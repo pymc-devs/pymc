@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>Lets look at what the classifier has learned &mdash; PyMC3 3.0.rc4 documentation</title>
+  <title>&lt;no title&gt; &mdash; PyMC3 3.0 documentation</title>
   
 
   
@@ -33,7 +33,7 @@
         <link rel="index" title="Index"
               href="../genindex.html"/>
         <link rel="search" title="Search" href="../search.html"/>
-    <link rel="top" title="PyMC3 3.0.rc4 documentation" href="../index.html"/> 
+    <link rel="top" title="PyMC3 3.0 documentation" href="../index.html"/> 
 
   
   <script src="../_static/js/modernizr.min.js"></script>
@@ -116,11 +116,11 @@
   <ul class="wy-breadcrumbs">
     <li><a href="../index.html">Docs</a> &raquo;</li>
       
-    <li>Lets look at what the classifier has learned</li>
+    <li>&lt;no title&gt;</li>
       <li class="wy-breadcrumbs-aside">
         
           
-            <a href="../_sources/notebooks/svgd_test.txt" rel="nofollow"> View page source</a>
+            <a href="../_sources/notebooks/svgd_test.ipynb.txt" rel="nofollow"> View page source</a>
           
         
       </li>
@@ -316,16 +316,6 @@ div.nboutput  > :nth-child(2).stderr {
 </pre></div>
 </div>
 </div>
-<div class="nbinput nblast container">
-<div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [4]:
-</pre></div>
-</div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>pm.NormalMixture<span class="o">??</span>
-</pre></div>
-</div>
-</div>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
 <span></span>In [2]:
@@ -343,7 +333,7 @@ div.nboutput  > :nth-child(2).stderr {
 </div>
 <div class="stderr container">
 <div class="highlight"><pre>
-100%|██████████| 5000/5000 [00:10&lt;00:00, 459.84it/s]
+100%|██████████| 5000/5000 [00:09&lt;00:00, 506.42it/s]
 </pre></div></div>
 </div>
 <div class="nbinput container">
@@ -360,12 +350,12 @@ div.nboutput  > :nth-child(2).stderr {
 <div class="container">
 </div>
 <div class="container">
-<img alt="../_images/notebooks_svgd_test_3_0.png" src="../_images/notebooks_svgd_test_3_0.png" />
+<img alt="../_images/notebooks_svgd_test_2_0.png" src="../_images/notebooks_svgd_test_2_0.png" />
 </div>
 </div>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [3]:
+<span></span>In [4]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -385,18 +375,236 @@ div.nboutput  > :nth-child(2).stderr {
 </div>
 <div class="stderr container">
 <div class="highlight"><pre>
-100%|██████████| 5000/5000 [00:12&lt;00:00, 411.61it/s]
+100%|██████████| 5000/5000 [00:07&lt;00:00, 656.00it/s]
 </pre></div></div>
 </div>
-<div class="nbinput nblast container">
+<div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [4]:
+<span></span>In [32]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span><span class="kn">import</span> <span class="nn">seaborn</span> <span class="kn">as</span> <span class="nn">sns</span>
+<span></span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">test_point</span><span class="p">))</span>
 </pre></div>
 </div>
+</div>
+<div class="nboutput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>Out[32]:
+</pre></div>
+</div>
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>1
+</pre></div>
+</div>
+</div>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [10]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">trace</span><span class="o">.</span><span class="n">chains</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>Out[10]:
+</pre></div>
+</div>
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>[0, 1, 2, 3]
+</pre></div>
+</div>
+</div>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [15]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">trace</span><span class="o">.</span><span class="n">get_values</span><span class="p">(</span><span class="s1">&#39;mu&#39;</span><span class="p">,</span> <span class="n">squeeze</span><span class="o">=</span><span class="bp">False</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">shape</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>Out[15]:
+</pre></div>
+</div>
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>(20000, 2)
+</pre></div>
+</div>
+</div>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [7]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">np</span><span class="o">.</span><span class="n">cov</span><span class="p">(</span><span class="n">trace</span><span class="o">.</span><span class="n">flatten</span><span class="p">())</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>Out[7]:
+</pre></div>
+</div>
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>array([[ 1.02284988,  0.76190918],
+       [ 0.76190918,  1.01373306]])
+</pre></div>
+</div>
+</div>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [6]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="k">with</span> <span class="n">model</span><span class="p">:</span>
+    <span class="k">print</span><span class="p">(</span><span class="n">pm</span><span class="o">.</span><span class="n">scaling</span><span class="o">.</span><span class="n">trace_cov</span><span class="p">(</span><span class="n">trace</span><span class="p">))</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<div class="highlight"><pre>
+[[ 1.02284988  0.76190918]
+ [ 0.76190918  1.01373306]]
+</pre></div></div>
+</div>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [2]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="k">with</span> <span class="n">pm</span><span class="o">.</span><span class="n">Model</span><span class="p">()</span> <span class="k">as</span> <span class="n">model</span><span class="p">:</span>
+    <span class="n">pm</span><span class="o">.</span><span class="n">MvNormal</span><span class="p">(</span><span class="s1">&#39;mu&#39;</span><span class="p">,</span>
+                <span class="n">mu</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mf">0.</span><span class="p">,</span> <span class="mf">1.</span><span class="p">]),</span>
+                <span class="n">cov</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([[</span><span class="mf">1.</span><span class="p">,</span> <span class="o">.</span><span class="mi">75</span><span class="p">],</span>
+                              <span class="p">[</span><span class="o">.</span><span class="mi">75</span><span class="p">,</span> <span class="mf">1.</span><span class="p">]]),</span>
+                <span class="n">shape</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+
+    <span class="n">step</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">NUTS</span><span class="p">(</span><span class="n">scaling</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">eye</span><span class="p">(</span><span class="mi">2</span><span class="p">),</span> <span class="n">is_cov</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+
+    <span class="n">trace</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="mi">5000</span><span class="p">,</span> <span class="n">step</span><span class="p">,</span> <span class="n">njobs</span><span class="o">=</span><span class="mi">4</span><span class="p">)</span>
+    <span class="n">cov</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">cov</span><span class="p">(</span><span class="n">trace</span><span class="o">.</span><span class="n">flatten</span><span class="p">())</span>
+
+    <span class="n">step2</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">NUTS</span><span class="p">(</span><span class="n">scaling</span><span class="o">=</span><span class="n">cov</span><span class="p">,</span> <span class="n">is_cov</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+    <span class="n">trace</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="mi">5000</span><span class="p">,</span> <span class="n">step2</span><span class="p">,</span> <span class="n">njobs</span><span class="o">=</span><span class="mi">4</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="stderr container">
+<div class="highlight"><pre>
+100%|██████████| 5000/5000 [00:08&lt;00:00, 585.06it/s]
+100%|██████████| 5000/5000 [00:05&lt;00:00, 849.10it/s]
+</pre></div></div>
+</div>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [27]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">cov</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>Out[27]:
+</pre></div>
+</div>
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>array([[ 0.93725734,  0.70366519],
+       [ 0.70366519,  0.95927603]])
+</pre></div>
+</div>
+</div>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [20]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">step</span><span class="o">.</span><span class="n">potential</span><span class="o">.</span><span class="n">s</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>Out[20]:
+</pre></div>
+</div>
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>array([ 0.001,  0.001])
+</pre></div>
+</div>
+</div>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [25]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<div class="highlight"><pre>
+<span class="ansi-red-fg">---------------------------------------------------------------------------</span>
+<span class="ansi-red-fg">IndexError</span>                                Traceback (most recent call last)
+<span class="ansi-green-fg">/home/wiecki/working/projects/pymc/pymc3/model.py</span> in <span class="ansi-cyan-fg">get_context</span><span class="ansi-blue-fg">(cls)</span>
+<span class="ansi-green-intense-fg ansi-bold">    121</span>         <span class="ansi-green-fg">try</span><span class="ansi-blue-fg">:</span>
+<span class="ansi-green-fg">--&gt; 122</span><span class="ansi-red-fg">             </span><span class="ansi-green-fg">return</span> cls<span class="ansi-blue-fg">.</span>get_contexts<span class="ansi-blue-fg">(</span><span class="ansi-blue-fg">)</span><span class="ansi-blue-fg">[</span><span class="ansi-blue-fg">-</span><span class="ansi-cyan-fg">1</span><span class="ansi-blue-fg">]</span>
+<span class="ansi-green-intense-fg ansi-bold">    123</span>         <span class="ansi-green-fg">except</span> IndexError<span class="ansi-blue-fg">:</span>
+
+<span class="ansi-red-fg">IndexError</span>: list index out of range
+
+During handling of the above exception, another exception occurred:
+
+<span class="ansi-red-fg">TypeError</span>                                 Traceback (most recent call last)
+<span class="ansi-green-fg">&lt;ipython-input-25-ba2369cb19a9&gt;</span> in <span class="ansi-cyan-fg">&lt;module&gt;</span><span class="ansi-blue-fg">()</span>
+<span class="ansi-green-fg">----&gt; 1</span><span class="ansi-red-fg"> </span>pm<span class="ansi-blue-fg">.</span>trace_cov<span class="ansi-blue-fg">(</span>trace<span class="ansi-blue-fg">)</span>
+
+<span class="ansi-green-fg">/home/wiecki/working/projects/pymc/pymc3/tuning/scaling.py</span> in <span class="ansi-cyan-fg">trace_cov</span><span class="ansi-blue-fg">(trace, vars, model)</span>
+<span class="ansi-green-intense-fg ansi-bold">    156</span>         covariance matrix
+<span class="ansi-green-intense-fg ansi-bold">    157</span>     &#34;&#34;&#34;
+<span class="ansi-green-fg">--&gt; 158</span><span class="ansi-red-fg">     </span>model <span class="ansi-blue-fg">=</span> modelcontext<span class="ansi-blue-fg">(</span>model<span class="ansi-blue-fg">)</span>
+<span class="ansi-green-intense-fg ansi-bold">    159</span>
+<span class="ansi-green-intense-fg ansi-bold">    160</span>     <span class="ansi-green-fg">if</span> model <span class="ansi-green-fg">is</span> <span class="ansi-green-fg">not</span> <span class="ansi-green-fg">None</span><span class="ansi-blue-fg">:</span>
+
+<span class="ansi-green-fg">/home/wiecki/working/projects/pymc/pymc3/model.py</span> in <span class="ansi-cyan-fg">modelcontext</span><span class="ansi-blue-fg">(model)</span>
+<span class="ansi-green-intense-fg ansi-bold">    130</span>     &#34;&#34;&#34;
+<span class="ansi-green-intense-fg ansi-bold">    131</span>     <span class="ansi-green-fg">if</span> model <span class="ansi-green-fg">is</span> <span class="ansi-green-fg">None</span><span class="ansi-blue-fg">:</span>
+<span class="ansi-green-fg">--&gt; 132</span><span class="ansi-red-fg">         </span><span class="ansi-green-fg">return</span> Model<span class="ansi-blue-fg">.</span>get_context<span class="ansi-blue-fg">(</span><span class="ansi-blue-fg">)</span>
+<span class="ansi-green-intense-fg ansi-bold">    133</span>     <span class="ansi-green-fg">return</span> model
+<span class="ansi-green-intense-fg ansi-bold">    134</span>
+
+<span class="ansi-green-fg">/home/wiecki/working/projects/pymc/pymc3/model.py</span> in <span class="ansi-cyan-fg">get_context</span><span class="ansi-blue-fg">(cls)</span>
+<span class="ansi-green-intense-fg ansi-bold">    122</span>             <span class="ansi-green-fg">return</span> cls<span class="ansi-blue-fg">.</span>get_contexts<span class="ansi-blue-fg">(</span><span class="ansi-blue-fg">)</span><span class="ansi-blue-fg">[</span><span class="ansi-blue-fg">-</span><span class="ansi-cyan-fg">1</span><span class="ansi-blue-fg">]</span>
+<span class="ansi-green-intense-fg ansi-bold">    123</span>         <span class="ansi-green-fg">except</span> IndexError<span class="ansi-blue-fg">:</span>
+<span class="ansi-green-fg">--&gt; 124</span><span class="ansi-red-fg">             </span><span class="ansi-green-fg">raise</span> TypeError<span class="ansi-blue-fg">(</span><span class="ansi-blue-fg">&#34;No context on context stack&#34;</span><span class="ansi-blue-fg">)</span>
+<span class="ansi-green-intense-fg ansi-bold">    125</span>
+<span class="ansi-green-intense-fg ansi-bold">    126</span>
+
+<span class="ansi-red-fg">TypeError</span>: No context on context stack
+</pre></div></div>
 </div>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
@@ -414,7 +622,7 @@ div.nboutput  > :nth-child(2).stderr {
 </pre></div>
 </div>
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>&lt;matplotlib.axes._subplots.AxesSubplot at 0x7f6b2e154a20&gt;
+<span></span>&lt;matplotlib.axes._subplots.AxesSubplot at 0x7fe2b3d1ebe0&gt;
 </pre></div>
 </div>
 </div>
@@ -422,30 +630,12 @@ div.nboutput  > :nth-child(2).stderr {
 <div class="container">
 </div>
 <div class="container">
-<img alt="../_images/notebooks_svgd_test_6_1.png" src="../_images/notebooks_svgd_test_6_1.png" />
+<img alt="../_images/notebooks_svgd_test_13_1.png" src="../_images/notebooks_svgd_test_13_1.png" />
 </div>
 </div>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [3]:
-</pre></div>
-</div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span><span class="o">%</span><span class="k">pdb</span>
-</pre></div>
-</div>
-</div>
-<div class="nboutput nblast container">
-<div class="container">
-</div>
-<div class="container">
-<div class="highlight"><pre>
-Automatic pdb calling has been turned ON
-</pre></div></div>
-</div>
-<div class="nbinput container">
-<div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [2]:
+<span></span>In [8]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -456,40 +646,26 @@ Automatic pdb calling has been turned ON
                      <span class="n">sd</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mf">1.</span><span class="p">,</span> <span class="mf">1.</span><span class="p">]))</span>
 
     <span class="n">trace_nuts</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="mi">500</span><span class="p">)</span>
-    <span class="n">trace_svgd</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">variational</span><span class="o">.</span><span class="n">svgd</span><span class="p">(</span><span class="n">jitter</span><span class="o">=</span><span class="mf">4.</span><span class="p">,</span> <span class="n">n_particles</span><span class="o">=</span><span class="mi">800</span><span class="p">,</span> <span class="n">n</span><span class="o">=</span><span class="mi">400</span><span class="p">)</span>
+    <span class="n">trace_svgd</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">variational</span><span class="o">.</span><span class="n">svgd</span><span class="p">(</span><span class="n">jitter</span><span class="o">=</span><span class="mf">4.</span><span class="p">,</span> <span class="n">n_particles</span><span class="o">=</span><span class="mi">800</span><span class="p">,</span> <span class="n">n</span><span class="o">=</span><span class="mi">4000</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
-<div class="nboutput container">
+<div class="nboutput nblast container">
 <div class="container">
 </div>
 <div class="stderr container">
 <div class="highlight"><pre>
 Auto-assigning NUTS sampler...
 Initializing NUTS using advi...
-Average ELBO = -0.22884: 100%|██████████| 200000/200000 [00:12&lt;00:00, 16595.24it/s]
-Finished [100%]: Average ELBO = -0.23082
-100%|██████████| 500/500 [00:00&lt;00:00, 1242.86it/s]
+Average ELBO = -0.23624: 100%|██████████| 200000/200000 [00:08&lt;00:00, 23693.57it/s]
+Finished [100%]: Average ELBO = -0.22915
+100%|██████████| 500/500 [00:00&lt;00:00, 2118.43it/s]
+100%|██████████| 4000/4000 [09:50&lt;00:00,  7.50it/s]
 </pre></div></div>
 </div>
-<div class="nboutput nblast container">
-<div class="container">
-</div>
-<div class="container">
-<div class="highlight"><pre>
-<span class="ansi-red-fg">---------------------------------------------------------------------------</span>
-<span class="ansi-red-fg">AttributeError</span>                            Traceback (most recent call last)
-<span class="ansi-green-fg">&lt;ipython-input-2-51fc4780bff4&gt;</span> in <span class="ansi-cyan-fg">&lt;module&gt;</span><span class="ansi-blue-fg">()</span>
-<span class="ansi-green-intense-fg ansi-bold">      6</span>
-<span class="ansi-green-intense-fg ansi-bold">      7</span>     trace_nuts <span class="ansi-blue-fg">=</span> pm<span class="ansi-blue-fg">.</span>sample<span class="ansi-blue-fg">(</span><span class="ansi-cyan-fg">500</span><span class="ansi-blue-fg">)</span>
-<span class="ansi-green-fg">----&gt; 8</span><span class="ansi-red-fg">     </span>trace_svgd <span class="ansi-blue-fg">=</span> pm<span class="ansi-blue-fg">.</span>variational<span class="ansi-blue-fg">.</span>svgd<span class="ansi-blue-fg">(</span>jitter<span class="ansi-blue-fg">=</span><span class="ansi-cyan-fg">4.</span><span class="ansi-blue-fg">,</span> n_particles<span class="ansi-blue-fg">=</span><span class="ansi-cyan-fg">800</span><span class="ansi-blue-fg">,</span> n<span class="ansi-blue-fg">=</span><span class="ansi-cyan-fg">400</span><span class="ansi-blue-fg">)</span>
-
-<span class="ansi-red-fg">AttributeError</span>: module &#39;pymc3.variational&#39; has no attribute &#39;svgd&#39;
-</pre></div></div>
-</div>
-<div class="nbinput nblast container">
+<div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [ ]:
+<span></span>In [9]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -508,403 +684,30 @@ Finished [100%]: Average ELBO = -0.23082
 </pre></div>
 </div>
 </div>
-<div class="nbinput nblast container">
-<div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [24]:
-</pre></div>
-</div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>theano.tensor.Split<span class="o">??</span>
-</pre></div>
-</div>
-</div>
-<div class="nbinput container">
-<div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [30]:
-</pre></div>
-</div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span><span class="n">pm</span><span class="o">.</span><span class="n">traceplot</span><span class="p">(</span><span class="n">trace</span><span class="p">);</span>
-</pre></div>
-</div>
-</div>
-<div class="nboutput nblast container">
-<div class="container">
-</div>
-<div class="container">
-<img alt="../_images/notebooks_svgd_test_11_0.png" src="../_images/notebooks_svgd_test_11_0.png" />
-</div>
-</div>
-<div class="nbinput container">
-<div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [27]:
-</pre></div>
-</div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span><span class="c1"># Replace shared variables with testing set</span>
-<span class="c1">#ann_input.set_value(X_test)</span>
-<span class="c1">#ann_output.set_value(Y_test)</span>
-
-<span class="c1"># Creater posterior predictive samples</span>
-<span class="n">ppc</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">sample_ppc</span><span class="p">(</span><span class="n">trace</span><span class="p">,</span> <span class="n">model</span><span class="o">=</span><span class="n">neural_network</span><span class="p">,</span> <span class="n">samples</span><span class="o">=</span><span class="mi">500</span><span class="p">)</span>
-
-<span class="c1"># Use probability of &gt; 0.5 to assume prediction of class 1</span>
-<span class="n">pred</span> <span class="o">=</span> <span class="n">ppc</span><span class="p">[</span><span class="s1">&#39;p&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mf">0.5</span>
-</pre></div>
-</div>
-</div>
 <div class="nboutput container">
 <div class="container">
 </div>
 <div class="stderr container">
 <div class="highlight"><pre>
-
-
-  0%|          | 0/500 [00:00&lt;?, ?it/s]
-</pre></div></div>
-</div>
-<div class="nboutput nblast container">
-<div class="container">
-</div>
-<div class="container">
-<div class="highlight"><pre>
-<span class="ansi-red-fg">---------------------------------------------------------------------------</span>
-<span class="ansi-red-fg">ValueError</span>                                Traceback (most recent call last)
-<span class="ansi-green-fg">&lt;ipython-input-27-ca52e312c5c2&gt;</span> in <span class="ansi-cyan-fg">&lt;module&gt;</span><span class="ansi-blue-fg">()</span>
-<span class="ansi-green-intense-fg ansi-bold">      4</span>
-<span class="ansi-green-intense-fg ansi-bold">      5</span> <span class="ansi-red-fg"># Creater posterior predictive samples</span>
-<span class="ansi-green-fg">----&gt; 6</span><span class="ansi-red-fg"> </span>ppc <span class="ansi-blue-fg">=</span> pm<span class="ansi-blue-fg">.</span>sample_ppc<span class="ansi-blue-fg">(</span>trace<span class="ansi-blue-fg">,</span> model<span class="ansi-blue-fg">=</span>neural_network<span class="ansi-blue-fg">,</span> samples<span class="ansi-blue-fg">=</span><span class="ansi-cyan-fg">500</span><span class="ansi-blue-fg">)</span>
-<span class="ansi-green-intense-fg ansi-bold">      7</span>
-<span class="ansi-green-intense-fg ansi-bold">      8</span> <span class="ansi-red-fg"># Use probability of &gt; 0.5 to assume prediction of class 1</span>
-
-<span class="ansi-green-fg">/home/wiecki/working/projects/pymc/pymc3/sampling.py</span> in <span class="ansi-cyan-fg">sample_ppc</span><span class="ansi-blue-fg">(trace, samples, model, vars, size, random_seed, progressbar)</span>
-<span class="ansi-green-intense-fg ansi-bold">    389</span>         <span class="ansi-green-fg">for</span> var <span class="ansi-green-fg">in</span> vars<span class="ansi-blue-fg">:</span>
-<span class="ansi-green-intense-fg ansi-bold">    390</span>             ppc[var.name].append(var.distribution.random(point=param,
-<span class="ansi-green-fg">--&gt; 391</span><span class="ansi-red-fg">                                                          size=size))
-</span><span class="ansi-green-intense-fg ansi-bold">    392</span>
-<span class="ansi-green-intense-fg ansi-bold">    393</span>     <span class="ansi-green-fg">return</span> <span class="ansi-blue-fg">{</span>k<span class="ansi-blue-fg">:</span> np<span class="ansi-blue-fg">.</span>asarray<span class="ansi-blue-fg">(</span>v<span class="ansi-blue-fg">)</span> <span class="ansi-green-fg">for</span> k<span class="ansi-blue-fg">,</span> v <span class="ansi-green-fg">in</span> ppc<span class="ansi-blue-fg">.</span>items<span class="ansi-blue-fg">(</span><span class="ansi-blue-fg">)</span><span class="ansi-blue-fg">}</span>
-
-<span class="ansi-green-fg">/home/wiecki/working/projects/pymc/pymc3/distributions/discrete.py</span> in <span class="ansi-cyan-fg">random</span><span class="ansi-blue-fg">(self, point, size, repeat)</span>
-<span class="ansi-green-intense-fg ansi-bold">    155</span>         return generate_samples(stats.bernoulli.rvs, p,
-<span class="ansi-green-intense-fg ansi-bold">    156</span>                                 dist_shape<span class="ansi-blue-fg">=</span>self<span class="ansi-blue-fg">.</span>shape<span class="ansi-blue-fg">,</span>
-<span class="ansi-green-fg">--&gt; 157</span><span class="ansi-red-fg">                                 size=size)
-</span><span class="ansi-green-intense-fg ansi-bold">    158</span>
-<span class="ansi-green-intense-fg ansi-bold">    159</span>     <span class="ansi-green-fg">def</span> logp<span class="ansi-blue-fg">(</span>self<span class="ansi-blue-fg">,</span> value<span class="ansi-blue-fg">)</span><span class="ansi-blue-fg">:</span>
-
-<span class="ansi-green-fg">/home/wiecki/working/projects/pymc/pymc3/distributions/distribution.py</span> in <span class="ansi-cyan-fg">generate_samples</span><span class="ansi-blue-fg">(generator, *args, **kwargs)</span>
-<span class="ansi-green-intense-fg ansi-bold">    342</span>                                         broadcast_shape<span class="ansi-blue-fg">,</span>
-<span class="ansi-green-intense-fg ansi-bold">    343</span>                                         prefix_shape<span class="ansi-blue-fg">,</span>
-<span class="ansi-green-fg">--&gt; 344</span><span class="ansi-red-fg">                                         *args, **kwargs)
-</span><span class="ansi-green-intense-fg ansi-bold">    345</span>             <span class="ansi-green-fg">if</span> broadcast_shape <span class="ansi-blue-fg">==</span> <span class="ansi-blue-fg">(</span><span class="ansi-cyan-fg">1</span><span class="ansi-blue-fg">,</span><span class="ansi-blue-fg">)</span><span class="ansi-blue-fg">:</span>
-<span class="ansi-green-intense-fg ansi-bold">    346</span>                 samples <span class="ansi-blue-fg">=</span> np<span class="ansi-blue-fg">.</span>reshape<span class="ansi-blue-fg">(</span>samples<span class="ansi-blue-fg">,</span> prefix_shape<span class="ansi-blue-fg">)</span>
-
-<span class="ansi-green-fg">/home/wiecki/working/projects/pymc/pymc3/distributions/distribution.py</span> in <span class="ansi-cyan-fg">replicate_samples</span><span class="ansi-blue-fg">(generator, size, repeats, *args, **kwargs)</span>
-<span class="ansi-green-intense-fg ansi-bold">    262</span>     n <span class="ansi-blue-fg">=</span> int<span class="ansi-blue-fg">(</span>np<span class="ansi-blue-fg">.</span>prod<span class="ansi-blue-fg">(</span>repeats<span class="ansi-blue-fg">)</span><span class="ansi-blue-fg">)</span>
-<span class="ansi-green-intense-fg ansi-bold">    263</span>     <span class="ansi-green-fg">if</span> n <span class="ansi-blue-fg">==</span> <span class="ansi-cyan-fg">1</span><span class="ansi-blue-fg">:</span>
-<span class="ansi-green-fg">--&gt; 264</span><span class="ansi-red-fg">         </span>samples <span class="ansi-blue-fg">=</span> generator<span class="ansi-blue-fg">(</span>size<span class="ansi-blue-fg">=</span>size<span class="ansi-blue-fg">,</span> <span class="ansi-blue-fg">*</span>args<span class="ansi-blue-fg">,</span> <span class="ansi-blue-fg">**</span>kwargs<span class="ansi-blue-fg">)</span>
-<span class="ansi-green-intense-fg ansi-bold">    265</span>     <span class="ansi-green-fg">else</span><span class="ansi-blue-fg">:</span>
-<span class="ansi-green-intense-fg ansi-bold">    266</span>         samples = np.array([generator(size=size, *args, **kwargs)
-
-<span class="ansi-green-fg">/home/wiecki/miniconda3/lib/python3.5/site-packages/scipy/stats/_distn_infrastructure.py</span> in <span class="ansi-cyan-fg">rvs</span><span class="ansi-blue-fg">(self, *args, **kwargs)</span>
-<span class="ansi-green-intense-fg ansi-bold">   2794</span>         &#34;&#34;&#34;
-<span class="ansi-green-intense-fg ansi-bold">   2795</span>         kwargs<span class="ansi-blue-fg">[</span><span class="ansi-blue-fg">&#39;discrete&#39;</span><span class="ansi-blue-fg">]</span> <span class="ansi-blue-fg">=</span> <span class="ansi-green-fg">True</span>
-<span class="ansi-green-fg">-&gt; 2796</span><span class="ansi-red-fg">         </span><span class="ansi-green-fg">return</span> super<span class="ansi-blue-fg">(</span>rv_discrete<span class="ansi-blue-fg">,</span> self<span class="ansi-blue-fg">)</span><span class="ansi-blue-fg">.</span>rvs<span class="ansi-blue-fg">(</span><span class="ansi-blue-fg">*</span>args<span class="ansi-blue-fg">,</span> <span class="ansi-blue-fg">**</span>kwargs<span class="ansi-blue-fg">)</span>
-<span class="ansi-green-intense-fg ansi-bold">   2797</span>
-<span class="ansi-green-intense-fg ansi-bold">   2798</span>     <span class="ansi-green-fg">def</span> pmf<span class="ansi-blue-fg">(</span>self<span class="ansi-blue-fg">,</span> k<span class="ansi-blue-fg">,</span> <span class="ansi-blue-fg">*</span>args<span class="ansi-blue-fg">,</span> <span class="ansi-blue-fg">**</span>kwds<span class="ansi-blue-fg">)</span><span class="ansi-blue-fg">:</span>
-
-<span class="ansi-green-fg">/home/wiecki/miniconda3/lib/python3.5/site-packages/scipy/stats/_distn_infrastructure.py</span> in <span class="ansi-cyan-fg">rvs</span><span class="ansi-blue-fg">(self, *args, **kwds)</span>
-<span class="ansi-green-intense-fg ansi-bold">    934</span>         cond <span class="ansi-blue-fg">=</span> logical_and<span class="ansi-blue-fg">(</span>self<span class="ansi-blue-fg">.</span>_argcheck<span class="ansi-blue-fg">(</span><span class="ansi-blue-fg">*</span>args<span class="ansi-blue-fg">)</span><span class="ansi-blue-fg">,</span> <span class="ansi-blue-fg">(</span>scale <span class="ansi-blue-fg">&gt;=</span> <span class="ansi-cyan-fg">0</span><span class="ansi-blue-fg">)</span><span class="ansi-blue-fg">)</span>
-<span class="ansi-green-intense-fg ansi-bold">    935</span>         <span class="ansi-green-fg">if</span> <span class="ansi-green-fg">not</span> np<span class="ansi-blue-fg">.</span>all<span class="ansi-blue-fg">(</span>cond<span class="ansi-blue-fg">)</span><span class="ansi-blue-fg">:</span>
-<span class="ansi-green-fg">--&gt; 936</span><span class="ansi-red-fg">             </span><span class="ansi-green-fg">raise</span> ValueError<span class="ansi-blue-fg">(</span><span class="ansi-blue-fg">&#34;Domain error in arguments.&#34;</span><span class="ansi-blue-fg">)</span>
-<span class="ansi-green-intense-fg ansi-bold">    937</span>
-<span class="ansi-green-intense-fg ansi-bold">    938</span>         <span class="ansi-green-fg">if</span> np<span class="ansi-blue-fg">.</span>all<span class="ansi-blue-fg">(</span>scale <span class="ansi-blue-fg">==</span> <span class="ansi-cyan-fg">0</span><span class="ansi-blue-fg">)</span><span class="ansi-blue-fg">:</span>
-
-<span class="ansi-red-fg">ValueError</span>: Domain error in arguments.
-</pre></div></div>
-</div>
-<div class="nbinput container">
-<div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [14]:
-</pre></div>
-</div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span><span class="n">pred</span>
-</pre></div>
-</div>
-</div>
-<div class="nboutput nblast container">
-<div class="highlight-none"><div class="highlight"><pre>
-<span></span>Out[14]:
-</pre></div>
-</div>
-<div class="highlight-none"><div class="highlight"><pre>
-<span></span>array([False], dtype=bool)
-</pre></div>
-</div>
-</div>
-<div class="nbinput container">
-<div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [8]:
-</pre></div>
-</div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span><span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">()</span>
-<span class="n">ax</span><span class="o">.</span><span class="n">scatter</span><span class="p">(</span><span class="n">X</span><span class="p">[</span><span class="n">Y</span><span class="o">==</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span> <span class="n">X</span><span class="p">[</span><span class="n">pred</span><span class="o">==</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">])</span>
-<span class="n">ax</span><span class="o">.</span><span class="n">scatter</span><span class="p">(</span><span class="n">X</span><span class="p">[</span><span class="n">Y</span><span class="o">==</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span> <span class="n">X</span><span class="p">[</span><span class="n">pred</span><span class="o">==</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">],</span> <span class="n">color</span><span class="o">=</span><span class="s1">&#39;r&#39;</span><span class="p">)</span>
-<span class="n">sns</span><span class="o">.</span><span class="n">despine</span><span class="p">()</span>
-<span class="n">ax</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="n">title</span><span class="o">=</span><span class="s1">&#39;Predicted labels in testing set&#39;</span><span class="p">,</span> <span class="n">xlabel</span><span class="o">=</span><span class="s1">&#39;X&#39;</span><span class="p">,</span> <span class="n">ylabel</span><span class="o">=</span><span class="s1">&#39;Y&#39;</span><span class="p">);</span>
-</pre></div>
-</div>
-</div>
-<div class="nboutput container">
-<div class="container">
-</div>
-<div class="stderr container">
-<div class="highlight"><pre>
-/home/wiecki/miniconda3/lib/python3.5/site-packages/ipykernel/__main__.py:2: VisibleDeprecationWarning: boolean index did not match indexed array along dimension 0; dimension is 1000 but corresponding boolean dimension is 1
-  from ipykernel import kernelapp as app
-/home/wiecki/miniconda3/lib/python3.5/site-packages/ipykernel/__main__.py:3: VisibleDeprecationWarning: boolean index did not match indexed array along dimension 0; dimension is 1000 but corresponding boolean dimension is 1
-  app.launch_new_instance()
-</pre></div></div>
-</div>
-<div class="nboutput nblast container">
-<div class="container">
-</div>
-<div class="container">
-<img alt="../_images/notebooks_svgd_test_14_1.png" src="../_images/notebooks_svgd_test_14_1.png" />
-</div>
-</div>
-<div class="nbinput container">
-<div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [9]:
-</pre></div>
-</div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span><span class="k">print</span><span class="p">(</span><span class="s1">&#39;Accuracy = {}%&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">((</span><span class="n">Y</span> <span class="o">==</span> <span class="n">pred</span><span class="p">)</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span> <span class="o">*</span> <span class="mi">100</span><span class="p">))</span>
-</pre></div>
-</div>
-</div>
-<div class="nboutput nblast container">
-<div class="container">
-</div>
-<div class="container">
-<div class="highlight"><pre>
-Accuracy = 50.0%
-</pre></div></div>
-</div>
-<p>Hey, our neural network did all right!</p>
-<div class="section" id="Lets-look-at-what-the-classifier-has-learned">
-<h1>Lets look at what the classifier has learned<a class="headerlink" href="#Lets-look-at-what-the-classifier-has-learned" title="Permalink to this headline">¶</a></h1>
-<p>For this, we evaluate the class probability predictions on a grid over
-the whole input space.</p>
-<div class="nbinput nblast container">
-<div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [10]:
-</pre></div>
-</div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span><span class="n">grid</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mgrid</span><span class="p">[</span><span class="o">-</span><span class="mi">3</span><span class="p">:</span><span class="mi">3</span><span class="p">:</span><span class="mi">100j</span><span class="p">,</span><span class="o">-</span><span class="mi">3</span><span class="p">:</span><span class="mi">3</span><span class="p">:</span><span class="mi">100j</span><span class="p">]</span>
-<span class="n">grid_2d</span> <span class="o">=</span> <span class="n">grid</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">T</span>
-<span class="n">dummy_out</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">grid</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">int8</span><span class="p">)</span>
-</pre></div>
-</div>
-</div>
-<div class="nbinput container">
-<div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [11]:
-</pre></div>
-</div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span><span class="n">ann_input</span><span class="o">.</span><span class="n">set_value</span><span class="p">(</span><span class="n">grid_2d</span><span class="p">)</span>
-<span class="n">ann_output</span><span class="o">.</span><span class="n">set_value</span><span class="p">(</span><span class="n">dummy_out</span><span class="p">)</span>
-
-<span class="c1"># Creater posterior predictive samples</span>
-<span class="n">ppc</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">sample_ppc</span><span class="p">(</span><span class="n">trace</span><span class="p">,</span> <span class="n">model</span><span class="o">=</span><span class="n">neural_network</span><span class="p">,</span> <span class="n">samples</span><span class="o">=</span><span class="mi">500</span><span class="p">)</span>
-</pre></div>
-</div>
-</div>
-<div class="nboutput container">
-<div class="container">
-</div>
-<div class="stderr container">
-<div class="highlight"><pre>
-  0%|          | 0/500 [00:00&lt;?, ?it/s]
-</pre></div></div>
-</div>
-<div class="nboutput nblast container">
-<div class="container">
-</div>
-<div class="container">
-<div class="highlight"><pre>
-<span class="ansi-red-fg">---------------------------------------------------------------------------</span>
-<span class="ansi-red-fg">ValueError</span>                                Traceback (most recent call last)
-<span class="ansi-green-fg">&lt;ipython-input-11-c26be7d1e46c&gt;</span> in <span class="ansi-cyan-fg">&lt;module&gt;</span><span class="ansi-blue-fg">()</span>
-<span class="ansi-green-intense-fg ansi-bold">      3</span>
-<span class="ansi-green-intense-fg ansi-bold">      4</span> <span class="ansi-red-fg"># Creater posterior predictive samples</span>
-<span class="ansi-green-fg">----&gt; 5</span><span class="ansi-red-fg"> </span>ppc <span class="ansi-blue-fg">=</span> pm<span class="ansi-blue-fg">.</span>sample_ppc<span class="ansi-blue-fg">(</span>trace<span class="ansi-blue-fg">,</span> model<span class="ansi-blue-fg">=</span>neural_network<span class="ansi-blue-fg">,</span> samples<span class="ansi-blue-fg">=</span><span class="ansi-cyan-fg">500</span><span class="ansi-blue-fg">)</span>
-
-<span class="ansi-green-fg">/home/wiecki/working/projects/pymc/pymc3/sampling.py</span> in <span class="ansi-cyan-fg">sample_ppc</span><span class="ansi-blue-fg">(trace, samples, model, vars, size, random_seed, progressbar)</span>
-<span class="ansi-green-intense-fg ansi-bold">    389</span>         <span class="ansi-green-fg">for</span> var <span class="ansi-green-fg">in</span> vars<span class="ansi-blue-fg">:</span>
-<span class="ansi-green-intense-fg ansi-bold">    390</span>             ppc[var.name].append(var.distribution.random(point=param,
-<span class="ansi-green-fg">--&gt; 391</span><span class="ansi-red-fg">                                                          size=size))
-</span><span class="ansi-green-intense-fg ansi-bold">    392</span>
-<span class="ansi-green-intense-fg ansi-bold">    393</span>     <span class="ansi-green-fg">return</span> <span class="ansi-blue-fg">{</span>k<span class="ansi-blue-fg">:</span> np<span class="ansi-blue-fg">.</span>asarray<span class="ansi-blue-fg">(</span>v<span class="ansi-blue-fg">)</span> <span class="ansi-green-fg">for</span> k<span class="ansi-blue-fg">,</span> v <span class="ansi-green-fg">in</span> ppc<span class="ansi-blue-fg">.</span>items<span class="ansi-blue-fg">(</span><span class="ansi-blue-fg">)</span><span class="ansi-blue-fg">}</span>
-
-<span class="ansi-green-fg">/home/wiecki/working/projects/pymc/pymc3/distributions/discrete.py</span> in <span class="ansi-cyan-fg">random</span><span class="ansi-blue-fg">(self, point, size, repeat)</span>
-<span class="ansi-green-intense-fg ansi-bold">    155</span>         return generate_samples(stats.bernoulli.rvs, p,
-<span class="ansi-green-intense-fg ansi-bold">    156</span>                                 dist_shape<span class="ansi-blue-fg">=</span>self<span class="ansi-blue-fg">.</span>shape<span class="ansi-blue-fg">,</span>
-<span class="ansi-green-fg">--&gt; 157</span><span class="ansi-red-fg">                                 size=size)
-</span><span class="ansi-green-intense-fg ansi-bold">    158</span>
-<span class="ansi-green-intense-fg ansi-bold">    159</span>     <span class="ansi-green-fg">def</span> logp<span class="ansi-blue-fg">(</span>self<span class="ansi-blue-fg">,</span> value<span class="ansi-blue-fg">)</span><span class="ansi-blue-fg">:</span>
-
-<span class="ansi-green-fg">/home/wiecki/working/projects/pymc/pymc3/distributions/distribution.py</span> in <span class="ansi-cyan-fg">generate_samples</span><span class="ansi-blue-fg">(generator, *args, **kwargs)</span>
-<span class="ansi-green-intense-fg ansi-bold">    329</span>             samples <span class="ansi-blue-fg">=</span> generator<span class="ansi-blue-fg">(</span>size<span class="ansi-blue-fg">=</span>size<span class="ansi-blue-fg">,</span> <span class="ansi-blue-fg">*</span>args<span class="ansi-blue-fg">,</span> <span class="ansi-blue-fg">**</span>kwargs<span class="ansi-blue-fg">)</span>
-<span class="ansi-green-intense-fg ansi-bold">    330</span>         <span class="ansi-green-fg">else</span><span class="ansi-blue-fg">:</span>
-<span class="ansi-green-fg">--&gt; 331</span><span class="ansi-red-fg">             </span>samples <span class="ansi-blue-fg">=</span> generator<span class="ansi-blue-fg">(</span>size<span class="ansi-blue-fg">=</span><span class="ansi-cyan-fg">1</span><span class="ansi-blue-fg">,</span> <span class="ansi-blue-fg">*</span>args<span class="ansi-blue-fg">,</span> <span class="ansi-blue-fg">**</span>kwargs<span class="ansi-blue-fg">)</span>
-<span class="ansi-green-intense-fg ansi-bold">    332</span>     <span class="ansi-green-fg">else</span><span class="ansi-blue-fg">:</span>
-<span class="ansi-green-intense-fg ansi-bold">    333</span>         <span class="ansi-green-fg">if</span> size <span class="ansi-green-fg">is</span> <span class="ansi-green-fg">not</span> <span class="ansi-green-fg">None</span><span class="ansi-blue-fg">:</span>
-
-<span class="ansi-green-fg">/home/wiecki/miniconda3/lib/python3.5/site-packages/scipy/stats/_distn_infrastructure.py</span> in <span class="ansi-cyan-fg">rvs</span><span class="ansi-blue-fg">(self, *args, **kwargs)</span>
-<span class="ansi-green-intense-fg ansi-bold">   2794</span>         &#34;&#34;&#34;
-<span class="ansi-green-intense-fg ansi-bold">   2795</span>         kwargs<span class="ansi-blue-fg">[</span><span class="ansi-blue-fg">&#39;discrete&#39;</span><span class="ansi-blue-fg">]</span> <span class="ansi-blue-fg">=</span> <span class="ansi-green-fg">True</span>
-<span class="ansi-green-fg">-&gt; 2796</span><span class="ansi-red-fg">         </span><span class="ansi-green-fg">return</span> super<span class="ansi-blue-fg">(</span>rv_discrete<span class="ansi-blue-fg">,</span> self<span class="ansi-blue-fg">)</span><span class="ansi-blue-fg">.</span>rvs<span class="ansi-blue-fg">(</span><span class="ansi-blue-fg">*</span>args<span class="ansi-blue-fg">,</span> <span class="ansi-blue-fg">**</span>kwargs<span class="ansi-blue-fg">)</span>
-<span class="ansi-green-intense-fg ansi-bold">   2797</span>
-<span class="ansi-green-intense-fg ansi-bold">   2798</span>     <span class="ansi-green-fg">def</span> pmf<span class="ansi-blue-fg">(</span>self<span class="ansi-blue-fg">,</span> k<span class="ansi-blue-fg">,</span> <span class="ansi-blue-fg">*</span>args<span class="ansi-blue-fg">,</span> <span class="ansi-blue-fg">**</span>kwds<span class="ansi-blue-fg">)</span><span class="ansi-blue-fg">:</span>
-
-<span class="ansi-green-fg">/home/wiecki/miniconda3/lib/python3.5/site-packages/scipy/stats/_distn_infrastructure.py</span> in <span class="ansi-cyan-fg">rvs</span><span class="ansi-blue-fg">(self, *args, **kwds)</span>
-<span class="ansi-green-intense-fg ansi-bold">    934</span>         cond <span class="ansi-blue-fg">=</span> logical_and<span class="ansi-blue-fg">(</span>self<span class="ansi-blue-fg">.</span>_argcheck<span class="ansi-blue-fg">(</span><span class="ansi-blue-fg">*</span>args<span class="ansi-blue-fg">)</span><span class="ansi-blue-fg">,</span> <span class="ansi-blue-fg">(</span>scale <span class="ansi-blue-fg">&gt;=</span> <span class="ansi-cyan-fg">0</span><span class="ansi-blue-fg">)</span><span class="ansi-blue-fg">)</span>
-<span class="ansi-green-intense-fg ansi-bold">    935</span>         <span class="ansi-green-fg">if</span> <span class="ansi-green-fg">not</span> np<span class="ansi-blue-fg">.</span>all<span class="ansi-blue-fg">(</span>cond<span class="ansi-blue-fg">)</span><span class="ansi-blue-fg">:</span>
-<span class="ansi-green-fg">--&gt; 936</span><span class="ansi-red-fg">             </span><span class="ansi-green-fg">raise</span> ValueError<span class="ansi-blue-fg">(</span><span class="ansi-blue-fg">&#34;Domain error in arguments.&#34;</span><span class="ansi-blue-fg">)</span>
-<span class="ansi-green-intense-fg ansi-bold">    937</span>
-<span class="ansi-green-intense-fg ansi-bold">    938</span>         <span class="ansi-green-fg">if</span> np<span class="ansi-blue-fg">.</span>all<span class="ansi-blue-fg">(</span>scale <span class="ansi-blue-fg">==</span> <span class="ansi-cyan-fg">0</span><span class="ansi-blue-fg">)</span><span class="ansi-blue-fg">:</span>
-
-<span class="ansi-red-fg">ValueError</span>: Domain error in arguments.
-</pre></div></div>
-</div>
-<div class="section" id="Probability-surface">
-<h2>Probability surface<a class="headerlink" href="#Probability-surface" title="Permalink to this headline">¶</a></h2>
-<div class="nbinput container">
-<div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [12]:
-</pre></div>
-</div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span><span class="n">cmap</span> <span class="o">=</span> <span class="n">sns</span><span class="o">.</span><span class="n">diverging_palette</span><span class="p">(</span><span class="mi">250</span><span class="p">,</span> <span class="mi">12</span><span class="p">,</span> <span class="n">s</span><span class="o">=</span><span class="mi">85</span><span class="p">,</span> <span class="n">l</span><span class="o">=</span><span class="mi">25</span><span class="p">,</span> <span class="n">as_cmap</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
-<span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="mi">6</span><span class="p">))</span>
-<span class="n">contour</span> <span class="o">=</span> <span class="n">ax</span><span class="o">.</span><span class="n">contourf</span><span class="p">(</span><span class="o">*</span><span class="n">grid</span><span class="p">,</span> <span class="n">ppc</span><span class="p">[</span><span class="s1">&#39;out&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="mi">100</span><span class="p">,</span> <span class="mi">100</span><span class="p">),</span> <span class="n">cmap</span><span class="o">=</span><span class="n">cmap</span><span class="p">)</span>
-<span class="n">ax</span><span class="o">.</span><span class="n">scatter</span><span class="p">(</span><span class="n">X</span><span class="p">[</span><span class="n">Y</span><span class="o">==</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span> <span class="n">X</span><span class="p">[</span><span class="n">Y</span><span class="o">==</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">])</span>
-<span class="n">ax</span><span class="o">.</span><span class="n">scatter</span><span class="p">(</span><span class="n">X</span><span class="p">[</span><span class="n">Y</span><span class="o">==</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span> <span class="n">X</span><span class="p">[</span><span class="n">Y</span><span class="o">==</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">],</span> <span class="n">color</span><span class="o">=</span><span class="s1">&#39;r&#39;</span><span class="p">)</span>
-<span class="n">cbar</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">colorbar</span><span class="p">(</span><span class="n">contour</span><span class="p">,</span> <span class="n">ax</span><span class="o">=</span><span class="n">ax</span><span class="p">)</span>
-<span class="n">_</span> <span class="o">=</span> <span class="n">ax</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="n">xlim</span><span class="o">=</span><span class="p">(</span><span class="o">-</span><span class="mi">3</span><span class="p">,</span> <span class="mi">3</span><span class="p">),</span> <span class="n">ylim</span><span class="o">=</span><span class="p">(</span><span class="o">-</span><span class="mi">3</span><span class="p">,</span> <span class="mi">3</span><span class="p">),</span> <span class="n">xlabel</span><span class="o">=</span><span class="s1">&#39;X&#39;</span><span class="p">,</span> <span class="n">ylabel</span><span class="o">=</span><span class="s1">&#39;Y&#39;</span><span class="p">);</span>
-<span class="n">cbar</span><span class="o">.</span><span class="n">ax</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="s1">&#39;Posterior predictive mean probability of class label = 0&#39;</span><span class="p">);</span>
-</pre></div>
-</div>
-</div>
-<div class="nboutput container">
-<div class="container">
-</div>
-<div class="container">
-<div class="highlight"><pre>
-<span class="ansi-red-fg">---------------------------------------------------------------------------</span>
-<span class="ansi-red-fg">KeyError</span>                                  Traceback (most recent call last)
-<span class="ansi-green-fg">&lt;ipython-input-12-e016abd59590&gt;</span> in <span class="ansi-cyan-fg">&lt;module&gt;</span><span class="ansi-blue-fg">()</span>
-<span class="ansi-green-intense-fg ansi-bold">      1</span> cmap <span class="ansi-blue-fg">=</span> sns<span class="ansi-blue-fg">.</span>diverging_palette<span class="ansi-blue-fg">(</span><span class="ansi-cyan-fg">250</span><span class="ansi-blue-fg">,</span> <span class="ansi-cyan-fg">12</span><span class="ansi-blue-fg">,</span> s<span class="ansi-blue-fg">=</span><span class="ansi-cyan-fg">85</span><span class="ansi-blue-fg">,</span> l<span class="ansi-blue-fg">=</span><span class="ansi-cyan-fg">25</span><span class="ansi-blue-fg">,</span> as_cmap<span class="ansi-blue-fg">=</span><span class="ansi-green-fg">True</span><span class="ansi-blue-fg">)</span>
-<span class="ansi-green-intense-fg ansi-bold">      2</span> fig<span class="ansi-blue-fg">,</span> ax <span class="ansi-blue-fg">=</span> plt<span class="ansi-blue-fg">.</span>subplots<span class="ansi-blue-fg">(</span>figsize<span class="ansi-blue-fg">=</span><span class="ansi-blue-fg">(</span><span class="ansi-cyan-fg">10</span><span class="ansi-blue-fg">,</span> <span class="ansi-cyan-fg">6</span><span class="ansi-blue-fg">)</span><span class="ansi-blue-fg">)</span>
-<span class="ansi-green-fg">----&gt; 3</span><span class="ansi-red-fg"> </span>contour <span class="ansi-blue-fg">=</span> ax<span class="ansi-blue-fg">.</span>contourf<span class="ansi-blue-fg">(</span><span class="ansi-blue-fg">*</span>grid<span class="ansi-blue-fg">,</span> ppc<span class="ansi-blue-fg">[</span><span class="ansi-blue-fg">&#39;out&#39;</span><span class="ansi-blue-fg">]</span><span class="ansi-blue-fg">.</span>mean<span class="ansi-blue-fg">(</span>axis<span class="ansi-blue-fg">=</span><span class="ansi-cyan-fg">0</span><span class="ansi-blue-fg">)</span><span class="ansi-blue-fg">.</span>reshape<span class="ansi-blue-fg">(</span><span class="ansi-cyan-fg">100</span><span class="ansi-blue-fg">,</span> <span class="ansi-cyan-fg">100</span><span class="ansi-blue-fg">)</span><span class="ansi-blue-fg">,</span> cmap<span class="ansi-blue-fg">=</span>cmap<span class="ansi-blue-fg">)</span>
-<span class="ansi-green-intense-fg ansi-bold">      4</span> ax<span class="ansi-blue-fg">.</span>scatter<span class="ansi-blue-fg">(</span>X<span class="ansi-blue-fg">[</span>Y<span class="ansi-blue-fg">==</span><span class="ansi-cyan-fg">0</span><span class="ansi-blue-fg">,</span> <span class="ansi-cyan-fg">0</span><span class="ansi-blue-fg">]</span><span class="ansi-blue-fg">,</span> X<span class="ansi-blue-fg">[</span>Y<span class="ansi-blue-fg">==</span><span class="ansi-cyan-fg">0</span><span class="ansi-blue-fg">,</span> <span class="ansi-cyan-fg">1</span><span class="ansi-blue-fg">]</span><span class="ansi-blue-fg">)</span>
-<span class="ansi-green-intense-fg ansi-bold">      5</span> ax<span class="ansi-blue-fg">.</span>scatter<span class="ansi-blue-fg">(</span>X<span class="ansi-blue-fg">[</span>Y<span class="ansi-blue-fg">==</span><span class="ansi-cyan-fg">1</span><span class="ansi-blue-fg">,</span> <span class="ansi-cyan-fg">0</span><span class="ansi-blue-fg">]</span><span class="ansi-blue-fg">,</span> X<span class="ansi-blue-fg">[</span>Y<span class="ansi-blue-fg">==</span><span class="ansi-cyan-fg">1</span><span class="ansi-blue-fg">,</span> <span class="ansi-cyan-fg">1</span><span class="ansi-blue-fg">]</span><span class="ansi-blue-fg">,</span> color<span class="ansi-blue-fg">=</span><span class="ansi-blue-fg">&#39;r&#39;</span><span class="ansi-blue-fg">)</span>
-
-<span class="ansi-red-fg">KeyError</span>: &#39;out&#39;
+/home/wiecki/miniconda3/lib/python3.5/site-packages/statsmodels/nonparametric/kdetools.py:20: VisibleDeprecationWarning: using a non-integer number instead of an integer will result in an error in the future
+  y = X[:m/2+1] + np.r_[0,X[m/2+1:],0]*1j
 </pre></div></div>
 </div>
 <div class="nboutput container">
-<div class="container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>Out[9]:
+</pre></div>
 </div>
-<div class="container">
-<img alt="../_images/notebooks_svgd_test_21_1.png" src="../_images/notebooks_svgd_test_21_1.png" />
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>&lt;matplotlib.legend.Legend at 0x7fe2bc12cac8&gt;
+</pre></div>
 </div>
 </div>
 <div class="nboutput nblast container">
 <div class="container">
 </div>
-<div class="stderr container">
-<div class="highlight"><pre>
-
-</pre></div></div>
-</div>
-</div>
-<div class="section" id="Uncertainty-in-predicted-value">
-<h2>Uncertainty in predicted value<a class="headerlink" href="#Uncertainty-in-predicted-value" title="Permalink to this headline">¶</a></h2>
-<p>So far, everything I showed we could have done with a non-Bayesian
-Neural Network. The mean of the posterior predictive for each
-class-label should be identical to maximum likelihood predicted values.
-However, we can also look at the standard deviation of the posterior
-predictive to get a sense for the uncertainty in our predictions. Here
-is what that looks like:</p>
-<div class="nbinput nblast container">
-<div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [ ]:
-</pre></div>
-</div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span><span class="n">cmap</span> <span class="o">=</span> <span class="n">sns</span><span class="o">.</span><span class="n">cubehelix_palette</span><span class="p">(</span><span class="n">light</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">as_cmap</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
-<span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="mi">6</span><span class="p">))</span>
-<span class="n">contour</span> <span class="o">=</span> <span class="n">ax</span><span class="o">.</span><span class="n">contourf</span><span class="p">(</span><span class="o">*</span><span class="n">grid</span><span class="p">,</span> <span class="n">ppc</span><span class="p">[</span><span class="s1">&#39;out&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">std</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="mi">100</span><span class="p">,</span> <span class="mi">100</span><span class="p">),</span> <span class="n">cmap</span><span class="o">=</span><span class="n">cmap</span><span class="p">)</span>
-<span class="n">ax</span><span class="o">.</span><span class="n">scatter</span><span class="p">(</span><span class="n">X</span><span class="p">[</span><span class="n">Y</span><span class="o">==</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span> <span class="n">X</span><span class="p">[</span><span class="n">Y</span><span class="o">==</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">])</span>
-<span class="n">ax</span><span class="o">.</span><span class="n">scatter</span><span class="p">(</span><span class="n">X</span><span class="p">[</span><span class="n">Y</span><span class="o">==</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span> <span class="n">X</span><span class="p">[</span><span class="n">Y</span><span class="o">==</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">],</span> <span class="n">color</span><span class="o">=</span><span class="s1">&#39;r&#39;</span><span class="p">)</span>
-<span class="n">cbar</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">colorbar</span><span class="p">(</span><span class="n">contour</span><span class="p">,</span> <span class="n">ax</span><span class="o">=</span><span class="n">ax</span><span class="p">)</span>
-<span class="n">_</span> <span class="o">=</span> <span class="n">ax</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="n">xlim</span><span class="o">=</span><span class="p">(</span><span class="o">-</span><span class="mi">3</span><span class="p">,</span> <span class="mi">3</span><span class="p">),</span> <span class="n">ylim</span><span class="o">=</span><span class="p">(</span><span class="o">-</span><span class="mi">3</span><span class="p">,</span> <span class="mi">3</span><span class="p">),</span> <span class="n">xlabel</span><span class="o">=</span><span class="s1">&#39;X&#39;</span><span class="p">,</span> <span class="n">ylabel</span><span class="o">=</span><span class="s1">&#39;Y&#39;</span><span class="p">);</span>
-<span class="n">cbar</span><span class="o">.</span><span class="n">ax</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="s1">&#39;Uncertainty (posterior predictive standard deviation)&#39;</span><span class="p">);</span>
-</pre></div>
-</div>
-</div>
-<p>We can see that very close to the decision boundary, our uncertainty as
-to which label to predict is highest. You can imagine that associating
-predictions with uncertainty is a critical property for many
-applications like health care. To further maximize accuracy, we might
-want to train the model primarily on samples from that high-uncertainty
-region.</p>
-</div>
-</div>
-<div class="section" id="Mini-batch-ADVI:-Scaling-data-size">
-<h1>Mini-batch ADVI: Scaling data size<a class="headerlink" href="#Mini-batch-ADVI:-Scaling-data-size" title="Permalink to this headline">¶</a></h1>
-<p>So far, we have trained our model on all data at once. Obviously this
-won&#8217;t scale to something like ImageNet. Moreover, training on
-mini-batches of data (stochastic gradient descent) avoids local minima
-and can lead to faster convergence.</p>
-<p>Fortunately, ADVI can be run on mini-batches as well. It just requires
-some setting up:</p>
-<div class="nbinput nblast container">
-<div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [ ]:
-</pre></div>
-</div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span><span class="c1"># Set back to original data to retrain</span>
-<span class="n">ann_input</span><span class="o">.</span><span class="n">set_value</span><span class="p">(</span><span class="n">X_train</span><span class="p">)</span>
-<span class="n">ann_output</span><span class="o">.</span><span class="n">set_value</span><span class="p">(</span><span class="n">Y_train</span><span class="p">)</span>
-
-<span class="c1"># Tensors and RV that will be using mini-batches</span>
-<span class="n">minibatch_tensors</span> <span class="o">=</span> <span class="p">[</span><span class="n">ann_input</span><span class="p">,</span> <span class="n">ann_output</span><span class="p">]</span>
-<span class="n">minibatch_RVs</span> <span class="o">=</span> <span class="p">[</span><span class="n">out</span><span class="p">]</span>
-
-<span class="c1"># Generator that returns mini-batches in each iteration</span>
-<span class="k">def</span> <span class="nf">create_minibatch</span><span class="p">(</span><span class="n">data</span><span class="p">):</span>
-    <span class="n">rng</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">RandomState</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
-
-    <span class="k">while</span> <span class="bp">True</span><span class="p">:</span>
-        <span class="c1"># Return random data samples of set size 100 each iteration</span>
-        <span class="n">ixs</span> <span class="o">=</span> <span class="n">rng</span><span class="o">.</span><span class="n">randint</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">data</span><span class="p">),</span> <span class="n">size</span><span class="o">=</span><span class="mi">50</span><span class="p">)</span>
-        <span class="k">yield</span> <span class="n">data</span><span class="p">[</span><span class="n">ixs</span><span class="p">]</span>
-
-<span class="n">minibatches</span> <span class="o">=</span> <span class="nb">zip</span><span class="p">(</span>
-    <span class="n">create_minibatch</span><span class="p">(</span><span class="n">X_train</span><span class="p">),</span>
-    <span class="n">create_minibatch</span><span class="p">(</span><span class="n">Y_train</span><span class="p">),</span>
-<span class="p">)</span>
-
-<span class="n">total_size</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">Y_train</span><span class="p">)</span>
-</pre></div>
-</div>
+<div class="container">
+<img alt="../_images/notebooks_svgd_test_15_2.png" src="../_images/notebooks_svgd_test_15_2.png" />
 </div>
 </div>
 
@@ -940,7 +743,7 @@ some setting up:</p>
     <script type="text/javascript">
         var DOCUMENTATION_OPTIONS = {
             URL_ROOT:'../',
-            VERSION:'3.0.rc4',
+            VERSION:'3.0',
             COLLAPSE_INDEX:false,
             FILE_SUFFIX:'.html',
             HAS_SOURCE:  true

@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>GLM: Robust Regression with Outlier Detection &mdash; PyMC3 3.0.rc4 documentation</title>
+  <title>GLM: Robust Regression with Outlier Detection &mdash; PyMC3 3.0 documentation</title>
   
 
   
@@ -33,7 +33,7 @@
         <link rel="index" title="Index"
               href="../genindex.html"/>
         <link rel="search" title="Search" href="../search.html"/>
-    <link rel="top" title="PyMC3 3.0.rc4 documentation" href="../index.html"/>
+    <link rel="top" title="PyMC3 3.0 documentation" href="../index.html"/>
         <link rel="up" title="Examples" href="../examples.html"/>
         <link rel="next" title="GLM: Model Selection" href="GLM-model-selection.html"/>
         <link rel="prev" title="GLM: Robust Linear Regression" href="GLM-robust.html"/> 
@@ -149,7 +149,7 @@
       <li class="wy-breadcrumbs-aside">
         
           
-            <a href="../_sources/notebooks/GLM-robust-with-outlier-detection.txt" rel="nofollow"> View page source</a>
+            <a href="../_sources/notebooks/GLM-robust-with-outlier-detection.ipynb.txt" rel="nofollow"> View page source</a>
           
         
       </li>
@@ -513,9 +513,9 @@ line</li>
 <p>where:</p>
 <div class="line-block">
 <div class="line"><span class="math">\(\beta\)</span> = coefs = <span class="math">\(\{1, \beta_{j \in X_{j}}\}\)</span></div>
-<div class="line"><span class="math">\(\sigma\)</span> = the measured error in <span class="math">\(y\)</span> in the dataset
-<code class="docutils literal"><span class="pre">sigma_y</span></code></div>
+<div class="line"><span class="math">\(\sigma\)</span> = the measured error in <span class="math">\(y\)</span> in the dataset</div>
 </div>
+<p><code class="docutils literal"><span class="pre">sigma_y</span></code></p>
 <p><strong>NOTE:</strong> + We&#8217;re using a simple linear OLS model with Normally
 distributed priors so that it behaves like a ridge regression</p>
 <div class="nbinput nblast container">
@@ -720,9 +720,9 @@ inlier / outlier flags:</p>
 <div class="math">
 \mathcal{logL} = \sum_{i}^{i=N} log \left[ \frac{(1 - B_{i})}{\sqrt{2 \pi \sigma_{in}^{2}}} exp \left( - \frac{(x_{i} - \mu_{in})^{2}}{2\sigma_{in}^{2}} \right) \right] + \sum_{i}^{i=N} log \left[ \frac{B_{i}}{\sqrt{2 \pi (\sigma_{in}^{2} + \sigma_{out}^{2})}} exp \left( - \frac{(x_{i}- \mu_{out})^{2}}{2(\sigma_{in}^{2} + \sigma_{out}^{2})} \right) \right]</div><div class="line-block">
 <div class="line">where:</div>
-<div class="line"><span class="math">\(\bf{B}\)</span> is Bernoulli-distibuted
-<span class="math">\(B_{i} \in [0_{(inlier)},1_{(outlier)}]\)</span></div>
+<div class="line"><span class="math">\(\bf{B}\)</span> is Bernoulli-distibuted</div>
 </div>
+<p><span class="math">\(B_{i} \in [0_{(inlier)},1_{(outlier)}]\)</span></p>
 <div class="nbinput nblast container">
 <div class="highlight-none"><div class="highlight"><pre>
 <span></span>In [10]:
@@ -1065,7 +1065,7 @@ estimate.</li>
     <script type="text/javascript">
         var DOCUMENTATION_OPTIONS = {
             URL_ROOT:'../',
-            VERSION:'3.0.rc4',
+            VERSION:'3.0',
             COLLAPSE_INDEX:false,
             FILE_SUFFIX:'.html',
             HAS_SOURCE:  true

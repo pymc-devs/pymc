@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>Welcome to PyMC3’s documentation! &mdash; PyMC3 3.0.rc4 documentation</title>
+  <title>Welcome to PyMC3’s documentation! &mdash; PyMC3 3.0 documentation</title>
   
 
   
@@ -33,7 +33,7 @@
         <link rel="index" title="Index"
               href="genindex.html"/>
         <link rel="search" title="Search" href="search.html"/>
-    <link rel="top" title="PyMC3 3.0.rc4 documentation" href="#"/>
+    <link rel="top" title="PyMC3 3.0 documentation" href="#"/>
         <link rel="next" title="Getting started" href="getting_started.html"/> 
 
   
@@ -121,7 +121,7 @@
       <li class="wy-breadcrumbs-aside">
         
           
-            <a href="_sources/index.txt" rel="nofollow"> View page source</a>
+            <a href="_sources/index.rst.txt" rel="nofollow"> View page source</a>
           
         
       </li>
@@ -169,8 +169,8 @@
 <h1>Welcome to PyMC3&#8217;s documentation!<a class="headerlink" href="#welcome-to-pymc3-s-documentation" title="Permalink to this headline">¶</a></h1>
 <img alt="PyMC3 logo" class="align-center" src="https://github.com/pymc-devs/pymc3/blob/master/docs/pymc3_logo.jpg?raw=true" />
 <p><a class="reference external" href="https://gitter.im/pymc-devs/pymc?utm_source=badge&amp;utm_medium=badge&amp;utm_campaign=pr-badge&amp;utm_content=badge"><img alt="Gitter" src="https://badges.gitter.im/Join%20Chat.svg" /></a> <a class="reference external" href="https://travis-ci.org/pymc-devs/pymc3"><img alt="Build Status" src="https://travis-ci.org/pymc-devs/pymc3.png?branch=master" /></a> <a class="reference external" href="https://coveralls.io/github/pymc-devs/pymc3?branch=master"><img alt="Coverage" src="https://coveralls.io/repos/github/pymc-devs/pymc3/badge.svg?branch=master" /></a></p>
-<p>PyMC3 is a python module for Bayesian statistical modeling and model
-fitting which focuses on advanced Markov chain Monte Carlo and variational fitting
+<p>PyMC3 is a Python package for Bayesian statistical modeling and Probabilistic Machine Learning
+which focuses on advanced Markov chain Monte Carlo and variational fitting
 algorithms. Its flexibility and extensibility make it applicable to a
 large suite of problems.</p>
 <p>Check out the <a class="reference external" href="http://pymc-devs.github.io/pymc3/notebooks/getting_started.html">getting started
@@ -179,7 +179,7 @@ guide</a>!</p>
 <h2>Features<a class="headerlink" href="#features" title="Permalink to this headline">¶</a></h2>
 <ul>
 <li><p class="first">Intuitive model specification syntax, for example, <code class="docutils literal"><span class="pre">x</span> <span class="pre">~</span> <span class="pre">N(0,1)</span></code>
-translates to <code class="docutils literal"><span class="pre">x</span> <span class="pre">=</span> <span class="pre">Normal(0,1)</span></code></p>
+translates to <code class="docutils literal"><span class="pre">x</span> <span class="pre">=</span> <span class="pre">Normal('x',0,1)</span></code></p>
 </li>
 <li><p class="first"><strong>Powerful sampling algorithms</strong>, such as the <a class="reference external" href="http://arxiv.org/abs/1111.4246">No U-Turn
 Sampler</a>, allow complex models
@@ -190,14 +190,12 @@ fitting algorithms.</p>
 for fast approximate posterior estimation as well as mini-batch ADVI
 for large data sets.</p>
 </li>
-<li><p class="first">Easy optimization for finding the <em>maximum a posteriori</em> (MAP) point</p>
-</li>
 <li><dl class="first docutils">
 <dt>Relies on <a class="reference external" href="http://deeplearning.net/software/theano/">Theano</a> which provides:</dt>
 <dd><ul class="first last simple">
+<li>Computation optimization and dynamic C compilation</li>
 <li>Numpy broadcasting and advanced indexing</li>
 <li>Linear algebra operators</li>
-<li>Computation optimization and dynamic C compilation</li>
 <li>Simple extensibility</li>
 </ul>
 </dd>
@@ -223,6 +221,7 @@ PyMC3</a></li>
 Analysis&#8221; by John
 Kruschke</a></li>
 <li><a class="reference external" href="http://adsabs.harvard.edu/abs/2016arXiv160700379C">Coyle P. (2016) Probabilistic programming and PyMC3. European Scientific Python Conference 2015 (Cambridge, UK)</a></li>
+<li><a class="reference external" href="https://www.packtpub.com/big-data-and-business-intelligence/bayesian-analysis-python">Bayesian Analysis with Python by Osvaldo Martin</a></li>
 </ul>
 </div>
 <div class="section" id="installation">
@@ -256,7 +255,7 @@ your system, you can install PyMC3 directly from GitHub.</p>
 </div>
 <div class="section" id="dependencies">
 <h2>Dependencies<a class="headerlink" href="#dependencies" title="Permalink to this headline">¶</a></h2>
-<p>PyMC3 is tested on Python 2.7 and 3.5 and depends on Theano, NumPy,
+<p>PyMC3 is tested on Python 2.7 and 3.6 and depends on Theano, NumPy,
 SciPy, Pandas, and Matplotlib (see <code class="docutils literal"><span class="pre">requirements.txt</span></code> for version
 information).</p>
 <div class="section" id="optional">
@@ -277,6 +276,23 @@ in Python using PyMC3. PeerJ Computer Science 2:e55
 <h2>License<a class="headerlink" href="#license" title="Permalink to this headline">¶</a></h2>
 <p><a class="reference external" href="https://github.com/pymc-devs/pymc3/blob/master/LICENSE">Apache License, Version
 2.0</a></p>
+</div>
+<div class="section" id="software-using-pymc3">
+<h2>Software using PyMC3<a class="headerlink" href="#software-using-pymc3" title="Permalink to this headline">¶</a></h2>
+<blockquote>
+<div><ul class="simple">
+<li><a class="reference external" href="https://github.com/bambinos/bambi">Bambi</a>: BAyesian Model-Building Interface (BAMBI) in Python.</li>
+<li><a class="reference external" href="https://github.com/PsychoinformaticsLab/nipymc">NiPyMC</a>: Bayesian mixed-effects modeling of fMRI data in Python.</li>
+<li><a class="reference external" href="https://github.com/ferrine/gelato">gelato</a>: Bayesian Neural Networks with PyMC3 and Lasagne.</li>
+<li><a class="reference external" href="https://github.com/hvasbath/beat">beat</a>: Bayesian Earthquake Analysis Tool.</li>
+<li><a class="reference external" href="https://github.com/blei-lab/edward">Edward</a>: A library for probabilistic modeling, inference, and criticism.</li>
+</ul>
+</div></blockquote>
+<p>Please contact us if your software is not listed here.</p>
+</div>
+<div class="section" id="papers-citing-pymc3">
+<h2>Papers citing PyMC3<a class="headerlink" href="#papers-citing-pymc3" title="Permalink to this headline">¶</a></h2>
+<p>See <a class="reference external" href="https://scholar.google.de/scholar?oi=bibs&amp;hl=en&amp;authuser=1&amp;cites=6936955228135731011">Google Scholar</a> for a continuously updated list.</p>
 </div>
 <div class="section" id="contributors">
 <h2>Contributors<a class="headerlink" href="#contributors" title="Permalink to this headline">¶</a></h2>
@@ -321,6 +337,7 @@ page</a></p>
 <li class="toctree-l3"><a class="reference internal" href="notebooks/rugby_analytics.html">A Hierarchical model for Rugby prediction</a></li>
 <li class="toctree-l3"><a class="reference internal" href="notebooks/survival_analysis.html">Bayesian Survival Analysis</a></li>
 <li class="toctree-l3"><a class="reference internal" href="notebooks/GP-smoothing.html">Gaussian Process (GP) smoothing</a></li>
+<li class="toctree-l3"><a class="reference internal" href="notebooks/dawid-skene.html">The Dawid-Skene model with priors</a></li>
 </ul>
 </li>
 <li class="toctree-l2"><a class="reference internal" href="examples.html#glm">GLM</a><ul>
@@ -339,6 +356,7 @@ page</a></p>
 <li class="toctree-l3"><a class="reference internal" href="notebooks/marginalized_gaussian_mixture_model.html">Marginalized Gaussian Mixture Model</a></li>
 <li class="toctree-l3"><a class="reference internal" href="notebooks/gaussian-mixture-model-advi.html">Gaussian Mixture Model with ADVI</a></li>
 <li class="toctree-l3"><a class="reference internal" href="notebooks/dp_mix.html">Dirichlet process mixtures for density estimation</a></li>
+<li class="toctree-l3"><a class="reference internal" href="notebooks/dependent_density_regression.html">Dependent density regression</a></li>
 </ul>
 </li>
 <li class="toctree-l2"><a class="reference internal" href="examples.html#advi">ADVI</a><ul>
@@ -436,7 +454,7 @@ page</a></p>
     <script type="text/javascript">
         var DOCUMENTATION_OPTIONS = {
             URL_ROOT:'./',
-            VERSION:'3.0.rc4',
+            VERSION:'3.0',
             COLLAPSE_INDEX:false,
             FILE_SUFFIX:'.html',
             HAS_SOURCE:  true

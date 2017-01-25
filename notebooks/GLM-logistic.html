@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>GLM: Logistic Regression &mdash; PyMC3 3.0.rc4 documentation</title>
+  <title>GLM: Logistic Regression &mdash; PyMC3 3.0 documentation</title>
   
 
   
@@ -33,7 +33,7 @@
         <link rel="index" title="Index"
               href="../genindex.html"/>
         <link rel="search" title="Search" href="../search.html"/>
-    <link rel="top" title="PyMC3 3.0.rc4 documentation" href="../index.html"/> 
+    <link rel="top" title="PyMC3 3.0 documentation" href="../index.html"/> 
 
   
   <script src="../_static/js/modernizr.min.js"></script>
@@ -120,7 +120,7 @@
       <li class="wy-breadcrumbs-aside">
         
           
-            <a href="../_sources/notebooks/GLM-logistic.txt" rel="nofollow"> View page source</a>
+            <a href="../_sources/notebooks/GLM-logistic.ipynb.txt" rel="nofollow"> View page source</a>
           
         
       </li>
@@ -2848,13 +2848,12 @@ want to know the posterior probability distribution of the parameters
 likelihood</p>
 <div class="math">
 \[p(\theta | D) = \frac{p(D|\theta)p(\theta)}{p(D)}\]</div>
-<p>Because the denominator is a notoriously difficult integral, $p(D) =
-<a href="#id1"><span class="problematic" id="id2">:raw-latex:`\int `p(D \| :raw-latex:`</span></a>theta`) p(<a href="#id3"><span class="problematic" id="id4">:raw-latex:`\theta`</span></a>) d
-:raw-latex:<a href="#id5"><span class="problematic" id="id6">`</span></a>theta <a href="#id7"><span class="problematic" id="id8">`</span></a>$ we would prefer to skip computing it. Fortunately,
-if we draw examples from the parameter space, with probability
-proportional to the height of the posterior at any given point, we end
-up with an empirical distribution that converges to the posterior as the
-number of samples approaches infinity.</p>
+<p>Because the denominator is a notoriously difficult integral,
+:math:<a href="#id1"><span class="problematic" id="id2">`</span></a>p(D) = int p(D | theta) p(theta) d theta ` we would prefer to
+skip computing it. Fortunately, if we draw examples from the parameter
+space, with probability proportional to the height of the posterior at
+any given point, we end up with an empirical distribution that converges
+to the posterior as the number of samples approaches infinity.</p>
 <p>What this means in practice is that we only need to worry about the
 numerator.</p>
 <p>Getting back to logistic regression, we need to specify a prior and a
@@ -3348,7 +3347,7 @@ Which is another model selection technique.</p>
     <script type="text/javascript">
         var DOCUMENTATION_OPTIONS = {
             URL_ROOT:'../',
-            VERSION:'3.0.rc4',
+            VERSION:'3.0',
             COLLAPSE_INDEX:false,
             FILE_SUFFIX:'.html',
             HAS_SOURCE:  true

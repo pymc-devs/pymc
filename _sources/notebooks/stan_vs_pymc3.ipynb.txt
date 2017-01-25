@@ -1,0 +1,435 @@
+{
+ "cells": [
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "# STAN vs PyMC3: A biased comparison\n",
+    "\n",
+    "In this blog post I want to look at some differences between STAN and PyMC3. As a PyMC3 developer I expect this to be very biased towards making PyMC3 look favorable, in fact the idea is rather to highlight PyMC3's strengths, but I will try to be fair.\n",
+    "\n",
+    "Lets start with how amazing STAN is. It is carefully crafted, written in highly performant C++, a large user base,  and has introduced many revolutionary features that PyMC3 has been directly inspired by or just copied (NUTS, ADVI, auto-transforming of variables to name but a few). The developers are also the academics responsible for advancing a lot of the theory underlying the inference, so the newest developments will most likely be found in STAN (although not always). Moreover, the STAN developers have been very generous with their time and have been helping PyMC3 development on more than a few occasions.\n",
+    "\n",
+    "At the same time, I think PyMC3 has a few key advantages. These result mainly from being written to use `Theano`. Out of the gate, PyMC3 starts with autodiff, JIT compilation to C, powerful linear algebra support, as well as GPU support (although GPU support is still being worked on). All that without having to write a single line of C, C++, or CUDA code -- PyMC3's code base is 100% Python. \n",
+    "\n",
+    "Let's start with a few basic things:\n",
+    "\n",
+    "## Syntax\n",
+    "\n",
+    "STAN has a [DSL]() to write models that is heavily inspired by the BUGS language. With [PyStan] you can specify and fit models in Python but the model specification will have to be a string. \n",
+    "\n",
+    "PyMC3 allows you to build models and run inference in Python. The Random Variables are Theano expressions that can easily be linked together. This allows for more direct model interaction and easier debugging (although Theano can still give obscure error messages). Of course, this eternally marries PyMC3 to Python, whereas Stan has interfaces to all kind of different languages, including R, Julia and Mathematica. \n",
+    "\n",
+    "PyMC3 also has support for linear algebra which makes specification of multivariate models more succinct. I think this is a point that will become increasingly important as Probabilistic Programming and Machine Learning become more intertwined (more below). Lets look at a comparison:"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 1,
+   "metadata": {
+    "collapsed": true
+   },
+   "outputs": [],
+   "source": [
+    "%matplotlib inline\n",
+    "import numpy as np\n",
+    "import matplotlib.pyplot as plt\n",
+    "import seaborn as sns\n",
+    "sns.set()\n",
+    "\n",
+    "import pymc3 as pm\n",
+    "from pymc3 import Model, MvNormal, HalfCauchy, sample, traceplot, summary, find_MAP, NUTS, Deterministic\n",
+    "import theano.tensor as tt\n",
+    "from theano import shared\n",
+    "from theano.tensor.nlinalg import matrix_inverse"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "### Stan model"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 21,
+   "metadata": {
+    "collapsed": false
+   },
+   "outputs": [
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "INFO:pystan:COMPILING THE C++ CODE FOR MODEL TWOD_Gaussian_8707036eb327e6ea17b22c3520e0b826 NOW.\n",
+      "INFO:pystan:OS: linux, Python: 3.5.2 | packaged by conda-forge | (default, Jul 26 2016, 01:32:08) \n",
+      "[GCC 4.8.2 20140120 (Red Hat 4.8.2-15)], Cython 0.25.2\n"
+     ]
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "STAN model:\n",
+      "\n",
+      "parameters {\n",
+      "  vector[2] z;\n",
+      "}\n",
+      "\n",
+      "model {\n",
+      "  matrix[2,2] sigma;\n",
+      "  vector[2] mu;\n",
+      "\n",
+      "  mu[1] <- 0.0;\n",
+      "  mu[2] <- 3.0;\n",
+      "  sigma[1][1] <- 1.0 * 1.0;\n",
+      "  sigma[1][2] <- 0.5 * 1.0 * 2.0;\n",
+      "  sigma[2][1] <- 0.5 * 1.0 * 2.0;\n",
+      "  sigma[2][2] <- 2.0 * 2.0;\n",
+      "\n",
+      "  z ~ multi_normal(mu, sigma);\n",
+      "}\n",
+      "Compiling /tmp/tmpbj0pzf8r/pystan/stanfit4TWOD_Gaussian_8707036eb327e6ea17b22c3520e0b826_837be8edbd6148dc9f2b60214f8363ea.pyx because it changed.\n",
+      "[1/1] Cythonizing /tmp/tmpbj0pzf8r/pystan/stanfit4TWOD_Gaussian_8707036eb327e6ea17b22c3520e0b826_837be8edbd6148dc9f2b60214f8363ea.pyx\n",
+      "building 'stanfit4TWOD_Gaussian_8707036eb327e6ea17b22c3520e0b826_837be8edbd6148dc9f2b60214f8363ea' extension\n",
+      "C compiler: gcc -pthread -Wno-unused-result -Wsign-compare -DNDEBUG -g -fwrapv -O3 -Wall -Wstrict-prototypes -fPIC\n",
+      "\n",
+      "creating /tmp/tmpbj0pzf8r/pystan/tmp\n",
+      "creating /tmp/tmpbj0pzf8r/pystan/tmp/tmpbj0pzf8r\n",
+      "creating /tmp/tmpbj0pzf8r/pystan/tmp/tmpbj0pzf8r/pystan\n",
+      "compile options: '-DBOOST_RESULT_OF_USE_TR1 -DBOOST_NO_DECLTYPE -DBOOST_DISABLE_ASSERTS -DEIGEN_NO_DEBUG -I/tmp/tmpbj0pzf8r/pystan -I/home/wiecki/miniconda3/lib/python3.5/site-packages/pystan -I/home/wiecki/miniconda3/lib/python3.5/site-packages/pystan/stan/src -I/home/wiecki/miniconda3/lib/python3.5/site-packages/pystan/stan/lib/stan_math_2.8.0 -I/home/wiecki/miniconda3/lib/python3.5/site-packages/pystan/stan/lib/stan_math_2.8.0/lib/eigen_3.2.4 -I/home/wiecki/miniconda3/lib/python3.5/site-packages/pystan/stan/lib/stan_math_2.8.0/lib/boost_1.58.0 -I/home/wiecki/miniconda3/lib/python3.5/site-packages/numpy/core/include -I/home/wiecki/miniconda3/include/python3.5m -c'\n",
+      "extra options: '-O0 -ftemplate-depth-256 -Wno-unused-function -Wno-uninitialized'\n",
+      "Warning: Can't read registry to find the necessary compiler setting\n",
+      "Make sure that Python modules winreg, win32api or win32con are installed.\n",
+      "gcc: /tmp/tmpbj0pzf8r/pystan/stanfit4TWOD_Gaussian_8707036eb327e6ea17b22c3520e0b826_837be8edbd6148dc9f2b60214f8363ea.cpp\n",
+      "g++ -pthread -shared -L/home/wiecki/miniconda3/lib -Wl,-rpath=/home/wiecki/miniconda3/lib,--no-as-needed /tmp/tmpbj0pzf8r/pystan/tmp/tmpbj0pzf8r/pystan/stanfit4TWOD_Gaussian_8707036eb327e6ea17b22c3520e0b826_837be8edbd6148dc9f2b60214f8363ea.o -L/home/wiecki/miniconda3/lib -lpython3.5m -o /tmp/tmpbj0pzf8r/pystan/stanfit4TWOD_Gaussian_8707036eb327e6ea17b22c3520e0b826_837be8edbd6148dc9f2b60214f8363ea.cpython-35m-x86_64-linux-gnu.so\n"
+     ]
+    },
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "/home/wiecki/miniconda3/lib/python3.5/multiprocessing/reduction.py:50: UserWarning: Pickling fit objects is an experimental feature!\n",
+      "The relevant StanModel instance must be pickled along with this fit object.\n",
+      "When unpickling the StanModel must be unpickled first.\n",
+      "  cls(buf, protocol).dump(obj)\n",
+      "/home/wiecki/miniconda3/lib/python3.5/multiprocessing/reduction.py:50: UserWarning: Pickling fit objects is an experimental feature!\n",
+      "The relevant StanModel instance must be pickled along with this fit object.\n",
+      "When unpickling the StanModel must be unpickled first.\n",
+      "  cls(buf, protocol).dump(obj)\n",
+      "/home/wiecki/miniconda3/lib/python3.5/multiprocessing/reduction.py:50: UserWarning: Pickling fit objects is an experimental feature!\n",
+      "The relevant StanModel instance must be pickled along with this fit object.\n",
+      "When unpickling the StanModel must be unpickled first.\n",
+      "  cls(buf, protocol).dump(obj)\n",
+      "/home/wiecki/miniconda3/lib/python3.5/multiprocessing/reduction.py:50: UserWarning: Pickling fit objects is an experimental feature!\n",
+      "The relevant StanModel instance must be pickled along with this fit object.\n",
+      "When unpickling the StanModel must be unpickled first.\n",
+      "  cls(buf, protocol).dump(obj)\n"
+     ]
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      " \n",
+      "pystan version: 2.8.0.0\n",
+      "algorithm: NUTS\n",
+      "Inference for Stan model: TWOD_Gaussian_8707036eb327e6ea17b22c3520e0b826.\n",
+      "4 chains, each with iter=1000000; warmup=100000; thin=1; \n",
+      "post-warmup draws per chain=900000, total post-warmup draws=3600000.\n",
+      "\n",
+      "       mean se_mean     sd   2.5%    25%    50%    75%  97.5%  n_eff   Rhat\n",
+      "z[0] 3.3e-4  5.3e-4    1.0  -1.96  -0.68-3.7e-4   0.68   1.96  3.6e6    1.0\n",
+      "z[1]    3.0  1.1e-3    2.0  -0.92   1.65    3.0   4.35   6.91  3.6e6    1.0\n",
+      "lp__  -1.55  5.3e-4    1.0  -4.23  -1.93  -1.24  -0.84  -0.57  3.6e6    1.0\n",
+      "\n",
+      "Samples were drawn using NUTS(diag_e) at Tue Jan  3 12:57:40 2017.\n",
+      "For each parameter, n_eff is a crude measure of effective sample size,\n",
+      "and Rhat is the potential scale reduction factor on split chains (at \n",
+      "convergence, Rhat=1).\n",
+      "mean  : [  3.28211020e-04   2.99873327e+00]\n",
+      "stddev: [ 1.00078909  1.99983067]\n",
+      "corr  : 0.502617077448\n"
+     ]
+    }
+   ],
+   "source": [
+    "#!/usr/bin/env python\n",
+    "import numpy as np\n",
+    "import pystan\n",
+    "\n",
+    "# Define the model.\n",
+    "MU_X = 0.0\n",
+    "MU_Y = 3.0\n",
+    "SIGMA_X = 1.0\n",
+    "SIGMA_Y = 2.0\n",
+    "RHO = 0.5\n",
+    "\n",
+    "stan_model = \"\"\"\\\n",
+    "parameters {{\n",
+    "  vector[2] z;\n",
+    "}}\n",
+    "\n",
+    "model {{\n",
+    "  matrix[2,2] sigma;\n",
+    "  vector[2] mu;\n",
+    "\n",
+    "  mu[1] <- {MU_X};\n",
+    "  mu[2] <- {MU_Y};\n",
+    "  sigma[1][1] <- {SIGMA_X} * {SIGMA_X};\n",
+    "  sigma[1][2] <- {RHO} * {SIGMA_X} * {SIGMA_Y};\n",
+    "  sigma[2][1] <- {RHO} * {SIGMA_X} * {SIGMA_Y};\n",
+    "  sigma[2][2] <- {SIGMA_Y} * {SIGMA_Y};\n",
+    "\n",
+    "  z ~ multi_normal(mu, sigma);\n",
+    "}}\"\"\".format(MU_X=MU_X, MU_Y=MU_Y, SIGMA_X=SIGMA_X, SIGMA_Y=SIGMA_Y, RHO=RHO)\n",
+    "print(\"STAN model:\\n\\n%s\" % stan_model)\n",
+    "\n",
+    "# Compile it.\n",
+    "model = pystan.StanModel(model_code=stan_model, model_name='TWOD_Gaussian', verbose=True)\n",
+    "\n",
+    "# Sample\n",
+    "alg = 'NUTS'\n",
+    "rng = np.random.RandomState(seed=5678)\n",
+    "fit = model.sampling(warmup=100000,\n",
+    "                     iter=1000000,\n",
+    "                     verbose=True,\n",
+    "                     n_jobs=4,\n",
+    "                     chains=4,\n",
+    "                     seed=rng,\n",
+    "                     algorithm=alg)\n",
+    "\n",
+    "# Print stats.\n",
+    "print(' ')\n",
+    "print(\"pystan version:\", pystan.__version__)\n",
+    "print('algorithm:', alg)\n",
+    "print(fit)\n",
+    "z = fit.extract()['z']\n",
+    "print(\"mean  :\", np.mean(z, axis=0))\n",
+    "print(\"stddev:\", np.std(z, axis=0))\n",
+    "print(\"corr  :\", np.corrcoef(z.T)[0, 1])"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "### PyMC3 model"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 11,
+   "metadata": {
+    "collapsed": false
+   },
+   "outputs": [
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "Auto-assigning NUTS sampler...\n",
+      "Initializing NUTS using advi...\n",
+      "Average ELBO = -0.14799: 100%|██████████| 200000/200000 [00:06<00:00, 31373.94it/s]\n",
+      "Finished [100%]: Average ELBO = -0.1484\n",
+      "100%|██████████| 500000/500000 [01:54<00:00, 4383.12it/s]\n"
+     ]
+    }
+   ],
+   "source": [
+    "with pm.Model():\n",
+    "    pm.MvNormal('p', \n",
+    "                mu=np.array([MU_X, MU_Y]),\n",
+    "                cov=np.array([[SIGMA_X * SIGMA_X, RHO * SIGMA_X * SIGMA_Y],\n",
+    "                             [RHO * SIGMA_X * SIGMA_Y, SIGMA_Y * SIGMA_Y]]),\n",
+    "                shape=2,\n",
+    "                )\n",
+    "    \n",
+    "    trace = pm.sample(500000)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 18,
+   "metadata": {
+    "collapsed": false
+   },
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "\n",
+      "p:\n",
+      "\n",
+      "  Mean             SD               MC Error         95% HPD interval\n",
+      "  -------------------------------------------------------------------\n",
+      "  \n",
+      "  0.001            0.994            0.002            [-1.944, 1.963]\n",
+      "  2.996            1.990            0.004            [-0.847, 6.946]\n",
+      "\n",
+      "  Posterior quantiles:\n",
+      "  2.5            25             50             75             97.5\n",
+      "  |--------------|==============|==============|--------------|\n",
+      "  \n",
+      "  -1.955         -0.668         0.004          0.669          1.954\n",
+      "  -0.893         1.661          2.986          4.331          6.904\n",
+      "\n"
+     ]
+    }
+   ],
+   "source": [
+    "pm.summary(trace[10000::2]);"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 16,
+   "metadata": {
+    "collapsed": false
+   },
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "array([[ 1.        ,  0.50005014],\n",
+       "       [ 0.50005014,  1.        ]])"
+      ]
+     },
+     "execution_count": 16,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "np.corrcoef(trace['p'][10000::5, 0], trace['p'][10000::5, 1])"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## Speed"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## Missing Data"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 44,
+   "metadata": {
+    "collapsed": false
+   },
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "array([[[ 1.,  0.,  0.],\n",
+       "        [ 0.,  1.,  0.],\n",
+       "        [ 0.,  0.,  1.]],\n",
+       "\n",
+       "       [[ 1.,  0.,  0.],\n",
+       "        [ 0.,  1.,  0.],\n",
+       "        [ 0.,  0.,  1.]],\n",
+       "\n",
+       "       [[ 1.,  0.,  0.],\n",
+       "        [ 0.,  1.,  0.],\n",
+       "        [ 0.,  0.,  1.]],\n",
+       "\n",
+       "       [[ 1.,  0.,  0.],\n",
+       "        [ 0.,  1.,  0.],\n",
+       "        [ 0.,  0.,  1.]]])"
+      ]
+     },
+     "execution_count": 44,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "np.tile(np.eye(3), (4, 1, 1))"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 45,
+   "metadata": {
+    "collapsed": false
+   },
+   "outputs": [
+    {
+     "ename": "AssertionError",
+     "evalue": "",
+     "output_type": "error",
+     "traceback": [
+      "\u001b[0;31m---------------------------------------------------------------------------\u001b[0m",
+      "\u001b[0;31mAssertionError\u001b[0m                            Traceback (most recent call last)",
+      "\u001b[0;32m<ipython-input-45-87de70228624>\u001b[0m in \u001b[0;36m<module>\u001b[0;34m()\u001b[0m\n\u001b[1;32m      1\u001b[0m \u001b[0;32mwith\u001b[0m \u001b[0mpm\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mModel\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m:\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0;32m----> 2\u001b[0;31m     \u001b[0mf\u001b[0m \u001b[0;34m=\u001b[0m \u001b[0mpm\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mMvNormal\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0;34m'f'\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0mnp\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mtile\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0mnp\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mzeros\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0;36m3\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0;34m(\u001b[0m\u001b[0;36m4\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0;36m1\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0;36m1\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0mnp\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mtile\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0mnp\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0meye\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0;36m3\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0;34m(\u001b[0m\u001b[0;36m4\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0;36m1\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0;36m1\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0mshape\u001b[0m\u001b[0;34m=\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0;36m4\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0;36m3\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0m\u001b[1;32m      3\u001b[0m     \u001b[0mtrace\u001b[0m \u001b[0;34m=\u001b[0m \u001b[0mpm\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0msample\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0;36m5000\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n",
+      "\u001b[0;32m/home/wiecki/working/projects/pymc/pymc3/distributions/distribution.py\u001b[0m in \u001b[0;36m__new__\u001b[0;34m(cls, name, *args, **kwargs)\u001b[0m\n\u001b[1;32m     32\u001b[0m             \u001b[0mdata\u001b[0m \u001b[0;34m=\u001b[0m \u001b[0mkwargs\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mpop\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0;34m'observed'\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0;32mNone\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m     33\u001b[0m             \u001b[0mdist\u001b[0m \u001b[0;34m=\u001b[0m \u001b[0mcls\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mdist\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0;34m*\u001b[0m\u001b[0margs\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0;34m**\u001b[0m\u001b[0mkwargs\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0;32m---> 34\u001b[0;31m             \u001b[0;32mreturn\u001b[0m \u001b[0mmodel\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mVar\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0mname\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0mdist\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0mdata\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0m\u001b[1;32m     35\u001b[0m         \u001b[0;32melse\u001b[0m\u001b[0;34m:\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m     36\u001b[0m             \u001b[0;32mraise\u001b[0m \u001b[0mTypeError\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0;34m\"Name needs to be a string but got: %s\"\u001b[0m \u001b[0;34m%\u001b[0m \u001b[0mname\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n",
+      "\u001b[0;32m/home/wiecki/working/projects/pymc/pymc3/distributions/distribution.py\u001b[0m in \u001b[0;36mdist\u001b[0;34m(cls, *args, **kwargs)\u001b[0m\n\u001b[1;32m     43\u001b[0m         \u001b[0mdist\u001b[0m \u001b[0;34m=\u001b[0m \u001b[0mobject\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0m__new__\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0mcls\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m     44\u001b[0m         \u001b[0mdist\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0m__init__\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0;34m*\u001b[0m\u001b[0margs\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0;34m**\u001b[0m\u001b[0mkwargs\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0;32m---> 45\u001b[0;31m         \u001b[0;32mreturn\u001b[0m \u001b[0mdist\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0m\u001b[1;32m     46\u001b[0m \u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m     47\u001b[0m     \u001b[0;32mdef\u001b[0m \u001b[0m__init__\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0mself\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0mshape\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0mdtype\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0mtestval\u001b[0m\u001b[0;34m=\u001b[0m\u001b[0;32mNone\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0mdefaults\u001b[0m\u001b[0;34m=\u001b[0m\u001b[0;34m[\u001b[0m\u001b[0;34m]\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0mtransform\u001b[0m\u001b[0;34m=\u001b[0m\u001b[0;32mNone\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m:\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n",
+      "\u001b[0;32m/home/wiecki/working/projects/pymc/pymc3/distributions/multivariate.py\u001b[0m in \u001b[0;36m__init__\u001b[0;34m(self, mu, cov, tau, *args, **kwargs)\u001b[0m\n\u001b[1;32m     92\u001b[0m                       DeprecationWarning)\n\u001b[1;32m     93\u001b[0m         \u001b[0mself\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mmean\u001b[0m \u001b[0;34m=\u001b[0m \u001b[0mself\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mmedian\u001b[0m \u001b[0;34m=\u001b[0m \u001b[0mself\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mmode\u001b[0m \u001b[0;34m=\u001b[0m \u001b[0mself\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mmu\u001b[0m \u001b[0;34m=\u001b[0m \u001b[0mmu\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0;32m---> 94\u001b[0;31m         \u001b[0mself\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mtau\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0mself\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mcov\u001b[0m \u001b[0;34m=\u001b[0m \u001b[0mget_tau_cov\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0mmu\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0mtau\u001b[0m\u001b[0;34m=\u001b[0m\u001b[0mtau\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0mcov\u001b[0m\u001b[0;34m=\u001b[0m\u001b[0mcov\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0m\u001b[1;32m     95\u001b[0m \u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m     96\u001b[0m     \u001b[0;32mdef\u001b[0m \u001b[0mrandom\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0mself\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0mpoint\u001b[0m\u001b[0;34m=\u001b[0m\u001b[0;32mNone\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0msize\u001b[0m\u001b[0;34m=\u001b[0m\u001b[0;32mNone\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m:\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n",
+      "\u001b[0;32m/home/wiecki/working/projects/pymc/pymc3/distributions/multivariate.py\u001b[0m in \u001b[0;36mget_tau_cov\u001b[0;34m(mu, tau, cov)\u001b[0m\n\u001b[1;32m     49\u001b[0m             \u001b[0mtau\u001b[0m \u001b[0;34m=\u001b[0m \u001b[0mnp\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0meye\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0mlen\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0mmu\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m     50\u001b[0m         \u001b[0;32melse\u001b[0m\u001b[0;34m:\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0;32m---> 51\u001b[0;31m             \u001b[0mtau\u001b[0m \u001b[0;34m=\u001b[0m \u001b[0mtt\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mnlinalg\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mmatrix_inverse\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0mcov\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0m\u001b[1;32m     52\u001b[0m \u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m     53\u001b[0m     \u001b[0;32melse\u001b[0m\u001b[0;34m:\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n",
+      "\u001b[0;32m/home/wiecki/miniconda3/lib/python3.5/site-packages/theano/gof/op.py\u001b[0m in \u001b[0;36m__call__\u001b[0;34m(self, *inputs, **kwargs)\u001b[0m\n\u001b[1;32m    609\u001b[0m         \"\"\"\n\u001b[1;32m    610\u001b[0m         \u001b[0mreturn_list\u001b[0m \u001b[0;34m=\u001b[0m \u001b[0mkwargs\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mpop\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0;34m'return_list'\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0;32mFalse\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0;32m--> 611\u001b[0;31m         \u001b[0mnode\u001b[0m \u001b[0;34m=\u001b[0m \u001b[0mself\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mmake_node\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0;34m*\u001b[0m\u001b[0minputs\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0;34m**\u001b[0m\u001b[0mkwargs\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0m\u001b[1;32m    612\u001b[0m \u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m    613\u001b[0m         \u001b[0;32mif\u001b[0m \u001b[0mconfig\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mcompute_test_value\u001b[0m \u001b[0;34m!=\u001b[0m \u001b[0;34m'off'\u001b[0m\u001b[0;34m:\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n",
+      "\u001b[0;32m/home/wiecki/miniconda3/lib/python3.5/site-packages/theano/tensor/nlinalg.py\u001b[0m in \u001b[0;36mmake_node\u001b[0;34m(self, x)\u001b[0m\n\u001b[1;32m     71\u001b[0m     \u001b[0;32mdef\u001b[0m \u001b[0mmake_node\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0mself\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0mx\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m:\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m     72\u001b[0m         \u001b[0mx\u001b[0m \u001b[0;34m=\u001b[0m \u001b[0mas_tensor_variable\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0mx\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0;32m---> 73\u001b[0;31m         \u001b[0;32massert\u001b[0m \u001b[0mx\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mndim\u001b[0m \u001b[0;34m==\u001b[0m \u001b[0;36m2\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0m\u001b[1;32m     74\u001b[0m         \u001b[0;32mreturn\u001b[0m \u001b[0mApply\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0mself\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0;34m[\u001b[0m\u001b[0mx\u001b[0m\u001b[0;34m]\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0;34m[\u001b[0m\u001b[0mx\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mtype\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m]\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m     75\u001b[0m \u001b[0;34m\u001b[0m\u001b[0m\n",
+      "\u001b[0;31mAssertionError\u001b[0m: "
+     ]
+    }
+   ],
+   "source": [
+    "with pm.Model():\n",
+    "    f = pm.MvNormal('f', np.tile(np.zeros(3), (4, 1, 1)), np.tile(np.eye(3), (4, 1, 1)), shape=(4, 3))\n",
+    "    trace = pm.sample(5000)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 30,
+   "metadata": {
+    "collapsed": false
+   },
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "(5000, 4, 3)"
+      ]
+     },
+     "execution_count": 30,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "trace['f'].shape"
+   ]
+  }
+ ],
+ "metadata": {
+  "anaconda-cloud": {},
+  "kernelspec": {
+   "display_name": "Python [default]",
+   "language": "python",
+   "name": "python3"
+  },
+  "language_info": {
+   "codemirror_mode": {
+    "name": "ipython",
+    "version": 3
+   },
+   "file_extension": ".py",
+   "mimetype": "text/x-python",
+   "name": "python",
+   "nbconvert_exporter": "python",
+   "pygments_lexer": "ipython3",
+   "version": "3.5.2"
+  }
+ },
+ "nbformat": 4,
+ "nbformat_minor": 1
+}

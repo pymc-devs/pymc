@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>A Hierarchical model for Rugby prediction &mdash; PyMC3 3.0.rc4 documentation</title>
+  <title>A Hierarchical model for Rugby prediction &mdash; PyMC3 3.0 documentation</title>
   
 
   
@@ -33,7 +33,7 @@
         <link rel="index" title="Index"
               href="../genindex.html"/>
         <link rel="search" title="Search" href="../search.html"/>
-    <link rel="top" title="PyMC3 3.0.rc4 documentation" href="../index.html"/>
+    <link rel="top" title="PyMC3 3.0 documentation" href="../index.html"/>
         <link rel="up" title="Examples" href="../examples.html"/>
         <link rel="next" title="Bayesian Survival Analysis" href="survival_analysis.html"/>
         <link rel="prev" title="Stochastic Volatility model" href="stochastic_volatility.html"/> 
@@ -105,6 +105,7 @@
 </li>
 <li class="toctree-l3"><a class="reference internal" href="survival_analysis.html">Bayesian Survival Analysis</a></li>
 <li class="toctree-l3"><a class="reference internal" href="GP-smoothing.html">Gaussian Process (GP) smoothing</a></li>
+<li class="toctree-l3"><a class="reference internal" href="dawid-skene.html">The Dawid-Skene model with priors</a></li>
 </ul>
 </li>
 <li class="toctree-l2"><a class="reference internal" href="../examples.html#glm">GLM</a></li>
@@ -149,7 +150,7 @@
       <li class="wy-breadcrumbs-aside">
         
           
-            <a href="../_sources/notebooks/rugby_analytics.txt" rel="nofollow"> View page source</a>
+            <a href="../_sources/notebooks/rugby_analytics.ipynb.txt" rel="nofollow"> View page source</a>
           
         
       </li>
@@ -465,7 +466,7 @@ away team in the g-th game of the season (15 games) as <span class="math">\(y_{g
 and <span class="math">\(y_{g2}\)</span> respectively.</p>
 </p><p>The vector of observed counts <span class="math">\(\mathbb{y} = (y_{g1}, y_{g2})\)</span> is
 modelled as independent Poisson:
-<span class="math">\(y_{gi}| \theta_{gj} \tilde\;\; Poisson(\theta_{gj})\)</span> where the
+<span class="math">\(y_{gi}| \theta_{gj} \tilde\;\;  Poisson(\theta_{gj})\)</span> where the
 theta parameters represent the scoring intensity in the g-th game for
 the team playing at home (j=1) and away (j=2), respectively.</p>
 </p><p>We model these parameters according to a formulation that has been used
@@ -821,7 +822,7 @@ get some insight into how the variables are behaving.</p>
     <script type="text/javascript">
         var DOCUMENTATION_OPTIONS = {
             URL_ROOT:'../',
-            VERSION:'3.0.rc4',
+            VERSION:'3.0',
             COLLAPSE_INDEX:false,
             FILE_SUFFIX:'.html',
             HAS_SOURCE:  true

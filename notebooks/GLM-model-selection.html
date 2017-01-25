@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>GLM: Model Selection &mdash; PyMC3 3.0.rc4 documentation</title>
+  <title>GLM: Model Selection &mdash; PyMC3 3.0 documentation</title>
   
 
   
@@ -33,7 +33,7 @@
         <link rel="index" title="Index"
               href="../genindex.html"/>
         <link rel="search" title="Search" href="../search.html"/>
-    <link rel="top" title="PyMC3 3.0.rc4 documentation" href="../index.html"/>
+    <link rel="top" title="PyMC3 3.0 documentation" href="../index.html"/>
         <link rel="up" title="Examples" href="../examples.html"/>
         <link rel="next" title="Rolling Regression" href="GLM-rolling-regression.html"/>
         <link rel="prev" title="GLM: Robust Regression with Outlier Detection" href="GLM-robust-with-outlier-detection.html"/> 
@@ -153,7 +153,7 @@
       <li class="wy-breadcrumbs-aside">
         
           
-            <a href="../_sources/notebooks/GLM-model-selection.txt" rel="nofollow"> View page source</a>
+            <a href="../_sources/notebooks/GLM-model-selection.ipynb.txt" rel="nofollow"> View page source</a>
           
         
       </li>
@@ -370,9 +370,9 @@ for Evaluating Fitted Bayesian Models <a class="reference external" href="http:/
 Model</a></li>
 <li><a class="reference external" href="#Create-Higher-Order-Linear-Models">Create Higher-Order Linear
 Models</a></li>
-<li><a class="reference external" href="#Compare-Deviance-Information-Criterion-%5BDIC%5D">Compare Deviance Information Criterion
+<li><a class="reference external" href="#Compare-Deviance-Information-Criterion-[DIC]">Compare Deviance Information Criterion
 (DIC)</a></li>
-<li><a class="reference external" href="#Compare-Watanabe---Akaike-Information-Criterion-%5BWAIC%5D">Compare Watanabe-Akaike Information Criterion
+<li><a class="reference external" href="#Compare-Watanabe---Akaike-Information-Criterion-[WAIC]">Compare Watanabe-Akaike Information Criterion
 (WAIC)</a></li>
 </ul>
 <p><strong>Note:</strong></p>
@@ -660,9 +660,9 @@ possibilities of data we could generate.</p>
 \[y_{i} = a + bx_{i} + cx_{i}^{2} + \epsilon_{i}\]</div>
 <div class="line-block">
 <div class="line">where:</div>
-<div class="line"><span class="math">\(i \in n\)</span> datapoints
-<span class="math">\(\epsilon \sim \mathcal{N}(0,latent\_sigma\_y)\)</span></div>
+<div class="line"><span class="math">\(i \in n\)</span> datapoints</div>
 </div>
+<p><span class="math">\(\epsilon \sim \mathcal{N}(0,latent\_sigma\_y)\)</span></p>
 <p><strong>NOTE on outliers:</strong></p>
 <ul class="simple">
 <li>We can use value <code class="docutils literal"><span class="pre">p</span></code> to set the (approximate) proportion of
@@ -1519,7 +1519,7 @@ of the model grows beyond a few.</p>
     <script type="text/javascript">
         var DOCUMENTATION_OPTIONS = {
             URL_ROOT:'../',
-            VERSION:'3.0.rc4',
+            VERSION:'3.0',
             COLLAPSE_INDEX:false,
             FILE_SUFFIX:'.html',
             HAS_SOURCE:  true

@@ -1,0 +1,748 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>The Dawid-Skene model with priors &mdash; PyMC3 3.0 documentation</title>
+  
+
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  
+  
+    <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  
+
+  
+
+  
+        <link rel="index" title="Index"
+              href="../genindex.html"/>
+        <link rel="search" title="Search" href="../search.html"/>
+    <link rel="top" title="PyMC3 3.0 documentation" href="../index.html"/>
+        <link rel="up" title="Examples" href="../examples.html"/>
+        <link rel="next" title="GLM: Linear regression" href="GLM-linear.html"/>
+        <link rel="prev" title="Gaussian Process (GP) smoothing" href="GP-smoothing.html"/> 
+
+  
+  <script src="../_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+          
+            <a href="../index.html" class="icon icon-home"> PyMC3
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                3.0
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+                <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../getting_started.html">Getting started</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="../examples.html">Examples</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="../examples.html#howto">Howto</a></li>
+<li class="toctree-l2 current"><a class="reference internal" href="../examples.html#applied">Applied</a><ul class="current">
+<li class="toctree-l3"><a class="reference internal" href="BEST.html">Bayesian Estimation Supersedes the T-Test</a></li>
+<li class="toctree-l3"><a class="reference internal" href="stochastic_volatility.html">Stochastic Volatility model</a></li>
+<li class="toctree-l3"><a class="reference internal" href="rugby_analytics.html">A Hierarchical model for Rugby prediction</a></li>
+<li class="toctree-l3"><a class="reference internal" href="survival_analysis.html">Bayesian Survival Analysis</a></li>
+<li class="toctree-l3"><a class="reference internal" href="GP-smoothing.html">Gaussian Process (GP) smoothing</a></li>
+<li class="toctree-l3 current"><a class="current reference internal" href="#">The Dawid-Skene model with priors</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#Introduction">Introduction</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#Data">Data</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#Model">Model</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#Results">Results</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../examples.html#glm">GLM</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../examples.html#mixture-models">Mixture Models</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../examples.html#advi">ADVI</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../api.html">API Reference</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+        <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+        <a href="../index.html">PyMC3</a>
+      </nav>
+
+
+      
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          
+
+ 
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="../index.html">Docs</a> &raquo;</li>
+      
+          <li><a href="../examples.html">Examples</a> &raquo;</li>
+      
+    <li>The Dawid-Skene model with priors</li>
+      <li class="wy-breadcrumbs-aside">
+        
+          
+            <a href="../_sources/notebooks/dawid-skene.ipynb.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  
+<style>
+/* CSS for nbsphinx extension */
+
+/* remove conflicting styling from Sphinx themes */
+div.nbinput,
+div.nbinput > div,
+div.nbinput div[class^=highlight],
+div.nbinput div[class^=highlight] pre,
+div.nboutput,
+div.nboutput > div,
+div.nboutput div[class^=highlight],
+div.nboutput div[class^=highlight] pre {
+    background: none;
+    border: none;
+    padding: 0 0;
+    margin: 0;
+    box-shadow: none;
+}
+
+/* avoid gaps between output lines */
+div.nboutput div[class^=highlight] pre {
+    line-height: normal;
+}
+
+/* input/output containers */
+div.nbinput,
+div.nboutput {
+    display: -webkit-flex;
+    display: flex;
+    align-items: flex-start;
+    margin: 0;
+}
+
+/* input container */
+div.nbinput {
+    padding-top: 5px;
+}
+
+/* last container */
+div.nblast {
+    padding-bottom: 5px;
+}
+
+/* input prompt */
+div.nbinput > :first-child pre {
+    color: #303F9F;
+}
+
+/* output prompt */
+div.nboutput > :first-child pre {
+    color: #D84315;
+}
+
+/* all prompts */
+div.nbinput > :first-child[class^=highlight],
+div.nboutput > :first-child[class^=highlight],
+div.nboutput > :first-child {
+    min-width: 8ex;
+    padding-top: 0.4em;
+    padding-right: 0.4em;
+    text-align: right;
+    flex: 0;
+}
+
+/* input/output area */
+div.nbinput > :nth-child(2)[class^=highlight],
+div.nboutput > :nth-child(2),
+div.nboutput > :nth-child(2)[class^=highlight] {
+    padding: 0.4em;
+    -webkit-flex: 1;
+    flex: 1;
+    overflow: auto;
+}
+
+/* input area */
+div.nbinput > :nth-child(2)[class^=highlight] {
+    border: 1px solid #cfcfcf;
+    border-radius: 2px;
+    background: #f7f7f7;
+}
+
+/* override MathJax center alignment in output cells */
+div.nboutput div[class*=MathJax] {
+    text-align: left !important;
+}
+
+/* override sphinx.ext.pngmath center alignment in output cells */
+div.nboutput div.math p {
+    text-align: left;
+}
+
+/* standard error */
+div.nboutput  > :nth-child(2).stderr {
+    background: #fdd;
+}
+
+/* ANSI colors */
+.ansi-black-fg { color: #3E424D; }
+.ansi-black-bg { background-color: #3E424D; }
+.ansi-black-intense-fg { color: #282C36; }
+.ansi-black-intense-bg { background-color: #282C36; }
+.ansi-red-fg { color: #E75C58; }
+.ansi-red-bg { background-color: #E75C58; }
+.ansi-red-intense-fg { color: #B22B31; }
+.ansi-red-intense-bg { background-color: #B22B31; }
+.ansi-green-fg { color: #00A250; }
+.ansi-green-bg { background-color: #00A250; }
+.ansi-green-intense-fg { color: #007427; }
+.ansi-green-intense-bg { background-color: #007427; }
+.ansi-yellow-fg { color: #DDB62B; }
+.ansi-yellow-bg { background-color: #DDB62B; }
+.ansi-yellow-intense-fg { color: #B27D12; }
+.ansi-yellow-intense-bg { background-color: #B27D12; }
+.ansi-blue-fg { color: #208FFB; }
+.ansi-blue-bg { background-color: #208FFB; }
+.ansi-blue-intense-fg { color: #0065CA; }
+.ansi-blue-intense-bg { background-color: #0065CA; }
+.ansi-magenta-fg { color: #D160C4; }
+.ansi-magenta-bg { background-color: #D160C4; }
+.ansi-magenta-intense-fg { color: #A03196; }
+.ansi-magenta-intense-bg { background-color: #A03196; }
+.ansi-cyan-fg { color: #60C6C8; }
+.ansi-cyan-bg { background-color: #60C6C8; }
+.ansi-cyan-intense-fg { color: #258F8F; }
+.ansi-cyan-intense-bg { background-color: #258F8F; }
+.ansi-white-fg { color: #C5C1B4; }
+.ansi-white-bg { background-color: #C5C1B4; }
+.ansi-white-intense-fg { color: #A1A6B2; }
+.ansi-white-intense-bg { background-color: #A1A6B2; }
+
+.ansi-bold { font-weight: bold; }
+
+/* CSS overrides for sphinx_rtd_theme */
+
+/* 24px margin */
+.nbinput.nblast,
+.nboutput.nblast {
+    margin-bottom: 19px;  /* padding has already 5px */
+}
+
+/* ... except between code cells! */
+.nblast + .nbinput {
+    margin-top: -19px;
+}
+
+/* nice headers on first paragraph of info/warning boxes */
+.admonition .first {
+    margin: -12px;
+    padding: 6px 12px;
+    margin-bottom: 12px;
+    color: #fff;
+    line-height: 1;
+    display: block;
+}
+.admonition.warning .first {
+    background: #f0b37e;
+}
+.admonition.note .first {
+    background: #6ab0de;
+}
+.admonition > p:before {
+    margin-right: 4px;  /* make room for the exclamation icon */
+}
+</style>
+<div class="section" id="The-Dawid-Skene-model-with-priors">
+<h1>The Dawid-Skene model with priors<a class="headerlink" href="#The-Dawid-Skene-model-with-priors" title="Permalink to this headline">¶</a></h1>
+<p>The Dawid-Skene model (1979) is perhaps one of the first models to
+discover true item states/effects from multiple noisy measurements.
+Since then, there have been multiple models that improve over the basic
+model. This notebook covers the Dawid-Skene model which has been
+enhanced with priors.</p>
+<p>The model follows implementation in Rebecca J. Passonneau, Bob
+Carpenter, &#8220;The Benefits of a Model of Annotation&#8221;, TACL, 2014.</p>
+<div class="section" id="Introduction">
+<h2>Introduction<a class="headerlink" href="#Introduction" title="Permalink to this headline">¶</a></h2>
+<p>In healthcare, a number of patients can receive potentially noisy
+judgments from several professionals. In computer science, work items of
+different difficulty get labeled by multiple annotators of different
+skill. In this notebook we will attempt to recover true work item labels
+from noisy annotator input.</p>
+<p>The primary goal is to recover the true item states. The secondary goal
+is to estimate various additional factors of potential interest. We will
+use probabilistic programming approach in attempt to solve the problem.</p>
+<div class="nbinput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [1]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="o">%</span><span class="k">matplotlib</span> inline
+
+<span class="kn">import</span> <span class="nn">pymc3</span> <span class="kn">as</span> <span class="nn">pm</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="kn">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="kn">as</span> <span class="nn">plt</span>
+
+<span class="kn">from</span> <span class="nn">sklearn.metrics</span> <span class="kn">import</span> <span class="n">confusion_matrix</span>
+</pre></div>
+</div>
+</div>
+</div>
+<div class="section" id="Data">
+<h2>Data<a class="headerlink" href="#Data" title="Permalink to this headline">¶</a></h2>
+<p>Load also the data matrix with following dimensions: work items,
+annotators, categories. The data for this notebook has been taken from
+<a class="reference external" href="https://github.com/abhishekmalali/questioning-strategy-classification/tree/master/data">https://github.com/abhishekmalali/questioning-strategy-classification/tree/master/data</a></p>
+<p>Note: The data in this notebook is organized in matrix where each work
+item gets exactly one response for each work item. This is often not
+possible in practice. The discussed model accepts triplets of data:
+(work item, annotator, response) which relaxes the constraint to have
+all observations.</p>
+<div class="nbinput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [2]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">data_file</span> <span class="o">=</span> <span class="s1">&#39;../../../pymc3/examples/data/extrahard_MC_500_5_4.npz.npy&#39;</span>
+<span class="n">truth_file</span> <span class="o">=</span> <span class="s1">&#39;../../../pymc3/examples/data/extrahard_MC_500_5_4_reference_classes.npy&#39;</span>
+
+<span class="n">data</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">load</span><span class="p">(</span> <span class="n">data_file</span> <span class="p">)</span>
+<span class="n">z_true</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">load</span><span class="p">(</span> <span class="n">truth_file</span> <span class="p">)</span>
+
+<span class="n">I</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>               <span class="c1"># number of items</span>
+<span class="n">J</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>               <span class="c1"># number of annotators</span>
+<span class="n">K</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span>               <span class="c1"># number of classes</span>
+<span class="n">N</span> <span class="o">=</span> <span class="n">I</span> <span class="o">*</span> <span class="n">J</span>
+</pre></div>
+</div>
+</div>
+<p>Let&#8217;s create the necessary data structures. In particular, we will
+convert the data cube into triplet format. One data point with index n
+allows to access the following information: jj[n] as annotator ID,
+providing his/her vote y[n] for item ii[n].</p>
+<p>At the same time, we compute the majority vote estimate. This will serve
+both as a baseline and as initialization for our model.</p>
+<div class="nbinput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [3]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="c1"># create data triplets</span>
+<span class="n">jj</span> <span class="o">=</span> <span class="nb">list</span><span class="p">()</span>  <span class="c1"># annotator IDs</span>
+<span class="n">ii</span> <span class="o">=</span> <span class="nb">list</span><span class="p">()</span>  <span class="c1"># item IDs</span>
+<span class="n">y</span> <span class="o">=</span> <span class="nb">list</span><span class="p">()</span>   <span class="c1"># response</span>
+
+<span class="c1"># initialize true category with majority votes</span>
+<span class="n">z_init</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span> <span class="n">I</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">int64</span> <span class="p">)</span>
+
+<span class="c1"># create data triplets</span>
+<span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span> <span class="n">I</span> <span class="p">):</span>
+    <span class="n">ks</span> <span class="o">=</span> <span class="nb">list</span><span class="p">()</span>
+    <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span> <span class="n">J</span> <span class="p">):</span>
+        <span class="n">dat</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span> <span class="n">i</span><span class="p">,</span> <span class="n">j</span><span class="p">,</span> <span class="p">:</span> <span class="p">]</span>
+        <span class="n">k</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span> <span class="n">dat</span> <span class="o">==</span> <span class="mi">1</span> <span class="p">)[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">ks</span><span class="o">.</span><span class="n">append</span><span class="p">(</span> <span class="n">k</span> <span class="p">)</span>
+        <span class="n">ii</span><span class="o">.</span><span class="n">append</span><span class="p">(</span> <span class="n">i</span> <span class="p">)</span>
+        <span class="n">jj</span><span class="o">.</span><span class="n">append</span><span class="p">(</span> <span class="n">j</span> <span class="p">)</span>
+        <span class="n">y</span><span class="o">.</span><span class="n">append</span><span class="p">(</span> <span class="n">k</span> <span class="p">)</span>
+
+    <span class="c1"># getting maj vote for work item i (dealing with numpy casts)</span>
+    <span class="n">z_init</span><span class="p">[</span> <span class="n">i</span> <span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">bincount</span><span class="p">(</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span> <span class="n">ks</span> <span class="p">)</span> <span class="p">)</span><span class="o">.</span><span class="n">argmax</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<p>Comparing true item labels and majority vote estimated labels one by one
+is tedious. Computing accuracy gives a single performance metric but
+does not reveal where the mistakes are made (e.g. which categories tend
+to be confused) and by how much. A confusion matrix with majority vote
+estimates will serve as our baseline:</p>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [4]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">confMat</span> <span class="o">=</span> <span class="n">confusion_matrix</span><span class="p">(</span> <span class="n">z_true</span><span class="p">,</span> <span class="n">z_init</span> <span class="p">)</span>
+<span class="k">print</span><span class="p">(</span> <span class="s2">&quot;Majority vote estimate of true category:</span><span class="se">\n</span><span class="s2">&quot;</span> <span class="p">,</span> <span class="n">confMat</span> <span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<div class="highlight"><pre>
+Majority vote estimate of true category:
+ [[120   2   1   2]
+ [  5 116   4   0]
+ [  4   6 113   2]
+ [  4   3   3 115]]
+</pre></div></div>
+</div>
+</div>
+<div class="section" id="Model">
+<h2>Model<a class="headerlink" href="#Model" title="Permalink to this headline">¶</a></h2>
+<p>With the data loaded and baseline set, we can now start building the
+Dawid-Skene model. We will start by setting the top level priors: class
+prevalence and annotator-specific confusion matrices. The two priors are
+of secondary interest.</p>
+<p>The class prevalence prior tells the proportion of categories in the
+data. Since we are completely ignorant about category proportions, it is
+meaningful to set a flat distribution.</p>
+<p>The annotator-specific confusion matrices will &#8220;describe&#8221; every
+annotator. Notably, a confusion matrix for an annotator j tells us which
+categories the annotator is expert (very high value on diagonal) and
+where his expertise is limited (relatively small value on diagonal and
+relatively big values off-diagonal). We will initialize confusion
+matrices with uniform values with slightly dominant diagonal &#8211; our
+annotators are expected to provide meaningful labels.</p>
+<div class="nbinput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [5]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="c1"># class prevalence (flat prior)</span>
+<span class="n">alpha</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span> <span class="n">K</span> <span class="p">)</span>
+
+<span class="c1"># individual annotator confusion matrices - dominant diagonal</span>
+<span class="n">beta</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span> <span class="p">(</span><span class="n">K</span><span class="p">,</span><span class="n">K</span><span class="p">)</span> <span class="p">)</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">diag</span><span class="p">(</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">K</span><span class="p">)</span> <span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<p>Now, the interesting part &#8211; the definition of the model.</p>
+<p>First, we will need two random variables to encode class prevalence (pi)
+and annotator confusion matrices (theta). The two random variables can
+be naturally modeled with Dirichlet.</p>
+<p>Second, we will define a variable for the true/hidden category for each
+work item. The Categorical distribution fits well our purpose to model a
+work item with K possible states.</p>
+<p>Finally, a special variable for observed data brings together all random
+variables. This is the variable (Categorical) where the data is
+injected. The parametrization of the variable needs to be explained: the
+observation y[n] is generated according to Categorical distribution by
+worker y[n] for item ii[n], where the true label is z[ ii[n] ].</p>
+<p>The following block will build the model only but won&#8217;t do any
+inference.</p>
+<div class="nbinput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [6]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">model</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Model</span><span class="p">()</span>
+
+<span class="k">with</span> <span class="n">model</span><span class="p">:</span>
+    <span class="n">pi</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Dirichlet</span><span class="p">(</span> <span class="s1">&#39;pi&#39;</span><span class="p">,</span> <span class="n">a</span><span class="o">=</span><span class="n">alpha</span><span class="p">,</span> <span class="n">shape</span><span class="o">=</span><span class="n">K</span> <span class="p">)</span>
+    <span class="n">theta</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Dirichlet</span><span class="p">(</span> <span class="s1">&#39;theta&#39;</span><span class="p">,</span> <span class="n">a</span><span class="o">=</span><span class="n">beta</span><span class="p">,</span> <span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="n">J</span><span class="p">,</span><span class="n">K</span><span class="p">,</span><span class="n">K</span><span class="p">)</span> <span class="p">)</span>
+    <span class="n">z</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Categorical</span><span class="p">(</span> <span class="s1">&#39;z&#39;</span><span class="p">,</span> <span class="n">p</span><span class="o">=</span><span class="n">pi</span><span class="p">,</span> <span class="n">shape</span><span class="o">=</span><span class="n">I</span><span class="p">,</span> <span class="n">testval</span><span class="o">=</span><span class="n">z_init</span> <span class="p">)</span>
+    <span class="n">y_obs</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Categorical</span><span class="p">(</span> <span class="s1">&#39;y_obs&#39;</span><span class="p">,</span> <span class="n">p</span><span class="o">=</span><span class="n">theta</span><span class="p">[</span> <span class="n">jj</span><span class="p">,</span> <span class="n">z</span><span class="p">[</span> <span class="n">ii</span> <span class="p">]</span> <span class="p">],</span> <span class="n">observed</span><span class="o">=</span><span class="n">y</span> <span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<p>With model defined, we also need to set up the inference machinery. The
+variables of interest (pi, theta and z) will be divided in two groups:
+continuous (pi,theta) and discrete (z). The step methods are different:
+Metropolis or NUTS for former and CategoricalGibbsMetropolis for latter.</p>
+<p>Note: Running the following block will perform inference for our
+variables of interest and store results in the trace variable. The trace
+variable will contain a wealth of information that will be useful to
+perfom diagnostics and get posteriors for our three hidden variables &#8211;
+class prevalence, annotator confusion matrices and true categories for
+all work items.</p>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [7]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="k">with</span> <span class="n">model</span><span class="p">:</span>
+    <span class="n">step1</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Metropolis</span><span class="p">(</span> <span class="nb">vars</span><span class="o">=</span><span class="p">[</span><span class="n">pi</span><span class="p">,</span><span class="n">theta</span><span class="p">]</span> <span class="p">)</span>
+    <span class="n">step2</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">CategoricalGibbsMetropolis</span><span class="p">(</span> <span class="nb">vars</span><span class="o">=</span><span class="p">[</span><span class="n">z</span><span class="p">]</span> <span class="p">)</span>
+    <span class="n">trace</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span> <span class="mi">5000</span><span class="p">,</span> <span class="n">step</span><span class="o">=</span><span class="p">[</span><span class="n">step1</span><span class="p">,</span> <span class="n">step2</span><span class="p">],</span> <span class="n">progressbar</span><span class="o">=</span><span class="bp">True</span> <span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="stderr container">
+<div class="highlight"><pre>
+100%|██████████████████████████████████████████████████████████████████████████████| 5000/5000 [16:49&lt;00:00,  5.27it/s]
+</pre></div></div>
+</div>
+</div>
+<div class="section" id="Results">
+<h2>Results<a class="headerlink" href="#Results" title="Permalink to this headline">¶</a></h2>
+<p>Let&#8217;s get a global overview of the trace. On the left side of the
+figure, posterior distributions; on the right - individual samples. The
+samples subplots should show &#8220;uniform band of noise&#8221; as the sampler
+locks around the true variable state. It is important to not see any
+jumps, switches or steady increase/decrease.</p>
+<p>Besides the class prevalence variable (&#8220;pi&#8221;), the categories and theta
+posteriors, the plots are of little utility. We will explore other
+variables in other form.</p>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [9]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">pm</span><span class="o">.</span><span class="n">traceplot</span><span class="p">(</span> <span class="n">trace</span><span class="p">,</span> <span class="n">varnames</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;pi&#39;</span><span class="p">]</span> <span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>Out[9]:
+</pre></div>
+</div>
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>array([[&lt;matplotlib.axes._subplots.AxesSubplot object at 0x00000229DE3EBCC0&gt;,
+        &lt;matplotlib.axes._subplots.AxesSubplot object at 0x00000229DDE9CDA0&gt;]], dtype=object)
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<img alt="../_images/notebooks_dawid-skene_16_1.png" src="../_images/notebooks_dawid-skene_16_1.png" />
+</div>
+</div>
+<p>We will take 1000 last samples from posterior for random variable (&#8220;z&#8221;).
+The majority vote from 1000 samples will give us our estimate of true
+item labels.</p>
+<div class="nbinput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [10]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">z</span> <span class="o">=</span> <span class="n">trace</span><span class="p">[</span><span class="s1">&#39;z&#39;</span><span class="p">][</span><span class="o">-</span><span class="mi">1000</span><span class="p">:,:]</span>
+
+<span class="n">z_hat</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span> <span class="n">I</span> <span class="p">)</span>
+<span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span> <span class="n">I</span> <span class="p">):</span>
+    <span class="n">z_hat</span><span class="p">[</span> <span class="n">i</span> <span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">bincount</span><span class="p">(</span> <span class="n">z</span><span class="p">[:,</span><span class="n">i</span><span class="p">]</span> <span class="p">)</span><span class="o">.</span><span class="n">argmax</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<p>The confusion matrix tells us how good our estimate is with respect to
+the ground truth. Compare it to the baseline: a better estimate has less
+off diagonal values (and more on main diagonal).</p>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [11]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">confMat</span> <span class="o">=</span> <span class="n">confusion_matrix</span><span class="p">(</span> <span class="n">z_true</span><span class="p">,</span> <span class="n">z_hat</span> <span class="p">)</span>
+<span class="k">print</span><span class="p">(</span> <span class="s2">&quot;Dawid-Skene estimate of true category:</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">confMat</span> <span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<div class="highlight"><pre>
+Dawid-Skene estimate of true category:
+ [[122   1   1   1]
+ [  2 118   3   2]
+ [  3   1 118   3]
+ [  4   1   1 119]]
+</pre></div></div>
+</div>
+<p>Finally, let&#8217;s plot the confusion matrices of annotators. Notice the
+dominant diagonal nature of matrices &#8211; measure of annotator
+performance. Compare the first annotator (j=0) and the last one (j=4).</p>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [18]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">np</span><span class="o">.</span><span class="n">set_printoptions</span><span class="p">(</span><span class="n">precision</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+<span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span> <span class="n">J</span> <span class="p">):</span>
+    <span class="k">print</span><span class="p">(</span> <span class="s2">&quot;Annotator j=&quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">j</span><span class="p">)</span> <span class="p">)</span>
+    <span class="n">Cj</span> <span class="o">=</span> <span class="n">trace</span><span class="p">[</span><span class="s1">&#39;theta&#39;</span><span class="p">][</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span><span class="n">j</span><span class="p">]</span>
+    <span class="k">print</span><span class="p">(</span> <span class="n">Cj</span> <span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<div class="highlight"><pre>
+Annotator j=0
+[[  8.71e-01   4.00e-02   4.69e-02   4.17e-02]
+ [  1.13e-02   9.26e-01   1.56e-02   4.69e-02]
+ [  5.82e-02   3.62e-02   8.65e-01   4.01e-02]
+ [  4.53e-02   1.33e-02   7.79e-04   9.41e-01]]
+Annotator j=1
+[[ 0.66  0.13  0.08  0.14]
+ [ 0.11  0.69  0.12  0.08]
+ [ 0.11  0.13  0.62  0.15]
+ [ 0.08  0.13  0.15  0.65]]
+Annotator j=2
+[[ 0.62  0.17  0.15  0.07]
+ [ 0.1   0.58  0.18  0.14]
+ [ 0.2   0.02  0.57  0.2 ]
+ [ 0.1   0.14  0.16  0.6 ]]
+Annotator j=3
+[[ 0.68  0.17  0.05  0.1 ]
+ [ 0.09  0.7   0.11  0.1 ]
+ [ 0.1   0.16  0.68  0.07]
+ [ 0.09  0.09  0.08  0.73]]
+Annotator j=4
+[[ 0.55  0.14  0.09  0.21]
+ [ 0.18  0.51  0.19  0.12]
+ [ 0.11  0.1   0.58  0.21]
+ [ 0.25  0.23  0.1   0.42]]
+</pre></div></div>
+</div>
+</div>
+</div>
+
+
+           </div>
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="GLM-linear.html" class="btn btn-neutral float-right" title="GLM: Linear regression" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="GP-smoothing.html" class="btn btn-neutral" title="Gaussian Process (GP) smoothing" accesskey="p"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2016, John Salvatier, Christopher Fonnesbeck, Thomas Wiecki.
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'../',
+            VERSION:'3.0',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true
+        };
+    </script>
+      <script type="text/javascript" src="../_static/jquery.js"></script>
+      <script type="text/javascript" src="../_static/underscore.js"></script>
+      <script type="text/javascript" src="../_static/doctools.js"></script>
+      <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+  
+
+  
+  
+    <script type="text/javascript" src="../_static/js/theme.js"></script>
+  
+
+  
+  
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.StickyNav.enable();
+      });
+  </script>
+   
+
+</body>
+</html>

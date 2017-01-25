@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>Inferring parameters of SDEs using a Euler-Maruyama scheme &mdash; PyMC3 3.0.rc4 documentation</title>
+  <title>Inferring parameters of SDEs using a Euler-Maruyama scheme &mdash; PyMC3 3.0 documentation</title>
   
 
   
@@ -33,7 +33,7 @@
         <link rel="index" title="Index"
               href="../genindex.html"/>
         <link rel="search" title="Search" href="../search.html"/>
-    <link rel="top" title="PyMC3 3.0.rc4 documentation" href="../index.html"/> 
+    <link rel="top" title="PyMC3 3.0 documentation" href="../index.html"/> 
 
   
   <script src="../_static/js/modernizr.min.js"></script>
@@ -120,7 +120,7 @@
       <li class="wy-breadcrumbs-aside">
         
           
-            <a href="../_sources/notebooks/Euler-Maruyama and SDEs.txt" rel="nofollow"> View page source</a>
+            <a href="../_sources/notebooks/Euler-Maruyama and SDEs.ipynb.txt" rel="nofollow"> View page source</a>
           
         
       </li>
@@ -325,7 +325,7 @@ Populating the interactive namespace from numpy and matplotlib
 <div class="section" id="Toy-model-1">
 <h2>Toy model 1<a class="headerlink" href="#Toy-model-1" title="Permalink to this headline">¶</a></h2>
 <p>Here&#8217;s a scalar linear SDE in symbolic form</p>
-<p>$ dX_t = <a href="#id1"><span class="problematic" id="id2">:raw-latex:`\lambda `X\_t + :raw-latex:`</span></a>sigma`^2 dW_t $</p>
+<p>$ dX_t = X_t + ^2 dW_t $</p>
 <p>discretized with the Euler-Maruyama scheme</p>
 <div class="nbinput nblast container">
 <div class="highlight-none"><div class="highlight"><pre>
@@ -376,7 +376,7 @@ Populating the interactive namespace from numpy and matplotlib
 <div class="container">
 </div>
 <div class="container">
-<img alt="../_images/notebooks_Euler-Maruyama_and_SDEs_4_0.png" src="../_images/notebooks_Euler-Maruyama_and_SDEs_4_0.png" />
+<img alt="notebooks/../_build/doctrees/nbsphinx/notebooks_Euler-MaruyamaandSDEs_4_0.png" src="notebooks/../_build/doctrees/nbsphinx/notebooks_Euler-MaruyamaandSDEs_4_0.png" />
 </div>
 </div>
 <p>What is the inference we want to make? Since we&#8217;ve made a noisy
@@ -473,7 +473,7 @@ the posterior distribution, in the following steps:</p>
 <div class="container">
 </div>
 <div class="container">
-<img alt="../_images/notebooks_Euler-Maruyama_and_SDEs_13_0.png" src="../_images/notebooks_Euler-Maruyama_and_SDEs_13_0.png" />
+<img alt="notebooks/../_build/doctrees/nbsphinx/notebooks_Euler-MaruyamaandSDEs_13_0.png" src="notebooks/../_build/doctrees/nbsphinx/notebooks_Euler-MaruyamaandSDEs_13_0.png" />
 </div>
 </div>
 <p>A model can fit the data precisely and still be wrong; we need to use
@@ -521,7 +521,7 @@ data</p>
 <div class="container">
 </div>
 <div class="container">
-<img alt="../_images/notebooks_Euler-Maruyama_and_SDEs_15_2.png" src="../_images/notebooks_Euler-Maruyama_and_SDEs_15_2.png" />
+<img alt="notebooks/../_build/doctrees/nbsphinx/notebooks_Euler-MaruyamaandSDEs_15_2.png" src="notebooks/../_build/doctrees/nbsphinx/notebooks_Euler-MaruyamaandSDEs_15_2.png" />
 </div>
 </div>
 <p>Note that</p>
@@ -578,7 +578,7 @@ the PPC.</li>
 <div class="container">
 </div>
 <div class="container">
-<img alt="../_images/notebooks_Euler-Maruyama_and_SDEs_18_1.png" src="../_images/notebooks_Euler-Maruyama_and_SDEs_18_1.png" />
+<img alt="notebooks/../_build/doctrees/nbsphinx/notebooks_Euler-MaruyamaandSDEs_18_1.png" src="notebooks/../_build/doctrees/nbsphinx/notebooks_Euler-MaruyamaandSDEs_18_1.png" />
 </div>
 </div>
 <p>Now, estimate the hidden states <span class="math">\(x(t)\)</span> and <span class="math">\(y(t)\)</span>, as well
@@ -678,7 +678,7 @@ parameters of interest but also the hidden states</p>
 <div class="container">
 </div>
 <div class="container">
-<img alt="../_images/notebooks_Euler-Maruyama_and_SDEs_27_0.png" src="../_images/notebooks_Euler-Maruyama_and_SDEs_27_0.png" />
+<img alt="notebooks/../_build/doctrees/nbsphinx/notebooks_Euler-MaruyamaandSDEs_27_0.png" src="notebooks/../_build/doctrees/nbsphinx/notebooks_Euler-MaruyamaandSDEs_27_0.png" />
 </div>
 </div>
 <p>Again, we can perform a posterior predictive check, that our data are
@@ -722,7 +722,7 @@ likely given the fit model</p>
 <div class="container">
 </div>
 <div class="container">
-<img alt="../_images/notebooks_Euler-Maruyama_and_SDEs_29_2.png" src="../_images/notebooks_Euler-Maruyama_and_SDEs_29_2.png" />
+<img alt="notebooks/../_build/doctrees/nbsphinx/notebooks_Euler-MaruyamaandSDEs_29_2.png" src="notebooks/../_build/doctrees/nbsphinx/notebooks_Euler-MaruyamaandSDEs_29_2.png" />
 </div>
 </div>
 </div>
@@ -761,7 +761,7 @@ likely given the fit model</p>
     <script type="text/javascript">
         var DOCUMENTATION_OPTIONS = {
             URL_ROOT:'../',
-            VERSION:'3.0.rc4',
+            VERSION:'3.0',
             COLLAPSE_INDEX:false,
             FILE_SUFFIX:'.html',
             HAS_SOURCE:  true

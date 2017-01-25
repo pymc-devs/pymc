@@ -1,0 +1,1594 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>Dependent density regression &mdash; PyMC3 3.0 documentation</title>
+  
+
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  
+  
+    <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  
+
+  
+
+  
+        <link rel="index" title="Index"
+              href="../genindex.html"/>
+        <link rel="search" title="Search" href="../search.html"/>
+    <link rel="top" title="PyMC3 3.0 documentation" href="../index.html"/>
+        <link rel="up" title="Examples" href="../examples.html"/>
+        <link rel="next" title="GLM: Hierarchical Linear Regression with ADVI" href="GLM-hierarchical-ADVI.html"/>
+        <link rel="prev" title="Dirichlet process mixtures for density estimation" href="dp_mix.html"/> 
+
+  
+  <script src="../_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+          
+            <a href="../index.html" class="icon icon-home"> PyMC3
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                3.0
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+                <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../getting_started.html">Getting started</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="../examples.html">Examples</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="../examples.html#howto">Howto</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../examples.html#applied">Applied</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../examples.html#glm">GLM</a></li>
+<li class="toctree-l2 current"><a class="reference internal" href="../examples.html#mixture-models">Mixture Models</a><ul class="current">
+<li class="toctree-l3"><a class="reference internal" href="gaussian_mixture_model.html">Gaussian Mixture Model</a></li>
+<li class="toctree-l3"><a class="reference internal" href="marginalized_gaussian_mixture_model.html">Marginalized Gaussian Mixture Model</a></li>
+<li class="toctree-l3"><a class="reference internal" href="gaussian-mixture-model-advi.html">Gaussian Mixture Model with ADVI</a></li>
+<li class="toctree-l3"><a class="reference internal" href="dp_mix.html">Dirichlet process mixtures for density estimation</a></li>
+<li class="toctree-l3 current"><a class="current reference internal" href="#">Dependent density regression</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../examples.html#advi">ADVI</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../api.html">API Reference</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+        <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+        <a href="../index.html">PyMC3</a>
+      </nav>
+
+
+      
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          
+
+ 
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="../index.html">Docs</a> &raquo;</li>
+      
+          <li><a href="../examples.html">Examples</a> &raquo;</li>
+      
+    <li>Dependent density regression</li>
+      <li class="wy-breadcrumbs-aside">
+        
+          
+            <a href="../_sources/notebooks/dependent_density_regression.ipynb.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  
+<style>
+/* CSS for nbsphinx extension */
+
+/* remove conflicting styling from Sphinx themes */
+div.nbinput,
+div.nbinput > div,
+div.nbinput div[class^=highlight],
+div.nbinput div[class^=highlight] pre,
+div.nboutput,
+div.nboutput > div,
+div.nboutput div[class^=highlight],
+div.nboutput div[class^=highlight] pre {
+    background: none;
+    border: none;
+    padding: 0 0;
+    margin: 0;
+    box-shadow: none;
+}
+
+/* avoid gaps between output lines */
+div.nboutput div[class^=highlight] pre {
+    line-height: normal;
+}
+
+/* input/output containers */
+div.nbinput,
+div.nboutput {
+    display: -webkit-flex;
+    display: flex;
+    align-items: flex-start;
+    margin: 0;
+}
+
+/* input container */
+div.nbinput {
+    padding-top: 5px;
+}
+
+/* last container */
+div.nblast {
+    padding-bottom: 5px;
+}
+
+/* input prompt */
+div.nbinput > :first-child pre {
+    color: #303F9F;
+}
+
+/* output prompt */
+div.nboutput > :first-child pre {
+    color: #D84315;
+}
+
+/* all prompts */
+div.nbinput > :first-child[class^=highlight],
+div.nboutput > :first-child[class^=highlight],
+div.nboutput > :first-child {
+    min-width: 8ex;
+    padding-top: 0.4em;
+    padding-right: 0.4em;
+    text-align: right;
+    flex: 0;
+}
+
+/* input/output area */
+div.nbinput > :nth-child(2)[class^=highlight],
+div.nboutput > :nth-child(2),
+div.nboutput > :nth-child(2)[class^=highlight] {
+    padding: 0.4em;
+    -webkit-flex: 1;
+    flex: 1;
+    overflow: auto;
+}
+
+/* input area */
+div.nbinput > :nth-child(2)[class^=highlight] {
+    border: 1px solid #cfcfcf;
+    border-radius: 2px;
+    background: #f7f7f7;
+}
+
+/* override MathJax center alignment in output cells */
+div.nboutput div[class*=MathJax] {
+    text-align: left !important;
+}
+
+/* override sphinx.ext.pngmath center alignment in output cells */
+div.nboutput div.math p {
+    text-align: left;
+}
+
+/* standard error */
+div.nboutput  > :nth-child(2).stderr {
+    background: #fdd;
+}
+
+/* ANSI colors */
+.ansi-black-fg { color: #3E424D; }
+.ansi-black-bg { background-color: #3E424D; }
+.ansi-black-intense-fg { color: #282C36; }
+.ansi-black-intense-bg { background-color: #282C36; }
+.ansi-red-fg { color: #E75C58; }
+.ansi-red-bg { background-color: #E75C58; }
+.ansi-red-intense-fg { color: #B22B31; }
+.ansi-red-intense-bg { background-color: #B22B31; }
+.ansi-green-fg { color: #00A250; }
+.ansi-green-bg { background-color: #00A250; }
+.ansi-green-intense-fg { color: #007427; }
+.ansi-green-intense-bg { background-color: #007427; }
+.ansi-yellow-fg { color: #DDB62B; }
+.ansi-yellow-bg { background-color: #DDB62B; }
+.ansi-yellow-intense-fg { color: #B27D12; }
+.ansi-yellow-intense-bg { background-color: #B27D12; }
+.ansi-blue-fg { color: #208FFB; }
+.ansi-blue-bg { background-color: #208FFB; }
+.ansi-blue-intense-fg { color: #0065CA; }
+.ansi-blue-intense-bg { background-color: #0065CA; }
+.ansi-magenta-fg { color: #D160C4; }
+.ansi-magenta-bg { background-color: #D160C4; }
+.ansi-magenta-intense-fg { color: #A03196; }
+.ansi-magenta-intense-bg { background-color: #A03196; }
+.ansi-cyan-fg { color: #60C6C8; }
+.ansi-cyan-bg { background-color: #60C6C8; }
+.ansi-cyan-intense-fg { color: #258F8F; }
+.ansi-cyan-intense-bg { background-color: #258F8F; }
+.ansi-white-fg { color: #C5C1B4; }
+.ansi-white-bg { background-color: #C5C1B4; }
+.ansi-white-intense-fg { color: #A1A6B2; }
+.ansi-white-intense-bg { background-color: #A1A6B2; }
+
+.ansi-bold { font-weight: bold; }
+
+/* CSS overrides for sphinx_rtd_theme */
+
+/* 24px margin */
+.nbinput.nblast,
+.nboutput.nblast {
+    margin-bottom: 19px;  /* padding has already 5px */
+}
+
+/* ... except between code cells! */
+.nblast + .nbinput {
+    margin-top: -19px;
+}
+
+/* nice headers on first paragraph of info/warning boxes */
+.admonition .first {
+    margin: -12px;
+    padding: 6px 12px;
+    margin-bottom: 12px;
+    color: #fff;
+    line-height: 1;
+    display: block;
+}
+.admonition.warning .first {
+    background: #f0b37e;
+}
+.admonition.note .first {
+    background: #6ab0de;
+}
+.admonition > p:before {
+    margin-right: 4px;  /* make room for the exclamation icon */
+}
+</style>
+<div class="section" id="Dependent-density-regression">
+<h1>Dependent density regression<a class="headerlink" href="#Dependent-density-regression" title="Permalink to this headline">¶</a></h1>
+<p>Author: <a class="reference external" href="https://github.com/AustinRochford/">Austin Rochford</a></p>
+<p>In another
+<a class="reference external" href="http://pymc-devs.github.io/pymc3/notebooks/dp_mix.html">example</a>, we
+showed how to use Dirichlet processes to perform Bayesian nonparametric
+density estimation. This example expands on the previous one,
+illustrating dependent density regression.</p>
+<p>Just as Dirichlet process mixtures can be thought of as infinite mixture
+models that select the number of active components as part of inference,
+dependent density regression can be thought of as infinite <a class="reference external" href="https://en.wikipedia.org/wiki/Committee_machine">mixtures of
+experts</a> that select
+the active experts as part of inference. Their flexibility and
+modularity make them powerful tools for performing nonparametric
+Bayesian Data analysis.</p>
+<div class="nbinput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [1]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="o">%</span><span class="k">matplotlib</span> inline
+<span class="kn">from</span> <span class="nn">IPython.display</span> <span class="kn">import</span> <span class="n">HTML</span>
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [2]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="kn">from</span> <span class="nn">matplotlib</span> <span class="kn">import</span> <span class="n">animation</span> <span class="k">as</span> <span class="n">ani</span><span class="p">,</span> <span class="n">pyplot</span> <span class="k">as</span> <span class="n">plt</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="kn">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">pandas</span> <span class="kn">as</span> <span class="nn">pd</span>
+<span class="kn">import</span> <span class="nn">pymc3</span> <span class="kn">as</span> <span class="nn">pm</span>
+<span class="kn">import</span> <span class="nn">seaborn</span> <span class="kn">as</span> <span class="nn">sns</span>
+<span class="kn">from</span> <span class="nn">theano</span> <span class="kn">import</span> <span class="n">shared</span><span class="p">,</span> <span class="n">tensor</span> <span class="k">as</span> <span class="n">tt</span>
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [3]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">plt</span><span class="o">.</span><span class="n">rc</span><span class="p">(</span><span class="s1">&#39;animation&#39;</span><span class="p">,</span> <span class="n">writer</span><span class="o">=</span><span class="s1">&#39;avconv&#39;</span><span class="p">)</span>
+<span class="n">blue</span><span class="p">,</span> <span class="o">*</span><span class="n">_</span> <span class="o">=</span> <span class="n">sns</span><span class="o">.</span><span class="n">color_palette</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [4]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">SEED</span> <span class="o">=</span> <span class="mi">972915</span> <span class="c1"># from random.org; for reproducibility</span>
+<span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">seed</span><span class="p">(</span><span class="n">SEED</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<p>We will use the LIDAR data set from Larry Wasserman&#8217;s excellent book,
+<a class="reference external" href="http://www.stat.cmu.edu/~larry/all-of-nonpar/">*All of Nonparametric
+Statistics*</a>. We
+standardize the data set to improve the rate of convergence of our
+samples.</p>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [5]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">DATA_URI</span> <span class="o">=</span> <span class="s1">&#39;http://www.stat.cmu.edu/~larry/all-of-nonpar/=data/lidar.dat&#39;</span>
+
+<span class="k">def</span> <span class="nf">standardize</span><span class="p">(</span><span class="n">x</span><span class="p">):</span>
+    <span class="k">return</span> <span class="p">(</span><span class="n">x</span> <span class="o">-</span> <span class="n">x</span><span class="o">.</span><span class="n">mean</span><span class="p">())</span> <span class="o">/</span> <span class="n">x</span><span class="o">.</span><span class="n">std</span><span class="p">()</span>
+
+<span class="n">df</span> <span class="o">=</span> <span class="p">(</span><span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="n">DATA_URI</span><span class="p">,</span> <span class="n">sep</span><span class="o">=</span><span class="s1">&#39; *&#39;</span><span class="p">,</span> <span class="n">engine</span><span class="o">=</span><span class="s1">&#39;python&#39;</span><span class="p">)</span>
+        <span class="o">.</span><span class="n">assign</span><span class="p">(</span><span class="n">std_range</span><span class="o">=</span><span class="k">lambda</span> <span class="n">df</span><span class="p">:</span> <span class="n">standardize</span><span class="p">(</span><span class="n">df</span><span class="o">.</span><span class="n">range</span><span class="p">),</span>
+                <span class="n">std_logratio</span><span class="o">=</span><span class="k">lambda</span> <span class="n">df</span><span class="p">:</span> <span class="n">standardize</span><span class="p">(</span><span class="n">df</span><span class="o">.</span><span class="n">logratio</span><span class="p">)))</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="stderr container">
+<div class="highlight"><pre>
+/opt/conda/lib/python3.5/site-packages/pandas/io/parsers.py:1961: FutureWarning: split() requires a non-empty pattern match.
+  yield pat.split(line.strip())
+/opt/conda/lib/python3.5/site-packages/pandas/io/parsers.py:1963: FutureWarning: split() requires a non-empty pattern match.
+  yield pat.split(line.strip())
+</pre></div></div>
+</div>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [6]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">df</span><span class="o">.</span><span class="n">head</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>Out[6]:
+</pre></div>
+</div>
+<div class="container">
+<div>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>range</th>
+      <th>logratio</th>
+      <th>std_logratio</th>
+      <th>std_range</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>390</td>
+      <td>-0.050356</td>
+      <td>0.852467</td>
+      <td>-1.717725</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>391</td>
+      <td>-0.060097</td>
+      <td>0.817981</td>
+      <td>-1.707299</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>393</td>
+      <td>-0.041901</td>
+      <td>0.882398</td>
+      <td>-1.686447</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>394</td>
+      <td>-0.050985</td>
+      <td>0.850240</td>
+      <td>-1.676020</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>396</td>
+      <td>-0.059913</td>
+      <td>0.818631</td>
+      <td>-1.655168</td>
+    </tr>
+  </tbody>
+</table>
+</div></div>
+</div>
+<p>We plot the LIDAR data below.</p>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [7]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">8</span><span class="p">,</span> <span class="mi">6</span><span class="p">))</span>
+
+<span class="n">ax</span><span class="o">.</span><span class="n">scatter</span><span class="p">(</span><span class="n">df</span><span class="o">.</span><span class="n">std_range</span><span class="p">,</span> <span class="n">df</span><span class="o">.</span><span class="n">std_logratio</span><span class="p">,</span>
+           <span class="n">c</span><span class="o">=</span><span class="n">blue</span><span class="p">);</span>
+
+<span class="n">ax</span><span class="o">.</span><span class="n">set_xticklabels</span><span class="p">([]);</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="s2">&quot;Standardized range&quot;</span><span class="p">);</span>
+
+<span class="n">ax</span><span class="o">.</span><span class="n">set_yticklabels</span><span class="p">([]);</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="s2">&quot;Standardized log ratio&quot;</span><span class="p">);</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput container">
+<div class="container">
+</div>
+<div class="stderr container">
+<div class="highlight"><pre>
+/opt/conda/lib/python3.5/site-packages/matplotlib/font_manager.py:1297: UserWarning: findfont: Font family [&#39;sans-serif&#39;] not found. Falling back to DejaVu Sans
+  (prop.get_family(), self.defaultFamily[fontext]))
+</pre></div></div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<img alt="../_images/notebooks_dependent_density_regression_9_1.png" src="../_images/notebooks_dependent_density_regression_9_1.png" />
+</div>
+</div>
+<p>This data set has a two interesting properties that make it useful for
+illustrating dependent density regression.</p>
+<ol class="arabic simple">
+<li>The relationship between range and log ratio is nonlinear, but has
+locally linear components.</li>
+<li>The observation noise is
+<a class="reference external" href="https://en.wikipedia.org/wiki/Heteroscedasticity">heteroskedastic</a>;
+that is, the magnitude of the variance varies with the range.</li>
+</ol>
+<p>The intuitive idea behind dependent density regression is to reduce the
+problem to many (related) density estimates, conditioned on fixed values
+of the predictors. The following animation illustrates this intuition.</p>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [8]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">fig</span><span class="p">,</span> <span class="p">(</span><span class="n">scatter_ax</span><span class="p">,</span> <span class="n">hist_ax</span><span class="p">)</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="n">ncols</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">16</span><span class="p">,</span> <span class="mi">6</span><span class="p">))</span>
+
+<span class="n">scatter_ax</span><span class="o">.</span><span class="n">scatter</span><span class="p">(</span><span class="n">df</span><span class="o">.</span><span class="n">std_range</span><span class="p">,</span> <span class="n">df</span><span class="o">.</span><span class="n">std_logratio</span><span class="p">,</span>
+                   <span class="n">c</span><span class="o">=</span><span class="n">blue</span><span class="p">,</span> <span class="n">zorder</span><span class="o">=</span><span class="mi">2</span><span class="p">);</span>
+
+<span class="n">scatter_ax</span><span class="o">.</span><span class="n">set_xticklabels</span><span class="p">([]);</span>
+<span class="n">scatter_ax</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="s2">&quot;Standardized range&quot;</span><span class="p">);</span>
+
+<span class="n">scatter_ax</span><span class="o">.</span><span class="n">set_yticklabels</span><span class="p">([]);</span>
+<span class="n">scatter_ax</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="s2">&quot;Standardized log ratio&quot;</span><span class="p">);</span>
+
+<span class="n">bins</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="n">df</span><span class="o">.</span><span class="n">std_range</span><span class="o">.</span><span class="n">min</span><span class="p">(),</span> <span class="n">df</span><span class="o">.</span><span class="n">std_range</span><span class="o">.</span><span class="n">max</span><span class="p">(),</span> <span class="mi">25</span><span class="p">)</span>
+
+<span class="n">hist_ax</span><span class="o">.</span><span class="n">hist</span><span class="p">(</span><span class="n">df</span><span class="o">.</span><span class="n">std_logratio</span><span class="p">,</span> <span class="n">bins</span><span class="o">=</span><span class="n">bins</span><span class="p">,</span>
+             <span class="n">color</span><span class="o">=</span><span class="s1">&#39;k&#39;</span><span class="p">,</span> <span class="n">lw</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">0.25</span><span class="p">,</span>
+             <span class="n">label</span><span class="o">=</span><span class="s2">&quot;All data&quot;</span><span class="p">);</span>
+
+<span class="n">hist_ax</span><span class="o">.</span><span class="n">set_xticklabels</span><span class="p">([]);</span>
+<span class="n">hist_ax</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="s2">&quot;Standardized log ratio&quot;</span><span class="p">);</span>
+
+<span class="n">hist_ax</span><span class="o">.</span><span class="n">set_yticklabels</span><span class="p">([]);</span>
+<span class="n">hist_ax</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="s2">&quot;Frequency&quot;</span><span class="p">);</span>
+
+<span class="n">hist_ax</span><span class="o">.</span><span class="n">legend</span><span class="p">(</span><span class="n">loc</span><span class="o">=</span><span class="mi">2</span><span class="p">);</span>
+
+<span class="n">endpoints</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mf">1.05</span> <span class="o">*</span> <span class="n">df</span><span class="o">.</span><span class="n">std_range</span><span class="o">.</span><span class="n">min</span><span class="p">(),</span> <span class="mf">1.05</span> <span class="o">*</span> <span class="n">df</span><span class="o">.</span><span class="n">std_range</span><span class="o">.</span><span class="n">max</span><span class="p">(),</span> <span class="mi">15</span><span class="p">)</span>
+
+<span class="n">frame_artists</span> <span class="o">=</span> <span class="p">[]</span>
+
+<span class="k">for</span> <span class="n">low</span><span class="p">,</span> <span class="n">high</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">endpoints</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="n">endpoints</span><span class="p">[</span><span class="mi">2</span><span class="p">:]):</span>
+    <span class="n">interval</span> <span class="o">=</span> <span class="n">scatter_ax</span><span class="o">.</span><span class="n">axvspan</span><span class="p">(</span><span class="n">low</span><span class="p">,</span> <span class="n">high</span><span class="p">,</span>
+                                  <span class="n">color</span><span class="o">=</span><span class="s1">&#39;k&#39;</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span> <span class="n">lw</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">zorder</span><span class="o">=</span><span class="mi">1</span><span class="p">);</span>
+    <span class="o">*</span><span class="n">_</span><span class="p">,</span> <span class="n">bars</span> <span class="o">=</span> <span class="n">hist_ax</span><span class="o">.</span><span class="n">hist</span><span class="p">(</span><span class="n">df</span><span class="p">[</span><span class="n">df</span><span class="o">.</span><span class="n">std_range</span><span class="o">.</span><span class="n">between</span><span class="p">(</span><span class="n">low</span><span class="p">,</span> <span class="n">high</span><span class="p">)]</span><span class="o">.</span><span class="n">std_logratio</span><span class="p">,</span>
+                            <span class="n">bins</span><span class="o">=</span><span class="n">bins</span><span class="p">,</span>
+                            <span class="n">color</span><span class="o">=</span><span class="s1">&#39;k&#39;</span><span class="p">,</span> <span class="n">lw</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">0.5</span><span class="p">);</span>
+
+    <span class="n">frame_artists</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">interval</span><span class="p">,)</span> <span class="o">+</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">bars</span><span class="p">))</span>
+
+<span class="n">animation</span> <span class="o">=</span> <span class="n">ani</span><span class="o">.</span><span class="n">ArtistAnimation</span><span class="p">(</span><span class="n">fig</span><span class="p">,</span> <span class="n">frame_artists</span><span class="p">,</span>
+                                <span class="n">interval</span><span class="o">=</span><span class="mi">500</span><span class="p">,</span> <span class="n">repeat_delay</span><span class="o">=</span><span class="mi">3000</span><span class="p">,</span> <span class="n">blit</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">close</span><span class="p">();</span> <span class="c1"># prevent the intermediate figure from showing</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="stderr container">
+<div class="highlight"><pre>
+/opt/conda/lib/python3.5/site-packages/matplotlib/font_manager.py:1297: UserWarning: findfont: Font family [&#39;sans-serif&#39;] not found. Falling back to DejaVu Sans
+  (prop.get_family(), self.defaultFamily[fontext]))
+</pre></div></div>
+</div>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [9]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">HTML</span><span class="p">(</span><span class="n">animation</span><span class="o">.</span><span class="n">to_html5_video</span><span class="p">())</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput container">
+<div class="container">
+</div>
+<div class="stderr container">
+<div class="highlight"><pre>
+/opt/conda/lib/python3.5/site-packages/matplotlib/font_manager.py:1297: UserWarning: findfont: Font family [&#39;sans-serif&#39;] not found. Falling back to DejaVu Sans
+  (prop.get_family(), self.defaultFamily[fontext]))
+</pre></div></div>
+</div>
+<div class="nboutput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>Out[9]:
+</pre></div>
+</div>
+<div class="container">
+<video width="1152" height="432" controls autoplay loop>
+  <source type="video/mp4" src="data:video/mp4;base64,AAAAHGZ0eXBNNFYgAAACAGlzb21pc28yYXZjMQAAAAhmcmVlAACGoG1kYXQAAAKtBgX//6ncRem9
+5tlIt5Ys2CDZI+7veDI2NCAtIGNvcmUgMTQyIHIyNDMxIGE1ODMxYWEgLSBILjI2NC9NUEVHLTQg
+QVZDIGNvZGVjIC0gQ29weWxlZnQgMjAwMy0yMDE0IC0gaHR0cDovL3d3dy52aWRlb2xhbi5vcmcv
+eDI2NC5odG1sIC0gb3B0aW9uczogY2FiYWM9MSByZWY9MyBkZWJsb2NrPTE6MDowIGFuYWx5c2U9
+MHgzOjB4MTEzIG1lPWhleCBzdWJtZT03IHBzeT0xIHBzeV9yZD0xLjAwOjAuMDAgbWl4ZWRfcmVm
+PTEgbWVfcmFuZ2U9MTYgY2hyb21hX21lPTEgdHJlbGxpcz0xIDh4OGRjdD0xIGNxbT0wIGRlYWR6
+b25lPTIxLDExIGZhc3RfcHNraXA9MSBjaHJvbWFfcXBfb2Zmc2V0PS0yIHRocmVhZHM9NiBsb29r
+YWhlYWRfdGhyZWFkcz0xIHNsaWNlZF90aHJlYWRzPTAgbnI9MCBkZWNpbWF0ZT0xIGludGVybGFj
+ZWQ9MCBibHVyYXlfY29tcGF0PTAgY29uc3RyYWluZWRfaW50cmE9MCBiZnJhbWVzPTMgYl9weXJh
+bWlkPTIgYl9hZGFwdD0xIGJfYmlhcz0wIGRpcmVjdD0xIHdlaWdodGI9MSBvcGVuX2dvcD0wIHdl
+aWdodHA9MiBrZXlpbnQ9MjUwIGtleWludF9taW49MiBzY2VuZWN1dD00MCBpbnRyYV9yZWZyZXNo
+PTAgcmNfbG9va2FoZWFkPTQwIHJjPWNyZiBtYnRyZWU9MSBjcmY9MjMuMCBxY29tcD0wLjYwIHFw
+bWluPTAgcXBtYXg9NjkgcXBzdGVwPTQgaXBfcmF0aW89MS40MCBhcT0xOjEuMDAAgAAATRNliIQA
+Fv/+99M/zLLr9zm146j3op4mX0N1JQGblsTtOoAAAAMAAAMAAAMAAAVxrHCOXEcOH+g8AAADAAAf
+YABYY29tMaryWA92h+TNBWdfF2Rj4T44N8Bw98ClfBMZP73QIF3GAnqbdrjSNYdNwnbnoPA2lDyq
+HG2l34vT2+zUuKndtKmG6YsmZU5a9hb3UnlUwBTkPCjhvXzOS057PvVyHOTsBw8j2p0rBcXKx9Uh
+2eHAgs9UprY3LlfJcfjGXKeCrP+xs6TQAHXpPTtk4ocM1M4bofM91G+yTL169d5Lty+Hl0Dpcshx
+UX8HGeSRANB1hCUcw4LSWPwommTHKm7c3SSEkALB/yIjfhVEsMy82r0mQptWa8nUauZ+7SlzcFa3
+SsNnanGKzqyvKfr1WbGA9TYHgRjj4RfiNaHPVpRRgpCkOSegSWBnwVFggLEIKqa8szkcEJv5FtO8
+lybzvyPQ05UhTV0BgqMcQFAVi4B68o/SK6xwKUm1g7n0o+TuZrzk5f76YXf4qHdxthH5c1+FGrF8
+2EbM3XxGzZUEPWuaChTr453VUp9gnxttssqUKPrTmkPbOj3EkXrorFHu/mgIHVOwarEpO0bDpO3d
+2npIbCb9/4VAoo3TpyBCMt+KWZLSSFDDL65PBW5ICGBy6UYAt1/isw+Xqqb+BU70Y1/lsve+AlH6
+yr5BdTPf9ltEFWmCPgxxQ7R9TO/sega3UFJVdD3GdVtGI89V4Wre+HVAUGLxJhxPa5iPj7c7jtCn
+jF0pWvq4pmP75kayKQblGT8jF+aA9MFpmOm3eGPrhLJH5MXmRjXv8ldYGMkLmW0iUeDKAiOz1o4j
+ygRmEZctn+FANN+s3dApainutVdsMNHCF/zgGHkf9jjz15o5woPQJ+FPWKbWWzFXw3mumuClkYwo
+uvLVwpsRCooeZhqGqDvgR6hiZtN36XTtFQLEClxAAHKD7bRCyNnB8E1wgh4id4+LqAvVSAMOD69B
+8itALtvzHIfYZX5Pigf5endpZuy28Yc6KrfMdCrFLNYXK7fsHTQ8cnv/c3j8yXmOjXZC3wo1xsvZ
+nSlumZMm5PqkN1SR36r4Kd3hB5rhsPsLbee18DMj8M61+xgx0NpmWqFcjU9CMjWMmWEZDW1vrFJV
+f7Pg23wWcRNufb6YUXzvyevEy1ZUlVSAdoLIHl+JzpoxeU4FTjyiNI1K0n5oWHnJVnctK38X22RK
+CH/Br8FTNkNkQhyRxlhI02lJ0nf9Wc9/7CCmXRXh85QE1I3ge3dN2nG6SkgrWi38uFpssCnBcfSO
+LIBvt8qySKIWNEdr2kpSs1Xp0nkXStgoHPKRduN+BrFdbvF0ojuSBV8qHD8uI3KLhh9j9uQek50Q
+OOH3jiPjI39I3MtygrBqnAfiI9js2gOhqaHf6Konz0YjacO4UjClNqIeavQUjsmyEr/hAzZ4b4WB
+LqOuM0qL0YXwN7PD4fhvAQ6h9pg+IzVEmHoAHtypGv3LA8EUiEvpPmMR94sHDwjAZX1hcuK56I+Y
+fthF9ahqJOdyuAAoV/95jdSAAEOUvj7Gfz87yDNdVF3pncUGHdbOJzP5Yj9w+zjlUa8i9YDGNnbq
+8oQFPpx8Y5lxbpBIolzK5PQUZNtDB1upiw+9AFuf1cScrAQpsr/q0hGUgdvlRBq3Z6R7ixyNeNY1
+2U60qIT64v4j8dJdZuxtwQkrjgQ5PP3oZ2CD/Oo7/0uz6qut8dXlyxdRzTloVN7szrLPt/RTP+DF
+A5yq58mg9SFcer0y0zB9PtHLd3bAeUDiLaGMRprppkRfsgyQ49JKHmqY1d7lN/9U1Kfg9i3mfvxo
+Js38D2i/R/HlPHMOI5WKlfcvbke9/JVOSFDNMj7/+cL3dhphEYs/Hv5677nyjxXKdz7vTZhYnSBF
+lFWbzdooqG/xf8rDI5FQkHaZU1PXCDXsU3mhamWH/ZifgmOQe1jOxRydLNqFctuhJtBzAZ0n63PK
+Wl8XBEv9xWiga6kL+thsT1vhiPg8zjIknIUPLCP+ljiiBoSd3IXKabceK3a1ctp8g2URtXITDHqJ
+VOCuA81xnO+B14i2CYtK+BdkpIgCNRh5ylQYJxgbkDzCqVclr17IgBkyg78ISlR+rGwtIbCNTNaE
+7ujWVhTpNjFrY5J728YXbJhvYrpPvW9RJPtGHNe2n2sKX5xQ8zQZhj9zU3018hKApw/hYTj+UXC2
+XXWSeJ2kp+qWkBABgL1/Ec2a5teJ/noD8uuysYJCbRlyJElfTHWF8d1yPvsg6Qq52IaDQBDJEF4I
+FoWKsFvVvNS7F7TuBn1ujMXc2lvvqbExfab1fTmlLw1VNn/0b3J/ib9LLcS5HfKQ2IiAqEhYUnRo
+P4jzK3+c3nln+2L0gyV+m/oEZXuFvtGRLbYD89w8R9UTKPgidxjl1tWnKD5GFu3I2jGsoDVM38Gu
+AADQzC1XhtgP2+IpCO3AXf6PZYNTw9sWY6fDTbg/Lbw8A19iA0rbJ2RTx8wxIXEY4CzLqAk5DZBp
+daxMUZcNbVogd0XCmFCjhMZHHD5E+jFOl6OdTbxksPm7jwG0ue8awdPFMPAYjNPbog9SgNKUZXXg
+40nqw79hMntp0pfQ17+oSu82qVRuzUse6Ngylf4o4Luj4Ir32B8uqxkgnLNIjGRHBfhqMVHRSgiZ
+0FMqMbJAzUc5iDVFHPDxDdouF/H4AycQHeghSWAQ2TfY2Trnqvbm77zUY0rzEc3191pi2kzCPOkm
+Ap15GhWFg8kNr9ktJZHZe08jYMVmjlcDKCS8aedCfolNSMNjO+gW94T+FuC8iuwV5UBLui7oEs9p
+QRPKSWzkA63CmGjMLY/cHuS3ESrfzFP9T7hE5fqbCxcrxoQgN07EE7bf1L8r9/+Cdjis5xX84MAK
+ksHIv5/hM0qrbLEnobXnyd+e76wI8FgSenVV64Fec8bXkEghTS1u3XABJXLgKH+hoKygZ+70suzq
+zjLORyVwwXFT0+m+f/BvsuqAxOC802sBy7Rfp9MzmwAF6ay5MHtL/34VTbTyIxEzB7ex3NxPencf
+ohRoKXYHlPKugBWCZSFBTaeDbE71rFxMVzR1sNM3InOiJMuF6lRsEm0gDWMOCRU3M/wccKa7U+Je
+YgyA6A5Ewy94G87EyKVIAErNg+CCeQDuHbeHGX2llYd8seP8CxqxN5tZtPF2AxeuBaHdb9W1CHrn
+ucxGVsM8ACg8Y1mxt48agn8qrFclIOLIwJaMsd8MZqheomvOHc5u5JxOHmuKDHfORHyEfvkO44P9
+jc5wu5x2wZnkZ8mGaiouUDYsnLm9xNIx0O/K7t/QVnfLvflGA8Q+PP0b5SFHeqEkFkaVS7YjFK+R
+GQT1R3dcDgXP3NFyqaHN3r4yPD/8JHmEVC6IJ8/MyhLfRxlCMjbYeLf5E8LKn+/1w0uNlaQvTPz3
+5FNmsOfCmH+jHuOFXhud4szvLESohBz/DlXeiI6IUwau3do3kZRDYQkqBG4WDzQEBAowls9z07dS
+0jDVHm7ZLDDwmqJvf434GI2PtekoF4K+LJ2uUte9qDAVVZEfprblTtkmpYwPKxGURKEkw7KjblF0
+BC3J2HHm5yvEbREIvpE+nWyeSa8IgLjkzJLG3rLi9Kj2AYpu/gRCQVhmT8oEeZvxp5YUi5w8fsTe
+rDwY5HZi44Q+vasxnuMNLh68Do2qq5TRZbSbX5xNs40QMLqZYUc9M0ouuQK9ceYZaiVN7gr+SoS+
+JXTAQ4ZOytFMGPlmhmOe17VcHlUhszl66e+1jRwVQ6q7wO3olM40iAUxKqmHT3Q0GKdjUsAobqpb
+hJX/BCFI1gLhG0qJDCZlOhCBA065kcCA5gAI+sqHgwKWNKcatIzgZswcZb0CN2ei5c1fFJ4nLz8U
+VfFWEu4w7Zbm2MjD7/U+Hd6G3SW1wlZ2sijzUSP0nUCPyPvKxE1ZjCfGew+xkZU6ANuTloCOXdJD
+wOykQWvrIHrEO+cgArIBgVst2TE5Dp23AoPxSJouIqoVNxN0M1HV4t/OMk3qZ/qlSwOIzU9TFynX
+nTS363sHQv9PowjvnQtKGFXtufmIDbN7Pp/1GrsEEebFZY00sDyMEUSbrD8ACS+g2bcWK4wbAbK/
+NRzqxNcUkulnnbrf+VibXykPQwgGdTM7edxMUYZK9xiNarmrJ7ggus4JCFNc410Q4D3zLxteYn/U
+pNwFeZLQ2asM85NJsAlRS7N+6AFAtS+vhgeoiKGpv4I3CcyURCMRQhzyHS/JnUqDJTlkZtXBrOjd
+WfnM5Xz/08tVimADa1Fy57yeskBhi2YGlUwozBVlKDl5vwtOkmoe2pLLe5+ToYLQN8EujVwCUdxU
+5n68Djx4TRQ+Qb5czM671JpiiA7JwwWodXgyXaka09vdmqoXZAU12RMEK0RnKFX6VoMUVrPs6ci2
+nbRcs0DXJTOjPUKzQkBxANRaK/qufPf92VLCOmhHjcQem0ejTin+oV1uJG67TrBd6ZcQhLL9Hers
+4gv7ORFvOoa42mHhWHVgxpc0jTsLKf04ngiHVhcjEYLcsSySLq/Guo+ZMHkQKafl2RqjT61jCuul
++/Gj+CDLTHh5wEsBVDOWobbinH1dhNHQC2Znz36nTiGGW4WGPHShxff2q2R7Fpmt8iO93kGJOICE
+1/E2gjQVfyf+8HU7H3/LTHl4hUxeKbCZx/jKcihuIBmAgRrPOkT4vVehQfFBGo66hcN9F1LEewkR
+0c6/EnrzJ5t5zOICPmfjwtNvbTSeIWSt5H04SoxZo208WSyL9S2Q+JAX8l06oAsx/cBYEI45gFj1
+MzAKK3MOcRmI2AuXzYOau5ao08f1G8g+40BZWaIUABKev5waUlqI9KXRZ+S2ccZoP3nmlbtsynT6
+TYrM0uYtg5Q2mj1+6v7AtbiFechmcCBxIsL/B/e/Xc8qs0me08OMTr2ZvYGY7KbLDJJrJdVlndI3
+3yp9lGurUsc+KkmMlnP1Akov98Z3zYEfV+9eAXTWdzIIifnn/1NyEK5WTipfo1Fl4O2YKoVq0F3I
+30eYhzi1CyHcFyWSuM7MOfydpJNvmkhCzWknKbBmpWIBO+PX0nP9quzEEzMHxsvZX0tVa4bDxoLV
+3MVFaSIvstgMHy6i36YkPfkDnsDuAmcViDgh0pWzi2/X2T6QKSrVSh9whvW6U2wA5BbFFXEO2SSU
+/9tPnBQ60I0I9cyyHBzIKn2aVdGKOaXKqUPmKjysP13Im7hPOnIoMKYYKFz+e82yK6cmw36mN0K+
+xyyYY5GNEGYwlckfPZcbbfspS1nj7TDUOKXTobod8f1aNxlxTO44eobdAQgVpOpyv046GBIWROPV
+HmA4foEOHydAh/B5a8AGDESH7unKhYH3uCFHyzelfHMzvXE4ENNUCy4KthVnJGYTogJf2baA0Doh
+Knww80ltqWd/1fVEBiKO5nGwmzCP3UpNFDxd/taYjDmAiimFJZ9SI/g9jZIWVz6uPrTWlmCFScqS
+QoRfvTygiAF9eY/8KQvK7dEPnHC4vAxojBiWm1ve0YWSUcla+tx7RDDmDI9bx4Bm/qxvOy4lDhye
+dSqL8LkafIX1ry26JPrvW4N/okxPSPcWrK0BVjsIxfEFRCKhEmETOhXEgUZJ9+5AW8DEp+n1XKTP
+k6U10e9bzE5QBQXXws43JLEDl4halCwK9/++akoOjf4Sfzn4nNB8LzLeTY/9TEUsAncSB82QT9R6
+u76pPfGONV+pAIxrTZsfJpI+6BrkKagwHZafWZdWxb28aAb+UNWiN+5YnXgrGSYviFeNzkO/MpnY
+BVLrYbL7mDKMGsTFs8zhNNi6ojMG9r9HgQorqgLa2g/FhBpCFV3Z9czGRNvjxdQOgs0iagEwG2bb
+k6GUf8F86rniUfm7JzGhEVE9hPOhvht3dwpOV+Uvwkt5QXy3FSIQh2nfYAxBcYsSGIpYMV1pLl8b
+67dA1W+sUQPon0FddEoDIU6KKeo34uudnd0c1yW2mbzPeF2qEnMqfrgfXwVkkiYJU5/p6bqnaHgQ
+hYmDVDdWSIaTTAS1IzH52tkzXY2ooBRthxd7Yh5g53qHGGul0qlHQUIoHvgYg+Q1XxsH+NolONIq
++rI9mpWxD34ViA25t6va8R9mSDfh66STSY8Q6RxGz4F/hnb+nD6O4pCOaOkIHQJZ/B9Gs9o5SEtc
+w7jZl9cgUAPDL61kGKtxN+1Bt37YnKys5pLntgJLiTqVGTl7Qg5R1/K0jaZiDEtoclf+m32qLcPG
+6PQSQJ8tsOlv71jY1zB4bcfHChZxZfMlJfKN7BfyoPpbT/d+l3hNM0U3oy39wgpiLuJDn45GmUon
+gsl9JkCSfbtgDaFpPRGUAle+sFUNzyTGZtWlx54XQ36W9r4kvEfVeZ2SkkK5GnuF/PE8k9F7j0rf
+N6mr/4636FzgS12Bp+VI3H3t1dq+elvFUeWvdsfFQQoSBzW5psiXcF9tRZHzdX6yn+jJPscUbxGk
+4EICC3/ucjFQy2qZF50WMVKB+Hu75XTh99gq2jwG/sgVZr6gziPG3IK4mkwUKwZCHtPSRDUly+Ip
+TTTi47+I2WQ1tX7YPby+kt3PIlO0msqslqSKx7LwybQG7l/VpyVa7x+LCOk3Dyj8ZTuIWHN0xBNN
+l/Dq0dRYTH/48Rz1uw03Q0hlHUkkt3p/7Zf0av9ylUl3pDumkSaYfuSRX6k4TCoWJxMkI6o9w50l
+g/3Sl7LSoeP0GZb/2PPsq+9Z3tteo4kZ4ruG911JM8WQgUDz8+wjMagBHCS18k/M5+eB+i76DXt7
+h+2E/QW/C//oO4iiq6XKMHPU8gFOD86mLQ34x1rwfeVn4qDHS72t4Zog3lY+Uxiuecb1lcV/9vRA
+9tWkRMQFM2tVDVxZTZ29vXpwCKuxqUEN/dN4EerE/V7YycOthWLjQJgg36S7kxIi8e/Y19RLVZ+e
+ooVfjkdG+LtaSTkYKanpvpctIZ+QVfPpXpzRv8HUm6m3d/VtzaeSPY8bbl2X8E/XWiqjvl0Wj7OT
+zadwnkU8PncJWvaZkntCcgARD4eT04DYGvJ9+2US/7x2DdC6zpKwUrq/OGCUu1ye8LtQYF239B2v
+uiOEeBr6IgdFnDIcOAL9CUCwYNHf4HXZ9kpwYHRGD7LK8+I8yXvHqZa8AUrruOTJeQgLHdLRbimX
+s0m3hsuEFFSfWhRmaV4AxlzM+3IxVxxAL5SHJp0SPpdCbnWD8cHk52AOfi6vxjaOKlBG3Ae2Ir1H
+rgDeWrf6odsqDgRp8qy8J1tYdZRetv2zmDzL6LLks2YDsKnYmy66jfxYW6nIz2qyOqfq3hZpXjIT
++fgnyFjtgsgZF++8F2P2h26GGv3WDv1i6V80LZmxTdi6+2FTbqb84l0VybzmgZK4xSlbc8FV2lfR
+uUE0oUfIsTBppifozBCrnnjwLBMJ585+p4GLH0nB5HQaFV8FWq+AUlx7R1pUQ0mwS+cKbbl2SK36
+GbOMcP9wQ1/Xhr1b00x9LWH8b9Ni+b8Bz7SCT50ayfudppjEVHhoONjzuuEisEUF1dJFsF9ME5bE
+q0akJhbw3jIcxe9nYyZ4lvmeWN+RHXBaSMI/NwTL/j3/imNZBlrRW3O8HyFVPVIqu6bg4gEGEBup
+BMWg7Yx9mGQJRePzfXgMxQhgq1TukHu9t8zslt6RoABckofHYb63VEiwTJIEdyZTXSYwPoolEvUq
+jVz3FYNtIEv1ZdY2O+MjJ4hhx7qKp0DuP5bJLSQ+k5j191bT0CcXL+8IOXZzTvu52T5mWBWlIYRM
+htBwYW68MMS39kEkx3wDS2nSeDeDEOw5PKsgWTO+pi48kVf7+T6tYugKajNR8Msfce2zKSS8gRVL
+TLuUpeBMuKRZLYHL+8efvmPqv9OUWwJPBrZVsbR7gQHKiDjWabMMX4BQVSNMH7uFTQrK21TNbmWA
+ZNKl87FpbaPZ90CDwP6wUkTxf7egssEho/2JhVPZ/nXcQ1oXYLlU8wdHVvAp/jVLBpJFkmTxAQcB
+Q/naK9dE4cRcNKbUjaHu2H6S8d0XoeZna4mqAq7lvkTLntutqq3q6QsULN48Ha41FqiSF1etkbx7
+EnEfe31WicLd6071Y+YKHjFfD/E5/1JmCtpDHb7TSqGTKgt6IX5l2mbqqCMdxkIF/VT8LYcaWhAL
+11jA9F4EcID0VpsqIbvbTrChl8xmvQhI6xxw/PjZN3mwoNNnfZWRULYuv7DFvWOay2OUnHapEYRH
+k8hbwYbhT2MT4rtRA/1CtrwuoatccVvbkbWqztodz8AL4qQALEN89JSy+/LdW4X2QCp30bdjzc+G
+6cy1JaWKq29oOdY8kytascqo/Qt1S84mlLpuEjYFiSJTEloCQe0wMVGe91wBW+oCXRdEht4IBvsg
+LF0mc6J3/v9CjydqsztSvcd4ztEbMrEhOE/5KJKa8YRR6hWVY9i8mEt4hscX3fsINbbK8C4q7LEx
+MmdqHT+AcyUQf9pD9dgMppGovAxb8KXvI7hmoEDI3s+tav1IRY66xT2lrc9RWPwTn3z/vDKPr+qD
+Ce+xHXVV1LYhbKhUq8KmL2/CPB6IYUxDNkSAshykXmpQGgwmpim11ugsDPbl8TgrzraI+8gPGbl1
+6UI6zN5g30qnqYnFGvGJ23XptvzPWCTm8b8thD4AMUbFyYwm3F+/JJPDnb6LtEcFfa+oiN3PNHPE
+b+mewGfEJeJIWl8FkPcnQ6e4s0jEo/9b8KwDDRnsjJNFD9aea4n4KnxshvhbfRdt9OLGnle9WJtX
+If/kPTRXLTmZ+n7gErgnWIp5zU89MxmNM6CRwLLzGbTF3OSKm6lKOZYryaStf/tPCVx1k4FDbCXI
+/p3WGSaM5RtZx///4sTL5TfXXmAWaEv/5BMm/oToQCdFt6r+wTmA0rvCjBUf7P46K7w+nJsZBI/l
+v7e/J1Hm2Kv0MndCmJ2bqjxRYKIhiX2GUf4+1IvR5T3sOTk+mNNJLLrVgjF+py+MOoPpNiU+wVX+
++BenwWfY1qQCp2++68d38kEV60feUjBsizNHLNprKg4iZCZDd5O7yoiMfzEN4nLb1i3yAaOObHi2
+84YOXqFYBRiQp2DOQikGPQBKeQ/dtoGOv1JAx5iz3QcMiibKo5Aa0jf/wCrbNBaZQj/5JW5M47Xq
+5UTKywbi7YTxoORGpfaM/QhoabnRCwAkZAEPiYub4+flsUjFu8R7ej9d3KecyIw8bZ7djRQ2gAsy
+8aboKHby0cB26d9lj3ScqZ4PGgTr5374CUNs/e/IHIfr4r7Lr/vXPvFdCm/hMP+VUA3qdDb06hx1
+WKjXVmNKffFazWXdf222tYjN67DR0zfX8QOkA9+nKy0Zy9H6F9kvbXIwdKEiSQLuFX0p5WzLvEqA
+WUXONykHjOdcZVdGlI4eI39alPoONwfoKaPLbukMGKExTkGBXCtaPeYBNBtS5LlyByTX6kLR0V63
+7U86rI4nZqHiWAL5Qhq5MEAHgjTSMTWO0DSh+1l4v8mIul+vr6PRPlVX/6sbRCpA/wZy5e5UU+dS
+1dm1PypoSg2NshAVjBRzdFF5Dk3/GaK5jxj+bSdv9HYOFI4P1qsbEt/EC2TwROcrN9elsTNXUFp9
+ko+sQ2vGsW+v+evUO7rAOukQyRV6Yu1gttweKvyO9Wtbsb0VXZIsDEIZ/5Mzc6bU6l0HpA2PNhd0
+PqHrTDdaoJ+n3gSOPDje/kGoNdxawMqDTKUdU/AMnJ2gSf7t97gdbAhoHPM0tCe5a9tapPIi5O06
+xxn5kVq/cQkd+1s1NAMNjYNqNShU78UHZI3tihmxO+jGoqD1dXWqfUqdjt/4Y2GmhZ9gmhTffzM3
+f0F9ofKloosNeDSy0H0uOy2yalqmPVP833wFMYMX+sH6oGdU2zQVSB/3uSE3xKMdfTgWTRd10T32
+xr2IldXAFln2X5B0IjGwXASU80lWZlJJPG/paTyPcfNWbDRf2kUUE8l0QX3ZbFLw3pcxczahwsmo
+Ht6JYhBZHdpr2xW+ba7Hut6gRubDHr43g2rfMVYDLpmWLb1uz/D28/2zu8kJghRBhH/PoK5kEfHV
+lbct/E5MeHhSngxM+ZNA3umz2fnLD6tlpeh4/u/ZbXrnU0ynDWeJ9t5Ev+meB0XTwlPrly9WZweZ
+lrTqj/FVJg71NT6RmmCId0fm89mS4uKT/1aYTvqxzb8/1xFuUv0EdnPc9rJg7qYfSsc4/DP8+RBY
+XI0KmvFBZpR92PRK3Ei6ZWfGcVZq3Dz+DK0UTNwVV4f4Xtlo/ZDJEbGzfToYNpM2L1zFe5ZiWegG
+mBk4KFMlfFidYbzDXDJQ/8NcAPR8zN+yVV19bk9DhJipDhcatjrJzAUmbeFAjD5blHParELt7Fn5
++dO021y1W2US2GLRYgRgwYiwJIqYpH0GTLOjOH7Kl7u1M06GiwptkSiULN/KfQA/Z9sAFj+M2tBF
+WZGNU7KNWaAJw2oGwyyiiEXvfhLCgZkOz1Y0nF+k/eatQmfci+Dms0GFVOCyjRU7JF2HrilVF5ns
+yXLP2HoKPqALWAxrmn6wTvgVADRKm5UaK0F4DxVK5gFo1rOGmeMHUo4WdEpwQVTb4LQMlydtxMgF
+UJztTtF3KJv0yPzGRCZjJaQ/kMQXf7BhIXhm8j2J+tauc6inf/b83lBnQh8F1Z8a0fB+ssOMm9AV
+EEOHcAnR5FAZ9qfLzIolI+oJCpS4DT82dFsYCSzQlL62ZO3Y3YlJ/2v38TObQ4B5fnCgjAUsLKED
+DCBO+oA5foYLurWIE22ESvXabd2XNhPgjDoKKW8/w3NdFNZcOgM7hMYS3s/t6cwdZI2BvTUhsS48
+38mIaHUOrShEabhpWgGwghZBROuo96wTiRLB6fDNf6rWaL8E7uB7oOHFhlP2nDSzQuNXeF/P01gs
+h+AtlOzeWSb5i97VFlUa4kNCs2c/KCYRXBI5H0NIzPfNN+NpMoFIlWg9YOHGgOAsaBdfd1fpuAM6
+gT1G/+1ykVf8OUGctzgP97yBP4VmVcXKtp80WKCYJFsvR3ej+p/fJ9nG0qV+F/YhNovSwp6DA04A
+8ooUpRCWxRGvtaMLM05TBEh5Cb6ZNiA7D+6+GRwU2P3j10i3alcdI8cbbz4dHgPlWnZo/7YUdDvf
+969YuxOWyPGwyev1iShTKx54XvBApVJHUYAxJpiiaScQ9tuXlsk6ik/kCl6NKSwtVaSWnKmoAJCt
+IL+ascWpKJBcYo6MF7Ymh4ZEnjneaIUaOSz+yqwREa2Z6XYIvenebtFWLdFq42igI3cfSKrbktsh
+1cXmsSYvTOpOnaWytqUBhHGxNmtLnLB4MmVwjiuWFlSiLJLaesDRkEb7JsAkCwdZ2ZusSEGl3LCP
+LZ9Su8bmPFugWsnt6cFlM1yWcWE7faDunngO5j5dVnbUpdxzBIVDad2mqq/0YfKDlE25Sl9CMEgF
+dpfUpcM2uDvgRnZbCEXh5qEKBQ9dNekZyjuqVQx1x+Iwm28VvWQg+3BnAAIcqX3/cWEXncvCRpg4
+aN7mbpjNRazNco6YVRwibE1wmTvdpFIflYbiwgJCH4M8f+qB8FGxCECgsAn1zZCwiNNo8zi4/dCB
+T5PDNogr2/VO91zQ0RETb4Pqk3f41K3eTtGYauMfkvh+CQACMPWD95M6meVCZrAMV7oq7ECxfud1
+wytPyTP3Pj/Bj62t71XVKcN2zL5FUlsG8VS3qwxEX27FtF/JGg7qa3/b/3JVd1Z7N6ywDN2hWix8
+ohsux0Uj9TEXDENIdUB1Ur/XfaP8yf4UmSyxLa18Hkdjz0IkXoJ0GuSrsuv/KdSKHPDOEqi5Zg0m
+3H0lrKH+wn2TO+Poa8b4E+EfbRkC8CaO0fkvWTWgZ4X+P7x4+namey8qkFVcuxcrAWcNbtyaq4nP
+IwKXtpRjgmHbQVT+eo/37XDXjVstInlntbeKut+ZLKYtEZWkfLy3FfUmMIAXrVqhqC9Finhhb9oV
+es7mnAEj332f7Ci9myLXfbgHcgBWcm4KiqPNFOFCdzKqnz3AW4cTLWITH3bsPXL6Tv40touYmA4Q
+DnAx6yTD5vkN/b5Ra5Kb5Zo1TAku1Tyh3McL9l3wgcU+Y+/31rSn2wm+jChyBuQ/8Gt7/OmWTtgj
+3HAybIIlEJ4ImYJTmUeknDSrtxOw8w1kGHBqWtaFIg84Qv3765+RBNZgz7+G0pPG4kNQlq3RwEOl
+Hu2cPavYW5ttySFfVhzU7U+yqe/X5WiSnVmLoc2MIG8bRP/pz7rzpf9H8DfQ7kAqjzbIqxTVTESd
+q3S8jlbZTcy56/AgQekuO7JF3Fi8MODfDqoyBkGavQOPstLNEd+JV+ETVYxrrkAYZipNCK8glg2z
+a9HwcoFjdv9ByYJdwLLvrVN+l1yOqJoJGDzF3guuxIQer3wCFpdEt/tQefbi42o+3nsBYKzw/aIT
+criVSZRgznILJEgDM6PZdBv1whQQJwENtFlSqwmBfAaQUMYpqoXfjpehrg0b7R6k6DDEgza9BLpv
+E9o77XkSV8EJ3dxvPjOnjEB+sj/XYRaGAHz7NBRaK4qJSgGF7G8LpgBsk5hQkSOdlTxa7xpY/CVw
+KkZI/xf33hjwtAr4GAK3JVSPsxyA4ibKIzzKwYb4BvUVvO5YdkRNpjIpsaX+IsCol/K3HyDASNHG
+7dh3nNxojKkfId+Fk7sYAYSTk4/o3Ae/YnA5GbDsrHPBhbqHHvnz1okp45BJ0y/GXNxN/yl85tyK
+usmKJUJ65mpcV2qG9r+29O71eoPPfJb2jOmh+MvPfoX63yyek0TUtYTMz35+d+OJ84JeBDaHQEx7
+pQJTnEmFLbH6+dZxqwz/7zacvDK4joo/7apNmN/QsnrQGIw3GXjn0NFhtZngKMcNgAWWh6dFb+Me
+7xe9adzG39cdHlri5Y4OpHWAcMnzhB+sOvLkp94/WyRhXYpsUuxMRzcubo4ALTasaYV1knEBYgQ0
+moISA5dK+7cIaN6z3/mI9snO/MRjlSzSFLxq6w259e5p608SqmGeHHkp357FFnOWs33uw83koRf2
+PyIn+u5i4Mh5SKOauwWYJFtXxF+OgSoLSKnFGVH235p+E784keAvw0xg13mOEPdf/T4As4wvlPSD
+a5mgFMmAJdhRzDgjh0PjJu4hS/dKzmPLSFmwdfiVSgJeZ2yfBa8zrIG8ZKT89VznIcpcIq/FjL6K
+CBl+mttKx928OmMAB8qqoh0SJ3hOSdNSfnFNWVGbnpbLJtFlQZ7ErxiGHXL0/+9TOdL/eRotIyNf
+y8+43ESRUAc9PEYCQCs54dYsTJYTeNj3whH/p8ZLRj5lFX9MkZDkVxqY6Q0PLdFwdTz+0Fu3z85D
+EUPbRBbm0Sn+t6FfNOgBeryEEPXIAS76gew19Kp2kXi/haz+msvgEiDOEhUJ8O+PziaV4OC7XtXq
+S2hL2HOoeGOCLuAuN2fzPyZcholonhaDOTGqTqJm+9WKpNdAWBl297/Ua2TP1dJEGT1e7beX8WH8
+lSAPz+HhM4H3AJX7yNvcYz4GlnwqDgLZ3Saaynjp0c7ep3diHE3D0YtRtq3sHegOUTu7hRdoo+nr
+fzqTyNrBJfGfUT0Aqw5mj+Ijelzlypo4kAJzT9X9BkBqTDKrNQb9P0EPXHiXCdWDj7rqcCnWHix9
+CWfCzlLnhH15zebIWqX5Xw3RSeeiNjWObIVrvdVZZJQZzJqS4Z1j3VO+d2V3p+yaJFyNglyotgbN
+y8qgfJ2J17ligcRA+dXJcZO+VerXIG0BBFoEjob5mpd8ED+Hfwix6t+OMRcldIm/bJ50JgV6sGXr
+R4t8FKNFGgIuC0oGVURsaYiVh9vj31eAZ2ehHzVT6P15LlQdwQZUJcc9Oo6ikJALbfiNI+tmEoOb
+nrSee7HwvDiuJ1ocXcYV7kt4xYW1MJlJsy/xg2mt1ujJMb9rMi3i093aKa3eZCXSc2G58Ti4TuGc
+4ZnVZrQ2b4CgZUFFMpdLkSscXPq56qZB/HhgrXiBmODLcnyU/5zZ6OVe8zWeLX/10KEQiECb+hRL
+9osD+Nd5omubhF1JH1mYS/di41xVq5JjTBLrH+aLU16vT0vfYAwA/p8ZgvtZ4qqjFgM0dZXJ6YPl
+hf/PBR7+COWRdM+eOItARAMuQviCehGrh9cDLtz7DxRQnHLhtOPgSumXpjqqALUwfIhSXFJyTC1d
+udl73mRveiS+rxtBHJVIeBF7BPtEm1wpF08ysdbekUzEmm2GEKgtV+1iP+wY3v3ehO8WZ2uLF5Q0
+oRXZUDO+45acs8gSqg5PmR1aBxy+2WU+wQWcqtLY90ixfD70CPgkbX+e51alYgiNIAmfnykooyhR
+CKDxae1DGlF0Fv04/XFKgk9b2Jtj9mFLWrkC1YcR324CP/Qvyh6OaM1EpdTxCh1DI3PihiWQ9W3i
+zTMs2WLvD7NIAjeBsEsrY3yDYWt2rJWq3Otq/Z7TsQW8uQXKf/9XP4aXoPgBV9cKzoYiB96P/kfN
+yjqIyd/7mHhMdTqMM4T9ATn/bNjivgDPNn4n8GHCuin8//P9xZyanoNDNbKmc6MLhV7yvVOOMLWp
+w0ea/UqKndHJ3UarkbyYdlMf4tRsFAYzqnYY/8iduT9Vac+o2YJuyw3QDR3chxTR29ephXge51lJ
+KJDTvFbuFP81oVcoZqF40KwZOn1hV3fnr/SRCXfLbF7lpDLaagqCzTGzTX6JC4PcUZbi67bDeOCv
+z7tthv2jdfVfbAMFz1B0l7legECvHq44gtMR3tsJbR8ghOTl8wm0KK2GNmq8kD2zqAqgpbVkk1/B
+dLerqLqSO2bfd0Y4bFEAZsy0vZVxnWnU7mw2THvpK+hzcKBzzj3jPNNtTkmA22wgJUIeeQaviePX
+j30SCqbKqWjQ/00bzu9nsqrJ7rXoeYDmKiRIlTr/aDkLsSO+bOcsP/zb0Og6HlBhD9a/b2dHGCYs
+kgWF5dTPIam6QuVLxkr12bFE+7lhm6tanns5XD0c/QW3AYVsx1pJCEdWOgYbUyF4irGVmG8RthuX
+YmTom4F2KwqXXRP1dTzo4Z9CBqvKmq/SAlsaElFsthYRxvFX5hix2Tk2bfUvm94++YRh2cVJna8Z
+hxhlfUSfkmBhB6M6DLvSbzwm91x1zCvwAb0PF53KAayRJzFCH1wfWmcp/k1WbFp8LEwiBzc/BC4O
+E6xIJDlnTGqP9LNQ6ng7tsjooOCfWcUVYTLQk7mrh8+mMAAVmKGe9O2LXW41oBUzYY4fvJMvoKn+
+Sh1o08ADSr7UKCcYYnrMtK0WFHZRCh1J+t3TdvSsz3z9CJ+m5bdMvV0wJx3D1rRwvY+rWboJ7y+4
+rFCZb4J9l5g92HkMSR8o8AX67YuXK+ofbW6LF2c96Sz22yjlppLXyiWOlNF3roz5eLEk5yXs9WyP
+yOzc2SBbKFaHR18Chk27cco9lnoQvN3pBUY0HHTYnrs+D7EODKJ90lUdoQ6CNzjmyBdJMiylZAuN
+CUfr8jfvGX9MUZfW5eN67H6YgUmWiCxOUdGIdQzW1CS+dipmel3GvNNLQSz1PUZnXF59YaPWZi6k
+0pJf1vy15Vw5vtejhAwWE1JqjBcOz0jTcddTl4kBQjEP8BBhz/dr0JgTPkO7NMKPHaB2WP7eOuKX
+0VD6bonngkkSHSgDxnw6Qu/krTSr1BrIFr6oZX0Gebl2VnhhCYoIHGVyi3MaUZ40qwNpiEyuTJLr
+pXtimlqkkt2ghFXcicRYwcEaLVU5lU9M36fdirGzaKr702LkDKbHA1fymH2cSdahZ+DEPXjJ12ie
+Aael3NSZDf7m4AVIYpmjMoYGfRmofIGJxke/1R0s3WFuIwKNdpv4DPv/N/+BgueZVZsr6zhiOXvP
+3igeWxPAUWf/yInt/GlHXzmMtnX+7SrdA1gNMVwskRjRpvL9pwavb0U1S+5vyciUUweX+EoUDb56
+bpIf0d2hM6uHPpkYY/djGbJ6DOcQle2rBEuGre9xEaUlpBsrItHoCHS1U1AMm3F17tX6u1fYDwBR
+7eUx8+dlvvcq4Gi7mXB5TSH3UV00gVQqz4IN01VLImMxOZVMWfQeyTPCcKxeeOyX9qigzU+XEALB
+pCtKNVUmuI/7prCyl/cRaNH+yJLzSY3F5QKiIre+aAUwrDqUOaXJ3zi4CDXIF44Kb+/5iEf2QDZA
+xU6SpZzZu5QYc0PBxiwQc8wUY/6Hi1lFYGdlEfjT6NpRYLn2G+oAFCkYTolwQhCYLAMapUle940+
+MEekgPht5o13n9oTrocx47kJOLo92op3Cb8EbNi0poktw7ycUl8F6I8Y6J7XbAOmcBdtnucc7BUc
+M6tUG5QPqgvWwEhCg62cFLZerKuFczjwzd98vihnyEO4Kv49uIZsNaOMrSUTG+Vss5mnkku5KktH
+pu3M/KsIkfuOjqRJWVf5UQGphFCddPAQDTAVbd1JiNZiuvr+WNTzkOcm+zVb2rc8tXdbbVBzoYLX
+/kupKZ0PV/in9E7eXU5pKuXAekRO4FoG5qLLZZ4JFsqFNQaxpFI4PmMXfRiGP+TMUhJgxKPehVoS
+rhpq6YiJAAmt+XJFMGJkp37eHSS1xTNQxNaOYVI6p9R7CeVvvJgy2HSy97pMnvhYAkZZb4qSqkY1
+lPKrHspdQFKuKOb0fOcL6I6mhgLFVYiazMVUJInZ7S3fJCTxfv2CMhLU3YXpTUvcBtogubgRA+mu
+rxPfC2Cq24gZXiHcXBLs/5FPDQ9zAj5VE+4YAxzM98EdvGuXi6bwYc6rDCrckB7Iwl10Sg0jyyi6
+O+rPbT8ja8gW9N23mqo293b1K/si2sU4gwE2u9aeSLt8SaPlhIAcmSf9JQy1jgh/TzJF2G4WmNE7
+D+Y8uIayGdxYQ9j1jhgp3eHF2h/AJVDZieX6MKhJkz+hR87HTu0M0/7xbyfVTSHi8pMLZVqVdqvq
+Gsg9TkYPhCYk5ry3SG9IgrdpEEnPgweejQFK2P45TiS5oPOWahoh20ckM1IvnJJtenKxkQff/RwB
+TZmAZOCF498Db1YGWwtbGrQtxQqzqUXcpwytT4zdreYnZAPaBurRbdFJmyXRyVDJC78O4CCABf38
+l714oOC47f9t1Z/oUi5a4LVgZavGmJKB4vLMCQpYAX0Mbf3oy/MTDcpsBtIYBXPi7BlxuO4fflSj
+CmhTRoiJmfCcvL8VX1dbeN1/y3ksQooNZ8LLO4gdI9mImujQuWmlV8ybr3ov6EXtJMJNcTEROMk3
+CxAte5nPsYUaCikGMtZRG0Ow2kfk2K/z44abx1TuEl0iohRKtCUpz0TzOFapw22/keMyRuvHjVj6
+T1lXTIUKur8H/ZaTwhB2zJB7g9PSMWhq8teqWGpO4mc0L6ocVmsByEf1p//M1x4onHNymXabxvJA
+e4WRmZqq3AU0IiprZxND/iez+tvcaCxDf4GL81pPbKgaJ+6vzVL1SmPtWcgr83HznVOPckhPuYJ3
+3YvzqqlpTs0BB+xugaParwrBJZ0QRbfFpqQcmfaqPTNGwqksUuoMriG0AAAdM08T2Cry9Eax7EH3
+7+LwXpKerkA9RbKoTGdrKD4zIpmxJAWYEz/oK3Y8LWK2iGpPdvXvoH8RgSdq1DgUvTy8BGb0n0R5
+ZzHkRiNijKFdZ0EDqg9gxDQcjFW9IixnCbHsyhklS+IVLcmflk9rnLVEvqjSP6Y4utlV1z5QEvSx
+V2v+aMsfyo8uP39541FeLH906CHdCqTd8J7BwjSCYIa2cN06Wgr90C6zGYKGjEETfott5Sriha3v
+UeblqTpM6gAphpe6ykKKkUToJVn9wrcxOy2W2X0V9R32IIXOA73wgPf7Be2g0C+JicHFP+1BlI0Y
+4TdmjVGCuWba7fakBYqmC8UqBCCVuwSFk4EbT/2ga4lNjYgPzXNU5eQTyi3E8bTcHtnytCiaAtr+
+h/Diz6UcL7OxhsdvC1dW4NxiHIBCZCeegZdm+H2LyT8+8aP9yB+jy4PyfBnCSdUDMz0L7CR3TKR2
+GPJzL3RrwBeIFVhq/7rwWa2jgqalD3VT2JhrzvO98iDewxDITJyrQABcKhQIFNQKGuyy49RG7h1G
+XM86znb7bTjTcMSm/zaAShXt9yyBHrxSZNTxSJaANG0k0ptGeMpNM2kGataw4gIHP2qcCyYR0BEx
+AGJGiC9AvCdDUaaWm9t9QC4RnmTLTr51pesbMuJJWkqAxmHYKebEz4ByjGEN14qpjeF4zk0YTqqD
+71/M/xmw2SeYlGwPcmgd0FzfY22FtwWG9ckQHlMuU2g36GTbouMCfxZItpII30zCMU8xqtWZ3zt3
+5ZFnx25tIssNVizHKmAzz57G/tK+24Xpqsj7R4c5dj5civWOefb/1V7wAhGrLUQsigzqE3OdiTG/
+FfdhRG+tCBgn0qybRtljK+GCSoAYMgocKWUQ0yNX7BpBNFvEWAvGj+PfnaOmsvWpekZMYW7GcJG4
+2ioPEvpox0AVtjH0joaFuQHSqi25sMcn1krSEH0gQ7jc0VZhfpnduOABpyyApIoj5lAJCBGlxISl
+5FdELTGNzMtMTlDGCVsZIYB4lPDsVAK2C63fy0ekh4pOfqtzQGuoXuCx11uiSz+dcLhJscBwV/SN
+PccuIcPRknj6hrKkaILb2Hgc8wTsdPDvH4oAWGPRVUCGWD/U+zSTrI9dQpr7RtuJ2AHd9i+Ze5Et
+kQL/uXXJuFXOA5h9BuB1BZ58L4U7tN3xTPqrqR4F98rCTPe+woFhgGlNpQW11mWq4E0q0XYcov9S
+JSVuaIR7SRB7JBCKPeCspsvj6wPL7x5n7nifOzWtq+GXPWws1u0fPhPwDUfEqC/XfUTtZ2P+Rwqq
+XW+zR3rp9Vq9YwCWaydVsXuabSmSkKC/MgY4Fl6bjbAE/7xsU06t7Qqlq8Awil1pUmBJIfF6E9rT
+/XZ8hz/FLsbeKv1ep8GWBv9yLxuhnPaTX78N/eRgzOCiLT+ktBSowcZLBVns+pulzxwzkojAfr4o
+q8qw//xhf3vRTuA14janVuDmbcy9wPLGe11RpigoY7OB7SQBus5V429FosZtRwD/ih7twDycDYkU
+SF8kURvqhP02RK+egR6ef/9O+Ks+UrHJoeQoQDYqluhoGqClXHvwUSxrXPm0afFOzUlNujWs9Rkz
+/0v3ma5twL6FTC3ox6YVSv+0u66TsjPTfYv0hnlQdLpgpT+r6UkCt3CzeDBdkfsqWlawhfE2aOSu
+EHRD+/rN88Cag4n21LGZRkEHTjn9NLI/9ZiXsM+F84Sfvh1XxiPRjUyoZ57Mdv/T+oNfJ0QrQnFw
+jsnYoYKxHoDD3A8vapks0+98wtVQ1efM4ksUzhbD/Dy7YDabV6FSf4tM7htfK3YXtkT76QyaQT1J
+845o/ZjE2RzI9Nf/U8d426Ubem7NRRTPXgDDb4nR+igfmpdaBvEQWK8Yg/rzolD6NMLkGp9z5c2Z
+bnya5jJ75xPWmRCCfrjjkx8y1+aWRQWpJiu3q851UJQB8RlNvN1oWymMYXuZHkSNI1hH47XWKPX7
+QiPg2u6sfAFt3bdHifQUBoCA8z+AS1D2PMm9QhXjTgn1BOTvq69dpjJW6rRUOk4VSAwBQZg+Xu8c
+BqvBYdzywt3cAm2lLSYrzdHQqRjwRLwwRLjndUNUvLy4JWZxyZVr8x1SqvluEsrEyySx9mUvI8WV
+CKw6O+xIrPWmCq8F/F2zwaD+PITxxQ+hRmeHQFrxjJkdbYqOhRfdVwx7mSndgOohFMfg1jRJ16DI
+Tk9PaIw1ZMkN7SEzQJHpytaJsLR8mN0V1TyR3j6QByBC3gHr9d75lfOR9aF3j9yMFZE7kD/fRv8q
+TaWvj63vZTFfEECgcX9mTgmgGv8LZOjjAKNNEj0+BwzNL0s9AMqWrkHM/UGvNxgGObEAwstGNg4t
+mX+KUVk/OYeTuqK1lSxYgtiBEtt9QxLh2vJMu8u560vTjyKFByTY+IheW5PmYC0xzbXcVaqmHXcj
+ejAf5sKsJlvq/fnSPKcMUVX1WUJtkib4X33rloJWrbM05XQPt3SWC5EJIF/s/7NHjlvX0ACda0s1
+mqrQUAQXU1Z4haNvs/B0uf7XvN4QGNvtLU1nWP+qUuUOkOgSnb7z5CXqpqT4fFIbdM6dcf8j0AEi
+upjKMQcdo2hcPg7BJljYSttnbAMgOiZ/AHh7nrGyYSJJamJVO7UPJh1/SbTwWOJsJK/Abwrei8dF
+5FP0TkkssZeZ1L2Xi4Sr3V/6YYSTFkraHTEzcalxoaI7n9HKLinRa4CPD5Hut2GW5LFfZ5nCAKm6
+C03XRcgQ8TyXf2Y8MLUTbGBM/oF7XzyqY/7scEiRsSnMlzDHaPCDDOsnDV+zbVHMDXOUJQuPACQ/
+fAcWrWK7AK+YHMWSoPI30vikKmM6Hyj4PqvwWiD5O4ypZeLSpVZGQKIud/sedow5LbhjCHMOBrXi
+zoB28Kji0oqAGK1KklRAYkRVLavoDHnuGX9w5V5zsZRjJMEhprHEeoP8ttAjelIQ42irxMBDXoA6
+QFUtEiKRdQuH9eYDHVu9uuc6lxH1qSvDGO6CnSHVNBJTOjwb8lA9cNHEgqgbWXL+amoiR2ApjOE0
+hKhQtpBAU1pbMazZ6VbCgPHnoQUbrhKVfnC/+P/+8x2f9vzcJjlmwYah3iZ+SWe/8xJq9MKEzp4L
+gLeqltl4FpVymu6SR/3MNW/nhTiCuBOdCKSXrf51bNG94g8EJ9V2n8DtO+2KQExijoQ1j3xlkeOX
+JZqH9hVcdgw7Esewki4mFISBbxdRhCZTk0xVjc4suiOq1fP9mgtG/c2ER07tLlKY6PhpcZBDW99g
+yEiWC2mmwQHe8gAZDTI1MnBVe5QjC66CZqJH1Cp8jDki/9q9u/xbKD6epYz35T1ahLbT2Cp4HDIV
+Oz8m4C6DSdZyb3tTVpxhphvuBzadqJbgqlLQ8EsAAAVAKob8fR+TMAsoJ/MiXLpVKW8t54hfy5Ff
+QH9AYTYjo8q+5WDEaAt2qtgSJ8KFn0sKRtxkePmOMHZUCk9BeYcTqV8f1XdCXVI8WPILvRxTST9r
+LqfqVN7/pTQql8xinMQHRHfRZOgQMMYRSTouoA5o7cxTSAjHwuqL7d/aAvbu1hMuXcIWbUYUzGX4
+Utgtg98q2TCV8HnKoipNz05fvexM5+gL1P7Ctgf+skVo4mGg0EXgneyRDK2TsvjtVeC3G5KzaDzG
+/uBI039mWJvbKfz1rE+pMf6y3tkCLh43JzTuX24fg1Xw8A5WiMvl7L1sSgOKcP6AoAZbFhMrZlfk
+/ypwvstSfpTuP0cR2qaMTv4uhdV2eaFGDENvCnZOW15gIkO400G7USjbxWeqr+DjH6kda5QLt0jT
+ypSsSgGYg62qVJlMrQSk9uGB00B9S7i3u/XrR+cfchcCgiEp9TrzCQ73w9hPm+kD4iU0XrrfpPlM
+SZcNOwBUIKK/pnZkqq+tcBxReWzlboSgGfNrVSTnRI/vsDQVJltH8nqTkealRU1y1LoM2JsmEsnb
+Wzos8EUWIugH0RI9Bq04/qxSe5a9RJsKcGswSqdHLhwoWGq1kErniVeBZAPsXRFE0syWy1mxaFxW
+O0cZFxUXSTaV2mWnwIVH+JfUOv2DfVpZaXSpJe+qunrG7WEwtyNRUfoKK/yjJWqYm2Fm3/zutXJI
+R00xVXWsPwV+OAMJSrYMZQKN7IS1oIzQdJkh9RPZH5X6+WtM5OY2NZqmGb/Fw7JqfiEGTEwkQGDS
+2YFROHuEmXtlfYQ2Si/kHzJYv8xkkT0RlB87DVHyFL5S1HiWLcpGzYuNZIdJeAr1QDcs7oAvMdOA
+TAHbbL69t/OnT6Tb7pHHW7nKuX/5SfVmFVzf+UHy+s+8lgwLXWWFWy+1VuvzadpjEZdu5ZTSUJkt
++N48Sn5X4z+3aq//dzflF5/4jAVJGmWsLXTJpM+w7rkybtfq91O6K2sd5iSU67MUjSyOf7zTeJe9
+zzo8oNVw0oUvOPZ5KGPqnK2iSkNeerFf9BitL10QbrZ8GjxjWRZcgq/J8P7yRgpgWBeYRyHUtFDt
+jzF1j3UVvZl1spXWeovG+ETMma4Sy2yWk9zSB4Rmn7yZh6Fi/kVFHzbxwwgbe2TNZJXOga7Z4joT
+TG2q/m2n0Jct8QTJc+F67ErM4gERYvstxUhjaPGLMvfiMeLB2JDm+qM3ZvvQYFQZOj4avyWfO0bY
+kivisRheVrkF2bd0N5zZGv59lvGK3xmTGune7XupxM5PB1MpZTRlmh5R7zyHd7epg3ou/Gv0QWIs
+99L+7fZc40V5pwPetAg+qXNnrH2/vgsepAq57bGJrsMGwCNWdVrrcebbAOvLVirh9sf+2VUveK7P
+lKp9+sGE6kHYfv7bk+iWTrtodKX2+xY0pqoyckJXLy0i09L7T2li4+VvAbwjcN8WdnPNQ1IwY3Qu
+60MZ3ZMTHe6+68AJZoD1ze8lexF/71ipVC9gUWAjIWZfZpGxFkQaTu4hfHh+yLELoj22b812PvVI
+apw7tTB9Iwqgy3gd6ekfCo3hQz79gQS7fMgb638ZRxXZe8BbRlCgUPkZgUAA6vJ4/CjCHNwTaeQQ
+A/8AL3Z+qtc7Qd5y0V/RtKMuD8BYWmL5g/1/Y8Brz1y1emW7SbSZNLtSzgOJ3U39CztNtEBHcbOP
+9OOmXJzlwwAO2nLnjT1e1UaPnbR1DfNySei8ExjWNFYd/hMVSN7xqwJk2aPj5wnr594Olid9D9JM
+PMT8Mm5aVM0KOBGzRUrSbcyCyy9xsyaFxwxh4DCmK2dzpmz7sHYC2BGP/3fgrSDNcMmC/nff7U6a
+yTbkwrRsqWUqH0hh73GaBf2k8Qy+i2XCPss5LNwklcDitpBgYdhaQMUZB63n5upSjKjyzlYXAxkM
+lSZO7PBYNAgsbYYQZTjKZCn66HhlNULi3lgJbhMXOlay0PLrRplXCQma+nO6F0+3RCUgxe9cykls
+/RWgc81sVuPlc+39f2noKNsuGsvXC3fPV8d9ujnxFb9DgZ+JRbHYf5E06qw3mcPwuQRwhiM0RgHg
+B3WJHYpiTI95PhYanxMAsBqeR01Ms55QGlOZWGfl3e//4+wDK0XtnURIJQjjHXqz4ajPLgKS9AkI
+e5tfnJr6JsnbSPZb1y6JtBgZNj7DgF9JkWB54/un2qQ/8v1589htV1Xwgx1Pati9WlUSexfFBTj5
+G6NJWRke9ieOGBLcAxZE1ydisPNfUfjuBn214bROTCXgGDAE6ccwW/wWSiPQhSoMEcApx3aLeOAA
+O8us5DLXmpXB37e2gU3NHJpPdcGK8I7OQVDF0dS4qRL+A01nshyDDtp16OOqZmV4u9s0kFs50cb4
+pGyXYvkgOqzzCXzkoJzmrzYYLnwBCAf9kI89tXMft+6SrNRmr9Q/dy6mPnHk/DlesjlgJqJW0qM9
+tePGB/wsvMim/i7GGTvpksl6poyOrHPDufTAS7R/yXDV8qSgABD9wM6c+nck6FzVGmV02XKh45PR
+cs54WbOstgxtZBuh8UC7rgx8C1aycILObpnwo86tyZiocSx0ALDudjtuGmCcxX+r3+R1eVWCvRue
+EPVtsBb+O95r4Q69NxKAMT1WqbPO+DX/JPtFb/7BIFQ9lnGPA+HPTba9AnU/6rQ3/63Oxx8xW8Z+
+UE/D68twB5iP0Qj55K8QAAO8gEYZffO4D5Pwq+GvypMZXgFIl9drLxf+yOn5sHlhD+iW9uz8VY7m
+yIDdQSobmcCxtmkUnQYFXjuRCm/UUBs6IwP7XOD6tPY50UuV3KeRejGg7RA44CBL2vgwyH1YKy7+
+TGX7PWF2MGdTGh7ItrMhRE2CUHXGtiVSkXLstKagNoeh+j2t2YbPBlkKKjEAukHoaRHOZ0jUAU0l
+FGjZT6porpnhcH73hJnDKQvlHQrrJA1n7ZkAWcI8HNhTVfUP9+ikXFobe3c5oNSRUhT/XMJ/wt53
+/gfxqiIoexpIBAhEd7vRsGSzChW4mZqCf3b8n7mZUknKBCw+WjlGQAGcMUUgI28SfafGmT0T533L
+CkoQzh0Vw/W+z73By6TCtiApSp+qWhvf6qHqxjOzDt0Iq/IohR2ga2owf1a2dyh0clWpHfdkZoct
+aSkxHQkx7BvlmajuiYky0WDrqqmWNSv6hytH9A6CZQm8/HgvvL2j0Quk5AtlnQmnyfqhs+f6em6f
+fTUmU5q/WDb3Gq/mVqA8UBn7Rvvo6W9loYZyp0sG1n5mpv8LsrisuBMsSnYnBrpb5ZDflPvtg8XE
+1EpFb5gbHMRZiHN9QkTP2TBqv0w1UjYJkIDJx+PYU6azCbqp62e48DqGTPWpXSMXay8gA8gHrpMt
+c/+XoOGMSW+Pwhrg7teP72LnA+WPSPoJ7/gq1oHdDIdrlFu3WiWgDVeivzuqIvHEwZysQdIuAFQq
+qIPAQKj63XLx+S3T0/2/92MOw+OCrnyzHQ7D6NkxiQxpydo48DITVBMXSykfRR4DnKVXyG/9PyHu
+gNs6iKY6n2kXSDslvFJzYVEDbs41S7gOnbhHohfqqwvz8HoNKvSL9qCGvc2SUEdawGBAZT5UDxeO
+0KP31CJ/Y7xU8Lp0RWT8yyGhsGEBM8w2ZLR6/I7YD8CmK680YqXMooiWoAciMc2PFGwM9Clqe43Z
+lLpbJObVW/zhEde4OhNl3Yi4wh9zDUaDl32/Vd6NVNnOlDy6Ip0232x1puf1V9NwUE9oFCFNptpB
+fMQ4FRsjRVgbvBn3jd+jf2AtxABZF+tbah3sAu593fTqFQeJ8yt+kgaewhNp0M9IeDs0sOEcZ1rk
+tB9P1+AS61uy41RIDlkLrYHaMKod43/qkeRGXLKEgN6T6PXYRBUmsNz4zwK4lrw+kCW3v/SAn2gq
+zwzxe9ZugonP7WPW/xy48V5YlAZ4pW04t7AfOas70WWTHnhdqB80LU2pdvuOcwlTWvz/b7OzWBvt
+KecMqJzraf04gJ20rP9+uppKLyAAADURKF9vUSC3Px4/oZRNTfp+pPCQlSARGUrqgNL/P/ZOEyYD
+3/cGtlEPnJjb2LJxz/UffrU+o2qGLsCy4mc415T0MjAYqRMNXH8jvwboPUX0e9KcIAVq9fH8pymH
+vuncs2KkvOwF5kV996oq4egQdf17Z1tjkULnO8/75FKWyKorlk7/ZgAOlRyEicbDvETlkHGCLsVo
+7l5man+YHCx+V7Mi5mArPGojU3n5i+gIgok8t3wf6YrWBOw/XMOoTEU7qUGjpSkE89XJPA10JTSM
+GdaLnE+5l9/SJKBKN2J+DnHdrXJHFWqozM8D3LATkQM2hVR2pjfQjmYdMU+c52BEMYoUjra7nn2R
+tFSyc++a0XUEPhuGu6IU6H2jXnoDIrir14B2ZGSOGkB6eqi1wTEADAuyH/77GwYU/IMdpZ0PFa+J
+/hdzvCdpOyueHfi+9Ew8b+WRcCURwMaLpJcYTMy2HlnoY8+P8QMH6TPNElh+Rs/o6YuPMNxVjnnU
+R1REfrV6+VO0gSId6VDx5GftlkN6IU8bTlk2LpBJDENt5DHsovHWfDhR9fjQPUsgmn4pX6BCmBHv
+XJHP18V2Wz6XM3fZy/heK1WT9ozprWnVpE+rZfURqo6peRyIt2aSjChq3fwmbSND4Wq1COwmWP8v
+Uvttr7DMY0Xb1mdIk9U+q4Ov94CaKl0N84+1Iltgc6jFHDpu37BNJcq2tWcrtyqgQ8anCsdQCq4F
+wSWClOIMOYpngDj7IviwvTsvxHzFO6ahUV6fDq/tPHiIuZVM9DQxhKk3t0JdlTIawNUWRQsTvPfM
+BVImJu52WBPY17P6CQnDcH6XFMkXK9Y1r9qhXZ/CAffKvq5iB0ErlC/98PlRjzrwUXgMr91kd/wS
+P+U0fdJdKZPjbX6BXLIGR6uVg1c6p7EE9pPQhCYgDqBvuLNU5+4xSCgRp9oYQXHwza3PrFo9VYkD
+xoI8zMeSkvekhxbzu3o/2WznOPKyAVNUxG+AusWYARQQtH0EH+9tqoCjP9wOxZK/2fOB/bWTXqK5
+/fr/RQdNLDapwF8LCxMIulN6RWPMyQzMSuoLOLaTseLCbjoBfH4j0SKcxObsgvSz+ylludobJ8Vr
+i9thADUeeW8XMcm8wZrcf3/VqjD4B04UjYdJjurSykf3nNBp2Ud75tGKETdhOC2V+uFcPEmjmlQc
+FHHobGSnHD1E0MB/JTmM0bQF/X5KFmrVJn33YnvfRbdZTtgu2yNapYpQgr+Zr3r1Zs4Bsx3rjDML
+ZGiD5XrOToI/LOgvaqJC4zh3NvTPsGD+0xBFjld8Hd5qeaCr35PhooHlXH7KveXLTTgFprs/dUcS
+Sml/SuJxUC95Zk3k4jj/yfHwPvAtcIipBDhz2tEtEIGHHrnbkrJCYNsfpBWcXAAUHfmZ0BmSqsAA
+AAMAT0EAAAmXQZokbEFv/talUAAMVmDPx5DUABQawr9/lD0c8Y4G/39n94mIK4fwLfp1s1VYIJIH
+/8BJgZFG2XgJ1RPgLv/H82Avv96sT1bGFIZQ3VCMHb51WgFSQSc9YHB74RMmCYnIupXj3Wl1M2Dx
+CQFc4LrwnzRu8gceD4ex7zNsjK6H4NPa4g7tbXWY1zcqpg0WmIa5jX0os6xICL50scuiPd2rQsiE
+NiZcE880K/+A7gLuWaL7n7GlGBAA+LK31KmBB9Fyd/eZLUzLFF2qLBPztSxXO8ewbW34sTQhSp0H
+m261x4nHBBiFnp1iC/rL2/z5cUhOoGv5kGiWR+CUtotARnb5+pltcjalegjDamvYgsniKnAQR5vB
+a03l4Rvd8i44Djxuyx0HSqKEn70D9xqdc7NVKmA4FzbSi9TKO6RSym7cHS/vCQMC5sMljHeW61SR
+k8xZQbIyvspShyxd09HLCy0UJaHpO07qqqHYf2Ngj7iTQcf5I5brWa3wi8XEdNDGi53+VNfOlhxA
+A5Dc1bUYRn4OEkWCeYkrKZLH52QPJFnqZSbMlBMaRcCPQ85aE+1+0Hl0nluCEdN6v1UNcGy7uhQS
+G3U6XVr5rVUzGoC3aVH7qdUUjzecxKe2+MppO16i5+2e9xNviuP77Kq/TZUmObQtO2HPRyhVBo7P
+UsiI5Sm9JEY/09AxY6JNksjSzjwWiln1TSSz9urJoAjiXkt3nn2zkMx7RhNJZLlAxVrdMD+Yvq01
+axQkYkneef96F8+KoffVNGxCumoPkstDzx5Uu5kBaHcNVIQMjKBsaZuKyoV5uj3AzuuC/DPAlRog
+pZrvlySQhy2m2iPCC7XYmZeawNM5yBkVr+XgiSpVoAv6AO2Xl6vVcDU1vJFMwBmUFcUY/SH41FUC
+BhelyQJFJkNRP5v8x/6V0WZXNDHfrQdOTLSbqxtqMf5W8GwiiQNrKtApJ4LfYOYC5LLPZq8pLpIb
+DiUqEFsEojAE9yR3T6FxoY2kA7NNORgVozm7OTxxYTxzWgiS2DI6+eEK7XuEguCN6LarVJi3e1Pg
+68QFI9Vl4gbEQFpz9XpdusaoNlSEtcXOrgP3/GevkFPoRgDD+of0/DtHBY+kwW93/xjRWFIcri27
+VJd17EA9DQa3RiNUdUUZ9RIpLWljc4N3muE6R3eSt5sionSLLRQJvg3eZGUGc3PTpuwvO/HBASDU
+yR2s9wlGHU+muVnBAQxkYCB6VAzNUAXqvjIPHwGqIuhxmelV3X95FlUmSwrqpmruVJQOD5nyj3XM
+hiWZYBS2ZLtwBYMeF/PkbZC31HKX0NEBOyThy7cRm3en/6jBqZcmlqdxb52BIhZL2pNavDjp1o5N
+/hs/tgpBKBTiRamG1jsK2SZQTOyCGpqZRx6FRKnT8dKUho+So712tVv90VvlLyAD0/Pwe35PxIBx
+U2HxMaFdA2h9jl3+vtId0Rp8Md/NNM3XM9MDD0MjWUB3glkXg3Sebayh/USCoeLcF86yA5OWuTvj
+et++FnF7Dcc7erAuuST9me4ZkUF3xEE29FAQoFSHXQQVYAp3F3toGtbVGdH3hgNuCt5jr5qCUH6k
+KxvHnj0sUVZiSkqYmvQ+mAj/jDipjHFfDLJ7tuvGGdkQg7SucVKl8iOE9PotkXp7ltx3OENAbAcp
+6IIQ4iqFIepVvJsupBnN3V304/aOAdn/fn5pc1YRJsQAAUHbfqFr3hFqdszqW+wiZuNW7l8WSaB9
+8zTSxVhZN4tsSpxIHseWtJXUvBlZeZxyih4R/uO82s4fKz3fP4UHt1O1saIQUFOJuzCQeWifD5d+
+O0Mw9BbjqykhwQ4zo27Tdby0kjKAylPabZh2asDoipBzsBq+PW/p+Uz9Q16bQEIvlUFRoQQOHZjC
+30A9DXM6C2Ke92k1FB28WeHnnGlgQyDdUV3Xo/f2CY4tFX2MTGX7MKdgNms9f9/6+2bvGsXa2XEZ
+492le7eJg99DeIg6/gRbTY0q1br+BubxAptNYQ95cRxh+cXhJpOHq5lSrx/w6rkjLffXHnH/13Vr
++Q4X8MgPsL14Jn56lYq3aOBY1N89Ml/v3FHBbjmeNf/JnJ3qUcyXjqXFHNJqZTVwTfS4OJbCXL85
+VFAqiqtaDNK8sHxuY6RurXLCbVZ3az2UjDMEhTUVUAFUy+JDpxyX5YLX+TZDNKaRMiuCi2EUEWJ5
+TRMCQZCt1xEaKkg32mp6PDlyYhYUtmGOtC3dYKpEATZX1itF7NwcTZu0PIpuXmoi3RUzpc9bN7A7
+35y5ZErL4rPpdYgnmIOq3bnRV27B7Bma8lm0OdAajk6o5+9qTI4NcKr2bAfaR7FcM2yubUQHMPE4
++vK8cLYe/cZDZ6JXEISz94+8XyCVPXtDZHzJODvmY8lrfKbdMLSExTIjqI5wW97WmPXilFSZwwne
+Tk2n6cyGPhyPBg8viObKf1+dBZVZQfXIU+ClNxvO8K2a7aHy7HarVogbDohKiuDzvAoUAHaXKO2f
+MtjtOhGmoRyJjJKBu0ulNGXU36KgCEOqV8HLE2YNZ8yh+HQhltJN3+QgGBwpgjTjh+iDKMGmj+o+
+bkk56bsStIJk0TgmDnj1kONjCOjXX/nwTt75xT9+Qvtxz0OAzdMe0PAUo7fQQd97/+ceAbbT+1VY
+Dv+5pAVkXkL/ltQVVx1jCpo969j1q74tVvR3qATKFz9794QribW1rvZCM77D0F7LX2ZigdYpOqJp
+H9Dci3pSHcKe3jeNdEjPVJ/c1YWwyqF0xJpiv+yBN+eNJfJKbvfaqyv0Ru9TzKuMxLwHtmFjyA9J
+mvs/369YfWtt4zkZlea1l2TDvWYlzDh6r1NAZrMokap3q4HQK206ErbLFdekXF9iGYSSgLppXwcD
+2u/78ReorkB8knUZ9u0v4eNoH+pWcsw88PslZgo4UxRZioQpHjwA9DS532dk2fyvJBcFgEP+WpvD
+q7bbUxwe4suOQ0F9FusCsOEBC9+IaUe5cZSiTGesZIIbpSqOtthw7qksmu2j4Zvceno2tlEk4NVh
+fHNTXU4sKFH3buJrnTRbkEyzjMwfjQeHvEe3jDIefTBC1vuBj/lKgcJPbWESEAd8BOBThB4KjGP7
+RCXogNG/GHlK0Vyu7jx0NH68EY2W88K4BDxxJAKIITvreCrB0cJwCiXZUXB1HkDXTUEIYD7/lm4d
+0mGa4JS5Qh8aCMkruI2kc0h5bGZDRmj3X4rTbOOs2/JYM+ZdNBho2/hfdO2bpt/DmPMnhk1X69as
+5B+zBIZBT0QxBwgPVwAAArxBnkJ4gp8AABDK1qYDWT+OnLbZ7G497l63/7IevFlWte2AJjMEl8YA
+Om4L9xSBSn3cTqN5fyg48IP6V/EVzF7NoGUAx6u3+NMCyE9XYnmf/PzOMJ3MA1+LrUzrb4629e0b
+XDEjUvVWM0v34fKi4mCo3h3s2Ni0NgXtyeYwpXXroKEUKWlQU31P1Cvp7DJKuw671PMAEhepWBSA
+tZ+uOrixlvmp9Hp6rBITXmvw58+HcrLx7VNbvYs/SZdNmsfgFAylrtQNy1YH9NKKLavJuqA39YVd
+vzvZLTZHnj46lMi3gphheR83J2ZhDBsCxXCOOV/1RtoIr2H7drnlf1qB6n/kqS7FvoeKuOKw1uti
+RjZ4fii4wb3Dzb9H1T+ptCurhjjOWiCspz9d2OVQVmjxNHYDWsW2O2Gx5OXPSVXagXJhnhMxjOQ+
+PmXC4HRdlDXe0FTPt1uV0eJ3lBEMcoeS6+IHsJ2r8EbH6Sa+LdrTkdy+N6fDzxfPmMLD0emxfvz1
+NMoapsddH/ANvRv6EB4IX67E6vLhwxdV3USq46iZBDrGaSBjg2JhcMu+NROs25E6t3MlI5OmNw6P
+DpVaQLi7znEvt0LwckGPObDaV3WAHO09cbRn9VUeLoPIaXSrUiXxLRbtg6wxf5ogukyhiW7Lf8JA
+iSGT9lrOMc7lyUuGAMUTCJjOwy16R3frib1lOWtGOsYtwa/D0BSb+cgRZT5i8q3gZWfa1NI2SGQZ
+kvLN9EXGdTqO14kXWaBRIGOkKOHCc2esFyUX47GbMpo53G1b+QrPZOPCqFr7+4k8OF58aLQUsOTf
+s6DQHwXlDdTm4bokoyRW3Cy8Vu7EzLWOV+2r39LnYqzy3SAOTrBwBK7YQLDXt/yIfyXUg+MuACDP
+otZFYv3Xjy1TuT1WxOLLGjYGdR1K9TyndhMSJK+ePgGVAAACKgGeYXRBLwAAL6sVYU3+g7BgAF1Y
+/z+YxVF/KPCKlZMYB6ZVa7ton9AM4p2l3mBut7Ze8ceFBY0v4SuAklKAjdUATc5j2TK1VUo9qcLF
+buCUYRO1YS0N7069CoYyufaawL+BjVRkEO2u5Z+eTvu9neI81P+ON2ApOHFnUR6xq17P12+0PXo3
+nuu9gAEI5IzM2xKV7VjM6OrGnUaSipqfxZiLRzaV+0EhDUYgwPYY8gI4EGSXtxPmDO0NAUzPq/7Y
+2gwvNEYP8pUYqc/kWe6pw1OWfmzm3QOdZVJWwIaPRhuAgHz4Yygt7GSxazPf73NQy7priFuQyvvI
+zo12/gCGDXdPp2T2KpDFcX1tMWng8yt76Ixiwhdidpz4UUkgg6i0fuEYNlAdAxzGHvl72sTkF9nQ
+uXcTVon5Ip2Z1q2RUfQGh7qwdnznQD1qqlxuYbbjz1HrNXb7/K5d6ZOlARytYyd08EhzHGAnVKyh
+Wlar9zIFLamDGJ+gW9f6J/ru7hPXmINuvAB7vXmQjaU7yvnwh6qR5mtsRYazXrmH/yQTyrOx3O2m
+Q0RoWv5F9MsRlAiyRHDAqLANAOv+zBLujvEo7v0o+D70Uy8r+l91QhEIkIRl9FpURmVGLKnKglKD
+uEa3z7xANQg9dVLrGXK2l+t2UdsrjTUcfWW4wdHlTFA4N0P2G3KH7hd5wPzx/jrH9rWqFgNxZCOj
+idkOdcSZgM7EwA/WpK6tDu0JuAj4AAACQwGeY2pBLwAALDiB06hhEJigAnEAbSHziyOUTU8vYFhc
+nBMTwJV073vldbAM69zWH12p8xUnW9HERHwqako/EncBXmIvo2R6HCkhG/FUV/lOfviUv0BNKq2n
+UmFyyJMZOUTccYg9iBnwyFYPoLe1J9lrT4COAn9w7utWl2e6NWeDxqmdVRlTEyzOZERWcYINg6ix
+NXfnSUr5YJcDpEhU6AULe+YR2avln7wA9Ga5uF72EXcumQ+ICTW5pTworTQ9mVam38Ay5OT6vJN8
+jIOdRgwjTzOJ2JbGmEevasFFUwwrm7U2Tr5OdIjF2VaZQzkHHTA48bdjLSMEs10DafPxsXHA7Bfd
+nCrAvzTepTO3l7v0/EkYTPs1r1sBKzEH3t0dTxbVyuyqkH0RqlY0JsQ+Z9VLLQCFqUlIV6McbtK3
+nVBX/VpW1HTN7TW0O0j8D7gah0X9qJL/In6lKMlVB/hNgxpiZNsbB1HgrjmJB3UNq8qIjbs2b47I
+byRmfN1/hDxqMM7777QCejUokU3Arbe9VEy18x4Qb5Q5U+mh+6krZTREtSci6KvYHkd1MJ5zK3SI
+mGJ/kCcKlAmngXQOZLPekD4j55M7a5P4aEZtap0vyP7CxIbqT6HdPk3/Jt9hme6mW8hSkUpr8aCu
+FJSEA3NWoNieM+BlHC/EpfNrC/YS4RArUJkRnZJ3pCPXiWOsDgmi0sFax16PDUWhR43Livr1S8kR
+d+f2+ZodVSpKcBE33TOD6pnG3A6/brstO1tYW0MzvsgCkwAACLBBmmhJqEFomUwIK//+1qVQAAqY
+dourqoyVGCbp03b2Z2vjUAHOZQb+YxVF/KPHwo2cnAsV9nK/BAO3i0xVvl/gQBHxV+gGcY2wOPeJ
+Jf7eyxyOsDI/PRt0S/elFYZ7uiBAI6Jpb+9pYf361a77EZCcTjipGtG+/1yIgIFi21jEKKH2hWYL
+8m7d4H0PoXULgiNR8yZuJrw9TD2TydXDT6Z9dCI+Kl4Hl8ddnXeSLyiSII2ZvZ3lOSvOYLFpuR0H
+eDFJucxlCQjZ/zeIYkICQ1GtG2dG97eGNxYC9z0wNQ4RajgEwvBoDRFja3YfOKyK4UU9g+9UdduA
+dvc08IY2heqFq35n5S4P6HZsayJZRLjlcK95o8EvOq+sGs/qk55PCPVlGNbuUuiT7vVbUJ7VlhhF
+CPlcEDiVaq1V/yO6KjP9KG7rd3Lc4gmCVpWG1d8+zexb3OefKczDC234VCMHgx19EbkEC2sw/4Js
+bKkSawxBBC7yN/Dk1V2dEaRLXkkILxhCZRvJyz1fOBNzCuSPCWWl90x0XkkRudw75ytzs6uENn12
+hCpkJAwSl7gHgb6hJSNcibwKzvYGZ7Eld2PoSSyaWEYCXP5GBznrfF6rvAs0z5QuNViGWhzqhrSl
+d1t5diB+YansMCSW6MVmYpIq33NMM6qDav1LKKjPZG9vMiMVeiHMM9aDNiJ1UWNJsr+GCg6N4C1l
+jvuqXjDtDMIwkjusea4he/CmRtU3MBYH+1Hz6U09r+J8Ysv7OMBVjvdvlmyQQMCjZSwQGCAGVUXl
+EVzy6hDMpmPiGU6CtykPE2lgOtMBAFKebM4VyH7RWREm67B745ZpqD0y89ey8qnR69nd//tUWWfL
+vKxXmyalWJ0GIPmsKl7uXA+dGYW8Ppi+wsSn/edjDr+YSYPwL2nxjPlPJSaO7j5GENASACfiGGYJ
+jzrEXrcnnCarpsdxMjPRhC0Y/2/pJXYxc9sRfOq6vpN8o2jtM1P9QCFesJhhI1HZnuvV1aA3nXfE
+bJav2te8SEafeAy/jPDxQMpDT1Qn430Xtkn5CYCJhGwl1uksn7xQ/E16MISPvZCQTydrdVnjmQqz
+nX1COtIfFg7c4l+9QMtQp+fN4LzJjEPK3Y5RWPOkFYhq3A9ulspndU8SEbiJC0rEpkQ/14+JRu/t
+0WOnUVFk7EJEbMFsMGhZY+4TlMrxhzYjxgMYBkPz+0/5UV4dt5FJlsDPOmfoKsZoDWV8NF3VoL2N
+99nQBQ6zOfJuvU00+/RKXeo897voEh0FtEk+/xC/Pj8/mEW+JQdX61q37K8cKnI4V2b6L6KFgA4s
+pTAQDX7efOqp8DKuUsZa317qusQXnrK5iXVNn2e14nmZ/+G6JE9/4x6ywdcE37cfu0BnJGRL3OYN
+00T5MVMhZPBdZkbh7ZeqooA2IFbd11Mg/70b9xji59mUxDSGWSdiEsNh2TZ9RdsxcDSu90OTXfSg
+6T6u2dFig0klWzS+XrGqEZUOFi+itN/F85r7FXKReB8RmkN+pOUGAiIbZ7B+FJxz7yADrSCGXu4p
+BM+DqyigjkRzsYtZCZ0N+pAz5Dgg6mihoWPlVIbvB5TeBJ7rUcR/tjBz5dZvGHXHtmKVMSSzACL6
+wQ3U+/cGoT/vc/AVGl/VkCVfmwAZAmvwruZamsZRh/QGQBvWMZQwadLYGV8+hyGZOC1lhnPBbyBT
+BgoBEE9+jC0eT+OTv6FZRsLiHBV/m8PiFbwD3sB+m+UdPmBACnh6bX02hdoqSdQ40HPnIiD7ktiW
+p+VvfAEk33gijS2a1BOkreKJSZqq3y2I5umHTa9B3oF09QH3qnB8zqqive/Y9uLPK75xwK+ysrT3
+j/yngFuiGbU7WcFk+Rb/FQEORpF04QBG20WWOscNJbUBSpwmeM5/acxpRZI77jheIUPzBDdb4WwN
+QCYz9iPY2vHGIBg4xPi7FKMCJ1UJC0i4WvwNc4FKahbWGTHwA10aUT790Fj7+JrhODUZJIlT5dhG
+vDhc3YhuWyyi2t9FL8BgPNrIbZ9/pac9r+tX6bGLCOsg4Sia86ONpsDN7wJuMxYNnK3L2ip9d6qM
+3Vsos/+CPdhQjhoSBCUWJrjY+9lJXea35Z33ywQlKuyifUNh8D3b17+pQleG2k6eXVUCehIlWX97
+sMe8znLGTnre+7c9nC7F6lqUZHDSZ3sfHn8wtJrcQ43pLVgHbXrIsGsZureFxm3iGCJr7S6IY6+w
+vc8VfUj1KtZjcpZ0A7H5EeTgFjFy4k+ovUspzxiHctG6FxWkT6R2kOChpxII0XDwIG7kNPwpFHB7
+biylV2E0HwHgqG50yEynFBWb525CaBBFhXGcm2m86FHCk0cqt/AxppKQ8SlLTuDroCDRCIqlJTet
+0SZj3gSXuUd9X5sduzQNbG9qBlMleVRC8yr8HeVMmW07SPQrWiIr5bgfbujz22a1wOg/cV6MUS1O
+vp77aX6sqoqN4sc39AMGMrL29P/9fwM0YQ3bqfr/luyee73G1pl/Mwp8eTdn6f+VOQBo5OtaDaP/
+Rn0bBKtkzQo8CMoA0itlqQaHeVh+YMhXOrx96hmOf1AdgjYD4pKPkbznfNV5xXCThNe/jU/QYOc6
+kOfVzOMZAGYdQgPON5eC///gToM4iXkwEifLPnS50wCFzVaMsTfy4sq6HwopZGedaqszOty3Jaj/
+6NCJPQRETDLMHqdmpPyEZWwlH6lJT3tX3BGUFIvPOzYndWKdYdCvMJQJhmJ1qnMUHWWo6RxQrhkn
+7Jj0TG+1Uaz6GeR7gURQrzcHGmmMtd9/MKkiRqDa571RRF8+6sjX+D33WNFQdvGzfqOppC52FT7W
+KA0+pFxP4JW087SmO9NU/E9kypuKPntitzukDSlwOSNhILHSbDOCYMJ7l+MZoT1+1MCxUfIQ1O4w
+rs+3Twvhk0KbWeWrvrmRZgTc3RX6uKS01jsTSVXk9d66ZOIRgAYFAAAE80GehkURLBT/AAAOdhmJ
++1mksLURMnd/4gA/4eWlEhrH90RKMKTb+C9iaUpdV0rOzQJ/3SVvTh1ETh0hvBPzE9vI1s/UTiSP
+1qZQuTZCiKrj06bJ5PryvpUAKRP6JPrqXgfEgOmrkmnzg4NyB1C26xs2IYuq7thQgC7Rk3fA8DLM
++j5CwSfHVawerOMl9UFaYCQHqCIi0LQAHwvGe7Hcirm0x5+kLbtmmbebXORHhodqBg3enitbdNXy
+ndggzTkGBO/hv5+6GMnZj3j7Em6+WC9RmQ0twH4fVtIv1ECKRQN1wSgUxOthaNLulbl1+wshRSR7
+523AGntKeYrYzeq7yGjc2ogOuW+P7GY0ufOeeo58tgFAOQSwjkOMYeUqVBXlT4pZov2bRa7fl8/S
+W4e4fRWHP3cY0GfV06A4DfbSt2FdqUnRnSS3BvH06/4R26UM0NFgie4sQ407pxH+PMB/Ieblr4bn
+x49wJ8anevy/64YWq3Pto10jEniZGzybGBP4DU+GpJtdz5D0j+aU0Jg6qmymgoB4GT2M71d8yb6A
+wHSBLJtoH+3LfNE5L9+WFUmIRxQ2SXM1NiC1kmAttP9ol+d3Ev70hWopBuMlSL9h7xGvqgPahgcN
+KzS8HX9ayR6EAfh1kuKevwoyhoIXN7M6fib5tR+dPPcO7kQ0rgJX/64TaPZTnw4R8DPNmCthol32
+GRY9abBGkLx/O0oRKG9MbXUiZBSxnss5t/t61vmSCkWcL/DLEQN/VOxcz5eo4rLI1pozC5axcBUX
++AcBHZF6ll4a+ylLezWgejSYwfxki5aOxNXvKDUiWu2wn20OOpLj+9bSw/2xRXPXZQaPI+gRew2I
+zbmOYrAN0fK915OaJLbQRj/8QexVq9DvXaCe4AX+tAtbT+mshsb2Mj5V06VAOSGP7lrEOCg82kBO
+dAIKwhtMzi7EVY613FpUjCpc2/nlQSYBCrKRib8UucRXHJ+RMXob0l9br/HEawWsAiq2/la64E+I
+oVt0VTMJVkYv//nnjgU//QEh3ijO+l1W627OKInHrveZUTbjQdYDXtseRM0P8YnvTGgBxstXmv2V
+loeYiApFq4ZknkkUfTF6NOqLxaGcgVYmdZTdykHOERhHoWo4B38aY6V76OoG6rXDWutDXuhGe30/
+Uz/4GfdhP0GTjNiPsOcamVWYzmng/TFqVUFluUqOX8j4Vhb4/U6HwhOHW5iaT6GAqLnSxB3wAlCp
+2a3qYm8BGXYf84y/CylaR+Z/6Tl3EJZa0BgG0/rWj48YKKCM8MjAoRaSp6JOnvvR+7Mriz6RpFON
+fvQJr/u2ZqMpxea5btJkgrwAfqbGHFL9gLqIXYu+S8ncImj9rYif7WMMiBu+aRN6CHN5uy4fQ6nL
+rW9mrBkf1IHtn1HDdrWz83eChFsiVd+fgDGChRPFTMjMYB/FVvbwPkP7Z9WyWFXGuodpbzjC7XQP
+1f4VAJibvUF6WuD6jgpjagRxaDVdRAB7NcjDlaSlm91ZIe8yp9lsrcZDz8kdGuOHTNEXgImaeaH2
+KSE3uUx9Xr6uz5wBWrEpU7y+P8B4Cvb3VupPGRld3YIou0QZXmoE2UOVXms+FaZcyXbMZSgDZNu3
+0RrrVhqg7Ch2QQUjjbaHyajAABFrF7ll5Fkzf91JtTb/xWrdLZFQ2vJeUHdDArTs6rO2lsUwCHkA
+AAJ7AZ6ldEEvAAAo2RzcL0UjVh85hfbtf0AD+L+r+/GiO8US9gJgV+mq6Vz9wkLKJB4UZ2BPpGPP
+xiiDfMQt59VzGmcVBiYOtmQz4enToW46EeALqGbmH9+znZa7erOpsaZI/k/KUbBDv0wenJdLkoKn
+kA2nWlid9sLdH2QUeg6PBk4Dphdna/VGmDO7DruibUT5L+8hznX1ZqAuO/Q4HCHyzM1UolU1g7OT
+jvGMrmIjj87bL7BXiZQsJ6H1JMnDzsloA+8q6/p5KtqbIcFR319/OfDhe0r9PHeX02Pk2OOUh3WE
+g602lbof7voLX4+Vv+X9eSWN5tVLyBqLJe574DFYEmPNlT3fRMbR4OaTX/LZxWwc5Vnb4HwduiBh
+MVsWgMgDqcrsI0KuNS6+8uBqqUCCBCHKXF7CihbIeR7GScb+UX723F2AmXzHjr11RLzsInsdpLC9
+wVYDnqE846kcatUBjOxuO+VImxqr0KelUmRminp3jraUVC9KpIwpji3gHWeAizbMr9s4kuXJxncS
+YFTT9hkCSUOzVH9k7eTJjdBg0XStNKnzbS0olzhsNp+DzFicL8qLSuQJDTXR2OqhrLqeyk+1ieZ8
+VrsgGF3pTHxcItkb40/LzcavOtB7utMS8Ge52oK9X2dL5FEnTV1PAbECP9ngssvPr2tK3FW1JcA8
+AZ8TC91llfrIexYSiWMhBzfFMhnmRv+zGi1KUGbeM5zJeeBI9L886UoNj/3Zn1xIu3pmaz8dYZKa
+YXnldi8iH4jS8hr+Gau+VO1Ef+RKKC/+WjWkqSdrvfXZhG74GLdX/Dz6rKm7AmDDFFeLy7J/6ew9
+PltX/UPeVfjjBF0AAALzAZ6nakEvAAAkoYILYV9o7AC6TTYA/CJLCW+xlm0870IivNDIUczlBHIj
+bvIwSf+Q5mn9MDdCePchIohg09KezFkZmSrprxF6P4d+MKzzbDn8ZodrsTvLnHOl4QSAkOnH+QnR
+i7TJWVuIuhS38Jde4EJ6gwAimeej6Duzd1Deye9rUGg8UyxCsOwNMElugCMFSBRM/F9u9ki3BnlV
+7IoFUOkWG6RXQIBxOyEZu449Uqs2zcBDmYffpN5gHugGL0p1+//iPXn1Od8QFH8EfHv6+ZZPkZPL
+foa5xeoDo8EmOgBEkmjhkWygdosntk1TezrUNoZoqwDett6G8lF5mbaIoxP2Sm/iB8/RNr5UpSzA
+4DE6m3T9VdEQovyqe7wBO1C6/I9h6d77iOvL1YMdCV9oMxgJxDxg7DPa1QlXkTuCWrsrtKVvOf6A
+xIS18oAoQOh2Kgp516c8Ci9fZd1WOfmOEZve6pMtO/wAS8KdDR8aKHxxc4DXSykyYtd2DHKXV7Hr
+UxGbFn5SD3HXRQO4afz7xn0ffAAZMsZ3ay7klwjG89mAmC+3ZfIvrQYEtzP3VL6u/zprr+m/Ajsw
+uNnnPmputcFgz+kuOtgbtdHMljb8QWTA0zcexnnrCy8fDRRlRuLCxEj1ka9DRuDEDn5o/0yVG7do
+enaYSezIfHwTp8ShzhMumbe5pe7pjxg2rL69JAH5iFUn2ylz+RbfP/foQUof9i9zqbsKcN3RA21l
+5D84PoD6xgJ0Qxn7s1SZAAscsr+xxLDpPGZMj8zuHyLypkyCXIXdFl+eubh09BZs1IwEZSZ6upo9
+p/cyFqndPHug6sxk1p1+81RrtoyqvK0THHNjExJRtjoHq395jDEROEezpIebSS49wN+WsQiaRsJX
+Wf+aiC1NhFlqEQOl7d0ff/z+SZ45JHxajNgzLJmcouldGkbpdZ3GEYRxx3w6inWWuNl7U5u/123L
++EkEVKXxknFAJgKc3OKR1Kl8cQ70lN3nokZkAW0AAAbJQZqsSahBbJlMCCX//rUqgABEEnSKXsCc
+s+HNX0IA8QBE2P8/5/BXQlK00aR7XbGtRYefmfHoN//r9evSUZsfQ6SxNM5lEQbr3rtOj7WO7xkQ
+5tSJEtLqWw96T78R/wBfFmMBrnbBuAElbkEV35sHJmg3KeGli5mkxf4b/FH/cDT45lkcrttw+wro
+03V8In05ON0XYdYp4XIoRaXd0F/dQWg/L0vtsi0kteD3s2WFuZcefphWb2PW5XW9FW6oHARmZ8bN
+4y+0nPK9C+eE71jm1I8P9oB9cUv4ruUb6pqNENFSicznd1bOxA//m7MD5+IiCNP+hkS5B5TzOES+
+3GIBu4m5TAf8r5uXf0dfbCAhCyl8YHtIB+Joa1oAu46oaZ/6ueHJIMC6WDexzY40vKs6hQSun9sV
+pCi0FfbvBIdNZAkYusRjy2m8cscvy5g/oFh5eshae4XtsqGo8tIVfPPLP+lEVTtCgsQqO6M0onjL
+v1IhGoEIaD6r0uH0m3bbNzJ3z+F6eN7Sr5/z0/+o245WU0jGGtAYgcJ4lnwQXnzbRcY4oeAm5Amg
+SHRgvzzZYuP4t7ls3BiZrDevIz/W5pcfr6d0m7b04TeHBEkRAQD3++9mScstP8J+/uUs9X25zU4l
+7PMOq5+IWRIfJH5iDQIW6nNVIlrpNIxxtnA8mAxP6fOIU8EzrxXxoa7coSRYR//MiXgObB8r87kB
+wtDIwZ+SaBwjlMyftTS+tpxL/YCFF7NEXowzWN8X88di8I9bp7BJ5O+6Ys5IFQBkGsuLhF2vsl7h
+otFUtCxqdq1yub1zBfF8YcQe3DLXLKLNEK9p4DnBsOnIl4Jp98uYHHtpncGzNZuQFUJF+CAqb0/H
+3Y1UWEMOTGI7u6JWBkJQWRJtPyfZMwJSTQ4BJwatDbfZPf9XGlAGaspn5iLCwyNfjNya66szJpWt
+aSql9DK1qEmT9QU5LvVeE1RVN/69ce2YShKpLvzT438a9dxaYKoej+3O29/yFCSnLXp6m9/12yJi
+sse0vtzOxwj6JuR/m2hqgIjoG4yKC7i5RbFzE+GTtNuMv5ynxZHdFKGt/2mjiTqMELGumVdeA5Z/
+e0t2k0XQsWQ44qboKK5vy0rTCdH7urUUh7pnstJLTyb/OrC6J52HDzLde3LdDVDQAaKCssY9IgB7
+d2J1zgn3dthtJQNDiH8Vw/qTEV0yFJcLjP9sXShpVPW5NNJMaCbQrGwyBwtzbO3CjzKjZB8zncP5
+Bby5keHiHwlOCMHjkCDIUN+QyvIcgG8XwlWp8j1DCyVe7DofSRMQD3OTR84JPrtlPXhP62TpTiq2
+3NM1ICizZPwfwBiziO2ODtQJDFq+h9JHZeNU5A7JWs4e6zZOi229nK5iRKSxstoG2dizeuhye3FQ
+xG1Trno082SKjCSO4xz4SzsPwLgpmR0Yt172ONLIjgYOfqgrMuP0+sWxrmDScW5qKtAqJx3MVQq1
+nxUELla4M9uli7LFjM9QlfezkyRdW3Ni7uXTfu5aYodyAi950v2M1WhfiearQ7a5d0ZtPn8p3KAt
+I+vIrTqoM5WgPSgjp5AOCMiKEvhZoE6fFVOTRTHCvH1IIF0ThOnVPEV33ptKvr+jLKSQLzCKxhtx
+rcVHIBFNNWX0+R9SqZOZfSsympk7iOsheBBwCbx7MwVdGKt7X8GZWh1R2MgrvgtnrpQhZUEiVijh
+S4Sf/x42DDLXyYD4U5RHtX6xqlhmO1/5MEqenpCVjkTDtQyS34exi6nKVF+ql75guafyKu877WUU
+uBSfCsq9AI7lFTPqmmh0S8cxlJQ+/jyeOWEMutIoqDTd9y8kRponxjkkmGDElMGJGnSlEQ2Zbi1j
+FV90N9FVZENOjRHoxPg/rHRZGS3RuYHb3TSV+EquyxK13tFWvFPYoasIVBdx3JJ3likGlM2X0c4Z
+hNOUHvJixdJU9e7pMcvL6KgQa0j1+Lr0A+1jbur1UmMlXpJPjt2/zqyoMiCXtJ4UsNGRggiinNYD
+qcn5OPftZVQ7PtQjccOGWxeqKU/GtzMUgmbSSTPns1fwf76aOV8GkbqsDm1RcKfozi8YDa/xxP5r
+evTaDItdsyDMk/87GnG0LJ2QZIs2NS5Gt/HNelgLOrf6WZGUci0swgbAIhCtDygdckjX7q1dL9MY
+sluIemY/Wsk5FdbromgWjyCXSZ8VZdAP4OdAGbDKiDsmO8u6XpcDnvtKox46MnlafXRD4kF618q8
+tjMMXrbAW4b2isRHBUX0ovhc6QU7BgN86fFy6fBt8OYf1WY5ZCS51ZWxop3j+PYxq7V3JLFvf/IZ
+CjI4AAAF2kGeykUVLBT/AAAMNkHt+1gyXjp1UQAlpSA5dCErXO5l6Bem1W6UhECHdfF0f+HXH9tP
+7pACNh19evCjDgviJP82BPw2SyLg0kiss5A5niKrL1qV55fs1KsDmbN+5LNQi+0uHKESvxEr51GQ
+zb6i+UxVf37FcHesluNYZ/2v8TNMlCdF3tKR7aQ9w4eBguXdqDbp+OgjRIjxCYZLZlFRRZX0Jtx1
+aIRn2p+YrQ+xnOdNx6Yx3j3wOfhfbSxblwmvHYxFs4EhiwhKE9530KyN4UEpt+CzBtqwlOQ3ulUg
+KtEApya40KQ1mZ2lkgcUcIYnm2o0D00uBB/SD7YdMcxfXFVdm1KaY6YD17D7m7XpsN5oTvOVe3wJ
+Zd9zzF6NBRjwe/WOCVx/WT+6nuas6X/h5BPfwMmbpEeJQElUMJ+vtrSmzNPCIpc8dlVQGGDNUJ3I
+9guLYlhDlFbhP6VYYg/a2xSADc4jVCBM41M9Dh0B8Fno64aG56uxu/Yv0T9yqV4Zp0yymQMpU1zo
+nbdm8NnawnTD/iNwC9kbFaLurbG7NtC+IkKjcTDJSJAPIFuDoZGI7MYrb7B6s0t8Z2VnC+H7A5mK
+hTmNOvzSapNW/xZ1H2yRXWcqgEBFSp8nFd4Ge5SEq+vJe5kx7Qostb7WBUY/KJ+L8l6yra5kHxc1
+HpFm6kEePsvxKiODfqPoxbjQjyOPjT+0nC5DOLGyhZpwWdj5n7KqkefUQcARH66xH7Hgsiv8L1gd
+q9DhBrp8lYPa2fAueyjnfDEJqsCk5pT9ICeh0CXZlbHUI/7sLxH0520ZVkPsCGmOQD2mA4u7JLFs
+q57IIdACY+ywqfcZwoS/G4HedyFYzDFkyiWq1+U+T8bvHRbLzO2XQDG1arQOJ/AHq8ktrTUz8hK4
+Cbw44wOsdB0MBN2/l0jetnLDvo6t8P8VKa4+q/TZnPA+JBLvwtNGNEVChe0v9CJHUxo3aFEs/k+K
+Jv/9Lsz5EkkObjq0cVAVlKS+9mgg6peIgUIJojnsjOvCsjqOkPj0zkK6gcSEsTS5IR2bV3POInFD
+wKyLPTVvBC98H+X0+ZfNa0hyYCyxG8qJ8GV+75HsokL4XrgsgYLQ9MreLe9752taGDHYYzBNUDGp
+0v9EMx+92ZASOOkNFFBnLXRV3bgWo+69I+hgw/h5CG9likuQOA9kTlbOkjHoenC2rTv2cWRZHBOp
+pOyw8xNFDyRZYo69xzm0GioWz+VqikQpgvb/pv3ObhJvXz8G4hbxlmAATwptJEDUANdnc5jg3SGw
+YqwFuKjo38IoVS8eYJgYzwNJ3RKQxB2bDj6Y6vKjl/sXq2pCXnYnMtV+mT3Wsc3jmGOwTan16XLF
+9EdIm2ahjt97Zl2kfDfuYvU81HxVLR3H+MBBxcvSUfLSm74ua1E+4LdMbidcJgRdj/AKyYkoLKc/
+DUftq1g1OCCZ7rRLRHl3aDs+QZN7nmcCIMZop30s0Pm3fIFo+Ad+6yMGgQhI/YehXHmPu6kJOWFy
+PxeDuwndGTKaBP1VWvsUoc74iZFNtND/m8gdGsWzC2d0CHSHBWp0pFSn2Wh8sVkP5rcjMpNLQn98
+W7s0/1TQ/WUoRPxgmRuwKHpHdZZx33ct1BnAOX9DElGs8NJRJ/05Y8F6FOg2x6Vs5HchxieIr095
+i8aBZkJ9yLdB0yks4d8ETUcklxKtfbEust8WlXnyP8NK1GIvtv+A/ifWnj37oduk1BSVh9uavMB0
+kLYUAmEu1qbJ/6wLHO2363sUbKG0BhB1PSD87L1iiGa3Irg7glMM16NRKFYs0uuxKhNZ7oVxcPVs
+IGUtjxlx13mO8nweyuULhNgtgSht+l+43eZqxciVDBoyjIOPWCiEH6ATmF27L8oikJYyK0UZWUCD
+04SrFX/ysTxRLf4/pa6ixOPLgx2PcI3nf/YtQuHENXZr3iG+zgKY/kDpFbJ1TYJLynbwrOh8TX4k
+i7Jlnmwg8Kvy2hWFG13B0KTIzblTRU0AAALNAZ7pdEEvAAAhohzccV1vlkt49rMqqgAuiCNy+Aa1
+BiZvUTtKe6ebWbCe1pY+DymqcOonuPE8FBv8NsXK9tg/WWorXr4pRBapDsnTAKy2Qt+JKiDB/+Mm
+HRINnPf/un46F5blF7N4XA1Kp35r8snuDs8t94iAH3r6Lj813wr+CdN8fdN7vO9ToC+dkioAf/g8
+xRTjP5NyVkGVTKA//5+2dl7hLL/iaMr2TNMQYidelJK0Lu5N6kR8xuDUMdwR+zepvYwXxXLcZfLI
+Lr81STSGPVXsl/rxvg3xZIMn3rCTkBfsO5EMpZ5Nrejbju7PfdQY10gWjbPsspZmftyjmOLH56aU
+jSFQCWonJrdoXwSUGAB5XvEpOjb7eo3+m+NAk3KRK+WirYYtdXCKbCBuo4jcO0PCHMDXvNVFXS0P
+23Pa+4nSr3gNUwyA+2mgQ1rOhqcmZCjqjzk3FZnrqUDePwaxtfjBsEV85exuw3BHlI+wn8jp8sd8
+x8qLLHAnNvdhYpZkoIBdwL/n+d2uzLiC+llzPeSQDAvzP46bQ3hY8p3TDbNrry3crdWPF5k0HDs9
+SMlc528/vjeRnH85DOqSbpsiVOVCfC+jqRSqcVapHPq56C9kNwV6sQyvVttUvasy7hnJZbIY3ByH
+De/+Fq2TqufIsWPwtjwu0vf7lT2/4V1dIcKksECr+Hm59+GxmxPZxiM+hkDX0ldMq3gruNtL7gki
+1NhbJwne9aP8haMcMYUjIk5F7c180ZhVbiX3mSxzSr/C4XqjZdCqbkrxY/i42niAAne5tWFt99wI
+uxkV4sbXtydrLpV19zaQTZ3gQxgltnigVRe5xismniY6S1qti6l+YxX5lAckFu+gkqhqcHcDjNLT
+ew7++2gU4Uao5QJl5dKSNLrT0nzWSae0peyXP424z0RewzLhLB0r37kazRu2/4tZ1oTDfySHdAl/
+gBbQAAADXwGe62pBLwAAHwS/OxZiRwW4AP4v68b43tPyLNNuhkcT2x1HvgkzlMrxVxISLeXnRNBl
+Fy6Ik0ws8fED9DSv37qL5bwnYx7Um29eEoRWBe76R6XYtNnnK/XB9wGUXXYRmZe06r37frOI1u1F
+WZUC81LfQ0xfbvt4VD1UzF6edF19rpO4bBc/CGAlXZlNWNXsZLraCZf45x9kHiFEVjqpu/U/52TK
+MnH5/IaU6blAEEcIYmirzipua1zUaGCpA3A/V0SnLeTq6JWak7zpIxVyIkJmnLv0rSuL9QELf/0k
+hpP0Yf7jSMftpKvaePHn2gp+QGsT06qsYY7XHBueDm2caqmPx+BbtrbEmk3VRltnqv/S/dIAxvy/
+IdI8buxMs7Soyuk21Sh6WyjzlJRIxw0N0ocnwaG4jjzyWsqW46iGs7dfQp/fJy2qvh3Mmww+j4w+
+HAeMT5N6Ge46L/mmImJ8ObbH9XPHuyO4NiXlDoMZmBNpndMaVp0D9evHAs6sW0JhBGoX//qw3TYJ
+67dEx8atGJHQEx9EL3CAelnp4isFpJKHJulFCjUQ83ZScBWcK49tdXTVejSp47GBvxMN3lHEoI03
+3yjFX6yHjknBTe4EcdgruwH6U/7xmOtyu6jmGgWtvVgAIdUQyKvMEi+8o0bdALSEo2QrZje4FqG1
+7fAS2Ql7nXa0TZbVYFRMp7cWNQOd+RXf88W4A2C4JmCP3wLbIPDzAmrqNBOOvPZuDaBmNVSSQVS6
+SWnAn0g1Jqbp1OMWcyD9Vq+ErhWb/sqoh2l+3TEymA/cpMINfWAgcc7H8Xv2pyjmCls8RWgQVQM8
+rk9FS60o34OiAan4Kl4HNSpDVfI/NLbH969hZ9ItIX+NM4MEUxSZZUxMS5FHjYGT9so8ZUsH2INM
+s2DH9+3GYj8cAeue1ST5NMt40ac5oq5Z67hcjJmFldVS1BiL2RD0SKk6K5xIVbWI8KVXf+jHkai2
+AzAjXRJKyjPnwn/AwkK97Dabrkp/p5xDoW2E1zUCCjbEROs8cZhz6aG5oqrKeMoFQoo+x1cliMVC
+hFTBhE16bHLJZbl3NdRuqlFLweAX4lgl0rYCx4UJD3/+sic07EjSzWQuU8FInJMUa+K81S3s42Ni
+DyRRUao1COouvavdUgFbAAAEEG1vb3YAAABsbXZoZAAAAAAAAAAAAAAAAAAAA+gAABlkAAEAAAEA
+AAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAAAAAQAAAAAAAAAAAAAAAAAAQAAAAAAAAAAAAAAAAAAA
+AAAAAAAAAAAAAAAAAAAAAAIAAAAYaW9kcwAAAAAQgICABwBP/////v8AAAMldHJhawAAAFx0a2hk
+AAAAAwAAAAAAAAAAAAAAAQAAAAAAABlkAAAAAAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAAAA
+AQAAAAAAAAAAAAAAAAAAQAAAAASAAAABsAAAAAAAJGVkdHMAAAAcZWxzdAAAAAAAAAABAAAZZAAA
+AAIAAQAAAAACnW1kaWEAAAAgbWRoZAAAAAAAAAAAAAAAAAAAAAIAAAANVcQAAAAAAC1oZGxyAAAA
+AAAAAAB2aWRlAAAAAAAAAAAAAAAAVmlkZW9IYW5kbGVyAAAAAkhtaW5mAAAAFHZtaGQAAAABAAAA
+AAAAAAAAAAAkZGluZgAAABxkcmVmAAAAAAAAAAEAAAAMdXJsIAAAAAEAAAIIc3RibAAAALRzdHNk
+AAAAAAAAAAEAAACkYXZjMQAAAAAAAAABAAAAAAAAAAAAAAAAAAAAAASAAbAASAAAAEgAAAAAAAAA
+AQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABj//wAAADJhdmNDAWQAH//hABlnZAAf
+rNlASA3oQAAAAwBAAAADAQPGDGWAAQAGaOvjyyLAAAAAHHV1aWRraEDyXyRPxbo5pRvPAyPzAAAA
+AAAAABhzdHRzAAAAAAAAAAEAAAANAAAAAQAAABRzdHNzAAAAAAAAAAEAAAABAAAAeGN0dHMAAAAA
+AAAADQAAAAEAAAACAAAAAQAAAAUAAAABAAAAAgAAAAEAAAAAAAAAAQAAAAEAAAABAAAABQAAAAEA
+AAACAAAAAQAAAAAAAAABAAAAAQAAAAEAAAAFAAAAAQAAAAIAAAABAAAAAAAAAAEAAAABAAAAHHN0
+c2MAAAAAAAAAAQAAAAEAAAABAAAAAQAAAEhzdHN6AAAAAAAAAAAAAAANAABPyAAACZsAAALAAAAC
+LgAAAkcAAAi0AAAE9wAAAn8AAAL3AAAGzQAABd4AAALRAAADYwAAAERzdGNvAAAAAAAAAA0AAAAs
+AABP9AAAWY8AAFxPAABefQAAYMQAAGl4AABubwAAcO4AAHPlAAB6sgAAgJAAAINhAAAAX3VkdGEA
+AABXbWV0YQAAAAAAAAAhaGRscgAAAAAAAAAAbWRpcmFwcGwAAAAAAAAAAAAAAAAqaWxzdAAAACKp
+dG9vAAAAGmRhdGEAAAABAAAAAExhdmY1Ni4xLjA=
+">
+  Your browser does not support the video tag.
+</video></div>
+</div>
+<p>As we slice the data with a window sliding along the x-axis in the left
+plot, the empirical distribution of the y-values of the points in the
+window varies in the right plot. An important aspect of this approach is
+that the density estimates that correspond to close values of the
+predictor are similar.</p>
+<p>In the previous example, we saw that a Dirichlet process estimates a
+probability density as a mixture model with infinitely many components.
+In the case of normal component distributions,</p>
+<div class="math">
+y \sim \sum_{i = 1}^{\infty} w_i \cdot N(\mu_i, \tau_i^{-1}),</div><p>where the mixture weights, <span class="math">\(w_1, w_2, \ldots\)</span>, are generated by a
+<a class="reference external" href="https://en.wikipedia.org/wiki/Dirichlet_process#The_stick-breaking_process">stick-breaking
+process</a>.</p>
+<p>Dependent density regression generalizes this representation of the
+Dirichlet process mixture model by allowing the mixture weights and
+component means to vary conditioned on the value of the predictor,
+<span class="math">\(x\)</span>. That is,</p>
+<div class="math">
+y\ |\ x \sim \sum_{i = 1}^{\infty} w_i\ |\ x \cdot N(\mu_i\ |\ x, \tau_i^{-1}).</div><p>In this example, we will follow Chapter 23 of <a class="reference external" href="http://www.stat.columbia.edu/~gelman/book/">*Bayesian Data
+Analysis*</a> and use a
+probit stick-breaking process to determine the conditional mixture
+weights, <span class="math">\(w_i\ |\ x\)</span>. The probit stick-breaking process starts by
+defining</p>
+<div class="math">
+v_i\ |\ x = \Phi(\alpha_i + \beta_i x),</div><p>where <span class="math">\(\Phi\)</span> is the cumulative distribution function of the
+standard normal distribution. We then obtain <span class="math">\(w_i\ |\ x\)</span> by
+applying the stick breaking process to <span class="math">\(v_i\ |\ x\)</span>. That is,</p>
+<div class="math">
+w_i\ |\ x = v_i\ |\ x \cdot \prod_{j = 1}^{i - 1} (1 - v_j\ |\ x).</div><p>For the LIDAR data set, we use independent normal priors
+<span class="math">\(\alpha_i \sim N(0, 5^2)\)</span> and <span class="math">\(\beta_i \sim N(0, 5^2)\)</span>. We
+now express this this model for the conditional mixture weights using
+<code class="docutils literal"><span class="pre">pymc3</span></code>.</p>
+<div class="nbinput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [10]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="k">def</span> <span class="nf">norm_cdf</span><span class="p">(</span><span class="n">z</span><span class="p">):</span>
+    <span class="k">return</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="p">(</span><span class="mi">1</span> <span class="o">+</span> <span class="n">tt</span><span class="o">.</span><span class="n">erf</span><span class="p">(</span><span class="n">z</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="mi">2</span><span class="p">)))</span>
+
+<span class="k">def</span> <span class="nf">stick_breaking</span><span class="p">(</span><span class="n">v</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">v</span> <span class="o">*</span> <span class="n">tt</span><span class="o">.</span><span class="n">concatenate</span><span class="p">([</span><span class="n">tt</span><span class="o">.</span><span class="n">ones_like</span><span class="p">(</span><span class="n">v</span><span class="p">[:,</span> <span class="p">:</span><span class="mi">1</span><span class="p">]),</span>
+                               <span class="n">tt</span><span class="o">.</span><span class="n">extra_ops</span><span class="o">.</span><span class="n">cumprod</span><span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">v</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)[:,</span> <span class="p">:</span><span class="o">-</span><span class="mi">1</span><span class="p">]],</span>
+                              <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [11]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">N</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">shape</span>
+<span class="n">K</span> <span class="o">=</span> <span class="mi">20</span>
+
+<span class="n">std_range</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">std_range</span><span class="o">.</span><span class="n">values</span><span class="p">[:,</span> <span class="n">np</span><span class="o">.</span><span class="n">newaxis</span><span class="p">]</span>
+<span class="n">std_logratio</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">std_logratio</span><span class="o">.</span><span class="n">values</span><span class="p">[:,</span> <span class="n">np</span><span class="o">.</span><span class="n">newaxis</span><span class="p">]</span>
+
+<span class="n">x_lidar</span> <span class="o">=</span> <span class="n">shared</span><span class="p">(</span><span class="n">std_range</span><span class="p">,</span> <span class="n">broadcastable</span><span class="o">=</span><span class="p">(</span><span class="bp">False</span><span class="p">,</span> <span class="bp">True</span><span class="p">))</span>
+
+<span class="k">with</span> <span class="n">pm</span><span class="o">.</span><span class="n">Model</span><span class="p">()</span> <span class="k">as</span> <span class="n">model</span><span class="p">:</span>
+    <span class="n">alpha</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Normal</span><span class="p">(</span><span class="s1">&#39;alpha&#39;</span><span class="p">,</span> <span class="mf">0.</span><span class="p">,</span> <span class="mf">5.</span><span class="p">,</span> <span class="n">shape</span><span class="o">=</span><span class="n">K</span><span class="p">)</span>
+    <span class="n">beta</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Normal</span><span class="p">(</span><span class="s1">&#39;beta&#39;</span><span class="p">,</span> <span class="mf">0.</span><span class="p">,</span> <span class="mf">5.</span><span class="p">,</span> <span class="n">shape</span><span class="o">=</span><span class="n">K</span><span class="p">)</span>
+    <span class="n">v</span> <span class="o">=</span> <span class="n">norm_cdf</span><span class="p">(</span><span class="n">alpha</span> <span class="o">+</span> <span class="n">beta</span> <span class="o">*</span> <span class="n">x_lidar</span><span class="p">)</span>
+    <span class="n">w</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Deterministic</span><span class="p">(</span><span class="s1">&#39;w&#39;</span><span class="p">,</span> <span class="n">stick_breaking</span><span class="p">(</span><span class="n">v</span><span class="p">))</span>
+</pre></div>
+</div>
+</div>
+<p>We have defined <code class="docutils literal"><span class="pre">x_lidar</span></code> as a <code class="docutils literal"><span class="pre">theano</span></code>
+<code class="docutils literal"><span class="pre">`shared</span></code> &lt;<a class="reference external" href="http://deeplearning.net/software/theano/library/compile/shared.html">http://deeplearning.net/software/theano/library/compile/shared.html</a>&gt;`__
+variable in order to use <code class="docutils literal"><span class="pre">pymc3</span></code>&#8216;s posterior prediction capabilities
+later.</p>
+<p>While the dependent density regression model theoretically has
+infinitely many components, we must truncate the model to finitely many
+components (in this case, twenty) in order to express it using
+<code class="docutils literal"><span class="pre">pymc3</span></code>. After sampling from the model, we will verify that truncation
+did not unduly influence our results.</p>
+<p>Since the LIDAR data seems to have several linear components, we use the
+linear models</p>
+<div class="math">
+\begin{align*}
+\mu_i\ |\ x
+    &amp; \sim \gamma_i + \delta_i x \\
+\gamma_i
+    &amp; \sim N(0, 10^2) \\
+\delta_i
+    &amp; \sim N(0, 10^2)
+\end{align*}</div><p>for the conditional component means.</p>
+<div class="nbinput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [12]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="k">with</span> <span class="n">model</span><span class="p">:</span>
+    <span class="n">gamma</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Normal</span><span class="p">(</span><span class="s1">&#39;gamma&#39;</span><span class="p">,</span> <span class="mf">0.</span><span class="p">,</span> <span class="mf">10.</span><span class="p">,</span> <span class="n">shape</span><span class="o">=</span><span class="n">K</span><span class="p">)</span>
+    <span class="n">delta</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Normal</span><span class="p">(</span><span class="s1">&#39;delta&#39;</span><span class="p">,</span> <span class="mf">0.</span><span class="p">,</span> <span class="mf">10.</span><span class="p">,</span> <span class="n">shape</span><span class="o">=</span><span class="n">K</span><span class="p">)</span>
+    <span class="n">mu</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Deterministic</span><span class="p">(</span><span class="s1">&#39;mu&#39;</span><span class="p">,</span> <span class="n">gamma</span> <span class="o">+</span> <span class="n">delta</span> <span class="o">*</span> <span class="n">x_lidar</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<p>Finally, we place the prior <span class="math">\(\tau_i \sim \textrm{Gamma}(1, 1)\)</span> on
+the component precisions.</p>
+<div class="nbinput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [13]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="k">with</span> <span class="n">model</span><span class="p">:</span>
+    <span class="n">tau</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Gamma</span><span class="p">(</span><span class="s1">&#39;tau&#39;</span><span class="p">,</span> <span class="mf">1.</span><span class="p">,</span> <span class="mf">1.</span><span class="p">,</span> <span class="n">shape</span><span class="o">=</span><span class="n">K</span><span class="p">)</span>
+    <span class="n">obs</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">NormalMixture</span><span class="p">(</span><span class="s1">&#39;obs&#39;</span><span class="p">,</span> <span class="n">w</span><span class="p">,</span> <span class="n">mu</span><span class="p">,</span> <span class="n">tau</span><span class="o">=</span><span class="n">tau</span><span class="p">,</span> <span class="n">observed</span><span class="o">=</span><span class="n">std_logratio</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<p>We now sample from the dependent density regression model.</p>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [14]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">SAMPLES</span> <span class="o">=</span> <span class="mi">20000</span>
+<span class="n">BURN</span> <span class="o">=</span> <span class="mi">10000</span>
+<span class="n">THIN</span> <span class="o">=</span> <span class="mi">10</span>
+
+<span class="k">with</span> <span class="n">model</span><span class="p">:</span>
+    <span class="n">step</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Metropolis</span><span class="p">()</span>
+    <span class="n">trace_</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="n">SAMPLES</span><span class="p">,</span> <span class="n">step</span><span class="p">,</span> <span class="n">random_seed</span><span class="o">=</span><span class="n">SEED</span><span class="p">)</span>
+
+<span class="n">trace</span> <span class="o">=</span> <span class="n">trace_</span><span class="p">[</span><span class="n">BURN</span><span class="p">::</span><span class="n">THIN</span><span class="p">]</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="stderr container">
+<div class="highlight"><pre>
+100%|██████████| 20000/20000 [01:42&lt;00:00, 195.86it/s]
+</pre></div></div>
+</div>
+<p>To verify that truncation did not unduly influence our results, we plot
+the largest posterior expected mixture weight for each component. (In
+this model, each point has a mixture weight for each component, so we
+plot the maximum mixture weight for each component across all data
+points in order to judge if the component exerts any influence on the
+posterior.)</p>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [15]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">8</span><span class="p">,</span> <span class="mi">6</span><span class="p">))</span>
+
+<span class="n">ax</span><span class="o">.</span><span class="n">bar</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">K</span><span class="p">)</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span>
+       <span class="n">trace</span><span class="p">[</span><span class="s1">&#39;w&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">));</span>
+
+<span class="n">ax</span><span class="o">.</span><span class="n">set_xlim</span><span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="mf">0.5</span><span class="p">,</span> <span class="n">K</span> <span class="o">+</span> <span class="mf">0.5</span><span class="p">);</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">set_xticks</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">K</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span> <span class="o">+</span> <span class="mi">1</span><span class="p">);</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="s1">&#39;Mixture component&#39;</span><span class="p">);</span>
+
+<span class="n">ax</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="s1">&#39;Largest posterior expected</span><span class="se">\n</span><span class="s1">mixture weight&#39;</span><span class="p">);</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput container">
+<div class="container">
+</div>
+<div class="stderr container">
+<div class="highlight"><pre>
+/opt/conda/lib/python3.5/site-packages/matplotlib/font_manager.py:1297: UserWarning: findfont: Font family [&#39;sans-serif&#39;] not found. Falling back to DejaVu Sans
+  (prop.get_family(), self.defaultFamily[fontext]))
+</pre></div></div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<img alt="../_images/notebooks_dependent_density_regression_23_1.png" src="../_images/notebooks_dependent_density_regression_23_1.png" />
+</div>
+</div>
+<p>Since only three mixture components have appreciable posterior expected
+weight for any data point, we can be fairly certain that truncation did
+not unduly influence our results. (If most components had appreciable
+posterior expected weight, truncation may have influenced the results,
+and we would have increased the number of components and sampled again.)</p>
+<p>Visually, it is reasonable that the LIDAR data has three linear
+components, so these posterior expected weights seem to have identified
+the structure of the data well. We now sample from the posterior
+predictive distribution to get a better understand the model&#8217;s
+performance.</p>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [16]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">PP_SAMPLES</span> <span class="o">=</span> <span class="mi">5000</span>
+
+<span class="n">lidar_pp_x</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="n">std_range</span><span class="o">.</span><span class="n">min</span><span class="p">()</span> <span class="o">-</span> <span class="mf">0.05</span><span class="p">,</span> <span class="n">std_range</span><span class="o">.</span><span class="n">max</span><span class="p">()</span> <span class="o">+</span> <span class="mf">0.05</span><span class="p">,</span> <span class="mi">100</span><span class="p">)</span>
+<span class="n">x_lidar</span><span class="o">.</span><span class="n">set_value</span><span class="p">(</span><span class="n">lidar_pp_x</span><span class="p">[:,</span> <span class="n">np</span><span class="o">.</span><span class="n">newaxis</span><span class="p">])</span>
+
+<span class="k">with</span> <span class="n">model</span><span class="p">:</span>
+    <span class="n">pp_trace</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">sample_ppc</span><span class="p">(</span><span class="n">trace</span><span class="p">,</span> <span class="n">PP_SAMPLES</span><span class="p">,</span> <span class="n">random_seed</span><span class="o">=</span><span class="n">SEED</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="stderr container">
+<div class="highlight"><pre>
+100%|██████████| 5000/5000 [01:21&lt;00:00, 61.64it/s]
+</pre></div></div>
+</div>
+<p>Below we plot the posterior expected value and the 95% posterior
+credible interval.</p>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [17]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">()</span>
+
+<span class="n">ax</span><span class="o">.</span><span class="n">scatter</span><span class="p">(</span><span class="n">df</span><span class="o">.</span><span class="n">std_range</span><span class="p">,</span> <span class="n">df</span><span class="o">.</span><span class="n">std_logratio</span><span class="p">,</span>
+           <span class="n">c</span><span class="o">=</span><span class="n">blue</span><span class="p">,</span> <span class="n">zorder</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span>
+           <span class="n">label</span><span class="o">=</span><span class="bp">None</span><span class="p">);</span>
+
+<span class="n">low</span><span class="p">,</span> <span class="n">high</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">percentile</span><span class="p">(</span><span class="n">pp_trace</span><span class="p">[</span><span class="s1">&#39;obs&#39;</span><span class="p">],</span> <span class="p">[</span><span class="mf">2.5</span><span class="p">,</span> <span class="mf">97.5</span><span class="p">],</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">fill_between</span><span class="p">(</span><span class="n">lidar_pp_x</span><span class="p">,</span> <span class="n">low</span><span class="p">,</span> <span class="n">high</span><span class="p">,</span>
+                <span class="n">color</span><span class="o">=</span><span class="s1">&#39;k&#39;</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">0.35</span><span class="p">,</span> <span class="n">zorder</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span>
+                <span class="n">label</span><span class="o">=</span><span class="s1">&#39;95% posterior credible interval&#39;</span><span class="p">);</span>
+
+<span class="n">ax</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">lidar_pp_x</span><span class="p">,</span> <span class="n">pp_trace</span><span class="p">[</span><span class="s1">&#39;obs&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">),</span>
+        <span class="n">c</span><span class="o">=</span><span class="s1">&#39;k&#39;</span><span class="p">,</span> <span class="n">zorder</span><span class="o">=</span><span class="mi">6</span><span class="p">,</span>
+        <span class="n">label</span><span class="o">=</span><span class="s1">&#39;Posterior expected value&#39;</span><span class="p">);</span>
+
+<span class="n">ax</span><span class="o">.</span><span class="n">set_xticklabels</span><span class="p">([]);</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="s1">&#39;Standardized range&#39;</span><span class="p">);</span>
+
+<span class="n">ax</span><span class="o">.</span><span class="n">set_yticklabels</span><span class="p">([]);</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="s1">&#39;Standardized log ratio&#39;</span><span class="p">);</span>
+
+<span class="n">ax</span><span class="o">.</span><span class="n">legend</span><span class="p">(</span><span class="n">loc</span><span class="o">=</span><span class="mi">1</span><span class="p">);</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">set_title</span><span class="p">(</span><span class="s1">&#39;LIDAR Data&#39;</span><span class="p">);</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput container">
+<div class="container">
+</div>
+<div class="stderr container">
+<div class="highlight"><pre>
+/opt/conda/lib/python3.5/site-packages/matplotlib/font_manager.py:1297: UserWarning: findfont: Font family [&#39;sans-serif&#39;] not found. Falling back to DejaVu Sans
+  (prop.get_family(), self.defaultFamily[fontext]))
+</pre></div></div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<img alt="../_images/notebooks_dependent_density_regression_27_1.png" src="../_images/notebooks_dependent_density_regression_27_1.png" />
+</div>
+</div>
+<p>The model has fit the linear components of the data well, and also
+accomodated its heteroskedasticity. This flexibility, along with the
+ability to modularly specify the conditional mixture weights and
+conditional component densities, makes dependent density regression an
+extremely useful nonparametric Bayesian model.</p>
+<p>To learn more about depdendent density regression and related models,
+consult <a class="reference external" href="http://www.stat.columbia.edu/~gelman/book/">*Bayesian Data
+Analysis*</a>, <a class="reference external" href="http://www.springer.com/us/book/9783319189673">*Bayesian
+Nonparametric Data
+Analysis*</a>, or
+<a class="reference external" href="https://www.google.com/webhp?sourceid=chrome-instant&amp;ion=1&amp;espv=2&amp;ie=UTF-8#q=bayesian+nonparametrics+book">*Bayesian
+Nonparametrics*</a>.</p>
+<p>This example first appeared
+<a class="reference external" href="http://austinrochford.com/posts/2017-01-18-ddp-pymc3.html">here</a>.</p>
+</div>
+
+
+           </div>
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="GLM-hierarchical-ADVI.html" class="btn btn-neutral float-right" title="GLM: Hierarchical Linear Regression with ADVI" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="dp_mix.html" class="btn btn-neutral" title="Dirichlet process mixtures for density estimation" accesskey="p"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2016, John Salvatier, Christopher Fonnesbeck, Thomas Wiecki.
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'../',
+            VERSION:'3.0',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true
+        };
+    </script>
+      <script type="text/javascript" src="../_static/jquery.js"></script>
+      <script type="text/javascript" src="../_static/underscore.js"></script>
+      <script type="text/javascript" src="../_static/doctools.js"></script>
+      <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+  
+
+  
+  
+    <script type="text/javascript" src="../_static/js/theme.js"></script>
+  
+
+  
+  
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.StickyNav.enable();
+      });
+  </script>
+   
+
+</body>
+</html>

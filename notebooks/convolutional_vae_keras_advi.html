@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>Convolutional variational autoencoder with PyMC3 and Keras &mdash; PyMC3 3.0.rc4 documentation</title>
+  <title>Convolutional variational autoencoder with PyMC3 and Keras &mdash; PyMC3 3.0 documentation</title>
   
 
   
@@ -33,7 +33,7 @@
         <link rel="index" title="Index"
               href="../genindex.html"/>
         <link rel="search" title="Search" href="../search.html"/>
-    <link rel="top" title="PyMC3 3.0.rc4 documentation" href="../index.html"/>
+    <link rel="top" title="PyMC3 3.0 documentation" href="../index.html"/>
         <link rel="up" title="Examples" href="../examples.html"/>
         <link rel="next" title="API Reference" href="../api.html"/>
         <link rel="prev" title="Variational Inference: Bayesian Neural Networks" href="bayesian_neural_network_advi.html"/> 
@@ -147,7 +147,7 @@
       <li class="wy-breadcrumbs-aside">
         
           
-            <a href="../_sources/notebooks/convolutional_vae_keras_advi.txt" rel="nofollow"> View page source</a>
+            <a href="../_sources/notebooks/convolutional_vae_keras_advi.ipynb.txt" rel="nofollow"> View page source</a>
           
         
       </li>
@@ -345,7 +345,7 @@ Keras.</p>
 <p>Install Keras if it is not already available:</p>
 <div class="nbinput nblast container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [ ]:
+<span></span>In [1]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -355,7 +355,7 @@ Keras.</p>
 </div>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [1]:
+<span></span>In [2]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -390,9 +390,9 @@ Keras.</p>
 <div class="container">
 </div>
 <div class="container">
-<div id="93fb9998-77f3-4dfa-a835-4403c9c13385"></div>
+<div id="03c4ff31-1726-41d8-b130-a4b86adcbfa1"></div>
 <script type="text/javascript">
-var element = document.getElementById('93fb9998-77f3-4dfa-a835-4403c9c13385');
+var element = document.getElementById('03c4ff31-1726-41d8-b130-a4b86adcbfa1');
 IPython.notebook.set_autosave_interval(0)
 </script></div>
 </div>
@@ -419,7 +419,7 @@ API</a>. The dataset contains
 images of digits.</p>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [2]:
+<span></span>In [3]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -436,7 +436,7 @@ images of digits.</p>
 </div>
 <div class="container">
 <div class="highlight"><pre>
-dict_keys([&#39;data&#39;, &#39;COL_NAMES&#39;, &#39;DESCR&#39;, &#39;target&#39;])
+dict_keys([&#39;COL_NAMES&#39;, &#39;target&#39;, &#39;DESCR&#39;, &#39;data&#39;])
 </pre></div></div>
 </div>
 </div>
@@ -457,7 +457,7 @@ training or test. This information is important also for batch
 normalization.</p>
 <div class="nbinput nblast container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [3]:
+<span></span>In [4]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -502,7 +502,7 @@ representing observations (images of digits), the dimension of latent
 space, and the parameters of the model architecture.</p>
 <div class="nbinput nblast container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [4]:
+<span></span>In [5]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -543,7 +543,7 @@ on the architecture of the encoder except for input shape (<code class="docutils
 for images), so we can use this class for various encoding networks.</p>
 <div class="nbinput nblast container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [5]:
+<span></span>In [6]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -615,7 +615,7 @@ for images), so we can use this class for various encoding networks.</p>
 decoders.</p>
 <div class="nbinput nblast container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [6]:
+<span></span>In [7]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -654,7 +654,7 @@ decoders.</p>
 </div>
 <div class="nbinput nblast container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [7]:
+<span></span>In [8]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -707,12 +707,12 @@ and classes defined above. We set the size of mini-batches to 100 and
 the dimension of the latent space to 2 for visualization.</p>
 <div class="nbinput nblast container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [8]:
+<span></span>In [9]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="c1"># Constants</span>
-<span class="n">minibatch_size</span> <span class="o">=</span> <span class="mi">100</span>
+<span class="n">minibatch_size</span> <span class="o">=</span> <span class="mi">200</span>
 <span class="n">dim_hidden</span> <span class="o">=</span> <span class="mi">2</span>
 </pre></div>
 </div>
@@ -723,7 +723,7 @@ the below, <code class="docutils literal"><span class="pre">enc.model</span></co
 we can check the model architecture using the method <code class="docutils literal"><span class="pre">summary()</span></code>.</p>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [9]:
+<span></span>In [10]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -744,21 +744,21 @@ we can check the model architecture using the method <code class="docutils liter
 ____________________________________________________________________________________________________
 Layer (type)                     Output Shape          Param #     Connected to
 ====================================================================================================
-input_1 (InputLayer)             (100, 1, 28, 28)      0
+input_1 (InputLayer)             (200, 1, 28, 28)      0
 ____________________________________________________________________________________________________
-convolution2d_1 (Convolution2D)  (100, 1, 28, 28)      5           input_1[0][0]
+convolution2d_1 (Convolution2D)  (200, 1, 28, 28)      5           input_1[0][0]
 ____________________________________________________________________________________________________
-convolution2d_2 (Convolution2D)  (100, 64, 14, 14)     320         convolution2d_1[0][0]
+convolution2d_2 (Convolution2D)  (200, 64, 14, 14)     320         convolution2d_1[0][0]
 ____________________________________________________________________________________________________
-convolution2d_3 (Convolution2D)  (100, 64, 14, 14)     36928       convolution2d_2[0][0]
+convolution2d_3 (Convolution2D)  (200, 64, 14, 14)     36928       convolution2d_2[0][0]
 ____________________________________________________________________________________________________
-convolution2d_4 (Convolution2D)  (100, 64, 14, 14)     36928       convolution2d_3[0][0]
+convolution2d_4 (Convolution2D)  (200, 64, 14, 14)     36928       convolution2d_3[0][0]
 ____________________________________________________________________________________________________
-flatten_1 (Flatten)              (100, 12544)          0           convolution2d_4[0][0]
+flatten_1 (Flatten)              (200, 12544)          0           convolution2d_4[0][0]
 ____________________________________________________________________________________________________
-dense_1 (Dense)                  (100, 128)            1605760     flatten_1[0][0]
+dense_1 (Dense)                  (200, 128)            1605760     flatten_1[0][0]
 ____________________________________________________________________________________________________
-dense_2 (Dense)                  (100, 4)              516         dense_1[0][0]
+dense_2 (Dense)                  (200, 4)              516         dense_1[0][0]
 ====================================================================================================
 Total params: 1680457
 ____________________________________________________________________________________________________
@@ -771,7 +771,7 @@ Normal prior on <span class="math">\(\mathbf{z}\)</span>, decode the variational
 observation <span class="math">\(\mathbf{x}\)</span>.</p>
 <div class="nbinput nblast container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [10]:
+<span></span>In [11]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -783,7 +783,7 @@ observation <span class="math">\(\mathbf{x}\)</span>.</p>
     <span class="n">dec</span> <span class="o">=</span> <span class="n">Decoder</span><span class="p">(</span><span class="n">zs</span><span class="p">,</span> <span class="n">net</span><span class="o">=</span><span class="n">cnn_dec</span><span class="p">)</span>
 
     <span class="c1"># Observation model</span>
-    <span class="n">xs_</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Normal</span><span class="p">(</span><span class="s1">&#39;xs_&#39;</span><span class="p">,</span> <span class="n">mu</span><span class="o">=</span><span class="n">dec</span><span class="o">.</span><span class="n">out</span><span class="o">.</span><span class="n">ravel</span><span class="p">(),</span> <span class="n">sd</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">observed</span><span class="o">=</span><span class="n">xs_t</span><span class="o">.</span><span class="n">ravel</span><span class="p">(),</span> <span class="n">dtype</span><span class="o">=</span><span class="s1">&#39;float32&#39;</span><span class="p">)</span>
+    <span class="n">xs_</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Normal</span><span class="p">(</span><span class="s1">&#39;xs_&#39;</span><span class="p">,</span> <span class="n">mu</span><span class="o">=</span><span class="n">dec</span><span class="o">.</span><span class="n">out</span><span class="o">.</span><span class="n">ravel</span><span class="p">(),</span> <span class="n">sd</span><span class="o">=</span><span class="mf">0.1</span><span class="p">,</span> <span class="n">observed</span><span class="o">=</span><span class="n">xs_t</span><span class="o">.</span><span class="n">ravel</span><span class="p">(),</span> <span class="n">dtype</span><span class="o">=</span><span class="s1">&#39;float32&#39;</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
@@ -793,7 +793,7 @@ decoded variational parameters are passed to
 <code class="docutils literal"><span class="pre">local_RVs</span></code> in the ADVI function of PyMC3.</p>
 <div class="nbinput nblast container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [11]:
+<span></span>In [12]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -814,7 +814,7 @@ inference.</p>
 same way.</p>
 <div class="nbinput nblast container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [12]:
+<span></span>In [13]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -826,7 +826,7 @@ same way.</p>
 encoding network.</p>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [13]:
+<span></span>In [14]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -842,21 +842,21 @@ encoding network.</p>
 ____________________________________________________________________________________________________
 Layer (type)                     Output Shape          Param #     Connected to
 ====================================================================================================
-input_2 (InputLayer)             (100, 2)              0
+input_2 (InputLayer)             (200, 2)              0
 ____________________________________________________________________________________________________
-dense_3 (Dense)                  (100, 100)            300         input_2[0][0]
+dense_3 (Dense)                  (200, 100)            300         input_2[0][0]
 ____________________________________________________________________________________________________
-dense_4 (Dense)                  (100, 12544)          1266944     dense_3[0][0]
+dense_4 (Dense)                  (200, 12544)          1266944     dense_3[0][0]
 ____________________________________________________________________________________________________
-reshape_1 (Reshape)              (100, 64, 14, 14)     0           dense_4[0][0]
+reshape_1 (Reshape)              (200, 64, 14, 14)     0           dense_4[0][0]
 ____________________________________________________________________________________________________
-deconvolution2d_1 (Deconvolution2(100, 64, 14, 14)     36928       reshape_1[0][0]
+deconvolution2d_1 (Deconvolution2(200, 64, 14, 14)     36928       reshape_1[0][0]
 ____________________________________________________________________________________________________
-deconvolution2d_2 (Deconvolution2(100, 64, 14, 14)     36928       deconvolution2d_1[0][0]
+deconvolution2d_2 (Deconvolution2(200, 64, 14, 14)     36928       deconvolution2d_1[0][0]
 ____________________________________________________________________________________________________
-deconvolution2d_3 (Deconvolution2(100, 64, 28, 28)     16448       deconvolution2d_2[0][0]
+deconvolution2d_3 (Deconvolution2(200, 64, 29, 29)     16448       deconvolution2d_2[0][0]
 ____________________________________________________________________________________________________
-convolution2d_5 (Convolution2D)  (100, 1, 27, 27)      257         deconvolution2d_3[0][0]
+convolution2d_5 (Convolution2D)  (200, 1, 28, 28)      257         deconvolution2d_3[0][0]
 ====================================================================================================
 Total params: 1357805
 ____________________________________________________________________________________________________
@@ -870,7 +870,7 @@ define the optimizer used for ADVI. The optimizer is a function that
 returns Theano parameter update object (dictionary).</p>
 <div class="nbinput nblast container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [14]:
+<span></span>In [15]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -885,8 +885,8 @@ returns Theano parameter update object (dictionary).</p>
 
 <span class="n">minibatches</span> <span class="o">=</span> <span class="nb">zip</span><span class="p">(</span><span class="n">create_minibatch</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">minibatch_size</span><span class="p">))</span>
 
-<span class="k">def</span> <span class="nf">adam</span><span class="p">(</span><span class="n">loss</span><span class="p">,</span> <span class="n">param</span><span class="p">):</span>
-    <span class="n">adam_</span> <span class="o">=</span> <span class="n">keras</span><span class="o">.</span><span class="n">optimizers</span><span class="o">.</span><span class="n">Adam</span><span class="p">()</span>
+<span class="k">def</span> <span class="nf">rmsprop</span><span class="p">(</span><span class="n">loss</span><span class="p">,</span> <span class="n">param</span><span class="p">):</span>
+    <span class="n">adam_</span> <span class="o">=</span> <span class="n">keras</span><span class="o">.</span><span class="n">optimizers</span><span class="o">.</span><span class="n">RMSprop</span><span class="p">()</span>
     <span class="k">return</span> <span class="n">adam_</span><span class="o">.</span><span class="n">get_updates</span><span class="p">(</span><span class="n">param</span><span class="p">,</span> <span class="p">[],</span> <span class="n">loss</span><span class="p">)</span>
 </pre></div>
 </div>
@@ -894,16 +894,16 @@ returns Theano parameter update object (dictionary).</p>
 <p>Let us execute ADVI function of PyMC3.</p>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [15]:
+<span></span>In [16]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="k">with</span> <span class="n">model</span><span class="p">:</span>
     <span class="n">v_params</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">variational</span><span class="o">.</span><span class="n">advi_minibatch</span><span class="p">(</span>
-        <span class="n">n</span><span class="o">=</span><span class="mi">500</span><span class="p">,</span> <span class="n">minibatch_tensors</span><span class="o">=</span><span class="p">[</span><span class="n">xs_t</span><span class="p">],</span> <span class="n">minibatches</span><span class="o">=</span><span class="n">minibatches</span><span class="p">,</span>
+        <span class="n">n</span><span class="o">=</span><span class="mi">1000</span><span class="p">,</span> <span class="n">minibatch_tensors</span><span class="o">=</span><span class="p">[</span><span class="n">xs_t</span><span class="p">],</span> <span class="n">minibatches</span><span class="o">=</span><span class="n">minibatches</span><span class="p">,</span>
         <span class="n">local_RVs</span><span class="o">=</span><span class="n">local_RVs</span><span class="p">,</span> <span class="n">observed_RVs</span><span class="o">=</span><span class="n">observed_RVs</span><span class="p">,</span>
         <span class="n">encoder_params</span><span class="o">=</span><span class="p">(</span><span class="n">enc</span><span class="o">.</span><span class="n">params</span> <span class="o">+</span> <span class="n">dec</span><span class="o">.</span><span class="n">params</span><span class="p">),</span>
-        <span class="n">optimizer</span><span class="o">=</span><span class="n">adam</span>
+        <span class="n">optimizer</span><span class="o">=</span><span class="n">rmsprop</span>
     <span class="p">)</span>
 </pre></div>
 </div>
@@ -911,19 +911,9 @@ returns Theano parameter update object (dictionary).</p>
 <div class="nboutput nblast container">
 <div class="container">
 </div>
-<div class="container">
+<div class="stderr container">
 <div class="highlight"><pre>
-Iteration 0 [0%]: ELBO = -56970296.0
-Iteration 50 [10%]: Average ELBO = -53106500.16
-Iteration 100 [20%]: Average ELBO = -52194973.92
-Iteration 150 [30%]: Average ELBO = -52064982.24
-Iteration 200 [40%]: Average ELBO = -51975449.2
-Iteration 250 [50%]: Average ELBO = -51931158.48
-Iteration 300 [60%]: Average ELBO = -51887135.28
-Iteration 350 [70%]: Average ELBO = -51885579.92
-Iteration 400 [80%]: Average ELBO = -51846011.28
-Iteration 450 [90%]: Average ELBO = -51832335.44
-Finished [100%]: ELBO = -51903096.0
+Average ELBO = -41,015,059.05: 100%|██████████| 1000/1000 [36:47&lt;00:00,  2.19s/it]
 </pre></div></div>
 </div>
 </div>
@@ -934,7 +924,7 @@ ELBO during inference (optimization). We can see the convergence of the
 inference.</p>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [16]:
+<span></span>In [17]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -944,11 +934,11 @@ inference.</p>
 </div>
 <div class="nboutput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>Out[16]:
+<span></span>Out[17]:
 </pre></div>
 </div>
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>[&lt;matplotlib.lines.Line2D at 0x7faa20a4b748&gt;]
+<span></span>[&lt;matplotlib.lines.Line2D at 0x7f61aaa34438&gt;]
 </pre></div>
 </div>
 </div>
@@ -965,27 +955,28 @@ decoding network. The mean of <span class="math">\(p(\mathbf{x}|\mathbf{z})\)</s
 image corresponding to the samples on the grid.</p>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [17]:
+<span></span>In [18]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="n">zs</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([(</span><span class="n">z1</span><span class="p">,</span> <span class="n">z2</span><span class="p">)</span>
-               <span class="k">for</span> <span class="n">z1</span> <span class="ow">in</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mf">0.2</span><span class="p">)</span>
-               <span class="k">for</span> <span class="n">z2</span> <span class="ow">in</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mf">0.2</span><span class="p">)])</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="s1">&#39;float32&#39;</span><span class="p">)</span>
+               <span class="k">for</span> <span class="n">z1</span> <span class="ow">in</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="o">-</span><span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mf">0.2</span><span class="p">)</span>
+               <span class="k">for</span> <span class="n">z2</span> <span class="ow">in</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="o">-</span><span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mf">0.2</span><span class="p">)])</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="s1">&#39;float32&#39;</span><span class="p">)</span>
 <span class="n">xs</span> <span class="o">=</span> <span class="n">dec</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="n">zs</span><span class="p">)[:,</span> <span class="mi">0</span><span class="p">,</span> <span class="p">:,</span> <span class="p">:]</span>
-<span class="n">xs</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">bmat</span><span class="p">([[</span><span class="n">xs</span><span class="p">[</span><span class="n">i</span> <span class="o">+</span> <span class="n">j</span> <span class="o">*</span> <span class="mi">10</span><span class="p">]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">10</span><span class="p">)]</span> <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">10</span><span class="p">)])</span>
+<span class="n">xs</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">bmat</span><span class="p">([[</span><span class="n">xs</span><span class="p">[</span><span class="n">i</span> <span class="o">+</span> <span class="n">j</span> <span class="o">*</span> <span class="mi">20</span><span class="p">]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">20</span><span class="p">)]</span> <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">20</span><span class="p">)])</span>
 <span class="n">matplotlib</span><span class="o">.</span><span class="n">rc</span><span class="p">(</span><span class="s1">&#39;axes&#39;</span><span class="p">,</span> <span class="o">**</span><span class="p">{</span><span class="s1">&#39;grid&#39;</span><span class="p">:</span> <span class="bp">False</span><span class="p">})</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="mi">10</span><span class="p">))</span>
 <span class="n">plt</span><span class="o">.</span><span class="n">imshow</span><span class="p">(</span><span class="n">xs</span><span class="p">,</span> <span class="n">interpolation</span><span class="o">=</span><span class="s1">&#39;none&#39;</span><span class="p">,</span> <span class="n">cmap</span><span class="o">=</span><span class="s1">&#39;gray&#39;</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
 <div class="nboutput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>Out[17]:
+<span></span>Out[18]:
 </pre></div>
 </div>
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>&lt;matplotlib.image.AxesImage at 0x7faa1a963240&gt;
+<span></span>&lt;matplotlib.image.AxesImage at 0x7f619d721b70&gt;
 </pre></div>
 </div>
 </div>
@@ -1050,7 +1041,7 @@ image corresponding to the samples on the grid.</p>
     <script type="text/javascript">
         var DOCUMENTATION_OPTIONS = {
             URL_ROOT:'../',
-            VERSION:'3.0.rc4',
+            VERSION:'3.0',
             COLLAPSE_INDEX:false,
             FILE_SUFFIX:'.html',
             HAS_SOURCE:  true
