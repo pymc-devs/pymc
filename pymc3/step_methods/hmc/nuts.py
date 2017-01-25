@@ -1,7 +1,7 @@
 from ..arraystep import Competence
 from .base_hmc import BaseHMC
 from pymc3.vartypes import continuous_types
-
+from pymc3.theanof import floatX
 import numpy as np
 import numpy.random as nr
 
@@ -69,7 +69,8 @@ class NUTS(BaseHMC):
         else:
             step_size = np.exp(self.log_step_size_bar)
 
-        u = nr.uniform()
+        u = floatX(nr.uniform())
+
         q = qn = qp = q0
         pn = pp = p0
 
@@ -120,7 +121,8 @@ class NUTS(BaseHMC):
 
 def buildtree(leapfrog, q, p, u, direction, depth, step_size, Emax, start_energy):
     if depth == 0:
-        q_edge, p_edge, new_energy = leapfrog(q, p, np.array(direction * step_size))
+        q_edge, p_edge, new_energy = leapfrog(q, p,
+                                              floatX(np.asarray(direction * step_size)))
         energy_change = new_energy - start_energy
 
         leaf_size = int(np.log(u) + energy_change <= 0)

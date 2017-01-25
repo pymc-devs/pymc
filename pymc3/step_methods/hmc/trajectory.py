@@ -45,7 +45,7 @@ def _theano_energy_function(H, q, **theano_kwargs):
     energy_function : theano function that computes the energy at a point (p, q) in phase space
     p : Starting momentum variable.
     """
-    p = tt.dvector('p')
+    p = tt.vector('p')
     p.tag.test_value = q.tag.test_value
     total_energy = H.pot.energy(p) - H.logp(q)
     energy_function = theano.function(inputs=[q, p], outputs=total_energy, **theano_kwargs)
@@ -70,7 +70,7 @@ def _theano_leapfrog_integrator(H, q, p, **theano_kwargs):
     theano function which returns
     q_new, p_new, energy_new
     """
-    epsilon = tt.dscalar('epsilon')
+    epsilon = tt.scalar('epsilon')
     epsilon.tag.test_value = 1
 
     n_steps = tt.iscalar('n_steps')
@@ -171,8 +171,8 @@ def _theano_single_leapfrog(H, q, p, **theano_kwargs):
     See above for documentation.  This is optimized for the case where only a single step is
     needed, in case of, for example, a recursive algorithm.
     """
-    epsilon = tt.dscalar('epsilon')
-    epsilon.tag.test_value = 1
+    epsilon = tt.scalar('epsilon')
+    epsilon.tag.test_value = 1.
 
     p_new = p + 0.5 * epsilon * H.dlogp(q)  # half momentum update
     q_new = q + epsilon * H.pot.velocity(p_new)  # full position update

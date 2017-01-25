@@ -4,6 +4,8 @@ import scipy.linalg
 from theano.tensor import slinalg
 from scipy.sparse import issparse
 
+from pymc3.theanof import floatX
+
 import numpy as np
 
 __all__ = ['quad_potential', 'ElemWiseQuadPotential', 'QuadPotential',
@@ -79,6 +81,7 @@ def isquadpotential(o):
 class ElemWiseQuadPotential(object):
 
     def __init__(self, v):
+        v = floatX(v)
         s = v ** .5
 
         self.s = s
@@ -89,7 +92,7 @@ class ElemWiseQuadPotential(object):
         return self.v * x
 
     def random(self):
-        return normal(size=self.s.shape) * self.inv_s
+        return floatX(normal(size=self.s.shape)) * self.inv_s
 
     def energy(self, x):
         return .5 * x.dot(self.v * x)
@@ -98,7 +101,7 @@ class ElemWiseQuadPotential(object):
 class QuadPotential_Inv(object):
 
     def __init__(self, A):
-        self.L = scipy.linalg.cholesky(A, lower=True)
+        self.L = floatX(scipy.linalg.cholesky(A, lower=True))
 
     def velocity(self, x):
         solve = slinalg.Solve(lower=True)
@@ -156,7 +159,7 @@ if chol_available:
             return theano.sparse.dot(A, x)
 
         def random(self):
-            n = normal(size=self.size)
+            n = floatX(normal(size=self.size))
             n /= self.d_sqrt
             n = self.factor.solve_Lt(n)
             n = self.factor.apply_Pt(n)

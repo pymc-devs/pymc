@@ -1,8 +1,10 @@
 import sys
+
+import theano
 import six
 
 __all__ = ['bool_types', 'int_types', 'float_types', 'complex_types', 'continuous_types',
-           'discrete_types', 'default_type', 'typefilter', 'isgenerator']
+           'discrete_types', 'typefilter', 'isgenerator']
 
 bool_types = set(['int8'])
 
@@ -20,9 +22,6 @@ complex_types = set(['complex64',
                      'complex128'])
 continuous_types = float_types | complex_types
 discrete_types = bool_types | int_types
-
-default_type = {'discrete': 'int64',
-                'continuous': 'float64'}
 
 if sys.version_info[0] == 3:
     string_types = str
