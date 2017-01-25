@@ -30,3 +30,6 @@ class CompoundStep(object):
             for method in self.methods:
                 point = method.step(point)
             return point
+
+
+# TODO: Compound Particle steps with other particlesteps / with other scalar steps (create particlestep for each) (may be expensive)
