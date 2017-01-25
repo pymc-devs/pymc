@@ -5,12 +5,14 @@ import theano
 import theano.tensor as tt
 import numpy as np
 
-__all__ = ["RBF", "White"]
-
-"""
-Modeled *very* closely after GPy and GPFlow so far
-"""
-
+__all__ = ['ExpQuad',
+           'RatQuad',
+           'Exponential',
+           'Matern52',
+           'Matern32',
+           'Linear',
+           'Cosine',
+           'WarpedInput']
 
 class Covariance(object):
     def __init__(self, input_dim, active_dims=None):
@@ -64,6 +66,20 @@ class Prod(Combination):
 
 
 class Stationary(Covariance):
+    R"""
+    Base class for stationary covariance functions.
+
+    Parameters
+    ----------
+    input_dim : The dimensionality of the input space, $X$ and or $Z$.
+
+    lengthscales: If input_dim > 1, a list or array of scalars or PyMC3 random
+    variables.  If input_dim == 1, a scalar or PyMC3 random variable.
+
+    active_dims: optional. List or array of booleans indicating which
+    dimension, or column of $X$ is to be used as input to the covariance
+    function.
+    """
     def __init__(self, input_dim, lengthscales, active_dims=None):
         Covariance.__init__(self, input_dim, active_dims)
         self.lengthscales = lengthscales
@@ -73,12 +89,12 @@ class Stationary(Covariance):
         Xs = tt.sum(tt.square(X), 1)
         if Z is None:
             return -2.0 * tt.dot(X, tt.transpose(X)) +\
-                   tt.reshape(Xs, (-1, 1)) + tt.reshape(Xs, (1, -1))
+                   (tt.reshape(Xs, (-1, 1)) + tt.reshape(Xs, (1, -1)))
         else:
             Z = tt.mul(Z, 1.0 / self.lengthscales)
             Zs = tt.sum(tt.square(Z), 1)
             return -2.0 * tt.dot(X, tt.transpose(Z)) +\
-                   tt.reshape(Xs, (-1, 1)) + tt.reshape(Zs, (1, -1))
+                   (tt.reshape(Xs, (-1, 1)) + tt.reshape(Zs, (1, -1)))
 
     def euclidean_dist(self, X, Z):
         r2 = self.square_dist(X, Z)
@@ -86,6 +102,19 @@ class Stationary(Covariance):
 
 
 class ExpQuad(Stationary):
+    R"""
+    The exponentiated quadratic kernel.  Also refered to as the squared
+    exponential, or radial basis function kernel.
+
+    .. math::
+
+       k(x, x') = \mathrm{exp}\left[ -\frac{(x - x')^2}{2 \ell^2} \right]
+
+    Parameters
+    ----------
+        X : The first set of inputs to the kernel
+        Z : The optional second set of inputs the kernel.  If Z is None, Z = X.
+    """
     def K(self, X, Z=None):
         X, Z = self._slice(X, Z)
         return tt.exp( -0.5 * self.square_dist(X, Z))
@@ -135,47 +164,12 @@ class Linear(Covariance):
 
     def K(self, X, Z=None):
         X, Z = self._slice(X, Z)
-        # need to fix this with slope and center
         Xc = tt.sub(X, self.centers)
         if Z is None:
             return tt.dot(Xc, tt.transpose(Xc))
         else:
             Zc = tt.sub(Z, self.centers)
             return tt.dot(Xc, tt.transpose(Zc))
-
-class Gibbs(Covariance):
-    def __init__(self, input_dim, lengthscale_func, args=None, active_dims=None):
-        Covariance.__init__(self, input_dim, active_dims)
-        assert callable(lengthscale_func), "Must be a function"
-        self.l = handle_args(lengthscale_func, args)
-        self.args = args
-
-    def square_dist(self, X, Z):
-        # smallish? problem in here
-        X = tt.mul(X, 1.0 / self.l(X, self.args))
-        Xs = tt.sum(tt.square(X), 1)
-        if Z is None:
-            return -2.0 * tt.dot(X, tt.transpose(X)) +\
-                   tt.reshape(Xs, (-1, 1)) + tt.reshape(Xs, (1, -1))
-        else:
-            Z = tt.mul(Z, 1.0 / self.l(Z, self.args))
-            Zs = tt.sum(tt.square(Z), 1)
-            return -2.0 * tt.dot(X, tt.transpose(Z)) +\
-                   tt.reshape(Xs, (-1, 1)) + tt.reshape(Zs, (1, -1))
-
-    def euclidean_dist(self, X, Z):
-        r2 = self.square_dist(X, Z)
-        return tt.sqrt(r2 + 1e-12)
-
-    def K(self, X, Z=None):
-        X, Z = self._slice(X, Z)
-        lx = self.l(X, self.args)
-        if Z is None:
-            lxp = lx
-        else:
-            lxp = self.l(Z, self.args)
-        c = tt.prod(tt.sqrt( ((2.0 * lx * lxp) / (tt.square(lx) + tt.square(lxp))) + 1e-12))
-        return c * tt.exp(-0.5 * self.square_dist(X, Z))
 
 
 class WarpedInput(Covariance):
@@ -194,20 +188,6 @@ class WarpedInput(Covariance):
             return self.cov_func.K(self.w(X, self.args), self.w(Z, self.args))
 
 
-class BasisFuncCov(Covariance):
-    def __init__(self, input_dim, alpha, basis, active_dims=None):
-        Covariance.__init__(self, input_dim, active_dims)
-        # non functional, idealy user would suppy basis *function* from theano, so
-        # that prediction could be done, not just a one off linear basis that can
-        # only be used for fitting.  This requires e.g. spline functionality in theano
-        self.alpha = alpha
-        self.basis = basis
-
-    def K(self, X, Z=None):
-        X, Z = self._slice(X, Z)
-        phi = tt.dot(self.basis, self.alpha)
-        return tt.exp(tt.dot(phi, tt.transpose(phi)))
-
 def handle_args(func, args):
     def f(x, args):
         if args is None:
@@ -217,5 +197,3 @@ def handle_args(func, args):
                 args = (args,)
             return func(x, *args)
     return f
-
-
