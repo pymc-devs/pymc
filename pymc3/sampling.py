@@ -157,29 +157,30 @@ def sample(draws, step=None, init='advi', n_init=200000, start=None,
             # By default, use NUTS sampler
             pm._log.info('Auto-assigning NUTS sampler...')
             _start, step = init_nuts(init=init, njobs=njobs, n_init=n_init, model=model, random_seed=random_seed)
+            if start is None:
+                start = _start
         elif isinstance(step, ParticleStep):
             if start is None:
                 if init is not None:
-                    _start, _ = do_init(init=init, njobs=njobs*step.nparticles, n_init=n_init, model=model,
-                                       random_seed=random_seed)
+                    _start, _ = do_init(init=init, njobs=njobs * step.nparticles, n_init=n_init, model=model,
+                                        random_seed=random_seed)
                     _start = transform_start_particles(_start, step.nparticles, njobs, model)
                 elif init == 'random':
                     _start = [get_random_starters(step.nparticles, model) for i in range(njobs)]
             trace = MultiNDArray(step.nparticles)
+            if start is None:
+                start = _start
         else:
             step = assign_step_methods(model, step)
-        if start is None:
-            if njobs == 1:
-                start = _start[0]
-            else:
-                start = _start
+
     else:
         step = assign_step_methods(model, step)
-
 
     if njobs is None:
         import multiprocessing as mp
         njobs = max(mp.cpu_count() - 2, 1)
+    elif njobs == 1 and isinstance(start, (list, tuple)):
+        start = start[0]
 
     sample_args = {'draws': draws,
                    'step': step,
@@ -284,7 +285,7 @@ def _iter_sample(draws, step, start=None, trace=None, chain=0, tune=None,
         _soft_update(start, strace.point(-1))
     else:
         if hasattr(step, 'nparticles'):
-            _soft_update(start, {k: _make_parallel(v, step.nparticles) for k,v in model.test_point.iteritems()})
+            _soft_update(start, {k: _make_parallel(v, step.nparticles) for k, v in model.test_point.iteritems()})
         else:
             _soft_update(start, model.test_point)
 
@@ -506,7 +507,8 @@ def do_init(init='ADVI', njobs=1, n_init=500000, model=None, random_seed=-1, ran
         cov = pm.find_hessian(point=start)
         start = [start]
         if randomiser == 'sample':
-            raise NotImplemented('Randomising from MAP using sampling is not supported. Use "random", "cov", or "duplicate".')
+            raise NotImplemented(
+                'Randomising from MAP using "sample" is not supported. Use "random", "cov", or "duplicate".')
     elif init == 'nuts':
         init_trace = pm.sample(step=pm.NUTS(), draws=n_init,
                                random_seed=random_seed)[n_init // 2:]
@@ -515,17 +517,18 @@ def do_init(init='ADVI', njobs=1, n_init=500000, model=None, random_seed=-1, ran
     else:
         raise NotImplemented('Initializer {} is not supported.'.format(init))
 
-    if randomiser == 'sample':
-        return start, cov
-    elif randomiser == 'cov':
+    if njobs == 1:
+        return start[0], cov
+
+    if randomiser == 'cov':
         model = pm.modelcontext(model)
         order = pm.ArrayOrdering(model.vars)
         bij = pm.DictToArrayBijection(order, start[0])
         sarray = bij.map(start[0])
         start = [bij.rmap(np.random.multivariate_normal(sarray, cov)) for i in range(_njobs)]
     elif randomiser == 'duplicate':
-        start = [start[0]]*_njobs
-    else:
+        start = [start[0]] * _njobs
+    elif randomiser != 'sample':
         raise NotImplemented('Randomiser {} is not supported.'.format(randomiser))
 
     return start, cov
@@ -572,16 +575,18 @@ def init_nuts(init='ADVI', njobs=1, n_init=500000, model=None,
 
     return start, step
 
+
 def get_random_starters(nwalkers, model=None):
     model = pm.modelcontext(model)
     return {v.name: v.distribution.random(size=nwalkers) for v in model.vars}
+
 
 def transform_start_particles(var_dict_list, nparticles, njobs, model=None):
     model = modelcontext(model)
     l = []
     for njob in range(njobs):
         d = defaultdict(list)
-        for job_particle in var_dict_list[njob*nparticles:(njob+1)*nparticles]:
+        for job_particle in var_dict_list[njob * nparticles:(njob + 1) * nparticles]:
             for varname, value in job_particle.iteritems():
                 if varname in [i.name for i in model.vars]:
                     d[varname].append(value)
