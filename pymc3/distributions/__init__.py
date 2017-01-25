@@ -23,6 +23,7 @@ from .continuous import InverseGamma
 from .continuous import ExGaussian
 from .continuous import VonMises
 from .continuous import SkewNormal
+from .continuous import Triangular
 
 from .discrete import Binomial
 from .discrete import BetaBinomial
@@ -123,5 +124,6 @@ __all__ = ['Uniform',
            'GARCH11',
            'SkewNormal',
            'Mixture',
-           'NormalMixture'
+           'NormalMixture',
+           'Triangular'
            ]

@@ -1,8 +1,10 @@
 import unittest
-import theano.tensor as tt
+from theano import theano, tensor as tt
+import numpy as np
 import pymc3 as pm
 from pymc3.distributions import HalfCauchy, Normal
 from pymc3 import Potential, Deterministic
+from pymc3.theanof import generator
 
 
 class NewModel(pm.Model):
@@ -118,3 +120,44 @@ class TestNested(unittest.TestCase):
             self.assertTrue(model is model.root)
             with pm.Model() as sub:
                 self.assertTrue(model is sub.root)
+
+
+class TestScaling(unittest.TestCase):
+    def test_density_scaling(self):
+        with pm.Model() as model1:
+            Normal('n', observed=[[1]], total_size=1)
+            p1 = theano.function([], model1.logpt)
+
+        with pm.Model() as model2:
+            Normal('n', observed=[[1]], total_size=2)
+            p2 = theano.function([], model2.logpt)
+        self.assertEqual(p1() * 2, p2())
+
+    def test_density_scaling_with_genarator(self):
+        # We have different size generators
+        def gen1():
+            i = 0
+            while True:
+                yield np.ones((10, 100)) * i
+                i += 1
+
+        def gen2():
+            i = 0
+            while True:
+                yield np.ones((20, 100)) * i
+                i += 1
+
+        # We have same size models
+        with pm.Model() as model1:
+            Normal('n', observed=gen1(), total_size=100)
+            p1 = theano.function([], model1.logpt)
+
+        with pm.Model() as model2:
+            gen_var = generator(gen2())
+            Normal('n', observed=gen_var, total_size=100)
+            p2 = theano.function([], model2.logpt)
+
+        # We want densities to be equal
+        for _ in range(10):
+            np.testing.assert_almost_equal(p1(), p2())
+        # Done

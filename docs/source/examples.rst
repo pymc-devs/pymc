@@ -22,6 +22,7 @@ Applied
    notebooks/rugby_analytics.ipynb
    notebooks/survival_analysis.ipynb
    notebooks/GP-smoothing.ipynb
+   notebooks/dawid-skene.ipynb
 
 GLM
 ===
@@ -44,6 +45,7 @@ Mixture Models
    notebooks/marginalized_gaussian_mixture_model.ipynb
    notebooks/gaussian-mixture-model-advi.ipynb
    notebooks/dp_mix.ipynb
+   notebooks/dependent_density_regression.ipynb
 
 ADVI
 ====
