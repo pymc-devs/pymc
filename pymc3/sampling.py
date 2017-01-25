@@ -178,6 +178,7 @@ def sample(draws, step=None, init='advi', n_init=200000, start=None,
     else:
         step = assign_step_methods(model, step)
 
+
     if njobs is None:
         import multiprocessing as mp
         njobs = max(mp.cpu_count() - 2, 1)
@@ -304,7 +305,8 @@ def _iter_sample(draws, step, start=None, trace=None, chain=0, tune=None,
         strace.setup(draws, chain)
     methods = step.methods if isinstance(step, CompoundStep) else [step]
     for s in methods:
-        s._draws = draws
+        s.expected_ndraws = draws
+
     for i in range(draws):
         if i == tune:
             step = stop_tuning(step)
@@ -597,7 +599,3 @@ def transform_start_particles(var_dict_list, nparticles, njobs, model=None):
                     d[varname].append(value)
         l.append(d)
     return l
-
-def get_random_starters(nwalkers, model=None):
-    model = pm.modelcontext(model)
-    return {v.name: v.distribution.random(size=nwalkers) for v in model.vars}
