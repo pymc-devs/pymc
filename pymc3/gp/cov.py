@@ -129,15 +129,14 @@ class Cosine(Stationary):
 
 
 class Linear(Covariance):
-    def __init__(self, input_dim, slopes, centers, active_dims=None):
+    def __init__(self, input_dim, centers, active_dims=None):
         Covariance.__init__(self, input_dim, active_dims)
         self.centers = centers
-        self.slopes  = slopes
 
     def K(self, X, Z=None):
         X, Z = self._slice(X, Z)
         # need to fix this with slope and center
-        Xc = tt.sub(tt.mul(self.slopes, X), self.centers)
+        Xc = tt.sub(X, self.centers)
         if Z is None:
             return tt.dot(Xc, tt.transpose(Xc))
         else:
