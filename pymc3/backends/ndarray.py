@@ -229,6 +229,15 @@ class MultiNDArray(NDArray):
                 self.samples[varname] = np.zeros((self.nparticles, draws) + shape,
                                                  dtype=self.var_dtypes[varname])
 
+    def point(self, idx):
+        """Return dictionary of point values at `idx` for current chain
+        with variables names as keys.
+        """
+        idx = int(idx)
+        return {varname: values[:, idx]
+                for varname, values in self.samples.items()}
+
+
     def close(self):
         if self.draw_idx == self.draws:
             return
@@ -302,3 +311,6 @@ def _slice_as_ndarray(strace, idx):
     sliced.samples = {v: strace.get_values(v, burn=burn, thin=thin)
                       for v in strace.varnames}
     return sliced
+
+
+# TODO: Make MultiText, Multisqlite
