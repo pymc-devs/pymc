@@ -152,17 +152,27 @@ def sample(draws, step=None, init='advi', n_init=200000, start=None,
     if init is not None:
         init = init.lower()
 
-    if isinstance(step, ParticleStep):
-        trace = MultiNDArray(step.nparticles)
-
-    if step is None and init is not None and pm.model.all_continuous(model.vars):
-        # By default, use NUTS sampler
-        pm._log.info('Auto-assigning NUTS sampler...')
-        start_, step = init_nuts(init=init, njobs=njobs, n_init=n_init, model=model, random_seed=random_seed)
-        if start is None:
-            start = start_
+    if init is not None and pm.model.all_continuous(model.vars):
+        if step is None:
+            # By default, use NUTS sampler
+            pm._log.info('Auto-assigning NUTS sampler...')
+            start, step = init_nuts(init=init, njobs=njobs, n_init=n_init, model=model, random_seed=random_seed)
+        elif isinstance(step, ParticleStep):
+            if start is None:
+                if init is not None:
+                    start, _ = do_init(init=init, njobs=njobs*step.nparticles, n_init=n_init, model=model,
+                                       random_seed=random_seed)
+                    start = transform_start_particles(start, step.nparticles, njobs, model)
+                elif init == 'random':
+                    start = [get_random_starters(step.nparticles, model) for i in range(njobs)]
+            else:
+                step.point
+            trace = MultiNDArray(step.nparticles)
+        else:
+            step = assign_step_methods(model, step)
     else:
         step = assign_step_methods(model, step)
+
 
     if njobs is None:
         import multiprocessing as mp
@@ -183,6 +193,7 @@ def sample(draws, step=None, init='advi', n_init=200000, start=None,
         sample_args['njobs'] = njobs
     else:
         sample_func = _sample
+        sample_args['start'] = start[0] if start is not None else None
 
     return sample_func(**sample_args)
 
@@ -270,8 +281,8 @@ def _iter_sample(draws, step, start=None, trace=None, chain=0, tune=None,
     if len(strace) > 0:
         _soft_update(start, strace.point(-1))
     else:
-        if hasattr(strace, 'nparticles'):
-            start = get_random_starters(strace.nparticles, model)
+        if hasattr(step, 'nparticles'):
+            _soft_update(start, {k: _make_parallel(v, step.nparticles) for k,v in model.test_point.iteritems()})
         else:
             _soft_update(start, model.test_point)
 
@@ -288,7 +299,8 @@ def _iter_sample(draws, step, start=None, trace=None, chain=0, tune=None,
         strace.setup(draws, chain)
     methods = step.methods if isinstance(step, CompoundStep) else [step]
     for s in methods:
-        s._draws = draws
+        s.expected_ndraws = draws
+
     for i in range(draws):
         if i == tune:
             step = stop_tuning(step)
@@ -428,6 +440,99 @@ def sample_ppc(trace, samples=None, model=None, vars=None, size=None, random_see
     return {k: np.asarray(v) for k, v in ppc.items()}
 
 
+def do_init(init='ADVI', njobs=1, n_init=500000, model=None, random_seed=-1, randomiser=None):
+    """Initialize and sample from posterior of a continuous model.
+        Parameters
+        ----------
+        init : str {'ADVI', 'ADVI_MAP', 'MAP', 'NUTS'}
+            Initialization method to use.
+            * ADVI : Run ADVI to estimate posterior mean and diagonal covariance matrix.
+            * ADVI_MAP: Initialize ADVI with MAP and use MAP as starting point.
+            * MAP : Use the MAP as starting point.
+            * NUTS : Run NUTS and estimate posterior mean and covariance matrix.
+        njobs : int
+            Number of parallel jobs to start.
+        n_init : int
+            Number of iterations of initializer
+            If 'ADVI', number of iterations, if 'metropolis', number of draws.
+        model : Model (optional if in `with` context)
+        **kwargs : keyword arguments
+            Extra keyword arguments are forwarded to pymc3.NUTS.
+        randomiser : str ('cov', 'sample', 'duplicate')
+            How inits with njobs > 1 obtain samples around the single inititalized guess
+            * cov : Generate a covariance array for all parameters and sample from the ensuing multivariate gaussian
+            * sample : For all init methods except `map`, 'sample' will sample using advi or from the initial nuts trace
+            * duplicate : Just copy the same values for each job
+
+        Returns
+        -------
+        start, nuts_sampler
+
+        start : pymc3.model.Point
+            Starting point for sampler
+        """
+    model = pm.modelcontext(model)
+
+    pm._log.info('Initializing using {}...'.format(init))
+
+    random_seed = int(np.atleast_1d(random_seed)[0])
+    start = None
+
+    if randomiser is None:
+        if init == 'map':
+            randomiser = 'cov'
+        else:
+            randomiser = 'sample'
+
+    if randomiser != 'sample':
+        _njobs = njobs
+        njobs = 1
+
+    if init is not None:
+        init = init.lower()
+
+    if init.startswith('advi'):
+        if init == 'advi_map':
+            start = pm.find_MAP()
+        elif init != 'advi':
+            raise NotImplemented('Initializer {} is not supported.'.format(init))
+        v_params = pm.variational.advi(n=n_init, start=start, random_seed=random_seed)
+        cov = np.power(model.dict_to_array(v_params.stds), 2)
+        if randomiser == 'sample':
+            start = pm.variational.sample_vp(v_params, njobs, progressbar=False,
+                                             hide_transformed=False,
+                                             random_seed=random_seed)  # multitrace
+            start = [start[i] for i in range(njobs)]
+    elif init == 'map':
+        start = pm.find_MAP()  # dict
+        cov = pm.find_hessian(point=start)
+        start = [start]
+        if randomiser == 'sample':
+            raise NotImplemented('Randomising from MAP using sampling is not supported. Use "random", "cov", or "duplicate".')
+    elif init == 'nuts':
+        init_trace = pm.sample(step=pm.NUTS(), draws=n_init,
+                               random_seed=random_seed)[n_init // 2:]
+        cov = np.atleast_1d(pm.trace_cov(init_trace))
+        start = np.random.choice(init_trace, njobs)  # list of dicts
+    else:
+        raise NotImplemented('Initializer {} is not supported.'.format(init))
+
+    if randomiser == 'sample':
+        return start, cov
+    elif randomiser == 'cov':
+        model = pm.modelcontext(model)
+        order = pm.ArrayOrdering(model.vars)
+        bij = pm.DictToArrayBijection(order, start[0])
+        sarray = bij.map(start[0])
+        start = [bij.rmap(np.random.multivariate_normal(sarray, cov)) for i in range(_njobs)]
+    elif randomiser == 'duplicate':
+        start = [start[0]]*_njobs
+    else:
+        raise NotImplemented('Randomiser {} is not supported.'.format(randomiser))
+
+    return start, cov
+
+
 def init_nuts(init='ADVI', njobs=1, n_init=500000, model=None,
               random_seed=-1, **kwargs):
     """Initialize and sample from posterior of a continuous model.
@@ -464,41 +569,7 @@ def init_nuts(init='ADVI', njobs=1, n_init=500000, model=None,
         Instantiated and initialized NUTS sampler object
     """
 
-    model = pm.modelcontext(model)
-
-    pm._log.info('Initializing NUTS using {}...'.format(init))
-
-    random_seed = int(np.atleast_1d(random_seed)[0])
-
-    if init is not None:
-        init = init.lower()
-
-    if init == 'advi':
-        v_params = pm.variational.advi(n=n_init, random_seed=random_seed)
-        start = pm.variational.sample_vp(v_params, njobs, progressbar=False,
-                                         hide_transformed=False,
-                                         random_seed=random_seed)
-        if njobs == 1:
-            start = start[0]
-        cov = np.power(model.dict_to_array(v_params.stds), 2)
-    elif init == 'advi_map':
-        start = pm.find_MAP()
-        v_params = pm.variational.advi(n=n_init, start=start,
-                                       random_seed=random_seed)
-        cov = np.power(model.dict_to_array(v_params.stds), 2)
-    elif init == 'map':
-        start = pm.find_MAP()
-        cov = pm.find_hessian(point=start)
-    elif init == 'nuts':
-        init_trace = pm.sample(step=pm.NUTS(), draws=n_init,
-                               random_seed=random_seed)[n_init // 2:]
-        cov = np.atleast_1d(pm.trace_cov(init_trace))
-        start = np.random.choice(init_trace, njobs)
-        if njobs == 1:
-            start = start[0]
-    else:
-        raise NotImplementedError('Initializer {} is not supported.'.format(init))
-
+    start, cov = do_init(init, njobs, n_init, model, random_seed)
     step = pm.NUTS(scaling=cov, is_cov=True, **kwargs)
 
     return start, step
@@ -506,3 +577,15 @@ def init_nuts(init='ADVI', njobs=1, n_init=500000, model=None,
 def get_random_starters(nwalkers, model=None):
     model = pm.modelcontext(model)
     return {v.name: v.distribution.random(size=nwalkers) for v in model.vars}
+
+def transform_start_particles(var_dict_list, nparticles, njobs, model=None):
+    model = modelcontext(model)
+    l = []
+    for njob in range(njobs):
+        d = defaultdict(list)
+        for job_particle in var_dict_list[njob*nparticles:(njob+1)*nparticles]:
+            for varname, value in job_particle.iteritems():
+                if varname in [i.name for i in model.vars]:
+                    d[varname].append(value)
+        l.append(d)
+    return l
