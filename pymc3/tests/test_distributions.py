@@ -12,7 +12,8 @@ from ..distributions import (DensityDist, Categorical, Multinomial, VonMises, Di
                              InverseGamma, Gamma, Cauchy, HalfCauchy, Lognormal, Laplace,
                              NegativeBinomial, Geometric, Exponential, ExGaussian, Normal,
                              Flat, LKJCorr, Wald, ChiSquared, HalfNormal, DiscreteUniform,
-                             Bound, Uniform, Triangular, Binomial, Wishart, SkewNormal)
+                             Bound, Uniform, Triangular, Binomial, Wishart, SkewNormal,
+                             DiscreteWeibull)
 from ..distributions import continuous, multivariate
 from numpy import array, inf, log, exp
 from numpy.testing import assert_almost_equal
@@ -208,6 +209,10 @@ def betafn(a):
 
 def logpow(v, p):
     return np.choose(v == 0, [p * np.log(v), 0])
+
+
+def discrete_weibull_logpmf(value, q, beta):
+    return np.log(np.power(q, np.power(value, beta)) - np.power(q, np.power(value + 1, beta)))
 
 
 def dirichlet_logpdf(value, a):
@@ -480,6 +485,10 @@ class TestMatchesScipy(SeededTest):
     def test_bernoulli(self):
         self.pymc3_matches_scipy(Bernoulli, Bool, {'p': Unit},
                                  lambda value, p: sp.bernoulli.logpmf(value, p))
+
+    def test_discrete_weibull(self):
+        self.pymc3_matches_scipy(DiscreteWeibull, Nat,
+                {'q': Unit, 'beta': Rplusdunif}, discrete_weibull_logpmf)
 
     def test_poisson(self):
         self.pymc3_matches_scipy(Poisson, Nat, {'mu': Rplus},

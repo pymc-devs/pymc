@@ -1,5 +1,4 @@
-from functools import partial
-
+from functools import partial 
 import numpy as np
 import theano
 import theano.tensor as tt
@@ -8,10 +7,10 @@ from scipy import stats
 from .dist_math import bound, factln, binomln, betaln, logpow
 from .distribution import Discrete, draw_values, generate_samples, reshape_sampled
 
-__all__ = ['Binomial',  'BetaBinomial',  'Bernoulli',  'Poisson',
-           'NegativeBinomial', 'ConstantDist', 'Constant', 'ZeroInflatedPoisson',
-           'ZeroInflatedNegativeBinomial', 'DiscreteUniform', 'Geometric',
-           'Categorical']
+__all__ = ['Binomial',  'BetaBinomial',  'Bernoulli',  'DiscreteWeibull',
+           'Poisson', 'NegativeBinomial', 'ConstantDist', 'Constant',
+           'ZeroInflatedPoisson', 'ZeroInflatedNegativeBinomial',
+           'DiscreteUniform', 'Geometric', 'Categorical']
 
 
 class Binomial(Discrete):
@@ -162,6 +161,60 @@ class Bernoulli(Discrete):
             tt.switch(value, tt.log(p), tt.log(1 - p)),
             value >= 0, value <= 1,
             p >= 0, p <= 1)
+
+
+class DiscreteWeibull(Discrete):
+    R"""Discrete Weibull log-likelihood
+
+    The discrete Weibull distribution is a flexible model of count data that
+    can handle both over- and under-dispersion.
+
+    .. math:: f(x \mid q, \beta) = q^{x^{\beta}} - q^{(x + 1)^{\beta}}
+
+    ========  ======================
+    Support   :math:`x \in \mathbb{N}_0`
+    Mean      :math:`\mu = \sum_{x = 1}^{\infty} q^{x^{\beta}}`
+    Variance  :math:`2 \sum_{x = 1}^{\infty} x q^{x^{\beta}} - \mu - \mu^2`
+    ========  ======================
+    """
+    def __init__(self, q, beta, *args, **kwargs):
+        super(DiscreteWeibull, self).__init__(*args, defaults=['median'], **kwargs)
+        
+        self.q = q
+        self.beta = beta
+
+        self.median = self._ppf(0.5)
+    
+    def logp(self, value):
+        q = self.q
+        beta = self.beta
+        
+        return bound(tt.log(tt.power(q, tt.power(value, beta)) - tt.power(q, tt.power(value + 1, beta))),
+                     0 <= value,
+                     0 < q, q < 1,
+                     0 < beta)
+
+    def _ppf(self, p):
+        """
+        The percentile point function (the inverse of the cumulative
+        distribution function) of the discrete Weibull distribution.
+        """
+        q = self.q
+        beta = self.beta
+
+        return (tt.ceil(tt.power(tt.log(1 - p) / tt.log(q), 1. / beta)) - 1).astype('int64')
+
+    def _random(self, q, beta, size=None):
+        p = np.random.uniform(size=size)
+
+        return np.ceil(np.power(np.log(1 - p) / np.log(q), 1. / beta)) - 1
+
+    def random(self, point=None, size=None, repeat=None):
+        q, beta = draw_values([self.q, self.beta], point=point)
+
+        return generate_samples(self._random, q, beta,
+                                dist_shape=self.shape,
+                                size=size)
 
 
 class Poisson(Discrete):

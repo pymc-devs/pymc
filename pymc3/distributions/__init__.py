@@ -28,6 +28,7 @@ from .continuous import Triangular
 from .discrete import Binomial
 from .discrete import BetaBinomial
 from .discrete import Bernoulli
+from .discrete import DiscreteWeibull
 from .discrete import Poisson
 from .discrete import NegativeBinomial
 from .discrete import ConstantDist
@@ -125,5 +126,6 @@ __all__ = ['Uniform',
            'SkewNormal',
            'Mixture',
            'NormalMixture',
-           'Triangular'
+           'Triangular',
+           'DiscreteWeibull'
            ]
