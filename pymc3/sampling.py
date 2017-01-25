@@ -156,20 +156,23 @@ def sample(draws, step=None, init='advi', n_init=200000, start=None,
         if step is None:
             # By default, use NUTS sampler
             pm._log.info('Auto-assigning NUTS sampler...')
-            start, step = init_nuts(init=init, njobs=njobs, n_init=n_init, model=model, random_seed=random_seed)
+            _start, step = init_nuts(init=init, njobs=njobs, n_init=n_init, model=model, random_seed=random_seed)
         elif isinstance(step, ParticleStep):
             if start is None:
                 if init is not None:
-                    start, _ = do_init(init=init, njobs=njobs*step.nparticles, n_init=n_init, model=model,
+                    _start, _ = do_init(init=init, njobs=njobs*step.nparticles, n_init=n_init, model=model,
                                        random_seed=random_seed)
-                    start = transform_start_particles(start, step.nparticles, njobs, model)
+                    _start = transform_start_particles(_start, step.nparticles, njobs, model)
                 elif init == 'random':
-                    start = [get_random_starters(step.nparticles, model) for i in range(njobs)]
-            else:
-                step.point
+                    _start = [get_random_starters(step.nparticles, model) for i in range(njobs)]
             trace = MultiNDArray(step.nparticles)
         else:
             step = assign_step_methods(model, step)
+        if start is None:
+            if njobs == 1:
+                start = _start[0]
+            else:
+                start = _start
     else:
         step = assign_step_methods(model, step)
 
@@ -193,7 +196,6 @@ def sample(draws, step=None, init='advi', n_init=200000, start=None,
         sample_args['njobs'] = njobs
     else:
         sample_func = _sample
-        sample_args['start'] = start[0] if start is not None else None
 
     return sample_func(**sample_args)
 
