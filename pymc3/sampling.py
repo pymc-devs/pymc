@@ -189,11 +189,15 @@ def _sample(draws, step=None, start=None, trace=None, chain=0, tune=None,
     if progressbar:
         sampling = tqdm(sampling, total=draws)
     try:
+        strace = None
         for strace in sampling:
             pass
-    except KeyboardInterrupt:
-        strace.close()
-    return MultiTrace([strace])  # pylint: disable=undefined-loop-variable
+        result = [] if strace is None else [strace]
+    except KeyboardInterrupt as exc:
+        if strace is not None:
+            strace.close()
+        raise exc
+    return MultiTrace(result)
 
 
 def iter_sample(draws, step, start=None, trace=None, chain=0, tune=None,
