@@ -1,11 +1,18 @@
+import numpy as np
+
 from .vartypes import typefilter, continuous_types
 from theano import theano, scalar, tensor as tt
 from theano.gof.graph import inputs
+from theano.gof import Op
+from theano.configparser import change_flags
 from .memoize import memoize
 from .blocking import ArrayOrdering
+from .data import DataGenerator
 
-__all__ = ['gradient', 'hessian', 'hessian_diag', 'inputvars', 'cont_inputs',
-           'jacobian', 'CallableTensor', 'join_nonshared_inputs', 'make_shared_replacements']
+__all__ = ['gradient', 'hessian', 'hessian_diag', 'inputvars',
+           'cont_inputs', 'floatX', 'jacobian',
+           'CallableTensor', 'join_nonshared_inputs',
+           'make_shared_replacements', 'generator']
 
 
 def inputvars(a):
@@ -38,10 +45,19 @@ def cont_inputs(f):
     return typefilter(inputvars(f), continuous_types)
 
 
+def floatX(X):
+    """
+    Convert a theano tensor or numpy array to theano.config.floatX type.
+    """
+    try:
+        return X.astype(theano.config.floatX)
+    except AttributeError:
+        # Scalar passed
+        return np.asarray(X, dtype=theano.config.floatX)
+
 """
 Theano derivative functions
 """
-
 
 def gradient1(f, v):
     """flat gradient of f wrt v"""
@@ -65,7 +81,7 @@ def gradient(f, vars=None):
 def jacobian1(f, v):
     """jacobian of f wrt v"""
     f = tt.flatten(f)
-    idx = tt.arange(f.shape[0])
+    idx = tt.arange(f.shape[0], dtype='int32')
 
     def grad_i(i):
         return gradient1(f[i], v)
@@ -90,9 +106,8 @@ def hessian(f, vars=None):
 
 
 def hessian_diag1(f, v):
-
     g = gradient1(f, v)
-    idx = tt.arange(g.shape[0])
+    idx = tt.arange(g.shape[0], dtype='int32')
 
     def hess_ii(i):
         return gradient1(g[i], v)[i]
@@ -210,8 +225,8 @@ def reshape_t(x, shape):
 
 
 class CallableTensor(object):
-    """Turns a symbolic variable with one input into a function that returns symbolic arguments with the one variable replaced with the input.
-
+    """Turns a symbolic variable with one input into a function that returns symbolic arguments
+    with the one variable replaced with the input.
     """
 
     def __init__(self, tensor):
@@ -229,3 +244,64 @@ class CallableTensor(object):
 
 scalar_identity = IdentityOp(scalar.upgrade_to_float, name='scalar_identity')
 identity = tt.Elemwise(scalar_identity, name='identity')
+
+
+class GeneratorOp(Op):
+    """
+    Generaror Op is designed for storing python generators
+    inside theano graph. The main limitation is generator itself.
+
+    There are some important cases when generator becomes exhausted
+        - not endless generator is passed
+        - exception is raised while `generator.__next__` is performed
+            Note: it is dangerous in simple python generators, but ok in
+            custom class based generators with explicit state
+        - data type on each iteration should be the same
+    """
+    __props__ = ('generator',)
+
+    def __init__(self, gen):
+        super(GeneratorOp, self).__init__()
+        if not isinstance(gen, DataGenerator):
+            gen = DataGenerator(gen)
+        self.generator = gen
+        self.itypes = []
+        self.otypes = [self.generator.tensortype]
+        self._nan = np.zeros_like(self.generator.test_value)
+        self._nan[...] = np.nan
+
+    def perform(self, node, inputs, output_storage, params=None):
+        try:
+            output_storage[0][0] = next(self.generator)
+        except StopIteration:
+            output_storage[0][0] = self._nan
+
+    def do_constant_folding(self, node):
+        return False
+
+    class _set_gen(object):
+        """For pickling"""
+        def __init__(self, op):
+            self.op = op
+
+        def __call__(self, gen):
+            self.op.set_gen(gen)
+
+    @change_flags(compute_test_value='off')
+    def __call__(self, *args, **kwargs):
+        rval = super(GeneratorOp, self).__call__(*args, **kwargs)
+        rval.set_gen = self._set_gen(self)
+        rval.tag.test_value = self.generator.test_value
+        return rval
+
+    def set_gen(self, gen):
+        if not isinstance(gen, DataGenerator):
+            gen = DataGenerator(gen)
+        if not gen.tensortype == self.generator.tensortype:
+            raise ValueError('New generator should yield the same type')
+        self.generator = gen
+
+
+def generator(gen):
+    """shortcut for `GeneratorOp`"""
+    return GeneratorOp(gen)()

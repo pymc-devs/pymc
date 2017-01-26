@@ -1,17 +1,16 @@
-from functools import partial
-
+from functools import partial 
 import numpy as np
 import theano
 import theano.tensor as tt
 from scipy import stats
 
 from .dist_math import bound, factln, binomln, betaln, logpow
-from .distribution import Discrete, draw_values, generate_samples
+from .distribution import Discrete, draw_values, generate_samples, reshape_sampled
 
-__all__ = ['Binomial',  'BetaBinomial',  'Bernoulli',  'Poisson',
-           'NegativeBinomial', 'ConstantDist', 'Constant', 'ZeroInflatedPoisson',
-           'ZeroInflatedNegativeBinomial', 'DiscreteUniform', 'Geometric',
-           'Categorical']
+__all__ = ['Binomial',  'BetaBinomial',  'Bernoulli',  'DiscreteWeibull',
+           'Poisson', 'NegativeBinomial', 'ConstantDist', 'Constant',
+           'ZeroInflatedPoisson', 'ZeroInflatedNegativeBinomial',
+           'DiscreteUniform', 'Geometric', 'Categorical']
 
 
 class Binomial(Discrete):
@@ -40,8 +39,8 @@ class Binomial(Discrete):
 
     def __init__(self, n, p, *args, **kwargs):
         super(Binomial, self).__init__(*args, **kwargs)
-        self.n = n
-        self.p = p
+        self.n = n = tt.as_tensor_variable(n)
+        self.p = p = tt.as_tensor_variable(p)
         self.mode = tt.cast(tt.round(n * p), self.dtype)
 
     def random(self, point=None, size=None, repeat=None):
@@ -91,9 +90,9 @@ class BetaBinomial(Discrete):
 
     def __init__(self, alpha, beta, n, *args, **kwargs):
         super(BetaBinomial, self).__init__(*args, **kwargs)
-        self.alpha = alpha
-        self.beta = beta
-        self.n = n
+        self.alpha = alpha = tt.as_tensor_variable(alpha)
+        self.beta = beta = tt.as_tensor_variable(beta)
+        self.n = n = tt.as_tensor_variable(n)
         self.mode = tt.cast(tt.round(alpha / (alpha + beta)), 'int8')
 
     def _random(self, alpha, beta, n, size=None):
@@ -147,7 +146,7 @@ class Bernoulli(Discrete):
 
     def __init__(self, p, *args, **kwargs):
         super(Bernoulli, self).__init__(*args, **kwargs)
-        self.p = p
+        self.p = p = tt.as_tensor_variable(p)
         self.mode = tt.cast(tt.round(p), 'int8')
 
     def random(self, point=None, size=None, repeat=None):
@@ -162,6 +161,60 @@ class Bernoulli(Discrete):
             tt.switch(value, tt.log(p), tt.log(1 - p)),
             value >= 0, value <= 1,
             p >= 0, p <= 1)
+
+
+class DiscreteWeibull(Discrete):
+    R"""Discrete Weibull log-likelihood
+
+    The discrete Weibull distribution is a flexible model of count data that
+    can handle both over- and under-dispersion.
+
+    .. math:: f(x \mid q, \beta) = q^{x^{\beta}} - q^{(x + 1)^{\beta}}
+
+    ========  ======================
+    Support   :math:`x \in \mathbb{N}_0`
+    Mean      :math:`\mu = \sum_{x = 1}^{\infty} q^{x^{\beta}}`
+    Variance  :math:`2 \sum_{x = 1}^{\infty} x q^{x^{\beta}} - \mu - \mu^2`
+    ========  ======================
+    """
+    def __init__(self, q, beta, *args, **kwargs):
+        super(DiscreteWeibull, self).__init__(*args, defaults=['median'], **kwargs)
+        
+        self.q = q
+        self.beta = beta
+
+        self.median = self._ppf(0.5)
+    
+    def logp(self, value):
+        q = self.q
+        beta = self.beta
+        
+        return bound(tt.log(tt.power(q, tt.power(value, beta)) - tt.power(q, tt.power(value + 1, beta))),
+                     0 <= value,
+                     0 < q, q < 1,
+                     0 < beta)
+
+    def _ppf(self, p):
+        """
+        The percentile point function (the inverse of the cumulative
+        distribution function) of the discrete Weibull distribution.
+        """
+        q = self.q
+        beta = self.beta
+
+        return (tt.ceil(tt.power(tt.log(1 - p) / tt.log(q), 1. / beta)) - 1).astype('int64')
+
+    def _random(self, q, beta, size=None):
+        p = np.random.uniform(size=size)
+
+        return np.ceil(np.power(np.log(1 - p) / np.log(q), 1. / beta)) - 1
+
+    def random(self, point=None, size=None, repeat=None):
+        q, beta = draw_values([self.q, self.beta], point=point)
+
+        return generate_samples(self._random, q, beta,
+                                dist_shape=self.shape,
+                                size=size)
 
 
 class Poisson(Discrete):
@@ -193,7 +246,7 @@ class Poisson(Discrete):
 
     def __init__(self, mu, *args, **kwargs):
         super(Poisson, self).__init__(*args, **kwargs)
-        self.mu = mu
+        self.mu = mu = tt.as_tensor_variable(mu)
         self.mode = tt.floor(mu).astype('int32')
 
     def random(self, point=None, size=None, repeat=None):
@@ -240,8 +293,8 @@ class NegativeBinomial(Discrete):
 
     def __init__(self, mu, alpha, *args, **kwargs):
         super(NegativeBinomial, self).__init__(*args, **kwargs)
-        self.mu = mu
-        self.alpha = alpha
+        self.mu = mu = tt.as_tensor_variable(mu)
+        self.alpha = alpha = tt.as_tensor_variable(alpha)
         self.mode = tt.floor(mu).astype('int32')
 
     def random(self, point=None, size=None, repeat=None):
@@ -250,7 +303,7 @@ class NegativeBinomial(Discrete):
                              dist_shape=self.shape,
                              size=size)
         g[g == 0] = np.finfo(float).eps  # Just in case
-        return stats.poisson.rvs(g)
+        return reshape_sampled(stats.poisson.rvs(g), size, self.shape)
 
     def logp(self, value):
         mu = self.mu
@@ -289,7 +342,7 @@ class Geometric(Discrete):
 
     def __init__(self, p, *args, **kwargs):
         super(Geometric, self).__init__(*args, **kwargs)
-        self.p = p
+        self.p = p = tt.as_tensor_variable(p)
         self.mode = 1
 
     def random(self, point=None, size=None, repeat=None):
@@ -377,7 +430,7 @@ class Categorical(Discrete):
             self.k = tt.shape(p)[-1].tag.test_value
         except AttributeError:
             self.k = tt.shape(p)[-1]
-        self.p = tt.as_tensor_variable(p)
+        self.p = p = tt.as_tensor_variable(p)
         self.p = (p.T / tt.sum(p, -1)).T
         self.mode = tt.argmax(p)
 
@@ -425,7 +478,7 @@ class Constant(Discrete):
 
     def __init__(self, c, *args, **kwargs):
         super(Constant, self).__init__(*args, **kwargs)
-        self.mean = self.median = self.mode = self.c = c
+        self.mean = self.median = self.mode = self.c = c = tt.as_tensor_variable(c)
 
     def random(self, point=None, size=None, repeat=None):
         c = draw_values([self.c], point=point)
@@ -441,9 +494,11 @@ class Constant(Discrete):
         c = self.c
         return bound(0, tt.eq(value, c))
 
+
 def ConstantDist(*args, **kwargs):
+    import warnings
     warnings.warn("ConstantDist has been deprecated. In future, use Constant instead.",
-                DeprecationWarning)
+                  DeprecationWarning)
     return Constant(*args, **kwargs)
 
 
@@ -479,8 +534,8 @@ class ZeroInflatedPoisson(Discrete):
 
     def __init__(self, theta, psi, *args, **kwargs):
         super(ZeroInflatedPoisson, self).__init__(*args, **kwargs)
-        self.theta = theta
-        self.psi = psi
+        self.theta = theta = tt.as_tensor_variable(theta)
+        self.psi = psi = tt.as_tensor_variable(psi)
         self.pois = Poisson.dist(theta)
         self.mode = self.pois.mode
 
@@ -489,7 +544,8 @@ class ZeroInflatedPoisson(Discrete):
         g = generate_samples(stats.poisson.rvs, theta,
                              dist_shape=self.shape,
                              size=size)
-        return g * (np.random.random(np.squeeze(g.shape)) < psi)
+        sampled = g * (np.random.random(np.squeeze(g.shape)) < psi)
+        return reshape_sampled(sampled, size, self.shape)
 
     def logp(self, value):
         return tt.switch(value > 0,
@@ -530,9 +586,9 @@ class ZeroInflatedNegativeBinomial(Discrete):
 
     def __init__(self, mu, alpha, psi, *args, **kwargs):
         super(ZeroInflatedNegativeBinomial, self).__init__(*args, **kwargs)
-        self.mu = mu
-        self.alpha = alpha
-        self.psi = psi
+        self.mu = mu = tt.as_tensor_variable(mu)
+        self.alpha = alpha = tt.as_tensor_variable(alpha)
+        self.psi = psi = tt.as_tensor_variable(psi)
         self.nb = NegativeBinomial.dist(mu, alpha)
         self.mode = self.nb.mode
 
@@ -543,7 +599,8 @@ class ZeroInflatedNegativeBinomial(Discrete):
                              dist_shape=self.shape,
                              size=size)
         g[g == 0] = np.finfo(float).eps  # Just in case
-        return stats.poisson.rvs(g) * (np.random.random(np.squeeze(g.shape)) < psi)
+        sampled = stats.poisson.rvs(g) * (np.random.random(np.squeeze(g.shape)) < psi)
+        return reshape_sampled(sampled, size, self.shape)
 
     def logp(self, value):
         return tt.switch(value > 0,

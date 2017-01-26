@@ -8,7 +8,7 @@ import numpy.random as nr
 
 import pymc3 as pm
 from .helpers import SeededTest
-from .test_distributions import (build_model, Domain, product, R, Rplus, Rplusbig, Unit, Nat,
+from .test_distributions import (build_model, Domain, product, R, Rplus, Rplusbig, Rplusdunif, Unit, Nat,
                                  NatSmall, I, Simplex, Vector, PdMatrix)
 
 
@@ -96,20 +96,22 @@ class BaseTestCases(object):
             super(BaseTestCases.BaseTestCase, self).__init__(*args, **kwargs)
             self.model = pm.Model()
 
-        def get_random_variable(self, shape, with_vector_params=False):
+        def get_random_variable(self, shape, with_vector_params=False, name=None):
             if with_vector_params:
                 params = {key: value * np.ones(self.shape, dtype=np.dtype(type(value))) for
                           key, value in self.params.items()}
             else:
                 params = self.params
-            name = self.distribution.__name__
+            if name is None:
+                name = self.distribution.__name__
             with self.model:
                 if shape is None:
                     return self.distribution(name, transform=None, **params)
                 else:
                     return self.distribution(name, shape=shape, transform=None, **params)
 
-        def sample_random_variable(self, random_variable, size):
+        @staticmethod
+        def sample_random_variable(random_variable, size):
             try:
                 return random_variable.random(size=size)
             except AttributeError:
@@ -145,7 +147,7 @@ class BaseTestCases(object):
                 else:
                     expected = np.atleast_1d(size).tolist()
                 expected.append(self.shape)
-                actual = np.atleast_1d(self.sample_random_variable(rv, size)).shape
+                actual = self.sample_random_variable(rv, size).shape
                 self.assertSequenceEqual(expected, actual)
 
         def test_broadcast_shape(self):
@@ -159,6 +161,28 @@ class BaseTestCases(object):
                 expected.extend(broadcast_shape)
                 actual = np.atleast_1d(self.sample_random_variable(rv, size)).shape
                 self.assertSequenceEqual(expected, actual)
+
+        def test_different_shapes_and_sample_sizes(self):
+            shapes = [(), (1,), (1, 1), (1, 2), (10, 10, 1), (10, 10, 2)]
+            prefix = self.distribution.__name__
+            expected = []
+            actual = []
+            for shape in shapes:
+                rv = self.get_random_variable(shape, name='%s_%s' % (prefix, shape))
+                for size in (None, 1, 5, (4, 5)):
+                    if size is None:
+                        s = []
+                    else:
+                        try:
+                            s = list(size)
+                        except TypeError:
+                            s = [size]
+                    s.extend(shape)
+                    e = tuple(s)
+                    a = self.sample_random_variable(rv, size).shape
+                    expected.append(e)
+                    actual.append(a)
+            self.assertSequenceEqual(expected, actual)
 
 
 class TestNormal(BaseTestCases.BaseTestCase):
@@ -179,6 +203,10 @@ class TestHalfNormal(BaseTestCases.BaseTestCase):
 class TestUniform(BaseTestCases.BaseTestCase):
     distribution = pm.Uniform
     params = {'lower': 0., 'upper': 1.}
+
+class TestTriangular(BaseTestCases.BaseTestCase):
+    distribution = pm.Triangular
+    params = {'c': 0.5,'lower': 0., 'upper': 1.}
 
 
 class TestWald(BaseTestCases.BaseTestCase):
@@ -271,6 +299,11 @@ class TestBernoulli(BaseTestCases.BaseTestCase):
     params = {'p': 0.5}
 
 
+class TestDiscreteWeibull(BaseTestCases.BaseTestCase):
+    distribution = pm.DiscreteWeibull
+    params = {'q': 0.25, 'beta': 2.}
+
+
 class TestPoisson(BaseTestCases.BaseTestCase):
     distribution = pm.Poisson
     params = {'mu': 1.}
@@ -310,8 +343,8 @@ class TestCategorical(BaseTestCases.BaseTestCase):
     distribution = pm.Categorical
     params = {'p': np.ones(BaseTestCases.BaseTestCase.shape)}
 
-    def get_random_variable(self, shape, with_vector_params=False):  # don't transform categories
-        return super(TestCategorical, self).get_random_variable(shape, with_vector_params=False)
+    def get_random_variable(self, shape, with_vector_params=False, **kwargs):  # don't transform categories
+        return super(TestCategorical, self).get_random_variable(shape, with_vector_params=False, **kwargs)
 
 
 @attr('scalar_parameter_samples')
@@ -456,6 +489,15 @@ class ScalarParameterSamples(SeededTest):
         def ref_rand(size, lower, upper):
             return st.randint.rvs(lower, upper, size=size)
         pymc3_random_discrete(pm.DiscreteUniform, {'lower': -NatSmall, 'upper': NatSmall},
+                              ref_rand=ref_rand)
+
+    def test_discrete_weibull(self):
+        def ref_rand(size, q, beta):
+            u = np.random.uniform(size=size)
+
+            return np.ceil(np.power(np.log(1 - u) / np.log(q), 1. / beta)) - 1
+        
+        pymc3_random_discrete(pm.DiscreteWeibull, {'q': Unit, 'beta': Rplusdunif},
                               ref_rand=ref_rand)
 
     def test_categorical(self):

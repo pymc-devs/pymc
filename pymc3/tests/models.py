@@ -10,7 +10,7 @@ def simple_model():
     mu = -2.1
     tau = 1.3
     with Model() as model:
-        Normal('x', mu, tau=tau, shape=2, testval=[.1] * 2)
+        Normal('x', mu, tau=tau, shape=2, testval=tt.ones(2) * .1)
 
     return model.test_point, model, (mu, tau ** -1)
 
@@ -19,7 +19,7 @@ def simple_categorical():
     p = np.array([0.1, 0.2, 0.3, 0.4])
     v = np.array([0.0, 1.0, 2.0, 3.0])
     with Model() as model:
-        Categorical('x', p, shape = 3, testval = [1, 2, 3])
+        Categorical('x', p, shape=3, testval=[1, 2, 3])
 
     mu = np.dot(p, v)
     var = np.dot(p, (v - mu) ** 2)
@@ -30,7 +30,7 @@ def multidimensional_model():
     mu = -2.1
     tau = 1.3
     with Model() as model:
-        Normal('x', mu, tau=tau, shape=(3, 2), testval=.1 * np.ones((3, 2)))
+        Normal('x', mu, tau=tau, shape=(3, 2), testval=.1 * tt.ones((3, 2)))
 
     return model.test_point, model, (mu, tau ** -1)
 

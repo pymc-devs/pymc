@@ -5,7 +5,7 @@ import theano
 from ..distributions import draw_values
 from .arraystep import ArrayStepShared, ArrayStep, metrop_select, Competence
 import pymc3 as pm
-
+from pymc3.theanof import floatX
 
 __all__ = ['Metropolis', 'BinaryMetropolis', 'BinaryGibbsMetropolis',
            'CategoricalGibbsMetropolis', 'NormalProposal', 'CauchyProposal',
@@ -66,12 +66,13 @@ class Metropolis(ArrayStepShared):
         The frequency of tuning. Defaults to 100 iterations.
     model : PyMC Model
         Optional model for sampling step. Defaults to None (taken from context).
-
+    mode :  string or `Mode` instance.
+        compilation mode passed to Theano functions
     """
     default_blocked = False
 
     def __init__(self, vars=None, S=None, proposal_dist=NormalProposal, scaling=1.,
-                 tune=True, tune_interval=100, model=None, **kwargs):
+                 tune=True, tune_interval=100, model=None, mode=None, **kwargs):
 
         model = pm.modelcontext(model)
 
@@ -93,6 +94,8 @@ class Metropolis(ArrayStepShared):
             [[v.dtype in pm.discrete_types] * (v.dsize or 1) for v in vars])
         self.any_discrete = self.discrete.any()
         self.all_discrete = self.discrete.all()
+
+        self.mode = mode
 
         shared = pm.make_shared_replacements(vars, model)
         self.delta_logp = delta_logp(model.logpt, vars, shared)
@@ -119,7 +122,7 @@ class Metropolis(ArrayStepShared):
                     delta[self.discrete], 0).astype('int64')
                 q = (q0 + delta).astype('int64')
         else:
-            q = q0 + delta
+            q = floatX(q0 + delta)
 
         q_new = metrop_select(self.delta_logp(q, q0), q, q0)
 

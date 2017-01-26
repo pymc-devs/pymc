@@ -10,7 +10,6 @@ from .model import modelcontext
 from scipy.misc import logsumexp
 from scipy.stats.distributions import pareto
 
-import pymc3 as pm
 from .backends import tracetab as ttab
 
 __all__ = ['autocorr', 'autocov', 'dic', 'bpic', 'waic', 'loo', 'hpd', 'quantiles',
@@ -105,7 +104,7 @@ def log_post_trace(trace, model):
     return np.vstack([obs.logp_elemwise(pt) for obs in model.observed_RVs] for pt in trace)
 
 
-def waic(trace, model=None, n_eff=False):
+def waic(trace, model=None, n_eff=False, pointwise=False):
     """
     Calculate the widely available information criterion, its standard error
     and the effective number of parameters of the samples in trace from model.
@@ -120,6 +119,9 @@ def waic(trace, model=None, n_eff=False):
         Optional model. Default None, taken from context.
     n_eff: bool
         if True the effective number parameters will be returned.
+        Default False
+    pointwise: bool
+        if True the pointwise predictive accuracy will be returned.
         Default False
 
 
@@ -152,6 +154,8 @@ def waic(trace, model=None, n_eff=False):
 
     if n_eff:
         return waic, waic_se, p_waic
+    elif pointwise:
+        return waic, waic_se, waic_i, p_waic
     else:
         return waic, waic_se
 

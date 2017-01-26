@@ -87,12 +87,10 @@ class MvNormal(Continuous):
 
     def __init__(self, mu, cov=None, tau=None, *args, **kwargs):
         super(MvNormal, self).__init__(*args, **kwargs)
-        warnings.warn(('The calling signature of MvNormal() has changed. The new signature is:\n'
-                       'MvNormal(name, mu, cov) instead of MvNormal(name, mu, tau).'
-                       'You do not need to explicitly invert the covariance matrix anymore.'),
-                      DeprecationWarning)
-        self.mean = self.median = self.mode = self.mu = mu
-        self.tau, self.cov = get_tau_cov(mu, tau=tau, cov=cov)
+        self.mean = self.median = self.mode = self.mu = mu = tt.as_tensor_variable(mu)
+        tau, cov = get_tau_cov(mu, tau=tau, cov=cov)
+        self.tau = tt.as_tensor_variable(tau)
+        self.cov = tt.as_tensor_variable(cov)
 
     def random(self, point=None, size=None):
         mu, cov = draw_values([self.mu, self.cov], point=point)
@@ -149,9 +147,9 @@ class MvStudentT(Continuous):
 
     def __init__(self, nu, Sigma, mu=None, *args, **kwargs):
         super(MvStudentT, self).__init__(*args, **kwargs)
-        self.nu = nu
-        self.mu = np.zeros(Sigma.shape[0]) if mu is None else mu
-        self.Sigma = Sigma
+        self.nu = nu = tt.as_tensor_variable(nu)
+        self.mu = tt.zeros(Sigma.shape[0]) if mu is None else tt.as_tensor_variable(mu)
+        self.Sigma = Sigma = tt.as_tensor_variable(Sigma)
 
         self.mean = self.median = self.mode = self.mu = mu
 
@@ -219,8 +217,8 @@ class Dirichlet(Continuous):
         kwargs.setdefault("shape", shape)
         super(Dirichlet, self).__init__(transform=transform, *args, **kwargs)
 
-        self.k = shape
-        self.a = a
+        self.k = tt.as_tensor_variable(shape)
+        self.a = a = tt.as_tensor_variable(a)
         self.mean = a / tt.sum(a)
 
         self.mode = tt.switch(tt.all(a > 1),
@@ -297,8 +295,8 @@ class Multinomial(Discrete):
             self.n = tt.shape_padright(n)
             self.p = p if p.ndim == 2 else tt.shape_padleft(p)
         else:
-            self.n = n
-            self.p = p
+            self.n = tt.as_tensor_variable(n)
+            self.p = tt.as_tensor_variable(p)
 
         self.mean = self.n * self.p
         self.mode = tt.cast(tt.round(self.mean), 'int32')
@@ -571,8 +569,8 @@ class LKJCorr(Continuous):
     """
 
     def __init__(self, n, p, *args, **kwargs):
-        self.n = n
-        self.p = p
+        self.n = n = tt.as_tensor_variable(n)
+        self.p = p = tt.as_tensor_variable(p)
         n_elem = int(p * (p - 1) / 2)
         self.mean = np.zeros(n_elem)
         super(LKJCorr, self).__init__(shape=n_elem, *args, **kwargs)

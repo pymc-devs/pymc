@@ -1,8 +1,10 @@
 from numpy import dot
 from numpy.random import normal
-from numpy.linalg import solve
-from scipy.linalg import cholesky, cho_solve
+import scipy.linalg
+from theano.tensor import slinalg
 from scipy.sparse import issparse
+
+from pymc3.theanof import floatX
 
 import numpy as np
 
@@ -14,24 +16,27 @@ def quad_potential(C, is_cov, as_cov):
     """
     Parameters
     ----------
-        C : arraylike, 0 <= ndim <= 2
-            scaling matrix for the potential
-            vector treated as diagonal matrix
-        is_cov : Boolean
-            whether C is provided as a covariance matrix or hessian
-        as_cov : Boolean
-            whether the random draws should come from the normal dist
-            using the covariance matrix above or the inverse
+    C : arraylike, 0 <= ndim <= 2
+        scaling matrix for the potential
+        vector treated as diagonal matrix
+    is_cov : Boolean
+        whether C is provided as a covariance matrix or hessian
+    as_cov : Boolean
+        whether the random draws should come from the normal dist
+        using the covariance matrix above or the inverse
 
     Returns
     -------
-        q : Quadpotential
+    q : Quadpotential
     """
 
-    if issparse(C) and is_cov != as_cov:
+    if issparse(C):
         if not chol_available:
-            raise ImportError("Requires scikits.sparse")
-        return QuadPotential_SparseInv(C)
+            raise ImportError("Sparse mass matrices require scikits.sparse")
+        if is_cov != as_cov:
+            return QuadPotential_Sparse(C)
+        else:
+            raise ValueError("Sparse precission matrices are not supported")
 
     partial_check_positive_definite(C)
     if C.ndim == 1:
@@ -76,6 +81,7 @@ def isquadpotential(o):
 class ElemWiseQuadPotential(object):
 
     def __init__(self, v):
+        v = floatX(v)
         s = v ** .5
 
         self.s = s
@@ -86,7 +92,7 @@ class ElemWiseQuadPotential(object):
         return self.v * x
 
     def random(self):
-        return normal(size=self.s.shape) * self.inv_s
+        return floatX(normal(size=self.s.shape)) * self.inv_s
 
     def energy(self, x):
         return .5 * x.dot(self.v * x)
@@ -95,32 +101,34 @@ class ElemWiseQuadPotential(object):
 class QuadPotential_Inv(object):
 
     def __init__(self, A):
-        self.L = cholesky(A, lower=True)
+        self.L = floatX(scipy.linalg.cholesky(A, lower=True))
 
     def velocity(self, x):
-        return cho_solve((self.L, True), x)
+        solve = slinalg.Solve(lower=True)
+        y = solve(self.L, x)
+        return solve(self.L.T, y)
 
     def random(self):
         n = normal(size=self.L.shape[0])
         return dot(self.L, n)
 
     def energy(self, x):
-        L1x = solve(self.L, x)
-        return .5 * dot(L1x.T, L1x)
+        L1x = slinalg.Solve(lower=True)(self.L, x)
+        return .5 * L1x.T.dot(L1x)
 
 
 class QuadPotential(object):
 
     def __init__(self, A):
         self.A = A
-        self.L = cholesky(A, lower=True)
+        self.L = scipy.linalg.cholesky(A, lower=True)
 
     def velocity(self, x):
         return x.T.dot(self.A.T)
 
     def random(self):
         n = normal(size=self.L.shape[0])
-        return solve(self.L.T, n)
+        return scipy.linalg.solve_triangular(self.L.T, n)
 
     def energy(self, x):
         return .5 * x.dot(self.A).dot(x)
@@ -128,31 +136,34 @@ class QuadPotential(object):
     __call__ = random
 
 try:
-    import scikits.sparse.cholmod as cholmod
+    import sksparse.cholmod as cholmod
     chol_available = True
 except ImportError:
     chol_available = False
 
 if chol_available:
-    __all__ += ['QuadPotential_SparseInv']
+    __all__ += ['QuadPotential_Sparse']
 
-    class QuadPotential_SparseInv(object):
+    import theano
+    import theano.sparse
 
+    class QuadPotential_Sparse(object):
         def __init__(self, A):
-            self.n = A.shape[0]
+            self.A = A
+            self.size = A.shape[0]
             self.factor = factor = cholmod.cholesky(A)
-            self.L = factor.L()
-            self.p = np.argsort(factor.P())
+            self.d_sqrt = np.sqrt(factor.D())
 
         def velocity(self, x):
-            x = np.ones((x.shape[0], 2)) * x[:, np.newaxis]
-            return self.factor(x)[:, 0]
-
-        def Ldot(self, x):
-            return (self.L * x)[self.p]
+            A = theano.sparse.as_sparse(self.A)
+            return theano.sparse.dot(A, x)
 
         def random(self):
-            return self.Ldot(normal(size=self.n))
+            n = floatX(normal(size=self.size))
+            n /= self.d_sqrt
+            n = self.factor.solve_Lt(n)
+            n = self.factor.apply_Pt(n)
+            return n
 
         def energy(self, x):
-            return .5 * dot(x, self.velocity(x))
+            return 0.5 * x.T.dot(self.velocity(x))

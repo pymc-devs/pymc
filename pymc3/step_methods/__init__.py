@@ -1,6 +1,6 @@
 from .compound import CompoundStep
 
-from .hmc import HamiltonianMC
+from .hmc import HamiltonianMC, NUTS
 
 from .metropolis import Metropolis
 from .metropolis import BinaryMetropolis
@@ -15,5 +15,3 @@ from .metropolis import MultivariateNormalProposal
 from .gibbs import ElemwiseCategorical
 
 from .slicer import Slice
-
-from .nuts import NUTS

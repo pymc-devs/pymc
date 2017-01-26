@@ -10,4 +10,6 @@ CommonMark==0.5.4
 recommonmark
 sphinx
 nbsphinx
+numdifftools
 numpydoc
+six

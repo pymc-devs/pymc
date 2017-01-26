@@ -7,12 +7,13 @@ from ..model import Model, Point, Potential
 from ..blocking import DictToVarBijection, DictToArrayBijection, ArrayOrdering
 from ..distributions import (DensityDist, Categorical, Multinomial, VonMises, Dirichlet,
                              MvStudentT, MvNormal, ZeroInflatedPoisson,
-                             ZeroInflatedNegativeBinomial, ConstantDist, Constant, Poisson, Bernoulli, Beta,
-                             BetaBinomial, HalfStudentT, StudentT, Weibull, Pareto, InverseGamma,
-                             Gamma, Cauchy, HalfCauchy, Lognormal, Laplace, NegativeBinomial,
-                             Geometric, Exponential, ExGaussian, Normal, Flat, LKJCorr, Wald,
-                             ChiSquared, HalfNormal, DiscreteUniform, Bound, Uniform,
-                             Binomial, Wishart, SkewNormal)
+                             ZeroInflatedNegativeBinomial, Constant, Poisson, Bernoulli, Beta,
+                             BetaBinomial, HalfStudentT, StudentT, Weibull, Pareto,
+                             InverseGamma, Gamma, Cauchy, HalfCauchy, Lognormal, Laplace,
+                             NegativeBinomial, Geometric, Exponential, ExGaussian, Normal,
+                             Flat, LKJCorr, Wald, ChiSquared, HalfNormal, DiscreteUniform,
+                             Bound, Uniform, Triangular, Binomial, Wishart, SkewNormal,
+                             DiscreteWeibull)
 from ..distributions import continuous, multivariate
 from numpy import array, inf, log, exp
 from numpy.testing import assert_almost_equal
@@ -102,6 +103,7 @@ I = Domain([-1000, -3, -2, -1, 0, 1, 2, 3, 1000], 'int64')
 NatSmall = Domain([0, 3, 4, 5, 1000], 'int64')
 Nat = Domain([0, 1, 2, 3, 2000], 'int64')
 NatBig = Domain([0, 1, 2, 3, 5000, 50000], 'int64')
+PosNat = Domain([1, 2, 3, 2000], 'int64')
 
 Bool = Domain([0, 0, 1, 1], 'int64')
 
@@ -207,6 +209,10 @@ def betafn(a):
 
 def logpow(v, p):
     return np.choose(v == 0, [p * np.log(v), 0])
+
+
+def discrete_weibull_logpmf(value, q, beta):
+    return np.log(np.power(q, np.power(value, beta)) - np.power(q, np.power(value + 1, beta)))
 
 
 def dirichlet_logpdf(value, a):
@@ -333,10 +339,17 @@ class TestMatchesScipy(SeededTest):
             Uniform, Runif, {'lower': -Rplusunif, 'upper': Rplusunif},
             lambda value, lower, upper: sp.uniform.logpdf(value, lower, upper - lower))
 
+    def test_triangular(self):
+        self.pymc3_matches_scipy(
+            Triangular, Runif, {'lower': -Rplusunif, 'c': Runif, 'upper': Rplusunif},
+            lambda value, c, lower, upper: sp.triang.logpdf(value, c-lower, lower, upper-lower))
+
     def test_bound_normal(self):
         PositiveNormal = Bound(Normal, lower=0.)
         self.pymc3_matches_scipy(PositiveNormal, Rplus, {'mu': Rplus, 'sd': Rplus},
                                  lambda value, mu, sd: sp.norm.logpdf(value, mu, sd))
+        with Model(): x = PositiveNormal('x', mu=0, sd=1, transform=None)
+        assert np.isinf(x.logp({'x':-1}))
 
     def test_discrete_unif(self):
         self.pymc3_matches_scipy(
@@ -462,7 +475,6 @@ class TestMatchesScipy(SeededTest):
     def test_skew_normal(self):
         self.pymc3_matches_scipy(SkewNormal, R, {'mu': R, 'sd': Rplusbig, 'alpha': R},
                                  lambda value, alpha, mu, sd: sp.skewnorm.logpdf(value, alpha, mu, sd))
-
     def test_binomial(self):
         self.pymc3_matches_scipy(Binomial, Nat, {'n': NatSmall, 'p': Unit},
                                  lambda value, n, p: sp.binom.logpmf(value, n, p))
@@ -474,9 +486,21 @@ class TestMatchesScipy(SeededTest):
         self.pymc3_matches_scipy(Bernoulli, Bool, {'p': Unit},
                                  lambda value, p: sp.bernoulli.logpmf(value, p))
 
+    def test_discrete_weibull(self):
+        self.pymc3_matches_scipy(DiscreteWeibull, Nat,
+                {'q': Unit, 'beta': Rplusdunif}, discrete_weibull_logpmf)
+
     def test_poisson(self):
         self.pymc3_matches_scipy(Poisson, Nat, {'mu': Rplus},
                                  lambda value, mu: sp.poisson.logpmf(value, mu))
+
+    def test_bound_poisson(self):
+        NonZeroPoisson = Bound(Poisson, lower=1.)
+        self.pymc3_matches_scipy(NonZeroPoisson, PosNat, {'mu': Rplus},
+                                lambda value, mu: sp.poisson.logpmf(value, mu))
+
+        with Model(): x = NonZeroPoisson('x', mu=4)
+        assert np.isinf(x.logp({'x':0}))
 
     def test_constantdist(self):
         self.pymc3_matches_scipy(Constant, I, {'c': I},
