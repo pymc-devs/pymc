@@ -11,6 +11,7 @@ __all__ = ['ExpQuad',
            'Matern52',
            'Matern32',
            'Linear',
+           'Polynomial',
            'Cosine',
            'WarpedInput']
 
