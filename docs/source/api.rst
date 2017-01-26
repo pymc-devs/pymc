@@ -233,12 +233,12 @@ GP
 
    ExpQuad
    RatQuad
-   Exponential
-   Matern52
    Matern32
+   Matern52
+   Exponential
+   Cosine
    Linear
    Polynomial
-   Cosine
    WarpedInput
 
 .. automodule:: pymc3.gp.cov
