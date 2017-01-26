@@ -237,6 +237,7 @@ GP
    Matern52
    Matern32
    Linear
+   Polynomial
    Cosine
    WarpedInput
 
