@@ -549,6 +549,55 @@
   },
   {
    "cell_type": "code",
+   "execution_count": 7,
+   "metadata": {
+    "collapsed": false
+   },
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Automatic pdb calling has been turned ON\n"
+     ]
+    }
+   ],
+   "source": [
+    "%pdb"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 7,
+   "metadata": {
+    "collapsed": false
+   },
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Automatic pdb calling has been turned ON\n"
+     ]
+    }
+   ],
+   "source": [
+    "%pdb"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 20,
+   "metadata": {
+    "collapsed": true
+   },
+   "outputs": [],
+   "source": [
+    "pymc3.Normal??"
+   ]
+  },
+  {
+   "cell_type": "code",
    "execution_count": 6,
    "metadata": {
     "collapsed": false,
@@ -682,13 +731,6 @@
    ]
   },
   {
-   "cell_type": "markdown",
-   "metadata": {},
-   "source": [
-    "^ Should use \"  6.8%    99.8%      26.583s       5.32e-03s     C     5000       5   theano.tensor.blas_c.CGemv\", not Python."
-   ]
-  },
-  {
    "cell_type": "code",
    "execution_count": 17,
    "metadata": {
@@ -744,6 +786,230 @@
    "metadata": {},
    "source": [
     "---"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 40,
+   "metadata": {
+    "collapsed": true
+   },
+   "outputs": [],
+   "source": [
+    "basic_model.fastdlogp??"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 7,
+   "metadata": {
+    "collapsed": false
+   },
+   "outputs": [],
+   "source": [
+    "dlogp = basic_model.fastdlogp(profile=True)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 8,
+   "metadata": {
+    "collapsed": false
+   },
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "10 loops, best of 3: 18.9 ms per loop\n"
+     ]
+    }
+   ],
+   "source": [
+    "%timeit dlogp(basic_model.test_point)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 24,
+   "metadata": {
+    "collapsed": false
+   },
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "\"CGemv{no_inplace}(\\\\beta, TensorConstant{1.0}, TensorConstant{[[-1.29734..        ]]}, Elemwise{Composite{Switch(i0, Switch(Composite{Identity((GE(i0, i1) * LE(i0, i2)))}(scalar_sigmoid(i1), i2, i3), (i4 - scalar_sigmoid(i1)), i2), Switch(Composite{Identity((GE(i0, i1) * LE(i0, i2)))}(scalar_sigmoid(i1), i2, i3), (-scalar_sigmoid(i1)), i2))}}[(0, 1)](TensorConstant{[0 0 0 ..., 0 0 0]}, CGemv{inplace}(AllocEmpty{dtype='float32'}(TensorConstant{581012}), TensorConstant{1.0}, TensorConstant{[[-1.29734..        ]]}, \\\\beta, TensorConstant{0.0}), TensorConstant{(1,) of 0}, TensorConstant{(1,) of 1}, TensorConstant{(1,) of 1.0}), TensorConstant{-1.0})\""
+      ]
+     },
+     "execution_count": 24,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "theano.pp(dlogp.f.maker.fgraph.outputs[0])"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 25,
+   "metadata": {
+    "collapsed": false
+   },
+   "outputs": [
+    {
+     "ename": "RuntimeError",
+     "evalue": "('Failed to import pydot. You must install graphviz and either pydot or pydot-ng for `pydotprint` to work.', 'Install the python package pydot or pydot-ng. Install graphviz.')",
+     "output_type": "error",
+     "traceback": [
+      "\u001b[0;31m---------------------------------------------------------------------------\u001b[0m",
+      "\u001b[0;31mRuntimeError\u001b[0m                              Traceback (most recent call last)",
+      "\u001b[0;32m<ipython-input-25-d84dafa11c43>\u001b[0m in \u001b[0;36m<module>\u001b[0;34m()\u001b[0m\n\u001b[0;32m----> 1\u001b[0;31m \u001b[0mtheano\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mprinting\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mpydotprint\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0mdlogp\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mf\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mmaker\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mfgraph\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0moutputs\u001b[0m\u001b[0;34m[\u001b[0m\u001b[0;36m0\u001b[0m\u001b[0;34m]\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0m",
+      "\u001b[0;32m/home/wiecki/tools/theano/theano/printing.py\u001b[0m in \u001b[0;36mpydotprint\u001b[0;34m(fct, outfile, compact, format, with_ids, high_contrast, cond_highlight, colorCodes, max_label_size, scan_graphs, var_with_name_simple, print_output_file, return_image)\u001b[0m\n\u001b[1;32m    781\u001b[0m                            \u001b[0;34m\" and either pydot or pydot-ng for \"\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m    782\u001b[0m                            \u001b[0;34m\"`pydotprint` to work.\"\u001b[0m\u001b[0;34m,\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0;32m--> 783\u001b[0;31m                            pydot_imported_msg)\n\u001b[0m\u001b[1;32m    784\u001b[0m \u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m    785\u001b[0m     \u001b[0mg\u001b[0m \u001b[0;34m=\u001b[0m \u001b[0mpd\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mDot\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n",
+      "\u001b[0;31mRuntimeError\u001b[0m: ('Failed to import pydot. You must install graphviz and either pydot or pydot-ng for `pydotprint` to work.', 'Install the python package pydot or pydot-ng. Install graphviz.')"
+     ]
+    }
+   ],
+   "source": [
+    "theano.printing.pydotprint(dlogp.f.maker.fgraph.outputs[0])"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 13,
+   "metadata": {
+    "collapsed": false
+   },
+   "outputs": [
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "Function profiling\n",
+      "==================\n",
+      "  Message: /home/wiecki/working/projects/pymc/pymc3/model.py:574\n",
+      "  Time in 41 calls to Function.__call__: 9.287121e-01s\n",
+      "  Time in Function.fn.__call__: 9.256220e-01s (99.667%)\n",
+      "  Time in thunks: 9.239535e-01s (99.488%)\n",
+      "  Total compile time: 5.363478e+00s\n",
+      "    Number of Apply nodes: 4\n",
+      "    Theano Optimizer time: 2.129299e+00s\n",
+      "       Theano validate time: 1.461267e-03s\n",
+      "    Theano Linker time (includes C, CUDA code generation/compiling): 2.989259e+00s\n",
+      "       Import time 3.308773e-03s\n",
+      "       Node make_thunk time 2.988755e+00s\n",
+      "           Node CGemv{no_inplace}(beta, TensorConstant{1.0}, TensorConstant{[[-1.29734..        ]]}, Elemwise{Composite{Switch(i0, Switch(Composite{Identity((GE(i0, i1) * LE(i0, i2)))}(scalar_sigmoid(i1), i2, i3), (i4 - scalar_sigmoid(i1)), i2), Switch(Composite{Identity((GE(i0, i1) * LE(i0, i2)))}(scalar_sigmoid(i1), i2, i3), (-scalar_sigmoid(i1)), i2))}}[(0, 1)].0, TensorConstant{-1.0}) time 2.769116e+00s\n",
+      "           Node CGemv{inplace}(AllocEmpty{dtype='float32'}.0, TensorConstant{1.0}, TensorConstant{[[-1.29734..        ]]}, beta, TensorConstant{0.0}) time 2.099655e-01s\n",
+      "           Node Elemwise{Composite{Switch(i0, Switch(Composite{Identity((GE(i0, i1) * LE(i0, i2)))}(scalar_sigmoid(i1), i2, i3), (i4 - scalar_sigmoid(i1)), i2), Switch(Composite{Identity((GE(i0, i1) * LE(i0, i2)))}(scalar_sigmoid(i1), i2, i3), (-scalar_sigmoid(i1)), i2))}}[(0, 1)](TensorConstant{[0 0 0 ..., 0 0 0]}, CGemv{inplace}.0, TensorConstant{(1,) of 0}, TensorConstant{(1,) of 1}, TensorConstant{(1,) of 1.0}) time 9.192467e-03s\n",
+      "           Node AllocEmpty{dtype='float32'}(TensorConstant{581012}) time 4.730225e-04s\n",
+      "\n",
+      "Time in all call to theano.grad() 1.467909e+00s\n",
+      "Time since theano import 58.806s\n",
+      "Class\n",
+      "---\n",
+      "<% time> <sum %> <apply time> <time per call> <type> <#call> <#apply> <Class name>\n",
+      "  65.2%    65.2%       0.602s       7.34e-03s     C       82       2   theano.tensor.blas_c.CGemv\n",
+      "  34.8%   100.0%       0.322s       7.84e-03s     C       41       1   theano.tensor.elemwise.Elemwise\n",
+      "   0.0%   100.0%       0.000s       2.74e-06s     C       41       1   theano.tensor.basic.AllocEmpty\n",
+      "   ... (remaining 0 Classes account for   0.00%(0.00s) of the runtime)\n",
+      "\n",
+      "Ops\n",
+      "---\n",
+      "<% time> <sum %> <apply time> <time per call> <type> <#call> <#apply> <Op name>\n",
+      "  34.8%    34.8%       0.322s       7.84e-03s     C       41        1   Elemwise{Composite{Switch(i0, Switch(Composite{Identity((GE(i0, i1) * LE(i0, i2)))}(scalar_sigmoid(i1), i2, i3), (i4 - scalar_sigmoid(i1)), i2), Switch(Composite{Identity((GE(i0, i1) * LE(i0, i2)))}(scalar_sigmoid(i1), i2, i3), (-scalar_sigmoid(i1)), i2))}}[(0, 1)]\n",
+      "  33.3%    68.1%       0.308s       7.51e-03s     C       41        1   CGemv{no_inplace}\n",
+      "  31.9%   100.0%       0.295s       7.18e-03s     C       41        1   CGemv{inplace}\n",
+      "   0.0%   100.0%       0.000s       2.74e-06s     C       41        1   AllocEmpty{dtype='float32'}\n",
+      "   ... (remaining 0 Ops account for   0.00%(0.00s) of the runtime)\n",
+      "\n",
+      "Apply\n",
+      "------\n",
+      "<% time> <sum %> <apply time> <time per call> <#call> <id> <Apply name>\n",
+      "  34.8%    34.8%       0.322s       7.84e-03s     41     2   Elemwise{Composite{Switch(i0, Switch(Composite{Identity((GE(i0, i1) * LE(i0, i2)))}(scalar_sigmoid(i1), i2, i3), (i4 - scalar_sigmoid(i1)), i2), Switch(Composite{Identity((GE(i0, i1) * LE(i0, i2)))}(scalar_sigmoid(i1), i2, i3), (-scalar_sigmoid(i1)), i2))}}[(0, 1)](TensorConstant{[0 0 0 ..., 0 0 0]}, CGemv{inplace}.0, TensorConstant{(1,) of 0}, TensorConstant{(1,) of 1}, TensorConstant{(1,) of 1.0})\n",
+      "  33.3%    68.1%       0.308s       7.51e-03s     41     3   CGemv{no_inplace}(beta, TensorConstant{1.0}, TensorConstant{[[-1.29734..        ]]}, Elemwise{Composite{Switch(i0, Switch(Composite{Identity((GE(i0, i1) * LE(i0, i2)))}(scalar_sigmoid(i1), i2, i3), (i4 - scalar_sigmoid(i1)), i2), Switch(Composite{Identity((GE(i0, i1) * LE(i0, i2)))}(scalar_sigmoid(i1), i2, i3), (-scalar_sigmoid(i1)), i2))}}[(0, 1)].0, TensorConstant{-1.0})\n",
+      "  31.9%   100.0%       0.295s       7.18e-03s     41     1   CGemv{inplace}(AllocEmpty{dtype='float32'}.0, TensorConstant{1.0}, TensorConstant{[[-1.29734..        ]]}, beta, TensorConstant{0.0})\n",
+      "   0.0%   100.0%       0.000s       2.74e-06s     41     0   AllocEmpty{dtype='float32'}(TensorConstant{581012})\n",
+      "   ... (remaining 0 Apply instances account for 0.00%(0.00s) of the runtime)\n",
+      "\n",
+      "Here are tips to potentially make your code run faster\n",
+      "                 (if you think of new ones, suggest them on the mailing list).\n",
+      "                 Test them first, as they are not guaranteed to always provide a speedup.\n",
+      "  - Try installing amdlibm and set the Theano flag lib.amdlibm=True. This speeds up only some Elemwise operation.\n"
+     ]
+    }
+   ],
+   "source": [
+    "dlogp.f.profile.summary()"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {
+    "collapsed": true
+   },
+   "outputs": [],
+   "source": [
+    "Function profiling\n",
+    "==================\n",
+    "  Message: <ipython-input-15-44373b114871>:37\n",
+    "  Time in 41 calls to Function.__call__: 7.081084e-01s\n",
+    "  Time in Function.fn.__call__: 7.050962e-01s (99.575%)\n",
+    "  Time in thunks: 7.037623e-01s (99.386%)\n",
+    "  Total compile time: 3.073976e-01s\n",
+    "    Number of Apply nodes: 9\n",
+    "    Theano Optimizer time: 4.145336e-02s\n",
+    "       Theano validate time: 5.130768e-04s\n",
+    "    Theano Linker time (includes C, CUDA code generation/compiling): 1.980829e-02s\n",
+    "       Import time 9.435177e-03s\n",
+    "       Node make_thunk time 1.919985e-02s\n",
+    "           Node CGemv{no_inplace}(TensorConstant{[ 0.  0.  ...  0.  0.]}, TensorConstant{1.0}, <TensorType(float32, matrix)>, beta, TensorConstant{-1.0}) time 4.457951e-03s\n",
+    "           Node Elemwise{Neg}[(0, 0)](CGemv{no_inplace}.0) time 4.371643e-03s\n",
+    "           Node Elemwise{Composite{((i0 * i1) - (i2 * i3))}}[(0, 1)](TensorConstant{-0.5}, Sum{acc_dtype=float64}.0, TensorConstant{0.5}, Sum{acc_dtype=float64}.0) time 3.947973e-03s\n",
+    "           Node Sum{acc_dtype=float64}(Elemwise{sqr,no_inplace}.0) time 3.738403e-03s\n",
+    "           Node CGemv{no_inplace}(beta, TensorConstant{1.0}, InplaceDimShuffle{1,0}.0, Elemwise{Neg}[(0, 0)].0, TensorConstant{-1.0}) time 7.760525e-04s\n",
+    "\n",
+    "Time in all call to theano.grad() 2.922777e+00s\n",
+    "Time since theano import 87.091s\n",
+    "Class\n",
+    "---\n",
+    "<% time> <sum %> <apply time> <time per call> <type> <#call> <#apply> <Class name>\n",
+    "  89.7%    89.7%       0.631s       7.70e-03s     C       82       2   theano.tensor.blas_c.CGemv\n",
+    "   6.0%    95.7%       0.043s       5.19e-04s     C       82       2   theano.tensor.elemwise.Sum\n",
+    "   4.2%   100.0%       0.030s       1.82e-04s     C      164       4   theano.tensor.elemwise.Elemwise\n",
+    "   0.0%   100.0%       0.000s       1.59e-06s     C       41       1   theano.tensor.elemwise.DimShuffle\n",
+    "   ... (remaining 0 Classes account for   0.00%(0.00s) of the runtime)\n",
+    "\n",
+    "Ops\n",
+    "---\n",
+    "<% time> <sum %> <apply time> <time per call> <type> <#call> <#apply> <Op name>\n",
+    "  89.7%    89.7%       0.631s       7.70e-03s     C       82        2   CGemv{no_inplace}\n",
+    "   6.0%    95.7%       0.043s       5.19e-04s     C       82        2   Sum{acc_dtype=float64}\n",
+    "   2.4%    98.2%       0.017s       4.17e-04s     C       41        1   Elemwise{Neg}[(0, 0)]\n",
+    "   1.8%   100.0%       0.013s       1.55e-04s     C       82        2   Elemwise{sqr,no_inplace}\n",
+    "   0.0%   100.0%       0.000s       1.90e-06s     C       41        1   Elemwise{Composite{((i0 * i1) - (i2 * i3))}}[(0, 1)]\n",
+    "   0.0%   100.0%       0.000s       1.59e-06s     C       41        1   InplaceDimShuffle{1,0}\n",
+    "   ... (remaining 0 Ops account for   0.00%(0.00s) of the runtime)\n",
+    "\n",
+    "Apply\n",
+    "------\n",
+    "<% time> <sum %> <apply time> <time per call> <#call> <id> <Apply name>\n",
+    "  45.5%    45.5%       0.321s       7.82e-03s     41     7   CGemv{no_inplace}(beta, TensorConstant{1.0}, InplaceDimShuffle{1,0}.0, Elemwise{Neg}[(0, 0)].0, TensorConstant{-1.0})\n",
+    "  44.2%    89.7%       0.311s       7.58e-03s     41     2   CGemv{no_inplace}(TensorConstant{[ 0.  0.  ...  0.  0.]}, TensorConstant{1.0}, <TensorType(float32, matrix)>, beta, TensorConstant{-1.0})\n",
+    "   6.0%    95.7%       0.042s       1.04e-03s     41     6   Sum{acc_dtype=float64}(Elemwise{sqr,no_inplace}.0)\n",
+    "   2.4%    98.2%       0.017s       4.17e-04s     41     5   Elemwise{Neg}[(0, 0)](CGemv{no_inplace}.0)\n",
+    "   1.8%   100.0%       0.013s       3.07e-04s     41     4   Elemwise{sqr,no_inplace}(CGemv{no_inplace}.0)\n",
+    "   0.0%   100.0%       0.000s       2.02e-06s     41     0   Elemwise{sqr,no_inplace}(beta)\n",
+    "   0.0%   100.0%       0.000s       1.90e-06s     41     8   Elemwise{Composite{((i0 * i1) - (i2 * i3))}}[(0, 1)](TensorConstant{-0.5}, Sum{acc_dtype=float64}.0, TensorConstant{0.5}, Sum{acc_dtype=float64}.0)\n",
+    "   0.0%   100.0%       0.000s       1.77e-06s     41     3   Sum{acc_dtype=float64}(Elemwise{sqr,no_inplace}.0)\n",
+    "   0.0%   100.0%       0.000s       1.59e-06s     41     1   InplaceDimShuffle{1,0}(<TensorType(float32, matrix)>)\n",
+    "   ... (remaining 0 Apply instances account for 0.00%(0.00s) of the runtime)\n",
+    "\n",
+    "Here are tips to potentially make your code run faster\n",
+    "                 (if you think of new ones, suggest them on the mailing list).\n",
+    "                 Test them first, as they are not guaranteed to always provide a speedup.\n",
+    "  Sorry, no tip for today."
    ]
   },
   {

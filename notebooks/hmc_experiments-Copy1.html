@@ -120,7 +120,7 @@
       <li class="wy-breadcrumbs-aside">
         
           
-            <a href="../_sources/notebooks/hmc_experiments.ipynb.txt" rel="nofollow"> View page source</a>
+            <a href="../_sources/notebooks/hmc_experiments-Copy1.ipynb.txt" rel="nofollow"> View page source</a>
           
         
       </li>
@@ -641,7 +641,7 @@ Numpy (CPU) took 534.883 seconds
 <div class="container">
 </div>
 <div class="container">
-<img alt="../_images/notebooks_hmc_experiments_12_1.png" src="../_images/notebooks_hmc_experiments_12_1.png" />
+<img alt="../_images/notebooks_hmc_experiments-Copy1_12_1.png" src="../_images/notebooks_hmc_experiments-Copy1_12_1.png" />
 </div>
 </div>
 </div>
@@ -751,14 +751,14 @@ Stan (CPU, single-threaded) took 1952.880 seconds (34.286 Edward time)
 <div class="container">
 </div>
 <div class="container">
-<img alt="../_images/notebooks_hmc_experiments_18_0.png" src="../_images/notebooks_hmc_experiments_18_0.png" />
+<img alt="../_images/notebooks_hmc_experiments-Copy1_18_0.png" src="../_images/notebooks_hmc_experiments-Copy1_18_0.png" />
 </div>
 </div>
 <div class="nboutput nblast container">
 <div class="container">
 </div>
 <div class="container">
-<img alt="../_images/notebooks_hmc_experiments_18_1.png" src="../_images/notebooks_hmc_experiments_18_1.png" />
+<img alt="../_images/notebooks_hmc_experiments-Copy1_18_1.png" src="../_images/notebooks_hmc_experiments-Copy1_18_1.png" />
 </div>
 </div>
 </div>
@@ -793,6 +793,52 @@ Stan (CPU, single-threaded) took 1952.880 seconds (34.286 Edward time)
 <div class="highlight"><pre>
 float32
 </pre></div></div>
+</div>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [7]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="o">%</span><span class="k">pdb</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<div class="highlight"><pre>
+Automatic pdb calling has been turned ON
+</pre></div></div>
+</div>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [7]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="o">%</span><span class="k">pdb</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<div class="highlight"><pre>
+Automatic pdb calling has been turned ON
+</pre></div></div>
+</div>
+<div class="nbinput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [20]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span>pymc3.Normal<span class="o">??</span>
+</pre></div>
+</div>
 </div>
 <div class="nbinput nblast container">
 <div class="highlight-none"><div class="highlight"><pre>
@@ -925,8 +971,6 @@ Here are tips to potentially make your code run faster
   - Try installing amdlibm and set the Theano flag lib.amdlibm=True. This speeds up only some Elemwise operation.
 </pre></div></div>
 </div>
-<p>^ Should use &#8221; 6.8% 99.8% 26.583s 5.32e-03s C 5000 5
-theano.tensor.blas_c.CGemv&#8221;, not Python.</p>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
 <span></span>In [17]:
@@ -969,11 +1013,234 @@ PyMC3 (CPU, multi-threaded) took 467.597 seconds (6.123 Edward time)
 <div class="container">
 </div>
 <div class="container">
-<img alt="../_images/notebooks_hmc_experiments_26_1.png" src="../_images/notebooks_hmc_experiments_26_1.png" />
-</div>
+<img alt="../_images/notebooks_hmc_experiments-Copy1_28_1.png" src="../_images/notebooks_hmc_experiments-Copy1_28_1.png" />
 </div>
 </div>
 <hr class="docutils" />
+<div class="nbinput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [40]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span>basic_model.fastdlogp<span class="o">??</span>
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [7]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">dlogp</span> <span class="o">=</span> <span class="n">basic_model</span><span class="o">.</span><span class="n">fastdlogp</span><span class="p">(</span><span class="n">profile</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [8]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="o">%</span><span class="k">timeit</span> dlogp(basic_model.test_point)
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<div class="highlight"><pre>
+10 loops, best of 3: 18.9 ms per loop
+</pre></div></div>
+</div>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [24]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">theano</span><span class="o">.</span><span class="n">pp</span><span class="p">(</span><span class="n">dlogp</span><span class="o">.</span><span class="n">f</span><span class="o">.</span><span class="n">maker</span><span class="o">.</span><span class="n">fgraph</span><span class="o">.</span><span class="n">outputs</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>Out[24]:
+</pre></div>
+</div>
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>&quot;CGemv{no_inplace}(\\beta, TensorConstant{1.0}, TensorConstant{[[-1.29734..        ]]}, Elemwise{Composite{Switch(i0, Switch(Composite{Identity((GE(i0, i1) * LE(i0, i2)))}(scalar_sigmoid(i1), i2, i3), (i4 - scalar_sigmoid(i1)), i2), Switch(Composite{Identity((GE(i0, i1) * LE(i0, i2)))}(scalar_sigmoid(i1), i2, i3), (-scalar_sigmoid(i1)), i2))}}[(0, 1)](TensorConstant{[0 0 0 ..., 0 0 0]}, CGemv{inplace}(AllocEmpty{dtype=&#39;float32&#39;}(TensorConstant{581012}), TensorConstant{1.0}, TensorConstant{[[-1.29734..        ]]}, \\beta, TensorConstant{0.0}), TensorConstant{(1,) of 0}, TensorConstant{(1,) of 1}, TensorConstant{(1,) of 1.0}), TensorConstant{-1.0})&quot;
+</pre></div>
+</div>
+</div>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [25]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">theano</span><span class="o">.</span><span class="n">printing</span><span class="o">.</span><span class="n">pydotprint</span><span class="p">(</span><span class="n">dlogp</span><span class="o">.</span><span class="n">f</span><span class="o">.</span><span class="n">maker</span><span class="o">.</span><span class="n">fgraph</span><span class="o">.</span><span class="n">outputs</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<div class="highlight"><pre>
+<span class="ansi-red-fg">---------------------------------------------------------------------------</span>
+<span class="ansi-red-fg">RuntimeError</span>                              Traceback (most recent call last)
+<span class="ansi-green-fg">&lt;ipython-input-25-d84dafa11c43&gt;</span> in <span class="ansi-cyan-fg">&lt;module&gt;</span><span class="ansi-blue-fg">()</span>
+<span class="ansi-green-fg">----&gt; 1</span><span class="ansi-red-fg"> </span>theano<span class="ansi-blue-fg">.</span>printing<span class="ansi-blue-fg">.</span>pydotprint<span class="ansi-blue-fg">(</span>dlogp<span class="ansi-blue-fg">.</span>f<span class="ansi-blue-fg">.</span>maker<span class="ansi-blue-fg">.</span>fgraph<span class="ansi-blue-fg">.</span>outputs<span class="ansi-blue-fg">[</span><span class="ansi-cyan-fg">0</span><span class="ansi-blue-fg">]</span><span class="ansi-blue-fg">)</span>
+
+<span class="ansi-green-fg">/home/wiecki/tools/theano/theano/printing.py</span> in <span class="ansi-cyan-fg">pydotprint</span><span class="ansi-blue-fg">(fct, outfile, compact, format, with_ids, high_contrast, cond_highlight, colorCodes, max_label_size, scan_graphs, var_with_name_simple, print_output_file, return_image)</span>
+<span class="ansi-green-intense-fg ansi-bold">    781</span>                            <span class="ansi-blue-fg">&#34; and either pydot or pydot-ng for &#34;</span>
+<span class="ansi-green-intense-fg ansi-bold">    782</span>                            <span class="ansi-blue-fg">&#34;`pydotprint` to work.&#34;</span><span class="ansi-blue-fg">,</span>
+<span class="ansi-green-fg">--&gt; 783</span><span class="ansi-red-fg">                            pydot_imported_msg)
+</span><span class="ansi-green-intense-fg ansi-bold">    784</span>
+<span class="ansi-green-intense-fg ansi-bold">    785</span>     g <span class="ansi-blue-fg">=</span> pd<span class="ansi-blue-fg">.</span>Dot<span class="ansi-blue-fg">(</span><span class="ansi-blue-fg">)</span>
+
+<span class="ansi-red-fg">RuntimeError</span>: (&#39;Failed to import pydot. You must install graphviz and either pydot or pydot-ng for `pydotprint` to work.&#39;, &#39;Install the python package pydot or pydot-ng. Install graphviz.&#39;)
+</pre></div></div>
+</div>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [13]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">dlogp</span><span class="o">.</span><span class="n">f</span><span class="o">.</span><span class="n">profile</span><span class="o">.</span><span class="n">summary</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="stderr container">
+<div class="highlight"><pre>
+Function profiling
+==================
+  Message: /home/wiecki/working/projects/pymc/pymc3/model.py:574
+  Time in 41 calls to Function.__call__: 9.287121e-01s
+  Time in Function.fn.__call__: 9.256220e-01s (99.667%)
+  Time in thunks: 9.239535e-01s (99.488%)
+  Total compile time: 5.363478e+00s
+    Number of Apply nodes: 4
+    Theano Optimizer time: 2.129299e+00s
+       Theano validate time: 1.461267e-03s
+    Theano Linker time (includes C, CUDA code generation/compiling): 2.989259e+00s
+       Import time 3.308773e-03s
+       Node make_thunk time 2.988755e+00s
+           Node CGemv{no_inplace}(beta, TensorConstant{1.0}, TensorConstant{[[-1.29734..        ]]}, Elemwise{Composite{Switch(i0, Switch(Composite{Identity((GE(i0, i1) * LE(i0, i2)))}(scalar_sigmoid(i1), i2, i3), (i4 - scalar_sigmoid(i1)), i2), Switch(Composite{Identity((GE(i0, i1) * LE(i0, i2)))}(scalar_sigmoid(i1), i2, i3), (-scalar_sigmoid(i1)), i2))}}[(0, 1)].0, TensorConstant{-1.0}) time 2.769116e+00s
+           Node CGemv{inplace}(AllocEmpty{dtype=&#39;float32&#39;}.0, TensorConstant{1.0}, TensorConstant{[[-1.29734..        ]]}, beta, TensorConstant{0.0}) time 2.099655e-01s
+           Node Elemwise{Composite{Switch(i0, Switch(Composite{Identity((GE(i0, i1) * LE(i0, i2)))}(scalar_sigmoid(i1), i2, i3), (i4 - scalar_sigmoid(i1)), i2), Switch(Composite{Identity((GE(i0, i1) * LE(i0, i2)))}(scalar_sigmoid(i1), i2, i3), (-scalar_sigmoid(i1)), i2))}}[(0, 1)](TensorConstant{[0 0 0 ..., 0 0 0]}, CGemv{inplace}.0, TensorConstant{(1,) of 0}, TensorConstant{(1,) of 1}, TensorConstant{(1,) of 1.0}) time 9.192467e-03s
+           Node AllocEmpty{dtype=&#39;float32&#39;}(TensorConstant{581012}) time 4.730225e-04s
+
+Time in all call to theano.grad() 1.467909e+00s
+Time since theano import 58.806s
+Class
+---
+&lt;% time&gt; &lt;sum %&gt; &lt;apply time&gt; &lt;time per call&gt; &lt;type&gt; &lt;#call&gt; &lt;#apply&gt; &lt;Class name&gt;
+  65.2%    65.2%       0.602s       7.34e-03s     C       82       2   theano.tensor.blas_c.CGemv
+  34.8%   100.0%       0.322s       7.84e-03s     C       41       1   theano.tensor.elemwise.Elemwise
+   0.0%   100.0%       0.000s       2.74e-06s     C       41       1   theano.tensor.basic.AllocEmpty
+   ... (remaining 0 Classes account for   0.00%(0.00s) of the runtime)
+
+Ops
+---
+&lt;% time&gt; &lt;sum %&gt; &lt;apply time&gt; &lt;time per call&gt; &lt;type&gt; &lt;#call&gt; &lt;#apply&gt; &lt;Op name&gt;
+  34.8%    34.8%       0.322s       7.84e-03s     C       41        1   Elemwise{Composite{Switch(i0, Switch(Composite{Identity((GE(i0, i1) * LE(i0, i2)))}(scalar_sigmoid(i1), i2, i3), (i4 - scalar_sigmoid(i1)), i2), Switch(Composite{Identity((GE(i0, i1) * LE(i0, i2)))}(scalar_sigmoid(i1), i2, i3), (-scalar_sigmoid(i1)), i2))}}[(0, 1)]
+  33.3%    68.1%       0.308s       7.51e-03s     C       41        1   CGemv{no_inplace}
+  31.9%   100.0%       0.295s       7.18e-03s     C       41        1   CGemv{inplace}
+   0.0%   100.0%       0.000s       2.74e-06s     C       41        1   AllocEmpty{dtype=&#39;float32&#39;}
+   ... (remaining 0 Ops account for   0.00%(0.00s) of the runtime)
+
+Apply
+------
+&lt;% time&gt; &lt;sum %&gt; &lt;apply time&gt; &lt;time per call&gt; &lt;#call&gt; &lt;id&gt; &lt;Apply name&gt;
+  34.8%    34.8%       0.322s       7.84e-03s     41     2   Elemwise{Composite{Switch(i0, Switch(Composite{Identity((GE(i0, i1) * LE(i0, i2)))}(scalar_sigmoid(i1), i2, i3), (i4 - scalar_sigmoid(i1)), i2), Switch(Composite{Identity((GE(i0, i1) * LE(i0, i2)))}(scalar_sigmoid(i1), i2, i3), (-scalar_sigmoid(i1)), i2))}}[(0, 1)](TensorConstant{[0 0 0 ..., 0 0 0]}, CGemv{inplace}.0, TensorConstant{(1,) of 0}, TensorConstant{(1,) of 1}, TensorConstant{(1,) of 1.0})
+  33.3%    68.1%       0.308s       7.51e-03s     41     3   CGemv{no_inplace}(beta, TensorConstant{1.0}, TensorConstant{[[-1.29734..        ]]}, Elemwise{Composite{Switch(i0, Switch(Composite{Identity((GE(i0, i1) * LE(i0, i2)))}(scalar_sigmoid(i1), i2, i3), (i4 - scalar_sigmoid(i1)), i2), Switch(Composite{Identity((GE(i0, i1) * LE(i0, i2)))}(scalar_sigmoid(i1), i2, i3), (-scalar_sigmoid(i1)), i2))}}[(0, 1)].0, TensorConstant{-1.0})
+  31.9%   100.0%       0.295s       7.18e-03s     41     1   CGemv{inplace}(AllocEmpty{dtype=&#39;float32&#39;}.0, TensorConstant{1.0}, TensorConstant{[[-1.29734..        ]]}, beta, TensorConstant{0.0})
+   0.0%   100.0%       0.000s       2.74e-06s     41     0   AllocEmpty{dtype=&#39;float32&#39;}(TensorConstant{581012})
+   ... (remaining 0 Apply instances account for 0.00%(0.00s) of the runtime)
+
+Here are tips to potentially make your code run faster
+                 (if you think of new ones, suggest them on the mailing list).
+                 Test them first, as they are not guaranteed to always provide a speedup.
+  - Try installing amdlibm and set the Theano flag lib.amdlibm=True. This speeds up only some Elemwise operation.
+</pre></div></div>
+</div>
+<div class="nbinput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [ ]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">Function</span> <span class="n">profiling</span>
+<span class="o">==================</span>
+  <span class="n">Message</span><span class="p">:</span> <span class="o">&lt;</span><span class="n">ipython</span><span class="o">-</span><span class="nb">input</span><span class="o">-</span><span class="mi">15</span><span class="o">-</span><span class="mi">44373</span><span class="n">b114871</span><span class="o">&gt;</span><span class="p">:</span><span class="mi">37</span>
+  <span class="n">Time</span> <span class="ow">in</span> <span class="mi">41</span> <span class="n">calls</span> <span class="n">to</span> <span class="n">Function</span><span class="o">.</span><span class="n">__call__</span><span class="p">:</span> <span class="mf">7.081084e-01</span><span class="n">s</span>
+  <span class="n">Time</span> <span class="ow">in</span> <span class="n">Function</span><span class="o">.</span><span class="n">fn</span><span class="o">.</span><span class="n">__call__</span><span class="p">:</span> <span class="mf">7.050962e-01</span><span class="n">s</span> <span class="p">(</span><span class="mf">99.575</span><span class="o">%</span><span class="p">)</span>
+  <span class="n">Time</span> <span class="ow">in</span> <span class="n">thunks</span><span class="p">:</span> <span class="mf">7.037623e-01</span><span class="n">s</span> <span class="p">(</span><span class="mf">99.386</span><span class="o">%</span><span class="p">)</span>
+  <span class="n">Total</span> <span class="nb">compile</span> <span class="n">time</span><span class="p">:</span> <span class="mf">3.073976e-01</span><span class="n">s</span>
+    <span class="n">Number</span> <span class="n">of</span> <span class="n">Apply</span> <span class="n">nodes</span><span class="p">:</span> <span class="mi">9</span>
+    <span class="n">Theano</span> <span class="n">Optimizer</span> <span class="n">time</span><span class="p">:</span> <span class="mf">4.145336e-02</span><span class="n">s</span>
+       <span class="n">Theano</span> <span class="n">validate</span> <span class="n">time</span><span class="p">:</span> <span class="mf">5.130768e-04</span><span class="n">s</span>
+    <span class="n">Theano</span> <span class="n">Linker</span> <span class="n">time</span> <span class="p">(</span><span class="n">includes</span> <span class="n">C</span><span class="p">,</span> <span class="n">CUDA</span> <span class="n">code</span> <span class="n">generation</span><span class="o">/</span><span class="n">compiling</span><span class="p">):</span> <span class="mf">1.980829e-02</span><span class="n">s</span>
+       <span class="n">Import</span> <span class="n">time</span> <span class="mf">9.435177e-03</span><span class="n">s</span>
+       <span class="n">Node</span> <span class="n">make_thunk</span> <span class="n">time</span> <span class="mf">1.919985e-02</span><span class="n">s</span>
+           <span class="n">Node</span> <span class="n">CGemv</span><span class="p">{</span><span class="n">no_inplace</span><span class="p">}(</span><span class="n">TensorConstant</span><span class="p">{[</span> <span class="mf">0.</span>  <span class="mf">0.</span>  <span class="o">...</span>  <span class="mf">0.</span>  <span class="mf">0.</span><span class="p">]},</span> <span class="n">TensorConstant</span><span class="p">{</span><span class="mf">1.0</span><span class="p">},</span> <span class="o">&lt;</span><span class="n">TensorType</span><span class="p">(</span><span class="n">float32</span><span class="p">,</span> <span class="n">matrix</span><span class="p">)</span><span class="o">&gt;</span><span class="p">,</span> <span class="n">beta</span><span class="p">,</span> <span class="n">TensorConstant</span><span class="p">{</span><span class="o">-</span><span class="mf">1.0</span><span class="p">})</span> <span class="n">time</span> <span class="mf">4.457951e-03</span><span class="n">s</span>
+           <span class="n">Node</span> <span class="n">Elemwise</span><span class="p">{</span><span class="n">Neg</span><span class="p">}[(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">)](</span><span class="n">CGemv</span><span class="p">{</span><span class="n">no_inplace</span><span class="p">}</span><span class="o">.</span><span class="mi">0</span><span class="p">)</span> <span class="n">time</span> <span class="mf">4.371643e-03</span><span class="n">s</span>
+           <span class="n">Node</span> <span class="n">Elemwise</span><span class="p">{</span><span class="n">Composite</span><span class="p">{((</span><span class="n">i0</span> <span class="o">*</span> <span class="n">i1</span><span class="p">)</span> <span class="o">-</span> <span class="p">(</span><span class="n">i2</span> <span class="o">*</span> <span class="n">i3</span><span class="p">))}}[(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">)](</span><span class="n">TensorConstant</span><span class="p">{</span><span class="o">-</span><span class="mf">0.5</span><span class="p">},</span> <span class="n">Sum</span><span class="p">{</span><span class="n">acc_dtype</span><span class="o">=</span><span class="n">float64</span><span class="p">}</span><span class="o">.</span><span class="mi">0</span><span class="p">,</span> <span class="n">TensorConstant</span><span class="p">{</span><span class="mf">0.5</span><span class="p">},</span> <span class="n">Sum</span><span class="p">{</span><span class="n">acc_dtype</span><span class="o">=</span><span class="n">float64</span><span class="p">}</span><span class="o">.</span><span class="mi">0</span><span class="p">)</span> <span class="n">time</span> <span class="mf">3.947973e-03</span><span class="n">s</span>
+           <span class="n">Node</span> <span class="n">Sum</span><span class="p">{</span><span class="n">acc_dtype</span><span class="o">=</span><span class="n">float64</span><span class="p">}(</span><span class="n">Elemwise</span><span class="p">{</span><span class="n">sqr</span><span class="p">,</span><span class="n">no_inplace</span><span class="p">}</span><span class="o">.</span><span class="mi">0</span><span class="p">)</span> <span class="n">time</span> <span class="mf">3.738403e-03</span><span class="n">s</span>
+           <span class="n">Node</span> <span class="n">CGemv</span><span class="p">{</span><span class="n">no_inplace</span><span class="p">}(</span><span class="n">beta</span><span class="p">,</span> <span class="n">TensorConstant</span><span class="p">{</span><span class="mf">1.0</span><span class="p">},</span> <span class="n">InplaceDimShuffle</span><span class="p">{</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">}</span><span class="o">.</span><span class="mi">0</span><span class="p">,</span> <span class="n">Elemwise</span><span class="p">{</span><span class="n">Neg</span><span class="p">}[(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">)]</span><span class="o">.</span><span class="mi">0</span><span class="p">,</span> <span class="n">TensorConstant</span><span class="p">{</span><span class="o">-</span><span class="mf">1.0</span><span class="p">})</span> <span class="n">time</span> <span class="mf">7.760525e-04</span><span class="n">s</span>
+
+<span class="n">Time</span> <span class="ow">in</span> <span class="nb">all</span> <span class="n">call</span> <span class="n">to</span> <span class="n">theano</span><span class="o">.</span><span class="n">grad</span><span class="p">()</span> <span class="mf">2.922777e+00</span><span class="n">s</span>
+<span class="n">Time</span> <span class="n">since</span> <span class="n">theano</span> <span class="kn">import</span> <span class="mf">87.091</span><span class="n">s</span>
+<span class="n">Class</span>
+<span class="o">---</span>
+<span class="o">&lt;%</span> <span class="n">time</span><span class="o">&gt;</span> <span class="o">&lt;</span><span class="nb">sum</span> <span class="o">%&gt;</span> <span class="o">&lt;</span><span class="nb">apply</span> <span class="n">time</span><span class="o">&gt;</span> <span class="o">&lt;</span><span class="n">time</span> <span class="n">per</span> <span class="n">call</span><span class="o">&gt;</span> <span class="o">&lt;</span><span class="nb">type</span><span class="o">&gt;</span> <span class="o">&lt;</span><span class="c1">#call&gt; &lt;#apply&gt; &lt;Class name&gt;</span>
+  <span class="mf">89.7</span><span class="o">%</span>    <span class="mf">89.7</span><span class="o">%</span>       <span class="mf">0.631</span><span class="n">s</span>       <span class="mf">7.70e-03</span><span class="n">s</span>     <span class="n">C</span>       <span class="mi">82</span>       <span class="mi">2</span>   <span class="n">theano</span><span class="o">.</span><span class="n">tensor</span><span class="o">.</span><span class="n">blas_c</span><span class="o">.</span><span class="n">CGemv</span>
+   <span class="mf">6.0</span><span class="o">%</span>    <span class="mf">95.7</span><span class="o">%</span>       <span class="mf">0.043</span><span class="n">s</span>       <span class="mf">5.19e-04</span><span class="n">s</span>     <span class="n">C</span>       <span class="mi">82</span>       <span class="mi">2</span>   <span class="n">theano</span><span class="o">.</span><span class="n">tensor</span><span class="o">.</span><span class="n">elemwise</span><span class="o">.</span><span class="n">Sum</span>
+   <span class="mf">4.2</span><span class="o">%</span>   <span class="mf">100.0</span><span class="o">%</span>       <span class="mf">0.030</span><span class="n">s</span>       <span class="mf">1.82e-04</span><span class="n">s</span>     <span class="n">C</span>      <span class="mi">164</span>       <span class="mi">4</span>   <span class="n">theano</span><span class="o">.</span><span class="n">tensor</span><span class="o">.</span><span class="n">elemwise</span><span class="o">.</span><span class="n">Elemwise</span>
+   <span class="mf">0.0</span><span class="o">%</span>   <span class="mf">100.0</span><span class="o">%</span>       <span class="mf">0.000</span><span class="n">s</span>       <span class="mf">1.59e-06</span><span class="n">s</span>     <span class="n">C</span>       <span class="mi">41</span>       <span class="mi">1</span>   <span class="n">theano</span><span class="o">.</span><span class="n">tensor</span><span class="o">.</span><span class="n">elemwise</span><span class="o">.</span><span class="n">DimShuffle</span>
+   <span class="o">...</span> <span class="p">(</span><span class="n">remaining</span> <span class="mi">0</span> <span class="n">Classes</span> <span class="n">account</span> <span class="k">for</span>   <span class="mf">0.00</span><span class="o">%</span><span class="p">(</span><span class="mf">0.00</span><span class="n">s</span><span class="p">)</span> <span class="n">of</span> <span class="n">the</span> <span class="n">runtime</span><span class="p">)</span>
+
+<span class="n">Ops</span>
+<span class="o">---</span>
+<span class="o">&lt;%</span> <span class="n">time</span><span class="o">&gt;</span> <span class="o">&lt;</span><span class="nb">sum</span> <span class="o">%&gt;</span> <span class="o">&lt;</span><span class="nb">apply</span> <span class="n">time</span><span class="o">&gt;</span> <span class="o">&lt;</span><span class="n">time</span> <span class="n">per</span> <span class="n">call</span><span class="o">&gt;</span> <span class="o">&lt;</span><span class="nb">type</span><span class="o">&gt;</span> <span class="o">&lt;</span><span class="c1">#call&gt; &lt;#apply&gt; &lt;Op name&gt;</span>
+  <span class="mf">89.7</span><span class="o">%</span>    <span class="mf">89.7</span><span class="o">%</span>       <span class="mf">0.631</span><span class="n">s</span>       <span class="mf">7.70e-03</span><span class="n">s</span>     <span class="n">C</span>       <span class="mi">82</span>        <span class="mi">2</span>   <span class="n">CGemv</span><span class="p">{</span><span class="n">no_inplace</span><span class="p">}</span>
+   <span class="mf">6.0</span><span class="o">%</span>    <span class="mf">95.7</span><span class="o">%</span>       <span class="mf">0.043</span><span class="n">s</span>       <span class="mf">5.19e-04</span><span class="n">s</span>     <span class="n">C</span>       <span class="mi">82</span>        <span class="mi">2</span>   <span class="n">Sum</span><span class="p">{</span><span class="n">acc_dtype</span><span class="o">=</span><span class="n">float64</span><span class="p">}</span>
+   <span class="mf">2.4</span><span class="o">%</span>    <span class="mf">98.2</span><span class="o">%</span>       <span class="mf">0.017</span><span class="n">s</span>       <span class="mf">4.17e-04</span><span class="n">s</span>     <span class="n">C</span>       <span class="mi">41</span>        <span class="mi">1</span>   <span class="n">Elemwise</span><span class="p">{</span><span class="n">Neg</span><span class="p">}[(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">)]</span>
+   <span class="mf">1.8</span><span class="o">%</span>   <span class="mf">100.0</span><span class="o">%</span>       <span class="mf">0.013</span><span class="n">s</span>       <span class="mf">1.55e-04</span><span class="n">s</span>     <span class="n">C</span>       <span class="mi">82</span>        <span class="mi">2</span>   <span class="n">Elemwise</span><span class="p">{</span><span class="n">sqr</span><span class="p">,</span><span class="n">no_inplace</span><span class="p">}</span>
+   <span class="mf">0.0</span><span class="o">%</span>   <span class="mf">100.0</span><span class="o">%</span>       <span class="mf">0.000</span><span class="n">s</span>       <span class="mf">1.90e-06</span><span class="n">s</span>     <span class="n">C</span>       <span class="mi">41</span>        <span class="mi">1</span>   <span class="n">Elemwise</span><span class="p">{</span><span class="n">Composite</span><span class="p">{((</span><span class="n">i0</span> <span class="o">*</span> <span class="n">i1</span><span class="p">)</span> <span class="o">-</span> <span class="p">(</span><span class="n">i2</span> <span class="o">*</span> <span class="n">i3</span><span class="p">))}}[(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">)]</span>
+   <span class="mf">0.0</span><span class="o">%</span>   <span class="mf">100.0</span><span class="o">%</span>       <span class="mf">0.000</span><span class="n">s</span>       <span class="mf">1.59e-06</span><span class="n">s</span>     <span class="n">C</span>       <span class="mi">41</span>        <span class="mi">1</span>   <span class="n">InplaceDimShuffle</span><span class="p">{</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">}</span>
+   <span class="o">...</span> <span class="p">(</span><span class="n">remaining</span> <span class="mi">0</span> <span class="n">Ops</span> <span class="n">account</span> <span class="k">for</span>   <span class="mf">0.00</span><span class="o">%</span><span class="p">(</span><span class="mf">0.00</span><span class="n">s</span><span class="p">)</span> <span class="n">of</span> <span class="n">the</span> <span class="n">runtime</span><span class="p">)</span>
+
+<span class="n">Apply</span>
+<span class="o">------</span>
+<span class="o">&lt;%</span> <span class="n">time</span><span class="o">&gt;</span> <span class="o">&lt;</span><span class="nb">sum</span> <span class="o">%&gt;</span> <span class="o">&lt;</span><span class="nb">apply</span> <span class="n">time</span><span class="o">&gt;</span> <span class="o">&lt;</span><span class="n">time</span> <span class="n">per</span> <span class="n">call</span><span class="o">&gt;</span> <span class="o">&lt;</span><span class="c1">#call&gt; &lt;id&gt; &lt;Apply name&gt;</span>
+  <span class="mf">45.5</span><span class="o">%</span>    <span class="mf">45.5</span><span class="o">%</span>       <span class="mf">0.321</span><span class="n">s</span>       <span class="mf">7.82e-03</span><span class="n">s</span>     <span class="mi">41</span>     <span class="mi">7</span>   <span class="n">CGemv</span><span class="p">{</span><span class="n">no_inplace</span><span class="p">}(</span><span class="n">beta</span><span class="p">,</span> <span class="n">TensorConstant</span><span class="p">{</span><span class="mf">1.0</span><span class="p">},</span> <span class="n">InplaceDimShuffle</span><span class="p">{</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">}</span><span class="o">.</span><span class="mi">0</span><span class="p">,</span> <span class="n">Elemwise</span><span class="p">{</span><span class="n">Neg</span><span class="p">}[(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">)]</span><span class="o">.</span><span class="mi">0</span><span class="p">,</span> <span class="n">TensorConstant</span><span class="p">{</span><span class="o">-</span><span class="mf">1.0</span><span class="p">})</span>
+  <span class="mf">44.2</span><span class="o">%</span>    <span class="mf">89.7</span><span class="o">%</span>       <span class="mf">0.311</span><span class="n">s</span>       <span class="mf">7.58e-03</span><span class="n">s</span>     <span class="mi">41</span>     <span class="mi">2</span>   <span class="n">CGemv</span><span class="p">{</span><span class="n">no_inplace</span><span class="p">}(</span><span class="n">TensorConstant</span><span class="p">{[</span> <span class="mf">0.</span>  <span class="mf">0.</span>  <span class="o">...</span>  <span class="mf">0.</span>  <span class="mf">0.</span><span class="p">]},</span> <span class="n">TensorConstant</span><span class="p">{</span><span class="mf">1.0</span><span class="p">},</span> <span class="o">&lt;</span><span class="n">TensorType</span><span class="p">(</span><span class="n">float32</span><span class="p">,</span> <span class="n">matrix</span><span class="p">)</span><span class="o">&gt;</span><span class="p">,</span> <span class="n">beta</span><span class="p">,</span> <span class="n">TensorConstant</span><span class="p">{</span><span class="o">-</span><span class="mf">1.0</span><span class="p">})</span>
+   <span class="mf">6.0</span><span class="o">%</span>    <span class="mf">95.7</span><span class="o">%</span>       <span class="mf">0.042</span><span class="n">s</span>       <span class="mf">1.04e-03</span><span class="n">s</span>     <span class="mi">41</span>     <span class="mi">6</span>   <span class="n">Sum</span><span class="p">{</span><span class="n">acc_dtype</span><span class="o">=</span><span class="n">float64</span><span class="p">}(</span><span class="n">Elemwise</span><span class="p">{</span><span class="n">sqr</span><span class="p">,</span><span class="n">no_inplace</span><span class="p">}</span><span class="o">.</span><span class="mi">0</span><span class="p">)</span>
+   <span class="mf">2.4</span><span class="o">%</span>    <span class="mf">98.2</span><span class="o">%</span>       <span class="mf">0.017</span><span class="n">s</span>       <span class="mf">4.17e-04</span><span class="n">s</span>     <span class="mi">41</span>     <span class="mi">5</span>   <span class="n">Elemwise</span><span class="p">{</span><span class="n">Neg</span><span class="p">}[(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">)](</span><span class="n">CGemv</span><span class="p">{</span><span class="n">no_inplace</span><span class="p">}</span><span class="o">.</span><span class="mi">0</span><span class="p">)</span>
+   <span class="mf">1.8</span><span class="o">%</span>   <span class="mf">100.0</span><span class="o">%</span>       <span class="mf">0.013</span><span class="n">s</span>       <span class="mf">3.07e-04</span><span class="n">s</span>     <span class="mi">41</span>     <span class="mi">4</span>   <span class="n">Elemwise</span><span class="p">{</span><span class="n">sqr</span><span class="p">,</span><span class="n">no_inplace</span><span class="p">}(</span><span class="n">CGemv</span><span class="p">{</span><span class="n">no_inplace</span><span class="p">}</span><span class="o">.</span><span class="mi">0</span><span class="p">)</span>
+   <span class="mf">0.0</span><span class="o">%</span>   <span class="mf">100.0</span><span class="o">%</span>       <span class="mf">0.000</span><span class="n">s</span>       <span class="mf">2.02e-06</span><span class="n">s</span>     <span class="mi">41</span>     <span class="mi">0</span>   <span class="n">Elemwise</span><span class="p">{</span><span class="n">sqr</span><span class="p">,</span><span class="n">no_inplace</span><span class="p">}(</span><span class="n">beta</span><span class="p">)</span>
+   <span class="mf">0.0</span><span class="o">%</span>   <span class="mf">100.0</span><span class="o">%</span>       <span class="mf">0.000</span><span class="n">s</span>       <span class="mf">1.90e-06</span><span class="n">s</span>     <span class="mi">41</span>     <span class="mi">8</span>   <span class="n">Elemwise</span><span class="p">{</span><span class="n">Composite</span><span class="p">{((</span><span class="n">i0</span> <span class="o">*</span> <span class="n">i1</span><span class="p">)</span> <span class="o">-</span> <span class="p">(</span><span class="n">i2</span> <span class="o">*</span> <span class="n">i3</span><span class="p">))}}[(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">)](</span><span class="n">TensorConstant</span><span class="p">{</span><span class="o">-</span><span class="mf">0.5</span><span class="p">},</span> <span class="n">Sum</span><span class="p">{</span><span class="n">acc_dtype</span><span class="o">=</span><span class="n">float64</span><span class="p">}</span><span class="o">.</span><span class="mi">0</span><span class="p">,</span> <span class="n">TensorConstant</span><span class="p">{</span><span class="mf">0.5</span><span class="p">},</span> <span class="n">Sum</span><span class="p">{</span><span class="n">acc_dtype</span><span class="o">=</span><span class="n">float64</span><span class="p">}</span><span class="o">.</span><span class="mi">0</span><span class="p">)</span>
+   <span class="mf">0.0</span><span class="o">%</span>   <span class="mf">100.0</span><span class="o">%</span>       <span class="mf">0.000</span><span class="n">s</span>       <span class="mf">1.77e-06</span><span class="n">s</span>     <span class="mi">41</span>     <span class="mi">3</span>   <span class="n">Sum</span><span class="p">{</span><span class="n">acc_dtype</span><span class="o">=</span><span class="n">float64</span><span class="p">}(</span><span class="n">Elemwise</span><span class="p">{</span><span class="n">sqr</span><span class="p">,</span><span class="n">no_inplace</span><span class="p">}</span><span class="o">.</span><span class="mi">0</span><span class="p">)</span>
+   <span class="mf">0.0</span><span class="o">%</span>   <span class="mf">100.0</span><span class="o">%</span>       <span class="mf">0.000</span><span class="n">s</span>       <span class="mf">1.59e-06</span><span class="n">s</span>     <span class="mi">41</span>     <span class="mi">1</span>   <span class="n">InplaceDimShuffle</span><span class="p">{</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">}(</span><span class="o">&lt;</span><span class="n">TensorType</span><span class="p">(</span><span class="n">float32</span><span class="p">,</span> <span class="n">matrix</span><span class="p">)</span><span class="o">&gt;</span><span class="p">)</span>
+   <span class="o">...</span> <span class="p">(</span><span class="n">remaining</span> <span class="mi">0</span> <span class="n">Apply</span> <span class="n">instances</span> <span class="n">account</span> <span class="k">for</span> <span class="mf">0.00</span><span class="o">%</span><span class="p">(</span><span class="mf">0.00</span><span class="n">s</span><span class="p">)</span> <span class="n">of</span> <span class="n">the</span> <span class="n">runtime</span><span class="p">)</span>
+
+<span class="n">Here</span> <span class="n">are</span> <span class="n">tips</span> <span class="n">to</span> <span class="n">potentially</span> <span class="n">make</span> <span class="n">your</span> <span class="n">code</span> <span class="n">run</span> <span class="n">faster</span>
+                 <span class="p">(</span><span class="k">if</span> <span class="n">you</span> <span class="n">think</span> <span class="n">of</span> <span class="n">new</span> <span class="n">ones</span><span class="p">,</span> <span class="n">suggest</span> <span class="n">them</span> <span class="n">on</span> <span class="n">the</span> <span class="n">mailing</span> <span class="nb">list</span><span class="p">)</span><span class="o">.</span>
+                 <span class="n">Test</span> <span class="n">them</span> <span class="n">first</span><span class="p">,</span> <span class="k">as</span> <span class="n">they</span> <span class="n">are</span> <span class="ow">not</span> <span class="n">guaranteed</span> <span class="n">to</span> <span class="n">always</span> <span class="n">provide</span> <span class="n">a</span> <span class="n">speedup</span><span class="o">.</span>
+  <span class="n">Sorry</span><span class="p">,</span> <span class="n">no</span> <span class="n">tip</span> <span class="k">for</span> <span class="n">today</span><span class="o">.</span>
+</pre></div>
+</div>
+</div>
+</div>
 <div class="section" id="Handwritten-code-with-TF-for-gradients">
 <h1>Handwritten code with TF for gradients<a class="headerlink" href="#Handwritten-code-with-TF-for-gradients" title="Permalink to this headline">¶</a></h1>
 <div class="nbinput nblast container">
@@ -1096,7 +1363,7 @@ TF (GPU) took 5.855 seconds
 <div class="container">
 </div>
 <div class="container">
-<img alt="../_images/notebooks_hmc_experiments_32_1.png" src="../_images/notebooks_hmc_experiments_32_1.png" />
+<img alt="../_images/notebooks_hmc_experiments-Copy1_41_1.png" src="../_images/notebooks_hmc_experiments-Copy1_41_1.png" />
 </div>
 </div>
 <div class="nbinput container">
@@ -1142,7 +1409,7 @@ The slowest run took 6.52 times longer than the fastest. This could mean that an
 <div class="container">
 </div>
 <div class="container">
-<img alt="../_images/notebooks_hmc_experiments_34_1.png" src="../_images/notebooks_hmc_experiments_34_1.png" />
+<img alt="../_images/notebooks_hmc_experiments-Copy1_43_1.png" src="../_images/notebooks_hmc_experiments-Copy1_43_1.png" />
 </div>
 </div>
 </div>
@@ -1504,7 +1771,7 @@ Theano (GPU) took 4.471 seconds
 <div class="container">
 </div>
 <div class="container">
-<img alt="../_images/notebooks_hmc_experiments_46_1.png" src="../_images/notebooks_hmc_experiments_46_1.png" />
+<img alt="../_images/notebooks_hmc_experiments-Copy1_55_1.png" src="../_images/notebooks_hmc_experiments-Copy1_55_1.png" />
 </div>
 </div>
 <div class="nbinput container">
@@ -1550,7 +1817,7 @@ The slowest run took 6.52 times longer than the fastest. This could mean that an
 <div class="container">
 </div>
 <div class="container">
-<img alt="../_images/notebooks_hmc_experiments_48_1.png" src="../_images/notebooks_hmc_experiments_48_1.png" />
+<img alt="../_images/notebooks_hmc_experiments-Copy1_57_1.png" src="../_images/notebooks_hmc_experiments-Copy1_57_1.png" />
 </div>
 </div>
 <div class="nbinput nblast container">
