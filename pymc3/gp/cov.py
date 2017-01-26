@@ -233,6 +233,23 @@ class Linear(Covariance):
             return tt.dot(Xc, tt.transpose(Zc))
 
 
+class Polynomial(Linear):
+    R"""
+    The polynomial covariance function.
+
+    .. math::
+       k(x, x') = [(x - c)(x' - c) + \mathrm{offset}]^{d}
+    """
+
+    def __init__(self, input_dim, c, d, offset, active_dims=None):
+        Linear.__init__(self, input_dim, c, active_dims)
+        self.d = d
+        self.offset = offset
+
+    def K(self, X, Z=None):
+        return tt.power(Linear.K(self, X, Z) + self.offset, self.d)
+
+
 class WarpedInput(Covariance):
     R"""
     Warp the inputs of any covariance function using an arbitrary function
