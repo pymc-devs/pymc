@@ -36,6 +36,13 @@ GLM
    notebooks/GLM-poisson-regression.ipynb
    notebooks/hierarchical_partial_pooling.ipynb
 
+GP
+==
+
+.. toctree::
+   notebooks/GP-intro.ipynb
+   notebooks/GP-covariances.ipynb
+
 Mixture Models
 ==============
 
