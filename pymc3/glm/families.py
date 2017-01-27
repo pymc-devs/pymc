@@ -22,7 +22,6 @@ identity = Identity()
 logit = tt.nnet.sigmoid
 inverse = tt.inv
 exp = tt.exp
-log = tt.log
 
 
 class Family(object):
