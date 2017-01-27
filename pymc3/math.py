@@ -1,7 +1,7 @@
 from __future__ import division
 import sys
 import theano.tensor as tt
-# pylint: disable=unused-import
+# pylint: disable=unused-import, redefined-builtin
 import theano
 from theano.tensor import (
     constant, flatten, zeros_like, ones_like, stack, concatenate, sum, prod,
@@ -10,7 +10,7 @@ from theano.tensor import (
     minimum, sgn, ceil, floor)
 from theano.tensor.nlinalg import det, matrix_inverse, extract_diag, matrix_dot, trace
 from theano.tensor.nnet import sigmoid
-# pylint: enable=unused-import
+# pylint: enable=unused-import, redefined-builtin
 
 
 def logsumexp(x, axis=None):
