@@ -3,6 +3,7 @@ __version__ = "3.0"
 from .blocking import *
 from .distributions import *
 from .external import *
+from .glm import *
 from .math import logsumexp, logit, invlogit
 from .model import *
 from .stats import *
@@ -23,7 +24,6 @@ from .plots import *
 
 from .tests import test
 
-from . import glm
 from .data import *
 
 import logging

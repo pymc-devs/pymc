@@ -1,8 +1,9 @@
 import numpy as np
 
 from .helpers import SeededTest
-from pymc3 import glm, Model, Uniform, Normal, find_MAP, Slice, sample
-
+from pymc3 import Model, Uniform, Normal, find_MAP, Slice, sample
+from pymc3 import families, GLM, LinearComponent
+import pandas as pd
 
 # Generate data
 def generate_data(intercept, slope, size=700):
@@ -20,7 +21,7 @@ class TestGLM(SeededTest):
         cls.sd = .05
         x_linear, cls.y_linear = generate_data(cls.intercept, cls.slope, size=1000)
         cls.y_linear += np.random.normal(size=1000, scale=cls.sd)
-        cls.data_linear = dict(x=x_linear, y=cls.y_linear)
+        cls.data_linear = pd.DataFrame(dict(x=x_linear, y=cls.y_linear))
 
         x_logistic, y_logistic = generate_data(cls.intercept, cls.slope, size=3000)
         y_logistic = 1 / (1 + np.exp(-y_logistic))
@@ -29,9 +30,9 @@ class TestGLM(SeededTest):
 
     def test_linear_component(self):
         with Model() as model:
-            y_est, _ = glm.linear_component('y ~ x', self.data_linear)
+            lm = LinearComponent.from_formula('y ~ x', self.data_linear)
             sigma = Uniform('sigma', 0, 20)
-            Normal('y_obs', mu=y_est, sd=sigma, observed=self.y_linear)
+            Normal('y_obs', mu=lm.y_est, sd=sigma, observed=self.y_linear)
             start = find_MAP(vars=[sigma])
             step = Slice(model.vars)
             trace = sample(500, step=step, start=start, progressbar=False, random_seed=self.random_seed)
@@ -42,7 +43,7 @@ class TestGLM(SeededTest):
 
     def test_glm(self):
         with Model() as model:
-            glm.glm('y ~ x', self.data_linear)
+            GLM.from_formula('y ~ x', self.data_linear)
             step = Slice(model.vars)
             trace = sample(500, step, progressbar=False, random_seed=self.random_seed)
 
@@ -52,8 +53,8 @@ class TestGLM(SeededTest):
 
     def test_glm_link_func(self):
         with Model() as model:
-            glm.glm('y ~ x', self.data_logistic,
-                    family=glm.families.Binomial(link=glm.families.logit))
+            GLM.from_formula('y ~ x', self.data_logistic,
+                    family=families.Binomial(link=families.logit))
             step = Slice(model.vars)
             trace = sample(1000, step, progressbar=False, random_seed=self.random_seed)
 
@@ -62,17 +63,16 @@ class TestGLM(SeededTest):
 
     def test_more_than_one_glm_is_ok(self):
         with Model():
-            glm.glm('y ~ x', self.data_logistic,
-                    family=glm.families.Binomial(link=glm.families.logit),
+            GLM.from_formula('y ~ x', self.data_logistic,
+                    family=families.Binomial(link=families.logit),
                     name='glm1')
-            glm.glm('y ~ x', self.data_logistic,
-                    family=glm.families.Binomial(link=glm.families.logit),
+            GLM.from_formula('y ~ x', self.data_logistic,
+                    family=families.Binomial(link=families.logit),
                     name='glm2')
 
     def test_from_xy(self):
         with Model():
-            glm.glm.from_xy(
-                self.data_logistic['x'],
+            GLM(self.data_logistic['x'],
                 self.data_logistic['y'],
-                family=glm.families.Binomial(link=glm.families.logit),
+                family=families.Binomial(link=families.logit),
                 name='glm1')
