@@ -1,6 +1,6 @@
 import numpy as np
 import pandas as pd
-from pyplot import plot, ylim, subplot, title
+from pylab import plot, ylim, subplot, title
 
 import pymc3 as pm
 
