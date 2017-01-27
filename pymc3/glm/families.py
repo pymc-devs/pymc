@@ -116,4 +116,4 @@ class NegativeBinomial(Family):
     likelihood = pm_dists.NegativeBinomial
     parent = 'mu'
     priors = {'mu': pm_dists.HalfCauchy.dist(beta=10, testval=1.),
-              'alpha': pm_dists.HalfCauchy.dist(beta=10, testval=1.),}
+              'alpha': pm_dists.HalfCauchy.dist(beta=10, testval=1.)}
