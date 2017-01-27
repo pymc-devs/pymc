@@ -149,6 +149,8 @@ def advi(vars=None, start=None, model=None, n=5000, accurate_elbo=False,
         progress = trange(n)
         for i in progress:
             uw_i, e = f()
+            if np.isnan(e):
+                raise FloatingPointError('NaN occurred in ADVI optimization.')
             elbos[i] = e
             if n < 10:
                 progress.set_description('ELBO = {:,.5g}'.format(elbos[i]))
