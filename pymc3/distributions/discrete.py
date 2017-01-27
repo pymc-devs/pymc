@@ -455,15 +455,18 @@ class Categorical(Discrete):
         p = self.p
         k = self.k
 
+        # Clip values before using them for indexing
+        value_clip = tt.clip(value, 0, k - 1)
+
         sumto1 = theano.gradient.zero_grad(
             tt.le(abs(tt.sum(p, axis=-1) - 1), 1e-5))
+
         if p.ndim > 1:
-            a = tt.log(p[tt.arange(p.shape[0]), value])
+            a = tt.log(p[tt.arange(p.shape[0]), value_clip])
         else:
-            a = tt.log(p[value])
-        return bound(a,
-                     value >= 0, value <= (k - 1),
-                     sumto1)
+            a = tt.log(p[value_clip])
+
+        return bound(a, value >= 0, value <= (k - 1), sumto1)
 
 
 class Constant(Discrete):

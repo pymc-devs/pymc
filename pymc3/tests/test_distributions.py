@@ -647,6 +647,12 @@ class TestMatchesScipy(SeededTest):
         for n in [2, 3, 4]:
             yield self.check_categorical, n
 
+    def test_categorical_bounds(self):
+        with Model():
+            x = Categorical('x', p=np.array([0.2, 0.3, 0.5]))
+            assert np.isinf(x.logp({'x': -1}))
+            assert np.isinf(x.logp({'x': 3}))
+
     def check_categorical(self, n):
         self.pymc3_matches_scipy(Categorical, Domain(range(n), 'int64'), {'p': Simplex(n)},
                                  lambda value, p: categorical_logpdf(value, p))
