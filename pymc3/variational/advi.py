@@ -211,8 +211,8 @@ def _elbo_t(logp, uw, inarray, n_mcsamples, random_seed):
     w = uw[l_int:]
 
     # Callable tensor
-    def logp_(input):
-        return theano.clone(logp, {inarray: input}, strict=False)
+    def logp_(var):
+        return theano.clone(logp, {inarray: var}, strict=False)
 
     # Naive Monte-Carlo
     if random_seed is None:

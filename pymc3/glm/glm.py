@@ -228,13 +228,13 @@ class glm(namedtuple('Estimate', 'y_est,coeffs')):
                    )
 
 
-def plot_posterior_predictive(trace, eval=None, lm=None, samples=30, **kwargs):
+def plot_posterior_predictive(trace, eval_over=None, lm=None, samples=30, **kwargs):
     """Plot posterior predictive of a linear model.
 
     :Arguments:
         trace : <array>
             Array of posterior samples with columns
-        eval : <array>
+        eval_over : <array>
             Array over which to evaluate lm
         lm : function <default: linear function>
             Function mapping parameters at different points
@@ -252,8 +252,8 @@ def plot_posterior_predictive(trace, eval=None, lm=None, samples=30, **kwargs):
     if lm is None:
         lm = lambda x, sample: sample['Intercept'] + sample['x'] * x
 
-    if eval is None:
-        eval = np.linspace(0, 1, 100)
+    if eval_over is None:
+        eval_over = np.linspace(0, 1, 100)
 
     # Set default plotting arguments
     if 'lw' not in kwargs and 'linewidth' not in kwargs:
@@ -263,7 +263,7 @@ def plot_posterior_predictive(trace, eval=None, lm=None, samples=30, **kwargs):
 
     for rand_loc in np.random.randint(0, len(trace), samples):
         rand_sample = trace[rand_loc]
-        plt.plot(eval, lm(eval, rand_sample), **kwargs)
+        plt.plot(eval_over, lm(eval_over, rand_sample), **kwargs)
         # Make sure to not plot label multiple times
         kwargs.pop('label', None)
 

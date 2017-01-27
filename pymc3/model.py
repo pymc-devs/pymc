@@ -736,12 +736,12 @@ compilef = fastfn
 class FreeRV(Factor, TensorVariable):
     """Unobserved random variable that a model is specified in terms of."""
 
-    def __init__(self, type=None, owner=None, index=None, name=None,
+    def __init__(self, dtype=None, owner=None, index=None, name=None,
                  distribution=None, total_size=None, model=None):
         """
         Parameters
         ----------
-        type : theano type (optional)
+        dtype : theano type (optional)
         owner : theano owner (optional)
         name : str
         distribution : Distribution
@@ -749,9 +749,9 @@ class FreeRV(Factor, TensorVariable):
         total_size : scalar Tensor (optional)
             needed for upscaling logp
         """
-        if type is None:
-            type = distribution.type
-        super(FreeRV, self).__init__(type, owner, index, name)
+        if dtype is None:
+            dtype = distribution.type
+        super(FreeRV, self).__init__(dtype, owner, index, name)
 
         if distribution is not None:
             self.dshape = tuple(distribution.shape)
@@ -817,25 +817,28 @@ class ObservedRV(Factor, TensorVariable):
     Potentially partially observed.
     """
 
-    def __init__(self, type=None, owner=None, index=None, name=None, data=None,
+    def __init__(self, dtype=None, owner=None, name=None, data=None,
                  distribution=None, total_size=None, model=None):
         """
         Parameters
         ----------
-        type : theano type (optional)
+        dtype : theano type (optional)
         owner : theano owner (optional)
         name : str
+        data : array_like (optional)
+           If data is provided, the variable is observed. If None,
+           the variable is unobserved.
         distribution : Distribution
-        model : Model
         total_size : scalar Tensor (optional)
             needed for upscaling logp
+        model : Model
         """
         from .distributions import TensorType
-        if type is None:
+        if dtype is None:
             data = pandas_to_array(data)
-            type = TensorType(distribution.dtype, data.shape)
+            dtype = TensorType(distribution.dtype, data.shape)
 
-        super(TensorVariable, self).__init__(type, None, None, name)
+        super(TensorVariable, self).__init__(dtype, None, None, name)
 
         if distribution is not None:
             data = as_tensor(data, name, model, distribution)
@@ -868,13 +871,12 @@ class MultiObservedRV(Factor):
         """
         Parameters
         ----------
-        type : theano type (optional)
-        owner : theano owner (optional)
         name : str
+        data : array_like
         distribution : Distribution
-        model : Model
         total_size : scalar Tensor (optional)
             needed for upscaling logp
+        model : Model
         """
         self.name = name
         self.data = {name: as_tensor(data, name, model, distribution)
@@ -927,14 +929,14 @@ def Potential(name, var, model=None):
 
 class TransformedRV(TensorVariable):
 
-    def __init__(self, type=None, owner=None, index=None, name=None,
+    def __init__(self, dtype=None, owner=None, index=None, name=None,
                  distribution=None, model=None, transform=None,
                  total_size=None):
         """
         Parameters
         ----------
 
-        type : theano type (optional)
+        dtype : theano type (optional)
         owner : theano owner (optional)
         name : str
         distribution : Distribution
@@ -942,9 +944,9 @@ class TransformedRV(TensorVariable):
         total_size : scalar Tensor (optional)
             needed for upscaling logp
         """
-        if type is None:
-            type = distribution.type
-        super(TransformedRV, self).__init__(type, owner, index, name)
+        if dtype is None:
+            dtype = distribution.type
+        super(TransformedRV, self).__init__(dtype, owner, index, name)
 
         if distribution is not None:
             self.model = model

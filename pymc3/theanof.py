@@ -232,15 +232,15 @@ class CallableTensor(object):
     def __init__(self, tensor):
         self.tensor = tensor
 
-    def __call__(self, input):
+    def __call__(self, sv_input):
         """ Replaces the single input of symbolic variable to be the passed argument.
 
         Parameters
         ----------
-        input : TensorVariable
+        sv_input : TensorVariable
         """
         oldinput, = inputvars(self.tensor)
-        return theano.clone(self.tensor, {oldinput: input}, strict=False)
+        return theano.clone(self.tensor, {oldinput: sv_input}, strict=False)
 
 scalar_identity = IdentityOp(scalar.upgrade_to_float, name='scalar_identity')
 identity = tt.Elemwise(scalar_identity, name='identity')

@@ -5,7 +5,7 @@ Created on May 12, 2012
 '''
 from .arraystep import ArrayStep, Competence
 from ..distributions.discrete import Categorical
-from numpy import array, max, exp, cumsum, nested_iters, empty, searchsorted, ones, arange
+import numpy as np
 from numpy.random import uniform
 from warnings import warn
 
@@ -27,12 +27,12 @@ class ElemwiseCategorical(ArrayStep):
 
     def __init__(self, vars, values=None, model=None):
         warn('ElemwiseCategorical is deprecated, switch to CategoricalGibbsMetropolis.',
-             DeprecationWarning, stacklevel = 2)
+             DeprecationWarning, stacklevel=2)
         model = modelcontext(model)
         self.var = vars[0]
-        self.sh = ones(self.var.dshape, self.var.dtype)
+        self.sh = np.ones(self.var.dshape, self.var.dtype)
         if values is None:
-            self.values = arange(self.var.distribution.k)
+            self.values = np.arange(self.var.distribution.k)
         else:
             self.values = values
 
@@ -40,13 +40,11 @@ class ElemwiseCategorical(ArrayStep):
             vars, [elemwise_logp(model, self.var)])
 
     def astep(self, q, logp):
-        p = array([logp(v * self.sh) for v in self.values])
+        p = np.array([logp(v * self.sh) for v in self.values])
         return categorical(p, self.var.dshape)
 
     @staticmethod
     def competence(var):
-        distribution = getattr(
-            var.distribution, 'parent_dist', var.distribution)
         if isinstance(var.distribution, Categorical):
             return Competence.COMPATIBLE
         return Competence.INCOMPATIBLE
@@ -59,18 +57,17 @@ def elemwise_logp(model, var):
 
 
 def categorical(prob, shape):
-    out = empty([1] + list(shape))
+    out = np.empty([1] + list(shape))
 
     n = len(shape)
-    it0, it1 = nested_iters([prob, out], [list(range(1, n + 1)), [0]],
-                            op_flags=[['readonly'], ['readwrite']],
-                            flags=['reduce_ok'])
+    it0, it1 = np.nested_iters([prob, out], [list(range(1, n + 1)), [0]],
+                               op_flags=[['readonly'], ['readwrite']],
+                               flags=['reduce_ok'])
 
     for i in it0:
         p, o = it1.itviews
-        p = cumsum(exp(p - max(p, axis=0)))
+        p = np.cumsum(np.exp(p - np.max(p, axis=0)))
         r = uniform() * p[-1]
-
-        o[0] = searchsorted(p, r)
+        o[0] = np.searchsorted(p, r)
 
     return out[0, ...]
