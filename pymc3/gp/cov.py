@@ -1,9 +1,7 @@
-from functools import reduce
-import copy
-
-import theano
 import theano.tensor as tt
 import numpy as np
+from functools import reduce
+
 
 __all__ = ['ExpQuad',
            'RatQuad',
