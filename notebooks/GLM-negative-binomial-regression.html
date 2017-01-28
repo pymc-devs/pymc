@@ -1,0 +1,951 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>GLM: Negative Binomial Regression &mdash; PyMC3 3.0 documentation</title>
+  
+
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  
+  
+    <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  
+
+  
+
+  
+        <link rel="index" title="Index"
+              href="../genindex.html"/>
+        <link rel="search" title="Search" href="../search.html"/>
+    <link rel="top" title="PyMC3 3.0 documentation" href="../index.html"/>
+        <link rel="up" title="Examples" href="../examples.html"/>
+        <link rel="next" title="Gaussian Process Regression" href="GP-introduction.html"/>
+        <link rel="prev" title="Hierarchical Partial Pooling" href="hierarchical_partial_pooling.html"/> 
+
+  
+  <script src="../_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+          
+            <a href="../index.html" class="icon icon-home"> PyMC3
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                3.0
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+                <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../getting_started.html">Getting started</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="../examples.html">Examples</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="../examples.html#howto">Howto</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../examples.html#applied">Applied</a></li>
+<li class="toctree-l2 current"><a class="reference internal" href="../examples.html#glm">GLM</a><ul class="current">
+<li class="toctree-l3"><a class="reference internal" href="GLM-linear.html">GLM: Linear regression</a></li>
+<li class="toctree-l3"><a class="reference internal" href="GLM-robust.html">GLM: Robust Linear Regression</a></li>
+<li class="toctree-l3"><a class="reference internal" href="GLM-robust-with-outlier-detection.html">GLM: Robust Regression with Outlier Detection</a></li>
+<li class="toctree-l3"><a class="reference internal" href="GLM-model-selection.html">GLM: Model Selection</a></li>
+<li class="toctree-l3"><a class="reference internal" href="GLM-rolling-regression.html">Rolling Regression</a></li>
+<li class="toctree-l3"><a class="reference internal" href="GLM-hierarchical.html">GLM: Hierarchical Linear Regression</a></li>
+<li class="toctree-l3"><a class="reference internal" href="GLM-poisson-regression.html">GLM: Poisson Regression</a></li>
+<li class="toctree-l3"><a class="reference internal" href="hierarchical_partial_pooling.html">Hierarchical Partial Pooling</a></li>
+<li class="toctree-l3 current"><a class="current reference internal" href="#">GLM: Negative Binomial Regression</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#Contents">Contents</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#(Taken-from-the-Poisson-regression-example)">(Taken from the Poisson regression example)</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#Poisson-Data">Poisson Data</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#Negative-Binomial-Data">Negative Binomial Data</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../examples.html#gp">GP</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../examples.html#mixture-models">Mixture Models</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../examples.html#advi">ADVI</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../api.html">API Reference</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+        <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+        <a href="../index.html">PyMC3</a>
+      </nav>
+
+
+      
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          
+
+ 
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="../index.html">Docs</a> &raquo;</li>
+      
+          <li><a href="../examples.html">Examples</a> &raquo;</li>
+      
+    <li>GLM: Negative Binomial Regression</li>
+      <li class="wy-breadcrumbs-aside">
+        
+          
+            <a href="../_sources/notebooks/GLM-negative-binomial-regression.ipynb.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  
+<style>
+/* CSS for nbsphinx extension */
+
+/* remove conflicting styling from Sphinx themes */
+div.nbinput,
+div.nbinput > div,
+div.nbinput div[class^=highlight],
+div.nbinput div[class^=highlight] pre,
+div.nboutput,
+div.nboutput > div,
+div.nboutput div[class^=highlight],
+div.nboutput div[class^=highlight] pre {
+    background: none;
+    border: none;
+    padding: 0 0;
+    margin: 0;
+    box-shadow: none;
+}
+
+/* avoid gaps between output lines */
+div.nboutput div[class^=highlight] pre {
+    line-height: normal;
+}
+
+/* input/output containers */
+div.nbinput,
+div.nboutput {
+    display: -webkit-flex;
+    display: flex;
+    align-items: flex-start;
+    margin: 0;
+}
+
+/* input container */
+div.nbinput {
+    padding-top: 5px;
+}
+
+/* last container */
+div.nblast {
+    padding-bottom: 5px;
+}
+
+/* input prompt */
+div.nbinput > :first-child pre {
+    color: #303F9F;
+}
+
+/* output prompt */
+div.nboutput > :first-child pre {
+    color: #D84315;
+}
+
+/* all prompts */
+div.nbinput > :first-child[class^=highlight],
+div.nboutput > :first-child[class^=highlight],
+div.nboutput > :first-child {
+    min-width: 8ex;
+    padding-top: 0.4em;
+    padding-right: 0.4em;
+    text-align: right;
+    flex: 0;
+}
+
+/* input/output area */
+div.nbinput > :nth-child(2)[class^=highlight],
+div.nboutput > :nth-child(2),
+div.nboutput > :nth-child(2)[class^=highlight] {
+    padding: 0.4em;
+    -webkit-flex: 1;
+    flex: 1;
+    overflow: auto;
+}
+
+/* input area */
+div.nbinput > :nth-child(2)[class^=highlight] {
+    border: 1px solid #cfcfcf;
+    border-radius: 2px;
+    background: #f7f7f7;
+}
+
+/* override MathJax center alignment in output cells */
+div.nboutput div[class*=MathJax] {
+    text-align: left !important;
+}
+
+/* override sphinx.ext.pngmath center alignment in output cells */
+div.nboutput div.math p {
+    text-align: left;
+}
+
+/* standard error */
+div.nboutput  > :nth-child(2).stderr {
+    background: #fdd;
+}
+
+/* ANSI colors */
+.ansi-black-fg { color: #3E424D; }
+.ansi-black-bg { background-color: #3E424D; }
+.ansi-black-intense-fg { color: #282C36; }
+.ansi-black-intense-bg { background-color: #282C36; }
+.ansi-red-fg { color: #E75C58; }
+.ansi-red-bg { background-color: #E75C58; }
+.ansi-red-intense-fg { color: #B22B31; }
+.ansi-red-intense-bg { background-color: #B22B31; }
+.ansi-green-fg { color: #00A250; }
+.ansi-green-bg { background-color: #00A250; }
+.ansi-green-intense-fg { color: #007427; }
+.ansi-green-intense-bg { background-color: #007427; }
+.ansi-yellow-fg { color: #DDB62B; }
+.ansi-yellow-bg { background-color: #DDB62B; }
+.ansi-yellow-intense-fg { color: #B27D12; }
+.ansi-yellow-intense-bg { background-color: #B27D12; }
+.ansi-blue-fg { color: #208FFB; }
+.ansi-blue-bg { background-color: #208FFB; }
+.ansi-blue-intense-fg { color: #0065CA; }
+.ansi-blue-intense-bg { background-color: #0065CA; }
+.ansi-magenta-fg { color: #D160C4; }
+.ansi-magenta-bg { background-color: #D160C4; }
+.ansi-magenta-intense-fg { color: #A03196; }
+.ansi-magenta-intense-bg { background-color: #A03196; }
+.ansi-cyan-fg { color: #60C6C8; }
+.ansi-cyan-bg { background-color: #60C6C8; }
+.ansi-cyan-intense-fg { color: #258F8F; }
+.ansi-cyan-intense-bg { background-color: #258F8F; }
+.ansi-white-fg { color: #C5C1B4; }
+.ansi-white-bg { background-color: #C5C1B4; }
+.ansi-white-intense-fg { color: #A1A6B2; }
+.ansi-white-intense-bg { background-color: #A1A6B2; }
+
+.ansi-bold { font-weight: bold; }
+
+/* CSS overrides for sphinx_rtd_theme */
+
+/* 24px margin */
+.nbinput.nblast,
+.nboutput.nblast {
+    margin-bottom: 19px;  /* padding has already 5px */
+}
+
+/* ... except between code cells! */
+.nblast + .nbinput {
+    margin-top: -19px;
+}
+
+/* nice headers on first paragraph of info/warning boxes */
+.admonition .first {
+    margin: -12px;
+    padding: 6px 12px;
+    margin-bottom: 12px;
+    color: #fff;
+    line-height: 1;
+    display: block;
+}
+.admonition.warning .first {
+    background: #f0b37e;
+}
+.admonition.note .first {
+    background: #6ab0de;
+}
+.admonition > p:before {
+    margin-right: 4px;  /* make room for the exclamation icon */
+}
+</style>
+<div class="section" id="GLM:-Negative-Binomial-Regression">
+<h1>GLM: Negative Binomial Regression<a class="headerlink" href="#GLM:-Negative-Binomial-Regression" title="Permalink to this headline">¶</a></h1>
+<p>This notebook demos negative binomial regression using the <code class="docutils literal"><span class="pre">glm</span></code>
+submodule. It closely follows the GLM Poisson regression example by
+<a class="reference external" href="https://github.com/jonsedar">Jonathan Sedar</a> (which is in turn
+insipired by <a class="reference external" href="http://ianozsvald.com/2016/05/07/statistically-solving-sneezes-and-sniffles-a-work-in-progress-report-at-pydatalondon-2016/">a project by Ian
+Osvald</a>)
+except the data here is negative binomially distributed instead of
+Poisson distributed.</p>
+<p>Negative binomial regression is used to model count data for which the
+variance is higher than the mean. The <a class="reference external" href="https://en.wikipedia.org/wiki/Negative_binomial_distribution">negative binomial
+distribution</a>
+can be thought of as a Poisson distribution whose rate parameter is
+gamma distributed, so that rate parameter can be adjusted to account for
+the increased variance.</p>
+<div class="section" id="Contents">
+<h2>Contents<a class="headerlink" href="#Contents" title="Permalink to this headline">¶</a></h2>
+<ul class="simple">
+<li><a class="reference external" href="#Setup">Setup</a><ul>
+<li><a class="reference external" href="#Convenience-Functions">Convenience Functions</a></li>
+<li><a class="reference external" href="#Generate-Data">Generate Data</a><ul>
+<li><a class="reference external" href="#Poisson-Data">Poisson Data</a></li>
+<li><a class="reference external" href="#Negative-Binomial-Data">Negative Binomial Data</a></li>
+<li><a class="reference external" href="#Visualize-the-Data">Visualize the Data</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li><a class="reference external" href="#Negative-Binomial-Regression">Negative Binomial Regression</a><ul>
+<li><a class="reference external" href="#Create-GLM-Model">Create GLM Model</a></li>
+<li><a class="reference external" href="#View-Results">View Results</a></li>
+</ul>
+</li>
+</ul>
+<div class="section" id="Setup">
+<h3>Setup<a class="headerlink" href="#Setup" title="Permalink to this headline">¶</a></h3>
+<div class="nbinput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [1]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">numpy</span> <span class="kn">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">pandas</span> <span class="kn">as</span> <span class="nn">pd</span>
+<span class="kn">import</span> <span class="nn">pymc3</span> <span class="kn">as</span> <span class="nn">pm</span>
+<span class="kn">from</span> <span class="nn">scipy</span> <span class="kn">import</span> <span class="n">stats</span>
+<span class="kn">from</span> <span class="nn">scipy</span> <span class="kn">import</span> <span class="n">optimize</span>
+<span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="kn">as</span> <span class="nn">plt</span>
+<span class="kn">import</span> <span class="nn">seaborn</span> <span class="kn">as</span> <span class="nn">sns</span>
+<span class="kn">import</span> <span class="nn">re</span>
+
+<span class="o">%</span><span class="k">matplotlib</span> inline
+</pre></div>
+</div>
+</div>
+<div class="section" id="Convenience-Functions">
+<h4>Convenience Functions<a class="headerlink" href="#Convenience-Functions" title="Permalink to this headline">¶</a></h4>
+</div>
+</div>
+</div>
+<div class="section" id="(Taken-from-the-Poisson-regression-example)">
+<h2>(Taken from the Poisson regression example)<a class="headerlink" href="#(Taken-from-the-Poisson-regression-example)" title="Permalink to this headline">¶</a></h2>
+<div class="nbinput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [2]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="k">def</span> <span class="nf">plot_traces</span><span class="p">(</span><span class="n">trcs</span><span class="p">,</span> <span class="n">varnames</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39;Plot traces with overlaid means and values&#39;&#39;&#39;</span>
+
+    <span class="n">nrows</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">trcs</span><span class="o">.</span><span class="n">varnames</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">varnames</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+        <span class="n">nrows</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">varnames</span><span class="p">)</span>
+
+    <span class="n">ax</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">traceplot</span><span class="p">(</span><span class="n">trcs</span><span class="p">,</span> <span class="n">varnames</span><span class="o">=</span><span class="n">varnames</span><span class="p">,</span> <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">12</span><span class="p">,</span><span class="n">nrows</span><span class="o">*</span><span class="mf">1.4</span><span class="p">),</span>
+                      <span class="n">lines</span><span class="o">=</span><span class="p">{</span><span class="n">k</span><span class="p">:</span> <span class="n">v</span><span class="p">[</span><span class="s1">&#39;mean&#39;</span><span class="p">]</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span>
+                             <span class="n">pm</span><span class="o">.</span><span class="n">df_summary</span><span class="p">(</span><span class="n">trcs</span><span class="p">,</span><span class="n">varnames</span><span class="o">=</span><span class="n">varnames</span><span class="p">)</span><span class="o">.</span><span class="n">iterrows</span><span class="p">()})</span>
+
+    <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">mn</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">pm</span><span class="o">.</span><span class="n">df_summary</span><span class="p">(</span><span class="n">trcs</span><span class="p">,</span> <span class="n">varnames</span><span class="o">=</span><span class="n">varnames</span><span class="p">)[</span><span class="s1">&#39;mean&#39;</span><span class="p">]):</span>
+        <span class="n">ax</span><span class="p">[</span><span class="n">i</span><span class="p">,</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">annotate</span><span class="p">(</span><span class="s1">&#39;{:.2f}&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">mn</span><span class="p">),</span> <span class="n">xy</span><span class="o">=</span><span class="p">(</span><span class="n">mn</span><span class="p">,</span><span class="mi">0</span><span class="p">),</span> <span class="n">xycoords</span><span class="o">=</span><span class="s1">&#39;data&#39;</span><span class="p">,</span>
+                         <span class="n">xytext</span><span class="o">=</span><span class="p">(</span><span class="mi">5</span><span class="p">,</span><span class="mi">10</span><span class="p">),</span> <span class="n">textcoords</span><span class="o">=</span><span class="s1">&#39;offset points&#39;</span><span class="p">,</span> <span class="n">rotation</span><span class="o">=</span><span class="mi">90</span><span class="p">,</span>
+                         <span class="n">va</span><span class="o">=</span><span class="s1">&#39;bottom&#39;</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="s1">&#39;large&#39;</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s1">&#39;#AA0022&#39;</span><span class="p">)</span>
+
+<span class="k">def</span> <span class="nf">strip_derived_rvs</span><span class="p">(</span><span class="n">rvs</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39;Remove PyMC3-generated RVs from a list&#39;&#39;&#39;</span>
+
+    <span class="n">ret_rvs</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">rv</span> <span class="ow">in</span> <span class="n">rvs</span><span class="p">:</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span><span class="n">re</span><span class="o">.</span><span class="n">search</span><span class="p">(</span><span class="s1">&#39;_log&#39;</span><span class="p">,</span><span class="n">rv</span><span class="o">.</span><span class="n">name</span><span class="p">)</span> <span class="ow">or</span> <span class="n">re</span><span class="o">.</span><span class="n">search</span><span class="p">(</span><span class="s1">&#39;_interval&#39;</span><span class="p">,</span><span class="n">rv</span><span class="o">.</span><span class="n">name</span><span class="p">)):</span>
+            <span class="n">ret_rvs</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">rv</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">ret_rvs</span>
+</pre></div>
+</div>
+</div>
+<p>As in the Poisson regression example, we assume that sneezing occurs at
+some baseline rate, and that consuming alcohol, not taking
+antihistamines, or doing both, increase its frequency.</p>
+</div>
+<div class="section" id="Poisson-Data">
+<h2>Poisson Data<a class="headerlink" href="#Poisson-Data" title="Permalink to this headline">¶</a></h2>
+<p>First, let&#8217;s look at some Poisson distributed data from the Poisson
+regression example.</p>
+<div class="nbinput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [3]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">seed</span><span class="p">(</span><span class="mi">123</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [4]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="c1"># Mean Poisson values</span>
+<span class="n">theta_noalcohol_meds</span> <span class="o">=</span> <span class="mi">1</span>    <span class="c1"># no alcohol, took an antihist</span>
+<span class="n">theta_alcohol_meds</span> <span class="o">=</span> <span class="mi">3</span>      <span class="c1"># alcohol, took an antihist</span>
+<span class="n">theta_noalcohol_nomeds</span> <span class="o">=</span> <span class="mi">6</span>  <span class="c1"># no alcohol, no antihist</span>
+<span class="n">theta_alcohol_nomeds</span> <span class="o">=</span> <span class="mi">36</span>   <span class="c1"># alcohol, no antihist</span>
+
+<span class="c1"># Create samples</span>
+<span class="n">q</span> <span class="o">=</span> <span class="mi">1000</span>
+<span class="n">df_pois</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">({</span>
+        <span class="s1">&#39;nsneeze&#39;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">((</span><span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">poisson</span><span class="p">(</span><span class="n">theta_noalcohol_meds</span><span class="p">,</span> <span class="n">q</span><span class="p">),</span>
+                                   <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">poisson</span><span class="p">(</span><span class="n">theta_alcohol_meds</span><span class="p">,</span> <span class="n">q</span><span class="p">),</span>
+                                   <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">poisson</span><span class="p">(</span><span class="n">theta_noalcohol_nomeds</span><span class="p">,</span> <span class="n">q</span><span class="p">),</span>
+                                   <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">poisson</span><span class="p">(</span><span class="n">theta_alcohol_nomeds</span><span class="p">,</span> <span class="n">q</span><span class="p">))),</span>
+        <span class="s1">&#39;alcohol&#39;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">((</span><span class="n">np</span><span class="o">.</span><span class="n">repeat</span><span class="p">(</span><span class="bp">False</span><span class="p">,</span> <span class="n">q</span><span class="p">),</span>
+                                   <span class="n">np</span><span class="o">.</span><span class="n">repeat</span><span class="p">(</span><span class="bp">True</span><span class="p">,</span> <span class="n">q</span><span class="p">),</span>
+                                   <span class="n">np</span><span class="o">.</span><span class="n">repeat</span><span class="p">(</span><span class="bp">False</span><span class="p">,</span> <span class="n">q</span><span class="p">),</span>
+                                   <span class="n">np</span><span class="o">.</span><span class="n">repeat</span><span class="p">(</span><span class="bp">True</span><span class="p">,</span> <span class="n">q</span><span class="p">))),</span>
+        <span class="s1">&#39;nomeds&#39;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">((</span><span class="n">np</span><span class="o">.</span><span class="n">repeat</span><span class="p">(</span><span class="bp">False</span><span class="p">,</span> <span class="n">q</span><span class="p">),</span>
+                                      <span class="n">np</span><span class="o">.</span><span class="n">repeat</span><span class="p">(</span><span class="bp">False</span><span class="p">,</span> <span class="n">q</span><span class="p">),</span>
+                                      <span class="n">np</span><span class="o">.</span><span class="n">repeat</span><span class="p">(</span><span class="bp">True</span><span class="p">,</span> <span class="n">q</span><span class="p">),</span>
+                                      <span class="n">np</span><span class="o">.</span><span class="n">repeat</span><span class="p">(</span><span class="bp">True</span><span class="p">,</span> <span class="n">q</span><span class="p">)))})</span>
+</pre></div>
+</div>
+</div>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [5]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">df_pois</span><span class="o">.</span><span class="n">groupby</span><span class="p">([</span><span class="s1">&#39;nomeds&#39;</span><span class="p">,</span> <span class="s1">&#39;alcohol&#39;</span><span class="p">])[</span><span class="s1">&#39;nsneeze&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">agg</span><span class="p">([</span><span class="s1">&#39;mean&#39;</span><span class="p">,</span> <span class="s1">&#39;var&#39;</span><span class="p">])</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>Out[5]:
+</pre></div>
+</div>
+<div class="container">
+<div>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th></th>
+      <th>mean</th>
+      <th>var</th>
+    </tr>
+    <tr>
+      <th>nomeds</th>
+      <th>alcohol</th>
+      <th></th>
+      <th></th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th rowspan="2" valign="top">False</th>
+      <th>False</th>
+      <td>0.989</td>
+      <td>1.019899</td>
+    </tr>
+    <tr>
+      <th>True</th>
+      <td>2.973</td>
+      <td>2.985256</td>
+    </tr>
+    <tr>
+      <th rowspan="2" valign="top">True</th>
+      <th>False</th>
+      <td>5.948</td>
+      <td>5.907203</td>
+    </tr>
+    <tr>
+      <th>True</th>
+      <td>36.163</td>
+      <td>39.493925</td>
+    </tr>
+  </tbody>
+</table>
+</div></div>
+</div>
+<p>Since the mean and variance of a Poisson distributed random variable are
+equal, the sample means and variances are very close.</p>
+</div>
+<div class="section" id="Negative-Binomial-Data">
+<h2>Negative Binomial Data<a class="headerlink" href="#Negative-Binomial-Data" title="Permalink to this headline">¶</a></h2>
+<p>Now, suppose every subject in the dataset had the flu, increasing the
+variance of their sneezing (and causing an unfortunate few to sneeze
+over 70 times a day). If the mean number of sneezes stays the same but
+variance increases, the data might follow a negative binomial
+distribution.</p>
+<div class="nbinput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [6]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="c1"># Gamma shape parameter</span>
+<span class="n">alpha</span> <span class="o">=</span> <span class="mi">10</span>
+
+<span class="k">def</span> <span class="nf">get_nb_vals</span><span class="p">(</span><span class="n">mu</span><span class="p">,</span> <span class="n">alpha</span><span class="p">,</span> <span class="n">size</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Generate negative binomially distributed samples by</span>
+<span class="sd">    drawing a sample from a gamma distribution with mean `mu` and</span>
+<span class="sd">    shape parameter `alpha&#39;, then drawing from a Poisson</span>
+<span class="sd">    distribution whose rate parameter is given by the sampled</span>
+<span class="sd">    gamma variable.</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">g</span> <span class="o">=</span> <span class="n">stats</span><span class="o">.</span><span class="n">gamma</span><span class="o">.</span><span class="n">rvs</span><span class="p">(</span><span class="n">alpha</span><span class="p">,</span> <span class="n">scale</span><span class="o">=</span><span class="n">mu</span> <span class="o">/</span> <span class="n">alpha</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="n">size</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">stats</span><span class="o">.</span><span class="n">poisson</span><span class="o">.</span><span class="n">rvs</span><span class="p">(</span><span class="n">g</span><span class="p">)</span>
+
+<span class="c1"># Create samples</span>
+<span class="n">n</span> <span class="o">=</span> <span class="mi">1000</span>
+<span class="n">df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">({</span>
+        <span class="s1">&#39;nsneeze&#39;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">((</span><span class="n">get_nb_vals</span><span class="p">(</span><span class="n">theta_noalcohol_meds</span><span class="p">,</span> <span class="n">alpha</span><span class="p">,</span> <span class="n">n</span><span class="p">),</span>
+                                   <span class="n">get_nb_vals</span><span class="p">(</span><span class="n">theta_alcohol_meds</span><span class="p">,</span> <span class="n">alpha</span><span class="p">,</span> <span class="n">n</span><span class="p">),</span>
+                                   <span class="n">get_nb_vals</span><span class="p">(</span><span class="n">theta_noalcohol_nomeds</span><span class="p">,</span> <span class="n">alpha</span><span class="p">,</span> <span class="n">n</span><span class="p">),</span>
+                                   <span class="n">get_nb_vals</span><span class="p">(</span><span class="n">theta_alcohol_nomeds</span><span class="p">,</span> <span class="n">alpha</span><span class="p">,</span> <span class="n">n</span><span class="p">))),</span>
+        <span class="s1">&#39;alcohol&#39;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">((</span><span class="n">np</span><span class="o">.</span><span class="n">repeat</span><span class="p">(</span><span class="bp">False</span><span class="p">,</span> <span class="n">n</span><span class="p">),</span>
+                                   <span class="n">np</span><span class="o">.</span><span class="n">repeat</span><span class="p">(</span><span class="bp">True</span><span class="p">,</span> <span class="n">n</span><span class="p">),</span>
+                                   <span class="n">np</span><span class="o">.</span><span class="n">repeat</span><span class="p">(</span><span class="bp">False</span><span class="p">,</span> <span class="n">n</span><span class="p">),</span>
+                                   <span class="n">np</span><span class="o">.</span><span class="n">repeat</span><span class="p">(</span><span class="bp">True</span><span class="p">,</span> <span class="n">n</span><span class="p">))),</span>
+        <span class="s1">&#39;nomeds&#39;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">((</span><span class="n">np</span><span class="o">.</span><span class="n">repeat</span><span class="p">(</span><span class="bp">False</span><span class="p">,</span> <span class="n">n</span><span class="p">),</span>
+                                      <span class="n">np</span><span class="o">.</span><span class="n">repeat</span><span class="p">(</span><span class="bp">False</span><span class="p">,</span> <span class="n">n</span><span class="p">),</span>
+                                      <span class="n">np</span><span class="o">.</span><span class="n">repeat</span><span class="p">(</span><span class="bp">True</span><span class="p">,</span> <span class="n">n</span><span class="p">),</span>
+                                      <span class="n">np</span><span class="o">.</span><span class="n">repeat</span><span class="p">(</span><span class="bp">True</span><span class="p">,</span> <span class="n">n</span><span class="p">)))})</span>
+</pre></div>
+</div>
+</div>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [7]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">df</span><span class="o">.</span><span class="n">groupby</span><span class="p">([</span><span class="s1">&#39;nomeds&#39;</span><span class="p">,</span> <span class="s1">&#39;alcohol&#39;</span><span class="p">])[</span><span class="s1">&#39;nsneeze&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">agg</span><span class="p">([</span><span class="s1">&#39;mean&#39;</span><span class="p">,</span> <span class="s1">&#39;var&#39;</span><span class="p">])</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>Out[7]:
+</pre></div>
+</div>
+<div class="container">
+<div>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th></th>
+      <th>mean</th>
+      <th>var</th>
+    </tr>
+    <tr>
+      <th>nomeds</th>
+      <th>alcohol</th>
+      <th></th>
+      <th></th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th rowspan="2" valign="top">False</th>
+      <th>False</th>
+      <td>0.976</td>
+      <td>1.106531</td>
+    </tr>
+    <tr>
+      <th>True</th>
+      <td>2.961</td>
+      <td>3.619098</td>
+    </tr>
+    <tr>
+      <th rowspan="2" valign="top">True</th>
+      <th>False</th>
+      <td>6.022</td>
+      <td>9.505021</td>
+    </tr>
+    <tr>
+      <th>True</th>
+      <td>36.254</td>
+      <td>167.348833</td>
+    </tr>
+  </tbody>
+</table>
+</div></div>
+</div>
+<p>As in the Poisson regression example, we see that drinking alcohol
+and/or not taking antihistamines increase the sneezing rate to varying
+degrees. Unlike in that example, for each combination of <code class="docutils literal"><span class="pre">alcohol</span></code> and
+<code class="docutils literal"><span class="pre">nomeds</span></code>, the variance of <code class="docutils literal"><span class="pre">nsneeze</span></code> is higher than the mean. This
+suggests that a Poisson distrubution would be a poor fit for the data
+since the mean and variance of a Poisson distribution are equal.</p>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [8]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">g</span> <span class="o">=</span> <span class="n">sns</span><span class="o">.</span><span class="n">factorplot</span><span class="p">(</span><span class="n">x</span><span class="o">=</span><span class="s1">&#39;nsneeze&#39;</span><span class="p">,</span> <span class="n">row</span><span class="o">=</span><span class="s1">&#39;nomeds&#39;</span><span class="p">,</span> <span class="n">col</span><span class="o">=</span><span class="s1">&#39;alcohol&#39;</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="n">df</span><span class="p">,</span> <span class="n">kind</span><span class="o">=</span><span class="s1">&#39;count&#39;</span><span class="p">,</span> <span class="n">aspect</span><span class="o">=</span><span class="mf">1.5</span><span class="p">)</span>
+
+<span class="c1"># Make x-axis ticklabels less crowded</span>
+<span class="n">ax</span> <span class="o">=</span> <span class="n">g</span><span class="o">.</span><span class="n">axes</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span>
+<span class="n">labels</span> <span class="o">=</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">ax</span><span class="o">.</span><span class="n">get_xticklabels</span><span class="p">(</span><span class="n">which</span><span class="o">=</span><span class="s1">&#39;both&#39;</span><span class="p">)))</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">set_xticks</span><span class="p">(</span><span class="n">labels</span><span class="p">[::</span><span class="mi">5</span><span class="p">])</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">set_xticklabels</span><span class="p">(</span><span class="n">labels</span><span class="p">[::</span><span class="mi">5</span><span class="p">]);</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<img alt="../_images/notebooks_GLM-negative-binomial-regression_14_0.png" src="../_images/notebooks_GLM-negative-binomial-regression_14_0.png" />
+</div>
+</div>
+<div class="section" id="Negative-Binomial-Regression">
+<h3>Negative Binomial Regression<a class="headerlink" href="#Negative-Binomial-Regression" title="Permalink to this headline">¶</a></h3>
+<div class="section" id="Create-GLM-Model">
+<h4>Create GLM Model<a class="headerlink" href="#Create-GLM-Model" title="Permalink to this headline">¶</a></h4>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [9]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">fml</span> <span class="o">=</span> <span class="s1">&#39;nsneeze ~ alcohol + nomeds + alcohol:nomeds&#39;</span>
+
+<span class="k">with</span> <span class="n">pm</span><span class="o">.</span><span class="n">Model</span><span class="p">()</span> <span class="k">as</span> <span class="n">model</span><span class="p">:</span>
+    <span class="n">pm</span><span class="o">.</span><span class="n">glm</span><span class="o">.</span><span class="n">glm</span><span class="p">(</span><span class="n">formula</span><span class="o">=</span><span class="n">fml</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="n">df</span><span class="p">,</span> <span class="n">family</span><span class="o">=</span><span class="n">pm</span><span class="o">.</span><span class="n">glm</span><span class="o">.</span><span class="n">families</span><span class="o">.</span><span class="n">NegativeBinomial</span><span class="p">())</span>
+
+    <span class="c1"># This initialization seems to improve mixing</span>
+    <span class="n">start</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">find_MAP</span><span class="p">(</span><span class="n">fmin</span><span class="o">=</span><span class="n">optimize</span><span class="o">.</span><span class="n">fmin_powell</span><span class="p">)</span>
+    <span class="n">C</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">approx_hessian</span><span class="p">(</span><span class="n">start</span><span class="p">)</span>
+    <span class="n">trace</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="mi">4000</span><span class="p">,</span> <span class="n">step</span><span class="o">=</span><span class="n">pm</span><span class="o">.</span><span class="n">NUTS</span><span class="p">(</span><span class="n">scaling</span><span class="o">=</span><span class="n">C</span><span class="p">))</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput container">
+<div class="container">
+</div>
+<div class="container">
+<div class="highlight"><pre>
+Optimization terminated successfully.
+         Current function value: 9825.951700
+         Iterations: 16
+         Function evaluations: 1086
+</pre></div></div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="stderr container">
+<div class="highlight"><pre>
+100%|██████████| 4000/4000 [01:25&lt;00:00, 46.98it/s]
+</pre></div></div>
+</div>
+</div>
+<div class="section" id="View-Results">
+<h4>View Results<a class="headerlink" href="#View-Results" title="Permalink to this headline">¶</a></h4>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [10]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">rvs</span> <span class="o">=</span> <span class="p">[</span><span class="n">rv</span><span class="o">.</span><span class="n">name</span> <span class="k">for</span> <span class="n">rv</span> <span class="ow">in</span> <span class="n">strip_derived_rvs</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">unobserved_RVs</span><span class="p">)]</span>
+<span class="n">plot_traces</span><span class="p">(</span><span class="n">trace</span><span class="p">[</span><span class="mi">1000</span><span class="p">:],</span> <span class="n">varnames</span><span class="o">=</span><span class="n">rvs</span><span class="p">);</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<img alt="../_images/notebooks_GLM-negative-binomial-regression_19_0.png" src="../_images/notebooks_GLM-negative-binomial-regression_19_0.png" />
+</div>
+</div>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [11]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="c1"># Transform coefficients to recover parameter values</span>
+<span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="n">pm</span><span class="o">.</span><span class="n">df_summary</span><span class="p">(</span><span class="n">trace</span><span class="p">[</span><span class="mi">1000</span><span class="p">:],</span> <span class="n">varnames</span><span class="o">=</span><span class="n">rvs</span><span class="p">)[[</span><span class="s1">&#39;mean&#39;</span><span class="p">,</span><span class="s1">&#39;hpd_2.5&#39;</span><span class="p">,</span><span class="s1">&#39;hpd_97.5&#39;</span><span class="p">]])</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>Out[11]:
+</pre></div>
+</div>
+<div class="container">
+<div>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>mean</th>
+      <th>hpd_2.5</th>
+      <th>hpd_97.5</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>Intercept</th>
+      <td>9.758012e-01</td>
+      <td>0.914691</td>
+      <td>1.044931e+00</td>
+    </tr>
+    <tr>
+      <th>alcohol[T.True]</th>
+      <td>3.034426e+00</td>
+      <td>2.822523</td>
+      <td>3.282252e+00</td>
+    </tr>
+    <tr>
+      <th>nomeds[T.True]</th>
+      <td>6.172809e+00</td>
+      <td>5.720291</td>
+      <td>6.620674e+00</td>
+    </tr>
+    <tr>
+      <th>alcohol[T.True]:nomeds[T.True]</th>
+      <td>1.983920e+00</td>
+      <td>1.815308</td>
+      <td>2.157949e+00</td>
+    </tr>
+    <tr>
+      <th>mu</th>
+      <td>1.890197e+259</td>
+      <td>1.043632</td>
+      <td>1.230167e+64</td>
+    </tr>
+    <tr>
+      <th>alpha</th>
+      <td>2.605915e+04</td>
+      <td>9917.944814</td>
+      <td>7.460049e+04</td>
+    </tr>
+  </tbody>
+</table>
+</div></div>
+</div>
+<p>The mean values are close to the values we specified when generating the
+data: - The base rate is a constant 1. - Drinking alcohol triples the
+base rate. - Not taking antihistamines increases the base rate by 6
+times. - Drinking alcohol and not taking antihistamines doubles the rate
+that would be expected if their rates were independent. If they were
+independent, then doing both would increase the base rate by 3*6=18
+times, but instead the base rate is increased by 3*6*2=16 times.</p>
+<p>Finally, even though the sample for <code class="docutils literal"><span class="pre">mu</span></code> is highly skewed, its median
+value is close to the sample mean, and the mean of <code class="docutils literal"><span class="pre">alpha</span></code> is also
+quite close to its actual value of 10.</p>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [12]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">np</span><span class="o">.</span><span class="n">percentile</span><span class="p">(</span><span class="n">trace</span><span class="p">[</span><span class="mi">1000</span><span class="p">:][</span><span class="s1">&#39;mu&#39;</span><span class="p">],</span> <span class="p">[</span><span class="mi">25</span><span class="p">,</span><span class="mi">50</span><span class="p">,</span><span class="mi">75</span><span class="p">])</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>Out[12]:
+</pre></div>
+</div>
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>array([  4.30629445,  10.56216515,  26.05707153])
+</pre></div>
+</div>
+</div>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [13]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">df</span><span class="o">.</span><span class="n">nsneeze</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>Out[13]:
+</pre></div>
+</div>
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>11.55325
+</pre></div>
+</div>
+</div>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [14]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">trace</span><span class="p">[</span><span class="mi">1000</span><span class="p">:][</span><span class="s1">&#39;alpha&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>Out[14]:
+</pre></div>
+</div>
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>10.168124287771807
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [ ]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span>
+</pre></div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+
+
+           </div>
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="GP-introduction.html" class="btn btn-neutral float-right" title="Gaussian Process Regression" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="hierarchical_partial_pooling.html" class="btn btn-neutral" title="Hierarchical Partial Pooling" accesskey="p"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2016, John Salvatier, Christopher Fonnesbeck, Thomas Wiecki.
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'../',
+            VERSION:'3.0',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true
+        };
+    </script>
+      <script type="text/javascript" src="../_static/jquery.js"></script>
+      <script type="text/javascript" src="../_static/underscore.js"></script>
+      <script type="text/javascript" src="../_static/doctools.js"></script>
+      <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+  
+
+  
+  
+    <script type="text/javascript" src="../_static/js/theme.js"></script>
+  
+
+  
+  
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.StickyNav.enable();
+      });
+  </script>
+   
+
+</body>
+</html>
