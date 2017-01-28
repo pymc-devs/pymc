@@ -454,12 +454,13 @@ data points are <strong>evenly spaced</strong> across the domain of <span class=
 therefore can be indexed by <span class="math">\(i=1,\dots,N\)</span> without the loss of
 generality. The model is described as follows:</p>
 <div class="math">
-\[z_i \sim N(z_{i-1} + \mu, (1 - \alpha)\cdot\sigma^2) \: \text{ for } i=2,\dots,N\]</div>
-<div class="math">
-\[z_1 \sim ImproperFlat(-\infty,\infty)\]</div>
-<div class="math">
-\[y_i \sim N(z_i, \alpha\cdot\sigma^2)\]</div>
-<p>where <span class="math">\(z\)</span> is the hidden Brownian motion, <span class="math">\(y\)</span> is the observed
+\begin{equation}
+\begin{aligned}
+z_i &amp; \sim \mathcal{N}(z_{i-1} + \mu, (1 - \alpha)\cdot\sigma^2) \: \text{ for } i=2,\dots,N \\
+z_1 &amp; \sim ImproperFlat(-\infty,\infty) \\
+y_i &amp; \sim \mathcal{N}(z_i, \alpha\cdot\sigma^2)
+\end{aligned}
+\end{equation}</div><p>where <span class="math">\(z\)</span> is the hidden Brownian motion, <span class="math">\(y\)</span> is the observed
 data, and the total variance <span class="math">\(\sigma^2\)</span> of each ovservation is
 split between the hidden Brownian motion and the noise in proportions of
 <span class="math">\(1 - \alpha\)</span> and <span class="math">\(\alpha\)</span> respectively, with parameter
