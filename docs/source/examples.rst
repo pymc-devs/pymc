@@ -35,6 +35,7 @@ GLM
    notebooks/GLM-hierarchical.ipynb
    notebooks/GLM-poisson-regression.ipynb
    notebooks/hierarchical_partial_pooling.ipynb
+   notebooks/GLM-negative-binomial-regression.ipynb
 
 GP
 ==
