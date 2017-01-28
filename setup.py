@@ -58,7 +58,6 @@ if __name__ == "__main__":
                     'pymc3.tuning',
                     'pymc3.tests',
                     'pymc3.variational',
-                    'pymc3.models',
                     'pymc3.external',
                     'docs',
                     '.',
