@@ -81,7 +81,7 @@ def assign_step_methods(model, step=None, methods=(NUTS, HamiltonianMC, Metropol
     return steps
 
 
-def sample(draws, step=None, init='advi', n_init=200000, start=None,
+def sample(draws, step=None, n_advi=200000, n_nuts=2000, start=None,
            trace=None, chain=0, njobs=1, tune=None, progressbar=True,
            model=None, random_seed=-1):
     """
@@ -147,13 +147,10 @@ def sample(draws, step=None, init='advi', n_init=200000, start=None,
     """
     model = modelcontext(model)
 
-    if init is not None:
-        init = init.lower()
-
-    if step is None and init is not None and pm.model.all_continuous(model.vars):
+    if step is None and pm.model.all_continuous(model.vars):
         # By default, use NUTS sampler
         pm._log.info('Auto-assigning NUTS sampler...')
-        start_, step = init_nuts(init=init, njobs=njobs, n_init=n_init, model=model, random_seed=random_seed)
+        start_, step = init_nuts(njobs=njobs, n_advi=n_advi, n_nuts=n_nuts, model=model, random_seed=random_seed)
         if start is None:
             start = start_
     else:
@@ -404,7 +401,7 @@ def sample_ppc(trace, samples=None, model=None, vars=None, size=None, random_see
     return {k: np.asarray(v) for k, v in ppc.items()}
 
 
-def init_nuts(init='ADVI', njobs=1, n_init=500000, model=None,
+def init_nuts(njobs=1, n_advi=500000, n_nuts=2000, model=None,
               random_seed=-1, **kwargs):
     """Initialize and sample from posterior of a continuous model.
 
@@ -442,39 +439,37 @@ def init_nuts(init='ADVI', njobs=1, n_init=500000, model=None,
 
     model = pm.modelcontext(model)
 
-    pm._log.info('Initializing NUTS using {}...'.format(init))
+    pm._log.info('Initializing NUTS...')
 
     random_seed = int(np.atleast_1d(random_seed)[0])
 
-    if init is not None:
-        init = init.lower()
+    # Set default values
+    start = model.test_point
+    cov = np.eye(len(model.dict_to_array(model.test_point)))
 
-    if init == 'advi':
-        v_params = pm.variational.advi(n=n_init, random_seed=random_seed)
+    if n_advi > 0:
+        v_params = pm.variational.advi(n=n_advi, random_seed=random_seed)
         start = pm.variational.sample_vp(v_params, njobs, progressbar=False,
                                          hide_transformed=False,
                                          random_seed=random_seed)
         if njobs == 1:
             start = start[0]
         cov = np.power(model.dict_to_array(v_params.stds), 2)
-    elif init == 'advi_map':
-        start = pm.find_MAP()
-        v_params = pm.variational.advi(n=n_init, start=start,
-                                       random_seed=random_seed)
-        cov = np.power(model.dict_to_array(v_params.stds), 2)
-    elif init == 'map':
-        start = pm.find_MAP()
-        cov = pm.find_hessian(point=start)
-    elif init == 'nuts':
-        init_trace = pm.sample(step=pm.NUTS(), draws=n_init,
-                               random_seed=random_seed)[n_init // 2:]
-        cov = np.atleast_1d(pm.trace_cov(init_trace))
-        start = np.random.choice(init_trace, njobs)
+
+    if n_nuts > 0:
+        from sklearn import covariance
+        step_tune = pm.NUTS(scaling=cov, is_cov=True)
+        trace_tune = pm.sample(n_nuts, step_tune, tune=n_nuts // 2)[(n_nuts // 2):]
+        cov = covariance.LedoitWolf().fit(pm.trace_to_dataframe(trace_tune).values).covariance_
+        cov = pm.theanof.floatX(cov)
+        start = np.random.choice(trace_tune, njobs)
         if njobs == 1:
             start = start[0]
-    else:
-        raise NotImplemented('Initializer {} is not supported.'.format(init))
 
-    step = pm.NUTS(scaling=cov, is_cov=True, **kwargs)
+        step = pm.NUTS(scaling=cov, is_cov=True, **kwargs)
+        step.log_step_size = step_tune.log_step_size
+        step.log_step_size_bar = step_tune.log_step_size_bar
+    else:
+        step = pm.NUTS(scaling=cov, is_cov=True, **kwargs)
 
     return start, step

@@ -154,7 +154,7 @@ def _elbo_t(
 
     # Sampling local variational parameters
     if uw_l is not None:
-        l_l = (uw_l.size / 2).astype('int64')
+        l_l = (uw_l.size / 2).astype('int32')
         u_l = uw_l[:l_l]
         w_l = uw_l[l_l:]
         ns_l = r.normal(size=(n_mcsamples, inarray_l.tag.test_value.shape[0]))
@@ -165,7 +165,7 @@ def _elbo_t(
 
     # Sampling global variational parameters
     if uw_g is not None:
-        l_g = (uw_g.size / 2).astype('int64')
+        l_g = (uw_g.size / 2).astype('int32')
         u_g = uw_g[:l_g]
         w_g = uw_g[l_g:]
         ns_g = r.normal(size=(n_mcsamples, inarray_g.tag.test_value.shape[0]))

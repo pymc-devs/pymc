@@ -109,7 +109,7 @@ class QuadPotential_Inv(object):
         return solve(self.L.T, y)
 
     def random(self):
-        n = normal(size=self.L.shape[0])
+        n = floatX(normal(size=self.L.shape[0]))
         return dot(self.L, n)
 
     def energy(self, x):
@@ -120,14 +120,14 @@ class QuadPotential_Inv(object):
 class QuadPotential(object):
 
     def __init__(self, A):
-        self.A = A
+        self.A = floatX(A)
         self.L = scipy.linalg.cholesky(A, lower=True)
 
     def velocity(self, x):
         return x.T.dot(self.A.T)
 
     def random(self):
-        n = normal(size=self.L.shape[0])
+        n = floatX(normal(size=self.L.shape[0]))
         return scipy.linalg.solve_triangular(self.L.T, n)
 
     def energy(self, x):
