@@ -115,7 +115,8 @@ class GLM(LinearComponent):
             normal=families.Normal,
             student=families.StudentT,
             binomial=families.Binomial,
-            poisson=families.Poisson
+            poisson=families.Poisson,
+            negative_binomial=families.NegativeBinomial,
         )
         if isinstance(family, str):
             family = _families[family]()
