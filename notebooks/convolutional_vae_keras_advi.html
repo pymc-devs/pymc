@@ -338,25 +338,57 @@ than directly implementing of Monte Carlo sampling and the loss function
 as done in the Keras example. Thus I think the framework of AEVB in
 PyMC3 can be extended to more complex models such as <a class="reference external" href="https://taku-y.github.io/notebook/20160928/lda-advi-ae.html">latent dirichlet
 allocation</a>.</p>
-<p>NOTE: This notebook works best with Theano O.9.0dev3 otherwise you&#8217;ll
-get Nan errors. - Notebook Written by Taku Yoshioka (c) 2016</p>
+<ul class="simple">
+<li>Notebook Written by Taku Yoshioka (c) 2016</li>
+</ul>
 <p>For using Keras with PyMC3, we need to choose
 <a class="reference external" href="http://deeplearning.net/software/theano/">Theano</a> as the backend of
 Keras.</p>
-<p>Install Keras if it is not already available:</p>
+<p>Install required packages, including pymc3, if it is not already
+available:</p>
 <div class="nbinput nblast container">
 <div class="highlight-none"><div class="highlight"><pre>
 <span></span>In [1]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span><span class="o">!</span>conda install -y keras
+<span></span><span class="ch">#!pip install --upgrade git+https://github.com/Theano/Theano.git#egg=Theano</span>
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [2]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="ch">#!pip install --upgrade keras</span>
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [3]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="ch">#!pip install --upgrade pymc3</span>
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [4]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="ch">#!conda install -y mkl-service</span>
 </pre></div>
 </div>
 </div>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [2]:
+<span></span>In [5]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -367,7 +399,7 @@ Keras.</p>
 
 <span class="kn">from</span> <span class="nn">theano</span> <span class="kn">import</span> <span class="n">config</span>
 <span class="n">config</span><span class="o">.</span><span class="n">floatX</span> <span class="o">=</span> <span class="s1">&#39;float32&#39;</span>
-<span class="n">config</span><span class="o">.</span><span class="n">optimizer</span> <span class="o">=</span> <span class="s1">&#39;fast_compile&#39;</span>
+<span class="n">config</span><span class="o">.</span><span class="n">optimizer</span> <span class="o">=</span> <span class="s1">&#39;fast_run&#39;</span>
 
 <span class="kn">from</span> <span class="nn">collections</span> <span class="kn">import</span> <span class="n">OrderedDict</span>
 <span class="kn">from</span> <span class="nn">keras.layers</span> <span class="kn">import</span> <span class="n">InputLayer</span><span class="p">,</span> <span class="n">BatchNormalization</span><span class="p">,</span> <span class="n">Dense</span><span class="p">,</span> <span class="n">Convolution2D</span><span class="p">,</span> <span class="n">Deconvolution2D</span><span class="p">,</span> <span class="n">Activation</span><span class="p">,</span> <span class="n">Flatten</span><span class="p">,</span> <span class="n">Reshape</span>
@@ -391,9 +423,9 @@ Keras.</p>
 <div class="container">
 </div>
 <div class="container">
-<div id="f310eef9-22e6-44a7-8e5c-08f6cf6bd703"></div>
+<div id="beaa8f1a-c8e5-4dd8-9fa5-1de1ef633b10"></div>
 <script type="text/javascript">
-var element = document.getElementById('f310eef9-22e6-44a7-8e5c-08f6cf6bd703');
+var element = document.getElementById('beaa8f1a-c8e5-4dd8-9fa5-1de1ef633b10');
 IPython.notebook.set_autosave_interval(0)
 </script></div>
 </div>
@@ -413,6 +445,29 @@ Autosave disabled
 Using Theano backend.
 </pre></div></div>
 </div>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [6]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">pymc3</span><span class="o">,</span> <span class="nn">theano</span>
+<span class="k">print</span><span class="p">(</span><span class="n">pymc3</span><span class="o">.</span><span class="n">__version__</span><span class="p">)</span>
+<span class="k">print</span><span class="p">(</span><span class="n">theano</span><span class="o">.</span><span class="n">__version__</span><span class="p">)</span>
+<span class="k">print</span><span class="p">(</span><span class="n">keras</span><span class="o">.</span><span class="n">__version__</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<div class="highlight"><pre>
+3.0
+0.9.0beta1.dev-3343d912717ee85c5c2e0572cfae94581b35e32b
+1.2.1
+</pre></div></div>
+</div>
 <div class="section" id="Load-images">
 <h2>Load images<a class="headerlink" href="#Load-images" title="Permalink to this headline">¶</a></h2>
 <p>MNIST dataset can be obtained by <a class="reference external" href="http://scikit-learn.org/stable/datasets/">scikit-learn
@@ -420,7 +475,7 @@ API</a>. The dataset contains
 images of digits.</p>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [3]:
+<span></span>In [7]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -437,7 +492,7 @@ images of digits.</p>
 </div>
 <div class="container">
 <div class="highlight"><pre>
-dict_keys([&#39;COL_NAMES&#39;, &#39;target&#39;, &#39;DESCR&#39;, &#39;data&#39;])
+dict_keys([&#39;COL_NAMES&#39;, &#39;data&#39;, &#39;target&#39;, &#39;DESCR&#39;])
 </pre></div></div>
 </div>
 </div>
@@ -458,7 +513,7 @@ training or test. This information is important also for batch
 normalization.</p>
 <div class="nbinput nblast container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [4]:
+<span></span>In [8]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -503,7 +558,7 @@ representing observations (images of digits), the dimension of latent
 space, and the parameters of the model architecture.</p>
 <div class="nbinput nblast container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [5]:
+<span></span>In [9]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -544,7 +599,7 @@ on the architecture of the encoder except for input shape (<code class="docutils
 for images), so we can use this class for various encoding networks.</p>
 <div class="nbinput nblast container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [6]:
+<span></span>In [10]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -616,11 +671,11 @@ for images), so we can use this class for various encoding networks.</p>
 decoders.</p>
 <div class="nbinput nblast container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [7]:
+<span></span>In [11]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span><span class="k">def</span> <span class="nf">cnn_dec</span><span class="p">(</span><span class="n">zs</span><span class="p">,</span> <span class="n">minibatch_size</span><span class="p">,</span> <span class="n">nb_filters</span><span class="o">=</span><span class="mi">64</span><span class="p">,</span> <span class="n">nb_conv</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span> <span class="n">dim_hidden</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span> <span class="n">output_shape</span><span class="o">=</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">28</span><span class="p">,</span> <span class="mi">28</span><span class="p">)):</span>
+<span></span><span class="k">def</span> <span class="nf">cnn_dec</span><span class="p">(</span><span class="n">zs</span><span class="p">,</span> <span class="n">nb_filters</span><span class="o">=</span><span class="mi">64</span><span class="p">,</span> <span class="n">nb_conv</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span> <span class="n">output_shape</span><span class="o">=</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">28</span><span class="p">,</span> <span class="mi">28</span><span class="p">)):</span>
     <span class="sd">&quot;&quot;&quot;Returns a CNN model of Keras.</span>
 
 <span class="sd">    Parameters</span>
@@ -628,6 +683,7 @@ decoders.</p>
 <span class="sd">    zs : theano.tensor.var.TensorVariable</span>
 <span class="sd">        Input tensor.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">minibatch_size</span><span class="p">,</span> <span class="n">dim_hidden</span> <span class="o">=</span> <span class="n">zs</span><span class="o">.</span><span class="n">tag</span><span class="o">.</span><span class="n">test_value</span><span class="o">.</span><span class="n">shape</span>
     <span class="n">input_layer</span> <span class="o">=</span> <span class="n">InputLayer</span><span class="p">(</span><span class="n">input_tensor</span><span class="o">=</span><span class="n">zs</span><span class="p">,</span>
                              <span class="n">batch_input_shape</span><span class="o">=</span><span class="n">zs</span><span class="o">.</span><span class="n">tag</span><span class="o">.</span><span class="n">test_value</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
     <span class="n">model</span> <span class="o">=</span> <span class="n">Sequential</span><span class="p">()</span>
@@ -655,7 +711,7 @@ decoders.</p>
 </div>
 <div class="nbinput nblast container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [8]:
+<span></span>In [12]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -668,7 +724,7 @@ decoders.</p>
 <span class="sd">        Hidden variables.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">zs</span><span class="p">,</span> <span class="n">net</span><span class="p">):</span>
-        <span class="n">model</span> <span class="o">=</span> <span class="n">net</span><span class="p">(</span><span class="n">zs</span><span class="p">,</span> <span class="n">dim_hidden</span><span class="p">)</span>
+        <span class="n">model</span> <span class="o">=</span> <span class="n">net</span><span class="p">(</span><span class="n">zs</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">model</span> <span class="o">=</span> <span class="n">model</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">zs</span> <span class="o">=</span> <span class="n">zs</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">out</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">get_output_at</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span>
@@ -708,7 +764,7 @@ and classes defined above. We set the size of mini-batches to 100 and
 the dimension of the latent space to 2 for visualization.</p>
 <div class="nbinput nblast container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [9]:
+<span></span>In [13]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -724,7 +780,7 @@ the below, <code class="docutils literal"><span class="pre">enc.model</span></co
 we can check the model architecture using the method <code class="docutils literal"><span class="pre">summary()</span></code>.</p>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [10]:
+<span></span>In [14]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -736,6 +792,15 @@ we can check the model architecture using the method <code class="docutils liter
 <span class="n">enc</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">summary</span><span class="p">()</span>
 </pre></div>
 </div>
+</div>
+<div class="nboutput container">
+<div class="container">
+</div>
+<div class="stderr container">
+<div class="highlight"><pre>
+/opt/conda/lib/python3.5/site-packages/keras/engine/topology.py:371: UserWarning: The `regularizers` property of layers/models is deprecated. Regularization losses are now managed via the `losses` layer/model property.
+  warnings.warn(&#39;The `regularizers` property of &#39;
+</pre></div></div>
 </div>
 <div class="nboutput nblast container">
 <div class="container">
@@ -761,7 +826,9 @@ dense_1 (Dense)                  (200, 128)            1605760     flatten_1[0][
 ____________________________________________________________________________________________________
 dense_2 (Dense)                  (200, 4)              516         dense_1[0][0]
 ====================================================================================================
-Total params: 1680457
+Total params: 1,680,457
+Trainable params: 1,680,457
+Non-trainable params: 0
 ____________________________________________________________________________________________________
 </pre></div></div>
 </div>
@@ -770,9 +837,9 @@ variable <span class="math">\(\mathbf{z}\)</span> and observation <span class="m
 Normal prior on <span class="math">\(\mathbf{z}\)</span>, decode the variational parameters of
 <span class="math">\(q(\mathbf{z}|\mathbf{x})\)</span> and define the likelihood of the
 observation <span class="math">\(\mathbf{x}\)</span>.</p>
-<div class="nbinput nblast container">
+<div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [11]:
+<span></span>In [15]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -788,13 +855,22 @@ observation <span class="math">\(\mathbf{x}\)</span>.</p>
 </pre></div>
 </div>
 </div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="stderr container">
+<div class="highlight"><pre>
+/opt/conda/lib/python3.5/site-packages/keras/engine/topology.py:371: UserWarning: The `regularizers` property of layers/models is deprecated. Regularization losses are now managed via the `losses` layer/model property.
+  warnings.warn(&#39;The `regularizers` property of &#39;
+</pre></div></div>
+</div>
 <p>In the above definition of the generative model, we do not know how the
 decoded variational parameters are passed to
 <span class="math">\(q(\mathbf{z}|\mathbf{x})\)</span>. To do this, we will set the argument
 <code class="docutils literal"><span class="pre">local_RVs</span></code> in the ADVI function of PyMC3.</p>
 <div class="nbinput nblast container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [12]:
+<span></span>In [16]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -815,7 +891,7 @@ inference.</p>
 same way.</p>
 <div class="nbinput nblast container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [13]:
+<span></span>In [17]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -827,7 +903,7 @@ same way.</p>
 encoding network.</p>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [14]:
+<span></span>In [18]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -845,21 +921,23 @@ Layer (type)                     Output Shape          Param #     Connected to
 ====================================================================================================
 input_2 (InputLayer)             (200, 2)              0
 ____________________________________________________________________________________________________
-dense_3 (Dense)                  (200, 100)            300         input_2[0][0]
+dense_3 (Dense)                  (200, 2)              6           input_2[0][0]
 ____________________________________________________________________________________________________
-dense_4 (Dense)                  (200, 12544)          1266944     dense_3[0][0]
+dense_4 (Dense)                  (200, 12544)          37632       dense_3[0][0]
 ____________________________________________________________________________________________________
 reshape_1 (Reshape)              (200, 64, 14, 14)     0           dense_4[0][0]
 ____________________________________________________________________________________________________
-deconvolution2d_1 (Deconvolution2(200, 64, 14, 14)     36928       reshape_1[0][0]
+deconvolution2d_1 (Deconvolution (200, 64, 14, 14)     36928       reshape_1[0][0]
 ____________________________________________________________________________________________________
-deconvolution2d_2 (Deconvolution2(200, 64, 14, 14)     36928       deconvolution2d_1[0][0]
+deconvolution2d_2 (Deconvolution (200, 64, 14, 14)     36928       deconvolution2d_1[0][0]
 ____________________________________________________________________________________________________
-deconvolution2d_3 (Deconvolution2(200, 64, 29, 29)     16448       deconvolution2d_2[0][0]
+deconvolution2d_3 (Deconvolution (200, 64, 29, 29)     16448       deconvolution2d_2[0][0]
 ____________________________________________________________________________________________________
 convolution2d_5 (Convolution2D)  (200, 1, 28, 28)      257         deconvolution2d_3[0][0]
 ====================================================================================================
-Total params: 1357805
+Total params: 128,199
+Trainable params: 128,199
+Non-trainable params: 0
 ____________________________________________________________________________________________________
 </pre></div></div>
 </div>
@@ -871,7 +949,7 @@ define the optimizer used for ADVI. The optimizer is a function that
 returns Theano parameter update object (dictionary).</p>
 <div class="nbinput nblast container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [15]:
+<span></span>In [19]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -895,7 +973,7 @@ returns Theano parameter update object (dictionary).</p>
 <p>Let us execute ADVI function of PyMC3.</p>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [16]:
+<span></span>In [20]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -914,7 +992,7 @@ returns Theano parameter update object (dictionary).</p>
 </div>
 <div class="stderr container">
 <div class="highlight"><pre>
-Average ELBO = -41,015,059.05: 100%|██████████| 1000/1000 [36:47&lt;00:00,  2.19s/it]
+Average ELBO = -60,160,526.92: 100%|██████████| 1000/1000 [27:05&lt;00:00,  1.85s/it]
 </pre></div></div>
 </div>
 </div>
@@ -925,7 +1003,7 @@ ELBO during inference (optimization). We can see the convergence of the
 inference.</p>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [17]:
+<span></span>In [21]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -935,19 +1013,28 @@ inference.</p>
 </div>
 <div class="nboutput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>Out[17]:
+<span></span>Out[21]:
 </pre></div>
 </div>
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>[&lt;matplotlib.lines.Line2D at 0x7f61aaa34438&gt;]
+<span></span>[&lt;matplotlib.lines.Line2D at 0x7fb7362db940&gt;]
 </pre></div>
 </div>
+</div>
+<div class="nboutput container">
+<div class="container">
+</div>
+<div class="stderr container">
+<div class="highlight"><pre>
+/opt/conda/lib/python3.5/site-packages/matplotlib/font_manager.py:1297: UserWarning: findfont: Font family [&#39;sans-serif&#39;] not found. Falling back to DejaVu Sans
+  (prop.get_family(), self.defaultFamily[fontext]))
+</pre></div></div>
 </div>
 <div class="nboutput nblast container">
 <div class="container">
 </div>
 <div class="container">
-<img alt="../_images/notebooks_convolutional_vae_keras_advi_37_1.png" src="../_images/notebooks_convolutional_vae_keras_advi_37_1.png" />
+<img alt="../_images/notebooks_convolutional_vae_keras_advi_41_2.png" src="../_images/notebooks_convolutional_vae_keras_advi_41_2.png" />
 </div>
 </div>
 <p>Finally, we see the distribution of the images in the latent space. To
@@ -956,7 +1043,7 @@ decoding network. The mean of <span class="math">\(p(\mathbf{x}|\mathbf{z})\)</s
 image corresponding to the samples on the grid.</p>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [18]:
+<span></span>In [22]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -972,20 +1059,37 @@ image corresponding to the samples on the grid.</p>
 </div>
 </div>
 <div class="nboutput container">
+<div class="container">
+</div>
+<div class="stderr container">
+<div class="highlight"><pre>
+WARNING (theano.tensor.blas): We did not found a dynamic library into the library_dir of the library we use for blas. If you use ATLAS, make sure to compile it with dynamics library.
+</pre></div></div>
+</div>
+<div class="nboutput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>Out[18]:
+<span></span>Out[22]:
 </pre></div>
 </div>
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>&lt;matplotlib.image.AxesImage at 0x7f619d721b70&gt;
+<span></span>&lt;matplotlib.image.AxesImage at 0x7fb77538c2b0&gt;
 </pre></div>
 </div>
+</div>
+<div class="nboutput container">
+<div class="container">
+</div>
+<div class="stderr container">
+<div class="highlight"><pre>
+/opt/conda/lib/python3.5/site-packages/matplotlib/font_manager.py:1297: UserWarning: findfont: Font family [&#39;sans-serif&#39;] not found. Falling back to DejaVu Sans
+  (prop.get_family(), self.defaultFamily[fontext]))
+</pre></div></div>
 </div>
 <div class="nboutput nblast container">
 <div class="container">
 </div>
 <div class="container">
-<img alt="../_images/notebooks_convolutional_vae_keras_advi_39_1.png" src="../_images/notebooks_convolutional_vae_keras_advi_39_1.png" />
+<img alt="../_images/notebooks_convolutional_vae_keras_advi_43_3.png" src="../_images/notebooks_convolutional_vae_keras_advi_43_3.png" />
 </div>
 </div>
 <div class="nbinput nblast container">

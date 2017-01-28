@@ -899,7 +899,9 @@ some setting up:</p>
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span><span class="c1"># Set back to original data to retrain</span>
+<span></span><span class="kn">from</span> <span class="nn">six.moves</span> <span class="kn">import</span> <span class="nb">zip</span>
+
+<span class="c1"># Set back to original data to retrain</span>
 <span class="n">ann_input</span><span class="o">.</span><span class="n">set_value</span><span class="p">(</span><span class="n">X_train</span><span class="p">)</span>
 <span class="n">ann_output</span><span class="o">.</span><span class="n">set_value</span><span class="p">(</span><span class="n">Y_train</span><span class="p">)</span>
 
