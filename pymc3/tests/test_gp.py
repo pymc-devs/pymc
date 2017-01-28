@@ -32,14 +32,14 @@ class ExpQuadTest(unittest.TestCase):
             with Model() as model:
                 cov = gp.cov.ExpQuad(1, 0.1)
             K = theano.function([], cov.K(X))()
-        self.assertRaises(err1)
+        self.assertRaises(Exception,err1)
 
         def err2():
             X = np.random.randn(10,2)
             with Model() as model:
                 cov = gp.cov.ExpQuad(2, np.array([1,2,3]))
             K = theano.function([], cov.K(X))()
-        self.assertRaises(err2)
+        self.assertRaises(Exception,err2)
 
 
 class RatQuadTest(unittest.TestCase):
@@ -70,14 +70,14 @@ class RatQuadTest(unittest.TestCase):
             with Model() as model:
                 cov = gp.cov.RatQuad(1, 0.1, 0.5)
             K = theano.function([], cov.K(X))()
-        self.assertRaises(err1)
+        self.assertRaises(Exception,err1)
 
         def err2():
             X = np.random.randn(10,2)
             with Model() as model:
                 cov = gp.cov.RatQuad(2, np.array([1,2,3]), 0.5)
             K = theano.function([], cov.K(X))()
-        self.assertRaises(err2)
+        self.assertRaises(Exception,err2)
 
 
 class ExponentialTest(unittest.TestCase):
@@ -108,14 +108,14 @@ class ExponentialTest(unittest.TestCase):
             with Model() as model:
                 cov = gp.cov.Exponential(1, 0.1)
             K = theano.function([], cov.K(X))()
-        self.assertRaises(err1)
+        self.assertRaises(Exception,err1)
 
         def err2():
             X = np.random.randn(10,2)
             with Model() as model:
                 cov = gp.cov.Exponential(2, np.array([1,2,3]))
             K = theano.function([], cov.K(X))()
-        self.assertRaises(err2)
+        self.assertRaises(Exception,err2)
 
 
 class Matern52Test(unittest.TestCase):
@@ -146,14 +146,14 @@ class Matern52Test(unittest.TestCase):
             with Model() as model:
                 cov = gp.cov.Matern52(1, 0.1)
             K = theano.function([], cov.K(X))()
-        self.assertRaises(err1)
+        self.assertRaises(Exception,err1)
 
         def err2():
             X = np.random.randn(10,2)
             with Model() as model:
                 cov = gp.cov.Matern52(2, np.array([1,2,3]))
             K = theano.function([], cov.K(X))()
-        self.assertRaises(err2)
+        self.assertRaises(Exception,err2)
 
 
 class Matern32Test(unittest.TestCase):
@@ -184,14 +184,14 @@ class Matern32Test(unittest.TestCase):
             with Model() as model:
                 cov = gp.cov.Matern32(1, 0.1)
             K = theano.function([], cov.K(X))()
-        self.assertRaises(err1)
+        self.assertRaises(Exception,err1)
 
         def err2():
             X = np.random.randn(10,2)
             with Model() as model:
                 cov = gp.cov.Matern32(2, np.array([1,2,3]))
             K = theano.function([], cov.K(X))()
-        self.assertRaises(err2)
+        self.assertRaises(Exception,err2)
 
 
 class LinearTest(unittest.TestCase):
@@ -222,14 +222,14 @@ class LinearTest(unittest.TestCase):
             with Model() as model:
                 cov = gp.cov.Linear(1, 0.1)
             K = theano.function([], cov.K(X))()
-        self.assertRaises(err1)
+        self.assertRaises(Exception,err1)
 
         def err2():
             X = np.random.randn(10,2)
             with Model() as model:
                 cov = gp.cov.Linear(2, np.array([1,2,3]))
             K = theano.function([], cov.K(X))()
-        self.assertRaises(err2)
+        self.assertRaises(Exception,err2)
 
 
 class PolynomialTest(unittest.TestCase):
@@ -260,35 +260,27 @@ class PolynomialTest(unittest.TestCase):
             with Model() as model:
                 cov = gp.cov.Polynomial(1, 0.1, 2, 0)
             K = theano.function([], cov.K(X))()
-        self.assertRaises(err1)
+        self.assertRaises(Exception,err1)
 
         def err2():
             X = np.random.randn(10,2)
             with Model() as model:
                 cov = gp.cov.Polynomial(2, np.array([1,2,3]), 2, 0)
             K = theano.function([], cov.K(X))()
-        self.assertRaises(err2)
+        self.assertRaises(Exception, err2)
 
 
 class WarpedInputTest(unittest.TestCase):
     def warp_func(self, x, a, b, c):
         return x + (a * tt.tanh(b * (x - c)))
 
-    def test_1d(self):
-        X = np.linspace(0,1,10)[:,None]
-        with Model() as model:
-            cov_m52 = gp.cov.Matern52(1, 0.2)
-            cov = gp.cov.WarpedInput(1, warp_func=self.warp_func, args=(1,10,1), cov_func=cov_m52)
-        K = theano.function([], cov.K(X))()
-        self.assertAlmostEqual(K[4,5], 0.795196, 4)
-
     def test_dimerrors(self):
         def err():
             X = np.random.randn(10,2)
             with Model() as model:
                 cov_m52 = gp.cov.Matern52(1, 0.2)
-                cov = gp.cov.WarpedInput(1, warp_func=warp_func, args=(1,10,1), cov_func=cov_m52)
+                cov = gp.cov.WarpedInput(1, warp_func=self.warp_func, args=(1,10,1), cov_func=cov_m52)
             K = theano.function([], cov.K(X))()
-        self.assertRaises(err)
+        self.assertRaises(Exception, err)
 
 
