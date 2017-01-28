@@ -104,11 +104,11 @@ def test_multinomial_bound():
 
     with pm.Model() as modelA:
         p_a = pm.Dirichlet('p', np.ones(2))
-        x_obs_a = MultinomialA('x', n, p_a, observed=x)
+        MultinomialA('x', n, p_a, observed=x)
 
     with pm.Model() as modelB:
         p_b = pm.Dirichlet('p', np.ones(2))
-        x_obs_b = MultinomialB('x', n, p_b, observed=x)
+        MultinomialB('x', n, p_b, observed=x)
 
     assert np.isclose(modelA.logp({'p_stickbreaking_': [0]}),
                       modelB.logp({'p_stickbreaking_': [0]}))

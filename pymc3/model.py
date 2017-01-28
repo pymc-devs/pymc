@@ -652,7 +652,7 @@ class Model(six.with_metaclass(InitContextMeta, Context, Factor)):
         if point is None:
             point = self.test_point
 
-        for i in range(n):
+        for _ in range(n):
             f(**point)
 
         return f.profile

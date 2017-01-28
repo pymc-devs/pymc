@@ -4,12 +4,12 @@ import numpy as np
 '''Original Stan model
 
 data {
-  int<lower=0> J; // number of schools 
+  int<lower=0> J; // number of schools
   real y[J]; // estimated treatment effects
-  real<lower=0> sigma[J]; // s.e. of effect estimates 
+  real<lower=0> sigma[J]; // s.e. of effect estimates
 }
 parameters {
-  real mu; 
+  real mu;
   real<lower=0> tau;
   real eta[J];
 }
@@ -44,7 +44,7 @@ def run(n=1000):
         n = 50
     with schools:
         tr = sample(n)
-        l = loo(tr)
+        loo(tr)
 
 if __name__ == '__main__':
     run()

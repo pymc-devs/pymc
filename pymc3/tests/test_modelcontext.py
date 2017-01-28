@@ -21,14 +21,14 @@ class TestModelContext(unittest.TestCase):
             with modelA:
                 aInCtxt.set()
                 bInCtxt.wait()
-                a = Normal('a',0,1)
+                Normal('a',0,1)
             aDone.set()
         def make_model_b():
             aInCtxt.wait()
             with modelB:
                 bInCtxt.set()
                 aDone.wait()
-                b = Normal('b', 0, 1)
+                Normal('b', 0, 1)
         threadA = threading.Thread(target=make_model_a)
         threadB = threading.Thread(target=make_model_b)
         threadA.start()

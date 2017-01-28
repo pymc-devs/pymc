@@ -45,8 +45,6 @@ class ElemwiseCategorical(ArrayStep):
 
     @staticmethod
     def competence(var):
-        distribution = getattr(
-            var.distribution, 'parent_dist', var.distribution)
         if isinstance(var.distribution, Categorical):
             return Competence.COMPATIBLE
         return Competence.INCOMPATIBLE
@@ -66,7 +64,7 @@ def categorical(prob, shape):
                             op_flags=[['readonly'], ['readwrite']],
                             flags=['reduce_ok'])
 
-    for i in it0:
+    for _ in it0:
         p, o = it1.itviews
         p = cumsum(exp(p - max(p, axis=0)))
         r = uniform() * p[-1]

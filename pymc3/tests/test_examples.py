@@ -198,7 +198,7 @@ class TestGLMLinear(SeededTest):
     def test_run(self):
         with self.build_model():
             start = pm.find_MAP(fmin=opt.fmin_powell)
-            trace = pm.sample(50, pm.Slice(), start=start)
+            pm.sample(50, pm.Slice(), start=start)
 
 
 class TestLatentOccupancy(SeededTest):

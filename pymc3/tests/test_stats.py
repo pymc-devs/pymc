@@ -77,17 +77,17 @@ class TestStats(SeededTest):
 
             step = pm.Metropolis()
             trace = pm.sample(100, step)
-            calculated_waic, calculated_waic_se  = pm.waic(trace)
+            calculated_waic, calculated_waic_se = pm.waic(trace)
 
         log_py = st.binom.logpmf(np.atleast_2d(x_obs).T, 5, trace['p']).T
 
         lppd_i = np.log(np.mean(np.exp(log_py), axis=0))
         vars_lpd = np.var(log_py, axis=0)
         waic_i = - 2 * (lppd_i - vars_lpd)
-        
+
         actual_waic_se = np.sqrt(len(waic_i) * np.var(waic_i))
         actual_waic = np.sum(waic_i)
-        
+
         assert_almost_equal(calculated_waic, actual_waic, decimal=2)
         assert_almost_equal(calculated_waic_se, actual_waic_se, decimal=2)
 
@@ -372,7 +372,7 @@ class TestDfSummary(bf.ModelBackendSampledTestCase):
                 npt.assert_equal(val, ds.loc[vidx, 'mean'])
 
     def test_row_names(self):
-        with Model() as model:
+        with Model():
             pm.Uniform('x', 0, 1)
             step = Metropolis()
             trace = pm.sample(100, step=step)

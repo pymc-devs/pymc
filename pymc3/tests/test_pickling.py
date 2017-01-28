@@ -13,9 +13,9 @@ class TestPickling(unittest.TestCase):
         for proto in range(pickle.HIGHEST_PROTOCOL+1):
             try:
                 s = pickle.dumps(m, proto)
-                n = pickle.loads(s)
-            except Exception as ex:
+                pickle.loads(s)
+            except Exception:
                 raise AssertionError(
-                    "Exception while trying roundtrip with pickle protocol %d:\n"%proto +
+                    "Exception while trying roundtrip with pickle protocol %d:\n" % proto +
                     ''.join(traceback.format_exc())
                 )

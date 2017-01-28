@@ -73,7 +73,7 @@ def traceplot(trace, varnames=None, transform=lambda x: x, figsize=None,
         figsize = (12, n * 2)
 
     if ax is None:
-        fig, ax = plt.subplots(n, 2, squeeze=False, figsize=figsize)
+        _, ax = plt.subplots(n, 2, squeeze=False, figsize=figsize)
     elif ax.shape != (n, 2):
         pm._log.warning('traceplot requires n*2 subplots')
         return None
@@ -166,14 +166,14 @@ def kde2plot_op(ax, x, y, grid=200, **kwargs):
 
 def kdeplot(data, ax=None):
     if ax is None:
-        f, ax = plt.subplots(1, 1, squeeze=True)
+        _, ax = plt.subplots(1, 1, squeeze=True)
     kdeplot_op(ax, data)
     return ax
 
 
 def kde2plot(x, y, grid=200, ax=None, **kwargs):
     if ax is None:
-        f, ax = plt.subplots(1, 1, squeeze=True)
+        _, ax = plt.subplots(1, 1, squeeze=True)
     kde2plot_op(ax, x, y, grid, **kwargs)
     return ax
 
@@ -232,8 +232,8 @@ def autocorrplot(trace, varnames=None, max_lag=100, burn=0, plot_transformed=Fal
         figsize = (12, len(varnames) * 2)
 
     if ax is None:
-        fig, ax = plt.subplots(len(varnames), nchains, squeeze=False,
-                               sharex=True, sharey=True, figsize=figsize)
+        _, ax = plt.subplots(len(varnames), nchains, squeeze=False,
+                             sharex=True, sharey=True, figsize=figsize)
     elif ax.shape != (len(varnames), nchains):
         raise ValueError('autocorrplot requires {}*{} subplots'.format(
             len(varnames), nchains))
@@ -300,7 +300,7 @@ def forestplot(trace_obj, varnames=None, transform=lambda x: x, alpha=0.05, quar
 
     Parameters
     ----------
-    
+
     trace_obj: NpTrace or MultiTrace object
         Trace(s) from an MCMC sample.
     varnames: list
@@ -311,7 +311,7 @@ def forestplot(trace_obj, varnames=None, transform=lambda x: x, alpha=0.05, quar
     alpha (optional): float
         Alpha value for (1-alpha)*100% credible intervals (defaults to 0.05).
     quartiles (optional): bool
-        Flag for plotting the interquartile range, in addition to the 
+        Flag for plotting the interquartile range, in addition to the
         (1-alpha)*100% intervals (defaults to True).
     rhat (optional): bool
         Flag for plotting Gelman-Rubin statistics. Requires 2 or more chains
@@ -778,13 +778,13 @@ def plot_posterior(trace, varnames=None, transform=lambda x: x, figsize=None,
         fig.tight_layout()
     return ax
 
-    
+
 def fast_kde(x):
     """
     A fft-based Gaussian kernel density estimate (KDE) for computing
     the KDE on a regular grid.
     The code was adapted from https://github.com/mfouesneau/faststats
-    
+
     Parameters
     ----------
 
@@ -796,13 +796,13 @@ def fast_kde(x):
     grid: A gridded 1D KDE of the input points (x).
     xmin: minimum value of x
     xmax: maximum value of x
-    
+
     """
     # add small jitter in case input values are the same
     x = np.random.normal(x, 1e-12)
-    
+
     xmin, xmax = x.min(), x.max()
-    
+
     n = len(x)
     nx = 256
 

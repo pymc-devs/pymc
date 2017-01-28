@@ -121,7 +121,7 @@ def test_random_diag():
         quadpotential.quad_potential(np.diag(1./d), False, False),
     ]
     if quadpotential.chol_available:
-        d_ = scipy.sparse.csc_matrix(np.diag(d))
+        d = scipy.sparse.csc_matrix(np.diag(d))
         pot = quadpotential.quad_potential(d, True, False)
         pots.append(pot)
     for pot in pots:

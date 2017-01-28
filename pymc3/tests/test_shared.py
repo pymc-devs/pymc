@@ -20,9 +20,9 @@ class TestShared(SeededTest):
 
         x_shared = theano.shared(x)
 
-        with pm.Model() as model:
-            b = pm.Normal('b', 0., 10.)   
-            obs = pm.Normal('obs', b * x_shared, np.sqrt(1e-2), observed=y)
+        with pm.Model():
+            b = pm.Normal('b', 0., 10.)
+            pm.Normal('obs', b * x_shared, np.sqrt(1e-2), observed=y)
 
             trace = pm.sample(1000, init=None, progressbar=False)
 

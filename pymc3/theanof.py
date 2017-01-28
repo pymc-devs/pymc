@@ -143,14 +143,10 @@ class IdentityOp(scalar.UnaryScalarOp):
         return x
 
     def grad(self, inp, grads):
-        x, = inp
-        gz, = grads
         return grads
 
     def c_code(self, node, name, inp, out, sub):
-        x, = inp
-        z, = out
-        return """%(z)s = %(x)s;""" % locals()
+        return "{z} = {x};".format(x=inp[0], z=out[0])
 
     def __eq__(self, other):
         return type(self) == type(other)

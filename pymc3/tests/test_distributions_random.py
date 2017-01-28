@@ -55,7 +55,7 @@ def pymc3_random_discrete(dist, paramdomains,
             if np.all(k[:, 0] == k[:, 1]):
                 p = 1.
             else:
-                _chi, p = st.chisquare(k[:, 0], k[:, 1])
+                _, p = st.chisquare(k[:, 0], k[:, 1])
             f -= 1
         assert p > alpha, str(pt)
 

@@ -217,8 +217,8 @@ class Normal(Continuous):
         super(Normal, self).__init__(**kwargs)
 
     def random(self, point=None, size=None, repeat=None):
-        mu, tau, sd = draw_values([self.mu, self.tau, self.sd],
-                                  point=point)
+        mu, tau, _ = draw_values([self.mu, self.tau, self.sd],
+                                 point=point)
         return generate_samples(stats.norm.rvs, loc=mu, scale=tau**-0.5,
                                 dist_shape=self.shape,
                                 size=size)
@@ -1287,7 +1287,7 @@ class SkewNormal(Continuous):
         assert_negative_support(sd, 'sd', 'SkewNormal')
 
     def random(self, point=None, size=None, repeat=None):
-        mu, tau, sd, alpha = draw_values(
+        mu, tau, _, alpha = draw_values(
             [self.mu, self.tau, self.sd, self.alpha], point=point)
         return generate_samples(stats.skewnorm.rvs,
                                 a=alpha, loc=mu, scale=tau**-0.5,
