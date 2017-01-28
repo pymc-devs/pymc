@@ -108,6 +108,7 @@
 </li>
 <li class="toctree-l3"><a class="reference internal" href="GLM-poisson-regression.html">GLM: Poisson Regression</a></li>
 <li class="toctree-l3"><a class="reference internal" href="hierarchical_partial_pooling.html">Hierarchical Partial Pooling</a></li>
+<li class="toctree-l3"><a class="reference internal" href="GLM-negative-binomial-regression.html">GLM: Negative Binomial Regression</a></li>
 </ul>
 </li>
 <li class="toctree-l2"><a class="reference internal" href="../examples.html#gp">GP</a></li>
@@ -408,9 +409,10 @@ measurements are taken, ranging from 2 to 116 measurements per county.</p>
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="kn">as</span> <span class="nn">np</span>
 <span class="kn">import</span> <span class="nn">pymc3</span> <span class="kn">as</span> <span class="nn">pm</span>
 <span class="kn">import</span> <span class="nn">pandas</span> <span class="kn">as</span> <span class="nn">pd</span>
+<span class="kn">import</span> <span class="nn">theano</span>
 
 <span class="n">data</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="s1">&#39;../data/radon.csv&#39;</span><span class="p">)</span>
-
+<span class="n">data</span><span class="p">[</span><span class="s1">&#39;log_radon&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="s1">&#39;log_radon&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">theano</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">floatX</span><span class="p">)</span>
 <span class="n">county_names</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">county</span><span class="o">.</span><span class="n">unique</span><span class="p">()</span>
 <span class="n">county_idx</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">county_code</span><span class="o">.</span><span class="n">values</span>
 
@@ -421,7 +423,7 @@ measurements are taken, ranging from 2 to 116 measurements per county.</p>
 <p>The relevant part of the data we will model looks as follows:</p>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [2]:
+<span></span>In [6]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -431,7 +433,7 @@ measurements are taken, ranging from 2 to 116 measurements per county.</p>
 </div>
 <div class="nboutput nblast container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>Out[2]:
+<span></span>Out[6]:
 </pre></div>
 </div>
 <div class="container">
@@ -574,7 +576,7 @@ are normally distributed with noise <span class="math">\(\epsilon\)</span> on wh
 uniform distribution.</p>
 <div class="nbinput nblast container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [3]:
+<span></span>In [2]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -631,7 +633,7 @@ subsequently used to influence the distribution of each county&#8217;s
 <span class="math">\(\alpha\)</span> and <span class="math">\(\beta\)</span>.</p>
 <div class="nbinput nblast container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [5]:
+<span></span>In [2]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -662,13 +664,314 @@ subsequently used to influence the distribution of each county&#8217;s
 </div>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [6]:
+<span></span>In [4]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="o">%</span><span class="k">pdb</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<div class="highlight"><pre>
+Automatic pdb calling has been turned ON
+</pre></div></div>
+</div>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [3]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="c1"># Inference button (TM)!</span>
 <span class="k">with</span> <span class="n">hierarchical_model</span><span class="p">:</span>
-    <span class="n">hierarchical_trace</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="n">draws</span><span class="o">=</span><span class="mi">5000</span><span class="p">,</span> <span class="n">n_init</span><span class="o">=</span><span class="mi">20000</span><span class="p">)</span>
+    <span class="n">start</span><span class="p">,</span> <span class="n">step</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">init_nuts</span><span class="p">(</span><span class="n">n_advi</span><span class="o">=</span><span class="mi">20000</span><span class="p">,</span> <span class="n">n_nuts</span><span class="o">=</span><span class="mi">2000</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput container">
+<div class="container">
+</div>
+<div class="stderr container">
+<div class="highlight"><pre>
+Initializing NUTS...
+</pre></div></div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<div class="highlight"><pre>
+<span class="ansi-red-fg">---------------------------------------------------------------------------</span>
+<span class="ansi-red-fg">KeyboardInterrupt</span>                         Traceback (most recent call last)
+<span class="ansi-green-fg">&lt;ipython-input-3-b4cc78647d31&gt;</span> in <span class="ansi-cyan-fg">&lt;module&gt;</span><span class="ansi-blue-fg">()</span>
+<span class="ansi-green-intense-fg ansi-bold">      1</span> <span class="ansi-red-fg"># Inference button (TM)!</span>
+<span class="ansi-green-intense-fg ansi-bold">      2</span> <span class="ansi-green-fg">with</span> hierarchical_model<span class="ansi-blue-fg">:</span>
+<span class="ansi-green-fg">----&gt; 3</span><span class="ansi-red-fg">     </span>start<span class="ansi-blue-fg">,</span> step <span class="ansi-blue-fg">=</span> pm<span class="ansi-blue-fg">.</span>init_nuts<span class="ansi-blue-fg">(</span>n_advi<span class="ansi-blue-fg">=</span><span class="ansi-cyan-fg">20000</span><span class="ansi-blue-fg">,</span> n_nuts<span class="ansi-blue-fg">=</span><span class="ansi-cyan-fg">2000</span><span class="ansi-blue-fg">)</span>
+
+<span class="ansi-green-fg">/home/wiecki/working/projects/pymc/pymc3/sampling.py</span> in <span class="ansi-cyan-fg">init_nuts</span><span class="ansi-blue-fg">(njobs, n_advi, n_nuts, model, random_seed, **kwargs)</span>
+<span class="ansi-green-intense-fg ansi-bold">    461</span>
+<span class="ansi-green-intense-fg ansi-bold">    462</span>     <span class="ansi-green-fg">if</span> n_advi <span class="ansi-blue-fg">&gt;</span> <span class="ansi-cyan-fg">0</span><span class="ansi-blue-fg">:</span>
+<span class="ansi-green-fg">--&gt; 463</span><span class="ansi-red-fg">         </span>v_params <span class="ansi-blue-fg">=</span> pm<span class="ansi-blue-fg">.</span>variational<span class="ansi-blue-fg">.</span>advi<span class="ansi-blue-fg">(</span>n<span class="ansi-blue-fg">=</span>n_advi<span class="ansi-blue-fg">,</span> random_seed<span class="ansi-blue-fg">=</span>random_seed<span class="ansi-blue-fg">)</span>
+<span class="ansi-green-intense-fg ansi-bold">    464</span>         start = pm.variational.sample_vp(v_params, njobs, progressbar=False,
+<span class="ansi-green-intense-fg ansi-bold">    465</span>                                          hide_transformed<span class="ansi-blue-fg">=</span><span class="ansi-green-fg">False</span><span class="ansi-blue-fg">,</span>
+
+<span class="ansi-green-fg">/home/wiecki/working/projects/pymc/pymc3/variational/advi.py</span> in <span class="ansi-cyan-fg">advi</span><span class="ansi-blue-fg">(vars, start, model, n, accurate_elbo, optimizer, learning_rate, epsilon, mode, random_seed)</span>
+<span class="ansi-green-intense-fg ansi-bold">    142</span>     elbo <span class="ansi-blue-fg">=</span> pm<span class="ansi-blue-fg">.</span>CallableTensor<span class="ansi-blue-fg">(</span>elbo<span class="ansi-blue-fg">)</span><span class="ansi-blue-fg">(</span>uw_shared<span class="ansi-blue-fg">)</span>
+<span class="ansi-green-intense-fg ansi-bold">    143</span>     updates <span class="ansi-blue-fg">=</span> optimizer<span class="ansi-blue-fg">(</span>loss<span class="ansi-blue-fg">=</span><span class="ansi-blue-fg">-</span><span class="ansi-cyan-fg">1</span> <span class="ansi-blue-fg">*</span> elbo<span class="ansi-blue-fg">,</span> param<span class="ansi-blue-fg">=</span><span class="ansi-blue-fg">[</span>uw_shared<span class="ansi-blue-fg">]</span><span class="ansi-blue-fg">)</span>
+<span class="ansi-green-fg">--&gt; 144</span><span class="ansi-red-fg">     </span>f <span class="ansi-blue-fg">=</span> theano<span class="ansi-blue-fg">.</span>function<span class="ansi-blue-fg">(</span><span class="ansi-blue-fg">[</span><span class="ansi-blue-fg">]</span><span class="ansi-blue-fg">,</span> <span class="ansi-blue-fg">[</span>uw_shared<span class="ansi-blue-fg">,</span> elbo<span class="ansi-blue-fg">]</span><span class="ansi-blue-fg">,</span> updates<span class="ansi-blue-fg">=</span>updates<span class="ansi-blue-fg">,</span> mode<span class="ansi-blue-fg">=</span>mode<span class="ansi-blue-fg">)</span>
+<span class="ansi-green-intense-fg ansi-bold">    145</span>
+<span class="ansi-green-intense-fg ansi-bold">    146</span>     <span class="ansi-red-fg"># Optimization loop</span>
+
+<span class="ansi-green-fg">/home/wiecki/tools/theano/theano/compile/function.py</span> in <span class="ansi-cyan-fg">function</span><span class="ansi-blue-fg">(inputs, outputs, mode, updates, givens, no_default_updates, accept_inplace, name, rebuild_strict, allow_input_downcast, profile, on_unused_input)</span>
+<span class="ansi-green-intense-fg ansi-bold">    324</span>                    on_unused_input<span class="ansi-blue-fg">=</span>on_unused_input<span class="ansi-blue-fg">,</span>
+<span class="ansi-green-intense-fg ansi-bold">    325</span>                    profile<span class="ansi-blue-fg">=</span>profile<span class="ansi-blue-fg">,</span>
+<span class="ansi-green-fg">--&gt; 326</span><span class="ansi-red-fg">                    output_keys=output_keys)
+</span><span class="ansi-green-intense-fg ansi-bold">    327</span>     <span class="ansi-red-fg"># We need to add the flag check_aliased inputs if we have any mutable or</span>
+<span class="ansi-green-intense-fg ansi-bold">    328</span>     <span class="ansi-red-fg"># borrowed used defined inputs</span>
+
+<span class="ansi-green-fg">/home/wiecki/tools/theano/theano/compile/pfunc.py</span> in <span class="ansi-cyan-fg">pfunc</span><span class="ansi-blue-fg">(params, outputs, mode, updates, givens, no_default_updates, accept_inplace, name, rebuild_strict, allow_input_downcast, profile, on_unused_input, output_keys)</span>
+<span class="ansi-green-intense-fg ansi-bold">    447</span>                                          rebuild_strict<span class="ansi-blue-fg">=</span>rebuild_strict<span class="ansi-blue-fg">,</span>
+<span class="ansi-green-intense-fg ansi-bold">    448</span>                                          copy_inputs_over<span class="ansi-blue-fg">=</span><span class="ansi-green-fg">True</span><span class="ansi-blue-fg">,</span>
+<span class="ansi-green-fg">--&gt; 449</span><span class="ansi-red-fg">                                          no_default_updates=no_default_updates)
+</span><span class="ansi-green-intense-fg ansi-bold">    450</span>     <span class="ansi-red-fg"># extracting the arguments</span>
+<span class="ansi-green-intense-fg ansi-bold">    451</span>     input_variables<span class="ansi-blue-fg">,</span> cloned_extended_outputs<span class="ansi-blue-fg">,</span> other_stuff <span class="ansi-blue-fg">=</span> output_vars
+
+<span class="ansi-green-fg">/home/wiecki/tools/theano/theano/compile/pfunc.py</span> in <span class="ansi-cyan-fg">rebuild_collect_shared</span><span class="ansi-blue-fg">(outputs, inputs, replace, updates, rebuild_strict, copy_inputs_over, no_default_updates)</span>
+<span class="ansi-green-intense-fg ansi-bold">    256</span>         v<span class="ansi-blue-fg">,</span> v_update <span class="ansi-blue-fg">=</span> update_expr<span class="ansi-blue-fg">[</span>i<span class="ansi-blue-fg">]</span>
+<span class="ansi-green-intense-fg ansi-bold">    257</span>         cloned_v_update = clone_v_get_shared_updates(v_update,
+<span class="ansi-green-fg">--&gt; 258</span><span class="ansi-red-fg">                                                      copy_inputs_over)
+</span><span class="ansi-green-intense-fg ansi-bold">    259</span>         update_d<span class="ansi-blue-fg">[</span>v<span class="ansi-blue-fg">]</span> <span class="ansi-blue-fg">=</span> cloned_v_update
+<span class="ansi-green-intense-fg ansi-bold">    260</span>         <span class="ansi-green-fg">if</span> isinstance<span class="ansi-blue-fg">(</span>v<span class="ansi-blue-fg">,</span> SharedVariable<span class="ansi-blue-fg">)</span> <span class="ansi-green-fg">and</span> v <span class="ansi-green-fg">not</span> <span class="ansi-green-fg">in</span> shared_inputs<span class="ansi-blue-fg">:</span>
+
+<span class="ansi-green-fg">/home/wiecki/tools/theano/theano/compile/pfunc.py</span> in <span class="ansi-cyan-fg">clone_v_get_shared_updates</span><span class="ansi-blue-fg">(v, copy_inputs_over)</span>
+<span class="ansi-green-intense-fg ansi-bold">     91</span>             <span class="ansi-green-fg">if</span> owner <span class="ansi-green-fg">not</span> <span class="ansi-green-fg">in</span> clone_d<span class="ansi-blue-fg">:</span>
+<span class="ansi-green-intense-fg ansi-bold">     92</span>                 <span class="ansi-green-fg">for</span> i <span class="ansi-green-fg">in</span> owner<span class="ansi-blue-fg">.</span>inputs<span class="ansi-blue-fg">:</span>
+<span class="ansi-green-fg">---&gt; 93</span><span class="ansi-red-fg">                     </span>clone_v_get_shared_updates<span class="ansi-blue-fg">(</span>i<span class="ansi-blue-fg">,</span> copy_inputs_over<span class="ansi-blue-fg">)</span>
+<span class="ansi-green-intense-fg ansi-bold">     94</span>
+<span class="ansi-green-intense-fg ansi-bold">     95</span>                 clone_d[owner] = owner.clone_with_new_inputs(
+
+<span class="ansi-green-fg">/home/wiecki/tools/theano/theano/compile/pfunc.py</span> in <span class="ansi-cyan-fg">clone_v_get_shared_updates</span><span class="ansi-blue-fg">(v, copy_inputs_over)</span>
+<span class="ansi-green-intense-fg ansi-bold">     91</span>             <span class="ansi-green-fg">if</span> owner <span class="ansi-green-fg">not</span> <span class="ansi-green-fg">in</span> clone_d<span class="ansi-blue-fg">:</span>
+<span class="ansi-green-intense-fg ansi-bold">     92</span>                 <span class="ansi-green-fg">for</span> i <span class="ansi-green-fg">in</span> owner<span class="ansi-blue-fg">.</span>inputs<span class="ansi-blue-fg">:</span>
+<span class="ansi-green-fg">---&gt; 93</span><span class="ansi-red-fg">                     </span>clone_v_get_shared_updates<span class="ansi-blue-fg">(</span>i<span class="ansi-blue-fg">,</span> copy_inputs_over<span class="ansi-blue-fg">)</span>
+<span class="ansi-green-intense-fg ansi-bold">     94</span>
+<span class="ansi-green-intense-fg ansi-bold">     95</span>                 clone_d[owner] = owner.clone_with_new_inputs(
+
+<span class="ansi-green-fg">/home/wiecki/tools/theano/theano/compile/pfunc.py</span> in <span class="ansi-cyan-fg">clone_v_get_shared_updates</span><span class="ansi-blue-fg">(v, copy_inputs_over)</span>
+<span class="ansi-green-intense-fg ansi-bold">     91</span>             <span class="ansi-green-fg">if</span> owner <span class="ansi-green-fg">not</span> <span class="ansi-green-fg">in</span> clone_d<span class="ansi-blue-fg">:</span>
+<span class="ansi-green-intense-fg ansi-bold">     92</span>                 <span class="ansi-green-fg">for</span> i <span class="ansi-green-fg">in</span> owner<span class="ansi-blue-fg">.</span>inputs<span class="ansi-blue-fg">:</span>
+<span class="ansi-green-fg">---&gt; 93</span><span class="ansi-red-fg">                     </span>clone_v_get_shared_updates<span class="ansi-blue-fg">(</span>i<span class="ansi-blue-fg">,</span> copy_inputs_over<span class="ansi-blue-fg">)</span>
+<span class="ansi-green-intense-fg ansi-bold">     94</span>
+<span class="ansi-green-intense-fg ansi-bold">     95</span>                 clone_d[owner] = owner.clone_with_new_inputs(
+
+<span class="ansi-green-fg">/home/wiecki/tools/theano/theano/compile/pfunc.py</span> in <span class="ansi-cyan-fg">clone_v_get_shared_updates</span><span class="ansi-blue-fg">(v, copy_inputs_over)</span>
+<span class="ansi-green-intense-fg ansi-bold">     91</span>             <span class="ansi-green-fg">if</span> owner <span class="ansi-green-fg">not</span> <span class="ansi-green-fg">in</span> clone_d<span class="ansi-blue-fg">:</span>
+<span class="ansi-green-intense-fg ansi-bold">     92</span>                 <span class="ansi-green-fg">for</span> i <span class="ansi-green-fg">in</span> owner<span class="ansi-blue-fg">.</span>inputs<span class="ansi-blue-fg">:</span>
+<span class="ansi-green-fg">---&gt; 93</span><span class="ansi-red-fg">                     </span>clone_v_get_shared_updates<span class="ansi-blue-fg">(</span>i<span class="ansi-blue-fg">,</span> copy_inputs_over<span class="ansi-blue-fg">)</span>
+<span class="ansi-green-intense-fg ansi-bold">     94</span>
+<span class="ansi-green-intense-fg ansi-bold">     95</span>                 clone_d[owner] = owner.clone_with_new_inputs(
+
+<span class="ansi-green-fg">/home/wiecki/tools/theano/theano/compile/pfunc.py</span> in <span class="ansi-cyan-fg">clone_v_get_shared_updates</span><span class="ansi-blue-fg">(v, copy_inputs_over)</span>
+<span class="ansi-green-intense-fg ansi-bold">     91</span>             <span class="ansi-green-fg">if</span> owner <span class="ansi-green-fg">not</span> <span class="ansi-green-fg">in</span> clone_d<span class="ansi-blue-fg">:</span>
+<span class="ansi-green-intense-fg ansi-bold">     92</span>                 <span class="ansi-green-fg">for</span> i <span class="ansi-green-fg">in</span> owner<span class="ansi-blue-fg">.</span>inputs<span class="ansi-blue-fg">:</span>
+<span class="ansi-green-fg">---&gt; 93</span><span class="ansi-red-fg">                     </span>clone_v_get_shared_updates<span class="ansi-blue-fg">(</span>i<span class="ansi-blue-fg">,</span> copy_inputs_over<span class="ansi-blue-fg">)</span>
+<span class="ansi-green-intense-fg ansi-bold">     94</span>
+<span class="ansi-green-intense-fg ansi-bold">     95</span>                 clone_d[owner] = owner.clone_with_new_inputs(
+
+<span class="ansi-green-fg">/home/wiecki/tools/theano/theano/compile/pfunc.py</span> in <span class="ansi-cyan-fg">clone_v_get_shared_updates</span><span class="ansi-blue-fg">(v, copy_inputs_over)</span>
+<span class="ansi-green-intense-fg ansi-bold">     91</span>             <span class="ansi-green-fg">if</span> owner <span class="ansi-green-fg">not</span> <span class="ansi-green-fg">in</span> clone_d<span class="ansi-blue-fg">:</span>
+<span class="ansi-green-intense-fg ansi-bold">     92</span>                 <span class="ansi-green-fg">for</span> i <span class="ansi-green-fg">in</span> owner<span class="ansi-blue-fg">.</span>inputs<span class="ansi-blue-fg">:</span>
+<span class="ansi-green-fg">---&gt; 93</span><span class="ansi-red-fg">                     </span>clone_v_get_shared_updates<span class="ansi-blue-fg">(</span>i<span class="ansi-blue-fg">,</span> copy_inputs_over<span class="ansi-blue-fg">)</span>
+<span class="ansi-green-intense-fg ansi-bold">     94</span>
+<span class="ansi-green-intense-fg ansi-bold">     95</span>                 clone_d[owner] = owner.clone_with_new_inputs(
+
+<span class="ansi-green-fg">/home/wiecki/tools/theano/theano/compile/pfunc.py</span> in <span class="ansi-cyan-fg">clone_v_get_shared_updates</span><span class="ansi-blue-fg">(v, copy_inputs_over)</span>
+<span class="ansi-green-intense-fg ansi-bold">     91</span>             <span class="ansi-green-fg">if</span> owner <span class="ansi-green-fg">not</span> <span class="ansi-green-fg">in</span> clone_d<span class="ansi-blue-fg">:</span>
+<span class="ansi-green-intense-fg ansi-bold">     92</span>                 <span class="ansi-green-fg">for</span> i <span class="ansi-green-fg">in</span> owner<span class="ansi-blue-fg">.</span>inputs<span class="ansi-blue-fg">:</span>
+<span class="ansi-green-fg">---&gt; 93</span><span class="ansi-red-fg">                     </span>clone_v_get_shared_updates<span class="ansi-blue-fg">(</span>i<span class="ansi-blue-fg">,</span> copy_inputs_over<span class="ansi-blue-fg">)</span>
+<span class="ansi-green-intense-fg ansi-bold">     94</span>
+<span class="ansi-green-intense-fg ansi-bold">     95</span>                 clone_d[owner] = owner.clone_with_new_inputs(
+
+<span class="ansi-green-fg">/home/wiecki/tools/theano/theano/compile/pfunc.py</span> in <span class="ansi-cyan-fg">clone_v_get_shared_updates</span><span class="ansi-blue-fg">(v, copy_inputs_over)</span>
+<span class="ansi-green-intense-fg ansi-bold">     91</span>             <span class="ansi-green-fg">if</span> owner <span class="ansi-green-fg">not</span> <span class="ansi-green-fg">in</span> clone_d<span class="ansi-blue-fg">:</span>
+<span class="ansi-green-intense-fg ansi-bold">     92</span>                 <span class="ansi-green-fg">for</span> i <span class="ansi-green-fg">in</span> owner<span class="ansi-blue-fg">.</span>inputs<span class="ansi-blue-fg">:</span>
+<span class="ansi-green-fg">---&gt; 93</span><span class="ansi-red-fg">                     </span>clone_v_get_shared_updates<span class="ansi-blue-fg">(</span>i<span class="ansi-blue-fg">,</span> copy_inputs_over<span class="ansi-blue-fg">)</span>
+<span class="ansi-green-intense-fg ansi-bold">     94</span>
+<span class="ansi-green-intense-fg ansi-bold">     95</span>                 clone_d[owner] = owner.clone_with_new_inputs(
+
+<span class="ansi-green-fg">/home/wiecki/tools/theano/theano/compile/pfunc.py</span> in <span class="ansi-cyan-fg">clone_v_get_shared_updates</span><span class="ansi-blue-fg">(v, copy_inputs_over)</span>
+<span class="ansi-green-intense-fg ansi-bold">     91</span>             <span class="ansi-green-fg">if</span> owner <span class="ansi-green-fg">not</span> <span class="ansi-green-fg">in</span> clone_d<span class="ansi-blue-fg">:</span>
+<span class="ansi-green-intense-fg ansi-bold">     92</span>                 <span class="ansi-green-fg">for</span> i <span class="ansi-green-fg">in</span> owner<span class="ansi-blue-fg">.</span>inputs<span class="ansi-blue-fg">:</span>
+<span class="ansi-green-fg">---&gt; 93</span><span class="ansi-red-fg">                     </span>clone_v_get_shared_updates<span class="ansi-blue-fg">(</span>i<span class="ansi-blue-fg">,</span> copy_inputs_over<span class="ansi-blue-fg">)</span>
+<span class="ansi-green-intense-fg ansi-bold">     94</span>
+<span class="ansi-green-intense-fg ansi-bold">     95</span>                 clone_d[owner] = owner.clone_with_new_inputs(
+
+<span class="ansi-green-fg">/home/wiecki/tools/theano/theano/compile/pfunc.py</span> in <span class="ansi-cyan-fg">clone_v_get_shared_updates</span><span class="ansi-blue-fg">(v, copy_inputs_over)</span>
+<span class="ansi-green-intense-fg ansi-bold">     91</span>             <span class="ansi-green-fg">if</span> owner <span class="ansi-green-fg">not</span> <span class="ansi-green-fg">in</span> clone_d<span class="ansi-blue-fg">:</span>
+<span class="ansi-green-intense-fg ansi-bold">     92</span>                 <span class="ansi-green-fg">for</span> i <span class="ansi-green-fg">in</span> owner<span class="ansi-blue-fg">.</span>inputs<span class="ansi-blue-fg">:</span>
+<span class="ansi-green-fg">---&gt; 93</span><span class="ansi-red-fg">                     </span>clone_v_get_shared_updates<span class="ansi-blue-fg">(</span>i<span class="ansi-blue-fg">,</span> copy_inputs_over<span class="ansi-blue-fg">)</span>
+<span class="ansi-green-intense-fg ansi-bold">     94</span>
+<span class="ansi-green-intense-fg ansi-bold">     95</span>                 clone_d[owner] = owner.clone_with_new_inputs(
+
+<span class="ansi-green-fg">/home/wiecki/tools/theano/theano/compile/pfunc.py</span> in <span class="ansi-cyan-fg">clone_v_get_shared_updates</span><span class="ansi-blue-fg">(v, copy_inputs_over)</span>
+<span class="ansi-green-intense-fg ansi-bold">     91</span>             <span class="ansi-green-fg">if</span> owner <span class="ansi-green-fg">not</span> <span class="ansi-green-fg">in</span> clone_d<span class="ansi-blue-fg">:</span>
+<span class="ansi-green-intense-fg ansi-bold">     92</span>                 <span class="ansi-green-fg">for</span> i <span class="ansi-green-fg">in</span> owner<span class="ansi-blue-fg">.</span>inputs<span class="ansi-blue-fg">:</span>
+<span class="ansi-green-fg">---&gt; 93</span><span class="ansi-red-fg">                     </span>clone_v_get_shared_updates<span class="ansi-blue-fg">(</span>i<span class="ansi-blue-fg">,</span> copy_inputs_over<span class="ansi-blue-fg">)</span>
+<span class="ansi-green-intense-fg ansi-bold">     94</span>
+<span class="ansi-green-intense-fg ansi-bold">     95</span>                 clone_d[owner] = owner.clone_with_new_inputs(
+
+<span class="ansi-green-fg">/home/wiecki/tools/theano/theano/compile/pfunc.py</span> in <span class="ansi-cyan-fg">clone_v_get_shared_updates</span><span class="ansi-blue-fg">(v, copy_inputs_over)</span>
+<span class="ansi-green-intense-fg ansi-bold">     91</span>             <span class="ansi-green-fg">if</span> owner <span class="ansi-green-fg">not</span> <span class="ansi-green-fg">in</span> clone_d<span class="ansi-blue-fg">:</span>
+<span class="ansi-green-intense-fg ansi-bold">     92</span>                 <span class="ansi-green-fg">for</span> i <span class="ansi-green-fg">in</span> owner<span class="ansi-blue-fg">.</span>inputs<span class="ansi-blue-fg">:</span>
+<span class="ansi-green-fg">---&gt; 93</span><span class="ansi-red-fg">                     </span>clone_v_get_shared_updates<span class="ansi-blue-fg">(</span>i<span class="ansi-blue-fg">,</span> copy_inputs_over<span class="ansi-blue-fg">)</span>
+<span class="ansi-green-intense-fg ansi-bold">     94</span>
+<span class="ansi-green-intense-fg ansi-bold">     95</span>                 clone_d[owner] = owner.clone_with_new_inputs(
+
+<span class="ansi-green-fg">/home/wiecki/tools/theano/theano/compile/pfunc.py</span> in <span class="ansi-cyan-fg">clone_v_get_shared_updates</span><span class="ansi-blue-fg">(v, copy_inputs_over)</span>
+<span class="ansi-green-intense-fg ansi-bold">     91</span>             <span class="ansi-green-fg">if</span> owner <span class="ansi-green-fg">not</span> <span class="ansi-green-fg">in</span> clone_d<span class="ansi-blue-fg">:</span>
+<span class="ansi-green-intense-fg ansi-bold">     92</span>                 <span class="ansi-green-fg">for</span> i <span class="ansi-green-fg">in</span> owner<span class="ansi-blue-fg">.</span>inputs<span class="ansi-blue-fg">:</span>
+<span class="ansi-green-fg">---&gt; 93</span><span class="ansi-red-fg">                     </span>clone_v_get_shared_updates<span class="ansi-blue-fg">(</span>i<span class="ansi-blue-fg">,</span> copy_inputs_over<span class="ansi-blue-fg">)</span>
+<span class="ansi-green-intense-fg ansi-bold">     94</span>
+<span class="ansi-green-intense-fg ansi-bold">     95</span>                 clone_d[owner] = owner.clone_with_new_inputs(
+
+<span class="ansi-green-fg">/home/wiecki/tools/theano/theano/compile/pfunc.py</span> in <span class="ansi-cyan-fg">clone_v_get_shared_updates</span><span class="ansi-blue-fg">(v, copy_inputs_over)</span>
+<span class="ansi-green-intense-fg ansi-bold">     91</span>             <span class="ansi-green-fg">if</span> owner <span class="ansi-green-fg">not</span> <span class="ansi-green-fg">in</span> clone_d<span class="ansi-blue-fg">:</span>
+<span class="ansi-green-intense-fg ansi-bold">     92</span>                 <span class="ansi-green-fg">for</span> i <span class="ansi-green-fg">in</span> owner<span class="ansi-blue-fg">.</span>inputs<span class="ansi-blue-fg">:</span>
+<span class="ansi-green-fg">---&gt; 93</span><span class="ansi-red-fg">                     </span>clone_v_get_shared_updates<span class="ansi-blue-fg">(</span>i<span class="ansi-blue-fg">,</span> copy_inputs_over<span class="ansi-blue-fg">)</span>
+<span class="ansi-green-intense-fg ansi-bold">     94</span>
+<span class="ansi-green-intense-fg ansi-bold">     95</span>                 clone_d[owner] = owner.clone_with_new_inputs(
+
+<span class="ansi-green-fg">/home/wiecki/tools/theano/theano/compile/pfunc.py</span> in <span class="ansi-cyan-fg">clone_v_get_shared_updates</span><span class="ansi-blue-fg">(v, copy_inputs_over)</span>
+<span class="ansi-green-intense-fg ansi-bold">     91</span>             <span class="ansi-green-fg">if</span> owner <span class="ansi-green-fg">not</span> <span class="ansi-green-fg">in</span> clone_d<span class="ansi-blue-fg">:</span>
+<span class="ansi-green-intense-fg ansi-bold">     92</span>                 <span class="ansi-green-fg">for</span> i <span class="ansi-green-fg">in</span> owner<span class="ansi-blue-fg">.</span>inputs<span class="ansi-blue-fg">:</span>
+<span class="ansi-green-fg">---&gt; 93</span><span class="ansi-red-fg">                     </span>clone_v_get_shared_updates<span class="ansi-blue-fg">(</span>i<span class="ansi-blue-fg">,</span> copy_inputs_over<span class="ansi-blue-fg">)</span>
+<span class="ansi-green-intense-fg ansi-bold">     94</span>
+<span class="ansi-green-intense-fg ansi-bold">     95</span>                 clone_d[owner] = owner.clone_with_new_inputs(
+
+<span class="ansi-green-fg">/home/wiecki/tools/theano/theano/compile/pfunc.py</span> in <span class="ansi-cyan-fg">clone_v_get_shared_updates</span><span class="ansi-blue-fg">(v, copy_inputs_over)</span>
+<span class="ansi-green-intense-fg ansi-bold">     91</span>             <span class="ansi-green-fg">if</span> owner <span class="ansi-green-fg">not</span> <span class="ansi-green-fg">in</span> clone_d<span class="ansi-blue-fg">:</span>
+<span class="ansi-green-intense-fg ansi-bold">     92</span>                 <span class="ansi-green-fg">for</span> i <span class="ansi-green-fg">in</span> owner<span class="ansi-blue-fg">.</span>inputs<span class="ansi-blue-fg">:</span>
+<span class="ansi-green-fg">---&gt; 93</span><span class="ansi-red-fg">                     </span>clone_v_get_shared_updates<span class="ansi-blue-fg">(</span>i<span class="ansi-blue-fg">,</span> copy_inputs_over<span class="ansi-blue-fg">)</span>
+<span class="ansi-green-intense-fg ansi-bold">     94</span>
+<span class="ansi-green-intense-fg ansi-bold">     95</span>                 clone_d[owner] = owner.clone_with_new_inputs(
+
+<span class="ansi-green-fg">/home/wiecki/tools/theano/theano/compile/pfunc.py</span> in <span class="ansi-cyan-fg">clone_v_get_shared_updates</span><span class="ansi-blue-fg">(v, copy_inputs_over)</span>
+<span class="ansi-green-intense-fg ansi-bold">     91</span>             <span class="ansi-green-fg">if</span> owner <span class="ansi-green-fg">not</span> <span class="ansi-green-fg">in</span> clone_d<span class="ansi-blue-fg">:</span>
+<span class="ansi-green-intense-fg ansi-bold">     92</span>                 <span class="ansi-green-fg">for</span> i <span class="ansi-green-fg">in</span> owner<span class="ansi-blue-fg">.</span>inputs<span class="ansi-blue-fg">:</span>
+<span class="ansi-green-fg">---&gt; 93</span><span class="ansi-red-fg">                     </span>clone_v_get_shared_updates<span class="ansi-blue-fg">(</span>i<span class="ansi-blue-fg">,</span> copy_inputs_over<span class="ansi-blue-fg">)</span>
+<span class="ansi-green-intense-fg ansi-bold">     94</span>
+<span class="ansi-green-intense-fg ansi-bold">     95</span>                 clone_d[owner] = owner.clone_with_new_inputs(
+
+<span class="ansi-green-fg">/home/wiecki/tools/theano/theano/compile/pfunc.py</span> in <span class="ansi-cyan-fg">clone_v_get_shared_updates</span><span class="ansi-blue-fg">(v, copy_inputs_over)</span>
+<span class="ansi-green-intense-fg ansi-bold">     91</span>             <span class="ansi-green-fg">if</span> owner <span class="ansi-green-fg">not</span> <span class="ansi-green-fg">in</span> clone_d<span class="ansi-blue-fg">:</span>
+<span class="ansi-green-intense-fg ansi-bold">     92</span>                 <span class="ansi-green-fg">for</span> i <span class="ansi-green-fg">in</span> owner<span class="ansi-blue-fg">.</span>inputs<span class="ansi-blue-fg">:</span>
+<span class="ansi-green-fg">---&gt; 93</span><span class="ansi-red-fg">                     </span>clone_v_get_shared_updates<span class="ansi-blue-fg">(</span>i<span class="ansi-blue-fg">,</span> copy_inputs_over<span class="ansi-blue-fg">)</span>
+<span class="ansi-green-intense-fg ansi-bold">     94</span>
+<span class="ansi-green-intense-fg ansi-bold">     95</span>                 clone_d[owner] = owner.clone_with_new_inputs(
+
+<span class="ansi-green-fg">/home/wiecki/tools/theano/theano/compile/pfunc.py</span> in <span class="ansi-cyan-fg">clone_v_get_shared_updates</span><span class="ansi-blue-fg">(v, copy_inputs_over)</span>
+<span class="ansi-green-intense-fg ansi-bold">     94</span>
+<span class="ansi-green-intense-fg ansi-bold">     95</span>                 clone_d[owner] = owner.clone_with_new_inputs(
+<span class="ansi-green-fg">---&gt; 96</span><span class="ansi-red-fg">                     [clone_d[i] for i in owner.inputs], strict=rebuild_strict)
+</span><span class="ansi-green-intense-fg ansi-bold">     97</span>                 <span class="ansi-green-fg">for</span> old_o<span class="ansi-blue-fg">,</span> new_o <span class="ansi-green-fg">in</span> zip<span class="ansi-blue-fg">(</span>owner<span class="ansi-blue-fg">.</span>outputs<span class="ansi-blue-fg">,</span> clone_d<span class="ansi-blue-fg">[</span>owner<span class="ansi-blue-fg">]</span><span class="ansi-blue-fg">.</span>outputs<span class="ansi-blue-fg">)</span><span class="ansi-blue-fg">:</span>
+<span class="ansi-green-intense-fg ansi-bold">     98</span>                     clone_d<span class="ansi-blue-fg">.</span>setdefault<span class="ansi-blue-fg">(</span>old_o<span class="ansi-blue-fg">,</span> new_o<span class="ansi-blue-fg">)</span>
+
+<span class="ansi-green-fg">/home/wiecki/tools/theano/theano/gof/graph.py</span> in <span class="ansi-cyan-fg">clone_with_new_inputs</span><span class="ansi-blue-fg">(self, inputs, strict)</span>
+<span class="ansi-green-intense-fg ansi-bold">    243</span>             new_node<span class="ansi-blue-fg">.</span>tag <span class="ansi-blue-fg">=</span> copy<span class="ansi-blue-fg">(</span>self<span class="ansi-blue-fg">.</span>tag<span class="ansi-blue-fg">)</span><span class="ansi-blue-fg">.</span>__update__<span class="ansi-blue-fg">(</span>new_node<span class="ansi-blue-fg">.</span>tag<span class="ansi-blue-fg">)</span>
+<span class="ansi-green-intense-fg ansi-bold">    244</span>         <span class="ansi-green-fg">else</span><span class="ansi-blue-fg">:</span>
+<span class="ansi-green-fg">--&gt; 245</span><span class="ansi-red-fg">             </span>new_node <span class="ansi-blue-fg">=</span> self<span class="ansi-blue-fg">.</span>clone<span class="ansi-blue-fg">(</span><span class="ansi-blue-fg">)</span>
+<span class="ansi-green-intense-fg ansi-bold">    246</span>             new_node<span class="ansi-blue-fg">.</span>inputs <span class="ansi-blue-fg">=</span> new_inputs
+<span class="ansi-green-intense-fg ansi-bold">    247</span>         <span class="ansi-green-fg">return</span> new_node
+
+<span class="ansi-green-fg">/home/wiecki/tools/theano/theano/gof/graph.py</span> in <span class="ansi-cyan-fg">clone</span><span class="ansi-blue-fg">(self)</span>
+<span class="ansi-green-intense-fg ansi-bold">    201</span>         &#34;&#34;&#34;
+<span class="ansi-green-intense-fg ansi-bold">    202</span>         cp = self.__class__(self.op, self.inputs,
+<span class="ansi-green-fg">--&gt; 203</span><span class="ansi-red-fg">                             [output.clone() for output in self.outputs])
+</span><span class="ansi-green-intense-fg ansi-bold">    204</span>         cp<span class="ansi-blue-fg">.</span>tag <span class="ansi-blue-fg">=</span> copy<span class="ansi-blue-fg">(</span>self<span class="ansi-blue-fg">.</span>tag<span class="ansi-blue-fg">)</span>
+<span class="ansi-green-intense-fg ansi-bold">    205</span>         <span class="ansi-green-fg">return</span> cp
+
+<span class="ansi-green-fg">/home/wiecki/tools/theano/theano/gof/graph.py</span> in <span class="ansi-cyan-fg">&lt;listcomp&gt;</span><span class="ansi-blue-fg">(.0)</span>
+<span class="ansi-green-intense-fg ansi-bold">    201</span>         &#34;&#34;&#34;
+<span class="ansi-green-intense-fg ansi-bold">    202</span>         cp = self.__class__(self.op, self.inputs,
+<span class="ansi-green-fg">--&gt; 203</span><span class="ansi-red-fg">                             [output.clone() for output in self.outputs])
+</span><span class="ansi-green-intense-fg ansi-bold">    204</span>         cp<span class="ansi-blue-fg">.</span>tag <span class="ansi-blue-fg">=</span> copy<span class="ansi-blue-fg">(</span>self<span class="ansi-blue-fg">.</span>tag<span class="ansi-blue-fg">)</span>
+<span class="ansi-green-intense-fg ansi-bold">    205</span>         <span class="ansi-green-fg">return</span> cp
+
+<span class="ansi-green-fg">/home/wiecki/tools/theano/theano/gof/graph.py</span> in <span class="ansi-cyan-fg">clone</span><span class="ansi-blue-fg">(self)</span>
+<span class="ansi-green-intense-fg ansi-bold">    445</span>         &#34;&#34;&#34;
+<span class="ansi-green-intense-fg ansi-bold">    446</span>         <span class="ansi-red-fg"># return copy(self)</span>
+<span class="ansi-green-fg">--&gt; 447</span><span class="ansi-red-fg">         </span>cp <span class="ansi-blue-fg">=</span> self<span class="ansi-blue-fg">.</span>__class__<span class="ansi-blue-fg">(</span>self<span class="ansi-blue-fg">.</span>type<span class="ansi-blue-fg">,</span> <span class="ansi-green-fg">None</span><span class="ansi-blue-fg">,</span> <span class="ansi-green-fg">None</span><span class="ansi-blue-fg">,</span> self<span class="ansi-blue-fg">.</span>name<span class="ansi-blue-fg">)</span>
+<span class="ansi-green-intense-fg ansi-bold">    448</span>         cp<span class="ansi-blue-fg">.</span>tag <span class="ansi-blue-fg">=</span> copy<span class="ansi-blue-fg">(</span>self<span class="ansi-blue-fg">.</span>tag<span class="ansi-blue-fg">)</span>
+<span class="ansi-green-intense-fg ansi-bold">    449</span>         <span class="ansi-green-fg">return</span> cp
+
+<span class="ansi-green-fg">/home/wiecki/tools/theano/theano/tensor/var.py</span> in <span class="ansi-cyan-fg">__init__</span><span class="ansi-blue-fg">(self, type, owner, index, name)</span>
+<span class="ansi-green-intense-fg ansi-bold">    788</span>     <span class="ansi-green-fg">def</span> __init__<span class="ansi-blue-fg">(</span>self<span class="ansi-blue-fg">,</span> type<span class="ansi-blue-fg">,</span> owner<span class="ansi-blue-fg">=</span><span class="ansi-green-fg">None</span><span class="ansi-blue-fg">,</span> index<span class="ansi-blue-fg">=</span><span class="ansi-green-fg">None</span><span class="ansi-blue-fg">,</span> name<span class="ansi-blue-fg">=</span><span class="ansi-green-fg">None</span><span class="ansi-blue-fg">)</span><span class="ansi-blue-fg">:</span>
+<span class="ansi-green-intense-fg ansi-bold">    789</span>         super(TensorVariable, self).__init__(type, owner=owner,
+<span class="ansi-green-fg">--&gt; 790</span><span class="ansi-red-fg">                                              index=index, name=name)
+</span><span class="ansi-green-intense-fg ansi-bold">    791</span>         <span class="ansi-green-fg">if</span> <span class="ansi-blue-fg">(</span>config<span class="ansi-blue-fg">.</span>warn_float64 <span class="ansi-blue-fg">!=</span> <span class="ansi-blue-fg">&#39;ignore&#39;</span> <span class="ansi-green-fg">and</span> type<span class="ansi-blue-fg">.</span>dtype <span class="ansi-blue-fg">==</span> <span class="ansi-blue-fg">&#39;float64&#39;</span><span class="ansi-blue-fg">)</span><span class="ansi-blue-fg">:</span>
+<span class="ansi-green-intense-fg ansi-bold">    792</span>             msg = (&#39;You are creating a TensorVariable &#39;
+
+<span class="ansi-green-fg">/home/wiecki/tools/theano/theano/gof/graph.py</span> in <span class="ansi-cyan-fg">__init__</span><span class="ansi-blue-fg">(self, type, owner, index, name)</span>
+<span class="ansi-green-intense-fg ansi-bold">    373</span>
+<span class="ansi-green-intense-fg ansi-bold">    374</span>     <span class="ansi-green-fg">def</span> __init__<span class="ansi-blue-fg">(</span>self<span class="ansi-blue-fg">,</span> type<span class="ansi-blue-fg">,</span> owner<span class="ansi-blue-fg">=</span><span class="ansi-green-fg">None</span><span class="ansi-blue-fg">,</span> index<span class="ansi-blue-fg">=</span><span class="ansi-green-fg">None</span><span class="ansi-blue-fg">,</span> name<span class="ansi-blue-fg">=</span><span class="ansi-green-fg">None</span><span class="ansi-blue-fg">)</span><span class="ansi-blue-fg">:</span>
+<span class="ansi-green-fg">--&gt; 375</span><span class="ansi-red-fg">         </span>super<span class="ansi-blue-fg">(</span>Variable<span class="ansi-blue-fg">,</span> self<span class="ansi-blue-fg">)</span><span class="ansi-blue-fg">.</span>__init__<span class="ansi-blue-fg">(</span><span class="ansi-blue-fg">)</span>
+<span class="ansi-green-intense-fg ansi-bold">    376</span>
+<span class="ansi-green-intense-fg ansi-bold">    377</span>         self<span class="ansi-blue-fg">.</span>tag <span class="ansi-blue-fg">=</span> utils<span class="ansi-blue-fg">.</span>scratchpad<span class="ansi-blue-fg">(</span><span class="ansi-blue-fg">)</span>
+
+<span class="ansi-red-fg">KeyboardInterrupt</span>:
+</pre></div></div>
+</div>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [14]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">step</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>Out[14]:
+</pre></div>
+</div>
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>&lt;pymc3.step_methods.hmc.nuts.NUTS at 0x7f56932e0ba8&gt;
+</pre></div>
+</div>
+</div>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [4]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="o">%</span><span class="k">pdb</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<div class="highlight"><pre>
+Automatic pdb calling has been turned ON
+</pre></div></div>
+</div>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [ ]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="c1"># Inference button (TM)!</span>
+<span class="k">with</span> <span class="n">hierarchical_model</span><span class="p">:</span>
+    <span class="n">hierarchical_trace</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="n">draws</span><span class="o">=</span><span class="mi">5000</span><span class="p">,</span> <span class="n">n_advi</span><span class="o">=</span><span class="mi">50000</span><span class="p">,</span> <span class="n">n_nuts</span><span class="o">=</span><span class="mi">20000</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
@@ -678,22 +981,36 @@ subsequently used to influence the distribution of each county&#8217;s
 <div class="stderr container">
 <div class="highlight"><pre>
 Auto-assigning NUTS sampler...
-Initializing NUTS using advi...
-Average ELBO = -1,123.72: 100%|██████████| 20000/20000 [00:04&lt;00:00, 4199.25it/s]
-Finished [100%]: Average ELBO = -1,111.89
-100%|██████████| 5000/5000 [00:55&lt;00:00, 89.87it/s]
+Initializing NUTS...
+Average ELBO = -1,091.8: 100%|██████████| 50000/50000 [00:08&lt;00:00, 5985.49it/s]
+Finished [100%]: Average ELBO = -1,091.1
+ 10%|█         | 2027/20000 [00:08&lt;01:39, 181.07it/s]
 </pre></div></div>
 </div>
 <p>Plotting the hierarchical model trace -its found values- from 2000
 iterations onwards (right side plot) and its accumulated marginal values
 (left side plot)</p>
+<div class="nbinput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [ ]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">Auto</span><span class="o">-</span><span class="n">assigning</span> <span class="n">NUTS</span> <span class="n">sampler</span><span class="o">...</span>
+<span class="n">Initializing</span> <span class="n">NUTS</span> <span class="n">using</span> <span class="n">advi</span><span class="o">...</span>
+<span class="n">Average</span> <span class="n">ELBO</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span><span class="mf">123.7</span><span class="p">:</span> <span class="mi">100</span><span class="o">%|</span><span class="err">██████████</span><span class="o">|</span> <span class="mi">20000</span><span class="o">/</span><span class="mi">20000</span> <span class="p">[</span><span class="mo">00</span><span class="p">:</span><span class="mo">03</span><span class="o">&lt;</span><span class="mo">00</span><span class="p">:</span><span class="mo">00</span><span class="p">,</span> <span class="mf">6007.96</span><span class="n">it</span><span class="o">/</span><span class="n">s</span><span class="p">]</span>
+<span class="n">Finished</span> <span class="p">[</span><span class="mi">100</span><span class="o">%</span><span class="p">]:</span> <span class="n">Average</span> <span class="n">ELBO</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span><span class="mf">111.7</span>
+<span class="mi">100</span><span class="o">%|</span><span class="err">██████████</span><span class="o">|</span> <span class="mi">5000</span><span class="o">/</span><span class="mi">5000</span> <span class="p">[</span><span class="mo">00</span><span class="p">:</span><span class="mi">36</span><span class="o">&lt;</span><span class="mo">00</span><span class="p">:</span><span class="mo">00</span><span class="p">,</span> <span class="mf">137.46</span><span class="n">it</span><span class="o">/</span><span class="n">s</span><span class="p">]</span>
+</pre></div>
+</div>
+</div>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
 <span></span>In [7]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span><span class="n">pm</span><span class="o">.</span><span class="n">traceplot</span><span class="p">(</span><span class="n">hierarchical_trace</span><span class="p">[</span><span class="mi">2000</span><span class="p">:]);</span>
+<span></span><span class="n">pm</span><span class="o">.</span><span class="n">traceplot</span><span class="p">(</span><span class="n">hierarchical_trace</span><span class="p">);</span>
 </pre></div>
 </div>
 </div>
@@ -701,7 +1018,7 @@ iterations onwards (right side plot) and its accumulated marginal values
 <div class="container">
 </div>
 <div class="container">
-<img alt="../_images/notebooks_GLM-hierarchical_15_0.png" src="../_images/notebooks_GLM-hierarchical_15_0.png" />
+<img alt="../_images/notebooks_GLM-hierarchical_20_0.png" src="../_images/notebooks_GLM-hierarchical_20_0.png" />
 </div>
 </div>
 <p>The marginal posteriors in the left column are highly informative.
@@ -775,7 +1092,7 @@ predictions.</p>
 <div class="container">
 </div>
 <div class="container">
-<img alt="../_images/notebooks_GLM-hierarchical_18_0.png" src="../_images/notebooks_GLM-hierarchical_18_0.png" />
+<img alt="../_images/notebooks_GLM-hierarchical_23_0.png" src="../_images/notebooks_GLM-hierarchical_23_0.png" />
 </div>
 </div>
 <p>In the above plot we have the data points in black of three selected
@@ -846,7 +1163,7 @@ using each county&#8217;s data, resulting in a model more prone to outliers
 <div class="container">
 </div>
 <div class="container">
-<img alt="../_images/notebooks_GLM-hierarchical_22_0.png" src="../_images/notebooks_GLM-hierarchical_22_0.png" />
+<img alt="../_images/notebooks_GLM-hierarchical_27_0.png" src="../_images/notebooks_GLM-hierarchical_27_0.png" />
 </div>
 </div>
 <p>In the shrinkage plot above we show the coefficients of each county&#8217;s

@@ -482,7 +482,7 @@ problem that&#8217;s not linearly separable.</p>
 <div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="o">%</span><span class="k">matplotlib</span> inline
 <span class="kn">import</span> <span class="nn">theano</span>
-<span class="n">theano</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">floatX</span> <span class="o">=</span> <span class="s1">&#39;float64&#39;</span>
+<span class="n">floatX</span> <span class="o">=</span> <span class="n">theano</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">floatX</span>
 <span class="kn">import</span> <span class="nn">pymc3</span> <span class="kn">as</span> <span class="nn">pm</span>
 <span class="kn">import</span> <span class="nn">theano.tensor</span> <span class="kn">as</span> <span class="nn">T</span>
 <span class="kn">import</span> <span class="nn">sklearn</span>
@@ -502,7 +502,7 @@ problem that&#8217;s not linearly separable.</p>
 </div>
 <div class="stderr container">
 <div class="highlight"><pre>
-/Users/fonnescj/anaconda3/envs/dev/lib/python3.5/site-packages/sklearn/cross_validation.py:44: DeprecationWarning: This module was deprecated in version 0.18 in favor of the model_selection module into which all the refactored classes and functions are moved. Also note that the interface of the new CV iterators are different from that of this module. This module will be removed in 0.20.
+/home/wiecki/miniconda3/lib/python3.5/site-packages/sklearn/cross_validation.py:44: DeprecationWarning: This module was deprecated in version 0.18 in favor of the model_selection module into which all the refactored classes and functions are moved. Also note that the interface of the new CV iterators are different from that of this module. This module will be removed in 0.20.
   &#34;This module will be removed in 0.20.&#34;, DeprecationWarning)
 </pre></div></div>
 </div>
@@ -514,6 +514,8 @@ problem that&#8217;s not linearly separable.</p>
 <div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="n">X</span><span class="p">,</span> <span class="n">Y</span> <span class="o">=</span> <span class="n">make_moons</span><span class="p">(</span><span class="n">noise</span><span class="o">=</span><span class="mf">0.2</span><span class="p">,</span> <span class="n">random_state</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">n_samples</span><span class="o">=</span><span class="mi">1000</span><span class="p">)</span>
 <span class="n">X</span> <span class="o">=</span> <span class="n">scale</span><span class="p">(</span><span class="n">X</span><span class="p">)</span>
+<span class="n">X</span> <span class="o">=</span> <span class="n">X</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">floatX</span><span class="p">)</span>
+<span class="n">Y</span> <span class="o">=</span> <span class="n">Y</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">floatX</span><span class="p">)</span>
 <span class="n">X_train</span><span class="p">,</span> <span class="n">X_test</span><span class="p">,</span> <span class="n">Y_train</span><span class="p">,</span> <span class="n">Y_test</span> <span class="o">=</span> <span class="n">train_test_split</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">Y</span><span class="p">,</span> <span class="n">test_size</span><span class="o">=.</span><span class="mi">5</span><span class="p">)</span>
 </pre></div>
 </div>
@@ -566,9 +568,9 @@ sufficient for such a simple problem.</p>
 <span class="n">n_hidden</span> <span class="o">=</span> <span class="mi">5</span>
 
 <span class="c1"># Initialize random weights between each layer</span>
-<span class="n">init_1</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="n">X</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">n_hidden</span><span class="p">)</span>
-<span class="n">init_2</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="n">n_hidden</span><span class="p">,</span> <span class="n">n_hidden</span><span class="p">)</span>
-<span class="n">init_out</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="n">n_hidden</span><span class="p">)</span>
+<span class="n">init_1</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="n">X</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">n_hidden</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">floatX</span><span class="p">)</span>
+<span class="n">init_2</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="n">n_hidden</span><span class="p">,</span> <span class="n">n_hidden</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">floatX</span><span class="p">)</span>
+<span class="n">init_out</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="n">n_hidden</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">floatX</span><span class="p">)</span>
 
 <span class="k">with</span> <span class="n">pm</span><span class="o">.</span><span class="n">Model</span><span class="p">()</span> <span class="k">as</span> <span class="n">neural_network</span><span class="p">:</span>
     <span class="c1"># Weights from input to hidden layer</span>
@@ -587,12 +589,12 @@ sufficient for such a simple problem.</p>
                               <span class="n">testval</span><span class="o">=</span><span class="n">init_out</span><span class="p">)</span>
 
     <span class="c1"># Build neural-network using tanh activation function</span>
-    <span class="n">act_1</span> <span class="o">=</span> <span class="n">T</span><span class="o">.</span><span class="n">tanh</span><span class="p">(</span><span class="n">T</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">ann_input</span><span class="p">,</span>
-                         <span class="n">weights_in_1</span><span class="p">))</span>
-    <span class="n">act_2</span> <span class="o">=</span> <span class="n">T</span><span class="o">.</span><span class="n">tanh</span><span class="p">(</span><span class="n">T</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">act_1</span><span class="p">,</span>
-                         <span class="n">weights_1_2</span><span class="p">))</span>
-    <span class="n">act_out</span> <span class="o">=</span> <span class="n">T</span><span class="o">.</span><span class="n">nnet</span><span class="o">.</span><span class="n">sigmoid</span><span class="p">(</span><span class="n">T</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">act_2</span><span class="p">,</span>
-                                   <span class="n">weights_2_out</span><span class="p">))</span>
+    <span class="n">act_1</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">math</span><span class="o">.</span><span class="n">tanh</span><span class="p">(</span><span class="n">pm</span><span class="o">.</span><span class="n">math</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">ann_input</span><span class="p">,</span>
+                                     <span class="n">weights_in_1</span><span class="p">))</span>
+    <span class="n">act_2</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">math</span><span class="o">.</span><span class="n">tanh</span><span class="p">(</span><span class="n">pm</span><span class="o">.</span><span class="n">math</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">act_1</span><span class="p">,</span>
+                                     <span class="n">weights_1_2</span><span class="p">))</span>
+    <span class="n">act_out</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">math</span><span class="o">.</span><span class="n">sigmoid</span><span class="p">(</span><span class="n">pm</span><span class="o">.</span><span class="n">math</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">act_2</span><span class="p">,</span>
+                                          <span class="n">weights_2_out</span><span class="p">))</span>
 
     <span class="c1"># Binary classification -&gt; Bernoulli likelihood</span>
     <span class="n">out</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Bernoulli</span><span class="p">(</span><span class="s1">&#39;out&#39;</span><span class="p">,</span>
@@ -636,8 +638,8 @@ with neural_network:
 </div>
 <div class="stderr container">
 <div class="highlight"><pre>
-Average ELBO = -131.71: 100%|██████████| 50000/50000 [00:25&lt;00:00, 1965.31it/s]
-Finished [100%]: Average ELBO = -129.04
+Average ELBO = -136.67: 100%|██████████| 50000/50000 [00:16&lt;00:00, 3095.13it/s]
+Finished [100%]: Average ELBO = -134.76
 </pre></div></div>
 </div>
 <div class="nboutput nblast container">
@@ -645,11 +647,11 @@ Finished [100%]: Average ELBO = -129.04
 </div>
 <div class="container">
 <div class="highlight"><pre>
-CPU times: user 25.3 s, sys: 685 ms, total: 26 s
-Wall time: 29.4 s
+CPU times: user 18.3 s, sys: 360 ms, total: 18.7 s
+Wall time: 19 s
 </pre></div></div>
 </div>
-<p>&lt; 40 seconds on my older laptop. That&#8217;s pretty good considering that
+<p>&lt; 20 seconds on my older laptop. That&#8217;s pretty good considering that
 NUTS is having a really hard time. Further below we make this even
 faster. To make it really fly, we probably want to run the Neural
 Network on the GPU.</p>
@@ -673,7 +675,7 @@ MCMC):</p>
 </div>
 <div class="stderr container">
 <div class="highlight"><pre>
-100%|██████████| 5000/5000 [00:00&lt;00:00, 9737.59it/s]
+100%|██████████| 5000/5000 [00:00&lt;00:00, 12285.98it/s]
 </pre></div></div>
 </div>
 <p>Plotting the objective function (ELBO) we can see that the optimization
@@ -696,7 +698,7 @@ slowly improves the fit over time.</p>
 </pre></div>
 </div>
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>&lt;matplotlib.text.Text at 0x116334438&gt;
+<span></span>&lt;matplotlib.text.Text at 0x7fad0021cb00&gt;
 </pre></div>
 </div>
 </div>
@@ -735,7 +737,7 @@ to generate new data (in this case class predictions) from the posterior
 </div>
 <div class="stderr container">
 <div class="highlight"><pre>
-100%|██████████| 500/500 [00:05&lt;00:00, 94.45it/s]
+100%|██████████| 500/500 [00:03&lt;00:00, 140.07it/s]
 </pre></div></div>
 </div>
 <div class="nbinput container">
@@ -774,7 +776,7 @@ to generate new data (in this case class predictions) from the posterior
 </div>
 <div class="container">
 <div class="highlight"><pre>
-Accuracy = 96.2%
+Accuracy = 97.0%
 </pre></div></div>
 </div>
 <p>Hey, our neural network did all right!</p>
@@ -790,7 +792,7 @@ the whole input space.</p>
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span><span class="n">grid</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mgrid</span><span class="p">[</span><span class="o">-</span><span class="mi">3</span><span class="p">:</span><span class="mi">3</span><span class="p">:</span><span class="mi">100j</span><span class="p">,</span><span class="o">-</span><span class="mi">3</span><span class="p">:</span><span class="mi">3</span><span class="p">:</span><span class="mi">100j</span><span class="p">]</span>
+<span></span><span class="n">grid</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mgrid</span><span class="p">[</span><span class="o">-</span><span class="mi">3</span><span class="p">:</span><span class="mi">3</span><span class="p">:</span><span class="mi">100j</span><span class="p">,</span><span class="o">-</span><span class="mi">3</span><span class="p">:</span><span class="mi">3</span><span class="p">:</span><span class="mi">100j</span><span class="p">]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">floatX</span><span class="p">)</span>
 <span class="n">grid_2d</span> <span class="o">=</span> <span class="n">grid</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">T</span>
 <span class="n">dummy_out</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">grid</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">int8</span><span class="p">)</span>
 </pre></div>
@@ -815,7 +817,7 @@ the whole input space.</p>
 </div>
 <div class="stderr container">
 <div class="highlight"><pre>
-100%|██████████| 500/500 [00:08&lt;00:00, 57.93it/s]
+100%|██████████| 500/500 [00:04&lt;00:00, 116.49it/s]
 </pre></div></div>
 </div>
 <div class="section" id="Probability-surface">
@@ -955,8 +957,8 @@ with neural_network:
 </div>
 <div class="stderr container">
 <div class="highlight"><pre>
-Average ELBO = -120.61: 100%|██████████| 50000/50000 [00:31&lt;00:00, 1582.90it/s]
-Finished minibatch ADVI: ELBO = -120.17
+Average ELBO = -122.96: 100%|██████████| 50000/50000 [00:15&lt;00:00, 3268.69it/s]
+Finished minibatch ADVI: ELBO = -88.62
 </pre></div></div>
 </div>
 <div class="nboutput nblast container">
@@ -964,8 +966,8 @@ Finished minibatch ADVI: ELBO = -120.17
 </div>
 <div class="container">
 <div class="highlight"><pre>
-CPU times: user 35.9 s, sys: 676 ms, total: 36.6 s
-Wall time: 43.9 s
+CPU times: user 24.7 s, sys: 3.74 s, total: 28.5 s
+Wall time: 1min 1s
 </pre></div></div>
 </div>
 <div class="nbinput container">
@@ -984,7 +986,7 @@ Wall time: 43.9 s
 </div>
 <div class="stderr container">
 <div class="highlight"><pre>
-100%|██████████| 5000/5000 [00:00&lt;00:00, 7864.25it/s]
+100%|██████████| 5000/5000 [00:00&lt;00:00, 15873.94it/s]
 </pre></div></div>
 </div>
 <div class="nbinput container">
@@ -1049,10 +1051,8 @@ of <code class="docutils literal"><span class="pre">Theano</span></code> to make
 architectures easy. Ideally, we wouldn&#8217;t have to build the models by
 hand as I did above, but use the convenient syntax of <code class="docutils literal"><span class="pre">Lasagne</span></code> to
 construct the architecture, define our priors, and run ADVI.</p>
-<p>While we haven&#8217;t successfully run <code class="docutils literal"><span class="pre">PyMC3</span></code> on the GPU yet, it should be
-fairly straight forward (this is what <code class="docutils literal"><span class="pre">Theano</span></code> does after all) and
-further reduce the running time significantly. If you know some
-<code class="docutils literal"><span class="pre">Theano</span></code>, this would be a great area for contributions!</p>
+<p>You can also run this example on the GPU by setting <code class="docutils literal"><span class="pre">device</span> <span class="pre">=</span> <span class="pre">gpu</span></code> and
+<code class="docutils literal"><span class="pre">floatX</span> <span class="pre">=</span> <span class="pre">float32</span></code> in your <code class="docutils literal"><span class="pre">.theanorc</span></code>.</p>
 <p>You might also argue that the above network isn&#8217;t really deep, but note
 that we could easily extend it to have more layers, including
 convolutional ones to train on more challenging data sets.</p>
