@@ -4,6 +4,7 @@ from .blocking import *
 from .distributions import *
 from .external import *
 from .glm import *
+from . import gp
 from .math import logsumexp, logit, invlogit
 from .model import *
 from .stats import *
