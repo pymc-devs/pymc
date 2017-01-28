@@ -1,0 +1,840 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>Gaussian Process Regression &mdash; PyMC3 3.0 documentation</title>
+  
+
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  
+  
+    <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  
+
+  
+
+  
+        <link rel="index" title="Index"
+              href="../genindex.html"/>
+        <link rel="search" title="Search" href="../search.html"/>
+    <link rel="top" title="PyMC3 3.0 documentation" href="../index.html"/>
+        <link rel="up" title="Examples" href="../examples.html"/>
+        <link rel="next" title="Kernels / Covariance functions" href="GP-covariances.html"/>
+        <link rel="prev" title="Hierarchical Partial Pooling" href="hierarchical_partial_pooling.html"/> 
+
+  
+  <script src="../_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+          
+            <a href="../index.html" class="icon icon-home"> PyMC3
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                3.0
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+                <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../getting_started.html">Getting started</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="../examples.html">Examples</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="../examples.html#howto">Howto</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../examples.html#applied">Applied</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../examples.html#glm">GLM</a></li>
+<li class="toctree-l2 current"><a class="reference internal" href="../examples.html#gp">GP</a><ul class="current">
+<li class="toctree-l3 current"><a class="current reference internal" href="#">Gaussian Process Regression</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#Example-1:-Non-Linear-Regression">Example 1: Non-Linear Regression</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#Example-2:-A-periodic-signal-in-non-white-noise">Example 2: A periodic signal in non-white noise</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="GP-covariances.html">Kernels / Covariance functions</a></li>
+<li class="toctree-l3"><a class="reference internal" href="GP-smoothing.html">Gaussian Process (GP) smoothing</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../examples.html#mixture-models">Mixture Models</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../examples.html#advi">ADVI</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../api.html">API Reference</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+        <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+        <a href="../index.html">PyMC3</a>
+      </nav>
+
+
+      
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          
+
+ 
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="../index.html">Docs</a> &raquo;</li>
+      
+          <li><a href="../examples.html">Examples</a> &raquo;</li>
+      
+    <li>Gaussian Process Regression</li>
+      <li class="wy-breadcrumbs-aside">
+        
+          
+            <a href="../_sources/notebooks/GP-introduction.ipynb.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  
+<style>
+/* CSS for nbsphinx extension */
+
+/* remove conflicting styling from Sphinx themes */
+div.nbinput,
+div.nbinput > div,
+div.nbinput div[class^=highlight],
+div.nbinput div[class^=highlight] pre,
+div.nboutput,
+div.nboutput > div,
+div.nboutput div[class^=highlight],
+div.nboutput div[class^=highlight] pre {
+    background: none;
+    border: none;
+    padding: 0 0;
+    margin: 0;
+    box-shadow: none;
+}
+
+/* avoid gaps between output lines */
+div.nboutput div[class^=highlight] pre {
+    line-height: normal;
+}
+
+/* input/output containers */
+div.nbinput,
+div.nboutput {
+    display: -webkit-flex;
+    display: flex;
+    align-items: flex-start;
+    margin: 0;
+}
+
+/* input container */
+div.nbinput {
+    padding-top: 5px;
+}
+
+/* last container */
+div.nblast {
+    padding-bottom: 5px;
+}
+
+/* input prompt */
+div.nbinput > :first-child pre {
+    color: #303F9F;
+}
+
+/* output prompt */
+div.nboutput > :first-child pre {
+    color: #D84315;
+}
+
+/* all prompts */
+div.nbinput > :first-child[class^=highlight],
+div.nboutput > :first-child[class^=highlight],
+div.nboutput > :first-child {
+    min-width: 8ex;
+    padding-top: 0.4em;
+    padding-right: 0.4em;
+    text-align: right;
+    flex: 0;
+}
+
+/* input/output area */
+div.nbinput > :nth-child(2)[class^=highlight],
+div.nboutput > :nth-child(2),
+div.nboutput > :nth-child(2)[class^=highlight] {
+    padding: 0.4em;
+    -webkit-flex: 1;
+    flex: 1;
+    overflow: auto;
+}
+
+/* input area */
+div.nbinput > :nth-child(2)[class^=highlight] {
+    border: 1px solid #cfcfcf;
+    border-radius: 2px;
+    background: #f7f7f7;
+}
+
+/* override MathJax center alignment in output cells */
+div.nboutput div[class*=MathJax] {
+    text-align: left !important;
+}
+
+/* override sphinx.ext.pngmath center alignment in output cells */
+div.nboutput div.math p {
+    text-align: left;
+}
+
+/* standard error */
+div.nboutput  > :nth-child(2).stderr {
+    background: #fdd;
+}
+
+/* ANSI colors */
+.ansi-black-fg { color: #3E424D; }
+.ansi-black-bg { background-color: #3E424D; }
+.ansi-black-intense-fg { color: #282C36; }
+.ansi-black-intense-bg { background-color: #282C36; }
+.ansi-red-fg { color: #E75C58; }
+.ansi-red-bg { background-color: #E75C58; }
+.ansi-red-intense-fg { color: #B22B31; }
+.ansi-red-intense-bg { background-color: #B22B31; }
+.ansi-green-fg { color: #00A250; }
+.ansi-green-bg { background-color: #00A250; }
+.ansi-green-intense-fg { color: #007427; }
+.ansi-green-intense-bg { background-color: #007427; }
+.ansi-yellow-fg { color: #DDB62B; }
+.ansi-yellow-bg { background-color: #DDB62B; }
+.ansi-yellow-intense-fg { color: #B27D12; }
+.ansi-yellow-intense-bg { background-color: #B27D12; }
+.ansi-blue-fg { color: #208FFB; }
+.ansi-blue-bg { background-color: #208FFB; }
+.ansi-blue-intense-fg { color: #0065CA; }
+.ansi-blue-intense-bg { background-color: #0065CA; }
+.ansi-magenta-fg { color: #D160C4; }
+.ansi-magenta-bg { background-color: #D160C4; }
+.ansi-magenta-intense-fg { color: #A03196; }
+.ansi-magenta-intense-bg { background-color: #A03196; }
+.ansi-cyan-fg { color: #60C6C8; }
+.ansi-cyan-bg { background-color: #60C6C8; }
+.ansi-cyan-intense-fg { color: #258F8F; }
+.ansi-cyan-intense-bg { background-color: #258F8F; }
+.ansi-white-fg { color: #C5C1B4; }
+.ansi-white-bg { background-color: #C5C1B4; }
+.ansi-white-intense-fg { color: #A1A6B2; }
+.ansi-white-intense-bg { background-color: #A1A6B2; }
+
+.ansi-bold { font-weight: bold; }
+
+/* CSS overrides for sphinx_rtd_theme */
+
+/* 24px margin */
+.nbinput.nblast,
+.nboutput.nblast {
+    margin-bottom: 19px;  /* padding has already 5px */
+}
+
+/* ... except between code cells! */
+.nblast + .nbinput {
+    margin-top: -19px;
+}
+
+/* nice headers on first paragraph of info/warning boxes */
+.admonition .first {
+    margin: -12px;
+    padding: 6px 12px;
+    margin-bottom: 12px;
+    color: #fff;
+    line-height: 1;
+    display: block;
+}
+.admonition.warning .first {
+    background: #f0b37e;
+}
+.admonition.note .first {
+    background: #6ab0de;
+}
+.admonition > p:before {
+    margin-right: 4px;  /* make room for the exclamation icon */
+}
+</style>
+<div class="section" id="Gaussian-Process-Regression">
+<h1>Gaussian Process Regression<a class="headerlink" href="#Gaussian-Process-Regression" title="Permalink to this headline">¶</a></h1>
+<p>Gaussian Process regression is a non-parametric approach to regression
+or data fitting that assumes that observed data points <span class="math">\(y\)</span> are
+generated by some unknown latent function <span class="math">\(f(x)\)</span>. The latent
+function <span class="math">\(f(x)\)</span> is modeled as being multivariate normally
+distributed (a Gaussian Process), and is commonly denoted</p>
+<div class="math">
+f(x) \sim \mathcal{GP}(m(x;\theta), \, k(x, x';\theta)) \,.</div><p><span class="math">\(m(x ; \theta)\)</span> is the <em>mean function</em>, and
+<span class="math">\(k(x, x' ;\theta)\)</span> is the covariance function. In many
+applications, the mean function is set to <span class="math">\(0\)</span> because the data can
+still be fit well using just covariances.</p>
+<p><span class="math">\(\theta\)</span> is the set of <em>hyperparameters</em> for either the mean or
+covariance function. These are the unknown variables. They are usually
+found by maximizing the marginal likelihood. This approach is much
+faster computationally than MCMC, but produces a point estimate,
+<span class="math">\(\theta_{\mathrm{MAP}}\)</span>.</p>
+<p>The data in the next two examples is generated by a GP with noise that
+is also gaussian distributed. In sampling notation this is,</p>
+<div class="math">
+\begin{aligned}
+y = f(x) + \epsilon &amp; \\
+f(x) \sim \mathcal{GP}(0, \, k(x, x'; \theta)) &amp; \\
+\epsilon \sim \mathcal{N}(0, \sigma^2) &amp; \\
+\sigma^2 \sim \mathrm{Prior} &amp; \\
+\theta \sim \mathrm{Prior} &amp; \,.
+\end{aligned}</div><p>With Theano as a backend, PyMC3 is an excellent environment for
+developing fully Bayesian Gaussian Process models, particularly when a
+GP is component in a larger model. The GP functionality of PyMC3 is
+meant to be lightweight, highly composable, and have a clear syntax.
+This example is meant to give an introduction to how to specify a GP in
+PyMC3.</p>
+<div class="nbinput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [1]:
+</pre></div>
+</div>
+<div class="highlight-ipython2"><div class="highlight"><pre>
+<span></span><span class="o">%</span><span class="k">matplotlib</span> inline
+<span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="kn">as</span> <span class="nn">plt</span>
+<span class="kn">import</span> <span class="nn">matplotlib.cm</span> <span class="kn">as</span> <span class="nn">cmap</span>
+<span class="n">cm</span> <span class="o">=</span> <span class="n">cmap</span><span class="o">.</span><span class="n">inferno</span>
+
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="kn">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">theano</span>
+<span class="kn">import</span> <span class="nn">theano.tensor</span> <span class="kn">as</span> <span class="nn">tt</span>
+<span class="kn">import</span> <span class="nn">theano.tensor.nlinalg</span>
+<span class="kn">import</span> <span class="nn">sys</span>
+<span class="n">sys</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">insert</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="s2">&quot;../../..&quot;</span><span class="p">)</span>
+<span class="kn">import</span> <span class="nn">pymc3</span> <span class="kn">as</span> <span class="nn">pm</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="Example-1:-Non-Linear-Regression">
+<h2>Example 1: Non-Linear Regression<a class="headerlink" href="#Example-1:-Non-Linear-Regression" title="Permalink to this headline">¶</a></h2>
+<p>This is an example of a non-linear fit in a situation where there isn&#8217;t
+much data. Using optimization to find hyperparameters in this situation
+will greatly underestimate the amount of uncertainty if using the GP for
+prediction. In PyMC3 it is easy to be fully Bayesian and use MCMC
+methods.</p>
+<p>We generate 20 data points at random <code class="docutils literal"><span class="pre">x</span></code> values between 0 and 3. The
+true values of the hyperparameters are hardcoded in this temporary
+<code class="docutils literal"><span class="pre">model</span></code>.</p>
+<div class="nbinput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [2]:
+</pre></div>
+</div>
+<div class="highlight-ipython2"><div class="highlight"><pre>
+<span></span><span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">seed</span><span class="p">(</span><span class="mi">200</span><span class="p">)</span>
+<span class="n">n</span> <span class="o">=</span> <span class="mi">20</span>
+<span class="n">X</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sort</span><span class="p">(</span><span class="mi">3</span><span class="o">*</span><span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">rand</span><span class="p">(</span><span class="n">n</span><span class="p">))[:,</span><span class="bp">None</span><span class="p">]</span>
+
+<span class="k">with</span> <span class="n">pm</span><span class="o">.</span><span class="n">Model</span><span class="p">()</span> <span class="k">as</span> <span class="n">model</span><span class="p">:</span>
+    <span class="c1"># f(x)</span>
+    <span class="n">l_true</span> <span class="o">=</span> <span class="mf">0.3</span>
+    <span class="n">s2_f_true</span> <span class="o">=</span> <span class="mf">1.0</span>
+    <span class="n">cov</span> <span class="o">=</span> <span class="n">s2_f_true</span> <span class="o">*</span> <span class="n">pm</span><span class="o">.</span><span class="n">gp</span><span class="o">.</span><span class="n">cov</span><span class="o">.</span><span class="n">ExpQuad</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">l_true</span><span class="p">)</span>
+
+    <span class="c1"># noise, epsilon</span>
+    <span class="n">s2_n_true</span> <span class="o">=</span> <span class="mf">0.05</span>
+    <span class="n">K_noise</span> <span class="o">=</span> <span class="n">s2_n_true</span> <span class="o">*</span> <span class="n">tt</span><span class="o">.</span><span class="n">eye</span><span class="p">(</span><span class="n">n</span><span class="p">)</span>
+    <span class="n">K</span> <span class="o">=</span> <span class="n">cov</span><span class="o">.</span><span class="n">K</span><span class="p">(</span><span class="n">X</span><span class="p">)</span> <span class="o">+</span> <span class="n">K_noise</span>
+
+<span class="c1"># evaluate the covariance with the given hyperparameters</span>
+<span class="n">K</span> <span class="o">=</span> <span class="n">theano</span><span class="o">.</span><span class="n">function</span><span class="p">([],</span> <span class="n">cov</span><span class="o">.</span><span class="n">K</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">X</span><span class="p">)</span> <span class="o">+</span> <span class="n">K_noise</span><span class="p">)()</span>
+
+<span class="c1"># generate fake data from GP with white noise (with variance sigma2)</span>
+<span class="n">y</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">multivariate_normal</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">n</span><span class="p">),</span> <span class="n">K</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [3]:
+</pre></div>
+</div>
+<div class="highlight-ipython2"><div class="highlight"><pre>
+<span></span><span class="n">fig</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">14</span><span class="p">,</span><span class="mi">5</span><span class="p">));</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">fig</span><span class="o">.</span><span class="n">add_subplot</span><span class="p">(</span><span class="mi">111</span><span class="p">)</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="s1">&#39;ok&#39;</span><span class="p">,</span> <span class="n">ms</span><span class="o">=</span><span class="mi">10</span><span class="p">);</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="s2">&quot;x&quot;</span><span class="p">);</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="s2">&quot;f(x)&quot;</span><span class="p">);</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<img alt="../_images/notebooks_GP-introduction_4_0.png" src="../_images/notebooks_GP-introduction_4_0.png" />
+</div>
+</div>
+<p>Since there isn&#8217;t much data, there will likely be a lot of uncertainty
+in the hyperparameter values.</p>
+<div class="section" id="The-Model">
+<h3>The Model<a class="headerlink" href="#The-Model" title="Permalink to this headline">¶</a></h3>
+<ul>
+<li><p class="first">We assign prior distributions that are uniform in log space, suitable
+for variance-type parameters. Each hyperparameter must at least be
+constrained to be positive valued by its prior.</p>
+</li>
+<li><p class="first">None of the covariance function objects have a scaling coefficient
+built in. This is because random variables, such as <code class="docutils literal"><span class="pre">s2_f</span></code>, can be
+multiplied directly with a covariance function object,
+<code class="docutils literal"><span class="pre">gp.cov.ExpQuad</span></code>.</p>
+</li>
+<li><p class="first">The last line is the <em>marginal</em> likelihood. Since the observed data
+<span class="math">\(y\)</span> is also assumed to be multivariate normally distributed,
+the marginal likelihood is also multivariate normal. It is obtained
+by integrating out <span class="math">\(f(x)\)</span> from the product of the data
+likelihood <span class="math">\(p(y \mid f, X)\)</span> and the GP prior
+<span class="math">\(p(f \mid X)\)</span>,</p>
+<div class="math">
+p(y \mid X) = \int p(y \mid f, X) p(f \mid X) df</div></li>
+<li><p class="first">The call in the last line <code class="docutils literal"><span class="pre">f_cov.K(X)</span></code> evaluates the covariance
+function across the inputs <code class="docutils literal"><span class="pre">X</span></code>. The result is a matrix. The sum of
+this matrix and the diagonal noise term are used as the covariance
+matrix for the marginal likelihood.</p>
+</li>
+</ul>
+<div class="nbinput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [4]:
+</pre></div>
+</div>
+<div class="highlight-ipython2"><div class="highlight"><pre>
+<span></span><span class="n">Z</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="mi">3</span><span class="p">,</span><span class="mi">100</span><span class="p">)[:,</span><span class="bp">None</span><span class="p">]</span>
+<span class="k">with</span> <span class="n">pm</span><span class="o">.</span><span class="n">Model</span><span class="p">()</span> <span class="k">as</span> <span class="n">model</span><span class="p">:</span>
+    <span class="c1"># priors on the covariance function hyperparameters</span>
+    <span class="n">l</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Uniform</span><span class="p">(</span><span class="s1">&#39;l&#39;</span><span class="p">,</span> <span class="n">lower</span><span class="o">=</span><span class="mf">1e-3</span><span class="p">,</span> <span class="n">upper</span><span class="o">=</span><span class="mi">10</span><span class="p">)</span>
+
+    <span class="c1"># uninformative prior on the function variance</span>
+    <span class="n">log_s2_f</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Uniform</span><span class="p">(</span><span class="s1">&#39;log_s2_f&#39;</span><span class="p">,</span> <span class="n">lower</span><span class="o">=-</span><span class="mi">10</span><span class="p">,</span> <span class="n">upper</span><span class="o">=</span><span class="mi">5</span><span class="p">)</span>
+    <span class="n">s2_f</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Deterministic</span><span class="p">(</span><span class="s1">&#39;s2_f&#39;</span><span class="p">,</span> <span class="n">tt</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="n">log_s2_f</span><span class="p">))</span>
+
+    <span class="c1"># uninformative prior on the noise variance</span>
+    <span class="n">log_s2_n</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Uniform</span><span class="p">(</span><span class="s1">&#39;log_s2_n&#39;</span><span class="p">,</span> <span class="n">lower</span><span class="o">=-</span><span class="mi">10</span><span class="p">,</span> <span class="n">upper</span><span class="o">=</span><span class="mi">5</span><span class="p">)</span>
+    <span class="n">s2_n</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Deterministic</span><span class="p">(</span><span class="s1">&#39;s2_n&#39;</span><span class="p">,</span> <span class="n">tt</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="n">log_s2_n</span><span class="p">))</span>
+
+    <span class="c1"># covariance functions for the function f and the noise</span>
+    <span class="n">f_cov</span> <span class="o">=</span> <span class="n">s2_f</span> <span class="o">*</span> <span class="n">pm</span><span class="o">.</span><span class="n">gp</span><span class="o">.</span><span class="n">cov</span><span class="o">.</span><span class="n">ExpQuad</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">l</span><span class="p">)</span>
+    <span class="n">n_cov</span> <span class="o">=</span> <span class="n">s2_n</span> <span class="o">*</span> <span class="n">tt</span><span class="o">.</span><span class="n">eye</span><span class="p">(</span><span class="n">n</span><span class="p">)</span>
+
+    <span class="c1"># the marginal likelihood</span>
+    <span class="n">y_obs</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">MvNormal</span><span class="p">(</span><span class="s1">&#39;y_obs&#39;</span><span class="p">,</span> <span class="n">observed</span><span class="o">=</span><span class="n">y</span><span class="p">,</span> <span class="n">mu</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span>
+                                 <span class="n">cov</span><span class="o">=</span><span class="n">f_cov</span><span class="o">.</span><span class="n">K</span><span class="p">(</span><span class="n">X</span><span class="p">)</span> <span class="o">+</span> <span class="n">n_cov</span><span class="p">)</span>
+
+    <span class="c1">## using deterministics for prediction</span>
+    <span class="n">K_inv</span> <span class="o">=</span> <span class="n">tt</span><span class="o">.</span><span class="n">nlinalg</span><span class="o">.</span><span class="n">matrix_inverse</span><span class="p">(</span><span class="n">K</span><span class="p">)</span>
+    <span class="n">K_s</span>   <span class="o">=</span> <span class="n">f_cov</span><span class="o">.</span><span class="n">K</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">Z</span><span class="p">)</span>
+    <span class="n">K_ss</span>  <span class="o">=</span> <span class="n">f_cov</span><span class="o">.</span><span class="n">K</span><span class="p">(</span><span class="n">Z</span><span class="p">,</span> <span class="n">Z</span><span class="p">)</span>
+
+    <span class="n">f</span>     <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Deterministic</span><span class="p">(</span><span class="s2">&quot;f&quot;</span><span class="p">,</span> <span class="n">tt</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">tt</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">K_s</span><span class="o">.</span><span class="n">T</span><span class="p">,</span> <span class="n">K_inv</span><span class="p">),</span> <span class="n">y</span><span class="p">))</span>
+    <span class="n">Sigma</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Deterministic</span><span class="p">(</span><span class="s2">&quot;Sigma&quot;</span><span class="p">,</span> <span class="n">K_ss</span> <span class="o">-</span> <span class="n">tt</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">tt</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">K_s</span><span class="o">.</span><span class="n">T</span><span class="p">,</span> <span class="n">K_inv</span><span class="p">),</span> <span class="n">K_s</span><span class="p">))</span>
+</pre></div>
+</div>
+</div>
+<p>So far we&#8217;ve found that <code class="docutils literal"><span class="pre">Slice</span></code> and <code class="docutils literal"><span class="pre">Metropolis</span></code> work best for GP
+hyperparameters.</p>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [5]:
+</pre></div>
+</div>
+<div class="highlight-ipython2"><div class="highlight"><pre>
+<span></span><span class="k">with</span> <span class="n">model</span><span class="p">:</span>
+    <span class="n">start</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">find_MAP</span><span class="p">(</span><span class="n">fmin</span><span class="o">=</span><span class="n">sp</span><span class="o">.</span><span class="n">optimize</span><span class="o">.</span><span class="n">fmin_l_bfgs_b</span><span class="p">)</span>
+    <span class="n">trace</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="mi">5000</span><span class="p">,</span> <span class="n">step</span><span class="o">=</span><span class="n">pm</span><span class="o">.</span><span class="n">Slice</span><span class="p">(),</span> <span class="n">start</span><span class="o">=</span><span class="n">start</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="stderr container">
+<div class="highlight"><pre>
+100%|██████████| 5000/5000 [00:23&lt;00:00, 216.93it/s]
+</pre></div></div>
+</div>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [6]:
+</pre></div>
+</div>
+<div class="highlight-ipython2"><div class="highlight"><pre>
+<span></span><span class="n">pm</span><span class="o">.</span><span class="n">traceplot</span><span class="p">(</span><span class="n">trace</span><span class="p">[</span><span class="mi">1000</span><span class="p">:],</span> <span class="n">varnames</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;l&#39;</span><span class="p">,</span> <span class="s1">&#39;s2_f&#39;</span><span class="p">,</span> <span class="s1">&#39;s2_n&#39;</span><span class="p">],</span>
+             <span class="n">lines</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;l&quot;</span><span class="p">:</span> <span class="n">l_true</span><span class="p">,</span>
+                    <span class="s2">&quot;s2_f&quot;</span><span class="p">:</span> <span class="n">s2_f_true</span><span class="p">,</span>
+                    <span class="s2">&quot;s2_n&quot;</span><span class="p">:</span> <span class="n">s2_n_true</span><span class="p">});</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<img alt="../_images/notebooks_GP-introduction_9_0.png" src="../_images/notebooks_GP-introduction_9_0.png" />
+</div>
+</div>
+<p>The results show that the hyperparameters were recovered pretty well,
+but definitely with a high degree of uncertainty. Lets look at the
+predicted fits and uncertainty next using samples from the full
+posterior.</p>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [7]:
+</pre></div>
+</div>
+<div class="highlight-ipython2"><div class="highlight"><pre>
+<span></span><span class="n">fig</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">14</span><span class="p">,</span><span class="mi">5</span><span class="p">));</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">fig</span><span class="o">.</span><span class="n">add_subplot</span><span class="p">(</span><span class="mi">111</span><span class="p">)</span>
+
+<span class="c1"># plot random samples from the full predictive posterior</span>
+<span class="c1">#   of the fit</span>
+<span class="n">idx</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">randint</span><span class="p">(</span><span class="mi">1000</span><span class="p">,</span><span class="mi">5000</span><span class="p">,</span><span class="mi">1000</span><span class="p">)</span>
+<span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">ix</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">idx</span><span class="p">):</span>
+    <span class="n">S</span>  <span class="o">=</span> <span class="n">trace</span><span class="p">[</span><span class="n">ix</span><span class="p">][</span><span class="s2">&quot;Sigma&quot;</span><span class="p">]</span>
+    <span class="n">mu</span> <span class="o">=</span> <span class="n">trace</span><span class="p">[</span><span class="n">ix</span><span class="p">][</span><span class="s2">&quot;f&quot;</span><span class="p">]</span>
+
+    <span class="n">yz</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">multivariate_normal</span><span class="p">(</span><span class="n">mu</span><span class="p">,</span> <span class="n">S</span><span class="p">)</span>
+    <span class="n">ax</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">Z</span><span class="p">,</span> <span class="n">yz</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="n">cm</span><span class="p">(</span><span class="mf">0.3</span><span class="p">),</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">0.05</span><span class="p">)</span>
+
+<span class="c1"># overlay the observed data</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="s1">&#39;ok&#39;</span><span class="p">,</span> <span class="n">ms</span><span class="o">=</span><span class="mi">10</span><span class="p">);</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="s2">&quot;x&quot;</span><span class="p">);</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="s2">&quot;f(x)&quot;</span><span class="p">);</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">set_title</span><span class="p">(</span><span class="s2">&quot;Posterior predictive distribution&quot;</span><span class="p">)</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">set_ylim</span><span class="p">([</span><span class="o">-</span><span class="mi">4</span><span class="p">,</span><span class="mi">7</span><span class="p">]);</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput container">
+<div class="container">
+</div>
+<div class="stderr container">
+<div class="highlight"><pre>
+/usr/local/lib/python2.7/dist-packages/ipykernel/__main__.py:10: RuntimeWarning: covariance is not positive-semidefinite.
+</pre></div></div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<img alt="../_images/notebooks_GP-introduction_11_1.png" src="../_images/notebooks_GP-introduction_11_1.png" />
+</div>
+</div>
+</div>
+</div>
+<div class="section" id="Example-2:-A-periodic-signal-in-non-white-noise">
+<h2>Example 2: A periodic signal in non-white noise<a class="headerlink" href="#Example-2:-A-periodic-signal-in-non-white-noise" title="Permalink to this headline">¶</a></h2>
+<p>This time let&#8217;s pretend we have some more complex data that we would
+like to decompose. For the sake of example, we simulate some data points
+from a function that 1. has a fainter periodic component 2. has a lower
+frequency drift away from periodicity 3. has additive white noise</p>
+<p>As before, we generate the data using a throwaway PyMC3 <code class="docutils literal"><span class="pre">model</span></code>. We
+consider the sum of the drift term and the white noise to be &#8220;noise&#8221;,
+while the periodic component is &#8220;signal&#8221;. In GP regression, the
+treatment of signal and noise covariance functions is identical, so the
+distinction between signal and noise is somewhat arbitrary.</p>
+<div class="nbinput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [8]:
+</pre></div>
+</div>
+<div class="highlight-ipython2"><div class="highlight"><pre>
+<span></span><span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">seed</span><span class="p">(</span><span class="mi">200</span><span class="p">)</span>
+<span class="n">n</span> <span class="o">=</span> <span class="mi">150</span>
+<span class="n">X</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sort</span><span class="p">(</span><span class="mi">40</span><span class="o">*</span><span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">rand</span><span class="p">(</span><span class="n">n</span><span class="p">))[:,</span><span class="bp">None</span><span class="p">]</span>
+
+<span class="c1"># define gp, true parameter values</span>
+<span class="k">with</span> <span class="n">pm</span><span class="o">.</span><span class="n">Model</span><span class="p">()</span> <span class="k">as</span> <span class="n">model</span><span class="p">:</span>
+    <span class="n">l_per_true</span> <span class="o">=</span> <span class="mi">2</span>
+    <span class="n">cov_per</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">gp</span><span class="o">.</span><span class="n">cov</span><span class="o">.</span><span class="n">Cosine</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">l_per_true</span><span class="p">)</span>
+
+    <span class="n">l_drift_true</span> <span class="o">=</span> <span class="mi">4</span>
+    <span class="n">cov_drift</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">gp</span><span class="o">.</span><span class="n">cov</span><span class="o">.</span><span class="n">Matern52</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">l_drift_true</span><span class="p">)</span>
+
+    <span class="n">s2_p_true</span> <span class="o">=</span> <span class="mf">0.3</span>
+    <span class="n">s2_d_true</span> <span class="o">=</span> <span class="mf">1.5</span>
+    <span class="n">s2_w_true</span> <span class="o">=</span> <span class="mf">0.1</span>
+
+    <span class="n">periodic_cov</span> <span class="o">=</span> <span class="n">s2_p_true</span> <span class="o">*</span> <span class="n">cov_per</span>
+    <span class="n">drift_cov</span>    <span class="o">=</span> <span class="n">s2_d_true</span> <span class="o">*</span> <span class="n">cov_drift</span>
+
+    <span class="n">signal_cov</span>   <span class="o">=</span> <span class="n">periodic_cov</span> <span class="o">+</span> <span class="n">drift_cov</span>
+    <span class="n">noise_cov</span>    <span class="o">=</span> <span class="n">s2_w_true</span> <span class="o">*</span> <span class="n">tt</span><span class="o">.</span><span class="n">eye</span><span class="p">(</span><span class="n">n</span><span class="p">)</span>
+
+
+<span class="n">K</span> <span class="o">=</span> <span class="n">theano</span><span class="o">.</span><span class="n">function</span><span class="p">([],</span> <span class="n">signal_cov</span><span class="o">.</span><span class="n">K</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">X</span><span class="p">)</span> <span class="o">+</span> <span class="n">noise_cov</span><span class="p">)()</span>
+<span class="n">y</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">multivariate_normal</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">n</span><span class="p">),</span> <span class="n">K</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<p>In the plot of the observed data, the periodic component is barely
+distinguishable by eye. It is plausible that there isn&#8217;t a periodic
+component, and the observed data is just the drift component and white
+noise.</p>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [9]:
+</pre></div>
+</div>
+<div class="highlight-ipython2"><div class="highlight"><pre>
+<span></span><span class="n">fig</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">12</span><span class="p">,</span><span class="mi">5</span><span class="p">));</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">fig</span><span class="o">.</span><span class="n">add_subplot</span><span class="p">(</span><span class="mi">111</span><span class="p">)</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="s1">&#39;--&#39;</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="n">cm</span><span class="p">(</span><span class="mf">0.4</span><span class="p">))</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="s1">&#39;o&#39;</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s2">&quot;k&quot;</span><span class="p">,</span> <span class="n">ms</span><span class="o">=</span><span class="mi">10</span><span class="p">);</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="s2">&quot;x&quot;</span><span class="p">);</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="s2">&quot;f(x)&quot;</span><span class="p">);</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<img alt="../_images/notebooks_GP-introduction_15_0.png" src="../_images/notebooks_GP-introduction_15_0.png" />
+</div>
+</div>
+<p>Lets see if we can infer the correct values of the hyperparameters.</p>
+<div class="nbinput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [10]:
+</pre></div>
+</div>
+<div class="highlight-ipython2"><div class="highlight"><pre>
+<span></span><span class="k">with</span> <span class="n">pm</span><span class="o">.</span><span class="n">Model</span><span class="p">()</span> <span class="k">as</span> <span class="n">model</span><span class="p">:</span>
+    <span class="c1"># prior for periodic lengthscale, or frequency</span>
+    <span class="n">l_per</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Uniform</span><span class="p">(</span><span class="s1">&#39;l_per&#39;</span><span class="p">,</span> <span class="n">lower</span><span class="o">=</span><span class="mf">1e-5</span><span class="p">,</span> <span class="n">upper</span><span class="o">=</span><span class="mi">10</span><span class="p">)</span>
+
+    <span class="c1"># prior for the drift lengthscale hyperparameter</span>
+    <span class="n">l_drift</span>  <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Uniform</span><span class="p">(</span><span class="s1">&#39;l_drift&#39;</span><span class="p">,</span> <span class="n">lower</span><span class="o">=</span><span class="mf">1e-5</span><span class="p">,</span> <span class="n">upper</span><span class="o">=</span><span class="mi">10</span><span class="p">)</span>
+
+    <span class="c1"># uninformative prior on the periodic amplitude</span>
+    <span class="n">log_s2_p</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Uniform</span><span class="p">(</span><span class="s1">&#39;log_s2_p&#39;</span><span class="p">,</span> <span class="n">lower</span><span class="o">=-</span><span class="mi">10</span><span class="p">,</span> <span class="n">upper</span><span class="o">=</span><span class="mi">5</span><span class="p">)</span>
+    <span class="n">s2_p</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Deterministic</span><span class="p">(</span><span class="s1">&#39;s2_p&#39;</span><span class="p">,</span> <span class="n">tt</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="n">log_s2_p</span><span class="p">))</span>
+
+    <span class="c1"># uninformative prior on the drift amplitude</span>
+    <span class="n">log_s2_d</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Uniform</span><span class="p">(</span><span class="s1">&#39;log_s2_d&#39;</span><span class="p">,</span> <span class="n">lower</span><span class="o">=-</span><span class="mi">10</span><span class="p">,</span> <span class="n">upper</span><span class="o">=</span><span class="mi">5</span><span class="p">)</span>
+    <span class="n">s2_d</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Deterministic</span><span class="p">(</span><span class="s1">&#39;s2_d&#39;</span><span class="p">,</span> <span class="n">tt</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="n">log_s2_d</span><span class="p">))</span>
+
+    <span class="c1"># uninformative prior on the white noise variance</span>
+    <span class="n">log_s2_w</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Uniform</span><span class="p">(</span><span class="s1">&#39;log_s2_w&#39;</span><span class="p">,</span> <span class="n">lower</span><span class="o">=-</span><span class="mi">10</span><span class="p">,</span> <span class="n">upper</span><span class="o">=</span><span class="mi">5</span><span class="p">)</span>
+    <span class="n">s2_w</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Deterministic</span><span class="p">(</span><span class="s1">&#39;s2_w&#39;</span><span class="p">,</span> <span class="n">tt</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="n">log_s2_w</span><span class="p">))</span>
+
+    <span class="c1"># the periodic &quot;signal&quot; covariance</span>
+    <span class="n">signal_cov</span> <span class="o">=</span> <span class="n">s2_p</span> <span class="o">*</span> <span class="n">pm</span><span class="o">.</span><span class="n">gp</span><span class="o">.</span><span class="n">cov</span><span class="o">.</span><span class="n">Cosine</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">l_per</span><span class="p">)</span>
+
+    <span class="c1"># the &quot;noise&quot; covariance</span>
+    <span class="n">drift_cov</span>  <span class="o">=</span> <span class="n">s2_d</span> <span class="o">*</span> <span class="n">pm</span><span class="o">.</span><span class="n">gp</span><span class="o">.</span><span class="n">cov</span><span class="o">.</span><span class="n">Matern52</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">l_drift</span><span class="p">)</span>
+    <span class="n">noise_cov</span>  <span class="o">=</span> <span class="n">drift_cov</span><span class="o">.</span><span class="n">K</span><span class="p">(</span><span class="n">X</span><span class="p">)</span> <span class="o">+</span> <span class="n">s2_w</span> <span class="o">*</span> <span class="n">tt</span><span class="o">.</span><span class="n">eye</span><span class="p">(</span><span class="n">n</span><span class="p">)</span>
+
+    <span class="c1"># multivariate normal marginal likelihood</span>
+    <span class="n">y_obs</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">MvNormal</span><span class="p">(</span><span class="s1">&#39;y_obs&#39;</span><span class="p">,</span> <span class="n">mu</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span>
+                        <span class="n">cov</span><span class="o">=</span><span class="n">signal_cov</span><span class="o">.</span><span class="n">K</span><span class="p">(</span><span class="n">X</span><span class="p">)</span> <span class="o">+</span> <span class="n">noise_cov</span><span class="p">,</span>
+                        <span class="n">observed</span><span class="o">=</span><span class="n">y</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [11]:
+</pre></div>
+</div>
+<div class="highlight-ipython2"><div class="highlight"><pre>
+<span></span><span class="k">with</span> <span class="n">model</span><span class="p">:</span>
+    <span class="n">start</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">find_MAP</span><span class="p">(</span><span class="n">fmin</span><span class="o">=</span><span class="n">sp</span><span class="o">.</span><span class="n">optimize</span><span class="o">.</span><span class="n">fmin_l_bfgs_b</span><span class="p">)</span>
+    <span class="n">trace</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="mi">5000</span><span class="p">,</span> <span class="n">step</span><span class="o">=</span><span class="n">pm</span><span class="o">.</span><span class="n">Slice</span><span class="p">(),</span> <span class="n">start</span><span class="o">=</span><span class="n">start</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="stderr container">
+<div class="highlight"><pre>
+100%|██████████| 5000/5000 [06:45&lt;00:00, 13.41it/s]
+</pre></div></div>
+</div>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [12]:
+</pre></div>
+</div>
+<div class="highlight-ipython2"><div class="highlight"><pre>
+<span></span><span class="n">pm</span><span class="o">.</span><span class="n">traceplot</span><span class="p">(</span><span class="n">trace</span><span class="p">[</span><span class="mi">1000</span><span class="p">:],</span> <span class="n">varnames</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;l_per&#39;</span><span class="p">,</span> <span class="s1">&#39;l_drift&#39;</span><span class="p">,</span> <span class="s1">&#39;s2_d&#39;</span><span class="p">,</span> <span class="s1">&#39;s2_p&#39;</span><span class="p">,</span> <span class="s1">&#39;s2_w&#39;</span><span class="p">],</span>
+            <span class="n">lines</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;l_per&quot;</span><span class="p">:</span> <span class="n">l_per_true</span><span class="p">,</span>
+                   <span class="s2">&quot;l_drift&quot;</span><span class="p">:</span> <span class="n">l_drift_true</span><span class="p">,</span>
+                   <span class="s2">&quot;s2_d&quot;</span><span class="p">:</span>    <span class="n">s2_d_true</span><span class="p">,</span>
+                   <span class="s2">&quot;s2_p&quot;</span><span class="p">:</span>    <span class="n">s2_p_true</span><span class="p">,</span>
+                   <span class="s2">&quot;s2_w&quot;</span><span class="p">:</span>    <span class="n">s2_w_true</span><span class="p">});</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<img alt="../_images/notebooks_GP-introduction_19_0.png" src="../_images/notebooks_GP-introduction_19_0.png" />
+</div>
+</div>
+<p>Some large samples make the histogram of <code class="docutils literal"><span class="pre">s2_p</span></code> hard to read. Below is
+a zoomed in histogram.</p>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [14]:
+</pre></div>
+</div>
+<div class="highlight-ipython2"><div class="highlight"><pre>
+<span></span><span class="n">fig</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">12</span><span class="p">,</span><span class="mi">6</span><span class="p">));</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">fig</span><span class="o">.</span><span class="n">add_subplot</span><span class="p">(</span><span class="mi">111</span><span class="p">)</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">hist</span><span class="p">(</span><span class="n">trace</span><span class="p">[</span><span class="s1">&#39;s2_p&#39;</span><span class="p">],</span> <span class="mi">100</span><span class="p">,</span> <span class="nb">range</span><span class="o">=</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="mi">4</span><span class="p">),</span> <span class="n">color</span><span class="o">=</span><span class="n">cm</span><span class="p">(</span><span class="mf">0.3</span><span class="p">),</span> <span class="n">ec</span><span class="o">=</span><span class="s1">&#39;none&#39;</span><span class="p">);</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">plot</span><span class="p">([</span><span class="mf">0.3</span><span class="p">,</span> <span class="mf">0.3</span><span class="p">],</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">500</span><span class="p">],</span> <span class="s2">&quot;k&quot;</span><span class="p">,</span> <span class="n">lw</span><span class="o">=</span><span class="mi">2</span><span class="p">);</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">set_title</span><span class="p">(</span><span class="s2">&quot;Histogram of s2_p&quot;</span><span class="p">);</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="s2">&quot;Number of samples&quot;</span><span class="p">);</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="s2">&quot;s2_p&quot;</span><span class="p">);</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<img alt="../_images/notebooks_GP-introduction_21_0.png" src="../_images/notebooks_GP-introduction_21_0.png" />
+</div>
+</div>
+<p>Comparing the histograms of the results to the true values, we can see
+that the PyMC3&#8217;s MCMC methods did a good job estimating the true GP
+hyperparameters. Although the periodic component is faintly apparent in
+the observed data, the GP model is able to extract it with high
+accuracy.</p>
+</div>
+</div>
+
+
+           </div>
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="GP-covariances.html" class="btn btn-neutral float-right" title="Kernels / Covariance functions" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="hierarchical_partial_pooling.html" class="btn btn-neutral" title="Hierarchical Partial Pooling" accesskey="p"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2016, John Salvatier, Christopher Fonnesbeck, Thomas Wiecki.
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'../',
+            VERSION:'3.0',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true
+        };
+    </script>
+      <script type="text/javascript" src="../_static/jquery.js"></script>
+      <script type="text/javascript" src="../_static/underscore.js"></script>
+      <script type="text/javascript" src="../_static/doctools.js"></script>
+      <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+  
+
+  
+  
+    <script type="text/javascript" src="../_static/js/theme.js"></script>
+  
+
+  
+  
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.StickyNav.enable();
+      });
+  </script>
+   
+
+</body>
+</html>

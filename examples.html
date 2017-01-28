@@ -98,7 +98,6 @@
 <li class="toctree-l3"><a class="reference internal" href="notebooks/stochastic_volatility.html">Stochastic Volatility model</a></li>
 <li class="toctree-l3"><a class="reference internal" href="notebooks/rugby_analytics.html">A Hierarchical model for Rugby prediction</a></li>
 <li class="toctree-l3"><a class="reference internal" href="notebooks/survival_analysis.html">Bayesian Survival Analysis</a></li>
-<li class="toctree-l3"><a class="reference internal" href="notebooks/GP-smoothing.html">Gaussian Process (GP) smoothing</a></li>
 <li class="toctree-l3"><a class="reference internal" href="notebooks/dawid-skene.html">The Dawid-Skene model with priors</a></li>
 </ul>
 </li>
@@ -111,6 +110,12 @@
 <li class="toctree-l3"><a class="reference internal" href="notebooks/GLM-hierarchical.html">GLM: Hierarchical Linear Regression</a></li>
 <li class="toctree-l3"><a class="reference internal" href="notebooks/GLM-poisson-regression.html">GLM: Poisson Regression</a></li>
 <li class="toctree-l3"><a class="reference internal" href="notebooks/hierarchical_partial_pooling.html">Hierarchical Partial Pooling</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#gp">GP</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="notebooks/GP-introduction.html">Gaussian Process Regression</a></li>
+<li class="toctree-l3"><a class="reference internal" href="notebooks/GP-covariances.html">Kernels / Covariance functions</a></li>
+<li class="toctree-l3"><a class="reference internal" href="notebooks/GP-smoothing.html">Gaussian Process (GP) smoothing</a></li>
 </ul>
 </li>
 <li class="toctree-l2"><a class="reference internal" href="#mixture-models">Mixture Models</a><ul>
@@ -264,16 +269,6 @@
 <li class="toctree-l3"><a class="reference internal" href="notebooks/survival_analysis.html#Time-varying-effects">Time varying effects</a></li>
 </ul>
 </li>
-</ul>
-</li>
-<li class="toctree-l1"><a class="reference internal" href="notebooks/GP-smoothing.html">Gaussian Process (GP) smoothing</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="notebooks/GP-smoothing.html#Let's-try-a-linear-regression-first">Let&#8217;s try a linear regression first</a></li>
-<li class="toctree-l2"><a class="reference internal" href="notebooks/GP-smoothing.html#Linear-regression-model-recap">Linear regression model recap</a></li>
-<li class="toctree-l2"><a class="reference internal" href="notebooks/GP-smoothing.html#Gaussian-Process-smoothing-model">Gaussian Process smoothing model</a></li>
-<li class="toctree-l2"><a class="reference internal" href="notebooks/GP-smoothing.html#Let's-describe-the-above-GP-smoothing-model-in-PyMC3">Let&#8217;s describe the above GP-smoothing model in PyMC3</a></li>
-<li class="toctree-l2"><a class="reference internal" href="notebooks/GP-smoothing.html#Exploring-different-levels-of-smoothing">Exploring different levels of smoothing</a></li>
-<li class="toctree-l2"><a class="reference internal" href="notebooks/GP-smoothing.html#Smoothing-&quot;to-the-limits&quot;">Smoothing &#8220;to the limits&#8221;</a></li>
-<li class="toctree-l2"><a class="reference internal" href="notebooks/GP-smoothing.html#Interactive-smoothing">Interactive smoothing</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="notebooks/dawid-skene.html">The Dawid-Skene model with priors</a><ul>
@@ -435,6 +430,49 @@
 <li class="toctree-l1"><a class="reference internal" href="notebooks/hierarchical_partial_pooling.html">Hierarchical Partial Pooling</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="notebooks/hierarchical_partial_pooling.html#Data">Data</a></li>
 <li class="toctree-l2"><a class="reference internal" href="notebooks/hierarchical_partial_pooling.html#Approach">Approach</a></li>
+</ul>
+</li>
+</ul>
+</div>
+</div>
+<div class="section" id="gp">
+<h2>GP<a class="headerlink" href="#gp" title="Permalink to this headline">¶</a></h2>
+<div class="toctree-wrapper compound">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="notebooks/GP-introduction.html">Gaussian Process Regression</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="notebooks/GP-introduction.html#Example-1:-Non-Linear-Regression">Example 1: Non-Linear Regression</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="notebooks/GP-introduction.html#The-Model">The Model</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="notebooks/GP-introduction.html#Example-2:-A-periodic-signal-in-non-white-noise">Example 2: A periodic signal in non-white noise</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="notebooks/GP-covariances.html">Kernels / Covariance functions</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="notebooks/GP-covariances.html#Exponentiated-Quadratic">Exponentiated Quadratic</a></li>
+<li class="toctree-l2"><a class="reference internal" href="notebooks/GP-covariances.html#Two-(and-higher)-Dimensional-Inputs">Two (and higher) Dimensional Inputs</a></li>
+<li class="toctree-l2"><a class="reference internal" href="notebooks/GP-covariances.html#Both-dimensions-active">Both dimensions active</a></li>
+<li class="toctree-l2"><a class="reference internal" href="notebooks/GP-covariances.html#One-dimension-active">One dimension active</a></li>
+<li class="toctree-l2"><a class="reference internal" href="notebooks/GP-covariances.html#Product-of-two-covariances,-active-over-each-dimension">Product of two covariances, active over each dimension</a></li>
+<li class="toctree-l2"><a class="reference internal" href="notebooks/GP-covariances.html#White-Noise">White Noise</a></li>
+<li class="toctree-l2"><a class="reference internal" href="notebooks/GP-covariances.html#Rational-Quadratic">Rational Quadratic</a></li>
+<li class="toctree-l2"><a class="reference internal" href="notebooks/GP-covariances.html#Exponential">Exponential</a></li>
+<li class="toctree-l2"><a class="reference internal" href="notebooks/GP-covariances.html#Matern-5/2">Matern 5/2</a></li>
+<li class="toctree-l2"><a class="reference internal" href="notebooks/GP-covariances.html#Matern-3/2">Matern 3/2</a></li>
+<li class="toctree-l2"><a class="reference internal" href="notebooks/GP-covariances.html#Cosine">Cosine</a></li>
+<li class="toctree-l2"><a class="reference internal" href="notebooks/GP-covariances.html#Linear">Linear</a></li>
+<li class="toctree-l2"><a class="reference internal" href="notebooks/GP-covariances.html#Polynomial">Polynomial</a></li>
+<li class="toctree-l2"><a class="reference internal" href="notebooks/GP-covariances.html#Multiplication-with-a-precomputed-covariance-matrix">Multiplication with a precomputed covariance matrix</a></li>
+<li class="toctree-l2"><a class="reference internal" href="notebooks/GP-covariances.html#Applying-an-arbitary-warping-function-on-the-inputs">Applying an arbitary warping function on the inputs</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="notebooks/GP-smoothing.html">Gaussian Process (GP) smoothing</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="notebooks/GP-smoothing.html#Let's-try-a-linear-regression-first">Let&#8217;s try a linear regression first</a></li>
+<li class="toctree-l2"><a class="reference internal" href="notebooks/GP-smoothing.html#Linear-regression-model-recap">Linear regression model recap</a></li>
+<li class="toctree-l2"><a class="reference internal" href="notebooks/GP-smoothing.html#Gaussian-Process-smoothing-model">Gaussian Process smoothing model</a></li>
+<li class="toctree-l2"><a class="reference internal" href="notebooks/GP-smoothing.html#Let's-describe-the-above-GP-smoothing-model-in-PyMC3">Let&#8217;s describe the above GP-smoothing model in PyMC3</a></li>
+<li class="toctree-l2"><a class="reference internal" href="notebooks/GP-smoothing.html#Exploring-different-levels-of-smoothing">Exploring different levels of smoothing</a></li>
+<li class="toctree-l2"><a class="reference internal" href="notebooks/GP-smoothing.html#Smoothing-&quot;to-the-limits&quot;">Smoothing &#8220;to the limits&#8221;</a></li>
+<li class="toctree-l2"><a class="reference internal" href="notebooks/GP-smoothing.html#Interactive-smoothing">Interactive smoothing</a></li>
 </ul>
 </li>
 </ul>
