@@ -523,6 +523,8 @@ def advi_minibatch(vars=None, start=None, model=None, n=5000, n_mcsamples=1,
     progress = tqdm.trange(n)
     for i in progress:
         e = f(*next(minibatches))
+        if np.isnan(e):
+            raise FloatingPointError('NaN occurred in ADVI optimization.')
         elbos[i] = e
         if n < 10:
             progress.set_description('ELBO = {:,.2f}'.format(elbos[i]))
