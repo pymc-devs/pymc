@@ -47,6 +47,7 @@ class Covariance(object):
 
 
     def _slice(self, X, Z):
+        assert self.input_dim == X.shape[1], "dimension mismatch"
         X = X[:, self.active_dims]
         if Z is not None:
             Z = Z[:, self.active_dims]
