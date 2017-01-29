@@ -372,7 +372,7 @@ class TestDfSummary(bf.ModelBackendSampledTestCase):
                 npt.assert_equal(val, ds.loc[vidx, 'mean'])
 
     def test_row_names(self):
-        with Model():
+        with Model() as model:
             pm.Uniform('x', 0, 1)
             step = Metropolis()
             trace = pm.sample(100, step=step)

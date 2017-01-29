@@ -35,7 +35,7 @@ class TestMixture(SeededTest):
         cls.pois_x = generate_poisson_mixture_data(cls.pois_w, cls.pois_mu, size=1000)
 
     def test_mixture_list_of_normals(self):
-        with Model():
+        with Model() as model:
             w = Dirichlet('w', np.ones_like(self.norm_w))
             mu = Normal('mu', 0., 10., shape=self.norm_w.size)
             tau = Gamma('tau', 1., 1., shape=self.norm_w.size)
@@ -53,7 +53,7 @@ class TestMixture(SeededTest):
                         rtol=0.1, atol=0.1)
 
     def test_normal_mixture(self):
-        with Model():
+        with Model() as model:
             w = Dirichlet('w', np.ones_like(self.norm_w))
             mu = Normal('mu', 0., 10., shape=self.norm_w.size)
             tau = Gamma('tau', 1., 1., shape=self.norm_w.size)
@@ -69,7 +69,7 @@ class TestMixture(SeededTest):
                         rtol=0.1, atol=0.1)
 
     def test_poisson_mixture(self):
-        with Model():
+        with Model() as model:
             w = Dirichlet('w', np.ones_like(self.pois_w))
             mu = Gamma('mu', 1., 1., shape=self.pois_w.size)
             Mixture('x_obs', w, Poisson.dist(mu), observed=self.pois_x)
@@ -84,7 +84,7 @@ class TestMixture(SeededTest):
                         rtol=0.1, atol=0.1)
 
     def test_mixture_list_of_poissons(self):
-        with Model():
+        with Model() as model:
             w = Dirichlet('w', np.ones_like(self.pois_w))
             mu = Gamma('mu', 1., 1., shape=self.pois_w.size)
             Mixture('x_obs', w,

@@ -68,7 +68,7 @@ def test_make_2d():
 
 
 def test_plots_transformed():
-    with pm.Model():
+    with pm.Model() as model:
         pm.Uniform('x', 0, 1)
         step = pm.Metropolis()
         trace = pm.sample(100, step=step)

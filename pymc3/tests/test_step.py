@@ -127,7 +127,7 @@ class TestStepMethods(object):  # yield test doesn't work subclassing unittest.T
             tqdm.write('Benchmarking {} with {:,d} samples'.format(step_method.__name__, n_steps))
         else:
             tqdm.write('Checking {} has same trace as on master'.format(step_method.__name__))
-        with Model():
+        with Model() as model:
             Normal('x', mu=0, sd=1)
             trace = sample(n_steps, step=step_method(), random_seed=1)
 
