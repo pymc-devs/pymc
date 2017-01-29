@@ -170,7 +170,8 @@ def sample(draws, step=None, init='advi', n_init=200000, start=None,
                     _start = transform_start_particles(_start, step.nparticles, njobs, model)
                 elif init == 'random':
                     _start = [get_random_starters(step.nparticles, model) for i in range(njobs)]
-            trace = MultiNDArray(step.nparticles)
+            if trace is None:
+                trace = MultiNDArray(step.nparticles)
             if start is None:
                 start = _start
         else:
