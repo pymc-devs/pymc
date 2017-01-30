@@ -1,6 +1,6 @@
 import numpy as np
 import pandas as pd
-import pylab as pl
+import matplotlib.pyplot as plt
 
 from pymc3 import StudentT, Model, NUTS, Normal, find_MAP, get_data_file, sample
 from pymc3.distributions.timeseries import GaussianRandomWalk
@@ -17,12 +17,12 @@ group, countries = pd.factorize(data.area, order=countries)
 ncountries = len(countries)
 
 for i, country in enumerate(countries):
-    pl.subplot(2, 3, i + 1)
-    pl.title(country)
+    plt.subplot(2, 3, i + 1)
+    plt.title(country)
     d = data[data.area == country]
-    pl.plot(d.age, d.value, '.')
+    plt.plot(d.age, d.value, '.')
 
-    pl.ylim(0, rate.max())
+    plt.ylim(0, rate.max())
 
 
 nknots = 10
@@ -72,14 +72,14 @@ def run(n=3000):
         trace = sample(n, step, s)
 
     for i, country in enumerate(countries):
-        pl.subplot(2, 3, i + 1)
-        pl.title(country)
+        plt.subplot(2, 3, i + 1)
+        plt.title(country)
 
         d = data[data.area == country]
-        pl.plot(d.age, d.value, '.')
-        pl.plot(knots, trace[y][::5, :, i].T, color='r', alpha=.01)
+        plt.plot(d.age, d.value, '.')
+        plt.plot(knots, trace[y][::5, :, i].T, color='r', alpha=.01)
 
-        pl.ylim(0, rate.max())
+        plt.ylim(0, rate.max())
 
 
 if __name__ == '__main__':
