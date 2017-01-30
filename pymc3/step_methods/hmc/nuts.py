@@ -1,9 +1,9 @@
 from ..arraystep import Competence
 from .base_hmc import BaseHMC
 from pymc3.vartypes import continuous_types
-from pymc3.theanof import floatX
 import numpy as np
 import numpy.random as nr
+import theano
 
 __all__ = ['NUTS']
 
@@ -69,27 +69,27 @@ class NUTS(BaseHMC):
         else:
             step_size = np.exp(self.log_step_size_bar)
 
-        u = floatX(nr.uniform())
+        u = np.typeDict[theano.config.floatX](nr.uniform())
 
         q = qn = qp = q0
+        qn_grad = qp_grad = self.dlogp(q)
         pn = pp = p0
-
         tree_size, depth = 1., 0
         keep_sampling = True
 
         while keep_sampling:
             direction = bern(0.5) * 2 - 1
-            q_edge, p_edge = {-1: (qn, pn), 1: (qp, pp)}[direction]
+            q_edge, p_edge, q_edge_grad = {-1: (qn, pn, qn_grad), 1: (qp, pp, qp_grad)}[direction]
 
-            q_edge, p_edge, proposal, subtree_size, is_valid_sample, a, na = buildtree(
-                self.leapfrog, q_edge, p_edge,
+            q_edge, p_edge, q_edge_grad, proposal, subtree_size, is_valid_sample, a, na = buildtree(
+                self.leapfrog, q_edge, p_edge, q_edge_grad,
                 u, direction, depth,
                 step_size, self.Emax, start_energy)
 
             if direction == -1:
-                qn, pn = q_edge, p_edge
+                qn, pn, qn_grad = q_edge, p_edge, q_edge_grad
             else:
-                qp, pp = q_edge, p_edge
+                qp, pp, qp_grad = q_edge, p_edge, q_edge_grad
 
             if is_valid_sample and bern(min(1, subtree_size / tree_size)):
                 q = proposal
@@ -119,24 +119,23 @@ class NUTS(BaseHMC):
         return Competence.INCOMPATIBLE
 
 
-def buildtree(leapfrog, q, p, u, direction, depth, step_size, Emax, start_energy):
+def buildtree(leapfrog, q, p, q_grad, u, direction, depth, step_size, Emax, start_energy):
     if depth == 0:
-        q_edge, p_edge, new_energy = leapfrog(q, p,
-                                              floatX(np.asarray(direction * step_size)))
+        epsilon = np.asarray(direction * step_size, dtype=theano.config.floatX)
+        q_edge, p_edge, q_edge_grad, new_energy = leapfrog(q, p, q_grad, epsilon)
         energy_change = new_energy - start_energy
-
         leaf_size = int(np.log(u) + energy_change <= 0)
         is_valid_sample = (np.log(u) + energy_change < Emax)
-        return q_edge, p_edge, q_edge, leaf_size, is_valid_sample, min(1, np.exp(-energy_change)), 1
+        return q_edge, p_edge, q_edge_grad, q_edge, leaf_size, is_valid_sample, min(1, np.exp(-energy_change)), 1
     else:
         depth -= 1
 
-    q, p, proposal, tree_size, is_valid_sample, a1, na1 = buildtree(
-        leapfrog, q, p, u, direction, depth, step_size, Emax, start_energy)
+    q, p, q_grad, proposal, tree_size, is_valid_sample, a1, na1 = buildtree(
+        leapfrog, q, p, q_grad, u, direction, depth, step_size, Emax, start_energy)
 
     if is_valid_sample:
-        q_edge, p_edge, new_proposal, subtree_size, is_valid_subsample, a11, na11 = buildtree(
-            leapfrog, q, p, u, direction, depth, step_size, Emax, start_energy)
+        q_edge, p_edge, q_edge_grad, new_proposal, subtree_size, is_valid_subsample, a11, na11 = buildtree(
+            leapfrog, q, p, q_grad, u, direction, depth, step_size, Emax, start_energy)
 
         tree_size += subtree_size
         if bern(subtree_size * 1. / max(tree_size, 1)):
@@ -147,6 +146,6 @@ def buildtree(leapfrog, q, p, u, direction, depth, step_size, Emax, start_energy
         span = direction * (q_edge - q)
         is_valid_sample = is_valid_subsample and (span.dot(p_edge) >= 0) and (span.dot(p) >= 0)
     else:
-        q_edge, p_edge = q, p
+        q_edge, p_edge, q_edge_grad = q, p, q_grad
 
-    return q_edge, p_edge, proposal, tree_size, is_valid_sample, a1, na1
+    return q_edge, p_edge, q_edge_grad, proposal, tree_size, is_valid_sample, a1, na1
