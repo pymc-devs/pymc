@@ -145,6 +145,12 @@ class NDArray(base.BaseTrace):
         # Slicing directly instead of using _slice_as_ndarray to
         # support stop value in slice (which is needed by
         # iter_sample).
+
+        start = idx.start or 0
+        stop = min(idx.stop or len(self), len(self))
+        step = idx.step or 1
+        idx = slice(start, stop, step)
+
         sliced = NDArray(model=self.model, vars=self.vars)
         sliced.chain = self.chain
         sliced.samples = {varname: values[idx]
@@ -158,6 +164,8 @@ class NDArray(base.BaseTrace):
             sliced._stats.append(var_sliced)
             for key, vals in vars.items():
                 var_sliced[key] = vals[idx]
+
+        sliced.draw_idx = stop - start
         return sliced
 
     def point(self, idx):

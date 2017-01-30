@@ -61,6 +61,9 @@ class Text(base.BaseTrace):
         chain : int
             Chain number
         """
+        if self._fh is not None:
+            self._fh.close()
+
         self.chain = chain
         self.filename = os.path.join(self.name, 'chain-{}.csv'.format(chain))
 
