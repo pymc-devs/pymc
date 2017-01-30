@@ -1,3 +1,4 @@
+# pylint: disable=wildcard-import
 __version__ = "3.0"
 
 from .blocking import *
