@@ -35,12 +35,13 @@ class NUTS(BaseHMC):
         'step_size': np.float64,
         'tune': np.bool,
         'accept': np.float64,
+        'h_bar': np.float64,
         'step_size_bar': np.float64,
         'tree_size': np.float64,
     }]
 
     def __init__(self, vars=None, Emax=1000, target_accept=0.8,
-                 gamma=0.05, k=0.75, t0=10, **kwargs):
+                 gamma=0.05, k=0.75, t0=10, adapt_step_size=True, **kwargs):
         """
         Parameters
         ----------
@@ -50,11 +51,18 @@ class NUTS(BaseHMC):
             deviations will abort the integration.
         target_accept : float (0,1) default .8
             target for avg accept probability between final branch and initial position
+        step_scale : float, default 0.25
+            Size of steps to take, automatically scaled down by 1/n**(1/4).
+            If step size adaptation is switched off, the resulting step size
+            is used. If adaptation is enabled, it is used as initial guess.
         gamma : float, default .05
         k : float (.5,1) default .75
             scaling of speed of adaptation
         t0 : int, default 10
             slows inital adapatation
+        adapt_step_size : bool
+            Whether step size should be enabled. If this is disabled,
+            `k`, `t0`, `gamma` and `target_accept` are ignored.
         kwargs: passed to BaseHMC
 
         The step size adaptation stops when `self.tune` is set to False.
@@ -73,6 +81,7 @@ class NUTS(BaseHMC):
         self.log_step_size = np.log(self.step_size)
         self.log_step_size_bar = 0
         self.m = 1
+        self.adapt_step_size = adapt_step_size
 
         self.tune = True
 
@@ -80,7 +89,9 @@ class NUTS(BaseHMC):
         p0 = self.potential.random()
         start_energy = self.compute_energy(q0, p0)
 
-        if self.tune:
+        if not self.adapt_step_size:
+            step_size = self.step_size
+        elif self.tune:
             step_size = np.exp(self.log_step_size)
         else:
             step_size = np.exp(self.log_step_size_bar)
@@ -130,6 +141,7 @@ class NUTS(BaseHMC):
             'step_size': step_size,
             'tune': self.tune,
             'accept': a * 1. / na,
+            'h_bar': self.h_bar,
             'step_size_bar': np.exp(self.log_step_size_bar),
             'tree_size': tree_size,
         }

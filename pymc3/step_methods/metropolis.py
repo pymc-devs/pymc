@@ -207,6 +207,12 @@ class BinaryMetropolis(ArrayStep):
         Optional model for sampling step. Defaults to None (taken from context).
 
     """
+    generates_stats = True
+    stats_dtypes = [{
+        'accept': np.float64,
+        'tune': np.bool,
+        'p_jump': np.float64,
+    }]
 
     def __init__(self, vars, scaling=1., tune=True, tune_interval=100, model=None):
 
@@ -235,9 +241,16 @@ class BinaryMetropolis(ArrayStep):
         switch_locs = (rand_array < p_jump)
         q[switch_locs] = True - q[switch_locs]
 
-        q_new = metrop_select(logp(q) - logp(q0), q, q0)
+        accept = logp(q) - logp(q0)
+        q_new = metrop_select(accept, q, q0)
 
-        return q_new
+        stats = {
+            'tune': self.tune,
+            'accept': np.exp(accept),
+            'p_jump': p_jump,
+        }
+
+        return q_new, [stats]
 
     @staticmethod
     def competence(var):

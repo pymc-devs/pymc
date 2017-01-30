@@ -111,7 +111,7 @@ class ArrayStep(BlockedStep):
 
         if self.generates_stats:
             apoint, stats = self.astep(bij.map(point), *inputs)
-            return bij.rmap(apoint), [stats]
+            return bij.rmap(apoint), stats
         else:
             apoint = self.astep(bij.map(point), *inputs)
             return bij.rmap(apoint)
@@ -173,12 +173,3 @@ def metrop_select(mr, q, q0):
         return q
     else:
         return q0
-
-
-class SamplerHist(object):
-
-    def __init__(self):
-        self.metrops = []
-
-    def acceptr(self):
-        return np.minimum(np.exp(self.metrops), 1)

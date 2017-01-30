@@ -50,6 +50,12 @@ class TestNDArray2dSampling(bf.SamplingTestCase):
     shape = (2, 3)
 
 
+class TestNDArrayStats(bf.StatsTestCase):
+    backend = ndarray.NDArray
+    name = None
+    shape = (2, 3)
+
+
 class TestNDArray0dSelection(bf.SelectionTestCase):
     backend = ndarray.NDArray
     name = None
@@ -65,6 +71,20 @@ class TestNDArray0dSelection(bf.SelectionTestCase):
 
 
 class TestNDArray0dSelection(bf.SelectionTestCase):
+    backend = ndarray.NDArray
+    name = None
+    shape = ()
+    sampler_vars = STATS1
+
+
+class TestNDArray0dSelectionStats1(bf.SelectionTestCase):
+    backend = ndarray.NDArray
+    name = None
+    shape = ()
+    sampler_vars = STATS2
+
+
+class TestNDArray0dSelectionStats2(bf.SelectionTestCase):
     backend = ndarray.NDArray
     name = None
     shape = ()

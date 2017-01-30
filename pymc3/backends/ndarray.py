@@ -22,8 +22,8 @@ class NDArray(base.BaseTrace):
 
     supports_sampler_stats = True
 
-    def __init__(self, name=None, model=None, vars=None, sampler_vars=None):
-        super(NDArray, self).__init__(name, model, vars, sampler_vars)
+    def __init__(self, name=None, model=None, vars=None):
+        super(NDArray, self).__init__(name, model, vars)
         self.draw_idx = 0
         self.draws = None
         self.samples = {}
@@ -40,6 +40,9 @@ class NDArray(base.BaseTrace):
             Expected number of draws
         chain : int
             Chain number
+        sampler_vars : list of dicts
+            Names and dtypes of the variables that are
+            exported by the samplers.
         """
         super(NDArray, self).setup(draws, chain, sampler_vars)
 
@@ -76,10 +79,10 @@ class NDArray(base.BaseTrace):
                 if vars.keys() != data.keys():
                     raise ValueError("Sampler vars can't change")
                 old_draws = len(self)
-                for varname, dtype in vars:
+                for varname, dtype in vars.items():
                     old = data[varname]
                     new = np.zeros(draws, dtype=dtype)
-                    data[varname] = np.concatenate(old, new)
+                    data[varname] = np.concatenate([old, new])
 
     def record(self, point, sampler_stats=None):
         """Record results of a sampling iteration.
@@ -121,8 +124,7 @@ class NDArray(base.BaseTrace):
     def __len__(self):
         if not self.samples:  # `setup` has not been called.
             return 0
-        varname = self.varnames[0]
-        return self.samples[varname].shape[0]
+        return self.draw_idx
 
     def get_values(self, varname, burn=0, thin=1):
         """Get values from trace.
