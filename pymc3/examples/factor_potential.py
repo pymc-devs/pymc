@@ -1,19 +1,19 @@
-from pymc3 import *
+import pymc3 as pm
 
-with Model() as model:
-    x = Normal('x', 1, 1)
-    x2 = Potential('x2', -x ** 2)
+with pm.Model() as model:
+    x = pm.Normal('x', 1, 1)
+    x2 = pm.Potential('x2', -x ** 2)
 
     start = model.test_point
-    h = find_hessian(start)
-    step = Metropolis(model.vars, h)
+    h = pm.find_hessian(start)
+    step = pm.Metropolis(model.vars, h)
 
 
 def run(n=3000):
     if n == "short":
         n = 50
     with model:
-        trace = sample(n, step=step, start=start)
+        trace = pm.sample(n, step=step, start=start)
 
 if __name__ == '__main__':
     run()
