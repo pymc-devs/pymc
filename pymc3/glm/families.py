@@ -5,7 +5,7 @@ import theano.tensor as tt
 from ..model import modelcontext
 from .. import distributions as pm_dists
 
-__all__ = ['Normal', 'StudentT', 'Binomial', 'Poisson']
+__all__ = ['Normal', 'StudentT', 'Binomial', 'Poisson', 'NegativeBinomial']
 
 # Define link functions
 
