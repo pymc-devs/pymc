@@ -1,7 +1,7 @@
 import theano.tensor as tt
-import numpy as np
+# import numpy as np
 
-__all__ = []
+__all__ = ['Zero', 'Constant']
 
 class Mean(object):
     """
