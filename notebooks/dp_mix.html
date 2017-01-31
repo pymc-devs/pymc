@@ -445,7 +445,7 @@ the base distribution is <span class="math">\(N(0, 1)\)</span>.</p>
 <span class="kn">import</span> <span class="nn">scipy</span> <span class="kn">as</span> <span class="nn">sp</span>
 <span class="kn">import</span> <span class="nn">seaborn</span> <span class="kn">as</span> <span class="nn">sns</span>
 <span class="kn">from</span> <span class="nn">statsmodels.datasets</span> <span class="kn">import</span> <span class="n">get_rdataset</span>
-<span class="kn">from</span> <span class="nn">theano</span> <span class="kn">import</span> <span class="n">tensor</span> <span class="k">as</span> <span class="n">T</span>
+<span class="kn">from</span> <span class="nn">theano</span> <span class="kn">import</span> <span class="n">tensor</span> <span class="k">as</span> <span class="n">tt</span>
 </pre></div>
 </div>
 </div>
@@ -455,7 +455,7 @@ the base distribution is <span class="math">\(N(0, 1)\)</span>.</p>
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span><span class="n">blue</span> <span class="o">=</span> <span class="n">sns</span><span class="o">.</span><span class="n">color_palette</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span>
+<span></span><span class="n">blue</span><span class="p">,</span> <span class="o">*</span><span class="n">_</span> <span class="o">=</span> <span class="n">sns</span><span class="o">.</span><span class="n">color_palette</span><span class="p">()</span>
 </pre></div>
 </div>
 </div>
@@ -465,7 +465,9 @@ the base distribution is <span class="math">\(N(0, 1)\)</span>.</p>
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span><span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">seed</span><span class="p">(</span><span class="mi">462233</span><span class="p">)</span> <span class="c1"># from random.org</span>
+<span></span><span class="n">SEED</span> <span class="o">=</span> <span class="mi">5132290</span> <span class="c1"># from random.org</span>
+
+<span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">seed</span><span class="p">(</span><span class="n">SEED</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
@@ -521,11 +523,20 @@ the base distribution is <span class="math">\(N(0, 1)\)</span>.</p>
 </pre></div>
 </div>
 </div>
+<div class="nboutput container">
+<div class="container">
+</div>
+<div class="stderr container">
+<div class="highlight"><pre>
+/opt/conda/lib/python3.5/site-packages/matplotlib/font_manager.py:1297: UserWarning: findfont: Font family [&#39;sans-serif&#39;] not found. Falling back to DejaVu Sans
+  (prop.get_family(), self.defaultFamily[fontext]))
+</pre></div></div>
+</div>
 <div class="nboutput nblast container">
 <div class="container">
 </div>
 <div class="container">
-<img alt="../_images/notebooks_dp_mix_9_0.png" src="../_images/notebooks_dp_mix_9_0.png" />
+<img alt="../_images/notebooks_dp_mix_9_1.png" src="../_images/notebooks_dp_mix_9_1.png" />
 </div>
 </div>
 <p>As stated above, as <span class="math">\(\alpha \to \infty\)</span>, samples from the
@@ -580,11 +591,20 @@ Dirichlet process converge to the base distribution.</p>
 </pre></div>
 </div>
 </div>
+<div class="nboutput container">
+<div class="container">
+</div>
+<div class="stderr container">
+<div class="highlight"><pre>
+/opt/conda/lib/python3.5/site-packages/matplotlib/font_manager.py:1297: UserWarning: findfont: Font family [&#39;sans-serif&#39;] not found. Falling back to DejaVu Sans
+  (prop.get_family(), self.defaultFamily[fontext]))
+</pre></div></div>
+</div>
 <div class="nboutput nblast container">
 <div class="container">
 </div>
 <div class="container">
-<img alt="../_images/notebooks_dp_mix_11_0.png" src="../_images/notebooks_dp_mix_11_0.png" />
+<img alt="../_images/notebooks_dp_mix_11_1.png" src="../_images/notebooks_dp_mix_11_1.png" />
 </div>
 </div>
 </div>
@@ -657,11 +677,20 @@ mixture with <span class="math">\(\alpha = 2\)</span>, <span class="math">\(\the
 </pre></div>
 </div>
 </div>
+<div class="nboutput container">
+<div class="container">
+</div>
+<div class="stderr container">
+<div class="highlight"><pre>
+/opt/conda/lib/python3.5/site-packages/matplotlib/font_manager.py:1297: UserWarning: findfont: Font family [&#39;sans-serif&#39;] not found. Falling back to DejaVu Sans
+  (prop.get_family(), self.defaultFamily[fontext]))
+</pre></div></div>
+</div>
 <div class="nboutput nblast container">
 <div class="container">
 </div>
 <div class="container">
-<img alt="../_images/notebooks_dp_mix_15_0.png" src="../_images/notebooks_dp_mix_15_0.png" />
+<img alt="../_images/notebooks_dp_mix_15_1.png" src="../_images/notebooks_dp_mix_15_1.png" />
 </div>
 </div>
 <p>We now focus on a single mixture and decompose it into its individual
@@ -687,11 +716,20 @@ mixture with <span class="math">\(\alpha = 2\)</span>, <span class="math">\(\the
 </pre></div>
 </div>
 </div>
+<div class="nboutput container">
+<div class="container">
+</div>
+<div class="stderr container">
+<div class="highlight"><pre>
+/opt/conda/lib/python3.5/site-packages/matplotlib/font_manager.py:1297: UserWarning: findfont: Font family [&#39;sans-serif&#39;] not found. Falling back to DejaVu Sans
+  (prop.get_family(), self.defaultFamily[fontext]))
+</pre></div></div>
+</div>
 <div class="nboutput nblast container">
 <div class="container">
 </div>
 <div class="container">
-<img alt="../_images/notebooks_dp_mix_17_0.png" src="../_images/notebooks_dp_mix_17_0.png" />
+<img alt="../_images/notebooks_dp_mix_17_1.png" src="../_images/notebooks_dp_mix_17_1.png" />
 </div>
 </div>
 <p>Sampling from these stochastic processes is fun, but these ideas become
@@ -798,11 +836,20 @@ between eruptions.</p>
 </pre></div>
 </div>
 </div>
+<div class="nboutput container">
+<div class="container">
+</div>
+<div class="stderr container">
+<div class="highlight"><pre>
+/opt/conda/lib/python3.5/site-packages/matplotlib/font_manager.py:1297: UserWarning: findfont: Font family [&#39;sans-serif&#39;] not found. Falling back to DejaVu Sans
+  (prop.get_family(), self.defaultFamily[fontext]))
+</pre></div></div>
+</div>
 <div class="nboutput nblast container">
 <div class="container">
 </div>
 <div class="container">
-<img alt="../_images/notebooks_dp_mix_23_0.png" src="../_images/notebooks_dp_mix_23_0.png" />
+<img alt="../_images/notebooks_dp_mix_23_1.png" src="../_images/notebooks_dp_mix_23_1.png" />
 </div>
 </div>
 <p>Observant readers will have noted that we have not been continuing the
@@ -824,40 +871,41 @@ grow as needed. <a class="reference external" href="http://danroy.org/papers/Roy
 memoization</a>
 is another powerful technique for simulating Dirichlet processes while
 only storing finitely many components in memory. In this introductory
-example, we take the much less sophistocated approach of simple
+example, we take the much less sophistocated approach of simply
 truncating the Dirichlet process components that are stored after a
-fixed number, <span class="math">\(K\)</span>, of components. Importantly, this approach is
-compatible with some of <code class="docutils literal"><span class="pre">pymc3</span></code>&#8216;s (current) technical limitations.
-<a class="reference external" href="http://fisher.osu.edu/~schroeder.9/AMIS900/Ohlssen2006.pdf">Ohlssen, et
+fixed number, <span class="math">\(K\)</span>, of components. <a class="reference external" href="http://fisher.osu.edu/~schroeder.9/AMIS900/Ohlssen2006.pdf">Ohlssen, et
 al.</a>
 provide justification for truncation, showing that
 <span class="math">\(K &gt; 5 \alpha + 2\)</span> is most likely sufficient to capture almost all
-of the mixture weights (<span class="math">\(\sum_{i = 1}^{K} w_i &gt; 0.99\)</span>). We can
-practically verify the suitability of our truncated approximation to the
-Dirichlet process by checking the number of components that contribute
-non-negligible mass to the mixture. If, in our simulations, all
-components contribute non-negligible mass to the mixture, we have
-truncated our Dirichlet process too early.</p>
-<p>Our Dirichlet process mixture model for the standardized waiting times
-is</p>
+of the mixture weight (<span class="math">\(\sum_{i = 1}^{K} w_i &gt; 0.99\)</span>). In
+practice, we can verify the suitability of our truncated approximation
+to the Dirichlet process by checking the number of components that
+contribute non-negligible mass to the mixture. If, in our simulations,
+all components contribute non-negligible mass to the mixture, we have
+truncated the Dirichlet process too early.</p>
+<p>Our (truncated) Dirichlet process mixture model for the standardized
+waiting times is</p>
 <div class="math">
 \begin{align*}
-    x_i\ |\ \mu_i, \lambda_i, \tau_i
-        &amp; \sim N\left(\mu, (\lambda_i \tau_i)^{-1}\right) \\
+    \alpha
+        &amp; \sim \textrm{Gamma}(1, 1) \\
+    \beta_1, \ldots, \beta_K
+        &amp; \sim \textrm{Beta}(1, \alpha) \\
+    w_i
+        &amp; = \beta_i \prod_{j = i - 1}^i (1 - \beta_j) \\
+    \\
+    \lambda_1, \ldots, \lambda_K
+        &amp; \sim U(0, 5) \\
+    \tau_1, \ldots, \tau_K
+        &amp; \sim \textrm{Gamma}(1, 1) \\
     \mu_i\ |\ \lambda_i, \tau_i
         &amp; \sim N\left(0, (\lambda_i \tau_i)^{-1}\right) \\
-    (\lambda_1, \tau_1), (\lambda_2, \tau_2), \ldots
-        &amp; \sim P \\
-    P
-        &amp; \sim \textrm{DP}(\alpha, U(0, 5) \times \textrm{Gamma}(1, 1)) \\
-    \alpha
-        &amp; \sim \textrm{Gamma}(1, 1).
+    \\
+    x\ |\ w_i, \lambda_i, \tau_i, \mu_i
+        &amp; \sim \sum_{i = 1}^K w_i\ N(\mu_i, (\lambda_i \tau_i)^{-1})
 \end{align*}</div><p>Note that instead of fixing a value of <span class="math">\(\alpha\)</span>, as in our
 previous simulations, we specify a prior on <span class="math">\(\alpha\)</span>, so that we
-may learn its posterior distribution from the observations. This model
-is therefore actually a mixture of Dirichlet process mixtures, since
-each fixed value of <span class="math">\(\alpha\)</span> results in a Dirichlet process
-mixture.</p>
+may learn its posterior distribution from the observations.</p>
 <p>We now construct this model using <code class="docutils literal"><span class="pre">pymc3</span></code>.</p>
 <div class="nbinput nblast container">
 <div class="highlight-none"><div class="highlight"><pre>
@@ -877,35 +925,41 @@ mixture.</p>
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span><span class="k">with</span> <span class="n">pm</span><span class="o">.</span><span class="n">Model</span><span class="p">()</span> <span class="k">as</span> <span class="n">model</span><span class="p">:</span>
-    <span class="n">alpha</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Gamma</span><span class="p">(</span><span class="s1">&#39;alpha&#39;</span><span class="p">,</span> <span class="mf">1.</span><span class="p">,</span> <span class="mf">1.</span><span class="p">)</span>
-    <span class="n">beta</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Beta</span><span class="p">(</span><span class="s1">&#39;beta&#39;</span><span class="p">,</span> <span class="mf">1.</span><span class="p">,</span> <span class="n">alpha</span><span class="p">,</span> <span class="n">shape</span><span class="o">=</span><span class="n">K</span><span class="p">)</span>
-    <span class="n">w</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Deterministic</span><span class="p">(</span><span class="s1">&#39;w&#39;</span><span class="p">,</span> <span class="n">beta</span> <span class="o">*</span> <span class="n">T</span><span class="o">.</span><span class="n">concatenate</span><span class="p">([[</span><span class="mi">1</span><span class="p">],</span> <span class="n">T</span><span class="o">.</span><span class="n">extra_ops</span><span class="o">.</span><span class="n">cumprod</span><span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">beta</span><span class="p">)[:</span><span class="o">-</span><span class="mi">1</span><span class="p">]]))</span>
-    <span class="n">component</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Categorical</span><span class="p">(</span><span class="s1">&#39;component&#39;</span><span class="p">,</span> <span class="n">w</span><span class="p">,</span> <span class="n">shape</span><span class="o">=</span><span class="n">N</span><span class="p">)</span>
+<span></span><span class="k">def</span> <span class="nf">stick_breaking</span><span class="p">(</span><span class="n">beta</span><span class="p">):</span>
+    <span class="n">portion_remaining</span> <span class="o">=</span> <span class="n">tt</span><span class="o">.</span><span class="n">concatenate</span><span class="p">([[</span><span class="mi">1</span><span class="p">],</span> <span class="n">tt</span><span class="o">.</span><span class="n">extra_ops</span><span class="o">.</span><span class="n">cumprod</span><span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">beta</span><span class="p">)[:</span><span class="o">-</span><span class="mi">1</span><span class="p">]])</span>
 
-    <span class="n">tau</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Gamma</span><span class="p">(</span><span class="s1">&#39;tau&#39;</span><span class="p">,</span> <span class="mf">1.</span><span class="p">,</span> <span class="mf">1.</span><span class="p">,</span> <span class="n">shape</span><span class="o">=</span><span class="n">K</span><span class="p">)</span>
-    <span class="n">lambda_</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Uniform</span><span class="p">(</span><span class="s1">&#39;lambda&#39;</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="n">shape</span><span class="o">=</span><span class="n">K</span><span class="p">)</span>
-    <span class="n">mu</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Normal</span><span class="p">(</span><span class="s1">&#39;mu&#39;</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">tau</span><span class="o">=</span><span class="n">lambda_</span> <span class="o">*</span> <span class="n">tau</span><span class="p">,</span> <span class="n">shape</span><span class="o">=</span><span class="n">K</span><span class="p">)</span>
-    <span class="n">obs</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Normal</span><span class="p">(</span><span class="s1">&#39;obs&#39;</span><span class="p">,</span> <span class="n">mu</span><span class="p">[</span><span class="n">component</span><span class="p">],</span> <span class="n">tau</span><span class="o">=</span><span class="n">lambda_</span><span class="p">[</span><span class="n">component</span><span class="p">]</span> <span class="o">*</span> <span class="n">tau</span><span class="p">[</span><span class="n">component</span><span class="p">],</span>
-                    <span class="n">observed</span><span class="o">=</span><span class="n">old_faithful_df</span><span class="o">.</span><span class="n">std_waiting</span><span class="o">.</span><span class="n">values</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">beta</span> <span class="o">*</span> <span class="n">portion_remaining</span>
 </pre></div>
 </div>
 </div>
-<p>We sample from the posterior distribution 20,000 times, burn the first
-10,000 samples, and thin to every tenth sample.</p>
-<div class="nbinput container">
+<div class="nbinput nblast container">
 <div class="highlight-none"><div class="highlight"><pre>
 <span></span>In [20]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="k">with</span> <span class="n">pm</span><span class="o">.</span><span class="n">Model</span><span class="p">()</span> <span class="k">as</span> <span class="n">model</span><span class="p">:</span>
+    <span class="n">alpha</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Gamma</span><span class="p">(</span><span class="s1">&#39;alpha&#39;</span><span class="p">,</span> <span class="mf">1.</span><span class="p">,</span> <span class="mf">1.</span><span class="p">)</span>
+    <span class="n">beta</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Beta</span><span class="p">(</span><span class="s1">&#39;beta&#39;</span><span class="p">,</span> <span class="mf">1.</span><span class="p">,</span> <span class="n">alpha</span><span class="p">,</span> <span class="n">shape</span><span class="o">=</span><span class="n">K</span><span class="p">)</span>
+    <span class="n">w</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Deterministic</span><span class="p">(</span><span class="s1">&#39;w&#39;</span><span class="p">,</span> <span class="n">stick_breaking</span><span class="p">(</span><span class="n">beta</span><span class="p">))</span>
+
+    <span class="n">tau</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Gamma</span><span class="p">(</span><span class="s1">&#39;tau&#39;</span><span class="p">,</span> <span class="mf">1.</span><span class="p">,</span> <span class="mf">1.</span><span class="p">,</span> <span class="n">shape</span><span class="o">=</span><span class="n">K</span><span class="p">)</span>
+    <span class="n">lambda_</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Uniform</span><span class="p">(</span><span class="s1">&#39;lambda&#39;</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="n">shape</span><span class="o">=</span><span class="n">K</span><span class="p">)</span>
+    <span class="n">mu</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Normal</span><span class="p">(</span><span class="s1">&#39;mu&#39;</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">tau</span><span class="o">=</span><span class="n">lambda_</span> <span class="o">*</span> <span class="n">tau</span><span class="p">,</span> <span class="n">shape</span><span class="o">=</span><span class="n">K</span><span class="p">)</span>
+    <span class="n">obs</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">NormalMixture</span><span class="p">(</span><span class="s1">&#39;obs&#39;</span><span class="p">,</span> <span class="n">w</span><span class="p">,</span> <span class="n">mu</span><span class="p">,</span> <span class="n">tau</span><span class="o">=</span><span class="n">lambda_</span> <span class="o">*</span> <span class="n">tau</span><span class="p">,</span>
+                           <span class="n">observed</span><span class="o">=</span><span class="n">old_faithful_df</span><span class="o">.</span><span class="n">std_waiting</span><span class="o">.</span><span class="n">values</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<p>We sample from the model 2,000 times using NUTS initialized with ADVI.</p>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [21]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="k">with</span> <span class="n">model</span><span class="p">:</span>
-    <span class="n">step1</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Metropolis</span><span class="p">(</span><span class="nb">vars</span><span class="o">=</span><span class="p">[</span><span class="n">alpha</span><span class="p">,</span> <span class="n">beta</span><span class="p">,</span> <span class="n">w</span><span class="p">,</span> <span class="n">lambda_</span><span class="p">,</span> <span class="n">tau</span><span class="p">,</span> <span class="n">mu</span><span class="p">,</span> <span class="n">obs</span><span class="p">])</span>
-    <span class="n">step2</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">CategoricalGibbsMetropolis</span><span class="p">(</span><span class="nb">vars</span><span class="o">=</span><span class="p">[</span><span class="n">component</span><span class="p">])</span>
-
-    <span class="n">trace_</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="mi">20000</span><span class="p">,</span> <span class="p">[</span><span class="n">step1</span><span class="p">,</span> <span class="n">step2</span><span class="p">])</span>
-
-<span class="n">trace</span> <span class="o">=</span> <span class="n">trace_</span><span class="p">[</span><span class="mi">10000</span><span class="p">::</span><span class="mi">10</span><span class="p">]</span>
+    <span class="n">trace</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="mi">2000</span><span class="p">,</span> <span class="n">n_init</span><span class="o">=</span><span class="mi">50000</span><span class="p">,</span> <span class="n">random_seed</span><span class="o">=</span><span class="n">SEED</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
@@ -914,14 +968,18 @@ mixture.</p>
 </div>
 <div class="stderr container">
 <div class="highlight"><pre>
-100%|██████████| 20000/20000 [16:54&lt;00:00, 20.36it/s]
+Auto-assigning NUTS sampler...
+Initializing NUTS using advi...
+Average ELBO = -9,730.2: 100%|██████████| 50000/50000 [00:42&lt;00:00, 1172.42it/s]
+Finished [100%]: Average ELBO = -9,729.8
+100%|██████████| 2000/2000 [01:25&lt;00:00, 23.40it/s]
 </pre></div></div>
 </div>
-<p>The posterior distribution of <span class="math">\(\alpha\)</span> is concentrated between 0.2
-and 1.2.</p>
+<p>The posterior distribution of <span class="math">\(\alpha\)</span> is highly concentrated
+between 0.25 and 1.</p>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [21]:
+<span></span>In [22]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -929,25 +987,24 @@ and 1.2.</p>
 </pre></div>
 </div>
 </div>
+<div class="nboutput container">
+<div class="container">
+</div>
+<div class="stderr container">
+<div class="highlight"><pre>
+/opt/conda/lib/python3.5/site-packages/matplotlib/font_manager.py:1297: UserWarning: findfont: Font family [&#39;sans-serif&#39;] not found. Falling back to DejaVu Sans
+  (prop.get_family(), self.defaultFamily[fontext]))
+</pre></div></div>
+</div>
 <div class="nboutput nblast container">
 <div class="container">
 </div>
 <div class="container">
-<img alt="../_images/notebooks_dp_mix_30_0.png" src="../_images/notebooks_dp_mix_30_0.png" />
+<img alt="../_images/notebooks_dp_mix_31_1.png" src="../_images/notebooks_dp_mix_31_1.png" />
 </div>
 </div>
-<p>To verify that our truncation point is not biasing our results, we plot
-the distribution of the number of mixture components used.</p>
-<div class="nbinput nblast container">
-<div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [22]:
-</pre></div>
-</div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span><span class="n">n_components_used</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">apply_along_axis</span><span class="p">(</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">unique</span><span class="p">(</span><span class="n">x</span><span class="p">)</span><span class="o">.</span><span class="n">size</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">trace</span><span class="p">[</span><span class="s1">&#39;component&#39;</span><span class="p">])</span>
-</pre></div>
-</div>
-</div>
+<p>To verify that truncation is not biasing our results, we plot the
+posterior expected mixture weight of each component.</p>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
 <span></span>In [23]:
@@ -956,29 +1013,36 @@ the distribution of the number of mixture components used.</p>
 <div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">8</span><span class="p">,</span> <span class="mi">6</span><span class="p">))</span>
 
-<span class="n">bins</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">n_components_used</span><span class="o">.</span><span class="n">min</span><span class="p">(),</span> <span class="n">n_components_used</span><span class="o">.</span><span class="n">max</span><span class="p">()</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
-<span class="n">ax</span><span class="o">.</span><span class="n">hist</span><span class="p">(</span><span class="n">n_components_used</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span> <span class="n">bins</span><span class="o">=</span><span class="n">bins</span><span class="p">,</span> <span class="n">normed</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span> <span class="n">lw</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">0.75</span><span class="p">);</span>
+<span class="n">plot_w</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">K</span><span class="p">)</span> <span class="o">+</span> <span class="mi">1</span>
 
-<span class="n">ax</span><span class="o">.</span><span class="n">set_xticks</span><span class="p">(</span><span class="n">bins</span> <span class="o">+</span> <span class="mf">0.5</span><span class="p">);</span>
-<span class="n">ax</span><span class="o">.</span><span class="n">set_xticklabels</span><span class="p">(</span><span class="n">bins</span><span class="p">);</span>
-<span class="n">ax</span><span class="o">.</span><span class="n">set_xlim</span><span class="p">(</span><span class="n">bins</span><span class="o">.</span><span class="n">min</span><span class="p">(),</span> <span class="n">bins</span><span class="o">.</span><span class="n">max</span><span class="p">()</span> <span class="o">+</span> <span class="mi">1</span><span class="p">);</span>
-<span class="n">ax</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="s1">&#39;Number of mixture components used&#39;</span><span class="p">);</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">bar</span><span class="p">(</span><span class="n">plot_w</span> <span class="o">-</span> <span class="mf">0.5</span><span class="p">,</span> <span class="n">trace</span><span class="p">[</span><span class="s1">&#39;w&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">),</span> <span class="n">width</span><span class="o">=</span><span class="mf">1.</span><span class="p">,</span> <span class="n">lw</span><span class="o">=</span><span class="mi">0</span><span class="p">);</span>
 
-<span class="n">ax</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="s1">&#39;Posterior probability&#39;</span><span class="p">);</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">set_xlim</span><span class="p">(</span><span class="mf">0.5</span><span class="p">,</span> <span class="n">K</span><span class="p">);</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="s1">&#39;Component&#39;</span><span class="p">);</span>
+
+<span class="n">ax</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="s1">&#39;Posterior expected mixture weight&#39;</span><span class="p">);</span>
 </pre></div>
 </div>
+</div>
+<div class="nboutput container">
+<div class="container">
+</div>
+<div class="stderr container">
+<div class="highlight"><pre>
+/opt/conda/lib/python3.5/site-packages/matplotlib/font_manager.py:1297: UserWarning: findfont: Font family [&#39;sans-serif&#39;] not found. Falling back to DejaVu Sans
+  (prop.get_family(), self.defaultFamily[fontext]))
+</pre></div></div>
 </div>
 <div class="nboutput nblast container">
 <div class="container">
 </div>
 <div class="container">
-<img alt="../_images/notebooks_dp_mix_33_0.png" src="../_images/notebooks_dp_mix_33_0.png" />
+<img alt="../_images/notebooks_dp_mix_33_1.png" src="../_images/notebooks_dp_mix_33_1.png" />
 </div>
 </div>
-<p>We see that the vast majority of samples use four mixture components,
-and the largest number of mixture components used by any sample is nine.
-Since we truncated our Dirichlet process mixture at thirty components,
-we can be quite sure that truncation did not bias our results.</p>
+<p>We see that only three mixture components have appreciable posterior
+expected weights, so we conclude that truncating the Dirichlet process
+to forty components has not appreciably affected our estimates.</p>
 <p>We now compute and plot our posterior density estimate.</p>
 <div class="nbinput nblast container">
 <div class="highlight-none"><div class="highlight"><pre>
@@ -1024,11 +1088,20 @@ we can be quite sure that truncation did not bias our results.</p>
 </pre></div>
 </div>
 </div>
+<div class="nboutput container">
+<div class="container">
+</div>
+<div class="stderr container">
+<div class="highlight"><pre>
+/opt/conda/lib/python3.5/site-packages/matplotlib/font_manager.py:1297: UserWarning: findfont: Font family [&#39;sans-serif&#39;] not found. Falling back to DejaVu Sans
+  (prop.get_family(), self.defaultFamily[fontext]))
+</pre></div></div>
+</div>
 <div class="nboutput nblast container">
 <div class="container">
 </div>
 <div class="container">
-<img alt="../_images/notebooks_dp_mix_36_0.png" src="../_images/notebooks_dp_mix_36_0.png" />
+<img alt="../_images/notebooks_dp_mix_36_1.png" src="../_images/notebooks_dp_mix_36_1.png" />
 </div>
 </div>
 <p>As above, we can decompose this density estimate into its (weighted)
@@ -1061,11 +1134,20 @@ mixture components.</p>
 </pre></div>
 </div>
 </div>
+<div class="nboutput container">
+<div class="container">
+</div>
+<div class="stderr container">
+<div class="highlight"><pre>
+/opt/conda/lib/python3.5/site-packages/matplotlib/font_manager.py:1297: UserWarning: findfont: Font family [&#39;sans-serif&#39;] not found. Falling back to DejaVu Sans
+  (prop.get_family(), self.defaultFamily[fontext]))
+</pre></div></div>
+</div>
 <div class="nboutput nblast container">
 <div class="container">
 </div>
 <div class="container">
-<img alt="../_images/notebooks_dp_mix_38_0.png" src="../_images/notebooks_dp_mix_38_0.png" />
+<img alt="../_images/notebooks_dp_mix_38_1.png" src="../_images/notebooks_dp_mix_38_1.png" />
 </div>
 </div>
 <p>The Dirichlet process mixture model is incredibly flexible in terms of
@@ -1138,26 +1220,29 @@ the density of sunspots per year.</p>
 </table>
 </div></div>
 </div>
-<p>For this problem, the model is</p>
+<p>For this example, the model is</p>
 <div class="math">
 \begin{align*}
-    x_i\ |\ \lambda_i
-        &amp; \sim \textrm{Poisson}(\lambda_i) \\
-    \lambda_1, \lambda_2, \ldots
-        &amp; \sim P \\
-    P
-        &amp; \sim \textrm{DP}(\alpha, U(0, 300)) \\
     \alpha
-        &amp; \sim \textrm{Gamma}(1, 1).
+        &amp; \sim \textrm{Gamma}(1, 1) \\
+    \beta_1, \ldots, \beta_K
+        &amp; \sim \textrm{Beta}(1, \alpha) \\
+    w_i
+        &amp; = \beta_i \prod_{j = i - 1}^i (1 - \beta_j) \\
+    \\
+    \lambda_i, \ldots, \lambda_K
+        &amp; \sim U(0, 300)
+    \\
+    x\ |\ w_i, \lambda_i
+        &amp; \sim \sum_{i = 1}^K w_i\ \textrm{Poisson}(\lambda_i).
 \end{align*}</div><div class="nbinput nblast container">
 <div class="highlight-none"><div class="highlight"><pre>
 <span></span>In [29]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span><span class="n">N</span> <span class="o">=</span> <span class="n">sunspot_df</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
-
-<span class="n">K</span> <span class="o">=</span> <span class="mi">30</span>
+<span></span><span class="n">K</span> <span class="o">=</span> <span class="mi">50</span>
+<span class="n">N</span> <span class="o">=</span> <span class="n">sunspot_df</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
 </pre></div>
 </div>
 </div>
@@ -1170,11 +1255,10 @@ the density of sunspots per year.</p>
 <span></span><span class="k">with</span> <span class="n">pm</span><span class="o">.</span><span class="n">Model</span><span class="p">()</span> <span class="k">as</span> <span class="n">model</span><span class="p">:</span>
     <span class="n">alpha</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Gamma</span><span class="p">(</span><span class="s1">&#39;alpha&#39;</span><span class="p">,</span> <span class="mf">1.</span><span class="p">,</span> <span class="mf">1.</span><span class="p">)</span>
     <span class="n">beta</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Beta</span><span class="p">(</span><span class="s1">&#39;beta&#39;</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">alpha</span><span class="p">,</span> <span class="n">shape</span><span class="o">=</span><span class="n">K</span><span class="p">)</span>
-    <span class="n">w</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Deterministic</span><span class="p">(</span><span class="s1">&#39;beta&#39;</span><span class="p">,</span> <span class="n">beta</span> <span class="o">*</span> <span class="n">T</span><span class="o">.</span><span class="n">concatenate</span><span class="p">([[</span><span class="mi">1</span><span class="p">],</span> <span class="n">T</span><span class="o">.</span><span class="n">extra_ops</span><span class="o">.</span><span class="n">cumprod</span><span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">beta</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">])]))</span>
-    <span class="n">component</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Categorical</span><span class="p">(</span><span class="s1">&#39;component&#39;</span><span class="p">,</span> <span class="n">w</span><span class="p">,</span> <span class="n">shape</span><span class="o">=</span><span class="n">N</span><span class="p">)</span>
+    <span class="n">w</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Deterministic</span><span class="p">(</span><span class="s1">&#39;w&#39;</span><span class="p">,</span> <span class="n">stick_breaking</span><span class="p">(</span><span class="n">beta</span><span class="p">))</span>
 
     <span class="n">mu</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Uniform</span><span class="p">(</span><span class="s1">&#39;mu&#39;</span><span class="p">,</span> <span class="mf">0.</span><span class="p">,</span> <span class="mf">300.</span><span class="p">,</span> <span class="n">shape</span><span class="o">=</span><span class="n">K</span><span class="p">)</span>
-    <span class="n">obs</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Poisson</span><span class="p">(</span><span class="s1">&#39;obs&#39;</span><span class="p">,</span> <span class="n">mu</span><span class="p">[</span><span class="n">component</span><span class="p">],</span> <span class="n">observed</span><span class="o">=</span><span class="n">sunspot_df</span><span class="p">[</span><span class="s1">&#39;sunspot.year&#39;</span><span class="p">])</span>
+    <span class="n">obs</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Mixture</span><span class="p">(</span><span class="s1">&#39;obs&#39;</span><span class="p">,</span> <span class="n">w</span><span class="p">,</span> <span class="n">pm</span><span class="o">.</span><span class="n">Poisson</span><span class="o">.</span><span class="n">dist</span><span class="p">(</span><span class="n">mu</span><span class="p">),</span> <span class="n">observed</span><span class="o">=</span><span class="n">sunspot_df</span><span class="p">[</span><span class="s1">&#39;sunspot.year&#39;</span><span class="p">])</span>
 </pre></div>
 </div>
 </div>
@@ -1185,10 +1269,10 @@ the density of sunspots per year.</p>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="k">with</span> <span class="n">model</span><span class="p">:</span>
-    <span class="n">step1</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Metropolis</span><span class="p">(</span><span class="nb">vars</span><span class="o">=</span><span class="p">[</span><span class="n">alpha</span><span class="p">,</span> <span class="n">beta</span><span class="p">,</span> <span class="n">w</span><span class="p">,</span> <span class="n">mu</span><span class="p">,</span> <span class="n">obs</span><span class="p">])</span>
-    <span class="n">step2</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">CategoricalGibbsMetropolis</span><span class="p">([</span><span class="n">component</span><span class="p">])</span>
+    <span class="n">step</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Metropolis</span><span class="p">()</span>
+    <span class="n">trace_</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="mi">100000</span><span class="p">,</span> <span class="n">step</span><span class="o">=</span><span class="n">step</span><span class="p">,</span> <span class="n">random_seed</span><span class="o">=</span><span class="n">SEED</span><span class="p">)</span>
 
-    <span class="n">trace_</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="mi">20000</span><span class="p">,</span> <span class="p">[</span><span class="n">step1</span><span class="p">,</span> <span class="n">step2</span><span class="p">])</span>
+<span class="n">trace</span> <span class="o">=</span> <span class="n">trace_</span><span class="p">[</span><span class="mi">50000</span><span class="p">::</span><span class="mi">50</span><span class="p">]</span>
 </pre></div>
 </div>
 </div>
@@ -1197,26 +1281,16 @@ the density of sunspots per year.</p>
 </div>
 <div class="stderr container">
 <div class="highlight"><pre>
-100%|██████████| 20000/20000 [14:43&lt;00:00, 22.65it/s]
+100%|██████████| 100000/100000 [03:41&lt;00:00, 451.22it/s]
 </pre></div></div>
 </div>
-<div class="nbinput nblast container">
-<div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [32]:
-</pre></div>
-</div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span><span class="n">trace</span> <span class="o">=</span> <span class="n">trace_</span><span class="p">[</span><span class="mi">10000</span><span class="p">::</span><span class="mi">10</span><span class="p">]</span>
-</pre></div>
-</div>
-</div>
 <p>For the sunspot model, the posterior distribution of <span class="math">\(\alpha\)</span> is
-concentrated between one and three, indicating that we should expect
-more components to contribute non-negligible amounts to the mixture than
-for the Old Faithful waiting time model.</p>
+concentrated between 0.6 and 1.2, indicating that we should expect more
+components to contribute non-negligible amounts to the mixture than for
+the Old Faithful waiting time model.</p>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [33]:
+<span></span>In [32]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -1224,56 +1298,63 @@ for the Old Faithful waiting time model.</p>
 </pre></div>
 </div>
 </div>
+<div class="nboutput container">
+<div class="container">
+</div>
+<div class="stderr container">
+<div class="highlight"><pre>
+/opt/conda/lib/python3.5/site-packages/matplotlib/font_manager.py:1297: UserWarning: findfont: Font family [&#39;sans-serif&#39;] not found. Falling back to DejaVu Sans
+  (prop.get_family(), self.defaultFamily[fontext]))
+</pre></div></div>
+</div>
 <div class="nboutput nblast container">
 <div class="container">
 </div>
 <div class="container">
-<img alt="../_images/notebooks_dp_mix_48_0.png" src="../_images/notebooks_dp_mix_48_0.png" />
+<img alt="../_images/notebooks_dp_mix_47_1.png" src="../_images/notebooks_dp_mix_47_1.png" />
 </div>
 </div>
-<p>Indeed, we see that there are (on average) about ten to fifteen
-components used by this model.</p>
-<div class="nbinput nblast container">
-<div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [34]:
-</pre></div>
-</div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span><span class="n">n_components_used</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">apply_along_axis</span><span class="p">(</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">unique</span><span class="p">(</span><span class="n">x</span><span class="p">)</span><span class="o">.</span><span class="n">size</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">trace</span><span class="p">[</span><span class="s1">&#39;component&#39;</span><span class="p">])</span>
-</pre></div>
-</div>
-</div>
+<p>Indeed, we see that between ten and fifteen mixture components have
+appreciable posterior expected weight.</p>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [35]:
+<span></span>In [33]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">8</span><span class="p">,</span> <span class="mi">6</span><span class="p">))</span>
 
-<span class="n">bins</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">n_components_used</span><span class="o">.</span><span class="n">min</span><span class="p">(),</span> <span class="n">n_components_used</span><span class="o">.</span><span class="n">max</span><span class="p">()</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
-<span class="n">ax</span><span class="o">.</span><span class="n">hist</span><span class="p">(</span><span class="n">n_components_used</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span> <span class="n">bins</span><span class="o">=</span><span class="n">bins</span><span class="p">,</span> <span class="n">normed</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span> <span class="n">lw</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">0.75</span><span class="p">);</span>
+<span class="n">plot_w</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">K</span><span class="p">)</span> <span class="o">+</span> <span class="mi">1</span>
 
-<span class="n">ax</span><span class="o">.</span><span class="n">set_xticks</span><span class="p">(</span><span class="n">bins</span> <span class="o">+</span> <span class="mf">0.5</span><span class="p">);</span>
-<span class="n">ax</span><span class="o">.</span><span class="n">set_xticklabels</span><span class="p">(</span><span class="n">bins</span><span class="p">);</span>
-<span class="n">ax</span><span class="o">.</span><span class="n">set_xlim</span><span class="p">(</span><span class="n">bins</span><span class="o">.</span><span class="n">min</span><span class="p">(),</span> <span class="n">bins</span><span class="o">.</span><span class="n">max</span><span class="p">()</span> <span class="o">+</span> <span class="mi">1</span><span class="p">);</span>
-<span class="n">ax</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="s1">&#39;Number of mixture components used&#39;</span><span class="p">);</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">bar</span><span class="p">(</span><span class="n">plot_w</span> <span class="o">-</span> <span class="mf">0.5</span><span class="p">,</span> <span class="n">trace</span><span class="p">[</span><span class="s1">&#39;w&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">),</span> <span class="n">width</span><span class="o">=</span><span class="mf">1.</span><span class="p">,</span> <span class="n">lw</span><span class="o">=</span><span class="mi">0</span><span class="p">);</span>
 
-<span class="n">ax</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="s1">&#39;Posterior probability&#39;</span><span class="p">);</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">set_xlim</span><span class="p">(</span><span class="mf">0.5</span><span class="p">,</span> <span class="n">K</span><span class="p">);</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="s1">&#39;Component&#39;</span><span class="p">);</span>
+
+<span class="n">ax</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="s1">&#39;Posterior expected mixture weight&#39;</span><span class="p">);</span>
 </pre></div>
 </div>
+</div>
+<div class="nboutput container">
+<div class="container">
+</div>
+<div class="stderr container">
+<div class="highlight"><pre>
+/opt/conda/lib/python3.5/site-packages/matplotlib/font_manager.py:1297: UserWarning: findfont: Font family [&#39;sans-serif&#39;] not found. Falling back to DejaVu Sans
+  (prop.get_family(), self.defaultFamily[fontext]))
+</pre></div></div>
 </div>
 <div class="nboutput nblast container">
 <div class="container">
 </div>
 <div class="container">
-<img alt="../_images/notebooks_dp_mix_51_0.png" src="../_images/notebooks_dp_mix_51_0.png" />
+<img alt="../_images/notebooks_dp_mix_49_1.png" src="../_images/notebooks_dp_mix_49_1.png" />
 </div>
 </div>
 <p>We now calculate and plot the fitted density estimate.</p>
 <div class="nbinput nblast container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [36]:
+<span></span>In [34]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -1283,13 +1364,13 @@ components used by this model.</p>
 </div>
 <div class="nbinput nblast container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [37]:
+<span></span>In [35]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="n">post_pmf_contribs</span> <span class="o">=</span> <span class="n">sp</span><span class="o">.</span><span class="n">stats</span><span class="o">.</span><span class="n">poisson</span><span class="o">.</span><span class="n">pmf</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">atleast_3d</span><span class="p">(</span><span class="n">x_plot</span><span class="p">),</span>
                                          <span class="n">trace</span><span class="p">[</span><span class="s1">&#39;mu&#39;</span><span class="p">][:,</span> <span class="n">np</span><span class="o">.</span><span class="n">newaxis</span><span class="p">,</span> <span class="p">:])</span>
-<span class="n">post_pmfs</span> <span class="o">=</span> <span class="p">(</span><span class="n">trace</span><span class="p">[</span><span class="s1">&#39;beta&#39;</span><span class="p">][:,</span> <span class="n">np</span><span class="o">.</span><span class="n">newaxis</span><span class="p">,</span> <span class="p">:]</span> <span class="o">*</span> <span class="n">post_pmf_contribs</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">axis</span><span class="o">=-</span><span class="mi">1</span><span class="p">)</span>
+<span class="n">post_pmfs</span> <span class="o">=</span> <span class="p">(</span><span class="n">trace</span><span class="p">[</span><span class="s1">&#39;w&#39;</span><span class="p">][:,</span> <span class="n">np</span><span class="o">.</span><span class="n">newaxis</span><span class="p">,</span> <span class="p">:]</span> <span class="o">*</span> <span class="n">post_pmf_contribs</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">axis</span><span class="o">=-</span><span class="mi">1</span><span class="p">)</span>
 
 <span class="n">post_pmf_low</span><span class="p">,</span> <span class="n">post_pmf_high</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">percentile</span><span class="p">(</span><span class="n">post_pmfs</span><span class="p">,</span> <span class="p">[</span><span class="mf">2.5</span><span class="p">,</span> <span class="mf">97.5</span><span class="p">],</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
 </pre></div>
@@ -1297,7 +1378,7 @@ components used by this model.</p>
 </div>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [38]:
+<span></span>In [36]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -1319,18 +1400,27 @@ components used by this model.</p>
 </pre></div>
 </div>
 </div>
+<div class="nboutput container">
+<div class="container">
+</div>
+<div class="stderr container">
+<div class="highlight"><pre>
+/opt/conda/lib/python3.5/site-packages/matplotlib/font_manager.py:1297: UserWarning: findfont: Font family [&#39;sans-serif&#39;] not found. Falling back to DejaVu Sans
+  (prop.get_family(), self.defaultFamily[fontext]))
+</pre></div></div>
+</div>
 <div class="nboutput nblast container">
 <div class="container">
 </div>
 <div class="container">
-<img alt="../_images/notebooks_dp_mix_55_0.png" src="../_images/notebooks_dp_mix_55_0.png" />
+<img alt="../_images/notebooks_dp_mix_53_1.png" src="../_images/notebooks_dp_mix_53_1.png" />
 </div>
 </div>
 <p>Again, we can decompose the posterior expected density into weighted
 mixture densities.</p>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [39]:
+<span></span>In [37]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -1339,25 +1429,34 @@ mixture densities.</p>
 <span class="n">ax</span><span class="o">.</span><span class="n">hist</span><span class="p">(</span><span class="n">sunspot_df</span><span class="p">[</span><span class="s1">&#39;sunspot.year&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">,</span> <span class="n">bins</span><span class="o">=</span><span class="mi">40</span><span class="p">,</span> <span class="n">normed</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span> <span class="n">lw</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">0.75</span><span class="p">);</span>
 <span class="n">ax</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">x_plot</span><span class="p">,</span> <span class="n">post_pmfs</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">),</span>
         <span class="n">c</span><span class="o">=</span><span class="s1">&#39;k&#39;</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s1">&#39;Posterior expected density&#39;</span><span class="p">);</span>
-<span class="n">ax</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">x_plot</span><span class="p">,</span> <span class="p">(</span><span class="n">trace</span><span class="p">[</span><span class="s1">&#39;beta&#39;</span><span class="p">][:,</span> <span class="n">np</span><span class="o">.</span><span class="n">newaxis</span><span class="p">,</span> <span class="p">:]</span> <span class="o">*</span> <span class="n">post_pmf_contribs</span><span class="p">)</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)[:,</span> <span class="mi">0</span><span class="p">],</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">x_plot</span><span class="p">,</span> <span class="p">(</span><span class="n">trace</span><span class="p">[</span><span class="s1">&#39;w&#39;</span><span class="p">][:,</span> <span class="n">np</span><span class="o">.</span><span class="n">newaxis</span><span class="p">,</span> <span class="p">:]</span> <span class="o">*</span> <span class="n">post_pmf_contribs</span><span class="p">)</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)[:,</span> <span class="mi">0</span><span class="p">],</span>
         <span class="s1">&#39;--&#39;</span><span class="p">,</span> <span class="n">c</span><span class="o">=</span><span class="s1">&#39;k&#39;</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s1">&#39;Posterior expected</span><span class="se">\n</span><span class="s1">mixture components</span><span class="se">\n</span><span class="s1">(weighted)&#39;</span><span class="p">);</span>
-<span class="n">ax</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">x_plot</span><span class="p">,</span> <span class="p">(</span><span class="n">trace</span><span class="p">[</span><span class="s1">&#39;beta&#39;</span><span class="p">][:,</span> <span class="n">np</span><span class="o">.</span><span class="n">newaxis</span><span class="p">,</span> <span class="p">:]</span> <span class="o">*</span> <span class="n">post_pmf_contribs</span><span class="p">)</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">),</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">x_plot</span><span class="p">,</span> <span class="p">(</span><span class="n">trace</span><span class="p">[</span><span class="s1">&#39;w&#39;</span><span class="p">][:,</span> <span class="n">np</span><span class="o">.</span><span class="n">newaxis</span><span class="p">,</span> <span class="p">:]</span> <span class="o">*</span> <span class="n">post_pmf_contribs</span><span class="p">)</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">),</span>
         <span class="s1">&#39;--&#39;</span><span class="p">,</span> <span class="n">c</span><span class="o">=</span><span class="s1">&#39;k&#39;</span><span class="p">);</span>
 
-<span class="n">ax</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="s1">&#39;Yearly sunspoit count&#39;</span><span class="p">);</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="s1">&#39;Yearly sunspot count&#39;</span><span class="p">);</span>
 <span class="n">ax</span><span class="o">.</span><span class="n">set_yticklabels</span><span class="p">([]);</span>
 <span class="n">ax</span><span class="o">.</span><span class="n">legend</span><span class="p">(</span><span class="n">loc</span><span class="o">=</span><span class="mi">1</span><span class="p">);</span>
 </pre></div>
 </div>
 </div>
+<div class="nboutput container">
+<div class="container">
+</div>
+<div class="stderr container">
+<div class="highlight"><pre>
+/opt/conda/lib/python3.5/site-packages/matplotlib/font_manager.py:1297: UserWarning: findfont: Font family [&#39;sans-serif&#39;] not found. Falling back to DejaVu Sans
+  (prop.get_family(), self.defaultFamily[fontext]))
+</pre></div></div>
+</div>
 <div class="nboutput nblast container">
 <div class="container">
 </div>
 <div class="container">
-<img alt="../_images/notebooks_dp_mix_57_0.png" src="../_images/notebooks_dp_mix_57_0.png" />
+<img alt="../_images/notebooks_dp_mix_55_1.png" src="../_images/notebooks_dp_mix_55_1.png" />
 </div>
 </div>
-<p>This example first appeared
+<p>An earlier version of this example first appeared
 <a class="reference external" href="http://austinrochford.com/posts/2016-02-25-density-estimation-dpm.html">here</a>.</p>
 </div>
 </div>

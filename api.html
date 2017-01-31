@@ -2970,7 +2970,7 @@ is the first odd positive integer for which the sum
 <span id="sampling"></span><h3>Sampling<a class="headerlink" href="#module-pymc3.sampling" title="Permalink to this headline">¶</a></h3>
 <dl class="function">
 <dt id="pymc3.sampling.sample">
-<code class="descclassname">pymc3.sampling.</code><code class="descname">sample</code><span class="sig-paren">(</span><em>draws</em>, <em>step=None</em>, <em>n_advi=200000</em>, <em>n_nuts=2000</em>, <em>start=None</em>, <em>trace=None</em>, <em>chain=0</em>, <em>njobs=1</em>, <em>tune=None</em>, <em>progressbar=True</em>, <em>model=None</em>, <em>random_seed=-1</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.sampling.sample" title="Permalink to this definition">¶</a></dt>
+<code class="descclassname">pymc3.sampling.</code><code class="descname">sample</code><span class="sig-paren">(</span><em>draws</em>, <em>step=None</em>, <em>init='advi'</em>, <em>n_init=200000</em>, <em>start=None</em>, <em>trace=None</em>, <em>chain=0</em>, <em>njobs=1</em>, <em>tune=None</em>, <em>progressbar=True</em>, <em>model=None</em>, <em>random_seed=-1</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.sampling.sample" title="Permalink to this definition">¶</a></dt>
 <dd><p>Draw a number of samples using the given step method.
 Multiple step methods supported via compound step method
 returns the amount of time taken.</p>
@@ -3151,7 +3151,7 @@ parameters in each sample of the trace.</p>
 
 <dl class="function">
 <dt id="pymc3.sampling.init_nuts">
-<code class="descclassname">pymc3.sampling.</code><code class="descname">init_nuts</code><span class="sig-paren">(</span><em>njobs=1</em>, <em>n_advi=500000</em>, <em>n_nuts=2000</em>, <em>model=None</em>, <em>random_seed=-1</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.sampling.init_nuts" title="Permalink to this definition">¶</a></dt>
+<code class="descclassname">pymc3.sampling.</code><code class="descname">init_nuts</code><span class="sig-paren">(</span><em>init='ADVI'</em>, <em>njobs=1</em>, <em>n_init=500000</em>, <em>model=None</em>, <em>random_seed=-1</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.sampling.init_nuts" title="Permalink to this definition">¶</a></dt>
 <dd><p>Initialize and sample from posterior of a continuous model.</p>
 <p>This is a convenience function. NUTS convergence and sampling speed is extremely
 dependent on the choice of mass/scaling matrix. In our experience, using ADVI
