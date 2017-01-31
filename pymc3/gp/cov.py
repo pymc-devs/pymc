@@ -43,7 +43,7 @@ class Covariance(object):
         """
         raise NotImplementedError
         
-    K = __call__
+    K = self.__call__
 
 
     def _slice(self, X, Z):
