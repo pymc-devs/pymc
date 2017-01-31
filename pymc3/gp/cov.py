@@ -43,6 +43,9 @@ class Covariance(object):
         Z : The optional prediction set of inputs the kernel.  If Z is None, Z = X.
         """
         raise NotImplementedError
+        
+    def K(self, X, Z):
+        return self.__call__(X, Z)
 
 
     def _slice(self, X, Z):
