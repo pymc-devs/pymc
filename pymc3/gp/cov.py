@@ -32,7 +32,7 @@ class Covariance(object):
             self.active_dims = np.array(active_dims)
             assert len(active_dims) == input_dim
 
-    def __call__(self, X, Z):
+    def __call__(self, X, Z=None):
         R"""
         Evaluate the covariance function.
 
@@ -43,7 +43,7 @@ class Covariance(object):
         """
         raise NotImplementedError
         
-    K = self.__call__
+    K = __call__
 
 
     def _slice(self, X, Z):
