@@ -82,13 +82,12 @@ class Combination(Covariance):
 
 class Add(Combination):
     def __call__(self, X, Z=None):
-        return reduce((lambda x, y: x + y),
-                      [k.K(X, Z) if isinstance(k, Covariance) else k for k in self.factor_list])
+        return sum(k(X, Z) if isinstance(k, Covariance) else k for k in self.factor_list)
 
 class Prod(Combination):
     def __call__(self, X, Z=None):
         return reduce((lambda x, y: x * y),
-                      [k.K(X, Z) if isinstance(k, Covariance) else k for k in self.factor_list])
+                      [k(X, Z) if isinstance(k, Covariance) else k for k in self.factor_list])
 
 
 class Stationary(Covariance):
