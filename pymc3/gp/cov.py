@@ -45,8 +45,7 @@ class Covariance(object):
         """
         raise NotImplementedError
         
-    def K(self, X, Z):
-        return self.__call__(X, Z)
+    K = __call__
 
 
     def _slice(self, X, Z):
@@ -82,12 +81,11 @@ class Combination(Covariance):
 
 class Add(Combination):
     def __call__(self, X, Z=None):
-        return sum(k(X, Z) if isinstance(k, Covariance) else k for k in self.factor_list)
+        return tt.sum([k(X, Z) if isinstance(k, Covariance) else k for k in self.factor_list])
 
 class Prod(Combination):
     def __call__(self, X, Z=None):
-        return reduce((lambda x, y: x * y),
-                      [k(X, Z) if isinstance(k, Covariance) else k for k in self.factor_list])
+        return tt.mul([k(X, Z) if isinstance(k, Covariance) else k for k in self.factor_list])
 
 
 class Stationary(Covariance):
