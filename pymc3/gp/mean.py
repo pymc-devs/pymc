@@ -6,14 +6,8 @@ __all__ = []
 class Mean(object):
     """
     Base class for mean functions
-    
-    To implement a mean function, write the __call__ method. This takes a
-    tensor X and returns a tensor m(X). In accordance with the GPflow
-    standard, each row of X represents one datum, and each row of Y is computed
-    independently for each row of X.
-    MeanFunction classes can have parameters, see the Linear class for an
-    example.
     """
+    
     def __call__(self, X):
         R"""
         Evaluate the mean function.
