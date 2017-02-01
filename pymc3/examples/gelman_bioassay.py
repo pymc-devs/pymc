@@ -1,5 +1,5 @@
-import pymc3 as pm
-from numpy import ones, array
+from pymc3 import *
+from numpy import ones, array, random
 
 # Samples for each dose level
 n = 5 * ones(4, dtype=int)
@@ -25,7 +25,9 @@ def run(n=1000):
     if n == "short":
         n = 50
     with model:
-        trace = pm.sample(n, step)
+        random.seed(42)
+        trace = sample(n, init='random')
+        summary(trace, varnames=['alpha', 'beta'])
 
 if __name__ == '__main__':
     run()
