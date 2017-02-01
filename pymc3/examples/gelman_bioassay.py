@@ -1,5 +1,5 @@
 from pymc3 import *
-from numpy import ones, array
+from numpy import ones, array, random
 
 # Samples for each dose level
 n = 5 * ones(4, dtype=int)
@@ -18,14 +18,13 @@ with Model() as model:
     # Data likelihood
     deaths = Binomial('deaths', n=n, p=theta, observed=[0, 1, 3, 5])
 
-    step = NUTS()
-
-
 def run(n=1000):
     if n == "short":
         n = 50
     with model:
-        trace = sample(n, step)
+        random.seed(42)
+        trace = sample(n, init='random')
+        summary(trace, varnames=['alpha', 'beta'])
 
 if __name__ == '__main__':
     run()
