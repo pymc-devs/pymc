@@ -18,9 +18,6 @@ with pm.Model() as model:
     # Data likelihood
     deaths = pm.Binomial('deaths', n=n, p=theta, observed=[0, 1, 3, 5])
 
-    step = pm.NUTS()
-
-
 def run(n=1000):
     if n == "short":
         n = 50
