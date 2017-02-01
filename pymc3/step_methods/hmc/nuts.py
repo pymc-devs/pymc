@@ -1,10 +1,12 @@
+from collections import namedtuple
+
 from ..arraystep import Competence
 from .base_hmc import BaseHMC
-from collections import namedtuple
+from pymc3.theanof import floatX
 from pymc3.vartypes import continuous_types
+
 import numpy as np
 import numpy.random as nr
-import theano
 
 __all__ = ['NUTS']
 
@@ -14,7 +16,7 @@ BinaryTree = namedtuple('BinaryTree',
 
 
 def bern(p):
-    return np.random.uniform() < p
+    return nr.uniform() < p
 
 
 class NUTS(BaseHMC):
@@ -74,7 +76,7 @@ class NUTS(BaseHMC):
         else:
             step_size = np.exp(self.log_step_size_bar)
 
-        u = np.typeDict[theano.config.floatX](nr.uniform())
+        u = floatX(nr.uniform())
 
         q = qn = qp = q0
         qn_grad = qp_grad = self.dlogp(q)
@@ -125,7 +127,7 @@ class NUTS(BaseHMC):
 
 def buildtree(leapfrog, q, p, q_grad, u, direction, depth, step_size, Emax, start_energy):
     if depth == 0:
-        epsilon = np.asarray(direction * step_size, dtype=theano.config.floatX)
+        epsilon = floatX(np.asarray(direction * step_size))
         q, p, q_grad, new_energy = leapfrog(q, p, q_grad, epsilon)
         energy_change = new_energy - start_energy
         leaf_size = int(np.log(u) + energy_change <= 0)
