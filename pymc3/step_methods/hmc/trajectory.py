@@ -110,7 +110,7 @@ def get_theano_hamiltonian_functions(model_vars, shared, logpt, potential,
     H, q, dlogp = _theano_hamiltonian(model_vars, shared, logpt, potential)
     energy_function, p = _theano_energy_function(H, q, **theano_kwargs)
     if use_single_leapfrog:
-        leapfrog_integrator = _theano_single_leapfrog(H, q, p, **theano_kwargs)
+        leapfrog_integrator = _theano_single_leapfrog(H, q, p, H.dlogp(q), **theano_kwargs)
     else:
         leapfrog_integrator = _theano_leapfrog_integrator(H, q, p, **theano_kwargs)
     return H, energy_function, leapfrog_integrator, dlogp
@@ -167,7 +167,7 @@ def leapfrog(H, q, p, epsilon, n_steps):
     return q, p
 
 
-def _theano_single_leapfrog(H, q, p, **theano_kwargs):
+def _theano_single_leapfrog(H, q, p, q_grad, **theano_kwargs):
     """Leapfrog integrator for a single step.
 
     See above for documentation.  This is optimized for the case where only a single step is
@@ -175,9 +175,6 @@ def _theano_single_leapfrog(H, q, p, **theano_kwargs):
     """
     epsilon = tt.scalar('epsilon')
     epsilon.tag.test_value = 1.
-
-    q_grad = tt.dvector('q_grad')
-    q_grad.tag.test_value = [1.]
 
     p_new = p + 0.5 * epsilon * q_grad  # half momentum update
     q_new = q + epsilon * H.pot.velocity(p_new)  # full position update
