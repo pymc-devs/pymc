@@ -1,5 +1,5 @@
-import pymc3 as pm
-from numpy import ones, array
+from pymc3 import *
+from numpy import ones, array, random
 
 # Samples for each dose level
 n = 5 * ones(4, dtype=int)
@@ -17,9 +17,6 @@ with pm.Model() as model:
 
     # Data likelihood
     deaths = pm.Binomial('deaths', n=n, p=theta, observed=[0, 1, 3, 5])
-
-    step = pm.NUTS()
-
 
 def run(n=1000):
     if n == "short":
