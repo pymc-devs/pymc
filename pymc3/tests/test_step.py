@@ -261,7 +261,7 @@ class TestSampleEstimates(SeededTest):
             Y_obs = Normal('Y_obs', mu=mu, sd=sigma, observed=Y)
 
             for step_method, params in ((NUTS, {"target_accept": 0.95}), (Slice, {}), (Metropolis, {'scaling': 10.})):
-                trace = sample(100000, step=step_method(**params), progressbar=False, tune=1000)
+                trace = sample(100000, step=step_method(**params), tune=1000)
                 trace_ = trace[-300::5]
 
                 # We do the same for beta - using more burnin.
