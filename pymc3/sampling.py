@@ -480,11 +480,7 @@ def init_nuts(init='ADVI', njobs=1, n_init=500000, model=None,
         def random_sample():
             var_dict = {v.name:v.distribution.random() for v in model.vars 
                                         if not v.name.endswith('_')}
-<<<<<<< HEAD
             trans_var_dict = {v.name: trans_sample(v) for v in model.vars 
-=======
-            trans_var_dict = {v.name: trans_sample(v) for v in model.vars  
->>>>>>> Added random init to init_nuts
                                         if v.name.endswith('_')}
             var_dict.update(trans_var_dict)
             return var_dict

@@ -1,9 +1,5 @@
 import pymc3 as pm
-<<<<<<< HEAD
-from numpy import ones, array
-=======
 from numpy import ones, array, random
->>>>>>> Fixed import syntax in gelman_bioassay
 
 # Samples for each dose level
 n = 5 * ones(4, dtype=int)
@@ -21,7 +17,6 @@ with pm.Model() as model:
 
     # Data likelihood
     deaths = pm.Binomial('deaths', n=n, p=theta, observed=[0, 1, 3, 5])
-
 
 def run(n=1000):
     if n == "short":
