@@ -44,7 +44,7 @@ class BaseHMC(ArrayStepShared):
         if isinstance(scaling, dict):
             scaling = guess_scaling(Point(scaling, model=model), model=model, vars=vars)
 
-        n = scaling.shape[0]
+        n = model.dict_to_array(model.test_point).shape[0]
         self.step_size = step_scale / (n ** 0.25)
         self.potential = quad_potential(scaling, is_cov, as_cov=False)
 

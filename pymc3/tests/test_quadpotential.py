@@ -3,6 +3,7 @@ import numpy as np
 import scipy.sparse
 import theano.tensor as tt
 import theano
+import numpy.testing as npt
 
 from pymc3.step_methods.hmc import quadpotential
 
@@ -64,23 +65,35 @@ def test_equal_diag():
         x_ = np.random.randn(5)
         x = tt.vector()
         x.tag.test_value = x_
+
+        samples = np.random.randn(100000, 5) * np.sqrt(diag)
+
         pots = [
-            quadpotential.quad_potential(diag, False, False),
-            quadpotential.quad_potential(1. / diag, True, False),
-            quadpotential.quad_potential(np.diag(diag), False, False),
-            quadpotential.quad_potential(np.diag(1. / diag), True, False),
+            quadpotential.quad_potential(diag, True, False),
+            quadpotential.quad_potential(1. / diag, False, False),
+            quadpotential.quad_potential(np.diag(diag), True, False),
+            quadpotential.quad_potential(np.diag(1. / diag), False, False),
         ]
         if quadpotential.chol_available:
-            diag_ = scipy.sparse.csc_matrix(np.diag(1. / diag))
+            diag_ = scipy.sparse.csc_matrix(np.diag(diag))
             pots.append(quadpotential.quad_potential(diag_, True, False))
 
-        v = np.diag(1. / diag).dot(x_)
-        e = x_.dot(np.diag(1. / diag).dot(x_)) / 2
-        for pot in pots:
+        pots.append(quadpotential.QuadPotentialSample(samples, 0))
+
+        v = np.diag(diag).dot(x_)
+        e = x_.dot(np.diag(diag).dot(x_)) / 2
+        for pot in pots[:-1]:
             v_function = theano.function([x], pot.velocity(x))
             e_function = theano.function([x], pot.energy(x))
-            assert np.allclose(v_function(x_), v)
-            assert np.allclose(e_function(x_), e)
+            npt.assert_allclose(v_function(x_), v)
+            npt.assert_allclose(e_function(x_), e)
+
+        # QuadPotentialSample is less accurate
+        for pot in pots[-1:]:
+            v_function = theano.function([x], pot.velocity(x))
+            e_function = theano.function([x], pot.energy(x))
+            npt.assert_allclose(v_function(x_), v, rtol=0.2)
+            npt.assert_allclose(e_function(x_), e, rtol=0.2)
 
 
 def test_equal_dense():
@@ -94,35 +107,51 @@ def test_equal_dense():
         x_ = np.random.randn(5)
         x = tt.vector()
         x.tag.test_value = x_
+
+        samples = np.random.multivariate_normal(np.zeros_like(x_), cov, 1000)
+
         pots = [
-            quadpotential.quad_potential(cov, False, False),
-            quadpotential.quad_potential(inv, True, False),
+            quadpotential.quad_potential(cov, True, False),
+            quadpotential.quad_potential(inv, False, False),
         ]
         if quadpotential.chol_available:
-            pots.append(quadpotential.quad_potential(cov, False, False))
+            pots.append(quadpotential.quad_potential(cov, True, False))
 
-        v = np.linalg.solve(cov, x_)
+        pots.append(quadpotential.QuadPotentialSample(samples, 0))
+
+        v = np.dot(cov, x_)
         e = 0.5 * x_.dot(v)
-        for pot in pots:
+        for pot in pots[:-1]:
             v_function = theano.function([x], pot.velocity(x))
             e_function = theano.function([x], pot.energy(x))
-            assert np.allclose(v_function(x_), v)
-            assert np.allclose(e_function(x_), e)
+            npt.assert_allclose(v_function(x_), v)
+            npt.assert_allclose(e_function(x_), e)
+
+        for pot in pots[:-1]:
+            v_function = theano.function([x], pot.velocity(x))
+            e_function = theano.function([x], pot.energy(x))
+            npt.assert_allclose(v_function(x_), v, rtol=0.5)
+            npt.assert_allclose(e_function(x_), e, rtol=0.5)
 
 
 def test_random_diag():
     d = np.arange(10) + 1
     np.random.seed(42)
+
+    samples = np.random.randn(1000, 10) * np.sqrt(d)
+
     pots = [
         quadpotential.quad_potential(d, True, False),
         quadpotential.quad_potential(1./d, False, False),
         quadpotential.quad_potential(np.diag(d), True, False),
         quadpotential.quad_potential(np.diag(1./d), False, False),
+        quadpotential.QuadPotentialSample(samples, 0),
     ]
     if quadpotential.chol_available:
         d_ = scipy.sparse.csc_matrix(np.diag(d))
         pot = quadpotential.quad_potential(d, True, False)
         pots.append(pot)
+
     for pot in pots:
         vals = np.array([pot.random() for _ in range(1000)])
         assert np.allclose(vals.std(0), np.sqrt(1./d), atol=0.1)
@@ -137,13 +166,17 @@ def test_random_dense():
         inv = np.linalg.inv(cov)
         assert np.allclose(inv.dot(cov), np.eye(5))
 
+        samples = np.random.multivariate_normal(np.zeros(5), cov, 1000)
+
         pots = [
             quadpotential.QuadPotential(cov),
             quadpotential.QuadPotential_Inv(inv),
+            quadpotential.QuadPotentialSample(samples, 0),
         ]
         if quadpotential.chol_available:
             pot = quadpotential.QuadPotential_Sparse(scipy.sparse.csc_matrix(cov))
             pots.append(pot)
+
         for pot in pots:
             cov_ = np.cov(np.array([pot.random() for _ in range(1000)]).T)
             assert np.allclose(cov_, inv, atol=0.1)
