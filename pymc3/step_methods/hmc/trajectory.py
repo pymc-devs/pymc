@@ -26,9 +26,11 @@ def _theano_hamiltonian(model_vars, shared, logpt, potential):
     """
     dlogp = gradient(logpt, model_vars)
     (logp, dlogp), q = join_nonshared_inputs([logpt, dlogp], model_vars, shared)
+    dlogp_func = theano.function(inputs=[q], outputs=dlogp)
+    dlogp_func.trust_input = True
     logp = CallableTensor(logp)
     dlogp = CallableTensor(dlogp)
-    return Hamiltonian(logp, dlogp, potential), q
+    return Hamiltonian(logp, dlogp, potential), q, dlogp_func
 
 
 def _theano_energy_function(H, q, **theano_kwargs):
@@ -105,13 +107,13 @@ def get_theano_hamiltonian_functions(model_vars, shared, logpt, potential,
     leapfrog_integrator : theano function integrating the Hamiltonian from a point in phase space
     theano_variables : dictionary of variables used in the computation graph which may be useful
     """
-    H, q = _theano_hamiltonian(model_vars, shared, logpt, potential)
+    H, q, dlogp = _theano_hamiltonian(model_vars, shared, logpt, potential)
     energy_function, p = _theano_energy_function(H, q, **theano_kwargs)
     if use_single_leapfrog:
-        leapfrog_integrator = _theano_single_leapfrog(H, q, p, **theano_kwargs)
+        leapfrog_integrator = _theano_single_leapfrog(H, q, p, H.dlogp(q), **theano_kwargs)
     else:
         leapfrog_integrator = _theano_leapfrog_integrator(H, q, p, **theano_kwargs)
-    return H, energy_function, leapfrog_integrator, {'q': q, 'p': p}
+    return H, energy_function, leapfrog_integrator, dlogp
 
 
 def energy(H, q, p):
@@ -165,7 +167,7 @@ def leapfrog(H, q, p, epsilon, n_steps):
     return q, p
 
 
-def _theano_single_leapfrog(H, q, p, **theano_kwargs):
+def _theano_single_leapfrog(H, q, p, q_grad, **theano_kwargs):
     """Leapfrog integrator for a single step.
 
     See above for documentation.  This is optimized for the case where only a single step is
@@ -174,11 +176,13 @@ def _theano_single_leapfrog(H, q, p, **theano_kwargs):
     epsilon = tt.scalar('epsilon')
     epsilon.tag.test_value = 1.
 
-    p_new = p + 0.5 * epsilon * H.dlogp(q)  # half momentum update
+    p_new = p + 0.5 * epsilon * q_grad  # half momentum update
     q_new = q + epsilon * H.pot.velocity(p_new)  # full position update
-    p_new += 0.5 * epsilon * H.dlogp(q_new)  # half momentum update
+    q_new_grad = H.dlogp(q_new)
+    p_new += 0.5 * epsilon * q_new_grad  # half momentum update
     energy_new = energy(H, q_new, p_new)
 
-    f = theano.function(inputs=[q, p, epsilon], outputs=[q_new, p_new, energy_new], **theano_kwargs)
+    f = theano.function(inputs=[q, p, q_grad, epsilon],
+                        outputs=[q_new, p_new, q_new_grad, energy_new], **theano_kwargs)
     f.trust_input = True
     return f

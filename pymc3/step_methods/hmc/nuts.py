@@ -1,15 +1,22 @@
+from collections import namedtuple
+
 from ..arraystep import Competence
 from .base_hmc import BaseHMC
-from pymc3.vartypes import continuous_types
 from pymc3.theanof import floatX
+from pymc3.vartypes import continuous_types
+
 import numpy as np
 import numpy.random as nr
 
 __all__ = ['NUTS']
 
 
+BinaryTree = namedtuple('BinaryTree',
+                        'q, p, q_grad, proposal, leaf_size, is_valid_sample, p_accept, n_proposals')
+
+
 def bern(p):
-    return np.random.uniform() < p
+    return nr.uniform() < p
 
 
 class NUTS(BaseHMC):
@@ -72,36 +79,35 @@ class NUTS(BaseHMC):
         u = floatX(nr.uniform())
 
         q = qn = qp = q0
+        qn_grad = qp_grad = self.dlogp(q)
         pn = pp = p0
-
         tree_size, depth = 1., 0
         keep_sampling = True
 
         while keep_sampling:
             direction = bern(0.5) * 2 - 1
-            q_edge, p_edge = {-1: (qn, pn), 1: (qp, pp)}[direction]
+            q_edge, p_edge, q_edge_grad = {-1: (qn, pn, qn_grad), 1: (qp, pp, qp_grad)}[direction]
 
-            q_edge, p_edge, proposal, subtree_size, is_valid_sample, a, na = buildtree(
-                self.leapfrog, q_edge, p_edge,
-                u, direction, depth,
-                step_size, self.Emax, start_energy)
+            tree = buildtree(self.leapfrog, q_edge, p_edge, q_edge_grad, u, direction,
+                             depth, step_size, self.Emax, start_energy)
 
             if direction == -1:
-                qn, pn = q_edge, p_edge
+                qn, pn, qn_grad = tree.q, tree.p, tree.q_grad
             else:
-                qp, pp = q_edge, p_edge
+                qp, pp, qp_grad = tree.q, tree.p, tree.q_grad
 
-            if is_valid_sample and bern(min(1, subtree_size / tree_size)):
-                q = proposal
+            if tree.is_valid_sample and bern(min(1, tree.leaf_size / tree_size)):
+                q = tree.proposal
 
-            tree_size += subtree_size
+            tree_size += tree.leaf_size
 
             span = qp - qn
-            keep_sampling = is_valid_sample and (span.dot(pn) >= 0) and (span.dot(pp) >= 0)
+            keep_sampling = tree.is_valid_sample and (span.dot(pn) >= 0) and (span.dot(pp) >= 0)
             depth += 1
 
         w = 1. / (self.m + self.t0)
-        self.h_bar = (1 - w) * self.h_bar + w * (self.target_accept - a * 1. / na)
+        self.h_bar = ((1 - w) * self.h_bar +
+                      w * (self.target_accept - tree.p_accept * 1. / tree.n_proposals))
 
         if self.tune:
             self.log_step_size = self.mu - self.h_bar * np.sqrt(self.m) / self.gamma
@@ -119,34 +125,35 @@ class NUTS(BaseHMC):
         return Competence.INCOMPATIBLE
 
 
-def buildtree(leapfrog, q, p, u, direction, depth, step_size, Emax, start_energy):
+def buildtree(leapfrog, q, p, q_grad, u, direction, depth, step_size, Emax, start_energy):
     if depth == 0:
-        q_edge, p_edge, new_energy = leapfrog(q, p,
-                                              floatX(np.asarray(direction * step_size)))
+        epsilon = floatX(np.asarray(direction * step_size))
+        q, p, q_grad, new_energy = leapfrog(q, p, q_grad, epsilon)
         energy_change = new_energy - start_energy
-
         leaf_size = int(np.log(u) + energy_change <= 0)
         is_valid_sample = (np.log(u) + energy_change < Emax)
-        return q_edge, p_edge, q_edge, leaf_size, is_valid_sample, min(1, np.exp(-energy_change)), 1
+        p_accept = min(1, np.exp(-energy_change))
+        return BinaryTree(q, p, q_grad, q, leaf_size, is_valid_sample, p_accept, 1)
     else:
         depth -= 1
 
-    q, p, proposal, tree_size, is_valid_sample, a1, na1 = buildtree(
-        leapfrog, q, p, u, direction, depth, step_size, Emax, start_energy)
+    tree = buildtree(leapfrog, q, p, q_grad, u, direction, depth, step_size, Emax, start_energy)
 
-    if is_valid_sample:
-        q_edge, p_edge, new_proposal, subtree_size, is_valid_subsample, a11, na11 = buildtree(
-            leapfrog, q, p, u, direction, depth, step_size, Emax, start_energy)
-
-        tree_size += subtree_size
-        if bern(subtree_size * 1. / max(tree_size, 1)):
-            proposal = new_proposal
-
-        a1 += a11
-        na1 += na11
-        span = direction * (q_edge - q)
-        is_valid_sample = is_valid_subsample and (span.dot(p_edge) >= 0) and (span.dot(p) >= 0)
+    if tree.is_valid_sample:
+        subtree = buildtree(leapfrog, tree.q, tree.p, tree.q_grad, u, direction, depth,
+                            step_size, Emax, start_energy)
+        if bern(subtree.leaf_size * 1. / max(subtree.leaf_size + tree.leaf_size, 1)):
+            proposal = subtree.proposal
+        else:
+            proposal = tree.proposal
+        leaf_size = subtree.leaf_size + tree.leaf_size
+        p_accept = subtree.p_accept + tree.p_accept
+        n_proposals = subtree.n_proposals + tree.n_proposals
+        span = direction * (subtree.q - tree.q)
+        is_valid_sample = (subtree.is_valid_sample and
+                           span.dot(subtree.p) >= 0 and
+                           span.dot(tree.p) >= 0)
+        q, p, q_grad = subtree.q, subtree.p, subtree.q_grad
+        return BinaryTree(q, p, q_grad, proposal, leaf_size, is_valid_sample, p_accept, n_proposals)
     else:
-        q_edge, p_edge = q, p
-
-    return q_edge, p_edge, proposal, tree_size, is_valid_sample, a1, na1
+        return tree
