@@ -164,12 +164,12 @@ def sample(draws, step=None, init='advi', n_init=200000, start=None,
                 start = _start
         elif isinstance(step, ParticleStep):
             if start is None:
-                if init is not None:
+                if init == 'random':
+                    _start = [get_random_starters(step.nparticles, model) for i in range(njobs)]
+                elif init is not None:
                     _start, _ = do_init(init=init, njobs=njobs * step.nparticles, n_init=n_init, model=model,
                                         random_seed=random_seed)
                     _start = transform_start_particles(_start, step.nparticles, njobs, model)
-                elif init == 'random':
-                    _start = [get_random_starters(step.nparticles, model) for i in range(njobs)]
             if trace is None:
                 trace = MultiNDArray(step.nparticles)
             if start is None:
@@ -514,7 +514,7 @@ def do_init(init='ADVI', njobs=1, n_init=500000, model=None, random_seed=-1, ran
         cov = pm.find_hessian(point=start)
         start = [start]
         if randomiser == 'sample':
-            raise NotImplemented(
+            raise NotImplementedError(
                 'Randomising from MAP using "sample" is not supported. Use "random", "cov", or "duplicate".')
     elif init == 'nuts':
         init_trace = pm.sample(step=pm.NUTS(), draws=n_init,
@@ -522,7 +522,7 @@ def do_init(init='ADVI', njobs=1, n_init=500000, model=None, random_seed=-1, ran
         cov = np.atleast_1d(pm.trace_cov(init_trace))
         start = np.random.choice(init_trace, njobs)  # list of dicts
     else:
-        raise NotImplemented('Initializer {} is not supported.'.format(init))
+        raise NotImplementedError('Initializer {} is not supported.'.format(init))
 
     if njobs == 1:
         return start[0], cov
