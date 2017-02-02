@@ -350,10 +350,11 @@ def _choose_backend(trace, chain, shortcuts=None, nparticles=None, **kwds):
         if shortcuts is None:
             shortcuts = pm.backends._shortcuts
 
+    kwds['nparticles'] = nparticles
     try:
         backend = shortcuts[trace]['backend']
         name = shortcuts[trace]['name']
-        return backend(name, **kwds)
+        return backend(name=name, **kwds)
     except TypeError:
         if nparticles is None:
             return NDArray(vars=trace, **kwds)

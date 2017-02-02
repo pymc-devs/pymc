@@ -200,6 +200,16 @@ class BaseTrace(object):
             return set()
 
 
+class MultiMixin(object):
+    chain_coverage = []
+
+    def iter_fn(self, point, particle):
+        d = {}
+        for k, v in point.iteritems():
+            d[k] = v[particle]
+        return self.fn(d)
+
+
 class MultiTrace(object):
     """Main interface for accessing values from MCMC results
 

@@ -259,6 +259,122 @@ class SQLite(base.BaseTrace):
         return var_values
 
 
+class MultiSQLite(SQLite, base.MultiMixin):
+    def __init__(self, nparticles, name, model = None, vars = None):
+        super(MultiSQLite, self).__init__(name, model, vars)
+        self.nparticles = nparticles
+
+    def setup(self, draws, chain):
+        super(MultiSQLite, self).setup(draws, chain)
+        self.chain_coverage = [i+chain for i in range(self.nparticles)]
+
+    def record(self, point):
+        """Record results of a sampling iteration.
+
+        Parameters
+        ----------
+        point : dict
+            Values mapped to variable names
+        """
+        for w in range(self.nparticles):
+            for varname, value in zip(self.varnames, self.iter_fn(point, w)):
+                values = (self.draw_idx, self.chain+w) + tuple(np.ravel(value))
+                self._queue[varname].append(values)
+
+        if len(self._queue[self.varnames[0]]) > self._queue_limit:
+            self._execute_queue()
+        self.draw_idx += 1
+
+    def get_values(self, varname, burn=0, thin=1, particles=None):
+        """Get values from trace.
+
+        Parameters
+        ----------
+        varname : str
+        burn : int
+        thin : int
+
+        Returns
+        -------
+        A NumPy array
+        """
+        if burn < 0:
+            raise ValueError('Negative burn values not supported '
+                             'in SQLite backend.')
+        if thin < 1:
+            raise ValueError('Only positive thin values are supported '
+                             'in SQLite backend.')
+        varname = str(varname)
+
+        if isinstance(particles, int):
+            statement_args = {'chain': self.chain+particles}
+            if burn == 0 and thin == 1:
+                action = 'select'
+            elif thin == 1:
+                action = 'select_burn'
+                statement_args['burn'] = burn - 1
+            elif burn == 0:
+                action = 'select_thin'
+                statement_args['thin'] = thin
+            else:
+                action = 'select_burn_thin'
+                statement_args['burn'] = burn - 1
+                statement_args['thin'] = thin
+
+            self.db.connect()
+            shape = (-1,) + self.var_shapes[varname]
+            statement = TEMPLATES[action].format(table=varname)
+            self.db.cursor.execute(statement, statement_args)
+            values = _rows_to_ndarray(self.db.cursor)
+            return values.reshape(shape)
+
+        elif isinstance(particles, (list, tuple)):
+            return np.asarray([self.get_values(varname, burn, thin, i) for i in particles])
+        elif isinstance(particles, slice):
+            particles = range(self.nparticles)[particles]
+            return self.get_values(varname, burn, thin, particles)
+        elif particles is None:
+            return self.get_values(varname, burn, thin, slice(None))
+        else:
+            raise ValueError('{} is not a valid particle slice'.format(particles))
+
+    def _slice(self, idx):
+        if isinstance(idx, tuple):
+            i = idx[0]
+        else:
+            i = idx
+        if i.stop is not None:
+            raise ValueError('Stop value in slice not supported.')
+        return ndarray._slice_as_ndarray(self, idx)
+
+    def point(self, idx, ipx=None):
+        """Return dictionary of point values at `idx` for current chain
+        with variables names as keys.
+        """
+        if isinstance(ipx, int):
+            idx = int(idx)
+            if idx < 0:
+                idx = self._get_max_draw(self.chain) + idx + 1
+            statement = TEMPLATES['select_point']
+            self.db.connect()
+            var_values = {}
+            statement_args = {'chain': self.chain+ipx, 'draw': idx}
+            for varname in self.varnames:
+                self.db.cursor.execute(statement.format(table=varname),
+                                       statement_args)
+                values = _rows_to_ndarray(self.db.cursor)
+                var_values[varname] = values.reshape(self.var_shapes[varname])
+            return var_values
+        elif isinstance(ipx, (list, tuple)):
+            return np.asarray([self.point(idx, i) for i in ipx])
+        elif isinstance(ipx, slice):
+            ipx = range(self.nparticles)[ipx]
+            return self.point(idx, ipx)
+        elif ipx is None:
+            return self.point(idx, slice(None))
+        else:
+            raise ValueError('{} is not a valid particle slice'.format(ipx))
+
 class _SQLiteDB(object):
 
     def __init__(self, name):
@@ -344,3 +460,6 @@ def _get_chain_list(cursor, varname):
 def _rows_to_ndarray(cursor):
     """Convert SQL row to NDArray."""
     return np.squeeze(np.array([row[3:] for row in cursor.fetchall()]))
+
+
+# TODO: store chain coverage in SQL

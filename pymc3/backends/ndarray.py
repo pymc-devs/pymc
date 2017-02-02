@@ -178,18 +178,11 @@ class NDArray(base.BaseTrace):
                 for varname, values in self.samples.items()}
 
 
-class MultiNDArray(NDArray):
-    def __init__(self, nparticles=1, name=None, model=None, vars=None):
+class MultiNDArray(NDArray, base.MultiMixin):
+    def __init__(self, nparticles, name=None, model=None, vars=None):
         super(MultiNDArray, self).__init__(name, model, vars)
         self.nparticles = nparticles
         self.samples = OrderedDict([])
-
-
-    def iter_fn(self, point, particle):
-        d = {}
-        for k, v in point.iteritems():
-            d[k] = v[particle]
-        return self.fn(d)
 
     def record(self, point):
         """
@@ -230,12 +223,14 @@ class MultiNDArray(NDArray):
                 self.samples[varname] = np.zeros((self.nparticles, draws) + shape,
                                                  dtype=self.var_dtypes[varname])
 
-    def point(self, idx):
+    def point(self, idx, ipx=None):
         """Return dictionary of point values at `idx` for current chain
         with variables names as keys.
         """
+        if ipx is None:
+            ipx = slice(None)
         idx = int(idx)
-        return {varname: values[:, idx]
+        return {varname: values[ipx, idx]
                 for varname, values in self.samples.items()}
 
 
@@ -255,7 +250,7 @@ class MultiNDArray(NDArray):
         varname = self.varnames[0]
         return self.samples[varname].shape[1]
 
-    def get_values(self, varname, burn=0, thin=1, particle_idx=slice(None)):
+    def get_values(self, varname, burn=0, thin=1, particles=None):
         """Get values from trace.
 
         Parameters
@@ -269,7 +264,9 @@ class MultiNDArray(NDArray):
         -------
         A NumPy array
         """
-        return self.samples[varname][particle_idx, burn::thin]
+        if particles is None:
+            particles = slice(None)
+        return self.samples[varname][particles, burn::thin]
 
     def _slice(self, step_idx, particle_idx=slice(None)):
         # Slicing directly instead of using _slice_as_ndarray to
@@ -297,7 +294,7 @@ class MultiNDArray(NDArray):
                           for varname, values in self.samples.items()}
         return sliced
 
-def _slice_as_ndarray(strace, idx):
+def _slice_as_ndarray(strace, idx, ipx=None):
     if idx.start is None:
         burn = 0
     else:
@@ -307,10 +304,17 @@ def _slice_as_ndarray(strace, idx):
     else:
         thin = idx.step
 
-    sliced = NDArray(model=strace.model, vars=strace.vars)
-    sliced.chain = strace.chain
-    sliced.samples = {v: strace.get_values(v, burn=burn, thin=thin)
-                      for v in strace.varnames}
+    if hasattr(strace, 'nparticles'):
+        sliced = MultiNDArray(strace.nparticles, model=strace.model, vars=strace.vars)
+        sliced.chain = strace.chain
+        sliced.chain_coverage = strace.chain_coverage
+        sliced.samples = {v: strace.get_values(v, burn=burn, thin=thin, particles=ipx)
+                         for v in strace.varnames}
+    else:
+        sliced = NDArray(model=strace.model, vars=strace.vars)
+        sliced.chain = strace.chain
+        sliced.samples = {v: strace.get_values(v, burn=burn, thin=thin)
+                         for v in strace.varnames}
     return sliced
 
 
