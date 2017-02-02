@@ -157,6 +157,10 @@ def sample(draws, step=None, init='advi', n_init=200000, start=None,
 
     _start = None
     if init is not None and pm.model.all_continuous(model.vars):
+        if init_start:
+            for k in init_start.keys():
+                init_start[k] = np.asarray(init_start[k])
+            _soft_update(init_start, model.test_point)
         if step is None:
             # By default, use NUTS sampler
             pm._log.info('Auto-assigning NUTS sampler...')
