@@ -339,7 +339,7 @@ def _choose_backend(trace, chain, shortcuts=None, nparticles=None, **kwds):
     if isinstance(trace, MultiTrace):
         return trace._straces[chain]
 
-    if nparticles is None:
+    if nparticles is not None:
         if trace is None:
             return MultiNDArray(nparticles=nparticles, **kwds)
         if shortcuts is None:
