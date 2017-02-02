@@ -33,9 +33,9 @@ class TestTransformStartConsistent(SeededTest):
         self.assert_correct(test_this, nparticles, njobs, vs)
 
     def _test_start_input_mismatched_particles(self, dict_lengths, list_length, nparticles, njobs, vs=None):
-        startx = self.generate_start_points(nparticles[0])
-        starty = self.generate_start_points(nparticles[1])
-        startz = self.generate_start_points(nparticles[2])
+        startx = self.generate_start_points(dict_lengths[0])
+        starty = self.generate_start_points(dict_lengths[1])
+        startz = self.generate_start_points(dict_lengths[2])
         start = {}
         for s in [startx, starty, startz]:
             start.update(s)
@@ -44,7 +44,7 @@ class TestTransformStartConsistent(SeededTest):
 
         with self.assertRaises(TypeError) as context:
             transform_start_particles(start, nparticles, njobs, self.model)
-        self.assertTrue('given start' in context.exception)
+
 
 
     def test_single_job_one_particle_list_input(self):
@@ -78,4 +78,12 @@ class TestTransformStartConsistent(SeededTest):
         self._test_start_input(3, 0, 1, 3)
 
     def test_mismatched_nparticles_single_job_many_particles_list_input(self):
-        self._test_start_input_mismatched_particles([5, 6, 7], )
+        self._test_start_input_mismatched_particles([5, 6, 7], 1, 5, 1)
+
+    def test_mismatched_nparticles_dict_input(self):
+        self._test_start_input_mismatched_particles([5, 6, 7], 0, 5, 1)
+
+    def test_duplicate_nparticles_dict(self):
+        self._test_start_input(1, 0, 10, 1)
+        self._test_start_input(1, 0, 10, 10)
+        self._test_start_input(1, 0, 1, 10)
