@@ -1,4 +1,4 @@
-from pymc3 import *
+import pymc3 as pm
 from numpy import ones, array, random
 
 # Samples for each dose level
