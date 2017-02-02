@@ -85,7 +85,7 @@ def assign_step_methods(model, step=None, methods=(NUTS, HamiltonianMC, Metropol
 
 def sample(draws, step=None, init='advi', n_init=200000, start=None,
            trace=None, chain=0, njobs=1, tune=None, progressbar=True,
-           model=None, random_seed=-1):
+           model=None, random_seed=-1, init_start=None):
     """
     Draw a number of samples using the given step method.
     Multiple step methods supported via compound step method
@@ -155,30 +155,35 @@ def sample(draws, step=None, init='advi', n_init=200000, start=None,
     if isinstance(step, ParticleStep):
         trace = MultiNDArray(step.nparticles)
 
+    _start = None
     if init is not None and pm.model.all_continuous(model.vars):
         if step is None:
             # By default, use NUTS sampler
             pm._log.info('Auto-assigning NUTS sampler...')
-            _start, step = init_nuts(init=init, njobs=njobs, n_init=n_init, model=model, random_seed=random_seed)
-            if start is None:
-                start = _start
+            _start, cov = do_init(init=init, njobs=njobs * step.nparticles, n_init=n_init, model=model, start=init_start,
+                                  random_seed=random_seed)
+            step = pm.NUTS(scaling=cov, is_cov=True)
         elif isinstance(step, ParticleStep):
-            if start is None:
-                if init == 'random':
-                    _start = [get_random_starters(step.nparticles, model) for i in range(njobs)]
-                elif init is not None:
-                    _start, _ = do_init(init=init, njobs=njobs * step.nparticles, n_init=n_init, model=model,
-                                        random_seed=random_seed)
-                    _start = transform_start_particles(_start, step.nparticles, njobs, model)
+            if start is None and init == 'random':
+                _start = get_random_starters(njobs * step.nparticles, model)
+            elif init is not None:
+                _start, _ = do_init(init=init, njobs=njobs * step.nparticles, n_init=n_init, model=model,
+                                        random_seed=random_seed, start=init_start)
             if trace is None:
                 trace = MultiNDArray(step.nparticles)
-            if start is None:
-                start = _start
         else:
             step = assign_step_methods(model, step)
     else:
         step = assign_step_methods(model, step)
 
+    start = transform_start_particles(start, step.nparticles, njobs, model)
+    _start = transform_start_particles(_start, step.nparticles, njobs, model)
+    if start is None:
+        start = [{}]
+    if _start is None:
+        _start = [{}]
+    for pair in zip(start, _start):
+        _soft_update(*pair)
 
     if njobs is None:
         import multiprocessing as mp
@@ -283,7 +288,7 @@ def _iter_sample(draws, step, start=None, trace=None, chain=0, tune=None,
     if start is None:
         start = {}
 
-    strace = _choose_backend(trace, chain, model=model)
+    strace = _choose_backend(trace, chain, model=model, nparticles=step.nparticles)
 
     if len(strace) > 0:
         _soft_update(start, strace.point(-1))
@@ -324,23 +329,31 @@ def _iter_sample(draws, step, start=None, trace=None, chain=0, tune=None,
         strace.close()
 
 
-def _choose_backend(trace, chain, shortcuts=None, **kwds):
+def _choose_backend(trace, chain, shortcuts=None, nparticles=None, **kwds):
     if isinstance(trace, BaseTrace):
         return trace
     if isinstance(trace, MultiTrace):
         return trace._straces[chain]
-    if trace is None:
-        return NDArray(**kwds)
 
-    if shortcuts is None:
-        shortcuts = pm.backends._shortcuts
+    if nparticles is None:
+        if trace is None:
+            return MultiNDArray(nparticles=nparticles, **kwds)
+        if shortcuts is None:
+            shortcuts = pm.backends._particle_shortcuts
+    else:
+        if trace is None:
+            return NDArray(**kwds)
+        if shortcuts is None:
+            shortcuts = pm.backends._shortcuts
 
     try:
         backend = shortcuts[trace]['backend']
         name = shortcuts[trace]['name']
         return backend(name, **kwds)
     except TypeError:
-        return NDArray(vars=trace, **kwds)
+        if nparticles is None:
+            return NDArray(vars=trace, **kwds)
+        return MultiNDArray(vars=trace, **kwds)
     except KeyError:
         raise ValueError('Argument `trace` is invalid.')
 
@@ -446,7 +459,7 @@ def sample_ppc(trace, samples=None, model=None, vars=None, size=None, random_see
     return {k: np.asarray(v) for k, v in ppc.items()}
 
 
-def do_init(init='ADVI', njobs=1, n_init=500000, model=None, random_seed=-1, randomiser=None):
+def do_init(init='ADVI', njobs=1, n_init=500000, model=None, random_seed=-1, randomiser=None, start=None):
     """Initialize and sample from posterior of a continuous model.
         Parameters
         ----------
@@ -482,7 +495,6 @@ def do_init(init='ADVI', njobs=1, n_init=500000, model=None, random_seed=-1, ran
     pm._log.info('Initializing using {}...'.format(init))
 
     random_seed = int(np.atleast_1d(random_seed)[0])
-    start = None
 
     if randomiser is None:
         if init == 'map':
@@ -499,7 +511,7 @@ def do_init(init='ADVI', njobs=1, n_init=500000, model=None, random_seed=-1, ran
 
     if init.startswith('advi'):
         if init == 'advi_map':
-            start = pm.find_MAP()
+            start = pm.find_MAP(start=start)
         elif init != 'advi':
             raise NotImplemented('Initializer {} is not supported.'.format(init))
         v_params = pm.variational.advi(n=n_init, start=start, random_seed=random_seed)
@@ -510,7 +522,7 @@ def do_init(init='ADVI', njobs=1, n_init=500000, model=None, random_seed=-1, ran
                                              random_seed=random_seed)  # multitrace
             start = [start[i] for i in range(njobs)]
     elif init == 'map':
-        start = pm.find_MAP()  # dict
+        start = pm.find_MAP(start=start)  # dict
         cov = pm.find_hessian(point=start)
         start = [start]
         if randomiser == 'sample':
@@ -518,7 +530,7 @@ def do_init(init='ADVI', njobs=1, n_init=500000, model=None, random_seed=-1, ran
                 'Randomising from MAP using "sample" is not supported. Use "random", "cov", or "duplicate".')
     elif init == 'nuts':
         init_trace = pm.sample(step=pm.NUTS(), draws=n_init,
-                               random_seed=random_seed)[n_init // 2:]
+                               random_seed=random_seed, start=start)[n_init // 2:]
         cov = np.atleast_1d(pm.trace_cov(init_trace))
         start = np.random.choice(init_trace, njobs)  # list of dicts
     else:
@@ -579,7 +591,6 @@ def init_nuts(init='ADVI', njobs=1, n_init=500000, model=None,
 
     start, cov = do_init(init, njobs, n_init, model, random_seed)
     step = pm.NUTS(scaling=cov, is_cov=True, **kwargs)
-
     return start, step
 
 
@@ -588,14 +599,120 @@ def get_random_starters(nwalkers, model=None):
     return {v.name: v.distribution.random(size=nwalkers) for v in model.vars}
 
 
-def transform_start_particles(var_dict_list, nparticles, njobs, model=None):
+def transform_start_particles(start, nparticles, njobs, model=None):
+    """
+    Transforms lists/dicts of starting values to the same format of [{...}, {...}, ...] where the list index is the job index
+     and each dictionary variable has the same first dimension (nwalkers) or if they don't, duplicate those variables
+
+     if the given start has already specified the correct number of jobs (length of list) and nparticles, it is returned unchanged
+     if the given start has specified only one particle the required number of particles will be achieved by duplication
+     if the given start is a
+     if the given start is a list with len > 1 and njobs > 1 this will raise a TypeError
+     if the given start has mismatched walkers  this will raise a TypeError
+
+    :param start: dict or list of dicts
+    :param nparticles: int
+    :param njobs: int
+    :param model: model
+    :return:
+    """
     model = modelcontext(model)
-    l = []
-    for njob in range(njobs):
-        d = defaultdict(list)
-        for job_particle in var_dict_list[njob * nparticles:(njob + 1) * nparticles]:
-            for varname, value in job_particle.iteritems():
-                if varname in [i.name for i in model.vars]:
-                    d[varname].append(value)
-        l.append(d)
-    return l
+    if start is None:
+        return None
+
+    if isinstance(start, list):
+        ns = [np.atleast_1d(v).shape[0] for d in start for k, v in d.iteritems()]
+        if nparticles is not None:
+            if not all(n == ns[0] for n in ns):  # inconsistent shapes means no particle specification within the dict
+                # expects a list of dicts jobs/particles
+                l = []
+                for njob in range(njobs):
+                    d = defaultdict(list)
+                    for job_particle in start[njob * nparticles:(njob + 1) * nparticles]:
+                        for varname, value in job_particle.iteritems():
+                            if varname in [i.name for i in model.vars]:
+                                d[varname].append(value)
+                    l.append(d)
+                start = l
+            elif ns[0] == 1:
+                if len(start) == nparticles*njobs:
+                    l = []
+                    for j in range(njobs):
+                        d = defaultdict(list)
+                        slcs = start[j:(j+1)*nparticles]
+                        for s in slcs:
+                            for k, v in s.iteritems():
+                                d[k].append(v)
+                        l.append(d)
+                    start = l
+
+                elif len(start) == 1:
+                    pm._log.warning("Your given start is specified for 1 job/1 particle when you wanted {} jobs and {} particles, duplicating starting "
+                                    "values...".format(njobs, nparticles))
+                    start = [{k: [v]*nparticles for d in start for k, v in d.iteritems()}]*njobs
+
+            elif ns[0] == nparticles:
+                if len(start) == 1:
+                    pm._log.warning("Your given start is specified for 1 job when you wanted {}, duplicating starting "
+                                    "values between jobs...".format(njobs))
+                    start = start * njobs
+                elif len(start) != njobs:
+                    raise TypeError("Your given start specified {} jobs when you wanted {}, this is ambiguous".format(len(start), njobs))
+            else:
+                raise TypeError("Your given start is specified for {} particles when you wanted {}, this is "
+                                "ambiguous".format(ns[0], nparticles))
+        else:
+            if len(start) == 1:
+                pm._log.warning("Your given start specified 1 job when you wanted {}, duplicating starting values "
+                                "between jobs...".format(njobs))
+                start = start * njobs
+            elif len(start) != njobs:
+                raise TypeError("Your given start specified {} jobs when you wanted {}, this is ambiguous".format(len(start), njobs))
+
+    elif isinstance(start, dict):
+        ns = [np.atleast_1d(v).shape[0] for k, v in start.iteritems()]
+        if all(n == ns[0] for n in ns):
+            if nparticles is not None:
+                if ns[0] == nparticles * njobs:
+                    l = []
+                    for njob in range(njobs):
+                        d = {}
+                        for varname, value in start.iteritems():
+                            d[varname] = value[njob * nparticles:(njob + 1) * nparticles]
+                        l.append(d)
+                    start = l
+                elif ns[0] == nparticles:
+                    start = [start]*njobs
+                elif ns[0] == 1:  # single guess
+                    pm._log.warning(
+                        "Your given start is specified for 1 job/1 particle when you wanted {} jobs and {} particles, duplicating starting "
+                        "values...".format(njobs, nparticles))
+                    d = {}
+                    for varname, value in start.iteritems():
+                        d[varname] = np.asarray([value]*nparticles)
+                    start = [d]*njobs
+                else:
+                    raise TypeError("Your given start is specified for {} particles when you wanted {}, this is "
+                                    "ambiguous".format(ns[0], nparticles))
+            elif ns[0] == njobs:
+                l = []
+                for njob in range(njobs):
+                    d = {}
+                    for varname, value in start.iteritems():
+                        d[varname] = value[njob:njob + 1]
+                    l.append(d)
+                start = l
+        else:
+            start = [start] * njobs
+    else:
+        raise TypeError("Start type {} not understood".format(type(start)))
+
+    names = [i.name for i in model.vars]
+    _s = []
+    for i, d in enumerate(start):
+        _d = {}
+        for varname, value in d.iteritems():
+            if varname in names:
+                _d[varname] = value
+        _s.append(_d)
+    return _s
