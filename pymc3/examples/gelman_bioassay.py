@@ -1,5 +1,9 @@
 import pymc3 as pm
+<<<<<<< HEAD
 from numpy import ones, array
+=======
+from numpy import ones, array, random
+>>>>>>> Fixed import syntax in gelman_bioassay
 
 # Samples for each dose level
 n = 5 * ones(4, dtype=int)
@@ -24,8 +28,8 @@ def run(n=1000):
         n = 50
     with model:
         random.seed(42)
-        trace = sample(n, init='random')
-        summary(trace, varnames=['alpha', 'beta'])
+        trace = pm.sample(n, init='random')
+        pm.summary(trace, varnames=['alpha', 'beta'])
 
 if __name__ == '__main__':
     run()
