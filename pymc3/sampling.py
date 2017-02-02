@@ -49,7 +49,7 @@ def assign_step_methods(model, step=None, methods=(NUTS, HamiltonianMC, Metropol
     List of step methods associated with the model's variables.
     '''
     if isinstance(step, ParticleStep):
-        return [step]
+        return step
 
     steps = []
     assigned_vars = set()
@@ -84,8 +84,8 @@ def assign_step_methods(model, step=None, methods=(NUTS, HamiltonianMC, Metropol
 
 
 def sample(draws, step=None, init='advi', n_init=200000, start=None,
-           trace=None, chain=0, njobs=1, tune=None, progressbar=True,
-           model=None, random_seed=-1, init_start=None):
+           init_start=None, trace=None, chain=0, njobs=1, tune=None,
+           progressbar=True, model=None, random_seed=-1):
     """
     Draw a number of samples using the given step method.
     Multiple step methods supported via compound step method
@@ -122,6 +122,8 @@ def sample(draws, step=None, init='advi', n_init=200000, start=None,
         * (nparticles, var.dshape) - fully specified different starting positions
                                        for each particle
         * (var.dshape) - singly specified starting position to be copied to all particles
+    init_start: dict
+        starting point for the init function
     trace : backend, list, or MultiTrace
         This should be a backend instance, a list of variables to track,
         or a MultiTrace object with past values. If a MultiTrace object
@@ -160,25 +162,23 @@ def sample(draws, step=None, init='advi', n_init=200000, start=None,
         trace = MultiNDArray(step.nparticles)
 
     _start = None
-    if init is not None and pm.model.all_continuous(model.vars):
+    if init is not None:
         if init_start:
             for k in init_start.keys():
                 init_start[k] = np.asarray(init_start[k])
             _soft_update(init_start, model.test_point)
-        if step is None:
+        if step is None and pm.model.all_continuous(model.vars):
             # By default, use NUTS sampler
             pm._log.info('Auto-assigning NUTS sampler...')
             _start, cov = do_init(init=init, nsamples=1, n_init=n_init, model=model, start=init_start,
                                   random_seed=random_seed)
             step = pm.NUTS(scaling=cov, is_cov=True)
         elif isinstance(step, ParticleStep):
-            if start is None and init == 'random':
+            if init == 'random':
                 _start = get_random_starters(step.nparticles, model)
             elif init is not None:
                 _start, _ = do_init(init=init, nsamples=step.nparticles, n_init=n_init, model=model,
                                     random_seed=random_seed, start=init_start)
-            if trace is None:
-                trace = MultiNDArray(step.nparticles)
         else:
             step = assign_step_methods(model, step)
     else:
