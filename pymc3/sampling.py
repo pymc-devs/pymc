@@ -503,6 +503,7 @@ def init_nuts(init='ADVI', njobs=1, n_init=500000, model=None,
         start = np.random.choice(init_trace, njobs)
         if njobs == 1:
             start = start[0]
+
     elif init == 'random':
         def trans_sample(v): 
             return v.distribution.transform_used.backward(v.distribution.dist.random()).eval()
@@ -516,6 +517,7 @@ def init_nuts(init='ADVI', njobs=1, n_init=500000, model=None,
             return var_dict
             
         start = [random_sample() for _ in range(njobs)]
+
         if njobs == 1:
             start = start[0]
         cov = None
