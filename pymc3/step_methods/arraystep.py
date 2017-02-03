@@ -101,6 +101,7 @@ class ArrayStep(BlockedStep):
         self.fs = fs
         self.allvars = allvars
         self.blocked = blocked
+        self.nparticles = None
 
     def step(self, point):
         bij = DictToArrayBijection(self.ordering, point)
@@ -137,6 +138,7 @@ class ArrayStepShared(BlockedStep):
         self.ordering = ArrayOrdering(vars)
         self.shared = {str(var): shared for var, shared in shared.items()}
         self.blocked = blocked
+        self.nparticles = None
 
     def step(self, point):
         for var, share in self.shared.items():

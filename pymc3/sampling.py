@@ -297,7 +297,7 @@ def _iter_sample(draws, step, start=None, trace=None, chain=0, tune=None,
     if len(strace) > 0:
         _soft_update(start, strace.point(-1))
     else:
-        if hasattr(step, 'nparticles'):
+        if step.nparticles is not None:
             _soft_update(start, {k: _make_parallel(v, step.nparticles) for k, v in model.test_point.iteritems()})
         else:
             _soft_update(start, model.test_point)
@@ -620,12 +620,15 @@ def transform_start_particles(start, nparticles, model=None):
     dshapes = {i.name: i.dshape for i in model.vars}
     if isinstance(start, dict):
         if all(dshapes[k] == np.asarray(v).shape for k, v in start.iteritems()):
-            start = {k: np.asarray([v]*nparticles) for k, v in start.iteritems()}  # duplicate
-            return Point(**start)
-        elif all((nparticles,)+dshapes[k] == np.asarray(v).shape for k, v in start.iteritems()):
+            if nparticles is not None:
+                start = {k: np.asarray([v]*nparticles) for k, v in start.iteritems()}  # duplicate
             return Point(**start)
         else:
-            raise TypeError("Start dicts must have a shape of (nparticles, dshape) or (dshape,)")
+            extra = tuple() if nparticles is None else (nparticles, )
+            if all(extra+dshapes[k] == np.asarray(v).shape for k, v in start.iteritems()):
+                return Point(**start)
+            else:
+                raise TypeError("Start dicts must have a shape of (nparticles, dshape) or (dshape,)")
     elif isinstance(start, list):
         assert all(isinstance(i, dict) for i in start), "Start dicts must have a shape of (nparticles, dshape) or (dshape,)"
         assert len(start) == nparticles, "If start is a list, it must have a length of nparticles"
