@@ -413,6 +413,10 @@ class Model(six.with_metaclass(InitContextMeta, Context, Factor)):
         return self.bijection.map
 
     @property
+    def ndim(self):
+        return self.dict_to_array(self.test_point).shape[0]
+
+    @property
     @memoize
     def logp_array(self):
         return self.bijection.mapf(self.fastlogp)

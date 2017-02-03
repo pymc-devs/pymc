@@ -5,6 +5,7 @@ import theano.tensor as tt
 import theano
 
 from pymc3.step_methods.hmc import quadpotential
+import pymc3
 
 from nose.tools import raises
 from nose.plugins.skip import SkipTest
@@ -147,3 +148,23 @@ def test_random_dense():
         for pot in pots:
             cov_ = np.cov(np.array([pot.random() for _ in range(1000)]).T)
             assert np.allclose(cov_, inv, atol=0.1)
+
+
+def test_user_potential():
+    model = pymc3.Model()
+    with model:
+        a = pymc3.Normal("a", mu=0, sd=1)
+
+    # Work around missing nonlocal in python2
+    called = []
+
+    class Potential(quadpotential.ElemWiseQuadPotential):
+        def energy(self, x):
+            called.append(1)
+            return super(Potential, self).energy(x)
+
+    pot = Potential([1])
+    with model:
+        step = pymc3.NUTS(potential=pot)
+        pymc3.sample(10, init=None, step=step)
+    assert called
