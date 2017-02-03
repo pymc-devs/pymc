@@ -148,7 +148,6 @@ class RatQuad(Stationary):
         X, Z = self._slice(X, Z)
         return tt.power((1.0 + 0.5 * self.square_dist(X, Z) * (1.0 / self.alpha)), -1.0 * self.alpha)
 
-    K = __call__
 
 class Matern52(Stationary):
     R"""
@@ -178,7 +177,6 @@ class Matern32(Stationary):
         r = self.euclidean_dist(X, Z)
         return (1.0 + np.sqrt(3.0) * r) * tt.exp(-np.sqrt(3.0) * r)
 
-    K = __call__
 
 class Exponential(Stationary):
     R"""
@@ -193,7 +191,6 @@ class Exponential(Stationary):
         X, Z = self._slice(X, Z)
         return tt.exp(-0.5 * self.euclidean_dist(X, Z))
 
-    K = __call__
 
 class Cosine(Stationary):
     R"""
@@ -207,7 +204,6 @@ class Cosine(Stationary):
         X, Z = self._slice(X, Z)
         return tt.cos(np.pi * self.euclidean_dist(X, Z))
 
-    K = __call__
 
 class Linear(Covariance):
     R"""
@@ -247,7 +243,6 @@ class Polynomial(Linear):
     def __call__(self, X, Z=None):
         return tt.power(Linear.__call__(self, X, Z) + self.offset, self.d)
 
-    K = __call__
 
 class WarpedInput(Covariance):
     R"""
@@ -281,7 +276,6 @@ class WarpedInput(Covariance):
         else:
             return self.cov_func(self.w(X, self.args), self.w(Z, self.args))
 
-    K = __call__
 
 def handle_args(func, args):
     def f(x, args):
