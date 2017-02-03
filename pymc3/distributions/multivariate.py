@@ -569,13 +569,13 @@ class LKJCorr(Continuous):
     """
 
     def __init__(self, n, p, *args, **kwargs):
-        self.n = n = tt.as_tensor_variable(n)
-        self.p = p = tt.as_tensor_variable(p)
+        self.n = n
+        self.p = p
         n_elem = int(p * (p - 1) / 2)
-        self.mean = np.zeros(n_elem)
+        self.mean = np.zeros(n_elem, dtype=theano.config.floatX)
         super(LKJCorr, self).__init__(shape=n_elem, *args, **kwargs)
 
-        self.tri_index = np.zeros([p, p], dtype=int)
+        self.tri_index = np.zeros([p, p], dtype='int32')
         self.tri_index[np.triu_indices(p, k=1)] = np.arange(n_elem)
         self.tri_index[np.triu_indices(p, k=1)[::-1]] = np.arange(n_elem)
 
