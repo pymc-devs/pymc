@@ -569,8 +569,6 @@ class LKJCorr(Continuous):
     """
 
     def __init__(self, n, p, *args, **kwargs):
-        self.n = n = tt.as_tensor_variable(n)
-        self.p = p = tt.as_tensor_variable(p)
         n_elem = int(p * (p - 1) / 2)
         self.mean = np.zeros(n_elem)
         super(LKJCorr, self).__init__(shape=n_elem, *args, **kwargs)
@@ -579,6 +577,8 @@ class LKJCorr(Continuous):
         self.tri_index[np.triu_indices(p, k=1)] = np.arange(n_elem)
         self.tri_index[np.triu_indices(p, k=1)[::-1]] = np.arange(n_elem)
 
+        self.n = n = tt.as_tensor_variable(n)
+        self.p = p = tt.as_tensor_variable(p)
     def _normalizing_constant(self, n, p):
         if n == 1:
             result = gammaln(2. * tt.arange(1, int((p - 1) / 2) + 1)).sum()
