@@ -1,5 +1,4 @@
-import ndarray
-import base
+from ..backends import base, ndarray
 import h5py
 import numpy as np
 from contextlib import contextmanager
