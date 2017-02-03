@@ -1,5 +1,5 @@
-import theano.tensor as tt
-import numpy as np
+# import theano.tensor as tt
+# import numpy as np
 from .mean import Zero
 
 __all__ = ['GPP']
