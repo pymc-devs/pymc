@@ -1,17 +1,22 @@
-from ndarray import NDArray
+import ndarray
+import base
 import h5py
 import numpy as np
 from contextlib import contextmanager
 
 @contextmanager
 def activator(instance):
-    with instance.h5file as f:
-        instance.samples = f
-        yield
-    instance.samples = None
+    if isinstance(instance.samples, h5py.File):
+        if instance.samples.id:  # if file is open, keep open
+            yield
+            return
+    # if file is closed/not referenced: open, do job, then close
+    instance.samples = h5py.File(instance.name, 'a')
+    yield
+    instance.samples.close()
+    return
 
-
-class HDF5(NDArray):
+class HDF5(ndarray.NDArray):
     """HDF5 trace object
 
         Parameters
@@ -29,13 +34,36 @@ class HDF5(NDArray):
         return activator(self)
 
     @property
-    def h5file(self):
-        return h5py.File(self.name, 'a')
+    def chain_is_setup(self):
+        with self.activate_file:
+            try:
+                return self.chain in self.samples.attrs['chains']
+            except KeyError:
+                return False
 
     @property
-    def is_setup(self):
-        with self.h5file as f:
-            return 'chains' in f.attrs.keys()
+    def is_new_file(self):
+        with self.activate_file:
+            return len(self.samples.keys()) == 0
+
+    @property
+    def chain_dict(self):
+        with self.activate_file:
+            try:
+                l = self.samples.attrs['chains']
+                d = {k: i for i, k in enumerate(l)}
+                d[None] = 0
+                return d
+            except KeyError:
+                return {}
+
+    @property
+    def nchains(self):
+        with self.activate_file:
+            try:
+                return len(self.samples.attrs['chains'])
+            except KeyError:
+                return 0
 
     def setup(self, draws, chain):
         """Perform chain-specific setup.
@@ -48,27 +76,26 @@ class HDF5(NDArray):
             Chain number
         """
         self.chain = chain
-        if self.is_setup:  # Concatenate new array if chain is already present.
-            old_draws = len(self)
-            self.draws = old_draws + draws
-            self.draws_idx = old_draws
-            with self.h5file as file:
-                chs = file.attrs['chains']
-                if self.chain not in chs:
-                    file.attrs['chains'] = np.append(chs, self.chain)
-                    for v in file.itervalues():
-                        v.resize(len(chs), axis=0)
-                for v in file.itervalues():
-                    v.resize(self.draws, axis=1)
-                self.chain_dict = {c: i for i, c in enumerate(chs)}
-
-        else:  # Otherwise, make array of zeros for each variable.
-            self.draws = draws
-            with self.h5file as file:
-                file.attrs['chains'] = [self.chain]
+        with self.activate_file:
+            if self.is_new_file:
+                self.draws = draws
                 for varname, shape in self.var_shapes.items():
-                    ds = file.create_dataset(varname, (1, draws) + shape, dtype=self.var_dtypes[varname], maxshape=(None, None)+shape)
-                self.chain_dict = {self.chain: 0}
+                    ds = self.samples.create_dataset(varname, (1, draws) + shape, dtype=self.var_dtypes[varname],
+                                                     maxshape=(None, None) + shape)
+                    self.samples.attrs['chains'] = [self.chain]
+            else:
+                if not self.chain_is_setup:
+                    self.draws = draws
+                    for v in self.samples.itervalues():
+                        v.resize(self.nchains+1, axis=0)
+                    self.samples.attrs['chains'] = np.append(self.samples.attrs['chains'], self.chain)
+                else:
+                    old_draws = len(self)
+                    self.draws = old_draws + draws
+                    self.draw_idx = old_draws  # tag onto end of chain
+                for v in self.samples.itervalues():
+                    v.resize(self.draws, axis=1)
+
 
     def close(self):
         with self.activate_file:
@@ -77,7 +104,7 @@ class HDF5(NDArray):
             # Remove trailing zeros if interrupted before completed all
             # draws.
             for ds in self.samples.itervalues():
-                self.samples.resize(self.draws_idx+1, axis=1)
+                ds.resize(self.draw_idx, axis=1)
 
     def record(self, point):
         with self.activate_file:
@@ -87,12 +114,60 @@ class HDF5(NDArray):
 
     def get_values(self, varname, burn=0, thin=1):
         with self.activate_file:
-            return super(HDF5, self).get_values(varname, burn, thin)
+            return self.samples[varname][self.chain_dict[self.chain], burn::thin]
 
     def _slice(self, idx):
         with self.activate_file:
-            return super(HDF5, self)._slice(idx)
+            if idx.start is None:
+                burn = 0
+            else:
+                burn = idx.start
+            if idx.step is None:
+                thin = 1
+            else:
+                thin = idx.step
+
+            sliced = ndarray.NDArray(model=self.model, vars=self.vars)
+            sliced.chain = self.chain_dict[self.chain]
+            sliced.samples = {v: self.get_values(v, burn=burn, thin=thin)
+                              for v in self.varnames}
+            return sliced
 
     def point(self, idx):
         with self.activate_file:
-            return super(HDF5, self).point(idx)
+            idx = int(idx)
+            r = {}
+            for varname, values in self.samples.iteritems():
+                r[varname] = values[self.chain_dict[self.chain], idx]
+            return r
+
+    def __len__(self):
+        if self.chain_is_setup:
+            with self.activate_file:
+                return self.samples.values()[0].shape[1]
+        return 0
+
+
+def load(name, model=None):
+    """Load HDF5 arrays.
+
+    Parameters
+    ----------
+    name : str
+        Path to HDF5 arrays file
+    model : Model
+        If None, the model is taken from the `with` context.
+
+    Returns
+    -------
+    A MultiTrace instance
+    """
+    straces = []
+    with h5py.File(name, 'r') as file:
+        chains = file.attrs['chains']
+    for chain in chains:
+        trace = HDF5(name, model=model)
+        trace.chain = chain
+        straces.append(trace)
+    r = base.MultiTrace(straces)
+    return r
