@@ -66,7 +66,8 @@ def _svgd_gradient(vars, model, X, logp_grad_vec):
 
 
 def svgd(vars=None, n=5000, n_particles=100, jitter=.01,
-         optimizer=None, start=None, progressbar=True, random_seed=None, model=None):
+         optimizer=adagrad, start=None, progressbar=True,
+         random_seed=None, model=None):
 
     if random_seed is not None:
         seed(random_seed)
@@ -90,11 +91,7 @@ def svgd(vars=None, n=5000, n_particles=100, jitter=.01,
     logp_grad_vec = _make_vectorized_logp_grad(vars, model, theta)
     svgd_grad = -1 * _svgd_gradient(vars, model, theta, logp_grad_vec) # maximize
 
-    # Initialize optimizer
-    if optimizer is None:
-        optimizer = Adagrad(lr=1e-3)  # TODO. works better with regularizer for high dimension data
-
-    svgd_updates = optimizer(theta, svgd_grad)
+    svgd_updates = optimizer([svgd_grad], [theta], learning_rate=1e-3)
 
     i = tt.iscalar('i')
     svgd_step = theano.function([i], [i],
