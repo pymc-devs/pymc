@@ -457,7 +457,9 @@ def init_nuts(njobs=1, n_advi=500000, n_nuts=2000, model=None,
             step_tune.log_step_size_bar = step_tune.log_step_size_bar
 
         trace_tune = pm.sample(n, step_tune, tune=n // 2)[(n // 2):]
-        cov = covariance.LedoitWolf().fit(pm.trace_to_dataframe(trace_tune).values).covariance_
+        trace_df = pm.trace_to_dataframe(trace_tune, varnames=[rv.name for rv in model.free_RVs],
+                                         hide_transformed_vars=False)
+        cov = covariance.LedoitWolf().fit(trace_df.values).covariance_
         cov = pm.theanof.floatX(cov)
         start = np.random.choice(trace_tune, njobs)
         if njobs == 1:
