@@ -85,14 +85,14 @@ class HDF5(ndarray.NDArray):
             else:
                 if not self.chain_is_setup:
                     self.draws = draws
-                    for v in self.samples.itervalues():
+                    for v in self.samples.values():
                         v.resize(self.nchains+1, axis=0)
                     self.samples.attrs['chains'] = np.append(self.samples.attrs['chains'], self.chain)
                 else:
                     old_draws = len(self)
                     self.draws = old_draws + draws
                     self.draw_idx = old_draws  # tag onto end of chain
-                for v in self.samples.itervalues():
+                for v in self.samples.values():
                     v.resize(self.draws, axis=1)
 
 
@@ -102,7 +102,7 @@ class HDF5(ndarray.NDArray):
                 return
             # Remove trailing zeros if interrupted before completed all
             # draws.
-            for ds in self.samples.itervalues():
+            for ds in self.samples.values():
                 ds.resize(self.draw_idx, axis=1)
 
     def record(self, point):
@@ -143,7 +143,7 @@ class HDF5(ndarray.NDArray):
     def __len__(self):
         if self.chain_is_setup:
             with self.activate_file:
-                return self.samples.values()[0].shape[1]
+                return list(self.samples.values())[0].shape[1]
         return 0
 
 
