@@ -140,7 +140,7 @@ class NUTS(BaseHMC):
             'depth': depth,
             'step_size': step_size,
             'tune': self.tune,
-            'accept': a * 1. / na,
+            'accept': tree.p_accept * 1. / tree.n_proposals,
             'h_bar': self.h_bar,
             'step_size_bar': np.exp(self.log_step_size_bar),
             'tree_size': tree_size,
