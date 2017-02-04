@@ -150,7 +150,7 @@ def sample(draws, step=None, n_advi=200000, n_nuts=2000, start=None,
     if step is None and pm.model.all_continuous(model.vars):
         # By default, use NUTS sampler
         pm._log.info('Auto-assigning NUTS sampler...')
-        start_, step = init_nuts(njobs=njobs, n_advi=n_advi, n_nuts=n_nuts, model=model, random_seed=random_seed)
+        start_, step, _ = init_nuts(njobs=njobs, n_advi=n_advi, n_nuts=n_nuts, model=model, random_seed=random_seed)
         if start is None:
             start = start_
     else:
@@ -401,7 +401,7 @@ def sample_ppc(trace, samples=None, model=None, vars=None, size=None, random_see
     return {k: np.asarray(v) for k, v in ppc.items()}
 
 
-def init_nuts(njobs=1, n_advi=500000, n_nuts=2000, model=None,
+def init_nuts(njobs=1, n_advi=500000, n_nuts=2000, n_runs=2, model=None,
               random_seed=-1, **kwargs):
     """Initialize and sample from posterior of a continuous model.
 
@@ -446,26 +446,25 @@ def init_nuts(njobs=1, n_advi=500000, n_nuts=2000, model=None,
     # Set default values
     start = model.test_point
     cov = np.eye(len(model.dict_to_array(model.test_point)))
-    log_step_size = None
-    log_step_size_bar = None
+    step_size = None
+    covs = []
 
-    def nuts_cov(n, start, cov, log_step_size, log_step_size_bar):
+    def nuts_cov(n, start, cov, step_size):
         from sklearn import covariance
-        step_tune = pm.NUTS(scaling=cov, is_cov=True)
-        if log_step_size is not None:
-            step_tune.log_step_size = step_tune.log_step_size
-            step_tune.log_step_size_bar = step_tune.log_step_size_bar
+        step_tune = pm.NUTS(scaling=cov, is_cov=True, step_size=step_size)
 
-        trace_tune = pm.sample(n, step_tune, tune=n // 2)[(n // 2):]
-        trace_df = pm.trace_to_dataframe(trace_tune, varnames=[rv.name for rv in model.free_RVs],
+        trace_tune = pm.sample(n, step_tune, tune=n // 2, njobs=njobs)[njobs * (n // 2):]
+        vars = pm.inputvars(model.vars)
+        trace_df = pm.trace_to_dataframe(trace_tune, varnames=[rv.name for rv in vars],
                                          hide_transformed_vars=False)
-        cov = covariance.LedoitWolf().fit(trace_df.values).covariance_
+        #cov = covariance.LedoitWolf().fit(trace_df.values).covariance_
+        cov = trace_df.var().values
         cov = pm.theanof.floatX(cov)
         start = np.random.choice(trace_tune, njobs)
         if njobs == 1:
             start = start[0]
 
-        return start, cov, step_tune.log_step_size, step_tune.log_step_size_bar
+        return start, cov, np.exp(step_tune.log_step_size)
 
     if n_advi > 0:
         v_params = pm.variational.advi(n=n_advi, random_seed=random_seed)
@@ -475,15 +474,14 @@ def init_nuts(njobs=1, n_advi=500000, n_nuts=2000, model=None,
         if njobs == 1:
             start = start[0]
         cov = np.power(model.dict_to_array(v_params.stds), 2)
+        covs.append(cov)
 
-    if n_nuts > 0:
-        for i in range(3):
-            start, cov, log_step_size, log_step_size_bar = nuts_cov(n_nuts, start, cov, log_step_size, log_step_size_bar)
-
-        step = pm.NUTS(scaling=cov, is_cov=True, **kwargs)
-        step.log_step_size = log_step_size
-        step.log_step_size_bar = log_step_size_bar
+    if n_nuts > 0 and n_runs > 0:
+        for i in range(n_runs):
+            start, cov, step_size = nuts_cov(n_nuts, start, cov, step_size)
+            covs.append(cov)
+        step = pm.NUTS(scaling=cov, is_cov=True, step_size=step_size, **kwargs)
     else:
         step = pm.NUTS(scaling=cov, is_cov=True, **kwargs)
 
-    return start, step
+    return start, step, covs
