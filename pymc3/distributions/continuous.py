@@ -129,8 +129,8 @@ class Uniform(Continuous):
                  *args, **kwargs):
         super(Uniform, self).__init__(*args, **kwargs)
 
-        self.lower = lower
-        self.upper = upper
+        self.lower = lower = tt.as_tensor_variable(lower)
+        self.upper = upper = tt.as_tensor_variable(upper)
         self.mean = (upper + lower) / 2.
         self.median = self.mean
 
@@ -1347,4 +1347,3 @@ class Triangular(Continuous):
                          tt.switch(tt.eq(value, c), tt.log(2 / (upper - lower)),
                          tt.switch(alltrue_elemwise([c < value, value <= upper]),
                          tt.log(2 * (upper - value) / ((upper - lower) * (upper - c))),np.inf)))
-
