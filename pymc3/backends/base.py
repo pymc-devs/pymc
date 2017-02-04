@@ -138,7 +138,7 @@ class BaseTrace(object):
         """
         raise NotImplementedError
 
-    def get_stats(self, varname, sampler_idx=None, burn=0, thin=1):
+    def get_sampler_stats(self, varname, sampler_idx=None, burn=0, thin=1):
         """Get sampler statistics from the trace.
 
         Parameters
@@ -160,14 +160,14 @@ class BaseTrace(object):
             raise ValueError("This backend does not support sampler stats")
 
         if sampler_idx is not None:
-            return self._get_stats(varname, sampler_idx, burn, thin)
+            return self._get_sampler_stats(varname, sampler_idx, burn, thin)
 
         sampler_idxs = [i for i, s in enumerate(self.sampler_vars)
                        if varname in s]
         if not sampler_idxs:
             raise KeyError("Unknown sampler stat %s" % varname)
 
-        vals = np.stack([self._get_stats(varname, i, burn, thin)
+        vals = np.stack([self._get_sampler_stats(varname, i, burn, thin)
                          for i in sampler_idxs], axis=-1)
         if vals.shape[-1] == 1:
             return vals[..., 0]
@@ -175,7 +175,7 @@ class BaseTrace(object):
             return vals
 
 
-    def _get_stats(self, varname, sampler_idx, burn, thin):
+    def _get_sampler_stats(self, varname, sampler_idx, burn, thin):
         """Get sampler statistics."""
         raise NotImplementedError()
 
@@ -204,9 +204,9 @@ class MultiTrace(object):
     """Main interface for accessing values from MCMC results
 
     The core method to select values is `get_values`. The method
-    to select sampler statistics is `get_stats`. Both kinds of values
-    can also be accessed by indexing the MultiTrace object. Indexing
-    can behave in four ways:
+    to select sampler statistics is `get_sampler_stats`. Both kinds of
+    values can also be accessed by indexing the MultiTrace object.
+    Indexing can behave in four ways:
 
     1. Indexing with a variable or variable name (str) returns all
        values for that variable, combining values for all chains.
@@ -285,10 +285,10 @@ class MultiTrace(object):
             if var in self.stat_names:
                 warnings.warn("Attribute access on a trace object is ambigous. "
                 "Sampler statistic and model variable share a name. Use "
-                "trace.get_values or trace.get_stats.")
+                "trace.get_values or trace.get_sampler_stats.")
             return self.get_values(var, burn=burn, thin=thin)
         if var in self.stat_names:
-            return self.get_stats(var, burn=burn, thin=thin)
+            return self.get_sampler_stats(var, burn=burn, thin=thin)
         raise KeyError("Unknown variable %s" % var)
 
     _attrs = set(['_straces', 'varnames', 'chains', 'stat_names',
@@ -305,10 +305,10 @@ class MultiTrace(object):
             if name in self.stat_names:
                 warnings.warn("Attribute access on a trace object is ambigous. "
                 "Sampler statistic and model variable share a name. Use "
-                "trace.get_values or trace.get_stats.")
+                "trace.get_values or trace.get_sampler_stats.")
             return self.get_values(name)
         if name in self.stat_names:
-            return self.get_stats(name)
+            return self.get_sampler_stats(name)
         raise AttributeError("'{}' object has no attribute '{}'".format(
             type(self).__name__, name))
 
@@ -370,8 +370,8 @@ class MultiTrace(object):
             results = [self._straces[chains].get_values(varname, burn, thin)]
         return _squeeze_cat(results, combine, squeeze)
 
-    def get_stats(self, varname, burn=0, thin=1, combine=True, chains=None,
-                  squeeze=True):
+    def get_sampler_stats(self, varname, burn=0, thin=1, combine=True,
+                          chains=None, squeeze=True):
         """Get sampler statistics from the trace.
 
         Parameters
@@ -399,7 +399,7 @@ class MultiTrace(object):
         except TypeError:
             chains = [chains]
 
-        results = [self._straces[chain].get_stats(varname, None, burn, thin)
+        results = [self._straces[chain].get_sampler_stats(varname, None, burn, thin)
                    for chain in chains]
         return _squeeze_cat(results, combine, squeeze)
 

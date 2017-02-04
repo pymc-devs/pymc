@@ -240,7 +240,7 @@ class SamplingTestCase(ModelBackendSetupTestCase):
                              np.tile(last_idx, self.strace.var_shapes[varname]))
         if self.sampler_vars:
             for varname in self.strace.stat_names:
-                vals = self.strace.get_stats(varname)
+                vals = self.strace.get_sampler_stats(varname)
                 assert vals.shape[0] == self.draws
 
     def test_missing_stats(self):
@@ -254,7 +254,7 @@ class SamplingTestCase(ModelBackendSetupTestCase):
         for varname in self.test_point.keys():
             self.assertEqual(self.strace.get_values(varname).shape[0], 1)
         for statname in self.strace.stat_names:
-            self.assertEqual(self.strace.get_stats(statname).shape[0], 1)
+            self.assertEqual(self.strace.get_sampler_stats(statname).shape[0], 1)
 
 
 class SelectionTestCase(ModelBackendSampledTestCase):
@@ -291,7 +291,7 @@ class SelectionTestCase(ModelBackendSampledTestCase):
 
         for statname in self.mtrace.stat_names:
             self.assertEqual(self.stat_dtypes[statname],
-                             self.mtrace.get_stats(statname, chains=0).dtype)
+                             self.mtrace.get_sampler_stats(statname, chains=0).dtype)
 
     def test_get_values_nocombine_thin_keyword(self):
         thin = 2
