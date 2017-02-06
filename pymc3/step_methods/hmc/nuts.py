@@ -11,10 +11,6 @@ import numpy.random as nr
 __all__ = ['NUTS']
 
 
-BinaryTree = namedtuple('BinaryTree',
-                        'q, p, q_grad, proposal, leaf_size, is_valid_sample, p_accept, n_proposals')
-
-
 def bern(p):
     return nr.uniform() < p
 
@@ -34,10 +30,13 @@ class NUTS(BaseHMC):
         'depth': np.int64,
         'step_size': np.float64,
         'tune': np.bool,
-        'accept': np.float64,
+        'mean_tree_accept': np.float64,
         'h_bar': np.float64,
         'step_size_bar': np.float64,
         'tree_size': np.float64,
+        'diverging': np.bool,
+        'energy_change': np.float64,
+        'max_energy_change': np.float64,
     }]
 
     def __init__(self, vars=None, Emax=1000, target_accept=0.8,
@@ -96,38 +95,21 @@ class NUTS(BaseHMC):
         else:
             step_size = np.exp(self.log_step_size_bar)
 
-        u = floatX(nr.uniform())
+        u = nr.uniform()
+        start = Edge(q0, p0, self.dlogp(q0), start_energy)
+        tree = Tree(self.leapfrog, start, u, step_size, self.Emax)
 
-        q = qn = qp = q0
-        qn_grad = qp_grad = self.dlogp(q)
-        pn = pp = p0
-        tree_size, depth = 1., 0
-        keep_sampling = True
-
-        while keep_sampling:
+        while True:
             direction = bern(0.5) * 2 - 1
-            q_edge, p_edge, q_edge_grad = {-1: (qn, pn, qn_grad), 1: (qp, pp, qp_grad)}[direction]
+            diverging, turning = tree.extend(direction)
+            q = tree.proposal.q
 
-            tree = buildtree(self.leapfrog, q_edge, p_edge, q_edge_grad, u, direction,
-                             depth, step_size, self.Emax, start_energy)
-
-            if direction == -1:
-                qn, pn, qn_grad = tree.q, tree.p, tree.q_grad
-            else:
-                qp, pp, qp_grad = tree.q, tree.p, tree.q_grad
-
-            if tree.is_valid_sample and bern(min(1, tree.leaf_size / tree_size)):
-                q = tree.proposal
-
-            tree_size += tree.leaf_size
-
-            span = qp - qn
-            keep_sampling = tree.is_valid_sample and (span.dot(pn) >= 0) and (span.dot(pp) >= 0)
-            depth += 1
+            if diverging or turning:
+                break
 
         w = 1. / (self.m + self.t0)
         self.h_bar = ((1 - w) * self.h_bar +
-                      w * (self.target_accept - tree.p_accept * 1. / tree.n_proposals))
+                      w * (self.target_accept - tree.accept_sum * 1. / tree.n_proposals))
 
         if self.tune:
             self.log_step_size = self.mu - self.h_bar * np.sqrt(self.m) / self.gamma
@@ -137,14 +119,14 @@ class NUTS(BaseHMC):
         self.m += 1
 
         stats = {
-            'depth': depth,
             'step_size': step_size,
             'tune': self.tune,
-            'accept': tree.p_accept * 1. / tree.n_proposals,
             'h_bar': self.h_bar,
             'step_size_bar': np.exp(self.log_step_size_bar),
-            'tree_size': tree_size,
+            'diverging': diverging,
         }
+
+        stats.update(tree.stats())
 
         return q, [stats]
 
@@ -155,35 +137,135 @@ class NUTS(BaseHMC):
         return Competence.INCOMPATIBLE
 
 
-def buildtree(leapfrog, q, p, q_grad, u, direction, depth, step_size, Emax, start_energy):
-    if depth == 0:
-        epsilon = floatX(np.asarray(direction * step_size))
-        q, p, q_grad, new_energy = leapfrog(q, p, q_grad, epsilon)
-        energy_change = new_energy - start_energy
-        leaf_size = int(np.log(u) + energy_change <= 0)
-        is_valid_sample = (np.log(u) + energy_change < Emax)
-        p_accept = min(1, np.exp(-energy_change))
-        return BinaryTree(q, p, q_grad, q, leaf_size, is_valid_sample, p_accept, 1)
-    else:
-        depth -= 1
+# A node in the NUTS tree that is at the far right or left of the tree
+Edge = namedtuple("Edge", 'q, p, q_grad, energy')
 
-    tree = buildtree(leapfrog, q, p, q_grad, u, direction, depth, step_size, Emax, start_energy)
+# A proposal for the next position
+Proposal = namedtuple("Proposal", "q, energy, p_accept")
 
-    if tree.is_valid_sample:
-        subtree = buildtree(leapfrog, tree.q, tree.p, tree.q_grad, u, direction, depth,
-                            step_size, Emax, start_energy)
-        if bern(subtree.leaf_size * 1. / max(subtree.leaf_size + tree.leaf_size, 1)):
-            proposal = subtree.proposal
+# A subtree of the binary tree build by nuts.
+Subtree = namedtuple("Subtree", "left, right, proposal, depth, size, accept_sum, n_proposals")
+
+
+class Tree:
+    def __init__(self, leapfrog, start, u, step_size, Emax):
+        """Binary tree from the NUTS algorithm.
+
+        Parameters
+        ----------
+        leapfrog : function
+            A function that performs a single leapfrog step.
+        start : Edge
+            The starting point of the trajectory.
+        u : float in [0, 1]
+            Random slice sampling variable.
+        step_size : float
+            The step size to use in this tree
+        Emax : float
+            The maximum energy change to accept before aborting the
+            transition as diverging.
+        """
+        self.leapfrog = leapfrog
+        self.start = start
+        self.log_u = np.log(u)
+        self.step_size = step_size
+        self.Emax = Emax
+        self.start_energy = np.array(start.energy)
+
+        self.left = self.right = start
+        self.proposal = Proposal(start.q, start.energy, 1.0)
+        self.depth = 0
+        self.size = 1
+        # TODO Why not a global accept sum and n_proposals?
+        #self.accept_sum = 0
+        #self.n_proposals = 0
+        self.max_energy_change = 0
+
+    def extend(self, direction):
+        """Double the treesize by extending the tree in the given direction.
+
+        If direction is larger than 0, extend it to the right, otherwise
+        extend it to the left.
+
+        Return a tuple `(diverging, turning)` of type (bool, bool).
+        `diverging` indicates, that the tree extension was aborted because
+        the energy change exceeded `self.Emax`. `turning` indicates that
+        the tree extension was stopped because the termination criterior
+        was reached (the trajectory is turning back).
+        """
+        if direction > 0:
+            tree, diverging, turning = self._build_subtree(
+                self.right, self.depth, floatX(np.asarray(self.step_size)))
+            self.right = tree.right
         else:
-            proposal = tree.proposal
-        leaf_size = subtree.leaf_size + tree.leaf_size
-        p_accept = subtree.p_accept + tree.p_accept
-        n_proposals = subtree.n_proposals + tree.n_proposals
-        span = direction * (subtree.q - tree.q)
-        is_valid_sample = (subtree.is_valid_sample and
-                           span.dot(subtree.p) >= 0 and
-                           span.dot(tree.p) >= 0)
-        q, p, q_grad = subtree.q, subtree.p, subtree.q_grad
-        return BinaryTree(q, p, q_grad, proposal, leaf_size, is_valid_sample, p_accept, n_proposals)
-    else:
-        return tree
+            tree, diverging, turning = self._build_subtree(
+                self.left, self.depth, floatX(np.asarray(- self.step_size)))
+            self.left = tree.right
+
+        ok = not (diverging or turning)
+        if ok and bern(min(1, tree.size / self.size)):
+            self.proposal = tree.proposal
+
+        self.depth += 1
+        self.size += tree.size
+        # TODO why not +=
+        #self.accept_sum += tree.accept_sum
+        self.accept_sum = tree.accept_sum
+        #self.n_proposals += tree.n_proposals
+        self.n_proposals = tree.n_proposals
+
+        left, right = self.left, self.right
+        span = right.q - left.q
+        turning = turning or (span.dot(left.p) < 0) or (span.dot(right.p) < 0)
+        return diverging, turning
+
+    def _build_subtree(self, left, depth, epsilon):
+        if depth == 0:
+            right = self.leapfrog(left.q, left.p, left.q_grad, epsilon)
+            right = Edge(*right)
+            energy_change = right.energy - self.start_energy
+            if np.abs(energy_change) > np.abs(self.max_energy_change):
+                self.max_energy_change = energy_change
+            p_accept = min(1, np.exp(-energy_change))
+
+            size = int(self.log_u + energy_change <= 0)
+            diverging = not (self.log_u + energy_change < self.Emax)
+
+            proposal = Proposal(right.q, right.energy, p_accept)
+            tree = Subtree(left, right, proposal, 1, size, p_accept, 1)
+            return tree, diverging, False
+
+        tree1, diverging, turning = self._build_subtree(left, depth - 1, epsilon)
+        if diverging or turning:
+            return tree1, diverging, turning
+
+        tree2, diverging, turning = self._build_subtree(tree1.right, depth - 1, epsilon)
+
+        size = tree1.size + tree2.size
+        accept_sum = tree1.accept_sum + tree2.accept_sum
+        n_proposals = tree1.n_proposals + tree2.n_proposals
+
+        # TODO I think this is right:
+        #span = np.sign(epsilon) * (tree2.right.q - tree1.left.q)
+        #turning = turning or (span.dot(tree1.left.p) < 0) or (span.dot(tree2.right.p) < 0)
+        span = np.sign(epsilon) * (tree2.right.q - tree1.right.q)
+        turning = turning or (span.dot(tree1.right.p) < 0) or (span.dot(tree2.right.p) < 0)
+
+        # TODO why not "ok and bern..."?
+        #ok = not (turning or diverging)
+        if bern(tree2.size * 1. / max(size, 1)):
+            proposal = tree2.proposal
+        else:
+            proposal = tree1.proposal
+
+        tree = Subtree(left, tree2.right, proposal, depth, size, accept_sum, n_proposals)
+        return tree, diverging, turning
+
+    def stats(self):
+        return {
+            'depth': self.depth,
+            'mean_tree_accept': self.accept_sum / self.n_proposals,
+            'energy_change': self.proposal.energy - self.start.energy,
+            'tree_size': self.n_proposals,
+            'max_energy_change': self.max_energy_change,
+        }
