@@ -271,12 +271,22 @@ def _iter_sample(draws, step, start=None, trace=None, chain=0, tune=None,
 
     point = Point(start, model=model)
 
-    strace.setup(draws, chain)
+    if step.generates_stats and strace.supports_sampler_stats:
+        strace.setup(draws, chain, step.stats_dtypes)
+    else:
+        strace.setup(draws, chain)
     for i in range(draws):
         if i == tune:
             step = stop_tuning(step)
-        point = step.step(point)
-        strace.record(point)
+        if step.generates_stats:
+            point, states = step.step(point)
+            if strace.supports_sampler_stats:
+                strace.record(point, states)
+            else:
+                strace.record(point)
+        else:
+            point = step.step(point)
+            strace.record(point)
         yield strace
     else:
         strace.close()

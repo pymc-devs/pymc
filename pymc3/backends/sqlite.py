@@ -178,13 +178,21 @@ class SQLite(base.BaseTrace):
         self.db.connect()
         statement = TEMPLATES['draw_count'].format(table=self.varnames[0])
         self.db.cursor.execute(statement, (self.chain,))
-        return self.db.cursor.fetchall()[0][0]
+        counts = self.db.cursor.fetchall()[0][0]
+        if counts is None:
+            return 0
+        else:
+            return counts
 
     def _get_max_draw(self, chain):
         self.db.connect()
         statement = TEMPLATES['max_draw'].format(table=self.varnames[0])
         self.db.cursor.execute(statement, (chain, ))
-        return self.db.cursor.fetchall()[0][0]
+        counts = self.db.cursor.fetchall()[0][0]
+        if counts is None:
+            return 0
+        else:
+            return counts
 
     def get_values(self, varname, burn=0, thin=1):
         """Get values from trace.
