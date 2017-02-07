@@ -187,14 +187,14 @@ def _theano_single_threestage(H, q, p, q_grad, **theano_kwargs):
 
     References
     ----------
-    Blanes, Sergio, Fernando Casas, and J. M. Sanz-Serna. “Numerical
-    Integrators for the Hybrid Monte Carlo Method.” SIAM Journal on
-    Scientific Computing 36, no. 4 (January 2014): A1556–80.
+    Blanes, Sergio, Fernando Casas, and J. M. Sanz-Serna. "Numerical
+    Integrators for the Hybrid Monte Carlo Method." SIAM Journal on
+    Scientific Computing 36, no. 4 (January 2014): A1556-80.
     doi:10.1137/130932740.
 
-    Mannseth, Janne, Tore Selland Kleppe, and Hans J. Skaug. “On the
+    Mannseth, Janne, Tore Selland Kleppe, and Hans J. Skaug. "On the
     Application of Higher Order Symplectic Integrators in
-    Hamiltonian Monte Carlo.” arXiv:1608.07048 [Stat],
+    Hamiltonian Monte Carlo." arXiv:1608.07048 [Stat],
     August 25, 2016. http://arxiv.org/abs/1608.07048.
     """
     epsilon = tt.scalar('epsilon')
@@ -232,14 +232,14 @@ def _theano_single_twostage(H, q, p, q_grad, **theano_kwargs):
 
     References
     ----------
-    Blanes, Sergio, Fernando Casas, and J. M. Sanz-Serna. “Numerical
-    Integrators for the Hybrid Monte Carlo Method.” SIAM Journal on
-    Scientific Computing 36, no. 4 (January 2014): A1556–80.
+    Blanes, Sergio, Fernando Casas, and J. M. Sanz-Serna. "Numerical
+    Integrators for the Hybrid Monte Carlo Method." SIAM Journal on
+    Scientific Computing 36, no. 4 (January 2014): A1556-80.
     doi:10.1137/130932740.
 
-    Mannseth, Janne, Tore Selland Kleppe, and Hans J. Skaug. “On the
+    Mannseth, Janne, Tore Selland Kleppe, and Hans J. Skaug. "On the
     Application of Higher Order Symplectic Integrators in
-    Hamiltonian Monte Carlo.” arXiv:1608.07048 [Stat],
+    Hamiltonian Monte Carlo." arXiv:1608.07048 [Stat],
     August 25, 2016. http://arxiv.org/abs/1608.07048.
     """
     epsilon = tt.scalar('epsilon')
