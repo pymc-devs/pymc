@@ -1,5 +1,3 @@
-# Elliptical slice sampler
-
 import numpy as np
 import numpy.random as nr
 import theano.tensor as tt
