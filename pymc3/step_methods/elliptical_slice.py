@@ -61,13 +61,14 @@ class EllipticalSlice(ArrayStep):
                                     cov=draw_values([self.prior_cov]))
         y = logp(q0) - nr.standard_exponential()
 
+        # Draw initial proposal and propose a candidate point
         theta = nr.uniform(0, 2 * np.pi)
         theta_max = theta
         theta_min = theta - 2 * np.pi
-
         q_new = q0 * np.cos(theta) + nu * np.sin(theta)
 
         while logp(q_new) <= y:
+            # Shrink the bracket and propose a new point
             if theta < 0:
                 theta_min = theta
             else:
