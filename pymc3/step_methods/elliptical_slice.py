@@ -78,3 +78,9 @@ class EllipticalSlice(ArrayStep):
             q_new = q0 * np.cos(theta) + nu * np.sin(theta)
 
         return q_new
+
+    @staticmethod
+    def competence(var):
+        # Because it requires a specific type of prior, this step method
+        # should only be assigned explicitly.
+        return Competence.INCOMPATIBLE
