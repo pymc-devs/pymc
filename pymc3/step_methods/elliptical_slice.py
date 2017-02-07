@@ -47,9 +47,7 @@ class EllipticalSlice(ArrayStep):
     def __init__(self, vars=None, prior_cov=None, model=None, **kwargs):
         self.model = modelcontext(model)
         self.prior_cov = prior_cov
-
-        # Won't work if prior_cov is of dimension 1 (univariate normal)
-        self.prior_mean = tt.zeros_like(prior_cov.diagonal())
+        self.prior_mean = tt.zeros_like(prior_cov[0])
 
         if vars is None:
             vars = self.model.cont_vars
