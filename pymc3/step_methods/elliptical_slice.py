@@ -27,7 +27,7 @@ class EllipticalSlice(ArrayStep):
     model : PyMC Model
         Optional model for sampling step. Defaults to None (taken from context).
     """
-    default_blocked = False
+    default_blocked = True
 
     def __init__(self, vars=None, prior_cov=None, model=None, **kwargs):
         self.model = modelcontext(model)
