@@ -7,7 +7,6 @@ import theano.tensor as tt
 from .arraystep import ArrayStep, Competence
 from ..model import modelcontext
 from ..theanof import inputvars
-from ..vartypes import continuous_types
 from ..distributions import draw_values
 
 __all__ = ['EllipticalSlice']
@@ -16,17 +15,33 @@ __all__ = ['EllipticalSlice']
 class EllipticalSlice(ArrayStep):
     """Multivariate elliptical slice sampler step.
 
+    Elliptical slice sampling (ESS) [1]_ is a variant of slice sampling
+    that allows sampling from distributions with multivariate Gaussian
+    prior and arbitrary likelihood. It is generally about as fast as
+    regular slice sampling, mixes well even when the prior covariance
+    might otherwise induce a strong dependence between samples, and
+    does not depend on any tuning parameters.
+
+    The Gaussian prior is assumed to have zero mean.
+
     Parameters
     ----------
     vars : list
         List of variables for sampler.
     prior_cov : array
         Covariance matrix of the multivariate Gaussian prior.
-    logp : function
-        Log likelihood.
     model : PyMC Model
-        Optional model for sampling step. Defaults to None (taken from context).
+        Optional model for sampling step. Defaults to None (taken from
+        context).
+
+    References
+    ----------
+    .. [1] I. Murray, R. P. Adams, and D. J. C. MacKay. "Elliptical Slice
+       Sampling", The Proceedings of the 13th International Conference on
+       Artificial Intelligence and Statistics (AISTATS), JMLR W&CP
+       9:541–548, 2010.
     """
+
     default_blocked = True
 
     def __init__(self, vars=None, prior_cov=None, model=None, **kwargs):
