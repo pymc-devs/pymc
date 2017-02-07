@@ -9,7 +9,8 @@ from .dist_math import bound
 
 
 __all__ = ['DensityDist', 'Distribution', 'Continuous', 'Bound',
-           'Discrete', 'NoDistribution', 'TensorType', 'draw_values']
+           'Discrete', 'NoDistribution', 'TensorType', 'draw_values',   
+           'generate_samples']
 
 
 class _Unpickling(object):

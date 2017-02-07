@@ -1,3 +1,3 @@
 from . import cov
 from . import mean
-from . import gp
+from .gp import GP

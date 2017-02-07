@@ -47,6 +47,7 @@ from .distribution import Discrete
 from .distribution import NoDistribution
 from .distribution import TensorType
 from .distribution import draw_values
+from .distribution import generate_samples
 
 from .mixture import Mixture
 from .mixture import NormalMixture
