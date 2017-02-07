@@ -50,11 +50,11 @@ Examples
 >>> from lasagne.updates import sgd, apply_momentum
 >>> l_in = InputLayer((100, 20))
 >>> l1 = DenseLayer(l_in, num_units=3, nonlinearity=softmax)
->>> x = T.matrix('x')  # shp: num_batch x num_features
->>> y = T.ivector('y') # shp: num_batch
+>>> x = tt.matrix('x')  # shp: num_batch x num_features
+>>> y = tt.ivector('y') # shp: num_batch
 >>> l_out = get_output(l1, x)
 >>> params = lasagne.layers.get_all_params(l1)
->>> loss = T.mean(T.nnet.categorical_crossentropy(l_out, y))
+>>> loss = tt.mean(tt.nnet.categorical_crossentropy(l_out, y))
 >>> updates_sgd = sgd(loss, params, learning_rate=0.0001)
 >>> updates = apply_momentum(updates_sgd, params, momentum=0.9)
 >>> train_function = theano.function([x, y], updates=updates)
@@ -65,7 +65,7 @@ from collections import OrderedDict
 import numpy as np
 
 import theano
-import theano.tensor as T
+import theano.tensor as tt
 import pymc3 as pm
 
 
@@ -393,7 +393,7 @@ def adagrad(loss_or_grads, params, learning_rate=1.0, epsilon=1e-6):
         accu_new = accu + grad ** 2
         updates[accu] = accu_new
         updates[param] = param - (learning_rate * grad /
-                                  T.sqrt(accu_new + epsilon))
+                                  tt.sqrt(accu_new + epsilon))
 
     return updates
 
@@ -437,7 +437,7 @@ def rmsprop(loss_or_grads, params, learning_rate=1.0, rho=0.9, epsilon=1e-6):
 
     References
     ----------
-    .. [1] Tieleman, T. and Hinton, G. (2012):
+    .. [1] Tieleman, tt. and Hinton, G. (2012):
            Neural Networks for Machine Learning, Lecture 6.5 - rmsprop.
            Coursera. http://www.youtube.com/watch?v=O3sxAc4hxZU (formula @5:20)
     """
@@ -445,7 +445,7 @@ def rmsprop(loss_or_grads, params, learning_rate=1.0, rho=0.9, epsilon=1e-6):
     updates = OrderedDict()
 
     # Using theano constant to prevent upcasting of float32
-    one = T.constant(1)
+    one = tt.constant(1)
 
     for param, grad in zip(params, grads):
         value = param.get_value(borrow=True)
@@ -454,7 +454,7 @@ def rmsprop(loss_or_grads, params, learning_rate=1.0, rho=0.9, epsilon=1e-6):
         accu_new = rho * accu + (one - rho) * grad ** 2
         updates[accu] = accu_new
         updates[param] = param - (learning_rate * grad /
-                                  T.sqrt(accu_new + epsilon))
+                                  tt.sqrt(accu_new + epsilon))
 
     return updates
 
@@ -516,7 +516,7 @@ def adadelta(loss_or_grads, params, learning_rate=1.0, rho=0.95, epsilon=1e-6):
     updates = OrderedDict()
 
     # Using theano constant to prevent upcasting of float32
-    one = T.constant(1)
+    one = tt.constant(1)
 
     for param, grad in zip(params, grads):
         value = param.get_value(borrow=True)
@@ -532,8 +532,8 @@ def adadelta(loss_or_grads, params, learning_rate=1.0, rho=0.95, epsilon=1e-6):
         updates[accu] = accu_new
 
         # compute parameter update, using the 'old' delta_accu
-        update = (grad * T.sqrt(delta_accu + epsilon) /
-                  T.sqrt(accu_new + epsilon))
+        update = (grad * tt.sqrt(delta_accu + epsilon) /
+                  tt.sqrt(accu_new + epsilon))
         updates[param] = param - learning_rate * update
 
         # update delta_accu (as accu, but accumulating updates)
@@ -586,10 +586,10 @@ def adam(loss_or_grads, params, learning_rate=0.001, beta1=0.9,
     updates = OrderedDict()
 
     # Using theano constant to prevent upcasting of float32
-    one = T.constant(1)
+    one = tt.constant(1)
 
     t = t_prev + 1
-    a_t = learning_rate*T.sqrt(one-beta2**t)/(one-beta1**t)
+    a_t = learning_rate*tt.sqrt(one-beta2**t)/(one-beta1**t)
 
     for param, g_t in zip(params, all_grads):
         value = param.get_value(borrow=True)
@@ -600,7 +600,7 @@ def adam(loss_or_grads, params, learning_rate=0.001, beta1=0.9,
 
         m_t = beta1*m_prev + (one-beta1)*g_t
         v_t = beta2*v_prev + (one-beta2)*g_t**2
-        step = a_t*m_t/(T.sqrt(v_t) + epsilon)
+        step = a_t*m_t/(tt.sqrt(v_t) + epsilon)
 
         updates[m_prev] = m_t
         updates[v_prev] = v_t
@@ -648,7 +648,7 @@ def adamax(loss_or_grads, params, learning_rate=0.002, beta1=0.9,
     updates = OrderedDict()
 
     # Using theano constant to prevent upcasting of float32
-    one = T.constant(1)
+    one = tt.constant(1)
 
     t = t_prev + 1
     a_t = learning_rate/(one-beta1**t)
@@ -661,7 +661,7 @@ def adamax(loss_or_grads, params, learning_rate=0.002, beta1=0.9,
                                broadcastable=param.broadcastable)
 
         m_t = beta1*m_prev + (one-beta1)*g_t
-        u_t = T.maximum(beta2*u_prev, abs(g_t))
+        u_t = tt.maximum(beta2*u_prev, abs(g_t))
         step = a_t*m_t/(u_t + epsilon)
 
         updates[m_prev] = m_t
@@ -744,8 +744,8 @@ def norm_constraint(tensor_var, max_norm, norm_axes=None, epsilon=1e-7):
         )
 
     dtype = np.dtype(theano.config.floatX).type
-    norms = T.sqrt(T.sum(T.sqr(tensor_var), axis=sum_over, keepdims=True))
-    target_norms = T.clip(norms, 0, dtype(max_norm))
+    norms = tt.sqrt(tt.sum(tt.sqr(tensor_var), axis=sum_over, keepdims=True))
+    target_norms = tt.clip(norms, 0, dtype(max_norm))
     constrained_output = \
         (tensor_var * (target_norms / (dtype(epsilon) + norms)))
 
@@ -787,14 +787,14 @@ def total_norm_constraint(tensor_vars, max_norm, epsilon=1e-7,
     >>> from lasagne.layers import InputLayer, DenseLayer
     >>> import lasagne
     >>> from lasagne.updates import sgd, total_norm_constraint
-    >>> x = T.matrix()
-    >>> y = T.ivector()
+    >>> x = tt.matrix()
+    >>> y = tt.ivector()
     >>> l_in = InputLayer((5, 10))
-    >>> l1 = DenseLayer(l_in, num_units=7, nonlinearity=T.nnet.softmax)
+    >>> l1 = DenseLayer(l_in, num_units=7, nonlinearity=tt.nnet.softmax)
     >>> output = lasagne.layers.get_output(l1, x)
-    >>> cost = T.mean(T.nnet.categorical_crossentropy(output, y))
+    >>> cost = tt.mean(tt.nnet.categorical_crossentropy(output, y))
     >>> all_params = lasagne.layers.get_all_params(l1)
-    >>> all_grads = T.grad(cost, all_params)
+    >>> all_grads = tt.grad(cost, all_params)
     >>> scaled_grads = total_norm_constraint(all_grads, 5)
     >>> updates = sgd(scaled_grads, all_params, learning_rate=0.1)
 
@@ -808,9 +808,9 @@ def total_norm_constraint(tensor_vars, max_norm, epsilon=1e-7,
        learning with neural networks. In Advances in Neural Information
        Processing Systems (pp. 3104-3112).
     """
-    norm = T.sqrt(sum(T.sum(tensor**2) for tensor in tensor_vars))
+    norm = tt.sqrt(sum(tt.sum(tensor**2) for tensor in tensor_vars))
     dtype = np.dtype(theano.config.floatX).type
-    target_norm = T.clip(norm, 0, dtype(max_norm))
+    target_norm = tt.clip(norm, 0, dtype(max_norm))
     multiplier = target_norm / (dtype(epsilon) + norm)
     tensor_vars_scaled = [step*multiplier for step in tensor_vars]
 
