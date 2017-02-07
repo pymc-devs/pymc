@@ -1,3 +1,4 @@
+#  pylint:disable=unused-variable
 import unittest
 from pymc3 import Model, gp
 import theano
@@ -176,5 +177,3 @@ class WarpedInputTest(unittest.TestCase):
             cov = gp.cov.WarpedInput(1, warp_func=self.warp_func, args=(1,10,1), cov_func=cov_m52)
         K = theano.function([], cov.K(X))()
         self.assertAlmostEqual(K[0,1], 0.79593, 4)
-
-

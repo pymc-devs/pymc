@@ -31,7 +31,7 @@ def test_plots():
 def test_plots_multidimensional():
     # Test single trace
     start, model, _ = multidimensional_model()
-    with model as model:
+    with model:
         h = np.diag(find_hessian(start))
         step = Metropolis(model.vars, h)
         trace = sample(3000, step=step, start=start)

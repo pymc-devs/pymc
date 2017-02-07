@@ -17,23 +17,23 @@ def trace_to_dataframe(trace, chains=None, varnames=None, hide_transformed_vars=
         Chains to include. If None, all chains are used. A single
         chain value can also be given.
     varnames : list of variable names
-        Variables to be included in the DataFrame, if None all variable are 
+        Variables to be included in the DataFrame, if None all variable are
         included.
     hide_transformed_vars: boolean
-        If true transformed variables will not be included in the resulting 
+        If true transformed variables will not be included in the resulting
         DataFrame.
     """
     var_shapes = trace._straces[0].var_shapes
-    
+
     if varnames is None:
         varnames = var_shapes.keys()
 
     flat_names = {v: create_flat_names(v, shape)
                     for v, shape in var_shapes.items()
                     if not (hide_transformed_vars and v.endswith('_'))}
-    
+
     var_dfs = []
-    for v, shape in var_shapes.items():
+    for v in var_shapes:
         if v in varnames:
             if not hide_transformed_vars or not v.endswith('_'):
                 vals = trace.get_values(v, combine=True, chains=chains)
