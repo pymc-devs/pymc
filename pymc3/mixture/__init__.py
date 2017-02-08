@@ -1,1 +1,2 @@
 
+from .dirichlet import Dirichlet
