@@ -1,3 +1,5 @@
+from collections import OrderedDict
+
 import numpy as np
 from scipy.stats import kde, mode
 import matplotlib.pyplot as plt
@@ -741,7 +743,7 @@ def plot_posterior(trace, varnames=None, transform=lambda x: x, figsize=None,
         return ax, fig
 
     def get_trace_dict(tr, varnames):
-        traces = {}
+        traces = OrderedDict()
         for v in varnames:
             vals = tr.get_values(v, combine=True, squeeze=True)
             if vals.ndim > 1:
