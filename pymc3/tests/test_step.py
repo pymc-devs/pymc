@@ -195,7 +195,7 @@ class TestStepMethods(object):  # yield test doesn't work subclassing unittest.T
                  ('x', np.std, unc, unc / 10.))
         with model:
             steps = (
-                EllipticalSlice(prior_cov=K, model=model),
+                EllipticalSlice(prior_cov=K),
             )
         for step in steps:
             trace = sample(8000, step=step, start=start, model=model, random_seed=1)
