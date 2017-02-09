@@ -44,8 +44,8 @@ class EllipticalSlice(ArrayStep):
 
     def __init__(self, vars=None, prior_cov=None, model=None, **kwargs):
         self.model = modelcontext(model)
-        self.prior_cov = prior_cov
-        self.prior_mean = tt.zeros_like(prior_cov[0])
+        self.prior_cov = tt.as_tensor_variable(prior_cov)
+        self.prior_mean = tt.zeros_like(self.prior_cov[0])
 
         if vars is None:
             vars = self.model.cont_vars
@@ -57,8 +57,8 @@ class EllipticalSlice(ArrayStep):
         """q0 : current state
         logp : log probability function
         """
-        nu = nr.multivariate_normal(mean=draw_values([self.prior_mean]),
-                                    cov=draw_values([self.prior_cov]))
+        mean, cov = draw_values([self.prior_mean, self.prior_cov])
+        nu = nr.multivariate_normal(mean=mean, cov=cov)
         y = logp(q0) - nr.standard_exponential()
 
         # Draw initial proposal and propose a candidate point
