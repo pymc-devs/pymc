@@ -3,18 +3,16 @@ import unittest
 
 from .checks import close_to
 from .models import simple_categorical, mv_simple, mv_simple_discrete, simple_2model
-from .helpers import SeededTest
 from pymc3.sampling import assign_step_methods, sample
 from pymc3.model import Model
 from pymc3.step_methods import (NUTS, BinaryGibbsMetropolis, CategoricalGibbsMetropolis,
                                 Metropolis, Slice, CompoundStep,
                                 MultivariateNormalProposal, HamiltonianMC)
-from pymc3.distributions import Binomial, Normal, Bernoulli, Categorical, InverseGamma
+from pymc3.distributions import Binomial, Normal, Bernoulli, Categorical
 
 from numpy.testing import assert_array_almost_equal
 import numpy as np
 from tqdm import tqdm
-from scipy import stats
 
 
 class TestStepMethods(object):  # yield test doesn't work subclassing unittest.TestCase
@@ -240,42 +238,3 @@ class TestAssignStepMethods(unittest.TestCase):
             Binomial('x', 10, 0.5)
             steps = assign_step_methods(model, [])
         self.assertIsInstance(steps, Metropolis)
-
-
-class TestSampleEstimates(SeededTest):
-    def test_posterior_estimate(self):
-        alpha_true, sigma_true = 1., 0.5
-        beta_true = 1.
-
-        size = 1000
-
-        X = np.random.randn(size)
-        Y = alpha_true + beta_true * X + np.random.randn(size) * sigma_true
-
-        decimal = 1
-        with Model():
-            alpha = Normal('alpha', mu=0, sd=100, testval=alpha_true)
-            beta = Normal('beta', mu=0, sd=100, testval=beta_true)
-            sigma = InverseGamma('sigma', 10., testval=sigma_true)
-            mu = alpha + beta * X
-            Normal('Y_obs', mu=mu, sd=sigma, observed=Y)
-
-            for step_method, params in ((NUTS, {"target_accept": 0.95}), (Slice, {}), (Metropolis, {'scaling': 10.})):
-                trace = sample(100000, step=step_method(**params), tune=1000)
-                trace_ = trace[-300::5]
-
-                # We do the same for beta - using more burnin.
-                np.testing.assert_almost_equal(np.mean(trace_.alpha),
-                                               alpha_true, decimal=decimal)
-                np.testing.assert_almost_equal(np.mean(trace_.beta),
-                                               beta_true,
-                                               decimal=decimal)
-                np.testing.assert_almost_equal(np.mean(trace_.sigma),
-                                               sigma_true, decimal=decimal)
-
-                # Make sure posteriors are normal
-                _, p_alpha = stats.normaltest(trace_.alpha)
-                _, p_beta = stats.normaltest(trace_.beta)
-                # p-values should be > .05 to indiciate
-                np.testing.assert_array_less(0.05, p_alpha, verbose=True)
-                np.testing.assert_array_less(0.05, p_beta, verbose=True)
