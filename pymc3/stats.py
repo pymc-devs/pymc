@@ -5,6 +5,7 @@ import pandas as pd
 import itertools
 import sys
 import warnings
+from collections import namedtuple
 from .model import modelcontext
 
 from scipy.misc import logsumexp
@@ -124,7 +125,7 @@ def waic(trace, model=None, pointwise=False):
 
     Returns
     -------
-    DataFrame with the following columns:
+    namedtuple with the following elements:
     waic: widely available information criterion
     waic_se: standard error of waic
     p_waic: effective number parameters
@@ -151,13 +152,11 @@ def waic(trace, model=None, pointwise=False):
     p_waic = np.sum(vars_lpd)
 
     if pointwise:
-        return pd.DataFrame([[waic, waic_se, p_waic, waic_i]],
-                            columns=['WAIC', 'WAIC_se', 'p_WAIC', 'waic_i'],
-                            index=['model'])
+        WAIC_r = namedtuple('WAIC_r', 'WAIC, WAIC_se, p_WAIC, WAIC_i')
+        return WAIC_r(waic, waic_se, p_waic, waic_i)
     else:
-        return pd.DataFrame([[waic, waic_se, p_waic]],
-                            columns=['WAIC', 'WAIC_se', 'p_WAIC'],
-                            index=['model'])
+        WAIC_r = namedtuple('WAIC_r', 'WAIC, WAIC_se, p_WAIC')
+        return WAIC_r(waic, waic_se, p_waic)
 
 
 def loo(trace, model=None, pointwise=False):
@@ -179,7 +178,7 @@ def loo(trace, model=None, pointwise=False):
 
     Returns
     -------
-    A DataFrame with the following columns:
+    namedtuple with the following elements:
     loo: approximated Leave-one-out cross-validation
     loo_se: standard error of loo
     p_loo: effective number of parameters
@@ -240,13 +239,11 @@ def loo(trace, model=None, pointwise=False):
     p_loo = lppd + (0.5 * loo_lppd)
 
     if pointwise:
-        return pd.DataFrame([[loo_lppd, loo_lppd_se, p_loo, loo_lppd_i]],
-                            columns=['LOO', 'LOO_se', 'p_LOO', 'LOO_i'],
-                            index=['model'])
+        LOO_r = namedtuple('LOO_r', 'LOO, LOO_se, p_LOO, LOO_i')
+        return LOO_r(loo_lppd, loo_lppd_se, p_loo, loo_lppd_i)
     else:
-        return pd.DataFrame([[loo_lppd, loo_lppd_se, p_loo]],
-                            columns=['LOO', 'LOO_se', 'p_LOO'],
-                            index=['model'])
+        LOO_r = namedtuple('LOO_r', 'LOO, LOO_se, p_LOO')
+        return LOO_r(loo_lppd, loo_lppd_se, p_loo)
 
 
 def bpic(trace, model=None):
