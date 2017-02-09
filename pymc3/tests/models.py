@@ -1,4 +1,5 @@
 from pymc3 import Model, Normal, Categorical, Metropolis
+from pymc3.gp.cov import ExpQuad
 import numpy as np
 import pymc3 as pm
 from itertools import product
@@ -96,6 +97,21 @@ def mv_simple_discrete():
                 C[i, j] = -n * p[i] * p[j]
 
     return model.test_point, model, (mu, C)
+
+
+def mv_prior_simple():
+    n = 3
+    noise = 1e-10
+    X = np.linspace(0, 1, n)[:, None]
+    mu = np.sin(3 * X).flatten()
+    K = pm.gp.cov.ExpQuad(1, 1).K(X)
+
+    with pm.Model() as model:
+        x = pm.MvNormal('x', mu=np.zeros(n), cov=K, shape=n)
+        x_obs = pm.MvNormal('x_obs', observed=mu, mu=x,
+                            cov=noise * np.eye(n), shape=n)
+
+    return model.test_point, model, (K, mu, noise)
 
 
 def non_normal(n=2):
