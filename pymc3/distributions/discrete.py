@@ -389,7 +389,7 @@ class DiscreteUniform(Discrete):
         # as array-like.
         samples = stats.uniform.rvs(lower, upper - lower - np.finfo(float).eps,
                                     size=size)
-        return np.floor(samples).astype('int64')
+        return np.floor(samples).astype('int32')
 
     def random(self, point=None, size=None, repeat=None):
         lower, upper = draw_values([self.lower, self.upper], point=point)
