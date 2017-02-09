@@ -37,7 +37,7 @@ class EllipticalSlice(ArrayStep):
     .. [1] I. Murray, R. P. Adams, and D. J. C. MacKay. "Elliptical Slice
        Sampling", The Proceedings of the 13th International Conference on
        Artificial Intelligence and Statistics (AISTATS), JMLR W&CP
-       9:541–548, 2010.
+       9:541-548, 2010.
     """
 
     default_blocked = True
