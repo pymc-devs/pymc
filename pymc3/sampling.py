@@ -1,4 +1,4 @@
-from collections import defaultdict
+rom collections import defaultdict
 
 from joblib import Parallel, delayed
 from numpy.random import randint, seed
