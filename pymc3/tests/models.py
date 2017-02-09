@@ -1,5 +1,4 @@
 from pymc3 import Model, Normal, Categorical, Metropolis
-from pymc3.gp.cov import ExpQuad
 import numpy as np
 import pymc3 as pm
 from itertools import product
