@@ -86,9 +86,9 @@ def traceplot(trace, varnames=None, transform=lambda x: x, figsize=None,
             d = np.squeeze(transform(d))
             d = make_2d(d)
             if d.dtype.kind == 'i':
-                histplot_op(ax[i, 0], d, alpha=alpha)
+                colors = histplot_op(ax[i, 0], d, alpha=alpha)
             else:
-                kdeplot_op(ax[i, 0], d, prior, prior_alpha, prior_style)
+                colors = kdeplot_op(ax[i, 0], d, prior, prior_alpha, prior_style)
             ax[i, 0].set_title(str(v))
             ax[i, 0].grid(grid)
             ax[i, 1].set_title(str(v))
@@ -99,9 +99,10 @@ def traceplot(trace, varnames=None, transform=lambda x: x, figsize=None,
 
             if lines:
                 try:
-                    ax[i, 0].axvline(x=lines[v], color="r", lw=1.5)
-                    ax[i, 1].axhline(y=lines[v], color="r",
-                                     lw=1.5, alpha=alpha)
+                    for c, l in zip(colors, np.atleast_1d(lines[v]).ravel()):
+                        ax[i, 0].axvline(x=l, color=c, lw=1.5, alpha=0.75)
+                        ax[i, 1].axhline(y=l, color=c,
+                                         lw=1.5, alpha=alpha)
                 except KeyError:
                     pass
         ax[i, 0].set_ylim(ymin=0)
@@ -110,17 +111,21 @@ def traceplot(trace, varnames=None, transform=lambda x: x, figsize=None,
 
 
 def histplot_op(ax, data, alpha=.35):
+    colors = []
     for i in range(data.shape[1]):
         d = data[:, i]
 
         mind = np.min(d)
         maxd = np.max(d)
         step = max((maxd - mind) // 100, 1)
-        ax.hist(d, bins=range(mind, maxd + 2, step), alpha=alpha, align='left')
+        h = ax.hist(d, bins=range(mind, maxd + 2, step), alpha=alpha, align='left')
+        colors.append(h[2][0].get_facecolor())
         ax.set_xlim(mind - .5, maxd + .5)
+    return colors
 
 
 def kdeplot_op(ax, data, prior=None, prior_alpha=1, prior_style='--'):
+    colors = []
     for i in range(data.shape[1]):
         d = data[:, i]
         density, l, u = fast_kde(d)
@@ -130,7 +135,9 @@ def kdeplot_op(ax, data, prior=None, prior_alpha=1, prior_style='--'):
             p = prior.logp(x).eval()
             ax.plot(x, np.exp(p), alpha=prior_alpha, ls=prior_style)
 
-        ax.plot(x, density)
+        l = ax.plot(x, density)
+        colors.append(l[0].get_color())
+    return colors
 
 
 def make_2d(a):
