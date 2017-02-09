@@ -104,7 +104,7 @@ def log_post_trace(trace, model):
     return np.vstack([obs.logp_elemwise(pt) for obs in model.observed_RVs] for pt in trace)
 
 
-def waic(trace, model=None, n_eff=False, pointwise=False):
+def waic(trace, model=None, pointwise=False):
     """
     Calculate the widely available information criterion, its standard error
     and the effective number of parameters of the samples in trace from model.
@@ -117,9 +117,6 @@ def waic(trace, model=None, n_eff=False, pointwise=False):
     trace : result of MCMC run
     model : PyMC Model
         Optional model. Default None, taken from context.
-    n_eff: bool
-        if True the effective number parameters will be returned.
-        Default False
     pointwise: bool
         if True the pointwise predictive accuracy will be returned.
         Default False
@@ -127,9 +124,11 @@ def waic(trace, model=None, n_eff=False, pointwise=False):
 
     Returns
     -------
+    DataFrame with the following columns:
     waic: widely available information criterion
     waic_se: standard error of waic
-    p_waic: effective number parameters, only if n_eff True
+    p_waic: effective number parameters
+    waic_i: and array of the pointwise predictive accuracy, only if pointwise True
     """
     model = modelcontext(model)
 
@@ -151,16 +150,18 @@ def waic(trace, model=None, n_eff=False, pointwise=False):
 
     p_waic = np.sum(vars_lpd)
 
-
-    if n_eff:
-        return waic, waic_se, p_waic
-    elif pointwise:
-        return waic, waic_se, waic_i, p_waic
+    if pointwise:
+        return pd.DataFrame([[waic, waic_se, p_waic, waic_i]],
+                            columns=['WAIC', 'WAIC_se', 'p_WAIC', 'waic_i'],
+                            index=['model'])
     else:
-        return waic, waic_se
+        return pd.DataFrame([[waic, waic_se, p_waic]],
+                            columns=['WAIC', 'WAIC_se', 'p_WAIC'],
+                            index=['model'])
 
 
-def loo(trace, model=None, n_eff=False):
+
+def loo(trace, model=None, pointwise=False):
     """
     Calculates leave-one-out (LOO) cross-validation for out of sample predictive
     model fit, following Vehtari et al. (2015). Cross-validation is computed using
@@ -172,17 +173,20 @@ def loo(trace, model=None, n_eff=False):
     trace : result of MCMC run
     model : PyMC Model
         Optional model. Default None, taken from context.
-    n_eff: bool
-        if True the effective number parameters will be computed and returned.
+    pointwise: bool
+        if True the pointwise predictive accuracy will be returned.
         Default False
 
 
     Returns
     -------
-    elpd_loo: log pointwise predictive density calculated via approximated LOO cross-validation
-    elpd_loo_se: standard error of waic elpd_loo
-    p_loo: effective number parameters, only if n_eff True
+    A DataFrame with the following columns:
+    loo: approximated Leave-one-out cross-validation
+    loo_se: standard error of loo
+    p_loo: effective number of parameters
+    loo_i: and array of the pointwise predictive accuracy, only if pointwise True
     """
+
     model = modelcontext(model)
 
     log_py = log_post_trace(trace, model)
@@ -220,24 +224,30 @@ def loo(trace, model=None, n_eff=False):
     # Replace importance ratios with order statistics of fitted Pareto
     r_sorted[q80:] = np.vstack(expvals).T
     # Unsort ratios (within columns) before using them as weights
-    r_new = np.array([r[np.argsort(i)]
-                      for r, i in zip(r_sorted, np.argsort(r, axis=0))])
+    r_new =  np.array([r[np.argsort(i)]
+                      for r, i in zip(r_sorted.T, np.argsort(r.T, axis=1))]).T
 
     # Truncate weights to guarantee finite variance
     w = np.minimum(r_new, r_new.mean(axis=0) * S**0.75)
 
-    loo_lppd_i = -2.0 * logsumexp(log_py, axis = 0, b = w / np.sum(w, axis = 0))
+    loo_lppd_i = - 2. * logsumexp(log_py, axis=0, b=w/np.sum(w, axis=0))
 
     loo_lppd_se = np.sqrt(len(loo_lppd_i) * np.var(loo_lppd_i))
 
     loo_lppd = np.sum(loo_lppd_i)
+    
+    lppd = np.sum(logsumexp(log_py, axis=0, b=1./log_py.shape[0]))
 
+    p_loo = lppd + (0.5 * loo_lppd)
 
-    if n_eff:
-        p_loo = np.sum(np.log(np.mean(py, axis=0))) - loo_lppd
-        return loo_lppd, loo_lppd_se, p_loo
+    if pointwise:
+        return pd.DataFrame([[loo_lppd, loo_lppd_se, p_loo, loo_lppd_i]],
+                            columns=['LOO', 'LOO_se', 'p_LOO', 'LOO_i'],
+                            index=['model'])
     else:
-        return loo_lppd, loo_lppd_se
+        return pd.DataFrame([[loo_lppd, loo_lppd_se, p_loo]],
+                            columns=['LOO', 'LOO_se', 'p_LOO'],
+                            index=['model'])
 
 
 def bpic(trace, model=None):
