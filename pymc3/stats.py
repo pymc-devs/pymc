@@ -134,7 +134,7 @@ def waic(trace, model=None, pointwise=False):
 
     log_py = log_post_trace(trace, model)
 
-    lppd_i = logsumexp(log_py, axis = 0, b = 1.0 / log_py.shape[0])
+    lppd_i = logsumexp(log_py, axis=0, b=1.0 / log_py.shape[0])
 
     vars_lpd = np.var(log_py, axis=0)
     if np.any(vars_lpd > 0.4):
@@ -158,7 +158,6 @@ def waic(trace, model=None, pointwise=False):
         return pd.DataFrame([[waic, waic_se, p_waic]],
                             columns=['WAIC', 'WAIC_se', 'p_WAIC'],
                             index=['model'])
-
 
 
 def loo(trace, model=None, pointwise=False):
@@ -224,19 +223,19 @@ def loo(trace, model=None, pointwise=False):
     # Replace importance ratios with order statistics of fitted Pareto
     r_sorted[q80:] = np.vstack(expvals).T
     # Unsort ratios (within columns) before using them as weights
-    r_new =  np.array([r[np.argsort(i)]
+    r_new = np.array([r[np.argsort(i)]
                       for r, i in zip(r_sorted.T, np.argsort(r.T, axis=1))]).T
 
     # Truncate weights to guarantee finite variance
     w = np.minimum(r_new, r_new.mean(axis=0) * S**0.75)
 
-    loo_lppd_i = - 2. * logsumexp(log_py, axis=0, b=w/np.sum(w, axis=0))
+    loo_lppd_i = - 2. * logsumexp(log_py, axis=0, b=w / np.sum(w, axis=0))
 
     loo_lppd_se = np.sqrt(len(loo_lppd_i) * np.var(loo_lppd_i))
 
     loo_lppd = np.sum(loo_lppd_i)
-    
-    lppd = np.sum(logsumexp(log_py, axis=0, b=1./log_py.shape[0]))
+
+    lppd = np.sum(logsumexp(log_py, axis=0, b=1. / log_py.shape[0]))
 
     p_loo = lppd + (0.5 * loo_lppd)
 
