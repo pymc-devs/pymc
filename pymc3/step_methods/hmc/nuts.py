@@ -147,7 +147,7 @@ Proposal = namedtuple("Proposal", "q, energy, p_accept")
 Subtree = namedtuple("Subtree", "left, right, proposal, depth, size, accept_sum, n_proposals")
 
 
-class Tree:
+class Tree(object):
     def __init__(self, leapfrog, start, u, step_size, Emax):
         """Binary tree from the NUTS algorithm.
 
@@ -232,7 +232,7 @@ class Tree:
             diverging = not (self.log_u + energy_change < self.Emax)
 
             proposal = Proposal(right.q, right.energy, p_accept)
-            tree = Subtree(left, right, proposal, 1, size, p_accept, 1)
+            tree = Subtree(right, right, proposal, 1, size, p_accept, 1)
             return tree, diverging, False
 
         tree1, diverging, turning = self._build_subtree(left, depth - 1, epsilon)
@@ -245,20 +245,16 @@ class Tree:
         accept_sum = tree1.accept_sum + tree2.accept_sum
         n_proposals = tree1.n_proposals + tree2.n_proposals
 
-        # TODO I think this is right:
-        #span = np.sign(epsilon) * (tree2.right.q - tree1.left.q)
-        #turning = turning or (span.dot(tree1.left.p) < 0) or (span.dot(tree2.right.p) < 0)
-        span = np.sign(epsilon) * (tree2.right.q - tree1.right.q)
-        turning = turning or (span.dot(tree1.right.p) < 0) or (span.dot(tree2.right.p) < 0)
+        left, right = tree1.left, tree2.right
+        span = np.sign(epsilon) * (right.q - left.q)
+        turning = turning or (span.dot(left.p) < 0) or (span.dot(right.p) < 0)
 
-        # TODO why not "ok and bern..."?
-        #ok = not (turning or diverging)
         if bern(tree2.size * 1. / max(size, 1)):
             proposal = tree2.proposal
         else:
             proposal = tree1.proposal
 
-        tree = Subtree(left, tree2.right, proposal, depth, size, accept_sum, n_proposals)
+        tree = Subtree(left, right, proposal, depth, size, accept_sum, n_proposals)
         return tree, diverging, turning
 
     def stats(self):
