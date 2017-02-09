@@ -1,3 +1,3 @@
 from . import cov
 from . import mean
-from .gp import GP
+from .gp import ConjugatePred
