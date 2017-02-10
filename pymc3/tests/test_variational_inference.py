@@ -1,4 +1,5 @@
 import unittest
+import tqdm
 import numpy as np
 import theano
 import theano.tensor as tt
@@ -9,9 +10,10 @@ from pymc3.variational.opvi import (
     KL, MeanField, FullRank, TestFunction,
     NeuralNetwork, TestNeuralNetwork, LS
 )
-from ..theanof import set_tt_rng
-from . import models
-from .helpers import SeededTest
+from pymc3.theanof import set_tt_rng, tt_rng
+from pymc3.tests import models
+from pymc3.tests.helpers import SeededTest
+_old_rng = tt_rng()
 set_tt_rng(MRG_RandomStreams(42))
 
 
@@ -107,7 +109,7 @@ class TestApproximates:
                 obj_f = self.op(approx)(self.tf(approx.total_size))
                 updates = obj_f.updates(obj_f.random())
                 step = theano.function([], [], updates=updates)
-                for _ in range(self.NITER):
+                for _ in tqdm.tqdm(range(self.NITER)):
                     step()
                 trace = approx.sample_vp(10000)
             np.testing.assert_allclose(np.mean(trace['mu']), mu_post, rtol=0.1)
@@ -123,10 +125,12 @@ class TestFullRank(TestApproximates.Base):
 
 
 class TestLSOp(TestApproximates.Base):
-    NITER = 100000
-    approx = NeuralNetwork
-    tf = TestNeuralNetwork
+    NITER = 10000
+    approx = staticmethod(lambda: NeuralNetwork(hidden_size=(3, 3), activations=tt.nnet.relu))
+    tf = staticmethod(lambda dim: TestNeuralNetwork(dim, hidden_size=(3, 3), activations=tt.nnet.relu))
     op = LS
 
 if __name__ == '__main__':
     unittest.main()
+
+set_tt_rng(_old_rng)
