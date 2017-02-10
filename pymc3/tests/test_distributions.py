@@ -12,8 +12,7 @@ from ..distributions import (DensityDist, Categorical, Multinomial, VonMises, Di
                              InverseGamma, Gamma, Cauchy, HalfCauchy, Lognormal, Laplace,
                              NegativeBinomial, Geometric, Exponential, ExGaussian, Normal,
                              Flat, LKJCorr, Wald, ChiSquared, HalfNormal, DiscreteUniform,
-                             Bound, Uniform, Triangular, Binomial, Wishart, SkewNormal,
-                             DiscreteWeibull)
+                             Bound, Uniform, Triangular, Binomial, SkewNormal, DiscreteWeibull)
 from ..distributions import continuous, multivariate
 from nose_parameterized import parameterized
 from numpy import array, inf, log, exp
