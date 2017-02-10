@@ -32,6 +32,7 @@ fi
 
 pip install --upgrade pip
 pip install tqdm
+pip install nose_parameterized
 pip install --no-deps numdifftools
 pip install git+https://github.com/Theano/Theano.git
 pip install git+https://github.com/mahmoudimus/nose-timer.git
