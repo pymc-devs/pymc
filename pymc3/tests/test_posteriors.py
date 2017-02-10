@@ -9,7 +9,8 @@ class NUTSUniform(sf.NutsFixture, sf.UniformFixture):
     burn = 1000
     chains = 4
     min_n_eff = 9000
-    decimals = 2
+    rtol = 0.1
+    atol = 0.05
 
 
 class MetropolisUniform(sf.MetropolisFixture, sf.UniformFixture):
@@ -18,7 +19,8 @@ class MetropolisUniform(sf.MetropolisFixture, sf.UniformFixture):
     burn = 10000
     chains = 4
     min_n_eff = 10000
-    decimals = 2
+    rtol = 0.1
+    atol = 0.05
 
 
 class SliceUniform(sf.SliceFixture, sf.UniformFixture):
@@ -27,7 +29,8 @@ class SliceUniform(sf.SliceFixture, sf.UniformFixture):
     burn = 1000
     chains = 4
     min_n_eff = 5000
-    decimals = 2
+    rtol = 0.1
+    atol = 0.05
 
 
 class NUTSNormal(sf.NutsFixture, sf.NormalFixture):
@@ -36,7 +39,8 @@ class NUTSNormal(sf.NutsFixture, sf.NormalFixture):
     burn = 1000
     chains = 2
     min_n_eff = 10000
-    decimals = 1
+    rtol = 0.1
+    atol = 0.05
 
 
 class NUTSBetaBinomial(sf.NutsFixture, sf.BetaBinomialFixture):
@@ -45,7 +49,8 @@ class NUTSBetaBinomial(sf.NutsFixture, sf.BetaBinomialFixture):
     burn = 1000
     chains = 2
     min_n_eff = 2000
-    decimals = 1
+    rtol = 0.1
+    atol = 0.05
 
 
 @attr('extra')
@@ -55,7 +60,8 @@ class NUTSStudentT(sf.NutsFixture, sf.StudentTFixture):
     burn = 1000
     chains = 2
     min_n_eff = 5000
-    decimals = 1
+    rtol = 0.1
+    atol = 0.05
 
 
 @attr('extra')
@@ -65,4 +71,5 @@ class NUTSNormalLong(sf.NutsFixture, sf.NormalFixture):
     burn = 5000
     chains = 2
     min_n_eff = 300000
-    decimals = 3
+    rtol = 0.01
+    atol = 0.001
