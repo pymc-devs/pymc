@@ -11,7 +11,7 @@ from ..blocking import ArrayOrdering
 from ..distributions.dist_math import rho2sd, log_normal
 from ..math import flatten_list
 from ..model import modelcontext
-from ..theanof import tt_rng, memoize, change_flags, GradScale
+from ..theanof import tt_rng, memoize, change_flags, GradScale, floatX
 
 # helper class
 FlatView = collections.namedtuple('FlatView', 'input, replacements')
@@ -76,15 +76,50 @@ class Operator(object):
             if obj_optimizer is None:
                 obj_optimizer = adagrad_optimizer(learning_rate=.01, epsilon=.1)
             if test_optimizer is None:
-                test_optimizer = adagrad_optimizer(learning_rate=.001, epsilon=.1)
+                test_optimizer = adagrad_optimizer(learning_rate=0.01, epsilon=.1)
             target = self(z)
-            updates = theano.OrderedUpdates()
-            updates.update(obj_optimizer(target, self.obj_params + more_params))
+            obj_updates = theano.OrderedUpdates()
+            test_updates = theano.OrderedUpdates()
+            obj_updates.update(obj_optimizer(target, self.obj_params + more_params))
             if self.test_params:
-                updates.update(test_optimizer(-target, self.test_params))
+                test_updates.update(test_optimizer(-target, self.test_params))
             else:
                 pass
-            return updates
+            return obj_updates, test_updates
+
+        def step_function(self, z, obj_optimizer=None, test_optimizer=None, more_params=None, p=.1, value=True):
+            obj_upd, tf_upd = self.updates(z, obj_optimizer, test_optimizer, more_params)
+            obj_step = theano.function([], [], updates=obj_upd)
+            if tf_upd:
+                tf_step = theano.function([], [], updates=tf_upd)
+            else:
+                tf_step = None
+            if value:
+                val_fun = theano.function([], self(z))
+            else:
+                val_fun = None
+
+            if val_fun is not None:
+                if tf_step is not None:
+                    def step():
+                        obj_step()
+                        if np.random.uniform(size=()) < p:
+                            tf_step()
+                        return val_fun()
+                else:
+                    def step():
+                        obj_step()
+                        return val_fun()
+            else:
+                if tf_step is not None:
+                    def step():
+                        obj_step()
+                        if np.random.uniform(size=()) < p:
+                            tf_step()
+                else:
+                    def step():
+                        obj_step()
+            return step
 
 
 def cast_to_list(params):
