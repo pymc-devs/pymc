@@ -1,6 +1,7 @@
 from __future__ import division
 
 from nose import SkipTest
+from nose_parameterized import parameterized
 from nose.plugins.attrib import attr
 import numpy as np
 import scipy.stats as st
@@ -496,16 +497,12 @@ class ScalarParameterSamples(SeededTest):
             u = np.random.uniform(size=size)
 
             return np.ceil(np.power(np.log(1 - u) / np.log(q), 1. / beta)) - 1
-        
+
         pymc3_random_discrete(pm.DiscreteWeibull, {'q': Unit, 'beta': Rplusdunif},
                               ref_rand=ref_rand)
 
-    def test_categorical(self):
-        # Don't make simplex too big. You have been warned.
-        for s in [2, 3, 4]:
-            yield self.check_categorical_random, s
-
-    def checks_categorical_random(self, s):
+    @parameterized.expand([(2,), (3,), (4,)])
+    def test_categorical_random(self, s):
         def ref_rand(size, p):
             return nr.choice(np.arange(p.shape[0]), p=p, size=size)
         pymc3_random_discrete(pm.Categorical, {'p': Simplex(s)}, ref_rand=ref_rand)
