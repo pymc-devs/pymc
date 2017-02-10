@@ -36,7 +36,6 @@ class KnownCDF(unittest.TestCase):
             elif samples.ndim == 2:
                 pvals = []
                 for samples_, cdf_ in zip(samples.T, cdf):
-                    print(samples_)
                     t, p = stats.kstest(samples_[::self.ks_thin], cdf=cdf_)
                     pvals.append(p)
                 t, p = stats.combine_pvalues(pvals)
@@ -115,7 +114,6 @@ class BaseSampler(SeededTest):
 
     def test_neff(self):
         if hasattr(self, 'min_n_eff'):
-            print(len(self.trace))
             n_eff = pm.effective_n(self.trace[self.burn:])
             for var in n_eff:
                 npt.assert_array_less(self.min_n_eff, n_eff[var])
