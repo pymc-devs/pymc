@@ -13,14 +13,14 @@ class KnownMean(unittest.TestCase):
     def test_mean(self):
         for varname, expected in self.means.items():
             samples = self.samples[varname]
-            npt.assert_array_almost_equal(samples.mean(0), expected, self.decimals)
+            npt.assert_allclose(expected, samples.mean(0), self.rtol, self.atol)
 
 
 class KnownVariance(unittest.TestCase):
     def test_var(self):
         for varname, expected in self.variances.items():
             samples = self.samples[varname]
-            npt.assert_array_almost_equal(samples.var(0), expected, self.decimals)
+            npt.assert_allclose(expected, samples.var(0), self.rtol, self.atol)
 
 
 class KnownCDF(unittest.TestCase):
@@ -103,6 +103,7 @@ class StudentTFixture(KnownMean, KnownVariance, KnownCDF):
 class BaseSampler(SeededTest):
     @classmethod
     def setUpClass(cls):
+        super(BaseSampler, cls).setUpClass()
         cls.model = cls.make_model()
         with cls.model:
             cls.step = cls.make_step()
@@ -122,7 +123,7 @@ class BaseSampler(SeededTest):
     def test_Rhat(self):
         rhat = pm.gelman_rubin(self.trace[self.burn:])
         for var in rhat:
-            npt.assert_array_almost_equal(1, rhat[var], 2)
+            npt.assert_allclose(rhat[var], 1, rtol=0.01)
 
 
 class NutsFixture(BaseSampler):
@@ -135,7 +136,7 @@ class NutsFixture(BaseSampler):
 
     def test_target_accept(self):
         accept = self.trace[self.burn:]['mean_tree_accept']
-        npt.assert_almost_equal(self.step.target_accept, accept.mean(), 1)
+        npt.assert_allclose(accept.mean(), self.step.target_accept, 1)
 
 
 class MetropolisFixture(BaseSampler):
