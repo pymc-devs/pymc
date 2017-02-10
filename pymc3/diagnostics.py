@@ -223,13 +223,15 @@ def effective_n(mtrace):
             variogram = np.mean((x[t:, :] - x[:-t, :])**2)
             rho[t] = 1. - variogram / (2. * Vhat)
 
-            if not t % 2:
-                negative_autocorr = sum(rho[t - 1:t + 1]) < 0
+            negative_autocorr = sum(rho[t - 1:t + 1]) < 0
 
             t += 1
 
+        if t % 2:
+            t -= 1
+
         return min(num_chains * num_samples,
-                   int(num_chains * num_samples / (1. + 2 * rho[1:t].sum())))
+                   int(num_chains * num_samples / (1. + 2 * rho[1:t-1].sum())))
 
     n_eff = {}
     for var in mtrace.varnames:
