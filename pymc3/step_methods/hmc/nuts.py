@@ -36,6 +36,7 @@ class NUTS(BaseHMC):
         'tree_size': np.float64,
         'diverging': np.bool,
         'energy_change': np.float64,
+        'energy': np.float64,
         'max_energy_change': np.float64,
     }]
 
@@ -262,6 +263,7 @@ class Tree(object):
             'depth': self.depth,
             'mean_tree_accept': self.accept_sum / self.n_proposals,
             'energy_change': self.proposal.energy - self.start.energy,
+            'energy': self.proposal.energy,
             'tree_size': self.n_proposals,
             'max_energy_change': self.max_energy_change,
         }
