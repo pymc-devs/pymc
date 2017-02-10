@@ -11,8 +11,10 @@ import numpy.random as nr
 __all__ = ['NUTS']
 
 
-def bern(p):
-    return nr.uniform() < p
+def logbern(log_p):
+    if np.isnan(log_p):
+        raise FloatingPointError("log_p can't be nan.")
+    return np.log(nr.uniform()) < log_p
 
 
 class NUTS(BaseHMC):
@@ -136,12 +138,11 @@ class NUTS(BaseHMC):
         else:
             step_size = np.exp(self.log_step_size_bar)
 
-        u = nr.uniform()
         start = Edge(q0, p0, self.dlogp(q0), start_energy)
-        tree = Tree(self.leapfrog, start, u, step_size, self.Emax)
+        tree = Tree(self.leapfrog, start, step_size, self.Emax)
 
         while True:
-            direction = bern(0.5) * 2 - 1
+            direction = logbern(np.log(0.5)) * 2 - 1
             diverging, turning = tree.extend(direction)
             q = tree.proposal.q
 
@@ -184,11 +185,11 @@ Edge = namedtuple("Edge", 'q, p, q_grad, energy')
 Proposal = namedtuple("Proposal", "q, energy, p_accept")
 
 # A subtree of the binary tree build by nuts.
-Subtree = namedtuple("Subtree", "left, right, proposal, depth, size, accept_sum, n_proposals")
+Subtree = namedtuple("Subtree", "left, right, proposal, depth, log_size, accept_sum, n_proposals")
 
 
 class Tree(object):
-    def __init__(self, leapfrog, start, u, step_size, Emax):
+    def __init__(self, leapfrog, start, step_size, Emax):
         """Binary tree from the NUTS algorithm.
 
         Parameters
@@ -197,8 +198,6 @@ class Tree(object):
             A function that performs a single leapfrog step.
         start : Edge
             The starting point of the trajectory.
-        u : float in [0, 1]
-            Random slice sampling variable.
         step_size : float
             The step size to use in this tree
         Emax : float
@@ -207,7 +206,6 @@ class Tree(object):
         """
         self.leapfrog = leapfrog
         self.start = start
-        self.log_u = np.log(u)
         self.step_size = step_size
         self.Emax = Emax
         self.start_energy = np.array(start.energy)
@@ -215,7 +213,7 @@ class Tree(object):
         self.left = self.right = start
         self.proposal = Proposal(start.q, start.energy, 1.0)
         self.depth = 0
-        self.size = 1
+        self.log_size = 0
         # TODO Why not a global accept sum and n_proposals?
         #self.accept_sum = 0
         #self.n_proposals = 0
@@ -243,11 +241,11 @@ class Tree(object):
             self.left = tree.right
 
         ok = not (diverging or turning)
-        if ok and bern(min(1, tree.size / self.size)):
+        if ok and logbern(tree.log_size - self.log_size):
             self.proposal = tree.proposal
 
         self.depth += 1
-        self.size += tree.size
+        self.log_size = np.logaddexp(self.log_size, tree.log_size)
         # TODO why not +=
         #self.accept_sum += tree.accept_sum
         self.accept_sum = tree.accept_sum
@@ -268,11 +266,11 @@ class Tree(object):
                 self.max_energy_change = energy_change
             p_accept = min(1, np.exp(-energy_change))
 
-            size = int(self.log_u + energy_change <= 0)
-            diverging = not (self.log_u + energy_change < self.Emax)
+            log_size = -energy_change
+            diverging = not (energy_change < self.Emax)
 
             proposal = Proposal(right.q, right.energy, p_accept)
-            tree = Subtree(right, right, proposal, 1, size, p_accept, 1)
+            tree = Subtree(right, right, proposal, 1, log_size, p_accept, 1)
             return tree, diverging, False
 
         tree1, diverging, turning = self._build_subtree(left, depth - 1, epsilon)
@@ -281,7 +279,7 @@ class Tree(object):
 
         tree2, diverging, turning = self._build_subtree(tree1.right, depth - 1, epsilon)
 
-        size = tree1.size + tree2.size
+        log_size = np.logaddexp(tree1.log_size, tree2.log_size)
         accept_sum = tree1.accept_sum + tree2.accept_sum
         n_proposals = tree1.n_proposals + tree2.n_proposals
 
@@ -289,12 +287,12 @@ class Tree(object):
         span = np.sign(epsilon) * (right.q - left.q)
         turning = turning or (span.dot(left.p) < 0) or (span.dot(right.p) < 0)
 
-        if bern(tree2.size * 1. / max(size, 1)):
+        if logbern(tree2.log_size - log_size):
             proposal = tree2.proposal
         else:
             proposal = tree1.proposal
 
-        tree = Subtree(left, right, proposal, depth, size, accept_sum, n_proposals)
+        tree = Subtree(left, right, proposal, depth, log_size, accept_sum, n_proposals)
         return tree, diverging, turning
 
     def stats(self):
