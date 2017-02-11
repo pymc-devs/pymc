@@ -267,7 +267,8 @@ class Tree(object):
             p_accept = min(1, np.exp(-energy_change))
 
             log_size = -energy_change
-            diverging = not (energy_change < self.Emax)
+            diverging = not np.isfinite(energy_change)
+            diverging = diverging or (np.abs(energy_change) > self.Emax)
 
             proposal = Proposal(right.q, right.energy, p_accept)
             tree = Subtree(right, right, proposal, 1, log_size, p_accept, 1)
@@ -287,7 +288,7 @@ class Tree(object):
         span = np.sign(epsilon) * (right.q - left.q)
         turning = turning or (span.dot(left.p) < 0) or (span.dot(right.p) < 0)
 
-        if logbern(tree2.log_size - log_size):
+        if np.isfinite(tree2.log_size) and logbern(tree2.log_size - log_size):
             proposal = tree2.proposal
         else:
             proposal = tree1.proposal
