@@ -27,7 +27,7 @@ class TestGenerator(unittest.TestCase):
         f = theano.function([], gop)
         self.assertEqual(f(), np.float32(0))
         self.assertEqual(f(), np.float32(1))
-        for i in range(2, 100):
+        for _ in range(2, 100):
             f()
         self.assertEqual(f(), np.float32(100))
 
@@ -51,7 +51,7 @@ class TestGenerator(unittest.TestCase):
 
     def test_nans_produced(self):
         def gen():
-            for i in range(2):
+            for _ in range(2):
                 yield np.ones((10, 10))
 
         gop = generator(gen())
@@ -64,7 +64,7 @@ class TestGenerator(unittest.TestCase):
 
     def test_setvalue(self):
         def gen():
-            for i in range(2):
+            for _ in range(2):
                 yield np.ones((10, 10))
 
         gop = generator(gen())

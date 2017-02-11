@@ -34,7 +34,7 @@ def test_linear():
     with Model() as model:
         lamh = Flat('lamh')
         xh = EulerMaruyama('xh', dt, sde, (lamh,), shape=N + 1, testval=x)
-        zh = Normal('zh', mu=xh, sd=5e-3, observed=z)
+        Normal('zh', mu=xh, sd=5e-3, observed=z)
     # invert
     with model:
         start = find_MAP(vars=[xh], fmin=fmin_l_bfgs_b)

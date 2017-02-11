@@ -18,7 +18,7 @@ def test_dlogp():
 
 
 def test_dlogp2():
-    start, model, (mu, sig) = mv_simple()
+    start, model, (_, sig) = mv_simple()
     H = np.linalg.inv(sig)
     d2logp = model.fastd2logp()
     close_to(d2logp(start), H, np.abs(H / 100.))

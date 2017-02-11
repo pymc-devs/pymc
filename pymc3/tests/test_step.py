@@ -127,7 +127,7 @@ class TestStepMethods(object):  # yield test doesn't work subclassing unittest.T
             tqdm.write('Benchmarking {} with {:,d} samples'.format(step_method.__name__, n_steps))
         else:
             tqdm.write('Checking {} has same trace as on master'.format(step_method.__name__))
-        with Model():
+        with Model() as model:
             Normal('x', mu=0, sd=1)
             trace = sample(n_steps, step=step_method(), random_seed=1)
 
@@ -253,12 +253,12 @@ class TestSampleEstimates(SeededTest):
         Y = alpha_true + beta_true * X + np.random.randn(size) * sigma_true
 
         decimal = 1
-        with Model() as model:
+        with Model():
             alpha = Normal('alpha', mu=0, sd=100, testval=alpha_true)
             beta = Normal('beta', mu=0, sd=100, testval=beta_true)
             sigma = InverseGamma('sigma', 10., testval=sigma_true)
             mu = alpha + beta * X
-            Y_obs = Normal('Y_obs', mu=mu, sd=sigma, observed=Y)
+            Normal('Y_obs', mu=mu, sd=sigma, observed=Y)
 
             for step_method, params in ((NUTS, {"target_accept": 0.95}), (Slice, {}), (Metropolis, {'scaling': 10.})):
                 trace = sample(100000, step=step_method(**params), tune=1000)

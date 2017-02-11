@@ -43,8 +43,7 @@ def simple_arbitrary_det():
     with Model() as model:
         a = Normal('a')
         b = arbitrary_det(a)
-        c = Normal('obs', mu=b.astype('float64'),
-                   observed=np.array([1, 3, 5]))
+        Normal('obs', mu=b.astype('float64'), observed=np.array([1, 3, 5]))
 
     return model.test_point, model
 

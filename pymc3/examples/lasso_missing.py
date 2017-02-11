@@ -52,7 +52,7 @@ def run(n=5000):
     if n == 'short':
         n = 100
     with model:
-        pm.trace = pm.sample(n, [step1, step2], start)
+        pm.sample(n, [step1, step2], start)
 
 
 if __name__ == '__main__':

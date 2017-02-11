@@ -12,9 +12,9 @@ from ..distributions import (DensityDist, Categorical, Multinomial, VonMises, Di
                              InverseGamma, Gamma, Cauchy, HalfCauchy, Lognormal, Laplace,
                              NegativeBinomial, Geometric, Exponential, ExGaussian, Normal,
                              Flat, LKJCorr, Wald, ChiSquared, HalfNormal, DiscreteUniform,
-                             Bound, Uniform, Triangular, Binomial, Wishart, SkewNormal,
-                             DiscreteWeibull)
+                             Bound, Uniform, Triangular, Binomial, SkewNormal, DiscreteWeibull)
 from ..distributions import continuous, multivariate
+from nose_parameterized import parameterized
 from numpy import array, inf, log, exp
 from numpy.testing import assert_almost_equal
 import numpy.random as nr
@@ -23,6 +23,23 @@ import numpy as np
 from scipy import integrate
 import scipy.stats.distributions as sp
 import scipy.stats
+
+
+def gen_lkj_cases():
+    """
+    Log probabilities calculated using the formulas in:
+    http://www.sciencedirect.com/science/article/pii/S0047259X09000876
+    """
+    tri = np.array([0.7, 0.0, -0.7])
+    test_cases = [
+        (tri, 1, 1.5963125911388549),
+        (tri, 3, -7.7963493376312742),
+        (tri, 0, -np.inf),
+        (np.array([1.1, 0.0, -0.7]), 1, -np.inf),
+        (np.array([0.7, 0.0, -1.1]), 1, -np.inf)
+    ]
+    for t, n, logp in test_cases:
+        yield t, n, 3, logp
 
 
 class Domain(object):
@@ -375,30 +392,26 @@ class TestMatchesScipy(SeededTest):
         self.pymc3_matches_scipy(Wald, Rplus, {'mu': Rplus},
                                  lambda value, mu: sp.invgauss.logpdf(value, mu))
 
-    def test_wald(self):
+    @parameterized.expand([
+        (.5, .001, .5, None, 0., -124500.7257914),
+        (1., .5, .001, None, 0., -4.3733162),
+        (2., 1., None, None, 0., -2.2086593),
+        (5., 2., 2.5, None, 0., -3.4374500),
+        (7.5, 5., None, 1., 0., -3.2199074),
+        (15., 10., None, .75, 0., -4.0360623),
+        (50., 15., None, .66666, 0., -6.1801249),
+        (.5, .001, 0.5, None, 0., -124500.7257914),
+        (1., .5, .001, None, .5, -3.3330954),
+        (2., 1., None, None, 1., -0.9189385),
+        (5., 2., 2.5, None, 2., -2.2128783),
+        (7.5, 5., None, 1., 2.5, -2.5283764),
+        (15., 10., None, .75, 5., -3.3653647),
+        (50., 15., None, .666666, 10., -5.6481874)
+    ])
+    def test_wald(self, value, mu, lam, phi, alpha, logp):
         # Log probabilities calculated using the dIG function from the R package gamlss.
         # See e.g., doi: 10.1111/j.1467-9876.2005.00510.x, or
         # http://www.gamlss.org/.
-        test_cases = [
-            (.5, .001, .5, None, 0., -124500.7257914),
-            (1., .5, .001, None, 0., -4.3733162),
-            (2., 1., None, None, 0., -2.2086593),
-            (5., 2., 2.5, None, 0., -3.4374500),
-            (7.5, 5., None, 1., 0., -3.2199074),
-            (15., 10., None, .75, 0., -4.0360623),
-            (50., 15., None, .66666, 0., -6.1801249),
-            (.5, .001, 0.5, None, 0., -124500.7257914),
-            (1., .5, .001, None, .5, -3.3330954),
-            (2., 1., None, None, 1., -0.9189385),
-            (5., 2., 2.5, None, 2., -2.2128783),
-            (7.5, 5., None, 1., 2.5, -2.5283764),
-            (15., 10., None, .75, 5., -3.3653647),
-            (50., 15., None, .666666, 10., -5.6481874)
-        ]
-        for value, mu, lam, phi, alpha, logp in test_cases:
-            yield self.check_wald, value, mu, lam, phi, alpha, logp
-
-    def check_wald(self, value, mu, lam, phi, alpha, logp):
         with Model() as model:
             Wald('wald', mu=mu, lam=lam, phi=phi, alpha=alpha, transform=None)
         pt = {'wald': value}
@@ -513,80 +526,46 @@ class TestMatchesScipy(SeededTest):
         self.checkd(ZeroInflatedNegativeBinomial, Nat,
                     {'mu': Rplusbig, 'alpha': Rplusbig, 'psi': Unit})
 
-    def test_mvnormal(self):
-        for n in [1, 2]:
-            yield self.check_mvnormal, n
-
-    def check_mvnormal(self, n):
+    @parameterized.expand([(1,), (2,)])
+    def test_mvnormal(self, n):
         self.pymc3_matches_scipy(MvNormal, Vector(R, n),
                                  {'mu': Vector(R, n), 'tau': PdMatrix(n)}, normal_logpdf)
 
-    def check_mvnormal_cov(self, n):
-        self.pymc3_matches_scipy(MvNormal, Vector(R, n),
-                                 {'mu': Vector(R, n), 'cov': PdMatrix(n)}, normal_logpdf)
-
-    def test_mvt(self):
-        for n in [1, 2]:
-            yield self.check_mvt, n
-
-    def check_mvt(self, n):
+    @parameterized.expand([(1,), (2,)])
+    def test_mvt(self, n):
         self.pymc3_matches_scipy(MvStudentT, Vector(R, n),
                                  {'nu': Rplus, 'Sigma': PdMatrix(n), 'mu': Vector(R, n)},
                                  mvt_logpdf)
 
-    def test_wishart(self):
-        # for n in [2,3]:
-        #     yield self.check_wishart,n
+    @parameterized.expand([(2,), (3,)])
+    def test_wishart(self, n):
         # This check compares the autodiff gradient to the numdiff gradient.
         # However, due to the strict constraints of the wishart,
         # it is impossible to numerically determine the gradient as a small
         # pertubation breaks the symmetry. Thus disabling.
+        #
+        # self.checkd(Wishart, PdMatrix(n), {'n': Domain([2, 3, 4, 2000]), 'V': PdMatrix(n)},
+        #             checks=[self.check_dlogp])
         pass
 
-    def check_wishart(self, n):
-        self.checkd(Wishart, PdMatrix(n), {'n': Domain([2, 3, 4, 2000]), 'V': PdMatrix(n)},
-                    checks=[self.check_dlogp])
-
-    def test_lkj(self):
-        """
-        Log probabilities calculated using the formulas in:
-        http://www.sciencedirect.com/science/article/pii/S0047259X09000876
-        """
-        tri = np.array([0.7, 0.0, -0.7])
-        test_cases = [
-            (tri, 1, 1.5963125911388549),
-            (tri, 3, -7.7963493376312742),
-            (tri, 0, -np.inf),
-            (np.array([1.1, 0.0, -0.7]), 1, -np.inf),
-            (np.array([0.7, 0.0, -1.1]), 1, -np.inf)
-        ]
-        for t, n, logp in test_cases:
-            yield self.check_lkj, t, n, 3, logp
-
-    def check_lkj(self, x, n, p, lp):
+    @parameterized.expand(gen_lkj_cases)
+    def test_lkj(self, x, n, p, lp):
         with Model() as model:
             LKJCorr('lkj', n=n, p=p)
         pt = {'lkj': x}
         assert_almost_equal(model.fastlogp(pt), lp, decimal=6, err_msg=str(pt))
 
-    def test_dirichlet(self):
-        for n in [2, 3]:
-            yield self.check_dirichlet, n
-        yield self.check_dirichlet2D, 2, 2
-
-    def check_dirichlet(self, n):
+    @parameterized.expand([(2,), (3,)])
+    def test_dirichlet(self, n):
         self.pymc3_matches_scipy(Dirichlet, Simplex(
             n), {'a': Vector(Rplus, n)}, dirichlet_logpdf)
 
-    def check_dirichlet2D(self, ndep, nind):
-        self.pymc3_matches_scipy(Dirichlet, MultiSimplex(ndep, nind),
-                                 {'a': Vector(Vector(Rplus, ndep), nind)}, dirichlet_logpdf)
+    def test_dirichlet_2D(self):
+        self.pymc3_matches_scipy(Dirichlet, MultiSimplex(2, 2),
+                                 {'a': Vector(Vector(Rplus, 2), 2)}, dirichlet_logpdf)
 
-    def test_multinomial(self):
-        for n in [2, 3]:
-            yield self.check_multinomial, n
-
-    def check_multinomial(self, n):
+    @parameterized.expand([(2,), (3,)])
+    def test_multinomial(self, n):
         self.pymc3_matches_scipy(Multinomial, Vector(Nat, n), {'p': Simplex(n), 'n': Nat},
                                  multinomial_logpdf)
 
@@ -643,17 +622,14 @@ class TestMatchesScipy(SeededTest):
                             model.fastlogp({'m': vals}),
                             decimal=4)
 
-    def test_categorical(self):
-        for n in [2, 3, 4]:
-            yield self.check_categorical, n
-
     def test_categorical_bounds(self):
         with Model():
             x = Categorical('x', p=np.array([0.2, 0.3, 0.5]))
             assert np.isinf(x.logp({'x': -1}))
             assert np.isinf(x.logp({'x': 3}))
 
-    def check_categorical(self, n):
+    @parameterized.expand([(2,), (3,), (4,)])
+    def test_categorical(self, n):
         self.pymc3_matches_scipy(Categorical, Domain(range(n), 'int64'), {'p': Simplex(n)},
                                  lambda value, p: categorical_logpdf(value, p))
 
@@ -677,39 +653,28 @@ class TestMatchesScipy(SeededTest):
         cov = np.dot(cov, cov.T)
         mu = np.ones(3)
         tau, cov = multivariate.get_tau_cov(mu, cov=cov)
-        assert_almost_equal(tau.eval(),
-                            np.linalg.inv(cov)
-        )
+        assert_almost_equal(tau.eval(), np.linalg.inv(cov))
 
         tau, cov = multivariate.get_tau_cov(mu)
-        assert_almost_equal(cov,
-                            np.eye(3)
-        )
+        assert_almost_equal(cov, np.eye(3))
 
-
-    def test_ex_gaussian(self):
-        # Log probabilities calculated using the dexGAUS function from the R package gamlss.
-        # See e.g., doi: 10.1111/j.1467-9876.2005.00510.x, or
-        # http://www.gamlss.org/.
-        test_cases = [
-            (0.5, -50.000, 0.500, 0.500, -99.8068528),
-            (1.0, -1.000, 0.001, 0.001, -1992.5922447),
-            (2.0, 0.001, 1.000, 1.000, -1.6720416),
-            (5.0, 0.500, 2.500, 2.500, -2.4543644),
-            (7.5, 2.000, 5.000, 5.000, -2.8259429),
-            (15.0, 5.000, 7.500, 7.500, -3.3093854),
-            (50.0, 50.000, 10.000, 10.000, -3.6436067),
-            (1000.0, 500.000, 10.000, 20.000, -27.8707323)
-        ]
-        for value, mu, sigma, nu, logp in test_cases:
-            yield self.check_ex_gaussian, value, mu, sigma, nu, logp
-
-    def check_ex_gaussian(self, value, mu, sigma, nu, logp):
+    @parameterized.expand([
+        (0.5, -50.000, 0.500, 0.500, -99.8068528),
+        (1.0, -1.000, 0.001, 0.001, -1992.5922447),
+        (2.0, 0.001, 1.000, 1.000, -1.6720416),
+        (5.0, 0.500, 2.500, 2.500, -2.4543644),
+        (7.5, 2.000, 5.000, 5.000, -2.8259429),
+        (15.0, 5.000, 7.500, 7.500, -3.3093854),
+        (50.0, 50.000, 10.000, 10.000, -3.6436067),
+        (1000.0, 500.000, 10.000, 20.000, -27.8707323)
+    ])
+    def test_ex_gaussian(self, value, mu, sigma, nu, logp):
+        """Log probabilities calculated using the dexGAUS function from the R package gamlss.
+        See e.g., doi: 10.1111/j.1467-9876.2005.00510.x, or http://www.gamlss.org/."""
         with Model() as model:
             ExGaussian('eg', mu=mu, sigma=sigma, nu=nu)
         pt = {'eg': value}
         assert_almost_equal(model.fastlogp(pt), logp, decimal=6, err_msg=str(pt))
-
 
     def test_vonmises(self):
         self.pymc3_matches_scipy(VonMises, R, {'mu': Circ, 'kappa': Rplus},

@@ -18,7 +18,7 @@ def quad_potential(C, is_cov, as_cov):
     ----------
     C : arraylike, 0 <= ndim <= 2
         scaling matrix for the potential
-        vector treated as diagonal matrix
+        vector treated as diagonal matrix.
     is_cov : Boolean
         whether C is provided as a covariance matrix or hessian
     as_cov : Boolean
@@ -29,7 +29,6 @@ def quad_potential(C, is_cov, as_cov):
     -------
     q : Quadpotential
     """
-
     if issparse(C):
         if not chol_available:
             raise ImportError("Sparse mass matrices require scikits.sparse")

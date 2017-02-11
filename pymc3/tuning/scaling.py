@@ -67,8 +67,6 @@ def fixed_hessian(point, vars=None, model=None):
     point = Point(point, model=model)
 
     bij = DictToArrayBijection(ArrayOrdering(vars), point)
-    dlogp = bij.mapf(model.fastdlogp(vars))
-
     rval = np.ones(bij.map(point).size) / 10
     return rval
 

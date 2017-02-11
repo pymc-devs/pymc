@@ -14,21 +14,21 @@ class TestModelContext(unittest.TestCase):
         that thread A enters the context manager first, then B,
         then A attempts to declare a variable while B is still in the context manager.
         """
-        aInCtxt,bInCtxt,aDone = [threading.Event() for k in range(3)]
+        aInCtxt,bInCtxt,aDone = [threading.Event() for _ in range(3)]
         modelA = Model()
         modelB = Model()
         def make_model_a():
             with modelA:
                 aInCtxt.set()
                 bInCtxt.wait()
-                a = Normal('a',0,1)
+                Normal('a',0,1)
             aDone.set()
         def make_model_b():
             aInCtxt.wait()
             with modelB:
                 bInCtxt.set()
                 aDone.wait()
-                b = Normal('b', 0, 1)
+                Normal('b', 0, 1)
         threadA = threading.Thread(target=make_model_a)
         threadB = threading.Thread(target=make_model_b)
         threadA.start()

@@ -29,7 +29,7 @@ def test_leapfrog_reversible():
 def test_nuts_tuning():
     model = pymc3.Model()
     with model:
-        mu = pymc3.Normal("mu", mu=0, sd=1)
+        pymc3.Normal("mu", mu=0, sd=1)
         step = pymc3.NUTS()
-        trace = pymc3.sample(10, step=step, tune=5, progressbar=False)
+        pymc3.sample(10, step=step, tune=5, progressbar=False)
     assert not step.tune

@@ -48,7 +48,6 @@ def compute_sigma_level(trace1, trace2, nbins=20):
     """From a set of traces, bin by number of standard deviations"""
     L, xbins, ybins = np.histogram2d(trace1, trace2, nbins)
     L[L == 0] = 1E-16
-    logL = np.log(L)
 
     shape = L.shape
     L = L.ravel()
@@ -95,7 +94,7 @@ def plot_MCMC_model(ax, xdata, ydata, trace):
 
 def plot_MCMC_results(xdata, ydata, trace, colors='k'):
     """Plot both the trace and the model together"""
-    fig, ax = plt.subplots(1, 2, figsize=(10, 4))
+    _, ax = plt.subplots(1, 2, figsize=(10, 4))
     plot_MCMC_trace(ax[0], xdata, ydata, trace, True, colors=colors)
     plot_MCMC_model(ax[1], xdata, ydata, trace)
 
