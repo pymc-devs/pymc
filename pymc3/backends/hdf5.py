@@ -118,10 +118,10 @@ class HDF5(base.BaseTrace):
                 self.records_stats = sampler_vars
             if sampler_vars:
                 if not self.records_stats:
-                    raise TypeError("Cannot record stats to a trace which wasn't setup for stats")
+                    raise ValueError("Cannot record stats to a trace which wasn't setup for stats")
             else:
                 if self.records_stats:
-                    raise TypeError("Expected stats to be given")
+                    raise ValueError("Expected stats to be given")
 
             for varname, shape in self.var_shapes.items():
                 if varname not in self.samples:
@@ -130,9 +130,12 @@ class HDF5(base.BaseTrace):
                                                 maxshape=(None, ) + shape)
             for i, sampler in enumerate(sampler_vars):
                 data = self._stats.require_group(str(i))
-                for varname, dtype in sampler.items():
-                    if varname not in data:
-                        data.create_dataset(varname, (draws, ), dtype=dtype, maxshape=(None, ))
+                if not data.keys():  # no pre-recorded stats
+                    for varname, dtype in sampler.items():
+                        if varname not in data:
+                            data.create_dataset(varname, (draws, ), dtype=dtype, maxshape=(None, ))
+                elif data.keys() != sampler.keys():
+                    raise ValueError("Sampler vars can't change")
 
             self.draw_idx = len(self)
             self.draws = self.draw_idx + draws
