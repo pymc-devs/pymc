@@ -1,7 +1,20 @@
-import os
+import numpy as np
 from pymc3.tests import backend_fixtures as bf
 from pymc3.backends import ndarray, hdf5
+import os
 import tempfile
+
+STATS1 = [{
+    'a': np.float64,
+    'b': np.bool
+}]
+
+STATS2 = [{
+    'a': np.float64
+}, {
+    'a': np.float64,
+    'b': np.int64,
+}]
 
 DBNAME = os.path.join(tempfile.gettempdir(), 'test.h5')
 
