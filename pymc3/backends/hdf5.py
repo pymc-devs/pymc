@@ -152,7 +152,6 @@ class HDF5(base.BaseTrace):
     def record(self, point, sampler_stats=None):
         with self.activate_file:
             for varname, value in zip(self.varnames, self.fn(point)):
-                assert self.samples[varname].shape[1:] == value.shape, '{} {} {} {}'.format(varname, self.samples[varname].shape, self.var_shapes[varname], value.shape)
                 self.samples[varname][self.draw_idx] = value
 
             if self.records_stats and sampler_stats is None:
