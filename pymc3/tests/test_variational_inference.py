@@ -3,18 +3,14 @@ import tqdm
 import numpy as np
 import theano
 import theano.tensor as tt
-from theano.sandbox.rng_mrg import MRG_RandomStreams
 import pymc3 as pm
 from pymc3 import Model, Normal
 from pymc3.variational.opvi import (
-    KL, MeanField, FullRank, TestFunction,
-    NeuralNetwork, TestNeuralNetwork, LS
+    KL, MeanField, FullRank, TestFunction
 )
-from pymc3.theanof import set_tt_rng, tt_rng
+
 from pymc3.tests import models
 from pymc3.tests.helpers import SeededTest
-_old_rng = tt_rng()
-set_tt_rng(MRG_RandomStreams(42))
 
 
 class TestApproximates:
@@ -55,39 +51,27 @@ class TestApproximates:
                 0.5 * (np.log(2 * np.pi) + 1))
             np.testing.assert_allclose(elbo_mc, elbo_true, rtol=0, atol=1e-1)
 
-        @unittest.skip('Not ready')
-        def test_vary_samples(self):
-            _, model, _ = models.simple_model()
-            i = tt.iscalar('i')
-            i.tag.test_value = 1
-            with model:
-                mf = self.approx()
-                elbo = mf.elbo(i)
-            elbos = theano.function([i], elbo)
-            self.assertEqual(elbos(1).shape[0], 1)
-            self.assertEqual(elbos(10).shape[0], 10)
-
-        @unittest.skip('Not ready')
         def test_vars_view(self):
             _, model, _ = models.multidimensional_model()
             with model:
-                mf = self.approx()
-                posterior = mf.posterior(10)
-                x_sampled = mf.view_from(posterior, 'x').eval()
+                app = self.approx()
+                posterior = app.random(10)
+                x_sampled = app.view(posterior, 'x').eval()
             self.assertEqual(x_sampled.shape, (10,) + model['x'].dshape)
 
-        @unittest.skip('Not ready')
         def test_sample_vp(self):
             n_samples = 100
             xs = np.random.binomial(n=1, p=0.2, size=n_samples)
             with pm.Model():
                 p = pm.Beta('p', alpha=1, beta=1)
                 pm.Binomial('xs', n=1, p=p, observed=xs)
-                mf = self.approx()
-                trace = mf.sample_vp(draws=1, hide_transformed=True)
+                app = self.approx()
+                trace = app.sample_vp(draws=1, hide_transformed=True)
                 self.assertListEqual(trace.varnames, ['p'])
-                trace = mf.sample_vp(draws=1, hide_transformed=False)
+                self.assertEqual(len(trace), 1)
+                trace = app.sample_vp(draws=10, hide_transformed=False)
                 self.assertListEqual(sorted(trace.varnames), ['p', 'p_logodds_'])
+                self.assertEqual(len(trace), 10)
 
         def test_optimizer(self):
             n = 1000
@@ -106,7 +90,7 @@ class TestApproximates:
                 Normal('x', mu=mu_, sd=sd, observed=data)
                 pm.Deterministic('mu_sq', mu_**2)
                 approx = self.approx()
-                obj_f = self.op(approx)(self.tf(approx.total_size))
+                obj_f = self.op(approx)(self.tf())
                 step = obj_f.step_function(score=False)
                 for _ in tqdm.tqdm(range(self.NITER)):
                     step()
@@ -122,14 +106,5 @@ class TestMeanField(TestApproximates.Base):
 class TestFullRank(TestApproximates.Base):
     approx = FullRank
 
-
-class TestLSOp(TestApproximates.Base):
-    NITER = 5000
-    approx = staticmethod(lambda: NeuralNetwork(hidden_size=(3, 3), activations=tt.nnet.relu))
-    tf = staticmethod(lambda dim: TestNeuralNetwork(dim, hidden_size=(3, 3), activations=tt.nnet.relu))
-    op = LS
-
 if __name__ == '__main__':
     unittest.main()
-
-set_tt_rng(_old_rng)

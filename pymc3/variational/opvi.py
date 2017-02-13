@@ -3,10 +3,17 @@ import theano
 from theano import tensor as tt
 
 from pymc3.distributions.dist_math import log_normal, rho2sd, log_normal_mv
-from pymc3.variational.base import Operator, Approximation
+from pymc3.variational.base import Operator, Approximation, TestFunction
 
 
+__all__ = [
+    'TestFunction',
+    'KL',
+    'MeanField',
+    'FullRank'
+]
 # OPERATORS
+
 
 class KL(Operator):
     def apply(self, f):

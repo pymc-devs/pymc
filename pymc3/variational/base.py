@@ -85,7 +85,7 @@ class Operator(object):
             return resulting_updates
 
         def step_function(self, obj_n_mc=None, tf_n_mc=None, sc_n_mc=None,
-                          obj_optimizer=None, test_optimizer=None,
+                          obj_optimizer=adam, test_optimizer=adam,
                           more_obj_params=None, more_tf_params=None,
                           more_updates=None,
                           score=True):
@@ -450,7 +450,7 @@ class Approximation(object):
         -------
         variable view
         """
-
+        theano_is_here = isinstance(space, tt.TensorVariable)
         slc = self._view[name].slc
         _, _, _shape, dtype = self._view[name]
         if space.ndim == 2:
@@ -461,7 +461,7 @@ class Approximation(object):
             raise ValueError('Space should have no more than 2 dims, got %d' % space.ndim)
         if reshape:
             if len(_shape) > 0:
-                if isinstance(space, tt.TensorVariable):
+                if theano_is_here:
                     shape = tt.concatenate([space.shape[:-1],
                                             tt.as_tensor(_shape)])
                 else:
@@ -470,7 +470,10 @@ class Approximation(object):
 
             else:
                 shape = space.shape[:-1]
-            view = view.reshape(shape)
+            if theano_is_here:
+                view = view.reshape(shape, ndim=space.ndim + len(_shape) - 1)
+            else:
+                view = view.reshape(shape)
         return view.astype(dtype)
 
     @property
