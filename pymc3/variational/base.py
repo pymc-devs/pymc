@@ -50,7 +50,7 @@ class Operator(object):
         obj_params = property(lambda self: self.op.approx.params)
         test_params = property(lambda self: self.tf.params)
 
-        def random(self, size):
+        def random(self, size=None):
             return self.op.approx.random(size)
 
         def __call__(self, z):
@@ -63,9 +63,11 @@ class Operator(object):
             return tt.abs_(a)
 
         def updates(self, obj_n_mc=None, tf_n_mc=None, obj_optimizer=None, test_optimizer=None,
-                    more_params=None, more_updates=None):
-            if more_params is None:
-                more_params = []
+                    more_obj_params=None, more_tf_params=None, more_updates=None):
+            if more_obj_params is None:
+                more_obj_params = []
+            if more_tf_params is None:
+                more_tf_params = []
             if more_updates is None:
                 more_updates = dict()
             if obj_optimizer is None:
@@ -77,25 +79,29 @@ class Operator(object):
             if self.test_params:
                 tf_z = self.random(tf_n_mc)
                 tf_target = -self(tf_z)
-                resulting_updates.update(test_optimizer(tf_target, self.test_params))
+                resulting_updates.update(test_optimizer(tf_target, self.test_params + more_tf_params))
             else:
                 pass
             obj_z = self.random(obj_n_mc)
             obj_target = self(obj_z)
-            resulting_updates.update(obj_optimizer(obj_target, self.obj_params + more_params))
+            resulting_updates.update(obj_optimizer(obj_target, self.obj_params + more_obj_params))
             resulting_updates.update(more_updates)
             return resulting_updates
 
-        def step_function(self, obj_n_mc=None, tf_n_mc=None,
+        def step_function(self, obj_n_mc=None, tf_n_mc=None, sc_n_mc=None,
                           obj_optimizer=None, test_optimizer=None,
-                          more_params=None, more_updates=None,
+                          more_obj_params=None, more_tf_params=None,
+                          more_updates=None,
                           score=True):
-            updates = self.updates(obj_n_mc, tf_n_mc,
-                                   obj_optimizer, test_optimizer,
-                                   more_params, more_updates)
+            updates = self.updates(obj_n_mc=obj_n_mc, tf_n_mc=tf_n_mc,
+                                   obj_optimizer=obj_optimizer,
+                                   test_optimizer=test_optimizer,
+                                   more_obj_params=more_obj_params,
+                                   more_tf_params=more_tf_params,
+                                   more_updates=more_updates)
             step_fn = theano.function([], [], updates=updates)
             if score:
-                val_fun = theano.function([], self(self.random()))
+                val_fun = theano.function([], self(self.random(sc_n_mc)))
             else:
                 val_fun = None
 
