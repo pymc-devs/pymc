@@ -842,15 +842,67 @@ def fast_kde(x):
     return grid, xmin, xmax
 
 
-def _get_all_parents(end_node, starting_list=[]):
-    for parent in end_node.owner.get_parents():
-        starting_list.append(parent)
-        if parent.owner is not None:
-            _get_all_parents(parent, starting_list)
-    return starting_list
+def get_inputs(node, variables):
+    if node.owner is not None:
+        for inp in node.owner.inputs:
+            if inp in variables:
+                yield inp
+            elif inp.owner is not None:
+                for i in get_inputs(inp, variables):
+                    yield i
 
 
-def plot_network(model, layout='spectral', plot=True, ax=None):
+def tree_layout(graph):
+    if not graph.is_directed():
+        raise ValueError('graph must be directed')
+
+    if not nx.is_directed_acyclic_graph(graph):
+        raise ValueError('graph must not contain cycles')
+
+    roots = [node for node, degree in graph.out_degree_iter() if degree < 1]
+
+    # Find the tree width at every depth in order to layout
+    # the nodes in a justified manner
+    depths = {}
+    for node in graph.nodes():
+        depth = 0
+        parents = graph.successors(node)
+        while len(parents) > 0:
+            _node = parents[0]
+            parents = graph.successors(_node)
+            depth += 1
+        depths[node] = depth
+    depths_list = depths.values()
+
+    max_depth = max(depths_list)
+    widths = [depths_list.count(i) for i in range(max_depth+1)]
+    max_width = max(widths)
+    nodes_positioned_at_depth = [0] * len(widths)
+
+    # breadth first tree transversal
+    midpoint = max_width / 2.0
+    depth_positions = []
+    for width in widths:
+        pos = (np.linspace(0, width, width) -
+               (width / 2.0) +
+               midpoint).tolist()
+        depth_positions.append(pos)
+    positions = {}
+    assert len(roots) == len(depth_positions[0])
+    for root in roots:
+        root_depth = depths[root]
+        positions[root] = (depth_positions[root_depth].pop(0), root_depth)
+        for node in graph.nodes():
+            if node not in positions:
+                node_depth = depths[node]
+                positions[node] = (
+                    depth_positions[node_depth].pop(0), node_depth
+                )
+
+    return positions
+
+
+def plot_network(model, layout='tree', plot=True, ax=None):
     """
     Create and optionally draw a directed graph (network) representation of a
     provided model.
@@ -859,9 +911,10 @@ def plot_network(model, layout='spectral', plot=True, ax=None):
     ----------
     model : pymc3.Model
         The Model object to be coerced into a graph.
-    layout : str
+    layout : str, default='tree'
         Layout to use when plotting the graph. Available options are:
-        'circular', 'shell', 'spectral', 'spring', 'force-directed', 'random'.
+        'circular', 'shell', 'spectral', 'spring', 'force-directed', 'random',
+        'tree'.
     plot : bool
         Plots the graph using Matplotlib if True. If False, no plot is created
         and only the graph object is returned.
@@ -881,6 +934,7 @@ def plot_network(model, layout='spectral', plot=True, ax=None):
         "spring": nx.spring_layout,
         "force-directed": nx.fruchterman_reingold_layout,
         "random": nx.random_layout,
+        "tree": tree_layout,
     }
 
     try:
@@ -904,13 +958,13 @@ def plot_network(model, layout='spectral', plot=True, ax=None):
             if param_value in variables:
                 graph.add_edge(param_value, var)
             elif owner is not None:
-                parents = _get_all_parents(param_value)
-                for parent in parents:
+                for parent in get_inputs(param_value, variables):
                     if parent in variables:
                         graph.add_edge(parent, var)
 
     if plot:
         pos = layout_func(graph)
-        nx.draw_networkx(graph, pos, ax)
+        nx.draw_networkx(graph, pos, arrows=True, node_size=1000, node_color='w', font_size=8)
+        plt.axis('off')
 
     return graph
