@@ -1,6 +1,5 @@
 from ..backends import base, ndarray
 import h5py
-import numpy as np
 from contextlib import contextmanager
 
 @contextmanager
@@ -33,13 +32,14 @@ class HDF5(base.BaseTrace):
     supports_sampler_stats = True
 
     def __init__(self, name=None, model=None, vars=None):
-        super(HDF5, self).__init__(name, model, vars)
+        self.hdf5_file = None
         self.draw_idx = 0
         self.draws = None
-        self.hdf5_file = None
+        super(HDF5, self).__init__(name, model, vars)
 
     def _get_sampler_stats(self, varname, sampler_idx, burn, thin):
-        return self._stats[str(sampler_idx)][varname][burn::thin]
+        with self.activate_file:
+            return self.stats[str(sampler_idx)][varname][burn::thin]
 
     @property
     def activate_file(self):
@@ -53,11 +53,11 @@ class HDF5(base.BaseTrace):
         return g.require_group('samples')
 
     @property
-    def _stats(self):
+    def stats(self):
         g = self.hdf5_file.require_group(str(self.chain))
         if 'name' not in g.attrs:
             g.attrs['name'] = self.chain
-        return g.require_group('_stats')
+        return g.require_group('stats')
 
     @property
     def chains(self):
@@ -92,9 +92,40 @@ class HDF5(base.BaseTrace):
     def _resize(self, n):
         for v in self.samples.values():
             v.resize(n, axis=0)
-        for key, group in self._stats.items():
+        for key, group in self.stats.items():
             for statds in group.values():
                 statds.resize((n, ))
+
+    @property
+    def sampler_vars(self):
+        with self.activate_file:
+            l = []
+            for i, sampler in sorted(self.stats.items(), key=lambda x: int(x[0])):
+                d = {}
+                for varname, ds in sampler.items():
+                    d[varname] = ds.dtype
+                l.append(d)
+        if not l:
+            return None
+        return l
+
+    @sampler_vars.setter
+    def sampler_vars(self, values):
+        with self.activate_file:
+            if values is None:
+                self.records_stats = False
+                return
+
+            for i, sampler in enumerate(values):
+                data = self.stats.require_group(str(i))
+                if not data.keys():  # no pre-recorded stats
+                    for varname, dtype in sampler.items():
+                        if varname not in data:
+                            data.create_dataset(varname, (self.draws,), dtype=dtype, maxshape=(None,))
+                elif data.keys() != sampler.keys():
+                    raise ValueError(
+                        "Sampler vars can't change, names incompatible: {} != {}".format(data.keys(), sampler.keys()))
+            self.records_stats = True
 
     def setup(self, draws, chain, sampler_vars=None):
         """Perform chain-specific setup.
@@ -110,36 +141,18 @@ class HDF5(base.BaseTrace):
             exported by the samplers.
         """
         self.chain = chain
-        if sampler_vars is None:
-            sampler_vars = []
-
         with self.activate_file:
-            if self.is_new_file:
-                self.records_stats = sampler_vars
-            if sampler_vars:
-                if not self.records_stats:
-                    raise ValueError("Cannot record stats to a trace which wasn't setup for stats")
-            else:
-                if self.records_stats:
-                    raise ValueError("Expected stats to be given")
-
             for varname, shape in self.var_shapes.items():
                 if varname not in self.samples:
                     self.samples.create_dataset(name=varname, shape=(draws, ) + shape,
                                                 dtype=self.var_dtypes[varname],
                                                 maxshape=(None, ) + shape)
-            for i, sampler in enumerate(sampler_vars):
-                data = self._stats.require_group(str(i))
-                if not data.keys():  # no pre-recorded stats
-                    for varname, dtype in sampler.items():
-                        if varname not in data:
-                            data.create_dataset(varname, (draws, ), dtype=dtype, maxshape=(None, ))
-                elif data.keys() != sampler.keys():
-                    raise ValueError("Sampler vars can't change")
-
             self.draw_idx = len(self)
             self.draws = self.draw_idx + draws
+            self._set_sampler_vars(sampler_vars)
+            self._is_base_setup = True
             self._resize(self.draws)
+
 
     def close(self):
         with self.activate_file:
@@ -160,7 +173,7 @@ class HDF5(base.BaseTrace):
                 raise ValueError("Unknown sampler_stats")
             if sampler_stats is not None:
                 for i, vars in enumerate(sampler_stats):
-                    data = self._stats[str(i)]
+                    data = self.stats[str(i)]
                     for key, val in vars.items():
                         data[key][self.draw_idx] = val
 
