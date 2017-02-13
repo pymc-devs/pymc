@@ -20,14 +20,6 @@ __all__ = ['advi', 'sample_vp']
 ADVIFit = namedtuple('ADVIFit', 'means, stds, elbo_vals')
 
 
-def check_discrete_rvs(vars):
-    """Check that vars not include discrete variables, excepting ObservedRVs.
-    """
-    vars_ = [var for var in vars if not isinstance(var, pm.model.ObservedRV)]
-    if any([var.dtype in pm.discrete_types for var in vars_]):
-        raise ValueError('Model should not include discrete RVs for ADVI.')
-
-
 def gen_random_state():
     """Helper to generate a random state for MRG_RandomStreams"""
     M1 = 2147483647
