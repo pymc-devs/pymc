@@ -157,7 +157,7 @@ class Inference(object):
             except KeyboardInterrupt:
                 pass
         self.hist = np.concatenate([self.hist, scores])
-        return self.objective.approx
+        return self.approx
 
 
 class ADVI(Inference):

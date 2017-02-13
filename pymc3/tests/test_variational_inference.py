@@ -41,6 +41,7 @@ class TestELBO(SeededTest):
                      0.5 * (np.log(2 * np.pi) + 1))
         np.testing.assert_allclose(elbo_mc, elbo_true, rtol=0, atol=1e-1)
 
+
 class TestApproximates:
     class Base(SeededTest):
         inference = None
