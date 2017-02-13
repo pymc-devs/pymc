@@ -1,47 +1,152 @@
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
-  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 
 
-<html xmlns="http://www.w3.org/1999/xhtml">
-  <head>
-    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-    
-    <title>LKJ Prior for fitting a Multivariate Normal Model &#8212; PyMC3 3.0 documentation</title>
-    
-    <link rel="stylesheet" href="../_static/alabaster.css" type="text/css" />
-    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
-    
-    <script type="text/javascript">
-      var DOCUMENTATION_OPTIONS = {
-        URL_ROOT:    '../',
-        VERSION:     '3.0',
-        COLLAPSE_INDEX: false,
-        FILE_SUFFIX: '.html',
-        HAS_SOURCE:  true
-      };
-    </script>
-    <script type="text/javascript" src="../_static/jquery.js"></script>
-    <script type="text/javascript" src="../_static/underscore.js"></script>
-    <script type="text/javascript" src="../_static/doctools.js"></script>
-    <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
-    <link rel="top" title="PyMC3 3.0 documentation" href="../index.html" />
-    <link rel="up" title="Examples" href="../examples.html" />
-    <link rel="next" title="Bayesian Estimation Supersedes the T-Test" href="BEST.html" />
-    <link rel="prev" title="How to debug a model" href="howto_debugging.html" />
-   
-  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
   
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
-
-  </head>
-  <body role="document">
+  <title>LKJ Prior for fitting a Multivariate Normal Model &mdash; PyMC3 3.0 documentation</title>
   
 
-    <div class="document">
-      <div class="documentwrapper">
-        <div class="bodywrapper">
-          <div class="body" role="main">
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  
+  
+    <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  
+
+  
+
+  
+        <link rel="index" title="Index"
+              href="../genindex.html"/>
+        <link rel="search" title="Search" href="../search.html"/>
+    <link rel="top" title="PyMC3 3.0 documentation" href="../index.html"/>
+        <link rel="up" title="Examples" href="../examples.html"/>
+        <link rel="next" title="Bayesian Estimation Supersedes the T-Test" href="BEST.html"/>
+        <link rel="prev" title="How to debug a model" href="howto_debugging.html"/> 
+
+  
+  <script src="../_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+          
+            <a href="../index.html" class="icon icon-home"> PyMC3
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                3.0
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+                <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../getting_started.html">Getting started</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="../examples.html">Examples</a><ul class="current">
+<li class="toctree-l2 current"><a class="reference internal" href="../examples.html#howto">Howto</a><ul class="current">
+<li class="toctree-l3"><a class="reference internal" href="posterior_predictive.html">Posterior Predictive Checks</a></li>
+<li class="toctree-l3"><a class="reference internal" href="howto_debugging.html">How to debug a model</a></li>
+<li class="toctree-l3 current"><a class="current reference internal" href="#">LKJ Prior for fitting a Multivariate Normal Model</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../examples.html#applied">Applied</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../examples.html#glm">GLM</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../examples.html#gp">GP</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../examples.html#mixture-models">Mixture Models</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../examples.html#advi">ADVI</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../api.html">API Reference</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+        <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+        <a href="../index.html">PyMC3</a>
+      </nav>
+
+
+      
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          
+
+ 
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="../index.html">Docs</a> &raquo;</li>
+      
+          <li><a href="../examples.html">Examples</a> &raquo;</li>
+      
+    <li>LKJ Prior for fitting a Multivariate Normal Model</li>
+      <li class="wy-breadcrumbs-aside">
+        
+          
+            <a href="../_sources/notebooks/LKJ.ipynb.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
             
   
 <style>
@@ -49,15 +154,13 @@
 
 /* remove conflicting styling from Sphinx themes */
 div.nbinput,
-div.nbinput div.prompt,
-div.nbinput div.input_area,
-div.nbinput div[class*=highlight],
-div.nbinput div[class*=highlight] pre,
+div.nbinput > div,
+div.nbinput div[class^=highlight],
+div.nbinput div[class^=highlight] pre,
 div.nboutput,
-div.nbinput div.prompt,
-div.nbinput div.output_area,
-div.nboutput div[class*=highlight],
-div.nboutput div[class*=highlight] pre {
+div.nboutput > div,
+div.nboutput div[class^=highlight],
+div.nboutput div[class^=highlight] pre {
     background: none;
     border: none;
     padding: 0 0;
@@ -66,7 +169,7 @@ div.nboutput div[class*=highlight] pre {
 }
 
 /* avoid gaps between output lines */
-div.nboutput div[class*=highlight] pre {
+div.nboutput div[class^=highlight] pre {
     line-height: normal;
 }
 
@@ -77,13 +180,6 @@ div.nboutput {
     display: flex;
     align-items: flex-start;
     margin: 0;
-    width: 100%;
-}
-@media (max-width: 540px) {
-    div.nbinput,
-    div.nboutput {
-        flex-direction: column;
-    }
 }
 
 /* input container */
@@ -97,58 +193,38 @@ div.nblast {
 }
 
 /* input prompt */
-div.nbinput div.prompt pre {
+div.nbinput > :first-child pre {
     color: #303F9F;
 }
 
 /* output prompt */
-div.nboutput div.prompt pre {
+div.nboutput > :first-child pre {
     color: #D84315;
 }
 
 /* all prompts */
-div.nbinput div.prompt,
-div.nboutput div.prompt {
+div.nbinput > :first-child[class^=highlight],
+div.nboutput > :first-child[class^=highlight],
+div.nboutput > :first-child {
     min-width: 8ex;
     padding-top: 0.4em;
     padding-right: 0.4em;
     text-align: right;
     flex: 0;
 }
-@media (max-width: 540px) {
-    div.nbinput div.prompt,
-    div.nboutput div.prompt {
-        text-align: left;
-        padding: 0.4em;
-    }
-    div.nboutput div.prompt.empty {
-        padding: 0;
-    }
-}
-
-/* disable scrollbars on prompts */
-div.nbinput div.prompt pre,
-div.nboutput div.prompt pre {
-    overflow: hidden;
-}
 
 /* input/output area */
-div.nbinput div.input_area,
-div.nboutput div.output_area {
+div.nbinput > :nth-child(2)[class^=highlight],
+div.nboutput > :nth-child(2),
+div.nboutput > :nth-child(2)[class^=highlight] {
     padding: 0.4em;
     -webkit-flex: 1;
     flex: 1;
     overflow: auto;
 }
-@media (max-width: 540px) {
-    div.nbinput div.input_area,
-    div.nboutput div.output_area {
-        width: 100%;
-    }
-}
 
 /* input area */
-div.nbinput div.input_area {
+div.nbinput > :nth-child(2)[class^=highlight] {
     border: 1px solid #cfcfcf;
     border-radius: 2px;
     background: #f7f7f7;
@@ -165,7 +241,7 @@ div.nboutput div.math p {
 }
 
 /* standard error */
-div.nboutput div.output_area.stderr {
+div.nboutput  > :nth-child(2).stderr {
     background: #fdd;
 }
 
@@ -204,6 +280,38 @@ div.nboutput div.output_area.stderr {
 .ansi-white-intense-bg { background-color: #A1A6B2; }
 
 .ansi-bold { font-weight: bold; }
+
+/* CSS overrides for sphinx_rtd_theme */
+
+/* 24px margin */
+.nbinput.nblast,
+.nboutput.nblast {
+    margin-bottom: 19px;  /* padding has already 5px */
+}
+
+/* ... except between code cells! */
+.nblast + .nbinput {
+    margin-top: -19px;
+}
+
+/* nice headers on first paragraph of info/warning boxes */
+.admonition .first {
+    margin: -12px;
+    padding: 6px 12px;
+    margin-bottom: 12px;
+    color: #fff;
+    line-height: 1;
+    display: block;
+}
+.admonition.warning .first {
+    background: #f0b37e;
+}
+.admonition.note .first {
+    background: #6ab0de;
+}
+.admonition > p:before {
+    margin-right: 4px;  /* make room for the exclamation icon */
+}
 </style>
 <div class="section" id="LKJ-Prior-for-fitting-a-Multivariate-Normal-Model">
 <h1>LKJ Prior for fitting a Multivariate Normal Model<a class="headerlink" href="#LKJ-Prior-for-fitting-a-Multivariate-Normal-Model" title="Permalink to this headline">¶</a></h1>
@@ -225,21 +333,21 @@ closed form solution, sampling from a multivariate normal model in
 <code class="docutils literal"><span class="pre">pymc3</span></code> is important as a building block for more complex models.</p>
 <p>First, we generate some two-dimensional sample data.</p>
 <div class="nbinput nblast container">
-<div class="prompt highlight-none"><div class="highlight"><pre>
+<div class="highlight-none"><div class="highlight"><pre>
 <span></span>In [1]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="o">%</span><span class="k">matplotlib</span> inline
 </pre></div>
 </div>
 </div>
 <div class="nbinput nblast container">
-<div class="prompt highlight-none"><div class="highlight"><pre>
+<div class="highlight-none"><div class="highlight"><pre>
 <span></span>In [2]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="kn">from</span> <span class="nn">matplotlib.patches</span> <span class="kn">import</span> <span class="n">Ellipse</span>
 <span class="kn">from</span> <span class="nn">matplotlib</span> <span class="kn">import</span> <span class="n">pyplot</span> <span class="k">as</span> <span class="n">plt</span>
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="kn">as</span> <span class="nn">np</span>
@@ -251,21 +359,21 @@ closed form solution, sampling from a multivariate normal model in
 </div>
 </div>
 <div class="nbinput nblast container">
-<div class="prompt highlight-none"><div class="highlight"><pre>
+<div class="highlight-none"><div class="highlight"><pre>
 <span></span>In [3]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">seed</span><span class="p">(</span><span class="mi">3264602</span><span class="p">)</span> <span class="c1"># from random.org</span>
 </pre></div>
 </div>
 </div>
 <div class="nbinput nblast container">
-<div class="prompt highlight-none"><div class="highlight"><pre>
+<div class="highlight-none"><div class="highlight"><pre>
 <span></span>In [4]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="n">N</span> <span class="o">=</span> <span class="mi">100</span>
 
 <span class="n">mu_actual</span> <span class="o">=</span> <span class="n">sp</span><span class="o">.</span><span class="n">stats</span><span class="o">.</span><span class="n">uniform</span><span class="o">.</span><span class="n">rvs</span><span class="p">(</span><span class="o">-</span><span class="mi">5</span><span class="p">,</span> <span class="mi">10</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
@@ -278,22 +386,22 @@ closed form solution, sampling from a multivariate normal model in
 </div>
 </div>
 <div class="nbinput nblast container">
-<div class="prompt highlight-none"><div class="highlight"><pre>
+<div class="highlight-none"><div class="highlight"><pre>
 <span></span>In [5]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="n">var</span><span class="p">,</span> <span class="n">U</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">eig</span><span class="p">(</span><span class="n">cov_actual</span><span class="p">)</span>
 <span class="n">angle</span> <span class="o">=</span> <span class="mf">180.</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">arccos</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">U</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">]))</span>
 </pre></div>
 </div>
 </div>
 <div class="nbinput container">
-<div class="prompt highlight-none"><div class="highlight"><pre>
+<div class="highlight-none"><div class="highlight"><pre>
 <span></span>In [6]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">8</span><span class="p">,</span> <span class="mi">6</span><span class="p">))</span>
 
 <span class="n">blue</span> <span class="o">=</span> <span class="n">sns</span><span class="o">.</span><span class="n">color_palette</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span>
@@ -312,9 +420,9 @@ closed form solution, sampling from a multivariate normal model in
 </div>
 </div>
 <div class="nboutput nblast container">
-<div class="prompt empty container">
+<div class="container">
 </div>
-<div class="output_area container">
+<div class="container">
 <img alt="../_images/notebooks_LKJ_7_0.png" src="../_images/notebooks_LKJ_7_0.png" />
 </div>
 </div>
@@ -350,11 +458,11 @@ starting point when we do inference further below. When summary
 statistics are available, it is always a good idea to use them in this
 manner.</p>
 <div class="nbinput nblast container">
-<div class="prompt highlight-none"><div class="highlight"><pre>
+<div class="highlight-none"><div class="highlight"><pre>
 <span></span>In [7]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="n">init_sigma</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">std</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
 <span class="n">init_corr</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">corrcoef</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">rowvar</span><span class="o">=</span><span class="mi">0</span><span class="p">)[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span>
 <span class="k">with</span> <span class="n">pm</span><span class="o">.</span><span class="n">Model</span><span class="p">()</span> <span class="k">as</span> <span class="n">model</span><span class="p">:</span>
@@ -370,21 +478,21 @@ manner.</p>
 distribution as a one-dimensional vector of the upper triangular
 elements of the full covariance matrix.</p>
 <div class="nbinput container">
-<div class="prompt highlight-none"><div class="highlight"><pre>
+<div class="highlight-none"><div class="highlight"><pre>
 <span></span>In [8]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="n">C_triu</span><span class="o">.</span><span class="n">tag</span><span class="o">.</span><span class="n">test_value</span><span class="o">.</span><span class="n">shape</span>
 </pre></div>
 </div>
 </div>
 <div class="nboutput nblast container">
-<div class="prompt highlight-none"><div class="highlight"><pre>
+<div class="highlight-none"><div class="highlight"><pre>
 <span></span>Out[8]:
 </pre></div>
 </div>
-<div class="output_area highlight-none"><div class="highlight"><pre>
+<div class="highlight-none"><div class="highlight"><pre>
 <span></span>(1,)
 </pre></div>
 </div>
@@ -396,11 +504,11 @@ matrix must be symmetric and positive definite with all diagonal entries
 equal to one.) We can then proceed to build the covariance matrix
 <span class="math">\(\Sigma\)</span> and the precision matrix <span class="math">\(\Lambda\)</span>.</p>
 <div class="nbinput nblast container">
-<div class="prompt highlight-none"><div class="highlight"><pre>
+<div class="highlight-none"><div class="highlight"><pre>
 <span></span>In [9]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="k">with</span> <span class="n">model</span><span class="p">:</span>
     <span class="n">C</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Deterministic</span><span class="p">(</span><span class="s1">&#39;C&#39;</span><span class="p">,</span> <span class="n">tt</span><span class="o">.</span><span class="n">fill_diagonal</span><span class="p">(</span><span class="n">C_triu</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">int64</span><span class="p">)],</span> <span class="mf">1.</span><span class="p">))</span>
 
@@ -410,21 +518,21 @@ equal to one.) We can then proceed to build the covariance matrix
 </div>
 </div>
 <div class="nbinput container">
-<div class="prompt highlight-none"><div class="highlight"><pre>
+<div class="highlight-none"><div class="highlight"><pre>
 <span></span>In [10]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="n">cov</span><span class="o">.</span><span class="n">tag</span><span class="o">.</span><span class="n">test_value</span>
 </pre></div>
 </div>
 </div>
 <div class="nboutput nblast container">
-<div class="prompt highlight-none"><div class="highlight"><pre>
+<div class="highlight-none"><div class="highlight"><pre>
 <span></span>Out[10]:
 </pre></div>
 </div>
-<div class="output_area highlight-none"><div class="highlight"><pre>
+<div class="highlight-none"><div class="highlight"><pre>
 <span></span>array([[ 0.54737873,  0.88092866],
        [ 0.88092866,  1.98234664]])
 </pre></div>
@@ -439,11 +547,11 @@ dimensions.</p>
 <p>Finally, we define the prior on <span class="math">\(\mu\)</span> and the sampling
 distribution.</p>
 <div class="nbinput nblast container">
-<div class="prompt highlight-none"><div class="highlight"><pre>
+<div class="highlight-none"><div class="highlight"><pre>
 <span></span>In [11]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="k">with</span> <span class="n">model</span><span class="p">:</span>
     <span class="n">mu</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">MvNormal</span><span class="p">(</span><span class="s1">&#39;mu&#39;</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">cov</span><span class="p">,</span> <span class="n">shape</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">testval</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">))</span>
 
@@ -453,40 +561,40 @@ distribution.</p>
 </div>
 <p>We are now ready to fit this model using <code class="docutils literal"><span class="pre">pymc3</span></code>.</p>
 <div class="nbinput nblast container">
-<div class="prompt highlight-none"><div class="highlight"><pre>
+<div class="highlight-none"><div class="highlight"><pre>
 <span></span>In [12]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="n">n_samples</span> <span class="o">=</span> <span class="mi">4000</span>
 </pre></div>
 </div>
 </div>
 <div class="nbinput container">
-<div class="prompt highlight-none"><div class="highlight"><pre>
+<div class="highlight-none"><div class="highlight"><pre>
 <span></span>In [13]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="k">with</span> <span class="n">model</span><span class="p">:</span>
     <span class="n">trace_</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="n">n_samples</span><span class="p">,</span> <span class="n">pm</span><span class="o">.</span><span class="n">Metropolis</span><span class="p">())</span>
 </pre></div>
 </div>
 </div>
 <div class="nboutput nblast container">
-<div class="prompt empty container">
+<div class="container">
 </div>
-<div class="stderr output_area container">
+<div class="stderr container">
 <div class="highlight"><pre>
 100%|██████████| 4000/4000 [00:05&lt;00:00, 718.12it/s]
 </pre></div></div>
 </div>
 <div class="nbinput nblast container">
-<div class="prompt highlight-none"><div class="highlight"><pre>
+<div class="highlight-none"><div class="highlight"><pre>
 <span></span>In [14]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="n">trace</span> <span class="o">=</span> <span class="n">trace_</span><span class="p">[</span><span class="mi">50</span><span class="p">:]</span>
 </pre></div>
 </div>
@@ -494,96 +602,96 @@ distribution.</p>
 <p>We see that the posterior estimate of <span class="math">\(\mu\)</span> is reasonably
 accurate.</p>
 <div class="nbinput container">
-<div class="prompt highlight-none"><div class="highlight"><pre>
+<div class="highlight-none"><div class="highlight"><pre>
 <span></span>In [15]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="n">pm</span><span class="o">.</span><span class="n">traceplot</span><span class="p">(</span><span class="n">trace</span><span class="p">,</span> <span class="n">varnames</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;mu&#39;</span><span class="p">]);</span>
 </pre></div>
 </div>
 </div>
 <div class="nboutput nblast container">
-<div class="prompt empty container">
+<div class="container">
 </div>
-<div class="output_area container">
+<div class="container">
 <img alt="../_images/notebooks_LKJ_22_0.png" src="../_images/notebooks_LKJ_22_0.png" />
 </div>
 </div>
 <div class="nbinput container">
-<div class="prompt highlight-none"><div class="highlight"><pre>
+<div class="highlight-none"><div class="highlight"><pre>
 <span></span>In [16]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="n">mu_actual</span>
 </pre></div>
 </div>
 </div>
 <div class="nboutput nblast container">
-<div class="prompt highlight-none"><div class="highlight"><pre>
+<div class="highlight-none"><div class="highlight"><pre>
 <span></span>Out[16]:
 </pre></div>
 </div>
-<div class="output_area highlight-none"><div class="highlight"><pre>
+<div class="highlight-none"><div class="highlight"><pre>
 <span></span>array([-1.41866859, -4.8018335 ])
 </pre></div>
 </div>
 </div>
 <p>The estimates of the standard deviations are certainly biased.</p>
 <div class="nbinput container">
-<div class="prompt highlight-none"><div class="highlight"><pre>
+<div class="highlight-none"><div class="highlight"><pre>
 <span></span>In [17]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="n">pm</span><span class="o">.</span><span class="n">traceplot</span><span class="p">(</span><span class="n">trace</span><span class="p">,</span> <span class="n">varnames</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;sigma&#39;</span><span class="p">]);</span>
 </pre></div>
 </div>
 </div>
 <div class="nboutput nblast container">
-<div class="prompt empty container">
+<div class="container">
 </div>
-<div class="output_area container">
+<div class="container">
 <img alt="../_images/notebooks_LKJ_25_0.png" src="../_images/notebooks_LKJ_25_0.png" />
 </div>
 </div>
 <div class="nbinput container">
-<div class="prompt highlight-none"><div class="highlight"><pre>
+<div class="highlight-none"><div class="highlight"><pre>
 <span></span>In [18]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="n">trace</span><span class="p">[</span><span class="s1">&#39;sigma&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
 <div class="nboutput nblast container">
-<div class="prompt highlight-none"><div class="highlight"><pre>
+<div class="highlight-none"><div class="highlight"><pre>
 <span></span>Out[18]:
 </pre></div>
 </div>
-<div class="output_area highlight-none"><div class="highlight"><pre>
+<div class="highlight-none"><div class="highlight"><pre>
 <span></span>array([ 0.75945843,  1.50000803])
 </pre></div>
 </div>
 </div>
 <div class="nbinput container">
-<div class="prompt highlight-none"><div class="highlight"><pre>
+<div class="highlight-none"><div class="highlight"><pre>
 <span></span>In [19]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">var</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
 <div class="nboutput nblast container">
-<div class="prompt highlight-none"><div class="highlight"><pre>
+<div class="highlight-none"><div class="highlight"><pre>
 <span></span>Out[19]:
 </pre></div>
 </div>
-<div class="output_area highlight-none"><div class="highlight"><pre>
+<div class="highlight-none"><div class="highlight"><pre>
 <span></span>array([ 0.3522422 ,  1.58192855])
 </pre></div>
 </div>
@@ -591,11 +699,11 @@ accurate.</p>
 <p>However, the 95% posterior credible region is visually quite close to
 the true credible region, so we can be fairly satisfied with our model.</p>
 <div class="nbinput nblast container">
-<div class="prompt highlight-none"><div class="highlight"><pre>
+<div class="highlight-none"><div class="highlight"><pre>
 <span></span>In [20]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="n">post_cov</span> <span class="o">=</span> <span class="n">trace</span><span class="p">[</span><span class="s1">&#39;cov&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
 
 <span class="n">post_sigma</span><span class="p">,</span> <span class="n">post_U</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">eig</span><span class="p">(</span><span class="n">post_cov</span><span class="p">)</span>
@@ -604,11 +712,11 @@ the true credible region, so we can be fairly satisfied with our model.</p>
 </div>
 </div>
 <div class="nbinput container">
-<div class="prompt highlight-none"><div class="highlight"><pre>
+<div class="highlight-none"><div class="highlight"><pre>
 <span></span>In [21]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">8</span><span class="p">,</span> <span class="mi">6</span><span class="p">))</span>
 
 <span class="n">blue</span> <span class="o">=</span> <span class="n">sns</span><span class="o">.</span><span class="n">color_palette</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span>
@@ -637,65 +745,81 @@ the true credible region, so we can be fairly satisfied with our model.</p>
 </div>
 </div>
 <div class="nboutput nblast container">
-<div class="prompt empty container">
+<div class="container">
 </div>
-<div class="output_area container">
+<div class="container">
 <img alt="../_images/notebooks_LKJ_30_0.png" src="../_images/notebooks_LKJ_30_0.png" />
 </div>
 </div>
 </div>
 
 
+           </div>
           </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="BEST.html" class="btn btn-neutral float-right" title="Bayesian Estimation Supersedes the T-Test" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="howto_debugging.html" class="btn btn-neutral" title="How to debug a model" accesskey="p"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2016, John Salvatier, Christopher Fonnesbeck, Thomas Wiecki.
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
         </div>
       </div>
-      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
-        <div class="sphinxsidebarwrapper"><div class="relations">
-<h3>Related Topics</h3>
-<ul>
-  <li><a href="../index.html">Documentation overview</a><ul>
-  <li><a href="../examples.html">Examples</a><ul>
-      <li>Previous: <a href="howto_debugging.html" title="previous chapter">How to debug a model</a></li>
-      <li>Next: <a href="BEST.html" title="next chapter">Bayesian Estimation Supersedes the T-Test</a></li>
-  </ul></li>
-  </ul></li>
-</ul>
-</div>
-  <div role="note" aria-label="source link">
-    <h3>This Page</h3>
-    <ul class="this-page-menu">
-      <li><a href="../_sources/notebooks/LKJ.txt"
-            rel="nofollow">Show Source</a></li>
-    </ul>
-   </div>
-<div id="searchbox" style="display: none" role="search">
-  <h3>Quick search</h3>
-    <form class="search" action="../search.html" method="get">
-      <div><input type="text" name="q" /></div>
-      <div><input type="submit" value="Go" /></div>
-      <input type="hidden" name="check_keywords" value="yes" />
-      <input type="hidden" name="area" value="default" />
-    </form>
-</div>
-<script type="text/javascript">$('#searchbox').show(0);</script>
-        </div>
-      </div>
-      <div class="clearer"></div>
-    </div>
-    <div class="footer">
-      &copy;2016, John Salvatier, Christopher Fonnesbeck, Thomas Wiecki.
-      
-      |
-      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.4.6</a>
-      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.9</a>
-      
-      |
-      <a href="../_sources/notebooks/LKJ.txt"
-          rel="nofollow">Page source</a>
-    </div>
 
-    
+    </section>
 
-    
-  </body>
+  </div>
+  
+
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'../',
+            VERSION:'3.0',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true
+        };
+    </script>
+      <script type="text/javascript" src="../_static/jquery.js"></script>
+      <script type="text/javascript" src="../_static/underscore.js"></script>
+      <script type="text/javascript" src="../_static/doctools.js"></script>
+      <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+  
+
+  
+  
+    <script type="text/javascript" src="../_static/js/theme.js"></script>
+  
+
+  
+  
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.StickyNav.enable();
+      });
+  </script>
+   
+
+</body>
 </html>

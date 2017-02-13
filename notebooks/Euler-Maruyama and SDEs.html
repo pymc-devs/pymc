@@ -1,44 +1,134 @@
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
-  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 
 
-<html xmlns="http://www.w3.org/1999/xhtml">
-  <head>
-    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-    
-    <title>Inferring parameters of SDEs using a Euler-Maruyama scheme &#8212; PyMC3 3.0 documentation</title>
-    
-    <link rel="stylesheet" href="../_static/alabaster.css" type="text/css" />
-    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
-    
-    <script type="text/javascript">
-      var DOCUMENTATION_OPTIONS = {
-        URL_ROOT:    '../',
-        VERSION:     '3.0',
-        COLLAPSE_INDEX: false,
-        FILE_SUFFIX: '.html',
-        HAS_SOURCE:  true
-      };
-    </script>
-    <script type="text/javascript" src="../_static/jquery.js"></script>
-    <script type="text/javascript" src="../_static/underscore.js"></script>
-    <script type="text/javascript" src="../_static/doctools.js"></script>
-    <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
-    <link rel="top" title="PyMC3 3.0 documentation" href="../index.html" />
-   
-  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
   
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
-
-  </head>
-  <body role="document">
+  <title>Inferring parameters of SDEs using a Euler-Maruyama scheme &mdash; PyMC3 3.0 documentation</title>
   
 
-    <div class="document">
-      <div class="documentwrapper">
-        <div class="bodywrapper">
-          <div class="body" role="main">
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  
+  
+    <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  
+
+  
+
+  
+        <link rel="index" title="Index"
+              href="../genindex.html"/>
+        <link rel="search" title="Search" href="../search.html"/>
+    <link rel="top" title="PyMC3 3.0 documentation" href="../index.html"/> 
+
+  
+  <script src="../_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+          
+            <a href="../index.html" class="icon icon-home"> PyMC3
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                3.0
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+                <ul>
+<li class="toctree-l1"><a class="reference internal" href="../getting_started.html">Getting started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../examples.html">Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../api.html">API Reference</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+        <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+        <a href="../index.html">PyMC3</a>
+      </nav>
+
+
+      
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          
+
+ 
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="../index.html">Docs</a> &raquo;</li>
+      
+    <li>Inferring parameters of SDEs using a Euler-Maruyama scheme</li>
+      <li class="wy-breadcrumbs-aside">
+        
+          
+            <a href="../_sources/notebooks/Euler-Maruyama and SDEs.ipynb.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
             
   
 <style>
@@ -46,15 +136,13 @@
 
 /* remove conflicting styling from Sphinx themes */
 div.nbinput,
-div.nbinput div.prompt,
-div.nbinput div.input_area,
-div.nbinput div[class*=highlight],
-div.nbinput div[class*=highlight] pre,
+div.nbinput > div,
+div.nbinput div[class^=highlight],
+div.nbinput div[class^=highlight] pre,
 div.nboutput,
-div.nbinput div.prompt,
-div.nbinput div.output_area,
-div.nboutput div[class*=highlight],
-div.nboutput div[class*=highlight] pre {
+div.nboutput > div,
+div.nboutput div[class^=highlight],
+div.nboutput div[class^=highlight] pre {
     background: none;
     border: none;
     padding: 0 0;
@@ -63,7 +151,7 @@ div.nboutput div[class*=highlight] pre {
 }
 
 /* avoid gaps between output lines */
-div.nboutput div[class*=highlight] pre {
+div.nboutput div[class^=highlight] pre {
     line-height: normal;
 }
 
@@ -74,13 +162,6 @@ div.nboutput {
     display: flex;
     align-items: flex-start;
     margin: 0;
-    width: 100%;
-}
-@media (max-width: 540px) {
-    div.nbinput,
-    div.nboutput {
-        flex-direction: column;
-    }
 }
 
 /* input container */
@@ -94,58 +175,38 @@ div.nblast {
 }
 
 /* input prompt */
-div.nbinput div.prompt pre {
+div.nbinput > :first-child pre {
     color: #303F9F;
 }
 
 /* output prompt */
-div.nboutput div.prompt pre {
+div.nboutput > :first-child pre {
     color: #D84315;
 }
 
 /* all prompts */
-div.nbinput div.prompt,
-div.nboutput div.prompt {
+div.nbinput > :first-child[class^=highlight],
+div.nboutput > :first-child[class^=highlight],
+div.nboutput > :first-child {
     min-width: 8ex;
     padding-top: 0.4em;
     padding-right: 0.4em;
     text-align: right;
     flex: 0;
 }
-@media (max-width: 540px) {
-    div.nbinput div.prompt,
-    div.nboutput div.prompt {
-        text-align: left;
-        padding: 0.4em;
-    }
-    div.nboutput div.prompt.empty {
-        padding: 0;
-    }
-}
-
-/* disable scrollbars on prompts */
-div.nbinput div.prompt pre,
-div.nboutput div.prompt pre {
-    overflow: hidden;
-}
 
 /* input/output area */
-div.nbinput div.input_area,
-div.nboutput div.output_area {
+div.nbinput > :nth-child(2)[class^=highlight],
+div.nboutput > :nth-child(2),
+div.nboutput > :nth-child(2)[class^=highlight] {
     padding: 0.4em;
     -webkit-flex: 1;
     flex: 1;
     overflow: auto;
 }
-@media (max-width: 540px) {
-    div.nbinput div.input_area,
-    div.nboutput div.output_area {
-        width: 100%;
-    }
-}
 
 /* input area */
-div.nbinput div.input_area {
+div.nbinput > :nth-child(2)[class^=highlight] {
     border: 1px solid #cfcfcf;
     border-radius: 2px;
     background: #f7f7f7;
@@ -162,7 +223,7 @@ div.nboutput div.math p {
 }
 
 /* standard error */
-div.nboutput div.output_area.stderr {
+div.nboutput  > :nth-child(2).stderr {
     background: #fdd;
 }
 
@@ -201,6 +262,38 @@ div.nboutput div.output_area.stderr {
 .ansi-white-intense-bg { background-color: #A1A6B2; }
 
 .ansi-bold { font-weight: bold; }
+
+/* CSS overrides for sphinx_rtd_theme */
+
+/* 24px margin */
+.nbinput.nblast,
+.nboutput.nblast {
+    margin-bottom: 19px;  /* padding has already 5px */
+}
+
+/* ... except between code cells! */
+.nblast + .nbinput {
+    margin-top: -19px;
+}
+
+/* nice headers on first paragraph of info/warning boxes */
+.admonition .first {
+    margin: -12px;
+    padding: 6px 12px;
+    margin-bottom: 12px;
+    color: #fff;
+    line-height: 1;
+    display: block;
+}
+.admonition.warning .first {
+    background: #f0b37e;
+}
+.admonition.note .first {
+    background: #6ab0de;
+}
+.admonition > p:before {
+    margin-right: 4px;  /* make room for the exclamation icon */
+}
 </style>
 <div class="section" id="Inferring-parameters-of-SDEs-using-a-Euler-Maruyama-scheme">
 <h1>Inferring parameters of SDEs using a Euler-Maruyama scheme<a class="headerlink" href="#Inferring-parameters-of-SDEs-using-a-Euler-Maruyama-scheme" title="Permalink to this headline">¶</a></h1>
@@ -208,11 +301,11 @@ div.nboutput div.output_area.stderr {
 Theoretical Neuroscience Group, Institute of Systems Neuroscience at
 Aix-Marseile University.</em></p>
 <div class="nbinput container">
-<div class="prompt highlight-none"><div class="highlight"><pre>
+<div class="highlight-none"><div class="highlight"><pre>
 <span></span>In [1]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="o">%</span><span class="k">pylab</span> inline
 <span class="kn">import</span> <span class="nn">pymc3</span> <span class="kn">as</span> <span class="nn">pm</span>
 <span class="kn">import</span> <span class="nn">theano.tensor</span> <span class="kn">as</span> <span class="nn">tt</span>
@@ -222,9 +315,9 @@ Aix-Marseile University.</em></p>
 </div>
 </div>
 <div class="nboutput nblast container">
-<div class="prompt empty container">
+<div class="container">
 </div>
-<div class="output_area container">
+<div class="container">
 <div class="highlight"><pre>
 Populating the interactive namespace from numpy and matplotlib
 </pre></div></div>
@@ -232,14 +325,14 @@ Populating the interactive namespace from numpy and matplotlib
 <div class="section" id="Toy-model-1">
 <h2>Toy model 1<a class="headerlink" href="#Toy-model-1" title="Permalink to this headline">¶</a></h2>
 <p>Here&#8217;s a scalar linear SDE in symbolic form</p>
-<p>$ dX_t = <a href="#id1"><span class="problematic" id="id2">:raw-latex:`\lambda `X\_t + :raw-latex:`</span></a>sigma`^2 dW_t $</p>
+<p>$ dX_t = X_t + ^2 dW_t $</p>
 <p>discretized with the Euler-Maruyama scheme</p>
 <div class="nbinput nblast container">
-<div class="prompt highlight-none"><div class="highlight"><pre>
+<div class="highlight-none"><div class="highlight"><pre>
 <span></span>In [2]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="c1"># parameters</span>
 <span class="err">λ</span> <span class="o">=</span> <span class="o">-</span><span class="mf">0.78</span>
 <span class="err">σ</span><span class="mi">2</span> <span class="o">=</span> <span class="mf">5e-3</span>
@@ -263,11 +356,11 @@ Populating the interactive namespace from numpy and matplotlib
 </div>
 </div>
 <div class="nbinput container">
-<div class="prompt highlight-none"><div class="highlight"><pre>
+<div class="highlight-none"><div class="highlight"><pre>
 <span></span>In [3]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="mi">3</span><span class="p">))</span>
 <span class="n">subplot</span><span class="p">(</span><span class="mi">121</span><span class="p">)</span>
 <span class="n">plot</span><span class="p">(</span><span class="n">x_t</span><span class="p">[:</span><span class="mi">30</span><span class="p">],</span> <span class="s1">&#39;k&#39;</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s1">&#39;$x(t)$&#39;</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">0.5</span><span class="p">),</span> <span class="n">plot</span><span class="p">(</span><span class="n">z_t</span><span class="p">[:</span><span class="mi">30</span><span class="p">],</span> <span class="s1">&#39;r&#39;</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s1">&#39;$z(t)$&#39;</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">0.5</span><span class="p">)</span>
@@ -280,10 +373,10 @@ Populating the interactive namespace from numpy and matplotlib
 </div>
 </div>
 <div class="nboutput nblast container">
-<div class="prompt empty container">
+<div class="container">
 </div>
-<div class="output_area container">
-<img alt="../_images/notebooks_Euler-Maruyama_and_SDEs_4_0.png" src="../_images/notebooks_Euler-Maruyama_and_SDEs_4_0.png" />
+<div class="container">
+<img alt="notebooks/../_build/doctrees/nbsphinx/notebooks_Euler-MaruyamaandSDEs_4_0.png" src="notebooks/../_build/doctrees/nbsphinx/notebooks_Euler-MaruyamaandSDEs_4_0.png" />
 </div>
 </div>
 <p>What is the inference we want to make? Since we&#8217;ve made a noisy
@@ -292,11 +385,11 @@ observation of the generated time series, we need to estimate both
 <p>First, we rewrite our SDE as a function returning a tuple of the drift
 and diffusion coefficients</p>
 <div class="nbinput nblast container">
-<div class="prompt highlight-none"><div class="highlight"><pre>
+<div class="highlight-none"><div class="highlight"><pre>
 <span></span>In [4]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="k">def</span> <span class="nf">lin_sde</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">lam</span><span class="p">):</span>
     <span class="k">return</span> <span class="n">lam</span> <span class="o">*</span> <span class="n">x</span><span class="p">,</span> <span class="err">σ</span><span class="mi">2</span>
 </pre></div>
@@ -305,11 +398,11 @@ and diffusion coefficients</p>
 <p>Next, we describe the probability model as a set of three stochastic
 variables, <code class="docutils literal"><span class="pre">lam</span></code>, <code class="docutils literal"><span class="pre">xh</span></code>, and <code class="docutils literal"><span class="pre">zh</span></code>:</p>
 <div class="nbinput nblast container">
-<div class="prompt highlight-none"><div class="highlight"><pre>
+<div class="highlight-none"><div class="highlight"><pre>
 <span></span>In [5]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="k">with</span> <span class="n">pm</span><span class="o">.</span><span class="n">Model</span><span class="p">()</span> <span class="k">as</span> <span class="n">model</span><span class="p">:</span>
 
     <span class="c1"># uniform prior, but we know it must be negative</span>
@@ -327,11 +420,11 @@ variables, <code class="docutils literal"><span class="pre">lam</span></code>, <
 <p>Once the model is constructed, we perform inference, i.e. sample from
 the posterior distribution, in the following steps:</p>
 <div class="nbinput container">
-<div class="prompt highlight-none"><div class="highlight"><pre>
+<div class="highlight-none"><div class="highlight"><pre>
 <span></span>In [6]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="k">with</span> <span class="n">model</span><span class="p">:</span>
 
     <span class="c1"># optimize to find the mode of the posterior as starting point for prob. mass</span>
@@ -348,9 +441,9 @@ the posterior distribution, in the following steps:</p>
 </div>
 </div>
 <div class="nboutput nblast container">
-<div class="prompt empty container">
+<div class="container">
 </div>
-<div class="stderr output_area container">
+<div class="stderr container">
 <div class="highlight"><pre>
 100%|██████████| 1000/1000 [00:10&lt;00:00, 93.65it/s]
 100%|██████████| 2000/2000 [00:11&lt;00:00, 178.16it/s]
@@ -358,11 +451,11 @@ the posterior distribution, in the following steps:</p>
 </div>
 <p>Next, we plot some basic statistics on the samples from the posterior,</p>
 <div class="nbinput container">
-<div class="prompt highlight-none"><div class="highlight"><pre>
+<div class="highlight-none"><div class="highlight"><pre>
 <span></span>In [7]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="mi">3</span><span class="p">))</span>
 <span class="n">subplot</span><span class="p">(</span><span class="mi">121</span><span class="p">)</span>
 <span class="n">plot</span><span class="p">(</span><span class="n">percentile</span><span class="p">(</span><span class="n">trace</span><span class="p">[</span><span class="n">xh</span><span class="p">],</span> <span class="p">[</span><span class="mf">2.5</span><span class="p">,</span> <span class="mf">97.5</span><span class="p">],</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">T</span><span class="p">,</span> <span class="s1">&#39;k&#39;</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s1">&#39;$\hat{x}_{95\%}(t)$&#39;</span><span class="p">)</span>
@@ -377,10 +470,10 @@ the posterior distribution, in the following steps:</p>
 </div>
 </div>
 <div class="nboutput nblast container">
-<div class="prompt empty container">
+<div class="container">
 </div>
-<div class="output_area container">
-<img alt="../_images/notebooks_Euler-Maruyama_and_SDEs_13_0.png" src="../_images/notebooks_Euler-Maruyama_and_SDEs_13_0.png" />
+<div class="container">
+<img alt="notebooks/../_build/doctrees/nbsphinx/notebooks_Euler-MaruyamaandSDEs_13_0.png" src="notebooks/../_build/doctrees/nbsphinx/notebooks_Euler-MaruyamaandSDEs_13_0.png" />
 </div>
 </div>
 <p>A model can fit the data precisely and still be wrong; we need to use
@@ -390,11 +483,11 @@ data our likely.</p>
 observations - check that the new observations fit with the original
 data</p>
 <div class="nbinput container">
-<div class="prompt highlight-none"><div class="highlight"><pre>
+<div class="highlight-none"><div class="highlight"><pre>
 <span></span>In [8]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="c1"># generate trace from posterior</span>
 <span class="n">ppc_trace</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">sample_ppc</span><span class="p">(</span><span class="n">trace</span><span class="p">,</span> <span class="n">model</span><span class="o">=</span><span class="n">model</span><span class="p">)</span>
 
@@ -407,28 +500,28 @@ data</p>
 </div>
 </div>
 <div class="nboutput container">
-<div class="prompt empty container">
+<div class="container">
 </div>
-<div class="stderr output_area container">
+<div class="stderr container">
 <div class="highlight"><pre>
 100%|██████████| 2000/2000 [00:03&lt;00:00, 504.18it/s]
 </pre></div></div>
 </div>
 <div class="nboutput container">
-<div class="prompt highlight-none"><div class="highlight"><pre>
+<div class="highlight-none"><div class="highlight"><pre>
 <span></span>Out[8]:
 </pre></div>
 </div>
-<div class="output_area highlight-none"><div class="highlight"><pre>
+<div class="highlight-none"><div class="highlight"><pre>
 <span></span>&lt;matplotlib.legend.Legend at 0x117dac080&gt;
 </pre></div>
 </div>
 </div>
 <div class="nboutput nblast container">
-<div class="prompt empty container">
+<div class="container">
 </div>
-<div class="output_area container">
-<img alt="../_images/notebooks_Euler-Maruyama_and_SDEs_15_2.png" src="../_images/notebooks_Euler-Maruyama_and_SDEs_15_2.png" />
+<div class="container">
+<img alt="notebooks/../_build/doctrees/nbsphinx/notebooks_Euler-MaruyamaandSDEs_15_2.png" src="notebooks/../_build/doctrees/nbsphinx/notebooks_Euler-MaruyamaandSDEs_15_2.png" />
 </div>
 </div>
 <p>Note that</p>
@@ -447,11 +540,11 @@ the PPC.</li>
 \dot{y} &amp;= \frac{1}{\tau} (a - x)
 \end{align}</div><p>with noisy observation <span class="math">\(z(t) = m x + (1 - m) y + N(0, 0.05)\)</span>.</p>
 <div class="nbinput container">
-<div class="prompt highlight-none"><div class="highlight"><pre>
+<div class="highlight-none"><div class="highlight"><pre>
 <span></span>In [9]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="n">N</span><span class="p">,</span> <span class="err">τ</span><span class="p">,</span> <span class="n">a</span><span class="p">,</span> <span class="n">m</span><span class="p">,</span> <span class="err">σ</span><span class="mi">2</span> <span class="o">=</span> <span class="mi">200</span><span class="p">,</span> <span class="mf">3.0</span><span class="p">,</span> <span class="mf">1.05</span><span class="p">,</span> <span class="mf">0.2</span><span class="p">,</span> <span class="mf">1e-1</span>
 <span class="n">xs</span><span class="p">,</span> <span class="n">ys</span> <span class="o">=</span> <span class="p">[</span><span class="mf">0.0</span><span class="p">],</span> <span class="p">[</span><span class="mf">1.0</span><span class="p">]</span>
 <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">N</span><span class="p">):</span>
@@ -472,20 +565,20 @@ the PPC.</li>
 </div>
 </div>
 <div class="nboutput container">
-<div class="prompt highlight-none"><div class="highlight"><pre>
+<div class="highlight-none"><div class="highlight"><pre>
 <span></span>Out[9]:
 </pre></div>
 </div>
-<div class="output_area highlight-none"><div class="highlight"><pre>
+<div class="highlight-none"><div class="highlight"><pre>
 <span></span>&lt;matplotlib.legend.Legend at 0x117facb00&gt;
 </pre></div>
 </div>
 </div>
 <div class="nboutput nblast container">
-<div class="prompt empty container">
+<div class="container">
 </div>
-<div class="output_area container">
-<img alt="../_images/notebooks_Euler-Maruyama_and_SDEs_18_1.png" src="../_images/notebooks_Euler-Maruyama_and_SDEs_18_1.png" />
+<div class="container">
+<img alt="notebooks/../_build/doctrees/nbsphinx/notebooks_Euler-MaruyamaandSDEs_18_1.png" src="notebooks/../_build/doctrees/nbsphinx/notebooks_Euler-MaruyamaandSDEs_18_1.png" />
 </div>
 </div>
 <p>Now, estimate the hidden states <span class="math">\(x(t)\)</span> and <span class="math">\(y(t)\)</span>, as well
@@ -493,11 +586,11 @@ as parameters <span class="math">\(\tau\)</span>, <span class="math">\(a\)</span
 <p>As before, we rewrite our SDE as a function returned drift &amp; diffusion
 coefficients:</p>
 <div class="nbinput nblast container">
-<div class="prompt highlight-none"><div class="highlight"><pre>
+<div class="highlight-none"><div class="highlight"><pre>
 <span></span>In [10]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="k">def</span> <span class="nf">osc_sde</span><span class="p">(</span><span class="n">xy</span><span class="p">,</span> <span class="err">τ</span><span class="p">,</span> <span class="n">a</span><span class="p">):</span>
     <span class="n">x</span><span class="p">,</span> <span class="n">y</span> <span class="o">=</span> <span class="n">xy</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">],</span> <span class="n">xy</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">]</span>
     <span class="n">dx</span> <span class="o">=</span> <span class="err">τ</span> <span class="o">*</span> <span class="p">(</span><span class="n">x</span> <span class="o">-</span> <span class="n">x</span><span class="o">**</span><span class="mf">3.0</span><span class="o">/</span><span class="mf">3.0</span> <span class="o">+</span> <span class="n">y</span><span class="p">)</span>
@@ -513,11 +606,11 @@ prediction of the state at step <span class="math">\(i+1\)</span> based on the s
 <p>We can now write our statistical model as before, with uninformative
 priors on <span class="math">\(\tau\)</span>, <span class="math">\(a\)</span> and <span class="math">\(m\)</span>:</p>
 <div class="nbinput nblast container">
-<div class="prompt highlight-none"><div class="highlight"><pre>
+<div class="highlight-none"><div class="highlight"><pre>
 <span></span>In [11]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="n">xys</span> <span class="o">=</span> <span class="n">c_</span><span class="p">[</span><span class="n">xs</span><span class="p">,</span> <span class="n">ys</span><span class="p">]</span>
 
 <span class="k">with</span> <span class="n">pm</span><span class="o">.</span><span class="n">Model</span><span class="p">()</span> <span class="k">as</span> <span class="n">model</span><span class="p">:</span>
@@ -532,11 +625,11 @@ priors on <span class="math">\(\tau\)</span>, <span class="math">\(a\)</span> an
 <p>As with the linear SDE, we 1) find a MAP estimate, 2) warm up and 3)
 sample from the probability mass:</p>
 <div class="nbinput container">
-<div class="prompt highlight-none"><div class="highlight"><pre>
+<div class="highlight-none"><div class="highlight"><pre>
 <span></span>In [12]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="k">with</span> <span class="n">model</span><span class="p">:</span>
 
     <span class="c1"># optimize to find the mode of the posterior as starting point for prob. mass</span>
@@ -553,9 +646,9 @@ sample from the probability mass:</p>
 </div>
 </div>
 <div class="nboutput nblast container">
-<div class="prompt empty container">
+<div class="container">
 </div>
-<div class="stderr output_area container">
+<div class="stderr container">
 <div class="highlight"><pre>
 100%|██████████| 100/100 [00:17&lt;00:00,  6.02it/s]
 100%|██████████| 2000/2000 [01:38&lt;00:00, 20.29it/s]
@@ -564,11 +657,11 @@ sample from the probability mass:</p>
 <p>Again, the result is a set of samples from the posterior, including our
 parameters of interest but also the hidden states</p>
 <div class="nbinput container">
-<div class="prompt highlight-none"><div class="highlight"><pre>
+<div class="highlight-none"><div class="highlight"><pre>
 <span></span>In [13]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="mi">6</span><span class="p">))</span>
 <span class="n">subplot</span><span class="p">(</span><span class="mi">211</span><span class="p">)</span>
 <span class="n">plot</span><span class="p">(</span><span class="n">percentile</span><span class="p">(</span><span class="n">trace</span><span class="p">[</span><span class="n">xyh</span><span class="p">][</span><span class="o">...</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span> <span class="p">[</span><span class="mf">2.5</span><span class="p">,</span> <span class="mf">97.5</span><span class="p">],</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">T</span><span class="p">,</span> <span class="s1">&#39;k&#39;</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s1">&#39;$\hat{x}_{95\%}(t)$&#39;</span><span class="p">)</span>
@@ -582,20 +675,20 @@ parameters of interest but also the hidden states</p>
 </div>
 </div>
 <div class="nboutput nblast container">
-<div class="prompt empty container">
+<div class="container">
 </div>
-<div class="output_area container">
-<img alt="../_images/notebooks_Euler-Maruyama_and_SDEs_27_0.png" src="../_images/notebooks_Euler-Maruyama_and_SDEs_27_0.png" />
+<div class="container">
+<img alt="notebooks/../_build/doctrees/nbsphinx/notebooks_Euler-MaruyamaandSDEs_27_0.png" src="notebooks/../_build/doctrees/nbsphinx/notebooks_Euler-MaruyamaandSDEs_27_0.png" />
 </div>
 </div>
 <p>Again, we can perform a posterior predictive check, that our data are
 likely given the fit model</p>
 <div class="nbinput container">
-<div class="prompt highlight-none"><div class="highlight"><pre>
+<div class="highlight-none"><div class="highlight"><pre>
 <span></span>In [14]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="c1"># generate trace from posterior</span>
 <span class="n">ppc_trace</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">sample_ppc</span><span class="p">(</span><span class="n">trace</span><span class="p">,</span> <span class="n">model</span><span class="o">=</span><span class="n">model</span><span class="p">)</span>
 
@@ -608,28 +701,28 @@ likely given the fit model</p>
 </div>
 </div>
 <div class="nboutput container">
-<div class="prompt empty container">
+<div class="container">
 </div>
-<div class="stderr output_area container">
+<div class="stderr container">
 <div class="highlight"><pre>
 100%|██████████| 2000/2000 [00:09&lt;00:00, 210.01it/s]
 </pre></div></div>
 </div>
 <div class="nboutput container">
-<div class="prompt highlight-none"><div class="highlight"><pre>
+<div class="highlight-none"><div class="highlight"><pre>
 <span></span>Out[14]:
 </pre></div>
 </div>
-<div class="output_area highlight-none"><div class="highlight"><pre>
+<div class="highlight-none"><div class="highlight"><pre>
 <span></span>&lt;matplotlib.legend.Legend at 0x122c6fa90&gt;
 </pre></div>
 </div>
 </div>
 <div class="nboutput nblast container">
-<div class="prompt empty container">
+<div class="container">
 </div>
-<div class="output_area container">
-<img alt="../_images/notebooks_Euler-Maruyama_and_SDEs_29_2.png" src="../_images/notebooks_Euler-Maruyama_and_SDEs_29_2.png" />
+<div class="container">
+<img alt="notebooks/../_build/doctrees/nbsphinx/notebooks_Euler-MaruyamaandSDEs_29_2.png" src="notebooks/../_build/doctrees/nbsphinx/notebooks_Euler-MaruyamaandSDEs_29_2.png" />
 </div>
 </div>
 </div>
@@ -637,63 +730,63 @@ likely given the fit model</p>
 </div>
 
 
+           </div>
           </div>
+          <footer>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2016, John Salvatier, Christopher Fonnesbeck, Thomas Wiecki.
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
         </div>
       </div>
-      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
-        <div class="sphinxsidebarwrapper">
-  <h3><a href="../index.html">Table Of Contents</a></h3>
-  <ul>
-<li><a class="reference internal" href="#">Inferring parameters of SDEs using a Euler-Maruyama scheme</a><ul>
-<li><a class="reference internal" href="#Toy-model-1">Toy model 1</a><ul>
-<li><a class="reference internal" href="#Toy-model-2">Toy model 2</a></li>
-</ul>
-</li>
-</ul>
-</li>
-</ul>
-<div class="relations">
-<h3>Related Topics</h3>
-<ul>
-  <li><a href="../index.html">Documentation overview</a><ul>
-  </ul></li>
-</ul>
-</div>
-  <div role="note" aria-label="source link">
-    <h3>This Page</h3>
-    <ul class="this-page-menu">
-      <li><a href="../_sources/notebooks/Euler-Maruyama and SDEs.txt"
-            rel="nofollow">Show Source</a></li>
-    </ul>
-   </div>
-<div id="searchbox" style="display: none" role="search">
-  <h3>Quick search</h3>
-    <form class="search" action="../search.html" method="get">
-      <div><input type="text" name="q" /></div>
-      <div><input type="submit" value="Go" /></div>
-      <input type="hidden" name="check_keywords" value="yes" />
-      <input type="hidden" name="area" value="default" />
-    </form>
-</div>
-<script type="text/javascript">$('#searchbox').show(0);</script>
-        </div>
-      </div>
-      <div class="clearer"></div>
-    </div>
-    <div class="footer">
-      &copy;2016, John Salvatier, Christopher Fonnesbeck, Thomas Wiecki.
-      
-      |
-      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.4.6</a>
-      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.9</a>
-      
-      |
-      <a href="../_sources/notebooks/Euler-Maruyama and SDEs.txt"
-          rel="nofollow">Page source</a>
-    </div>
 
-    
+    </section>
 
-    
-  </body>
+  </div>
+  
+
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'../',
+            VERSION:'3.0',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true
+        };
+    </script>
+      <script type="text/javascript" src="../_static/jquery.js"></script>
+      <script type="text/javascript" src="../_static/underscore.js"></script>
+      <script type="text/javascript" src="../_static/doctools.js"></script>
+      <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+  
+
+  
+  
+    <script type="text/javascript" src="../_static/js/theme.js"></script>
+  
+
+  
+  
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.StickyNav.enable();
+      });
+  </script>
+   
+
+</body>
 </html>

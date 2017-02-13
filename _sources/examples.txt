@@ -8,7 +8,6 @@ Howto
 =====
 
 .. toctree::
-   notebooks/sampler-stats.ipynb
    notebooks/posterior_predictive.ipynb
    notebooks/howto_debugging.ipynb
    notebooks/LKJ.ipynb
@@ -22,7 +21,7 @@ Applied
    notebooks/probabilistic-matrix-factorization.ipynb
    notebooks/rugby_analytics.ipynb
    notebooks/survival_analysis.ipynb
-   notebooks/dawid-skene.ipynb
+   notebooks/GP-smoothing.ipynb
 
 GLM
 ===
@@ -35,16 +34,6 @@ GLM
    notebooks/GLM-rolling-regression.ipynb
    notebooks/GLM-hierarchical.ipynb
    notebooks/GLM-poisson-regression.ipynb
-   notebooks/hierarchical_partial_pooling.ipynb
-   notebooks/GLM-negative-binomial-regression.ipynb
-
-GP
-==
-
-.. toctree::
-   notebooks/GP-introduction.ipynb
-   notebooks/GP-covariances.ipynb
-   notebooks/GP-smoothing.ipynb
 
 Mixture Models
 ==============
@@ -54,7 +43,6 @@ Mixture Models
    notebooks/marginalized_gaussian_mixture_model.ipynb
    notebooks/gaussian-mixture-model-advi.ipynb
    notebooks/dp_mix.ipynb
-   notebooks/dependent_density_regression.ipynb
 
 ADVI
 ====

@@ -1,47 +1,162 @@
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
-  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 
 
-<html xmlns="http://www.w3.org/1999/xhtml">
-  <head>
-    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-    
-    <title>Convolutional variational autoencoder with PyMC3 and Keras &#8212; PyMC3 3.0 documentation</title>
-    
-    <link rel="stylesheet" href="../_static/alabaster.css" type="text/css" />
-    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
-    
-    <script type="text/javascript">
-      var DOCUMENTATION_OPTIONS = {
-        URL_ROOT:    '../',
-        VERSION:     '3.0',
-        COLLAPSE_INDEX: false,
-        FILE_SUFFIX: '.html',
-        HAS_SOURCE:  true
-      };
-    </script>
-    <script type="text/javascript" src="../_static/jquery.js"></script>
-    <script type="text/javascript" src="../_static/underscore.js"></script>
-    <script type="text/javascript" src="../_static/doctools.js"></script>
-    <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
-    <link rel="top" title="PyMC3 3.0 documentation" href="../index.html" />
-    <link rel="up" title="Examples" href="../examples.html" />
-    <link rel="next" title="API Reference" href="../api.html" />
-    <link rel="prev" title="Variational Inference: Bayesian Neural Networks" href="bayesian_neural_network_advi.html" />
-   
-  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
   
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
-
-  </head>
-  <body role="document">
+  <title>Convolutional variational autoencoder with PyMC3 and Keras &mdash; PyMC3 3.0 documentation</title>
   
 
-    <div class="document">
-      <div class="documentwrapper">
-        <div class="bodywrapper">
-          <div class="body" role="main">
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  
+  
+    <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  
+
+  
+
+  
+        <link rel="index" title="Index"
+              href="../genindex.html"/>
+        <link rel="search" title="Search" href="../search.html"/>
+    <link rel="top" title="PyMC3 3.0 documentation" href="../index.html"/>
+        <link rel="up" title="Examples" href="../examples.html"/>
+        <link rel="next" title="API Reference" href="../api.html"/>
+        <link rel="prev" title="Variational Inference: Bayesian Neural Networks" href="bayesian_neural_network_advi.html"/> 
+
+  
+  <script src="../_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+          
+            <a href="../index.html" class="icon icon-home"> PyMC3
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                3.0
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+                <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../getting_started.html">Getting started</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="../examples.html">Examples</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="../examples.html#howto">Howto</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../examples.html#applied">Applied</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../examples.html#glm">GLM</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../examples.html#gp">GP</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../examples.html#mixture-models">Mixture Models</a></li>
+<li class="toctree-l2 current"><a class="reference internal" href="../examples.html#advi">ADVI</a><ul class="current">
+<li class="toctree-l3"><a class="reference internal" href="GLM-hierarchical-ADVI.html">GLM: Hierarchical Linear Regression with ADVI</a></li>
+<li class="toctree-l3"><a class="reference internal" href="GLM-hierarchical-advi-minibatch.html">GLM: Mini-batch ADVI on hierarchical regression model</a></li>
+<li class="toctree-l3"><a class="reference internal" href="lda-advi-aevb.html">Automatic autoencoding variational Bayes for latent dirichlet allocation with PyMC3</a></li>
+<li class="toctree-l3"><a class="reference internal" href="bayesian_neural_network_advi.html">Variational Inference: Bayesian Neural Networks</a></li>
+<li class="toctree-l3 current"><a class="current reference internal" href="#">Convolutional variational autoencoder with PyMC3 and Keras</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#Load-images">Load images</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#Use-Keras">Use Keras</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#Encoder-and-decoder">Encoder and decoder</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#Generative-model">Generative model</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#Inference">Inference</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#Results">Results</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../api.html">API Reference</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+        <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+        <a href="../index.html">PyMC3</a>
+      </nav>
+
+
+      
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          
+
+ 
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="../index.html">Docs</a> &raquo;</li>
+      
+          <li><a href="../examples.html">Examples</a> &raquo;</li>
+      
+    <li>Convolutional variational autoencoder with PyMC3 and Keras</li>
+      <li class="wy-breadcrumbs-aside">
+        
+          
+            <a href="../_sources/notebooks/convolutional_vae_keras_advi.ipynb.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
             
   
 <style>
@@ -49,15 +164,13 @@
 
 /* remove conflicting styling from Sphinx themes */
 div.nbinput,
-div.nbinput div.prompt,
-div.nbinput div.input_area,
-div.nbinput div[class*=highlight],
-div.nbinput div[class*=highlight] pre,
+div.nbinput > div,
+div.nbinput div[class^=highlight],
+div.nbinput div[class^=highlight] pre,
 div.nboutput,
-div.nbinput div.prompt,
-div.nbinput div.output_area,
-div.nboutput div[class*=highlight],
-div.nboutput div[class*=highlight] pre {
+div.nboutput > div,
+div.nboutput div[class^=highlight],
+div.nboutput div[class^=highlight] pre {
     background: none;
     border: none;
     padding: 0 0;
@@ -66,7 +179,7 @@ div.nboutput div[class*=highlight] pre {
 }
 
 /* avoid gaps between output lines */
-div.nboutput div[class*=highlight] pre {
+div.nboutput div[class^=highlight] pre {
     line-height: normal;
 }
 
@@ -77,13 +190,6 @@ div.nboutput {
     display: flex;
     align-items: flex-start;
     margin: 0;
-    width: 100%;
-}
-@media (max-width: 540px) {
-    div.nbinput,
-    div.nboutput {
-        flex-direction: column;
-    }
 }
 
 /* input container */
@@ -97,58 +203,38 @@ div.nblast {
 }
 
 /* input prompt */
-div.nbinput div.prompt pre {
+div.nbinput > :first-child pre {
     color: #303F9F;
 }
 
 /* output prompt */
-div.nboutput div.prompt pre {
+div.nboutput > :first-child pre {
     color: #D84315;
 }
 
 /* all prompts */
-div.nbinput div.prompt,
-div.nboutput div.prompt {
+div.nbinput > :first-child[class^=highlight],
+div.nboutput > :first-child[class^=highlight],
+div.nboutput > :first-child {
     min-width: 8ex;
     padding-top: 0.4em;
     padding-right: 0.4em;
     text-align: right;
     flex: 0;
 }
-@media (max-width: 540px) {
-    div.nbinput div.prompt,
-    div.nboutput div.prompt {
-        text-align: left;
-        padding: 0.4em;
-    }
-    div.nboutput div.prompt.empty {
-        padding: 0;
-    }
-}
-
-/* disable scrollbars on prompts */
-div.nbinput div.prompt pre,
-div.nboutput div.prompt pre {
-    overflow: hidden;
-}
 
 /* input/output area */
-div.nbinput div.input_area,
-div.nboutput div.output_area {
+div.nbinput > :nth-child(2)[class^=highlight],
+div.nboutput > :nth-child(2),
+div.nboutput > :nth-child(2)[class^=highlight] {
     padding: 0.4em;
     -webkit-flex: 1;
     flex: 1;
     overflow: auto;
 }
-@media (max-width: 540px) {
-    div.nbinput div.input_area,
-    div.nboutput div.output_area {
-        width: 100%;
-    }
-}
 
 /* input area */
-div.nbinput div.input_area {
+div.nbinput > :nth-child(2)[class^=highlight] {
     border: 1px solid #cfcfcf;
     border-radius: 2px;
     background: #f7f7f7;
@@ -165,7 +251,7 @@ div.nboutput div.math p {
 }
 
 /* standard error */
-div.nboutput div.output_area.stderr {
+div.nboutput  > :nth-child(2).stderr {
     background: #fdd;
 }
 
@@ -204,6 +290,38 @@ div.nboutput div.output_area.stderr {
 .ansi-white-intense-bg { background-color: #A1A6B2; }
 
 .ansi-bold { font-weight: bold; }
+
+/* CSS overrides for sphinx_rtd_theme */
+
+/* 24px margin */
+.nbinput.nblast,
+.nboutput.nblast {
+    margin-bottom: 19px;  /* padding has already 5px */
+}
+
+/* ... except between code cells! */
+.nblast + .nbinput {
+    margin-top: -19px;
+}
+
+/* nice headers on first paragraph of info/warning boxes */
+.admonition .first {
+    margin: -12px;
+    padding: 6px 12px;
+    margin-bottom: 12px;
+    color: #fff;
+    line-height: 1;
+    display: block;
+}
+.admonition.warning .first {
+    background: #f0b37e;
+}
+.admonition.note .first {
+    background: #6ab0de;
+}
+.admonition > p:before {
+    margin-right: 4px;  /* make room for the exclamation icon */
+}
 </style>
 <div class="section" id="Convolutional-variational-autoencoder-with-PyMC3-and-Keras">
 <h1>Convolutional variational autoencoder with PyMC3 and Keras<a class="headerlink" href="#Convolutional-variational-autoencoder-with-PyMC3-and-Keras" title="Permalink to this headline">¶</a></h1>
@@ -229,51 +347,51 @@ Keras.</p>
 <p>Install required packages, including pymc3, if it is not already
 available:</p>
 <div class="nbinput nblast container">
-<div class="prompt highlight-none"><div class="highlight"><pre>
+<div class="highlight-none"><div class="highlight"><pre>
 <span></span>In [1]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="ch">#!pip install --upgrade git+https://github.com/Theano/Theano.git#egg=Theano</span>
 </pre></div>
 </div>
 </div>
 <div class="nbinput nblast container">
-<div class="prompt highlight-none"><div class="highlight"><pre>
+<div class="highlight-none"><div class="highlight"><pre>
 <span></span>In [2]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="ch">#!pip install --upgrade keras</span>
 </pre></div>
 </div>
 </div>
 <div class="nbinput nblast container">
-<div class="prompt highlight-none"><div class="highlight"><pre>
+<div class="highlight-none"><div class="highlight"><pre>
 <span></span>In [3]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="ch">#!pip install --upgrade pymc3</span>
 </pre></div>
 </div>
 </div>
 <div class="nbinput nblast container">
-<div class="prompt highlight-none"><div class="highlight"><pre>
+<div class="highlight-none"><div class="highlight"><pre>
 <span></span>In [4]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="ch">#!conda install -y mkl-service</span>
 </pre></div>
 </div>
 </div>
 <div class="nbinput container">
-<div class="prompt highlight-none"><div class="highlight"><pre>
+<div class="highlight-none"><div class="highlight"><pre>
 <span></span>In [5]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="o">%</span><span class="k">autosave</span> 0
 <span class="o">%</span><span class="k">matplotlib</span> inline
 <span class="kn">import</span> <span class="nn">sys</span><span class="o">,</span> <span class="nn">os</span>
@@ -302,37 +420,37 @@ available:</p>
 </div>
 </div>
 <div class="nboutput container">
-<div class="prompt empty container">
+<div class="container">
 </div>
-<div class="output_area container">
-<div id="0da4d2a5-1b9b-4465-baa4-1f683ec61c9d"></div>
+<div class="container">
+<div id="7f81692d-f7ee-4cba-bd1a-8ab5127340d4"></div>
 <script type="text/javascript">
-var element = document.getElementById('0da4d2a5-1b9b-4465-baa4-1f683ec61c9d');
+var element = document.getElementById('7f81692d-f7ee-4cba-bd1a-8ab5127340d4');
 IPython.notebook.set_autosave_interval(0)
 </script></div>
 </div>
 <div class="nboutput container">
-<div class="prompt empty container">
+<div class="container">
 </div>
-<div class="output_area container">
+<div class="container">
 <div class="highlight"><pre>
 Autosave disabled
 </pre></div></div>
 </div>
 <div class="nboutput nblast container">
-<div class="prompt empty container">
+<div class="container">
 </div>
-<div class="stderr output_area container">
+<div class="stderr container">
 <div class="highlight"><pre>
 Using Theano backend.
 </pre></div></div>
 </div>
 <div class="nbinput container">
-<div class="prompt highlight-none"><div class="highlight"><pre>
+<div class="highlight-none"><div class="highlight"><pre>
 <span></span>In [6]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="kn">import</span> <span class="nn">pymc3</span><span class="o">,</span> <span class="nn">theano</span>
 <span class="k">print</span><span class="p">(</span><span class="n">pymc3</span><span class="o">.</span><span class="n">__version__</span><span class="p">)</span>
 <span class="k">print</span><span class="p">(</span><span class="n">theano</span><span class="o">.</span><span class="n">__version__</span><span class="p">)</span>
@@ -341,9 +459,9 @@ Using Theano backend.
 </div>
 </div>
 <div class="nboutput nblast container">
-<div class="prompt empty container">
+<div class="container">
 </div>
-<div class="output_area container">
+<div class="container">
 <div class="highlight"><pre>
 3.0
 0.9.0beta1.dev-3343d912717ee85c5c2e0572cfae94581b35e32b
@@ -356,11 +474,11 @@ Using Theano backend.
 API</a>. The dataset contains
 images of digits.</p>
 <div class="nbinput container">
-<div class="prompt highlight-none"><div class="highlight"><pre>
+<div class="highlight-none"><div class="highlight"><pre>
 <span></span>In [7]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="kn">from</span> <span class="nn">sklearn.datasets</span> <span class="kn">import</span> <span class="n">fetch_mldata</span>
 <span class="n">mnist</span> <span class="o">=</span> <span class="n">fetch_mldata</span><span class="p">(</span><span class="s1">&#39;MNIST original&#39;</span><span class="p">)</span>
 <span class="k">print</span><span class="p">(</span><span class="n">mnist</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span>
@@ -370,9 +488,9 @@ images of digits.</p>
 </div>
 </div>
 <div class="nboutput nblast container">
-<div class="prompt empty container">
+<div class="container">
 </div>
-<div class="output_area container">
+<div class="container">
 <div class="highlight"><pre>
 dict_keys([&#39;COL_NAMES&#39;, &#39;data&#39;, &#39;target&#39;, &#39;DESCR&#39;])
 </pre></div></div>
@@ -394,11 +512,11 @@ to modify (I want to send PR in future).</p>
 training or test. This information is important also for batch
 normalization.</p>
 <div class="nbinput nblast container">
-<div class="prompt highlight-none"><div class="highlight"><pre>
+<div class="highlight-none"><div class="highlight"><pre>
 <span></span>In [8]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="kn">from</span> <span class="nn">keras.models</span> <span class="kn">import</span> <span class="n">Sequential</span>
 <span class="kn">from</span> <span class="nn">keras.layers</span> <span class="kn">import</span> <span class="n">Dense</span><span class="p">,</span> <span class="n">BatchNormalization</span>
 
@@ -439,11 +557,11 @@ Keras API. This function returns a CNN model given the shared variable
 representing observations (images of digits), the dimension of latent
 space, and the parameters of the model architecture.</p>
 <div class="nbinput nblast container">
-<div class="prompt highlight-none"><div class="highlight"><pre>
+<div class="highlight-none"><div class="highlight"><pre>
 <span></span>In [9]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="k">def</span> <span class="nf">cnn_enc</span><span class="p">(</span><span class="n">xs</span><span class="p">,</span> <span class="n">latent_dim</span><span class="p">,</span> <span class="n">nb_filters</span><span class="o">=</span><span class="mi">64</span><span class="p">,</span> <span class="n">nb_conv</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span> <span class="n">intermediate_dim</span><span class="o">=</span><span class="mi">128</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;Returns a CNN model of Keras.</span>
 
@@ -480,11 +598,11 @@ space, and the parameters of the model architecture.</p>
 on the architecture of the encoder except for input shape (<code class="docutils literal"><span class="pre">tensor4</span></code>
 for images), so we can use this class for various encoding networks.</p>
 <div class="nbinput nblast container">
-<div class="prompt highlight-none"><div class="highlight"><pre>
+<div class="highlight-none"><div class="highlight"><pre>
 <span></span>In [10]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="k">class</span> <span class="nc">Encoder</span><span class="p">:</span>
     <span class="sd">&quot;&quot;&quot;Encode observed images to variational parameters (mean/std of Gaussian).</span>
 
@@ -552,11 +670,11 @@ for images), so we can use this class for various encoding networks.</p>
 <p>In a similar way, we define the decoding network and a utility class for
 decoders.</p>
 <div class="nbinput nblast container">
-<div class="prompt highlight-none"><div class="highlight"><pre>
+<div class="highlight-none"><div class="highlight"><pre>
 <span></span>In [11]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="k">def</span> <span class="nf">cnn_dec</span><span class="p">(</span><span class="n">zs</span><span class="p">,</span> <span class="n">nb_filters</span><span class="o">=</span><span class="mi">64</span><span class="p">,</span> <span class="n">nb_conv</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span> <span class="n">output_shape</span><span class="o">=</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">28</span><span class="p">,</span> <span class="mi">28</span><span class="p">)):</span>
     <span class="sd">&quot;&quot;&quot;Returns a CNN model of Keras.</span>
 
@@ -592,11 +710,11 @@ decoders.</p>
 </div>
 </div>
 <div class="nbinput nblast container">
-<div class="prompt highlight-none"><div class="highlight"><pre>
+<div class="highlight-none"><div class="highlight"><pre>
 <span></span>In [12]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="k">class</span> <span class="nc">Decoder</span><span class="p">:</span>
     <span class="sd">&quot;&quot;&quot;Decode hidden variables to images.</span>
 
@@ -645,11 +763,11 @@ decoders.</p>
 and classes defined above. We set the size of mini-batches to 100 and
 the dimension of the latent space to 2 for visualization.</p>
 <div class="nbinput nblast container">
-<div class="prompt highlight-none"><div class="highlight"><pre>
+<div class="highlight-none"><div class="highlight"><pre>
 <span></span>In [13]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="c1"># Constants</span>
 <span class="n">minibatch_size</span> <span class="o">=</span> <span class="mi">200</span>
 <span class="n">dim_hidden</span> <span class="o">=</span> <span class="mi">2</span>
@@ -661,11 +779,11 @@ be placed in the ADVI inference. It is also the input to the encoder. In
 the below, <code class="docutils literal"><span class="pre">enc.model</span></code> is a Keras model of the encoder network, thus
 we can check the model architecture using the method <code class="docutils literal"><span class="pre">summary()</span></code>.</p>
 <div class="nbinput container">
-<div class="prompt highlight-none"><div class="highlight"><pre>
+<div class="highlight-none"><div class="highlight"><pre>
 <span></span>In [14]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="c1"># Placeholder of images</span>
 <span class="n">xs_t</span> <span class="o">=</span> <span class="n">shared</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">minibatch_size</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">28</span><span class="p">,</span> <span class="mi">28</span><span class="p">))</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="s1">&#39;float32&#39;</span><span class="p">),</span> <span class="n">name</span><span class="o">=</span><span class="s1">&#39;xs_t&#39;</span><span class="p">)</span>
 
@@ -676,18 +794,18 @@ we can check the model architecture using the method <code class="docutils liter
 </div>
 </div>
 <div class="nboutput container">
-<div class="prompt empty container">
+<div class="container">
 </div>
-<div class="stderr output_area container">
+<div class="stderr container">
 <div class="highlight"><pre>
 /opt/conda/lib/python3.5/site-packages/keras/engine/topology.py:371: UserWarning: The `regularizers` property of layers/models is deprecated. Regularization losses are now managed via the `losses` layer/model property.
   warnings.warn(&#39;The `regularizers` property of &#39;
 </pre></div></div>
 </div>
 <div class="nboutput nblast container">
-<div class="prompt empty container">
+<div class="container">
 </div>
-<div class="output_area container">
+<div class="container">
 <div class="highlight"><pre>
 ____________________________________________________________________________________________________
 Layer (type)                     Output Shape          Param #     Connected to
@@ -720,11 +838,11 @@ Normal prior on <span class="math">\(\mathbf{z}\)</span>, decode the variational
 <span class="math">\(q(\mathbf{z}|\mathbf{x})\)</span> and define the likelihood of the
 observation <span class="math">\(\mathbf{x}\)</span>.</p>
 <div class="nbinput container">
-<div class="prompt highlight-none"><div class="highlight"><pre>
+<div class="highlight-none"><div class="highlight"><pre>
 <span></span>In [15]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="k">with</span> <span class="n">pm</span><span class="o">.</span><span class="n">Model</span><span class="p">()</span> <span class="k">as</span> <span class="n">model</span><span class="p">:</span>
     <span class="c1"># Hidden variables</span>
     <span class="n">zs</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Normal</span><span class="p">(</span><span class="s1">&#39;zs&#39;</span><span class="p">,</span> <span class="n">mu</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">sd</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="n">minibatch_size</span><span class="p">,</span> <span class="n">dim_hidden</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="s1">&#39;float32&#39;</span><span class="p">)</span>
@@ -738,9 +856,9 @@ observation <span class="math">\(\mathbf{x}\)</span>.</p>
 </div>
 </div>
 <div class="nboutput nblast container">
-<div class="prompt empty container">
+<div class="container">
 </div>
-<div class="stderr output_area container">
+<div class="stderr container">
 <div class="highlight"><pre>
 /opt/conda/lib/python3.5/site-packages/keras/engine/topology.py:371: UserWarning: The `regularizers` property of layers/models is deprecated. Regularization losses are now managed via the `losses` layer/model property.
   warnings.warn(&#39;The `regularizers` property of &#39;
@@ -751,11 +869,11 @@ decoded variational parameters are passed to
 <span class="math">\(q(\mathbf{z}|\mathbf{x})\)</span>. To do this, we will set the argument
 <code class="docutils literal"><span class="pre">local_RVs</span></code> in the ADVI function of PyMC3.</p>
 <div class="nbinput nblast container">
-<div class="prompt highlight-none"><div class="highlight"><pre>
+<div class="highlight-none"><div class="highlight"><pre>
 <span></span>In [16]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="n">local_RVs</span> <span class="o">=</span> <span class="n">OrderedDict</span><span class="p">({</span><span class="n">zs</span><span class="p">:</span> <span class="p">((</span><span class="n">enc</span><span class="o">.</span><span class="n">means</span><span class="p">,</span> <span class="n">enc</span><span class="o">.</span><span class="n">lstds</span><span class="p">),</span> <span class="nb">len</span><span class="p">(</span><span class="n">data</span><span class="p">)</span> <span class="o">/</span> <span class="nb">float</span><span class="p">(</span><span class="n">minibatch_size</span><span class="p">))})</span>
 </pre></div>
 </div>
@@ -772,11 +890,11 @@ inference.</p>
 <p>The scaling constant for the observed random variables is set in the
 same way.</p>
 <div class="nbinput nblast container">
-<div class="prompt highlight-none"><div class="highlight"><pre>
+<div class="highlight-none"><div class="highlight"><pre>
 <span></span>In [17]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="n">observed_RVs</span> <span class="o">=</span> <span class="n">OrderedDict</span><span class="p">({</span><span class="n">xs_</span><span class="p">:</span> <span class="nb">len</span><span class="p">(</span><span class="n">data</span><span class="p">)</span> <span class="o">/</span> <span class="nb">float</span><span class="p">(</span><span class="n">minibatch_size</span><span class="p">)})</span>
 </pre></div>
 </div>
@@ -784,19 +902,19 @@ same way.</p>
 <p>We can also check the architecture of the decoding network as for the
 encoding network.</p>
 <div class="nbinput container">
-<div class="prompt highlight-none"><div class="highlight"><pre>
+<div class="highlight-none"><div class="highlight"><pre>
 <span></span>In [18]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="n">dec</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">summary</span><span class="p">()</span>
 </pre></div>
 </div>
 </div>
 <div class="nboutput nblast container">
-<div class="prompt empty container">
+<div class="container">
 </div>
-<div class="output_area container">
+<div class="container">
 <div class="highlight"><pre>
 ____________________________________________________________________________________________________
 Layer (type)                     Output Shape          Param #     Connected to
@@ -830,11 +948,11 @@ ________________________________________________________________________________
 define the optimizer used for ADVI. The optimizer is a function that
 returns Theano parameter update object (dictionary).</p>
 <div class="nbinput nblast container">
-<div class="prompt highlight-none"><div class="highlight"><pre>
+<div class="highlight-none"><div class="highlight"><pre>
 <span></span>In [19]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="c1"># Mini-batches</span>
 <span class="k">def</span> <span class="nf">create_minibatch</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">minibatch_size</span><span class="p">):</span>
     <span class="n">rng</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">RandomState</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
@@ -854,11 +972,11 @@ returns Theano parameter update object (dictionary).</p>
 </div>
 <p>Let us execute ADVI function of PyMC3.</p>
 <div class="nbinput container">
-<div class="prompt highlight-none"><div class="highlight"><pre>
+<div class="highlight-none"><div class="highlight"><pre>
 <span></span>In [20]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="k">with</span> <span class="n">model</span><span class="p">:</span>
     <span class="n">v_params</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">variational</span><span class="o">.</span><span class="n">advi_minibatch</span><span class="p">(</span>
         <span class="n">n</span><span class="o">=</span><span class="mi">1000</span><span class="p">,</span> <span class="n">minibatch_tensors</span><span class="o">=</span><span class="p">[</span><span class="n">xs_t</span><span class="p">],</span> <span class="n">minibatches</span><span class="o">=</span><span class="n">minibatches</span><span class="p">,</span>
@@ -870,9 +988,9 @@ returns Theano parameter update object (dictionary).</p>
 </div>
 </div>
 <div class="nboutput nblast container">
-<div class="prompt empty container">
+<div class="container">
 </div>
-<div class="stderr output_area container">
+<div class="stderr container">
 <div class="highlight"><pre>
 Average ELBO = -60,160,526.92: 100%|██████████| 1000/1000 [27:05&lt;00:00,  1.85s/it]
 </pre></div></div>
@@ -884,38 +1002,38 @@ Average ELBO = -60,160,526.92: 100%|██████████| 1000/1000 [2
 ELBO during inference (optimization). We can see the convergence of the
 inference.</p>
 <div class="nbinput container">
-<div class="prompt highlight-none"><div class="highlight"><pre>
+<div class="highlight-none"><div class="highlight"><pre>
 <span></span>In [21]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">v_params</span><span class="o">.</span><span class="n">elbo_vals</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
 <div class="nboutput container">
-<div class="prompt highlight-none"><div class="highlight"><pre>
+<div class="highlight-none"><div class="highlight"><pre>
 <span></span>Out[21]:
 </pre></div>
 </div>
-<div class="output_area highlight-none"><div class="highlight"><pre>
+<div class="highlight-none"><div class="highlight"><pre>
 <span></span>[&lt;matplotlib.lines.Line2D at 0x7fb7362db940&gt;]
 </pre></div>
 </div>
 </div>
 <div class="nboutput container">
-<div class="prompt empty container">
+<div class="container">
 </div>
-<div class="stderr output_area container">
+<div class="stderr container">
 <div class="highlight"><pre>
 /opt/conda/lib/python3.5/site-packages/matplotlib/font_manager.py:1297: UserWarning: findfont: Font family [&#39;sans-serif&#39;] not found. Falling back to DejaVu Sans
   (prop.get_family(), self.defaultFamily[fontext]))
 </pre></div></div>
 </div>
 <div class="nboutput nblast container">
-<div class="prompt empty container">
+<div class="container">
 </div>
-<div class="output_area container">
+<div class="container">
 <img alt="../_images/notebooks_convolutional_vae_keras_advi_41_2.png" src="../_images/notebooks_convolutional_vae_keras_advi_41_2.png" />
 </div>
 </div>
@@ -924,11 +1042,11 @@ do this, we make 2-dimensional points in a grid and feed them into the
 decoding network. The mean of <span class="math">\(p(\mathbf{x}|\mathbf{z})\)</span> is the
 image corresponding to the samples on the grid.</p>
 <div class="nbinput container">
-<div class="prompt highlight-none"><div class="highlight"><pre>
+<div class="highlight-none"><div class="highlight"><pre>
 <span></span>In [22]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="n">zs</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([(</span><span class="n">z1</span><span class="p">,</span> <span class="n">z2</span><span class="p">)</span>
                <span class="k">for</span> <span class="n">z1</span> <span class="ow">in</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="o">-</span><span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mf">0.2</span><span class="p">)</span>
                <span class="k">for</span> <span class="n">z2</span> <span class="ow">in</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="o">-</span><span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mf">0.2</span><span class="p">)])</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="s1">&#39;float32&#39;</span><span class="p">)</span>
@@ -941,45 +1059,45 @@ image corresponding to the samples on the grid.</p>
 </div>
 </div>
 <div class="nboutput container">
-<div class="prompt empty container">
+<div class="container">
 </div>
-<div class="stderr output_area container">
+<div class="stderr container">
 <div class="highlight"><pre>
 WARNING (theano.tensor.blas): We did not found a dynamic library into the library_dir of the library we use for blas. If you use ATLAS, make sure to compile it with dynamics library.
 </pre></div></div>
 </div>
 <div class="nboutput container">
-<div class="prompt highlight-none"><div class="highlight"><pre>
+<div class="highlight-none"><div class="highlight"><pre>
 <span></span>Out[22]:
 </pre></div>
 </div>
-<div class="output_area highlight-none"><div class="highlight"><pre>
+<div class="highlight-none"><div class="highlight"><pre>
 <span></span>&lt;matplotlib.image.AxesImage at 0x7fb77538c2b0&gt;
 </pre></div>
 </div>
 </div>
 <div class="nboutput container">
-<div class="prompt empty container">
+<div class="container">
 </div>
-<div class="stderr output_area container">
+<div class="stderr container">
 <div class="highlight"><pre>
 /opt/conda/lib/python3.5/site-packages/matplotlib/font_manager.py:1297: UserWarning: findfont: Font family [&#39;sans-serif&#39;] not found. Falling back to DejaVu Sans
   (prop.get_family(), self.defaultFamily[fontext]))
 </pre></div></div>
 </div>
 <div class="nboutput nblast container">
-<div class="prompt empty container">
+<div class="container">
 </div>
-<div class="output_area container">
+<div class="container">
 <img alt="../_images/notebooks_convolutional_vae_keras_advi_43_3.png" src="../_images/notebooks_convolutional_vae_keras_advi_43_3.png" />
 </div>
 </div>
 <div class="nbinput nblast container">
-<div class="prompt highlight-none"><div class="highlight"><pre>
+<div class="highlight-none"><div class="highlight"><pre>
 <span></span>In [ ]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span>
 </pre></div>
 </div>
@@ -988,69 +1106,72 @@ WARNING (theano.tensor.blas): We did not found a dynamic library into the librar
 </div>
 
 
+           </div>
           </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="../api.html" class="btn btn-neutral float-right" title="API Reference" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="bayesian_neural_network_advi.html" class="btn btn-neutral" title="Variational Inference: Bayesian Neural Networks" accesskey="p"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2016, John Salvatier, Christopher Fonnesbeck, Thomas Wiecki.
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
         </div>
       </div>
-      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
-        <div class="sphinxsidebarwrapper">
-  <h3><a href="../index.html">Table Of Contents</a></h3>
-  <ul>
-<li><a class="reference internal" href="#">Convolutional variational autoencoder with PyMC3 and Keras</a><ul>
-<li><a class="reference internal" href="#Load-images">Load images</a></li>
-<li><a class="reference internal" href="#Use-Keras">Use Keras</a></li>
-<li><a class="reference internal" href="#Encoder-and-decoder">Encoder and decoder</a></li>
-<li><a class="reference internal" href="#Generative-model">Generative model</a></li>
-<li><a class="reference internal" href="#Inference">Inference</a></li>
-<li><a class="reference internal" href="#Results">Results</a></li>
-</ul>
-</li>
-</ul>
-<div class="relations">
-<h3>Related Topics</h3>
-<ul>
-  <li><a href="../index.html">Documentation overview</a><ul>
-  <li><a href="../examples.html">Examples</a><ul>
-      <li>Previous: <a href="bayesian_neural_network_advi.html" title="previous chapter">Variational Inference: Bayesian Neural Networks</a></li>
-      <li>Next: <a href="../api.html" title="next chapter">API Reference</a></li>
-  </ul></li>
-  </ul></li>
-</ul>
-</div>
-  <div role="note" aria-label="source link">
-    <h3>This Page</h3>
-    <ul class="this-page-menu">
-      <li><a href="../_sources/notebooks/convolutional_vae_keras_advi.txt"
-            rel="nofollow">Show Source</a></li>
-    </ul>
-   </div>
-<div id="searchbox" style="display: none" role="search">
-  <h3>Quick search</h3>
-    <form class="search" action="../search.html" method="get">
-      <div><input type="text" name="q" /></div>
-      <div><input type="submit" value="Go" /></div>
-      <input type="hidden" name="check_keywords" value="yes" />
-      <input type="hidden" name="area" value="default" />
-    </form>
-</div>
-<script type="text/javascript">$('#searchbox').show(0);</script>
-        </div>
-      </div>
-      <div class="clearer"></div>
-    </div>
-    <div class="footer">
-      &copy;2016, John Salvatier, Christopher Fonnesbeck, Thomas Wiecki.
-      
-      |
-      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.4.6</a>
-      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.9</a>
-      
-      |
-      <a href="../_sources/notebooks/convolutional_vae_keras_advi.txt"
-          rel="nofollow">Page source</a>
-    </div>
 
-    
+    </section>
 
-    
-  </body>
+  </div>
+  
+
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'../',
+            VERSION:'3.0',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true
+        };
+    </script>
+      <script type="text/javascript" src="../_static/jquery.js"></script>
+      <script type="text/javascript" src="../_static/underscore.js"></script>
+      <script type="text/javascript" src="../_static/doctools.js"></script>
+      <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+  
+
+  
+  
+    <script type="text/javascript" src="../_static/js/theme.js"></script>
+  
+
+  
+  
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.StickyNav.enable();
+      });
+  </script>
+   
+
+</body>
 </html>

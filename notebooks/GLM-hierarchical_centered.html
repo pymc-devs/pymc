@@ -1,44 +1,134 @@
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
-  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 
 
-<html xmlns="http://www.w3.org/1999/xhtml">
-  <head>
-    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-    
-    <title>The intuitive specification &#8212; PyMC3 3.0 documentation</title>
-    
-    <link rel="stylesheet" href="../_static/alabaster.css" type="text/css" />
-    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
-    
-    <script type="text/javascript">
-      var DOCUMENTATION_OPTIONS = {
-        URL_ROOT:    '../',
-        VERSION:     '3.0',
-        COLLAPSE_INDEX: false,
-        FILE_SUFFIX: '.html',
-        HAS_SOURCE:  true
-      };
-    </script>
-    <script type="text/javascript" src="../_static/jquery.js"></script>
-    <script type="text/javascript" src="../_static/underscore.js"></script>
-    <script type="text/javascript" src="../_static/doctools.js"></script>
-    <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
-    <link rel="top" title="PyMC3 3.0 documentation" href="../index.html" />
-   
-  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
   
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
-
-  </head>
-  <body role="document">
+  <title>The intuitive specification &mdash; PyMC3 3.0 documentation</title>
   
 
-    <div class="document">
-      <div class="documentwrapper">
-        <div class="bodywrapper">
-          <div class="body" role="main">
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  
+  
+    <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  
+
+  
+
+  
+        <link rel="index" title="Index"
+              href="../genindex.html"/>
+        <link rel="search" title="Search" href="../search.html"/>
+    <link rel="top" title="PyMC3 3.0 documentation" href="../index.html"/> 
+
+  
+  <script src="../_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+          
+            <a href="../index.html" class="icon icon-home"> PyMC3
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                3.0
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+                <ul>
+<li class="toctree-l1"><a class="reference internal" href="../getting_started.html">Getting started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../examples.html">Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../api.html">API Reference</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+        <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+        <a href="../index.html">PyMC3</a>
+      </nav>
+
+
+      
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          
+
+ 
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="../index.html">Docs</a> &raquo;</li>
+      
+    <li>The intuitive specification</li>
+      <li class="wy-breadcrumbs-aside">
+        
+          
+            <a href="../_sources/notebooks/GLM-hierarchical_centered.ipynb.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
             
   
 <style>
@@ -46,15 +136,13 @@
 
 /* remove conflicting styling from Sphinx themes */
 div.nbinput,
-div.nbinput div.prompt,
-div.nbinput div.input_area,
-div.nbinput div[class*=highlight],
-div.nbinput div[class*=highlight] pre,
+div.nbinput > div,
+div.nbinput div[class^=highlight],
+div.nbinput div[class^=highlight] pre,
 div.nboutput,
-div.nbinput div.prompt,
-div.nbinput div.output_area,
-div.nboutput div[class*=highlight],
-div.nboutput div[class*=highlight] pre {
+div.nboutput > div,
+div.nboutput div[class^=highlight],
+div.nboutput div[class^=highlight] pre {
     background: none;
     border: none;
     padding: 0 0;
@@ -63,7 +151,7 @@ div.nboutput div[class*=highlight] pre {
 }
 
 /* avoid gaps between output lines */
-div.nboutput div[class*=highlight] pre {
+div.nboutput div[class^=highlight] pre {
     line-height: normal;
 }
 
@@ -74,13 +162,6 @@ div.nboutput {
     display: flex;
     align-items: flex-start;
     margin: 0;
-    width: 100%;
-}
-@media (max-width: 540px) {
-    div.nbinput,
-    div.nboutput {
-        flex-direction: column;
-    }
 }
 
 /* input container */
@@ -94,58 +175,38 @@ div.nblast {
 }
 
 /* input prompt */
-div.nbinput div.prompt pre {
+div.nbinput > :first-child pre {
     color: #303F9F;
 }
 
 /* output prompt */
-div.nboutput div.prompt pre {
+div.nboutput > :first-child pre {
     color: #D84315;
 }
 
 /* all prompts */
-div.nbinput div.prompt,
-div.nboutput div.prompt {
+div.nbinput > :first-child[class^=highlight],
+div.nboutput > :first-child[class^=highlight],
+div.nboutput > :first-child {
     min-width: 8ex;
     padding-top: 0.4em;
     padding-right: 0.4em;
     text-align: right;
     flex: 0;
 }
-@media (max-width: 540px) {
-    div.nbinput div.prompt,
-    div.nboutput div.prompt {
-        text-align: left;
-        padding: 0.4em;
-    }
-    div.nboutput div.prompt.empty {
-        padding: 0;
-    }
-}
-
-/* disable scrollbars on prompts */
-div.nbinput div.prompt pre,
-div.nboutput div.prompt pre {
-    overflow: hidden;
-}
 
 /* input/output area */
-div.nbinput div.input_area,
-div.nboutput div.output_area {
+div.nbinput > :nth-child(2)[class^=highlight],
+div.nboutput > :nth-child(2),
+div.nboutput > :nth-child(2)[class^=highlight] {
     padding: 0.4em;
     -webkit-flex: 1;
     flex: 1;
     overflow: auto;
 }
-@media (max-width: 540px) {
-    div.nbinput div.input_area,
-    div.nboutput div.output_area {
-        width: 100%;
-    }
-}
 
 /* input area */
-div.nbinput div.input_area {
+div.nbinput > :nth-child(2)[class^=highlight] {
     border: 1px solid #cfcfcf;
     border-radius: 2px;
     background: #f7f7f7;
@@ -162,7 +223,7 @@ div.nboutput div.math p {
 }
 
 /* standard error */
-div.nboutput div.output_area.stderr {
+div.nboutput  > :nth-child(2).stderr {
     background: #fdd;
 }
 
@@ -201,6 +262,38 @@ div.nboutput div.output_area.stderr {
 .ansi-white-intense-bg { background-color: #A1A6B2; }
 
 .ansi-bold { font-weight: bold; }
+
+/* CSS overrides for sphinx_rtd_theme */
+
+/* 24px margin */
+.nbinput.nblast,
+.nboutput.nblast {
+    margin-bottom: 19px;  /* padding has already 5px */
+}
+
+/* ... except between code cells! */
+.nblast + .nbinput {
+    margin-top: -19px;
+}
+
+/* nice headers on first paragraph of info/warning boxes */
+.admonition .first {
+    margin: -12px;
+    padding: 6px 12px;
+    margin-bottom: 12px;
+    color: #fff;
+    line-height: 1;
+    display: block;
+}
+.admonition.warning .first {
+    background: #f0b37e;
+}
+.admonition.note .first {
+    background: #6ab0de;
+}
+.admonition > p:before {
+    margin-right: 4px;  /* make room for the exclamation icon */
+}
 </style>
 <ol class="loweralpha simple" start="3">
 <li>2017 by Thomas Wiecki</li>
@@ -225,11 +318,11 @@ point about expectations vs modes (i.e. the MAP). Several talks by
 <a class="reference external" href="https://twitter.com/betanalpha">Michael Betancourt</a> have really
 expanded my thinking here.</p>
 <div class="nbinput nblast container">
-<div class="prompt highlight-none"><div class="highlight"><pre>
+<div class="highlight-none"><div class="highlight"><pre>
 <span></span>In [31]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="o">%</span><span class="k">matplotlib</span> inline
 <span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="kn">as</span> <span class="nn">plt</span>
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="kn">as</span> <span class="nn">np</span>
@@ -256,11 +349,11 @@ expanded my thinking here.</p>
 regression model, individual slopes would be centered around a group
 mean with a certain group variance, which controls the shrinkage:</p>
 <div class="nbinput nblast container">
-<div class="prompt highlight-none"><div class="highlight"><pre>
+<div class="highlight-none"><div class="highlight"><pre>
 <span></span>In [2]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="k">with</span> <span class="n">pm</span><span class="o">.</span><span class="n">Model</span><span class="p">()</span> <span class="k">as</span> <span class="n">hierarchical_model_centered</span><span class="p">:</span>
     <span class="c1"># Hyperpriors for group nodes</span>
     <span class="n">mu_a</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Normal</span><span class="p">(</span><span class="s1">&#39;mu_a&#39;</span><span class="p">,</span> <span class="n">mu</span><span class="o">=</span><span class="mf">0.</span><span class="p">,</span> <span class="n">sd</span><span class="o">=</span><span class="mi">100</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span>
@@ -289,11 +382,11 @@ mean with a certain group variance, which controls the shrinkage:</p>
 </div>
 </div>
 <div class="nbinput container">
-<div class="prompt highlight-none"><div class="highlight"><pre>
+<div class="highlight-none"><div class="highlight"><pre>
 <span></span>In [3]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="c1"># Inference button (TM)!</span>
 <span class="k">with</span> <span class="n">hierarchical_model_centered</span><span class="p">:</span>
     <span class="n">hierarchical_centered_trace</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="n">draws</span><span class="o">=</span><span class="mi">5000</span><span class="p">,</span> <span class="n">tune</span><span class="o">=</span><span class="mi">1000</span><span class="p">,</span> <span class="n">njobs</span><span class="o">=</span><span class="mi">4</span><span class="p">)[</span><span class="mi">1000</span><span class="p">:]</span>
@@ -301,9 +394,9 @@ mean with a certain group variance, which controls the shrinkage:</p>
 </div>
 </div>
 <div class="nboutput nblast container">
-<div class="prompt empty container">
+<div class="container">
 </div>
-<div class="stderr output_area container">
+<div class="stderr container">
 <div class="highlight"><pre>
 Auto-assigning NUTS sampler...
 Initializing NUTS using advi...
@@ -313,11 +406,11 @@ Finished [100%]: Average ELBO = -1,090.4
 </pre></div></div>
 </div>
 <div class="nbinput container">
-<div class="prompt highlight-none"><div class="highlight"><pre>
+<div class="highlight-none"><div class="highlight"><pre>
 <span></span>In [51]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="c1"># Inference button (TM)!</span>
 <span class="k">with</span> <span class="n">hierarchical_model_non_centered</span><span class="p">:</span>
     <span class="n">v_params</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">advi</span><span class="p">(</span><span class="n">n</span><span class="o">=</span><span class="mi">10000</span><span class="p">)</span>
@@ -326,9 +419,9 @@ Finished [100%]: Average ELBO = -1,090.4
 </div>
 </div>
 <div class="nboutput nblast container">
-<div class="prompt empty container">
+<div class="container">
 </div>
-<div class="stderr output_area container">
+<div class="stderr container">
 <div class="highlight"><pre>
 Average ELBO = -1,625.5: 100%|██████████| 10000/10000 [00:01&lt;00:00, 5364.38it/s]
 Finished [100%]: Average ELBO = -1,447
@@ -336,11 +429,11 @@ Finished [100%]: Average ELBO = -1,447
 </pre></div></div>
 </div>
 <div class="nbinput container">
-<div class="prompt highlight-none"><div class="highlight"><pre>
+<div class="highlight-none"><div class="highlight"><pre>
 <span></span>In [45]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="c1"># Inference button (TM)!</span>
 <span class="k">with</span> <span class="n">hierarchical_model_centered</span><span class="p">:</span>
     <span class="n">v_params</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">advi</span><span class="p">(</span><span class="n">n</span><span class="o">=</span><span class="mi">10000</span><span class="p">)</span>
@@ -349,9 +442,9 @@ Finished [100%]: Average ELBO = -1,447
 </div>
 </div>
 <div class="nboutput nblast container">
-<div class="prompt empty container">
+<div class="container">
 </div>
-<div class="stderr output_area container">
+<div class="stderr container">
 <div class="highlight"><pre>
 Average ELBO = -1,446.6: 100%|██████████| 10000/10000 [00:02&lt;00:00, 4813.02it/s]
 Finished [100%]: Average ELBO = -1,362.4
@@ -359,86 +452,86 @@ Finished [100%]: Average ELBO = -1,362.4
 </pre></div></div>
 </div>
 <div class="nbinput container">
-<div class="prompt highlight-none"><div class="highlight"><pre>
+<div class="highlight-none"><div class="highlight"><pre>
 <span></span>In [52]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="n">pm</span><span class="o">.</span><span class="n">traceplot</span><span class="p">(</span><span class="n">advi_trace</span><span class="p">);</span>
 </pre></div>
 </div>
 </div>
 <div class="nboutput nblast container">
-<div class="prompt empty container">
+<div class="container">
 </div>
-<div class="output_area container">
+<div class="container">
 <img alt="../_images/notebooks_GLM-hierarchical_centered_7_0.png" src="../_images/notebooks_GLM-hierarchical_centered_7_0.png" />
 </div>
 </div>
 <div class="nbinput nblast container">
-<div class="prompt highlight-none"><div class="highlight"><pre>
+<div class="highlight-none"><div class="highlight"><pre>
 <span></span>In [ ]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="n">pm</span><span class="o">.</span><span class="n">glm</span><span class="o">.</span>
 </pre></div>
 </div>
 </div>
 <div class="nbinput container">
-<div class="prompt highlight-none"><div class="highlight"><pre>
+<div class="highlight-none"><div class="highlight"><pre>
 <span></span>In [53]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="n">v_params</span><span class="o">.</span><span class="n">means</span><span class="p">[</span><span class="s1">&#39;sigma_b_log_&#39;</span><span class="p">])</span>
 </pre></div>
 </div>
 </div>
 <div class="nboutput nblast container">
-<div class="prompt highlight-none"><div class="highlight"><pre>
+<div class="highlight-none"><div class="highlight"><pre>
 <span></span>Out[53]:
 </pre></div>
 </div>
-<div class="output_area highlight-none"><div class="highlight"><pre>
+<div class="highlight-none"><div class="highlight"><pre>
 <span></span>0.75825167
 </pre></div>
 </div>
 </div>
 <div class="nbinput container">
-<div class="prompt highlight-none"><div class="highlight"><pre>
+<div class="highlight-none"><div class="highlight"><pre>
 <span></span>In [50]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="n">v_params</span><span class="o">.</span><span class="n">means</span><span class="p">[</span><span class="s1">&#39;sigma_b_log_&#39;</span><span class="p">])</span>
 </pre></div>
 </div>
 </div>
 <div class="nboutput nblast container">
-<div class="prompt highlight-none"><div class="highlight"><pre>
+<div class="highlight-none"><div class="highlight"><pre>
 <span></span>Out[50]:
 </pre></div>
 </div>
-<div class="output_area highlight-none"><div class="highlight"><pre>
+<div class="highlight-none"><div class="highlight"><pre>
 <span></span>1.4801246
 </pre></div>
 </div>
 </div>
 <div class="nbinput container">
-<div class="prompt highlight-none"><div class="highlight"><pre>
+<div class="highlight-none"><div class="highlight"><pre>
 <span></span>In [32]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="n">pm</span><span class="o">.</span><span class="n">traceplot</span><span class="p">(</span><span class="n">hierarchical_centered_trace</span><span class="p">);</span>
 </pre></div>
 </div>
 </div>
 <div class="nboutput nblast container">
-<div class="prompt empty container">
+<div class="container">
 </div>
-<div class="output_area container">
+<div class="container">
 <img alt="../_images/notebooks_GLM-hierarchical_centered_11_0.png" src="../_images/notebooks_GLM-hierarchical_centered_11_0.png" />
 </div>
 </div>
@@ -446,19 +539,19 @@ Finished [100%]: Average ELBO = -1,362.4
 might look fine to the unassuming eye. Perhaps <code class="docutils literal"><span class="pre">sigma_b</span></code> has some
 problems, so let&#8217;s look at the Rhat:</p>
 <div class="nbinput container">
-<div class="prompt highlight-none"><div class="highlight"><pre>
+<div class="highlight-none"><div class="highlight"><pre>
 <span></span>In [5]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="k">print</span><span class="p">(</span><span class="s1">&#39;Rhat(sigma_b) = {}&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">pm</span><span class="o">.</span><span class="n">diagnostics</span><span class="o">.</span><span class="n">gelman_rubin</span><span class="p">(</span><span class="n">hierarchical_centered_trace</span><span class="p">)[</span><span class="s1">&#39;sigma_b&#39;</span><span class="p">]))</span>
 </pre></div>
 </div>
 </div>
 <div class="nboutput nblast container">
-<div class="prompt empty container">
+<div class="container">
 </div>
-<div class="output_area container">
+<div class="container">
 <div class="highlight"><pre>
 Rhat(sigma_b) = 1.0008132807924583
 </pre></div></div>
@@ -471,11 +564,11 @@ what&#8217;s going on, let&#8217;s take a closer look at the slopes <code class=
 group variance (i.e. how far they are allowed to move from the mean)
 <code class="docutils literal"><span class="pre">sigma_b</span></code>. I&#8217;m just plotting a single chain now.</p>
 <div class="nbinput container">
-<div class="prompt highlight-none"><div class="highlight"><pre>
+<div class="highlight-none"><div class="highlight"><pre>
 <span></span>In [33]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="n">fig</span><span class="p">,</span> <span class="n">axs</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="n">nrows</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
 <span class="n">axs</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">hierarchical_centered_trace</span><span class="o">.</span><span class="n">get_values</span><span class="p">(</span><span class="s1">&#39;sigma_b&#39;</span><span class="p">,</span> <span class="n">chains</span><span class="o">=</span><span class="mi">1</span><span class="p">),</span> <span class="n">alpha</span><span class="o">=.</span><span class="mi">5</span><span class="p">);</span>
 <span class="n">axs</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="n">ylabel</span><span class="o">=</span><span class="s1">&#39;sigma_b&#39;</span><span class="p">);</span>
@@ -485,9 +578,9 @@ group variance (i.e. how far they are allowed to move from the mean)
 </div>
 </div>
 <div class="nboutput nblast container">
-<div class="prompt empty container">
+<div class="container">
 </div>
-<div class="output_area container">
+<div class="container">
 <img alt="../_images/notebooks_GLM-hierarchical_centered_15_0.png" src="../_images/notebooks_GLM-hierarchical_centered_15_0.png" />
 </div>
 </div>
@@ -503,11 +596,11 @@ called the funnel, I added the last part for dramatic effect).</p>
 <p>Let&#8217;s look at the joint posterior of a single slope <code class="docutils literal"><span class="pre">b</span></code> (I randomly
 chose the 75th one) and the slope group variance <code class="docutils literal"><span class="pre">sigma_b</span></code>.</p>
 <div class="nbinput container">
-<div class="prompt highlight-none"><div class="highlight"><pre>
+<div class="highlight-none"><div class="highlight"><pre>
 <span></span>In [34]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="n">x</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">(</span><span class="n">hierarchical_centered_trace</span><span class="p">[</span><span class="s1">&#39;b&#39;</span><span class="p">][:,</span> <span class="mi">75</span><span class="p">],</span> <span class="n">name</span><span class="o">=</span><span class="s1">&#39;slope b_75&#39;</span><span class="p">)</span>
 <span class="n">y</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">(</span><span class="n">hierarchical_centered_trace</span><span class="p">[</span><span class="s1">&#39;sigma_b&#39;</span><span class="p">],</span> <span class="n">name</span><span class="o">=</span><span class="s1">&#39;slope group variance sigma_b&#39;</span><span class="p">)</span>
 
@@ -516,9 +609,9 @@ chose the 75th one) and the slope group variance <code class="docutils literal">
 </div>
 </div>
 <div class="nboutput nblast container">
-<div class="prompt empty container">
+<div class="container">
 </div>
-<div class="output_area container">
+<div class="container">
 <img alt="../_images/notebooks_GLM-hierarchical_centered_18_0.png" src="../_images/notebooks_GLM-hierarchical_centered_18_0.png" />
 </div>
 </div>
@@ -556,11 +649,11 @@ space, maybe we can adjust the region of space to make it simpler for
 the sampler? This is indeed possible and quite simple with a small
 reparameterization trick, we will call this the <em>non-centered</em> version.</p>
 <div class="nbinput nblast container">
-<div class="prompt highlight-none"><div class="highlight"><pre>
+<div class="highlight-none"><div class="highlight"><pre>
 <span></span>In [8]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="k">with</span> <span class="n">pm</span><span class="o">.</span><span class="n">Model</span><span class="p">()</span> <span class="k">as</span> <span class="n">hierarchical_model_non_centered</span><span class="p">:</span>
     <span class="c1"># Hyperpriors for group nodes</span>
     <span class="n">mu_a</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Normal</span><span class="p">(</span><span class="s1">&#39;mu_a&#39;</span><span class="p">,</span> <span class="n">mu</span><span class="o">=</span><span class="mf">0.</span><span class="p">,</span> <span class="n">sd</span><span class="o">=</span><span class="mi">100</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span>
@@ -607,11 +700,11 @@ introduction, see e.g. <a class="reference external" href="https://arxiv.org/pdf
 This will become more clear soon. Let&#8217;s first look at if this transform
 helped our sampling:</p>
 <div class="nbinput container">
-<div class="prompt highlight-none"><div class="highlight"><pre>
+<div class="highlight-none"><div class="highlight"><pre>
 <span></span>In [9]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="c1"># Inference button (TM)!</span>
 <span class="k">with</span> <span class="n">hierarchical_model_non_centered</span><span class="p">:</span>
     <span class="n">hierarchical_non_centered_trace</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="n">draws</span><span class="o">=</span><span class="mi">5000</span><span class="p">,</span> <span class="n">tune</span><span class="o">=</span><span class="mi">1000</span><span class="p">,</span> <span class="n">njobs</span><span class="o">=</span><span class="mi">4</span><span class="p">)[</span><span class="mi">1000</span><span class="p">:]</span>
@@ -619,9 +712,9 @@ helped our sampling:</p>
 </div>
 </div>
 <div class="nboutput nblast container">
-<div class="prompt empty container">
+<div class="container">
 </div>
-<div class="stderr output_area container">
+<div class="stderr container">
 <div class="highlight"><pre>
 Auto-assigning NUTS sampler...
 Initializing NUTS using advi...
@@ -631,29 +724,29 @@ Finished [100%]: Average ELBO = -1,086.3
 </pre></div></div>
 </div>
 <div class="nbinput container">
-<div class="prompt highlight-none"><div class="highlight"><pre>
+<div class="highlight-none"><div class="highlight"><pre>
 <span></span>In [35]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="n">pm</span><span class="o">.</span><span class="n">traceplot</span><span class="p">(</span><span class="n">hierarchical_non_centered_trace</span><span class="p">,</span> <span class="n">varnames</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;sigma_b&#39;</span><span class="p">]);</span>
 </pre></div>
 </div>
 </div>
 <div class="nboutput nblast container">
-<div class="prompt empty container">
+<div class="container">
 </div>
-<div class="output_area container">
+<div class="container">
 <img alt="../_images/notebooks_GLM-hierarchical_centered_23_0.png" src="../_images/notebooks_GLM-hierarchical_centered_23_0.png" />
 </div>
 </div>
 <p>That looks much better as also confirmed by the joint plot:</p>
 <div class="nbinput container">
-<div class="prompt highlight-none"><div class="highlight"><pre>
+<div class="highlight-none"><div class="highlight"><pre>
 <span></span>In [36]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="n">fig</span><span class="p">,</span> <span class="n">axs</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="n">ncols</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">sharex</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span> <span class="n">sharey</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
 
 <span class="n">x</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">(</span><span class="n">hierarchical_centered_trace</span><span class="p">[</span><span class="s1">&#39;b&#39;</span><span class="p">][:,</span> <span class="mi">75</span><span class="p">],</span> <span class="n">name</span><span class="o">=</span><span class="s1">&#39;slope b_75&#39;</span><span class="p">)</span>
@@ -671,20 +764,20 @@ Finished [100%]: Average ELBO = -1,086.3
 </div>
 </div>
 <div class="nboutput nblast container">
-<div class="prompt empty container">
+<div class="container">
 </div>
-<div class="output_area container">
+<div class="container">
 <img alt="../_images/notebooks_GLM-hierarchical_centered_25_0.png" src="../_images/notebooks_GLM-hierarchical_centered_25_0.png" />
 </div>
 </div>
 <p>To really drive this home, let&#8217;s also compare the <code class="docutils literal"><span class="pre">sigma_b</span></code> marginal
 posteriors of the two models:</p>
 <div class="nbinput container">
-<div class="prompt highlight-none"><div class="highlight"><pre>
+<div class="highlight-none"><div class="highlight"><pre>
 <span></span>In [37]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="n">pm</span><span class="o">.</span><span class="n">kdeplot</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">stack</span><span class="p">([</span><span class="n">hierarchical_centered_trace</span><span class="p">[</span><span class="s1">&#39;sigma_b&#39;</span><span class="p">],</span> <span class="n">hierarchical_non_centered_trace</span><span class="p">[</span><span class="s1">&#39;sigma_b&#39;</span><span class="p">],</span> <span class="p">])</span><span class="o">.</span><span class="n">T</span><span class="p">)</span>
 <span class="n">plt</span><span class="o">.</span><span class="n">axvline</span><span class="p">(</span><span class="n">hierarchical_centered_trace</span><span class="p">[</span><span class="s1">&#39;sigma_b&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">mean</span><span class="p">(),</span> <span class="n">color</span><span class="o">=</span><span class="s1">&#39;b&#39;</span><span class="p">,</span> <span class="n">linestyle</span><span class="o">=</span><span class="s1">&#39;--&#39;</span><span class="p">)</span>
 <span class="n">plt</span><span class="o">.</span><span class="n">axvline</span><span class="p">(</span><span class="n">hierarchical_non_centered_trace</span><span class="p">[</span><span class="s1">&#39;sigma_b&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">mean</span><span class="p">(),</span> <span class="n">color</span><span class="o">=</span><span class="s1">&#39;g&#39;</span><span class="p">,</span> <span class="n">linestyle</span><span class="o">=</span><span class="s1">&#39;--&#39;</span><span class="p">)</span>
@@ -694,9 +787,9 @@ posteriors of the two models:</p>
 </div>
 </div>
 <div class="nboutput nblast container">
-<div class="prompt empty container">
+<div class="container">
 </div>
-<div class="output_area container">
+<div class="container">
 <img alt="../_images/notebooks_GLM-hierarchical_centered_27_0.png" src="../_images/notebooks_GLM-hierarchical_centered_27_0.png" />
 </div>
 </div>
@@ -718,11 +811,11 @@ information in the individual slopes than what we estimated.</p>
 <p>To more clearly understand why this model works better, let&#8217;s look at
 the joint distribution of <code class="docutils literal"><span class="pre">b_offset</span></code>:</p>
 <div class="nbinput container">
-<div class="prompt highlight-none"><div class="highlight"><pre>
+<div class="highlight-none"><div class="highlight"><pre>
 <span></span>In [38]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="n">x</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">(</span><span class="n">hierarchical_non_centered_trace</span><span class="p">[</span><span class="s1">&#39;b_offset&#39;</span><span class="p">][:,</span> <span class="mi">75</span><span class="p">],</span> <span class="n">name</span><span class="o">=</span><span class="s1">&#39;slope b_offset_75&#39;</span><span class="p">)</span>
 <span class="n">y</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">(</span><span class="n">hierarchical_non_centered_trace</span><span class="p">[</span><span class="s1">&#39;sigma_b&#39;</span><span class="p">],</span> <span class="n">name</span><span class="o">=</span><span class="s1">&#39;slope group variance sigma_b&#39;</span><span class="p">)</span>
 
@@ -731,19 +824,19 @@ the joint distribution of <code class="docutils literal"><span class="pre">b_off
 </div>
 </div>
 <div class="nboutput container">
-<div class="prompt highlight-none"><div class="highlight"><pre>
+<div class="highlight-none"><div class="highlight"><pre>
 <span></span>Out[38]:
 </pre></div>
 </div>
-<div class="output_area highlight-none"><div class="highlight"><pre>
+<div class="highlight-none"><div class="highlight"><pre>
 <span></span>&lt;seaborn.axisgrid.JointGrid at 0x7f35aeb6e7f0&gt;
 </pre></div>
 </div>
 </div>
 <div class="nboutput nblast container">
-<div class="prompt empty container">
+<div class="container">
 </div>
-<div class="output_area container">
+<div class="container">
 <img alt="../_images/notebooks_GLM-hierarchical_centered_30_1.png" src="../_images/notebooks_GLM-hierarchical_centered_30_1.png" />
 </div>
 </div>
@@ -769,7 +862,8 @@ touched on this point in his tweet:</p>
 <blockquote class="twitter-tweet" data-lang="en"><p lang="en" dir="ltr"><p>It&#8217;s interesting that many summarize Bayes as being about priors; but
 real power is its focus on integrals/expectations over maxima/modes</p>
 </p><p>— Ross Taylor (&#64;rosstaylor90) February 2, 2017</p>
-</blockquote><script async src="//platform.twitter.com/widgets.js" charset="utf-8"></script><p>Michael Betancourt makes a similar point when he says <a class="reference external" href="https://www.youtube.com/watch?v=pHsuIaPbNbY&amp;t=8s">&#8220;Expectations are
+</blockquote>
+<script async src="//platform.twitter.com/widgets.js" charset="utf-8"></script><p>Michael Betancourt makes a similar point when he says <a class="reference external" href="https://www.youtube.com/watch?v=pHsuIaPbNbY&amp;t=8s">&#8220;Expectations are
 the only thing that make
 sense.&#8221;</a></p>
 <p>But what&#8217;s wrong with maxima/modes? Aren&#8217;t those really close to the
@@ -780,20 +874,20 @@ interesting or meaningful at all.</p>
 <p>Let&#8217;s compare the posterior mode (i.e. the MAP) to the posterior mean of
 our hierachical linear regression model:</p>
 <div class="nbinput container">
-<div class="prompt highlight-none"><div class="highlight"><pre>
+<div class="highlight-none"><div class="highlight"><pre>
 <span></span>In [22]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="k">with</span> <span class="n">hierarchical_model_centered</span><span class="p">:</span>
     <span class="n">mode</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">find_MAP</span><span class="p">()</span>
 </pre></div>
 </div>
 </div>
 <div class="nboutput nblast container">
-<div class="prompt empty container">
+<div class="container">
 </div>
-<div class="output_area container">
+<div class="container">
 <div class="highlight"><pre>
 Warning: Desired error not necessarily achieved due to precision loss.
          Current function value: 61.050344
@@ -803,21 +897,21 @@ Warning: Desired error not necessarily achieved due to precision loss.
 </pre></div></div>
 </div>
 <div class="nbinput container">
-<div class="prompt highlight-none"><div class="highlight"><pre>
+<div class="highlight-none"><div class="highlight"><pre>
 <span></span>In [23]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="n">mode</span><span class="p">[</span><span class="s1">&#39;b&#39;</span><span class="p">]</span>
 </pre></div>
 </div>
 </div>
 <div class="nboutput nblast container">
-<div class="prompt highlight-none"><div class="highlight"><pre>
+<div class="highlight-none"><div class="highlight"><pre>
 <span></span>Out[23]:
 </pre></div>
 </div>
-<div class="output_area highlight-none"><div class="highlight"><pre>
+<div class="highlight-none"><div class="highlight"><pre>
 <span></span>array([-0.55116832, -0.5510971 , -0.55099195, -0.55130643, -0.55106109,
        -0.55115461, -0.55112362, -0.55119258, -0.55104429, -0.5512051 ,
        -0.55114496, -0.55114496, -0.5511508 , -0.5512777 , -0.55119324,
@@ -839,21 +933,21 @@ Warning: Desired error not necessarily achieved due to precision loss.
 </div>
 </div>
 <div class="nbinput container">
-<div class="prompt highlight-none"><div class="highlight"><pre>
+<div class="highlight-none"><div class="highlight"><pre>
 <span></span>In [24]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="n">mode</span><span class="p">[</span><span class="s1">&#39;sigma_b_log_&#39;</span><span class="p">])</span>
 </pre></div>
 </div>
 </div>
 <div class="nboutput nblast container">
-<div class="prompt highlight-none"><div class="highlight"><pre>
+<div class="highlight-none"><div class="highlight"><pre>
 <span></span>Out[24]:
 </pre></div>
 </div>
-<div class="output_area highlight-none"><div class="highlight"><pre>
+<div class="highlight-none"><div class="highlight"><pre>
 <span></span>6.2456231e-05
 </pre></div>
 </div>
@@ -869,21 +963,21 @@ is computed by integrating probability <strong>density</strong> and <strong>volu
 provide probabilty <strong>mass</strong> &#8211; the thing we really care about. Under the
 hood, that&#8217;s the integration performed by the MCMC sampler.</p>
 <div class="nbinput container">
-<div class="prompt highlight-none"><div class="highlight"><pre>
+<div class="highlight-none"><div class="highlight"><pre>
 <span></span>In [25]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="n">hierarchical_non_centered_trace</span><span class="p">[</span><span class="s1">&#39;b&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
 <div class="nboutput nblast container">
-<div class="prompt highlight-none"><div class="highlight"><pre>
+<div class="highlight-none"><div class="highlight"><pre>
 <span></span>Out[25]:
 </pre></div>
 </div>
-<div class="output_area highlight-none"><div class="highlight"><pre>
+<div class="highlight-none"><div class="highlight"><pre>
 <span></span>array([-0.61611807, -0.78092307, -0.64165854, -0.68841439, -0.61489558,
        -0.6457985 , -0.4308877 , -0.62139744, -0.49358603, -0.71702331,
        -0.64619285, -0.64893192, -0.64824373, -0.71124178, -0.64579517,
@@ -905,21 +999,21 @@ hood, that&#8217;s the integration performed by the MCMC sampler.</p>
 </div>
 </div>
 <div class="nbinput container">
-<div class="prompt highlight-none"><div class="highlight"><pre>
+<div class="highlight-none"><div class="highlight"><pre>
 <span></span>In [26]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="n">hierarchical_non_centered_trace</span><span class="p">[</span><span class="s1">&#39;sigma_b&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
 <div class="nboutput nblast container">
-<div class="prompt highlight-none"><div class="highlight"><pre>
+<div class="highlight-none"><div class="highlight"><pre>
 <span></span>Out[26]:
 </pre></div>
 </div>
-<div class="output_area highlight-none"><div class="highlight"><pre>
+<div class="highlight-none"><div class="highlight"><pre>
 <span></span>0.25659895
 </pre></div>
 </div>
@@ -953,20 +1047,20 @@ comments on an earlier draft.</p>
 <div class="section" id="Dependencies">
 <h1>Dependencies<a class="headerlink" href="#Dependencies" title="Permalink to this headline">¶</a></h1>
 <div class="nbinput container">
-<div class="prompt highlight-none"><div class="highlight"><pre>
+<div class="highlight-none"><div class="highlight"><pre>
 <span></span>In [27]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="o">%</span><span class="k">load_ext</span> watermark
 <span class="o">%</span><span class="k">watermark</span> -dmvgp numpy,scipy,pandas,matplotlib,seaborn,patsy,pymc3,theano,joblib
 </pre></div>
 </div>
 </div>
 <div class="nboutput nblast container">
-<div class="prompt empty container">
+<div class="container">
 </div>
-<div class="output_area container">
+<div class="container">
 <div class="highlight"><pre>
 07/02/2017
 
@@ -996,65 +1090,63 @@ Git hash   : 5d2767de3bbae72c7de7965f2afcb533df8e7ad3
 </div>
 
 
+           </div>
           </div>
+          <footer>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2016, John Salvatier, Christopher Fonnesbeck, Thomas Wiecki.
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
         </div>
       </div>
-      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
-        <div class="sphinxsidebarwrapper">
-  <h3><a href="../index.html">Table Of Contents</a></h3>
-  <ul>
-<li><a class="reference internal" href="#">The intuitive specification</a></li>
-<li><a class="reference internal" href="#The-Funnel-of-Hell-(and-how-to-escape-it)">The Funnel of Hell (and how to escape it)</a></li>
-<li><a class="reference internal" href="#Reparameterization">Reparameterization</a><ul>
-<li><a class="reference internal" href="#Why-does-the-reparameterized-model-work-better?">Why does the reparameterized model work better?</a></li>
-</ul>
-</li>
-<li><a class="reference internal" href="#Why-hierarchical-models-are-Bayesian">Why hierarchical models are Bayesian</a></li>
-<li><a class="reference internal" href="#Acknowledgements">Acknowledgements</a></li>
-<li><a class="reference internal" href="#Dependencies">Dependencies</a></li>
-</ul>
-<div class="relations">
-<h3>Related Topics</h3>
-<ul>
-  <li><a href="../index.html">Documentation overview</a><ul>
-  </ul></li>
-</ul>
-</div>
-  <div role="note" aria-label="source link">
-    <h3>This Page</h3>
-    <ul class="this-page-menu">
-      <li><a href="../_sources/notebooks/GLM-hierarchical_centered.txt"
-            rel="nofollow">Show Source</a></li>
-    </ul>
-   </div>
-<div id="searchbox" style="display: none" role="search">
-  <h3>Quick search</h3>
-    <form class="search" action="../search.html" method="get">
-      <div><input type="text" name="q" /></div>
-      <div><input type="submit" value="Go" /></div>
-      <input type="hidden" name="check_keywords" value="yes" />
-      <input type="hidden" name="area" value="default" />
-    </form>
-</div>
-<script type="text/javascript">$('#searchbox').show(0);</script>
-        </div>
-      </div>
-      <div class="clearer"></div>
-    </div>
-    <div class="footer">
-      &copy;2016, John Salvatier, Christopher Fonnesbeck, Thomas Wiecki.
-      
-      |
-      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.4.6</a>
-      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.9</a>
-      
-      |
-      <a href="../_sources/notebooks/GLM-hierarchical_centered.txt"
-          rel="nofollow">Page source</a>
-    </div>
 
-    
+    </section>
 
-    
-  </body>
+  </div>
+  
+
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'../',
+            VERSION:'3.0',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true
+        };
+    </script>
+      <script type="text/javascript" src="../_static/jquery.js"></script>
+      <script type="text/javascript" src="../_static/underscore.js"></script>
+      <script type="text/javascript" src="../_static/doctools.js"></script>
+      <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+  
+
+  
+  
+    <script type="text/javascript" src="../_static/js/theme.js"></script>
+  
+
+  
+  
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.StickyNav.enable();
+      });
+  </script>
+   
+
+</body>
 </html>

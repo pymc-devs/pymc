@@ -1,47 +1,156 @@
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
-  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 
 
-<html xmlns="http://www.w3.org/1999/xhtml">
-  <head>
-    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-    
-    <title>Gaussian Process Regression &#8212; PyMC3 3.0 documentation</title>
-    
-    <link rel="stylesheet" href="../_static/alabaster.css" type="text/css" />
-    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
-    
-    <script type="text/javascript">
-      var DOCUMENTATION_OPTIONS = {
-        URL_ROOT:    '../',
-        VERSION:     '3.0',
-        COLLAPSE_INDEX: false,
-        FILE_SUFFIX: '.html',
-        HAS_SOURCE:  true
-      };
-    </script>
-    <script type="text/javascript" src="../_static/jquery.js"></script>
-    <script type="text/javascript" src="../_static/underscore.js"></script>
-    <script type="text/javascript" src="../_static/doctools.js"></script>
-    <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
-    <link rel="top" title="PyMC3 3.0 documentation" href="../index.html" />
-    <link rel="up" title="Examples" href="../examples.html" />
-    <link rel="next" title="Kernels / Covariance functions" href="GP-covariances.html" />
-    <link rel="prev" title="GLM: Negative Binomial Regression" href="GLM-negative-binomial-regression.html" />
-   
-  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
   
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
-
-  </head>
-  <body role="document">
+  <title>Gaussian Process Regression &mdash; PyMC3 3.0 documentation</title>
   
 
-    <div class="document">
-      <div class="documentwrapper">
-        <div class="bodywrapper">
-          <div class="body" role="main">
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  
+  
+    <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  
+
+  
+
+  
+        <link rel="index" title="Index"
+              href="../genindex.html"/>
+        <link rel="search" title="Search" href="../search.html"/>
+    <link rel="top" title="PyMC3 3.0 documentation" href="../index.html"/>
+        <link rel="up" title="Examples" href="../examples.html"/>
+        <link rel="next" title="Kernels / Covariance functions" href="GP-covariances.html"/>
+        <link rel="prev" title="GLM: Negative Binomial Regression" href="GLM-negative-binomial-regression.html"/> 
+
+  
+  <script src="../_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+          
+            <a href="../index.html" class="icon icon-home"> PyMC3
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                3.0
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+                <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../getting_started.html">Getting started</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="../examples.html">Examples</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="../examples.html#howto">Howto</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../examples.html#applied">Applied</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../examples.html#glm">GLM</a></li>
+<li class="toctree-l2 current"><a class="reference internal" href="../examples.html#gp">GP</a><ul class="current">
+<li class="toctree-l3 current"><a class="current reference internal" href="#">Gaussian Process Regression</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#Example-1:-Non-Linear-Regression">Example 1: Non-Linear Regression</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#Example-2:-A-periodic-signal-in-non-white-noise">Example 2: A periodic signal in non-white noise</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="GP-covariances.html">Kernels / Covariance functions</a></li>
+<li class="toctree-l3"><a class="reference internal" href="GP-smoothing.html">Gaussian Process (GP) smoothing</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../examples.html#mixture-models">Mixture Models</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../examples.html#advi">ADVI</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../api.html">API Reference</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+        <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+        <a href="../index.html">PyMC3</a>
+      </nav>
+
+
+      
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          
+
+ 
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="../index.html">Docs</a> &raquo;</li>
+      
+          <li><a href="../examples.html">Examples</a> &raquo;</li>
+      
+    <li>Gaussian Process Regression</li>
+      <li class="wy-breadcrumbs-aside">
+        
+          
+            <a href="../_sources/notebooks/GP-introduction.ipynb.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
             
   
 <style>
@@ -49,15 +158,13 @@
 
 /* remove conflicting styling from Sphinx themes */
 div.nbinput,
-div.nbinput div.prompt,
-div.nbinput div.input_area,
-div.nbinput div[class*=highlight],
-div.nbinput div[class*=highlight] pre,
+div.nbinput > div,
+div.nbinput div[class^=highlight],
+div.nbinput div[class^=highlight] pre,
 div.nboutput,
-div.nbinput div.prompt,
-div.nbinput div.output_area,
-div.nboutput div[class*=highlight],
-div.nboutput div[class*=highlight] pre {
+div.nboutput > div,
+div.nboutput div[class^=highlight],
+div.nboutput div[class^=highlight] pre {
     background: none;
     border: none;
     padding: 0 0;
@@ -66,7 +173,7 @@ div.nboutput div[class*=highlight] pre {
 }
 
 /* avoid gaps between output lines */
-div.nboutput div[class*=highlight] pre {
+div.nboutput div[class^=highlight] pre {
     line-height: normal;
 }
 
@@ -77,13 +184,6 @@ div.nboutput {
     display: flex;
     align-items: flex-start;
     margin: 0;
-    width: 100%;
-}
-@media (max-width: 540px) {
-    div.nbinput,
-    div.nboutput {
-        flex-direction: column;
-    }
 }
 
 /* input container */
@@ -97,58 +197,38 @@ div.nblast {
 }
 
 /* input prompt */
-div.nbinput div.prompt pre {
+div.nbinput > :first-child pre {
     color: #303F9F;
 }
 
 /* output prompt */
-div.nboutput div.prompt pre {
+div.nboutput > :first-child pre {
     color: #D84315;
 }
 
 /* all prompts */
-div.nbinput div.prompt,
-div.nboutput div.prompt {
+div.nbinput > :first-child[class^=highlight],
+div.nboutput > :first-child[class^=highlight],
+div.nboutput > :first-child {
     min-width: 8ex;
     padding-top: 0.4em;
     padding-right: 0.4em;
     text-align: right;
     flex: 0;
 }
-@media (max-width: 540px) {
-    div.nbinput div.prompt,
-    div.nboutput div.prompt {
-        text-align: left;
-        padding: 0.4em;
-    }
-    div.nboutput div.prompt.empty {
-        padding: 0;
-    }
-}
-
-/* disable scrollbars on prompts */
-div.nbinput div.prompt pre,
-div.nboutput div.prompt pre {
-    overflow: hidden;
-}
 
 /* input/output area */
-div.nbinput div.input_area,
-div.nboutput div.output_area {
+div.nbinput > :nth-child(2)[class^=highlight],
+div.nboutput > :nth-child(2),
+div.nboutput > :nth-child(2)[class^=highlight] {
     padding: 0.4em;
     -webkit-flex: 1;
     flex: 1;
     overflow: auto;
 }
-@media (max-width: 540px) {
-    div.nbinput div.input_area,
-    div.nboutput div.output_area {
-        width: 100%;
-    }
-}
 
 /* input area */
-div.nbinput div.input_area {
+div.nbinput > :nth-child(2)[class^=highlight] {
     border: 1px solid #cfcfcf;
     border-radius: 2px;
     background: #f7f7f7;
@@ -165,7 +245,7 @@ div.nboutput div.math p {
 }
 
 /* standard error */
-div.nboutput div.output_area.stderr {
+div.nboutput  > :nth-child(2).stderr {
     background: #fdd;
 }
 
@@ -204,6 +284,38 @@ div.nboutput div.output_area.stderr {
 .ansi-white-intense-bg { background-color: #A1A6B2; }
 
 .ansi-bold { font-weight: bold; }
+
+/* CSS overrides for sphinx_rtd_theme */
+
+/* 24px margin */
+.nbinput.nblast,
+.nboutput.nblast {
+    margin-bottom: 19px;  /* padding has already 5px */
+}
+
+/* ... except between code cells! */
+.nblast + .nbinput {
+    margin-top: -19px;
+}
+
+/* nice headers on first paragraph of info/warning boxes */
+.admonition .first {
+    margin: -12px;
+    padding: 6px 12px;
+    margin-bottom: 12px;
+    color: #fff;
+    line-height: 1;
+    display: block;
+}
+.admonition.warning .first {
+    background: #f0b37e;
+}
+.admonition.note .first {
+    background: #6ab0de;
+}
+.admonition > p:before {
+    margin-right: 4px;  /* make room for the exclamation icon */
+}
 </style>
 <div class="section" id="Gaussian-Process-Regression">
 <h1>Gaussian Process Regression<a class="headerlink" href="#Gaussian-Process-Regression" title="Permalink to this headline">¶</a></h1>
@@ -242,11 +354,11 @@ meant to be lightweight, highly composable, and have a clear syntax.
 This example is meant to give an introduction to how to specify a GP in
 PyMC3.</p>
 <div class="nbinput nblast container">
-<div class="prompt highlight-none"><div class="highlight"><pre>
+<div class="highlight-none"><div class="highlight"><pre>
 <span></span>In [1]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="o">%</span><span class="k">matplotlib</span> inline
 <span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="kn">as</span> <span class="nn">plt</span>
 <span class="kn">import</span> <span class="nn">matplotlib.cm</span> <span class="kn">as</span> <span class="nn">cmap</span>
@@ -273,11 +385,11 @@ methods.</p>
 true values of the hyperparameters are hardcoded in this temporary
 <code class="docutils literal"><span class="pre">model</span></code>.</p>
 <div class="nbinput nblast container">
-<div class="prompt highlight-none"><div class="highlight"><pre>
+<div class="highlight-none"><div class="highlight"><pre>
 <span></span>In [2]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">seed</span><span class="p">(</span><span class="mi">200</span><span class="p">)</span>
 <span class="n">n</span> <span class="o">=</span> <span class="mi">20</span>
 <span class="n">X</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sort</span><span class="p">(</span><span class="mi">3</span><span class="o">*</span><span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">rand</span><span class="p">(</span><span class="n">n</span><span class="p">))[:,</span><span class="bp">None</span><span class="p">]</span>
@@ -302,11 +414,11 @@ true values of the hyperparameters are hardcoded in this temporary
 </div>
 </div>
 <div class="nbinput container">
-<div class="prompt highlight-none"><div class="highlight"><pre>
+<div class="highlight-none"><div class="highlight"><pre>
 <span></span>In [3]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="n">fig</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">14</span><span class="p">,</span><span class="mi">5</span><span class="p">));</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">fig</span><span class="o">.</span><span class="n">add_subplot</span><span class="p">(</span><span class="mi">111</span><span class="p">)</span>
 <span class="n">ax</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="s1">&#39;ok&#39;</span><span class="p">,</span> <span class="n">ms</span><span class="o">=</span><span class="mi">10</span><span class="p">);</span>
 <span class="n">ax</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="s2">&quot;x&quot;</span><span class="p">);</span>
@@ -315,9 +427,9 @@ true values of the hyperparameters are hardcoded in this temporary
 </div>
 </div>
 <div class="nboutput nblast container">
-<div class="prompt empty container">
+<div class="container">
 </div>
-<div class="output_area container">
+<div class="container">
 <img alt="../_images/notebooks_GP-introduction_4_0.png" src="../_images/notebooks_GP-introduction_4_0.png" />
 </div>
 </div>
@@ -350,11 +462,11 @@ this matrix and the diagonal noise term are used as the covariance
 matrix for the marginal likelihood.</li>
 </ul>
 <div class="nbinput nblast container">
-<div class="prompt highlight-none"><div class="highlight"><pre>
+<div class="highlight-none"><div class="highlight"><pre>
 <span></span>In [4]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="n">Z</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="mi">3</span><span class="p">,</span><span class="mi">100</span><span class="p">)[:,</span><span class="bp">None</span><span class="p">]</span>
 <span class="k">with</span> <span class="n">pm</span><span class="o">.</span><span class="n">Model</span><span class="p">()</span> <span class="k">as</span> <span class="n">model</span><span class="p">:</span>
     <span class="c1"># priors on the covariance function hyperparameters</span>
@@ -389,11 +501,11 @@ matrix for the marginal likelihood.</li>
 <p>So far we&#8217;ve found that <code class="docutils literal"><span class="pre">Slice</span></code> and <code class="docutils literal"><span class="pre">Metropolis</span></code> work best for GP
 hyperparameters.</p>
 <div class="nbinput container">
-<div class="prompt highlight-none"><div class="highlight"><pre>
+<div class="highlight-none"><div class="highlight"><pre>
 <span></span>In [5]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="k">with</span> <span class="n">model</span><span class="p">:</span>
     <span class="n">start</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">find_MAP</span><span class="p">(</span><span class="n">fmin</span><span class="o">=</span><span class="n">sp</span><span class="o">.</span><span class="n">optimize</span><span class="o">.</span><span class="n">fmin_l_bfgs_b</span><span class="p">)</span>
     <span class="n">trace</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="mi">5000</span><span class="p">,</span> <span class="n">step</span><span class="o">=</span><span class="n">pm</span><span class="o">.</span><span class="n">Slice</span><span class="p">(),</span> <span class="n">start</span><span class="o">=</span><span class="n">start</span><span class="p">)</span>
@@ -401,19 +513,19 @@ hyperparameters.</p>
 </div>
 </div>
 <div class="nboutput nblast container">
-<div class="prompt empty container">
+<div class="container">
 </div>
-<div class="stderr output_area container">
+<div class="stderr container">
 <div class="highlight"><pre>
 100%|██████████| 5000/5000 [00:23&lt;00:00, 216.93it/s]
 </pre></div></div>
 </div>
 <div class="nbinput container">
-<div class="prompt highlight-none"><div class="highlight"><pre>
+<div class="highlight-none"><div class="highlight"><pre>
 <span></span>In [6]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="n">pm</span><span class="o">.</span><span class="n">traceplot</span><span class="p">(</span><span class="n">trace</span><span class="p">[</span><span class="mi">1000</span><span class="p">:],</span> <span class="n">varnames</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;l&#39;</span><span class="p">,</span> <span class="s1">&#39;s2_f&#39;</span><span class="p">,</span> <span class="s1">&#39;s2_n&#39;</span><span class="p">],</span>
              <span class="n">lines</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;l&quot;</span><span class="p">:</span> <span class="n">l_true</span><span class="p">,</span>
                     <span class="s2">&quot;s2_f&quot;</span><span class="p">:</span> <span class="n">s2_f_true</span><span class="p">,</span>
@@ -422,9 +534,9 @@ hyperparameters.</p>
 </div>
 </div>
 <div class="nboutput nblast container">
-<div class="prompt empty container">
+<div class="container">
 </div>
-<div class="output_area container">
+<div class="container">
 <img alt="../_images/notebooks_GP-introduction_9_0.png" src="../_images/notebooks_GP-introduction_9_0.png" />
 </div>
 </div>
@@ -433,11 +545,11 @@ but definitely with a high degree of uncertainty. Lets look at the
 predicted fits and uncertainty next using samples from the full
 posterior.</p>
 <div class="nbinput container">
-<div class="prompt highlight-none"><div class="highlight"><pre>
+<div class="highlight-none"><div class="highlight"><pre>
 <span></span>In [7]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="n">fig</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">14</span><span class="p">,</span><span class="mi">5</span><span class="p">));</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">fig</span><span class="o">.</span><span class="n">add_subplot</span><span class="p">(</span><span class="mi">111</span><span class="p">)</span>
 
 <span class="c1"># plot random samples from the full predictive posterior</span>
@@ -460,17 +572,17 @@ posterior.</p>
 </div>
 </div>
 <div class="nboutput container">
-<div class="prompt empty container">
+<div class="container">
 </div>
-<div class="stderr output_area container">
+<div class="stderr container">
 <div class="highlight"><pre>
 /usr/local/lib/python2.7/dist-packages/ipykernel/__main__.py:10: RuntimeWarning: covariance is not positive-semidefinite.
 </pre></div></div>
 </div>
 <div class="nboutput nblast container">
-<div class="prompt empty container">
+<div class="container">
 </div>
-<div class="output_area container">
+<div class="container">
 <img alt="../_images/notebooks_GP-introduction_11_1.png" src="../_images/notebooks_GP-introduction_11_1.png" />
 </div>
 </div>
@@ -488,11 +600,11 @@ while the periodic component is &#8220;signal&#8221;. In GP regression, the
 treatment of signal and noise covariance functions is identical, so the
 distinction between signal and noise is somewhat arbitrary.</p>
 <div class="nbinput nblast container">
-<div class="prompt highlight-none"><div class="highlight"><pre>
+<div class="highlight-none"><div class="highlight"><pre>
 <span></span>In [8]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">seed</span><span class="p">(</span><span class="mi">200</span><span class="p">)</span>
 <span class="n">n</span> <span class="o">=</span> <span class="mi">150</span>
 <span class="n">X</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sort</span><span class="p">(</span><span class="mi">40</span><span class="o">*</span><span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">rand</span><span class="p">(</span><span class="n">n</span><span class="p">))[:,</span><span class="bp">None</span><span class="p">]</span>
@@ -526,11 +638,11 @@ distinguishable by eye. It is plausible that there isn&#8217;t a periodic
 component, and the observed data is just the drift component and white
 noise.</p>
 <div class="nbinput container">
-<div class="prompt highlight-none"><div class="highlight"><pre>
+<div class="highlight-none"><div class="highlight"><pre>
 <span></span>In [9]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="n">fig</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">12</span><span class="p">,</span><span class="mi">5</span><span class="p">));</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">fig</span><span class="o">.</span><span class="n">add_subplot</span><span class="p">(</span><span class="mi">111</span><span class="p">)</span>
 <span class="n">ax</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="s1">&#39;--&#39;</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="n">cm</span><span class="p">(</span><span class="mf">0.4</span><span class="p">))</span>
 <span class="n">ax</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="s1">&#39;o&#39;</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s2">&quot;k&quot;</span><span class="p">,</span> <span class="n">ms</span><span class="o">=</span><span class="mi">10</span><span class="p">);</span>
@@ -540,19 +652,19 @@ noise.</p>
 </div>
 </div>
 <div class="nboutput nblast container">
-<div class="prompt empty container">
+<div class="container">
 </div>
-<div class="output_area container">
+<div class="container">
 <img alt="../_images/notebooks_GP-introduction_15_0.png" src="../_images/notebooks_GP-introduction_15_0.png" />
 </div>
 </div>
 <p>Lets see if we can infer the correct values of the hyperparameters.</p>
 <div class="nbinput nblast container">
-<div class="prompt highlight-none"><div class="highlight"><pre>
+<div class="highlight-none"><div class="highlight"><pre>
 <span></span>In [10]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="k">with</span> <span class="n">pm</span><span class="o">.</span><span class="n">Model</span><span class="p">()</span> <span class="k">as</span> <span class="n">model</span><span class="p">:</span>
     <span class="c1"># prior for periodic lengthscale, or frequency</span>
     <span class="n">l_per</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Uniform</span><span class="p">(</span><span class="s1">&#39;l_per&#39;</span><span class="p">,</span> <span class="n">lower</span><span class="o">=</span><span class="mf">1e-5</span><span class="p">,</span> <span class="n">upper</span><span class="o">=</span><span class="mi">10</span><span class="p">)</span>
@@ -587,11 +699,11 @@ noise.</p>
 </div>
 </div>
 <div class="nbinput container">
-<div class="prompt highlight-none"><div class="highlight"><pre>
+<div class="highlight-none"><div class="highlight"><pre>
 <span></span>In [11]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="k">with</span> <span class="n">model</span><span class="p">:</span>
     <span class="n">start</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">find_MAP</span><span class="p">(</span><span class="n">fmin</span><span class="o">=</span><span class="n">sp</span><span class="o">.</span><span class="n">optimize</span><span class="o">.</span><span class="n">fmin_l_bfgs_b</span><span class="p">)</span>
     <span class="n">trace</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="mi">5000</span><span class="p">,</span> <span class="n">step</span><span class="o">=</span><span class="n">pm</span><span class="o">.</span><span class="n">Slice</span><span class="p">(),</span> <span class="n">start</span><span class="o">=</span><span class="n">start</span><span class="p">)</span>
@@ -599,19 +711,19 @@ noise.</p>
 </div>
 </div>
 <div class="nboutput nblast container">
-<div class="prompt empty container">
+<div class="container">
 </div>
-<div class="stderr output_area container">
+<div class="stderr container">
 <div class="highlight"><pre>
 100%|██████████| 5000/5000 [06:45&lt;00:00, 13.41it/s]
 </pre></div></div>
 </div>
 <div class="nbinput container">
-<div class="prompt highlight-none"><div class="highlight"><pre>
+<div class="highlight-none"><div class="highlight"><pre>
 <span></span>In [12]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="n">pm</span><span class="o">.</span><span class="n">traceplot</span><span class="p">(</span><span class="n">trace</span><span class="p">[</span><span class="mi">1000</span><span class="p">:],</span> <span class="n">varnames</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;l_per&#39;</span><span class="p">,</span> <span class="s1">&#39;l_drift&#39;</span><span class="p">,</span> <span class="s1">&#39;s2_d&#39;</span><span class="p">,</span> <span class="s1">&#39;s2_p&#39;</span><span class="p">,</span> <span class="s1">&#39;s2_w&#39;</span><span class="p">],</span>
             <span class="n">lines</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;l_per&quot;</span><span class="p">:</span> <span class="n">l_per_true</span><span class="p">,</span>
                    <span class="s2">&quot;l_drift&quot;</span><span class="p">:</span> <span class="n">l_drift_true</span><span class="p">,</span>
@@ -622,20 +734,20 @@ noise.</p>
 </div>
 </div>
 <div class="nboutput nblast container">
-<div class="prompt empty container">
+<div class="container">
 </div>
-<div class="output_area container">
+<div class="container">
 <img alt="../_images/notebooks_GP-introduction_19_0.png" src="../_images/notebooks_GP-introduction_19_0.png" />
 </div>
 </div>
 <p>Some large samples make the histogram of <code class="docutils literal"><span class="pre">s2_p</span></code> hard to read. Below is
 a zoomed in histogram.</p>
 <div class="nbinput container">
-<div class="prompt highlight-none"><div class="highlight"><pre>
+<div class="highlight-none"><div class="highlight"><pre>
 <span></span>In [14]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="n">fig</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">12</span><span class="p">,</span><span class="mi">6</span><span class="p">));</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">fig</span><span class="o">.</span><span class="n">add_subplot</span><span class="p">(</span><span class="mi">111</span><span class="p">)</span>
 <span class="n">ax</span><span class="o">.</span><span class="n">hist</span><span class="p">(</span><span class="n">trace</span><span class="p">[</span><span class="s1">&#39;s2_p&#39;</span><span class="p">],</span> <span class="mi">100</span><span class="p">,</span> <span class="nb">range</span><span class="o">=</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="mi">4</span><span class="p">),</span> <span class="n">color</span><span class="o">=</span><span class="n">cm</span><span class="p">(</span><span class="mf">0.3</span><span class="p">),</span> <span class="n">ec</span><span class="o">=</span><span class="s1">&#39;none&#39;</span><span class="p">);</span>
 <span class="n">ax</span><span class="o">.</span><span class="n">plot</span><span class="p">([</span><span class="mf">0.3</span><span class="p">,</span> <span class="mf">0.3</span><span class="p">],</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">500</span><span class="p">],</span> <span class="s2">&quot;k&quot;</span><span class="p">,</span> <span class="n">lw</span><span class="o">=</span><span class="mi">2</span><span class="p">);</span>
@@ -646,9 +758,9 @@ a zoomed in histogram.</p>
 </div>
 </div>
 <div class="nboutput nblast container">
-<div class="prompt empty container">
+<div class="container">
 </div>
-<div class="output_area container">
+<div class="container">
 <img alt="../_images/notebooks_GP-introduction_21_0.png" src="../_images/notebooks_GP-introduction_21_0.png" />
 </div>
 </div>
@@ -661,68 +773,72 @@ accuracy.</p>
 </div>
 
 
+           </div>
           </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="GP-covariances.html" class="btn btn-neutral float-right" title="Kernels / Covariance functions" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="GLM-negative-binomial-regression.html" class="btn btn-neutral" title="GLM: Negative Binomial Regression" accesskey="p"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2016, John Salvatier, Christopher Fonnesbeck, Thomas Wiecki.
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
         </div>
       </div>
-      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
-        <div class="sphinxsidebarwrapper">
-  <h3><a href="../index.html">Table Of Contents</a></h3>
-  <ul>
-<li><a class="reference internal" href="#">Gaussian Process Regression</a><ul>
-<li><a class="reference internal" href="#Example-1:-Non-Linear-Regression">Example 1: Non-Linear Regression</a><ul>
-<li><a class="reference internal" href="#The-Model">The Model</a></li>
-</ul>
-</li>
-<li><a class="reference internal" href="#Example-2:-A-periodic-signal-in-non-white-noise">Example 2: A periodic signal in non-white noise</a></li>
-</ul>
-</li>
-</ul>
-<div class="relations">
-<h3>Related Topics</h3>
-<ul>
-  <li><a href="../index.html">Documentation overview</a><ul>
-  <li><a href="../examples.html">Examples</a><ul>
-      <li>Previous: <a href="GLM-negative-binomial-regression.html" title="previous chapter">GLM: Negative Binomial Regression</a></li>
-      <li>Next: <a href="GP-covariances.html" title="next chapter">Kernels / Covariance functions</a></li>
-  </ul></li>
-  </ul></li>
-</ul>
-</div>
-  <div role="note" aria-label="source link">
-    <h3>This Page</h3>
-    <ul class="this-page-menu">
-      <li><a href="../_sources/notebooks/GP-introduction.txt"
-            rel="nofollow">Show Source</a></li>
-    </ul>
-   </div>
-<div id="searchbox" style="display: none" role="search">
-  <h3>Quick search</h3>
-    <form class="search" action="../search.html" method="get">
-      <div><input type="text" name="q" /></div>
-      <div><input type="submit" value="Go" /></div>
-      <input type="hidden" name="check_keywords" value="yes" />
-      <input type="hidden" name="area" value="default" />
-    </form>
-</div>
-<script type="text/javascript">$('#searchbox').show(0);</script>
-        </div>
-      </div>
-      <div class="clearer"></div>
-    </div>
-    <div class="footer">
-      &copy;2016, John Salvatier, Christopher Fonnesbeck, Thomas Wiecki.
-      
-      |
-      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.4.6</a>
-      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.9</a>
-      
-      |
-      <a href="../_sources/notebooks/GP-introduction.txt"
-          rel="nofollow">Page source</a>
-    </div>
 
-    
+    </section>
 
-    
-  </body>
+  </div>
+  
+
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'../',
+            VERSION:'3.0',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true
+        };
+    </script>
+      <script type="text/javascript" src="../_static/jquery.js"></script>
+      <script type="text/javascript" src="../_static/underscore.js"></script>
+      <script type="text/javascript" src="../_static/doctools.js"></script>
+      <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+  
+
+  
+  
+    <script type="text/javascript" src="../_static/js/theme.js"></script>
+  
+
+  
+  
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.StickyNav.enable();
+      });
+  </script>
+   
+
+</body>
 </html>

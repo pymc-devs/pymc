@@ -1,47 +1,168 @@
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
-  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 
 
-<html xmlns="http://www.w3.org/1999/xhtml">
-  <head>
-    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-    
-    <title>Getting started with PyMC3 &#8212; PyMC3 3.0 documentation</title>
-    
-    <link rel="stylesheet" href="../_static/alabaster.css" type="text/css" />
-    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
-    
-    <script type="text/javascript">
-      var DOCUMENTATION_OPTIONS = {
-        URL_ROOT:    '../',
-        VERSION:     '3.0',
-        COLLAPSE_INDEX: false,
-        FILE_SUFFIX: '.html',
-        HAS_SOURCE:  true
-      };
-    </script>
-    <script type="text/javascript" src="../_static/jquery.js"></script>
-    <script type="text/javascript" src="../_static/underscore.js"></script>
-    <script type="text/javascript" src="../_static/doctools.js"></script>
-    <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
-    <link rel="top" title="PyMC3 3.0 documentation" href="../index.html" />
-    <link rel="up" title="Getting started" href="../getting_started.html" />
-    <link rel="next" title="Examples" href="../examples.html" />
-    <link rel="prev" title="Getting started" href="../getting_started.html" />
-   
-  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
   
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
-
-  </head>
-  <body role="document">
+  <title>Getting started with PyMC3 &mdash; PyMC3 3.0 documentation</title>
   
 
-    <div class="document">
-      <div class="documentwrapper">
-        <div class="bodywrapper">
-          <div class="body" role="main">
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  
+  
+    <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  
+
+  
+
+  
+        <link rel="index" title="Index"
+              href="../genindex.html"/>
+        <link rel="search" title="Search" href="../search.html"/>
+    <link rel="top" title="PyMC3 3.0 documentation" href="../index.html"/>
+        <link rel="up" title="Getting started" href="../getting_started.html"/>
+        <link rel="next" title="Examples" href="../examples.html"/>
+        <link rel="prev" title="Getting started" href="../getting_started.html"/> 
+
+  
+  <script src="../_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+          
+            <a href="../index.html" class="icon icon-home"> PyMC3
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                3.0
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+                <ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="../getting_started.html">Getting started</a><ul class="current">
+<li class="toctree-l2 current"><a class="current reference internal" href="#">Getting started with PyMC3</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#Abstract">Abstract</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#Introduction">Introduction</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#Installation">Installation</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#A-Motivating-Example:-Linear-Regression">A Motivating Example: Linear Regression</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#Generating-data">Generating data</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#Model-Specification">Model Specification</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#Model-fitting">Model fitting</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#Posterior-analysis">Posterior analysis</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#Case-study-1:-Stochastic-volatility">Case study 1: Stochastic volatility</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#The-Model">The Model</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#The-Data">The Data</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#Model-Specification">Model Specification</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#Fitting">Fitting</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#Case-study-2:-Coal-mining-disasters">Case study 2: Coal mining disasters</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#Arbitrary-deterministics">Arbitrary deterministics</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#Arbitrary-distributions">Arbitrary distributions</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#Generalized-Linear-Models">Generalized Linear Models</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#Backends">Backends</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#Discussion">Discussion</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#References">References</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../examples.html">Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../api.html">API Reference</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+        <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+        <a href="../index.html">PyMC3</a>
+      </nav>
+
+
+      
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          
+
+ 
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="../index.html">Docs</a> &raquo;</li>
+      
+          <li><a href="../getting_started.html">Getting started</a> &raquo;</li>
+      
+    <li>Getting started with PyMC3</li>
+      <li class="wy-breadcrumbs-aside">
+        
+          
+            <a href="../_sources/notebooks/getting_started.ipynb.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
             
   
 <style>
@@ -49,15 +170,13 @@
 
 /* remove conflicting styling from Sphinx themes */
 div.nbinput,
-div.nbinput div.prompt,
-div.nbinput div.input_area,
-div.nbinput div[class*=highlight],
-div.nbinput div[class*=highlight] pre,
+div.nbinput > div,
+div.nbinput div[class^=highlight],
+div.nbinput div[class^=highlight] pre,
 div.nboutput,
-div.nbinput div.prompt,
-div.nbinput div.output_area,
-div.nboutput div[class*=highlight],
-div.nboutput div[class*=highlight] pre {
+div.nboutput > div,
+div.nboutput div[class^=highlight],
+div.nboutput div[class^=highlight] pre {
     background: none;
     border: none;
     padding: 0 0;
@@ -66,7 +185,7 @@ div.nboutput div[class*=highlight] pre {
 }
 
 /* avoid gaps between output lines */
-div.nboutput div[class*=highlight] pre {
+div.nboutput div[class^=highlight] pre {
     line-height: normal;
 }
 
@@ -77,13 +196,6 @@ div.nboutput {
     display: flex;
     align-items: flex-start;
     margin: 0;
-    width: 100%;
-}
-@media (max-width: 540px) {
-    div.nbinput,
-    div.nboutput {
-        flex-direction: column;
-    }
 }
 
 /* input container */
@@ -97,58 +209,38 @@ div.nblast {
 }
 
 /* input prompt */
-div.nbinput div.prompt pre {
+div.nbinput > :first-child pre {
     color: #303F9F;
 }
 
 /* output prompt */
-div.nboutput div.prompt pre {
+div.nboutput > :first-child pre {
     color: #D84315;
 }
 
 /* all prompts */
-div.nbinput div.prompt,
-div.nboutput div.prompt {
+div.nbinput > :first-child[class^=highlight],
+div.nboutput > :first-child[class^=highlight],
+div.nboutput > :first-child {
     min-width: 8ex;
     padding-top: 0.4em;
     padding-right: 0.4em;
     text-align: right;
     flex: 0;
 }
-@media (max-width: 540px) {
-    div.nbinput div.prompt,
-    div.nboutput div.prompt {
-        text-align: left;
-        padding: 0.4em;
-    }
-    div.nboutput div.prompt.empty {
-        padding: 0;
-    }
-}
-
-/* disable scrollbars on prompts */
-div.nbinput div.prompt pre,
-div.nboutput div.prompt pre {
-    overflow: hidden;
-}
 
 /* input/output area */
-div.nbinput div.input_area,
-div.nboutput div.output_area {
+div.nbinput > :nth-child(2)[class^=highlight],
+div.nboutput > :nth-child(2),
+div.nboutput > :nth-child(2)[class^=highlight] {
     padding: 0.4em;
     -webkit-flex: 1;
     flex: 1;
     overflow: auto;
 }
-@media (max-width: 540px) {
-    div.nbinput div.input_area,
-    div.nboutput div.output_area {
-        width: 100%;
-    }
-}
 
 /* input area */
-div.nbinput div.input_area {
+div.nbinput > :nth-child(2)[class^=highlight] {
     border: 1px solid #cfcfcf;
     border-radius: 2px;
     background: #f7f7f7;
@@ -165,7 +257,7 @@ div.nboutput div.math p {
 }
 
 /* standard error */
-div.nboutput div.output_area.stderr {
+div.nboutput  > :nth-child(2).stderr {
     background: #fdd;
 }
 
@@ -204,6 +296,38 @@ div.nboutput div.output_area.stderr {
 .ansi-white-intense-bg { background-color: #A1A6B2; }
 
 .ansi-bold { font-weight: bold; }
+
+/* CSS overrides for sphinx_rtd_theme */
+
+/* 24px margin */
+.nbinput.nblast,
+.nboutput.nblast {
+    margin-bottom: 19px;  /* padding has already 5px */
+}
+
+/* ... except between code cells! */
+.nblast + .nbinput {
+    margin-top: -19px;
+}
+
+/* nice headers on first paragraph of info/warning boxes */
+.admonition .first {
+    margin: -12px;
+    padding: 6px 12px;
+    margin-bottom: 12px;
+    color: #fff;
+    line-height: 1;
+    display: block;
+}
+.admonition.warning .first {
+    background: #f0b37e;
+}
+.admonition.note .first {
+    background: #6ab0de;
+}
+.admonition > p:before {
+    margin-right: 4px;  /* make room for the exclamation icon */
+}
 </style>
 <div class="section" id="Getting-started-with-PyMC3">
 <h1>Getting started with PyMC3<a class="headerlink" href="#Getting-started-with-PyMC3" title="Permalink to this headline">¶</a></h1>
@@ -333,11 +457,11 @@ distribution bounded at zero) as the prior for <span class="math">\(\sigma\)</sp
 corresponding parameters. We are intentionally generating the data to
 closely correspond the PyMC3 model structure.</p>
 <div class="nbinput nblast container">
-<div class="prompt highlight-none"><div class="highlight"><pre>
+<div class="highlight-none"><div class="highlight"><pre>
 <span></span>In [1]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="kn">import</span> <span class="nn">numpy</span> <span class="kn">as</span> <span class="nn">np</span>
 <span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="kn">as</span> <span class="nn">plt</span>
 
@@ -363,11 +487,11 @@ closely correspond the PyMC3 model structure.</p>
 <p>Here is what the simulated data look like. We use the <code class="docutils literal"><span class="pre">pylab</span></code> module
 from the plotting library matplotlib.</p>
 <div class="nbinput container">
-<div class="prompt highlight-none"><div class="highlight"><pre>
+<div class="highlight-none"><div class="highlight"><pre>
 <span></span>In [2]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="o">%</span><span class="k">matplotlib</span> inline
 
 <span class="n">fig</span><span class="p">,</span> <span class="n">axes</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="n">sharex</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span> <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span><span class="mi">4</span><span class="p">))</span>
@@ -378,9 +502,9 @@ from the plotting library matplotlib.</p>
 </div>
 </div>
 <div class="nboutput nblast container">
-<div class="prompt empty container">
+<div class="container">
 </div>
-<div class="output_area container">
+<div class="container">
 <img alt="../_images/notebooks_getting_started_5_0.png" src="../_images/notebooks_getting_started_5_0.png" />
 </div>
 </div>
@@ -392,11 +516,11 @@ as close to the statistical notation. For the most part, each line of
 Python code corresponds to a line in the model notation above.</p>
 <p>First, we import the components we will need from PyMC.</p>
 <div class="nbinput nblast container">
-<div class="prompt highlight-none"><div class="highlight"><pre>
+<div class="highlight-none"><div class="highlight"><pre>
 <span></span>In [3]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="kn">from</span> <span class="nn">pymc3</span> <span class="kn">import</span> <span class="n">Model</span><span class="p">,</span> <span class="n">Normal</span><span class="p">,</span> <span class="n">HalfNormal</span>
 </pre></div>
 </div>
@@ -404,11 +528,11 @@ Python code corresponds to a line in the model notation above.</p>
 <p>Now we build our model, which we will present in full first, then
 explain each part line-by-line.</p>
 <div class="nbinput nblast container">
-<div class="prompt highlight-none"><div class="highlight"><pre>
+<div class="highlight-none"><div class="highlight"><pre>
 <span></span>In [4]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="n">basic_model</span> <span class="o">=</span> <span class="n">Model</span><span class="p">()</span>
 
 <span class="k">with</span> <span class="n">basic_model</span><span class="p">:</span>
@@ -483,19 +607,19 @@ random variable that takes on 5 by 7 matrix values).</p>
 <p>Detailed notes about distributions, sampling methods and other PyMC3
 functions are available via the <code class="docutils literal"><span class="pre">help</span></code> function.</p>
 <div class="nbinput container">
-<div class="prompt highlight-none"><div class="highlight"><pre>
+<div class="highlight-none"><div class="highlight"><pre>
 <span></span>In [5]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="n">help</span><span class="p">(</span><span class="n">Normal</span><span class="p">)</span> <span class="c1">#try help(Model), help(Uniform) or help(basic_model)</span>
 </pre></div>
 </div>
 </div>
 <div class="nboutput nblast container">
-<div class="prompt empty container">
+<div class="container">
 </div>
-<div class="output_area container">
+<div class="container">
 <div class="highlight"><pre>
 Help on class Normal in module pymc3.distributions.continuous:
 
@@ -638,11 +762,11 @@ with the <code class="docutils literal"><span class="pre">find_MAP</span></code>
 parameter <strong>point</strong>, which is always represented by a Python dictionary
 of variable names to NumPy arrays of parameter values.</p>
 <div class="nbinput container">
-<div class="prompt highlight-none"><div class="highlight"><pre>
+<div class="highlight-none"><div class="highlight"><pre>
 <span></span>In [6]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="kn">from</span> <span class="nn">pymc3</span> <span class="kn">import</span> <span class="n">find_MAP</span>
 
 <span class="n">map_estimate</span> <span class="o">=</span> <span class="n">find_MAP</span><span class="p">(</span><span class="n">model</span><span class="o">=</span><span class="n">basic_model</span><span class="p">)</span>
@@ -652,9 +776,9 @@ of variable names to NumPy arrays of parameter values.</p>
 </div>
 </div>
 <div class="nboutput nblast container">
-<div class="prompt empty container">
+<div class="container">
 </div>
-<div class="output_area container">
+<div class="container">
 <div class="highlight"><pre>
 Optimization terminated successfully.
          Current function value: 149.017982
@@ -670,11 +794,11 @@ but also allows selection of other optimization algorithms from the
 <code class="docutils literal"><span class="pre">scipy.optimize</span></code> module. For example, below we use Powell&#8217;s method to
 find the MAP.</p>
 <div class="nbinput container">
-<div class="prompt highlight-none"><div class="highlight"><pre>
+<div class="highlight-none"><div class="highlight"><pre>
 <span></span>In [7]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="kn">from</span> <span class="nn">scipy</span> <span class="kn">import</span> <span class="n">optimize</span>
 
 <span class="n">map_estimate</span> <span class="o">=</span> <span class="n">find_MAP</span><span class="p">(</span><span class="n">model</span><span class="o">=</span><span class="n">basic_model</span><span class="p">,</span> <span class="n">fmin</span><span class="o">=</span><span class="n">optimize</span><span class="o">.</span><span class="n">fmin_powell</span><span class="p">)</span>
@@ -684,9 +808,9 @@ find the MAP.</p>
 </div>
 </div>
 <div class="nboutput nblast container">
-<div class="prompt empty container">
+<div class="container">
 </div>
-<div class="output_area container">
+<div class="container">
 <div class="highlight"><pre>
 Optimization terminated successfully.
          Current function value: 149.019762
@@ -769,11 +893,11 @@ Moreover, <code class="docutils literal"><span class="pre">PyMC3</span></code> w
 we don&#8217;t supply it via the <code class="docutils literal"><span class="pre">step</span></code> keyword argument (see below for an
 example of how to explicitly assign step methods).</p>
 <div class="nbinput container">
-<div class="prompt highlight-none"><div class="highlight"><pre>
+<div class="highlight-none"><div class="highlight"><pre>
 <span></span>In [8]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="kn">from</span> <span class="nn">pymc3</span> <span class="kn">import</span> <span class="n">NUTS</span><span class="p">,</span> <span class="n">sample</span>
 <span class="kn">from</span> <span class="nn">scipy</span> <span class="kn">import</span> <span class="n">optimize</span>
 
@@ -784,9 +908,9 @@ example of how to explicitly assign step methods).</p>
 </div>
 </div>
 <div class="nboutput nblast container">
-<div class="prompt empty container">
+<div class="container">
 </div>
-<div class="stderr output_area container">
+<div class="stderr container">
 <div class="highlight"><pre>
 Auto-assigning NUTS sampler...
 Initializing NUTS using advi...
@@ -804,21 +928,21 @@ dimension of the array is the sampling index and the later dimensions
 match the shape of the variable. We can see the last 5 values for the
 <code class="docutils literal"><span class="pre">alpha</span></code> variable as follows:</p>
 <div class="nbinput container">
-<div class="prompt highlight-none"><div class="highlight"><pre>
+<div class="highlight-none"><div class="highlight"><pre>
 <span></span>In [9]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="n">trace</span><span class="p">[</span><span class="s1">&#39;alpha&#39;</span><span class="p">][</span><span class="o">-</span><span class="mi">5</span><span class="p">:]</span>
 </pre></div>
 </div>
 </div>
 <div class="nboutput nblast container">
-<div class="prompt highlight-none"><div class="highlight"><pre>
+<div class="highlight-none"><div class="highlight"><pre>
 <span></span>Out[9]:
 </pre></div>
 </div>
-<div class="output_area highlight-none"><div class="highlight"><pre>
+<div class="highlight-none"><div class="highlight"><pre>
 <span></span>array([ 0.87254059,  0.92100952,  0.90321028,  0.90372965,  0.86679235])
 </pre></div>
 </div>
@@ -827,11 +951,11 @@ match the shape of the variable. We can see the last 5 values for the
 NUTS (which was assigned automatically), we could have specified this as
 the <code class="docutils literal"><span class="pre">step</span></code> argument for <code class="docutils literal"><span class="pre">sample</span></code>.</p>
 <div class="nbinput container">
-<div class="prompt highlight-none"><div class="highlight"><pre>
+<div class="highlight-none"><div class="highlight"><pre>
 <span></span>In [10]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="kn">from</span> <span class="nn">pymc3</span> <span class="kn">import</span> <span class="n">Slice</span>
 
 <span class="k">with</span> <span class="n">basic_model</span><span class="p">:</span>
@@ -849,18 +973,18 @@ the <code class="docutils literal"><span class="pre">step</span></code> argument
 </div>
 </div>
 <div class="nboutput container">
-<div class="prompt empty container">
+<div class="container">
 </div>
-<div class="stderr output_area container">
+<div class="stderr container">
 <div class="highlight"><pre>
 Assigned NUTS to alpha
 Assigned NUTS to beta
 </pre></div></div>
 </div>
 <div class="nboutput container">
-<div class="prompt empty container">
+<div class="container">
 </div>
-<div class="output_area container">
+<div class="container">
 <div class="highlight"><pre>
 Optimization terminated successfully.
          Current function value: 149.019762
@@ -869,9 +993,9 @@ Optimization terminated successfully.
 </pre></div></div>
 </div>
 <div class="nboutput nblast container">
-<div class="prompt empty container">
+<div class="container">
 </div>
-<div class="stderr output_area container">
+<div class="stderr container">
 <div class="highlight"><pre>
 100%|██████████| 5000/5000 [00:11&lt;00:00, 443.78it/s]
 </pre></div></div>
@@ -884,11 +1008,11 @@ Optimization terminated successfully.
 the sampling output. A simple posterior plot can be created using
 <code class="docutils literal"><span class="pre">traceplot</span></code>.</p>
 <div class="nbinput container">
-<div class="prompt highlight-none"><div class="highlight"><pre>
+<div class="highlight-none"><div class="highlight"><pre>
 <span></span>In [11]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="kn">from</span> <span class="nn">pymc3</span> <span class="kn">import</span> <span class="n">traceplot</span>
 
 <span class="n">traceplot</span><span class="p">(</span><span class="n">trace</span><span class="p">);</span>
@@ -896,9 +1020,9 @@ the sampling output. A simple posterior plot can be created using
 </div>
 </div>
 <div class="nboutput nblast container">
-<div class="prompt empty container">
+<div class="container">
 </div>
-<div class="output_area container">
+<div class="container">
 <img alt="../_images/notebooks_getting_started_26_0.png" src="../_images/notebooks_getting_started_26_0.png" />
 </div>
 </div>
@@ -911,11 +1035,11 @@ predictor coefficients.</p>
 <p>In addition, the <code class="docutils literal"><span class="pre">summary</span></code> function provides a text-based output of
 common posterior statistics:</p>
 <div class="nbinput container">
-<div class="prompt highlight-none"><div class="highlight"><pre>
+<div class="highlight-none"><div class="highlight"><pre>
 <span></span>In [12]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="kn">from</span> <span class="nn">pymc3</span> <span class="kn">import</span> <span class="n">summary</span>
 
 <span class="n">summary</span><span class="p">(</span><span class="n">trace</span><span class="p">)</span>
@@ -923,9 +1047,9 @@ common posterior statistics:</p>
 </div>
 </div>
 <div class="nboutput nblast container">
-<div class="prompt empty container">
+<div class="container">
 </div>
-<div class="output_area container">
+<div class="container">
 <div class="highlight"><pre>
 
 alpha:
@@ -1012,11 +1136,11 @@ financial crisis. Here, we use <code class="docutils literal"><span class="pre">
 data from Yahoo!-Finance; it can be installed with
 <code class="docutils literal"><span class="pre">pip</span> <span class="pre">install</span> <span class="pre">pandas-datareader</span></code>.</p>
 <div class="nbinput nblast container">
-<div class="prompt highlight-none"><div class="highlight"><pre>
+<div class="highlight-none"><div class="highlight"><pre>
 <span></span>In [13]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="k">try</span><span class="p">:</span>
     <span class="kn">from</span> <span class="nn">pandas_datareader</span> <span class="kn">import</span> <span class="n">data</span>
 <span class="k">except</span> <span class="ne">ImportError</span><span class="p">:</span>
@@ -1026,11 +1150,11 @@ data from Yahoo!-Finance; it can be installed with
 </div>
 </div>
 <div class="nbinput container">
-<div class="prompt highlight-none"><div class="highlight"><pre>
+<div class="highlight-none"><div class="highlight"><pre>
 <span></span>In [14]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="kn">import</span> <span class="nn">pandas</span> <span class="kn">as</span> <span class="nn">pd</span>
 
 <span class="n">returns</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">get_data_yahoo</span><span class="p">(</span><span class="s1">&#39;SPY&#39;</span><span class="p">,</span> <span class="n">start</span><span class="o">=</span><span class="s1">&#39;2008-5-1&#39;</span><span class="p">,</span> <span class="n">end</span><span class="o">=</span><span class="s1">&#39;2009-12-1&#39;</span><span class="p">)[</span><span class="s1">&#39;Adj Close&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">pct_change</span><span class="p">()</span>
@@ -1040,28 +1164,28 @@ data from Yahoo!-Finance; it can be installed with
 </div>
 </div>
 <div class="nboutput nblast container">
-<div class="prompt empty container">
+<div class="container">
 </div>
-<div class="output_area container">
+<div class="container">
 <div class="highlight"><pre>
 401
 </pre></div></div>
 </div>
 <div class="nbinput container">
-<div class="prompt highlight-none"><div class="highlight"><pre>
+<div class="highlight-none"><div class="highlight"><pre>
 <span></span>In [15]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="n">returns</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="mi">6</span><span class="p">))</span>
 <span class="n">plt</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="s1">&#39;daily returns in %&#39;</span><span class="p">);</span>
 </pre></div>
 </div>
 </div>
 <div class="nboutput nblast container">
-<div class="prompt empty container">
+<div class="container">
 </div>
-<div class="output_area container">
+<div class="container">
 <img alt="../_images/notebooks_getting_started_33_0.png" src="../_images/notebooks_getting_started_33_0.png" />
 </div>
 </div>
@@ -1070,10 +1194,10 @@ data from Yahoo!-Finance; it can be installed with
 <h3>Model Specification<a class="headerlink" href="#Model-Specification" title="Permalink to this headline">¶</a></h3>
 <p>As with the linear regression example, specifying the model in PyMC3
 mirrors its statistical specification. This model employs several new
-distributions: the <code class="docutils literal"><span class="pre">Exponential</span></code> distribution for the $
-<a href="#id2"><span class="problematic" id="id3">:raw-latex:`\nu `$ and :math:`</span></a>sigma` priors, the Student-T
-(<code class="docutils literal"><span class="pre">StudentT</span></code>) distribution for distribution of returns, and the
-<code class="docutils literal"><span class="pre">GaussianRandomWalk</span></code> for the prior for the latent volatilities.</p>
+distributions: the <code class="docutils literal"><span class="pre">Exponential</span></code> distribution for the $ $ and
+<span class="math">\(\sigma\)</span> priors, the Student-T (<code class="docutils literal"><span class="pre">StudentT</span></code>) distribution for
+distribution of returns, and the <code class="docutils literal"><span class="pre">GaussianRandomWalk</span></code> for the prior
+for the latent volatilities.</p>
 <p>In PyMC3, variables with purely positive priors like <code class="docutils literal"><span class="pre">Exponential</span></code> are
 transformed with a log transform. This makes sampling more robust.
 Behind the scenes, a variable in the unconstrained space (named
@@ -1100,11 +1224,11 @@ scale of the innovations of the random walk, <code class="docutils literal"><spa
 terms of the precision of the normally distributed innovations and can
 be a scalar or vector.</p>
 <div class="nbinput nblast container">
-<div class="prompt highlight-none"><div class="highlight"><pre>
+<div class="highlight-none"><div class="highlight"><pre>
 <span></span>In [16]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="kn">from</span> <span class="nn">pymc3</span> <span class="kn">import</span> <span class="n">Exponential</span><span class="p">,</span> <span class="n">StudentT</span><span class="p">,</span> <span class="n">Deterministic</span>
 <span class="kn">from</span> <span class="nn">pymc3.math</span> <span class="kn">import</span> <span class="n">exp</span>
 <span class="kn">from</span> <span class="nn">pymc3.distributions.timeseries</span> <span class="kn">import</span> <span class="n">GaussianRandomWalk</span>
@@ -1134,11 +1258,11 @@ into two lines, as we did for the first example.</p>
 <div class="section" id="Fitting">
 <h3>Fitting<a class="headerlink" href="#Fitting" title="Permalink to this headline">¶</a></h3>
 <div class="nbinput container">
-<div class="prompt highlight-none"><div class="highlight"><pre>
+<div class="highlight-none"><div class="highlight"><pre>
 <span></span>In [17]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="kn">from</span> <span class="nn">pymc3</span> <span class="kn">import</span> <span class="n">variational</span>
 
 <span class="kn">import</span> <span class="nn">scipy</span>
@@ -1148,9 +1272,9 @@ into two lines, as we did for the first example.</p>
 </div>
 </div>
 <div class="nboutput nblast container">
-<div class="prompt empty container">
+<div class="container">
 </div>
-<div class="stderr output_area container">
+<div class="stderr container">
 <div class="highlight"><pre>
 Auto-assigning NUTS sampler...
 Initializing NUTS using advi...
@@ -1162,19 +1286,19 @@ Finished [100%]: Average ELBO = 883.43
 <p>We can check our samples by looking at the traceplot for <code class="docutils literal"><span class="pre">nu</span></code> and
 <code class="docutils literal"><span class="pre">sigma</span></code>.</p>
 <div class="nbinput container">
-<div class="prompt highlight-none"><div class="highlight"><pre>
+<div class="highlight-none"><div class="highlight"><pre>
 <span></span>In [18]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="n">traceplot</span><span class="p">(</span><span class="n">trace</span><span class="p">[</span><span class="mi">200</span><span class="p">:],</span> <span class="p">[</span><span class="n">nu</span><span class="p">,</span> <span class="n">sigma</span><span class="p">]);</span>
 </pre></div>
 </div>
 </div>
 <div class="nboutput nblast container">
-<div class="prompt empty container">
+<div class="container">
 </div>
-<div class="output_area container">
+<div class="container">
 <img alt="../_images/notebooks_getting_started_40_0.png" src="../_images/notebooks_getting_started_40_0.png" />
 </div>
 </div>
@@ -1184,11 +1308,11 @@ partially transparent (via the <code class="docutils literal"><span class="pre">
 <code class="docutils literal"><span class="pre">plot</span></code> function) so the regions where many paths overlap are shaded
 more darkly.</p>
 <div class="nbinput container">
-<div class="prompt highlight-none"><div class="highlight"><pre>
+<div class="highlight-none"><div class="highlight"><pre>
 <span></span>In [19]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">15</span><span class="p">,</span> <span class="mi">8</span><span class="p">))</span>
 <span class="n">returns</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">ax</span><span class="o">=</span><span class="n">ax</span><span class="p">)</span>
 <span class="n">ax</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">returns</span><span class="o">.</span><span class="n">index</span><span class="p">,</span> <span class="mi">1</span><span class="o">/</span><span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="n">trace</span><span class="p">[</span><span class="s1">&#39;s&#39;</span><span class="p">,::</span><span class="mi">5</span><span class="p">]</span><span class="o">.</span><span class="n">T</span><span class="p">),</span> <span class="s1">&#39;r&#39;</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=.</span><span class="mo">03</span><span class="p">);</span>
@@ -1198,19 +1322,19 @@ more darkly.</p>
 </div>
 </div>
 <div class="nboutput container">
-<div class="prompt highlight-none"><div class="highlight"><pre>
+<div class="highlight-none"><div class="highlight"><pre>
 <span></span>Out[19]:
 </pre></div>
 </div>
-<div class="output_area highlight-none"><div class="highlight"><pre>
+<div class="highlight-none"><div class="highlight"><pre>
 <span></span>&lt;matplotlib.legend.Legend at 0x7f0a0935e780&gt;
 </pre></div>
 </div>
 </div>
 <div class="nboutput nblast container">
-<div class="prompt empty container">
+<div class="container">
 </div>
-<div class="output_area container">
+<div class="container">
 <img alt="../_images/notebooks_getting_started_42_1.png" src="../_images/notebooks_getting_started_42_1.png" />
 </div>
 </div>
@@ -1233,11 +1357,11 @@ marker value.</p>
 the change occurred. At the same time, we will see how to handle missing
 data, use multiple samplers and sample from discrete random variables.</p>
 <div class="nbinput container">
-<div class="prompt highlight-none"><div class="highlight"><pre>
+<div class="highlight-none"><div class="highlight"><pre>
 <span></span>In [20]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="n">disaster_data</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ma</span><span class="o">.</span><span class="n">masked_values</span><span class="p">([</span><span class="mi">4</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">6</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">6</span><span class="p">,</span>
                             <span class="mi">3</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span>
                             <span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="o">-</span><span class="mi">999</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span>
@@ -1254,19 +1378,19 @@ data, use multiple samplers and sample from discrete random variables.</p>
 </div>
 </div>
 <div class="nboutput container">
-<div class="prompt highlight-none"><div class="highlight"><pre>
+<div class="highlight-none"><div class="highlight"><pre>
 <span></span>Out[20]:
 </pre></div>
 </div>
-<div class="output_area highlight-none"><div class="highlight"><pre>
+<div class="highlight-none"><div class="highlight"><pre>
 <span></span>&lt;matplotlib.text.Text at 0x7f0a05f0ef60&gt;
 </pre></div>
 </div>
 </div>
 <div class="nboutput nblast container">
-<div class="prompt empty container">
+<div class="container">
 </div>
-<div class="output_area container">
+<div class="container">
 <img alt="../_images/notebooks_getting_started_45_1.png" src="../_images/notebooks_getting_started_45_1.png" />
 </div>
 </div>
@@ -1277,16 +1401,16 @@ interested in locating the change point in the series, which perhaps is
 related to changes in mining safety regulations.</p>
 <p>In our model,</p>
 <div class="math">
-\[ \begin{align}\begin{aligned}:nowrap:\\\begin{split}  \begin{aligned}
-    D_t &amp;\sim \text{Pois}(r_t), r_t= \begin{cases}
-     l, &amp; \text{if } t \lt s \\
-     e, &amp; \text{if } t \ge s
-     \end{cases} \\
-    s &amp;\sim \text{Unif}(t_l, t_h)\\
-    e &amp;\sim \text{exp}(1)\\
-    l &amp;\sim \text{exp}(1)
-  \end{aligned}\end{split}\\the parameters are defined as follows: \* :math:`D_t`: The number of\end{aligned}\end{align} \]</div>
-<p>disasters in year <span class="math">\(t\)</span> * <span class="math">\(r_t\)</span>: The rate parameter of the
+\begin{aligned}
+  D_t &amp;\sim \text{Pois}(r_t), r_t= \begin{cases}
+   l, &amp; \text{if } t \lt s \\
+   e, &amp; \text{if } t \ge s
+   \end{cases} \\
+  s &amp;\sim \text{Unif}(t_l, t_h)\\
+  e &amp;\sim \text{exp}(1)\\
+  l &amp;\sim \text{exp}(1)
+\end{aligned}</div><p>the parameters are defined as follows: * <span class="math">\(D_t\)</span>: The number of
+disasters in year <span class="math">\(t\)</span> * <span class="math">\(r_t\)</span>: The rate parameter of the
 Poisson distribution of disasters in year <span class="math">\(t\)</span>. * <span class="math">\(s\)</span>: The
 year in which the rate parameter changes (the switchpoint). *
 <span class="math">\(e\)</span>: The rate parameter before the switchpoint <span class="math">\(s\)</span>. *
@@ -1298,11 +1422,11 @@ are the introduction of discrete variables with the Poisson and
 discrete-uniform priors and the novel form of the deterministic random
 variable <code class="docutils literal"><span class="pre">rate</span></code>.</p>
 <div class="nbinput nblast container">
-<div class="prompt highlight-none"><div class="highlight"><pre>
+<div class="highlight-none"><div class="highlight"><pre>
 <span></span>In [21]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="kn">from</span> <span class="nn">pymc3</span> <span class="kn">import</span> <span class="n">DiscreteUniform</span><span class="p">,</span> <span class="n">Poisson</span>
 <span class="kn">from</span> <span class="nn">pymc3.math</span> <span class="kn">import</span> <span class="n">switch</span>
 
@@ -1341,11 +1465,11 @@ the missing disaster observations. Instead, we will sample using a
 Metropolis-Hastings, because it is designed to handle discrete values.
 <code class="docutils literal"><span class="pre">PyMC3</span></code> automatically assigns the correct sampling algorithms.</p>
 <div class="nbinput container">
-<div class="prompt highlight-none"><div class="highlight"><pre>
+<div class="highlight-none"><div class="highlight"><pre>
 <span></span>In [23]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="kn">from</span> <span class="nn">pymc3</span> <span class="kn">import</span> <span class="n">Metropolis</span>
 
 <span class="k">with</span> <span class="n">disaster_model</span><span class="p">:</span>
@@ -1354,9 +1478,9 @@ Metropolis-Hastings, because it is designed to handle discrete values.
 </div>
 </div>
 <div class="nboutput nblast container">
-<div class="prompt empty container">
+<div class="container">
 </div>
-<div class="stderr output_area container">
+<div class="stderr container">
 <div class="highlight"><pre>
 Assigned Metropolis to switchpoint
 Assigned NUTS to early_rate_log_
@@ -1371,19 +1495,19 @@ that contains most of the probability mass. The distribution is jagged
 because of the jumpy relationship between the year switchpoint and the
 likelihood and not due to sampling error.</p>
 <div class="nbinput container">
-<div class="prompt highlight-none"><div class="highlight"><pre>
+<div class="highlight-none"><div class="highlight"><pre>
 <span></span>In [24]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="n">traceplot</span><span class="p">(</span><span class="n">trace</span><span class="p">);</span>
 </pre></div>
 </div>
 </div>
 <div class="nboutput nblast container">
-<div class="prompt empty container">
+<div class="container">
 </div>
-<div class="output_area container">
+<div class="container">
 <img alt="../_images/notebooks_getting_started_52_0.png" src="../_images/notebooks_getting_started_52_0.png" />
 </div>
 </div>
@@ -1403,11 +1527,11 @@ which are specified for <code class="docutils literal"><span class="pre">as_op</
 of the available
 types</a>.</p>
 <div class="nbinput nblast container">
-<div class="prompt highlight-none"><div class="highlight"><pre>
+<div class="highlight-none"><div class="highlight"><pre>
 <span></span>In [25]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="kn">import</span> <span class="nn">theano.tensor</span> <span class="kn">as</span> <span class="nn">T</span>
 <span class="kn">from</span> <span class="nn">theano.compile.ops</span> <span class="kn">import</span> <span class="n">as_op</span>
 
@@ -1469,11 +1593,11 @@ custom theano operator using <code class="docutils literal"><span class="pre">as
 shown below, along with a sub-function using the <code class="docutils literal"><span class="pre">as_op</span></code> decorator,
 though this is not strictly necessary.</p>
 <div class="nbinput nblast container">
-<div class="prompt highlight-none"><div class="highlight"><pre>
+<div class="highlight-none"><div class="highlight"><pre>
 <span></span>In [26]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="kn">from</span> <span class="nn">pymc3.distributions</span> <span class="kn">import</span> <span class="n">Continuous</span>
 
 <span class="k">class</span> <span class="nc">Beta</span><span class="p">(</span><span class="n">Continuous</span><span class="p">):</span>
@@ -1508,11 +1632,11 @@ implemented via the <code class="docutils literal"><span class="pre">patsy</span
 <p>The <code class="docutils literal"><span class="pre">glm</span></code> submodule requires data to be included as a <code class="docutils literal"><span class="pre">pandas</span></code>
 <code class="docutils literal"><span class="pre">DataFrame</span></code>. Hence, for our linear regression example:</p>
 <div class="nbinput nblast container">
-<div class="prompt highlight-none"><div class="highlight"><pre>
+<div class="highlight-none"><div class="highlight"><pre>
 <span></span>In [27]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="c1"># Convert X and Y to a pandas DataFrame</span>
 <span class="kn">import</span> <span class="nn">pandas</span>
 
@@ -1522,11 +1646,11 @@ implemented via the <code class="docutils literal"><span class="pre">patsy</span
 </div>
 <p>The model can then be very concisely specified in one line of code.</p>
 <div class="nbinput container">
-<div class="prompt highlight-none"><div class="highlight"><pre>
+<div class="highlight-none"><div class="highlight"><pre>
 <span></span>In [28]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="kn">from</span> <span class="nn">pymc3.glm</span> <span class="kn">import</span> <span class="n">glm</span>
 
 <span class="k">with</span> <span class="n">Model</span><span class="p">()</span> <span class="k">as</span> <span class="n">model_glm</span><span class="p">:</span>
@@ -1536,9 +1660,9 @@ implemented via the <code class="docutils literal"><span class="pre">patsy</span
 </div>
 </div>
 <div class="nboutput nblast container">
-<div class="prompt empty container">
+<div class="container">
 </div>
-<div class="stderr output_area container">
+<div class="stderr container">
 <div class="highlight"><pre>
 Auto-assigning NUTS sampler...
 Initializing NUTS using advi...
@@ -1551,11 +1675,11 @@ Finished [100%]: Average ELBO = -190.04
 assumed to be normal. In the case of logistic regression, this can be
 modified by passing in a <code class="docutils literal"><span class="pre">Binomial</span></code> family object.</p>
 <div class="nbinput nblast container">
-<div class="prompt highlight-none"><div class="highlight"><pre>
+<div class="highlight-none"><div class="highlight"><pre>
 <span></span>In [29]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="kn">from</span> <span class="nn">pymc3.glm.families</span> <span class="kn">import</span> <span class="n">Binomial</span>
 
 <span class="n">df_logistic</span> <span class="o">=</span> <span class="n">pandas</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">({</span><span class="s1">&#39;x1&#39;</span><span class="p">:</span> <span class="n">X1</span><span class="p">,</span> <span class="s1">&#39;y&#39;</span><span class="p">:</span> <span class="n">Y</span> <span class="o">&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">median</span><span class="p">(</span><span class="n">Y</span><span class="p">)})</span>
@@ -1574,11 +1698,11 @@ file, and SQLite. These can be found in <code class="docutils literal"><span cla
 <p>By default, an in-memory <code class="docutils literal"><span class="pre">ndarray</span></code> is used but if the samples would
 get too large to be held in memory we could use the <code class="docutils literal"><span class="pre">sqlite</span></code> backend:</p>
 <div class="nbinput container">
-<div class="prompt highlight-none"><div class="highlight"><pre>
+<div class="highlight-none"><div class="highlight"><pre>
 <span></span>In [30]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="kn">from</span> <span class="nn">pymc3.backends</span> <span class="kn">import</span> <span class="n">SQLite</span>
 
 <span class="k">with</span> <span class="n">Model</span><span class="p">()</span> <span class="k">as</span> <span class="n">model_glm_logistic</span><span class="p">:</span>
@@ -1590,9 +1714,9 @@ get too large to be held in memory we could use the <code class="docutils litera
 </div>
 </div>
 <div class="nboutput nblast container">
-<div class="prompt empty container">
+<div class="container">
 </div>
-<div class="stderr output_area container">
+<div class="stderr container">
 <div class="highlight"><pre>
 Auto-assigning NUTS sampler...
 Initializing NUTS using advi...
@@ -1602,19 +1726,19 @@ Finished [100%]: Average ELBO = -170.31
 </pre></div></div>
 </div>
 <div class="nbinput container">
-<div class="prompt highlight-none"><div class="highlight"><pre>
+<div class="highlight-none"><div class="highlight"><pre>
 <span></span>In [31]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="n">summary</span><span class="p">(</span><span class="n">trace</span><span class="p">,</span> <span class="n">varnames</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;x1&#39;</span><span class="p">])</span>
 </pre></div>
 </div>
 </div>
 <div class="nboutput nblast container">
-<div class="prompt empty container">
+<div class="container">
 </div>
-<div class="output_area container">
+<div class="container">
 <div class="highlight"><pre>
 
 x1:
@@ -1634,11 +1758,11 @@ x1:
 </div>
 <p>The stored trace can then later be loaded using the <code class="docutils literal"><span class="pre">load</span></code> command:</p>
 <div class="nbinput nblast container">
-<div class="prompt highlight-none"><div class="highlight"><pre>
+<div class="highlight-none"><div class="highlight"><pre>
 <span></span>In [32]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="kn">from</span> <span class="nn">pymc3.backends.sqlite</span> <span class="kn">import</span> <span class="n">load</span>
 
 <span class="k">with</span> <span class="n">basic_model</span><span class="p">:</span>
@@ -1736,92 +1860,72 @@ Biometrika, 66:191–193, 1979.</p>
 </div>
 
 
+           </div>
           </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="../examples.html" class="btn btn-neutral float-right" title="Examples" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="../getting_started.html" class="btn btn-neutral" title="Getting started" accesskey="p"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2016, John Salvatier, Christopher Fonnesbeck, Thomas Wiecki.
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
         </div>
       </div>
-      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
-        <div class="sphinxsidebarwrapper">
-  <h3><a href="../index.html">Table Of Contents</a></h3>
-  <ul>
-<li><a class="reference internal" href="#">Getting started with PyMC3</a><ul>
-<li><a class="reference internal" href="#Abstract">Abstract</a></li>
-<li><a class="reference internal" href="#Introduction">Introduction</a></li>
-<li><a class="reference internal" href="#Installation">Installation</a></li>
-<li><a class="reference internal" href="#A-Motivating-Example:-Linear-Regression">A Motivating Example: Linear Regression</a><ul>
-<li><a class="reference internal" href="#Generating-data">Generating data</a></li>
-<li><a class="reference internal" href="#Model-Specification">Model Specification</a></li>
-<li><a class="reference internal" href="#Model-fitting">Model fitting</a><ul>
-<li><a class="reference internal" href="#Maximum-a-posteriori-methods">Maximum a posteriori methods</a></li>
-<li><a class="reference internal" href="#Sampling-methods">Sampling methods</a></li>
-<li><a class="reference internal" href="#Gradient-based-sampling-methods">Gradient-based sampling methods</a></li>
-</ul>
-</li>
-<li><a class="reference internal" href="#Posterior-analysis">Posterior analysis</a></li>
-</ul>
-</li>
-<li><a class="reference internal" href="#Case-study-1:-Stochastic-volatility">Case study 1: Stochastic volatility</a><ul>
-<li><a class="reference internal" href="#The-Model">The Model</a></li>
-<li><a class="reference internal" href="#The-Data">The Data</a></li>
-<li><a class="reference internal" href="#Model-Specification">Model Specification</a></li>
-<li><a class="reference internal" href="#Fitting">Fitting</a></li>
-</ul>
-</li>
-<li><a class="reference internal" href="#Case-study-2:-Coal-mining-disasters">Case study 2: Coal mining disasters</a></li>
-<li><a class="reference internal" href="#Arbitrary-deterministics">Arbitrary deterministics</a></li>
-<li><a class="reference internal" href="#Arbitrary-distributions">Arbitrary distributions</a></li>
-<li><a class="reference internal" href="#Generalized-Linear-Models">Generalized Linear Models</a></li>
-<li><a class="reference internal" href="#Backends">Backends</a></li>
-<li><a class="reference internal" href="#Discussion">Discussion</a></li>
-<li><a class="reference internal" href="#References">References</a></li>
-</ul>
-</li>
-</ul>
-<div class="relations">
-<h3>Related Topics</h3>
-<ul>
-  <li><a href="../index.html">Documentation overview</a><ul>
-  <li><a href="../getting_started.html">Getting started</a><ul>
-      <li>Previous: <a href="../getting_started.html" title="previous chapter">Getting started</a></li>
-      <li>Next: <a href="../examples.html" title="next chapter">Examples</a></li>
-  </ul></li>
-  </ul></li>
-</ul>
-</div>
-  <div role="note" aria-label="source link">
-    <h3>This Page</h3>
-    <ul class="this-page-menu">
-      <li><a href="../_sources/notebooks/getting_started.txt"
-            rel="nofollow">Show Source</a></li>
-    </ul>
-   </div>
-<div id="searchbox" style="display: none" role="search">
-  <h3>Quick search</h3>
-    <form class="search" action="../search.html" method="get">
-      <div><input type="text" name="q" /></div>
-      <div><input type="submit" value="Go" /></div>
-      <input type="hidden" name="check_keywords" value="yes" />
-      <input type="hidden" name="area" value="default" />
-    </form>
-</div>
-<script type="text/javascript">$('#searchbox').show(0);</script>
-        </div>
-      </div>
-      <div class="clearer"></div>
-    </div>
-    <div class="footer">
-      &copy;2016, John Salvatier, Christopher Fonnesbeck, Thomas Wiecki.
-      
-      |
-      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.4.6</a>
-      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.9</a>
-      
-      |
-      <a href="../_sources/notebooks/getting_started.txt"
-          rel="nofollow">Page source</a>
-    </div>
 
-    
+    </section>
 
-    
-  </body>
+  </div>
+  
+
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'../',
+            VERSION:'3.0',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true
+        };
+    </script>
+      <script type="text/javascript" src="../_static/jquery.js"></script>
+      <script type="text/javascript" src="../_static/underscore.js"></script>
+      <script type="text/javascript" src="../_static/doctools.js"></script>
+      <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+  
+
+  
+  
+    <script type="text/javascript" src="../_static/js/theme.js"></script>
+  
+
+  
+  
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.StickyNav.enable();
+      });
+  </script>
+   
+
+</body>
 </html>
