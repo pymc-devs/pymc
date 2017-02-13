@@ -1,134 +1,44 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 
 
-<!DOCTYPE html>
-<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
-<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
-<head>
-  <meta charset="utf-8">
-  
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  
-  <title>Model comparison &mdash; PyMC3 3.0 documentation</title>
-  
-
-  
-  
-
-  
-
-  
-  
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     
-
-  
-
-  
-  
-    <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
-  
-
-  
-
-  
-        <link rel="index" title="Index"
-              href="../genindex.html"/>
-        <link rel="search" title="Search" href="../search.html"/>
-    <link rel="top" title="PyMC3 3.0 documentation" href="../index.html"/> 
-
-  
-  <script src="../_static/js/modernizr.min.js"></script>
-
-</head>
-
-<body class="wy-body-for-nav" role="document">
-
-  <div class="wy-grid-for-nav">
-
+    <title>Model comparison &#8212; PyMC3 3.0 documentation</title>
     
-    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
-      <div class="wy-side-scroll">
-        <div class="wy-side-nav-search">
-          
+    <link rel="stylesheet" href="../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '3.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="top" title="PyMC3 3.0 documentation" href="../index.html" />
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
 
-          
-            <a href="../index.html" class="icon icon-home"> PyMC3
-          
+  </head>
+  <body role="document">
+  
 
-          
-          </a>
-
-          
-            
-            
-              <div class="version">
-                3.0
-              </div>
-            
-          
-
-          
-<div role="search">
-  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
-    <input type="text" name="q" placeholder="Search docs" />
-    <input type="hidden" name="check_keywords" value="yes" />
-    <input type="hidden" name="area" value="default" />
-  </form>
-</div>
-
-          
-        </div>
-
-        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
-          
-            
-            
-                <ul>
-<li class="toctree-l1"><a class="reference internal" href="../getting_started.html">Getting started</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../examples.html">Examples</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../api.html">API Reference</a></li>
-</ul>
-
-            
-          
-        </div>
-      </div>
-    </nav>
-
-    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
-
-      
-      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
-        <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
-        <a href="../index.html">PyMC3</a>
-      </nav>
-
-
-      
-      <div class="wy-nav-content">
-        <div class="rst-content">
-          
-
- 
-
-
-
-<div role="navigation" aria-label="breadcrumbs navigation">
-  <ul class="wy-breadcrumbs">
-    <li><a href="../index.html">Docs</a> &raquo;</li>
-      
-    <li>Model comparison</li>
-      <li class="wy-breadcrumbs-aside">
-        
-          
-            <a href="../_sources/notebooks/Model Comparison.ipynb.txt" rel="nofollow"> View page source</a>
-          
-        
-      </li>
-  </ul>
-  <hr/>
-</div>
-          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
-           <div itemprop="articleBody">
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
             
   
 <style>
@@ -136,13 +46,15 @@
 
 /* remove conflicting styling from Sphinx themes */
 div.nbinput,
-div.nbinput > div,
-div.nbinput div[class^=highlight],
-div.nbinput div[class^=highlight] pre,
+div.nbinput div.prompt,
+div.nbinput div.input_area,
+div.nbinput div[class*=highlight],
+div.nbinput div[class*=highlight] pre,
 div.nboutput,
-div.nboutput > div,
-div.nboutput div[class^=highlight],
-div.nboutput div[class^=highlight] pre {
+div.nbinput div.prompt,
+div.nbinput div.output_area,
+div.nboutput div[class*=highlight],
+div.nboutput div[class*=highlight] pre {
     background: none;
     border: none;
     padding: 0 0;
@@ -151,7 +63,7 @@ div.nboutput div[class^=highlight] pre {
 }
 
 /* avoid gaps between output lines */
-div.nboutput div[class^=highlight] pre {
+div.nboutput div[class*=highlight] pre {
     line-height: normal;
 }
 
@@ -162,6 +74,13 @@ div.nboutput {
     display: flex;
     align-items: flex-start;
     margin: 0;
+    width: 100%;
+}
+@media (max-width: 540px) {
+    div.nbinput,
+    div.nboutput {
+        flex-direction: column;
+    }
 }
 
 /* input container */
@@ -175,38 +94,58 @@ div.nblast {
 }
 
 /* input prompt */
-div.nbinput > :first-child pre {
+div.nbinput div.prompt pre {
     color: #303F9F;
 }
 
 /* output prompt */
-div.nboutput > :first-child pre {
+div.nboutput div.prompt pre {
     color: #D84315;
 }
 
 /* all prompts */
-div.nbinput > :first-child[class^=highlight],
-div.nboutput > :first-child[class^=highlight],
-div.nboutput > :first-child {
+div.nbinput div.prompt,
+div.nboutput div.prompt {
     min-width: 8ex;
     padding-top: 0.4em;
     padding-right: 0.4em;
     text-align: right;
     flex: 0;
 }
+@media (max-width: 540px) {
+    div.nbinput div.prompt,
+    div.nboutput div.prompt {
+        text-align: left;
+        padding: 0.4em;
+    }
+    div.nboutput div.prompt.empty {
+        padding: 0;
+    }
+}
+
+/* disable scrollbars on prompts */
+div.nbinput div.prompt pre,
+div.nboutput div.prompt pre {
+    overflow: hidden;
+}
 
 /* input/output area */
-div.nbinput > :nth-child(2)[class^=highlight],
-div.nboutput > :nth-child(2),
-div.nboutput > :nth-child(2)[class^=highlight] {
+div.nbinput div.input_area,
+div.nboutput div.output_area {
     padding: 0.4em;
     -webkit-flex: 1;
     flex: 1;
     overflow: auto;
 }
+@media (max-width: 540px) {
+    div.nbinput div.input_area,
+    div.nboutput div.output_area {
+        width: 100%;
+    }
+}
 
 /* input area */
-div.nbinput > :nth-child(2)[class^=highlight] {
+div.nbinput div.input_area {
     border: 1px solid #cfcfcf;
     border-radius: 2px;
     background: #f7f7f7;
@@ -223,7 +162,7 @@ div.nboutput div.math p {
 }
 
 /* standard error */
-div.nboutput  > :nth-child(2).stderr {
+div.nboutput div.output_area.stderr {
     background: #fdd;
 }
 
@@ -262,38 +201,6 @@ div.nboutput  > :nth-child(2).stderr {
 .ansi-white-intense-bg { background-color: #A1A6B2; }
 
 .ansi-bold { font-weight: bold; }
-
-/* CSS overrides for sphinx_rtd_theme */
-
-/* 24px margin */
-.nbinput.nblast,
-.nboutput.nblast {
-    margin-bottom: 19px;  /* padding has already 5px */
-}
-
-/* ... except between code cells! */
-.nblast + .nbinput {
-    margin-top: -19px;
-}
-
-/* nice headers on first paragraph of info/warning boxes */
-.admonition .first {
-    margin: -12px;
-    padding: 6px 12px;
-    margin-bottom: 12px;
-    color: #fff;
-    line-height: 1;
-    display: block;
-}
-.admonition.warning .first {
-    background: #f0b37e;
-}
-.admonition.note .first {
-    background: #6ab0de;
-}
-.admonition > p:before {
-    margin-right: 4px;  /* make room for the exclamation icon */
-}
 </style>
 <div class="section" id="Model-comparison">
 <h1>Model comparison<a class="headerlink" href="#Model-comparison" title="Permalink to this headline">¶</a></h1>
@@ -304,11 +211,11 @@ students from 8 schools. Below, we fit a <strong>pooled model</strong>, which as
 a single fixed effect across all schools, and a <strong>hierarchical model</strong>
 that allows for a random effect that partially pools the data.</p>
 <div class="nbinput nblast container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [1]:
 </pre></div>
 </div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="o">%</span><span class="k">matplotlib</span> inline
 <span class="kn">from</span> <span class="nn">pymc3</span> <span class="kn">import</span> <span class="p">(</span><span class="n">Normal</span><span class="p">,</span> <span class="n">HalfCauchy</span><span class="p">,</span> <span class="n">sample</span><span class="p">,</span> <span class="n">Model</span><span class="p">,</span> <span class="n">waic</span><span class="p">,</span> <span class="n">dic</span><span class="p">,</span> <span class="n">loo</span><span class="p">,</span> <span class="n">forestplot</span><span class="p">,</span>
                    <span class="n">traceplot</span><span class="p">,</span> <span class="n">NUTS</span><span class="p">,</span> <span class="n">find_MAP</span><span class="p">,</span> <span class="n">Deterministic</span><span class="p">,</span> <span class="n">HalfCauchy</span><span class="p">)</span>
@@ -322,11 +229,11 @@ that allows for a random effect that partially pools the data.</p>
 <p>The data include the observed treatment effects and associated standard
 deviations in the 8 schools.</p>
 <div class="nbinput nblast container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [2]:
 </pre></div>
 </div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="n">J</span> <span class="o">=</span> <span class="mi">8</span>
 <span class="n">y</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mi">28</span><span class="p">,</span>  <span class="mi">8</span><span class="p">,</span> <span class="o">-</span><span class="mi">3</span><span class="p">,</span>  <span class="mi">7</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span>  <span class="mi">1</span><span class="p">,</span> <span class="mi">18</span><span class="p">,</span> <span class="mi">12</span><span class="p">])</span>
 <span class="n">sigma</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mi">15</span><span class="p">,</span> <span class="mi">10</span><span class="p">,</span> <span class="mi">16</span><span class="p">,</span> <span class="mi">11</span><span class="p">,</span>  <span class="mi">9</span><span class="p">,</span> <span class="mi">11</span><span class="p">,</span> <span class="mi">10</span><span class="p">,</span> <span class="mi">18</span><span class="p">])</span>
@@ -336,11 +243,11 @@ deviations in the 8 schools.</p>
 <div class="section" id="Pooled-model">
 <h2>Pooled model<a class="headerlink" href="#Pooled-model" title="Permalink to this headline">¶</a></h2>
 <div class="nbinput nblast container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [3]:
 </pre></div>
 </div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="k">with</span> <span class="n">Model</span><span class="p">()</span> <span class="k">as</span> <span class="n">pooled</span><span class="p">:</span>
 
     <span class="n">mu</span> <span class="o">=</span> <span class="n">Normal</span><span class="p">(</span><span class="s1">&#39;mu&#39;</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">sd</span><span class="o">=</span><span class="mf">1e6</span><span class="p">)</span>
@@ -350,52 +257,51 @@ deviations in the 8 schools.</p>
 </div>
 </div>
 <div class="nbinput container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [4]:
 </pre></div>
 </div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="k">with</span> <span class="n">pooled</span><span class="p">:</span>
     <span class="n">trace_p</span> <span class="o">=</span> <span class="n">sample</span><span class="p">(</span><span class="mi">2000</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
 <div class="nboutput nblast container">
-<div class="container">
+<div class="prompt empty container">
 </div>
-<div class="stderr container">
+<div class="stderr output_area container">
 <div class="highlight"><pre>
-WARNING (theano.tensor.blas): We did not found a dynamic library into the library_dir of the library we use for blas. If you use ATLAS, make sure to compile it with dynamics library.
-WARNING:theano.tensor.blas:We did not found a dynamic library into the library_dir of the library we use for blas. If you use ATLAS, make sure to compile it with dynamics library.
-100%|██████████| 2000/2000 [00:00&lt;00:00, 3510.88it/s]
+Average ELBO = -42.09: 100%|██████████| 200000/200000 [00:15&lt;00:00, 12578.89it/s] 8, 10674.33it/s]
+100%|██████████| 2000/2000 [00:00&lt;00:00, 2385.73it/s]
 </pre></div></div>
 </div>
 <div class="nbinput container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [5]:
 </pre></div>
 </div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="n">traceplot</span><span class="p">(</span><span class="n">trace_p</span><span class="p">,</span> <span class="n">varnames</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;mu&#39;</span><span class="p">]);</span>
 </pre></div>
 </div>
 </div>
 <div class="nboutput nblast container">
-<div class="container">
+<div class="prompt empty container">
 </div>
-<div class="container">
-<img alt="notebooks/../_build/doctrees/nbsphinx/notebooks_ModelComparison_7_0.png" src="notebooks/../_build/doctrees/nbsphinx/notebooks_ModelComparison_7_0.png" />
+<div class="output_area container">
+<img alt="../_images/notebooks_Model_Comparison_7_0.png" src="../_images/notebooks_Model_Comparison_7_0.png" />
 </div>
 </div>
 </div>
 <div class="section" id="Hierarchical-model">
 <h2>Hierarchical model<a class="headerlink" href="#Hierarchical-model" title="Permalink to this headline">¶</a></h2>
 <div class="nbinput nblast container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [6]:
 </pre></div>
 </div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="k">with</span> <span class="n">Model</span><span class="p">()</span> <span class="k">as</span> <span class="n">hierarchical</span><span class="p">:</span>
 
     <span class="n">eta</span> <span class="o">=</span> <span class="n">Normal</span><span class="p">(</span><span class="s1">&#39;eta&#39;</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">shape</span><span class="o">=</span><span class="n">J</span><span class="p">)</span>
@@ -409,56 +315,57 @@ WARNING:theano.tensor.blas:We did not found a dynamic library into the library_d
 </div>
 </div>
 <div class="nbinput container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [7]:
 </pre></div>
 </div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="k">with</span> <span class="n">hierarchical</span><span class="p">:</span>
     <span class="n">trace_h</span> <span class="o">=</span> <span class="n">sample</span><span class="p">(</span><span class="mi">2000</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
 <div class="nboutput nblast container">
-<div class="container">
+<div class="prompt empty container">
 </div>
-<div class="stderr container">
+<div class="stderr output_area container">
 <div class="highlight"><pre>
-100%|██████████| 2000/2000 [00:02&lt;00:00, 679.76it/s]
+Average ELBO = -43.175: 100%|██████████| 200000/200000 [00:21&lt;00:00, 9379.18it/s]6, 7465.47it/s]
+100%|██████████| 2000/2000 [00:02&lt;00:00, 706.05it/s]
 </pre></div></div>
 </div>
 <div class="nbinput container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [8]:
 </pre></div>
 </div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="n">traceplot</span><span class="p">(</span><span class="n">trace_h</span><span class="p">,</span> <span class="n">varnames</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;mu&#39;</span><span class="p">]);</span>
 </pre></div>
 </div>
 </div>
 <div class="nboutput nblast container">
-<div class="container">
+<div class="prompt empty container">
 </div>
-<div class="container">
-<img alt="notebooks/../_build/doctrees/nbsphinx/notebooks_ModelComparison_11_0.png" src="notebooks/../_build/doctrees/nbsphinx/notebooks_ModelComparison_11_0.png" />
+<div class="output_area container">
+<img alt="../_images/notebooks_Model_Comparison_11_0.png" src="../_images/notebooks_Model_Comparison_11_0.png" />
 </div>
 </div>
 <div class="nbinput container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [9]:
 </pre></div>
 </div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="n">forestplot</span><span class="p">(</span><span class="n">trace_h</span><span class="p">,</span> <span class="n">varnames</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;theta&#39;</span><span class="p">]);</span>
 </pre></div>
 </div>
 </div>
 <div class="nboutput nblast container">
-<div class="container">
+<div class="prompt empty container">
 </div>
-<div class="container">
-<img alt="notebooks/../_build/doctrees/nbsphinx/notebooks_ModelComparison_12_0.png" src="notebooks/../_build/doctrees/nbsphinx/notebooks_ModelComparison_12_0.png" />
+<div class="output_area container">
+<img alt="../_images/notebooks_Model_Comparison_12_0.png" src="../_images/notebooks_Model_Comparison_12_0.png" />
 </div>
 </div>
 </div>
@@ -471,11 +378,11 @@ for the modeling of random effects, replacing the maximum likelihood
 estimate with the posterior mean and using the effective number of
 parameters to correct for bias.</p>
 <div class="nbinput container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [10]:
 </pre></div>
 </div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="k">with</span> <span class="n">pooled</span><span class="p">:</span>
     <span class="n">pooled_dic</span> <span class="o">=</span> <span class="n">dic</span><span class="p">(</span><span class="n">trace_p</span><span class="p">)</span>
 
@@ -484,21 +391,21 @@ parameters to correct for bias.</p>
 </div>
 </div>
 <div class="nboutput nblast container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>Out[10]:
 </pre></div>
 </div>
-<div class="highlight-none"><div class="highlight"><pre>
-<span></span>90.928576354546024
+<div class="output_area highlight-none"><div class="highlight"><pre>
+<span></span>90.925442023139937
 </pre></div>
 </div>
 </div>
 <div class="nbinput container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [11]:
 </pre></div>
 </div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="k">with</span> <span class="n">hierarchical</span><span class="p">:</span>
     <span class="n">hierarchical_dic</span> <span class="o">=</span> <span class="n">dic</span><span class="p">(</span><span class="n">trace_h</span><span class="p">)</span>
 
@@ -507,12 +414,12 @@ parameters to correct for bias.</p>
 </div>
 </div>
 <div class="nboutput nblast container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>Out[11]:
 </pre></div>
 </div>
-<div class="highlight-none"><div class="highlight"><pre>
-<span></span>124.78826230698768
+<div class="output_area highlight-none"><div class="highlight"><pre>
+<span></span>124.4586578158235
 </pre></div>
 </div>
 </div>
@@ -524,64 +431,64 @@ out-of-sample expectation, using the computed log pointwise posterior
 predictive density (LPPD) and correcting for the effective number of
 parameters to adjust for overfitting.</p>
 <div class="nbinput container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [12]:
 </pre></div>
 </div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="k">with</span> <span class="n">pooled</span><span class="p">:</span>
-    <span class="n">pooled_waic</span><span class="p">,</span> <span class="n">pooled_waic_se</span> <span class="o">=</span> <span class="n">waic</span><span class="p">(</span><span class="n">trace_p</span><span class="p">)</span>
+    <span class="n">pooled_waic</span> <span class="o">=</span> <span class="n">waic</span><span class="p">(</span><span class="n">trace_p</span><span class="p">)</span>
 
-<span class="n">pooled_waic</span><span class="p">,</span> <span class="n">pooled_waic_se</span>
+<span class="n">pooled_waic</span><span class="o">.</span><span class="n">WAIC</span>
 </pre></div>
 </div>
 </div>
 <div class="nboutput nblast container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>Out[12]:
 </pre></div>
 </div>
-<div class="highlight-none"><div class="highlight"><pre>
-<span></span>(61.19519094778147, 2.1980669582811139)
+<div class="output_area highlight-none"><div class="highlight"><pre>
+<span></span>61.207200231982306
 </pre></div>
 </div>
 </div>
 <div class="nbinput container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [13]:
 </pre></div>
 </div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="k">with</span> <span class="n">hierarchical</span><span class="p">:</span>
-    <span class="n">hierarchical_waic</span><span class="p">,</span> <span class="n">hierarchical_waic_se</span> <span class="o">=</span> <span class="n">waic</span><span class="p">(</span><span class="n">trace_h</span><span class="p">)</span>
+    <span class="n">hierarchical_waic</span> <span class="o">=</span> <span class="n">waic</span><span class="p">(</span><span class="n">trace_h</span><span class="p">)</span>
 
-<span class="n">hierarchical_waic</span><span class="p">,</span> <span class="n">hierarchical_waic_se</span>
+<span class="n">hierarchical_waic</span><span class="o">.</span><span class="n">WAIC</span>
 </pre></div>
 </div>
 </div>
 <div class="nboutput nblast container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>Out[13]:
 </pre></div>
 </div>
-<div class="highlight-none"><div class="highlight"><pre>
-<span></span>(61.503344897536387, 2.0280476219107615)
+<div class="output_area highlight-none"><div class="highlight"><pre>
+<span></span>61.343846074554747
 </pre></div>
 </div>
 </div>
-<p>For WAIC PyMC3 reports a point estimate together its standard error. The
-standard error can be useful to assess the uncertainty of the WAIC
-estimates. Nevertheless, caution need to be taken because the estimation
-of the standard error assumes normality and hence could be problematic
-when the sample size is low.</p>
+<p>For WAIC PyMC3 reports a point estimate together with its standard
+error. The standard error can be useful to assess the uncertainty of the
+WAIC estimates. Nevertheless, caution need to be taken because the
+estimation of the standard error assumes normality and hence could be
+problematic when the sample size is low.</p>
 <div class="nbinput container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [14]:
 </pre></div>
 </div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span><span class="n">plt</span><span class="o">.</span><span class="n">errorbar</span><span class="p">(</span><span class="n">pooled_waic</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">xerr</span><span class="o">=</span><span class="n">pooled_waic_se</span><span class="p">,</span> <span class="n">fmt</span><span class="o">=</span><span class="s1">&#39;o&#39;</span><span class="p">)</span>
-<span class="n">plt</span><span class="o">.</span><span class="n">errorbar</span><span class="p">(</span><span class="n">hierarchical_waic</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">xerr</span><span class="o">=</span><span class="n">hierarchical_waic_se</span><span class="p">,</span> <span class="n">fmt</span><span class="o">=</span><span class="s1">&#39;o&#39;</span><span class="p">)</span>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">plt</span><span class="o">.</span><span class="n">errorbar</span><span class="p">(</span><span class="n">pooled_waic</span><span class="o">.</span><span class="n">WAIC</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">xerr</span><span class="o">=</span><span class="n">pooled_waic</span><span class="o">.</span><span class="n">WAIC_se</span><span class="p">,</span> <span class="n">fmt</span><span class="o">=</span><span class="s1">&#39;o&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">errorbar</span><span class="p">(</span><span class="n">hierarchical_waic</span><span class="o">.</span><span class="n">WAIC</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">xerr</span><span class="o">=</span><span class="n">hierarchical_waic</span><span class="o">.</span><span class="n">WAIC_se</span><span class="p">,</span> <span class="n">fmt</span><span class="o">=</span><span class="s1">&#39;o&#39;</span><span class="p">)</span>
 <span class="n">plt</span><span class="o">.</span><span class="n">title</span><span class="p">(</span><span class="s1">&#39;WAIC&#39;</span><span class="p">)</span>
 <span class="n">plt</span><span class="o">.</span><span class="n">yticks</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">2</span><span class="p">),</span> <span class="p">(</span><span class="s1">&#39;pooled&#39;</span><span class="p">,</span> <span class="s1">&#39;hierarchical&#39;</span><span class="p">))</span>
 <span class="n">plt</span><span class="o">.</span><span class="n">ylim</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">);</span>
@@ -589,101 +496,105 @@ when the sample size is low.</p>
 </div>
 </div>
 <div class="nboutput nblast container">
-<div class="container">
+<div class="prompt empty container">
 </div>
-<div class="container">
-<img alt="notebooks/../_build/doctrees/nbsphinx/notebooks_ModelComparison_20_0.png" src="notebooks/../_build/doctrees/nbsphinx/notebooks_ModelComparison_20_0.png" />
+<div class="output_area container">
+<img alt="../_images/notebooks_Model_Comparison_20_0.png" src="../_images/notebooks_Model_Comparison_20_0.png" />
 </div>
 </div>
 </div>
 <div class="section" id="Leave-one-out-Cross-validation-(LOO)">
 <h2>Leave-one-out Cross-validation (LOO)<a class="headerlink" href="#Leave-one-out-Cross-validation-(LOO)" title="Permalink to this headline">¶</a></h2>
-<p>LOO cross-validation is a estimate of out-of-sample predictive fit. In
-cross-validation, the data are repeatedly partitioned into training and
-holdout sets, iteratively fitting the model with the former and
+<p>LOO cross-validation is an estimate of the out-of-sample predictive fit.
+In cross-validation, the data are repeatedly partitioned into training
+and holdout sets, iteratively fitting the model with the former and
 evaluating the fit with the holdout data. Vehtari et al. (2016)
 introduced an efficient computation of LOO from MCMC samples, which are
 corrected using Pareto-smoothed importance sampling (PSIS) to provide an
 estimate of pointwise out-of-sample prediction accuracy.</p>
 <div class="nbinput container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [15]:
 </pre></div>
 </div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="k">with</span> <span class="n">pooled</span><span class="p">:</span>
-    <span class="n">pooled_loo</span><span class="p">,</span> <span class="n">pooled_loo_se</span> <span class="o">=</span> <span class="n">loo</span><span class="p">(</span><span class="n">trace_p</span><span class="p">)</span>
+    <span class="n">pooled_loo</span><span class="o">=</span> <span class="n">loo</span><span class="p">(</span><span class="n">trace_p</span><span class="p">)</span>
 
-<span class="n">pooled_loo</span><span class="p">,</span> <span class="n">pooled_loo_se</span>
+<span class="n">pooled_loo</span><span class="o">.</span><span class="n">LOO</span>
 </pre></div>
 </div>
 </div>
 <div class="nboutput container">
-<div class="container">
+<div class="prompt empty container">
 </div>
-<div class="stderr container">
+<div class="stderr output_area container">
 <div class="highlight"><pre>
-/home/osvaldo/anaconda3/lib/python3.5/site-packages/pymc3/stats.py:192: UserWarning: Estimated shape parameter of Pareto distribution
-        is for one or more samples is greater than 0.5. This may indicate
-        that the variance of the Pareto smoothed importance sampling estimate
-        is very large.
-  is very large.&#34;&#34;&#34;)
+/home/osvaldo/anaconda3/lib/python3.5/site-packages/pymc3/stats.py:208: UserWarning: Estimated shape parameter of Pareto distribution is
+        greater than 0.7 for one or more samples.
+        You should consider using a more robust model, this is
+        because importance sampling is less likely to work well if the marginal
+        posterior and LOO posterior are very different. This is more likely to
+        happen with a non-robust model and highly influential observations.
+  happen with a non-robust model and highly influential observations.&#34;&#34;&#34;)
 </pre></div></div>
 </div>
 <div class="nboutput nblast container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>Out[15]:
 </pre></div>
 </div>
-<div class="highlight-none"><div class="highlight"><pre>
-<span></span>(59.796215810927023, 2.0067514127136565)
+<div class="output_area highlight-none"><div class="highlight"><pre>
+<span></span>61.53782737562031
 </pre></div>
 </div>
 </div>
 <div class="nbinput container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [16]:
 </pre></div>
 </div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="k">with</span> <span class="n">hierarchical</span><span class="p">:</span>
-    <span class="n">hierarchical_loo</span><span class="p">,</span> <span class="n">hierarchical_loo_se</span>  <span class="o">=</span> <span class="n">loo</span><span class="p">(</span><span class="n">trace_h</span><span class="p">)</span>
+    <span class="n">hierarchical_loo</span>  <span class="o">=</span> <span class="n">loo</span><span class="p">(</span><span class="n">trace_h</span><span class="p">)</span>
 
-<span class="n">hierarchical_loo</span><span class="p">,</span> <span class="n">hierarchical_loo_se</span>
+<span class="n">hierarchical_loo</span><span class="o">.</span><span class="n">LOO</span>
 </pre></div>
 </div>
 </div>
 <div class="nboutput container">
-<div class="container">
+<div class="prompt empty container">
 </div>
-<div class="stderr container">
+<div class="stderr output_area container">
 <div class="highlight"><pre>
-/home/osvaldo/anaconda3/lib/python3.5/site-packages/pymc3/stats.py:192: UserWarning: Estimated shape parameter of Pareto distribution
-        is for one or more samples is greater than 0.5. This may indicate
-        that the variance of the Pareto smoothed importance sampling estimate
-        is very large.
-  is very large.&#34;&#34;&#34;)
+/home/osvaldo/anaconda3/lib/python3.5/site-packages/pymc3/stats.py:208: UserWarning: Estimated shape parameter of Pareto distribution is
+        greater than 0.7 for one or more samples.
+        You should consider using a more robust model, this is
+        because importance sampling is less likely to work well if the marginal
+        posterior and LOO posterior are very different. This is more likely to
+        happen with a non-robust model and highly influential observations.
+  happen with a non-robust model and highly influential observations.&#34;&#34;&#34;)
 </pre></div></div>
 </div>
 <div class="nboutput nblast container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>Out[16]:
 </pre></div>
 </div>
-<div class="highlight-none"><div class="highlight"><pre>
-<span></span>(59.411244130649877, 1.8240316214171435)
+<div class="output_area highlight-none"><div class="highlight"><pre>
+<span></span>61.385652284361953
 </pre></div>
 </div>
 </div>
 <p>For LOO we can also make a similar plot to the one we did for WAIC</p>
 <div class="nbinput container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [17]:
 </pre></div>
 </div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span><span class="n">plt</span><span class="o">.</span><span class="n">errorbar</span><span class="p">(</span><span class="n">pooled_loo</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">xerr</span><span class="o">=</span><span class="n">pooled_loo_se</span><span class="p">,</span> <span class="n">fmt</span><span class="o">=</span><span class="s1">&#39;o&#39;</span><span class="p">)</span>
-<span class="n">plt</span><span class="o">.</span><span class="n">errorbar</span><span class="p">(</span><span class="n">hierarchical_loo</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">xerr</span><span class="o">=</span><span class="n">hierarchical_loo_se</span><span class="p">,</span> <span class="n">fmt</span><span class="o">=</span><span class="s1">&#39;o&#39;</span><span class="p">)</span>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">plt</span><span class="o">.</span><span class="n">errorbar</span><span class="p">(</span><span class="n">pooled_loo</span><span class="o">.</span><span class="n">LOO</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">xerr</span><span class="o">=</span><span class="n">pooled_loo</span><span class="o">.</span><span class="n">LOO_se</span><span class="p">,</span> <span class="n">fmt</span><span class="o">=</span><span class="s1">&#39;o&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">errorbar</span><span class="p">(</span><span class="n">hierarchical_loo</span><span class="o">.</span><span class="n">LOO</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">xerr</span><span class="o">=</span><span class="n">hierarchical_loo</span><span class="o">.</span><span class="n">LOO_se</span><span class="p">,</span> <span class="n">fmt</span><span class="o">=</span><span class="s1">&#39;o&#39;</span><span class="p">)</span>
 <span class="n">plt</span><span class="o">.</span><span class="n">title</span><span class="p">(</span><span class="s1">&#39;LOO&#39;</span><span class="p">)</span>
 <span class="n">plt</span><span class="o">.</span><span class="n">yticks</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">2</span><span class="p">),</span> <span class="p">(</span><span class="s1">&#39;pooled&#39;</span><span class="p">,</span> <span class="s1">&#39;hierarchical&#39;</span><span class="p">))</span>
 <span class="n">plt</span><span class="o">.</span><span class="n">ylim</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">);</span>
@@ -691,10 +602,10 @@ estimate of pointwise out-of-sample prediction accuracy.</p>
 </div>
 </div>
 <div class="nboutput nblast container">
-<div class="container">
+<div class="prompt empty container">
 </div>
-<div class="container">
-<img alt="notebooks/../_build/doctrees/nbsphinx/notebooks_ModelComparison_25_0.png" src="notebooks/../_build/doctrees/nbsphinx/notebooks_ModelComparison_25_0.png" />
+<div class="output_area container">
+<img alt="../_images/notebooks_Model_Comparison_25_0.png" src="../_images/notebooks_Model_Comparison_25_0.png" />
 </div>
 </div>
 </div>
@@ -714,63 +625,68 @@ information criteria for Bayesian models. Statistics and Computing,
 </div>
 
 
-           </div>
           </div>
-          <footer>
-  
-
-  <hr/>
-
-  <div role="contentinfo">
-    <p>
-        &copy; Copyright 2016, John Salvatier, Christopher Fonnesbeck, Thomas Wiecki.
-
-    </p>
-  </div>
-  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
-
-</footer>
-
         </div>
       </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="../index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">Model comparison</a><ul>
+<li><a class="reference internal" href="#Pooled-model">Pooled model</a></li>
+<li><a class="reference internal" href="#Hierarchical-model">Hierarchical model</a></li>
+<li><a class="reference internal" href="#Deviance-Information-Criterion-(DIC)">Deviance Information Criterion (DIC)</a></li>
+<li><a class="reference internal" href="#Widely-applicable-Information-Criterion-(WAIC)">Widely-applicable Information Criterion (WAIC)</a></li>
+<li><a class="reference internal" href="#Leave-one-out-Cross-validation-(LOO)">Leave-one-out Cross-validation (LOO)</a></li>
+<li><a class="reference internal" href="#Interpretation">Interpretation</a><ul>
+<li><a class="reference internal" href="#Reference">Reference</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../index.html">Documentation overview</a><ul>
+  </ul></li>
+</ul>
+</div>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="../_sources/notebooks/Model Comparison.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2016, John Salvatier, Christopher Fonnesbeck, Thomas Wiecki.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.4.6</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.9</a>
+      
+      |
+      <a href="../_sources/notebooks/Model Comparison.txt"
+          rel="nofollow">Page source</a>
+    </div>
 
-    </section>
+    
 
-  </div>
-  
-
-
-  
-
-    <script type="text/javascript">
-        var DOCUMENTATION_OPTIONS = {
-            URL_ROOT:'../',
-            VERSION:'3.0',
-            COLLAPSE_INDEX:false,
-            FILE_SUFFIX:'.html',
-            HAS_SOURCE:  true
-        };
-    </script>
-      <script type="text/javascript" src="../_static/jquery.js"></script>
-      <script type="text/javascript" src="../_static/underscore.js"></script>
-      <script type="text/javascript" src="../_static/doctools.js"></script>
-      <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
-
-  
-
-  
-  
-    <script type="text/javascript" src="../_static/js/theme.js"></script>
-  
-
-  
-  
-  <script type="text/javascript">
-      jQuery(function () {
-          SphinxRtdTheme.StickyNav.enable();
-      });
-  </script>
-   
-
-</body>
+    
+  </body>
 </html>

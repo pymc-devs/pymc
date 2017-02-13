@@ -1,159 +1,47 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 
 
-<!DOCTYPE html>
-<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
-<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
-<head>
-  <meta charset="utf-8">
-  
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  
-  <title>Gaussian Mixture Model &mdash; PyMC3 3.0 documentation</title>
-  
-
-  
-  
-
-  
-
-  
-  
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     
-
-  
-
-  
-  
-    <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
-  
-
-  
-
-  
-        <link rel="index" title="Index"
-              href="../genindex.html"/>
-        <link rel="search" title="Search" href="../search.html"/>
-    <link rel="top" title="PyMC3 3.0 documentation" href="../index.html"/>
-        <link rel="up" title="Examples" href="../examples.html"/>
-        <link rel="next" title="Marginalized Gaussian Mixture Model" href="marginalized_gaussian_mixture_model.html"/>
-        <link rel="prev" title="Gaussian Process (GP) smoothing" href="GP-smoothing.html"/> 
-
-  
-  <script src="../_static/js/modernizr.min.js"></script>
-
-</head>
-
-<body class="wy-body-for-nav" role="document">
-
-  <div class="wy-grid-for-nav">
-
+    <title>Gaussian Mixture Model &#8212; PyMC3 3.0 documentation</title>
     
-    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
-      <div class="wy-side-scroll">
-        <div class="wy-side-nav-search">
-          
+    <link rel="stylesheet" href="../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '3.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="top" title="PyMC3 3.0 documentation" href="../index.html" />
+    <link rel="up" title="Examples" href="../examples.html" />
+    <link rel="next" title="Marginalized Gaussian Mixture Model" href="marginalized_gaussian_mixture_model.html" />
+    <link rel="prev" title="Gaussian Process (GP) smoothing" href="GP-smoothing.html" />
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
 
-          
-            <a href="../index.html" class="icon icon-home"> PyMC3
-          
+  </head>
+  <body role="document">
+  
 
-          
-          </a>
-
-          
-            
-            
-              <div class="version">
-                3.0
-              </div>
-            
-          
-
-          
-<div role="search">
-  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
-    <input type="text" name="q" placeholder="Search docs" />
-    <input type="hidden" name="check_keywords" value="yes" />
-    <input type="hidden" name="area" value="default" />
-  </form>
-</div>
-
-          
-        </div>
-
-        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
-          
-            
-            
-                <ul class="current">
-<li class="toctree-l1"><a class="reference internal" href="../getting_started.html">Getting started</a></li>
-<li class="toctree-l1 current"><a class="reference internal" href="../examples.html">Examples</a><ul class="current">
-<li class="toctree-l2"><a class="reference internal" href="../examples.html#howto">Howto</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../examples.html#applied">Applied</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../examples.html#glm">GLM</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../examples.html#gp">GP</a></li>
-<li class="toctree-l2 current"><a class="reference internal" href="../examples.html#mixture-models">Mixture Models</a><ul class="current">
-<li class="toctree-l3 current"><a class="current reference internal" href="#">Gaussian Mixture Model</a><ul>
-<li class="toctree-l4"><a class="reference internal" href="#Full-trace">Full trace</a></li>
-<li class="toctree-l4"><a class="reference internal" href="#After-convergence">After convergence</a></li>
-<li class="toctree-l4"><a class="reference internal" href="#Sampling-of-cluster-for-individual-data-point">Sampling of cluster for individual data point</a></li>
-</ul>
-</li>
-<li class="toctree-l3"><a class="reference internal" href="marginalized_gaussian_mixture_model.html">Marginalized Gaussian Mixture Model</a></li>
-<li class="toctree-l3"><a class="reference internal" href="gaussian-mixture-model-advi.html">Gaussian Mixture Model with ADVI</a></li>
-<li class="toctree-l3"><a class="reference internal" href="dp_mix.html">Dirichlet process mixtures for density estimation</a></li>
-<li class="toctree-l3"><a class="reference internal" href="dependent_density_regression.html">Dependent density regression</a></li>
-</ul>
-</li>
-<li class="toctree-l2"><a class="reference internal" href="../examples.html#advi">ADVI</a></li>
-</ul>
-</li>
-<li class="toctree-l1"><a class="reference internal" href="../api.html">API Reference</a></li>
-</ul>
-
-            
-          
-        </div>
-      </div>
-    </nav>
-
-    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
-
-      
-      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
-        <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
-        <a href="../index.html">PyMC3</a>
-      </nav>
-
-
-      
-      <div class="wy-nav-content">
-        <div class="rst-content">
-          
-
- 
-
-
-
-<div role="navigation" aria-label="breadcrumbs navigation">
-  <ul class="wy-breadcrumbs">
-    <li><a href="../index.html">Docs</a> &raquo;</li>
-      
-          <li><a href="../examples.html">Examples</a> &raquo;</li>
-      
-    <li>Gaussian Mixture Model</li>
-      <li class="wy-breadcrumbs-aside">
-        
-          
-            <a href="../_sources/notebooks/gaussian_mixture_model.ipynb.txt" rel="nofollow"> View page source</a>
-          
-        
-      </li>
-  </ul>
-  <hr/>
-</div>
-          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
-           <div itemprop="articleBody">
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
             
   
 <style>
@@ -161,13 +49,15 @@
 
 /* remove conflicting styling from Sphinx themes */
 div.nbinput,
-div.nbinput > div,
-div.nbinput div[class^=highlight],
-div.nbinput div[class^=highlight] pre,
+div.nbinput div.prompt,
+div.nbinput div.input_area,
+div.nbinput div[class*=highlight],
+div.nbinput div[class*=highlight] pre,
 div.nboutput,
-div.nboutput > div,
-div.nboutput div[class^=highlight],
-div.nboutput div[class^=highlight] pre {
+div.nbinput div.prompt,
+div.nbinput div.output_area,
+div.nboutput div[class*=highlight],
+div.nboutput div[class*=highlight] pre {
     background: none;
     border: none;
     padding: 0 0;
@@ -176,7 +66,7 @@ div.nboutput div[class^=highlight] pre {
 }
 
 /* avoid gaps between output lines */
-div.nboutput div[class^=highlight] pre {
+div.nboutput div[class*=highlight] pre {
     line-height: normal;
 }
 
@@ -187,6 +77,13 @@ div.nboutput {
     display: flex;
     align-items: flex-start;
     margin: 0;
+    width: 100%;
+}
+@media (max-width: 540px) {
+    div.nbinput,
+    div.nboutput {
+        flex-direction: column;
+    }
 }
 
 /* input container */
@@ -200,38 +97,58 @@ div.nblast {
 }
 
 /* input prompt */
-div.nbinput > :first-child pre {
+div.nbinput div.prompt pre {
     color: #303F9F;
 }
 
 /* output prompt */
-div.nboutput > :first-child pre {
+div.nboutput div.prompt pre {
     color: #D84315;
 }
 
 /* all prompts */
-div.nbinput > :first-child[class^=highlight],
-div.nboutput > :first-child[class^=highlight],
-div.nboutput > :first-child {
+div.nbinput div.prompt,
+div.nboutput div.prompt {
     min-width: 8ex;
     padding-top: 0.4em;
     padding-right: 0.4em;
     text-align: right;
     flex: 0;
 }
+@media (max-width: 540px) {
+    div.nbinput div.prompt,
+    div.nboutput div.prompt {
+        text-align: left;
+        padding: 0.4em;
+    }
+    div.nboutput div.prompt.empty {
+        padding: 0;
+    }
+}
+
+/* disable scrollbars on prompts */
+div.nbinput div.prompt pre,
+div.nboutput div.prompt pre {
+    overflow: hidden;
+}
 
 /* input/output area */
-div.nbinput > :nth-child(2)[class^=highlight],
-div.nboutput > :nth-child(2),
-div.nboutput > :nth-child(2)[class^=highlight] {
+div.nbinput div.input_area,
+div.nboutput div.output_area {
     padding: 0.4em;
     -webkit-flex: 1;
     flex: 1;
     overflow: auto;
 }
+@media (max-width: 540px) {
+    div.nbinput div.input_area,
+    div.nboutput div.output_area {
+        width: 100%;
+    }
+}
 
 /* input area */
-div.nbinput > :nth-child(2)[class^=highlight] {
+div.nbinput div.input_area {
     border: 1px solid #cfcfcf;
     border-radius: 2px;
     background: #f7f7f7;
@@ -248,7 +165,7 @@ div.nboutput div.math p {
 }
 
 /* standard error */
-div.nboutput  > :nth-child(2).stderr {
+div.nboutput div.output_area.stderr {
     background: #fdd;
 }
 
@@ -287,48 +204,16 @@ div.nboutput  > :nth-child(2).stderr {
 .ansi-white-intense-bg { background-color: #A1A6B2; }
 
 .ansi-bold { font-weight: bold; }
-
-/* CSS overrides for sphinx_rtd_theme */
-
-/* 24px margin */
-.nbinput.nblast,
-.nboutput.nblast {
-    margin-bottom: 19px;  /* padding has already 5px */
-}
-
-/* ... except between code cells! */
-.nblast + .nbinput {
-    margin-top: -19px;
-}
-
-/* nice headers on first paragraph of info/warning boxes */
-.admonition .first {
-    margin: -12px;
-    padding: 6px 12px;
-    margin-bottom: 12px;
-    color: #fff;
-    line-height: 1;
-    display: block;
-}
-.admonition.warning .first {
-    background: #f0b37e;
-}
-.admonition.note .first {
-    background: #6ab0de;
-}
-.admonition > p:before {
-    margin-right: 4px;  /* make room for the exclamation icon */
-}
 </style>
 <div class="section" id="Gaussian-Mixture-Model">
 <h1>Gaussian Mixture Model<a class="headerlink" href="#Gaussian-Mixture-Model" title="Permalink to this headline">¶</a></h1>
 <p>Original NB by Abe Flaxman, modified by Thomas Wiecki</p>
 <div class="nbinput container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [1]:
 </pre></div>
 </div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="o">!</span>date
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="kn">as</span> <span class="nn">np</span><span class="o">,</span> <span class="nn">pandas</span> <span class="kn">as</span> <span class="nn">pd</span><span class="o">,</span> <span class="nn">matplotlib.pyplot</span> <span class="kn">as</span> <span class="nn">plt</span><span class="o">,</span> <span class="nn">seaborn</span> <span class="kn">as</span> <span class="nn">sns</span>
 <span class="o">%</span><span class="k">matplotlib</span> inline
@@ -338,29 +223,29 @@ div.nboutput  > :nth-child(2).stderr {
 </div>
 </div>
 <div class="nboutput nblast container">
-<div class="container">
+<div class="prompt empty container">
 </div>
-<div class="container">
+<div class="output_area container">
 <div class="highlight"><pre>
 Fri Nov 18 18:11:28 CST 2016
 </pre></div></div>
 </div>
 <div class="nbinput nblast container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [2]:
 </pre></div>
 </div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="kn">import</span> <span class="nn">pymc3</span> <span class="kn">as</span> <span class="nn">pm</span><span class="o">,</span> <span class="nn">theano.tensor</span> <span class="kn">as</span> <span class="nn">tt</span>
 </pre></div>
 </div>
 </div>
 <div class="nbinput container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [3]:
 </pre></div>
 </div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="c1"># simulate data from a known mixture distribution</span>
 <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">seed</span><span class="p">(</span><span class="mi">12345</span><span class="p">)</span> <span class="c1"># set random seed for reproducibility</span>
 
@@ -378,18 +263,18 @@ Fri Nov 18 18:11:28 CST 2016
 </div>
 </div>
 <div class="nboutput nblast container">
-<div class="container">
+<div class="prompt empty container">
 </div>
-<div class="container">
+<div class="output_area container">
 <img alt="../_images/notebooks_gaussian_mixture_model_3_0.png" src="../_images/notebooks_gaussian_mixture_model_3_0.png" />
 </div>
 </div>
 <div class="nbinput container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [4]:
 </pre></div>
 </div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="c1"># setup model</span>
 <span class="n">model</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Model</span><span class="p">()</span>
 <span class="k">with</span> <span class="n">model</span><span class="p">:</span>
@@ -423,20 +308,20 @@ Fri Nov 18 18:11:28 CST 2016
 </div>
 </div>
 <div class="nboutput nblast container">
-<div class="container">
+<div class="prompt empty container">
 </div>
-<div class="stderr container">
+<div class="stderr output_area container">
 <div class="highlight"><pre>
 INFO (theano.gof.compilelock): Waiting for existing lock by process &#39;4344&#39; (I am process &#39;4379&#39;)
 INFO (theano.gof.compilelock): To manually release the lock, delete /Users/fonnescj/.theano/compiledir_Darwin-16.1.0-x86_64-i386-64bit-i386-3.5.2-64/lock_dir
 </pre></div></div>
 </div>
 <div class="nbinput container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [5]:
 </pre></div>
 </div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="c1"># fit model</span>
 <span class="k">with</span> <span class="n">model</span><span class="p">:</span>
     <span class="n">step1</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Metropolis</span><span class="p">(</span><span class="nb">vars</span><span class="o">=</span><span class="p">[</span><span class="n">p</span><span class="p">,</span> <span class="n">sd</span><span class="p">,</span> <span class="n">means</span><span class="p">])</span>
@@ -446,9 +331,9 @@ INFO (theano.gof.compilelock): To manually release the lock, delete /Users/fonne
 </div>
 </div>
 <div class="nboutput nblast container">
-<div class="container">
+<div class="prompt empty container">
 </div>
-<div class="stderr container">
+<div class="stderr output_area container">
 <div class="highlight"><pre>
 /Users/fonnescj/anaconda3/envs/dev/lib/python3.5/site-packages/ipykernel/__main__.py:4: DeprecationWarning: ElemwiseCategorical is deprecated, switch to CategoricalGibbsMetropolis.
 100%|██████████| 10000/10000 [02:00&lt;00:00, 82.75it/s]
@@ -457,19 +342,19 @@ INFO (theano.gof.compilelock): To manually release the lock, delete /Users/fonne
 <div class="section" id="Full-trace">
 <h2>Full trace<a class="headerlink" href="#Full-trace" title="Permalink to this headline">¶</a></h2>
 <div class="nbinput container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [6]:
 </pre></div>
 </div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="n">pm</span><span class="o">.</span><span class="n">plots</span><span class="o">.</span><span class="n">traceplot</span><span class="p">(</span><span class="n">tr</span><span class="p">,</span> <span class="p">[</span><span class="s1">&#39;p&#39;</span><span class="p">,</span> <span class="s1">&#39;sd&#39;</span><span class="p">,</span> <span class="s1">&#39;means&#39;</span><span class="p">]);</span>
 </pre></div>
 </div>
 </div>
 <div class="nboutput nblast container">
-<div class="container">
+<div class="prompt empty container">
 </div>
-<div class="container">
+<div class="output_area container">
 <img alt="../_images/notebooks_gaussian_mixture_model_7_0.png" src="../_images/notebooks_gaussian_mixture_model_7_0.png" />
 </div>
 </div>
@@ -477,11 +362,11 @@ INFO (theano.gof.compilelock): To manually release the lock, delete /Users/fonne
 <div class="section" id="After-convergence">
 <h2>After convergence<a class="headerlink" href="#After-convergence" title="Permalink to this headline">¶</a></h2>
 <div class="nbinput container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [7]:
 </pre></div>
 </div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="c1"># take a look at traceplot for some model parameters</span>
 <span class="c1"># (with some burn-in and thinning)</span>
 <span class="n">pm</span><span class="o">.</span><span class="n">plots</span><span class="o">.</span><span class="n">traceplot</span><span class="p">(</span><span class="n">tr</span><span class="p">[</span><span class="mi">5000</span><span class="p">::</span><span class="mi">5</span><span class="p">],</span> <span class="p">[</span><span class="s1">&#39;p&#39;</span><span class="p">,</span> <span class="s1">&#39;sd&#39;</span><span class="p">,</span> <span class="s1">&#39;means&#39;</span><span class="p">]);</span>
@@ -489,37 +374,37 @@ INFO (theano.gof.compilelock): To manually release the lock, delete /Users/fonne
 </div>
 </div>
 <div class="nboutput nblast container">
-<div class="container">
+<div class="prompt empty container">
 </div>
-<div class="container">
+<div class="output_area container">
 <img alt="../_images/notebooks_gaussian_mixture_model_9_0.png" src="../_images/notebooks_gaussian_mixture_model_9_0.png" />
 </div>
 </div>
 <div class="nbinput container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [8]:
 </pre></div>
 </div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="c1"># I prefer autocorrelation plots for serious confirmation of MCMC convergence</span>
 <span class="n">pm</span><span class="o">.</span><span class="n">autocorrplot</span><span class="p">(</span><span class="n">tr</span><span class="p">[</span><span class="mi">5000</span><span class="p">::</span><span class="mi">5</span><span class="p">],</span> <span class="n">varnames</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;sd&#39;</span><span class="p">])</span>
 </pre></div>
 </div>
 </div>
 <div class="nboutput container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>Out[8]:
 </pre></div>
 </div>
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="output_area highlight-none"><div class="highlight"><pre>
 <span></span>array([[&lt;matplotlib.axes._subplots.AxesSubplot object at 0x1162b0860&gt;]], dtype=object)
 </pre></div>
 </div>
 </div>
 <div class="nboutput nblast container">
-<div class="container">
+<div class="prompt empty container">
 </div>
-<div class="container">
+<div class="output_area container">
 <img alt="../_images/notebooks_gaussian_mixture_model_10_1.png" src="../_images/notebooks_gaussian_mixture_model_10_1.png" />
 </div>
 </div>
@@ -527,11 +412,11 @@ INFO (theano.gof.compilelock): To manually release the lock, delete /Users/fonne
 <div class="section" id="Sampling-of-cluster-for-individual-data-point">
 <h2>Sampling of cluster for individual data point<a class="headerlink" href="#Sampling-of-cluster-for-individual-data-point" title="Permalink to this headline">¶</a></h2>
 <div class="nbinput container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [9]:
 </pre></div>
 </div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="n">i</span><span class="o">=</span><span class="mi">0</span>
 <span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">tr</span><span class="p">[</span><span class="s1">&#39;category&#39;</span><span class="p">][</span><span class="mi">5000</span><span class="p">::</span><span class="mi">5</span><span class="p">,</span> <span class="n">i</span><span class="p">],</span> <span class="n">drawstyle</span><span class="o">=</span><span class="s1">&#39;steps-mid&#39;</span><span class="p">)</span>
 <span class="n">plt</span><span class="o">.</span><span class="n">axis</span><span class="p">(</span><span class="n">ymin</span><span class="o">=-.</span><span class="mi">1</span><span class="p">,</span> <span class="n">ymax</span><span class="o">=</span><span class="mf">2.1</span><span class="p">)</span>
@@ -539,28 +424,28 @@ INFO (theano.gof.compilelock): To manually release the lock, delete /Users/fonne
 </div>
 </div>
 <div class="nboutput container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>Out[9]:
 </pre></div>
 </div>
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="output_area highlight-none"><div class="highlight"><pre>
 <span></span>(0.0, 1000.0, -0.1, 2.1)
 </pre></div>
 </div>
 </div>
 <div class="nboutput nblast container">
-<div class="container">
+<div class="prompt empty container">
 </div>
-<div class="container">
+<div class="output_area container">
 <img alt="../_images/notebooks_gaussian_mixture_model_12_1.png" src="../_images/notebooks_gaussian_mixture_model_12_1.png" />
 </div>
 </div>
 <div class="nbinput container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [10]:
 </pre></div>
 </div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="k">def</span> <span class="nf">cluster_posterior</span><span class="p">(</span><span class="n">i</span><span class="o">=</span><span class="mi">0</span><span class="p">):</span>
     <span class="k">print</span><span class="p">(</span><span class="s1">&#39;true cluster:&#39;</span><span class="p">,</span> <span class="n">v</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
     <span class="k">print</span><span class="p">(</span><span class="s1">&#39;  data value:&#39;</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">round</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="n">i</span><span class="p">],</span><span class="mi">2</span><span class="p">))</span>
@@ -572,18 +457,18 @@ INFO (theano.gof.compilelock): To manually release the lock, delete /Users/fonne
 </div>
 </div>
 <div class="nboutput container">
-<div class="container">
+<div class="prompt empty container">
 </div>
-<div class="container">
+<div class="output_area container">
 <div class="highlight"><pre>
 true cluster: 2
   data value: 3.29
 </pre></div></div>
 </div>
 <div class="nboutput nblast container">
-<div class="container">
+<div class="prompt empty container">
 </div>
-<div class="container">
+<div class="output_area container">
 <img alt="../_images/notebooks_gaussian_mixture_model_13_1.png" src="../_images/notebooks_gaussian_mixture_model_13_1.png" />
 </div>
 </div>
@@ -591,72 +476,66 @@ true cluster: 2
 </div>
 
 
-           </div>
           </div>
-          <footer>
-  
-    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
-      
-        <a href="marginalized_gaussian_mixture_model.html" class="btn btn-neutral float-right" title="Marginalized Gaussian Mixture Model" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
-      
-      
-        <a href="GP-smoothing.html" class="btn btn-neutral" title="Gaussian Process (GP) smoothing" accesskey="p"><span class="fa fa-arrow-circle-left"></span> Previous</a>
-      
-    </div>
-  
-
-  <hr/>
-
-  <div role="contentinfo">
-    <p>
-        &copy; Copyright 2016, John Salvatier, Christopher Fonnesbeck, Thomas Wiecki.
-
-    </p>
-  </div>
-  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
-
-</footer>
-
         </div>
       </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="../index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">Gaussian Mixture Model</a><ul>
+<li><a class="reference internal" href="#Full-trace">Full trace</a></li>
+<li><a class="reference internal" href="#After-convergence">After convergence</a></li>
+<li><a class="reference internal" href="#Sampling-of-cluster-for-individual-data-point">Sampling of cluster for individual data point</a></li>
+</ul>
+</li>
+</ul>
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../index.html">Documentation overview</a><ul>
+  <li><a href="../examples.html">Examples</a><ul>
+      <li>Previous: <a href="GP-smoothing.html" title="previous chapter">Gaussian Process (GP) smoothing</a></li>
+      <li>Next: <a href="marginalized_gaussian_mixture_model.html" title="next chapter">Marginalized Gaussian Mixture Model</a></li>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="../_sources/notebooks/gaussian_mixture_model.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2016, John Salvatier, Christopher Fonnesbeck, Thomas Wiecki.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.4.6</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.9</a>
+      
+      |
+      <a href="../_sources/notebooks/gaussian_mixture_model.txt"
+          rel="nofollow">Page source</a>
+    </div>
 
-    </section>
+    
 
-  </div>
-  
-
-
-  
-
-    <script type="text/javascript">
-        var DOCUMENTATION_OPTIONS = {
-            URL_ROOT:'../',
-            VERSION:'3.0',
-            COLLAPSE_INDEX:false,
-            FILE_SUFFIX:'.html',
-            HAS_SOURCE:  true
-        };
-    </script>
-      <script type="text/javascript" src="../_static/jquery.js"></script>
-      <script type="text/javascript" src="../_static/underscore.js"></script>
-      <script type="text/javascript" src="../_static/doctools.js"></script>
-      <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
-
-  
-
-  
-  
-    <script type="text/javascript" src="../_static/js/theme.js"></script>
-  
-
-  
-  
-  <script type="text/javascript">
-      jQuery(function () {
-          SphinxRtdTheme.StickyNav.enable();
-      });
-  </script>
-   
-
-</body>
+    
+  </body>
 </html>

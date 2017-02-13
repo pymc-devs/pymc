@@ -1,134 +1,44 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 
 
-<!DOCTYPE html>
-<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
-<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
-<head>
-  <meta charset="utf-8">
-  
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  
-  <title>GLM: Linear Regression &mdash; PyMC3 3.0 documentation</title>
-  
-
-  
-  
-
-  
-
-  
-  
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     
-
-  
-
-  
-  
-    <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
-  
-
-  
-
-  
-        <link rel="index" title="Index"
-              href="../genindex.html"/>
-        <link rel="search" title="Search" href="../search.html"/>
-    <link rel="top" title="PyMC3 3.0 documentation" href="../index.html"/> 
-
-  
-  <script src="../_static/js/modernizr.min.js"></script>
-
-</head>
-
-<body class="wy-body-for-nav" role="document">
-
-  <div class="wy-grid-for-nav">
-
+    <title>GLM: Linear Regression &#8212; PyMC3 3.0 documentation</title>
     
-    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
-      <div class="wy-side-scroll">
-        <div class="wy-side-nav-search">
-          
+    <link rel="stylesheet" href="../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '3.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="top" title="PyMC3 3.0 documentation" href="../index.html" />
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
 
-          
-            <a href="../index.html" class="icon icon-home"> PyMC3
-          
+  </head>
+  <body role="document">
+  
 
-          
-          </a>
-
-          
-            
-            
-              <div class="version">
-                3.0
-              </div>
-            
-          
-
-          
-<div role="search">
-  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
-    <input type="text" name="q" placeholder="Search docs" />
-    <input type="hidden" name="check_keywords" value="yes" />
-    <input type="hidden" name="area" value="default" />
-  </form>
-</div>
-
-          
-        </div>
-
-        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
-          
-            
-            
-                <ul>
-<li class="toctree-l1"><a class="reference internal" href="../getting_started.html">Getting started</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../examples.html">Examples</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../api.html">API Reference</a></li>
-</ul>
-
-            
-          
-        </div>
-      </div>
-    </nav>
-
-    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
-
-      
-      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
-        <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
-        <a href="../index.html">PyMC3</a>
-      </nav>
-
-
-      
-      <div class="wy-nav-content">
-        <div class="rst-content">
-          
-
- 
-
-
-
-<div role="navigation" aria-label="breadcrumbs navigation">
-  <ul class="wy-breadcrumbs">
-    <li><a href="../index.html">Docs</a> &raquo;</li>
-      
-    <li>GLM: Linear Regression</li>
-      <li class="wy-breadcrumbs-aside">
-        
-          
-            <a href="../_sources/notebooks/GLM.ipynb.txt" rel="nofollow"> View page source</a>
-          
-        
-      </li>
-  </ul>
-  <hr/>
-</div>
-          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
-           <div itemprop="articleBody">
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
             
   
 <style>
@@ -136,13 +46,15 @@
 
 /* remove conflicting styling from Sphinx themes */
 div.nbinput,
-div.nbinput > div,
-div.nbinput div[class^=highlight],
-div.nbinput div[class^=highlight] pre,
+div.nbinput div.prompt,
+div.nbinput div.input_area,
+div.nbinput div[class*=highlight],
+div.nbinput div[class*=highlight] pre,
 div.nboutput,
-div.nboutput > div,
-div.nboutput div[class^=highlight],
-div.nboutput div[class^=highlight] pre {
+div.nbinput div.prompt,
+div.nbinput div.output_area,
+div.nboutput div[class*=highlight],
+div.nboutput div[class*=highlight] pre {
     background: none;
     border: none;
     padding: 0 0;
@@ -151,7 +63,7 @@ div.nboutput div[class^=highlight] pre {
 }
 
 /* avoid gaps between output lines */
-div.nboutput div[class^=highlight] pre {
+div.nboutput div[class*=highlight] pre {
     line-height: normal;
 }
 
@@ -162,6 +74,13 @@ div.nboutput {
     display: flex;
     align-items: flex-start;
     margin: 0;
+    width: 100%;
+}
+@media (max-width: 540px) {
+    div.nbinput,
+    div.nboutput {
+        flex-direction: column;
+    }
 }
 
 /* input container */
@@ -175,38 +94,58 @@ div.nblast {
 }
 
 /* input prompt */
-div.nbinput > :first-child pre {
+div.nbinput div.prompt pre {
     color: #303F9F;
 }
 
 /* output prompt */
-div.nboutput > :first-child pre {
+div.nboutput div.prompt pre {
     color: #D84315;
 }
 
 /* all prompts */
-div.nbinput > :first-child[class^=highlight],
-div.nboutput > :first-child[class^=highlight],
-div.nboutput > :first-child {
+div.nbinput div.prompt,
+div.nboutput div.prompt {
     min-width: 8ex;
     padding-top: 0.4em;
     padding-right: 0.4em;
     text-align: right;
     flex: 0;
 }
+@media (max-width: 540px) {
+    div.nbinput div.prompt,
+    div.nboutput div.prompt {
+        text-align: left;
+        padding: 0.4em;
+    }
+    div.nboutput div.prompt.empty {
+        padding: 0;
+    }
+}
+
+/* disable scrollbars on prompts */
+div.nbinput div.prompt pre,
+div.nboutput div.prompt pre {
+    overflow: hidden;
+}
 
 /* input/output area */
-div.nbinput > :nth-child(2)[class^=highlight],
-div.nboutput > :nth-child(2),
-div.nboutput > :nth-child(2)[class^=highlight] {
+div.nbinput div.input_area,
+div.nboutput div.output_area {
     padding: 0.4em;
     -webkit-flex: 1;
     flex: 1;
     overflow: auto;
 }
+@media (max-width: 540px) {
+    div.nbinput div.input_area,
+    div.nboutput div.output_area {
+        width: 100%;
+    }
+}
 
 /* input area */
-div.nbinput > :nth-child(2)[class^=highlight] {
+div.nbinput div.input_area {
     border: 1px solid #cfcfcf;
     border-radius: 2px;
     background: #f7f7f7;
@@ -223,7 +162,7 @@ div.nboutput div.math p {
 }
 
 /* standard error */
-div.nboutput  > :nth-child(2).stderr {
+div.nboutput div.output_area.stderr {
     background: #fdd;
 }
 
@@ -262,47 +201,15 @@ div.nboutput  > :nth-child(2).stderr {
 .ansi-white-intense-bg { background-color: #A1A6B2; }
 
 .ansi-bold { font-weight: bold; }
-
-/* CSS overrides for sphinx_rtd_theme */
-
-/* 24px margin */
-.nbinput.nblast,
-.nboutput.nblast {
-    margin-bottom: 19px;  /* padding has already 5px */
-}
-
-/* ... except between code cells! */
-.nblast + .nbinput {
-    margin-top: -19px;
-}
-
-/* nice headers on first paragraph of info/warning boxes */
-.admonition .first {
-    margin: -12px;
-    padding: 6px 12px;
-    margin-bottom: 12px;
-    color: #fff;
-    line-height: 1;
-    display: block;
-}
-.admonition.warning .first {
-    background: #f0b37e;
-}
-.admonition.note .first {
-    background: #6ab0de;
-}
-.admonition > p:before {
-    margin-right: 4px;  /* make room for the exclamation icon */
-}
 </style>
 <div class="section" id="GLM:-Linear-Regression">
 <h1>GLM: Linear Regression<a class="headerlink" href="#GLM:-Linear-Regression" title="Permalink to this headline">¶</a></h1>
 <div class="nbinput container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [1]:
 </pre></div>
 </div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="o">%</span><span class="k">matplotlib</span> inline
 <span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="kn">as</span> <span class="nn">plt</span>
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="kn">as</span> <span class="nn">np</span>
@@ -316,9 +223,9 @@ div.nboutput  > :nth-child(2).stderr {
 </div>
 </div>
 <div class="nboutput nblast container">
-<div class="container">
+<div class="prompt empty container">
 </div>
-<div class="stderr container">
+<div class="stderr output_area container">
 <div class="highlight"><pre>
 WARNING (theano.configdefaults): Only clang++ is supported. With g++, we end up with strange g++/OSX bugs.
 </pre></div></div>
@@ -329,11 +236,11 @@ WARNING (theano.configdefaults): Only clang++ is supported. With g++, we end up 
 <p>Lets generate some data with known slope and intercept and fit a simple
 linear GLM.</p>
 <div class="nbinput nblast container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [2]:
 </pre></div>
 </div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="n">size</span> <span class="o">=</span> <span class="mi">50</span>
 <span class="n">true_intercept</span> <span class="o">=</span> <span class="mi">1</span>
 <span class="n">true_slope</span> <span class="o">=</span> <span class="mi">2</span>
@@ -346,11 +253,11 @@ linear GLM.</p>
 <p>The <code class="docutils literal"><span class="pre">glm.linear_component()</span></code> function can be used to generate the
 output variable y_est and coefficients of the specified linear model.</p>
 <div class="nbinput container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [3]:
 </pre></div>
 </div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="k">with</span> <span class="n">Model</span><span class="p">()</span> <span class="k">as</span> <span class="n">model</span><span class="p">:</span>
     <span class="n">y_est</span><span class="p">,</span> <span class="n">coeffs</span> <span class="o">=</span> <span class="n">glm</span><span class="o">.</span><span class="n">linear_component</span><span class="p">(</span><span class="s1">&#39;y ~ x&#39;</span><span class="p">,</span> <span class="n">data</span><span class="p">)</span>
     <span class="n">sigma</span> <span class="o">=</span> <span class="n">Uniform</span><span class="p">(</span><span class="s1">&#39;sigma&#39;</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">20</span><span class="p">)</span>
@@ -366,9 +273,9 @@ output variable y_est and coefficients of the specified linear model.</p>
 </div>
 </div>
 <div class="nboutput container">
-<div class="container">
+<div class="prompt empty container">
 </div>
-<div class="stderr container">
+<div class="stderr output_area container">
 <div class="highlight"><pre>
 /usr/local/var/pyenv/versions/miniconda3-4.0.5/envs/testenv/lib/python3.5/site-packages/ipykernel/__main__.py:2: DeprecationWarning: stack(*tensors) interface is deprecated, use stack(tensors, axis=0) instead.
   from ipykernel import kernelapp as app
@@ -377,9 +284,9 @@ Applied interval-transform to sigma and added transformed sigma_interval_ to mod
 </pre></div></div>
 </div>
 <div class="nboutput nblast container">
-<div class="container">
+<div class="prompt empty container">
 </div>
-<div class="container">
+<div class="output_area container">
 <img alt="../_images/notebooks_GLM_5_1.png" src="../_images/notebooks_GLM_5_1.png" />
 </div>
 </div>
@@ -393,11 +300,11 @@ starting point which it returns.</p>
 <p>Note that the below call to <code class="docutils literal"><span class="pre">glm()</span></code> is producing exactly the same
 model as above, just more succinctly.</p>
 <div class="nbinput container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [4]:
 </pre></div>
 </div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="k">with</span> <span class="n">Model</span><span class="p">()</span> <span class="k">as</span> <span class="n">model</span><span class="p">:</span>
     <span class="n">glm</span><span class="o">.</span><span class="n">glm</span><span class="p">(</span><span class="s1">&#39;y ~ x&#39;</span><span class="p">,</span> <span class="n">data</span><span class="p">)</span>
     <span class="n">trace</span> <span class="o">=</span> <span class="n">sample</span><span class="p">(</span><span class="mi">2000</span><span class="p">,</span> <span class="n">Slice</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">vars</span><span class="p">))</span>
@@ -409,18 +316,18 @@ model as above, just more succinctly.</p>
 </div>
 </div>
 <div class="nboutput container">
-<div class="container">
+<div class="prompt empty container">
 </div>
-<div class="stderr container">
+<div class="stderr output_area container">
 <div class="highlight"><pre>
 Applied log-transform to sd and added transformed sd_log_ to model.
 100%|██████████| 2000/2000 [00:02&lt;00:00, 887.52it/s]
 </pre></div></div>
 </div>
 <div class="nboutput nblast container">
-<div class="container">
+<div class="prompt empty container">
 </div>
-<div class="container">
+<div class="output_area container">
 <img alt="../_images/notebooks_GLM_7_1.png" src="../_images/notebooks_GLM_7_1.png" />
 </div>
 </div>
@@ -429,11 +336,11 @@ Applied log-transform to sd and added transformed sd_log_ to model.
 <h1>Robust GLM<a class="headerlink" href="#Robust-GLM" title="Permalink to this headline">¶</a></h1>
 <p>Lets try the same model but with a few outliers in the data.</p>
 <div class="nbinput nblast container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [5]:
 </pre></div>
 </div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="n">x_out</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="p">[</span><span class="o">.</span><span class="mi">1</span><span class="p">,</span> <span class="o">.</span><span class="mi">15</span><span class="p">,</span> <span class="o">.</span><span class="mi">2</span><span class="p">])</span>
 <span class="n">y_out</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">y</span><span class="p">,</span> <span class="p">[</span><span class="mi">8</span><span class="p">,</span> <span class="mi">6</span><span class="p">,</span> <span class="mi">9</span><span class="p">])</span>
 <span class="n">data_outlier</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">x</span><span class="o">=</span><span class="n">x_out</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="n">y_out</span><span class="p">)</span>
@@ -441,11 +348,11 @@ Applied log-transform to sd and added transformed sd_log_ to model.
 </div>
 </div>
 <div class="nbinput container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [6]:
 </pre></div>
 </div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="k">with</span> <span class="n">Model</span><span class="p">()</span> <span class="k">as</span> <span class="n">model</span><span class="p">:</span>
     <span class="n">glm</span><span class="o">.</span><span class="n">glm</span><span class="p">(</span><span class="s1">&#39;y ~ x&#39;</span><span class="p">,</span> <span class="n">data_outlier</span><span class="p">)</span>
     <span class="n">trace</span> <span class="o">=</span> <span class="n">sample</span><span class="p">(</span><span class="mi">2000</span><span class="p">,</span> <span class="n">Slice</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">vars</span><span class="p">))</span>
@@ -457,18 +364,18 @@ Applied log-transform to sd and added transformed sd_log_ to model.
 </div>
 </div>
 <div class="nboutput container">
-<div class="container">
+<div class="prompt empty container">
 </div>
-<div class="stderr container">
+<div class="stderr output_area container">
 <div class="highlight"><pre>
 Applied log-transform to sd and added transformed sd_log_ to model.
 100%|██████████| 2000/2000 [00:02&lt;00:00, 885.06it/s]
 </pre></div></div>
 </div>
 <div class="nboutput nblast container">
-<div class="container">
+<div class="prompt empty container">
 </div>
-<div class="container">
+<div class="output_area container">
 <img alt="../_images/notebooks_GLM_10_1.png" src="../_images/notebooks_GLM_10_1.png" />
 </div>
 </div>
@@ -485,11 +392,11 @@ a family object that contains information on how to link the output to
 which is also the default) and what the priors for the T distribution
 are. Here we fix the degrees of freedom <code class="docutils literal"><span class="pre">nu</span></code> to 1.5.</p>
 <div class="nbinput container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [7]:
 </pre></div>
 </div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="k">with</span> <span class="n">Model</span><span class="p">()</span> <span class="k">as</span> <span class="n">model_robust</span><span class="p">:</span>
     <span class="n">family</span> <span class="o">=</span> <span class="n">glm</span><span class="o">.</span><span class="n">families</span><span class="o">.</span><span class="n">StudentT</span><span class="p">(</span><span class="n">link</span><span class="o">=</span><span class="n">glm</span><span class="o">.</span><span class="n">families</span><span class="o">.</span><span class="n">Identity</span><span class="p">(),</span>
                                    <span class="n">priors</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;nu&#39;</span><span class="p">:</span> <span class="mf">1.5</span><span class="p">,</span>
@@ -504,18 +411,18 @@ are. Here we fix the degrees of freedom <code class="docutils literal"><span cla
 </div>
 </div>
 <div class="nboutput container">
-<div class="container">
+<div class="prompt empty container">
 </div>
-<div class="stderr container">
+<div class="stderr output_area container">
 <div class="highlight"><pre>
 Applied interval-transform to lam and added transformed lam_interval_ to model.
 100%|██████████| 2000/2000 [00:02&lt;00:00, 870.31it/s]
 </pre></div></div>
 </div>
 <div class="nboutput nblast container">
-<div class="container">
+<div class="prompt empty container">
 </div>
-<div class="container">
+<div class="output_area container">
 <img alt="../_images/notebooks_GLM_12_1.png" src="../_images/notebooks_GLM_12_1.png" />
 </div>
 </div>
@@ -523,21 +430,21 @@ Applied interval-transform to lam and added transformed lam_interval_ to model.
 <div class="section" id="Hierarchical-GLM">
 <h1>Hierarchical GLM<a class="headerlink" href="#Hierarchical-GLM" title="Permalink to this headline">¶</a></h1>
 <div class="nbinput nblast container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [8]:
 </pre></div>
 </div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="n">sat_data</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="s1">&#39;../data/Guber1999data.txt&#39;</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
 <div class="nbinput container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [9]:
 </pre></div>
 </div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="k">with</span> <span class="n">Model</span><span class="p">()</span> <span class="k">as</span> <span class="n">model_sat</span><span class="p">:</span>
     <span class="n">grp_mean</span> <span class="o">=</span> <span class="n">Normal</span><span class="p">(</span><span class="s1">&#39;grp_mean&#39;</span><span class="p">,</span> <span class="n">mu</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">sd</span><span class="o">=</span><span class="mi">10</span><span class="p">)</span>
     <span class="n">grp_sd</span> <span class="o">=</span> <span class="n">Uniform</span><span class="p">(</span><span class="s1">&#39;grp_sd&#39;</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">200</span><span class="p">)</span>
@@ -554,9 +461,9 @@ Applied interval-transform to lam and added transformed lam_interval_ to model.
 </div>
 </div>
 <div class="nboutput nblast container">
-<div class="container">
+<div class="prompt empty container">
 </div>
-<div class="stderr container">
+<div class="stderr output_area container">
 <div class="highlight"><pre>
 Applied interval-transform to grp_sd and added transformed grp_sd_interval_ to model.
 Applied log-transform to sd and added transformed sd_log_ to model.
@@ -564,28 +471,28 @@ Applied log-transform to sd and added transformed sd_log_ to model.
 </pre></div></div>
 </div>
 <div class="nbinput container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [10]:
 </pre></div>
 </div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="n">scatter_matrix</span><span class="p">(</span><span class="n">trace_to_dataframe</span><span class="p">(</span><span class="n">trace_sat</span><span class="p">),</span> <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">12</span><span class="p">,</span><span class="mi">12</span><span class="p">));</span>
 </pre></div>
 </div>
 </div>
 <div class="nboutput nblast container">
-<div class="container">
+<div class="prompt empty container">
 </div>
-<div class="container">
+<div class="output_area container">
 <img alt="../_images/notebooks_GLM_16_0.png" src="../_images/notebooks_GLM_16_0.png" />
 </div>
 </div>
 <div class="nbinput container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [11]:
 </pre></div>
 </div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="k">with</span> <span class="n">Model</span><span class="p">()</span> <span class="k">as</span> <span class="n">model_sat</span><span class="p">:</span>
     <span class="n">grp_mean</span> <span class="o">=</span> <span class="n">Normal</span><span class="p">(</span><span class="s1">&#39;grp_mean&#39;</span><span class="p">,</span> <span class="n">mu</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">sd</span><span class="o">=</span><span class="mi">10</span><span class="p">)</span>
     <span class="n">grp_prec</span> <span class="o">=</span> <span class="n">Gamma</span><span class="p">(</span><span class="s1">&#39;grp_prec&#39;</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">beta</span><span class="o">=.</span><span class="mi">1</span><span class="p">,</span> <span class="n">testval</span><span class="o">=</span><span class="mf">1.</span><span class="p">)</span>
@@ -598,9 +505,9 @@ Applied log-transform to sd and added transformed sd_log_ to model.
 </div>
 </div>
 <div class="nboutput nblast container">
-<div class="container">
+<div class="prompt empty container">
 </div>
-<div class="stderr container">
+<div class="stderr output_area container">
 <div class="highlight"><pre>
 Applied log-transform to grp_prec and added transformed grp_prec_log_ to model.
 Applied log-transform to sd and added transformed sd_log_ to model.
@@ -608,28 +515,28 @@ Applied log-transform to sd and added transformed sd_log_ to model.
 </pre></div></div>
 </div>
 <div class="nbinput container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [12]:
 </pre></div>
 </div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="n">scatter_matrix</span><span class="p">(</span><span class="n">trace_to_dataframe</span><span class="p">(</span><span class="n">trace_sat</span><span class="p">),</span> <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">12</span><span class="p">,</span><span class="mi">12</span><span class="p">));</span>
 </pre></div>
 </div>
 </div>
 <div class="nboutput nblast container">
-<div class="container">
+<div class="prompt empty container">
 </div>
-<div class="container">
+<div class="output_area container">
 <img alt="../_images/notebooks_GLM_18_0.png" src="../_images/notebooks_GLM_18_0.png" />
 </div>
 </div>
 <div class="nbinput container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [13]:
 </pre></div>
 </div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="n">tdf_gain</span> <span class="o">=</span> <span class="mf">5.</span>
 <span class="k">with</span> <span class="n">Model</span><span class="p">()</span> <span class="k">as</span> <span class="n">model_sat</span><span class="p">:</span>
     <span class="n">grp_mean</span> <span class="o">=</span> <span class="n">Normal</span><span class="p">(</span><span class="s1">&#39;grp_mean&#39;</span><span class="p">,</span> <span class="n">mu</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">sd</span><span class="o">=</span><span class="mi">10</span><span class="p">)</span>
@@ -644,9 +551,9 @@ Applied log-transform to sd and added transformed sd_log_ to model.
 </div>
 </div>
 <div class="nboutput nblast container">
-<div class="container">
+<div class="prompt empty container">
 </div>
-<div class="stderr container">
+<div class="stderr output_area container">
 <div class="highlight"><pre>
 Applied log-transform to grp_prec and added transformed grp_prec_log_ to model.
 Applied log-transform to sd and added transformed sd_log_ to model.
@@ -657,22 +564,22 @@ Applied log-transform to sd and added transformed sd_log_ to model.
 <div class="section" id="Logistic-Regression">
 <h1>Logistic Regression<a class="headerlink" href="#Logistic-Regression" title="Permalink to this headline">¶</a></h1>
 <div class="nbinput container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [14]:
 </pre></div>
 </div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="n">htwt_data</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="s1">&#39;../data/HtWt.csv&#39;</span><span class="p">)</span>
 <span class="n">htwt_data</span><span class="o">.</span><span class="n">head</span><span class="p">()</span>
 </pre></div>
 </div>
 </div>
 <div class="nboutput nblast container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>Out[14]:
 </pre></div>
 </div>
-<div class="container">
+<div class="output_area container">
 <div>
 <table border="1" class="dataframe">
   <thead>
@@ -719,20 +626,20 @@ Applied log-transform to sd and added transformed sd_log_ to model.
 </div></div>
 </div>
 <div class="nbinput container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [15]:
 </pre></div>
 </div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="n">m</span> <span class="o">=</span> <span class="n">glm_sm</span><span class="p">(</span><span class="s1">&#39;male ~ height + weight&#39;</span><span class="p">,</span> <span class="n">htwt_data</span><span class="p">,</span> <span class="n">family</span><span class="o">=</span><span class="n">sm</span><span class="o">.</span><span class="n">families</span><span class="o">.</span><span class="n">Binomial</span><span class="p">())</span><span class="o">.</span><span class="n">fit</span><span class="p">()</span>
 <span class="k">print</span><span class="p">(</span><span class="n">m</span><span class="o">.</span><span class="n">summary</span><span class="p">())</span>
 </pre></div>
 </div>
 </div>
 <div class="nboutput nblast container">
-<div class="container">
+<div class="prompt empty container">
 </div>
-<div class="container">
+<div class="output_area container">
 <div class="highlight"><pre>
                  Generalized Linear Model Regression Results
 ==============================================================================
@@ -754,11 +661,11 @@ weight         0.0096      0.011      0.892      0.372        -0.012     0.031
 </pre></div></div>
 </div>
 <div class="nbinput container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [16]:
 </pre></div>
 </div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="k">with</span> <span class="n">Model</span><span class="p">()</span> <span class="k">as</span> <span class="n">model_htwt</span><span class="p">:</span>
     <span class="n">glm</span><span class="o">.</span><span class="n">glm</span><span class="p">(</span><span class="s1">&#39;male ~ height + weight&#39;</span><span class="p">,</span> <span class="n">htwt_data</span><span class="p">,</span> <span class="n">family</span><span class="o">=</span><span class="n">glm</span><span class="o">.</span><span class="n">families</span><span class="o">.</span><span class="n">Binomial</span><span class="p">())</span>
     <span class="n">trace_htwt</span> <span class="o">=</span> <span class="n">sample</span><span class="p">(</span><span class="mi">1000</span><span class="p">,</span> <span class="n">NUTS</span><span class="p">())</span>
@@ -766,9 +673,9 @@ weight         0.0096      0.011      0.892      0.372        -0.012     0.031
 </div>
 </div>
 <div class="nboutput nblast container">
-<div class="container">
+<div class="prompt empty container">
 </div>
-<div class="stderr container">
+<div class="stderr output_area container">
 <div class="highlight"><pre>
 Applied logodds-transform to p and added transformed p_logodds_ to model.
 INFO:pymc3:Applied logodds-transform to p and added transformed p_logodds_ to model.
@@ -776,11 +683,11 @@ INFO:pymc3:Applied logodds-transform to p and added transformed p_logodds_ to mo
 </pre></div></div>
 </div>
 <div class="nbinput container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [17]:
 </pre></div>
 </div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="n">trace_df</span> <span class="o">=</span> <span class="n">trace_to_dataframe</span><span class="p">(</span><span class="n">trace_htwt</span><span class="p">)</span>
 <span class="k">print</span><span class="p">(</span><span class="n">trace_df</span><span class="o">.</span><span class="n">describe</span><span class="p">()</span><span class="o">.</span><span class="n">drop</span><span class="p">(</span><span class="s1">&#39;count&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">T</span><span class="p">)</span>
 <span class="n">scatter_matrix</span><span class="p">(</span><span class="n">trace_df</span><span class="p">,</span> <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">8</span><span class="p">,</span> <span class="mi">8</span><span class="p">))</span>
@@ -790,9 +697,9 @@ INFO:pymc3:Applied logodds-transform to p and added transformed p_logodds_ to mo
 </div>
 </div>
 <div class="nboutput container">
-<div class="container">
+<div class="prompt empty container">
 </div>
-<div class="container">
+<div class="output_area container">
 <div class="highlight"><pre>
                 mean        std         min        25%        50%        75%  \
 Intercept -50.709383  13.193083 -103.853682 -60.323900 -51.081365 -42.115205
@@ -810,20 +717,20 @@ P(height &lt; 0) =  0.0
 </pre></div></div>
 </div>
 <div class="nboutput nblast container">
-<div class="container">
+<div class="prompt empty container">
 </div>
-<div class="container">
+<div class="output_area container">
 <img alt="../_images/notebooks_GLM_24_1.png" src="../_images/notebooks_GLM_24_1.png" />
 </div>
 </div>
 <div class="section" id="Bayesian-Logistic-Lasso">
 <h2>Bayesian Logistic Lasso<a class="headerlink" href="#Bayesian-Logistic-Lasso" title="Permalink to this headline">¶</a></h2>
 <div class="nbinput container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [18]:
 </pre></div>
 </div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="n">lp</span> <span class="o">=</span> <span class="n">Laplace</span><span class="o">.</span><span class="n">dist</span><span class="p">(</span><span class="n">mu</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">b</span><span class="o">=</span><span class="mf">0.05</span><span class="p">)</span>
 <span class="n">x_eval</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="o">-.</span><span class="mi">5</span><span class="p">,</span> <span class="o">.</span><span class="mi">5</span><span class="p">,</span> <span class="mi">300</span><span class="p">)</span>
 <span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">x_eval</span><span class="p">,</span> <span class="n">theano</span><span class="o">.</span><span class="n">tensor</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="n">lp</span><span class="o">.</span><span class="n">logp</span><span class="p">(</span><span class="n">x_eval</span><span class="p">))</span><span class="o">.</span><span class="n">eval</span><span class="p">())</span>
@@ -834,18 +741,18 @@ P(height &lt; 0) =  0.0
 </div>
 </div>
 <div class="nboutput nblast container">
-<div class="container">
+<div class="prompt empty container">
 </div>
-<div class="container">
+<div class="output_area container">
 <img alt="../_images/notebooks_GLM_26_0.png" src="../_images/notebooks_GLM_26_0.png" />
 </div>
 </div>
 <div class="nbinput container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [19]:
 </pre></div>
 </div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="k">with</span> <span class="n">Model</span><span class="p">()</span> <span class="k">as</span> <span class="n">model_lasso</span><span class="p">:</span>
     <span class="c1"># Define priors for intercept and regression coefficients.</span>
     <span class="n">priors</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;Intercept&#39;</span><span class="p">:</span> <span class="n">Normal</span><span class="o">.</span><span class="n">dist</span><span class="p">(</span><span class="n">mu</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">sd</span><span class="o">=</span><span class="mi">50</span><span class="p">),</span>
@@ -864,9 +771,9 @@ P(height &lt; 0) =  0.0
 </div>
 </div>
 <div class="nboutput container">
-<div class="container">
+<div class="prompt empty container">
 </div>
-<div class="stderr container">
+<div class="stderr output_area container">
 <div class="highlight"><pre>
 Applied logodds-transform to p and added transformed p_logodds_ to model.
 INFO:pymc3:Applied logodds-transform to p and added transformed p_logodds_ to model.
@@ -874,9 +781,9 @@ INFO:pymc3:Applied logodds-transform to p and added transformed p_logodds_ to mo
 </pre></div></div>
 </div>
 <div class="nboutput container">
-<div class="container">
+<div class="prompt empty container">
 </div>
-<div class="container">
+<div class="output_area container">
 <div class="highlight"><pre>
                 mean       std        min        25%        50%        75%  \
 Intercept -24.586548  7.999507 -43.240430 -30.782016 -23.721298 -19.595319
@@ -892,18 +799,18 @@ p          0.999594
 </pre></div></div>
 </div>
 <div class="nboutput nblast container">
-<div class="container">
+<div class="prompt empty container">
 </div>
-<div class="container">
+<div class="output_area container">
 <img alt="../_images/notebooks_GLM_27_2.png" src="../_images/notebooks_GLM_27_2.png" />
 </div>
 </div>
 <div class="nbinput nblast container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [ ]:
 </pre></div>
 </div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span>
 </pre></div>
 </div>
@@ -912,63 +819,64 @@ p          0.999594
 </div>
 
 
-           </div>
           </div>
-          <footer>
-  
-
-  <hr/>
-
-  <div role="contentinfo">
-    <p>
-        &copy; Copyright 2016, John Salvatier, Christopher Fonnesbeck, Thomas Wiecki.
-
-    </p>
-  </div>
-  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
-
-</footer>
-
         </div>
       </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="../index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">GLM: Linear Regression</a></li>
+<li><a class="reference internal" href="#Simple-example">Simple example</a></li>
+<li><a class="reference internal" href="#Robust-GLM">Robust GLM</a></li>
+<li><a class="reference internal" href="#Hierarchical-GLM">Hierarchical GLM</a></li>
+<li><a class="reference internal" href="#Logistic-Regression">Logistic Regression</a><ul>
+<li><a class="reference internal" href="#Bayesian-Logistic-Lasso">Bayesian Logistic Lasso</a></li>
+</ul>
+</li>
+</ul>
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../index.html">Documentation overview</a><ul>
+  </ul></li>
+</ul>
+</div>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="../_sources/notebooks/GLM.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2016, John Salvatier, Christopher Fonnesbeck, Thomas Wiecki.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.4.6</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.9</a>
+      
+      |
+      <a href="../_sources/notebooks/GLM.txt"
+          rel="nofollow">Page source</a>
+    </div>
 
-    </section>
+    
 
-  </div>
-  
-
-
-  
-
-    <script type="text/javascript">
-        var DOCUMENTATION_OPTIONS = {
-            URL_ROOT:'../',
-            VERSION:'3.0',
-            COLLAPSE_INDEX:false,
-            FILE_SUFFIX:'.html',
-            HAS_SOURCE:  true
-        };
-    </script>
-      <script type="text/javascript" src="../_static/jquery.js"></script>
-      <script type="text/javascript" src="../_static/underscore.js"></script>
-      <script type="text/javascript" src="../_static/doctools.js"></script>
-      <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
-
-  
-
-  
-  
-    <script type="text/javascript" src="../_static/js/theme.js"></script>
-  
-
-  
-  
-  <script type="text/javascript">
-      jQuery(function () {
-          SphinxRtdTheme.StickyNav.enable();
-      });
-  </script>
-   
-
-</body>
+    
+  </body>
 </html>

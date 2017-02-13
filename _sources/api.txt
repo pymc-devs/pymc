@@ -224,6 +224,26 @@ GLM
 .. automodule:: pymc3.glm.glm
    :members:
 
+
+GP
+--
+
+.. currentmodule:: pymc3.gp.cov
+.. autosummary::
+
+   ExpQuad
+   RatQuad
+   Matern32
+   Matern52
+   Exponential
+   Cosine
+   Linear
+   Polynomial
+   WarpedInput
+
+.. automodule:: pymc3.gp.cov
+   :members:
+
 Math
 ----
 

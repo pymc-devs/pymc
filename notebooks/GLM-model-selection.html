@@ -1,168 +1,47 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 
 
-<!DOCTYPE html>
-<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
-<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
-<head>
-  <meta charset="utf-8">
-  
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  
-  <title>GLM: Model Selection &mdash; PyMC3 3.0 documentation</title>
-  
-
-  
-  
-
-  
-
-  
-  
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     
-
-  
-
-  
-  
-    <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
-  
-
-  
-
-  
-        <link rel="index" title="Index"
-              href="../genindex.html"/>
-        <link rel="search" title="Search" href="../search.html"/>
-    <link rel="top" title="PyMC3 3.0 documentation" href="../index.html"/>
-        <link rel="up" title="Examples" href="../examples.html"/>
-        <link rel="next" title="Rolling Regression" href="GLM-rolling-regression.html"/>
-        <link rel="prev" title="GLM: Robust Regression with Outlier Detection" href="GLM-robust-with-outlier-detection.html"/> 
-
-  
-  <script src="../_static/js/modernizr.min.js"></script>
-
-</head>
-
-<body class="wy-body-for-nav" role="document">
-
-  <div class="wy-grid-for-nav">
-
+    <title>GLM: Model Selection &#8212; PyMC3 3.0 documentation</title>
     
-    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
-      <div class="wy-side-scroll">
-        <div class="wy-side-nav-search">
-          
+    <link rel="stylesheet" href="../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '3.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="top" title="PyMC3 3.0 documentation" href="../index.html" />
+    <link rel="up" title="Examples" href="../examples.html" />
+    <link rel="next" title="Rolling Regression" href="GLM-rolling-regression.html" />
+    <link rel="prev" title="GLM: Robust Regression with Outlier Detection" href="GLM-robust-with-outlier-detection.html" />
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
 
-          
-            <a href="../index.html" class="icon icon-home"> PyMC3
-          
+  </head>
+  <body role="document">
+  
 
-          
-          </a>
-
-          
-            
-            
-              <div class="version">
-                3.0
-              </div>
-            
-          
-
-          
-<div role="search">
-  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
-    <input type="text" name="q" placeholder="Search docs" />
-    <input type="hidden" name="check_keywords" value="yes" />
-    <input type="hidden" name="area" value="default" />
-  </form>
-</div>
-
-          
-        </div>
-
-        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
-          
-            
-            
-                <ul class="current">
-<li class="toctree-l1"><a class="reference internal" href="../getting_started.html">Getting started</a></li>
-<li class="toctree-l1 current"><a class="reference internal" href="../examples.html">Examples</a><ul class="current">
-<li class="toctree-l2"><a class="reference internal" href="../examples.html#howto">Howto</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../examples.html#applied">Applied</a></li>
-<li class="toctree-l2 current"><a class="reference internal" href="../examples.html#glm">GLM</a><ul class="current">
-<li class="toctree-l3"><a class="reference internal" href="GLM-linear.html">GLM: Linear regression</a></li>
-<li class="toctree-l3"><a class="reference internal" href="GLM-robust.html">GLM: Robust Linear Regression</a></li>
-<li class="toctree-l3"><a class="reference internal" href="GLM-robust-with-outlier-detection.html">GLM: Robust Regression with Outlier Detection</a></li>
-<li class="toctree-l3 current"><a class="current reference internal" href="#">GLM: Model Selection</a><ul>
-<li class="toctree-l4"><a class="reference internal" href="#Setup">Setup</a></li>
-<li class="toctree-l4"><a class="reference internal" href="#Generate-Toy-Datasets">Generate Toy Datasets</a></li>
-<li class="toctree-l4"><a class="reference internal" href="#Demonstrate-Simple-Linear-Model">Demonstrate Simple Linear Model</a></li>
-<li class="toctree-l4"><a class="reference internal" href="#Create-Higher-Order-Linear-Models">Create Higher-Order Linear Models</a></li>
-<li class="toctree-l4"><a class="reference internal" href="#A-really-bad-method-for-model-selection:-compare-likelihoods">A really bad method for model selection: compare likelihoods</a></li>
-<li class="toctree-l4"><a class="reference internal" href="#Compare-Deviance-Information-Criterion-[DIC]">Compare Deviance Information Criterion [DIC]</a></li>
-<li class="toctree-l4"><a class="reference internal" href="#Compare-Watanabe---Akaike-Information-Criterion-[WAIC]">Compare Watanabe - Akaike Information Criterion [WAIC]</a></li>
-<li class="toctree-l4"><a class="reference internal" href="#TODO">TODO</a></li>
-<li class="toctree-l4"><a class="reference internal" href="#Bayes-Factor">Bayes Factor</a></li>
-</ul>
-</li>
-<li class="toctree-l3"><a class="reference internal" href="GLM-rolling-regression.html">Rolling Regression</a></li>
-<li class="toctree-l3"><a class="reference internal" href="GLM-hierarchical.html">GLM: Hierarchical Linear Regression</a></li>
-<li class="toctree-l3"><a class="reference internal" href="GLM-poisson-regression.html">GLM: Poisson Regression</a></li>
-<li class="toctree-l3"><a class="reference internal" href="hierarchical_partial_pooling.html">Hierarchical Partial Pooling</a></li>
-</ul>
-</li>
-<li class="toctree-l2"><a class="reference internal" href="../examples.html#gp">GP</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../examples.html#mixture-models">Mixture Models</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../examples.html#advi">ADVI</a></li>
-</ul>
-</li>
-<li class="toctree-l1"><a class="reference internal" href="../api.html">API Reference</a></li>
-</ul>
-
-            
-          
-        </div>
-      </div>
-    </nav>
-
-    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
-
-      
-      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
-        <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
-        <a href="../index.html">PyMC3</a>
-      </nav>
-
-
-      
-      <div class="wy-nav-content">
-        <div class="rst-content">
-          
-
- 
-
-
-
-<div role="navigation" aria-label="breadcrumbs navigation">
-  <ul class="wy-breadcrumbs">
-    <li><a href="../index.html">Docs</a> &raquo;</li>
-      
-          <li><a href="../examples.html">Examples</a> &raquo;</li>
-      
-    <li>GLM: Model Selection</li>
-      <li class="wy-breadcrumbs-aside">
-        
-          
-            <a href="../_sources/notebooks/GLM-model-selection.ipynb.txt" rel="nofollow"> View page source</a>
-          
-        
-      </li>
-  </ul>
-  <hr/>
-</div>
-          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
-           <div itemprop="articleBody">
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
             
   
 <style>
@@ -170,13 +49,15 @@
 
 /* remove conflicting styling from Sphinx themes */
 div.nbinput,
-div.nbinput > div,
-div.nbinput div[class^=highlight],
-div.nbinput div[class^=highlight] pre,
+div.nbinput div.prompt,
+div.nbinput div.input_area,
+div.nbinput div[class*=highlight],
+div.nbinput div[class*=highlight] pre,
 div.nboutput,
-div.nboutput > div,
-div.nboutput div[class^=highlight],
-div.nboutput div[class^=highlight] pre {
+div.nbinput div.prompt,
+div.nbinput div.output_area,
+div.nboutput div[class*=highlight],
+div.nboutput div[class*=highlight] pre {
     background: none;
     border: none;
     padding: 0 0;
@@ -185,7 +66,7 @@ div.nboutput div[class^=highlight] pre {
 }
 
 /* avoid gaps between output lines */
-div.nboutput div[class^=highlight] pre {
+div.nboutput div[class*=highlight] pre {
     line-height: normal;
 }
 
@@ -196,6 +77,13 @@ div.nboutput {
     display: flex;
     align-items: flex-start;
     margin: 0;
+    width: 100%;
+}
+@media (max-width: 540px) {
+    div.nbinput,
+    div.nboutput {
+        flex-direction: column;
+    }
 }
 
 /* input container */
@@ -209,38 +97,58 @@ div.nblast {
 }
 
 /* input prompt */
-div.nbinput > :first-child pre {
+div.nbinput div.prompt pre {
     color: #303F9F;
 }
 
 /* output prompt */
-div.nboutput > :first-child pre {
+div.nboutput div.prompt pre {
     color: #D84315;
 }
 
 /* all prompts */
-div.nbinput > :first-child[class^=highlight],
-div.nboutput > :first-child[class^=highlight],
-div.nboutput > :first-child {
+div.nbinput div.prompt,
+div.nboutput div.prompt {
     min-width: 8ex;
     padding-top: 0.4em;
     padding-right: 0.4em;
     text-align: right;
     flex: 0;
 }
+@media (max-width: 540px) {
+    div.nbinput div.prompt,
+    div.nboutput div.prompt {
+        text-align: left;
+        padding: 0.4em;
+    }
+    div.nboutput div.prompt.empty {
+        padding: 0;
+    }
+}
+
+/* disable scrollbars on prompts */
+div.nbinput div.prompt pre,
+div.nboutput div.prompt pre {
+    overflow: hidden;
+}
 
 /* input/output area */
-div.nbinput > :nth-child(2)[class^=highlight],
-div.nboutput > :nth-child(2),
-div.nboutput > :nth-child(2)[class^=highlight] {
+div.nbinput div.input_area,
+div.nboutput div.output_area {
     padding: 0.4em;
     -webkit-flex: 1;
     flex: 1;
     overflow: auto;
 }
+@media (max-width: 540px) {
+    div.nbinput div.input_area,
+    div.nboutput div.output_area {
+        width: 100%;
+    }
+}
 
 /* input area */
-div.nbinput > :nth-child(2)[class^=highlight] {
+div.nbinput div.input_area {
     border: 1px solid #cfcfcf;
     border-radius: 2px;
     background: #f7f7f7;
@@ -257,7 +165,7 @@ div.nboutput div.math p {
 }
 
 /* standard error */
-div.nboutput  > :nth-child(2).stderr {
+div.nboutput div.output_area.stderr {
     background: #fdd;
 }
 
@@ -296,38 +204,6 @@ div.nboutput  > :nth-child(2).stderr {
 .ansi-white-intense-bg { background-color: #A1A6B2; }
 
 .ansi-bold { font-weight: bold; }
-
-/* CSS overrides for sphinx_rtd_theme */
-
-/* 24px margin */
-.nbinput.nblast,
-.nboutput.nblast {
-    margin-bottom: 19px;  /* padding has already 5px */
-}
-
-/* ... except between code cells! */
-.nblast + .nbinput {
-    margin-top: -19px;
-}
-
-/* nice headers on first paragraph of info/warning boxes */
-.admonition .first {
-    margin: -12px;
-    padding: 6px 12px;
-    margin-bottom: 12px;
-    color: #fff;
-    line-height: 1;
-    display: block;
-}
-.admonition.warning .first {
-    background: #f0b37e;
-}
-.admonition.note .first {
-    background: #6ab0de;
-}
-.admonition > p:before {
-    margin-right: 4px;  /* make room for the exclamation icon */
-}
 </style>
 <div class="section" id="GLM:-Model-Selection">
 <h1>GLM: Model Selection<a class="headerlink" href="#GLM:-Model-Selection" title="Permalink to this headline">¶</a></h1>
@@ -371,9 +247,9 @@ for Evaluating Fitted Bayesian Models <a class="reference external" href="http:/
 Model</a></li>
 <li><a class="reference external" href="#Create-Higher-Order-Linear-Models">Create Higher-Order Linear
 Models</a></li>
-<li><a class="reference external" href="#Compare-Deviance-Information-Criterion-[DIC]">Compare Deviance Information Criterion
+<li><a class="reference external" href="#Compare-Deviance-Information-Criterion-%5BDIC%5D">Compare Deviance Information Criterion
 (DIC)</a></li>
-<li><a class="reference external" href="#Compare-Watanabe---Akaike-Information-Criterion-[WAIC]">Compare Watanabe-Akaike Information Criterion
+<li><a class="reference external" href="#Compare-Watanabe---Akaike-Information-Criterion-%5BWAIC%5D">Compare Watanabe-Akaike Information Criterion
 (WAIC)</a></li>
 </ul>
 <p><strong>Note:</strong></p>
@@ -416,11 +292,11 @@ $&gt; pip install --process-dependency-links git+https://github.com/pymc-devs/py
 <div class="section" id="Setup">
 <h2>Setup<a class="headerlink" href="#Setup" title="Permalink to this headline">¶</a></h2>
 <div class="nbinput nblast container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [1]:
 </pre></div>
 </div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="o">%</span><span class="k">matplotlib</span> inline
 
 <span class="kn">import</span> <span class="nn">warnings</span>
@@ -429,11 +305,11 @@ $&gt; pip install --process-dependency-links git+https://github.com/pymc-devs/py
 </div>
 </div>
 <div class="nbinput nblast container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [2]:
 </pre></div>
 </div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="kn">from</span> <span class="nn">collections</span> <span class="kn">import</span> <span class="n">OrderedDict</span>
 <span class="kn">from</span> <span class="nn">time</span> <span class="kn">import</span> <span class="n">time</span>
 
@@ -462,11 +338,11 @@ $&gt; pip install --process-dependency-links git+https://github.com/pymc-devs/py
 <div class="section" id="Local-Functions">
 <h3>Local Functions<a class="headerlink" href="#Local-Functions" title="Permalink to this headline">¶</a></h3>
 <div class="nbinput nblast container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [43]:
 </pre></div>
 </div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="k">def</span> <span class="nf">generate_data</span><span class="p">(</span><span class="n">n</span><span class="o">=</span><span class="mi">20</span><span class="p">,</span> <span class="n">p</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">a</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">b</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">c</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">latent_sigma_y</span><span class="o">=</span><span class="mi">20</span><span class="p">):</span>
     <span class="sd">&#39;&#39;&#39;</span>
 <span class="sd">    Create a toy dataset based on a very simple model that we might</span>
@@ -661,9 +537,9 @@ possibilities of data we could generate.</p>
 \[y_{i} = a + bx_{i} + cx_{i}^{2} + \epsilon_{i}\]</div>
 <div class="line-block">
 <div class="line">where:</div>
-<div class="line"><span class="math">\(i \in n\)</span> datapoints</div>
+<div class="line"><span class="math">\(i \in n\)</span> datapoints
+<span class="math">\(\epsilon \sim \mathcal{N}(0,latent\_sigma\_y)\)</span></div>
 </div>
-<p><span class="math">\(\epsilon \sim \mathcal{N}(0,latent\_sigma\_y)\)</span></p>
 <p><strong>NOTE on outliers:</strong></p>
 <ul class="simple">
 <li>We can use value <code class="docutils literal"><span class="pre">p</span></code> to set the (approximate) proportion of
@@ -674,20 +550,20 @@ useful for other modelling, see another example Notebook
 <code class="docutils literal"><span class="pre">GLM-robust-with-outlier-detection.ipynb</span></code></li>
 </ul>
 <div class="nbinput container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [4]:
 </pre></div>
 </div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="n">interactive</span><span class="p">(</span><span class="n">interact_dataset</span><span class="p">,</span> <span class="n">n</span><span class="o">=</span><span class="p">[</span><span class="mi">5</span><span class="p">,</span><span class="mi">50</span><span class="p">,</span><span class="mi">5</span><span class="p">],</span> <span class="n">p</span><span class="o">=</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="o">.</span><span class="mi">5</span><span class="p">,</span><span class="o">.</span><span class="mo">05</span><span class="p">],</span> <span class="n">a</span><span class="o">=</span><span class="p">[</span><span class="o">-</span><span class="mi">50</span><span class="p">,</span><span class="mi">50</span><span class="p">]</span>
             <span class="p">,</span><span class="n">b</span><span class="o">=</span><span class="p">[</span><span class="o">-</span><span class="mi">10</span><span class="p">,</span><span class="mi">10</span><span class="p">],</span> <span class="n">c</span><span class="o">=</span><span class="p">[</span><span class="o">-</span><span class="mi">3</span><span class="p">,</span><span class="mi">3</span><span class="p">],</span> <span class="n">latent_sigma_y</span><span class="o">=</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="mi">1000</span><span class="p">,</span><span class="mi">50</span><span class="p">])</span>
 </pre></div>
 </div>
 </div>
 <div class="nboutput nblast container">
-<div class="container">
+<div class="prompt empty container">
 </div>
-<div class="container">
+<div class="output_area container">
 <img alt="../_images/notebooks_GLM-model-selection_9_0.png" src="../_images/notebooks_GLM-model-selection_9_0.png" />
 </div>
 </div>
@@ -712,11 +588,11 @@ simple.</li>
 <li>Secondly, a quadratic model with small noise</li>
 </ol>
 <div class="nbinput nblast container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [5]:
 </pre></div>
 </div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="n">n</span> <span class="o">=</span> <span class="mi">12</span>
 <span class="n">df_lin</span><span class="p">,</span> <span class="n">dfp_lin</span> <span class="o">=</span> <span class="n">generate_data</span><span class="p">(</span><span class="n">n</span><span class="o">=</span><span class="n">n</span><span class="p">,</span> <span class="n">p</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">a</span><span class="o">=-</span><span class="mi">30</span><span class="p">,</span> <span class="n">b</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span> <span class="n">c</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">latent_sigma_y</span><span class="o">=</span><span class="mi">40</span><span class="p">)</span>
 <span class="n">df_quad</span><span class="p">,</span> <span class="n">dfp_quad</span> <span class="o">=</span> <span class="n">generate_data</span><span class="p">(</span><span class="n">n</span><span class="o">=</span><span class="n">n</span><span class="p">,</span> <span class="n">p</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">a</span><span class="o">=-</span><span class="mi">200</span><span class="p">,</span> <span class="n">b</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">c</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span> <span class="n">latent_sigma_y</span><span class="o">=</span><span class="mi">500</span><span class="p">)</span>
@@ -726,19 +602,19 @@ simple.</li>
 <div class="section" id="Scatterplot-against-model-line">
 <h4>Scatterplot against model line<a class="headerlink" href="#Scatterplot-against-model-line" title="Permalink to this headline">¶</a></h4>
 <div class="nbinput container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [6]:
 </pre></div>
 </div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="n">plot_datasets</span><span class="p">(</span><span class="n">df_lin</span><span class="p">,</span> <span class="n">df_quad</span><span class="p">,</span> <span class="n">dfp_lin</span><span class="p">,</span> <span class="n">dfp_quad</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
 <div class="nboutput nblast container">
-<div class="container">
+<div class="prompt empty container">
 </div>
-<div class="container">
+<div class="output_area container">
 <img alt="../_images/notebooks_GLM-model-selection_15_0.png" src="../_images/notebooks_GLM-model-selection_15_0.png" />
 </div>
 </div>
@@ -756,11 +632,11 @@ will be shown in Blue and the quadratic in Green.</li>
 <div class="section" id="Standardize">
 <h3>Standardize<a class="headerlink" href="#Standardize" title="Permalink to this headline">¶</a></h3>
 <div class="nbinput nblast container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [7]:
 </pre></div>
 </div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="n">dfs_lin</span> <span class="o">=</span> <span class="n">df_lin</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
 <span class="n">dfs_lin</span><span class="p">[</span><span class="s1">&#39;x&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="n">df_lin</span><span class="p">[</span><span class="s1">&#39;x&#39;</span><span class="p">]</span> <span class="o">-</span> <span class="n">df_lin</span><span class="p">[</span><span class="s1">&#39;x&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">mean</span><span class="p">())</span> <span class="o">/</span> <span class="n">df_lin</span><span class="p">[</span><span class="s1">&#39;x&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">std</span><span class="p">()</span>
 
@@ -772,11 +648,11 @@ will be shown in Blue and the quadratic in Green.</li>
 <div class="section" id="Create-ranges-for-later-ylim-xim">
 <h4>Create ranges for later ylim xim<a class="headerlink" href="#Create-ranges-for-later-ylim-xim" title="Permalink to this headline">¶</a></h4>
 <div class="nbinput nblast container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [8]:
 </pre></div>
 </div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="n">dfs_lin_xlims</span> <span class="o">=</span> <span class="p">(</span><span class="n">dfs_lin</span><span class="p">[</span><span class="s1">&#39;x&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">min</span><span class="p">()</span> <span class="o">-</span> <span class="n">np</span><span class="o">.</span><span class="n">ptp</span><span class="p">(</span><span class="n">dfs_lin</span><span class="p">[</span><span class="s1">&#39;x&#39;</span><span class="p">])</span><span class="o">/</span><span class="mi">10</span><span class="p">,</span>
                  <span class="n">dfs_lin</span><span class="p">[</span><span class="s1">&#39;x&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">max</span><span class="p">()</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">ptp</span><span class="p">(</span><span class="n">dfs_lin</span><span class="p">[</span><span class="s1">&#39;x&#39;</span><span class="p">])</span><span class="o">/</span><span class="mi">10</span><span class="p">)</span>
 
@@ -800,11 +676,11 @@ constraints (Ridge Regression):</p>
 <div class="section" id="Define-model-using-ordinary-pymc3-method">
 <h3>Define model using ordinary pymc3 method<a class="headerlink" href="#Define-model-using-ordinary-pymc3-method" title="Permalink to this headline">¶</a></h3>
 <div class="nbinput container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [9]:
 </pre></div>
 </div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="k">with</span> <span class="n">pm</span><span class="o">.</span><span class="n">Model</span><span class="p">()</span> <span class="k">as</span> <span class="n">mdl_ols</span><span class="p">:</span>
     <span class="c1">## define Normal priors to give Ridge regression</span>
     <span class="n">b0</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Normal</span><span class="p">(</span><span class="s1">&#39;b0&#39;</span><span class="p">,</span> <span class="n">mu</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">sd</span><span class="o">=</span><span class="mi">100</span><span class="p">)</span>
@@ -823,9 +699,9 @@ constraints (Ridge Regression):</p>
 </div>
 </div>
 <div class="nboutput nblast container">
-<div class="container">
+<div class="prompt empty container">
 </div>
-<div class="stderr container">
+<div class="stderr output_area container">
 <div class="highlight"><pre>
 Auto-assigning NUTS sampler...
 Initializing NUTS using advi...
@@ -837,19 +713,19 @@ Finished [100%]: Average ELBO = -73.241
 <div class="section" id="View-Traces-after-burn-in">
 <h4>View Traces after burn-in<a class="headerlink" href="#View-Traces-after-burn-in" title="Permalink to this headline">¶</a></h4>
 <div class="nbinput container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [10]:
 </pre></div>
 </div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="n">plot_traces</span><span class="p">(</span><span class="n">traces_ols</span><span class="p">,</span> <span class="n">retain</span><span class="o">=</span><span class="mi">1000</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
 <div class="nboutput nblast container">
-<div class="container">
+<div class="prompt empty container">
 </div>
-<div class="container">
+<div class="output_area container">
 <img alt="../_images/notebooks_GLM-model-selection_26_0.png" src="../_images/notebooks_GLM-model-selection_26_0.png" />
 </div>
 </div>
@@ -871,11 +747,11 @@ especially for defining simple regression models in fewer lines of code.</p>
 launch into using <code class="docutils literal"><span class="pre">glm</span></code> for the rest of the Notebook, here&#8217;s the same
 OLS model as above, defined using <code class="docutils literal"><span class="pre">glm</span></code>.</p>
 <div class="nbinput container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [11]:
 </pre></div>
 </div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="k">with</span> <span class="n">pm</span><span class="o">.</span><span class="n">Model</span><span class="p">()</span> <span class="k">as</span> <span class="n">mdl_ols_glm</span><span class="p">:</span>
     <span class="c1"># setup model with Normal likelihood (which uses HalfCauchy for error prior)</span>
     <span class="n">pm</span><span class="o">.</span><span class="n">glm</span><span class="o">.</span><span class="n">glm</span><span class="p">(</span><span class="s1">&#39;y ~ 1 + x&#39;</span><span class="p">,</span> <span class="n">df_lin</span><span class="p">,</span> <span class="n">family</span><span class="o">=</span><span class="n">pm</span><span class="o">.</span><span class="n">glm</span><span class="o">.</span><span class="n">families</span><span class="o">.</span><span class="n">Normal</span><span class="p">())</span>
@@ -885,9 +761,9 @@ OLS model as above, defined using <code class="docutils literal"><span class="pr
 </div>
 </div>
 <div class="nboutput nblast container">
-<div class="container">
+<div class="prompt empty container">
 </div>
-<div class="stderr container">
+<div class="stderr output_area container">
 <div class="highlight"><pre>
 Auto-assigning NUTS sampler...
 Initializing NUTS using advi...
@@ -899,19 +775,19 @@ Finished [100%]: Average ELBO = -91.636
 <div class="section" id="View-Traces-after-burn-in">
 <h4>View Traces after burn-in<a class="headerlink" href="#View-Traces-after-burn-in" title="Permalink to this headline">¶</a></h4>
 <div class="nbinput container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [12]:
 </pre></div>
 </div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="n">plot_traces</span><span class="p">(</span><span class="n">traces_ols_glm</span><span class="p">,</span> <span class="n">retain</span><span class="o">=</span><span class="mi">1000</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
 <div class="nboutput nblast container">
-<div class="container">
+<div class="prompt empty container">
 </div>
-<div class="container">
+<div class="output_area container">
 <img alt="../_images/notebooks_GLM-model-selection_32_0.png" src="../_images/notebooks_GLM-model-selection_32_0.png" />
 </div>
 </div>
@@ -950,191 +826,191 @@ toy datasets. By default this is for models of order 1 to 5.</p>
 <p>Please see <code class="docutils literal"><span class="pre">run_models()</span></code> above for details. Generally, we&#8217;re creating
 5 polynomial models and fitting each to the chosen dataset</p>
 <div class="nbinput container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [44]:
 </pre></div>
 </div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="n">models_lin</span><span class="p">,</span> <span class="n">traces_lin</span> <span class="o">=</span> <span class="n">run_models</span><span class="p">(</span><span class="n">dfs_lin</span><span class="p">,</span> <span class="mi">5</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
 <div class="nboutput container">
-<div class="container">
+<div class="prompt empty container">
 </div>
-<div class="container">
+<div class="output_area container">
 <div class="highlight"><pre>
 
 Running: k1
 </pre></div></div>
 </div>
 <div class="nboutput container">
-<div class="container">
+<div class="prompt empty container">
 </div>
-<div class="stderr container">
+<div class="stderr output_area container">
 <div class="highlight"><pre>
 100%|██████████| 5000/5000 [00:01&lt;00:00, 3110.85it/s]
 </pre></div></div>
 </div>
 <div class="nboutput container">
-<div class="container">
+<div class="prompt empty container">
 </div>
-<div class="container">
+<div class="output_area container">
 <div class="highlight"><pre>
 
 Running: k2
 </pre></div></div>
 </div>
 <div class="nboutput container">
-<div class="container">
+<div class="prompt empty container">
 </div>
-<div class="stderr container">
+<div class="stderr output_area container">
 <div class="highlight"><pre>
 100%|██████████| 5000/5000 [00:02&lt;00:00, 2399.09it/s]
 </pre></div></div>
 </div>
 <div class="nboutput container">
-<div class="container">
+<div class="prompt empty container">
 </div>
-<div class="container">
+<div class="output_area container">
 <div class="highlight"><pre>
 
 Running: k3
 </pre></div></div>
 </div>
 <div class="nboutput container">
-<div class="container">
+<div class="prompt empty container">
 </div>
-<div class="stderr container">
+<div class="stderr output_area container">
 <div class="highlight"><pre>
 100%|██████████| 5000/5000 [00:02&lt;00:00, 2100.65it/s]
 </pre></div></div>
 </div>
 <div class="nboutput container">
-<div class="container">
+<div class="prompt empty container">
 </div>
-<div class="container">
+<div class="output_area container">
 <div class="highlight"><pre>
 
 Running: k4
 </pre></div></div>
 </div>
 <div class="nboutput container">
-<div class="container">
+<div class="prompt empty container">
 </div>
-<div class="stderr container">
+<div class="stderr output_area container">
 <div class="highlight"><pre>
 100%|██████████| 5000/5000 [00:03&lt;00:00, 1618.59it/s]
 </pre></div></div>
 </div>
 <div class="nboutput container">
-<div class="container">
+<div class="prompt empty container">
 </div>
-<div class="container">
+<div class="output_area container">
 <div class="highlight"><pre>
 
 Running: k5
 </pre></div></div>
 </div>
 <div class="nboutput nblast container">
-<div class="container">
+<div class="prompt empty container">
 </div>
-<div class="stderr container">
+<div class="stderr output_area container">
 <div class="highlight"><pre>
 100%|██████████| 5000/5000 [00:03&lt;00:00, 1432.95it/s]
 </pre></div></div>
 </div>
 <div class="nbinput container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [45]:
 </pre></div>
 </div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="n">models_quad</span><span class="p">,</span> <span class="n">traces_quad</span> <span class="o">=</span> <span class="n">run_models</span><span class="p">(</span><span class="n">dfs_quad</span><span class="p">,</span> <span class="mi">5</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
 <div class="nboutput container">
-<div class="container">
+<div class="prompt empty container">
 </div>
-<div class="container">
+<div class="output_area container">
 <div class="highlight"><pre>
 
 Running: k1
 </pre></div></div>
 </div>
 <div class="nboutput container">
-<div class="container">
+<div class="prompt empty container">
 </div>
-<div class="stderr container">
+<div class="stderr output_area container">
 <div class="highlight"><pre>
 100%|██████████| 5000/5000 [00:01&lt;00:00, 3223.01it/s]
 </pre></div></div>
 </div>
 <div class="nboutput container">
-<div class="container">
+<div class="prompt empty container">
 </div>
-<div class="container">
+<div class="output_area container">
 <div class="highlight"><pre>
 
 Running: k2
 </pre></div></div>
 </div>
 <div class="nboutput container">
-<div class="container">
+<div class="prompt empty container">
 </div>
-<div class="stderr container">
+<div class="stderr output_area container">
 <div class="highlight"><pre>
 100%|██████████| 5000/5000 [00:02&lt;00:00, 2122.66it/s]
 </pre></div></div>
 </div>
 <div class="nboutput container">
-<div class="container">
+<div class="prompt empty container">
 </div>
-<div class="container">
+<div class="output_area container">
 <div class="highlight"><pre>
 
 Running: k3
 </pre></div></div>
 </div>
 <div class="nboutput container">
-<div class="container">
+<div class="prompt empty container">
 </div>
-<div class="stderr container">
+<div class="stderr output_area container">
 <div class="highlight"><pre>
 100%|██████████| 5000/5000 [00:03&lt;00:00, 1611.79it/s]
 </pre></div></div>
 </div>
 <div class="nboutput container">
-<div class="container">
+<div class="prompt empty container">
 </div>
-<div class="container">
+<div class="output_area container">
 <div class="highlight"><pre>
 
 Running: k4
 </pre></div></div>
 </div>
 <div class="nboutput container">
-<div class="container">
+<div class="prompt empty container">
 </div>
-<div class="stderr container">
+<div class="stderr output_area container">
 <div class="highlight"><pre>
 100%|██████████| 5000/5000 [00:03&lt;00:00, 1256.59it/s]
 </pre></div></div>
 </div>
 <div class="nboutput container">
-<div class="container">
+<div class="prompt empty container">
 </div>
-<div class="container">
+<div class="output_area container">
 <div class="highlight"><pre>
 
 Running: k5
 </pre></div></div>
 </div>
 <div class="nboutput nblast container">
-<div class="container">
+<div class="prompt empty container">
 </div>
-<div class="stderr container">
+<div class="stderr output_area container">
 <div class="highlight"><pre>
 100%|██████████| 5000/5000 [00:03&lt;00:00, 1369.04it/s]
 </pre></div></div>
@@ -1144,11 +1020,11 @@ Running: k5
 <div class="section" id="A-really-bad-method-for-model-selection:-compare-likelihoods">
 <h2>A really bad method for model selection: compare likelihoods<a class="headerlink" href="#A-really-bad-method-for-model-selection:-compare-likelihoods" title="Permalink to this headline">¶</a></h2>
 <div class="nbinput nblast container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [46]:
 </pre></div>
 </div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="n">dfll</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">index</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;k1&#39;</span><span class="p">,</span><span class="s1">&#39;k2&#39;</span><span class="p">,</span><span class="s1">&#39;k3&#39;</span><span class="p">,</span><span class="s1">&#39;k4&#39;</span><span class="p">,</span><span class="s1">&#39;k5&#39;</span><span class="p">],</span> <span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;lin&#39;</span><span class="p">,</span><span class="s1">&#39;quad&#39;</span><span class="p">])</span>
 <span class="n">dfll</span><span class="o">.</span><span class="n">index</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="s1">&#39;model&#39;</span>
 
@@ -1161,20 +1037,20 @@ Running: k5
 </div>
 </div>
 <div class="nbinput container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [47]:
 </pre></div>
 </div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="n">g</span> <span class="o">=</span> <span class="n">sns</span><span class="o">.</span><span class="n">factorplot</span><span class="p">(</span><span class="n">x</span><span class="o">=</span><span class="s1">&#39;model&#39;</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="s1">&#39;log_likelihood&#39;</span><span class="p">,</span> <span class="n">col</span><span class="o">=</span><span class="s1">&#39;poly&#39;</span><span class="p">,</span> <span class="n">hue</span><span class="o">=</span><span class="s1">&#39;poly&#39;</span>
                    <span class="p">,</span><span class="n">data</span><span class="o">=</span><span class="n">dfll</span><span class="p">,</span> <span class="n">kind</span><span class="o">=</span><span class="s1">&#39;bar&#39;</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="mi">6</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
 <div class="nboutput nblast container">
-<div class="container">
+<div class="prompt empty container">
 </div>
-<div class="container">
+<div class="output_area container">
 <img alt="../_images/notebooks_GLM-model-selection_44_0.png" src="../_images/notebooks_GLM-model-selection_44_0.png" />
 </div>
 </div>
@@ -1197,11 +1073,11 @@ the posterior predictive fit for the models k1 through k5.</p>
 models exhibit some quite wild swings in the function in order to
 (over)fit the data</p>
 <div class="nbinput container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [30]:
 </pre></div>
 </div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="n">interactive</span><span class="p">(</span><span class="n">plot_posterior_cr</span><span class="p">,</span> <span class="n">models</span><span class="o">=</span><span class="n">fixed</span><span class="p">(</span><span class="n">models_lin</span><span class="p">),</span> <span class="n">traces</span><span class="o">=</span><span class="n">fixed</span><span class="p">(</span><span class="n">traces_lin</span><span class="p">)</span>
             <span class="p">,</span><span class="n">rawdata</span><span class="o">=</span><span class="n">fixed</span><span class="p">(</span><span class="n">dfs_lin</span><span class="p">),</span> <span class="n">xlims</span><span class="o">=</span><span class="n">fixed</span><span class="p">(</span><span class="n">dfs_lin_xlims</span><span class="p">),</span> <span class="n">datamodelnm</span><span class="o">=</span><span class="n">fixed</span><span class="p">(</span><span class="s1">&#39;linear&#39;</span><span class="p">)</span>
             <span class="p">,</span><span class="n">modelnm</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;k1&#39;</span><span class="p">,</span><span class="s1">&#39;k2&#39;</span><span class="p">,</span><span class="s1">&#39;k3&#39;</span><span class="p">,</span><span class="s1">&#39;k4&#39;</span><span class="p">,</span><span class="s1">&#39;k5&#39;</span><span class="p">])</span>
@@ -1209,9 +1085,9 @@ models exhibit some quite wild swings in the function in order to
 </div>
 </div>
 <div class="nboutput nblast container">
-<div class="container">
+<div class="prompt empty container">
 </div>
-<div class="container">
+<div class="output_area container">
 <img alt="../_images/notebooks_GLM-model-selection_47_0.png" src="../_images/notebooks_GLM-model-selection_47_0.png" />
 </div>
 </div>
@@ -1228,11 +1104,11 @@ good results in a variety of cases, see the discussion worth reading in
 <p>DIC has recently been added to PyMC3, so lets see what it tells us about
 our model fits for both datasets.</p>
 <div class="nbinput container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [48]:
 </pre></div>
 </div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="n">dftrc_lin</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">trace_to_dataframe</span><span class="p">(</span><span class="n">traces_lin</span><span class="p">[</span><span class="s1">&#39;k1&#39;</span><span class="p">],</span> <span class="n">hide_transformed_vars</span><span class="o">=</span><span class="bp">False</span><span class="p">)</span>
 <span class="n">trc_lin_logp</span> <span class="o">=</span> <span class="n">dftrc_lin</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">models_lin</span><span class="p">[</span><span class="s1">&#39;k1&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">logp</span><span class="p">(</span><span class="n">x</span><span class="o">.</span><span class="n">to_dict</span><span class="p">()),</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
 <span class="n">mean_deviance</span> <span class="o">=</span> <span class="o">-</span><span class="mi">2</span> <span class="o">*</span> <span class="n">trc_lin_logp</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
@@ -1241,73 +1117,73 @@ our model fits for both datasets.</p>
 </div>
 </div>
 <div class="nboutput nblast container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>Out[48]:
 </pre></div>
 </div>
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="output_area highlight-none"><div class="highlight"><pre>
 <span></span>190.51457821816018
 </pre></div>
 </div>
 </div>
 <div class="nbinput container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [49]:
 </pre></div>
 </div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="n">deviance_at_mean</span> <span class="o">=</span> <span class="o">-</span><span class="mi">2</span> <span class="o">*</span> <span class="n">models_lin</span><span class="p">[</span><span class="s1">&#39;k1&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">logp</span><span class="p">(</span><span class="n">dftrc_lin</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">to_dict</span><span class="p">())</span>
 <span class="n">deviance_at_mean</span>
 </pre></div>
 </div>
 </div>
 <div class="nboutput nblast container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>Out[49]:
 </pre></div>
 </div>
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="output_area highlight-none"><div class="highlight"><pre>
 <span></span>187.44666201867705
 </pre></div>
 </div>
 </div>
 <div class="nbinput container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [50]:
 </pre></div>
 </div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="n">dic_k1</span> <span class="o">=</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">mean_deviance</span> <span class="o">-</span> <span class="n">deviance_at_mean</span>
 <span class="n">dic_k1</span>
 </pre></div>
 </div>
 </div>
 <div class="nboutput nblast container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>Out[50]:
 </pre></div>
 </div>
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="output_area highlight-none"><div class="highlight"><pre>
 <span></span>193.58249441764332
 </pre></div>
 </div>
 </div>
 <div class="nbinput container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [51]:
 </pre></div>
 </div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="n">pm</span><span class="o">.</span><span class="n">stats</span><span class="o">.</span><span class="n">dic</span><span class="p">(</span><span class="n">model</span><span class="o">=</span><span class="n">models_lin</span><span class="p">[</span><span class="s1">&#39;k1&#39;</span><span class="p">],</span> <span class="n">trace</span><span class="o">=</span><span class="n">traces_lin</span><span class="p">[</span><span class="s1">&#39;k1&#39;</span><span class="p">])</span>
 </pre></div>
 </div>
 </div>
 <div class="nboutput nblast container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>Out[51]:
 </pre></div>
 </div>
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="output_area highlight-none"><div class="highlight"><pre>
 <span></span>193.58249441764318
 </pre></div>
 </div>
@@ -1318,11 +1194,11 @@ our model fits for both datasets.</p>
 package method</li>
 </ul>
 <div class="nbinput container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [52]:
 </pre></div>
 </div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="n">dfdic</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">index</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;k1&#39;</span><span class="p">,</span><span class="s1">&#39;k2&#39;</span><span class="p">,</span><span class="s1">&#39;k3&#39;</span><span class="p">,</span><span class="s1">&#39;k4&#39;</span><span class="p">,</span><span class="s1">&#39;k5&#39;</span><span class="p">],</span> <span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;lin&#39;</span><span class="p">,</span><span class="s1">&#39;quad&#39;</span><span class="p">])</span>
 <span class="n">dfdic</span><span class="o">.</span><span class="n">index</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="s1">&#39;model&#39;</span>
 
@@ -1337,9 +1213,9 @@ package method</li>
 </div>
 </div>
 <div class="nboutput nblast container">
-<div class="container">
+<div class="prompt empty container">
 </div>
-<div class="container">
+<div class="output_area container">
 <img alt="../_images/notebooks_GLM-model-selection_58_0.png" src="../_images/notebooks_GLM-model-selection_58_0.png" />
 </div>
 </div>
@@ -1372,21 +1248,21 @@ for details.</p>
 <p>WAIC has also recently been added to PyMC3, so lets see what it tells us
 about our model fits for both datasets.</p>
 <div class="nbinput container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [53]:
 </pre></div>
 </div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="n">pm</span><span class="o">.</span><span class="n">stats</span><span class="o">.</span><span class="n">waic</span><span class="p">(</span><span class="n">model</span><span class="o">=</span><span class="n">models_lin</span><span class="p">[</span><span class="s1">&#39;k1&#39;</span><span class="p">],</span> <span class="n">trace</span><span class="o">=</span><span class="n">traces_lin</span><span class="p">[</span><span class="s1">&#39;k1&#39;</span><span class="p">])</span>
 </pre></div>
 </div>
 </div>
 <div class="nboutput nblast container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>Out[53]:
 </pre></div>
 </div>
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="output_area highlight-none"><div class="highlight"><pre>
 <span></span>(130.81721528352693, 1.248109623573133)
 </pre></div>
 </div>
@@ -1397,11 +1273,11 @@ about our model fits for both datasets.</p>
 lets compare all models</li>
 </ul>
 <div class="nbinput container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [54]:
 </pre></div>
 </div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="n">dfwaic</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">index</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;k1&#39;</span><span class="p">,</span><span class="s1">&#39;k2&#39;</span><span class="p">,</span><span class="s1">&#39;k3&#39;</span><span class="p">,</span><span class="s1">&#39;k4&#39;</span><span class="p">,</span><span class="s1">&#39;k5&#39;</span><span class="p">],</span> <span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;lin&#39;</span><span class="p">,</span><span class="s1">&#39;quad&#39;</span><span class="p">])</span>
 <span class="n">dfwaic</span><span class="o">.</span><span class="n">index</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="s1">&#39;model&#39;</span>
 
@@ -1416,9 +1292,9 @@ lets compare all models</li>
 </div>
 </div>
 <div class="nboutput nblast container">
-<div class="container">
+<div class="prompt empty container">
 </div>
-<div class="container">
+<div class="output_area container">
 <img alt="../_images/notebooks_GLM-model-selection_65_0.png" src="../_images/notebooks_GLM-model-selection_65_0.png" />
 </div>
 </div>
@@ -1480,72 +1356,108 @@ of the model grows beyond a few.</p>
 </div>
 
 
-           </div>
           </div>
-          <footer>
-  
-    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
-      
-        <a href="GLM-rolling-regression.html" class="btn btn-neutral float-right" title="Rolling Regression" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
-      
-      
-        <a href="GLM-robust-with-outlier-detection.html" class="btn btn-neutral" title="GLM: Robust Regression with Outlier Detection" accesskey="p"><span class="fa fa-arrow-circle-left"></span> Previous</a>
-      
-    </div>
-  
-
-  <hr/>
-
-  <div role="contentinfo">
-    <p>
-        &copy; Copyright 2016, John Salvatier, Christopher Fonnesbeck, Thomas Wiecki.
-
-    </p>
-  </div>
-  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
-
-</footer>
-
         </div>
       </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="../index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">GLM: Model Selection</a><ul>
+<li><a class="reference internal" href="#Setup">Setup</a><ul>
+<li><a class="reference internal" href="#Local-Functions">Local Functions</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#Generate-Toy-Datasets">Generate Toy Datasets</a><ul>
+<li><a class="reference internal" href="#Interactively-Draft-Data">Interactively Draft Data</a></li>
+<li><a class="reference internal" href="#Create-Datasets-for-Modelling">Create Datasets for Modelling</a><ul>
+<li><a class="reference internal" href="#Scatterplot-against-model-line">Scatterplot against model line</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#Standardize">Standardize</a><ul>
+<li><a class="reference internal" href="#Create-ranges-for-later-ylim-xim">Create ranges for later ylim xim</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li><a class="reference internal" href="#Demonstrate-Simple-Linear-Model">Demonstrate Simple Linear Model</a><ul>
+<li><a class="reference internal" href="#Define-model-using-ordinary-pymc3-method">Define model using ordinary pymc3 method</a><ul>
+<li><a class="reference internal" href="#View-Traces-after-burn-in">View Traces after burn-in</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#Define-model-using-pymc3-GLM-method">Define model using pymc3 GLM method</a><ul>
+<li><a class="reference internal" href="#View-Traces-after-burn-in">View Traces after burn-in</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li><a class="reference internal" href="#Create-Higher-Order-Linear-Models">Create Higher-Order Linear Models</a><ul>
+<li><a class="reference internal" href="#Create-and-run-polynomial-models">Create and run polynomial models</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#A-really-bad-method-for-model-selection:-compare-likelihoods">A really bad method for model selection: compare likelihoods</a><ul>
+<li><a class="reference internal" href="#View-posterior-predictive-fit">View posterior predictive fit</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#Compare-Deviance-Information-Criterion-[DIC]">Compare Deviance Information Criterion [DIC]</a></li>
+<li><a class="reference internal" href="#Compare-Watanabe---Akaike-Information-Criterion-[WAIC]">Compare Watanabe - Akaike Information Criterion [WAIC]</a></li>
+<li><a class="reference internal" href="#TODO">TODO</a><ul>
+<li><a class="reference internal" href="#K-Fold-Cross-Validation-and/or-Leave-One-Out-(LOO)">K-Fold Cross Validation and/or Leave-One-Out (LOO)</a><ul>
+<li><a class="reference internal" href="#Left-for-future-development---should-be-easy-enough">Left for future development - should be easy enough</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li><a class="reference internal" href="#Bayes-Factor">Bayes Factor</a></li>
+</ul>
+</li>
+</ul>
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../index.html">Documentation overview</a><ul>
+  <li><a href="../examples.html">Examples</a><ul>
+      <li>Previous: <a href="GLM-robust-with-outlier-detection.html" title="previous chapter">GLM: Robust Regression with Outlier Detection</a></li>
+      <li>Next: <a href="GLM-rolling-regression.html" title="next chapter">Rolling Regression</a></li>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="../_sources/notebooks/GLM-model-selection.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2016, John Salvatier, Christopher Fonnesbeck, Thomas Wiecki.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.4.6</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.9</a>
+      
+      |
+      <a href="../_sources/notebooks/GLM-model-selection.txt"
+          rel="nofollow">Page source</a>
+    </div>
 
-    </section>
+    
 
-  </div>
-  
-
-
-  
-
-    <script type="text/javascript">
-        var DOCUMENTATION_OPTIONS = {
-            URL_ROOT:'../',
-            VERSION:'3.0',
-            COLLAPSE_INDEX:false,
-            FILE_SUFFIX:'.html',
-            HAS_SOURCE:  true
-        };
-    </script>
-      <script type="text/javascript" src="../_static/jquery.js"></script>
-      <script type="text/javascript" src="../_static/underscore.js"></script>
-      <script type="text/javascript" src="../_static/doctools.js"></script>
-      <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
-
-  
-
-  
-  
-    <script type="text/javascript" src="../_static/js/theme.js"></script>
-  
-
-  
-  
-  <script type="text/javascript">
-      jQuery(function () {
-          SphinxRtdTheme.StickyNav.enable();
-      });
-  </script>
-   
-
-</body>
+    
+  </body>
 </html>

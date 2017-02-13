@@ -1,227 +1,55 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 
 
-<!DOCTYPE html>
-<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
-<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
-<head>
-  <meta charset="utf-8">
-  
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  
-  <title>Examples &mdash; PyMC3 3.0 documentation</title>
-  
-
-  
-  
-
-  
-
-  
-  
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     
-
-  
-
-  
-  
-    <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
-  
-
-  
-
-  
-        <link rel="index" title="Index"
-              href="genindex.html"/>
-        <link rel="search" title="Search" href="search.html"/>
-    <link rel="top" title="PyMC3 3.0 documentation" href="index.html"/>
-        <link rel="next" title="Posterior Predictive Checks" href="notebooks/posterior_predictive.html"/>
-        <link rel="prev" title="Getting started with PyMC3" href="notebooks/getting_started.html"/> 
-
-  
-  <script src="_static/js/modernizr.min.js"></script>
-
-</head>
-
-<body class="wy-body-for-nav" role="document">
-
-  <div class="wy-grid-for-nav">
-
+    <title>Examples &#8212; PyMC3 3.0 documentation</title>
     
-    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
-      <div class="wy-side-scroll">
-        <div class="wy-side-nav-search">
-          
-
-          
-            <a href="index.html" class="icon icon-home"> PyMC3
-          
-
-          
-          </a>
-
-          
-            
-            
-              <div class="version">
-                3.0
-              </div>
-            
-          
-
-          
-<div role="search">
-  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
-    <input type="text" name="q" placeholder="Search docs" />
-    <input type="hidden" name="check_keywords" value="yes" />
-    <input type="hidden" name="area" value="default" />
-  </form>
-</div>
-
-          
-        </div>
-
-        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
-          
-            
-            
-                <ul class="current">
-<li class="toctree-l1"><a class="reference internal" href="getting_started.html">Getting started</a></li>
-<li class="toctree-l1 current"><a class="current reference internal" href="#">Examples</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="#howto">Howto</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="notebooks/posterior_predictive.html">Posterior Predictive Checks</a></li>
-<li class="toctree-l3"><a class="reference internal" href="notebooks/howto_debugging.html">How to debug a model</a></li>
-<li class="toctree-l3"><a class="reference internal" href="notebooks/LKJ.html">LKJ Prior for fitting a Multivariate Normal Model</a></li>
-</ul>
-</li>
-<li class="toctree-l2"><a class="reference internal" href="#applied">Applied</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="notebooks/BEST.html">Bayesian Estimation Supersedes the T-Test</a></li>
-<li class="toctree-l3"><a class="reference internal" href="notebooks/stochastic_volatility.html">Stochastic Volatility model</a></li>
-<li class="toctree-l3"><a class="reference internal" href="notebooks/rugby_analytics.html">A Hierarchical model for Rugby prediction</a></li>
-<li class="toctree-l3"><a class="reference internal" href="notebooks/survival_analysis.html">Bayesian Survival Analysis</a></li>
-<li class="toctree-l3"><a class="reference internal" href="notebooks/dawid-skene.html">The Dawid-Skene model with priors</a></li>
-</ul>
-</li>
-<li class="toctree-l2"><a class="reference internal" href="#glm">GLM</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="notebooks/GLM-linear.html">GLM: Linear regression</a></li>
-<li class="toctree-l3"><a class="reference internal" href="notebooks/GLM-robust.html">GLM: Robust Linear Regression</a></li>
-<li class="toctree-l3"><a class="reference internal" href="notebooks/GLM-robust-with-outlier-detection.html">GLM: Robust Regression with Outlier Detection</a></li>
-<li class="toctree-l3"><a class="reference internal" href="notebooks/GLM-model-selection.html">GLM: Model Selection</a></li>
-<li class="toctree-l3"><a class="reference internal" href="notebooks/GLM-rolling-regression.html">Rolling Regression</a></li>
-<li class="toctree-l3"><a class="reference internal" href="notebooks/GLM-hierarchical.html">GLM: Hierarchical Linear Regression</a></li>
-<li class="toctree-l3"><a class="reference internal" href="notebooks/GLM-poisson-regression.html">GLM: Poisson Regression</a></li>
-<li class="toctree-l3"><a class="reference internal" href="notebooks/hierarchical_partial_pooling.html">Hierarchical Partial Pooling</a></li>
-<li class="toctree-l3"><a class="reference internal" href="notebooks/GLM-negative-binomial-regression.html">GLM: Negative Binomial Regression</a></li>
-</ul>
-</li>
-<li class="toctree-l2"><a class="reference internal" href="#gp">GP</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="notebooks/GP-introduction.html">Gaussian Process Regression</a></li>
-<li class="toctree-l3"><a class="reference internal" href="notebooks/GP-covariances.html">Kernels / Covariance functions</a></li>
-<li class="toctree-l3"><a class="reference internal" href="notebooks/GP-smoothing.html">Gaussian Process (GP) smoothing</a></li>
-</ul>
-</li>
-<li class="toctree-l2"><a class="reference internal" href="#mixture-models">Mixture Models</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="notebooks/gaussian_mixture_model.html">Gaussian Mixture Model</a></li>
-<li class="toctree-l3"><a class="reference internal" href="notebooks/marginalized_gaussian_mixture_model.html">Marginalized Gaussian Mixture Model</a></li>
-<li class="toctree-l3"><a class="reference internal" href="notebooks/gaussian-mixture-model-advi.html">Gaussian Mixture Model with ADVI</a></li>
-<li class="toctree-l3"><a class="reference internal" href="notebooks/dp_mix.html">Dirichlet process mixtures for density estimation</a></li>
-<li class="toctree-l3"><a class="reference internal" href="notebooks/dependent_density_regression.html">Dependent density regression</a></li>
-</ul>
-</li>
-<li class="toctree-l2"><a class="reference internal" href="#advi">ADVI</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="notebooks/GLM-hierarchical-ADVI.html">GLM: Hierarchical Linear Regression with ADVI</a></li>
-<li class="toctree-l3"><a class="reference internal" href="notebooks/GLM-hierarchical-advi-minibatch.html">GLM: Mini-batch ADVI on hierarchical regression model</a></li>
-<li class="toctree-l3"><a class="reference internal" href="notebooks/lda-advi-aevb.html">Automatic autoencoding variational Bayes for latent dirichlet allocation with PyMC3</a></li>
-<li class="toctree-l3"><a class="reference internal" href="notebooks/bayesian_neural_network_advi.html">Variational Inference: Bayesian Neural Networks</a></li>
-<li class="toctree-l3"><a class="reference internal" href="notebooks/convolutional_vae_keras_advi.html">Convolutional variational autoencoder with PyMC3 and Keras</a></li>
-</ul>
-</li>
-</ul>
-</li>
-<li class="toctree-l1"><a class="reference internal" href="api.html">API Reference</a></li>
-</ul>
-
-            
-          
-        </div>
-      </div>
-    </nav>
-
-    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
-
-      
-      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
-        <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
-        <a href="index.html">PyMC3</a>
-      </nav>
-
-
-      
-      <div class="wy-nav-content">
-        <div class="rst-content">
-          
-
- 
-
-
-
-<div role="navigation" aria-label="breadcrumbs navigation">
-  <ul class="wy-breadcrumbs">
-    <li><a href="index.html">Docs</a> &raquo;</li>
-      
-    <li>Examples</li>
-      <li class="wy-breadcrumbs-aside">
-        
-          
-            <a href="_sources/examples.rst.txt" rel="nofollow"> View page source</a>
-          
-        
-      </li>
-  </ul>
-  <hr/>
-</div>
-          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
-           <div itemprop="articleBody">
-            
+    <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    './',
+        VERSION:     '3.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="top" title="PyMC3 3.0 documentation" href="index.html" />
+    <link rel="next" title="Sampler statistics" href="notebooks/sampler-stats.html" />
+    <link rel="prev" title="Getting started with PyMC3" href="notebooks/getting_started.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
   
-<style>
-/* CSS overrides for sphinx_rtd_theme */
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
 
-/* 24px margin */
-.nbinput.nblast,
-.nboutput.nblast {
-    margin-bottom: 19px;  /* padding has already 5px */
-}
+  </head>
+  <body role="document">
+  
 
-/* ... except between code cells! */
-.nblast + .nbinput {
-    margin-top: -19px;
-}
-
-/* nice headers on first paragraph of info/warning boxes */
-.admonition .first {
-    margin: -12px;
-    padding: 6px 12px;
-    margin-bottom: 12px;
-    color: #fff;
-    line-height: 1;
-    display: block;
-}
-.admonition.warning .first {
-    background: #f0b37e;
-}
-.admonition.note .first {
-    background: #6ab0de;
-}
-.admonition > p:before {
-    margin-right: 4px;  /* make room for the exclamation icon */
-}
-</style>
-<div class="section" id="examples">
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="examples">
 <span id="id1"></span><h1>Examples<a class="headerlink" href="#examples" title="Permalink to this headline">¶</a></h1>
 <div class="section" id="howto">
 <h2>Howto<a class="headerlink" href="#howto" title="Permalink to this headline">¶</a></h2>
 <div class="toctree-wrapper compound">
 <ul>
+<li class="toctree-l1"><a class="reference internal" href="notebooks/sampler-stats.html">Sampler statistics</a></li>
+<li class="toctree-l1"><a class="reference internal" href="notebooks/sampler-stats.html#Multiple-samplers">Multiple samplers</a></li>
 <li class="toctree-l1"><a class="reference internal" href="notebooks/posterior_predictive.html">Posterior Predictive Checks</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="notebooks/posterior_predictive.html#Comparison-between-PPC-and-other-model-evaluation-methods.">Comparison between PPC and other model evaluation methods.</a></li>
 <li class="toctree-l2"><a class="reference internal" href="notebooks/posterior_predictive.html#Prediction">Prediction</a><ul>
@@ -584,72 +412,67 @@
 </div>
 
 
-           </div>
           </div>
-          <footer>
-  
-    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
-      
-        <a href="notebooks/posterior_predictive.html" class="btn btn-neutral float-right" title="Posterior Predictive Checks" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
-      
-      
-        <a href="notebooks/getting_started.html" class="btn btn-neutral" title="Getting started with PyMC3" accesskey="p"><span class="fa fa-arrow-circle-left"></span> Previous</a>
-      
-    </div>
-  
-
-  <hr/>
-
-  <div role="contentinfo">
-    <p>
-        &copy; Copyright 2016, John Salvatier, Christopher Fonnesbeck, Thomas Wiecki.
-
-    </p>
-  </div>
-  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
-
-</footer>
-
         </div>
       </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">Examples</a><ul>
+<li><a class="reference internal" href="#howto">Howto</a></li>
+<li><a class="reference internal" href="#applied">Applied</a></li>
+<li><a class="reference internal" href="#glm">GLM</a></li>
+<li><a class="reference internal" href="#gp">GP</a></li>
+<li><a class="reference internal" href="#mixture-models">Mixture Models</a></li>
+<li><a class="reference internal" href="#advi">ADVI</a></li>
+</ul>
+</li>
+</ul>
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="notebooks/getting_started.html" title="previous chapter">Getting started with PyMC3</a></li>
+      <li>Next: <a href="notebooks/sampler-stats.html" title="next chapter">Sampler statistics</a></li>
+  </ul></li>
+</ul>
+</div>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/examples.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2016, John Salvatier, Christopher Fonnesbeck, Thomas Wiecki.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.4.6</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.9</a>
+      
+      |
+      <a href="_sources/examples.txt"
+          rel="nofollow">Page source</a>
+    </div>
 
-    </section>
+    
 
-  </div>
-  
-
-
-  
-
-    <script type="text/javascript">
-        var DOCUMENTATION_OPTIONS = {
-            URL_ROOT:'./',
-            VERSION:'3.0',
-            COLLAPSE_INDEX:false,
-            FILE_SUFFIX:'.html',
-            HAS_SOURCE:  true
-        };
-    </script>
-      <script type="text/javascript" src="_static/jquery.js"></script>
-      <script type="text/javascript" src="_static/underscore.js"></script>
-      <script type="text/javascript" src="_static/doctools.js"></script>
-      <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
-
-  
-
-  
-  
-    <script type="text/javascript" src="_static/js/theme.js"></script>
-  
-
-  
-  
-  <script type="text/javascript">
-      jQuery(function () {
-          SphinxRtdTheme.StickyNav.enable();
-      });
-  </script>
-   
-
-</body>
+    
+  </body>
 </html>

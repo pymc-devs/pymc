@@ -1,134 +1,44 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 
 
-<!DOCTYPE html>
-<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
-<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
-<head>
-  <meta charset="utf-8">
-  
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  
-  <title>Edward code &mdash; PyMC3 3.0 documentation</title>
-  
-
-  
-  
-
-  
-
-  
-  
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     
-
-  
-
-  
-  
-    <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
-  
-
-  
-
-  
-        <link rel="index" title="Index"
-              href="../genindex.html"/>
-        <link rel="search" title="Search" href="../search.html"/>
-    <link rel="top" title="PyMC3 3.0 documentation" href="../index.html"/> 
-
-  
-  <script src="../_static/js/modernizr.min.js"></script>
-
-</head>
-
-<body class="wy-body-for-nav" role="document">
-
-  <div class="wy-grid-for-nav">
-
+    <title>Edward code &#8212; PyMC3 3.0 documentation</title>
     
-    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
-      <div class="wy-side-scroll">
-        <div class="wy-side-nav-search">
-          
+    <link rel="stylesheet" href="../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '3.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="top" title="PyMC3 3.0 documentation" href="../index.html" />
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
 
-          
-            <a href="../index.html" class="icon icon-home"> PyMC3
-          
+  </head>
+  <body role="document">
+  
 
-          
-          </a>
-
-          
-            
-            
-              <div class="version">
-                3.0
-              </div>
-            
-          
-
-          
-<div role="search">
-  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
-    <input type="text" name="q" placeholder="Search docs" />
-    <input type="hidden" name="check_keywords" value="yes" />
-    <input type="hidden" name="area" value="default" />
-  </form>
-</div>
-
-          
-        </div>
-
-        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
-          
-            
-            
-                <ul>
-<li class="toctree-l1"><a class="reference internal" href="../getting_started.html">Getting started</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../examples.html">Examples</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../api.html">API Reference</a></li>
-</ul>
-
-            
-          
-        </div>
-      </div>
-    </nav>
-
-    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
-
-      
-      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
-        <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
-        <a href="../index.html">PyMC3</a>
-      </nav>
-
-
-      
-      <div class="wy-nav-content">
-        <div class="rst-content">
-          
-
- 
-
-
-
-<div role="navigation" aria-label="breadcrumbs navigation">
-  <ul class="wy-breadcrumbs">
-    <li><a href="../index.html">Docs</a> &raquo;</li>
-      
-    <li>Edward code</li>
-      <li class="wy-breadcrumbs-aside">
-        
-          
-            <a href="../_sources/notebooks/hmc_experiments.ipynb.txt" rel="nofollow"> View page source</a>
-          
-        
-      </li>
-  </ul>
-  <hr/>
-</div>
-          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
-           <div itemprop="articleBody">
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
             
   
 <style>
@@ -136,13 +46,15 @@
 
 /* remove conflicting styling from Sphinx themes */
 div.nbinput,
-div.nbinput > div,
-div.nbinput div[class^=highlight],
-div.nbinput div[class^=highlight] pre,
+div.nbinput div.prompt,
+div.nbinput div.input_area,
+div.nbinput div[class*=highlight],
+div.nbinput div[class*=highlight] pre,
 div.nboutput,
-div.nboutput > div,
-div.nboutput div[class^=highlight],
-div.nboutput div[class^=highlight] pre {
+div.nbinput div.prompt,
+div.nbinput div.output_area,
+div.nboutput div[class*=highlight],
+div.nboutput div[class*=highlight] pre {
     background: none;
     border: none;
     padding: 0 0;
@@ -151,7 +63,7 @@ div.nboutput div[class^=highlight] pre {
 }
 
 /* avoid gaps between output lines */
-div.nboutput div[class^=highlight] pre {
+div.nboutput div[class*=highlight] pre {
     line-height: normal;
 }
 
@@ -162,6 +74,13 @@ div.nboutput {
     display: flex;
     align-items: flex-start;
     margin: 0;
+    width: 100%;
+}
+@media (max-width: 540px) {
+    div.nbinput,
+    div.nboutput {
+        flex-direction: column;
+    }
 }
 
 /* input container */
@@ -175,38 +94,58 @@ div.nblast {
 }
 
 /* input prompt */
-div.nbinput > :first-child pre {
+div.nbinput div.prompt pre {
     color: #303F9F;
 }
 
 /* output prompt */
-div.nboutput > :first-child pre {
+div.nboutput div.prompt pre {
     color: #D84315;
 }
 
 /* all prompts */
-div.nbinput > :first-child[class^=highlight],
-div.nboutput > :first-child[class^=highlight],
-div.nboutput > :first-child {
+div.nbinput div.prompt,
+div.nboutput div.prompt {
     min-width: 8ex;
     padding-top: 0.4em;
     padding-right: 0.4em;
     text-align: right;
     flex: 0;
 }
+@media (max-width: 540px) {
+    div.nbinput div.prompt,
+    div.nboutput div.prompt {
+        text-align: left;
+        padding: 0.4em;
+    }
+    div.nboutput div.prompt.empty {
+        padding: 0;
+    }
+}
+
+/* disable scrollbars on prompts */
+div.nbinput div.prompt pre,
+div.nboutput div.prompt pre {
+    overflow: hidden;
+}
 
 /* input/output area */
-div.nbinput > :nth-child(2)[class^=highlight],
-div.nboutput > :nth-child(2),
-div.nboutput > :nth-child(2)[class^=highlight] {
+div.nbinput div.input_area,
+div.nboutput div.output_area {
     padding: 0.4em;
     -webkit-flex: 1;
     flex: 1;
     overflow: auto;
 }
+@media (max-width: 540px) {
+    div.nbinput div.input_area,
+    div.nboutput div.output_area {
+        width: 100%;
+    }
+}
 
 /* input area */
-div.nbinput > :nth-child(2)[class^=highlight] {
+div.nbinput div.input_area {
     border: 1px solid #cfcfcf;
     border-radius: 2px;
     background: #f7f7f7;
@@ -223,7 +162,7 @@ div.nboutput div.math p {
 }
 
 /* standard error */
-div.nboutput  > :nth-child(2).stderr {
+div.nboutput div.output_area.stderr {
     background: #fdd;
 }
 
@@ -262,59 +201,26 @@ div.nboutput  > :nth-child(2).stderr {
 .ansi-white-intense-bg { background-color: #A1A6B2; }
 
 .ansi-bold { font-weight: bold; }
-
-/* CSS overrides for sphinx_rtd_theme */
-
-/* 24px margin */
-.nbinput.nblast,
-.nboutput.nblast {
-    margin-bottom: 19px;  /* padding has already 5px */
-}
-
-/* ... except between code cells! */
-.nblast + .nbinput {
-    margin-top: -19px;
-}
-
-/* nice headers on first paragraph of info/warning boxes */
-.admonition .first {
-    margin: -12px;
-    padding: 6px 12px;
-    margin-bottom: 12px;
-    color: #fff;
-    line-height: 1;
-    display: block;
-}
-.admonition.warning .first {
-    background: #f0b37e;
-}
-.admonition.note .first {
-    background: #6ab0de;
-}
-.admonition > p:before {
-    margin-right: 4px;  /* make room for the exclamation icon */
-}
 </style>
 <div class="nbinput nblast container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [1]:
 </pre></div>
 </div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="kn">import</span> <span class="nn">sklearn.datasets</span>
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="kn">as</span> <span class="nn">np</span>
-<span class="kn">import</span> <span class="nn">time</span>
 </pre></div>
 </div>
 </div>
 <div class="nbinput nblast container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [2]:
 </pre></div>
 </div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="n">data</span> <span class="o">=</span> <span class="n">sklearn</span><span class="o">.</span><span class="n">datasets</span><span class="o">.</span><span class="n">covtype</span><span class="o">.</span><span class="n">fetch_covtype</span><span class="p">()</span>
-<span class="n">x</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
+<span class="n">x</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">data</span><span class="c1">#.astype(np.float32)</span>
 <span class="n">y</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">target</span>
 
 <span class="n">x</span> <span class="o">=</span> <span class="n">x</span> <span class="o">-</span> <span class="n">x</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
@@ -324,29 +230,29 @@ div.nboutput  > :nth-child(2).stderr {
 <span class="n">D</span> <span class="o">=</span> <span class="n">x</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="mi">1</span>
 
 <span class="c1"># Add a constant column for the intercept</span>
-<span class="n">x</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">hstack</span><span class="p">([</span><span class="n">x</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">([</span><span class="n">N</span><span class="p">,</span> <span class="mi">1</span><span class="p">],</span> <span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)])</span>
+<span class="n">x</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">hstack</span><span class="p">([</span><span class="n">x</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">([</span><span class="n">N</span><span class="p">,</span> <span class="mi">1</span><span class="p">])])</span><span class="c1">#, np.float32)])</span>
 </pre></div>
 </div>
 </div>
 <div class="nbinput nblast container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [3]:
 </pre></div>
 </div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="c1"># Which category to binarize on</span>
 <span class="n">values</span><span class="p">,</span> <span class="n">counts</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">unique</span><span class="p">(</span><span class="n">y</span><span class="p">,</span> <span class="n">return_counts</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
 <span class="n">binarize_on</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">argmax</span><span class="p">(</span><span class="n">counts</span><span class="p">)</span>
-<span class="n">y</span> <span class="o">=</span> <span class="p">(</span><span class="n">y</span> <span class="o">==</span> <span class="n">binarize_on</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
+<span class="n">y</span> <span class="o">=</span> <span class="p">(</span><span class="n">y</span> <span class="o">==</span> <span class="n">binarize_on</span><span class="p">)</span><span class="c1">#.astype(np.float32)</span>
 </pre></div>
 </div>
 </div>
 <div class="nbinput nblast container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [4]:
 </pre></div>
 </div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="n">step_size</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="mf">0.5</span> <span class="o">/</span> <span class="n">N</span><span class="p">)</span>
 <span class="n">n_steps</span> <span class="o">=</span> <span class="mi">10</span>
 <span class="n">n_iterations</span> <span class="o">=</span> <span class="mi">1000</span>
@@ -356,13 +262,13 @@ div.nboutput  > :nth-child(2).stderr {
 <div class="section" id="Edward-code">
 <h1>Edward code<a class="headerlink" href="#Edward-code" title="Permalink to this headline">¶</a></h1>
 <div class="nbinput nblast container">
-<div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [14]:
+<div class="prompt highlight-none"><div class="highlight"><pre>
+<span></span>In [5]:
 </pre></div>
 </div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="kn">import</span> <span class="nn">tensorflow</span> <span class="kn">as</span> <span class="nn">tf</span>
-<span class="c1">#sys.path.insert(0, &#39;/usr/local/google/home/mhoffman/research/edward/&#39;)</span>
+<span class="n">sys</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">insert</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="s1">&#39;/usr/local/google/home/mhoffman/research/edward/&#39;</span><span class="p">)</span>
 
 <span class="kn">import</span> <span class="nn">edward</span> <span class="kn">as</span> <span class="nn">ed</span>
 
@@ -374,11 +280,11 @@ div.nboutput  > :nth-child(2).stderr {
 </div>
 </div>
 <div class="nbinput container">
-<div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [15]:
+<div class="prompt highlight-none"><div class="highlight"><pre>
+<span></span>In [25]:
 </pre></div>
 </div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="c1"># MODEL</span>
 <span class="n">tf_x</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">Variable</span><span class="p">(</span><span class="n">x</span><span class="o">.</span><span class="n">T</span><span class="p">,</span> <span class="n">trainable</span><span class="o">=</span><span class="bp">False</span><span class="p">)</span>
 
@@ -399,62 +305,80 @@ div.nboutput  > :nth-child(2).stderr {
 </div>
 </div>
 <div class="nboutput nblast container">
-<div class="container">
+<div class="prompt empty container">
 </div>
-<div class="container">
+<div class="output_area container">
 <div class="highlight"><pre>
 Iteration    1 [  0%]: Acceptance Rate = nan
 Iteration  100 [ 10%]: Acceptance Rate = 1.00
-Iteration  200 [ 20%]: Acceptance Rate = 0.97
-Iteration  300 [ 30%]: Acceptance Rate = 0.94
-Iteration  400 [ 40%]: Acceptance Rate = 0.93
-Iteration  500 [ 50%]: Acceptance Rate = 0.93
-Iteration  600 [ 60%]: Acceptance Rate = 0.92
-Iteration  700 [ 70%]: Acceptance Rate = 0.93
-Iteration  800 [ 80%]: Acceptance Rate = 0.93
-Iteration  900 [ 90%]: Acceptance Rate = 0.93
-Iteration 1000 [100%]: Acceptance Rate = 0.92
+Iteration  200 [ 20%]: Acceptance Rate = 0.96
+Iteration  300 [ 30%]: Acceptance Rate = 0.96
+Iteration  400 [ 40%]: Acceptance Rate = 0.96
+Iteration  500 [ 50%]: Acceptance Rate = 0.97
+Iteration  600 [ 60%]: Acceptance Rate = 0.97
+Iteration  700 [ 70%]: Acceptance Rate = 0.97
+Iteration  800 [ 80%]: Acceptance Rate = 0.97
+Iteration  900 [ 90%]: Acceptance Rate = 0.97
+Iteration 1000 [100%]: Acceptance Rate = 0.97
+took 56.958 seconds
 </pre></div></div>
 </div>
 <div class="nbinput container">
-<div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [16]:
+<div class="prompt highlight-none"><div class="highlight"><pre>
+<span></span>In [26]:
 </pre></div>
 </div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span><span class="k">print</span><span class="p">(</span><span class="s1">&#39;Edward took </span><span class="si">%.3f</span><span class="s1"> seconds&#39;</span> <span class="o">%</span> <span class="n">ed_time</span><span class="p">)</span>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="k">print</span> <span class="s1">&#39;Edward took </span><span class="si">%.3f</span><span class="s1"> seconds&#39;</span> <span class="o">%</span> <span class="n">ed_time</span>
 </pre></div>
 </div>
 </div>
 <div class="nboutput nblast container">
-<div class="container">
+<div class="prompt empty container">
 </div>
-<div class="container">
+<div class="output_area container">
 <div class="highlight"><pre>
-Edward took 76.373 seconds
+Edward took 56.958 seconds
 </pre></div></div>
 </div>
-<div class="nbinput nblast container">
-<div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [ ]:
+<div class="nbinput container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
+<span></span>In [7]:
 </pre></div>
 </div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="n">sess</span> <span class="o">=</span> <span class="n">ed</span><span class="o">.</span><span class="n">get_session</span><span class="p">()</span>
 <span class="n">ed_samples</span> <span class="o">=</span> <span class="n">sess</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">qbeta</span><span class="o">.</span><span class="n">params</span><span class="p">)</span>
 <span class="n">plot</span><span class="p">(</span><span class="n">ed_samples</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">])</span>
 </pre></div>
 </div>
 </div>
+<div class="nboutput container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
+<span></span>Out[7]:
+</pre></div>
+</div>
+<div class="output_area highlight-none"><div class="highlight"><pre>
+<span></span>[&lt;matplotlib.lines.Line2D at 0x7fbfdc5d8210&gt;]
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="prompt empty container">
+</div>
+<div class="output_area container">
+<img alt="../_images/notebooks_hmc_experiments_8_1.png" src="../_images/notebooks_hmc_experiments_8_1.png" />
+</div>
+</div>
 </div>
 <div class="section" id="Handwritten-HMC-code">
 <h1>Handwritten HMC code<a class="headerlink" href="#Handwritten-HMC-code" title="Permalink to this headline">¶</a></h1>
 <div class="nbinput nblast container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [8]:
 </pre></div>
 </div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="k">def</span> <span class="nf">leapfrog</span><span class="p">(</span><span class="n">logp_grad</span><span class="p">,</span> <span class="n">step_size</span><span class="p">,</span> <span class="n">z</span><span class="p">,</span> <span class="n">momentum</span><span class="p">,</span> <span class="n">last_grad</span><span class="p">):</span>
     <span class="n">momentum</span> <span class="o">=</span> <span class="n">momentum</span> <span class="o">+</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="n">step_size</span> <span class="o">*</span> <span class="n">last_grad</span>
     <span class="n">z</span> <span class="o">=</span> <span class="n">z</span> <span class="o">+</span> <span class="n">step_size</span> <span class="o">*</span> <span class="n">momentum</span>
@@ -491,11 +415,11 @@ Edward took 76.373 seconds
 </div>
 </div>
 <div class="nbinput container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [9]:
 </pre></div>
 </div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="n">t0</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
 <span class="n">beta</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">D</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
 <span class="n">np_samples</span> <span class="o">=</span> <span class="p">[]</span>
@@ -510,9 +434,9 @@ Edward took 76.373 seconds
 </div>
 </div>
 <div class="nboutput nblast container">
-<div class="container">
+<div class="prompt empty container">
 </div>
-<div class="container">
+<div class="output_area container">
 <div class="highlight"><pre>
 0
 10
@@ -618,29 +542,29 @@ Numpy (CPU) took 534.883 seconds
 </pre></div></div>
 </div>
 <div class="nbinput container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [10]:
 </pre></div>
 </div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="n">plot</span><span class="p">(</span><span class="n">np_samples</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">])</span>
 </pre></div>
 </div>
 </div>
 <div class="nboutput container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>Out[10]:
 </pre></div>
 </div>
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="output_area highlight-none"><div class="highlight"><pre>
 <span></span>[&lt;matplotlib.lines.Line2D at 0x7fbfe427c150&gt;]
 </pre></div>
 </div>
 </div>
 <div class="nboutput nblast container">
-<div class="container">
+<div class="prompt empty container">
 </div>
-<div class="container">
+<div class="output_area container">
 <img alt="../_images/notebooks_hmc_experiments_12_1.png" src="../_images/notebooks_hmc_experiments_12_1.png" />
 </div>
 </div>
@@ -648,21 +572,21 @@ Numpy (CPU) took 534.883 seconds
 <div class="section" id="PyStan">
 <h1>PyStan<a class="headerlink" href="#PyStan" title="Permalink to this headline">¶</a></h1>
 <div class="nbinput nblast container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [11]:
 </pre></div>
 </div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="kn">import</span> <span class="nn">pystan</span>
 </pre></div>
 </div>
 </div>
 <div class="nbinput container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [ ]:
 </pre></div>
 </div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="n">model_code</span> <span class="o">=</span> <span class="s1">&#39;&#39;&#39;</span>
 <span class="s1">data {</span>
 <span class="s1">    int N;</span>
@@ -684,19 +608,19 @@ Numpy (CPU) took 534.883 seconds
 </div>
 </div>
 <div class="nboutput nblast container">
-<div class="container">
+<div class="prompt empty container">
 </div>
-<div class="stderr container">
+<div class="stderr output_area container">
 <div class="highlight"><pre>
 INFO:pystan:COMPILING THE C++ CODE FOR MODEL anon_model_976aaa495a9359c3216a14ee7a2eb583 NOW.
 </pre></div></div>
 </div>
 <div class="nbinput container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [19]:
 </pre></div>
 </div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="n">t0</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
 <span class="n">control</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;stepsize&#39;</span><span class="p">:</span><span class="n">step_size</span><span class="p">,</span> <span class="s1">&#39;int_time&#39;</span><span class="p">:</span><span class="n">n_steps</span><span class="o">*</span><span class="n">step_size</span><span class="p">,</span>
            <span class="s1">&#39;adapt_engaged&#39;</span><span class="p">:</span><span class="bp">False</span><span class="p">,</span> <span class="s1">&#39;stepsize_jitter&#39;</span><span class="p">:</span><span class="mi">0</span><span class="p">,</span> <span class="s1">&#39;metric&#39;</span><span class="p">:</span><span class="s1">&#39;unit_e&#39;</span><span class="p">}</span>
@@ -708,37 +632,37 @@ INFO:pystan:COMPILING THE C++ CODE FOR MODEL anon_model_976aaa495a9359c3216a14ee
 </div>
 </div>
 <div class="nboutput nblast container">
-<div class="container">
+<div class="prompt empty container">
 </div>
-<div class="container">
+<div class="output_area container">
 <div class="highlight"><pre>
 Stan (CPU, single-threaded) took 1952.880 seconds
 </pre></div></div>
 </div>
 <div class="nbinput container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [27]:
 </pre></div>
 </div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="k">print</span> <span class="s1">&#39;Stan (CPU, single-threaded) took </span><span class="si">%.3f</span><span class="s1"> seconds (</span><span class="si">%.3f</span><span class="s1"> Edward time)&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">stan_time</span><span class="p">,</span> <span class="n">stan_time</span> <span class="o">/</span> <span class="n">ed_time</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
 <div class="nboutput nblast container">
-<div class="container">
+<div class="prompt empty container">
 </div>
-<div class="container">
+<div class="output_area container">
 <div class="highlight"><pre>
 Stan (CPU, single-threaded) took 1952.880 seconds (34.286 Edward time)
 </pre></div></div>
 </div>
 <div class="nbinput container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [24]:
 </pre></div>
 </div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="n">stan_samples</span> <span class="o">=</span> <span class="n">fit</span><span class="o">.</span><span class="n">extract</span><span class="p">()[</span><span class="s1">&#39;beta&#39;</span><span class="p">]</span>
 <span class="n">plot</span><span class="p">(</span><span class="n">stan_samples</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">])</span>
 <span class="n">show</span><span class="p">()</span>
@@ -748,16 +672,16 @@ Stan (CPU, single-threaded) took 1952.880 seconds (34.286 Edward time)
 </div>
 </div>
 <div class="nboutput container">
-<div class="container">
+<div class="prompt empty container">
 </div>
-<div class="container">
+<div class="output_area container">
 <img alt="../_images/notebooks_hmc_experiments_18_0.png" src="../_images/notebooks_hmc_experiments_18_0.png" />
 </div>
 </div>
 <div class="nboutput nblast container">
-<div class="container">
+<div class="prompt empty container">
 </div>
-<div class="container">
+<div class="output_area container">
 <img alt="../_images/notebooks_hmc_experiments_18_1.png" src="../_images/notebooks_hmc_experiments_18_1.png" />
 </div>
 </div>
@@ -765,223 +689,274 @@ Stan (CPU, single-threaded) took 1952.880 seconds (34.286 Edward time)
 <div class="section" id="PyMC3">
 <h1>PyMC3<a class="headerlink" href="#PyMC3" title="Permalink to this headline">¶</a></h1>
 <div class="nbinput nblast container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [5]:
 </pre></div>
 </div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="kn">import</span> <span class="nn">pymc3</span>
 <span class="kn">import</span> <span class="nn">theano</span>
 <span class="kn">import</span> <span class="nn">theano.tensor</span> <span class="kn">as</span> <span class="nn">T</span>
 </pre></div>
 </div>
 </div>
-<div class="nbinput container">
-<div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [18]:
+<div class="nbinput nblast container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
+<span></span>In [8]:
 </pre></div>
 </div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span><span class="k">print</span><span class="p">(</span><span class="n">theano</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">floatX</span><span class="p">)</span>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">pymc3.math</span>
+<span class="kn">import</span> <span class="nn">time</span>
+</pre></div>
+</div>
+</div>
+<div class="nbinput container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
+<span></span>In [10]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="o">%</span><span class="k">pdb</span>
 </pre></div>
 </div>
 </div>
 <div class="nboutput nblast container">
-<div class="container">
+<div class="prompt empty container">
 </div>
-<div class="container">
+<div class="output_area container">
 <div class="highlight"><pre>
-float32
+Automatic pdb calling has been turned ON
 </pre></div></div>
 </div>
-<div class="nbinput nblast container">
-<div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [6]:
+<div class="nbinput container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
+<span></span>In [13]:
 </pre></div>
 </div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="n">basic_model</span> <span class="o">=</span> <span class="n">pymc3</span><span class="o">.</span><span class="n">Model</span><span class="p">()</span>
 
 <span class="k">with</span> <span class="n">basic_model</span><span class="p">:</span>
     <span class="n">pymc_beta</span> <span class="o">=</span> <span class="n">pymc3</span><span class="o">.</span><span class="n">Normal</span><span class="p">(</span><span class="s1">&#39;beta&#39;</span><span class="p">,</span> <span class="n">mu</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">sd</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">shape</span><span class="o">=</span><span class="n">D</span><span class="p">)</span>
-    <span class="n">pymc_y</span> <span class="o">=</span> <span class="n">pymc3</span><span class="o">.</span><span class="n">Bernoulli</span><span class="p">(</span><span class="s1">&#39;y&#39;</span><span class="p">,</span> <span class="n">p</span><span class="o">=</span><span class="n">pymc3</span><span class="o">.</span><span class="n">math</span><span class="o">.</span><span class="n">sigmoid</span><span class="p">(</span><span class="n">pymc3</span><span class="o">.</span><span class="n">math</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">pymc_beta</span><span class="p">)),</span>
-                             <span class="n">observed</span><span class="o">=</span><span class="n">y</span><span class="p">)</span>
+    <span class="n">pymc_y</span> <span class="o">=</span> <span class="n">pymc3</span><span class="o">.</span><span class="n">Bernoulli</span><span class="p">(</span><span class="s1">&#39;y&#39;</span><span class="p">,</span> <span class="n">p</span><span class="o">=</span><span class="n">pymc3</span><span class="o">.</span><span class="n">math</span><span class="o">.</span><span class="n">sigmoid</span><span class="p">(</span><span class="n">pymc3</span><span class="o">.</span><span class="n">math</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">pymc_beta</span><span class="p">)),</span> <span class="n">observed</span><span class="o">=</span><span class="n">y</span><span class="p">)</span>
 
-    <span class="n">step</span> <span class="o">=</span> <span class="n">pymc3</span><span class="o">.</span><span class="n">HamiltonianMC</span><span class="p">(</span><span class="n">step_scale</span><span class="o">=</span><span class="n">step_size</span><span class="o">*</span><span class="p">(</span><span class="mf">1.</span><span class="o">/</span><span class="n">D</span><span class="p">)</span><span class="o">**</span><span class="p">(</span><span class="o">-</span><span class="mf">1.</span><span class="o">/</span><span class="mi">4</span><span class="p">),</span>
-                               <span class="n">path_length</span><span class="o">=</span><span class="n">step_size</span><span class="o">*</span><span class="n">n_steps</span><span class="p">,</span>
-                               <span class="n">step_rand</span><span class="o">=</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">x</span><span class="p">),</span> <span class="n">scaling</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">D</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">),</span> <span class="n">profile</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+    <span class="n">step</span> <span class="o">=</span> <span class="n">pymc3</span><span class="o">.</span><span class="n">HamiltonianMC</span><span class="p">(</span><span class="n">step_scale</span><span class="o">=</span><span class="n">step_size</span><span class="o">*</span><span class="p">(</span><span class="mf">1.</span><span class="o">/</span><span class="n">D</span><span class="p">)</span><span class="o">**</span><span class="p">(</span><span class="o">-</span><span class="mf">1.</span><span class="o">/</span><span class="mi">4</span><span class="p">),</span> <span class="n">path_length</span><span class="o">=</span><span class="n">step_size</span><span class="o">*</span><span class="n">n_steps</span><span class="p">,</span>
+                               <span class="n">step_rand</span><span class="o">=</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span><span class="n">x</span><span class="p">,</span> <span class="n">scaling</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">D</span><span class="p">))</span><span class="c1">#, np.float32))</span>
     <span class="n">t0</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
-    <span class="c1">#pymc_samples = pymc3.sample(n_iterations, step=step, init=None, njobs=1)</span>
-<span class="c1">#pymc_time = time.time() - t0</span>
-<span class="c1">#print(&#39;pymc (CPU multithreaded) took %.3f seconds&#39; % pymc_time)</span>
+    <span class="n">pymc_samples</span> <span class="o">=</span> <span class="n">pymc3</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="n">n_iterations</span><span class="p">,</span> <span class="n">step</span><span class="o">=</span><span class="n">step</span><span class="p">,</span> <span class="n">init</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">njobs</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+<span class="n">pymc_time</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span> <span class="o">-</span> <span class="n">t0</span>
+<span class="k">print</span><span class="p">(</span><span class="s1">&#39;pymc (CPU multithreaded) took </span><span class="si">%.3f</span><span class="s1"> seconds&#39;</span> <span class="o">%</span> <span class="n">pymc_time</span><span class="p">)</span>
 </pre></div>
 </div>
+</div>
+<div class="nboutput container">
+<div class="prompt empty container">
+</div>
+<div class="stderr output_area container">
+<div class="highlight"><pre>
+/Users/twiecki/anaconda/lib/python3.5/site-packages/theano/tensor/basic.py:2147: UserWarning: theano.tensor.round() changed its default from `half_away_from_zero` to `half_to_even` to have the same default as NumPy. Use the Theano flag `warn.round=False` to disable this warning.
+  &#34;theano.tensor.round() changed its default from&#34;
+  0%|          | 0/1000 [00:00&lt;?, ?it/s]
+</pre></div></div>
+</div>
+<div class="nboutput container">
+<div class="prompt empty container">
+</div>
+<div class="output_area container">
+<div class="highlight"><pre>
+<span class="ansi-red-fg">---------------------------------------------------------------------------</span>
+<span class="ansi-red-fg">NotImplementedError</span>                       Traceback (most recent call last)
+<span class="ansi-green-fg">/Users/twiecki/anaconda/lib/python3.5/site-packages/theano/compile/function_module.py</span> in <span class="ansi-cyan-fg">__call__</span><span class="ansi-blue-fg">(self, *args, **kwargs)</span>
+<span class="ansi-green-intense-fg ansi-bold">    883</span>             outputs <span class="ansi-blue-fg">=</span><span class="ansi-red-fg">\</span>
+<span class="ansi-green-fg">--&gt; 884</span><span class="ansi-red-fg">                 </span>self<span class="ansi-blue-fg">.</span>fn<span class="ansi-blue-fg">(</span><span class="ansi-blue-fg">)</span> <span class="ansi-green-fg">if</span> output_subset <span class="ansi-green-fg">is</span> <span class="ansi-green-fg">None</span> <span class="ansi-green-fg">else</span><span class="ansi-red-fg">\</span>
+<span class="ansi-green-intense-fg ansi-bold">    885</span>                 self<span class="ansi-blue-fg">.</span>fn<span class="ansi-blue-fg">(</span>output_subset<span class="ansi-blue-fg">=</span>output_subset<span class="ansi-blue-fg">)</span>
+
+<span class="ansi-red-fg">NotImplementedError</span>: input nd
+
+During handling of the above exception, another exception occurred:
+
+<span class="ansi-red-fg">NotImplementedError</span>                       Traceback (most recent call last)
+<span class="ansi-green-fg">&lt;ipython-input-13-ef3813d96f26&gt;</span> in <span class="ansi-cyan-fg">&lt;module&gt;</span><span class="ansi-blue-fg">()</span>
+<span class="ansi-green-intense-fg ansi-bold">      8</span>                                step_rand=lambda x:x, scaling=np.ones(D, dtype=&#39;int32&#39;))#, np.float32))
+<span class="ansi-green-intense-fg ansi-bold">      9</span>     t0 <span class="ansi-blue-fg">=</span> time<span class="ansi-blue-fg">.</span>time<span class="ansi-blue-fg">(</span><span class="ansi-blue-fg">)</span>
+<span class="ansi-green-fg">---&gt; 10</span><span class="ansi-red-fg">     </span>pymc_samples <span class="ansi-blue-fg">=</span> pymc3<span class="ansi-blue-fg">.</span>sample<span class="ansi-blue-fg">(</span>n_iterations<span class="ansi-blue-fg">,</span> step<span class="ansi-blue-fg">=</span>step<span class="ansi-blue-fg">,</span> init<span class="ansi-blue-fg">=</span><span class="ansi-green-fg">None</span><span class="ansi-blue-fg">,</span> njobs<span class="ansi-blue-fg">=</span><span class="ansi-cyan-fg">1</span><span class="ansi-blue-fg">)</span>
+<span class="ansi-green-intense-fg ansi-bold">     11</span> pymc_time <span class="ansi-blue-fg">=</span> time<span class="ansi-blue-fg">.</span>time<span class="ansi-blue-fg">(</span><span class="ansi-blue-fg">)</span> <span class="ansi-blue-fg">-</span> t0
+<span class="ansi-green-intense-fg ansi-bold">     12</span> print<span class="ansi-blue-fg">(</span><span class="ansi-blue-fg">&#39;pymc (CPU multithreaded) took %.3f seconds&#39;</span> <span class="ansi-blue-fg">%</span> pymc_time<span class="ansi-blue-fg">)</span>
+
+<span class="ansi-green-fg">/Users/twiecki/working/projects/pymc/pymc3/sampling.py</span> in <span class="ansi-cyan-fg">sample</span><span class="ansi-blue-fg">(draws, step, init, n_init, start, trace, chain, njobs, tune, progressbar, model, random_seed)</span>
+<span class="ansi-green-intense-fg ansi-bold">    180</span>         sample_func <span class="ansi-blue-fg">=</span> _sample
+<span class="ansi-green-intense-fg ansi-bold">    181</span>
+<span class="ansi-green-fg">--&gt; 182</span><span class="ansi-red-fg">     </span><span class="ansi-green-fg">return</span> sample_func<span class="ansi-blue-fg">(</span><span class="ansi-blue-fg">**</span>sample_args<span class="ansi-blue-fg">)</span>
+<span class="ansi-green-intense-fg ansi-bold">    183</span>
+<span class="ansi-green-intense-fg ansi-bold">    184</span>
+
+<span class="ansi-green-fg">/Users/twiecki/working/projects/pymc/pymc3/sampling.py</span> in <span class="ansi-cyan-fg">_sample</span><span class="ansi-blue-fg">(draws, step, start, trace, chain, tune, progressbar, model, random_seed)</span>
+<span class="ansi-green-intense-fg ansi-bold">    191</span>     <span class="ansi-green-fg">try</span><span class="ansi-blue-fg">:</span>
+<span class="ansi-green-intense-fg ansi-bold">    192</span>         strace <span class="ansi-blue-fg">=</span> <span class="ansi-green-fg">None</span>
+<span class="ansi-green-fg">--&gt; 193</span><span class="ansi-red-fg">         </span><span class="ansi-green-fg">for</span> strace <span class="ansi-green-fg">in</span> sampling<span class="ansi-blue-fg">:</span>
+<span class="ansi-green-intense-fg ansi-bold">    194</span>             <span class="ansi-green-fg">pass</span>
+<span class="ansi-green-intense-fg ansi-bold">    195</span>     <span class="ansi-green-fg">except</span> KeyboardInterrupt<span class="ansi-blue-fg">:</span>
+
+<span class="ansi-green-fg">/Users/twiecki/anaconda/lib/python3.5/site-packages/tqdm/_tqdm.py</span> in <span class="ansi-cyan-fg">__iter__</span><span class="ansi-blue-fg">(self)</span>
+<span class="ansi-green-intense-fg ansi-bold">    828</span> &#34;&#34;&#34;, fp_write=getattr(self.fp, &#39;write&#39;, sys.stderr.write))
+<span class="ansi-green-intense-fg ansi-bold">    829</span>
+<span class="ansi-green-fg">--&gt; 830</span><span class="ansi-red-fg">             </span><span class="ansi-green-fg">for</span> obj <span class="ansi-green-fg">in</span> iterable<span class="ansi-blue-fg">:</span>
+<span class="ansi-green-intense-fg ansi-bold">    831</span>                 <span class="ansi-green-fg">yield</span> obj
+<span class="ansi-green-intense-fg ansi-bold">    832</span>                 <span class="ansi-red-fg"># Update and print the progressbar.</span>
+
+<span class="ansi-green-fg">/Users/twiecki/working/projects/pymc/pymc3/sampling.py</span> in <span class="ansi-cyan-fg">_iter_sample</span><span class="ansi-blue-fg">(draws, step, start, trace, chain, tune, model, random_seed)</span>
+<span class="ansi-green-intense-fg ansi-bold">    289</span>                 strace<span class="ansi-blue-fg">.</span>record<span class="ansi-blue-fg">(</span>point<span class="ansi-blue-fg">)</span>
+<span class="ansi-green-intense-fg ansi-bold">    290</span>         <span class="ansi-green-fg">else</span><span class="ansi-blue-fg">:</span>
+<span class="ansi-green-fg">--&gt; 291</span><span class="ansi-red-fg">             </span>point <span class="ansi-blue-fg">=</span> step<span class="ansi-blue-fg">.</span>step<span class="ansi-blue-fg">(</span>point<span class="ansi-blue-fg">)</span>
+<span class="ansi-green-intense-fg ansi-bold">    292</span>             strace<span class="ansi-blue-fg">.</span>record<span class="ansi-blue-fg">(</span>point<span class="ansi-blue-fg">)</span>
+<span class="ansi-green-intense-fg ansi-bold">    293</span>         <span class="ansi-green-fg">yield</span> strace
+
+<span class="ansi-green-fg">/Users/twiecki/working/projects/pymc/pymc3/step_methods/arraystep.py</span> in <span class="ansi-cyan-fg">step</span><span class="ansi-blue-fg">(self, point)</span>
+<span class="ansi-green-intense-fg ansi-bold">    149</span>             <span class="ansi-green-fg">return</span> bij<span class="ansi-blue-fg">.</span>rmap<span class="ansi-blue-fg">(</span>apoint<span class="ansi-blue-fg">)</span><span class="ansi-blue-fg">,</span> stats
+<span class="ansi-green-intense-fg ansi-bold">    150</span>         <span class="ansi-green-fg">else</span><span class="ansi-blue-fg">:</span>
+<span class="ansi-green-fg">--&gt; 151</span><span class="ansi-red-fg">             </span>apoint <span class="ansi-blue-fg">=</span> self<span class="ansi-blue-fg">.</span>astep<span class="ansi-blue-fg">(</span>bij<span class="ansi-blue-fg">.</span>map<span class="ansi-blue-fg">(</span>point<span class="ansi-blue-fg">)</span><span class="ansi-blue-fg">)</span>
+<span class="ansi-green-intense-fg ansi-bold">    152</span>             <span class="ansi-green-fg">return</span> bij<span class="ansi-blue-fg">.</span>rmap<span class="ansi-blue-fg">(</span>apoint<span class="ansi-blue-fg">)</span>
+<span class="ansi-green-intense-fg ansi-bold">    153</span>
+
+<span class="ansi-green-fg">/Users/twiecki/working/projects/pymc/pymc3/step_methods/hmc/hmc.py</span> in <span class="ansi-cyan-fg">astep</span><span class="ansi-blue-fg">(self, q0)</span>
+<span class="ansi-green-intense-fg ansi-bold">     47</span>         p <span class="ansi-blue-fg">=</span> self<span class="ansi-blue-fg">.</span>H<span class="ansi-blue-fg">.</span>pot<span class="ansi-blue-fg">.</span>random<span class="ansi-blue-fg">(</span><span class="ansi-blue-fg">)</span>  <span class="ansi-red-fg"># initialize momentum</span>
+<span class="ansi-green-intense-fg ansi-bold">     48</span>         initial_energy <span class="ansi-blue-fg">=</span> self<span class="ansi-blue-fg">.</span>compute_energy<span class="ansi-blue-fg">(</span>q<span class="ansi-blue-fg">,</span> p<span class="ansi-blue-fg">)</span>
+<span class="ansi-green-fg">---&gt; 49</span><span class="ansi-red-fg">         </span>q<span class="ansi-blue-fg">,</span> p<span class="ansi-blue-fg">,</span> current_energy <span class="ansi-blue-fg">=</span> self<span class="ansi-blue-fg">.</span>leapfrog<span class="ansi-blue-fg">(</span>q<span class="ansi-blue-fg">,</span> p<span class="ansi-blue-fg">,</span> e<span class="ansi-blue-fg">,</span> n_steps<span class="ansi-blue-fg">)</span>
+<span class="ansi-green-intense-fg ansi-bold">     50</span>         energy_change <span class="ansi-blue-fg">=</span> initial_energy <span class="ansi-blue-fg">-</span> current_energy
+<span class="ansi-green-intense-fg ansi-bold">     51</span>         <span class="ansi-green-fg">return</span> metrop_select<span class="ansi-blue-fg">(</span>energy_change<span class="ansi-blue-fg">,</span> q<span class="ansi-blue-fg">,</span> q0<span class="ansi-blue-fg">)</span>
+
+<span class="ansi-green-fg">/Users/twiecki/anaconda/lib/python3.5/site-packages/theano/compile/function_module.py</span> in <span class="ansi-cyan-fg">__call__</span><span class="ansi-blue-fg">(self, *args, **kwargs)</span>
+<span class="ansi-green-intense-fg ansi-bold">    896</span>                     node<span class="ansi-blue-fg">=</span>self<span class="ansi-blue-fg">.</span>fn<span class="ansi-blue-fg">.</span>nodes<span class="ansi-blue-fg">[</span>self<span class="ansi-blue-fg">.</span>fn<span class="ansi-blue-fg">.</span>position_of_error<span class="ansi-blue-fg">]</span><span class="ansi-blue-fg">,</span>
+<span class="ansi-green-intense-fg ansi-bold">    897</span>                     thunk<span class="ansi-blue-fg">=</span>thunk<span class="ansi-blue-fg">,</span>
+<span class="ansi-green-fg">--&gt; 898</span><span class="ansi-red-fg">                     storage_map=getattr(self.fn, &#39;storage_map&#39;, None))
+</span><span class="ansi-green-intense-fg ansi-bold">    899</span>             <span class="ansi-green-fg">else</span><span class="ansi-blue-fg">:</span>
+<span class="ansi-green-intense-fg ansi-bold">    900</span>                 <span class="ansi-red-fg"># old-style linkers raise their own exceptions</span>
+
+<span class="ansi-green-fg">/Users/twiecki/anaconda/lib/python3.5/site-packages/theano/gof/link.py</span> in <span class="ansi-cyan-fg">raise_with_op</span><span class="ansi-blue-fg">(node, thunk, exc_info, storage_map)</span>
+<span class="ansi-green-intense-fg ansi-bold">    323</span>         <span class="ansi-red-fg"># extra long error message in that case.</span>
+<span class="ansi-green-intense-fg ansi-bold">    324</span>         <span class="ansi-green-fg">pass</span>
+<span class="ansi-green-fg">--&gt; 325</span><span class="ansi-red-fg">     </span>reraise<span class="ansi-blue-fg">(</span>exc_type<span class="ansi-blue-fg">,</span> exc_value<span class="ansi-blue-fg">,</span> exc_trace<span class="ansi-blue-fg">)</span>
+<span class="ansi-green-intense-fg ansi-bold">    326</span>
+<span class="ansi-green-intense-fg ansi-bold">    327</span>
+
+<span class="ansi-green-fg">/Users/twiecki/anaconda/lib/python3.5/site-packages/six.py</span> in <span class="ansi-cyan-fg">reraise</span><span class="ansi-blue-fg">(tp, value, tb)</span>
+<span class="ansi-green-intense-fg ansi-bold">    683</span>             value <span class="ansi-blue-fg">=</span> tp<span class="ansi-blue-fg">(</span><span class="ansi-blue-fg">)</span>
+<span class="ansi-green-intense-fg ansi-bold">    684</span>         <span class="ansi-green-fg">if</span> value<span class="ansi-blue-fg">.</span>__traceback__ <span class="ansi-green-fg">is</span> <span class="ansi-green-fg">not</span> tb<span class="ansi-blue-fg">:</span>
+<span class="ansi-green-fg">--&gt; 685</span><span class="ansi-red-fg">             </span><span class="ansi-green-fg">raise</span> value<span class="ansi-blue-fg">.</span>with_traceback<span class="ansi-blue-fg">(</span>tb<span class="ansi-blue-fg">)</span>
+<span class="ansi-green-intense-fg ansi-bold">    686</span>         <span class="ansi-green-fg">raise</span> value
+<span class="ansi-green-intense-fg ansi-bold">    687</span>
+
+<span class="ansi-green-fg">/Users/twiecki/anaconda/lib/python3.5/site-packages/theano/compile/function_module.py</span> in <span class="ansi-cyan-fg">__call__</span><span class="ansi-blue-fg">(self, *args, **kwargs)</span>
+<span class="ansi-green-intense-fg ansi-bold">    882</span>         <span class="ansi-green-fg">try</span><span class="ansi-blue-fg">:</span>
+<span class="ansi-green-intense-fg ansi-bold">    883</span>             outputs <span class="ansi-blue-fg">=</span><span class="ansi-red-fg">\</span>
+<span class="ansi-green-fg">--&gt; 884</span><span class="ansi-red-fg">                 </span>self<span class="ansi-blue-fg">.</span>fn<span class="ansi-blue-fg">(</span><span class="ansi-blue-fg">)</span> <span class="ansi-green-fg">if</span> output_subset <span class="ansi-green-fg">is</span> <span class="ansi-green-fg">None</span> <span class="ansi-green-fg">else</span><span class="ansi-red-fg">\</span>
+<span class="ansi-green-intense-fg ansi-bold">    885</span>                 self<span class="ansi-blue-fg">.</span>fn<span class="ansi-blue-fg">(</span>output_subset<span class="ansi-blue-fg">=</span>output_subset<span class="ansi-blue-fg">)</span>
+<span class="ansi-green-intense-fg ansi-bold">    886</span>         <span class="ansi-green-fg">except</span> Exception<span class="ansi-blue-fg">:</span>
+
+<span class="ansi-red-fg">NotImplementedError</span>: input nd
+Apply node that caused the error: InplaceDimShuffle{x,x}(epsilon)
+Toposort index: 4
+Inputs types: [TensorType(float64, scalar)]
+Inputs shapes: [()]
+Inputs strides: [()]
+Inputs values: [0.00092766773347816456]
+Outputs clients: [[Elemwise{Composite{(i0 + (i1 * i2 * ((-i3) + i4)))}}[(0, 4)](InplaceDimShuffle{x,0}.0, TensorConstant{(1, 1) of 0.5}, InplaceDimShuffle{x,x}.0, InplaceDimShuffle{x,0}.0, InplaceDimShuffle{x,0}.0), Elemwise{Composite{(i0 + (i1 * i2))}}[(0, 2)](InplaceDimShuffle{x,0}.0, InplaceDimShuffle{x,x}.0, Elemwise{Composite{(i0 + (i1 * i2 * ((-i3) + i4)))}}[(0, 4)].0)]]
+
+HINT: Re-running with most Theano optimization disabled could give you a back-trace of when this node was created. This can be done with by setting the Theano flag &#39;optimizer=fast_compile&#39;. If that does not work, Theano optimizations can be disabled with &#39;optimizer=None&#39;.
+HINT: Use the Theano flag &#39;exception_verbosity=high&#39; for a debugprint and storage map footprint of this apply node.
+</pre></div></div>
+</div>
+<div class="nboutput nblast container">
+<div class="prompt empty container">
+</div>
+<div class="output_area container">
+<div class="highlight"><pre>
+&gt; <span class="ansi-green-fg">/Users/twiecki/anaconda/lib/python3.5/site-packages/theano/compile/function_module.py</span>(898)<span class="ansi-cyan-fg">__call__</span><span class="ansi-blue-fg">()</span>
+<span class="ansi-green-fg">    896 </span><span class="ansi-red-fg">                    </span>node<span class="ansi-blue-fg">=</span>self<span class="ansi-blue-fg">.</span>fn<span class="ansi-blue-fg">.</span>nodes<span class="ansi-blue-fg">[</span>self<span class="ansi-blue-fg">.</span>fn<span class="ansi-blue-fg">.</span>position_of_error<span class="ansi-blue-fg">]</span><span class="ansi-blue-fg">,</span>
+<span class="ansi-green-fg">    897 </span><span class="ansi-red-fg">                    </span>thunk<span class="ansi-blue-fg">=</span>thunk<span class="ansi-blue-fg">,</span>
+<span class="ansi-green-fg">--&gt; 898 </span><span class="ansi-red-fg">                    storage_map=getattr(self.fn, &#39;storage_map&#39;, None))
+</span><span class="ansi-green-fg">    899 </span><span class="ansi-red-fg">            </span><span class="ansi-green-fg">else</span><span class="ansi-blue-fg">:</span>
+<span class="ansi-green-fg">    900 </span><span class="ansi-red-fg">                </span><span class="ansi-red-fg"># old-style linkers raise their own exceptions</span>
+
+ipdb&gt; q
+</pre></div></div>
 </div>
 <div class="nbinput container">
-<div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [13]:
+<div class="prompt highlight-none"><div class="highlight"><pre>
+<span></span>In [28]:
 </pre></div>
 </div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span><span class="n">step</span><span class="o">.</span><span class="n">leapfrog</span><span class="o">.</span><span class="n">profile</span><span class="o">.</span><span class="n">summary</span><span class="p">()</span>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="k">print</span> <span class="s1">&#39;PyMC3 (CPU, multi-threaded) took </span><span class="si">%.3f</span><span class="s1"> seconds (</span><span class="si">%.3f</span><span class="s1"> Edward time)&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">pymc_time</span><span class="p">,</span> <span class="n">pymc_time</span> <span class="o">/</span> <span class="n">ed_time</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
 <div class="nboutput nblast container">
-<div class="container">
+<div class="prompt empty container">
 </div>
-<div class="stderr container">
+<div class="output_area container">
 <div class="highlight"><pre>
-Function profiling
-==================
-  Message: /home/wiecki/working/projects/pymc/pymc3/step_methods/hmc/trajectory.py:82
-  Time in 1000 calls to Function.__call__: 3.912939e+02s
-  Time in Function.fn.__call__: 3.912476e+02s (99.988%)
-  Time in thunks: 3.910677e+02s (99.942%)
-  Total compile time: 2.532339e+01s
-    Number of Apply nodes: 59
-    Theano Optimizer time: 1.796372e+01s
-       Theano validate time: 2.631712e-02s
-    Theano Linker time (includes C, CUDA code generation/compiling): 7.095931e+00s
-       Import time 0.000000e+00s
-       Node make_thunk time 7.091756e+00s
-           Node forall_inplace,cpu,scan_fn}(Elemwise{maximum,no_inplace}.0, IncSubtensor{InplaceSet;:int64:}.0, IncSubtensor{InplaceSet;:int64:}.0, InplaceDimShuffle{x}.0) time 2.847363e+00s
-           Node CGemv{inplace}(AllocEmpty{dtype=&#39;float32&#39;}.0, TensorConstant{1.0}, TensorConstant{[[-1.29734..        ]]}, Elemwise{Composite{Switch(i0, Switch(Composite{Identity((GE(i0, i1) * LE(i0, i2)))}(scalar_sigmoid(i1), i2, i3), (i4 - scalar_sigmoid(i1)), i2), Switch(Composite{Identity((GE(i0, i1) * LE(i0, i2)))}(scalar_sigmoid(i1), i2, i3), (-scalar_sigmoid(i1)), i2))}}[(0, 1)].0, TensorConstant{0.0}) time 2.029986e+00s
-           Node CGemv{inplace}(Subtensor{int64}.0, InplaceDimShuffle{}.0, TensorConstant{[[-1.29734..        ]]}, Elemwise{Composite{Switch(i0, Switch(i1, (i2 - i3), i4), Switch(i1, (-i3), i4))}}[(0, 3)].0, TensorConstant{1.0}) time 1.700661e+00s
-           Node CGemv{inplace}(AllocEmpty{dtype=&#39;float32&#39;}.0, TensorConstant{1.0}, TensorConstant{[[-1.29734..        ]]}, Subtensor{int64:int64:}.0, TensorConstant{0.0}) time 2.284324e-01s
-           Node CGemv{inplace}(AllocEmpty{dtype=&#39;float32&#39;}.0, TensorConstant{1.0}, TensorConstant{[[-1.29734..        ]]}, Subtensor{int64, int64:int64:}.0, TensorConstant{0.0}) time 2.141685e-01s
-
-Time in all call to theano.grad() 2.469898e+01s
-Time since theano import 1038.354s
-Class
----
-&lt;% time&gt; &lt;sum %&gt; &lt;apply time&gt; &lt;time per call&gt; &lt;type&gt; &lt;#call&gt; &lt;#apply&gt; &lt;Class name&gt;
-  71.8%    71.8%     280.788s       2.81e-01s     Py    1000       1   theano.scan_module.scan_op.Scan
-  21.2%    93.0%      82.736s       3.45e-03s     C    24000      24   theano.tensor.elemwise.Elemwise
-   6.8%    99.8%      26.583s       5.32e-03s     C     5000       5   theano.tensor.blas_c.CGemv
-   0.2%   100.0%       0.806s       4.03e-04s     C     2000       2   theano.tensor.elemwise.Sum
-   0.0%   100.0%       0.114s       5.68e-05s     C     2000       2   theano.tensor.subtensor.IncSubtensor
-   0.0%   100.0%       0.014s       1.52e-06s     C     9000       9   theano.tensor.elemwise.DimShuffle
-   0.0%   100.0%       0.011s       1.84e-06s     C     6000       6   theano.tensor.basic.AllocEmpty
-   0.0%   100.0%       0.009s       2.26e-06s     C     4000       4   theano.tensor.subtensor.Subtensor
-   0.0%   100.0%       0.003s       1.67e-06s     C     2000       2   theano.compile.ops.Shape_i
-   0.0%   100.0%       0.003s       1.38e-06s     C     2000       2   theano.tensor.basic.ScalarFromTensor
-   0.0%   100.0%       0.001s       6.32e-07s     C     2000       2   theano.compile.ops.Rebroadcast
-   ... (remaining 0 Classes account for   0.00%(0.00s) of the runtime)
-
-Ops
----
-&lt;% time&gt; &lt;sum %&gt; &lt;apply time&gt; &lt;time per call&gt; &lt;type&gt; &lt;#call&gt; &lt;#apply&gt; &lt;Op name&gt;
-  71.8%    71.8%     280.788s       2.81e-01s     Py    1000        1   forall_inplace,cpu,scan_fn}
-  12.8%    84.6%      50.072s       5.01e-02s     C     1000        1   Elemwise{Composite{Switch(i0, Switch(i1, (-scalar_softplus((-i2))), (-scalar_softplus(i2))), i3)}}[(0, 2)]
-   6.8%    91.4%      26.583s       5.32e-03s     C     5000        5   CGemv{inplace}
-   4.1%    95.5%      16.075s       1.61e-02s     C     1000        1   Elemwise{Composite{Switch(i0, Switch(Composite{Identity((GE(i0, i1) * LE(i0, i2)))}(scalar_sigmoid(i1), i2, i3), (i4 - scalar_sigmoid(i1)), i2), Switch(Composite{Identity((GE(i0, i1) * LE(i0, i2)))}(scalar_sigmoid(i1), i2, i3), (-scalar_sigmoid(i1)), i2))}}[(0, 1)]
-   3.8%    99.3%      14.846s       1.48e-02s     C     1000        1   Elemwise{scalar_sigmoid}
-   0.3%    99.6%       1.166s       1.17e-03s     C     1000        1   Elemwise{Composite{Switch(i0, Switch(i1, (i2 - i3), i4), Switch(i1, (-i3), i4))}}[(0, 3)]
-   0.2%    99.8%       0.806s       4.03e-04s     C     2000        2   Sum{acc_dtype=float64}
-   0.1%    99.9%       0.536s       5.36e-04s     C     1000        1   Elemwise{Composite{Identity((GE(i0, i1) * LE(i0, i2)))}}
-   0.0%   100.0%       0.114s       5.68e-05s     C     2000        2   IncSubtensor{InplaceSet;:int64:}
-   0.0%   100.0%       0.011s       1.84e-06s     C     6000        6   AllocEmpty{dtype=&#39;float32&#39;}
-   0.0%   100.0%       0.008s       1.66e-06s     C     5000        5   InplaceDimShuffle{x,0}
-   0.0%   100.0%       0.005s       4.53e-06s     C     1000        1   Elemwise{Composite{maximum(maximum(((maximum(i0, i1) - Switch(LT(i2, i3), (i2 + i4 + i5), i2)) + i1), i6), maximum(((maximum(i0, i1) - Switch(LT(i2, i3), (i2 + i4 + i5), i2)) + i1), i6))}}[(0, 0)]
-   0.0%   100.0%       0.003s       3.46e-06s     C     1000        1   Subtensor{int64:int64:}
-   0.0%   100.0%       0.003s       3.39e-06s     C     1000        1   Elemwise{Composite{((i0 * i1 * i2) + i3)}}[(0, 3)]
-   0.0%   100.0%       0.003s       1.67e-06s     C     2000        2   Shape_i{0}
-   0.0%   100.0%       0.003s       3.18e-06s     C     1000        1   Elemwise{mul,no_inplace}
-   0.0%   100.0%       0.003s       2.82e-06s     C     1000        1   Subtensor{int64, int64:int64:}
-   0.0%   100.0%       0.003s       1.39e-06s     C     2000        2   Subtensor{int64}
-   0.0%   100.0%       0.003s       1.38e-06s     C     2000        2   ScalarFromTensor
-   0.0%   100.0%       0.003s       2.68e-06s     C     1000        1   Elemwise{Composite{(i0 + (i1 * i2 * ((-i3) + i4)))}}[(0, 4)]
-   ... (remaining 18 Ops account for   0.01%(0.03s) of the runtime)
-
-Apply
-------
-&lt;% time&gt; &lt;sum %&gt; &lt;apply time&gt; &lt;time per call&gt; &lt;#call&gt; &lt;id&gt; &lt;Apply name&gt;
-  71.8%    71.8%     280.788s       2.81e-01s   1000    41   forall_inplace,cpu,scan_fn}(Elemwise{maximum,no_inplace}.0, IncSubtensor{InplaceSet;:int64:}.0, IncSubtensor{InplaceSet;:int64:}.0, InplaceDimShuffle{x}.0)
-  12.8%    84.6%      50.072s       5.01e-02s   1000    51   Elemwise{Composite{Switch(i0, Switch(i1, (-scalar_softplus((-i2))), (-scalar_softplus(i2))), i3)}}[(0, 2)](Elemwise{Composite{Identity((GE(i0, i1) * LE(i0, i2)))}}.0, TensorConstant{[0 0 0 ..., 0 0 0]}, CGemv{inplace}.0, TensorConstant{(1,) of -inf})
-   4.1%    88.7%      16.075s       1.61e-02s   1000    19   Elemwise{Composite{Switch(i0, Switch(Composite{Identity((GE(i0, i1) * LE(i0, i2)))}(scalar_sigmoid(i1), i2, i3), (i4 - scalar_sigmoid(i1)), i2), Switch(Composite{Identity((GE(i0, i1) * LE(i0, i2)))}(scalar_sigmoid(i1), i2, i3), (-scalar_sigmoid(i1)), i2))}}[(0, 1)](TensorConstant{[0 0 0 ..., 0 0 0]}, CGemv{inplace}.0, TensorConstant{(1,) of 0}, TensorConstant{(1,) of 1}, TensorConstant{(1,) of 1.0})
-   3.8%    92.5%      14.846s       1.48e-02s   1000    47   Elemwise{scalar_sigmoid}(CGemv{inplace}.0)
-   1.7%    94.3%       6.815s       6.81e-03s   1000    52   CGemv{inplace}(Subtensor{int64}.0, InplaceDimShuffle{}.0, TensorConstant{[[-1.29734..        ]]}, Elemwise{Composite{Switch(i0, Switch(i1, (i2 - i3), i4), Switch(i1, (-i3), i4))}}[(0, 3)].0, TensorConstant{1.0})
-   1.7%    96.0%       6.670s       6.67e-03s   1000    45   CGemv{inplace}(AllocEmpty{dtype=&#39;float32&#39;}.0, TensorConstant{1.0}, TensorConstant{[[-1.29734..        ]]}, Subtensor{int64, int64:int64:}.0, TensorConstant{0.0})
-   1.7%    97.6%       6.551s       6.55e-03s   1000    16   CGemv{inplace}(AllocEmpty{dtype=&#39;float32&#39;}.0, TensorConstant{1.0}, TensorConstant{[[-1.29734..        ]]}, Subtensor{int64:int64:}.0, TensorConstant{0.0})
-   1.7%    99.3%       6.544s       6.54e-03s   1000    21   CGemv{inplace}(AllocEmpty{dtype=&#39;float32&#39;}.0, TensorConstant{1.0}, TensorConstant{[[-1.29734..        ]]}, Elemwise{Composite{Switch(i0, Switch(Composite{Identity((GE(i0, i1) * LE(i0, i2)))}(scalar_sigmoid(i1), i2, i3), (i4 - scalar_sigmoid(i1)), i2), Switch(Composite{Identity((GE(i0, i1) * LE(i0, i2)))}(scalar_sigmoid(i1), i2, i3), (-scalar_sigmoid(i1)), i2))}}[(0, 1)].0, TensorConstant{0.0})
-   0.3%    99.6%       1.166s       1.17e-03s   1000    50   Elemwise{Composite{Switch(i0, Switch(i1, (i2 - i3), i4), Switch(i1, (-i3), i4))}}[(0, 3)](TensorConstant{[0 0 0 ..., 0 0 0]}, Elemwise{Composite{Identity((GE(i0, i1) * LE(i0, i2)))}}.0, TensorConstant{(1,) of 1.0}, Elemwise{scalar_sigmoid}.0, TensorConstant{(1,) of 0})
-   0.2%    99.8%       0.800s       8.00e-04s   1000    53   Sum{acc_dtype=float64}(Elemwise{Composite{Switch(i0, Switch(i1, (-scalar_softplus((-i2))), (-scalar_softplus(i2))), i3)}}[(0, 2)].0)
-   0.1%    99.9%       0.536s       5.36e-04s   1000    49   Elemwise{Composite{Identity((GE(i0, i1) * LE(i0, i2)))}}(Elemwise{scalar_sigmoid}.0, TensorConstant{(1,) of 0}, TensorConstant{(1,) of 1})
-   0.0%   100.0%       0.110s       1.10e-04s   1000    37   IncSubtensor{InplaceSet;:int64:}(AllocEmpty{dtype=&#39;float32&#39;}.0, Rebroadcast{0}.0, Constant{1})
-   0.0%   100.0%       0.006s       5.50e-06s   1000    48   Sum{acc_dtype=float64}(Elemwise{Composite{(i0 + (-sqr(i1)))}}.0)
-   0.0%   100.0%       0.005s       4.53e-06s   1000    26   Elemwise{Composite{maximum(maximum(((maximum(i0, i1) - Switch(LT(i2, i3), (i2 + i4 + i5), i2)) + i1), i6), maximum(((maximum(i0, i1) - Switch(LT(i2, i3), (i2 + i4 + i5), i2)) + i1), i6))}}[(0, 0)](Elemwise{Composite{minimum(maximum(maximum(((i0 + i1) - i2), ((i3 + i1) - i2)), ((i4 + i1) - i2)), i5)}}.0, TensorConstant{1}, Elemwise{Composite{Switch(LT(((i0 + i1) - Composite{Switch(LT(i0, i1), i0, i1)}(i2, i3)), i4), (-(i2 + i1)), Switch(GE(((i0 + i1)
-   0.0%   100.0%       0.004s       3.98e-06s   1000    56   CGemv{inplace}(AllocEmpty{dtype=&#39;float32&#39;}.0, TensorConstant{1.0}, InplaceDimShuffle{x,0}.0, Elemwise{Composite{((i0 * i1 * i2) + i3)}}[(0, 3)].0, TensorConstant{0.0})
-   0.0%   100.0%       0.003s       3.46e-06s   1000     5   Subtensor{int64:int64:}(inarray, Constant{0}, Constant{55})
-   0.0%   100.0%       0.003s       3.39e-06s   1000    54   Elemwise{Composite{((i0 * i1 * i2) + i3)}}[(0, 3)](TensorConstant{(1,) of -1.0}, Elemwise{mul,no_inplace}.0, Subtensor{int64, int64:int64:}.0, CGemv{inplace}.0)
-   0.0%   100.0%       0.003s       3.19e-06s   1000    25   InplaceDimShuffle{x,0}(CGemv{inplace}.0)
-   0.0%   100.0%       0.003s       3.18e-06s   1000    14   Elemwise{mul,no_inplace}(TensorConstant{(1,) of 0.5}, InplaceDimShuffle{x}.0)
-   0.0%   100.0%       0.003s       3.01e-06s   1000    40   IncSubtensor{InplaceSet;:int64:}(AllocEmpty{dtype=&#39;float32&#39;}.0, Rebroadcast{0}.0, Constant{1})
-   ... (remaining 39 Apply instances account for 0.02%(0.06s) of the runtime)
-
-Here are tips to potentially make your code run faster
-                 (if you think of new ones, suggest them on the mailing list).
-                 Test them first, as they are not guaranteed to always provide a speedup.
-  - Try installing amdlibm and set the Theano flag lib.amdlibm=True. This speeds up only some Elemwise operation.
-</pre></div></div>
-</div>
-<p>^ Should use &#8221; 6.8% 99.8% 26.583s 5.32e-03s C 5000 5
-theano.tensor.blas_c.CGemv&#8221;, not Python.</p>
-<div class="nbinput container">
-<div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [17]:
-</pre></div>
-</div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span><span class="k">print</span><span class="p">(</span><span class="s1">&#39;PyMC3 (CPU, multi-threaded) took </span><span class="si">%.3f</span><span class="s1"> seconds (</span><span class="si">%.3f</span><span class="s1"> Edward time)&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">pymc_time</span><span class="p">,</span> <span class="n">pymc_time</span> <span class="o">/</span> <span class="n">ed_time</span><span class="p">))</span>
-</pre></div>
-</div>
-</div>
-<div class="nboutput nblast container">
-<div class="container">
-</div>
-<div class="container">
-<div class="highlight"><pre>
-PyMC3 (CPU, multi-threaded) took 467.597 seconds (6.123 Edward time)
+PyMC3 (CPU, multi-threaded) took 1785.090 seconds (31.341 Edward time)
 </pre></div></div>
 </div>
 <div class="nbinput container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [23]:
 </pre></div>
 </div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="n">plot</span><span class="p">(</span><span class="n">pymc_samples</span><span class="o">.</span><span class="n">get_values</span><span class="p">(</span><span class="s1">&#39;beta&#39;</span><span class="p">)[:,</span> <span class="mi">0</span><span class="p">])</span>
 </pre></div>
 </div>
 </div>
 <div class="nboutput container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>Out[23]:
 </pre></div>
 </div>
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="output_area highlight-none"><div class="highlight"><pre>
 <span></span>[&lt;matplotlib.lines.Line2D at 0x7fbf6e7fbe50&gt;]
 </pre></div>
 </div>
 </div>
 <div class="nboutput nblast container">
-<div class="container">
+<div class="prompt empty container">
 </div>
-<div class="container">
-<img alt="../_images/notebooks_hmc_experiments_26_1.png" src="../_images/notebooks_hmc_experiments_26_1.png" />
-</div>
+<div class="output_area container">
+<img alt="../_images/notebooks_hmc_experiments_25_1.png" src="../_images/notebooks_hmc_experiments_25_1.png" />
 </div>
 </div>
 <hr class="docutils" />
+<div class="nbinput nblast container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
+<span></span>In [ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<span></span>
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
+<span></span>In [ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<span></span>
+</pre></div>
+</div>
+</div>
+</div>
 <div class="section" id="Handwritten-code-with-TF-for-gradients">
 <h1>Handwritten code with TF for gradients<a class="headerlink" href="#Handwritten-code-with-TF-for-gradients" title="Permalink to this headline">¶</a></h1>
 <div class="nbinput nblast container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [15]:
 </pre></div>
 </div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="k">def</span> <span class="nf">leapfrog</span><span class="p">(</span><span class="n">logp_grad</span><span class="p">,</span> <span class="n">step_size</span><span class="p">,</span> <span class="n">z</span><span class="p">,</span> <span class="n">momentum</span><span class="p">,</span> <span class="n">last_grad</span><span class="p">):</span>
     <span class="n">momentum</span> <span class="o">=</span> <span class="n">momentum</span> <span class="o">+</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="n">step_size</span> <span class="o">*</span> <span class="n">last_grad</span>
     <span class="n">z</span> <span class="o">=</span> <span class="n">z</span> <span class="o">+</span> <span class="n">step_size</span> <span class="o">*</span> <span class="n">momentum</span>
@@ -1028,11 +1003,11 @@ PyMC3 (CPU, multi-threaded) took 467.597 seconds (6.123 Edward time)
 </div>
 </div>
 <div class="nbinput container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [17]:
 </pre></div>
 </div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="n">beta</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">D</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
 <span class="c1"># %timeit logp_grad(beta)</span>
 <span class="o">%</span><span class="k">timeit</span> sess.run(tf_grad, {tf_beta:beta})
@@ -1040,19 +1015,19 @@ PyMC3 (CPU, multi-threaded) took 467.597 seconds (6.123 Edward time)
 </div>
 </div>
 <div class="nboutput nblast container">
-<div class="container">
+<div class="prompt empty container">
 </div>
-<div class="container">
+<div class="output_area container">
 <div class="highlight"><pre>
 100 loops, best of 3: 5.05 ms per loop
 </pre></div></div>
 </div>
 <div class="nbinput container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [18]:
 </pre></div>
 </div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="n">t0</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
 <span class="n">beta</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">D</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
 <span class="n">samples</span> <span class="o">=</span> <span class="p">[]</span>
@@ -1065,126 +1040,116 @@ PyMC3 (CPU, multi-threaded) took 467.597 seconds (6.123 Edward time)
 </div>
 </div>
 <div class="nboutput nblast container">
-<div class="container">
+<div class="prompt empty container">
 </div>
-<div class="container">
+<div class="output_area container">
 <div class="highlight"><pre>
 TF (GPU) took 5.855 seconds
 </pre></div></div>
 </div>
 <div class="nbinput container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [19]:
 </pre></div>
 </div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="n">plot</span><span class="p">(</span><span class="n">samples</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">])</span>
 </pre></div>
 </div>
 </div>
 <div class="nboutput container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>Out[19]:
 </pre></div>
 </div>
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="output_area highlight-none"><div class="highlight"><pre>
 <span></span>[&lt;matplotlib.lines.Line2D at 0x7fd0f827bad0&gt;]
 </pre></div>
 </div>
 </div>
 <div class="nboutput nblast container">
-<div class="container">
+<div class="prompt empty container">
 </div>
-<div class="container">
-<img alt="../_images/notebooks_hmc_experiments_32_1.png" src="../_images/notebooks_hmc_experiments_32_1.png" />
+<div class="output_area container">
+<img alt="../_images/notebooks_hmc_experiments_33_1.png" src="../_images/notebooks_hmc_experiments_33_1.png" />
 </div>
 </div>
 <div class="nbinput container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [56]:
 </pre></div>
 </div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="o">%</span><span class="k">timeit</span> logp_grad(beta)
 </pre></div>
 </div>
 </div>
 <div class="nboutput nblast container">
-<div class="container">
+<div class="prompt empty container">
 </div>
-<div class="container">
+<div class="output_area container">
 <div class="highlight"><pre>
 The slowest run took 6.52 times longer than the fastest. This could mean that an intermediate result is being cached.
 1 loop, best of 3: 44 ms per loop
 </pre></div></div>
 </div>
 <div class="nbinput container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [80]:
 </pre></div>
 </div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="n">plot</span><span class="p">(</span><span class="n">samples</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">])</span>
 </pre></div>
 </div>
 </div>
 <div class="nboutput container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>Out[80]:
 </pre></div>
 </div>
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="output_area highlight-none"><div class="highlight"><pre>
 <span></span>[&lt;matplotlib.lines.Line2D at 0x7faa64137210&gt;]
 </pre></div>
 </div>
 </div>
 <div class="nboutput nblast container">
-<div class="container">
+<div class="prompt empty container">
 </div>
-<div class="container">
-<img alt="../_images/notebooks_hmc_experiments_34_1.png" src="../_images/notebooks_hmc_experiments_34_1.png" />
+<div class="output_area container">
+<img alt="../_images/notebooks_hmc_experiments_35_1.png" src="../_images/notebooks_hmc_experiments_35_1.png" />
 </div>
 </div>
 </div>
 <div class="section" id="Handwritten-code-with-Theano-for-gradients">
 <h1>Handwritten code with Theano for gradients<a class="headerlink" href="#Handwritten-code-with-Theano-for-gradients" title="Permalink to this headline">¶</a></h1>
-<div class="nbinput nblast container">
-<div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [27]:
+<div class="nbinput container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
+<span></span>In [5]:
 </pre></div>
 </div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="kn">import</span> <span class="nn">theano</span>
 <span class="kn">import</span> <span class="nn">theano.tensor</span> <span class="kn">as</span> <span class="nn">T</span>
 </pre></div>
 </div>
 </div>
-<div class="nbinput container">
-<div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [32]:
-</pre></div>
-</div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span><span class="n">y</span>
-</pre></div>
-</div>
-</div>
 <div class="nboutput nblast container">
-<div class="highlight-none"><div class="highlight"><pre>
-<span></span>Out[32]:
-</pre></div>
+<div class="prompt empty container">
 </div>
-<div class="highlight-none"><div class="highlight"><pre>
-<span></span>array([ 0.,  0.,  0., ...,  0.,  0.,  0.], dtype=float32)
-</pre></div>
-</div>
+<div class="stderr output_area container">
+<div class="highlight"><pre>
+Using gpu device 0: TITAN X (Pascal) (CNMeM is disabled, cuDNN 5105)
+/usr/local/lib/python2.7/dist-packages/theano/sandbox/cuda/__init__.py:600: UserWarning: Your cuDNN version is more recent than the one Theano officially supports. If you see any problems, try updating Theano or downgrading cuDNN to version 5.
+  warnings.warn(warn)
+</pre></div></div>
 </div>
 <div class="nbinput nblast container">
-<div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [15]:
+<div class="prompt highlight-none"><div class="highlight"><pre>
+<span></span>In [17]:
 </pre></div>
 </div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="k">def</span> <span class="nf">leapfrog</span><span class="p">(</span><span class="n">logp_grad</span><span class="p">,</span> <span class="n">step_size</span><span class="p">,</span> <span class="n">z</span><span class="p">,</span> <span class="n">momentum</span><span class="p">,</span> <span class="n">last_grad</span><span class="p">):</span>
     <span class="n">momentum</span> <span class="o">=</span> <span class="n">momentum</span> <span class="o">+</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="n">step_size</span> <span class="o">*</span> <span class="n">last_grad</span>
     <span class="n">z</span> <span class="o">=</span> <span class="n">z</span> <span class="o">+</span> <span class="n">step_size</span> <span class="o">*</span> <span class="n">momentum</span>
@@ -1210,9 +1175,7 @@ The slowest run took 6.52 times longer than the fastest. This could mean that an
     <span class="k">return</span> <span class="n">z</span>
 
 <span class="k">def</span> <span class="nf">make_logp_grad</span><span class="p">():</span>
-    <span class="k">global</span> <span class="n">x</span><span class="p">,</span> <span class="n">y</span>
     <span class="n">beta</span> <span class="o">=</span> <span class="n">T</span><span class="o">.</span><span class="n">vector</span><span class="p">(</span><span class="s1">&#39;beta&#39;</span><span class="p">)</span>
-    <span class="n">beta</span><span class="o">.</span><span class="n">tag</span><span class="o">.</span><span class="n">test_value</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">D</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
     <span class="n">t_x</span> <span class="o">=</span> <span class="n">theano</span><span class="o">.</span><span class="n">shared</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
     <span class="n">t_y</span> <span class="o">=</span> <span class="n">theano</span><span class="o">.</span><span class="n">shared</span><span class="p">(</span><span class="n">y</span><span class="p">)</span>
     <span class="n">logit_preds</span> <span class="o">=</span> <span class="n">t_x</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">beta</span><span class="p">)</span>
@@ -1221,57 +1184,18 @@ The slowest run took 6.52 times longer than the fastest. This could mean that an
     <span class="n">logp</span> <span class="o">=</span> <span class="o">-</span><span class="mf">0.5</span> <span class="o">*</span> <span class="n">T</span><span class="o">.</span><span class="n">square</span><span class="p">(</span><span class="n">logit_preds</span> <span class="o">-</span> <span class="n">y</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>
     <span class="n">logp</span> <span class="o">-=</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="n">T</span><span class="o">.</span><span class="n">square</span><span class="p">(</span><span class="n">beta</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>
     <span class="n">grad</span> <span class="o">=</span> <span class="n">T</span><span class="o">.</span><span class="n">grad</span><span class="p">(</span><span class="n">logp</span><span class="p">,</span> <span class="n">beta</span><span class="p">)</span>
-    <span class="k">return</span> <span class="n">theano</span><span class="o">.</span><span class="n">function</span><span class="p">([</span><span class="n">beta</span><span class="p">],</span> <span class="p">[</span><span class="n">logp</span><span class="p">,</span> <span class="n">grad</span><span class="p">],</span> <span class="n">profile</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">theano</span><span class="o">.</span><span class="n">function</span><span class="p">([</span><span class="n">beta</span><span class="p">],</span> <span class="p">[</span><span class="n">logp</span><span class="p">,</span> <span class="n">grad</span><span class="p">])</span>
 
 <span class="n">logp_grad</span> <span class="o">=</span> <span class="n">make_logp_grad</span><span class="p">()</span>
 </pre></div>
 </div>
 </div>
 <div class="nbinput container">
-<div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [19]:
-</pre></div>
-</div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span><span class="n">logp_grad</span><span class="p">(</span><span class="n">beta</span><span class="p">)</span>
-</pre></div>
-</div>
-</div>
-<div class="nboutput nblast container">
-<div class="highlight-none"><div class="highlight"><pre>
-<span></span>Out[19]:
-</pre></div>
-</div>
-<div class="highlight-none"><div class="highlight"><pre>
-<span></span>[array(-105920.0, dtype=float32),
- array([  1.28222781e+05,   9.09090820e+02,  -2.76247480e+04,
-          9.98171875e+02,  -1.54826426e+04,   3.59759844e+04,
-         -1.17709082e+03,   9.36618896e+02,   7.45278320e+03,
-          4.62467188e+03,   2.14361484e+04,   3.48892344e+04,
-         -9.78073047e+03,  -5.53271016e+04,  -1.53760117e+04,
-         -2.42740938e+04,  -1.94298672e+04,  -3.00029492e+04,
-         -1.11407861e+04,  -2.27419824e+04,  -2.84630249e+03,
-         -1.27202271e+03,  -5.79383398e+03,  -4.74406406e+04,
-         -2.61200098e+04,  -3.74384336e+04,  -2.43622734e+04,
-         -6.81428516e+03,  -4.81313538e+02,  -5.76235693e+03,
-         -1.35192207e+04,  -1.09082988e+04,   1.20276172e+04,
-          2.75471289e+03,   1.32044033e+04,   5.85381602e+04,
-          4.83618164e+04,   1.81232773e+04,  -1.67320288e+03,
-         -9.92301660e+03,   4.82513672e+03,  -7.48619385e+03,
-         -2.05542969e+02,  -1.51743428e+04,   1.22136357e+04,
-          7.61510352e+03,   6.31883594e+03,  -9.38339648e+03,
-          4.24561377e+03,  -2.05518335e+03,  -4.80466895e+03,
-          1.88541953e+04,   1.86701719e+04,   1.35195664e+04,
-          2.11840000e+05], dtype=float32)]
-</pre></div>
-</div>
-</div>
-<div class="nbinput container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [18]:
 </pre></div>
 </div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="n">beta</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">D</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
 <span class="o">%</span><span class="k">timeit</span> logp_grad(beta)
 <span class="c1"># while True:</span>
@@ -1280,95 +1204,19 @@ The slowest run took 6.52 times longer than the fastest. This could mean that an
 </div>
 </div>
 <div class="nboutput nblast container">
-<div class="container">
+<div class="prompt empty container">
 </div>
-<div class="container">
+<div class="output_area container">
 <div class="highlight"><pre>
-10 loops, best of 3: 14.7 ms per loop
+100 loops, best of 3: 3.45 ms per loop
 </pre></div></div>
 </div>
 <div class="nbinput container">
-<div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [17]:
-</pre></div>
-</div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span><span class="n">logp_grad</span><span class="o">.</span><span class="n">profile</span><span class="o">.</span><span class="n">summary</span><span class="p">()</span>
-</pre></div>
-</div>
-</div>
-<div class="nboutput nblast container">
-<div class="container">
-</div>
-<div class="stderr container">
-<div class="highlight"><pre>
-Function profiling
-==================
-  Message: &lt;ipython-input-15-44373b114871&gt;:37
-  Time in 41 calls to Function.__call__: 7.081084e-01s
-  Time in Function.fn.__call__: 7.050962e-01s (99.575%)
-  Time in thunks: 7.037623e-01s (99.386%)
-  Total compile time: 3.073976e-01s
-    Number of Apply nodes: 9
-    Theano Optimizer time: 4.145336e-02s
-       Theano validate time: 5.130768e-04s
-    Theano Linker time (includes C, CUDA code generation/compiling): 1.980829e-02s
-       Import time 9.435177e-03s
-       Node make_thunk time 1.919985e-02s
-           Node CGemv{no_inplace}(TensorConstant{[ 0.  0.  ...  0.  0.]}, TensorConstant{1.0}, &lt;TensorType(float32, matrix)&gt;, beta, TensorConstant{-1.0}) time 4.457951e-03s
-           Node Elemwise{Neg}[(0, 0)](CGemv{no_inplace}.0) time 4.371643e-03s
-           Node Elemwise{Composite{((i0 * i1) - (i2 * i3))}}[(0, 1)](TensorConstant{-0.5}, Sum{acc_dtype=float64}.0, TensorConstant{0.5}, Sum{acc_dtype=float64}.0) time 3.947973e-03s
-           Node Sum{acc_dtype=float64}(Elemwise{sqr,no_inplace}.0) time 3.738403e-03s
-           Node CGemv{no_inplace}(beta, TensorConstant{1.0}, InplaceDimShuffle{1,0}.0, Elemwise{Neg}[(0, 0)].0, TensorConstant{-1.0}) time 7.760525e-04s
-
-Time in all call to theano.grad() 2.922777e+00s
-Time since theano import 87.091s
-Class
----
-&lt;% time&gt; &lt;sum %&gt; &lt;apply time&gt; &lt;time per call&gt; &lt;type&gt; &lt;#call&gt; &lt;#apply&gt; &lt;Class name&gt;
-  89.7%    89.7%       0.631s       7.70e-03s     C       82       2   theano.tensor.blas_c.CGemv
-   6.0%    95.7%       0.043s       5.19e-04s     C       82       2   theano.tensor.elemwise.Sum
-   4.2%   100.0%       0.030s       1.82e-04s     C      164       4   theano.tensor.elemwise.Elemwise
-   0.0%   100.0%       0.000s       1.59e-06s     C       41       1   theano.tensor.elemwise.DimShuffle
-   ... (remaining 0 Classes account for   0.00%(0.00s) of the runtime)
-
-Ops
----
-&lt;% time&gt; &lt;sum %&gt; &lt;apply time&gt; &lt;time per call&gt; &lt;type&gt; &lt;#call&gt; &lt;#apply&gt; &lt;Op name&gt;
-  89.7%    89.7%       0.631s       7.70e-03s     C       82        2   CGemv{no_inplace}
-   6.0%    95.7%       0.043s       5.19e-04s     C       82        2   Sum{acc_dtype=float64}
-   2.4%    98.2%       0.017s       4.17e-04s     C       41        1   Elemwise{Neg}[(0, 0)]
-   1.8%   100.0%       0.013s       1.55e-04s     C       82        2   Elemwise{sqr,no_inplace}
-   0.0%   100.0%       0.000s       1.90e-06s     C       41        1   Elemwise{Composite{((i0 * i1) - (i2 * i3))}}[(0, 1)]
-   0.0%   100.0%       0.000s       1.59e-06s     C       41        1   InplaceDimShuffle{1,0}
-   ... (remaining 0 Ops account for   0.00%(0.00s) of the runtime)
-
-Apply
-------
-&lt;% time&gt; &lt;sum %&gt; &lt;apply time&gt; &lt;time per call&gt; &lt;#call&gt; &lt;id&gt; &lt;Apply name&gt;
-  45.5%    45.5%       0.321s       7.82e-03s     41     7   CGemv{no_inplace}(beta, TensorConstant{1.0}, InplaceDimShuffle{1,0}.0, Elemwise{Neg}[(0, 0)].0, TensorConstant{-1.0})
-  44.2%    89.7%       0.311s       7.58e-03s     41     2   CGemv{no_inplace}(TensorConstant{[ 0.  0.  ...  0.  0.]}, TensorConstant{1.0}, &lt;TensorType(float32, matrix)&gt;, beta, TensorConstant{-1.0})
-   6.0%    95.7%       0.042s       1.04e-03s     41     6   Sum{acc_dtype=float64}(Elemwise{sqr,no_inplace}.0)
-   2.4%    98.2%       0.017s       4.17e-04s     41     5   Elemwise{Neg}[(0, 0)](CGemv{no_inplace}.0)
-   1.8%   100.0%       0.013s       3.07e-04s     41     4   Elemwise{sqr,no_inplace}(CGemv{no_inplace}.0)
-   0.0%   100.0%       0.000s       2.02e-06s     41     0   Elemwise{sqr,no_inplace}(beta)
-   0.0%   100.0%       0.000s       1.90e-06s     41     8   Elemwise{Composite{((i0 * i1) - (i2 * i3))}}[(0, 1)](TensorConstant{-0.5}, Sum{acc_dtype=float64}.0, TensorConstant{0.5}, Sum{acc_dtype=float64}.0)
-   0.0%   100.0%       0.000s       1.77e-06s     41     3   Sum{acc_dtype=float64}(Elemwise{sqr,no_inplace}.0)
-   0.0%   100.0%       0.000s       1.59e-06s     41     1   InplaceDimShuffle{1,0}(&lt;TensorType(float32, matrix)&gt;)
-   ... (remaining 0 Apply instances account for 0.00%(0.00s) of the runtime)
-
-Here are tips to potentially make your code run faster
-                 (if you think of new ones, suggest them on the mailing list).
-                 Test them first, as they are not guaranteed to always provide a speedup.
-  Sorry, no tip for today.
-</pre></div></div>
-</div>
-<div class="nbinput container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [12]:
 </pre></div>
 </div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="n">t0</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
 <span class="n">beta</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">D</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
 <span class="n">samples</span> <span class="o">=</span> <span class="p">[]</span>
@@ -1381,19 +1229,19 @@ Here are tips to potentially make your code run faster
 </div>
 </div>
 <div class="nboutput nblast container">
-<div class="container">
+<div class="prompt empty container">
 </div>
-<div class="container">
+<div class="output_area container">
 <div class="highlight"><pre>
 Theano (GPU) took 4.471 seconds
 </pre></div></div>
 </div>
 <div class="nbinput nblast container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [24]:
 </pre></div>
 </div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="k">def</span> <span class="nf">leapfrog</span><span class="p">(</span><span class="n">logp_grad</span><span class="p">,</span> <span class="n">step_size</span><span class="p">,</span> <span class="n">z</span><span class="p">,</span> <span class="n">momentum</span><span class="p">,</span> <span class="n">last_grad</span><span class="p">):</span>
     <span class="n">momentum</span> <span class="o">=</span> <span class="n">momentum</span> <span class="o">+</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="n">step_size</span> <span class="o">*</span> <span class="n">last_grad</span>
     <span class="n">z</span> <span class="o">=</span> <span class="n">z</span> <span class="o">+</span> <span class="n">step_size</span> <span class="o">*</span> <span class="n">momentum</span>
@@ -1435,11 +1283,11 @@ Theano (GPU) took 4.471 seconds
 </div>
 </div>
 <div class="nbinput container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [25]:
 </pre></div>
 </div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="n">beta</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">([</span><span class="mi">2</span><span class="p">,</span> <span class="n">D</span><span class="p">],</span> <span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
 <span class="o">%</span><span class="k">timeit</span> logp_grad(beta)
 <span class="c1"># while True:</span>
@@ -1448,19 +1296,19 @@ Theano (GPU) took 4.471 seconds
 </div>
 </div>
 <div class="nboutput nblast container">
-<div class="container">
+<div class="prompt empty container">
 </div>
-<div class="container">
+<div class="output_area container">
 <div class="highlight"><pre>
 10 loops, best of 3: 40.5 ms per loop
 </pre></div></div>
 </div>
 <div class="nbinput container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [12]:
 </pre></div>
 </div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="n">t0</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
 <span class="n">beta</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">D</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
 <span class="n">samples</span> <span class="o">=</span> <span class="p">[]</span>
@@ -1473,102 +1321,102 @@ Theano (GPU) took 4.471 seconds
 </div>
 </div>
 <div class="nboutput nblast container">
-<div class="container">
+<div class="prompt empty container">
 </div>
-<div class="container">
+<div class="output_area container">
 <div class="highlight"><pre>
 Theano (GPU) took 4.471 seconds
 </pre></div></div>
 </div>
 <div class="nbinput container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [42]:
 </pre></div>
 </div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="n">plot</span><span class="p">(</span><span class="n">samples</span><span class="p">[:,</span> <span class="mi">5</span><span class="p">])</span>
 </pre></div>
 </div>
 </div>
 <div class="nboutput container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>Out[42]:
 </pre></div>
 </div>
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="output_area highlight-none"><div class="highlight"><pre>
 <span></span>[&lt;matplotlib.lines.Line2D at 0x7f1ef5739450&gt;]
 </pre></div>
 </div>
 </div>
 <div class="nboutput nblast container">
-<div class="container">
+<div class="prompt empty container">
 </div>
-<div class="container">
-<img alt="../_images/notebooks_hmc_experiments_46_1.png" src="../_images/notebooks_hmc_experiments_46_1.png" />
+<div class="output_area container">
+<img alt="../_images/notebooks_hmc_experiments_44_1.png" src="../_images/notebooks_hmc_experiments_44_1.png" />
 </div>
 </div>
 <div class="nbinput container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [56]:
 </pre></div>
 </div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="o">%</span><span class="k">timeit</span> logp_grad(beta)
 </pre></div>
 </div>
 </div>
 <div class="nboutput nblast container">
-<div class="container">
+<div class="prompt empty container">
 </div>
-<div class="container">
+<div class="output_area container">
 <div class="highlight"><pre>
 The slowest run took 6.52 times longer than the fastest. This could mean that an intermediate result is being cached.
 1 loop, best of 3: 44 ms per loop
 </pre></div></div>
 </div>
 <div class="nbinput container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [80]:
 </pre></div>
 </div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="n">plot</span><span class="p">(</span><span class="n">samples</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">])</span>
 </pre></div>
 </div>
 </div>
 <div class="nboutput container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>Out[80]:
 </pre></div>
 </div>
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="output_area highlight-none"><div class="highlight"><pre>
 <span></span>[&lt;matplotlib.lines.Line2D at 0x7faa64137210&gt;]
 </pre></div>
 </div>
 </div>
 <div class="nboutput nblast container">
-<div class="container">
+<div class="prompt empty container">
 </div>
-<div class="container">
-<img alt="../_images/notebooks_hmc_experiments_48_1.png" src="../_images/notebooks_hmc_experiments_48_1.png" />
+<div class="output_area container">
+<img alt="../_images/notebooks_hmc_experiments_46_1.png" src="../_images/notebooks_hmc_experiments_46_1.png" />
 </div>
 </div>
 <div class="nbinput nblast container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [ ]:
 </pre></div>
 </div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span>
 </pre></div>
 </div>
 </div>
 <div class="nbinput container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [5]:
 </pre></div>
 </div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="n">beta</span> <span class="o">=</span> <span class="n">ed</span><span class="o">.</span><span class="n">models</span><span class="o">.</span><span class="n">Normal</span><span class="p">(</span><span class="n">mu</span><span class="o">=</span><span class="n">tf</span><span class="o">.</span><span class="n">zeros</span><span class="p">([</span><span class="n">D</span><span class="p">,</span> <span class="mi">1</span><span class="p">]),</span> <span class="n">sigma</span><span class="o">=</span><span class="n">tf</span><span class="o">.</span><span class="n">ones</span><span class="p">([</span><span class="n">D</span><span class="p">,</span> <span class="mi">1</span><span class="p">]))</span>
 <span class="n">qbeta</span> <span class="o">=</span> <span class="n">ed</span><span class="o">.</span><span class="n">models</span><span class="o">.</span><span class="n">Empirical</span><span class="p">(</span><span class="n">params</span><span class="o">=</span><span class="n">tf</span><span class="o">.</span><span class="n">Variable</span><span class="p">(</span><span class="n">tf</span><span class="o">.</span><span class="n">zeros</span><span class="p">([</span><span class="mi">1000</span><span class="p">,</span> <span class="n">D</span><span class="p">,</span> <span class="mi">1</span><span class="p">])),</span> <span class="n">value</span><span class="o">=</span><span class="n">tf</span><span class="o">.</span><span class="n">zeros</span><span class="p">([</span><span class="n">D</span><span class="p">,</span> <span class="mi">1</span><span class="p">]))</span>
 <span class="n">inference</span> <span class="o">=</span> <span class="n">ed</span><span class="o">.</span><span class="n">HMC</span><span class="p">({</span><span class="n">beta</span><span class="p">:</span><span class="n">qbeta</span><span class="p">})</span>
@@ -1577,9 +1425,9 @@ The slowest run took 6.52 times longer than the fastest. This could mean that an
 </div>
 </div>
 <div class="nboutput nblast container">
-<div class="container">
+<div class="prompt empty container">
 </div>
-<div class="container">
+<div class="output_area container">
 <div class="highlight"><pre>
 WARNING:tensorflow:VARIABLES collection name is deprecated, please use GLOBAL_VARIABLES instead; VARIABLES will be removed after 2017-03-02.
 WARNING:tensorflow:VARIABLES collection name is deprecated, please use GLOBAL_VARIABLES instead; VARIABLES will be removed after 2017-03-02.
@@ -1709,31 +1557,31 @@ Iteration 1000 [100%]: Acceptance Rate = 1.00
 </pre></div></div>
 </div>
 <div class="nbinput nblast container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [ ]:
 </pre></div>
 </div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span>
 </pre></div>
 </div>
 </div>
 <div class="nbinput nblast container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [ ]:
 </pre></div>
 </div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span>
 </pre></div>
 </div>
 </div>
 <div class="nbinput container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [5]:
 </pre></div>
 </div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="c1"># MODEL</span>
 <span class="n">tf_x</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">constant</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
 <span class="n">tf_y</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">Variable</span><span class="p">(</span><span class="n">y</span><span class="p">)</span>
@@ -1752,9 +1600,9 @@ Iteration 1000 [100%]: Acceptance Rate = 1.00
 </div>
 </div>
 <div class="nboutput container">
-<div class="container">
+<div class="prompt empty container">
 </div>
-<div class="container">
+<div class="output_area container">
 <div class="highlight"><pre>
 WARNING:tensorflow:VARIABLES collection name is deprecated, please use GLOBAL_VARIABLES instead; VARIABLES will be removed after 2017-03-02.
 WARNING:tensorflow:VARIABLES collection name is deprecated, please use GLOBAL_VARIABLES instead; VARIABLES will be removed after 2017-03-02.
@@ -1983,9 +1831,9 @@ Use `tf.global_variables_initializer` instead.
 </pre></div></div>
 </div>
 <div class="nboutput nblast container">
-<div class="container">
+<div class="prompt empty container">
 </div>
-<div class="container">
+<div class="output_area container">
 <div class="highlight"><pre>
 
 <span class="ansi-red-fg">ValueError</span>Traceback (most recent call last)
@@ -2068,11 +1916,11 @@ Use `tf.global_variables_initializer` instead.
 </pre></div></div>
 </div>
 <div class="nbinput container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [4]:
 </pre></div>
 </div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="c1"># MODEL</span>
 <span class="n">tf_x</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">Variable</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">trainable</span><span class="o">=</span><span class="bp">False</span><span class="p">)</span>
 <span class="n">tf_y</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">Variable</span><span class="p">(</span><span class="n">y</span><span class="p">,</span> <span class="n">trainable</span><span class="o">=</span><span class="bp">False</span><span class="p">)</span>
@@ -2091,9 +1939,9 @@ Use `tf.global_variables_initializer` instead.
 </div>
 </div>
 <div class="nboutput container">
-<div class="container">
+<div class="prompt empty container">
 </div>
-<div class="container">
+<div class="output_area container">
 <div class="highlight"><pre>
 WARNING:tensorflow:VARIABLES collection name is deprecated, please use GLOBAL_VARIABLES instead; VARIABLES will be removed after 2017-03-02.
 WARNING:tensorflow:VARIABLES collection name is deprecated, please use GLOBAL_VARIABLES instead; VARIABLES will be removed after 2017-03-02.
@@ -2256,9 +2104,9 @@ Use `tf.global_variables_initializer` instead.
 </pre></div></div>
 </div>
 <div class="nboutput nblast container">
-<div class="container">
+<div class="prompt empty container">
 </div>
-<div class="container">
+<div class="output_area container">
 <div class="highlight"><pre>
 
 <span class="ansi-red-fg">InternalError</span>Traceback (most recent call last)
@@ -2383,31 +2231,31 @@ InternalError (see above for traceback): Dst tensor is not initialized.
 </pre></div></div>
 </div>
 <div class="nbinput nblast container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [ ]:
 </pre></div>
 </div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span>
 </pre></div>
 </div>
 </div>
 <div class="nbinput nblast container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [2]:
 </pre></div>
 </div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span>
 </pre></div>
 </div>
 </div>
 <div class="nbinput container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [4]:
 </pre></div>
 </div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="c1"># MODEL</span>
 <span class="n">z</span> <span class="o">=</span> <span class="n">ed</span><span class="o">.</span><span class="n">models</span><span class="o">.</span><span class="n">MultivariateNormalFull</span><span class="p">(</span>
     <span class="n">mu</span><span class="o">=</span><span class="n">tf</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="mi">2</span><span class="p">),</span>
@@ -2430,9 +2278,9 @@ InternalError (see above for traceback): Dst tensor is not initialized.
 </div>
 </div>
 <div class="nboutput nblast container">
-<div class="container">
+<div class="prompt empty container">
 </div>
-<div class="container">
+<div class="output_area container">
 <div class="highlight"><pre>
 WARNING:tensorflow:VARIABLES collection name is deprecated, please use GLOBAL_VARIABLES instead; VARIABLES will be removed after 2017-03-02.
 WARNING:tensorflow:VARIABLES collection name is deprecated, please use GLOBAL_VARIABLES instead; VARIABLES will be removed after 2017-03-02.
@@ -2666,52 +2514,52 @@ Inferred posterior std:
 </pre></div></div>
 </div>
 <div class="nbinput container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [13]:
 </pre></div>
 </div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="n">np</span><span class="o">.</span><span class="n">cov</span><span class="p">(</span><span class="n">sess</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">qz_val</span><span class="p">)[</span><span class="mi">500</span><span class="p">:,</span> <span class="p">:]</span><span class="o">.</span><span class="n">T</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
 <div class="nboutput nblast container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>Out[13]:
 </pre></div>
 </div>
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="output_area highlight-none"><div class="highlight"><pre>
 <span></span>array([[ 1.03392557,  0.822245  ],
        [ 0.822245  ,  1.00111521]])
 </pre></div>
 </div>
 </div>
 <div class="nbinput nblast container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [ ]:
 </pre></div>
 </div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span>
 </pre></div>
 </div>
 </div>
 <div class="nbinput nblast container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [ ]:
 </pre></div>
 </div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span>
 </pre></div>
 </div>
 </div>
 <div class="nbinput container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [2]:
 </pre></div>
 </div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="sd">&quot;&quot;&quot;Correlated normal posterior. Inference with Hamiltonian Monte Carlo.</span>
 <span class="sd">&quot;&quot;&quot;</span>
 <span class="kn">from</span> <span class="nn">__future__</span> <span class="kn">import</span> <span class="n">absolute_import</span>
@@ -2747,9 +2595,9 @@ Inferred posterior std:
 </div>
 </div>
 <div class="nboutput nblast container">
-<div class="container">
+<div class="prompt empty container">
 </div>
-<div class="container">
+<div class="output_area container">
 <div class="highlight"><pre>
 
 <span class="ansi-red-fg">NotImplementedError</span>Traceback (most recent call last)
@@ -2792,32 +2640,32 @@ Inferred posterior std:
 </pre></div></div>
 </div>
 <div class="nbinput nblast container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [ ]:
 </pre></div>
 </div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span>
 </pre></div>
 </div>
 </div>
 <div class="nbinput nblast container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [4]:
 </pre></div>
 </div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="kn">import</span> <span class="nn">edward</span> <span class="kn">as</span> <span class="nn">ed</span>
 <span class="kn">import</span> <span class="nn">tensorflow</span> <span class="kn">as</span> <span class="nn">tf</span>
 </pre></div>
 </div>
 </div>
 <div class="nbinput container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [7]:
 </pre></div>
 </div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="n">z</span> <span class="o">=</span> <span class="n">ed</span><span class="o">.</span><span class="n">models</span><span class="o">.</span><span class="n">Normal</span><span class="p">(</span><span class="n">mu</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span> <span class="n">sigma</span><span class="o">=</span><span class="mf">1.0</span><span class="p">)</span>
 <span class="n">x</span> <span class="o">=</span> <span class="n">ed</span><span class="o">.</span><span class="n">models</span><span class="o">.</span><span class="n">Normal</span><span class="p">(</span><span class="n">mu</span><span class="o">=</span><span class="n">tf</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="mi">10</span><span class="p">)</span> <span class="o">*</span> <span class="n">z</span><span class="p">,</span> <span class="n">sigma</span><span class="o">=</span><span class="mf">1.0</span><span class="p">)</span>
 
@@ -2828,9 +2676,9 @@ Inferred posterior std:
 </div>
 </div>
 <div class="nboutput nblast container">
-<div class="container">
+<div class="prompt empty container">
 </div>
-<div class="container">
+<div class="output_area container">
 <div class="highlight"><pre>
 
 <span class="ansi-red-fg">NotImplementedError</span>Traceback (most recent call last)
@@ -2873,11 +2721,11 @@ Inferred posterior std:
 </pre></div></div>
 </div>
 <div class="nbinput nblast container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [ ]:
 </pre></div>
 </div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span>
 </pre></div>
 </div>
@@ -2885,63 +2733,62 @@ Inferred posterior std:
 </div>
 
 
-           </div>
           </div>
-          <footer>
-  
-
-  <hr/>
-
-  <div role="contentinfo">
-    <p>
-        &copy; Copyright 2016, John Salvatier, Christopher Fonnesbeck, Thomas Wiecki.
-
-    </p>
-  </div>
-  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
-
-</footer>
-
         </div>
       </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="../index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">Edward code</a></li>
+<li><a class="reference internal" href="#Handwritten-HMC-code">Handwritten HMC code</a></li>
+<li><a class="reference internal" href="#PyStan">PyStan</a></li>
+<li><a class="reference internal" href="#PyMC3">PyMC3</a></li>
+<li><a class="reference internal" href="#Handwritten-code-with-TF-for-gradients">Handwritten code with TF for gradients</a></li>
+<li><a class="reference internal" href="#Handwritten-code-with-Theano-for-gradients">Handwritten code with Theano for gradients</a></li>
+</ul>
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../index.html">Documentation overview</a><ul>
+  </ul></li>
+</ul>
+</div>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="../_sources/notebooks/hmc_experiments.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2016, John Salvatier, Christopher Fonnesbeck, Thomas Wiecki.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.4.6</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.9</a>
+      
+      |
+      <a href="../_sources/notebooks/hmc_experiments.txt"
+          rel="nofollow">Page source</a>
+    </div>
 
-    </section>
+    
 
-  </div>
-  
-
-
-  
-
-    <script type="text/javascript">
-        var DOCUMENTATION_OPTIONS = {
-            URL_ROOT:'../',
-            VERSION:'3.0',
-            COLLAPSE_INDEX:false,
-            FILE_SUFFIX:'.html',
-            HAS_SOURCE:  true
-        };
-    </script>
-      <script type="text/javascript" src="../_static/jquery.js"></script>
-      <script type="text/javascript" src="../_static/underscore.js"></script>
-      <script type="text/javascript" src="../_static/doctools.js"></script>
-      <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
-
-  
-
-  
-  
-    <script type="text/javascript" src="../_static/js/theme.js"></script>
-  
-
-  
-  
-  <script type="text/javascript">
-      jQuery(function () {
-          SphinxRtdTheme.StickyNav.enable();
-      });
-  </script>
-   
-
-</body>
+    
+  </body>
 </html>

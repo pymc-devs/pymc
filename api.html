@@ -1,220 +1,47 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 
 
-<!DOCTYPE html>
-<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
-<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
-<head>
-  <meta charset="utf-8">
-  
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  
-  <title>API Reference &mdash; PyMC3 3.0 documentation</title>
-  
-
-  
-  
-
-  
-
-  
-  
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     
-
-  
-
-  
-  
-    <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
-  
-
-  
-
-  
-        <link rel="index" title="Index"
-              href="genindex.html"/>
-        <link rel="search" title="Search" href="search.html"/>
-    <link rel="top" title="PyMC3 3.0 documentation" href="index.html"/>
-        <link rel="prev" title="Convolutional variational autoencoder with PyMC3 and Keras" href="notebooks/convolutional_vae_keras_advi.html"/> 
-
-  
-  <script src="_static/js/modernizr.min.js"></script>
-
-</head>
-
-<body class="wy-body-for-nav" role="document">
-
-  <div class="wy-grid-for-nav">
-
+    <title>API Reference &#8212; PyMC3 3.0 documentation</title>
     
-    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
-      <div class="wy-side-scroll">
-        <div class="wy-side-nav-search">
-          
-
-          
-            <a href="index.html" class="icon icon-home"> PyMC3
-          
-
-          
-          </a>
-
-          
-            
-            
-              <div class="version">
-                3.0
-              </div>
-            
-          
-
-          
-<div role="search">
-  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
-    <input type="text" name="q" placeholder="Search docs" />
-    <input type="hidden" name="check_keywords" value="yes" />
-    <input type="hidden" name="area" value="default" />
-  </form>
-</div>
-
-          
-        </div>
-
-        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
-          
-            
-            
-                <ul class="current">
-<li class="toctree-l1"><a class="reference internal" href="getting_started.html">Getting started</a></li>
-<li class="toctree-l1"><a class="reference internal" href="examples.html">Examples</a></li>
-<li class="toctree-l1 current"><a class="current reference internal" href="#">API Reference</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="#distributions">Distributions</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="#continuous">Continuous</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#discrete">Discrete</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#multivariate">Multivariate</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#mixture">Mixture</a></li>
-</ul>
-</li>
-<li class="toctree-l2"><a class="reference internal" href="#module-pymc3.plots">Plots</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#module-pymc3.stats">Stats</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#module-pymc3.diagnostics">Diagnostics</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#inference">Inference</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="#module-pymc3.sampling">Sampling</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#step-methods">Step-methods</a><ul>
-<li class="toctree-l4"><a class="reference internal" href="#nuts">NUTS</a></li>
-<li class="toctree-l4"><a class="reference internal" href="#module-pymc3.step_methods.metropolis">Metropolis</a></li>
-<li class="toctree-l4"><a class="reference internal" href="#module-pymc3.step_methods.slicer">Slice</a></li>
-<li class="toctree-l4"><a class="reference internal" href="#module-pymc3.step_methods.hmc">Hamiltonian Monte Carlo</a></li>
-</ul>
-</li>
-<li class="toctree-l3"><a class="reference internal" href="#variational">Variational</a><ul>
-<li class="toctree-l4"><a class="reference internal" href="#module-pymc3.variational.advi">ADVI</a></li>
-<li class="toctree-l4"><a class="reference internal" href="#module-pymc3.variational.advi_minibatch">ADVI minibatch</a></li>
-</ul>
-</li>
-</ul>
-</li>
-<li class="toctree-l2"><a class="reference internal" href="#module-pymc3.backends">Backends</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="#available-backends">Available backends</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#selecting-a-backend">Selecting a backend</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#selecting-values-from-a-backend">Selecting values from a backend</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#loading-a-saved-backend">Loading a saved backend</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#writing-custom-backends">Writing custom backends</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#module-pymc3.backends.ndarray">ndarray</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#module-pymc3.backends.sqlite">sqlite</a><ul>
-<li class="toctree-l4"><a class="reference internal" href="#database-format">Database format</a></li>
-</ul>
-</li>
-<li class="toctree-l3"><a class="reference internal" href="#module-pymc3.backends.text">text</a><ul>
-<li class="toctree-l4"><a class="reference internal" href="#file-format">File format</a></li>
-</ul>
-</li>
-<li class="toctree-l3"><a class="reference internal" href="#module-pymc3.backends.tracetab">tracetab</a></li>
-</ul>
-</li>
-<li class="toctree-l2"><a class="reference internal" href="#glm">GLM</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#gp">GP</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#math">Math</a></li>
-</ul>
-</li>
-</ul>
-
-            
-          
-        </div>
-      </div>
-    </nav>
-
-    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
-
-      
-      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
-        <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
-        <a href="index.html">PyMC3</a>
-      </nav>
-
-
-      
-      <div class="wy-nav-content">
-        <div class="rst-content">
-          
-
- 
-
-
-
-<div role="navigation" aria-label="breadcrumbs navigation">
-  <ul class="wy-breadcrumbs">
-    <li><a href="index.html">Docs</a> &raquo;</li>
-      
-    <li>API Reference</li>
-      <li class="wy-breadcrumbs-aside">
-        
-          
-            <a href="_sources/api.rst.txt" rel="nofollow"> View page source</a>
-          
-        
-      </li>
-  </ul>
-  <hr/>
-</div>
-          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
-           <div itemprop="articleBody">
-            
+    <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    './',
+        VERSION:     '3.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="top" title="PyMC3 3.0 documentation" href="index.html" />
+    <link rel="prev" title="Convolutional variational autoencoder with PyMC3 and Keras" href="notebooks/convolutional_vae_keras_advi.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
   
-<style>
-/* CSS overrides for sphinx_rtd_theme */
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
 
-/* 24px margin */
-.nbinput.nblast,
-.nboutput.nblast {
-    margin-bottom: 19px;  /* padding has already 5px */
-}
+  </head>
+  <body role="document">
+  
 
-/* ... except between code cells! */
-.nblast + .nbinput {
-    margin-top: -19px;
-}
-
-/* nice headers on first paragraph of info/warning boxes */
-.admonition .first {
-    margin: -12px;
-    padding: 6px 12px;
-    margin-bottom: 12px;
-    color: #fff;
-    line-height: 1;
-    display: block;
-}
-.admonition.warning .first {
-    background: #f0b37e;
-}
-.admonition.note .first {
-    background: #6ab0de;
-}
-.admonition > p:before {
-    margin-right: 4px;  /* make room for the exclamation icon */
-}
-</style>
-<div class="section" id="api-reference">
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="api-reference">
 <span id="api"></span><h1>API Reference<a class="headerlink" href="#api-reference" title="Permalink to this headline">¶</a></h1>
 <div class="section" id="distributions">
 <h2>Distributions<a class="headerlink" href="#distributions" title="Permalink to this headline">¶</a></h2>
@@ -229,7 +56,7 @@
 <tr class="row-odd"><td><a class="reference internal" href="#pymc3.distributions.continuous.Uniform" title="pymc3.distributions.continuous.Uniform"><code class="xref py py-obj docutils literal"><span class="pre">Uniform</span></code></a>([lower,&nbsp;upper,&nbsp;transform])</td>
 <td>Continuous uniform log-likelihood.</td>
 </tr>
-<tr class="row-even"><td><a class="reference internal" href="#pymc3.distributions.continuous.Flat" title="pymc3.distributions.continuous.Flat"><code class="xref py py-obj docutils literal"><span class="pre">Flat</span></code></a>(\*args,&nbsp;\*\*kwargs)</td>
+<tr class="row-even"><td><a class="reference internal" href="#pymc3.distributions.continuous.Flat" title="pymc3.distributions.continuous.Flat"><code class="xref py py-obj docutils literal"><span class="pre">Flat</span></code></a>(*args,&nbsp;**kwargs)</td>
 <td>Uninformative log-likelihood that returns 0 regardless of the passed value.</td>
 </tr>
 <tr class="row-odd"><td><a class="reference internal" href="#pymc3.distributions.continuous.Normal" title="pymc3.distributions.continuous.Normal"><code class="xref py py-obj docutils literal"><span class="pre">Normal</span></code></a>([mu,&nbsp;sd,&nbsp;tau])</td>
@@ -238,34 +65,34 @@
 <tr class="row-even"><td><a class="reference internal" href="#pymc3.distributions.continuous.Beta" title="pymc3.distributions.continuous.Beta"><code class="xref py py-obj docutils literal"><span class="pre">Beta</span></code></a>([alpha,&nbsp;beta,&nbsp;mu,&nbsp;sd])</td>
 <td>Beta log-likelihood.</td>
 </tr>
-<tr class="row-odd"><td><a class="reference internal" href="#pymc3.distributions.continuous.Exponential" title="pymc3.distributions.continuous.Exponential"><code class="xref py py-obj docutils literal"><span class="pre">Exponential</span></code></a>(lam,&nbsp;\*args,&nbsp;\*\*kwargs)</td>
+<tr class="row-odd"><td><a class="reference internal" href="#pymc3.distributions.continuous.Exponential" title="pymc3.distributions.continuous.Exponential"><code class="xref py py-obj docutils literal"><span class="pre">Exponential</span></code></a>(lam,&nbsp;*args,&nbsp;**kwargs)</td>
 <td>Exponential log-likelihood.</td>
 </tr>
-<tr class="row-even"><td><a class="reference internal" href="#pymc3.distributions.continuous.Laplace" title="pymc3.distributions.continuous.Laplace"><code class="xref py py-obj docutils literal"><span class="pre">Laplace</span></code></a>(mu,&nbsp;b,&nbsp;\*args,&nbsp;\*\*kwargs)</td>
+<tr class="row-even"><td><a class="reference internal" href="#pymc3.distributions.continuous.Laplace" title="pymc3.distributions.continuous.Laplace"><code class="xref py py-obj docutils literal"><span class="pre">Laplace</span></code></a>(mu,&nbsp;b,&nbsp;*args,&nbsp;**kwargs)</td>
 <td>Laplace log-likelihood.</td>
 </tr>
 <tr class="row-odd"><td><a class="reference internal" href="#pymc3.distributions.continuous.StudentT" title="pymc3.distributions.continuous.StudentT"><code class="xref py py-obj docutils literal"><span class="pre">StudentT</span></code></a>(nu[,&nbsp;mu,&nbsp;lam,&nbsp;sd])</td>
 <td>Non-central Student&#8217;s T log-likelihood.</td>
 </tr>
-<tr class="row-even"><td><a class="reference internal" href="#pymc3.distributions.continuous.Cauchy" title="pymc3.distributions.continuous.Cauchy"><code class="xref py py-obj docutils literal"><span class="pre">Cauchy</span></code></a>(alpha,&nbsp;beta,&nbsp;\*args,&nbsp;\*\*kwargs)</td>
+<tr class="row-even"><td><a class="reference internal" href="#pymc3.distributions.continuous.Cauchy" title="pymc3.distributions.continuous.Cauchy"><code class="xref py py-obj docutils literal"><span class="pre">Cauchy</span></code></a>(alpha,&nbsp;beta,&nbsp;*args,&nbsp;**kwargs)</td>
 <td>Cauchy log-likelihood.</td>
 </tr>
-<tr class="row-odd"><td><a class="reference internal" href="#pymc3.distributions.continuous.HalfCauchy" title="pymc3.distributions.continuous.HalfCauchy"><code class="xref py py-obj docutils literal"><span class="pre">HalfCauchy</span></code></a>(beta,&nbsp;\*args,&nbsp;\*\*kwargs)</td>
+<tr class="row-odd"><td><a class="reference internal" href="#pymc3.distributions.continuous.HalfCauchy" title="pymc3.distributions.continuous.HalfCauchy"><code class="xref py py-obj docutils literal"><span class="pre">HalfCauchy</span></code></a>(beta,&nbsp;*args,&nbsp;**kwargs)</td>
 <td>Half-Cauchy log-likelihood.</td>
 </tr>
 <tr class="row-even"><td><a class="reference internal" href="#pymc3.distributions.continuous.Gamma" title="pymc3.distributions.continuous.Gamma"><code class="xref py py-obj docutils literal"><span class="pre">Gamma</span></code></a>([alpha,&nbsp;beta,&nbsp;mu,&nbsp;sd])</td>
 <td>Gamma log-likelihood.</td>
 </tr>
-<tr class="row-odd"><td><a class="reference internal" href="#pymc3.distributions.continuous.Weibull" title="pymc3.distributions.continuous.Weibull"><code class="xref py py-obj docutils literal"><span class="pre">Weibull</span></code></a>(alpha,&nbsp;beta,&nbsp;\*args,&nbsp;\*\*kwargs)</td>
+<tr class="row-odd"><td><a class="reference internal" href="#pymc3.distributions.continuous.Weibull" title="pymc3.distributions.continuous.Weibull"><code class="xref py py-obj docutils literal"><span class="pre">Weibull</span></code></a>(alpha,&nbsp;beta,&nbsp;*args,&nbsp;**kwargs)</td>
 <td>Weibull log-likelihood.</td>
 </tr>
-<tr class="row-even"><td><code class="xref py py-obj docutils literal"><span class="pre">StudentTpos</span></code>(\*args,&nbsp;\*\*kwargs)</td>
+<tr class="row-even"><td><code class="xref py py-obj docutils literal"><span class="pre">StudentTpos</span></code>(*args,&nbsp;**kwargs)</td>
 <td></td>
 </tr>
 <tr class="row-odd"><td><a class="reference internal" href="#pymc3.distributions.continuous.Lognormal" title="pymc3.distributions.continuous.Lognormal"><code class="xref py py-obj docutils literal"><span class="pre">Lognormal</span></code></a>([mu,&nbsp;sd,&nbsp;tau])</td>
 <td>Log-normal log-likelihood.</td>
 </tr>
-<tr class="row-even"><td><a class="reference internal" href="#pymc3.distributions.continuous.ChiSquared" title="pymc3.distributions.continuous.ChiSquared"><code class="xref py py-obj docutils literal"><span class="pre">ChiSquared</span></code></a>(nu,&nbsp;\*args,&nbsp;\*\*kwargs)</td>
+<tr class="row-even"><td><a class="reference internal" href="#pymc3.distributions.continuous.ChiSquared" title="pymc3.distributions.continuous.ChiSquared"><code class="xref py py-obj docutils literal"><span class="pre">ChiSquared</span></code></a>(nu,&nbsp;*args,&nbsp;**kwargs)</td>
 <td><span class="math">\(\chi^2\)</span> log-likelihood.</td>
 </tr>
 <tr class="row-odd"><td><a class="reference internal" href="#pymc3.distributions.continuous.HalfNormal" title="pymc3.distributions.continuous.HalfNormal"><code class="xref py py-obj docutils literal"><span class="pre">HalfNormal</span></code></a>([sd,&nbsp;tau])</td>
@@ -274,13 +101,13 @@
 <tr class="row-even"><td><a class="reference internal" href="#pymc3.distributions.continuous.Wald" title="pymc3.distributions.continuous.Wald"><code class="xref py py-obj docutils literal"><span class="pre">Wald</span></code></a>([mu,&nbsp;lam,&nbsp;phi,&nbsp;alpha])</td>
 <td>Wald log-likelihood.</td>
 </tr>
-<tr class="row-odd"><td><a class="reference internal" href="#pymc3.distributions.continuous.Pareto" title="pymc3.distributions.continuous.Pareto"><code class="xref py py-obj docutils literal"><span class="pre">Pareto</span></code></a>(alpha,&nbsp;m,&nbsp;\*args,&nbsp;\*\*kwargs)</td>
+<tr class="row-odd"><td><a class="reference internal" href="#pymc3.distributions.continuous.Pareto" title="pymc3.distributions.continuous.Pareto"><code class="xref py py-obj docutils literal"><span class="pre">Pareto</span></code></a>(alpha,&nbsp;m,&nbsp;*args,&nbsp;**kwargs)</td>
 <td>Pareto log-likelihood.</td>
 </tr>
 <tr class="row-even"><td><a class="reference internal" href="#pymc3.distributions.continuous.InverseGamma" title="pymc3.distributions.continuous.InverseGamma"><code class="xref py py-obj docutils literal"><span class="pre">InverseGamma</span></code></a>(alpha[,&nbsp;beta])</td>
 <td>Inverse gamma log-likelihood, the reciprocal of the gamma distribution.</td>
 </tr>
-<tr class="row-odd"><td><a class="reference internal" href="#pymc3.distributions.continuous.ExGaussian" title="pymc3.distributions.continuous.ExGaussian"><code class="xref py py-obj docutils literal"><span class="pre">ExGaussian</span></code></a>(mu,&nbsp;sigma,&nbsp;nu,&nbsp;\*args,&nbsp;\*\*kwargs)</td>
+<tr class="row-odd"><td><a class="reference internal" href="#pymc3.distributions.continuous.ExGaussian" title="pymc3.distributions.continuous.ExGaussian"><code class="xref py py-obj docutils literal"><span class="pre">ExGaussian</span></code></a>(mu,&nbsp;sigma,&nbsp;nu,&nbsp;*args,&nbsp;**kwargs)</td>
 <td>Exponentially modified Gaussian log-likelihood.</td>
 </tr>
 </tbody>
@@ -1237,34 +1064,34 @@ approaching plus/minus infinite we get a half-normal distribution.</p>
 <col width="90%" />
 </colgroup>
 <tbody valign="top">
-<tr class="row-odd"><td><a class="reference internal" href="#pymc3.distributions.discrete.Binomial" title="pymc3.distributions.discrete.Binomial"><code class="xref py py-obj docutils literal"><span class="pre">Binomial</span></code></a>(n,&nbsp;p,&nbsp;\*args,&nbsp;\*\*kwargs)</td>
+<tr class="row-odd"><td><a class="reference internal" href="#pymc3.distributions.discrete.Binomial" title="pymc3.distributions.discrete.Binomial"><code class="xref py py-obj docutils literal"><span class="pre">Binomial</span></code></a>(n,&nbsp;p,&nbsp;*args,&nbsp;**kwargs)</td>
 <td>Binomial log-likelihood.</td>
 </tr>
-<tr class="row-even"><td><a class="reference internal" href="#pymc3.distributions.discrete.BetaBinomial" title="pymc3.distributions.discrete.BetaBinomial"><code class="xref py py-obj docutils literal"><span class="pre">BetaBinomial</span></code></a>(alpha,&nbsp;beta,&nbsp;n,&nbsp;\*args,&nbsp;\*\*kwargs)</td>
+<tr class="row-even"><td><a class="reference internal" href="#pymc3.distributions.discrete.BetaBinomial" title="pymc3.distributions.discrete.BetaBinomial"><code class="xref py py-obj docutils literal"><span class="pre">BetaBinomial</span></code></a>(alpha,&nbsp;beta,&nbsp;n,&nbsp;*args,&nbsp;**kwargs)</td>
 <td>Beta-binomial log-likelihood.</td>
 </tr>
-<tr class="row-odd"><td><a class="reference internal" href="#pymc3.distributions.discrete.Bernoulli" title="pymc3.distributions.discrete.Bernoulli"><code class="xref py py-obj docutils literal"><span class="pre">Bernoulli</span></code></a>(p,&nbsp;\*args,&nbsp;\*\*kwargs)</td>
+<tr class="row-odd"><td><a class="reference internal" href="#pymc3.distributions.discrete.Bernoulli" title="pymc3.distributions.discrete.Bernoulli"><code class="xref py py-obj docutils literal"><span class="pre">Bernoulli</span></code></a>(p,&nbsp;*args,&nbsp;**kwargs)</td>
 <td>Bernoulli log-likelihood</td>
 </tr>
-<tr class="row-even"><td><a class="reference internal" href="#pymc3.distributions.discrete.Poisson" title="pymc3.distributions.discrete.Poisson"><code class="xref py py-obj docutils literal"><span class="pre">Poisson</span></code></a>(mu,&nbsp;\*args,&nbsp;\*\*kwargs)</td>
+<tr class="row-even"><td><a class="reference internal" href="#pymc3.distributions.discrete.Poisson" title="pymc3.distributions.discrete.Poisson"><code class="xref py py-obj docutils literal"><span class="pre">Poisson</span></code></a>(mu,&nbsp;*args,&nbsp;**kwargs)</td>
 <td>Poisson log-likelihood.</td>
 </tr>
-<tr class="row-odd"><td><a class="reference internal" href="#pymc3.distributions.discrete.NegativeBinomial" title="pymc3.distributions.discrete.NegativeBinomial"><code class="xref py py-obj docutils literal"><span class="pre">NegativeBinomial</span></code></a>(mu,&nbsp;alpha,&nbsp;\*args,&nbsp;\*\*kwargs)</td>
+<tr class="row-odd"><td><a class="reference internal" href="#pymc3.distributions.discrete.NegativeBinomial" title="pymc3.distributions.discrete.NegativeBinomial"><code class="xref py py-obj docutils literal"><span class="pre">NegativeBinomial</span></code></a>(mu,&nbsp;alpha,&nbsp;*args,&nbsp;**kwargs)</td>
 <td>Negative binomial log-likelihood.</td>
 </tr>
-<tr class="row-even"><td><code class="xref py py-obj docutils literal"><span class="pre">ConstantDist</span></code>(\*args,&nbsp;\*\*kwargs)</td>
+<tr class="row-even"><td><code class="xref py py-obj docutils literal"><span class="pre">ConstantDist</span></code>(*args,&nbsp;**kwargs)</td>
 <td></td>
 </tr>
-<tr class="row-odd"><td><a class="reference internal" href="#pymc3.distributions.discrete.ZeroInflatedPoisson" title="pymc3.distributions.discrete.ZeroInflatedPoisson"><code class="xref py py-obj docutils literal"><span class="pre">ZeroInflatedPoisson</span></code></a>(theta,&nbsp;psi,&nbsp;\*args,&nbsp;\*\*kwargs)</td>
+<tr class="row-odd"><td><a class="reference internal" href="#pymc3.distributions.discrete.ZeroInflatedPoisson" title="pymc3.distributions.discrete.ZeroInflatedPoisson"><code class="xref py py-obj docutils literal"><span class="pre">ZeroInflatedPoisson</span></code></a>(theta,&nbsp;psi,&nbsp;*args,&nbsp;**kwargs)</td>
 <td>Zero-inflated Poisson log-likelihood.</td>
 </tr>
-<tr class="row-even"><td><a class="reference internal" href="#pymc3.distributions.discrete.DiscreteUniform" title="pymc3.distributions.discrete.DiscreteUniform"><code class="xref py py-obj docutils literal"><span class="pre">DiscreteUniform</span></code></a>(lower,&nbsp;upper,&nbsp;\*args,&nbsp;\*\*kwargs)</td>
+<tr class="row-even"><td><a class="reference internal" href="#pymc3.distributions.discrete.DiscreteUniform" title="pymc3.distributions.discrete.DiscreteUniform"><code class="xref py py-obj docutils literal"><span class="pre">DiscreteUniform</span></code></a>(lower,&nbsp;upper,&nbsp;*args,&nbsp;**kwargs)</td>
 <td>Discrete uniform distribution.</td>
 </tr>
-<tr class="row-odd"><td><a class="reference internal" href="#pymc3.distributions.discrete.Geometric" title="pymc3.distributions.discrete.Geometric"><code class="xref py py-obj docutils literal"><span class="pre">Geometric</span></code></a>(p,&nbsp;\*args,&nbsp;\*\*kwargs)</td>
+<tr class="row-odd"><td><a class="reference internal" href="#pymc3.distributions.discrete.Geometric" title="pymc3.distributions.discrete.Geometric"><code class="xref py py-obj docutils literal"><span class="pre">Geometric</span></code></a>(p,&nbsp;*args,&nbsp;**kwargs)</td>
 <td>Geometric log-likelihood.</td>
 </tr>
-<tr class="row-even"><td><a class="reference internal" href="#pymc3.distributions.discrete.Categorical" title="pymc3.distributions.discrete.Categorical"><code class="xref py py-obj docutils literal"><span class="pre">Categorical</span></code></a>(p,&nbsp;\*args,&nbsp;\*\*kwargs)</td>
+<tr class="row-even"><td><a class="reference internal" href="#pymc3.distributions.discrete.Categorical" title="pymc3.distributions.discrete.Categorical"><code class="xref py py-obj docutils literal"><span class="pre">Categorical</span></code></a>(p,&nbsp;*args,&nbsp;**kwargs)</td>
 <td>Categorical log-likelihood.</td>
 </tr>
 </tbody>
@@ -1754,13 +1581,13 @@ rescaled otherwise.</p>
 <tr class="row-odd"><td><a class="reference internal" href="#pymc3.distributions.multivariate.MvNormal" title="pymc3.distributions.multivariate.MvNormal"><code class="xref py py-obj docutils literal"><span class="pre">MvNormal</span></code></a>(mu[,&nbsp;cov,&nbsp;tau])</td>
 <td>Multivariate normal log-likelihood.</td>
 </tr>
-<tr class="row-even"><td><a class="reference internal" href="#pymc3.distributions.multivariate.Wishart" title="pymc3.distributions.multivariate.Wishart"><code class="xref py py-obj docutils literal"><span class="pre">Wishart</span></code></a>(n,&nbsp;V,&nbsp;\*args,&nbsp;\*\*kwargs)</td>
+<tr class="row-even"><td><a class="reference internal" href="#pymc3.distributions.multivariate.Wishart" title="pymc3.distributions.multivariate.Wishart"><code class="xref py py-obj docutils literal"><span class="pre">Wishart</span></code></a>(n,&nbsp;V,&nbsp;*args,&nbsp;**kwargs)</td>
 <td>Wishart log-likelihood.</td>
 </tr>
-<tr class="row-odd"><td><a class="reference internal" href="#pymc3.distributions.multivariate.LKJCorr" title="pymc3.distributions.multivariate.LKJCorr"><code class="xref py py-obj docutils literal"><span class="pre">LKJCorr</span></code></a>(n,&nbsp;p,&nbsp;\*args,&nbsp;\*\*kwargs)</td>
+<tr class="row-odd"><td><a class="reference internal" href="#pymc3.distributions.multivariate.LKJCorr" title="pymc3.distributions.multivariate.LKJCorr"><code class="xref py py-obj docutils literal"><span class="pre">LKJCorr</span></code></a>(n,&nbsp;p,&nbsp;*args,&nbsp;**kwargs)</td>
 <td>The LKJ (Lewandowski, Kurowicka and Joe) log-likelihood.</td>
 </tr>
-<tr class="row-even"><td><a class="reference internal" href="#pymc3.distributions.multivariate.Multinomial" title="pymc3.distributions.multivariate.Multinomial"><code class="xref py py-obj docutils literal"><span class="pre">Multinomial</span></code></a>(n,&nbsp;p,&nbsp;\*args,&nbsp;\*\*kwargs)</td>
+<tr class="row-even"><td><a class="reference internal" href="#pymc3.distributions.multivariate.Multinomial" title="pymc3.distributions.multivariate.Multinomial"><code class="xref py py-obj docutils literal"><span class="pre">Multinomial</span></code></a>(n,&nbsp;p,&nbsp;*args,&nbsp;**kwargs)</td>
 <td>Multinomial log-likelihood.</td>
 </tr>
 <tr class="row-odd"><td><a class="reference internal" href="#pymc3.distributions.multivariate.Dirichlet" title="pymc3.distributions.multivariate.Dirichlet"><code class="xref py py-obj docutils literal"><span class="pre">Dirichlet</span></code></a>(a[,&nbsp;transform])</td>
@@ -2127,10 +1954,10 @@ extended onion method.&#8221; Journal of multivariate analysis,
 <col width="90%" />
 </colgroup>
 <tbody valign="top">
-<tr class="row-odd"><td><a class="reference internal" href="#pymc3.distributions.mixture.Mixture" title="pymc3.distributions.mixture.Mixture"><code class="xref py py-obj docutils literal"><span class="pre">Mixture</span></code></a>(w,&nbsp;comp_dists,&nbsp;\*args,&nbsp;\*\*kwargs)</td>
+<tr class="row-odd"><td><a class="reference internal" href="#pymc3.distributions.mixture.Mixture" title="pymc3.distributions.mixture.Mixture"><code class="xref py py-obj docutils literal"><span class="pre">Mixture</span></code></a>(w,&nbsp;comp_dists,&nbsp;*args,&nbsp;**kwargs)</td>
 <td>Mixture log-likelihood</td>
 </tr>
-<tr class="row-even"><td><a class="reference internal" href="#pymc3.distributions.mixture.NormalMixture" title="pymc3.distributions.mixture.NormalMixture"><code class="xref py py-obj docutils literal"><span class="pre">NormalMixture</span></code></a>(w,&nbsp;mu,&nbsp;\*args,&nbsp;\*\*kwargs)</td>
+<tr class="row-even"><td><a class="reference internal" href="#pymc3.distributions.mixture.NormalMixture" title="pymc3.distributions.mixture.NormalMixture"><code class="xref py py-obj docutils literal"><span class="pre">NormalMixture</span></code></a>(w,&nbsp;mu,&nbsp;*args,&nbsp;**kwargs)</td>
 <td>Normal mixture log-likelihood</td>
 </tr>
 </tbody>
@@ -2248,7 +2075,9 @@ the mixutre weights</div></blockquote>
 <blockquote>
 <div><p>Dictionary of variable name / value  to be overplotted as vertical
 lines to the posteriors and horizontal lines on sample values
-e.g. mean of posteriors, true values of a simulation</p>
+e.g. mean of posteriors, true values of a simulation.
+If an array of values, line colors are matched to posterior colors.
+Otherwise, a default red line</p>
 </div></blockquote>
 <p><strong>combined</strong> : bool</p>
 <blockquote>
@@ -2328,7 +2157,7 @@ variables plotted).</p>
 </div></blockquote>
 <p><strong>quartiles (optional): bool</strong></p>
 <blockquote>
-<div><p>Flag for plotting the interquartile range, in addition to the 
+<div><p>Flag for plotting the interquartile range, in addition to the
 (1-alpha)*100% intervals (defaults to True).</p>
 </div></blockquote>
 <p><strong>rhat (optional): bool</strong></p>
@@ -2536,7 +2365,7 @@ Read more theory here - in a paper by some of the leading authorities on Model S
 
 <dl class="function">
 <dt id="pymc3.stats.waic">
-<code class="descclassname">pymc3.stats.</code><code class="descname">waic</code><span class="sig-paren">(</span><em>trace</em>, <em>model=None</em>, <em>n_eff=False</em>, <em>pointwise=False</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.stats.waic" title="Permalink to this definition">¶</a></dt>
+<code class="descclassname">pymc3.stats.</code><code class="descname">waic</code><span class="sig-paren">(</span><em>trace</em>, <em>model=None</em>, <em>pointwise=False</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.stats.waic" title="Permalink to this definition">¶</a></dt>
 <dd><p>Calculate the widely available information criterion, its standard error
 and the effective number of parameters of the samples in trace from model.
 Read more theory here - in a paper by some of the leading authorities on
@@ -2550,11 +2379,6 @@ Model Selection - dx.doi.org/10.1111/1467-9868.00353</p>
 <blockquote>
 <div><p>Optional model. Default None, taken from context.</p>
 </div></blockquote>
-<p><strong>n_eff: bool</strong></p>
-<blockquote>
-<div><p>if True the effective number parameters will be returned.
-Default False</p>
-</div></blockquote>
 <p><strong>pointwise: bool</strong></p>
 <blockquote>
 <div><p>if True the pointwise predictive accuracy will be returned.
@@ -2562,9 +2386,11 @@ Default False</p>
 </div></blockquote>
 </td>
 </tr>
-<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">waic: widely available information criterion</p>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">namedtuple with the following elements:</p>
+<p>waic: widely available information criterion</p>
 <p>waic_se: standard error of waic</p>
-<p class="last">p_waic: effective number parameters, only if n_eff True</p>
+<p>p_waic: effective number parameters</p>
+<p class="last">waic_i: and array of the pointwise predictive accuracy, only if pointwise True</p>
 </td>
 </tr>
 </tbody>
@@ -2573,7 +2399,7 @@ Default False</p>
 
 <dl class="function">
 <dt id="pymc3.stats.loo">
-<code class="descclassname">pymc3.stats.</code><code class="descname">loo</code><span class="sig-paren">(</span><em>trace</em>, <em>model=None</em>, <em>n_eff=False</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.stats.loo" title="Permalink to this definition">¶</a></dt>
+<code class="descclassname">pymc3.stats.</code><code class="descname">loo</code><span class="sig-paren">(</span><em>trace</em>, <em>model=None</em>, <em>pointwise=False</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.stats.loo" title="Permalink to this definition">¶</a></dt>
 <dd><p>Calculates leave-one-out (LOO) cross-validation for out of sample predictive
 model fit, following Vehtari et al. (2015). Cross-validation is computed using
 Pareto-smoothed importance sampling (PSIS).</p>
@@ -2586,16 +2412,18 @@ Pareto-smoothed importance sampling (PSIS).</p>
 <blockquote>
 <div><p>Optional model. Default None, taken from context.</p>
 </div></blockquote>
-<p><strong>n_eff: bool</strong></p>
+<p><strong>pointwise: bool</strong></p>
 <blockquote>
-<div><p>if True the effective number parameters will be computed and returned.
+<div><p>if True the pointwise predictive accuracy will be returned.
 Default False</p>
 </div></blockquote>
 </td>
 </tr>
-<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">elpd_loo: log pointwise predictive density calculated via approximated LOO cross-validation</p>
-<p>elpd_loo_se: standard error of waic elpd_loo</p>
-<p class="last">p_loo: effective number parameters, only if n_eff True</p>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">namedtuple with the following elements:</p>
+<p>loo: approximated Leave-one-out cross-validation</p>
+<p>loo_se: standard error of loo</p>
+<p>p_loo: effective number of parameters</p>
+<p class="last">loo_i: and array of the pointwise predictive accuracy, only if pointwise True</p>
 </td>
 </tr>
 </tbody>
@@ -2719,7 +2547,7 @@ This is only meaningful when <cite>stat_funcs</cite> is None.</p>
 <div><p>Flag for summarizing automatically transformed variables in addition to
 original variables (defaults to False).</p>
 </div></blockquote>
-<p><strong>tofile</strong> : None or string</p>
+<p><strong>to_file</strong> : None or string</p>
 <blockquote class="last">
 <div><p>File to write results to. If not given, print to stdout.</p>
 </div></blockquote>
@@ -3896,12 +3724,12 @@ defined that returns a MultiTrace object.</p>
 <dt id="pymc3.backends.ndarray.NDArray.point">
 <code class="descname">point</code><span class="sig-paren">(</span><em>idx</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.backends.ndarray.NDArray.point" title="Permalink to this definition">¶</a></dt>
 <dd><p>Return dictionary of point values at <cite>idx</cite> for current chain
-with variables names as keys.</p>
+with variable names as keys.</p>
 </dd></dl>
 
 <dl class="method">
 <dt id="pymc3.backends.ndarray.NDArray.record">
-<code class="descname">record</code><span class="sig-paren">(</span><em>point</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.backends.ndarray.NDArray.record" title="Permalink to this definition">¶</a></dt>
+<code class="descname">record</code><span class="sig-paren">(</span><em>point</em>, <em>sampler_stats=None</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.backends.ndarray.NDArray.record" title="Permalink to this definition">¶</a></dt>
 <dd><p>Record results of a sampling iteration.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
@@ -3919,7 +3747,7 @@ with variables names as keys.</p>
 
 <dl class="method">
 <dt id="pymc3.backends.ndarray.NDArray.setup">
-<code class="descname">setup</code><span class="sig-paren">(</span><em>draws</em>, <em>chain</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.backends.ndarray.NDArray.setup" title="Permalink to this definition">¶</a></dt>
+<code class="descname">setup</code><span class="sig-paren">(</span><em>draws</em>, <em>chain</em>, <em>sampler_vars=None</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.backends.ndarray.NDArray.setup" title="Permalink to this definition">¶</a></dt>
 <dd><p>Perform chain-specific setup.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
@@ -3930,8 +3758,13 @@ with variables names as keys.</p>
 <div><p>Expected number of draws</p>
 </div></blockquote>
 <p><strong>chain</strong> : int</p>
-<blockquote class="last">
+<blockquote>
 <div><p>Chain number</p>
+</div></blockquote>
+<p><strong>sampler_vars</strong> : list of dicts</p>
+<blockquote class="last">
+<div><p>Names and dtypes of the variables that are
+exported by the samplers.</p>
 </div></blockquote>
 </td>
 </tr>
@@ -4258,12 +4091,12 @@ chain value can also be given.</p>
 </div></blockquote>
 <p><strong>varnames</strong> : list of variable names</p>
 <blockquote>
-<div><p>Variables to be included in the DataFrame, if None all variable are 
+<div><p>Variables to be included in the DataFrame, if None all variable are
 included.</p>
 </div></blockquote>
 <p><strong>hide_transformed_vars: boolean</strong></p>
 <blockquote class="last">
-<div><p>If true transformed variables will not be included in the resulting 
+<div><p>If true transformed variables will not be included in the resulting
 DataFrame.</p>
 </div></blockquote>
 </td>
@@ -4434,7 +4267,7 @@ expressions rather than NumPy or Python code.</p>
 <tr class="row-odd"><td><code class="xref py py-obj docutils literal"><span class="pre">ones_like</span></code>(model[,&nbsp;dtype,&nbsp;opt])</td>
 <td>equivalent of numpy.ones_like</td>
 </tr>
-<tr class="row-even"><td><code class="xref py py-obj docutils literal"><span class="pre">stack</span></code>(\*tensors,&nbsp;\*\*kwargs)</td>
+<tr class="row-even"><td><code class="xref py py-obj docutils literal"><span class="pre">stack</span></code>(*tensors,&nbsp;**kwargs)</td>
 <td>Stack tensors in sequence on given axis (default is 0).</td>
 </tr>
 <tr class="row-odd"><td><code class="xref py py-obj docutils literal"><span class="pre">concatenate</span></code>(tensor_list[,&nbsp;axis])</td>
@@ -4545,7 +4378,7 @@ expressions rather than NumPy or Python code.</p>
 <tr class="row-even"><td><code class="xref py py-obj docutils literal"><span class="pre">extract_diag</span></code></td>
 <td>Return the diagonal of a matrix.</td>
 </tr>
-<tr class="row-odd"><td><code class="xref py py-obj docutils literal"><span class="pre">matrix_dot</span></code>(\*args)</td>
+<tr class="row-odd"><td><code class="xref py py-obj docutils literal"><span class="pre">matrix_dot</span></code>(*args)</td>
 <td>Shorthand for product between several dots.</td>
 </tr>
 <tr class="row-even"><td><code class="xref py py-obj docutils literal"><span class="pre">trace</span></code>(X)</td>
@@ -4569,70 +4402,107 @@ expressions rather than NumPy or Python code.</p>
 </div>
 
 
-           </div>
           </div>
-          <footer>
-  
-    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
-      
-      
-        <a href="notebooks/convolutional_vae_keras_advi.html" class="btn btn-neutral" title="Convolutional variational autoencoder with PyMC3 and Keras" accesskey="p"><span class="fa fa-arrow-circle-left"></span> Previous</a>
-      
-    </div>
-  
-
-  <hr/>
-
-  <div role="contentinfo">
-    <p>
-        &copy; Copyright 2016, John Salvatier, Christopher Fonnesbeck, Thomas Wiecki.
-
-    </p>
-  </div>
-  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
-
-</footer>
-
         </div>
       </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">API Reference</a><ul>
+<li><a class="reference internal" href="#distributions">Distributions</a><ul>
+<li><a class="reference internal" href="#continuous">Continuous</a></li>
+<li><a class="reference internal" href="#discrete">Discrete</a></li>
+<li><a class="reference internal" href="#multivariate">Multivariate</a></li>
+<li><a class="reference internal" href="#mixture">Mixture</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#module-pymc3.plots">Plots</a></li>
+<li><a class="reference internal" href="#module-pymc3.stats">Stats</a></li>
+<li><a class="reference internal" href="#module-pymc3.diagnostics">Diagnostics</a></li>
+<li><a class="reference internal" href="#inference">Inference</a><ul>
+<li><a class="reference internal" href="#module-pymc3.sampling">Sampling</a></li>
+<li><a class="reference internal" href="#step-methods">Step-methods</a><ul>
+<li><a class="reference internal" href="#nuts">NUTS</a></li>
+<li><a class="reference internal" href="#module-pymc3.step_methods.metropolis">Metropolis</a></li>
+<li><a class="reference internal" href="#module-pymc3.step_methods.slicer">Slice</a></li>
+<li><a class="reference internal" href="#module-pymc3.step_methods.hmc">Hamiltonian Monte Carlo</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#variational">Variational</a><ul>
+<li><a class="reference internal" href="#module-pymc3.variational.advi">ADVI</a></li>
+<li><a class="reference internal" href="#module-pymc3.variational.advi_minibatch">ADVI minibatch</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li><a class="reference internal" href="#module-pymc3.backends">Backends</a><ul>
+<li><a class="reference internal" href="#available-backends">Available backends</a></li>
+<li><a class="reference internal" href="#selecting-a-backend">Selecting a backend</a></li>
+<li><a class="reference internal" href="#selecting-values-from-a-backend">Selecting values from a backend</a></li>
+<li><a class="reference internal" href="#loading-a-saved-backend">Loading a saved backend</a></li>
+<li><a class="reference internal" href="#writing-custom-backends">Writing custom backends</a></li>
+<li><a class="reference internal" href="#module-pymc3.backends.ndarray">ndarray</a></li>
+<li><a class="reference internal" href="#module-pymc3.backends.sqlite">sqlite</a><ul>
+<li><a class="reference internal" href="#database-format">Database format</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#module-pymc3.backends.text">text</a><ul>
+<li><a class="reference internal" href="#file-format">File format</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#module-pymc3.backends.tracetab">tracetab</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#glm">GLM</a></li>
+<li><a class="reference internal" href="#gp">GP</a></li>
+<li><a class="reference internal" href="#math">Math</a></li>
+</ul>
+</li>
+</ul>
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="notebooks/convolutional_vae_keras_advi.html" title="previous chapter">Convolutional variational autoencoder with PyMC3 and Keras</a></li>
+  </ul></li>
+</ul>
+</div>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/api.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2016, John Salvatier, Christopher Fonnesbeck, Thomas Wiecki.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.4.6</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.9</a>
+      
+      |
+      <a href="_sources/api.txt"
+          rel="nofollow">Page source</a>
+    </div>
 
-    </section>
+    
 
-  </div>
-  
-
-
-  
-
-    <script type="text/javascript">
-        var DOCUMENTATION_OPTIONS = {
-            URL_ROOT:'./',
-            VERSION:'3.0',
-            COLLAPSE_INDEX:false,
-            FILE_SUFFIX:'.html',
-            HAS_SOURCE:  true
-        };
-    </script>
-      <script type="text/javascript" src="_static/jquery.js"></script>
-      <script type="text/javascript" src="_static/underscore.js"></script>
-      <script type="text/javascript" src="_static/doctools.js"></script>
-      <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
-
-  
-
-  
-  
-    <script type="text/javascript" src="_static/js/theme.js"></script>
-  
-
-  
-  
-  <script type="text/javascript">
-      jQuery(function () {
-          SphinxRtdTheme.StickyNav.enable();
-      });
-  </script>
-   
-
-</body>
+    
+  </body>
 </html>
