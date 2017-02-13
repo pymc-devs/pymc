@@ -4,8 +4,9 @@ import theano
 from .vartypes import typefilter, continuous_types
 from theano import theano, scalar, tensor as tt
 from theano.gof.graph import inputs
-from theano.gof import Op
+from theano.gof import Op, Apply
 from theano.configparser import change_flags
+from theano.tensor.nlinalg import matrix_inverse
 from .memoize import memoize
 from .blocking import ArrayOrdering
 from .data import DataGenerator
@@ -60,12 +61,13 @@ def floatX(X):
 Theano derivative functions
 """
 
-class logdet(Op):
+class LogDet(Op):
     """Computes the logarithm of absolute determinant of a square
     matrix M, log(abs(det(M))), on CPU. Avoids det(M) overflow/
     underflow.
 
-    Note: Once PR #3959 in the Theano repo is merged, this must be removed.
+    Note: Once PR #3959 (https://github.com/Theano/Theano/pull/3959/) by harpone is merged,
+    this must be removed. 
     """
     def make_node(self, x):
         x = theano.tensor.as_tensor_variable(x)
@@ -76,11 +78,11 @@ class logdet(Op):
         try:
             (x,) = inputs
             (z,) = outputs
-            s = numpy.linalg.svd(x, compute_uv=False)
-            log_abs_det = numpy.sum(numpy.log(numpy.abs(s)))
-            z[0] = numpy.asarray(log_abs_det, dtype=x.dtype)
+            s = np.linalg.svd(x, compute_uv=False)
+            log_det = np.sum(np.log(np.abs(s)))
+            z[0] = np.asarray(log_det, dtype=x.dtype)
         except Exception:
-            print('Failed to compute logabsdet of {}.'.format(x))
+            print('Failed to compute logdet of {}.'.format(x))
             raise
 
     def grad(self, inputs, g_outputs):
@@ -89,12 +91,13 @@ class logdet(Op):
         return [gz * matrix_inverse(x).T]
 
     def __str__(self):
-        return "LogAbsDet"
+        return "LogDet"
+
+logdet = LogDet()
 
 def gradient1(f, v):
     """flat gradient of f wrt v"""
     return tt.flatten(tt.grad(f, v, disconnected_inputs='warn'))
-
 
 empty_gradient = tt.zeros(0, dtype='float32')
 
