@@ -192,11 +192,14 @@ def _sample(draws, step=None, start=None, trace=None, chain=0, tune=None,
         strace = None
         for strace in sampling:
             pass
-        result = [] if strace is None else [strace]
-    except KeyboardInterrupt as exc:
-        if strace is not None:
-            strace.close()
-        raise exc
+    except KeyboardInterrupt:
+        pass
+    finally:
+        if progressbar:
+            sampling.close()
+    if strace is not None:
+        strace.close()
+    result = [] if strace is None else [strace]
     return MultiTrace(result)
 
 
