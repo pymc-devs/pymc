@@ -107,7 +107,7 @@ class TestApproximates:
                 pm.Deterministic('mu_sq', mu_**2)
                 approx = self.approx()
                 obj_f = self.op(approx)(self.tf(approx.total_size))
-                step = obj_f.step_function(obj_f.random(), value=False, p=0.05)
+                step = obj_f.step_function(score=False)
                 for _ in tqdm.tqdm(range(self.NITER)):
                     step()
                 trace = approx.sample_vp(10000)
@@ -124,7 +124,7 @@ class TestFullRank(TestApproximates.Base):
 
 
 class TestLSOp(TestApproximates.Base):
-    NITER = 50000
+    NITER = 5000
     approx = staticmethod(lambda: NeuralNetwork(hidden_size=(3, 3), activations=tt.nnet.relu))
     tf = staticmethod(lambda dim: TestNeuralNetwork(dim, hidden_size=(3, 3), activations=tt.nnet.relu))
     op = LS

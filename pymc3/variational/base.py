@@ -1,5 +1,3 @@
-import collections
-
 import numpy as np
 import theano
 import theano.tensor as tt
@@ -7,31 +5,14 @@ from theano.ifelse import ifelse
 
 import pymc3 as pm
 from .advi import adagrad_optimizer
-from ..blocking import ArrayOrdering
 from ..distributions.dist_math import rho2sd, log_normal
-from ..math import flatten_list
 from ..model import modelcontext
-from ..theanof import tt_rng, memoize, change_flags, GradScale, floatX
-
-# helper class
-FlatView = collections.namedtuple('FlatView', 'input, replacements')
-
-
-def flatten_model(model, vars=None):
-    """Helper function for flattening model input"""
-    if vars is None:
-        vars = model.free_RVs
-    order = ArrayOrdering(vars)
-    inputvar = tt.vector('flat_view', dtype=theano.config.floatX)
-    inputvar.tag.test_value = flatten_list(vars).tag.test_value
-    replacements = {model.named_vars[name]: inputvar[slc].reshape(shape).astype(dtype)
-                    for name, slc, shape, dtype in order.vmap}
-    flat_view = FlatView(inputvar, replacements)
-    view = {vm.var: vm for vm in order.vmap}
-    return order, flat_view, view
+from ..theanof import tt_rng, memoize, change_flags, GradScale
 
 
 class Operator(object):
+    NEED_F = False
+
     def __init__(self, approx):
         self.model = approx.model
         self.approx = approx
@@ -50,9 +31,15 @@ class Operator(object):
     def apply(self, f):
         raise NotImplementedError
 
-    def __call__(self, f):
-        if not isinstance(f, TestFunction):
+    def __call__(self, f=None):
+        if f is None:
+            if self.NEED_F:
+                raise ValueError('Operator %s requires TestFunction' % self)
+            else:
+                f = TestFunction()
+        elif not isinstance(f, TestFunction):
             f = TestFunction.from_function(f)
+        f.setup(self.approx.total_size)
         return Operator.ObjectiveFunction(self, f)
 
     class ObjectiveFunction(object):
@@ -63,63 +50,66 @@ class Operator(object):
         obj_params = property(lambda self: self.op.approx.params)
         test_params = property(lambda self: self.tf.params)
 
-        def random(self):
-            return self.op.approx.random()
+        def random(self, size):
+            return self.op.approx.random(size)
 
         def __call__(self, z):
-            a = theano.clone(self.op.apply(self.tf), {self.op.input: z})
+            if z.ndim > 1:
+                a = theano.scan(
+                    lambda z_: theano.clone(self.op.apply(self.tf), {self.op.input: z_}),
+                    sequences=z, n_steps=z.shape[0])[0].mean()
+            else:
+                a = theano.clone(self.op.apply(self.tf), {self.op.input: z})
             return tt.abs_(a)
 
-        def updates(self, z, obj_optimizer=None, test_optimizer=None, more_params=None):
+        def updates(self, obj_n_mc=None, tf_n_mc=None, obj_optimizer=None, test_optimizer=None,
+                    more_params=None, more_updates=None):
             if more_params is None:
                 more_params = []
+            if more_updates is None:
+                more_updates = dict()
             if obj_optimizer is None:
                 obj_optimizer = adagrad_optimizer(learning_rate=.01, epsilon=.1)
             if test_optimizer is None:
-                test_optimizer = adagrad_optimizer(learning_rate=0.01, epsilon=.1)
-            target = self(z)
-            obj_updates = theano.OrderedUpdates()
-            test_updates = theano.OrderedUpdates()
-            obj_updates.update(obj_optimizer(target, self.obj_params + more_params))
+                test_optimizer = adagrad_optimizer(learning_rate=.01, epsilon=.1)
+            resulting_updates = theano.OrderedUpdates()
+
             if self.test_params:
-                test_updates.update(test_optimizer(-target, self.test_params))
+                tf_z = self.random(tf_n_mc)
+                tf_target = -self(tf_z)
+                resulting_updates.update(test_optimizer(tf_target, self.test_params))
             else:
                 pass
-            return obj_updates, test_updates
+            obj_z = self.random(obj_n_mc)
+            obj_target = self(obj_z)
+            resulting_updates.update(obj_optimizer(obj_target, self.obj_params + more_params))
+            resulting_updates.update(more_updates)
+            return resulting_updates
 
-        def step_function(self, z, obj_optimizer=None, test_optimizer=None, more_params=None, p=.1, value=True):
-            obj_upd, tf_upd = self.updates(z, obj_optimizer, test_optimizer, more_params)
-            obj_step = theano.function([], [], updates=obj_upd)
-            if tf_upd:
-                tf_step = theano.function([], [], updates=tf_upd)
-            else:
-                tf_step = None
-            if value:
-                val_fun = theano.function([], self(z))
+        def step_function(self, obj_n_mc=None, tf_n_mc=None,
+                          obj_optimizer=None, test_optimizer=None,
+                          more_params=None, more_updates=None,
+                          score=True):
+            updates = self.updates(obj_n_mc, tf_n_mc,
+                                   obj_optimizer, test_optimizer,
+                                   more_params, more_updates)
+            step_fn = theano.function([], [], updates=updates)
+            if score:
+                val_fun = theano.function([], self(self.random()))
             else:
                 val_fun = None
 
             if val_fun is not None:
-                if tf_step is not None:
-                    def step():
-                        obj_step()
-                        if np.random.uniform(size=()) < p:
-                            tf_step()
-                        return val_fun()
-                else:
-                    def step():
-                        obj_step()
-                        return val_fun()
+                def step():
+                    step_fn()
+                    return val_fun()
             else:
-                if tf_step is not None:
-                    def step():
-                        obj_step()
-                        if np.random.uniform(size=()) < p:
-                            tf_step()
-                else:
-                    def step():
-                        obj_step()
+                step = step_fn
             return step
+
+    def __str__(self):
+        return '%(op)s[%(ap)s]' % dict(op=self.__class__.__name__,
+                                       ap=self.approx.__class__.__name__)
 
 
 def cast_to_list(params):
@@ -138,11 +128,11 @@ def cast_to_list(params):
 
 
 class TestFunction(object):
-    def __init__(self, dim=None):
-        self.dim = dim
-        self.shared_params = self.create_shared_params()
+    def __init__(self):
+        self._inited = False
+        self.shared_params = None
 
-    def create_shared_params(self):
+    def create_shared_params(self, dim):
         pass
 
     @property
@@ -152,11 +142,20 @@ class TestFunction(object):
     def __call__(self, z):
         raise NotImplementedError
 
+    def setup(self, dim):
+        if not self._inited:
+            self._setup(dim)
+            self.shared_params = self.create_shared_params(dim)
+            self._inited = True
+
+    def _setup(self, dim):
+        pass
+
     @classmethod
     def from_function(cls, f):
         if not callable(f):
             raise ValueError('Need callable, got %r' % f)
-        obj = TestFunction(None)
+        obj = TestFunction()
         obj.__call__ = f
         return obj
 
@@ -182,8 +181,7 @@ class Approximation(object):
         self.known = known
         self.local_vars = [v for v in model.free_RVs if v in known]
         self.global_vars = [v for v in model.free_RVs if v not in known]
-        self.order, self.flat_view, self._view = flatten_model(
-            model=self.model,
+        self.flat_view, self.order, self._view = model.flatten(
             vars=self.local_vars + self.global_vars
         )
         self.cost_part_grad_scale = cost_part_grad_scale
@@ -410,7 +408,7 @@ class Approximation(object):
         is set to zero to lower variance of ELBO
         """
         if not self.local_vars:
-            return 0
+            return tt.constant(0)
         logp = []
         for var in self.local_vars:
             mu = self.known[var][0].ravel()

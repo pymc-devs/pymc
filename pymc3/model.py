@@ -1,14 +1,15 @@
+import collections
 import threading
 import six
 
 import numpy as np
 import scipy.sparse as sps
-import theano
-import theano.tensor as tt
 import theano.sparse as sparse
+from theano import theano, tensor as tt
 from theano.tensor.var import TensorVariable
 
 import pymc3 as pm
+from pymc3.math import flatten_list
 from .memoize import memoize
 from .theanof import gradient, hessian, inputvars, generator
 from .vartypes import typefilter, discrete_types, continuous_types, isgenerator
@@ -18,6 +19,8 @@ __all__ = [
     'Model', 'Factor', 'compilef', 'fn', 'fastfn', 'modelcontext',
     'Point', 'Deterministic', 'Potential'
 ]
+
+FlatView = collections.namedtuple('FlatView', 'input, replacements')
 
 
 class InstanceMethod(object):
@@ -658,6 +661,32 @@ class Model(six.with_metaclass(InitContextMeta, Context, Factor)):
             f(**point)
 
         return f.profile
+
+    def flatten(self, vars=None):
+        """Flattens model's input and returns:
+            * FlatView with input vector and replacements `input_var -> vars`
+            * ArrayOrdering
+            * view {variable: VarMap}
+
+        Parameters
+        ----------
+        vars : list of variables or None
+            if None, then all model.free_RVs are used for flattening input
+
+        Returns
+        -------
+        order, flat_view, view
+        """
+        if vars is None:
+            vars = self.free_RVs
+        order = ArrayOrdering(vars)
+        inputvar = tt.vector('flat_view', dtype=theano.config.floatX)
+        inputvar.tag.test_value = flatten_list(vars).tag.test_value
+        replacements = {self.named_vars[name]: inputvar[slc].reshape(shape).astype(dtype)
+                        for name, slc, shape, dtype in order.vmap}
+        flat_view = FlatView(inputvar, replacements)
+        view = {vm.var: vm for vm in order.vmap}
+        return flat_view, order, view
 
 
 def fn(outs, mode=None, model=None, *args, **kwargs):
