@@ -457,8 +457,8 @@ def init_nuts(njobs=1, n_advi=500000, n_nuts=2000, n_runs=2, model=None,
         vars = pm.inputvars(model.vars)
         trace_df = pm.trace_to_dataframe(trace_tune, varnames=[rv.name for rv in vars],
                                          hide_transformed_vars=False)
-        #cov = covariance.LedoitWolf().fit(trace_df.values).covariance_
-        cov = trace_df.var().values
+        cov = covariance.LedoitWolf().fit(trace_df.values).covariance_
+        #cov = trace_df.var().values
         cov = pm.theanof.floatX(cov)
         start = np.random.choice(trace_tune, njobs)
         if njobs == 1:
