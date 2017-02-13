@@ -8,6 +8,7 @@ Howto
 =====
 
 .. toctree::
+   notebooks/sampler-stats.ipynb
    notebooks/posterior_predictive.ipynb
    notebooks/howto_debugging.ipynb
    notebooks/LKJ.ipynb
