@@ -5,6 +5,7 @@ import theano
 from ..theanof import DataGenerator, GeneratorOp, generator
 from theano.tests import unittest_tools as utt
 from pymc3.theanof import LogDet, logdet
+from .helpers import SeededTest
 
 def integers():
     i = 0
@@ -19,7 +20,7 @@ def integers_ndim(ndim):
         yield np.ones((2,) * ndim) * i
         i += 1
 
-class TestLogDet(unittest.TestCase):
+class TestLogDet(SeededTest):
 
     def setUp(self):
         utt.seed_rng()
