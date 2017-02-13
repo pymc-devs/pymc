@@ -37,15 +37,11 @@ class TestMixture(SeededTest):
     def test_mixture_list_of_normals(self):
         with Model() as model:
             w = Dirichlet('w', np.ones_like(self.norm_w))
-
             mu = Normal('mu', 0., 10., shape=self.norm_w.size)
             tau = Gamma('tau', 1., 1., shape=self.norm_w.size)
-
-            x_obs = Mixture('x_obs', w,
-                            [Normal.dist(mu[0], tau=tau[0]),
-                             Normal.dist(mu[1], tau=tau[1])],
-                            observed=self.norm_x)
-
+            Mixture('x_obs', w,
+                    [Normal.dist(mu[0], tau=tau[0]), Normal.dist(mu[1], tau=tau[1])],
+                    observed=self.norm_x)
             step = Metropolis()
             trace = sample(5000, step, random_seed=self.random_seed, progressbar=False)
 
@@ -59,12 +55,9 @@ class TestMixture(SeededTest):
     def test_normal_mixture(self):
         with Model() as model:
             w = Dirichlet('w', np.ones_like(self.norm_w))
-
             mu = Normal('mu', 0., 10., shape=self.norm_w.size)
             tau = Gamma('tau', 1., 1., shape=self.norm_w.size)
-
-            x_obs = NormalMixture('x_obs', w, mu, tau=tau, observed=self.norm_x)
-
+            NormalMixture('x_obs', w, mu, tau=tau, observed=self.norm_x)
             step = Metropolis()
             trace = sample(5000, step, random_seed=self.random_seed, progressbar=False)
 
@@ -78,11 +71,8 @@ class TestMixture(SeededTest):
     def test_poisson_mixture(self):
         with Model() as model:
             w = Dirichlet('w', np.ones_like(self.pois_w))
-
             mu = Gamma('mu', 1., 1., shape=self.pois_w.size)
-
-            x_obs = Mixture('x_obs', w, Poisson.dist(mu), observed=self.pois_x)
-
+            Mixture('x_obs', w, Poisson.dist(mu), observed=self.pois_x)
             step = Metropolis()
             trace = sample(5000, step, random_seed=self.random_seed, progressbar=False)
 
@@ -96,13 +86,10 @@ class TestMixture(SeededTest):
     def test_mixture_list_of_poissons(self):
         with Model() as model:
             w = Dirichlet('w', np.ones_like(self.pois_w))
-
             mu = Gamma('mu', 1., 1., shape=self.pois_w.size)
-
-            x_obs = Mixture('x_obs', w,
-                            [Poisson.dist(mu[0]), Poisson.dist(mu[1])],
-                            observed=self.pois_x)
-
+            Mixture('x_obs', w,
+                    [Poisson.dist(mu[0]), Poisson.dist(mu[1])],
+                    observed=self.pois_x)
             step = Metropolis()
             trace = sample(5000, step, random_seed=self.random_seed, progressbar=False)
 

@@ -1,4 +1,3 @@
-import numpy as np
 from .blocking import DictToVarBijection
 
 # TODO I could not locate this function used anywhere in the code base

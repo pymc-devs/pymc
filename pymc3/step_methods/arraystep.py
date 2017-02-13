@@ -4,11 +4,9 @@ from ..theanof import inputvars
 from ..blocking import ArrayOrdering, DictToArrayBijection
 import numpy as np
 from numpy.random import uniform
-from numpy import log, isfinite
 from enum import IntEnum, unique
 
-__all__ = ['ArrayStep', 'ArrayStepShared', 'metrop_select', 'SamplerHist',
-           'Competence']
+__all__ = ['ArrayStep', 'ArrayStepShared', 'metrop_select', 'Competence']
 
 
 @unique
@@ -27,6 +25,8 @@ class Competence(IntEnum):
 
 
 class BlockedStep(object):
+
+    generates_stats = False
 
     def __new__(cls, *args, **kwargs):
         blocked = kwargs.get('blocked')
@@ -90,9 +90,9 @@ class ArrayStep(BlockedStep):
     ----------
     vars : list
         List of variables for sampler.
+    fs: list of logp theano functions
     allvars: Boolean (default False)
     blocked: Boolean (default True)
-    fs: logp theano function
     """
 
     def __init__(self, vars, fs, allvars=False, blocked=True):
@@ -109,15 +109,20 @@ class ArrayStep(BlockedStep):
         if self.allvars:
             inputs.append(point)
 
-        apoint = self.astep(bij.map(point), *inputs)
-        return bij.rmap(apoint)
+        if self.generates_stats:
+            apoint, stats = self.astep(bij.map(point), *inputs)
+            return bij.rmap(apoint), stats
+        else:
+            apoint = self.astep(bij.map(point), *inputs)
+            return bij.rmap(apoint)
 
 
 class ArrayStepShared(BlockedStep):
-    """Faster version of ArrayStep that requires the substep method that does not wrap the functions the step method uses.
+    """Faster version of ArrayStep that requires the substep method that does not wrap
+       the functions the step method uses.
 
-    Works by setting shared variables before using the step. This eliminates the mapping and unmapping overhead as well
-    as moving fewer variables around.
+    Works by setting shared variables before using the step. This eliminates the mapping
+    and unmapping overhead as well as moving fewer variables around.
     """
 
     def __init__(self, vars, shared, blocked=True):
@@ -139,27 +144,32 @@ class ArrayStepShared(BlockedStep):
 
         bij = DictToArrayBijection(self.ordering, point)
 
-        apoint = self.astep(bij.map(point))
-        return bij.rmap(apoint)
+        if self.generates_stats:
+            apoint, stats = self.astep(bij.map(point))
+            return bij.rmap(apoint), stats
+        else:
+            apoint = self.astep(bij.map(point))
+            return bij.rmap(apoint)
 
 
 def metrop_select(mr, q, q0):
-    # Perform rejection/acceptance step for Metropolis class samplers
+    """Perform rejection/acceptance step for Metropolis class samplers.
 
+    Returns the new sample q if a uniform random number is less than the
+    metropolis acceptance rate (`mr`), and the old sample otherwise.
+
+    Parameters
+    ----------
+    mr : float, Metropolis acceptance rate
+    q : proposed sample
+    q0 : current sample
+
+    Returns
+    -------
+    q or q0
+    """
     # Compare acceptance ratio to uniform random number
-    if isfinite(mr) and log(uniform()) < mr:
-        # Accept proposed value
+    if np.isfinite(mr) and np.log(uniform()) < mr:
         return q
     else:
-        # Reject proposed value
         return q0
-
-
-class SamplerHist(object):
-
-    def __init__(self):
-        self.metrops = []
-
-    def acceptr(self):
-        return np.minimum(np.exp(self.metrops), 1)
-

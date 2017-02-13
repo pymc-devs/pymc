@@ -5,7 +5,7 @@ from ..distributions.continuous import Flat, Normal
 from ..distributions.timeseries import EulerMaruyama
 from ..tuning.starting import find_MAP
 from ..sampling import sample, sample_ppc
-from ..step_methods.nuts import NUTS
+from ..step_methods import NUTS
 
 import numpy as np
 from scipy.optimize import fmin_l_bfgs_b
@@ -34,7 +34,7 @@ def test_linear():
     with Model() as model:
         lamh = Flat('lamh')
         xh = EulerMaruyama('xh', dt, sde, (lamh,), shape=N + 1, testval=x)
-        zh = Normal('zh', mu=xh, sd=5e-3, observed=z)
+        Normal('zh', mu=xh, sd=5e-3, observed=z)
     # invert
     with model:
         start = find_MAP(vars=[xh], fmin=fmin_l_bfgs_b)

@@ -54,7 +54,7 @@ class ARM5_4(SeededTest):
             h = H(start)
 
             step = pm.HamiltonianMC(model.vars, h)
-            pm.sample(50, step, start)
+            pm.sample(50, step=step, start=start)
 
 
 class TestARM12_6(SeededTest):
@@ -88,7 +88,7 @@ class TestARM12_6(SeededTest):
             start = pm.find_MAP(start=start,
                                 vars=[model['groupmean'], model['sd_interval_'], model['floor_m']])
             step = pm.NUTS(model.vars, scaling=start)
-            pm.sample(50, step, start)
+            pm.sample(50, step=step, start=start)
 
 
 class TestARM12_6Uranium(SeededTest):
@@ -129,7 +129,7 @@ class TestARM12_6Uranium(SeededTest):
             h = np.diag(H(start))
 
             step = pm.HamiltonianMC(model.vars, h)
-            pm.sample(50, step, start)
+            pm.sample(50, step=step, start=start)
 
 
 def build_disaster_model(masked=False):
@@ -192,15 +192,13 @@ class TestGLMLinear(SeededTest):
         self.y = true_intercept + self.x * true_slope + np.random.normal(scale=.5, size=size)
         data = dict(x=self.x, y=self.y)
         with pm.Model() as model:
-            pm.glm.glm('y ~ x', data)
+            pm.GLM.from_formula('y ~ x', data)
         return model
 
     def test_run(self):
         with self.build_model():
             start = pm.find_MAP(fmin=opt.fmin_powell)
-            trace = pm.sample(50, pm.Slice(), start=start)
-
-        pm.glm.plot_posterior_predictive(trace)
+            pm.sample(50, pm.Slice(), start=start)
 
 
 class TestLatentOccupancy(SeededTest):
@@ -263,7 +261,7 @@ class TestLatentOccupancy(SeededTest):
             start = {'psi': 0.5, 'z': (self.y > 0).astype(int), 'theta': 5}
             step_one = pm.Metropolis([model.theta_interval_, model.psi_logodds_])
             step_two = pm.BinaryMetropolis([model.z])
-            pm.sample(50, [step_one, step_two], start)
+            pm.sample(50, step=[step_one, step_two], start=start)
 
 
 class TestRSV(SeededTest):

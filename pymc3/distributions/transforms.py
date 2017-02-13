@@ -2,7 +2,7 @@ import theano.tensor as tt
 
 from ..model import FreeRV
 from ..theanof import gradient
-from .distribution import Distribution
+from . import distribution
 from ..math import logit, invlogit
 import numpy as np
 
@@ -42,7 +42,7 @@ class ElemwiseTransform(Transform):
         return tt.log(tt.abs_(grad))
 
 
-class TransformedDistribution(Distribution):
+class TransformedDistribution(distribution.Distribution):
     """A distribution that has been transformed from one space into another."""
 
     def __init__(self, dist, transform, *args, **kwargs):

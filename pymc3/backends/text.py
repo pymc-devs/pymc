@@ -16,7 +16,6 @@ represents two variables, x and y, where x is a scalar and y has a
 shape of (3, 2).
 """
 from glob import glob
-import numpy as np
 import os
 import pandas as pd
 
@@ -62,6 +61,9 @@ class Text(base.BaseTrace):
         chain : int
             Chain number
         """
+        if self._fh is not None:
+            self._fh.close()
+
         self.chain = chain
         self.filename = os.path.join(self.name, 'chain-{}.csv'.format(chain))
 

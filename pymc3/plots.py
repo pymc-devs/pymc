@@ -1,3 +1,5 @@
+from collections import OrderedDict
+
 import numpy as np
 from scipy.stats import kde, mode
 import matplotlib.pyplot as plt
@@ -29,7 +31,9 @@ def traceplot(trace, varnames=None, transform=lambda x: x, figsize=None,
     lines : dict
         Dictionary of variable name / value  to be overplotted as vertical
         lines to the posteriors and horizontal lines on sample values
-        e.g. mean of posteriors, true values of a simulation
+        e.g. mean of posteriors, true values of a simulation.
+        If an array of values, line colors are matched to posterior colors.
+        Otherwise, a default red line
     combined : bool
         Flag for combining multiple chains into a single chain. If False
         (default), chains will be plotted separately.
@@ -74,7 +78,7 @@ def traceplot(trace, varnames=None, transform=lambda x: x, figsize=None,
         figsize = (12, n * 2)
 
     if ax is None:
-        fig, ax = plt.subplots(n, 2, squeeze=False, figsize=figsize)
+        _, ax = plt.subplots(n, 2, squeeze=False, figsize=figsize)
     elif ax.shape != (n, 2):
         pm._log.warning('traceplot requires n*2 subplots')
         return None
@@ -87,9 +91,11 @@ def traceplot(trace, varnames=None, transform=lambda x: x, figsize=None,
             d = np.squeeze(transform(d))
             d = make_2d(d)
             if d.dtype.kind == 'i':
-                histplot_op(ax[i, 0], d, alpha=alpha)
+                hist_objs = histplot_op(ax[i, 0], d, alpha=alpha)
+                colors = [h[-1][0].get_color() for h in hist_objs]
             else:
-                kdeplot_op(ax[i, 0], d, prior, prior_alpha, prior_style)
+                artists = kdeplot_op(ax[i, 0], d, prior, prior_alpha, prior_style)[0]
+                colors = [a[0].get_color() for a in artists]
             ax[i, 0].set_title(str(v))
             ax[i, 0].grid(grid)
             ax[i, 1].set_title(str(v))
@@ -100,9 +106,17 @@ def traceplot(trace, varnames=None, transform=lambda x: x, figsize=None,
 
             if lines:
                 try:
-                    ax[i, 0].axvline(x=lines[v], color="r", lw=1.5)
-                    ax[i, 1].axhline(y=lines[v], color="r",
-                                     lw=1.5, alpha=alpha)
+                    if isinstance(lines[v], (float, int)):
+                        line_values, colors = [lines[v]], ['r']
+                    else:
+                        line_values = np.atleast_1d(lines[v]).ravel()
+                        assert len(colors) == len(line_values), "An incorrect number of lines was specified " \
+                                                                "for '{}', give a iterable of length {} or " \
+                                                                "to draw a single red line, give a scalar".format(v, len(colors))
+                    for c, l in zip(colors, line_values):
+                        ax[i, 0].axvline(x=l, color=c, lw=1.5, alpha=0.75)
+                        ax[i, 1].axhline(y=l, color=c,
+                                         lw=1.5, alpha=alpha)
                 except KeyError:
                     pass
         ax[i, 0].set_ylim(ymin=0)
@@ -111,17 +125,21 @@ def traceplot(trace, varnames=None, transform=lambda x: x, figsize=None,
 
 
 def histplot_op(ax, data, alpha=.35):
+    hs = []
     for i in range(data.shape[1]):
         d = data[:, i]
 
         mind = np.min(d)
         maxd = np.max(d)
         step = max((maxd - mind) // 100, 1)
-        ax.hist(d, bins=range(mind, maxd + 2, step), alpha=alpha, align='left')
+        hs.append(ax.hist(d, bins=range(mind, maxd + 2, step), alpha=alpha, align='left'))
         ax.set_xlim(mind - .5, maxd + .5)
+    return hs
 
 
 def kdeplot_op(ax, data, prior=None, prior_alpha=1, prior_style='--'):
+    ls = []
+    pls = []
     for i in range(data.shape[1]):
         d = data[:, i]
         density, l, u = fast_kde(d)
@@ -129,9 +147,11 @@ def kdeplot_op(ax, data, prior=None, prior_alpha=1, prior_style='--'):
 
         if prior is not None:
             p = prior.logp(x).eval()
-            ax.plot(x, np.exp(p), alpha=prior_alpha, ls=prior_style)
+            pls.append(ax.plot(x, np.exp(p), alpha=prior_alpha, ls=prior_style))
 
-        ax.plot(x, density)
+        ls.append(ax.plot(x, density))
+    return ls, pls
+
 
 
 def make_2d(a):
@@ -167,14 +187,14 @@ def kde2plot_op(ax, x, y, grid=200, **kwargs):
 
 def kdeplot(data, ax=None):
     if ax is None:
-        f, ax = plt.subplots(1, 1, squeeze=True)
+        _, ax = plt.subplots(1, 1, squeeze=True)
     kdeplot_op(ax, data)
     return ax
 
 
 def kde2plot(x, y, grid=200, ax=None, **kwargs):
     if ax is None:
-        f, ax = plt.subplots(1, 1, squeeze=True)
+        _, ax = plt.subplots(1, 1, squeeze=True)
     kde2plot_op(ax, x, y, grid, **kwargs)
     return ax
 
@@ -233,8 +253,8 @@ def autocorrplot(trace, varnames=None, max_lag=100, burn=0, plot_transformed=Fal
         figsize = (12, len(varnames) * 2)
 
     if ax is None:
-        fig, ax = plt.subplots(len(varnames), nchains, squeeze=False,
-                               sharex=True, sharey=True, figsize=figsize)
+        _, ax = plt.subplots(len(varnames), nchains, squeeze=False,
+                             sharex=True, sharey=True, figsize=figsize)
     elif ax.shape != (len(varnames), nchains):
         raise ValueError('autocorrplot requires {}*{} subplots'.format(
             len(varnames), nchains))
@@ -293,62 +313,54 @@ def var_str(name, shape):
 
 def forestplot(trace_obj, varnames=None, transform=lambda x: x, alpha=0.05, quartiles=True,
                rhat=True, main=None, xtitle=None, xrange=None, ylabels=None,
-               chain_spacing=0.05, vline=0, gs=None):
-    """ Forest plot (model summary plot)
-
+               chain_spacing=0.05, vline=0, gs=None, plot_transformed=False):
+    """
+    Forest plot (model summary plot)
     Generates a "forest plot" of 100*(1-alpha)% credible intervals for either
     the set of variables in a given model, or a specified set of nodes.
 
-    :Arguments:
-        trace_obj: NpTrace or MultiTrace object
-            Trace(s) from an MCMC sample.
+    Parameters
+    ----------
 
-        varnames: list
-            List of variables to plot (defaults to None, which results in all
-            variables plotted).
+    trace_obj: NpTrace or MultiTrace object
+        Trace(s) from an MCMC sample.
+    varnames: list
+        List of variables to plot (defaults to None, which results in all
+        variables plotted).
+    transform : callable
+        Function to transform data (defaults to identity)
+    alpha (optional): float
+        Alpha value for (1-alpha)*100% credible intervals (defaults to 0.05).
+    quartiles (optional): bool
+        Flag for plotting the interquartile range, in addition to the
+        (1-alpha)*100% intervals (defaults to True).
+    rhat (optional): bool
+        Flag for plotting Gelman-Rubin statistics. Requires 2 or more chains
+        (defaults to True).
+    main (optional): string
+        Title for main plot. Passing False results in titles being suppressed;
+        passing None (default) results in default titles.
+    xtitle (optional): string
+        Label for x-axis. Defaults to no label
+    xrange (optional): list or tuple
+        Range for x-axis. Defaults to matplotlib's best guess.
+    ylabels (optional): list or array
+        User-defined labels for each variable. If not provided, the node
+        __name__ attributes are used.
+    chain_spacing (optional): float
+        Plot spacing between chains (defaults to 0.05).
+    vline (optional): numeric
+        Location of vertical reference line (defaults to 0).
+    gs : GridSpec
+        Matplotlib GridSpec object. Defaults to None.
+    plot_transformed : bool
+        Flag for plotting automatically transformed variables in addition to
+        original variables (defaults to False).
 
-        transform : callable
-            Function to transform data (defaults to identity)
+    Returns
+    -------
 
-        alpha (optional): float
-            Alpha value for (1-alpha)*100% credible intervals (defaults to
-            0.05).
-
-        quartiles (optional): bool
-            Flag for plotting the interquartile range, in addition to the
-            (1-alpha)*100% intervals (defaults to True).
-
-        rhat (optional): bool
-            Flag for plotting Gelman-Rubin statistics. Requires 2 or more
-            chains (defaults to True).
-
-        main (optional): string
-            Title for main plot. Passing False results in titles being
-            suppressed; passing None (default) results in default titles.
-
-        xtitle (optional): string
-            Label for x-axis. Defaults to no label
-
-        xrange (optional): list or tuple
-            Range for x-axis. Defaults to matplotlib's best guess.
-
-        ylabels (optional): list or array
-            User-defined labels for each variable. If not provided, the node
-            __name__ attributes are used.
-
-        chain_spacing (optional): float
-            Plot spacing between chains (defaults to 0.05).
-
-        vline (optional): numeric
-            Location of vertical reference line (defaults to 0).
-
-        gs : GridSpec
-            Matplotlib GridSpec object. Defaults to None.
-
-        Returns
-        -------
-
-        gs : matplotlib GridSpec
+    gs : matplotlib GridSpec
 
     """
     from matplotlib import gridspec
@@ -377,7 +389,10 @@ def forestplot(trace_obj, varnames=None, transform=lambda x: x, alpha=0.05, quar
         rhat = False
 
     if varnames is None:
-        varnames = trace_obj.varnames
+            if plot_transformed:
+                varnames = [name for name in trace_obj.varnames]
+            else:
+                varnames = [name for name in trace_obj.varnames if not name.endswith('_')]
 
     # Empty list for y-axis labels
     labels = []
@@ -747,7 +762,7 @@ def plot_posterior(trace, varnames=None, transform=lambda x: x, figsize=None,
         return ax, fig
 
     def get_trace_dict(tr, varnames):
-        traces = {}
+        traces = OrderedDict()
         for v in varnames:
             vals = tr.get_values(v, combine=True, squeeze=True)
             if vals.ndim > 1:

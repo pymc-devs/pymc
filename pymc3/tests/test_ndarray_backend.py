@@ -5,9 +5,36 @@ from pymc3.tests import backend_fixtures as bf
 from pymc3.backends import base, ndarray
 
 
+STATS1 = [{
+    'a': np.float64,
+    'b': np.bool
+}]
+
+STATS2 = [{
+    'a': np.float64
+}, {
+    'a': np.float64,
+    'b': np.int64,
+}]
+
+
 class TestNDArray0dSampling(bf.SamplingTestCase):
     backend = ndarray.NDArray
     name = None
+    shape = ()
+
+
+class TestNDArray0dSamplingStats1(bf.SamplingTestCase):
+    backend = ndarray.NDArray
+    name = None
+    sampler_vars = STATS1
+    shape = ()
+
+
+class TestNDArray0dSamplingStats2(bf.SamplingTestCase):
+    backend = ndarray.NDArray
+    name = None
+    sampler_vars = STATS2
     shape = ()
 
 
@@ -23,7 +50,41 @@ class TestNDArray2dSampling(bf.SamplingTestCase):
     shape = (2, 3)
 
 
+class TestNDArrayStats(bf.StatsTestCase):
+    backend = ndarray.NDArray
+    name = None
+    shape = (2, 3)
+
+
 class TestNDArray0dSelection(bf.SelectionTestCase):
+    backend = ndarray.NDArray
+    name = None
+    shape = ()
+    sampler_vars = STATS1
+
+
+class TestNDArray0dSelection(bf.SelectionTestCase):
+    backend = ndarray.NDArray
+    name = None
+    shape = ()
+    sampler_vars = STATS2
+
+
+class TestNDArray0dSelection(bf.SelectionTestCase):
+    backend = ndarray.NDArray
+    name = None
+    shape = ()
+    sampler_vars = STATS1
+
+
+class TestNDArray0dSelectionStats1(bf.SelectionTestCase):
+    backend = ndarray.NDArray
+    name = None
+    shape = ()
+    sampler_vars = STATS2
+
+
+class TestNDArray0dSelectionStats2(bf.SelectionTestCase):
     backend = ndarray.NDArray
     name = None
     shape = ()

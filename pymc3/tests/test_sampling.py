@@ -59,7 +59,7 @@ class TestSample(SeededTest):
         with self.model:
             for njobs in test_njobs:
                 for steps in [1, 10, 300]:
-                    pm.sample(steps, self.step, {}, None, njobs=njobs, random_seed=self.random_seed)
+                    pm.sample(steps, step=self.step, njobs=njobs, random_seed=self.random_seed)
 
     def test_sample_init(self):
         with self.model:

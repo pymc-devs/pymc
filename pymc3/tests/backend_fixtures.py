@@ -3,6 +3,7 @@ import numpy as np
 import numpy.testing as npt
 import os
 import shutil
+import collections
 
 from pymc3.tests import models
 from pymc3.backends import base
@@ -21,6 +22,9 @@ class ModelBackendSetupTestCase(unittest.TestCase):
     - backend
     - name
     - shape
+
+    Children may define
+    - sampler_vars
     """
 
     def setUp(self):
@@ -28,7 +32,68 @@ class ModelBackendSetupTestCase(unittest.TestCase):
         with self.model:
             self.strace = self.backend(self.name)
         self.draws, self.chain = 3, 0
-        self.strace.setup(self.draws, self.chain)
+        if not hasattr(self, 'sampler_vars'):
+            self.sampler_vars = None
+        if self.sampler_vars is not None:
+            assert self.strace.supports_sampler_stats
+            self.strace.setup(self.draws, self.chain, self.sampler_vars)
+        else:
+            self.strace.setup(self.draws, self.chain)
+
+    def test_append_invalid(self):
+        if self.sampler_vars is not None:
+            with self.assertRaises(ValueError):
+                self.strace.setup(self.draws, self.chain)
+            with self.assertRaises(ValueError):
+                vars = self.sampler_vars + [{'a': np.bool}]
+                self.strace.setup(self.draws, self.chain, vars)
+        else:
+            with self.assertRaises((ValueError, TypeError)):
+                self.strace.setup(self.draws, self.chain, [{'a': np.bool}])
+
+    def test_append(self):
+        if self.sampler_vars is None:
+            self.strace.setup(self.draws, self.chain)
+            assert len(self.strace) == 0
+        else:
+            self.strace.setup(self.draws, self.chain, self.sampler_vars)
+            assert len(self.strace) == 0
+
+    def tearDown(self):
+        if self.name is not None:
+            remove_file_or_directory(self.name)
+
+
+class StatsTestCase(unittest.TestCase):
+    """Test for init and setup of backups.
+
+    Provides the attributes
+    - test_point
+    - model
+    - draws
+
+    Children must define
+    - backend
+    - name
+    - shape
+    """
+    def setUp(self):
+        self.test_point, self.model, _ = models.beta_bernoulli(self.shape)
+        self.draws, self.chain = 3, 0
+
+    def test_bad_dtype(self):
+        bad_vars = [{'a': np.float64}, {'a': np.bool}]
+        good_vars = [{'a': np.float64}, {'a': np.float64}]
+        with self.model:
+            strace = self.backend(self.name)
+        with self.assertRaises((ValueError, TypeError)):
+            strace.setup(self.draws, self.chain, bad_vars)
+        strace.setup(self.draws, self.chain, good_vars)
+        if strace.supports_sampler_stats:
+            assert strace.stat_names == set(['a'])
+        else:
+            with self.assertRaises((ValueError, TypeError)):
+                strace.setup(self.draws, self.chain, good_vars)
 
     def tearDown(self):
         if self.name is not None:
@@ -45,11 +110,15 @@ class ModelBackendSampledTestCase(unittest.TestCase):
     - draws
     - expected
         Expected values mapped to chain number and variable name.
+    - stat_dtypes
 
     Children must define
     - backend
     - name
     - shape
+
+    Children may define
+    - sampler_vars
     """
     @classmethod
     def setUpClass(cls):
@@ -58,9 +127,16 @@ class ModelBackendSampledTestCase(unittest.TestCase):
             strace0 = cls.backend(cls.name)
             strace1 = cls.backend(cls.name)
 
+        if not hasattr(cls, 'sampler_vars'):
+            cls.sampler_vars = None
+
         cls.draws = 5
-        strace0.setup(cls.draws, chain=0)
-        strace1.setup(cls.draws, chain=1)
+        if cls.sampler_vars is not None:
+            strace0.setup(cls.draws, chain=0, sampler_vars=cls.sampler_vars)
+            strace1.setup(cls.draws, chain=1, sampler_vars=cls.sampler_vars)
+        else:
+            strace0.setup(cls.draws, chain=0)
+            strace1.setup(cls.draws, chain=1)
 
         varnames = list(cls.test_point.keys())
         shapes = {varname: value.shape
@@ -76,16 +152,43 @@ class ModelBackendSampledTestCase(unittest.TestCase):
             cls.expected[0][varname] = values.reshape(mcmc_shape)
             cls.expected[1][varname] = values.reshape(mcmc_shape) * 100
 
+        if cls.sampler_vars is not None:
+            cls.expected_stats = {0: [], 1: []}
+            for vars in cls.sampler_vars:
+                stats = {}
+                cls.expected_stats[0].append(stats)
+                cls.expected_stats[1].append(stats)
+                for key, dtype in vars.items():
+                    if dtype == np.bool:
+                        stats[key] = np.zeros(cls.draws, dtype=dtype)
+                    else:
+                        stats[key] = np.arange(cls.draws, dtype=dtype)
+
+
         for idx in range(cls.draws):
             point0 = {varname: cls.expected[0][varname][idx, ...]
                       for varname in varnames}
             point1 = {varname: cls.expected[1][varname][idx, ...]
                       for varname in varnames}
-            strace0.record(point=point0)
-            strace1.record(point=point1)
+            if cls.sampler_vars is not None:
+                stats1 = [dict((key, val[idx]) for key, val in stats.items())
+                          for stats in cls.expected_stats[0]]
+                stats2 = [dict((key, val[idx]) for key, val in stats.items())
+                          for stats in cls.expected_stats[1]]
+                strace0.record(point=point0, sampler_stats=stats1)
+                strace1.record(point=point1, sampler_stats=stats2)
+            else:
+                strace0.record(point=point0)
+                strace1.record(point=point1)
         strace0.close()
         strace1.close()
         cls.mtrace = base.MultiTrace([strace0, strace1])
+
+        cls.stat_dtypes = {}
+        cls.stats_counts = collections.Counter()
+        for stats in cls.sampler_vars or []:
+            cls.stat_dtypes.update(stats)
+            cls.stats_counts.update(stats.keys())
 
     @classmethod
     def tearDownClass(cls):
@@ -98,6 +201,12 @@ class ModelBackendSampledTestCase(unittest.TestCase):
         # if the loop is never entered.
         assert list(self.test_point.keys())
 
+    def test_stat_names(self):
+        names = set()
+        for vars in self.sampler_vars or []:
+            names.update(vars.keys())
+        assert self.mtrace.stat_names == names
+
 
 class SamplingTestCase(ModelBackendSetupTestCase):
     """Test backend sampling.
@@ -108,11 +217,19 @@ class SamplingTestCase(ModelBackendSetupTestCase):
     - shape
     """
 
+    def record_point(self, val):
+        point = {varname: np.tile(val, value.shape)
+                 for varname, value in self.test_point.items()}
+        if self.sampler_vars is not None:
+            stats = [dict((key, dtype(val)) for key, dtype in vars.items())
+                     for vars in self.sampler_vars]
+            self.strace.record(point=point, sampler_stats=stats)
+        else:
+            self.strace.record(point=point)
+
     def test_standard_close(self):
         for idx in range(self.draws):
-            point = {varname: np.tile(idx, value.shape)
-                     for varname, value in self.test_point.items()}
-            self.strace.record(point=point)
+            self.record_point(idx)
         self.strace.close()
 
         for varname in self.test_point.keys():
@@ -121,12 +238,23 @@ class SamplingTestCase(ModelBackendSetupTestCase):
             last_idx = self.draws - 1
             npt.assert_equal(self.strace.get_values(varname)[last_idx, ...],
                              np.tile(last_idx, self.strace.var_shapes[varname]))
+        if self.sampler_vars:
+            for varname in self.strace.stat_names:
+                vals = self.strace.get_sampler_stats(varname)
+                assert vals.shape[0] == self.draws
+
+    def test_missing_stats(self):
+        if self.sampler_vars is not None:
+            with self.assertRaises(ValueError):
+                self.strace.record(point=self.test_point)
 
     def test_clean_interrupt(self):
-        self.strace.record(point=self.test_point)
+        self.record_point(0)
         self.strace.close()
         for varname in self.test_point.keys():
             self.assertEqual(self.strace.get_values(varname).shape[0], 1)
+        for statname in self.strace.stat_names:
+            self.assertEqual(self.strace.get_sampler_stats(statname).shape[0], 1)
 
 
 class SelectionTestCase(ModelBackendSampledTestCase):
@@ -160,6 +288,10 @@ class SelectionTestCase(ModelBackendSampledTestCase):
         for varname in self.test_point.keys():
             self.assertEqual(self.expected[0][varname].dtype,
                              self.mtrace.get_values(varname, chains=0).dtype)
+
+        for statname in self.mtrace.stat_names:
+            self.assertEqual(self.stat_dtypes[statname],
+                             self.mtrace.get_sampler_stats(statname, chains=0).dtype)
 
     def test_get_values_nocombine_thin_keyword(self):
         thin = 2

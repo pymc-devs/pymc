@@ -1,19 +1,9 @@
-# -*- coding: utf-8 -*-
-# <nbformat>3.0</nbformat>
-
-# <codecell>
+import numpy as np
 import pandas as pd
-from pylab import *
+import matplotlib.pyplot as plt
 
-from pymc3 import StudentT, Model, NUTS, Normal, find_MAP, trace, get_data_file
+from pymc3 import StudentT, Model, NUTS, Normal, find_MAP, get_data_file, sample
 from pymc3.distributions.timeseries import GaussianRandomWalk
-
-# <markdowncell>
-
-# Data
-# ----
-
-# <codecell>
 
 data = pd.read_csv(get_data_file('pymc3.examples', 'data/pancreatitis.csv'))
 countries = ['CYP', 'DNK', 'ESP', 'FIN', 'GBR', 'ISL']
@@ -26,22 +16,14 @@ group, countries = pd.factorize(data.area, order=countries)
 
 ncountries = len(countries)
 
-# <codecell>
-
 for i, country in enumerate(countries):
-    subplot(2, 3, i + 1)
-    title(country)
+    plt.subplot(2, 3, i + 1)
+    plt.title(country)
     d = data[data.area == country]
-    plot(d.age, d.value, '.')
+    plt.plot(d.age, d.value, '.')
 
-    ylim(0, rate.max())
+    plt.ylim(0, rate.max())
 
-# <markdowncell>
-
-# Model Specification
-# -------------------
-
-# <codecell>
 
 nknots = 10
 knots = np.linspace(data.age_start.min(), data.age_end.max(), nknots)
@@ -71,12 +53,6 @@ with Model() as model:
 
     vals = Normal('vals', p, sd=sd, observed=rate)
 
-# <markdowncell>
-
-# Model Fitting
-# -------------
-
-# <codecell>
 
 with model:
     s = find_MAP(vars=[sd, y])
@@ -94,17 +70,16 @@ def run(n=3000):
         n = 150
     with model:
         trace = sample(n, step, s)
-    # <codecell>
 
     for i, country in enumerate(countries):
-        subplot(2, 3, i + 1)
-        title(country)
+        plt.subplot(2, 3, i + 1)
+        plt.title(country)
 
         d = data[data.area == country]
-        plot(d.age, d.value, '.')
-        plot(knots, trace[y][::5, :, i].T, color='r', alpha=.01)
+        plt.plot(d.age, d.value, '.')
+        plt.plot(knots, trace[y][::5, :, i].T, color='r', alpha=.01)
 
-        ylim(0, rate.max())
+        plt.ylim(0, rate.max())
 
 
 if __name__ == '__main__':
