@@ -62,7 +62,7 @@ class Operator(object):
                 a = theano.clone(self.op.apply(self.tf), {self.op.input: z})
             return tt.abs_(a)
 
-        def updates(self, obj_n_mc=None, tf_n_mc=None, obj_optimizer=None, test_optimizer=None,
+        def updates(self, obj_n_mc=None, tf_n_mc=None, obj_optimizer=adam, test_optimizer=adam,
                     more_obj_params=None, more_tf_params=None, more_updates=None):
             if more_obj_params is None:
                 more_obj_params = []
@@ -70,10 +70,6 @@ class Operator(object):
                 more_tf_params = []
             if more_updates is None:
                 more_updates = dict()
-            if obj_optimizer is None:
-                obj_optimizer = adam
-            if test_optimizer is None:
-                test_optimizer = adam
             resulting_updates = theano.OrderedUpdates()
 
             if self.test_params:
