@@ -4,7 +4,7 @@ import theano.tensor as tt
 from theano.ifelse import ifelse
 
 import pymc3 as pm
-from .advi import adagrad_optimizer
+from .updates import adam
 from ..distributions.dist_math import rho2sd, log_normal
 from ..model import modelcontext
 from ..theanof import tt_rng, memoize, change_flags, GradScale
@@ -71,9 +71,9 @@ class Operator(object):
             if more_updates is None:
                 more_updates = dict()
             if obj_optimizer is None:
-                obj_optimizer = adagrad_optimizer(learning_rate=.01, epsilon=.1)
+                obj_optimizer = adam
             if test_optimizer is None:
-                test_optimizer = adagrad_optimizer(learning_rate=.01, epsilon=.1)
+                test_optimizer = adam
             resulting_updates = theano.OrderedUpdates()
 
             if self.test_params:
