@@ -575,7 +575,7 @@ def summary(trace, varnames=None, alpha=0.05, start=0, batches=None, roundto=3,
     include_transformed : bool
       Flag for summarizing automatically transformed variables in addition to
       original variables (defaults to False).
-    tofile : None or string
+    to_file : None or string
       File to write results to. If not given, print to stdout.
 
     """
