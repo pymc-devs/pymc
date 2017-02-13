@@ -23,6 +23,43 @@ class NUTS(BaseHMC):
 
     Hoffman, Matthew D., & Gelman, Andrew. (2011).
     The No-U-Turn Sampler: Adaptively Setting Path Lengths in Hamiltonian Monte Carlo.
+
+    Nuts provides a number of statistics, that can be accessed using
+    `trace.get_sampler_stats`:
+
+    - `mean_tree_accept`: The mean acceptance probability for the tree
+      that generated this sample. The mean of these values across all
+      samples but the burn-in should be approximately `target_accept`
+      (the default for this is 0.8).
+    - `diverging`: Whether the trajectory for this sample diverged. If
+      there are many diverging samples, this usually indicates that a
+      region of the posterior has high curvature. Reparametrization can
+      often help, but you can also try to increase `target_accept` to
+      something like 0.9 or 0.95.
+    - `energy`: The energy at the point in phase-space where the sample
+      was accepted. This can be used to identify posteriors with
+      problematically long tails. See below for an example.
+    - `energy_change`: The difference in energy between the start and
+      the end of the trajectory. For a perfect integrator this would
+      always be zero.
+    - `max_energy_change`: The maximum difference in energy along the
+      whole trajectory.
+    - `depth`: The depth of the tree that was used to generate this sample
+    - `tree_size`: The number of leafs of the sampling tree, when the
+      sample was accepted. This is usually a bit less than
+      $2 ^ \text{depth}$. If the tree size is large, the sampler is using
+      a lot of leapfrog steps to find the next sample. This can for
+      example happen if there are strong correlations in the posterior,
+      if the posterior has long tails, if there are regions of high
+      curvature ("funnels"), or if the variance estimates in the mass
+      matrix are inaccurate. Reparametrisation of the model or estimating
+      the posterior variances from past samples might help.
+    - `tune`: This is `True`, if step size adaptation was turned on when
+      this sample was generated.
+    - `step_size`: The step size used for this sample.
+    - `step_size_bar`: The current best known step-size. After the tuning
+       samples, the step size is set to this value. This should converge
+       during tuning.
     """
     default_blocked = True
     generates_stats = True
@@ -31,13 +68,12 @@ class NUTS(BaseHMC):
         'step_size': np.float64,
         'tune': np.bool,
         'mean_tree_accept': np.float64,
-        'h_bar': np.float64,
         'step_size_bar': np.float64,
         'tree_size': np.float64,
         'diverging': np.bool,
-        'energy_change': np.float64,
+        'energy_error': np.float64,
         'energy': np.float64,
-        'max_energy_change': np.float64,
+        'max_energy_error': np.float64,
     }]
 
     def __init__(self, vars=None, Emax=1000, target_accept=0.8,
@@ -122,7 +158,6 @@ class NUTS(BaseHMC):
         stats = {
             'step_size': step_size,
             'tune': self.tune,
-            'h_bar': self.h_bar,
             'step_size_bar': np.exp(self.log_step_size_bar),
             'diverging': diverging,
         }
@@ -262,8 +297,8 @@ class Tree(object):
         return {
             'depth': self.depth,
             'mean_tree_accept': self.accept_sum / self.n_proposals,
-            'energy_change': self.proposal.energy - self.start.energy,
+            'energy_error': self.proposal.energy - self.start.energy,
             'energy': self.proposal.energy,
             'tree_size': self.n_proposals,
-            'max_energy_change': self.max_energy_change,
+            'max_energy_error': self.max_energy_change,
         }
