@@ -281,10 +281,10 @@ def compare(traces, models, ic='WAIC'):
     Returns
     -------
     A DataFrame, ordered from lowest to highest IC. The index reflects
-    the order in which the models are passed to this function. The columns are:
+    the order in wich the models are passed to this function. The columns are:
     IC: Information Criteria (WAIC or LOO).
-        Smaller IC indicates higher out-of-sample predictive fit ("better" model).
-        Default WAIC.
+        Smaller IC indicates higher out-of-sample predictive fit ("better" model). 
+        Default WAIC. 
     pIC: Estimated effective number of parameters.
     dIC: Relative difference between each IC (WAIC or LOO)
     and the lowest IC (WAIC or LOO).
@@ -299,34 +299,48 @@ def compare(traces, models, ic='WAIC'):
     dSE: Standard error of the difference in IC between each model and
     the top-ranked model.
         It's always 0 for the top-ranked model.
+    warning: A value of 1 indicates that the computation of the IC may not be
+    reliable see http://arxiv.org/abs/1507.04544 for details
     """
+
     if ic == 'WAIC':
         ic_func = waic
         df_comp = pd.DataFrame(index=np.arange(len(models)),
-                               columns=['WAIC', 'pWAIC', 'dWAIC', 'weight', 'SE', 'dSE'])
+                               columns=['WAIC', 'pWAIC', 'dWAIC', 'weight',
+                                        'SE', 'dSE', 'warning'])
     elif ic == 'LOO':
         ic_func = loo
         df_comp = pd.DataFrame(index=np.arange(len(models)),
-                               columns=['LOO', 'pLOO', 'dLOO', 'weight', 'SE', 'dSE'])
+                               columns=['LOO', 'pLOO', 'dLOO', 'weight', 'SE',
+                                        'dSE', 'warning'])
     else:
         raise NotImplementedError(
             'The information criterion {} is not supported.'.format(ic))
 
-    ics = []
-    for c, (t, m) in enumerate(zip(traces, models)):
-        ics.append((c, ic_func(t, m, pointwise=True)))
+    warns = np.zeros(len(models))
+    def add_warns(*args):
+        warns[c] = 1
+
+    with warnings.catch_warnings():
+        warnings.showwarning = add_warns
+        warnings.filterwarnings('always')
+
+        ics = []
+        for c, (t, m) in enumerate(zip(traces, models)):
+            ics.append((c, ic_func(t, m, pointwise=True)))
 
     ics.sort(key=lambda x: x[1][0])
 
-    max_ic = ics[-1][1][0]
-    Z = np.sum([np.exp(-0.5 * (x[1][0] - max_ic)) for x in ics])
+    min_ic = ics[0][1][0]
+    Z = np.sum([np.exp(-0.5 * (x[1][0] - min_ic)) for x in ics])
 
     for idx, res in ics:
         diff = ics[0][1][3] - res[3]
         d_waic = np.sum(diff)
         d_se = np.sqrt(len(diff)) * np.var(diff)
-        weight = np.exp(-0.5 * (res[0] - max_ic)) / Z
-        df_comp.at[idx] = res[0], res[2], abs(d_waic), weight, res[1], d_se
+        weight = np.exp(-0.5 * (res[0] - min_ic)) / Z
+        df_comp.at[idx] = res[0], res[2], abs(d_waic), weight, res[1],
+        d_se, warns[idx]
 
     return df_comp.sort_values(by=ic)
 
