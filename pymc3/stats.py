@@ -318,6 +318,7 @@ def compare(traces, models, ic='WAIC'):
 
     warns = np.zeros(len(models))
 
+    c = 0
     def add_warns(*args):
         warns[c] = 1
 
