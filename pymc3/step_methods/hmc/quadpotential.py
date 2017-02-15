@@ -1,6 +1,7 @@
 from numpy import dot
 from numpy.random import normal
 import scipy.linalg
+import theano.tensor as tt
 from theano.tensor import slinalg
 from scipy.sparse import issparse
 
@@ -123,7 +124,7 @@ class QuadPotential(object):
         self.L = scipy.linalg.cholesky(A, lower=True)
 
     def velocity(self, x):
-        return x.T.dot(self.A.T)
+        return tt.dot(self.A, x)
 
     def random(self):
         n = floatX(normal(size=self.L.shape[0]))

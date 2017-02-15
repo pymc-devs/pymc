@@ -30,7 +30,7 @@ def test_leapfrog_reversible_single():
     n = 3
     start, model, _ = models.non_normal(n)
 
-    integrators = ['leapfrog', 'two-stage', 'three-stage']
+    integrators = ['leapfrog', 'two-stage', 'three-stage', 'leapfrog3']
     steps = [BaseHMC(vars=model.vars, model=model, integrator=method, use_single_leapfrog=True)
              for method in integrators]
     for method, step in zip(integrators, steps):
@@ -46,10 +46,10 @@ def test_leapfrog_reversible_single():
 
                 energy = step.compute_energy(q, p)
                 for _ in range(n_steps):
-                    q, p, dlogp, _ = step.leapfrog(q, p, dlogp, np.array(epsilon))
+                    q, p, v, dlogp, _ = step.leapfrog(q, p, dlogp, np.array(epsilon))
                 p = -p
                 for _ in range(n_steps):
-                    q, p, dlogp, _ = step.leapfrog(q, p, dlogp, np.array(epsilon))
+                    q, p, v, dlogp, _ = step.leapfrog(q, p, dlogp, np.array(epsilon))
 
                 close_to(q, q0, 1e-8, str(('q', method, n_steps, epsilon)))
                 close_to(-p, p0, 1e-8, str(('p', method, n_steps, epsilon)))
