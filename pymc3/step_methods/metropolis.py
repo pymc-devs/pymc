@@ -1,6 +1,7 @@
 import numpy as np
 import numpy.random as nr
 import theano
+import scipy.linalg
 
 from ..distributions import draw_values
 from .arraystep import ArrayStepShared, ArrayStep, metrop_select, Competence
@@ -41,8 +42,16 @@ class PoissonProposal(Proposal):
 
 
 class MultivariateNormalProposal(Proposal):
+    def __init__(self, s):
+        n, m = s.shape
+        if n != m:
+            raise ValueError("Covariance matrix is not symmetric.")
+        self.n = n
+        self.chol = scipy.linalg.cholesky(s, lower=True)
+
     def __call__(self, num_draws=None):
-        return nr.multivariate_normal(mean=np.zeros(self.s.shape[0]), cov=self.s, size=num_draws)
+        b = np.random.randn(self.n)
+        return np.dot(self.chol, b)
 
 
 class Metropolis(ArrayStepShared):
@@ -76,7 +85,7 @@ class Metropolis(ArrayStepShared):
         'tune': np.bool,
     }]
 
-    def __init__(self, vars=None, S=None, proposal_dist=NormalProposal, scaling=1.,
+    def __init__(self, vars=None, S=None, proposal_dist=None, scaling=1.,
                  tune=True, tune_interval=100, model=None, mode=None, **kwargs):
 
         model = pm.modelcontext(model)
@@ -87,7 +96,16 @@ class Metropolis(ArrayStepShared):
 
         if S is None:
             S = np.ones(sum(v.dsize for v in vars))
-        self.proposal_dist = proposal_dist(S)
+
+        if proposal_dist is not None:
+            self.proposal_dist = proposal_dist(S)
+        elif S.ndim == 1:
+            self.proposal_dist = NormalProposal(S)
+        elif S.ndim == 2:
+            self.proposal_dist = MultivariateNormalProposal(S)
+        else:
+            raise ValueError("Invalid rank for variance: %s" % S.ndim)
+
         self.scaling = np.atleast_1d(scaling)
         self.tune = tune
         self.tune_interval = tune_interval
