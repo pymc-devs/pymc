@@ -281,7 +281,7 @@ def compare(traces, models, ic='WAIC'):
     Returns
     -------
     A DataFrame, ordered from lowest to highest IC. The index reflects
-    the order in wich the models are passed to this function. The columns are:
+    the order in which the models are passed to this function. The columns are:
     IC: Information Criteria (WAIC or LOO).
         Smaller IC indicates higher out-of-sample predictive fit ("better" model). 
         Default WAIC. 
@@ -302,22 +302,22 @@ def compare(traces, models, ic='WAIC'):
     warning: A value of 1 indicates that the computation of the IC may not be
     reliable see http://arxiv.org/abs/1507.04544 for details
     """
-
     if ic == 'WAIC':
         ic_func = waic
         df_comp = pd.DataFrame(index=np.arange(len(models)),
                                columns=['WAIC', 'pWAIC', 'dWAIC', 'weight',
-                                        'SE', 'dSE', 'warning'])
+                               'SE', 'dSE', 'warning'])
     elif ic == 'LOO':
         ic_func = loo
         df_comp = pd.DataFrame(index=np.arange(len(models)),
-                               columns=['LOO', 'pLOO', 'dLOO', 'weight', 'SE',
-                                        'dSE', 'warning'])
+                               columns=['LOO', 'pLOO', 'dLOO', 'weight',
+                               'SE', 'dSE', 'warning'])
     else:
         raise NotImplementedError(
             'The information criterion {} is not supported.'.format(ic))
 
     warns = np.zeros(len(models))
+
     def add_warns(*args):
         warns[c] = 1
 
@@ -336,11 +336,11 @@ def compare(traces, models, ic='WAIC'):
 
     for idx, res in ics:
         diff = ics[0][1][3] - res[3]
-        d_waic = np.sum(diff)
-        d_se = np.sqrt(len(diff)) * np.var(diff)
+        d_ic = np.sum(diff)
+        d_se = (len(diff)) * np.var(diff) ** 0.5
         weight = np.exp(-0.5 * (res[0] - min_ic)) / Z
-        df_comp.at[idx] = res[0], res[2], abs(d_waic), weight, res[1],
-        d_se, warns[idx]
+        df_comp.at[idx] = (res[0], res[2], abs(d_ic), weight, res[1],
+                           d_se, warns[idx])
 
     return df_comp.sort_values(by=ic)
 
