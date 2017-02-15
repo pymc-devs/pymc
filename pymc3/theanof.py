@@ -14,7 +14,7 @@ from .data import DataGenerator
 __all__ = ['gradient', 'hessian', 'hessian_diag', 'inputvars',
            'cont_inputs', 'floatX', 'jacobian',
            'CallableTensor', 'join_nonshared_inputs',
-           'make_shared_replacements', 'generator']
+           'make_shared_replacements', 'generator', 'LogDet', 'logdet']
 
 
 def inputvars(a):
