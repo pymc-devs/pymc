@@ -2,7 +2,6 @@ import theano.tensor as tt
 import numpy as np
 from functools import reduce
 
-
 __all__ = ['ExpQuad',
            'RatQuad',
            'Exponential',
@@ -34,7 +33,7 @@ class Covariance(object):
             self.active_dims = np.array(active_dims)
             assert len(active_dims) == input_dim
 
-    def K(self, X, Z):
+    def __call__(self, X, Z=None):
         R"""
         Evaluate the covariance function.
 
@@ -78,14 +77,14 @@ class Combination(Covariance):
                 self.factor_list.append(factor)
 
 class Add(Combination):
-    def K(self, X, Z=None):
+    def __call__(self, X, Z=None):
         return reduce((lambda x, y: x + y),
-                      [k.K(X, Z) if isinstance(k, Covariance) else k for k in self.factor_list])
+            [k(X, Z) if isinstance(k, Covariance) else k for k in self.factor_list])
 
 class Prod(Combination):
-    def K(self, X, Z=None):
+    def __call__(self, X, Z=None):
         return reduce((lambda x, y: x * y),
-                      [k.K(X, Z) if isinstance(k, Covariance) else k for k in self.factor_list])
+            [k(X, Z) if isinstance(k, Covariance) else k for k in self.factor_list])
 
 
 class Stationary(Covariance):
@@ -129,10 +128,10 @@ class ExpQuad(Stationary):
        k(x, x') = \mathrm{exp}\left[ -\frac{(x - x')^2}{2 \ell^2} \right]
     """
 
-    def K(self, X, Z=None):
+    def __call__(self, X, Z=None):
         X, Z = self._slice(X, Z)
         return tt.exp( -0.5 * self.square_dist(X, Z))
-
+    
 
 class RatQuad(Stationary):
     R"""
@@ -148,7 +147,7 @@ class RatQuad(Stationary):
         self.lengthscales = lengthscales
         self.alpha = alpha
 
-    def K(self, X, Z=None):
+    def __call__(self, X, Z=None):
         X, Z = self._slice(X, Z)
         return tt.power((1.0 + 0.5 * self.square_dist(X, Z) * (1.0 / self.alpha)), -1.0 * self.alpha)
 
@@ -162,11 +161,10 @@ class Matern52(Stationary):
        k(x, x') = \left(1 + \frac{\sqrt{5(x - x')^2}}{\ell} + \frac{5(x-x')^2}{3\ell^2}\right) \mathrm{exp}\left[ - \frac{\sqrt{5(x - x')^2}}{\ell} \right]
     """
 
-    def K(self, X, Z=None):
+    def __call__(self, X, Z=None):
         X, Z = self._slice(X, Z)
         r = self.euclidean_dist(X, Z)
         return (1.0 + np.sqrt(5.0) * r + 5.0 / 3.0 * tt.square(r)) * tt.exp(-1.0 * np.sqrt(5.0) * r)
-
 
 class Matern32(Stationary):
     R"""
@@ -177,7 +175,7 @@ class Matern32(Stationary):
        k(x, x') = \left(1 + \frac{\sqrt{3(x - x')^2}}{\ell}\right)\mathrm{exp}\left[ - \frac{\sqrt{3(x - x')^2}}{\ell} \right]
     """
 
-    def K(self, X, Z=None):
+    def __call__(self, X, Z=None):
         X, Z = self._slice(X, Z)
         r = self.euclidean_dist(X, Z)
         return (1.0 + np.sqrt(3.0) * r) * tt.exp(-np.sqrt(3.0) * r)
@@ -192,7 +190,7 @@ class Exponential(Stationary):
        k(x, x') = \mathrm{exp}\left[ -\frac{||x - x'||}{2\ell^2} \right]
     """
 
-    def K(self, X, Z=None):
+    def __call__(self, X, Z=None):
         X, Z = self._slice(X, Z)
         return tt.exp(-0.5 * self.euclidean_dist(X, Z))
 
@@ -205,7 +203,7 @@ class Cosine(Stationary):
        k(x, x') = \mathrm{cos}\left( \frac{||x - x'||}{ \ell^2} \right)
     """
 
-    def K(self, X, Z=None):
+    def __call__(self, X, Z=None):
         X, Z = self._slice(X, Z)
         return tt.cos(np.pi * self.euclidean_dist(X, Z))
 
@@ -222,7 +220,7 @@ class Linear(Covariance):
         Covariance.__init__(self, input_dim, active_dims)
         self.c = c
 
-    def K(self, X, Z=None):
+    def __call__(self, X, Z=None):
         X, Z = self._slice(X, Z)
         Xc = tt.sub(X, self.c)
         if Z is None:
@@ -230,7 +228,7 @@ class Linear(Covariance):
         else:
             Zc = tt.sub(Z, self.c)
             return tt.dot(Xc, tt.transpose(Zc))
-
+    
 
 class Polynomial(Linear):
     R"""
@@ -245,8 +243,8 @@ class Polynomial(Linear):
         self.d = d
         self.offset = offset
 
-    def K(self, X, Z=None):
-        return tt.power(Linear.K(self, X, Z) + self.offset, self.d)
+    def __call__(self, X, Z=None):
+        return tt.power(Linear.__call__(self, X, Z) + self.offset, self.d)
 
 
 class WarpedInput(Covariance):
@@ -274,12 +272,12 @@ class WarpedInput(Covariance):
         self.args = args
         self.cov_func = cov_func
 
-    def K(self, X, Z=None):
+    def __call__(self, X, Z=None):
         X, Z = self._slice(X, Z)
         if Z is None:
-            return self.cov_func.K(self.w(X, self.args), Z)
+            return self.cov_func(self.w(X, self.args), Z)
         else:
-            return self.cov_func.K(self.w(X, self.args), self.w(Z, self.args))
+            return self.cov_func(self.w(X, self.args), self.w(Z, self.args))
 
 
 def handle_args(func, args):

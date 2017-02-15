@@ -6,9 +6,11 @@ import matplotlib.pyplot as plt
 import pymc3 as pm
 from .stats import quantiles, hpd
 from scipy.signal import gaussian, convolve
+import theano
 
 __all__ = ['traceplot', 'kdeplot', 'kde2plot',
-           'forestplot', 'autocorrplot', 'plot_posterior']
+           'forestplot', 'autocorrplot', 'plot_posterior',
+           'plot_gram']
 
 
 def traceplot(trace, varnames=None, transform=lambda x: x, figsize=None,
@@ -854,3 +856,35 @@ def fast_kde(x):
     grid /= norm_factor
 
     return grid, xmin, xmax
+
+def plot_gram(K, X, cmap='terrain', interpolation='nearest', plot_colorbar=True, **kwargs):
+    """Plot gram matrix of kernel K at points X. Uses matplotlib.cmap
+    
+    Parameters
+    ----------
+
+    K : PyMC covariance function
+    X : array
+        Vector of points to plot gram matrix over.
+    cmap : colormap
+        Color map to apply to plotted matrix (Defaults to "terrain").
+    interpolation : string
+        Interpolation algorithm applied to missing cells, if any (Defaults to "nearest").
+    plot_colorbar : bool
+        Flag for plotting colorbar corresponding to covariance values (Defaults to True).
+    ax : axes
+        Matplotlib axes. Defaults to None.
+    **kwargs
+        Passed as-is to plt.imshow()
+
+    Returns
+    -------
+
+    ax : matplotlib axes    
+    """
+    Sigma = theano.function([], K(X))()
+    m = plt.imshow(Sigma, cmap=cmap, interpolation=interpolation, **kwargs) 
+    if plot_colorbar:
+        plt.colorbar(m)
+    plt.axis('off')
+    return m
