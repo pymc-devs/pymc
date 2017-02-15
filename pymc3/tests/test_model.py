@@ -1,5 +1,6 @@
 import unittest
 from theano import theano, tensor as tt
+import scipy.stats as stats
 import numpy as np
 import pymc3 as pm
 from pymc3.distributions import HalfCauchy, Normal
@@ -147,6 +148,11 @@ class TestScaling(unittest.TestCase):
                 yield np.ones((20, 100)) * i
                 i += 1
 
+        def true_dens():
+            g = gen1()
+            for i, point in enumerate(g):
+                yield stats.norm.logpdf(point * i).sum() * 10
+        t = true_dens()
         # We have same size models
         with pm.Model() as model1:
             Normal('n', observed=gen1(), total_size=100)
@@ -157,7 +163,8 @@ class TestScaling(unittest.TestCase):
             Normal('n', observed=gen_var, total_size=100)
             p2 = theano.function([], model2.logpt)
 
-        # We want densities to be equal
-        for _ in range(10):
-            np.testing.assert_almost_equal(p1(), p2())
+        for i in range(10):
+            _1, _2, _t = p1(), p2(), next(t)
+            np.testing.assert_almost_equal(_1, _t)
+            np.testing.assert_almost_equal(_1, _2)
         # Done
