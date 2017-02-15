@@ -97,6 +97,34 @@ class TestApproximates:
             np.testing.assert_allclose(np.mean(trace['mu']), mu_post, rtol=0.1)
             np.testing.assert_allclose(np.std(trace['mu']), np.sqrt(1. / d), rtol=0.4)
 
+        def test_optimizer_minibatch(self):
+            n = 1000
+            sd0 = 2.
+            mu0 = 4.
+            sd = 3.
+            mu = -5.
+
+            data = sd * np.random.randn(n) + mu
+
+            d = n / sd**2 + 1 / sd0**2
+            mu_post = (n * np.mean(data) / sd**2 + mu0 / sd0**2) / d
+
+            def create_minibatch(data):
+                while True:
+                    data = np.roll(data, 100, axis=0)
+                    yield data[:100]
+
+            minibatches = create_minibatch(data)
+            with Model():
+                mu_ = Normal('mu', mu=mu0, sd=sd0, testval=0)
+                Normal('x', mu=mu_, sd=sd, observed=minibatches, total_size=n)
+                inf = self.inference()
+                approx = inf.fit(self.NITER)
+                trace = approx.sample_vp(10000)
+
+            np.testing.assert_allclose(np.mean(trace['mu']), mu_post, rtol=0.4)
+            np.testing.assert_allclose(np.std(trace['mu']), np.sqrt(1. / d), rtol=0.4)
+
 
 class TestMeanField(TestApproximates.Base):
     inference = ADVI

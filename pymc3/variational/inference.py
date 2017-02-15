@@ -98,7 +98,7 @@ class Inference(object):
 
     approx = property(lambda self: self.objective.approx)
 
-    def fit(self, n=10000, score_every=1, callbacks=None, **kwargs):
+    def fit(self, n=10000, callbacks=None, score_every=1, callback_every=1, **kwargs):
         if callbacks is None:
             callbacks = []
         sc_n_mc = kwargs.get('sc_n_mc')
@@ -115,43 +115,44 @@ class Inference(object):
             scores[:] = np.nan
         else:
             scores = np.asarray(())
+        logger = pm._log  # noqa
+        progress = tqdm.trange(n)
         if score_every is not None:
             try:
                 scores = np.empty(n // score_every)
-                progress = tqdm.trange(n)
                 for i in progress:
                     step_func()
                     if i % score_every == 0:
                         e = score_func()
                         if np.isnan(e):
+                            scores = scores[:j]
+                            self.hist = np.concatenate([self.hist, scores])
                             raise FloatingPointError('NaN occurred in optimization.')
                         scores[j] = e
                         j += 1
+                        if i % 10 == 0:
+                            avg_elbo = scores[max(0, j - 1000):j].mean()
+                            progress.set_description('Average Loss = {:,.5g}'.format(avg_elbo))
+                    if i % callback_every == 0:
                         for callback in callbacks:
                             callback(self.approx, scores[:j], i)
-                        if n < 10:
-                            progress.set_description('SCORE = {:,.5g}'.format(scores[i]))
-                        elif i % (n // 10) == 0 and i > 0:
-                            avg_elbo = scores[max(0, j - 100):j].mean()
-                            progress.set_description('Average SCORE = {:,.5g}'.format(avg_elbo))
             except KeyboardInterrupt:
                 scores = scores[:j]
                 if n < 10:
-                    pm._log.info('Interrupted at {:,d} [{:.0f}%]: SCORE = {:,.5g}'.format(
+                    logger.info('Interrupted at {:,d} [{:.0f}%]: Loss = {:,.5g}'.format(
                         i, 100 * i // n, scores[i]))
                 else:
-                    avg_elbo = scores[min(0, j - 100):j].mean()
-                    pm._log.info('Interrupted at {:,d} [{:.0f}%]: Average SCORE = {:,.5g}'.format(
+                    avg_elbo = scores[min(0, j - 1000):j].mean()
+                    logger.info('Interrupted at {:,d} [{:.0f}%]: Average Loss = {:,.5g}'.format(
                         i, 100 * i // n, avg_elbo))
             else:
                 if n < 10:
-                    pm._log.info('Finished [100%]: ELBO = {:,.5g}'.format(scores[-1]))
+                    logger.info('Finished [100%]: Loss = {:,.5g}'.format(scores[-1]))
                 else:
-                    avg_elbo = scores[max(0, j - 100):j].mean()
-                    pm._log.info('Finished [100%]: Average ELBO = {:,.5g}'.format(avg_elbo))
+                    avg_elbo = scores[max(0, j - 1000):j].mean()
+                    logger.info('Finished [100%]: Average Loss = {:,.5g}'.format(avg_elbo))
         else:
             try:
-                progress = tqdm.trange(n)
                 for _ in progress:
                     step_func()
             except KeyboardInterrupt:
