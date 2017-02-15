@@ -6,12 +6,13 @@ from .models import simple_categorical, mv_simple, mv_simple_discrete, simple_2m
 from pymc3.sampling import assign_step_methods, sample
 from pymc3.model import Model
 from pymc3.step_methods import (NUTS, BinaryGibbsMetropolis, CategoricalGibbsMetropolis,
-                                Metropolis, Slice, CompoundStep,
+                                Metropolis, Slice, CompoundStep, NormalProposal,
                                 MultivariateNormalProposal, HamiltonianMC)
 from pymc3.distributions import Binomial, Normal, Bernoulli, Categorical
 
 from numpy.testing import assert_array_almost_equal
 import numpy as np
+import numpy.testing as npt
 from tqdm import tqdm
 
 
@@ -185,6 +186,29 @@ class TestStepMethods(object):  # yield test doesn't work subclassing unittest.T
         for step in steps:
             trace = sample(8000, step=step, start=start, model=model, random_seed=1)
             yield self.check_stat, check, trace, step.__class__.__name__
+
+
+class TestMetropolisProposal(unittest.TestCase):
+    def test_proposal_choice(self):
+        _, model, _ = mv_simple()
+        with model:
+            s = np.ones(model.ndim)
+            sampler = Metropolis(S=s)
+            assert isinstance(sampler.proposal_dist, NormalProposal)
+            s = np.diag(s)
+            sampler = Metropolis(S=s)
+            assert isinstance(sampler.proposal_dist, MultivariateNormalProposal)
+            s[0, 0] = -s[0, 0]
+            with self.assertRaises(np.linalg.LinAlgError):
+                sampler = Metropolis(S=s)
+
+    def test_mv_proposal(self):
+        np.random.seed(42)
+        cov = np.random.randn(5, 5)
+        cov = cov.dot(cov.T)
+        prop = MultivariateNormalProposal(cov)
+        samples = np.array([prop() for _ in range(10000)])
+        npt.assert_allclose(np.cov(samples.T), cov, rtol=0.2)
 
 
 class TestCompoundStep(unittest.TestCase):
