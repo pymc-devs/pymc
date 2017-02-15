@@ -271,10 +271,10 @@ def compare(traces, models, ic='WAIC'):
 
     Parameters
     ----------
-    traces: list of PyMC3 traces
-    models: list of PyMC3 models
+    traces : list of PyMC3 traces
+    models : list of PyMC3 models
         in the same order as traces.
-    ic: string
+    ic : string
         Information Criterion (WAIC or LOO) used to compare models.
         Default WAIC.
 
@@ -282,25 +282,25 @@ def compare(traces, models, ic='WAIC'):
     -------
     A DataFrame, ordered from lowest to highest IC. The index reflects
     the order in which the models are passed to this function. The columns are:
-    IC: Information Criteria (WAIC or LOO).
+    IC : Information Criteria (WAIC or LOO).
         Smaller IC indicates higher out-of-sample predictive fit ("better" model). 
         Default WAIC. 
-    pIC: Estimated effective number of parameters.
-    dIC: Relative difference between each IC (WAIC or LOO)
+    pIC : Estimated effective number of parameters.
+    dIC : Relative difference between each IC (WAIC or LOO)
     and the lowest IC (WAIC or LOO).
         It's always 0 for the top-ranked model.
     weight: Akaike weights for each model. 
         This can be loosely interpreted as the probability of each model
         (among the compared model) given the data. Be careful that these
         weights are based on point estimates of the IC (uncertainty is ignored).
-    SE: Standard error of the IC estimate.
+    SE : Standard error of the IC estimate.
         For a "large enough" sample size this is an estimate of the uncertainty
         in the computation of the IC.
-    dSE: Standard error of the difference in IC between each model and
+    dSE : Standard error of the difference in IC between each model and
     the top-ranked model.
         It's always 0 for the top-ranked model.
-    warning: A value of 1 indicates that the computation of the IC may not be
-    reliable see http://arxiv.org/abs/1507.04544 for details
+    warning : A value of 1 indicates that the computation of the IC may not be
+    reliable see http://arxiv.org/abs/1507.04544 for details.
     """
     if ic == 'WAIC':
         ic_func = waic
