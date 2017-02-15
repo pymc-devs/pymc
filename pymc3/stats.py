@@ -337,7 +337,7 @@ def compare(traces, models, ic='WAIC'):
     for idx, res in ics:
         diff = ics[0][1][3] - res[3]
         d_ic = np.sum(diff)
-        d_se = (len(diff)) * np.var(diff) ** 0.5
+        d_se = len(diff) ** 0.5 * np.var(diff)
         weight = np.exp(-0.5 * (res[0] - min_ic)) / Z
         df_comp.at[idx] = (res[0], res[2], abs(d_ic), weight, res[1],
                            d_se, warns[idx])
