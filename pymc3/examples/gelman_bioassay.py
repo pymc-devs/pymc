@@ -22,7 +22,9 @@ def run(n=1000):
     if n == "short":
         n = 50
     with model:
-        pm.sample(n, step)
+        random.seed(42)
+        trace = pm.sample(n, init='random')
+        pm.summary(trace, varnames=['alpha', 'beta'])
 
 if __name__ == '__main__':
     run()
