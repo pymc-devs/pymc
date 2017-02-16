@@ -2,7 +2,7 @@
 '''
 (c) 2016, John Salvatier & Taku Yoshioka
 '''
-from collections import OrderedDict, namedtuple
+from collections import OrderedDict, namedtuple, deque
 
 import numpy as np
 import theano
@@ -30,7 +30,7 @@ def gen_random_state():
 
 def advi(vars=None, start=None, model=None, n=5000, accurate_elbo=False,
          optimizer=None, learning_rate=.001, epsilon=.1, mode=None,
-         random_seed=None):
+         tol_obj=0.01, eval_elbo=100, random_seed=None):
     """Perform automatic differentiation variational inference (ADVI).
 
     This function implements the meanfield ADVI, where the variational
@@ -79,6 +79,11 @@ def advi(vars=None, start=None, model=None, n=5000, accurate_elbo=False,
     epsilon : float
         Offset in denominator of the scale of learning rate in Adagrad.
         This parameter is ignored when optimizer is given.
+    tol_obj : float
+        Relative tolerance for testing convergence of ELBO.
+    eval_elbo : int
+        Window for checking convergence of ELBO. Convergence will be checked
+        for every multiple of eval_elbo.
     random_seed : int or None
         Seed to initialize random state. None uses current seed.
     mode :  string or `Mode` instance.
@@ -135,11 +140,23 @@ def advi(vars=None, start=None, model=None, n=5000, accurate_elbo=False,
     updates = optimizer(loss=-1 * elbo, param=[uw_shared])
     f = theano.function([], [uw_shared, elbo], updates=updates, mode=mode)
 
+    # For tracking convergence of ELBO
+    window_size = int(max(0.1 * n // eval_elbo, 2.0))
+    circ_buff = deque([], maxlen=window_size)
+    converged = False
+
     # Optimization loop
     elbos = np.empty(n)
     try:
         progress = trange(n)
-        for i in progress:
+        uw_i, elbo_current = f()
+        if np.isnan(elbo_current):
+            raise FloatingPointError('NaN occurred in ADVI optimization.')
+        elbos[0] = elbo_current
+        progress.update(1)
+        i = 1
+        while not converged and i < n:
+            progress.update(1)
             uw_i, e = f()
             if np.isnan(e):
                 raise FloatingPointError('NaN occurred in ADVI optimization.')
@@ -149,6 +166,27 @@ def advi(vars=None, start=None, model=None, n=5000, accurate_elbo=False,
             elif i % (n // 10) == 0 and i > 0:
                 avg_elbo = elbos[i - n // 10:i].mean()
                 progress.set_description('Average ELBO = {:,.5g}'.format(avg_elbo))
+
+            if i % eval_elbo == 0:
+                elbo_prev = elbo_current
+                elbo_current = elbos[i]
+                delta_elbo = abs((elbo_current - elbo_prev) / elbo_prev)
+                circ_buff.append(delta_elbo)
+                avg_delta = np.mean(circ_buff)
+                med_delta = np.median(circ_buff)
+
+                if avg_delta < tol_obj:
+                    pm._log.info('Mean ELBO converged.')
+                    converged = True
+                    elbos = elbos[:(i + 1)]
+                elif med_delta < tol_obj:
+                    pm._log.info('Median ELBO converged.')
+                    converged = True
+                    elbos = elbos[:(i + 1)]
+                if i > 10 * eval_elbo:
+                    if med_delta > 0.5 or avg_delta > 0.5:
+                        pm._log.info('May be diverging, inspect ELBO.')
+            i += 1
     except KeyboardInterrupt:
         elbos = elbos[:i]
         if n < 10:
