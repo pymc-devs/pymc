@@ -181,6 +181,8 @@ def sample(draws, step=None, init='advi', n_init=200000, start=None,
                                     random_seed=random_seed, start=init_start)
         else:
             step = assign_step_methods(model, step)
+            _start, _ = do_init(init=init, nsamples=1, n_init=n_init, model=model,
+                                random_seed=random_seed, start=init_start)
     else:
         step = assign_step_methods(model, step)
 
@@ -618,6 +620,7 @@ def transform_start_particles(start, nparticles, model=None):
     if start is None:
         return {}
     dshapes = {i.name: i.dshape for i in model.vars}
+    dshapes.update({i.name: i.transformed.dshape for i in model.deterministics if hasattr(i, 'transformed')})
     if isinstance(start, dict):
         if all(dshapes[k] == np.asarray(v).shape for k, v in start.items()):
             if nparticles is not None:
