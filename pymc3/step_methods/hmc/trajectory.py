@@ -116,14 +116,11 @@ def get_theano_hamiltonian_functions(model_vars, shared, logpt, potential,
     H, q, dlogp = _theano_hamiltonian(model_vars, shared, logpt, potential)
     energy_function, p = _theano_energy_function(H, q, **theano_kwargs)
     if use_single_leapfrog:
-        if integrator == "leapfrog":
-            integrator = _theano_single_leapfrog(H, q, p, H.dlogp(q), **theano_kwargs)
-        elif integrator == "two-stage":
-            integrator = _theano_single_twostage(H, q, p, H.dlogp(q), **theano_kwargs)
-        elif integrator == "three-stage":
-            integrator = _theano_single_threestage(H, q, p, H.dlogp(q), **theano_kwargs)
-        else:
-            raise ValueError("Unknown step method %s" % step_method)
+        try:
+            _theano_integrator = INTEGRATORS_SINGLE[integrator]
+        except KeyError:
+            raise ValueError("Unknown integrator: %s" % integrator)
+        integrator = _theano_integrator(H, q, p, H.dlogp(q), **theano_kwargs)
     else:
         if integrator != "leapfrog":
             raise ValueError("Only leapfrog is supported")
@@ -281,3 +278,10 @@ def _theano_single_leapfrog(H, q, p, q_grad, **theano_kwargs):
                         outputs=[q_new, p_new, q_new_grad, energy_new], **theano_kwargs)
     f.trust_input = True
     return f
+
+
+INTEGRATORS_SINGLE = {
+    'leapfrog': _theano_single_leapfrog,
+    'two-stage': _theano_single_twostage,
+    'three-stage': _theano_single_threestage
+}
