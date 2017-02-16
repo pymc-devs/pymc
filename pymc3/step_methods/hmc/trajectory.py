@@ -89,7 +89,7 @@ def _theano_leapfrog_integrator(H, q, p, **theano_kwargs):
 
 def get_theano_hamiltonian_functions(model_vars, shared, logpt, potential,
                                      use_single_leapfrog=False,
-                                     step_method="leapfrog", **theano_kwargs):
+                                     integrator="leapfrog", **theano_kwargs):
     """Construct theano functions for the Hamiltonian, energy, and leapfrog integrator.
 
     Parameters
@@ -102,7 +102,7 @@ def get_theano_hamiltonian_functions(model_vars, shared, logpt, potential,
     use_single_leapfrog : bool
         if only 1 integration step is done at a time (as in NUTS), this
         provides a ~2x speedup
-    step_method : str
+    integrator : str
         Integration scheme to use. One of "leapfog", "two-stage", or
         "three-stage".
 
@@ -116,16 +116,16 @@ def get_theano_hamiltonian_functions(model_vars, shared, logpt, potential,
     H, q, dlogp = _theano_hamiltonian(model_vars, shared, logpt, potential)
     energy_function, p = _theano_energy_function(H, q, **theano_kwargs)
     if use_single_leapfrog:
-        if step_method == "leapfrog":
+        if integrator == "leapfrog":
             integrator = _theano_single_leapfrog(H, q, p, H.dlogp(q), **theano_kwargs)
-        elif step_method == "two-stage":
+        elif integrator == "two-stage":
             integrator = _theano_single_twostage(H, q, p, H.dlogp(q), **theano_kwargs)
-        elif step_method == "three-stage":
+        elif integrator == "three-stage":
             integrator = _theano_single_threestage(H, q, p, H.dlogp(q), **theano_kwargs)
         else:
             raise ValueError("Unknown step method %s" % step_method)
     else:
-        if step_method != "leapfrog":
+        if integrator != "leapfrog":
             raise ValueError("Only leapfrog is supported")
         integrator = _theano_leapfrog_integrator(H, q, p, **theano_kwargs)
     return H, energy_function, integrator, dlogp

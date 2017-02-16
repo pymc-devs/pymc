@@ -35,20 +35,20 @@ class SliceUniform(sf.SliceFixture, sf.UniformFixture):
 
 @attr('extra')
 class NUTSUniform2(NUTSUniform):
-    step_args = {'target_accept': 0.95, 'step_method': 'two-stage'}
+    step_args = {'target_accept': 0.95, 'integrator': 'two-stage'}
 
 
 class NUTSUniform3(NUTSUniform):
-    step_args = {'target_accept': 0.80, 'step_method': 'two-stage'}
+    step_args = {'target_accept': 0.80, 'integrator': 'two-stage'}
 
 
 @attr('extra')
 class NUTSUniform4(NUTSUniform):
-    step_args = {'target_accept': 0.95, 'step_method': 'three-stage'}
+    step_args = {'target_accept': 0.95, 'integrator': 'three-stage'}
 
 
 class NUTSUniform5(NUTSUniform):
-    step_args = {'target_accept': 0.80, 'step_method': 'three-stage'}
+    step_args = {'target_accept': 0.80, 'integrator': 'three-stage'}
 
 
 class NUTSNormal(sf.NutsFixture, sf.NormalFixture):
