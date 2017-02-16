@@ -30,10 +30,10 @@ def test_leapfrog_reversible_single():
     n = 3
     start, model, _ = models.non_normal(n)
 
-    step_methods = ['leapfrog', 'two-stage', 'three-stage']
-    steps = [BaseHMC(vars=model.vars, model=model, step_method=method, use_single_leapfrog=True)
-             for method in step_methods]
-    for method, step in zip(step_methods, steps):
+    integrators = ['leapfrog', 'two-stage', 'three-stage']
+    steps = [BaseHMC(vars=model.vars, model=model, integrator=method, use_single_leapfrog=True)
+             for method in integrators]
+    for method, step in zip(integrators, steps):
         bij = DictToArrayBijection(step.ordering, start)
         q0 = bij.map(start)
         p0 = np.ones(n) * .05
