@@ -85,14 +85,22 @@ class MvNormal(Continuous):
         Covariance matrix.
     tau : array, optional
         Precision matrix.
+
+    Flags
+    ----------
+    gpu_compat : False, because LogDet is not GPU compatible yet.
+
     """
 
-    def __init__(self, mu, cov=None, tau=None, *args, **kwargs):
+    def __init__(self, mu, cov=None, tau=None, gpu_compat=False, *args, **kwargs):
         super(MvNormal, self).__init__(*args, **kwargs)
         self.mean = self.median = self.mode = self.mu = mu = tt.as_tensor_variable(mu)
         tau, cov = get_tau_cov(mu, tau=tau, cov=cov)
         self.tau = tt.as_tensor_variable(tau)
         self.cov = tt.as_tensor_variable(cov)
+        self.gpu_compat = gpu_compat
+        if gpu_compat is False and theano.config.device == 'gpu':
+            warnings.warn("This function is not GPU compatible. Please check the gpu_compat flag")
 
     def random(self, point=None, size=None):
         mu, cov = draw_values([self.mu, self.cov], point=point)
