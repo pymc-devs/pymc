@@ -192,7 +192,7 @@ def sample(draws, step=None, init='advi', n_init=200000, start=None,
     if njobs is None:
         import multiprocessing as mp
         njobs = max(mp.cpu_count() - 2, 1)
-    elif njobs == 1 and isinstance(start, (list, tuple)):
+    elif njobs == 1:
         start = start[0]
 
     sample_args = {'draws': draws,
@@ -619,22 +619,24 @@ def transform_start_particles(start, nparticles, model=None):
         return {}
     dshapes = {i.name: i.dshape for i in model.vars}
     if isinstance(start, dict):
-        if all(dshapes[k] == np.asarray(v).shape for k, v in start.iteritems()):
+        if all(dshapes[k] == np.asarray(v).shape for k, v in start.items()):
             if nparticles is not None:
-                start = {k: np.asarray([v]*nparticles) for k, v in start.iteritems()}  # duplicate
+                start = {k: np.asarray([v]*nparticles) for k, v in start.items()}  # duplicate
             return Point(**start)
         else:
             extra = tuple() if nparticles is None else (nparticles, )
-            if all(extra+dshapes[k] == np.asarray(v).shape for k, v in start.iteritems()):
+            if all(extra+dshapes[k] == np.asarray(v).shape for k, v in start.items()):
                 return Point(**start)
             else:
                 raise TypeError("Start dicts must have a shape of (nparticles, dshape) or (dshape,)")
     elif isinstance(start, list):
-        assert all(isinstance(i, dict) for i in start), "Start dicts must have a shape of (nparticles, dshape) or (dshape,)"
+        assert all(isinstance(i, dict) for i in start), "Start dicts must have a shape of (dshape,)"
         assert len(start) == nparticles, "If start is a list, it must have a length of nparticles"
+        assert all(s.keys() == start[0].keys() for s in start), "All start positions must have the same variables"
         d = {}
-        for k, d in dshapes.iteritems():
-            if k in start:
-                d[k] = np.asarray([s[k] for s in start])
-        return Point(*d)
+        for varname, varshape in dshapes.items():
+            if varname in start[0].keys():
+                assert all(varshape == s[varname].shape for s in start), "Start dicts must have a shape of (dshape,)"
+                d[varname] = np.asarray([s[varname] for s in start])
+        return Point(**d)
     raise TypeError("Start must be a dict or a list of dicts")
