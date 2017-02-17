@@ -122,7 +122,7 @@ To ask a question regarding modeling or usage of PyMC3 we encourage posting to `
 
 To interact with PyMC3 developers, visit the `pymc Gitter channel <https://gitter.im/pymc-devs/pymc>`__.
 
-Finally, if you need to get in touch for non-technical information about the project, `send us an e-mail`__.
+Finally, if you need to get in touch for non-technical information about the project, `send us an e-mail <fonnesbeck+pymc@gmail.com>`__.
 
 License
 -------
@@ -170,4 +170,3 @@ Sponsors
    :target: http://www.numfocus.org/
 .. |Quantopian| image:: https://raw.githubusercontent.com/pymc-devs/pymc3/master/docs/quantopianlogo.jpg
    :target: https://quantopian.com
-.. __send us an e-mail: fonnesbeck+pymc@gmail.com
