@@ -25,7 +25,7 @@ class Mean(object):
         
 class Zero(Mean):
     def __call__(self, X):
-        return tt.zeros(tt.stack([tt.shape(X)[0], 1]), dtype='float32')
+        return tt.zeros(X.shape, dtype='float32').squeeze()
         
 class Constant(Mean):
     """
@@ -42,8 +42,7 @@ class Constant(Mean):
         self.c = c
 
     def __call__(self, X):
-        shape = tt.stack([tt.shape(X)[0], 1])
-        return tt.tile(tt.reshape(self.c, (1, -1)), shape)
+        return tt.tile(tt.stack(self.c), X.shape).squeeze()
 
 class Linear(Mean):
     
