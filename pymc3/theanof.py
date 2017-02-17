@@ -1,10 +1,12 @@
 import numpy as np
+import theano
 
 from .vartypes import typefilter, continuous_types
 from theano import theano, scalar, tensor as tt
 from theano.gof.graph import inputs
-from theano.gof import Op
+from theano.gof import Op, Apply
 from theano.configparser import change_flags
+from theano.tensor.nlinalg import matrix_inverse
 from .memoize import memoize
 from .blocking import ArrayOrdering
 from .data import DataGenerator
@@ -12,7 +14,7 @@ from .data import DataGenerator
 __all__ = ['gradient', 'hessian', 'hessian_diag', 'inputvars',
            'cont_inputs', 'floatX', 'jacobian',
            'CallableTensor', 'join_nonshared_inputs',
-           'make_shared_replacements', 'generator']
+           'make_shared_replacements', 'generator', 'LogDet', 'logdet']
 
 
 def inputvars(a):
@@ -59,10 +61,43 @@ def floatX(X):
 Theano derivative functions
 """
 
+class LogDet(Op):
+    """Computes the logarithm of absolute determinant of a square
+    matrix M, log(abs(det(M))), on CPU. Avoids det(M) overflow/
+    underflow.
+
+    Note: Once PR #3959 (https://github.com/Theano/Theano/pull/3959/) by harpone is merged,
+    this must be removed. 
+    """
+    def make_node(self, x):
+        x = theano.tensor.as_tensor_variable(x)
+        o = theano.tensor.scalar(dtype=x.dtype)
+        return Apply(self, [x], [o])
+
+    def perform(self, node, inputs, outputs):
+        try:
+            (x,) = inputs
+            (z,) = outputs
+            s = np.linalg.svd(x, compute_uv=False)
+            log_det = np.sum(np.log(np.abs(s)))
+            z[0] = np.asarray(log_det, dtype=x.dtype)
+        except Exception:
+            print('Failed to compute logdet of {}.'.format(x))
+            raise
+
+    def grad(self, inputs, g_outputs):
+        [gz] = g_outputs
+        [x] = inputs
+        return [gz * matrix_inverse(x).T]
+
+    def __str__(self):
+        return "LogDet"
+
+logdet = LogDet()
+
 def gradient1(f, v):
     """flat gradient of f wrt v"""
     return tt.flatten(tt.grad(f, v, disconnected_inputs='warn'))
-
 
 empty_gradient = tt.zeros(0, dtype='float32')
 
