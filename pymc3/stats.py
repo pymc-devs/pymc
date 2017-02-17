@@ -14,7 +14,7 @@ from scipy.stats.distributions import pareto
 from .backends import tracetab as ttab
 
 __all__ = ['autocorr', 'autocov', 'dic', 'bpic', 'waic', 'loo', 'hpd', 'quantiles',
-           'mc_error', 'summary', 'df_summary']
+           'mc_error', 'summary', 'df_summary', 'compare']
 
 
 def statfunc(f):
@@ -260,6 +260,90 @@ def bpic(trace, model=None):
     deviance_at_mean = -2 * model.logp(free_rv_means)
 
     return 3 * mean_deviance - 2 * deviance_at_mean
+
+
+def compare(traces, models, ic='WAIC'):
+    """
+    Compare models based on the widely available information criterion (WAIC)
+    or leave-one-out (LOO) cross-validation.
+    Read more theory here - in a paper by some of the leading authorities on
+    Model Selection - dx.doi.org/10.1111/1467-9868.00353
+
+    Parameters
+    ----------
+    traces : list of PyMC3 traces
+    models : list of PyMC3 models
+        in the same order as traces.
+    ic : string
+        Information Criterion (WAIC or LOO) used to compare models.
+        Default WAIC.
+
+    Returns
+    -------
+    A DataFrame, ordered from lowest to highest IC. The index reflects
+    the order in which the models are passed to this function. The columns are:
+    IC : Information Criteria (WAIC or LOO).
+        Smaller IC indicates higher out-of-sample predictive fit ("better" model). 
+        Default WAIC. 
+    pIC : Estimated effective number of parameters.
+    dIC : Relative difference between each IC (WAIC or LOO)
+    and the lowest IC (WAIC or LOO).
+        It's always 0 for the top-ranked model.
+    weight: Akaike weights for each model. 
+        This can be loosely interpreted as the probability of each model
+        (among the compared model) given the data. Be careful that these
+        weights are based on point estimates of the IC (uncertainty is ignored).
+    SE : Standard error of the IC estimate.
+        For a "large enough" sample size this is an estimate of the uncertainty
+        in the computation of the IC.
+    dSE : Standard error of the difference in IC between each model and
+    the top-ranked model.
+        It's always 0 for the top-ranked model.
+    warning : A value of 1 indicates that the computation of the IC may not be
+    reliable see http://arxiv.org/abs/1507.04544 for details.
+    """
+    if ic == 'WAIC':
+        ic_func = waic
+        df_comp = pd.DataFrame(index=np.arange(len(models)),
+                               columns=['WAIC', 'pWAIC', 'dWAIC', 'weight',
+                               'SE', 'dSE', 'warning'])
+    elif ic == 'LOO':
+        ic_func = loo
+        df_comp = pd.DataFrame(index=np.arange(len(models)),
+                               columns=['LOO', 'pLOO', 'dLOO', 'weight',
+                               'SE', 'dSE', 'warning'])
+    else:
+        raise NotImplementedError(
+            'The information criterion {} is not supported.'.format(ic))
+
+    warns = np.zeros(len(models))
+
+    c = 0
+    def add_warns(*args):
+        warns[c] = 1
+
+    with warnings.catch_warnings():
+        warnings.showwarning = add_warns
+        warnings.filterwarnings('always')
+
+        ics = []
+        for c, (t, m) in enumerate(zip(traces, models)):
+            ics.append((c, ic_func(t, m, pointwise=True)))
+
+    ics.sort(key=lambda x: x[1][0])
+
+    min_ic = ics[0][1][0]
+    Z = np.sum([np.exp(-0.5 * (x[1][0] - min_ic)) for x in ics])
+
+    for idx, res in ics:
+        diff = ics[0][1][3] - res[3]
+        d_ic = np.sum(diff)
+        d_se = len(diff) ** 0.5 * np.var(diff)
+        weight = np.exp(-0.5 * (res[0] - min_ic)) / Z
+        df_comp.at[idx] = (res[0], res[2], abs(d_ic), weight, res[1],
+                           d_se, warns[idx])
+
+    return df_comp.sort_values(by=ic)
 
 
 def make_indices(dimensions):

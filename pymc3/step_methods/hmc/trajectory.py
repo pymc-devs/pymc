@@ -1,9 +1,10 @@
 from collections import namedtuple
 
-from pymc3.theanof import join_nonshared_inputs, gradient, CallableTensor
+from pymc3.theanof import join_nonshared_inputs, gradient, CallableTensor, floatX
 
 import theano
 import theano.tensor as tt
+import numpy as np
 
 
 Hamiltonian = namedtuple("Hamiltonian", "logp, dlogp, pot")
@@ -73,7 +74,7 @@ def _theano_leapfrog_integrator(H, q, p, **theano_kwargs):
     q_new, p_new, energy_new
     """
     epsilon = tt.scalar('epsilon')
-    epsilon.tag.test_value = 1
+    epsilon.tag.test_value = 1.
 
     n_steps = tt.iscalar('n_steps')
     n_steps.tag.test_value = 2
@@ -87,7 +88,8 @@ def _theano_leapfrog_integrator(H, q, p, **theano_kwargs):
 
 
 def get_theano_hamiltonian_functions(model_vars, shared, logpt, potential,
-                                     use_single_leapfrog=False, **theano_kwargs):
+                                     use_single_leapfrog=False,
+                                     integrator="leapfrog", **theano_kwargs):
     """Construct theano functions for the Hamiltonian, energy, and leapfrog integrator.
 
     Parameters
@@ -97,8 +99,12 @@ def get_theano_hamiltonian_functions(model_vars, shared, logpt, potential,
     logpt : model log probability
     potential : Hamiltonian potential
     theano_kwargs : dictionary of keyword arguments to pass to theano functions
-    use_single_leapfrog : Boolean, if only 1 integration step is done at a time (as in NUTS),
-                          this provides a ~2x speedup
+    use_single_leapfrog : bool
+        if only 1 integration step is done at a time (as in NUTS), this
+        provides a ~2x speedup
+    integrator : str
+        Integration scheme to use. One of "leapfog", "two-stage", or
+        "three-stage".
 
     Returns
     -------
@@ -110,10 +116,16 @@ def get_theano_hamiltonian_functions(model_vars, shared, logpt, potential,
     H, q, dlogp = _theano_hamiltonian(model_vars, shared, logpt, potential)
     energy_function, p = _theano_energy_function(H, q, **theano_kwargs)
     if use_single_leapfrog:
-        leapfrog_integrator = _theano_single_leapfrog(H, q, p, H.dlogp(q), **theano_kwargs)
+        try:
+            _theano_integrator = INTEGRATORS_SINGLE[integrator]
+        except KeyError:
+            raise ValueError("Unknown integrator: %s" % integrator)
+        integrator = _theano_integrator(H, q, p, H.dlogp(q), **theano_kwargs)
     else:
-        leapfrog_integrator = _theano_leapfrog_integrator(H, q, p, **theano_kwargs)
-    return H, energy_function, leapfrog_integrator, dlogp
+        if integrator != "leapfrog":
+            raise ValueError("Only leapfrog is supported")
+        integrator = _theano_leapfrog_integrator(H, q, p, **theano_kwargs)
+    return H, energy_function, integrator, dlogp
 
 
 def energy(H, q, p):
@@ -167,6 +179,86 @@ def leapfrog(H, q, p, epsilon, n_steps):
     return q, p
 
 
+def _theano_single_threestage(H, q, p, q_grad, **theano_kwargs):
+    """Perform a single step of a third order symplectic integration scheme.
+
+    References
+    ----------
+    Blanes, Sergio, Fernando Casas, and J. M. Sanz-Serna. "Numerical
+    Integrators for the Hybrid Monte Carlo Method." SIAM Journal on
+    Scientific Computing 36, no. 4 (January 2014): A1556-80.
+    doi:10.1137/130932740.
+
+    Mannseth, Janne, Tore Selland Kleppe, and Hans J. Skaug. "On the
+    Application of Higher Order Symplectic Integrators in
+    Hamiltonian Monte Carlo." arXiv:1608.07048 [Stat],
+    August 25, 2016. http://arxiv.org/abs/1608.07048.
+    """
+    epsilon = tt.scalar('epsilon')
+    epsilon.tag.test_value = 1.
+
+    a = 12127897.0 / 102017882
+    b = 4271554.0 / 14421423
+
+    # q_{a\epsilon}
+    p_ae = p + floatX(a) * epsilon * q_grad
+    q_be = q + floatX(b) * epsilon * H.pot.velocity(p_ae)
+
+    # q_{\epsilon / 2}
+    p_e2 = p_ae + floatX(0.5 - a) * epsilon * H.dlogp(q_be)
+
+    # p_{(1-b)\epsilon}
+    q_1be = q_be + floatX(1 - 2 * b) * epsilon * H.pot.velocity(p_e2)
+    p_1ae = p_e2 + floatX(0.5 - a) * epsilon * H.dlogp(q_1be)
+
+    q_e = q_1be + floatX(b) * epsilon * H.pot.velocity(p_1ae)
+    grad_e = H.dlogp(q_e)
+    p_e = p_1ae + floatX(a) * epsilon * grad_e
+
+    new_energy = energy(H, q_e, p_e)
+
+    f = theano.function(inputs=[q, p, q_grad, epsilon],
+                        outputs=[q_e, p_e, grad_e, new_energy],
+                        **theano_kwargs)
+    f.trust_input = True
+    return f
+
+
+def _theano_single_twostage(H, q, p, q_grad, **theano_kwargs):
+    """Perform a single step of a second order symplectic integration scheme.
+
+    References
+    ----------
+    Blanes, Sergio, Fernando Casas, and J. M. Sanz-Serna. "Numerical
+    Integrators for the Hybrid Monte Carlo Method." SIAM Journal on
+    Scientific Computing 36, no. 4 (January 2014): A1556-80.
+    doi:10.1137/130932740.
+
+    Mannseth, Janne, Tore Selland Kleppe, and Hans J. Skaug. "On the
+    Application of Higher Order Symplectic Integrators in
+    Hamiltonian Monte Carlo." arXiv:1608.07048 [Stat],
+    August 25, 2016. http://arxiv.org/abs/1608.07048.
+    """
+    epsilon = tt.scalar('epsilon')
+    epsilon.tag.test_value = 1.
+
+    a = floatX((3 - np.sqrt(3)) / 6)
+
+    p_ae = p + a * epsilon * q_grad
+    q_e2 = q + epsilon / 2 * H.pot.velocity(p_ae)
+    p_1ae = p_ae + (1 - 2 * a) * epsilon * H.dlogp(q_e2)
+    q_e = q_e2 + epsilon / 2 * H.pot.velocity(p_1ae)
+    grad_e = H.dlogp(q_e)
+    p_e = p_1ae + a * epsilon * grad_e
+
+    new_energy = energy(H, q_e, p_e)
+    f = theano.function(inputs=[q, p, q_grad, epsilon],
+                        outputs=[q_e, p_e, grad_e, new_energy],
+                        **theano_kwargs)
+    f.trust_input = True
+    return f
+
+
 def _theano_single_leapfrog(H, q, p, q_grad, **theano_kwargs):
     """Leapfrog integrator for a single step.
 
@@ -186,3 +278,10 @@ def _theano_single_leapfrog(H, q, p, q_grad, **theano_kwargs):
                         outputs=[q_new, p_new, q_new_grad, energy_new], **theano_kwargs)
     f.trust_input = True
     return f
+
+
+INTEGRATORS_SINGLE = {
+    'leapfrog': _theano_single_leapfrog,
+    'two-stage': _theano_single_twostage,
+    'three-stage': _theano_single_threestage
+}
