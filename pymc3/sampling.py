@@ -191,6 +191,8 @@ def sample(draws, step=None, init='advi', n_init=200000, start=None,
     for pair in zip(start, _start):
         _soft_update(*pair)
 
+    # TODO: Fix init=None problem
+
     if njobs is None:
         import multiprocessing as mp
         njobs = max(mp.cpu_count() - 2, 1)
