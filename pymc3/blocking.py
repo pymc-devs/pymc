@@ -5,10 +5,13 @@ Classes for working with subsets of parameters.
 """
 import numpy as np
 import collections
+import copy
 
-__all__ = ['ArrayOrdering', 'DictToArrayBijection', 'DictToVarBijection']
+__all__ = ['ArrayOrdering', 'DictToArrayBijection', 'DictToVarBijection',
+           'ListArrayOrdering', 'ListToArrayBijection']
 
 VarMap = collections.namedtuple('VarMap', 'var, slc, shp, dtyp')
+DataMap = collections.namedtuple('DataMap', 'list_ind, slc, shp, dtype')
 
 # TODO Classes and methods need to be fully documented.
 
@@ -28,6 +31,97 @@ class ArrayOrdering(object):
             dim += var.dsize
 
         self.dimensions = dim
+
+
+class ListArrayOrdering(object):
+    """
+    An ordering for a list to an array space. Takes also non theano.tensors.
+
+    Parameters
+    ----------
+    list_arrays : list
+        :class:`numpy.ndarray` or :class:`theano.tensor.Tensor`
+    intype : str
+        defining the input type 'tensor' or 'numpy'
+    """
+
+    def __init__(self, list_arrays, intype='numpy'):
+        self.vmap = []
+        dim = 0
+
+        count = 0
+        for array in list_arrays:
+            if intype == 'tensor':
+                array = array.tag.test_value
+            elif intype == 'numpy':
+                pass
+
+            slc = slice(dim, dim + array.size)
+            self.vmap.append(DataMap(
+                count, slc, array.shape, array.dtype))
+            dim += array.size
+            count += 1
+
+        self.dimensions = dim
+
+
+class ListToArrayBijection(object):
+    """
+    A mapping between a List of arrays and an array space
+
+    Parameters
+    ----------
+    ordering : :class:`ListArrayOrdering`
+    list_arrays : list
+        of :class:`numpy.ndarray`
+    """
+
+    def __init__(self, ordering, list_arrays):
+        self.ordering = ordering
+        self.list_arrays = list_arrays
+
+    def fmap(self, list_arrays):
+        """
+        Maps values from List space to array space
+
+        Parameters
+        ----------
+        list_arrays : list
+            of :class:`numpy.ndarray`
+
+        Returns
+        -------
+        array : :class:`numpy.ndarray`
+            single array comprising all the input arrays
+        """
+
+        array = np.empty(self.ordering.dimensions)
+        for list_ind, slc, _, _ in self.ordering.vmap:
+            array[slc] = list_arrays[list_ind].ravel()
+        return array
+
+    def rmap(self, array):
+        """
+        Maps value from array space to List space
+        Inverse operation of fmap.
+
+        Parameters
+        ----------
+        array : :class:`numpy.ndarray`
+
+        Returns
+        -------
+        a_list : list
+            of :class:`numpy.ndarray`
+        """
+
+        a_list = copy.copy(self.list_arrays)
+
+        for list_ind, slc, shp, dtype in self.ordering.vmap:
+            a_list[list_ind] = np.atleast_1d(
+                                        array)[slc].reshape(shp).astype(dtype)
+
+        return a_list
 
 
 class DictToArrayBijection(object):
@@ -93,7 +187,8 @@ class DictToArrayBijection(object):
 
 class DictToVarBijection(object):
     """
-    A mapping between a dict space and the array space for one element within the dict space
+    A mapping between a dict space and the array space for one element within
+    the dict space
     """
 
     def __init__(self, var, idx, dpoint):
