@@ -41,7 +41,7 @@ class GP(Continuous):
                 
     def random(self, point=None, size=None, **kwargs):
         X = kwargs.pop('X')
-        mu, cov = draw_values([self.M(X).squeeze(), self.K(X)], point=point)
+        mu, cov = draw_values([self.M(X).squeeze(), self.K(X) + np.eye(X.shape[0])*self.sigma**2], point=point)
 
         def _random(mean, cov, size=None):
             return stats.multivariate_normal.rvs(
@@ -56,15 +56,9 @@ class GP(Continuous):
 
     def logp(self, X, Y):
         mu = self.M(X)
-        k = mu.shape[0]
-        tau = matrix_inverse((self.K + tt.eye(k)*self.sigma)(X))
-        value = Y
+        Sigma = self.K(X) + tt.eye(X.shape[0])*self.sigma**2
 
-        delta = value - mu
-
-        result = k * tt.log(2 * np.pi) + tt.log(1. / det(tau))
-        result += (delta.dot(tau) * delta).sum(axis=delta.ndim - 1)
-        return -1 / 2. * result
+        return MvNormal.dist(mu, Sigma).logp(Y)
         
 
 def sample_gp(trace, gp, X_values, samples=None, obs_noise=True, model=None, random_seed=None, progressbar=True):
@@ -85,8 +79,8 @@ def sample_gp(trace, gp, X_values, samples=None, obs_noise=True, model=None, ran
         Flag for including observation noise in sample. Defaults to True.
     model : Model 
         Model used to generate `trace`. Optional if in `with` context manager.
-    n_jobs : integer > 0
-        Number of CPUs to use for sampling.
+    random_seed : integer > 0
+        Random number seed for sampling.
     progressbar : bool
         Flag for showing progress bar.
     
@@ -105,7 +99,7 @@ def sample_gp(trace, gp, X_values, samples=None, obs_noise=True, model=None, ran
     if progressbar:
         indices = tqdm(np.random.randint(0, len(trace), samples), total=samples)
     else:
-        indices = randint(0, len(trace), samples)
+        indices = np.random.randint(0, len(trace), samples)
 
     K = gp.distribution.K 
         
@@ -118,7 +112,7 @@ def sample_gp(trace, gp, X_values, samples=None, obs_noise=True, model=None, ran
     S_xz = K(X, Z)
     S_zz = K(Z)
     if obs_noise:
-        S_inv = matrix_inverse(K(X) + tt.eye(X.shape[0])*gp.distribution.sigma)
+        S_inv = matrix_inverse(K(X) + tt.eye(X.shape[0])*gp.distribution.sigma**2)
     else:
         S_inv = matrix_inverse(K(X))
 
