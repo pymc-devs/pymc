@@ -89,6 +89,7 @@ class MvNormal(Continuous):
     Flags
     ----------
     gpu_compat : False, because LogDet is not GPU compatible yet.
+                 If this is set as true, the GPU compatible (but numerically unstable) log(det) is used.
 
     """
 
@@ -100,7 +101,7 @@ class MvNormal(Continuous):
         self.cov = tt.as_tensor_variable(cov)
         self.gpu_compat = gpu_compat
         if gpu_compat is False and theano.config.device == 'gpu':
-            warnings.warn("This function is not GPU compatible. Please check the gpu_compat flag")
+            warnings.warn("The function used is not GPU compatible. Please check the gpu_compat flag")
 
     def random(self, point=None, size=None):
         mu, cov = draw_values([self.mu, self.cov], point=point)
@@ -123,7 +124,10 @@ class MvNormal(Continuous):
         delta = value - mu
         k = tau.shape[0]
 
-        result = k * tt.log(2 * np.pi) - logdet(tau)
+        if gpu_compat is False:
+            result = k * tt.log(2 * np.pi) - logdet(tau)
+        elif gpu_compat is True:
+            result = k * tt.log(2 * np.pi) + tt.log(1. / det(tau))
         result += (delta.dot(tau) * delta).sum(axis=delta.ndim - 1)
         return -1 / 2. * result
 
