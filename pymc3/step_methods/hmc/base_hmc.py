@@ -12,7 +12,7 @@ class BaseHMC(ArrayStepShared):
 
     def __init__(self, vars=None, scaling=None, step_scale=0.25, is_cov=False,
                  model=None, blocked=True, use_single_leapfrog=False,
-                 potential=None, **theano_kwargs):
+                 potential=None, integrator="leapfrog", **theano_kwargs):
         """Superclass to implement Hamiltonian/hybrid monte carlo
 
         Parameters
@@ -60,6 +60,6 @@ class BaseHMC(ArrayStepShared):
             theano_kwargs = {}
 
         self.H, self.compute_energy, self.leapfrog, self.dlogp = get_theano_hamiltonian_functions(
-            vars, shared, model.logpt, self.potential, use_single_leapfrog, **theano_kwargs)
+            vars, shared, model.logpt, self.potential, use_single_leapfrog, integrator, **theano_kwargs)
 
         super(BaseHMC, self).__init__(vars, shared, blocked=blocked)

@@ -33,6 +33,24 @@ class SliceUniform(sf.SliceFixture, sf.UniformFixture):
     atol = 0.05
 
 
+@attr('extra')
+class NUTSUniform2(NUTSUniform):
+    step_args = {'target_accept': 0.95, 'integrator': 'two-stage'}
+
+
+class NUTSUniform3(NUTSUniform):
+    step_args = {'target_accept': 0.80, 'integrator': 'two-stage'}
+
+
+@attr('extra')
+class NUTSUniform4(NUTSUniform):
+    step_args = {'target_accept': 0.95, 'integrator': 'three-stage'}
+
+
+class NUTSUniform5(NUTSUniform):
+    step_args = {'target_accept': 0.80, 'integrator': 'three-stage'}
+
+
 class NUTSNormal(sf.NutsFixture, sf.NormalFixture):
     n_samples = 10000
     tune = 1000

@@ -99,6 +99,10 @@ class NUTS(BaseHMC):
         adapt_step_size : bool
             Whether step size should be enabled. If this is disabled,
             `k`, `t0`, `gamma` and `target_accept` are ignored.
+        integrator : str, default "leapfrog"
+            The integrator to use for the trajectories. One of "leapfrog",
+            "two-stage" or "three-stage". The second two can increase
+            sampling speed for some high dimensional problems.
         kwargs: passed to BaseHMC
 
         The step size adaptation stops when `self.tune` is set to False.
