@@ -84,6 +84,8 @@ def find_MAP(start=None, vars=None, fmin=None,
     def logp_o(point):
         return nan_to_high(-logp(point))
 
+    monitor = Monitor(bij, logp)
+
     # Check to see if minimization function actually uses the gradient
     if 'fprime' in getargspec(fmin).args:
         dlogp = bij.mapf(model.fastdlogp(vars))
@@ -91,7 +93,7 @@ def find_MAP(start=None, vars=None, fmin=None,
             return nan_to_num(-dlogp(point))
 
         r = fmin(logp_o, bij.map(
-            start), fprime=grad_logp_o, *args, **kwargs)
+            start), fprime=grad_logp_o, callback=monitor, *args, **kwargs)
         compute_gradient = True
     else:
         compute_gradient = False
@@ -171,3 +173,95 @@ def allinmodel(vars, model):
     notin = [v for v in vars if v not in model.vars]
     if notin:
         raise ValueError("Some variables not in the model: " + str(notin))
+
+
+
+from IPython.display import display,clear_output
+from ipywidgets import IntProgress, HTML, Box, VBox, HBox, FlexBox
+import time
+
+class Monitor(object):
+    def __init__(self, bij, logp):
+        self.bij = bij
+        self.logp = logp
+
+        self.t_initial = time.time()
+        self.iters = 0
+        self.t0 = self.t_initial
+
+        self.prog_table  = HTML(width='100%')
+        self.param_table = HTML(width='100%')
+
+        r_col = VBox(children=[self.param_table], padding=2, width='70%')
+        l_col = VBox(children=[self.prog_table],  padding=2, width='30%')
+        self.hor_align = FlexBox(children = [l_col, r_col], width='100%', orientation='horizontal')
+        display(self.hor_align)
+
+    def __call__(self, x):
+        self.iters += 1
+        if time.time() - self.t0 > 1:
+            v = self.bij.rmap(x)
+            self.update_paramtable(x)
+            self.update_progtable(x)
+            self.t0 = time.time()
+
+    def update_progtable(self, x):
+        t_elapsed = time.time() - self.t_initial
+
+        html_begin = "<table>"
+        html_end = "</table>"
+        html_body = ""
+        html_body += "<tr><td>Time elapsed:</td>" + "<td>{}</td></tr>".format(t_elapsed)
+        html_body += "<tr><td>Iteration:</td>"    + "<td>{}</td></tr>".format(self.iters)
+        html_body += "<tr><td>Avg time \n per iteration:</td>" + "<td>{}</td></tr>".format(t_elapsed/self.iters)
+        html_body += "<tr><td>Log-Posterior:</td>" + "<td>{}</td></tr>".format(self.logp(x))
+        #html_body += "</tr>"
+        self.prog_table.value = html_begin + html_body + html_end
+
+    def update_paramtable(self, x):
+        names_vals = self.bij.rmap(x)
+        html_begin = "<table>"
+        html_end = "</table>"
+        html_body = "<tr><td>Parameter</td> <td>Size</td> <td>Current Value</td></tr>"
+        for name, val in names_vals.items():
+            html_body += "<tr>"
+            if val.size == 1:
+                 html_body += "<td>{}</td>".format(name)
+                 html_body += "<td>{}</td>".format(val.size)
+                 html_body += "<td>{}</td>".format(val)
+            elif val.size < 8:
+                 valstr = np.array2string(val, suppress_small=True, separator=", ",
+                                          formatter={'float_kind': lambda x: "%.3f" % x})
+                 html_body += "<td>{}</td>".format(name)
+                 html_body += "<td>{}</td>".format(val.size)
+                 html_body += "<td>{}</td>".format(valstr)
+            else:
+                 valstr_beg = np.array2string(val[:4],  suppress_small=True, separator=", ",
+                                          formatter={'float_kind': lambda x: "%.3f" % x})[:-1]
+                 valstr_end = np.array2string(val[-4:], suppress_small=True, separator=", ",
+                                          formatter={'float_kind': lambda x: "%.3f" % x})[1:]
+                 html_body += "<td>{}</td>".format(name)
+                 html_body += "<td>{}</td>".format(val.size)
+                 html_body += "<td>{}</td>".format(valstr_beg + ", ..., " + valstr_end)
+            html_body += "</tr>"
+
+        self.param_table.value = html_begin + html_body + html_end
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
