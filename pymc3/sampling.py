@@ -191,8 +191,6 @@ def sample(draws, step=None, init='advi', n_init=200000, start=None,
     for pair in zip(start, _start):
         _soft_update(*pair)
 
-    # TODO: Fix init=None problem
-
     if njobs is None:
         import multiprocessing as mp
         njobs = max(mp.cpu_count() - 2, 1)
@@ -302,7 +300,7 @@ def _iter_sample(draws, step, start=None, trace=None, chain=0, tune=None,
         _soft_update(start, strace.point(-1))
     else:
         if step.nparticles is not None:
-            _soft_update(start, {k: _make_parallel(v, step.nparticles) for k, v in model.test_point.iteritems()})
+            _soft_update(start, {k: np.asarray([v]*step.nparticles) for k, v in model.test_point.iteritems()})
         else:
             _soft_update(start, model.test_point)
 
