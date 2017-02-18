@@ -3,6 +3,7 @@
 (c) 2016, John Salvatier & Taku Yoshioka
 '''
 from collections import OrderedDict, namedtuple, deque
+from itertools import islice
 
 import numpy as np
 import theano
@@ -143,7 +144,6 @@ def advi(vars=None, start=None, model=None, n=5000, accurate_elbo=False,
     # For tracking convergence of ELBO
     window_size = int(max(0.1 * n // eval_elbo, 2.0))
     circ_buff = deque([], maxlen=window_size)
-    converged = False
 
     # Optimization loop
     elbos = np.empty(n)
@@ -152,11 +152,7 @@ def advi(vars=None, start=None, model=None, n=5000, accurate_elbo=False,
         uw_i, elbo_current = f()
         if np.isnan(elbo_current):
             raise FloatingPointError('NaN occurred in ADVI optimization.')
-        elbos[0] = elbo_current
-        progress.update(1)
-        i = 1
-        while not converged and i < n:
-            progress.update(1)
+        for i in progress:
             uw_i, e = f()
             if np.isnan(e):
                 raise FloatingPointError('NaN occurred in ADVI optimization.')
@@ -179,21 +175,22 @@ def advi(vars=None, start=None, model=None, n=5000, accurate_elbo=False,
                     pm._log.info('Mean ELBO converged.')
                     converged = True
                     elbos = elbos[:(i + 1)]
+                    break
                 elif med_delta < tol_obj:
                     pm._log.info('Median ELBO converged.')
                     converged = True
                     elbos = elbos[:(i + 1)]
+                    break
                 if i > 10 * eval_elbo:
                     if med_delta > 0.5 or avg_delta > 0.5:
                         pm._log.info('May be diverging, inspect ELBO.')
-            i += 1
     except KeyboardInterrupt:
         elbos = elbos[:i]
         if n < 10:
             pm._log.info('Interrupted at {:,d} [{:.0f}%]: ELBO = {:,.5g}'.format(
                 i, 100 * i // n, elbos[i]))
         else:
-            avg_elbo = elbos[i - n // 10:].mean()
+            avg_elbo = elbos[i - n // 10:i].mean()
             pm._log.info('Interrupted at {:,d} [{:.0f}%]: Average ELBO = {:,.5g}'.format(
                 i, 100 * i // n, avg_elbo))
     else:
