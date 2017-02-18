@@ -91,7 +91,7 @@ def traceplot(trace, varnames=None, transform=lambda x: x, figsize=None,
             d = make_2d(d)
             if d.dtype.kind == 'i':
                 hist_objs = histplot_op(ax[i, 0], d, alpha=alpha)
-                colors = [h[-1][0].get_color() for h in hist_objs]
+                colors = [h[-1][0].get_facecolor() for h in hist_objs]
             else:
                 artists = kdeplot_op(ax[i, 0], d, prior, prior_alpha, prior_style)[0]
                 colors = [a[0].get_color() for a in artists]
