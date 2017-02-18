@@ -5,7 +5,7 @@ import numpy as np
 import pymc3 as pm
 from .checks import close_to
 
-from .models import multidimensional_model
+from .models import multidimensional_model, simple_categorical
 from ..plots import traceplot, forestplot, autocorrplot, plot_posterior, make_2d
 from ..step_methods import Slice, Metropolis
 from ..sampling import sample
@@ -26,6 +26,18 @@ def test_plots():
         forestplot(trace)
         plot_posterior(trace)
         autocorrplot(trace)
+
+
+def test_plots_categorical():
+    # Test single trace
+    start, model, _ = simple_categorical()
+    with asmod.build_model() as model:
+        start = model.test_point
+        h = find_hessian(start)
+        step = Metropolis(model.vars, h)
+        trace = sample(3000, step=step, start=start)
+
+        traceplot(trace)
 
 
 def test_plots_multidimensional():
