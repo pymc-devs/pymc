@@ -622,6 +622,7 @@ def transform_start_particles(start, nparticles, model=None):
     dshapes = {i.name: i.dshape for i in model.vars}
     dshapes.update({i.name: i.transformed.dshape for i in model.deterministics if hasattr(i, 'transformed')})
     if isinstance(start, dict):
+        start = {k: v for k,v in start.items() if k in dshapes}
         if all(dshapes[k] == np.asarray(v).shape for k, v in start.items()):
             if nparticles is not None:
                 start = {k: np.asarray([v]*nparticles) for k, v in start.items()}  # duplicate
@@ -633,6 +634,7 @@ def transform_start_particles(start, nparticles, model=None):
             else:
                 raise TypeError("Start dicts must have a shape of (nparticles, dshape) or (dshape,)")
     elif isinstance(start, list):
+        start = [{k: v for k, v in s.items() if k in dshapes} for s in start]
         assert all(isinstance(i, dict) for i in start), "Start dicts must have a shape of (dshape,)"
         assert len(start) == nparticles, "If start is a list, it must have a length of nparticles"
         assert all(s.keys() == start[0].keys() for s in start), "All start positions must have the same variables"
