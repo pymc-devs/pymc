@@ -204,7 +204,7 @@ class HDF5(base.BaseTrace):
         with self.activate_file:
             idx = int(idx)
             r = {}
-            for varname, values in self.samples.iteritems():
+            for varname, values in self.samples.items():
                 r[varname] = values[idx]
             return r
 
