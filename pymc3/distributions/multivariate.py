@@ -13,7 +13,7 @@ from theano.tensor.nlinalg import det, matrix_inverse, trace
 
 import pymc3 as pm
 
-from pymc3.theanof import logdet
+from pymc3.math import logdet
 from . import transforms
 from .distribution import Continuous, Discrete, draw_values, generate_samples
 from ..model import Deterministic
@@ -124,10 +124,11 @@ class MvNormal(Continuous):
         delta = value - mu
         k = tau.shape[0]
 
+        result = k * tt.log(2 * np.pi)
         if self.gpu_compat:
-            result = k * tt.log(2 * np.pi) + tt.log(1. / det(tau))
+            result -= tt.log(det(tau))
         else:
-            result = k * tt.log(2 * np.pi) - logdet(tau)
+            result -= logdet(tau)
         result += (delta.dot(tau) * delta).sum(axis=delta.ndim - 1)
         return -1 / 2. * result
 
