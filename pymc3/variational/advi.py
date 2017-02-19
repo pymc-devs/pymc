@@ -3,7 +3,6 @@
 (c) 2016, John Salvatier & Taku Yoshioka
 '''
 from collections import OrderedDict, namedtuple, deque
-from itertools import islice
 
 import numpy as np
 import theano
