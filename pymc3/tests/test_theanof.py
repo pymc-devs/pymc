@@ -3,8 +3,6 @@ import unittest
 import numpy as np
 import theano
 from ..theanof import DataGenerator, GeneratorOp, generator
-from theano.tests import unittest_tools as utt
-from .helpers import SeededTest
 
 def integers():
     i = 0

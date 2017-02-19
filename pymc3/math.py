@@ -42,7 +42,7 @@ class LogDet(Op):
         o = theano.tensor.scalar(dtype=x.dtype)
         return Apply(self, [x], [o])
 
-    def perform(self, node, inputs, outputs):
+    def perform(self, node, inputs, outputs, params=None):
         try:
             (x,) = inputs
             (z,) = outputs

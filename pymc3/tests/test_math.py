@@ -1,4 +1,3 @@
-import unittest
 import numpy as np
 import theano
 from theano.tests import unittest_tools as utt
