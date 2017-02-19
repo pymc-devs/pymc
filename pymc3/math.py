@@ -10,6 +10,8 @@ from theano.tensor import (
     minimum, sgn, ceil, floor)
 from theano.tensor.nlinalg import det, matrix_inverse, extract_diag, matrix_dot, trace
 from theano.tensor.nnet import sigmoid
+from theano.gof import Op, Apply
+import numpy as np
 # pylint: enable=unused-import
 
 
@@ -25,3 +27,38 @@ def invlogit(x, eps=sys.float_info.epsilon):
 
 def logit(p):
     return tt.log(p / (1 - p))
+
+
+class LogDet(Op):
+    """Computes the logarithm of absolute determinant of a square
+    matrix M, log(abs(det(M))), on CPU. Avoids det(M) overflow/
+    underflow.
+
+    Note: Once PR #3959 (https://github.com/Theano/Theano/pull/3959/) by harpone is merged,
+    this must be removed. 
+    """
+    def make_node(self, x):
+        x = theano.tensor.as_tensor_variable(x)
+        o = theano.tensor.scalar(dtype=x.dtype)
+        return Apply(self, [x], [o])
+
+    def perform(self, node, inputs, outputs):
+        try:
+            (x,) = inputs
+            (z,) = outputs
+            s = np.linalg.svd(x, compute_uv=False)
+            log_det = np.sum(np.log(np.abs(s)))
+            z[0] = np.asarray(log_det, dtype=x.dtype)
+        except Exception:
+            print('Failed to compute logdet of {}.'.format(x))
+            raise
+
+    def grad(self, inputs, g_outputs):
+        [gz] = g_outputs
+        [x] = inputs
+        return [gz * matrix_inverse(x).T]
+
+    def __str__(self):
+        return "LogDet"
+
+logdet = LogDet()
