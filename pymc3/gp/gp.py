@@ -2,9 +2,8 @@ import numpy as np
 from scipy import stats
 from tqdm import tqdm
 
-from theano.tensor.nlinalg import matrix_inverse, det
+from theano.tensor.nlinalg import matrix_inverse
 import theano.tensor as tt
-import theano
 
 from .mean import Zero
 from ..distributions import MvNormal, Continuous, draw_values, generate_samples

@@ -103,7 +103,7 @@ def mv_prior_simple():
     noise = 0.1
     X = np.linspace(0, 1, n)[:, None]
 
-    K = pm.gp.cov.ExpQuad(1, 1).K(X).eval()
+    K = pm.gp.cov.ExpQuad(1, 1)(X).eval()
     K_noise = K + noise * np.eye(n)
     obs = np.array([-0.1, 0.5, 1.1])
 
