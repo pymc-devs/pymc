@@ -192,10 +192,11 @@ class Monitor(object):
         self.prog_table  = HTML(width='100%')
         self.param_table = HTML(width='100%')
 
-        r_col = VBox(children=[self.param_table], padding=2, width='70%')
-        l_col = VBox(children=[self.prog_table],  padding=2, width='30%')
+        r_col = VBox(children=[self.param_table], padding=3, width='78%')
+        l_col = HBox(children=[self.prog_table],  padding=3, width='22%')
         self.hor_align = FlexBox(children = [l_col, r_col], width='100%', orientation='horizontal')
         display(self.hor_align)
+
 
     def __call__(self, x):
         self.iters += 1
@@ -206,45 +207,75 @@ class Monitor(object):
             self.t0 = time.time()
 
     def update_progtable(self, x):
-        t_elapsed = time.time() - self.t_initial
-
-        html_begin = "<table>"
-        html_end = "</table>"
-        html_body = ""
-        html_body += "<tr><td>Time elapsed:</td>" + "<td>{}</td></tr>".format(t_elapsed)
-        html_body += "<tr><td>Iteration:</td>"    + "<td>{}</td></tr>".format(self.iters)
-        html_body += "<tr><td>Avg time \n per iteration:</td>" + "<td>{}</td></tr>".format(t_elapsed/self.iters)
-        html_body += "<tr><td>Log-Posterior:</td>" + "<td>{}</td></tr>".format(self.logp(x))
-        #html_body += "</tr>"
-        self.prog_table.value = html_begin + html_body + html_end
+        s = time.time() - self.t_initial
+        hours, remainder = divmod(int(s), 3600)
+        minutes, seconds = divmod(remainder, 60)
+        t_elapsed = "{}h {}m {}s".format(hours, minutes, seconds)
+        html = r"""<style type="text/css">
+        .tg {border-collapse:collapse;border-spacing:0;border-color:#ccc; table-layout:fixed;}
+        .tg td{font-family:Arial, sans-serif;font-size:12px;padding:3px 3px;border-style:solid;border-width:1px;overflow:hidden;word-break:normal;border-color:#ccc;color:#333;background-color:#fff;word-wrap: break-word;}
+        .tg th{font-family:Arial, sans-serif;font-size:12px;font-weight:normal;padding:3px 3px;border-style:solid;border-width:1px;overflow:hidden;word-break:normal;border-color:#ccc;color:#333;background-color:#f0f0f0;}
+        .tg .tg-vkoh{font-family:"Lucida Console", Monaco, monospace !important; background-color:#ffffff;}
+        .tg .tg-suao{font-weight:bold;font-family:"Lucida Console", Monaco, monospace !important;background-color:#343d46;color:#ffffff;}
+        """
+        html += r"""
+        </style>
+        <table class="tg" style="undefined;">
+           <col width="50%" />
+           <col width="50%" />
+           <tr>
+             <th class= "tg-suao">Time elapsed</th>
+             <th class= "tg-vkoh">{}</th>
+           </tr>
+           <tr>
+             <th class= "tg-suao">Iteration</th>
+             <th class= "tg-vkoh">{}</th>
+           </tr>
+           <tr>
+             <th class= "tg-suao">Log Posterior</th>
+             <th class= "tg-vkoh">{:.1f}</th>
+           </tr>
+        </table>
+        """.format(t_elapsed, self.iters, np.float(self.logp(x)))
+        self.prog_table.value = html
 
     def update_paramtable(self, x):
         names_vals = self.bij.rmap(x)
-        html_begin = "<table>"
-        html_end = "</table>"
-        html_body = "<tr><td>Parameter</td> <td>Size</td> <td>Current Value</td></tr>"
+        html_begin = r"""<style type="text/css">
+          .tg .tg-bgft{font-weight:normal;font-family:"Lucida Console", Monaco, monospace !important;background-color:#C1E6DE;color:#000000;}
+          </style>
+          <table class="tg" style="undefined;">
+             <col width="130px" />
+             <col width="70px" />
+             <col width="500px" />
+             <tr>
+               <th class="tg-suao">Parameter</th>
+               <th class="tg-suao">Size</th>
+               <th class="tg-suao">Current Value</th>
+             </tr>
+           """
+        html_body = ""
         for name, val in names_vals.items():
-            html_body += "<tr>"
             if val.size == 1:
-                 html_body += "<td>{}</td>".format(name)
-                 html_body += "<td>{}</td>".format(val.size)
-                 html_body += "<td>{}</td>".format(val)
-            elif val.size < 8:
+                 valstr = "{:3.3f}".format(np.float(val))
+            elif val.size < 6:
                  valstr = np.array2string(val, suppress_small=True, separator=", ",
-                                          formatter={'float_kind': lambda x: "%.3f" % x})
-                 html_body += "<td>{}</td>".format(name)
-                 html_body += "<td>{}</td>".format(val.size)
-                 html_body += "<td>{}</td>".format(valstr)
+                                          formatter={'float_kind': lambda x: "%3.3f" % x})
             else:
-                 valstr_beg = np.array2string(val[:4],  suppress_small=True, separator=", ",
-                                          formatter={'float_kind': lambda x: "%.3f" % x})[:-1]
-                 valstr_end = np.array2string(val[-4:], suppress_small=True, separator=", ",
-                                          formatter={'float_kind': lambda x: "%.3f" % x})[1:]
-                 html_body += "<td>{}</td>".format(name)
-                 html_body += "<td>{}</td>".format(val.size)
-                 html_body += "<td>{}</td>".format(valstr_beg + ", ..., " + valstr_end)
-            html_body += "</tr>"
+                 valstr_beg = np.array2string(val[:3],  suppress_small=True, separator=", ",
+                                          formatter={'float_kind': lambda x: "%3.3f" % x})[:-1]
+                 valstr_end = np.array2string(val[-3:], suppress_small=True, separator=", ",
+                                          formatter={'float_kind': lambda x: "%3.3f" % x})[1:]
+                 valstr = valstr_beg + ", ..., " + valstr_end
 
+            html_body += r"""
+              <tr>
+                <td class="tg-bgft">{}</td>
+                <td class="tg-vkoh">{}</td>
+                <td class="tg-vkoh">{}</td>
+              </tr>
+            """.format(name, val.size, valstr)
+        html_end = "</table>"
         self.param_table.value = html_begin + html_body + html_end
 
 
