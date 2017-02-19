@@ -8,6 +8,20 @@ from pymc3 import Potential, Deterministic
 from pymc3.theanof import generator
 
 
+
+def gen1():
+    i = 0
+    while True:
+        yield np.ones((10, 100)) * i
+        i += 1
+
+
+def gen2():
+    i = 0
+    while True:
+        yield np.ones((20, 100)) * i
+        i += 1
+
 class NewModel(pm.Model):
     def __init__(self, name='', model=None):
         super(NewModel, self).__init__(name, model)
@@ -136,17 +150,6 @@ class TestScaling(unittest.TestCase):
 
     def test_density_scaling_with_genarator(self):
         # We have different size generators
-        def gen1():
-            i = 0
-            while True:
-                yield np.ones((10, 100)) * i
-                i += 1
-
-        def gen2():
-            i = 0
-            while True:
-                yield np.ones((20, 100)) * i
-                i += 1
 
         def true_dens():
             g = gen1()
@@ -168,3 +171,21 @@ class TestScaling(unittest.TestCase):
             np.testing.assert_almost_equal(_1, _t)
             np.testing.assert_almost_equal(_1, _2)
         # Done
+
+    def test_gradient_with_scaling(self):
+        with pm.Model() as model1:
+            genvar = generator(gen1())
+            m = Normal('m')
+            Normal('n', observed=genvar, total_size=1000)
+            grad1 = theano.function([m], tt.grad(model1.logpt, m))
+        with pm.Model() as model2:
+            m = Normal('m')
+            shavar = theano.shared(np.ones((1000, 100)))
+            Normal('n', observed=shavar)
+            grad2 = theano.function([m], tt.grad(model2.logpt, m))
+
+        for i in range(10):
+            shavar.set_value(np.ones((100, 100)) * i)
+            g1 = grad1(1)
+            g2 = grad2(1)
+            np.testing.assert_almost_equal(g1, g2)
