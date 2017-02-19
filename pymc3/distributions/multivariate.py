@@ -124,10 +124,11 @@ class MvNormal(Continuous):
         delta = value - mu
         k = tau.shape[0]
 
+        result = k * tt.log(2 * np.pi)
         if self.gpu_compat:
-            result = k * tt.log(2 * np.pi) + tt.log(1. / det(tau))
+            result -= tt.log(det(tau))
         else:
-            result = k * tt.log(2 * np.pi) - logdet(tau)
+            result -= logdet(tau)
         result += (delta.dot(tau) * delta).sum(axis=delta.ndim - 1)
         return -1 / 2. * result
 
