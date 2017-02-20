@@ -246,7 +246,8 @@ class Polynomial(Linear):
         self.offset = offset
 
     def __call__(self, X, Z=None):
-        return tt.power(Linear(self, X, Z) + self.offset, self.d)
+        linear = super(Polynomial, self).__call__(X, Z)
+        return tt.power(linear + self.offset, self.d)
 
 
 class WarpedInput(Covariance):
