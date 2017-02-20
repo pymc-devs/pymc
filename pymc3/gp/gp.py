@@ -6,6 +6,7 @@ from theano.tensor.nlinalg import matrix_inverse
 import theano.tensor as tt
 
 from .mean import Zero
+from .cov import Covariance
 from ..distributions import MvNormal, Continuous, draw_values, generate_samples
 from ..model import modelcontext
 
@@ -21,11 +22,13 @@ class GP(Continuous):
         Mean function of Gaussian process
     cov_func : Covariance
         Covariance function of Gaussian process
+    X : array
+        Grid of points to evaluate Gaussian process over. Only required if the 
+        GP is not an observed variable.
     sigma : scalar or array
-        Observation noise (defaults to zero)
+        Observation standard deviation (defaults to zero)
     """
-    def __init__(self, mean_func=None, cov_func=None, sigma=0, *args, **kwargs):
-        super(GP, self).__init__(*args, **kwargs)
+    def __init__(self, mean_func=None, cov_func=None, X=None, sigma=0, *args, **kwargs):
         
         if mean_func is None:
             self.M = Zero()
@@ -34,27 +37,38 @@ class GP(Continuous):
             
         if cov_func is None:
             raise ValueError('A covariance function must be specified for GPP')
+        if not isinstance(cov_func, Covariance):
+            raise ValueError('cov_func must be a subclass of Covariance')
         self.K = cov_func
         
         self.sigma = sigma
+        
+        if X is not None:
+            self.X = X
+            self.mean = self.mode = self.M(X)
+            kwargs.setdefault("shape", X.squeeze().shape)
+            
+        super(GP, self).__init__(*args, **kwargs)
                 
     def random(self, point=None, size=None, **kwargs):
-        X = kwargs.pop('X')
+        X = self.X
         mu, cov = draw_values([self.M(X).squeeze(), self.K(X) + np.eye(X.shape[0])*self.sigma**2], point=point)
-
+        
         def _random(mean, cov, size=None):
             return stats.multivariate_normal.rvs(
                 mean, cov, None if size == mean.shape else size)
 
         samples = generate_samples(_random,
                                    mean=mu, cov=cov,
-                                   dist_shape=self.shape,
+                                   dist_shape=mu.shape,
                                    broadcast_shape=mu.shape,
                                    size=size)
         return samples
 
-    def logp(self, X, Y):
-        mu = self.M(X)
+    def logp(self, Y, X=None):
+        if X is None:
+            X = self.X
+        mu = self.M(X).squeeze()
         Sigma = self.K(X) + tt.eye(X.shape[0])*self.sigma**2
 
         return MvNormal.dist(mu, Sigma).logp(Y)

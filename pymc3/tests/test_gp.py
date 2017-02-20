@@ -1,9 +1,36 @@
 #  pylint:disable=unused-variable
+from .helpers import SeededTest
 import unittest
-from pymc3 import Model, gp
+from pymc3 import Model, gp, sample, Uniform
 import theano
 import theano.tensor as tt
 import numpy as np
+
+class ZeroTest(unittest.TestCase):
+    def test_value(self):
+        X = np.linspace(0,1,10)[:,None]
+        with Model() as model:
+            zero_mean = gp.mean.Zero()
+        M = theano.function([], zero_mean(X))()
+        self.assertTrue(np.all(M==0))
+        self.assertSequenceEqual(M.shape, (10,1))
+        
+class ConstantTest(unittest.TestCase):
+    def test_value(self):
+        X = np.linspace(0,1,10)[:,None]
+        with Model() as model:
+            const_mean = gp.mean.Constant(6)
+        M = theano.function([], const_mean(X))()
+        self.assertTrue(np.all(M==6))
+        self.assertSequenceEqual(M.shape, (10,1))
+        
+class LinearMeanTest(unittest.TestCase):
+    def test_value(self):
+        X = np.linspace(0,1,10)[:,None]
+        with Model() as model:
+            linear_mean = gp.mean.Linear(2, 0.5)
+        M = theano.function([], linear_mean(X))()
+        self.assertAlmostEqual(M[1,0], 0.7222, 3)
 
 class ExpQuadTest(unittest.TestCase):
     def test_1d(self):
@@ -177,3 +204,18 @@ class WarpedInputTest(unittest.TestCase):
             cov = gp.cov.WarpedInput(1, warp_func=self.warp_func, args=(1,10,1), cov_func=cov_m52)
         K = theano.function([], cov(X))()
         self.assertAlmostEqual(K[0,1], 0.79593, 4)
+
+class GPTest(SeededTest):
+    def test_sample(self):
+        X = np.linspace(0,1,100)[:,None]
+        Y = np.random.randn(100,1)
+        with Model() as model:
+            M = gp.mean.Zero()
+            l = Uniform('l', 0, 100)
+            K = gp.cov.Matern32(1, l)
+            sigma = 1
+
+            # make a Gaussian model
+            random_test = gp.GP('random_test', mean_func=M, cov_func=K, sigma=sigma, observed={'X':X, 'Y':Y})
+
+            tr = sample(500, init=None, progressbar=False, random_seed=self.random_seed)
