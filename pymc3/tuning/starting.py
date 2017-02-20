@@ -7,6 +7,7 @@ from scipy import optimize
 import numpy as np
 from numpy import isfinite, nan_to_num, logical_not
 import pymc3 as pm
+import time
 from ..vartypes import discrete_types, typefilter
 from ..model import modelcontext, Point
 from ..theanof import inputvars
@@ -52,7 +53,6 @@ def find_MAP(start=None, vars=None, fmin=None,
     if vars is None:
         vars = model.cont_vars
     vars = inputvars(vars)
-
     disc_vars = list(typefilter(vars, discrete_types))
 
     try:
@@ -84,25 +84,24 @@ def find_MAP(start=None, vars=None, fmin=None,
     def logp_o(point):
         return nan_to_high(-logp(point))
 
-    monitor = Monitor(bij, logp)
-
     # Check to see if minimization function actually uses the gradient
     if 'fprime' in getargspec(fmin).args:
         dlogp = bij.mapf(model.fastdlogp(vars))
         def grad_logp_o(point):
             return nan_to_num(-dlogp(point))
 
+        monitor = Monitor(bij, logp_o, grad_logp_o)
         r = fmin(logp_o, bij.map(
             start), fprime=grad_logp_o, callback=monitor, *args, **kwargs)
         compute_gradient = True
     else:
-        compute_gradient = False
-
         # Check to see if minimization function uses a starting value
+        monitor = Monitor(bij, logp_o)
         if 'x0' in getargspec(fmin).args:
             r = fmin(logp_o, bij.map(start), *args, **kwargs)
         else:
             r = fmin(logp_o, *args, **kwargs)
+        compute_gradient = False
 
     if isinstance(r, tuple):
         mx0 = r[0]
@@ -178,32 +177,36 @@ def allinmodel(vars, model):
 
 from IPython.display import display,clear_output
 from ipywidgets import IntProgress, HTML, Box, VBox, HBox, FlexBox
-import time
 
 class Monitor(object):
-    def __init__(self, bij, logp):
+    def __init__(self, bij, logp, dlogp=None, in_notebook=True):
         self.bij = bij
         self.logp = logp
+        self.dlogp = dlogp
 
         self.t_initial = time.time()
         self.iters = 0
         self.t0 = self.t_initial
 
-        self.prog_table  = HTML(width='100%')
-        self.param_table = HTML(width='100%')
-
-        r_col = VBox(children=[self.param_table], padding=3, width='78%')
-        l_col = HBox(children=[self.prog_table],  padding=3, width='22%')
-        self.hor_align = FlexBox(children = [l_col, r_col], width='100%', orientation='horizontal')
-        display(self.hor_align)
-
+        try:
+            self.prog_table  = HTML(width='100%')
+            self.param_table = HTML(width='100%')
+            r_col = VBox(children=[self.param_table], padding=3, width='100%')
+            l_col = HBox(children=[self.prog_table],  padding=3, width='25%')
+            self.hor_align = FlexBox(children = [l_col, r_col], width='100%', orientation='vertical')
+            display(self.hor_align)
+            self.in_notebook = in_notebook
+        except:
+            self.in_notebook = False
 
     def __call__(self, x):
         self.iters += 1
         if time.time() - self.t0 > 1:
-            v = self.bij.rmap(x)
-            self.update_paramtable(x)
-            self.update_progtable(x)
+            if self.in_notebook:
+                self.update_paramtable(x)
+                self.update_progtable(x)
+            else:
+                print('hi')
             self.t0 = time.time()
 
     def update_progtable(self, x):
@@ -212,60 +215,64 @@ class Monitor(object):
         minutes, seconds = divmod(remainder, 60)
         t_elapsed = "{}h {}m {}s".format(hours, minutes, seconds)
         html = r"""<style type="text/css">
-        .tg {border-collapse:collapse;border-spacing:0;border-color:#ccc; table-layout:fixed;}
-        .tg td{font-family:Arial, sans-serif;font-size:12px;padding:3px 3px;border-style:solid;border-width:1px;overflow:hidden;word-break:normal;border-color:#ccc;color:#333;background-color:#fff;word-wrap: break-word;}
-        .tg th{font-family:Arial, sans-serif;font-size:12px;font-weight:normal;padding:3px 3px;border-style:solid;border-width:1px;overflow:hidden;word-break:normal;border-color:#ccc;color:#333;background-color:#f0f0f0;}
-        .tg .tg-vkoh{font-family:"Lucida Console", Monaco, monospace !important; background-color:#ffffff;}
-        .tg .tg-suao{font-weight:bold;font-family:"Lucida Console", Monaco, monospace !important;background-color:#343d46;color:#ffffff;}
+        table { border-collapse:collapse }
+        .tg {border-collapse:collapse;border-spacing:0;border:none;}
+        .tg td{font-family:Arial, sans-serif;font-size:14px;padding:3px 3px;border-style:solid;border-width:0px;overflow:hidden;word-break:normal;}
+        .tg th{Impact, Charcoal, sans-serif;font-size:13px;font-weight:bold;padding:3px 3px;border-style:solid;border-width:0px;overflow:hidden;word-break:normal; background-color:#0E688A;color:#ffffff;}
+        .tg .tg-vkoh{font-weight:normal;font-family:"Lucida Console", Monaco, monospace !important; background-color:#ffffff;color:#000000}
+        .tg .tg-suao{font-weight:bold;font-family:"Lucida Console", Monaco, monospace !important;background-color:#0E688A;color:#ffffff;}
         """
         html += r"""
         </style>
         <table class="tg" style="undefined;">
-           <col width="50%" />
-           <col width="50%" />
+           <col width="200px" />
            <tr>
-             <th class= "tg-suao">Time elapsed</th>
-             <th class= "tg-vkoh">{}</th>
+             <th class= "tg-vkoh">Time Elapsed: {}</th>
            </tr>
            <tr>
-             <th class= "tg-suao">Iteration</th>
-             <th class= "tg-vkoh">{}</th>
+             <th class= "tg-vkoh">Iteration: {}</th>
            </tr>
            <tr>
-             <th class= "tg-suao">Log Posterior</th>
-             <th class= "tg-vkoh">{:.1f}</th>
+             <th class= "tg-vkoh">Log Posterior: {:.3f}</th>
            </tr>
-        </table>
         """.format(t_elapsed, self.iters, np.float(self.logp(x)))
+        if self.dlogp is not None:
+           html += r"""
+             <tr>
+               <th class= "tg-vkoh">||grad||: {:.3f}</th>
+             </tr>""".format(np.linalg.norm(self.dlogp(x)))
+        html += "</table>"
         self.prog_table.value = html
 
     def update_paramtable(self, x):
         names_vals = self.bij.rmap(x)
         html_begin = r"""<style type="text/css">
-          .tg .tg-bgft{font-weight:normal;font-family:"Lucida Console", Monaco, monospace !important;background-color:#C1E6DE;color:#000000;}
+          .tg .tg-bgft{font-weight:normal;font-family:"Lucida Console", Monaco, monospace !important;background-color:#0E688A;color:#ffffff;}
+          .tg td{font-family:Arial, sans-serif;font-size:12px;padding:3px 3px;border-style:solid;border-width:1px;overflow:hidden;word-break:normal;border-color:#504A4E;color:#333;background-color:#fff;word-wrap: break-word;}
+          .tg th{Impact, Charcoal, sans-serif;font-size:13px;font-weight:bold;padding:3px 3px;border-style:solid;border-width:1px;overflow:hidden;word-break:normal;border-color:#504A4E;background-color:#0E688A;color:#ffffff;}
           </style>
           <table class="tg" style="undefined;">
              <col width="130px" />
              <col width="70px" />
              <col width="500px" />
              <tr>
-               <th class="tg-suao">Parameter</th>
-               <th class="tg-suao">Size</th>
-               <th class="tg-suao">Current Value</th>
+               <th class="tg">Parameter</th>
+               <th class="tg">Size</th>
+               <th class="tg">Current Value</th>
              </tr>
            """
         html_body = ""
         for name, val in names_vals.items():
             if val.size == 1:
-                 valstr = "{:3.3f}".format(np.float(val))
-            elif val.size < 6:
+                 valstr = "{:.3f}".format(np.float(val))
+            elif val.size < 9:
                  valstr = np.array2string(val, suppress_small=True, separator=", ",
-                                          formatter={'float_kind': lambda x: "%3.3f" % x})
+                                          formatter={'float_kind': lambda x: "{:.3f}".format(x)})
             else:
-                 valstr_beg = np.array2string(val[:3],  suppress_small=True, separator=", ",
-                                          formatter={'float_kind': lambda x: "%3.3f" % x})[:-1]
-                 valstr_end = np.array2string(val[-3:], suppress_small=True, separator=", ",
-                                          formatter={'float_kind': lambda x: "%3.3f" % x})[1:]
+                 valstr_beg = np.array2string(val[:4],  suppress_small=True, separator=", ",
+                                          formatter={'float_kind': lambda x: "{:.3f}".format(x)})[:-1]
+                 valstr_end = np.array2string(val[-4:], suppress_small=True, separator=", ",
+                                          formatter={'float_kind': lambda x: "{:.3f}".format(x)})[1:]
                  valstr = valstr_beg + ", ..., " + valstr_end
 
             html_body += r"""
