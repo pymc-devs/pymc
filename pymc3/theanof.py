@@ -4,7 +4,7 @@ import theano
 from .vartypes import typefilter, continuous_types
 from theano import theano, scalar, tensor as tt
 from theano.gof.graph import inputs
-from theano.gof import Op
+from theano.gof import Op, Container
 from theano.configparser import change_flags
 from .memoize import memoize
 from .blocking import ArrayOrdering
@@ -267,9 +267,11 @@ class GeneratorOp(Op):
         if not isinstance(gen, DataGenerator):
             gen = DataGenerator(gen)
         self.generator = gen
-        self.itypes = []
-        self.otypes = [self.generator.tensortype]
         self.set_default(default)
+
+    def make_node(self, *inputs):
+        gen_var = self.generator.make_variable(self)
+        return theano.Apply(self, [], [gen_var])
 
     def perform(self, node, inputs, output_storage, params=None):
         if self.default is not None:
@@ -280,30 +282,7 @@ class GeneratorOp(Op):
     def do_constant_folding(self, node):
         return False
 
-    class _set_gen(object):
-        """For pickling"""
-        def __init__(self, op):
-            self.op = op
-
-        def __call__(self, gen):
-            self.op.set_gen(gen)
-
-    class _set_default(object):
-        """For pickling"""
-        def __init__(self, op):
-            self.op = op
-
-        def __call__(self, value):
-            self.op.set_default(value)
-
-    @change_flags(compute_test_value='off')
-    def __call__(self, *args, **kwargs):
-        rval = super(GeneratorOp, self).__call__(*args, **kwargs)
-        # maybe not the best solution but works
-        rval.set_gen = self._set_gen(self)
-        rval.set_default = self._set_default(self)
-        rval.tag.test_value = self.generator.test_value
-        return rval
+    __call__ = change_flags(compute_test_value='off')(Op.__call__)
 
     def set_gen(self, gen):
         if not isinstance(gen, DataGenerator):
@@ -317,11 +296,10 @@ class GeneratorOp(Op):
             self.default = None
         else:
             value = np.asarray(value)
-            tensortype = tt.TensorType(
-                            value.dtype,
-                            ((False,) * value.ndim)
-            )
-            if not tensortype == self.generator.tensortype:
+            t1 = (value.dtype, ((False,) * value.ndim))
+            t2 = (self.generator.tensortype.dtype,
+                  self.generator.tensortype.broadcastable)
+            if not t1 == t2:
                 raise ValueError('Default value should have the '
                                  'same type as generator')
             self.default = value
