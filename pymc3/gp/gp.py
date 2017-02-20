@@ -5,7 +5,7 @@ from tqdm import tqdm
 from theano.tensor.nlinalg import matrix_inverse
 import theano.tensor as tt
 
-from .mean import Zero
+from .mean import Zero, Mean
 from .cov import Covariance
 from ..distributions import MvNormal, Continuous, draw_values, generate_samples
 from ..model import modelcontext
@@ -33,6 +33,8 @@ class GP(Continuous):
         if mean_func is None:
             self.M = Zero()
         else:
+            if not isinstance(mean_func, Mean):
+                raise ValueError('mean_func must be a subclass of Mean')
             self.M = mean_func
             
         if cov_func is None:

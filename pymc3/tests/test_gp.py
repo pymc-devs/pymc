@@ -206,6 +206,17 @@ class WarpedInputTest(unittest.TestCase):
         self.assertAlmostEqual(K[0,1], 0.79593, 4)
 
 class GPTest(SeededTest):
+    def test_func_args(self):
+        X = np.linspace(0,1,10)[:,None]
+        Y = np.random.randn(10,1)
+        with Model() as model:
+            # make a Gaussian model
+            with self.assertRaises(ValueError):
+                random_test = gp.GP('random_test', cov_func=gp.mean.Zero(), observed={'X':X, 'Y':Y})
+            with self.assertRaises(ValueError):
+                random_test = gp.GP('random_test', mean_func=gp.cov.Matern32(1, 1), 
+                                        cov_func=gp.cov.Matern32(1, 1), observed={'X':X, 'Y':Y})
+                
     def test_sample(self):
         X = np.linspace(0,1,100)[:,None]
         Y = np.random.randn(100,1)
