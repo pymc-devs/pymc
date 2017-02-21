@@ -17,8 +17,8 @@ class TestELBO(SeededTest):
         sigma = 1.0
         y_obs = np.array([1.6, 1.4])
 
-        post_mu = np.array([1.88])
-        post_sd = np.array([1])
+        post_mu = np.array([1.88], dtype=theano.config.floatX)
+        post_sd = np.array([1], dtype=theano.config.floatX)
         # Create a model for test
         with Model() as model:
             mu = Normal('mu', mu=mu0, sd=sigma)
