@@ -146,6 +146,7 @@ def advi(vars=None, start=None, model=None, n=5000, accurate_elbo=False,
 
     # Optimization loop
     elbos = np.empty(n)
+    divergence_flag = False
     try:
         progress = trange(n)
         uw_i, elbo_current = f()
@@ -182,7 +183,10 @@ def advi(vars=None, start=None, model=None, n=5000, accurate_elbo=False,
                     break
                 if i > 10 * eval_elbo:
                     if med_delta > 0.5 or avg_delta > 0.5:
-                        pm._log.info('May be diverging, inspect ELBO.')
+                        divergence_flag = True
+                    else:
+                        divergence_flag = False
+                        
     except KeyboardInterrupt:
         elbos = elbos[:i]
         if n < 10:
@@ -198,7 +202,10 @@ def advi(vars=None, start=None, model=None, n=5000, accurate_elbo=False,
         else:
             avg_elbo = elbos[-n // 10:].mean()
             pm._log.info('Finished [100%]: Average ELBO = {:,.5g}'.format(avg_elbo))
-
+    
+    if divergence_flag:
+        pm._log.info('Evidence of divergence detected, inspect ELBO.')
+        
     # Estimated parameters
     l = int(uw_i.size / 2)
     u = bij.rmap(uw_i[:l])
