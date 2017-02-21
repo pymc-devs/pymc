@@ -222,9 +222,9 @@ class GPTest(SeededTest):
         Y = np.random.randn(100,1)
         with Model() as model:
             M = gp.mean.Zero()
-            l = Uniform('l', 0, 100)
+            l = Uniform('l', 0, 5)
             K = gp.cov.Matern32(1, l)
-            sigma = 1
+            sigma = Uniform('sigma', 0, 10)
 
             # make a Gaussian model
             random_test = gp.GP('random_test', mean_func=M, cov_func=K, sigma=sigma, observed={'X':X, 'Y':Y})
