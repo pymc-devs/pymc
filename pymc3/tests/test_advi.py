@@ -8,7 +8,7 @@ from pymc3.theanof import CallableTensor
 from theano import function, shared
 import theano.tensor as tt
 
-from .helpers import SeededTest
+from .helpers import SeededTest, TestHandler, Matcher
 
 
 class TestADVI(SeededTest):
@@ -23,6 +23,13 @@ class TestADVI(SeededTest):
                                                  0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 1],
                                                  value=-999)
         self.year = np.arange(1851, 1962)
+
+        self.handler = h = TestHandler(Matcher())
+        pm._log.addHandler(h)
+
+    def tearDown(self):
+        pm._log.removeHandler(self.handler)
+        self.handler.close()
 
     def test_elbo(self):
         mu0 = 1.5
@@ -118,6 +125,9 @@ class TestADVI(SeededTest):
 
         np.testing.assert_allclose(np.mean(trace['mu']), mu_post, rtol=0.4)
         np.testing.assert_allclose(np.std(trace['mu']), np.sqrt(1. / d), rtol=0.4)
+
+        h = self.handler
+        self.assertTrue(h.matches(msg="converged"))
 
         # Test for n < 10
         with Model():
