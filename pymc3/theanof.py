@@ -2,6 +2,7 @@ import numpy as np
 import theano
 
 from theano import theano, scalar, tensor as tt
+from theano.sandbox.rng_mrg import MRG_RandomStreams
 from theano.gof.graph import inputs
 from theano.gof import Op
 from theano.configparser import change_flags
