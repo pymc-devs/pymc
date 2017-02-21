@@ -244,10 +244,10 @@ identity = tt.Elemwise(scalar_identity, name='identity')
 
 class GeneratorOp(Op):
     """
-    Generaror Op is designed for storing python generators inside theano graph.
+    Generator Op is designed for storing python generators inside theano graph.
 
     __call__ creates TensorVariable
-        It has 2 new methods (assigned externally)
+        It has 2 new methods
         - var.set_gen(gen) : sets new generator
         - var.set_default(value) : sets new default value (None erases default value)
 
@@ -320,7 +320,7 @@ def generator(gen, default=None):
     Returns
     -------
     TensorVariable
-        It has 2 new methods (assigned externally)
+        It has 2 new methods
         - var.set_gen(gen) : sets new generator
         - var.set_default(value) : sets new default value (None erases default value)
     """
