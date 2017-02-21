@@ -45,7 +45,7 @@ class TestELBO(SeededTest):
 class TestApproximates:
     class Base(SeededTest):
         inference = None
-        NITER = 30000
+        NITER = 10000
 
         def test_vars_view(self):
             _, model, _ = models.multidimensional_model()
@@ -118,11 +118,11 @@ class TestApproximates:
             with Model():
                 mu_ = Normal('mu', mu=mu0, sd=sd0, testval=0)
                 Normal('x', mu=mu_, sd=sd, observed=minibatches, total_size=n)
-                inf1 = self.inference()
-                approx = inf1.fit(self.NITER)
-                trace1 = approx.sample_vp(10000)
-            np.testing.assert_allclose(np.mean(trace1['mu']), mu_post, rtol=0.4)
-            np.testing.assert_allclose(np.std(trace1['mu']), np.sqrt(1. / d), rtol=0.4)
+                inf = self.inference()
+                approx = inf.fit(self.NITER)
+                trace = approx.sample_vp(10000)
+            np.testing.assert_allclose(np.mean(trace['mu']), mu_post, rtol=0.4)
+            np.testing.assert_allclose(np.std(trace['mu']), np.sqrt(1. / d), rtol=0.4)
 
         def test_optimizer_minibatch_with_callback(self):
             n = 1000
@@ -149,11 +149,11 @@ class TestApproximates:
                     data_t.set_value(next(minibatches))
                 mu_ = Normal('mu', mu=mu0, sd=sd0, testval=0)
                 Normal('x', mu=mu_, sd=sd, observed=data_t, total_size=n)
-                inf2 = self.inference()
-                approx = inf2.fit(self.NITER, callbacks=[cb])
-                trace2 = approx.sample_vp(10000)
-            np.testing.assert_allclose(np.mean(trace2['mu']), mu_post, rtol=0.4)
-            np.testing.assert_allclose(np.std(trace2['mu']), np.sqrt(1. / d), rtol=0.4)
+                inf = self.inference()
+                approx = inf.fit(self.NITER, callbacks=[cb])
+                trace = approx.sample_vp(10000)
+            np.testing.assert_allclose(np.mean(trace['mu']), mu_post, rtol=0.4)
+            np.testing.assert_allclose(np.std(trace['mu']), np.sqrt(1. / d), rtol=0.4)
 
 
 class TestMeanField(TestApproximates.Base):

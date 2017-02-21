@@ -22,7 +22,8 @@ __all__ = ['gradient',
            'CallableTensor',
            'join_nonshared_inputs',
            'make_shared_replacements',
-           'generator']
+           'generator',
+           'GradScale']
 
 
 def inputvars(a):
@@ -69,6 +70,7 @@ def floatX(X):
 Theano derivative functions
 """
 
+
 def gradient1(f, v):
     """flat gradient of f wrt v"""
     return tt.flatten(tt.grad(f, v, disconnected_inputs='warn'))
@@ -107,6 +109,17 @@ def jacobian(f, vars=None):
         return tt.concatenate([jacobian1(f, v) for v in vars], axis=1)
     else:
         return empty_gradient
+
+
+def jacobian_diag(f, x):
+    idx = tt.arange(f.shape[0], dtype='int32')
+
+    def grad_ii(i):
+        return theano.grad(f[i], x)[i]
+
+    return theano.scan(grad_ii, sequences=[idx],
+                       n_steps=f.shape[0],
+                       name='jacobian_diag')[0]
 
 
 @memoize

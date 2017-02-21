@@ -126,7 +126,6 @@ class Inference(object):
         progress = tqdm.trange(n)
         if score_every is not None:
             try:
-                scores = np.empty(n // score_every)
                 for i in progress:
                     step_func()
                     if i % score_every == 0:
