@@ -61,6 +61,13 @@ class MeanField(Approximation):
 
 
 class FullRank(Approximation):
+    def __init__(self, local_rv=None, model=None, cost_part_grad_scale=1, gpu_compat=False):
+        super(FullRank, self).__init__(
+            local_rv=local_rv, model=model,
+            cost_part_grad_scale=cost_part_grad_scale
+        )
+        self.gpu_compat = gpu_compat
+
     def create_shared_params(self):
         return {'mu': theano.shared(
                     self.input.tag.test_value[self.global_slc]),
@@ -78,7 +85,7 @@ class FullRank(Approximation):
         L = self.shared_params['L']
         mu = self.scale_grad(mu)
         L = self.scale_grad(L)
-        return log_normal_mv(z, mu, chol=L)
+        return log_normal_mv(z, mu, chol=L, gpu_compat=self.gpu_compat)
 
     def random_global(self, samples=None, no_rand=False):
         initial = self.initial(samples, no_rand, l=self.global_size)
@@ -169,7 +176,7 @@ class ADVI(Inference):
 
 
 class FullRankADVI(Inference):
-    def __init__(self, local_rv=None, model=None, cost_part_grad_scale=1):
+    def __init__(self, local_rv=None, model=None, cost_part_grad_scale=1, gpu_compat=False):
         super(FullRankADVI, self).__init__(
             KL, FullRank, None,
-            local_rv=local_rv, model=model, cost_part_grad_scale=cost_part_grad_scale)
+            local_rv=local_rv, model=model, cost_part_grad_scale=cost_part_grad_scale, gpu_compat=gpu_compat)

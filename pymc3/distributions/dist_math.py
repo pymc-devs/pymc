@@ -9,7 +9,7 @@ import numpy as np
 import theano.tensor as tt
 
 from .special import gammaln
-
+from ..math import logdet as _logdet
 
 c = - 0.5 * np.log(2 * np.pi)
 
@@ -158,7 +158,7 @@ def log_normal(x, mean, **kwargs):
     return c - tt.log(tt.abs_(std)) - (x - mean) ** 2 / (2 * std ** 2)
 
 
-def log_normal_mv(x, mean, **kwargs):
+def log_normal_mv(x, mean, gpu_compat=False, **kwargs):
     """
     Calculate logarithm of normal distribution at point `x`
     with given `mean` and `sigma` matrix
@@ -169,6 +169,12 @@ def log_normal_mv(x, mean, **kwargs):
     mean : Tensor
         mean of normal distribution
     kwargs : one of parameters `{cov, tau, chol}`
+
+    Flags
+    ----------
+    gpu_compat : False, because LogDet is not GPU compatible yet.
+                 If this is set as true, the GPU compatible (but numerically unstable) log(det) is used.
+
     Notes
     -----
     There are three variants for density parametrization.
@@ -178,6 +184,12 @@ def log_normal_mv(x, mean, **kwargs):
         3) cholesky decomposition matrix  - `chol`
     ----
     """
+    if gpu_compat:
+        def logdet(m):
+            return tt.log(tt.abs_(tt.nlinalg.det(m)))
+    else:
+        logdet = _logdet
+
     T = kwargs.get('tau')
     S = kwargs.get('cov')
     L = kwargs.get('chol')
@@ -190,14 +202,14 @@ def log_normal_mv(x, mean, **kwargs):
     if L is not None:
         S = L.dot(L.T)
         T = tt.nlinalg.matrix_inverse(S)
-        Det = tt.nlinalg.det(S)
+        log_det = -logdet(S)
     elif T is not None:
-        Det = 1 / tt.nlinalg.det(T)
+        log_det = logdet(T)
     else:
         T = tt.nlinalg.matrix_inverse(S)
-        Det = tt.nlinalg.det(S)
+        log_det = -logdet(S)
     delta = x - mean
     k = S.shape[0]
-    result = k * tt.log(2 * np.pi) + tt.log(Det)
+    result = k * tt.log(2 * np.pi) - log_det
     result += delta.dot(T).dot(delta)
     return -1 / 2. * result
