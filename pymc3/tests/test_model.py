@@ -154,7 +154,7 @@ class TestScaling(unittest.TestCase):
         def true_dens():
             g = gen1()
             for i, point in enumerate(g):
-                yield stats.norm.logpdf(point * i).sum() * 10
+                yield stats.norm.logpdf(point).sum() * 10
         t = true_dens()
         # We have same size models
         with pm.Model() as model1:
