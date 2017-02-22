@@ -389,7 +389,9 @@ def set_tt_rng(new_rng):
     new_rng : `theano.sandbox.rng_mrg.MRG_RandomStreams` instance
         The random number generator to use.
     """
+    # pylint: disable=global-statement
     global _tt_rng
+    # pylint: enable=global-statement
     _tt_rng = new_rng
     launch_rng(_tt_rng)
 
