@@ -45,7 +45,7 @@ class TestELBO(SeededTest):
 class TestApproximates:
     class Base(SeededTest):
         inference = None
-        NITER = 10000
+        NITER = 30000
 
         def test_vars_view(self):
             _, model, _ = models.multidimensional_model()
