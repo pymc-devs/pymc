@@ -85,6 +85,7 @@ class Operator(object):
             resulting_updates.update(more_updates)
             return resulting_updates
 
+        @memoize
         def step_function(self, obj_n_mc=None, tf_n_mc=None, sc_n_mc=None,
                           obj_optimizer=adam, test_optimizer=adam,
                           more_obj_params=None, more_tf_params=None,
@@ -110,6 +111,7 @@ class Operator(object):
                 step = step_fn
             return step
 
+        @memoize
         def score_function(self, sc_n_mc=None):
             return theano.function([], self(self.random(sc_n_mc)))
 
