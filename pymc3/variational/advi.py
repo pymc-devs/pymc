@@ -12,7 +12,6 @@ from theano.sandbox.rng_mrg import MRG_RandomStreams
 import pymc3 as pm
 from pymc3.backends.base import MultiTrace
 from ..theanof import floatX
-from tqdm import trange
 import tqdm
 
 __all__ = ['advi', 'sample_vp']
