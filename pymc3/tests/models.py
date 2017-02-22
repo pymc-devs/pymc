@@ -100,17 +100,28 @@ def mv_simple_discrete():
 
 def mv_prior_simple():
     n = 3
-    noise = 1e-10
+    noise = 0.1
     X = np.linspace(0, 1, n)[:, None]
-    mu = np.sin(3 * X).flatten()
-    K = pm.gp.cov.ExpQuad(1, 1).K(X)
+
+    K = pm.gp.cov.ExpQuad(1, 1)(X).eval()
+    K_noise = K + noise * np.eye(n)
+    obs = np.array([-0.1, 0.5, 1.1])
+
+    # Posterior mean
+    L_noise = np.linalg.cholesky(K_noise)
+    alpha = np.linalg.solve(L_noise.T, np.linalg.solve(L_noise, obs))
+    mu_post = np.dot(K.T, alpha)
+
+    # Posterior standard deviation
+    v = np.linalg.solve(L_noise, K)
+    std_post = (K - np.dot(v.T, v)).diagonal() ** 0.5
 
     with pm.Model() as model:
-        x = pm.MvNormal('x', mu=np.zeros(n), cov=K, shape=n)
-        x_obs = pm.MvNormal('x_obs', observed=mu, mu=x,
+        x = pm.Flat('x', shape=n)
+        x_obs = pm.MvNormal('x_obs', observed=obs, mu=x,
                             cov=noise * np.eye(n), shape=n)
 
-    return model.test_point, model, (K, mu, noise)
+    return model.test_point, model, (K, mu_post, std_post, noise)
 
 
 def non_normal(n=2):

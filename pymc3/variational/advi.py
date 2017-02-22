@@ -2,7 +2,7 @@
 '''
 (c) 2016, John Salvatier & Taku Yoshioka
 '''
-from collections import OrderedDict, namedtuple
+from collections import OrderedDict, namedtuple, deque
 
 import numpy as np
 import theano
@@ -30,7 +30,7 @@ def gen_random_state():
 
 def advi(vars=None, start=None, model=None, n=5000, accurate_elbo=False,
          optimizer=None, learning_rate=.001, epsilon=.1, mode=None,
-         random_seed=None):
+         tol_obj=0.01, eval_elbo=100, random_seed=None):
     """Perform automatic differentiation variational inference (ADVI).
 
     This function implements the meanfield ADVI, where the variational
@@ -79,6 +79,11 @@ def advi(vars=None, start=None, model=None, n=5000, accurate_elbo=False,
     epsilon : float
         Offset in denominator of the scale of learning rate in Adagrad.
         This parameter is ignored when optimizer is given.
+    tol_obj : float
+        Relative tolerance for testing convergence of ELBO.
+    eval_elbo : int
+        Window for checking convergence of ELBO. Convergence will be checked
+        for every multiple of eval_elbo.
     random_seed : int or None
         Seed to initialize random state. None uses current seed.
     mode :  string or `Mode` instance.
@@ -135,10 +140,18 @@ def advi(vars=None, start=None, model=None, n=5000, accurate_elbo=False,
     updates = optimizer(loss=-1 * elbo, param=[uw_shared])
     f = theano.function([], [uw_shared, elbo], updates=updates, mode=mode)
 
+    # For tracking convergence of ELBO
+    window_size = int(max(0.1 * n // eval_elbo, 2.0))
+    circ_buff = deque([], maxlen=window_size)
+
     # Optimization loop
     elbos = np.empty(n)
+    divergence_flag = False
     try:
         progress = trange(n)
+        uw_i, elbo_current = f()
+        if np.isnan(elbo_current):
+            raise FloatingPointError('NaN occurred in ADVI optimization.')
         for i in progress:
             uw_i, e = f()
             if np.isnan(e):
@@ -149,13 +162,38 @@ def advi(vars=None, start=None, model=None, n=5000, accurate_elbo=False,
             elif i % (n // 10) == 0 and i > 0:
                 avg_elbo = elbos[i - n // 10:i].mean()
                 progress.set_description('Average ELBO = {:,.5g}'.format(avg_elbo))
+
+            if i % eval_elbo == 0:
+                elbo_prev = elbo_current
+                elbo_current = elbos[i]
+                delta_elbo = abs((elbo_current - elbo_prev) / elbo_prev)
+                circ_buff.append(delta_elbo)
+                avg_delta = np.mean(circ_buff)
+                med_delta = np.median(circ_buff)
+
+                if avg_delta < tol_obj:
+                    pm._log.info('Mean ELBO converged.')
+                    converged = True
+                    elbos = elbos[:(i + 1)]
+                    break
+                elif med_delta < tol_obj:
+                    pm._log.info('Median ELBO converged.')
+                    converged = True
+                    elbos = elbos[:(i + 1)]
+                    break
+                if i > 10 * eval_elbo:
+                    if med_delta > 0.5 or avg_delta > 0.5:
+                        divergence_flag = True
+                    else:
+                        divergence_flag = False
+                        
     except KeyboardInterrupt:
         elbos = elbos[:i]
         if n < 10:
             pm._log.info('Interrupted at {:,d} [{:.0f}%]: ELBO = {:,.5g}'.format(
                 i, 100 * i // n, elbos[i]))
         else:
-            avg_elbo = elbos[i - n // 10:].mean()
+            avg_elbo = elbos[i - n // 10:i].mean()
             pm._log.info('Interrupted at {:,d} [{:.0f}%]: Average ELBO = {:,.5g}'.format(
                 i, 100 * i // n, avg_elbo))
     else:
@@ -164,7 +202,10 @@ def advi(vars=None, start=None, model=None, n=5000, accurate_elbo=False,
         else:
             avg_elbo = elbos[-n // 10:].mean()
             pm._log.info('Finished [100%]: Average ELBO = {:,.5g}'.format(avg_elbo))
-
+    
+    if divergence_flag:
+        pm._log.info('Evidence of divergence detected, inspect ELBO.')
+        
     # Estimated parameters
     l = int(uw_i.size / 2)
     u = bij.rmap(uw_i[:l])

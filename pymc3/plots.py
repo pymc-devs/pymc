@@ -91,7 +91,7 @@ def traceplot(trace, varnames=None, transform=lambda x: x, figsize=None,
             d = make_2d(d)
             if d.dtype.kind == 'i':
                 hist_objs = histplot_op(ax[i, 0], d, alpha=alpha)
-                colors = [h[-1][0].get_color() for h in hist_objs]
+                colors = [h[-1][0].get_facecolor() for h in hist_objs]
             else:
                 artists = kdeplot_op(ax[i, 0], d, prior, prior_alpha, prior_style)[0]
                 colors = [a[0].get_color() for a in artists]
@@ -125,6 +125,8 @@ def traceplot(trace, varnames=None, transform=lambda x: x, figsize=None,
 
 def histplot_op(ax, data, alpha=.35):
     hs = []
+    data_min = np.min(data)
+    data_max = np.max(data)
     for i in range(data.shape[1]):
         d = data[:, i]
 
@@ -132,7 +134,7 @@ def histplot_op(ax, data, alpha=.35):
         maxd = np.max(d)
         step = max((maxd - mind) // 100, 1)
         hs.append(ax.hist(d, bins=range(mind, maxd + 2, step), alpha=alpha, align='left'))
-        ax.set_xlim(mind - .5, maxd + .5)
+    ax.set_xlim(data_min - .5, data_max + .5)
     return hs
 
 
