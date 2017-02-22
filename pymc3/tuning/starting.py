@@ -17,9 +17,8 @@ from inspect import getargspec
 
 __all__ = ['find_MAP']
 
-
 def find_MAP(start=None, vars=None, fmin=None,
-             return_raw=False,model=None, *args, **kwargs):
+             return_raw=False, model=None, disp=True, callback=None, *args, **kwargs):
     """
     Sets state to the local maximum a posteriori point given a model.
     Current default of fmin_Hessian does not deal well with optimizing close
@@ -90,17 +89,20 @@ def find_MAP(start=None, vars=None, fmin=None,
         def grad_logp_o(point):
             return nan_to_num(-dlogp(point))
 
-        monitor = Monitor(bij, logp_o, grad_logp_o)
-        r = fmin(logp_o, bij.map(
-            start), fprime=grad_logp_o, callback=monitor, *args, **kwargs)
+        if callback is None:
+            callback = Monitor(bij, logp_o, grad_logp_o, disp)
+
+        r = fmin(logp_o, bij.map(start), fprime=grad_logp_o, callback=callback, *args, **kwargs)
         compute_gradient = True
     else:
+        if callback is None:
+            callback = Monitor(bij, logp_o, grad_logp_o=None, disp=disp)
+
         # Check to see if minimization function uses a starting value
-        monitor = Monitor(bij, logp_o)
         if 'x0' in getargspec(fmin).args:
-            r = fmin(logp_o, bij.map(start), *args, **kwargs)
+            r = fmin(logp_o, bij.map(start), callback=callback, *args, **kwargs)
         else:
-            r = fmin(logp_o, *args, **kwargs)
+            r = fmin(logp_o, callback=callback, *args, **kwargs)
         compute_gradient = False
 
     if isinstance(r, tuple):
@@ -175,45 +177,75 @@ def allinmodel(vars, model):
 
 
 
-from IPython.display import display,clear_output
-from ipywidgets import IntProgress, HTML, Box, VBox, HBox, FlexBox
-
 class Monitor(object):
-    def __init__(self, bij, logp, dlogp=None, in_notebook=True):
-        self.bij = bij
-        self.logp = logp
-        self.dlogp = dlogp
+    def __init__(self, bij, logp, dlogp=None, disp=True):
+        if disp:
+            try:
+                from IPython.display import display
+                from ipywidgets import HTML, VBox, HBox, FlexBox
+                self.prog_table  = HTML(width='100%')
+                self.param_table = HTML(width='100%')
+                r_col = VBox(children=[self.param_table], padding=3, width='100%')
+                l_col = HBox(children=[self.prog_table],  padding=3, width='25%')
+                self.hor_align = FlexBox(children = [l_col, r_col], width='100%', orientation='vertical')
+                display(self.hor_align)
+                self.using_notebook = True
+            except:
+                self.using_notebook = False
 
-        self.t_initial = time.time()
-        self.iters = 0
-        self.t0 = self.t_initial
+            self.bij = bij
+            self.logp = logp
+            self.dlogp = dlogp
+            self.disp = disp
 
-        try:
-            self.prog_table  = HTML(width='100%')
-            self.param_table = HTML(width='100%')
-            r_col = VBox(children=[self.param_table], padding=3, width='100%')
-            l_col = HBox(children=[self.prog_table],  padding=3, width='25%')
-            self.hor_align = FlexBox(children = [l_col, r_col], width='100%', orientation='vertical')
-            display(self.hor_align)
-            self.in_notebook = in_notebook
-        except:
-            self.in_notebook = False
+            self.t_initial = time.time()
+            self.iters = 0
+            self.t0 = self.t_initial
+            self.paramtable = {}
 
     def __call__(self, x):
+        if not self.disp:
+            return
         self.iters += 1
         if time.time() - self.t0 > 1:
-            if self.in_notebook:
-                self.update_paramtable(x)
-                self.update_progtable(x)
+            self.update_progtable(x)
+            self.update_paramtable(x)
+            if self.using_notebook:
+                self.display_notebook()
             else:
-                print('hi')
+                self.display_terminal()
             self.t0 = time.time()
 
     def update_progtable(self, x):
         s = time.time() - self.t_initial
         hours, remainder = divmod(int(s), 3600)
         minutes, seconds = divmod(remainder, 60)
-        t_elapsed = "{}h {}m {}s".format(hours, minutes, seconds)
+        self.t_elapsed = "{}h {}m {}s".format(hours, minutes, seconds)
+        self.logpost = np.float(self.logp(x))
+        self.dlogpost = np.linalg.norm(self.dlogp(x))
+
+    def update_paramtable(self, x):
+        names_vals = self.bij.rmap(x)
+        for parameter, val in names_vals.items():
+            if val.size == 1:
+                 valstr = "{:.3f}".format(np.float(val))
+            elif val.size < 9:
+                 valstr = np.array2string(val, suppress_small=True, separator=", ",
+                                          formatter={'float_kind': lambda x: "{:.3f}".format(x)})
+            else:
+                 valstr_beg = np.array2string(val[:4],  suppress_small=True, separator=", ",
+                                          formatter={'float_kind': lambda x: "{:.3f}".format(x)})[:-1]
+                 valstr_end = np.array2string(val[-4:], suppress_small=True, separator=", ",
+                                          formatter={'float_kind': lambda x: "{:.3f}".format(x)})[1:]
+                 valstr = valstr_beg + ", ..., " + valstr_end
+            self.paramtable[parameter] = {"size": val.size, "valstr": valstr}
+
+    def display_terminal(self):
+        pm._log.info("iter    runtime    lpost    ||grad||    ")
+        disp_str = "{:8.3f}{:s}{:9.3f}{12.3f} \r".format(self.iters, self.t_elapsed, self.logpost, self.dlogpost)
+
+    def display_notebook(self):
+        ## Progress table
         html = r"""<style type="text/css">
         table { border-collapse:collapse }
         .tg {border-collapse:collapse;border-spacing:0;border:none;}
@@ -235,55 +267,41 @@ class Monitor(object):
            <tr>
              <th class= "tg-vkoh">Log Posterior: {:.3f}</th>
            </tr>
-        """.format(t_elapsed, self.iters, np.float(self.logp(x)))
+        """.format(self.t_elapsed, self.iters, self.logpost)
         if self.dlogp is not None:
            html += r"""
              <tr>
                <th class= "tg-vkoh">||grad||: {:.3f}</th>
-             </tr>""".format(np.linalg.norm(self.dlogp(x)))
+             </tr>""".format(self.dlogpost)
         html += "</table>"
         self.prog_table.value = html
 
-    def update_paramtable(self, x):
-        names_vals = self.bij.rmap(x)
-        html_begin = r"""<style type="text/css">
+        ## Parameter table
+        html = r"""<style type="text/css">
           .tg .tg-bgft{font-weight:normal;font-family:"Lucida Console", Monaco, monospace !important;background-color:#0E688A;color:#ffffff;}
           .tg td{font-family:Arial, sans-serif;font-size:12px;padding:3px 3px;border-style:solid;border-width:1px;overflow:hidden;word-break:normal;border-color:#504A4E;color:#333;background-color:#fff;word-wrap: break-word;}
           .tg th{Impact, Charcoal, sans-serif;font-size:13px;font-weight:bold;padding:3px 3px;border-style:solid;border-width:1px;overflow:hidden;word-break:normal;border-color:#504A4E;background-color:#0E688A;color:#ffffff;}
           </style>
           <table class="tg" style="undefined;">
              <col width="130px" />
-             <col width="70px" />
-             <col width="500px" />
+             <col width="50px" />
+             <col width="600px" />
              <tr>
                <th class="tg">Parameter</th>
                <th class="tg">Size</th>
                <th class="tg">Current Value</th>
              </tr>
            """
-        html_body = ""
-        for name, val in names_vals.items():
-            if val.size == 1:
-                 valstr = "{:.3f}".format(np.float(val))
-            elif val.size < 9:
-                 valstr = np.array2string(val, suppress_small=True, separator=", ",
-                                          formatter={'float_kind': lambda x: "{:.3f}".format(x)})
-            else:
-                 valstr_beg = np.array2string(val[:4],  suppress_small=True, separator=", ",
-                                          formatter={'float_kind': lambda x: "{:.3f}".format(x)})[:-1]
-                 valstr_end = np.array2string(val[-4:], suppress_small=True, separator=", ",
-                                          formatter={'float_kind': lambda x: "{:.3f}".format(x)})[1:]
-                 valstr = valstr_beg + ", ..., " + valstr_end
-
-            html_body += r"""
+        for parameter, values in self.paramtable.items():
+            html += r"""
               <tr>
                 <td class="tg-bgft">{}</td>
                 <td class="tg-vkoh">{}</td>
                 <td class="tg-vkoh">{}</td>
               </tr>
-            """.format(name, val.size, valstr)
-        html_end = "</table>"
-        self.param_table.value = html_begin + html_body + html_end
+            """.format(parameter, values["size"], values["valstr"])
+        html += "</table>"
+        self.param_table.value = html
 
 
 
