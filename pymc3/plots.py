@@ -1,9 +1,11 @@
 from collections import OrderedDict
+import itertools
 
 import numpy as np
 from scipy.stats import kde, mode
+from matplotlib import gridspec
 import matplotlib.pyplot as plt
-import pymc3 as pm
+from .diagnostics import gelman_rubin
 from .stats import quantiles, hpd
 from scipy.signal import gaussian, convolve
 
@@ -11,10 +13,43 @@ __all__ = ['traceplot', 'kdeplot', 'kde2plot',
            'forestplot', 'autocorrplot', 'plot_posterior', 'compare_plot']
 
 
-def traceplot(trace, varnames=None, transform=lambda x: x, figsize=None,
-              lines=None, combined=False, plot_transformed=False, grid=False,
-              alpha=0.35, priors=None, prior_alpha=1, prior_style='--',
-              ax=None):
+def get_axis(ax, default_rows, default_columns, **default_kwargs):
+    """Verifies the provided axis is of the correct shape, and creates one if needed.
+
+    Args:
+        ax: matplotlib axis or None
+        default_rows: int, expected rows in axis
+        default_columns: int, expected columns in axis
+        **default_kwargs: keyword arguments to pass to plt.subplot
+
+    Returns:
+        axis, or raises an error
+    """
+
+    default_shape = (default_rows, default_columns)
+    if ax is None:
+        _, ax = plt.subplots(*default_shape, **default_kwargs)
+    elif ax.shape != default_shape:
+        raise ValueError('Subplots with shape %r required' % (default_shape,))
+    return ax
+
+
+def identity_transform(x):
+    """f(x) = x"""
+    return x
+
+
+def get_default_varnames(trace, include_transformed):
+    """Helper to extract default varnames from a trace."""
+    if include_transformed:
+        return [name for name in trace.varnames]
+    else:
+        return [name for name in trace.varnames if not name.endswith('_')]
+
+
+def traceplot(trace, varnames=None, transform=identity_transform, figsize=None, lines=None,
+              combined=False, plot_transformed=False, grid=False, alpha=0.35, priors=None,
+              prior_alpha=1, prior_style='--', ax=None):
     """Plot samples histograms and values
 
     Parameters
@@ -44,7 +79,7 @@ def traceplot(trace, varnames=None, transform=lambda x: x, figsize=None,
     alpha : float
         Alpha value for plot line. Defaults to 0.35.
     priors : iterable of PyMC distributions
-        PyMC prior distribution(s) to be plotted alongside poterior. Defaults
+        PyMC prior distribution(s) to be plotted alongside posterior. Defaults
         to None (no prior plots).
     prior_alpha : float
         Alpha value for prior plot. Defaults to 1.
@@ -66,26 +101,18 @@ def traceplot(trace, varnames=None, transform=lambda x: x, figsize=None,
     """
 
     if varnames is None:
-        if plot_transformed:
-            varnames = [name for name in trace.varnames]
-        else:
-            varnames = [name for name in trace.varnames if not name.endswith('_')]
-
-    n = len(varnames)
+        varnames = get_default_varnames(trace, plot_transformed)
 
     if figsize is None:
-        figsize = (12, n * 2)
+        figsize = (12, len(varnames) * 2)
 
-    if ax is None:
-        _, ax = plt.subplots(n, 2, squeeze=False, figsize=figsize)
-    elif ax.shape != (n, 2):
-        pm._log.warning('traceplot requires n*2 subplots')
-        return None
+    ax = get_axis(ax, len(varnames), 2, squeeze=False, figsize=figsize)
 
     for i, v in enumerate(varnames):
-        prior = None
         if priors is not None:
             prior = priors[i]
+        else:
+            prior = None
         for d in trace.get_values(v, combine=combined, squeeze=False):
             d = np.squeeze(transform(d))
             d = make_2d(d)
@@ -109,9 +136,10 @@ def traceplot(trace, varnames=None, transform=lambda x: x, figsize=None,
                         line_values, colors = [lines[v]], ['r']
                     else:
                         line_values = np.atleast_1d(lines[v]).ravel()
-                        assert len(colors) == len(line_values), "An incorrect number of lines was specified " \
-                                                                "for '{}', give a iterable of length {} or " \
-                                                                "to draw a single red line, give a scalar".format(v, len(colors))
+                        if len(colors) != len(line_values):
+                            raise AssertionError("An incorrect number of lines was specified for "
+                                                 "'{}'. Expected an iterable of length {} or to "
+                                                 " a scalar".format(v, len(colors)))
                     for c, l in zip(colors, line_values):
                         ax[i, 0].axvline(x=l, color=c, lw=1.5, alpha=0.75)
                         ax[i, 1].axhline(y=l, color=c,
@@ -154,10 +182,8 @@ def kdeplot_op(ax, data, prior=None, prior_alpha=1, prior_style='--'):
     return ls, pls
 
 
-
 def make_2d(a):
-    """Ravel the dimensions after the first.
-    """
+    """Ravel the dimensions after the first."""
     a = np.atleast_2d(a.T).T
     # flatten out dimensions beyond the first
     n = a.shape[0]
@@ -240,26 +266,17 @@ def autocorrplot(trace, varnames=None, max_lag=100, burn=0, plot_transformed=Fal
             yield varname
 
     if varnames is None:
-        if plot_transformed:
-            varnames = [name for name in trace.varnames]
-        else:
-            varnames = [name for name in trace.varnames if not name.endswith('_')]
+        varnames = get_default_varnames(trace, plot_transformed)
 
-    varnames = [item for sub in [[i for i in _handle_array_varnames(v)]
-                                 for v in varnames] for item in sub]
+    varnames = list(itertools.chain.from_iterable(map(_handle_array_varnames, varnames)))
 
     nchains = trace.nchains
 
     if figsize is None:
         figsize = (12, len(varnames) * 2)
 
-    if ax is None:
-        _, ax = plt.subplots(len(varnames), nchains, squeeze=False,
-                             sharex=True, sharey=True, figsize=figsize)
-    elif ax.shape != (len(varnames), nchains):
-        raise ValueError('autocorrplot requires {}*{} subplots'.format(
-            len(varnames), nchains))
-        return None
+    ax = get_axis(ax, len(varnames), nchains,
+                  squeeze=False, sharex=True, sharey=True, figsize=figsize)
 
     max_lag = min(len(trace) - 1, max_lag)
 
@@ -276,8 +293,9 @@ def autocorrplot(trace, varnames=None, max_lag=100, burn=0, plot_transformed=Fal
 
             ax[i, j].acorr(d, detrend=plt.mlab.detrend_mean, maxlags=max_lag)
 
-            if not j:
+            if j == 0:
                 ax[i, j].set_ylabel("correlation")
+
             if i == len(varnames) - 1:
                 ax[i, j].set_xlabel("lag")
 
@@ -305,15 +323,88 @@ def var_str(name, shape):
     size = np.prod(shape)
     ind = (np.indices(shape) + 1).reshape(-1, size)
     names = ['[' + ','.join(map(str, i)) + ']' for i in zip(*ind)]
-    # if len(name)>12:
-    #     name = '\n'.join(name.split('_'))
-    #     name += '\n'
     names[0] = '%s %s' % (name, names[0])
     return names
 
 
-def forestplot(trace_obj, varnames=None, transform=lambda x: x, alpha=0.05, quartiles=True,
-               rhat=True, main=None, xtitle=None, xrange=None, ylabels=None,
+def make_rhat_plot(trace, ax, title, labels, varnames, include_transformed):
+    if varnames is None:
+        varnames = get_default_varnames(trace, include_transformed)
+
+    R = gelman_rubin(trace)
+    R = {v: R[v] for v in varnames}
+
+    ax.set_title(title)
+
+    # Set x range
+    ax.set_xlim(0.9, 2.1)
+
+    # X axis labels
+    ax.set_xticks((1.0, 1.5, 2.0), ("1", "1.5", "2+"))
+    ax.set_yticks([-(l + 1) for l in range(len(labels))], "")
+
+    i = 1
+    for varname in varnames:
+        chain = trace.chains[0]
+        value = trace.get_values(varname, chains=[chain])[0]
+        k = np.size(value)
+
+        if k > 1:
+            ax.plot([min(r, 2) for r in R[varname]],
+                    [-(j + i) for j in range(k)], 'bo', markersize=4)
+        else:
+            ax.plot(min(R[varname], 2), -i, 'bo', markersize=4)
+
+        i += k
+
+    # Define range of y-axis
+    ax.set_ylim(-i + 0.5, -0.5)
+
+    # Remove ticklines on y-axes
+    ax.set_yticks([])
+
+    for loc, spine in ax.spines.items():
+        if loc in ['left', 'right']:
+            spine.set_color('none')  # don't draw spine
+    return ax
+
+
+def plot_tree(ax, y, ntiles, show_quartiles):
+    """ Helper to plot errorbars for the forestplot.
+
+    Parameters
+    ----------
+    ax: Matplotlib.Axes
+    y: float
+        y value to add error bar to
+    ntiles: iterable
+        A list or array of length 5 or 3
+    show_quartiles: boolean
+        Whether to plot the interquartile range
+
+    Returns
+    -------
+
+    Matplotlib.Axes with a single error bar added
+
+    """
+    if show_quartiles:
+        # Plot median
+        ax.plot(ntiles[2], y, 'bo', markersize=4)
+        # Plot quartile interval
+        ax.errorbar(x=(ntiles[1], ntiles[3]), y=(y, y), linewidth=2, color='b')
+
+    else:
+        # Plot median
+        ax.plot(ntiles[1], y, 'bo', markersize=4)
+
+    # Plot outer interval
+    ax.errorbar(x=(ntiles[0], ntiles[-1]), y=(y, y), linewidth=1, color='b')
+    return ax
+
+
+def forestplot(trace_obj, varnames=None, transform=identity_transform, alpha=0.05, quartiles=True,
+               rhat=True, main=None, xtitle=None, xlim=None, ylabels=None,
                chain_spacing=0.05, vline=0, gs=None, plot_transformed=False):
     """
     Forest plot (model summary plot)
@@ -343,7 +434,7 @@ def forestplot(trace_obj, varnames=None, transform=lambda x: x, alpha=0.05, quar
         passing None (default) results in default titles.
     xtitle (optional): string
         Label for x-axis. Defaults to no label
-    xrange (optional): list or tuple
+    xlim (optional): list or tuple
         Range for x-axis. Defaults to matplotlib's best guess.
     ylabels (optional): list or array
         User-defined labels for each variable. If not provided, the node
@@ -364,59 +455,43 @@ def forestplot(trace_obj, varnames=None, transform=lambda x: x, alpha=0.05, quar
     gs : matplotlib GridSpec
 
     """
-    from matplotlib import gridspec
 
     # Quantiles to be calculated
-    qlist = [100 * alpha / 2, 50, 100 * (1 - alpha / 2)]
     if quartiles:
         qlist = [100 * alpha / 2, 25, 50, 75, 100 * (1 - alpha / 2)]
+    else:
+        qlist = [100 * alpha / 2, 50, 100 * (1 - alpha / 2)]
 
     # Range for x-axis
     plotrange = None
 
     # Subplots
     interval_plot = None
-    rhat_plot = None
 
     nchains = trace_obj.nchains
-    if nchains > 1:
-        from .diagnostics import gelman_rubin
-
-        R = gelman_rubin(trace_obj)
-        if varnames is not None:
-            R = {v: R[v] for v in varnames}
-    else:
-        # Can't calculate Gelman-Rubin with a single trace
-        rhat = False
 
     if varnames is None:
-            if plot_transformed:
-                varnames = [name for name in trace_obj.varnames]
-            else:
-                varnames = [name for name in trace_obj.varnames if not name.endswith('_')]
+        varnames = get_default_varnames(trace_obj, plot_transformed)
 
+    plot_rhat = (rhat and nchains > 1)
     # Empty list for y-axis labels
-    labels = []
-
     if gs is None:
         # Initialize plot
-        if rhat and nchains > 1:
+        if plot_rhat:
             gs = gridspec.GridSpec(1, 2, width_ratios=[3, 1])
-
         else:
-
             gs = gridspec.GridSpec(1, 1)
 
         # Subplot for confidence intervals
         interval_plot = plt.subplot(gs[0])
 
-    trace_quantiles = quantiles(
-        trace_obj, qlist, transform=transform, squeeze=False)
+    trace_quantiles = quantiles(trace_obj, qlist, transform=transform, squeeze=False)
     hpd_intervals = hpd(trace_obj, alpha, transform=transform, squeeze=False)
 
+    labels = []
     for j, chain in enumerate(trace_obj.chains):
         # Counter for current variable
-        var = 1
+        var = 0
         for varname in varnames:
             var_quantiles = trace_quantiles[chain][varname]
 
@@ -429,11 +504,8 @@ def forestplot(trace_obj, varnames=None, transform=lambda x: x, alpha=0.05, quar
 
             # Ensure x-axis contains range of current interval
             if plotrange:
-                plotrange = [min(
-                             plotrange[0],
-                             np.min(quants)),
-                             max(plotrange[1],
-                                 np.max(quants))]
+                plotrange = [min(plotrange[0], np.min(quants)),
+                             max(plotrange[1], np.max(quants))]
             else:
                 plotrange = [np.min(quants), np.max(quants)]
 
@@ -442,79 +514,27 @@ def forestplot(trace_obj, varnames=None, transform=lambda x: x, alpha=0.05, quar
             k = np.size(value)
 
             # Append variable name(s) to list
-            if not j:
+            if j == 0:
                 if k > 1:
                     names = var_str(varname, np.shape(value))
                     labels += names
                 else:
                     labels.append(varname)
-                    # labels.append('\n'.join(varname.split('_')))
 
             # Add spacing for each chain, if more than one
-            e = [0] + [(chain_spacing * ((i + 2) / 2)) *
-                       (-1) ** i for i in range(nchains - 1)]
+            offset = [0] + [(chain_spacing * ((i + 2) / 2)) * (-1) ** i for i in range(nchains - 1)]
+
+            # Y coordinate with offset
+            y = -var + offset[j]
 
             # Deal with multivariate nodes
             if k > 1:
-
-                for i, q in enumerate(np.transpose(quants).squeeze()):
-
-                    # Y coordinate with jitter
-                    y = -(var + i) + e[j]
-
-                    if quartiles:
-                        # Plot median
-                        plt.plot(q[2], y, 'bo', markersize=4)
-                        # Plot quartile interval
-                        plt.errorbar(
-                            x=(q[1],
-                                q[3]),
-                            y=(y,
-                                y),
-                            linewidth=2,
-                            color='b')
-
-                    else:
-                        # Plot median
-                        plt.plot(q[1], y, 'bo', markersize=4)
-
-                    # Plot outer interval
-                    plt.errorbar(
-                        x=(q[0],
-                            q[-1]),
-                        y=(y,
-                            y),
-                        linewidth=1,
-                        color='b')
-
+                for q in np.transpose(quants).squeeze():
+                    # Multiple y values
+                    y -= 1
+                    interval_plot = plot_tree(interval_plot, y, q, quartiles)
             else:
-
-                # Y coordinate with jitter
-                y = -var + e[j]
-
-                if quartiles:
-                    # Plot median
-                    plt.plot(quants[2], y, 'bo', markersize=4)
-                    # Plot quartile interval
-                    plt.errorbar(
-                        x=(quants[1],
-                            quants[3]),
-                        y=(y,
-                            y),
-                        linewidth=2,
-                        color='b')
-                else:
-                    # Plot median
-                    plt.plot(quants[1], y, 'bo', markersize=4)
-
-                # Plot outer interval
-                plt.errorbar(
-                    x=(quants[0],
-                        quants[-1]),
-                    y=(y,
-                        y),
-                    linewidth=1,
-                    color='b')
+                interval_plot = plot_tree(interval_plot, y, quants, quartiles)
 
             # Increment index
             var += k
@@ -526,27 +546,31 @@ def forestplot(trace_obj, varnames=None, transform=lambda x: x, alpha=0.05, quar
     gs.update(left=left_margin, right=0.95, top=0.9, bottom=0.05)
 
     # Define range of y-axis
-    plt.ylim(-var + 0.5, -0.5)
+    interval_plot.set_ylim(-var + 0.5, -0.5)
 
     datarange = plotrange[1] - plotrange[0]
-    plt.xlim(plotrange[0] - 0.05 * datarange, plotrange[1] + 0.05 * datarange)
+    interval_plot.set_xlim(plotrange[0] - 0.05 * datarange, plotrange[1] + 0.05 * datarange)
 
     # Add variable labels
-    plt.yticks([-(l + 1) for l in range(len(labels))], labels)
+    interval_plot.set_yticks([-(l + 1) for l in range(len(labels))])
+    interval_plot.set_yticklabels(labels)
 
     # Add title
-    if main is not False:
-        plot_title = main or str(int((
-            1 - alpha) * 100)) + "% Credible Intervals"
-        plt.title(plot_title)
+    plot_title = ""
+    if main is None:
+        plot_title = "{:.0f}% Credible Intervals".format((1 - alpha) * 100)
+    elif main:
+        plot_title = main
+    if plot_title:
+        interval_plot.set_title(plot_title)
 
     # Add x-axis label
     if xtitle is not None:
-        plt.xlabel(xtitle)
+        interval_plot.set_xlabel(xtitle)
 
     # Constrain to specified range
-    if xrange is not None:
-        plt.xlim(*xrange)
+    if xlim is not None:
+        interval_plot.set_xlim(*xlim)
 
     # Remove ticklines on y-axes
     for ticks in interval_plot.yaxis.get_major_ticks():
@@ -554,65 +578,20 @@ def forestplot(trace_obj, varnames=None, transform=lambda x: x, alpha=0.05, quar
         ticks.tick2On = False
 
     for loc, spine in interval_plot.spines.items():
-        if loc in ['bottom', 'top']:
-            pass
-            # spine.set_position(('outward',10)) # outward by 10 points
-        elif loc in ['left', 'right']:
+        if loc in ['left', 'right']:
             spine.set_color('none')  # don't draw spine
 
     # Reference line
-    plt.axvline(vline, color='k', linestyle='--')
+    interval_plot.axvline(vline, color='k', linestyle='--')
 
     # Genenerate Gelman-Rubin plot
-    if rhat and nchains > 1:
-
-        # If there are multiple chains, calculate R-hat
-        rhat_plot = plt.subplot(gs[1])
-
-        if main is not False:
-            plt.title("R-hat")
-
-        # Set x range
-        plt.xlim(0.9, 2.1)
-
-        # X axis labels
-        plt.xticks((1.0, 1.5, 2.0), ("1", "1.5", "2+"))
-        plt.yticks([-(l + 1) for l in range(len(labels))], "")
-
-        i = 1
-        for varname in varnames:
-
-            chain = trace_obj.chains[0]
-            value = trace_obj.get_values(varname, chains=[chain])[0]
-            k = np.size(value)
-
-            if k > 1:
-                plt.plot([min(r, 2) for r in R[varname]], [-(j + i)
-                                                           for j in range(k)], 'bo', markersize=4)
-            else:
-                plt.plot(min(R[varname], 2), -i, 'bo', markersize=4)
-
-            i += k
-
-        # Define range of y-axis
-        plt.ylim(-i + 0.5, -0.5)
-
-        # Remove ticklines on y-axes
-        for ticks in rhat_plot.yaxis.get_major_ticks():
-            ticks.tick1On = False
-            ticks.tick2On = False
-
-        for loc, spine in rhat_plot.spines.items():
-            if loc in ['bottom', 'top']:
-                pass
-                # spine.set_position(('outward',10)) # outward by 10 points
-            elif loc in ['left', 'right']:
-                spine.set_color('none')  # don't draw spine
+    if plot_rhat:
+        make_rhat_plot(trace_obj, plt.subplot(gs[1]), "R-hat", labels, varnames, plot_transformed)
 
     return gs
 
 
-def plot_posterior(trace, varnames=None, transform=lambda x: x, figsize=None,
+def plot_posterior(trace, varnames=None, transform=identity_transform, figsize=None,
                    alpha_level=0.05, round_to=3, point_estimate='mean', rope=None,
                    ref_val=None, kde_plot=False, plot_transformed=False, ax=None, **kwargs):
     """Plot Posterior densities in style of John K. Kruschke book
@@ -782,10 +761,7 @@ def plot_posterior(trace, varnames=None, transform=lambda x: x, figsize=None,
         plot_posterior_op(transform(trace), ax)
     else:
         if varnames is None:
-            if plot_transformed:
-                varnames = [name for name in trace.varnames]
-            else:
-                varnames = [name for name in trace.varnames if not name.endswith('_')]
+            varnames = get_default_varnames(trace, plot_transformed)
 
         trace_dict = get_trace_dict(trace, varnames)
 
@@ -843,7 +819,6 @@ def fast_kde(x):
     # Evaluate the gaussian function on the kernel grid
     kernel = np.reshape(gaussian(kern_nx, scotts_factor * std_x), kern_nx)
 
-
     # Compute the KDE
     # use symmetric padding to correct for data boundaries in the kde
     npad = np.min((nx, 2 * kern_nx))
@@ -886,10 +861,8 @@ def compare_plot(comp_df, ax=None):
     data = comp_df.values
     min_ic = data[0, 0]
 
-    ax.errorbar(x=data[:, 0], y=yticks_pos[::2], xerr=data[
-                :, 4], fmt='ko', mfc='None', mew=1)
-    ax.errorbar(x=data[1:, 0], y=yticks_pos[1::2],
-                xerr=data[1:, 5], fmt='^', color='grey')
+    ax.errorbar(x=data[:, 0], y=yticks_pos[::2], xerr=data[:, 4], fmt='ko', mfc='None', mew=1)
+    ax.errorbar(x=data[1:, 0], y=yticks_pos[1::2], xerr=data[1:, 5], fmt='^', color='grey')
 
     ax.plot(data[:, 0] - (2 * data[:, 1]), yticks_pos[::2], 'ko')
     ax.axvline(min_ic, ls='--', color='grey')
