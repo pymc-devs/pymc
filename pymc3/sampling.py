@@ -158,19 +158,13 @@ def sample(draws, step=None, init='advi', n_init=200000, start=None,
     if init is not None:
         init = init.lower()
 
-    if isinstance(step, ParticleStep):
-        trace = MultiNDArray(step.nparticles)
-        start_nsamples = step.nparticles
-    else:
-        start_nsamples = 1
-
     _start = None
     if init is not None:
         if init_start:
             for k in init_start.keys():
                 init_start[k] = np.asarray(init_start[k])
             _soft_update(init_start, model.test_point)
-        _start, cov = do_init(init=init, nsamples=start_nsamples, n_init=n_init, model=model, start=init_start,
+        _start, cov = do_init(init=init, nsamples=step.nparticles, n_init=n_init, model=model, start=init_start,
                               random_seed=random_seed)
         if step is None and pm.model.all_continuous(model.vars):
             # By default, use NUTS sampler
@@ -179,6 +173,7 @@ def sample(draws, step=None, init='advi', n_init=200000, start=None,
                 pm._log.warning('Warning: initializer "{}" gave no scaling covariance for NUTS sampler, this could '
                                 'result in poor performance.'.format(init))
             step = pm.NUTS(scaling=cov, is_cov=True)
+
     step = assign_step_methods(model, step)
 
     start = [transform_start_particles(start, step.nparticles, model)] * njobs
@@ -495,6 +490,8 @@ def do_init(init='ADVI', nsamples=1, n_init=500000, model=None, random_seed=-1, 
     pm._log.info('Initializing using {}...'.format(init))
 
     random_seed = int(np.atleast_1d(random_seed)[0])
+    if nsamples is None:
+        nsamples = 1
 
     if randomiser is None:
         if init == 'map':
