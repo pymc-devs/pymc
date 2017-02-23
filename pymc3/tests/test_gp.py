@@ -210,7 +210,7 @@ class GibbsTest(unittest.TestCase):
         return (x1 + x2) / 2.0 - (x1 - x2) / 2.0 * tt.tanh((x - x0) / w)
 
     def test_1d(self):
-        X = np.linspace(0,2,10)[:,None]
+        X = np.linspace(0, 2, 10)[:,None]
         with Model() as model:
             cov = gp.cov.Gibbs(1, self.tanh_func, args=(0.05, 0.6, 0.4, 1.0))
         K = theano.function([], cov(X))()
