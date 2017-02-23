@@ -2,6 +2,7 @@ import theano.tensor as tt
 import numpy as np
 from functools import reduce
 
+import theano
 
 __all__ = ['ExpQuad',
            'RatQuad',
@@ -281,6 +282,45 @@ class WarpedInput(Covariance):
             return self.cov_func(self.w(X, self.args), Z)
         else:
             return self.cov_func(self.w(X, self.args), self.w(Z, self.args))
+
+
+class Gibbs(Covariance):
+    def __init__(self, input_dim, warp_func, args=None, active_dims=None):
+        Covariance.__init__(self, input_dim, active_dims)
+        assert callable(warp_func), "Must be a function"
+        self.w = handle_args(warp_func, args)
+        self.args = args
+
+    def square_dist(self, X, Z):
+        X = tt.mul(X, 1.0)
+        Xs = tt.sum(tt.square(X), 1)
+        if Z is None:
+            return -2.0 * tt.dot(X, tt.transpose(X)) +\
+                   (tt.reshape(Xs, (-1, 1)) + tt.reshape(Xs, (1, -1)))
+        else:
+            Z = tt.mul(Z, 1.0)
+            Zs = tt.sum(tt.square(Z), 1)
+            return -2.0 * tt.dot(X, tt.transpose(Z)) +\
+                   (tt.reshape(Xs, (-1, 1)) + tt.reshape(Zs, (1, -1)))
+
+    def euclidean_dist(self, X, Z):
+        r2 = self.square_dist(X, Z)
+        return tt.sqrt(r2 + 1e-12)
+
+    def __call__(self, X, Z=None):
+        X, Z = self._slice(X, Z)
+        rx = self.w(X, self.args)
+        rx2 = tt.reshape(tt.square(self.w(X, self.args)), (-1, 1))
+        if Z is None:
+            r2 = self.square_dist(X,X)
+            rz = self.w(X, self.args)
+            rz2 = tt.reshape(tt.square(self.w(X, self.args)), (1, -1))
+        else:
+            r2 = self.square_dist(X,Z)
+            rz = self.w(Z, self.args)
+            rz2 = tt.reshape(tt.square(self.w(Z, self.args)), (1, -1))
+        return tt.sqrt((2.0 * tt.dot(rx, tt.transpose(rz))) / (rx2 + rz2)) *\
+               tt.exp(-1.0 * r2 / (rx2 + rz2))
 
 
 def handle_args(func, args):
