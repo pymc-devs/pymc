@@ -286,7 +286,7 @@ class WarpedInput(Covariance):
 
 class Gibbs(Covariance):
     R"""
-    Use an arbitrary lengthscale function defined using Theano.
+    Use an arbitrary lengthscale function defined using Theano.  Operates on a single input dimension.
 
     .. math::
        k_{\mathrm{gibbs}}(x, x') = \sqrt{\frac{2\ell(x)\ell(x')}{\ell^2(x) + \ell^2(x')}}
@@ -301,6 +301,10 @@ class Gibbs(Covariance):
     """
     def __init__(self, input_dim, warp_func, args=None, active_dims=None):
         Covariance.__init__(self, input_dim, active_dims)
+        if active_dims is None:
+            assert input_dim == 1, "Must have one dimensional input"
+        else:
+            assert len(input_dim) == 1, "Must have one dimensional input"
         assert callable(warp_func), "Must be a function"
         self.w = handle_args(warp_func, args)
         self.args = args
