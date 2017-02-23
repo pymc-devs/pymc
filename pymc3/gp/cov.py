@@ -327,7 +327,6 @@ class Gibbs(Covariance):
 
     def __call__(self, X, Z=None):
         X, Z = self._slice(X, Z)
-        print(self.args)
         rx = self.ell(X, self.args)
         rx2 = tt.reshape(tt.square(rx), (-1, 1))
         if Z is None:
