@@ -80,3 +80,22 @@ def test_find_MAP():
 
     close_to(map_est2['mu'], 0, tol)
     close_to(map_est2['sigma'], 1, tol)
+
+
+def test_find_MAP_noverbosity():
+    # test with verbosity turned off (it is on by default)
+    #   should not error
+    with Model():
+        mu = Normal('mu', 0, 1, testval=100)
+        map_est1 = starting.find_MAP(fmin=starting.optimize.fmin_bfgs,   disp=False)
+        map_est2 = starting.find_MAP(fmin=starting.optimize.fmin_powell, disp=False)
+
+    # providing a callback should override disp (since it is a callback)
+    #   should not error
+    with Model():
+        mu = Normal('mu', 0, 1, testval=100)
+        # test with verbosity turned off (it is on by default)
+        map_est1 = starting.find_MAP(fmin=starting.optimize.fmin_bfgs,   disp=True, callback = lambda x: 1.0)
+        map_est2 = starting.find_MAP(fmin=starting.optimize.fmin_powell, disp=True, callback = lambda x: 1.0)
+
+

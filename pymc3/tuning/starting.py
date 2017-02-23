@@ -96,7 +96,7 @@ def find_MAP(start=None, vars=None, fmin=None,
         compute_gradient = True
     else:
         if callback is None:
-            callback = Monitor(bij, logp_o, grad_logp_o=None, disp=disp)
+            callback = Monitor(bij, logp_o, dlogp=None, disp=disp)
 
         # Check to see if minimization function uses a starting value
         if 'x0' in getargspec(fmin).args:
@@ -179,6 +179,8 @@ def allinmodel(vars, model):
 
 class Monitor(object):
     def __init__(self, bij, logp, dlogp=None, disp=True):
+        self.iters = 0
+        self.disp = disp
         if disp:
             try:
                 from IPython.display import display
@@ -198,10 +200,8 @@ class Monitor(object):
             self.bij = bij
             self.logp = logp
             self.dlogp = dlogp
-            self.disp = disp
 
             self.t_initial = time.time()
-            self.iters = 0
             self.t0 = self.t_initial
             self.paramtable = {}
 
@@ -210,17 +210,17 @@ class Monitor(object):
         if not self.disp:
             return
         if self.iters == 1 and not self.using_notebook:
-            print("iter         runtime   lpost      ||grad||    ")
+            pm._log.info("iter   runtime   lpost      ||grad||    ")
         if time.time() - self.t0 > self.update_interval:
-            self.update_progtable(x)
-            self.update_paramtable(x)
+            self._update_progtable(x)
+            self._update_paramtable(x)
             if self.using_notebook:
-                self.display_notebook()
+                self._display_notebook()
             else:
-                self.display_terminal()
+                self._display_terminal()
             self.t0 = time.time()
 
-    def update_progtable(self, x):
+    def _update_progtable(self, x):
         s = time.time() - self.t_initial
         hours, remainder = divmod(int(s), 3600)
         minutes, seconds = divmod(remainder, 60)
@@ -228,7 +228,7 @@ class Monitor(object):
         self.logpost = np.float(self.logp(x))
         self.dlogpost = np.linalg.norm(self.dlogp(x))
 
-    def update_paramtable(self, x):
+    def _update_paramtable(self, x):
         names_vals = self.bij.rmap(x)
         for parameter, val in names_vals.items():
             if val.size == 1:
@@ -244,11 +244,11 @@ class Monitor(object):
                  valstr = valstr_beg + ", ..., " + valstr_end
             self.paramtable[parameter] = {"size": val.size, "valstr": valstr}
 
-    def display_terminal(self):
-        disp_str = "{:<5d}       {:<s}  {:<9.3f}  {:<12.3f}".format(self.iters, self.t_elapsed, self.logpost, self.dlogpost)
-        print(disp_str + "\r")
+    def _display_terminal(self):
+        disp_str = "{:<5d} {:<s}  {:<9.3f}  {:<12.3f}".format(self.iters, self.t_elapsed, self.logpost, self.dlogpost)
+        pm._log.info(disp_str)
 
-    def display_notebook(self):
+    def _display_notebook(self):
         ## Progress table
         html = r"""<style type="text/css">
         table { border-collapse:collapse }
