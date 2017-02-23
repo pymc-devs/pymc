@@ -486,7 +486,7 @@ def init_nuts(init='ADVI', njobs=1, n_init=500000, model=None,
         if njobs == 1:
             start = start[0]
     else:
-        raise NotImplemented('Initializer {} is not supported.'.format(init))
+        raise NotImplementedError('Initializer {} is not supported.'.format(init))
 
     step = pm.NUTS(scaling=cov, is_cov=True, **kwargs)
 
