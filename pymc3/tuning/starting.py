@@ -225,7 +225,7 @@ class Monitor(object):
         hours, remainder = divmod(int(s), 3600)
         minutes, seconds = divmod(remainder, 60)
         self.t_elapsed = "{:2d}h{:2d}m{:2d}s".format(hours, minutes, seconds)
-        self.logpost = np.float(self.logp(x))
+        self.logpost = -1.0*np.float(self.logp(x))
         self.dlogpost = np.linalg.norm(self.dlogp(x))
 
     def _update_paramtable(self, x):
