@@ -190,8 +190,10 @@ class Monitor(object):
                 self.hor_align = FlexBox(children = [l_col, r_col], width='100%', orientation='vertical')
                 display(self.hor_align)
                 self.using_notebook = True
+                self.update_interval = 1
             except:
                 self.using_notebook = False
+                self.update_interval = 2
 
             self.bij = bij
             self.logp = logp
@@ -208,8 +210,8 @@ class Monitor(object):
         if not self.disp:
             return
         if self.iters == 1 and not self.using_notebook:
-            pm._log.info("iter    runtime    lpost    ||grad||    ")
-        if time.time() - self.t0 > 1:
+            print("iter         runtime   lpost      ||grad||    ")
+        if time.time() - self.t0 > self.update_interval:
             self.update_progtable(x)
             self.update_paramtable(x)
             if self.using_notebook:
@@ -222,7 +224,7 @@ class Monitor(object):
         s = time.time() - self.t_initial
         hours, remainder = divmod(int(s), 3600)
         minutes, seconds = divmod(remainder, 60)
-        self.t_elapsed = "{}h {}m {}s".format(hours, minutes, seconds)
+        self.t_elapsed = "{:2d}h{:2d}m{:2d}s".format(hours, minutes, seconds)
         self.logpost = np.float(self.logp(x))
         self.dlogpost = np.linalg.norm(self.dlogp(x))
 
@@ -243,8 +245,8 @@ class Monitor(object):
             self.paramtable[parameter] = {"size": val.size, "valstr": valstr}
 
     def display_terminal(self):
-        disp_str = "{}  {:s}  {:9.3f}  {:12.3f}".format(self.iters, self.t_elapsed, self.logpost, self.dlogpost)
-        pm._log.info(disp_str)
+        disp_str = "{:<5d}       {:<s}  {:<9.3f}  {:<12.3f}".format(self.iters, self.t_elapsed, self.logpost, self.dlogpost)
+        print(disp_str + "\r")
 
     def display_notebook(self):
         ## Progress table
