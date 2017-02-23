@@ -44,6 +44,7 @@ GP
 .. toctree::
    notebooks/GP-introduction.ipynb
    notebooks/GP-covariances.ipynb
+   notebooks/GP-slice-sampling.ipynb
    notebooks/GP-smoothing.ipynb
 
 Mixture Models
