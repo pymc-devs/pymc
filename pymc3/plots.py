@@ -14,7 +14,7 @@ __all__ = ['traceplot', 'kdeplot', 'kde2plot',
 def traceplot(trace, varnames=None, transform=lambda x: x, figsize=None,
               lines=None, combined=False, plot_transformed=False, grid=False,
               alpha=0.35, priors=None, prior_alpha=1, prior_style='--',
-              ax=None):
+              ax=None, fname=None, fformat=None):
     """Plot samples histograms and values
 
     Parameters
@@ -57,7 +57,16 @@ def traceplot(trace, varnames=None, transform=lambda x: x, figsize=None,
         >>> pymc3.traceplot(trace, ax=axs)
 
         Creates own axes by default.
-
+    fname: str
+        A string containing the file name to output the figure.
+        If format is None and fname is a string, the output
+        format is deduced from the extension of the filename.
+        If format is provided and is valid,
+        it is suffixed to fname as a file extenstion.
+        Defaults to None.
+    fformat: str
+        Graphic file format compatible with matplotlib's savefig().
+        Defaults to None.
     Returns
     -------
 
@@ -120,6 +129,12 @@ def traceplot(trace, varnames=None, transform=lambda x: x, figsize=None,
                     pass
         ax[i, 0].set_ylim(ymin=0)
     plt.tight_layout()
+    if fname:
+        if fformat and fformat in plt.gcf().canvas.get_supported_filetypes().keys():
+            filename = '{0}.{1}'.format(fname, fformat)
+            plt.savefig(filename)
+        else:
+            plt.savefig(fname)
     return ax
 
 
