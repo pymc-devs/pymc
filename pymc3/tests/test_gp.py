@@ -194,25 +194,23 @@ class PolynomialTest(unittest.TestCase):
 
 
 class WarpedInputTest(unittest.TestCase):
-    def warp_func(self, x, a, b, c):
-        return x + (a * tt.tanh(b * (x - c)))
-
     def test_1d(self):
         X = np.linspace(0,1,10)[:,None]
+        def warp_func(x, a, b, c):
+            return x + (a * tt.tanh(b * (x - c)))
         with Model() as model:
             cov_m52 = gp.cov.Matern52(1, 0.2)
-            cov = gp.cov.WarpedInput(1, warp_func=self.warp_func, args=(1,10,1), cov_func=cov_m52)
+            cov = gp.cov.WarpedInput(1, warp_func=warp_func, args=(1,10,1), cov_func=cov_m52)
         K = theano.function([], cov(X))()
         self.assertAlmostEqual(K[0,1], 0.79593, 4)
 
 class GibbsTest(unittest.TestCase):
-    def tanh_func(x, x1, x2, w, x0):
-        return (x1 + x2) / 2.0 - (x1 - x2) / 2.0 * tt.tanh((x - x0) / w)
-
     def test_1d(self):
         X = np.linspace(0, 2, 10)[:,None]
+        def tanh_func(x, x1, x2, w, x0):
+            return (x1 + x2) / 2.0 - (x1 - x2) / 2.0 * tt.tanh((x - x0) / w)
         with Model() as model:
-            cov = gp.cov.Gibbs(1, self.tanh_func, args=(0.05, 0.6, 0.4, 1.0))
+            cov = gp.cov.Gibbs(1, tanh_func, args=(0.05, 0.6, 0.4, 1.0))
         K = theano.function([], cov(X))()
         self.assertAlmostEqual(K[2,3], 0.136683, 4)
 
