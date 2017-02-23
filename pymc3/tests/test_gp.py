@@ -14,7 +14,7 @@ class ZeroTest(unittest.TestCase):
         M = theano.function([], zero_mean(X))()
         self.assertTrue(np.all(M==0))
         self.assertSequenceEqual(M.shape, (10,1))
-        
+
 class ConstantTest(unittest.TestCase):
     def test_value(self):
         X = np.linspace(0,1,10)[:,None]
@@ -23,7 +23,7 @@ class ConstantTest(unittest.TestCase):
         M = theano.function([], const_mean(X))()
         self.assertTrue(np.all(M==6))
         self.assertSequenceEqual(M.shape, (10,1))
-        
+
 class LinearMeanTest(unittest.TestCase):
     def test_value(self):
         X = np.linspace(0,1,10)[:,None]
@@ -205,6 +205,17 @@ class WarpedInputTest(unittest.TestCase):
         K = theano.function([], cov(X))()
         self.assertAlmostEqual(K[0,1], 0.79593, 4)
 
+class GibbsTest(unittest.TestCase):
+    def tanh_func(x, x1, x2, w, x0):
+        return (x1 + x2) / 2.0 - (x1 - x2) / 2.0 * tt.tanh((x - x0) / w)
+
+    def test_1d(self):
+        X = np.linspace(0,2,10)[:,None]
+        with Model() as model:
+            cov = gp.cov.Gibbs(1, self.tanh_func, args=(0.05, 0.6, 0.4, 1.0))
+        K = theano.function([], cov(X))()
+        self.assertAlmostEqual(K[2,3], 0.136683, 4)
+
 class GPTest(SeededTest):
     def test_func_args(self):
         X = np.linspace(0,1,10)[:,None]
@@ -214,9 +225,9 @@ class GPTest(SeededTest):
             with self.assertRaises(ValueError):
                 random_test = gp.GP('random_test', cov_func=gp.mean.Zero(), observed={'X':X, 'Y':Y})
             with self.assertRaises(ValueError):
-                random_test = gp.GP('random_test', mean_func=gp.cov.Matern32(1, 1), 
+                random_test = gp.GP('random_test', mean_func=gp.cov.Matern32(1, 1),
                                         cov_func=gp.cov.Matern32(1, 1), observed={'X':X, 'Y':Y})
-                
+
     def test_sample(self):
         X = np.linspace(0,1,100)[:,None]
         Y = np.random.randn(100,1)
