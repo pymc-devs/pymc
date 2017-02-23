@@ -204,9 +204,11 @@ class Monitor(object):
             self.paramtable = {}
 
     def __call__(self, x):
+        self.iters += 1
         if not self.disp:
             return
-        self.iters += 1
+        if self.iters == 1 and not self.using_notebook:
+            pm._log.info("iter    runtime    lpost    ||grad||    ")
         if time.time() - self.t0 > 1:
             self.update_progtable(x)
             self.update_paramtable(x)
@@ -241,8 +243,8 @@ class Monitor(object):
             self.paramtable[parameter] = {"size": val.size, "valstr": valstr}
 
     def display_terminal(self):
-        pm._log.info("iter    runtime    lpost    ||grad||    ")
-        disp_str = "{:8.3f}{:s}{:9.3f}{12.3f} \r".format(self.iters, self.t_elapsed, self.logpost, self.dlogpost)
+        disp_str = "{}  {:s}  {:9.3f}  {:12.3f}".format(self.iters, self.t_elapsed, self.logpost, self.dlogpost)
+        pm._log.info(disp_str)
 
     def display_notebook(self):
         ## Progress table
