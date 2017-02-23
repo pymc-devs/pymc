@@ -160,9 +160,9 @@ def sample(draws, step=None, init='advi', n_init=200000, start=None,
 
     if isinstance(step, ParticleStep):
         trace = MultiNDArray(step.nparticles)
-        nparticles = step.nparticles
+        start_nsamples = step.nparticles
     else:
-        nparticles = 1
+        start_nsamples = 1
 
     _start = None
     if init is not None:
@@ -170,7 +170,7 @@ def sample(draws, step=None, init='advi', n_init=200000, start=None,
             for k in init_start.keys():
                 init_start[k] = np.asarray(init_start[k])
             _soft_update(init_start, model.test_point)
-        _start, cov = do_init(init=init, nsamples=nparticles, n_init=n_init, model=model, start=init_start,
+        _start, cov = do_init(init=init, nsamples=start_nsamples, n_init=n_init, model=model, start=init_start,
                               random_seed=random_seed)
         if step is None and pm.model.all_continuous(model.vars):
             # By default, use NUTS sampler
@@ -181,8 +181,8 @@ def sample(draws, step=None, init='advi', n_init=200000, start=None,
             step = pm.NUTS(scaling=cov, is_cov=True)
     step = assign_step_methods(model, step)
 
-    start = [transform_start_particles(start, nparticles, model)] * njobs
-    _start = [transform_start_particles(_start, nparticles, model)] * njobs
+    start = [transform_start_particles(start, step.nparticles, model)] * njobs
+    _start = [transform_start_particles(_start, step.nparticles, model)] * njobs
     for pair in zip(start, _start):
         _soft_update(*pair)
 
