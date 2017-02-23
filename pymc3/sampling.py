@@ -160,6 +160,9 @@ def sample(draws, step=None, init='advi', n_init=200000, start=None,
 
     if isinstance(step, ParticleStep):
         trace = MultiNDArray(step.nparticles)
+        nparticles = step.nparticles
+    else:
+        nparticles = 1
 
     _start = None
     if init is not None:
@@ -167,27 +170,19 @@ def sample(draws, step=None, init='advi', n_init=200000, start=None,
             for k in init_start.keys():
                 init_start[k] = np.asarray(init_start[k])
             _soft_update(init_start, model.test_point)
+        _start, cov = do_init(init=init, nsamples=nparticles, n_init=n_init, model=model, start=init_start,
+                              random_seed=random_seed)
         if step is None and pm.model.all_continuous(model.vars):
             # By default, use NUTS sampler
             pm._log.info('Auto-assigning NUTS sampler...')
-            _start, cov = do_init(init=init, nsamples=1, n_init=n_init, model=model, start=init_start,
-                                  random_seed=random_seed)
+            if cov is None:
+                pm._log.warning('Warning: initializer "{}" gave no scaling covariance for NUTS sampler, this could '
+                                'result in poor performance.'.format(init))
             step = pm.NUTS(scaling=cov, is_cov=True)
-        elif isinstance(step, ParticleStep):
-            if init == 'random':
-                _start = get_random_starters(step.nparticles, model)
-            elif init is not None:
-                _start, _ = do_init(init=init, nsamples=step.nparticles, n_init=n_init, model=model,
-                                    random_seed=random_seed, start=init_start)
-        else:
-            step = assign_step_methods(model, step)
-            _start, _ = do_init(init=init, nsamples=1, n_init=n_init, model=model,
-                                random_seed=random_seed, start=init_start)
-    else:
-        step = assign_step_methods(model, step)
+    step = assign_step_methods(model, step)
 
-    start = [transform_start_particles(start, step.nparticles, model)] * njobs
-    _start = [transform_start_particles(_start, step.nparticles, model)] * njobs
+    start = [transform_start_particles(start, nparticles, model)] * njobs
+    _start = [transform_start_particles(_start, nparticles, model)] * njobs
     for pair in zip(start, _start):
         _soft_update(*pair)
 
@@ -492,8 +487,6 @@ def do_init(init='ADVI', nsamples=1, n_init=500000, model=None, random_seed=-1, 
 
         Returns
         -------
-        start, nuts_sampler
-
         start : pymc3.model.Point
             Starting point for sampler
         """
@@ -516,6 +509,8 @@ def do_init(init='ADVI', nsamples=1, n_init=500000, model=None, random_seed=-1, 
     if init is not None:
         init = init.lower()
 
+    if init == 'random':
+        return get_random_starters(nsamples, model), None
     if init.startswith('advi'):
         if init == 'advi_map':
             start = pm.find_MAP(start=start)
@@ -556,7 +551,6 @@ def do_init(init='ADVI', nsamples=1, n_init=500000, model=None, random_seed=-1, 
         start = [start[0]] * _nsamples
     elif randomiser != 'sample':
         raise NotImplemented('Randomiser {} is not supported.'.format(randomiser))
-
     return start, cov
 
 
@@ -603,19 +597,24 @@ def init_nuts(init='ADVI', njobs=1, n_init=500000, model=None,
 
 def get_random_starters(nwalkers, model=None):
     model = pm.modelcontext(model)
-    return {v.name: v.distribution.random(size=nwalkers) for v in model.vars}
+    return [{v.name: v.distribution.random() for v in model.vars} for _ in range(nwalkers)]
 
 
 def transform_start_particles(start, nparticles, model=None):
     """
-    :param start:
-    Accepts 3 data types:
-    * dict of start positions with variable shape of (nparticles, var.dshape)
-    * dict of start positions with variable shape (var.dshape)
-    * list of dicts of length nparticles each with start positions of shape (var.dshape)
-    :param nparticles: int
-    :param model : Model (optional if in `with` context)
-    :return: a dict each with start positions of shape (nparticles, var.dshape)
+    Parameters
+    ----------
+    start : list, dict
+        Accepts 3 data types:
+        * dict of start positions with variable shape of (nparticles, var.dshape)
+        * dict of start positions with variable shape (var.dshape)
+        * list of dicts of length nparticles each with start positions of shape (var.dshape)
+    nparticles : int
+    model : Model (optional if in `with` context)
+
+    Returns
+    -------
+     transformed_start : a dict each with start positions of shape (nparticles, var.dshape)
     """
     if start is None:
         return {}
@@ -635,8 +634,8 @@ def transform_start_particles(start, nparticles, model=None):
                 raise TypeError("Start dicts must have a shape of (nparticles, dshape) or (dshape,)")
     elif isinstance(start, list):
         start = [{k: v for k, v in s.items() if k in dshapes} for s in start]
-        assert all(isinstance(i, dict) for i in start), "Start dicts must have a shape of (dshape,)"
         assert len(start) == nparticles, "If start is a list, it must have a length of nparticles"
+        assert all(isinstance(i, dict) for i in start), "Start dicts must have a shape of (dshape,)"
         assert all(s.keys() == start[0].keys() for s in start), "All start positions must have the same variables"
         d = {}
         for varname, varshape in dshapes.items():
