@@ -279,7 +279,6 @@ class Monitor(object):
              </tr>""".format(self.dlogpost)
         html += "</table>"
         self.prog_table.value = html
-
         ## Parameter table
         html = r"""<style type="text/css">
           .tg .tg-bgft{font-weight:normal;font-family:"Lucida Console", Monaco, monospace !important;background-color:#0E688A;color:#ffffff;}
@@ -306,22 +305,3 @@ class Monitor(object):
             """.format(parameter, values["size"], values["valstr"])
         html += "</table>"
         self.param_table.value = html
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

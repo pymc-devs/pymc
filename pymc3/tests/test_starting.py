@@ -82,20 +82,20 @@ def test_find_MAP():
     close_to(map_est2['sigma'], 1, tol)
 
 
-def test_find_MAP_noverbosity():
+def test_find_MAP_nomonitor():
     # test with verbosity turned off (it is on by default)
     #   should not error
     with Model():
         mu = Normal('mu', 0, 1, testval=100)
-        map_est1 = starting.find_MAP(fmin=starting.optimize.fmin_bfgs,   disp=False)
+        map_est1 = starting.find_MAP(fmin=starting.optimize.fmin_bfgs, disp=False)
         map_est2 = starting.find_MAP(fmin=starting.optimize.fmin_powell, disp=False)
 
-    # providing a callback should override disp (since it is a callback)
+    # providing a callback should override disp (since monitor works via callback to sp.optimize)
     #   should not error
     with Model():
         mu = Normal('mu', 0, 1, testval=100)
         # test with verbosity turned off (it is on by default)
-        map_est1 = starting.find_MAP(fmin=starting.optimize.fmin_bfgs,   disp=True, callback = lambda x: 1.0)
+        map_est1 = starting.find_MAP(fmin=starting.optimize.fmin_bfgs, disp=True, callback = lambda x: 1.0)
         map_est2 = starting.find_MAP(fmin=starting.optimize.fmin_powell, disp=True, callback = lambda x: 1.0)
 
 
