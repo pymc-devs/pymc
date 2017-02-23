@@ -2,8 +2,6 @@ import theano.tensor as tt
 import numpy as np
 from functools import reduce
 
-import theano
-
 __all__ = ['ExpQuad',
            'RatQuad',
            'Exponential',
@@ -12,7 +10,8 @@ __all__ = ['ExpQuad',
            'Linear',
            'Polynomial',
            'Cosine',
-           'WarpedInput']
+           'WarpedInput',
+           'Gibbs']
 
 class Covariance(object):
     R"""
