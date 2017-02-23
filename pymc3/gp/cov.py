@@ -262,7 +262,7 @@ class WarpedInput(Covariance):
     Parameters
     ----------
     cov_func : Covariance
-    warp_func : function
+    warp_func : callable
         Theano function of X and additional optional arguments.
     args : optional, tuple or list of scalars or PyMC3 variables
         Additional inputs (besides X or Z) to warp_func.
@@ -285,6 +285,20 @@ class WarpedInput(Covariance):
 
 
 class Gibbs(Covariance):
+    R"""
+    Use an arbitrary lengthscale function defined using Theano.
+
+    .. math::
+       k_{\mathrm{gibbs}}(x, x') = \sqrt{\frac{2\ell(x)\ell(x')}{\ell^2(x) + \ell^2(x')}}
+                                   \mathrm{exp}\left[ -\frac{(x - x')^2}{\ell(x)^2 + \ell^2(x')} \right]
+
+    Parameters
+    ----------
+    warp_func : callable
+        Theano function of X and additional optional arguments.
+    args : optional, tuple or list of scalars or PyMC3 variables
+        Additional inputs (besides X or Z) to warp_func.
+    """
     def __init__(self, input_dim, warp_func, args=None, active_dims=None):
         Covariance.__init__(self, input_dim, active_dims)
         assert callable(warp_func), "Must be a function"
