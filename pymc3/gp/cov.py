@@ -294,19 +294,19 @@ class Gibbs(Covariance):
 
     Parameters
     ----------
-    warp_func : callable
+    lengthscale_func : callable
         Theano function of X and additional optional arguments.
     args : optional, tuple or list of scalars or PyMC3 variables
         Additional inputs (besides X or Z) to warp_func.
     """
-    def __init__(self, input_dim, warp_func, args=None, active_dims=None):
+    def __init__(self, input_dim, lengthscale_func, args=None, active_dims=None):
         Covariance.__init__(self, input_dim, active_dims)
         if active_dims is None:
             assert input_dim == 1, "Must have one dimensional input"
         else:
-            assert len(input_dim) == 1, "Must have one dimensional input"
-        assert callable(warp_func), "Must be a function"
-        self.w = handle_args(warp_func, args)
+            assert len(active_dims) == 1, "Must have one dimensional input"
+        assert callable(lengthscale_func), "Must be a function"
+        self.ell = handle_args(lengthscale_func, args)
         self.args = args
 
     def square_dist(self, X, Z):
@@ -327,16 +327,16 @@ class Gibbs(Covariance):
 
     def __call__(self, X, Z=None):
         X, Z = self._slice(X, Z)
-        rx = self.w(X, self.args)
-        rx2 = tt.reshape(tt.square(self.w(X, self.args)), (-1, 1))
+        print(self.args)
+        rx = self.ell(X, self.args)
+        rx2 = tt.reshape(tt.square(rx), (-1, 1))
         if Z is None:
             r2 = self.square_dist(X,X)
-            rz = self.w(X, self.args)
-            rz2 = tt.reshape(tt.square(self.w(X, self.args)), (1, -1))
+            rz = self.ell(X, self.args)
         else:
             r2 = self.square_dist(X,Z)
-            rz = self.w(Z, self.args)
-            rz2 = tt.reshape(tt.square(self.w(Z, self.args)), (1, -1))
+            rz = self.ell(Z, self.args)
+        rz2 = tt.reshape(tt.square(rz), (1, -1))
         return tt.sqrt((2.0 * tt.dot(rx, tt.transpose(rz))) / (rx2 + rz2)) *\
                tt.exp(-1.0 * r2 / (rx2 + rz2))
 
