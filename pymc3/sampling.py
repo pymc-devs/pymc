@@ -291,8 +291,6 @@ def _iter_sample(draws, step, start=None, trace=None, chain=0, tune=None,
             point = step.step(point)
             strace.record(point)
         yield strace
-    else:
-        strace.close()
 
 
 def _choose_backend(trace, chain, shortcuts=None, **kwds):
