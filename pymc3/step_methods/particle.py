@@ -31,7 +31,6 @@ class ParticleStep(BlockedStep):
         self.shared = {str(var): shared for var, shared in shared.items()}
         self.blocked = True
         self.t_func = logp(model.logpt, vars, shared)
-        self.nparticles = None
 
     @property
     def ordering(self):

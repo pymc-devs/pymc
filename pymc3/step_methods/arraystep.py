@@ -27,6 +27,8 @@ class Competence(IntEnum):
 class BlockedStep(object):
 
     generates_stats = False
+    _nparticles = None
+    min_nparticles = None
 
     def __new__(cls, *args, **kwargs):
         blocked = kwargs.get('blocked')
@@ -69,9 +71,6 @@ class BlockedStep(object):
             step.__newargs = (vars, ) + args, kwargs
             return step
 
-    def __init__(self):
-        self._nparticles = None
-        self.min_nparticles = None
 
     # Hack for creating the class correctly when unpickling.
     def __getnewargs_ex__(self):
@@ -91,7 +90,10 @@ class BlockedStep(object):
 
     @nparticles.setter
     def nparticles(self, value):
-        assert (value >= self.min_nparticles) or (value is None and self.min_nparticles is None)
+        if value is not None and self.min_nparticles is None:
+            raise ValueError("{} does not support particles".format(self))
+        assert value >= self.min_nparticles, "{} requires at least {} particles for the variables {}"\
+            .format(self, self.min_nparticles, '\n'.join(self.vars))
         self._nparticles = value
 
 
@@ -109,7 +111,6 @@ class ArrayStep(BlockedStep):
     """
 
     def __init__(self, vars, fs, allvars=False, blocked=True):
-        super(ArrayStep, self).__init__()
         self.vars = vars
         self.ordering = ArrayOrdering(vars)
         self.fs = fs
@@ -147,7 +148,6 @@ class ArrayStepShared(BlockedStep):
         shared : dict of theano variable -> shared variable
         blocked : Boolean (default True)
         """
-        super(ArrayStepShared, self).__init__()
         self.vars = vars
         self.ordering = ArrayOrdering(vars)
         self.shared = {str(var): shared for var, shared in shared.items()}

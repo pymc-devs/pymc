@@ -161,14 +161,14 @@ def sample(draws, step=None, init='advi', n_init=200000, start=None,
         init = init.lower()
 
     if nparticles is None:
-        if isinstance(step, CompoundStep):
-            steps = step.methods
+        if step is None:
+            nparticles = None
         else:
             try:
                 steps = list(step)
             except TypeError:
                 steps = [step]
-        nparticles = max(s.min_nparticles for s in steps) if step is not None else None
+            nparticles = max(s.min_nparticles for s in steps)
         if nparticles is not None:
             pm._log.info('Auto-assigning {} particles...'.format(nparticles))
 

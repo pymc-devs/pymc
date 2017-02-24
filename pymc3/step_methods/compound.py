@@ -15,8 +15,7 @@ class CompoundStep(object):
         for method in self.methods:
             if method.generates_stats:
                 self.stats_dtypes.extend(method.stats_dtypes)
-        assert all(m.nparticles is None for m in methods), "CompoundStep is not for use with particlesteps"
-        self.nparticles = None
+        assert all(m.nparticles == methods[0].nparticles for m in methods), "CompoundStep is not for use with particlesteps"
 
     def step(self, point):
         if self.generates_stats:
@@ -33,5 +32,15 @@ class CompoundStep(object):
                 point = method.step(point)
             return point
 
+    @property
+    def nparticles(self):
+        return self.methods[0].nparticles
 
-# TODO: Compound Particle steps with other particlesteps / with other scalar steps (create particlestep for each) (may be expensive)
+    @nparticles.setter
+    def nparticles(self, value):
+        for method in self.methods:
+            method.nparticles = value
+
+    @property
+    def min_nparticles(self):
+        return max(method.min_nparticles for method in self.methods)
