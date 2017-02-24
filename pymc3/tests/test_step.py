@@ -194,13 +194,14 @@ class TestStepMethods(object):  # yield test doesn't work subclassing unittest.T
             yield self.check_stat, check, trace, step.__class__.__name__
 
     def test_step_elliptical_slice(self):
-        start, model, (K, mu, std, noise) = mv_prior_simple()
+        start, model, (K, L, mu, std, noise) = mv_prior_simple()
         unc = noise ** 0.5
         check = (('x', np.mean, mu, unc / 10.),
                  ('x', np.std, std, unc / 10.))
         with model:
             steps = (
                 EllipticalSlice(prior_cov=K),
+                EllipticalSlice(prior_chol=L),
             )
         for step in steps:
             trace = sample(5000, step=step, start=start, model=model, random_seed=1)
