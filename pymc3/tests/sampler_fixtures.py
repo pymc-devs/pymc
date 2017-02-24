@@ -57,10 +57,6 @@ class UniformFixture(KnownMean, KnownVariance, KnownCDF):
             a = pm.Uniform("a", lower=-1, upper=1)
         return model
 
-    def test_interval(self):
-        a = self.samples['a']
-        npt.assert_almost_equal(((a > 0.1) & (a < 0.5)).mean(), 0.2, 2)
-
 
 class NormalFixture(KnownMean, KnownVariance, KnownCDF):
     means = {'a': 2 * np.ones(10)}
@@ -86,9 +82,8 @@ class BetaBinomialFixture(KnownCDF):
         return model
 
 
-class StudentTFixture(KnownMean, KnownVariance, KnownCDF):
+class StudentTFixture(KnownMean, KnownCDF):
     means = {'a': 0}
-    variances = {'a': 3}
     cdfs = {'a': stats.t(df=3).cdf}
     ks_thin = 10
 
