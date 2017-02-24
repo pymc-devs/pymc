@@ -292,38 +292,8 @@ def _theano_single_leapfrog(H, q, p, q_grad, **theano_kwargs):
     return f
 
 
-def _theano_single_leapfrog3(H, q, p, q_grad, **theano_kwargs):
-    """Do three leapfrog steps."""
-    step_size = tt.scalar('epsilon')
-    step_size.tag.test_value = 1.
-
-    epsilon = step_size / 3
-
-    p_new = p + 0.5 * epsilon * q_grad  # half momentum update
-    q_new = q + epsilon * H.pot.velocity(p_new)  # full position update
-
-    p_new = p_new + epsilon * H.dlogp(q_new)
-    q_new = q_new + epsilon * H.pot.velocity(p_new)
-
-    p_new = p_new + epsilon * H.dlogp(q_new)
-    q_new = q_new + epsilon * H.pot.velocity(p_new)
-
-    q_new_grad = H.dlogp(q_new)
-    p_new = p_new + 0.5 * epsilon * q_new_grad
-
-    energy_new = energy(H, q_new, p_new)
-    v_new = H.pot.velocity(p_new)
-
-    f = theano.function(inputs=[q, p, q_grad, step_size],
-                        outputs=[q_new, p_new, v_new, q_new_grad, energy_new],
-                        **theano_kwargs)
-    f.trust_input = True
-    return f
-
-
 INTEGRATORS_SINGLE = {
     'leapfrog': _theano_single_leapfrog,
     'two-stage': _theano_single_twostage,
     'three-stage': _theano_single_threestage,
-    'leapfrog3': _theano_single_leapfrog3,
 }

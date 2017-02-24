@@ -187,7 +187,7 @@ Edge = namedtuple("Edge", 'q, p, v, q_grad, energy')
 # A proposal for the next position
 Proposal = namedtuple("Proposal", "q, energy, p_accept")
 
-# A subtree of the binary tree build by nuts.
+# A subtree of the binary tree built by nuts.
 Subtree = namedtuple("Subtree", "left, right, p_sum, proposal, log_size, accept_sum, n_proposals")
 
 
@@ -288,14 +288,10 @@ class Tree(object):
             return tree1, diverging, turning
 
         tree2, diverging, turning = self._build_subtree(tree1.right, depth - 1, epsilon)
-        ok = not (diverging or turning)
-
-        accept_sum = tree1.accept_sum + tree2.accept_sum
-        n_proposals = tree1.n_proposals + tree2.n_proposals
 
         left, right = tree1.left, tree2.right
 
-        if ok:
+        if not (diverging or turning):
             p_sum = tree1.p_sum + tree2.p_sum
             turning = (p_sum.dot(left.v) <= 0) or (p_sum.dot(right.v) <= 0)
 
@@ -308,6 +304,9 @@ class Tree(object):
             p_sum = tree1.p_sum
             log_size = tree1.log_size
             proposal = tree1.proposal
+
+        accept_sum = tree1.accept_sum + tree2.accept_sum
+        n_proposals = tree1.n_proposals + tree2.n_proposals
 
         tree = Subtree(left, right, p_sum, proposal, log_size, accept_sum, n_proposals)
         return tree, diverging, turning

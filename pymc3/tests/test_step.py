@@ -137,7 +137,6 @@ class TestStepMethods(object):  # yield test doesn't work subclassing unittest.T
             trace = sample(n_steps, step=step_method(), random_seed=1)
 
         if not benchmarking:
-            print(trace.get_values('x'))
             assert_array_almost_equal(trace.get_values('x'), self.master_samples[step_method])
 
     def check_stat(self, check, trace, name):

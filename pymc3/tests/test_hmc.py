@@ -30,7 +30,7 @@ def test_leapfrog_reversible_single():
     n = 3
     start, model, _ = models.non_normal(n)
 
-    integrators = ['leapfrog', 'two-stage', 'three-stage', 'leapfrog3']
+    integrators = ['leapfrog', 'two-stage', 'three-stage']
     steps = [BaseHMC(vars=model.vars, model=model, integrator=method, use_single_leapfrog=True)
              for method in integrators]
     for method, step in zip(integrators, steps):
