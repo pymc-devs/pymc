@@ -151,7 +151,7 @@ class TestChooseBackend(unittest.TestCase):
     def test_choose_backend_list_of_variables(self):
         with mock.patch('pymc3.sampling.NDArray') as nd:
             pm.sampling._choose_backend(['var1', 'var2'], 'chain')
-        nd.assert_called_with(vars=['var1', 'var2'])
+        nd.assert_called_with(vars=['var1', 'var2'], nparticles=None)
 
     def test_choose_backend_invalid(self):
         self.assertRaises(ValueError,
