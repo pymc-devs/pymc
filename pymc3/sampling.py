@@ -1,11 +1,12 @@
+import sys
 from collections import defaultdict
 
+import numpy as np
+import pymc3 as pm
 from joblib import Parallel, delayed
 from numpy.random import randint, seed
-import numpy as np
-
-import pymc3 as pm
-from pymc3.step_methods.arraystep import BlockedStep
+from pymc3.step_methods.particle import transform_start_particles
+from tqdm import tqdm
 
 from .backends.base import merge_traces, BaseTrace, MultiTrace
 from .backends.ndarray import NDArray, MultiNDArray
@@ -13,9 +14,6 @@ from .model import modelcontext, Point
 from .step_methods import (NUTS, HamiltonianMC, Metropolis, BinaryMetropolis,
                            BinaryGibbsMetropolis, CategoricalGibbsMetropolis,
                            Slice, CompoundStep, ParticleStep)
-from tqdm import tqdm
-
-import sys
 sys.setrecursionlimit(10000)
 
 __all__ = ['sample', 'iter_sample', 'sample_ppc', 'init_nuts']
@@ -610,49 +608,3 @@ def init_nuts(init='ADVI', njobs=1, n_init=500000, model=None,
 def get_random_starters(nwalkers, model=None):
     model = pm.modelcontext(model)
     return [{v.name: v.distribution.random() for v in model.vars} for _ in range(nwalkers)]
-
-
-def transform_start_particles(start, nparticles, model=None):
-    """
-    Parameters
-    ----------
-    start : list, dict
-        Accepts 3 data types:
-        * dict of start positions with variable shape of (nparticles, var.dshape)
-        * dict of start positions with variable shape (var.dshape)
-        * list of dicts of length nparticles each with start positions of shape (var.dshape)
-    nparticles : int
-    model : Model (optional if in `with` context)
-
-    Returns
-    -------
-     transformed_start : a dict each with start positions of shape (nparticles, var.dshape)
-    """
-    if start is None:
-        return {}
-    dshapes = {i.name: i.dshape for i in model.vars}
-    dshapes.update({i.name: i.transformed.dshape for i in model.deterministics if hasattr(i, 'transformed')})
-    if isinstance(start, dict):
-        start = {k: v for k,v in start.items() if k in dshapes}
-        if all(dshapes[k] == np.asarray(v).shape for k, v in start.items()):
-            if nparticles is not None:
-                start = {k: np.asarray([v]*nparticles) for k, v in start.items()}  # duplicate
-            return Point(**start)
-        else:
-            extra = tuple() if nparticles is None else (nparticles, )
-            if all(extra+dshapes[k] == np.asarray(v).shape for k, v in start.items()):
-                return Point(**start)
-            else:
-                raise TypeError("Start dicts must have a shape of (nparticles, dshape) or (dshape,)")
-    elif isinstance(start, list):
-        start = [{k: v for k, v in s.items() if k in dshapes} for s in start]
-        assert len(start) == nparticles, "If start is a list, it must have a length of nparticles"
-        assert all(isinstance(i, dict) for i in start), "Start dicts must have a shape of (dshape,)"
-        assert all(s.keys() == start[0].keys() for s in start), "All start positions must have the same variables"
-        d = {}
-        for varname, varshape in dshapes.items():
-            if varname in start[0].keys():
-                assert all(varshape == s[varname].shape for s in start), "Start dicts must have a shape of (dshape,)"
-                d[varname] = np.asarray([s[varname] for s in start])
-        return Point(**d)
-    raise TypeError("Start must be a dict or a list of dicts")
