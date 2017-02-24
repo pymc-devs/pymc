@@ -15,7 +15,7 @@ class CompoundStep(object):
         for method in self.methods:
             if method.generates_stats:
                 self.stats_dtypes.extend(method.stats_dtypes)
-        assert all(m.nparticles == methods[0].nparticles for m in methods), "CompoundStep is not for use with particlesteps"
+        assert all(m.nparticles == methods[0].nparticles for m in methods), "number of particles should be consistent"
 
     def step(self, point):
         if self.generates_stats:
