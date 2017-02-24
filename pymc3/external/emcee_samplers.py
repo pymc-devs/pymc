@@ -6,6 +6,11 @@ try:
 
 
     class EmceeEnsemble(ParticleStep):
+        """
+        ParticleStep function that uses the external library emcee.
+        Please refer to emcee documentation for emcee_kwargs
+        """
+
         default_blocked = True
         generates_stats = False
 
