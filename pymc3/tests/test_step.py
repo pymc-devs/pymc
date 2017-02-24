@@ -129,7 +129,12 @@ class TestStepMethods(object):  # yield test doesn't work subclassing unittest.T
             tqdm.write('Checking {} has same trace as on master'.format(step_method.__name__))
         with Model() as model:
             Normal('x', mu=0, sd=1)
-            trace = sample(n_steps, step=step_method(), random_seed=1)
+            step = step_method()
+            if isinstance(step, NUTS):
+                init = 'advi'
+            else:
+                init = None
+            trace = sample(n_steps, step=step, init=init, random_seed=1)
 
         if not benchmarking:
             assert_array_almost_equal(trace.get_values('x'), self.master_samples[step_method])
@@ -157,9 +162,13 @@ class TestStepMethods(object):  # yield test doesn't work subclassing unittest.T
                     HamiltonianMC(scaling=C, is_cov=True),
                     HamiltonianMC(scaling=C, is_cov=True, blocked=False)]),
             )
-        for step in steps:
-            trace = sample(8000, step=step, start=start, model=model, random_seed=1)
-            yield self.check_stat, check, trace, step.__class__.__name__
+            for step in steps:
+                if isinstance(step, NUTS):
+                    init = 'advi'
+                else:
+                    init = None
+                trace = sample(8000, step=step, start=start, init=init, model=model, random_seed=1)
+                yield self.check_stat, check, trace, step.__class__.__name__
 
     def test_step_discrete(self):
         start, model, (mu, C) = mv_simple_discrete()
@@ -170,9 +179,9 @@ class TestStepMethods(object):  # yield test doesn't work subclassing unittest.T
             steps = (
                 Metropolis(S=C, proposal_dist=MultivariateNormalProposal),
             )
-        for step in steps:
-            trace = sample(20000, step=step, start=start, model=model, random_seed=1)
-            yield self.check_stat, check, trace, step.__class__.__name__
+            for step in steps:
+                trace = sample(20000, step=step, start=start, init=None, model=model, random_seed=1)
+                yield self.check_stat, check, trace, step.__class__.__name__
 
     def test_step_categorical(self):
         start, model, (mu, C) = simple_categorical()
@@ -184,9 +193,9 @@ class TestStepMethods(object):  # yield test doesn't work subclassing unittest.T
                 CategoricalGibbsMetropolis(model.x, proposal='uniform'),
                 CategoricalGibbsMetropolis(model.x, proposal='proportional'),
             )
-        for step in steps:
-            trace = sample(8000, step=step, start=start, model=model, random_seed=1)
-            yield self.check_stat, check, trace, step.__class__.__name__
+            for step in steps:
+                trace = sample(8000, step=step, start=start, init=None, model=model, random_seed=1)
+                yield self.check_stat, check, trace, step.__class__.__name__
 
     def test_step_elliptical_slice(self):
         start, model, (K, mu, std, noise) = mv_prior_simple()
@@ -197,9 +206,9 @@ class TestStepMethods(object):  # yield test doesn't work subclassing unittest.T
             steps = (
                 EllipticalSlice(prior_cov=K),
             )
-        for step in steps:
-            trace = sample(5000, step=step, start=start, model=model, random_seed=1)
-            yield self.check_stat, check, trace, step.__class__.__name__
+            for step in steps:
+                trace = sample(5000, step=step, start=start, init=None, model=model, random_seed=1)
+                yield self.check_stat, check, trace, step.__class__.__name__
 
 
 class TestMetropolisProposal(unittest.TestCase):
