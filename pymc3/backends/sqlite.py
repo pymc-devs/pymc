@@ -260,11 +260,35 @@ class SQLite(base.BaseTrace):
 
 
 class MultiSQLite(SQLite, base.MultiMixin):
+    """SQLite trace object
+
+    Parameters
+    ----------
+    nparticles : int
+        Number of chains to record to
+    name : str
+        Name of database file
+    model : Model
+        If None, the model is taken from the `with` context.
+    vars : list of variables
+        Sampling values will be stored for these variables. If None,
+        `model.unobserved_RVs` is used.
+    """
+
     def __init__(self, nparticles, name, model = None, vars = None):
         super(MultiSQLite, self).__init__(name, model, vars)
         self.nparticles = nparticles
 
     def setup(self, draws, chain):
+        """Perform chain-specific setup.
+
+        Parameters
+        ----------
+        draws : int
+            Expected number of draws
+        chain : int
+            Chain number
+        """
         super(MultiSQLite, self).setup(draws, chain)
         self.chain_coverage = [i+chain for i in range(self.nparticles)]
 
@@ -293,6 +317,7 @@ class MultiSQLite(SQLite, base.MultiMixin):
         varname : str
         burn : int
         thin : int
+        particles : int, Slice, iterable, None
 
         Returns
         -------
@@ -347,33 +372,33 @@ class MultiSQLite(SQLite, base.MultiMixin):
             raise ValueError('Stop value in slice not supported.')
         return ndarray._slice_as_ndarray(self, idx)
 
-    def point(self, idx, ipx=None):
+    def point(self, idx, ichain=None):
         """Return dictionary of point values at `idx` for current chain
-        with variables names as keys.
+        with variables names as keys. `ichain` != None selects specific chain(s)
         """
-        if isinstance(ipx, int):
+        if isinstance(ichain, int):
             idx = int(idx)
             if idx < 0:
                 idx = self._get_max_draw(self.chain) + idx + 1
             statement = TEMPLATES['select_point']
             self.db.connect()
             var_values = {}
-            statement_args = {'chain': self.chain+ipx, 'draw': idx}
+            statement_args = {'chain': self.chain + ichain, 'draw': idx}
             for varname in self.varnames:
                 self.db.cursor.execute(statement.format(table=varname),
                                        statement_args)
                 values = _rows_to_ndarray(self.db.cursor)
                 var_values[varname] = values.reshape(self.var_shapes[varname])
             return var_values
-        elif isinstance(ipx, (list, tuple)):
-            return np.asarray([self.point(idx, i) for i in ipx])
-        elif isinstance(ipx, slice):
-            ipx = range(self.nparticles)[ipx]
-            return self.point(idx, ipx)
-        elif ipx is None:
+        elif isinstance(ichain, (list, tuple)):
+            return np.asarray([self.point(idx, i) for i in ichain])
+        elif isinstance(ichain, slice):
+            ichain = range(self.nparticles)[ichain]
+            return self.point(idx, ichain)
+        elif ichain is None:
             return self.point(idx, slice(None))
         else:
-            raise ValueError('{} is not a valid particle slice'.format(ipx))
+            raise ValueError('{} is not a valid particle slice'.format(ichain))
 
 class _SQLiteDB(object):
 

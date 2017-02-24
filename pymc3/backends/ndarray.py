@@ -179,22 +179,42 @@ class NDArray(base.BaseTrace):
 
 
 class MultiNDArray(NDArray, base.MultiMixin):
+    """NDArray trace object
+
+    Parameters
+    ----------
+    nparticles : int
+        Number of chains to record to
+    name : str
+        Name of backend. This has no meaning for the NDArray backend.
+    model : Model
+        If None, the model is taken from the `with` context.
+    vars : list of variables
+        Sampling values will be stored for these variables. If None,
+        `model.unobserved_RVs` is used.
+    """
+
+    supports_sampler_stats = False
+
     def __init__(self, nparticles, name=None, model=None, vars=None):
         super(MultiNDArray, self).__init__(name, model, vars)
         self.nparticles = nparticles
         self.samples = OrderedDict([])
 
-    def record(self, point):
-        """
-        :param q:
-        :return:
+    def record(self, point, sampler_stats=None):
+        """Record results of a sampling iteration.
+
+        Parameters
+        ----------
+        point : dict
+            Values mapped to variable names
         """
         for w in range(self.nparticles):
             for varname, value in zip(self.varnames, self.iter_fn(point, w)):
                 self.samples[varname][w, self.draw_idx] = value
         self.draw_idx += 1
 
-    def setup(self, draws, chain):
+    def setup(self, draws, chain, sampler_vars=None):
         """Perform chain-specific setup.
 
         Parameters
@@ -250,7 +270,7 @@ class MultiNDArray(NDArray, base.MultiMixin):
         varname = self.varnames[0]
         return self.samples[varname].shape[1]
 
-    def get_values(self, varname, burn=0, thin=1, particles=None):
+    def get_values(self, varname, burn=0, thin=1, iparticle=None):
         """Get values from trace.
 
         Parameters
@@ -258,15 +278,15 @@ class MultiNDArray(NDArray, base.MultiMixin):
         varname : str
         burn : int
         thin : int
-        particle_idx: int
+        iparticle: int, Slice
 
         Returns
         -------
         A NumPy array
         """
-        if particles is None:
-            particles = slice(None)
-        return self.samples[varname][particles, burn::thin]
+        if iparticle is None:
+            iparticle = slice(None)
+        return self.samples[varname][iparticle, burn::thin]
 
     def _slice(self, step_idx, particle_idx=slice(None)):
         # Slicing directly instead of using _slice_as_ndarray to
@@ -280,6 +300,9 @@ class MultiNDArray(NDArray, base.MultiMixin):
         return sliced
 
     def get_particle_trace(self, particle_index):
+        """
+        Extracts trace for specific particle
+        """
         assert isinstance(particle_index, int)
         sliced = NDArray(model=self.model, vars=self.vars)
         sliced.chain = self.chain_coverage[particle_index]
@@ -288,6 +311,9 @@ class MultiNDArray(NDArray, base.MultiMixin):
         return sliced
 
     def get_flat_trace(self):
+        """
+        Returns an NDArray trace with all particles flattened
+        """
         sliced = NDArray(model=self.model, vars=self.vars)
         sliced.chain = self.chain_coverage[0]
         sliced.samples = {varname: values.ravel()
@@ -316,6 +342,3 @@ def _slice_as_ndarray(strace, idx, ipx=None):
         sliced.samples = {v: strace.get_values(v, burn=burn, thin=thin)
                          for v in strace.varnames}
     return sliced
-
-
-# TODO: Make MultiText, Multisqlite
