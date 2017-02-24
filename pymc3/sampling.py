@@ -512,10 +512,6 @@ def do_init(init='ADVI', nsamples=1, n_init=500000, model=None, random_seed=-1, 
         else:
             randomiser = 'sample'
 
-    if randomiser != 'sample':
-        _nsamples = nsamples
-        nsamples = 1
-
     if init is not None:
         init = init.lower()
 
@@ -556,9 +552,9 @@ def do_init(init='ADVI', nsamples=1, n_init=500000, model=None, random_seed=-1, 
         order = pm.ArrayOrdering(model.vars)
         bij = pm.DictToArrayBijection(order, start[0])
         sarray = bij.map(start[0])
-        start = [bij.rmap(np.random.multivariate_normal(sarray, cov)) for i in range(_nsamples)]
+        start = [bij.rmap(np.random.multivariate_normal(sarray, cov)) for _ in range(nsamples)]
     elif randomiser == 'duplicate':
-        start = [start[0]] * _nsamples
+        start = [start[0]] * nsamples
     elif randomiser != 'sample':
         raise NotImplemented('Randomiser {} is not supported.'.format(randomiser))
     return start, cov
