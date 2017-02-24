@@ -129,7 +129,7 @@ class MvNormal(Continuous):
             result -= tt.log(det(tau))
         else:
             result -= logdet(tau)
-        result += (tt.dot(tau, delta) * delta).sum(axis=delta.ndim - 1)
+        result += (tt.dot(delta, tau) * delta).sum(axis=delta.ndim - 1)
         return -1 / 2. * result
 
 
