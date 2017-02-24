@@ -358,7 +358,7 @@ subpopulation heterogeneity. A toy example of such a data set is shown
 below.</p>
 <div class="nbinput nblast container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [5]:
+<span></span>In [4]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -373,7 +373,7 @@ below.</p>
 </div>
 <div class="nbinput nblast container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [6]:
+<span></span>In [5]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -384,7 +384,7 @@ below.</p>
 </div>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [7]:
+<span></span>In [6]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -394,11 +394,20 @@ below.</p>
 </pre></div>
 </div>
 </div>
+<div class="nboutput container">
+<div class="container">
+</div>
+<div class="stderr container">
+<div class="highlight"><pre>
+/opt/conda/lib/python3.5/site-packages/matplotlib/font_manager.py:1297: UserWarning: findfont: Font family [&#39;sans-serif&#39;] not found. Falling back to DejaVu Sans
+  (prop.get_family(), self.defaultFamily[fontext]))
+</pre></div></div>
+</div>
 <div class="nboutput nblast container">
 <div class="container">
 </div>
 <div class="container">
-<img alt="../_images/notebooks_marginalized_gaussian_mixture_model_7_0.png" src="../_images/notebooks_marginalized_gaussian_mixture_model_7_0.png" />
+<img alt="../_images/notebooks_marginalized_gaussian_mixture_model_7_1.png" src="../_images/notebooks_marginalized_gaussian_mixture_model_7_1.png" />
 </div>
 </div>
 <p>A natural parameterization of the Gaussian mixture model is as the
@@ -452,7 +461,7 @@ models through its <code class="docutils literal"><span class="pre">Mixture</spa
 marginalized Gaussian mixture model to this data in PyMC3.</p>
 <div class="nbinput nblast container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [8]:
+<span></span>In [7]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -468,15 +477,12 @@ marginalized Gaussian mixture model to this data in PyMC3.</p>
 </div>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [9]:
+<span></span>In [8]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="k">with</span> <span class="n">model</span><span class="p">:</span>
-    <span class="n">step</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Metropolis</span><span class="p">()</span>
-    <span class="n">trace_</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="mi">20000</span><span class="p">,</span> <span class="n">step</span><span class="p">,</span> <span class="n">random_seed</span><span class="o">=</span><span class="n">SEED</span><span class="p">)</span>
-
-<span class="n">trace</span> <span class="o">=</span> <span class="n">trace_</span><span class="p">[</span><span class="mi">10000</span><span class="p">::</span><span class="mi">10</span><span class="p">]</span>
+    <span class="n">trace</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="mi">5000</span><span class="p">,</span> <span class="n">n_init</span><span class="o">=</span><span class="mi">10000</span><span class="p">,</span> <span class="n">tune</span><span class="o">=</span><span class="mi">1000</span><span class="p">,</span> <span class="n">random_seed</span><span class="o">=</span><span class="n">SEED</span><span class="p">)[</span><span class="mi">1000</span><span class="p">:]</span>
 </pre></div>
 </div>
 </div>
@@ -485,14 +491,18 @@ marginalized Gaussian mixture model to this data in PyMC3.</p>
 </div>
 <div class="stderr container">
 <div class="highlight"><pre>
-100%|██████████| 20000/20000 [00:23&lt;00:00, 835.32it/s]
+Auto-assigning NUTS sampler...
+Initializing NUTS using advi...
+Average ELBO = -6,663.8: 100%|██████████| 10000/10000 [00:06&lt;00:00, 1582.50it/s]
+Finished [100%]: Average ELBO = -6,582.7
+100%|██████████| 5000/5000 [-1:54:12&lt;00:00, -0.07s/it]
 </pre></div></div>
 </div>
 <p>We see in the following plot that the posterior distribution on the
 weights and the component means has captured the true value quite well.</p>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [10]:
+<span></span>In [9]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -500,11 +510,46 @@ weights and the component means has captured the true value quite well.</p>
 </pre></div>
 </div>
 </div>
+<div class="nboutput container">
+<div class="container">
+</div>
+<div class="stderr container">
+<div class="highlight"><pre>
+/opt/conda/lib/python3.5/site-packages/matplotlib/font_manager.py:1297: UserWarning: findfont: Font family [&#39;sans-serif&#39;] not found. Falling back to DejaVu Sans
+  (prop.get_family(), self.defaultFamily[fontext]))
+</pre></div></div>
+</div>
 <div class="nboutput nblast container">
 <div class="container">
 </div>
 <div class="container">
-<img alt="../_images/notebooks_marginalized_gaussian_mixture_model_12_0.png" src="../_images/notebooks_marginalized_gaussian_mixture_model_12_0.png" />
+<img alt="../_images/notebooks_marginalized_gaussian_mixture_model_12_1.png" src="../_images/notebooks_marginalized_gaussian_mixture_model_12_1.png" />
+</div>
+</div>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [10]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">pm</span><span class="o">.</span><span class="n">plot_posterior</span><span class="p">(</span><span class="n">trace</span><span class="p">,</span> <span class="n">varnames</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;w&#39;</span><span class="p">,</span> <span class="s1">&#39;mu&#39;</span><span class="p">]);</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput container">
+<div class="container">
+</div>
+<div class="stderr container">
+<div class="highlight"><pre>
+/opt/conda/lib/python3.5/site-packages/matplotlib/font_manager.py:1297: UserWarning: findfont: Font family [&#39;sans-serif&#39;] not found. Falling back to DejaVu Sans
+  (prop.get_family(), self.defaultFamily[fontext]))
+</pre></div></div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<img alt="../_images/notebooks_marginalized_gaussian_mixture_model_13_1.png" src="../_images/notebooks_marginalized_gaussian_mixture_model_13_1.png" />
 </div>
 </div>
 <p>We can also sample from the model&#8217;s posterior predictive distribution,
@@ -525,7 +570,7 @@ as follows.</p>
 </div>
 <div class="stderr container">
 <div class="highlight"><pre>
-100%|██████████| 5000/5000 [00:41&lt;00:00, 120.43it/s]
+100%|██████████| 5000/5000 [03:28&lt;00:00, 23.93it/s]
 </pre></div></div>
 </div>
 <p>We see that the posterior predictive samples have a distribution quite
@@ -549,11 +594,20 @@ close to that of the observed data.</p>
 </pre></div>
 </div>
 </div>
+<div class="nboutput container">
+<div class="container">
+</div>
+<div class="stderr container">
+<div class="highlight"><pre>
+/opt/conda/lib/python3.5/site-packages/matplotlib/font_manager.py:1297: UserWarning: findfont: Font family [&#39;sans-serif&#39;] not found. Falling back to DejaVu Sans
+  (prop.get_family(), self.defaultFamily[fontext]))
+</pre></div></div>
+</div>
 <div class="nboutput nblast container">
 <div class="container">
 </div>
 <div class="container">
-<img alt="../_images/notebooks_marginalized_gaussian_mixture_model_16_0.png" src="../_images/notebooks_marginalized_gaussian_mixture_model_16_0.png" />
+<img alt="../_images/notebooks_marginalized_gaussian_mixture_model_17_1.png" src="../_images/notebooks_marginalized_gaussian_mixture_model_17_1.png" />
 </div>
 </div>
 </div>

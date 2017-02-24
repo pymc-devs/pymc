@@ -297,7 +297,7 @@ div.nboutput  > :nth-child(2).stderr {
 </style>
 <div class="section" id="Model-comparison">
 <h1>Model comparison<a class="headerlink" href="#Model-comparison" title="Permalink to this headline">¶</a></h1>
-<p>To demonstrate the use of model comparison criteria in PyMC 3, we
+<p>To demonstrate the use of model comparison criteria in PyMC3, we
 implement the <strong>8 schools</strong> example from Section 5.5 of Gelman et al
 (2003), which attempts to infer the effects of coaching on SAT scores of
 students from 8 schools. Below, we fit a <strong>pooled model</strong>, which assumes
@@ -310,8 +310,7 @@ that allows for a random effect that partially pools the data.</p>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="o">%</span><span class="k">matplotlib</span> inline
-<span class="kn">from</span> <span class="nn">pymc3</span> <span class="kn">import</span> <span class="p">(</span><span class="n">Normal</span><span class="p">,</span> <span class="n">HalfCauchy</span><span class="p">,</span> <span class="n">sample</span><span class="p">,</span> <span class="n">Model</span><span class="p">,</span> <span class="n">waic</span><span class="p">,</span> <span class="n">dic</span><span class="p">,</span> <span class="n">loo</span><span class="p">,</span> <span class="n">forestplot</span><span class="p">,</span>
-                   <span class="n">traceplot</span><span class="p">,</span> <span class="n">NUTS</span><span class="p">,</span> <span class="n">find_MAP</span><span class="p">,</span> <span class="n">Deterministic</span><span class="p">,</span> <span class="n">HalfCauchy</span><span class="p">)</span>
+<span class="kn">import</span> <span class="nn">pymc3</span> <span class="kn">as</span> <span class="nn">pm</span>
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="kn">as</span> <span class="nn">np</span>
 <span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="kn">as</span> <span class="nn">plt</span>
 <span class="kn">import</span> <span class="nn">seaborn</span> <span class="kn">as</span> <span class="nn">sns</span>
@@ -335,28 +334,18 @@ deviations in the 8 schools.</p>
 </div>
 <div class="section" id="Pooled-model">
 <h2>Pooled model<a class="headerlink" href="#Pooled-model" title="Permalink to this headline">¶</a></h2>
-<div class="nbinput nblast container">
+<div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
 <span></span>In [3]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span><span class="k">with</span> <span class="n">Model</span><span class="p">()</span> <span class="k">as</span> <span class="n">pooled</span><span class="p">:</span>
+<span></span><span class="k">with</span> <span class="n">pm</span><span class="o">.</span><span class="n">Model</span><span class="p">()</span> <span class="k">as</span> <span class="n">pooled</span><span class="p">:</span>
+    <span class="n">mu</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Normal</span><span class="p">(</span><span class="s1">&#39;mu&#39;</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">sd</span><span class="o">=</span><span class="mf">1e6</span><span class="p">)</span>
 
-    <span class="n">mu</span> <span class="o">=</span> <span class="n">Normal</span><span class="p">(</span><span class="s1">&#39;mu&#39;</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">sd</span><span class="o">=</span><span class="mf">1e6</span><span class="p">)</span>
+    <span class="n">obs</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Normal</span><span class="p">(</span><span class="s1">&#39;obs&#39;</span><span class="p">,</span> <span class="n">mu</span><span class="p">,</span> <span class="n">sd</span><span class="o">=</span><span class="n">sigma</span><span class="p">,</span> <span class="n">observed</span><span class="o">=</span><span class="n">y</span><span class="p">)</span>
 
-    <span class="n">obs</span> <span class="o">=</span> <span class="n">Normal</span><span class="p">(</span><span class="s1">&#39;obs&#39;</span><span class="p">,</span> <span class="n">mu</span><span class="p">,</span> <span class="n">sd</span><span class="o">=</span><span class="n">sigma</span><span class="p">,</span> <span class="n">observed</span><span class="o">=</span><span class="n">y</span><span class="p">)</span>
-</pre></div>
-</div>
-</div>
-<div class="nbinput container">
-<div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [4]:
-</pre></div>
-</div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span><span class="k">with</span> <span class="n">pooled</span><span class="p">:</span>
-    <span class="n">trace_p</span> <span class="o">=</span> <span class="n">sample</span><span class="p">(</span><span class="mi">2000</span><span class="p">)</span>
+    <span class="n">trace_p</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="mi">2000</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
@@ -365,17 +354,17 @@ deviations in the 8 schools.</p>
 </div>
 <div class="stderr container">
 <div class="highlight"><pre>
-Average ELBO = -42.09: 100%|██████████| 200000/200000 [00:15&lt;00:00, 12578.89it/s] 8, 10674.33it/s]
-100%|██████████| 2000/2000 [00:00&lt;00:00, 2385.73it/s]
+Average ELBO = -42.09: 100%|██████████| 200000/200000 [00:17&lt;00:00, 11675.35it/s] , 9446.54it/s]
+100%|██████████| 2000/2000 [00:01&lt;00:00, 1747.24it/s]
 </pre></div></div>
 </div>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [5]:
+<span></span>In [4]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span><span class="n">traceplot</span><span class="p">(</span><span class="n">trace_p</span><span class="p">,</span> <span class="n">varnames</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;mu&#39;</span><span class="p">]);</span>
+<span></span><span class="n">pm</span><span class="o">.</span><span class="n">traceplot</span><span class="p">(</span><span class="n">trace_p</span><span class="p">);</span>
 </pre></div>
 </div>
 </div>
@@ -383,28 +372,56 @@ Average ELBO = -42.09: 100%|██████████| 200000/200000 [00:15
 <div class="container">
 </div>
 <div class="container">
-<img alt="notebooks/../_build/doctrees/nbsphinx/notebooks_ModelComparison_7_0.png" src="notebooks/../_build/doctrees/nbsphinx/notebooks_ModelComparison_7_0.png" />
+<img alt="notebooks/../_build/doctrees/nbsphinx/notebooks_ModelComparison_6_0.png" src="notebooks/../_build/doctrees/nbsphinx/notebooks_ModelComparison_6_0.png" />
 </div>
 </div>
 </div>
 <div class="section" id="Hierarchical-model">
 <h2>Hierarchical model<a class="headerlink" href="#Hierarchical-model" title="Permalink to this headline">¶</a></h2>
-<div class="nbinput nblast container">
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [5]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="k">with</span> <span class="n">pm</span><span class="o">.</span><span class="n">Model</span><span class="p">()</span> <span class="k">as</span> <span class="n">hierarchical</span><span class="p">:</span>
+
+    <span class="n">eta</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Normal</span><span class="p">(</span><span class="s1">&#39;eta&#39;</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">shape</span><span class="o">=</span><span class="n">J</span><span class="p">)</span>
+    <span class="n">mu</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Normal</span><span class="p">(</span><span class="s1">&#39;mu&#39;</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">sd</span><span class="o">=</span><span class="mf">1e6</span><span class="p">)</span>
+    <span class="n">tau</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">HalfCauchy</span><span class="p">(</span><span class="s1">&#39;tau&#39;</span><span class="p">,</span> <span class="mi">5</span><span class="p">)</span>
+
+    <span class="n">theta</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Deterministic</span><span class="p">(</span><span class="s1">&#39;theta&#39;</span><span class="p">,</span> <span class="n">mu</span> <span class="o">+</span> <span class="n">tau</span><span class="o">*</span><span class="n">eta</span><span class="p">)</span>
+
+    <span class="n">obs</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Normal</span><span class="p">(</span><span class="s1">&#39;obs&#39;</span><span class="p">,</span> <span class="n">theta</span><span class="p">,</span> <span class="n">sd</span><span class="o">=</span><span class="n">sigma</span><span class="p">,</span> <span class="n">observed</span><span class="o">=</span><span class="n">y</span><span class="p">)</span>
+
+    <span class="n">trace_h</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="mi">2000</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="stderr container">
+<div class="highlight"><pre>
+Average ELBO = -43.175: 100%|██████████| 200000/200000 [00:23&lt;00:00, 8435.73it/s]3, 8478.86it/s]
+100%|██████████| 2000/2000 [00:03&lt;00:00, 477.25it/s]
+</pre></div></div>
+</div>
+<div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
 <span></span>In [6]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span><span class="k">with</span> <span class="n">Model</span><span class="p">()</span> <span class="k">as</span> <span class="n">hierarchical</span><span class="p">:</span>
-
-    <span class="n">eta</span> <span class="o">=</span> <span class="n">Normal</span><span class="p">(</span><span class="s1">&#39;eta&#39;</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">shape</span><span class="o">=</span><span class="n">J</span><span class="p">)</span>
-    <span class="n">mu</span> <span class="o">=</span> <span class="n">Normal</span><span class="p">(</span><span class="s1">&#39;mu&#39;</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">sd</span><span class="o">=</span><span class="mf">1e6</span><span class="p">)</span>
-    <span class="n">tau</span> <span class="o">=</span> <span class="n">HalfCauchy</span><span class="p">(</span><span class="s1">&#39;tau&#39;</span><span class="p">,</span> <span class="mi">5</span><span class="p">)</span>
-
-    <span class="n">theta</span> <span class="o">=</span> <span class="n">Deterministic</span><span class="p">(</span><span class="s1">&#39;theta&#39;</span><span class="p">,</span> <span class="n">mu</span> <span class="o">+</span> <span class="n">tau</span><span class="o">*</span><span class="n">eta</span><span class="p">)</span>
-
-    <span class="n">obs</span> <span class="o">=</span> <span class="n">Normal</span><span class="p">(</span><span class="s1">&#39;obs&#39;</span><span class="p">,</span> <span class="n">theta</span><span class="p">,</span> <span class="n">sd</span><span class="o">=</span><span class="n">sigma</span><span class="p">,</span> <span class="n">observed</span><span class="o">=</span><span class="n">y</span><span class="p">)</span>
+<span></span><span class="n">pm</span><span class="o">.</span><span class="n">traceplot</span><span class="p">(</span><span class="n">trace_h</span><span class="p">,</span> <span class="n">varnames</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;mu&#39;</span><span class="p">]);</span>
 </pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<img alt="notebooks/../_build/doctrees/nbsphinx/notebooks_ModelComparison_9_0.png" src="notebooks/../_build/doctrees/nbsphinx/notebooks_ModelComparison_9_0.png" />
 </div>
 </div>
 <div class="nbinput container">
@@ -413,27 +430,7 @@ Average ELBO = -42.09: 100%|██████████| 200000/200000 [00:15
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span><span class="k">with</span> <span class="n">hierarchical</span><span class="p">:</span>
-    <span class="n">trace_h</span> <span class="o">=</span> <span class="n">sample</span><span class="p">(</span><span class="mi">2000</span><span class="p">)</span>
-</pre></div>
-</div>
-</div>
-<div class="nboutput nblast container">
-<div class="container">
-</div>
-<div class="stderr container">
-<div class="highlight"><pre>
-Average ELBO = -43.175: 100%|██████████| 200000/200000 [00:21&lt;00:00, 9379.18it/s]6, 7465.47it/s]
-100%|██████████| 2000/2000 [00:02&lt;00:00, 706.05it/s]
-</pre></div></div>
-</div>
-<div class="nbinput container">
-<div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [8]:
-</pre></div>
-</div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span><span class="n">traceplot</span><span class="p">(</span><span class="n">trace_h</span><span class="p">,</span> <span class="n">varnames</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;mu&#39;</span><span class="p">]);</span>
+<span></span><span class="n">pm</span><span class="o">.</span><span class="n">forestplot</span><span class="p">(</span><span class="n">trace_h</span><span class="p">,</span> <span class="n">varnames</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;theta&#39;</span><span class="p">]);</span>
 </pre></div>
 </div>
 </div>
@@ -441,24 +438,7 @@ Average ELBO = -43.175: 100%|██████████| 200000/200000 [00:2
 <div class="container">
 </div>
 <div class="container">
-<img alt="notebooks/../_build/doctrees/nbsphinx/notebooks_ModelComparison_11_0.png" src="notebooks/../_build/doctrees/nbsphinx/notebooks_ModelComparison_11_0.png" />
-</div>
-</div>
-<div class="nbinput container">
-<div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [9]:
-</pre></div>
-</div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span><span class="n">forestplot</span><span class="p">(</span><span class="n">trace_h</span><span class="p">,</span> <span class="n">varnames</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;theta&#39;</span><span class="p">]);</span>
-</pre></div>
-</div>
-</div>
-<div class="nboutput nblast container">
-<div class="container">
-</div>
-<div class="container">
-<img alt="notebooks/../_build/doctrees/nbsphinx/notebooks_ModelComparison_12_0.png" src="notebooks/../_build/doctrees/nbsphinx/notebooks_ModelComparison_12_0.png" />
+<img alt="notebooks/../_build/doctrees/nbsphinx/notebooks_ModelComparison_10_0.png" src="notebooks/../_build/doctrees/nbsphinx/notebooks_ModelComparison_10_0.png" />
 </div>
 </div>
 </div>
@@ -472,12 +452,11 @@ estimate with the posterior mean and using the effective number of
 parameters to correct for bias.</p>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [10]:
+<span></span>In [8]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span><span class="k">with</span> <span class="n">pooled</span><span class="p">:</span>
-    <span class="n">pooled_dic</span> <span class="o">=</span> <span class="n">dic</span><span class="p">(</span><span class="n">trace_p</span><span class="p">)</span>
+<span></span><span class="n">pooled_dic</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">dic</span><span class="p">(</span><span class="n">trace_p</span><span class="p">,</span> <span class="n">pooled</span><span class="p">)</span>
 
 <span class="n">pooled_dic</span>
 </pre></div>
@@ -485,22 +464,21 @@ parameters to correct for bias.</p>
 </div>
 <div class="nboutput nblast container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>Out[10]:
+<span></span>Out[8]:
 </pre></div>
 </div>
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>90.925442023139937
+<span></span>90.832077760613302
 </pre></div>
 </div>
 </div>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [11]:
+<span></span>In [9]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span><span class="k">with</span> <span class="n">hierarchical</span><span class="p">:</span>
-    <span class="n">hierarchical_dic</span> <span class="o">=</span> <span class="n">dic</span><span class="p">(</span><span class="n">trace_h</span><span class="p">)</span>
+<span></span><span class="n">hierarchical_dic</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">dic</span><span class="p">(</span><span class="n">trace_h</span><span class="p">,</span> <span class="n">hierarchical</span><span class="p">)</span>
 
 <span class="n">hierarchical_dic</span>
 </pre></div>
@@ -508,11 +486,11 @@ parameters to correct for bias.</p>
 </div>
 <div class="nboutput nblast container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>Out[11]:
+<span></span>Out[9]:
 </pre></div>
 </div>
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>124.4586578158235
+<span></span>124.82406598767808
 </pre></div>
 </div>
 </div>
@@ -525,14 +503,60 @@ predictive density (LPPD) and correcting for the effective number of
 parameters to adjust for overfitting.</p>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [10]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">pooled_waic</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">waic</span><span class="p">(</span><span class="n">trace_p</span><span class="p">,</span> <span class="n">pooled</span><span class="p">)</span>
+
+<span class="n">pooled_waic</span><span class="o">.</span><span class="n">WAIC</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>Out[10]:
+</pre></div>
+</div>
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>61.121151094964134
+</pre></div>
+</div>
+</div>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [11]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">hierarchical_waic</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">waic</span><span class="p">(</span><span class="n">trace_h</span><span class="p">,</span> <span class="n">hierarchical</span><span class="p">)</span>
+
+<span class="n">hierarchical_waic</span><span class="o">.</span><span class="n">WAIC</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>Out[11]:
+</pre></div>
+</div>
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>61.570270537072844
+</pre></div>
+</div>
+</div>
+<p>PyMC3 includes two convenience functions to help compare WAIC for
+different models. The first of this functions is <code class="docutils literal"><span class="pre">compare</span></code>, this one
+computes WAIC (or LOO) from a set of traces and models and returns a
+DataFrame.</p>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
 <span></span>In [12]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span><span class="k">with</span> <span class="n">pooled</span><span class="p">:</span>
-    <span class="n">pooled_waic</span> <span class="o">=</span> <span class="n">waic</span><span class="p">(</span><span class="n">trace_p</span><span class="p">)</span>
-
-<span class="n">pooled_waic</span><span class="o">.</span><span class="n">WAIC</span>
+<span></span><span class="n">df_comp_WAIC</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">compare</span><span class="p">((</span><span class="n">trace_h</span><span class="p">,</span> <span class="n">trace_p</span><span class="p">),</span> <span class="p">(</span><span class="n">hierarchical</span><span class="p">,</span> <span class="n">pooled</span><span class="p">))</span>
+<span class="n">df_comp_WAIC</span>
 </pre></div>
 </div>
 </div>
@@ -541,50 +565,101 @@ parameters to adjust for overfitting.</p>
 <span></span>Out[12]:
 </pre></div>
 </div>
-<div class="highlight-none"><div class="highlight"><pre>
-<span></span>61.207200231982306
-</pre></div>
+<div class="container">
+<div>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>WAIC</th>
+      <th>pWAIC</th>
+      <th>dWAIC</th>
+      <th>weight</th>
+      <th>SE</th>
+      <th>dSE</th>
+      <th>warning</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>1</th>
+      <td>61.1212</td>
+      <td>0.674471</td>
+      <td>0</td>
+      <td>0.555905</td>
+      <td>2.20084</td>
+      <td>0</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>0</th>
+      <td>61.5703</td>
+      <td>1.08163</td>
+      <td>0.449119</td>
+      <td>0.444095</td>
+      <td>1.96714</td>
+      <td>0.0259316</td>
+      <td>0</td>
+    </tr>
+  </tbody>
+</table>
+</div></div>
 </div>
-</div>
+<p>We have many columns so let check one by one the meaning of them:</p>
+<ol class="arabic simple">
+<li>The first column clearly contains the values of WAIC. The DataFrame
+is always sorted from lowest to highest WAIC. The index reflects the
+order in which the models are passed to this function.</li>
+<li>The second column is the estimated effective number of parameters. In
+general, models with more parameters will be more flexible to fit
+data and at the same time could also lead to overfitting. Thus we can
+interpret pWAIC as a penalization term, intuitively we can also
+interpret it as measure of how flexible each model is in fitting the
+data.</li>
+<li>The third column is the relative difference between the value of WAIC
+for the top-ranked model and the value of WAIC for each model. For
+this reason we will always get a value of 0 for the first model.</li>
+<li>Sometimes when comparing models, we do not want to select the &#8220;best&#8221;
+model, instead we want to perform predictions by averaging along all
+the models (or at least several models). Ideally we would like to
+perform a weighted average, giving more weight to the model that
+seems to explain/predict the data better. There are many approaches
+to perform this task, one of them is to use Akaike weights based on
+the values of WAIC for each model. These weights can be loosely
+interpreted as the probability of each model (among the compared
+models) given the data. One caveat of this approach is that the
+weights are based on point estimates of WAIC (i.e. the uncertainty is
+ignored).</li>
+<li>The fifth column records the standard error for the WAIC
+computations. The standard error can be useful to assess the
+uncertainty of the WAIC estimates. Nevertheless, caution need to be
+taken because the estimation of the standard error assumes normality
+and hence could be problematic when the sample size is low.</li>
+<li>In the same way that we can compute the standard error for each value
+of WAIC, we can compute the standard error of the differences between
+two values of WAIC. Notice that both quantities are not necessarily
+the same, the reason is that the uncertainty about WAIC is correlated
+between models. This quantity is always 0 for the top-ranked model.</li>
+<li>Finally we have the last column named &#8220;warning&#8221;. A value of 1
+indicates that the computation of WAIC may not be reliable, this
+warning is based on an empirical determined cutoff value and need to
+be interpreted with caution. For more details you can read this
+<a class="reference external" href="https://arxiv.org/abs/1507.04544">paper</a>.</li>
+</ol>
+<p>The second convenience function takes the output of <code class="docutils literal"><span class="pre">compare</span></code> and
+produces a summary plot in the style of the one used in the book
+<a class="reference external" href="http://xcelab.net/rm/statistical-rethinking/">Statistical
+Rethinking</a> by Richard
+McElreath (check also <a class="reference external" href="https://github.com/aloctavodia/Statistical-Rethinking-with-Python-and-PyMC3">this
+port</a>
+of the examples in the book to PyMC3).</p>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
 <span></span>In [13]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span><span class="k">with</span> <span class="n">hierarchical</span><span class="p">:</span>
-    <span class="n">hierarchical_waic</span> <span class="o">=</span> <span class="n">waic</span><span class="p">(</span><span class="n">trace_h</span><span class="p">)</span>
-
-<span class="n">hierarchical_waic</span><span class="o">.</span><span class="n">WAIC</span>
-</pre></div>
-</div>
-</div>
-<div class="nboutput nblast container">
-<div class="highlight-none"><div class="highlight"><pre>
-<span></span>Out[13]:
-</pre></div>
-</div>
-<div class="highlight-none"><div class="highlight"><pre>
-<span></span>61.343846074554747
-</pre></div>
-</div>
-</div>
-<p>For WAIC PyMC3 reports a point estimate together with its standard
-error. The standard error can be useful to assess the uncertainty of the
-WAIC estimates. Nevertheless, caution need to be taken because the
-estimation of the standard error assumes normality and hence could be
-problematic when the sample size is low.</p>
-<div class="nbinput container">
-<div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [14]:
-</pre></div>
-</div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span><span class="n">plt</span><span class="o">.</span><span class="n">errorbar</span><span class="p">(</span><span class="n">pooled_waic</span><span class="o">.</span><span class="n">WAIC</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">xerr</span><span class="o">=</span><span class="n">pooled_waic</span><span class="o">.</span><span class="n">WAIC_se</span><span class="p">,</span> <span class="n">fmt</span><span class="o">=</span><span class="s1">&#39;o&#39;</span><span class="p">)</span>
-<span class="n">plt</span><span class="o">.</span><span class="n">errorbar</span><span class="p">(</span><span class="n">hierarchical_waic</span><span class="o">.</span><span class="n">WAIC</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">xerr</span><span class="o">=</span><span class="n">hierarchical_waic</span><span class="o">.</span><span class="n">WAIC_se</span><span class="p">,</span> <span class="n">fmt</span><span class="o">=</span><span class="s1">&#39;o&#39;</span><span class="p">)</span>
-<span class="n">plt</span><span class="o">.</span><span class="n">title</span><span class="p">(</span><span class="s1">&#39;WAIC&#39;</span><span class="p">)</span>
-<span class="n">plt</span><span class="o">.</span><span class="n">yticks</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">2</span><span class="p">),</span> <span class="p">(</span><span class="s1">&#39;pooled&#39;</span><span class="p">,</span> <span class="s1">&#39;hierarchical&#39;</span><span class="p">))</span>
-<span class="n">plt</span><span class="o">.</span><span class="n">ylim</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">);</span>
+<span></span><span class="n">pm</span><span class="o">.</span><span class="n">compare_plot</span><span class="p">(</span><span class="n">df_comp_WAIC</span><span class="p">);</span>
 </pre></div>
 </div>
 </div>
@@ -592,9 +667,19 @@ problematic when the sample size is low.</p>
 <div class="container">
 </div>
 <div class="container">
-<img alt="notebooks/../_build/doctrees/nbsphinx/notebooks_ModelComparison_20_0.png" src="notebooks/../_build/doctrees/nbsphinx/notebooks_ModelComparison_20_0.png" />
+<img alt="notebooks/../_build/doctrees/nbsphinx/notebooks_ModelComparison_21_0.png" src="notebooks/../_build/doctrees/nbsphinx/notebooks_ModelComparison_21_0.png" />
 </div>
 </div>
+<p>The empty circle represents the values of WAIC and the black error bars
+associated with them are the values of the standard deviation of WAIC.</p>
+<p>The value of the lowest WAIC is also indicated with a vertical dashed
+grey line to ease comparison with other WAIC values.</p>
+<p>The filled black dots are the in-sample deviance of each model, which
+for WAIC is 2 pWAIC from the corresponding WAIC value.</p>
+<p>For all models except the top-ranked one we also get a triangle
+indicating the value of the difference of WAIC between that model and
+the top model and a grey errobar indicating the standard error of the
+differences between the top-ranked WAIC and WAIC for each model.</p>
 </div>
 <div class="section" id="Leave-one-out-Cross-validation-(LOO)">
 <h2>Leave-one-out Cross-validation (LOO)<a class="headerlink" href="#Leave-one-out-Cross-validation-(LOO)" title="Permalink to this headline">¶</a></h2>
@@ -604,17 +689,52 @@ and holdout sets, iteratively fitting the model with the former and
 evaluating the fit with the holdout data. Vehtari et al. (2016)
 introduced an efficient computation of LOO from MCMC samples, which are
 corrected using Pareto-smoothed importance sampling (PSIS) to provide an
-estimate of pointwise out-of-sample prediction accuracy.</p>
+estimate of point-wise out-of-sample prediction accuracy.</p>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [14]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">pooled_loo</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">loo</span><span class="p">(</span><span class="n">trace_p</span><span class="p">,</span> <span class="n">pooled</span><span class="p">)</span>
+
+<span class="n">pooled_loo</span><span class="o">.</span><span class="n">LOO</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput container">
+<div class="container">
+</div>
+<div class="stderr container">
+<div class="highlight"><pre>
+/home/osvaldo/anaconda3/lib/python3.5/site-packages/pymc3/stats.py:208: UserWarning: Estimated shape parameter of Pareto distribution is
+        greater than 0.7 for one or more samples.
+        You should consider using a more robust model, this is
+        because importance sampling is less likely to work well if the marginal
+        posterior and LOO posterior are very different. This is more likely to
+        happen with a non-robust model and highly influential observations.
+  happen with a non-robust model and highly influential observations.&#34;&#34;&#34;)
+</pre></div></div>
+</div>
+<div class="nboutput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>Out[14]:
+</pre></div>
+</div>
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>61.591020562529295
+</pre></div>
+</div>
+</div>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
 <span></span>In [15]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span><span class="k">with</span> <span class="n">pooled</span><span class="p">:</span>
-    <span class="n">pooled_loo</span><span class="o">=</span> <span class="n">loo</span><span class="p">(</span><span class="n">trace_p</span><span class="p">)</span>
+<span></span><span class="n">hierarchical_loo</span>  <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">loo</span><span class="p">(</span><span class="n">trace_h</span><span class="p">,</span> <span class="n">hierarchical</span><span class="p">)</span>
 
-<span class="n">pooled_loo</span><span class="o">.</span><span class="n">LOO</span>
+<span class="n">hierarchical_loo</span><span class="o">.</span><span class="n">LOO</span>
 </pre></div>
 </div>
 </div>
@@ -638,59 +758,78 @@ estimate of pointwise out-of-sample prediction accuracy.</p>
 </pre></div>
 </div>
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>61.53782737562031
+<span></span>61.655191059793324
 </pre></div>
 </div>
 </div>
+<p>We can also use <code class="docutils literal"><span class="pre">compare</span></code> with LOO.</p>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
 <span></span>In [16]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span><span class="k">with</span> <span class="n">hierarchical</span><span class="p">:</span>
-    <span class="n">hierarchical_loo</span>  <span class="o">=</span> <span class="n">loo</span><span class="p">(</span><span class="n">trace_h</span><span class="p">)</span>
-
-<span class="n">hierarchical_loo</span><span class="o">.</span><span class="n">LOO</span>
+<span></span><span class="n">df_comp_LOO</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">compare</span><span class="p">((</span><span class="n">trace_h</span><span class="p">,</span> <span class="n">trace_p</span><span class="p">),</span> <span class="p">(</span><span class="n">hierarchical</span><span class="p">,</span> <span class="n">pooled</span><span class="p">),</span> <span class="n">ic</span><span class="o">=</span><span class="s1">&#39;LOO&#39;</span><span class="p">)</span>
+<span class="n">df_comp_LOO</span>
 </pre></div>
 </div>
-</div>
-<div class="nboutput container">
-<div class="container">
-</div>
-<div class="stderr container">
-<div class="highlight"><pre>
-/home/osvaldo/anaconda3/lib/python3.5/site-packages/pymc3/stats.py:208: UserWarning: Estimated shape parameter of Pareto distribution is
-        greater than 0.7 for one or more samples.
-        You should consider using a more robust model, this is
-        because importance sampling is less likely to work well if the marginal
-        posterior and LOO posterior are very different. This is more likely to
-        happen with a non-robust model and highly influential observations.
-  happen with a non-robust model and highly influential observations.&#34;&#34;&#34;)
-</pre></div></div>
 </div>
 <div class="nboutput nblast container">
 <div class="highlight-none"><div class="highlight"><pre>
 <span></span>Out[16]:
 </pre></div>
 </div>
-<div class="highlight-none"><div class="highlight"><pre>
-<span></span>61.385652284361953
-</pre></div>
+<div class="container">
+<div>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>LOO</th>
+      <th>pLOO</th>
+      <th>dLOO</th>
+      <th>weight</th>
+      <th>SE</th>
+      <th>dSE</th>
+      <th>warning</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>1</th>
+      <td>61.591</td>
+      <td>0.909406</td>
+      <td>0</td>
+      <td>0.508021</td>
+      <td>2.13514</td>
+      <td>0</td>
+      <td>1</td>
+    </tr>
+    <tr>
+      <th>0</th>
+      <td>61.6552</td>
+      <td>1.12409</td>
+      <td>0.0641705</td>
+      <td>0.491979</td>
+      <td>1.9971</td>
+      <td>0.0258501</td>
+      <td>1</td>
+    </tr>
+  </tbody>
+</table>
+</div></div>
 </div>
-</div>
-<p>For LOO we can also make a similar plot to the one we did for WAIC</p>
+<p>The columns return the equivalent values for LOO, notice that in this
+example we get two warnings. Also notice that the order of the models is
+not the same as the one for WAIC.</p>
+<p>We can also plot the results</p>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
 <span></span>In [17]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span><span class="n">plt</span><span class="o">.</span><span class="n">errorbar</span><span class="p">(</span><span class="n">pooled_loo</span><span class="o">.</span><span class="n">LOO</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">xerr</span><span class="o">=</span><span class="n">pooled_loo</span><span class="o">.</span><span class="n">LOO_se</span><span class="p">,</span> <span class="n">fmt</span><span class="o">=</span><span class="s1">&#39;o&#39;</span><span class="p">)</span>
-<span class="n">plt</span><span class="o">.</span><span class="n">errorbar</span><span class="p">(</span><span class="n">hierarchical_loo</span><span class="o">.</span><span class="n">LOO</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">xerr</span><span class="o">=</span><span class="n">hierarchical_loo</span><span class="o">.</span><span class="n">LOO_se</span><span class="p">,</span> <span class="n">fmt</span><span class="o">=</span><span class="s1">&#39;o&#39;</span><span class="p">)</span>
-<span class="n">plt</span><span class="o">.</span><span class="n">title</span><span class="p">(</span><span class="s1">&#39;LOO&#39;</span><span class="p">)</span>
-<span class="n">plt</span><span class="o">.</span><span class="n">yticks</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">2</span><span class="p">),</span> <span class="p">(</span><span class="s1">&#39;pooled&#39;</span><span class="p">,</span> <span class="s1">&#39;hierarchical&#39;</span><span class="p">))</span>
-<span class="n">plt</span><span class="o">.</span><span class="n">ylim</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">);</span>
+<span></span><span class="n">pm</span><span class="o">.</span><span class="n">compare_plot</span><span class="p">(</span><span class="n">df_comp_LOO</span><span class="p">);</span>
 </pre></div>
 </div>
 </div>
@@ -698,7 +837,7 @@ estimate of pointwise out-of-sample prediction accuracy.</p>
 <div class="container">
 </div>
 <div class="container">
-<img alt="notebooks/../_build/doctrees/nbsphinx/notebooks_ModelComparison_25_0.png" src="notebooks/../_build/doctrees/nbsphinx/notebooks_ModelComparison_25_0.png" />
+<img alt="notebooks/../_build/doctrees/nbsphinx/notebooks_ModelComparison_29_0.png" src="notebooks/../_build/doctrees/nbsphinx/notebooks_ModelComparison_29_0.png" />
 </div>
 </div>
 </div>
@@ -706,13 +845,17 @@ estimate of pointwise out-of-sample prediction accuracy.</p>
 <h2>Interpretation<a class="headerlink" href="#Interpretation" title="Permalink to this headline">¶</a></h2>
 <p>Though we might expect the hierarchical model to outperform a complete
 pooling model, there is little to choose between the models in this
-case, with the pooling model actually providing the best average
-predictive performance.</p>
+case, giving that both models gives very similar values of the
+information criteria. This is more clearly appreciated when we take into
+account the uncertainty (in terms of standard errors) of WAIC and LOO.</p>
 <div class="section" id="Reference">
 <h3>Reference<a class="headerlink" href="#Reference" title="Permalink to this headline">¶</a></h3>
 <p><a class="reference external" href="http://doi.org/10.1007/s11222-013-9416-2">Gelman, A., Hwang, J., &amp; Vehtari, A. (2014). Understanding predictive
 information criteria for Bayesian models. Statistics and Computing,
 24(6), 997–1016.</a></p>
+<p><a class="reference external" href="http://link.springer.com/article/10.1007/s11222-016-9696-4">Vehtari, A, Gelman, A, Gabry, J. (2016). Practical Bayesian model
+evaluation using leave-one-out cross-validation and WAIC. Statistics and
+Computing</a></p>
 </div>
 </div>
 </div>

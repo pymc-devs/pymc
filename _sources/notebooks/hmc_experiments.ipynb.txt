@@ -2,37 +2,14 @@
  "cells": [
   {
    "cell_type": "code",
-   "execution_count": 1,
-   "metadata": {
-    "collapsed": false
-   },
-   "outputs": [],
-   "source": [
-    "import sklearn.datasets\n",
-    "import numpy as np\n",
-    "import time"
-   ]
-  },
-  {
-   "cell_type": "code",
    "execution_count": 2,
    "metadata": {
     "collapsed": false
    },
    "outputs": [],
    "source": [
-    "data = sklearn.datasets.covtype.fetch_covtype()\n",
-    "x = data.data.astype(np.float32)\n",
-    "y = data.target\n",
-    "\n",
-    "x = x - x.mean(0)\n",
-    "x = x / x.std(0)\n",
-    "\n",
-    "N = x.shape[0]\n",
-    "D = x.shape[1] + 1\n",
-    "\n",
-    "# Add a constant column for the intercept\n",
-    "x = np.hstack([x, np.ones([N, 1], np.float32)])"
+    "import sklearn.datasets\n",
+    "import numpy as np"
    ]
   },
   {
@@ -43,15 +20,37 @@
    },
    "outputs": [],
    "source": [
-    "# Which category to binarize on\n",
-    "values, counts = np.unique(y, return_counts=True)\n",
-    "binarize_on = np.argmax(counts)\n",
-    "y = (y == binarize_on).astype(np.float32)"
+    "data = sklearn.datasets.covtype.fetch_covtype()\n",
+    "x = data.data #.astype(np.float32)\n",
+    "y = data.target\n",
+    "\n",
+    "x = x - x.mean(0)\n",
+    "x = x / x.std(0)\n",
+    "\n",
+    "N = x.shape[0]\n",
+    "D = x.shape[1] + 1\n",
+    "\n",
+    "# Add a constant column for the intercept\n",
+    "x = np.hstack([x, np.ones([N, 1])])"
    ]
   },
   {
    "cell_type": "code",
    "execution_count": 4,
+   "metadata": {
+    "collapsed": false
+   },
+   "outputs": [],
+   "source": [
+    "# Which category to binarize on\n",
+    "values, counts = np.unique(y, return_counts=True)\n",
+    "binarize_on = np.argmax(counts)\n",
+    "y = (y == binarize_on)#.astype(np.float32)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 5,
    "metadata": {
     "collapsed": false
    },
@@ -71,9 +70,9 @@
   },
   {
    "cell_type": "code",
-   "execution_count": 14,
+   "execution_count": 6,
    "metadata": {
-    "collapsed": true
+    "collapsed": false
    },
    "outputs": [],
    "source": [
@@ -85,32 +84,46 @@
     "# Hack for backwards compatibility\n",
     "# tf.select = tf.where\n",
     "\n",
-    "ed.set_seed(42)"
+    "ed.set_seed(42)\n"
    ]
   },
   {
    "cell_type": "code",
-   "execution_count": 15,
+   "execution_count": 7,
+   "metadata": {
+    "collapsed": true
+   },
+   "outputs": [],
+   "source": [
+    "import time"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 8,
    "metadata": {
     "collapsed": false,
     "scrolled": false
    },
    "outputs": [
     {
-     "name": "stdout",
-     "output_type": "stream",
-     "text": [
-      "Iteration    1 [  0%]: Acceptance Rate = nan\n",
-      "Iteration  100 [ 10%]: Acceptance Rate = 1.00\n",
-      "Iteration  200 [ 20%]: Acceptance Rate = 0.97\n",
-      "Iteration  300 [ 30%]: Acceptance Rate = 0.94\n",
-      "Iteration  400 [ 40%]: Acceptance Rate = 0.93\n",
-      "Iteration  500 [ 50%]: Acceptance Rate = 0.93\n",
-      "Iteration  600 [ 60%]: Acceptance Rate = 0.92\n",
-      "Iteration  700 [ 70%]: Acceptance Rate = 0.93\n",
-      "Iteration  800 [ 80%]: Acceptance Rate = 0.93\n",
-      "Iteration  900 [ 90%]: Acceptance Rate = 0.93\n",
-      "Iteration 1000 [100%]: Acceptance Rate = 0.92\n"
+     "ename": "TypeError",
+     "evalue": "Input 'b' of 'MatMul' Op has type float64 that does not match type float32 of argument 'a'.",
+     "output_type": "error",
+     "traceback": [
+      "\u001b[0;31m---------------------------------------------------------------------------\u001b[0m",
+      "\u001b[0;31mValueError\u001b[0m                                Traceback (most recent call last)",
+      "\u001b[0;32m/home/wiecki/miniconda3/lib/python3.5/site-packages/tensorflow/python/framework/op_def_library.py\u001b[0m in \u001b[0;36mapply_op\u001b[0;34m(self, op_type_name, name, **keywords)\u001b[0m\n\u001b[1;32m    489\u001b[0m                 \u001b[0mas_ref\u001b[0m\u001b[0;34m=\u001b[0m\u001b[0minput_arg\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mis_ref\u001b[0m\u001b[0;34m,\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0;32m--> 490\u001b[0;31m                 preferred_dtype=default_dtype)\n\u001b[0m\u001b[1;32m    491\u001b[0m           \u001b[0;32mexcept\u001b[0m \u001b[0mValueError\u001b[0m\u001b[0;34m:\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n",
+      "\u001b[0;32m/home/wiecki/miniconda3/lib/python3.5/site-packages/tensorflow/python/framework/ops.py\u001b[0m in \u001b[0;36mconvert_to_tensor\u001b[0;34m(value, dtype, name, as_ref, preferred_dtype)\u001b[0m\n\u001b[1;32m    656\u001b[0m         \u001b[0;32mif\u001b[0m \u001b[0mret\u001b[0m \u001b[0;32mis\u001b[0m \u001b[0;32mNone\u001b[0m\u001b[0;34m:\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0;32m--> 657\u001b[0;31m           \u001b[0mret\u001b[0m \u001b[0;34m=\u001b[0m \u001b[0mconversion_func\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0mvalue\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0mdtype\u001b[0m\u001b[0;34m=\u001b[0m\u001b[0mdtype\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0mname\u001b[0m\u001b[0;34m=\u001b[0m\u001b[0mname\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0mas_ref\u001b[0m\u001b[0;34m=\u001b[0m\u001b[0mas_ref\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0m\u001b[1;32m    658\u001b[0m \u001b[0;34m\u001b[0m\u001b[0m\n",
+      "\u001b[0;32m/home/wiecki/miniconda3/lib/python3.5/site-packages/tensorflow/python/framework/ops.py\u001b[0m in \u001b[0;36m_TensorTensorConversionFunction\u001b[0;34m(t, dtype, name, as_ref)\u001b[0m\n\u001b[1;32m    570\u001b[0m         \u001b[0;34m\"Tensor conversion requested dtype %s for Tensor with dtype %s: %r\"\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0;32m--> 571\u001b[0;31m         % (dtype.name, t.dtype.name, str(t)))\n\u001b[0m\u001b[1;32m    572\u001b[0m   \u001b[0;32mreturn\u001b[0m \u001b[0mt\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n",
+      "\u001b[0;31mValueError\u001b[0m: Tensor conversion requested dtype float32 for Tensor with dtype float64: 'Tensor(\"Variable/read:0\", shape=(55, 581012), dtype=float64)'",
+      "\nDuring handling of the above exception, another exception occurred:\n",
+      "\u001b[0;31mTypeError\u001b[0m                                 Traceback (most recent call last)",
+      "\u001b[0;32m<ipython-input-8-5bbd810962b1>\u001b[0m in \u001b[0;36m<module>\u001b[0;34m()\u001b[0m\n\u001b[1;32m      5\u001b[0m \u001b[0mbeta\u001b[0m \u001b[0;34m=\u001b[0m \u001b[0med\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mmodels\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mNormal\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0mmu\u001b[0m\u001b[0;34m=\u001b[0m\u001b[0mtf\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mzeros\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0mD\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0msigma\u001b[0m\u001b[0;34m=\u001b[0m\u001b[0mtf\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mones\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0mD\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m      6\u001b[0m \u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0;32m----> 7\u001b[0;31m \u001b[0mlogit_pred\u001b[0m \u001b[0;34m=\u001b[0m \u001b[0mtf\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0msqueeze\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0mtf\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mmatmul\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0mtf\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mexpand_dims\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0mbeta\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0;36m0\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0mtf_x\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0m\u001b[1;32m      8\u001b[0m \u001b[0med_y\u001b[0m \u001b[0;34m=\u001b[0m \u001b[0med\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mmodels\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mBernoulliWithSigmoidP\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0mp\u001b[0m\u001b[0;34m=\u001b[0m\u001b[0mlogit_pred\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m      9\u001b[0m \u001b[0;34m\u001b[0m\u001b[0m\n",
+      "\u001b[0;32m/home/wiecki/miniconda3/lib/python3.5/site-packages/tensorflow/python/ops/math_ops.py\u001b[0m in \u001b[0;36mmatmul\u001b[0;34m(a, b, transpose_a, transpose_b, a_is_sparse, b_is_sparse, name)\u001b[0m\n\u001b[1;32m   1396\u001b[0m                                    \u001b[0mtranspose_a\u001b[0m\u001b[0;34m=\u001b[0m\u001b[0mtranspose_a\u001b[0m\u001b[0;34m,\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m   1397\u001b[0m                                    \u001b[0mtranspose_b\u001b[0m\u001b[0;34m=\u001b[0m\u001b[0mtranspose_b\u001b[0m\u001b[0;34m,\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0;32m-> 1398\u001b[0;31m                                    name=name)\n\u001b[0m\u001b[1;32m   1399\u001b[0m \u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m   1400\u001b[0m \u001b[0msparse_matmul\u001b[0m \u001b[0;34m=\u001b[0m \u001b[0mgen_math_ops\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0m_sparse_mat_mul\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n",
+      "\u001b[0;32m/home/wiecki/miniconda3/lib/python3.5/site-packages/tensorflow/python/ops/gen_math_ops.py\u001b[0m in \u001b[0;36m_mat_mul\u001b[0;34m(a, b, transpose_a, transpose_b, name)\u001b[0m\n\u001b[1;32m   1346\u001b[0m   \"\"\"\n\u001b[1;32m   1347\u001b[0m   result = _op_def_lib.apply_op(\"MatMul\", a=a, b=b, transpose_a=transpose_a,\n\u001b[0;32m-> 1348\u001b[0;31m                                 transpose_b=transpose_b, name=name)\n\u001b[0m\u001b[1;32m   1349\u001b[0m   \u001b[0;32mreturn\u001b[0m \u001b[0mresult\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m   1350\u001b[0m \u001b[0;34m\u001b[0m\u001b[0m\n",
+      "\u001b[0;32m/home/wiecki/miniconda3/lib/python3.5/site-packages/tensorflow/python/framework/op_def_library.py\u001b[0m in \u001b[0;36mapply_op\u001b[0;34m(self, op_type_name, name, **keywords)\u001b[0m\n\u001b[1;32m    510\u001b[0m                   \u001b[0;34m\"%s type %s of argument '%s'.\"\u001b[0m \u001b[0;34m%\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m    511\u001b[0m                   (prefix, dtypes.as_dtype(attrs[input_arg.type_attr]).name,\n\u001b[0;32m--> 512\u001b[0;31m                    inferred_from[input_arg.type_attr]))\n\u001b[0m\u001b[1;32m    513\u001b[0m \u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m    514\u001b[0m           \u001b[0mtypes\u001b[0m \u001b[0;34m=\u001b[0m \u001b[0;34m[\u001b[0m\u001b[0mvalues\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mdtype\u001b[0m\u001b[0;34m]\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n",
+      "\u001b[0;31mTypeError\u001b[0m: Input 'b' of 'MatMul' Op has type float64 that does not match type float32 of argument 'a'."
      ]
     }
    ],
@@ -135,7 +148,7 @@
   },
   {
    "cell_type": "code",
-   "execution_count": 16,
+   "execution_count": 12,
    "metadata": {
     "collapsed": false
    },
@@ -144,7 +157,7 @@
      "name": "stdout",
      "output_type": "stream",
      "text": [
-      "Edward took 76.373 seconds\n"
+      "Edward took 89.355 seconds\n"
      ]
     }
    ],
@@ -154,11 +167,32 @@
   },
   {
    "cell_type": "code",
-   "execution_count": null,
+   "execution_count": 7,
    "metadata": {
     "collapsed": false
    },
-   "outputs": [],
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "[<matplotlib.lines.Line2D at 0x7fbfdc5d8210>]"
+      ]
+     },
+     "execution_count": 7,
+     "metadata": {},
+     "output_type": "execute_result"
+    },
+    {
+     "data": {
+      "image/png": "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\n+g+Vp8PwYdFl7QAAAABJRU5ErkJggg==\n",
+      "text/plain": [
+       "<matplotlib.figure.Figure at 0x7fc0af7f4210>"
+      ]
+     },
+     "metadata": {},
+     "output_type": "display_data"
+    }
+   ],
    "source": [
     "sess = ed.get_session()\n",
     "ed_samples = sess.run(qbeta.params)\n",
@@ -517,194 +551,119 @@
   },
   {
    "cell_type": "code",
-   "execution_count": 5,
+   "execution_count": 6,
    "metadata": {
     "collapsed": false
    },
    "outputs": [],
    "source": [
     "import pymc3\n",
+    "import pymc3.math\n",
     "import theano\n",
     "import theano.tensor as T"
    ]
   },
   {
    "cell_type": "code",
-   "execution_count": 18,
+   "execution_count": 7,
    "metadata": {
-    "collapsed": false
-   },
-   "outputs": [
-    {
-     "name": "stdout",
-     "output_type": "stream",
-     "text": [
-      "float32\n"
-     ]
-    }
-   ],
-   "source": [
-    "print(theano.config.floatX)"
-   ]
-  },
-  {
-   "cell_type": "code",
-   "execution_count": 6,
-   "metadata": {
-    "collapsed": false,
-    "scrolled": true
+    "collapsed": true
    },
    "outputs": [],
    "source": [
-    "basic_model = pymc3.Model()\n",
-    "\n",
-    "with basic_model:\n",
-    "    pymc_beta = pymc3.Normal('beta', mu=0, sd=1, shape=D)\n",
-    "    pymc_y = pymc3.Bernoulli('y', p=pymc3.math.sigmoid(pymc3.math.dot(x, pymc_beta)), \n",
-    "                             observed=y)\n",
-    "\n",
-    "    step = pymc3.HamiltonianMC(step_scale=step_size*(1./D)**(-1./4), \n",
-    "                               path_length=step_size*n_steps,\n",
-    "                               step_rand=lambda x: np.asarray(x), scaling=np.ones(D, np.float32), profile=True)\n",
-    "    t0 = time.time()\n",
-    "    #pymc_samples = pymc3.sample(n_iterations, step=step, init=None, njobs=1)\n",
-    "#pymc_time = time.time() - t0\n",
-    "#print('pymc (CPU multithreaded) took %.3f seconds' % pymc_time)"
+    "import time"
    ]
   },
   {
    "cell_type": "code",
-   "execution_count": 13,
+   "execution_count": 8,
    "metadata": {
-    "collapsed": false
+    "collapsed": false,
+    "scrolled": true
    },
    "outputs": [
     {
      "name": "stderr",
      "output_type": "stream",
      "text": [
-      "Function profiling\n",
-      "==================\n",
-      "  Message: /home/wiecki/working/projects/pymc/pymc3/step_methods/hmc/trajectory.py:82\n",
-      "  Time in 1000 calls to Function.__call__: 3.912939e+02s\n",
-      "  Time in Function.fn.__call__: 3.912476e+02s (99.988%)\n",
-      "  Time in thunks: 3.910677e+02s (99.942%)\n",
-      "  Total compile time: 2.532339e+01s\n",
-      "    Number of Apply nodes: 59\n",
-      "    Theano Optimizer time: 1.796372e+01s\n",
-      "       Theano validate time: 2.631712e-02s\n",
-      "    Theano Linker time (includes C, CUDA code generation/compiling): 7.095931e+00s\n",
-      "       Import time 0.000000e+00s\n",
-      "       Node make_thunk time 7.091756e+00s\n",
-      "           Node forall_inplace,cpu,scan_fn}(Elemwise{maximum,no_inplace}.0, IncSubtensor{InplaceSet;:int64:}.0, IncSubtensor{InplaceSet;:int64:}.0, InplaceDimShuffle{x}.0) time 2.847363e+00s\n",
-      "           Node CGemv{inplace}(AllocEmpty{dtype='float32'}.0, TensorConstant{1.0}, TensorConstant{[[-1.29734..        ]]}, Elemwise{Composite{Switch(i0, Switch(Composite{Identity((GE(i0, i1) * LE(i0, i2)))}(scalar_sigmoid(i1), i2, i3), (i4 - scalar_sigmoid(i1)), i2), Switch(Composite{Identity((GE(i0, i1) * LE(i0, i2)))}(scalar_sigmoid(i1), i2, i3), (-scalar_sigmoid(i1)), i2))}}[(0, 1)].0, TensorConstant{0.0}) time 2.029986e+00s\n",
-      "           Node CGemv{inplace}(Subtensor{int64}.0, InplaceDimShuffle{}.0, TensorConstant{[[-1.29734..        ]]}, Elemwise{Composite{Switch(i0, Switch(i1, (i2 - i3), i4), Switch(i1, (-i3), i4))}}[(0, 3)].0, TensorConstant{1.0}) time 1.700661e+00s\n",
-      "           Node CGemv{inplace}(AllocEmpty{dtype='float32'}.0, TensorConstant{1.0}, TensorConstant{[[-1.29734..        ]]}, Subtensor{int64:int64:}.0, TensorConstant{0.0}) time 2.284324e-01s\n",
-      "           Node CGemv{inplace}(AllocEmpty{dtype='float32'}.0, TensorConstant{1.0}, TensorConstant{[[-1.29734..        ]]}, Subtensor{int64, int64:int64:}.0, TensorConstant{0.0}) time 2.141685e-01s\n",
-      "\n",
-      "Time in all call to theano.grad() 2.469898e+01s\n",
-      "Time since theano import 1038.354s\n",
-      "Class\n",
-      "---\n",
-      "<% time> <sum %> <apply time> <time per call> <type> <#call> <#apply> <Class name>\n",
-      "  71.8%    71.8%     280.788s       2.81e-01s     Py    1000       1   theano.scan_module.scan_op.Scan\n",
-      "  21.2%    93.0%      82.736s       3.45e-03s     C    24000      24   theano.tensor.elemwise.Elemwise\n",
-      "   6.8%    99.8%      26.583s       5.32e-03s     C     5000       5   theano.tensor.blas_c.CGemv\n",
-      "   0.2%   100.0%       0.806s       4.03e-04s     C     2000       2   theano.tensor.elemwise.Sum\n",
-      "   0.0%   100.0%       0.114s       5.68e-05s     C     2000       2   theano.tensor.subtensor.IncSubtensor\n",
-      "   0.0%   100.0%       0.014s       1.52e-06s     C     9000       9   theano.tensor.elemwise.DimShuffle\n",
-      "   0.0%   100.0%       0.011s       1.84e-06s     C     6000       6   theano.tensor.basic.AllocEmpty\n",
-      "   0.0%   100.0%       0.009s       2.26e-06s     C     4000       4   theano.tensor.subtensor.Subtensor\n",
-      "   0.0%   100.0%       0.003s       1.67e-06s     C     2000       2   theano.compile.ops.Shape_i\n",
-      "   0.0%   100.0%       0.003s       1.38e-06s     C     2000       2   theano.tensor.basic.ScalarFromTensor\n",
-      "   0.0%   100.0%       0.001s       6.32e-07s     C     2000       2   theano.compile.ops.Rebroadcast\n",
-      "   ... (remaining 0 Classes account for   0.00%(0.00s) of the runtime)\n",
-      "\n",
-      "Ops\n",
-      "---\n",
-      "<% time> <sum %> <apply time> <time per call> <type> <#call> <#apply> <Op name>\n",
-      "  71.8%    71.8%     280.788s       2.81e-01s     Py    1000        1   forall_inplace,cpu,scan_fn}\n",
-      "  12.8%    84.6%      50.072s       5.01e-02s     C     1000        1   Elemwise{Composite{Switch(i0, Switch(i1, (-scalar_softplus((-i2))), (-scalar_softplus(i2))), i3)}}[(0, 2)]\n",
-      "   6.8%    91.4%      26.583s       5.32e-03s     C     5000        5   CGemv{inplace}\n",
-      "   4.1%    95.5%      16.075s       1.61e-02s     C     1000        1   Elemwise{Composite{Switch(i0, Switch(Composite{Identity((GE(i0, i1) * LE(i0, i2)))}(scalar_sigmoid(i1), i2, i3), (i4 - scalar_sigmoid(i1)), i2), Switch(Composite{Identity((GE(i0, i1) * LE(i0, i2)))}(scalar_sigmoid(i1), i2, i3), (-scalar_sigmoid(i1)), i2))}}[(0, 1)]\n",
-      "   3.8%    99.3%      14.846s       1.48e-02s     C     1000        1   Elemwise{scalar_sigmoid}\n",
-      "   0.3%    99.6%       1.166s       1.17e-03s     C     1000        1   Elemwise{Composite{Switch(i0, Switch(i1, (i2 - i3), i4), Switch(i1, (-i3), i4))}}[(0, 3)]\n",
-      "   0.2%    99.8%       0.806s       4.03e-04s     C     2000        2   Sum{acc_dtype=float64}\n",
-      "   0.1%    99.9%       0.536s       5.36e-04s     C     1000        1   Elemwise{Composite{Identity((GE(i0, i1) * LE(i0, i2)))}}\n",
-      "   0.0%   100.0%       0.114s       5.68e-05s     C     2000        2   IncSubtensor{InplaceSet;:int64:}\n",
-      "   0.0%   100.0%       0.011s       1.84e-06s     C     6000        6   AllocEmpty{dtype='float32'}\n",
-      "   0.0%   100.0%       0.008s       1.66e-06s     C     5000        5   InplaceDimShuffle{x,0}\n",
-      "   0.0%   100.0%       0.005s       4.53e-06s     C     1000        1   Elemwise{Composite{maximum(maximum(((maximum(i0, i1) - Switch(LT(i2, i3), (i2 + i4 + i5), i2)) + i1), i6), maximum(((maximum(i0, i1) - Switch(LT(i2, i3), (i2 + i4 + i5), i2)) + i1), i6))}}[(0, 0)]\n",
-      "   0.0%   100.0%       0.003s       3.46e-06s     C     1000        1   Subtensor{int64:int64:}\n",
-      "   0.0%   100.0%       0.003s       3.39e-06s     C     1000        1   Elemwise{Composite{((i0 * i1 * i2) + i3)}}[(0, 3)]\n",
-      "   0.0%   100.0%       0.003s       1.67e-06s     C     2000        2   Shape_i{0}\n",
-      "   0.0%   100.0%       0.003s       3.18e-06s     C     1000        1   Elemwise{mul,no_inplace}\n",
-      "   0.0%   100.0%       0.003s       2.82e-06s     C     1000        1   Subtensor{int64, int64:int64:}\n",
-      "   0.0%   100.0%       0.003s       1.39e-06s     C     2000        2   Subtensor{int64}\n",
-      "   0.0%   100.0%       0.003s       1.38e-06s     C     2000        2   ScalarFromTensor\n",
-      "   0.0%   100.0%       0.003s       2.68e-06s     C     1000        1   Elemwise{Composite{(i0 + (i1 * i2 * ((-i3) + i4)))}}[(0, 4)]\n",
-      "   ... (remaining 18 Ops account for   0.01%(0.03s) of the runtime)\n",
-      "\n",
-      "Apply\n",
-      "------\n",
-      "<% time> <sum %> <apply time> <time per call> <#call> <id> <Apply name>\n",
-      "  71.8%    71.8%     280.788s       2.81e-01s   1000    41   forall_inplace,cpu,scan_fn}(Elemwise{maximum,no_inplace}.0, IncSubtensor{InplaceSet;:int64:}.0, IncSubtensor{InplaceSet;:int64:}.0, InplaceDimShuffle{x}.0)\n",
-      "  12.8%    84.6%      50.072s       5.01e-02s   1000    51   Elemwise{Composite{Switch(i0, Switch(i1, (-scalar_softplus((-i2))), (-scalar_softplus(i2))), i3)}}[(0, 2)](Elemwise{Composite{Identity((GE(i0, i1) * LE(i0, i2)))}}.0, TensorConstant{[0 0 0 ..., 0 0 0]}, CGemv{inplace}.0, TensorConstant{(1,) of -inf})\n",
-      "   4.1%    88.7%      16.075s       1.61e-02s   1000    19   Elemwise{Composite{Switch(i0, Switch(Composite{Identity((GE(i0, i1) * LE(i0, i2)))}(scalar_sigmoid(i1), i2, i3), (i4 - scalar_sigmoid(i1)), i2), Switch(Composite{Identity((GE(i0, i1) * LE(i0, i2)))}(scalar_sigmoid(i1), i2, i3), (-scalar_sigmoid(i1)), i2))}}[(0, 1)](TensorConstant{[0 0 0 ..., 0 0 0]}, CGemv{inplace}.0, TensorConstant{(1,) of 0}, TensorConstant{(1,) of 1}, TensorConstant{(1,) of 1.0})\n",
-      "   3.8%    92.5%      14.846s       1.48e-02s   1000    47   Elemwise{scalar_sigmoid}(CGemv{inplace}.0)\n",
-      "   1.7%    94.3%       6.815s       6.81e-03s   1000    52   CGemv{inplace}(Subtensor{int64}.0, InplaceDimShuffle{}.0, TensorConstant{[[-1.29734..        ]]}, Elemwise{Composite{Switch(i0, Switch(i1, (i2 - i3), i4), Switch(i1, (-i3), i4))}}[(0, 3)].0, TensorConstant{1.0})\n",
-      "   1.7%    96.0%       6.670s       6.67e-03s   1000    45   CGemv{inplace}(AllocEmpty{dtype='float32'}.0, TensorConstant{1.0}, TensorConstant{[[-1.29734..        ]]}, Subtensor{int64, int64:int64:}.0, TensorConstant{0.0})\n",
-      "   1.7%    97.6%       6.551s       6.55e-03s   1000    16   CGemv{inplace}(AllocEmpty{dtype='float32'}.0, TensorConstant{1.0}, TensorConstant{[[-1.29734..        ]]}, Subtensor{int64:int64:}.0, TensorConstant{0.0})\n",
-      "   1.7%    99.3%       6.544s       6.54e-03s   1000    21   CGemv{inplace}(AllocEmpty{dtype='float32'}.0, TensorConstant{1.0}, TensorConstant{[[-1.29734..        ]]}, Elemwise{Composite{Switch(i0, Switch(Composite{Identity((GE(i0, i1) * LE(i0, i2)))}(scalar_sigmoid(i1), i2, i3), (i4 - scalar_sigmoid(i1)), i2), Switch(Composite{Identity((GE(i0, i1) * LE(i0, i2)))}(scalar_sigmoid(i1), i2, i3), (-scalar_sigmoid(i1)), i2))}}[(0, 1)].0, TensorConstant{0.0})\n",
-      "   0.3%    99.6%       1.166s       1.17e-03s   1000    50   Elemwise{Composite{Switch(i0, Switch(i1, (i2 - i3), i4), Switch(i1, (-i3), i4))}}[(0, 3)](TensorConstant{[0 0 0 ..., 0 0 0]}, Elemwise{Composite{Identity((GE(i0, i1) * LE(i0, i2)))}}.0, TensorConstant{(1,) of 1.0}, Elemwise{scalar_sigmoid}.0, TensorConstant{(1,) of 0})\n",
-      "   0.2%    99.8%       0.800s       8.00e-04s   1000    53   Sum{acc_dtype=float64}(Elemwise{Composite{Switch(i0, Switch(i1, (-scalar_softplus((-i2))), (-scalar_softplus(i2))), i3)}}[(0, 2)].0)\n",
-      "   0.1%    99.9%       0.536s       5.36e-04s   1000    49   Elemwise{Composite{Identity((GE(i0, i1) * LE(i0, i2)))}}(Elemwise{scalar_sigmoid}.0, TensorConstant{(1,) of 0}, TensorConstant{(1,) of 1})\n",
-      "   0.0%   100.0%       0.110s       1.10e-04s   1000    37   IncSubtensor{InplaceSet;:int64:}(AllocEmpty{dtype='float32'}.0, Rebroadcast{0}.0, Constant{1})\n",
-      "   0.0%   100.0%       0.006s       5.50e-06s   1000    48   Sum{acc_dtype=float64}(Elemwise{Composite{(i0 + (-sqr(i1)))}}.0)\n",
-      "   0.0%   100.0%       0.005s       4.53e-06s   1000    26   Elemwise{Composite{maximum(maximum(((maximum(i0, i1) - Switch(LT(i2, i3), (i2 + i4 + i5), i2)) + i1), i6), maximum(((maximum(i0, i1) - Switch(LT(i2, i3), (i2 + i4 + i5), i2)) + i1), i6))}}[(0, 0)](Elemwise{Composite{minimum(maximum(maximum(((i0 + i1) - i2), ((i3 + i1) - i2)), ((i4 + i1) - i2)), i5)}}.0, TensorConstant{1}, Elemwise{Composite{Switch(LT(((i0 + i1) - Composite{Switch(LT(i0, i1), i0, i1)}(i2, i3)), i4), (-(i2 + i1)), Switch(GE(((i0 + i1)\n",
-      "   0.0%   100.0%       0.004s       3.98e-06s   1000    56   CGemv{inplace}(AllocEmpty{dtype='float32'}.0, TensorConstant{1.0}, InplaceDimShuffle{x,0}.0, Elemwise{Composite{((i0 * i1 * i2) + i3)}}[(0, 3)].0, TensorConstant{0.0})\n",
-      "   0.0%   100.0%       0.003s       3.46e-06s   1000     5   Subtensor{int64:int64:}(inarray, Constant{0}, Constant{55})\n",
-      "   0.0%   100.0%       0.003s       3.39e-06s   1000    54   Elemwise{Composite{((i0 * i1 * i2) + i3)}}[(0, 3)](TensorConstant{(1,) of -1.0}, Elemwise{mul,no_inplace}.0, Subtensor{int64, int64:int64:}.0, CGemv{inplace}.0)\n",
-      "   0.0%   100.0%       0.003s       3.19e-06s   1000    25   InplaceDimShuffle{x,0}(CGemv{inplace}.0)\n",
-      "   0.0%   100.0%       0.003s       3.18e-06s   1000    14   Elemwise{mul,no_inplace}(TensorConstant{(1,) of 0.5}, InplaceDimShuffle{x}.0)\n",
-      "   0.0%   100.0%       0.003s       3.01e-06s   1000    40   IncSubtensor{InplaceSet;:int64:}(AllocEmpty{dtype='float32'}.0, Rebroadcast{0}.0, Constant{1})\n",
-      "   ... (remaining 39 Apply instances account for 0.02%(0.06s) of the runtime)\n",
-      "\n",
-      "Here are tips to potentially make your code run faster\n",
-      "                 (if you think of new ones, suggest them on the mailing list).\n",
-      "                 Test them first, as they are not guaranteed to always provide a speedup.\n",
-      "  - Try installing amdlibm and set the Theano flag lib.amdlibm=True. This speeds up only some Elemwise operation.\n"
+      "100%|██████████| 1000/1000 [20:34<00:00,  1.22s/it]"
+     ]
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "pymc (CPU multithreaded) took 1234.174 seconds\n"
+     ]
+    },
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "\n"
      ]
     }
    ],
    "source": [
-    "step.leapfrog.profile.summary()"
-   ]
-  },
-  {
-   "cell_type": "markdown",
-   "metadata": {},
-   "source": [
-    "^ Should use \"  6.8%    99.8%      26.583s       5.32e-03s     C     5000       5   theano.tensor.blas_c.CGemv\", not Python."
+    "basic_model = pymc3.Model()\n",
+    "\n",
+    "with basic_model:\n",
+    "    pymc_beta = pymc3.Normal('beta', mu=0, sd=1, shape=D)\n",
+    "    pymc_y = pymc3.Bernoulli('y', p=pymc3.math.sigmoid(pymc3.math.dot(x.astype('float64'), \n",
+    "                                                                      pymc_beta)), observed=y.astype('int64'))\n",
+    "\n",
+    "    step = pymc3.HamiltonianMC(step_scale=step_size*(1./D)**(-1./4), \n",
+    "                               path_length=step_size*n_steps,\n",
+    "                               step_rand=lambda x:x, scaling=np.ones(D, np.float32))\n",
+    "    t0 = time.time()\n",
+    "    pymc_samples = pymc3.sample(n_iterations, step=step, init=None, njobs=1)\n",
+    "pymc_time = time.time() - t0\n",
+    "print('pymc (CPU multithreaded) took %.3f seconds' % pymc_time)"
    ]
   },
   {
    "cell_type": "code",
-   "execution_count": 17,
+   "execution_count": 9,
    "metadata": {
     "collapsed": false
    },
    "outputs": [
     {
-     "name": "stdout",
-     "output_type": "stream",
-     "text": [
-      "PyMC3 (CPU, multi-threaded) took 467.597 seconds (6.123 Edward time)\n"
+     "data": {
+      "text/plain": [
+       "13.71111111111111"
+      ]
+     },
+     "execution_count": 9,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "1234./90"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 7,
+   "metadata": {
+    "collapsed": false
+   },
+   "outputs": [
+    {
+     "ename": "NameError",
+     "evalue": "name 'pymc_time' is not defined",
+     "output_type": "error",
+     "traceback": [
+      "\u001b[0;31m---------------------------------------------------------------------------\u001b[0m",
+      "\u001b[0;31mNameError\u001b[0m                                 Traceback (most recent call last)",
+      "\u001b[0;32m<ipython-input-7-c24eae3578da>\u001b[0m in \u001b[0;36m<module>\u001b[0;34m()\u001b[0m\n\u001b[0;32m----> 1\u001b[0;31m \u001b[0mprint\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0;34m'PyMC3 (CPU, multi-theaded) took %.3f seconds (%.3f Edward time)'\u001b[0m \u001b[0;34m%\u001b[0m \u001b[0;34m(\u001b[0m\u001b[0mpymc_time\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0mpymc_time\u001b[0m \u001b[0;34m/\u001b[0m \u001b[0med_time\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0m",
+      "\u001b[0;31mNameError\u001b[0m: name 'pymc_time' is not defined"
      ]
     }
    ],
    "source": [
-    "print('PyMC3 (CPU, multi-threaded) took %.3f seconds (%.3f Edward time)' % (pymc_time, pymc_time / ed_time))"
+    "print('PyMC3 (CPU, multi-theaded) took %.3f seconds (%.3f Edward time)' % (pymc_time, pymc_time / ed_time))"
    ]
   },
   {
@@ -745,6 +704,24 @@
    "source": [
     "---"
    ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {
+    "collapsed": true
+   },
+   "outputs": [],
+   "source": []
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {
+    "collapsed": true
+   },
+   "outputs": [],
+   "source": []
   },
   {
    "cell_type": "markdown",
@@ -945,11 +922,21 @@
   },
   {
    "cell_type": "code",
-   "execution_count": 27,
+   "execution_count": 5,
    "metadata": {
     "collapsed": false
    },
-   "outputs": [],
+   "outputs": [
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "Using gpu device 0: TITAN X (Pascal) (CNMeM is disabled, cuDNN 5105)\n",
+      "/usr/local/lib/python2.7/dist-packages/theano/sandbox/cuda/__init__.py:600: UserWarning: Your cuDNN version is more recent than the one Theano officially supports. If you see any problems, try updating Theano or downgrading cuDNN to version 5.\n",
+      "  warnings.warn(warn)\n"
+     ]
+    }
+   ],
    "source": [
     "import theano\n",
     "import theano.tensor as T"
@@ -957,29 +944,7 @@
   },
   {
    "cell_type": "code",
-   "execution_count": 32,
-   "metadata": {
-    "collapsed": false
-   },
-   "outputs": [
-    {
-     "data": {
-      "text/plain": [
-       "array([ 0.,  0.,  0., ...,  0.,  0.,  0.], dtype=float32)"
-      ]
-     },
-     "execution_count": 32,
-     "metadata": {},
-     "output_type": "execute_result"
-    }
-   ],
-   "source": [
-    "y"
-   ]
-  },
-  {
-   "cell_type": "code",
-   "execution_count": 15,
+   "execution_count": 17,
    "metadata": {
     "collapsed": false
    },
@@ -1010,9 +975,7 @@
     "    return z\n",
     "\n",
     "def make_logp_grad():\n",
-    "    global x, y\n",
     "    beta = T.vector('beta')\n",
-    "    beta.tag.test_value = np.ones(D, np.float32)\n",
     "    t_x = theano.shared(x)\n",
     "    t_y = theano.shared(y)\n",
     "    logit_preds = t_x.dot(beta)\n",
@@ -1021,50 +984,9 @@
     "    logp = -0.5 * T.square(logit_preds - y).sum()\n",
     "    logp -= 0.5 * T.square(beta).sum()\n",
     "    grad = T.grad(logp, beta)\n",
-    "    return theano.function([beta], [logp, grad], profile=True)\n",
+    "    return theano.function([beta], [logp, grad])\n",
     "\n",
     "logp_grad = make_logp_grad()"
-   ]
-  },
-  {
-   "cell_type": "code",
-   "execution_count": 19,
-   "metadata": {
-    "collapsed": false
-   },
-   "outputs": [
-    {
-     "data": {
-      "text/plain": [
-       "[array(-105920.0, dtype=float32),\n",
-       " array([  1.28222781e+05,   9.09090820e+02,  -2.76247480e+04,\n",
-       "          9.98171875e+02,  -1.54826426e+04,   3.59759844e+04,\n",
-       "         -1.17709082e+03,   9.36618896e+02,   7.45278320e+03,\n",
-       "          4.62467188e+03,   2.14361484e+04,   3.48892344e+04,\n",
-       "         -9.78073047e+03,  -5.53271016e+04,  -1.53760117e+04,\n",
-       "         -2.42740938e+04,  -1.94298672e+04,  -3.00029492e+04,\n",
-       "         -1.11407861e+04,  -2.27419824e+04,  -2.84630249e+03,\n",
-       "         -1.27202271e+03,  -5.79383398e+03,  -4.74406406e+04,\n",
-       "         -2.61200098e+04,  -3.74384336e+04,  -2.43622734e+04,\n",
-       "         -6.81428516e+03,  -4.81313538e+02,  -5.76235693e+03,\n",
-       "         -1.35192207e+04,  -1.09082988e+04,   1.20276172e+04,\n",
-       "          2.75471289e+03,   1.32044033e+04,   5.85381602e+04,\n",
-       "          4.83618164e+04,   1.81232773e+04,  -1.67320288e+03,\n",
-       "         -9.92301660e+03,   4.82513672e+03,  -7.48619385e+03,\n",
-       "         -2.05542969e+02,  -1.51743428e+04,   1.22136357e+04,\n",
-       "          7.61510352e+03,   6.31883594e+03,  -9.38339648e+03,\n",
-       "          4.24561377e+03,  -2.05518335e+03,  -4.80466895e+03,\n",
-       "          1.88541953e+04,   1.86701719e+04,   1.35195664e+04,\n",
-       "          2.11840000e+05], dtype=float32)]"
-      ]
-     },
-     "execution_count": 19,
-     "metadata": {},
-     "output_type": "execute_result"
-    }
-   ],
-   "source": [
-    "logp_grad(beta)"
    ]
   },
   {
@@ -1078,7 +1000,7 @@
      "name": "stdout",
      "output_type": "stream",
      "text": [
-      "10 loops, best of 3: 14.7 ms per loop\n"
+      "100 loops, best of 3: 3.45 ms per loop\n"
      ]
     }
    ],
@@ -1087,83 +1009,6 @@
     "%timeit logp_grad(beta)\n",
     "# while True:\n",
     "#     logp_grad(beta)"
-   ]
-  },
-  {
-   "cell_type": "code",
-   "execution_count": 17,
-   "metadata": {
-    "collapsed": false
-   },
-   "outputs": [
-    {
-     "name": "stderr",
-     "output_type": "stream",
-     "text": [
-      "Function profiling\n",
-      "==================\n",
-      "  Message: <ipython-input-15-44373b114871>:37\n",
-      "  Time in 41 calls to Function.__call__: 7.081084e-01s\n",
-      "  Time in Function.fn.__call__: 7.050962e-01s (99.575%)\n",
-      "  Time in thunks: 7.037623e-01s (99.386%)\n",
-      "  Total compile time: 3.073976e-01s\n",
-      "    Number of Apply nodes: 9\n",
-      "    Theano Optimizer time: 4.145336e-02s\n",
-      "       Theano validate time: 5.130768e-04s\n",
-      "    Theano Linker time (includes C, CUDA code generation/compiling): 1.980829e-02s\n",
-      "       Import time 9.435177e-03s\n",
-      "       Node make_thunk time 1.919985e-02s\n",
-      "           Node CGemv{no_inplace}(TensorConstant{[ 0.  0.  ...  0.  0.]}, TensorConstant{1.0}, <TensorType(float32, matrix)>, beta, TensorConstant{-1.0}) time 4.457951e-03s\n",
-      "           Node Elemwise{Neg}[(0, 0)](CGemv{no_inplace}.0) time 4.371643e-03s\n",
-      "           Node Elemwise{Composite{((i0 * i1) - (i2 * i3))}}[(0, 1)](TensorConstant{-0.5}, Sum{acc_dtype=float64}.0, TensorConstant{0.5}, Sum{acc_dtype=float64}.0) time 3.947973e-03s\n",
-      "           Node Sum{acc_dtype=float64}(Elemwise{sqr,no_inplace}.0) time 3.738403e-03s\n",
-      "           Node CGemv{no_inplace}(beta, TensorConstant{1.0}, InplaceDimShuffle{1,0}.0, Elemwise{Neg}[(0, 0)].0, TensorConstant{-1.0}) time 7.760525e-04s\n",
-      "\n",
-      "Time in all call to theano.grad() 2.922777e+00s\n",
-      "Time since theano import 87.091s\n",
-      "Class\n",
-      "---\n",
-      "<% time> <sum %> <apply time> <time per call> <type> <#call> <#apply> <Class name>\n",
-      "  89.7%    89.7%       0.631s       7.70e-03s     C       82       2   theano.tensor.blas_c.CGemv\n",
-      "   6.0%    95.7%       0.043s       5.19e-04s     C       82       2   theano.tensor.elemwise.Sum\n",
-      "   4.2%   100.0%       0.030s       1.82e-04s     C      164       4   theano.tensor.elemwise.Elemwise\n",
-      "   0.0%   100.0%       0.000s       1.59e-06s     C       41       1   theano.tensor.elemwise.DimShuffle\n",
-      "   ... (remaining 0 Classes account for   0.00%(0.00s) of the runtime)\n",
-      "\n",
-      "Ops\n",
-      "---\n",
-      "<% time> <sum %> <apply time> <time per call> <type> <#call> <#apply> <Op name>\n",
-      "  89.7%    89.7%       0.631s       7.70e-03s     C       82        2   CGemv{no_inplace}\n",
-      "   6.0%    95.7%       0.043s       5.19e-04s     C       82        2   Sum{acc_dtype=float64}\n",
-      "   2.4%    98.2%       0.017s       4.17e-04s     C       41        1   Elemwise{Neg}[(0, 0)]\n",
-      "   1.8%   100.0%       0.013s       1.55e-04s     C       82        2   Elemwise{sqr,no_inplace}\n",
-      "   0.0%   100.0%       0.000s       1.90e-06s     C       41        1   Elemwise{Composite{((i0 * i1) - (i2 * i3))}}[(0, 1)]\n",
-      "   0.0%   100.0%       0.000s       1.59e-06s     C       41        1   InplaceDimShuffle{1,0}\n",
-      "   ... (remaining 0 Ops account for   0.00%(0.00s) of the runtime)\n",
-      "\n",
-      "Apply\n",
-      "------\n",
-      "<% time> <sum %> <apply time> <time per call> <#call> <id> <Apply name>\n",
-      "  45.5%    45.5%       0.321s       7.82e-03s     41     7   CGemv{no_inplace}(beta, TensorConstant{1.0}, InplaceDimShuffle{1,0}.0, Elemwise{Neg}[(0, 0)].0, TensorConstant{-1.0})\n",
-      "  44.2%    89.7%       0.311s       7.58e-03s     41     2   CGemv{no_inplace}(TensorConstant{[ 0.  0.  ...  0.  0.]}, TensorConstant{1.0}, <TensorType(float32, matrix)>, beta, TensorConstant{-1.0})\n",
-      "   6.0%    95.7%       0.042s       1.04e-03s     41     6   Sum{acc_dtype=float64}(Elemwise{sqr,no_inplace}.0)\n",
-      "   2.4%    98.2%       0.017s       4.17e-04s     41     5   Elemwise{Neg}[(0, 0)](CGemv{no_inplace}.0)\n",
-      "   1.8%   100.0%       0.013s       3.07e-04s     41     4   Elemwise{sqr,no_inplace}(CGemv{no_inplace}.0)\n",
-      "   0.0%   100.0%       0.000s       2.02e-06s     41     0   Elemwise{sqr,no_inplace}(beta)\n",
-      "   0.0%   100.0%       0.000s       1.90e-06s     41     8   Elemwise{Composite{((i0 * i1) - (i2 * i3))}}[(0, 1)](TensorConstant{-0.5}, Sum{acc_dtype=float64}.0, TensorConstant{0.5}, Sum{acc_dtype=float64}.0)\n",
-      "   0.0%   100.0%       0.000s       1.77e-06s     41     3   Sum{acc_dtype=float64}(Elemwise{sqr,no_inplace}.0)\n",
-      "   0.0%   100.0%       0.000s       1.59e-06s     41     1   InplaceDimShuffle{1,0}(<TensorType(float32, matrix)>)\n",
-      "   ... (remaining 0 Apply instances account for 0.00%(0.00s) of the runtime)\n",
-      "\n",
-      "Here are tips to potentially make your code run faster\n",
-      "                 (if you think of new ones, suggest them on the mailing list).\n",
-      "                 Test them first, as they are not guaranteed to always provide a speedup.\n",
-      "  Sorry, no tip for today.\n"
-     ]
-    }
-   ],
-   "source": [
-    "logp_grad.profile.summary()"
    ]
   },
   {
@@ -1550,7 +1395,7 @@
    "execution_count": 5,
    "metadata": {
     "collapsed": false,
-    "scrolled": true
+    "scrolled": false
    },
    "outputs": [
     {
@@ -1827,7 +1672,7 @@
    "execution_count": 4,
    "metadata": {
     "collapsed": false,
-    "scrolled": true
+    "scrolled": false
    },
    "outputs": [
     {
@@ -2053,7 +1898,7 @@
    "execution_count": 4,
    "metadata": {
     "collapsed": false,
-    "scrolled": true
+    "scrolled": false
    },
    "outputs": [
     {
@@ -2477,21 +2322,9 @@
  "metadata": {
   "anaconda-cloud": {},
   "kernelspec": {
-   "display_name": "Python [default]",
+   "display_name": "Python [conda env:pymc30]",
    "language": "python",
-   "name": "python3"
-  },
-  "language_info": {
-   "codemirror_mode": {
-    "name": "ipython",
-    "version": 3
-   },
-   "file_extension": ".py",
-   "mimetype": "text/x-python",
-   "name": "python",
-   "nbconvert_exporter": "python",
-   "pygments_lexer": "ipython3",
-   "version": "3.5.2"
+   "name": "conda-env-pymc30-py"
   }
  },
  "nbformat": 4,

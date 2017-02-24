@@ -35,7 +35,7 @@
         <link rel="search" title="Search" href="../search.html"/>
     <link rel="top" title="PyMC3 3.0 documentation" href="../index.html"/>
         <link rel="up" title="Examples" href="../examples.html"/>
-        <link rel="next" title="Gaussian Process (GP) smoothing" href="GP-smoothing.html"/>
+        <link rel="next" title="Gaussian Process Regression and Classification with Elliptical Slice Sampling" href="GP-slice-sampling.html"/>
         <link rel="prev" title="Gaussian Process Regression" href="GP-introduction.html"/> 
 
   
@@ -109,8 +109,10 @@
 <li class="toctree-l4"><a class="reference internal" href="#Polynomial">Polynomial</a></li>
 <li class="toctree-l4"><a class="reference internal" href="#Multiplication-with-a-precomputed-covariance-matrix">Multiplication with a precomputed covariance matrix</a></li>
 <li class="toctree-l4"><a class="reference internal" href="#Applying-an-arbitary-warping-function-on-the-inputs">Applying an arbitary warping function on the inputs</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#Gibbs">Gibbs</a></li>
 </ul>
 </li>
+<li class="toctree-l3"><a class="reference internal" href="GP-slice-sampling.html">Gaussian Process Regression and Classification with Elliptical Slice Sampling</a></li>
 <li class="toctree-l3"><a class="reference internal" href="GP-smoothing.html">Gaussian Process (GP) smoothing</a></li>
 </ul>
 </li>
@@ -353,8 +355,6 @@ used for inference.</p>
 <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">seed</span><span class="p">(</span><span class="mi">206</span><span class="p">)</span>
 <span class="kn">import</span> <span class="nn">theano</span>
 <span class="kn">import</span> <span class="nn">theano.tensor</span> <span class="kn">as</span> <span class="nn">tt</span>
-<span class="kn">import</span> <span class="nn">sys</span>
-<span class="n">sys</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">insert</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="s2">&quot;../../..&quot;</span><span class="p">)</span>
 <span class="kn">import</span> <span class="nn">pymc3</span> <span class="kn">as</span> <span class="nn">pm</span>
 </pre></div>
 </div>
@@ -418,7 +418,7 @@ bias term <span class="math">\(b\)</span> can be scalars or PyMC3 random variabl
     <span class="n">b</span> <span class="o">=</span> <span class="mf">0.5</span>
     <span class="n">cov</span> <span class="o">=</span> <span class="n">b</span> <span class="o">+</span> <span class="n">tau</span> <span class="o">*</span> <span class="n">pm</span><span class="o">.</span><span class="n">gp</span><span class="o">.</span><span class="n">cov</span><span class="o">.</span><span class="n">ExpQuad</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">l</span><span class="p">)</span>
 
-<span class="n">K</span> <span class="o">=</span> <span class="n">theano</span><span class="o">.</span><span class="n">function</span><span class="p">([],</span> <span class="n">cov</span><span class="o">.</span><span class="n">K</span><span class="p">(</span><span class="n">X</span><span class="p">))()</span>
+<span class="n">K</span> <span class="o">=</span> <span class="n">theano</span><span class="o">.</span><span class="n">function</span><span class="p">([],</span> <span class="n">cov</span><span class="p">(</span><span class="n">X</span><span class="p">))()</span>
 <span class="n">plot_cov</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">K</span><span class="p">)</span>
 </pre></div>
 </div>
@@ -449,7 +449,7 @@ random variables can be used for automatic relevance determination
 (ARD).</p>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [4]:
+<span></span>In [5]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -459,7 +459,7 @@ random variables can be used for automatic relevance determination
 <span class="k">with</span> <span class="n">pm</span><span class="o">.</span><span class="n">Model</span><span class="p">()</span> <span class="k">as</span> <span class="n">model</span><span class="p">:</span>
     <span class="n">l</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mf">0.2</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">])</span>
     <span class="n">cov</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">gp</span><span class="o">.</span><span class="n">cov</span><span class="o">.</span><span class="n">ExpQuad</span><span class="p">(</span><span class="n">input_dim</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">lengthscales</span><span class="o">=</span><span class="n">l</span><span class="p">)</span>
-<span class="n">K</span> <span class="o">=</span> <span class="n">theano</span><span class="o">.</span><span class="n">function</span><span class="p">([],</span> <span class="n">cov</span><span class="o">.</span><span class="n">K</span><span class="p">(</span><span class="n">X2</span><span class="p">))()</span>
+<span class="n">K</span> <span class="o">=</span> <span class="n">theano</span><span class="o">.</span><span class="n">function</span><span class="p">([],</span> <span class="n">cov</span><span class="p">(</span><span class="n">X2</span><span class="p">))()</span>
 <span class="n">m</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">imshow</span><span class="p">(</span><span class="n">K</span><span class="p">,</span> <span class="n">cmap</span><span class="o">=</span><span class="s2">&quot;inferno&quot;</span><span class="p">,</span> <span class="n">interpolation</span><span class="o">=</span><span class="s1">&#39;none&#39;</span><span class="p">);</span> <span class="n">plt</span><span class="o">.</span><span class="n">colorbar</span><span class="p">(</span><span class="n">m</span><span class="p">);</span>
 </pre></div>
 </div>
@@ -476,7 +476,7 @@ random variables can be used for automatic relevance determination
 <h2>One dimension active<a class="headerlink" href="#One-dimension-active" title="Permalink to this headline">¶</a></h2>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [5]:
+<span></span>In [6]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -484,7 +484,7 @@ random variables can be used for automatic relevance determination
     <span class="n">l</span> <span class="o">=</span> <span class="mf">0.2</span>
     <span class="n">cov</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">gp</span><span class="o">.</span><span class="n">cov</span><span class="o">.</span><span class="n">ExpQuad</span><span class="p">(</span><span class="n">input_dim</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">lengthscales</span><span class="o">=</span><span class="n">l</span><span class="p">,</span>
                             <span class="n">active_dims</span><span class="o">=</span><span class="p">[</span><span class="bp">True</span><span class="p">,</span> <span class="bp">False</span><span class="p">])</span>
-<span class="n">K</span> <span class="o">=</span> <span class="n">theano</span><span class="o">.</span><span class="n">function</span><span class="p">([],</span> <span class="n">cov</span><span class="o">.</span><span class="n">K</span><span class="p">(</span><span class="n">X2</span><span class="p">))()</span>
+<span class="n">K</span> <span class="o">=</span> <span class="n">theano</span><span class="o">.</span><span class="n">function</span><span class="p">([],</span> <span class="n">cov</span><span class="p">(</span><span class="n">X2</span><span class="p">))()</span>
 <span class="n">m</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">imshow</span><span class="p">(</span><span class="n">K</span><span class="p">,</span> <span class="n">cmap</span><span class="o">=</span><span class="s2">&quot;inferno&quot;</span><span class="p">,</span> <span class="n">interpolation</span><span class="o">=</span><span class="s1">&#39;none&#39;</span><span class="p">);</span> <span class="n">plt</span><span class="o">.</span><span class="n">colorbar</span><span class="p">(</span><span class="n">m</span><span class="p">);</span>
 </pre></div>
 </div>
@@ -501,7 +501,7 @@ random variables can be used for automatic relevance determination
 <h2>Product of two covariances, active over each dimension<a class="headerlink" href="#Product-of-two-covariances,-active-over-each-dimension" title="Permalink to this headline">¶</a></h2>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [6]:
+<span></span>In [7]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -511,7 +511,7 @@ random variables can be used for automatic relevance determination
     <span class="n">cov1</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">gp</span><span class="o">.</span><span class="n">cov</span><span class="o">.</span><span class="n">ExpQuad</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="n">l1</span><span class="p">,</span> <span class="n">active_dims</span><span class="o">=</span><span class="p">[</span><span class="bp">True</span><span class="p">,</span> <span class="bp">False</span><span class="p">])</span>
     <span class="n">cov2</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">gp</span><span class="o">.</span><span class="n">cov</span><span class="o">.</span><span class="n">ExpQuad</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="n">l2</span><span class="p">,</span> <span class="n">active_dims</span><span class="o">=</span><span class="p">[</span><span class="bp">False</span><span class="p">,</span> <span class="bp">True</span><span class="p">])</span>
     <span class="n">cov</span> <span class="o">=</span> <span class="n">cov1</span> <span class="o">*</span> <span class="n">cov2</span>
-<span class="n">K</span> <span class="o">=</span> <span class="n">theano</span><span class="o">.</span><span class="n">function</span><span class="p">([],</span> <span class="n">cov</span><span class="o">.</span><span class="n">K</span><span class="p">(</span><span class="n">X2</span><span class="p">))()</span>
+<span class="n">K</span> <span class="o">=</span> <span class="n">theano</span><span class="o">.</span><span class="n">function</span><span class="p">([],</span> <span class="n">cov</span><span class="p">(</span><span class="n">X2</span><span class="p">))()</span>
 <span class="n">m</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">imshow</span><span class="p">(</span><span class="n">K</span><span class="p">,</span> <span class="n">cmap</span><span class="o">=</span><span class="s2">&quot;inferno&quot;</span><span class="p">,</span> <span class="n">interpolation</span><span class="o">=</span><span class="s1">&#39;none&#39;</span><span class="p">);</span> <span class="n">plt</span><span class="o">.</span><span class="n">colorbar</span><span class="p">(</span><span class="n">m</span><span class="p">);</span>
 </pre></div>
 </div>
@@ -531,7 +531,7 @@ be handled with Theano. The following is a covariance function that is
 5% white noise.</p>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [7]:
+<span></span>In [8]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -542,7 +542,7 @@ be handled with Theano. The following is a covariance function that is
     <span class="n">cov_latent</span> <span class="o">=</span> <span class="n">tau</span> <span class="o">*</span> <span class="n">pm</span><span class="o">.</span><span class="n">gp</span><span class="o">.</span><span class="n">cov</span><span class="o">.</span><span class="n">ExpQuad</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">l</span><span class="p">)</span>
     <span class="n">cov_noise</span> <span class="o">=</span> <span class="n">sigma2</span> <span class="o">*</span> <span class="n">tt</span><span class="o">.</span><span class="n">eye</span><span class="p">(</span><span class="mi">200</span><span class="p">)</span>
 
-<span class="n">K</span> <span class="o">=</span> <span class="n">theano</span><span class="o">.</span><span class="n">function</span><span class="p">([],</span> <span class="n">cov_latent</span><span class="o">.</span><span class="n">K</span><span class="p">(</span><span class="n">X</span><span class="p">)</span> <span class="o">+</span> <span class="n">cov_noise</span><span class="p">)()</span>
+<span class="n">K</span> <span class="o">=</span> <span class="n">theano</span><span class="o">.</span><span class="n">function</span><span class="p">([],</span> <span class="n">cov_latent</span><span class="p">(</span><span class="n">X</span><span class="p">)</span> <span class="o">+</span> <span class="n">cov_noise</span><span class="p">)()</span>
 <span class="n">plot_cov</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">K</span><span class="p">)</span>
 </pre></div>
 </div>
@@ -566,7 +566,7 @@ be handled with Theano. The following is a covariance function that is
 <h2>Rational Quadratic<a class="headerlink" href="#Rational-Quadratic" title="Permalink to this headline">¶</a></h2>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [8]:
+<span></span>In [9]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -576,7 +576,7 @@ be handled with Theano. The following is a covariance function that is
     <span class="n">tau</span> <span class="o">=</span> <span class="mf">2.0</span>
     <span class="n">cov</span> <span class="o">=</span> <span class="n">tau</span> <span class="o">*</span> <span class="n">pm</span><span class="o">.</span><span class="n">gp</span><span class="o">.</span><span class="n">cov</span><span class="o">.</span><span class="n">RatQuad</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">l</span><span class="p">,</span> <span class="n">alpha</span><span class="p">)</span>
 
-<span class="n">K</span> <span class="o">=</span> <span class="n">theano</span><span class="o">.</span><span class="n">function</span><span class="p">([],</span> <span class="n">cov</span><span class="o">.</span><span class="n">K</span><span class="p">(</span><span class="n">X</span><span class="p">))()</span>
+<span class="n">K</span> <span class="o">=</span> <span class="n">theano</span><span class="o">.</span><span class="n">function</span><span class="p">([],</span> <span class="n">cov</span><span class="p">(</span><span class="n">X</span><span class="p">))()</span>
 
 <span class="n">plot_cov</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">K</span><span class="p">)</span>
 </pre></div>
@@ -601,7 +601,7 @@ be handled with Theano. The following is a covariance function that is
 <h2>Exponential<a class="headerlink" href="#Exponential" title="Permalink to this headline">¶</a></h2>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [9]:
+<span></span>In [10]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -610,7 +610,7 @@ be handled with Theano. The following is a covariance function that is
     <span class="n">tau</span> <span class="o">=</span> <span class="mf">2.0</span>
     <span class="n">cov</span> <span class="o">=</span> <span class="n">tau</span> <span class="o">*</span> <span class="n">pm</span><span class="o">.</span><span class="n">gp</span><span class="o">.</span><span class="n">cov</span><span class="o">.</span><span class="n">Exponential</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">l</span><span class="p">)</span>
 
-<span class="n">K</span> <span class="o">=</span> <span class="n">theano</span><span class="o">.</span><span class="n">function</span><span class="p">([],</span> <span class="n">cov</span><span class="o">.</span><span class="n">K</span><span class="p">(</span><span class="n">X</span><span class="p">))()</span>
+<span class="n">K</span> <span class="o">=</span> <span class="n">theano</span><span class="o">.</span><span class="n">function</span><span class="p">([],</span> <span class="n">cov</span><span class="p">(</span><span class="n">X</span><span class="p">))()</span>
 
 <span class="n">plot_cov</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">K</span><span class="p">)</span>
 </pre></div>
@@ -635,7 +635,7 @@ be handled with Theano. The following is a covariance function that is
 <h2>Matern 5/2<a class="headerlink" href="#Matern-5/2" title="Permalink to this headline">¶</a></h2>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [10]:
+<span></span>In [11]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -644,7 +644,7 @@ be handled with Theano. The following is a covariance function that is
     <span class="n">tau</span> <span class="o">=</span> <span class="mf">2.0</span>
     <span class="n">cov</span> <span class="o">=</span> <span class="n">tau</span> <span class="o">*</span> <span class="n">pm</span><span class="o">.</span><span class="n">gp</span><span class="o">.</span><span class="n">cov</span><span class="o">.</span><span class="n">Matern52</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">l</span><span class="p">)</span>
 
-<span class="n">K</span> <span class="o">=</span> <span class="n">theano</span><span class="o">.</span><span class="n">function</span><span class="p">([],</span> <span class="n">cov</span><span class="o">.</span><span class="n">K</span><span class="p">(</span><span class="n">X</span><span class="p">))()</span>
+<span class="n">K</span> <span class="o">=</span> <span class="n">theano</span><span class="o">.</span><span class="n">function</span><span class="p">([],</span> <span class="n">cov</span><span class="p">(</span><span class="n">X</span><span class="p">))()</span>
 
 <span class="n">plot_cov</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">K</span><span class="p">)</span>
 </pre></div>
@@ -669,7 +669,7 @@ be handled with Theano. The following is a covariance function that is
 <h2>Matern 3/2<a class="headerlink" href="#Matern-3/2" title="Permalink to this headline">¶</a></h2>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [11]:
+<span></span>In [12]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -678,7 +678,7 @@ be handled with Theano. The following is a covariance function that is
     <span class="n">tau</span> <span class="o">=</span> <span class="mf">2.0</span>
     <span class="n">cov</span> <span class="o">=</span> <span class="n">tau</span> <span class="o">*</span> <span class="n">pm</span><span class="o">.</span><span class="n">gp</span><span class="o">.</span><span class="n">cov</span><span class="o">.</span><span class="n">Matern32</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">l</span><span class="p">)</span>
 
-<span class="n">K</span> <span class="o">=</span> <span class="n">theano</span><span class="o">.</span><span class="n">function</span><span class="p">([],</span> <span class="n">cov</span><span class="o">.</span><span class="n">K</span><span class="p">(</span><span class="n">X</span><span class="p">))()</span>
+<span class="n">K</span> <span class="o">=</span> <span class="n">theano</span><span class="o">.</span><span class="n">function</span><span class="p">([],</span> <span class="n">cov</span><span class="p">(</span><span class="n">X</span><span class="p">))()</span>
 
 <span class="n">plot_cov</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">K</span><span class="p">)</span>
 </pre></div>
@@ -703,7 +703,7 @@ be handled with Theano. The following is a covariance function that is
 <h2>Cosine<a class="headerlink" href="#Cosine" title="Permalink to this headline">¶</a></h2>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [12]:
+<span></span>In [13]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -712,7 +712,7 @@ be handled with Theano. The following is a covariance function that is
     <span class="n">tau</span> <span class="o">=</span> <span class="mf">2.0</span>
     <span class="n">cov</span> <span class="o">=</span> <span class="n">tau</span> <span class="o">*</span> <span class="n">pm</span><span class="o">.</span><span class="n">gp</span><span class="o">.</span><span class="n">cov</span><span class="o">.</span><span class="n">Cosine</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">l</span><span class="p">)</span>
 
-<span class="n">K</span> <span class="o">=</span> <span class="n">theano</span><span class="o">.</span><span class="n">function</span><span class="p">([],</span> <span class="n">cov</span><span class="o">.</span><span class="n">K</span><span class="p">(</span><span class="n">X</span><span class="p">))()</span>
+<span class="n">K</span> <span class="o">=</span> <span class="n">theano</span><span class="o">.</span><span class="n">function</span><span class="p">([],</span> <span class="n">cov</span><span class="p">(</span><span class="n">X</span><span class="p">))()</span>
 
 <span class="n">plot_cov</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">K</span><span class="p">)</span>
 </pre></div>
@@ -737,7 +737,7 @@ be handled with Theano. The following is a covariance function that is
 <h2>Linear<a class="headerlink" href="#Linear" title="Permalink to this headline">¶</a></h2>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [13]:
+<span></span>In [14]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -746,7 +746,7 @@ be handled with Theano. The following is a covariance function that is
     <span class="n">tau</span> <span class="o">=</span> <span class="mf">2.0</span>
     <span class="n">cov</span> <span class="o">=</span> <span class="n">tau</span> <span class="o">*</span> <span class="n">pm</span><span class="o">.</span><span class="n">gp</span><span class="o">.</span><span class="n">cov</span><span class="o">.</span><span class="n">Linear</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">c</span><span class="p">)</span>
 
-<span class="n">K</span> <span class="o">=</span> <span class="n">theano</span><span class="o">.</span><span class="n">function</span><span class="p">([],</span> <span class="n">cov</span><span class="o">.</span><span class="n">K</span><span class="p">(</span><span class="n">X</span><span class="p">))()</span>
+<span class="n">K</span> <span class="o">=</span> <span class="n">theano</span><span class="o">.</span><span class="n">function</span><span class="p">([],</span> <span class="n">cov</span><span class="p">(</span><span class="n">X</span><span class="p">))()</span>
 
 <span class="n">plot_cov</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">K</span><span class="p">,</span> <span class="bp">False</span><span class="p">)</span>
 </pre></div>
@@ -771,7 +771,7 @@ be handled with Theano. The following is a covariance function that is
 <h2>Polynomial<a class="headerlink" href="#Polynomial" title="Permalink to this headline">¶</a></h2>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [14]:
+<span></span>In [15]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -782,7 +782,7 @@ be handled with Theano. The following is a covariance function that is
     <span class="n">tau</span> <span class="o">=</span> <span class="mf">0.1</span>
     <span class="n">cov</span> <span class="o">=</span> <span class="n">tau</span> <span class="o">*</span> <span class="n">pm</span><span class="o">.</span><span class="n">gp</span><span class="o">.</span><span class="n">cov</span><span class="o">.</span><span class="n">Polynomial</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">c</span><span class="o">=</span><span class="n">c</span><span class="p">,</span> <span class="n">d</span><span class="o">=</span><span class="n">d</span><span class="p">,</span> <span class="n">offset</span><span class="o">=</span><span class="n">offset</span><span class="p">)</span>
 
-<span class="n">K</span> <span class="o">=</span> <span class="n">theano</span><span class="o">.</span><span class="n">function</span><span class="p">([],</span> <span class="n">cov</span><span class="o">.</span><span class="n">K</span><span class="p">(</span><span class="n">X</span><span class="p">))()</span>
+<span class="n">K</span> <span class="o">=</span> <span class="n">theano</span><span class="o">.</span><span class="n">function</span><span class="p">([],</span> <span class="n">cov</span><span class="p">(</span><span class="n">X</span><span class="p">))()</span>
 
 <span class="n">plot_cov</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">K</span><span class="p">,</span> <span class="bp">False</span><span class="p">)</span>
 </pre></div>
@@ -809,20 +809,20 @@ be handled with Theano. The following is a covariance function that is
 <code class="docutils literal"><span class="pre">K_cos</span></code>.</p>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [15]:
+<span></span>In [16]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="k">with</span> <span class="n">pm</span><span class="o">.</span><span class="n">Model</span><span class="p">()</span> <span class="k">as</span> <span class="n">model</span><span class="p">:</span>
     <span class="n">l</span> <span class="o">=</span> <span class="mf">0.2</span>
     <span class="n">cov_cos</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">gp</span><span class="o">.</span><span class="n">cov</span><span class="o">.</span><span class="n">Cosine</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">l</span><span class="p">)</span>
-<span class="n">K_cos</span> <span class="o">=</span> <span class="n">theano</span><span class="o">.</span><span class="n">function</span><span class="p">([],</span> <span class="n">cov_cos</span><span class="o">.</span><span class="n">K</span><span class="p">(</span><span class="n">X</span><span class="p">))()</span>
+<span class="n">K_cos</span> <span class="o">=</span> <span class="n">theano</span><span class="o">.</span><span class="n">function</span><span class="p">([],</span> <span class="n">cov_cos</span><span class="p">(</span><span class="n">X</span><span class="p">))()</span>
 
 
 <span class="k">with</span> <span class="n">pm</span><span class="o">.</span><span class="n">Model</span><span class="p">()</span> <span class="k">as</span> <span class="n">model</span><span class="p">:</span>
     <span class="n">cov</span> <span class="o">=</span> <span class="n">tau</span> <span class="o">*</span> <span class="n">pm</span><span class="o">.</span><span class="n">gp</span><span class="o">.</span><span class="n">cov</span><span class="o">.</span><span class="n">Matern32</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mf">0.5</span><span class="p">)</span> <span class="o">*</span> <span class="n">K_cos</span>
 
-<span class="n">K</span> <span class="o">=</span> <span class="n">theano</span><span class="o">.</span><span class="n">function</span><span class="p">([],</span> <span class="n">cov</span><span class="o">.</span><span class="n">K</span><span class="p">(</span><span class="n">X</span><span class="p">))()</span>
+<span class="n">K</span> <span class="o">=</span> <span class="n">theano</span><span class="o">.</span><span class="n">function</span><span class="p">([],</span> <span class="n">cov</span><span class="p">(</span><span class="n">X</span><span class="p">))()</span>
 <span class="n">plot_cov</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">K</span><span class="p">)</span>
 </pre></div>
 </div>
@@ -851,12 +851,12 @@ remaining arguments can be anything else, including (thanks to Theano&#8217;s
 symbolic differentiation) random variables.</p>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [16]:
+<span></span>In [4]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="k">def</span> <span class="nf">warp_func</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="p">,</span> <span class="n">c</span><span class="p">):</span>
-    <span class="k">return</span> <span class="n">x</span> <span class="o">+</span> <span class="p">(</span><span class="n">a</span> <span class="o">*</span> <span class="n">tt</span><span class="o">.</span><span class="n">tanh</span><span class="p">(</span><span class="n">b</span> <span class="o">*</span> <span class="p">(</span><span class="n">x</span> <span class="o">-</span> <span class="n">c</span><span class="p">)))</span>
+    <span class="k">return</span> <span class="mf">1.0</span> <span class="o">+</span> <span class="n">x</span> <span class="o">+</span> <span class="p">(</span><span class="n">a</span> <span class="o">*</span> <span class="n">tt</span><span class="o">.</span><span class="n">tanh</span><span class="p">(</span><span class="n">b</span> <span class="o">*</span> <span class="p">(</span><span class="n">x</span> <span class="o">-</span> <span class="n">c</span><span class="p">)))</span>
 
 <span class="k">with</span> <span class="n">pm</span><span class="o">.</span><span class="n">Model</span><span class="p">()</span> <span class="k">as</span> <span class="n">model</span><span class="p">:</span>
     <span class="n">a</span> <span class="o">=</span> <span class="mf">1.0</span>
@@ -866,8 +866,11 @@ symbolic differentiation) random variables.</p>
     <span class="n">cov_m52</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">gp</span><span class="o">.</span><span class="n">cov</span><span class="o">.</span><span class="n">Matern52</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">l</span><span class="p">)</span>
     <span class="n">cov</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">gp</span><span class="o">.</span><span class="n">cov</span><span class="o">.</span><span class="n">WarpedInput</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">warp_func</span><span class="o">=</span><span class="n">warp_func</span><span class="p">,</span> <span class="n">args</span><span class="o">=</span><span class="p">(</span><span class="n">a</span><span class="p">,</span><span class="n">b</span><span class="p">,</span><span class="n">c</span><span class="p">),</span> <span class="n">cov_func</span><span class="o">=</span><span class="n">cov_m52</span><span class="p">)</span>
 
-<span class="n">K</span> <span class="o">=</span> <span class="n">theano</span><span class="o">.</span><span class="n">function</span><span class="p">([],</span> <span class="n">cov</span><span class="o">.</span><span class="n">K</span><span class="p">(</span><span class="n">X</span><span class="p">))()</span>
-<span class="n">plot_cov</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">K</span><span class="p">,</span> <span class="bp">True</span><span class="p">)</span>
+<span class="n">wf</span> <span class="o">=</span> <span class="n">theano</span><span class="o">.</span><span class="n">function</span><span class="p">([],</span> <span class="n">warp_func</span><span class="p">(</span><span class="n">X</span><span class="o">.</span><span class="n">flatten</span><span class="p">(),</span> <span class="n">a</span><span class="p">,</span><span class="n">b</span><span class="p">,</span><span class="n">c</span><span class="p">))()</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">wf</span><span class="p">);</span> <span class="n">plt</span><span class="o">.</span><span class="n">xlabel</span><span class="p">(</span><span class="s2">&quot;X&quot;</span><span class="p">);</span> <span class="n">plt</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="s2">&quot;warp_func(X)&quot;</span><span class="p">);</span> <span class="n">plt</span><span class="o">.</span><span class="n">title</span><span class="p">(</span><span class="s2">&quot;Warping function of X&quot;</span><span class="p">);</span>
+
+<span class="n">K</span> <span class="o">=</span> <span class="n">theano</span><span class="o">.</span><span class="n">function</span><span class="p">([],</span> <span class="n">cov</span><span class="p">(</span><span class="n">X</span><span class="p">))()</span>
+<span class="n">plot_cov</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">K</span><span class="p">,</span> <span class="bp">False</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
@@ -878,11 +881,76 @@ symbolic differentiation) random variables.</p>
 <img alt="../_images/notebooks_GP-covariances_30_0.png" src="../_images/notebooks_GP-covariances_30_0.png" />
 </div>
 </div>
-<div class="nboutput nblast container">
+<div class="nboutput container">
 <div class="container">
 </div>
 <div class="container">
 <img alt="../_images/notebooks_GP-covariances_30_1.png" src="../_images/notebooks_GP-covariances_30_1.png" />
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<img alt="../_images/notebooks_GP-covariances_30_2.png" src="../_images/notebooks_GP-covariances_30_2.png" />
+</div>
+</div>
+</div>
+<div class="section" id="Gibbs">
+<h2>Gibbs<a class="headerlink" href="#Gibbs" title="Permalink to this headline">¶</a></h2>
+<p>The Gibbs covariance function applies a positive definite warping
+function to the lengthscale. Similarly to <code class="docutils literal"><span class="pre">WarpedInput</span></code>, the
+lengthscale warping function can be specified with parameters that are
+either fixed or random variables.</p>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [5]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="k">def</span> <span class="nf">tanh_func</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">x1</span><span class="p">,</span> <span class="n">x2</span><span class="p">,</span> <span class="n">w</span><span class="p">,</span> <span class="n">x0</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    l1: Left saturation value</span>
+<span class="sd">    l2: Right saturation value</span>
+<span class="sd">    lw: Transition width</span>
+<span class="sd">    x0: Transition location.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="p">(</span><span class="n">x1</span> <span class="o">+</span> <span class="n">x2</span><span class="p">)</span> <span class="o">/</span> <span class="mf">2.0</span> <span class="o">-</span> <span class="p">(</span><span class="n">x1</span> <span class="o">-</span> <span class="n">x2</span><span class="p">)</span> <span class="o">/</span> <span class="mf">2.0</span> <span class="o">*</span> <span class="n">tt</span><span class="o">.</span><span class="n">tanh</span><span class="p">((</span><span class="n">x</span> <span class="o">-</span> <span class="n">x0</span><span class="p">)</span> <span class="o">/</span> <span class="n">w</span><span class="p">)</span>
+
+<span class="k">with</span> <span class="n">pm</span><span class="o">.</span><span class="n">Model</span><span class="p">()</span> <span class="k">as</span> <span class="n">model</span><span class="p">:</span>
+    <span class="n">l1</span> <span class="o">=</span> <span class="mf">0.05</span>
+    <span class="n">l2</span> <span class="o">=</span> <span class="mf">0.6</span>
+    <span class="n">lw</span> <span class="o">=</span> <span class="mf">0.4</span>
+    <span class="n">x0</span> <span class="o">=</span> <span class="mf">1.0</span>
+    <span class="n">cov</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">gp</span><span class="o">.</span><span class="n">cov</span><span class="o">.</span><span class="n">Gibbs</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">tanh_func</span><span class="p">,</span> <span class="n">args</span><span class="o">=</span><span class="p">(</span><span class="n">l1</span><span class="p">,</span> <span class="n">l2</span><span class="p">,</span> <span class="n">lw</span><span class="p">,</span> <span class="n">x0</span><span class="p">))</span>
+
+<span class="n">wf</span> <span class="o">=</span> <span class="n">theano</span><span class="o">.</span><span class="n">function</span><span class="p">([],</span> <span class="n">tanh_func</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">l1</span><span class="p">,</span> <span class="n">l2</span><span class="p">,</span> <span class="n">lw</span><span class="p">,</span> <span class="n">x0</span><span class="p">))()</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">wf</span><span class="p">);</span> <span class="n">plt</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="s2">&quot;tanh_func(X)&quot;</span><span class="p">);</span> <span class="n">plt</span><span class="o">.</span><span class="n">xlabel</span><span class="p">(</span><span class="s2">&quot;X&quot;</span><span class="p">);</span> <span class="n">plt</span><span class="o">.</span><span class="n">title</span><span class="p">(</span><span class="s2">&quot;Lengthscale as a function of X&quot;</span><span class="p">);</span>
+
+<span class="n">K</span> <span class="o">=</span> <span class="n">theano</span><span class="o">.</span><span class="n">function</span><span class="p">([],</span> <span class="n">cov</span><span class="p">(</span><span class="n">X</span><span class="p">))()</span>
+<span class="n">plot_cov</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">K</span><span class="p">,</span> <span class="bp">False</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput container">
+<div class="container">
+</div>
+<div class="container">
+<img alt="../_images/notebooks_GP-covariances_32_0.png" src="../_images/notebooks_GP-covariances_32_0.png" />
+</div>
+</div>
+<div class="nboutput container">
+<div class="container">
+</div>
+<div class="container">
+<img alt="../_images/notebooks_GP-covariances_32_1.png" src="../_images/notebooks_GP-covariances_32_1.png" />
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<img alt="../_images/notebooks_GP-covariances_32_2.png" src="../_images/notebooks_GP-covariances_32_2.png" />
 </div>
 </div>
 </div>
@@ -895,7 +963,7 @@ symbolic differentiation) random variables.</p>
   
     <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
       
-        <a href="GP-smoothing.html" class="btn btn-neutral float-right" title="Gaussian Process (GP) smoothing" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
+        <a href="GP-slice-sampling.html" class="btn btn-neutral float-right" title="Gaussian Process Regression and Classification with Elliptical Slice Sampling" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
       
       
         <a href="GP-introduction.html" class="btn btn-neutral" title="Gaussian Process Regression" accesskey="p"><span class="fa fa-arrow-circle-left"></span> Previous</a>

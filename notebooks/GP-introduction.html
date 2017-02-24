@@ -98,6 +98,7 @@
 </ul>
 </li>
 <li class="toctree-l3"><a class="reference internal" href="GP-covariances.html">Kernels / Covariance functions</a></li>
+<li class="toctree-l3"><a class="reference internal" href="GP-slice-sampling.html">Gaussian Process Regression and Classification with Elliptical Slice Sampling</a></li>
 <li class="toctree-l3"><a class="reference internal" href="GP-smoothing.html">Gaussian Process (GP) smoothing</a></li>
 </ul>
 </li>
@@ -365,6 +366,7 @@ PyMC3.</p>
 <span class="n">cm</span> <span class="o">=</span> <span class="n">cmap</span><span class="o">.</span><span class="n">inferno</span>
 
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="kn">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">scipy</span> <span class="kn">as</span> <span class="nn">sp</span>
 <span class="kn">import</span> <span class="nn">theano</span>
 <span class="kn">import</span> <span class="nn">theano.tensor</span> <span class="kn">as</span> <span class="nn">tt</span>
 <span class="kn">import</span> <span class="nn">theano.tensor.nlinalg</span>
@@ -390,7 +392,7 @@ true values of the hyperparameters are hardcoded in this temporary
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span><span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">seed</span><span class="p">(</span><span class="mi">200</span><span class="p">)</span>
+<span></span><span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">seed</span><span class="p">(</span><span class="mi">20090425</span><span class="p">)</span>
 <span class="n">n</span> <span class="o">=</span> <span class="mi">20</span>
 <span class="n">X</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sort</span><span class="p">(</span><span class="mi">3</span><span class="o">*</span><span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">rand</span><span class="p">(</span><span class="n">n</span><span class="p">))[:,</span><span class="bp">None</span><span class="p">]</span>
 
@@ -401,12 +403,12 @@ true values of the hyperparameters are hardcoded in this temporary
     <span class="n">cov</span> <span class="o">=</span> <span class="n">s2_f_true</span> <span class="o">*</span> <span class="n">pm</span><span class="o">.</span><span class="n">gp</span><span class="o">.</span><span class="n">cov</span><span class="o">.</span><span class="n">ExpQuad</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">l_true</span><span class="p">)</span>
 
     <span class="c1"># noise, epsilon</span>
-    <span class="n">s2_n_true</span> <span class="o">=</span> <span class="mf">0.05</span>
-    <span class="n">K_noise</span> <span class="o">=</span> <span class="n">s2_n_true</span> <span class="o">*</span> <span class="n">tt</span><span class="o">.</span><span class="n">eye</span><span class="p">(</span><span class="n">n</span><span class="p">)</span>
-    <span class="n">K</span> <span class="o">=</span> <span class="n">cov</span><span class="o">.</span><span class="n">K</span><span class="p">(</span><span class="n">X</span><span class="p">)</span> <span class="o">+</span> <span class="n">K_noise</span>
+    <span class="n">s2_n_true</span> <span class="o">=</span> <span class="mf">0.1</span>
+    <span class="n">K_noise</span> <span class="o">=</span> <span class="n">s2_n_true</span><span class="o">**</span><span class="mi">2</span> <span class="o">*</span> <span class="n">tt</span><span class="o">.</span><span class="n">eye</span><span class="p">(</span><span class="n">n</span><span class="p">)</span>
+    <span class="n">K</span> <span class="o">=</span> <span class="n">cov</span><span class="p">(</span><span class="n">X</span><span class="p">)</span> <span class="o">+</span> <span class="n">K_noise</span>
 
 <span class="c1"># evaluate the covariance with the given hyperparameters</span>
-<span class="n">K</span> <span class="o">=</span> <span class="n">theano</span><span class="o">.</span><span class="n">function</span><span class="p">([],</span> <span class="n">cov</span><span class="o">.</span><span class="n">K</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">X</span><span class="p">)</span> <span class="o">+</span> <span class="n">K_noise</span><span class="p">)()</span>
+<span class="n">K</span> <span class="o">=</span> <span class="n">theano</span><span class="o">.</span><span class="n">function</span><span class="p">([],</span> <span class="n">cov</span><span class="p">(</span><span class="n">X</span><span class="p">)</span> <span class="o">+</span> <span class="n">K_noise</span><span class="p">)()</span>
 
 <span class="c1"># generate fake data from GP with white noise (with variance sigma2)</span>
 <span class="n">y</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">multivariate_normal</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">n</span><span class="p">),</span> <span class="n">K</span><span class="p">)</span>
@@ -435,8 +437,6 @@ true values of the hyperparameters are hardcoded in this temporary
 </div>
 <p>Since there isn&#8217;t much data, there will likely be a lot of uncertainty
 in the hyperparameter values.</p>
-<div class="section" id="The-Model">
-<h3>The Model<a class="headerlink" href="#The-Model" title="Permalink to this headline">¶</a></h3>
 <ul class="simple">
 <li>We assign prior distributions that are uniform in log space, suitable
 for variance-type parameters. Each hyperparameter must at least be
@@ -468,9 +468,10 @@ matrix for the marginal likelihood.</li>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="n">Z</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="mi">3</span><span class="p">,</span><span class="mi">100</span><span class="p">)[:,</span><span class="bp">None</span><span class="p">]</span>
+
 <span class="k">with</span> <span class="n">pm</span><span class="o">.</span><span class="n">Model</span><span class="p">()</span> <span class="k">as</span> <span class="n">model</span><span class="p">:</span>
     <span class="c1"># priors on the covariance function hyperparameters</span>
-    <span class="n">l</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Uniform</span><span class="p">(</span><span class="s1">&#39;l&#39;</span><span class="p">,</span> <span class="n">lower</span><span class="o">=</span><span class="mf">1e-3</span><span class="p">,</span> <span class="n">upper</span><span class="o">=</span><span class="mi">10</span><span class="p">)</span>
+    <span class="n">l</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Uniform</span><span class="p">(</span><span class="s1">&#39;l&#39;</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">10</span><span class="p">)</span>
 
     <span class="c1"># uninformative prior on the function variance</span>
     <span class="n">log_s2_f</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Uniform</span><span class="p">(</span><span class="s1">&#39;log_s2_f&#39;</span><span class="p">,</span> <span class="n">lower</span><span class="o">=-</span><span class="mi">10</span><span class="p">,</span> <span class="n">upper</span><span class="o">=</span><span class="mi">5</span><span class="p">)</span>
@@ -482,24 +483,11 @@ matrix for the marginal likelihood.</li>
 
     <span class="c1"># covariance functions for the function f and the noise</span>
     <span class="n">f_cov</span> <span class="o">=</span> <span class="n">s2_f</span> <span class="o">*</span> <span class="n">pm</span><span class="o">.</span><span class="n">gp</span><span class="o">.</span><span class="n">cov</span><span class="o">.</span><span class="n">ExpQuad</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">l</span><span class="p">)</span>
-    <span class="n">n_cov</span> <span class="o">=</span> <span class="n">s2_n</span> <span class="o">*</span> <span class="n">tt</span><span class="o">.</span><span class="n">eye</span><span class="p">(</span><span class="n">n</span><span class="p">)</span>
 
-    <span class="c1"># the marginal likelihood</span>
-    <span class="n">y_obs</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">MvNormal</span><span class="p">(</span><span class="s1">&#39;y_obs&#39;</span><span class="p">,</span> <span class="n">observed</span><span class="o">=</span><span class="n">y</span><span class="p">,</span> <span class="n">mu</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span>
-                                 <span class="n">cov</span><span class="o">=</span><span class="n">f_cov</span><span class="o">.</span><span class="n">K</span><span class="p">(</span><span class="n">X</span><span class="p">)</span> <span class="o">+</span> <span class="n">n_cov</span><span class="p">)</span>
-
-    <span class="c1">## using deterministics for prediction</span>
-    <span class="n">K_inv</span> <span class="o">=</span> <span class="n">tt</span><span class="o">.</span><span class="n">nlinalg</span><span class="o">.</span><span class="n">matrix_inverse</span><span class="p">(</span><span class="n">K</span><span class="p">)</span>
-    <span class="n">K_s</span>   <span class="o">=</span> <span class="n">f_cov</span><span class="o">.</span><span class="n">K</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">Z</span><span class="p">)</span>
-    <span class="n">K_ss</span>  <span class="o">=</span> <span class="n">f_cov</span><span class="o">.</span><span class="n">K</span><span class="p">(</span><span class="n">Z</span><span class="p">,</span> <span class="n">Z</span><span class="p">)</span>
-
-    <span class="n">f</span>     <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Deterministic</span><span class="p">(</span><span class="s2">&quot;f&quot;</span><span class="p">,</span> <span class="n">tt</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">tt</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">K_s</span><span class="o">.</span><span class="n">T</span><span class="p">,</span> <span class="n">K_inv</span><span class="p">),</span> <span class="n">y</span><span class="p">))</span>
-    <span class="n">Sigma</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Deterministic</span><span class="p">(</span><span class="s2">&quot;Sigma&quot;</span><span class="p">,</span> <span class="n">K_ss</span> <span class="o">-</span> <span class="n">tt</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">tt</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">K_s</span><span class="o">.</span><span class="n">T</span><span class="p">,</span> <span class="n">K_inv</span><span class="p">),</span> <span class="n">K_s</span><span class="p">))</span>
+    <span class="n">y_obs</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">gp</span><span class="o">.</span><span class="n">GP</span><span class="p">(</span><span class="s1">&#39;y_obs&#39;</span><span class="p">,</span> <span class="n">cov_func</span><span class="o">=</span><span class="n">f_cov</span><span class="p">,</span> <span class="n">sigma</span><span class="o">=</span><span class="n">s2_n</span><span class="p">,</span> <span class="n">observed</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;X&#39;</span><span class="p">:</span><span class="n">X</span><span class="p">,</span> <span class="s1">&#39;Y&#39;</span><span class="p">:</span><span class="n">y</span><span class="p">})</span>
 </pre></div>
 </div>
 </div>
-<p>So far we&#8217;ve found that <code class="docutils literal"><span class="pre">Slice</span></code> and <code class="docutils literal"><span class="pre">Metropolis</span></code> work best for GP
-hyperparameters.</p>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
 <span></span>In [5]:
@@ -507,8 +495,7 @@ hyperparameters.</p>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="k">with</span> <span class="n">model</span><span class="p">:</span>
-    <span class="n">start</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">find_MAP</span><span class="p">(</span><span class="n">fmin</span><span class="o">=</span><span class="n">sp</span><span class="o">.</span><span class="n">optimize</span><span class="o">.</span><span class="n">fmin_l_bfgs_b</span><span class="p">)</span>
-    <span class="n">trace</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="mi">5000</span><span class="p">,</span> <span class="n">step</span><span class="o">=</span><span class="n">pm</span><span class="o">.</span><span class="n">Slice</span><span class="p">(),</span> <span class="n">start</span><span class="o">=</span><span class="n">start</span><span class="p">)</span>
+    <span class="n">trace</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="mi">2000</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
@@ -517,9 +504,17 @@ hyperparameters.</p>
 </div>
 <div class="stderr container">
 <div class="highlight"><pre>
-100%|██████████| 5000/5000 [00:23&lt;00:00, 216.93it/s]
+Auto-assigning NUTS sampler...
+Initializing NUTS using advi...
+Average ELBO = -22.818: 100%|██████████| 200000/200000 [00:43&lt;00:00, 4605.11it/s]
+Finished [100%]: Average ELBO = -22.857
+100%|██████████| 2000/2000 [00:18&lt;00:00, 109.41it/s]
 </pre></div></div>
 </div>
+<p>The results show that the hyperparameters were recovered pretty well,
+but definitely with a high degree of uncertainty. Lets look at the
+predicted fits and uncertainty next using samples from the full
+posterior.</p>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
 <span></span>In [6]:
@@ -540,51 +535,51 @@ hyperparameters.</p>
 <img alt="../_images/notebooks_GP-introduction_9_0.png" src="../_images/notebooks_GP-introduction_9_0.png" />
 </div>
 </div>
-<p>The results show that the hyperparameters were recovered pretty well,
-but definitely with a high degree of uncertainty. Lets look at the
-predicted fits and uncertainty next using samples from the full
-posterior.</p>
+<p>The <code class="docutils literal"><span class="pre">sample_gp</span></code> function draws realizations of the GP from the
+predictive distribution.</p>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
 <span></span>In [7]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span><span class="n">fig</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">14</span><span class="p">,</span><span class="mi">5</span><span class="p">));</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">fig</span><span class="o">.</span><span class="n">add_subplot</span><span class="p">(</span><span class="mi">111</span><span class="p">)</span>
-
-<span class="c1"># plot random samples from the full predictive posterior</span>
-<span class="c1">#   of the fit</span>
-<span class="n">idx</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">randint</span><span class="p">(</span><span class="mi">1000</span><span class="p">,</span><span class="mi">5000</span><span class="p">,</span><span class="mi">1000</span><span class="p">)</span>
-<span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">ix</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">idx</span><span class="p">):</span>
-    <span class="n">S</span>  <span class="o">=</span> <span class="n">trace</span><span class="p">[</span><span class="n">ix</span><span class="p">][</span><span class="s2">&quot;Sigma&quot;</span><span class="p">]</span>
-    <span class="n">mu</span> <span class="o">=</span> <span class="n">trace</span><span class="p">[</span><span class="n">ix</span><span class="p">][</span><span class="s2">&quot;f&quot;</span><span class="p">]</span>
-
-    <span class="n">yz</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">multivariate_normal</span><span class="p">(</span><span class="n">mu</span><span class="p">,</span> <span class="n">S</span><span class="p">)</span>
-    <span class="n">ax</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">Z</span><span class="p">,</span> <span class="n">yz</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="n">cm</span><span class="p">(</span><span class="mf">0.3</span><span class="p">),</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">0.05</span><span class="p">)</span>
-
-<span class="c1"># overlay the observed data</span>
-<span class="n">ax</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="s1">&#39;ok&#39;</span><span class="p">,</span> <span class="n">ms</span><span class="o">=</span><span class="mi">10</span><span class="p">);</span>
-<span class="n">ax</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="s2">&quot;x&quot;</span><span class="p">);</span>
-<span class="n">ax</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="s2">&quot;f(x)&quot;</span><span class="p">);</span>
-<span class="n">ax</span><span class="o">.</span><span class="n">set_title</span><span class="p">(</span><span class="s2">&quot;Posterior predictive distribution&quot;</span><span class="p">)</span>
-<span class="n">ax</span><span class="o">.</span><span class="n">set_ylim</span><span class="p">([</span><span class="o">-</span><span class="mi">4</span><span class="p">,</span><span class="mi">7</span><span class="p">]);</span>
+<span></span><span class="k">with</span> <span class="n">model</span><span class="p">:</span>
+    <span class="n">gp_samples</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">gp</span><span class="o">.</span><span class="n">sample_gp</span><span class="p">(</span><span class="n">trace</span><span class="p">[</span><span class="mi">1000</span><span class="p">:],</span> <span class="n">y_obs</span><span class="p">,</span> <span class="n">Z</span><span class="p">,</span> <span class="n">samples</span><span class="o">=</span><span class="mi">50</span><span class="p">,</span> <span class="n">random_seed</span><span class="o">=</span><span class="mi">42</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
-<div class="nboutput container">
+<div class="nboutput nblast container">
 <div class="container">
 </div>
 <div class="stderr container">
 <div class="highlight"><pre>
-/usr/local/lib/python2.7/dist-packages/ipykernel/__main__.py:10: RuntimeWarning: covariance is not positive-semidefinite.
+  0%|          | 0/50 [00:00&lt;?, ?it/s]/Users/fonnescj/anaconda3/envs/dev/lib/python3.6/site-packages/scipy/stats/_multivariate.py:533: RuntimeWarning: covariance is not positive-semidefinite.
+  out = random_state.multivariate_normal(mean, cov, size)
+100%|██████████| 50/50 [00:03&lt;00:00, 16.24it/s]
 </pre></div></div>
+</div>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [8]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">14</span><span class="p">,</span><span class="mi">5</span><span class="p">))</span>
+
+<span class="p">[</span><span class="n">ax</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">Z</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="n">cm</span><span class="p">(</span><span class="mf">0.3</span><span class="p">),</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">0.3</span><span class="p">)</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">gp_samples</span><span class="p">]</span>
+<span class="c1"># overlay the observed data</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="s1">&#39;ok&#39;</span><span class="p">,</span> <span class="n">ms</span><span class="o">=</span><span class="mi">10</span><span class="p">);</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="s2">&quot;x&quot;</span><span class="p">);</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="s2">&quot;f(x)&quot;</span><span class="p">);</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">set_title</span><span class="p">(</span><span class="s2">&quot;Posterior predictive distribution&quot;</span><span class="p">);</span>
+</pre></div>
+</div>
 </div>
 <div class="nboutput nblast container">
 <div class="container">
 </div>
 <div class="container">
-<img alt="../_images/notebooks_GP-introduction_11_1.png" src="../_images/notebooks_GP-introduction_11_1.png" />
-</div>
+<img alt="../_images/notebooks_GP-introduction_12_0.png" src="../_images/notebooks_GP-introduction_12_0.png" />
 </div>
 </div>
 </div>
@@ -601,7 +596,7 @@ treatment of signal and noise covariance functions is identical, so the
 distinction between signal and noise is somewhat arbitrary.</p>
 <div class="nbinput nblast container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [8]:
+<span></span>In [2]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -619,16 +614,16 @@ distinction between signal and noise is somewhat arbitrary.</p>
 
     <span class="n">s2_p_true</span> <span class="o">=</span> <span class="mf">0.3</span>
     <span class="n">s2_d_true</span> <span class="o">=</span> <span class="mf">1.5</span>
-    <span class="n">s2_w_true</span> <span class="o">=</span> <span class="mf">0.1</span>
+    <span class="n">s2_w_true</span> <span class="o">=</span> <span class="mf">0.3</span>
 
     <span class="n">periodic_cov</span> <span class="o">=</span> <span class="n">s2_p_true</span> <span class="o">*</span> <span class="n">cov_per</span>
     <span class="n">drift_cov</span>    <span class="o">=</span> <span class="n">s2_d_true</span> <span class="o">*</span> <span class="n">cov_drift</span>
 
     <span class="n">signal_cov</span>   <span class="o">=</span> <span class="n">periodic_cov</span> <span class="o">+</span> <span class="n">drift_cov</span>
-    <span class="n">noise_cov</span>    <span class="o">=</span> <span class="n">s2_w_true</span> <span class="o">*</span> <span class="n">tt</span><span class="o">.</span><span class="n">eye</span><span class="p">(</span><span class="n">n</span><span class="p">)</span>
+    <span class="n">noise_cov</span>    <span class="o">=</span> <span class="n">s2_w_true</span><span class="o">**</span><span class="mi">2</span> <span class="o">*</span> <span class="n">tt</span><span class="o">.</span><span class="n">eye</span><span class="p">(</span><span class="n">n</span><span class="p">)</span>
 
 
-<span class="n">K</span> <span class="o">=</span> <span class="n">theano</span><span class="o">.</span><span class="n">function</span><span class="p">([],</span> <span class="n">signal_cov</span><span class="o">.</span><span class="n">K</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">X</span><span class="p">)</span> <span class="o">+</span> <span class="n">noise_cov</span><span class="p">)()</span>
+<span class="n">K</span> <span class="o">=</span> <span class="n">theano</span><span class="o">.</span><span class="n">function</span><span class="p">([],</span> <span class="n">signal_cov</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">X</span><span class="p">)</span> <span class="o">+</span> <span class="n">noise_cov</span><span class="p">)()</span>
 <span class="n">y</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">multivariate_normal</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">n</span><span class="p">),</span> <span class="n">K</span><span class="p">)</span>
 </pre></div>
 </div>
@@ -639,7 +634,7 @@ component, and the observed data is just the drift component and white
 noise.</p>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [9]:
+<span></span>In [3]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -655,13 +650,13 @@ noise.</p>
 <div class="container">
 </div>
 <div class="container">
-<img alt="../_images/notebooks_GP-introduction_15_0.png" src="../_images/notebooks_GP-introduction_15_0.png" />
+<img alt="../_images/notebooks_GP-introduction_16_0.png" src="../_images/notebooks_GP-introduction_16_0.png" />
 </div>
 </div>
 <p>Lets see if we can infer the correct values of the hyperparameters.</p>
 <div class="nbinput nblast container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [10]:
+<span></span>In [25]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -689,24 +684,19 @@ noise.</p>
 
     <span class="c1"># the &quot;noise&quot; covariance</span>
     <span class="n">drift_cov</span>  <span class="o">=</span> <span class="n">s2_d</span> <span class="o">*</span> <span class="n">pm</span><span class="o">.</span><span class="n">gp</span><span class="o">.</span><span class="n">cov</span><span class="o">.</span><span class="n">Matern52</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">l_drift</span><span class="p">)</span>
-    <span class="n">noise_cov</span>  <span class="o">=</span> <span class="n">drift_cov</span><span class="o">.</span><span class="n">K</span><span class="p">(</span><span class="n">X</span><span class="p">)</span> <span class="o">+</span> <span class="n">s2_w</span> <span class="o">*</span> <span class="n">tt</span><span class="o">.</span><span class="n">eye</span><span class="p">(</span><span class="n">n</span><span class="p">)</span>
 
-    <span class="c1"># multivariate normal marginal likelihood</span>
-    <span class="n">y_obs</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">MvNormal</span><span class="p">(</span><span class="s1">&#39;y_obs&#39;</span><span class="p">,</span> <span class="n">mu</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span>
-                        <span class="n">cov</span><span class="o">=</span><span class="n">signal_cov</span><span class="o">.</span><span class="n">K</span><span class="p">(</span><span class="n">X</span><span class="p">)</span> <span class="o">+</span> <span class="n">noise_cov</span><span class="p">,</span>
-                        <span class="n">observed</span><span class="o">=</span><span class="n">y</span><span class="p">)</span>
+    <span class="n">y_obs</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">gp</span><span class="o">.</span><span class="n">GP</span><span class="p">(</span><span class="s1">&#39;y_obs&#39;</span><span class="p">,</span> <span class="n">cov_func</span><span class="o">=</span><span class="n">signal_cov</span> <span class="o">+</span> <span class="n">drift_cov</span><span class="p">,</span> <span class="n">sigma</span><span class="o">=</span><span class="n">s2_w</span><span class="p">,</span> <span class="n">observed</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;X&#39;</span><span class="p">:</span><span class="n">X</span><span class="p">,</span> <span class="s1">&#39;Y&#39;</span><span class="p">:</span><span class="n">y</span><span class="p">})</span>
 </pre></div>
 </div>
 </div>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [11]:
+<span></span>In [26]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="k">with</span> <span class="n">model</span><span class="p">:</span>
-    <span class="n">start</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">find_MAP</span><span class="p">(</span><span class="n">fmin</span><span class="o">=</span><span class="n">sp</span><span class="o">.</span><span class="n">optimize</span><span class="o">.</span><span class="n">fmin_l_bfgs_b</span><span class="p">)</span>
-    <span class="n">trace</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="mi">5000</span><span class="p">,</span> <span class="n">step</span><span class="o">=</span><span class="n">pm</span><span class="o">.</span><span class="n">Slice</span><span class="p">(),</span> <span class="n">start</span><span class="o">=</span><span class="n">start</span><span class="p">)</span>
+    <span class="n">trace</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="mi">2000</span><span class="p">,</span> <span class="n">step</span><span class="o">=</span><span class="n">pm</span><span class="o">.</span><span class="n">NUTS</span><span class="p">(</span><span class="n">integrator</span><span class="o">=</span><span class="s2">&quot;two-stage&quot;</span><span class="p">),</span> <span class="n">init</span><span class="o">=</span><span class="bp">None</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
@@ -715,12 +705,12 @@ noise.</p>
 </div>
 <div class="stderr container">
 <div class="highlight"><pre>
-100%|██████████| 5000/5000 [06:45&lt;00:00, 13.41it/s]
+100%|██████████| 2000/2000 [39:31&lt;00:00,  1.67s/it]
 </pre></div></div>
 </div>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [12]:
+<span></span>In [28]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -737,20 +727,40 @@ noise.</p>
 <div class="container">
 </div>
 <div class="container">
-<img alt="../_images/notebooks_GP-introduction_19_0.png" src="../_images/notebooks_GP-introduction_19_0.png" />
+<img alt="../_images/notebooks_GP-introduction_20_0.png" src="../_images/notebooks_GP-introduction_20_0.png" />
 </div>
 </div>
 <p>Some large samples make the histogram of <code class="docutils literal"><span class="pre">s2_p</span></code> hard to read. Below is
 a zoomed in histogram.</p>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [14]:
+<span></span>In [32]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">ax</span><span class="o">.</span><span class="n">get_ybound</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>Out[32]:
+</pre></div>
+</div>
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>(0.0, 525.0)
+</pre></div>
+</div>
+</div>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [33]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="n">fig</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">12</span><span class="p">,</span><span class="mi">6</span><span class="p">));</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">fig</span><span class="o">.</span><span class="n">add_subplot</span><span class="p">(</span><span class="mi">111</span><span class="p">)</span>
-<span class="n">ax</span><span class="o">.</span><span class="n">hist</span><span class="p">(</span><span class="n">trace</span><span class="p">[</span><span class="s1">&#39;s2_p&#39;</span><span class="p">],</span> <span class="mi">100</span><span class="p">,</span> <span class="nb">range</span><span class="o">=</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="mi">4</span><span class="p">),</span> <span class="n">color</span><span class="o">=</span><span class="n">cm</span><span class="p">(</span><span class="mf">0.3</span><span class="p">),</span> <span class="n">ec</span><span class="o">=</span><span class="s1">&#39;none&#39;</span><span class="p">);</span>
-<span class="n">ax</span><span class="o">.</span><span class="n">plot</span><span class="p">([</span><span class="mf">0.3</span><span class="p">,</span> <span class="mf">0.3</span><span class="p">],</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">500</span><span class="p">],</span> <span class="s2">&quot;k&quot;</span><span class="p">,</span> <span class="n">lw</span><span class="o">=</span><span class="mi">2</span><span class="p">);</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">hist</span><span class="p">(</span><span class="n">trace</span><span class="p">[</span><span class="s1">&#39;s2_p&#39;</span><span class="p">,</span> <span class="mi">1000</span><span class="p">:],</span> <span class="mi">100</span><span class="p">,</span> <span class="nb">range</span><span class="o">=</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="mi">4</span><span class="p">),</span> <span class="n">color</span><span class="o">=</span><span class="n">cm</span><span class="p">(</span><span class="mf">0.3</span><span class="p">),</span> <span class="n">ec</span><span class="o">=</span><span class="s1">&#39;none&#39;</span><span class="p">);</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">plot</span><span class="p">([</span><span class="mf">0.3</span><span class="p">,</span> <span class="mf">0.3</span><span class="p">],</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="n">ax</span><span class="o">.</span><span class="n">get_ybound</span><span class="p">()[</span><span class="mi">1</span><span class="p">]],</span> <span class="s2">&quot;k&quot;</span><span class="p">,</span> <span class="n">lw</span><span class="o">=</span><span class="mi">2</span><span class="p">);</span>
 <span class="n">ax</span><span class="o">.</span><span class="n">set_title</span><span class="p">(</span><span class="s2">&quot;Histogram of s2_p&quot;</span><span class="p">);</span>
 <span class="n">ax</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="s2">&quot;Number of samples&quot;</span><span class="p">);</span>
 <span class="n">ax</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="s2">&quot;s2_p&quot;</span><span class="p">);</span>
@@ -761,7 +771,7 @@ a zoomed in histogram.</p>
 <div class="container">
 </div>
 <div class="container">
-<img alt="../_images/notebooks_GP-introduction_21_0.png" src="../_images/notebooks_GP-introduction_21_0.png" />
+<img alt="../_images/notebooks_GP-introduction_23_0.png" src="../_images/notebooks_GP-introduction_23_0.png" />
 </div>
 </div>
 <p>Comparing the histograms of the results to the true values, we can see
@@ -769,6 +779,42 @@ that the PyMC3&#8217;s MCMC methods did a good job estimating the true GP
 hyperparameters. Although the periodic component is faintly apparent in
 the observed data, the GP model is able to extract it with high
 accuracy.</p>
+<div class="nbinput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [34]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">Z</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">40</span><span class="p">,</span> <span class="mi">100</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+<span class="k">with</span> <span class="n">model</span><span class="p">:</span>
+    <span class="n">gp_samples</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">gp</span><span class="o">.</span><span class="n">sample_gp</span><span class="p">(</span><span class="n">trace</span><span class="p">[</span><span class="mi">1000</span><span class="p">:],</span> <span class="n">y_obs</span><span class="p">,</span> <span class="n">Z</span><span class="p">,</span> <span class="n">samples</span><span class="o">=</span><span class="mi">50</span><span class="p">,</span> <span class="n">random_seed</span><span class="o">=</span><span class="mi">42</span><span class="p">,</span> <span class="n">progressbar</span><span class="o">=</span><span class="bp">False</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [35]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">14</span><span class="p">,</span><span class="mi">5</span><span class="p">))</span>
+
+<span class="p">[</span><span class="n">ax</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">Z</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="n">cm</span><span class="p">(</span><span class="mf">0.3</span><span class="p">),</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">0.3</span><span class="p">)</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">gp_samples</span><span class="p">]</span>
+<span class="c1"># overlay the observed data</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="s1">&#39;o&#39;</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s2">&quot;k&quot;</span><span class="p">,</span> <span class="n">ms</span><span class="o">=</span><span class="mi">10</span><span class="p">);</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="s2">&quot;x&quot;</span><span class="p">);</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="s2">&quot;f(x)&quot;</span><span class="p">);</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">set_title</span><span class="p">(</span><span class="s2">&quot;Posterior predictive distribution&quot;</span><span class="p">);</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<img alt="../_images/notebooks_GP-introduction_26_0.png" src="../_images/notebooks_GP-introduction_26_0.png" />
+</div>
+</div>
 </div>
 </div>
 

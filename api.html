@@ -1751,7 +1751,7 @@ rescaled otherwise.</p>
 <col width="90%" />
 </colgroup>
 <tbody valign="top">
-<tr class="row-odd"><td><a class="reference internal" href="#pymc3.distributions.multivariate.MvNormal" title="pymc3.distributions.multivariate.MvNormal"><code class="xref py py-obj docutils literal"><span class="pre">MvNormal</span></code></a>(mu[,&nbsp;cov,&nbsp;tau])</td>
+<tr class="row-odd"><td><a class="reference internal" href="#pymc3.distributions.multivariate.MvNormal" title="pymc3.distributions.multivariate.MvNormal"><code class="xref py py-obj docutils literal"><span class="pre">MvNormal</span></code></a>(mu[,&nbsp;cov,&nbsp;tau,&nbsp;gpu_compat])</td>
 <td>Multivariate normal log-likelihood.</td>
 </tr>
 <tr class="row-even"><td><a class="reference internal" href="#pymc3.distributions.multivariate.Wishart" title="pymc3.distributions.multivariate.Wishart"><code class="xref py py-obj docutils literal"><span class="pre">Wishart</span></code></a>(n,&nbsp;V,&nbsp;\*args,&nbsp;\*\*kwargs)</td>
@@ -1770,7 +1770,7 @@ rescaled otherwise.</p>
 </table>
 <span class="target" id="module-pymc3.distributions.multivariate"></span><dl class="class">
 <dt id="pymc3.distributions.multivariate.MvNormal">
-<em class="property">class </em><code class="descclassname">pymc3.distributions.multivariate.</code><code class="descname">MvNormal</code><span class="sig-paren">(</span><em>mu</em>, <em>cov=None</em>, <em>tau=None</em>, <em>*args</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.distributions.multivariate.MvNormal" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><code class="descclassname">pymc3.distributions.multivariate.</code><code class="descname">MvNormal</code><span class="sig-paren">(</span><em>mu</em>, <em>cov=None</em>, <em>tau=None</em>, <em>gpu_compat=False</em>, <em>*args</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.distributions.multivariate.MvNormal" title="Permalink to this definition">¶</a></dt>
 <dd><p>Multivariate normal log-likelihood.</p>
 <div class="math">
 \[f(x \mid \pi, T) =
@@ -2225,7 +2225,7 @@ the mixutre weights</div></blockquote>
 <span id="plots"></span><h2>Plots<a class="headerlink" href="#module-pymc3.plots" title="Permalink to this headline">¶</a></h2>
 <dl class="function">
 <dt id="pymc3.plots.traceplot">
-<code class="descclassname">pymc3.plots.</code><code class="descname">traceplot</code><span class="sig-paren">(</span><em>trace</em>, <em>varnames=None</em>, <em>transform=&lt;function &lt;lambda&gt;&gt;</em>, <em>figsize=None</em>, <em>lines=None</em>, <em>combined=False</em>, <em>plot_transformed=False</em>, <em>grid=False</em>, <em>alpha=0.35</em>, <em>priors=None</em>, <em>prior_alpha=1</em>, <em>prior_style='--'</em>, <em>ax=None</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.plots.traceplot" title="Permalink to this definition">¶</a></dt>
+<code class="descclassname">pymc3.plots.</code><code class="descname">traceplot</code><span class="sig-paren">(</span><em>trace</em>, <em>varnames=None</em>, <em>transform=&lt;function identity_transform&gt;</em>, <em>figsize=None</em>, <em>lines=None</em>, <em>combined=False</em>, <em>plot_transformed=False</em>, <em>grid=False</em>, <em>alpha=0.35</em>, <em>priors=None</em>, <em>prior_alpha=1</em>, <em>prior_style='--'</em>, <em>ax=None</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.plots.traceplot" title="Permalink to this definition">¶</a></dt>
 <dd><p>Plot samples histograms and values</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
@@ -2272,7 +2272,7 @@ original variables (defaults to False).</p>
 </div></blockquote>
 <p><strong>priors</strong> : iterable of PyMC distributions</p>
 <blockquote>
-<div><p>PyMC prior distribution(s) to be plotted alongside poterior. Defaults
+<div><p>PyMC prior distribution(s) to be plotted alongside posterior. Defaults
 to None (no prior plots).</p>
 </div></blockquote>
 <p><strong>prior_alpha</strong> : float</p>
@@ -2303,7 +2303,7 @@ to None (no prior plots).</p>
 
 <dl class="function">
 <dt id="pymc3.plots.forestplot">
-<code class="descclassname">pymc3.plots.</code><code class="descname">forestplot</code><span class="sig-paren">(</span><em>trace_obj</em>, <em>varnames=None</em>, <em>transform=&lt;function &lt;lambda&gt;&gt;</em>, <em>alpha=0.05</em>, <em>quartiles=True</em>, <em>rhat=True</em>, <em>main=None</em>, <em>xtitle=None</em>, <em>xrange=None</em>, <em>ylabels=None</em>, <em>chain_spacing=0.05</em>, <em>vline=0</em>, <em>gs=None</em>, <em>plot_transformed=False</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.plots.forestplot" title="Permalink to this definition">¶</a></dt>
+<code class="descclassname">pymc3.plots.</code><code class="descname">forestplot</code><span class="sig-paren">(</span><em>trace_obj</em>, <em>varnames=None</em>, <em>transform=&lt;function identity_transform&gt;</em>, <em>alpha=0.05</em>, <em>quartiles=True</em>, <em>rhat=True</em>, <em>main=None</em>, <em>xtitle=None</em>, <em>xlim=None</em>, <em>ylabels=None</em>, <em>chain_spacing=0.05</em>, <em>vline=0</em>, <em>gs=None</em>, <em>plot_transformed=False</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.plots.forestplot" title="Permalink to this definition">¶</a></dt>
 <dd><p>Forest plot (model summary plot)
 Generates a &#8220;forest plot&#8221; of 100*(1-alpha)% credible intervals for either
 the set of variables in a given model, or a specified set of nodes.</p>
@@ -2347,7 +2347,7 @@ passing None (default) results in default titles.</p>
 <blockquote>
 <div><p>Label for x-axis. Defaults to no label</p>
 </div></blockquote>
-<p><strong>xrange (optional): list or tuple</strong></p>
+<p><strong>xlim (optional): list or tuple</strong></p>
 <blockquote>
 <div><p>Range for x-axis. Defaults to matplotlib&#8217;s best guess.</p>
 </div></blockquote>
@@ -2434,7 +2434,7 @@ Note this is not used if ax is supplied.</p>
 
 <dl class="function">
 <dt id="pymc3.plots.plot_posterior">
-<code class="descclassname">pymc3.plots.</code><code class="descname">plot_posterior</code><span class="sig-paren">(</span><em>trace</em>, <em>varnames=None</em>, <em>transform=&lt;function &lt;lambda&gt;&gt;</em>, <em>figsize=None</em>, <em>alpha_level=0.05</em>, <em>round_to=3</em>, <em>point_estimate='mean'</em>, <em>rope=None</em>, <em>ref_val=None</em>, <em>kde_plot=False</em>, <em>plot_transformed=False</em>, <em>ax=None</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.plots.plot_posterior" title="Permalink to this definition">¶</a></dt>
+<code class="descclassname">pymc3.plots.</code><code class="descname">plot_posterior</code><span class="sig-paren">(</span><em>trace</em>, <em>varnames=None</em>, <em>transform=&lt;function identity_transform&gt;</em>, <em>figsize=None</em>, <em>alpha_level=0.05</em>, <em>round_to=3</em>, <em>point_estimate='mean'</em>, <em>rope=None</em>, <em>ref_val=None</em>, <em>kde_plot=False</em>, <em>plot_transformed=False</em>, <em>ax=None</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.plots.plot_posterior" title="Permalink to this definition">¶</a></dt>
 <dd><p>Plot Posterior densities in style of John K. Kruschke book</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
@@ -2492,6 +2492,32 @@ original variables (defaults to False).</p>
 value of the argument kde_plot
 Some defaults are added, if not specified
 color=&#8217;#87ceeb&#8217; will match the style in the book</p>
+</div></blockquote>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last"><strong>ax</strong> : matplotlib axes</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="pymc3.plots.compare_plot">
+<code class="descclassname">pymc3.plots.</code><code class="descname">compare_plot</code><span class="sig-paren">(</span><em>comp_df</em>, <em>ax=None</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.plots.compare_plot" title="Permalink to this definition">¶</a></dt>
+<dd><p>Model comparison summary plot in the style of the one used in the book
+Statistical Rethinking by Richard McElreath.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>comp_df: DataFrame</strong></p>
+<blockquote>
+<div><p>The result of the pm.compare() function</p>
+</div></blockquote>
+<p><strong>ax</strong> : axes</p>
+<blockquote>
+<div><p>Matplotlib axes. Defaults to None.</p>
 </div></blockquote>
 </td>
 </tr>
@@ -2825,6 +2851,66 @@ This is only meaningful when <cite>stat_funcs</cite> is None.</p>
 <span class="go">mu__1  0.067513 -0.159097 -0.045637  0.062912</span>
 </pre></div>
 </div>
+</dd></dl>
+
+<dl class="function">
+<dt id="pymc3.stats.compare">
+<code class="descclassname">pymc3.stats.</code><code class="descname">compare</code><span class="sig-paren">(</span><em>traces</em>, <em>models</em>, <em>ic='WAIC'</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.stats.compare" title="Permalink to this definition">¶</a></dt>
+<dd><p>Compare models based on the widely available information criterion (WAIC)
+or leave-one-out (LOO) cross-validation.
+Read more theory here - in a paper by some of the leading authorities on
+Model Selection - dx.doi.org/10.1111/1467-9868.00353</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>traces</strong> : list of PyMC3 traces</p>
+<p><strong>models</strong> : list of PyMC3 models</p>
+<blockquote>
+<div><p>in the same order as traces.</p>
+</div></blockquote>
+<p><strong>ic</strong> : string</p>
+<blockquote>
+<div><p>Information Criterion (WAIC or LOO) used to compare models.
+Default WAIC.</p>
+</div></blockquote>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">A DataFrame, ordered from lowest to highest IC. The index reflects</p>
+<p>the order in which the models are passed to this function. The columns are:</p>
+<p><strong>IC</strong> : Information Criteria (WAIC or LOO).</p>
+<blockquote>
+<div><p>Smaller IC indicates higher out-of-sample predictive fit (&#8220;better&#8221; model). 
+Default WAIC.</p>
+</div></blockquote>
+<p><strong>pIC</strong> : Estimated effective number of parameters.</p>
+<p><strong>dIC</strong> : Relative difference between each IC (WAIC or LOO)</p>
+<p>and the lowest IC (WAIC or LOO).</p>
+<blockquote>
+<div><p>It&#8217;s always 0 for the top-ranked model.</p>
+</div></blockquote>
+<p>weight: Akaike weights for each model.</p>
+<blockquote>
+<div><p>This can be loosely interpreted as the probability of each model
+(among the compared model) given the data. Be careful that these
+weights are based on point estimates of the IC (uncertainty is ignored).</p>
+</div></blockquote>
+<p><strong>SE</strong> : Standard error of the IC estimate.</p>
+<blockquote>
+<div><p>For a &#8220;large enough&#8221; sample size this is an estimate of the uncertainty
+in the computation of the IC.</p>
+</div></blockquote>
+<p><strong>dSE</strong> : Standard error of the difference in IC between each model and</p>
+<p>the top-ranked model.</p>
+<blockquote>
+<div><p>It&#8217;s always 0 for the top-ranked model.</p>
+</div></blockquote>
+<p><strong>warning</strong> : A value of 1 indicates that the computation of the IC may not be</p>
+<p class="last">reliable see <a class="reference external" href="http://arxiv.org/abs/1507.04544">http://arxiv.org/abs/1507.04544</a> for details.</p>
+</td>
+</tr>
+</tbody>
+</table>
 </dd></dl>
 
 </div>
@@ -3211,7 +3297,7 @@ If &#8216;ADVI&#8217;, number of iterations, if &#8216;metropolis&#8217;, number
 <span id="metropolis"></span><h4>Metropolis<a class="headerlink" href="#module-pymc3.step_methods.metropolis" title="Permalink to this headline">¶</a></h4>
 <dl class="class">
 <dt id="pymc3.step_methods.metropolis.Metropolis">
-<em class="property">class </em><code class="descclassname">pymc3.step_methods.metropolis.</code><code class="descname">Metropolis</code><span class="sig-paren">(</span><em>vars=None</em>, <em>S=None</em>, <em>proposal_dist=&lt;class 'pymc3.step_methods.metropolis.NormalProposal'&gt;</em>, <em>scaling=1.0</em>, <em>tune=True</em>, <em>tune_interval=100</em>, <em>model=None</em>, <em>mode=None</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.step_methods.metropolis.Metropolis" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><code class="descclassname">pymc3.step_methods.metropolis.</code><code class="descname">Metropolis</code><span class="sig-paren">(</span><em>vars=None</em>, <em>S=None</em>, <em>proposal_dist=None</em>, <em>scaling=1.0</em>, <em>tune=True</em>, <em>tune_interval=100</em>, <em>model=None</em>, <em>mode=None</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.step_methods.metropolis.Metropolis" title="Permalink to this definition">¶</a></dt>
 <dd><p>Metropolis-Hastings sampling step</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
@@ -3375,7 +3461,7 @@ Categorical variables.</p>
 </ol>
 <dl class="function">
 <dt id="pymc3.variational.advi.advi">
-<code class="descclassname">pymc3.variational.advi.</code><code class="descname">advi</code><span class="sig-paren">(</span><em>vars=None</em>, <em>start=None</em>, <em>model=None</em>, <em>n=5000</em>, <em>accurate_elbo=False</em>, <em>optimizer=None</em>, <em>learning_rate=0.001</em>, <em>epsilon=0.1</em>, <em>mode=None</em>, <em>random_seed=None</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.variational.advi.advi" title="Permalink to this definition">¶</a></dt>
+<code class="descclassname">pymc3.variational.advi.</code><code class="descname">advi</code><span class="sig-paren">(</span><em>vars=None</em>, <em>start=None</em>, <em>model=None</em>, <em>n=5000</em>, <em>accurate_elbo=False</em>, <em>optimizer=None</em>, <em>learning_rate=0.001</em>, <em>epsilon=0.1</em>, <em>mode=None</em>, <em>tol_obj=0.01</em>, <em>eval_elbo=100</em>, <em>random_seed=None</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.variational.advi.advi" title="Permalink to this definition">¶</a></dt>
 <dd><p>Perform automatic differentiation variational inference (ADVI).</p>
 <p>This function implements the meanfield ADVI, where the variational
 posterior distribution is assumed to be spherical Gaussian without
@@ -3436,6 +3522,15 @@ optimizer is given.</p>
 <blockquote>
 <div><p>Offset in denominator of the scale of learning rate in Adagrad.
 This parameter is ignored when optimizer is given.</p>
+</div></blockquote>
+<p><strong>tol_obj</strong> : float</p>
+<blockquote>
+<div><p>Relative tolerance for testing convergence of ELBO.</p>
+</div></blockquote>
+<p><strong>eval_elbo</strong> : int</p>
+<blockquote>
+<div><p>Window for checking convergence of ELBO. Convergence will be checked
+for every multiple of eval_elbo.</p>
 </div></blockquote>
 <p><strong>random_seed</strong> : int or None</p>
 <blockquote>
@@ -4318,6 +4413,9 @@ DataFrame.</p>
 <tr class="row-odd"><td><a class="reference internal" href="#pymc3.gp.cov.WarpedInput" title="pymc3.gp.cov.WarpedInput"><code class="xref py py-obj docutils literal"><span class="pre">WarpedInput</span></code></a>(input_dim,&nbsp;cov_func,&nbsp;warp_func)</td>
 <td>Warp the inputs of any covariance function using an arbitrary function defined using Theano.</td>
 </tr>
+<tr class="row-even"><td><a class="reference internal" href="#pymc3.gp.cov.Gibbs" title="pymc3.gp.cov.Gibbs"><code class="xref py py-obj docutils literal"><span class="pre">Gibbs</span></code></a>(input_dim,&nbsp;lengthscale_func[,&nbsp;args,&nbsp;...])</td>
+<td>Use an arbitrary lengthscale function defined using Theano.</td>
+</tr>
 </tbody>
 </table>
 <span class="target" id="module-pymc3.gp.cov"></span><dl class="class">
@@ -4397,7 +4495,32 @@ defined using Theano.</p>
 <col class="field-body" />
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>cov_func</strong> : Covariance</p>
-<p><strong>warp_func</strong> : function</p>
+<p><strong>warp_func</strong> : callable</p>
+<blockquote>
+<div><p>Theano function of X and additional optional arguments.</p>
+</div></blockquote>
+<p><strong>args</strong> : optional, tuple or list of scalars or PyMC3 variables</p>
+<blockquote class="last">
+<div><p>Additional inputs (besides X or Z) to warp_func.</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="class">
+<dt id="pymc3.gp.cov.Gibbs">
+<em class="property">class </em><code class="descclassname">pymc3.gp.cov.</code><code class="descname">Gibbs</code><span class="sig-paren">(</span><em>input_dim</em>, <em>lengthscale_func</em>, <em>args=None</em>, <em>active_dims=None</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.gp.cov.Gibbs" title="Permalink to this definition">¶</a></dt>
+<dd><p>Use an arbitrary lengthscale function defined using Theano.  Operates on a single input dimension.</p>
+<div class="math">
+\[k_{\mathrm{gibbs}}(x, x') = \sqrt{\frac{2\ell(x)\ell(x')}{\ell^2(x) + \ell^2(x')}}
+                            \mathrm{exp}\left[ -\frac{(x - x')^2}{\ell(x)^2 + \ell^2(x')} \right]\]</div>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>lengthscale_func</strong> : callable</p>
 <blockquote>
 <div><p>Theano function of X and additional optional arguments.</p>
 </div></blockquote>
@@ -4571,7 +4694,17 @@ expressions rather than NumPy or Python code.</p>
 </tr>
 </tbody>
 </table>
-<span class="target" id="module-pymc3.math"></span></div>
+<span class="target" id="module-pymc3.math"></span><dl class="class">
+<dt id="pymc3.math.LogDet">
+<em class="property">class </em><code class="descclassname">pymc3.math.</code><code class="descname">LogDet</code><a class="headerlink" href="#pymc3.math.LogDet" title="Permalink to this definition">¶</a></dt>
+<dd><p>Computes the logarithm of absolute determinant of a square
+matrix M, log(abs(det(M))), on CPU. Avoids det(M) overflow/
+underflow.</p>
+<p>Note: Once PR #3959 (<a class="reference external" href="https://github.com/Theano/Theano/pull/3959/">https://github.com/Theano/Theano/pull/3959/</a>) by harpone is merged,
+this must be removed.</p>
+</dd></dl>
+
+</div>
 </div>
 
 
