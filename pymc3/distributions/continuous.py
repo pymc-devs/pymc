@@ -1374,12 +1374,10 @@ class Rice(Continuous):
         standard deviation.
 
     """
-
     def __init__(self, sd=None, nu = None, *args, **kwargs):
         super(Rice, self).__init__(*args, **kwargs)
-        self.sd = sd
-        self.nu = nu
-
+        self.sd = tt.as_tensor_variable(sd)
+        self.nu = tt.as_tenosr_variable(nu)
 
     def random(self, point=None, size=None, repeat=None):
         sd, nu = draw_values([self.sd, self.nu],
@@ -1387,7 +1385,7 @@ class Rice(Continuous):
         return generate_samples(stats.rice.rvs, sd, nu,
                                 dist_shape=self.shape,
                                 size=size)
-
+    
     def logp(self, value):
         sd = self.sd
         nu = self.nu
