@@ -5,6 +5,8 @@ from numpy.random import randint, seed
 import numpy as np
 
 import pymc3 as pm
+from pymc3.step_methods.arraystep import BlockedStep
+
 from .backends.base import merge_traces, BaseTrace, MultiTrace
 from .backends.ndarray import NDArray, MultiNDArray
 from .model import modelcontext, Point
@@ -84,7 +86,7 @@ def assign_step_methods(model, step=None, methods=(NUTS, HamiltonianMC, Metropol
 
 
 def sample(draws, step=None, init='advi', n_init=200000, start=None,
-           init_start=None, trace=None, chain=0, njobs=1, tune=None,
+           init_start=None, trace=None, chain=0, nparticles=None, njobs=1, tune=None,
            progressbar=True, model=None, random_seed=-1):
     """
     Draw a number of samples using the given step method.
@@ -158,13 +160,25 @@ def sample(draws, step=None, init='advi', n_init=200000, start=None,
     if init is not None:
         init = init.lower()
 
+    if nparticles is None:
+        if isinstance(step, CompoundStep):
+            steps = step.methods
+        else:
+            try:
+                steps = list(step)
+            except TypeError:
+                steps = [step]
+        nparticles = max(s.min_nparticles for s in steps) if step is not None else None
+        if nparticles is not None:
+            pm._log.info('Auto-assigning {} particles...'.format(nparticles))
+
     _start = None
     if init is not None:
         if init_start:
             for k in init_start.keys():
                 init_start[k] = np.asarray(init_start[k])
             _soft_update(init_start, model.test_point)
-        _start, cov = do_init(init=init, nsamples=step.nparticles, n_init=n_init, model=model, start=init_start,
+        _start, cov = do_init(init=init, nsamples=nparticles, n_init=n_init, model=model, start=init_start,
                               random_seed=random_seed)
         if step is None and pm.model.all_continuous(model.vars):
             # By default, use NUTS sampler
@@ -176,8 +190,8 @@ def sample(draws, step=None, init='advi', n_init=200000, start=None,
 
     step = assign_step_methods(model, step)
 
-    start = [transform_start_particles(start, step.nparticles, model)] * njobs
-    _start = [transform_start_particles(_start, step.nparticles, model)] * njobs
+    start = [transform_start_particles(start, nparticles, model)] * njobs
+    _start = [transform_start_particles(_start, nparticles, model)] * njobs
     for pair in zip(start, _start):
         _soft_update(*pair)
 
@@ -193,6 +207,7 @@ def sample(draws, step=None, init='advi', n_init=200000, start=None,
                    'trace': trace,
                    'chain': chain,
                    'tune': tune,
+                   'nparticles': nparticles,
                    'progressbar': progressbar,
                    'model': model,
                    'random_seed': random_seed}
@@ -206,10 +221,10 @@ def sample(draws, step=None, init='advi', n_init=200000, start=None,
     return sample_func(**sample_args)
 
 
-def _sample(draws, step=None, start=None, trace=None, chain=0, tune=None,
+def _sample(draws, step=None, start=None, trace=None, chain=0, tune=None, nparticles=None,
             progressbar=True, model=None, random_seed=-1):
     sampling = _iter_sample(draws, step, start, trace, chain,
-                            tune, model, random_seed)
+                            tune, nparticles, model, random_seed)
     if progressbar:
         sampling = tqdm(sampling, total=draws)
     try:
@@ -227,7 +242,7 @@ def _sample(draws, step=None, start=None, trace=None, chain=0, tune=None,
     return MultiTrace(result)
 
 
-def iter_sample(draws, step, start=None, trace=None, chain=0, tune=None,
+def iter_sample(draws, step, start=None, trace=None, chain=0, tune=None, nparticles=None,
                 model=None, random_seed=-1):
     """
     Generator that returns a trace on each iteration using the given
@@ -266,13 +281,13 @@ def iter_sample(draws, step, start=None, trace=None, chain=0, tune=None,
     for trace in iter_sample(500, step):
         ...
     """
-    sampling = _iter_sample(draws, step, start, trace, chain, tune,
+    sampling = _iter_sample(draws, step, start, trace, chain, tune, nparticles,
                             model, random_seed)
     for i, strace in enumerate(sampling):
         yield MultiTrace([strace[:i + 1]])
 
 
-def _iter_sample(draws, step, start=None, trace=None, chain=0, tune=None,
+def _iter_sample(draws, step, start=None, trace=None, chain=0, tune=None, nparticles=None,
                  model=None, random_seed=-1):
     model = modelcontext(model)
     draws = int(draws)
@@ -284,13 +299,13 @@ def _iter_sample(draws, step, start=None, trace=None, chain=0, tune=None,
     if start is None:
         start = {}
 
-    strace = _choose_backend(trace, chain, model=model, nparticles=step.nparticles)
+    strace = _choose_backend(trace, chain, model=model, nparticles=nparticles)
 
     if len(strace) > 0:
         _soft_update(start, strace.point(-1))
     else:
-        if step.nparticles is not None:
-            _soft_update(start, {k: np.asarray([v]*step.nparticles) for k, v in model.test_point.iteritems()})
+        if nparticles is not None:
+            _soft_update(start, {k: np.asarray([v]*nparticles) for k, v in model.test_point.iteritems()})
         else:
             _soft_update(start, model.test_point)
 
@@ -298,7 +313,7 @@ def _iter_sample(draws, step, start=None, trace=None, chain=0, tune=None,
         step = CompoundStep(step)
     except TypeError:
         pass
-
+    step.nparticles = nparticles
     point = Point(start, model=model)
 
     if step.generates_stats and strace.supports_sampler_stats:

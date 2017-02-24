@@ -1,13 +1,13 @@
 import pymc3 as pm
 import theano
 
-from .arraystep import ArrayStepShared
+from .arraystep import BlockedStep
 from ..blocking import ArrayOrdering, DictToArrayBijection
 from ..model import modelcontext
 from ..theanof import inputvars, make_shared_replacements
 
 
-class ParticleStep(ArrayStepShared):
+class ParticleStep(BlockedStep):
     """
     Defined as a controller for a population of walkers/particles which all have individual parameter/logp values.
     This implementation assumes nothing about what is happening in the actual proprietary `astep`
@@ -15,11 +15,8 @@ class ParticleStep(ArrayStepShared):
     The higher level `step` method will control where the variables go and what reshapes to perform
     """
 
-    def __new__(cls, *args, **kwargs):
-        obj = ArrayStepShared.__new__(cls, *args[1:], **kwargs)
-        return obj
-
-    def __init__(self, nparticles=None, vars=None, model=None, mode=None, **kwargs):
+    def __init__(self, vars=None, model=None, **kwargs):
+        super(ParticleStep, self).__init__()
         model = modelcontext(model)
         if vars is not None and len(vars) != len(model.vars):
             raise NotImplementedError(
@@ -27,30 +24,34 @@ class ParticleStep(ArrayStepShared):
         vars = model.vars
         vars = inputvars(vars)
         shared = make_shared_replacements(vars, model)
-        self.mode = mode
         self.model = model
         self.vars = vars
+
         self.dim = sum([i.dsize for i in self.vars])
-        if nparticles is None:
-            self.nparticles = (self.dim*2) + 2
-        else:
-            self.nparticles = nparticles
-        self.ordering = ArrayOrdering(vars, self.nparticles)
         self.shared = {str(var): shared for var, shared in shared.items()}
         self.blocked = True
         self.t_func = logp(model.logpt, vars, shared)
+        self.nparticles = None
+
+    @property
+    def ordering(self):
+        return ArrayOrdering(self.vars, self.nparticles)
 
     def astep(self, point_array):
         raise NotImplementedError("This is a ParticleStep template, it doesn't do anything!")
-
 
     def step(self, point):
         for var, share in self.shared.items():
             share.container.storage[0] = point[var]
 
         bij = DictToArrayBijection(self.ordering, point)
-        apoint = self.astep(bij.map(point))
-        return bij.rmap(apoint)
+
+        if self.generates_stats:
+            apoint, stats = self.astep(bij.map(point))
+            return bij.rmap(apoint), stats
+        else:
+            apoint = self.astep(bij.map(point))
+            return bij.rmap(apoint)
 
 
 def logp(logp, vars, shared):

@@ -69,6 +69,10 @@ class BlockedStep(object):
             step.__newargs = (vars, ) + args, kwargs
             return step
 
+    def __init__(self):
+        self._nparticles = None
+        self.min_nparticles = None
+
     # Hack for creating the class correctly when unpickling.
     def __getnewargs_ex__(self):
         return self.__newargs
@@ -80,6 +84,15 @@ class BlockedStep(object):
     @classmethod
     def _competence(cls, vars):
         return [cls.competence(var) for var in np.atleast_1d(vars)]
+
+    @property
+    def nparticles(self):
+        return self._nparticles
+
+    @nparticles.setter
+    def nparticles(self, value):
+        assert (value >= self.min_nparticles) or (value is None and self.min_nparticles is None)
+        self._nparticles = value
 
 
 class ArrayStep(BlockedStep):
@@ -96,12 +109,12 @@ class ArrayStep(BlockedStep):
     """
 
     def __init__(self, vars, fs, allvars=False, blocked=True):
+        super(ArrayStep, self).__init__()
         self.vars = vars
         self.ordering = ArrayOrdering(vars)
         self.fs = fs
         self.allvars = allvars
         self.blocked = blocked
-        self.nparticles = None
 
     def step(self, point):
         bij = DictToArrayBijection(self.ordering, point)
@@ -134,11 +147,11 @@ class ArrayStepShared(BlockedStep):
         shared : dict of theano variable -> shared variable
         blocked : Boolean (default True)
         """
+        super(ArrayStepShared, self).__init__()
         self.vars = vars
         self.ordering = ArrayOrdering(vars)
         self.shared = {str(var): shared for var, shared in shared.items()}
         self.blocked = blocked
-        self.nparticles = None
 
     def step(self, point):
         for var, share in self.shared.items():
