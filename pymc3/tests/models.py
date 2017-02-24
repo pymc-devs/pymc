@@ -104,6 +104,7 @@ def mv_prior_simple():
     X = np.linspace(0, 1, n)[:, None]
 
     K = pm.gp.cov.ExpQuad(1, 1)(X).eval()
+    L = np.linalg.cholesky(K)
     K_noise = K + noise * np.eye(n)
     obs = np.array([-0.1, 0.5, 1.1])
 
@@ -121,7 +122,7 @@ def mv_prior_simple():
         x_obs = pm.MvNormal('x_obs', observed=obs, mu=x,
                             cov=noise * np.eye(n), shape=n)
 
-    return model.test_point, model, (K, mu_post, std_post, noise)
+    return model.test_point, model, (K, L, mu_post, std_post, noise)
 
 
 def non_normal(n=2):
