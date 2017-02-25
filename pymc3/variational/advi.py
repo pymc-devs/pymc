@@ -10,6 +10,7 @@ import theano.tensor as tt
 from theano.sandbox.rng_mrg import MRG_RandomStreams
 
 import pymc3 as pm
+from pymc3.variational.updates import adagrad
 from pymc3.backends.base import MultiTrace
 from ..theanof import floatX
 
@@ -118,7 +119,7 @@ def advi(vars=None, start=None, model=None, n=5000, accurate_elbo=False,
 
     # Prepare optimizer
     if optimizer is None:
-        optimizer = adagrad_optimizer(learning_rate, epsilon)
+        optimizer = adagrad
 
     # Create variational gradient tensor
     elbo, shared = _calc_elbo(vars, model, n_mcsamples=n_mcsamples,
@@ -137,7 +138,7 @@ def advi(vars=None, start=None, model=None, n=5000, accurate_elbo=False,
     # Create parameter update function used in the training loop
     uw_shared = theano.shared(uw, 'uw_shared')
     elbo = pm.CallableTensor(elbo)(uw_shared)
-    updates = optimizer(loss=-1 * elbo, param=[uw_shared])
+    updates = optimizer(-1 * elbo, [uw_shared], learning_rate=learning_rate, epsilon=epsilon)
     f = theano.function([], [uw_shared, elbo], updates=updates, mode=mode)
 
     # For tracking convergence of ELBO
@@ -268,58 +269,6 @@ def _elbo_t(logp, uw, inarray, n_mcsamples, random_seed):
         elbo = tt.mean(logps) + tt.sum(w) + 0.5 * l * (1 + tt.log(2.0 * np.pi))
 
     return elbo
-
-
-def adagrad_optimizer(learning_rate, epsilon, n_win=10):
-    """Returns a function that returns parameter updates.
-
-    Parameter
-    ---------
-    learning_rate : float
-        Learning rate.
-    epsilon : float
-        Offset to avoid zero-division in the normalizer of adagrad.
-    n_win : int
-        Number of past steps to calculate scales of parameter gradients.
-
-    Returns
-    -------
-    A function (loss, param) -> updates.
-
-    loss : Theano scalar
-        Loss function to be minimized (e.g., negative ELBO).
-    param : List of shared variables
-        Parameters to be optimized.
-    updates : OrderedDict
-        Parameter updates used in Theano functions.
-    """
-    def optimizer(loss, param):
-        updates = OrderedDict()
-        if param is not list:
-            param = list(param)
-
-        for param_ in param:
-            i = theano.shared(floatX(np.array(0)))
-            i_int = i.astype('int32')
-            value = param_.get_value(borrow=True)
-            accu = theano.shared(
-                np.zeros(value.shape + (n_win,), dtype=value.dtype))
-            grad = tt.grad(loss, param_)
-
-            # Append squared gradient vector to accu_new
-            accu_new = tt.set_subtensor(accu[:, i_int], grad ** 2)
-            i_new = tt.switch((i + 1) < n_win, i + 1, 0)
-
-            updates[accu] = accu_new
-            updates[i] = i_new
-
-            accu_sum = accu_new.sum(axis=1)
-            updates[param_] = param_ - (learning_rate * grad /
-                                        tt.sqrt(accu_sum + epsilon))
-
-        return updates
-
-    return optimizer
 
 
 def sample_vp(
