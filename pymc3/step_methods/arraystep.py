@@ -90,9 +90,11 @@ class BlockedStep(object):
 
     @nparticles.setter
     def nparticles(self, value):
-        if value is not None and self.min_nparticles is None:
-            raise ValueError("{} does not support particles".format(self))
-        assert value >= self.min_nparticles, "{} requires at least {} particles for the variables {}"\
+        if self.min_nparticles is None:
+            if value is not None:
+                raise ValueError("{} does not support particles".format(self))
+        else:
+            assert value >= self.min_nparticles, "{} requires at least {} particles for the variables {}"\
             .format(self, self.min_nparticles, '\n'.join(self.vars))
         self._nparticles = value
 

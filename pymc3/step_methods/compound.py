@@ -43,4 +43,4 @@ class CompoundStep(object):
 
     @property
     def min_nparticles(self):
-        return max(method.min_nparticles for method in self.methods)
+        return max([method.min_nparticles for method in self.methods], key=lambda x: 0 if x is None else x)

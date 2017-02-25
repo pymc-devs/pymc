@@ -88,7 +88,7 @@ class TestARM12_6(SeededTest):
             start = pm.find_MAP(start=start,
                                 vars=[model['groupmean'], model['sd_interval_'], model['floor_m']])
             step = pm.NUTS(model.vars, scaling=start)
-            pm.sample(50, step=step, start=start)
+            pm.sample(50, step=step, start=start, init=None)
 
 
 class TestARM12_6Uranium(SeededTest):
@@ -129,7 +129,7 @@ class TestARM12_6Uranium(SeededTest):
             h = np.diag(H(start))
 
             step = pm.HamiltonianMC(model.vars, h)
-            pm.sample(50, step=step, start=start)
+            pm.sample(50, step=step, start=start, init=None)
 
 
 def build_disaster_model(masked=False):
@@ -169,7 +169,7 @@ class TestDisasterModel(SeededTest):
             start = {'early_mean': 2., 'late_mean': 3.}
             # Use slice sampler for means (other varibles auto-selected)
             step = pm.Slice([model.early_mean_log_, model.late_mean_log_])
-            tr = pm.sample(500, tune=50, start=start, step=step)
+            tr = pm.sample(500, tune=50, start=start, step=step, init=None)
             pm.summary(tr)
 
     def test_disaster_model_missing(self):
@@ -179,7 +179,7 @@ class TestDisasterModel(SeededTest):
             start = {'early_mean': 2., 'late_mean': 3.}
             # Use slice sampler for means (other varibles auto-selected)
             step = pm.Slice([model.early_mean_log_, model.late_mean_log_])
-            tr = pm.sample(500, tune=50, start=start, step=step)
+            tr = pm.sample(500, tune=50, start=start, step=step, init=None)
             pm.summary(tr)
 
 
@@ -261,7 +261,7 @@ class TestLatentOccupancy(SeededTest):
             start = {'psi': 0.5, 'z': (self.y > 0).astype(int), 'theta': 5}
             step_one = pm.Metropolis([model.theta_interval_, model.psi_logodds_])
             step_two = pm.BinaryMetropolis([model.z])
-            pm.sample(50, step=[step_one, step_two], start=start)
+            pm.sample(50, step=[step_one, step_two], start=start, init=None)
 
 
 class TestRSV(SeededTest):
@@ -299,4 +299,4 @@ class TestRSV(SeededTest):
 
     def test_run(self):
         with self.build_model():
-            pm.sample(50, step=[pm.NUTS(), pm.Metropolis()])
+            pm.sample(50, step=[pm.NUTS(), pm.Metropolis()], init=None)
