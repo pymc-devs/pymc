@@ -95,74 +95,65 @@ class FullRank(Approximation):
 
 
 class Inference(object):
-    def __init__(self, op, approx, tf, local_rv=None, model=None, cost_part_grad_scale=1, **kwargs):
+    def __init__(self, op, approx, tf, local_rv=None, model=None, **kwargs):
         self.hist = np.asarray(())
         self.objective = op(approx(
             local_rv=local_rv,
-            model=model,
-            cost_part_grad_scale=cost_part_grad_scale, **kwargs)
+            model=model, **kwargs)
         )(tf)
 
     approx = property(lambda self: self.objective.approx)
 
-    def fit(self, n=10000, callbacks=None, score_every=1, callback_every=1, **kwargs):
+    def fit(self, n=10000, score=True, callbacks=None, callback_every=1,
+            **kwargs):
         if callbacks is None:
             callbacks = []
-        sc_n_mc = kwargs.get('sc_n_mc')
-        kwargs['score'] = False
-        step_func = self.objective.step_function(**kwargs)
-        if score_every is not None:
-            score_func = self.objective.score_function(sc_n_mc)
-        else:
-            score_func = None
+        step_func = self.objective.step_function(score=score, **kwargs)
         i = 0
-        j = 0
-        if score_every is not None:
-            scores = np.empty(n // score_every)
-            scores[:] = np.nan
-        else:
-            scores = np.asarray(())
+        scores = np.empty(n)
+        scores[:] = np.nan
         logger = pm._log  # noqa
         progress = tqdm.trange(n)
-        if score_every is not None:
+        if score:
             try:
                 for i in progress:
-                    step_func()
-                    if i % score_every == 0:
-                        e = score_func()
-                        if np.isnan(e):
-                            scores = scores[:j]
-                            self.hist = np.concatenate([self.hist, scores])
-                            raise FloatingPointError('NaN occurred in optimization.')
-                        scores[j] = e
-                        j += 1
-                        if i % 10 == 0:
-                            avg_elbo = scores[max(0, j - 1000):j].mean()
-                            progress.set_description('Average Loss = {:,.5g}'.format(avg_elbo))
+                    e = step_func()
+                    if np.isnan(e):
+                        scores = scores[:i]
+                        self.hist = np.concatenate([self.hist, scores])
+                        raise FloatingPointError('NaN occurred in optimization.')
+                    scores[i] = e
+                    if i % 10 == 0:
+                        avg_elbo = scores[max(0, i - 1000):i+1].mean()
+                        progress.set_description('Average Loss = {:,.5g}'.format(avg_elbo))
                     if i % callback_every == 0:
                         for callback in callbacks:
-                            callback(self.approx, scores[:j], i)
+                            callback(self.approx, scores[:i+1], i)
             except KeyboardInterrupt:
-                scores = scores[:j]
+                scores = scores[:i]
                 if n < 10:
                     logger.info('Interrupted at {:,d} [{:.0f}%]: Loss = {:,.5g}'.format(
                         i, 100 * i // n, scores[i]))
                 else:
-                    avg_elbo = scores[min(0, j - 1000):j].mean()
+                    avg_elbo = scores[min(0, i - 1000):i].mean()
                     logger.info('Interrupted at {:,d} [{:.0f}%]: Average Loss = {:,.5g}'.format(
                         i, 100 * i // n, avg_elbo))
             else:
                 if n < 10:
                     logger.info('Finished [100%]: Loss = {:,.5g}'.format(scores[-1]))
                 else:
-                    avg_elbo = scores[max(0, j - 1000):j].mean()
+                    avg_elbo = scores[max(0, i - 1000):i].mean()
                     logger.info('Finished [100%]: Average Loss = {:,.5g}'.format(avg_elbo))
+            finally:
+                progress.close()
         else:
             try:
                 for _ in progress:
                     step_func()
             except KeyboardInterrupt:
                 pass
+            finally:
+                progress.close()
         self.hist = np.concatenate([self.hist, scores])
         return self.approx
 

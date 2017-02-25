@@ -10,6 +10,13 @@ from ..model import modelcontext
 from ..theanof import tt_rng, memoize, change_flags, GradScale
 
 
+class ObjectiveUpdates(theano.OrderedUpdates):
+    """
+    OrderedUpdates extension for storing loss
+    """
+    loss = None
+
+
 class Operator(object):
     NEED_F = False
 
@@ -71,7 +78,7 @@ class Operator(object):
                 more_tf_params = []
             if more_updates is None:
                 more_updates = dict()
-            resulting_updates = theano.OrderedUpdates()
+            resulting_updates = ObjectiveUpdates()
 
             if self.test_params:
                 tf_z = self.random(tf_n_mc)
@@ -83,37 +90,34 @@ class Operator(object):
             obj_target = self(obj_z)
             resulting_updates.update(obj_optimizer(obj_target, self.obj_params + more_obj_params))
             resulting_updates.update(more_updates)
+            resulting_updates.loss = obj_target
             return resulting_updates
 
         @memoize
-        def step_function(self, obj_n_mc=None, tf_n_mc=None, sc_n_mc=None,
+        def step_function(self, obj_n_mc=None, tf_n_mc=None,
                           obj_optimizer=adam, test_optimizer=adam,
                           more_obj_params=None, more_tf_params=None,
-                          more_updates=None,
-                          score=False):
+                          more_updates=None, score=False,
+                          fn_kwargs=None):
+            if fn_kwargs is None:
+                fn_kwargs = {}
             updates = self.updates(obj_n_mc=obj_n_mc, tf_n_mc=tf_n_mc,
                                    obj_optimizer=obj_optimizer,
                                    test_optimizer=test_optimizer,
                                    more_obj_params=more_obj_params,
                                    more_tf_params=more_tf_params,
                                    more_updates=more_updates)
-            step_fn = theano.function([], [], updates=updates)
             if score:
-                score_fun = self.score_function(sc_n_mc)
+                step_fn = theano.function([], updates.loss, updates=updates, **fn_kwargs)
             else:
-                score_fun = None
-
-            if score_fun is not None:
-                def step():
-                    step_fn()
-                    return score_fun()
-            else:
-                step = step_fn
-            return step
+                step_fn = theano.function([], None, updates=updates, **fn_kwargs)
+            return step_fn
 
         @memoize
-        def score_function(self, sc_n_mc=None):
-            return theano.function([], self(self.random(sc_n_mc)))
+        def score_function(self, sc_n_mc=None, fn_kwargs=None):
+            if fn_kwargs is None:
+                fn_kwargs = {}
+            return theano.function([], self(self.random(sc_n_mc)), **fn_kwargs)
 
     def __str__(self):
         return '%(op)s[%(ap)s]' % dict(op=self.__class__.__name__,
@@ -192,7 +196,7 @@ class Approximation(object):
         self.flat_view, self.order, self._view = model.flatten(
             vars=self.local_vars + self.global_vars
         )
-        self.cost_part_grad_scale = cost_part_grad_scale
+        self.grad_scale_op = GradScale(cost_part_grad_scale)
         self.shared_params = self.create_shared_params()
 
     input = property(lambda self: self.flat_view.input)
@@ -219,7 +223,9 @@ class Approximation(object):
         rho = tt.concatenate(rho)
         return mu, rho
 
-    def apply_replacements(self, node, deterministic=False, include=None, exclude=None):
+    def apply_replacements(self, node, deterministic=False,
+                           include=None, exclude=None,
+                           more_replacements=None):
         """
         Replace variables in graph with variational approximation. By default, replaces all variables
 
@@ -234,6 +240,8 @@ class Approximation(object):
             latent variables to be replaced
         exclude : list
             latent variables to be excluded for replacements
+        more_replacements : dict
+            add custom replacements to graph, e.g. change input source
 
         Returns
         -------
@@ -249,6 +257,8 @@ class Approximation(object):
                             in self.flat_view.replacements.items() if k not in exclude}
         else:
             replacements = self.flat_view.replacements
+        if more_replacements is not None:
+            replacements.update(more_replacements)
         node = theano.clone(node, replacements, strict=False)
         posterior = self.random(no_rand=deterministic)
         return theano.clone(node, {self.input: posterior})
@@ -262,7 +272,7 @@ class Approximation(object):
         Sticking the Landing: A Simple Reduced-Variance Gradient for ADVI
         approximateinference.org/accepted/RoederEtAl2016.pdf
         """
-        return GradScale(self.cost_part_grad_scale)(inp)
+        return self.grad_scale_op(inp)
 
     def to_flat_input(self, node):
         """
