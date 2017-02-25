@@ -83,7 +83,7 @@ def assign_step_methods(model, step=None, methods=(NUTS, HamiltonianMC, Metropol
     return steps
 
 
-def sample(draws, step=None, init='advi', n_init=200000, start=None,
+def sample(draws, step=None, init='auto', n_init=200000, start=None,
            init_start=None, trace=None, chain=0, nparticles=None, njobs=1, tune=None,
            progressbar=True, model=None, random_seed=-1):
     """
@@ -100,8 +100,9 @@ def sample(draws, step=None, init='advi', n_init=200000, start=None,
         A step function or collection of functions. If no step methods are
         specified, or are partially specified, they will be assigned
         automatically (defaults to None).
-    init : str {'ADVI', 'ADVI_MAP', 'MAP', 'NUTS', None}
+    init : str {'auto', 'ADVI', 'ADVI_MAP', 'MAP', 'NUTS', None}
         Initialization method to use.
+        * 'auto': selects advi unless model variables are discrete in which case, init is not used
         * ADVI : Run ADVI to estimate starting points and diagonal covariance
         matrix. If njobs > 1 it will sample starting points from the estimated
         posterior, otherwise it will use the estimated posterior mean.
@@ -171,6 +172,10 @@ def sample(draws, step=None, init='advi', n_init=200000, start=None,
             pm._log.info('Auto-assigning {} particles...'.format(nparticles))
 
     _start = None
+    if init == 'auto' and pm.model.all_continuous(model.vars):
+        init = 'advi'
+    else:
+        init = None
     if init is not None:
         if init_start:
             for k in init_start.keys():
