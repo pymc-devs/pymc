@@ -169,16 +169,27 @@ def histplot_op(ax, data, alpha=.35):
 def kdeplot_op(ax, data, prior=None, prior_alpha=1, prior_style='--'):
     ls = []
     pls = []
+    errored = []
     for i in range(data.shape[1]):
         d = data[:, i]
-        density, l, u = fast_kde(d)
-        x = np.linspace(l, u, len(density))
+        try:
+            density, l, u = fast_kde(d)
+            x = np.linspace(l, u, len(density))
 
-        if prior is not None:
-            p = prior.logp(x).eval()
-            pls.append(ax.plot(x, np.exp(p), alpha=prior_alpha, ls=prior_style))
+            if prior is not None:
+                p = prior.logp(x).eval()
+                pls.append(
+                    ax.plot(x, np.exp(p), alpha=prior_alpha, ls=prior_style))
 
-        ls.append(ax.plot(x, density))
+            ls.append(ax.plot(x, density))
+        except ValueError:
+            errored.append(str(i))
+
+    if errored:
+        ax.text(.27, .47, 'WARNING: KDE plot failed for: ' + ','.join(errored),
+                bbox={'facecolor': 'red', 'alpha': 0.5, 'pad': 10},
+                style='italic')
+
     return ls, pls
 
 
@@ -796,13 +807,14 @@ def fast_kde(x):
     xmax: maximum value of x
 
     """
-    # add small jitter in case input values are the same
-    x = np.random.normal(x, 1e-12)
-
-    xmin, xmax = x.min(), x.max()
-
+    x = x[~np.isnan(x)]
+    x = x[~np.isinf(x)]
     n = len(x)
-    nx = 256
+    nx = 200
+
+    # add small jitter in case input values are the same
+    x += np.random.uniform(-1E-12, 1E-12, size=n)
+    xmin, xmax = np.min(x), np.max(x)
 
     # compute histogram
     bins = np.linspace(xmin, xmax, nx)
@@ -872,3 +884,4 @@ def compare_plot(comp_df, ax=None):
     ax.set_xlabel('Deviance')
 
     return ax
+
