@@ -1,6 +1,7 @@
 import numpy as np
 import numpy.random as nr
-for theano import tensor as tt
+import theano.tensor as tt
+from scipy import stats
 
 from .arraystep import ArrayStep, Competence
 from ..model import modelcontext
@@ -9,18 +10,12 @@ from ..distributions import draw_values
 
 __all__ = ['Dirichlet']
 
-class Dirichlet(object):
-    
-    def __init__(self, input_dim, active_dims=None):
-        self.input_dim = input_dim
-        if active_dims is None:
-            self.active_dims = np.arange(input_dim)
-        else:
-            self.active_dims = np.array(active_dims)
-            assert len(active_dims) == input_dim
-            
-    def stick_breaking(beta):
-        portion_remaining = tt.concatenate([[1], tt.extra_ops.cumprod(1 - beta)[:-1]])
-        return beta * portion_remaining
+class StickBreakingProcess(Continuous):
+    def __init__(self, alpha, shape=None, *args, **kwargs):
+        super(StickBreaking, self).__init__(*args, shape=shape, **kwargs)
+        self.shape = tt.as_tensor_variable(shape)
+        self.alpha = tt.as_tensor_variable(alpha)
         
+    def logp(self, value):
+        raise NotImplementedError
         
