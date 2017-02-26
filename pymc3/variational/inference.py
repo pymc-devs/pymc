@@ -188,10 +188,16 @@ class FullRank(Approximation):
         return log_normal_mv(z, mu, chol=L, gpu_compat=self.gpu_compat)
 
     def random_global(self, samples=None, no_rand=False):
-        initial = self.initial(samples, no_rand, l=self.global_size)
+        # (samples, dim) or (dim, )
+        initial = self.initial(samples, no_rand, l=self.global_size).T
+        # (dim, dim)
         L = self.L
+        # (dim, )
         mu = self.mu
-        return L.dot(initial) + mu
+        # x = Az + m, but it assumes z is vector
+        # When we get z with shape (samples, dim)
+        # we need to transpose Az
+        return L.dot(initial).T + mu
 
     @classmethod
     def from_mean_field(cls, mean_field, gpu_compat=False):
