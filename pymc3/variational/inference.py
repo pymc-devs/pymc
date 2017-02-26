@@ -63,6 +63,18 @@ class MeanField(Approximation):
         Sticking the Landing: A Simple Reduced-Variance Gradient for ADVI
         approximateinference.org/accepted/RoederEtAl2016.pdf
     """
+    @property
+    def mu(self):
+        return self.shared_params['mu']
+
+    @property
+    def rho(self):
+        return self.shared_params['rho']
+
+    @property
+    def cov(self):
+        return tt.diag(rho2sd(self.rho))
+
     def create_shared_params(self):
         return {'mu': theano.shared(
                     self.input.tag.test_value[self.global_slc]),
@@ -76,17 +88,16 @@ class MeanField(Approximation):
         Gradient wrt mu, rho in density parametrization
         is set to zero to lower variance of ELBO
         """
-        mu = self.shared_params['mu']
-        rho = self.shared_params['rho']
-        mu = self.scale_grad(mu)
-        rho = self.scale_grad(rho)
-        logq = tt.sum(log_normal(z[self.global_slc], mu, rho=rho))
+        mu = self.scale_grad(self.mu)
+        rho = self.scale_grad(self.rho)
+        z = z[self.global_slc]
+        logq = tt.sum(log_normal(z, mu, rho=rho))
         return logq
 
     def random_global(self, samples=None, no_rand=False):
         initial = self.initial(samples, no_rand, l=self.global_size)
-        sd = rho2sd(self.shared_params['rho'])
-        mu = self.shared_params['mu']
+        sd = rho2sd(self.rho)
+        mu = self.mu
         return sd * initial + mu
 
 
@@ -127,6 +138,19 @@ class FullRank(Approximation):
         self.gpu_compat = gpu_compat
 
     @property
+    def L(self):
+        return self.shared_params['L_tril'][self.tril_index_matrix]
+
+    @property
+    def mu(self):
+        return self.shared_params['mu']
+
+    @property
+    def cov(self):
+        L = self.L
+        return L.dot(L.T)
+
+    @property
     def num_tril_entries(self):
         n = self.global_size
         return int(n * (n + 1) / 2)
@@ -158,16 +182,15 @@ class FullRank(Approximation):
         Gradient wrt mu, rho in density parametrization
         is set to zero to lower variance of ELBO
         """
-        mu = self.shared_params['mu']
-        L = self.shared_params['L_tril'][self.tril_index_matrix]
-        mu = self.scale_grad(mu)
-        L = self.scale_grad(L)
+        mu = self.scale_grad(self.mu)
+        L = self.scale_grad(self.L)
+        z = z[self.global_slc]
         return log_normal_mv(z, mu, chol=L, gpu_compat=self.gpu_compat)
 
     def random_global(self, samples=None, no_rand=False):
         initial = self.initial(samples, no_rand, l=self.global_size)
-        L = self.shared_params['L_tril'][self.tril_index_matrix]
-        mu = self.shared_params['mu']
+        L = self.L
+        mu = self.mu
         return L.dot(initial) + mu
 
     @classmethod
