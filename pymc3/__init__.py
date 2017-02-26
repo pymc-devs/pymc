@@ -1,6 +1,10 @@
 # pylint: disable=wildcard-import
 __version__ = "3.0"
 
+# Turn off nagging Theano warnings
+import os
+os.environ["THEANO_FLAGS"] = "warn.round=False"
+
 from .blocking import *
 from .distributions import *
 from .external import *
