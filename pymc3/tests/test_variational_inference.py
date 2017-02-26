@@ -171,5 +171,16 @@ class TestMeanField(TestApproximates.Base):
 class TestFullRank(TestApproximates.Base):
     inference = FullRankADVI
 
+    def test_from_mean_field(self):
+        with models.multidimensional_model()[1]:
+            advi = ADVI()
+            full_rank = FullRankADVI.from_mean_field(advi.approx)
+            full_rank.fit(20)
+
+    def test_from_advi(self):
+        with models.multidimensional_model()[1]:
+            advi = ADVI()
+            full_rank = FullRankADVI.from_advi(advi)
+            full_rank.fit(20)
 if __name__ == '__main__':
     unittest.main()

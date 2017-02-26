@@ -126,11 +126,30 @@ class FullRank(Approximation):
         )
         self.gpu_compat = gpu_compat
 
+    @property
+    def num_tril_entries(self):
+        n = self.global_size
+        return int(n * (n + 1) / 2)
+
+    @property
+    def tril_index_matrix(self):
+        n = self.global_size
+        num_tril_entries = self.num_tril_entries
+        tril_index_matrix = np.zeros([n, n], dtype=int)
+        tril_index_matrix[np.tril_indices(n)] = np.arange(num_tril_entries)
+        tril_index_matrix[np.tril_indices(n)[::-1]] = np.arange(num_tril_entries)
+        return tril_index_matrix
+
     def create_shared_params(self):
+        n = self.global_size
+        L_tril = (
+            np.eye(n)
+            [np.tril_indices(n)]
+            .astype(theano.config.floatX)
+        )
         return {'mu': theano.shared(
                     self.input.tag.test_value[self.global_slc]),
-                'L': theano.shared(
-                    np.eye(self.global_size, dtype=theano.config.floatX))
+                'L_tril': theano.shared(L_tril)
                 }
 
     def log_q_W_global(self, z):
@@ -140,16 +159,35 @@ class FullRank(Approximation):
         is set to zero to lower variance of ELBO
         """
         mu = self.shared_params['mu']
-        L = self.shared_params['L']
+        L = self.shared_params['L_tril'][self.tril_index_matrix]
         mu = self.scale_grad(mu)
         L = self.scale_grad(L)
         return log_normal_mv(z, mu, chol=L, gpu_compat=self.gpu_compat)
 
     def random_global(self, samples=None, no_rand=False):
         initial = self.initial(samples, no_rand, l=self.global_size)
-        L = self.shared_params['L']
+        L = self.shared_params['L_tril'][self.tril_index_matrix]
         mu = self.shared_params['mu']
-        return initial.dot(L) + mu
+        return L.dot(initial) + mu
+
+    @classmethod
+    def from_mean_field(cls, mean_field, gpu_compat=False):
+        full_rank = object.__new__(cls)  # type: FullRank
+        full_rank.gpu_compat = gpu_compat
+        full_rank.__dict__.update(mean_field.__dict__)
+        full_rank.shared_params = full_rank.create_shared_params()
+        full_rank.shared_params['mu'].set_value(
+            mean_field.shared_params['mu'].get_value()
+        )
+        rho = mean_field.shared_params['rho'].get_value()
+        n = full_rank.global_size
+        L_tril = (
+            np.diag(np.log1p(np.exp(rho)))  # rho2sd
+            [np.tril_indices(n)]
+            .astype(theano.config.floatX)
+        )
+        full_rank.shared_params['L_tril'].set_value(L_tril)
+        return full_rank
 
 
 class Inference(object):
@@ -169,10 +207,15 @@ class Inference(object):
     """
     def __init__(self, op, approx, tf, local_rv=None, model=None, **kwargs):
         self.hist = np.asarray(())
-        self.objective = op(approx(
-            local_rv=local_rv,
-            model=model, **kwargs)
-        )(tf)
+        if isinstance(approx, type) and issubclass(approx, Approximation):
+            approx = approx(
+                local_rv=local_rv,
+                model=model, **kwargs)
+        elif isinstance(approx, Approximation):
+            pass
+        else:
+            raise TypeError('approx should be Approximation instance or Approximation subclass')
+        self.objective = op(approx)(tf)
 
     approx = property(lambda self: self.objective.approx)
 
@@ -324,3 +367,18 @@ class FullRankADVI(Inference):
         super(FullRankADVI, self).__init__(
             KL, FullRank, None,
             local_rv=local_rv, model=model, cost_part_grad_scale=cost_part_grad_scale, gpu_compat=gpu_compat)
+
+    @classmethod
+    def from_mean_field(cls, mean_field, gpu_compat=False):
+        full_rank = FullRank.from_mean_field(mean_field, gpu_compat)
+        inference = object.__new__(cls)
+        objective = KL(full_rank)(None)
+        inference.objective = objective
+        inference.hist = np.asarray(())
+        return inference
+
+    @classmethod
+    def from_advi(cls, advi, gpu_compat=False):
+        inference = cls.from_mean_field(advi.approx, gpu_compat)
+        inference.hist = advi.hist
+        return inference
