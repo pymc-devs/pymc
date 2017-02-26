@@ -21,11 +21,13 @@ __all__ = [
 
 
 class KL(Operator):
+    """
+    Operator based on Kullback Leibler Divergence
+    .. math::
+
+        KL[q(v)||p(v)] = \int q(v)\log\\frac{q(v)}{p(v)}dv
+    """
     def apply(self, f):
-        """
-        KL divergence between posterior and approximation for input `z`
-            :math:`z ~ Approximation`
-        """
         z = self.input
         return self.logq(z) - self.logp(z)
 
@@ -33,6 +35,34 @@ class KL(Operator):
 
 
 class MeanField(Approximation):
+    """
+    Mean Field approximation to the posterior where spherical Gaussian family
+    is fitted to minimize KL divergence from True posterior. It is assumed
+    that latent space variables are uncorrelated that is the main drawback
+    of the method
+
+    Parameters
+    ----------
+    local_rv : dict
+        mapping {model_variable -> local_variable}
+        Local Vars are used for Autoencoding Variational Bayes
+        See (AEVB; Kingma and Welling, 2014) for details
+
+    model : PyMC3 model for inference
+
+    cost_part_grad_scale : float or scalar tensor
+        Scaling score part of gradient can be useful near optimum for
+        archiving better convergence properties. Common schedule is
+        1 at the start and 0 in the end. So slow decay will be ok.
+        See (Sticking the Landing; Geoffrey Roeder,
+        Yuhuai Wu, David Duvenaud, 2016) for details
+
+    References
+    ----------
+    Geoffrey Roeder, Yuhuai Wu, David Duvenaud, 2016
+        Sticking the Landing: A Simple Reduced-Variance Gradient for ADVI
+        approximateinference.org/accepted/RoederEtAl2016.pdf
+    """
     def create_shared_params(self):
         return {'mu': theano.shared(
                     self.input.tag.test_value[self.global_slc]),
@@ -61,6 +91,34 @@ class MeanField(Approximation):
 
 
 class FullRank(Approximation):
+    """
+    Full Rank approximation to the posterior where Multivariate Gaussian family
+    is fitted to minimize KL divergence from True posterior. In contrast to
+    MeanField approach correlations between variables are taken in account. The
+    main drawback of the method is computational cost.
+
+    Parameters
+    ----------
+    local_rv : dict
+        mapping {model_variable -> local_variable}
+        Local Vars are used for Autoencoding Variational Bayes
+        See (AEVB; Kingma and Welling, 2014) for details
+
+    model : PyMC3 model for inference
+
+    cost_part_grad_scale : float or scalar tensor
+        Scaling score part of gradient can be useful near optimum for
+        archiving better convergence properties. Common schedule is
+        1 at the start and 0 in the end. So slow decay will be ok.
+        See (Sticking the Landing; Geoffrey Roeder,
+        Yuhuai Wu, David Duvenaud, 2016) for details
+
+    References
+    ----------
+    Geoffrey Roeder, Yuhuai Wu, David Duvenaud, 2016
+        Sticking the Landing: A Simple Reduced-Variance Gradient for ADVI
+        approximateinference.org/accepted/RoederEtAl2016.pdf
+    """
     def __init__(self, local_rv=None, model=None, cost_part_grad_scale=1, gpu_compat=False):
         super(FullRank, self).__init__(
             local_rv=local_rv, model=model,
@@ -95,6 +153,20 @@ class FullRank(Approximation):
 
 
 class Inference(object):
+    """
+    Base class for Variational Inference
+
+    Communicates Operator, Approximation and Test Function to build Objective Function
+
+    Parameters
+    ----------
+    op : Operator class
+    approx : Approximation class or instance
+    tf : TestFunction instance
+    local_rv : list
+    model : PyMC3 Model
+    kwargs : kwargs for Approximation
+    """
     def __init__(self, op, approx, tf, local_rv=None, model=None, **kwargs):
         self.hist = np.asarray(())
         self.objective = op(approx(
@@ -106,6 +178,24 @@ class Inference(object):
 
     def fit(self, n=10000, score=True, callbacks=None, callback_every=1,
             **kwargs):
+        """
+        Performs Operator Variational Inference
+
+        Parameters
+        ----------
+        n : int
+            number of iterations
+        score : bool
+            evaluate loss on each iteration or not
+        callbacks : list[function : (Approximation, losses, i) -> any]
+        callback_every : int
+            call callback functions on `callback_every` step
+        kwargs : kwargs for ObjectiveFunction.step_function
+
+        Returns
+        -------
+        Approximation
+        """
         if callbacks is None:
             callbacks = []
         step_func = self.objective.step_function(score=score, **kwargs)
@@ -159,6 +249,38 @@ class Inference(object):
 
 
 class ADVI(Inference):
+    """
+    Automatic Differentiation Variational Inference (ADVI)
+
+    Parameters
+    ----------
+    local_rv : dict
+        mapping {model_variable -> local_variable}
+        Local Vars are used for Autoencoding Variational Bayes
+        See (AEVB; Kingma and Welling, 2014) for details
+
+    model : PyMC3 model for inference
+
+    cost_part_grad_scale : float or scalar tensor
+        Scaling score part of gradient can be useful near optimum for
+        archiving better convergence properties. Common schedule is
+        1 at the start and 0 in the end. So slow decay will be ok.
+        See (Sticking the Landing; Geoffrey Roeder,
+        Yuhuai Wu, David Duvenaud, 2016) for details
+
+    References
+    ----------
+    - Kucukelbir, A., Tran, D., Ranganath, R., Gelman, A.,
+        and Blei, D. M. (2016). Automatic Differentiation Variational
+        Inference. arXiv preprint arXiv:1603.00788.
+
+    - Geoffrey Roeder, Yuhuai Wu, David Duvenaud, 2016
+        Sticking the Landing: A Simple Reduced-Variance Gradient for ADVI
+        approximateinference.org/accepted/RoederEtAl2016.pdf
+
+    - Kingma, D. P., & Welling, M. (2014).
+      Auto-Encoding Variational Bayes. stat, 1050, 1.
+    """
     def __init__(self, local_rv=None, model=None, cost_part_grad_scale=1):
         super(ADVI, self).__init__(
             KL, MeanField, None,
@@ -166,6 +288,38 @@ class ADVI(Inference):
 
 
 class FullRankADVI(Inference):
+    """
+    Full Rank Automatic Differentiation Variational Inference (ADVI)
+
+    Parameters
+    ----------
+    local_rv : dict
+        mapping {model_variable -> local_variable}
+        Local Vars are used for Autoencoding Variational Bayes
+        See (AEVB; Kingma and Welling, 2014) for details
+
+    model : PyMC3 model for inference
+
+    cost_part_grad_scale : float or scalar tensor
+        Scaling score part of gradient can be useful near optimum for
+        archiving better convergence properties. Common schedule is
+        1 at the start and 0 in the end. So slow decay will be ok.
+        See (Sticking the Landing; Geoffrey Roeder,
+        Yuhuai Wu, David Duvenaud, 2016) for details
+
+    References
+    ----------
+    - Kucukelbir, A., Tran, D., Ranganath, R., Gelman, A.,
+        and Blei, D. M. (2016). Automatic Differentiation Variational
+        Inference. arXiv preprint arXiv:1603.00788.
+
+    - Geoffrey Roeder, Yuhuai Wu, David Duvenaud, 2016
+        Sticking the Landing: A Simple Reduced-Variance Gradient for ADVI
+        approximateinference.org/accepted/RoederEtAl2016.pdf
+
+    - Kingma, D. P., & Welling, M. (2014).
+      Auto-Encoding Variational Bayes. stat, 1050, 1.
+    """
     def __init__(self, local_rv=None, model=None, cost_part_grad_scale=1, gpu_compat=False):
         super(FullRankADVI, self).__init__(
             KL, FullRank, None,

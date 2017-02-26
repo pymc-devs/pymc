@@ -18,6 +18,18 @@ class ObjectiveUpdates(theano.OrderedUpdates):
 
 
 class Operator(object):
+    """
+    Base class for Operator
+
+    Parameters
+    ----------
+    approx : Approximation
+
+    Subclassing
+    -----------
+    For implementing Custom operator it is needed to define `.apply(f)` method
+    """
+
     NEED_F = False
 
     def __init__(self, approx):
@@ -36,6 +48,22 @@ class Operator(object):
         return self.approx.logq(z)
 
     def apply(self, f):
+        """
+        Operator itself
+        .. math::
+
+            (O^{p,q}f_{\theta})(z)
+
+        Parameters
+        ----------
+        f : function or None
+            function that takes `z = self.input` and returns
+            same dimension output
+
+        Returns
+        -------
+        symbolically applied operator
+        """
         raise NotImplementedError
 
     def __call__(self, f=None):
@@ -62,15 +90,35 @@ class Operator(object):
 
 
 class ObjectiveFunction(object):
+    """
+    Helper class for construction loss and updates for variational inference
+
+    Parameters
+    ----------
+    op : Operator
+    tf : TestFunction
+    """
     def __init__(self, op, tf):
-        self.tf = tf
         self.op = op
+        self.tf = tf
 
     obj_params = property(lambda self: self.op.approx.params)
     test_params = property(lambda self: self.tf.params)
     approx = property(lambda self: self.op.approx)
 
     def random(self, size=None):
+        """
+        Posterior distribution from initial latent space
+
+        Parameters
+        ----------
+        size : int
+            number of samples from distribution
+
+        Returns
+        -------
+        posterior space (theano)
+        """
         return self.op.approx.random(size)
 
     def __call__(self, z):
@@ -84,6 +132,31 @@ class ObjectiveFunction(object):
 
     def updates(self, obj_n_mc=None, tf_n_mc=None, obj_optimizer=adam, test_optimizer=adam,
                 more_obj_params=None, more_tf_params=None, more_updates=None):
+        """
+        Calculates gradients for objective function, test function and then
+        constructs updates for optimization step
+
+        Parameters
+        ----------
+        obj_n_mc : int
+            Number of monte carlo samples used for approximation of objective gradients
+        tf_n_mc : int
+            Number of monte carlo samples used for approximation of test function gradients
+        obj_optimizer : function (loss, params) -> updates
+            Optimizer that is used for objective params
+        test_optimizer : function (loss, params) -> updates
+            Optimizer that is used for test function params
+        more_obj_params : list
+            Add custom params for objective optimizer
+        more_tf_params : list
+            Add custom params for test function optimizer
+        more_updates : dict
+            Add custom updates to resulting updates
+
+        Returns
+        -------
+        ObjectiveUpdates
+        """
         if more_obj_params is None:
             more_obj_params = []
         if more_tf_params is None:
@@ -111,6 +184,38 @@ class ObjectiveFunction(object):
                       more_obj_params=None, more_tf_params=None,
                       more_updates=None, score=False,
                       fn_kwargs=None):
+        """
+        Step function that should be called on each optimization step.
+
+        Generally it solves the following problem:
+        .. math::
+
+                \textbf{\lambda^{*}} = \inf_{\lambda} \sup_{\theta} t(\mathbb{E}_{\lambda}[(O^{p,q}f_{\theta})(z)])
+
+        Parameters
+        ----------
+        obj_n_mc : int
+            Number of monte carlo samples used for approximation of objective gradients
+        tf_n_mc : int
+            Number of monte carlo samples used for approximation of test function gradients
+        obj_optimizer : function (loss, params) -> updates
+            Optimizer that is used for objective params
+        test_optimizer : function (loss, params) -> updates
+            Optimizer that is used for test function params
+        more_obj_params : list
+            Add custom params for objective optimizer
+        more_tf_params : list
+            Add custom params for test function optimizer
+        more_updates : dict
+            Add custom updates to resulting updates
+        score : bool
+            calculate loss on each step? Defaults to False for speed
+        fn_kwargs : dict
+            Add kwargs to theano.function (e.g. `{'profile': True}`)
+        Returns
+        -------
+        theano.function
+        """
         if fn_kwargs is None:
             fn_kwargs = {}
         updates = self.updates(obj_n_mc=obj_n_mc, tf_n_mc=tf_n_mc,
@@ -139,6 +244,18 @@ class ObjectiveFunction(object):
 
 
 def cast_to_list(params):
+    """
+    Helper function for getting a list from
+    usable representation of parameters
+
+    Parameters
+    ----------
+    params : {list|tuple|dict|theano.shared|None}
+
+    Returns
+    -------
+    list
+    """
     if isinstance(params, list):
         return params
     elif isinstance(params, tuple):
@@ -159,6 +276,11 @@ class TestFunction(object):
         self.shared_params = None
 
     def create_shared_params(self, dim):
+        """
+        Returns
+        -------
+        {dict|list|theano.shared}
+        """
         pass
 
     @property
@@ -175,6 +297,13 @@ class TestFunction(object):
             self._inited = True
 
     def _setup(self, dim):
+        """
+        Does some preparation stuff before calling `.create_shared_params()`
+
+        Parameters
+        ----------
+        dim : int dimension of posterior distribution
+        """
         pass
 
     @classmethod
@@ -187,10 +316,64 @@ class TestFunction(object):
 
 
 class Approximation(object):
+    """
+    Base class for approximations.
+
+    Parameters
+    ----------
+    local_rv : dict
+        mapping {model_variable -> local_variable}
+        Local Vars are used for Autoencoding Variational Bayes
+        See (AEVB; Kingma and Welling, 2014) for details
+
+    model : PyMC3 model for inference
+
+    cost_part_grad_scale : float or scalar tensor
+        Scaling score part of gradient can be useful near optimum for
+        archiving better convergence properties. Common schedule is
+        1 at the start and 0 in the end. So slow decay will be ok.
+        See (Sticking the Landing; Geoffrey Roeder,
+        Yuhuai Wu, David Duvenaud, 2016) for details
+
+    Subclassing
+    -----------
+    Defining an approximation needs
+    custom implementation of the following methods:
+        - `.create_shared_params()`
+            Returns {dict|list|theano.shared}
+
+        - `.random_global(size=None, no_rand=False)`
+            Generate samples from posterior. If `no_rand==False`:
+            sample from MAP of initial distribution.
+            Returns TensorVariable
+
+        - `.log_q_W_global(z)`
+            It is needed only if used with operator
+            that requires :math:`logq` of an approximation
+            Returns Scalar
+
+    Notes
+    -----
+    There are some defaults for approximation classes that can be
+    optionally overriden.
+        - `initial_dist_name`
+            string that represents name of the initial distribution.
+            In most cases if will be `uniform` or `normal`
+        - `initial_dist_map`
+            float where initial distribution has maximum density
+
+    References
+    ----------
+    - Geoffrey Roeder, Yuhuai Wu, David Duvenaud, 2016
+        Sticking the Landing: A Simple Reduced-Variance Gradient for ADVI
+        approximateinference.org/accepted/RoederEtAl2016.pdf
+
+    - Kingma, D. P., & Welling, M. (2014).
+      Auto-Encoding Variational Bayes. stat, 1050, 1.
+    """
     initial_dist_name = 'normal'
     initial_dist_map = 0.
 
-    # TODO: docs
     def __init__(self, local_rv=None, model=None, cost_part_grad_scale=1):
         model = modelcontext(model)
         self.model = model
@@ -239,6 +422,11 @@ class Approximation(object):
             raise ValueError('Model should not include discrete RVs')
 
     def create_shared_params(self):
+        """
+        Returns
+        -------
+        {dict|list|theano.shared}
+        """
         pass
 
     def _local_mu_rho(self):
@@ -293,12 +481,13 @@ class Approximation(object):
 
     def scale_grad(self, inp):
         """
-        Identity with scaling gradient
+        Rescale gradient of input
 
         References
         ----------
-        Sticking the Landing: A Simple Reduced-Variance Gradient for ADVI
-        approximateinference.org/accepted/RoederEtAl2016.pdf
+        - Geoffrey Roeder, Yuhuai Wu, David Duvenaud, 2016
+            Sticking the Landing: A Simple Reduced-Variance Gradient for ADVI
+            approximateinference.org/accepted/RoederEtAl2016.pdf
         """
         return self.grad_scale_op(inp)
 
@@ -387,7 +576,7 @@ class Approximation(object):
 
         Returns
         -------
-        posterior space
+        posterior space (theano)
         """
         if size is None:
             ax = 0
@@ -409,6 +598,18 @@ class Approximation(object):
     @memoize
     @change_flags(compute_test_value='off')
     def random_fn(self):
+        """
+        Implements posterior distribution from initial latent space
+
+        Parameters
+        ----------
+        size : number of samples from distribution
+        no_rand : whether use deterministic distribution
+
+        Returns
+        -------
+        posterior space (numpy)
+        """
         In = theano.In
         size = tt.iscalar('size')
         no_rand = tt.bscalar('no_rand')
@@ -426,6 +627,21 @@ class Approximation(object):
         return inner
 
     def sample_vp(self, draws=1, hide_transformed=False):
+        """
+        Draw samples from variational posterior.
+
+        Parameters
+        ----------
+        draws : int
+            Number of random samples.
+        hide_transformed : bool
+            If False, transformed variables are also sampled. Default is True.
+
+        Returns
+        -------
+        trace : pymc3.backends.base.MultiTrace
+            Samples drawn from the variational posterior.
+        """
         if hide_transformed:
             vars_sampled = [v_ for v_ in self.model.unobserved_RVs
                             if not str(v_).endswith('_')]
