@@ -47,81 +47,95 @@ class Operator(object):
         elif not isinstance(f, TestFunction):
             f = TestFunction.from_function(f)
         f.setup(self.approx.total_size)
-        return Operator.ObjectiveFunction(self, f)
+        return ObjectiveFunction(self, f)
 
-    class ObjectiveFunction(object):
-        def __init__(self, op, tf):
-            self.tf = tf
-            self.op = op
+    def __getstate__(self):
+        # pickle only important parts
+        return self.approx
 
-        obj_params = property(lambda self: self.op.approx.params)
-        test_params = property(lambda self: self.tf.params)
-        approx = property(lambda self: self.op.approx)
-
-        def random(self, size=None):
-            return self.op.approx.random(size)
-
-        def __call__(self, z):
-            if z.ndim > 1:
-                a = theano.scan(
-                    lambda z_: theano.clone(self.op.apply(self.tf), {self.op.input: z_}),
-                    sequences=z, n_steps=z.shape[0])[0].mean()
-            else:
-                a = theano.clone(self.op.apply(self.tf), {self.op.input: z})
-            return tt.abs_(a)
-
-        def updates(self, obj_n_mc=None, tf_n_mc=None, obj_optimizer=adam, test_optimizer=adam,
-                    more_obj_params=None, more_tf_params=None, more_updates=None):
-            if more_obj_params is None:
-                more_obj_params = []
-            if more_tf_params is None:
-                more_tf_params = []
-            if more_updates is None:
-                more_updates = dict()
-            resulting_updates = ObjectiveUpdates()
-
-            if self.test_params:
-                tf_z = self.random(tf_n_mc)
-                tf_target = -self(tf_z)
-                resulting_updates.update(test_optimizer(tf_target, self.test_params + more_tf_params))
-            else:
-                pass
-            obj_z = self.random(obj_n_mc)
-            obj_target = self(obj_z)
-            resulting_updates.update(obj_optimizer(obj_target, self.obj_params + more_obj_params))
-            resulting_updates.update(more_updates)
-            resulting_updates.loss = obj_target
-            return resulting_updates
-
-        @memoize
-        def step_function(self, obj_n_mc=None, tf_n_mc=None,
-                          obj_optimizer=adam, test_optimizer=adam,
-                          more_obj_params=None, more_tf_params=None,
-                          more_updates=None, score=False,
-                          fn_kwargs=None):
-            if fn_kwargs is None:
-                fn_kwargs = {}
-            updates = self.updates(obj_n_mc=obj_n_mc, tf_n_mc=tf_n_mc,
-                                   obj_optimizer=obj_optimizer,
-                                   test_optimizer=test_optimizer,
-                                   more_obj_params=more_obj_params,
-                                   more_tf_params=more_tf_params,
-                                   more_updates=more_updates)
-            if score:
-                step_fn = theano.function([], updates.loss, updates=updates, **fn_kwargs)
-            else:
-                step_fn = theano.function([], None, updates=updates, **fn_kwargs)
-            return step_fn
-
-        @memoize
-        def score_function(self, sc_n_mc=None, fn_kwargs=None):
-            if fn_kwargs is None:
-                fn_kwargs = {}
-            return theano.function([], self(self.random(sc_n_mc)), **fn_kwargs)
+    def __setstate__(self, approx):
+        self.__init__(approx)
 
     def __str__(self):
         return '%(op)s[%(ap)s]' % dict(op=self.__class__.__name__,
                                        ap=self.approx.__class__.__name__)
+
+
+class ObjectiveFunction(object):
+    def __init__(self, op, tf):
+        self.tf = tf
+        self.op = op
+
+    obj_params = property(lambda self: self.op.approx.params)
+    test_params = property(lambda self: self.tf.params)
+    approx = property(lambda self: self.op.approx)
+
+    def random(self, size=None):
+        return self.op.approx.random(size)
+
+    def __call__(self, z):
+        if z.ndim > 1:
+            a = theano.scan(
+                lambda z_: theano.clone(self.op.apply(self.tf), {self.op.input: z_}),
+                sequences=z, n_steps=z.shape[0])[0].mean()
+        else:
+            a = theano.clone(self.op.apply(self.tf), {self.op.input: z})
+        return tt.abs_(a)
+
+    def updates(self, obj_n_mc=None, tf_n_mc=None, obj_optimizer=adam, test_optimizer=adam,
+                more_obj_params=None, more_tf_params=None, more_updates=None):
+        if more_obj_params is None:
+            more_obj_params = []
+        if more_tf_params is None:
+            more_tf_params = []
+        if more_updates is None:
+            more_updates = dict()
+        resulting_updates = ObjectiveUpdates()
+
+        if self.test_params:
+            tf_z = self.random(tf_n_mc)
+            tf_target = -self(tf_z)
+            resulting_updates.update(test_optimizer(tf_target, self.test_params + more_tf_params))
+        else:
+            pass
+        obj_z = self.random(obj_n_mc)
+        obj_target = self(obj_z)
+        resulting_updates.update(obj_optimizer(obj_target, self.obj_params + more_obj_params))
+        resulting_updates.update(more_updates)
+        resulting_updates.loss = obj_target
+        return resulting_updates
+
+    @memoize
+    def step_function(self, obj_n_mc=None, tf_n_mc=None,
+                      obj_optimizer=adam, test_optimizer=adam,
+                      more_obj_params=None, more_tf_params=None,
+                      more_updates=None, score=False,
+                      fn_kwargs=None):
+        if fn_kwargs is None:
+            fn_kwargs = {}
+        updates = self.updates(obj_n_mc=obj_n_mc, tf_n_mc=tf_n_mc,
+                               obj_optimizer=obj_optimizer,
+                               test_optimizer=test_optimizer,
+                               more_obj_params=more_obj_params,
+                               more_tf_params=more_tf_params,
+                               more_updates=more_updates)
+        if score:
+            step_fn = theano.function([], updates.loss, updates=updates, **fn_kwargs)
+        else:
+            step_fn = theano.function([], None, updates=updates, **fn_kwargs)
+        return step_fn
+
+    @memoize
+    def score_function(self, sc_n_mc=None, fn_kwargs=None):
+        if fn_kwargs is None:
+            fn_kwargs = {}
+        return theano.function([], self(self.random(sc_n_mc)), **fn_kwargs)
+
+    def __getstate__(self):
+        return self.op, self.tf
+
+    def __setstate__(self, state):
+        self.__init__(*state)
 
 
 def cast_to_list(params):
@@ -198,6 +212,20 @@ class Approximation(object):
         )
         self.grad_scale_op = GradScale(cost_part_grad_scale)
         self.shared_params = self.create_shared_params()
+
+    def __getstate__(self):
+        state = self.__dict__.copy()
+        # can be inferred from the rest parts
+        state.pop('flat_view')
+        state.pop('order')
+        state.pop('_view')
+        return state
+
+    def __setstate__(self, state):
+        self.__dict__.update(state)
+        self.flat_view, self.order, self._view = self.model.flatten(
+            vars=self.local_vars + self.global_vars
+        )
 
     input = property(lambda self: self.flat_view.input)
 

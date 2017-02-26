@@ -1,3 +1,4 @@
+from six.moves import cPickle as pickle
 import unittest
 import numpy as np
 import theano
@@ -154,6 +155,13 @@ class TestApproximates:
                 trace = approx.sample_vp(10000)
             np.testing.assert_allclose(np.mean(trace['mu']), mu_post, rtol=0.4)
             np.testing.assert_allclose(np.std(trace['mu']), np.sqrt(1. / d), rtol=0.4)
+
+        def test_pickling(self):
+            with models.multidimensional_model()[1]:
+                inference = self.inference()
+
+            inference = pickle.loads(pickle.dumps(inference))
+            inference.fit(20)
 
 
 class TestMeanField(TestApproximates.Base):
