@@ -57,6 +57,13 @@ def _theano_energy_function(H, q, **theano_kwargs):
     return energy_function, p
 
 
+def _theano_velocity_function(H, p, **theano_kwargs):
+    v = H.pot.velocity(p)
+    velocity_function = theano.function(inputs=[p], outputs=v, **theano_kwargs)
+    velocity_function.trust_input = True
+    return velocity_function
+
+
 def _theano_leapfrog_integrator(H, q, p, **theano_kwargs):
     """Computes a theano function that computes one leapfrog step and the energy at the
     end of the trajectory.
@@ -115,6 +122,7 @@ def get_theano_hamiltonian_functions(model_vars, shared, logpt, potential,
     """
     H, q, dlogp = _theano_hamiltonian(model_vars, shared, logpt, potential)
     energy_function, p = _theano_energy_function(H, q, **theano_kwargs)
+    velocity_function = _theano_velocity_function(H, p, **theano_kwargs)
     if use_single_leapfrog:
         try:
             _theano_integrator = INTEGRATORS_SINGLE[integrator]
@@ -125,7 +133,7 @@ def get_theano_hamiltonian_functions(model_vars, shared, logpt, potential,
         if integrator != "leapfrog":
             raise ValueError("Only leapfrog is supported")
         integrator = _theano_leapfrog_integrator(H, q, p, **theano_kwargs)
-    return H, energy_function, integrator, dlogp
+    return H, energy_function, velocity_function, integrator, dlogp
 
 
 def energy(H, q, p):
@@ -214,11 +222,12 @@ def _theano_single_threestage(H, q, p, q_grad, **theano_kwargs):
     q_e = q_1be + floatX(b) * epsilon * H.pot.velocity(p_1ae)
     grad_e = H.dlogp(q_e)
     p_e = p_1ae + floatX(a) * epsilon * grad_e
+    v_e = H.pot.velocity(p_e)
 
     new_energy = energy(H, q_e, p_e)
 
     f = theano.function(inputs=[q, p, q_grad, epsilon],
-                        outputs=[q_e, p_e, grad_e, new_energy],
+                        outputs=[q_e, p_e, v_e, grad_e, new_energy],
                         **theano_kwargs)
     f.trust_input = True
     return f
@@ -250,10 +259,11 @@ def _theano_single_twostage(H, q, p, q_grad, **theano_kwargs):
     q_e = q_e2 + epsilon / 2 * H.pot.velocity(p_1ae)
     grad_e = H.dlogp(q_e)
     p_e = p_1ae + a * epsilon * grad_e
+    v_e = H.pot.velocity(p_e)
 
     new_energy = energy(H, q_e, p_e)
     f = theano.function(inputs=[q, p, q_grad, epsilon],
-                        outputs=[q_e, p_e, grad_e, new_energy],
+                        outputs=[q_e, p_e, v_e, grad_e, new_energy],
                         **theano_kwargs)
     f.trust_input = True
     return f
@@ -273,9 +283,11 @@ def _theano_single_leapfrog(H, q, p, q_grad, **theano_kwargs):
     q_new_grad = H.dlogp(q_new)
     p_new += 0.5 * epsilon * q_new_grad  # half momentum update
     energy_new = energy(H, q_new, p_new)
+    v_new = H.pot.velocity(p_new)
 
     f = theano.function(inputs=[q, p, q_grad, epsilon],
-                        outputs=[q_new, p_new, q_new_grad, energy_new], **theano_kwargs)
+                        outputs=[q_new, p_new, v_new, q_new_grad, energy_new],
+                        **theano_kwargs)
     f.trust_input = True
     return f
 
@@ -283,5 +295,5 @@ def _theano_single_leapfrog(H, q, p, q_grad, **theano_kwargs):
 INTEGRATORS_SINGLE = {
     'leapfrog': _theano_single_leapfrog,
     'two-stage': _theano_single_twostage,
-    'three-stage': _theano_single_threestage
+    'three-stage': _theano_single_threestage,
 }

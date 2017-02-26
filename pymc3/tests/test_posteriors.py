@@ -62,13 +62,12 @@ class NUTSNormal(sf.NutsFixture, sf.NormalFixture):
 
 
 class NUTSBetaBinomial(sf.NutsFixture, sf.BetaBinomialFixture):
-    n_samples = 10000
+    n_samples = 2000
+    ks_thin = 5
     tune = 1000
     burn = 1000
     chains = 2
-    min_n_eff = 2000
-    rtol = 0.1
-    atol = 0.05
+    min_n_eff = 400
 
 
 @attr('extra')

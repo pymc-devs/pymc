@@ -291,8 +291,6 @@ def _iter_sample(draws, step, start=None, trace=None, chain=0, tune=None,
             point = step.step(point)
             strace.record(point)
         yield strace
-    else:
-        strace.close()
 
 
 def _choose_backend(trace, chain, shortcuts=None, **kwds):
@@ -486,7 +484,7 @@ def init_nuts(init='ADVI', njobs=1, n_init=500000, model=None,
         if njobs == 1:
             start = start[0]
     else:
-        raise NotImplemented('Initializer {} is not supported.'.format(init))
+        raise NotImplementedError('Initializer {} is not supported.'.format(init))
 
     step = pm.NUTS(scaling=cov, is_cov=True, **kwargs)
 
