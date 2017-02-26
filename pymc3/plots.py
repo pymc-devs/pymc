@@ -779,12 +779,12 @@ def plot_posterior(trace, varnames=None, transform=identity_transform, figsize=N
         if ax is None:
             ax, fig = create_axes_grid(figsize, trace_dict)
 
-        for a, v in zip(ax, trace_dict):
+        for a, v in zip(np.atleast_1d(ax), trace_dict):
             tr_values = transform(trace_dict[v])
             plot_posterior_op(tr_values, ax=a)
             a.set_title(v)
 
-        fig.tight_layout()
+        plt.tight_layout()
     return ax
 
 
