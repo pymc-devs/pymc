@@ -2,7 +2,7 @@
 '''
 (c) 2016, John Salvatier & Taku Yoshioka
 '''
-from collections import OrderedDict, namedtuple, deque
+from collections import namedtuple, deque
 
 import numpy as np
 import theano
