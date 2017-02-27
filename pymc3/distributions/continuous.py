@@ -1349,7 +1349,7 @@ class Triangular(Continuous):
                          tt.log(2 * (upper - value) / ((upper - lower) * (upper - c))),np.inf)))
 
 class Rice(Continuous):
-    """
+    R"""
     Rice distribution.
 
     .. math::
@@ -1374,19 +1374,22 @@ class Rice(Continuous):
         standard deviation.
 
     """
-    def __init__(self, sd=None, nu = None, *args, **kwargs):
+    def __init__(self, nu=None, sd=None, *args, **kwargs):
         super(Rice, self).__init__(*args, **kwargs)
-        self.sd = tt.as_tensor_variable(sd)
         self.nu = tt.as_tenosr_variable(nu)
+        self.sd = tt.as_tensor_variable(sd)
+        self.mean = sd * np.sqrt(np.pi / 2) * tt.exp((-nu**2 / (2 * sd**2)) / 2) * ((1 - (-nu**2 / (2 * sd**2)))
+                                 * i0(-(-nu**2 / (2 * sd**2)) / 2) - (-nu**2 / (2 * sd**2)) * i1(-(-nu**2 / (2 * sd**2)) / 2))
+        self.variance = 2 * sd**2 + nu**2 - (np.pi * sd**2 / 2) * (tt.exp((-nu**2 / (2 * sd**2)) / 2) * ((1 - (-nu**2 / (
+            2 * sd**2))) * i0(-(-nu**2 / (2 * sd**2)) / 2) - (-nu**2 / (2 * sd**2)) * i1(-(-nu**2 / (2 * sd**2)) / 2)))**2
 
     def random(self, point=None, size=None, repeat=None):
-        sd, nu = draw_values([self.sd, self.nu],
+        nu, sd = draw_values([self.nu, self.sd],
                                   point=point)
-        return generate_samples(stats.rice.rvs, sd, nu,
-                                dist_shape=self.shape,
-                                size=size)
-    
+        return generate_samples(stats.rice.rvs, b=nu, scale=sd, loc=0,
+                                dist_shape=self.shape, size=size)
+
     def logp(self, value):
-        sd = self.sd
         nu = self.nu
-        return tt.log(value/sd**2*tt.exp(-(value**2+nu**2)/(2*sd**2))*i0(value*nu/sd**2))
+        sd = self.sd
+        return bound(tt.log(value/(sd**2)*tt.exp(-(value**2+nu**2) / (2*sd**2))*i0(value*nu/(sd**2))), nu>0)
