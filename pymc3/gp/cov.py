@@ -32,7 +32,7 @@ class Covariance(object):
             self.active_dims = np.arange(input_dim)
         else:
             self.active_dims = np.array(active_dims)
-            assert len(active_dims) == input_dim
+            assert len(active_dims) == input_dim, "One boolean value per dimension required"
 
     def __call__(self, X, Z):
         R"""
@@ -55,14 +55,30 @@ class Covariance(object):
     def __add__(self, other):
         return Add([self, other])
 
-    def __radd__(self, other):
-        return self.__add__(other)
-
     def __mul__(self, other):
         return Prod([self, other])
 
+    def __radd__(self, other):
+        return self.__add__(other)
+
     def __rmul__(self, other):
         return self.__mul__(other)
+
+    def __array_wrap__(self, result):
+        """
+        Required to allow radd/rmul by numpy arrays.
+        """
+        r,c = result.shape
+        A = np.zeros((r,c))
+        for i in range(r):
+            for j in range(c):
+                A[i,j] = result[i,j].factor_list[1]
+        if isinstance(result[0][0], Add):
+            return result[0][0].factor_list[0] + A
+        elif isinstance(result[0][0], Prod):
+            return result[0][0].factor_list[0] * A
+        else:
+            raise RuntimeError
 
 
 class Combination(Covariance):
@@ -77,10 +93,12 @@ class Combination(Covariance):
             else:
                 self.factor_list.append(factor)
 
+
 class Add(Combination):
     def __call__(self, X, Z=None):
         return reduce((lambda x, y: x + y),
                       [k(X, Z) if isinstance(k, Covariance) else k for k in self.factor_list])
+
 
 class Prod(Combination):
     def __call__(self, X, Z=None):
@@ -100,6 +118,8 @@ class Stationary(Covariance):
 
     def __init__(self, input_dim, lengthscales, active_dims=None):
         Covariance.__init__(self, input_dim, active_dims)
+        if isinstance(lengthscales, (list, tuple)):
+            lengthscales = np.array(lengthscales)
         self.lengthscales = lengthscales
 
     def square_dist(self, X, Z):
@@ -269,7 +289,7 @@ class WarpedInput(Covariance):
 
     def __init__(self, input_dim, cov_func, warp_func, args=None, active_dims=None):
         Covariance.__init__(self, input_dim, active_dims)
-        assert callable(warp_func), "Must be a function"
+        assert callable(warp_func), "Must be a callable"
         assert isinstance(cov_func, Covariance), "Must be one of the covariance functions"
         self.w = handle_args(warp_func, args)
         self.args = args
@@ -300,29 +320,27 @@ class Gibbs(Covariance):
     """
     def __init__(self, input_dim, lengthscale_func, args=None, active_dims=None):
         Covariance.__init__(self, input_dim, active_dims)
-        if active_dims is None:
-            assert input_dim == 1, "Must have one dimensional input"
+        if active_dims is not None:
+            if input_dim != 1 or sum(active_dims) == 1:
+                raise NotImplementedError("Higher dimensional inputs are untested")
         else:
-            assert len(active_dims) == 1, "Must have one dimensional input"
-        assert callable(lengthscale_func), "Must be a function"
+            if input_dim != 1:
+                raise NotImplementedError("Higher dimensional inputs are untested")
+        assert callable(lengthscale_func), "Must be a callable"
         self.ell = handle_args(lengthscale_func, args)
         self.args = args
 
     def square_dist(self, X, Z):
-        X = tt.mul(X, 1.0)
+        X = tt.as_tensor_variable(X)
         Xs = tt.sum(tt.square(X), 1)
         if Z is None:
             return -2.0 * tt.dot(X, tt.transpose(X)) +\
                    (tt.reshape(Xs, (-1, 1)) + tt.reshape(Xs, (1, -1)))
         else:
-            Z = tt.mul(Z, 1.0)
+            Z = tt.as_tensor_variable(Z)
             Zs = tt.sum(tt.square(Z), 1)
             return -2.0 * tt.dot(X, tt.transpose(Z)) +\
                    (tt.reshape(Xs, (-1, 1)) + tt.reshape(Zs, (1, -1)))
-
-    def euclidean_dist(self, X, Z):
-        r2 = self.square_dist(X, Z)
-        return tt.sqrt(r2 + 1e-12)
 
     def __call__(self, X, Z=None):
         X, Z = self._slice(X, Z)
