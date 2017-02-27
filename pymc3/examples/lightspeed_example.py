@@ -36,7 +36,7 @@ def run(n=5000):
     with model_1:
         xstart = pm.find_MAP()
         xstep = pm.Slice()
-        trace = pm.sample(5000, xstep, xstart,
+        trace = pm.sample(5000, xstep, start=xstart,
                           random_seed=123, progressbar=True)
 
         pm.summary(trace)
