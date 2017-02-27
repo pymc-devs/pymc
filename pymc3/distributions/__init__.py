@@ -1,3 +1,7 @@
+# Turn off nagging Theano warnings
+import os
+os.environ["THEANO_FLAGS"] = "warn.round=False"
+
 from . import timeseries
 from . import transforms
 
