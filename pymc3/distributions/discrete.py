@@ -10,7 +10,7 @@ from .distribution import Discrete, draw_values, generate_samples, reshape_sampl
 __all__ = ['Binomial',  'BetaBinomial',  'Bernoulli',  'DiscreteWeibull',
            'Poisson', 'NegativeBinomial', 'ConstantDist', 'Constant',
            'ZeroInflatedPoisson', 'ZeroInflatedNegativeBinomial',
-           'DiscreteUniform', 'Geometric', 'Categorical']
+           'DiscreteUniform', 'Geometric', 'Categorical', 'Dirichlet']
 
 
 class Binomial(Discrete):
@@ -609,3 +609,12 @@ class ZeroInflatedNegativeBinomial(Discrete):
         return tt.switch(value > 0,
                          tt.log(self.psi) + self.nb.logp(value),
                          tt.log((1. - self.psi) + self.psi * (self.alpha / (self.alpha + self.mu))**self.alpha))
+
+class StickBreakingProcess(Continuous):
+    def __init__(self, alpha, shape=None, *args, **kwargs):
+        super(StickBreaking, self).__init__(*args, shape=shape, **kwargs)
+        
+        raise NotImplementedError
+        
+    def logp(self, value):
+        raise NotImplementedError
