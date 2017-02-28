@@ -130,8 +130,6 @@ class HelperFuncTests(unittest.TestCase):
         for func_output in [dense_output, sparse_output]:
             self.assertEqual(func_output.name, input_name)
 
-        print type(dense_output)
-
         # Ensure the that returned functions are all of the correct type
         self.assertIsInstance(dense_output, tt.TensorConstant)
         self.assertTrue(sparse.basic._is_sparse_variable(sparse_output))
