@@ -6,7 +6,7 @@ import theano
 import theano.tensor as tt
 import numpy as np
 
-class ZeroTest(unittest.TestCase):
+class TestZero(unittest.TestCase):
     def test_value(self):
         X = np.linspace(0,1,10)[:,None]
         with Model() as model:
@@ -15,7 +15,7 @@ class ZeroTest(unittest.TestCase):
         self.assertTrue(np.all(M==0))
         self.assertSequenceEqual(M.shape, (10,1))
 
-class ConstantTest(unittest.TestCase):
+class TestConstant(unittest.TestCase):
     def test_value(self):
         X = np.linspace(0,1,10)[:,None]
         with Model() as model:
@@ -24,7 +24,7 @@ class ConstantTest(unittest.TestCase):
         self.assertTrue(np.all(M==6))
         self.assertSequenceEqual(M.shape, (10,1))
 
-class LinearMeanTest(unittest.TestCase):
+class TestLinearMean(unittest.TestCase):
     def test_value(self):
         X = np.linspace(0,1,10)[:,None]
         with Model() as model:
@@ -33,7 +33,7 @@ class LinearMeanTest(unittest.TestCase):
         self.assertAlmostEqual(M[1,0], 0.7222, 3)
 
 
-class CovAddTest(unittest.TestCase):
+class TestCovAdd(unittest.TestCase):
     def test_symadd_cov(self):
         X = np.linspace(0,1,10)[:,None]
         with Model() as model:
@@ -78,7 +78,7 @@ class CovAddTest(unittest.TestCase):
         self.assertTrue(np.allclose(K, K_true))
 
 
-class CovProdTest(unittest.TestCase):
+class TestCovProd(unittest.TestCase):
     def test_symprod_cov(self):
         X = np.linspace(0,1,10)[:,None]
         with Model() as model:
@@ -133,7 +133,7 @@ class CovProdTest(unittest.TestCase):
         self.assertTrue(np.allclose(K1, K2))
 
 
-class CovSliceDimTest(unittest.TestCase):
+class TestCovSliceDim(unittest.TestCase):
     def test_slice1(self):
         X = np.linspace(0,1,30).reshape(10,3)
         with Model() as model:
@@ -164,10 +164,12 @@ class CovSliceDimTest(unittest.TestCase):
 
     def test_raises(self):
         lengthscales = 2.0
-        self.assertRaises(AssertionError, gp.cov.ExpQuad, 1, lengthscales, [True, False])
+        with self.assertRaises(ValueError):
+            gp.cov.ExpQuad(1, lengthscales, [True, False])
+            gp.cov.ExpQuad(2, lengthscales, [True])
 
 
-class ExpQuadTest(unittest.TestCase):
+class TestExpQuad(unittest.TestCase):
     def test_1d(self):
         X = np.linspace(0,1,10)[:,None]
         with Model() as model:
@@ -192,7 +194,7 @@ class ExpQuadTest(unittest.TestCase):
         self.assertAlmostEqual(K[0,1], 0.969607, 3)
 
 
-class RatQuadTest(unittest.TestCase):
+class TestRatQuad(unittest.TestCase):
     def test_1d(self):
         X = np.linspace(0,1,10)[:,None]
         with Model() as model:
@@ -203,7 +205,7 @@ class RatQuadTest(unittest.TestCase):
         self.assertAlmostEqual(K[0,1], 0.66896, 3)
 
 
-class ExponentialTest(unittest.TestCase):
+class TestExponential(unittest.TestCase):
     def test_1d(self):
         X = np.linspace(0,1,10)[:,None]
         with Model() as model:
@@ -214,7 +216,7 @@ class ExponentialTest(unittest.TestCase):
         self.assertAlmostEqual(K[0,1], 0.57375, 3)
 
 
-class Matern52Test(unittest.TestCase):
+class TestMatern52(unittest.TestCase):
     def test_1d(self):
         X = np.linspace(0,1,10)[:,None]
         with Model() as model:
@@ -225,7 +227,7 @@ class Matern52Test(unittest.TestCase):
         self.assertAlmostEqual(K[0,1], 0.46202, 3)
 
 
-class Matern32Test(unittest.TestCase):
+class TestMatern32(unittest.TestCase):
     def test_1d(self):
         X = np.linspace(0,1,10)[:,None]
         with Model() as model:
@@ -236,7 +238,7 @@ class Matern32Test(unittest.TestCase):
         self.assertAlmostEqual(K[0,1], 0.42682, 3)
 
 
-class CosineTest(unittest.TestCase):
+class TestCosine(unittest.TestCase):
     def test_1d(self):
         X = np.linspace(0,1,10)[:,None]
         with Model() as model:
@@ -247,7 +249,7 @@ class CosineTest(unittest.TestCase):
         self.assertAlmostEqual(K[0,1], -0.93969, 3)
 
 
-class LinearTest(unittest.TestCase):
+class TestLinear(unittest.TestCase):
     def test_1d(self):
         X = np.linspace(0,1,10)[:,None]
         with Model() as model:
@@ -258,7 +260,7 @@ class LinearTest(unittest.TestCase):
         self.assertAlmostEqual(K[0,1], 0.19444, 3)
 
 
-class PolynomialTest(unittest.TestCase):
+class TestPolynomial(unittest.TestCase):
     def test_1d(self):
         X = np.linspace(0,1,10)[:,None]
         with Model() as model:
@@ -269,7 +271,7 @@ class PolynomialTest(unittest.TestCase):
         self.assertAlmostEqual(K[0,1], 0.03780, 4)
 
 
-class WarpedInputTest(unittest.TestCase):
+class TestWarpedInput(unittest.TestCase):
     def test_1d(self):
         X = np.linspace(0,1,10)[:,None]
         def warp_func(x, a, b, c):
@@ -284,11 +286,13 @@ class WarpedInputTest(unittest.TestCase):
 
     def test_raises(self):
         cov_m52 = gp.cov.Matern52(1, 0.2)
-        self.assertRaises(AssertionError, gp.cov.WarpedInput, 1, cov_m52, "not callable")
-        self.assertRaises(AssertionError, gp.cov.WarpedInput, 1, "not a Covariance object", lambda x: x)
+        with self.assertRaises(TypeError):
+            gp.cov.WarpedInput(1, cov_m52, "str is not callable")
+        with self.assertRaises(TypeError):
+            gp.cov.WarpedInput(1, "str is not Covariance object", lambda x: x)
 
 
-class GibbsTest(unittest.TestCase):
+class TestGibbs(unittest.TestCase):
     def test_1d(self):
         X = np.linspace(0, 2, 10)[:,None]
         def tanh_func(x, x1, x2, w, x0):
@@ -301,11 +305,15 @@ class GibbsTest(unittest.TestCase):
         self.assertAlmostEqual(K[2,3], 0.136683, 4)
 
     def test_raises(self):
-        self.assertRaises(AssertionError, gp.cov.Gibbs, 1, 555)
-        self.assertRaises(NotImplementedError, gp.cov.Gibbs, 2, lambda x: x)
-        self.assertRaises(NotImplementedError, gp.cov.Gibbs, 3, lambda x: x, active_dims=[True, True, False])
+        with self.assertRaises(TypeError):
+            gp.cov.Gibbs(1, "str is not callable")
+        with self.assertRaises(NotImplementedError):
+            gp.cov.Gibbs(2, lambda x: x)
+        with self.assertRaises(NotImplementedError):
+            gp.cov.Gibbs(3, lambda x: x, active_dims=[True, True, False])
 
-class HandleArgsTest(unittest.TestCase):
+
+class TestHandleArgs(unittest.TestCase):
     def test_handleargs(self):
         def func_noargs(x):
             return x
@@ -324,7 +332,7 @@ class HandleArgsTest(unittest.TestCase):
         self.assertEqual(func_twoarg(x, a, b), func_twoarg2(x, args=(a, b)))
 
 
-class GPTest(SeededTest):
+class TestGP(SeededTest):
     def test_func_args(self):
         X = np.linspace(0,1,10)[:,None]
         Y = np.random.randn(10,1)
