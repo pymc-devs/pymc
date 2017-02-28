@@ -82,6 +82,62 @@ class HelperFuncTests(unittest.TestCase):
 
         return None
 
+    def test_as_tensor(self):
+        """
+        Check returned values for `data` given known inputs to `as_tensor()`.
 
+        Note that ndarrays should return a TensorConstant and sparse inputs
+        should return a Sparse Theano object.
+        """
+        # Create the various inputs to the function
+        input_name = 'testing_inputs'
+        sparse_input = sps.csr_matrix(np.eye(3))
+        dense_input = np.arange(9).reshape((3, 3))
+        masked_array_input = ma.array(dense_input,
+                                      mask=(np.mod(dense_input, 2) == 0))
 
+        # Create a fake model and fake distribution to be used for the test
+        fake_model = pm.Model()
+        with fake_model:
+            fake_distribution = pm.Normal('fake_dist', mu=0, sd=1)
+            # Create the testval attribute simply for the sake of model testing
+            fake_distribution.testval = None
 
+        # Alias the function to be tested
+        func = pm.model.as_tensor
+
+        # Check function behavior using the various inputs
+        dense_output = func(dense_input,
+                            input_name,
+                            fake_model,
+                            fake_distribution)
+        sparse_output = func(sparse_input,
+                             input_name,
+                             fake_model,
+                             fake_distribution)
+        masked_output = func(masked_array_input,
+                             input_name,
+                             fake_model,
+                             fake_distribution)
+
+        # Ensure that the missing values are appropriately set to None
+        for func_output in [dense_output, sparse_output]:
+            self.assertIsNone(func_output.missing_values)
+
+        # Ensure that the Theano variable names are correctly set.
+        # Note that the output for masked inputs do not have their names set
+        # to the passed value.
+        for func_output in [dense_output, sparse_output]:
+            self.assertEqual(func_output.name, input_name)
+
+        print type(dense_output)
+
+        # Ensure the that returned functions are all of the correct type
+        self.assertIsInstance(dense_output, tt.TensorConstant)
+        self.assertTrue(sparse.basic._is_sparse_variable(sparse_output))
+
+        # Masked output is something weird. Just ensure it has missing values
+        # self.assertIsInstance(masked_output, tt.TensorConstant)
+        self.assertIsNotNone(masked_output.missing_values)
+
+        return None
