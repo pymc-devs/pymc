@@ -167,3 +167,12 @@ class NormalMixture(Mixture):
 
         super(NormalMixture, self).__init__(w, Normal.dist(mu, sd=sd),
                                             *args, **kwargs)
+
+class DirichletMixture(Mixture):
+    R"""
+    Dirichlet mixture log-likelihood
+
+    """
+    def __init__(self, w, mu, *args, **kwargs):
+         super(NormalMixture, self).__init__(w, Normal.dist(mu, sd=sd),
+                                            *args, **kwargs)
