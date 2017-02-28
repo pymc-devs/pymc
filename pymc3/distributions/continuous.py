@@ -1376,7 +1376,7 @@ class Rice(Continuous):
     """
     def __init__(self, nu=None, sd=None, *args, **kwargs):
         super(Rice, self).__init__(*args, **kwargs)
-        self.nu = tt.as_tenosr_variable(nu)
+        self.nu = tt.as_tensor_variable(nu)
         self.sd = tt.as_tensor_variable(sd)
         self.mean = sd * np.sqrt(np.pi / 2) * tt.exp((-nu**2 / (2 * sd**2)) / 2) * ((1 - (-nu**2 / (2 * sd**2)))
                                  * i0(-(-nu**2 / (2 * sd**2)) / 2) - (-nu**2 / (2 * sd**2)) * i1(-(-nu**2 / (2 * sd**2)) / 2))
