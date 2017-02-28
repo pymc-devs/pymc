@@ -32,7 +32,8 @@ class Covariance(object):
             self.active_dims = np.arange(input_dim)
         else:
             self.active_dims = np.array(active_dims)
-            assert len(active_dims) == input_dim, "One boolean value per dimension required"
+            if len(active_dims) != input_dim:
+                raise ValueError("Length of active_dims must match input_dim")
 
     def __call__(self, X, Z):
         R"""
@@ -44,7 +45,6 @@ class Covariance(object):
         Z : The optional prediction set of inputs the kernel.  If Z is None, Z = X.
         """
         raise NotImplementedError
-
 
     def _slice(self, X, Z):
         X = X[:, self.active_dims]
@@ -289,8 +289,10 @@ class WarpedInput(Covariance):
 
     def __init__(self, input_dim, cov_func, warp_func, args=None, active_dims=None):
         Covariance.__init__(self, input_dim, active_dims)
-        assert callable(warp_func), "Must be a callable"
-        assert isinstance(cov_func, Covariance), "Must be one of the covariance functions"
+        if not callable(warp_func):
+            raise TypeError("warp_func must be callable")
+        if not isinstance(cov_func, Covariance):
+            raise TypeError("Must be or inherit from the Covariance class")
         self.w = handle_args(warp_func, args)
         self.args = args
         self.cov_func = cov_func
@@ -326,7 +328,8 @@ class Gibbs(Covariance):
         else:
             if input_dim != 1:
                 raise NotImplementedError("Higher dimensional inputs are untested")
-        assert callable(lengthscale_func), "Must be a callable"
+        if not callable(lengthscale_func):
+            raise TypeError("lengthscale_func must be callable")
         self.ell = handle_args(lengthscale_func, args)
         self.args = args
 
