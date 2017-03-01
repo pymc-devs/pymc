@@ -531,6 +531,11 @@ class TestMatchesScipy(SeededTest):
         self.pymc3_matches_scipy(MvNormal, Vector(R, n),
                                  {'mu': Vector(R, n), 'tau': PdMatrix(n)}, normal_logpdf)
 
+    def test_mvnormal_init_fail(self):
+        with Model():
+            with self.assertRaises(ValueError):
+                x = MvNormal('x', np.zeros(3), shape=3)
+
     @parameterized.expand([(1,), (2,)])
     def test_mvt(self, n):
         self.pymc3_matches_scipy(MvStudentT, Vector(R, n),
