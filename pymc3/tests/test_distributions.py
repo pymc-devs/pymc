@@ -660,8 +660,8 @@ class TestMatchesScipy(SeededTest):
         tau, cov = multivariate.get_tau_cov(mu, cov=cov)
         assert_almost_equal(tau.eval(), np.linalg.inv(cov))
 
-        tau, cov = multivariate.get_tau_cov(mu)
-        assert_almost_equal(cov, np.eye(3))
+        with self.assertRaises(ValueError):
+            tau, cov = multivariate.get_tau_cov(mu)
 
     @parameterized.expand([
         (0.5, -50.000, 0.500, 0.500, -99.8068528),
