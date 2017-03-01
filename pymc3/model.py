@@ -2,8 +2,10 @@ import threading
 import six
 
 import numpy as np
+import scipy.sparse as sps
 import theano
 import theano.tensor as tt
+import theano.sparse as sparse
 from theano.tensor.var import TensorVariable
 
 import pymc3 as pm
@@ -787,6 +789,8 @@ def pandas_to_array(data):
         return data
     elif isinstance(data, theano.gof.graph.Variable):
         return data
+    elif sps.issparse(data):
+        return data
     elif isgenerator(data):
         return generator(data)
     else:
@@ -810,6 +814,10 @@ def as_tensor(data, name, model, distribution):
             constant[data.mask.nonzero()], missing_values)
         dataTensor.missing_values = missing_values
         return dataTensor
+    elif sps.issparse(data):
+        data = sparse.basic.as_sparse(data, name=name)
+        data.missing_values = None
+        return data
     else:
         data = tt.as_tensor_variable(data, name=name)
         data.missing_values = None
