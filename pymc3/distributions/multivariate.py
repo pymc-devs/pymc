@@ -35,8 +35,8 @@ def get_tau_cov(mu, tau=None, cov=None):
     Parameters
     ----------
     mu : array-like
-    tau : array-like, optional
-    cov : array-like, optional
+    tau : array-like, not required if cov is passed
+    cov : array-like, not required if tau is passed
 
     Results
     -------
@@ -50,6 +50,7 @@ def get_tau_cov(mu, tau=None, cov=None):
         if cov is None:
             cov = np.eye(len(mu))
             tau = np.eye(len(mu))
+            warnings.warn("Returning an identity matrix as a default covariance matrix for MvNormal is deprecated and will be removed in v3.1.")
         else:
             tau = tt.nlinalg.matrix_inverse(cov)
 
