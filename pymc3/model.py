@@ -20,7 +20,7 @@ __all__ = [
     'Point', 'Deterministic', 'Potential'
 ]
 
-FlatView = collections.namedtuple('FlatView', 'input, replacements')
+FlatView = collections.namedtuple('FlatView', 'input, replacements, view')
 
 
 class InstanceMethod(object):
@@ -664,8 +664,9 @@ class Model(six.with_metaclass(InitContextMeta, Context, Factor)):
 
     def flatten(self, vars=None):
         """Flattens model's input and returns:
-            * FlatView with input vector and replacements `input_var -> vars`
-            * ArrayOrdering
+            FlatView with
+            * input vector variable
+            * replacements `input_var -> vars`
             * view {variable: VarMap}
 
         Parameters
@@ -675,7 +676,7 @@ class Model(six.with_metaclass(InitContextMeta, Context, Factor)):
 
         Returns
         -------
-        order, flat_view, view
+        flat_view
         """
         if vars is None:
             vars = self.free_RVs
@@ -684,9 +685,9 @@ class Model(six.with_metaclass(InitContextMeta, Context, Factor)):
         inputvar.tag.test_value = flatten_list(vars).tag.test_value
         replacements = {self.named_vars[name]: inputvar[slc].reshape(shape).astype(dtype)
                         for name, slc, shape, dtype in order.vmap}
-        flat_view = FlatView(inputvar, replacements)
         view = {vm.var: vm for vm in order.vmap}
-        return flat_view, order, view
+        flat_view = FlatView(inputvar, replacements, view)
+        return flat_view
 
 
 def fn(outs, mode=None, model=None, *args, **kwargs):

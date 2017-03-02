@@ -6,7 +6,7 @@ from theano.ifelse import ifelse
 import pymc3 as pm
 from .updates import adam
 from ..distributions.dist_math import rho2sd, log_normal
-from ..model import modelcontext
+from ..model import modelcontext, ArrayOrdering
 from ..theanof import tt_rng, memoize, change_flags, GradScale
 
 
@@ -390,7 +390,8 @@ class Approximation(object):
         self.known = known
         self.local_vars = [v for v in model.free_RVs if v in known]
         self.global_vars = [v for v in model.free_RVs if v not in known]
-        self.flat_view, self.order, self._view = model.flatten(
+        self.order = ArrayOrdering(self.local_vars + self.global_vars)
+        self.flat_view = model.flatten(
             vars=self.local_vars + self.global_vars
         )
         self.grad_scale_op = GradScale(cost_part_grad_scale)
@@ -401,15 +402,16 @@ class Approximation(object):
         # can be inferred from the rest parts
         state.pop('flat_view')
         state.pop('order')
-        state.pop('_view')
         return state
 
     def __setstate__(self, state):
         self.__dict__.update(state)
-        self.flat_view, self.order, self._view = self.model.flatten(
+        self.order = ArrayOrdering(self.local_vars + self.global_vars)
+        self.flat_view = self.model.flatten(
             vars=self.local_vars + self.global_vars
         )
 
+    _view = property(lambda self: self.flat_view.view)
     input = property(lambda self: self.flat_view.input)
 
     @staticmethod
