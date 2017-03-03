@@ -6,7 +6,8 @@ import pymc3 as pm
 from .checks import close_to
 
 from .models import multidimensional_model, simple_categorical
-from ..plots import traceplot, forestplot, autocorrplot, plot_posterior, make_2d
+from ..plots import traceplot, forestplot, autocorrplot, plot_posterior
+from ..plots.utils import make_2d
 from ..step_methods import Slice, Metropolis
 from ..sampling import sample
 from ..tuning.scaling import find_hessian
