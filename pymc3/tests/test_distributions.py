@@ -530,6 +530,11 @@ class TestMatchesScipy(SeededTest):
     def test_mvnormal(self, n):
         self.pymc3_matches_scipy(MvNormal, Vector(R, n),
                                  {'mu': Vector(R, n), 'tau': PdMatrix(n)}, normal_logpdf)
+                                 
+    def test_mvnormal_init_fail(self):
+        with Model():
+            with self.assertRaises(ValueError):
+                x = MvNormal('x', np.zeros(3), shape=3)
 
     @parameterized.expand([(1,), (2,)])
     def test_mvt(self, n):
@@ -655,8 +660,8 @@ class TestMatchesScipy(SeededTest):
         tau, cov = multivariate.get_tau_cov(mu, cov=cov)
         assert_almost_equal(tau.eval(), np.linalg.inv(cov))
 
-        tau, cov = multivariate.get_tau_cov(mu)
-        assert_almost_equal(cov, np.eye(3))
+        with self.assertRaises(ValueError):
+            tau, cov = multivariate.get_tau_cov(mu)
 
     @parameterized.expand([
         (0.5, -50.000, 0.500, 0.500, -99.8068528),
