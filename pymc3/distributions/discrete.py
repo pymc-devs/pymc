@@ -4,6 +4,8 @@ import theano
 import theano.tensor as tt
 from scipy import stats
 
+round = lambda *args, **kwargs: tt.round(*args, **kwargs, mode='half_to_even')
+
 from .dist_math import bound, factln, binomln, betaln, logpow
 from .distribution import Discrete, draw_values, generate_samples, reshape_sampled
 
@@ -41,7 +43,7 @@ class Binomial(Discrete):
         super(Binomial, self).__init__(*args, **kwargs)
         self.n = n = tt.as_tensor_variable(n)
         self.p = p = tt.as_tensor_variable(p)
-        self.mode = tt.cast(tt.round(n * p), self.dtype)
+        self.mode = tt.cast(round(n * p), self.dtype)
 
     def random(self, point=None, size=None, repeat=None):
         n, p = draw_values([self.n, self.p], point=point)

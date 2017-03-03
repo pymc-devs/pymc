@@ -7,6 +7,8 @@ import scipy
 import theano
 import theano.tensor as tt
 
+tround = lambda *args, **kwargs: tt.round(*args, **kwargs, mode='half_to_even')
+
 from scipy import stats
 
 from theano.tensor.nlinalg import det, matrix_inverse, trace
@@ -314,7 +316,7 @@ class Multinomial(Discrete):
             self.p = tt.as_tensor_variable(p)
 
         self.mean = self.n * self.p
-        self.mode = tt.cast(tt.round(self.mean), 'int32')
+        self.mode = tt.cast(tround(self.mean), 'int32')
 
     def _random(self, n, p, size=None):
         if size == p.shape:
