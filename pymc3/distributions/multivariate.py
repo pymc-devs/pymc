@@ -35,8 +35,8 @@ def get_tau_cov(mu, tau=None, cov=None):
     Parameters
     ----------
     mu : array-like
-    tau : array-like, optional
-    cov : array-like, optional
+    tau : array-like, not required if cov is passed
+    cov : array-like, not required of tau is passed
 
     Results
     -------
@@ -48,8 +48,8 @@ def get_tau_cov(mu, tau=None, cov=None):
     """
     if tau is None:
         if cov is None:
-            cov = np.eye(len(mu))
-            tau = np.eye(len(mu))
+            raise ValueError('Incompatible parameterization. Either use tau'
+                             'or cov to specify distribution.')
         else:
             tau = tt.nlinalg.matrix_inverse(cov)
 
@@ -81,10 +81,10 @@ class MvNormal(Continuous):
     ----------
     mu : array
         Vector of means.
-    cov : array, optional
-        Covariance matrix.
-    tau : array, optional
-        Precision matrix.
+    cov : array
+        Covariance matrix. Not required if tau is passed.
+    tau : array
+        Precision matrix. Not required if tau is passed.
 
     Flags
     ----------
