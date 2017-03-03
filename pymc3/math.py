@@ -19,7 +19,8 @@ def tround(*args, **kwargs):
     Temporary function to silence round warning in Theano. Please remove
     when the warning disappears.
     """
-    return tt.round(*args, **kwargs, mode='half_to_even')
+    kwargs['mode'] = 'half_to_even'
+    return tt.round(*args, **kwargs)
 
 
 def logsumexp(x, axis=None):
