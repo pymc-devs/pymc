@@ -6,6 +6,7 @@ from scipy import stats
 
 from .dist_math import bound, factln, binomln, betaln, logpow
 from .distribution import Discrete, draw_values, generate_samples, reshape_sampled
+from pymc3.math import tround
 
 __all__ = ['Binomial',  'BetaBinomial',  'Bernoulli',  'DiscreteWeibull',
            'Poisson', 'NegativeBinomial', 'ConstantDist', 'Constant',
@@ -41,7 +42,7 @@ class Binomial(Discrete):
         super(Binomial, self).__init__(*args, **kwargs)
         self.n = n = tt.as_tensor_variable(n)
         self.p = p = tt.as_tensor_variable(p)
-        self.mode = tt.cast(tt.round(n * p), self.dtype)
+        self.mode = tt.cast(tround(n * p), self.dtype)
 
     def random(self, point=None, size=None, repeat=None):
         n, p = draw_values([self.n, self.p], point=point)
@@ -93,7 +94,7 @@ class BetaBinomial(Discrete):
         self.alpha = alpha = tt.as_tensor_variable(alpha)
         self.beta = beta = tt.as_tensor_variable(beta)
         self.n = n = tt.as_tensor_variable(n)
-        self.mode = tt.cast(tt.round(alpha / (alpha + beta)), 'int8')
+        self.mode = tt.cast(tround(alpha / (alpha + beta)), 'int8')
 
     def _random(self, alpha, beta, n, size=None):
         size = size or 1
@@ -147,7 +148,7 @@ class Bernoulli(Discrete):
     def __init__(self, p, *args, **kwargs):
         super(Bernoulli, self).__init__(*args, **kwargs)
         self.p = p = tt.as_tensor_variable(p)
-        self.mode = tt.cast(tt.round(p), 'int8')
+        self.mode = tt.cast(tround(p), 'int8')
 
     def random(self, point=None, size=None, repeat=None):
         p = draw_values([self.p], point=point)
