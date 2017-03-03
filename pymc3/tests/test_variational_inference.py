@@ -5,7 +5,8 @@ import theano
 import pymc3 as pm
 from pymc3 import Model, Normal
 from pymc3.variational.inference import (
-    KL, MeanField, ADVI, FullRankADVI
+    KL, MeanField, ADVI, FullRankADVI,
+    approximate
 )
 
 from pymc3.tests import models
@@ -182,5 +183,10 @@ class TestFullRank(TestApproximates.Base):
             advi = ADVI()
             full_rank = FullRankADVI.from_advi(advi)
             full_rank.fit(20)
+
+    def test_combined(self):
+        with models.multidimensional_model()[1]:
+            approximate(method='advi->fullrank', frac=.5)
+
 if __name__ == '__main__':
     unittest.main()

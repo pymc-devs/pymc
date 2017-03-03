@@ -1,3 +1,7 @@
+from __future__ import division
+
+import logging
+
 import numpy as np
 import theano
 from theano import tensor as tt
@@ -7,6 +11,7 @@ import pymc3 as pm
 from pymc3.distributions.dist_math import log_normal, rho2sd, log_normal_mv
 from pymc3.variational.opvi import Operator, Approximation, TestFunction
 
+logger = logging.getLogger(__name__)
 
 __all__ = [
     'TestFunction',
@@ -201,6 +206,23 @@ class FullRank(Approximation):
 
     @classmethod
     def from_mean_field(cls, mean_field, gpu_compat=False):
+        """
+        Construct FullRank from MeanField approximation
+
+        Parameters
+        ----------
+        mean_field : MeanField
+            approximation to start with
+
+        Flags
+        -----
+        gpu_compat : bool
+            use GPU compatible version or not
+
+        Returns
+        -------
+        FullRank
+        """
         full_rank = object.__new__(cls)  # type: FullRank
         full_rank.gpu_compat = gpu_compat
         full_rank.__dict__.update(mean_field.__dict__)
@@ -274,7 +296,6 @@ class Inference(object):
         i = 0
         scores = np.empty(n)
         scores[:] = np.nan
-        logger = pm._log  # noqa
         progress = tqdm.trange(n)
         if score:
             try:
@@ -399,6 +420,23 @@ class FullRankADVI(Inference):
 
     @classmethod
     def from_mean_field(cls, mean_field, gpu_compat=False):
+        """
+        Construct FullRankADVI from MeanField approximation
+
+        Parameters
+        ----------
+        mean_field : MeanField
+            approximation to start with
+
+        Flags
+        -----
+        gpu_compat : bool
+            use GPU compatible version or not
+
+        Returns
+        -------
+        FullRankADVI
+        """
         full_rank = FullRank.from_mean_field(mean_field, gpu_compat)
         inference = object.__new__(cls)
         objective = KL(full_rank)(None)
@@ -408,6 +446,78 @@ class FullRankADVI(Inference):
 
     @classmethod
     def from_advi(cls, advi, gpu_compat=False):
+        """
+        Construct FullRankADVI from ADVI
+
+        Parameters
+        ----------
+        advi : ADVI
+
+        Flags
+        -----
+        gpu_compat : bool
+            use GPU compatible version or not
+
+        Returns
+        -------
+        FullRankADVI
+        """
         inference = cls.from_mean_field(advi.approx, gpu_compat)
         inference.hist = advi.hist
         return inference
+
+
+def approximate(n=10000, local_rv=None, method='advi', model=None, **kwargs):
+    """
+    Handy shortcut for using inference methods in functional way
+
+    Parameters
+    ----------
+    n : int
+        number of iterations
+    local_rv : dict
+        mapping {model_variable -> local_variable}
+        Local Vars are used for Autoencoding Variational Bayes
+        See (AEVB; Kingma and Welling, 2014) for details
+    method : str or Inference
+        string name is case insensitive in {'advi', 'fullrank', 'advi->fullrank'}
+    model : None or Model
+    frac : float
+        if method is 'advi->fullrank' represents advi part
+    kwargs : kwargs for Inference.fit
+
+    Returns
+    -------
+    Approximation
+    """
+    if model is None:
+        model = pm.modelcontext(model)
+    _select = dict(
+        advi=ADVI,
+        fullrank=FullRankADVI,
+    )
+    if isinstance(method, str) and method == 'advi->fullrank':
+        frac = kwargs.pop('frac', 1/2)
+        n1 = int(n * frac)
+        n2 = n-n1
+        inference = ADVI(local_rv=local_rv, model=model)
+        logger.info('fitting advi ...')
+        inference.fit(n1, **kwargs)
+        inference = FullRankADVI.from_advi(inference)
+        logger.info('fitting fullrank advi ...')
+        return inference.fit(n2, **kwargs)
+
+    elif isinstance(method, str):
+        try:
+            inference = _select[method.lower()](local_rv=local_rv, model=model)
+        except KeyError:
+            raise KeyError('method should be one of %s '
+                           'or Inference instance' %
+                           set(_select.keys()))
+    elif isinstance(method, Inference):
+        inference = method
+    else:
+        raise TypeError('method should be one of %s '
+                        'or Inference instance' %
+                        set(_select.keys()))
+    return inference.fit(n, **kwargs)
