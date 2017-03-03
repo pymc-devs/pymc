@@ -147,8 +147,8 @@ def advi(vars=None, start=None, model=None, n=5000, accurate_elbo=False,
     # Optimization loop
     elbos = np.empty(n)
     divergence_flag = False
+    progress = trange(n)
     try:
-        progress = trange(n)
         uw_i, elbo_current = f()
         if np.isnan(elbo_current):
             raise FloatingPointError('NaN occurred in ADVI optimization.')
@@ -171,12 +171,12 @@ def advi(vars=None, start=None, model=None, n=5000, accurate_elbo=False,
                 avg_delta = np.mean(circ_buff)
                 med_delta = np.median(circ_buff)
 
-                if avg_delta < tol_obj:
+                if i > 0 and avg_delta < tol_obj:
                     pm._log.info('Mean ELBO converged.')
                     converged = True
                     elbos = elbos[:(i + 1)]
                     break
-                elif med_delta < tol_obj:
+                elif i > 0 and med_delta < tol_obj:
                     pm._log.info('Median ELBO converged.')
                     converged = True
                     elbos = elbos[:(i + 1)]
@@ -186,7 +186,7 @@ def advi(vars=None, start=None, model=None, n=5000, accurate_elbo=False,
                         divergence_flag = True
                     else:
                         divergence_flag = False
-                        
+
     except KeyboardInterrupt:
         elbos = elbos[:i]
         if n < 10:
@@ -202,10 +202,12 @@ def advi(vars=None, start=None, model=None, n=5000, accurate_elbo=False,
         else:
             avg_elbo = elbos[-n // 10:].mean()
             pm._log.info('Finished [100%]: Average ELBO = {:,.5g}'.format(avg_elbo))
-    
+    finally:
+        progress.close()
+
     if divergence_flag:
         pm._log.info('Evidence of divergence detected, inspect ELBO.')
-        
+
     # Estimated parameters
     l = int(uw_i.size / 2)
     u = bij.rmap(uw_i[:l])
