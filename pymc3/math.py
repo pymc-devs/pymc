@@ -14,6 +14,13 @@ from theano.gof import Op, Apply
 import numpy as np
 # pylint: enable=unused-import
 
+def tround(*args, **kwargs): 
+    """
+    Temporary function to silence round warning in Theano. Please remove
+    when the warning disappears.
+    """
+    rerurn tt.round(*args, **kwargs, mode='half_to_even')
+
 
 def logsumexp(x, axis=None):
     # Adapted from https://github.com/Theano/Theano/issues/1563

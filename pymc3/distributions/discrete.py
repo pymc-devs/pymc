@@ -4,10 +4,9 @@ import theano
 import theano.tensor as tt
 from scipy import stats
 
-tround = lambda *args, **kwargs: tt.round(*args, **kwargs, mode='half_to_even')
-
 from .dist_math import bound, factln, binomln, betaln, logpow
 from .distribution import Discrete, draw_values, generate_samples, reshape_sampled
+from pymc3.math import tround
 
 __all__ = ['Binomial',  'BetaBinomial',  'Bernoulli',  'DiscreteWeibull',
            'Poisson', 'NegativeBinomial', 'ConstantDist', 'Constant',

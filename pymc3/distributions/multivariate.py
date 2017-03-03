@@ -7,15 +7,13 @@ import scipy
 import theano
 import theano.tensor as tt
 
-tround = lambda *args, **kwargs: tt.round(*args, **kwargs, mode='half_to_even')
-
 from scipy import stats
 
 from theano.tensor.nlinalg import det, matrix_inverse, trace
 
 import pymc3 as pm
 
-from pymc3.math import logdet
+from pymc3.math import logdet, tround
 from . import transforms
 from .distribution import Continuous, Discrete, draw_values, generate_samples
 from ..model import Deterministic
