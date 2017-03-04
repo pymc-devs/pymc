@@ -13,7 +13,7 @@ from theano.tensor.nlinalg import det, matrix_inverse, trace
 
 import pymc3 as pm
 
-from pymc3.math import logdet
+from pymc3.math import logdet, tround
 from . import transforms
 from .distribution import Continuous, Discrete, draw_values, generate_samples
 from ..model import Deterministic
@@ -314,7 +314,7 @@ class Multinomial(Discrete):
             self.p = tt.as_tensor_variable(p)
 
         self.mean = self.n * self.p
-        self.mode = tt.cast(tt.round(self.mean), 'int32')
+        self.mode = tt.cast(tround(self.mean), 'int32')
 
     def _random(self, n, p, size=None):
         if size == p.shape:
