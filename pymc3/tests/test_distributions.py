@@ -12,7 +12,9 @@ from ..distributions import (DensityDist, Categorical, Multinomial, VonMises, Di
                              InverseGamma, Gamma, Cauchy, HalfCauchy, Lognormal, Laplace,
                              NegativeBinomial, Geometric, Exponential, ExGaussian, Normal,
                              Flat, LKJCorr, Wald, ChiSquared, HalfNormal, DiscreteUniform,
-                             Bound, Uniform, Triangular, Binomial, SkewNormal, DiscreteWeibull)
+                             Bound, Uniform, Triangular, Binomial, SkewNormal, DiscreteWeibull,
+                             Rice)
+
 from ..distributions import continuous, multivariate
 from nose_parameterized import parameterized
 from numpy import array, inf, log, exp
@@ -688,3 +690,7 @@ class TestMatchesScipy(SeededTest):
     def test_multidimensional_beta_construction(self):
         with Model():
             Beta('beta', alpha=1., beta=1., shape=(10, 20))
+    
+    def test_rice(self):
+        self.pymc3_matches_scipy(Normal, R, {'nu': R, 'sd': Rplus},
+                                 lambda value, mu, sd: sp.norm.logpdf(value, mu, sd))
