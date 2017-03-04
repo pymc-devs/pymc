@@ -13,3 +13,4 @@ nbsphinx
 numdifftools
 numpydoc
 six
+h5py

@@ -192,11 +192,14 @@ def _sample(draws, step=None, start=None, trace=None, chain=0, tune=None,
         strace = None
         for strace in sampling:
             pass
-        result = [] if strace is None else [strace]
-    except KeyboardInterrupt as exc:
-        if strace is not None:
-            strace.close()
-        raise exc
+    except KeyboardInterrupt:
+        pass
+    finally:
+        if progressbar:
+            sampling.close()
+    if strace is not None:
+        strace.close()
+    result = [] if strace is None else [strace]
     return MultiTrace(result)
 
 
@@ -288,8 +291,6 @@ def _iter_sample(draws, step, start=None, trace=None, chain=0, tune=None,
             point = step.step(point)
             strace.record(point)
         yield strace
-    else:
-        strace.close()
 
 
 def _choose_backend(trace, chain, shortcuts=None, **kwds):
@@ -483,7 +484,7 @@ def init_nuts(init='ADVI', njobs=1, n_init=500000, model=None,
         if njobs == 1:
             start = start[0]
     else:
-        raise NotImplemented('Initializer {} is not supported.'.format(init))
+        raise NotImplementedError('Initializer {} is not supported.'.format(init))
 
     step = pm.NUTS(scaling=cov, is_cov=True, **kwargs)
 

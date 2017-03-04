@@ -240,6 +240,7 @@ GP
    Linear
    Polynomial
    WarpedInput
+   Gibbs
 
 .. automodule:: pymc3.gp.cov
    :members:

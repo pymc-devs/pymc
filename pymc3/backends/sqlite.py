@@ -208,8 +208,7 @@ class SQLite(base.BaseTrace):
         A NumPy array
         """
         if burn < 0:
-            raise ValueError('Negative burn values not supported '
-                             'in SQLite backend.')
+            burn = max(0, len(self) + burn)
         if thin < 1:
             raise ValueError('Only positive thin values are supported '
                              'in SQLite backend.')

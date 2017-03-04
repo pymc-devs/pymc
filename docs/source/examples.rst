@@ -8,6 +8,7 @@ Howto
 =====
 
 .. toctree::
+   notebooks/sampler-stats.ipynb
    notebooks/posterior_predictive.ipynb
    notebooks/howto_debugging.ipynb
    notebooks/LKJ.ipynb
@@ -43,6 +44,7 @@ GP
 .. toctree::
    notebooks/GP-introduction.ipynb
    notebooks/GP-covariances.ipynb
+   notebooks/GP-slice-sampling.ipynb
    notebooks/GP-smoothing.ipynb
 
 Mixture Models

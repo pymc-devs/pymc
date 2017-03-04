@@ -1,4 +1,5 @@
 import numpy as np
+import theano
 
 from .vartypes import typefilter, continuous_types
 from theano import theano, scalar, tensor as tt
@@ -62,7 +63,6 @@ Theano derivative functions
 def gradient1(f, v):
     """flat gradient of f wrt v"""
     return tt.flatten(tt.grad(f, v, disconnected_inputs='warn'))
-
 
 empty_gradient = tt.zeros(0, dtype='float32')
 
@@ -244,51 +244,45 @@ identity = tt.Elemwise(scalar_identity, name='identity')
 
 class GeneratorOp(Op):
     """
-    Generaror Op is designed for storing python generators
-    inside theano graph. The main limitation is generator itself.
+    Generator Op is designed for storing python generators inside theano graph.
 
-    There are some important cases when generator becomes exhausted
-        - not endless generator is passed
-        - exception is raised while `generator.__next__` is performed
-            Note: it is dangerous in simple python generators, but ok in
-            custom class based generators with explicit state
-        - data type on each iteration should be the same
+    __call__ creates TensorVariable
+        It has 2 new methods
+        - var.set_gen(gen) : sets new generator
+        - var.set_default(value) : sets new default value (None erases default value)
+
+    If generator is exhausted, variable will produce default value if it is not None,
+    else raises `StopIteration` exception that can be caught on runtime.
+
+    Parameters
+    ----------
+    gen : generator that implements __next__ (py3) or next (py2) method
+        and yields np.arrays with same types
+    default : np.array with the same type as generator produces
     """
     __props__ = ('generator',)
 
-    def __init__(self, gen):
+    def __init__(self, gen, default=None):
         super(GeneratorOp, self).__init__()
         if not isinstance(gen, DataGenerator):
             gen = DataGenerator(gen)
         self.generator = gen
-        self.itypes = []
-        self.otypes = [self.generator.tensortype]
-        self._nan = np.zeros_like(self.generator.test_value)
-        self._nan[...] = np.nan
+        self.set_default(default)
+
+    def make_node(self, *inputs):
+        gen_var = self.generator.make_variable(self)
+        return theano.Apply(self, [], [gen_var])
 
     def perform(self, node, inputs, output_storage, params=None):
-        try:
+        if self.default is not None:
+            output_storage[0][0] = next(self.generator, self.default)
+        else:
             output_storage[0][0] = next(self.generator)
-        except StopIteration:
-            output_storage[0][0] = self._nan
 
     def do_constant_folding(self, node):
         return False
 
-    class _set_gen(object):
-        """For pickling"""
-        def __init__(self, op):
-            self.op = op
-
-        def __call__(self, gen):
-            self.op.set_gen(gen)
-
-    @change_flags(compute_test_value='off')
-    def __call__(self, *args, **kwargs):
-        rval = super(GeneratorOp, self).__call__(*args, **kwargs)
-        rval.set_gen = self._set_gen(self)
-        rval.tag.test_value = self.generator.test_value
-        return rval
+    __call__ = change_flags(compute_test_value='off')(Op.__call__)
 
     def set_gen(self, gen):
         if not isinstance(gen, DataGenerator):
@@ -297,7 +291,37 @@ class GeneratorOp(Op):
             raise ValueError('New generator should yield the same type')
         self.generator = gen
 
+    def set_default(self, value):
+        if value is None:
+            self.default = None
+        else:
+            value = np.asarray(value)
+            t1 = (value.dtype, ((False,) * value.ndim))
+            t2 = (self.generator.tensortype.dtype,
+                  self.generator.tensortype.broadcastable)
+            if not t1 == t2:
+                raise ValueError('Default value should have the '
+                                 'same type as generator')
+            self.default = value
 
-def generator(gen):
-    """shortcut for `GeneratorOp`"""
-    return GeneratorOp(gen)()
+
+def generator(gen, default=None):
+    """
+    Generator variable with possibility to set default value and new generator.
+    If generator is exhausted variable will produce default value if it is not None,
+    else raises `StopIteration` exception that can be caught on runtime.
+
+    Parameters
+    ----------
+    gen : generator that implements __next__ (py3) or next (py2) method
+        and yields np.arrays with same types
+    default : np.array with the same type as generator produces
+
+    Returns
+    -------
+    TensorVariable
+        It has 2 new methods
+        - var.set_gen(gen) : sets new generator
+        - var.set_default(value) : sets new default value (None erases default value)
+    """
+    return GeneratorOp(gen, default)()

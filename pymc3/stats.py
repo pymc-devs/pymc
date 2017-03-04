@@ -5,6 +5,7 @@ import pandas as pd
 import itertools
 import sys
 import warnings
+from collections import namedtuple
 from .model import modelcontext
 
 from scipy.misc import logsumexp
@@ -13,7 +14,7 @@ from scipy.stats.distributions import pareto
 from .backends import tracetab as ttab
 
 __all__ = ['autocorr', 'autocov', 'dic', 'bpic', 'waic', 'loo', 'hpd', 'quantiles',
-           'mc_error', 'summary', 'df_summary']
+           'mc_error', 'summary', 'df_summary', 'compare']
 
 
 def statfunc(f):
@@ -104,7 +105,7 @@ def log_post_trace(trace, model):
     return np.vstack([obs.logp_elemwise(pt) for obs in model.observed_RVs] for pt in trace)
 
 
-def waic(trace, model=None, n_eff=False, pointwise=False):
+def waic(trace, model=None, pointwise=False):
     """
     Calculate the widely available information criterion, its standard error
     and the effective number of parameters of the samples in trace from model.
@@ -117,9 +118,6 @@ def waic(trace, model=None, n_eff=False, pointwise=False):
     trace : result of MCMC run
     model : PyMC Model
         Optional model. Default None, taken from context.
-    n_eff: bool
-        if True the effective number parameters will be returned.
-        Default False
     pointwise: bool
         if True the pointwise predictive accuracy will be returned.
         Default False
@@ -127,15 +125,17 @@ def waic(trace, model=None, n_eff=False, pointwise=False):
 
     Returns
     -------
+    namedtuple with the following elements:
     waic: widely available information criterion
     waic_se: standard error of waic
-    p_waic: effective number parameters, only if n_eff True
+    p_waic: effective number parameters
+    waic_i: and array of the pointwise predictive accuracy, only if pointwise True
     """
     model = modelcontext(model)
 
     log_py = log_post_trace(trace, model)
 
-    lppd_i = logsumexp(log_py, axis = 0, b = 1.0 / log_py.shape[0])
+    lppd_i = logsumexp(log_py, axis=0, b=1.0 / log_py.shape[0])
 
     vars_lpd = np.var(log_py, axis=0)
     if np.any(vars_lpd > 0.4):
@@ -151,16 +151,15 @@ def waic(trace, model=None, n_eff=False, pointwise=False):
 
     p_waic = np.sum(vars_lpd)
 
-
-    if n_eff:
-        return waic, waic_se, p_waic
-    elif pointwise:
-        return waic, waic_se, waic_i, p_waic
+    if pointwise:
+        WAIC_r = namedtuple('WAIC_r', 'WAIC, WAIC_se, p_WAIC, WAIC_i')
+        return WAIC_r(waic, waic_se, p_waic, waic_i)
     else:
-        return waic, waic_se
+        WAIC_r = namedtuple('WAIC_r', 'WAIC, WAIC_se, p_WAIC')
+        return WAIC_r(waic, waic_se, p_waic)
 
 
-def loo(trace, model=None, n_eff=False):
+def loo(trace, model=None, pointwise=False):
     """
     Calculates leave-one-out (LOO) cross-validation for out of sample predictive
     model fit, following Vehtari et al. (2015). Cross-validation is computed using
@@ -172,17 +171,20 @@ def loo(trace, model=None, n_eff=False):
     trace : result of MCMC run
     model : PyMC Model
         Optional model. Default None, taken from context.
-    n_eff: bool
-        if True the effective number parameters will be computed and returned.
+    pointwise: bool
+        if True the pointwise predictive accuracy will be returned.
         Default False
 
 
     Returns
     -------
-    elpd_loo: log pointwise predictive density calculated via approximated LOO cross-validation
-    elpd_loo_se: standard error of waic elpd_loo
-    p_loo: effective number parameters, only if n_eff True
+    namedtuple with the following elements:
+    loo: approximated Leave-one-out cross-validation
+    loo_se: standard error of loo
+    p_loo: effective number of parameters
+    loo_i: and array of the pointwise predictive accuracy, only if pointwise True
     """
+
     model = modelcontext(model)
 
     log_py = log_post_trace(trace, model)
@@ -221,23 +223,27 @@ def loo(trace, model=None, n_eff=False):
     r_sorted[q80:] = np.vstack(expvals).T
     # Unsort ratios (within columns) before using them as weights
     r_new = np.array([r[np.argsort(i)]
-                      for r, i in zip(r_sorted, np.argsort(r, axis=0))])
+                      for r, i in zip(r_sorted.T, np.argsort(r.T, axis=1))]).T
 
     # Truncate weights to guarantee finite variance
     w = np.minimum(r_new, r_new.mean(axis=0) * S**0.75)
 
-    loo_lppd_i = -2.0 * logsumexp(log_py, axis = 0, b = w / np.sum(w, axis = 0))
+    loo_lppd_i = - 2. * logsumexp(log_py, axis=0, b=w / np.sum(w, axis=0))
 
     loo_lppd_se = np.sqrt(len(loo_lppd_i) * np.var(loo_lppd_i))
 
     loo_lppd = np.sum(loo_lppd_i)
 
+    lppd = np.sum(logsumexp(log_py, axis=0, b=1. / log_py.shape[0]))
 
-    if n_eff:
-        p_loo = np.sum(np.log(np.mean(py, axis=0))) - loo_lppd
-        return loo_lppd, loo_lppd_se, p_loo
+    p_loo = lppd + (0.5 * loo_lppd)
+
+    if pointwise:
+        LOO_r = namedtuple('LOO_r', 'LOO, LOO_se, p_LOO, LOO_i')
+        return LOO_r(loo_lppd, loo_lppd_se, p_loo, loo_lppd_i)
     else:
-        return loo_lppd, loo_lppd_se
+        LOO_r = namedtuple('LOO_r', 'LOO, LOO_se, p_LOO')
+        return LOO_r(loo_lppd, loo_lppd_se, p_loo)
 
 
 def bpic(trace, model=None):
@@ -254,6 +260,90 @@ def bpic(trace, model=None):
     deviance_at_mean = -2 * model.logp(free_rv_means)
 
     return 3 * mean_deviance - 2 * deviance_at_mean
+
+
+def compare(traces, models, ic='WAIC'):
+    """
+    Compare models based on the widely available information criterion (WAIC)
+    or leave-one-out (LOO) cross-validation.
+    Read more theory here - in a paper by some of the leading authorities on
+    Model Selection - dx.doi.org/10.1111/1467-9868.00353
+
+    Parameters
+    ----------
+    traces : list of PyMC3 traces
+    models : list of PyMC3 models
+        in the same order as traces.
+    ic : string
+        Information Criterion (WAIC or LOO) used to compare models.
+        Default WAIC.
+
+    Returns
+    -------
+    A DataFrame, ordered from lowest to highest IC. The index reflects
+    the order in which the models are passed to this function. The columns are:
+    IC : Information Criteria (WAIC or LOO).
+        Smaller IC indicates higher out-of-sample predictive fit ("better" model). 
+        Default WAIC. 
+    pIC : Estimated effective number of parameters.
+    dIC : Relative difference between each IC (WAIC or LOO)
+    and the lowest IC (WAIC or LOO).
+        It's always 0 for the top-ranked model.
+    weight: Akaike weights for each model. 
+        This can be loosely interpreted as the probability of each model
+        (among the compared model) given the data. Be careful that these
+        weights are based on point estimates of the IC (uncertainty is ignored).
+    SE : Standard error of the IC estimate.
+        For a "large enough" sample size this is an estimate of the uncertainty
+        in the computation of the IC.
+    dSE : Standard error of the difference in IC between each model and
+    the top-ranked model.
+        It's always 0 for the top-ranked model.
+    warning : A value of 1 indicates that the computation of the IC may not be
+    reliable see http://arxiv.org/abs/1507.04544 for details.
+    """
+    if ic == 'WAIC':
+        ic_func = waic
+        df_comp = pd.DataFrame(index=np.arange(len(models)),
+                               columns=['WAIC', 'pWAIC', 'dWAIC', 'weight',
+                               'SE', 'dSE', 'warning'])
+    elif ic == 'LOO':
+        ic_func = loo
+        df_comp = pd.DataFrame(index=np.arange(len(models)),
+                               columns=['LOO', 'pLOO', 'dLOO', 'weight',
+                               'SE', 'dSE', 'warning'])
+    else:
+        raise NotImplementedError(
+            'The information criterion {} is not supported.'.format(ic))
+
+    warns = np.zeros(len(models))
+
+    c = 0
+    def add_warns(*args):
+        warns[c] = 1
+
+    with warnings.catch_warnings():
+        warnings.showwarning = add_warns
+        warnings.filterwarnings('always')
+
+        ics = []
+        for c, (t, m) in enumerate(zip(traces, models)):
+            ics.append((c, ic_func(t, m, pointwise=True)))
+
+    ics.sort(key=lambda x: x[1][0])
+
+    min_ic = ics[0][1][0]
+    Z = np.sum([np.exp(-0.5 * (x[1][0] - min_ic)) for x in ics])
+
+    for idx, res in ics:
+        diff = ics[0][1][3] - res[3]
+        d_ic = np.sum(diff)
+        d_se = len(diff) ** 0.5 * np.var(diff)
+        weight = np.exp(-0.5 * (res[0] - min_ic)) / Z
+        df_comp.at[idx] = (res[0], res[2], abs(d_ic), weight, res[1],
+                           d_se, warns[idx])
+
+    return df_comp.sort_values(by=ic)
 
 
 def make_indices(dimensions):
@@ -569,7 +659,7 @@ def summary(trace, varnames=None, alpha=0.05, start=0, batches=None, roundto=3,
     include_transformed : bool
       Flag for summarizing automatically transformed variables in addition to
       original variables (defaults to False).
-    tofile : None or string
+    to_file : None or string
       File to write results to. If not given, print to stdout.
 
     """

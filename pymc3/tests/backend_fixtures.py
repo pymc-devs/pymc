@@ -319,6 +319,17 @@ class SelectionTestCase(ModelBackendSampledTestCase):
                 npt.assert_equal(result.get_values(varname, chains=[chain]),
                                  expected[chain][varname])
 
+    def test_get_neg_slice(self):
+        expected = []
+        for chain in [0, 1]:
+            expected.append({varname: self.expected[chain][varname][-2:]
+                             for varname in self.mtrace.varnames})
+        result = self.mtrace[-2:]
+        for chain in [0, 1]:
+            for varname in self.test_point.keys():
+                npt.assert_equal(result.get_values(varname, chains=[chain]),
+                                 expected[chain][varname])
+
     def test_get_values_one_chain(self):
         for varname in self.test_point.keys():
             expected = self.expected[0][varname]
