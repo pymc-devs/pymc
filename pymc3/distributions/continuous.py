@@ -22,7 +22,7 @@ __all__ = ['Uniform', 'Flat', 'Normal', 'Beta', 'Exponential', 'Laplace',
            'StudentT', 'Cauchy', 'HalfCauchy', 'Gamma', 'Weibull',
            'HalfStudentT', 'StudentTpos', 'Lognormal', 'ChiSquared',
            'HalfNormal', 'Wald', 'Pareto', 'InverseGamma', 'ExGaussian',
-           'VonMises', 'SkewNormal','Rice']
+           'VonMises', 'SkewNormal', 'Rice']
 
 
 class PositiveContinuous(Continuous):

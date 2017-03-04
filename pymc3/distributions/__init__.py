@@ -24,6 +24,7 @@ from .continuous import ExGaussian
 from .continuous import VonMises
 from .continuous import SkewNormal
 from .continuous import Triangular
+from .continuous import Rice
 
 from .discrete import Binomial
 from .discrete import BetaBinomial
