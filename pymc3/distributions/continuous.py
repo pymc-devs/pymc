@@ -1392,4 +1392,5 @@ class Rice(Continuous):
     def logp(self, value):
         nu = self.nu
         sd = self.sd
-        return bound(tt.log(value/(sd**2)*tt.exp(-(value**2+nu**2) / (2*sd**2))*i0(value*nu/(sd**2))), nu>0)
+        return bound(tt.log(value / (sd**2)*tt.exp(-(value**2 + nu**2) / (2 * sd**2))*i0(value * nu / (sd**2))), 
+                     nu>0)
