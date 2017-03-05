@@ -532,7 +532,7 @@ class TestMatchesScipy(SeededTest):
     def test_mvnormal(self, n):
         self.pymc3_matches_scipy(MvNormal, Vector(R, n),
                                  {'mu': Vector(R, n), 'tau': PdMatrix(n)}, normal_logpdf)
-                                 
+
     def test_mvnormal_init_fail(self):
         with Model():
             with self.assertRaises(ValueError):
@@ -690,7 +690,7 @@ class TestMatchesScipy(SeededTest):
     def test_multidimensional_beta_construction(self):
         with Model():
             Beta('beta', alpha=1., beta=1., shape=(10, 20))
-    
+
     def test_rice(self):
-        self.pymc3_matches_scipy(Normal, R, {'nu': R, 'sd': Rplus},
-                                 lambda value, mu, sd: sp.norm.logpdf(value, mu, sd))
+        self.pymc3_matches_scipy(Rice, Rplus, {'nu': Rplus, 'sd': Rplus},
+                                 lambda value, nu, sd: sp.rice.logpdf(value / sd, loc=nu, scale=sd))
