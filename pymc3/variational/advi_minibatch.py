@@ -518,9 +518,14 @@ def advi_minibatch(vars=None, start=None, model=None, n=5000, n_mcsamples=1,
     updates = OrderedDict(optimizer(loss=-1 * elbo, param=params))
     f = theano.function(tensors, elbo, updates=updates, mode=mode)
 
+    # set up progress bar
+    try:
+        progress = tqdm.tqdm_notebook(range(n))
+    except:
+        progress = tqdm.trange(n)
+
     # Optimization loop
     elbos = np.empty(n)
-    progress = tqdm.trange(n)
     for i in progress:
         e = f(*next(minibatches))
         if np.isnan(e):

@@ -12,8 +12,7 @@ from theano.sandbox.rng_mrg import MRG_RandomStreams
 import pymc3 as pm
 from pymc3.backends.base import MultiTrace
 from ..theanof import floatX
-
-from tqdm import trange
+import tqdm
 
 __all__ = ['advi', 'sample_vp']
 
@@ -148,10 +147,15 @@ def advi(vars=None, start=None, model=None, n=5000, accurate_elbo=False,
     elbos = np.empty(n)
     divergence_flag = False
     try:
-        progress = trange(n)
         uw_i, elbo_current = f()
         if np.isnan(elbo_current):
             raise FloatingPointError('NaN occurred in ADVI optimization.')
+        # set up progress bar
+        try:
+            progress = tqdm.tqdm_notebook(range(n))
+        except:
+            progress = tqdm.trange(n)
+
         for i in progress:
             uw_i, e = f()
             if np.isnan(e):
@@ -186,7 +190,7 @@ def advi(vars=None, start=None, model=None, n=5000, accurate_elbo=False,
                         divergence_flag = True
                     else:
                         divergence_flag = False
-                        
+
     except KeyboardInterrupt:
         elbos = elbos[:i]
         if n < 10:
@@ -202,10 +206,10 @@ def advi(vars=None, start=None, model=None, n=5000, accurate_elbo=False,
         else:
             avg_elbo = elbos[-n // 10:].mean()
             pm._log.info('Finished [100%]: Average ELBO = {:,.5g}'.format(avg_elbo))
-    
+
     if divergence_flag:
         pm._log.info('Evidence of divergence detected, inspect ELBO.')
-        
+
     # Estimated parameters
     l = int(uw_i.size / 2)
     u = bij.rmap(uw_i[:l])
@@ -400,7 +404,14 @@ def sample_vp(
     trace = pm.sampling.NDArray(model=model, vars=vars_sampled)
     trace.setup(draws=draws, chain=0)
 
-    range_ = trange(draws) if progressbar else range(draws)
+    if progressbar:
+        # set up progress bar
+        try:
+            range_ = tqdm.tqdm_notebook(range(draws))
+        except:
+            range_ = tqdm.trange(draws)
+    else:
+        range_ = range(draws)
 
     for _ in range_:
         # 'point' is like {'var1': np.array(0.1), 'var2': np.array(0.2), ...}
