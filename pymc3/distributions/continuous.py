@@ -26,7 +26,8 @@ __all__ = ['Uniform', 'Flat', 'HalfFlat', 'Normal', 'Beta', 'Exponential',
            'Laplace', 'StudentT', 'Cauchy', 'HalfCauchy', 'Gamma', 'Weibull',
            'HalfStudentT', 'Lognormal', 'ChiSquared', 'HalfNormal', 'Wald',
            'Pareto', 'InverseGamma', 'ExGaussian', 'VonMises', 'SkewNormal',
-           'Triangular', 'Gumbel', 'Logistic', 'LogitNormal', 'Interpolated']
+           'Triangular', 'Gumbel', 'Logistic', 'LogitNormal', 'Interpolated',
+           'Rice']
 
 
 class PositiveContinuous(Continuous):
@@ -68,7 +69,7 @@ def assert_negative_support(var, label, distname, value=-1e-6):
 
 def get_tau_sd(tau=None, sd=None):
     """
-    Find precision and standard deviation. The link between the two 
+    Find precision and standard deviation. The link between the two
     parameterizations is given by the inverse relationship:
 
     .. math::
@@ -275,14 +276,14 @@ class Normal(Continuous):
         Standard deviation (sd > 0) (only required if tau is not specified).
     tau : float
         Precision (tau > 0) (only required if sd is not specified).
-        
+
     Examples
     --------
     .. code-block:: python
 
         with pm.Model():
             x = pm.Normal('x', mu=0, sd=10)
-            
+
         with pm.Model():
             x = pm.Normal('x', mu=0, tau=1/23)
     """
@@ -887,7 +888,7 @@ class Lognormal(PositiveContinuous):
         Standard deviation. (sd > 0). (only required if tau is not specified).
     tau : float
         Scale parameter (tau > 0). (only required if sd is not specified).
-        
+
     Example
     -------
     .. code-block:: python
@@ -994,14 +995,14 @@ class StudentT(Continuous):
         Standard deviation (sd > 0) (only required if lam is not specified)
     lam : float
         Precision (lam > 0) (only required if sd is not specified)
-        
+
     Examples
     --------
     .. code-block:: python
 
         with pm.Model():
             x = pm.StudentT('x', nu=15, mu=0, sd=10)
-            
+
         with pm.Model():
             x = pm.StudentT('x', nu=15, mu=0, lam=1/23)
     """
@@ -1601,8 +1602,8 @@ class Weibull(PositiveContinuous):
         self.median = beta * tt.exp(gammaln(tt.log(2)))**(1. / alpha)
         self.variance = (beta**2) * \
             tt.exp(gammaln(1 + 2. / alpha - self.mean**2))
-        self.mode = tt.switch(alpha >= 1, 
-                              beta * ((alpha - 1)/alpha) ** (1 / alpha), 
+        self.mode = tt.switch(alpha >= 1,
+                              beta * ((alpha - 1)/alpha) ** (1 / alpha),
                               0)  # Reference: https://en.wikipedia.org/wiki/Weibull_distribution
 
         assert_negative_support(alpha, 'alpha', 'Weibull')
@@ -1682,7 +1683,7 @@ class HalfStudentT(PositiveContinuous):
     lam : float
         Scale parameter (lam > 0). Converges to the precision as nu
         increases. (only required if sd is not specified)
-        
+
     Examples
     --------
     .. code-block:: python
@@ -1690,7 +1691,7 @@ class HalfStudentT(PositiveContinuous):
         # Only pass in one of lam or sd, but not both.
         with pm.Model():
             x = pm.HalfStudentT('x', sd=10, nu=10)
-     
+
         with pm.Model():
             x = pm.HalfStudentT('x', lam=4, nu=10)
     """
@@ -2196,6 +2197,58 @@ class Gumbel(Continuous):
         return r'${} \sim \text{{Gumbel}}(\mathit{{mu}}={},~\mathit{{beta}}={})$'.format(name,
                                                                 get_variable_name(mu),
                                                                 get_variable_name(beta))
+
+
+class Rice(Continuous):
+    R"""
+    Rice distribution.
+
+    .. math::
+
+       f(x\mid \nu ,\sigma )=
+       {\frac  {x}{\sigma ^{2}}}\exp
+       \left({\frac  {-(x^{2}+\nu ^{2})}{2\sigma ^{2}}}\right)I_{0}\left({\frac  {x\nu }{\sigma ^{2}}}\right),
+
+    ========  ==============================================================
+    Support   :math:`x \in (0, +\infinity)`
+    Mean      :math:`\sigma {\sqrt  {\pi /2}}\,\,L_{{1/2}}(-\nu ^{2}/2\sigma ^{2})`
+    Variance  :math:`2\sigma ^{2}+\nu ^{2}-{\frac  {\pi \sigma ^{2}}{2}}L_{{1/2}}^{2}
+                        \left({\frac  {-\nu ^{2}}{2\sigma ^{2}}}\right)`
+    ========  ==============================================================
+
+
+    Parameters
+    ----------
+    nu : float
+        shape parameter.
+    sd : float
+        standard deviation.
+
+    """
+    def __init__(self, nu=None, sd=None, *args, **kwargs):
+        super(Rice, self).__init__(*args, **kwargs)
+        self.nu = nu = tt.as_tensor_variable(nu)
+        self.sd = sd = tt.as_tensor_variable(sd)
+        self.mean = sd * np.sqrt(np.pi / 2) * tt.exp((-nu**2 / (2 * sd**2)) / 2) * ((1 - (-nu**2 / (2 * sd**2)))
+                                 * i0(-(-nu**2 / (2 * sd**2)) / 2) - (-nu**2 / (2 * sd**2)) * i1(-(-nu**2 / (2 * sd**2)) / 2))
+        self.variance = 2 * sd**2 + nu**2 - (np.pi * sd**2 / 2) * (tt.exp((-nu**2 / (2 * sd**2)) / 2) * ((1 - (-nu**2 / (
+            2 * sd**2))) * i0(-(-nu**2 / (2 * sd**2)) / 2) - (-nu**2 / (2 * sd**2)) * i1(-(-nu**2 / (2 * sd**2)) / 2)))**2
+
+
+    def random(self, point=None, size=None, repeat=None):
+        nu, sd = draw_values([self.nu, self.sd],
+                                  point=point)
+        return generate_samples(stats.rice.rvs, b=nu, scale=sd, loc=0,
+                                dist_shape=self.shape, size=size)
+
+    def logp(self, value):
+        nu = self.nu
+        sd = self.sd
+        return bound(tt.log(value / (sd**2) * tt.exp(-(value**2 + nu**2) / (2 * sd**2)) * i0(value * nu / (sd**2))),
+                     sd >= 0,
+                     nu >= 0,
+                     value > 0,
+        )
 
 
 class Logistic(Continuous):
