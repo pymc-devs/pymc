@@ -20,6 +20,7 @@ from ..model import Deterministic
 from .continuous import ChiSquared, Normal
 from .special import gammaln, multigammaln
 from .dist_math import bound, logpow, factln
+from . import transforms
 
 __all__ = ['MvNormal', 'MvStudentT', 'Dirichlet',
            'Multinomial', 'Wishart', 'WishartBartlett', 'LKJCorr']
@@ -583,12 +584,17 @@ class LKJCorr(Continuous):
         100(9), pp.1989-2001.
     """
 
-    def __init__(self, n, p, *args, **kwargs):
+    def __init__(self, n, p, transform='interval', *args, **kwargs):
         self.n = n
         self.p = p
         n_elem = int(p * (p - 1) / 2)
         self.mean = np.zeros(n_elem, dtype=theano.config.floatX)
-        super(LKJCorr, self).__init__(shape=n_elem, *args, **kwargs)
+
+        if transform == 'interval':
+            transform = transforms.interval(-1, 1)
+
+        super(LKJCorr, self).__init__(shape=n_elem, transform=transform,
+                                      *args, **kwargs)
 
         self.tri_index = np.zeros([p, p], dtype='int32')
         self.tri_index[np.triu_indices(p, k=1)] = np.arange(n_elem)
