@@ -22,7 +22,7 @@ __all__ = ['Uniform', 'Flat', 'Normal', 'Beta', 'Exponential', 'Laplace',
            'StudentT', 'Cauchy', 'HalfCauchy', 'Gamma', 'Weibull',
            'HalfStudentT', 'StudentTpos', 'Lognormal', 'ChiSquared',
            'HalfNormal', 'Wald', 'Pareto', 'InverseGamma', 'ExGaussian',
-           'VonMises', 'SkewNormal', 'Rice']
+           'VonMises', 'SkewNormal']
 
 
 class PositiveContinuous(Continuous):
@@ -1347,50 +1347,3 @@ class Triangular(Continuous):
                          tt.switch(tt.eq(value, c), tt.log(2 / (upper - lower)),
                          tt.switch(alltrue_elemwise([c < value, value <= upper]),
                          tt.log(2 * (upper - value) / ((upper - lower) * (upper - c))),np.inf)))
-
-class Rice(Continuous):
-    R"""
-    Rice distribution.
-
-    .. math::
-
-       f(x\mid \nu ,\sigma )=
-       {\frac  {x}{\sigma ^{2}}}\exp
-       \left({\frac  {-(x^{2}+\nu ^{2})}{2\sigma ^{2}}}\right)I_{0}\left({\frac  {x\nu }{\sigma ^{2}}}\right),
-
-    ========  ==============================================================
-    Support   :math:`x \in (0, +\infinity)`
-    Mean      :math:`\sigma {\sqrt  {\pi /2}}\,\,L_{{1/2}}(-\nu ^{2}/2\sigma ^{2})`
-    Variance  :math:`2\sigma ^{2}+\nu ^{2}-{\frac  {\pi \sigma ^{2}}{2}}L_{{1/2}}^{2}
-                        \left({\frac  {-\nu ^{2}}{2\sigma ^{2}}}\right)`
-    ========  ==============================================================
-
-
-    Parameters
-    ----------
-    nu : float
-        shape parameter.
-    sd : float
-        standard deviation.
-
-    """
-    def __init__(self, nu=None, sd=None, *args, **kwargs):
-        super(Rice, self).__init__(*args, **kwargs)
-        self.nu = tt.as_tensor_variable(nu)
-        self.sd = tt.as_tensor_variable(sd)
-        self.mean = sd * np.sqrt(np.pi / 2) * tt.exp((-nu**2 / (2 * sd**2)) / 2) * ((1 - (-nu**2 / (2 * sd**2)))
-                                 * i0(-(-nu**2 / (2 * sd**2)) / 2) - (-nu**2 / (2 * sd**2)) * i1(-(-nu**2 / (2 * sd**2)) / 2))
-        self.variance = 2 * sd**2 + nu**2 - (np.pi * sd**2 / 2) * (tt.exp((-nu**2 / (2 * sd**2)) / 2) * ((1 - (-nu**2 / (
-            2 * sd**2))) * i0(-(-nu**2 / (2 * sd**2)) / 2) - (-nu**2 / (2 * sd**2)) * i1(-(-nu**2 / (2 * sd**2)) / 2)))**2
-
-    def random(self, point=None, size=None, repeat=None):
-        nu, sd = draw_values([self.nu, self.sd],
-                                  point=point)
-        return generate_samples(stats.rice.rvs, b=nu, scale=sd, loc=0,
-                                dist_shape=self.shape, size=size)
-
-    def logp(self, value):
-        nu = self.nu
-        sd = self.sd
-        return bound(tt.log(value / (sd**2)*tt.exp(-(value**2 + nu**2) / (2 * sd**2))*i0(value * nu / (sd**2))), 
-                     nu>0)
