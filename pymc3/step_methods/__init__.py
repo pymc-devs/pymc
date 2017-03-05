@@ -17,3 +17,6 @@ from .gibbs import ElemwiseCategorical
 from .slicer import Slice
 
 from .elliptical_slice import EllipticalSlice
+
+from .smc import SMC
+
