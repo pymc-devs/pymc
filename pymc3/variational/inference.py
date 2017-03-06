@@ -467,7 +467,7 @@ class FullRankADVI(Inference):
         return inference
 
 
-def approximate(n=10000, local_rv=None, method='advi', model=None, **kwargs):
+def fit(n=10000, local_rv=None, method='advi', model=None, **kwargs):
     """
     Handy shortcut for using inference methods in functional way
 

@@ -6,7 +6,7 @@ import pymc3 as pm
 from pymc3 import Model, Normal
 from pymc3.variational.inference import (
     KL, MeanField, ADVI, FullRankADVI,
-    approximate
+    fit
 )
 
 from pymc3.tests import models
@@ -168,6 +168,10 @@ class TestApproximates:
 class TestMeanField(TestApproximates.Base):
     inference = ADVI
 
+    def test_approximate(self):
+        with models.multidimensional_model()[1]:
+            fit(method='advi')
+
 
 class TestFullRank(TestApproximates.Base):
     inference = FullRankADVI
@@ -186,7 +190,11 @@ class TestFullRank(TestApproximates.Base):
 
     def test_combined(self):
         with models.multidimensional_model()[1]:
-            approximate(method='advi->fullrank', frac=.5)
+            fit(method='advi->fullrank', frac=.5)
+
+    def test_approximate(self):
+        with models.multidimensional_model()[1]:
+            fit(method='fullrank')
 
 if __name__ == '__main__':
     unittest.main()
