@@ -101,4 +101,4 @@ def zvalue(value, sd=1, mu=0):
     """
     Calculate the z-value for a normal distribution. By default standard normal.
     """
-    return (value - mu) / tt.sqrt(2 * sd**2)
+    return (value - mu) / sd
