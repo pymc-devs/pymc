@@ -392,12 +392,14 @@ class TestMatchesScipy(SeededTest):
     def test_normal(self):
         self.pymc3_matches_scipy(Normal, R, {'mu': R, 'sd': Rplus},
                                  lambda value, mu, sd: sp.norm.logpdf(value, mu, sd))
-        self.check_logcdf(Normal, R, {'mu': R, 'sd': Rplus}, 
+        self.check_logcdf(Normal, R, {'mu': R, 'sd': Rplus},
                                 lambda value, mu, sd: sp.norm.logcdf(value, mu, sd))
 
     def test_half_normal(self):
         self.pymc3_matches_scipy(HalfNormal, Rplus, {'sd': Rplus},
                                  lambda value, sd: sp.halfnorm.logpdf(value, scale=sd))
+        self.check_logcdf(HalfNormal, Rplus, {'sd': Rplus},
+                          lambda value, sd: sp.halfnorm.logcdf(value, scale=sd))
 
     def test_chi_squared(self):
         self.pymc3_matches_scipy(ChiSquared, Rplus, {'nu': Rplusdunif},

@@ -255,7 +255,7 @@ class Normal(Continuous):
             tt.sqr(tt.abs_(z)) / 2,
             tt.log1p(-tt.erfc(z / tt.sqrt(2.)) / 2.)
         )
-        
+
 
 class HalfNormal(PositiveContinuous):
     R"""
@@ -306,6 +306,15 @@ class HalfNormal(PositiveContinuous):
         return bound(-0.5 * tau * value**2 + 0.5 * tt.log(tau * 2. / np.pi),
                      value >= 0,
                      tau > 0, sd > 0)
+
+    def logcdf(self, value):
+        sd = self.sd
+        z = zvalue(value, mu=0, sd=sd)
+        return tt.switch(
+            tt.lt(z, -1.0),
+            tt.log(tt.erfcx(-z / tt.sqrt(2.))) - tt.sqr(tt.abs_(z)),
+            tt.log1p(-tt.erfc(z / tt.sqrt(2.)))
+        )
 
 
 class Wald(PositiveContinuous):
