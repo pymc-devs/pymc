@@ -169,6 +169,15 @@ class TestCovSliceDim(unittest.TestCase):
             gp.cov.ExpQuad(2, lengthscales, [True])
 
 
+class TestStability(unittest.TestCase):
+    def test_stable(self):
+        X = np.random.uniform(low=320., high=400., size=[2000,2])
+        with Model() as model:
+            cov = gp.cov.ExpQuad(2, 0.1)
+        dists = theano.function([], cov.square_dist(X, X))()
+        self.assertFalse(np.any(dists < 0))
+
+
 class TestExpQuad(unittest.TestCase):
     def test_1d(self):
         X = np.linspace(0,1,10)[:,None]
