@@ -663,15 +663,27 @@ class TestMatchesScipy(SeededTest):
         sd = np.array([2])
         assert_almost_equal(continuous.get_tau_sd(sd=sd), [1. / sd**2, sd])
 
-    def test_get_tau_cov(self):
+    # def test_get_tau_cov(self):
+    #     cov = np.random.randn(3, 3)
+    #     cov = np.dot(cov, cov.T)
+    #     mu = np.ones(3)
+    #     tau, cov = multivariate.get_tau_cov(mu, cov=cov)
+    #     assert_almost_equal(tau.eval(), np.linalg.inv(cov))
+
+    #     with self.assertRaises(ValueError):
+    #         tau, cov = multivariate.get_tau_cov(mu)
+    def test_get_tau_chol(self):
         cov = np.random.randn(3, 3)
         cov = np.dot(cov, cov.T)
-        mu = np.ones(3)
-        tau, cov = multivariate.get_tau_cov(mu, cov=cov)
+        tau, chol = multivariate.get_tau_chol(cov=cov)
         assert_almost_equal(tau.eval(), np.linalg.inv(cov))
+        assert_almost_equal(chol.eval(), np.linalg.cholesky(cov))
 
-        with pytest.raises(ValueError):
-            tau, cov = multivariate.get_tau_cov(mu)
+        with self.assertRaises(ValueError):
+            tau, chol = multivariate.get_tau_chol()
+        with self.assertRaises(ValueError):
+            tau, chol = multivariate.get_tau_chol(tau, cov)
+
 
     @pytest.mark.parametrize('value,mu,sigma,nu,logp', [
         (0.5, -50.000, 0.500, 0.500, -99.8068528),

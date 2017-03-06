@@ -6,6 +6,7 @@ import numpy as np
 import scipy
 import theano
 import theano.tensor as tt
+import collections
 
 from scipy import stats
 
@@ -26,41 +27,21 @@ __all__ = ['MvNormal', 'MvStudentT', 'Dirichlet',
            'LKJCorr', 'LKJCholeskyCov']
 
 
-def get_tau_cov(mu, tau=None, cov=None):
-    """
-    Find precision and standard deviation
+def get_tau_chol(tau=None, cov=None, chol=None):
+    if len([i for i in [tau, cov, chol] if i is not None]) != 1:
+        raise ValueError('Incompatible parameterization. Specify exactly one,'
+                         'of tau, cov, or chol to specify distribution.')
 
-    .. math::
-        \Tau = \Sigma^-1
-
-    Parameters
-    ----------
-    mu : array-like
-    tau : array-like, not required if cov is passed
-    cov : array-like, not required if tau is passed
-
-    Results
-    -------
-    Returns tuple (tau, sd)
-
-    Notes
-    -----
-    If neither tau nor cov is provided, returns an identity matrix.
-    """
-    if tau is None:
-        if cov is None:
-            raise ValueError('Incompatible parameterization. Either use tau'
-                             'or cov to specify distribution.')
-        else:
-            tau = tt.nlinalg.matrix_inverse(cov)
-
+    if cov is not None:
+        tau = tt.nlinalg.matrix_inverse(cov)
+        chol = tt.slinalg.cholesky(cov)
+    elif tau is not None:
+        chol = tt.slinalg.cholesky(tt.nlinalg.matrix_inverse(tau))
     else:
-        if cov is not None:
-            raise ValueError("Can't pass both tau and sd")
-        else:
-            cov = tt.nlinalg.matrix_inverse(tau)
+        chol_inv = tt.nlinalg.inv(chol)
+        tau = tt.dot(chol_inv.T, chol_inv)
+    return (tau, chol)
 
-    return (tau, cov)
 
 class MvNormal(Continuous):
     R"""
@@ -83,9 +64,12 @@ class MvNormal(Continuous):
     mu : array
         Vector of means.
     cov : array
-        Covariance matrix. Not required if tau is passed.
+        Covariance matrix. Exactly one of cov, tau, or chol is needed.
     tau : array
-        Precision matrix. Not required if tau is passed.
+        Precision matrix. Exactly one of cov, tau, or chol is needed.
+    chol : array
+        Cholesky decomposition of covariance matrix. Exactly one of cov,
+        tau, or chol is needed.
 
     Flags
     ----------
@@ -94,29 +78,30 @@ class MvNormal(Continuous):
 
     """
 
-    def __init__(self, mu, cov=None, tau=None, gpu_compat=False, *args, **kwargs):
+    def __init__(self, mu, cov=None, tau=None, chol=None, gpu_compat=False,
+                 *args, **kwargs):
         super(MvNormal, self).__init__(*args, **kwargs)
         self.mean = self.median = self.mode = self.mu = mu = tt.as_tensor_variable(mu)
-        tau, cov = get_tau_cov(mu, tau=tau, cov=cov)
+        tau, chol = get_tau_chol(tau=tau, cov=cov, chol=chol)
         self.tau = tt.as_tensor_variable(tau)
-        self.cov = tt.as_tensor_variable(cov)
+        self.chol = tt.as_tensor_variable(chol)
         self.gpu_compat = gpu_compat
         if gpu_compat is False and theano.config.device == 'gpu':
             warnings.warn("The function used is not GPU compatible. Please check the gpu_compat flag")
 
     def random(self, point=None, size=None):
-        mu, cov = draw_values([self.mu, self.cov], point=point)
+        mu, chol = draw_values([self.mu, self.chol], point=point)
 
-        def _random(mean, cov, size=None):
-            return stats.multivariate_normal.rvs(
-                mean, cov, None if size == mean.shape else size)
+        if size is None or size == mu.shape:
+            size = mu.shape
+        elif isinstance(size, collections.Iterable):
+            size = list(size)
+            size.append(mu.shape[0])
+        else:
+            size = [size]
+            size.append(mu.shape[0])
 
-        samples = generate_samples(_random,
-                                   mean=mu, cov=cov,
-                                   dist_shape=self.shape,
-                                   broadcast_shape=mu.shape,
-                                   size=size)
-        return samples
+        return mu + (np.dot(np.random.standard_normal(size), chol))
 
     def logp(self, value):
         mu = self.mu
