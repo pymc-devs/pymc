@@ -252,7 +252,7 @@ class Normal(Continuous):
         return tt.switch(
             tt.lt(z, -1.0),
             tt.log(tt.erfcx(-z / tt.sqrt(2.)) / 2.) -
-            tt.sqr(tt.abs_(z)) / 2,
+            tt.sqr(z) / 2,
             tt.log1p(-tt.erfc(z / tt.sqrt(2.)) / 2.)
         )
 
@@ -312,7 +312,7 @@ class HalfNormal(PositiveContinuous):
         z = zvalue(value, mu=0, sd=sd)
         return tt.switch(
             tt.lt(z, -1.0),
-            tt.log(tt.erfcx(-z / tt.sqrt(2.))) - tt.sqr(tt.abs_(z)),
+            tt.log(tt.erfcx(-z / tt.sqrt(2.))) - tt.sqr(z),
             tt.log1p(-tt.erfc(z / tt.sqrt(2.)))
         )
 
