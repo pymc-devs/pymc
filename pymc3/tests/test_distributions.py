@@ -296,8 +296,8 @@ class TestMatchesScipy(SeededTest):
         model = build_model(pymc3_dist, domain, paramdomains, extra_args)
         value = model.named_vars['value']
 
-        def logp(args):
-            return scipy_dist(**args)
+        def logp(kwargs):
+            return scipy_dist(**kwargs)
         self.check_logp(model, value, domain, paramdomains, logp)
 
     def check_logp(self, model, value, domain, paramdomains, logp_reference):
@@ -307,6 +307,17 @@ class TestMatchesScipy(SeededTest):
         for pt in product(domains, n_samples=100):
             pt = Point(pt, model=model)
             assert_almost_equal(logp(pt), logp_reference(pt), decimal=6, err_msg=str(pt))
+            
+    def check_logcdf(self, pymc3_dist, domain, paramdomains, scipy_logcdf):
+        domains = paramdomains.copy()
+        domains['value'] = domain
+        for pt in product(domains, n_samples=100):
+            params = dict(pt)
+            scipy_cdf = scipy_logcdf(**params)
+            value = params.pop('value')
+            dist = pymc3_dist.dist(**params)
+            assert_almost_equal(dist.logcdf(value).tag.test_value, scipy_cdf, 
+                                decimal=6, err_msg=str(pt))
 
     def check_int_to_1(self, model, value, domain, paramdomains):
         pdf = model.fastfn(exp(model.logpt))
@@ -379,6 +390,8 @@ class TestMatchesScipy(SeededTest):
     def test_normal(self):
         self.pymc3_matches_scipy(Normal, R, {'mu': R, 'sd': Rplus},
                                  lambda value, mu, sd: sp.norm.logpdf(value, mu, sd))
+        self.check_logcdf(Normal, R, {'mu': R, 'sd': Rplus}, 
+                                lambda value, mu, sd: sp.norm.logcdf(value, mu, sd))
 
     def test_half_normal(self):
         self.pymc3_matches_scipy(HalfNormal, Rplus, {'sd': Rplus},

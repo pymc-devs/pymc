@@ -96,3 +96,9 @@ def i1(x):
                      x**9 / 1474560 + x**11 / 176947200 + x**13 / 29727129600,
                      np.e**x / (2 * np.pi * x)**0.5 * (1 - 3 / (8 * x) + 15 / (128 * x**2) + 315 / (3072 * x**3)
                                                        + 14175 / (98304 * x**4)))
+
+def zvalue(value, sd=1, mu=0):
+    """
+    Calculate the z-value for a normal distribution. By default standard normal.
+    """
+    return (value - mu) / tt.sqrt(2 * sd**2)

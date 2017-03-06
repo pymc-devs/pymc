@@ -15,7 +15,8 @@ import warnings
 from pymc3.theanof import floatX
 from . import transforms
 
-from .dist_math import bound, logpow, gammaln, betaln, std_cdf, i0, i1, alltrue_elemwise
+from .dist_math import (bound, logpow, gammaln, betaln, std_cdf, i0, i1, 
+                        alltrue_elemwise, zvalue)
 from .distribution import Continuous, draw_values, generate_samples, Bound
 
 __all__ = ['Uniform', 'Flat', 'Normal', 'Beta', 'Exponential', 'Laplace',
@@ -231,6 +232,18 @@ class Normal(Continuous):
         return bound((-tau * (value - mu)**2 + tt.log(tau / np.pi / 2.)) / 2.,
                      sd > 0)
 
+    def logcdf(self, value):
+        mu = self.mu
+        sd = self.sd
+        z = zvalue(value, mu=mu, sd=sd)
+
+        return tt.switch(
+            tt.lt(z, -1.0),
+            tt.log(tt.erfcx(-z / tt.sqrt(2.)) / 2.) -
+            tt.sqr(tt.abs_(z)) / 2,
+            tt.log1p(-tt.erfc(z / tt.sqrt(2.)) / 2.)
+        )
+        
 
 class HalfNormal(PositiveContinuous):
     R"""
