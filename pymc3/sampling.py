@@ -108,6 +108,7 @@ def sample(draws, step=None, init='advi', n_init=200000, start=None,
         * NUTS : Run NUTS to estimate starting points and covariance matrix. If
         njobs > 1 it will sample starting points from the estimated posterior,
         otherwise it will use the estimated posterior mean.
+        * random : Draw random values from priors
         * None : Do not initialize.
     n_init : int
         Number of iterations of initializer
@@ -158,6 +159,10 @@ def sample(draws, step=None, init='advi', n_init=200000, start=None,
             start = start_
     else:
         step = assign_step_methods(model, step)
+        if init=='random':
+            start = [random_init(model) for _ in range(njobs)]
+            if njobs == 1:
+                start = start[0]
 
     if njobs is None:
         import multiprocessing as mp
@@ -413,7 +418,19 @@ def sample_ppc(trace, samples=None, model=None, vars=None, size=None, random_see
                                                          size=size))
 
     return {k: np.asarray(v) for k, v in ppc.items()}
-
+    
+def random_init(model):
+    
+    def trans_sample(v): 
+        return v.distribution.transform_used.backward(v.distribution.dist.random()).eval()
+        
+    var_dict = {v.name:v.distribution.random() for v in model.vars 
+                                if not v.name.endswith('_')}
+    trans_var_dict = {v.name: trans_sample(v) for v in model.vars 
+                                if v.name.endswith('_')}
+    var_dict.update(trans_var_dict)
+    
+    return var_dict
 
 def init_nuts(init='ADVI', njobs=1, n_init=500000, model=None,
               random_seed=-1, **kwargs):
@@ -432,6 +449,7 @@ def init_nuts(init='ADVI', njobs=1, n_init=500000, model=None,
         * ADVI_MAP: Initialize ADVI with MAP and use MAP as starting point.
         * MAP : Use the MAP as starting point.
         * NUTS : Run NUTS and estimate posterior mean and covariance matrix.
+        * random : Draw random values from prior.
     njobs : int
         Number of parallel jobs to start.
     n_init : int
@@ -483,6 +501,24 @@ def init_nuts(init='ADVI', njobs=1, n_init=500000, model=None,
         start = np.random.choice(init_trace, njobs)
         if njobs == 1:
             start = start[0]
+
+    elif init == 'random':
+        def trans_sample(v): 
+            return v.distribution.transform_used.backward(v.distribution.dist.random()).eval()
+        def random_sample():
+            var_dict = {v.name:v.distribution.random() for v in model.vars 
+                                        if not v.name.endswith('_')}
+
+            trans_var_dict = {v.name: trans_sample(v) for v in model.vars  
+                                        if v.name.endswith('_')}
+            var_dict.update(trans_var_dict)
+            return var_dict
+            
+        start = [random_sample() for _ in range(njobs)]
+
+        if njobs == 1:
+            start = start[0]
+        cov = None
     else:
         raise NotImplementedError('Initializer {} is not supported.'.format(init))
 
