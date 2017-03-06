@@ -239,6 +239,18 @@ class Uniform(BoundedContinuous):
         return r'${} \sim \text{{Uniform}}(\mathit{{lower}}={},~\mathit{{upper}}={})$'.format(
             name, get_variable_name(lower), get_variable_name(upper))
 
+    def logcdf(self, value):
+        return tt.switch(
+            tt.or_(tt.lt(value, self.lower), tt.gt(value, self.upper)),
+            -np.inf,
+            tt.switch(
+                tt.eq(value, self.upper),
+                0,
+                tt.log((value - self.lower)) -
+                tt.log((self.upper - self.lower))
+            )
+        )
+
 
 class Flat(Continuous):
     """

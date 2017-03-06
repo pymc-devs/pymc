@@ -511,6 +511,8 @@ class TestMatchesScipy(SeededTest):
         self.pymc3_matches_scipy(
             Uniform, Runif, {'lower': -Rplusunif, 'upper': Rplusunif},
             lambda value, lower, upper: sp.uniform.logpdf(value, lower, upper - lower))
+        self.check_logcdf(Uniform, Runif, {'lower': -Rplusunif, 'upper': Rplusunif},
+                          lambda value, lower, upper: sp.uniform.logcdf(value, lower, upper - lower))
 
     def test_triangular(self):
         self.pymc3_matches_scipy(
