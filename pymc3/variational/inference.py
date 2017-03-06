@@ -480,10 +480,10 @@ def fit(n=10000, local_rv=None, method='advi', model=None, **kwargs):
         Local Vars are used for Autoencoding Variational Bayes
         See (AEVB; Kingma and Welling, 2014) for details
     method : str or Inference
-        string name is case insensitive in {'advi', 'fullrank', 'advi->fullrank'}
+        string name is case insensitive in {'advi', 'fullrank_advi', 'advi->fullrank_advi'}
     model : None or Model
     frac : float
-        if method is 'advi->fullrank' represents advi part
+        if method is 'advi->fullrank_advi' represents advi fraction when training
     kwargs : kwargs for Inference.fit
 
     Returns
@@ -494,10 +494,12 @@ def fit(n=10000, local_rv=None, method='advi', model=None, **kwargs):
         model = pm.modelcontext(model)
     _select = dict(
         advi=ADVI,
-        fullrank=FullRankADVI,
+        fullrank_advi=FullRankADVI,
     )
-    if isinstance(method, str) and method == 'advi->fullrank':
-        frac = kwargs.pop('frac', 1/2)
+    if isinstance(method, str) and method.lower() == 'advi->fullrank_advi':
+        frac = kwargs.pop('frac', .5)
+        if not 0. < frac < 1.:
+            raise ValueError('frac should be in (0, 1)')
         n1 = int(n * frac)
         n2 = n-n1
         inference = ADVI(local_rv=local_rv, model=model)
@@ -509,7 +511,9 @@ def fit(n=10000, local_rv=None, method='advi', model=None, **kwargs):
 
     elif isinstance(method, str):
         try:
-            inference = _select[method.lower()](local_rv=local_rv, model=model)
+            inference = _select[method.lower()](
+                local_rv=local_rv, model=model
+            )
         except KeyError:
             raise KeyError('method should be one of %s '
                            'or Inference instance' %

@@ -170,7 +170,7 @@ class TestMeanField(TestApproximates.Base):
 
     def test_approximate(self):
         with models.multidimensional_model()[1]:
-            fit(method='advi')
+            fit(10, method='advi')
 
 
 class TestFullRank(TestApproximates.Base):
@@ -190,11 +190,11 @@ class TestFullRank(TestApproximates.Base):
 
     def test_combined(self):
         with models.multidimensional_model()[1]:
-            fit(method='advi->fullrank', frac=.5)
+            fit(10, method='advi->fullrank_advi', frac=.5)
 
     def test_approximate(self):
         with models.multidimensional_model()[1]:
-            fit(method='fullrank')
+            fit(10, method='fullrank_advi')
 
 if __name__ == '__main__':
     unittest.main()
