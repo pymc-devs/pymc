@@ -338,13 +338,14 @@ class Gibbs(Covariance):
         X = tt.as_tensor_variable(X)
         Xs = tt.sum(tt.square(X), 1)
         if Z is None:
-            return -2.0 * tt.dot(X, tt.transpose(X)) +\
-                   (tt.reshape(Xs, (-1, 1)) + tt.reshape(Xs, (1, -1)))
+            sqd = -2.0 * tt.dot(X, tt.transpose(X)) +\
+                  (tt.reshape(Xs, (-1, 1)) + tt.reshape(Xs, (1, -1)))
         else:
             Z = tt.as_tensor_variable(Z)
             Zs = tt.sum(tt.square(Z), 1)
-            return -2.0 * tt.dot(X, tt.transpose(Z)) +\
-                   (tt.reshape(Xs, (-1, 1)) + tt.reshape(Zs, (1, -1)))
+            sqd = -2.0 * tt.dot(X, tt.transpose(Z)) +\
+                  (tt.reshape(Xs, (-1, 1)) + tt.reshape(Zs, (1, -1)))
+        return tt.clip(sqd, 0.0, np.inf)
 
     def __call__(self, X, Z=None):
         X, Z = self._slice(X, Z)
