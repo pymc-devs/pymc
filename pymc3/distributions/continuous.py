@@ -3152,6 +3152,24 @@ class Triangular(BoundedContinuous):
                                                                 get_variable_name(lower),
                                                                 get_variable_name(upper))
 
+    def logcdf(self, value):
+        l = self.lower
+        u = self.upper
+        c = self.c
+        return tt.switch(
+            tt.le(value, l),
+            -np.inf,
+            tt.switch(
+                tt.le(value, c),
+                tt.log(((value - l) ** 2) / ((u - l) * (c - l))),
+                tt.switch(
+                    tt.lt(value, u),
+                    tt.log1p(-((u - value) ** 2) / ((u - l) * (u - c))),
+                    0
+                )
+            )
+        )
+
 
 class Gumbel(Continuous):
     R"""
