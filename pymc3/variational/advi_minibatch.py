@@ -9,7 +9,9 @@ import tqdm
 
 import pymc3 as pm
 from pymc3.theanof import reshape_t, inputvars, floatX
-from .advi import ADVIFit, adagrad_optimizer, gen_random_state
+from .advi import ADVIFit, gen_random_state
+from pymc3.variational.updates import adagrad
+
 
 __all__ = ['advi_minibatch']
 
@@ -453,7 +455,7 @@ def advi_minibatch(vars=None, start=None, model=None, n=5000, n_mcsamples=1,
 
     # Prepare optimizer
     if optimizer is None:
-        optimizer = adagrad_optimizer(learning_rate, epsilon)
+        optimizer = adagrad
 
     # For backward compatibility in how input arguments are given
     local_RVs, observed_RVs = _get_rvss(minibatch_RVs, local_RVs, observed_RVs,
@@ -515,7 +517,7 @@ def advi_minibatch(vars=None, start=None, model=None, n=5000, n_mcsamples=1,
     params = encoder_params
     if 0 < len(global_RVs):
         params += [uw_global_shared]
-    updates = OrderedDict(optimizer(loss=-1 * elbo, param=params))
+    updates = OrderedDict(optimizer(-1 * elbo, params, learning_rate=learning_rate, epsilon=epsilon))
     f = theano.function(tensors, elbo, updates=updates, mode=mode)
 
     # Optimization loop

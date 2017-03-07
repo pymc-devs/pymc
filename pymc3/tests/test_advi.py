@@ -3,7 +3,7 @@ import pymc3 as pm
 from pymc3 import Model, Normal, DiscreteUniform, Poisson, Exponential
 from pymc3.theanof import inputvars
 from pymc3.variational import advi, advi_minibatch, sample_vp
-from pymc3.variational.advi import _calc_elbo, adagrad_optimizer
+from pymc3.variational.advi import _calc_elbo
 from pymc3.theanof import CallableTensor
 from theano import function, shared
 import theano.tensor as tt
@@ -157,8 +157,8 @@ class TestADVI(SeededTest):
         with Model():
             mu_ = Normal('mu', mu=mu0, sd=sd0, testval=0)
             Normal('x', mu=mu_, sd=sd, observed=data)
-            optimizer = adagrad_optimizer(learning_rate=0.1, epsilon=0.1)
-            advi_fit = advi(n=1000, optimizer=optimizer)
+            # by passing only learning rate and epsilon, we use the default adagrad optimizer with those values
+            advi_fit = advi(n=1000, learning_rate=0.1, epsilon=0.1)
             np.testing.assert_allclose(advi_fit.means['mu'], mu_post, rtol=0.1)
             trace = sample_vp(advi_fit, 10000)
 
