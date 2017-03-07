@@ -632,8 +632,8 @@ def _hpd_df(x, alpha):
     return pd.DataFrame(hpd(x, alpha), columns=cnames)
 
 
-def summary(trace, varnames=None, alpha=0.05, start=0, batches=None, roundto=3,
-            include_transformed=False, to_file=None):
+def summary(trace, varnames=None, transform=lambda x: x, alpha=0.05, start=0,
+             batches=None, roundto=3, include_transformed=False, to_file=None):
     R"""
     Generate a pretty-printed summary of the node.
 
@@ -644,6 +644,8 @@ def summary(trace, varnames=None, alpha=0.05, start=0, batches=None, roundto=3,
     varnames : list of strings
       List of variables to summarize. Defaults to None, which results
       in all variables summarized.
+    transform : callable
+      Function to transform data (defaults to identity)
     alpha : float
       The alpha level for generating posterior intervals. Defaults to
       0.05.
@@ -682,7 +684,7 @@ def summary(trace, varnames=None, alpha=0.05, start=0, batches=None, roundto=3,
 
     for var in varnames:
         # Extract sampled values
-        sample = trace.get_values(var, burn=start, combine=True)
+        sample = transform(trace.get_values(var, burn=start, combine=True))
 
         fh.write('\n%s:\n\n' % var)
 
