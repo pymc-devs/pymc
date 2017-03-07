@@ -104,6 +104,24 @@ class MvNormal(Continuous):
         return mu + (np.dot(np.random.standard_normal(size), chol))
 
     def logp(self, value):
+        if self.chol is not None:
+            return _logp_chol(self, value)
+        else:
+            return _logp_tau(self, value)
+
+    def _logp_chol(self, value):
+        mu = self.mu
+        chol = self.chol
+
+        delta = value - mu
+        k = chol.shape[0]
+        tmp = self.solve(chol, delta)
+
+        return k * tt.log(2 * np.pi) +\
+               2.0 * tt.sum(tt.log(tt.nlinalg.diag(chol)))+\
+              -0.5 * tt.dot(tt.transpose(tmp), tmp)
+
+    def _logp_tau(self, value):
         mu = self.mu
         tau = self.tau
 
