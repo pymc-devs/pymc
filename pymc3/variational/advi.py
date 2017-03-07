@@ -413,5 +413,5 @@ def sample_vp(
 
 
 def infmean(input_array):
-    """Return the median of the finite values of the array"""
+    """Return the mean of the finite values of the array"""
     return np.mean(np.asarray(input_array)[np.isfinite(input_array)])
