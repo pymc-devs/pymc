@@ -15,12 +15,23 @@ do
     shift
 done
 
+command -v conda >/dev/null 2>&1 || {
+  echo "Requires conda but it is not installed.  Run install_miniconda.sh." >&2;
+  exit 1;
+}
+
+ENVNAME="testenv"
 PYTHON_VERSION=${PYTHON_VERSION:-3.6} # if no python specified, use 3.6
 
 if [ -z ${GLOBAL} ]
 then
-    conda create -n testenv --yes pip python=${PYTHON_VERSION}
-    source activate testenv
+    if conda env list | grep -q ${ENVNAME}
+    then
+      echo "Environment ${ENVNAME} already exists, keeping up to date"
+    else
+      conda create -n ${ENVNAME} --yes pip python=${PYTHON_VERSION}
+      source activate ${ENVNAME}
+    fi
 fi
 
 pip install jupyter
