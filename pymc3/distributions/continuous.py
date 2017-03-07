@@ -1970,6 +1970,11 @@ class Cauchy(Continuous):
                                                                 get_variable_name(alpha),
                                                                 get_variable_name(beta))
 
+    def logcdf(self, value):
+        return tt.log(
+            0.5 + tt.arctan((value - self.alpha) / self.beta) / np.pi
+        )
+
 
 class HalfCauchy(PositiveContinuous):
     R"""
