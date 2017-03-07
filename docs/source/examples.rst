@@ -39,8 +39,8 @@ GLM
    notebooks/hierarchical_partial_pooling.ipynb
    notebooks/GLM-negative-binomial-regression.ipynb
 
-GP
-==
+Gaussian Processes
+==================
 
 .. toctree::
    notebooks/GP-introduction.ipynb
@@ -58,8 +58,8 @@ Mixture Models
    notebooks/dp_mix.ipynb
    notebooks/dependent_density_regression.ipynb
 
-ADVI
-====
+Variational Inference
+=====================
 
 .. toctree::
    notebooks/GLM-hierarchical-ADVI.ipynb
