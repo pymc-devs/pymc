@@ -1448,6 +1448,20 @@ class Laplace(Continuous):
                                                                 get_variable_name(mu),
                                                                 get_variable_name(b))
 
+    def logcdf(self, value):
+        a = self.mu
+        b = self.b
+        y = (value - a) / b
+        return tt.switch(
+            tt.le(value, a),
+            tt.log(0.5) + y,
+            tt.switch(
+                tt.gt(y, 1),
+                tt.log1p(-0.5 * tt.exp(-y)),
+                tt.log(1 - 0.5 * tt.exp(-y))
+            )
+        )
+
 
 class Lognormal(PositiveContinuous):
     R"""

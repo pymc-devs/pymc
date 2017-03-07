@@ -642,6 +642,8 @@ class TestMatchesScipy(SeededTest):
     def test_laplace(self):
         self.pymc3_matches_scipy(Laplace, R, {'mu': R, 'b': Rplus},
                                  lambda value, mu, b: sp.laplace.logpdf(value, mu, b))
+        self.check_logcdf(Laplace, R, {'mu': R, 'b': Rplus},
+                          lambda value, mu, b: sp.laplace.logcdf(value, mu, b))
 
     def test_lognormal(self):
         self.pymc3_matches_scipy(
