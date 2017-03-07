@@ -591,8 +591,8 @@ class Lognormal(PositiveContinuous):
     .. math::
 
        f(x \mid \mu, \tau) =
-           \sqrt{\frac{\tau}{2\pi}}
-           \frac{\exp\left\{ -\frac{\tau}{2} (\ln(x)-\mu)^2 \right\}}{x}
+           \frac{1}{x} \sqrt{\frac{\tau}{2\pi}}
+           \exp\left\{ -\frac{\tau}{2} (\ln(x)-\mu)^2 \right\}
 
     ========  ================================================================
     Support   :math:`x \in (0, 1)`
