@@ -85,6 +85,8 @@ class MvNormal(Continuous):
         tau, chol = get_tau_chol(tau=tau, cov=cov, chol=chol)
         self.tau = tt.as_tensor_variable(tau)
         self.chol = tt.as_tensor_variable(chol)
+        # not necessary to define theano solver function if tau given...
+        self.solve = tt.slinalg.Solve(A_structure="lower_triangular", lower=True)
         self.gpu_compat = gpu_compat
         if gpu_compat is False and theano.config.device == 'gpu':
             warnings.warn("The function used is not GPU compatible. Please check the gpu_compat flag")
