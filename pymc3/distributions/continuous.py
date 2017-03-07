@@ -1571,6 +1571,22 @@ class Lognormal(PositiveContinuous):
                                                                 get_variable_name(mu),
                                                                 get_variable_name(tau))
 
+    def logcdf(self, value):
+        mu = self.mu
+        sd = self.sd
+        z = zvalue(tt.log(value), mu=mu, sd=sd)
+
+        return tt.switch(
+            tt.le(value, 0),
+            -np.inf,
+            tt.switch(
+                tt.lt(z, -1.0),
+                tt.log(tt.erfcx(-z / tt.sqrt(2.)) / 2.) -
+                tt.sqr(z) / 2,
+                tt.log1p(-tt.erfc(z / tt.sqrt(2.)) / 2.)
+            )
+        )
+
 
 class StudentT(Continuous):
     R"""
