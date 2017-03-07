@@ -186,7 +186,7 @@ class LogOdds(ElemwiseTransform):
 
         # Add a test_value if there is not one already. Useful when operating
         # with theano.config.compute_test_value = 'off'
-        if not hasattr(r.tag, "test_value"):
+        if not hasattr(return_expr.tag, "test_value"):
             # Get the numeric object to be used as the test value for x
             numeric_x = get_single_numeric_obj(x, name='x')
             # Compute the test value. Note that this is accurate only because
@@ -200,7 +200,7 @@ class LogOdds(ElemwiseTransform):
 
         # Add a test_value if there is not one already. Useful when operating
         # with theano.config.compute_test_value = 'off'
-        if not hasattr(r.tag, "test_value"):
+        if not hasattr(return_expr.tag, "test_value"):
             # Get the numeric object to be used as the test value for x
             numeric_x = get_single_numeric_obj(x, name='x')
             # Set the test value
