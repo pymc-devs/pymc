@@ -136,6 +136,12 @@ class TestNested(unittest.TestCase):
             with pm.Model() as sub:
                 self.assertTrue(model is sub.root)
 
+class TestObserved(unittest.TestCase):
+    def test_observed_rv_fail(self):
+        with self.assertRaises(TypeError):
+            with pm.Model() as model:
+                x = Normal('x')
+                Normal('n', observed=x)
 
 class TestScaling(unittest.TestCase):
     def test_density_scaling(self):
