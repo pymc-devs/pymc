@@ -9,7 +9,7 @@ import tqdm
 
 import pymc3 as pm
 from pymc3.theanof import reshape_t, inputvars, floatX
-from .advi import ADVIFit, adagrad_optimizer, gen_random_state
+from .advi import ADVIFit, adagrad_optimizer, gen_random_state, infmean
 
 __all__ = ['advi_minibatch']
 
@@ -529,7 +529,7 @@ def advi_minibatch(vars=None, start=None, model=None, n=5000, n_mcsamples=1,
         if n < 10:
             progress.set_description('ELBO = {:,.2f}'.format(elbos[i]))
         elif i % (n // 10) == 0 and i > 0:
-            avg_elbo = elbos[i - n // 10:i].mean()
+            avg_elbo = infmean(elbos[i - n // 10:i])
             progress.set_description('Average ELBO = {:,.2f}'.format(avg_elbo))
 
     pm._log.info('Finished minibatch ADVI: ELBO = {:,.2f}'.format(elbos[-1]))
