@@ -657,6 +657,8 @@ class TestMatchesScipy(SeededTest):
     def test_cauchy(self):
         self.pymc3_matches_scipy(Cauchy, R, {'alpha': R, 'beta': Rplusbig},
                                  lambda value, alpha, beta: sp.cauchy.logpdf(value, alpha, beta))
+        self.check_logcdf(Cauchy, R, {'alpha': R, 'beta': Rplusbig},
+                          lambda value, alpha, beta: sp.cauchy.logcdf(value, alpha, beta))
 
     def test_half_cauchy(self):
         self.pymc3_matches_scipy(HalfCauchy, Rplus, {'beta': Rplusbig},
