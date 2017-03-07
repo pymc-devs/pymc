@@ -1,0 +1,1339 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>Diagnosing Biased Inference with Divergences &mdash; PyMC3 3.0 documentation</title>
+  
+
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  
+  
+    <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  
+
+  
+
+  
+        <link rel="index" title="Index"
+              href="../genindex.html"/>
+        <link rel="search" title="Search" href="../search.html"/>
+    <link rel="top" title="PyMC3 3.0 documentation" href="../index.html"/>
+        <link rel="up" title="Examples" href="../examples.html"/>
+        <link rel="next" title="Posterior Predictive Checks" href="posterior_predictive.html"/>
+        <link rel="prev" title="Sampler statistics" href="sampler-stats.html"/> 
+
+  
+  <script src="../_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+          
+            <a href="../index.html" class="icon icon-home"> PyMC3
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                3.0
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+                <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../getting_started.html">Getting started</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="../examples.html">Examples</a><ul class="current">
+<li class="toctree-l2 current"><a class="reference internal" href="../examples.html#howto">Howto</a><ul class="current">
+<li class="toctree-l3"><a class="reference internal" href="sampler-stats.html">Sampler statistics</a></li>
+<li class="toctree-l3"><a class="reference internal" href="sampler-stats.html#Multiple-samplers">Multiple samplers</a></li>
+<li class="toctree-l3 current"><a class="current reference internal" href="#">Diagnosing Biased Inference with Divergences</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#PyMC3-port-of-Michael-Betancourt's-post-on-ms-stan.-For-detailed-explanation-of-the-underlying-mechanism-please-check-the-original-post-and-Betancourt's-excellent-paper.">PyMC3 port of Michael Betancourt&#8217;s post on ms-stan. For detailed explanation of the underlying mechanism please check the original post and Betancourt&#8217;s excellent paper.</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#More-formally,-as-explained-in-the-original-post-(in-markdown-block,-same-below):">More formally, as explained in the original post (in markdown block, same below):</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#A-Dangerously-Short-Markov-Chain">A Dangerously-Short Markov Chain</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#A-Safer,-Longer-Markov-Chain">A Safer, Longer Markov Chain</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#Adjusting-Adaptation-Routine">Adjusting Adaptation Routine</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="posterior_predictive.html">Posterior Predictive Checks</a></li>
+<li class="toctree-l3"><a class="reference internal" href="howto_debugging.html">How to debug a model</a></li>
+<li class="toctree-l3"><a class="reference internal" href="LKJ.html">LKJ Prior for fitting a Multivariate Normal Model</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../examples.html#applied">Applied</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../examples.html#glm">GLM</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../examples.html#gaussian-processes">Gaussian Processes</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../examples.html#mixture-models">Mixture Models</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../examples.html#variational-inference">Variational Inference</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../api.html">API Reference</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+        <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+        <a href="../index.html">PyMC3</a>
+      </nav>
+
+
+      
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          
+
+ 
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="../index.html">Docs</a> &raquo;</li>
+      
+          <li><a href="../examples.html">Examples</a> &raquo;</li>
+      
+    <li>Diagnosing Biased Inference with Divergences</li>
+      <li class="wy-breadcrumbs-aside">
+        
+          
+            <a href="../_sources/notebooks/Diagnosing_biased_Inference_with_Divergences.ipynb.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  
+<style>
+/* CSS for nbsphinx extension */
+
+/* remove conflicting styling from Sphinx themes */
+div.nbinput,
+div.nbinput > div,
+div.nbinput div[class^=highlight],
+div.nbinput div[class^=highlight] pre,
+div.nboutput,
+div.nboutput > div,
+div.nboutput div[class^=highlight],
+div.nboutput div[class^=highlight] pre {
+    background: none;
+    border: none;
+    padding: 0 0;
+    margin: 0;
+    box-shadow: none;
+}
+
+/* avoid gaps between output lines */
+div.nboutput div[class^=highlight] pre {
+    line-height: normal;
+}
+
+/* input/output containers */
+div.nbinput,
+div.nboutput {
+    display: -webkit-flex;
+    display: flex;
+    align-items: flex-start;
+    margin: 0;
+}
+
+/* input container */
+div.nbinput {
+    padding-top: 5px;
+}
+
+/* last container */
+div.nblast {
+    padding-bottom: 5px;
+}
+
+/* input prompt */
+div.nbinput > :first-child pre {
+    color: #303F9F;
+}
+
+/* output prompt */
+div.nboutput > :first-child pre {
+    color: #D84315;
+}
+
+/* all prompts */
+div.nbinput > :first-child[class^=highlight],
+div.nboutput > :first-child[class^=highlight],
+div.nboutput > :first-child {
+    min-width: 8ex;
+    padding-top: 0.4em;
+    padding-right: 0.4em;
+    text-align: right;
+    flex: 0;
+}
+
+/* input/output area */
+div.nbinput > :nth-child(2)[class^=highlight],
+div.nboutput > :nth-child(2),
+div.nboutput > :nth-child(2)[class^=highlight] {
+    padding: 0.4em;
+    -webkit-flex: 1;
+    flex: 1;
+    overflow: auto;
+}
+
+/* input area */
+div.nbinput > :nth-child(2)[class^=highlight] {
+    border: 1px solid #cfcfcf;
+    border-radius: 2px;
+    background: #f7f7f7;
+}
+
+/* override MathJax center alignment in output cells */
+div.nboutput div[class*=MathJax] {
+    text-align: left !important;
+}
+
+/* override sphinx.ext.pngmath center alignment in output cells */
+div.nboutput div.math p {
+    text-align: left;
+}
+
+/* standard error */
+div.nboutput  > :nth-child(2).stderr {
+    background: #fdd;
+}
+
+/* ANSI colors */
+.ansi-black-fg { color: #3E424D; }
+.ansi-black-bg { background-color: #3E424D; }
+.ansi-black-intense-fg { color: #282C36; }
+.ansi-black-intense-bg { background-color: #282C36; }
+.ansi-red-fg { color: #E75C58; }
+.ansi-red-bg { background-color: #E75C58; }
+.ansi-red-intense-fg { color: #B22B31; }
+.ansi-red-intense-bg { background-color: #B22B31; }
+.ansi-green-fg { color: #00A250; }
+.ansi-green-bg { background-color: #00A250; }
+.ansi-green-intense-fg { color: #007427; }
+.ansi-green-intense-bg { background-color: #007427; }
+.ansi-yellow-fg { color: #DDB62B; }
+.ansi-yellow-bg { background-color: #DDB62B; }
+.ansi-yellow-intense-fg { color: #B27D12; }
+.ansi-yellow-intense-bg { background-color: #B27D12; }
+.ansi-blue-fg { color: #208FFB; }
+.ansi-blue-bg { background-color: #208FFB; }
+.ansi-blue-intense-fg { color: #0065CA; }
+.ansi-blue-intense-bg { background-color: #0065CA; }
+.ansi-magenta-fg { color: #D160C4; }
+.ansi-magenta-bg { background-color: #D160C4; }
+.ansi-magenta-intense-fg { color: #A03196; }
+.ansi-magenta-intense-bg { background-color: #A03196; }
+.ansi-cyan-fg { color: #60C6C8; }
+.ansi-cyan-bg { background-color: #60C6C8; }
+.ansi-cyan-intense-fg { color: #258F8F; }
+.ansi-cyan-intense-bg { background-color: #258F8F; }
+.ansi-white-fg { color: #C5C1B4; }
+.ansi-white-bg { background-color: #C5C1B4; }
+.ansi-white-intense-fg { color: #A1A6B2; }
+.ansi-white-intense-bg { background-color: #A1A6B2; }
+
+.ansi-bold { font-weight: bold; }
+
+/* CSS overrides for sphinx_rtd_theme */
+
+/* 24px margin */
+.nbinput.nblast,
+.nboutput.nblast {
+    margin-bottom: 19px;  /* padding has already 5px */
+}
+
+/* ... except between code cells! */
+.nblast + .nbinput {
+    margin-top: -19px;
+}
+
+/* nice headers on first paragraph of info/warning boxes */
+.admonition .first {
+    margin: -12px;
+    padding: 6px 12px;
+    margin-bottom: 12px;
+    color: #fff;
+    line-height: 1;
+    display: block;
+}
+.admonition.warning .first {
+    background: #f0b37e;
+}
+.admonition.note .first {
+    background: #6ab0de;
+}
+.admonition > p:before {
+    margin-right: 4px;  /* make room for the exclamation icon */
+}
+</style>
+<div class="section" id="Diagnosing-Biased-Inference-with-Divergences">
+<h1>Diagnosing Biased Inference with Divergences<a class="headerlink" href="#Diagnosing-Biased-Inference-with-Divergences" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="PyMC3-port-of-Michael-Betancourt's-post-on-ms-stan.-For-detailed-explanation-of-the-underlying-mechanism-please-check-the-original-post-and-Betancourt's-excellent-paper.">
+<h2>PyMC3 port of <a class="reference external" href="http://mc-stan.org/documentation/case-studies/divergences_and_bias.html">Michael Betancourt&#8217;s post on ms-stan</a>. For detailed explanation of the underlying mechanism please check <a class="reference external" href="http://mc-stan.org/documentation/case-studies/divergences_and_bias.html">the original post</a> and Betancourt&#8217;s <a class="reference external" href="https://arxiv.org/abs/1701.02434">excellent paper</a>.<a class="headerlink" href="#PyMC3-port-of-Michael-Betancourt's-post-on-ms-stan.-For-detailed-explanation-of-the-underlying-mechanism-please-check-the-original-post-and-Betancourt's-excellent-paper." title="Permalink to this headline">¶</a></h2>
+<p>Bayesian statistics is all about building your model and estimating the
+parameters in the model. However, due to limitations in our current
+mathematical understanding and computation capacity, naive or direct
+parameterization of our probability model often ran into problem (<a class="reference external" href="http://twiecki.github.io/blog/2017/02/08/bayesian-hierchical-non-centered/">you
+can check out Thomas Wiecki&#8217;s blog post on the same issue in
+PyMC3</a>).
+Suboptimal parameterization is often lead to slow sampling, and more
+problematic, biased MCMC estimators.</p>
+</div>
+<div class="section" id="More-formally,-as-explained-in-the-original-post-(in-markdown-block,-same-below):">
+<h2>More formally, as explained in <a class="reference external" href="http://mc-stan.org/documentation/case-studies/divergences_and_bias.html">the original post</a> (in markdown block, same below):<a class="headerlink" href="#More-formally,-as-explained-in-the-original-post-(in-markdown-block,-same-below):" title="Permalink to this headline">¶</a></h2>
+<blockquote>
+<div><p>Markov chain Monte Carlo (MCMC) approximates expectations with
+respect to a given target distribution,</p>
+<div class="math">
+\[\mathbb{E}{\pi} [ f ] = \int \mathrm{d}q \, \pi (q) \, f(q),\]</div>
+<p>using the states of a Markov chain, <span class="math">\({q{0}, \ldots, q_{N} }\)</span>,</p>
+<div class="math">
+\[ \begin{align}\begin{aligned}\mathbb{E}{\pi} [ f ] \approx \hat{f}{N} = \frac{1}{N + 1} \sum_{n = 0}^{N} f(q_{n}).\\These estimators, however, are guaranteed to be accurate only\end{aligned}\end{align} \]</div>
+<p>asymptotically as the chain grows to be infinitely long,</p>
+<div class="math">
+\[\lim_{N \rightarrow \infty} \hat{f}{N} = \mathbb{E}{\pi} [ f ].\]</div>
+<p>To be useful in applied analyses, we need MCMC estimators to
+converge to the true expectation values sufficiently quickly that
+they are reasonably accurate before we exhaust our finite
+computational resources. This fast convergence requires strong
+ergodicity conditions to hold, in particular geometric ergodicity
+between a Markov transition and a target distribution. Geometric
+ergodicity is usually the necessary condition for MCMC estimators to
+follow a central limit theorem, which ensures not only that they are
+unbiased even after only a finite number of iterations but also that
+we can empirically quantify their precision using the MCMC standard
+error.</p>
+<p>Unfortunately, proving geometric ergodicity theoretically is
+infeasible for any nontrivial problem. Instead we must rely on
+empirical diagnostics that identify obstructions to geometric
+ergodicity, and hence well-behaved MCMC estimators. For a general
+Markov transition and target distribution, the best known diagnostic
+is the split <span class="math">\(\hat{R}\)</span> statistic over an ensemble of Markov
+chains initialized from diffuse points in parameter space; to do any
+better we need to exploit the particular structure of a given
+transition or target distribution.</p>
+<p>Hamiltonian Monte Carlo, for example, is especially powerful in this
+regard as its failures to be geometrically ergodic with respect to
+any target distribution manifest in distinct behaviors that have
+been developed into sensitive diagnostics. One of these behaviors is
+the appearance of divergences that indicate the Hamiltonian Markov
+chain has encountered regions of high curvature in the target
+distribution which it cannot adequately explore.</p>
+</div></blockquote>
+<p>In this notebook we aim to replicated the identification of divergences
+sample and the underlying pathologies in <code class="docutils literal"><span class="pre">PyMC3</span></code> similar to <a class="reference external" href="http://mc-stan.org/documentation/case-studies/divergences_and_bias.html">the
+original
+post</a>.</p>
+<div class="nbinput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [1]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">numpy</span> <span class="kn">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="kn">as</span> <span class="nn">plt</span>
+<span class="kn">import</span> <span class="nn">seaborn</span> <span class="kn">as</span> <span class="nn">sb</span>
+<span class="kn">import</span> <span class="nn">pandas</span> <span class="kn">as</span> <span class="nn">pd</span>
+<span class="kn">import</span> <span class="nn">pymc3</span> <span class="kn">as</span> <span class="nn">pm</span>
+
+<span class="o">%</span><span class="k">config</span> InlineBackend.figure_format = &#39;retina&#39;
+<span class="o">%</span><span class="k">matplotlib</span> inline
+</pre></div>
+</div>
+</div>
+<div class="section" id="The-Eight-Schools-Model">
+<h3>The Eight Schools Model<a class="headerlink" href="#The-Eight-Schools-Model" title="Permalink to this headline">¶</a></h3>
+<blockquote>
+<div><p>The hierarchical model of the the Eight Schools dataset (Rubin 1981)
+as seen in <code class="docutils literal"><span class="pre">Stan</span></code>:</p>
+<div class="math">
+\[\mu \sim \mathcal{N}(0, 5)\]</div>
+<div class="math">
+\[\tau \sim \text{Half-Cauchy}(0, 5)\]</div>
+<div class="math">
+\[\theta_{n} \sim \mathcal{N}(\mu, \tau)\]</div>
+<div class="math">
+\[y_{n} \sim \mathcal{N}(\theta_{n}, \sigma_{n}),\]</div>
+<p>where <span class="math">\(n \in \{1, \ldots, 8 \}\)</span> and the
+<span class="math">\(\{ y_{n}, \sigma_{n} \}\)</span> are given as data.</p>
+<p>Inferring the hierarchical hyperparameters, <span class="math">\(\mu\)</span> and
+<span class="math">\(\sigma\)</span>, together with the group-level parameters,
+<span class="math">\(\theta_{1}, \ldots, \theta_{8}\)</span>, allows the model to pool
+data across the groups and reduce their posterior variance.
+Unfortunately, the direct <em>centered</em> parameterization also squeezes
+the posterior distribution into a particularly challenging geometry
+that obstructs geometric ergodicity and hence biases MCMC
+estimation.</p>
+</div></blockquote>
+<div class="nbinput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [2]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="c1"># Data of the Eight Schools Model</span>
+<span class="n">J</span> <span class="o">=</span> <span class="mi">8</span>
+<span class="n">y</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">([</span><span class="mi">28</span><span class="p">,</span>  <span class="mi">8</span><span class="p">,</span> <span class="o">-</span><span class="mi">3</span><span class="p">,</span>  <span class="mi">7</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span>  <span class="mi">1</span><span class="p">,</span> <span class="mi">18</span><span class="p">,</span> <span class="mi">12</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+<span class="n">sigma</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">([</span><span class="mi">15</span><span class="p">,</span> <span class="mi">10</span><span class="p">,</span> <span class="mi">16</span><span class="p">,</span> <span class="mi">11</span><span class="p">,</span>  <span class="mi">9</span><span class="p">,</span> <span class="mi">11</span><span class="p">,</span> <span class="mi">10</span><span class="p">,</span> <span class="mi">18</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+<span class="c1"># tau = 25.</span>
+</pre></div>
+</div>
+</div>
+</div>
+<div class="section" id="A-Centered-Eight-Schools-Implementation">
+<h3>A Centered Eight Schools Implementation<a class="headerlink" href="#A-Centered-Eight-Schools-Implementation" title="Permalink to this headline">¶</a></h3>
+<p><code class="docutils literal"><span class="pre">Stan</span></code> model:</p>
+<div class="highlight-C"><div class="highlight"><pre><span></span><span class="n">data</span> <span class="p">{</span>
+  <span class="kt">int</span><span class="o">&lt;</span><span class="n">lower</span><span class="o">=</span><span class="mi">0</span><span class="o">&gt;</span> <span class="n">J</span><span class="p">;</span>
+  <span class="n">real</span> <span class="n">y</span><span class="p">[</span><span class="n">J</span><span class="p">];</span>
+  <span class="n">real</span><span class="o">&lt;</span><span class="n">lower</span><span class="o">=</span><span class="mi">0</span><span class="o">&gt;</span> <span class="n">sigma</span><span class="p">[</span><span class="n">J</span><span class="p">];</span>
+<span class="p">}</span>
+
+<span class="n">parameters</span> <span class="p">{</span>
+  <span class="n">real</span> <span class="n">mu</span><span class="p">;</span>
+  <span class="n">real</span><span class="o">&lt;</span><span class="n">lower</span><span class="o">=</span><span class="mi">0</span><span class="o">&gt;</span> <span class="n">tau</span><span class="p">;</span>
+  <span class="n">real</span> <span class="n">theta</span><span class="p">[</span><span class="n">J</span><span class="p">];</span>
+<span class="p">}</span>
+
+<span class="n">model</span> <span class="p">{</span>
+  <span class="n">mu</span> <span class="o">~</span> <span class="n">normal</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">5</span><span class="p">);</span>
+  <span class="n">tau</span> <span class="o">~</span> <span class="n">cauchy</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">5</span><span class="p">);</span>
+  <span class="n">theta</span> <span class="o">~</span> <span class="n">normal</span><span class="p">(</span><span class="n">mu</span><span class="p">,</span> <span class="n">tau</span><span class="p">);</span>
+  <span class="n">y</span> <span class="o">~</span> <span class="n">normal</span><span class="p">(</span><span class="n">theta</span><span class="p">,</span> <span class="n">sigma</span><span class="p">);</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>Similarly, we can easily implemented it in <code class="docutils literal"><span class="pre">PyMC3</span></code></p>
+<div class="nbinput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [4]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="k">with</span> <span class="n">pm</span><span class="o">.</span><span class="n">Model</span><span class="p">()</span> <span class="k">as</span> <span class="n">Centered_eight</span><span class="p">:</span>
+    <span class="n">mu</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Normal</span><span class="p">(</span><span class="s1">&#39;mu&#39;</span><span class="p">,</span> <span class="n">mu</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">sd</span><span class="o">=</span><span class="mi">5</span><span class="p">)</span>
+    <span class="n">tau</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">HalfCauchy</span><span class="p">(</span><span class="s1">&#39;tau&#39;</span><span class="p">,</span> <span class="n">beta</span><span class="o">=</span><span class="mi">5</span><span class="p">)</span>
+    <span class="n">theta</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Normal</span><span class="p">(</span><span class="s1">&#39;theta&#39;</span><span class="p">,</span> <span class="n">mu</span><span class="o">=</span><span class="n">mu</span><span class="p">,</span> <span class="n">sd</span><span class="o">=</span><span class="n">tau</span><span class="p">,</span> <span class="n">shape</span><span class="o">=</span><span class="n">J</span><span class="p">)</span>
+    <span class="n">obs</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Normal</span><span class="p">(</span><span class="s1">&#39;obs&#39;</span><span class="p">,</span> <span class="n">mu</span><span class="o">=</span><span class="n">theta</span><span class="p">,</span> <span class="n">sd</span><span class="o">=</span><span class="n">sigma</span><span class="p">,</span> <span class="n">observed</span><span class="o">=</span><span class="n">y</span><span class="p">)</span>
+
+
+
+
+<span class="n">Unfortunately</span><span class="p">,</span> <span class="n">this</span> <span class="n">direct</span> <span class="n">implementation</span> <span class="n">of</span> <span class="n">the</span> <span class="n">model</span> <span class="n">exhibits</span> <span class="n">a</span>
+<span class="n">pathological</span> <span class="n">geometry</span> <span class="n">that</span> <span class="n">frustrates</span> <span class="n">geometric</span> <span class="n">ergodicity</span><span class="o">.</span> <span class="n">Even</span>
+<span class="n">more</span> <span class="n">worrisome</span><span class="p">,</span> <span class="n">the</span> <span class="n">resulting</span> <span class="n">bias</span> <span class="ow">is</span> <span class="n">subtle</span> <span class="ow">and</span> <span class="n">may</span> <span class="ow">not</span> <span class="n">be</span> <span class="n">obvious</span>
+<span class="n">upon</span> <span class="n">inspection</span> <span class="n">of</span> <span class="n">the</span> <span class="n">Markov</span> <span class="n">chain</span> <span class="n">alone</span><span class="o">.</span> <span class="n">To</span> <span class="n">understand</span> <span class="n">this</span> <span class="n">bias</span><span class="p">,</span>
+<span class="n">let</span><span class="s1">&#39;s consider first a short Markov chain, commonly used when</span>
+<span class="n">computational</span> <span class="n">expediency</span> <span class="ow">is</span> <span class="n">a</span> <span class="n">motivating</span> <span class="n">factor</span><span class="p">,</span> <span class="ow">and</span> <span class="n">only</span> <span class="n">afterwards</span>
+<span class="n">a</span> <span class="n">longer</span> <span class="n">Markov</span> <span class="n">chain</span><span class="o">.</span>
+</pre></div>
+</div>
+</div>
+</div>
+</div>
+<div class="section" id="A-Dangerously-Short-Markov-Chain">
+<h2>A Dangerously-Short Markov Chain<a class="headerlink" href="#A-Dangerously-Short-Markov-Chain" title="Permalink to this headline">¶</a></h2>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [7]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="k">with</span> <span class="n">Centered_eight</span><span class="p">:</span>
+    <span class="n">short_trace</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="mi">600</span><span class="p">,</span> <span class="n">init</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">njobs</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">tune</span><span class="o">=</span><span class="mi">500</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="stderr container">
+<div class="highlight"><pre>
+Assigned NUTS to mu
+Assigned NUTS to tau_log_
+Assigned NUTS to theta
+100%|██████████| 600/600 [00:01&lt;00:00, 354.50it/s]
+</pre></div></div>
+</div>
+<div class="line-block">
+<div class="line">In the <a href="#id1"><span class="problematic" id="id2">`</span></a>the original</div>
+</div>
+<p>post &lt;<a class="reference external" href="http://mc-stan.org/documentation/case-studies/divergences_and_bias.html">http://mc-stan.org/documentation/case-studies/divergences_and_bias.html</a>&gt;`__
+a single chain of 1200 sample is applied. However, since split
+<span class="math">\(\hat{R}\)</span> is not implemented in <code class="docutils literal"><span class="pre">PyMC3</span></code> we fit 2 chains with 600
+sample each instead.
+| The Gelman-Rubin diagnostic <span class="math">\(\hat{R}\)</span> doesn’t indicate any
+problems (value close to 1) and the effective sample size per iteration
+is reasonable</p>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [20]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="k">print</span><span class="p">(</span><span class="n">pm</span><span class="o">.</span><span class="n">diagnostics</span><span class="o">.</span><span class="n">gelman_rubin</span><span class="p">(</span><span class="n">short_trace</span><span class="p">))</span>
+<span class="k">print</span><span class="p">(</span><span class="s1">&#39;&#39;</span><span class="p">)</span>
+<span class="k">print</span><span class="p">(</span><span class="n">pm</span><span class="o">.</span><span class="n">diagnostics</span><span class="o">.</span><span class="n">effective_n</span><span class="p">(</span><span class="n">short_trace</span><span class="p">))</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<div class="highlight"><pre>
+{&#39;theta&#39;: array([ 1.01466455,  1.00153203,  1.00351269,  1.009334  ,  0.99977168,
+        1.00057635,  1.0159455 ,  1.00228008]), &#39;tau_log_&#39;: 1.0439591442751275, &#39;mu&#39;: 1.0081977447110899, &#39;tau&#39;: 1.0164411689259558}
+
+{&#39;theta&#39;: array([ 274.,  384.,  311.,  358.,  282.,  343.,  263.,  409.]), &#39;tau_log_&#39;: 59.0, &#39;mu&#39;: 182.0, &#39;tau&#39;: 88.0}
+</pre></div><p>Moreover, the trace plots all look fine. Let&#8217;s consider, for
+example, the hierarchical standard deviation <span class="math">\(\tau\)</span>, or more
+specifically, its logarithm, <span class="math">\(log(\tau)\)</span>. Because <span class="math">\(\tau\)</span>
+is constrained to be positive, its logarithm will allow us to better
+resolve behavior for small values. Indeed the chains seems to be
+exploring both small and large values reasonably well,</p>
+</div>
+</div>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [23]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="c1"># plot the trace of log(tau)</span>
+<span class="n">pm</span><span class="o">.</span><span class="n">traceplot</span><span class="p">(</span><span class="n">short_trace</span><span class="p">,</span> <span class="n">varnames</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;tau_log_&#39;</span><span class="p">])</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<img alt="../_images/notebooks_Diagnosing_biased_Inference_with_Divergences_13_0.png" src="../_images/notebooks_Diagnosing_biased_Inference_with_Divergences_13_0.png" />
+<p>Unfortunately, the resulting estimate for the mean of
+<span class="math">\(log(\tau)\)</span> is strongly biased away from the true value, here
+shown in grey.</p>
+</div>
+</div>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [27]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="c1"># plot the estimate for the mean of log(τ) cumulating mean</span>
+<span class="n">logtau</span> <span class="o">=</span> <span class="n">short_trace</span><span class="p">[</span><span class="s1">&#39;tau_log_&#39;</span><span class="p">]</span>
+<span class="n">mlogtau</span> <span class="o">=</span> <span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">logtau</span><span class="p">[:</span><span class="n">i</span><span class="p">])</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">logtau</span><span class="p">))]</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">15</span><span class="p">,</span> <span class="mi">4</span><span class="p">))</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">axhline</span><span class="p">(</span><span class="mf">0.7657852</span><span class="p">,</span> <span class="n">lw</span><span class="o">=</span><span class="mf">2.5</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s1">&#39;gray&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">mlogtau</span><span class="p">,</span> <span class="n">lw</span><span class="o">=</span><span class="mf">2.5</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">ylim</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">xlabel</span><span class="p">(</span><span class="s1">&#39;Iteration&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="s1">&#39;MCMC mean of log(tau)&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">title</span><span class="p">(</span><span class="s1">&#39;MCMC estimation of log(tau)&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<img alt="../_images/notebooks_Diagnosing_biased_Inference_with_Divergences_15_0.png" src="../_images/notebooks_Diagnosing_biased_Inference_with_Divergences_15_0.png" />
+<p>Hamiltonian Monte Carlo, however, is not so oblivious to these
+issues as 2% of the iterations in our lone Markov chain ended with a
+divergence.</p>
+</div>
+</div>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [28]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="c1"># display the total number and percentage of divergent</span>
+<span class="n">divergent</span> <span class="o">=</span> <span class="n">short_trace</span><span class="p">[</span><span class="s1">&#39;diverging&#39;</span><span class="p">]</span>
+<span class="k">print</span><span class="p">(</span><span class="s1">&#39;Number of Divergent </span><span class="si">%d</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="n">divergent</span><span class="o">.</span><span class="n">nonzero</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">size</span><span class="p">)</span>
+<span class="n">divperc</span> <span class="o">=</span> <span class="n">divergent</span><span class="o">.</span><span class="n">nonzero</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">size</span><span class="o">/</span><span class="nb">len</span><span class="p">(</span><span class="n">short_trace</span><span class="p">)</span>
+<span class="k">print</span><span class="p">(</span><span class="s1">&#39;Percentage of Divergent </span><span class="si">%.5f</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="n">divperc</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<div class="highlight"><pre>
+Number of Divergent 14
+Percentage of Divergent 0.02333
+</pre></div><p>Even with a single short chain these divergences are able to
+identity the bias and advise skepticism of any resulting MCMC
+estimators.</p>
+<p>Additionally, because the divergent transitions, here shown here in
+green, tend to be located near the pathologies we can use them to
+identify the location of the problematic neighborhoods in parameter
+space.</p>
+</div>
+</div>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [38]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="c1"># scatter plot between log(tau) and theta[0]</span>
+<span class="c1"># for the identifcation of the problematic neighborhoods in parameter space</span>
+<span class="n">theta_trace</span> <span class="o">=</span> <span class="n">short_trace</span><span class="p">[</span><span class="s1">&#39;theta&#39;</span><span class="p">]</span>
+<span class="n">theta0</span> <span class="o">=</span> <span class="n">theta_trace</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">]</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="mi">6</span><span class="p">))</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">scatter</span><span class="p">(</span><span class="n">theta0</span><span class="p">[</span><span class="n">divergent</span> <span class="o">==</span> <span class="mi">0</span><span class="p">],</span> <span class="n">logtau</span><span class="p">[</span><span class="n">divergent</span> <span class="o">==</span> <span class="mi">0</span><span class="p">],</span> <span class="n">color</span><span class="o">=</span><span class="s1">&#39;r&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">scatter</span><span class="p">(</span><span class="n">theta0</span><span class="p">[</span><span class="n">divergent</span> <span class="o">==</span> <span class="mi">1</span><span class="p">],</span> <span class="n">logtau</span><span class="p">[</span><span class="n">divergent</span> <span class="o">==</span> <span class="mi">1</span><span class="p">],</span> <span class="n">color</span><span class="o">=</span><span class="s1">&#39;g&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">axis</span><span class="p">([</span><span class="o">-</span><span class="mi">20</span><span class="p">,</span> <span class="mi">50</span><span class="p">,</span> <span class="o">-</span><span class="mi">6</span><span class="p">,</span> <span class="mi">4</span><span class="p">])</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="s1">&#39;log(tau)&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">xlabel</span><span class="p">(</span><span class="s1">&#39;theta[0]&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">title</span><span class="p">(</span><span class="s1">&#39;scatter plot between log(tau) and theta[1]&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<img alt="../_images/notebooks_Diagnosing_biased_Inference_with_Divergences_19_0.png" src="../_images/notebooks_Diagnosing_biased_Inference_with_Divergences_19_0.png" />
+</div>
+</div>
+<p>In the current example, the pathological samples from the trace is not
+necessary concentrated at the funnel (unlike in <code class="docutils literal"><span class="pre">Stan</span></code>), the follow
+figure is from the <a class="reference external" href="http://mc-stan.org/documentation/case-studies/divergences_and_bias.html">the original
+post</a>
+as comparison.</p>
+<p>In <code class="docutils literal"><span class="pre">Stan</span></code> the divergences are clustering at small values of
+<span class="math">\(\tau\)</span> where the hierarchical distribution, and hence all of the
+group-level <span class="math">\(\theta_{n}\)</span>, are squeezed together. Eventually this
+squeezing would yield the funnel geometry infamous to hierarchical
+models, but here it appears that the Hamiltonian Markov chain is
+diverging before it can fully explore the neck of the funnel.</p>
+<div class="nbinput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [41]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="c1"># A small wrapper function for displaying the MCMC sampler diagnostics as above</span>
+<span class="k">def</span> <span class="nf">report_trace</span><span class="p">(</span><span class="n">trace</span><span class="p">):</span>
+    <span class="c1"># plot the trace of log(tau)</span>
+    <span class="n">pm</span><span class="o">.</span><span class="n">traceplot</span><span class="p">(</span><span class="n">trace</span><span class="p">,</span> <span class="n">varnames</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;tau_log_&#39;</span><span class="p">])</span>
+
+    <span class="c1"># plot the estimate for the mean of log(τ) cumulating mean</span>
+    <span class="n">logtau</span> <span class="o">=</span> <span class="n">trace</span><span class="p">[</span><span class="s1">&#39;tau_log_&#39;</span><span class="p">]</span>
+    <span class="n">mlogtau</span> <span class="o">=</span> <span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">logtau</span><span class="p">[:</span><span class="n">i</span><span class="p">])</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">logtau</span><span class="p">))]</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">15</span><span class="p">,</span> <span class="mi">4</span><span class="p">))</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">axhline</span><span class="p">(</span><span class="mf">0.7657852</span><span class="p">,</span> <span class="n">lw</span><span class="o">=</span><span class="mf">2.5</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s1">&#39;gray&#39;</span><span class="p">)</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">mlogtau</span><span class="p">,</span> <span class="n">lw</span><span class="o">=</span><span class="mf">2.5</span><span class="p">)</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">ylim</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">xlabel</span><span class="p">(</span><span class="s1">&#39;Iteration&#39;</span><span class="p">)</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="s1">&#39;MCMC mean of log(tau)&#39;</span><span class="p">)</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">title</span><span class="p">(</span><span class="s1">&#39;MCMC estimation of log(tau)&#39;</span><span class="p">)</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+
+    <span class="c1"># display the total number and percentage of divergent</span>
+    <span class="n">divergent</span> <span class="o">=</span> <span class="n">trace</span><span class="p">[</span><span class="s1">&#39;diverging&#39;</span><span class="p">]</span>
+    <span class="k">print</span><span class="p">(</span><span class="s1">&#39;Number of Divergent </span><span class="si">%d</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="n">divergent</span><span class="o">.</span><span class="n">nonzero</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">size</span><span class="p">)</span>
+    <span class="n">divperc</span> <span class="o">=</span> <span class="n">divergent</span><span class="o">.</span><span class="n">nonzero</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">size</span><span class="o">/</span><span class="nb">len</span><span class="p">(</span><span class="n">trace</span><span class="p">)</span>
+    <span class="k">print</span><span class="p">(</span><span class="s1">&#39;Percentage of Divergent </span><span class="si">%.5f</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="n">divperc</span><span class="p">)</span>
+
+    <span class="c1"># scatter plot between log(tau) and theta[0]</span>
+    <span class="c1"># for the identifcation of the problematic neighborhoods in parameter space</span>
+    <span class="n">theta_trace</span> <span class="o">=</span> <span class="n">trace</span><span class="p">[</span><span class="s1">&#39;theta&#39;</span><span class="p">]</span>
+    <span class="n">theta0</span> <span class="o">=</span> <span class="n">theta_trace</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">]</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="mi">6</span><span class="p">))</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">scatter</span><span class="p">(</span><span class="n">theta0</span><span class="p">[</span><span class="n">divergent</span> <span class="o">==</span> <span class="mi">0</span><span class="p">],</span> <span class="n">logtau</span><span class="p">[</span><span class="n">divergent</span> <span class="o">==</span> <span class="mi">0</span><span class="p">],</span> <span class="n">color</span><span class="o">=</span><span class="s1">&#39;r&#39;</span><span class="p">)</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">scatter</span><span class="p">(</span><span class="n">theta0</span><span class="p">[</span><span class="n">divergent</span> <span class="o">==</span> <span class="mi">1</span><span class="p">],</span> <span class="n">logtau</span><span class="p">[</span><span class="n">divergent</span> <span class="o">==</span> <span class="mi">1</span><span class="p">],</span> <span class="n">color</span><span class="o">=</span><span class="s1">&#39;g&#39;</span><span class="p">)</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">axis</span><span class="p">([</span><span class="o">-</span><span class="mi">20</span><span class="p">,</span> <span class="mi">50</span><span class="p">,</span> <span class="o">-</span><span class="mi">6</span><span class="p">,</span> <span class="mi">4</span><span class="p">])</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="s1">&#39;log(tau)&#39;</span><span class="p">)</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">xlabel</span><span class="p">(</span><span class="s1">&#39;theta[0]&#39;</span><span class="p">)</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">title</span><span class="p">(</span><span class="s1">&#39;scatter plot between log(tau) and theta[1]&#39;</span><span class="p">)</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+</div>
+<div class="section" id="A-Safer,-Longer-Markov-Chain">
+<h2>A Safer, Longer Markov Chain<a class="headerlink" href="#A-Safer,-Longer-Markov-Chain" title="Permalink to this headline">¶</a></h2>
+<blockquote>
+<div>Given the potential insensitivity of split <span class="math">\(\hat{R}\)</span> on single
+short chains, <code class="docutils literal"><span class="pre">Stan</span></code> recommend always running multiple chains as
+long as possible to have the best chance to observe any obstructions
+to geometric ergodicity. Because it is not always possible to run
+long chains for complex models, however, divergences are an
+incredibly powerful diagnostic for biased MCMC estimation.</div></blockquote>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [46]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="k">with</span> <span class="n">Centered_eight</span><span class="p">:</span>
+    <span class="n">longer_trace</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="mi">5000</span><span class="p">,</span> <span class="n">init</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">njobs</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">tune</span><span class="o">=</span><span class="mi">1000</span><span class="p">)</span>
+
+<span class="n">report_trace</span><span class="p">(</span><span class="n">longer_trace</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput container">
+<div class="container">
+</div>
+<div class="stderr container">
+<div class="highlight"><pre>
+Assigned NUTS to mu
+Assigned NUTS to tau_log_
+Assigned NUTS to theta
+100%|██████████| 5000/5000 [00:11&lt;00:00, 444.46it/s]
+</pre></div></div>
+</div>
+<div class="nboutput container">
+<div class="container">
+</div>
+<div class="container">
+<img alt="../_images/notebooks_Diagnosing_biased_Inference_with_Divergences_23_1.png" src="../_images/notebooks_Diagnosing_biased_Inference_with_Divergences_23_1.png" />
+</div>
+</div>
+<div class="nboutput container">
+<div class="container">
+</div>
+<div class="container">
+<img alt="../_images/notebooks_Diagnosing_biased_Inference_with_Divergences_23_2.png" src="../_images/notebooks_Diagnosing_biased_Inference_with_Divergences_23_2.png" />
+</div>
+</div>
+<div class="nboutput container">
+<div class="container">
+</div>
+<div class="container">
+<div class="highlight"><pre>
+Number of Divergent 39
+Percentage of Divergent 0.00780
+</pre></div></div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<img alt="../_images/notebooks_Diagnosing_biased_Inference_with_Divergences_23_4.png" src="../_images/notebooks_Diagnosing_biased_Inference_with_Divergences_23_4.png" />
+</div>
+</div>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [47]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="k">print</span><span class="p">(</span><span class="n">pm</span><span class="o">.</span><span class="n">diagnostics</span><span class="o">.</span><span class="n">gelman_rubin</span><span class="p">(</span><span class="n">longer_trace</span><span class="p">))</span>
+<span class="k">print</span><span class="p">(</span><span class="s1">&#39;&#39;</span><span class="p">)</span>
+<span class="k">print</span><span class="p">(</span><span class="n">pm</span><span class="o">.</span><span class="n">diagnostics</span><span class="o">.</span><span class="n">effective_n</span><span class="p">(</span><span class="n">longer_trace</span><span class="p">))</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<div class="highlight"><pre>
+{&#39;theta&#39;: array([ 1.00037593,  0.99990022,  1.00114791,  0.9999347 ,  1.00259776,
+        1.00022565,  1.00152861,  0.99992059]), &#39;tau_log_&#39;: 1.0398125400857179, &#39;mu&#39;: 1.0006934326362604, &#39;tau&#39;: 1.0208315582727976}
+
+{&#39;theta&#39;: array([ 1953.,  2127.,  2155.,  2106.,  1382.,  2054.,   988.,  2195.]), &#39;tau_log_&#39;: 72.0, &#39;mu&#39;: 1024.0, &#39;tau&#39;: 101.0}
+</pre></div><p>Similar to the result in <code class="docutils literal"><span class="pre">Stan</span></code>, <span class="math">\(\hat{R}\)</span> does not indicate
+any serious issues. However, the effective sample size per iteration
+has drastically fallen, indicating that we are exploring less
+efficiently the longer we run. This odd behavior is a clear sign
+that something problematic is afoot. As shown in the trace plot, the
+chain occasionally &#8220;sticking&#8221; as it approaches small values of
+<span class="math">\(\tau\)</span>, exactly where we saw the divergences concentrating.
+This is a clear indication of the underlying pathologies. These
+sticky intervals induce severe oscillations in the MCMC estimators
+early on, until they seem to finally settle into biased values.</p>
+<p>In fact the sticky intervals are the Markov chain trying to correct
+the biased exploration. If we ran the chain even longer then it
+would eventually get stuck again and drag the MCMC estimator down
+towards the true value. Given an infinite number of iterations this
+delicate balance asymptotes to the true expectation as we’d expect
+given the consistency guarantee of MCMC. Stopping the after any
+finite number of iterations, however, destroys this balance and
+leaves us with a significant bias.</p>
+</div>
+</div>
+<p>More details can be found in Betancourt&#8217;s <a class="reference external" href="https://arxiv.org/abs/1701.02434">recent
+paper</a>.</p>
+<div class="section" id="Mitigating-Divergences-by-Adjusting-PyMC3's-Adaptation-Routine">
+<h3>Mitigating Divergences by Adjusting PyMC3&#8217;s Adaptation Routine<a class="headerlink" href="#Mitigating-Divergences-by-Adjusting-PyMC3's-Adaptation-Routine" title="Permalink to this headline">¶</a></h3>
+<blockquote>
+<div><p>Divergences in Hamiltonian Monte Carlo arise when the Hamiltonian
+transition encounters regions of extremely large curvature, such as
+the opening of the hierarchical funnel. Unable to accurate resolve
+these regions, the transition malfunctions and flies off towards
+infinity. With the transitions unable to completely explore these
+regions of extreme curvature, we lose geometric ergodicity and our
+MCMC estimators become biased.</p>
+<p>Algorithm implemented in <code class="docutils literal"><span class="pre">Stan</span></code> uses a heuristic to quickly
+identify these misbehaving trajectories, and hence label
+divergences, without having to wait for them to run all the way to
+infinity. This heuristic can be a bit aggressive, however, and
+sometimes label transitions as divergent even when we have not lost
+geometric ergodicity.</p>
+<p>To resolve this potential ambiguity we can adjust the step size,
+<span class="math">\(\epsilon\)</span>, of the Hamiltonian transition. The smaller the
+step size the more accurate the trajectory and the less likely it
+will be mislabeled as a divergence. In other words, if we have
+geometric ergodicity between the Hamiltonian transition and the
+target distribution then decreasing the step size will reduce and
+then ultimately remove the divergences entirely. If we do not have
+geometric ergodicity, however, then decreasing the step size will
+not completely remove the divergences.</p>
+</div></blockquote>
+<p>Like <code class="docutils literal"><span class="pre">Stan</span></code>, the step size in <code class="docutils literal"><span class="pre">PyMC3</span></code> is tuned automatically during
+warm up, but we can coerce smaller step sizes by tweaking the
+configuration of <code class="docutils literal"><span class="pre">PyMC3</span></code>&#8216;s adaptation routine. In particular, we can
+increase the <code class="docutils literal"><span class="pre">target_accept</span></code> parameter from its default value of 0.8
+closer to its maximum value of 1.</p>
+</div>
+</div>
+<div class="section" id="Adjusting-Adaptation-Routine">
+<h2>Adjusting Adaptation Routine<a class="headerlink" href="#Adjusting-Adaptation-Routine" title="Permalink to this headline">¶</a></h2>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [48]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="k">with</span> <span class="n">Centered_eight</span><span class="p">:</span>
+    <span class="n">step</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">NUTS</span><span class="p">(</span><span class="n">target_accept</span><span class="o">=.</span><span class="mi">85</span><span class="p">)</span>
+    <span class="n">fit_cp85</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="mi">5000</span><span class="p">,</span> <span class="n">step</span><span class="o">=</span><span class="n">step</span><span class="p">,</span> <span class="n">init</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">njobs</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">tune</span><span class="o">=</span><span class="mi">1000</span><span class="p">)</span>
+<span class="k">with</span> <span class="n">Centered_eight</span><span class="p">:</span>
+    <span class="n">step</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">NUTS</span><span class="p">(</span><span class="n">target_accept</span><span class="o">=.</span><span class="mi">90</span><span class="p">)</span>
+    <span class="n">fit_cp90</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="mi">5000</span><span class="p">,</span> <span class="n">step</span><span class="o">=</span><span class="n">step</span><span class="p">,</span> <span class="n">init</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">njobs</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">tune</span><span class="o">=</span><span class="mi">1000</span><span class="p">)</span>
+<span class="k">with</span> <span class="n">Centered_eight</span><span class="p">:</span>
+    <span class="n">step</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">NUTS</span><span class="p">(</span><span class="n">target_accept</span><span class="o">=.</span><span class="mi">95</span><span class="p">)</span>
+    <span class="n">fit_cp95</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="mi">5000</span><span class="p">,</span> <span class="n">step</span><span class="o">=</span><span class="n">step</span><span class="p">,</span> <span class="n">init</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">njobs</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">tune</span><span class="o">=</span><span class="mi">1000</span><span class="p">)</span>
+<span class="k">with</span> <span class="n">Centered_eight</span><span class="p">:</span>
+    <span class="n">step</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">NUTS</span><span class="p">(</span><span class="n">target_accept</span><span class="o">=.</span><span class="mi">99</span><span class="p">)</span>
+    <span class="n">fit_cp99</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="mi">5000</span><span class="p">,</span> <span class="n">step</span><span class="o">=</span><span class="n">step</span><span class="p">,</span> <span class="n">init</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">njobs</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">tune</span><span class="o">=</span><span class="mi">1000</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="stderr container">
+<div class="highlight"><pre>
+100%|██████████| 5000/5000 [00:11&lt;00:00, 450.42it/s]
+100%|██████████| 5000/5000 [00:15&lt;00:00, 325.33it/s]
+100%|██████████| 5000/5000 [00:19&lt;00:00, 258.28it/s]
+100%|██████████| 5000/5000 [00:36&lt;00:00, 138.24it/s]
+</pre></div></div>
+</div>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [50]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">([</span><span class="n">longer_trace</span><span class="p">[</span><span class="s1">&#39;step_size&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">mean</span><span class="p">(),</span>
+                  <span class="n">fit_cp85</span><span class="p">[</span><span class="s1">&#39;step_size&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">mean</span><span class="p">(),</span>
+                  <span class="n">fit_cp90</span><span class="p">[</span><span class="s1">&#39;step_size&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">mean</span><span class="p">(),</span>
+                  <span class="n">fit_cp95</span><span class="p">[</span><span class="s1">&#39;step_size&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">mean</span><span class="p">(),</span>
+                  <span class="n">fit_cp99</span><span class="p">[</span><span class="s1">&#39;step_size&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">mean</span><span class="p">()],</span> <span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;Step_size&#39;</span><span class="p">])</span>
+<span class="n">df</span><span class="p">[</span><span class="s1">&#39;Divergent&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">([</span><span class="n">longer_trace</span><span class="p">[</span><span class="s1">&#39;diverging&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">sum</span><span class="p">(),</span>
+                            <span class="n">fit_cp85</span><span class="p">[</span><span class="s1">&#39;diverging&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">sum</span><span class="p">(),</span>
+                            <span class="n">fit_cp90</span><span class="p">[</span><span class="s1">&#39;diverging&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">sum</span><span class="p">(),</span>
+                            <span class="n">fit_cp95</span><span class="p">[</span><span class="s1">&#39;diverging&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">sum</span><span class="p">(),</span>
+                            <span class="n">fit_cp99</span><span class="p">[</span><span class="s1">&#39;diverging&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">sum</span><span class="p">()])</span>
+<span class="n">df</span><span class="p">[</span><span class="s1">&#39;delta&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">([</span><span class="s1">&#39;.80&#39;</span><span class="p">,</span> <span class="s1">&#39;.85&#39;</span><span class="p">,</span> <span class="s1">&#39;.90&#39;</span><span class="p">,</span> <span class="s1">&#39;.95&#39;</span><span class="p">,</span> <span class="s1">&#39;.99&#39;</span><span class="p">])</span>
+<span class="k">print</span><span class="p">(</span><span class="n">df</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<div class="highlight"><pre>
+   Step_size  Divergent delta
+0   0.206308         39   .80
+1   0.193720         70   .85
+2   0.186060         57   .90
+3   0.136067         10   .95
+4   0.060498          4   .99
+</pre></div></div>
+</div>
+<p>Interestingly, unlike in <code class="docutils literal"><span class="pre">Stan</span></code>, the number of divergent transitions
+decrease since we increased the adapt_delta and decreased the step
+size. &gt; This behavior also has a nice geometric intuition. The more we
+decrease the step size the more the Hamiltonian Markov chain can explore
+the neck of the funnel. Consequently, the marginal posterior
+distribution for <span class="math">\(log (\tau)\)</span> stretches further and further
+towards negative values with the decreasing step size.</p>
+<p>Since in <code class="docutils literal"><span class="pre">PyMC3</span></code> after tuning we have a smaller step size than
+<code class="docutils literal"><span class="pre">Stan</span></code>, the geometery is better explored. &gt; However, the Hamiltonian
+transition is still not geometrically ergodic with respect to the
+centered implementation of the Eight Schools model. Indeed, this is
+expected given the observed bias.</p>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [54]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">theta0</span> <span class="o">=</span> <span class="n">longer_trace</span><span class="p">[</span><span class="s1">&#39;theta&#39;</span><span class="p">][:,</span> <span class="mi">0</span><span class="p">]</span>
+<span class="n">logtau0</span> <span class="o">=</span> <span class="n">longer_trace</span><span class="p">[</span><span class="s1">&#39;tau_log_&#39;</span><span class="p">]</span>
+<span class="n">divergent0</span> <span class="o">=</span> <span class="n">longer_trace</span><span class="p">[</span><span class="s1">&#39;diverging&#39;</span><span class="p">]</span>
+
+<span class="n">theta1</span> <span class="o">=</span> <span class="n">fit_cp99</span><span class="p">[</span><span class="s1">&#39;theta&#39;</span><span class="p">][:,</span> <span class="mi">0</span><span class="p">]</span>
+<span class="n">logtau1</span> <span class="o">=</span> <span class="n">fit_cp99</span><span class="p">[</span><span class="s1">&#39;tau_log_&#39;</span><span class="p">]</span>
+<span class="n">divergent1</span> <span class="o">=</span> <span class="n">fit_cp99</span><span class="p">[</span><span class="s1">&#39;diverging&#39;</span><span class="p">]</span>
+
+<span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="mi">6</span><span class="p">))</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">scatter</span><span class="p">(</span><span class="n">theta1</span><span class="p">[</span><span class="n">divergent1</span> <span class="o">==</span> <span class="mi">0</span><span class="p">],</span> <span class="n">logtau1</span><span class="p">[</span><span class="n">divergent1</span> <span class="o">==</span> <span class="mi">0</span><span class="p">],</span>
+            <span class="n">color</span><span class="o">=</span><span class="s1">&#39;r&#39;</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=.</span><span class="mi">5</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s1">&#39;Centered, delta=0.99&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">scatter</span><span class="p">(</span><span class="n">theta0</span><span class="p">[</span><span class="n">divergent0</span> <span class="o">==</span> <span class="mi">0</span><span class="p">],</span> <span class="n">logtau0</span><span class="p">[</span><span class="n">divergent0</span> <span class="o">==</span> <span class="mi">0</span><span class="p">],</span>
+            <span class="n">color</span><span class="o">=</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="o">.</span><span class="mi">5</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span> <span class="n">alpha</span><span class="o">=.</span><span class="mi">5</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s1">&#39;Centered, delta=0.85&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">axis</span><span class="p">([</span><span class="o">-</span><span class="mi">20</span><span class="p">,</span> <span class="mi">50</span><span class="p">,</span> <span class="o">-</span><span class="mi">6</span><span class="p">,</span> <span class="mi">4</span><span class="p">])</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="s1">&#39;log(tau)&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">xlabel</span><span class="p">(</span><span class="s1">&#39;theta[0]&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">title</span><span class="p">(</span><span class="s1">&#39;scatter plot between log(tau) and theta[1]&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">legend</span><span class="p">()</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+
+<span class="n">logtau2</span> <span class="o">=</span> <span class="n">fit_cp90</span><span class="p">[</span><span class="s1">&#39;tau_log_&#39;</span><span class="p">]</span>
+
+<span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">15</span><span class="p">,</span> <span class="mi">4</span><span class="p">))</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">axhline</span><span class="p">(</span><span class="mf">0.7657852</span><span class="p">,</span> <span class="n">lw</span><span class="o">=</span><span class="mf">2.5</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s1">&#39;gray&#39;</span><span class="p">)</span>
+<span class="n">mlogtau0</span> <span class="o">=</span> <span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">logtau0</span><span class="p">[:</span><span class="n">i</span><span class="p">])</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">logtau0</span><span class="p">))]</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">mlogtau0</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s1">&#39;Centered, delta=0.85&#39;</span><span class="p">,</span> <span class="n">lw</span><span class="o">=</span><span class="mf">2.5</span><span class="p">)</span>
+<span class="n">mlogtau2</span> <span class="o">=</span> <span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">logtau2</span><span class="p">[:</span><span class="n">i</span><span class="p">])</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">logtau2</span><span class="p">))]</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">mlogtau2</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s1">&#39;Centered, delta=0.90&#39;</span><span class="p">,</span> <span class="n">lw</span><span class="o">=</span><span class="mf">2.5</span><span class="p">)</span>
+<span class="n">mlogtau1</span> <span class="o">=</span> <span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">logtau1</span><span class="p">[:</span><span class="n">i</span><span class="p">])</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">logtau1</span><span class="p">))]</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">mlogtau1</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s1">&#39;Centered, delta=0.99&#39;</span><span class="p">,</span> <span class="n">lw</span><span class="o">=</span><span class="mf">2.5</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">ylim</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">xlabel</span><span class="p">(</span><span class="s1">&#39;Iteration&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="s1">&#39;MCMC mean of log(tau)&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">title</span><span class="p">(</span><span class="s1">&#39;MCMC estimation of log(tau)&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">legend</span><span class="p">()</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput container">
+<div class="container">
+</div>
+<div class="container">
+<img alt="../_images/notebooks_Diagnosing_biased_Inference_with_Divergences_31_0.png" src="../_images/notebooks_Diagnosing_biased_Inference_with_Divergences_31_0.png" />
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<img alt="../_images/notebooks_Diagnosing_biased_Inference_with_Divergences_31_1.png" src="../_images/notebooks_Diagnosing_biased_Inference_with_Divergences_31_1.png" />
+</div>
+</div>
+<div class="section" id="A-Non-Centered-Eight-Schools-Implementation">
+<h3>A Non-Centered Eight Schools Implementation<a class="headerlink" href="#A-Non-Centered-Eight-Schools-Implementation" title="Permalink to this headline">¶</a></h3>
+<blockquote>
+<div><p>Although reducing the step size improves exploration, ultimately it
+only reveals the true extent the pathology in the centered
+implementation. Fortunately, there is another way to implement
+hierarchical models that does not suffer from the same pathologies.</p>
+<p>In a non-centered parameterization we do not try to fit the
+group-level parameters directly, rather we fit a latent Gaussian
+variable from which we can recover the group-level parameters with a
+scaling and a translation.</p>
+<div class="math">
+\[\mu \sim \mathcal{N}(0, 5)\]</div>
+<div class="math">
+\[\tau \sim \text{Half-Cauchy}(0, 5)\]</div>
+<div class="math">
+\[\tilde{\theta}_{n} \sim \mathcal{N}(0, 1)\]</div>
+<div class="math">
+\[\theta_{n} = \mu + \tau \cdot \tilde{\theta}_{n}.\]</div>
+</div></blockquote>
+<p>Stan model:</p>
+<div class="highlight-C"><div class="highlight"><pre><span></span><span class="n">data</span> <span class="p">{</span>
+  <span class="kt">int</span><span class="o">&lt;</span><span class="n">lower</span><span class="o">=</span><span class="mi">0</span><span class="o">&gt;</span> <span class="n">J</span><span class="p">;</span>
+  <span class="n">real</span> <span class="n">y</span><span class="p">[</span><span class="n">J</span><span class="p">];</span>
+  <span class="n">real</span><span class="o">&lt;</span><span class="n">lower</span><span class="o">=</span><span class="mi">0</span><span class="o">&gt;</span> <span class="n">sigma</span><span class="p">[</span><span class="n">J</span><span class="p">];</span>
+<span class="p">}</span>
+
+<span class="n">parameters</span> <span class="p">{</span>
+  <span class="n">real</span> <span class="n">mu</span><span class="p">;</span>
+  <span class="n">real</span><span class="o">&lt;</span><span class="n">lower</span><span class="o">=</span><span class="mi">0</span><span class="o">&gt;</span> <span class="n">tau</span><span class="p">;</span>
+  <span class="n">real</span> <span class="n">theta_tilde</span><span class="p">[</span><span class="n">J</span><span class="p">];</span>
+<span class="p">}</span>
+
+<span class="n">transformed</span> <span class="n">parameters</span> <span class="p">{</span>
+  <span class="n">real</span> <span class="n">theta</span><span class="p">[</span><span class="n">J</span><span class="p">];</span>
+  <span class="k">for</span> <span class="p">(</span><span class="n">j</span> <span class="n">in</span> <span class="mi">1</span><span class="o">:</span><span class="n">J</span><span class="p">)</span>
+    <span class="n">theta</span><span class="p">[</span><span class="n">j</span><span class="p">]</span> <span class="o">=</span> <span class="n">mu</span> <span class="o">+</span> <span class="n">tau</span> <span class="o">*</span> <span class="n">theta_tilde</span><span class="p">[</span><span class="n">j</span><span class="p">];</span>
+<span class="p">}</span>
+
+<span class="n">model</span> <span class="p">{</span>
+  <span class="n">mu</span> <span class="o">~</span> <span class="n">normal</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">5</span><span class="p">);</span>
+  <span class="n">tau</span> <span class="o">~</span> <span class="n">cauchy</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">5</span><span class="p">);</span>
+  <span class="n">theta_tilde</span> <span class="o">~</span> <span class="n">normal</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">);</span>
+  <span class="n">y</span> <span class="o">~</span> <span class="n">normal</span><span class="p">(</span><span class="n">theta</span><span class="p">,</span> <span class="n">sigma</span><span class="p">);</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<div class="nbinput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [57]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="k">with</span> <span class="n">pm</span><span class="o">.</span><span class="n">Model</span><span class="p">()</span> <span class="k">as</span> <span class="n">NonCentered_eight</span><span class="p">:</span>
+    <span class="n">mu</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Normal</span><span class="p">(</span><span class="s1">&#39;mu&#39;</span><span class="p">,</span> <span class="n">mu</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">sd</span><span class="o">=</span><span class="mi">5</span><span class="p">)</span>
+    <span class="n">tau</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">HalfCauchy</span><span class="p">(</span><span class="s1">&#39;tau&#39;</span><span class="p">,</span> <span class="n">beta</span><span class="o">=</span><span class="mi">5</span><span class="p">)</span>
+    <span class="n">theta_tilde</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Normal</span><span class="p">(</span><span class="s1">&#39;theta_t&#39;</span><span class="p">,</span> <span class="n">mu</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">sd</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">shape</span><span class="o">=</span><span class="n">J</span><span class="p">)</span>
+    <span class="n">theta</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Deterministic</span><span class="p">(</span><span class="s1">&#39;theta&#39;</span><span class="p">,</span> <span class="n">mu</span> <span class="o">+</span> <span class="n">tau</span> <span class="o">*</span> <span class="n">theta_tilde</span><span class="p">)</span>
+    <span class="n">obs</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Normal</span><span class="p">(</span><span class="s1">&#39;obs&#39;</span><span class="p">,</span> <span class="n">mu</span><span class="o">=</span><span class="n">theta</span><span class="p">,</span> <span class="n">sd</span><span class="o">=</span><span class="n">sigma</span><span class="p">,</span> <span class="n">observed</span><span class="o">=</span><span class="n">y</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [58]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="k">with</span> <span class="n">NonCentered_eight</span><span class="p">:</span>
+    <span class="n">step</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">NUTS</span><span class="p">(</span><span class="n">target_accept</span><span class="o">=.</span><span class="mi">80</span><span class="p">)</span>
+    <span class="n">fit_ncp80</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="mi">5000</span><span class="p">,</span> <span class="n">step</span><span class="o">=</span><span class="n">step</span><span class="p">,</span> <span class="n">init</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">njobs</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">tune</span><span class="o">=</span><span class="mi">1000</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="stderr container">
+<div class="highlight"><pre>
+100%|██████████| 5000/5000 [00:05&lt;00:00, 854.95it/s]
+</pre></div></div>
+</div>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [59]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="k">print</span><span class="p">(</span><span class="n">pm</span><span class="o">.</span><span class="n">diagnostics</span><span class="o">.</span><span class="n">gelman_rubin</span><span class="p">(</span><span class="n">fit_ncp80</span><span class="p">))</span>
+<span class="k">print</span><span class="p">(</span><span class="s1">&#39;&#39;</span><span class="p">)</span>
+<span class="k">print</span><span class="p">(</span><span class="n">pm</span><span class="o">.</span><span class="n">diagnostics</span><span class="o">.</span><span class="n">effective_n</span><span class="p">(</span><span class="n">fit_ncp80</span><span class="p">))</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<div class="highlight"><pre>
+{&#39;theta&#39;: array([ 0.9999017 ,  0.99990126,  0.99994554,  0.99991853,  0.99992781,
+        0.99990295,  0.99990909,  0.99991026]), &#39;tau_log_&#39;: 1.0005729430235684, &#39;tau&#39;: 0.99990735598654512, &#39;mu&#39;: 0.99990583189162452, &#39;theta_t&#39;: array([ 0.99990015,  1.00004939,  0.99990031,  0.99990172,  0.99990554,
+        0.99990178,  1.00008856,  0.99991732])}
+
+{&#39;theta&#39;: array([  8024.,  10000.,   9338.,  10000.,   9299.,   9330.,   8541.,
+         8856.]), &#39;tau_log_&#39;: 3741.0, &#39;tau&#39;: 4488.0, &#39;mu&#39;: 10000.0, &#39;theta_t&#39;: array([ 10000.,  10000.,  10000.,  10000.,  10000.,  10000.,  10000.,
+        10000.])}
+</pre></div><p>As shown above, the effective sample size per iteration has
+drastically improved, and the trace plots no longer show any
+&#8220;stickyness&#8221;. However, we do still see the rare divergence. These
+infrequent divergences do not seem concentrate anywhere in parameter
+space, which is indicative of the divergences being false positives.</p>
+</div>
+</div>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [60]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">report_trace</span><span class="p">(</span><span class="n">fit_ncp80</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput container">
+<div class="container">
+</div>
+<div class="container">
+<img alt="../_images/notebooks_Diagnosing_biased_Inference_with_Divergences_37_0.png" src="../_images/notebooks_Diagnosing_biased_Inference_with_Divergences_37_0.png" />
+</div>
+</div>
+<div class="nboutput container">
+<div class="container">
+</div>
+<div class="container">
+<img alt="../_images/notebooks_Diagnosing_biased_Inference_with_Divergences_37_1.png" src="../_images/notebooks_Diagnosing_biased_Inference_with_Divergences_37_1.png" />
+</div>
+</div>
+<div class="nboutput container">
+<div class="container">
+</div>
+<div class="container">
+<div class="highlight"><pre>
+Number of Divergent 14
+Percentage of Divergent 0.00280
+</pre></div></div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<img alt="../_images/notebooks_Diagnosing_biased_Inference_with_Divergences_37_3.png" src="../_images/notebooks_Diagnosing_biased_Inference_with_Divergences_37_3.png" />
+<p>As expected of false positives, we can remove the divergences
+entirely by decreasing the step size,</p>
+</div>
+</div>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [61]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="k">with</span> <span class="n">NonCentered_eight</span><span class="p">:</span>
+    <span class="n">step</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">NUTS</span><span class="p">(</span><span class="n">target_accept</span><span class="o">=.</span><span class="mi">90</span><span class="p">)</span>
+    <span class="n">fit_ncp90</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="mi">5000</span><span class="p">,</span> <span class="n">step</span><span class="o">=</span><span class="n">step</span><span class="p">,</span> <span class="n">init</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">njobs</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">tune</span><span class="o">=</span><span class="mi">1000</span><span class="p">)</span>
+
+<span class="c1"># display the total number and percentage of divergent</span>
+<span class="n">divergent</span> <span class="o">=</span> <span class="n">fit_ncp90</span><span class="p">[</span><span class="s1">&#39;diverging&#39;</span><span class="p">]</span>
+<span class="k">print</span><span class="p">(</span><span class="s1">&#39;Number of Divergent </span><span class="si">%d</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="n">divergent</span><span class="o">.</span><span class="n">nonzero</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">size</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput container">
+<div class="container">
+</div>
+<div class="stderr container">
+<div class="highlight"><pre>
+100%|██████████| 5000/5000 [00:06&lt;00:00, 721.82it/s]
+</pre></div></div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<div class="highlight"><pre>
+Number of Divergent 0
+</pre></div><p>The more agreeable geometry of the non-centered implementation
+allows the Markov chain to explore deep into the neck of the funnel,
+capturing even the smallest values of <span class="math">\(\tau\)</span> that are
+consistent with the measurements. Consequently, MCMC estimators from
+the non-centered chain rapidly converge towards their true
+expectation values.</p>
+</div>
+</div>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [65]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">theta0</span> <span class="o">=</span> <span class="n">fit_cp90</span><span class="p">[</span><span class="s1">&#39;theta&#39;</span><span class="p">][:,</span> <span class="mi">0</span><span class="p">]</span>
+<span class="n">logtau0</span> <span class="o">=</span> <span class="n">fit_cp90</span><span class="p">[</span><span class="s1">&#39;tau_log_&#39;</span><span class="p">]</span>
+<span class="n">divergent0</span> <span class="o">=</span> <span class="n">fit_cp90</span><span class="p">[</span><span class="s1">&#39;diverging&#39;</span><span class="p">]</span>
+
+<span class="n">theta1</span> <span class="o">=</span> <span class="n">fit_cp99</span><span class="p">[</span><span class="s1">&#39;theta&#39;</span><span class="p">][:,</span> <span class="mi">0</span><span class="p">]</span>
+<span class="n">logtau1</span> <span class="o">=</span> <span class="n">fit_cp99</span><span class="p">[</span><span class="s1">&#39;tau_log_&#39;</span><span class="p">]</span>
+<span class="n">divergent1</span> <span class="o">=</span> <span class="n">fit_cp99</span><span class="p">[</span><span class="s1">&#39;diverging&#39;</span><span class="p">]</span>
+
+<span class="n">thetan</span> <span class="o">=</span> <span class="n">fit_ncp80</span><span class="p">[</span><span class="s1">&#39;theta&#39;</span><span class="p">][:,</span> <span class="mi">0</span><span class="p">]</span>
+<span class="n">logtaun</span> <span class="o">=</span> <span class="n">fit_ncp80</span><span class="p">[</span><span class="s1">&#39;tau_log_&#39;</span><span class="p">]</span>
+<span class="n">divergentn</span> <span class="o">=</span> <span class="n">fit_ncp80</span><span class="p">[</span><span class="s1">&#39;diverging&#39;</span><span class="p">]</span>
+
+<span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="mi">6</span><span class="p">))</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">scatter</span><span class="p">(</span><span class="n">thetan</span><span class="p">[</span><span class="n">divergentn</span> <span class="o">==</span> <span class="mi">0</span><span class="p">],</span> <span class="n">logtaun</span><span class="p">[</span><span class="n">divergentn</span> <span class="o">==</span> <span class="mi">0</span><span class="p">],</span>
+            <span class="n">color</span><span class="o">=</span><span class="s1">&#39;b&#39;</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=.</span><span class="mi">5</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s1">&#39;Non-Centered, delta=0.80&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">scatter</span><span class="p">(</span><span class="n">theta1</span><span class="p">[</span><span class="n">divergent1</span> <span class="o">==</span> <span class="mi">0</span><span class="p">],</span> <span class="n">logtau1</span><span class="p">[</span><span class="n">divergent1</span> <span class="o">==</span> <span class="mi">0</span><span class="p">],</span>
+            <span class="n">color</span><span class="o">=</span><span class="s1">&#39;r&#39;</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=.</span><span class="mi">5</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s1">&#39;Centered, delta=0.99&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">scatter</span><span class="p">(</span><span class="n">theta0</span><span class="p">[</span><span class="n">divergent0</span> <span class="o">==</span> <span class="mi">0</span><span class="p">],</span> <span class="n">logtau0</span><span class="p">[</span><span class="n">divergent0</span> <span class="o">==</span> <span class="mi">0</span><span class="p">],</span>
+            <span class="n">color</span><span class="o">=</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mf">0.5</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span> <span class="n">alpha</span><span class="o">=.</span><span class="mi">5</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s1">&#39;Centered, delta=0.90&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">axis</span><span class="p">([</span><span class="o">-</span><span class="mi">20</span><span class="p">,</span> <span class="mi">50</span><span class="p">,</span> <span class="o">-</span><span class="mi">6</span><span class="p">,</span> <span class="mi">4</span><span class="p">])</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="s1">&#39;log(tau)&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">xlabel</span><span class="p">(</span><span class="s1">&#39;theta[0]&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">title</span><span class="p">(</span><span class="s1">&#39;scatter plot between log(tau) and theta[1]&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">legend</span><span class="p">()</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+
+<span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">15</span><span class="p">,</span> <span class="mi">4</span><span class="p">))</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">axhline</span><span class="p">(</span><span class="mf">0.7657852</span><span class="p">,</span> <span class="n">lw</span><span class="o">=</span><span class="mf">2.5</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s1">&#39;gray&#39;</span><span class="p">)</span>
+<span class="n">mlogtaun</span> <span class="o">=</span> <span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">logtaun</span><span class="p">[:</span><span class="n">i</span><span class="p">])</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">logtaun</span><span class="p">))]</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">mlogtaun</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s1">&#39;b&#39;</span><span class="p">,</span> <span class="n">lw</span><span class="o">=</span><span class="mf">2.5</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s1">&#39;Non-Centered, delta=0.80&#39;</span><span class="p">)</span>
+
+<span class="n">mlogtau1</span> <span class="o">=</span> <span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">logtau1</span><span class="p">[:</span><span class="n">i</span><span class="p">])</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">logtau1</span><span class="p">))]</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">mlogtau1</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s1">&#39;r&#39;</span><span class="p">,</span> <span class="n">lw</span><span class="o">=</span><span class="mf">2.5</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s1">&#39;Centered, delta=0.99&#39;</span><span class="p">)</span>
+
+<span class="n">mlogtau0</span> <span class="o">=</span> <span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">logtau0</span><span class="p">[:</span><span class="n">i</span><span class="p">])</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">logtau0</span><span class="p">))]</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">mlogtau0</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mf">0.5</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span> <span class="n">lw</span><span class="o">=</span><span class="mf">2.5</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s1">&#39;Centered, delta=0.90&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">ylim</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">xlabel</span><span class="p">(</span><span class="s1">&#39;Iteration&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="s1">&#39;MCMC mean of log(tau)&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">title</span><span class="p">(</span><span class="s1">&#39;MCMC estimation of log(tau)&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">legend</span><span class="p">()</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput container">
+<div class="container">
+</div>
+<div class="container">
+<img alt="../_images/notebooks_Diagnosing_biased_Inference_with_Divergences_41_0.png" src="../_images/notebooks_Diagnosing_biased_Inference_with_Divergences_41_0.png" />
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<img alt="../_images/notebooks_Diagnosing_biased_Inference_with_Divergences_41_1.png" src="../_images/notebooks_Diagnosing_biased_Inference_with_Divergences_41_1.png" />
+</div>
+</div>
+<div class="nbinput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [ ]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span>
+</pre></div>
+</div>
+</div>
+</div>
+</div>
+</div>
+
+
+           </div>
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="posterior_predictive.html" class="btn btn-neutral float-right" title="Posterior Predictive Checks" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="sampler-stats.html" class="btn btn-neutral" title="Sampler statistics" accesskey="p"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2016, John Salvatier, Christopher Fonnesbeck, Thomas Wiecki.
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'../',
+            VERSION:'3.0',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true
+        };
+    </script>
+      <script type="text/javascript" src="../_static/jquery.js"></script>
+      <script type="text/javascript" src="../_static/underscore.js"></script>
+      <script type="text/javascript" src="../_static/doctools.js"></script>
+      <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+  
+
+  
+  
+    <script type="text/javascript" src="../_static/js/theme.js"></script>
+  
+
+  
+  
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.StickyNav.enable();
+      });
+  </script>
+   
+
+</body>
+</html>

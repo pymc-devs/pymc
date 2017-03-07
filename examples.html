@@ -90,6 +90,7 @@
 <li class="toctree-l2"><a class="reference internal" href="#howto">Howto</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="notebooks/sampler-stats.html">Sampler statistics</a></li>
 <li class="toctree-l3"><a class="reference internal" href="notebooks/sampler-stats.html#Multiple-samplers">Multiple samplers</a></li>
+<li class="toctree-l3"><a class="reference internal" href="notebooks/Diagnosing_biased_Inference_with_Divergences.html">Diagnosing Biased Inference with Divergences</a></li>
 <li class="toctree-l3"><a class="reference internal" href="notebooks/posterior_predictive.html">Posterior Predictive Checks</a></li>
 <li class="toctree-l3"><a class="reference internal" href="notebooks/howto_debugging.html">How to debug a model</a></li>
 <li class="toctree-l3"><a class="reference internal" href="notebooks/LKJ.html">LKJ Prior for fitting a Multivariate Normal Model</a></li>
@@ -115,7 +116,7 @@
 <li class="toctree-l3"><a class="reference internal" href="notebooks/GLM-negative-binomial-regression.html">GLM: Negative Binomial Regression</a></li>
 </ul>
 </li>
-<li class="toctree-l2"><a class="reference internal" href="#gp">GP</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#gaussian-processes">Gaussian Processes</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="notebooks/GP-introduction.html">Gaussian Process Regression</a></li>
 <li class="toctree-l3"><a class="reference internal" href="notebooks/GP-covariances.html">Kernels / Covariance functions</a></li>
 <li class="toctree-l3"><a class="reference internal" href="notebooks/GP-slice-sampling.html">Gaussian Process Regression and Classification with Elliptical Slice Sampling</a></li>
@@ -130,7 +131,7 @@
 <li class="toctree-l3"><a class="reference internal" href="notebooks/dependent_density_regression.html">Dependent density regression</a></li>
 </ul>
 </li>
-<li class="toctree-l2"><a class="reference internal" href="#advi">ADVI</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#variational-inference">Variational Inference</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="notebooks/GLM-hierarchical-ADVI.html">GLM: Hierarchical Linear Regression with ADVI</a></li>
 <li class="toctree-l3"><a class="reference internal" href="notebooks/GLM-hierarchical-advi-minibatch.html">GLM: Mini-batch ADVI on hierarchical regression model</a></li>
 <li class="toctree-l3"><a class="reference internal" href="notebooks/lda-advi-aevb.html">Automatic autoencoding variational Bayes for latent dirichlet allocation with PyMC3</a></li>
@@ -227,6 +228,24 @@
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="notebooks/sampler-stats.html">Sampler statistics</a></li>
 <li class="toctree-l1"><a class="reference internal" href="notebooks/sampler-stats.html#Multiple-samplers">Multiple samplers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="notebooks/Diagnosing_biased_Inference_with_Divergences.html">Diagnosing Biased Inference with Divergences</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="notebooks/Diagnosing_biased_Inference_with_Divergences.html#PyMC3-port-of-Michael-Betancourt's-post-on-ms-stan.-For-detailed-explanation-of-the-underlying-mechanism-please-check-the-original-post-and-Betancourt's-excellent-paper.">PyMC3 port of Michael Betancourt&#8217;s post on ms-stan. For detailed explanation of the underlying mechanism please check the original post and Betancourt&#8217;s excellent paper.</a></li>
+<li class="toctree-l2"><a class="reference internal" href="notebooks/Diagnosing_biased_Inference_with_Divergences.html#More-formally,-as-explained-in-the-original-post-(in-markdown-block,-same-below):">More formally, as explained in the original post (in markdown block, same below):</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="notebooks/Diagnosing_biased_Inference_with_Divergences.html#The-Eight-Schools-Model">The Eight Schools Model</a></li>
+<li class="toctree-l3"><a class="reference internal" href="notebooks/Diagnosing_biased_Inference_with_Divergences.html#A-Centered-Eight-Schools-Implementation">A Centered Eight Schools Implementation</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="notebooks/Diagnosing_biased_Inference_with_Divergences.html#A-Dangerously-Short-Markov-Chain">A Dangerously-Short Markov Chain</a></li>
+<li class="toctree-l2"><a class="reference internal" href="notebooks/Diagnosing_biased_Inference_with_Divergences.html#A-Safer,-Longer-Markov-Chain">A Safer, Longer Markov Chain</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="notebooks/Diagnosing_biased_Inference_with_Divergences.html#Mitigating-Divergences-by-Adjusting-PyMC3's-Adaptation-Routine">Mitigating Divergences by Adjusting PyMC3&#8217;s Adaptation Routine</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="notebooks/Diagnosing_biased_Inference_with_Divergences.html#Adjusting-Adaptation-Routine">Adjusting Adaptation Routine</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="notebooks/Diagnosing_biased_Inference_with_Divergences.html#A-Non-Centered-Eight-Schools-Implementation">A Non-Centered Eight Schools Implementation</a></li>
+</ul>
+</li>
+</ul>
+</li>
 <li class="toctree-l1"><a class="reference internal" href="notebooks/posterior_predictive.html">Posterior Predictive Checks</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="notebooks/posterior_predictive.html#Comparison-between-PPC-and-other-model-evaluation-methods.">Comparison between PPC and other model evaluation methods.</a></li>
 <li class="toctree-l2"><a class="reference internal" href="notebooks/posterior_predictive.html#Prediction">Prediction</a><ul>
@@ -461,8 +480,8 @@
 </ul>
 </div>
 </div>
-<div class="section" id="gp">
-<h2>GP<a class="headerlink" href="#gp" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="gaussian-processes">
+<h2>Gaussian Processes<a class="headerlink" href="#gaussian-processes" title="Permalink to this headline">¶</a></h2>
 <div class="toctree-wrapper compound">
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="notebooks/GP-introduction.html">Gaussian Process Regression</a><ul>
@@ -539,8 +558,8 @@
 </ul>
 </div>
 </div>
-<div class="section" id="advi">
-<h2>ADVI<a class="headerlink" href="#advi" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="variational-inference">
+<h2>Variational Inference<a class="headerlink" href="#variational-inference" title="Permalink to this headline">¶</a></h2>
 <div class="toctree-wrapper compound">
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="notebooks/GLM-hierarchical-ADVI.html">GLM: Hierarchical Linear Regression with ADVI</a><ul>
