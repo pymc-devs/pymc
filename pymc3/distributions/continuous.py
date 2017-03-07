@@ -870,6 +870,9 @@ class Cauchy(Continuous):
                      - tt.log1p(((value - alpha) / beta)**2),
                      beta > 0)
 
+    def logcdf (self, value):
+          return tt.log(0.5 + tt.arctan ((value - self.alpha) / self.beta) / np.pi)
+
 
 class HalfCauchy(PositiveContinuous):
     R"""
