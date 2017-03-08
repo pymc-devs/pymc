@@ -76,3 +76,4 @@ def probit(p):
     
 def invprobit(x):
     return 0.5 * erfc(-x / sqrt(2))
+    
