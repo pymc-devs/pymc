@@ -3,7 +3,7 @@ import theano.tensor as tt
 from theano import function
 import theano
 from ..memoize import memoize
-from ..model import Model, get_named_nodes
+from ..model import Model, get_named_nodes, FreeRV, ObservedRV
 from ..vartypes import string_types
 from .dist_math import bound
 
@@ -30,11 +30,13 @@ class Distribution(object):
 
         if isinstance(name, string_types):
             data = kwargs.pop('observed', None)
+            if isinstance(data, ObservedRV) or isinstance(data, FreeRV):
+                raise TypeError("observed needs to be data but got: {}".format(type(data)))
             total_size = kwargs.pop('total_size', None)
             dist = cls.dist(*args, **kwargs)
             return model.Var(name, dist, data, total_size)
         else:
-            raise TypeError("Name needs to be a string but got: %s" % name)
+            raise TypeError("Name needs to be a string but got: {}".format(name))
 
     def __getnewargs__(self):
         return _Unpickling,
