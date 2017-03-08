@@ -633,7 +633,7 @@ def _hpd_df(x, alpha):
 
 
 def summary(trace, varnames=None, transform=lambda x: x, alpha=0.05, start=0,
-             batches=None, roundto=3, include_transformed=False, to_file=None):
+            batches=None, roundto=3, include_transformed=False, to_file=None):
     R"""
     Generate a pretty-printed summary of the node.
 
