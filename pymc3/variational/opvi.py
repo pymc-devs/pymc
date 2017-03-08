@@ -40,7 +40,7 @@ class Operator(object):
     input = property(lambda self: self.approx.flat_view.input)
 
     def logp(self, z):
-        p = theano.clone(self.model.logpt, self.flat_view.replacements, strict=False)
+        p = self.approx.to_flat_input(self.model.logpt)
         p = theano.clone(p, {self.input: z})
         return p
 
@@ -679,9 +679,12 @@ class Approximation(object):
             rho = self.known[var][1].ravel()
             mu = self.scale_grad(mu)
             rho = self.scale_grad(rho)
+
             x = self.view(z, var.name, reshape=False)
             q = log_normal(x, mu, rho=rho)
-            logp.append(q.sum() * var.scaling)
+
+            s = self.to_flat_input(var.scaling)
+            logp.append(q.sum() * s)
         return tt.sum(logp)
 
     def log_q_W_global(self, z):
