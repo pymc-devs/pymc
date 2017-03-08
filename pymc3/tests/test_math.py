@@ -1,8 +1,12 @@
 import numpy as np
 import theano
 from theano.tests import unittest_tools as utt
-from pymc3.math import LogDet, logdet
+from pymc3.math import LogDet, logdet, probit, invprobit
 from .helpers import SeededTest
+
+def test_probit():
+    p = np.array([0.01, 0.25, 0.5, 0.75, 0.99])
+    assert np.all(invprobit(probit(p)).eval()==p)
 
 class TestLogDet(SeededTest):
 
