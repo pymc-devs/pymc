@@ -170,7 +170,7 @@ def sample(draws, step=None, init='auto', n_init=200000, start=None,
         if pm.model.all_continuous(model.vars):
             init = 'advi'
         else:
-            init = 'random'
+            init = None
     if init is not None:
         if init_start:
             for k in init_start.keys():
