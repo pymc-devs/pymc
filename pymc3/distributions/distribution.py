@@ -117,8 +117,6 @@ class Discrete(Distribution):
 
 class Continuous(Distribution):
     """Base class for continuous distributions"""
-    # Note that mean is listed as a default before median because it appears
-    # that more distributions have closed form means than medians.
     def __init__(self, shape=(), dtype=None, defaults=['median', 'mean', 'mode'], *args, **kwargs):
         if dtype is None:
             dtype = theano.config.floatX

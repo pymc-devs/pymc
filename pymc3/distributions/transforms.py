@@ -154,7 +154,6 @@ class Log(ElemwiseTransform):
             # Set the test value for the theano variable to be returned
             return_expr.tag.test_value = np.exp(numeric_x)
 
-        assert hasattr(return_expr.tag, "test_value")
         return return_expr
 
     def forward(self, x):
@@ -168,7 +167,6 @@ class Log(ElemwiseTransform):
             # Set the test value for the theano variable to be returned
             return_expr.tag.test_value = np.log(numeric_x)
 
-        assert hasattr(return_expr.tag, "test_value")
         return return_expr
 
 log = Log()
