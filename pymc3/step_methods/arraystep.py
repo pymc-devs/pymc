@@ -27,8 +27,6 @@ class Competence(IntEnum):
 class BlockedStep(object):
 
     generates_stats = False
-    _nparticles = None
-    min_nparticles = None
 
     def __new__(cls, *args, **kwargs):
         blocked = kwargs.get('blocked')
@@ -83,20 +81,6 @@ class BlockedStep(object):
     @classmethod
     def _competence(cls, vars):
         return [cls.competence(var) for var in np.atleast_1d(vars)]
-
-    @property
-    def nparticles(self):
-        return self._nparticles
-
-    @nparticles.setter
-    def nparticles(self, value):
-        if self.min_nparticles is None:
-            if value is not None:
-                raise ValueError("{} does not support particles".format(self))
-        else:
-            assert value >= self.min_nparticles, "{} requires at least {} particles for the variables {}"\
-            .format(self, self.min_nparticles, '\n'.join(self.vars))
-        self._nparticles = value
 
 
 class ArrayStep(BlockedStep):

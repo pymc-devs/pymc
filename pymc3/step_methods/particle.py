@@ -34,13 +34,6 @@ class ParticleStep(BlockedStep):
         self.blocked = True
         self.t_func = logp(model.logpt, vars, shared)
 
-    @property
-    def ordering(self):
-        return ArrayOrdering(self.vars, self.nparticles)
-
-    def astep(self, point_array):
-        raise NotImplementedError("This is a ParticleStep template, it doesn't do anything!")
-
     def step(self, point):
         for var, share in self.shared.items():
             share.container.storage[0] = point[var]
@@ -54,16 +47,26 @@ class ParticleStep(BlockedStep):
             apoint = self.astep(bij.map(point))
             return bij.rmap(apoint)
 
+    @property
+    def nparticles(self):
+        if self._nparticles is None:
+            raise AttributeError("nparticles has not been set")
+        return self._nparticles
+
+    @nparticles.setter
+    def nparticles(self, value):
+        assert value >= self.min_nparticles, "{} <= minimum required particles for {}".format(value, self)
+        self._nparticles = int(value)
+        self.ordering = ArrayOrdering(self.vars, self._nparticles)
+
 
 def logp(logp, vars, shared):
     [logp0], inarray0 = pm.join_nonshared_inputs([logp], vars, shared)
-    tensor_type = inarray0.type
     f = theano.function([inarray0], logp0)
     f.trust_input = True
     return f
 
-
-def transform_start_particles(start, nparticles, model=None):
+def transform_start_positions(start, nparticles, njobs, model=None):
     """
     Parameters
     ----------
@@ -77,33 +80,46 @@ def transform_start_particles(start, nparticles, model=None):
 
     Returns
     -------
-     transformed_start : a dict each with start positions of shape (nparticles, var.dshape)
+     transformed_start : a list of dicts each with start positions of shape (nparticles, var.dshape)
     """
+    assert nparticles is None or nparticles >= 1
+    assert njobs >= 1
     if start is None:
-        return {}
+        return [{}]
+    model = modelcontext(model)
     dshapes = {i.name: i.dshape for i in model.vars}
     dshapes.update({i.name: i.transformed.dshape for i in model.deterministics if hasattr(i, 'transformed')})
+
     if isinstance(start, dict):
         start = {k: v for k,v in start.items() if k in dshapes}
         if all(dshapes[k] == np.asarray(v).shape for k, v in start.items()):
             if nparticles is not None:
                 start = {k: np.asarray([v]*nparticles) for k, v in start.items()}  # duplicate
-            return Point(**start)
+            return [Point(**start)]
         else:
-            extra = tuple() if nparticles is None else (nparticles, )
-            if all(extra+dshapes[k] == np.asarray(v).shape for k, v in start.items()):
-                return Point(**start)
+            extra_particlesjobs = tuple() if nparticles is None else (nparticles*njobs,)
+            extra_particlesjobs_sep = (njobs, ) if nparticles is None else (njobs, nparticles,)
+            if all(extra_particlesjobs+dshapes[k] == np.asarray(v).shape for k, v in start.items()):
+                return [Point(**{k: v[j:(j+1)*nparticles] for k, v in start.items()}) for j in range(njobs)]
+            elif all(extra_particlesjobs_sep+dshapes[k] == np.asarray(v).shape for k, v in start.items()):
+                return [Point(**{k: v[j] for k, v in start.items()}) for j in range(njobs)]
             else:
                 raise TypeError("Start dicts must have a shape of (nparticles, dshape) or (dshape,)")
     elif isinstance(start, list):
         start = [{k: v for k, v in s.items() if k in dshapes} for s in start]
-        assert len(start) == nparticles, "If start is a list, it must have a length of nparticles"
-        assert all(isinstance(i, dict) for i in start), "Start dicts must have a shape of (dshape,)"
+        assert all(isinstance(i, dict) for i in start)
         assert all(s.keys() == start[0].keys() for s in start), "All start positions must have the same variables"
+
         d = {}
         for varname, varshape in dshapes.items():
             if varname in start[0].keys():
-                assert all(varshape == s[varname].shape for s in start), "Start dicts must have a shape of (dshape,)"
                 d[varname] = np.asarray([s[varname] for s in start])
-        return Point(**d)
+        return transform_start_positions(d, nparticles, njobs, model)
     raise TypeError("Start must be a dict or a list of dicts")
+
+
+def get_required_nparticles(*steps):
+    try:
+        return max(s.min_nparticles for s in steps if hasattr(s, 'min_nparticles'))
+    except ValueError, TypeError:
+        return

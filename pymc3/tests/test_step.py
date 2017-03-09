@@ -1,6 +1,8 @@
 import os
 import unittest
 
+from pymc3.step_methods.compound import _CompoundStep
+
 from .checks import close_to
 from .models import simple_categorical, mv_simple, mv_simple_discrete, simple_2model, mv_prior_simple
 from pymc3.sampling import assign_step_methods, sample
@@ -242,14 +244,14 @@ class TestCompoundStep(unittest.TestCase):
         _, model = simple_2model()
         with model:
             for sampler in self.samplers:
-                self.assertIsInstance(sampler(blocked=False), CompoundStep)
+                self.assertIsInstance(sampler(blocked=False), _CompoundStep)
 
     def test_blocked(self):
         _, model = simple_2model()
         with model:
             for sampler in self.samplers:
                 sampler_instance = sampler(blocked=True)
-                self.assertNotIsInstance(sampler_instance, CompoundStep)
+                self.assertNotIsInstance(sampler_instance, _CompoundStep)
                 self.assertIsInstance(sampler_instance, sampler)
 
 

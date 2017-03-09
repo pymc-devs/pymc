@@ -5,7 +5,8 @@ import numpy as np
 import pymc3 as pm
 from joblib import Parallel, delayed
 from numpy.random import randint, seed
-from pymc3.step_methods.particle import transform_start_particles
+from pymc3.step_methods.compound import _CompoundStep
+from pymc3.step_methods.particle import transform_start_positions, get_required_nparticles
 from tqdm import tqdm
 
 from .backends.base import merge_traces, BaseTrace, MultiTrace
@@ -160,22 +161,16 @@ def sample(draws, step=None, init='auto', n_init=200000, start=None,
         init = init.lower()
 
     if nparticles is None:
-        if step is None:
-            nparticles = None
-        else:
-            try:
-                steps = list(step)
-            except TypeError:
-                steps = [step]
-            nparticles = max(s.min_nparticles for s in steps)
+        nparticles = get_required_nparticles(step)
         if nparticles is not None:
             pm._log.info('Auto-assigning {} particles...'.format(nparticles))
 
     _start = None
-    if init == 'auto' and pm.model.all_continuous(model.vars):
-        init = 'advi'
-    else:
-        init = None
+    if init == 'auto':
+        if pm.model.all_continuous(model.vars):
+            init = 'advi'
+        else:
+            init = 'random'
     if init is not None:
         if init_start:
             for k in init_start.keys():
@@ -193,8 +188,8 @@ def sample(draws, step=None, init='auto', n_init=200000, start=None,
 
     step = assign_step_methods(model, step)
 
-    start = [transform_start_particles(start, nparticles, model)] * njobs
-    _start = [transform_start_particles(_start, nparticles, model)] * njobs
+    start = transform_start_positions(start, nparticles, njobs, model)
+    _start = transform_start_positions(_start, nparticles, njobs, model)
     for pair in zip(start, _start):
         _soft_update(*pair)
 
@@ -308,7 +303,7 @@ def _iter_sample(draws, step, start=None, trace=None, chain=0, tune=None, nparti
         _soft_update(start, strace.point(-1))
     else:
         if nparticles is not None:
-            _soft_update(start, {k: np.asarray([v]*nparticles) for k, v in model.test_point.iteritems()})
+            _soft_update(start, {k: np.asarray([v]*nparticles) for k, v in model.test_point.items()})
         else:
             _soft_update(start, model.test_point)
 
@@ -323,9 +318,7 @@ def _iter_sample(draws, step, start=None, trace=None, chain=0, tune=None, nparti
         strace.setup(draws, chain, step.stats_dtypes)
     else:
         strace.setup(draws, chain)
-    methods = step.methods if isinstance(step, CompoundStep) else [step]
-    for s in methods:
-        s.expected_ndraws = draws
+
     for i in range(draws):
         if i == tune:
             step = stop_tuning(step)
@@ -474,7 +467,7 @@ def sample_ppc(trace, samples=None, model=None, vars=None, size=None, random_see
     return {k: np.asarray(v) for k, v in ppc.items()}
 
 
-def do_init(init='ADVI', nsamples=1, n_init=500000, model=None, random_seed=-1, randomiser=None, start=None):
+def do_init(init='ADVI', nsamples=1, n_init=500000, model=None, random_seed=-1, sampler=None, start=None):
     """Initialize and sample from posterior of a continuous model.
         Parameters
         ----------
@@ -492,7 +485,7 @@ def do_init(init='ADVI', nsamples=1, n_init=500000, model=None, random_seed=-1, 
         model : Model (optional if in `with` context)
         **kwargs : keyword arguments
             Extra keyword arguments are forwarded to pymc3.NUTS.
-        randomiser : str ('cov', 'sample', 'duplicate')
+        sampler : str ('cov', 'sample', 'duplicate')
             How inits with njobs > 1 obtain samples around the single inititalized guess
             * cov : Generate a covariance array for all parameters and sample from the ensuing multivariate gaussian
             * sample : For all init methods except `map`, 'sample' will sample using advi or from the initial nuts trace
@@ -511,11 +504,11 @@ def do_init(init='ADVI', nsamples=1, n_init=500000, model=None, random_seed=-1, 
     if nsamples is None:
         nsamples = 1
 
-    if randomiser is None:
+    if sampler is None:
         if init == 'map':
-            randomiser = 'cov'
+            sampler = 'cov'
         else:
-            randomiser = 'sample'
+            sampler = 'sample'
 
     if init is not None:
         init = init.lower()
@@ -529,7 +522,7 @@ def do_init(init='ADVI', nsamples=1, n_init=500000, model=None, random_seed=-1, 
             raise NotImplemented('Initializer {} is not supported.'.format(init))
         v_params = pm.variational.advi(n=n_init, start=start, random_seed=random_seed)
         cov = np.power(model.dict_to_array(v_params.stds), 2)
-        if randomiser == 'sample':
+        if sampler == 'sample':
             start = pm.variational.sample_vp(v_params, nsamples, progressbar=False,
                                              hide_transformed=False,
                                              random_seed=random_seed)  # multitrace
@@ -538,7 +531,7 @@ def do_init(init='ADVI', nsamples=1, n_init=500000, model=None, random_seed=-1, 
         start = pm.find_MAP(start=start)  # dict
         cov = pm.find_hessian(point=start)
         start = [start]
-        if randomiser == 'sample':
+        if sampler == 'sample':
             raise NotImplementedError(
                 'Randomising from MAP using "sample" is not supported. Use "random", "cov", or "duplicate".')
     elif init == 'nuts':
@@ -552,16 +545,16 @@ def do_init(init='ADVI', nsamples=1, n_init=500000, model=None, random_seed=-1, 
     if nsamples == 1:
         return start[0], cov
 
-    if randomiser == 'cov':
+    if sampler == 'cov':
         model = pm.modelcontext(model)
         order = pm.ArrayOrdering(model.vars)
         bij = pm.DictToArrayBijection(order, start[0])
         sarray = bij.map(start[0])
         start = [bij.rmap(np.random.multivariate_normal(sarray, cov)) for _ in range(nsamples)]
-    elif randomiser == 'duplicate':
+    elif sampler == 'duplicate':
         start = [start[0]] * nsamples
-    elif randomiser != 'sample':
-        raise NotImplemented('Randomiser {} is not supported.'.format(randomiser))
+    elif sampler != 'sample':
+        raise NotImplemented('Randomiser {} is not supported.'.format(sampler))
     return start, cov
 
 
