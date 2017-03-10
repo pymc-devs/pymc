@@ -121,5 +121,5 @@ def transform_start_positions(start, nparticles, njobs, model=None):
 def get_required_nparticles(*steps):
     try:
         return max(s.min_nparticles for s in steps if hasattr(s, 'min_nparticles'))
-    except ValueError, TypeError:
+    except (ValueError, TypeError):
         return
