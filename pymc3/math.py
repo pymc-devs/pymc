@@ -6,8 +6,8 @@ import theano
 from theano.tensor import (
     constant, flatten, zeros_like, ones_like, stack, concatenate, sum, prod,
     lt, gt, le, ge, eq, neq, switch, clip, where, and_, or_, abs_, exp, log,
-    cos, sin, tan, cosh, sinh, tanh, sqr, sqrt, erf, erfinv, dot, maximum,
-    minimum, sgn, ceil, floor)
+    cos, sin, tan, cosh, sinh, tanh, sqr, sqrt, erf, erfc, erfinv, erfcinv, dot, 
+    maximum, minimum, sgn, ceil, floor)
 from theano.tensor.nlinalg import det, matrix_inverse, extract_diag, matrix_dot, trace
 from theano.tensor.nnet import sigmoid
 from theano.gof import Op, Apply
@@ -70,3 +70,9 @@ class LogDet(Op):
         return "LogDet"
 
 logdet = LogDet()
+
+def probit(p):
+    return -sqrt(2) * erfcinv(2 * p)
+    
+def invprobit(x):
+    return 0.5 * erfc(-x / sqrt(2))
