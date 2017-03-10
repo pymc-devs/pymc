@@ -18,16 +18,19 @@ class ArrayOrdering(object):
     An ordering for an array space
     """
 
-    def __init__(self, vars):
+    def __init__(self, vars, nparticles=None):
         self.vmap = []
         dim = 0
+        self.nparticles = nparticles
 
         for var in vars:
             slc = slice(dim, dim + var.dsize)
             self.vmap.append(VarMap(str(var), slc, var.dshape, var.dtype))
             dim += var.dsize
-
-        self.dimensions = dim
+        if self.nparticles is not None:
+            self.dimensions = (self.nparticles, dim)
+        else:
+            self.dimensions = dim
 
 
 class DictToArrayBijection(object):
@@ -38,7 +41,7 @@ class DictToArrayBijection(object):
     def __init__(self, ordering, dpoint):
         self.ordering = ordering
         self.dpt = dpoint
-        
+
         # determine smallest float dtype that will fit all data
         if all([x.dtyp == 'float16' for x in ordering.vmap]):
             self.array_dtype = 'float16'
@@ -56,8 +59,12 @@ class DictToArrayBijection(object):
         dpt : dict
         """
         apt = np.empty(self.ordering.dimensions, dtype=self.array_dtype)
-        for var, slc, _, _ in self.ordering.vmap:
-            apt[slc] = dpt[var].ravel()
+        for var, slc, shp, _ in self.ordering.vmap:
+            if self.ordering.nparticles is not None:
+                for d in range(self.ordering.nparticles):
+                    apt[d, slc] = dpt[var][d].ravel()
+            else:
+                apt[slc] = dpt[var].ravel()
         return apt
 
     def rmap(self, apt):
@@ -71,7 +78,11 @@ class DictToArrayBijection(object):
         dpt = self.dpt.copy()
 
         for var, slc, shp, dtyp in self.ordering.vmap:
-            dpt[var] = np.atleast_1d(apt)[slc].reshape(shp).astype(dtyp)
+            if self.ordering.nparticles is not None:
+                for d in range(self.ordering.nparticles):
+                    dpt[var][d] = np.atleast_1d(apt)[d, slc].reshape(shp).astype(dtyp)
+            else:
+                dpt[var] = np.atleast_1d(apt)[slc].reshape(shp).astype(dtyp)
 
         return dpt
 

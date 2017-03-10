@@ -200,6 +200,16 @@ class BaseTrace(object):
             return set()
 
 
+class MultiMixin(object):
+    chain_coverage = []
+
+    def iter_fn(self, point, particle):
+        d = {}
+        for k, v in point.iteritems():
+            d[k] = v[particle]
+        return self.fn(d)
+
+
 class MultiTrace(object):
     """Main interface for accessing values from MCMC results
 
@@ -242,6 +252,16 @@ class MultiTrace(object):
 
     def __init__(self, straces):
         self._straces = {}
+        particle_traces = []
+        for i, strace in enumerate(straces):
+            try:
+                for j in range(strace.nparticles):
+                    particle_traces.append(strace.get_particle_trace(j))
+                del straces[i]
+            except AttributeError:
+                pass
+
+        straces += particle_traces
         for strace in straces:
             if strace.chain in self._straces:
                 raise ValueError("Chains are not unique.")

@@ -113,9 +113,9 @@ defined that returns a MultiTrace object.
 
 For specific examples, see pymc3.backends.{ndarray,text,sqlite}.py.
 """
-from ..backends.ndarray import NDArray
+from ..backends.ndarray import NDArray, MultiNDArray
 from ..backends.text import Text
-from ..backends.sqlite import SQLite
+from ..backends.sqlite import SQLite, MultiSQLite
 from ..backends.hdf5 import HDF5
 
 _shortcuts = {'text': {'backend': Text,
@@ -124,3 +124,5 @@ _shortcuts = {'text': {'backend': Text,
                          'name': 'mcmc.sqlite'},
               'hdf5': {'backend': HDF5,
                        'name': 'mcmc.hdf5'}}
+
+_particle_shortcuts = {'sqlite': {'backend': MultiSQLite, 'name': 'mcmc.sqlite'}}

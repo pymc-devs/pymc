@@ -2,6 +2,8 @@
 
 Store sampling values in memory as a NumPy array.
 """
+from collections import OrderedDict
+
 import numpy as np
 from ..backends import base
 
@@ -175,7 +177,149 @@ class NDArray(base.BaseTrace):
                 for varname, values in self.samples.items()}
 
 
-def _slice_as_ndarray(strace, idx):
+class MultiNDArray(NDArray, base.MultiMixin):
+    """NDArray trace object
+
+    Parameters
+    ----------
+    nparticles : int
+        Number of chains to record to
+    name : str
+        Name of backend. This has no meaning for the NDArray backend.
+    model : Model
+        If None, the model is taken from the `with` context.
+    vars : list of variables
+        Sampling values will be stored for these variables. If None,
+        `model.unobserved_RVs` is used.
+    """
+
+    supports_sampler_stats = False
+
+    def __init__(self, nparticles, name=None, model=None, vars=None):
+        super(MultiNDArray, self).__init__(name, model, vars)
+        self.nparticles = nparticles
+        self.samples = OrderedDict([])
+
+    def record(self, point, sampler_stats=None):
+        """Record results of a sampling iteration.
+
+        Parameters
+        ----------
+        point : dict
+            Values mapped to variable names
+        """
+        for w in range(self.nparticles):
+            for varname, value in zip(self.varnames, self.iter_fn(point, w)):
+                self.samples[varname][w, self.draw_idx] = value
+        self.draw_idx += 1
+
+    def setup(self, draws, chain, sampler_vars=None):
+        """Perform chain-specific setup.
+
+        Parameters
+        ----------
+        draws : int
+            Expected number of draws
+        chain : int
+            Chain number
+        """
+        self.chain = chain
+        self.chain_coverage = range(chain, chain+self.nparticles)
+        if self.samples:  # Concatenate new array if chain is already present.
+            old_draws = len(self)
+            self.draws = old_draws + draws
+            self.draws_idx = old_draws
+            for varname, shape in self.var_shapes.items():
+                old_var_samples = self.samples[varname]
+                new_var_samples = np.zeros((self.nparticles, draws) + shape,
+                                           self.var_dtypes[varname])
+                self.samples[varname] = np.concatenate((old_var_samples,
+                                                        new_var_samples),
+                                                       axis=0)
+        else:  # Otherwise, make array of zeros for each variable.
+            self.draws = draws
+            for varname, shape in self.var_shapes.items():
+                self.samples[varname] = np.zeros((self.nparticles, draws) + shape,
+                                                 dtype=self.var_dtypes[varname])
+
+    def point(self, idx, ipx=None):
+        """Return dictionary of point values at `idx` for current chain
+        with variables names as keys.
+        """
+        if ipx is None:
+            ipx = slice(None)
+        idx = int(idx)
+        return {varname: values[ipx, idx]
+                for varname, values in self.samples.items()}
+
+
+    def close(self):
+        if self.draw_idx == self.draws:
+            return
+        # Remove trailing zeros if interrupted before completed all
+        # draws.
+        self.samples = {var: vtrace[:, :self.draw_idx]
+                        for var, vtrace in self.samples.items()}
+
+    # Selection methods
+
+    def __len__(self):
+        if not self.samples:  # `setup` has not been called.
+            return 0
+        varname = self.varnames[0]
+        return self.samples[varname].shape[1]
+
+    def get_values(self, varname, burn=0, thin=1, iparticle=None):
+        """Get values from trace.
+
+        Parameters
+        ----------
+        varname : str
+        burn : int
+        thin : int
+        iparticle: int, Slice
+
+        Returns
+        -------
+        A NumPy array
+        """
+        if iparticle is None:
+            iparticle = slice(None)
+        return self.samples[varname][iparticle, burn::thin]
+
+    def _slice(self, step_idx, particle_idx=slice(None)):
+        # Slicing directly instead of using _slice_as_ndarray to
+        # support stop value in slice (which is needed by
+        # iter_sample).
+
+        sliced = MultiNDArray(model=self.model, vars=self.vars)
+        sliced.chain = self.chain
+        sliced.samples = {varname: values[particle_idx, step_idx]
+                          for varname, values in self.samples.items()}
+        return sliced
+
+    def get_particle_trace(self, particle_index):
+        """
+        Extracts trace for specific particle
+        """
+        assert isinstance(particle_index, int)
+        sliced = NDArray(model=self.model, vars=self.vars)
+        sliced.chain = self.chain_coverage[particle_index]
+        sliced.samples = {varname: values[particle_index]
+                          for varname, values in self.samples.items()}
+        return sliced
+
+    def get_flat_trace(self):
+        """
+        Returns an NDArray trace with all particles flattened
+        """
+        sliced = NDArray(model=self.model, vars=self.vars)
+        sliced.chain = self.chain_coverage[0]
+        sliced.samples = {varname: values.ravel()
+                          for varname, values in self.samples.items()}
+        return sliced
+
+def _slice_as_ndarray(strace, idx, ipx=None):
     if idx.start is None:
         burn = 0
     else:
@@ -185,8 +329,15 @@ def _slice_as_ndarray(strace, idx):
     else:
         thin = idx.step
 
-    sliced = NDArray(model=strace.model, vars=strace.vars)
-    sliced.chain = strace.chain
-    sliced.samples = {v: strace.get_values(v, burn=burn, thin=thin)
-                      for v in strace.varnames}
+    if hasattr(strace, 'nparticles'):
+        sliced = MultiNDArray(strace.nparticles, model=strace.model, vars=strace.vars)
+        sliced.chain = strace.chain
+        sliced.chain_coverage = strace.chain_coverage
+        sliced.samples = {v: strace.get_values(v, burn=burn, thin=thin, particles=ipx)
+                         for v in strace.varnames}
+    else:
+        sliced = NDArray(model=strace.model, vars=strace.vars)
+        sliced.chain = strace.chain
+        sliced.samples = {v: strace.get_values(v, burn=burn, thin=thin)
+                         for v in strace.varnames}
     return sliced

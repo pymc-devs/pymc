@@ -69,6 +69,7 @@ class BlockedStep(object):
             step.__newargs = (vars, ) + args, kwargs
             return step
 
+
     # Hack for creating the class correctly when unpickling.
     def __getnewargs_ex__(self):
         return self.__newargs

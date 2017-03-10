@@ -1,6 +1,8 @@
 import os
 import unittest
 
+from pymc3.step_methods.compound import _CompoundStep
+
 from .checks import close_to
 from .models import simple_categorical, mv_simple, mv_simple_discrete, simple_2model, mv_prior_simple
 from pymc3.sampling import assign_step_methods, sample
@@ -134,7 +136,12 @@ class TestStepMethods(object):  # yield test doesn't work subclassing unittest.T
             tqdm.write('Checking {} has same trace as on master'.format(step_method.__name__))
         with Model() as model:
             Normal('x', mu=0, sd=1)
-            trace = sample(n_steps, step=step_method(), random_seed=1)
+            step = step_method()
+            if isinstance(step, NUTS):
+                init = 'advi'
+            else:
+                init = None
+            trace = sample(n_steps, step=step, init=init, random_seed=1)
 
         if not benchmarking:
             assert_array_almost_equal(trace.get_values('x'), self.master_samples[step_method])
@@ -162,9 +169,13 @@ class TestStepMethods(object):  # yield test doesn't work subclassing unittest.T
                     HamiltonianMC(scaling=C, is_cov=True),
                     HamiltonianMC(scaling=C, is_cov=True, blocked=False)]),
             )
-        for step in steps:
-            trace = sample(8000, step=step, start=start, model=model, random_seed=1)
-            yield self.check_stat, check, trace, step.__class__.__name__
+            for step in steps:
+                if isinstance(step, NUTS):
+                    init = 'advi'
+                else:
+                    init = None
+                trace = sample(8000, step=step, start=start, init=init, model=model, random_seed=1)
+                yield self.check_stat, check, trace, step.__class__.__name__
 
     def test_step_discrete(self):
         start, model, (mu, C) = mv_simple_discrete()
@@ -175,9 +186,9 @@ class TestStepMethods(object):  # yield test doesn't work subclassing unittest.T
             steps = (
                 Metropolis(S=C, proposal_dist=MultivariateNormalProposal),
             )
-        for step in steps:
-            trace = sample(20000, step=step, start=start, model=model, random_seed=1)
-            yield self.check_stat, check, trace, step.__class__.__name__
+            for step in steps:
+                trace = sample(20000, step=step, start=start, init=None, model=model, random_seed=1)
+                yield self.check_stat, check, trace, step.__class__.__name__
 
     def test_step_categorical(self):
         start, model, (mu, C) = simple_categorical()
@@ -189,9 +200,9 @@ class TestStepMethods(object):  # yield test doesn't work subclassing unittest.T
                 CategoricalGibbsMetropolis(model.x, proposal='uniform'),
                 CategoricalGibbsMetropolis(model.x, proposal='proportional'),
             )
-        for step in steps:
-            trace = sample(8000, step=step, start=start, model=model, random_seed=1)
-            yield self.check_stat, check, trace, step.__class__.__name__
+            for step in steps:
+                trace = sample(8000, step=step, start=start, init=None, model=model, random_seed=1)
+                yield self.check_stat, check, trace, step.__class__.__name__
 
     def test_step_elliptical_slice(self):
         start, model, (K, L, mu, std, noise) = mv_prior_simple()
@@ -203,9 +214,9 @@ class TestStepMethods(object):  # yield test doesn't work subclassing unittest.T
                 EllipticalSlice(prior_cov=K),
                 EllipticalSlice(prior_chol=L),
             )
-        for step in steps:
-            trace = sample(5000, step=step, start=start, model=model, random_seed=1)
-            yield self.check_stat, check, trace, step.__class__.__name__
+            for step in steps:
+                trace = sample(5000, step=step, start=start, init=None, model=model, random_seed=1)
+                yield self.check_stat, check, trace, step.__class__.__name__
 
 
 class TestMetropolisProposal(unittest.TestCase):
@@ -239,14 +250,14 @@ class TestCompoundStep(unittest.TestCase):
         _, model = simple_2model()
         with model:
             for sampler in self.samplers:
-                self.assertIsInstance(sampler(blocked=False), CompoundStep)
+                self.assertIsInstance(sampler(blocked=False), _CompoundStep)
 
     def test_blocked(self):
         _, model = simple_2model()
         with model:
             for sampler in self.samplers:
                 sampler_instance = sampler(blocked=True)
-                self.assertNotIsInstance(sampler_instance, CompoundStep)
+                self.assertNotIsInstance(sampler_instance, _CompoundStep)
                 self.assertIsInstance(sampler_instance, sampler)
 
 
