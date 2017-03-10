@@ -1,7 +1,6 @@
 import numpy as np
 import theano
 import theano.tensor as tt
-from theano.ifelse import ifelse
 
 import pymc3 as pm
 from .updates import adam
@@ -503,13 +502,13 @@ class Approximation(object):
     def params(self):
         return cast_to_list(self.shared_params)
 
-    def initial(self, samples, no_rand=False, l=None):
+    def initial(self, size, no_rand=False, l=None):
         """
         Initial distribution for constructing posterior
 
         Parameters
         ----------
-        samples : int - number of samples
+        size : int - number of samples
         no_rand : bool - return zeros if True
         l : length of sample, defaults to latent space dim
 
@@ -518,20 +517,27 @@ class Approximation(object):
         Tensor
             sampled latent space shape == size + latent_dim
         """
+
+        theano_condition_is_here = isinstance(no_rand, tt.Variable)
         if l is None:
             l = self.total_size
-        if samples is None:
-            shape = tt.as_tensor(l)[None]
+        if size is None:
+            shape = (l, )
         else:
-            shape = tt.stack([tt.as_tensor(samples),
-                              tt.as_tensor(l)])
-        if isinstance(no_rand, bool):
-            no_rand = int(no_rand)
-        zeros = tt.as_tensor(no_rand)
-        sample = getattr(tt_rng(), self.initial_dist_name)(shape)
-        space = ifelse(zeros,
-                       tt.ones_like(sample) * self.initial_dist_map,
-                       sample)
+            shape = (size, l)
+        if theano_condition_is_here:
+            no_rand = tt.as_tensor(no_rand)
+            sample = getattr(tt_rng(), self.initial_dist_name)(shape)
+            space = tt.switch(
+                no_rand,
+                tt.ones_like(sample) * self.initial_dist_map,
+                sample
+            )
+        else:
+            if no_rand:
+                return tt.ones(shape) * self.initial_dist_map
+            else:
+                return getattr(tt_rng(), self.initial_dist_name)(shape)
         return space
 
     def random_local(self, size=None, no_rand=False):
@@ -660,9 +666,12 @@ class Approximation(object):
                        for name in names}
 
         trace = pm.sampling.NDArray(model=self.model, vars=vars_sampled)
-        trace.setup(draws=draws, chain=0)
-        for point in points():
-            trace.record(point)
+        try:
+            trace.setup(draws=draws, chain=0)
+            for point in points():
+                trace.record(point)
+        finally:
+            trace.close()
         return pm.sampling.MultiTrace([trace])
 
     def log_q_W_local(self, z):
@@ -685,7 +694,7 @@ class Approximation(object):
 
             s = self.to_flat_input(var.scaling)
             logp.append(q.sum() * s)
-        return tt.sum(logp)
+        return tt.add(*logp)
 
     def log_q_W_global(self, z):
         """

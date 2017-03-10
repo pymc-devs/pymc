@@ -99,8 +99,8 @@ class MeanField(Approximation):
         logq = tt.sum(log_normal(z, mu, rho=rho))
         return logq
 
-    def random_global(self, samples=None, no_rand=False):
-        initial = self.initial(samples, no_rand, l=self.global_size)
+    def random_global(self, size=None, no_rand=False):
+        initial = self.initial(size, no_rand, l=self.global_size)
         sd = rho2sd(self.rho)
         mu = self.mu
         return sd * initial + mu
@@ -192,9 +192,9 @@ class FullRank(Approximation):
         z = z[self.global_slc]
         return log_normal_mv(z, mu, chol=L, gpu_compat=self.gpu_compat)
 
-    def random_global(self, samples=None, no_rand=False):
+    def random_global(self, size=None, no_rand=False):
         # (samples, dim) or (dim, )
-        initial = self.initial(samples, no_rand, l=self.global_size).T
+        initial = self.initial(size, no_rand, l=self.global_size).T
         # (dim, dim)
         L = self.L
         # (dim, )
@@ -269,6 +269,21 @@ class Inference(object):
         self.objective = op(approx)(tf)
 
     approx = property(lambda self: self.objective.approx)
+
+    def run_profiling(self, n=1000, score=True, **kwargs):
+        step_func = self.objective.step_function(
+            score=score, fn_kwargs={'profile': True},
+            **kwargs
+        )
+        progres = tqdm.trange(n)
+        try:
+            for _ in progres:
+                step_func()
+        except KeyboardInterrupt:
+            pass
+        finally:
+            progres.close()
+        return step_func.profile
 
     def fit(self, n=10000, score=True, callbacks=None, callback_every=1,
             **kwargs):

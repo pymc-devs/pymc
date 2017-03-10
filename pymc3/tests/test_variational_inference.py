@@ -1,7 +1,7 @@
 from six.moves import cPickle as pickle
 import unittest
 import numpy as np
-import theano
+from theano import theano, tensor as tt
 import pymc3 as pm
 from pymc3 import Model, Normal
 from pymc3.variational.inference import (
@@ -56,6 +56,18 @@ class TestApproximates:
                 posterior = app.random(10)
                 x_sampled = app.view(posterior, 'x').eval()
             self.assertEqual(x_sampled.shape, (10,) + model['x'].dshape)
+
+        def test_vars_view_dynamic_size(self):
+            _, model, _ = models.multidimensional_model()
+            with model:
+                app = self.inference().approx
+                i = tt.iscalar('i')
+                i.tag.test_value = 1
+                posterior = app.random(i)
+            x_sampled = app.view(posterior, 'x').eval({i: 10})
+            self.assertEqual(x_sampled.shape, (10,) + model['x'].dshape)
+            x_sampled = app.view(posterior, 'x').eval({i: 1})
+            self.assertEqual(x_sampled.shape, (1,) + model['x'].dshape)
 
         def test_sample_vp(self):
             n_samples = 100
