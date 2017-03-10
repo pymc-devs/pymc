@@ -456,7 +456,7 @@ def init_nuts(init='ADVI', njobs=1, n_init=500000, model=None,
     """
 
     model = pm.modelcontext(model)
-    
+
     pm._log.info('Initializing NUTS using {}...'.format(init))
 
     random_seed = int(np.atleast_1d(random_seed)[0])
