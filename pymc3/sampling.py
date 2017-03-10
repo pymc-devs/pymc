@@ -13,6 +13,8 @@ from .step_methods import (NUTS, HamiltonianMC, Metropolis, BinaryMetropolis,
                            Slice, CompoundStep)
 from tqdm import tqdm
 
+import warnings
+
 import sys
 sys.setrecursionlimit(10000)
 
@@ -81,7 +83,7 @@ def assign_step_methods(model, step=None, methods=(NUTS, HamiltonianMC, Metropol
     return steps
 
 
-def sample(draws, step=None, init='advi', n_init=200000, start=None,
+def sample(draws, step=None, init='ADVI', n_init=200000, start=None,
            trace=None, chain=0, njobs=1, tune=None, progressbar=True,
            model=None, random_seed=-1):
     """
@@ -157,6 +159,8 @@ def sample(draws, step=None, init='advi', n_init=200000, start=None,
         if start is None:
             start = start_
     else:
+        if step is not None and init is not None:
+            warnings.warn('Instantiated step methods cannot be automatically initialized. init argument ignored.')
         step = assign_step_methods(model, step)
 
     if njobs is None:
@@ -452,7 +456,7 @@ def init_nuts(init='ADVI', njobs=1, n_init=500000, model=None,
     """
 
     model = pm.modelcontext(model)
-
+    
     pm._log.info('Initializing NUTS using {}...'.format(init))
 
     random_seed = int(np.atleast_1d(random_seed)[0])
