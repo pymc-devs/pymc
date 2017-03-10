@@ -682,19 +682,21 @@ class Approximation(object):
         """
         if not self.local_vars:
             return tt.constant(0)
-        logp = []
+        mu, rho = self._local_mu_rho()
+        mu = self.scale_grad(mu)
+        rho = self.scale_grad(rho)
+        logp = log_normal(z[self.local_slc], mu, rho=rho)
+        scaling = []
         for var in self.local_vars:
-            mu = self.known[var][0].ravel()
-            rho = self.known[var][1].ravel()
-            mu = self.scale_grad(mu)
-            rho = self.scale_grad(rho)
+            logp = tt.set_subtensor(logp)
+            scaling.append(tt.ones(var.dsize)*var.scaling)
+        scaling = tt.concatenate(scaling)
 
-            x = self.view(z, var.name, reshape=False)
-            q = log_normal(x, mu, rho=rho)
-
-            s = self.to_flat_input(var.scaling)
-            logp.append(q.sum() * s)
-        return tt.add(*logp)
+        if z.ndim > 1:
+            logp *= scaling[:, None]
+        else:
+            logp *= scaling
+        return self.to_flat_input(tt.sum(logp))
 
     def log_q_W_global(self, z):
         """

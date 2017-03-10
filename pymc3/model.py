@@ -175,8 +175,10 @@ class Factor(object):
     @property
     def logpt(self):
         """Theano scalar of log-probability of the model"""
-
-        return tt.sum(self.logp_elemwiset) * self.scaling
+        if getattr(self, 'total_size', None) is not None:
+            return tt.sum(self.logp_elemwiset) * self.scaling
+        else:
+            return tt.sum(self.logp_elemwiset)
 
     @property
     def scaling(self):
