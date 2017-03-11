@@ -86,6 +86,9 @@ class Log(ElemwiseTransform):
     def forward(self, x):
         return tt.log(x)
 
+    def jacobian_det(self, x):
+        return x
+
 log = Log()
 
 
@@ -109,20 +112,22 @@ class Interval(ElemwiseTransform):
 
     name = "interval"
 
-    def __init__(self, a, b, eps=1e-6):
+    def __init__(self, a, b):
         self.a = a
         self.b = b
-        self.eps = eps
 
     def backward(self, x):
         a, b = self.a, self.b
-        r = (b - a) / (1 + tt.exp(-x)) + a
+        r = (b - a) * tt.nnet.sigmoid(x) + a
         return r
 
     def forward(self, x):
-        a, b, e = self.a, self.b, self.eps
-        r = tt.log(tt.maximum((x - a) / tt.maximum(b - x, e), e))
-        return r
+        a, b = self.a, self.b
+        return tt.log(x - a) - tt.log(b - x)
+
+    def jacobian_det(self, x):
+        s = tt.nnet.softplus(-x)
+        return tt.log(self.b - self.a) - 2 * s - x
 
 interval = Interval
 
@@ -145,6 +150,9 @@ class LowerBound(ElemwiseTransform):
         r = tt.log(x - a)
         return r
 
+    def jacobian_det(self, x):
+        return x
+
 lowerbound = LowerBound
 
 
@@ -165,6 +173,9 @@ class UpperBound(ElemwiseTransform):
         b = self.b
         r = tt.log(b - x)
         return r
+
+    def jacobian_det(self, x):
+        return x
 
 upperbound = UpperBound
 
