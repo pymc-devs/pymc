@@ -7,9 +7,11 @@ nodes in PyMC.
 """
 from __future__ import division
 
+from numbers import Number
+
 import numpy as np
 import theano.tensor as tt
-from scipy import stats
+from scipy import stats, special
 import warnings
 
 from pymc3.theanof import floatX
@@ -127,15 +129,61 @@ class Uniform(Continuous):
 
     def __init__(self, lower=0, upper=1, transform='interval',
                  *args, **kwargs):
-        super(Uniform, self).__init__(*args, **kwargs)
-
         self.lower = lower = tt.as_tensor_variable(lower)
         self.upper = upper = tt.as_tensor_variable(upper)
         self.mean = (upper + lower) / 2.
         self.median = self.mean
 
+        # Add a test value (if necessary) to the distribution's mean
+        self.mean = self.add_test_value_to_mean(self.mean,
+                                                self.lower,
+                                                self.upper)
+
+        # Carry out initialization after setting the mean and median
+        # attributes. This is useful when checking default values and
+        # theano.config.compute_test_values = 'off'
+        super(Uniform, self).__init__(*args, **kwargs)
+
         if transform == 'interval':
             self.transform = transforms.interval(lower, upper)
+
+    def add_test_value_to_mean(self, mean, lower, upper):
+        """
+        Add a test_value to the tag attribute of the mean of the Uniform
+        distribution.
+
+        Parameters
+        ----------
+        mean : theano expression for the mean of the Uniform distribution.
+            Should have a `tag` attribute.
+        lower, upper : theano TensorConstant or Tensor
+            Parameters of the Uniform distribution whose mean will be
+            calculated.
+
+        Returns
+        -------
+        mean : same as input but with a test_value attribute on `mean.tag`.
+        """
+        # Check argument validity and raise an informative error.
+        if not hasattr(mean, "tag"):
+            raise ValueError("'mean' argument doesn't have a 'tag' attribute.")
+
+        # Check if a test value needs to be manually set
+        needs_test_val = not hasattr(mean.tag, "test_value")
+
+        if needs_test_val:
+            # Create the list of theano objects and their corresponding names
+            objs_and_names = [(lower, 'lower'), (upper, 'upper')]
+
+            # Get the numeric version of the parameters
+            numeric_params =\
+                get_numeric_objects_from_tensors_or_constants(objs_and_names)
+
+            # Set the test value using the numeric version of mu and alpha
+            mean.tag.test_value =\
+                (numeric_params['lower'] + numeric_params['upper']) / 2.
+
+        return mean
 
     def random(self, point=None, size=None, repeat=None):
         lower, upper = draw_values([self.lower, self.upper],
@@ -159,8 +207,11 @@ class Flat(Continuous):
     """
 
     def __init__(self, *args, **kwargs):
-        super(Flat, self).__init__(*args, **kwargs)
         self.median = 0
+        # Carry out initialization after setting the median attribute.
+        # This is useful when checking default values and
+        # theano.config.compute_test_values = 'off'
+        super(Flat, self).__init__(*args, **kwargs)
 
     def random(self, point=None, size=None, repeat=None):
         raise ValueError('Cannot sample from Flat distribution')
@@ -257,17 +308,59 @@ class HalfNormal(PositiveContinuous):
     """
 
     def __init__(self, sd=None, tau=None, *args, **kwargs):
-        super(HalfNormal, self).__init__(*args, **kwargs)
         tau, sd = get_tau_sd(tau=tau, sd=sd)
 
         self.sd = sd = tt.as_tensor_variable(sd)
         self.tau = tau = tt.as_tensor_variable(tau)
 
         self.mean = tt.sqrt(2 / (np.pi * self.tau))
+
+        # Add a test value (if necessary) to the distribution's mean
+        self.mean = self.add_test_value_to_mean(self.mean, self.tau)
+
         self.variance = (1. - 2 / np.pi) / self.tau
 
         assert_negative_support(tau, 'tau', 'HalfNormal')
         assert_negative_support(sd, 'sd', 'HalfNormal')
+
+        # Carry out PositiveContinuous initialization after setting the mean
+        # attribute. Useful when checking default values and
+        # theano.config.compute_test_values = 'off'
+        super(HalfNormal, self).__init__(*args, **kwargs)
+
+    def add_test_value_to_mean(self, mean, tau):
+        """
+        Add a test_value to the tag attribute of the mean of the HalfNormal
+        distribution.
+
+        Parameters
+        ----------
+        mean : theano expression for the mean of the half normal distribution.
+            Should have a `tag` attribute.
+        tau : theano TensorConstant or Tensor
+            Specifies the tau parameter for the half normal distribution whose
+            mean will being calculated.
+
+        Returns
+        -------
+        mean : same as input but with a test_value attribute on `mean.tag`.
+        """
+        # Check argument validity and raise an informative error.
+        if not hasattr(mean, "tag"):
+            raise ValueError("'mean' argument doesn't have a 'tag' attribute.")
+
+        # Check if a test value needs to be manually set
+        needs_test_val = not hasattr(mean.tag, "test_value")
+
+        if needs_test_val:
+            # Get the numeric version of tau
+            numeric_tau =\
+                get_single_numeric_obj(tau, name='tau')
+
+            # Set the test value using the numeric version of tau
+            mean.tag.test_value = np.sqrt(2 / (np.pi * numeric_tau))
+
+        return mean
 
     def random(self, point=None, size=None, repeat=None):
         sd = draw_values([self.sd], point=point)
@@ -340,7 +433,7 @@ class Wald(PositiveContinuous):
     """
 
     def __init__(self, mu=None, lam=None, phi=None, alpha=0., *args, **kwargs):
-        super(Wald, self).__init__(*args, **kwargs)
+        
         mu, lam, phi = self.get_mu_lam_phi(mu, lam, phi)
         self.alpha = alpha = tt.as_tensor_variable(alpha)
         self.mu = mu = tt.as_tensor_variable(mu)
@@ -350,11 +443,24 @@ class Wald(PositiveContinuous):
         self.mean = self.mu + self.alpha
         self.mode = self.mu * (tt.sqrt(1. + (1.5 * self.mu / self.lam)**2)
                                - 1.5 * self.mu / self.lam) + self.alpha
+
+        # Add a test value (if necessary) to the distribution's mean and mode
+        self.mean = self.add_test_value_to_mean(self.mean, self.mu, self.alpha)
+        self.mode = self.add_test_value_to_mode(self.mode,
+                                                self.mu,
+                                                self.lam,
+                                                self.alpha)
+
         self.variance = (self.mu**3) / self.lam
 
         assert_negative_support(phi, 'phi', 'Wald')
         assert_negative_support(mu, 'mu', 'Wald')
         assert_negative_support(lam, 'lam', 'Wald')
+
+        # Carry out PositiveContinuous initialization after setting the mean
+        # and mode attributes. Useful when checking default values and
+        # theano.config.compute_test_values = 'off'
+        super(Wald, self).__init__(*args, **kwargs)
 
     def get_mu_lam_phi(self, mu, lam, phi):
         if mu is None:
@@ -372,6 +478,83 @@ class Wald(PositiveContinuous):
 
         raise ValueError('Wald distribution must specify either mu only, '
                          'mu and lam, mu and phi, or lam and phi.')
+
+    def add_test_value_to_mean(self, mean, mu, alpha):
+        """
+        Add a test_value to the tag attribute of the mean of the Wald
+        distribution.
+
+        Parameters
+        ----------
+        mean : theano expression for the mean of the Wald distribution.
+            Should have a `tag` attribute.
+        mu, alpha : theano TensorConstant or Tensor
+            Parameters of the Wald distribution whose mean will be calculated.
+
+        Returns
+        -------
+        mean : same as input but with a test_value attribute on `mean.tag`.
+        """
+        # Check argument validity and raise an informative error.
+        if not hasattr(mean, "tag"):
+            raise ValueError("'mean' argument doesn't have a 'tag' attribute.")
+
+        # Check if a test value needs to be manually set
+        needs_test_val = not hasattr(mean.tag, "test_value")
+
+        if needs_test_val:
+            # Create the list of theano objects and their corresponding names
+            objs_and_names = [(mu, 'mu'), (alpha, 'alpha')]
+
+            # Get the numeric version of the parameters
+            numeric_params =\
+                get_numeric_objects_from_tensors_or_constants(objs_and_names)
+
+            # Set the test value using the numeric version of mu and alpha
+            mean.tag.test_value =\
+                numeric_params['mu'] + numeric_params['alpha']
+
+        return mean
+
+    def add_test_value_to_mode(self, mode, mu, lam, alpha):
+        """
+        Add a test_value to the tag attribute of the mode of the Wald
+        distribution.
+
+        Parameters
+        ----------
+        mode : theano expression for the mode of the Wald distribution.
+            Should have a `tag` attribute.
+        mu, lam, alpha : theano TensorConstant or Tensor
+            Parameters of the Wald distribution whose mode will be calculated.
+
+        Returns
+        -------
+        mode : same as input but with a test_value attribute on `mode.tag`.
+        """
+        # Check argument validity and raise an informative error.
+        if not hasattr(mode, "tag"):
+            raise ValueError("'mode' argument doesn't have a 'tag' attribute.")
+
+        # Check if a test value needs to be manually set
+        needs_test_val = not hasattr(mode.tag, "test_value")
+
+        if needs_test_val:
+            # Create the list of theano objects and their corresponding names
+            objs_and_names = [(mu, 'mu'), (lam, 'lam'), (alpha, 'alpha')]
+
+            # Get the numeric version of the parameters
+            param_nums =\
+                get_numeric_objects_from_tensors_or_constants(objs_and_names)
+
+            # Set the test value with numeric versions of mu, lam, and alpha
+            mode.tag.test_value =\
+                (param_nums['mu'] * 
+                 (np.sqrt(1. + (1.5 * param_nums['mu'] / param_nums['lam'])**2)
+                  - 1.5 * param_nums['mu'] / param_nums['lam']) +
+                 param_nums['alpha'])
+
+        return mode
 
     def _random(self, mu, lam, alpha, size=None):
         v = np.random.normal(size=size)**2
@@ -449,8 +632,6 @@ class Beta(UnitContinuous):
 
     def __init__(self, alpha=None, beta=None, mu=None, sd=None,
                  *args, **kwargs):
-        super(Beta, self).__init__(*args, **kwargs)
-
         alpha, beta = self.get_alpha_beta(alpha, beta, mu, sd)
         self.alpha = alpha = tt.as_tensor_variable(alpha)
         self.beta = beta = tt.as_tensor_variable(beta)
@@ -459,8 +640,18 @@ class Beta(UnitContinuous):
         self.variance = self.alpha * self.beta / (
             (self.alpha + self.beta)**2 * (self.alpha + self.beta + 1))
 
+        # Add a test value (if necessary) to the distribution's mean
+        self.mean = self.add_test_value_to_mean(self.mean,
+                                                self.alpha,
+                                                self.beta)
+
         assert_negative_support(alpha, 'alpha', 'Beta')
         assert_negative_support(beta, 'beta', 'Beta')
+
+        # Carry out UnitContinuous initialization after setting the mean
+        # attribute. This is useful when checking default values and
+        # theano.config.compute_test_values = 'off'
+        super(Beta, self).__init__(*args, **kwargs)
 
     def get_alpha_beta(self, alpha=None, beta=None, mu=None, sd=None):
         if (alpha is not None) and (beta is not None):
@@ -474,6 +665,43 @@ class Beta(UnitContinuous):
                              'and beta, or mu and sd to specify distribution.')
 
         return alpha, beta
+
+    def add_test_value_to_mean(self, mean, alpha, beta):
+        """
+        Add a test_value to the tag attribute of the mean of the Beta
+        distribution.
+
+        Parameters
+        ----------
+        mean : theano expression for the mean of the Beta distribution.
+            Should have a `tag` attribute.
+        alpha, beta : theano TensorConstant or Tensor
+            Parameters of the Beta distribution whose mean will be calculated.
+
+        Returns
+        -------
+        mean : same as input but with a test_value attribute on `mean.tag`.
+        """
+        # Check argument validity and raise an informative error.
+        if not hasattr(mean, "tag"):
+            raise ValueError("'mean' argument doesn't have a 'tag' attribute.")
+
+        # Check if a test value needs to be manually set
+        needs_test_val = not hasattr(mean.tag, "test_value")
+
+        if needs_test_val:
+            # Create the list of theano objects and their corresponding names
+            objs_and_names = [(alpha, 'alpha'), (beta, 'beta')]
+
+            # Get the numeric version of the parameters
+            numeric_params =\
+                get_numeric_objects_from_tensors_or_constants(objs_and_names)
+
+            # Set the test value using the numeric version of alpha and beta
+            denominator = numeric_params['alpha'] + numeric_params['beta']
+            mean.tag.test_value = numeric_params['alpha'] / denominator
+
+        return mean
 
     def random(self, point=None, size=None, repeat=None):
         alpha, beta = draw_values([self.alpha, self.beta],
@@ -513,15 +741,91 @@ class Exponential(PositiveContinuous):
     """
 
     def __init__(self, lam, *args, **kwargs):
-        super(Exponential, self).__init__(*args, **kwargs)
         self.lam = lam = tt.as_tensor_variable(lam)
         self.mean = 1. / self.lam
         self.median = self.mean * tt.log(2)
         self.mode = tt.zeros_like(self.lam)
 
+        # Add a test value (if necessary) to the distribution's mean and median
+        self.mean = self.add_test_value_to_mean(self.mean, self.lam)
+        self.median = self.add_test_value_to_median(self.median, self.lam)
+
         self.variance = self.lam**-2
 
         assert_negative_support(lam, 'lam', 'Exponential')
+
+        # Carry out PositiveContinuous initialization after setting the mean
+        # and median attributes. Useful when checking default values and
+        # theano.config.compute_test_values = 'off'
+        super(Exponential, self).__init__(*args, **kwargs)
+
+    def add_test_value_to_mean(self, mean, lam):
+        """
+        Add a test_value to the tag attribute of the mean of the Exponential
+        distribution.
+
+        Parameters
+        ----------
+        mean : theano expression for the mean of the Exponential distribution.
+            Should have a `tag` attribute.
+        lam : theano TensorConstant or Tensor
+            Parameter of the Exponential distribution whose mean will be
+            calculated.
+
+        Returns
+        -------
+        mean : same as input but with a test_value attribute on `mean.tag`.
+        """
+        # Check argument validity and raise an informative error.
+        if not hasattr(mean, "tag"):
+            raise ValueError("'mean' argument doesn't have a 'tag' attribute.")
+
+        # Check if a test value needs to be manually set
+        needs_test_val = not hasattr(mean.tag, "test_value")
+
+        if needs_test_val:
+            # Get the numeric version of lambda
+            numeric_lam =\
+                get_single_numeric_obj(lam, name='lam')
+
+            # Set the test value using the numeric version of lambda
+            mean.tag.test_value = 1.0 / numeric_lam
+
+        return mean
+
+    def add_test_value_to_median(self, median, lam):
+        """
+        Add a test_value to the tag attribute of the median of the Exponential
+        distribution.
+
+        Parameters
+        ----------
+        mode : theano expression for the median of the Exponential distribution.
+            Should have a `tag` attribute.
+        lam : theano TensorConstant or Tensor
+            Parameter of the Exponential distribution whose median will be
+            calculated.
+
+        Returns
+        -------
+        median : same as input but with a test_value attribute on `median.tag`.
+        """
+        # Check argument validity and raise an informative error.
+        if not hasattr(median, "tag"):
+            raise ValueError("'median' doesn't have a 'tag' attribute.")
+
+        # Check if a test value needs to be manually set
+        needs_test_val = not hasattr(median.tag, "test_value")
+
+        if needs_test_val:
+            # Get the numeric version of lambda
+            numeric_lam =\
+                get_single_numeric_obj(lam, name='lam')
+
+            # Set the test value using the numeric version of lambda
+            median.tag.test_value = np.log(2) / numeric_lam
+
+        return median
 
     def random(self, point=None, size=None, repeat=None):
         lam = draw_values([self.lam], point=point)
@@ -558,13 +862,17 @@ class Laplace(Continuous):
     """
 
     def __init__(self, mu, b, *args, **kwargs):
-        super(Laplace, self).__init__(*args, **kwargs)
         self.b = b = tt.as_tensor_variable(b)
         self.mean = self.median = self.mode = self.mu = mu = tt.as_tensor_variable(mu)
 
         self.variance = 2 * self.b**2
 
         assert_negative_support(b, 'b', 'Laplace')
+
+        # Carry out initialization after setting the mean, median, and mode.
+        # attributes. This is useful when checking default values and
+        # theano.config.compute_test_values = 'off'
+        super(Laplace, self).__init__(*args, **kwargs)
 
     def random(self, point=None, size=None, repeat=None):
         mu, b = draw_values([self.mu, self.b], point=point)
@@ -609,7 +917,6 @@ class Lognormal(PositiveContinuous):
     """
 
     def __init__(self, mu=0, sd=None, tau=None, *args, **kwargs):
-        super(Lognormal, self).__init__(*args, **kwargs)
         tau, sd = get_tau_sd(tau=tau, sd=sd)
 
         self.mu = mu = tt.as_tensor_variable(mu)
@@ -619,10 +926,131 @@ class Lognormal(PositiveContinuous):
         self.mean = tt.exp(self.mu + 1. / (2 * self.tau))
         self.median = tt.exp(self.mu)
         self.mode = tt.exp(self.mu - 1. / self.tau)
-        self.variance = (tt.exp(1. / self.tau) - 1) * tt.exp(2 * self.mu + 1. / self.tau)
+        self.variance = ((tt.exp(1. / self.tau) - 1) * 
+                         tt.exp(2 * self.mu + 1. / self.tau))
+
+        # Ensure the distribution's mean, median, and mode have test values
+        self.mean = self.add_test_value_to_mean(self.mean, self.mu, self.tau)
+        self.median = self.add_test_value_to_median(self.median, self.mu)
+        self.mode = self.add_test_value_to_mode(self.mode, self.mu, self.tau)
 
         assert_negative_support(tau, 'tau', 'Lognormal')
         assert_negative_support(sd, 'sd', 'Lognormal')
+
+        # Carry out PositiveContinuous initialization after setting the mean
+        # median, and mode attributes. Useful when checking default values and
+        # theano.config.compute_test_values = 'off'
+        super(Lognormal, self).__init__(*args, **kwargs)
+
+    def add_test_value_to_mean(self, mean, mu, tau):
+        """
+        Add a test_value to the tag attribute of the mean of the Log-normal
+        distribution.
+
+        Parameters
+        ----------
+        mean : theano expression for the mean of the Log-normal distribution.
+            Should have a `tag` attribute.
+        mu, tau : theano TensorConstant or Tensor
+            Parameters of the Log-normal distribution whose mean will be
+            calculated.
+
+        Returns
+        -------
+        mean : same as input but with a test_value attribute on `mean.tag`.
+        """
+        # Check argument validity and raise an informative error.
+        if not hasattr(mean, "tag"):
+            raise ValueError("'mean' argument doesn't have a 'tag' attribute.")
+
+        # Check if a test value needs to be manually set
+        needs_test_val = not hasattr(mean.tag, "test_value")
+
+        if needs_test_val:
+            # Create the list of theano objects and their corresponding names
+            objs_and_names = [(mu, 'mu'), (tau, 'tau')]
+
+            # Get the numeric version of the parameters
+            numeric_params =\
+                get_numeric_objects_from_tensors_or_constants(objs_and_names)
+
+            # Set the test value using the numeric version of mu and tau
+            mean.tag.test_value =\
+                np.exp(numeric_params['mu'] + 1. / (2 * numeric_params['tau']))
+
+        return mean
+
+    def add_test_value_to_median(self, median, mu):
+        """
+        Add a test_value to the tag attribute of the median of the Log-normal
+        distribution.
+
+        Parameters
+        ----------
+        mode : theano expression for the median of the Log-normal distribution.
+            Should have a `tag` attribute.
+        mu : theano TensorConstant or Tensor
+            Parameter of the Log-normal distribution whose median will be
+            calculated.
+
+        Returns
+        -------
+        median : same as input but with a test_value attribute on `median.tag`.
+        """
+        # Check argument validity and raise an informative error.
+        if not hasattr(median, "tag"):
+            raise ValueError("'median' doesn't have a 'tag' attribute.")
+
+        # Check if a test value needs to be manually set
+        needs_test_val = not hasattr(median.tag, "test_value")
+
+        if needs_test_val:
+            # Get the numeric version of lambda
+            numeric_mu =\
+                get_single_numeric_obj(mu, name='mu')
+
+            # Set the test value using the numeric version of lambda
+            median.tag.test_value = np.exp(numeric_mu)
+
+        return median
+
+    def add_test_value_to_mode(self, mode, mu, tau):
+        """
+        Add a test_value to the tag attribute of the mode of the Log-normal
+        distribution.
+
+        Parameters
+        ----------
+        mode : theano expression for the mode of the Log-normal distribution.
+            Should have a `tag` attribute.
+        mu, tau : theano TensorConstant or Tensor
+            Parameters of the Log-normal distribution whose mode will be
+            calculated.
+
+        Returns
+        -------
+        mode : same as input but with a test_value attribute on `mode.tag`.
+        """
+        # Check argument validity and raise an informative error.
+        if not hasattr(mode, "tag"):
+            raise ValueError("'mode' argument doesn't have a 'tag' attribute.")
+
+        # Check if a test value needs to be manually set
+        needs_test_val = not hasattr(mode.tag, "test_value")
+
+        if needs_test_val:
+            # Create the list of theano objects and their corresponding names
+            objs_and_names = [(mu, 'mu'), (tau, 'tau')]
+
+            # Get the numeric version of the parameters
+            param_nums =\
+                get_numeric_objects_from_tensors_or_constants(objs_and_names)
+
+            # Set the test value with numeric versions of mu, lam, and alpha
+            mode.tag.test_value = np.exp(param_nums['mu'] -
+                                         1. / param_nums['tau'])
+
+        return mode
 
     def _random(self, mu, tau, size=None):
         samples = np.random.normal(size=size)
@@ -673,7 +1101,6 @@ class StudentT(Continuous):
     """
 
     def __init__(self, nu, mu=0, lam=None, sd=None, *args, **kwargs):
-        super(StudentT, self).__init__(*args, **kwargs)
         self.nu = nu = tt.as_tensor_variable(nu)
         lam, sd = get_tau_sd(tau=lam, sd=sd)
         self.lam = lam = tt.as_tensor_variable(lam)
@@ -686,6 +1113,11 @@ class StudentT(Continuous):
 
         assert_negative_support(lam, 'lam (sd)', 'StudentT')
         assert_negative_support(nu, 'nu', 'StudentT')
+
+        # Carry out initialization after setting the mean, median, and mode.
+        # attributes. This is useful when checking default values and
+        # theano.config.compute_test_values = 'off'
+        super(StudentT, self).__init__(*args, **kwargs)
 
     def random(self, point=None, size=None, repeat=None):
         nu, mu, lam = draw_values([self.nu, self.mu, self.lam],
@@ -734,21 +1166,123 @@ class Pareto(PositiveContinuous):
     """
 
     def __init__(self, alpha, m, *args, **kwargs):
-        super(Pareto, self).__init__(*args, **kwargs)
         self.alpha = alpha = tt.as_tensor_variable(alpha)
         self.m = m = tt.as_tensor_variable(m)
 
-        self.mean = tt.switch(tt.gt(alpha, 1), alpha *
-                              m / (alpha - 1.), np.inf)
+        self.mean = tt.switch(tt.gt(alpha, 1),
+                              alpha * m / (alpha - 1.),
+                              np.inf)
         self.median = m * 2.**(1. / alpha)
         self.variance = tt.switch(
             tt.gt(alpha, 2),
             (alpha * m**2) / ((alpha - 2.) * (alpha - 1.)**2),
             np.inf)
 
+        # Ensure the distribution's mean and median have test values
+        self.mean = self.add_test_value_to_mean(self.mean, self.alpha, self.m)
+        self.median =\
+            self.add_test_value_to_median(self.median, self.alpha, self.m)
+
         assert_negative_support(alpha, 'alpha', 'Pareto')
         assert_negative_support(m, 'm', 'Pareto')
 
+        # Carry out PositiveContinuous initialization after setting the mean
+        # and mode attributes. Useful when checking default values and
+        # theano.config.compute_test_values = 'off'
+        super(Pareto, self).__init__(*args, **kwargs)
+
+    def add_test_value_to_mean(self, mean, alpha, m):
+        """
+        Add a test_value to the tag attribute of the mean of the Pareto
+        distribution.
+
+        Parameters
+        ----------
+        mean : theano expression for the mean of the Pareto distribution.
+            Should have a `tag` attribute.
+        alpha, m : theano TensorConstant or Tensor
+            Parameters of the Pareto distribution whose mean will be
+            calculated.
+
+        Returns
+        -------
+        mean : same as input but with a test_value attribute on `mean.tag`.
+        """
+        # Check argument validity and raise an informative error.
+        if not hasattr(mean, "tag"):
+            raise ValueError("'mean' argument doesn't have a 'tag' attribute.")
+
+        # Check if a test value needs to be manually set
+        needs_test_val = not hasattr(mean.tag, "test_value")
+
+        if needs_test_val:
+            # Create the list of theano objects and their corresponding names
+            objs_and_names = [(alpha, 'alpha'), (m, 'm')]
+
+            # Get the numeric version of the parameters
+            numeric_params =\
+                get_numeric_objects_from_tensors_or_constants(objs_and_names)
+
+            # Calculate the numeric version of the mean for the test value
+            if len(numeric_params['alpha'].shape) >= 1:  # We have an array
+                mean_value = (numeric_params['alpha'] * 
+                              numeric_params['m'] /
+                              (numeric_params['alpha'] - 1))
+                mean_value[np.where(numeric_params['alpha'] <= 1)] = np.inf
+            else:  # We have a number
+                numeric_alpha = float(numeric_params['alpha'])
+                if numeric_alpha > 1:
+                    mean_value = (numeric_alpha * 
+                                  numeric_params['m'] /
+                                  (numeric_alpha - 1))
+                else:
+                    # Note we multiply np.inf by numeric_params['m'] so that
+                    # the mean has the correct shape, in the case where
+                    # numeric_params['m'] is an array with more than one value
+                    mean_value = np.inf * numeric_params['m']
+
+
+            # Set the test value of the mean
+            mean.tag.test_value = mean_value
+
+        return mean
+
+    def add_test_value_to_median(self, median, alpha, m):
+        """
+        Add a test_value to the tag attribute of the median of the Pareto
+        distribution.
+
+        Parameters
+        ----------
+        mode : theano expression for the median of the Pareto distribution.
+            Should have a `tag` attribute.
+        alpha, m : theano TensorConstant or Tensor
+            Parameters of the Pareto distribution whose median will be
+            calculated.
+
+        Returns
+        -------
+        median : same as input but with a test_value attribute on `median.tag`.
+        """
+        # Check argument validity and raise an informative error.
+        if not hasattr(median, "tag"):
+            raise ValueError("'median' doesn't have a 'tag' attribute.")
+
+        # Check if a test value needs to be manually set
+        needs_test_val = not hasattr(median.tag, "test_value")
+
+        if needs_test_val:
+            # Create the list of theano objects and their corresponding names
+            objs_and_names = [(alpha, 'alpha'), (m, 'm')]
+
+            # Get the numeric version of the parameters
+            numeric_params =\
+                get_numeric_objects_from_tensors_or_constants(objs_and_names)
+
+            # Set the test value using the numeric version of lambda
+            median.tag.test_value = (numeric_params['m'] *
+                                     2.**(1. / numeric_params['alpha']))
+        return median
 
     def _random(self, alpha, m, size=None):
         u = np.random.uniform(size=size)
@@ -796,11 +1330,15 @@ class Cauchy(Continuous):
     """
 
     def __init__(self, alpha, beta, *args, **kwargs):
-        super(Cauchy, self).__init__(*args, **kwargs)
         self.median = self.mode = self.alpha = tt.as_tensor_variable(alpha)
         self.beta = tt.as_tensor_variable(beta)
 
         assert_negative_support(beta, 'beta', 'Cauchy')
+
+        # Carry out Continuous initialization after setting the median and mode
+        # attributes. This is useful when checking default values and
+        # theano.config.compute_test_values = 'off'
+        super(Cauchy, self).__init__(*args, **kwargs)
 
     def _random(self, alpha, beta, size=None):
         u = np.random.uniform(size=size)
@@ -843,12 +1381,16 @@ class HalfCauchy(PositiveContinuous):
     """
 
     def __init__(self, beta, *args, **kwargs):
-        super(HalfCauchy, self).__init__(*args, **kwargs)
+        self.beta = tt.as_tensor_variable(beta)
         self.mode = tt.as_tensor_variable(0)
         self.median = tt.as_tensor_variable(beta)
-        self.beta = tt.as_tensor_variable(beta)
 
         assert_negative_support(beta, 'beta', 'HalfCauchy')
+
+        # Carry out PositiveContinuous initialization after setting the mean
+        # and mode attributes. Useful when checking default values and
+        # theano.config.compute_test_values = 'off'
+        super(HalfCauchy, self).__init__(*args, **kwargs)
 
     def _random(self, beta, size=None):
         u = np.random.uniform(size=size)
@@ -908,16 +1450,28 @@ class Gamma(PositiveContinuous):
 
     def __init__(self, alpha=None, beta=None, mu=None, sd=None,
                  *args, **kwargs):
-        super(Gamma, self).__init__(*args, **kwargs)
         alpha, beta = self.get_alpha_beta(alpha, beta, mu, sd)
+
         self.alpha = alpha = tt.as_tensor_variable(alpha)
         self.beta = beta = tt.as_tensor_variable(beta)
+
         self.mean = alpha / beta
         self.mode = tt.maximum((alpha - 1) / beta, 0)
         self.variance = alpha / beta**2
 
+        # Ensure the distribution's mean and mode have test values
+        self.mean =\
+            self.add_test_value_to_mean(self.mean, self.alpha, self.beta)
+        self.mode =\
+            self.add_test_value_to_mode(self.mode, self.alpha, self.beta)
+
         assert_negative_support(alpha, 'alpha', 'Gamma')
         assert_negative_support(beta, 'beta', 'Gamma')
+
+        # Carry out PositiveContinuous initialization after setting the mean
+        # and mode attributes. Useful when checking default values and
+        # theano.config.compute_test_values = 'off'
+        super(Gamma, self).__init__(*args, **kwargs)
 
     def get_alpha_beta(self, alpha=None, beta=None, mu=None, sd=None):
         if (alpha is not None) and (beta is not None):
@@ -931,6 +1485,82 @@ class Gamma(PositiveContinuous):
                              'distribution.')
 
         return alpha, beta
+
+    def add_test_value_to_mean(self, mean, alpha, beta):
+        """
+        Add a test_value to the tag attribute of the mean of the Gamma
+        distribution.
+
+        Parameters
+        ----------
+        mean : theano expression for the mean of the Gamma distribution.
+            Should have a `tag` attribute.
+        alpha, beta : theano TensorConstant or Tensor
+            Parameters of the Gamma distribution whose mean will be
+            calculated.
+
+        Returns
+        -------
+        mean : same as input but with a test_value attribute on `mean.tag`.
+        """
+        # Check argument validity and raise an informative error.
+        if not hasattr(mean, "tag"):
+            raise ValueError("'mean' argument doesn't have a 'tag' attribute.")
+
+        # Check if a test value needs to be manually set
+        needs_test_val = not hasattr(mean.tag, "test_value")
+
+        if needs_test_val:
+            # Create the list of theano objects and their corresponding names
+            objs_and_names = [(alpha, 'alpha'), (beta, 'beta')]
+
+            # Get the numeric version of the parameters
+            numeric_params =\
+                get_numeric_objects_from_tensors_or_constants(objs_and_names)
+
+            # Set the test value of the mean
+            mean.tag.test_value =\
+                numeric_params['alpha'] / numeric_params['beta']
+
+        return mean
+
+    def add_test_value_to_mode(self, mode, alpha, beta):
+        """
+        Add a test_value to the tag attribute of the mode of the Gamma
+        distribution.
+
+        Parameters
+        ----------
+        mode : theano expression for the mode of the Gamma distribution.
+            Should have a `tag` attribute.
+        alpha, beta : theano TensorConstant or Tensor
+            Parameters of the Gamma distribution whose mode will be
+            calculated.
+
+        Returns
+        -------
+        mode : same as input but with a test_value attribute on `mode.tag`.
+        """
+        # Check argument validity and raise an informative error.
+        if not hasattr(mode, "tag"):
+            raise ValueError("'mode' argument doesn't have a 'tag' attribute.")
+
+        # Check if a test value needs to be manually set
+        needs_test_val = not hasattr(mode.tag, "test_value")
+
+        if needs_test_val:
+            # Create the list of theano objects and their corresponding names
+            objs_and_names = [(alpha, 'alpha'), (beta, 'beta')]
+
+            # Get the numeric version of the parameters
+            param_nums =\
+                get_numeric_objects_from_tensors_or_constants(objs_and_names)
+
+            # Set the test value with numeric versions of mu, lam, and alpha
+            mode.tag.test_value =\
+                np.max(((param_nums['alpha'] - 1) / param_nums['beta'], 0))
+
+        return mode
 
     def random(self, point=None, size=None, repeat=None):
         alpha, beta = draw_values([self.alpha, self.beta],
@@ -976,7 +1606,6 @@ class InverseGamma(PositiveContinuous):
     """
 
     def __init__(self, alpha, beta=1, *args, **kwargs):
-        super(InverseGamma, self).__init__(*args, **kwargs)
         self.alpha = alpha = tt.as_tensor_variable(alpha)
         self.beta = beta = tt.as_tensor_variable(beta)
 
@@ -988,6 +1617,17 @@ class InverseGamma(PositiveContinuous):
         assert_negative_support(alpha, 'alpha', 'InverseGamma')
         assert_negative_support(beta, 'beta', 'InverseGamma')
 
+        # Ensure the distribution's mean and mode have test values
+        self.mean =\
+            self.add_test_value_to_mean(self.mean, self.alpha, self.beta)
+        self.mode =\
+            self.add_test_value_to_mode(self.mode, self.alpha, self.beta)
+
+        # Carry out PositiveContinuous initialization after setting the mean
+        # and mode attributes. Useful when checking default values and
+        # theano.config.compute_test_values = 'off'
+        super(InverseGamma, self).__init__(*args, **kwargs)
+
     def _calculate_mean(self):
         m = self.beta / (self.alpha - 1.)
         try:
@@ -995,6 +1635,90 @@ class InverseGamma(PositiveContinuous):
         except ValueError:  # alpha is an array
             m[self.alpha <= 1] = np.inf
             return m
+
+    def add_test_value_to_mean(self, mean, alpha, beta):
+        """
+        Add a test_value to the tag attribute of the mean of the InverseGamma
+        distribution.
+
+        Parameters
+        ----------
+        mean : theano expression for the mean of the InverseGamma distribution.
+            Should have a `tag` attribute.
+        alpha, beta : theano TensorConstant or Tensor
+            Parameters of the InverseGamma distribution whose mean will be
+            calculated.
+
+        Returns
+        -------
+        mean : same as input but with a test_value attribute on `mean.tag`.
+        """
+        # Check argument validity and raise an informative error.
+        if not hasattr(mean, "tag"):
+            raise ValueError("'mean' argument doesn't have a 'tag' attribute.")
+
+        # Check if a test value needs to be manually set
+        needs_test_val = not hasattr(mean.tag, "test_value")
+
+        if needs_test_val:
+            # Create the list of theano objects and their corresponding names
+            objs_and_names = [(alpha, 'alpha'), (beta, 'beta')]
+
+            # Get the numeric version of the parameters
+            numerics =\
+                get_numeric_objects_from_tensors_or_constants(objs_and_names)
+
+            # Initalize the test value of the mean
+            test_mean = numerics['beta'] / (numerics['alpha'] - 1.)
+
+            # Account for small values of alpha or alpha being an array.
+            if isinstance(numerics['alpha'], Number):
+                test_mean = (numerics['alpha'] > 1) * test_mean or np.inf
+            else:
+                test_mean[numerics['alpha'] <= 1] = np.inf
+
+            # Set the test value
+            mean.tag.test_value = test_mean
+
+        return mean
+
+    def add_test_value_to_mode(self, mode, alpha, beta):
+        """
+        Add a test_value to the tag attribute of the mode of the InverseGamma
+        distribution.
+
+        Parameters
+        ----------
+        mode : theano expression for the mode of the InverseGamma distribution.
+            Should have a `tag` attribute.
+        alpha, beta : theano TensorConstant or Tensor
+            Parameters of the InverseGamma distribution whose mode will be
+            calculated.
+
+        Returns
+        -------
+        mode : same as input but with a test_value attribute on `mode.tag`.
+        """
+        # Check argument validity and raise an informative error.
+        if not hasattr(mode, "tag"):
+            raise ValueError("'mode' argument doesn't have a 'tag' attribute.")
+
+        # Check if a test value needs to be manually set
+        needs_test_val = not hasattr(mode.tag, "test_value")
+
+        if needs_test_val:
+            # Create the list of theano objects and their corresponding names
+            objs_and_names = [(alpha, 'alpha'), (beta, 'beta')]
+
+            # Get the numeric version of the parameters
+            numerics =\
+                get_numeric_objects_from_tensors_or_constants(objs_and_names)
+
+            # Set the test value with numeric versions of alpha and beta
+            mode.tag.test_value =\
+                numerics['beta'] / (numerics['alpha'] + 1.)
+
+        return mode
 
     def random(self, point=None, size=None, repeat=None):
         alpha, beta = draw_values([self.alpha, self.beta],
@@ -1032,9 +1756,50 @@ class ChiSquared(Gamma):
     """
 
     def __init__(self, nu, *args, **kwargs):
+        # Note that nu will now be a TensorConstant
         self.nu = nu = tt.as_tensor_variable(nu)
-        super(ChiSquared, self).__init__(alpha=nu / 2., beta=0.5,
+        
+        alpha = nu / 2.
+        # Note that alpha will be a theano TensorVariable, and as such,
+        # it needs a tag.test_value if one is not set by theano. The next lines
+        # are useful when checking default values and
+        # theano.config.compute_test_values = 'off'
+        alpha = self.set_test_value_on_alpha(alpha, nu)
+
+        # Carry out Gamma initialization after ensuring all inputs are scalars
+        # or have test_values. Useful when checking default values and
+        # theano.config.compute_test_values = 'off'
+        super(ChiSquared, self).__init__(alpha=alpha, beta=0.5,
                                          *args, **kwargs)
+
+    def set_test_value_on_alpha(self, alpha, nu):
+        """
+        Ensures that alpha has a test_value before being passed to the __init__
+        function of the Gamma distribution.
+
+        Parameters
+        ----------
+        alpha, nu : theano Tensor, TensorConstant, or TensorVariable objects.
+            Parameters of the Gamma and Chi-square distribution respectively.
+
+        Returns
+        -------
+        alpha : same as input, but with a `.tag.test_value` attribute.
+        """
+        # Check validity of the alpha argument
+        if not hasattr(alpha, "tag"):
+            raise AttributeError("alpha does not have a tag attribute.")
+
+        if not hasattr(alpha.tag, "test_value"):
+            if hasattr(nu, "value"):
+                alpha.tag.test_value = nu.value / 2.
+            elif hasattr(nu, "tag") and hasattr(nu.tag, "test_value"):
+                alpha.tag.test_value = nu.tag.test_value / 2.
+            else:
+                raise AttributeError("nu has neither a 'value' nor a "
+                                     "'.tag.test_value' attribute.")
+
+        return alpha
 
 
 class Weibull(PositiveContinuous):
@@ -1062,7 +1827,6 @@ class Weibull(PositiveContinuous):
     """
 
     def __init__(self, alpha, beta, *args, **kwargs):
-        super(Weibull, self).__init__(*args, **kwargs)
         self.alpha = alpha = tt.as_tensor_variable(alpha)
         self.beta = beta = tt.as_tensor_variable(beta)
         self.mean = beta * tt.exp(gammaln(1 + 1. / alpha))
@@ -1070,8 +1834,96 @@ class Weibull(PositiveContinuous):
         self.variance = (beta**2) * \
             tt.exp(gammaln(1 + 2. / alpha - self.mean**2))
 
+        # Ensure the distribution's mean and median have test values
+        self.mean =\
+            self.add_test_value_to_mean(self.mean, self.alpha, self.beta)
+        self.median =\
+            self.add_test_value_to_median(self.median, self.alpha, self.beta)
+
         assert_negative_support(alpha, 'alpha', 'Weibull')
         assert_negative_support(beta, 'beta', 'Weibull')
+
+        # Carry out PositiveContinuous initialization after setting the mean
+        # and mode attributes. Useful when checking default values and
+        # theano.config.compute_test_values = 'off'
+        super(Weibull, self).__init__(*args, **kwargs)
+
+    def add_test_value_to_mean(self, mean, alpha, beta):
+        """
+        Add a test_value to the tag attribute of the mean of the Weibull
+        distribution.
+
+        Parameters
+        ----------
+        mean : theano expression for the mean of the Weibull distribution.
+            Should have a `tag` attribute.
+        alpha, beta : theano Tensor, TensorConstant or TensorVariable
+            Parameters of the Weibull distribution whose mean will be
+            calculated.
+
+        Returns
+        -------
+        mean : same as input but with a test_value attribute on `mean.tag`.
+        """
+        # Check argument validity and raise an informative error.
+        if not hasattr(mean, "tag"):
+            raise ValueError("'mean' argument doesn't have a 'tag' attribute.")
+
+        # Check if a test value needs to be manually set
+        needs_test_val = not hasattr(mean.tag, "test_value")
+
+        if needs_test_val:
+            # Create the list of theano objects and their corresponding names
+            objs_and_names = [(alpha, 'alpha'), (beta, 'beta')]
+
+            # Get the numeric version of the parameters
+            numerics =\
+                get_numeric_objects_from_tensors_or_constants(objs_and_names)
+
+            # Set the test value of the mean
+            mean.tag.test_value =\
+                (numerics['beta'] *
+                 np.exp(special.gammaln(1 + 1. / numerics['alpha'])))
+
+        return mean
+
+    def add_test_value_to_median(self, median, alpha, beta):
+        """
+        Add a test_value to the tag attribute of the median of the Weibull
+        distribution.
+
+        Parameters
+        ----------
+        mode : theano expression for the median of the Weibull distribution.
+            Should have a `tag` attribute.
+        alpha, beta : theano Tensor, TensorConstant or TensorVariable
+            Parameters of the Weibull distribution whose median will be
+            calculated.
+
+        Returns
+        -------
+        median : same as input but with a test_value attribute on `median.tag`.
+        """
+        # Check argument validity and raise an informative error.
+        if not hasattr(median, "tag"):
+            raise ValueError("'median' doesn't have a 'tag' attribute.")
+
+        # Check if a test value needs to be manually set
+        needs_test_val = not hasattr(median.tag, "test_value")
+
+        if needs_test_val:
+            # Create the list of theano objects and their corresponding names
+            objs_and_names = [(alpha, 'alpha'), (beta, 'beta')]
+
+            # Get the numeric version of the parameters
+            numerics =\
+                get_numeric_objects_from_tensors_or_constants(objs_and_names)
+
+            # Set the test value using the numeric version of lambda
+            median.tag.test_value = (numerics['beta'] *
+                                     np.exp(special.gammaln(np.log(2))) **
+                                     (1. / numerics['alpha']))
+        return median
 
     def random(self, point=None, size=None, repeat=None):
         alpha, beta = draw_values([self.alpha, self.beta],
@@ -1147,15 +1999,59 @@ class ExGaussian(Continuous):
     """
 
     def __init__(self, mu, sigma, nu, *args, **kwargs):
-        super(ExGaussian, self).__init__(*args, **kwargs)
         self.mu = mu = tt.as_tensor_variable(mu)
         self.sigma = sigma = tt.as_tensor_variable(sigma)
         self.nu = nu = tt.as_tensor_variable(nu)
         self.mean = mu + nu
         self.variance = (sigma**2) + (nu**2)
 
+        # Ensure the distribution's mean has test values
+        self.mean = self.add_test_value_to_mean(self.mean, self.mu, self.nu)
+
         assert_negative_support(sigma, 'sigma', 'ExGaussian')
         assert_negative_support(nu, 'nu', 'ExGaussian')
+
+        # Carry out initialization after setting the mean attribute
+        # This is useful when checking default values and
+        # theano.config.compute_test_values = 'off'
+        super(ExGaussian, self).__init__(*args, **kwargs)
+
+    def add_test_value_to_mean(self, mean, mu, nu):
+        """
+        Add a test_value to the tag attribute of the mean of the ExGaussian
+        distribution.
+
+        Parameters
+        ----------
+        mean : theano expression for the mean of the ExGaussian distribution.
+            Should have a `tag` attribute.
+        mu, nu : theano TensorConstant or Tensor
+            Parameters of the ExGaussian distribution whose mean will be
+            calculated.
+
+        Returns
+        -------
+        mean : same as input but with a test_value attribute on `mean.tag`.
+        """
+        # Check argument validity and raise an informative error.
+        if not hasattr(mean, "tag"):
+            raise ValueError("'mean' argument doesn't have a 'tag' attribute.")
+
+        # Check if a test value needs to be manually set
+        needs_test_val = not hasattr(mean.tag, "test_value")
+
+        if needs_test_val:
+            # Create the list of theano objects and their corresponding names
+            objs_and_names = [(mu, 'mu'), (nu, 'nu')]
+
+            # Get the numeric version of the parameters
+            numeric_params =\
+                get_numeric_objects_from_tensors_or_constants(objs_and_names)
+
+            # Set the test value using the numeric version of mu and nu
+            mean.tag.test_value = numeric_params['mu'] + numeric_params['nu']
+
+        return mean
 
     def random(self, point=None, size=None, repeat=None):
         mu, sigma, nu = draw_values([self.mu, self.sigma, self.nu],
@@ -1209,15 +2105,20 @@ class VonMises(Continuous):
 
     def __init__(self, mu=0.0, kappa=None, transform='circular',
                  *args, **kwargs):
-        super(VonMises, self).__init__(*args, **kwargs)
         self.mean = self.median = self.mode = self.mu = mu = tt.as_tensor_variable(mu)
         self.kappa = kappa = tt.as_tensor_variable(kappa)
         self.variance = 1 - i1(kappa) / i0(kappa)
+
+        # Carry out initialization after setting the mean attribute
+        # This is useful when checking default values and
+        # theano.config.compute_test_values = 'off'
+        super(VonMises, self).__init__(*args, **kwargs)
 
         if transform == 'circular':
             self.transform = transforms.Circular()
 
         assert_negative_support(kappa, 'kappa', 'VonMises')
+
 
     def random(self, point=None, size=None, repeat=None):
         mu, kappa = draw_values([self.mu, self.kappa],
@@ -1272,7 +2173,6 @@ class SkewNormal(Continuous):
 
     """
     def __init__(self, mu=0.0, sd=None, tau=None, alpha=1,  *args, **kwargs):
-        super(SkewNormal, self).__init__(*args, **kwargs)
         tau, sd = get_tau_sd(tau=tau, sd=sd)
         self.mu = mu = tt.as_tensor_variable(mu)
         self.tau = tt.as_tensor_variable(tau)
@@ -1283,8 +2183,60 @@ class SkewNormal(Continuous):
         self.mean = mu + self.sd * (2 / np.pi)**0.5 * alpha / (1 + alpha**2)**0.5
         self.variance = self.sd**2 * (1 - (2 * alpha**2) / ((1 + alpha**2) * np.pi))
 
+        # Ensure the distribution's mean has test values
+        self.mean = self.add_test_value_to_mean(self.mean,
+                                                self.mu,
+                                                self.sd,
+                                                self.alpha)
+
         assert_negative_support(tau, 'tau', 'SkewNormal')
         assert_negative_support(sd, 'sd', 'SkewNormal')
+
+        # Carry out initialization after setting the mean attribute
+        # This is useful when checking default values and
+        # theano.config.compute_test_values = 'off'
+        super(SkewNormal, self).__init__(*args, **kwargs)
+
+    def add_test_value_to_mean(self, mean, mu, sd, alpha):
+        """
+        Add a test_value to the tag attribute of the mean of the SkewNormal
+        distribution.
+
+        Parameters
+        ----------
+        mean : theano expression for the mean of the SkewNormal distribution.
+            Should have a `tag` attribute.
+        mu, sd, alpha : theano TensorConstant or Tensor
+            Parameters of the SkewNormal distribution whose mean will be
+            calculated.
+
+        Returns
+        -------
+        mean : same as input but with a test_value attribute on `mean.tag`.
+        """
+        # Check argument validity and raise an informative error.
+        if not hasattr(mean, "tag"):
+            raise ValueError("'mean' argument doesn't have a 'tag' attribute.")
+
+        # Check if a test value needs to be manually set
+        needs_test_val = not hasattr(mean.tag, "test_value")
+
+        if needs_test_val:
+            # Create the list of theano objects and their corresponding names
+            objs_and_names = [(mu, 'mu'), (sd, 'sd'), (alpha, 'alpha')]
+
+            # Get the numeric version of the parameters
+            param_nums =\
+                get_numeric_objects_from_tensors_or_constants(objs_and_names)
+
+            # Set the test value using the numeric version of mu, sd, and alpha
+            mean.tag.test_value = (param_nums['mu'] +
+                                   param_nums['sd'] *
+                                   (2 / np.pi)**0.5 *
+                                   param_nums['alpha'] /
+                                   (1 + param_nums['alpha']**2)**0.5)
+
+        return mean
 
     def random(self, point=None, size=None, repeat=None):
         mu, tau, _, alpha = draw_values(
@@ -1347,3 +2299,45 @@ class Triangular(Continuous):
                          tt.switch(tt.eq(value, c), tt.log(2 / (upper - lower)),
                          tt.switch(alltrue_elemwise([c < value, value <= upper]),
                          tt.log(2 * (upper - value) / ((upper - lower) * (upper - c))),np.inf)))
+
+
+def get_numeric_objects_from_tensors_or_constants(objects_and_names):
+    """
+    Extracts a dictionary of names (keys) and numeric objects from the passed
+    `objects_and_names`.
+
+    Parameters
+    objects_and_names : list of tuples.
+        Each tuple should have two elements. The first element should be a
+        theano Tensor, TensorConstant, or TensorVariable. The second element
+        should be a string representing the name of the corresponding theano
+        object.
+
+    Returns
+    -------
+    dict.
+        Keys will be the second element in each tuple in `objects_and_names`.
+        Values will be the numeric objects extracted from each first element in
+        `objects_and_names`.
+    """
+    assert all([isinstance(elem, tuple) for elem in objects_and_names])
+    assert all([len(elem) == 2 for elem in objects_and_names])
+
+    # Initialize a dictionary to store the extracted numeric objects
+    numeric_params = {}
+    for param, name in objects_and_names:
+        if isinstance(param, tt.TensorConstant):
+            numeric_params[name] = param.value
+        elif isinstance(param, (tt.Tensor, tt.TensorVariable)):
+            # Perform a final validity check.
+            if not hasattr(param.tag, "test_value"):
+                msg = "{}.tag.test_value does not exist."
+                raise ValueError(msg.format(name))
+            
+            numeric_params[name] = param.tag.test_value
+        else:
+            msg = ("'{}' is not a theano Tensor, TensorConstant or "
+                   "TensorVariable.")
+            raise ValueError(msg.format(name))
+
+    return numeric_params

@@ -119,7 +119,6 @@ class Discrete(Distribution):
 
 class Continuous(Distribution):
     """Base class for continuous distributions"""
-
     def __init__(self, shape=(), dtype=None, defaults=['median', 'mean', 'mode'], *args, **kwargs):
         if dtype is None:
             dtype = theano.config.floatX

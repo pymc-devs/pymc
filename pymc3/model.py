@@ -850,20 +850,27 @@ class ObservedRV(Factor, TensorVariable):
         super(TensorVariable, self).__init__(type, None, None, name)
 
         if distribution is not None:
-            data = as_tensor(data, name, model, distribution)
+            data_tensor = as_tensor(data, name, model, distribution)
 
-            self.missing_values = data.missing_values
+            self.missing_values = data_tensor.missing_values
 
-            self.logp_elemwiset = distribution.logp(data)
+            self.logp_elemwiset = distribution.logp(data_tensor)
             self.total_size = total_size
             self.model = model
             self.distribution = distribution
 
             # make this RV a view on the combined missing/nonmissing array
             theano.gof.Apply(theano.compile.view_op,
-                             inputs=[data], outputs=[self])
+                             inputs=[data_tensor], outputs=[self])
 
-            self.tag.test_value = theano.compile.view_op(data).tag.test_value
+            # Create the test value for the observed random variable
+            theano_data_view = theano.compile.view_op(data_tensor)
+            if hasattr(theano_data_view.tag, "test_value"):
+                self.tag.test_value = theano_data_view.tag.test_value
+            else:
+                # This branch is used in instances when
+                # theano.config.compute_test_value = 'off'
+                self.tag.test_value = data
 
     @property
     def init_value(self):
