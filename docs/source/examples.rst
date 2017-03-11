@@ -9,6 +9,7 @@ Howto
 
 .. toctree::
    notebooks/sampler-stats.ipynb
+   notebooks/Diagnosing_biased_Inference_with_Divergences.ipynb
    notebooks/posterior_predictive.ipynb
    notebooks/howto_debugging.ipynb
    notebooks/LKJ.ipynb
@@ -38,12 +39,13 @@ GLM
    notebooks/hierarchical_partial_pooling.ipynb
    notebooks/GLM-negative-binomial-regression.ipynb
 
-GP
-==
+Gaussian Processes
+==================
 
 .. toctree::
    notebooks/GP-introduction.ipynb
    notebooks/GP-covariances.ipynb
+   notebooks/GP-slice-sampling.ipynb
    notebooks/GP-smoothing.ipynb
 
 Mixture Models
@@ -56,8 +58,8 @@ Mixture Models
    notebooks/dp_mix.ipynb
    notebooks/dependent_density_regression.ipynb
 
-ADVI
-====
+Variational Inference
+=====================
 
 .. toctree::
    notebooks/GLM-hierarchical-ADVI.ipynb

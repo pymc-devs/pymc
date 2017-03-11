@@ -2,7 +2,6 @@ import theano.tensor as tt
 import numpy as np
 from functools import reduce
 
-
 __all__ = ['ExpQuad',
            'RatQuad',
            'Exponential',
@@ -11,7 +10,8 @@ __all__ = ['ExpQuad',
            'Linear',
            'Polynomial',
            'Cosine',
-           'WarpedInput']
+           'WarpedInput',
+           'Gibbs']
 
 class Covariance(object):
     R"""
@@ -32,9 +32,10 @@ class Covariance(object):
             self.active_dims = np.arange(input_dim)
         else:
             self.active_dims = np.array(active_dims)
-            assert len(active_dims) == input_dim
+            if len(active_dims) != input_dim:
+                raise ValueError("Length of active_dims must match input_dim")
 
-    def K(self, X, Z):
+    def __call__(self, X, Z):
         R"""
         Evaluate the covariance function.
 
@@ -45,7 +46,6 @@ class Covariance(object):
         """
         raise NotImplementedError
 
-
     def _slice(self, X, Z):
         X = X[:, self.active_dims]
         if Z is not None:
@@ -55,14 +55,30 @@ class Covariance(object):
     def __add__(self, other):
         return Add([self, other])
 
-    def __radd__(self, other):
-        return self.__add__(other)
-
     def __mul__(self, other):
         return Prod([self, other])
 
+    def __radd__(self, other):
+        return self.__add__(other)
+
     def __rmul__(self, other):
         return self.__mul__(other)
+
+    def __array_wrap__(self, result):
+        """
+        Required to allow radd/rmul by numpy arrays.
+        """
+        r,c = result.shape
+        A = np.zeros((r,c))
+        for i in range(r):
+            for j in range(c):
+                A[i,j] = result[i,j].factor_list[1]
+        if isinstance(result[0][0], Add):
+            return result[0][0].factor_list[0] + A
+        elif isinstance(result[0][0], Prod):
+            return result[0][0].factor_list[0] * A
+        else:
+            raise RuntimeError
 
 
 class Combination(Covariance):
@@ -77,15 +93,17 @@ class Combination(Covariance):
             else:
                 self.factor_list.append(factor)
 
+
 class Add(Combination):
-    def K(self, X, Z=None):
+    def __call__(self, X, Z=None):
         return reduce((lambda x, y: x + y),
-                      [k.K(X, Z) if isinstance(k, Covariance) else k for k in self.factor_list])
+                      [k(X, Z) if isinstance(k, Covariance) else k for k in self.factor_list])
+
 
 class Prod(Combination):
-    def K(self, X, Z=None):
+    def __call__(self, X, Z=None):
         return reduce((lambda x, y: x * y),
-                      [k.K(X, Z) if isinstance(k, Covariance) else k for k in self.factor_list])
+                      [k(X, Z) if isinstance(k, Covariance) else k for k in self.factor_list])
 
 
 class Stationary(Covariance):
@@ -100,19 +118,22 @@ class Stationary(Covariance):
 
     def __init__(self, input_dim, lengthscales, active_dims=None):
         Covariance.__init__(self, input_dim, active_dims)
+        if isinstance(lengthscales, (list, tuple)):
+            lengthscales = np.array(lengthscales)
         self.lengthscales = lengthscales
 
     def square_dist(self, X, Z):
         X = tt.mul(X, 1.0 / self.lengthscales)
         Xs = tt.sum(tt.square(X), 1)
         if Z is None:
-            return -2.0 * tt.dot(X, tt.transpose(X)) +\
-                   (tt.reshape(Xs, (-1, 1)) + tt.reshape(Xs, (1, -1)))
+            sqd = -2.0 * tt.dot(X, tt.transpose(X)) +\
+                  (tt.reshape(Xs, (-1, 1)) + tt.reshape(Xs, (1, -1)))
         else:
             Z = tt.mul(Z, 1.0 / self.lengthscales)
             Zs = tt.sum(tt.square(Z), 1)
-            return -2.0 * tt.dot(X, tt.transpose(Z)) +\
-                   (tt.reshape(Xs, (-1, 1)) + tt.reshape(Zs, (1, -1)))
+            sqd = -2.0 * tt.dot(X, tt.transpose(Z)) +\
+                  (tt.reshape(Xs, (-1, 1)) + tt.reshape(Zs, (1, -1)))
+        return tt.clip(sqd, 0.0, np.inf)
 
     def euclidean_dist(self, X, Z):
         r2 = self.square_dist(X, Z)
@@ -129,7 +150,7 @@ class ExpQuad(Stationary):
        k(x, x') = \mathrm{exp}\left[ -\frac{(x - x')^2}{2 \ell^2} \right]
     """
 
-    def K(self, X, Z=None):
+    def __call__(self, X, Z=None):
         X, Z = self._slice(X, Z)
         return tt.exp( -0.5 * self.square_dist(X, Z))
 
@@ -148,7 +169,7 @@ class RatQuad(Stationary):
         self.lengthscales = lengthscales
         self.alpha = alpha
 
-    def K(self, X, Z=None):
+    def __call__(self, X, Z=None):
         X, Z = self._slice(X, Z)
         return tt.power((1.0 + 0.5 * self.square_dist(X, Z) * (1.0 / self.alpha)), -1.0 * self.alpha)
 
@@ -162,7 +183,7 @@ class Matern52(Stationary):
        k(x, x') = \left(1 + \frac{\sqrt{5(x - x')^2}}{\ell} + \frac{5(x-x')^2}{3\ell^2}\right) \mathrm{exp}\left[ - \frac{\sqrt{5(x - x')^2}}{\ell} \right]
     """
 
-    def K(self, X, Z=None):
+    def __call__(self, X, Z=None):
         X, Z = self._slice(X, Z)
         r = self.euclidean_dist(X, Z)
         return (1.0 + np.sqrt(5.0) * r + 5.0 / 3.0 * tt.square(r)) * tt.exp(-1.0 * np.sqrt(5.0) * r)
@@ -177,7 +198,7 @@ class Matern32(Stationary):
        k(x, x') = \left(1 + \frac{\sqrt{3(x - x')^2}}{\ell}\right)\mathrm{exp}\left[ - \frac{\sqrt{3(x - x')^2}}{\ell} \right]
     """
 
-    def K(self, X, Z=None):
+    def __call__(self, X, Z=None):
         X, Z = self._slice(X, Z)
         r = self.euclidean_dist(X, Z)
         return (1.0 + np.sqrt(3.0) * r) * tt.exp(-np.sqrt(3.0) * r)
@@ -192,7 +213,7 @@ class Exponential(Stationary):
        k(x, x') = \mathrm{exp}\left[ -\frac{||x - x'||}{2\ell^2} \right]
     """
 
-    def K(self, X, Z=None):
+    def __call__(self, X, Z=None):
         X, Z = self._slice(X, Z)
         return tt.exp(-0.5 * self.euclidean_dist(X, Z))
 
@@ -205,7 +226,7 @@ class Cosine(Stationary):
        k(x, x') = \mathrm{cos}\left( \frac{||x - x'||}{ \ell^2} \right)
     """
 
-    def K(self, X, Z=None):
+    def __call__(self, X, Z=None):
         X, Z = self._slice(X, Z)
         return tt.cos(np.pi * self.euclidean_dist(X, Z))
 
@@ -222,7 +243,7 @@ class Linear(Covariance):
         Covariance.__init__(self, input_dim, active_dims)
         self.c = c
 
-    def K(self, X, Z=None):
+    def __call__(self, X, Z=None):
         X, Z = self._slice(X, Z)
         Xc = tt.sub(X, self.c)
         if Z is None:
@@ -245,8 +266,9 @@ class Polynomial(Linear):
         self.d = d
         self.offset = offset
 
-    def K(self, X, Z=None):
-        return tt.power(Linear.K(self, X, Z) + self.offset, self.d)
+    def __call__(self, X, Z=None):
+        linear = super(Polynomial, self).__call__(X, Z)
+        return tt.power(linear + self.offset, self.d)
 
 
 class WarpedInput(Covariance):
@@ -260,7 +282,7 @@ class WarpedInput(Covariance):
     Parameters
     ----------
     cov_func : Covariance
-    warp_func : function
+    warp_func : callable
         Theano function of X and additional optional arguments.
     args : optional, tuple or list of scalars or PyMC3 variables
         Additional inputs (besides X or Z) to warp_func.
@@ -268,18 +290,76 @@ class WarpedInput(Covariance):
 
     def __init__(self, input_dim, cov_func, warp_func, args=None, active_dims=None):
         Covariance.__init__(self, input_dim, active_dims)
-        assert callable(warp_func), "Must be a function"
-        assert isinstance(cov_func, Covariance), "Must be one of the covariance functions"
+        if not callable(warp_func):
+            raise TypeError("warp_func must be callable")
+        if not isinstance(cov_func, Covariance):
+            raise TypeError("Must be or inherit from the Covariance class")
         self.w = handle_args(warp_func, args)
         self.args = args
         self.cov_func = cov_func
 
-    def K(self, X, Z=None):
+    def __call__(self, X, Z=None):
         X, Z = self._slice(X, Z)
         if Z is None:
-            return self.cov_func.K(self.w(X, self.args), Z)
+            return self.cov_func(self.w(X, self.args), Z)
         else:
-            return self.cov_func.K(self.w(X, self.args), self.w(Z, self.args))
+            return self.cov_func(self.w(X, self.args), self.w(Z, self.args))
+
+
+class Gibbs(Covariance):
+    R"""
+    Use an arbitrary lengthscale function defined using Theano.  Operates on a single input dimension.
+
+    .. math::
+       k_{\mathrm{gibbs}}(x, x') = \sqrt{\frac{2\ell(x)\ell(x')}{\ell^2(x) + \ell^2(x')}}
+                                   \mathrm{exp}\left[ -\frac{(x - x')^2}{\ell(x)^2 + \ell^2(x')} \right]
+
+    Parameters
+    ----------
+    lengthscale_func : callable
+        Theano function of X and additional optional arguments.
+    args : optional, tuple or list of scalars or PyMC3 variables
+        Additional inputs (besides X or Z) to warp_func.
+    """
+    def __init__(self, input_dim, lengthscale_func, args=None, active_dims=None):
+        Covariance.__init__(self, input_dim, active_dims)
+        if active_dims is not None:
+            if input_dim != 1 or sum(active_dims) == 1:
+                raise NotImplementedError("Higher dimensional inputs are untested")
+        else:
+            if input_dim != 1:
+                raise NotImplementedError("Higher dimensional inputs are untested")
+        if not callable(lengthscale_func):
+            raise TypeError("lengthscale_func must be callable")
+        self.ell = handle_args(lengthscale_func, args)
+        self.args = args
+
+    def square_dist(self, X, Z):
+        X = tt.as_tensor_variable(X)
+        Xs = tt.sum(tt.square(X), 1)
+        if Z is None:
+            sqd = -2.0 * tt.dot(X, tt.transpose(X)) +\
+                  (tt.reshape(Xs, (-1, 1)) + tt.reshape(Xs, (1, -1)))
+        else:
+            Z = tt.as_tensor_variable(Z)
+            Zs = tt.sum(tt.square(Z), 1)
+            sqd = -2.0 * tt.dot(X, tt.transpose(Z)) +\
+                  (tt.reshape(Xs, (-1, 1)) + tt.reshape(Zs, (1, -1)))
+        return tt.clip(sqd, 0.0, np.inf)
+
+    def __call__(self, X, Z=None):
+        X, Z = self._slice(X, Z)
+        rx = self.ell(X, self.args)
+        rx2 = tt.reshape(tt.square(rx), (-1, 1))
+        if Z is None:
+            r2 = self.square_dist(X,X)
+            rz = self.ell(X, self.args)
+        else:
+            r2 = self.square_dist(X,Z)
+            rz = self.ell(Z, self.args)
+        rz2 = tt.reshape(tt.square(rz), (1, -1))
+        return tt.sqrt((2.0 * tt.dot(rx, tt.transpose(rz))) / (rx2 + rz2)) *\
+               tt.exp(-1.0 * r2 / (rx2 + rz2))
 
 
 def handle_args(func, args):

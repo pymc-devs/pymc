@@ -517,7 +517,7 @@ class Exponential(PositiveContinuous):
         self.lam = lam = tt.as_tensor_variable(lam)
         self.mean = 1. / self.lam
         self.median = self.mean * tt.log(2)
-        self.mode = 0
+        self.mode = tt.zeros_like(self.lam)
 
         self.variance = self.lam**-2
 
@@ -591,8 +591,8 @@ class Lognormal(PositiveContinuous):
     .. math::
 
        f(x \mid \mu, \tau) =
-           \sqrt{\frac{\tau}{2\pi}}
-           \frac{\exp\left\{ -\frac{\tau}{2} (\ln(x)-\mu)^2 \right\}}{x}
+           \frac{1}{x} \sqrt{\frac{\tau}{2\pi}}
+           \exp\left\{ -\frac{\tau}{2} (\ln(x)-\mu)^2 \right\}
 
     ========  ================================================================
     Support   :math:`x \in (0, 1)`

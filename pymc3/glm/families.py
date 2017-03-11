@@ -101,7 +101,6 @@ class Binomial(Family):
     link = logit
     likelihood = pm_dists.Bernoulli
     parent = 'p'
-    priors = {'p': pm_dists.Beta.dist(alpha=1, beta=1)}
 
 
 class Poisson(Family):

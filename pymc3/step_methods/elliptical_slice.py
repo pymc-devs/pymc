@@ -10,6 +10,30 @@ from ..distributions import draw_values
 __all__ = ['EllipticalSlice']
 
 
+def get_chol(cov, chol):
+    """Get Cholesky decomposition of the prior covariance.
+
+    Ensure that exactly one of the prior covariance or Cholesky
+    decomposition is passed. If the prior covariance was passed, then
+    return its Cholesky decomposition.
+
+    Parameters
+    ----------
+    cov : array, optional
+        Covariance matrix of the multivariate Gaussian prior.
+    chol : array, optional
+        Cholesky decomposition of the covariance matrix of the
+        multivariate Gaussian prior.
+    """
+
+    if len([i for i in [cov, chol] if i is not None]) != 1:
+        raise ValueError('Must pass exactly one of cov or chol')
+
+    if cov is not None:
+        chol = tt.slinalg.cholesky(cov)
+    return chol
+
+
 class EllipticalSlice(ArrayStep):
     """Multivariate elliptical slice sampler step.
 
@@ -26,8 +50,11 @@ class EllipticalSlice(ArrayStep):
     ----------
     vars : list
         List of variables for sampler.
-    prior_cov : array
+    prior_cov : array, optional
         Covariance matrix of the multivariate Gaussian prior.
+    prior_chol : array, optional
+        Cholesky decomposition of the covariance matrix of the
+        multivariate Gaussian prior.
     model : PyMC Model
         Optional model for sampling step. Defaults to None (taken from
         context).
@@ -42,10 +69,11 @@ class EllipticalSlice(ArrayStep):
 
     default_blocked = True
 
-    def __init__(self, vars=None, prior_cov=None, model=None, **kwargs):
+    def __init__(self, vars=None, prior_cov=None, prior_chol=None, model=None,
+                 **kwargs):
         self.model = modelcontext(model)
-        self.prior_cov = tt.as_tensor_variable(prior_cov)
-        self.prior_mean = tt.zeros_like(self.prior_cov[0])
+        chol = get_chol(prior_cov, prior_chol)
+        self.prior_chol = tt.as_tensor_variable(chol)
 
         if vars is None:
             vars = self.model.cont_vars
@@ -57,8 +85,11 @@ class EllipticalSlice(ArrayStep):
         """q0 : current state
         logp : log probability function
         """
-        mean, cov = draw_values([self.prior_mean, self.prior_cov])
-        nu = nr.multivariate_normal(mean=mean, cov=cov)
+
+        # Draw from the normal prior by multiplying the Cholesky decomposition
+        # of the covariance with draws from a standard normal
+        chol = draw_values([self.prior_chol])
+        nu = np.dot(chol, nr.randn(chol.shape[0]))
         y = logp(q0) - nr.standard_exponential()
 
         # Draw initial proposal and propose a candidate point

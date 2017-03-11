@@ -113,6 +113,17 @@ Salvatier J, Wiecki TV, Fonnesbeck C. (2016) Probabilistic programming
 in Python using PyMC3. PeerJ Computer Science 2:e55
 https://doi.org/10.7717/peerj-cs.55
 
+Contact
+-------
+
+To report an issue with PyMC3 or to suggest a feature please use the `issue tracker <https://github.com/pymc-devs/pymc3/issues>`__.
+
+To ask a question regarding modeling or usage of PyMC3 we encourage posting to `StackOverflow using the "pymc" tag <http://stackoverflow.com/questions/tagged/pymc>`__.
+
+To interact with PyMC3 developers, visit the `pymc Gitter channel <https://gitter.im/pymc-devs/pymc>`__.
+
+Finally, if you need to get in touch for non-technical information about the project, `send us an e-mail <fonnesbeck+pymc@gmail.com>`__.
+
 License
 -------
 

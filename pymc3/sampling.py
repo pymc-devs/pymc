@@ -13,6 +13,8 @@ from .step_methods import (NUTS, HamiltonianMC, Metropolis, BinaryMetropolis,
                            Slice, CompoundStep)
 from tqdm import tqdm
 
+import warnings
+
 import sys
 sys.setrecursionlimit(10000)
 
@@ -81,7 +83,7 @@ def assign_step_methods(model, step=None, methods=(NUTS, HamiltonianMC, Metropol
     return steps
 
 
-def sample(draws, step=None, init='advi', n_init=200000, start=None,
+def sample(draws, step=None, init='ADVI', n_init=200000, start=None,
            trace=None, chain=0, njobs=1, tune=None, progressbar=True,
            model=None, random_seed=-1):
     """
@@ -157,6 +159,8 @@ def sample(draws, step=None, init='advi', n_init=200000, start=None,
         if start is None:
             start = start_
     else:
+        if step is not None and init is not None:
+            warnings.warn('Instantiated step methods cannot be automatically initialized. init argument ignored.')
         step = assign_step_methods(model, step)
 
     if njobs is None:
@@ -291,8 +295,6 @@ def _iter_sample(draws, step, start=None, trace=None, chain=0, tune=None,
             point = step.step(point)
             strace.record(point)
         yield strace
-    else:
-        strace.close()
 
 
 def _choose_backend(trace, chain, shortcuts=None, **kwds):
@@ -486,7 +488,7 @@ def init_nuts(init='ADVI', njobs=1, n_init=500000, model=None,
         if njobs == 1:
             start = start[0]
     else:
-        raise NotImplemented('Initializer {} is not supported.'.format(init))
+        raise NotImplementedError('Initializer {} is not supported.'.format(init))
 
     step = pm.NUTS(scaling=cov, is_cov=True, **kwargs)
 

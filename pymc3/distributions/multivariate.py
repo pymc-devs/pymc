@@ -13,7 +13,7 @@ from theano.tensor.nlinalg import det, matrix_inverse, trace
 
 import pymc3 as pm
 
-from pymc3.theanof import logdet
+from pymc3.math import logdet, tround
 from . import transforms
 from .distribution import Continuous, Discrete, draw_values, generate_samples
 from ..model import Deterministic
@@ -35,8 +35,8 @@ def get_tau_cov(mu, tau=None, cov=None):
     Parameters
     ----------
     mu : array-like
-    tau : array-like, optional
-    cov : array-like, optional
+    tau : array-like, not required if cov is passed
+    cov : array-like, not required of tau is passed
 
     Results
     -------
@@ -48,8 +48,8 @@ def get_tau_cov(mu, tau=None, cov=None):
     """
     if tau is None:
         if cov is None:
-            cov = np.eye(len(mu))
-            tau = np.eye(len(mu))
+            raise ValueError('Incompatible parameterization. Either use tau'
+                             'or cov to specify distribution.')
         else:
             tau = tt.nlinalg.matrix_inverse(cov)
 
@@ -81,10 +81,10 @@ class MvNormal(Continuous):
     ----------
     mu : array
         Vector of means.
-    cov : array, optional
-        Covariance matrix.
-    tau : array, optional
-        Precision matrix.
+    cov : array
+        Covariance matrix. Not required if tau is passed.
+    tau : array
+        Precision matrix. Not required if tau is passed.
 
     Flags
     ----------
@@ -124,11 +124,12 @@ class MvNormal(Continuous):
         delta = value - mu
         k = tau.shape[0]
 
+        result = k * tt.log(2 * np.pi)
         if self.gpu_compat:
-            result = k * tt.log(2 * np.pi) + tt.log(1. / det(tau))
+            result -= tt.log(det(tau))
         else:
-            result = k * tt.log(2 * np.pi) - logdet(tau)
-        result += (delta.dot(tau) * delta).sum(axis=delta.ndim - 1)
+            result -= logdet(tau)
+        result += (tt.dot(delta, tau) * delta).sum(axis=delta.ndim - 1)
         return -1 / 2. * result
 
 
@@ -313,7 +314,7 @@ class Multinomial(Discrete):
             self.p = tt.as_tensor_variable(p)
 
         self.mean = self.n * self.p
-        self.mode = tt.cast(tt.round(self.mean), 'int32')
+        self.mode = tt.cast(tround(self.mean), 'int32')
 
     def _random(self, n, p, size=None):
         if size == p.shape:
@@ -582,12 +583,17 @@ class LKJCorr(Continuous):
         100(9), pp.1989-2001.
     """
 
-    def __init__(self, n, p, *args, **kwargs):
+    def __init__(self, n, p, transform='interval', *args, **kwargs):
         self.n = n
         self.p = p
         n_elem = int(p * (p - 1) / 2)
         self.mean = np.zeros(n_elem, dtype=theano.config.floatX)
-        super(LKJCorr, self).__init__(shape=n_elem, *args, **kwargs)
+
+        if transform == 'interval':
+            transform = transforms.interval(-1, 1)
+
+        super(LKJCorr, self).__init__(shape=n_elem, transform=transform,
+                                      *args, **kwargs)
 
         self.tri_index = np.zeros([p, p], dtype='int32')
         self.tri_index[np.triu_indices(p, k=1)] = np.arange(n_elem)

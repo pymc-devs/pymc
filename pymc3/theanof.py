@@ -4,9 +4,8 @@ import theano
 from .vartypes import typefilter, continuous_types
 from theano import theano, scalar, tensor as tt
 from theano.gof.graph import inputs
-from theano.gof import Op, Apply
+from theano.gof import Op
 from theano.configparser import change_flags
-from theano.tensor.nlinalg import matrix_inverse
 from .memoize import memoize
 from .blocking import ArrayOrdering
 from .data import DataGenerator
@@ -14,7 +13,7 @@ from .data import DataGenerator
 __all__ = ['gradient', 'hessian', 'hessian_diag', 'inputvars',
            'cont_inputs', 'floatX', 'jacobian',
            'CallableTensor', 'join_nonshared_inputs',
-           'make_shared_replacements', 'generator', 'LogDet', 'logdet']
+           'make_shared_replacements', 'generator']
 
 
 def inputvars(a):
@@ -60,40 +59,6 @@ def floatX(X):
 """
 Theano derivative functions
 """
-
-class LogDet(Op):
-    """Computes the logarithm of absolute determinant of a square
-    matrix M, log(abs(det(M))), on CPU. Avoids det(M) overflow/
-    underflow.
-
-    Note: Once PR #3959 (https://github.com/Theano/Theano/pull/3959/) by harpone is merged,
-    this must be removed. 
-    """
-    def make_node(self, x):
-        x = theano.tensor.as_tensor_variable(x)
-        o = theano.tensor.scalar(dtype=x.dtype)
-        return Apply(self, [x], [o])
-
-    def perform(self, node, inputs, outputs):
-        try:
-            (x,) = inputs
-            (z,) = outputs
-            s = np.linalg.svd(x, compute_uv=False)
-            log_det = np.sum(np.log(np.abs(s)))
-            z[0] = np.asarray(log_det, dtype=x.dtype)
-        except Exception:
-            print('Failed to compute logdet of {}.'.format(x))
-            raise
-
-    def grad(self, inputs, g_outputs):
-        [gz] = g_outputs
-        [x] = inputs
-        return [gz * matrix_inverse(x).T]
-
-    def __str__(self):
-        return "LogDet"
-
-logdet = LogDet()
 
 def gradient1(f, v):
     """flat gradient of f wrt v"""
@@ -279,51 +244,45 @@ identity = tt.Elemwise(scalar_identity, name='identity')
 
 class GeneratorOp(Op):
     """
-    Generaror Op is designed for storing python generators
-    inside theano graph. The main limitation is generator itself.
+    Generator Op is designed for storing python generators inside theano graph.
 
-    There are some important cases when generator becomes exhausted
-        - not endless generator is passed
-        - exception is raised while `generator.__next__` is performed
-            Note: it is dangerous in simple python generators, but ok in
-            custom class based generators with explicit state
-        - data type on each iteration should be the same
+    __call__ creates TensorVariable
+        It has 2 new methods
+        - var.set_gen(gen) : sets new generator
+        - var.set_default(value) : sets new default value (None erases default value)
+
+    If generator is exhausted, variable will produce default value if it is not None,
+    else raises `StopIteration` exception that can be caught on runtime.
+
+    Parameters
+    ----------
+    gen : generator that implements __next__ (py3) or next (py2) method
+        and yields np.arrays with same types
+    default : np.array with the same type as generator produces
     """
     __props__ = ('generator',)
 
-    def __init__(self, gen):
+    def __init__(self, gen, default=None):
         super(GeneratorOp, self).__init__()
         if not isinstance(gen, DataGenerator):
             gen = DataGenerator(gen)
         self.generator = gen
-        self.itypes = []
-        self.otypes = [self.generator.tensortype]
-        self._nan = np.zeros_like(self.generator.test_value)
-        self._nan[...] = np.nan
+        self.set_default(default)
+
+    def make_node(self, *inputs):
+        gen_var = self.generator.make_variable(self)
+        return theano.Apply(self, [], [gen_var])
 
     def perform(self, node, inputs, output_storage, params=None):
-        try:
+        if self.default is not None:
+            output_storage[0][0] = next(self.generator, self.default)
+        else:
             output_storage[0][0] = next(self.generator)
-        except StopIteration:
-            output_storage[0][0] = self._nan
 
     def do_constant_folding(self, node):
         return False
 
-    class _set_gen(object):
-        """For pickling"""
-        def __init__(self, op):
-            self.op = op
-
-        def __call__(self, gen):
-            self.op.set_gen(gen)
-
-    @change_flags(compute_test_value='off')
-    def __call__(self, *args, **kwargs):
-        rval = super(GeneratorOp, self).__call__(*args, **kwargs)
-        rval.set_gen = self._set_gen(self)
-        rval.tag.test_value = self.generator.test_value
-        return rval
+    __call__ = change_flags(compute_test_value='off')(Op.__call__)
 
     def set_gen(self, gen):
         if not isinstance(gen, DataGenerator):
@@ -332,7 +291,37 @@ class GeneratorOp(Op):
             raise ValueError('New generator should yield the same type')
         self.generator = gen
 
+    def set_default(self, value):
+        if value is None:
+            self.default = None
+        else:
+            value = np.asarray(value)
+            t1 = (value.dtype, ((False,) * value.ndim))
+            t2 = (self.generator.tensortype.dtype,
+                  self.generator.tensortype.broadcastable)
+            if not t1 == t2:
+                raise ValueError('Default value should have the '
+                                 'same type as generator')
+            self.default = value
 
-def generator(gen):
-    """shortcut for `GeneratorOp`"""
-    return GeneratorOp(gen)()
+
+def generator(gen, default=None):
+    """
+    Generator variable with possibility to set default value and new generator.
+    If generator is exhausted variable will produce default value if it is not None,
+    else raises `StopIteration` exception that can be caught on runtime.
+
+    Parameters
+    ----------
+    gen : generator that implements __next__ (py3) or next (py2) method
+        and yields np.arrays with same types
+    default : np.array with the same type as generator produces
+
+    Returns
+    -------
+    TensorVariable
+        It has 2 new methods
+        - var.set_gen(gen) : sets new generator
+        - var.set_default(value) : sets new default value (None erases default value)
+    """
+    return GeneratorOp(gen, default)()

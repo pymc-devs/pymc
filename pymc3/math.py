@@ -6,11 +6,21 @@ import theano
 from theano.tensor import (
     constant, flatten, zeros_like, ones_like, stack, concatenate, sum, prod,
     lt, gt, le, ge, eq, neq, switch, clip, where, and_, or_, abs_, exp, log,
-    cos, sin, tan, cosh, sinh, tanh, sqr, sqrt, erf, erfinv, dot, maximum,
-    minimum, sgn, ceil, floor)
+    cos, sin, tan, cosh, sinh, tanh, sqr, sqrt, erf, erfc, erfinv, erfcinv, dot, 
+    maximum, minimum, sgn, ceil, floor)
 from theano.tensor.nlinalg import det, matrix_inverse, extract_diag, matrix_dot, trace
 from theano.tensor.nnet import sigmoid
+from theano.gof import Op, Apply
+import numpy as np
 # pylint: enable=unused-import
+
+def tround(*args, **kwargs): 
+    """
+    Temporary function to silence round warning in Theano. Please remove
+    when the warning disappears.
+    """
+    kwargs['mode'] = 'half_to_even'
+    return tt.round(*args, **kwargs)
 
 
 def logsumexp(x, axis=None):
@@ -25,3 +35,44 @@ def invlogit(x, eps=sys.float_info.epsilon):
 
 def logit(p):
     return tt.log(p / (1 - p))
+
+
+class LogDet(Op):
+    """Computes the logarithm of absolute determinant of a square
+    matrix M, log(abs(det(M))), on CPU. Avoids det(M) overflow/
+    underflow.
+
+    Note: Once PR #3959 (https://github.com/Theano/Theano/pull/3959/) by harpone is merged,
+    this must be removed. 
+    """
+    def make_node(self, x):
+        x = theano.tensor.as_tensor_variable(x)
+        o = theano.tensor.scalar(dtype=x.dtype)
+        return Apply(self, [x], [o])
+
+    def perform(self, node, inputs, outputs, params=None):
+        try:
+            (x,) = inputs
+            (z,) = outputs
+            s = np.linalg.svd(x, compute_uv=False)
+            log_det = np.sum(np.log(np.abs(s)))
+            z[0] = np.asarray(log_det, dtype=x.dtype)
+        except Exception:
+            print('Failed to compute logdet of {}.'.format(x))
+            raise
+
+    def grad(self, inputs, g_outputs):
+        [gz] = g_outputs
+        [x] = inputs
+        return [gz * matrix_inverse(x).T]
+
+    def __str__(self):
+        return "LogDet"
+
+logdet = LogDet()
+
+def probit(p):
+    return -sqrt(2) * erfcinv(2 * p)
+    
+def invprobit(x):
+    return 0.5 * erfc(-x / sqrt(2))
