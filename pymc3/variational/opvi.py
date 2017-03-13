@@ -688,7 +688,6 @@ class Approximation(object):
         logp = log_normal(z[self.local_slc], mu, rho=rho)
         scaling = []
         for var in self.local_vars:
-            logp = tt.set_subtensor(logp)
             scaling.append(tt.ones(var.dsize)*var.scaling)
         scaling = tt.concatenate(scaling)
 
