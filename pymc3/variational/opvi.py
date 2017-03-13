@@ -741,7 +741,7 @@ class Approximation(object):
                                             tt.as_tensor(_shape)])
                 else:
                     shape = np.concatenate([space.shape[:-1],
-                                            _shape])
+                                            _shape]).astype(int)
 
             else:
                 shape = space.shape[:-1]

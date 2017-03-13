@@ -69,6 +69,19 @@ class TestApproximates:
             x_sampled = app.view(posterior, 'x').eval({i: 1})
             self.assertEqual(x_sampled.shape, (1,) + model['x'].dshape)
 
+        def test_vars_view_dynamic_size_numpy(self):
+            _, model, _ = models.multidimensional_model()
+            with model:
+                app = self.inference().approx
+                i = tt.iscalar('i')
+                i.tag.test_value = 1
+            x_sampled = app.view(app.random_fn(10), 'x')
+            self.assertEqual(x_sampled.shape, (10,) + model['x'].dshape)
+            x_sampled = app.view(app.random_fn(1), 'x')
+            self.assertEqual(x_sampled.shape, (1,) + model['x'].dshape)
+            x_sampled = app.view(app.random_fn(), 'x')
+            self.assertEqual(x_sampled.shape, () + model['x'].dshape)
+
         def test_sample_vp(self):
             n_samples = 100
             xs = np.random.binomial(n=1, p=0.2, size=n_samples)
