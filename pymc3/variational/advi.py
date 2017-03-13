@@ -10,7 +10,7 @@ import theano.tensor as tt
 from theano.sandbox.rng_mrg import MRG_RandomStreams
 
 import pymc3 as pm
-from pymc3.variational.updates import adagrad
+from pymc3.variational.updates import adagrad, apply_momentum
 from pymc3.backends.base import MultiTrace
 from ..theanof import floatX
 
@@ -48,7 +48,7 @@ def advi(vars=None, start=None, model=None, n=5000, accurate_elbo=False,
     The variational parameters are defined on the transformed space, which is
     required to do ADVI on an unconstrained parameter space as described in
     [KTR+2016]. The parameters in the :code:`ADVIfit` object are in the
-    transformed space, while traces returned by :code:`sample_vp()` are in
+    transformed space, while traces preturned by :code:`sample_vp()` are in
     the original space as obtained by MCMC sampling methods in PyMC3.
 
     The variational parameters are optimized with given optimizer, which is a
@@ -138,7 +138,8 @@ def advi(vars=None, start=None, model=None, n=5000, accurate_elbo=False,
     # Create parameter update function used in the training loop
     uw_shared = theano.shared(uw, 'uw_shared')
     elbo = pm.CallableTensor(elbo)(uw_shared)
-    updates = optimizer(-1 * elbo, [uw_shared], learning_rate=learning_rate, epsilon=epsilon)
+    updates = optimizer([-1 * elbo], [uw_shared], learning_rate=learning_rate, epsilon=epsilon)
+    updates = apply_momentum(updates, [uw_shared], momentum=0.9)
     f = theano.function([], [uw_shared, elbo], updates=updates, mode=mode)
 
     # For tracking convergence of ELBO
@@ -187,7 +188,7 @@ def advi(vars=None, start=None, model=None, n=5000, accurate_elbo=False,
                         divergence_flag = True
                     else:
                         divergence_flag = False
-                        
+
     except KeyboardInterrupt:
         elbos = elbos[:i]
         if n < 10:
@@ -203,10 +204,10 @@ def advi(vars=None, start=None, model=None, n=5000, accurate_elbo=False,
         else:
             avg_elbo = elbos[-n // 10:].mean()
             pm._log.info('Finished [100%]: Average ELBO = {:,.5g}'.format(avg_elbo))
-    
+
     if divergence_flag:
         pm._log.info('Evidence of divergence detected, inspect ELBO.')
-        
+
     # Estimated parameters
     l = int(uw_i.size / 2)
     u = bij.rmap(uw_i[:l])
