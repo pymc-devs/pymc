@@ -1757,7 +1757,7 @@ rescaled otherwise.</p>
 <tr class="row-even"><td><a class="reference internal" href="#pymc3.distributions.multivariate.Wishart" title="pymc3.distributions.multivariate.Wishart"><code class="xref py py-obj docutils literal"><span class="pre">Wishart</span></code></a>(n,&nbsp;V,&nbsp;\*args,&nbsp;\*\*kwargs)</td>
 <td>Wishart log-likelihood.</td>
 </tr>
-<tr class="row-odd"><td><a class="reference internal" href="#pymc3.distributions.multivariate.LKJCorr" title="pymc3.distributions.multivariate.LKJCorr"><code class="xref py py-obj docutils literal"><span class="pre">LKJCorr</span></code></a>(n,&nbsp;p,&nbsp;\*args,&nbsp;\*\*kwargs)</td>
+<tr class="row-odd"><td><a class="reference internal" href="#pymc3.distributions.multivariate.LKJCorr" title="pymc3.distributions.multivariate.LKJCorr"><code class="xref py py-obj docutils literal"><span class="pre">LKJCorr</span></code></a>(n,&nbsp;p[,&nbsp;transform])</td>
 <td>The LKJ (Lewandowski, Kurowicka and Joe) log-likelihood.</td>
 </tr>
 <tr class="row-even"><td><a class="reference internal" href="#pymc3.distributions.multivariate.Multinomial" title="pymc3.distributions.multivariate.Multinomial"><code class="xref py py-obj docutils literal"><span class="pre">Multinomial</span></code></a>(n,&nbsp;p,&nbsp;\*args,&nbsp;\*\*kwargs)</td>
@@ -2063,7 +2063,7 @@ of the covariance matrix.</p>
 
 <dl class="class">
 <dt id="pymc3.distributions.multivariate.LKJCorr">
-<em class="property">class </em><code class="descclassname">pymc3.distributions.multivariate.</code><code class="descname">LKJCorr</code><span class="sig-paren">(</span><em>n</em>, <em>p</em>, <em>*args</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.distributions.multivariate.LKJCorr" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><code class="descclassname">pymc3.distributions.multivariate.</code><code class="descname">LKJCorr</code><span class="sig-paren">(</span><em>n</em>, <em>p</em>, <em>transform='interval'</em>, <em>*args</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.distributions.multivariate.LKJCorr" title="Permalink to this definition">¶</a></dt>
 <dd><p>The LKJ (Lewandowski, Kurowicka and Joe) log-likelihood.</p>
 <p>The LKJ distribution is a prior distribution for correlation matrices.
 If n = 1 this corresponds to the uniform distribution over correlation
@@ -2401,7 +2401,7 @@ the batch means is calculated.</p>
 
 <dl class="function">
 <dt id="pymc3.stats.summary">
-<code class="descclassname">pymc3.stats.</code><code class="descname">summary</code><span class="sig-paren">(</span><em>trace</em>, <em>varnames=None</em>, <em>alpha=0.05</em>, <em>start=0</em>, <em>batches=None</em>, <em>roundto=3</em>, <em>include_transformed=False</em>, <em>to_file=None</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.stats.summary" title="Permalink to this definition">¶</a></dt>
+<code class="descclassname">pymc3.stats.</code><code class="descname">summary</code><span class="sig-paren">(</span><em>trace</em>, <em>varnames=None</em>, <em>transform=&lt;function &lt;lambda&gt;&gt;</em>, <em>alpha=0.05</em>, <em>start=0</em>, <em>batches=None</em>, <em>roundto=3</em>, <em>include_transformed=False</em>, <em>to_file=None</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.stats.summary" title="Permalink to this definition">¶</a></dt>
 <dd><p>Generate a pretty-printed summary of the node.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
@@ -2415,6 +2415,10 @@ the batch means is calculated.</p>
 <blockquote>
 <div><p>List of variables to summarize. Defaults to None, which results
 in all variables summarized.</p>
+</div></blockquote>
+<p><strong>transform</strong> : callable</p>
+<blockquote>
+<div><p>Function to transform data (defaults to identity)</p>
 </div></blockquote>
 <p><strong>alpha</strong> : float</p>
 <blockquote>
@@ -2752,7 +2756,7 @@ is the first odd positive integer for which the sum
 <span id="sampling"></span><h3>Sampling<a class="headerlink" href="#module-pymc3.sampling" title="Permalink to this headline">¶</a></h3>
 <dl class="function">
 <dt id="pymc3.sampling.sample">
-<code class="descclassname">pymc3.sampling.</code><code class="descname">sample</code><span class="sig-paren">(</span><em>draws</em>, <em>step=None</em>, <em>init='advi'</em>, <em>n_init=200000</em>, <em>start=None</em>, <em>trace=None</em>, <em>chain=0</em>, <em>njobs=1</em>, <em>tune=None</em>, <em>progressbar=True</em>, <em>model=None</em>, <em>random_seed=-1</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.sampling.sample" title="Permalink to this definition">¶</a></dt>
+<code class="descclassname">pymc3.sampling.</code><code class="descname">sample</code><span class="sig-paren">(</span><em>draws</em>, <em>step=None</em>, <em>init='ADVI'</em>, <em>n_init=200000</em>, <em>start=None</em>, <em>trace=None</em>, <em>chain=0</em>, <em>njobs=1</em>, <em>tune=None</em>, <em>progressbar=True</em>, <em>model=None</em>, <em>random_seed=-1</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.sampling.sample" title="Permalink to this definition">¶</a></dt>
 <dd><p>Draw a number of samples using the given step method.
 Multiple step methods supported via compound step method
 returns the amount of time taken.</p>

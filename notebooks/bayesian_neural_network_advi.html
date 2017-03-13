@@ -91,9 +91,9 @@
 <li class="toctree-l2"><a class="reference internal" href="../examples.html#howto">Howto</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../examples.html#applied">Applied</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../examples.html#glm">GLM</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../examples.html#gp">GP</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../examples.html#gaussian-processes">Gaussian Processes</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../examples.html#mixture-models">Mixture Models</a></li>
-<li class="toctree-l2 current"><a class="reference internal" href="../examples.html#advi">ADVI</a><ul class="current">
+<li class="toctree-l2 current"><a class="reference internal" href="../examples.html#variational-inference">Variational Inference</a><ul class="current">
 <li class="toctree-l3"><a class="reference internal" href="GLM-hierarchical-ADVI.html">GLM: Hierarchical Linear Regression with ADVI</a></li>
 <li class="toctree-l3"><a class="reference internal" href="GLM-hierarchical-advi-minibatch.html">GLM: Mini-batch ADVI on hierarchical regression model</a></li>
 <li class="toctree-l3"><a class="reference internal" href="lda-advi-aevb.html">Automatic autoencoding variational Bayes for latent dirichlet allocation with PyMC3</a></li>
@@ -553,7 +553,7 @@ layers. Here we will use 2 hidden layers with 5 neurons each which is
 sufficient for such a simple problem.</p>
 <div class="nbinput nblast container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [4]:
+<span></span>In [26]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -621,35 +621,37 @@ faster and will scale better. Note, that this is a mean-field
 approximation so we ignore correlations in the posterior.</p>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [5]:
+<span></span>In [27]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span><span class="o">%%</span><span class="k">time</span>
-
-with neural_network:
-    # Run ADVI which returns posterior means, standard deviations, and the evidence lower bound (ELBO)
-    v_params = pm.variational.advi(n=50000)
+<span></span><span class="c1">#%%time</span>
+<span class="kn">import</span> <span class="nn">pymc3.variational.inference</span>
+<span class="k">with</span> <span class="n">neural_network</span><span class="p">:</span>
+    <span class="c1"># Run ADVI which returns posterior means, standard deviations, and the evidence lower bound (ELBO)</span>
+    <span class="c1">#v_params = pm.variational.advi(n=50000)</span>
+    <span class="n">approx</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">variational</span><span class="o">.</span><span class="n">inference</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">n</span><span class="o">=</span><span class="mi">50000</span><span class="p">,</span> <span class="n">method</span><span class="o">=</span><span class="s1">&#39;fullrank&#39;</span><span class="p">)</span>
 </pre></div>
 </div>
-</div>
-<div class="nboutput container">
-<div class="container">
-</div>
-<div class="stderr container">
-<div class="highlight"><pre>
-Average ELBO = -136.67: 100%|██████████| 50000/50000 [00:16&lt;00:00, 3095.13it/s]
-Finished [100%]: Average ELBO = -134.76
-</pre></div></div>
 </div>
 <div class="nboutput nblast container">
 <div class="container">
 </div>
-<div class="container">
+<div class="stderr container">
 <div class="highlight"><pre>
-CPU times: user 18.3 s, sys: 360 ms, total: 18.7 s
-Wall time: 19 s
+Average Loss = 120.8: 100%|██████████| 50000/50000 [01:30&lt;00:00, 552.25it/s]
+Finished [100%]: Average Loss = 120.78
 </pre></div></div>
+</div>
+<div class="nbinput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [28]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">trace</span> <span class="o">=</span> <span class="n">approx</span><span class="o">.</span><span class="n">sample_vp</span><span class="p">(</span><span class="mi">5000</span><span class="p">)</span>
+</pre></div>
+</div>
 </div>
 <p>&lt; 20 seconds on my older laptop. That&#8217;s pretty good considering that
 NUTS is having a really hard time. Further below we make this even
@@ -682,7 +684,7 @@ MCMC):</p>
 slowly improves the fit over time.</p>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [7]:
+<span></span>In [11]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -692,22 +694,20 @@ slowly improves the fit over time.</p>
 </pre></div>
 </div>
 </div>
-<div class="nboutput container">
-<div class="highlight-none"><div class="highlight"><pre>
-<span></span>Out[7]:
-</pre></div>
-</div>
-<div class="highlight-none"><div class="highlight"><pre>
-<span></span>&lt;matplotlib.text.Text at 0x7fad0021cb00&gt;
-</pre></div>
-</div>
-</div>
 <div class="nboutput nblast container">
 <div class="container">
 </div>
 <div class="container">
-<img alt="../_images/notebooks_bayesian_neural_network_advi_15_1.png" src="../_images/notebooks_bayesian_neural_network_advi_15_1.png" />
-</div>
+<div class="highlight"><pre>
+<span class="ansi-red-fg">---------------------------------------------------------------------------</span>
+<span class="ansi-red-fg">NameError</span>                                 Traceback (most recent call last)
+<span class="ansi-green-fg">&lt;ipython-input-11-f9822cbfc3ca&gt;</span> in <span class="ansi-cyan-fg">&lt;module&gt;</span><span class="ansi-blue-fg">()</span>
+<span class="ansi-green-fg">----&gt; 1</span><span class="ansi-red-fg"> </span>plt<span class="ansi-blue-fg">.</span>plot<span class="ansi-blue-fg">(</span>v_params<span class="ansi-blue-fg">.</span>elbo_vals<span class="ansi-blue-fg">)</span>
+<span class="ansi-green-intense-fg ansi-bold">      2</span> plt<span class="ansi-blue-fg">.</span>ylabel<span class="ansi-blue-fg">(</span><span class="ansi-blue-fg">&#39;ELBO&#39;</span><span class="ansi-blue-fg">)</span>
+<span class="ansi-green-intense-fg ansi-bold">      3</span> plt<span class="ansi-blue-fg">.</span>xlabel<span class="ansi-blue-fg">(</span><span class="ansi-blue-fg">&#39;iteration&#39;</span><span class="ansi-blue-fg">)</span>
+
+<span class="ansi-red-fg">NameError</span>: name &#39;v_params&#39; is not defined
+</pre></div></div>
 </div>
 <p>Now that we trained our model, lets predict on the hold-out set using a
 posterior predictive check (PPC). We use
@@ -716,7 +716,7 @@ to generate new data (in this case class predictions) from the posterior
 (sampled from the variational estimation).</p>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [8]:
+<span></span>In [29]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -737,12 +737,12 @@ to generate new data (in this case class predictions) from the posterior
 </div>
 <div class="stderr container">
 <div class="highlight"><pre>
-100%|██████████| 500/500 [00:03&lt;00:00, 140.07it/s]
+100%|██████████| 500/500 [00:02&lt;00:00, 192.79it/s]
 </pre></div></div>
 </div>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [9]:
+<span></span>In [30]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -758,12 +758,12 @@ to generate new data (in this case class predictions) from the posterior
 <div class="container">
 </div>
 <div class="container">
-<img alt="../_images/notebooks_bayesian_neural_network_advi_18_0.png" src="../_images/notebooks_bayesian_neural_network_advi_18_0.png" />
+<img alt="../_images/notebooks_bayesian_neural_network_advi_19_0.png" src="../_images/notebooks_bayesian_neural_network_advi_19_0.png" />
 </div>
 </div>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [10]:
+<span></span>In [31]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -776,7 +776,7 @@ to generate new data (in this case class predictions) from the posterior
 </div>
 <div class="container">
 <div class="highlight"><pre>
-Accuracy = 97.0%
+Accuracy = 96.6%
 </pre></div></div>
 </div>
 <p>Hey, our neural network did all right!</p>
@@ -788,7 +788,7 @@ Accuracy = 97.0%
 the whole input space.</p>
 <div class="nbinput nblast container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [11]:
+<span></span>In [32]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -800,7 +800,7 @@ the whole input space.</p>
 </div>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [12]:
+<span></span>In [33]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -817,14 +817,14 @@ the whole input space.</p>
 </div>
 <div class="stderr container">
 <div class="highlight"><pre>
-100%|██████████| 500/500 [00:04&lt;00:00, 116.49it/s]
+100%|██████████| 500/500 [00:08&lt;00:00, 37.32it/s]
 </pre></div></div>
 </div>
 <div class="section" id="Probability-surface">
 <h3>Probability surface<a class="headerlink" href="#Probability-surface" title="Permalink to this headline">¶</a></h3>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [13]:
+<span></span>In [34]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -843,7 +843,7 @@ the whole input space.</p>
 <div class="container">
 </div>
 <div class="container">
-<img alt="../_images/notebooks_bayesian_neural_network_advi_25_0.png" src="../_images/notebooks_bayesian_neural_network_advi_25_0.png" />
+<img alt="../_images/notebooks_bayesian_neural_network_advi_26_0.png" src="../_images/notebooks_bayesian_neural_network_advi_26_0.png" />
 </div>
 </div>
 </div>
@@ -857,7 +857,7 @@ predictive to get a sense for the uncertainty in our predictions. Here
 is what that looks like:</p>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [14]:
+<span></span>In [35]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -876,7 +876,7 @@ is what that looks like:</p>
 <div class="container">
 </div>
 <div class="container">
-<img alt="../_images/notebooks_bayesian_neural_network_advi_27_0.png" src="../_images/notebooks_bayesian_neural_network_advi_27_0.png" />
+<img alt="../_images/notebooks_bayesian_neural_network_advi_28_0.png" src="../_images/notebooks_bayesian_neural_network_advi_28_0.png" />
 </div>
 </div>
 <p>We can see that very close to the decision boundary, our uncertainty as
@@ -1006,7 +1006,7 @@ Wall time: 1min 1s
 <div class="container">
 </div>
 <div class="container">
-<img alt="../_images/notebooks_bayesian_neural_network_advi_34_0.png" src="../_images/notebooks_bayesian_neural_network_advi_34_0.png" />
+<img alt="../_images/notebooks_bayesian_neural_network_advi_35_0.png" src="../_images/notebooks_bayesian_neural_network_advi_35_0.png" />
 </div>
 </div>
 <p>As you can see, mini-batch ADVI&#8217;s running time is much lower. It also
@@ -1027,7 +1027,7 @@ uncertainty of our Neural Network weights.</p>
 <div class="container">
 </div>
 <div class="container">
-<img alt="../_images/notebooks_bayesian_neural_network_advi_36_0.png" src="../_images/notebooks_bayesian_neural_network_advi_36_0.png" />
+<img alt="../_images/notebooks_bayesian_neural_network_advi_37_0.png" src="../_images/notebooks_bayesian_neural_network_advi_37_0.png" />
 </div>
 </div>
 </div>
