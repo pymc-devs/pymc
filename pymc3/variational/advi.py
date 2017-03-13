@@ -48,7 +48,7 @@ def advi(vars=None, start=None, model=None, n=5000, accurate_elbo=False,
     The variational parameters are defined on the transformed space, which is
     required to do ADVI on an unconstrained parameter space as described in
     [KTR+2016]. The parameters in the :code:`ADVIfit` object are in the
-    transformed space, while traces preturned by :code:`sample_vp()` are in
+    transformed space, while traces returned by :code:`sample_vp()` are in
     the original space as obtained by MCMC sampling methods in PyMC3.
 
     The variational parameters are optimized with given optimizer, which is a
