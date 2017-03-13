@@ -176,6 +176,16 @@ class TestApproximates:
             inference = pickle.loads(pickle.dumps(inference))
             inference.fit(20)
 
+        def test_aevb(self):
+            _, model, _ = models.exponential_beta()
+            x = model.x
+            y = model.y
+            mu = theano.shared(x.init_value) * 2
+            sd = theano.shared(x.init_value) * 3
+            with model:
+                inference = self.inference(local_rv={y: (mu, sd)})
+                inference.fit(3)
+
 
 class TestMeanField(TestApproximates.Base):
     inference = ADVI
