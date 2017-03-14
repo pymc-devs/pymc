@@ -271,18 +271,20 @@ class Inference(object):
     approx = property(lambda self: self.objective.approx)
 
     def run_profiling(self, n=1000, score=True, **kwargs):
+        fn_kwargs = kwargs.pop('fn_kwargs', dict())
+        fn_kwargs.update(profile=True)
         step_func = self.objective.step_function(
-            score=score, fn_kwargs={'profile': True},
+            score=score, fn_kwargs=fn_kwargs,
             **kwargs
         )
-        progres = tqdm.trange(n)
+        progress = tqdm.trange(n)
         try:
-            for _ in progres:
+            for _ in progress:
                 step_func()
         except KeyboardInterrupt:
             pass
         finally:
-            progres.close()
+            progress.close()
         return step_func.profile
 
     def fit(self, n=10000, score=True, callbacks=None, callback_every=1,

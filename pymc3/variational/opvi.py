@@ -440,6 +440,39 @@ class Approximation(object):
         rho = tt.concatenate(rho)
         return mu, rho
 
+    def construct_replacements(self, include=None, exclude=None,
+                               more_replacements=None):
+        """
+        Construct replacements with given conditions
+
+        Parameters
+        ----------
+        include : list
+            latent variables to be replaced
+        exclude : list
+            latent variables to be excluded for replacements
+        more_replacements : dict
+            add custom replacements to graph, e.g. change input source
+
+        Returns
+        -------
+        dict
+            Replacements
+        """
+        if include is not None and exclude is not None:
+            raise ValueError('Only one parameter is supported {include|exclude}, got two')
+        if include is not None:
+            replacements = {k: v for k, v
+                            in self.flat_view.replacements.items() if k in include}
+        elif exclude is not None:
+            replacements = {k: v for k, v
+                            in self.flat_view.replacements.items() if k not in exclude}
+        else:
+            replacements = self.flat_view.replacements
+        if more_replacements is not None:
+            replacements.update(more_replacements)
+        return replacements
+
     def apply_replacements(self, node, deterministic=False,
                            include=None, exclude=None,
                            more_replacements=None):
@@ -464,21 +497,23 @@ class Approximation(object):
         -------
         node with replacements
         """
-        if include is not None and exclude is not None:
-            raise ValueError('Only one parameter is supported {include|exclude}, got two')
-        if include is not None:
-            replacements = {k: v for k, v
-                            in self.flat_view.replacements.items() if k in include}
-        elif exclude is not None:
-            replacements = {k: v for k, v
-                            in self.flat_view.replacements.items() if k not in exclude}
-        else:
-            replacements = self.flat_view.replacements
-        if more_replacements is not None:
-            replacements.update(more_replacements)
+        replacements = self.construct_replacements(
+            include, exclude, more_replacements
+        )
         node = theano.clone(node, replacements, strict=False)
         posterior = self.random(no_rand=deterministic)
         return theano.clone(node, {self.input: posterior})
+
+    def sample_node(self, node, size=100,
+                    more_replacements=None):
+        if more_replacements is not None:
+            node = theano.clone(node, more_replacements)
+        posterior = self.random(size)
+        node = self.to_flat_input(node)
+
+        def sample(z): return theano.clone(node, {self.input: z})
+        nodes, _ = theano.scan(sample, posterior, n_steps=size)
+        return nodes
 
     def scale_grad(self, inp):
         """

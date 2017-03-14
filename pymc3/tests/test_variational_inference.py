@@ -96,6 +96,15 @@ class TestApproximates:
                 self.assertListEqual(sorted(trace.varnames), ['p', 'p_logodds_'])
                 self.assertEqual(len(trace), 10)
 
+        def test_sample_node(self):
+            n_samples = 100
+            xs = np.random.binomial(n=1, p=0.2, size=n_samples)
+            with pm.Model():
+                p = pm.Beta('p', alpha=1, beta=1)
+                pm.Binomial('xs', n=1, p=p, observed=xs)
+                app = self.inference().approx
+            app.sample_node(p).eval()   # should be evaluated without errors
+
         def test_optimizer_with_full_data(self):
             n = 1000
             sd0 = 2.
