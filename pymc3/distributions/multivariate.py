@@ -22,7 +22,8 @@ from .special import gammaln, multigammaln
 from .dist_math import bound, logpow, factln
 
 __all__ = ['MvNormal', 'MvStudentT', 'Dirichlet',
-           'Multinomial', 'Wishart', 'WishartBartlett', 'LKJCorr']
+           'Multinomial', 'Wishart', 'WishartBartlett',
+           'LKJCorr', 'LKJCholeskyCov']
 
 
 def get_tau_cov(mu, tau=None, cov=None):
@@ -541,6 +542,44 @@ def WishartBartlett(name, S, nu, is_cholesky=False, return_cholesky=False, testv
         return Deterministic(name, tt.dot(L, A))
     else:
         return Deterministic(name, tt.dot(tt.dot(tt.dot(L, A), A.T), L.T))
+
+
+class LKJCholeskyCov(Continuous):
+    def __init__(self, eta, sd_dist, *args, **kwargs):
+        self.n = sd_dist.shape[0]
+
+        if 'transform' in kwargs:
+            raise ValueError('Invalid parameter transform')
+
+        shape = self.n * (self.n + 1) // 2
+        transform = transforms.CholeskyCovPacked(self.n)
+        super(LKJCholeskyCov, self).__init__(
+            *args, **kwargs, transform=transform, shape=(shape,))
+        self.eta = eta
+        assert sd_dist.shape.ndim == 1
+        self.sd_dist = sd_dist
+        self.diag_idxs = transform.diag_idxs
+
+        self.mode = np.zeros(shape)
+        self.mode[self.diag_idxs] = 1
+
+    def logp(self, x):
+        diag_idxs = self.diag_idxs
+        cumsum = tt.cumsum(x ** 2)
+        rowlengths = tt.zeros(self.n)
+        rowlengths = tt.set_subtensor(rowlengths[0], x[0] ** 2)
+        rowlengths = tt.set_subtensor(
+            rowlengths[1:],
+            cumsum[diag_idxs[1:]] - cumsum[diag_idxs[:-1]])
+        sd_vals = tt.sqrt(rowlengths)
+        logp_sd = self.sd_dist.logp(sd_vals)
+
+        corr_diag = x[diag_idxs] / rowlengths
+        corr_logdet = np.log(corr_diag).sum()
+
+        det_invjac = np.log(0.5 * rowlengths).sum()
+
+        return (self.n - 1) * corr_logdet + logp_sd + det_invjac
 
 
 class LKJCorr(Continuous):
