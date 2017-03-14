@@ -266,3 +266,19 @@ class Circular(Transform):
         return 0
 
 circular = Circular()
+
+
+class CholeskyCovPacked(Transform):
+    name = "cholesky_cov_packed"
+
+    def __init__(self, n):
+        self.diag_idxs = np.arange(1, n + 1).cumsum() - 1
+
+    def backward(self, x):
+        return tt.advanced_set_subtensor1(x, tt.exp(x[self.diag_idxs]), self.diag_idxs)
+
+    def forward(self, y):
+        return tt.advanced_set_subtensor1(y, tt.log(y[self.diag_idxs]), self.diag_idxs)
+
+    def jacobian_det(self, y):
+        return tt.sum(y[self.diag_idxs])
