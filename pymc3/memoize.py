@@ -1,5 +1,5 @@
 import functools
-from six.moves import cPickle as pickle
+import pickle
 
 
 def memoize(obj):
@@ -32,7 +32,8 @@ def hashable(a):
     # Not hashable >>>
     try:
         return hash(pickle.dumps(a))
-    except pickle.PicklingError:
+    # Due to changes in python3.6 we need to catch 2 types of exceptions
+    except (TypeError, pickle.PicklingError):
         if hasattr(a, '__dict__'):
             return hashable(a.__dict__)
         else:
