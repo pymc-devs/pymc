@@ -32,8 +32,7 @@ def hashable(a):
     # Not hashable >>>
     try:
         return hash(pickle.dumps(a))
-    # Due to changes in python3.6 we need to catch 2 types of exceptions
-    except (TypeError, pickle.PicklingError):
+    except Exception:
         if hasattr(a, '__dict__'):
             return hashable(a.__dict__)
         else:
