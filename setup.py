@@ -60,10 +60,9 @@ if __name__ == "__main__":
                     'pymc3.variational',
                     'pymc3.external',
                     'pymc3.gp',
-                    'pymc3.plots',
-                    'docs',
-                    '.',
+                    'pymc3.plots'
           ],
+          package_data={'docs':['*'],},
           classifiers=classifiers,
           install_requires=install_reqs,
           tests_require=test_reqs,
