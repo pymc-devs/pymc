@@ -152,6 +152,18 @@ class Uniform(Continuous):
         return bound(-tt.log(upper - lower),
                      value >= lower, value <= upper)
 
+    def logcdf(self, value):
+        return tt.switch(
+            tt.or_(tt.lt(value, self.lower), tt.gt(value, self.upper)),
+            -np.inf,
+            tt.switch(
+                tt.eq(value, self.upper),
+                0,
+                tt.log((value - self.lower)) -
+                tt.log((self.upper - self.lower))
+            )
+        )
+
 
 class Flat(Continuous):
     """
@@ -240,10 +252,10 @@ class Normal(Continuous):
         return tt.switch(
             tt.lt(z, -1.0),
             tt.log(tt.erfcx(-z / tt.sqrt(2.)) / 2.) -
-            tt.sqr(tt.abs_(z)) / 2,
+            tt.sqr(z) / 2,
             tt.log1p(-tt.erfc(z / tt.sqrt(2.)) / 2.)
         )
-        
+
 
 class HalfNormal(PositiveContinuous):
     R"""
@@ -294,6 +306,15 @@ class HalfNormal(PositiveContinuous):
         return bound(-0.5 * tau * value**2 + 0.5 * tt.log(tau * 2. / np.pi),
                      value >= 0,
                      tau > 0, sd > 0)
+
+    def logcdf(self, value):
+        sd = self.sd
+        z = zvalue(value, mu=0, sd=sd)
+        return tt.switch(
+            tt.lt(z, -1.0),
+            tt.log(tt.erfcx(-z / tt.sqrt(2.))) - tt.sqr(z),
+            tt.log1p(-tt.erfc(z / tt.sqrt(2.)))
+        )
 
 
 class Wald(PositiveContinuous):
@@ -591,6 +612,20 @@ class Laplace(Continuous):
 
         return -tt.log(2 * b) - abs(value - mu) / b
 
+    def logcdf(self, value):
+        a = self.mu
+        b = self.b
+        y = (value - a) / b
+        return tt.switch(
+            tt.le(value, a),
+            tt.log(0.5) + y,
+            tt.switch(
+                tt.gt(y, 1),
+                tt.log1p(-0.5 * tt.exp(-y)),
+                tt.log(1 - 0.5 * tt.exp(-y))
+            )
+        )
+
 
 class Lognormal(PositiveContinuous):
     R"""
@@ -654,6 +689,22 @@ class Lognormal(PositiveContinuous):
                      + 0.5 * tt.log(tau / (2. * np.pi))
                      - tt.log(value),
                      tau > 0)
+
+    def logcdf(self, value):
+        mu = self.mu
+        sd = self.sd
+        z = zvalue(tt.log(value), mu=mu, sd=sd)
+
+        return tt.switch(
+            tt.le(value, 0),
+            -np.inf,
+            tt.switch(
+                tt.lt(z, -1.0),
+                tt.log(tt.erfcx(-z / tt.sqrt(2.)) / 2.) -
+                tt.sqr(z) / 2,
+                tt.log1p(-tt.erfc(z / tt.sqrt(2.)) / 2.)
+            )
+        )
 
 
 class StudentT(Continuous):
@@ -832,6 +883,9 @@ class Cauchy(Continuous):
         return bound(- tt.log(np.pi) - tt.log(beta)
                      - tt.log1p(((value - alpha) / beta)**2),
                      beta > 0)
+
+    def logcdf (self, value):
+          return tt.log(0.5 + tt.arctan ((value - self.alpha) / self.beta) / np.pi)
 
 
 class HalfCauchy(PositiveContinuous):
@@ -1360,3 +1414,21 @@ class Triangular(Continuous):
                          tt.switch(tt.eq(value, c), tt.log(2 / (upper - lower)),
                          tt.switch(alltrue_elemwise([c < value, value <= upper]),
                          tt.log(2 * (upper - value) / ((upper - lower) * (upper - c))),np.inf)))
+
+    def logcdf(self, value):
+        l = self.lower
+        u = self.upper
+        c = self.c
+        return tt.switch(
+            tt.le(value, l),
+            -np.inf,
+            tt.switch(
+                tt.le(value, c),
+                tt.log(((value - l) ** 2) / ((u - l) * (c - l))),
+                tt.switch(
+                    tt.lt(value, u),
+                    tt.log1p(-((u - value) ** 2) / ((u - l) * (u - c))),
+                    0
+                )
+            )
+        )

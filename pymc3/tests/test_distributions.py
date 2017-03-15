@@ -366,11 +366,15 @@ class TestMatchesScipy(SeededTest):
         self.pymc3_matches_scipy(
             Uniform, Runif, {'lower': -Rplusunif, 'upper': Rplusunif},
             lambda value, lower, upper: sp.uniform.logpdf(value, lower, upper - lower))
+        self.check_logcdf(Uniform, Runif, {'lower': -Rplusunif, 'upper': Rplusunif},
+                          lambda value, lower, upper: sp.uniform.logcdf(value, lower, upper - lower))
 
     def test_triangular(self):
         self.pymc3_matches_scipy(
             Triangular, Runif, {'lower': -Rplusunif, 'c': Runif, 'upper': Rplusunif},
             lambda value, c, lower, upper: sp.triang.logpdf(value, c-lower, lower, upper-lower))
+        self.check_logcdf(Triangular, Runif, {'lower': -Rplusunif, 'c': Runif, 'upper': Rplusunif},
+                          lambda value, c, lower, upper: sp.triang.logcdf(value, c-lower, lower, upper-lower))
 
     def test_bound_normal(self):
         PositiveNormal = Bound(Normal, lower=0.)
@@ -390,12 +394,14 @@ class TestMatchesScipy(SeededTest):
     def test_normal(self):
         self.pymc3_matches_scipy(Normal, R, {'mu': R, 'sd': Rplus},
                                  lambda value, mu, sd: sp.norm.logpdf(value, mu, sd))
-        self.check_logcdf(Normal, R, {'mu': R, 'sd': Rplus}, 
+        self.check_logcdf(Normal, R, {'mu': R, 'sd': Rplus},
                                 lambda value, mu, sd: sp.norm.logcdf(value, mu, sd))
 
     def test_half_normal(self):
         self.pymc3_matches_scipy(HalfNormal, Rplus, {'sd': Rplus},
                                  lambda value, sd: sp.halfnorm.logpdf(value, scale=sd))
+        self.check_logcdf(HalfNormal, Rplus, {'sd': Rplus},
+                          lambda value, sd: sp.halfnorm.logcdf(value, scale=sd))
 
     def test_chi_squared(self):
         self.pymc3_matches_scipy(ChiSquared, Rplus, {'nu': Rplusdunif},
@@ -452,11 +458,15 @@ class TestMatchesScipy(SeededTest):
     def test_laplace(self):
         self.pymc3_matches_scipy(Laplace, R, {'mu': R, 'b': Rplus},
                                  lambda value, mu, b: sp.laplace.logpdf(value, mu, b))
+        self.check_logcdf(Laplace, R, {'mu': R, 'b': Rplus},
+                          lambda value, mu, b: sp.laplace.logcdf(value, mu, b))
 
     def test_lognormal(self):
         self.pymc3_matches_scipy(
             Lognormal, Rplus, {'mu': R, 'tau': Rplusbig},
             lambda value, mu, tau: sp.lognorm.logpdf(value, tau**-.5, 0, np.exp(mu)))
+        self.check_logcdf(Lognormal, Rplus, {'mu': R, 'tau': Rplusbig},
+                          lambda value, mu, tau: sp.lognorm.logcdf(value, tau**-.5, 0, np.exp(mu)))
 
     def test_t(self):
         self.pymc3_matches_scipy(StudentT, R, {'nu': Rplus, 'mu': R, 'lam': Rplus},
@@ -465,6 +475,8 @@ class TestMatchesScipy(SeededTest):
     def test_cauchy(self):
         self.pymc3_matches_scipy(Cauchy, R, {'alpha': R, 'beta': Rplusbig},
                                  lambda value, alpha, beta: sp.cauchy.logpdf(value, alpha, beta))
+        self.check_logcdf(Cauchy, R, {'alpha': R, 'beta': Rplusbig},
+                          lambda value, alpha, beta: sp.cauchy.logcdf(value, alpha, beta))
 
     def test_half_cauchy(self):
         self.pymc3_matches_scipy(HalfCauchy, Rplus, {'beta': Rplusbig},
