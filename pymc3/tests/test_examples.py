@@ -234,6 +234,7 @@ class TestLatentOccupancy(SeededTest):
     Copyright (c) 2008 University of Otago. All rights reserved.
     """
     def setUp(self):
+        super(TestLatentOccupancy, self).setUp()
         # Sample size
         n = 100
         # True mean count, given occupancy

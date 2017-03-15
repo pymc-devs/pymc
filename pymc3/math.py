@@ -37,13 +37,17 @@ def logit(p):
     return tt.log(p / (1 - p))
 
 
+def flatten_list(tensors):
+    return tt.concatenate([var.ravel() for var in tensors])
+
+
 class LogDet(Op):
     """Computes the logarithm of absolute determinant of a square
     matrix M, log(abs(det(M))), on CPU. Avoids det(M) overflow/
     underflow.
 
     Note: Once PR #3959 (https://github.com/Theano/Theano/pull/3959/) by harpone is merged,
-    this must be removed. 
+    this must be removed.
     """
     def make_node(self, x):
         x = theano.tensor.as_tensor_variable(x)
