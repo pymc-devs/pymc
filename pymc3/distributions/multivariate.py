@@ -550,11 +550,15 @@ class LKJCholeskyCov(Continuous):
 
         if 'transform' in kwargs:
             raise ValueError('Invalid parameter transform')
+        if 'shape' in kwargs:
+            raise ValueError('Invalid shape parameter. Shape is set by sd_dist.')
 
         shape = self.n * (self.n + 1) // 2
         transform = transforms.CholeskyCovPacked(self.n)
-        super(LKJCholeskyCov, self).__init__(
-            *args, **kwargs, transform=transform, shape=(shape,))
+
+        kwargs['shape'] = shape
+        kwargs['transform'] = transform
+        super(LKJCholeskyCov, self).__init__(*args, **kwargs)
         self.eta = eta
         assert sd_dist.shape.ndim == 1
         self.sd_dist = sd_dist
@@ -572,12 +576,14 @@ class LKJCholeskyCov(Continuous):
             rowlengths[1:],
             cumsum[diag_idxs[1:]] - cumsum[diag_idxs[:-1]])
         sd_vals = tt.sqrt(rowlengths)
-        logp_sd = self.sd_dist.logp(sd_vals)
+        logp_sd = self.sd_dist.logp(sd_vals).sum()
 
-        corr_diag = x[diag_idxs] / rowlengths
+        corr_diag = x[diag_idxs] / sd_vals
         corr_logdet = np.log(corr_diag).sum()
 
-        det_invjac = np.log(0.5 * rowlengths).sum()
+        count = np.arange(self.n - 1)
+        det_invjac = - (count * tt.log(sd_vals[1:])).sum()
+        det_invjac += - tt.log(x[diag_idxs]).sum() + tt.log(x[0])
 
         return (self.n - 1) * corr_logdet + logp_sd + det_invjac
 
