@@ -101,7 +101,7 @@ def sample(draws, step=None, init='ADVI', n_init=200000, start=None,
         specified, or are partially specified, they will be assigned
         automatically (defaults to None).
     init : str {'ADVI', 'ADVI_MAP', 'MAP', 'NUTS', None}
-        Initialization method to use.
+        Initialization method to use. Only works for auto-assigned step methods.
         * ADVI : Run ADVI to estimate starting points and diagonal covariance
         matrix. If njobs > 1 it will sample starting points from the estimated
         posterior, otherwise it will use the estimated posterior mean.
