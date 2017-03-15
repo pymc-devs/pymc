@@ -61,9 +61,7 @@ class Mixture(Distribution):
 
         try:
             comp_modes = self._comp_modes()
-            # for logp the different modes are like different observations, i.e. rows, hence use comp_modes.T
-            # logPs is a vector, hence self.logp(..).T == self.logp(..)
-            comp_mode_logps = self.logp(comp_modes.T)
+            comp_mode_logps = self.logp(comp_modes)
             self.mode = comp_modes[tt.argmax(w * comp_mode_logps, axis=-1)]
 
             if 'mode' not in defaults:
