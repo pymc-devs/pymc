@@ -6,6 +6,7 @@ from ..memoize import memoize
 from ..model import Model, get_named_nodes, FreeRV, ObservedRV
 from ..vartypes import string_types
 from .dist_math import bound
+from . import transforms
 
 
 __all__ = ['DensityDist', 'Distribution', 'Continuous', 'Bound',
@@ -394,7 +395,6 @@ class Bounded(Distribution):
     """
 
     def __init__(self, distribution, lower, upper, transform='infer', *args, **kwargs):
-        import pymc3.distributions.transforms as transforms
         self.dist = distribution.dist(*args, **kwargs)
 
         self.__dict__.update(self.dist.__dict__)
