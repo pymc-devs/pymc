@@ -1,13 +1,16 @@
-from six.moves import cPickle as pickle
+import pickle
 import unittest
 import numpy as np
 from theano import theano, tensor as tt
 import pymc3 as pm
 from pymc3 import Model, Normal
-from pymc3.variational.inference import (
-    KL, MeanField, ADVI, FullRankADVI,
+from pymc3.variational import (
+    ADVI, FullRankADVI,
+    Histogram,
     fit
 )
+from pymc3.variational.operators import KL
+from pymc3.variational.approximations import MeanField
 
 from pymc3.tests import models
 from pymc3.tests.helpers import SeededTest
@@ -239,6 +242,30 @@ class TestFullRank(TestApproximates.Base):
     def test_approximate(self):
         with models.multidimensional_model()[1]:
             fit(10, method='fullrank_advi')
+
+
+class TestHistogram(unittest.TestCase):
+    def test_map(self):
+        with models.multidimensional_model()[1]:
+            full_rank = FullRankADVI()
+            approx = full_rank.fit(20)
+            trace = approx.sample_vp(10000)
+            histogram = Histogram(trace)
+            map = pm.find_MAP()
+            z_p = histogram._bij.map(map)
+            z_h = histogram.find_map()
+            np.testing.assert_allclose(z_p, z_h)
+
+    def test_sampling(self):
+        with models.multidimensional_model()[1]:
+            full_rank = FullRankADVI()
+            approx = full_rank.fit(20)
+            trace0 = approx.sample_vp(10000)
+            histogram = Histogram(trace0)
+        trace1 = histogram.sample_vp(100000)
+        np.testing.assert_allclose(trace0['x'].mean(0), trace1['x'].mean(0), atol=0.01)
+        np.testing.assert_allclose(trace0['x'].var(0), trace1['x'].var(0), atol=0.01)
+
 
 if __name__ == '__main__':
     unittest.main()

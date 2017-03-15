@@ -387,14 +387,24 @@ class Approximation(object):
 
         known = {get_transformed(k): v for k, v in local_rv.items()}
         self.known = known
-        self.local_vars = [v for v in model.free_RVs if v in known]
-        self.global_vars = [v for v in model.free_RVs if v not in known]
+        self.local_vars = self.get_local_vars()
+        self.global_vars = self.get_global_vars()
         self.order = ArrayOrdering(self.local_vars + self.global_vars)
         self.flat_view = model.flatten(
             vars=self.local_vars + self.global_vars
         )
         self.grad_scale_op = GradScale(cost_part_grad_scale)
+        self._setup()
         self.shared_params = self.create_shared_params()
+
+    def _setup(self):
+        pass
+
+    def get_global_vars(self):
+        return [v for v in self.model.free_RVs if v not in self.known]
+
+    def get_local_vars(self):
+        return [v for v in self.model.free_RVs if v in self.known]
 
     def __getstate__(self):
         state = self.__dict__.copy()
