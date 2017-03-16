@@ -6,7 +6,7 @@ import pymc3 as pm
 from pymc3 import ArrayOrdering, DictToArrayBijection
 from pymc3.distributions.dist_math import rho2sd, log_normal, log_normal_mv
 from pymc3.variational.opvi import Approximation
-from pymc3.theanof import tt_rng
+from pymc3.theanof import tt_rng, memoize, change_flags
 
 
 __all__ = [
@@ -264,7 +264,7 @@ class Histogram(Approximation):
         theano_condition_is_here = isinstance(no_rand, tt.Variable)
         if theano_condition_is_here:
             return tt.switch(no_rand,
-                             self.find_map(),
+                             self.map,
                              self.histogram[self.randidx(size)])
         else:
             if no_rand:
@@ -292,9 +292,9 @@ class Histogram(Approximation):
     @property
     def map(self):  # pragma: no cover
         if self._map is None:
-            raise ValueError('Need to call `Histogram.find_map()` first')
+            return self.find_map()
         else:
-            return self._map.get_value()
+            return self._map
 
     @property
     def params(self):
@@ -302,10 +302,49 @@ class Histogram(Approximation):
 
     def find_map(self, recompute=False):
         if self.local_vars:
-            raise NotImplementedError
+            raise NotImplementedError('no_rand mode is not supported for AEVB Histogram')
         if self._map is not None and not recompute:
             return self._map
 
         theta_map = pm.find_MAP(disp=False, model=self.model)
         self._map = self._bij.map(theta_map)
         return self._map
+
+    @property
+    @memoize
+    @change_flags(compute_test_value='off')
+    def random_fn(self):
+        """
+        Implements posterior distribution from initial latent space
+
+        Parameters
+        ----------
+        size : number of samples from distribution
+        no_rand : whether use deterministic distribution
+
+        Returns
+        -------
+        posterior space (numpy)
+        """
+        In = theano.In
+        size = tt.iscalar('size')
+        no_rand = tt.bscalar('no_rand')
+        if not self.local_vars:
+            posterior = self.random(size, no_rand=no_rand)
+            raise_on_no_rand = False
+        else:
+            posterior = self.random(size, no_rand=False)
+            raise_on_no_rand = True
+        fn = theano.function([In(size, 'size', 1, allow_downcast=True),
+                              In(no_rand, 'no_rand', 0, allow_downcast=True)],
+                             posterior, on_unused_input='ignore')
+
+        def inner(size=None, no_rand=False):
+            if raise_on_no_rand and no_rand:
+                raise ValueError('no_rand is not supported for AEVB Histogram')
+            if size is None:
+                return fn(1, int(no_rand))[0]
+            else:
+                return fn(size, int(no_rand))
+
+        return inner

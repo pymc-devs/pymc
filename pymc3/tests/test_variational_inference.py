@@ -288,8 +288,9 @@ class TestHistogram(unittest.TestCase):
             inference = ADVI(local_rv={x: (mu, rho)})
             approx = inference.approx
             trace0 = approx.sample_vp(1000)
-            histogram = Histogram(trace0)
+            histogram = Histogram(trace0, local_rv={x: (mu, rho)})
             trace1 = histogram.sample_vp(10000)
+            self.assertRaises(ValueError, histogram.random, no_rand=False)
         np.testing.assert_allclose(trace0['y'].mean(0), trace1['y'].mean(0), atol=0.02)
         np.testing.assert_allclose(trace0['y'].var(0), trace1['y'].var(0), atol=0.02)
         np.testing.assert_allclose(trace0['x'].mean(0), trace1['x'].mean(0), atol=0.02)
@@ -304,8 +305,8 @@ class TestHistogram(unittest.TestCase):
             histogram.find_map()
             histogram.randidx(None).eval()
             histogram.randidx(1).eval()
-            histogram.random(no_rand=True).eval()
-            histogram.random(no_rand=False).eval()
+            histogram.random_fn(no_rand=True)
+            histogram.random_fn(no_rand=False)
             histogram.histogram_logp.eval()
 
 if __name__ == '__main__':
