@@ -4,9 +4,23 @@
 
 ### New features
 
-* Experimental GPU support.
+* Theano's floatX setting is no respected, enabling GPU support.
 
-* Gaussian Process support.
+* [Add Gaussian Process submodule](http://pymc-devs.github.io/pymc3/notebooks/GP-introduction.html)
+
+* Many optimizations and speed-ups.
+
+* NUTS implementation now matches current Stan implementation.
+
+* Add higher-order integrators for HMC.
+
+* [Add sampler statistics.](http://pymc-devs.github.io/pymc3/notebooks/sampler-stats.html)
+
+* ADVI stopping criterion implemented.
+
+* [Add Elliptical Slice Sampler.](http://pymc-devs.github.io/pymc3/notebooks/GP-slice-sampling.html)
+
+* Add Stein-Variational Gradient Descent (experimental).
 
 * `Model` can now be inherited from and act as a base class for user specified models (see pymc3.models.linear).
 
