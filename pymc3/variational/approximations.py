@@ -341,7 +341,7 @@ class Histogram(Approximation):
 
         def inner(size=None, no_rand=False):
             if raise_on_no_rand and no_rand:
-                raise ValueError('no_rand is not supported for AEVB Histogram')
+                raise NotImplementedError('no_rand is not supported for AEVB Histogram')
             if size is None:
                 return fn(1, int(no_rand))[0]
             else:
