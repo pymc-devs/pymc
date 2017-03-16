@@ -189,7 +189,7 @@ class TestApproximates:
                 mu_ = Normal('mu', mu=mu0, sd=sd0, testval=0)
                 Normal('x', mu=mu_, sd=sd, observed=data_t, total_size=n)
                 inf = self.inference()
-                approx = inf.fit(self.NITER, callbacks=[cb])
+                approx = inf.fit(self.NITER, callbacks=[cb], obj_n_mc=10)
                 trace = approx.sample_vp(10000)
             np.testing.assert_allclose(np.mean(trace['mu']), mu_post, rtol=0.4)
             np.testing.assert_allclose(np.std(trace['mu']), np.sqrt(1. / d), rtol=0.4)
@@ -202,14 +202,23 @@ class TestApproximates:
             inference.fit(20)
 
         def test_aevb(self):
-            _, model, _ = models.exponential_beta()
+            _, model, _ = models.exponential_beta(n=2)
             x = model.x
             y = model.y
             mu = theano.shared(x.init_value) * 2
-            sd = theano.shared(x.init_value) * 3
+            rho = theano.shared(np.zeros_like(x.init_value))
             with model:
-                inference = self.inference(local_rv={y: (mu, sd)})
-                inference.fit(3)
+                inference = self.inference(local_rv={y: (mu, rho)})
+                approx = inference.fit(3, obj_n_mc=2)
+                approx.sample_vp(10)
+                approx.apply_replacements(
+                    y,
+                    more_replacements={x: np.asarray([1, 1], dtype=x.dtype)}
+                ).eval()
+
+        def test_profile(self):
+            with models.multidimensional_model()[1]:
+                self.inference().run_profiling(10)
 
 
 class TestMeanField(TestApproximates.Base):
@@ -217,7 +226,10 @@ class TestMeanField(TestApproximates.Base):
 
     def test_approximate(self):
         with models.multidimensional_model()[1]:
-            fit(10, method='advi')
+            meth = ADVI()
+            fit(10, method=meth)
+            self.assertRaises(KeyError, fit, 10, method='undefined')
+            self.assertRaises(TypeError, fit, 10, method=1)
 
 
 class TestFullRank(TestApproximates.Base):
@@ -237,6 +249,7 @@ class TestFullRank(TestApproximates.Base):
 
     def test_combined(self):
         with models.multidimensional_model()[1]:
+            self.assertRaises(ValueError, fit, 10, method='advi->fullrank_advi', frac=1)
             fit(10, method='advi->fullrank_advi', frac=.5)
 
     def test_approximate(self):
@@ -266,6 +279,34 @@ class TestHistogram(unittest.TestCase):
         np.testing.assert_allclose(trace0['x'].mean(0), trace1['x'].mean(0), atol=0.01)
         np.testing.assert_allclose(trace0['x'].var(0), trace1['x'].var(0), atol=0.01)
 
+    def test_aevb_histogram(self):
+        _, model, _ = models.exponential_beta(n=2)
+        x = model.x
+        mu = theano.shared(x.init_value)
+        rho = theano.shared(np.zeros_like(x.init_value))
+        with model:
+            inference = ADVI(local_rv={x: (mu, rho)})
+            approx = inference.approx
+            trace0 = approx.sample_vp(1000)
+            histogram = Histogram(trace0)
+            trace1 = histogram.sample_vp(10000)
+        np.testing.assert_allclose(trace0['y'].mean(0), trace1['y'].mean(0), atol=0.02)
+        np.testing.assert_allclose(trace0['y'].var(0), trace1['y'].var(0), atol=0.02)
+        np.testing.assert_allclose(trace0['x'].mean(0), trace1['x'].mean(0), atol=0.02)
+        np.testing.assert_allclose(trace0['x'].var(0), trace1['x'].var(0), atol=0.02)
+
+    def test_random(self):
+        with models.multidimensional_model()[1]:
+            full_rank = FullRankADVI()
+            approx = full_rank.approx
+            trace0 = approx.sample_vp(10000)
+            histogram = Histogram(trace0)
+            histogram.find_map()
+            histogram.randidx(None).eval()
+            histogram.randidx(1).eval()
+            histogram.random(no_rand=True).eval()
+            histogram.random(no_rand=False).eval()
+            histogram.histogram_logp.eval()
 
 if __name__ == '__main__':
     unittest.main()

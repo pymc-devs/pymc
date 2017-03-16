@@ -41,9 +41,9 @@ class Inference(object):
             approx = approx(
                 local_rv=local_rv,
                 model=model, **kwargs)
-        elif isinstance(approx, Approximation):
+        elif isinstance(approx, Approximation):    # pragma: no cover
             pass
-        else:
+        else:   # pragma: no cover
             raise TypeError('approx should be Approximation instance or Approximation subclass')
         self.objective = op(approx)(tf)
 
@@ -97,7 +97,7 @@ class Inference(object):
             try:
                 for i in progress:
                     e = step_func()
-                    if np.isnan(e):
+                    if np.isnan(e):     # pragma: no cover
                         scores = scores[:i]
                         self.hist = np.concatenate([self.hist, scores])
                         raise FloatingPointError('NaN occurred in optimization.')
@@ -108,7 +108,7 @@ class Inference(object):
                     if i % callback_every == 0:
                         for callback in callbacks:
                             callback(self.approx, scores[:i+1], i)
-            except KeyboardInterrupt:
+            except KeyboardInterrupt:   # pragma: no cover
                 scores = scores[:i]
                 if n < 10:
                     logger.info('Interrupted at {:,d} [{:.0f}%]: Loss = {:,.5g}'.format(
@@ -125,7 +125,7 @@ class Inference(object):
                     logger.info('Finished [100%]: Average Loss = {:,.5g}'.format(avg_elbo))
             finally:
                 progress.close()
-        else:
+        else:   # pragma: no cover
             try:
                 for _ in progress:
                     step_func()

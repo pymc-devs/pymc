@@ -244,34 +244,33 @@ class Histogram(Approximation):
             histogram[i] = self._bij.map(trace[i])
         return theano.shared(histogram, 'histogram')
 
-    def randint(self, size):
+    def randidx(self, size=None):
         if size is None:
             size = ()
         elif isinstance(size, tt.TensorVariable):
             if size.ndim < 1:
                 size = size[None]
+            elif size.ndim > 1:
+                raise ValueError('size ndim should be no more than 1d')
             else:
                 pass
         else:
-            size = np.atleast_1d(size)
-        if size.ndim > 1:
-            raise ValueError('size ndim should be no more than 1d')
+            size = tuple(np.atleast_1d(size))
         return (tt_rng()
                 .uniform(size=size, low=0.0, high=self.histogram.shape[0] - 1e-10)
                 .astype('int64'))
 
     def random_global(self, size=None, no_rand=False):
         theano_condition_is_here = isinstance(no_rand, tt.Variable)
-        if not theano_condition_is_here:
-            if no_rand:
-                return self.find_map()
-            else:
-                idx = self.randint(size)
-                return self.histogram[idx]
-        else:
+        if theano_condition_is_here:
             return tt.switch(no_rand,
                              self.find_map(),
-                             self.histogram[self.randint(size)])
+                             self.histogram[self.randidx(size)])
+        else:
+            if no_rand:
+                return tt.constant(self.find_map())
+            else:
+                return self.histogram[self.randidx(size)]
 
     @property
     def histogram(self):
@@ -280,11 +279,18 @@ class Histogram(Approximation):
     @property
     def histogram_logp(self):
         if self._histogram_logp is None:
-            self._histogram_logp = self._logp(self.histogram)
+            node = self.to_flat_input(self.model.logpt)
+
+            def mapping(z):
+                return theano.clone(node, {self.input: z})
+            x = self.histogram
+            self._histogram_logp, _ = theano.scan(
+                mapping, x, n_steps=x.shape[0]
+            )
         return self._histogram_logp
 
     @property
-    def map(self):
+    def map(self):  # pragma: no cover
         if self._map is None:
             raise ValueError('Need to call `Histogram.find_map()` first')
         else:
@@ -293,20 +299,6 @@ class Histogram(Approximation):
     @property
     def params(self):
         return []
-
-    def _logp(self, x):
-        if x.ndim == 1:
-            return theano.clone(
-                self.to_flat_input(self.model.logpt),
-                {self.input: x})
-        else:
-            node = self.to_flat_input(self.model.logpt)
-
-            def mapping(z):
-                return theano.clone(node, {self.input: z})
-
-            nodes, _ = theano.scan(mapping, x, n_steps=x.shape[0])
-            return nodes
 
     def find_map(self, recompute=False):
         if self.local_vars:
