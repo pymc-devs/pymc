@@ -207,6 +207,11 @@ class SQLite(base.BaseTrace):
         -------
         A NumPy array
         """
+        if burn is None:
+            burn = 0
+        if thin is None:
+            thin = 1
+
         if burn < 0:
             burn = max(0, len(self) + burn)
         if thin < 1:
