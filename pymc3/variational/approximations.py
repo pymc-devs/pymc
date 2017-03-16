@@ -221,7 +221,6 @@ class FullRank(Approximation):
 class Histogram(Approximation):
     def __init__(self, trace, local_rv=None, model=None):
         self.trace = trace
-        self._map = None
         self._histogram_logp = None
         super(Histogram, self).__init__(local_rv=local_rv, model=model)
 
@@ -257,18 +256,18 @@ class Histogram(Approximation):
         else:
             size = tuple(np.atleast_1d(size))
         return (tt_rng()
-                .uniform(size=size, low=0.0, high=self.histogram.shape[0] - 1e-10)
+                .uniform(size=size, low=0.0, high=self.histogram.shape[0] - 1e-16)
                 .astype('int64'))
 
     def random_global(self, size=None, no_rand=False):
         theano_condition_is_here = isinstance(no_rand, tt.Variable)
         if theano_condition_is_here:
             return tt.switch(no_rand,
-                             self.map,
+                             self.mean,
                              self.histogram[self.randidx(size)])
         else:
             if no_rand:
-                return tt.constant(self.find_map())
+                return self.mean
             else:
                 return self.histogram[self.randidx(size)]
 
@@ -290,25 +289,12 @@ class Histogram(Approximation):
         return self._histogram_logp
 
     @property
-    def map(self):  # pragma: no cover
-        if self._map is None:
-            return self.find_map()
-        else:
-            return self._map
+    def mean(self):
+        return self.histogram.mean(0)
 
     @property
     def params(self):
         return []
-
-    def find_map(self, recompute=False):
-        if self.local_vars:
-            raise NotImplementedError('no_rand mode is not supported for AEVB Histogram')
-        if self._map is not None and not recompute:
-            return self._map
-
-        theta_map = pm.find_MAP(disp=False, model=self.model)
-        self._map = self._bij.map(theta_map)
-        return self._map
 
     @property
     @memoize
@@ -329,19 +315,12 @@ class Histogram(Approximation):
         In = theano.In
         size = tt.iscalar('size')
         no_rand = tt.bscalar('no_rand')
-        if not self.local_vars:
-            posterior = self.random(size, no_rand=no_rand)
-            raise_on_no_rand = False
-        else:
-            posterior = self.random(size, no_rand=False)
-            raise_on_no_rand = True
+        posterior = self.random(size, no_rand=no_rand)
         fn = theano.function([In(size, 'size', 1, allow_downcast=True),
                               In(no_rand, 'no_rand', 0, allow_downcast=True)],
-                             posterior, on_unused_input='ignore')
+                             posterior)
 
         def inner(size=None, no_rand=False):
-            if raise_on_no_rand and no_rand:
-                raise NotImplementedError('no_rand is not supported for AEVB Histogram')
             if size is None:
                 return fn(1, int(no_rand))[0]
             else:

@@ -257,18 +257,7 @@ class TestFullRank(TestApproximates.Base):
             fit(10, method='fullrank_advi')
 
 
-class TestHistogram(unittest.TestCase):
-    def test_map(self):
-        with models.multidimensional_model()[1]:
-            full_rank = FullRankADVI()
-            approx = full_rank.fit(20)
-            trace = approx.sample_vp(10000)
-            histogram = Histogram(trace)
-            map = pm.find_MAP()
-            z_p = histogram._bij.map(map)
-            z_h = histogram.find_map()
-            np.testing.assert_allclose(z_p, z_h)
-
+class TestHistogram(SeededTest):
     def test_sampling(self):
         with models.multidimensional_model()[1]:
             full_rank = FullRankADVI()
@@ -290,8 +279,8 @@ class TestHistogram(unittest.TestCase):
             trace0 = approx.sample_vp(1000)
             histogram = Histogram(trace0, local_rv={x: (mu, rho)})
             trace1 = histogram.sample_vp(10000)
-            self.assertRaises(NotImplementedError, histogram.random, no_rand=True)
-            self.assertRaises(NotImplementedError, histogram.random_fn, no_rand=True)
+            histogram.random(no_rand=True)
+            histogram.random_fn(no_rand=True)
         np.testing.assert_allclose(trace0['y'].mean(0), trace1['y'].mean(0), atol=0.02)
         np.testing.assert_allclose(trace0['y'].var(0), trace1['y'].var(0), atol=0.02)
         np.testing.assert_allclose(trace0['x'].mean(0), trace1['x'].mean(0), atol=0.02)
@@ -303,7 +292,6 @@ class TestHistogram(unittest.TestCase):
             approx = full_rank.approx
             trace0 = approx.sample_vp(10000)
             histogram = Histogram(trace0)
-            histogram.find_map()
             histogram.randidx(None).eval()
             histogram.randidx(1).eval()
             histogram.random_fn(no_rand=True)
