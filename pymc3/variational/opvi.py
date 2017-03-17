@@ -46,7 +46,7 @@ class Operator(object):
     def logq(self, z):
         return self.approx.logq(z)
 
-    def apply(self, f):
+    def apply(self, f):   # pragma: no cover
         """
         Operator itself
         .. math::
@@ -83,7 +83,7 @@ class Operator(object):
     def __setstate__(self, approx):
         self.__init__(approx)
 
-    def __str__(self):
+    def __str__(self):    # pragma: no cover
         return '%(op)s[%(ap)s]' % dict(op=self.__class__.__name__,
                                        ap=self.approx.__class__.__name__)
 
@@ -230,7 +230,7 @@ class ObjectiveFunction(object):
         return step_fn
 
     @memoize
-    def score_function(self, sc_n_mc=None, fn_kwargs=None):
+    def score_function(self, sc_n_mc=None, fn_kwargs=None):   # pragma: no cover
         if fn_kwargs is None:
             fn_kwargs = {}
         return theano.function([], self(self.random(sc_n_mc)), **fn_kwargs)
@@ -387,14 +387,24 @@ class Approximation(object):
 
         known = {get_transformed(k): v for k, v in local_rv.items()}
         self.known = known
-        self.local_vars = [v for v in model.free_RVs if v in known]
-        self.global_vars = [v for v in model.free_RVs if v not in known]
+        self.local_vars = self.get_local_vars()
+        self.global_vars = self.get_global_vars()
         self.order = ArrayOrdering(self.local_vars + self.global_vars)
         self.flat_view = model.flatten(
             vars=self.local_vars + self.global_vars
         )
         self.grad_scale_op = GradScale(cost_part_grad_scale)
+        self._setup()
         self.shared_params = self.create_shared_params()
+
+    def _setup(self):
+        pass
+
+    def get_global_vars(self):
+        return [v for v in self.model.free_RVs if v not in self.known]
+
+    def get_local_vars(self):
+        return [v for v in self.model.free_RVs if v in self.known]
 
     def __getstate__(self):
         state = self.__dict__.copy()
@@ -419,7 +429,7 @@ class Approximation(object):
         Checks that model is valid for variational inference
         """
         vars_ = [var for var in model.vars if not isinstance(var, pm.model.ObservedRV)]
-        if any([var.dtype in pm.discrete_types for var in vars_]):
+        if any([var.dtype in pm.discrete_types for var in vars_]):  # pragma: no cover
             raise ValueError('Model should not include discrete RVs')
 
     def create_shared_params(self):
@@ -461,15 +471,15 @@ class Approximation(object):
         """
         if include is not None and exclude is not None:
             raise ValueError('Only one parameter is supported {include|exclude}, got two')
-        if include is not None:
+        if include is not None:    # pragma: no cover
             replacements = {k: v for k, v
                             in self.flat_view.replacements.items() if k in include}
-        elif exclude is not None:
+        elif exclude is not None:  # pragma: no cover
             replacements = {k: v for k, v
                             in self.flat_view.replacements.items() if k not in exclude}
         else:
             replacements = self.flat_view.replacements
-        if more_replacements is not None:
+        if more_replacements is not None:   # pragma: no cover
             replacements.update(more_replacements)
         return replacements
 
@@ -506,7 +516,7 @@ class Approximation(object):
 
     def sample_node(self, node, size=100,
                     more_replacements=None):
-        if more_replacements is not None:
+        if more_replacements is not None:   # pragma: no cover
             node = theano.clone(node, more_replacements)
         posterior = self.random(size)
         node = self.to_flat_input(node)
@@ -554,7 +564,7 @@ class Approximation(object):
         """
 
         theano_condition_is_here = isinstance(no_rand, tt.Variable)
-        if l is None:
+        if l is None:   # pragma: no cover
             l = self.total_size
         if size is None:
             shape = (l, )
@@ -593,7 +603,7 @@ class Approximation(object):
         e = self.initial(size, no_rand, self.local_size)
         return e * rho2sd(rho) + mu
 
-    def random_global(self, size=None, no_rand=False):
+    def random_global(self, size=None, no_rand=False):  # pragma: no cover
         """
         Implements posterior distribution from initial latent space
 
@@ -630,11 +640,11 @@ class Approximation(object):
                 self.random_local(size, no_rand),
                 self.random_global(size, no_rand)
             ], axis=ax)
-        elif self.local_vars:
+        elif self.local_vars:   # pragma: no cover
             return self.random_local(size, no_rand)
         elif self.global_vars:
             return self.random_global(size, no_rand)
-        else:
+        else:   # pragma: no cover
             raise ValueError('No FreeVARs in model')
 
     @property
@@ -725,14 +735,14 @@ class Approximation(object):
         for var in self.local_vars:
             scaling.append(tt.ones(var.dsize)*var.scaling)
         scaling = tt.concatenate(scaling)
-
-        if z.ndim > 1:
-            logp *= scaling[:, None]
+        if z.ndim > 1:  # pragma: no cover
+            # rare case when logq(z) is called directly
+            logp *= scaling[None]
         else:
             logp *= scaling
         return self.to_flat_input(tt.sum(logp))
 
-    def log_q_W_global(self, z):
+    def log_q_W_global(self, z):    # pragma: no cover
         """
         log_q_W samples over q for global vars
         """
@@ -767,7 +777,7 @@ class Approximation(object):
             view = space[:, slc]
         elif space.ndim < 2:
             view = space[slc]
-        else:
+        else:   # pragma: no cover
             raise ValueError('Space should have no more than 2 dims, got %d' % space.ndim)
         if reshape:
             if len(_shape) > 0:
