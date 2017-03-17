@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+from os.path import realpath, dirname, join
 from setuptools import setup, find_packages
 import sys
 
@@ -28,7 +29,10 @@ classifiers = ['Development Status :: 5 - Production/Stable',
                'Topic :: Scientific/Engineering :: Mathematics',
                'Operating System :: OS Independent']
 
-with open('requirements.txt') as f:
+PROJECT_ROOT = dirname(realpath(__file__))
+REQUIREMENTS_FILE = join(PROJECT_ROOT, 'requirements.txt')
+
+with open(REQUIREMENTS_FILE) as f:
     install_reqs = f.read().splitlines()
 
 if sys.version_info < (3, 4):
@@ -49,7 +53,7 @@ if __name__ == "__main__":
           url=URL,
           long_description=LONG_DESCRIPTION,
           packages=find_packages(),
-          package_data={'docs':['*'], 'pymc3.examples':['data/*']},
+          package_data={'docs': ['*'], 'pymc3.examples': ['data/*']},
           classifiers=classifiers,
           install_requires=install_reqs,
           tests_require=test_reqs,
