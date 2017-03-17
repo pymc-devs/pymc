@@ -45,7 +45,7 @@ class MeanField(Approximation):
         approximateinference.org/accepted/RoederEtAl2016.pdf
     """
     @property
-    def mu(self):
+    def mean(self):
         return self.shared_params['mu']
 
     @property
@@ -69,7 +69,7 @@ class MeanField(Approximation):
         Gradient wrt mu, rho in density parametrization
         is set to zero to lower variance of ELBO
         """
-        mu = self.scale_grad(self.mu)
+        mu = self.scale_grad(self.mean)
         rho = self.scale_grad(self.rho)
         z = z[self.global_slc]
         logq = tt.sum(log_normal(z, mu, rho=rho))
@@ -78,7 +78,7 @@ class MeanField(Approximation):
     def random_global(self, size=None, no_rand=False):
         initial = self.initial(size, no_rand, l=self.global_size)
         sd = rho2sd(self.rho)
-        mu = self.mu
+        mu = self.mean
         return sd * initial + mu
 
 
@@ -123,7 +123,7 @@ class FullRank(Approximation):
         return self.shared_params['L_tril'][self.tril_index_matrix]
 
     @property
-    def mu(self):
+    def mean(self):
         return self.shared_params['mu']
 
     @property
@@ -163,7 +163,7 @@ class FullRank(Approximation):
         Gradient wrt mu, rho in density parametrization
         is set to zero to lower variance of ELBO
         """
-        mu = self.scale_grad(self.mu)
+        mu = self.scale_grad(self.mean)
         L = self.scale_grad(self.L)
         z = z[self.global_slc]
         return log_normal_mv(z, mu, chol=L, gpu_compat=self.gpu_compat)
@@ -174,7 +174,7 @@ class FullRank(Approximation):
         # (dim, dim)
         L = self.L
         # (dim, )
-        mu = self.mu
+        mu = self.mean
         # x = Az + m, but it assumes z is vector
         # When we get z with shape (samples, dim)
         # we need to transpose Az
