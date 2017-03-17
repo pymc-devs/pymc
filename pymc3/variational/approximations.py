@@ -5,7 +5,7 @@ from theano import tensor as tt
 from pymc3 import ArrayOrdering, DictToArrayBijection
 from pymc3.distributions.dist_math import rho2sd, log_normal, log_normal_mv
 from pymc3.variational.opvi import Approximation
-from pymc3.theanof import tt_rng, memoize, change_flags
+from pymc3.theanof import tt_rng
 
 
 __all__ = [
