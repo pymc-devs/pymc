@@ -221,6 +221,21 @@ class FullRank(Approximation):
 
 
 class Histogram(Approximation):
+    """
+    Builds Approximation instance from a given trace,
+    it has the same interface as variational approximation
+
+    Prameters
+    ----------
+    trace : MultiTrace
+    local_rv : dict
+        Experimental for Histogram
+        mapping {model_variable -> local_variable}
+        Local Vars are used for Autoencoding Variational Bayes
+        See (AEVB; Kingma and Welling, 2014) for details
+
+    model : PyMC3 model
+    """
     def __init__(self, trace, local_rv=None, model=None):
         self.trace = trace
         self._histogram_logp = None
@@ -275,10 +290,16 @@ class Histogram(Approximation):
 
     @property
     def histogram(self):
+        """
+        Shortcut to flattened Trace
+        """
         return self.shared_params
 
     @property
     def histogram_logp(self):
+        """
+        Symbolic logp for every point in trace
+        """
         if self._histogram_logp is None:
             node = self.to_flat_input(self.model.logpt)
 
