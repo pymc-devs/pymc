@@ -544,14 +544,128 @@ def WishartBartlett(name, S, nu, is_cholesky=False, return_cholesky=False, testv
         return Deterministic(name, tt.dot(tt.dot(tt.dot(L, A), A.T), L.T))
 
 
+def expand_packed_triangular(packed, lower=False, diagonal_only=False):
+    # TODO
+    pass
+
+
 class LKJCholeskyCov(Continuous):
-    def __init__(self, eta, sd_dist, *args, **kwargs):
-        self.n = sd_dist.shape[0]
+    """Covariance matrix with LKJ distributed correlations.
+
+    This defines a distribution over cholesky decomposed covariance
+    matrices, such that the underlying correlation matrices follow an
+    LKJ distribution [1] and the standard deviations follow an arbitray
+    distribution specified by the user.
+
+    Parameters
+    ----------
+    n : int
+        The number of rows of the covariance matrix.
+    eta : float
+        The shape parameter of the LKJ distribution. A value of one
+        implies a uniform distribution of the correlation matrices;
+        larger values put more weight on matrices with few correlations.
+    sd_dist : pm.Distribution
+        A distribution for the standard deviations.
+
+    Notes
+    -----
+    Since the cholesky factor is a lower triangular matrix, we use
+    packed storge for the matrix: We store and return the values of
+    the lower triangular matrix in a one-dimensional array, numbered
+    by row.
+
+        [[0 - - -]
+         [1 2 - -]
+         [3 4 5 -]
+         [6 7 8 9]]
+
+    You can use `pm.expand_packed_triangular(packed_cov, lower=True)`
+    to convert this to a regular two-dimensional array.
+
+    Examples
+    --------
+
+        with pm.Model() as model:
+            # Note that we access the distribution for the standard
+            # deviations, and do not create a new random variable.
+            sd_dist = pm.HalfCauchy.dist(beta=2.5)
+            packed_chol = pm.LKJCholeskyCov('chol_cov', 10, 2, sd_dist)
+
+            # Define a new MvNormal with the given covariance
+            vals = pm.MvNormal('vals', mu=np.zeros(10), packed_chol=packed_col)
+
+            # Or transform a uncorrelated normal:
+            vals_raw = pm.Normal('vals_raw', mu=np.zeros(10), sd=1)
+            chol = pm.expand_packed_triangular(packed_chol, lower=True)
+            vals = tt.dot(chol, vals_raw)
+
+            # Or compute the covariance matrix
+            chol = pm.expand_packed_triangular(packed_chol, lower=True)
+            cov = pm.dot(chol, chol.T)
+
+            # Extract the standard deviations
+            stds = pm.extracet_packed_triangular(
+                packed_chol, lower=True, diagonal_only=True)
+
+    Implementation
+    --------------
+    In the unconstrained space all values of the cholesky factor
+    are stored untransformed, except for the diagonal entries, where
+    we use a log-transform to restrict them to positive values.
+
+    To correctly compute log-likelihoods for the standard deviations
+    and the correlation matrix seperatly, we need to consider a
+    second transformation: Given a cholesky factorization
+    :math:`LL^T = \Sigma` of a covariance matrix we can recover the
+    standard deviations :math:`\sigma` as the euclidean lengths of
+    the rows of :math:`L`, and the cholesky factor of the
+    correlation matrix as :math:`U = \text{diag}(\sigma)^{-1}L`.
+    Since each row of :math:`U` has length 1, we do not need to
+    store the diagonal. We define a transformation :math:`\phi`
+    such that `\phi(L)` is the lower triangular matrix containing
+    the standard deviations :math:`\sigma` on the diagonal and the
+    correlation matrix :math:`U` below. In this form we can easily
+    compute the different likelihoods seperatly, as the likelihood
+    of the correlation matrix only depends on the values below the
+    diagonal, and the likelihood of the standard deviation depends
+    only on the diagonal values.
+
+    We still need the determinant of the jacobian of :math:`\phi^{-1}`.
+    If we think of :math:`\phi` as an automorphism on
+    :math:`\mathbb{R}^{\tfrac{n(n+1)}{2}}`, where we order
+    the dimensions as described in the notes above, the jacobian
+    is a block-diagonal matrix, where each block corresponds to
+    one row of :math:`U`. Each block has arrowhead shape, and we
+    can compute the determinant of that as described in [2]. Since
+    the determinant of a block-diagonal matrix is the product
+    of the determinants of the blocks, we get
+
+    .. math::
+
+       \text{det}(J_{\phi^{-1}}(U)) =
+       \left[
+         \prod^{i=2}^N u_{ii}^(i - 1) L_{ii}
+       \right]^{-1}
+
+    References
+    ----------
+    [1] Lewandowski, D., Kurowicka, D. and Joe, H. (2009).
+        "Generating random correlation matrices based on vines and
+        extended onion method." Journal of multivariate analysis,
+        100(9), pp.1989-2001.
+    [2] J. M. isn't a mathematician (http://math.stackexchange.com/users/498/
+        j-m-isnt-a-mathematician), Different approaches to evaluate this
+        determinant, URL (version: 2012-04-14):
+        http://math.stackexchange.com/q/130026
+    """
+    def __init__(self, n, eta, sd_dist, *args, **kwargs):
+        self.n = n
 
         if 'transform' in kwargs:
-            raise ValueError('Invalid parameter transform')
+            raise ValueError('Invalid parameter: transform.')
         if 'shape' in kwargs:
-            raise ValueError('Invalid shape parameter. Shape is set by sd_dist.')
+            raise ValueError('Invalid shape parameter: shape.')
 
         shape = self.n * (self.n + 1) // 2
         transform = transforms.CholeskyCovPacked(self.n)
@@ -581,6 +695,8 @@ class LKJCholeskyCov(Continuous):
         corr_diag = x[diag_idxs] / sd_vals
         corr_logdet = np.log(corr_diag).sum()
 
+        # Compute the log det jacobian of the second transformation
+        # described in the docstring.
         count = np.arange(self.n - 1)
         det_invjac = - (count * tt.log(sd_vals[1:])).sum()
         det_invjac += - tt.log(x[diag_idxs]).sum() + tt.log(x[0])
