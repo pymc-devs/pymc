@@ -58,9 +58,11 @@ class MeanField(Approximation):
 
     def create_shared_params(self):
         return {'mu': theano.shared(
-                    self.input.tag.test_value[self.global_slc]),
+                    self.input.tag.test_value[self.global_slc],
+                    'mu'),
                 'rho': theano.shared(
-                    np.zeros((self.global_size,), dtype=theano.config.floatX))
+                    np.zeros((self.global_size,), dtype=theano.config.floatX),
+                    'rho')
                 }
 
     def log_q_W_global(self, z):
@@ -153,8 +155,9 @@ class FullRank(Approximation):
             .astype(theano.config.floatX)
         )
         return {'mu': theano.shared(
-                    self.input.tag.test_value[self.global_slc]),
-                'L_tril': theano.shared(L_tril)
+                    self.input.tag.test_value[self.global_slc],
+                    'mu'),
+                'L_tril': theano.shared(L_tril, 'L_tril')
                 }
 
     def log_q_W_global(self, z):
