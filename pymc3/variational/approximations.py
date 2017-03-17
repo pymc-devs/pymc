@@ -318,35 +318,3 @@ class Histogram(Approximation):
     @property
     def params(self):
         return []
-
-    @property
-    @memoize
-    @change_flags(compute_test_value='off')
-    def random_fn(self):
-        """
-        Implements posterior distribution from initial latent space
-
-        Parameters
-        ----------
-        size : number of samples from distribution
-        no_rand : whether use deterministic distribution
-
-        Returns
-        -------
-        posterior space (numpy)
-        """
-        In = theano.In
-        size = tt.iscalar('size')
-        no_rand = tt.bscalar('no_rand')
-        posterior = self.random(size, no_rand=no_rand)
-        fn = theano.function([In(size, 'size', 1, allow_downcast=True),
-                              In(no_rand, 'no_rand', 0, allow_downcast=True)],
-                             posterior)
-
-        def inner(size=None, no_rand=False):
-            if size is None:
-                return fn(1, int(no_rand))[0]
-            else:
-                return fn(size, int(no_rand))
-
-        return inner
