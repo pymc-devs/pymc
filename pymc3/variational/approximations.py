@@ -235,6 +235,13 @@ class Histogram(Approximation):
         See (AEVB; Kingma and Welling, 2014) for details
 
     model : PyMC3 model
+
+    Usage
+    -----
+    >>> with model:
+    ...     step = NUTS()
+    ...     trace = sample(1000, step=step)
+    ...     histogram = Histogram(trace[100:])
     """
     def __init__(self, trace, local_rv=None, model=None):
         self.trace = trace
