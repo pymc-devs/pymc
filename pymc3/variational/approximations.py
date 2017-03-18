@@ -5,7 +5,7 @@ from theano import tensor as tt
 from pymc3 import ArrayOrdering, DictToArrayBijection
 from pymc3.distributions.dist_math import rho2sd, log_normal, log_normal_mv
 from pymc3.variational.opvi import Approximation
-from pymc3.theanof import tt_rng, memoize, change_flags
+from pymc3.theanof import tt_rng
 
 
 __all__ = [
@@ -221,6 +221,28 @@ class FullRank(Approximation):
 
 
 class Histogram(Approximation):
+    """
+    Builds Approximation instance from a given trace,
+    it has the same interface as variational approximation
+
+    Prameters
+    ----------
+    trace : MultiTrace
+    local_rv : dict
+        Experimental for Histogram
+        mapping {model_variable -> local_variable}
+        Local Vars are used for Autoencoding Variational Bayes
+        See (AEVB; Kingma and Welling, 2014) for details
+
+    model : PyMC3 model
+
+    Usage
+    -----
+    >>> with model:
+    ...     step = NUTS()
+    ...     trace = sample(1000, step=step)
+    ...     histogram = Histogram(trace[100:])
+    """
     def __init__(self, trace, local_rv=None, model=None):
         self.trace = trace
         self._histogram_logp = None
@@ -275,10 +297,16 @@ class Histogram(Approximation):
 
     @property
     def histogram(self):
+        """
+        Shortcut to flattened Trace
+        """
         return self.shared_params
 
     @property
     def histogram_logp(self):
+        """
+        Symbolic logp for every point in trace
+        """
         if self._histogram_logp is None:
             node = self.to_flat_input(self.model.logpt)
 
@@ -297,35 +325,3 @@ class Histogram(Approximation):
     @property
     def params(self):
         return []
-
-    @property
-    @memoize
-    @change_flags(compute_test_value='off')
-    def random_fn(self):
-        """
-        Implements posterior distribution from initial latent space
-
-        Parameters
-        ----------
-        size : number of samples from distribution
-        no_rand : whether use deterministic distribution
-
-        Returns
-        -------
-        posterior space (numpy)
-        """
-        In = theano.In
-        size = tt.iscalar('size')
-        no_rand = tt.bscalar('no_rand')
-        posterior = self.random(size, no_rand=no_rand)
-        fn = theano.function([In(size, 'size', 1, allow_downcast=True),
-                              In(no_rand, 'no_rand', 0, allow_downcast=True)],
-                             posterior)
-
-        def inner(size=None, no_rand=False):
-            if size is None:
-                return fn(1, int(no_rand))[0]
-            else:
-                return fn(size, int(no_rand))
-
-        return inner
