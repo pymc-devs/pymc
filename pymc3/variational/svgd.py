@@ -122,6 +122,8 @@ def svgd(vars=None, n=5000, n_particles=100, jitter=.01,
         strace.setup(theta_val.shape[0], 1)
         for p in theta_val:
             strace.record(model.bijection.rmap(p))
+    except KeyboardInterrupt:
+        pass
     finally:
         strace.close()
 
