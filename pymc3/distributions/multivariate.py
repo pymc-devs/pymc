@@ -544,9 +544,23 @@ def WishartBartlett(name, S, nu, is_cholesky=False, return_cholesky=False, testv
         return Deterministic(name, tt.dot(tt.dot(tt.dot(L, A), A.T), L.T))
 
 
-def expand_packed_triangular(packed, lower=False, diagonal_only=False):
-    # TODO
-    pass
+def _lkj_normalizing_constant(n, p):
+    if n == 1:
+        result = gammaln(2. * tt.arange(1, int((p - 1) / 2) + 1)).sum()
+        if p % 2 == 1:
+            result += (0.25 * (p ** 2 - 1) * tt.log(np.pi)
+                       - 0.25 * (p - 1) ** 2 * tt.log(2.)
+                       - (p - 1) * gammaln(int((p + 1) / 2)))
+        else:
+            result += (0.25 * p * (p - 2) * tt.log(np.pi)
+                       + 0.25 * (3 * p ** 2 - 4 * p) * tt.log(2.)
+                       + p * gammaln(p / 2) - (p - 1) * gammaln(p))
+    else:
+        result = -(p - 1) * gammaln(n + 0.5 * (p - 1))
+        k = tt.arange(1, p)
+        result += (0.5 * k * tt.log(np.pi)
+                   + gammaln(n + 0.5 * (p - 1 - k))).sum()
+    return result
 
 
 class LKJCholeskyCov(Continuous):
@@ -595,18 +609,18 @@ class LKJCholeskyCov(Continuous):
             # Define a new MvNormal with the given covariance
             vals = pm.MvNormal('vals', mu=np.zeros(10), packed_chol=packed_col)
 
-            # Or transform a uncorrelated normal:
+            # Or transform an uncorrelated normal:
             vals_raw = pm.Normal('vals_raw', mu=np.zeros(10), sd=1)
-            chol = pm.expand_packed_triangular(packed_chol, lower=True)
+            chol = pm.expand_packed_triangular(10, packed_chol, lower=True)
             vals = tt.dot(chol, vals_raw)
 
             # Or compute the covariance matrix
-            chol = pm.expand_packed_triangular(packed_chol, lower=True)
+            chol = pm.expand_packed_triangular(10, packed_chol, lower=True)
             cov = pm.dot(chol, chol.T)
 
             # Extract the standard deviations
             stds = pm.extracet_packed_triangular(
-                packed_chol, lower=True, diagonal_only=True)
+                10, packed_chol, lower=True, diagonal_only=True)
 
     Implementation
     --------------
@@ -623,7 +637,7 @@ class LKJCholeskyCov(Continuous):
     correlation matrix as :math:`U = \text{diag}(\sigma)^{-1}L`.
     Since each row of :math:`U` has length 1, we do not need to
     store the diagonal. We define a transformation :math:`\phi`
-    such that `\phi(L)` is the lower triangular matrix containing
+    such that :math:`\phi(L)` is the lower triangular matrix containing
     the standard deviations :math:`\sigma` on the diagonal and the
     correlation matrix :math:`U` below. In this form we can easily
     compute the different likelihoods seperatly, as the likelihood
@@ -701,7 +715,9 @@ class LKJCholeskyCov(Continuous):
         det_invjac = - (count * tt.log(sd_vals[1:])).sum()
         det_invjac += - tt.log(x[diag_idxs]).sum() + tt.log(x[0])
 
-        return (self.n - 1) * corr_logdet + logp_sd + det_invjac
+        norm = _lkj_normalizing_constant(eta, self.n)
+
+        return norm + (self.n - 1) * corr_logdet + logp_sd + det_invjac
 
 
 class LKJCorr(Continuous):
@@ -759,24 +775,6 @@ class LKJCorr(Continuous):
         self.tri_index = np.zeros([p, p], dtype='int32')
         self.tri_index[np.triu_indices(p, k=1)] = np.arange(n_elem)
         self.tri_index[np.triu_indices(p, k=1)[::-1]] = np.arange(n_elem)
-
-    def _normalizing_constant(self, n, p):
-        if n == 1:
-            result = gammaln(2. * tt.arange(1, int((p - 1) / 2) + 1)).sum()
-            if p % 2 == 1:
-                result += (0.25 * (p ** 2 - 1) * tt.log(np.pi)
-                           - 0.25 * (p - 1) ** 2 * tt.log(2.)
-                           - (p - 1) * gammaln(int((p + 1) / 2)))
-            else:
-                result += (0.25 * p * (p - 2) * tt.log(np.pi)
-                           + 0.25 * (3 * p ** 2 - 4 * p) * tt.log(2.)
-                           + p * gammaln(p / 2) - (p - 1) * gammaln(p))
-        else:
-            result = -(p - 1) * gammaln(n + 0.5 * (p - 1))
-            k = tt.arange(1, p)
-            result += (0.5 * k * tt.log(np.pi)
-                       + gammaln(n + 0.5 * (p - 1 - k))).sum()
-        return result
 
     def logp(self, x):
         n = self.n
