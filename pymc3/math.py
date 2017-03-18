@@ -6,7 +6,7 @@ import theano
 from theano.tensor import (
     constant, flatten, zeros_like, ones_like, stack, concatenate, sum, prod,
     lt, gt, le, ge, eq, neq, switch, clip, where, and_, or_, abs_, exp, log,
-    cos, sin, tan, cosh, sinh, tanh, sqr, sqrt, erf, erfc, erfinv, erfcinv, dot, 
+    cos, sin, tan, cosh, sinh, tanh, sqr, sqrt, erf, erfc, erfinv, erfcinv, dot,
     maximum, minimum, sgn, ceil, floor)
 from theano.tensor.nlinalg import det, matrix_inverse, extract_diag, matrix_dot, trace
 from theano.tensor.nnet import sigmoid
@@ -14,7 +14,7 @@ from theano.gof import Op, Apply
 import numpy as np
 # pylint: enable=unused-import
 
-def tround(*args, **kwargs): 
+def tround(*args, **kwargs):
     """
     Temporary function to silence round warning in Theano. Please remove
     when the warning disappears.
@@ -77,6 +77,50 @@ logdet = LogDet()
 
 def probit(p):
     return -sqrt(2) * erfcinv(2 * p)
-    
+
 def invprobit(x):
     return 0.5 * erfc(-x / sqrt(2))
+
+
+def expand_packed_triangular(n, packed, lower=False, diagonal_only=False):
+    """Convert a packed triangular matrix into a two dimensional array.
+
+    Triangular matrices can be stored with better space efficiancy by
+    storing the non-zero values in a one-dimensional array. We number
+    the elements by row like this (for lower or upper triangular matrices):
+
+        [[0 - - -]     [[0 1 2 3]
+         [1 2 - -]      [- 4 5 6]
+         [3 4 5 -]      [- - 7 8]
+         [6 7 8 9]]     [- - - 9]
+
+    Parameters
+    ----------
+    n : int
+        The number of rows of the triangular matrix.
+    packed : ndarray or theano.vector
+        The matrix in packed format.
+    lower : bool
+        If true, assume that the matrix is lower triangular.
+    diagonal_only : bool
+        If true, return only the diagonal of the matrix.
+    """
+    if packed.ndim != 1:
+        raise ValueError('Packed triagular is not one dimensional.')
+
+    if diagonal_only and lower:
+        diag_idxs = np.arange(1, n + 1).cumsum() - 1
+        return packed[diag_idxs]
+    elif diagonal_only and not lower:
+        diag_idxs = np.arange(n)[::-1].cumsum() - n
+        return packed[diag_idxs]
+    elif lower:
+        out = tt.zeros((n, n), dtype=theano.config.floatX)
+        idxs = np.tril_indices(n)
+        return tt.advanced_set_subtensor(out, packed, idxs)
+    elif not lower:
+        out = tt.zeros((n, n), dtype=theano.config.floatX)
+        idxs = np.triu_indices(n)
+        return tt.advanced_set_subtensor(out, packed, idxs)
+    else:
+        assert False
