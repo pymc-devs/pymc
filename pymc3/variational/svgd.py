@@ -5,6 +5,7 @@
 
 import numpy as np
 import theano
+from theano.ifelse import ifelse
 import theano.tensor as tt
 from tqdm import tqdm
 from .updates import adagrad
@@ -23,11 +24,11 @@ def rbf_kernel(X):
     V = H.flatten()
 
     # median distance
-    h = tt.switch(tt.eq((V.shape[0] % 2), 0),
-                  # if even vector
-                  tt.mean(tt.sort(V)[ ((V.shape[0] // 2) - 1) : ((V.shape[0] // 2) + 1) ]),
-                  # if odd vector
-                  tt.sort(V)[V.shape[0] // 2])
+    h = ifelse(tt.eq((V.shape[0] % 2), 0),
+               # if even vector
+               tt.mean(tt.sort(V)[ ((V.shape[0] // 2) - 1) : ((V.shape[0] // 2) + 1) ]),
+               # if odd vector
+               tt.sort(V)[V.shape[0] // 2])
 
     h = tt.sqrt(0.5 * h / tt.log(X.shape[0].astype('float32') + 1.0))
 
