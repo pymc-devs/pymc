@@ -27,22 +27,6 @@ __all__ = ['MvNormal', 'MvStudentT', 'Dirichlet',
            'LKJCorr', 'LKJCholeskyCov']
 
 
-def get_tau_chol(tau=None, cov=None, chol=None):
-    if len([i for i in [tau, cov, chol] if i is not None]) != 1:
-        raise ValueError('Incompatible parameterization. Specify exactly one,'
-                         'of tau, cov, or chol to specify distribution.')
-
-    if cov is not None:
-        tau = tt.nlinalg.matrix_inverse(cov)
-        chol = tt.slinalg.cholesky(cov)
-    elif tau is not None:
-        chol = tt.slinalg.cholesky(tt.nlinalg.matrix_inverse(tau))
-    else:
-        chol_inv = tt.nlinalg.inv(chol)
-        tau = tt.dot(chol_inv.T, chol_inv)
-    return (tau, chol)
-
-
 class MvNormal(Continuous):
     R"""
     Multivariate normal log-likelihood.
@@ -81,19 +65,26 @@ class MvNormal(Continuous):
     def __init__(self, mu, cov=None, tau=None, chol=None, gpu_compat=False,
                  *args, **kwargs):
         super(MvNormal, self).__init__(*args, **kwargs)
+        if len([i for i in [tau, cov, chol] if i is not None]) != 1:
+            raise ValueError('Incompatible parameterization. Specify exactly one,'
+                             'of tau, cov, or chol to specify distribution.')
         self.mean = self.median = self.mode = self.mu = mu = tt.as_tensor_variable(mu)
-        tau, chol = get_tau_chol(tau=tau, cov=cov, chol=chol)
-        self.tau = tt.as_tensor_variable(tau)
-        self.chol = tt.as_tensor_variable(chol)
-        # not necessary to define theano solver function if tau given...
         self.solve = tt.slinalg.Solve(A_structure="lower_triangular", lower=True)
+        if cov is not None:
+            self.chol = tt.slinalg.cholesky(tt.as_tensor_variable(cov))
+        elif tau is not None:
+            self.tau = tt.as_tensor_variable(tau)
+            self.chol = tt.slinalg.cholesky(tt.nlinalg.matrix_inverse(tau))
+            self.logp = self._logp_tau
+        else:
+            self.chol = tt.as_tensor_variable(chol)
+            self.logp = self._logp_chol
         self.gpu_compat = gpu_compat
         if gpu_compat is False and theano.config.device == 'gpu':
             warnings.warn("The function used is not GPU compatible. Please check the gpu_compat flag")
 
     def random(self, point=None, size=None):
         mu, chol = draw_values([self.mu, self.chol], point=point)
-
         if size is None or size == mu.shape:
             size = mu.shape
         elif isinstance(size, collections.Iterable):
@@ -102,32 +93,31 @@ class MvNormal(Continuous):
         else:
             size = [size]
             size.append(mu.shape[0])
-
         return mu + (np.dot(np.random.standard_normal(size), chol))
 
     def logp(self, value):
         if self.chol is not None:
-            return _logp_chol(self, value)
+            return self._logp_chol(value)
         else:
-            return _logp_tau(self, value)
+            return self._logp_tau(value)
 
     def _logp_chol(self, value):
         mu = self.mu
-        chol = self.chol
-
         delta = value - mu
-        k = chol.shape[0]
-        tmp = self.solve(chol, delta)
 
-        return k * tt.log(2 * np.pi) +\
-               2.0 * tt.sum(tt.log(tt.nlinalg.diag(chol)))+\
-              -0.5 * tt.dot(tt.transpose(tmp), tmp)
+        chol = self.chol
+        k = chol.shape[0]
+
+        tmp = self.solve(chol, delta)
+        return -0.5 * (k * tt.log(2 * np.pi) +\
+                       2.0 * tt.sum(tt.log(tt.nlinalg.diag(chol)))+\
+                       tt.dot(tt.transpose(tmp), tmp))
 
     def _logp_tau(self, value):
         mu = self.mu
-        tau = self.tau
-
         delta = value - mu
+
+        tau = self.tau
         k = tau.shape[0]
 
         result = k * tt.log(2 * np.pi)
