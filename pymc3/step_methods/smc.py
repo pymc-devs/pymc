@@ -27,13 +27,53 @@ from ..model import modelcontext
 from ..vartypes import discrete_types
 from ..theanof import inputvars, make_shared_replacements, \
     join_nonshared_inputs
-from .metropolis import MultivariateNormalProposal as MvNPd
 from numpy.random import seed, randint
 
 from .arraystep import metrop_select
 from ..backends import smc_text as atext
 
 __all__ = ['SMC', 'ATMIP_sample', 'logp_forw']
+
+
+class Proposal(object):
+    """
+    Proposal distributions modified from pymc3 to initially create all the
+    Proposal steps without repeated execution of the RNG- significant speedup!
+
+    Parameters
+    ----------
+    s : :class:`numpy.ndarray`
+    """
+    def __init__(self, s):
+        self.s = np.atleast_1d(s)
+
+
+class MultivariateNormalProposal(Proposal):
+    def __call__(self, num_draws=None):
+        return np.random.multivariate_normal(
+                mean=np.zeros(self.s.shape[0]), cov=self.s, size=num_draws)
+
+
+proposal_dists = {
+    'MultivariateNormal': MultivariateNormalProposal,
+        }
+
+
+def choose_proposal(proposal_name, scale=1.):
+    """
+    Initialises and selects proposal distribution.
+
+    Parameters
+    ----------
+    proposal_name : string
+        Name of the proposal distribution to initialise
+    scale : float or :class:`numpy.ndarray`
+
+    Returns
+    -------
+    class:`pymc3.Proposal` Object
+    """
+    return proposal_dists[proposal_name](scale)
 
 
 class SMC(atext.ArrayStepSharedLLK):
@@ -62,10 +102,9 @@ class SMC(atext.ArrayStepSharedLLK):
     likelihood_name : string
         name of the :class:`pymc3.determinsitic` variable that contains the
         model likelihood - defaults to 'like'
-    proposal_dist :
-        :class:`pymc3.metropolis.Proposal`
+    proposal_name :
         Type of proposal distribution, see
-        :module:`pymc3.step_methods.metropolis` for options
+        smc.proposal_dists.keys() for options
     tune : boolean
         Flag for adaptive scaling based on the acceptance rate
     coef_variation : scalar, float
@@ -95,7 +134,8 @@ class SMC(atext.ArrayStepSharedLLK):
 
     def __init__(self, vars=None, out_vars=None, covariance=None, scaling=1.,
                  n_chains=100, tune=True, tune_interval=100, model=None,
-                 check_bound=True, likelihood_name='like', proposal_dist=MvNPd,
+                 check_bound=True, likelihood_name='like',
+                 proposal_name='MultivariateNormal',
                  coef_variation=1., **kwargs):
 
         model = modelcontext(model)
@@ -110,15 +150,24 @@ class SMC(atext.ArrayStepSharedLLK):
 
         out_varnames = [out_var.name for out_var in out_vars]
 
-        if covariance is None:
+        if covariance is None and proposal_name == 'MultivariateNormal':
             self.covariance = np.eye(sum(v.dsize for v in vars))
+            scale = self.covariance
+        elif covariance is None:
+            scale = np.ones(sum(v.dsize for v in vars))
+        else:
+            scale = covariance
+
         self.scaling = np.atleast_1d(scaling)
         self.tune = tune
         self.check_bnd = check_bound
         self.tune_interval = tune_interval
         self.steps_until_tune = tune_interval
 
-        self.proposal_dist = proposal_dist(self.covariance)
+        self.proposal_name = proposal_name
+        self.proposal_dist = choose_proposal(
+            self.proposal_name, scale=scale)
+
         self.proposal_samples_array = self.proposal_dist(n_chains)
 
         self.stage_sample = 0
@@ -655,7 +704,8 @@ def ATMIP_sample(n_steps, step=None, start=None, homepath=None, chain=0,
                 break
 
             step.covariance = step.calc_covariance()
-            step.proposal_dist = MvNPd(step.covariance)
+            step.proposal_dist = choose_proposal(
+                step.proposal_name, scale=step.covariance)
             step.resampling_indexes = step.resample()
             step.chain_previous_lpoint = step.get_chain_previous_lpoint(mtrace)
 
@@ -674,7 +724,8 @@ def ATMIP_sample(n_steps, step=None, start=None, homepath=None, chain=0,
                            (step.likelihoods - step.likelihoods.max()))
         step.weights = temp / np.sum(temp)
         step.covariance = step.calc_covariance()
-        step.proposal_dist = MvNPd(step.covariance)
+        step.proposal_dist = choose_proposal(
+                step.proposal_name, scale=step.covariance)
         step.resampling_indexes = step.resample()
         step.chain_previous_lpoint = step.get_chain_previous_lpoint(mtrace)
 
