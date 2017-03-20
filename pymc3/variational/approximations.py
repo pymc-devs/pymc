@@ -248,13 +248,10 @@ class Histogram(Approximation):
         self._histogram_logp = None
         super(Histogram, self).__init__(local_rv=local_rv, model=model)
 
-    @staticmethod
-    def check_model(model):
-        return True
-
-    def get_global_vars(self):
-        return [var for var in self.model.unobserved_RVs
-                if var.name in self.trace.varnames]
+    def check_model(self, model):
+        if not all([var.name in self.trace.varnames
+                    for var in model.free_RVs]):
+            raise ValueError('trace has not all FreeRV')
 
     def _setup(self):
         self._histogram_order = ArrayOrdering(self.global_vars)

@@ -423,8 +423,7 @@ class Approximation(object):
     _view = property(lambda self: self.flat_view.view)
     input = property(lambda self: self.flat_view.input)
 
-    @staticmethod
-    def check_model(model):
+    def check_model(self, model):
         """
         Checks that model is valid for variational inference
         """
