@@ -117,10 +117,8 @@ def expand_packed_triangular(n, packed, lower=False, diagonal_only=False):
     elif lower:
         out = tt.zeros((n, n), dtype=theano.config.floatX)
         idxs = np.tril_indices(n)
-        return tt.advanced_set_subtensor(out, packed, idxs)
+        return tt.set_subtensor(out[idxs], packed)
     elif not lower:
         out = tt.zeros((n, n), dtype=theano.config.floatX)
         idxs = np.triu_indices(n)
-        return tt.advanced_set_subtensor(out, packed, idxs)
-    else:
-        assert False
+        return tt.set_subtensor(out[idxs], packed)
