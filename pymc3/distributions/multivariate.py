@@ -619,8 +619,7 @@ class LKJCholeskyCov(Continuous):
             cov = pm.dot(chol, chol.T)
 
             # Extract the standard deviations
-            stds = pm.extracet_packed_triangular(
-                10, packed_chol, lower=True, diagonal_only=True)
+            stds = tt.sqrt(tt.diag(cov))
 
     Implementation
     --------------
@@ -679,16 +678,19 @@ class LKJCholeskyCov(Continuous):
         if 'transform' in kwargs:
             raise ValueError('Invalid parameter: transform.')
         if 'shape' in kwargs:
-            raise ValueError('Invalid shape parameter: shape.')
+            raise ValueError('Invalid parameter: shape.')
 
         shape = self.n * (self.n + 1) // 2
+
+        if sd_dist.shape.ndim not in [0, 1]:
+            raise ValueError('Invalid shape for sd_dist.')
+
         transform = transforms.CholeskyCovPacked(self.n)
 
         kwargs['shape'] = shape
         kwargs['transform'] = transform
         super(LKJCholeskyCov, self).__init__(*args, **kwargs)
         self.eta = eta
-        assert sd_dist.shape.ndim == 1
         self.sd_dist = sd_dist
         self.diag_idxs = transform.diag_idxs
 
@@ -696,28 +698,33 @@ class LKJCholeskyCov(Continuous):
         self.mode[self.diag_idxs] = 1
 
     def logp(self, x):
+        n = self.n
+        eta = self.eta
+
         diag_idxs = self.diag_idxs
         cumsum = tt.cumsum(x ** 2)
-        rowlengths = tt.zeros(self.n)
-        rowlengths = tt.set_subtensor(rowlengths[0], x[0] ** 2)
-        rowlengths = tt.set_subtensor(
-            rowlengths[1:],
+        variance = tt.zeros(n)
+        variance = tt.inc_subtensor(variance[0], x[0] ** 2)
+        variance = tt.inc_subtensor(
+            variance[1:],
             cumsum[diag_idxs[1:]] - cumsum[diag_idxs[:-1]])
-        sd_vals = tt.sqrt(rowlengths)
-        logp_sd = self.sd_dist.logp(sd_vals).sum()
+        sd_vals = tt.sqrt(variance)
 
+        logp_sd = self.sd_dist.logp(sd_vals).sum()
         corr_diag = x[diag_idxs] / sd_vals
-        corr_logdet = np.log(corr_diag).sum()
+
+        logp_lkj = (2 * eta - 3 + n - tt.arange(n)) * np.log(corr_diag)
+        logp_lkj = tt.sum(logp_lkj)
 
         # Compute the log det jacobian of the second transformation
         # described in the docstring.
-        count = np.arange(self.n - 1)
-        det_invjac = - (count * tt.log(sd_vals[1:])).sum()
-        det_invjac += - tt.log(x[diag_idxs]).sum() + tt.log(x[0])
+        idx = tt.arange(n)
+        det_invjac = tt.log(corr_diag) - idx * tt.log(sd_vals)
+        det_invjac = det_invjac.sum()
 
         norm = _lkj_normalizing_constant(eta, self.n)
 
-        return norm + (self.n - 1) * corr_logdet + logp_sd + det_invjac
+        return norm + logp_lkj + logp_sd + det_invjac
 
 
 class LKJCorr(Continuous):
@@ -783,7 +790,7 @@ class LKJCorr(Continuous):
         X = x[self.tri_index]
         X = tt.fill_diagonal(X, 1)
 
-        result = self._normalizing_constant(n, p)
+        result = _lkj_normalizing_constant(n, p)
         result += (n - 1.) * tt.log(det(X))
         return bound(result,
                      tt.all(X <= 1), tt.all(X >= -1),
