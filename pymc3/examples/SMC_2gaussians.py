@@ -50,7 +50,7 @@ with pm.Model() as ATMIP_test:
     llk = pm.Potential('like', like)
 
 with ATMIP_test:
-    step = smc.ATMCMC(
+    step = smc.SMC(
         n_chains=n_chains, tune_interval=tune_interval,
         likelihood_name=ATMIP_test.deterministics[0].name)
 
