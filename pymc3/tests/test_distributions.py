@@ -230,7 +230,7 @@ def normal_logpdf_tau(value, mu, tau):
 
 
 def normal_logpdf_cov(value, mu, cov):
-    return scipy.stats.multivariate_normal.pdf(value, mu, cov)
+    return scipy.stats.multivariate_normal.logpdf(value, mu, cov)
 
 
 def betafn(a):
