@@ -276,7 +276,7 @@ class TestHistogram(SeededTest):
         with model:
             inference = ADVI(local_rv={x: (mu, rho)})
             approx = inference.approx
-            trace0 = approx.sample_vp(1000)
+            trace0 = approx.sample_vp(10000)
             histogram = Histogram(trace0, local_rv={x: (mu, rho)})
             trace1 = histogram.sample_vp(10000)
             histogram.random(no_rand=True)
@@ -286,17 +286,20 @@ class TestHistogram(SeededTest):
         np.testing.assert_allclose(trace0['x'].mean(0), trace1['x'].mean(0), atol=0.02)
         np.testing.assert_allclose(trace0['x'].var(0), trace1['x'].var(0), atol=0.02)
 
-    def test_random(self):
-        with models.multidimensional_model()[1]:
-            full_rank = FullRankADVI()
-            approx = full_rank.approx
-            trace0 = approx.sample_vp(10000)
-            histogram = Histogram(trace0)
+    def test_random_with_transformed(self):
+        p = .2
+        trials = (np.random.uniform(size=10) < p).astype('int8')
+        with pm.Model():
+            p = pm.Uniform('p')
+            pm.Bernoulli('trials', p, observed=trials)
+            trace = pm.sample(1000, step=pm.Metropolis())
+            histogram = Histogram(trace)
             histogram.randidx(None).eval()
             histogram.randidx(1).eval()
             histogram.random_fn(no_rand=True)
             histogram.random_fn(no_rand=False)
             histogram.histogram_logp.eval()
+
 
 if __name__ == '__main__':
     unittest.main()
