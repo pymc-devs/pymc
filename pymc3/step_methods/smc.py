@@ -23,6 +23,7 @@ import shutil
 import theano
 import copy
 
+from six.moves import map, zip
 from ..model import modelcontext
 from ..vartypes import discrete_types
 from ..theanof import inputvars, make_shared_replacements, \
@@ -815,7 +816,6 @@ def _work_chain(work):
     chain : int
         Index of chain that has been sampled
     """
-
     return _sample(*work)
 
 
@@ -843,7 +843,7 @@ def _iter_parallel_chains(draws, step, stage_path, progressbar, model, n_jobs,
     for i in range(int(len(chains) / n_jobs)):
         block_pb.append(pack_pb)
 
-    map(list_pb.extend, block_pb)
+    list(map(list_pb.extend, block_pb))
 
     pm._log.info('Initialising chain traces ...')
     for chain in chains:
@@ -864,12 +864,16 @@ def _iter_parallel_chains(draws, step, stage_path, progressbar, model, n_jobs,
     else:
         chunksize = 1
 
+    p = atext.paripool(
+            _work_chain, work, chunksize=chunksize, nprocs=n_jobs)
+
     with tqdm(total=len(chains)) as pbar:
-        for i in atext.paripool(
-            _work_chain, work, chunksize=chunksize, nprocs=n_jobs):
+        for i, _ in tqdm(enumerate(p)):
+            pbar.update()
 
-            pbar.update(i)
-
+    pbar.close()
+    p.close()
+    
 
 def tune(acc_rate):
     """

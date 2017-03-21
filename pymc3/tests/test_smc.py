@@ -14,11 +14,10 @@ class TestSMC(SeededTest):
         super(TestSMC, self).setUp()
         self.test_folder = mkdtemp(prefix='ATMIP_TEST')
 
-    def test_sample(self):
+    def test_sample_n_core(self, n_jobs=1):
         n_chains = 300
         n_steps = 100
         tune_interval = 25
-        n_jobs = 1
 
         n = 4
 
@@ -69,7 +68,7 @@ class TestSMC(SeededTest):
             stage='0',
             homepath=self.test_folder,
             model=ATMIP_test,
-            rm_flag=False)
+            rm_flag=True)
 
         d = mtrace.get_values('X', combine=True, squeeze=True)
         x = last_sample(d)
@@ -77,5 +76,9 @@ class TestSMC(SeededTest):
 
         np.testing.assert_allclose(mu1, mu1d, rtol=0., atol=0.03)
 
+    def test_sample_double_core(self):
+        self.tearDown()
+        self.test_sample_n_core(n_jobs=2)
+        
     def tearDown(self):
         shutil.rmtree(self.test_folder)

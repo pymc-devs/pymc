@@ -22,6 +22,7 @@ from glob import glob
 import pickle
 import os
 import pandas as pd
+from six.moves import map, zip
 
 import pymc3 as pm
 from ..model import modelcontext
@@ -70,17 +71,18 @@ def paripool(function, work, **kwargs):
 
     if nprocs == 1:
         def pack_one_worker(*work):
-            iterables = map(iter, work)
+            iterables = list(map(iter, work))
             return iterables
 
         iterables = pack_one_worker(work)
         kwargs = {}
-        while True:
+
+        while(True):
             args = [next(it) for it in iterables]
             yield function(*args, **kwargs)
 
         return
-
+    
     if nprocs is None:
         nprocs = multiprocessing.cpu_count()
 
@@ -88,15 +90,12 @@ def paripool(function, work, **kwargs):
                                 initializer=start_message)
 
     try:
-        _ = pool.imap_unordered(function, work, chunksize=chunksize)
-        pool.close()
-        pool.join()
+        yield pool.imap_unordered(function, work, chunksize=chunksize)
+
     except KeyboardInterrupt:
         pm._log.warn('User interrupt! Ctrl + C')
         pool.terminate()
         pool.join()
-
-    return
 
 
 class ArrayStepSharedLLK(BlockedStep):
@@ -488,8 +487,8 @@ def dump_objects(outpath, outlist):
         of objects to save pickle
     """
 
-    with open(outpath, 'w') as f:
-        pickle.dump(outlist, f)
+    with open(outpath, 'wb') as f:
+        pickle.dump(outlist, f, protocol=pickle.HIGHEST_PROTOCOL)
 
 
 def load_objects(loadpath):
