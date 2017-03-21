@@ -223,10 +223,14 @@ def scipy_exponweib_sucks(value, alpha, beta):
     return floatX(pdf)
 
 
-def normal_logpdf(value, mu, tau):
+def normal_logpdf_tau(value, mu, tau):
     (k,) = value.shape
     constant = -0.5 * k * np.log(2 * np.pi) + 0.5 * np.log(np.linalg.det(tau))
     return constant - 0.5 * (value - mu).dot(tau).dot(value - mu)
+
+
+def normal_logpdf_cov(value, mu, cov):
+    return scipy.stats.multivariate_normal.pdf(value, mu, cov)
 
 
 def betafn(a):
@@ -538,9 +542,9 @@ class TestMatchesScipy(SeededTest):
     @pytest.mark.parametrize('n', [1, 2])
     def test_mvnormal(self, n):
         self.pymc3_matches_scipy(MvNormal, Vector(R, n),
-                                 {'mu': Vector(R, n), 'tau': PdMatrix(n)}, normal_logpdf)
+                                 {'mu': Vector(R, n), 'tau': PdMatrix(n)}, normal_logpdf_tau)
         self.pymc3_matches_scipy(MvNormal, Vector(R, n),
-                                 {'mu': Vector(R, n), 'cov': PdMatrix(n)}, normal_logpdf)
+                                 {'mu': Vector(R, n), 'cov': PdMatrix(n)}, normal_logpdf_cov)
 
     def test_mvnormal_init_fail(self):
         with Model():
