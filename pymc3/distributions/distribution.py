@@ -47,7 +47,7 @@ class Distribution(object):
         dist.__init__(*args, **kwargs)
         return dist
 
-    def __init__(self, shape, dtype, testval=None, defaults=[], transform=None):
+    def __init__(self, shape, dtype, testval=None, defaults=(), transform=None):
         self.shape = np.atleast_1d(shape)
         if False in (np.floor(self.shape) == self.shape):
             raise TypeError("Expected int elements in shape")
@@ -91,7 +91,7 @@ def TensorType(dtype, shape):
 
 class NoDistribution(Distribution):
 
-    def __init__(self, shape, dtype, testval=None, defaults=[], transform=None, parent_dist=None, *args, **kwargs):
+    def __init__(self, shape, dtype, testval=None, defaults=(), transform=None, parent_dist=None, *args, **kwargs):
         super(NoDistribution, self).__init__(shape=shape, dtype=dtype,
                                              testval=testval, defaults=defaults,
                                              *args, **kwargs)
@@ -110,7 +110,7 @@ class NoDistribution(Distribution):
 class Discrete(Distribution):
     """Base class for discrete distributions"""
 
-    def __init__(self, shape=(), dtype='int64', defaults=['mode'], *args, **kwargs):
+    def __init__(self, shape=(), dtype='int64', defaults=('mode',), *args, **kwargs):
         if dtype != 'int64':
             raise TypeError('Discrete classes expect dtype to be int64.')
         super(Discrete, self).__init__(
@@ -120,7 +120,7 @@ class Discrete(Distribution):
 class Continuous(Distribution):
     """Base class for continuous distributions"""
 
-    def __init__(self, shape=(), dtype=None, defaults=['median', 'mean', 'mode'], *args, **kwargs):
+    def __init__(self, shape=(), dtype=None, defaults=('median', 'mean', 'mode'), *args, **kwargs):
         if dtype is None:
             dtype = theano.config.floatX
         super(Continuous, self).__init__(

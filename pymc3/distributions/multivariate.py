@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
 import warnings
@@ -154,9 +153,9 @@ class MvStudentT(Continuous):
 
     def __init__(self, nu, Sigma, mu=None, *args, **kwargs):
         super(MvStudentT, self).__init__(*args, **kwargs)
-        self.nu = nu = tt.as_tensor_variable(nu)
+        self.nu = tt.as_tensor_variable(nu)
         self.mu = tt.zeros(Sigma.shape[0]) if mu is None else tt.as_tensor_variable(mu)
-        self.Sigma = Sigma = tt.as_tensor_variable(Sigma)
+        self.Sigma = tt.as_tensor_variable(Sigma)
 
         self.mean = self.median = self.mode = self.mu = mu
 
@@ -361,7 +360,7 @@ class PosDefMatrix(theano.Op):
         return theano.Apply(self, [x], [o])
 
     # Python implementation:
-    def perform(self, node, inputs, outputs):
+    def perform(self, node, inputs, outputs, params=None):
 
         (x,) = inputs
         (z,) = outputs
@@ -453,8 +452,7 @@ class Wishart(Continuous):
                      matrix_pos_def(X),
                      tt.eq(X, X.T),
                      n > (p - 1),
-                     broadcast_conditions=False
-        )
+                     broadcast_conditions=False)
 
 
 def WishartBartlett(name, S, nu, is_cholesky=False, return_cholesky=False, testval=None):
@@ -789,5 +787,4 @@ class LKJCorr(Continuous):
                      tt.all(X <= 1), tt.all(X >= -1),
                      matrix_pos_def(X),
                      n > 0,
-                     broadcast_conditions=False
-        )
+                     broadcast_conditions=False)
