@@ -1,3 +1,4 @@
+import collections
 import numpy as np
 import theano.tensor as tt
 from theano import function
@@ -18,6 +19,7 @@ class _Unpickling(object):
 
 class Distribution(object):
     """Statistical distribution"""
+    rng = None
     def __new__(cls, name, *args, **kwargs):
         if name is _Unpickling:
             return object.__new__(cls)  # for pickle
@@ -56,6 +58,7 @@ class Distribution(object):
         self.testval = testval
         self.defaults = defaults
         self.transform = transform
+        self.parents = collections.OrderedDict()
 
     def default(self):
         return self.get_test_val(self.testval, self.defaults)
@@ -83,6 +86,19 @@ class Distribution(object):
             return val.value
 
         return val
+
+    def draw_parents(self, point=None):
+        s_parents = draw_values(self.parents.values(), point)
+        return collections.OrderedDict(zip(self.parents.keys(), s_parents))
+
+    @classmethod
+    def _st_random(cls, dist_shape, size, **kwargs):
+        return generate_samples(cls.rng, dist_shape=dist_shape, size=size,
+                                **kwargs)
+
+    def random(self, point=None, size=None):
+        s_parents = self.draw_parents(point)
+        return self._st_random(dist_shape=self.shape, size=size, **s_parents)
 
 
 def TensorType(dtype, shape):
