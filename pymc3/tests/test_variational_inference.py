@@ -276,7 +276,7 @@ class TestHistogram(SeededTest):
         with model:
             inference = ADVI(local_rv={x: (mu, rho)})
             approx = inference.approx
-            trace0 = approx.sample_vp(1000)
+            trace0 = approx.sample_vp(10000)
             histogram = Histogram(trace0, local_rv={x: (mu, rho)})
             trace1 = histogram.sample_vp(10000)
             histogram.random(no_rand=True)
