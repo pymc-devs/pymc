@@ -13,9 +13,8 @@ from ..distributions import (DensityDist, Categorical, Multinomial, VonMises, Di
                              NegativeBinomial, Geometric, Exponential, ExGaussian, Normal,
                              Flat, LKJCorr, Wald, ChiSquared, HalfNormal, DiscreteUniform,
                              Bound, Uniform, Triangular, Binomial, SkewNormal, DiscreteWeibull)
-from ..distributions import continuous, multivariate
-from pymc3.theanof import floatX
-import theano
+from ..distributions import continuous
+from nose_parameterized import parameterized
 from numpy import array, inf, log, exp
 from numpy.testing import assert_almost_equal
 import numpy.random as nr
@@ -548,15 +547,10 @@ class TestMatchesScipy(SeededTest):
 
     def test_mvnormal_init_fail(self):
         with Model():
-<<<<<<< HEAD
-            with pytest.raises(ValueError):
-                x = MvNormal('x', np.zeros(3), shape=3)
-=======
             with self.assertRaises(ValueError):
                 x = MvNormal('x', mu=np.zeros(3), shape=3)
             with self.assertRaises(ValueError):
                 x = MvNormal('x', mu=np.zeros(3), cov=np.eye(3), tau=np.eye(3), shape=3)
->>>>>>> add logp tests
 
     @pytest.mark.parametrize('n', [1, 2])
     def test_mvt(self, n):
