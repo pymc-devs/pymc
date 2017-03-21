@@ -40,6 +40,7 @@ class UnitContinuous(Continuous):
         super(UnitContinuous, self).__init__(
             transform=transform, *args, **kwargs)
 
+
 def assert_negative_support(var, label, distname, value=-1e-6):
     # Checks for evidence of positive support for a variable
     if var is None:
@@ -47,7 +48,7 @@ def assert_negative_support(var, label, distname, value=-1e-6):
     try:
         # Transformed distribution
         support = np.isfinite(var.transformed.distribution.dist
-                                .logp(value).tag.test_value)
+                              .logp(value).tag.test_value)
     except AttributeError:
         try:
             # Untransformed distribution
@@ -100,7 +101,7 @@ def get_tau_sd(tau=None, sd=None):
     tau = 1. * tau
     sd = 1. * sd
 
-    return (floatX(tau), floatX(sd))
+    return floatX(tau), floatX(sd)
 
 
 class Uniform(Continuous):
@@ -208,7 +209,7 @@ class Normal(Continuous):
         self.sd = tt.as_tensor_variable(sd)
         self.tau = tt.as_tensor_variable(tau)
 
-        self.mean = self.median = self.mode = self.mu = mu = tt.as_tensor_variable(mu)
+        self.mean = self.median = self.mode = self.mu = tt.as_tensor_variable(mu)
         self.variance = 1. / self.tau
 
         assert_negative_support(sd, 'sd', 'Normal')
@@ -560,7 +561,7 @@ class Laplace(Continuous):
     def __init__(self, mu, b, *args, **kwargs):
         super(Laplace, self).__init__(*args, **kwargs)
         self.b = b = tt.as_tensor_variable(b)
-        self.mean = self.median = self.mode = self.mu = mu = tt.as_tensor_variable(mu)
+        self.mean = self.median = self.mode = self.mu = tt.as_tensor_variable(mu)
 
         self.variance = 2 * self.b**2
 
@@ -612,7 +613,7 @@ class Lognormal(PositiveContinuous):
         super(Lognormal, self).__init__(*args, **kwargs)
         tau, sd = get_tau_sd(tau=tau, sd=sd)
 
-        self.mu = mu = tt.as_tensor_variable(mu)
+        self.mu = tt.as_tensor_variable(mu)
         self.tau = tau = tt.as_tensor_variable(tau)
         self.sd = sd = tt.as_tensor_variable(sd)
 
@@ -677,7 +678,7 @@ class StudentT(Continuous):
         self.nu = nu = tt.as_tensor_variable(nu)
         lam, sd = get_tau_sd(tau=lam, sd=sd)
         self.lam = lam = tt.as_tensor_variable(lam)
-        self.sd = sd = tt.as_tensor_variable(sd)
+        self.sd = tt.as_tensor_variable(sd)
         self.mean = self.median = self.mode = self.mu = mu = tt.as_tensor_variable(mu)
 
         self.variance = tt.switch((nu > 2) * 1,
@@ -748,7 +749,6 @@ class Pareto(PositiveContinuous):
 
         assert_negative_support(alpha, 'alpha', 'Pareto')
         assert_negative_support(m, 'm', 'Pareto')
-
 
     def _random(self, alpha, m, size=None):
         u = np.random.uniform(size=size)
@@ -1095,7 +1095,7 @@ class Weibull(PositiveContinuous):
 
 def StudentTpos(*args, **kwargs):
     warnings.warn("StudentTpos has been deprecated. In future, use HalfStudentT instead.",
-                DeprecationWarning)
+                  DeprecationWarning)
     return HalfStudentT(*args, **kwargs)
 
 HalfStudentT = Bound(StudentT, lower=0)
@@ -1268,8 +1268,8 @@ class SkewNormal(Continuous):
     When alpha=0 we recover the Normal distribution and mu becomes the mean,
     tau the precision and sd the standard deviation. In the limit of alpha
     approaching plus/minus infinite we get a half-normal distribution.
-
     """
+
     def __init__(self, mu=0.0, sd=None, tau=None, alpha=1,  *args, **kwargs):
         super(SkewNormal, self).__init__(*args, **kwargs)
         tau, sd = get_tau_sd(tau=tau, sd=sd)
@@ -1345,4 +1345,5 @@ class Triangular(Continuous):
                          tt.log(2 * (value - lower) / ((upper - lower) * (c - lower))),
                          tt.switch(tt.eq(value, c), tt.log(2 / (upper - lower)),
                          tt.switch(alltrue_elemwise([c < value, value <= upper]),
-                         tt.log(2 * (upper - value) / ((upper - lower) * (upper - c))),np.inf)))
+                                   tt.log(2 * (upper - value) / ((upper - lower) * (upper - c))),
+                                   np.inf)))
