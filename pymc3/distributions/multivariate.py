@@ -14,7 +14,7 @@ from theano.tensor.nlinalg import det, matrix_inverse, trace
 
 import pymc3 as pm
 
-from pymc3.math import logdet, tround
+from pymc3.math import logdet, tround, expand_packed_triangular
 from . import transforms
 from .distribution import Continuous, Discrete, draw_values, generate_samples
 from ..model import Deterministic
@@ -62,21 +62,25 @@ class MvNormal(Continuous):
 
     """
 
-    def __init__(self, mu, cov=None, tau=None, chol=None, gpu_compat=False,
-                 *args, **kwargs):
+    def __init__(self, mu, cov=None, tau=None, chol=None, packed_chol=None,
+                 gpu_compat=False, *args, **kwargs):
         super(MvNormal, self).__init__(*args, **kwargs)
-        if len([i for i in [tau, cov, chol] if i is not None]) != 1:
-            raise ValueError('Incompatible parameterization. Specify exactly one,'
-                             'of tau, cov, or chol to specify distribution.')
+        if len([i for i in [tau, cov, chol, packed_chol] if i is not None]) != 1:
+            raise ValueError('Incompatible parameterization. Specify exactly '
+                             'one of tau, cov, chol, or packed_chol to '
+                             'specify distribution.')
         self.mean = self.median = self.mode = self.mu = mu = tt.as_tensor_variable(mu)
         self.solve = tt.slinalg.Solve(A_structure="lower_triangular", lower=True)
         if cov is not None:
             self.chol = tt.slinalg.cholesky(tt.as_tensor_variable(cov))
+            self.logp = self._logp_chol
         elif tau is not None:
             self.tau = tt.as_tensor_variable(tau)
             self.chol = tt.slinalg.cholesky(tt.nlinalg.matrix_inverse(tau))
             self.logp = self._logp_tau
         else:
+            if self.packed_chol is not None:
+                chol = expand_packed_triangular(packed_chol, lower=True)
             self.chol = tt.as_tensor_variable(chol)
             self.logp = self._logp_chol
         self.gpu_compat = gpu_compat
@@ -109,8 +113,8 @@ class MvNormal(Continuous):
         k = chol.shape[0]
 
         tmp = self.solve(chol, delta)
-        return -0.5 * (k * tt.log(2 * np.pi) +\
-                       2.0 * tt.sum(tt.log(tt.nlinalg.diag(chol)))+\
+        return -0.5 * (k * tt.log(2 * np.pi) +
+                       2.0 * tt.sum(tt.log(tt.nlinalg.diag(chol))) +
                        tt.dot(tt.transpose(tmp), tmp))
 
     def _logp_tau(self, value):
