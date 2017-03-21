@@ -5,7 +5,7 @@ from theano import tensor as tt
 from pymc3 import ArrayOrdering, DictToArrayBijection
 from pymc3.distributions.dist_math import rho2sd, log_normal, log_normal_mv
 from pymc3.variational.opvi import Approximation
-from pymc3.theanof import tt_rng
+from pymc3.theanof import tt_rng, memoize
 
 
 __all__ = [
@@ -245,16 +245,12 @@ class Histogram(Approximation):
     """
     def __init__(self, trace, local_rv=None, model=None):
         self.trace = trace
-        self._histogram_logp = None
         super(Histogram, self).__init__(local_rv=local_rv, model=model)
 
-    @staticmethod
-    def check_model(model):
-        return True
-
-    def get_global_vars(self):
-        return [var for var in self.model.unobserved_RVs
-                if var.name in self.trace.varnames]
+    def check_model(self, model):
+        if not all([var.name in self.trace.varnames
+                    for var in model.free_RVs]):
+            raise ValueError('trace has not all FreeRV')
 
     def _setup(self):
         self._histogram_order = ArrayOrdering(self.global_vars)
@@ -303,20 +299,20 @@ class Histogram(Approximation):
         return self.shared_params
 
     @property
+    @memoize
     def histogram_logp(self):
         """
         Symbolic logp for every point in trace
         """
-        if self._histogram_logp is None:
-            node = self.to_flat_input(self.model.logpt)
+        node = self.to_flat_input(self.model.logpt)
 
-            def mapping(z):
-                return theano.clone(node, {self.input: z})
-            x = self.histogram
-            self._histogram_logp, _ = theano.scan(
-                mapping, x, n_steps=x.shape[0]
-            )
-        return self._histogram_logp
+        def mapping(z):
+            return theano.clone(node, {self.input: z})
+        x = self.histogram
+        _histogram_logp, _ = theano.scan(
+            mapping, x, n_steps=x.shape[0]
+        )
+        return _histogram_logp
 
     @property
     def mean(self):
