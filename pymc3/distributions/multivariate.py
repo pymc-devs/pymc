@@ -71,18 +71,19 @@ class MvNormal(Continuous):
                              'specify distribution.')
         self.mean = self.median = self.mode = self.mu = mu = tt.as_tensor_variable(mu)
         self.solve = tt.slinalg.Solve(A_structure="lower_triangular", lower=True)
+
+        # Use the Cholesky logp unless tau is given
+        self.use_chol_logp = tau is None
         if cov is not None:
             self.chol = tt.slinalg.cholesky(tt.as_tensor_variable(cov))
-            self.logp = self._logp_chol
         elif tau is not None:
             self.tau = tt.as_tensor_variable(tau)
             self.chol = tt.slinalg.cholesky(tt.nlinalg.matrix_inverse(tau))
-            self.logp = self._logp_tau
         else:
-            if self.packed_chol is not None:
+            if packed_chol is not None:
                 chol = expand_packed_triangular(packed_chol, lower=True)
             self.chol = tt.as_tensor_variable(chol)
-            self.logp = self._logp_chol
+
         self.gpu_compat = gpu_compat
         if gpu_compat is False and theano.config.device == 'gpu':
             warnings.warn("The function used is not GPU compatible. Please check the gpu_compat flag")
@@ -100,10 +101,9 @@ class MvNormal(Continuous):
         return mu + (np.dot(np.random.standard_normal(size), chol))
 
     def logp(self, value):
-        if self.chol is not None:
+        if self.use_chol_logp:
             return self._logp_chol(value)
-        else:
-            return self._logp_tau(value)
+        return self._logp_tau(value)
 
     def _logp_chol(self, value):
         mu = self.mu
