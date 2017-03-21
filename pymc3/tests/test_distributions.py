@@ -539,11 +539,20 @@ class TestMatchesScipy(SeededTest):
     def test_mvnormal(self, n):
         self.pymc3_matches_scipy(MvNormal, Vector(R, n),
                                  {'mu': Vector(R, n), 'tau': PdMatrix(n)}, normal_logpdf)
+        self.pymc3_matches_scipy(MvNormal, Vector(R, n),
+                                 {'mu': Vector(R, n), 'cov': PdMatrix(n)}, normal_logpdf)
 
     def test_mvnormal_init_fail(self):
         with Model():
+<<<<<<< HEAD
             with pytest.raises(ValueError):
                 x = MvNormal('x', np.zeros(3), shape=3)
+=======
+            with self.assertRaises(ValueError):
+                x = MvNormal('x', mu=np.zeros(3), shape=3)
+            with self.assertRaises(ValueError):
+                x = MvNormal('x', mu=np.zeros(3), cov=np.eye(3), tau=np.eye(3), shape=3)
+>>>>>>> add logp tests
 
     @pytest.mark.parametrize('n', [1, 2])
     def test_mvt(self, n):
@@ -663,20 +672,7 @@ class TestMatchesScipy(SeededTest):
         sd = np.array([2])
         assert_almost_equal(continuous.get_tau_sd(sd=sd), [1. / sd**2, sd])
 
-    def test_get_tau_chol(self):
-        cov = np.random.randn(3, 3)
-        cov = np.dot(cov, cov.T)
-        tau, chol = multivariate.get_tau_chol(cov=cov)
-        assert_almost_equal(tau.eval(), np.linalg.inv(cov))
-        assert_almost_equal(chol.eval(), np.linalg.cholesky(cov))
-
-        with self.assertRaises(ValueError):
-            tau, chol = multivariate.get_tau_chol()
-        with self.assertRaises(ValueError):
-            tau, chol = multivariate.get_tau_chol(tau, cov)
-
-
-    @pytest.mark.parametrize('value,mu,sigma,nu,logp', [
+    @parameterized.expand([
         (0.5, -50.000, 0.500, 0.500, -99.8068528),
         (1.0, -1.000, 0.001, 0.001, -1992.5922447),
         (2.0, 0.001, 1.000, 1.000, -1.6720416),
