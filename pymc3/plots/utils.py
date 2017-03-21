@@ -99,6 +99,6 @@ def fast_kde(x):
 
     norm_factor = n * dx * (2 * np.pi * std_x ** 2 * scotts_factor ** 2) ** 0.5
 
-    grid /= norm_factor
+    grid = grid / norm_factor
 
     return grid, xmin, xmax
