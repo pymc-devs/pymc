@@ -20,6 +20,7 @@ class _Unpickling(object):
 class Distribution(object):
     """Statistical distribution"""
     rng = None
+
     def __new__(cls, name, *args, **kwargs):
         if name is _Unpickling:
             return object.__new__(cls)  # for pickle

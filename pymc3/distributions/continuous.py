@@ -16,7 +16,7 @@ from pymc3.theanof import floatX
 from . import transforms
 
 from .dist_math import bound, logpow, gammaln, betaln, std_cdf, i0, i1, alltrue_elemwise
-from .distribution import Continuous, draw_values, generate_samples, Bound
+from .distribution import Continuous, Bound
 
 __all__ = ['Uniform', 'Flat', 'Normal', 'Beta', 'Exponential', 'Laplace',
            'StudentT', 'Cauchy', 'HalfCauchy', 'Gamma', 'Weibull',

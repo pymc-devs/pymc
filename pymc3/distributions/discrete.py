@@ -5,7 +5,7 @@ import theano.tensor as tt
 from scipy import stats
 
 from .dist_math import bound, factln, binomln, betaln, logpow
-from .distribution import Discrete, draw_values, generate_samples, reshape_sampled
+from .distribution import Discrete, generate_samples
 from pymc3.math import tround
 
 __all__ = ['Binomial',  'BetaBinomial',  'Bernoulli',  'DiscreteWeibull',
