@@ -1,10 +1,11 @@
 import pkgutil
 import io
 from copy import copy
+import numpy as np
 import theano.tensor as tt
 from .vartypes import isgenerator
 
-__all__ = ['get_data_file', 'DataGenerator']
+__all__ = ['get_data_file', 'GeneratorAdapter']
 
 
 def get_data_file(pkg, path):
@@ -24,30 +25,31 @@ def get_data_file(pkg, path):
     return io.BytesIO(pkgutil.get_data(pkg, path))
 
 
-class DataGenerator(object):
+class GenTensorVariable(tt.TensorVariable):
+    def __init__(self, op, type, name=None):
+        super(GenTensorVariable, self).__init__(type=type, name=name)
+        self.op = op
+
+    def set_gen(self, gen):
+        self.op.set_gen(gen)
+
+    def set_default(self, value):
+        self.op.set_default(value)
+
+    def clone(self):
+        cp = self.__class__(self.op, self.type, self.name)
+        cp.tag = copy(self.tag)
+        return cp
+
+
+class GeneratorAdapter(object):
     """
     Helper class that helps to infer data type of generator with looking
     at the first item, preserving the order of the resulting generator
     """
 
-    class Variable(tt.TensorVariable):
-        def __init__(self, op, type, name=None):
-            super(DataGenerator.Variable, self).__init__(type=type, name=name)
-            self.op = op
-
-        def set_gen(self, gen):
-            self.op.set_gen(gen)
-
-        def set_default(self, value):
-            self.op.set_default(value)
-
-        def clone(self):
-            cp = self.__class__(self.op, self.type, self.name)
-            cp.tag = copy(self.tag)
-            return cp
-
     def make_variable(self, gop, name=None):
-        var = self.Variable(gop, self.tensortype, name)
+        var = GenTensorVariable(gop, self.tensortype, name)
         var.tag.test_value = self.test_value
         return var
 
@@ -81,3 +83,23 @@ class DataGenerator(object):
 
     def __hash__(self):
         return hash(id(self))
+
+
+class DataSampler(object):
+    def __init__(self, data, n=50, seed=42):
+        self.rng = np.random.RandomState(seed)
+        self.data = data
+        self.n = n
+
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        idx = (self.rng
+               .uniform(size=self.n,
+                        low=0.0,
+                        high=self.data.shape[0] - 1e-16)
+               .astype('int64'))
+        return self.data[idx]
+
+    next = __next__

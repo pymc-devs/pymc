@@ -10,7 +10,7 @@ from theano.configparser import change_flags
 from .vartypes import typefilter, continuous_types
 from .memoize import memoize
 from .blocking import ArrayOrdering
-from .data import DataGenerator
+from .data import GeneratorAdapter
 
 __all__ = ['gradient',
            'hessian',
@@ -289,8 +289,8 @@ class GeneratorOp(Op):
 
     def __init__(self, gen, default=None):
         super(GeneratorOp, self).__init__()
-        if not isinstance(gen, DataGenerator):
-            gen = DataGenerator(gen)
+        if not isinstance(gen, GeneratorAdapter):
+            gen = GeneratorAdapter(gen)
         self.generator = gen
         self.set_default(default)
 
@@ -310,8 +310,8 @@ class GeneratorOp(Op):
     __call__ = change_flags(compute_test_value='off')(Op.__call__)
 
     def set_gen(self, gen):
-        if not isinstance(gen, DataGenerator):
-            gen = DataGenerator(gen)
+        if not isinstance(gen, GeneratorAdapter):
+            gen = GeneratorAdapter(gen)
         if not gen.tensortype == self.generator.tensortype:
             raise ValueError('New generator should yield the same type')
         self.generator = gen

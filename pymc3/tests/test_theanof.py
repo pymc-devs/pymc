@@ -2,7 +2,7 @@ import itertools
 import unittest
 import numpy as np
 import theano
-from ..theanof import DataGenerator, GeneratorOp, generator
+from ..theanof import GeneratorAdapter, GeneratorOp, generator
 
 def integers():
     i = 0
@@ -20,7 +20,7 @@ def integers_ndim(ndim):
 
 class TestGenerator(unittest.TestCase):
     def test_basic(self):
-        generator = DataGenerator(integers())
+        generator = GeneratorAdapter(integers())
         gop = GeneratorOp(generator)()
         self.assertEqual(gop.tag.test_value, np.float32(0))
         f = theano.function([], gop)
@@ -33,7 +33,7 @@ class TestGenerator(unittest.TestCase):
     def test_ndim(self):
         for ndim in range(10):
             res = list(itertools.islice(integers_ndim(ndim), 0, 2))
-            generator = DataGenerator(integers_ndim(ndim))
+            generator = GeneratorAdapter(integers_ndim(ndim))
             gop = GeneratorOp(generator)()
             f = theano.function([], gop)
             self.assertEqual(ndim, res[0].ndim)
