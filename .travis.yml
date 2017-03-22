@@ -19,8 +19,9 @@ env:
   - PYTHON_VERSION=3.6 TESTCMD=" -vv --with-timer --with-coverage --cover-package=pymc3 -e test_examples -e test_distributions"
   - PYTHON_VERSION=3.6 TESTCMD=" -vv --with-timer --with-coverage --cover-package=pymc3 pymc3.tests.test_distributions pymc3.tests.test_examples"
   - PYTHON_VERSION=3.6 TESTCMD=" -vv --with-timer --with-coverage --cover-package=pymc3 pymc3.tests.test_distributions_random"
+  - THEANO_FLOAT_TYPE='floatX=float32'
 script:
-  - . ./scripts/test.sh $TESTCMD
+  - . ./scripts/test.sh $TESTCMD 
 
 after_success:
   - coveralls
