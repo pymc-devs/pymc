@@ -97,7 +97,7 @@ class StudentTFixture(KnownMean, KnownCDF):
 
 class LKJCholeskyCovFixture(KnownCDF):
     cdfs = {
-        'log_stds': [stats.norm(loc=x, scale=x / 10).cdf
+        'log_stds': [stats.norm(loc=x, scale=x / 10.).cdf
                      for x in [1, 2, 3, 4, 5]],
         # The entries of the correlation matrix should follow
         # beta(eta - 1 + d/2, eta - 1 + d/2) on (-1, 1).
@@ -112,7 +112,7 @@ class LKJCholeskyCovFixture(KnownCDF):
     def make_model(cls):
         with pm.Model() as model:
             sd_mu = np.array([1, 2, 3, 4, 5])
-            sd_dist = pm.Lognormal.dist(mu=sd_mu, sd=sd_mu / 10, shape=5)
+            sd_dist = pm.Lognormal.dist(mu=sd_mu, sd=sd_mu / 10., shape=5)
             chol_packed = pm.LKJCholeskyCov('chol_packed', 5, 3, sd_dist)
             chol = pm.expand_packed_triangular(5, chol_packed, lower=True)
             cov = tt.dot(chol, chol.T)

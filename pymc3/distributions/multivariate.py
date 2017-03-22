@@ -713,7 +713,7 @@ class LKJCholeskyCov(Continuous):
         logp_sd = self.sd_dist.logp(sd_vals).sum()
         corr_diag = x[diag_idxs] / sd_vals
 
-        logp_lkj = (2 * eta - 3 + n - tt.arange(n)) * np.log(corr_diag)
+        logp_lkj = (2 * eta - 3 + n - tt.arange(n)) * tt.log(corr_diag)
         logp_lkj = tt.sum(logp_lkj)
 
         # Compute the log det jacobian of the second transformation
