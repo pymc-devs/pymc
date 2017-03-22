@@ -415,8 +415,8 @@ class Categorical(Discrete):
             self.k = k = tt.shape(p)[-1].tag.test_value
         except AttributeError:
             self.k = k = tt.shape(p)[-1]
-        self.p = p = tt.as_tensor_variable(p)
-        self.p = (p.T / tt.sum(p, -1)).T
+        p = tt.as_tensor_variable(p)
+        self.p = p = (p.T / tt.sum(p, -1)).T
         self.mode = tt.argmax(p)
         self.parents.update(
             p=p, k=k
