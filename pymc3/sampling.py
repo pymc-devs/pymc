@@ -16,7 +16,7 @@ from tqdm import tqdm
 import sys
 sys.setrecursionlimit(10000)
 
-__all__ = ['sample', 'iter_sample', 'sample_ppc', 'init_nuts']
+__all__ = ['assign_step_methods', 'sample', 'iter_sample', 'sample_ppc', 'init_nuts']
 
 
 def assign_step_methods(model, step=None, methods=(NUTS, HamiltonianMC, Metropolis,
