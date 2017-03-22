@@ -436,9 +436,8 @@ class Categorical(Discrete):
     def _st_random(cls, dist_shape, size, **kwargs):
         p = kwargs['p']
         k = kwargs['k']
-        return generate_samples(partial(cls.rng, np.arange(k)), dist_shape=dist_shape, size=size,
-                                broadcast_shape=p.shape[:-1] or (1,),
-                                **kwargs)
+        return generate_samples(cls.rng, k=np.arange(k), p=p, dist_shape=dist_shape, size=size,
+                                broadcast_shape=p.shape[:-1] or (1,))
 
     def logp(self, value):
         p = self.p
