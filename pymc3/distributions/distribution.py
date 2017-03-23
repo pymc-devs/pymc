@@ -447,23 +447,23 @@ def Bounded(distribution, lower=-np.inf, upper=np.inf, transform='infer'):
                     if default >= upper:
                         self.testval = upper - 1
 
-            self.parents.update(
-                lower=self.lower,
-                upper=self.upper
-            )
-
-        @staticmethod
-        def rng(lower, upper, size=None, **kwargs):
+        def _random(self, lower, upper, point, size=None):
             samples = np.zeros(size).flatten()
             samples[:] = np.nan
             while np.isnan(samples).any():
                 n = np.isnan(samples).sum()
-                sample = distribution.rng(size=n, **kwargs)
+                sample = distribution.random(self, size=n, point=point)
                 select = sample[np.logical_and(sample > lower, sample < upper)]
                 samples[np.isnan(samples)][:select.size] = select
             if size is not None:
                 samples = np.reshape(samples, size)
             return samples
+
+        def random(self, point=None, size=None):
+            lower, upper = draw_values([self.lower, self.upper], point=point)
+            return generate_samples(self._random, lower, upper, point,
+                                    dist_shape=self.shape,
+                                    size=size)
 
         def logp(self, value):
             return bound(distribution.logp(self, value),
