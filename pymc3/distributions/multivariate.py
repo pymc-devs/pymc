@@ -78,7 +78,8 @@ class MvNormal(Continuous):
             self.chol = tt.slinalg.cholesky(tt.as_tensor_variable(cov))
         elif tau is not None:
             self.tau = tt.as_tensor_variable(tau)
-            self.chol = tt.slinalg.cholesky(tt.nlinalg.matrix_inverse(tau))
+            chol = tt.slinalg.cholesky(self.tau)
+            self.chol = self.solve(chol, tt.identity_like(chol)).T
         else:
             if packed_chol is not None:
                 chol = expand_packed_triangular(n=self.mu.shape[0], packed=packed_chol, lower=True)
