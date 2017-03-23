@@ -37,7 +37,7 @@ def get_tau_cov(mu, tau=None, cov=None):
     ----------
     mu : array-like
     tau : array-like, not required if cov is passed
-    cov : array-like, not required of tau is passed
+    cov : array-like, not required if tau is passed
 
     Results
     -------
@@ -607,7 +607,7 @@ class LKJCholeskyCov(Continuous):
             packed_chol = pm.LKJCholeskyCov('chol_cov', 10, 2, sd_dist)
 
             # Define a new MvNormal with the given covariance
-            vals = pm.MvNormal('vals', mu=np.zeros(10), packed_chol=packed_col)
+            vals = pm.MvNormal('vals', mu=np.zeros(10), packed_chol=packed_chol)
 
             # Or transform an uncorrelated normal:
             vals_raw = pm.Normal('vals_raw', mu=np.zeros(10), sd=1)
@@ -616,7 +616,7 @@ class LKJCholeskyCov(Continuous):
 
             # Or compute the covariance matrix
             chol = pm.expand_packed_triangular(10, packed_chol, lower=True)
-            cov = pm.dot(chol, chol.T)
+            cov = tt.dot(chol, chol.T)
 
             # Extract the standard deviations
             stds = tt.sqrt(tt.diag(cov))
