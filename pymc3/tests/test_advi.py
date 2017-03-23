@@ -5,6 +5,7 @@ from pymc3.theanof import inputvars
 from pymc3.variational import advi, advi_minibatch, sample_vp
 from pymc3.variational.advi import _calc_elbo, adagrad_optimizer
 from pymc3.theanof import CallableTensor
+from pymc3.theanof import floatX
 from theano import function, shared
 import theano.tensor as tt
 
@@ -82,7 +83,7 @@ class TestADVI(SeededTest):
 
     def test_check_discrete_minibatch(self):
         disaster_data_t = tt.vector()
-        disaster_data_t.tag.test_value = np.zeros(len(self.disaster_data))
+        disaster_data_t.tag.test_value = floatX(np.zeros(len(self.disaster_data)))
 
         def create_minibatches():
             while True:
@@ -172,13 +173,13 @@ class TestADVI(SeededTest):
         sd = 3.
         mu = -5.
 
-        data = sd * np.random.randn(n) + mu
+        data = floatX(sd * np.random.randn(n) + mu)
 
         d = n / sd**2 + 1 / sd0**2
         mu_post = (n * np.mean(data) / sd**2 + mu0 / sd0**2) / d
 
         data_t = tt.vector()
-        data_t.tag.test_value = np.zeros(1,)
+        data_t.tag.test_value = floatX(np.zeros(1,))
 
         def create_minibatch(data):
             while True:
