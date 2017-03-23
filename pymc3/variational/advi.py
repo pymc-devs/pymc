@@ -111,6 +111,9 @@ def advi(vars=None, start=None, model=None, n=5000, accurate_elbo=False,
         vars = model.vars
     vars = pm.inputvars(vars)
 
+    if len(vars) == 0:
+        raise ValueError('No free random variables to fit.')
+
     if not pm.model.all_continuous(vars):
         raise ValueError('Model can not include discrete RVs for ADVI.')
 
