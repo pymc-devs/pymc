@@ -212,6 +212,9 @@ def join_nonshared_inputs(xs, vars, shared, make_shared=False):
     tensors : list of same tensors but with inarray as input
     inarray : vector of inputs
     """
+    if not vars:
+        raise ValueError('Empty list of variables.')
+
     joined = tt.concatenate([var.ravel() for var in vars])
 
     if not make_shared:
