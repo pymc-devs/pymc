@@ -416,12 +416,16 @@ def Bounded(distribution, lower=-np.inf, upper=np.inf, transform='infer'):
      boundedNormal = pymc3.Bound(pymc3.Normal, lower=0.0)
      par = boundedNormal(mu=0.0, sd=1.0, testval=1.0)
      """
-    from pymc3.distributions import transforms
+    from pymc3.distributions.transforms import (
+        interval, lowerbound, upperbound
+    )
     import inspect
     if issubclass(distribution, _BoundedIndicator):
         raise ValueError('Cannot bound already bounded Distribution')
 
     class Dummy(distribution, _BoundedIndicator):
+        __doc__ = distribution.__doc__
+
         def __init__(self, *args, **kwargs):
             transform = kwargs.get('transform', self._default_transform)
             distribution.__init__(self, *args, **kwargs)
@@ -429,17 +433,17 @@ def Bounded(distribution, lower=-np.inf, upper=np.inf, transform='infer'):
                 default = self.default()
                 lower, upper = self.lower, self.upper
                 if not np.isinf(lower) and not np.isinf(upper):
-                    self.transform = transforms.interval(lower, upper)
+                    self.transform = interval(lower, upper)
                     if default <= lower or default >= upper:
                         self.testval = 0.5 * (upper + lower)
 
                 if not np.isinf(lower) and np.isinf(upper):
-                    self.transform = transforms.lowerbound(lower)
+                    self.transform = lowerbound(lower)
                     if default <= lower:
                         self.testval = lower + 1
 
                 if np.isinf(lower) and not np.isinf(upper):
-                    self.transform = transforms.upperbound(upper)
+                    self.transform = upperbound(upper)
                     if default >= upper:
                         self.testval = upper - 1
 
@@ -475,7 +479,6 @@ def Bounded(distribution, lower=-np.inf, upper=np.inf, transform='infer'):
     Dummy.upper = upper
     Dummy._default_transform = transform
     Dummy.__module__ = modname
-    Dummy.__doc__ = distribution.__doc__
     Dummy.__name__ = 'Bounded'+distribution.__name__
     return Dummy
 
