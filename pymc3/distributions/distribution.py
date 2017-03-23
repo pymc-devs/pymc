@@ -474,6 +474,11 @@ class Bound(object):
         self.upper = upper
 
     def __call__(self, *args, **kwargs):
+        if 'observed' in kwargs:
+            raise ValueError('Observed Bound distributions are not allowed. '
+                             'If you want to model truncated data '
+                             'you can use a pm.Potential in combination '
+                             'with the cumulative probability function.')
         first, args = args[0], args[1:]
 
         return Bounded(first, self.distribution, self.lower, self.upper,
