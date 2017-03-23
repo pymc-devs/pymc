@@ -23,7 +23,3 @@ from .inference import (
     FullRankADVI,
     fit,
 )
-from .approximations import Histogram
-
-from . import approximations
-from . import operators
