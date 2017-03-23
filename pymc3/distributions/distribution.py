@@ -454,7 +454,7 @@ def Bounded(distribution, lower=-np.inf, upper=np.inf, transform='infer'):
                 n = np.isnan(samples).sum()
                 sample = distribution.random(self, size=n, point=point)
                 select = sample[np.logical_and(sample > lower, sample < upper)]
-                samples[np.isnan(samples)][:select.size] = select
+                samples[samples.size-np.isnan(samples).sum():][:select.size] = select
             if size is not None:
                 samples = np.reshape(samples, size)
             return samples
