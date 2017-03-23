@@ -392,115 +392,91 @@ def generate_samples(generator, *args, **kwargs):
     return reshape_sampled(samples, size, dist_shape)
 
 
-class Bounded(Distribution):
+class _BoundedIndicator(object):
+    pass
+
+
+def Bounded(distribution, lower=-np.inf, upper=np.inf, transform='infer'):
     R"""
-    An upper, lower or upper+lower bounded distribution
+     An upper, lower or upper+lower bounded distribution
+     Parameters
+     ----------
+     distribution : pymc3 distribution
+         Distribution to be transformed into a bounded distribution
+     lower : float (optional)
+         Lower bound of the distribution, set to -inf to disable.
+     upper : float (optional)
+         Upper bound of the distribibution, set to inf to disable.
+     transform : 'infer' or object
+         If 'infer', infers the right transform to apply from the supplied bounds.
+         If transform object, has to supply .forward() and .backward() methods.
+         See pymc3.distributions.transforms for more information.
+     Example
+     -------
+     boundedNormal = pymc3.Bound(pymc3.Normal, lower=0.0)
+     par = boundedNormal(mu=0.0, sd=1.0, testval=1.0)
+     """
+    from pymc3.distributions import transforms
+    import inspect
+    if issubclass(distribution, _BoundedIndicator):
+        raise ValueError('Cannot bound already bounded Distribution')
 
-    Parameters
-    ----------
-    distribution : pymc3 distribution
-        Distribution to be transformed into a bounded distribution
-    lower : float (optional)
-        Lower bound of the distribution, set to -inf to disable.
-    upper : float (optional)
-        Upper bound of the distribibution, set to inf to disable.
-    tranform : 'infer' or object
-        If 'infer', infers the right transform to apply from the supplied bounds.
-        If transform object, has to supply .forward() and .backward() methods.
-        See pymc3.distributions.transforms for more information.
-    """
+    class Dummy(distribution, _BoundedIndicator):
+        def __init__(self, *args, **kwargs):
+            transform = kwargs.get('transform', self._default_transform)
+            distribution.__init__(self, *args, **kwargs)
+            if transform == 'infer' and not issubclass(type(self), Discrete):
+                default = self.default()
+                lower, upper = self.lower, self.upper
+                if not np.isinf(lower) and not np.isinf(upper):
+                    self.transform = transforms.interval(lower, upper)
+                    if default <= lower or default >= upper:
+                        self.testval = 0.5 * (upper + lower)
 
-    def __init__(self, distribution, lower, upper, transform='infer', *args, **kwargs):
-        import pymc3.distributions.transforms as transforms
-        self.dist = distribution.dist(*args, **kwargs)
+                if not np.isinf(lower) and np.isinf(upper):
+                    self.transform = transforms.lowerbound(lower)
+                    if default <= lower:
+                        self.testval = lower + 1
 
-        self.__dict__.update(self.dist.__dict__)
-        self.__dict__.update(locals())
+                if np.isinf(lower) and not np.isinf(upper):
+                    self.transform = transforms.upperbound(upper)
+                    if default >= upper:
+                        self.testval = upper - 1
 
-        if hasattr(self.dist, 'mode'):
-            self.mode = self.dist.mode
+            self.parents.update(
+                lower=self.lower,
+                upper=self.upper
+            )
 
-        if transform == 'infer':
-
-            default = self.dist.default()
-
-            if not np.isinf(lower) and not np.isinf(upper):
-                self.transform = transforms.interval(lower, upper)
-                if default <= lower or default >= upper:
-                    self.testval = 0.5 * (upper + lower)
-
-            if not np.isinf(lower) and np.isinf(upper):
-                self.transform = transforms.lowerbound(lower)
-                if default <= lower:
-                    self.testval = lower + 1
-
-            if np.isinf(lower) and not np.isinf(upper):
-                self.transform = transforms.upperbound(upper)
-                if default >= upper:
-                    self.testval = upper - 1
-
-        if issubclass(distribution, Discrete):
-            self.transform = None
-
-    def _random(self, lower, upper, point=None, size=None):
-        samples = np.zeros(size).flatten()
-        i, n = 0, len(samples)
-        while i < len(samples):
-            sample = self.dist.random(point=point, size=n)
-            select = sample[np.logical_and(sample > lower, sample <= upper)]
-            samples[i:(i + len(select))] = select[:]
-            i += len(select)
-            n -= len(select)
-        if size is not None:
-            return np.reshape(samples, size)
-        else:
+        @staticmethod
+        def rng(lower, upper, size=None, **kwargs):
+            samples = np.zeros(size).flatten()
+            samples[:] = np.nan
+            while np.isnan(samples).any():
+                n = np.isnan(samples).sum()
+                sample = distribution.rng(size=n, **kwargs)
+                select = sample[np.logical_and(sample > lower, sample < upper)]
+                samples[np.isnan(samples)][:select.size] = select
+            if size is not None:
+                samples = np.reshape(samples, size)
             return samples
 
-    def random(self, point=None, size=None, repeat=None):
-        lower, upper = draw_values([self.lower, self.upper], point=point)
-        return generate_samples(self._random, lower, upper, point,
-                                dist_shape=self.shape,
-                                size=size)
+        def logp(self, value):
+            return bound(distribution.logp(self, value),
+                         value >= self.lower, value <= self.upper)
+    # pickling
+    frm = inspect.stack()[1]
+    mod = inspect.getmodule(frm[0])
+    if mod is None:
+        modname = '__main__'
+    else:
+        modname = mod.__name__
+    Dummy.lower = lower
+    Dummy.upper = upper
+    Dummy._default_transform = transform
+    Dummy.__module__ = modname
+    Dummy.__doc__ = distribution.__doc__
+    Dummy.__name__ = 'Bounded'+distribution.__name__
+    return Dummy
 
-    def logp(self, value):
-        return bound(self.dist.logp(value),
-                     value >= self.lower, value <= self.upper)
-
-
-class Bound(object):
-    R"""
-    Creates a new upper, lower or upper+lower bounded distribution
-
-    Parameters
-    ----------
-    distribution : pymc3 distribution
-        Distribution to be transformed into a bounded distribution
-    lower : float (optional)
-        Lower bound of the distribution
-    upper : float (optional)
-
-    Example
-    -------
-    boundedNormal = pymc3.Bound(pymc3.Normal, lower=0.0)
-    par = boundedNormal(mu=0.0, sd=1.0, testval=1.0)
-    """
-
-    def __init__(self, distribution, lower=-np.inf, upper=np.inf):
-        self.distribution = distribution
-        self.lower = lower
-        self.upper = upper
-
-    def __call__(self, *args, **kwargs):
-        if 'observed' in kwargs:
-            raise ValueError('Observed Bound distributions are not allowed. '
-                             'If you want to model truncated data '
-                             'you can use a pm.Potential in combination '
-                             'with the cumulative probability function.')
-        first, args = args[0], args[1:]
-
-        return Bounded(first, self.distribution, self.lower, self.upper,
-                       *args, **kwargs)
-
-    def dist(self, *args, **kwargs):
-        return Bounded.dist(self.distribution, self.lower, self.upper,
-                            *args, **kwargs)
+Bound = Bounded
