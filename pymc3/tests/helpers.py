@@ -1,6 +1,8 @@
 import unittest
-import numpy.random as nr
 from logging.handlers import BufferingHandler
+import numpy.random as nr
+from theano.sandbox.rng_mrg import MRG_RandomStreams
+from ..theanof import set_tt_rng, tt_rng
 
 
 class SeededTest(unittest.TestCase):
@@ -12,6 +14,11 @@ class SeededTest(unittest.TestCase):
 
     def setUp(self):
         nr.seed(self.random_seed)
+        self.old_tt_rng = tt_rng()
+        set_tt_rng(MRG_RandomStreams(self.random_seed))
+
+    def tearDown(self):
+        set_tt_rng(self.old_tt_rng)
 
 class TestHandler(BufferingHandler):
     def __init__(self, matcher):

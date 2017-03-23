@@ -319,6 +319,25 @@ class SelectionTestCase(ModelBackendSampledTestCase):
                 npt.assert_equal(result.get_values(varname, chains=[chain]),
                                  expected[chain][varname])
 
+    def test_get_slice_step(self):
+        result = self.mtrace[:]
+        self.assertEqual(len(result), self.draws)
+
+        result = self.mtrace[::2]
+        self.assertEqual(len(result), self.draws // 2)
+
+
+    def test_get_slice_neg_step(self):
+        if hasattr(self, 'skip_test_get_slice_neg_step'):
+            return
+
+        result = self.mtrace[::-1]
+        self.assertEqual(len(result), self.draws)
+
+        result = self.mtrace[::-2]
+        self.assertEqual(len(result), self.draws // 2)
+
+
     def test_get_neg_slice(self):
         expected = []
         for chain in [0, 1]:

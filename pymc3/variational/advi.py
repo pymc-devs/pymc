@@ -160,7 +160,7 @@ def advi(vars=None, start=None, model=None, n=5000, accurate_elbo=False,
             if n < 10:
                 progress.set_description('ELBO = {:,.5g}'.format(elbos[i]))
             elif i % (n // 10) == 0 and i > 0:
-                avg_elbo = elbos[i - n // 10:i].mean()
+                avg_elbo = infmean(elbos[i - n // 10:i])
                 progress.set_description('Average ELBO = {:,.5g}'.format(avg_elbo))
 
             if i % eval_elbo == 0:
@@ -193,14 +193,14 @@ def advi(vars=None, start=None, model=None, n=5000, accurate_elbo=False,
             pm._log.info('Interrupted at {:,d} [{:.0f}%]: ELBO = {:,.5g}'.format(
                 i, 100 * i // n, elbos[i]))
         else:
-            avg_elbo = elbos[i - n // 10:i].mean()
+            avg_elbo = infmean(elbos[i - n // 10:i])
             pm._log.info('Interrupted at {:,d} [{:.0f}%]: Average ELBO = {:,.5g}'.format(
                 i, 100 * i // n, avg_elbo))
     else:
         if n < 10:
             pm._log.info('Finished [100%]: ELBO = {:,.5g}'.format(elbos[-1]))
         else:
-            avg_elbo = elbos[-n // 10:].mean()
+            avg_elbo = infmean(elbos[-n // 10:])
             pm._log.info('Finished [100%]: Average ELBO = {:,.5g}'.format(avg_elbo))
     finally:
         progress.close()
@@ -410,3 +410,8 @@ def sample_vp(
         trace.record(point)
 
     return MultiTrace([trace])
+
+
+def infmean(input_array):
+    """Return the mean of the finite values of the array"""
+    return np.mean(np.asarray(input_array)[np.isfinite(input_array)])

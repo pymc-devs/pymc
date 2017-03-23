@@ -90,3 +90,11 @@ class NUTSNormalLong(sf.NutsFixture, sf.NormalFixture):
     min_n_eff = 300000
     rtol = 0.01
     atol = 0.001
+
+
+class NUTSLKJCholeskyCov(sf.NutsFixture, sf.LKJCholeskyCovFixture):
+    n_samples = 2000
+    tune = 1000
+    burn = 1000
+    chains = 2
+    min_n_eff = 200

@@ -185,19 +185,12 @@ class HDF5(base.BaseTrace):
 
     def _slice(self, idx):
         with self.activate_file:
-            if idx.start is None:
-                burn = 0
-            else:
-                burn = idx.start
-            if idx.step is None:
-                thin = 1
-            else:
-                thin = idx.step
-
+            start, stop, step = idx.indices(len(self))
             sliced = ndarray.NDArray(model=self.model, vars=self.vars)
             sliced.chain = self.chain
-            sliced.samples = {v: self.get_values(v, burn=burn, thin=thin)
+            sliced.samples = {v: self.samples[v][start:stop:step]
                               for v in self.varnames}
+            sliced.draw_idx = (stop - start) // step
             return sliced
 
     def point(self, idx):

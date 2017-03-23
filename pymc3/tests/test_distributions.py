@@ -530,7 +530,7 @@ class TestMatchesScipy(SeededTest):
     def test_mvnormal(self, n):
         self.pymc3_matches_scipy(MvNormal, Vector(R, n),
                                  {'mu': Vector(R, n), 'tau': PdMatrix(n)}, normal_logpdf)
-                                 
+
     def test_mvnormal_init_fail(self):
         with Model():
             with self.assertRaises(ValueError):
@@ -556,7 +556,8 @@ class TestMatchesScipy(SeededTest):
     @parameterized.expand(gen_lkj_cases)
     def test_lkj(self, x, n, p, lp):
         with Model() as model:
-            LKJCorr('lkj', n=n, p=p)
+            LKJCorr('lkj', n=n, p=p, transform=None)
+
         pt = {'lkj': x}
         assert_almost_equal(model.fastlogp(pt), lp, decimal=6, err_msg=str(pt))
 

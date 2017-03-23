@@ -22,7 +22,8 @@ from .special import gammaln, multigammaln
 from .dist_math import bound, logpow, factln
 
 __all__ = ['MvNormal', 'MvStudentT', 'Dirichlet',
-           'Multinomial', 'Wishart', 'WishartBartlett', 'LKJCorr']
+           'Multinomial', 'Wishart', 'WishartBartlett',
+           'LKJCorr', 'LKJCholeskyCov']
 
 
 def get_tau_cov(mu, tau=None, cov=None):
@@ -543,6 +544,189 @@ def WishartBartlett(name, S, nu, is_cholesky=False, return_cholesky=False, testv
         return Deterministic(name, tt.dot(tt.dot(tt.dot(L, A), A.T), L.T))
 
 
+def _lkj_normalizing_constant(n, p):
+    if n == 1:
+        result = gammaln(2. * tt.arange(1, int((p - 1) / 2) + 1)).sum()
+        if p % 2 == 1:
+            result += (0.25 * (p ** 2 - 1) * tt.log(np.pi)
+                       - 0.25 * (p - 1) ** 2 * tt.log(2.)
+                       - (p - 1) * gammaln(int((p + 1) / 2)))
+        else:
+            result += (0.25 * p * (p - 2) * tt.log(np.pi)
+                       + 0.25 * (3 * p ** 2 - 4 * p) * tt.log(2.)
+                       + p * gammaln(p / 2) - (p - 1) * gammaln(p))
+    else:
+        result = -(p - 1) * gammaln(n + 0.5 * (p - 1))
+        k = tt.arange(1, p)
+        result += (0.5 * k * tt.log(np.pi)
+                   + gammaln(n + 0.5 * (p - 1 - k))).sum()
+    return result
+
+
+class LKJCholeskyCov(Continuous):
+    """Covariance matrix with LKJ distributed correlations.
+
+    This defines a distribution over cholesky decomposed covariance
+    matrices, such that the underlying correlation matrices follow an
+    LKJ distribution [1] and the standard deviations follow an arbitray
+    distribution specified by the user.
+
+    Parameters
+    ----------
+    n : int
+        The number of rows of the covariance matrix.
+    eta : float
+        The shape parameter of the LKJ distribution. A value of one
+        implies a uniform distribution of the correlation matrices;
+        larger values put more weight on matrices with few correlations.
+    sd_dist : pm.Distribution
+        A distribution for the standard deviations.
+
+    Notes
+    -----
+    Since the cholesky factor is a lower triangular matrix, we use
+    packed storge for the matrix: We store and return the values of
+    the lower triangular matrix in a one-dimensional array, numbered
+    by row.
+
+        [[0 - - -]
+         [1 2 - -]
+         [3 4 5 -]
+         [6 7 8 9]]
+
+    You can use `pm.expand_packed_triangular(packed_cov, lower=True)`
+    to convert this to a regular two-dimensional array.
+
+    Examples
+    --------
+
+        with pm.Model() as model:
+            # Note that we access the distribution for the standard
+            # deviations, and do not create a new random variable.
+            sd_dist = pm.HalfCauchy.dist(beta=2.5)
+            packed_chol = pm.LKJCholeskyCov('chol_cov', 10, 2, sd_dist)
+
+            # Define a new MvNormal with the given covariance
+            vals = pm.MvNormal('vals', mu=np.zeros(10), packed_chol=packed_col)
+
+            # Or transform an uncorrelated normal:
+            vals_raw = pm.Normal('vals_raw', mu=np.zeros(10), sd=1)
+            chol = pm.expand_packed_triangular(10, packed_chol, lower=True)
+            vals = tt.dot(chol, vals_raw)
+
+            # Or compute the covariance matrix
+            chol = pm.expand_packed_triangular(10, packed_chol, lower=True)
+            cov = pm.dot(chol, chol.T)
+
+            # Extract the standard deviations
+            stds = tt.sqrt(tt.diag(cov))
+
+    Implementation
+    --------------
+    In the unconstrained space all values of the cholesky factor
+    are stored untransformed, except for the diagonal entries, where
+    we use a log-transform to restrict them to positive values.
+
+    To correctly compute log-likelihoods for the standard deviations
+    and the correlation matrix seperatly, we need to consider a
+    second transformation: Given a cholesky factorization
+    :math:`LL^T = \Sigma` of a covariance matrix we can recover the
+    standard deviations :math:`\sigma` as the euclidean lengths of
+    the rows of :math:`L`, and the cholesky factor of the
+    correlation matrix as :math:`U = \text{diag}(\sigma)^{-1}L`.
+    Since each row of :math:`U` has length 1, we do not need to
+    store the diagonal. We define a transformation :math:`\phi`
+    such that :math:`\phi(L)` is the lower triangular matrix containing
+    the standard deviations :math:`\sigma` on the diagonal and the
+    correlation matrix :math:`U` below. In this form we can easily
+    compute the different likelihoods seperatly, as the likelihood
+    of the correlation matrix only depends on the values below the
+    diagonal, and the likelihood of the standard deviation depends
+    only on the diagonal values.
+
+    We still need the determinant of the jacobian of :math:`\phi^{-1}`.
+    If we think of :math:`\phi` as an automorphism on
+    :math:`\mathbb{R}^{\tfrac{n(n+1)}{2}}`, where we order
+    the dimensions as described in the notes above, the jacobian
+    is a block-diagonal matrix, where each block corresponds to
+    one row of :math:`U`. Each block has arrowhead shape, and we
+    can compute the determinant of that as described in [2]. Since
+    the determinant of a block-diagonal matrix is the product
+    of the determinants of the blocks, we get
+
+    .. math::
+
+       \text{det}(J_{\phi^{-1}}(U)) =
+       \left[
+         \prod^{i=2}^N u_{ii}^(i - 1) L_{ii}
+       \right]^{-1}
+
+    References
+    ----------
+    [1] Lewandowski, D., Kurowicka, D. and Joe, H. (2009).
+        "Generating random correlation matrices based on vines and
+        extended onion method." Journal of multivariate analysis,
+        100(9), pp.1989-2001.
+    [2] J. M. isn't a mathematician (http://math.stackexchange.com/users/498/
+        j-m-isnt-a-mathematician), Different approaches to evaluate this
+        determinant, URL (version: 2012-04-14):
+        http://math.stackexchange.com/q/130026
+    """
+    def __init__(self, n, eta, sd_dist, *args, **kwargs):
+        self.n = n
+
+        if 'transform' in kwargs:
+            raise ValueError('Invalid parameter: transform.')
+        if 'shape' in kwargs:
+            raise ValueError('Invalid parameter: shape.')
+
+        shape = self.n * (self.n + 1) // 2
+
+        if sd_dist.shape.ndim not in [0, 1]:
+            raise ValueError('Invalid shape for sd_dist.')
+
+        transform = transforms.CholeskyCovPacked(self.n)
+
+        kwargs['shape'] = shape
+        kwargs['transform'] = transform
+        super(LKJCholeskyCov, self).__init__(*args, **kwargs)
+        self.eta = eta
+        self.sd_dist = sd_dist
+        self.diag_idxs = transform.diag_idxs
+
+        self.mode = np.zeros(shape)
+        self.mode[self.diag_idxs] = 1
+
+    def logp(self, x):
+        n = self.n
+        eta = self.eta
+
+        diag_idxs = self.diag_idxs
+        cumsum = tt.cumsum(x ** 2)
+        variance = tt.zeros(n)
+        variance = tt.inc_subtensor(variance[0], x[0] ** 2)
+        variance = tt.inc_subtensor(
+            variance[1:],
+            cumsum[diag_idxs[1:]] - cumsum[diag_idxs[:-1]])
+        sd_vals = tt.sqrt(variance)
+
+        logp_sd = self.sd_dist.logp(sd_vals).sum()
+        corr_diag = x[diag_idxs] / sd_vals
+
+        logp_lkj = (2 * eta - 3 + n - tt.arange(n)) * tt.log(corr_diag)
+        logp_lkj = tt.sum(logp_lkj)
+
+        # Compute the log det jacobian of the second transformation
+        # described in the docstring.
+        idx = tt.arange(n)
+        det_invjac = tt.log(corr_diag) - idx * tt.log(sd_vals)
+        det_invjac = det_invjac.sum()
+
+        norm = _lkj_normalizing_constant(eta, self.n)
+
+        return norm + logp_lkj + logp_sd + det_invjac
+
+
 class LKJCorr(Continuous):
     R"""
     The LKJ (Lewandowski, Kurowicka and Joe) log-likelihood.
@@ -583,34 +767,21 @@ class LKJCorr(Continuous):
         100(9), pp.1989-2001.
     """
 
-    def __init__(self, n, p, *args, **kwargs):
+    def __init__(self, n, p, transform='interval', *args, **kwargs):
         self.n = n
         self.p = p
         n_elem = int(p * (p - 1) / 2)
         self.mean = np.zeros(n_elem, dtype=theano.config.floatX)
-        super(LKJCorr, self).__init__(shape=n_elem, *args, **kwargs)
+
+        if transform == 'interval':
+            transform = transforms.interval(-1, 1)
+
+        super(LKJCorr, self).__init__(shape=n_elem, transform=transform,
+                                      *args, **kwargs)
 
         self.tri_index = np.zeros([p, p], dtype='int32')
         self.tri_index[np.triu_indices(p, k=1)] = np.arange(n_elem)
         self.tri_index[np.triu_indices(p, k=1)[::-1]] = np.arange(n_elem)
-
-    def _normalizing_constant(self, n, p):
-        if n == 1:
-            result = gammaln(2. * tt.arange(1, int((p - 1) / 2) + 1)).sum()
-            if p % 2 == 1:
-                result += (0.25 * (p ** 2 - 1) * tt.log(np.pi)
-                           - 0.25 * (p - 1) ** 2 * tt.log(2.)
-                           - (p - 1) * gammaln(int((p + 1) / 2)))
-            else:
-                result += (0.25 * p * (p - 2) * tt.log(np.pi)
-                           + 0.25 * (3 * p ** 2 - 4 * p) * tt.log(2.)
-                           + p * gammaln(p / 2) - (p - 1) * gammaln(p))
-        else:
-            result = -(p - 1) * gammaln(n + 0.5 * (p - 1))
-            k = tt.arange(1, p)
-            result += (0.5 * k * tt.log(np.pi)
-                       + gammaln(n + 0.5 * (p - 1 - k))).sum()
-        return result
 
     def logp(self, x):
         n = self.n
@@ -619,7 +790,7 @@ class LKJCorr(Continuous):
         X = x[self.tri_index]
         X = tt.fill_diagonal(X, 1)
 
-        result = self._normalizing_constant(n, p)
+        result = _lkj_normalizing_constant(n, p)
         result += (n - 1.) * tt.log(det(X))
         return bound(result,
                      tt.all(X <= 1), tt.all(X >= -1),

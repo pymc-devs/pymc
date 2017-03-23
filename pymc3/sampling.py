@@ -13,6 +13,8 @@ from .step_methods import (NUTS, HamiltonianMC, Metropolis, BinaryMetropolis,
                            Slice, CompoundStep)
 from tqdm import tqdm
 
+import warnings
+
 import sys
 sys.setrecursionlimit(10000)
 
@@ -81,7 +83,7 @@ def assign_step_methods(model, step=None, methods=(NUTS, HamiltonianMC, Metropol
     return steps
 
 
-def sample(draws, step=None, init='advi', n_init=200000, start=None,
+def sample(draws, step=None, init='ADVI', n_init=200000, start=None,
            trace=None, chain=0, njobs=1, tune=None, progressbar=True,
            model=None, random_seed=-1):
     """
@@ -99,7 +101,7 @@ def sample(draws, step=None, init='advi', n_init=200000, start=None,
         specified, or are partially specified, they will be assigned
         automatically (defaults to None).
     init : str {'ADVI', 'ADVI_MAP', 'MAP', 'NUTS', None}
-        Initialization method to use.
+        Initialization method to use. Only works for auto-assigned step methods.
         * ADVI : Run ADVI to estimate starting points and diagonal covariance
         matrix. If njobs > 1 it will sample starting points from the estimated
         posterior, otherwise it will use the estimated posterior mean.
@@ -157,6 +159,8 @@ def sample(draws, step=None, init='advi', n_init=200000, start=None,
         if start is None:
             start = start_
     else:
+        if step is not None and init is not None:
+            warnings.warn('Instantiated step methods cannot be automatically initialized. init argument ignored.')
         step = assign_step_methods(model, step)
 
     if njobs is None:
