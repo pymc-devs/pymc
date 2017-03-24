@@ -14,6 +14,7 @@ from ..distributions import (DensityDist, Categorical, Multinomial, VonMises, Di
                              Flat, LKJCorr, Wald, ChiSquared, HalfNormal, DiscreteUniform,
                              Bound, Uniform, Triangular, Binomial, SkewNormal, DiscreteWeibull)
 from ..distributions import continuous, multivariate
+from pymc3.theanof import floatX
 from nose_parameterized import parameterized
 from numpy import array, inf, log, exp
 from numpy.testing import assert_almost_equal
@@ -23,6 +24,15 @@ import numpy as np
 from scipy import integrate
 import scipy.stats.distributions as sp
 import scipy.stats
+
+# Keep track of floating point mode for determining equality decimal cutoffs.
+DTYPE = floatX(1.0).dtype.name
+
+
+def select_decimal(float64, float32):
+    """Helper function to choose reasonable decimal cutoffs for different floatX modes."""
+    decimal = float64 if DTYPE == "float64" else float32
+    return decimal
 
 
 def gen_lkj_cases():
@@ -211,7 +221,7 @@ def scipy_exponweib_sucks(value, alpha, beta):
     pdf = np.log(sp.exponweib.pdf(value, 1, alpha, scale=beta))
     if np.isinf(pdf):
         return sp.exponweib.logpdf(value, 1, alpha, scale=beta)
-    return pdf
+    return floatX(pdf)
 
 
 def normal_logpdf(value, mu, tau):
@@ -221,7 +231,7 @@ def normal_logpdf(value, mu, tau):
 
 
 def betafn(a):
-    return scipy.special.gammaln(a).sum(-1) - scipy.special.gammaln(a.sum(-1))
+    return floatX(scipy.special.gammaln(a).sum(-1) - scipy.special.gammaln(a.sum(-1)))
 
 
 def logpow(v, p):
@@ -229,16 +239,16 @@ def logpow(v, p):
 
 
 def discrete_weibull_logpmf(value, q, beta):
-    return np.log(np.power(q, np.power(value, beta)) - np.power(q, np.power(value + 1, beta)))
+    return floatX(np.log(np.power(q, np.power(value, beta)) - np.power(q, np.power(value + 1, beta))))
 
 
 def dirichlet_logpdf(value, a):
-    return (-betafn(a) + logpow(value, a - 1).sum(-1)).sum()
+    return floatX((-betafn(a) + logpow(value, a - 1).sum(-1)).sum())
 
 
 def categorical_logpdf(value, p):
     if value >= 0 and value <= len(p):
-        return np.log(p[value])
+        return floatX(np.log(p[value]))
     else:
         return -inf
 
@@ -306,7 +316,7 @@ class TestMatchesScipy(SeededTest):
         logp = model.fastlogp
         for pt in product(domains, n_samples=100):
             pt = Point(pt, model=model)
-            assert_almost_equal(logp(pt), logp_reference(pt), decimal=6, err_msg=str(pt))
+            assert_almost_equal(logp(pt), logp_reference(pt), decimal=select_decimal(float64=6, float32=2), err_msg=str(pt))
 
     def check_int_to_1(self, model, value, domain, paramdomains):
         pdf = model.fastfn(exp(model.logpt))
@@ -342,7 +352,7 @@ class TestMatchesScipy(SeededTest):
         for pt in product(domains, n_samples=100):
             pt = Point(pt, model=model)
             pt = bij.map(pt)
-            assert_almost_equal(dlogp(pt), ndlogp(pt), decimal=6, err_msg=str(pt))
+            assert_almost_equal(dlogp(pt), ndlogp(pt), decimal=select_decimal(float64=6, float32=4), err_msg=str(pt))
 
     def checkd(self, distfam, valuedomain, vardomains, checks=None, extra_args={}):
         if checks is None:
@@ -415,7 +425,7 @@ class TestMatchesScipy(SeededTest):
         with Model() as model:
             Wald('wald', mu=mu, lam=lam, phi=phi, alpha=alpha, transform=None)
         pt = {'wald': value}
-        assert_almost_equal(model.fastlogp(pt), logp, decimal=6, err_msg=str(pt))
+        assert_almost_equal(model.fastlogp(pt), logp, decimal=select_decimal(float64=6, float32=1), err_msg=str(pt))
 
     def test_beta(self):
         self.pymc3_matches_scipy(Beta, Unit, {'alpha': Rplus, 'beta': Rplus},
@@ -443,7 +453,7 @@ class TestMatchesScipy(SeededTest):
     def test_lognormal(self):
         self.pymc3_matches_scipy(
             Lognormal, Rplus, {'mu': R, 'tau': Rplusbig},
-            lambda value, mu, tau: sp.lognorm.logpdf(value, tau**-.5, 0, np.exp(mu)))
+            lambda value, mu, tau: floatX(sp.lognorm.logpdf(value, tau**-.5, 0, np.exp(mu))))
 
     def test_t(self):
         self.pymc3_matches_scipy(StudentT, R, {'nu': Rplus, 'mu': R, 'lam': Rplus},
@@ -559,7 +569,7 @@ class TestMatchesScipy(SeededTest):
             LKJCorr('lkj', n=n, p=p, transform=None)
 
         pt = {'lkj': x}
-        assert_almost_equal(model.fastlogp(pt), lp, decimal=6, err_msg=str(pt))
+        assert_almost_equal(model.fastlogp(pt), lp, decimal=select_decimal(float64=6, float32=4), err_msg=str(pt))
 
     @parameterized.expand([(2,), (3,)])
     def test_dirichlet(self, n):
@@ -684,7 +694,7 @@ class TestMatchesScipy(SeededTest):
 
     def test_vonmises(self):
         self.pymc3_matches_scipy(VonMises, R, {'mu': Circ, 'kappa': Rplus},
-                                 lambda value, mu, kappa: sp.vonmises.logpdf(value, kappa, loc=mu))
+                                 lambda value, mu, kappa: floatX(sp.vonmises.logpdf(value, kappa, loc=mu)))
 
     def test_multidimensional_beta_construction(self):
         with Model():
