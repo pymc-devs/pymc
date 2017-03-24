@@ -477,7 +477,7 @@ class Approximation(object):
             replacements = {k: v for k, v
                             in self.flat_view.replacements.items() if k not in exclude}
         else:
-            replacements = self.flat_view.replacements
+            replacements = self.flat_view.replacements.copy()
         if more_replacements is not None:   # pragma: no cover
             replacements.update(more_replacements)
         return replacements
