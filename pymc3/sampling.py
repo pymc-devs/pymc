@@ -369,7 +369,7 @@ def _soft_update(a, b):
     a.update({k: v for k, v in b.items() if k not in a})
 
 
-def sample_ppc(trace, samples=None, model=None, vars=None, size=None, random_seed=None, progressbar=True):
+def sample_ppc(trace, samples=None, model=None, vars=None, random_seed=None, progressbar=True):
     """Generate posterior predictive samples from a model given a trace.
 
     Parameters
@@ -384,9 +384,6 @@ def sample_ppc(trace, samples=None, model=None, vars=None, size=None, random_see
     vars : iterable
         Variables for which to compute the posterior predictive samples.
         Defaults to `model.observed_RVs`.
-    size : int
-        The number of random draws from the distribution specified by the
-        parameters in each sample of the trace.
 
     Returns
     -------
@@ -413,8 +410,7 @@ def sample_ppc(trace, samples=None, model=None, vars=None, size=None, random_see
     for idx in indices:
         param = trace[idx]
         for var in vars:
-            ppc[var.name].append(var.distribution.random(point=param,
-                                                         size=size))
+            ppc[var.name].append(var.distribution.random(point=param))
 
     return {k: np.asarray(v) for k, v in ppc.items()}
 
