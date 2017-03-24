@@ -569,6 +569,7 @@ class Approximation(object):
             shape = (l, )
         else:
             shape = (size, l)
+        shape = tt.stack(*shape)
         if theano_condition_is_here:
             no_rand = tt.as_tensor(no_rand)
             sample = getattr(tt_rng(), self.initial_dist_name)(shape)
