@@ -19,6 +19,7 @@ shape of (3, 2).
 """
 from glob import glob
 
+from joblib import Parallel, delayed
 import pickle
 import os
 import pandas as pd
@@ -35,10 +36,6 @@ from ..step_methods.arraystep import BlockedStep
 import multiprocessing
 
 
-def start_message():
-    pm._log.info('Starting', multiprocessing.current_process().name)
-
-
 def paripool(function, work, **kwargs):
     """
     Initialises a pool of workers and executes a function in parallel by
@@ -53,18 +50,12 @@ def paripool(function, work, **kwargs):
         these objects are different for each task.
     nprocs : int
         number of processors to be used in paralell process
-    initmessage : bool
-        log status message during initialisation, default: false
     chunksize : int
         number of work packages to throw at workers in each instance
     """
 
     nprocs = kwargs.get('nprocs', None)
-    initmessage = kwargs.get('initmessage', False)
     chunksize = kwargs.get('chunksize', None)
-
-    if not initmessage:
-        start_message = None
 
     if chunksize is None:
         chunksize = 1
@@ -82,15 +73,12 @@ def paripool(function, work, **kwargs):
             yield function(*args, **kwargs)
 
         return
-    
+
     if nprocs is None:
         nprocs = multiprocessing.cpu_count()
 
-    pool = multiprocessing.Pool(processes=nprocs,
-                                initializer=start_message)
-
     try:
-        yield pool.imap_unordered(function, work, chunksize=chunksize)
+        yield Parallel(n_jobs=nprocs)(delayed(function)(job) for job in work)
 
     except KeyboardInterrupt:
         pm._log.warn('User interrupt! Ctrl + C')
