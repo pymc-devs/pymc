@@ -34,3 +34,21 @@ if not logging.root.handlers:
     _log.setLevel(logging.INFO)
     handler = logging.StreamHandler()
     _log.addHandler(handler)
+
+def tqdm(*args, **kwargs):
+    try:
+        from tqdm import tqdm_notebook
+        return tqdm_notebook(*args, **kwargs)
+    except:
+        from tqdm import tqdm
+        return tqdm(*args, **kwargs)
+
+def trange(*args, **kwargs):
+    try:
+        from tqdm import tnrange
+        return tnrange(*args, **kwargs)
+    except:
+        from tqdm import trange
+        return trange(*args, **kwargs)
+
+
