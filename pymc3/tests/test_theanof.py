@@ -1,10 +1,10 @@
 import pickle
 import itertools
-import unittest
 import numpy as np
 from theano import theano
 from pymc3.theanof import GeneratorOp, generator, tt_rng
 from pymc3.data import DataSampler, GeneratorAdapter
+import pytest
 
 
 def integers():
@@ -21,17 +21,17 @@ def integers_ndim(ndim):
         i += 1
 
 
-class TestGenerator(unittest.TestCase):
+class TestGenerator(object):
     def test_basic(self):
         generator = GeneratorAdapter(integers())
         gop = GeneratorOp(generator)()
-        self.assertEqual(gop.tag.test_value, np.float32(0))
+        assert gop.tag.test_value == np.float32(0)
         f = theano.function([], gop)
-        self.assertEqual(f(), np.float32(0))
-        self.assertEqual(f(), np.float32(1))
+        assert f() == np.float32(0)
+        assert f() == np.float32(1)
         for _ in range(2, 100):
             f()
-        self.assertEqual(f(), np.float32(100))
+        assert f() == np.float32(100)
 
     def test_ndim(self):
         for ndim in range(10):
@@ -39,7 +39,7 @@ class TestGenerator(unittest.TestCase):
             generator = GeneratorAdapter(integers_ndim(ndim))
             gop = GeneratorOp(generator)()
             f = theano.function([], gop)
-            self.assertEqual(ndim, res[0].ndim)
+            assert ndim == res[0].ndim
             np.testing.assert_equal(f(), res[0])
             np.testing.assert_equal(f(), res[1])
 
@@ -49,7 +49,7 @@ class TestGenerator(unittest.TestCase):
         shared = theano.shared(np.float32(10))
         res1 = theano.clone(res, {gop: shared})
         f = theano.function([], res1)
-        self.assertEqual(f(), np.float32(100))
+        assert f() == np.float32(100)
 
     def test_default_value(self):
         def gen():
@@ -61,7 +61,8 @@ class TestGenerator(unittest.TestCase):
         np.testing.assert_equal(np.ones((10, 10)) * 0, f())
         np.testing.assert_equal(np.ones((10, 10)) * 1, f())
         np.testing.assert_equal(np.ones((10, 10)) * 10, f())
-        self.assertRaises(ValueError, gop.set_default, 1)
+        with pytest.raises(ValueError):
+            gop.set_default(1)
 
     def test_set_gen_and_exc(self):
         def gen():
@@ -72,11 +73,11 @@ class TestGenerator(unittest.TestCase):
         f = theano.function([], gop)
         np.testing.assert_equal(np.ones((10, 10)) * 0, f())
         np.testing.assert_equal(np.ones((10, 10)) * 1, f())
-        self.assertRaises(StopIteration, f)
+        with pytest.raises(StopIteration):
+            f()
         gop.set_gen(gen())
         np.testing.assert_equal(np.ones((10, 10)) * 0, f())
         np.testing.assert_equal(np.ones((10, 10)) * 1, f())
-        self.assertRaises(StopIteration, f)
 
     def test_pickling(self):
         data = np.random.uniform(size=(1000, 10))
@@ -84,7 +85,8 @@ class TestGenerator(unittest.TestCase):
         gen = generator(minibatches)
         pickle.loads(pickle.dumps(gen))
         bad_gen = generator(integers())
-        self.assertRaises(Exception, pickle.dumps, bad_gen)
+        with pytest.raises(Exception):
+            pickle.dumps(bad_gen)
 
     def test_gen_cloning_with_shape_change(self):
         data = np.random.uniform(size=(1000, 10))
@@ -93,7 +95,7 @@ class TestGenerator(unittest.TestCase):
         gen_r = tt_rng().normal(size=gen.shape).T
         X = gen.dot(gen_r)
         res, _ = theano.scan(lambda x: x.sum(), X, n_steps=X.shape[0])
-        self.assertEquals(res.eval().shape, (50,))
+        assert res.eval().shape == (50,)
         shared = theano.shared(data)
         res2 = theano.clone(res, {gen: shared**2})
-        self.assertEquals(res2.eval().shape, (1000,))
+        assert res2.eval().shape == (1000,)

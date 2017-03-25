@@ -11,8 +11,8 @@ def test_probit():
 
 
 class TestLogDet(SeededTest):
-    def setUp(self):
-        super(TestLogDet, self).setUp()
+    def setup_method(self):
+        super(TestLogDet, self).setup_method()
         utt.seed_rng()
         self.op_class = LogDet
         self.op = logdet

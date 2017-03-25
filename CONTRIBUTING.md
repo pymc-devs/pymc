@@ -77,11 +77,11 @@ We recommended that your contribution complies with the following guidelines bef
 You can also check for common programming errors with the following
 tools:
 
-* Code with good unittest **coverage** (at least 80%), check with:
+* Code with good test **coverage** (at least 80%), check with:
 
   ```bash
-  $ pip install nose coverage
-  $ nosetests --with-coverage path/to/tests_for_package
+  $ pip install pytest pytest-cov coverage
+  $ pytest --cov=pymc3 pymc3/tests/tests_for_package.py
   ```
 
 * No `pyflakes` warnings, check with:
@@ -111,7 +111,7 @@ We have provided a Dockerfile which helps for isolating build problems, and loca
 Install [Docker](https://www.docker.com/) for your operating system, clone this repo, then
 run `./scripts/start_container.sh`. This should start a local docker container called `pymc3`,
 as well as a [`jupyter`](http://jupyter.org/) notebook server running on port 8888. You will have to open
-a browser at `localhost:8888`. The repo will be running the code from your local copy of `pymc3`, 
+a browser at `localhost:8888`. The repo will be running the code from your local copy of `pymc3`,
 so it is good for development.  You may also use it to run the test suite, with
 
 ```bash

@@ -6,19 +6,18 @@ before_install:
   - "sh -e /etc/init.d/xvfb start"
   - if [ ${MATPLOTLIB} = "1.2" ]; then mkdir $HOME/.matplotlib; fi
   - if [ ${MATPLOTLIB} = "1.2" ]; then cp ${SRCDIR}/tools/matplotlibrc $HOME/.matplotlib/matplotlibrc; fi
-  #- mkdir -p $HOME/.config/matplotlib; echo "backend: agg" > $HOME/.config/matplotlib/matplotlibrc
 
 install:
   - . ./scripts/create_testenv.sh
-  - pip install coveralls pylint
+  - pip install coveralls pylint nose_parameterized
 
 env:
-  - PYTHON_VERSION=2.7 TESTCMD=" -vv --with-timer --with-coverage --cover-package=pymc3 -e test_examples -e test_distributions"
-  - PYTHON_VERSION=2.7 RUN_PYLINT="true" TESTCMD=" -vv --with-timer --with-coverage --cover-package=pymc3 pymc3.tests.test_distributions pymc3.tests.test_examples"
-  - PYTHON_VERSION=2.7 TESTCMD=" -vv --with-timer --with-coverage --cover-package=pymc3 pymc3.tests.test_distributions_random"
-  - PYTHON_VERSION=3.6 TESTCMD=" -vv --with-timer --with-coverage --cover-package=pymc3 -e test_examples -e test_distributions"
-  - PYTHON_VERSION=3.6 TESTCMD=" -vv --with-timer --with-coverage --cover-package=pymc3 pymc3.tests.test_distributions pymc3.tests.test_examples"
-  - PYTHON_VERSION=3.6 TESTCMD=" -vv --with-timer --with-coverage --cover-package=pymc3 pymc3.tests.test_distributions_random"
+  - PYTHON_VERSION=2.7 TESTCMD="--durations=10 --ignore=pymc3/tests/test_examples.py --cov-append --ignore=pymc3/tests/test_distributions_random.py --ignore=pymc3/tests/test_variational_inference.py --ignore=pymc3/tests/test_shared.py"
+  - PYTHON_VERSION=2.7 RUN_PYLINT="true" TESTCMD="--durations=10 --cov-append pymc3/tests/test_distributions_random.py pymc3/tests/test_shared.py"
+  - PYTHON_VERSION=2.7 TESTCMD="--durations=10 --cov-append pymc3/tests/test_examples.py pymc3/tests/test_variational_inference.py"
+  - PYTHON_VERSION=3.6 TESTCMD="--durations=10 --cov-append --ignore=pymc3/tests/test_examples.py --ignore=pymc3/tests/test_distributions_random.py --ignore=pymc3/tests/test_variational_inference.py --ignore=pymc3/tests/test_shared.py"
+  - PYTHON_VERSION=3.6 TESTCMD="--durations=10 --cov-append pymc3/tests/test_distributions_random.py pymc3/tests/test_shared.py"
+  - PYTHON_VERSION=3.6 TESTCMD="--durations=10 --cov-append pymc3/tests/test_examples.py pymc3/tests/test_variational_inference.py"
 script:
   - . ./scripts/test.sh $TESTCMD
 

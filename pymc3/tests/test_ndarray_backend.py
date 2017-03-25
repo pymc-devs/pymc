@@ -1,8 +1,8 @@
-import unittest
 import numpy as np
 import numpy.testing as npt
 from pymc3.tests import backend_fixtures as bf
 from pymc3.backends import base, ndarray
+import pytest
 
 
 STATS1 = [{
@@ -107,28 +107,28 @@ class TestMultiTrace(bf.ModelBackendSetupTestCase):
     backend = ndarray.NDArray
     shape = ()
 
-    def setUp(self):
-        super(TestMultiTrace, self).setUp()
+    def setup_method(self):
+        super(TestMultiTrace, self).setup_method()
         self.strace0 = self.strace
 
-        super(TestMultiTrace, self).setUp()
+        super(TestMultiTrace, self).setup_method()
         self.strace1 = self.strace
 
     def test_multitrace_nonunique(self):
-        self.assertRaises(ValueError,
-                          base.MultiTrace, [self.strace0, self.strace1])
+        with pytest.raises(ValueError):
+            base.MultiTrace([self.strace0, self.strace1])
 
     def test_merge_traces_nonunique(self):
         mtrace0 = base.MultiTrace([self.strace0])
         mtrace1 = base.MultiTrace([self.strace1])
 
-        self.assertRaises(ValueError,
-                          base.merge_traces, [mtrace0, mtrace1])
+        with pytest.raises(ValueError):
+            base.merge_traces([mtrace0, mtrace1])
 
 
-class TestSqueezeCat(unittest.TestCase):
+class TestSqueezeCat(object):
 
-    def setUp(self):
+    def setup_method(self):
         self.x = np.arange(10)
         self.y = np.arange(10, 20)
 

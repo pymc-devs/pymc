@@ -28,7 +28,7 @@ def get_city_data():
     return data.merge(unique, 'inner', on='fips')
 
 
-class ARM5_4(SeededTest):
+class TestARM5_4(SeededTest):
     def build_model(self):
         wells = pm.get_data_file('pymc3.examples', 'data/wells.dat')
         data = pd.read_csv(wells, delimiter=u' ', index_col=u'id', dtype={u'switch': np.int8})
@@ -233,8 +233,8 @@ class TestLatentOccupancy(SeededTest):
     Created by Chris Fonnesbeck on 2008-07-28.
     Copyright (c) 2008 University of Otago. All rights reserved.
     """
-    def setUp(self):
-        super(TestLatentOccupancy, self).setUp()
+    def setup_method(self):
+        super(TestLatentOccupancy, self).setup_method()
         # Sample size
         n = 100
         # True mean count, given occupancy
