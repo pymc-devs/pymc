@@ -133,7 +133,7 @@ class MvNormal(Continuous):
         delta_trans = tt.dot(chol_tau.T, delta)
         return -0.5 * (k * tt.log(2 * np.pi) -
                        2.0 * tt.sum(tt.log(tt.nlinalg.diag(chol_tau))) +
-                       tt.dot(delta_trans.T, delta_trans))
+                       tt.dot(tt.transpose(delta_trans), delta_trans))
 
 
 class MvStudentT(Continuous):
