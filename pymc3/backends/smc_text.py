@@ -19,9 +19,11 @@ shape of (3, 2).
 """
 from glob import glob
 
+from joblib import Parallel, delayed
 import pickle
 import os
 import pandas as pd
+from six.moves import map, zip
 
 import pymc3 as pm
 from ..model import modelcontext
@@ -32,10 +34,6 @@ from ..blocking import DictToArrayBijection, ArrayOrdering,\
 from ..step_methods.arraystep import BlockedStep
 
 import multiprocessing
-
-
-def start_message():
-    pm._log.info('Starting', multiprocessing.current_process().name)
 
 
 def paripool(function, work, **kwargs):
@@ -52,30 +50,26 @@ def paripool(function, work, **kwargs):
         these objects are different for each task.
     nprocs : int
         number of processors to be used in paralell process
-    initmessage : bool
-        log status message during initialisation, default: false
     chunksize : int
         number of work packages to throw at workers in each instance
     """
 
     nprocs = kwargs.get('nprocs', None)
-    initmessage = kwargs.get('initmessage', False)
     chunksize = kwargs.get('chunksize', None)
-
-    if not initmessage:
-        start_message = None
+    verbose = kwargs.get('verbose', None)
 
     if chunksize is None:
         chunksize = 1
 
     if nprocs == 1:
         def pack_one_worker(*work):
-            iterables = map(iter, work)
+            iterables = list(map(iter, work))
             return iterables
 
         iterables = pack_one_worker(work)
         kwargs = {}
-        while True:
+
+        while(True):
             args = [next(it) for it in iterables]
             yield function(*args, **kwargs)
 
@@ -84,19 +78,12 @@ def paripool(function, work, **kwargs):
     if nprocs is None:
         nprocs = multiprocessing.cpu_count()
 
-    pool = multiprocessing.Pool(processes=nprocs,
-                                initializer=start_message)
-
     try:
-        _ = pool.imap_unordered(function, work, chunksize=chunksize)
-        pool.close()
-        pool.join()
+        yield Parallel(n_jobs=nprocs, batch_size=chunksize, verbose=verbose)(
+            delayed(function)(job) for job in work)
+
     except KeyboardInterrupt:
         pm._log.warn('User interrupt! Ctrl + C')
-        pool.terminate()
-        pool.join()
-
-    return
 
 
 class ArrayStepSharedLLK(BlockedStep):
@@ -488,8 +475,8 @@ def dump_objects(outpath, outlist):
         of objects to save pickle
     """
 
-    with open(outpath, 'w') as f:
-        pickle.dump(outlist, f)
+    with open(outpath, 'wb') as f:
+        pickle.dump(outlist, f, protocol=pickle.HIGHEST_PROTOCOL)
 
 
 def load_objects(loadpath):
