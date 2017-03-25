@@ -345,8 +345,9 @@ respect to a given target distribution,</p>
 \[\mathbb{E}{\pi} [ f ] = \int \mathrm{d}q \, \pi (q) \, f(q),\]</div>
 <p>using the states of a Markov chain, <span class="math">\({q{0}, \ldots, q_{N} }\)</span>,</p>
 <div class="math">
-\[ \begin{align}\begin{aligned}\mathbb{E}{\pi} [ f ] \approx \hat{f}{N} = \frac{1}{N + 1} \sum_{n = 0}^{N} f(q_{n}).\\These estimators, however, are guaranteed to be accurate only\end{aligned}\end{align} \]</div>
-<p>asymptotically as the chain grows to be infinitely long,</p>
+\[\mathbb{E}{\pi} [ f ] \approx \hat{f}{N} = \frac{1}{N + 1} \sum_{n = 0}^{N} f(q_{n}).\]</div>
+<p>These estimators, however, are guaranteed to be accurate only
+asymptotically as the chain grows to be infinitely long,</p>
 <div class="math">
 \[\lim_{N \rightarrow \infty} \hat{f}{N} = \mathbb{E}{\pi} [ f ].\]</div>
 <p>To be useful in applied analyses, we need MCMC estimators to

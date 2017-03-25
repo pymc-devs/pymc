@@ -2118,6 +2118,76 @@ extended onion method.&#8221; Journal of multivariate analysis,
 </table>
 </dd></dl>
 
+<dl class="class">
+<dt id="pymc3.distributions.multivariate.LKJCholeskyCov">
+<em class="property">class </em><code class="descclassname">pymc3.distributions.multivariate.</code><code class="descname">LKJCholeskyCov</code><span class="sig-paren">(</span><em>n</em>, <em>eta</em>, <em>sd_dist</em>, <em>*args</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.distributions.multivariate.LKJCholeskyCov" title="Permalink to this definition">¶</a></dt>
+<dd><p>Covariance matrix with LKJ distributed correlations.</p>
+<blockquote>
+<div>This defines a distribution over cholesky decomposed covariance
+matrices, such that the underlying correlation matrices follow an
+LKJ distribution [1] and the standard deviations follow an arbitray
+distribution specified by the user.</div></blockquote>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>n</strong> : int</p>
+<blockquote class="last">
+<div><blockquote>
+<div><p>The number of rows of the covariance matrix.</p>
+</div></blockquote>
+<dl class="docutils">
+<dt>eta</dt>
+ <span class="classifier-delimiter">:</span> <span class="classifier">float</span><dd><p class="first last">The shape parameter of the LKJ distribution. A value of one
+implies a uniform distribution of the correlation matrices;
+larger values put more weight on matrices with few correlations.</p>
+</dd>
+<dt>sd_dist</dt>
+ <span class="classifier-delimiter">:</span> <span class="classifier">pm.Distribution</span><dd><p class="first last">A distribution for the standard deviations.</p>
+</dd>
+</dl>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">Notes</p>
+<p>Since the cholesky factor is a lower triangular matrix, we use
+packed storge for the matrix: We store and return the values of
+the lower triangular matrix in a one-dimensional array, numbered
+by row.</p>
+<blockquote>
+<div><dl class="docutils">
+<dt>[[0 - - -]</dt>
+<dd>[1 2 - -]
+[3 4 5 -]
+[6 7 8 9]]</dd>
+</dl>
+</div></blockquote>
+<p>You can use <cite>pm.expand_packed_triangular(packed_cov, lower=True)</cite>
+to convert this to a regular two-dimensional array.</p>
+<p class="rubric">Examples</p>
+<dl class="docutils">
+<dt>with pm.Model() as model:</dt>
+<dd><p class="first"># Note that we access the distribution for the standard
+# deviations, and do not create a new random variable.
+sd_dist = pm.HalfCauchy.dist(beta=2.5)
+packed_chol = pm.LKJCholeskyCov(&#8216;chol_cov&#8217;, 10, 2, sd_dist)</p>
+<p># Define a new MvNormal with the given covariance
+vals = pm.MvNormal(&#8216;vals&#8217;, mu=np.zeros(10), packed_chol=packed_chol)</p>
+<p># Or transform an uncorrelated normal:
+vals_raw = pm.Normal(&#8216;vals_raw&#8217;, mu=np.zeros(10), sd=1)
+chol = pm.expand_packed_triangular(10, packed_chol, lower=True)
+vals = tt.dot(chol, vals_raw)</p>
+<p># Or compute the covariance matrix
+chol = pm.expand_packed_triangular(10, packed_chol, lower=True)
+cov = tt.dot(chol, chol.T)</p>
+<p class="last"># Extract the standard deviations
+stds = tt.sqrt(tt.diag(cov))</p>
+</dd>
+</dl>
+</dd></dl>
+
 </div>
 <div class="section" id="mixture">
 <h3>Mixture<a class="headerlink" href="#mixture" title="Permalink to this headline">¶</a></h3>
@@ -2776,7 +2846,7 @@ automatically (defaults to None).</p>
 </div></blockquote>
 <p><strong>init</strong> : str {&#8216;ADVI&#8217;, &#8216;ADVI_MAP&#8217;, &#8216;MAP&#8217;, &#8216;NUTS&#8217;, None}</p>
 <blockquote>
-<div><p>Initialization method to use.
+<div><p>Initialization method to use. Only works for auto-assigned step methods.
 * ADVI : Run ADVI to estimate starting points and diagonal covariance
 matrix. If njobs &gt; 1 it will sample starting points from the estimated
 posterior, otherwise it will use the estimated posterior mean.
@@ -4176,6 +4246,47 @@ matrix M, log(abs(det(M))), on CPU. Avoids det(M) overflow/
 underflow.</p>
 <p>Note: Once PR #3959 (<a class="reference external" href="https://github.com/Theano/Theano/pull/3959/">https://github.com/Theano/Theano/pull/3959/</a>) by harpone is merged,
 this must be removed.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="pymc3.math.expand_packed_triangular">
+<code class="descclassname">pymc3.math.</code><code class="descname">expand_packed_triangular</code><span class="sig-paren">(</span><em>n</em>, <em>packed</em>, <em>lower=False</em>, <em>diagonal_only=False</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.math.expand_packed_triangular" title="Permalink to this definition">¶</a></dt>
+<dd><p>Convert a packed triangular matrix into a two dimensional array.</p>
+<p>Triangular matrices can be stored with better space efficiancy by
+storing the non-zero values in a one-dimensional array. We number
+the elements by row like this (for lower or upper triangular matrices):</p>
+<blockquote>
+<div><dl class="docutils">
+<dt>[[0 - - -]     [[0 1 2 3]</dt>
+<dd>[1 2 - -]      [- 4 5 6]
+[3 4 5 -]      [- - 7 8]
+[6 7 8 9]]     [- - - 9]</dd>
+</dl>
+</div></blockquote>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>n</strong> : int</p>
+<blockquote>
+<div><p>The number of rows of the triangular matrix.</p>
+</div></blockquote>
+<p><strong>packed</strong> : ndarray or theano.vector</p>
+<blockquote>
+<div><p>The matrix in packed format.</p>
+</div></blockquote>
+<p><strong>lower</strong> : bool</p>
+<blockquote>
+<div><p>If true, assume that the matrix is lower triangular.</p>
+</div></blockquote>
+<p><strong>diagonal_only</strong> : bool</p>
+<blockquote class="last">
+<div><p>If true, return only the diagonal of the matrix.</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
 </dd></dl>
 
 <dl class="function">
