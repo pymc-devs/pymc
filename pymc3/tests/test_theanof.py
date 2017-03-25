@@ -2,8 +2,8 @@ import pickle
 import itertools
 import unittest
 import numpy as np
-import theano
-from pymc3.theanof import GeneratorOp, generator
+from theano import theano, tensor as tt
+from pymc3.theanof import GeneratorOp, generator, tt_rng
 from pymc3.data import DataSampler, GeneratorAdapter
 
 
@@ -85,3 +85,15 @@ class TestGenerator(unittest.TestCase):
         pickle.loads(pickle.dumps(gen))
         bad_gen = generator(integers())
         self.assertRaises(Exception, pickle.dumps, bad_gen)
+
+    def test_gen_cloning_with_shape_change(self):
+        data = np.random.uniform(size=(1000, 10))
+        minibatches = DataSampler(data, batchsize=50)
+        gen = generator(minibatches)
+        gen_r = tt_rng().normal(size=gen.shape).T
+        X = gen.dot(gen_r)
+        res, _ = theano.scan(lambda x: x.sum(), X, n_steps=X.shape[0])
+        self.assertEquals(res.eval().shape, (50,))
+        shared = theano.shared(data)
+        res2 = theano.clone(res, {gen: shared**2})
+        self.assertEquals(res2.eval().shape, (1000,))
