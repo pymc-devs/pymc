@@ -14,7 +14,7 @@ from theano.tensor.nlinalg import det, matrix_inverse, trace
 
 import pymc3 as pm
 
-from pymc3.math import logdet, tround, expand_packed_triangular
+from pymc3.math import tround, expand_packed_triangular
 from . import transforms
 from .distribution import Continuous, Discrete, draw_values, generate_samples
 from ..model import Deterministic
@@ -72,25 +72,26 @@ class MvNormal(Continuous):
         self.mean = self.median = self.mode = self.mu = tt.as_tensor_variable(mu)
         self.solve = tt.slinalg.Solve(A_structure="lower_triangular", lower=True)
 
-        # Use the Cholesky logp unless tau is given
-        self.use_chol_logp = tau is None
+        self.has_tau = tau is not None
         if cov is not None:
-            self.chol = tt.slinalg.cholesky(tt.as_tensor_variable(cov))
+            self.chol_cov = tt.slinalg.cholesky(tt.as_tensor_variable(cov))
         elif tau is not None:
-            self.tau = tt.as_tensor_variable(tau)
-            chol = tt.slinalg.cholesky(self.tau)
-            self.chol = self.solve(chol, tt.identity_like(chol)).T
+            self.chol_tau = tt.slinalg.cholesky(tt.as_tensor_variable(tau))
         else:
             if packed_chol is not None:
                 chol = expand_packed_triangular(n=self.mu.shape[0], packed=packed_chol, lower=True)
-            self.chol = tt.as_tensor_variable(chol)
+            self.chol_cov = tt.as_tensor_variable(chol)
 
         self.gpu_compat = gpu_compat
         if gpu_compat is False and theano.config.device == 'gpu':
             warnings.warn("The function used is not GPU compatible. Please check the gpu_compat flag")
 
     def random(self, point=None, size=None):
-        mu, chol = draw_values([self.mu, self.chol], point=point)
+        if self.has_tau:
+            mu, chol = draw_values([self.mu, self.chol_tau], point=point)
+        else:
+            mu, chol = draw_values([self.mu, self.chol_cov], point=point)
+
         if size is None or size == mu.shape:
             size = mu.shape
         elif isinstance(size, collections.Iterable):
@@ -99,39 +100,40 @@ class MvNormal(Continuous):
         else:
             size = [size]
             size.append(mu.shape[0])
-        return mu + (np.dot(np.random.standard_normal(size), chol))
+
+        standard_normal = np.random.standard_normal(size)
+        if self.has_tau:
+            return mu + scipy.linalg.solve_triangular(chol, standard_normal, lower=True)
+        return mu + np.dot(standard_normal, chol)
 
     def logp(self, value):
-        if self.use_chol_logp:
-            return self._logp_chol(value)
-        return self._logp_tau(value)
+        if self.has_tau:
+            return self._logp_tau(value)
+        return self._logp_chol(value)
 
     def _logp_chol(self, value):
         mu = self.mu
         delta = value - mu
 
-        chol = self.chol
-        k = chol.shape[0]
+        chol_cov = self.chol_cov
+        k = chol_cov.shape[0]
 
-        tmp = self.solve(chol, delta)
+        delta_trans = self.solve(chol_cov, delta)
         return -0.5 * (k * tt.log(2 * np.pi) +
-                       2.0 * tt.sum(tt.log(tt.nlinalg.diag(chol))) +
-                       tt.dot(tt.transpose(tmp), tmp))
+                       2.0 * tt.sum(tt.log(tt.nlinalg.diag(chol_cov))) +
+                       tt.dot(tt.transpose(delta_trans), delta_trans))
 
     def _logp_tau(self, value):
         mu = self.mu
         delta = value - mu
 
-        tau = self.tau
-        k = tau.shape[0]
+        chol_tau = self.chol_tau
+        k = chol_tau.shape[0]
 
-        result = k * tt.log(2 * np.pi)
-        if self.gpu_compat:
-            result -= tt.log(det(tau))
-        else:
-            result -= logdet(tau)
-        result += (tt.dot(delta, tau) * delta).sum(axis=delta.ndim - 1)
-        return -1 / 2. * result
+        delta_trans = tt.dot(chol_tau.T, delta)
+        return -0.5 * (k * tt.log(2 * np.pi) -
+                       2.0 * tt.sum(tt.log(tt.nlinalg.diag(chol_tau))) +
+                       tt.dot(delta_trans.T, delta_trans))
 
 
 class MvStudentT(Continuous):
