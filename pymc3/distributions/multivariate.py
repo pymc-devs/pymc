@@ -88,23 +88,23 @@ class MvNormal(Continuous):
 
     def random(self, point=None, size=None):
         if self.has_tau:
-            mu, chol = draw_values([self.mu, self.chol_tau], point=point)
+            mu, chol_tau = draw_values([self.mu, self.chol_tau], point=point)
         else:
-            mu, chol = draw_values([self.mu, self.chol_cov], point=point)
+            mu, chol_cov = draw_values([self.mu, self.chol_cov], point=point)
 
-        if size is None or size == mu.shape:
-            size = mu.shape
-        elif isinstance(size, collections.Iterable):
-            size = list(size)
-            size.append(mu.shape[0])
+        if size is None:
+            size = []
         else:
-            size = [size]
-            size.append(mu.shape[0])
+            try:
+                size = list(size)
+            except TypeError:
+                size = [size]
+        size.append(mu.shape[0])
 
         standard_normal = np.random.standard_normal(size)
         if self.has_tau:
-            return mu + scipy.linalg.solve_triangular(chol, standard_normal, lower=True)
-        return mu + np.dot(standard_normal, chol)
+            return mu + scipy.linalg.solve_triangular(chol_tau, standard_normal.T, lower=True).T
+        return mu + np.dot(standard_normal, chol_cov)
 
     def logp(self, value):
         if self.has_tau:
