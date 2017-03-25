@@ -4,7 +4,7 @@ from copy import copy
 import numpy as np
 import theano.tensor as tt
 import theano
-from .vartypes import isgenerator
+import pymc3 as pm
 
 __all__ = [
     'get_data_file',
@@ -59,7 +59,7 @@ class GeneratorAdapter(object):
         return var
 
     def __init__(self, generator):
-        if not isgenerator(generator):
+        if not pm.vartypes.isgenerator(generator):
             raise TypeError('Object should be generator like')
         self.test_value = copy(next(generator))
         # make pickling potentially possible
@@ -103,6 +103,25 @@ class DataSampler(object):
     batchsize : sample size over zero axis
     seed : int for numpy random generator
     dtype : str representing dtype
+
+    Usage
+    -----
+    >>> import pickle
+    >>> data = np.random.normal(size=(10000, 10)) + 10
+    >>> minibatches = DataSampler(data, batchsize=50)
+    >>> with pm.Model():
+    ...     sd = pm.Uniform('sd', 0, 10)
+    ...     mu = pm.Normal('mu')
+    ...     obs_norm = pm.Normal('obs_norm', mu=mu, sd=sd,
+    ...                          observed=minibatches,
+    ...                          total_size=data.shape[0])
+    ...     approx = pm.fit(method='fullrank_advi')
+    >>> new = pickle.loads(pickle.dumps(approx))
+    >>> new #doctest: +ELLIPSIS
+    <pymc3.variational.approximations.FullRank object at 0x...>
+    >>> new.cov.eval().round(1)
+    array([[ 1.1, -1.9],
+           [-1.9,  3.3]])
     """
     def __init__(self, data, batchsize=50, seed=42, dtype='floatX'):
         self.dtype = theano.config.floatX if dtype == 'floatX' else dtype
