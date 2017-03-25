@@ -34,8 +34,8 @@ class NUTS(BaseHMC):
       samples but the burn-in should be approximately `target_accept`
       (the default for this is 0.8).
     - `diverging`: Whether the trajectory for this sample diverged. If
-      there are many diverging samples, this usually indicates that a
-      region of the posterior has high curvature. Reparametrization can
+      there are any divergences after burnin, this indicates that
+      the results might not be reliable. Reparametrization can
       often help, but you can also try to increase `target_accept` to
       something like 0.9 or 0.95.
     - `energy`: The energy at the point in phase-space where the sample
@@ -89,7 +89,9 @@ class NUTS(BaseHMC):
             Maximum energy change allowed during leapfrog steps. Larger
             deviations will abort the integration.
         target_accept : float (0,1) default .8
-            target for avg accept probability between final branch and initial position
+            Try to find a step size such that the average acceptance
+            probability across the trajectories are close to target_accept.
+            Higher values for target_accept lead to smaller step sizes.
         step_scale : float, default 0.25
             Size of steps to take, automatically scaled down by 1/n**(1/4).
             If step size adaptation is switched off, the resulting step size
@@ -98,14 +100,31 @@ class NUTS(BaseHMC):
         k : float (.5,1) default .75
             scaling of speed of adaptation
         t0 : int, default 10
-            slows inital adapatation
-        adapt_step_size : bool
-            Whether step size should be enabled. If this is disabled,
-            `k`, `t0`, `gamma` and `target_accept` are ignored.
+            slows initial adaptation
+        adapt_step_size : bool, default=True
+            Whether step size adaptation should be enabled. If this is
+            disabled, `k`, `t0`, `gamma` and `target_accept` are ignored.
         integrator : str, default "leapfrog"
             The integrator to use for the trajectories. One of "leapfrog",
             "two-stage" or "three-stage". The second two can increase
             sampling speed for some high dimensional problems.
+        step_scale : float, default=0.25
+            Initial size of steps to take, automatically scaled down
+            by 1/n**(1/4).
+        scaling : array_like, ndim = {1,2}
+            The inverse mass, or precision matrix. One dimensional arrays are
+            interpreted as diagonal matrices. If `is_cov` is set to True,
+            this will be interpreded as the mass or covariance matrix.
+        is_cov : bool, default=False
+            Treat the scaling as mass or covariance matrix.
+        potential : Potential, optional
+            An object that represents the Hamiltonian with methods `velocity`,
+            `energy`, and `random` methods. It can be specified instead
+            of the scaling matrix.
+        model : pymc3.Model
+            The model
+        vars : list of theano variables
+            Which variables the nuts sampler should be applied to.
         kwargs: passed to BaseHMC
 
         The step size adaptation stops when `self.tune` is set to False.
