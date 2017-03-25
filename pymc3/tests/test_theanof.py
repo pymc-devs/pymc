@@ -1,8 +1,11 @@
+import pickle
 import itertools
 import unittest
 import numpy as np
 import theano
-from ..theanof import GeneratorAdapter, GeneratorOp, generator
+from pymc3.theanof import GeneratorOp, generator
+from pymc3.data import DataSampler, GeneratorAdapter
+
 
 def integers():
     i = 0
@@ -74,3 +77,11 @@ class TestGenerator(unittest.TestCase):
         np.testing.assert_equal(np.ones((10, 10)) * 0, f())
         np.testing.assert_equal(np.ones((10, 10)) * 1, f())
         self.assertRaises(StopIteration, f)
+
+    def test_pickling(self):
+        data = np.random.uniform(size=(1000, 10))
+        minibatches = DataSampler(data, batchsize=50)
+        gen = generator(minibatches)
+        pickle.loads(pickle.dumps(gen))
+        bad_gen = generator(integers())
+        self.assertRaises(Exception, pickle.dumps, bad_gen)

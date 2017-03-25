@@ -3,9 +3,14 @@ import io
 from copy import copy
 import numpy as np
 import theano.tensor as tt
+import theano
 from .vartypes import isgenerator
 
-__all__ = ['get_data_file', 'GeneratorAdapter']
+__all__ = [
+    'get_data_file',
+    'GeneratorAdapter',
+    'DataSampler'
+]
 
 
 def get_data_file(pkg, path):
@@ -86,10 +91,24 @@ class GeneratorAdapter(object):
 
 
 class DataSampler(object):
-    def __init__(self, data, n=50, seed=42):
+    """
+    Convenient picklable data sampler for minibatch inference.
+
+    This generator can be used for passing to pm.generator
+    creating picklable theano computational grapf
+
+    Parameters
+    ----------
+    data : array like
+    batchsize : sample size over zero axis
+    seed : int for numpy random generator
+    dtype : str representing dtype
+    """
+    def __init__(self, data, batchsize=50, seed=42, dtype='floatX'):
+        self.dtype = theano.config.floatX if dtype == 'floatX' else dtype
         self.rng = np.random.RandomState(seed)
         self.data = data
-        self.n = n
+        self.n = batchsize
 
     def __iter__(self):
         return self
@@ -100,6 +119,6 @@ class DataSampler(object):
                         low=0.0,
                         high=self.data.shape[0] - 1e-16)
                .astype('int64'))
-        return self.data[idx]
+        return np.asarray(self.data[idx], self.dtype)
 
     next = __next__
