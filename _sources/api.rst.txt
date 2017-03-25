@@ -126,9 +126,9 @@ Step-methods
 NUTS
 """"
 
-.. currentmodule:: pymc3.step_methods.nuts
+.. currentmodule:: pymc3.step_methods.hmc.nuts
 
-.. automodule:: pymc3.step_methods.nuts
+.. automodule:: pymc3.step_methods.hmc.nuts
    :members:
 
 Metropolis
@@ -150,9 +150,9 @@ Slice
 Hamiltonian Monte Carlo
 """""""""""""""""""""""
 
-.. currentmodule:: pymc3.step_methods.hmc
+.. currentmodule:: pymc3.step_methods.hmc.hmc
 
-.. automodule:: pymc3.step_methods.hmc
+.. automodule:: pymc3.step_methods.hmc.hmc
    :members:
 
 

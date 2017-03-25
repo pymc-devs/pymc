@@ -100,10 +100,10 @@
 <li class="toctree-l2"><a class="reference internal" href="#inference">Inference</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="#module-pymc3.sampling">Sampling</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#step-methods">Step-methods</a><ul>
-<li class="toctree-l4"><a class="reference internal" href="#nuts">NUTS</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#module-pymc3.step_methods.hmc.nuts">NUTS</a></li>
 <li class="toctree-l4"><a class="reference internal" href="#module-pymc3.step_methods.metropolis">Metropolis</a></li>
 <li class="toctree-l4"><a class="reference internal" href="#module-pymc3.step_methods.slicer">Slice</a></li>
-<li class="toctree-l4"><a class="reference internal" href="#module-pymc3.step_methods.hmc">Hamiltonian Monte Carlo</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#module-pymc3.step_methods.hmc.hmc">Hamiltonian Monte Carlo</a></li>
 </ul>
 </li>
 <li class="toctree-l3"><a class="reference internal" href="#variational">Variational</a><ul>
@@ -3059,8 +3059,67 @@ If &#8216;ADVI&#8217;, number of iterations, if &#8216;metropolis&#8217;, number
 </div>
 <div class="section" id="step-methods">
 <h3>Step-methods<a class="headerlink" href="#step-methods" title="Permalink to this headline">¶</a></h3>
-<div class="section" id="nuts">
-<h4>NUTS<a class="headerlink" href="#nuts" title="Permalink to this headline">¶</a></h4>
+<div class="section" id="module-pymc3.step_methods.hmc.nuts">
+<span id="nuts"></span><h4>NUTS<a class="headerlink" href="#module-pymc3.step_methods.hmc.nuts" title="Permalink to this headline">¶</a></h4>
+<dl class="class">
+<dt id="pymc3.step_methods.hmc.nuts.NUTS">
+<em class="property">class </em><code class="descclassname">pymc3.step_methods.hmc.nuts.</code><code class="descname">NUTS</code><span class="sig-paren">(</span><em>vars=None</em>, <em>Emax=1000</em>, <em>target_accept=0.8</em>, <em>gamma=0.05</em>, <em>k=0.75</em>, <em>t0=10</em>, <em>adapt_step_size=True</em>, <em>max_treedepth=10</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.step_methods.hmc.nuts.NUTS" title="Permalink to this definition">¶</a></dt>
+<dd><p>Automatically tunes step size and adjust number of steps for good performance.</p>
+<p>Implements &#8220;Algorithm 6: Efficient No-U-Turn Sampler with Dual Averaging&#8221; in:</p>
+<p>Hoffman, Matthew D., &amp; Gelman, Andrew. (2011).
+The No-U-Turn Sampler: Adaptively Setting Path Lengths in Hamiltonian Monte Carlo.</p>
+<p>Nuts provides a number of statistics, that can be accessed using
+<cite>trace.get_sampler_stats</cite>:</p>
+<ul>
+<li><p class="first"><cite>mean_tree_accept</cite>: The mean acceptance probability for the tree
+that generated this sample. The mean of these values across all
+samples but the burn-in should be approximately <cite>target_accept</cite>
+(the default for this is 0.8).</p>
+</li>
+<li><p class="first"><cite>diverging</cite>: Whether the trajectory for this sample diverged. If
+there are any divergences after burnin, this indicates that
+the results might not be reliable. Reparametrization can
+often help, but you can also try to increase <cite>target_accept</cite> to
+something like 0.9 or 0.95.</p>
+</li>
+<li><p class="first"><cite>energy</cite>: The energy at the point in phase-space where the sample
+was accepted. This can be used to identify posteriors with
+problematically long tails. See below for an example.</p>
+</li>
+<li><p class="first"><cite>energy_change</cite>: The difference in energy between the start and
+the end of the trajectory. For a perfect integrator this would
+always be zero.</p>
+</li>
+<li><p class="first"><cite>max_energy_change</cite>: The maximum difference in energy along the
+whole trajectory.</p>
+</li>
+<li><p class="first"><cite>depth</cite>: The depth of the tree that was used to generate this sample</p>
+</li>
+<li><p class="first"><cite>tree_size</cite>: The number of leafs of the sampling tree, when the
+sample was accepted. This is usually a bit less than
+$2 ^      ext{depth}$. If the tree size is large, the sampler is using
+a lot of leapfrog steps to find the next sample. This can for
+example happen if there are strong correlations in the posterior,
+if the posterior has long tails, if there are regions of high
+curvature (&#8220;funnels&#8221;), or if the variance estimates in the mass
+matrix are inaccurate. Reparametrisation of the model or estimating
+the posterior variances from past samples might help.</p>
+</li>
+<li><p class="first"><cite>tune</cite>: This is <cite>True</cite>, if step size adaptation was turned on when
+this sample was generated.</p>
+</li>
+<li><p class="first"><cite>step_size</cite>: The step size used for this sample.</p>
+</li>
+<li><dl class="first docutils">
+<dt><cite>step_size_bar</cite>: The current best known step-size. After the tuning</dt>
+<dd><p class="first last">samples, the step size is set to this value. This should converge
+during tuning.</p>
+</dd>
+</dl>
+</li>
+</ul>
+</dd></dl>
+
 </div>
 <div class="section" id="module-pymc3.step_methods.metropolis">
 <span id="metropolis"></span><h4>Metropolis<a class="headerlink" href="#module-pymc3.step_methods.metropolis" title="Permalink to this headline">¶</a></h4>
@@ -3217,8 +3276,10 @@ Categorical variables.</p>
 </dd></dl>
 
 </div>
-<div class="section" id="module-pymc3.step_methods.hmc">
-<span id="hamiltonian-monte-carlo"></span><h4>Hamiltonian Monte Carlo<a class="headerlink" href="#module-pymc3.step_methods.hmc" title="Permalink to this headline">¶</a></h4>
+<div class="section" id="module-pymc3.step_methods.hmc.hmc">
+<span id="hamiltonian-monte-carlo"></span><h4>Hamiltonian Monte Carlo<a class="headerlink" href="#module-pymc3.step_methods.hmc.hmc" title="Permalink to this headline">¶</a></h4>
+<p>Created on Mar 7, 2011</p>
+<p>&#64;author: johnsalvatier</p>
 </div>
 </div>
 <div class="section" id="variational">
