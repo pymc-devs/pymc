@@ -3,7 +3,6 @@ from __future__ import division
 import logging
 
 import numpy as np
-import tqdm
 
 import pymc3 as pm
 from pymc3.variational.approximations import MeanField, FullRank
@@ -56,7 +55,7 @@ class Inference(object):
             score=score, fn_kwargs=fn_kwargs,
             **kwargs
         )
-        progress = tqdm.trange(n)
+        progress = pm.trange(n)
         try:
             for _ in progress:
                 step_func()
@@ -92,7 +91,7 @@ class Inference(object):
         i = 0
         scores = np.empty(n)
         scores[:] = np.nan
-        progress = tqdm.trange(n)
+        progress = pm.trange(n)
         if score:
             try:
                 for i in progress:

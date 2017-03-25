@@ -13,8 +13,6 @@ import pymc3 as pm
 from pymc3.backends.base import MultiTrace
 from ..theanof import floatX
 
-from tqdm import trange
-
 __all__ = ['advi', 'sample_vp']
 
 ADVIFit = namedtuple('ADVIFit', 'means, stds, elbo_vals')
@@ -150,7 +148,7 @@ def advi(vars=None, start=None, model=None, n=5000, accurate_elbo=False,
     # Optimization loop
     elbos = np.empty(n)
     divergence_flag = False
-    progress = trange(n)
+    progress = pm.trange(n)
     try:
         uw_i, elbo_current = f()
         if np.isnan(elbo_current):
@@ -405,7 +403,7 @@ def sample_vp(
     trace = pm.sampling.NDArray(model=model, vars=vars_sampled)
     trace.setup(draws=draws, chain=0)
 
-    range_ = trange(draws) if progressbar else range(draws)
+    range_ = pm.trange(draws) if progressbar else range(draws)
 
     for _ in range_:
         # 'point' is like {'var1': np.array(0.1), 'var2': np.array(0.2), ...}

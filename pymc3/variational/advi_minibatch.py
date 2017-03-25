@@ -5,7 +5,6 @@ import theano
 import theano.tensor as tt
 from theano.sandbox.rng_mrg import MRG_RandomStreams
 from theano.configparser import change_flags
-import tqdm
 
 import pymc3 as pm
 from pymc3.theanof import reshape_t, inputvars, floatX
@@ -520,7 +519,7 @@ def advi_minibatch(vars=None, start=None, model=None, n=5000, n_mcsamples=1,
 
     # Optimization loop
     elbos = np.empty(n)
-    progress = tqdm.trange(n)
+    progress = pm.trange(n)
     for i in progress:
         e = f(*next(minibatches))
         if np.isnan(e):

@@ -7,7 +7,6 @@ import numpy as np
 import theano
 from theano.ifelse import ifelse
 import theano.tensor as tt
-from tqdm import tqdm
 from .updates import adagrad
 
 import pymc3 as pm
@@ -100,7 +99,7 @@ def svgd(vars=None, n=5000, n_particles=100, jitter=.01,
                                 updates=svgd_updates)
     # Run svgd optimization
     if progressbar:
-        progress = tqdm(np.arange(n))
+        progress = pm.tqdm(np.arange(n))
     else:
         progress = np.arange(n)
 

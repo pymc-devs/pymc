@@ -11,7 +11,6 @@ from .model import modelcontext, Point
 from .step_methods import (NUTS, HamiltonianMC, Metropolis, BinaryMetropolis,
                            BinaryGibbsMetropolis, CategoricalGibbsMetropolis,
                            Slice, CompoundStep)
-from tqdm import tqdm
 
 import warnings
 
@@ -191,7 +190,7 @@ def _sample(draws, step=None, start=None, trace=None, chain=0, tune=None,
     sampling = _iter_sample(draws, step, start, trace, chain,
                             tune, model, random_seed)
     if progressbar:
-        sampling = tqdm(sampling, total=draws)
+        sampling = pm.tqdm(sampling, total=draws)
     try:
         strace = None
         for strace in sampling:
@@ -405,7 +404,7 @@ def sample_ppc(trace, samples=None, model=None, vars=None, size=None, random_see
     seed(random_seed)
 
     if progressbar:
-        indices = tqdm(randint(0, len(trace), samples), total=samples)
+        indices = pm.tqdm(randint(0, len(trace), samples), total=samples)
     else:
         indices = randint(0, len(trace), samples)
 
