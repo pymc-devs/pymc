@@ -23,7 +23,9 @@ __all__ = ['gradient',
            'join_nonshared_inputs',
            'make_shared_replacements',
            'generator',
-           'GradScale']
+           'GradScale',
+           'set_tt_rng',
+           'tt_rng']
 
 
 def inputvars(a):
@@ -395,6 +397,8 @@ def set_tt_rng(new_rng):
     # pylint: disable=global-statement
     global _tt_rng
     # pylint: enable=global-statement
+    if isinstance(new_rng, int):
+        new_rng = MRG_RandomStreams(new_rng)
     _tt_rng = new_rng
     launch_rng(_tt_rng)
 

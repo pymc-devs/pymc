@@ -107,21 +107,26 @@ class DataSampler(object):
     Usage
     -----
     >>> import pickle
-    >>> data = np.random.normal(size=(10000, 10)) + 10
+    >>> from functools import partial
+    >>> np.random.seed(42) # reproducibility
+    >>> pm.set_tt_rng(42)
+    >>> data = np.random.normal(size=(1000,)) + 10
     >>> minibatches = DataSampler(data, batchsize=50)
     >>> with pm.Model():
     ...     sd = pm.Uniform('sd', 0, 10)
-    ...     mu = pm.Normal('mu')
+    ...     mu = pm.Normal('mu', sd=10)
     ...     obs_norm = pm.Normal('obs_norm', mu=mu, sd=sd,
     ...                          observed=minibatches,
     ...                          total_size=data.shape[0])
-    ...     approx = pm.fit(method='fullrank_advi')
+    ...     adam = partial(pm.adam, learning_rate=.8) # easy problem
+    ...     approx = pm.fit(10000, method='advi', obj_optimizer=adam)
     >>> new = pickle.loads(pickle.dumps(approx))
     >>> new #doctest: +ELLIPSIS
-    <pymc3.variational.approximations.FullRank object at 0x...>
-    >>> new.cov.eval().round(1)
-    array([[ 1.1, -1.9],
-           [-1.9,  3.3]])
+    <pymc3.variational.approximations.MeanField object at 0x...>
+    >>> new.sample_vp(draws=1000)['mu'].mean()
+    10.08339999101371
+    >>> new.sample_vp(draws=1000)['sd'].mean()
+    1.2178044136104513
     """
     def __init__(self, data, batchsize=50, seed=42, dtype='floatX'):
         self.dtype = theano.config.floatX if dtype == 'floatX' else dtype
