@@ -29,12 +29,29 @@ class Optimizer(object):
         self.hist = np.asarray(())
 
     @change_flags(compute_test_value='off')
-    def refresh(self):
+    def refresh(self, kwargs=None):
+        """
+        Recompile step_function and reset updates
+
+        Parameters
+        ----------
+        kwargs : kwargs for theano.function
+        """
         updates = self.optimizer(self.loss, self.wrt)
-        self.step_function = theano.function([], self.loss, updates=updates)
+        self.step_function = theano.function([], self.loss, updates=updates, **kwargs)
         self.hist = np.asarray(())
 
-    def fit(self, n=5000):
+    def fit(self, n=5000, callbacks=()):
+        """
+        Perform optimization steps
+        Parameters
+        ----------
+        n : int
+            number of iterations
+        callbacks : list[callable]
+            list of callables with following signature
+            f(Approximation, loss_history, i) -> None
+        """
         progress = tqdm.trange(n)
         scores = np.empty(n)
         scores[:] = np.nan
@@ -42,6 +59,8 @@ class Optimizer(object):
         try:
             for i in progress:
                 scores[i] = self.step_function()
+                for callback in callbacks:
+                    callback(self.approx, scores[:i + 1], i)
                 if i % ((n+1000)//1000) == 0:
                     progress.set_description(
                         'E_q[Loss] = %.4f' % scores[max(0, i - n//50):i+1].mean()
