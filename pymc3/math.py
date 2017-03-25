@@ -14,6 +14,7 @@ from theano.gof import Op, Apply
 import numpy as np
 # pylint: enable=unused-import
 
+
 def tround(*args, **kwargs):
     """
     Temporary function to silence round warning in Theano. Please remove
@@ -75,8 +76,10 @@ class LogDet(Op):
 
 logdet = LogDet()
 
+
 def probit(p):
     return -sqrt(2) * erfcinv(2 * p)
+
 
 def invprobit(x):
     return 0.5 * erfc(-x / sqrt(2))
