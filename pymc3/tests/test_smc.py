@@ -79,7 +79,13 @@ class TestSMC(SeededTest):
 
     def test_sample_multi_core(self):
         self.tearDown()
-        self.test_sample_n_core(n_jobs=mp.cpu_count())
+        cpus = mp.cpu_count()
+        if cpus > 3:
+            n_jobs = 4
+        else:
+            n_jobs = 2
+
+        self.test_sample_n_core(n_jobs=n_jobs)
 
     def tearDown(self):
         shutil.rmtree(self.test_folder)
