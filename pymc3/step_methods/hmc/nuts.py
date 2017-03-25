@@ -123,8 +123,6 @@ class NUTS(BaseHMC):
             of the scaling matrix.
         model : pymc3.Model
             The model
-        vars : list of theano variables
-            Which variables the nuts sampler should be applied to.
         kwargs: passed to BaseHMC
 
         The step size adaptation stops when `self.tune` is set to False.
