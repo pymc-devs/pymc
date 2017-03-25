@@ -15,7 +15,6 @@ from ..distributions import (DensityDist, Categorical, Multinomial, VonMises, Di
                              Bound, Uniform, Triangular, Binomial, SkewNormal, DiscreteWeibull)
 from ..distributions import continuous, multivariate
 from pymc3.theanof import floatX
-import theano
 from nose_parameterized import parameterized
 from numpy import array, inf, log, exp
 from numpy.testing import assert_almost_equal, assert_allclose
@@ -26,10 +25,13 @@ from scipy import integrate
 import scipy.stats.distributions as sp
 import scipy.stats
 
+# Keep track of floating point mode for determining equality decimal cutoffs.
+DTYPE = floatX(1.0).dtype.name
+
 
 def select_by_precision(float64, float32):
     """Helper function to choose reasonable decimal cutoffs for different floatX modes."""
-    decimal = float64 if theano.config.floatX == "float64" else float32
+    decimal = float64 if DTYPE == "float64" else float32
     return decimal
 
 
