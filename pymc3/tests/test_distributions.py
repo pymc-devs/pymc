@@ -27,7 +27,7 @@ import scipy.stats.distributions as sp
 import scipy.stats
 
 
-def select_decimal(float64, float32):
+def select_by_precision(float64, float32):
     """Helper function to choose reasonable decimal cutoffs for different floatX modes."""
     decimal = float64 if theano.config.floatX == "float64" else float32
     return decimal
@@ -314,7 +314,7 @@ class TestMatchesScipy(SeededTest):
         logp = model.fastlogp
         for pt in product(domains, n_samples=100):
             pt = Point(pt, model=model)
-            assert_almost_equal(logp(pt), logp_reference(pt), decimal=select_decimal(float64=6, float32=2), err_msg=str(pt))
+            assert_almost_equal(logp(pt), logp_reference(pt), decimal=select_by_precision(float64=6, float32=2), err_msg=str(pt))
 
     def check_int_to_1(self, model, value, domain, paramdomains):
         pdf = model.fastfn(exp(model.logpt))
@@ -350,7 +350,7 @@ class TestMatchesScipy(SeededTest):
         for pt in product(domains, n_samples=100):
             pt = Point(pt, model=model)
             pt = bij.map(pt)
-            assert_almost_equal(dlogp(pt), ndlogp(pt), decimal=select_decimal(float64=6, float32=4), err_msg=str(pt))
+            assert_almost_equal(dlogp(pt), ndlogp(pt), decimal=select_by_precision(float64=6, float32=4), err_msg=str(pt))
 
     def checkd(self, distfam, valuedomain, vardomains, checks=None, extra_args={}):
         if checks is None:
@@ -423,7 +423,7 @@ class TestMatchesScipy(SeededTest):
         with Model() as model:
             Wald('wald', mu=mu, lam=lam, phi=phi, alpha=alpha, transform=None)
         pt = {'wald': value}
-        assert_almost_equal(model.fastlogp(pt), logp, decimal=select_decimal(float64=6, float32=1), err_msg=str(pt))
+        assert_almost_equal(model.fastlogp(pt), logp, decimal=select_by_precision(float64=6, float32=1), err_msg=str(pt))
 
     def test_beta(self):
         self.pymc3_matches_scipy(Beta, Unit, {'alpha': Rplus, 'beta': Rplus},
@@ -567,7 +567,7 @@ class TestMatchesScipy(SeededTest):
             LKJCorr('lkj', n=n, p=p, transform=None)
 
         pt = {'lkj': x}
-        assert_almost_equal(model.fastlogp(pt), lp, decimal=select_decimal(float64=6, float32=4), err_msg=str(pt))
+        assert_almost_equal(model.fastlogp(pt), lp, decimal=select_by_precision(float64=6, float32=4), err_msg=str(pt))
 
     @parameterized.expand([(2,), (3,)])
     def test_dirichlet(self, n):
