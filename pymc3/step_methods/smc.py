@@ -665,6 +665,7 @@ def ATMIP_sample(n_steps, step=None, start=None, homepath=None, chain=0,
             else:
                 draws = n_steps
 
+            print('Beta: %f Stage: %i' % (step.beta, step.stage))
             pm._log.info('Beta: %f Stage: %i' % (step.beta, step.stage))
 
             # Metropolis sampling intermediate stages
@@ -747,7 +748,7 @@ def _sample(draws, step=None, start=None, trace=None, chain=0, tune=None,
     sampling = _iter_sample(draws, step, start, trace, chain,
                             tune, model, random_seed)
 
-    if progressbar:
+    if progressbar == True:
         sampling = tqdm(sampling, total=draws)
 
     try:
@@ -831,10 +832,7 @@ def _iter_parallel_chains(draws, step, stage_path, progressbar, model, n_jobs,
 
     trace_list = []
 
-    if progressbar:
-        display = True
-    else:
-        display = False
+    display = False
 
     pack_pb = ['False' for i in range(n_jobs - 1)] + [display]
     block_pb = []
@@ -864,16 +862,25 @@ def _iter_parallel_chains(draws, step, stage_path, progressbar, model, n_jobs,
     else:
         chunksize = 1
 
+    if n_jobs == 1:
+        verbose = 0
+    elif n_jobs > 1:
+        if progressbar == True:
+            verbose = 7
+        else:
+            verbose = 0
+
     p = atext.paripool(
-            _work_chain, work, chunksize=chunksize, nprocs=n_jobs)
+        _work_chain, work, chunksize=chunksize, nprocs=n_jobs, verbose=verbose)
 
-    with tqdm(total=len(chains)) as pbar:
-        for i, _ in tqdm(enumerate(p)):
-            pbar.update()
+    if n_jobs == 1 and progressbar:
+        p = tqdm(p, total=len(chains))
 
-    pbar.close()
-    p.close()
-    
+    for i in p:
+        pass
+
+    p.close
+
 
 def tune(acc_rate):
     """

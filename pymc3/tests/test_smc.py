@@ -4,6 +4,7 @@ from pymc3.step_methods import smc
 from tempfile import mkdtemp
 import shutil
 import theano.tensor as tt
+import multiprocessing as mp
 
 from .helpers import SeededTest
 
@@ -76,9 +77,9 @@ class TestSMC(SeededTest):
 
         np.testing.assert_allclose(mu1, mu1d, rtol=0., atol=0.03)
 
-    def test_sample_double_core(self):
+    def test_sample_multi_core(self):
         self.tearDown()
-        self.test_sample_n_core(n_jobs=2)
-        
+        self.test_sample_n_core(n_jobs=mp.cpu_count())
+
     def tearDown(self):
         shutil.rmtree(self.test_folder)

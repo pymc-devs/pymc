@@ -56,6 +56,7 @@ def paripool(function, work, **kwargs):
 
     nprocs = kwargs.get('nprocs', None)
     chunksize = kwargs.get('chunksize', None)
+    verbose = kwargs.get('verbose', None)
 
     if chunksize is None:
         chunksize = 1
@@ -78,12 +79,11 @@ def paripool(function, work, **kwargs):
         nprocs = multiprocessing.cpu_count()
 
     try:
-        yield Parallel(n_jobs=nprocs)(delayed(function)(job) for job in work)
+        yield Parallel(n_jobs=nprocs, batch_size=chunksize, verbose=verbose)(
+            delayed(function)(job) for job in work)
 
     except KeyboardInterrupt:
         pm._log.warn('User interrupt! Ctrl + C')
-        pool.terminate()
-        pool.join()
 
 
 class ArrayStepSharedLLK(BlockedStep):
