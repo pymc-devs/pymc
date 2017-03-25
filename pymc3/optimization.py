@@ -4,6 +4,10 @@ import theano
 from theano.configparser import change_flags
 import pymc3 as pm
 
+__all__ = [
+    'Optimizer'
+]
+
 
 class Optimizer(object):
     """
