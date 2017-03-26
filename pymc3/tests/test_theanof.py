@@ -2,7 +2,7 @@ import pickle
 import itertools
 import unittest
 import numpy as np
-from theano import theano, tensor as tt
+from theano import theano
 from pymc3.theanof import GeneratorOp, generator, tt_rng
 from pymc3.data import DataSampler, GeneratorAdapter
 
