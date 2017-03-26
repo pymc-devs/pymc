@@ -392,7 +392,7 @@ def generate_samples(generator, *args, **kwargs):
     return reshape_sampled(samples, size, dist_shape)
 
 
-class _BoundedIndicator(object):
+class BoundedIndicator(object):
     pass
 
 
@@ -420,10 +420,10 @@ def Bounded(distribution, lower=-np.inf, upper=np.inf, transform='infer'):
         interval, lowerbound, upperbound
     )
     import inspect
-    if issubclass(distribution, _BoundedIndicator):
+    if issubclass(distribution, BoundedIndicator):
         raise ValueError('Cannot bound already bounded Distribution')
 
-    class Dummy(distribution, _BoundedIndicator):
+    class Dummy(distribution, BoundedIndicator):
         __doc__ = distribution.__doc__
 
         def __init__(self, *args, **kwargs):

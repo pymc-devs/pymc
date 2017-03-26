@@ -875,6 +875,7 @@ class ObservedRV(Factor, TensorVariable):
             needed for upscaling logp
         """
         from .distributions import TensorType
+        from .distributions.distribution import BoundedIndicator
         if type is None:
             data = pandas_to_array(data)
             type = TensorType(distribution.dtype, data.shape)
@@ -882,6 +883,11 @@ class ObservedRV(Factor, TensorVariable):
         super(TensorVariable, self).__init__(type, None, None, name)
 
         if distribution is not None:
+            if isinstance(distribution, BoundedIndicator):
+                raise ValueError('Observed Bound distributions are not allowed. '
+                                 'If you want to model truncated data '
+                                 'you can use a pm.Potential in combination '
+                                 'with the cumulative probability function.')
             data = as_tensor(data, name, model, distribution)
 
             self.missing_values = data.missing_values
@@ -920,6 +926,12 @@ class MultiObservedRV(Factor):
         total_size : scalar Tensor (optional)
             needed for upscaling logp
         """
+        from .distributions.distribution import BoundedIndicator
+        if isinstance(distribution, BoundedIndicator):
+            raise ValueError('Observed Bound distributions are not allowed. '
+                             'If you want to model truncated data '
+                             'you can use a pm.Potential in combination '
+                             'with the cumulative probability function.')
         self.name = name
         self.data = {name: as_tensor(data, name, model, distribution)
                      for name, data in data.items()}
