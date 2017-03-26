@@ -43,11 +43,13 @@ def flatten_list(tensors):
 
 
 class LogDet(Op):
-    """Computes the logarithm of absolute determinant of a square
-    matrix M, log(abs(det(M))), on CPU. Avoids det(M) overflow/
+    """Compute the logarithm of the absolute determinant of a square
+    matrix M, log(abs(det(M))) on the CPU. Avoids det(M) overflow/
     underflow.
 
-    Note: Once PR #3959 (https://github.com/Theano/Theano/pull/3959/) by harpone is merged,
+    Note
+    ----
+    Once PR #3959 (https://github.com/Theano/Theano/pull/3959/) by harpone is merged,
     this must be removed.
     """
     def make_node(self, x):
@@ -86,11 +88,11 @@ def invprobit(x):
 
 
 def expand_packed_triangular(n, packed, lower=False, diagonal_only=False):
-    """Convert a packed triangular matrix into a two dimensional array.
+    R"""Convert a packed triangular matrix into a two dimensional array.
 
     Triangular matrices can be stored with better space efficiancy by
     storing the non-zero values in a one-dimensional array. We number
-    the elements by row like this (for lower or upper triangular matrices):
+    the elements by row like this (for lower or upper triangular matrices)::
 
         [[0 - - -]     [[0 1 2 3]
          [1 2 - -]      [- 4 5 6]
@@ -101,7 +103,7 @@ def expand_packed_triangular(n, packed, lower=False, diagonal_only=False):
     ----------
     n : int
         The number of rows of the triangular matrix.
-    packed : ndarray or theano.vector
+    packed : theano.vector
         The matrix in packed format.
     lower : bool
         If true, assume that the matrix is lower triangular.

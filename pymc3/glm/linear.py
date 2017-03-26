@@ -13,6 +13,7 @@ __all__ = [
 
 class LinearComponent(Model):
     """Creates linear component, y_est is accessible via attribute
+
     Parameters
     ----------
     name : str - name, associated with the linear component
@@ -88,6 +89,7 @@ class LinearComponent(Model):
 
 class GLM(LinearComponent):
     """Creates glm model, y_est is accessible via attribute
+
     Parameters
     ----------
     name : str - name, associated with the linear component

@@ -86,31 +86,30 @@ def assign_step_methods(model, step=None, methods=(NUTS, HamiltonianMC, Metropol
 def sample(draws, step=None, init='ADVI', n_init=200000, start=None,
            trace=None, chain=0, njobs=1, tune=None, progressbar=True,
            model=None, random_seed=-1):
-    """
-    Draw a number of samples using the given step method.
-    Multiple step methods supported via compound step method
-    returns the amount of time taken.
+    """Draw samples from the posterior using the given step methods.
+
+    Multiple step methods are supported via compound step methods.
 
     Parameters
     ----------
-
     draws : int
         The number of samples to draw.
     step : function or iterable of functions
-        A step function or collection of functions. If no step methods are
-        specified, or are partially specified, they will be assigned
-        automatically (defaults to None).
+        A step function or collection of functions. If there are variables
+        without a step methods, step methods for those variables will
+        be assigned automatically.
     init : str {'ADVI', 'ADVI_MAP', 'MAP', 'NUTS', None}
         Initialization method to use. Only works for auto-assigned step methods.
-        * ADVI : Run ADVI to estimate starting points and diagonal covariance
-        matrix. If njobs > 1 it will sample starting points from the estimated
-        posterior, otherwise it will use the estimated posterior mean.
+
+        * ADVI: Run ADVI to estimate starting points and diagonal covariance
+          matrix. If njobs > 1 it will sample starting points from the estimated
+          posterior, otherwise it will use the estimated posterior mean.
         * ADVI_MAP: Initialize ADVI with MAP and use MAP as starting point.
-        * MAP : Use the MAP as starting point.
-        * NUTS : Run NUTS to estimate starting points and covariance matrix. If
-        njobs > 1 it will sample starting points from the estimated posterior,
-        otherwise it will use the estimated posterior mean.
-        * None : Do not initialize.
+        * MAP: Use the MAP as starting point.
+        * NUTS: Run NUTS to estimate starting points and covariance matrix. If
+          njobs > 1 it will sample starting points from the estimated posterior,
+          otherwise it will use the estimated posterior mean.
+        * None: Do not initialize.
     n_init : int
         Number of iterations of initializer
         If 'ADVI', number of iterations, if 'nuts', number of draws.
@@ -145,7 +144,8 @@ def sample(draws, step=None, init='ADVI', n_init=200000, start=None,
 
     Returns
     -------
-    MultiTrace object with access to sampling values
+    trace : pymc3.backends.base.MultiTrace
+        A `MultiTrace` object that contains the samples.
     """
     model = modelcontext(model)
 
@@ -242,9 +242,10 @@ def iter_sample(draws, step, start=None, trace=None, chain=0, tune=None,
 
     Example
     -------
+    ::
 
-    for trace in iter_sample(500, step):
-        ...
+        for trace in iter_sample(500, step):
+            ...
     """
     sampling = _iter_sample(draws, step, start, trace, chain, tune,
                             model, random_seed)
@@ -390,8 +391,9 @@ def sample_ppc(trace, samples=None, model=None, vars=None, size=None, random_see
 
     Returns
     -------
-    Dictionary keyed by `vars`, where the values are the corresponding
-    posterior predictive samples.
+    samples : dict
+        Dictionary with the variables as keys. The values corresponding
+        to the posterior predictive samples.
     """
     if samples is None:
         samples = len(trace)
@@ -447,8 +449,6 @@ def init_nuts(init='ADVI', njobs=1, n_init=500000, model=None,
 
     Returns
     -------
-    start, nuts_sampler
-
     start : pymc3.model.Point
         Starting point for sampler
     nuts_sampler : pymc3.step_methods.NUTS
