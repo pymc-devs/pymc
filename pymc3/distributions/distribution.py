@@ -19,7 +19,9 @@ class _Unpickling(object):
 
 class Distribution(object):
     """Statistical distribution"""
-    rng = None
+    @classmethod
+    def rng(cls, *args, **kwargs):
+        raise NotImplementedError('Static random generator is not available for %s' % cls)
 
     def __new__(cls, name, *args, **kwargs):
         if name is _Unpickling:

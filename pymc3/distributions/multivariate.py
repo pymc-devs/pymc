@@ -71,6 +71,10 @@ class MvNormal(Continuous):
             self.chol_tau = tt.slinalg.cholesky(tt.as_tensor_variable(tau))
         else:
             self.chol_cov = tt.as_tensor_variable(chol)
+        self.parents.update(
+            mean=self.mean,
+            chol=None # TODO self.chol_tau if self.has_tau else self.chol_cov
+        )
 
     def random(self, point=None, size=None):
         if self.has_tau:
@@ -158,14 +162,15 @@ class MvStudentT(Continuous):
         self.Sigma = tt.as_tensor_variable(Sigma)
 
         self.mean = self.median = self.mode = self.mu = mu
+        self.parents.update(
+            nu=self.nu, sigma=self.Sigma, mu=self.mu
+        )
 
-    def random(self, point=None, size=None):
+    @staticmethod
+    def rng(nu, sigma, mu, size=None):
         chi2 = np.random.chisquare
         mvn = np.random.multivariate_normal
-
-        nu, S, mu = draw_values([self.nu, self.Sigma, self.mu], point=point)
-
-        return (np.sqrt(nu) * (mvn(np.zeros(len(S)), S, size).T
+        return (np.sqrt(nu) * (mvn(np.zeros(len(sigma)), sigma, size).T
                                / chi2(nu, size))).T + mu
 
     def logp(self, value):
@@ -230,17 +235,13 @@ class Dirichlet(Continuous):
         self.mode = tt.switch(tt.all(a > 1),
                               (a - 1) / tt.sum(a - 1),
                               np.nan)
+        self.parents.update(
+            a=self.a
+        )
 
-    def random(self, point=None, size=None):
-        a = draw_values([self.a], point=point)
-
-        def _random(a, size=None):
-            return stats.dirichlet.rvs(a, None if size == a.shape else size)
-
-        samples = generate_samples(_random, a,
-                                   dist_shape=self.shape,
-                                   size=size)
-        return samples
+    @staticmethod
+    def rng(a, size=None):
+        return stats.dirichlet.rvs(a, None if size == a.shape else size)
 
     def logp(self, value):
         k = self.k
@@ -306,18 +307,16 @@ class Multinomial(Discrete):
 
         self.mean = self.n * self.p
         self.mode = tt.cast(tround(self.mean), 'int32')
+        self.parents.update(
+            n=self.n,
+            p=self.p
+        )
 
-    def _random(self, n, p, size=None):
+    @staticmethod
+    def rng(n, p, size=None):
         if size == p.shape:
             size = None
         return np.random.multinomial(n, p, size=size)
-
-    def random(self, point=None, size=None):
-        n, p = draw_values([self.n, self.p], point=point)
-        samples = generate_samples(self._random, n, p,
-                                   dist_shape=self.shape,
-                                   size=size)
-        return samples
 
     def logp(self, x):
         n = self.n
