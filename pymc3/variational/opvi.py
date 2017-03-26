@@ -384,10 +384,10 @@ class Approximation(object):
     initial_dist_name = 'normal'
     initial_dist_map = 0.
 
-    def __init__(self, local_rv=None, model=None, cost_part_grad_scale=1):
+    def __init__(self, local_rv=None, model=None, cost_part_grad_scale=1, **kwargs):
         model = modelcontext(model)
         self.model = model
-        self.check_model(model)
+        self.check_model(model, **kwargs)
         if local_rv is None:
             local_rv = {}
 
@@ -398,27 +398,27 @@ class Approximation(object):
 
         known = {get_transformed(k): v for k, v in local_rv.items()}
         self.known = known
-        self.local_vars = self.get_local_vars()
-        self.global_vars = self.get_global_vars()
+        self.local_vars = self.get_local_vars(**kwargs)
+        self.global_vars = self.get_global_vars(**kwargs)
         self.order = ArrayOrdering(self.local_vars + self.global_vars)
         self.flat_view = model.flatten(
             vars=self.local_vars + self.global_vars
         )
         self.grad_scale_op = GradScale(cost_part_grad_scale)
-        self._setup()
-        self.shared_params = self.create_shared_params()
+        self._setup(**kwargs)
+        self.shared_params = self.create_shared_params(**kwargs)
 
     @property
     def normalizing_constant(self):
         return self.to_flat_input(tt.max([v.scaling for v in self.model.basic_RVs]))
 
-    def _setup(self):
+    def _setup(self, **kwargs):
         pass
 
-    def get_global_vars(self):
+    def get_global_vars(self, **kwargs):
         return [v for v in self.model.free_RVs if v not in self.known]
 
-    def get_local_vars(self):
+    def get_local_vars(self, **kwargs):
         return [v for v in self.model.free_RVs if v in self.known]
 
     def __getstate__(self):
@@ -438,7 +438,7 @@ class Approximation(object):
     _view = property(lambda self: self.flat_view.view)
     input = property(lambda self: self.flat_view.input)
 
-    def check_model(self, model):
+    def check_model(self, model, **kwargs):
         """
         Checks that model is valid for variational inference
         """
@@ -446,7 +446,7 @@ class Approximation(object):
         if any([var.dtype in pm.discrete_types for var in vars_]):  # pragma: no cover
             raise ValueError('Model should not include discrete RVs')
 
-    def create_shared_params(self):
+    def create_shared_params(self, **kwargs):
         """
         Returns
         -------
