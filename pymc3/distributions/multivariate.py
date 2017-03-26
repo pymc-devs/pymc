@@ -6,7 +6,6 @@ import numpy as np
 import scipy
 import theano
 import theano.tensor as tt
-import collections
 
 from scipy import stats
 
