@@ -220,6 +220,21 @@ class TestApproximates:
             with models.multidimensional_model()[1]:
                 self.inference().run_profiling(10)
 
+        def test_multiple_replacements(self):
+            _, model, _ = models.exponential_beta(n=2)
+            x = model.x
+            y = model.y
+            xy = x*y
+            xpy = x+y
+            with model:
+                mf = self.inference().approx
+                xy_, xpy_ = mf.apply_replacements([xy, xpy])
+                xy_s, xpy_s = mf.sample_node([xy, xpy])
+                xy_.eval()
+                xpy_.eval()
+                xy_s.eval()
+                xpy_s.eval()
+
 
 class TestMeanField(TestApproximates.Base):
     inference = ADVI

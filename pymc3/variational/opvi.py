@@ -490,8 +490,8 @@ class Approximation(object):
 
         Parameters
         ----------
-        node : Variable
-            node for replacements
+        node : Theano Variables (or Theano expressions)
+            node or nodes for replacements
         deterministic : bool
             whether to use zeros as initial distribution
             if True - zero initial point will produce constant latent variables
@@ -504,7 +504,7 @@ class Approximation(object):
 
         Returns
         -------
-        node with replacements
+        node(s) with replacements
         """
         replacements = self.construct_replacements(
             include, exclude, more_replacements
@@ -515,6 +515,21 @@ class Approximation(object):
 
     def sample_node(self, node, size=100,
                     more_replacements=None):
+        """
+        Samples given node or nodes over shared posterior
+
+        Parameters
+        ----------
+        node : Theano Variables (or Theano expressions)
+        size : scalar
+            number of samples
+        more_replacements : dict
+            add custom replacements to graph, e.g. change input source
+
+        Returns
+        -------
+        sampled node(s) with replacements
+        """
         if more_replacements is not None:   # pragma: no cover
             node = theano.clone(node, more_replacements)
         posterior = self.random(size)
