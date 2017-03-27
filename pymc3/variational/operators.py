@@ -1,5 +1,5 @@
-import theano
-from pymc3.variational.opvi import Operator, ObjectiveFunction
+from theano import theano, tensor as tt
+from pymc3.variational.opvi import Operator
 import pymc3 as pm
 
 __all__ = [
@@ -19,12 +19,6 @@ class KL(Operator):
         return self.logq_norm(z) - self.logp_norm(z)
 
 # SVGD Implementation
-
-
-class SVGDObjectiveFunction(ObjectiveFunction):
-    def __call__(self, z):
-        # z is not used, apply is deterministic
-        return self.op.apply(self.tf)
 
 
 class KSD(Operator):
@@ -50,6 +44,7 @@ class KSD(Operator):
         arXiv:1608.04471
     """
     NEED_F = True
+    HISTOGRAM_BASED = True
 
     def __init__(self, approx):
         if not isinstance(approx, pm.Histogram):
@@ -64,5 +59,5 @@ class KSD(Operator):
             sequences=X
         )[0]    # bottleneck
         Kxy, dxkxy = f(X)
-        svgd_grad = (Kxy.dot(dlogpdx) + dxkxy) / X.shape[0].astype('float32')
-        return svgd_grad
+        svgd_grad = (tt.dot(Kxy, dlogpdx) + dxkxy) / X.shape[0].astype('float32')
+        return [-1 * svgd_grad]

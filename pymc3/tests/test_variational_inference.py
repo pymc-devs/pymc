@@ -4,7 +4,7 @@ from theano import theano, tensor as tt
 import pymc3 as pm
 from pymc3 import Model, Normal
 from pymc3.variational import (
-    ADVI, FullRankADVI,
+    ADVI, FullRankADVI, SVGD,
     Histogram,
     fit
 )
@@ -202,6 +202,8 @@ class TestApproximates:
             inference.fit(20)
 
         def test_aevb(self):
+            if self.inference is SVGD:
+                raise unittest.SkipTest('Not for svgd')
             _, model, _ = models.exponential_beta(n=2)
             x = model.x
             y = model.y
@@ -247,6 +249,11 @@ class TestMeanField(TestApproximates.Base):
                 fit(10, method='undefined')
             with pytest.raises(TypeError):
                 fit(10, method=1)
+
+
+class TestSVGD(TestApproximates.Base):
+    inference = SVGD
+    NITER = 50000
 
 
 class TestFullRank(TestApproximates.Base):

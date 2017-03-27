@@ -6,9 +6,11 @@ import numpy as np
 import tqdm
 
 import pymc3 as pm
-from pymc3.variational.approximations import MeanField, FullRank
-from pymc3.variational.operators import KL
+from pymc3.variational.approximations import MeanField, FullRank, Histogram
+from pymc3.variational.operators import KL, KSD
 from pymc3.variational.opvi import Approximation, TestFunction
+from pymc3.variational import test_functions
+
 
 logger = logging.getLogger(__name__)
 
@@ -16,6 +18,7 @@ __all__ = [
     'TestFunction',
     'ADVI',
     'FullRankADVI',
+    'SVGD',
     'Inference'
 ]
 
@@ -261,6 +264,22 @@ class FullRankADVI(Inference):
         inference = cls.from_mean_field(advi.approx, gpu_compat)
         inference.hist = advi.hist
         return inference
+
+
+class SVGD(Inference):
+    def __init__(self, n_particles=100, jitter=.01, local_rv=None, model=None, kernel=test_functions.rbf):
+        super(SVGD, self).__init__(
+            KSD, Histogram.from_noise(
+                n_particles, jitter=jitter, local_rv=local_rv, model=model),
+            kernel,
+            local_rv=local_rv, model=model)
+
+    def fit(self, n=10000, callbacks=None, callback_every=1,
+            **kwargs):
+        return Inference.fit(self, n=10000, callbacks=None, callback_every=1, score=False, **kwargs)
+
+    def run_profiling(self, n=1000, **kwargs):
+        return Inference.run_profiling(self, n=1000, score=False, **kwargs)
 
 
 def fit(n=10000, local_rv=None, method='advi', model=None, **kwargs):

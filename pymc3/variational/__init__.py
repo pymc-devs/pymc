@@ -21,9 +21,11 @@ from .svgd import svgd
 from .inference import (
     ADVI,
     FullRankADVI,
+    SVGD,
     fit,
 )
 from .approximations import Histogram
 
 from . import approximations
 from . import operators
+from . import test_functions

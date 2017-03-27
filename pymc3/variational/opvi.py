@@ -30,6 +30,7 @@ class Operator(object):
     """
 
     NEED_F = False
+    HISTOGRAM_BASED = False
 
     def __init__(self, approx):
         self.model = approx.model
@@ -131,7 +132,7 @@ class ObjectiveFunction(object):
         """
         return self.op.approx.random(size)
 
-    def __call__(self, z):
+    def __call__non_histogram__(self, z):
         if z.ndim > 1:
             a = theano.scan(
                 lambda z_: theano.clone(self.op.apply(self.tf), {self.op.input: z_}),
@@ -139,6 +140,15 @@ class ObjectiveFunction(object):
         else:
             a = theano.clone(self.op.apply(self.tf), {self.op.input: z})
         return tt.abs_(a)
+
+    def __call__histogram__(self, z):
+        return self.op.apply(self.tf)   # histogram should be used inside apply
+
+    def __call__(self, z):
+        if self.op.HISTOGRAM_BASED:
+            return self.__call__histogram__(z)
+        else:
+            return self.__call__non_histogram__(z)
 
     def updates(self, obj_n_mc=None, tf_n_mc=None, obj_optimizer=adam, test_optimizer=adam,
                 more_obj_params=None, more_tf_params=None, more_updates=None):
@@ -174,15 +184,20 @@ class ObjectiveFunction(object):
         if more_updates is None:
             more_updates = dict()
         resulting_updates = ObjectiveUpdates()
-
         if self.test_params:
-            tf_z = self.random(tf_n_mc)
-            tf_target = -self(tf_z)
+            if not self.op.HISTOGRAM_BASED:
+                tf_z = self.random(tf_n_mc)
+                tf_target = -self(tf_z)
+            else:
+                tf_target = -self(None)
             resulting_updates.update(test_optimizer(tf_target, self.test_params + more_tf_params))
         else:
             pass
-        obj_z = self.random(obj_n_mc)
-        obj_target = self(obj_z)
+        if not self.op.HISTOGRAM_BASED:
+            obj_z = self.random(obj_n_mc)
+            obj_target = self(obj_z)
+        else:
+            obj_target = self(None)
         resulting_updates.update(obj_optimizer(obj_target, self.obj_params + more_obj_params))
         resulting_updates.update(more_updates)
         resulting_updates.loss = obj_target
