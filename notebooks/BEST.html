@@ -13,6 +13,8 @@
 
   
   
+  
+  
 
   
 
@@ -45,6 +47,7 @@
 
 <body class="wy-body-for-nav" role="document">
 
+   
   <div class="wy-grid-for-nav">
 
     
@@ -85,7 +88,10 @@
           
             
             
-                <ul class="current">
+              
+            
+            
+              <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="../getting_started.html">Getting started</a></li>
 <li class="toctree-l1 current"><a class="reference internal" href="../examples.html">Examples</a><ul class="current">
 <li class="toctree-l2"><a class="reference internal" href="../examples.html#howto">Howto</a></li>
@@ -101,9 +107,9 @@
 </ul>
 </li>
 <li class="toctree-l2"><a class="reference internal" href="../examples.html#glm">GLM</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../examples.html#gp">GP</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../examples.html#gaussian-processes">Gaussian Processes</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../examples.html#mixture-models">Mixture Models</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../examples.html#advi">ADVI</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../examples.html#variational-inference">Variational Inference</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="../api.html">API Reference</a></li>
@@ -119,8 +125,10 @@
 
       
       <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
-        <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
-        <a href="../index.html">PyMC3</a>
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">PyMC3</a>
+        
       </nav>
 
 
@@ -129,25 +137,42 @@
         <div class="rst-content">
           
 
- 
+
+
+
+
+
+
+
+
+
+
+
 
 
 
 <div role="navigation" aria-label="breadcrumbs navigation">
+
   <ul class="wy-breadcrumbs">
-    <li><a href="../index.html">Docs</a> &raquo;</li>
-      
+    
+      <li><a href="../index.html">Docs</a> &raquo;</li>
+        
           <li><a href="../examples.html">Examples</a> &raquo;</li>
-      
-    <li>Bayesian Estimation Supersedes the T-Test</li>
+        
+      <li>Bayesian Estimation Supersedes the T-Test</li>
+    
+    
       <li class="wy-breadcrumbs-aside">
         
-          
+            
             <a href="../_sources/notebooks/BEST.ipynb.txt" rel="nofollow"> View page source</a>
           
         
       </li>
+    
   </ul>
+
+  
   <hr/>
 </div>
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
@@ -159,13 +184,15 @@
 
 /* remove conflicting styling from Sphinx themes */
 div.nbinput,
-div.nbinput > div,
-div.nbinput div[class^=highlight],
-div.nbinput div[class^=highlight] pre,
+div.nbinput div.prompt,
+div.nbinput div.input_area,
+div.nbinput div[class*=highlight],
+div.nbinput div[class*=highlight] pre,
 div.nboutput,
-div.nboutput > div,
-div.nboutput div[class^=highlight],
-div.nboutput div[class^=highlight] pre {
+div.nbinput div.prompt,
+div.nbinput div.output_area,
+div.nboutput div[class*=highlight],
+div.nboutput div[class*=highlight] pre {
     background: none;
     border: none;
     padding: 0 0;
@@ -174,7 +201,7 @@ div.nboutput div[class^=highlight] pre {
 }
 
 /* avoid gaps between output lines */
-div.nboutput div[class^=highlight] pre {
+div.nboutput div[class*=highlight] pre {
     line-height: normal;
 }
 
@@ -185,6 +212,13 @@ div.nboutput {
     display: flex;
     align-items: flex-start;
     margin: 0;
+    width: 100%;
+}
+@media (max-width: 540px) {
+    div.nbinput,
+    div.nboutput {
+        flex-direction: column;
+    }
 }
 
 /* input container */
@@ -198,38 +232,58 @@ div.nblast {
 }
 
 /* input prompt */
-div.nbinput > :first-child pre {
+div.nbinput div.prompt pre {
     color: #303F9F;
 }
 
 /* output prompt */
-div.nboutput > :first-child pre {
+div.nboutput div.prompt pre {
     color: #D84315;
 }
 
 /* all prompts */
-div.nbinput > :first-child[class^=highlight],
-div.nboutput > :first-child[class^=highlight],
-div.nboutput > :first-child {
+div.nbinput div.prompt,
+div.nboutput div.prompt {
     min-width: 8ex;
     padding-top: 0.4em;
     padding-right: 0.4em;
     text-align: right;
     flex: 0;
 }
+@media (max-width: 540px) {
+    div.nbinput div.prompt,
+    div.nboutput div.prompt {
+        text-align: left;
+        padding: 0.4em;
+    }
+    div.nboutput div.prompt.empty {
+        padding: 0;
+    }
+}
+
+/* disable scrollbars on prompts */
+div.nbinput div.prompt pre,
+div.nboutput div.prompt pre {
+    overflow: hidden;
+}
 
 /* input/output area */
-div.nbinput > :nth-child(2)[class^=highlight],
-div.nboutput > :nth-child(2),
-div.nboutput > :nth-child(2)[class^=highlight] {
+div.nbinput div.input_area,
+div.nboutput div.output_area {
     padding: 0.4em;
     -webkit-flex: 1;
     flex: 1;
     overflow: auto;
 }
+@media (max-width: 540px) {
+    div.nbinput div.input_area,
+    div.nboutput div.output_area {
+        width: 100%;
+    }
+}
 
 /* input area */
-div.nbinput > :nth-child(2)[class^=highlight] {
+div.nbinput div.input_area {
     border: 1px solid #cfcfcf;
     border-radius: 2px;
     background: #f7f7f7;
@@ -246,7 +300,7 @@ div.nboutput div.math p {
 }
 
 /* standard error */
-div.nboutput  > :nth-child(2).stderr {
+div.nboutput div.output_area.stderr {
     background: #fdd;
 }
 
@@ -370,12 +424,12 @@ intelligence by comparing IQ scores of individuals in a treatment arm
 (those receiving the drug) to those in a control arm (those recieving a
 placebo). There are 47 individuals and 42 individuals in the treatment
 and control arms, respectively.</p>
-<div class="nbinput nblast container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [1]:
 </pre></div>
 </div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="o">%</span><span class="k">matplotlib</span> inline
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="kn">as</span> <span class="nn">np</span>
 <span class="kn">import</span> <span class="nn">pymc3</span> <span class="kn">as</span> <span class="nn">pm</span>
@@ -387,12 +441,12 @@ and control arms, respectively.</p>
 </pre></div>
 </div>
 </div>
-<div class="nbinput container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [2]:
 </pre></div>
 </div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="n">drug</span> <span class="o">=</span> <span class="p">(</span><span class="mi">101</span><span class="p">,</span><span class="mi">100</span><span class="p">,</span><span class="mi">102</span><span class="p">,</span><span class="mi">104</span><span class="p">,</span><span class="mi">102</span><span class="p">,</span><span class="mi">97</span><span class="p">,</span><span class="mi">105</span><span class="p">,</span><span class="mi">105</span><span class="p">,</span><span class="mi">98</span><span class="p">,</span><span class="mi">101</span><span class="p">,</span><span class="mi">100</span><span class="p">,</span><span class="mi">123</span><span class="p">,</span><span class="mi">105</span><span class="p">,</span><span class="mi">103</span><span class="p">,</span><span class="mi">100</span><span class="p">,</span><span class="mi">95</span><span class="p">,</span><span class="mi">102</span><span class="p">,</span><span class="mi">106</span><span class="p">,</span>
         <span class="mi">109</span><span class="p">,</span><span class="mi">102</span><span class="p">,</span><span class="mi">82</span><span class="p">,</span><span class="mi">102</span><span class="p">,</span><span class="mi">100</span><span class="p">,</span><span class="mi">102</span><span class="p">,</span><span class="mi">102</span><span class="p">,</span><span class="mi">101</span><span class="p">,</span><span class="mi">102</span><span class="p">,</span><span class="mi">102</span><span class="p">,</span><span class="mi">103</span><span class="p">,</span><span class="mi">103</span><span class="p">,</span><span class="mi">97</span><span class="p">,</span><span class="mi">97</span><span class="p">,</span><span class="mi">103</span><span class="p">,</span><span class="mi">101</span><span class="p">,</span><span class="mi">97</span><span class="p">,</span><span class="mi">104</span><span class="p">,</span>
         <span class="mi">96</span><span class="p">,</span><span class="mi">103</span><span class="p">,</span><span class="mi">124</span><span class="p">,</span><span class="mi">101</span><span class="p">,</span><span class="mi">101</span><span class="p">,</span><span class="mi">100</span><span class="p">,</span><span class="mi">101</span><span class="p">,</span><span class="mi">101</span><span class="p">,</span><span class="mi">104</span><span class="p">,</span><span class="mi">100</span><span class="p">,</span><span class="mi">101</span><span class="p">)</span>
@@ -408,10 +462,10 @@ and control arms, respectively.</p>
 </pre></div>
 </div>
 </div>
-<div class="nboutput nblast container">
-<div class="container">
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
 </div>
-<div class="container">
+<div class="output_area docutils container">
 <img alt="../_images/notebooks_BEST_5_0.png" src="../_images/notebooks_BEST_5_0.png" />
 </div>
 </div>
@@ -446,12 +500,12 @@ applies very diffuse information to these quantities (and importantly,
 does not favor one or the other <em>a priori</em>).</p>
 <div class="math">
 \[\mu_k \sim N(\bar{x}, 2s)\]</div>
-<div class="nbinput nblast container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [3]:
 </pre></div>
 </div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="err">μ</span><span class="n">_m</span> <span class="o">=</span> <span class="n">y</span><span class="o">.</span><span class="n">value</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span>
 <span class="err">μ</span><span class="n">_s</span> <span class="o">=</span> <span class="n">y</span><span class="o">.</span><span class="n">value</span><span class="o">.</span><span class="n">std</span><span class="p">()</span> <span class="o">*</span> <span class="mi">2</span>
 
@@ -478,12 +532,12 @@ as much prior information that you have available to the
 parameterization of prior distributions.</p>
 <p>We will instead set the group standard deviations to have a
 <span class="math">\(\text{Uniform}(1,10)\)</span> prior:</p>
-<div class="nbinput nblast container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [4]:
 </pre></div>
 </div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="err">σ</span><span class="n">_low</span> <span class="o">=</span> <span class="mi">1</span>
 <span class="err">σ</span><span class="n">_high</span> <span class="o">=</span> <span class="mi">10</span>
 
@@ -497,12 +551,12 @@ parameterization of prior distributions.</p>
 distributed with a mean of 30; this allocates high prior probability
 over the regions of the parameter that describe the range from normal to
 heavy-tailed data under the Student-T distribution.</p>
-<div class="nbinput container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [5]:
 </pre></div>
 </div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="k">with</span> <span class="n">model</span><span class="p">:</span>
     <span class="err">ν</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Exponential</span><span class="p">(</span><span class="s1">&#39;ν_minus_one&#39;</span><span class="p">,</span> <span class="mi">1</span><span class="o">/</span><span class="mf">29.</span><span class="p">)</span> <span class="o">+</span> <span class="mi">1</span>
 
@@ -510,22 +564,22 @@ heavy-tailed data under the Student-T distribution.</p>
 </pre></div>
 </div>
 </div>
-<div class="nboutput nblast container">
-<div class="container">
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
 </div>
-<div class="container">
+<div class="output_area docutils container">
 <img alt="../_images/notebooks_BEST_11_0.png" src="../_images/notebooks_BEST_11_0.png" />
 </div>
 </div>
 <p>Since PyMC3 parameterizes the Student-T in terms of precision, rather
 than standard deviation, we must transform the standard deviations
 before specifying our likelihoods.</p>
-<div class="nbinput nblast container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [6]:
 </pre></div>
 </div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="k">with</span> <span class="n">model</span><span class="p">:</span>
     <span class="err">λ</span><span class="mi">1</span> <span class="o">=</span> <span class="n">group1_std</span><span class="o">**-</span><span class="mi">2</span>
     <span class="err">λ</span><span class="mi">2</span> <span class="o">=</span> <span class="n">group2_std</span><span class="o">**-</span><span class="mi">2</span>
@@ -547,12 +601,12 @@ size&#8221;, which is the difference in means scaled by the pooled estimates
 of standard deviation. This quantity can be harder to interpret, since
 it is no longer in the same units as our data, but the quantity is a
 function of all four estimated parameters.</p>
-<div class="nbinput nblast container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [7]:
 </pre></div>
 </div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="k">with</span> <span class="n">model</span><span class="p">:</span>
     <span class="n">diff_of_means</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Deterministic</span><span class="p">(</span><span class="s1">&#39;difference of means&#39;</span><span class="p">,</span> <span class="n">group1_mean</span> <span class="o">-</span> <span class="n">group2_mean</span><span class="p">)</span>
     <span class="n">diff_of_stds</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Deterministic</span><span class="p">(</span><span class="s1">&#39;difference of stds&#39;</span><span class="p">,</span> <span class="n">group1_std</span> <span class="o">-</span> <span class="n">group2_std</span><span class="p">)</span>
@@ -563,21 +617,21 @@ function of all four estimated parameters.</p>
 </div>
 </div>
 <p>Now, we can fit the model and evaluate its output.</p>
-<div class="nbinput container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [8]:
 </pre></div>
 </div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="k">with</span> <span class="n">model</span><span class="p">:</span>
     <span class="n">trace</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="mi">2000</span><span class="p">,</span> <span class="n">init</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">njobs</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
-<div class="nboutput nblast container">
-<div class="container">
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
 </div>
-<div class="stderr container">
+<div class="stderr output_area docutils container">
 <div class="highlight"><pre>
 Assigned NUTS to group1_mean
 Assigned NUTS to group2_mean
@@ -593,22 +647,22 @@ portrayed in Kruschke (2012). These summarize the posterior
 distributions of the parameters, and present a 95% credible interval and
 the posterior mean. The plots below are constructed with the final 1000
 samples from each of the 2 chains, pooled together.</p>
-<div class="nbinput container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [9]:
 </pre></div>
 </div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="n">pm</span><span class="o">.</span><span class="n">plot_posterior</span><span class="p">(</span><span class="n">trace</span><span class="p">[</span><span class="mi">100</span><span class="p">:],</span>
                   <span class="n">varnames</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;group1_mean&#39;</span><span class="p">,</span> <span class="s1">&#39;group2_mean&#39;</span><span class="p">,</span> <span class="s1">&#39;group1_std&#39;</span><span class="p">,</span> <span class="s1">&#39;group2_std&#39;</span><span class="p">,</span> <span class="s1">&#39;ν_minus_one&#39;</span><span class="p">],</span>
                   <span class="n">color</span><span class="o">=</span><span class="s1">&#39;#87ceeb&#39;</span><span class="p">);</span>
 </pre></div>
 </div>
 </div>
-<div class="nboutput nblast container">
-<div class="container">
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
 </div>
-<div class="container">
+<div class="output_area docutils container">
 <img alt="../_images/notebooks_BEST_19_0.png" src="../_images/notebooks_BEST_19_0.png" />
 </div>
 </div>
@@ -625,12 +679,12 @@ deviation are similarly positive.</p>
 expected scores, but also the variability in scores across the sample.
 So, this does not rule out the possibility that some recipients may be
 adversely affected by the drug at the same time others benefit.</p>
-<div class="nbinput container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [10]:
 </pre></div>
 </div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="n">pm</span><span class="o">.</span><span class="n">plot_posterior</span><span class="p">(</span><span class="n">trace</span><span class="p">[</span><span class="mi">1000</span><span class="p">:],</span>
                   <span class="n">varnames</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;difference of means&#39;</span><span class="p">,</span> <span class="s1">&#39;difference of stds&#39;</span><span class="p">,</span> <span class="s1">&#39;effect size&#39;</span><span class="p">],</span>
                   <span class="n">ref_val</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
@@ -638,10 +692,10 @@ adversely affected by the drug at the same time others benefit.</p>
 </pre></div>
 </div>
 </div>
-<div class="nboutput nblast container">
-<div class="container">
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
 </div>
-<div class="container">
+<div class="output_area docutils container">
 <img alt="../_images/notebooks_BEST_21_0.png" src="../_images/notebooks_BEST_21_0.png" />
 </div>
 </div>
@@ -649,75 +703,75 @@ adversely affected by the drug at the same time others benefit.</p>
 also plots the potential scale reduction parameter, which is used to
 reveal evidence for lack of convergence; values near one, as we have
 here, suggest that the model has converged.</p>
-<div class="nbinput container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [11]:
 </pre></div>
 </div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="n">pm</span><span class="o">.</span><span class="n">forestplot</span><span class="p">(</span><span class="n">trace</span><span class="p">[</span><span class="mi">1000</span><span class="p">:],</span> <span class="n">varnames</span><span class="o">=</span><span class="p">[</span><span class="n">v</span><span class="o">.</span><span class="n">name</span> <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">model</span><span class="o">.</span><span class="n">vars</span><span class="p">[:</span><span class="mi">2</span><span class="p">]])</span>
 </pre></div>
 </div>
 </div>
-<div class="nboutput container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="nboutput docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>Out[11]:
 </pre></div>
 </div>
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="output_area highlight-none"><div class="highlight"><pre>
 <span></span>&lt;matplotlib.gridspec.GridSpec at 0x11d91a320&gt;
 </pre></div>
 </div>
 </div>
-<div class="nboutput nblast container">
-<div class="container">
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
 </div>
-<div class="container">
+<div class="output_area docutils container">
 <img alt="../_images/notebooks_BEST_23_1.png" src="../_images/notebooks_BEST_23_1.png" />
 </div>
 </div>
-<div class="nbinput container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [12]:
 </pre></div>
 </div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="n">pm</span><span class="o">.</span><span class="n">forestplot</span><span class="p">(</span><span class="n">trace</span><span class="p">[</span><span class="mi">1000</span><span class="p">:],</span> <span class="n">varnames</span><span class="o">=</span><span class="p">[</span><span class="n">v</span><span class="o">.</span><span class="n">name</span> <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">model</span><span class="o">.</span><span class="n">vars</span><span class="p">[</span><span class="mi">2</span><span class="p">:]])</span>
 </pre></div>
 </div>
 </div>
-<div class="nboutput container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="nboutput docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>Out[12]:
 </pre></div>
 </div>
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="output_area highlight-none"><div class="highlight"><pre>
 <span></span>&lt;matplotlib.gridspec.GridSpec at 0x11b9bd5f8&gt;
 </pre></div>
 </div>
 </div>
-<div class="nboutput nblast container">
-<div class="container">
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
 </div>
-<div class="container">
+<div class="output_area docutils container">
 <img alt="../_images/notebooks_BEST_24_1.png" src="../_images/notebooks_BEST_24_1.png" />
 </div>
 </div>
-<div class="nbinput container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [13]:
 </pre></div>
 </div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="n">pm</span><span class="o">.</span><span class="n">summary</span><span class="p">(</span><span class="n">trace</span><span class="p">[</span><span class="mi">1000</span><span class="p">:],</span>
                  <span class="n">varnames</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;difference of means&#39;</span><span class="p">,</span> <span class="s1">&#39;difference of stds&#39;</span><span class="p">,</span> <span class="s1">&#39;effect size&#39;</span><span class="p">])</span>
 </pre></div>
 </div>
 </div>
-<div class="nboutput nblast container">
-<div class="container">
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
 </div>
-<div class="container">
+<div class="output_area docutils container">
 <div class="highlight"><pre>
 
 difference of means:
@@ -781,15 +835,18 @@ Gen. 2013;142(2):573-603. doi:10.1037/a0029146.</li>
 
 
            </div>
+           <div class="articleComments">
+            
+           </div>
           </div>
           <footer>
   
     <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
       
-        <a href="stochastic_volatility.html" class="btn btn-neutral float-right" title="Stochastic Volatility model" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
+        <a href="stochastic_volatility.html" class="btn btn-neutral float-right" title="Stochastic Volatility model" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
       
       
-        <a href="LKJ.html" class="btn btn-neutral" title="LKJ Prior for fitting a Multivariate Normal Model" accesskey="p"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+        <a href="LKJ.html" class="btn btn-neutral" title="LKJ Prior for fitting a Multivariate Normal Model" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
       
     </div>
   
@@ -823,7 +880,8 @@ Gen. 2013;142(2):573-603. doi:10.1037/a0029146.</li>
             VERSION:'3.0',
             COLLAPSE_INDEX:false,
             FILE_SUFFIX:'.html',
-            HAS_SOURCE:  true
+            HAS_SOURCE:  true,
+            SOURCELINK_SUFFIX: '.txt'
         };
     </script>
       <script type="text/javascript" src="../_static/jquery.js"></script>

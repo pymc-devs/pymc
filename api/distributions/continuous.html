@@ -1,0 +1,1192 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>Continuous &mdash; PyMC3 3.0 documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  
+  
+    <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
+  
+
+  
+
+  
+        <link rel="index" title="Index"
+              href="../../genindex.html"/>
+        <link rel="search" title="Search" href="../../search.html"/>
+    <link rel="top" title="PyMC3 3.0 documentation" href="../../index.html"/>
+        <link rel="up" title="Distributions" href="../distributions.html"/>
+        <link rel="next" title="Discrete" href="discrete.html"/>
+        <link rel="prev" title="Distributions" href="../distributions.html"/> 
+
+  
+  <script src="../../_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+   
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+          
+            <a href="../../index.html" class="icon icon-home"> PyMC3
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                3.0
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../../getting_started.html">Getting started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../examples.html">Examples</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="../../api.html">API Reference</a><ul class="current">
+<li class="toctree-l2 current"><a class="reference internal" href="../distributions.html">Distributions</a><ul class="current">
+<li class="toctree-l3 current"><a class="current reference internal" href="#">Continuous</a></li>
+<li class="toctree-l3"><a class="reference internal" href="discrete.html">Discrete</a></li>
+<li class="toctree-l3"><a class="reference internal" href="multivariate.html">Multivariate</a></li>
+<li class="toctree-l3"><a class="reference internal" href="mixture.html">Mixture</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../inference.html">Inference</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../glm.html">Generalized Linear Models</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../gp.html">Gaussian Processes</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../plots.html">Plots</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../stats.html">Stats</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../diagnostics.html">Diagnostics</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../backends.html">Backends</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../math.html">Math</a></li>
+</ul>
+</li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">PyMC3</a>
+        
+      </nav>
+
+
+      
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../../index.html">Docs</a> &raquo;</li>
+        
+          <li><a href="../../api.html">API Reference</a> &raquo;</li>
+        
+          <li><a href="../distributions.html">Distributions</a> &raquo;</li>
+        
+      <li>Continuous</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            <a href="../../_sources/api/distributions/continuous.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  
+<style>
+/* CSS overrides for sphinx_rtd_theme */
+
+/* 24px margin */
+.nbinput.nblast,
+.nboutput.nblast {
+    margin-bottom: 19px;  /* padding has already 5px */
+}
+
+/* ... except between code cells! */
+.nblast + .nbinput {
+    margin-top: -19px;
+}
+
+/* nice headers on first paragraph of info/warning boxes */
+.admonition .first {
+    margin: -12px;
+    padding: 6px 12px;
+    margin-bottom: 12px;
+    color: #fff;
+    line-height: 1;
+    display: block;
+}
+.admonition.warning .first {
+    background: #f0b37e;
+}
+.admonition.note .first {
+    background: #6ab0de;
+}
+.admonition > p:before {
+    margin-right: 4px;  /* make room for the exclamation icon */
+}
+</style>
+<div class="section" id="continuous">
+<h1>Continuous<a class="headerlink" href="#continuous" title="Permalink to this headline">¶</a></h1>
+<table border="1" class="longtable docutils">
+<colgroup>
+<col width="10%" />
+<col width="90%" />
+</colgroup>
+<tbody valign="top">
+<tr class="row-odd"><td><a class="reference internal" href="#pymc3.distributions.continuous.Uniform" title="pymc3.distributions.continuous.Uniform"><code class="xref py py-obj docutils literal"><span class="pre">Uniform</span></code></a>([lower,&nbsp;upper,&nbsp;transform])</td>
+<td>Continuous uniform log-likelihood.</td>
+</tr>
+<tr class="row-even"><td><a class="reference internal" href="#pymc3.distributions.continuous.Flat" title="pymc3.distributions.continuous.Flat"><code class="xref py py-obj docutils literal"><span class="pre">Flat</span></code></a>(\*args,&nbsp;\*\*kwargs)</td>
+<td>Uninformative log-likelihood that returns 0 regardless of the passed value.</td>
+</tr>
+<tr class="row-odd"><td><a class="reference internal" href="#pymc3.distributions.continuous.Normal" title="pymc3.distributions.continuous.Normal"><code class="xref py py-obj docutils literal"><span class="pre">Normal</span></code></a>([mu,&nbsp;sd,&nbsp;tau])</td>
+<td>Univariate normal log-likelihood.</td>
+</tr>
+<tr class="row-even"><td><a class="reference internal" href="#pymc3.distributions.continuous.Beta" title="pymc3.distributions.continuous.Beta"><code class="xref py py-obj docutils literal"><span class="pre">Beta</span></code></a>([alpha,&nbsp;beta,&nbsp;mu,&nbsp;sd])</td>
+<td>Beta log-likelihood.</td>
+</tr>
+<tr class="row-odd"><td><a class="reference internal" href="#pymc3.distributions.continuous.Exponential" title="pymc3.distributions.continuous.Exponential"><code class="xref py py-obj docutils literal"><span class="pre">Exponential</span></code></a>(lam,&nbsp;\*args,&nbsp;\*\*kwargs)</td>
+<td>Exponential log-likelihood.</td>
+</tr>
+<tr class="row-even"><td><a class="reference internal" href="#pymc3.distributions.continuous.Laplace" title="pymc3.distributions.continuous.Laplace"><code class="xref py py-obj docutils literal"><span class="pre">Laplace</span></code></a>(mu,&nbsp;b,&nbsp;\*args,&nbsp;\*\*kwargs)</td>
+<td>Laplace log-likelihood.</td>
+</tr>
+<tr class="row-odd"><td><a class="reference internal" href="#pymc3.distributions.continuous.StudentT" title="pymc3.distributions.continuous.StudentT"><code class="xref py py-obj docutils literal"><span class="pre">StudentT</span></code></a>(nu[,&nbsp;mu,&nbsp;lam,&nbsp;sd])</td>
+<td>Non-central Student&#8217;s T log-likelihood.</td>
+</tr>
+<tr class="row-even"><td><a class="reference internal" href="#pymc3.distributions.continuous.Cauchy" title="pymc3.distributions.continuous.Cauchy"><code class="xref py py-obj docutils literal"><span class="pre">Cauchy</span></code></a>(alpha,&nbsp;beta,&nbsp;\*args,&nbsp;\*\*kwargs)</td>
+<td>Cauchy log-likelihood.</td>
+</tr>
+<tr class="row-odd"><td><a class="reference internal" href="#pymc3.distributions.continuous.HalfCauchy" title="pymc3.distributions.continuous.HalfCauchy"><code class="xref py py-obj docutils literal"><span class="pre">HalfCauchy</span></code></a>(beta,&nbsp;\*args,&nbsp;\*\*kwargs)</td>
+<td>Half-Cauchy log-likelihood.</td>
+</tr>
+<tr class="row-even"><td><a class="reference internal" href="#pymc3.distributions.continuous.Gamma" title="pymc3.distributions.continuous.Gamma"><code class="xref py py-obj docutils literal"><span class="pre">Gamma</span></code></a>([alpha,&nbsp;beta,&nbsp;mu,&nbsp;sd])</td>
+<td>Gamma log-likelihood.</td>
+</tr>
+<tr class="row-odd"><td><a class="reference internal" href="#pymc3.distributions.continuous.Weibull" title="pymc3.distributions.continuous.Weibull"><code class="xref py py-obj docutils literal"><span class="pre">Weibull</span></code></a>(alpha,&nbsp;beta,&nbsp;\*args,&nbsp;\*\*kwargs)</td>
+<td>Weibull log-likelihood.</td>
+</tr>
+<tr class="row-even"><td><code class="xref py py-obj docutils literal"><span class="pre">StudentTpos</span></code>(\*args,&nbsp;\*\*kwargs)</td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><a class="reference internal" href="#pymc3.distributions.continuous.Lognormal" title="pymc3.distributions.continuous.Lognormal"><code class="xref py py-obj docutils literal"><span class="pre">Lognormal</span></code></a>([mu,&nbsp;sd,&nbsp;tau])</td>
+<td>Log-normal log-likelihood.</td>
+</tr>
+<tr class="row-even"><td><a class="reference internal" href="#pymc3.distributions.continuous.ChiSquared" title="pymc3.distributions.continuous.ChiSquared"><code class="xref py py-obj docutils literal"><span class="pre">ChiSquared</span></code></a>(nu,&nbsp;\*args,&nbsp;\*\*kwargs)</td>
+<td><span class="math">\(\chi^2\)</span> log-likelihood.</td>
+</tr>
+<tr class="row-odd"><td><a class="reference internal" href="#pymc3.distributions.continuous.HalfNormal" title="pymc3.distributions.continuous.HalfNormal"><code class="xref py py-obj docutils literal"><span class="pre">HalfNormal</span></code></a>([sd,&nbsp;tau])</td>
+<td>Half-normal log-likelihood.</td>
+</tr>
+<tr class="row-even"><td><a class="reference internal" href="#pymc3.distributions.continuous.Wald" title="pymc3.distributions.continuous.Wald"><code class="xref py py-obj docutils literal"><span class="pre">Wald</span></code></a>([mu,&nbsp;lam,&nbsp;phi,&nbsp;alpha])</td>
+<td>Wald log-likelihood.</td>
+</tr>
+<tr class="row-odd"><td><a class="reference internal" href="#pymc3.distributions.continuous.Pareto" title="pymc3.distributions.continuous.Pareto"><code class="xref py py-obj docutils literal"><span class="pre">Pareto</span></code></a>(alpha,&nbsp;m,&nbsp;\*args,&nbsp;\*\*kwargs)</td>
+<td>Pareto log-likelihood.</td>
+</tr>
+<tr class="row-even"><td><a class="reference internal" href="#pymc3.distributions.continuous.InverseGamma" title="pymc3.distributions.continuous.InverseGamma"><code class="xref py py-obj docutils literal"><span class="pre">InverseGamma</span></code></a>(alpha[,&nbsp;beta])</td>
+<td>Inverse gamma log-likelihood, the reciprocal of the gamma distribution.</td>
+</tr>
+<tr class="row-odd"><td><a class="reference internal" href="#pymc3.distributions.continuous.ExGaussian" title="pymc3.distributions.continuous.ExGaussian"><code class="xref py py-obj docutils literal"><span class="pre">ExGaussian</span></code></a>(mu,&nbsp;sigma,&nbsp;nu,&nbsp;\*args,&nbsp;\*\*kwargs)</td>
+<td>Exponentially modified Gaussian log-likelihood.</td>
+</tr>
+</tbody>
+</table>
+<span class="target" id="module-pymc3.distributions.continuous"></span><p>pymc3.distributions</p>
+<p>A collection of common probability distributions for stochastic
+nodes in PyMC.</p>
+<dl class="class">
+<dt id="pymc3.distributions.continuous.Uniform">
+<em class="property">class </em><code class="descclassname">pymc3.distributions.continuous.</code><code class="descname">Uniform</code><span class="sig-paren">(</span><em>lower=0</em>, <em>upper=1</em>, <em>transform='interval'</em>, <em>*args</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.distributions.continuous.Uniform" title="Permalink to this definition">¶</a></dt>
+<dd><p>Continuous uniform log-likelihood.</p>
+<div class="math">
+\[f(x \mid lower, upper) = \frac{1}{upper-lower}\]</div>
+<table border="1" class="docutils">
+<colgroup>
+<col width="18%" />
+<col width="82%" />
+</colgroup>
+<tbody valign="top">
+<tr class="row-odd"><td>Support</td>
+<td><span class="math">\(x \in [lower, upper]\)</span></td>
+</tr>
+<tr class="row-even"><td>Mean</td>
+<td><span class="math">\(\dfrac{lower + upper}{2}\)</span></td>
+</tr>
+<tr class="row-odd"><td>Variance</td>
+<td><span class="math">\(\dfrac{(upper - lower)^2}{12}\)</span></td>
+</tr>
+</tbody>
+</table>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>lower</strong> (<em>float</em>) &#8211; Lower limit.</li>
+<li><strong>upper</strong> (<em>float</em>) &#8211; Upper limit.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="class">
+<dt id="pymc3.distributions.continuous.Flat">
+<em class="property">class </em><code class="descclassname">pymc3.distributions.continuous.</code><code class="descname">Flat</code><span class="sig-paren">(</span><em>*args</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.distributions.continuous.Flat" title="Permalink to this definition">¶</a></dt>
+<dd><p>Uninformative log-likelihood that returns 0 regardless of
+the passed value.</p>
+</dd></dl>
+
+<dl class="class">
+<dt id="pymc3.distributions.continuous.Normal">
+<em class="property">class </em><code class="descclassname">pymc3.distributions.continuous.</code><code class="descname">Normal</code><span class="sig-paren">(</span><em>mu=0</em>, <em>sd=None</em>, <em>tau=None</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.distributions.continuous.Normal" title="Permalink to this definition">¶</a></dt>
+<dd><p>Univariate normal log-likelihood.</p>
+<div class="math">
+\[f(x \mid \mu, \tau) =
+    \sqrt{\frac{\tau}{2\pi}}
+    \exp\left\{ -\frac{\tau}{2} (x-\mu)^2 \right\}\]</div>
+<table border="1" class="docutils">
+<colgroup>
+<col width="16%" />
+<col width="84%" />
+</colgroup>
+<tbody valign="top">
+<tr class="row-odd"><td>Support</td>
+<td><span class="math">\(x \in \mathbb{R}\)</span></td>
+</tr>
+<tr class="row-even"><td>Mean</td>
+<td><span class="math">\(\mu\)</span></td>
+</tr>
+<tr class="row-odd"><td>Variance</td>
+<td><span class="math">\(\dfrac{1}{\tau}\)</span> or <span class="math">\(\sigma^2\)</span></td>
+</tr>
+</tbody>
+</table>
+<p>Normal distribution can be parameterized either in terms of precision
+or standard deviation. The link between the two parametrizations is
+given by</p>
+<div class="math">
+\[\tau = \dfrac{1}{\sigma^2}\]</div>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>mu</strong> (<em>float</em>) &#8211; Mean.</li>
+<li><strong>sd</strong> (<em>float</em>) &#8211; Standard deviation (sd &gt; 0).</li>
+<li><strong>tau</strong> (<em>float</em>) &#8211; Precision (tau &gt; 0).</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="class">
+<dt id="pymc3.distributions.continuous.Beta">
+<em class="property">class </em><code class="descclassname">pymc3.distributions.continuous.</code><code class="descname">Beta</code><span class="sig-paren">(</span><em>alpha=None</em>, <em>beta=None</em>, <em>mu=None</em>, <em>sd=None</em>, <em>*args</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.distributions.continuous.Beta" title="Permalink to this definition">¶</a></dt>
+<dd><p>Beta log-likelihood.</p>
+<div class="math">
+\[f(x \mid \alpha, \beta) =
+    \frac{x^{\alpha - 1} (1 - x)^{\beta - 1}}{B(\alpha, \beta)}\]</div>
+<table border="1" class="docutils">
+<colgroup>
+<col width="11%" />
+<col width="89%" />
+</colgroup>
+<tbody valign="top">
+<tr class="row-odd"><td>Support</td>
+<td><span class="math">\(x \in (0, 1)\)</span></td>
+</tr>
+<tr class="row-even"><td>Mean</td>
+<td><span class="math">\(\dfrac{\alpha}{\alpha + \beta}\)</span></td>
+</tr>
+<tr class="row-odd"><td>Variance</td>
+<td><span class="math">\(\dfrac{\alpha \beta}{(\alpha+\beta)^2(\alpha+\beta+1)}\)</span></td>
+</tr>
+</tbody>
+</table>
+<p>Beta distribution can be parameterized either in terms of alpha and
+beta or mean and standard deviation. The link between the two
+parametrizations is given by</p>
+<div class="math">
+\[ \begin{align}\begin{aligned}\begin{split}\alpha &amp;= \mu \kappa \\
+\beta  &amp;= (1 - \mu) \kappa\end{split}\\\text{where } \kappa = \frac{\mu(1-\mu)}{\sigma^2} - 1\end{aligned}\end{align} \]</div>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>alpha</strong> (<em>float</em>) &#8211; alpha &gt; 0.</li>
+<li><strong>beta</strong> (<em>float</em>) &#8211; beta &gt; 0.</li>
+<li><strong>mu</strong> (<em>float</em>) &#8211; Alternative mean (0 &lt; mu &lt; 1).</li>
+<li><strong>sd</strong> (<em>float</em>) &#8211; Alternative standard deviation (sd &gt; 0).</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">Notes</p>
+<p>Beta distribution is a conjugate prior for the parameter <span class="math">\(p\)</span> of
+the binomial distribution.</p>
+</dd></dl>
+
+<dl class="class">
+<dt id="pymc3.distributions.continuous.Exponential">
+<em class="property">class </em><code class="descclassname">pymc3.distributions.continuous.</code><code class="descname">Exponential</code><span class="sig-paren">(</span><em>lam</em>, <em>*args</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.distributions.continuous.Exponential" title="Permalink to this definition">¶</a></dt>
+<dd><p>Exponential log-likelihood.</p>
+<div class="math">
+\[f(x \mid \lambda) = \lambda \exp\left\{ -\lambda x \right\}\]</div>
+<table border="1" class="docutils">
+<colgroup>
+<col width="22%" />
+<col width="78%" />
+</colgroup>
+<tbody valign="top">
+<tr class="row-odd"><td>Support</td>
+<td><span class="math">\(x \in [0, \infty)\)</span></td>
+</tr>
+<tr class="row-even"><td>Mean</td>
+<td><span class="math">\(\dfrac{1}{\lambda}\)</span></td>
+</tr>
+<tr class="row-odd"><td>Variance</td>
+<td><span class="math">\(\dfrac{1}{\lambda^2}\)</span></td>
+</tr>
+</tbody>
+</table>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>lam</strong> (<em>float</em>) &#8211; Rate or inverse scale (lam &gt; 0)</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="class">
+<dt id="pymc3.distributions.continuous.Laplace">
+<em class="property">class </em><code class="descclassname">pymc3.distributions.continuous.</code><code class="descname">Laplace</code><span class="sig-paren">(</span><em>mu</em>, <em>b</em>, <em>*args</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.distributions.continuous.Laplace" title="Permalink to this definition">¶</a></dt>
+<dd><p>Laplace log-likelihood.</p>
+<div class="math">
+\[f(x \mid \alpha, \beta) =
+    \frac{1}{2b} \exp \left\{ - \frac{|x - \mu|}{b} \right\}\]</div>
+<table border="1" class="docutils">
+<colgroup>
+<col width="25%" />
+<col width="75%" />
+</colgroup>
+<tbody valign="top">
+<tr class="row-odd"><td>Support</td>
+<td><span class="math">\(x \in \mathbb{R}\)</span></td>
+</tr>
+<tr class="row-even"><td>Mean</td>
+<td><span class="math">\(\mu\)</span></td>
+</tr>
+<tr class="row-odd"><td>Variance</td>
+<td><span class="math">\(2 b^2\)</span></td>
+</tr>
+</tbody>
+</table>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>mu</strong> (<em>float</em>) &#8211; Location parameter.</li>
+<li><strong>b</strong> (<em>float</em>) &#8211; Scale parameter (b &gt; 0).</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="class">
+<dt id="pymc3.distributions.continuous.StudentT">
+<em class="property">class </em><code class="descclassname">pymc3.distributions.continuous.</code><code class="descname">StudentT</code><span class="sig-paren">(</span><em>nu</em>, <em>mu=0</em>, <em>lam=None</em>, <em>sd=None</em>, <em>*args</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.distributions.continuous.StudentT" title="Permalink to this definition">¶</a></dt>
+<dd><p>Non-central Student&#8217;s T log-likelihood.</p>
+<p>Describes a normal variable whose precision is gamma distributed.
+If only nu parameter is passed, this specifies a standard (central)
+Student&#8217;s T.</p>
+<div class="math">
+\[f(x|\mu,\lambda,\nu) =
+    \frac{\Gamma(\frac{\nu + 1}{2})}{\Gamma(\frac{\nu}{2})}
+    \left(\frac{\lambda}{\pi\nu}\right)^{\frac{1}{2}}
+    \left[1+\frac{\lambda(x-\mu)^2}{\nu}\right]^{-\frac{\nu+1}{2}}\]</div>
+<table border="1" class="docutils">
+<colgroup>
+<col width="25%" />
+<col width="75%" />
+</colgroup>
+<tbody valign="top">
+<tr class="row-odd"><td>Support</td>
+<td><span class="math">\(x \in \mathbb{R}\)</span></td>
+</tr>
+</tbody>
+</table>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>nu</strong> (<em>int</em>) &#8211; Degrees of freedom (nu &gt; 0).</li>
+<li><strong>mu</strong> (<em>float</em>) &#8211; Location parameter.</li>
+<li><strong>lam</strong> (<em>float</em>) &#8211; Scale parameter (lam &gt; 0).</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="class">
+<dt id="pymc3.distributions.continuous.Cauchy">
+<em class="property">class </em><code class="descclassname">pymc3.distributions.continuous.</code><code class="descname">Cauchy</code><span class="sig-paren">(</span><em>alpha</em>, <em>beta</em>, <em>*args</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.distributions.continuous.Cauchy" title="Permalink to this definition">¶</a></dt>
+<dd><p>Cauchy log-likelihood.</p>
+<p>Also known as the Lorentz or the Breit-Wigner distribution.</p>
+<div class="math">
+\[f(x \mid \alpha, \beta) =
+    \frac{1}{\pi \beta [1 + (\frac{x-\alpha}{\beta})^2]}\]</div>
+<table border="1" class="docutils">
+<colgroup>
+<col width="25%" />
+<col width="75%" />
+</colgroup>
+<tbody valign="top">
+<tr class="row-odd"><td>Support</td>
+<td><span class="math">\(x \in \mathbb{R}\)</span></td>
+</tr>
+<tr class="row-even"><td>Mode</td>
+<td><span class="math">\(\alpha\)</span></td>
+</tr>
+<tr class="row-odd"><td>Mean</td>
+<td>undefined</td>
+</tr>
+<tr class="row-even"><td>Variance</td>
+<td>undefined</td>
+</tr>
+</tbody>
+</table>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>alpha</strong> (<em>float</em>) &#8211; Location parameter</li>
+<li><strong>beta</strong> (<em>float</em>) &#8211; Scale parameter &gt; 0</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="class">
+<dt id="pymc3.distributions.continuous.HalfCauchy">
+<em class="property">class </em><code class="descclassname">pymc3.distributions.continuous.</code><code class="descname">HalfCauchy</code><span class="sig-paren">(</span><em>beta</em>, <em>*args</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.distributions.continuous.HalfCauchy" title="Permalink to this definition">¶</a></dt>
+<dd><p>Half-Cauchy log-likelihood.</p>
+<div class="math">
+\[f(x \mid \beta) = \frac{2}{\pi \beta [1 + (\frac{x}{\beta})^2]}\]</div>
+<table border="1" class="docutils">
+<colgroup>
+<col width="25%" />
+<col width="75%" />
+</colgroup>
+<tbody valign="top">
+<tr class="row-odd"><td>Support</td>
+<td><span class="math">\(x \in \mathbb{R}\)</span></td>
+</tr>
+<tr class="row-even"><td>Mode</td>
+<td>0</td>
+</tr>
+<tr class="row-odd"><td>Mean</td>
+<td>undefined</td>
+</tr>
+<tr class="row-even"><td>Variance</td>
+<td>undefined</td>
+</tr>
+</tbody>
+</table>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>beta</strong> (<em>float</em>) &#8211; Scale parameter (beta &gt; 0).</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="class">
+<dt id="pymc3.distributions.continuous.Gamma">
+<em class="property">class </em><code class="descclassname">pymc3.distributions.continuous.</code><code class="descname">Gamma</code><span class="sig-paren">(</span><em>alpha=None</em>, <em>beta=None</em>, <em>mu=None</em>, <em>sd=None</em>, <em>*args</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.distributions.continuous.Gamma" title="Permalink to this definition">¶</a></dt>
+<dd><p>Gamma log-likelihood.</p>
+<p>Represents the sum of alpha exponentially distributed random variables,
+each of which has mean beta.</p>
+<div class="math">
+\[f(x \mid \alpha, \beta) =
+    \frac{\beta^{\alpha}x^{\alpha-1}e^{-\beta x}}{\Gamma(\alpha)}\]</div>
+<table border="1" class="docutils">
+<colgroup>
+<col width="21%" />
+<col width="79%" />
+</colgroup>
+<tbody valign="top">
+<tr class="row-odd"><td>Support</td>
+<td><span class="math">\(x \in (0, \infty)\)</span></td>
+</tr>
+<tr class="row-even"><td>Mean</td>
+<td><span class="math">\(\dfrac{\alpha}{\beta}\)</span></td>
+</tr>
+<tr class="row-odd"><td>Variance</td>
+<td><span class="math">\(\dfrac{\alpha}{\beta^2}\)</span></td>
+</tr>
+</tbody>
+</table>
+<p>Gamma distribution can be parameterized either in terms of alpha and
+beta or mean and standard deviation. The link between the two
+parametrizations is given by</p>
+<div class="math">
+\[\begin{split}\alpha &amp;= \frac{\mu^2}{\sigma^2} \\
+\beta &amp;= \frac{\mu}{\sigma^2}\end{split}\]</div>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>alpha</strong> (<em>float</em>) &#8211; Shape parameter (alpha &gt; 0).</li>
+<li><strong>beta</strong> (<em>float</em>) &#8211; Rate parameter (beta &gt; 0).</li>
+<li><strong>mu</strong> (<em>float</em>) &#8211; Alternative shape parameter (mu &gt; 0).</li>
+<li><strong>sd</strong> (<em>float</em>) &#8211; Alternative scale parameter (sd &gt; 0).</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="class">
+<dt id="pymc3.distributions.continuous.Weibull">
+<em class="property">class </em><code class="descclassname">pymc3.distributions.continuous.</code><code class="descname">Weibull</code><span class="sig-paren">(</span><em>alpha</em>, <em>beta</em>, <em>*args</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.distributions.continuous.Weibull" title="Permalink to this definition">¶</a></dt>
+<dd><p>Weibull log-likelihood.</p>
+<div class="math">
+\[f(x \mid \alpha, \beta) =
+    \frac{\alpha x^{\alpha - 1}
+    \exp(-(\frac{x}{\beta})^{\alpha})}{\beta^\alpha}\]</div>
+<table border="1" class="docutils">
+<colgroup>
+<col width="13%" />
+<col width="87%" />
+</colgroup>
+<tbody valign="top">
+<tr class="row-odd"><td>Support</td>
+<td><span class="math">\(x \in [0, \infty)\)</span></td>
+</tr>
+<tr class="row-even"><td>Mean</td>
+<td><span class="math">\(\beta \Gamma(1 + \frac{1}{\alpha})\)</span></td>
+</tr>
+<tr class="row-odd"><td>Variance</td>
+<td><span class="math">\(\beta^2 \Gamma(1 + \frac{2}{\alpha} - \mu^2)\)</span></td>
+</tr>
+</tbody>
+</table>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>alpha</strong> (<em>float</em>) &#8211; Shape parameter (alpha &gt; 0).</li>
+<li><strong>beta</strong> (<em>float</em>) &#8211; Scale parameter (beta &gt; 0).</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="class">
+<dt id="pymc3.distributions.continuous.Lognormal">
+<em class="property">class </em><code class="descclassname">pymc3.distributions.continuous.</code><code class="descname">Lognormal</code><span class="sig-paren">(</span><em>mu=0</em>, <em>sd=None</em>, <em>tau=None</em>, <em>*args</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.distributions.continuous.Lognormal" title="Permalink to this definition">¶</a></dt>
+<dd><p>Log-normal log-likelihood.</p>
+<p>Distribution of any random variable whose logarithm is normally
+distributed. A variable might be modeled as log-normal if it can
+be thought of as the multiplicative product of many small
+independent factors.</p>
+<div class="math">
+\[f(x \mid \mu, \tau) =
+    \frac{1}{x} \sqrt{\frac{\tau}{2\pi}}
+    \exp\left\{ -\frac{\tau}{2} (\ln(x)-\mu)^2 \right\}\]</div>
+<table border="1" class="docutils">
+<colgroup>
+<col width="11%" />
+<col width="89%" />
+</colgroup>
+<tbody valign="top">
+<tr class="row-odd"><td>Support</td>
+<td><span class="math">\(x \in (0, 1)\)</span></td>
+</tr>
+<tr class="row-even"><td>Mean</td>
+<td><span class="math">\(\exp\{\mu + \frac{1}{2\tau}\}\)</span></td>
+</tr>
+<tr class="row-odd"><td>Variance</td>
+<td><span class="math">\(\exp\{\frac{1}{\tau} - 1\} \exp\{2\mu + \frac{1}{\tau}\}\)</span></td>
+</tr>
+</tbody>
+</table>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>mu</strong> (<em>float</em>) &#8211; Location parameter.</li>
+<li><strong>tau</strong> (<em>float</em>) &#8211; Scale parameter (tau &gt; 0).</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="class">
+<dt id="pymc3.distributions.continuous.ChiSquared">
+<em class="property">class </em><code class="descclassname">pymc3.distributions.continuous.</code><code class="descname">ChiSquared</code><span class="sig-paren">(</span><em>nu</em>, <em>*args</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.distributions.continuous.ChiSquared" title="Permalink to this definition">¶</a></dt>
+<dd><p><span class="math">\(\chi^2\)</span> log-likelihood.</p>
+<div class="math">
+\[f(x \mid \nu) = \frac{x^{(\nu-2)/2}e^{-x/2}}{2^{\nu/2}\Gamma(\nu/2)}\]</div>
+<table border="1" class="docutils">
+<colgroup>
+<col width="21%" />
+<col width="79%" />
+</colgroup>
+<tbody valign="top">
+<tr class="row-odd"><td>Support</td>
+<td><span class="math">\(x \in [0, \infty)\)</span></td>
+</tr>
+<tr class="row-even"><td>Mean</td>
+<td><span class="math">\(\nu\)</span></td>
+</tr>
+<tr class="row-odd"><td>Variance</td>
+<td><span class="math">\(2 \nu\)</span></td>
+</tr>
+</tbody>
+</table>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>nu</strong> (<em>int</em>) &#8211; Degrees of freedom (nu &gt; 0).</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="class">
+<dt id="pymc3.distributions.continuous.HalfNormal">
+<em class="property">class </em><code class="descclassname">pymc3.distributions.continuous.</code><code class="descname">HalfNormal</code><span class="sig-paren">(</span><em>sd=None</em>, <em>tau=None</em>, <em>*args</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.distributions.continuous.HalfNormal" title="Permalink to this definition">¶</a></dt>
+<dd><p>Half-normal log-likelihood.</p>
+<div class="math">
+\[f(x \mid \tau) =
+    \sqrt{\frac{2\tau}{\pi}}
+    \exp\left\{ {\frac{-x^2 \tau}{2}}\right\}\]</div>
+<table border="1" class="docutils">
+<colgroup>
+<col width="16%" />
+<col width="84%" />
+</colgroup>
+<tbody valign="top">
+<tr class="row-odd"><td>Support</td>
+<td><span class="math">\(x \in [0, \infty)\)</span></td>
+</tr>
+<tr class="row-even"><td>Mean</td>
+<td><span class="math">\(0\)</span></td>
+</tr>
+<tr class="row-odd"><td>Variance</td>
+<td><span class="math">\(\dfrac{1}{\tau}\)</span> or <span class="math">\(\sigma^2\)</span></td>
+</tr>
+</tbody>
+</table>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>sd</strong> (<em>float</em>) &#8211; Standard deviation (sd &gt; 0).</li>
+<li><strong>tau</strong> (<em>float</em>) &#8211; Precision (tau &gt; 0).</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="class">
+<dt id="pymc3.distributions.continuous.Wald">
+<em class="property">class </em><code class="descclassname">pymc3.distributions.continuous.</code><code class="descname">Wald</code><span class="sig-paren">(</span><em>mu=None</em>, <em>lam=None</em>, <em>phi=None</em>, <em>alpha=0.0</em>, <em>*args</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.distributions.continuous.Wald" title="Permalink to this definition">¶</a></dt>
+<dd><p>Wald log-likelihood.</p>
+<div class="math">
+\[f(x \mid \mu, \lambda) =
+    \left(\frac{\lambda}{2\pi)}\right)^{1/2} x^{-3/2}
+    \exp\left\{
+        -\frac{\lambda}{2x}\left(\frac{x-\mu}{\mu}\right)^2
+    \right\}\]</div>
+<table border="1" class="docutils">
+<colgroup>
+<col width="21%" />
+<col width="79%" />
+</colgroup>
+<tbody valign="top">
+<tr class="row-odd"><td>Support</td>
+<td><span class="math">\(x \in (0, \infty)\)</span></td>
+</tr>
+<tr class="row-even"><td>Mean</td>
+<td><span class="math">\(\mu\)</span></td>
+</tr>
+<tr class="row-odd"><td>Variance</td>
+<td><span class="math">\(\dfrac{\mu^3}{\lambda}\)</span></td>
+</tr>
+</tbody>
+</table>
+<p>Wald distribution can be parameterized either in terms of lam or phi.
+The link between the two parametrizations is given by</p>
+<div class="math">
+\[\phi = \dfrac{\lambda}{\mu}\]</div>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>mu</strong> (<em>float</em><em>, </em><em>optional</em>) &#8211; Mean of the distribution (mu &gt; 0).</li>
+<li><strong>lam</strong> (<em>float</em><em>, </em><em>optional</em>) &#8211; Relative precision (lam &gt; 0).</li>
+<li><strong>phi</strong> (<em>float</em><em>, </em><em>optional</em>) &#8211; Alternative shape parameter (phi &gt; 0).</li>
+<li><strong>alpha</strong> (<em>float</em><em>, </em><em>optional</em>) &#8211; Shift/location parameter (alpha &gt;= 0).</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">Notes</p>
+<p>To instantiate the distribution specify any of the following</p>
+<ul class="simple">
+<li>only mu (in this case lam will be 1)</li>
+<li>mu and lam</li>
+<li>mu and phi</li>
+<li>lam and phi</li>
+</ul>
+<p class="rubric">References</p>
+<table class="docutils citation" frame="void" id="tweedie1957" rules="none">
+<colgroup><col class="label" /><col /></colgroup>
+<tbody valign="top">
+<tr><td class="label">[Tweedie1957]</td><td>Tweedie, M. C. K. (1957).
+Statistical Properties of Inverse Gaussian Distributions I.
+The Annals of Mathematical Statistics, Vol. 28, No. 2, pp. 362-377</td></tr>
+</tbody>
+</table>
+<table class="docutils citation" frame="void" id="michael1976" rules="none">
+<colgroup><col class="label" /><col /></colgroup>
+<tbody valign="top">
+<tr><td class="label">[Michael1976]</td><td>Michael, J. R., Schucany, W. R. and Hass, R. W. (1976).
+Generating Random Variates Using Transformations with Multiple Roots.
+The American Statistician, Vol. 30, No. 2, pp. 88-90</td></tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="class">
+<dt id="pymc3.distributions.continuous.Pareto">
+<em class="property">class </em><code class="descclassname">pymc3.distributions.continuous.</code><code class="descname">Pareto</code><span class="sig-paren">(</span><em>alpha</em>, <em>m</em>, <em>*args</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.distributions.continuous.Pareto" title="Permalink to this definition">¶</a></dt>
+<dd><p>Pareto log-likelihood.</p>
+<p>Often used to characterize wealth distribution, or other examples of the
+80/20 rule.</p>
+<div class="math">
+\[f(x \mid \alpha, m) = \frac{\alpha m^{\alpha}}{x^{\alpha+1}}\]</div>
+<table border="1" class="docutils">
+<colgroup>
+<col width="12%" />
+<col width="88%" />
+</colgroup>
+<tbody valign="top">
+<tr class="row-odd"><td>Support</td>
+<td><span class="math">\(x \in [m, \infty)\)</span></td>
+</tr>
+<tr class="row-even"><td>Mean</td>
+<td><span class="math">\(\dfrac{\alpha m}{\alpha - 1}\)</span> for <span class="math">\(\alpha \ge 1\)</span></td>
+</tr>
+<tr class="row-odd"><td>Variance</td>
+<td><span class="math">\(\dfrac{m \alpha}{(\alpha - 1)^2 (\alpha - 2)}\)</span>
+for <span class="math">\(\alpha &gt; 2\)</span></td>
+</tr>
+</tbody>
+</table>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>alpha</strong> (<em>float</em>) &#8211; Shape parameter (alpha &gt; 0).</li>
+<li><strong>m</strong> (<em>float</em>) &#8211; Scale parameter (m &gt; 0).</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="class">
+<dt id="pymc3.distributions.continuous.InverseGamma">
+<em class="property">class </em><code class="descclassname">pymc3.distributions.continuous.</code><code class="descname">InverseGamma</code><span class="sig-paren">(</span><em>alpha</em>, <em>beta=1</em>, <em>*args</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.distributions.continuous.InverseGamma" title="Permalink to this definition">¶</a></dt>
+<dd><p>Inverse gamma log-likelihood, the reciprocal of the gamma distribution.</p>
+<div class="math">
+\[f(x \mid \alpha, \beta) =
+    \frac{\beta^{\alpha}}{\Gamma(\alpha)} x^{-\alpha - 1}
+    \exp\left(\frac{-\beta}{x}\right)\]</div>
+<table border="1" class="docutils">
+<colgroup>
+<col width="13%" />
+<col width="87%" />
+</colgroup>
+<tbody valign="top">
+<tr class="row-odd"><td>Support</td>
+<td><span class="math">\(x \in (0, \infty)\)</span></td>
+</tr>
+<tr class="row-even"><td>Mean</td>
+<td><span class="math">\(\dfrac{\beta}{\alpha-1}\)</span> for <span class="math">\(\alpha &gt; 1\)</span></td>
+</tr>
+<tr class="row-odd"><td>Variance</td>
+<td><span class="math">\(\dfrac{\beta^2}{(\alpha-1)^2(\alpha)}\)</span>
+for <span class="math">\(\alpha &gt; 2\)</span></td>
+</tr>
+</tbody>
+</table>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>alpha</strong> (<em>float</em>) &#8211; Shape parameter (alpha &gt; 0).</li>
+<li><strong>beta</strong> (<em>float</em>) &#8211; Scale parameter (beta &gt; 0).</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="class">
+<dt id="pymc3.distributions.continuous.ExGaussian">
+<em class="property">class </em><code class="descclassname">pymc3.distributions.continuous.</code><code class="descname">ExGaussian</code><span class="sig-paren">(</span><em>mu</em>, <em>sigma</em>, <em>nu</em>, <em>*args</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.distributions.continuous.ExGaussian" title="Permalink to this definition">¶</a></dt>
+<dd><p>Exponentially modified Gaussian log-likelihood.</p>
+<p>Results from the convolution of a normal distribution with an exponential
+distribution.</p>
+<div class="math">
+\[f(x \mid \mu, \sigma, \tau) =
+    \frac{1}{\nu}\;
+    \exp\left\{\frac{\mu-x}{\nu}+\frac{\sigma^2}{2\nu^2}\right\}
+    \Phi\left(\frac{x-\mu}{\sigma}-\frac{\sigma}{\nu}\right)\]</div>
+<p>where <span class="math">\(\Phi\)</span> is the cumulative distribution function of the
+standard normal distribution.</p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="25%" />
+<col width="75%" />
+</colgroup>
+<tbody valign="top">
+<tr class="row-odd"><td>Support</td>
+<td><span class="math">\(x \in \mathbb{R}\)</span></td>
+</tr>
+<tr class="row-even"><td>Mean</td>
+<td><span class="math">\(\mu + \nu\)</span></td>
+</tr>
+<tr class="row-odd"><td>Variance</td>
+<td><span class="math">\(\sigma^2 + \nu^2\)</span></td>
+</tr>
+</tbody>
+</table>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>mu</strong> (<em>float</em>) &#8211; Mean of the normal distribution.</li>
+<li><strong>sigma</strong> (<em>float</em>) &#8211; Standard deviation of the normal distribution (sigma &gt; 0).</li>
+<li><strong>nu</strong> (<em>float</em>) &#8211; Mean of the exponential distribution (nu &gt; 0).</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">References</p>
+<table class="docutils citation" frame="void" id="rigby2005" rules="none">
+<colgroup><col class="label" /><col /></colgroup>
+<tbody valign="top">
+<tr><td class="label">[Rigby2005]</td><td>Rigby R.A. and Stasinopoulos D.M. (2005).
+&#8220;Generalized additive models for location, scale and shape&#8221;
+Applied Statististics., 54, part 3, pp 507-554.</td></tr>
+</tbody>
+</table>
+<table class="docutils citation" frame="void" id="lacouture2008" rules="none">
+<colgroup><col class="label" /><col /></colgroup>
+<tbody valign="top">
+<tr><td class="label">[Lacouture2008]</td><td>Lacouture, Y. and Couseanou, D. (2008).
+&#8220;How to use MATLAB to fit the ex-Gaussian and other probability
+functions to a distribution of response times&#8221;.
+Tutorials in Quantitative Methods for Psychology,
+Vol. 4, No. 1, pp 35-45.</td></tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="class">
+<dt id="pymc3.distributions.continuous.VonMises">
+<em class="property">class </em><code class="descclassname">pymc3.distributions.continuous.</code><code class="descname">VonMises</code><span class="sig-paren">(</span><em>mu=0.0</em>, <em>kappa=None</em>, <em>transform='circular'</em>, <em>*args</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.distributions.continuous.VonMises" title="Permalink to this definition">¶</a></dt>
+<dd><p>Univariate VonMises log-likelihood.</p>
+<div class="math">
+\[f(x \mid \mu, \kappa) =
+    \frac{e^{\kappa\cos(x-\mu)}}{2\pi I_0(\kappa)}\]</div>
+<p>where :I_0 is the modified Bessel function of order 0.</p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="16%" />
+<col width="84%" />
+</colgroup>
+<tbody valign="top">
+<tr class="row-odd"><td>Support</td>
+<td><span class="math">\(x \in [-\pi, \pi]\)</span></td>
+</tr>
+<tr class="row-even"><td>Mean</td>
+<td><span class="math">\(\mu\)</span></td>
+</tr>
+<tr class="row-odd"><td>Variance</td>
+<td><span class="math">\(1-\frac{I_1(\kappa)}{I_0(\kappa)}\)</span></td>
+</tr>
+</tbody>
+</table>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>mu</strong> (<em>float</em>) &#8211; Mean.</li>
+<li><strong>kappa</strong> (<em>float</em>) &#8211; Concentration (frac{1}{kappa} is analogous to sigma^2).</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="class">
+<dt id="pymc3.distributions.continuous.SkewNormal">
+<em class="property">class </em><code class="descclassname">pymc3.distributions.continuous.</code><code class="descname">SkewNormal</code><span class="sig-paren">(</span><em>mu=0.0</em>, <em>sd=None</em>, <em>tau=None</em>, <em>alpha=1</em>, <em>*args</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.distributions.continuous.SkewNormal" title="Permalink to this definition">¶</a></dt>
+<dd><p>Univariate skew-normal log-likelihood.</p>
+<div class="math">
+\[f(x \mid \mu, \tau, \alpha) =
+2 \Phi((x-\mu)\sqrt{\tau}\alpha) \phi(x,\mu,\tau)\]</div>
+<table border="1" class="docutils">
+<colgroup>
+<col width="9%" />
+<col width="91%" />
+</colgroup>
+<tbody valign="top">
+<tr class="row-odd"><td>Support</td>
+<td><span class="math">\(x \in \mathbb{R}\)</span></td>
+</tr>
+<tr class="row-even"><td>Mean</td>
+<td><span class="math">\(\mu + \sigma \sqrt{\frac{2}{\pi}} \frac {\alpha }{{\sqrt {1+\alpha ^{2}}}}\)</span></td>
+</tr>
+<tr class="row-odd"><td>Variance</td>
+<td><span class="math">\(\sigma^2 \left(  1-\frac{2\alpha^2}{(\alpha^2+1) \pi} \right)\)</span></td>
+</tr>
+</tbody>
+</table>
+<p>Skew-normal distribution can be parameterized either in terms of precision
+or standard deviation. The link between the two parametrizations is
+given by</p>
+<div class="math">
+\[\tau = \dfrac{1}{\sigma^2}\]</div>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>mu</strong> (<em>float</em>) &#8211; Location parameter.</li>
+<li><strong>sd</strong> (<em>float</em>) &#8211; Scale parameter (sd &gt; 0).</li>
+<li><strong>tau</strong> (<em>float</em>) &#8211; Alternative scale parameter (tau &gt; 0).</li>
+<li><strong>alpha</strong> (<em>float</em>) &#8211; Skewness parameter.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">Notes</p>
+<p>When alpha=0 we recover the Normal distribution and mu becomes the mean,
+tau the precision and sd the standard deviation. In the limit of alpha
+approaching plus/minus infinite we get a half-normal distribution.</p>
+</dd></dl>
+
+</div>
+
+
+           </div>
+           <div class="articleComments">
+            
+           </div>
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="discrete.html" class="btn btn-neutral float-right" title="Discrete" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="../distributions.html" class="btn btn-neutral" title="Distributions" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2016, John Salvatier, Christopher Fonnesbeck, Thomas Wiecki.
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'../../',
+            VERSION:'3.0',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true,
+            SOURCELINK_SUFFIX: '.txt'
+        };
+    </script>
+      <script type="text/javascript" src="../../_static/jquery.js"></script>
+      <script type="text/javascript" src="../../_static/underscore.js"></script>
+      <script type="text/javascript" src="../../_static/doctools.js"></script>
+      <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+  
+
+  
+  
+    <script type="text/javascript" src="../../_static/js/theme.js"></script>
+  
+
+  
+  
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.StickyNav.enable();
+      });
+  </script>
+   
+
+</body>
+</html>

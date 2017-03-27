@@ -13,6 +13,8 @@
 
   
   
+  
+  
 
   
 
@@ -45,6 +47,7 @@
 
 <body class="wy-body-for-nav" role="document">
 
+   
   <div class="wy-grid-for-nav">
 
     
@@ -85,7 +88,10 @@
           
             
             
-                <ul class="current">
+              
+            
+            
+              <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="../getting_started.html">Getting started</a></li>
 <li class="toctree-l1 current"><a class="reference internal" href="../examples.html">Examples</a><ul class="current">
 <li class="toctree-l2"><a class="reference internal" href="../examples.html#howto">Howto</a></li>
@@ -106,11 +112,12 @@
 <li class="toctree-l3"><a class="reference internal" href="GLM-hierarchical.html">GLM: Hierarchical Linear Regression</a></li>
 <li class="toctree-l3"><a class="reference internal" href="GLM-poisson-regression.html">GLM: Poisson Regression</a></li>
 <li class="toctree-l3"><a class="reference internal" href="hierarchical_partial_pooling.html">Hierarchical Partial Pooling</a></li>
+<li class="toctree-l3"><a class="reference internal" href="GLM-negative-binomial-regression.html">GLM: Negative Binomial Regression</a></li>
 </ul>
 </li>
-<li class="toctree-l2"><a class="reference internal" href="../examples.html#gp">GP</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../examples.html#gaussian-processes">Gaussian Processes</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../examples.html#mixture-models">Mixture Models</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../examples.html#advi">ADVI</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../examples.html#variational-inference">Variational Inference</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="../api.html">API Reference</a></li>
@@ -126,8 +133,10 @@
 
       
       <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
-        <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
-        <a href="../index.html">PyMC3</a>
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">PyMC3</a>
+        
       </nav>
 
 
@@ -136,25 +145,42 @@
         <div class="rst-content">
           
 
- 
+
+
+
+
+
+
+
+
+
+
+
 
 
 
 <div role="navigation" aria-label="breadcrumbs navigation">
+
   <ul class="wy-breadcrumbs">
-    <li><a href="../index.html">Docs</a> &raquo;</li>
-      
+    
+      <li><a href="../index.html">Docs</a> &raquo;</li>
+        
           <li><a href="../examples.html">Examples</a> &raquo;</li>
-      
-    <li>GLM: Robust Regression with Outlier Detection</li>
+        
+      <li>GLM: Robust Regression with Outlier Detection</li>
+    
+    
       <li class="wy-breadcrumbs-aside">
         
-          
+            
             <a href="../_sources/notebooks/GLM-robust-with-outlier-detection.ipynb.txt" rel="nofollow"> View page source</a>
           
         
       </li>
+    
   </ul>
+
+  
   <hr/>
 </div>
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
@@ -166,13 +192,15 @@
 
 /* remove conflicting styling from Sphinx themes */
 div.nbinput,
-div.nbinput > div,
-div.nbinput div[class^=highlight],
-div.nbinput div[class^=highlight] pre,
+div.nbinput div.prompt,
+div.nbinput div.input_area,
+div.nbinput div[class*=highlight],
+div.nbinput div[class*=highlight] pre,
 div.nboutput,
-div.nboutput > div,
-div.nboutput div[class^=highlight],
-div.nboutput div[class^=highlight] pre {
+div.nbinput div.prompt,
+div.nbinput div.output_area,
+div.nboutput div[class*=highlight],
+div.nboutput div[class*=highlight] pre {
     background: none;
     border: none;
     padding: 0 0;
@@ -181,7 +209,7 @@ div.nboutput div[class^=highlight] pre {
 }
 
 /* avoid gaps between output lines */
-div.nboutput div[class^=highlight] pre {
+div.nboutput div[class*=highlight] pre {
     line-height: normal;
 }
 
@@ -192,6 +220,13 @@ div.nboutput {
     display: flex;
     align-items: flex-start;
     margin: 0;
+    width: 100%;
+}
+@media (max-width: 540px) {
+    div.nbinput,
+    div.nboutput {
+        flex-direction: column;
+    }
 }
 
 /* input container */
@@ -205,38 +240,58 @@ div.nblast {
 }
 
 /* input prompt */
-div.nbinput > :first-child pre {
+div.nbinput div.prompt pre {
     color: #303F9F;
 }
 
 /* output prompt */
-div.nboutput > :first-child pre {
+div.nboutput div.prompt pre {
     color: #D84315;
 }
 
 /* all prompts */
-div.nbinput > :first-child[class^=highlight],
-div.nboutput > :first-child[class^=highlight],
-div.nboutput > :first-child {
+div.nbinput div.prompt,
+div.nboutput div.prompt {
     min-width: 8ex;
     padding-top: 0.4em;
     padding-right: 0.4em;
     text-align: right;
     flex: 0;
 }
+@media (max-width: 540px) {
+    div.nbinput div.prompt,
+    div.nboutput div.prompt {
+        text-align: left;
+        padding: 0.4em;
+    }
+    div.nboutput div.prompt.empty {
+        padding: 0;
+    }
+}
+
+/* disable scrollbars on prompts */
+div.nbinput div.prompt pre,
+div.nboutput div.prompt pre {
+    overflow: hidden;
+}
 
 /* input/output area */
-div.nbinput > :nth-child(2)[class^=highlight],
-div.nboutput > :nth-child(2),
-div.nboutput > :nth-child(2)[class^=highlight] {
+div.nbinput div.input_area,
+div.nboutput div.output_area {
     padding: 0.4em;
     -webkit-flex: 1;
     flex: 1;
     overflow: auto;
 }
+@media (max-width: 540px) {
+    div.nbinput div.input_area,
+    div.nboutput div.output_area {
+        width: 100%;
+    }
+}
 
 /* input area */
-div.nbinput > :nth-child(2)[class^=highlight] {
+div.nbinput div.input_area {
     border: 1px solid #cfcfcf;
     border-radius: 2px;
     background: #f7f7f7;
@@ -253,7 +308,7 @@ div.nboutput div.math p {
 }
 
 /* standard error */
-div.nboutput  > :nth-child(2).stderr {
+div.nboutput div.output_area.stderr {
     background: #fdd;
 }
 
@@ -389,12 +444,12 @@ $&gt; pip install --process-dependency-links git+https://github.com/pymc-devs/py
 </div>
 <div class="section" id="Setup">
 <h2>Setup<a class="headerlink" href="#Setup" title="Permalink to this headline">¶</a></h2>
-<div class="nbinput nblast container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [1]:
 </pre></div>
 </div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="o">%</span><span class="k">matplotlib</span> inline
 <span class="o">%</span><span class="k">qtconsole</span> --colors=linux
 
@@ -403,12 +458,12 @@ $&gt; pip install --process-dependency-links git+https://github.com/pymc-devs/py
 </pre></div>
 </div>
 </div>
-<div class="nbinput nblast container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [2]:
 </pre></div>
 </div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="kn">import</span> <span class="nn">numpy</span> <span class="kn">as</span> <span class="nn">np</span>
 <span class="kn">import</span> <span class="nn">pandas</span> <span class="kn">as</span> <span class="nn">pd</span>
 <span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="kn">as</span> <span class="nn">plt</span>
@@ -432,12 +487,12 @@ $&gt; pip install --process-dependency-links git+https://github.com/pymc-devs/py
 <p>We&#8217;ll use the Hogg 2010 data available at
 <a class="reference external" href="https://github.com/astroML/astroML/blob/master/astroML/datasets/hogg2010test.py">https://github.com/astroML/astroML/blob/master/astroML/datasets/hogg2010test.py</a></p>
 <p>It&#8217;s a very small dataset so for convenience, it&#8217;s hardcoded below</p>
-<div class="nbinput container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [3]:
 </pre></div>
 </div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="c1">#### cut &amp; pasted directly from the fetch_hogg2010test() function</span>
 <span class="c1">## identical to the original dataset as hardcoded in the Hogg 2010 paper</span>
 
@@ -490,10 +545,10 @@ $&gt; pip install --process-dependency-links git+https://github.com/pymc-devs/py
 </pre></div>
 </div>
 </div>
-<div class="nboutput nblast container">
-<div class="container">
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
 </div>
-<div class="container">
+<div class="output_area docutils container">
 <img alt="../_images/notebooks_GLM-robust-with-outlier-detection_6_0.png" src="../_images/notebooks_GLM-robust-with-outlier-detection_6_0.png" />
 </div>
 </div>
@@ -514,17 +569,17 @@ line</li>
 <p>where:</p>
 <div class="line-block">
 <div class="line"><span class="math">\(\beta\)</span> = coefs = <span class="math">\(\{1, \beta_{j \in X_{j}}\}\)</span></div>
-<div class="line"><span class="math">\(\sigma\)</span> = the measured error in <span class="math">\(y\)</span> in the dataset</div>
+<div class="line"><span class="math">\(\sigma\)</span> = the measured error in <span class="math">\(y\)</span> in the dataset
+<code class="docutils literal"><span class="pre">sigma_y</span></code></div>
 </div>
-<p><code class="docutils literal"><span class="pre">sigma_y</span></code></p>
 <p><strong>NOTE:</strong> + We&#8217;re using a simple linear OLS model with Normally
 distributed priors so that it behaves like a ridge regression</p>
-<div class="nbinput nblast container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [4]:
 </pre></div>
 </div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="k">with</span> <span class="n">pm</span><span class="o">.</span><span class="n">Model</span><span class="p">()</span> <span class="k">as</span> <span class="n">mdl_ols</span><span class="p">:</span>
 
     <span class="c1">## Define weakly informative Normal priors to give Ridge regression</span>
@@ -544,12 +599,12 @@ distributed priors so that it behaves like a ridge regression</p>
 </pre></div>
 </div>
 </div>
-<div class="nbinput container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [5]:
 </pre></div>
 </div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="k">with</span> <span class="n">mdl_ols</span><span class="p">:</span>
 
     <span class="c1">## find MAP using Powell, seems to be more robust</span>
@@ -560,10 +615,10 @@ distributed priors so that it behaves like a ridge regression</p>
 </pre></div>
 </div>
 </div>
-<div class="nboutput nblast container">
-<div class="container">
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
 </div>
-<div class="container">
+<div class="output_area docutils container">
 <div class="highlight"><pre>
 Optimization terminated successfully.
          Current function value: 145.777745
@@ -573,21 +628,21 @@ Optimization terminated successfully.
 </pre></div></div>
 </div>
 <p><strong>NOTE</strong>: I&#8217;ll &#8216;burn&#8217; the traces to only retain the final 1000 samples</p>
-<div class="nbinput container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [6]:
 </pre></div>
 </div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="n">_</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">traceplot</span><span class="p">(</span><span class="n">traces_ols</span><span class="p">[</span><span class="o">-</span><span class="mi">1000</span><span class="p">:],</span> <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">12</span><span class="p">,</span><span class="nb">len</span><span class="p">(</span><span class="n">traces_ols</span><span class="o">.</span><span class="n">varnames</span><span class="p">)</span><span class="o">*</span><span class="mf">1.5</span><span class="p">),</span>
                 <span class="n">lines</span><span class="o">=</span><span class="p">{</span><span class="n">k</span><span class="p">:</span> <span class="n">v</span><span class="p">[</span><span class="s1">&#39;mean&#39;</span><span class="p">]</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">pm</span><span class="o">.</span><span class="n">df_summary</span><span class="p">(</span><span class="n">traces_ols</span><span class="p">[</span><span class="o">-</span><span class="mi">1000</span><span class="p">:])</span><span class="o">.</span><span class="n">iterrows</span><span class="p">()})</span>
 </pre></div>
 </div>
 </div>
-<div class="nboutput nblast container">
-<div class="container">
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
 </div>
-<div class="container">
+<div class="output_area docutils container">
 <img alt="../_images/notebooks_GLM-robust-with-outlier-detection_15_0.png" src="../_images/notebooks_GLM-robust-with-outlier-detection_15_0.png" />
 </div>
 </div>
@@ -610,12 +665,12 @@ Vs Noise model below, so a comparison seems worthwhile.</p>
 <p><strong>Note:</strong> we&#8217;ll constrain the Student-T &#8216;degrees of freedom&#8217; parameter
 <code class="docutils literal"><span class="pre">nu</span></code> to be an integer, but otherwise leave it as just another
 stochastic to be inferred: no need for prior knowledge.</p>
-<div class="nbinput nblast container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [7]:
 </pre></div>
 </div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="k">with</span> <span class="n">pm</span><span class="o">.</span><span class="n">Model</span><span class="p">()</span> <span class="k">as</span> <span class="n">mdl_studentt</span><span class="p">:</span>
 
     <span class="c1">## Define weakly informative Normal priors to give Ridge regression</span>
@@ -639,12 +694,12 @@ stochastic to be inferred: no need for prior knowledge.</p>
 </pre></div>
 </div>
 </div>
-<div class="nbinput container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [8]:
 </pre></div>
 </div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="k">with</span> <span class="n">mdl_studentt</span><span class="p">:</span>
 
     <span class="c1">## find MAP using Powell, seems to be more robust</span>
@@ -659,10 +714,10 @@ stochastic to be inferred: no need for prior knowledge.</p>
 </pre></div>
 </div>
 </div>
-<div class="nboutput nblast container">
-<div class="container">
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
 </div>
-<div class="container">
+<div class="output_area docutils container">
 <div class="highlight"><pre>
 Optimization terminated successfully.
          Current function value: 107.488021
@@ -671,22 +726,22 @@ Optimization terminated successfully.
  [-----------------100%-----------------] 2000 of 2000 complete in 1.0 sec
 </pre></div></div>
 </div>
-<div class="nbinput container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [9]:
 </pre></div>
 </div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="n">_</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">traceplot</span><span class="p">(</span><span class="n">traces_studentt</span><span class="p">[</span><span class="o">-</span><span class="mi">1000</span><span class="p">:]</span>
             <span class="p">,</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">12</span><span class="p">,</span><span class="nb">len</span><span class="p">(</span><span class="n">traces_studentt</span><span class="o">.</span><span class="n">varnames</span><span class="p">)</span><span class="o">*</span><span class="mf">1.5</span><span class="p">)</span>
             <span class="p">,</span><span class="n">lines</span><span class="o">=</span><span class="p">{</span><span class="n">k</span><span class="p">:</span> <span class="n">v</span><span class="p">[</span><span class="s1">&#39;mean&#39;</span><span class="p">]</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">pm</span><span class="o">.</span><span class="n">df_summary</span><span class="p">(</span><span class="n">traces_studentt</span><span class="p">[</span><span class="o">-</span><span class="mi">1000</span><span class="p">:])</span><span class="o">.</span><span class="n">iterrows</span><span class="p">()})</span>
 </pre></div>
 </div>
 </div>
-<div class="nboutput nblast container">
-<div class="container">
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
 </div>
-<div class="container">
+<div class="output_area docutils container">
 <img alt="../_images/notebooks_GLM-robust-with-outlier-detection_25_0.png" src="../_images/notebooks_GLM-robust-with-outlier-detection_25_0.png" />
 </div>
 </div>
@@ -719,17 +774,18 @@ randomly assign datapoints in N to either the inlier or outlier groups,
 and we sample the model as usual to infer robust model parameters and
 inlier / outlier flags:</p>
 <div class="math">
-\mathcal{logL} = \sum_{i}^{i=N} log \left[ \frac{(1 - B_{i})}{\sqrt{2 \pi \sigma_{in}^{2}}} exp \left( - \frac{(x_{i} - \mu_{in})^{2}}{2\sigma_{in}^{2}} \right) \right] + \sum_{i}^{i=N} log \left[ \frac{B_{i}}{\sqrt{2 \pi (\sigma_{in}^{2} + \sigma_{out}^{2})}} exp \left( - \frac{(x_{i}- \mu_{out})^{2}}{2(\sigma_{in}^{2} + \sigma_{out}^{2})} \right) \right]</div><div class="line-block">
+\[\mathcal{logL} = \sum_{i}^{i=N} log \left[ \frac{(1 - B_{i})}{\sqrt{2 \pi \sigma_{in}^{2}}} exp \left( - \frac{(x_{i} - \mu_{in})^{2}}{2\sigma_{in}^{2}} \right) \right] + \sum_{i}^{i=N} log \left[ \frac{B_{i}}{\sqrt{2 \pi (\sigma_{in}^{2} + \sigma_{out}^{2})}} exp \left( - \frac{(x_{i}- \mu_{out})^{2}}{2(\sigma_{in}^{2} + \sigma_{out}^{2})} \right) \right]\]</div>
+<div class="line-block">
 <div class="line">where:</div>
-<div class="line"><span class="math">\(\bf{B}\)</span> is Bernoulli-distibuted</div>
+<div class="line"><span class="math">\(\bf{B}\)</span> is Bernoulli-distibuted
+<span class="math">\(B_{i} \in [0_{(inlier)},1_{(outlier)}]\)</span></div>
 </div>
-<p><span class="math">\(B_{i} \in [0_{(inlier)},1_{(outlier)}]\)</span></p>
-<div class="nbinput nblast container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [10]:
 </pre></div>
 </div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="k">def</span> <span class="nf">logp_signoise</span><span class="p">(</span><span class="n">yobs</span><span class="p">,</span> <span class="n">is_outlier</span><span class="p">,</span> <span class="n">yest_in</span><span class="p">,</span> <span class="n">sigma_y_in</span><span class="p">,</span> <span class="n">yest_out</span><span class="p">,</span> <span class="n">sigma_y_out</span><span class="p">):</span>
     <span class="sd">&#39;&#39;&#39;</span>
 <span class="sd">    Define custom loglikelihood for inliers vs outliers.</span>
@@ -754,12 +810,12 @@ inlier / outlier flags:</p>
 </pre></div>
 </div>
 </div>
-<div class="nbinput nblast container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [11]:
 </pre></div>
 </div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="k">with</span> <span class="n">pm</span><span class="o">.</span><span class="n">Model</span><span class="p">()</span> <span class="k">as</span> <span class="n">mdl_signoise</span><span class="p">:</span>
 
     <span class="c1">## Define weakly informative Normal priors to give Ridge regression</span>
@@ -792,12 +848,12 @@ inlier / outlier flags:</p>
 </pre></div>
 </div>
 </div>
-<div class="nbinput container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [17]:
 </pre></div>
 </div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="k">with</span> <span class="n">mdl_signoise</span><span class="p">:</span>
 
     <span class="c1">## two-step sampling to create Bernoulli inlier/outlier flags</span>
@@ -812,10 +868,10 @@ inlier / outlier flags:</p>
 </pre></div>
 </div>
 </div>
-<div class="nboutput nblast container">
-<div class="container">
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
 </div>
-<div class="container">
+<div class="output_area docutils container">
 <div class="highlight"><pre>
 Optimization terminated successfully.
          Current function value: 155.449990
@@ -824,21 +880,21 @@ Optimization terminated successfully.
  [-----------------100%-----------------] 2000 of 2000 complete in 169.1 sec
 </pre></div></div>
 </div>
-<div class="nbinput container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [18]:
 </pre></div>
 </div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="n">_</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">traceplot</span><span class="p">(</span><span class="n">traces_signoise</span><span class="p">[</span><span class="o">-</span><span class="mi">1000</span><span class="p">:],</span> <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">12</span><span class="p">,</span><span class="nb">len</span><span class="p">(</span><span class="n">traces_signoise</span><span class="o">.</span><span class="n">varnames</span><span class="p">)</span><span class="o">*</span><span class="mf">1.5</span><span class="p">),</span>
             <span class="n">lines</span><span class="o">=</span><span class="p">{</span><span class="n">k</span><span class="p">:</span> <span class="n">v</span><span class="p">[</span><span class="s1">&#39;mean&#39;</span><span class="p">]</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">pm</span><span class="o">.</span><span class="n">df_summary</span><span class="p">(</span><span class="n">traces_signoise</span><span class="p">[</span><span class="o">-</span><span class="mi">1000</span><span class="p">:])</span><span class="o">.</span><span class="n">iterrows</span><span class="p">()})</span>
 </pre></div>
 </div>
 </div>
-<div class="nboutput nblast container">
-<div class="container">
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
 </div>
-<div class="container">
+<div class="output_area docutils container">
 <img alt="../_images/notebooks_GLM-robust-with-outlier-detection_36_0.png" src="../_images/notebooks_GLM-robust-with-outlier-detection_36_0.png" />
 </div>
 </div>
@@ -865,12 +921,12 @@ samples under Metropolis-Hastings.</li>
 outlier. We hope that the datapoints spend an unequal time being one
 state or the other, so let&#8217;s take a look at the simple count of states
 for each of the 20 datapoints.</p>
-<div class="nbinput container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [19]:
 </pre></div>
 </div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="n">outlier_melt</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">melt</span><span class="p">(</span><span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">traces_signoise</span><span class="p">[</span><span class="s1">&#39;is_outlier&#39;</span><span class="p">,</span> <span class="o">-</span><span class="mi">1000</span><span class="p">:],</span>
                                    <span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;[{}]&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">d</span><span class="p">))</span> <span class="k">for</span> <span class="n">d</span> <span class="ow">in</span> <span class="n">dfhoggs</span><span class="o">.</span><span class="n">index</span><span class="p">]),</span>
                       <span class="n">var_name</span><span class="o">=</span><span class="s1">&#39;datapoint_id&#39;</span><span class="p">,</span> <span class="n">value_name</span><span class="o">=</span><span class="s1">&#39;is_outlier&#39;</span><span class="p">)</span>
@@ -889,10 +945,10 @@ for each of the 20 datapoints.</p>
 </pre></div>
 </div>
 </div>
-<div class="nboutput nblast container">
-<div class="container">
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
 </div>
-<div class="container">
+<div class="output_area docutils container">
 <img alt="../_images/notebooks_GLM-robust-with-outlier-detection_42_0.png" src="../_images/notebooks_GLM-robust-with-outlier-detection_42_0.png" />
 </div>
 </div>
@@ -919,24 +975,24 @@ different way as points with means above 0.68.</p>
 1 at the 5-percentile cutoff, i.e. in the percentiles from 5 up to 100,
 their values are 1. + Try for yourself altering cutoff to larger values,
 which leads to an objective ranking of outlier-hood.</p>
-<div class="nbinput container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [20]:
 </pre></div>
 </div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="n">cutoff</span> <span class="o">=</span> <span class="mi">5</span>
 <span class="n">dfhoggs</span><span class="p">[</span><span class="s1">&#39;outlier&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">percentile</span><span class="p">(</span><span class="n">traces_signoise</span><span class="p">[</span><span class="o">-</span><span class="mi">1000</span><span class="p">:][</span><span class="s1">&#39;is_outlier&#39;</span><span class="p">],</span><span class="n">cutoff</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
 <span class="n">dfhoggs</span><span class="p">[</span><span class="s1">&#39;outlier&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">value_counts</span><span class="p">()</span>
 </pre></div>
 </div>
 </div>
-<div class="nboutput nblast container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>Out[20]:
 </pre></div>
 </div>
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="output_area highlight-none"><div class="highlight"><pre>
 <span></span>0    17
 1     3
 Name: outlier, dtype: int64
@@ -945,12 +1001,12 @@ Name: outlier, dtype: int64
 </div>
 <div class="section" id="Posterior-Prediction-Plots-for-OLS-vs-StudentT-vs-SignalNoise">
 <h3>Posterior Prediction Plots for OLS vs StudentT vs SignalNoise<a class="headerlink" href="#Posterior-Prediction-Plots-for-OLS-vs-StudentT-vs-SignalNoise" title="Permalink to this headline">¶</a></h3>
-<div class="nbinput container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [21]:
 </pre></div>
 </div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="n">g</span> <span class="o">=</span> <span class="n">sns</span><span class="o">.</span><span class="n">FacetGrid</span><span class="p">(</span><span class="n">dfhoggs</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="mi">8</span><span class="p">,</span> <span class="n">hue</span><span class="o">=</span><span class="s1">&#39;outlier&#39;</span><span class="p">,</span> <span class="n">hue_order</span><span class="o">=</span><span class="p">[</span><span class="bp">True</span><span class="p">,</span><span class="bp">False</span><span class="p">],</span>
                   <span class="n">palette</span><span class="o">=</span><span class="s1">&#39;Set1&#39;</span><span class="p">,</span> <span class="n">legend_out</span><span class="o">=</span><span class="bp">False</span><span class="p">)</span>
 
@@ -975,10 +1031,10 @@ Name: outlier, dtype: int64
 </pre></div>
 </div>
 </div>
-<div class="nboutput nblast container">
-<div class="container">
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
 </div>
-<div class="container">
+<div class="output_area docutils container">
 <img alt="../_images/notebooks_GLM-robust-with-outlier-detection_47_0.png" src="../_images/notebooks_GLM-robust-with-outlier-detection_47_0.png" />
 </div>
 </div>
@@ -1027,15 +1083,18 @@ estimate.</li>
 
 
            </div>
+           <div class="articleComments">
+            
+           </div>
           </div>
           <footer>
   
     <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
       
-        <a href="GLM-model-selection.html" class="btn btn-neutral float-right" title="GLM: Model Selection" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
+        <a href="GLM-model-selection.html" class="btn btn-neutral float-right" title="GLM: Model Selection" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
       
       
-        <a href="GLM-robust.html" class="btn btn-neutral" title="GLM: Robust Linear Regression" accesskey="p"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+        <a href="GLM-robust.html" class="btn btn-neutral" title="GLM: Robust Linear Regression" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
       
     </div>
   
@@ -1069,7 +1128,8 @@ estimate.</li>
             VERSION:'3.0',
             COLLAPSE_INDEX:false,
             FILE_SUFFIX:'.html',
-            HAS_SOURCE:  true
+            HAS_SOURCE:  true,
+            SOURCELINK_SUFFIX: '.txt'
         };
     </script>
       <script type="text/javascript" src="../_static/jquery.js"></script>

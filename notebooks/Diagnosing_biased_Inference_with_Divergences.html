@@ -13,6 +13,8 @@
 
   
   
+  
+  
 
   
 
@@ -45,6 +47,7 @@
 
 <body class="wy-body-for-nav" role="document">
 
+   
   <div class="wy-grid-for-nav">
 
     
@@ -85,7 +88,10 @@
           
             
             
-                <ul class="current">
+              
+            
+            
+              <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="../getting_started.html">Getting started</a></li>
 <li class="toctree-l1 current"><a class="reference internal" href="../examples.html">Examples</a><ul class="current">
 <li class="toctree-l2 current"><a class="reference internal" href="../examples.html#howto">Howto</a><ul class="current">
@@ -124,8 +130,10 @@
 
       
       <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
-        <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
-        <a href="../index.html">PyMC3</a>
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">PyMC3</a>
+        
       </nav>
 
 
@@ -134,25 +142,42 @@
         <div class="rst-content">
           
 
- 
+
+
+
+
+
+
+
+
+
+
+
 
 
 
 <div role="navigation" aria-label="breadcrumbs navigation">
+
   <ul class="wy-breadcrumbs">
-    <li><a href="../index.html">Docs</a> &raquo;</li>
-      
+    
+      <li><a href="../index.html">Docs</a> &raquo;</li>
+        
           <li><a href="../examples.html">Examples</a> &raquo;</li>
-      
-    <li>Diagnosing Biased Inference with Divergences</li>
+        
+      <li>Diagnosing Biased Inference with Divergences</li>
+    
+    
       <li class="wy-breadcrumbs-aside">
         
-          
+            
             <a href="../_sources/notebooks/Diagnosing_biased_Inference_with_Divergences.ipynb.txt" rel="nofollow"> View page source</a>
           
         
       </li>
+    
   </ul>
+
+  
   <hr/>
 </div>
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
@@ -164,13 +189,15 @@
 
 /* remove conflicting styling from Sphinx themes */
 div.nbinput,
-div.nbinput > div,
-div.nbinput div[class^=highlight],
-div.nbinput div[class^=highlight] pre,
+div.nbinput div.prompt,
+div.nbinput div.input_area,
+div.nbinput div[class*=highlight],
+div.nbinput div[class*=highlight] pre,
 div.nboutput,
-div.nboutput > div,
-div.nboutput div[class^=highlight],
-div.nboutput div[class^=highlight] pre {
+div.nbinput div.prompt,
+div.nbinput div.output_area,
+div.nboutput div[class*=highlight],
+div.nboutput div[class*=highlight] pre {
     background: none;
     border: none;
     padding: 0 0;
@@ -179,7 +206,7 @@ div.nboutput div[class^=highlight] pre {
 }
 
 /* avoid gaps between output lines */
-div.nboutput div[class^=highlight] pre {
+div.nboutput div[class*=highlight] pre {
     line-height: normal;
 }
 
@@ -190,6 +217,13 @@ div.nboutput {
     display: flex;
     align-items: flex-start;
     margin: 0;
+    width: 100%;
+}
+@media (max-width: 540px) {
+    div.nbinput,
+    div.nboutput {
+        flex-direction: column;
+    }
 }
 
 /* input container */
@@ -203,38 +237,58 @@ div.nblast {
 }
 
 /* input prompt */
-div.nbinput > :first-child pre {
+div.nbinput div.prompt pre {
     color: #303F9F;
 }
 
 /* output prompt */
-div.nboutput > :first-child pre {
+div.nboutput div.prompt pre {
     color: #D84315;
 }
 
 /* all prompts */
-div.nbinput > :first-child[class^=highlight],
-div.nboutput > :first-child[class^=highlight],
-div.nboutput > :first-child {
+div.nbinput div.prompt,
+div.nboutput div.prompt {
     min-width: 8ex;
     padding-top: 0.4em;
     padding-right: 0.4em;
     text-align: right;
     flex: 0;
 }
+@media (max-width: 540px) {
+    div.nbinput div.prompt,
+    div.nboutput div.prompt {
+        text-align: left;
+        padding: 0.4em;
+    }
+    div.nboutput div.prompt.empty {
+        padding: 0;
+    }
+}
+
+/* disable scrollbars on prompts */
+div.nbinput div.prompt pre,
+div.nboutput div.prompt pre {
+    overflow: hidden;
+}
 
 /* input/output area */
-div.nbinput > :nth-child(2)[class^=highlight],
-div.nboutput > :nth-child(2),
-div.nboutput > :nth-child(2)[class^=highlight] {
+div.nbinput div.input_area,
+div.nboutput div.output_area {
     padding: 0.4em;
     -webkit-flex: 1;
     flex: 1;
     overflow: auto;
 }
+@media (max-width: 540px) {
+    div.nbinput div.input_area,
+    div.nboutput div.output_area {
+        width: 100%;
+    }
+}
 
 /* input area */
-div.nbinput > :nth-child(2)[class^=highlight] {
+div.nbinput div.input_area {
     border: 1px solid #cfcfcf;
     border-radius: 2px;
     background: #f7f7f7;
@@ -251,7 +305,7 @@ div.nboutput div.math p {
 }
 
 /* standard error */
-div.nboutput  > :nth-child(2).stderr {
+div.nboutput div.output_area.stderr {
     background: #fdd;
 }
 
@@ -382,12 +436,12 @@ distribution which it cannot adequately explore.</p>
 sample and the underlying pathologies in <code class="docutils literal"><span class="pre">PyMC3</span></code> similar to <a class="reference external" href="http://mc-stan.org/documentation/case-studies/divergences_and_bias.html">the
 original
 post</a>.</p>
-<div class="nbinput nblast container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [1]:
 </pre></div>
 </div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="kn">import</span> <span class="nn">numpy</span> <span class="kn">as</span> <span class="nn">np</span>
 <span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="kn">as</span> <span class="nn">plt</span>
 <span class="kn">import</span> <span class="nn">seaborn</span> <span class="kn">as</span> <span class="nn">sb</span>
@@ -423,12 +477,12 @@ the posterior distribution into a particularly challenging geometry
 that obstructs geometric ergodicity and hence biases MCMC
 estimation.</p>
 </div></blockquote>
-<div class="nbinput nblast container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [2]:
 </pre></div>
 </div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="c1"># Data of the Eight Schools Model</span>
 <span class="n">J</span> <span class="o">=</span> <span class="mi">8</span>
 <span class="n">y</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">([</span><span class="mi">28</span><span class="p">,</span>  <span class="mi">8</span><span class="p">,</span> <span class="o">-</span><span class="mi">3</span><span class="p">,</span>  <span class="mi">7</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span>  <span class="mi">1</span><span class="p">,</span> <span class="mi">18</span><span class="p">,</span> <span class="mi">12</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
@@ -441,7 +495,7 @@ estimation.</p>
 <div class="section" id="A-Centered-Eight-Schools-Implementation">
 <h3>A Centered Eight Schools Implementation<a class="headerlink" href="#A-Centered-Eight-Schools-Implementation" title="Permalink to this headline">¶</a></h3>
 <p><code class="docutils literal"><span class="pre">Stan</span></code> model:</p>
-<div class="highlight-C"><div class="highlight"><pre><span></span><span class="n">data</span> <span class="p">{</span>
+<div class="highlight-c"><div class="highlight"><pre><span></span><span class="n">data</span> <span class="p">{</span>
   <span class="kt">int</span><span class="o">&lt;</span><span class="n">lower</span><span class="o">=</span><span class="mi">0</span><span class="o">&gt;</span> <span class="n">J</span><span class="p">;</span>
   <span class="n">real</span> <span class="n">y</span><span class="p">[</span><span class="n">J</span><span class="p">];</span>
   <span class="n">real</span><span class="o">&lt;</span><span class="n">lower</span><span class="o">=</span><span class="mi">0</span><span class="o">&gt;</span> <span class="n">sigma</span><span class="p">[</span><span class="n">J</span><span class="p">];</span>
@@ -462,12 +516,12 @@ estimation.</p>
 </pre></div>
 </div>
 <p>Similarly, we can easily implemented it in <code class="docutils literal"><span class="pre">PyMC3</span></code></p>
-<div class="nbinput nblast container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [4]:
 </pre></div>
 </div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="k">with</span> <span class="n">pm</span><span class="o">.</span><span class="n">Model</span><span class="p">()</span> <span class="k">as</span> <span class="n">Centered_eight</span><span class="p">:</span>
     <span class="n">mu</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Normal</span><span class="p">(</span><span class="s1">&#39;mu&#39;</span><span class="p">,</span> <span class="n">mu</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">sd</span><span class="o">=</span><span class="mi">5</span><span class="p">)</span>
     <span class="n">tau</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">HalfCauchy</span><span class="p">(</span><span class="s1">&#39;tau&#39;</span><span class="p">,</span> <span class="n">beta</span><span class="o">=</span><span class="mi">5</span><span class="p">)</span>
@@ -491,21 +545,21 @@ estimation.</p>
 </div>
 <div class="section" id="A-Dangerously-Short-Markov-Chain">
 <h2>A Dangerously-Short Markov Chain<a class="headerlink" href="#A-Dangerously-Short-Markov-Chain" title="Permalink to this headline">¶</a></h2>
-<div class="nbinput container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [7]:
 </pre></div>
 </div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="k">with</span> <span class="n">Centered_eight</span><span class="p">:</span>
     <span class="n">short_trace</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="mi">600</span><span class="p">,</span> <span class="n">init</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">njobs</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">tune</span><span class="o">=</span><span class="mi">500</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
-<div class="nboutput nblast container">
-<div class="container">
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
 </div>
-<div class="stderr container">
+<div class="stderr output_area docutils container">
 <div class="highlight"><pre>
 Assigned NUTS to mu
 Assigned NUTS to tau_log_
@@ -514,31 +568,31 @@ Assigned NUTS to theta
 </pre></div></div>
 </div>
 <div class="line-block">
-<div class="line">In the <a href="#id1"><span class="problematic" id="id2">`</span></a>the original</div>
-</div>
-<p>post &lt;<a class="reference external" href="http://mc-stan.org/documentation/case-studies/divergences_and_bias.html">http://mc-stan.org/documentation/case-studies/divergences_and_bias.html</a>&gt;`__
+<div class="line">In the <a class="reference external" href="http://mc-stan.org/documentation/case-studies/divergences_and_bias.html">the original
+post</a>
 a single chain of 1200 sample is applied. However, since split
-<span class="math">\(\hat{R}\)</span> is not implemented in <code class="docutils literal"><span class="pre">PyMC3</span></code> we fit 2 chains with 600
-sample each instead.
-| The Gelman-Rubin diagnostic <span class="math">\(\hat{R}\)</span> doesn’t indicate any
-problems (value close to 1) and the effective sample size per iteration
-is reasonable</p>
-<div class="nbinput container">
-<div class="highlight-none"><div class="highlight"><pre>
+<span class="math">\(\hat{R}\)</span> is not implemented in <code class="docutils literal"><span class="pre">PyMC3</span></code> we fit 2 chains with
+600 sample each instead.</div>
+<div class="line">The Gelman-Rubin diagnostic <span class="math">\(\hat{R}\)</span> doesn’t indicate any
+problems (value close to 1) and the effective sample size per
+iteration is reasonable</div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [20]:
 </pre></div>
 </div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="k">print</span><span class="p">(</span><span class="n">pm</span><span class="o">.</span><span class="n">diagnostics</span><span class="o">.</span><span class="n">gelman_rubin</span><span class="p">(</span><span class="n">short_trace</span><span class="p">))</span>
 <span class="k">print</span><span class="p">(</span><span class="s1">&#39;&#39;</span><span class="p">)</span>
 <span class="k">print</span><span class="p">(</span><span class="n">pm</span><span class="o">.</span><span class="n">diagnostics</span><span class="o">.</span><span class="n">effective_n</span><span class="p">(</span><span class="n">short_trace</span><span class="p">))</span>
 </pre></div>
 </div>
 </div>
-<div class="nboutput nblast container">
-<div class="container">
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
 </div>
-<div class="container">
+<div class="output_area docutils container">
 <div class="highlight"><pre>
 {&#39;theta&#39;: array([ 1.01466455,  1.00153203,  1.00351269,  1.009334  ,  0.99977168,
         1.00057635,  1.0159455 ,  1.00228008]), &#39;tau_log_&#39;: 1.0439591442751275, &#39;mu&#39;: 1.0081977447110899, &#39;tau&#39;: 1.0164411689259558}
@@ -552,34 +606,34 @@ resolve behavior for small values. Indeed the chains seems to be
 exploring both small and large values reasonably well,</p>
 </div>
 </div>
-<div class="nbinput container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [23]:
 </pre></div>
 </div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="c1"># plot the trace of log(tau)</span>
 <span class="n">pm</span><span class="o">.</span><span class="n">traceplot</span><span class="p">(</span><span class="n">short_trace</span><span class="p">,</span> <span class="n">varnames</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;tau_log_&#39;</span><span class="p">])</span>
 <span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
 </pre></div>
 </div>
 </div>
-<div class="nboutput nblast container">
-<div class="container">
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
 </div>
-<div class="container">
+<div class="output_area docutils container">
 <img alt="../_images/notebooks_Diagnosing_biased_Inference_with_Divergences_13_0.png" src="../_images/notebooks_Diagnosing_biased_Inference_with_Divergences_13_0.png" />
 <p>Unfortunately, the resulting estimate for the mean of
 <span class="math">\(log(\tau)\)</span> is strongly biased away from the true value, here
 shown in grey.</p>
 </div>
 </div>
-<div class="nbinput container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [27]:
 </pre></div>
 </div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="c1"># plot the estimate for the mean of log(τ) cumulating mean</span>
 <span class="n">logtau</span> <span class="o">=</span> <span class="n">short_trace</span><span class="p">[</span><span class="s1">&#39;tau_log_&#39;</span><span class="p">]</span>
 <span class="n">mlogtau</span> <span class="o">=</span> <span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">logtau</span><span class="p">[:</span><span class="n">i</span><span class="p">])</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">logtau</span><span class="p">))]</span>
@@ -594,22 +648,22 @@ shown in grey.</p>
 </pre></div>
 </div>
 </div>
-<div class="nboutput nblast container">
-<div class="container">
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
 </div>
-<div class="container">
+<div class="output_area docutils container">
 <img alt="../_images/notebooks_Diagnosing_biased_Inference_with_Divergences_15_0.png" src="../_images/notebooks_Diagnosing_biased_Inference_with_Divergences_15_0.png" />
 <p>Hamiltonian Monte Carlo, however, is not so oblivious to these
 issues as 2% of the iterations in our lone Markov chain ended with a
 divergence.</p>
 </div>
 </div>
-<div class="nbinput container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [28]:
 </pre></div>
 </div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="c1"># display the total number and percentage of divergent</span>
 <span class="n">divergent</span> <span class="o">=</span> <span class="n">short_trace</span><span class="p">[</span><span class="s1">&#39;diverging&#39;</span><span class="p">]</span>
 <span class="k">print</span><span class="p">(</span><span class="s1">&#39;Number of Divergent </span><span class="si">%d</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="n">divergent</span><span class="o">.</span><span class="n">nonzero</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">size</span><span class="p">)</span>
@@ -618,10 +672,10 @@ divergence.</p>
 </pre></div>
 </div>
 </div>
-<div class="nboutput nblast container">
-<div class="container">
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
 </div>
-<div class="container">
+<div class="output_area docutils container">
 <div class="highlight"><pre>
 Number of Divergent 14
 Percentage of Divergent 0.02333
@@ -634,12 +688,12 @@ identify the location of the problematic neighborhoods in parameter
 space.</p>
 </div>
 </div>
-<div class="nbinput container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [38]:
 </pre></div>
 </div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="c1"># scatter plot between log(tau) and theta[0]</span>
 <span class="c1"># for the identifcation of the problematic neighborhoods in parameter space</span>
 <span class="n">theta_trace</span> <span class="o">=</span> <span class="n">short_trace</span><span class="p">[</span><span class="s1">&#39;theta&#39;</span><span class="p">]</span>
@@ -655,10 +709,10 @@ space.</p>
 </pre></div>
 </div>
 </div>
-<div class="nboutput nblast container">
-<div class="container">
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
 </div>
-<div class="container">
+<div class="output_area docutils container">
 <img alt="../_images/notebooks_Diagnosing_biased_Inference_with_Divergences_19_0.png" src="../_images/notebooks_Diagnosing_biased_Inference_with_Divergences_19_0.png" />
 </div>
 </div>
@@ -673,12 +727,12 @@ group-level <span class="math">\(\theta_{n}\)</span>, are squeezed together. Eve
 squeezing would yield the funnel geometry infamous to hierarchical
 models, but here it appears that the Hamiltonian Markov chain is
 diverging before it can fully explore the neck of the funnel.</p>
-<div class="nbinput nblast container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [41]:
 </pre></div>
 </div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="c1"># A small wrapper function for displaying the MCMC sampler diagnostics as above</span>
 <span class="k">def</span> <span class="nf">report_trace</span><span class="p">(</span><span class="n">trace</span><span class="p">):</span>
     <span class="c1"># plot the trace of log(tau)</span>
@@ -727,12 +781,12 @@ long as possible to have the best chance to observe any obstructions
 to geometric ergodicity. Because it is not always possible to run
 long chains for complex models, however, divergences are an
 incredibly powerful diagnostic for biased MCMC estimation.</div></blockquote>
-<div class="nbinput container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [46]:
 </pre></div>
 </div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="k">with</span> <span class="n">Centered_eight</span><span class="p">:</span>
     <span class="n">longer_trace</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="mi">5000</span><span class="p">,</span> <span class="n">init</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">njobs</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">tune</span><span class="o">=</span><span class="mi">1000</span><span class="p">)</span>
 
@@ -740,10 +794,10 @@ incredibly powerful diagnostic for biased MCMC estimation.</div></blockquote>
 </pre></div>
 </div>
 </div>
-<div class="nboutput container">
-<div class="container">
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
 </div>
-<div class="stderr container">
+<div class="stderr output_area docutils container">
 <div class="highlight"><pre>
 Assigned NUTS to mu
 Assigned NUTS to tau_log_
@@ -751,52 +805,52 @@ Assigned NUTS to theta
 100%|██████████| 5000/5000 [00:11&lt;00:00, 444.46it/s]
 </pre></div></div>
 </div>
-<div class="nboutput container">
-<div class="container">
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
 </div>
-<div class="container">
+<div class="output_area docutils container">
 <img alt="../_images/notebooks_Diagnosing_biased_Inference_with_Divergences_23_1.png" src="../_images/notebooks_Diagnosing_biased_Inference_with_Divergences_23_1.png" />
 </div>
 </div>
-<div class="nboutput container">
-<div class="container">
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
 </div>
-<div class="container">
+<div class="output_area docutils container">
 <img alt="../_images/notebooks_Diagnosing_biased_Inference_with_Divergences_23_2.png" src="../_images/notebooks_Diagnosing_biased_Inference_with_Divergences_23_2.png" />
 </div>
 </div>
-<div class="nboutput container">
-<div class="container">
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
 </div>
-<div class="container">
+<div class="output_area docutils container">
 <div class="highlight"><pre>
 Number of Divergent 39
 Percentage of Divergent 0.00780
 </pre></div></div>
 </div>
-<div class="nboutput nblast container">
-<div class="container">
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
 </div>
-<div class="container">
+<div class="output_area docutils container">
 <img alt="../_images/notebooks_Diagnosing_biased_Inference_with_Divergences_23_4.png" src="../_images/notebooks_Diagnosing_biased_Inference_with_Divergences_23_4.png" />
 </div>
 </div>
-<div class="nbinput container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [47]:
 </pre></div>
 </div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="k">print</span><span class="p">(</span><span class="n">pm</span><span class="o">.</span><span class="n">diagnostics</span><span class="o">.</span><span class="n">gelman_rubin</span><span class="p">(</span><span class="n">longer_trace</span><span class="p">))</span>
 <span class="k">print</span><span class="p">(</span><span class="s1">&#39;&#39;</span><span class="p">)</span>
 <span class="k">print</span><span class="p">(</span><span class="n">pm</span><span class="o">.</span><span class="n">diagnostics</span><span class="o">.</span><span class="n">effective_n</span><span class="p">(</span><span class="n">longer_trace</span><span class="p">))</span>
 </pre></div>
 </div>
 </div>
-<div class="nboutput nblast container">
-<div class="container">
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
 </div>
-<div class="container">
+<div class="output_area docutils container">
 <div class="highlight"><pre>
 {&#39;theta&#39;: array([ 1.00037593,  0.99990022,  1.00114791,  0.9999347 ,  1.00259776,
         1.00022565,  1.00152861,  0.99992059]), &#39;tau_log_&#39;: 1.0398125400857179, &#39;mu&#39;: 1.0006934326362604, &#39;tau&#39;: 1.0208315582727976}
@@ -859,12 +913,12 @@ closer to its maximum value of 1.</p>
 </div>
 <div class="section" id="Adjusting-Adaptation-Routine">
 <h2>Adjusting Adaptation Routine<a class="headerlink" href="#Adjusting-Adaptation-Routine" title="Permalink to this headline">¶</a></h2>
-<div class="nbinput container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [48]:
 </pre></div>
 </div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="k">with</span> <span class="n">Centered_eight</span><span class="p">:</span>
     <span class="n">step</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">NUTS</span><span class="p">(</span><span class="n">target_accept</span><span class="o">=.</span><span class="mi">85</span><span class="p">)</span>
     <span class="n">fit_cp85</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="mi">5000</span><span class="p">,</span> <span class="n">step</span><span class="o">=</span><span class="n">step</span><span class="p">,</span> <span class="n">init</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">njobs</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">tune</span><span class="o">=</span><span class="mi">1000</span><span class="p">)</span>
@@ -880,10 +934,10 @@ closer to its maximum value of 1.</p>
 </pre></div>
 </div>
 </div>
-<div class="nboutput nblast container">
-<div class="container">
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
 </div>
-<div class="stderr container">
+<div class="stderr output_area docutils container">
 <div class="highlight"><pre>
 100%|██████████| 5000/5000 [00:11&lt;00:00, 450.42it/s]
 100%|██████████| 5000/5000 [00:15&lt;00:00, 325.33it/s]
@@ -891,12 +945,12 @@ closer to its maximum value of 1.</p>
 100%|██████████| 5000/5000 [00:36&lt;00:00, 138.24it/s]
 </pre></div></div>
 </div>
-<div class="nbinput container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [50]:
 </pre></div>
 </div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="n">df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">([</span><span class="n">longer_trace</span><span class="p">[</span><span class="s1">&#39;step_size&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">mean</span><span class="p">(),</span>
                   <span class="n">fit_cp85</span><span class="p">[</span><span class="s1">&#39;step_size&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">mean</span><span class="p">(),</span>
                   <span class="n">fit_cp90</span><span class="p">[</span><span class="s1">&#39;step_size&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">mean</span><span class="p">(),</span>
@@ -912,10 +966,10 @@ closer to its maximum value of 1.</p>
 </pre></div>
 </div>
 </div>
-<div class="nboutput nblast container">
-<div class="container">
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
 </div>
-<div class="container">
+<div class="output_area docutils container">
 <div class="highlight"><pre>
    Step_size  Divergent delta
 0   0.206308         39   .80
@@ -937,12 +991,12 @@ towards negative values with the decreasing step size.</p>
 transition is still not geometrically ergodic with respect to the
 centered implementation of the Eight Schools model. Indeed, this is
 expected given the observed bias.</p>
-<div class="nbinput container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [54]:
 </pre></div>
 </div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="n">theta0</span> <span class="o">=</span> <span class="n">longer_trace</span><span class="p">[</span><span class="s1">&#39;theta&#39;</span><span class="p">][:,</span> <span class="mi">0</span><span class="p">]</span>
 <span class="n">logtau0</span> <span class="o">=</span> <span class="n">longer_trace</span><span class="p">[</span><span class="s1">&#39;tau_log_&#39;</span><span class="p">]</span>
 <span class="n">divergent0</span> <span class="o">=</span> <span class="n">longer_trace</span><span class="p">[</span><span class="s1">&#39;diverging&#39;</span><span class="p">]</span>
@@ -982,17 +1036,17 @@ expected given the observed bias.</p>
 </pre></div>
 </div>
 </div>
-<div class="nboutput container">
-<div class="container">
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
 </div>
-<div class="container">
+<div class="output_area docutils container">
 <img alt="../_images/notebooks_Diagnosing_biased_Inference_with_Divergences_31_0.png" src="../_images/notebooks_Diagnosing_biased_Inference_with_Divergences_31_0.png" />
 </div>
 </div>
-<div class="nboutput nblast container">
-<div class="container">
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
 </div>
-<div class="container">
+<div class="output_area docutils container">
 <img alt="../_images/notebooks_Diagnosing_biased_Inference_with_Divergences_31_1.png" src="../_images/notebooks_Diagnosing_biased_Inference_with_Divergences_31_1.png" />
 </div>
 </div>
@@ -1017,7 +1071,7 @@ scaling and a translation.</p>
 \[\theta_{n} = \mu + \tau \cdot \tilde{\theta}_{n}.\]</div>
 </div></blockquote>
 <p>Stan model:</p>
-<div class="highlight-C"><div class="highlight"><pre><span></span><span class="n">data</span> <span class="p">{</span>
+<div class="highlight-c"><div class="highlight"><pre><span></span><span class="n">data</span> <span class="p">{</span>
   <span class="kt">int</span><span class="o">&lt;</span><span class="n">lower</span><span class="o">=</span><span class="mi">0</span><span class="o">&gt;</span> <span class="n">J</span><span class="p">;</span>
   <span class="n">real</span> <span class="n">y</span><span class="p">[</span><span class="n">J</span><span class="p">];</span>
   <span class="n">real</span><span class="o">&lt;</span><span class="n">lower</span><span class="o">=</span><span class="mi">0</span><span class="o">&gt;</span> <span class="n">sigma</span><span class="p">[</span><span class="n">J</span><span class="p">];</span>
@@ -1043,12 +1097,12 @@ scaling and a translation.</p>
 <span class="p">}</span>
 </pre></div>
 </div>
-<div class="nbinput nblast container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [57]:
 </pre></div>
 </div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="k">with</span> <span class="n">pm</span><span class="o">.</span><span class="n">Model</span><span class="p">()</span> <span class="k">as</span> <span class="n">NonCentered_eight</span><span class="p">:</span>
     <span class="n">mu</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Normal</span><span class="p">(</span><span class="s1">&#39;mu&#39;</span><span class="p">,</span> <span class="n">mu</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">sd</span><span class="o">=</span><span class="mi">5</span><span class="p">)</span>
     <span class="n">tau</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">HalfCauchy</span><span class="p">(</span><span class="s1">&#39;tau&#39;</span><span class="p">,</span> <span class="n">beta</span><span class="o">=</span><span class="mi">5</span><span class="p">)</span>
@@ -1058,42 +1112,42 @@ scaling and a translation.</p>
 </pre></div>
 </div>
 </div>
-<div class="nbinput container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [58]:
 </pre></div>
 </div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="k">with</span> <span class="n">NonCentered_eight</span><span class="p">:</span>
     <span class="n">step</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">NUTS</span><span class="p">(</span><span class="n">target_accept</span><span class="o">=.</span><span class="mi">80</span><span class="p">)</span>
     <span class="n">fit_ncp80</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="mi">5000</span><span class="p">,</span> <span class="n">step</span><span class="o">=</span><span class="n">step</span><span class="p">,</span> <span class="n">init</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">njobs</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">tune</span><span class="o">=</span><span class="mi">1000</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
-<div class="nboutput nblast container">
-<div class="container">
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
 </div>
-<div class="stderr container">
+<div class="stderr output_area docutils container">
 <div class="highlight"><pre>
 100%|██████████| 5000/5000 [00:05&lt;00:00, 854.95it/s]
 </pre></div></div>
 </div>
-<div class="nbinput container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [59]:
 </pre></div>
 </div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="k">print</span><span class="p">(</span><span class="n">pm</span><span class="o">.</span><span class="n">diagnostics</span><span class="o">.</span><span class="n">gelman_rubin</span><span class="p">(</span><span class="n">fit_ncp80</span><span class="p">))</span>
 <span class="k">print</span><span class="p">(</span><span class="s1">&#39;&#39;</span><span class="p">)</span>
 <span class="k">print</span><span class="p">(</span><span class="n">pm</span><span class="o">.</span><span class="n">diagnostics</span><span class="o">.</span><span class="n">effective_n</span><span class="p">(</span><span class="n">fit_ncp80</span><span class="p">))</span>
 </pre></div>
 </div>
 </div>
-<div class="nboutput nblast container">
-<div class="container">
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
 </div>
-<div class="container">
+<div class="output_area docutils container">
 <div class="highlight"><pre>
 {&#39;theta&#39;: array([ 0.9999017 ,  0.99990126,  0.99994554,  0.99991853,  0.99992781,
         0.99990295,  0.99990909,  0.99991026]), &#39;tau_log_&#39;: 1.0005729430235684, &#39;tau&#39;: 0.99990735598654512, &#39;mu&#39;: 0.99990583189162452, &#39;theta_t&#39;: array([ 0.99990015,  1.00004939,  0.99990031,  0.99990172,  0.99990554,
@@ -1109,54 +1163,54 @@ infrequent divergences do not seem concentrate anywhere in parameter
 space, which is indicative of the divergences being false positives.</p>
 </div>
 </div>
-<div class="nbinput container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [60]:
 </pre></div>
 </div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="n">report_trace</span><span class="p">(</span><span class="n">fit_ncp80</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
-<div class="nboutput container">
-<div class="container">
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
 </div>
-<div class="container">
+<div class="output_area docutils container">
 <img alt="../_images/notebooks_Diagnosing_biased_Inference_with_Divergences_37_0.png" src="../_images/notebooks_Diagnosing_biased_Inference_with_Divergences_37_0.png" />
 </div>
 </div>
-<div class="nboutput container">
-<div class="container">
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
 </div>
-<div class="container">
+<div class="output_area docutils container">
 <img alt="../_images/notebooks_Diagnosing_biased_Inference_with_Divergences_37_1.png" src="../_images/notebooks_Diagnosing_biased_Inference_with_Divergences_37_1.png" />
 </div>
 </div>
-<div class="nboutput container">
-<div class="container">
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
 </div>
-<div class="container">
+<div class="output_area docutils container">
 <div class="highlight"><pre>
 Number of Divergent 14
 Percentage of Divergent 0.00280
 </pre></div></div>
 </div>
-<div class="nboutput nblast container">
-<div class="container">
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
 </div>
-<div class="container">
+<div class="output_area docutils container">
 <img alt="../_images/notebooks_Diagnosing_biased_Inference_with_Divergences_37_3.png" src="../_images/notebooks_Diagnosing_biased_Inference_with_Divergences_37_3.png" />
 <p>As expected of false positives, we can remove the divergences
 entirely by decreasing the step size,</p>
 </div>
 </div>
-<div class="nbinput container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [61]:
 </pre></div>
 </div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="k">with</span> <span class="n">NonCentered_eight</span><span class="p">:</span>
     <span class="n">step</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">NUTS</span><span class="p">(</span><span class="n">target_accept</span><span class="o">=.</span><span class="mi">90</span><span class="p">)</span>
     <span class="n">fit_ncp90</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="mi">5000</span><span class="p">,</span> <span class="n">step</span><span class="o">=</span><span class="n">step</span><span class="p">,</span> <span class="n">init</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">njobs</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">tune</span><span class="o">=</span><span class="mi">1000</span><span class="p">)</span>
@@ -1167,18 +1221,18 @@ entirely by decreasing the step size,</p>
 </pre></div>
 </div>
 </div>
-<div class="nboutput container">
-<div class="container">
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
 </div>
-<div class="stderr container">
+<div class="stderr output_area docutils container">
 <div class="highlight"><pre>
 100%|██████████| 5000/5000 [00:06&lt;00:00, 721.82it/s]
 </pre></div></div>
 </div>
-<div class="nboutput nblast container">
-<div class="container">
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
 </div>
-<div class="container">
+<div class="output_area docutils container">
 <div class="highlight"><pre>
 Number of Divergent 0
 </pre></div><p>The more agreeable geometry of the non-centered implementation
@@ -1189,12 +1243,12 @@ the non-centered chain rapidly converge towards their true
 expectation values.</p>
 </div>
 </div>
-<div class="nbinput container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [65]:
 </pre></div>
 </div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="n">theta0</span> <span class="o">=</span> <span class="n">fit_cp90</span><span class="p">[</span><span class="s1">&#39;theta&#39;</span><span class="p">][:,</span> <span class="mi">0</span><span class="p">]</span>
 <span class="n">logtau0</span> <span class="o">=</span> <span class="n">fit_cp90</span><span class="p">[</span><span class="s1">&#39;tau_log_&#39;</span><span class="p">]</span>
 <span class="n">divergent0</span> <span class="o">=</span> <span class="n">fit_cp90</span><span class="p">[</span><span class="s1">&#39;diverging&#39;</span><span class="p">]</span>
@@ -1240,26 +1294,26 @@ expectation values.</p>
 </pre></div>
 </div>
 </div>
-<div class="nboutput container">
-<div class="container">
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
 </div>
-<div class="container">
+<div class="output_area docutils container">
 <img alt="../_images/notebooks_Diagnosing_biased_Inference_with_Divergences_41_0.png" src="../_images/notebooks_Diagnosing_biased_Inference_with_Divergences_41_0.png" />
 </div>
 </div>
-<div class="nboutput nblast container">
-<div class="container">
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
 </div>
-<div class="container">
+<div class="output_area docutils container">
 <img alt="../_images/notebooks_Diagnosing_biased_Inference_with_Divergences_41_1.png" src="../_images/notebooks_Diagnosing_biased_Inference_with_Divergences_41_1.png" />
 </div>
 </div>
-<div class="nbinput nblast container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [ ]:
 </pre></div>
 </div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span>
 </pre></div>
 </div>
@@ -1270,15 +1324,18 @@ expectation values.</p>
 
 
            </div>
+           <div class="articleComments">
+            
+           </div>
           </div>
           <footer>
   
     <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
       
-        <a href="posterior_predictive.html" class="btn btn-neutral float-right" title="Posterior Predictive Checks" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
+        <a href="posterior_predictive.html" class="btn btn-neutral float-right" title="Posterior Predictive Checks" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
       
       
-        <a href="sampler-stats.html" class="btn btn-neutral" title="Sampler statistics" accesskey="p"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+        <a href="sampler-stats.html" class="btn btn-neutral" title="Sampler statistics" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
       
     </div>
   
@@ -1312,7 +1369,8 @@ expectation values.</p>
             VERSION:'3.0',
             COLLAPSE_INDEX:false,
             FILE_SUFFIX:'.html',
-            HAS_SOURCE:  true
+            HAS_SOURCE:  true,
+            SOURCELINK_SUFFIX: '.txt'
         };
     </script>
       <script type="text/javascript" src="../_static/jquery.js"></script>

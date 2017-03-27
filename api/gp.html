@@ -1,0 +1,431 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>Gaussian Processes &mdash; PyMC3 3.0 documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  
+  
+    <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  
+
+  
+
+  
+        <link rel="index" title="Index"
+              href="../genindex.html"/>
+        <link rel="search" title="Search" href="../search.html"/>
+    <link rel="top" title="PyMC3 3.0 documentation" href="../index.html"/>
+        <link rel="up" title="API Reference" href="../api.html"/>
+        <link rel="next" title="Plots" href="plots.html"/>
+        <link rel="prev" title="Generalized Linear Models" href="glm.html"/> 
+
+  
+  <script src="../_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+   
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+          
+            <a href="../index.html" class="icon icon-home"> PyMC3
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                3.0
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../getting_started.html">Getting started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../examples.html">Examples</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="../api.html">API Reference</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="distributions.html">Distributions</a></li>
+<li class="toctree-l2"><a class="reference internal" href="inference.html">Inference</a></li>
+<li class="toctree-l2"><a class="reference internal" href="glm.html">Generalized Linear Models</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">Gaussian Processes</a></li>
+<li class="toctree-l2"><a class="reference internal" href="plots.html">Plots</a></li>
+<li class="toctree-l2"><a class="reference internal" href="stats.html">Stats</a></li>
+<li class="toctree-l2"><a class="reference internal" href="diagnostics.html">Diagnostics</a></li>
+<li class="toctree-l2"><a class="reference internal" href="backends.html">Backends</a></li>
+<li class="toctree-l2"><a class="reference internal" href="math.html">Math</a></li>
+</ul>
+</li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">PyMC3</a>
+        
+      </nav>
+
+
+      
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../index.html">Docs</a> &raquo;</li>
+        
+          <li><a href="../api.html">API Reference</a> &raquo;</li>
+        
+      <li>Gaussian Processes</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            <a href="../_sources/api/gp.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  
+<style>
+/* CSS overrides for sphinx_rtd_theme */
+
+/* 24px margin */
+.nbinput.nblast,
+.nboutput.nblast {
+    margin-bottom: 19px;  /* padding has already 5px */
+}
+
+/* ... except between code cells! */
+.nblast + .nbinput {
+    margin-top: -19px;
+}
+
+/* nice headers on first paragraph of info/warning boxes */
+.admonition .first {
+    margin: -12px;
+    padding: 6px 12px;
+    margin-bottom: 12px;
+    color: #fff;
+    line-height: 1;
+    display: block;
+}
+.admonition.warning .first {
+    background: #f0b37e;
+}
+.admonition.note .first {
+    background: #6ab0de;
+}
+.admonition > p:before {
+    margin-right: 4px;  /* make room for the exclamation icon */
+}
+</style>
+<div class="section" id="gaussian-processes">
+<h1>Gaussian Processes<a class="headerlink" href="#gaussian-processes" title="Permalink to this headline">¶</a></h1>
+<table border="1" class="longtable docutils">
+<colgroup>
+<col width="10%" />
+<col width="90%" />
+</colgroup>
+<tbody valign="top">
+<tr class="row-odd"><td><a class="reference internal" href="#pymc3.gp.cov.ExpQuad" title="pymc3.gp.cov.ExpQuad"><code class="xref py py-obj docutils literal"><span class="pre">ExpQuad</span></code></a>(input_dim,&nbsp;lengthscales[,&nbsp;active_dims])</td>
+<td>The exponentiated quadratic kernel.</td>
+</tr>
+<tr class="row-even"><td><a class="reference internal" href="#pymc3.gp.cov.RatQuad" title="pymc3.gp.cov.RatQuad"><code class="xref py py-obj docutils literal"><span class="pre">RatQuad</span></code></a>(input_dim,&nbsp;lengthscales,&nbsp;alpha[,&nbsp;...])</td>
+<td>The rational quadratic kernel.</td>
+</tr>
+<tr class="row-odd"><td><a class="reference internal" href="#pymc3.gp.cov.Matern32" title="pymc3.gp.cov.Matern32"><code class="xref py py-obj docutils literal"><span class="pre">Matern32</span></code></a>(input_dim,&nbsp;lengthscales[,&nbsp;active_dims])</td>
+<td>The Matern kernel with nu = 3/2.</td>
+</tr>
+<tr class="row-even"><td><a class="reference internal" href="#pymc3.gp.cov.Matern52" title="pymc3.gp.cov.Matern52"><code class="xref py py-obj docutils literal"><span class="pre">Matern52</span></code></a>(input_dim,&nbsp;lengthscales[,&nbsp;active_dims])</td>
+<td>The Matern kernel with nu = 5/2.</td>
+</tr>
+<tr class="row-odd"><td><a class="reference internal" href="#pymc3.gp.cov.Exponential" title="pymc3.gp.cov.Exponential"><code class="xref py py-obj docutils literal"><span class="pre">Exponential</span></code></a>(input_dim,&nbsp;lengthscales[,&nbsp;...])</td>
+<td>The Exponential kernel.</td>
+</tr>
+<tr class="row-even"><td><a class="reference internal" href="#pymc3.gp.cov.Cosine" title="pymc3.gp.cov.Cosine"><code class="xref py py-obj docutils literal"><span class="pre">Cosine</span></code></a>(input_dim,&nbsp;lengthscales[,&nbsp;active_dims])</td>
+<td>The cosine kernel.</td>
+</tr>
+<tr class="row-odd"><td><a class="reference internal" href="#pymc3.gp.cov.Linear" title="pymc3.gp.cov.Linear"><code class="xref py py-obj docutils literal"><span class="pre">Linear</span></code></a>(input_dim,&nbsp;c[,&nbsp;active_dims])</td>
+<td>The linear kernel.</td>
+</tr>
+<tr class="row-even"><td><a class="reference internal" href="#pymc3.gp.cov.Polynomial" title="pymc3.gp.cov.Polynomial"><code class="xref py py-obj docutils literal"><span class="pre">Polynomial</span></code></a>(input_dim,&nbsp;c,&nbsp;d,&nbsp;offset[,&nbsp;...])</td>
+<td>The polynomial covariance function.</td>
+</tr>
+<tr class="row-odd"><td><a class="reference internal" href="#pymc3.gp.cov.WarpedInput" title="pymc3.gp.cov.WarpedInput"><code class="xref py py-obj docutils literal"><span class="pre">WarpedInput</span></code></a>(input_dim,&nbsp;cov_func,&nbsp;warp_func)</td>
+<td>Warp the inputs of any covariance function using an arbitrary function defined using Theano.</td>
+</tr>
+<tr class="row-even"><td><a class="reference internal" href="#pymc3.gp.cov.Gibbs" title="pymc3.gp.cov.Gibbs"><code class="xref py py-obj docutils literal"><span class="pre">Gibbs</span></code></a>(input_dim,&nbsp;lengthscale_func[,&nbsp;args,&nbsp;...])</td>
+<td>Use an arbitrary lengthscale function defined using Theano.</td>
+</tr>
+</tbody>
+</table>
+<span class="target" id="module-pymc3.gp.cov"></span><dl class="class">
+<dt id="pymc3.gp.cov.ExpQuad">
+<em class="property">class </em><code class="descclassname">pymc3.gp.cov.</code><code class="descname">ExpQuad</code><span class="sig-paren">(</span><em>input_dim</em>, <em>lengthscales</em>, <em>active_dims=None</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.gp.cov.ExpQuad" title="Permalink to this definition">¶</a></dt>
+<dd><p>The exponentiated quadratic kernel.  Also refered to as the squared
+exponential, or radial basis function kernel.</p>
+<div class="math">
+\[k(x, x') = \mathrm{exp}\left[ -\frac{(x - x')^2}{2 \ell^2} \right]\]</div>
+</dd></dl>
+
+<dl class="class">
+<dt id="pymc3.gp.cov.RatQuad">
+<em class="property">class </em><code class="descclassname">pymc3.gp.cov.</code><code class="descname">RatQuad</code><span class="sig-paren">(</span><em>input_dim</em>, <em>lengthscales</em>, <em>alpha</em>, <em>active_dims=None</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.gp.cov.RatQuad" title="Permalink to this definition">¶</a></dt>
+<dd><p>The rational quadratic kernel.</p>
+<div class="math">
+\[k(x, x') = \left(1 + \frac{(x - x')^2}{2\alpha\ell^2} \right)^{-\alpha}\]</div>
+</dd></dl>
+
+<dl class="class">
+<dt id="pymc3.gp.cov.Exponential">
+<em class="property">class </em><code class="descclassname">pymc3.gp.cov.</code><code class="descname">Exponential</code><span class="sig-paren">(</span><em>input_dim</em>, <em>lengthscales</em>, <em>active_dims=None</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.gp.cov.Exponential" title="Permalink to this definition">¶</a></dt>
+<dd><p>The Exponential kernel.</p>
+<div class="math">
+\[k(x, x') = \mathrm{exp}\left[ -\frac{||x - x'||}{2\ell^2} \right]\]</div>
+</dd></dl>
+
+<dl class="class">
+<dt id="pymc3.gp.cov.Matern52">
+<em class="property">class </em><code class="descclassname">pymc3.gp.cov.</code><code class="descname">Matern52</code><span class="sig-paren">(</span><em>input_dim</em>, <em>lengthscales</em>, <em>active_dims=None</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.gp.cov.Matern52" title="Permalink to this definition">¶</a></dt>
+<dd><p>The Matern kernel with nu = 5/2.</p>
+<div class="math">
+\[k(x, x') = \left(1 + \frac{\sqrt{5(x - x')^2}}{\ell} + \frac{5(x-x')^2}{3\ell^2}\right) \mathrm{exp}\left[ - \frac{\sqrt{5(x - x')^2}}{\ell} \right]\]</div>
+</dd></dl>
+
+<dl class="class">
+<dt id="pymc3.gp.cov.Matern32">
+<em class="property">class </em><code class="descclassname">pymc3.gp.cov.</code><code class="descname">Matern32</code><span class="sig-paren">(</span><em>input_dim</em>, <em>lengthscales</em>, <em>active_dims=None</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.gp.cov.Matern32" title="Permalink to this definition">¶</a></dt>
+<dd><p>The Matern kernel with nu = 3/2.</p>
+<div class="math">
+\[k(x, x') = \left(1 + \frac{\sqrt{3(x - x')^2}}{\ell}\right)\mathrm{exp}\left[ - \frac{\sqrt{3(x - x')^2}}{\ell} \right]\]</div>
+</dd></dl>
+
+<dl class="class">
+<dt id="pymc3.gp.cov.Linear">
+<em class="property">class </em><code class="descclassname">pymc3.gp.cov.</code><code class="descname">Linear</code><span class="sig-paren">(</span><em>input_dim</em>, <em>c</em>, <em>active_dims=None</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.gp.cov.Linear" title="Permalink to this definition">¶</a></dt>
+<dd><p>The linear kernel.</p>
+<div class="math">
+\[k(x, x') = (x - c)(x' - c)\]</div>
+</dd></dl>
+
+<dl class="class">
+<dt id="pymc3.gp.cov.Polynomial">
+<em class="property">class </em><code class="descclassname">pymc3.gp.cov.</code><code class="descname">Polynomial</code><span class="sig-paren">(</span><em>input_dim</em>, <em>c</em>, <em>d</em>, <em>offset</em>, <em>active_dims=None</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.gp.cov.Polynomial" title="Permalink to this definition">¶</a></dt>
+<dd><p>The polynomial covariance function.</p>
+<div class="math">
+\[k(x, x') = [(x - c)(x' - c) + \mathrm{offset}]^{d}\]</div>
+</dd></dl>
+
+<dl class="class">
+<dt id="pymc3.gp.cov.Cosine">
+<em class="property">class </em><code class="descclassname">pymc3.gp.cov.</code><code class="descname">Cosine</code><span class="sig-paren">(</span><em>input_dim</em>, <em>lengthscales</em>, <em>active_dims=None</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.gp.cov.Cosine" title="Permalink to this definition">¶</a></dt>
+<dd><p>The cosine kernel.</p>
+<div class="math">
+\[k(x, x') = \mathrm{cos}\left( \frac{||x - x'||}{ \ell^2} \right)\]</div>
+</dd></dl>
+
+<dl class="class">
+<dt id="pymc3.gp.cov.WarpedInput">
+<em class="property">class </em><code class="descclassname">pymc3.gp.cov.</code><code class="descname">WarpedInput</code><span class="sig-paren">(</span><em>input_dim</em>, <em>cov_func</em>, <em>warp_func</em>, <em>args=None</em>, <em>active_dims=None</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.gp.cov.WarpedInput" title="Permalink to this definition">¶</a></dt>
+<dd><p>Warp the inputs of any covariance function using an arbitrary function
+defined using Theano.</p>
+<div class="math">
+\[k_{\mathrm{warped}}(x, x') = k(w(x), w(x'))\]</div>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>cov_func</strong> (<em>Covariance</em>) &#8211; </li>
+<li><strong>warp_func</strong> (<em>callable</em>) &#8211; Theano function of X and additional optional arguments.</li>
+<li><strong>args</strong> (<em>optional</em><em>, </em><em>tuple</em><em> or </em><em>list of scalars</em><em> or </em><em>PyMC3 variables</em>) &#8211; Additional inputs (besides X or Z) to warp_func.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="class">
+<dt id="pymc3.gp.cov.Gibbs">
+<em class="property">class </em><code class="descclassname">pymc3.gp.cov.</code><code class="descname">Gibbs</code><span class="sig-paren">(</span><em>input_dim</em>, <em>lengthscale_func</em>, <em>args=None</em>, <em>active_dims=None</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.gp.cov.Gibbs" title="Permalink to this definition">¶</a></dt>
+<dd><p>Use an arbitrary lengthscale function defined using Theano.  Operates on a single input dimension.</p>
+<div class="math">
+\[k_{\mathrm{gibbs}}(x, x') = \sqrt{\frac{2\ell(x)\ell(x')}{\ell^2(x) + \ell^2(x')}}
+                            \mathrm{exp}\left[ -\frac{(x - x')^2}{\ell(x)^2 + \ell^2(x')} \right]\]</div>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>lengthscale_func</strong> (<em>callable</em>) &#8211; Theano function of X and additional optional arguments.</li>
+<li><strong>args</strong> (<em>optional</em><em>, </em><em>tuple</em><em> or </em><em>list of scalars</em><em> or </em><em>PyMC3 variables</em>) &#8211; Additional inputs (besides X or Z) to warp_func.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</div>
+
+
+           </div>
+           <div class="articleComments">
+            
+           </div>
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="plots.html" class="btn btn-neutral float-right" title="Plots" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="glm.html" class="btn btn-neutral" title="Generalized Linear Models" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2016, John Salvatier, Christopher Fonnesbeck, Thomas Wiecki.
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'../',
+            VERSION:'3.0',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true,
+            SOURCELINK_SUFFIX: '.txt'
+        };
+    </script>
+      <script type="text/javascript" src="../_static/jquery.js"></script>
+      <script type="text/javascript" src="../_static/underscore.js"></script>
+      <script type="text/javascript" src="../_static/doctools.js"></script>
+      <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+  
+
+  
+  
+    <script type="text/javascript" src="../_static/js/theme.js"></script>
+  
+
+  
+  
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.StickyNav.enable();
+      });
+  </script>
+   
+
+</body>
+</html>

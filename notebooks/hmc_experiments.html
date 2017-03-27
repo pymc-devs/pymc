@@ -13,6 +13,8 @@
 
   
   
+  
+  
 
   
 
@@ -42,6 +44,7 @@
 
 <body class="wy-body-for-nav" role="document">
 
+   
   <div class="wy-grid-for-nav">
 
     
@@ -82,7 +85,10 @@
           
             
             
-                <ul>
+              
+            
+            
+              <ul>
 <li class="toctree-l1"><a class="reference internal" href="../getting_started.html">Getting started</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../examples.html">Examples</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../api.html">API Reference</a></li>
@@ -98,8 +104,10 @@
 
       
       <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
-        <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
-        <a href="../index.html">PyMC3</a>
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">PyMC3</a>
+        
       </nav>
 
 
@@ -108,23 +116,40 @@
         <div class="rst-content">
           
 
- 
+
+
+
+
+
+
+
+
+
+
+
 
 
 
 <div role="navigation" aria-label="breadcrumbs navigation">
+
   <ul class="wy-breadcrumbs">
-    <li><a href="../index.html">Docs</a> &raquo;</li>
-      
-    <li>Edward code</li>
+    
+      <li><a href="../index.html">Docs</a> &raquo;</li>
+        
+      <li>Edward code</li>
+    
+    
       <li class="wy-breadcrumbs-aside">
         
-          
+            
             <a href="../_sources/notebooks/hmc_experiments.ipynb.txt" rel="nofollow"> View page source</a>
           
         
       </li>
+    
   </ul>
+
+  
   <hr/>
 </div>
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
@@ -136,13 +161,15 @@
 
 /* remove conflicting styling from Sphinx themes */
 div.nbinput,
-div.nbinput > div,
-div.nbinput div[class^=highlight],
-div.nbinput div[class^=highlight] pre,
+div.nbinput div.prompt,
+div.nbinput div.input_area,
+div.nbinput div[class*=highlight],
+div.nbinput div[class*=highlight] pre,
 div.nboutput,
-div.nboutput > div,
-div.nboutput div[class^=highlight],
-div.nboutput div[class^=highlight] pre {
+div.nbinput div.prompt,
+div.nbinput div.output_area,
+div.nboutput div[class*=highlight],
+div.nboutput div[class*=highlight] pre {
     background: none;
     border: none;
     padding: 0 0;
@@ -151,7 +178,7 @@ div.nboutput div[class^=highlight] pre {
 }
 
 /* avoid gaps between output lines */
-div.nboutput div[class^=highlight] pre {
+div.nboutput div[class*=highlight] pre {
     line-height: normal;
 }
 
@@ -162,6 +189,13 @@ div.nboutput {
     display: flex;
     align-items: flex-start;
     margin: 0;
+    width: 100%;
+}
+@media (max-width: 540px) {
+    div.nbinput,
+    div.nboutput {
+        flex-direction: column;
+    }
 }
 
 /* input container */
@@ -175,38 +209,58 @@ div.nblast {
 }
 
 /* input prompt */
-div.nbinput > :first-child pre {
+div.nbinput div.prompt pre {
     color: #303F9F;
 }
 
 /* output prompt */
-div.nboutput > :first-child pre {
+div.nboutput div.prompt pre {
     color: #D84315;
 }
 
 /* all prompts */
-div.nbinput > :first-child[class^=highlight],
-div.nboutput > :first-child[class^=highlight],
-div.nboutput > :first-child {
+div.nbinput div.prompt,
+div.nboutput div.prompt {
     min-width: 8ex;
     padding-top: 0.4em;
     padding-right: 0.4em;
     text-align: right;
     flex: 0;
 }
+@media (max-width: 540px) {
+    div.nbinput div.prompt,
+    div.nboutput div.prompt {
+        text-align: left;
+        padding: 0.4em;
+    }
+    div.nboutput div.prompt.empty {
+        padding: 0;
+    }
+}
+
+/* disable scrollbars on prompts */
+div.nbinput div.prompt pre,
+div.nboutput div.prompt pre {
+    overflow: hidden;
+}
 
 /* input/output area */
-div.nbinput > :nth-child(2)[class^=highlight],
-div.nboutput > :nth-child(2),
-div.nboutput > :nth-child(2)[class^=highlight] {
+div.nbinput div.input_area,
+div.nboutput div.output_area {
     padding: 0.4em;
     -webkit-flex: 1;
     flex: 1;
     overflow: auto;
 }
+@media (max-width: 540px) {
+    div.nbinput div.input_area,
+    div.nboutput div.output_area {
+        width: 100%;
+    }
+}
 
 /* input area */
-div.nbinput > :nth-child(2)[class^=highlight] {
+div.nbinput div.input_area {
     border: 1px solid #cfcfcf;
     border-radius: 2px;
     background: #f7f7f7;
@@ -223,7 +277,7 @@ div.nboutput div.math p {
 }
 
 /* standard error */
-div.nboutput  > :nth-child(2).stderr {
+div.nboutput div.output_area.stderr {
     background: #fdd;
 }
 
@@ -295,291 +349,241 @@ div.nboutput  > :nth-child(2).stderr {
     margin-right: 4px;  /* make room for the exclamation icon */
 }
 </style>
-<div class="nbinput nblast container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
+<span></span>In [1]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">sklearn.datasets</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="kn">as</span> <span class="nn">np</span>
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [2]:
 </pre></div>
 </div>
-<div class="highlight-none"><div class="highlight"><pre>
-<span></span>import sklearn.datasets
-import numpy as np
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">data</span> <span class="o">=</span> <span class="n">sklearn</span><span class="o">.</span><span class="n">datasets</span><span class="o">.</span><span class="n">covtype</span><span class="o">.</span><span class="n">fetch_covtype</span><span class="p">()</span>
+<span class="n">x</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">data</span><span class="c1">#.astype(np.float32)</span>
+<span class="n">y</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">target</span>
+
+<span class="n">x</span> <span class="o">=</span> <span class="n">x</span> <span class="o">-</span> <span class="n">x</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+<span class="n">x</span> <span class="o">=</span> <span class="n">x</span> <span class="o">/</span> <span class="n">x</span><span class="o">.</span><span class="n">std</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+
+<span class="n">N</span> <span class="o">=</span> <span class="n">x</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+<span class="n">D</span> <span class="o">=</span> <span class="n">x</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="mi">1</span>
+
+<span class="c1"># Add a constant column for the intercept</span>
+<span class="n">x</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">hstack</span><span class="p">([</span><span class="n">x</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">([</span><span class="n">N</span><span class="p">,</span> <span class="mi">1</span><span class="p">])])</span><span class="c1">#, np.float32)])</span>
 </pre></div>
 </div>
 </div>
-<div class="nbinput nblast container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [3]:
 </pre></div>
 </div>
-<div class="highlight-none"><div class="highlight"><pre>
-<span></span>data = sklearn.datasets.covtype.fetch_covtype()
-x = data.data #.astype(np.float32)
-y = data.target
-
-x = x - x.mean(0)
-x = x / x.std(0)
-
-N = x.shape[0]
-D = x.shape[1] + 1
-
-# Add a constant column for the intercept
-x = np.hstack([x, np.ones([N, 1])])
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="c1"># Which category to binarize on</span>
+<span class="n">values</span><span class="p">,</span> <span class="n">counts</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">unique</span><span class="p">(</span><span class="n">y</span><span class="p">,</span> <span class="n">return_counts</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+<span class="n">binarize_on</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">argmax</span><span class="p">(</span><span class="n">counts</span><span class="p">)</span>
+<span class="n">y</span> <span class="o">=</span> <span class="p">(</span><span class="n">y</span> <span class="o">==</span> <span class="n">binarize_on</span><span class="p">)</span><span class="c1">#.astype(np.float32)</span>
 </pre></div>
 </div>
 </div>
-<div class="nbinput nblast container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [4]:
 </pre></div>
 </div>
-<div class="highlight-none"><div class="highlight"><pre>
-<span></span># Which category to binarize on
-values, counts = np.unique(y, return_counts=True)
-binarize_on = np.argmax(counts)
-y = (y == binarize_on)#.astype(np.float32)
-</pre></div>
-</div>
-</div>
-<div class="nbinput nblast container">
-<div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [5]:
-</pre></div>
-</div>
-<div class="highlight-none"><div class="highlight"><pre>
-<span></span>step_size = np.sqrt(0.5 / N)
-n_steps = 10
-n_iterations = 1000
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">step_size</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="mf">0.5</span> <span class="o">/</span> <span class="n">N</span><span class="p">)</span>
+<span class="n">n_steps</span> <span class="o">=</span> <span class="mi">10</span>
+<span class="n">n_iterations</span> <span class="o">=</span> <span class="mi">1000</span>
 </pre></div>
 </div>
 </div>
 <div class="section" id="Edward-code">
 <h1>Edward code<a class="headerlink" href="#Edward-code" title="Permalink to this headline">¶</a></h1>
-<div class="nbinput nblast container">
-<div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [6]:
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
+<span></span>In [5]:
 </pre></div>
 </div>
-<div class="highlight-none"><div class="highlight"><pre>
-<span></span>import tensorflow as tf
-#sys.path.insert(0, &#39;/usr/local/google/home/mhoffman/research/edward/&#39;)
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">tensorflow</span> <span class="kn">as</span> <span class="nn">tf</span>
+<span class="n">sys</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">insert</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="s1">&#39;/usr/local/google/home/mhoffman/research/edward/&#39;</span><span class="p">)</span>
 
-import edward as ed
+<span class="kn">import</span> <span class="nn">edward</span> <span class="kn">as</span> <span class="nn">ed</span>
 
-# Hack for backwards compatibility
-# tf.select = tf.where
+<span class="c1"># Hack for backwards compatibility</span>
+<span class="c1"># tf.select = tf.where</span>
 
-ed.set_seed(42)
-
+<span class="n">ed</span><span class="o">.</span><span class="n">set_seed</span><span class="p">(</span><span class="mi">42</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
-<div class="nbinput nblast container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
+<span></span>In [25]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="c1"># MODEL</span>
+<span class="n">tf_x</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">Variable</span><span class="p">(</span><span class="n">x</span><span class="o">.</span><span class="n">T</span><span class="p">,</span> <span class="n">trainable</span><span class="o">=</span><span class="bp">False</span><span class="p">)</span>
+
+<span class="c1"># Standard normal prior on coefficients</span>
+<span class="n">beta</span> <span class="o">=</span> <span class="n">ed</span><span class="o">.</span><span class="n">models</span><span class="o">.</span><span class="n">Normal</span><span class="p">(</span><span class="n">mu</span><span class="o">=</span><span class="n">tf</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">D</span><span class="p">),</span> <span class="n">sigma</span><span class="o">=</span><span class="n">tf</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">D</span><span class="p">))</span>
+
+<span class="n">logit_pred</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">squeeze</span><span class="p">(</span><span class="n">tf</span><span class="o">.</span><span class="n">matmul</span><span class="p">(</span><span class="n">tf</span><span class="o">.</span><span class="n">expand_dims</span><span class="p">(</span><span class="n">beta</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span> <span class="n">tf_x</span><span class="p">))</span>
+<span class="n">ed_y</span> <span class="o">=</span> <span class="n">ed</span><span class="o">.</span><span class="n">models</span><span class="o">.</span><span class="n">BernoulliWithSigmoidP</span><span class="p">(</span><span class="n">p</span><span class="o">=</span><span class="n">logit_pred</span><span class="p">)</span>
+
+<span class="c1"># INFERENCE</span>
+<span class="n">qbeta</span> <span class="o">=</span> <span class="n">ed</span><span class="o">.</span><span class="n">models</span><span class="o">.</span><span class="n">Empirical</span><span class="p">(</span><span class="n">params</span><span class="o">=</span><span class="n">tf</span><span class="o">.</span><span class="n">Variable</span><span class="p">(</span><span class="n">tf</span><span class="o">.</span><span class="n">zeros</span><span class="p">([</span><span class="n">n_iterations</span><span class="p">,</span> <span class="n">D</span><span class="p">])))</span>
+<span class="n">inference</span> <span class="o">=</span> <span class="n">ed</span><span class="o">.</span><span class="n">HMC</span><span class="p">({</span><span class="n">beta</span><span class="p">:</span><span class="n">qbeta</span><span class="p">},</span> <span class="n">data</span><span class="o">=</span><span class="p">{</span><span class="n">ed_y</span><span class="p">:</span><span class="n">y</span><span class="p">})</span>
+<span class="n">t0</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+<span class="n">inference</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">step_size</span><span class="o">=</span><span class="n">step_size</span><span class="p">,</span> <span class="n">n_steps</span><span class="o">=</span><span class="n">n_steps</span><span class="p">)</span>
+
+<span class="n">ed_time</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span> <span class="o">-</span> <span class="n">t0</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Iteration    1 [  0%]: Acceptance Rate = nan
+Iteration  100 [ 10%]: Acceptance Rate = 1.00
+Iteration  200 [ 20%]: Acceptance Rate = 0.96
+Iteration  300 [ 30%]: Acceptance Rate = 0.96
+Iteration  400 [ 40%]: Acceptance Rate = 0.96
+Iteration  500 [ 50%]: Acceptance Rate = 0.97
+Iteration  600 [ 60%]: Acceptance Rate = 0.97
+Iteration  700 [ 70%]: Acceptance Rate = 0.97
+Iteration  800 [ 80%]: Acceptance Rate = 0.97
+Iteration  900 [ 90%]: Acceptance Rate = 0.97
+Iteration 1000 [100%]: Acceptance Rate = 0.97
+took 56.958 seconds
+</pre></div></div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
+<span></span>In [26]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="k">print</span> <span class="s1">&#39;Edward took </span><span class="si">%.3f</span><span class="s1"> seconds&#39;</span> <span class="o">%</span> <span class="n">ed_time</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Edward took 56.958 seconds
+</pre></div></div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [7]:
 </pre></div>
 </div>
-<div class="highlight-none"><div class="highlight"><pre>
-<span></span>import time
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">sess</span> <span class="o">=</span> <span class="n">ed</span><span class="o">.</span><span class="n">get_session</span><span class="p">()</span>
+<span class="n">ed_samples</span> <span class="o">=</span> <span class="n">sess</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">qbeta</span><span class="o">.</span><span class="n">params</span><span class="p">)</span>
+<span class="n">plot</span><span class="p">(</span><span class="n">ed_samples</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">])</span>
 </pre></div>
 </div>
 </div>
-<div class="nbinput container">
-<div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [8]:
-</pre></div>
-</div>
-<div class="highlight-none"><div class="highlight"><pre>
-<span></span># MODEL
-tf_x = tf.Variable(x.T, trainable=False)
-
-# Standard normal prior on coefficients
-beta = ed.models.Normal(mu=tf.zeros(D), sigma=tf.ones(D))
-
-logit_pred = tf.squeeze(tf.matmul(tf.expand_dims(beta, 0), tf_x))
-ed_y = ed.models.BernoulliWithSigmoidP(p=logit_pred)
-
-# INFERENCE
-qbeta = ed.models.Empirical(params=tf.Variable(tf.zeros([n_iterations, D])))
-inference = ed.HMC({beta:qbeta}, data={ed_y:y})
-t0 = time.time()
-inference.run(step_size=step_size, n_steps=n_steps)
-
-ed_time = time.time() - t0
-</pre></div>
-</div>
-</div>
-<div class="nboutput nblast container">
-<div class="container">
-</div>
-<div class="container">
-<div class="highlight"><pre>
-<span class="ansi-red-fg">---------------------------------------------------------------------------</span>
-<span class="ansi-red-fg">ValueError</span>                                Traceback (most recent call last)
-<span class="ansi-green-fg">/home/wiecki/miniconda3/lib/python3.5/site-packages/tensorflow/python/framework/op_def_library.py</span> in <span class="ansi-cyan-fg">apply_op</span><span class="ansi-blue-fg">(self, op_type_name, name, **keywords)</span>
-<span class="ansi-green-intense-fg ansi-bold">    489</span>                 as_ref<span class="ansi-blue-fg">=</span>input_arg<span class="ansi-blue-fg">.</span>is_ref<span class="ansi-blue-fg">,</span>
-<span class="ansi-green-fg">--&gt; 490</span><span class="ansi-red-fg">                 preferred_dtype=default_dtype)
-</span><span class="ansi-green-intense-fg ansi-bold">    491</span>           <span class="ansi-green-fg">except</span> ValueError<span class="ansi-blue-fg">:</span>
-
-<span class="ansi-green-fg">/home/wiecki/miniconda3/lib/python3.5/site-packages/tensorflow/python/framework/ops.py</span> in <span class="ansi-cyan-fg">convert_to_tensor</span><span class="ansi-blue-fg">(value, dtype, name, as_ref, preferred_dtype)</span>
-<span class="ansi-green-intense-fg ansi-bold">    656</span>         <span class="ansi-green-fg">if</span> ret <span class="ansi-green-fg">is</span> <span class="ansi-green-fg">None</span><span class="ansi-blue-fg">:</span>
-<span class="ansi-green-fg">--&gt; 657</span><span class="ansi-red-fg">           </span>ret <span class="ansi-blue-fg">=</span> conversion_func<span class="ansi-blue-fg">(</span>value<span class="ansi-blue-fg">,</span> dtype<span class="ansi-blue-fg">=</span>dtype<span class="ansi-blue-fg">,</span> name<span class="ansi-blue-fg">=</span>name<span class="ansi-blue-fg">,</span> as_ref<span class="ansi-blue-fg">=</span>as_ref<span class="ansi-blue-fg">)</span>
-<span class="ansi-green-intense-fg ansi-bold">    658</span>
-
-<span class="ansi-green-fg">/home/wiecki/miniconda3/lib/python3.5/site-packages/tensorflow/python/framework/ops.py</span> in <span class="ansi-cyan-fg">_TensorTensorConversionFunction</span><span class="ansi-blue-fg">(t, dtype, name, as_ref)</span>
-<span class="ansi-green-intense-fg ansi-bold">    570</span>         <span class="ansi-blue-fg">&#34;Tensor conversion requested dtype %s for Tensor with dtype %s: %r&#34;</span>
-<span class="ansi-green-fg">--&gt; 571</span><span class="ansi-red-fg">         % (dtype.name, t.dtype.name, str(t)))
-</span><span class="ansi-green-intense-fg ansi-bold">    572</span>   <span class="ansi-green-fg">return</span> t
-
-<span class="ansi-red-fg">ValueError</span>: Tensor conversion requested dtype float32 for Tensor with dtype float64: &#39;Tensor(&#34;Variable/read:0&#34;, shape=(55, 581012), dtype=float64)&#39;
-
-During handling of the above exception, another exception occurred:
-
-<span class="ansi-red-fg">TypeError</span>                                 Traceback (most recent call last)
-<span class="ansi-green-fg">&lt;ipython-input-8-5bbd810962b1&gt;</span> in <span class="ansi-cyan-fg">&lt;module&gt;</span><span class="ansi-blue-fg">()</span>
-<span class="ansi-green-intense-fg ansi-bold">      5</span> beta <span class="ansi-blue-fg">=</span> ed<span class="ansi-blue-fg">.</span>models<span class="ansi-blue-fg">.</span>Normal<span class="ansi-blue-fg">(</span>mu<span class="ansi-blue-fg">=</span>tf<span class="ansi-blue-fg">.</span>zeros<span class="ansi-blue-fg">(</span>D<span class="ansi-blue-fg">)</span><span class="ansi-blue-fg">,</span> sigma<span class="ansi-blue-fg">=</span>tf<span class="ansi-blue-fg">.</span>ones<span class="ansi-blue-fg">(</span>D<span class="ansi-blue-fg">)</span><span class="ansi-blue-fg">)</span>
-<span class="ansi-green-intense-fg ansi-bold">      6</span>
-<span class="ansi-green-fg">----&gt; 7</span><span class="ansi-red-fg"> </span>logit_pred <span class="ansi-blue-fg">=</span> tf<span class="ansi-blue-fg">.</span>squeeze<span class="ansi-blue-fg">(</span>tf<span class="ansi-blue-fg">.</span>matmul<span class="ansi-blue-fg">(</span>tf<span class="ansi-blue-fg">.</span>expand_dims<span class="ansi-blue-fg">(</span>beta<span class="ansi-blue-fg">,</span> <span class="ansi-cyan-fg">0</span><span class="ansi-blue-fg">)</span><span class="ansi-blue-fg">,</span> tf_x<span class="ansi-blue-fg">)</span><span class="ansi-blue-fg">)</span>
-<span class="ansi-green-intense-fg ansi-bold">      8</span> ed_y <span class="ansi-blue-fg">=</span> ed<span class="ansi-blue-fg">.</span>models<span class="ansi-blue-fg">.</span>BernoulliWithSigmoidP<span class="ansi-blue-fg">(</span>p<span class="ansi-blue-fg">=</span>logit_pred<span class="ansi-blue-fg">)</span>
-<span class="ansi-green-intense-fg ansi-bold">      9</span>
-
-<span class="ansi-green-fg">/home/wiecki/miniconda3/lib/python3.5/site-packages/tensorflow/python/ops/math_ops.py</span> in <span class="ansi-cyan-fg">matmul</span><span class="ansi-blue-fg">(a, b, transpose_a, transpose_b, a_is_sparse, b_is_sparse, name)</span>
-<span class="ansi-green-intense-fg ansi-bold">   1396</span>                                    transpose_a<span class="ansi-blue-fg">=</span>transpose_a<span class="ansi-blue-fg">,</span>
-<span class="ansi-green-intense-fg ansi-bold">   1397</span>                                    transpose_b<span class="ansi-blue-fg">=</span>transpose_b<span class="ansi-blue-fg">,</span>
-<span class="ansi-green-fg">-&gt; 1398</span><span class="ansi-red-fg">                                    name=name)
-</span><span class="ansi-green-intense-fg ansi-bold">   1399</span>
-<span class="ansi-green-intense-fg ansi-bold">   1400</span> sparse_matmul <span class="ansi-blue-fg">=</span> gen_math_ops<span class="ansi-blue-fg">.</span>_sparse_mat_mul
-
-<span class="ansi-green-fg">/home/wiecki/miniconda3/lib/python3.5/site-packages/tensorflow/python/ops/gen_math_ops.py</span> in <span class="ansi-cyan-fg">_mat_mul</span><span class="ansi-blue-fg">(a, b, transpose_a, transpose_b, name)</span>
-<span class="ansi-green-intense-fg ansi-bold">   1346</span>   &#34;&#34;&#34;
-<span class="ansi-green-intense-fg ansi-bold">   1347</span>   result = _op_def_lib.apply_op(&#34;MatMul&#34;, a=a, b=b, transpose_a=transpose_a,
-<span class="ansi-green-fg">-&gt; 1348</span><span class="ansi-red-fg">                                 transpose_b=transpose_b, name=name)
-</span><span class="ansi-green-intense-fg ansi-bold">   1349</span>   <span class="ansi-green-fg">return</span> result
-<span class="ansi-green-intense-fg ansi-bold">   1350</span>
-
-<span class="ansi-green-fg">/home/wiecki/miniconda3/lib/python3.5/site-packages/tensorflow/python/framework/op_def_library.py</span> in <span class="ansi-cyan-fg">apply_op</span><span class="ansi-blue-fg">(self, op_type_name, name, **keywords)</span>
-<span class="ansi-green-intense-fg ansi-bold">    510</span>                   <span class="ansi-blue-fg">&#34;%s type %s of argument &#39;%s&#39;.&#34;</span> <span class="ansi-blue-fg">%</span>
-<span class="ansi-green-intense-fg ansi-bold">    511</span>                   (prefix, dtypes.as_dtype(attrs[input_arg.type_attr]).name,
-<span class="ansi-green-fg">--&gt; 512</span><span class="ansi-red-fg">                    inferred_from[input_arg.type_attr]))
-</span><span class="ansi-green-intense-fg ansi-bold">    513</span>
-<span class="ansi-green-intense-fg ansi-bold">    514</span>           types <span class="ansi-blue-fg">=</span> <span class="ansi-blue-fg">[</span>values<span class="ansi-blue-fg">.</span>dtype<span class="ansi-blue-fg">]</span>
-
-<span class="ansi-red-fg">TypeError</span>: Input &#39;b&#39; of &#39;MatMul&#39; Op has type float64 that does not match type float32 of argument &#39;a&#39;.
-</pre></div></div>
-</div>
-<div class="nbinput container">
-<div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [12]:
-</pre></div>
-</div>
-<div class="highlight-none"><div class="highlight"><pre>
-<span></span>print(&#39;Edward took %.3f seconds&#39; % ed_time)
-</pre></div>
-</div>
-</div>
-<div class="nboutput nblast container">
-<div class="container">
-</div>
-<div class="container">
-<div class="highlight"><pre>
-Edward took 89.355 seconds
-</pre></div></div>
-</div>
-<div class="nbinput container">
-<div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [7]:
-</pre></div>
-</div>
-<div class="highlight-none"><div class="highlight"><pre>
-<span></span>sess = ed.get_session()
-ed_samples = sess.run(qbeta.params)
-plot(ed_samples[:, 0])
-</pre></div>
-</div>
-</div>
-<div class="nboutput container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="nboutput docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>Out[7]:
 </pre></div>
 </div>
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="output_area highlight-none"><div class="highlight"><pre>
 <span></span>[&lt;matplotlib.lines.Line2D at 0x7fbfdc5d8210&gt;]
 </pre></div>
 </div>
 </div>
-<div class="nboutput nblast container">
-<div class="container">
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
 </div>
-<div class="container">
-<img alt="../_images/notebooks_hmc_experiments_9_1.png" src="../_images/notebooks_hmc_experiments_9_1.png" />
+<div class="output_area docutils container">
+<img alt="../_images/notebooks_hmc_experiments_8_1.png" src="../_images/notebooks_hmc_experiments_8_1.png" />
 </div>
 </div>
 </div>
 <div class="section" id="Handwritten-HMC-code">
 <h1>Handwritten HMC code<a class="headerlink" href="#Handwritten-HMC-code" title="Permalink to this headline">¶</a></h1>
-<div class="nbinput nblast container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [8]:
 </pre></div>
 </div>
-<div class="highlight-none"><div class="highlight"><pre>
-<span></span>def leapfrog(logp_grad, step_size, z, momentum, last_grad):
-    momentum = momentum + 0.5 * step_size * last_grad
-    z = z + step_size * momentum
-    logp, grad = logp_grad(z)
-    momentum = momentum + 0.5 * step_size * grad
-    return z, momentum, logp, grad
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="k">def</span> <span class="nf">leapfrog</span><span class="p">(</span><span class="n">logp_grad</span><span class="p">,</span> <span class="n">step_size</span><span class="p">,</span> <span class="n">z</span><span class="p">,</span> <span class="n">momentum</span><span class="p">,</span> <span class="n">last_grad</span><span class="p">):</span>
+    <span class="n">momentum</span> <span class="o">=</span> <span class="n">momentum</span> <span class="o">+</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="n">step_size</span> <span class="o">*</span> <span class="n">last_grad</span>
+    <span class="n">z</span> <span class="o">=</span> <span class="n">z</span> <span class="o">+</span> <span class="n">step_size</span> <span class="o">*</span> <span class="n">momentum</span>
+    <span class="n">logp</span><span class="p">,</span> <span class="n">grad</span> <span class="o">=</span> <span class="n">logp_grad</span><span class="p">(</span><span class="n">z</span><span class="p">)</span>
+    <span class="n">momentum</span> <span class="o">=</span> <span class="n">momentum</span> <span class="o">+</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="n">step_size</span> <span class="o">*</span> <span class="n">grad</span>
+    <span class="k">return</span> <span class="n">z</span><span class="p">,</span> <span class="n">momentum</span><span class="p">,</span> <span class="n">logp</span><span class="p">,</span> <span class="n">grad</span>
 
-def hmc_update(logp_grad, last_z, step_size, n_steps):
-    D = len(last_z)
-    logp, grad = logp_grad(last_z)
-    momentum = np.random.randn(D).astype(np.float32)
-    new_momentum = momentum.copy()
-    new_z = last_z.copy()
-    new_grad = grad.copy()
-    for l in xrange(n_steps):
-        new_z, new_momentum, new_logp, new_grad = leapfrog(logp_grad, step_size, new_z, new_momentum, new_grad)
-    alpha = -0.5 * np.square(new_momentum).sum() + new_logp
-    alpha -= -0.5 * np.square(momentum).sum() + logp
-    if np.log(np.random.rand()) &lt; alpha:
-        z = new_z
-    else:
-        z = last_z
-    return z
+<span class="k">def</span> <span class="nf">hmc_update</span><span class="p">(</span><span class="n">logp_grad</span><span class="p">,</span> <span class="n">last_z</span><span class="p">,</span> <span class="n">step_size</span><span class="p">,</span> <span class="n">n_steps</span><span class="p">):</span>
+    <span class="n">D</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">last_z</span><span class="p">)</span>
+    <span class="n">logp</span><span class="p">,</span> <span class="n">grad</span> <span class="o">=</span> <span class="n">logp_grad</span><span class="p">(</span><span class="n">last_z</span><span class="p">)</span>
+    <span class="n">momentum</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="n">D</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
+    <span class="n">new_momentum</span> <span class="o">=</span> <span class="n">momentum</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+    <span class="n">new_z</span> <span class="o">=</span> <span class="n">last_z</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+    <span class="n">new_grad</span> <span class="o">=</span> <span class="n">grad</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+    <span class="k">for</span> <span class="n">l</span> <span class="ow">in</span> <span class="nb">xrange</span><span class="p">(</span><span class="n">n_steps</span><span class="p">):</span>
+        <span class="n">new_z</span><span class="p">,</span> <span class="n">new_momentum</span><span class="p">,</span> <span class="n">new_logp</span><span class="p">,</span> <span class="n">new_grad</span> <span class="o">=</span> <span class="n">leapfrog</span><span class="p">(</span><span class="n">logp_grad</span><span class="p">,</span> <span class="n">step_size</span><span class="p">,</span> <span class="n">new_z</span><span class="p">,</span> <span class="n">new_momentum</span><span class="p">,</span> <span class="n">new_grad</span><span class="p">)</span>
+    <span class="n">alpha</span> <span class="o">=</span> <span class="o">-</span><span class="mf">0.5</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">square</span><span class="p">(</span><span class="n">new_momentum</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span> <span class="o">+</span> <span class="n">new_logp</span>
+    <span class="n">alpha</span> <span class="o">-=</span> <span class="o">-</span><span class="mf">0.5</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">square</span><span class="p">(</span><span class="n">momentum</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span> <span class="o">+</span> <span class="n">logp</span>
+    <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">rand</span><span class="p">())</span> <span class="o">&lt;</span> <span class="n">alpha</span><span class="p">:</span>
+        <span class="n">z</span> <span class="o">=</span> <span class="n">new_z</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">z</span> <span class="o">=</span> <span class="n">last_z</span>
+    <span class="k">return</span> <span class="n">z</span>
 
-def logp_grad(beta):
-    logp = -0.5 * np.square(beta).sum()
-    logit_preds = x.dot(beta)
-    y_logit_preds = (2*y-1) * logit_preds
-    logp += -np.log(1 + np.exp(-y_logit_preds)).sum()
-    grad = -beta
-    grad += ((2*y-1) * scipy.special.expit(-y_logit_preds)).dot(x)
-    return logp, grad
+<span class="k">def</span> <span class="nf">logp_grad</span><span class="p">(</span><span class="n">beta</span><span class="p">):</span>
+    <span class="n">logp</span> <span class="o">=</span> <span class="o">-</span><span class="mf">0.5</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">square</span><span class="p">(</span><span class="n">beta</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>
+    <span class="n">logit_preds</span> <span class="o">=</span> <span class="n">x</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">beta</span><span class="p">)</span>
+    <span class="n">y_logit_preds</span> <span class="o">=</span> <span class="p">(</span><span class="mi">2</span><span class="o">*</span><span class="n">y</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="n">logit_preds</span>
+    <span class="n">logp</span> <span class="o">+=</span> <span class="o">-</span><span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="mi">1</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="o">-</span><span class="n">y_logit_preds</span><span class="p">))</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>
+    <span class="n">grad</span> <span class="o">=</span> <span class="o">-</span><span class="n">beta</span>
+    <span class="n">grad</span> <span class="o">+=</span> <span class="p">((</span><span class="mi">2</span><span class="o">*</span><span class="n">y</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="n">scipy</span><span class="o">.</span><span class="n">special</span><span class="o">.</span><span class="n">expit</span><span class="p">(</span><span class="o">-</span><span class="n">y_logit_preds</span><span class="p">))</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">logp</span><span class="p">,</span> <span class="n">grad</span>
 </pre></div>
 </div>
 </div>
-<div class="nbinput container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [9]:
 </pre></div>
 </div>
-<div class="highlight-none"><div class="highlight"><pre>
-<span></span>t0 = time.time()
-beta = np.zeros(D, np.float32)
-np_samples = []
-for i in xrange(n_iterations):
-    if i % 10 == 0:
-        print i
-    beta = hmc_update(logp_grad, beta, step_size, n_steps)
-    np_samples.append(beta)
-np_samples = np.array(np_samples)
-print &#39;Numpy (CPU) took %.3f seconds&#39; % (time.time() - t0)
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">t0</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+<span class="n">beta</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">D</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
+<span class="n">np_samples</span> <span class="o">=</span> <span class="p">[]</span>
+<span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">xrange</span><span class="p">(</span><span class="n">n_iterations</span><span class="p">):</span>
+    <span class="k">if</span> <span class="n">i</span> <span class="o">%</span> <span class="mi">10</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="k">print</span> <span class="n">i</span>
+    <span class="n">beta</span> <span class="o">=</span> <span class="n">hmc_update</span><span class="p">(</span><span class="n">logp_grad</span><span class="p">,</span> <span class="n">beta</span><span class="p">,</span> <span class="n">step_size</span><span class="p">,</span> <span class="n">n_steps</span><span class="p">)</span>
+    <span class="n">np_samples</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">beta</span><span class="p">)</span>
+<span class="n">np_samples</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">np_samples</span><span class="p">)</span>
+<span class="k">print</span> <span class="s1">&#39;Numpy (CPU) took </span><span class="si">%.3f</span><span class="s1"> seconds&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span> <span class="o">-</span> <span class="n">t0</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
-<div class="nboutput nblast container">
-<div class="container">
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
 </div>
-<div class="container">
+<div class="output_area docutils container">
 <div class="highlight"><pre>
 0
 10
@@ -684,310 +688,313 @@ print &#39;Numpy (CPU) took %.3f seconds&#39; % (time.time() - t0)
 Numpy (CPU) took 534.883 seconds
 </pre></div></div>
 </div>
-<div class="nbinput container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [10]:
 </pre></div>
 </div>
-<div class="highlight-none"><div class="highlight"><pre>
-<span></span>plot(np_samples[:, 0])
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">plot</span><span class="p">(</span><span class="n">np_samples</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">])</span>
 </pre></div>
 </div>
 </div>
-<div class="nboutput container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="nboutput docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>Out[10]:
 </pre></div>
 </div>
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="output_area highlight-none"><div class="highlight"><pre>
 <span></span>[&lt;matplotlib.lines.Line2D at 0x7fbfe427c150&gt;]
 </pre></div>
 </div>
 </div>
-<div class="nboutput nblast container">
-<div class="container">
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
 </div>
-<div class="container">
-<img alt="../_images/notebooks_hmc_experiments_13_1.png" src="../_images/notebooks_hmc_experiments_13_1.png" />
+<div class="output_area docutils container">
+<img alt="../_images/notebooks_hmc_experiments_12_1.png" src="../_images/notebooks_hmc_experiments_12_1.png" />
 </div>
 </div>
 </div>
 <div class="section" id="PyStan">
 <h1>PyStan<a class="headerlink" href="#PyStan" title="Permalink to this headline">¶</a></h1>
-<div class="nbinput nblast container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [11]:
 </pre></div>
 </div>
-<div class="highlight-none"><div class="highlight"><pre>
-<span></span>import pystan
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">pystan</span>
 </pre></div>
 </div>
 </div>
-<div class="nbinput container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [ ]:
 </pre></div>
 </div>
-<div class="highlight-none"><div class="highlight"><pre>
-<span></span>model_code = &#39;&#39;&#39;
-data {
-    int N;
-    int D;
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">model_code</span> <span class="o">=</span> <span class="s1">&#39;&#39;&#39;</span>
+<span class="s1">data {</span>
+<span class="s1">    int N;</span>
+<span class="s1">    int D;</span>
 
-    int y[N];
-    matrix[N, D] x;
-}
-parameters {
-    vector[D] beta;
-}
-model {
-    beta ~ normal(0, 1);
-    y ~ bernoulli_logit(x * beta);
-}
-&#39;&#39;&#39;
-model = pystan.StanModel(model_code=model_code)
+<span class="s1">    int y[N];</span>
+<span class="s1">    matrix[N, D] x;</span>
+<span class="s1">}</span>
+<span class="s1">parameters {</span>
+<span class="s1">    vector[D] beta;</span>
+<span class="s1">}</span>
+<span class="s1">model {</span>
+<span class="s1">    beta ~ normal(0, 1);</span>
+<span class="s1">    y ~ bernoulli_logit(x * beta);</span>
+<span class="s1">}</span>
+<span class="s1">&#39;&#39;&#39;</span>
+<span class="n">model</span> <span class="o">=</span> <span class="n">pystan</span><span class="o">.</span><span class="n">StanModel</span><span class="p">(</span><span class="n">model_code</span><span class="o">=</span><span class="n">model_code</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
-<div class="nboutput nblast container">
-<div class="container">
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
 </div>
-<div class="stderr container">
+<div class="stderr output_area docutils container">
 <div class="highlight"><pre>
 INFO:pystan:COMPILING THE C++ CODE FOR MODEL anon_model_976aaa495a9359c3216a14ee7a2eb583 NOW.
 </pre></div></div>
 </div>
-<div class="nbinput container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [19]:
 </pre></div>
 </div>
-<div class="highlight-none"><div class="highlight"><pre>
-<span></span>t0 = time.time()
-control = {&#39;stepsize&#39;:step_size, &#39;int_time&#39;:n_steps*step_size,
-           &#39;adapt_engaged&#39;:False, &#39;stepsize_jitter&#39;:0, &#39;metric&#39;:&#39;unit_e&#39;}
-fit = model.sampling(data={&#39;N&#39;:N, &#39;D&#39;:D, &#39;y&#39;:y.astype(np.int32), &#39;x&#39;:x},
-                     warmup=0, verbose=True, chains=1, iter=n_iterations, algorithm=&#39;HMC&#39;, init=0,
-                     control=control)
-stan_time = time.time() - t0
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">t0</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+<span class="n">control</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;stepsize&#39;</span><span class="p">:</span><span class="n">step_size</span><span class="p">,</span> <span class="s1">&#39;int_time&#39;</span><span class="p">:</span><span class="n">n_steps</span><span class="o">*</span><span class="n">step_size</span><span class="p">,</span>
+           <span class="s1">&#39;adapt_engaged&#39;</span><span class="p">:</span><span class="bp">False</span><span class="p">,</span> <span class="s1">&#39;stepsize_jitter&#39;</span><span class="p">:</span><span class="mi">0</span><span class="p">,</span> <span class="s1">&#39;metric&#39;</span><span class="p">:</span><span class="s1">&#39;unit_e&#39;</span><span class="p">}</span>
+<span class="n">fit</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">sampling</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;N&#39;</span><span class="p">:</span><span class="n">N</span><span class="p">,</span> <span class="s1">&#39;D&#39;</span><span class="p">:</span><span class="n">D</span><span class="p">,</span> <span class="s1">&#39;y&#39;</span><span class="p">:</span><span class="n">y</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">),</span> <span class="s1">&#39;x&#39;</span><span class="p">:</span><span class="n">x</span><span class="p">},</span>
+                     <span class="n">warmup</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span> <span class="n">chains</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="nb">iter</span><span class="o">=</span><span class="n">n_iterations</span><span class="p">,</span> <span class="n">algorithm</span><span class="o">=</span><span class="s1">&#39;HMC&#39;</span><span class="p">,</span> <span class="n">init</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+                     <span class="n">control</span><span class="o">=</span><span class="n">control</span><span class="p">)</span>
+<span class="n">stan_time</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span> <span class="o">-</span> <span class="n">t0</span>
 </pre></div>
 </div>
 </div>
-<div class="nboutput nblast container">
-<div class="container">
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
 </div>
-<div class="container">
+<div class="output_area docutils container">
 <div class="highlight"><pre>
 Stan (CPU, single-threaded) took 1952.880 seconds
 </pre></div></div>
 </div>
-<div class="nbinput container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [27]:
 </pre></div>
 </div>
-<div class="highlight-none"><div class="highlight"><pre>
-<span></span>print &#39;Stan (CPU, single-threaded) took %.3f seconds (%.3f Edward time)&#39; % (stan_time, stan_time / ed_time)
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="k">print</span> <span class="s1">&#39;Stan (CPU, single-threaded) took </span><span class="si">%.3f</span><span class="s1"> seconds (</span><span class="si">%.3f</span><span class="s1"> Edward time)&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">stan_time</span><span class="p">,</span> <span class="n">stan_time</span> <span class="o">/</span> <span class="n">ed_time</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
-<div class="nboutput nblast container">
-<div class="container">
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
 </div>
-<div class="container">
+<div class="output_area docutils container">
 <div class="highlight"><pre>
 Stan (CPU, single-threaded) took 1952.880 seconds (34.286 Edward time)
 </pre></div></div>
 </div>
-<div class="nbinput container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [24]:
 </pre></div>
 </div>
-<div class="highlight-none"><div class="highlight"><pre>
-<span></span>stan_samples = fit.extract()[&#39;beta&#39;]
-plot(stan_samples[:, 0])
-show()
-plot(fit.extract()[&#39;lp__&#39;])
-show()
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">stan_samples</span> <span class="o">=</span> <span class="n">fit</span><span class="o">.</span><span class="n">extract</span><span class="p">()[</span><span class="s1">&#39;beta&#39;</span><span class="p">]</span>
+<span class="n">plot</span><span class="p">(</span><span class="n">stan_samples</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">])</span>
+<span class="n">show</span><span class="p">()</span>
+<span class="n">plot</span><span class="p">(</span><span class="n">fit</span><span class="o">.</span><span class="n">extract</span><span class="p">()[</span><span class="s1">&#39;lp__&#39;</span><span class="p">])</span>
+<span class="n">show</span><span class="p">()</span>
 </pre></div>
 </div>
 </div>
-<div class="nboutput container">
-<div class="container">
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
 </div>
-<div class="container">
-<img alt="../_images/notebooks_hmc_experiments_19_0.png" src="../_images/notebooks_hmc_experiments_19_0.png" />
+<div class="output_area docutils container">
+<img alt="../_images/notebooks_hmc_experiments_18_0.png" src="../_images/notebooks_hmc_experiments_18_0.png" />
 </div>
 </div>
-<div class="nboutput nblast container">
-<div class="container">
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
 </div>
-<div class="container">
-<img alt="../_images/notebooks_hmc_experiments_19_1.png" src="../_images/notebooks_hmc_experiments_19_1.png" />
+<div class="output_area docutils container">
+<img alt="../_images/notebooks_hmc_experiments_18_1.png" src="../_images/notebooks_hmc_experiments_18_1.png" />
 </div>
 </div>
 </div>
 <div class="section" id="PyMC3">
 <h1>PyMC3<a class="headerlink" href="#PyMC3" title="Permalink to this headline">¶</a></h1>
-<div class="nbinput nblast container">
-<div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [6]:
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
+<span></span>In [5]:
 </pre></div>
 </div>
-<div class="highlight-none"><div class="highlight"><pre>
-<span></span>import pymc3
-import pymc3.math
-import theano
-import theano.tensor as T
-</pre></div>
-</div>
-</div>
-<div class="nbinput nblast container">
-<div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [7]:
-</pre></div>
-</div>
-<div class="highlight-none"><div class="highlight"><pre>
-<span></span>import time
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">pymc3</span>
+<span class="kn">import</span> <span class="nn">theano</span>
+<span class="kn">import</span> <span class="nn">theano.tensor</span> <span class="kn">as</span> <span class="nn">T</span>
 </pre></div>
 </div>
 </div>
-<div class="nbinput container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [8]:
 </pre></div>
 </div>
-<div class="highlight-none"><div class="highlight"><pre>
-<span></span>basic_model = pymc3.Model()
-
-with basic_model:
-    pymc_beta = pymc3.Normal(&#39;beta&#39;, mu=0, sd=1, shape=D)
-    pymc_y = pymc3.Bernoulli(&#39;y&#39;, p=pymc3.math.sigmoid(pymc3.math.dot(x.astype(&#39;float64&#39;),
-                                                                      pymc_beta)), observed=y.astype(&#39;int64&#39;))
-
-    step = pymc3.HamiltonianMC(step_scale=step_size*(1./D)**(-1./4),
-                               path_length=step_size*n_steps,
-                               step_rand=lambda x:x, scaling=np.ones(D, np.float32))
-    t0 = time.time()
-    pymc_samples = pymc3.sample(n_iterations, step=step, init=None, njobs=1)
-pymc_time = time.time() - t0
-print(&#39;pymc (CPU multithreaded) took %.3f seconds&#39; % pymc_time)
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">pymc3.math</span>
+<span class="kn">import</span> <span class="nn">time</span>
 </pre></div>
 </div>
 </div>
-<div class="nboutput container">
-<div class="container">
+<div class="nbinput docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
+<span></span>In [10]:
+</pre></div>
 </div>
-<div class="stderr container">
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="o">%</span><span class="k">pdb</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
 <div class="highlight"><pre>
-100%|██████████| 1000/1000 [20:34&lt;00:00,  1.22s/it]
+Automatic pdb calling has been turned ON
 </pre></div></div>
 </div>
-<div class="nboutput container">
-<div class="container">
+<div class="nbinput docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
+<span></span>In [15]:
+</pre></div>
 </div>
-<div class="container">
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">basic_model</span> <span class="o">=</span> <span class="n">pymc3</span><span class="o">.</span><span class="n">Model</span><span class="p">()</span>
+
+<span class="k">with</span> <span class="n">basic_model</span><span class="p">:</span>
+    <span class="n">pymc_beta</span> <span class="o">=</span> <span class="n">pymc3</span><span class="o">.</span><span class="n">Normal</span><span class="p">(</span><span class="s1">&#39;beta&#39;</span><span class="p">,</span> <span class="n">mu</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">sd</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">shape</span><span class="o">=</span><span class="n">D</span><span class="p">)</span>
+    <span class="n">pymc_y</span> <span class="o">=</span> <span class="n">pymc3</span><span class="o">.</span><span class="n">Bernoulli</span><span class="p">(</span><span class="s1">&#39;y&#39;</span><span class="p">,</span> <span class="n">p</span><span class="o">=</span><span class="n">pymc3</span><span class="o">.</span><span class="n">math</span><span class="o">.</span><span class="n">sigmoid</span><span class="p">(</span><span class="n">pymc3</span><span class="o">.</span><span class="n">math</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">pymc_beta</span><span class="p">)),</span> <span class="n">observed</span><span class="o">=</span><span class="n">y</span><span class="p">)</span>
+
+    <span class="n">step</span> <span class="o">=</span> <span class="n">pymc3</span><span class="o">.</span><span class="n">HamiltonianMC</span><span class="p">()</span><span class="c1">#step_scale=step_size*(1./D)**(-1./4), path_length=step_size*n_steps,</span>
+                               <span class="c1">#step_rand=lambda x:x, scaling=np.ones(D))#, np.float32))</span>
+    <span class="n">t0</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+    <span class="n">pymc_samples</span> <span class="o">=</span> <span class="n">pymc3</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="n">n_iterations</span><span class="p">,</span> <span class="n">step</span><span class="o">=</span><span class="n">step</span><span class="p">,</span> <span class="n">init</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">njobs</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+<span class="n">pymc_time</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span> <span class="o">-</span> <span class="n">t0</span>
+<span class="k">print</span><span class="p">(</span><span class="s1">&#39;pymc (CPU multithreaded) took </span><span class="si">%.3f</span><span class="s1"> seconds&#39;</span> <span class="o">%</span> <span class="n">pymc_time</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="stderr output_area docutils container">
 <div class="highlight"><pre>
-pymc (CPU multithreaded) took 1234.174 seconds
+/Users/twiecki/anaconda/lib/python3.5/site-packages/theano/tensor/basic.py:2147: UserWarning: theano.tensor.round() changed its default from `half_away_from_zero` to `half_to_even` to have the same default as NumPy. Use the Theano flag `warn.round=False` to disable this warning.
+  &#34;theano.tensor.round() changed its default from&#34;
+ 13%|█▎        | 129/1000 [02:44&lt;20:06,  1.38s/it]
 </pre></div></div>
 </div>
-<div class="nboutput nblast container">
-<div class="container">
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
 </div>
-<div class="stderr container">
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+pymc (CPU multithreaded) took 166.318 seconds
+</pre></div></div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="stderr output_area docutils container">
 <div class="highlight"><pre>
 
 </pre></div></div>
 </div>
-<div class="nbinput container">
-<div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [9]:
-</pre></div>
-</div>
-<div class="highlight-none"><div class="highlight"><pre>
-<span></span>1234./90
-</pre></div>
-</div>
-</div>
-<div class="nboutput nblast container">
-<div class="highlight-none"><div class="highlight"><pre>
-<span></span>Out[9]:
-</pre></div>
-</div>
-<div class="highlight-none"><div class="highlight"><pre>
-<span></span>13.71111111111111
-</pre></div>
-</div>
-</div>
-<div class="nbinput container">
-<div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [7]:
-</pre></div>
-</div>
-<div class="highlight-none"><div class="highlight"><pre>
-<span></span>print(&#39;PyMC3 (CPU, multi-theaded) took %.3f seconds (%.3f Edward time)&#39; % (pymc_time, pymc_time / ed_time))
-</pre></div>
-</div>
-</div>
-<div class="nboutput nblast container">
-<div class="container">
-</div>
-<div class="container">
-<div class="highlight"><pre>
-<span class="ansi-red-fg">---------------------------------------------------------------------------</span>
-<span class="ansi-red-fg">NameError</span>                                 Traceback (most recent call last)
-<span class="ansi-green-fg">&lt;ipython-input-7-c24eae3578da&gt;</span> in <span class="ansi-cyan-fg">&lt;module&gt;</span><span class="ansi-blue-fg">()</span>
-<span class="ansi-green-fg">----&gt; 1</span><span class="ansi-red-fg"> </span>print<span class="ansi-blue-fg">(</span><span class="ansi-blue-fg">&#39;PyMC3 (CPU, multi-theaded) took %.3f seconds (%.3f Edward time)&#39;</span> <span class="ansi-blue-fg">%</span> <span class="ansi-blue-fg">(</span>pymc_time<span class="ansi-blue-fg">,</span> pymc_time <span class="ansi-blue-fg">/</span> ed_time<span class="ansi-blue-fg">)</span><span class="ansi-blue-fg">)</span>
-
-<span class="ansi-red-fg">NameError</span>: name &#39;pymc_time&#39; is not defined
-</pre></div></div>
-</div>
-<div class="nbinput container">
-<div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [23]:
-</pre></div>
-</div>
-<div class="highlight-none"><div class="highlight"><pre>
-<span></span>plot(pymc_samples.get_values(&#39;beta&#39;)[:, 0])
-</pre></div>
-</div>
-</div>
-<div class="nboutput container">
-<div class="highlight-none"><div class="highlight"><pre>
-<span></span>Out[23]:
-</pre></div>
-</div>
-<div class="highlight-none"><div class="highlight"><pre>
-<span></span>[&lt;matplotlib.lines.Line2D at 0x7fbf6e7fbe50&gt;]
-</pre></div>
-</div>
-</div>
-<div class="nboutput nblast container">
-<div class="container">
-</div>
-<div class="container">
-<img alt="../_images/notebooks_hmc_experiments_26_1.png" src="../_images/notebooks_hmc_experiments_26_1.png" />
-</div>
-</div>
-<hr class="docutils" />
-<div class="nbinput nblast container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [ ]:
 </pre></div>
 </div>
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span>
 </pre></div>
 </div>
 </div>
-<div class="nbinput nblast container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
+<span></span>In [28]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="k">print</span> <span class="s1">&#39;PyMC3 (CPU, multi-threaded) took </span><span class="si">%.3f</span><span class="s1"> seconds (</span><span class="si">%.3f</span><span class="s1"> Edward time)&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">pymc_time</span><span class="p">,</span> <span class="n">pymc_time</span> <span class="o">/</span> <span class="n">ed_time</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+PyMC3 (CPU, multi-threaded) took 1785.090 seconds (31.341 Edward time)
+</pre></div></div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
+<span></span>In [23]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">plot</span><span class="p">(</span><span class="n">pymc_samples</span><span class="o">.</span><span class="n">get_values</span><span class="p">(</span><span class="s1">&#39;beta&#39;</span><span class="p">)[:,</span> <span class="mi">0</span><span class="p">])</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
+<span></span>Out[23]:
+</pre></div>
+</div>
+<div class="output_area highlight-none"><div class="highlight"><pre>
+<span></span>[&lt;matplotlib.lines.Line2D at 0x7fbf6e7fbe50&gt;]
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/notebooks_hmc_experiments_26_1.png" src="../_images/notebooks_hmc_experiments_26_1.png" />
+</div>
+</div>
+<hr class="docutils" />
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [ ]:
 </pre></div>
 </div>
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<span></span>
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
+<span></span>In [ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span>
 </pre></div>
 </div>
@@ -995,483 +1002,483 @@ pymc (CPU multithreaded) took 1234.174 seconds
 </div>
 <div class="section" id="Handwritten-code-with-TF-for-gradients">
 <h1>Handwritten code with TF for gradients<a class="headerlink" href="#Handwritten-code-with-TF-for-gradients" title="Permalink to this headline">¶</a></h1>
-<div class="nbinput nblast container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [15]:
 </pre></div>
 </div>
-<div class="highlight-none"><div class="highlight"><pre>
-<span></span>def leapfrog(logp_grad, step_size, z, momentum, last_grad):
-    momentum = momentum + 0.5 * step_size * last_grad
-    z = z + step_size * momentum
-    logp, grad = logp_grad(z)
-    momentum = momentum + 0.5 * step_size * grad
-    return z, momentum, logp, grad
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="k">def</span> <span class="nf">leapfrog</span><span class="p">(</span><span class="n">logp_grad</span><span class="p">,</span> <span class="n">step_size</span><span class="p">,</span> <span class="n">z</span><span class="p">,</span> <span class="n">momentum</span><span class="p">,</span> <span class="n">last_grad</span><span class="p">):</span>
+    <span class="n">momentum</span> <span class="o">=</span> <span class="n">momentum</span> <span class="o">+</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="n">step_size</span> <span class="o">*</span> <span class="n">last_grad</span>
+    <span class="n">z</span> <span class="o">=</span> <span class="n">z</span> <span class="o">+</span> <span class="n">step_size</span> <span class="o">*</span> <span class="n">momentum</span>
+    <span class="n">logp</span><span class="p">,</span> <span class="n">grad</span> <span class="o">=</span> <span class="n">logp_grad</span><span class="p">(</span><span class="n">z</span><span class="p">)</span>
+    <span class="n">momentum</span> <span class="o">=</span> <span class="n">momentum</span> <span class="o">+</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="n">step_size</span> <span class="o">*</span> <span class="n">grad</span>
+    <span class="k">return</span> <span class="n">z</span><span class="p">,</span> <span class="n">momentum</span><span class="p">,</span> <span class="n">logp</span><span class="p">,</span> <span class="n">grad</span>
 
-def hmc_update(logp_grad, last_z, step_size, n_steps):
-    D = len(last_z)
-    logp, grad = logp_grad(last_z)
-    momentum = np.random.randn(D).astype(np.float32)
-    new_momentum = momentum.copy()
-    new_z = last_z.copy()
-    new_grad = grad.copy()
-    for l in xrange(n_steps):
-        new_z, new_momentum, new_logp, new_grad = leapfrog(logp_grad, step_size, new_z, new_momentum, new_grad)
-    alpha = -0.5 * np.square(new_momentum).sum() + new_logp
-    alpha -= -0.5 * np.square(momentum).sum() + logp
-    if np.log(np.random.rand()) &lt; alpha:
-        z = new_z
-    else:
-        z = last_z
-    return z
+<span class="k">def</span> <span class="nf">hmc_update</span><span class="p">(</span><span class="n">logp_grad</span><span class="p">,</span> <span class="n">last_z</span><span class="p">,</span> <span class="n">step_size</span><span class="p">,</span> <span class="n">n_steps</span><span class="p">):</span>
+    <span class="n">D</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">last_z</span><span class="p">)</span>
+    <span class="n">logp</span><span class="p">,</span> <span class="n">grad</span> <span class="o">=</span> <span class="n">logp_grad</span><span class="p">(</span><span class="n">last_z</span><span class="p">)</span>
+    <span class="n">momentum</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="n">D</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
+    <span class="n">new_momentum</span> <span class="o">=</span> <span class="n">momentum</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+    <span class="n">new_z</span> <span class="o">=</span> <span class="n">last_z</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+    <span class="n">new_grad</span> <span class="o">=</span> <span class="n">grad</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+    <span class="k">for</span> <span class="n">l</span> <span class="ow">in</span> <span class="nb">xrange</span><span class="p">(</span><span class="n">n_steps</span><span class="p">):</span>
+        <span class="n">new_z</span><span class="p">,</span> <span class="n">new_momentum</span><span class="p">,</span> <span class="n">new_logp</span><span class="p">,</span> <span class="n">new_grad</span> <span class="o">=</span> <span class="n">leapfrog</span><span class="p">(</span><span class="n">logp_grad</span><span class="p">,</span> <span class="n">step_size</span><span class="p">,</span> <span class="n">new_z</span><span class="p">,</span> <span class="n">new_momentum</span><span class="p">,</span> <span class="n">new_grad</span><span class="p">)</span>
+    <span class="n">alpha</span> <span class="o">=</span> <span class="o">-</span><span class="mf">0.5</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">square</span><span class="p">(</span><span class="n">new_momentum</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span> <span class="o">+</span> <span class="n">new_logp</span>
+    <span class="n">alpha</span> <span class="o">-=</span> <span class="o">-</span><span class="mf">0.5</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">square</span><span class="p">(</span><span class="n">momentum</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span> <span class="o">+</span> <span class="n">logp</span>
+    <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">rand</span><span class="p">())</span> <span class="o">&lt;</span> <span class="n">alpha</span><span class="p">:</span>
+        <span class="n">z</span> <span class="o">=</span> <span class="n">new_z</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">z</span> <span class="o">=</span> <span class="n">last_z</span>
+    <span class="k">return</span> <span class="n">z</span>
 
-g = tf.Graph()
-with g.as_default():
-    with tf.device(&#39;/gpu:0&#39;):
-        tf_beta = tf.placeholder(np.float32, shape=D, name=&#39;beta&#39;)
-        tf_x = tf.Variable(x.T, trainable=False)
-        tf_y = tf.Variable(y, trainable=False)
-        tf_logit_preds = tf.matmul(tf.expand_dims(tf_beta, 0), tf_x)
-        tf_y_logit_preds = (2. * tf_y - 1.) * tf_logit_preds
-        tf_logp = -tf.reduce_sum(tf.nn.softplus(-tf_y_logit_preds))
-        tf_logp -= 0.5 * tf.reduce_sum(tf.square(tf_beta))
-        tf_grad = tf.gradients(tf_logp, tf_beta)[0]
-    initializer = tf.initialize_all_variables()
-    sess = tf.Session()
-    sess.run(initializer)
+<span class="n">g</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">Graph</span><span class="p">()</span>
+<span class="k">with</span> <span class="n">g</span><span class="o">.</span><span class="n">as_default</span><span class="p">():</span>
+    <span class="k">with</span> <span class="n">tf</span><span class="o">.</span><span class="n">device</span><span class="p">(</span><span class="s1">&#39;/gpu:0&#39;</span><span class="p">):</span>
+        <span class="n">tf_beta</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">placeholder</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">,</span> <span class="n">shape</span><span class="o">=</span><span class="n">D</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s1">&#39;beta&#39;</span><span class="p">)</span>
+        <span class="n">tf_x</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">Variable</span><span class="p">(</span><span class="n">x</span><span class="o">.</span><span class="n">T</span><span class="p">,</span> <span class="n">trainable</span><span class="o">=</span><span class="bp">False</span><span class="p">)</span>
+        <span class="n">tf_y</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">Variable</span><span class="p">(</span><span class="n">y</span><span class="p">,</span> <span class="n">trainable</span><span class="o">=</span><span class="bp">False</span><span class="p">)</span>
+        <span class="n">tf_logit_preds</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">matmul</span><span class="p">(</span><span class="n">tf</span><span class="o">.</span><span class="n">expand_dims</span><span class="p">(</span><span class="n">tf_beta</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span> <span class="n">tf_x</span><span class="p">)</span>
+        <span class="n">tf_y_logit_preds</span> <span class="o">=</span> <span class="p">(</span><span class="mf">2.</span> <span class="o">*</span> <span class="n">tf_y</span> <span class="o">-</span> <span class="mf">1.</span><span class="p">)</span> <span class="o">*</span> <span class="n">tf_logit_preds</span>
+        <span class="n">tf_logp</span> <span class="o">=</span> <span class="o">-</span><span class="n">tf</span><span class="o">.</span><span class="n">reduce_sum</span><span class="p">(</span><span class="n">tf</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">softplus</span><span class="p">(</span><span class="o">-</span><span class="n">tf_y_logit_preds</span><span class="p">))</span>
+        <span class="n">tf_logp</span> <span class="o">-=</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="n">tf</span><span class="o">.</span><span class="n">reduce_sum</span><span class="p">(</span><span class="n">tf</span><span class="o">.</span><span class="n">square</span><span class="p">(</span><span class="n">tf_beta</span><span class="p">))</span>
+        <span class="n">tf_grad</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">gradients</span><span class="p">(</span><span class="n">tf_logp</span><span class="p">,</span> <span class="n">tf_beta</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="n">initializer</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">initialize_all_variables</span><span class="p">()</span>
+    <span class="n">sess</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">Session</span><span class="p">()</span>
+    <span class="n">sess</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">initializer</span><span class="p">)</span>
 
-def logp_grad(beta):
-#     return sess.run([tf_logp, tf_grad], {tf_beta: beta[:, np.newaxis]})
-    return sess.run([tf_logp, tf_grad], {tf_beta: beta})
+<span class="k">def</span> <span class="nf">logp_grad</span><span class="p">(</span><span class="n">beta</span><span class="p">):</span>
+<span class="c1">#     return sess.run([tf_logp, tf_grad], {tf_beta: beta[:, np.newaxis]})</span>
+    <span class="k">return</span> <span class="n">sess</span><span class="o">.</span><span class="n">run</span><span class="p">([</span><span class="n">tf_logp</span><span class="p">,</span> <span class="n">tf_grad</span><span class="p">],</span> <span class="p">{</span><span class="n">tf_beta</span><span class="p">:</span> <span class="n">beta</span><span class="p">})</span>
 </pre></div>
 </div>
 </div>
-<div class="nbinput container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [17]:
 </pre></div>
 </div>
-<div class="highlight-none"><div class="highlight"><pre>
-<span></span>beta = np.zeros(D, np.float32)
-# %timeit logp_grad(beta)
-%timeit sess.run(tf_grad, {tf_beta:beta})
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">beta</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">D</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
+<span class="c1"># %timeit logp_grad(beta)</span>
+<span class="o">%</span><span class="k">timeit</span> sess.run(tf_grad, {tf_beta:beta})
 </pre></div>
 </div>
 </div>
-<div class="nboutput nblast container">
-<div class="container">
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
 </div>
-<div class="container">
+<div class="output_area docutils container">
 <div class="highlight"><pre>
 100 loops, best of 3: 5.05 ms per loop
 </pre></div></div>
 </div>
-<div class="nbinput container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [18]:
 </pre></div>
 </div>
-<div class="highlight-none"><div class="highlight"><pre>
-<span></span>t0 = time.time()
-beta = np.zeros(D, np.float32)
-samples = []
-for i in xrange(100):
-    beta = hmc_update(logp_grad, beta, np.sqrt(step_size), n_steps)
-    samples.append(beta)
-samples = np.array(samples)
-print &#39;TF (GPU) took %.3f seconds&#39; % (time.time() - t0)
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">t0</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+<span class="n">beta</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">D</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
+<span class="n">samples</span> <span class="o">=</span> <span class="p">[]</span>
+<span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">xrange</span><span class="p">(</span><span class="mi">100</span><span class="p">):</span>
+    <span class="n">beta</span> <span class="o">=</span> <span class="n">hmc_update</span><span class="p">(</span><span class="n">logp_grad</span><span class="p">,</span> <span class="n">beta</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">step_size</span><span class="p">),</span> <span class="n">n_steps</span><span class="p">)</span>
+    <span class="n">samples</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">beta</span><span class="p">)</span>
+<span class="n">samples</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">samples</span><span class="p">)</span>
+<span class="k">print</span> <span class="s1">&#39;TF (GPU) took </span><span class="si">%.3f</span><span class="s1"> seconds&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span> <span class="o">-</span> <span class="n">t0</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
-<div class="nboutput nblast container">
-<div class="container">
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
 </div>
-<div class="container">
+<div class="output_area docutils container">
 <div class="highlight"><pre>
 TF (GPU) took 5.855 seconds
 </pre></div></div>
 </div>
-<div class="nbinput container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [19]:
 </pre></div>
 </div>
-<div class="highlight-none"><div class="highlight"><pre>
-<span></span>plot(samples[:, 0])
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">plot</span><span class="p">(</span><span class="n">samples</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">])</span>
 </pre></div>
 </div>
 </div>
-<div class="nboutput container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="nboutput docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>Out[19]:
 </pre></div>
 </div>
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="output_area highlight-none"><div class="highlight"><pre>
 <span></span>[&lt;matplotlib.lines.Line2D at 0x7fd0f827bad0&gt;]
 </pre></div>
 </div>
 </div>
-<div class="nboutput nblast container">
-<div class="container">
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
 </div>
-<div class="container">
+<div class="output_area docutils container">
 <img alt="../_images/notebooks_hmc_experiments_34_1.png" src="../_images/notebooks_hmc_experiments_34_1.png" />
 </div>
 </div>
-<div class="nbinput container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [56]:
 </pre></div>
 </div>
-<div class="highlight-none"><div class="highlight"><pre>
-<span></span>%timeit logp_grad(beta)
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="o">%</span><span class="k">timeit</span> logp_grad(beta)
 </pre></div>
 </div>
 </div>
-<div class="nboutput nblast container">
-<div class="container">
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
 </div>
-<div class="container">
+<div class="output_area docutils container">
 <div class="highlight"><pre>
 The slowest run took 6.52 times longer than the fastest. This could mean that an intermediate result is being cached.
 1 loop, best of 3: 44 ms per loop
 </pre></div></div>
 </div>
-<div class="nbinput container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [80]:
 </pre></div>
 </div>
-<div class="highlight-none"><div class="highlight"><pre>
-<span></span>plot(samples[:, 0])
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">plot</span><span class="p">(</span><span class="n">samples</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">])</span>
 </pre></div>
 </div>
 </div>
-<div class="nboutput container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="nboutput docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>Out[80]:
 </pre></div>
 </div>
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="output_area highlight-none"><div class="highlight"><pre>
 <span></span>[&lt;matplotlib.lines.Line2D at 0x7faa64137210&gt;]
 </pre></div>
 </div>
 </div>
-<div class="nboutput nblast container">
-<div class="container">
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
 </div>
-<div class="container">
+<div class="output_area docutils container">
 <img alt="../_images/notebooks_hmc_experiments_36_1.png" src="../_images/notebooks_hmc_experiments_36_1.png" />
 </div>
 </div>
 </div>
 <div class="section" id="Handwritten-code-with-Theano-for-gradients">
 <h1>Handwritten code with Theano for gradients<a class="headerlink" href="#Handwritten-code-with-Theano-for-gradients" title="Permalink to this headline">¶</a></h1>
-<div class="nbinput container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [5]:
 </pre></div>
 </div>
-<div class="highlight-none"><div class="highlight"><pre>
-<span></span>import theano
-import theano.tensor as T
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">theano</span>
+<span class="kn">import</span> <span class="nn">theano.tensor</span> <span class="kn">as</span> <span class="nn">T</span>
 </pre></div>
 </div>
 </div>
-<div class="nboutput nblast container">
-<div class="container">
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
 </div>
-<div class="stderr container">
+<div class="stderr output_area docutils container">
 <div class="highlight"><pre>
 Using gpu device 0: TITAN X (Pascal) (CNMeM is disabled, cuDNN 5105)
 /usr/local/lib/python2.7/dist-packages/theano/sandbox/cuda/__init__.py:600: UserWarning: Your cuDNN version is more recent than the one Theano officially supports. If you see any problems, try updating Theano or downgrading cuDNN to version 5.
   warnings.warn(warn)
 </pre></div></div>
 </div>
-<div class="nbinput nblast container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [17]:
 </pre></div>
 </div>
-<div class="highlight-none"><div class="highlight"><pre>
-<span></span>def leapfrog(logp_grad, step_size, z, momentum, last_grad):
-    momentum = momentum + 0.5 * step_size * last_grad
-    z = z + step_size * momentum
-    logp, grad = logp_grad(z)
-    momentum = momentum + 0.5 * step_size * grad
-    return z, momentum, logp, grad
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="k">def</span> <span class="nf">leapfrog</span><span class="p">(</span><span class="n">logp_grad</span><span class="p">,</span> <span class="n">step_size</span><span class="p">,</span> <span class="n">z</span><span class="p">,</span> <span class="n">momentum</span><span class="p">,</span> <span class="n">last_grad</span><span class="p">):</span>
+    <span class="n">momentum</span> <span class="o">=</span> <span class="n">momentum</span> <span class="o">+</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="n">step_size</span> <span class="o">*</span> <span class="n">last_grad</span>
+    <span class="n">z</span> <span class="o">=</span> <span class="n">z</span> <span class="o">+</span> <span class="n">step_size</span> <span class="o">*</span> <span class="n">momentum</span>
+    <span class="n">logp</span><span class="p">,</span> <span class="n">grad</span> <span class="o">=</span> <span class="n">logp_grad</span><span class="p">(</span><span class="n">z</span><span class="p">)</span>
+    <span class="n">momentum</span> <span class="o">=</span> <span class="n">momentum</span> <span class="o">+</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="n">step_size</span> <span class="o">*</span> <span class="n">grad</span>
+    <span class="k">return</span> <span class="n">z</span><span class="p">,</span> <span class="n">momentum</span><span class="p">,</span> <span class="n">logp</span><span class="p">,</span> <span class="n">grad</span>
 
-def hmc_update(logp_grad, last_z, step_size, n_steps):
-    D = len(last_z)
-    logp, grad = logp_grad(last_z)
-    momentum = np.random.randn(D).astype(np.float32)
-    new_momentum = momentum.copy()
-    new_z = last_z.copy()
-    new_grad = grad.copy()
-    for l in xrange(n_steps):
-        new_z, new_momentum, new_logp, new_grad = leapfrog(logp_grad, step_size, new_z, new_momentum, new_grad)
-    alpha = -0.5 * np.square(new_momentum).sum() + new_logp
-    alpha -= -0.5 * np.square(momentum).sum() + logp
-    if np.log(np.random.rand()) &lt; alpha:
-        z = new_z
-    else:
-        z = last_z
-    return z
+<span class="k">def</span> <span class="nf">hmc_update</span><span class="p">(</span><span class="n">logp_grad</span><span class="p">,</span> <span class="n">last_z</span><span class="p">,</span> <span class="n">step_size</span><span class="p">,</span> <span class="n">n_steps</span><span class="p">):</span>
+    <span class="n">D</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">last_z</span><span class="p">)</span>
+    <span class="n">logp</span><span class="p">,</span> <span class="n">grad</span> <span class="o">=</span> <span class="n">logp_grad</span><span class="p">(</span><span class="n">last_z</span><span class="p">)</span>
+    <span class="n">momentum</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="n">D</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
+    <span class="n">new_momentum</span> <span class="o">=</span> <span class="n">momentum</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+    <span class="n">new_z</span> <span class="o">=</span> <span class="n">last_z</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+    <span class="n">new_grad</span> <span class="o">=</span> <span class="n">grad</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+    <span class="k">for</span> <span class="n">l</span> <span class="ow">in</span> <span class="nb">xrange</span><span class="p">(</span><span class="n">n_steps</span><span class="p">):</span>
+        <span class="n">new_z</span><span class="p">,</span> <span class="n">new_momentum</span><span class="p">,</span> <span class="n">new_logp</span><span class="p">,</span> <span class="n">new_grad</span> <span class="o">=</span> <span class="n">leapfrog</span><span class="p">(</span><span class="n">logp_grad</span><span class="p">,</span> <span class="n">step_size</span><span class="p">,</span> <span class="n">new_z</span><span class="p">,</span> <span class="n">new_momentum</span><span class="p">,</span> <span class="n">new_grad</span><span class="p">)</span>
+    <span class="n">alpha</span> <span class="o">=</span> <span class="o">-</span><span class="mf">0.5</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">square</span><span class="p">(</span><span class="n">new_momentum</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span> <span class="o">+</span> <span class="n">new_logp</span>
+    <span class="n">alpha</span> <span class="o">-=</span> <span class="o">-</span><span class="mf">0.5</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">square</span><span class="p">(</span><span class="n">momentum</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span> <span class="o">+</span> <span class="n">logp</span>
+    <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">rand</span><span class="p">())</span> <span class="o">&lt;</span> <span class="n">alpha</span><span class="p">:</span>
+        <span class="n">z</span> <span class="o">=</span> <span class="n">new_z</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">z</span> <span class="o">=</span> <span class="n">last_z</span>
+    <span class="k">return</span> <span class="n">z</span>
 
-def make_logp_grad():
-    beta = T.vector(&#39;beta&#39;)
-    t_x = theano.shared(x)
-    t_y = theano.shared(y)
-    logit_preds = t_x.dot(beta)
-#     y_logit_preds = (2*t_y-1) * logit_preds
-#     logp = -T.log(1 + T.exp(-y_logit_preds)).sum()
-    logp = -0.5 * T.square(logit_preds - y).sum()
-    logp -= 0.5 * T.square(beta).sum()
-    grad = T.grad(logp, beta)
-    return theano.function([beta], [logp, grad])
+<span class="k">def</span> <span class="nf">make_logp_grad</span><span class="p">():</span>
+    <span class="n">beta</span> <span class="o">=</span> <span class="n">T</span><span class="o">.</span><span class="n">vector</span><span class="p">(</span><span class="s1">&#39;beta&#39;</span><span class="p">)</span>
+    <span class="n">t_x</span> <span class="o">=</span> <span class="n">theano</span><span class="o">.</span><span class="n">shared</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+    <span class="n">t_y</span> <span class="o">=</span> <span class="n">theano</span><span class="o">.</span><span class="n">shared</span><span class="p">(</span><span class="n">y</span><span class="p">)</span>
+    <span class="n">logit_preds</span> <span class="o">=</span> <span class="n">t_x</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">beta</span><span class="p">)</span>
+<span class="c1">#     y_logit_preds = (2*t_y-1) * logit_preds</span>
+<span class="c1">#     logp = -T.log(1 + T.exp(-y_logit_preds)).sum()</span>
+    <span class="n">logp</span> <span class="o">=</span> <span class="o">-</span><span class="mf">0.5</span> <span class="o">*</span> <span class="n">T</span><span class="o">.</span><span class="n">square</span><span class="p">(</span><span class="n">logit_preds</span> <span class="o">-</span> <span class="n">y</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>
+    <span class="n">logp</span> <span class="o">-=</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="n">T</span><span class="o">.</span><span class="n">square</span><span class="p">(</span><span class="n">beta</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>
+    <span class="n">grad</span> <span class="o">=</span> <span class="n">T</span><span class="o">.</span><span class="n">grad</span><span class="p">(</span><span class="n">logp</span><span class="p">,</span> <span class="n">beta</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">theano</span><span class="o">.</span><span class="n">function</span><span class="p">([</span><span class="n">beta</span><span class="p">],</span> <span class="p">[</span><span class="n">logp</span><span class="p">,</span> <span class="n">grad</span><span class="p">])</span>
 
-logp_grad = make_logp_grad()
+<span class="n">logp_grad</span> <span class="o">=</span> <span class="n">make_logp_grad</span><span class="p">()</span>
 </pre></div>
 </div>
 </div>
-<div class="nbinput container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [18]:
 </pre></div>
 </div>
-<div class="highlight-none"><div class="highlight"><pre>
-<span></span>beta = np.zeros(D, np.float32)
-%timeit logp_grad(beta)
-# while True:
-#     logp_grad(beta)
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">beta</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">D</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
+<span class="o">%</span><span class="k">timeit</span> logp_grad(beta)
+<span class="c1"># while True:</span>
+<span class="c1">#     logp_grad(beta)</span>
 </pre></div>
 </div>
 </div>
-<div class="nboutput nblast container">
-<div class="container">
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
 </div>
-<div class="container">
+<div class="output_area docutils container">
 <div class="highlight"><pre>
 100 loops, best of 3: 3.45 ms per loop
 </pre></div></div>
 </div>
-<div class="nbinput container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [12]:
 </pre></div>
 </div>
-<div class="highlight-none"><div class="highlight"><pre>
-<span></span>t0 = time.time()
-beta = np.zeros(D, np.float32)
-samples = []
-for i in xrange(100):
-    beta = hmc_update(logp_grad, beta, np.sqrt(step_size), n_steps)
-    samples.append(beta)
-samples = np.array(samples)
-print &#39;Theano (GPU) took %.3f seconds&#39; % (time.time() - t0)
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">t0</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+<span class="n">beta</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">D</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
+<span class="n">samples</span> <span class="o">=</span> <span class="p">[]</span>
+<span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">xrange</span><span class="p">(</span><span class="mi">100</span><span class="p">):</span>
+    <span class="n">beta</span> <span class="o">=</span> <span class="n">hmc_update</span><span class="p">(</span><span class="n">logp_grad</span><span class="p">,</span> <span class="n">beta</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">step_size</span><span class="p">),</span> <span class="n">n_steps</span><span class="p">)</span>
+    <span class="n">samples</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">beta</span><span class="p">)</span>
+<span class="n">samples</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">samples</span><span class="p">)</span>
+<span class="k">print</span> <span class="s1">&#39;Theano (GPU) took </span><span class="si">%.3f</span><span class="s1"> seconds&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span> <span class="o">-</span> <span class="n">t0</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
-<div class="nboutput nblast container">
-<div class="container">
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
 </div>
-<div class="container">
+<div class="output_area docutils container">
 <div class="highlight"><pre>
 Theano (GPU) took 4.471 seconds
 </pre></div></div>
 </div>
-<div class="nbinput nblast container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [24]:
 </pre></div>
 </div>
-<div class="highlight-none"><div class="highlight"><pre>
-<span></span>def leapfrog(logp_grad, step_size, z, momentum, last_grad):
-    momentum = momentum + 0.5 * step_size * last_grad
-    z = z + step_size * momentum
-    logp, grad = logp_grad(z)
-    momentum = momentum + 0.5 * step_size * grad
-    return z, momentum, logp, grad
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="k">def</span> <span class="nf">leapfrog</span><span class="p">(</span><span class="n">logp_grad</span><span class="p">,</span> <span class="n">step_size</span><span class="p">,</span> <span class="n">z</span><span class="p">,</span> <span class="n">momentum</span><span class="p">,</span> <span class="n">last_grad</span><span class="p">):</span>
+    <span class="n">momentum</span> <span class="o">=</span> <span class="n">momentum</span> <span class="o">+</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="n">step_size</span> <span class="o">*</span> <span class="n">last_grad</span>
+    <span class="n">z</span> <span class="o">=</span> <span class="n">z</span> <span class="o">+</span> <span class="n">step_size</span> <span class="o">*</span> <span class="n">momentum</span>
+    <span class="n">logp</span><span class="p">,</span> <span class="n">grad</span> <span class="o">=</span> <span class="n">logp_grad</span><span class="p">(</span><span class="n">z</span><span class="p">)</span>
+    <span class="n">momentum</span> <span class="o">=</span> <span class="n">momentum</span> <span class="o">+</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="n">step_size</span> <span class="o">*</span> <span class="n">grad</span>
+    <span class="k">return</span> <span class="n">z</span><span class="p">,</span> <span class="n">momentum</span><span class="p">,</span> <span class="n">logp</span><span class="p">,</span> <span class="n">grad</span>
 
-def hmc_update(logp_grad, last_z, step_size, n_steps):
-    D = len(last_z)
-    logp, grad = logp_grad(last_z)
-    momentum = np.random.randn(D).astype(np.float32)
-    new_momentum = momentum.copy()
-    new_z = last_z.copy()
-    new_grad = grad.copy()
-    for l in xrange(n_steps):
-        new_z, new_momentum, new_logp, new_grad = leapfrog(logp_grad, step_size, new_z, new_momentum, new_grad)
-    alpha = -0.5 * np.square(new_momentum).sum() + new_logp
-    alpha -= -0.5 * np.square(momentum).sum() + logp
-    if np.log(np.random.rand()) &lt; alpha:
-        z = new_z
-    else:
-        z = last_z
-    return z
+<span class="k">def</span> <span class="nf">hmc_update</span><span class="p">(</span><span class="n">logp_grad</span><span class="p">,</span> <span class="n">last_z</span><span class="p">,</span> <span class="n">step_size</span><span class="p">,</span> <span class="n">n_steps</span><span class="p">):</span>
+    <span class="n">D</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">last_z</span><span class="p">)</span>
+    <span class="n">logp</span><span class="p">,</span> <span class="n">grad</span> <span class="o">=</span> <span class="n">logp_grad</span><span class="p">(</span><span class="n">last_z</span><span class="p">)</span>
+    <span class="n">momentum</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="n">D</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
+    <span class="n">new_momentum</span> <span class="o">=</span> <span class="n">momentum</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+    <span class="n">new_z</span> <span class="o">=</span> <span class="n">last_z</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+    <span class="n">new_grad</span> <span class="o">=</span> <span class="n">grad</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+    <span class="k">for</span> <span class="n">l</span> <span class="ow">in</span> <span class="nb">xrange</span><span class="p">(</span><span class="n">n_steps</span><span class="p">):</span>
+        <span class="n">new_z</span><span class="p">,</span> <span class="n">new_momentum</span><span class="p">,</span> <span class="n">new_logp</span><span class="p">,</span> <span class="n">new_grad</span> <span class="o">=</span> <span class="n">leapfrog</span><span class="p">(</span><span class="n">logp_grad</span><span class="p">,</span> <span class="n">step_size</span><span class="p">,</span> <span class="n">new_z</span><span class="p">,</span> <span class="n">new_momentum</span><span class="p">,</span> <span class="n">new_grad</span><span class="p">)</span>
+    <span class="n">alpha</span> <span class="o">=</span> <span class="o">-</span><span class="mf">0.5</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">square</span><span class="p">(</span><span class="n">new_momentum</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span> <span class="o">+</span> <span class="n">new_logp</span>
+    <span class="n">alpha</span> <span class="o">-=</span> <span class="o">-</span><span class="mf">0.5</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">square</span><span class="p">(</span><span class="n">momentum</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span> <span class="o">+</span> <span class="n">logp</span>
+    <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">rand</span><span class="p">())</span> <span class="o">&lt;</span> <span class="n">alpha</span><span class="p">:</span>
+        <span class="n">z</span> <span class="o">=</span> <span class="n">new_z</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">z</span> <span class="o">=</span> <span class="n">last_z</span>
+    <span class="k">return</span> <span class="n">z</span>
 
-def make_logp_grad():
-    beta = T.matrix(&#39;beta&#39;)
-    t_x = theano.shared(x.T)
-    t_y = theano.shared(np.repeat(y[:, np.newaxis], 2, 1).T)
-    logit_preds = beta.dot(t_x)
-#     logit_preds = t_x.dot(beta)
-    y_logit_preds = (2*t_y-1) * logit_preds
-    logp = -T.log(1 + T.exp(-y_logit_preds)).sum()
-    logp -= 0.5 * T.square(beta).sum()
-    grad = T.grad(logp, beta)
-    return theano.function([beta], [logp, grad])
+<span class="k">def</span> <span class="nf">make_logp_grad</span><span class="p">():</span>
+    <span class="n">beta</span> <span class="o">=</span> <span class="n">T</span><span class="o">.</span><span class="n">matrix</span><span class="p">(</span><span class="s1">&#39;beta&#39;</span><span class="p">)</span>
+    <span class="n">t_x</span> <span class="o">=</span> <span class="n">theano</span><span class="o">.</span><span class="n">shared</span><span class="p">(</span><span class="n">x</span><span class="o">.</span><span class="n">T</span><span class="p">)</span>
+    <span class="n">t_y</span> <span class="o">=</span> <span class="n">theano</span><span class="o">.</span><span class="n">shared</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">repeat</span><span class="p">(</span><span class="n">y</span><span class="p">[:,</span> <span class="n">np</span><span class="o">.</span><span class="n">newaxis</span><span class="p">],</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">T</span><span class="p">)</span>
+    <span class="n">logit_preds</span> <span class="o">=</span> <span class="n">beta</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">t_x</span><span class="p">)</span>
+<span class="c1">#     logit_preds = t_x.dot(beta)</span>
+    <span class="n">y_logit_preds</span> <span class="o">=</span> <span class="p">(</span><span class="mi">2</span><span class="o">*</span><span class="n">t_y</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="n">logit_preds</span>
+    <span class="n">logp</span> <span class="o">=</span> <span class="o">-</span><span class="n">T</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="mi">1</span> <span class="o">+</span> <span class="n">T</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="o">-</span><span class="n">y_logit_preds</span><span class="p">))</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>
+    <span class="n">logp</span> <span class="o">-=</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="n">T</span><span class="o">.</span><span class="n">square</span><span class="p">(</span><span class="n">beta</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>
+    <span class="n">grad</span> <span class="o">=</span> <span class="n">T</span><span class="o">.</span><span class="n">grad</span><span class="p">(</span><span class="n">logp</span><span class="p">,</span> <span class="n">beta</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">theano</span><span class="o">.</span><span class="n">function</span><span class="p">([</span><span class="n">beta</span><span class="p">],</span> <span class="p">[</span><span class="n">logp</span><span class="p">,</span> <span class="n">grad</span><span class="p">])</span>
 
-logp_grad = make_logp_grad()
+<span class="n">logp_grad</span> <span class="o">=</span> <span class="n">make_logp_grad</span><span class="p">()</span>
 </pre></div>
 </div>
 </div>
-<div class="nbinput container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [25]:
 </pre></div>
 </div>
-<div class="highlight-none"><div class="highlight"><pre>
-<span></span>beta = np.zeros([2, D], np.float32)
-%timeit logp_grad(beta)
-# while True:
-#     logp_grad(beta)
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">beta</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">([</span><span class="mi">2</span><span class="p">,</span> <span class="n">D</span><span class="p">],</span> <span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
+<span class="o">%</span><span class="k">timeit</span> logp_grad(beta)
+<span class="c1"># while True:</span>
+<span class="c1">#     logp_grad(beta)</span>
 </pre></div>
 </div>
 </div>
-<div class="nboutput nblast container">
-<div class="container">
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
 </div>
-<div class="container">
+<div class="output_area docutils container">
 <div class="highlight"><pre>
 10 loops, best of 3: 40.5 ms per loop
 </pre></div></div>
 </div>
-<div class="nbinput container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [12]:
 </pre></div>
 </div>
-<div class="highlight-none"><div class="highlight"><pre>
-<span></span>t0 = time.time()
-beta = np.zeros(D, np.float32)
-samples = []
-for i in xrange(100):
-    beta = hmc_update(logp_grad, beta, np.sqrt(step_size), n_steps)
-    samples.append(beta)
-samples = np.array(samples)
-print &#39;Theano (GPU) took %.3f seconds&#39; % (time.time() - t0)
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">t0</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+<span class="n">beta</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">D</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
+<span class="n">samples</span> <span class="o">=</span> <span class="p">[]</span>
+<span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">xrange</span><span class="p">(</span><span class="mi">100</span><span class="p">):</span>
+    <span class="n">beta</span> <span class="o">=</span> <span class="n">hmc_update</span><span class="p">(</span><span class="n">logp_grad</span><span class="p">,</span> <span class="n">beta</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">step_size</span><span class="p">),</span> <span class="n">n_steps</span><span class="p">)</span>
+    <span class="n">samples</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">beta</span><span class="p">)</span>
+<span class="n">samples</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">samples</span><span class="p">)</span>
+<span class="k">print</span> <span class="s1">&#39;Theano (GPU) took </span><span class="si">%.3f</span><span class="s1"> seconds&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span> <span class="o">-</span> <span class="n">t0</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
-<div class="nboutput nblast container">
-<div class="container">
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
 </div>
-<div class="container">
+<div class="output_area docutils container">
 <div class="highlight"><pre>
 Theano (GPU) took 4.471 seconds
 </pre></div></div>
 </div>
-<div class="nbinput container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [42]:
 </pre></div>
 </div>
-<div class="highlight-none"><div class="highlight"><pre>
-<span></span>plot(samples[:, 5])
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">plot</span><span class="p">(</span><span class="n">samples</span><span class="p">[:,</span> <span class="mi">5</span><span class="p">])</span>
 </pre></div>
 </div>
 </div>
-<div class="nboutput container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="nboutput docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>Out[42]:
 </pre></div>
 </div>
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="output_area highlight-none"><div class="highlight"><pre>
 <span></span>[&lt;matplotlib.lines.Line2D at 0x7f1ef5739450&gt;]
 </pre></div>
 </div>
 </div>
-<div class="nboutput nblast container">
-<div class="container">
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
 </div>
-<div class="container">
+<div class="output_area docutils container">
 <img alt="../_images/notebooks_hmc_experiments_45_1.png" src="../_images/notebooks_hmc_experiments_45_1.png" />
 </div>
 </div>
-<div class="nbinput container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [56]:
 </pre></div>
 </div>
-<div class="highlight-none"><div class="highlight"><pre>
-<span></span>%timeit logp_grad(beta)
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="o">%</span><span class="k">timeit</span> logp_grad(beta)
 </pre></div>
 </div>
 </div>
-<div class="nboutput nblast container">
-<div class="container">
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
 </div>
-<div class="container">
+<div class="output_area docutils container">
 <div class="highlight"><pre>
 The slowest run took 6.52 times longer than the fastest. This could mean that an intermediate result is being cached.
 1 loop, best of 3: 44 ms per loop
 </pre></div></div>
 </div>
-<div class="nbinput container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [80]:
 </pre></div>
 </div>
-<div class="highlight-none"><div class="highlight"><pre>
-<span></span>plot(samples[:, 0])
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">plot</span><span class="p">(</span><span class="n">samples</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">])</span>
 </pre></div>
 </div>
 </div>
-<div class="nboutput container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="nboutput docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>Out[80]:
 </pre></div>
 </div>
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="output_area highlight-none"><div class="highlight"><pre>
 <span></span>[&lt;matplotlib.lines.Line2D at 0x7faa64137210&gt;]
 </pre></div>
 </div>
 </div>
-<div class="nboutput nblast container">
-<div class="container">
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
 </div>
-<div class="container">
+<div class="output_area docutils container">
 <img alt="../_images/notebooks_hmc_experiments_47_1.png" src="../_images/notebooks_hmc_experiments_47_1.png" />
 </div>
 </div>
-<div class="nbinput nblast container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [ ]:
 </pre></div>
 </div>
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span>
 </pre></div>
 </div>
 </div>
-<div class="nbinput container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [5]:
 </pre></div>
 </div>
-<div class="highlight-none"><div class="highlight"><pre>
-<span></span>beta = ed.models.Normal(mu=tf.zeros([D, 1]), sigma=tf.ones([D, 1]))
-qbeta = ed.models.Empirical(params=tf.Variable(tf.zeros([1000, D, 1])), value=tf.zeros([D, 1]))
-inference = ed.HMC({beta:qbeta})
-inference.run(step_size=0.5/N, n_steps=10)
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">beta</span> <span class="o">=</span> <span class="n">ed</span><span class="o">.</span><span class="n">models</span><span class="o">.</span><span class="n">Normal</span><span class="p">(</span><span class="n">mu</span><span class="o">=</span><span class="n">tf</span><span class="o">.</span><span class="n">zeros</span><span class="p">([</span><span class="n">D</span><span class="p">,</span> <span class="mi">1</span><span class="p">]),</span> <span class="n">sigma</span><span class="o">=</span><span class="n">tf</span><span class="o">.</span><span class="n">ones</span><span class="p">([</span><span class="n">D</span><span class="p">,</span> <span class="mi">1</span><span class="p">]))</span>
+<span class="n">qbeta</span> <span class="o">=</span> <span class="n">ed</span><span class="o">.</span><span class="n">models</span><span class="o">.</span><span class="n">Empirical</span><span class="p">(</span><span class="n">params</span><span class="o">=</span><span class="n">tf</span><span class="o">.</span><span class="n">Variable</span><span class="p">(</span><span class="n">tf</span><span class="o">.</span><span class="n">zeros</span><span class="p">([</span><span class="mi">1000</span><span class="p">,</span> <span class="n">D</span><span class="p">,</span> <span class="mi">1</span><span class="p">])),</span> <span class="n">value</span><span class="o">=</span><span class="n">tf</span><span class="o">.</span><span class="n">zeros</span><span class="p">([</span><span class="n">D</span><span class="p">,</span> <span class="mi">1</span><span class="p">]))</span>
+<span class="n">inference</span> <span class="o">=</span> <span class="n">ed</span><span class="o">.</span><span class="n">HMC</span><span class="p">({</span><span class="n">beta</span><span class="p">:</span><span class="n">qbeta</span><span class="p">})</span>
+<span class="n">inference</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">step_size</span><span class="o">=</span><span class="mf">0.5</span><span class="o">/</span><span class="n">N</span><span class="p">,</span> <span class="n">n_steps</span><span class="o">=</span><span class="mi">10</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
-<div class="nboutput nblast container">
-<div class="container">
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
 </div>
-<div class="container">
+<div class="output_area docutils container">
 <div class="highlight"><pre>
 WARNING:tensorflow:VARIABLES collection name is deprecated, please use GLOBAL_VARIABLES instead; VARIABLES will be removed after 2017-03-02.
 WARNING:tensorflow:VARIABLES collection name is deprecated, please use GLOBAL_VARIABLES instead; VARIABLES will be removed after 2017-03-02.
@@ -1600,53 +1607,53 @@ Iteration  900 [ 90%]: Acceptance Rate = 1.00
 Iteration 1000 [100%]: Acceptance Rate = 1.00
 </pre></div></div>
 </div>
-<div class="nbinput nblast container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [ ]:
 </pre></div>
 </div>
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span>
 </pre></div>
 </div>
 </div>
-<div class="nbinput nblast container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [ ]:
 </pre></div>
 </div>
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span>
 </pre></div>
 </div>
 </div>
-<div class="nbinput container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [5]:
 </pre></div>
 </div>
-<div class="highlight-none"><div class="highlight"><pre>
-<span></span># MODEL
-tf_x = tf.constant(x)
-tf_y = tf.Variable(y)
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="c1"># MODEL</span>
+<span class="n">tf_x</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">constant</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+<span class="n">tf_y</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">Variable</span><span class="p">(</span><span class="n">y</span><span class="p">)</span>
 
-# Standard normal prior on coefficients
-beta = ed.models.Normal(mu=tf.zeros([D, 1]), sigma=tf.ones([D, 1]))
+<span class="c1"># Standard normal prior on coefficients</span>
+<span class="n">beta</span> <span class="o">=</span> <span class="n">ed</span><span class="o">.</span><span class="n">models</span><span class="o">.</span><span class="n">Normal</span><span class="p">(</span><span class="n">mu</span><span class="o">=</span><span class="n">tf</span><span class="o">.</span><span class="n">zeros</span><span class="p">([</span><span class="n">D</span><span class="p">,</span> <span class="mi">1</span><span class="p">]),</span> <span class="n">sigma</span><span class="o">=</span><span class="n">tf</span><span class="o">.</span><span class="n">ones</span><span class="p">([</span><span class="n">D</span><span class="p">,</span> <span class="mi">1</span><span class="p">]))</span>
 
-logit_pred = tf.matmul(tf_x, beta)
-ed_y = ed.models.BernoulliWithSigmoidP(p=logit_pred)
+<span class="n">logit_pred</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">matmul</span><span class="p">(</span><span class="n">tf_x</span><span class="p">,</span> <span class="n">beta</span><span class="p">)</span>
+<span class="n">ed_y</span> <span class="o">=</span> <span class="n">ed</span><span class="o">.</span><span class="n">models</span><span class="o">.</span><span class="n">BernoulliWithSigmoidP</span><span class="p">(</span><span class="n">p</span><span class="o">=</span><span class="n">logit_pred</span><span class="p">)</span>
 
-# INFERENCE
-qbeta = ed.models.Empirical(params=tf.Variable(tf.zeros([1000, D, 1])), value=tf.zeros([D, 1]))
-inference = ed.HMC({beta:qbeta}, data={ed_y:y[:, np.newaxis]})
-inference.run(step_size=0.5/N, n_steps=10)
+<span class="c1"># INFERENCE</span>
+<span class="n">qbeta</span> <span class="o">=</span> <span class="n">ed</span><span class="o">.</span><span class="n">models</span><span class="o">.</span><span class="n">Empirical</span><span class="p">(</span><span class="n">params</span><span class="o">=</span><span class="n">tf</span><span class="o">.</span><span class="n">Variable</span><span class="p">(</span><span class="n">tf</span><span class="o">.</span><span class="n">zeros</span><span class="p">([</span><span class="mi">1000</span><span class="p">,</span> <span class="n">D</span><span class="p">,</span> <span class="mi">1</span><span class="p">])),</span> <span class="n">value</span><span class="o">=</span><span class="n">tf</span><span class="o">.</span><span class="n">zeros</span><span class="p">([</span><span class="n">D</span><span class="p">,</span> <span class="mi">1</span><span class="p">]))</span>
+<span class="n">inference</span> <span class="o">=</span> <span class="n">ed</span><span class="o">.</span><span class="n">HMC</span><span class="p">({</span><span class="n">beta</span><span class="p">:</span><span class="n">qbeta</span><span class="p">},</span> <span class="n">data</span><span class="o">=</span><span class="p">{</span><span class="n">ed_y</span><span class="p">:</span><span class="n">y</span><span class="p">[:,</span> <span class="n">np</span><span class="o">.</span><span class="n">newaxis</span><span class="p">]})</span>
+<span class="n">inference</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">step_size</span><span class="o">=</span><span class="mf">0.5</span><span class="o">/</span><span class="n">N</span><span class="p">,</span> <span class="n">n_steps</span><span class="o">=</span><span class="mi">10</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
-<div class="nboutput container">
-<div class="container">
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
 </div>
-<div class="container">
+<div class="output_area docutils container">
 <div class="highlight"><pre>
 WARNING:tensorflow:VARIABLES collection name is deprecated, please use GLOBAL_VARIABLES instead; VARIABLES will be removed after 2017-03-02.
 WARNING:tensorflow:VARIABLES collection name is deprecated, please use GLOBAL_VARIABLES instead; VARIABLES will be removed after 2017-03-02.
@@ -1874,10 +1881,10 @@ Instructions for updating:
 Use `tf.global_variables_initializer` instead.
 </pre></div></div>
 </div>
-<div class="nboutput nblast container">
-<div class="container">
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
 </div>
-<div class="container">
+<div class="output_area docutils container">
 <div class="highlight"><pre>
 
 <span class="ansi-red-fg">ValueError</span>Traceback (most recent call last)
@@ -1959,33 +1966,33 @@ Use `tf.global_variables_initializer` instead.
 <span class="ansi-red-fg">ValueError</span>: GraphDef cannot be larger than 2GB.
 </pre></div></div>
 </div>
-<div class="nbinput container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [4]:
 </pre></div>
 </div>
-<div class="highlight-none"><div class="highlight"><pre>
-<span></span># MODEL
-tf_x = tf.Variable(x, trainable=False)
-tf_y = tf.Variable(y, trainable=False)
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="c1"># MODEL</span>
+<span class="n">tf_x</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">Variable</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">trainable</span><span class="o">=</span><span class="bp">False</span><span class="p">)</span>
+<span class="n">tf_y</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">Variable</span><span class="p">(</span><span class="n">y</span><span class="p">,</span> <span class="n">trainable</span><span class="o">=</span><span class="bp">False</span><span class="p">)</span>
 
-# Standard normal prior on coefficients
-beta = ed.models.Normal(mu=tf.zeros([D, 1]), sigma=tf.ones([D, 1]))
+<span class="c1"># Standard normal prior on coefficients</span>
+<span class="n">beta</span> <span class="o">=</span> <span class="n">ed</span><span class="o">.</span><span class="n">models</span><span class="o">.</span><span class="n">Normal</span><span class="p">(</span><span class="n">mu</span><span class="o">=</span><span class="n">tf</span><span class="o">.</span><span class="n">zeros</span><span class="p">([</span><span class="n">D</span><span class="p">,</span> <span class="mi">1</span><span class="p">]),</span> <span class="n">sigma</span><span class="o">=</span><span class="n">tf</span><span class="o">.</span><span class="n">ones</span><span class="p">([</span><span class="n">D</span><span class="p">,</span> <span class="mi">1</span><span class="p">]))</span>
 
-logit_pred = tf.matmul(tf_x, beta)
-ed_y = ed.models.BernoulliWithSigmoidP(p=logit_pred)
+<span class="n">logit_pred</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">matmul</span><span class="p">(</span><span class="n">tf_x</span><span class="p">,</span> <span class="n">beta</span><span class="p">)</span>
+<span class="n">ed_y</span> <span class="o">=</span> <span class="n">ed</span><span class="o">.</span><span class="n">models</span><span class="o">.</span><span class="n">BernoulliWithSigmoidP</span><span class="p">(</span><span class="n">p</span><span class="o">=</span><span class="n">logit_pred</span><span class="p">)</span>
 
-# INFERENCE
-qbeta = ed.models.Empirical(params=tf.Variable(tf.zeros([1000, D, 1])), value=tf.zeros([D, 1]))
-inference = ed.HMC({beta:qbeta}, data={ed_y:y[:, np.newaxis]})
-inference.run(step_size=0.5/N, n_steps=10)
+<span class="c1"># INFERENCE</span>
+<span class="n">qbeta</span> <span class="o">=</span> <span class="n">ed</span><span class="o">.</span><span class="n">models</span><span class="o">.</span><span class="n">Empirical</span><span class="p">(</span><span class="n">params</span><span class="o">=</span><span class="n">tf</span><span class="o">.</span><span class="n">Variable</span><span class="p">(</span><span class="n">tf</span><span class="o">.</span><span class="n">zeros</span><span class="p">([</span><span class="mi">1000</span><span class="p">,</span> <span class="n">D</span><span class="p">,</span> <span class="mi">1</span><span class="p">])),</span> <span class="n">value</span><span class="o">=</span><span class="n">tf</span><span class="o">.</span><span class="n">zeros</span><span class="p">([</span><span class="n">D</span><span class="p">,</span> <span class="mi">1</span><span class="p">]))</span>
+<span class="n">inference</span> <span class="o">=</span> <span class="n">ed</span><span class="o">.</span><span class="n">HMC</span><span class="p">({</span><span class="n">beta</span><span class="p">:</span><span class="n">qbeta</span><span class="p">},</span> <span class="n">data</span><span class="o">=</span><span class="p">{</span><span class="n">ed_y</span><span class="p">:</span><span class="n">y</span><span class="p">[:,</span> <span class="n">np</span><span class="o">.</span><span class="n">newaxis</span><span class="p">]})</span>
+<span class="n">inference</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">step_size</span><span class="o">=</span><span class="mf">0.5</span><span class="o">/</span><span class="n">N</span><span class="p">,</span> <span class="n">n_steps</span><span class="o">=</span><span class="mi">10</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
-<div class="nboutput container">
-<div class="container">
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
 </div>
-<div class="container">
+<div class="output_area docutils container">
 <div class="highlight"><pre>
 WARNING:tensorflow:VARIABLES collection name is deprecated, please use GLOBAL_VARIABLES instead; VARIABLES will be removed after 2017-03-02.
 WARNING:tensorflow:VARIABLES collection name is deprecated, please use GLOBAL_VARIABLES instead; VARIABLES will be removed after 2017-03-02.
@@ -2147,10 +2154,10 @@ Instructions for updating:
 Use `tf.global_variables_initializer` instead.
 </pre></div></div>
 </div>
-<div class="nboutput nblast container">
-<div class="container">
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
 </div>
-<div class="container">
+<div class="output_area docutils container">
 <div class="highlight"><pre>
 
 <span class="ansi-red-fg">InternalError</span>Traceback (most recent call last)
@@ -2274,57 +2281,57 @@ InternalError (see above for traceback): Dst tensor is not initialized.
 
 </pre></div></div>
 </div>
-<div class="nbinput nblast container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [ ]:
 </pre></div>
 </div>
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span>
 </pre></div>
 </div>
 </div>
-<div class="nbinput nblast container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [2]:
 </pre></div>
 </div>
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span>
 </pre></div>
 </div>
 </div>
-<div class="nbinput container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [4]:
 </pre></div>
 </div>
-<div class="highlight-none"><div class="highlight"><pre>
-<span></span># MODEL
-z = ed.models.MultivariateNormalFull(
-    mu=tf.ones(2),
-    sigma=tf.constant([[1.0, 0.8], [0.8, 1.0]]))
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="c1"># MODEL</span>
+<span class="n">z</span> <span class="o">=</span> <span class="n">ed</span><span class="o">.</span><span class="n">models</span><span class="o">.</span><span class="n">MultivariateNormalFull</span><span class="p">(</span>
+    <span class="n">mu</span><span class="o">=</span><span class="n">tf</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="mi">2</span><span class="p">),</span>
+    <span class="n">sigma</span><span class="o">=</span><span class="n">tf</span><span class="o">.</span><span class="n">constant</span><span class="p">([[</span><span class="mf">1.0</span><span class="p">,</span> <span class="mf">0.8</span><span class="p">],</span> <span class="p">[</span><span class="mf">0.8</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">]]))</span>
 
-qz_val = tf.Variable(tf.random_normal([1000, 2]))
-qz = ed.models.Empirical(params=qz_val, value=[0, 0])
+<span class="n">qz_val</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">Variable</span><span class="p">(</span><span class="n">tf</span><span class="o">.</span><span class="n">random_normal</span><span class="p">([</span><span class="mi">1000</span><span class="p">,</span> <span class="mi">2</span><span class="p">]))</span>
+<span class="n">qz</span> <span class="o">=</span> <span class="n">ed</span><span class="o">.</span><span class="n">models</span><span class="o">.</span><span class="n">Empirical</span><span class="p">(</span><span class="n">params</span><span class="o">=</span><span class="n">qz_val</span><span class="p">,</span> <span class="n">value</span><span class="o">=</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">])</span>
 
-inference = ed.HMC({z: qz})
-inference.run(step_size=0.5, n_steps=20)
+<span class="n">inference</span> <span class="o">=</span> <span class="n">ed</span><span class="o">.</span><span class="n">HMC</span><span class="p">({</span><span class="n">z</span><span class="p">:</span> <span class="n">qz</span><span class="p">})</span>
+<span class="n">inference</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">step_size</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span> <span class="n">n_steps</span><span class="o">=</span><span class="mi">20</span><span class="p">)</span>
 
-# CRITICISM
-sess = ed.get_session()
-mean, std = sess.run([qz.mean(), qz.std()])
-print(&quot;Inferred posterior mean:&quot;)
-print(mean)
-print(&quot;Inferred posterior std:&quot;)
-print(std)
+<span class="c1"># CRITICISM</span>
+<span class="n">sess</span> <span class="o">=</span> <span class="n">ed</span><span class="o">.</span><span class="n">get_session</span><span class="p">()</span>
+<span class="n">mean</span><span class="p">,</span> <span class="n">std</span> <span class="o">=</span> <span class="n">sess</span><span class="o">.</span><span class="n">run</span><span class="p">([</span><span class="n">qz</span><span class="o">.</span><span class="n">mean</span><span class="p">(),</span> <span class="n">qz</span><span class="o">.</span><span class="n">std</span><span class="p">()])</span>
+<span class="k">print</span><span class="p">(</span><span class="s2">&quot;Inferred posterior mean:&quot;</span><span class="p">)</span>
+<span class="k">print</span><span class="p">(</span><span class="n">mean</span><span class="p">)</span>
+<span class="k">print</span><span class="p">(</span><span class="s2">&quot;Inferred posterior std:&quot;</span><span class="p">)</span>
+<span class="k">print</span><span class="p">(</span><span class="n">std</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
-<div class="nboutput nblast container">
-<div class="container">
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
 </div>
-<div class="container">
+<div class="output_area docutils container">
 <div class="highlight"><pre>
 WARNING:tensorflow:VARIABLES collection name is deprecated, please use GLOBAL_VARIABLES instead; VARIABLES will be removed after 2017-03-02.
 WARNING:tensorflow:VARIABLES collection name is deprecated, please use GLOBAL_VARIABLES instead; VARIABLES will be removed after 2017-03-02.
@@ -2557,91 +2564,91 @@ Inferred posterior std:
 [ 1.01514173  1.02216983]
 </pre></div></div>
 </div>
-<div class="nbinput container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [13]:
 </pre></div>
 </div>
-<div class="highlight-none"><div class="highlight"><pre>
-<span></span>np.cov(sess.run(qz_val)[500:, :].T)
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">np</span><span class="o">.</span><span class="n">cov</span><span class="p">(</span><span class="n">sess</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">qz_val</span><span class="p">)[</span><span class="mi">500</span><span class="p">:,</span> <span class="p">:]</span><span class="o">.</span><span class="n">T</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
-<div class="nboutput nblast container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>Out[13]:
 </pre></div>
 </div>
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="output_area highlight-none"><div class="highlight"><pre>
 <span></span>array([[ 1.03392557,  0.822245  ],
        [ 0.822245  ,  1.00111521]])
 </pre></div>
 </div>
 </div>
-<div class="nbinput nblast container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [ ]:
 </pre></div>
 </div>
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span>
 </pre></div>
 </div>
 </div>
-<div class="nbinput nblast container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [ ]:
 </pre></div>
 </div>
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span>
 </pre></div>
 </div>
 </div>
-<div class="nbinput container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [2]:
 </pre></div>
 </div>
-<div class="highlight-none"><div class="highlight"><pre>
-<span></span>&quot;&quot;&quot;Correlated normal posterior. Inference with Hamiltonian Monte Carlo.
-&quot;&quot;&quot;
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;Correlated normal posterior. Inference with Hamiltonian Monte Carlo.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="kn">from</span> <span class="nn">__future__</span> <span class="kn">import</span> <span class="n">absolute_import</span>
+<span class="kn">from</span> <span class="nn">__future__</span> <span class="kn">import</span> <span class="n">division</span>
+<span class="kn">from</span> <span class="nn">__future__</span> <span class="kn">import</span> <span class="n">print_function</span>
 
-import edward as ed
-import tensorflow as tf
+<span class="kn">import</span> <span class="nn">edward</span> <span class="kn">as</span> <span class="nn">ed</span>
+<span class="kn">import</span> <span class="nn">tensorflow</span> <span class="kn">as</span> <span class="nn">tf</span>
 
-from edward.models import Empirical, MultivariateNormalFull
+<span class="kn">from</span> <span class="nn">edward.models</span> <span class="kn">import</span> <span class="n">Empirical</span><span class="p">,</span> <span class="n">MultivariateNormalFull</span>
 
-# ed.set_seed(42)
+<span class="c1"># ed.set_seed(42)</span>
 
-# MODEL
-z = MultivariateNormalFull(
-    mu=tf.ones(2),
-    sigma=tf.constant([[1.0, 0.8], [0.8, 1.0]]))
+<span class="c1"># MODEL</span>
+<span class="n">z</span> <span class="o">=</span> <span class="n">MultivariateNormalFull</span><span class="p">(</span>
+    <span class="n">mu</span><span class="o">=</span><span class="n">tf</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="mi">2</span><span class="p">),</span>
+    <span class="n">sigma</span><span class="o">=</span><span class="n">tf</span><span class="o">.</span><span class="n">constant</span><span class="p">([[</span><span class="mf">1.0</span><span class="p">,</span> <span class="mf">0.8</span><span class="p">],</span> <span class="p">[</span><span class="mf">0.8</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">]]))</span>
 
-# INFERENCE
-qz = Empirical(params=tf.Variable(tf.random_normal([1000, 2])))
+<span class="c1"># INFERENCE</span>
+<span class="n">qz</span> <span class="o">=</span> <span class="n">Empirical</span><span class="p">(</span><span class="n">params</span><span class="o">=</span><span class="n">tf</span><span class="o">.</span><span class="n">Variable</span><span class="p">(</span><span class="n">tf</span><span class="o">.</span><span class="n">random_normal</span><span class="p">([</span><span class="mi">1000</span><span class="p">,</span> <span class="mi">2</span><span class="p">])))</span>
 
-inference = ed.HMC({z: qz})
-inference.run()
+<span class="n">inference</span> <span class="o">=</span> <span class="n">ed</span><span class="o">.</span><span class="n">HMC</span><span class="p">({</span><span class="n">z</span><span class="p">:</span> <span class="n">qz</span><span class="p">})</span>
+<span class="n">inference</span><span class="o">.</span><span class="n">run</span><span class="p">()</span>
 
-# CRITICISM
-sess = ed.get_session()
-mean, std = sess.run([qz.mean(), qz.std()])
-print(&quot;Inferred posterior mean:&quot;)
-print(mean)
-print(&quot;Inferred posterior std:&quot;)
-print(std)
+<span class="c1"># CRITICISM</span>
+<span class="n">sess</span> <span class="o">=</span> <span class="n">ed</span><span class="o">.</span><span class="n">get_session</span><span class="p">()</span>
+<span class="n">mean</span><span class="p">,</span> <span class="n">std</span> <span class="o">=</span> <span class="n">sess</span><span class="o">.</span><span class="n">run</span><span class="p">([</span><span class="n">qz</span><span class="o">.</span><span class="n">mean</span><span class="p">(),</span> <span class="n">qz</span><span class="o">.</span><span class="n">std</span><span class="p">()])</span>
+<span class="k">print</span><span class="p">(</span><span class="s2">&quot;Inferred posterior mean:&quot;</span><span class="p">)</span>
+<span class="k">print</span><span class="p">(</span><span class="n">mean</span><span class="p">)</span>
+<span class="k">print</span><span class="p">(</span><span class="s2">&quot;Inferred posterior std:&quot;</span><span class="p">)</span>
+<span class="k">print</span><span class="p">(</span><span class="n">std</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
-<div class="nboutput nblast container">
-<div class="container">
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
 </div>
-<div class="container">
+<div class="output_area docutils container">
 <div class="highlight"><pre>
 
 <span class="ansi-red-fg">NotImplementedError</span>Traceback (most recent call last)
@@ -2683,46 +2690,46 @@ print(std)
 <span class="ansi-red-fg">NotImplementedError</span>: sample_n is not implemented
 </pre></div></div>
 </div>
-<div class="nbinput nblast container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [ ]:
 </pre></div>
 </div>
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span>
 </pre></div>
 </div>
 </div>
-<div class="nbinput nblast container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [4]:
 </pre></div>
 </div>
-<div class="highlight-none"><div class="highlight"><pre>
-<span></span>import edward as ed
-import tensorflow as tf
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">edward</span> <span class="kn">as</span> <span class="nn">ed</span>
+<span class="kn">import</span> <span class="nn">tensorflow</span> <span class="kn">as</span> <span class="nn">tf</span>
 </pre></div>
 </div>
 </div>
-<div class="nbinput container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [7]:
 </pre></div>
 </div>
-<div class="highlight-none"><div class="highlight"><pre>
-<span></span>z = ed.models.Normal(mu=0.0, sigma=1.0)
-x = ed.models.Normal(mu=tf.ones(10) * z, sigma=1.0)
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">z</span> <span class="o">=</span> <span class="n">ed</span><span class="o">.</span><span class="n">models</span><span class="o">.</span><span class="n">Normal</span><span class="p">(</span><span class="n">mu</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span> <span class="n">sigma</span><span class="o">=</span><span class="mf">1.0</span><span class="p">)</span>
+<span class="n">x</span> <span class="o">=</span> <span class="n">ed</span><span class="o">.</span><span class="n">models</span><span class="o">.</span><span class="n">Normal</span><span class="p">(</span><span class="n">mu</span><span class="o">=</span><span class="n">tf</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="mi">10</span><span class="p">)</span> <span class="o">*</span> <span class="n">z</span><span class="p">,</span> <span class="n">sigma</span><span class="o">=</span><span class="mf">1.0</span><span class="p">)</span>
 
-qz = ed.models.Empirical(tf.Variable(tf.zeros([500])))
-data = {x: np.array([0.0] * 10, dtype=np.float32)}
-inference = ed.HMC({z: qz}, data)
+<span class="n">qz</span> <span class="o">=</span> <span class="n">ed</span><span class="o">.</span><span class="n">models</span><span class="o">.</span><span class="n">Empirical</span><span class="p">(</span><span class="n">tf</span><span class="o">.</span><span class="n">Variable</span><span class="p">(</span><span class="n">tf</span><span class="o">.</span><span class="n">zeros</span><span class="p">([</span><span class="mi">500</span><span class="p">])))</span>
+<span class="n">data</span> <span class="o">=</span> <span class="p">{</span><span class="n">x</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mf">0.0</span><span class="p">]</span> <span class="o">*</span> <span class="mi">10</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)}</span>
+<span class="n">inference</span> <span class="o">=</span> <span class="n">ed</span><span class="o">.</span><span class="n">HMC</span><span class="p">({</span><span class="n">z</span><span class="p">:</span> <span class="n">qz</span><span class="p">},</span> <span class="n">data</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
-<div class="nboutput nblast container">
-<div class="container">
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
 </div>
-<div class="container">
+<div class="output_area docutils container">
 <div class="highlight"><pre>
 
 <span class="ansi-red-fg">NotImplementedError</span>Traceback (most recent call last)
@@ -2764,12 +2771,12 @@ inference = ed.HMC({z: qz}, data)
 <span class="ansi-red-fg">NotImplementedError</span>: sample_n is not implemented
 </pre></div></div>
 </div>
-<div class="nbinput nblast container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [ ]:
 </pre></div>
 </div>
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span>
 </pre></div>
 </div>
@@ -2777,6 +2784,9 @@ inference = ed.HMC({z: qz}, data)
 </div>
 
 
+           </div>
+           <div class="articleComments">
+            
            </div>
           </div>
           <footer>
@@ -2811,7 +2821,8 @@ inference = ed.HMC({z: qz}, data)
             VERSION:'3.0',
             COLLAPSE_INDEX:false,
             FILE_SUFFIX:'.html',
-            HAS_SOURCE:  true
+            HAS_SOURCE:  true,
+            SOURCELINK_SUFFIX: '.txt'
         };
     </script>
       <script type="text/javascript" src="../_static/jquery.js"></script>

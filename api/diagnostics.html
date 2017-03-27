@@ -1,0 +1,390 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>Diagnostics &mdash; PyMC3 3.0 documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  
+  
+    <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  
+
+  
+
+  
+        <link rel="index" title="Index"
+              href="../genindex.html"/>
+        <link rel="search" title="Search" href="../search.html"/>
+    <link rel="top" title="PyMC3 3.0 documentation" href="../index.html"/>
+        <link rel="up" title="API Reference" href="../api.html"/>
+        <link rel="next" title="Backends" href="backends.html"/>
+        <link rel="prev" title="Stats" href="stats.html"/> 
+
+  
+  <script src="../_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+   
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+          
+            <a href="../index.html" class="icon icon-home"> PyMC3
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                3.0
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../getting_started.html">Getting started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../examples.html">Examples</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="../api.html">API Reference</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="distributions.html">Distributions</a></li>
+<li class="toctree-l2"><a class="reference internal" href="inference.html">Inference</a></li>
+<li class="toctree-l2"><a class="reference internal" href="glm.html">Generalized Linear Models</a></li>
+<li class="toctree-l2"><a class="reference internal" href="gp.html">Gaussian Processes</a></li>
+<li class="toctree-l2"><a class="reference internal" href="plots.html">Plots</a></li>
+<li class="toctree-l2"><a class="reference internal" href="stats.html">Stats</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">Diagnostics</a></li>
+<li class="toctree-l2"><a class="reference internal" href="backends.html">Backends</a></li>
+<li class="toctree-l2"><a class="reference internal" href="math.html">Math</a></li>
+</ul>
+</li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">PyMC3</a>
+        
+      </nav>
+
+
+      
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../index.html">Docs</a> &raquo;</li>
+        
+          <li><a href="../api.html">API Reference</a> &raquo;</li>
+        
+      <li>Diagnostics</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            <a href="../_sources/api/diagnostics.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  
+<style>
+/* CSS overrides for sphinx_rtd_theme */
+
+/* 24px margin */
+.nbinput.nblast,
+.nboutput.nblast {
+    margin-bottom: 19px;  /* padding has already 5px */
+}
+
+/* ... except between code cells! */
+.nblast + .nbinput {
+    margin-top: -19px;
+}
+
+/* nice headers on first paragraph of info/warning boxes */
+.admonition .first {
+    margin: -12px;
+    padding: 6px 12px;
+    margin-bottom: 12px;
+    color: #fff;
+    line-height: 1;
+    display: block;
+}
+.admonition.warning .first {
+    background: #f0b37e;
+}
+.admonition.note .first {
+    background: #6ab0de;
+}
+.admonition > p:before {
+    margin-right: 4px;  /* make room for the exclamation icon */
+}
+</style>
+<div class="section" id="module-pymc3.diagnostics">
+<span id="diagnostics"></span><h1>Diagnostics<a class="headerlink" href="#module-pymc3.diagnostics" title="Permalink to this headline">¶</a></h1>
+<p>Convergence diagnostics and model validation</p>
+<dl class="function">
+<dt id="pymc3.diagnostics.geweke">
+<code class="descclassname">pymc3.diagnostics.</code><code class="descname">geweke</code><span class="sig-paren">(</span><em>pymc3_obj</em>, <em>*args</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.diagnostics.geweke" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return z-scores for convergence diagnostics.</p>
+<p>Compare the mean of the first % of series with the mean of the last % of
+series. x is divided into a number of segments for which this difference is
+computed. If the series is converged, this score should oscillate between
+-1 and 1.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>x</strong> (<em>array-like</em>) &#8211; The trace of some stochastic parameter.</li>
+<li><strong>first</strong> (<em>float</em>) &#8211; The fraction of series at the beginning of the trace.</li>
+<li><strong>last</strong> (<em>float</em>) &#8211; The fraction of series at the end to be compared with the section
+at the beginning.</li>
+<li><strong>intervals</strong> (<em>int</em>) &#8211; The number of segments.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last"><strong>scores</strong> (<em>list [[]]</em>) &#8211; Return a list of [i, score], where i is the starting index for each
+interval and score the Geweke score on the interval.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">Notes</p>
+<p>The Geweke score on some series x is computed by:</p>
+<blockquote>
+<div><div class="math">
+\[\frac{E[x_s] - E[x_e]}{\sqrt{V[x_s] + V[x_e]}}\]</div>
+</div></blockquote>
+<p>where <span class="math">\(E\)</span> stands for the mean, <span class="math">\(V\)</span> the variance,
+<span class="math">\(x_s\)</span> a section at the start of the series and
+<span class="math">\(x_e\)</span> a section at the end of the series.</p>
+<p class="rubric">References</p>
+<p>Geweke (1992)</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="pymc3.diagnostics.gelman_rubin">
+<code class="descclassname">pymc3.diagnostics.</code><code class="descname">gelman_rubin</code><span class="sig-paren">(</span><em>mtrace</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.diagnostics.gelman_rubin" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns estimate of R for a set of traces.</p>
+<p>The Gelman-Rubin diagnostic tests for lack of convergence by comparing
+the variance between multiple chains to the variance within each chain.
+If convergence has been achieved, the between-chain and within-chain
+variances should be identical. To be most effective in detecting evidence
+for nonconvergence, each chain should have been initialized to starting
+values that are dispersed relative to the target distribution.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>mtrace</strong> (<em>MultiTrace</em>) &#8211; A MultiTrace object containing parallel traces (minimum 2)
+of one or more stochastic parameters.</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><strong>Rhat</strong> (<em>dict</em>) &#8211; Returns dictionary of the potential scale reduction
+factors, <span class="math">\(\hat{R}\)</span></td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">Notes</p>
+<p>The diagnostic is computed by:</p>
+<blockquote>
+<div><div class="math">
+\[\hat{R} = \frac{\hat{V}}{W}\]</div>
+</div></blockquote>
+<p>where <span class="math">\(W\)</span> is the within-chain variance and <span class="math">\(\hat{V}\)</span> is
+the posterior variance estimate for the pooled traces. This is the
+potential scale reduction factor, which converges to unity when each
+of the traces is a sample from the target posterior. Values greater
+than one indicate that one or more chains have not yet converged.</p>
+<p class="rubric">References</p>
+<p>Brooks and Gelman (1998)
+Gelman and Rubin (1992)</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="pymc3.diagnostics.effective_n">
+<code class="descclassname">pymc3.diagnostics.</code><code class="descname">effective_n</code><span class="sig-paren">(</span><em>mtrace</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.diagnostics.effective_n" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns estimate of the effective sample size of a set of traces.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>mtrace</strong> (<em>MultiTrace</em>) &#8211; A MultiTrace object containing parallel traces (minimum 2)
+of one or more stochastic parameters.</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><strong>n_eff</strong> (<em>float</em>) &#8211; Return the effective sample size, <span class="math">\(\hat{n}_{eff}\)</span></td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">Notes</p>
+<p>The diagnostic is computed by:</p>
+<div class="math">
+\[\hat{n}_{eff} = \frac{mn}{1 + 2 \sum_{t=1}^T \hat{\rho}_t}\]</div>
+<p>where <span class="math">\(\hat{\rho}_t\)</span> is the estimated autocorrelation at lag t, and T
+is the first odd positive integer for which the sum
+<span class="math">\(\hat{\rho}_{T+1} + \hat{\rho}_{T+1}\)</span> is negative.</p>
+<p class="rubric">References</p>
+<p>Gelman et al. (2014)</p>
+</dd></dl>
+
+</div>
+
+
+           </div>
+           <div class="articleComments">
+            
+           </div>
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="backends.html" class="btn btn-neutral float-right" title="Backends" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="stats.html" class="btn btn-neutral" title="Stats" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2016, John Salvatier, Christopher Fonnesbeck, Thomas Wiecki.
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'../',
+            VERSION:'3.0',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true,
+            SOURCELINK_SUFFIX: '.txt'
+        };
+    </script>
+      <script type="text/javascript" src="../_static/jquery.js"></script>
+      <script type="text/javascript" src="../_static/underscore.js"></script>
+      <script type="text/javascript" src="../_static/doctools.js"></script>
+      <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+  
+
+  
+  
+    <script type="text/javascript" src="../_static/js/theme.js"></script>
+  
+
+  
+  
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.StickyNav.enable();
+      });
+  </script>
+   
+
+</body>
+</html>

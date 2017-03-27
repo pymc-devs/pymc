@@ -96,7 +96,7 @@
    "cell_type": "markdown",
    "metadata": {},
    "source": [
-    "This function will randomly draw 50 samples of parameters from the trace. Then, for each sample, it will draw 100 random numbers from a normal distribution specified by the values of `mu` and `std` in that sample."
+    "This function will randomly draw 500 samples of parameters from the trace. Then, for each sample, it will draw 100 random numbers from a normal distribution specified by the values of `mu` and `std` in that sample."
    ]
   },
   {

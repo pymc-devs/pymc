@@ -2,7 +2,7 @@
  "cells": [
   {
    "cell_type": "code",
-   "execution_count": 2,
+   "execution_count": 1,
    "metadata": {
     "collapsed": false
    },
@@ -14,14 +14,14 @@
   },
   {
    "cell_type": "code",
-   "execution_count": 3,
+   "execution_count": 2,
    "metadata": {
     "collapsed": false
    },
    "outputs": [],
    "source": [
     "data = sklearn.datasets.covtype.fetch_covtype()\n",
-    "x = data.data #.astype(np.float32)\n",
+    "x = data.data#.astype(np.float32)\n",
     "y = data.target\n",
     "\n",
     "x = x - x.mean(0)\n",
@@ -31,12 +31,12 @@
     "D = x.shape[1] + 1\n",
     "\n",
     "# Add a constant column for the intercept\n",
-    "x = np.hstack([x, np.ones([N, 1])])"
+    "x = np.hstack([x, np.ones([N, 1])])#, np.float32)])"
    ]
   },
   {
    "cell_type": "code",
-   "execution_count": 4,
+   "execution_count": 3,
    "metadata": {
     "collapsed": false
    },
@@ -50,7 +50,7 @@
   },
   {
    "cell_type": "code",
-   "execution_count": 5,
+   "execution_count": 4,
    "metadata": {
     "collapsed": false
    },
@@ -70,60 +70,47 @@
   },
   {
    "cell_type": "code",
-   "execution_count": 6,
+   "execution_count": 5,
    "metadata": {
-    "collapsed": false
+    "collapsed": true
    },
    "outputs": [],
    "source": [
     "import tensorflow as tf\n",
-    "#sys.path.insert(0, '/usr/local/google/home/mhoffman/research/edward/')\n",
+    "sys.path.insert(0, '/usr/local/google/home/mhoffman/research/edward/')\n",
     "\n",
     "import edward as ed\n",
     "\n",
     "# Hack for backwards compatibility\n",
     "# tf.select = tf.where\n",
     "\n",
-    "ed.set_seed(42)\n"
+    "ed.set_seed(42)"
    ]
   },
   {
    "cell_type": "code",
-   "execution_count": 7,
-   "metadata": {
-    "collapsed": true
-   },
-   "outputs": [],
-   "source": [
-    "import time"
-   ]
-  },
-  {
-   "cell_type": "code",
-   "execution_count": 8,
+   "execution_count": 25,
    "metadata": {
     "collapsed": false,
     "scrolled": false
    },
    "outputs": [
     {
-     "ename": "TypeError",
-     "evalue": "Input 'b' of 'MatMul' Op has type float64 that does not match type float32 of argument 'a'.",
-     "output_type": "error",
-     "traceback": [
-      "\u001b[0;31m---------------------------------------------------------------------------\u001b[0m",
-      "\u001b[0;31mValueError\u001b[0m                                Traceback (most recent call last)",
-      "\u001b[0;32m/home/wiecki/miniconda3/lib/python3.5/site-packages/tensorflow/python/framework/op_def_library.py\u001b[0m in \u001b[0;36mapply_op\u001b[0;34m(self, op_type_name, name, **keywords)\u001b[0m\n\u001b[1;32m    489\u001b[0m                 \u001b[0mas_ref\u001b[0m\u001b[0;34m=\u001b[0m\u001b[0minput_arg\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mis_ref\u001b[0m\u001b[0;34m,\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0;32m--> 490\u001b[0;31m                 preferred_dtype=default_dtype)\n\u001b[0m\u001b[1;32m    491\u001b[0m           \u001b[0;32mexcept\u001b[0m \u001b[0mValueError\u001b[0m\u001b[0;34m:\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n",
-      "\u001b[0;32m/home/wiecki/miniconda3/lib/python3.5/site-packages/tensorflow/python/framework/ops.py\u001b[0m in \u001b[0;36mconvert_to_tensor\u001b[0;34m(value, dtype, name, as_ref, preferred_dtype)\u001b[0m\n\u001b[1;32m    656\u001b[0m         \u001b[0;32mif\u001b[0m \u001b[0mret\u001b[0m \u001b[0;32mis\u001b[0m \u001b[0;32mNone\u001b[0m\u001b[0;34m:\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0;32m--> 657\u001b[0;31m           \u001b[0mret\u001b[0m \u001b[0;34m=\u001b[0m \u001b[0mconversion_func\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0mvalue\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0mdtype\u001b[0m\u001b[0;34m=\u001b[0m\u001b[0mdtype\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0mname\u001b[0m\u001b[0;34m=\u001b[0m\u001b[0mname\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0mas_ref\u001b[0m\u001b[0;34m=\u001b[0m\u001b[0mas_ref\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0m\u001b[1;32m    658\u001b[0m \u001b[0;34m\u001b[0m\u001b[0m\n",
-      "\u001b[0;32m/home/wiecki/miniconda3/lib/python3.5/site-packages/tensorflow/python/framework/ops.py\u001b[0m in \u001b[0;36m_TensorTensorConversionFunction\u001b[0;34m(t, dtype, name, as_ref)\u001b[0m\n\u001b[1;32m    570\u001b[0m         \u001b[0;34m\"Tensor conversion requested dtype %s for Tensor with dtype %s: %r\"\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0;32m--> 571\u001b[0;31m         % (dtype.name, t.dtype.name, str(t)))\n\u001b[0m\u001b[1;32m    572\u001b[0m   \u001b[0;32mreturn\u001b[0m \u001b[0mt\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n",
-      "\u001b[0;31mValueError\u001b[0m: Tensor conversion requested dtype float32 for Tensor with dtype float64: 'Tensor(\"Variable/read:0\", shape=(55, 581012), dtype=float64)'",
-      "\nDuring handling of the above exception, another exception occurred:\n",
-      "\u001b[0;31mTypeError\u001b[0m                                 Traceback (most recent call last)",
-      "\u001b[0;32m<ipython-input-8-5bbd810962b1>\u001b[0m in \u001b[0;36m<module>\u001b[0;34m()\u001b[0m\n\u001b[1;32m      5\u001b[0m \u001b[0mbeta\u001b[0m \u001b[0;34m=\u001b[0m \u001b[0med\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mmodels\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mNormal\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0mmu\u001b[0m\u001b[0;34m=\u001b[0m\u001b[0mtf\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mzeros\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0mD\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0msigma\u001b[0m\u001b[0;34m=\u001b[0m\u001b[0mtf\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mones\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0mD\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m      6\u001b[0m \u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0;32m----> 7\u001b[0;31m \u001b[0mlogit_pred\u001b[0m \u001b[0;34m=\u001b[0m \u001b[0mtf\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0msqueeze\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0mtf\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mmatmul\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0mtf\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mexpand_dims\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0mbeta\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0;36m0\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0mtf_x\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0m\u001b[1;32m      8\u001b[0m \u001b[0med_y\u001b[0m \u001b[0;34m=\u001b[0m \u001b[0med\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mmodels\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mBernoulliWithSigmoidP\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0mp\u001b[0m\u001b[0;34m=\u001b[0m\u001b[0mlogit_pred\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m      9\u001b[0m \u001b[0;34m\u001b[0m\u001b[0m\n",
-      "\u001b[0;32m/home/wiecki/miniconda3/lib/python3.5/site-packages/tensorflow/python/ops/math_ops.py\u001b[0m in \u001b[0;36mmatmul\u001b[0;34m(a, b, transpose_a, transpose_b, a_is_sparse, b_is_sparse, name)\u001b[0m\n\u001b[1;32m   1396\u001b[0m                                    \u001b[0mtranspose_a\u001b[0m\u001b[0;34m=\u001b[0m\u001b[0mtranspose_a\u001b[0m\u001b[0;34m,\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m   1397\u001b[0m                                    \u001b[0mtranspose_b\u001b[0m\u001b[0;34m=\u001b[0m\u001b[0mtranspose_b\u001b[0m\u001b[0;34m,\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0;32m-> 1398\u001b[0;31m                                    name=name)\n\u001b[0m\u001b[1;32m   1399\u001b[0m \u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m   1400\u001b[0m \u001b[0msparse_matmul\u001b[0m \u001b[0;34m=\u001b[0m \u001b[0mgen_math_ops\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0m_sparse_mat_mul\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n",
-      "\u001b[0;32m/home/wiecki/miniconda3/lib/python3.5/site-packages/tensorflow/python/ops/gen_math_ops.py\u001b[0m in \u001b[0;36m_mat_mul\u001b[0;34m(a, b, transpose_a, transpose_b, name)\u001b[0m\n\u001b[1;32m   1346\u001b[0m   \"\"\"\n\u001b[1;32m   1347\u001b[0m   result = _op_def_lib.apply_op(\"MatMul\", a=a, b=b, transpose_a=transpose_a,\n\u001b[0;32m-> 1348\u001b[0;31m                                 transpose_b=transpose_b, name=name)\n\u001b[0m\u001b[1;32m   1349\u001b[0m   \u001b[0;32mreturn\u001b[0m \u001b[0mresult\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m   1350\u001b[0m \u001b[0;34m\u001b[0m\u001b[0m\n",
-      "\u001b[0;32m/home/wiecki/miniconda3/lib/python3.5/site-packages/tensorflow/python/framework/op_def_library.py\u001b[0m in \u001b[0;36mapply_op\u001b[0;34m(self, op_type_name, name, **keywords)\u001b[0m\n\u001b[1;32m    510\u001b[0m                   \u001b[0;34m\"%s type %s of argument '%s'.\"\u001b[0m \u001b[0;34m%\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m    511\u001b[0m                   (prefix, dtypes.as_dtype(attrs[input_arg.type_attr]).name,\n\u001b[0;32m--> 512\u001b[0;31m                    inferred_from[input_arg.type_attr]))\n\u001b[0m\u001b[1;32m    513\u001b[0m \u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m    514\u001b[0m           \u001b[0mtypes\u001b[0m \u001b[0;34m=\u001b[0m \u001b[0;34m[\u001b[0m\u001b[0mvalues\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mdtype\u001b[0m\u001b[0;34m]\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n",
-      "\u001b[0;31mTypeError\u001b[0m: Input 'b' of 'MatMul' Op has type float64 that does not match type float32 of argument 'a'."
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Iteration    1 [  0%]: Acceptance Rate = nan\n",
+      "Iteration  100 [ 10%]: Acceptance Rate = 1.00\n",
+      "Iteration  200 [ 20%]: Acceptance Rate = 0.96\n",
+      "Iteration  300 [ 30%]: Acceptance Rate = 0.96\n",
+      "Iteration  400 [ 40%]: Acceptance Rate = 0.96\n",
+      "Iteration  500 [ 50%]: Acceptance Rate = 0.97\n",
+      "Iteration  600 [ 60%]: Acceptance Rate = 0.97\n",
+      "Iteration  700 [ 70%]: Acceptance Rate = 0.97\n",
+      "Iteration  800 [ 80%]: Acceptance Rate = 0.97\n",
+      "Iteration  900 [ 90%]: Acceptance Rate = 0.97\n",
+      "Iteration 1000 [100%]: Acceptance Rate = 0.97\n",
+      "took 56.958 seconds\n"
      ]
     }
    ],
@@ -148,7 +135,7 @@
   },
   {
    "cell_type": "code",
-   "execution_count": 12,
+   "execution_count": 26,
    "metadata": {
     "collapsed": false
    },
@@ -157,12 +144,12 @@
      "name": "stdout",
      "output_type": "stream",
      "text": [
-      "Edward took 89.355 seconds\n"
+      "Edward took 56.958 seconds\n"
      ]
     }
    ],
    "source": [
-    "print('Edward took %.3f seconds' % ed_time)"
+    "print 'Edward took %.3f seconds' % ed_time"
    ]
   },
   {
@@ -551,49 +538,69 @@
   },
   {
    "cell_type": "code",
-   "execution_count": 6,
+   "execution_count": 5,
    "metadata": {
     "collapsed": false
    },
    "outputs": [],
    "source": [
     "import pymc3\n",
-    "import pymc3.math\n",
     "import theano\n",
     "import theano.tensor as T"
    ]
   },
   {
    "cell_type": "code",
-   "execution_count": 7,
+   "execution_count": 8,
    "metadata": {
-    "collapsed": true
+    "collapsed": false
    },
    "outputs": [],
    "source": [
+    "import pymc3.math\n",
     "import time"
    ]
   },
   {
    "cell_type": "code",
-   "execution_count": 8,
+   "execution_count": 10,
    "metadata": {
-    "collapsed": false,
-    "scrolled": true
+    "collapsed": false
+   },
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Automatic pdb calling has been turned ON\n"
+     ]
+    }
+   ],
+   "source": [
+    "%pdb"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 15,
+   "metadata": {
+    "collapsed": false
    },
    "outputs": [
     {
      "name": "stderr",
      "output_type": "stream",
      "text": [
-      "100%|██████████| 1000/1000 [20:34<00:00,  1.22s/it]"
+      "/Users/twiecki/anaconda/lib/python3.5/site-packages/theano/tensor/basic.py:2147: UserWarning: theano.tensor.round() changed its default from `half_away_from_zero` to `half_to_even` to have the same default as NumPy. Use the Theano flag `warn.round=False` to disable this warning.\n",
+      "  \"theano.tensor.round() changed its default from\"\n",
+      " 13%|█▎        | 129/1000 [02:44<20:06,  1.38s/it]"
      ]
     },
     {
      "name": "stdout",
      "output_type": "stream",
      "text": [
-      "pymc (CPU multithreaded) took 1234.174 seconds\n"
+      "pymc (CPU multithreaded) took 166.318 seconds\n"
      ]
     },
     {
@@ -609,12 +616,10 @@
     "\n",
     "with basic_model:\n",
     "    pymc_beta = pymc3.Normal('beta', mu=0, sd=1, shape=D)\n",
-    "    pymc_y = pymc3.Bernoulli('y', p=pymc3.math.sigmoid(pymc3.math.dot(x.astype('float64'), \n",
-    "                                                                      pymc_beta)), observed=y.astype('int64'))\n",
+    "    pymc_y = pymc3.Bernoulli('y', p=pymc3.math.sigmoid(pymc3.math.dot(x, pymc_beta)), observed=y)\n",
     "\n",
-    "    step = pymc3.HamiltonianMC(step_scale=step_size*(1./D)**(-1./4), \n",
-    "                               path_length=step_size*n_steps,\n",
-    "                               step_rand=lambda x:x, scaling=np.ones(D, np.float32))\n",
+    "    step = pymc3.HamiltonianMC()#step_scale=step_size*(1./D)**(-1./4), path_length=step_size*n_steps,\n",
+    "                               #step_rand=lambda x:x, scaling=np.ones(D))#, np.float32))\n",
     "    t0 = time.time()\n",
     "    pymc_samples = pymc3.sample(n_iterations, step=step, init=None, njobs=1)\n",
     "pymc_time = time.time() - t0\n",
@@ -623,47 +628,30 @@
   },
   {
    "cell_type": "code",
-   "execution_count": 9,
+   "execution_count": null,
    "metadata": {
-    "collapsed": false
+    "collapsed": true
    },
-   "outputs": [
-    {
-     "data": {
-      "text/plain": [
-       "13.71111111111111"
-      ]
-     },
-     "execution_count": 9,
-     "metadata": {},
-     "output_type": "execute_result"
-    }
-   ],
-   "source": [
-    "1234./90"
-   ]
+   "outputs": [],
+   "source": []
   },
   {
    "cell_type": "code",
-   "execution_count": 7,
+   "execution_count": 28,
    "metadata": {
     "collapsed": false
    },
    "outputs": [
     {
-     "ename": "NameError",
-     "evalue": "name 'pymc_time' is not defined",
-     "output_type": "error",
-     "traceback": [
-      "\u001b[0;31m---------------------------------------------------------------------------\u001b[0m",
-      "\u001b[0;31mNameError\u001b[0m                                 Traceback (most recent call last)",
-      "\u001b[0;32m<ipython-input-7-c24eae3578da>\u001b[0m in \u001b[0;36m<module>\u001b[0;34m()\u001b[0m\n\u001b[0;32m----> 1\u001b[0;31m \u001b[0mprint\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0;34m'PyMC3 (CPU, multi-theaded) took %.3f seconds (%.3f Edward time)'\u001b[0m \u001b[0;34m%\u001b[0m \u001b[0;34m(\u001b[0m\u001b[0mpymc_time\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0mpymc_time\u001b[0m \u001b[0;34m/\u001b[0m \u001b[0med_time\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0m",
-      "\u001b[0;31mNameError\u001b[0m: name 'pymc_time' is not defined"
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "PyMC3 (CPU, multi-threaded) took 1785.090 seconds (31.341 Edward time)\n"
      ]
     }
    ],
    "source": [
-    "print('PyMC3 (CPU, multi-theaded) took %.3f seconds (%.3f Edward time)' % (pymc_time, pymc_time / ed_time))"
+    "print 'PyMC3 (CPU, multi-threaded) took %.3f seconds (%.3f Edward time)' % (pymc_time, pymc_time / ed_time)"
    ]
   },
   {
@@ -2320,11 +2308,22 @@
   }
  ],
  "metadata": {
-  "anaconda-cloud": {},
   "kernelspec": {
-   "display_name": "Python [conda env:pymc30]",
+   "display_name": "Python 3",
    "language": "python",
-   "name": "conda-env-pymc30-py"
+   "name": "python3"
+  },
+  "language_info": {
+   "codemirror_mode": {
+    "name": "ipython",
+    "version": 3
+   },
+   "file_extension": ".py",
+   "mimetype": "text/x-python",
+   "name": "python",
+   "nbconvert_exporter": "python",
+   "pygments_lexer": "ipython3",
+   "version": "3.5.2"
   }
  },
  "nbformat": 4,

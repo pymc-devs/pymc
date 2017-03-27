@@ -1,0 +1,753 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>Multivariate &mdash; PyMC3 3.0 documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  
+  
+    <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
+  
+
+  
+
+  
+        <link rel="index" title="Index"
+              href="../../genindex.html"/>
+        <link rel="search" title="Search" href="../../search.html"/>
+    <link rel="top" title="PyMC3 3.0 documentation" href="../../index.html"/>
+        <link rel="up" title="Distributions" href="../distributions.html"/>
+        <link rel="next" title="Mixture" href="mixture.html"/>
+        <link rel="prev" title="Discrete" href="discrete.html"/> 
+
+  
+  <script src="../../_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+   
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+          
+            <a href="../../index.html" class="icon icon-home"> PyMC3
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                3.0
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../../getting_started.html">Getting started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../examples.html">Examples</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="../../api.html">API Reference</a><ul class="current">
+<li class="toctree-l2 current"><a class="reference internal" href="../distributions.html">Distributions</a><ul class="current">
+<li class="toctree-l3"><a class="reference internal" href="continuous.html">Continuous</a></li>
+<li class="toctree-l3"><a class="reference internal" href="discrete.html">Discrete</a></li>
+<li class="toctree-l3 current"><a class="current reference internal" href="#">Multivariate</a></li>
+<li class="toctree-l3"><a class="reference internal" href="mixture.html">Mixture</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../inference.html">Inference</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../glm.html">Generalized Linear Models</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../gp.html">Gaussian Processes</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../plots.html">Plots</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../stats.html">Stats</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../diagnostics.html">Diagnostics</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../backends.html">Backends</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../math.html">Math</a></li>
+</ul>
+</li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">PyMC3</a>
+        
+      </nav>
+
+
+      
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../../index.html">Docs</a> &raquo;</li>
+        
+          <li><a href="../../api.html">API Reference</a> &raquo;</li>
+        
+          <li><a href="../distributions.html">Distributions</a> &raquo;</li>
+        
+      <li>Multivariate</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            <a href="../../_sources/api/distributions/multivariate.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  
+<style>
+/* CSS overrides for sphinx_rtd_theme */
+
+/* 24px margin */
+.nbinput.nblast,
+.nboutput.nblast {
+    margin-bottom: 19px;  /* padding has already 5px */
+}
+
+/* ... except between code cells! */
+.nblast + .nbinput {
+    margin-top: -19px;
+}
+
+/* nice headers on first paragraph of info/warning boxes */
+.admonition .first {
+    margin: -12px;
+    padding: 6px 12px;
+    margin-bottom: 12px;
+    color: #fff;
+    line-height: 1;
+    display: block;
+}
+.admonition.warning .first {
+    background: #f0b37e;
+}
+.admonition.note .first {
+    background: #6ab0de;
+}
+.admonition > p:before {
+    margin-right: 4px;  /* make room for the exclamation icon */
+}
+</style>
+<div class="section" id="multivariate">
+<h1>Multivariate<a class="headerlink" href="#multivariate" title="Permalink to this headline">¶</a></h1>
+<table border="1" class="longtable docutils">
+<colgroup>
+<col width="10%" />
+<col width="90%" />
+</colgroup>
+<tbody valign="top">
+<tr class="row-odd"><td><a class="reference internal" href="#pymc3.distributions.multivariate.MvNormal" title="pymc3.distributions.multivariate.MvNormal"><code class="xref py py-obj docutils literal"><span class="pre">MvNormal</span></code></a>(mu[,&nbsp;cov,&nbsp;tau,&nbsp;gpu_compat])</td>
+<td>Multivariate normal log-likelihood.</td>
+</tr>
+<tr class="row-even"><td><a class="reference internal" href="#pymc3.distributions.multivariate.Wishart" title="pymc3.distributions.multivariate.Wishart"><code class="xref py py-obj docutils literal"><span class="pre">Wishart</span></code></a>(n,&nbsp;V,&nbsp;\*args,&nbsp;\*\*kwargs)</td>
+<td>Wishart log-likelihood.</td>
+</tr>
+<tr class="row-odd"><td><a class="reference internal" href="#pymc3.distributions.multivariate.LKJCholeskyCov" title="pymc3.distributions.multivariate.LKJCholeskyCov"><code class="xref py py-obj docutils literal"><span class="pre">LKJCholeskyCov</span></code></a>(n,&nbsp;eta,&nbsp;sd_dist,&nbsp;\*args,&nbsp;\*\*kwargs)</td>
+<td>Covariance matrix with LKJ distributed correlations.</td>
+</tr>
+<tr class="row-even"><td><a class="reference internal" href="#pymc3.distributions.multivariate.LKJCorr" title="pymc3.distributions.multivariate.LKJCorr"><code class="xref py py-obj docutils literal"><span class="pre">LKJCorr</span></code></a>(n,&nbsp;p[,&nbsp;transform])</td>
+<td>The LKJ (Lewandowski, Kurowicka and Joe) log-likelihood.</td>
+</tr>
+<tr class="row-odd"><td><a class="reference internal" href="#pymc3.distributions.multivariate.Multinomial" title="pymc3.distributions.multivariate.Multinomial"><code class="xref py py-obj docutils literal"><span class="pre">Multinomial</span></code></a>(n,&nbsp;p,&nbsp;\*args,&nbsp;\*\*kwargs)</td>
+<td>Multinomial log-likelihood.</td>
+</tr>
+<tr class="row-even"><td><a class="reference internal" href="#pymc3.distributions.multivariate.Dirichlet" title="pymc3.distributions.multivariate.Dirichlet"><code class="xref py py-obj docutils literal"><span class="pre">Dirichlet</span></code></a>(a[,&nbsp;transform])</td>
+<td>Dirichlet log-likelihood.</td>
+</tr>
+</tbody>
+</table>
+<span class="target" id="module-pymc3.distributions.multivariate"></span><dl class="class">
+<dt id="pymc3.distributions.multivariate.MvNormal">
+<em class="property">class </em><code class="descclassname">pymc3.distributions.multivariate.</code><code class="descname">MvNormal</code><span class="sig-paren">(</span><em>mu</em>, <em>cov=None</em>, <em>tau=None</em>, <em>gpu_compat=False</em>, <em>*args</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.distributions.multivariate.MvNormal" title="Permalink to this definition">¶</a></dt>
+<dd><p>Multivariate normal log-likelihood.</p>
+<div class="math">
+\[f(x \mid \pi, T) =
+    \frac{|T|^{1/2}}{(2\pi)^{1/2}}
+    \exp\left\{ -\frac{1}{2} (x-\mu)^{\prime} T (x-\mu) \right\}\]</div>
+<table border="1" class="docutils">
+<colgroup>
+<col width="24%" />
+<col width="76%" />
+</colgroup>
+<tbody valign="top">
+<tr class="row-odd"><td>Support</td>
+<td><span class="math">\(x \in \mathbb{R}^k\)</span></td>
+</tr>
+<tr class="row-even"><td>Mean</td>
+<td><span class="math">\(\mu\)</span></td>
+</tr>
+<tr class="row-odd"><td>Variance</td>
+<td><span class="math">\(T^{-1}\)</span></td>
+</tr>
+</tbody>
+</table>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>mu</strong> (<em>array</em>) &#8211; Vector of means.</li>
+<li><strong>cov</strong> (<em>array</em>) &#8211; Covariance matrix. Not required if tau is passed.</li>
+<li><strong>tau</strong> (<em>array</em>) &#8211; Precision matrix. Not required if tau is passed.</li>
+<li><strong>Flags</strong> &#8211; </li>
+<li><strong>----------</strong> &#8211; </li>
+<li><strong>gpu_compat</strong> (<em>False</em><em>, </em><em>because LogDet is not GPU compatible yet.</em>) &#8211; If this is set as true, the GPU compatible (but numerically unstable) log(det) is used.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="class">
+<dt id="pymc3.distributions.multivariate.MvStudentT">
+<em class="property">class </em><code class="descclassname">pymc3.distributions.multivariate.</code><code class="descname">MvStudentT</code><span class="sig-paren">(</span><em>nu</em>, <em>Sigma</em>, <em>mu=None</em>, <em>*args</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.distributions.multivariate.MvStudentT" title="Permalink to this definition">¶</a></dt>
+<dd><p>Multivariate Student-T log-likelihood.</p>
+<div class="math">
+\[f(\mathbf{x}| \nu,\mu,\Sigma) =
+\frac{\Gamma\left[(\nu+p)/2\right]}{\Gamma(\nu/2)\nu^{p/2}\pi^{p/2}\left|{\Sigma}\right|^{1/2}\left[1+\frac{1}{\nu}({\mathbf x}-{\mu})^T{\Sigma}^{-1}({\mathbf x}-{\mu})\right]^{(\nu+p)/2}}\]</div>
+<table border="1" class="docutils">
+<colgroup>
+<col width="15%" />
+<col width="85%" />
+</colgroup>
+<tbody valign="top">
+<tr class="row-odd"><td>Support</td>
+<td><span class="math">\(x \in \mathbb{R}^k\)</span></td>
+</tr>
+<tr class="row-even"><td>Mean</td>
+<td><span class="math">\(\mu\)</span> if <span class="math">\(\nu &gt; 1\)</span> else undefined</td>
+</tr>
+<tr class="row-odd"><td>Variance</td>
+<td><dl class="first last docutils">
+<dt><span class="math">\(\frac{\nu}{\mu-2}\Sigma\)</span></dt>
+<dd>if <span class="math">\(\nu&gt;2\)</span> else undefined</dd>
+</dl>
+</td>
+</tr>
+</tbody>
+</table>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>nu</strong> (<em>int</em>) &#8211; Degrees of freedom.</li>
+<li><strong>Sigma</strong> (<em>matrix</em>) &#8211; Covariance matrix.</li>
+<li><strong>mu</strong> (<em>array</em>) &#8211; Vector of means.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="class">
+<dt id="pymc3.distributions.multivariate.Dirichlet">
+<em class="property">class </em><code class="descclassname">pymc3.distributions.multivariate.</code><code class="descname">Dirichlet</code><span class="sig-paren">(</span><em>a</em>, <em>transform=&lt;pymc3.distributions.transforms.StickBreaking object&gt;</em>, <em>*args</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.distributions.multivariate.Dirichlet" title="Permalink to this definition">¶</a></dt>
+<dd><p>Dirichlet log-likelihood.</p>
+<div class="math">
+\[f(\mathbf{x}) =
+    \frac{\Gamma(\sum_{i=1}^k \theta_i)}{\prod \Gamma(\theta_i)}
+    \prod_{i=1}^{k-1} x_i^{\theta_i - 1}
+    \left(1-\sum_{i=1}^{k-1}x_i\right)^\theta_k\]</div>
+<table border="1" class="docutils">
+<colgroup>
+<col width="12%" />
+<col width="88%" />
+</colgroup>
+<tbody valign="top">
+<tr class="row-odd"><td>Support</td>
+<td><span class="math">\(x_i \in (0, 1)\)</span> for <span class="math">\(i \in \{1, \ldots, K\}\)</span>
+such that <span class="math">\(\sum x_i = 1\)</span></td>
+</tr>
+<tr class="row-even"><td>Mean</td>
+<td><span class="math">\(\dfrac{a_i}{\sum a_i}\)</span></td>
+</tr>
+<tr class="row-odd"><td>Variance</td>
+<td><span class="math">\(\dfrac{a_i - \sum a_0}{a_0^2 (a_0 + 1)}\)</span>
+where <span class="math">\(a_0 = \sum a_i\)</span></td>
+</tr>
+</tbody>
+</table>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>a</strong> (<em>array</em>) &#8211; Concentration parameters (a &gt; 0).</td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">Notes</p>
+<p>Only the first <cite>k-1</cite> elements of <cite>x</cite> are expected. Can be used
+as a parent of Multinomial and Categorical nevertheless.</p>
+</dd></dl>
+
+<dl class="class">
+<dt id="pymc3.distributions.multivariate.Multinomial">
+<em class="property">class </em><code class="descclassname">pymc3.distributions.multivariate.</code><code class="descname">Multinomial</code><span class="sig-paren">(</span><em>n</em>, <em>p</em>, <em>*args</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.distributions.multivariate.Multinomial" title="Permalink to this definition">¶</a></dt>
+<dd><p>Multinomial log-likelihood.</p>
+<p>Generalizes binomial distribution, but instead of each trial resulting
+in &#8220;success&#8221; or &#8220;failure&#8221;, each one results in exactly one of some
+fixed finite number k of possible outcomes over n independent trials.
+&#8216;x[i]&#8217; indicates the number of times outcome number i was observed
+over the n trials.</p>
+<div class="math">
+\[f(x \mid n, p) = \frac{n!}{\prod_{i=1}^k x_i!} \prod_{i=1}^k p_i^{x_i}\]</div>
+<table border="1" class="docutils">
+<colgroup>
+<col width="19%" />
+<col width="81%" />
+</colgroup>
+<tbody valign="top">
+<tr class="row-odd"><td>Support</td>
+<td><span class="math">\(x \in \{0, 1, \ldots, n\}\)</span> such that
+<span class="math">\(\sum x_i = n\)</span></td>
+</tr>
+<tr class="row-even"><td>Mean</td>
+<td><span class="math">\(n p_i\)</span></td>
+</tr>
+<tr class="row-odd"><td>Variance</td>
+<td><span class="math">\(n p_i (1 - p_i)\)</span></td>
+</tr>
+<tr class="row-even"><td>Covariance</td>
+<td><span class="math">\(-n p_i p_j\)</span> for <span class="math">\(i \ne j\)</span></td>
+</tr>
+</tbody>
+</table>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>n</strong> (<em>int</em><em> or </em><em>array</em>) &#8211; Number of trials (n &gt; 0).</li>
+<li><strong>p</strong> (<em>one-</em><em> or </em><em>two-dimensional array</em>) &#8211; Probability of each one of the different outcomes. Elements must
+be non-negative and sum to 1 along the last axis. They will be automatically
+rescaled otherwise.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="class">
+<dt id="pymc3.distributions.multivariate.Wishart">
+<em class="property">class </em><code class="descclassname">pymc3.distributions.multivariate.</code><code class="descname">Wishart</code><span class="sig-paren">(</span><em>n</em>, <em>V</em>, <em>*args</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.distributions.multivariate.Wishart" title="Permalink to this definition">¶</a></dt>
+<dd><p>Wishart log-likelihood.</p>
+<p>The Wishart distribution is the probability distribution of the
+maximum-likelihood estimator (MLE) of the precision matrix of a
+multivariate normal distribution.  If V=1, the distribution is
+identical to the chi-square distribution with n degrees of
+freedom.</p>
+<div class="math">
+\[f(X \mid n, T) =
+    \frac{{\mid T \mid}^{n/2}{\mid X \mid}^{(n-k-1)/2}}{2^{nk/2}
+    \Gamma_p(n/2)} \exp\left\{ -\frac{1}{2} Tr(TX) \right\}\]</div>
+<p>where <span class="math">\(k\)</span> is the rank of <span class="math">\(X\)</span>.</p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="16%" />
+<col width="84%" />
+</colgroup>
+<tbody valign="top">
+<tr class="row-odd"><td>Support</td>
+<td><span class="math">\(X(p x p)\)</span> positive definite matrix</td>
+</tr>
+<tr class="row-even"><td>Mean</td>
+<td><span class="math">\(n V\)</span></td>
+</tr>
+<tr class="row-odd"><td>Variance</td>
+<td><span class="math">\(n (v_{ij}^2 + v_{ii} v_{jj})\)</span></td>
+</tr>
+</tbody>
+</table>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>n</strong> (<em>int</em>) &#8211; Degrees of freedom, &gt; 0.</li>
+<li><strong>V</strong> (<em>array</em>) &#8211; p x p positive definite matrix.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">This distribution is unusable in a PyMC3 model. You should instead
+use WishartBartlett or LKJCorr.</p>
+</div>
+</dd></dl>
+
+<dl class="function">
+<dt id="pymc3.distributions.multivariate.WishartBartlett">
+<code class="descclassname">pymc3.distributions.multivariate.</code><code class="descname">WishartBartlett</code><span class="sig-paren">(</span><em>name</em>, <em>S</em>, <em>nu</em>, <em>is_cholesky=False</em>, <em>return_cholesky=False</em>, <em>testval=None</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.distributions.multivariate.WishartBartlett" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bartlett decomposition of the Wishart distribution. As the Wishart
+distribution requires the matrix to be symmetric positive semi-definite
+it is impossible for MCMC to ever propose acceptable matrices.</p>
+<p>Instead, we can use the Barlett decomposition which samples a lower
+diagonal matrix. Specifically:</p>
+<div class="math">
+\[ \begin{align}\begin{aligned}\begin{split}\text{If} L \sim \begin{pmatrix}
+\sqrt{c_1} &amp; 0 &amp; 0 \\
+z_{21} &amp; \sqrt{c_2} &amp; 0 \\
+z_{31} &amp; z_{32} &amp; \sqrt{c_3}
+\end{pmatrix}\end{split}\\\begin{split}\text{with} c_i \sim \chi^2(n-i+1) \text{ and } n_{ij} \sim \mathcal{N}(0, 1), \text{then} \\
+L \times A \times A.T \times L.T \sim \text{Wishart}(L \times L.T, \nu)\end{split}\end{aligned}\end{align} \]</div>
+<p>See <a class="reference external" href="http://en.wikipedia.org/wiki/Wishart_distribution#Bartlett_decomposition">http://en.wikipedia.org/wiki/Wishart_distribution#Bartlett_decomposition</a>
+for more information.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>S</strong> (<a class="reference internal" href="../backends.html#module-pymc3.backends.ndarray" title="pymc3.backends.ndarray"><em>ndarray</em></a>) &#8211; p x p positive definite matrix
+Or:
+p x p lower-triangular matrix that is the Cholesky factor
+of the covariance matrix.</li>
+<li><strong>nu</strong> (<em>int</em>) &#8211; Degrees of freedom, &gt; dim(S).</li>
+<li><strong>is_cholesky</strong> (<em>bool</em><em> (</em><em>default=False</em><em>)</em><em></em>) &#8211; Input matrix S is already Cholesky decomposed as S.T * S</li>
+<li><strong>return_cholesky</strong> (<em>bool</em><em> (</em><em>default=False</em><em>)</em><em></em>) &#8211; Only return the Cholesky decomposed matrix.</li>
+<li><strong>testval</strong> (<a class="reference internal" href="../backends.html#module-pymc3.backends.ndarray" title="pymc3.backends.ndarray"><em>ndarray</em></a>) &#8211; p x p positive definite matrix used to initialize</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">This is not a standard Distribution class but follows a similar
+interface. Besides the Wishart distribution, it will add RVs
+c and z to your model which make up the matrix.</p>
+</div>
+</dd></dl>
+
+<dl class="class">
+<dt id="pymc3.distributions.multivariate.LKJCorr">
+<em class="property">class </em><code class="descclassname">pymc3.distributions.multivariate.</code><code class="descname">LKJCorr</code><span class="sig-paren">(</span><em>n</em>, <em>p</em>, <em>transform='interval'</em>, <em>*args</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.distributions.multivariate.LKJCorr" title="Permalink to this definition">¶</a></dt>
+<dd><p>The LKJ (Lewandowski, Kurowicka and Joe) log-likelihood.</p>
+<p>The LKJ distribution is a prior distribution for correlation matrices.
+If n = 1 this corresponds to the uniform distribution over correlation
+matrices. For n -&gt; oo the LKJ prior approaches the identity matrix.</p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="15%" />
+<col width="85%" />
+</colgroup>
+<tbody valign="top">
+<tr class="row-odd"><td>Support</td>
+<td>Upper triangular matrix with values in [-1, 1]</td>
+</tr>
+</tbody>
+</table>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>n</strong> (<em>float</em>) &#8211; Shape parameter (n &gt; 0). Uniform distribution at n = 1.</li>
+<li><strong>p</strong> (<em>int</em>) &#8211; Dimension of correlation matrix (p &gt; 0).</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">Notes</p>
+<p>This implementation only returns the values of the upper triangular
+matrix excluding the diagonal. Here is a schematic for p = 5, showing
+the indexes of the elements:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="p">[[</span><span class="o">-</span> <span class="mi">0</span> <span class="mi">1</span> <span class="mi">2</span> <span class="mi">3</span><span class="p">]</span>
+ <span class="p">[</span><span class="o">-</span> <span class="o">-</span> <span class="mi">4</span> <span class="mi">5</span> <span class="mi">6</span><span class="p">]</span>
+ <span class="p">[</span><span class="o">-</span> <span class="o">-</span> <span class="o">-</span> <span class="mi">7</span> <span class="mi">8</span><span class="p">]</span>
+ <span class="p">[</span><span class="o">-</span> <span class="o">-</span> <span class="o">-</span> <span class="o">-</span> <span class="mi">9</span><span class="p">]</span>
+ <span class="p">[</span><span class="o">-</span> <span class="o">-</span> <span class="o">-</span> <span class="o">-</span> <span class="o">-</span><span class="p">]]</span>
+</pre></div>
+</div>
+<p class="rubric">References</p>
+<table class="docutils citation" frame="void" id="lkj2009" rules="none">
+<colgroup><col class="label" /><col /></colgroup>
+<tbody valign="top">
+<tr><td class="label">[LKJ2009]</td><td>Lewandowski, D., Kurowicka, D. and Joe, H. (2009).
+&#8220;Generating random correlation matrices based on vines and
+extended onion method.&#8221; Journal of multivariate analysis,
+100(9), pp.1989-2001.</td></tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="class">
+<dt id="pymc3.distributions.multivariate.LKJCholeskyCov">
+<em class="property">class </em><code class="descclassname">pymc3.distributions.multivariate.</code><code class="descname">LKJCholeskyCov</code><span class="sig-paren">(</span><em>n</em>, <em>eta</em>, <em>sd_dist</em>, <em>*args</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.distributions.multivariate.LKJCholeskyCov" title="Permalink to this definition">¶</a></dt>
+<dd><p>Covariance matrix with LKJ distributed correlations.</p>
+<p>This defines a distribution over cholesky decomposed covariance
+matrices, such that the underlying correlation matrices follow an
+LKJ distribution [1] and the standard deviations follow an arbitray
+distribution specified by the user.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>n</strong> (<em>int</em>) &#8211; The number of rows of the covariance matrix.</li>
+<li><strong>eta</strong> (<em>float</em>) &#8211; The shape parameter of the LKJ distribution. A value of one
+implies a uniform distribution of the correlation matrices;
+larger values put more weight on matrices with few correlations.</li>
+<li><strong>sd_dist</strong> (<em>pm.Distribution</em>) &#8211; A distribution for the standard deviations.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">Notes</p>
+<p>Since the cholesky factor is a lower triangular matrix, we use
+packed storge for the matrix: We store and return the values of
+the lower triangular matrix in a one-dimensional array, numbered
+by row:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="p">[[</span><span class="mi">0</span> <span class="o">-</span> <span class="o">-</span> <span class="o">-</span><span class="p">]</span>
+ <span class="p">[</span><span class="mi">1</span> <span class="mi">2</span> <span class="o">-</span> <span class="o">-</span><span class="p">]</span>
+ <span class="p">[</span><span class="mi">3</span> <span class="mi">4</span> <span class="mi">5</span> <span class="o">-</span><span class="p">]</span>
+ <span class="p">[</span><span class="mi">6</span> <span class="mi">7</span> <span class="mi">8</span> <span class="mi">9</span><span class="p">]]</span>
+</pre></div>
+</div>
+<p>You can use <cite>pm.expand_packed_triangular(packed_cov, lower=True)</cite>
+to convert this to a regular two-dimensional array.</p>
+<p class="rubric">Examples</p>
+<div class="highlight-python"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">pm</span><span class="o">.</span><span class="n">Model</span><span class="p">()</span> <span class="k">as</span> <span class="n">model</span><span class="p">:</span>
+    <span class="c1"># Note that we access the distribution for the standard</span>
+    <span class="c1"># deviations, and do not create a new random variable.</span>
+    <span class="n">sd_dist</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">HalfCauchy</span><span class="o">.</span><span class="n">dist</span><span class="p">(</span><span class="n">beta</span><span class="o">=</span><span class="mf">2.5</span><span class="p">)</span>
+    <span class="n">packed_chol</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">LKJCholeskyCov</span><span class="p">(</span><span class="s1">&#39;chol_cov&#39;</span><span class="p">,</span> <span class="mi">10</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="n">sd_dist</span><span class="p">)</span>
+
+    <span class="c1"># Define a new MvNormal with the given covariance</span>
+    <span class="n">vals</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">MvNormal</span><span class="p">(</span><span class="s1">&#39;vals&#39;</span><span class="p">,</span> <span class="n">mu</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="mi">10</span><span class="p">),</span> <span class="n">packed_chol</span><span class="o">=</span><span class="n">packed_chol</span><span class="p">)</span>
+
+    <span class="c1"># Or transform an uncorrelated normal:</span>
+    <span class="n">vals_raw</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Normal</span><span class="p">(</span><span class="s1">&#39;vals_raw&#39;</span><span class="p">,</span> <span class="n">mu</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="mi">10</span><span class="p">),</span> <span class="n">sd</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+    <span class="n">chol</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">expand_packed_triangular</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="n">packed_chol</span><span class="p">,</span> <span class="n">lower</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+    <span class="n">vals</span> <span class="o">=</span> <span class="n">tt</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">chol</span><span class="p">,</span> <span class="n">vals_raw</span><span class="p">)</span>
+
+    <span class="c1"># Or compute the covariance matrix</span>
+    <span class="n">chol</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">expand_packed_triangular</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="n">packed_chol</span><span class="p">,</span> <span class="n">lower</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+    <span class="n">cov</span> <span class="o">=</span> <span class="n">tt</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">chol</span><span class="p">,</span> <span class="n">chol</span><span class="o">.</span><span class="n">T</span><span class="p">)</span>
+
+    <span class="c1"># Extract the standard deviations</span>
+    <span class="n">stds</span> <span class="o">=</span> <span class="n">tt</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">tt</span><span class="o">.</span><span class="n">diag</span><span class="p">(</span><span class="n">cov</span><span class="p">))</span>
+</pre></div>
+</div>
+<p>In the unconstrained space all values of the cholesky factor
+are stored untransformed, except for the diagonal entries, where
+we use a log-transform to restrict them to positive values.</p>
+<p>To correctly compute log-likelihoods for the standard deviations
+and the correlation matrix seperatly, we need to consider a
+second transformation: Given a cholesky factorization
+<span class="math">\(LL^T = \Sigma\)</span> of a covariance matrix we can recover the
+standard deviations <span class="math">\(\sigma\)</span> as the euclidean lengths of
+the rows of <span class="math">\(L\)</span>, and the cholesky factor of the
+correlation matrix as <span class="math">\(U = \text{diag}(\sigma)^{-1}L\)</span>.
+Since each row of <span class="math">\(U\)</span> has length 1, we do not need to
+store the diagonal. We define a transformation <span class="math">\(\phi\)</span>
+such that <span class="math">\(\phi(L)\)</span> is the lower triangular matrix containing
+the standard deviations <span class="math">\(\sigma\)</span> on the diagonal and the
+correlation matrix <span class="math">\(U\)</span> below. In this form we can easily
+compute the different likelihoods seperatly, as the likelihood
+of the correlation matrix only depends on the values below the
+diagonal, and the likelihood of the standard deviation depends
+only on the diagonal values.</p>
+<p>We still need the determinant of the jacobian of <span class="math">\(\phi^{-1}\)</span>.
+If we think of <span class="math">\(\phi\)</span> as an automorphism on
+<span class="math">\(\mathbb{R}^{\tfrac{n(n+1)}{2}}\)</span>, where we order
+the dimensions as described in the notes above, the jacobian
+is a block-diagonal matrix, where each block corresponds to
+one row of <span class="math">\(U\)</span>. Each block has arrowhead shape, and we
+can compute the determinant of that as described in [2]. Since
+the determinant of a block-diagonal matrix is the product
+of the determinants of the blocks, we get</p>
+<div class="math">
+\[\text{det}(J_{\phi^{-1}}(U)) =
+\left[
+  \prod_{i=2}^N u_{ii}^{i - 1} L_{ii}
+\right]^{-1}\]</div>
+<p class="rubric">References</p>
+<table class="docutils footnote" frame="void" id="id1" rules="none">
+<colgroup><col class="label" /><col /></colgroup>
+<tbody valign="top">
+<tr><td class="label">[1]</td><td>Lewandowski, D., Kurowicka, D. and Joe, H. (2009).
+&#8220;Generating random correlation matrices based on vines and
+extended onion method.&#8221; Journal of multivariate analysis,
+100(9), pp.1989-2001.</td></tr>
+</tbody>
+</table>
+<table class="docutils footnote" frame="void" id="id2" rules="none">
+<colgroup><col class="label" /><col /></colgroup>
+<tbody valign="top">
+<tr><td class="label">[2]</td><td>J. M. isn&#8217;t a mathematician (<a class="reference external" href="http://math.stackexchange.com/users/498/">http://math.stackexchange.com/users/498/</a>
+j-m-isnt-a-mathematician), Different approaches to evaluate this
+determinant, URL (version: 2012-04-14):
+<a class="reference external" href="http://math.stackexchange.com/q/130026">http://math.stackexchange.com/q/130026</a></td></tr>
+</tbody>
+</table>
+</dd></dl>
+
+</div>
+
+
+           </div>
+           <div class="articleComments">
+            
+           </div>
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="mixture.html" class="btn btn-neutral float-right" title="Mixture" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="discrete.html" class="btn btn-neutral" title="Discrete" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2016, John Salvatier, Christopher Fonnesbeck, Thomas Wiecki.
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'../../',
+            VERSION:'3.0',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true,
+            SOURCELINK_SUFFIX: '.txt'
+        };
+    </script>
+      <script type="text/javascript" src="../../_static/jquery.js"></script>
+      <script type="text/javascript" src="../../_static/underscore.js"></script>
+      <script type="text/javascript" src="../../_static/doctools.js"></script>
+      <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+  
+
+  
+  
+    <script type="text/javascript" src="../../_static/js/theme.js"></script>
+  
+
+  
+  
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.StickyNav.enable();
+      });
+  </script>
+   
+
+</body>
+</html>

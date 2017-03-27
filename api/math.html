@@ -1,0 +1,488 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>Math &mdash; PyMC3 3.0 documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  
+  
+    <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  
+
+  
+
+  
+        <link rel="index" title="Index"
+              href="../genindex.html"/>
+        <link rel="search" title="Search" href="../search.html"/>
+    <link rel="top" title="PyMC3 3.0 documentation" href="../index.html"/>
+        <link rel="up" title="API Reference" href="../api.html"/>
+        <link rel="prev" title="Backends" href="backends.html"/> 
+
+  
+  <script src="../_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+   
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+          
+            <a href="../index.html" class="icon icon-home"> PyMC3
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                3.0
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../getting_started.html">Getting started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../examples.html">Examples</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="../api.html">API Reference</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="distributions.html">Distributions</a></li>
+<li class="toctree-l2"><a class="reference internal" href="inference.html">Inference</a></li>
+<li class="toctree-l2"><a class="reference internal" href="glm.html">Generalized Linear Models</a></li>
+<li class="toctree-l2"><a class="reference internal" href="gp.html">Gaussian Processes</a></li>
+<li class="toctree-l2"><a class="reference internal" href="plots.html">Plots</a></li>
+<li class="toctree-l2"><a class="reference internal" href="stats.html">Stats</a></li>
+<li class="toctree-l2"><a class="reference internal" href="diagnostics.html">Diagnostics</a></li>
+<li class="toctree-l2"><a class="reference internal" href="backends.html">Backends</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">Math</a></li>
+</ul>
+</li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">PyMC3</a>
+        
+      </nav>
+
+
+      
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../index.html">Docs</a> &raquo;</li>
+        
+          <li><a href="../api.html">API Reference</a> &raquo;</li>
+        
+      <li>Math</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            <a href="../_sources/api/math.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  
+<style>
+/* CSS overrides for sphinx_rtd_theme */
+
+/* 24px margin */
+.nbinput.nblast,
+.nboutput.nblast {
+    margin-bottom: 19px;  /* padding has already 5px */
+}
+
+/* ... except between code cells! */
+.nblast + .nbinput {
+    margin-top: -19px;
+}
+
+/* nice headers on first paragraph of info/warning boxes */
+.admonition .first {
+    margin: -12px;
+    padding: 6px 12px;
+    margin-bottom: 12px;
+    color: #fff;
+    line-height: 1;
+    display: block;
+}
+.admonition.warning .first {
+    background: #f0b37e;
+}
+.admonition.note .first {
+    background: #6ab0de;
+}
+.admonition > p:before {
+    margin-right: 4px;  /* make room for the exclamation icon */
+}
+</style>
+<div class="section" id="math">
+<h1>Math<a class="headerlink" href="#math" title="Permalink to this headline">¶</a></h1>
+<p>This submodule contains various mathematical functions. Most of them
+are imported directly from theano.tensor (see there for more
+details). Doing any kind of math with PyMC3 random variables, or
+defining custom likelihoods or priors requires you to use these theano
+expressions rather than NumPy or Python code.</p>
+<table border="1" class="longtable docutils">
+<colgroup>
+<col width="10%" />
+<col width="90%" />
+</colgroup>
+<tbody valign="top">
+<tr class="row-odd"><td><code class="xref py py-obj docutils literal"><span class="pre">dot</span></code>(a,&nbsp;b)</td>
+<td>Computes the dot product of two variables.</td>
+</tr>
+<tr class="row-even"><td><code class="xref py py-obj docutils literal"><span class="pre">constant</span></code>(x[,&nbsp;name,&nbsp;ndim,&nbsp;dtype])</td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><code class="xref py py-obj docutils literal"><span class="pre">flatten</span></code>(x[,&nbsp;outdim])</td>
+<td>Reshapes the variable x by keeping the first outdim-1 dimension size(s) of x the same, and making the last dimension size of x equal to the multiplication of its remaining dimension size(s).</td>
+</tr>
+<tr class="row-even"><td><code class="xref py py-obj docutils literal"><span class="pre">zeros_like</span></code>(model[,&nbsp;dtype,&nbsp;opt])</td>
+<td>equivalent of numpy.zeros_like</td>
+</tr>
+<tr class="row-odd"><td><code class="xref py py-obj docutils literal"><span class="pre">ones_like</span></code>(model[,&nbsp;dtype,&nbsp;opt])</td>
+<td>equivalent of numpy.ones_like</td>
+</tr>
+<tr class="row-even"><td><code class="xref py py-obj docutils literal"><span class="pre">stack</span></code>(\*tensors,&nbsp;\*\*kwargs)</td>
+<td>Stack tensors in sequence on given axis (default is 0).</td>
+</tr>
+<tr class="row-odd"><td><code class="xref py py-obj docutils literal"><span class="pre">concatenate</span></code>(tensor_list[,&nbsp;axis])</td>
+<td>Alias for <a href="#id1"><span class="problematic" id="id2">`</span></a>join`(axis, <a href="#id3"><span class="problematic" id="id4">*</span></a>tensor_list).</td>
+</tr>
+<tr class="row-even"><td><code class="xref py py-obj docutils literal"><span class="pre">sum</span></code>(input[,&nbsp;axis,&nbsp;dtype,&nbsp;keepdims,&nbsp;acc_dtype])</td>
+<td>Computes the sum along the given axis(es) of a tensor <cite>input</cite>.</td>
+</tr>
+<tr class="row-odd"><td><code class="xref py py-obj docutils literal"><span class="pre">prod</span></code>(input[,&nbsp;axis,&nbsp;dtype,&nbsp;keepdims,&nbsp;...])</td>
+<td>Computes the product along the given axis(es) of a tensor <cite>input</cite>.</td>
+</tr>
+<tr class="row-even"><td><code class="xref py py-obj docutils literal"><span class="pre">lt</span></code></td>
+<td>a &lt; b</td>
+</tr>
+<tr class="row-odd"><td><code class="xref py py-obj docutils literal"><span class="pre">gt</span></code></td>
+<td>a &gt; b</td>
+</tr>
+<tr class="row-even"><td><code class="xref py py-obj docutils literal"><span class="pre">le</span></code></td>
+<td>a &lt;= b</td>
+</tr>
+<tr class="row-odd"><td><code class="xref py py-obj docutils literal"><span class="pre">ge</span></code></td>
+<td>a &gt;= b</td>
+</tr>
+<tr class="row-even"><td><code class="xref py py-obj docutils literal"><span class="pre">eq</span></code></td>
+<td>a == b</td>
+</tr>
+<tr class="row-odd"><td><code class="xref py py-obj docutils literal"><span class="pre">neq</span></code></td>
+<td>a != b</td>
+</tr>
+<tr class="row-even"><td><code class="xref py py-obj docutils literal"><span class="pre">switch</span></code></td>
+<td>if cond then ift else iff</td>
+</tr>
+<tr class="row-odd"><td><code class="xref py py-obj docutils literal"><span class="pre">clip</span></code></td>
+<td>Clip x to be between min and max.</td>
+</tr>
+<tr class="row-even"><td><code class="xref py py-obj docutils literal"><span class="pre">where</span></code></td>
+<td>if cond then ift else iff</td>
+</tr>
+<tr class="row-odd"><td><code class="xref py py-obj docutils literal"><span class="pre">and_</span></code></td>
+<td>bitwise a &amp; b</td>
+</tr>
+<tr class="row-even"><td><code class="xref py py-obj docutils literal"><span class="pre">or_</span></code></td>
+<td>bitwise a | b</td>
+</tr>
+<tr class="row-odd"><td><code class="xref py py-obj docutils literal"><span class="pre">abs_</span></code></td>
+<td><a href="#id5"><span class="problematic" id="id6">|`a`|</span></a></td>
+</tr>
+<tr class="row-even"><td><code class="xref py py-obj docutils literal"><span class="pre">exp</span></code></td>
+<td>e^`a`</td>
+</tr>
+<tr class="row-odd"><td><code class="xref py py-obj docutils literal"><span class="pre">log</span></code></td>
+<td>base e logarithm of a</td>
+</tr>
+<tr class="row-even"><td><code class="xref py py-obj docutils literal"><span class="pre">cos</span></code></td>
+<td>cosine of a</td>
+</tr>
+<tr class="row-odd"><td><code class="xref py py-obj docutils literal"><span class="pre">sin</span></code></td>
+<td>sine of a</td>
+</tr>
+<tr class="row-even"><td><code class="xref py py-obj docutils literal"><span class="pre">tan</span></code></td>
+<td>tangent of a</td>
+</tr>
+<tr class="row-odd"><td><code class="xref py py-obj docutils literal"><span class="pre">cosh</span></code></td>
+<td>hyperbolic cosine of a</td>
+</tr>
+<tr class="row-even"><td><code class="xref py py-obj docutils literal"><span class="pre">sinh</span></code></td>
+<td>hyperbolic sine of a</td>
+</tr>
+<tr class="row-odd"><td><code class="xref py py-obj docutils literal"><span class="pre">tanh</span></code></td>
+<td>hyperbolic tangent of a</td>
+</tr>
+<tr class="row-even"><td><code class="xref py py-obj docutils literal"><span class="pre">sqr</span></code></td>
+<td>square of a</td>
+</tr>
+<tr class="row-odd"><td><code class="xref py py-obj docutils literal"><span class="pre">sqrt</span></code></td>
+<td>square root of a</td>
+</tr>
+<tr class="row-even"><td><code class="xref py py-obj docutils literal"><span class="pre">erf</span></code></td>
+<td>error function</td>
+</tr>
+<tr class="row-odd"><td><code class="xref py py-obj docutils literal"><span class="pre">erfinv</span></code></td>
+<td>inverse error function</td>
+</tr>
+<tr class="row-even"><td><code class="xref py py-obj docutils literal"><span class="pre">dot</span></code>(a,&nbsp;b)</td>
+<td>Computes the dot product of two variables.</td>
+</tr>
+<tr class="row-odd"><td><code class="xref py py-obj docutils literal"><span class="pre">maximum</span></code></td>
+<td>elemwise maximum. See max for the maximum in one tensor</td>
+</tr>
+<tr class="row-even"><td><code class="xref py py-obj docutils literal"><span class="pre">minimum</span></code></td>
+<td>elemwise minimum. See min for the minimum in one tensor</td>
+</tr>
+<tr class="row-odd"><td><code class="xref py py-obj docutils literal"><span class="pre">sgn</span></code></td>
+<td>sign of a</td>
+</tr>
+<tr class="row-even"><td><code class="xref py py-obj docutils literal"><span class="pre">ceil</span></code></td>
+<td>ceiling of a</td>
+</tr>
+<tr class="row-odd"><td><code class="xref py py-obj docutils literal"><span class="pre">floor</span></code></td>
+<td>floor of a</td>
+</tr>
+<tr class="row-even"><td><code class="xref py py-obj docutils literal"><span class="pre">det</span></code></td>
+<td>Matrix determinant.</td>
+</tr>
+<tr class="row-odd"><td><code class="xref py py-obj docutils literal"><span class="pre">matrix_inverse</span></code></td>
+<td>Computes the inverse of a matrix <span class="math">\(A\)</span>.</td>
+</tr>
+<tr class="row-even"><td><code class="xref py py-obj docutils literal"><span class="pre">extract_diag</span></code></td>
+<td>Return the diagonal of a matrix.</td>
+</tr>
+<tr class="row-odd"><td><code class="xref py py-obj docutils literal"><span class="pre">matrix_dot</span></code>(\*args)</td>
+<td>Shorthand for product between several dots.</td>
+</tr>
+<tr class="row-even"><td><code class="xref py py-obj docutils literal"><span class="pre">trace</span></code>(X)</td>
+<td>Returns the sum of diagonal elements of matrix X.</td>
+</tr>
+<tr class="row-odd"><td><code class="xref py py-obj docutils literal"><span class="pre">sigmoid</span></code></td>
+<td>Generalizes a scalar op to tensors.</td>
+</tr>
+<tr class="row-even"><td><code class="xref py py-obj docutils literal"><span class="pre">logsumexp</span></code>(x[,&nbsp;axis])</td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><code class="xref py py-obj docutils literal"><span class="pre">invlogit</span></code>(x[,&nbsp;eps])</td>
+<td></td>
+</tr>
+<tr class="row-even"><td><code class="xref py py-obj docutils literal"><span class="pre">logit</span></code>(p)</td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<span class="target" id="module-pymc3.math"></span><dl class="class">
+<dt id="pymc3.math.LogDet">
+<em class="property">class </em><code class="descclassname">pymc3.math.</code><code class="descname">LogDet</code><a class="headerlink" href="#pymc3.math.LogDet" title="Permalink to this definition">¶</a></dt>
+<dd><p>Compute the logarithm of the absolute determinant of a square
+matrix M, log(abs(det(M))) on the CPU. Avoids det(M) overflow/
+underflow.</p>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">Once PR #3959 (<a class="reference external" href="https://github.com/Theano/Theano/pull/3959/">https://github.com/Theano/Theano/pull/3959/</a>) by harpone is merged,
+this must be removed.</p>
+</div>
+</dd></dl>
+
+<dl class="function">
+<dt id="pymc3.math.expand_packed_triangular">
+<code class="descclassname">pymc3.math.</code><code class="descname">expand_packed_triangular</code><span class="sig-paren">(</span><em>n</em>, <em>packed</em>, <em>lower=False</em>, <em>diagonal_only=False</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.math.expand_packed_triangular" title="Permalink to this definition">¶</a></dt>
+<dd><p>Convert a packed triangular matrix into a two dimensional array.</p>
+<p>Triangular matrices can be stored with better space efficiancy by
+storing the non-zero values in a one-dimensional array. We number
+the elements by row like this (for lower or upper triangular matrices):</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="p">[[</span><span class="mi">0</span> <span class="o">-</span> <span class="o">-</span> <span class="o">-</span><span class="p">]</span>     <span class="p">[[</span><span class="mi">0</span> <span class="mi">1</span> <span class="mi">2</span> <span class="mi">3</span><span class="p">]</span>
+ <span class="p">[</span><span class="mi">1</span> <span class="mi">2</span> <span class="o">-</span> <span class="o">-</span><span class="p">]</span>      <span class="p">[</span><span class="o">-</span> <span class="mi">4</span> <span class="mi">5</span> <span class="mi">6</span><span class="p">]</span>
+ <span class="p">[</span><span class="mi">3</span> <span class="mi">4</span> <span class="mi">5</span> <span class="o">-</span><span class="p">]</span>      <span class="p">[</span><span class="o">-</span> <span class="o">-</span> <span class="mi">7</span> <span class="mi">8</span><span class="p">]</span>
+ <span class="p">[</span><span class="mi">6</span> <span class="mi">7</span> <span class="mi">8</span> <span class="mi">9</span><span class="p">]]</span>     <span class="p">[</span><span class="o">-</span> <span class="o">-</span> <span class="o">-</span> <span class="mi">9</span><span class="p">]</span>
+</pre></div>
+</div>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>n</strong> (<em>int</em>) &#8211; The number of rows of the triangular matrix.</li>
+<li><strong>packed</strong> (<em>theano.vector</em>) &#8211; The matrix in packed format.</li>
+<li><strong>lower</strong> (<em>bool</em>) &#8211; If true, assume that the matrix is lower triangular.</li>
+<li><strong>diagonal_only</strong> (<em>bool</em>) &#8211; If true, return only the diagonal of the matrix.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="pymc3.math.tround">
+<code class="descclassname">pymc3.math.</code><code class="descname">tround</code><span class="sig-paren">(</span><em>*args</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.math.tround" title="Permalink to this definition">¶</a></dt>
+<dd><p>Temporary function to silence round warning in Theano. Please remove
+when the warning disappears.</p>
+</dd></dl>
+
+</div>
+
+
+           </div>
+           <div class="articleComments">
+            
+           </div>
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+      
+        <a href="backends.html" class="btn btn-neutral" title="Backends" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2016, John Salvatier, Christopher Fonnesbeck, Thomas Wiecki.
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'../',
+            VERSION:'3.0',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true,
+            SOURCELINK_SUFFIX: '.txt'
+        };
+    </script>
+      <script type="text/javascript" src="../_static/jquery.js"></script>
+      <script type="text/javascript" src="../_static/underscore.js"></script>
+      <script type="text/javascript" src="../_static/doctools.js"></script>
+      <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+  
+
+  
+  
+    <script type="text/javascript" src="../_static/js/theme.js"></script>
+  
+
+  
+  
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.StickyNav.enable();
+      });
+  </script>
+   
+
+</body>
+</html>

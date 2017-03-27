@@ -13,6 +13,8 @@
 
   
   
+  
+  
 
   
 
@@ -45,6 +47,7 @@
 
 <body class="wy-body-for-nav" role="document">
 
+   
   <div class="wy-grid-for-nav">
 
     
@@ -85,15 +88,18 @@
           
             
             
-                <ul class="current">
+              
+            
+            
+              <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="../getting_started.html">Getting started</a></li>
 <li class="toctree-l1 current"><a class="reference internal" href="../examples.html">Examples</a><ul class="current">
 <li class="toctree-l2"><a class="reference internal" href="../examples.html#howto">Howto</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../examples.html#applied">Applied</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../examples.html#glm">GLM</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../examples.html#gp">GP</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../examples.html#gaussian-processes">Gaussian Processes</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../examples.html#mixture-models">Mixture Models</a></li>
-<li class="toctree-l2 current"><a class="reference internal" href="../examples.html#advi">ADVI</a><ul class="current">
+<li class="toctree-l2 current"><a class="reference internal" href="../examples.html#variational-inference">Variational Inference</a><ul class="current">
 <li class="toctree-l3"><a class="reference internal" href="GLM-hierarchical-ADVI.html">GLM: Hierarchical Linear Regression with ADVI</a></li>
 <li class="toctree-l3"><a class="reference internal" href="GLM-hierarchical-advi-minibatch.html">GLM: Mini-batch ADVI on hierarchical regression model</a></li>
 <li class="toctree-l3 current"><a class="current reference internal" href="#">Automatic autoencoding variational Bayes for latent dirichlet allocation with PyMC3</a><ul>
@@ -128,8 +134,10 @@
 
       
       <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
-        <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
-        <a href="../index.html">PyMC3</a>
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">PyMC3</a>
+        
       </nav>
 
 
@@ -138,25 +146,42 @@
         <div class="rst-content">
           
 
- 
+
+
+
+
+
+
+
+
+
+
+
 
 
 
 <div role="navigation" aria-label="breadcrumbs navigation">
+
   <ul class="wy-breadcrumbs">
-    <li><a href="../index.html">Docs</a> &raquo;</li>
-      
+    
+      <li><a href="../index.html">Docs</a> &raquo;</li>
+        
           <li><a href="../examples.html">Examples</a> &raquo;</li>
-      
-    <li>Automatic autoencoding variational Bayes for latent dirichlet allocation with PyMC3</li>
+        
+      <li>Automatic autoencoding variational Bayes for latent dirichlet allocation with PyMC3</li>
+    
+    
       <li class="wy-breadcrumbs-aside">
         
-          
+            
             <a href="../_sources/notebooks/lda-advi-aevb.ipynb.txt" rel="nofollow"> View page source</a>
           
         
       </li>
+    
   </ul>
+
+  
   <hr/>
 </div>
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
@@ -168,13 +193,15 @@
 
 /* remove conflicting styling from Sphinx themes */
 div.nbinput,
-div.nbinput > div,
-div.nbinput div[class^=highlight],
-div.nbinput div[class^=highlight] pre,
+div.nbinput div.prompt,
+div.nbinput div.input_area,
+div.nbinput div[class*=highlight],
+div.nbinput div[class*=highlight] pre,
 div.nboutput,
-div.nboutput > div,
-div.nboutput div[class^=highlight],
-div.nboutput div[class^=highlight] pre {
+div.nbinput div.prompt,
+div.nbinput div.output_area,
+div.nboutput div[class*=highlight],
+div.nboutput div[class*=highlight] pre {
     background: none;
     border: none;
     padding: 0 0;
@@ -183,7 +210,7 @@ div.nboutput div[class^=highlight] pre {
 }
 
 /* avoid gaps between output lines */
-div.nboutput div[class^=highlight] pre {
+div.nboutput div[class*=highlight] pre {
     line-height: normal;
 }
 
@@ -194,6 +221,13 @@ div.nboutput {
     display: flex;
     align-items: flex-start;
     margin: 0;
+    width: 100%;
+}
+@media (max-width: 540px) {
+    div.nbinput,
+    div.nboutput {
+        flex-direction: column;
+    }
 }
 
 /* input container */
@@ -207,38 +241,58 @@ div.nblast {
 }
 
 /* input prompt */
-div.nbinput > :first-child pre {
+div.nbinput div.prompt pre {
     color: #303F9F;
 }
 
 /* output prompt */
-div.nboutput > :first-child pre {
+div.nboutput div.prompt pre {
     color: #D84315;
 }
 
 /* all prompts */
-div.nbinput > :first-child[class^=highlight],
-div.nboutput > :first-child[class^=highlight],
-div.nboutput > :first-child {
+div.nbinput div.prompt,
+div.nboutput div.prompt {
     min-width: 8ex;
     padding-top: 0.4em;
     padding-right: 0.4em;
     text-align: right;
     flex: 0;
 }
+@media (max-width: 540px) {
+    div.nbinput div.prompt,
+    div.nboutput div.prompt {
+        text-align: left;
+        padding: 0.4em;
+    }
+    div.nboutput div.prompt.empty {
+        padding: 0;
+    }
+}
+
+/* disable scrollbars on prompts */
+div.nbinput div.prompt pre,
+div.nboutput div.prompt pre {
+    overflow: hidden;
+}
 
 /* input/output area */
-div.nbinput > :nth-child(2)[class^=highlight],
-div.nboutput > :nth-child(2),
-div.nboutput > :nth-child(2)[class^=highlight] {
+div.nbinput div.input_area,
+div.nboutput div.output_area {
     padding: 0.4em;
     -webkit-flex: 1;
     flex: 1;
     overflow: auto;
 }
+@media (max-width: 540px) {
+    div.nbinput div.input_area,
+    div.nboutput div.output_area {
+        width: 100%;
+    }
+}
 
 /* input area */
-div.nbinput > :nth-child(2)[class^=highlight] {
+div.nbinput div.input_area {
     border: 1px solid #cfcfcf;
     border-radius: 2px;
     background: #f7f7f7;
@@ -255,7 +309,7 @@ div.nboutput div.math p {
 }
 
 /* standard error */
-div.nboutput  > :nth-child(2).stderr {
+div.nboutput div.output_area.stderr {
     background: #fdd;
 }
 
@@ -356,12 +410,12 @@ and ADVI allows us to quickly apply more complex probabilistic models
 than LDA to big data with the help of mini-batches. I hope this notebook
 will attract readers, especially practitioners working on a variety of
 machine learning tasks, to probabilistic programming and PyMC3.</p>
-<div class="nbinput nblast container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [1]:
 </pre></div>
 </div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="o">%</span><span class="k">matplotlib</span> inline
 <span class="kn">import</span> <span class="nn">sys</span><span class="o">,</span> <span class="nn">os</span>
 
@@ -394,12 +448,12 @@ obtained by using functions of scikit-learn. The below code is partially
 adopted from an example of scikit-learn
 (<a class="reference external" href="http://scikit-learn.org/stable/auto_examples/applications/topics_extraction_with_nmf_lda.html">http://scikit-learn.org/stable/auto_examples/applications/topics_extraction_with_nmf_lda.html</a>).
 We set the number of words in the vocabulary to 1000.</p>
-<div class="nbinput container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [2]:
 </pre></div>
 </div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="c1"># The number of words in the vocaburary</span>
 <span class="n">n_words</span> <span class="o">=</span> <span class="mi">1000</span>
 
@@ -422,10 +476,10 @@ We set the number of words in the vocabulary to 1000.</p>
 </pre></div>
 </div>
 </div>
-<div class="nboutput nblast container">
-<div class="container">
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
 </div>
-<div class="container">
+<div class="output_area docutils container">
 <div class="highlight"><pre>
 Loading dataset...
 done in 1.923s.
@@ -435,20 +489,20 @@ done in 2.227s.
 </div>
 <p>Each document is represented by 1000-dimensional term-frequency vector.
 Let&#8217;s check the data.</p>
-<div class="nbinput container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [3]:
 </pre></div>
 </div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">tf</span><span class="p">[:</span><span class="mi">10</span><span class="p">,</span> <span class="p">:]</span><span class="o">.</span><span class="n">toarray</span><span class="p">()</span><span class="o">.</span><span class="n">T</span><span class="p">);</span>
 </pre></div>
 </div>
 </div>
-<div class="nboutput nblast container">
-<div class="container">
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
 </div>
-<div class="container">
+<div class="output_area docutils container">
 <img alt="../_images/notebooks_lda-advi-aevb_5_0.png" src="../_images/notebooks_lda-advi-aevb_5_0.png" />
 </div>
 </div>
@@ -456,12 +510,12 @@ Let&#8217;s check the data.</p>
 tokens in the training set is 480K. Sparsity of the term-frequency
 document matrix is 0.025%, which implies almost all components in the
 term-frequency matrix is zero.</p>
-<div class="nbinput container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [4]:
 </pre></div>
 </div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="n">n_samples_tr</span> <span class="o">=</span> <span class="mi">10000</span>
 <span class="n">n_samples_te</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">-</span> <span class="n">n_samples_tr</span>
 <span class="n">docs_tr</span> <span class="o">=</span> <span class="n">tf</span><span class="p">[:</span><span class="n">n_samples_tr</span><span class="p">,</span> <span class="p">:]</span>
@@ -476,10 +530,10 @@ term-frequency matrix is zero.</p>
 </pre></div>
 </div>
 </div>
-<div class="nboutput nblast container">
-<div class="container">
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
 </div>
-<div class="container">
+<div class="output_area docutils container">
 <div class="highlight"><pre>
 Number of docs for training = 10000
 Number of docs for test = 1314
@@ -492,19 +546,16 @@ Sparsity = 0.0253936
 <h2>Log-likelihood of documents for LDA<a class="headerlink" href="#Log-likelihood-of-documents-for-LDA" title="Permalink to this headline">¶</a></h2>
 <p>For a document <span class="math">\(d\)</span> consisting of tokens <span class="math">\(w\)</span>, the
 log-likelihood of the LDA model with <span class="math">\(K\)</span> topics is given as</p>
-<div class="math">
-\begin{eqnarray}
-    \log p\left(d|\theta_{d},\beta\right) &amp; = &amp; \sum_{w\in d}\log\left[\sum_{k=1}^{K}\exp\left(\log\theta_{d,k} + \log \beta_{k,w}\right)\right]+const,
-\end{eqnarray}</div><p>where <span class="math">\(\theta_{d}\)</span> is the topic distribution for document
+<p>where <span class="math">\(\theta_{d}\)</span> is the topic distribution for document
 <span class="math">\(d\)</span> and <span class="math">\(\beta\)</span> is the word distribution for the <span class="math">\(K\)</span>
 topics. We define a function that returns a tensor of the log-likelihood
 of documents given <span class="math">\(\theta_{d}\)</span> and <span class="math">\(\beta\)</span>.</p>
-<div class="nbinput nblast container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [5]:
 </pre></div>
 </div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="k">def</span> <span class="nf">logp_lda_doc</span><span class="p">(</span><span class="n">beta</span><span class="p">,</span> <span class="n">theta</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;Returns the log-likelihood function for given documents.</span>
 
@@ -562,12 +613,12 @@ a Python function which takes observations (a document matrix in this
 example) and returns the log-likelihood value. This function is given as
 a return value of <code class="docutils literal"><span class="pre">logp_lda_doc(beta,</span> <span class="pre">theta)</span></code>, which has been defined
 above.</p>
-<div class="nbinput nblast container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [6]:
 </pre></div>
 </div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="n">n_topics</span> <span class="o">=</span> <span class="mi">10</span>
 <span class="n">minibatch_size</span> <span class="o">=</span> <span class="mi">128</span>
 
@@ -591,12 +642,12 @@ datasets, whole training samples are splitted into mini-batches. PyMC3&#8217;s
 ADVI function accepts a Python generator which send a list of
 mini-batches to the algorithm. Here is an example to make a generator.</p>
 <p>TODO: replace the code using the new interface</p>
-<div class="nbinput nblast container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [7]:
 </pre></div>
 </div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="k">def</span> <span class="nf">create_minibatch</span><span class="p">(</span><span class="n">data</span><span class="p">):</span>
     <span class="n">rng</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">RandomState</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
 
@@ -614,12 +665,12 @@ given by generators. We need to specify those tensors by a list. The
 order of the list should be the same with the mini-batches sent from the
 generator. Note that <code class="docutils literal"><span class="pre">doc_t</span></code> has been used in the model creation as
 the observation of the random variable named <code class="docutils literal"><span class="pre">doc</span></code>.</p>
-<div class="nbinput nblast container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [8]:
 </pre></div>
 </div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="c1"># The value of doc_t will be replaced with mini-batches</span>
 <span class="n">minibatch_tensors</span> <span class="o">=</span> <span class="p">[</span><span class="n">doc_t</span><span class="p">]</span>
 </pre></div>
@@ -631,12 +682,12 @@ observed random variable and the value is a scalar representing the
 scaling factor. Since the likelihood of the documents in mini-batches
 have been already scaled in the likelihood function, we set the scaling
 factor to 1.</p>
-<div class="nbinput nblast container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [9]:
 </pre></div>
 </div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="c1"># observed_RVs = OrderedDict([(doc, n_samples_tr / minibatch_size)])</span>
 <span class="n">observed_RVs</span> <span class="o">=</span> <span class="n">OrderedDict</span><span class="p">([(</span><span class="n">doc</span><span class="p">,</span> <span class="mi">1</span><span class="p">)])</span>
 </pre></div>
@@ -659,12 +710,12 @@ automativally exponentiated (thus bounded to be positive) in
 <p>To enhance generalization ability to unseen words, a bernoulli
 corruption process is applied to the inputted documents. Unfortunately,
 I have never see any significant improvement with this.</p>
-<div class="nbinput nblast container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [10]:
 </pre></div>
 </div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="k">class</span> <span class="nc">LDAEncoder</span><span class="p">:</span>
     <span class="sd">&quot;&quot;&quot;Encode (term-frequency) document vectors to variational means and (log-transformed) stds.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
@@ -706,12 +757,12 @@ I have never see any significant improvement with this.</p>
 </div>
 <p>To feed the output of the encoder to the variational parameters of
 <span class="math">\(\theta\)</span>, we set an OrderedDict of tuples as below.</p>
-<div class="nbinput nblast container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [11]:
 </pre></div>
 </div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="n">encoder</span> <span class="o">=</span> <span class="n">LDAEncoder</span><span class="p">(</span><span class="n">n_words</span><span class="o">=</span><span class="n">n_words</span><span class="p">,</span> <span class="n">n_hidden</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span> <span class="n">n_topics</span><span class="o">=</span><span class="n">n_topics</span><span class="p">,</span> <span class="n">p_corruption</span><span class="o">=</span><span class="mf">0.0</span><span class="p">)</span>
 <span class="n">local_RVs</span> <span class="o">=</span> <span class="n">OrderedDict</span><span class="p">([(</span><span class="n">theta</span><span class="p">,</span> <span class="p">(</span><span class="n">encoder</span><span class="o">.</span><span class="n">encode</span><span class="p">(</span><span class="n">doc_t</span><span class="p">),</span> <span class="n">n_samples_tr</span> <span class="o">/</span> <span class="n">minibatch_size</span><span class="p">))])</span>
 </pre></div>
@@ -726,12 +777,12 @@ a theano expression and a scalar. The theano expression
 scaling factor for mini-batches.</p>
 <p>ADVI optimizes the parameters of the encoder. They are passed to the
 function for ADVI.</p>
-<div class="nbinput nblast container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [12]:
 </pre></div>
 </div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="n">encoder_params</span> <span class="o">=</span> <span class="n">encoder</span><span class="o">.</span><span class="n">get_params</span><span class="p">()</span>
 </pre></div>
 </div>
@@ -740,12 +791,12 @@ function for ADVI.</p>
 <div class="section" id="AEVB-with-ADVI">
 <h2>AEVB with ADVI<a class="headerlink" href="#AEVB-with-ADVI" title="Permalink to this headline">¶</a></h2>
 <p><code class="docutils literal"><span class="pre">advi_minibatch()</span></code> can be used to run AEVB with ADVI on the LDA model.</p>
-<div class="nbinput container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [13]:
 </pre></div>
 </div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="k">def</span> <span class="nf">run_advi</span><span class="p">():</span>
     <span class="k">with</span> <span class="n">model</span><span class="p">:</span>
         <span class="n">v_params</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">variational</span><span class="o">.</span><span class="n">advi_minibatch</span><span class="p">(</span>
@@ -761,38 +812,38 @@ function for ADVI.</p>
 </pre></div>
 </div>
 </div>
-<div class="nboutput container">
-<div class="container">
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
 </div>
-<div class="stderr container">
+<div class="stderr output_area docutils container">
 <div class="highlight"><pre>
 Average ELBO = -3,237,774.14: 100%|██████████| 3000/3000 [00:46&lt;00:00, 64.78it/s]
 Finished minibatch ADVI: ELBO = -3,221,686.06
 </pre></div></div>
 </div>
-<div class="nboutput container">
-<div class="container">
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
 </div>
-<div class="container">
+<div class="output_area docutils container">
 <div class="highlight"><pre>
 CPU times: user 1min 12s, sys: 3.13 s, total: 1min 15s
 Wall time: 2min 26s
 </pre></div></div>
 </div>
-<div class="nboutput container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="nboutput docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>Out[13]:
 </pre></div>
 </div>
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="output_area highlight-none"><div class="highlight"><pre>
 <span></span>[&lt;matplotlib.lines.Line2D at 0x125ed7978&gt;]
 </pre></div>
 </div>
 </div>
-<div class="nboutput nblast container">
-<div class="container">
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
 </div>
-<div class="container">
+<div class="output_area docutils container">
 <img alt="../_images/notebooks_lda-advi-aevb_26_3.png" src="../_images/notebooks_lda-advi-aevb_26_3.png" />
 </div>
 </div>
@@ -807,12 +858,12 @@ variational posterior. To do this, we use function <code class="docutils literal
 we use this function to obtain posterior mean of the word-topic
 distribution <span class="math">\(\beta\)</span> and show top-10 words frequently appeared in
 the 10 topics.</p>
-<div class="nbinput container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [14]:
 </pre></div>
 </div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="k">def</span> <span class="nf">print_top_words</span><span class="p">(</span><span class="n">beta</span><span class="p">,</span> <span class="n">feature_names</span><span class="p">,</span> <span class="n">n_top_words</span><span class="o">=</span><span class="mi">10</span><span class="p">):</span>
     <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">beta</span><span class="p">)):</span>
         <span class="k">print</span><span class="p">((</span><span class="s2">&quot;Topic #</span><span class="si">%d</span><span class="s2">: &quot;</span> <span class="o">%</span> <span class="n">i</span><span class="p">)</span> <span class="o">+</span> <span class="s2">&quot; &quot;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="n">feature_names</span><span class="p">[</span><span class="n">j</span><span class="p">]</span>
@@ -828,18 +879,18 @@ the 10 topics.</p>
 </pre></div>
 </div>
 </div>
-<div class="nboutput container">
-<div class="container">
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
 </div>
-<div class="stderr container">
+<div class="stderr output_area docutils container">
 <div class="highlight"><pre>
 100%|██████████| 100/100 [00:00&lt;00:00, 483.07it/s]
 </pre></div></div>
 </div>
-<div class="nboutput container">
-<div class="container">
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
 </div>
-<div class="container">
+<div class="output_area docutils container">
 <div class="highlight"><pre>
 Topic #0: does question point believe true case think read evidence way
 Topic #1: key government use law public state used encryption president people
@@ -853,10 +904,10 @@ Topic #8: god people jesus life world bible israel man christian church
 Topic #9: good like ve just time better little car problem long
 </pre></div></div>
 </div>
-<div class="nboutput nblast container">
-<div class="container">
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
 </div>
-<div class="stderr container">
+<div class="stderr output_area docutils container">
 <div class="highlight"><pre>
 
 </pre></div></div>
@@ -865,12 +916,12 @@ Topic #9: good like ve just time better little car problem long
 implementation on scikit-learn, which is based on an online stochastic
 variational inference (Hoffman et al., 2013). We can see that estimated
 words in the topics are qualitatively similar.</p>
-<div class="nbinput container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [15]:
 </pre></div>
 </div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="kn">from</span> <span class="nn">sklearn.decomposition</span> <span class="kn">import</span> <span class="n">LatentDirichletAllocation</span>
 
 <span class="n">lda</span> <span class="o">=</span> <span class="n">LatentDirichletAllocation</span><span class="p">(</span><span class="n">n_topics</span><span class="o">=</span><span class="n">n_topics</span><span class="p">,</span> <span class="n">max_iter</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span>
@@ -883,10 +934,10 @@ words in the topics are qualitatively similar.</p>
 </pre></div>
 </div>
 </div>
-<div class="nboutput nblast container">
-<div class="container">
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
 </div>
-<div class="container">
+<div class="output_area docutils container">
 <div class="highlight"><pre>
 CPU times: user 13 s, sys: 102 ms, total: 13.1 s
 Wall time: 13.1 s
@@ -911,12 +962,12 @@ the model fitness. The log-likelihood function for tokens of the
 held-out word can be calculated with posterior means of <span class="math">\(\theta\)</span>
 and <span class="math">\(\beta\)</span>. The validity of this is explained in (Hoffman et al.
 2013).</p>
-<div class="nbinput nblast container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [16]:
 </pre></div>
 </div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="k">def</span> <span class="nf">calc_pp</span><span class="p">(</span><span class="n">ws</span><span class="p">,</span> <span class="n">thetas</span><span class="p">,</span> <span class="n">beta</span><span class="p">,</span> <span class="n">wix</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Parameters</span>
@@ -987,12 +1038,12 @@ and <span class="math">\(\beta\)</span>. The validity of this is explained in (H
 probabilistic model because the number of documents to be tested
 changes. Since variational parameters have already been obtained, we can
 reuse them for sampling from the approximate posterior distribution.</p>
-<div class="nbinput nblast container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [17]:
 </pre></div>
 </div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="n">n_docs_te</span> <span class="o">=</span> <span class="n">docs_te</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
 <span class="n">doc_t</span> <span class="o">=</span> <span class="n">shared</span><span class="p">(</span><span class="n">docs_te</span><span class="o">.</span><span class="n">toarray</span><span class="p">(),</span> <span class="n">name</span><span class="o">=</span><span class="s1">&#39;doc_t&#39;</span><span class="p">)</span>
 
@@ -1012,12 +1063,12 @@ reuse them for sampling from the approximate posterior distribution.</p>
 <p><code class="docutils literal"><span class="pre">transform()</span></code> function is defined with <code class="docutils literal"><span class="pre">sample_vp()</span></code> function. This
 function is an argument to the function for calculating log predictive
 probabilities.</p>
-<div class="nbinput nblast container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [18]:
 </pre></div>
 </div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="k">def</span> <span class="nf">transform_pymc3</span><span class="p">(</span><span class="n">docs</span><span class="p">):</span>
     <span class="k">with</span> <span class="n">model</span><span class="p">:</span>
         <span class="n">doc_t</span><span class="o">.</span><span class="n">set_value</span><span class="p">(</span><span class="n">docs</span><span class="p">)</span>
@@ -1028,21 +1079,21 @@ probabilities.</p>
 </div>
 </div>
 <p>The mean of the log predictive probability is about -7.00.</p>
-<div class="nbinput container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [19]:
 </pre></div>
 </div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="o">%</span><span class="k">time</span> result_pymc3 = eval_lda(transform_pymc3, beta_pymc3, docs_te.toarray(), np.arange(100))
 <span class="k">print</span><span class="p">(</span><span class="s1">&#39;Predictive log prob (pm3) = {}&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">result_pymc3</span><span class="p">[</span><span class="s1">&#39;lp&#39;</span><span class="p">]))</span>
 </pre></div>
 </div>
 </div>
-<div class="nboutput container">
-<div class="container">
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
 </div>
-<div class="stderr container">
+<div class="stderr output_area docutils container">
 <div class="highlight"><pre>
 100%|██████████| 100/100 [00:01&lt;00:00, 64.72it/s]
 100%|██████████| 100/100 [2:31:10&lt;00:00, 90.71s/it]
@@ -1146,20 +1197,20 @@ probabilities.</p>
 100%|██████████| 100/100 [00:01&lt;00:00, 52.75it/s]
 </pre></div></div>
 </div>
-<div class="nboutput container">
-<div class="container">
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
 </div>
-<div class="container">
+<div class="output_area docutils container">
 <div class="highlight"><pre>
 CPU times: user 5min 46s, sys: 38.9 s, total: 6min 25s
 Wall time: 2h 36min 36s
 Predictive log prob (pm3) = -7.165695592003698
 </pre></div></div>
 </div>
-<div class="nboutput nblast container">
-<div class="container">
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
 </div>
-<div class="stderr container">
+<div class="stderr output_area docutils container">
 <div class="highlight"><pre>
 
 </pre></div></div>
@@ -1170,12 +1221,12 @@ though it shows similar words in the estimated topics. It may because
 that the mean-field approximation to distribution on the simplex (topic
 and/or word distributions) is less accurate. See
 <a class="reference external" href="https://gist.github.com/taku-y/f724392bc0ad633deac45ffa135414d3">https://gist.github.com/taku-y/f724392bc0ad633deac45ffa135414d3</a>.</p>
-<div class="nbinput container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [20]:
 </pre></div>
 </div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="k">def</span> <span class="nf">transform_sklearn</span><span class="p">(</span><span class="n">docs</span><span class="p">):</span>
     <span class="n">thetas</span> <span class="o">=</span> <span class="n">lda</span><span class="o">.</span><span class="n">transform</span><span class="p">(</span><span class="n">docs</span><span class="p">)</span>
     <span class="k">return</span> <span class="n">thetas</span> <span class="o">/</span> <span class="n">thetas</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)[:,</span> <span class="n">np</span><span class="o">.</span><span class="n">newaxis</span><span class="p">]</span>
@@ -1185,10 +1236,10 @@ and/or word distributions) is less accurate. See
 </pre></div>
 </div>
 </div>
-<div class="nboutput nblast container">
-<div class="container">
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
 </div>
-<div class="container">
+<div class="output_area docutils container">
 <div class="highlight"><pre>
 CPU times: user 37 s, sys: 163 ms, total: 37.2 s
 Wall time: 37.4 s
@@ -1240,15 +1291,18 @@ Conference on Machine Learning (pp. 1218-1226).</li>
 
 
            </div>
+           <div class="articleComments">
+            
+           </div>
           </div>
           <footer>
   
     <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
       
-        <a href="bayesian_neural_network_advi.html" class="btn btn-neutral float-right" title="Variational Inference: Bayesian Neural Networks" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
+        <a href="bayesian_neural_network_advi.html" class="btn btn-neutral float-right" title="Variational Inference: Bayesian Neural Networks" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
       
       
-        <a href="GLM-hierarchical-advi-minibatch.html" class="btn btn-neutral" title="GLM: Mini-batch ADVI on hierarchical regression model" accesskey="p"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+        <a href="GLM-hierarchical-advi-minibatch.html" class="btn btn-neutral" title="GLM: Mini-batch ADVI on hierarchical regression model" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
       
     </div>
   
@@ -1282,7 +1336,8 @@ Conference on Machine Learning (pp. 1218-1226).</li>
             VERSION:'3.0',
             COLLAPSE_INDEX:false,
             FILE_SUFFIX:'.html',
-            HAS_SOURCE:  true
+            HAS_SOURCE:  true,
+            SOURCELINK_SUFFIX: '.txt'
         };
     </script>
       <script type="text/javascript" src="../_static/jquery.js"></script>

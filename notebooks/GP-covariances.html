@@ -13,6 +13,8 @@
 
   
   
+  
+  
 
   
 
@@ -45,6 +47,7 @@
 
 <body class="wy-body-for-nav" role="document">
 
+   
   <div class="wy-grid-for-nav">
 
     
@@ -85,13 +88,16 @@
           
             
             
-                <ul class="current">
+              
+            
+            
+              <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="../getting_started.html">Getting started</a></li>
 <li class="toctree-l1 current"><a class="reference internal" href="../examples.html">Examples</a><ul class="current">
 <li class="toctree-l2"><a class="reference internal" href="../examples.html#howto">Howto</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../examples.html#applied">Applied</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../examples.html#glm">GLM</a></li>
-<li class="toctree-l2 current"><a class="reference internal" href="../examples.html#gp">GP</a><ul class="current">
+<li class="toctree-l2 current"><a class="reference internal" href="../examples.html#gaussian-processes">Gaussian Processes</a><ul class="current">
 <li class="toctree-l3"><a class="reference internal" href="GP-introduction.html">Gaussian Process Regression</a></li>
 <li class="toctree-l3 current"><a class="current reference internal" href="#">Kernels / Covariance functions</a><ul>
 <li class="toctree-l4"><a class="reference internal" href="#Exponentiated-Quadratic">Exponentiated Quadratic</a></li>
@@ -117,7 +123,7 @@
 </ul>
 </li>
 <li class="toctree-l2"><a class="reference internal" href="../examples.html#mixture-models">Mixture Models</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../examples.html#advi">ADVI</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../examples.html#variational-inference">Variational Inference</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="../api.html">API Reference</a></li>
@@ -133,8 +139,10 @@
 
       
       <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
-        <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
-        <a href="../index.html">PyMC3</a>
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">PyMC3</a>
+        
       </nav>
 
 
@@ -143,25 +151,42 @@
         <div class="rst-content">
           
 
- 
+
+
+
+
+
+
+
+
+
+
+
 
 
 
 <div role="navigation" aria-label="breadcrumbs navigation">
+
   <ul class="wy-breadcrumbs">
-    <li><a href="../index.html">Docs</a> &raquo;</li>
-      
+    
+      <li><a href="../index.html">Docs</a> &raquo;</li>
+        
           <li><a href="../examples.html">Examples</a> &raquo;</li>
-      
-    <li>Kernels / Covariance functions</li>
+        
+      <li>Kernels / Covariance functions</li>
+    
+    
       <li class="wy-breadcrumbs-aside">
         
-          
+            
             <a href="../_sources/notebooks/GP-covariances.ipynb.txt" rel="nofollow"> View page source</a>
           
         
       </li>
+    
   </ul>
+
+  
   <hr/>
 </div>
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
@@ -173,13 +198,15 @@
 
 /* remove conflicting styling from Sphinx themes */
 div.nbinput,
-div.nbinput > div,
-div.nbinput div[class^=highlight],
-div.nbinput div[class^=highlight] pre,
+div.nbinput div.prompt,
+div.nbinput div.input_area,
+div.nbinput div[class*=highlight],
+div.nbinput div[class*=highlight] pre,
 div.nboutput,
-div.nboutput > div,
-div.nboutput div[class^=highlight],
-div.nboutput div[class^=highlight] pre {
+div.nbinput div.prompt,
+div.nbinput div.output_area,
+div.nboutput div[class*=highlight],
+div.nboutput div[class*=highlight] pre {
     background: none;
     border: none;
     padding: 0 0;
@@ -188,7 +215,7 @@ div.nboutput div[class^=highlight] pre {
 }
 
 /* avoid gaps between output lines */
-div.nboutput div[class^=highlight] pre {
+div.nboutput div[class*=highlight] pre {
     line-height: normal;
 }
 
@@ -199,6 +226,13 @@ div.nboutput {
     display: flex;
     align-items: flex-start;
     margin: 0;
+    width: 100%;
+}
+@media (max-width: 540px) {
+    div.nbinput,
+    div.nboutput {
+        flex-direction: column;
+    }
 }
 
 /* input container */
@@ -212,38 +246,58 @@ div.nblast {
 }
 
 /* input prompt */
-div.nbinput > :first-child pre {
+div.nbinput div.prompt pre {
     color: #303F9F;
 }
 
 /* output prompt */
-div.nboutput > :first-child pre {
+div.nboutput div.prompt pre {
     color: #D84315;
 }
 
 /* all prompts */
-div.nbinput > :first-child[class^=highlight],
-div.nboutput > :first-child[class^=highlight],
-div.nboutput > :first-child {
+div.nbinput div.prompt,
+div.nboutput div.prompt {
     min-width: 8ex;
     padding-top: 0.4em;
     padding-right: 0.4em;
     text-align: right;
     flex: 0;
 }
+@media (max-width: 540px) {
+    div.nbinput div.prompt,
+    div.nboutput div.prompt {
+        text-align: left;
+        padding: 0.4em;
+    }
+    div.nboutput div.prompt.empty {
+        padding: 0;
+    }
+}
+
+/* disable scrollbars on prompts */
+div.nbinput div.prompt pre,
+div.nboutput div.prompt pre {
+    overflow: hidden;
+}
 
 /* input/output area */
-div.nbinput > :nth-child(2)[class^=highlight],
-div.nboutput > :nth-child(2),
-div.nboutput > :nth-child(2)[class^=highlight] {
+div.nbinput div.input_area,
+div.nboutput div.output_area {
     padding: 0.4em;
     -webkit-flex: 1;
     flex: 1;
     overflow: auto;
 }
+@media (max-width: 540px) {
+    div.nbinput div.input_area,
+    div.nboutput div.output_area {
+        width: 100%;
+    }
+}
 
 /* input area */
-div.nbinput > :nth-child(2)[class^=highlight] {
+div.nbinput div.input_area {
     border: 1px solid #cfcfcf;
     border-radius: 2px;
     background: #f7f7f7;
@@ -260,7 +314,7 @@ div.nboutput div.math p {
 }
 
 /* standard error */
-div.nboutput  > :nth-child(2).stderr {
+div.nboutput div.output_area.stderr {
     background: #fdd;
 }
 
@@ -341,12 +395,12 @@ be familiar to users of <a class="reference external" href="https://github.com/S
 simplified. All covariance function parameters can be assigned prior
 distributions or hardcoded. MCMC methods or optimization methods can be
 used for inference.</p>
-<div class="nbinput nblast container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [1]:
 </pre></div>
 </div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="kn">as</span> <span class="nn">plt</span>
 <span class="kn">import</span> <span class="nn">matplotlib.cm</span> <span class="kn">as</span> <span class="nn">cmap</span>
 <span class="o">%</span><span class="k">matplotlib</span> inline
@@ -359,12 +413,12 @@ used for inference.</p>
 </pre></div>
 </div>
 </div>
-<div class="nbinput nblast container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [2]:
 </pre></div>
 </div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="n">X</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">200</span><span class="p">)[:,</span><span class="bp">None</span><span class="p">]</span>
 
 <span class="c1"># function to display covariance matrices</span>
@@ -406,12 +460,12 @@ used for inference.</p>
 <h2>Exponentiated Quadratic<a class="headerlink" href="#Exponentiated-Quadratic" title="Permalink to this headline">¶</a></h2>
 <p>The lengthscale <span class="math">\(l\)</span>, overall scaling <span class="math">\(\tau\)</span>, and constant
 bias term <span class="math">\(b\)</span> can be scalars or PyMC3 random variables.</p>
-<div class="nbinput container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [3]:
 </pre></div>
 </div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="k">with</span> <span class="n">pm</span><span class="o">.</span><span class="n">Model</span><span class="p">()</span> <span class="k">as</span> <span class="n">model</span><span class="p">:</span>
     <span class="n">l</span> <span class="o">=</span> <span class="mf">0.2</span>
     <span class="n">tau</span> <span class="o">=</span> <span class="mf">2.0</span>
@@ -423,17 +477,17 @@ bias term <span class="math">\(b\)</span> can be scalars or PyMC3 random variabl
 </pre></div>
 </div>
 </div>
-<div class="nboutput container">
-<div class="container">
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
 </div>
-<div class="container">
+<div class="output_area docutils container">
 <img alt="../_images/notebooks_GP-covariances_4_0.png" src="../_images/notebooks_GP-covariances_4_0.png" />
 </div>
 </div>
-<div class="nboutput nblast container">
-<div class="container">
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
 </div>
-<div class="container">
+<div class="output_area docutils container">
 <img alt="../_images/notebooks_GP-covariances_4_1.png" src="../_images/notebooks_GP-covariances_4_1.png" />
 </div>
 </div>
@@ -447,12 +501,12 @@ bias term <span class="math">\(b\)</span> can be scalars or PyMC3 random variabl
 the <code class="docutils literal"><span class="pre">lengthscales</span></code> parameter is an array of length 2. Lists of PyMC3
 random variables can be used for automatic relevance determination
 (ARD).</p>
-<div class="nbinput container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [5]:
 </pre></div>
 </div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="n">x1</span><span class="p">,</span> <span class="n">x2</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">meshgrid</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">10</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">4</span><span class="p">))</span>
 <span class="n">X2</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">((</span><span class="n">x1</span><span class="o">.</span><span class="n">reshape</span><span class="p">((</span><span class="mi">30</span><span class="p">,</span><span class="mi">1</span><span class="p">)),</span> <span class="n">x2</span><span class="o">.</span><span class="n">reshape</span><span class="p">((</span><span class="mi">30</span><span class="p">,</span><span class="mi">1</span><span class="p">))),</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
 
@@ -464,22 +518,22 @@ random variables can be used for automatic relevance determination
 </pre></div>
 </div>
 </div>
-<div class="nboutput nblast container">
-<div class="container">
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
 </div>
-<div class="container">
+<div class="output_area docutils container">
 <img alt="../_images/notebooks_GP-covariances_6_0.png" src="../_images/notebooks_GP-covariances_6_0.png" />
 </div>
 </div>
 </div>
 <div class="section" id="One-dimension-active">
 <h2>One dimension active<a class="headerlink" href="#One-dimension-active" title="Permalink to this headline">¶</a></h2>
-<div class="nbinput container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [6]:
 </pre></div>
 </div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="k">with</span> <span class="n">pm</span><span class="o">.</span><span class="n">Model</span><span class="p">()</span> <span class="k">as</span> <span class="n">model</span><span class="p">:</span>
     <span class="n">l</span> <span class="o">=</span> <span class="mf">0.2</span>
     <span class="n">cov</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">gp</span><span class="o">.</span><span class="n">cov</span><span class="o">.</span><span class="n">ExpQuad</span><span class="p">(</span><span class="n">input_dim</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">lengthscales</span><span class="o">=</span><span class="n">l</span><span class="p">,</span>
@@ -489,22 +543,22 @@ random variables can be used for automatic relevance determination
 </pre></div>
 </div>
 </div>
-<div class="nboutput nblast container">
-<div class="container">
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
 </div>
-<div class="container">
+<div class="output_area docutils container">
 <img alt="../_images/notebooks_GP-covariances_8_0.png" src="../_images/notebooks_GP-covariances_8_0.png" />
 </div>
 </div>
 </div>
 <div class="section" id="Product-of-two-covariances,-active-over-each-dimension">
 <h2>Product of two covariances, active over each dimension<a class="headerlink" href="#Product-of-two-covariances,-active-over-each-dimension" title="Permalink to this headline">¶</a></h2>
-<div class="nbinput container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [7]:
 </pre></div>
 </div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="k">with</span> <span class="n">pm</span><span class="o">.</span><span class="n">Model</span><span class="p">()</span> <span class="k">as</span> <span class="n">model</span><span class="p">:</span>
     <span class="n">l1</span> <span class="o">=</span> <span class="mf">0.2</span>
     <span class="n">l2</span> <span class="o">=</span> <span class="mf">1.0</span>
@@ -516,10 +570,10 @@ random variables can be used for automatic relevance determination
 </pre></div>
 </div>
 </div>
-<div class="nboutput nblast container">
-<div class="container">
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
 </div>
-<div class="container">
+<div class="output_area docutils container">
 <img alt="../_images/notebooks_GP-covariances_10_0.png" src="../_images/notebooks_GP-covariances_10_0.png" />
 </div>
 </div>
@@ -529,12 +583,12 @@ random variables can be used for automatic relevance determination
 <p>In our design, there is no need for a white noise kernel. This case can
 be handled with Theano. The following is a covariance function that is
 5% white noise.</p>
-<div class="nbinput container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [8]:
 </pre></div>
 </div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="k">with</span> <span class="n">pm</span><span class="o">.</span><span class="n">Model</span><span class="p">()</span> <span class="k">as</span> <span class="n">model</span><span class="p">:</span>
     <span class="n">l</span> <span class="o">=</span> <span class="mf">0.2</span>
     <span class="n">sigma2</span> <span class="o">=</span> <span class="mf">0.05</span>
@@ -547,29 +601,29 @@ be handled with Theano. The following is a covariance function that is
 </pre></div>
 </div>
 </div>
-<div class="nboutput container">
-<div class="container">
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
 </div>
-<div class="container">
+<div class="output_area docutils container">
 <img alt="../_images/notebooks_GP-covariances_12_0.png" src="../_images/notebooks_GP-covariances_12_0.png" />
 </div>
 </div>
-<div class="nboutput nblast container">
-<div class="container">
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
 </div>
-<div class="container">
+<div class="output_area docutils container">
 <img alt="../_images/notebooks_GP-covariances_12_1.png" src="../_images/notebooks_GP-covariances_12_1.png" />
 </div>
 </div>
 </div>
 <div class="section" id="Rational-Quadratic">
 <h2>Rational Quadratic<a class="headerlink" href="#Rational-Quadratic" title="Permalink to this headline">¶</a></h2>
-<div class="nbinput container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [9]:
 </pre></div>
 </div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="k">with</span> <span class="n">pm</span><span class="o">.</span><span class="n">Model</span><span class="p">()</span> <span class="k">as</span> <span class="n">model</span><span class="p">:</span>
     <span class="n">alpha</span> <span class="o">=</span> <span class="mf">0.1</span>
     <span class="n">l</span> <span class="o">=</span> <span class="mf">0.2</span>
@@ -582,29 +636,29 @@ be handled with Theano. The following is a covariance function that is
 </pre></div>
 </div>
 </div>
-<div class="nboutput container">
-<div class="container">
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
 </div>
-<div class="container">
+<div class="output_area docutils container">
 <img alt="../_images/notebooks_GP-covariances_14_0.png" src="../_images/notebooks_GP-covariances_14_0.png" />
 </div>
 </div>
-<div class="nboutput nblast container">
-<div class="container">
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
 </div>
-<div class="container">
+<div class="output_area docutils container">
 <img alt="../_images/notebooks_GP-covariances_14_1.png" src="../_images/notebooks_GP-covariances_14_1.png" />
 </div>
 </div>
 </div>
 <div class="section" id="Exponential">
 <h2>Exponential<a class="headerlink" href="#Exponential" title="Permalink to this headline">¶</a></h2>
-<div class="nbinput container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [10]:
 </pre></div>
 </div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="k">with</span> <span class="n">pm</span><span class="o">.</span><span class="n">Model</span><span class="p">()</span> <span class="k">as</span> <span class="n">model</span><span class="p">:</span>
     <span class="n">l</span> <span class="o">=</span> <span class="mf">0.2</span>
     <span class="n">tau</span> <span class="o">=</span> <span class="mf">2.0</span>
@@ -616,29 +670,29 @@ be handled with Theano. The following is a covariance function that is
 </pre></div>
 </div>
 </div>
-<div class="nboutput container">
-<div class="container">
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
 </div>
-<div class="container">
+<div class="output_area docutils container">
 <img alt="../_images/notebooks_GP-covariances_16_0.png" src="../_images/notebooks_GP-covariances_16_0.png" />
 </div>
 </div>
-<div class="nboutput nblast container">
-<div class="container">
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
 </div>
-<div class="container">
+<div class="output_area docutils container">
 <img alt="../_images/notebooks_GP-covariances_16_1.png" src="../_images/notebooks_GP-covariances_16_1.png" />
 </div>
 </div>
 </div>
 <div class="section" id="Matern-5/2">
 <h2>Matern 5/2<a class="headerlink" href="#Matern-5/2" title="Permalink to this headline">¶</a></h2>
-<div class="nbinput container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [11]:
 </pre></div>
 </div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="k">with</span> <span class="n">pm</span><span class="o">.</span><span class="n">Model</span><span class="p">()</span> <span class="k">as</span> <span class="n">model</span><span class="p">:</span>
     <span class="n">l</span> <span class="o">=</span> <span class="mf">0.2</span>
     <span class="n">tau</span> <span class="o">=</span> <span class="mf">2.0</span>
@@ -650,29 +704,29 @@ be handled with Theano. The following is a covariance function that is
 </pre></div>
 </div>
 </div>
-<div class="nboutput container">
-<div class="container">
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
 </div>
-<div class="container">
+<div class="output_area docutils container">
 <img alt="../_images/notebooks_GP-covariances_18_0.png" src="../_images/notebooks_GP-covariances_18_0.png" />
 </div>
 </div>
-<div class="nboutput nblast container">
-<div class="container">
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
 </div>
-<div class="container">
+<div class="output_area docutils container">
 <img alt="../_images/notebooks_GP-covariances_18_1.png" src="../_images/notebooks_GP-covariances_18_1.png" />
 </div>
 </div>
 </div>
 <div class="section" id="Matern-3/2">
 <h2>Matern 3/2<a class="headerlink" href="#Matern-3/2" title="Permalink to this headline">¶</a></h2>
-<div class="nbinput container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [12]:
 </pre></div>
 </div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="k">with</span> <span class="n">pm</span><span class="o">.</span><span class="n">Model</span><span class="p">()</span> <span class="k">as</span> <span class="n">model</span><span class="p">:</span>
     <span class="n">l</span> <span class="o">=</span> <span class="mf">0.2</span>
     <span class="n">tau</span> <span class="o">=</span> <span class="mf">2.0</span>
@@ -684,29 +738,29 @@ be handled with Theano. The following is a covariance function that is
 </pre></div>
 </div>
 </div>
-<div class="nboutput container">
-<div class="container">
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
 </div>
-<div class="container">
+<div class="output_area docutils container">
 <img alt="../_images/notebooks_GP-covariances_20_0.png" src="../_images/notebooks_GP-covariances_20_0.png" />
 </div>
 </div>
-<div class="nboutput nblast container">
-<div class="container">
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
 </div>
-<div class="container">
+<div class="output_area docutils container">
 <img alt="../_images/notebooks_GP-covariances_20_1.png" src="../_images/notebooks_GP-covariances_20_1.png" />
 </div>
 </div>
 </div>
 <div class="section" id="Cosine">
 <h2>Cosine<a class="headerlink" href="#Cosine" title="Permalink to this headline">¶</a></h2>
-<div class="nbinput container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [13]:
 </pre></div>
 </div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="k">with</span> <span class="n">pm</span><span class="o">.</span><span class="n">Model</span><span class="p">()</span> <span class="k">as</span> <span class="n">model</span><span class="p">:</span>
     <span class="n">l</span> <span class="o">=</span> <span class="mf">0.2</span>
     <span class="n">tau</span> <span class="o">=</span> <span class="mf">2.0</span>
@@ -718,29 +772,29 @@ be handled with Theano. The following is a covariance function that is
 </pre></div>
 </div>
 </div>
-<div class="nboutput container">
-<div class="container">
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
 </div>
-<div class="container">
+<div class="output_area docutils container">
 <img alt="../_images/notebooks_GP-covariances_22_0.png" src="../_images/notebooks_GP-covariances_22_0.png" />
 </div>
 </div>
-<div class="nboutput nblast container">
-<div class="container">
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
 </div>
-<div class="container">
+<div class="output_area docutils container">
 <img alt="../_images/notebooks_GP-covariances_22_1.png" src="../_images/notebooks_GP-covariances_22_1.png" />
 </div>
 </div>
 </div>
 <div class="section" id="Linear">
 <h2>Linear<a class="headerlink" href="#Linear" title="Permalink to this headline">¶</a></h2>
-<div class="nbinput container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [14]:
 </pre></div>
 </div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="k">with</span> <span class="n">pm</span><span class="o">.</span><span class="n">Model</span><span class="p">()</span> <span class="k">as</span> <span class="n">model</span><span class="p">:</span>
     <span class="n">c</span> <span class="o">=</span> <span class="mf">1.0</span>
     <span class="n">tau</span> <span class="o">=</span> <span class="mf">2.0</span>
@@ -752,29 +806,29 @@ be handled with Theano. The following is a covariance function that is
 </pre></div>
 </div>
 </div>
-<div class="nboutput container">
-<div class="container">
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
 </div>
-<div class="container">
+<div class="output_area docutils container">
 <img alt="../_images/notebooks_GP-covariances_24_0.png" src="../_images/notebooks_GP-covariances_24_0.png" />
 </div>
 </div>
-<div class="nboutput nblast container">
-<div class="container">
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
 </div>
-<div class="container">
+<div class="output_area docutils container">
 <img alt="../_images/notebooks_GP-covariances_24_1.png" src="../_images/notebooks_GP-covariances_24_1.png" />
 </div>
 </div>
 </div>
 <div class="section" id="Polynomial">
 <h2>Polynomial<a class="headerlink" href="#Polynomial" title="Permalink to this headline">¶</a></h2>
-<div class="nbinput container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [15]:
 </pre></div>
 </div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="k">with</span> <span class="n">pm</span><span class="o">.</span><span class="n">Model</span><span class="p">()</span> <span class="k">as</span> <span class="n">model</span><span class="p">:</span>
     <span class="n">c</span> <span class="o">=</span> <span class="mf">1.0</span>
     <span class="n">d</span> <span class="o">=</span> <span class="mi">3</span>
@@ -788,17 +842,17 @@ be handled with Theano. The following is a covariance function that is
 </pre></div>
 </div>
 </div>
-<div class="nboutput container">
-<div class="container">
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
 </div>
-<div class="container">
+<div class="output_area docutils container">
 <img alt="../_images/notebooks_GP-covariances_26_0.png" src="../_images/notebooks_GP-covariances_26_0.png" />
 </div>
 </div>
-<div class="nboutput nblast container">
-<div class="container">
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
 </div>
-<div class="container">
+<div class="output_area docutils container">
 <img alt="../_images/notebooks_GP-covariances_26_1.png" src="../_images/notebooks_GP-covariances_26_1.png" />
 </div>
 </div>
@@ -807,12 +861,12 @@ be handled with Theano. The following is a covariance function that is
 <h2>Multiplication with a precomputed covariance matrix<a class="headerlink" href="#Multiplication-with-a-precomputed-covariance-matrix" title="Permalink to this headline">¶</a></h2>
 <p>A covariance function <code class="docutils literal"><span class="pre">cov</span></code> can be multiplied with numpy matrix,
 <code class="docutils literal"><span class="pre">K_cos</span></code>.</p>
-<div class="nbinput container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [16]:
 </pre></div>
 </div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="k">with</span> <span class="n">pm</span><span class="o">.</span><span class="n">Model</span><span class="p">()</span> <span class="k">as</span> <span class="n">model</span><span class="p">:</span>
     <span class="n">l</span> <span class="o">=</span> <span class="mf">0.2</span>
     <span class="n">cov_cos</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">gp</span><span class="o">.</span><span class="n">cov</span><span class="o">.</span><span class="n">Cosine</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">l</span><span class="p">)</span>
@@ -827,17 +881,17 @@ be handled with Theano. The following is a covariance function that is
 </pre></div>
 </div>
 </div>
-<div class="nboutput container">
-<div class="container">
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
 </div>
-<div class="container">
+<div class="output_area docutils container">
 <img alt="../_images/notebooks_GP-covariances_28_0.png" src="../_images/notebooks_GP-covariances_28_0.png" />
 </div>
 </div>
-<div class="nboutput nblast container">
-<div class="container">
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
 </div>
-<div class="container">
+<div class="output_area docutils container">
 <img alt="../_images/notebooks_GP-covariances_28_1.png" src="../_images/notebooks_GP-covariances_28_1.png" />
 </div>
 </div>
@@ -849,12 +903,12 @@ be handled with Theano. The following is a covariance function that is
 <p>The first argument of the warping function must be the input <code class="docutils literal"><span class="pre">X</span></code>. The
 remaining arguments can be anything else, including (thanks to Theano&#8217;s
 symbolic differentiation) random variables.</p>
-<div class="nbinput container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [4]:
 </pre></div>
 </div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="k">def</span> <span class="nf">warp_func</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="p">,</span> <span class="n">c</span><span class="p">):</span>
     <span class="k">return</span> <span class="mf">1.0</span> <span class="o">+</span> <span class="n">x</span> <span class="o">+</span> <span class="p">(</span><span class="n">a</span> <span class="o">*</span> <span class="n">tt</span><span class="o">.</span><span class="n">tanh</span><span class="p">(</span><span class="n">b</span> <span class="o">*</span> <span class="p">(</span><span class="n">x</span> <span class="o">-</span> <span class="n">c</span><span class="p">)))</span>
 
@@ -874,24 +928,24 @@ symbolic differentiation) random variables.</p>
 </pre></div>
 </div>
 </div>
-<div class="nboutput container">
-<div class="container">
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
 </div>
-<div class="container">
+<div class="output_area docutils container">
 <img alt="../_images/notebooks_GP-covariances_30_0.png" src="../_images/notebooks_GP-covariances_30_0.png" />
 </div>
 </div>
-<div class="nboutput container">
-<div class="container">
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
 </div>
-<div class="container">
+<div class="output_area docutils container">
 <img alt="../_images/notebooks_GP-covariances_30_1.png" src="../_images/notebooks_GP-covariances_30_1.png" />
 </div>
 </div>
-<div class="nboutput nblast container">
-<div class="container">
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
 </div>
-<div class="container">
+<div class="output_area docutils container">
 <img alt="../_images/notebooks_GP-covariances_30_2.png" src="../_images/notebooks_GP-covariances_30_2.png" />
 </div>
 </div>
@@ -902,12 +956,12 @@ symbolic differentiation) random variables.</p>
 function to the lengthscale. Similarly to <code class="docutils literal"><span class="pre">WarpedInput</span></code>, the
 lengthscale warping function can be specified with parameters that are
 either fixed or random variables.</p>
-<div class="nbinput container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [5]:
 </pre></div>
 </div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="k">def</span> <span class="nf">tanh_func</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">x1</span><span class="p">,</span> <span class="n">x2</span><span class="p">,</span> <span class="n">w</span><span class="p">,</span> <span class="n">x0</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    l1: Left saturation value</span>
@@ -932,24 +986,24 @@ either fixed or random variables.</p>
 </pre></div>
 </div>
 </div>
-<div class="nboutput container">
-<div class="container">
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
 </div>
-<div class="container">
+<div class="output_area docutils container">
 <img alt="../_images/notebooks_GP-covariances_32_0.png" src="../_images/notebooks_GP-covariances_32_0.png" />
 </div>
 </div>
-<div class="nboutput container">
-<div class="container">
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
 </div>
-<div class="container">
+<div class="output_area docutils container">
 <img alt="../_images/notebooks_GP-covariances_32_1.png" src="../_images/notebooks_GP-covariances_32_1.png" />
 </div>
 </div>
-<div class="nboutput nblast container">
-<div class="container">
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
 </div>
-<div class="container">
+<div class="output_area docutils container">
 <img alt="../_images/notebooks_GP-covariances_32_2.png" src="../_images/notebooks_GP-covariances_32_2.png" />
 </div>
 </div>
@@ -958,15 +1012,18 @@ either fixed or random variables.</p>
 
 
            </div>
+           <div class="articleComments">
+            
+           </div>
           </div>
           <footer>
   
     <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
       
-        <a href="GP-slice-sampling.html" class="btn btn-neutral float-right" title="Gaussian Process Regression and Classification with Elliptical Slice Sampling" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
+        <a href="GP-slice-sampling.html" class="btn btn-neutral float-right" title="Gaussian Process Regression and Classification with Elliptical Slice Sampling" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
       
       
-        <a href="GP-introduction.html" class="btn btn-neutral" title="Gaussian Process Regression" accesskey="p"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+        <a href="GP-introduction.html" class="btn btn-neutral" title="Gaussian Process Regression" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
       
     </div>
   
@@ -1000,7 +1057,8 @@ either fixed or random variables.</p>
             VERSION:'3.0',
             COLLAPSE_INDEX:false,
             FILE_SUFFIX:'.html',
-            HAS_SOURCE:  true
+            HAS_SOURCE:  true,
+            SOURCELINK_SUFFIX: '.txt'
         };
     </script>
       <script type="text/javascript" src="../_static/jquery.js"></script>

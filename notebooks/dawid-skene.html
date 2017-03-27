@@ -13,6 +13,8 @@
 
   
   
+  
+  
 
   
 
@@ -45,6 +47,7 @@
 
 <body class="wy-body-for-nav" role="document">
 
+   
   <div class="wy-grid-for-nav">
 
     
@@ -85,7 +88,10 @@
           
             
             
-                <ul class="current">
+              
+            
+            
+              <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="../getting_started.html">Getting started</a></li>
 <li class="toctree-l1 current"><a class="reference internal" href="../examples.html">Examples</a><ul class="current">
 <li class="toctree-l2"><a class="reference internal" href="../examples.html#howto">Howto</a></li>
@@ -104,9 +110,9 @@
 </ul>
 </li>
 <li class="toctree-l2"><a class="reference internal" href="../examples.html#glm">GLM</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../examples.html#gp">GP</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../examples.html#gaussian-processes">Gaussian Processes</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../examples.html#mixture-models">Mixture Models</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../examples.html#advi">ADVI</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../examples.html#variational-inference">Variational Inference</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="../api.html">API Reference</a></li>
@@ -122,8 +128,10 @@
 
       
       <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
-        <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
-        <a href="../index.html">PyMC3</a>
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">PyMC3</a>
+        
       </nav>
 
 
@@ -132,25 +140,42 @@
         <div class="rst-content">
           
 
- 
+
+
+
+
+
+
+
+
+
+
+
 
 
 
 <div role="navigation" aria-label="breadcrumbs navigation">
+
   <ul class="wy-breadcrumbs">
-    <li><a href="../index.html">Docs</a> &raquo;</li>
-      
+    
+      <li><a href="../index.html">Docs</a> &raquo;</li>
+        
           <li><a href="../examples.html">Examples</a> &raquo;</li>
-      
-    <li>The Dawid-Skene model with priors</li>
+        
+      <li>The Dawid-Skene model with priors</li>
+    
+    
       <li class="wy-breadcrumbs-aside">
         
-          
+            
             <a href="../_sources/notebooks/dawid-skene.ipynb.txt" rel="nofollow"> View page source</a>
           
         
       </li>
+    
   </ul>
+
+  
   <hr/>
 </div>
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
@@ -162,13 +187,15 @@
 
 /* remove conflicting styling from Sphinx themes */
 div.nbinput,
-div.nbinput > div,
-div.nbinput div[class^=highlight],
-div.nbinput div[class^=highlight] pre,
+div.nbinput div.prompt,
+div.nbinput div.input_area,
+div.nbinput div[class*=highlight],
+div.nbinput div[class*=highlight] pre,
 div.nboutput,
-div.nboutput > div,
-div.nboutput div[class^=highlight],
-div.nboutput div[class^=highlight] pre {
+div.nbinput div.prompt,
+div.nbinput div.output_area,
+div.nboutput div[class*=highlight],
+div.nboutput div[class*=highlight] pre {
     background: none;
     border: none;
     padding: 0 0;
@@ -177,7 +204,7 @@ div.nboutput div[class^=highlight] pre {
 }
 
 /* avoid gaps between output lines */
-div.nboutput div[class^=highlight] pre {
+div.nboutput div[class*=highlight] pre {
     line-height: normal;
 }
 
@@ -188,6 +215,13 @@ div.nboutput {
     display: flex;
     align-items: flex-start;
     margin: 0;
+    width: 100%;
+}
+@media (max-width: 540px) {
+    div.nbinput,
+    div.nboutput {
+        flex-direction: column;
+    }
 }
 
 /* input container */
@@ -201,38 +235,58 @@ div.nblast {
 }
 
 /* input prompt */
-div.nbinput > :first-child pre {
+div.nbinput div.prompt pre {
     color: #303F9F;
 }
 
 /* output prompt */
-div.nboutput > :first-child pre {
+div.nboutput div.prompt pre {
     color: #D84315;
 }
 
 /* all prompts */
-div.nbinput > :first-child[class^=highlight],
-div.nboutput > :first-child[class^=highlight],
-div.nboutput > :first-child {
+div.nbinput div.prompt,
+div.nboutput div.prompt {
     min-width: 8ex;
     padding-top: 0.4em;
     padding-right: 0.4em;
     text-align: right;
     flex: 0;
 }
+@media (max-width: 540px) {
+    div.nbinput div.prompt,
+    div.nboutput div.prompt {
+        text-align: left;
+        padding: 0.4em;
+    }
+    div.nboutput div.prompt.empty {
+        padding: 0;
+    }
+}
+
+/* disable scrollbars on prompts */
+div.nbinput div.prompt pre,
+div.nboutput div.prompt pre {
+    overflow: hidden;
+}
 
 /* input/output area */
-div.nbinput > :nth-child(2)[class^=highlight],
-div.nboutput > :nth-child(2),
-div.nboutput > :nth-child(2)[class^=highlight] {
+div.nbinput div.input_area,
+div.nboutput div.output_area {
     padding: 0.4em;
     -webkit-flex: 1;
     flex: 1;
     overflow: auto;
 }
+@media (max-width: 540px) {
+    div.nbinput div.input_area,
+    div.nboutput div.output_area {
+        width: 100%;
+    }
+}
 
 /* input area */
-div.nbinput > :nth-child(2)[class^=highlight] {
+div.nbinput div.input_area {
     border: 1px solid #cfcfcf;
     border-radius: 2px;
     background: #f7f7f7;
@@ -249,7 +303,7 @@ div.nboutput div.math p {
 }
 
 /* standard error */
-div.nboutput  > :nth-child(2).stderr {
+div.nboutput div.output_area.stderr {
     background: #fdd;
 }
 
@@ -340,12 +394,12 @@ from noisy annotator input.</p>
 <p>The primary goal is to recover the true item states. The secondary goal
 is to estimate various additional factors of potential interest. We will
 use probabilistic programming approach in attempt to solve the problem.</p>
-<div class="nbinput nblast container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [1]:
 </pre></div>
 </div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="o">%</span><span class="k">matplotlib</span> inline
 
 <span class="kn">import</span> <span class="nn">pymc3</span> <span class="kn">as</span> <span class="nn">pm</span>
@@ -367,12 +421,12 @@ item gets exactly one response for each work item. This is often not
 possible in practice. The discussed model accepts triplets of data:
 (work item, annotator, response) which relaxes the constraint to have
 all observations.</p>
-<div class="nbinput nblast container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [2]:
 </pre></div>
 </div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="n">data_file</span> <span class="o">=</span> <span class="s1">&#39;../../../pymc3/examples/data/extrahard_MC_500_5_4.npz.npy&#39;</span>
 <span class="n">truth_file</span> <span class="o">=</span> <span class="s1">&#39;../../../pymc3/examples/data/extrahard_MC_500_5_4_reference_classes.npy&#39;</span>
 
@@ -392,12 +446,12 @@ allows to access the following information: jj[n] as annotator ID,
 providing his/her vote y[n] for item ii[n].</p>
 <p>At the same time, we compute the majority vote estimate. This will serve
 both as a baseline and as initialization for our model.</p>
-<div class="nbinput nblast container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [3]:
 </pre></div>
 </div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="c1"># create data triplets</span>
 <span class="n">jj</span> <span class="o">=</span> <span class="nb">list</span><span class="p">()</span>  <span class="c1"># annotator IDs</span>
 <span class="n">ii</span> <span class="o">=</span> <span class="nb">list</span><span class="p">()</span>  <span class="c1"># item IDs</span>
@@ -427,21 +481,21 @@ is tedious. Computing accuracy gives a single performance metric but
 does not reveal where the mistakes are made (e.g. which categories tend
 to be confused) and by how much. A confusion matrix with majority vote
 estimates will serve as our baseline:</p>
-<div class="nbinput container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [4]:
 </pre></div>
 </div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="n">confMat</span> <span class="o">=</span> <span class="n">confusion_matrix</span><span class="p">(</span> <span class="n">z_true</span><span class="p">,</span> <span class="n">z_init</span> <span class="p">)</span>
 <span class="k">print</span><span class="p">(</span> <span class="s2">&quot;Majority vote estimate of true category:</span><span class="se">\n</span><span class="s2">&quot;</span> <span class="p">,</span> <span class="n">confMat</span> <span class="p">)</span>
 </pre></div>
 </div>
 </div>
-<div class="nboutput nblast container">
-<div class="container">
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
 </div>
-<div class="container">
+<div class="output_area docutils container">
 <div class="highlight"><pre>
 Majority vote estimate of true category:
  [[120   2   1   2]
@@ -467,12 +521,12 @@ where his expertise is limited (relatively small value on diagonal and
 relatively big values off-diagonal). We will initialize confusion
 matrices with uniform values with slightly dominant diagonal &#8211; our
 annotators are expected to provide meaningful labels.</p>
-<div class="nbinput nblast container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [5]:
 </pre></div>
 </div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="c1"># class prevalence (flat prior)</span>
 <span class="n">alpha</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span> <span class="n">K</span> <span class="p">)</span>
 
@@ -495,12 +549,12 @@ observation y[n] is generated according to Categorical distribution by
 worker y[n] for item ii[n], where the true label is z[ ii[n] ].</p>
 <p>The following block will build the model only but won&#8217;t do any
 inference.</p>
-<div class="nbinput nblast container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [6]:
 </pre></div>
 </div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="n">model</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Model</span><span class="p">()</span>
 
 <span class="k">with</span> <span class="n">model</span><span class="p">:</span>
@@ -521,12 +575,12 @@ variable will contain a wealth of information that will be useful to
 perfom diagnostics and get posteriors for our three hidden variables &#8211;
 class prevalence, annotator confusion matrices and true categories for
 all work items.</p>
-<div class="nbinput container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [7]:
 </pre></div>
 </div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="k">with</span> <span class="n">model</span><span class="p">:</span>
     <span class="n">step1</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Metropolis</span><span class="p">(</span> <span class="nb">vars</span><span class="o">=</span><span class="p">[</span><span class="n">pi</span><span class="p">,</span><span class="n">theta</span><span class="p">]</span> <span class="p">)</span>
     <span class="n">step2</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">CategoricalGibbsMetropolis</span><span class="p">(</span> <span class="nb">vars</span><span class="o">=</span><span class="p">[</span><span class="n">z</span><span class="p">]</span> <span class="p">)</span>
@@ -534,10 +588,10 @@ all work items.</p>
 </pre></div>
 </div>
 </div>
-<div class="nboutput nblast container">
-<div class="container">
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
 </div>
-<div class="stderr container">
+<div class="stderr output_area docutils container">
 <div class="highlight"><pre>
 100%|██████████████████████████████████████████████████████████████████████████████| 5000/5000 [16:49&lt;00:00,  5.27it/s]
 </pre></div></div>
@@ -553,43 +607,43 @@ jumps, switches or steady increase/decrease.</p>
 <p>Besides the class prevalence variable (&#8220;pi&#8221;), the categories and theta
 posteriors, the plots are of little utility. We will explore other
 variables in other form.</p>
-<div class="nbinput container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [9]:
 </pre></div>
 </div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="n">pm</span><span class="o">.</span><span class="n">traceplot</span><span class="p">(</span> <span class="n">trace</span><span class="p">,</span> <span class="n">varnames</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;pi&#39;</span><span class="p">]</span> <span class="p">)</span>
 </pre></div>
 </div>
 </div>
-<div class="nboutput container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="nboutput docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>Out[9]:
 </pre></div>
 </div>
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="output_area highlight-none"><div class="highlight"><pre>
 <span></span>array([[&lt;matplotlib.axes._subplots.AxesSubplot object at 0x00000229DE3EBCC0&gt;,
         &lt;matplotlib.axes._subplots.AxesSubplot object at 0x00000229DDE9CDA0&gt;]], dtype=object)
 </pre></div>
 </div>
 </div>
-<div class="nboutput nblast container">
-<div class="container">
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
 </div>
-<div class="container">
+<div class="output_area docutils container">
 <img alt="../_images/notebooks_dawid-skene_16_1.png" src="../_images/notebooks_dawid-skene_16_1.png" />
 </div>
 </div>
 <p>We will take 1000 last samples from posterior for random variable (&#8220;z&#8221;).
 The majority vote from 1000 samples will give us our estimate of true
 item labels.</p>
-<div class="nbinput nblast container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [10]:
 </pre></div>
 </div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="n">z</span> <span class="o">=</span> <span class="n">trace</span><span class="p">[</span><span class="s1">&#39;z&#39;</span><span class="p">][</span><span class="o">-</span><span class="mi">1000</span><span class="p">:,:]</span>
 
 <span class="n">z_hat</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span> <span class="n">I</span> <span class="p">)</span>
@@ -601,21 +655,21 @@ item labels.</p>
 <p>The confusion matrix tells us how good our estimate is with respect to
 the ground truth. Compare it to the baseline: a better estimate has less
 off diagonal values (and more on main diagonal).</p>
-<div class="nbinput container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [11]:
 </pre></div>
 </div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="n">confMat</span> <span class="o">=</span> <span class="n">confusion_matrix</span><span class="p">(</span> <span class="n">z_true</span><span class="p">,</span> <span class="n">z_hat</span> <span class="p">)</span>
 <span class="k">print</span><span class="p">(</span> <span class="s2">&quot;Dawid-Skene estimate of true category:</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">confMat</span> <span class="p">)</span>
 </pre></div>
 </div>
 </div>
-<div class="nboutput nblast container">
-<div class="container">
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
 </div>
-<div class="container">
+<div class="output_area docutils container">
 <div class="highlight"><pre>
 Dawid-Skene estimate of true category:
  [[122   1   1   1]
@@ -627,12 +681,12 @@ Dawid-Skene estimate of true category:
 <p>Finally, let&#8217;s plot the confusion matrices of annotators. Notice the
 dominant diagonal nature of matrices &#8211; measure of annotator
 performance. Compare the first annotator (j=0) and the last one (j=4).</p>
-<div class="nbinput container">
-<div class="highlight-none"><div class="highlight"><pre>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [18]:
 </pre></div>
 </div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="n">np</span><span class="o">.</span><span class="n">set_printoptions</span><span class="p">(</span><span class="n">precision</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
 <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span> <span class="n">J</span> <span class="p">):</span>
     <span class="k">print</span><span class="p">(</span> <span class="s2">&quot;Annotator j=&quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">j</span><span class="p">)</span> <span class="p">)</span>
@@ -641,10 +695,10 @@ performance. Compare the first annotator (j=0) and the last one (j=4).</p>
 </pre></div>
 </div>
 </div>
-<div class="nboutput nblast container">
-<div class="container">
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
 </div>
-<div class="container">
+<div class="output_area docutils container">
 <div class="highlight"><pre>
 Annotator j=0
 [[  8.71e-01   4.00e-02   4.69e-02   4.17e-02]
@@ -678,15 +732,18 @@ Annotator j=4
 
 
            </div>
+           <div class="articleComments">
+            
+           </div>
           </div>
           <footer>
   
     <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
       
-        <a href="GLM-linear.html" class="btn btn-neutral float-right" title="GLM: Linear regression" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
+        <a href="GLM-linear.html" class="btn btn-neutral float-right" title="GLM: Linear regression" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
       
       
-        <a href="survival_analysis.html" class="btn btn-neutral" title="Bayesian Survival Analysis" accesskey="p"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+        <a href="survival_analysis.html" class="btn btn-neutral" title="Bayesian Survival Analysis" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
       
     </div>
   
@@ -720,7 +777,8 @@ Annotator j=4
             VERSION:'3.0',
             COLLAPSE_INDEX:false,
             FILE_SUFFIX:'.html',
-            HAS_SOURCE:  true
+            HAS_SOURCE:  true,
+            SOURCELINK_SUFFIX: '.txt'
         };
     </script>
       <script type="text/javascript" src="../_static/jquery.js"></script>

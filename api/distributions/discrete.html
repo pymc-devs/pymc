@@ -1,0 +1,754 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>Discrete &mdash; PyMC3 3.0 documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  
+  
+    <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
+  
+
+  
+
+  
+        <link rel="index" title="Index"
+              href="../../genindex.html"/>
+        <link rel="search" title="Search" href="../../search.html"/>
+    <link rel="top" title="PyMC3 3.0 documentation" href="../../index.html"/>
+        <link rel="up" title="Distributions" href="../distributions.html"/>
+        <link rel="next" title="Multivariate" href="multivariate.html"/>
+        <link rel="prev" title="Continuous" href="continuous.html"/> 
+
+  
+  <script src="../../_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+   
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+          
+            <a href="../../index.html" class="icon icon-home"> PyMC3
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                3.0
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../../getting_started.html">Getting started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../examples.html">Examples</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="../../api.html">API Reference</a><ul class="current">
+<li class="toctree-l2 current"><a class="reference internal" href="../distributions.html">Distributions</a><ul class="current">
+<li class="toctree-l3"><a class="reference internal" href="continuous.html">Continuous</a></li>
+<li class="toctree-l3 current"><a class="current reference internal" href="#">Discrete</a></li>
+<li class="toctree-l3"><a class="reference internal" href="multivariate.html">Multivariate</a></li>
+<li class="toctree-l3"><a class="reference internal" href="mixture.html">Mixture</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../inference.html">Inference</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../glm.html">Generalized Linear Models</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../gp.html">Gaussian Processes</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../plots.html">Plots</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../stats.html">Stats</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../diagnostics.html">Diagnostics</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../backends.html">Backends</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../math.html">Math</a></li>
+</ul>
+</li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">PyMC3</a>
+        
+      </nav>
+
+
+      
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../../index.html">Docs</a> &raquo;</li>
+        
+          <li><a href="../../api.html">API Reference</a> &raquo;</li>
+        
+          <li><a href="../distributions.html">Distributions</a> &raquo;</li>
+        
+      <li>Discrete</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            <a href="../../_sources/api/distributions/discrete.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  
+<style>
+/* CSS overrides for sphinx_rtd_theme */
+
+/* 24px margin */
+.nbinput.nblast,
+.nboutput.nblast {
+    margin-bottom: 19px;  /* padding has already 5px */
+}
+
+/* ... except between code cells! */
+.nblast + .nbinput {
+    margin-top: -19px;
+}
+
+/* nice headers on first paragraph of info/warning boxes */
+.admonition .first {
+    margin: -12px;
+    padding: 6px 12px;
+    margin-bottom: 12px;
+    color: #fff;
+    line-height: 1;
+    display: block;
+}
+.admonition.warning .first {
+    background: #f0b37e;
+}
+.admonition.note .first {
+    background: #6ab0de;
+}
+.admonition > p:before {
+    margin-right: 4px;  /* make room for the exclamation icon */
+}
+</style>
+<div class="section" id="discrete">
+<h1>Discrete<a class="headerlink" href="#discrete" title="Permalink to this headline">¶</a></h1>
+<table border="1" class="longtable docutils">
+<colgroup>
+<col width="10%" />
+<col width="90%" />
+</colgroup>
+<tbody valign="top">
+<tr class="row-odd"><td><a class="reference internal" href="#pymc3.distributions.discrete.Binomial" title="pymc3.distributions.discrete.Binomial"><code class="xref py py-obj docutils literal"><span class="pre">Binomial</span></code></a>(n,&nbsp;p,&nbsp;\*args,&nbsp;\*\*kwargs)</td>
+<td>Binomial log-likelihood.</td>
+</tr>
+<tr class="row-even"><td><a class="reference internal" href="#pymc3.distributions.discrete.BetaBinomial" title="pymc3.distributions.discrete.BetaBinomial"><code class="xref py py-obj docutils literal"><span class="pre">BetaBinomial</span></code></a>(alpha,&nbsp;beta,&nbsp;n,&nbsp;\*args,&nbsp;\*\*kwargs)</td>
+<td>Beta-binomial log-likelihood.</td>
+</tr>
+<tr class="row-odd"><td><a class="reference internal" href="#pymc3.distributions.discrete.Bernoulli" title="pymc3.distributions.discrete.Bernoulli"><code class="xref py py-obj docutils literal"><span class="pre">Bernoulli</span></code></a>(p,&nbsp;\*args,&nbsp;\*\*kwargs)</td>
+<td>Bernoulli log-likelihood</td>
+</tr>
+<tr class="row-even"><td><a class="reference internal" href="#pymc3.distributions.discrete.Poisson" title="pymc3.distributions.discrete.Poisson"><code class="xref py py-obj docutils literal"><span class="pre">Poisson</span></code></a>(mu,&nbsp;\*args,&nbsp;\*\*kwargs)</td>
+<td>Poisson log-likelihood.</td>
+</tr>
+<tr class="row-odd"><td><a class="reference internal" href="#pymc3.distributions.discrete.NegativeBinomial" title="pymc3.distributions.discrete.NegativeBinomial"><code class="xref py py-obj docutils literal"><span class="pre">NegativeBinomial</span></code></a>(mu,&nbsp;alpha,&nbsp;\*args,&nbsp;\*\*kwargs)</td>
+<td>Negative binomial log-likelihood.</td>
+</tr>
+<tr class="row-even"><td><code class="xref py py-obj docutils literal"><span class="pre">ConstantDist</span></code>(\*args,&nbsp;\*\*kwargs)</td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><a class="reference internal" href="#pymc3.distributions.discrete.ZeroInflatedPoisson" title="pymc3.distributions.discrete.ZeroInflatedPoisson"><code class="xref py py-obj docutils literal"><span class="pre">ZeroInflatedPoisson</span></code></a>(theta,&nbsp;psi,&nbsp;\*args,&nbsp;\*\*kwargs)</td>
+<td>Zero-inflated Poisson log-likelihood.</td>
+</tr>
+<tr class="row-even"><td><a class="reference internal" href="#pymc3.distributions.discrete.DiscreteUniform" title="pymc3.distributions.discrete.DiscreteUniform"><code class="xref py py-obj docutils literal"><span class="pre">DiscreteUniform</span></code></a>(lower,&nbsp;upper,&nbsp;\*args,&nbsp;\*\*kwargs)</td>
+<td>Discrete uniform distribution.</td>
+</tr>
+<tr class="row-odd"><td><a class="reference internal" href="#pymc3.distributions.discrete.Geometric" title="pymc3.distributions.discrete.Geometric"><code class="xref py py-obj docutils literal"><span class="pre">Geometric</span></code></a>(p,&nbsp;\*args,&nbsp;\*\*kwargs)</td>
+<td>Geometric log-likelihood.</td>
+</tr>
+<tr class="row-even"><td><a class="reference internal" href="#pymc3.distributions.discrete.Categorical" title="pymc3.distributions.discrete.Categorical"><code class="xref py py-obj docutils literal"><span class="pre">Categorical</span></code></a>(p,&nbsp;\*args,&nbsp;\*\*kwargs)</td>
+<td>Categorical log-likelihood.</td>
+</tr>
+</tbody>
+</table>
+<span class="target" id="module-pymc3.distributions.discrete"></span><dl class="class">
+<dt id="pymc3.distributions.discrete.Binomial">
+<em class="property">class </em><code class="descclassname">pymc3.distributions.discrete.</code><code class="descname">Binomial</code><span class="sig-paren">(</span><em>n</em>, <em>p</em>, <em>*args</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.distributions.discrete.Binomial" title="Permalink to this definition">¶</a></dt>
+<dd><p>Binomial log-likelihood.</p>
+<p>The discrete probability distribution of the number of successes
+in a sequence of n independent yes/no experiments, each of which
+yields success with probability p.</p>
+<div class="math">
+\[f(x \mid n, p) = \binom{n}{x} p^x (1-p)^{n-x}\]</div>
+<table border="1" class="docutils">
+<colgroup>
+<col width="16%" />
+<col width="84%" />
+</colgroup>
+<tbody valign="top">
+<tr class="row-odd"><td>Support</td>
+<td><span class="math">\(x \in \{0, 1, \ldots, n\}\)</span></td>
+</tr>
+<tr class="row-even"><td>Mean</td>
+<td><span class="math">\(n p\)</span></td>
+</tr>
+<tr class="row-odd"><td>Variance</td>
+<td><span class="math">\(n p (1 - p)\)</span></td>
+</tr>
+</tbody>
+</table>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>n</strong> (<em>int</em>) &#8211; Number of Bernoulli trials (n &gt;= 0).</li>
+<li><strong>p</strong> (<em>float</em>) &#8211; Probability of success in each trial (0 &lt; p &lt; 1).</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="class">
+<dt id="pymc3.distributions.discrete.BetaBinomial">
+<em class="property">class </em><code class="descclassname">pymc3.distributions.discrete.</code><code class="descname">BetaBinomial</code><span class="sig-paren">(</span><em>alpha</em>, <em>beta</em>, <em>n</em>, <em>*args</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.distributions.discrete.BetaBinomial" title="Permalink to this definition">¶</a></dt>
+<dd><p>Beta-binomial log-likelihood.</p>
+<p>Equivalent to binomial random variable with success probability
+drawn from a beta distribution.</p>
+<div class="math">
+\[f(x \mid \alpha, \beta, n) =
+    \binom{n}{x}
+    \frac{B(x + \alpha, n - x + \beta)}{B(\alpha, \beta)}\]</div>
+<table border="1" class="docutils">
+<colgroup>
+<col width="11%" />
+<col width="89%" />
+</colgroup>
+<tbody valign="top">
+<tr class="row-odd"><td>Support</td>
+<td><span class="math">\(x \in \{0, 1, \ldots, n\}\)</span></td>
+</tr>
+<tr class="row-even"><td>Mean</td>
+<td><span class="math">\(n \dfrac{\alpha}{\alpha + \beta}\)</span></td>
+</tr>
+<tr class="row-odd"><td>Variance</td>
+<td><span class="math">\(n \dfrac{\alpha \beta}{(\alpha+\beta)^2 (\alpha+\beta+1)}\)</span></td>
+</tr>
+</tbody>
+</table>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>n</strong> (<em>int</em>) &#8211; Number of Bernoulli trials (n &gt;= 0).</li>
+<li><strong>alpha</strong> (<em>float</em>) &#8211; alpha &gt; 0.</li>
+<li><strong>beta</strong> (<em>float</em>) &#8211; beta &gt; 0.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="class">
+<dt id="pymc3.distributions.discrete.Bernoulli">
+<em class="property">class </em><code class="descclassname">pymc3.distributions.discrete.</code><code class="descname">Bernoulli</code><span class="sig-paren">(</span><em>p</em>, <em>*args</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.distributions.discrete.Bernoulli" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bernoulli log-likelihood</p>
+<p>The Bernoulli distribution describes the probability of successes
+(x=1) and failures (x=0).</p>
+<div class="math">
+\[f(x \mid p) = p^{x} (1-p)^{1-x}\]</div>
+<table border="1" class="docutils">
+<colgroup>
+<col width="27%" />
+<col width="73%" />
+</colgroup>
+<tbody valign="top">
+<tr class="row-odd"><td>Support</td>
+<td><span class="math">\(x \in \{0, 1\}\)</span></td>
+</tr>
+<tr class="row-even"><td>Mean</td>
+<td><span class="math">\(p\)</span></td>
+</tr>
+<tr class="row-odd"><td>Variance</td>
+<td><span class="math">\(p (1 - p)\)</span></td>
+</tr>
+</tbody>
+</table>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>p</strong> (<em>float</em>) &#8211; Probability of success (0 &lt; p &lt; 1).</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="class">
+<dt id="pymc3.distributions.discrete.DiscreteWeibull">
+<em class="property">class </em><code class="descclassname">pymc3.distributions.discrete.</code><code class="descname">DiscreteWeibull</code><span class="sig-paren">(</span><em>q</em>, <em>beta</em>, <em>*args</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.distributions.discrete.DiscreteWeibull" title="Permalink to this definition">¶</a></dt>
+<dd><p>Discrete Weibull log-likelihood</p>
+<p>The discrete Weibull distribution is a flexible model of count data that
+can handle both over- and under-dispersion.</p>
+<div class="math">
+\[f(x \mid q, \beta) = q^{x^{\beta}} - q^{(x + 1)^{\beta}}\]</div>
+<table border="1" class="docutils">
+<colgroup>
+<col width="12%" />
+<col width="88%" />
+</colgroup>
+<tbody valign="top">
+<tr class="row-odd"><td>Support</td>
+<td><span class="math">\(x \in \mathbb{N}_0\)</span></td>
+</tr>
+<tr class="row-even"><td>Mean</td>
+<td><span class="math">\(\mu = \sum_{x = 1}^{\infty} q^{x^{\beta}}\)</span></td>
+</tr>
+<tr class="row-odd"><td>Variance</td>
+<td><span class="math">\(2 \sum_{x = 1}^{\infty} x q^{x^{\beta}} - \mu - \mu^2\)</span></td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="class">
+<dt id="pymc3.distributions.discrete.Poisson">
+<em class="property">class </em><code class="descclassname">pymc3.distributions.discrete.</code><code class="descname">Poisson</code><span class="sig-paren">(</span><em>mu</em>, <em>*args</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.distributions.discrete.Poisson" title="Permalink to this definition">¶</a></dt>
+<dd><p>Poisson log-likelihood.</p>
+<p>Often used to model the number of events occurring in a fixed period
+of time when the times at which events occur are independent.</p>
+<div class="math">
+\[f(x \mid \mu) = \frac{e^{-\mu}\mu^x}{x!}\]</div>
+<table border="1" class="docutils">
+<colgroup>
+<col width="24%" />
+<col width="76%" />
+</colgroup>
+<tbody valign="top">
+<tr class="row-odd"><td>Support</td>
+<td><span class="math">\(x \in \mathbb{N}_0\)</span></td>
+</tr>
+<tr class="row-even"><td>Mean</td>
+<td><span class="math">\(\mu\)</span></td>
+</tr>
+<tr class="row-odd"><td>Variance</td>
+<td><span class="math">\(\mu\)</span></td>
+</tr>
+</tbody>
+</table>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>mu</strong> (<em>float</em>) &#8211; Expected number of occurrences during the given interval
+(mu &gt;= 0).</td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">Notes</p>
+<p>The Poisson distribution can be derived as a limiting case of the
+binomial distribution.</p>
+</dd></dl>
+
+<dl class="class">
+<dt id="pymc3.distributions.discrete.NegativeBinomial">
+<em class="property">class </em><code class="descclassname">pymc3.distributions.discrete.</code><code class="descname">NegativeBinomial</code><span class="sig-paren">(</span><em>mu</em>, <em>alpha</em>, <em>*args</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.distributions.discrete.NegativeBinomial" title="Permalink to this definition">¶</a></dt>
+<dd><p>Negative binomial log-likelihood.</p>
+<p>The negative binomial distribution describes a Poisson random variable
+whose rate parameter is gamma distributed.</p>
+<div class="math">
+\[f(x \mid \mu, \alpha) =
+    \frac{\Gamma(x+\alpha)}{x! \Gamma(\alpha)}
+    (\alpha/(\mu+\alpha))^\alpha (\mu/(\mu+\alpha))^x\]</div>
+<table border="1" class="docutils">
+<colgroup>
+<col width="24%" />
+<col width="76%" />
+</colgroup>
+<tbody valign="top">
+<tr class="row-odd"><td>Support</td>
+<td><span class="math">\(x \in \mathbb{N}_0\)</span></td>
+</tr>
+<tr class="row-even"><td>Mean</td>
+<td><span class="math">\(\mu\)</span></td>
+</tr>
+</tbody>
+</table>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>mu</strong> (<em>float</em>) &#8211; Poission distribution parameter (mu &gt; 0).</li>
+<li><strong>alpha</strong> (<em>float</em>) &#8211; Gamma distribution parameter (alpha &gt; 0).</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="class">
+<dt id="pymc3.distributions.discrete.Constant">
+<em class="property">class </em><code class="descclassname">pymc3.distributions.discrete.</code><code class="descname">Constant</code><span class="sig-paren">(</span><em>c</em>, <em>*args</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.distributions.discrete.Constant" title="Permalink to this definition">¶</a></dt>
+<dd><p>Constant log-likelihood.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>value</strong> (<em>float</em><em> or </em><em>int</em>) &#8211; Constant parameter.</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="class">
+<dt id="pymc3.distributions.discrete.ZeroInflatedPoisson">
+<em class="property">class </em><code class="descclassname">pymc3.distributions.discrete.</code><code class="descname">ZeroInflatedPoisson</code><span class="sig-paren">(</span><em>theta</em>, <em>psi</em>, <em>*args</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.distributions.discrete.ZeroInflatedPoisson" title="Permalink to this definition">¶</a></dt>
+<dd><p>Zero-inflated Poisson log-likelihood.</p>
+<p>Often used to model the number of events occurring in a fixed period
+of time when the times at which events occur are independent.</p>
+<div class="math">
+\[\begin{split}f(x \mid \theta, \psi) = \left\{ \begin{array}{l}
+    (1-\psi) + \psi e^{-\theta}, \text{if } x = 0 \\
+    \psi \frac{e^{-\theta}\theta^x}{x!}, \text{if } x=1,2,3,\ldots
+    \end{array} \right.\end{split}\]</div>
+<table border="1" class="docutils">
+<colgroup>
+<col width="15%" />
+<col width="85%" />
+</colgroup>
+<tbody valign="top">
+<tr class="row-odd"><td>Support</td>
+<td><span class="math">\(x \in \mathbb{N}_0\)</span></td>
+</tr>
+<tr class="row-even"><td>Mean</td>
+<td><span class="math">\(\psi\theta\)</span></td>
+</tr>
+<tr class="row-odd"><td>Variance</td>
+<td><span class="math">\(\theta + \frac{1-\psi}{\psi}\theta^2\)</span></td>
+</tr>
+</tbody>
+</table>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>theta</strong> (<em>float</em>) &#8211; Expected number of occurrences during the given interval
+(theta &gt;= 0).</li>
+<li><strong>psi</strong> (<em>float</em>) &#8211; Expected proportion of Poisson variates (0 &lt; psi &lt; 1)</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="class">
+<dt id="pymc3.distributions.discrete.ZeroInflatedNegativeBinomial">
+<em class="property">class </em><code class="descclassname">pymc3.distributions.discrete.</code><code class="descname">ZeroInflatedNegativeBinomial</code><span class="sig-paren">(</span><em>mu</em>, <em>alpha</em>, <em>psi</em>, <em>*args</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.distributions.discrete.ZeroInflatedNegativeBinomial" title="Permalink to this definition">¶</a></dt>
+<dd><p>Zero-Inflated Negative binomial log-likelihood.</p>
+<p>The Zero-inflated version of the Negative Binomial (NB).
+The NB distribution describes a Poisson random variable
+whose rate parameter is gamma distributed.</p>
+<div class="math">
+\[\begin{split}f(x \mid \mu, \alpha, \psi) = \left\{ \begin{array}{l}
+     (1-\psi) + \psi \left (\frac{\alpha}{\alpha+\mu} \right) ^\alpha, \text{if } x = 0 \\
+     \psi \frac{\Gamma(x+\alpha)}{x! \Gamma(\alpha)} \left (\frac{\alpha}{\mu+\alpha} \right)^\alpha \left( \frac{\mu}{\mu+\alpha} \right)^x, \text{if } x=1,2,3,\ldots
+     \end{array} \right.\end{split}\]</div>
+<table border="1" class="docutils">
+<colgroup>
+<col width="9%" />
+<col width="91%" />
+</colgroup>
+<tbody valign="top">
+<tr class="row-odd"><td>Support</td>
+<td><span class="math">\(x \in \mathbb{N}_0\)</span></td>
+</tr>
+<tr class="row-even"><td>Mean</td>
+<td><span class="math">\(\psi\mu\)</span></td>
+</tr>
+<tr class="row-odd"><td>Var</td>
+<td><span class="math">\(\psi\mu +  \left (1 + \frac{\mu}{\alpha} + \frac{1-\psi}{\mu} \right)\)</span></td>
+</tr>
+</tbody>
+</table>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>mu</strong> (<em>float</em>) &#8211; Poission distribution parameter (mu &gt; 0).</li>
+<li><strong>alpha</strong> (<em>float</em>) &#8211; Gamma distribution parameter (alpha &gt; 0).</li>
+<li><strong>psi</strong> (<em>float</em>) &#8211; Expected proportion of NegativeBinomial variates (0 &lt; psi &lt; 1)</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="class">
+<dt id="pymc3.distributions.discrete.DiscreteUniform">
+<em class="property">class </em><code class="descclassname">pymc3.distributions.discrete.</code><code class="descname">DiscreteUniform</code><span class="sig-paren">(</span><em>lower</em>, <em>upper</em>, <em>*args</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.distributions.discrete.DiscreteUniform" title="Permalink to this definition">¶</a></dt>
+<dd><p>Discrete uniform distribution.</p>
+<div class="math">
+\[f(x \mid lower, upper) = \frac{1}{upper-lower}\]</div>
+<table border="1" class="docutils">
+<colgroup>
+<col width="15%" />
+<col width="85%" />
+</colgroup>
+<tbody valign="top">
+<tr class="row-odd"><td>Support</td>
+<td><span class="math">\(x \in {lower, lower + 1, \ldots, upper}\)</span></td>
+</tr>
+<tr class="row-even"><td>Mean</td>
+<td><span class="math">\(\dfrac{lower + upper}{2}\)</span></td>
+</tr>
+<tr class="row-odd"><td>Variance</td>
+<td><span class="math">\(\dfrac{(upper - lower)^2}{12}\)</span></td>
+</tr>
+</tbody>
+</table>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>lower</strong> (<em>int</em>) &#8211; Lower limit.</li>
+<li><strong>upper</strong> (<em>int</em>) &#8211; Upper limit (upper &gt; lower).</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="class">
+<dt id="pymc3.distributions.discrete.Geometric">
+<em class="property">class </em><code class="descclassname">pymc3.distributions.discrete.</code><code class="descname">Geometric</code><span class="sig-paren">(</span><em>p</em>, <em>*args</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.distributions.discrete.Geometric" title="Permalink to this definition">¶</a></dt>
+<dd><p>Geometric log-likelihood.</p>
+<p>The probability that the first success in a sequence of Bernoulli
+trials occurs on the x&#8217;th trial.</p>
+<div class="math">
+\[f(x \mid p) = p(1-p)^{x-1}\]</div>
+<table border="1" class="docutils">
+<colgroup>
+<col width="22%" />
+<col width="78%" />
+</colgroup>
+<tbody valign="top">
+<tr class="row-odd"><td>Support</td>
+<td><span class="math">\(x \in \mathbb{N}_{&gt;0}\)</span></td>
+</tr>
+<tr class="row-even"><td>Mean</td>
+<td><span class="math">\(\dfrac{1}{p}\)</span></td>
+</tr>
+<tr class="row-odd"><td>Variance</td>
+<td><span class="math">\(\dfrac{1 - p}{p^2}\)</span></td>
+</tr>
+</tbody>
+</table>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>p</strong> (<em>float</em>) &#8211; Probability of success on an individual trial (0 &lt; p &lt;= 1).</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="class">
+<dt id="pymc3.distributions.discrete.Categorical">
+<em class="property">class </em><code class="descclassname">pymc3.distributions.discrete.</code><code class="descname">Categorical</code><span class="sig-paren">(</span><em>p</em>, <em>*args</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.distributions.discrete.Categorical" title="Permalink to this definition">¶</a></dt>
+<dd><p>Categorical log-likelihood.</p>
+<p>The most general discrete distribution.</p>
+<div class="math">
+\[f(x \mid p) = p_x\]</div>
+<table border="1" class="docutils">
+<colgroup>
+<col width="19%" />
+<col width="81%" />
+</colgroup>
+<tbody valign="top">
+<tr class="row-odd"><td>Support</td>
+<td><span class="math">\(x \in \{1, 2, \ldots, |p|\}\)</span></td>
+</tr>
+</tbody>
+</table>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>p</strong> (<em>array of floats</em>) &#8211; p &gt; 0 and the elements of p must sum to 1. They will be automatically
+rescaled otherwise.</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</div>
+
+
+           </div>
+           <div class="articleComments">
+            
+           </div>
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="multivariate.html" class="btn btn-neutral float-right" title="Multivariate" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="continuous.html" class="btn btn-neutral" title="Continuous" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2016, John Salvatier, Christopher Fonnesbeck, Thomas Wiecki.
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'../../',
+            VERSION:'3.0',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true,
+            SOURCELINK_SUFFIX: '.txt'
+        };
+    </script>
+      <script type="text/javascript" src="../../_static/jquery.js"></script>
+      <script type="text/javascript" src="../../_static/underscore.js"></script>
+      <script type="text/javascript" src="../../_static/doctools.js"></script>
+      <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+  
+
+  
+  
+    <script type="text/javascript" src="../../_static/js/theme.js"></script>
+  
+
+  
+  
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.StickyNav.enable();
+      });
+  </script>
+   
+
+</body>
+</html>

@@ -1,0 +1,460 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>Plots &mdash; PyMC3 3.0 documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  
+  
+    <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  
+
+  
+
+  
+        <link rel="index" title="Index"
+              href="../genindex.html"/>
+        <link rel="search" title="Search" href="../search.html"/>
+    <link rel="top" title="PyMC3 3.0 documentation" href="../index.html"/>
+        <link rel="up" title="API Reference" href="../api.html"/>
+        <link rel="next" title="Stats" href="stats.html"/>
+        <link rel="prev" title="Gaussian Processes" href="gp.html"/> 
+
+  
+  <script src="../_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+   
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+          
+            <a href="../index.html" class="icon icon-home"> PyMC3
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                3.0
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../getting_started.html">Getting started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../examples.html">Examples</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="../api.html">API Reference</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="distributions.html">Distributions</a></li>
+<li class="toctree-l2"><a class="reference internal" href="inference.html">Inference</a></li>
+<li class="toctree-l2"><a class="reference internal" href="glm.html">Generalized Linear Models</a></li>
+<li class="toctree-l2"><a class="reference internal" href="gp.html">Gaussian Processes</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">Plots</a></li>
+<li class="toctree-l2"><a class="reference internal" href="stats.html">Stats</a></li>
+<li class="toctree-l2"><a class="reference internal" href="diagnostics.html">Diagnostics</a></li>
+<li class="toctree-l2"><a class="reference internal" href="backends.html">Backends</a></li>
+<li class="toctree-l2"><a class="reference internal" href="math.html">Math</a></li>
+</ul>
+</li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">PyMC3</a>
+        
+      </nav>
+
+
+      
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../index.html">Docs</a> &raquo;</li>
+        
+          <li><a href="../api.html">API Reference</a> &raquo;</li>
+        
+      <li>Plots</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            <a href="../_sources/api/plots.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  
+<style>
+/* CSS overrides for sphinx_rtd_theme */
+
+/* 24px margin */
+.nbinput.nblast,
+.nboutput.nblast {
+    margin-bottom: 19px;  /* padding has already 5px */
+}
+
+/* ... except between code cells! */
+.nblast + .nbinput {
+    margin-top: -19px;
+}
+
+/* nice headers on first paragraph of info/warning boxes */
+.admonition .first {
+    margin: -12px;
+    padding: 6px 12px;
+    margin-bottom: 12px;
+    color: #fff;
+    line-height: 1;
+    display: block;
+}
+.admonition.warning .first {
+    background: #f0b37e;
+}
+.admonition.note .first {
+    background: #6ab0de;
+}
+.admonition > p:before {
+    margin-right: 4px;  /* make room for the exclamation icon */
+}
+</style>
+<div class="section" id="module-pymc3.plots">
+<span id="plots"></span><h1>Plots<a class="headerlink" href="#module-pymc3.plots" title="Permalink to this headline">¶</a></h1>
+<dl class="function">
+<dt id="pymc3.plots.traceplot">
+<code class="descclassname">pymc3.plots.</code><code class="descname">traceplot</code><span class="sig-paren">(</span><em>trace</em>, <em>varnames=None</em>, <em>transform=&lt;function identity_transform&gt;</em>, <em>figsize=None</em>, <em>lines=None</em>, <em>combined=False</em>, <em>plot_transformed=False</em>, <em>grid=False</em>, <em>alpha=0.35</em>, <em>priors=None</em>, <em>prior_alpha=1</em>, <em>prior_style='--'</em>, <em>ax=None</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.plots.traceplot" title="Permalink to this definition">¶</a></dt>
+<dd><p>Plot samples histograms and values.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>trace</strong> (<em>result of MCMC run</em>) &#8211; </li>
+<li><strong>varnames</strong> (<em>list of variable names</em>) &#8211; Variables to be plotted, if None all variable are plotted</li>
+<li><strong>transform</strong> (<em>callable</em>) &#8211; Function to transform data (defaults to identity)</li>
+<li><strong>figsize</strong> (<em>figure size tuple</em>) &#8211; If None, size is (12, num of variables * 2) inch</li>
+<li><strong>lines</strong> (<em>dict</em>) &#8211; Dictionary of variable name / value  to be overplotted as vertical
+lines to the posteriors and horizontal lines on sample values
+e.g. mean of posteriors, true values of a simulation.
+If an array of values, line colors are matched to posterior colors.
+Otherwise, a default red line</li>
+<li><strong>combined</strong> (<em>bool</em>) &#8211; Flag for combining multiple chains into a single chain. If False
+(default), chains will be plotted separately.</li>
+<li><strong>plot_transformed</strong> (<em>bool</em>) &#8211; Flag for plotting automatically transformed variables in addition to
+original variables (defaults to False).</li>
+<li><strong>grid</strong> (<em>bool</em>) &#8211; Flag for adding gridlines to histogram. Defaults to True.</li>
+<li><strong>alpha</strong> (<em>float</em>) &#8211; Alpha value for plot line. Defaults to 0.35.</li>
+<li><strong>priors</strong> (<em>iterable of PyMC distributions</em>) &#8211; PyMC prior distribution(s) to be plotted alongside posterior. Defaults
+to None (no prior plots).</li>
+<li><strong>prior_alpha</strong> (<em>float</em>) &#8211; Alpha value for prior plot. Defaults to 1.</li>
+<li><strong>prior_style</strong> (<em>str</em>) &#8211; Line style for prior plot. Defaults to &#8216;&#8211;&#8217; (dashed line).</li>
+<li><strong>ax</strong> (<em>axes</em>) &#8211; <p>Matplotlib axes. Accepts an array of axes, e.g.:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">fig</span><span class="p">,</span> <span class="n">axs</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span> <span class="c1"># 3 RVs</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">pymc3</span><span class="o">.</span><span class="n">traceplot</span><span class="p">(</span><span class="n">trace</span><span class="p">,</span> <span class="n">ax</span><span class="o">=</span><span class="n">axs</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Creates own axes by default.</p>
+</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last"><strong>ax</strong> (<em>matplotlib axes</em>)</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="pymc3.plots.plot_posterior">
+<code class="descclassname">pymc3.plots.</code><code class="descname">plot_posterior</code><span class="sig-paren">(</span><em>trace</em>, <em>varnames=None</em>, <em>transform=&lt;function identity_transform&gt;</em>, <em>figsize=None</em>, <em>alpha_level=0.05</em>, <em>round_to=3</em>, <em>point_estimate='mean'</em>, <em>rope=None</em>, <em>ref_val=None</em>, <em>kde_plot=False</em>, <em>plot_transformed=False</em>, <em>ax=None</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.plots.plot_posterior" title="Permalink to this definition">¶</a></dt>
+<dd><p>Plot Posterior densities in style of John K. Kruschke book.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>trace</strong> (<em>result of MCMC run</em>) &#8211; </li>
+<li><strong>varnames</strong> (<em>list of variable names</em>) &#8211; Variables to be plotted, if None all variable are plotted</li>
+<li><strong>transform</strong> (<em>callable</em>) &#8211; Function to transform data (defaults to identity)</li>
+<li><strong>figsize</strong> (<em>figure size tuple</em>) &#8211; If None, size is (12, num of variables * 2) inch</li>
+<li><strong>alpha_level</strong> (<em>float</em>) &#8211; Defines range for High Posterior Density</li>
+<li><strong>round_to</strong> (<em>int</em>) &#8211; Controls formatting for floating point numbers</li>
+<li><strong>point_estimate</strong> (<em>str</em>) &#8211; Must be in (&#8216;mode&#8217;, &#8216;mean&#8217;, &#8216;median&#8217;)</li>
+<li><strong>rope</strong> (<em>list</em><em> or </em><em>numpy array</em>) &#8211; Lower and upper values of the Region Of Practical Equivalence</li>
+<li><strong>ref_val</strong> (<em>bool</em>) &#8211; display the percentage below and above ref_val</li>
+<li><strong>kde_plot</strong> (<em>bool</em>) &#8211; if True plot a KDE instead of a histogram</li>
+<li><strong>plot_transformed</strong> (<em>bool</em>) &#8211; Flag for plotting automatically transformed variables in addition to
+original variables (defaults to False).</li>
+<li><strong>ax</strong> (<em>axes</em>) &#8211; Matplotlib axes. Defaults to None.</li>
+<li><strong>**kwargs</strong> &#8211; Passed as-is to plt.hist() or plt.plot() function, depending on the
+value of the argument kde_plot
+Some defaults are added, if not specified
+color=&#8217;#87ceeb&#8217; will match the style in the book</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last"><strong>ax</strong> (<em>matplotlib axes</em>)</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="pymc3.plots.forestplot">
+<code class="descclassname">pymc3.plots.</code><code class="descname">forestplot</code><span class="sig-paren">(</span><em>trace_obj</em>, <em>varnames=None</em>, <em>transform=&lt;function identity_transform&gt;</em>, <em>alpha=0.05</em>, <em>quartiles=True</em>, <em>rhat=True</em>, <em>main=None</em>, <em>xtitle=None</em>, <em>xlim=None</em>, <em>ylabels=None</em>, <em>chain_spacing=0.05</em>, <em>vline=0</em>, <em>gs=None</em>, <em>plot_transformed=False</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.plots.forestplot" title="Permalink to this definition">¶</a></dt>
+<dd><p>Forest plot (model summary plot).</p>
+<p>Generates a &#8220;forest plot&#8221; of 100*(1-alpha)% credible intervals for either
+the set of variables in a given model, or a specified set of nodes.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>trace_obj</strong> (<em>NpTrace</em><em> or </em><em>MultiTrace object</em>) &#8211; Trace(s) from an MCMC sample.</li>
+<li><strong>varnames</strong> (<em>list</em>) &#8211; List of variables to plot (defaults to None, which results in all
+variables plotted).</li>
+<li><strong>transform</strong> (<em>callable</em>) &#8211; Function to transform data (defaults to identity)</li>
+<li><strong></strong><strong>(</strong><strong>optional</strong><strong>)</strong><strong></strong> (<em>vline</em>) &#8211; Alpha value for (1-alpha)*100% credible intervals (defaults to 0.05).</li>
+<li><strong></strong><strong>(</strong><strong>optional</strong><strong>)</strong><strong></strong> &#8211; Flag for plotting the interquartile range, in addition to the
+(1-alpha)*100% intervals (defaults to True).</li>
+<li><strong></strong><strong>(</strong><strong>optional</strong><strong>)</strong><strong></strong> &#8211; Flag for plotting Gelman-Rubin statistics. Requires 2 or more chains
+(defaults to True).</li>
+<li><strong></strong><strong>(</strong><strong>optional</strong><strong>)</strong><strong></strong> &#8211; Title for main plot. Passing False results in titles being suppressed;
+passing None (default) results in default titles.</li>
+<li><strong></strong><strong>(</strong><strong>optional</strong><strong>)</strong><strong></strong> &#8211; Label for x-axis. Defaults to no label</li>
+<li><strong></strong><strong>(</strong><strong>optional</strong><strong>)</strong><strong></strong> &#8211; Range for x-axis. Defaults to matplotlib&#8217;s best guess.</li>
+<li><strong></strong><strong>(</strong><strong>optional</strong><strong>)</strong><strong></strong> &#8211; User-defined labels for each variable. If not provided, the node
+__name__ attributes are used.</li>
+<li><strong></strong><strong>(</strong><strong>optional</strong><strong>)</strong><strong></strong> &#8211; Plot spacing between chains (defaults to 0.05).</li>
+<li><strong></strong><strong>(</strong><strong>optional</strong><strong>)</strong><strong></strong> &#8211; Location of vertical reference line (defaults to 0).</li>
+<li><strong>gs</strong> (<em>GridSpec</em>) &#8211; Matplotlib GridSpec object. Defaults to None.</li>
+<li><strong>plot_transformed</strong> (<em>bool</em>) &#8211; Flag for plotting automatically transformed variables in addition to
+original variables (defaults to False).</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last"><strong>gs</strong> (<em>matplotlib GridSpec</em>)</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="pymc3.plots.compare_plot">
+<code class="descclassname">pymc3.plots.</code><code class="descname">compare_plot</code><span class="sig-paren">(</span><em>comp_df</em>, <em>ax=None</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.plots.compare_plot" title="Permalink to this definition">¶</a></dt>
+<dd><p>Model comparison summary plot in the style of the one used in the book
+Statistical Rethinking by Richard McElreath.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>comp_df</strong> (<em>DataFrame</em>) &#8211; The result of the pm.compare() function</li>
+<li><strong>ax</strong> (<em>axes</em>) &#8211; Matplotlib axes. Defaults to None.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last"><strong>ax</strong> (<em>matplotlib axes</em>)</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="pymc3.plots.autocorrplot">
+<code class="descclassname">pymc3.plots.</code><code class="descname">autocorrplot</code><span class="sig-paren">(</span><em>trace</em>, <em>varnames=None</em>, <em>max_lag=100</em>, <em>burn=0</em>, <em>plot_transformed=False</em>, <em>symmetric_plot=False</em>, <em>ax=None</em>, <em>figsize=None</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.plots.autocorrplot" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bar plot of the autocorrelation function for a trace.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>trace</strong> (<em>result of MCMC run</em>) &#8211; </li>
+<li><strong>varnames</strong> (<em>list of variable names</em>) &#8211; Variables to be plotted, if None all variable are plotted.
+Vector-value stochastics are handled automatically.</li>
+<li><strong>max_lag</strong> (<em>int</em>) &#8211; Maximum lag to calculate autocorrelation. Defaults to 100.</li>
+<li><strong>burn</strong> (<em>int</em>) &#8211; Number of samples to discard from the beginning of the trace.
+Defaults to 0.</li>
+<li><strong>plot_transformed</strong> (<em>bool</em>) &#8211; Flag for plotting automatically transformed variables in addition to
+original variables (defaults to False).</li>
+<li><strong>symmetric_plot</strong> (<em>boolean</em>) &#8211; Plot from either [0, +lag] or [-lag, lag]. Defaults to False, [-, +lag].</li>
+<li><strong>ax</strong> (<em>axes</em>) &#8211; Matplotlib axes. Defaults to None.</li>
+<li><strong>figsize</strong> (<em>figure size tuple</em>) &#8211; If None, size is (12, num of variables * 2) inches.
+Note this is not used if ax is supplied.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last"><strong>ax</strong> (<em>matplotlib axes</em>)</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</div>
+
+
+           </div>
+           <div class="articleComments">
+            
+           </div>
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="stats.html" class="btn btn-neutral float-right" title="Stats" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="gp.html" class="btn btn-neutral" title="Gaussian Processes" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2016, John Salvatier, Christopher Fonnesbeck, Thomas Wiecki.
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'../',
+            VERSION:'3.0',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true,
+            SOURCELINK_SUFFIX: '.txt'
+        };
+    </script>
+      <script type="text/javascript" src="../_static/jquery.js"></script>
+      <script type="text/javascript" src="../_static/underscore.js"></script>
+      <script type="text/javascript" src="../_static/doctools.js"></script>
+      <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+  
+
+  
+  
+    <script type="text/javascript" src="../_static/js/theme.js"></script>
+  
+
+  
+  
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.StickyNav.enable();
+      });
+  </script>
+   
+
+</body>
+</html>

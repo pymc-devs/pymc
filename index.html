@@ -13,6 +13,8 @@
 
   
   
+  
+  
 
   
 
@@ -43,6 +45,7 @@
 
 <body class="wy-body-for-nav" role="document">
 
+   
   <div class="wy-grid-for-nav">
 
     
@@ -83,7 +86,10 @@
           
             
             
-                <ul>
+              
+            
+            
+              <ul>
 <li class="toctree-l1"><a class="reference internal" href="getting_started.html">Getting started</a></li>
 <li class="toctree-l1"><a class="reference internal" href="examples.html">Examples</a></li>
 <li class="toctree-l1"><a class="reference internal" href="api.html">API Reference</a></li>
@@ -99,8 +105,10 @@
 
       
       <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
-        <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
-        <a href="#">PyMC3</a>
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="#">PyMC3</a>
+        
       </nav>
 
 
@@ -109,23 +117,40 @@
         <div class="rst-content">
           
 
- 
+
+
+
+
+
+
+
+
+
+
+
 
 
 
 <div role="navigation" aria-label="breadcrumbs navigation">
+
   <ul class="wy-breadcrumbs">
-    <li><a href="#">Docs</a> &raquo;</li>
-      
-    <li>Welcome to PyMC3&#8217;s documentation!</li>
+    
+      <li><a href="#">Docs</a> &raquo;</li>
+        
+      <li>Welcome to PyMC3&#8217;s documentation!</li>
+    
+    
       <li class="wy-breadcrumbs-aside">
         
-          
+            
             <a href="_sources/index.rst.txt" rel="nofollow"> View page source</a>
           
         
       </li>
+    
   </ul>
+
+  
   <hr/>
 </div>
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
@@ -177,22 +202,19 @@ large suite of problems.</p>
 guide</a>!</p>
 <div class="section" id="features">
 <h2>Features<a class="headerlink" href="#features" title="Permalink to this headline">¶</a></h2>
-<ul>
-<li><p class="first">Intuitive model specification syntax, for example, <code class="docutils literal"><span class="pre">x</span> <span class="pre">~</span> <span class="pre">N(0,1)</span></code>
-translates to <code class="docutils literal"><span class="pre">x</span> <span class="pre">=</span> <span class="pre">Normal('x',0,1)</span></code></p>
-</li>
-<li><p class="first"><strong>Powerful sampling algorithms</strong>, such as the <a class="reference external" href="http://arxiv.org/abs/1111.4246">No U-Turn
+<ul class="simple">
+<li>Intuitive model specification syntax, for example, <code class="docutils literal"><span class="pre">x</span> <span class="pre">~</span> <span class="pre">N(0,1)</span></code>
+translates to <code class="docutils literal"><span class="pre">x</span> <span class="pre">=</span> <span class="pre">Normal('x',0,1)</span></code></li>
+<li><strong>Powerful sampling algorithms</strong>, such as the <a class="reference external" href="http://arxiv.org/abs/1111.4246">No U-Turn
 Sampler</a>, allow complex models
 with thousands of parameters with little specialized knowledge of
-fitting algorithms.</p>
-</li>
-<li><p class="first"><strong>Variational inference</strong>: <a class="reference external" href="http://arxiv.org/abs/1506.03431">ADVI</a>
+fitting algorithms.</li>
+<li><strong>Variational inference</strong>: <a class="reference external" href="http://arxiv.org/abs/1506.03431">ADVI</a>
 for fast approximate posterior estimation as well as mini-batch ADVI
-for large data sets.</p>
-</li>
+for large data sets.</li>
 <li><dl class="first docutils">
 <dt>Relies on <a class="reference external" href="http://deeplearning.net/software/theano/">Theano</a> which provides:</dt>
-<dd><ul class="first last simple">
+<dd><ul class="first last">
 <li>Computation optimization and dynamic C compilation</li>
 <li>Numpy broadcasting and advanced indexing</li>
 <li>Linear algebra operators</li>
@@ -201,8 +223,7 @@ for large data sets.</p>
 </dd>
 </dl>
 </li>
-<li><p class="first">Transparent support for missing value imputation</p>
-</li>
+<li>Transparent support for missing value imputation</li>
 </ul>
 </div>
 <div class="section" id="getting-started">
@@ -387,37 +408,37 @@ page</a></p>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="api.html">API Reference</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="api.html#distributions">Distributions</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="api.html#continuous">Continuous</a></li>
-<li class="toctree-l3"><a class="reference internal" href="api.html#discrete">Discrete</a></li>
-<li class="toctree-l3"><a class="reference internal" href="api.html#multivariate">Multivariate</a></li>
-<li class="toctree-l3"><a class="reference internal" href="api.html#mixture">Mixture</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api/distributions.html">Distributions</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="api/distributions/continuous.html">Continuous</a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/distributions/discrete.html">Discrete</a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/distributions/multivariate.html">Multivariate</a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/distributions/mixture.html">Mixture</a></li>
 </ul>
 </li>
-<li class="toctree-l2"><a class="reference internal" href="api.html#module-pymc3.plots">Plots</a></li>
-<li class="toctree-l2"><a class="reference internal" href="api.html#module-pymc3.stats">Stats</a></li>
-<li class="toctree-l2"><a class="reference internal" href="api.html#module-pymc3.diagnostics">Diagnostics</a></li>
-<li class="toctree-l2"><a class="reference internal" href="api.html#inference">Inference</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="api.html#module-pymc3.sampling">Sampling</a></li>
-<li class="toctree-l3"><a class="reference internal" href="api.html#step-methods">Step-methods</a></li>
-<li class="toctree-l3"><a class="reference internal" href="api.html#variational">Variational</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api/inference.html">Inference</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="api/inference.html#module-pymc3.sampling">Sampling</a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/inference.html#step-methods">Step-methods</a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/inference.html#variational">Variational</a></li>
 </ul>
 </li>
-<li class="toctree-l2"><a class="reference internal" href="api.html#module-pymc3.backends">Backends</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="api.html#available-backends">Available backends</a></li>
-<li class="toctree-l3"><a class="reference internal" href="api.html#selecting-a-backend">Selecting a backend</a></li>
-<li class="toctree-l3"><a class="reference internal" href="api.html#selecting-values-from-a-backend">Selecting values from a backend</a></li>
-<li class="toctree-l3"><a class="reference internal" href="api.html#loading-a-saved-backend">Loading a saved backend</a></li>
-<li class="toctree-l3"><a class="reference internal" href="api.html#writing-custom-backends">Writing custom backends</a></li>
-<li class="toctree-l3"><a class="reference internal" href="api.html#module-pymc3.backends.ndarray">ndarray</a></li>
-<li class="toctree-l3"><a class="reference internal" href="api.html#module-pymc3.backends.sqlite">sqlite</a></li>
-<li class="toctree-l3"><a class="reference internal" href="api.html#module-pymc3.backends.text">text</a></li>
-<li class="toctree-l3"><a class="reference internal" href="api.html#module-pymc3.backends.tracetab">tracetab</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api/glm.html">Generalized Linear Models</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api/gp.html">Gaussian Processes</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api/plots.html">Plots</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api/stats.html">Stats</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api/diagnostics.html">Diagnostics</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api/backends.html">Backends</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="api/backends.html#available-backends">Available backends</a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/backends.html#selecting-a-backend">Selecting a backend</a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/backends.html#selecting-values-from-a-backend">Selecting values from a backend</a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/backends.html#loading-a-saved-backend">Loading a saved backend</a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/backends.html#writing-custom-backends">Writing custom backends</a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/backends.html#module-pymc3.backends.ndarray">ndarray</a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/backends.html#module-pymc3.backends.sqlite">sqlite</a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/backends.html#module-pymc3.backends.text">text</a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/backends.html#module-pymc3.backends.tracetab">tracetab</a></li>
 </ul>
 </li>
-<li class="toctree-l2"><a class="reference internal" href="api.html#glm">GLM</a></li>
-<li class="toctree-l2"><a class="reference internal" href="api.html#gp">GP</a></li>
-<li class="toctree-l2"><a class="reference internal" href="api.html#math">Math</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api/math.html">Math</a></li>
 </ul>
 </li>
 </ul>
@@ -435,12 +456,15 @@ page</a></p>
 
 
            </div>
+           <div class="articleComments">
+            
+           </div>
           </div>
           <footer>
   
     <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
       
-        <a href="getting_started.html" class="btn btn-neutral float-right" title="Getting started" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
+        <a href="getting_started.html" class="btn btn-neutral float-right" title="Getting started" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
       
       
     </div>
@@ -475,7 +499,8 @@ page</a></p>
             VERSION:'3.0',
             COLLAPSE_INDEX:false,
             FILE_SUFFIX:'.html',
-            HAS_SOURCE:  true
+            HAS_SOURCE:  true,
+            SOURCELINK_SUFFIX: '.txt'
         };
     </script>
       <script type="text/javascript" src="_static/jquery.js"></script>

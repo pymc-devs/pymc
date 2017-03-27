@@ -1,0 +1,776 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>Backends &mdash; PyMC3 3.0 documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  
+  
+    <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  
+
+  
+
+  
+        <link rel="index" title="Index"
+              href="../genindex.html"/>
+        <link rel="search" title="Search" href="../search.html"/>
+    <link rel="top" title="PyMC3 3.0 documentation" href="../index.html"/>
+        <link rel="up" title="API Reference" href="../api.html"/>
+        <link rel="next" title="Math" href="math.html"/>
+        <link rel="prev" title="Diagnostics" href="diagnostics.html"/> 
+
+  
+  <script src="../_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+   
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+          
+            <a href="../index.html" class="icon icon-home"> PyMC3
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                3.0
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../getting_started.html">Getting started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../examples.html">Examples</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="../api.html">API Reference</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="distributions.html">Distributions</a></li>
+<li class="toctree-l2"><a class="reference internal" href="inference.html">Inference</a></li>
+<li class="toctree-l2"><a class="reference internal" href="glm.html">Generalized Linear Models</a></li>
+<li class="toctree-l2"><a class="reference internal" href="gp.html">Gaussian Processes</a></li>
+<li class="toctree-l2"><a class="reference internal" href="plots.html">Plots</a></li>
+<li class="toctree-l2"><a class="reference internal" href="stats.html">Stats</a></li>
+<li class="toctree-l2"><a class="reference internal" href="diagnostics.html">Diagnostics</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">Backends</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#available-backends">Available backends</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#selecting-a-backend">Selecting a backend</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#selecting-values-from-a-backend">Selecting values from a backend</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#loading-a-saved-backend">Loading a saved backend</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#writing-custom-backends">Writing custom backends</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#module-pymc3.backends.ndarray">ndarray</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#module-pymc3.backends.sqlite">sqlite</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#database-format">Database format</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#module-pymc3.backends.text">text</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#file-format">File format</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#module-pymc3.backends.tracetab">tracetab</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="math.html">Math</a></li>
+</ul>
+</li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">PyMC3</a>
+        
+      </nav>
+
+
+      
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../index.html">Docs</a> &raquo;</li>
+        
+          <li><a href="../api.html">API Reference</a> &raquo;</li>
+        
+      <li>Backends</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            <a href="../_sources/api/backends.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  
+<style>
+/* CSS overrides for sphinx_rtd_theme */
+
+/* 24px margin */
+.nbinput.nblast,
+.nboutput.nblast {
+    margin-bottom: 19px;  /* padding has already 5px */
+}
+
+/* ... except between code cells! */
+.nblast + .nbinput {
+    margin-top: -19px;
+}
+
+/* nice headers on first paragraph of info/warning boxes */
+.admonition .first {
+    margin: -12px;
+    padding: 6px 12px;
+    margin-bottom: 12px;
+    color: #fff;
+    line-height: 1;
+    display: block;
+}
+.admonition.warning .first {
+    background: #f0b37e;
+}
+.admonition.note .first {
+    background: #6ab0de;
+}
+.admonition > p:before {
+    margin-right: 4px;  /* make room for the exclamation icon */
+}
+</style>
+<div class="section" id="module-pymc3.backends">
+<span id="backends"></span><h1>Backends<a class="headerlink" href="#module-pymc3.backends" title="Permalink to this headline">¶</a></h1>
+<p>Backends for traces</p>
+<div class="section" id="available-backends">
+<h2>Available backends<a class="headerlink" href="#available-backends" title="Permalink to this headline">¶</a></h2>
+<ol class="arabic simple">
+<li>NumPy array (pymc3.backends.NDArray)</li>
+<li>Text files (pymc3.backends.Text)</li>
+<li>SQLite (pymc3.backends.SQLite)</li>
+</ol>
+<p>The NDArray backend holds the entire trace in memory, whereas the Text
+and SQLite backends store the values while sampling.</p>
+</div>
+<div class="section" id="selecting-a-backend">
+<h2>Selecting a backend<a class="headerlink" href="#selecting-a-backend" title="Permalink to this headline">¶</a></h2>
+<p>By default, a NumPy array is used as the backend. To specify a different
+backend, pass a backend instance to <cite>sample</cite>.</p>
+<p>For example, the following would save the sampling values to CSV files
+in the directory &#8216;test&#8217;.</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">pymc3</span> <span class="k">as</span> <span class="nn">pm</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">db</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">backends</span><span class="o">.</span><span class="n">Text</span><span class="p">(</span><span class="s1">&#39;test&#39;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">trace</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="o">...</span><span class="p">,</span> <span class="n">trace</span><span class="o">=</span><span class="n">db</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="selecting-values-from-a-backend">
+<h2>Selecting values from a backend<a class="headerlink" href="#selecting-values-from-a-backend" title="Permalink to this headline">¶</a></h2>
+<p>After a backend is finished sampling, it returns a MultiTrace object.
+Values can be accessed in a few ways. The easiest way is to index the
+backend object with a variable or variable name.</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">trace</span><span class="p">[</span><span class="s1">&#39;x&#39;</span><span class="p">]</span>  <span class="c1"># or trace.x or trace[x]</span>
+</pre></div>
+</div>
+<p>The call will return the sampling values of <cite>x</cite>, with the values for
+all chains concatenated. (For a single call to <cite>sample</cite>, the number of
+chains will correspond to the <cite>njobs</cite> argument.)</p>
+<p>To discard the first N values of each chain, slicing syntax can be
+used.</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">trace</span><span class="p">[</span><span class="s1">&#39;x&#39;</span><span class="p">,</span> <span class="mi">1000</span><span class="p">:]</span>
+</pre></div>
+</div>
+<p>The <cite>get_values</cite> method offers more control over which values are
+returned. The call below will discard the first 1000 iterations
+from each chain and keep the values for each chain as separate arrays.</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">trace</span><span class="o">.</span><span class="n">get_values</span><span class="p">(</span><span class="s1">&#39;x&#39;</span><span class="p">,</span> <span class="n">burn</span><span class="o">=</span><span class="mi">1000</span><span class="p">,</span> <span class="n">combine</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>The <cite>chains</cite> parameter of <cite>get_values</cite> can be used to limit the chains
+that are retrieved.</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">trace</span><span class="o">.</span><span class="n">get_values</span><span class="p">(</span><span class="s1">&#39;x&#39;</span><span class="p">,</span> <span class="n">burn</span><span class="o">=</span><span class="mi">1000</span><span class="p">,</span> <span class="n">chains</span><span class="o">=</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">2</span><span class="p">])</span>
+</pre></div>
+</div>
+<p>MultiTrace objects also support slicing. For example, the following
+call would return a new trace object without the first 1000 sampling
+iterations for all traces and variables.</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">sliced_trace</span> <span class="o">=</span> <span class="n">trace</span><span class="p">[</span><span class="mi">1000</span><span class="p">:]</span>
+</pre></div>
+</div>
+<p>The backend for the new trace is always NDArray, regardless of the
+type of original trace.  Only the NDArray backend supports a stop
+value in the slice.</p>
+</div>
+<div class="section" id="loading-a-saved-backend">
+<h2>Loading a saved backend<a class="headerlink" href="#loading-a-saved-backend" title="Permalink to this headline">¶</a></h2>
+<p>Saved backends can be loaded using <cite>load</cite> function in the module for the
+specific backend.</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">trace</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">backends</span><span class="o">.</span><span class="n">text</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="s1">&#39;test&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="writing-custom-backends">
+<h2>Writing custom backends<a class="headerlink" href="#writing-custom-backends" title="Permalink to this headline">¶</a></h2>
+<p>Backends consist of a class that handles sampling storage and value
+selection. Three sampling methods of backend will be called:</p>
+<ul class="simple">
+<li>setup: Before sampling is started, the <cite>setup</cite> method will be called
+with two arguments: the number of draws and the chain number. This is
+useful setting up any structure for storing the sampling values that
+require the above information.</li>
+<li>record: Record the sampling results for the current draw. This method
+will be called with a dictionary of values mapped to the variable
+names. This is the only sampling function that <em>must</em> do something to
+have a meaningful backend.</li>
+<li>close: This method is called following sampling and should perform any
+actions necessary for finalizing and cleaning up the backend.</li>
+</ul>
+<p>The base storage class <cite>backends.base.BaseTrace</cite> provides common model
+setup that is used by all the PyMC backends.</p>
+<p>Several selection methods must also be defined:</p>
+<ul class="simple">
+<li>get_values: This is the core method for selecting values from the
+backend. It can be called directly and is used by __getitem__ when the
+backend is indexed with a variable name or object.</li>
+<li>_slice: Defines how the backend returns a slice of itself. This
+is called if the backend is indexed with a slice range.</li>
+<li>point: Returns values for each variable at a single iteration. This is
+called if the backend is indexed with a single integer.</li>
+<li>__len__: This should return the number of draws.</li>
+</ul>
+<p>When <cite>pymc3.sample</cite> finishes, it wraps all trace objects in a MultiTrace
+object that provides a consistent selection interface for all backends.
+If the traces are stored on disk, then a <cite>load</cite> function should also be
+defined that returns a MultiTrace object.</p>
+<p>For specific examples, see pymc3.backends.{ndarray,text,sqlite}.py.</p>
+</div>
+<div class="section" id="module-pymc3.backends.ndarray">
+<span id="ndarray"></span><h2>ndarray<a class="headerlink" href="#module-pymc3.backends.ndarray" title="Permalink to this headline">¶</a></h2>
+<p>NumPy array trace backend</p>
+<p>Store sampling values in memory as a NumPy array.</p>
+<dl class="class">
+<dt id="pymc3.backends.ndarray.NDArray">
+<em class="property">class </em><code class="descclassname">pymc3.backends.ndarray.</code><code class="descname">NDArray</code><span class="sig-paren">(</span><em>name=None</em>, <em>model=None</em>, <em>vars=None</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.backends.ndarray.NDArray" title="Permalink to this definition">¶</a></dt>
+<dd><p>NDArray trace object</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>name</strong> (<em>str</em>) &#8211; Name of backend. This has no meaning for the NDArray backend.</li>
+<li><strong>model</strong> (<em>Model</em>) &#8211; If None, the model is taken from the <cite>with</cite> context.</li>
+<li><strong>vars</strong> (<em>list of variables</em>) &#8211; Sampling values will be stored for these variables. If None,
+<cite>model.unobserved_RVs</cite> is used.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+<dl class="method">
+<dt id="pymc3.backends.ndarray.NDArray.get_values">
+<code class="descname">get_values</code><span class="sig-paren">(</span><em>varname</em>, <em>burn=0</em>, <em>thin=1</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.backends.ndarray.NDArray.get_values" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get values from trace.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>varname</strong> (<em>str</em>) &#8211; </li>
+<li><strong>burn</strong> (<em>int</em>) &#8211; </li>
+<li><strong>thin</strong> (<em>int</em>) &#8211; </li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last"><em>A NumPy array</em></p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="pymc3.backends.ndarray.NDArray.point">
+<code class="descname">point</code><span class="sig-paren">(</span><em>idx</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.backends.ndarray.NDArray.point" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return dictionary of point values at <cite>idx</cite> for current chain
+with variable names as keys.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pymc3.backends.ndarray.NDArray.record">
+<code class="descname">record</code><span class="sig-paren">(</span><em>point</em>, <em>sampler_stats=None</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.backends.ndarray.NDArray.record" title="Permalink to this definition">¶</a></dt>
+<dd><p>Record results of a sampling iteration.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>point</strong> (<em>dict</em>) &#8211; Values mapped to variable names</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="pymc3.backends.ndarray.NDArray.setup">
+<code class="descname">setup</code><span class="sig-paren">(</span><em>draws</em>, <em>chain</em>, <em>sampler_vars=None</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.backends.ndarray.NDArray.setup" title="Permalink to this definition">¶</a></dt>
+<dd><p>Perform chain-specific setup.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>draws</strong> (<em>int</em>) &#8211; Expected number of draws</li>
+<li><strong>chain</strong> (<em>int</em>) &#8211; Chain number</li>
+<li><strong>sampler_vars</strong> (<em>list of dicts</em>) &#8211; Names and dtypes of the variables that are
+exported by the samplers.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="module-pymc3.backends.sqlite">
+<span id="sqlite"></span><h2>sqlite<a class="headerlink" href="#module-pymc3.backends.sqlite" title="Permalink to this headline">¶</a></h2>
+<p>SQLite trace backend</p>
+<p>Store and retrieve sampling values in SQLite database file.</p>
+<div class="section" id="database-format">
+<h3>Database format<a class="headerlink" href="#database-format" title="Permalink to this headline">¶</a></h3>
+<p>For each variable, a table is created with the following format:</p>
+<blockquote>
+<div>recid (INT), draw (INT), chain (INT),  v0 (FLOAT), v1 (FLOAT), v2 (FLOAT) ...</div></blockquote>
+<p>The variable column names are extended to reflect additional dimensions.
+For example, a variable with the shape (2, 2) would be stored as</p>
+<blockquote>
+<div>key (INT), draw (INT), chain (INT),  v0_0 (FLOAT), v0_1 (FLOAT), v1_0 (FLOAT) ...</div></blockquote>
+<p>The key is autoincremented each time a new row is added to the table.
+The chain column denotes the chain index and starts at 0.</p>
+<dl class="class">
+<dt id="pymc3.backends.sqlite.SQLite">
+<em class="property">class </em><code class="descclassname">pymc3.backends.sqlite.</code><code class="descname">SQLite</code><span class="sig-paren">(</span><em>name</em>, <em>model=None</em>, <em>vars=None</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.backends.sqlite.SQLite" title="Permalink to this definition">¶</a></dt>
+<dd><p>SQLite trace object</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>name</strong> (<em>str</em>) &#8211; Name of database file</li>
+<li><strong>model</strong> (<em>Model</em>) &#8211; If None, the model is taken from the <cite>with</cite> context.</li>
+<li><strong>vars</strong> (<em>list of variables</em>) &#8211; Sampling values will be stored for these variables. If None,
+<cite>model.unobserved_RVs</cite> is used.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+<dl class="method">
+<dt id="pymc3.backends.sqlite.SQLite.get_values">
+<code class="descname">get_values</code><span class="sig-paren">(</span><em>varname</em>, <em>burn=0</em>, <em>thin=1</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.backends.sqlite.SQLite.get_values" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get values from trace.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>varname</strong> (<em>str</em>) &#8211; </li>
+<li><strong>burn</strong> (<em>int</em>) &#8211; </li>
+<li><strong>thin</strong> (<em>int</em>) &#8211; </li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last"><em>A NumPy array</em></p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="pymc3.backends.sqlite.SQLite.point">
+<code class="descname">point</code><span class="sig-paren">(</span><em>idx</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.backends.sqlite.SQLite.point" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return dictionary of point values at <cite>idx</cite> for current chain
+with variables names as keys.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pymc3.backends.sqlite.SQLite.record">
+<code class="descname">record</code><span class="sig-paren">(</span><em>point</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.backends.sqlite.SQLite.record" title="Permalink to this definition">¶</a></dt>
+<dd><p>Record results of a sampling iteration.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>point</strong> (<em>dict</em>) &#8211; Values mapped to variable names</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="pymc3.backends.sqlite.SQLite.setup">
+<code class="descname">setup</code><span class="sig-paren">(</span><em>draws</em>, <em>chain</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.backends.sqlite.SQLite.setup" title="Permalink to this definition">¶</a></dt>
+<dd><p>Perform chain-specific setup.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>draws</strong> (<em>int</em>) &#8211; Expected number of draws</li>
+<li><strong>chain</strong> (<em>int</em>) &#8211; Chain number</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="function">
+<dt id="pymc3.backends.sqlite.load">
+<code class="descclassname">pymc3.backends.sqlite.</code><code class="descname">load</code><span class="sig-paren">(</span><em>name</em>, <em>model=None</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.backends.sqlite.load" title="Permalink to this definition">¶</a></dt>
+<dd><p>Load SQLite database.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>name</strong> (<em>str</em>) &#8211; Path to SQLite database file</li>
+<li><strong>model</strong> (<em>Model</em>) &#8211; If None, the model is taken from the <cite>with</cite> context.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last"><em>A MultiTrace instance</em></p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</div>
+</div>
+<div class="section" id="module-pymc3.backends.text">
+<span id="text"></span><h2>text<a class="headerlink" href="#module-pymc3.backends.text" title="Permalink to this headline">¶</a></h2>
+<p>Text file trace backend</p>
+<p>Store sampling values as CSV files.</p>
+<div class="section" id="file-format">
+<h3>File format<a class="headerlink" href="#file-format" title="Permalink to this headline">¶</a></h3>
+<p>Sampling values for each chain are saved in a separate file (under a
+directory specified by the <cite>name</cite> argument).  The rows correspond to
+sampling iterations.  The column names consist of variable names and
+index labels.  For example, the heading</p>
+<blockquote>
+<div>x,y__0_0,y__0_1,y__1_0,y__1_1,y__2_0,y__2_1</div></blockquote>
+<p>represents two variables, x and y, where x is a scalar and y has a
+shape of (3, 2).</p>
+<dl class="class">
+<dt id="pymc3.backends.text.Text">
+<em class="property">class </em><code class="descclassname">pymc3.backends.text.</code><code class="descname">Text</code><span class="sig-paren">(</span><em>name</em>, <em>model=None</em>, <em>vars=None</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.backends.text.Text" title="Permalink to this definition">¶</a></dt>
+<dd><p>Text trace object</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>name</strong> (<em>str</em>) &#8211; Name of directory to store text files</li>
+<li><strong>model</strong> (<em>Model</em>) &#8211; If None, the model is taken from the <cite>with</cite> context.</li>
+<li><strong>vars</strong> (<em>list of variables</em>) &#8211; Sampling values will be stored for these variables. If None,
+<cite>model.unobserved_RVs</cite> is used.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+<dl class="method">
+<dt id="pymc3.backends.text.Text.get_values">
+<code class="descname">get_values</code><span class="sig-paren">(</span><em>varname</em>, <em>burn=0</em>, <em>thin=1</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.backends.text.Text.get_values" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get values from trace.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>varname</strong> (<em>str</em>) &#8211; </li>
+<li><strong>burn</strong> (<em>int</em>) &#8211; </li>
+<li><strong>thin</strong> (<em>int</em>) &#8211; </li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last"><em>A NumPy array</em></p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="pymc3.backends.text.Text.point">
+<code class="descname">point</code><span class="sig-paren">(</span><em>idx</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.backends.text.Text.point" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return dictionary of point values at <cite>idx</cite> for current chain
+with variables names as keys.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pymc3.backends.text.Text.record">
+<code class="descname">record</code><span class="sig-paren">(</span><em>point</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.backends.text.Text.record" title="Permalink to this definition">¶</a></dt>
+<dd><p>Record results of a sampling iteration.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>point</strong> (<em>dict</em>) &#8211; Values mapped to variable names</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="pymc3.backends.text.Text.setup">
+<code class="descname">setup</code><span class="sig-paren">(</span><em>draws</em>, <em>chain</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.backends.text.Text.setup" title="Permalink to this definition">¶</a></dt>
+<dd><p>Perform chain-specific setup.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>draws</strong> (<em>int</em>) &#8211; Expected number of draws</li>
+<li><strong>chain</strong> (<em>int</em>) &#8211; Chain number</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="function">
+<dt id="pymc3.backends.text.dump">
+<code class="descclassname">pymc3.backends.text.</code><code class="descname">dump</code><span class="sig-paren">(</span><em>name</em>, <em>trace</em>, <em>chains=None</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.backends.text.dump" title="Permalink to this definition">¶</a></dt>
+<dd><p>Store values from NDArray trace as CSV files.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>name</strong> (<em>str</em>) &#8211; Name of directory to store CSV files in</li>
+<li><strong>trace</strong> (<em>MultiTrace of NDArray traces</em>) &#8211; Result of MCMC run with default NDArray backend</li>
+<li><strong>chains</strong> (<em>list</em>) &#8211; Chains to dump. If None, all chains are dumped.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="pymc3.backends.text.load">
+<code class="descclassname">pymc3.backends.text.</code><code class="descname">load</code><span class="sig-paren">(</span><em>name</em>, <em>model=None</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.backends.text.load" title="Permalink to this definition">¶</a></dt>
+<dd><p>Load Text database.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>name</strong> (<em>str</em>) &#8211; Name of directory with files (one per chain)</li>
+<li><strong>model</strong> (<em>Model</em>) &#8211; If None, the model is taken from the <cite>with</cite> context.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last"><em>A MultiTrace instance</em></p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</div>
+</div>
+<div class="section" id="module-pymc3.backends.tracetab">
+<span id="tracetab"></span><h2>tracetab<a class="headerlink" href="#module-pymc3.backends.tracetab" title="Permalink to this headline">¶</a></h2>
+<p>Functions for converting traces into a table-like format</p>
+<dl class="function">
+<dt id="pymc3.backends.tracetab.trace_to_dataframe">
+<code class="descclassname">pymc3.backends.tracetab.</code><code class="descname">trace_to_dataframe</code><span class="sig-paren">(</span><em>trace</em>, <em>chains=None</em>, <em>varnames=None</em>, <em>hide_transformed_vars=True</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.backends.tracetab.trace_to_dataframe" title="Permalink to this definition">¶</a></dt>
+<dd><p>Convert trace to Pandas DataFrame.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>trace</strong> (<em>NDarray trace</em>) &#8211; </li>
+<li><strong>chains</strong> (<em>int</em><em> or </em><em>list of ints</em>) &#8211; Chains to include. If None, all chains are used. A single
+chain value can also be given.</li>
+<li><strong>varnames</strong> (<em>list of variable names</em>) &#8211; Variables to be included in the DataFrame, if None all variable are
+included.</li>
+<li><strong>hide_transformed_vars</strong> (<em>boolean</em>) &#8211; If true transformed variables will not be included in the resulting
+DataFrame.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</div>
+</div>
+
+
+           </div>
+           <div class="articleComments">
+            
+           </div>
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="math.html" class="btn btn-neutral float-right" title="Math" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="diagnostics.html" class="btn btn-neutral" title="Diagnostics" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2016, John Salvatier, Christopher Fonnesbeck, Thomas Wiecki.
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'../',
+            VERSION:'3.0',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true,
+            SOURCELINK_SUFFIX: '.txt'
+        };
+    </script>
+      <script type="text/javascript" src="../_static/jquery.js"></script>
+      <script type="text/javascript" src="../_static/underscore.js"></script>
+      <script type="text/javascript" src="../_static/doctools.js"></script>
+      <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+  
+
+  
+  
+    <script type="text/javascript" src="../_static/js/theme.js"></script>
+  
+
+  
+  
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.StickyNav.enable();
+      });
+  </script>
+   
+
+</body>
+</html>
