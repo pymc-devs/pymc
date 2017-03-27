@@ -37,7 +37,7 @@ def get_tau_cov(mu, tau=None, cov=None):
     ----------
     mu : array-like
     tau : array-like, not required if cov is passed
-    cov : array-like, not required of tau is passed
+    cov : array-like, not required if tau is passed
 
     Results
     -------
@@ -564,7 +564,7 @@ def _lkj_normalizing_constant(n, p):
 
 
 class LKJCholeskyCov(Continuous):
-    """Covariance matrix with LKJ distributed correlations.
+    R"""Covariance matrix with LKJ distributed correlations.
 
     This defines a distribution over cholesky decomposed covariance
     matrices, such that the underlying correlation matrices follow an
@@ -587,7 +587,7 @@ class LKJCholeskyCov(Continuous):
     Since the cholesky factor is a lower triangular matrix, we use
     packed storge for the matrix: We store and return the values of
     the lower triangular matrix in a one-dimensional array, numbered
-    by row.
+    by row::
 
         [[0 - - -]
          [1 2 - -]
@@ -599,6 +599,7 @@ class LKJCholeskyCov(Continuous):
 
     Examples
     --------
+    .. code:: python
 
         with pm.Model() as model:
             # Note that we access the distribution for the standard
@@ -607,7 +608,7 @@ class LKJCholeskyCov(Continuous):
             packed_chol = pm.LKJCholeskyCov('chol_cov', 10, 2, sd_dist)
 
             # Define a new MvNormal with the given covariance
-            vals = pm.MvNormal('vals', mu=np.zeros(10), packed_chol=packed_col)
+            vals = pm.MvNormal('vals', mu=np.zeros(10), packed_chol=packed_chol)
 
             # Or transform an uncorrelated normal:
             vals_raw = pm.Normal('vals_raw', mu=np.zeros(10), sd=1)
@@ -616,7 +617,7 @@ class LKJCholeskyCov(Continuous):
 
             # Or compute the covariance matrix
             chol = pm.expand_packed_triangular(10, packed_chol, lower=True)
-            cov = pm.dot(chol, chol.T)
+            cov = tt.dot(chol, chol.T)
 
             # Extract the standard deviations
             stds = tt.sqrt(tt.diag(cov))
@@ -658,19 +659,20 @@ class LKJCholeskyCov(Continuous):
 
        \text{det}(J_{\phi^{-1}}(U)) =
        \left[
-         \prod^{i=2}^N u_{ii}^(i - 1) L_{ii}
+         \prod_{i=2}^N u_{ii}^{i - 1} L_{ii}
        \right]^{-1}
 
     References
     ----------
-    [1] Lewandowski, D., Kurowicka, D. and Joe, H. (2009).
-        "Generating random correlation matrices based on vines and
-        extended onion method." Journal of multivariate analysis,
-        100(9), pp.1989-2001.
-    [2] J. M. isn't a mathematician (http://math.stackexchange.com/users/498/
-        j-m-isnt-a-mathematician), Different approaches to evaluate this
-        determinant, URL (version: 2012-04-14):
-        http://math.stackexchange.com/q/130026
+    .. [1] Lewandowski, D., Kurowicka, D. and Joe, H. (2009).
+       "Generating random correlation matrices based on vines and
+       extended onion method." Journal of multivariate analysis,
+       100(9), pp.1989-2001.
+
+    .. [2] J. M. isn't a mathematician (http://math.stackexchange.com/users/498/
+       j-m-isnt-a-mathematician), Different approaches to evaluate this
+       determinant, URL (version: 2012-04-14):
+       http://math.stackexchange.com/q/130026
     """
     def __init__(self, n, eta, sd_dist, *args, **kwargs):
         self.n = n

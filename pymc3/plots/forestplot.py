@@ -257,13 +257,13 @@ def forestplot(trace_obj, varnames=None, transform=identity_transform, alpha=0.0
     gs.update(left=left_margin, right=0.95, top=0.9, bottom=0.05)
 
     # Define range of y-axis
-    interval_plot.set_ylim(-var - 0.5, -0.5)
+    interval_plot.set_ylim(-var + 0.5, 0.5)
 
     datarange = plotrange[1] - plotrange[0]
     interval_plot.set_xlim(plotrange[0] - 0.05 * datarange, plotrange[1] + 0.05 * datarange)
 
     # Add variable labels
-    interval_plot.set_yticks([-(l + 1) for l in range(len(labels))])
+    interval_plot.set_yticks([-l for l in range(len(labels))])
     interval_plot.set_yticklabels(labels)
 
     # Add title

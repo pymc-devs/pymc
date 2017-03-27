@@ -105,10 +105,10 @@ class Mixture(Distribution):
                                        for comp_dist in self.comp_dists])
 
         return np.squeeze(samples)
-        
+
     def logp(self, value):
         w = self.w
-        
+
         return bound(logsumexp(tt.log(w) + self._comp_logp(value), axis=-1).sum(),
                      w >= 0, w <= 1, tt.allclose(w.sum(axis=-1), 1))
 
@@ -142,7 +142,9 @@ class NormalMixture(Mixture):
     R"""
     Normal mixture log-likelihood
 
-    .. math:: f(x \mid w, \mu, \sigma^2) = \sum_{i = 1}^n w_i N(x \mid \mu_i, \sigma^2_i)
+    .. math::
+
+        f(x \mid w, \mu, \sigma^2) = \sum_{i = 1}^n w_i N(x \mid \mu_i, \sigma^2_i)
 
     ========  =======================================
     Support   :math:`x \in \mathbb{R}`
@@ -151,6 +153,7 @@ class NormalMixture(Mixture):
     ========  =======================================
 
     Parameters
+    ----------
     w : array of floats
         w >= 0 and w <= 1
         the mixutre weights
