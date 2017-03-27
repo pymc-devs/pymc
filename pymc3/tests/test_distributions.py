@@ -16,11 +16,11 @@ from ..distributions import (DensityDist, Categorical, Multinomial, VonMises, Di
 from ..distributions import continuous, multivariate
 from pymc3.theanof import floatX
 import theano
-from nose_parameterized import parameterized
 from numpy import array, inf, log, exp
 from numpy.testing import assert_almost_equal
 import numpy.random as nr
 import numpy as np
+import pytest
 
 from scipy import integrate
 import scipy.stats.distributions as sp
@@ -33,21 +33,22 @@ def select_by_precision(float64, float32):
     return decimal
 
 
-def gen_lkj_cases():
+def get_lkj_cases():
     """
     Log probabilities calculated using the formulas in:
     http://www.sciencedirect.com/science/article/pii/S0047259X09000876
     """
     tri = np.array([0.7, 0.0, -0.7])
-    test_cases = [
-        (tri, 1, 1.5963125911388549),
-        (tri, 3, -7.7963493376312742),
-        (tri, 0, -np.inf),
-        (np.array([1.1, 0.0, -0.7]), 1, -np.inf),
-        (np.array([0.7, 0.0, -1.1]), 1, -np.inf)
+    return [
+        (tri, 1, 3, 1.5963125911388549),
+        (tri, 3, 3, -7.7963493376312742),
+        (tri, 0, 3, -np.inf),
+        (np.array([1.1, 0.0, -0.7]), 1, 3, -np.inf),
+        (np.array([0.7, 0.0, -1.1]), 1, 3, -np.inf)
     ]
-    for t, n, logp in test_cases:
-        yield t, n, 3, logp
+
+
+LKJ_CASES = get_lkj_cases()
 
 
 class Domain(object):
@@ -400,7 +401,7 @@ class TestMatchesScipy(SeededTest):
         self.pymc3_matches_scipy(Wald, Rplus, {'mu': Rplus},
                                  lambda value, mu: sp.invgauss.logpdf(value, mu))
 
-    @parameterized.expand([
+    @pytest.mark.parametrize('value,mu,lam,phi,alpha,logp', [
         (.5, .001, .5, None, 0., -124500.7257914),
         (1., .5, .001, None, 0., -4.3733162),
         (2., 1., None, None, 0., -2.2086593),
@@ -534,23 +535,23 @@ class TestMatchesScipy(SeededTest):
         self.checkd(ZeroInflatedNegativeBinomial, Nat,
                     {'mu': Rplusbig, 'alpha': Rplusbig, 'psi': Unit})
 
-    @parameterized.expand([(1,), (2,)])
+    @pytest.mark.parametrize('n', [1, 2])
     def test_mvnormal(self, n):
         self.pymc3_matches_scipy(MvNormal, Vector(R, n),
                                  {'mu': Vector(R, n), 'tau': PdMatrix(n)}, normal_logpdf)
 
     def test_mvnormal_init_fail(self):
         with Model():
-            with self.assertRaises(ValueError):
+            with pytest.raises(ValueError):
                 x = MvNormal('x', np.zeros(3), shape=3)
 
-    @parameterized.expand([(1,), (2,)])
+    @pytest.mark.parametrize('n', [1, 2])
     def test_mvt(self, n):
         self.pymc3_matches_scipy(MvStudentT, Vector(R, n),
                                  {'nu': Rplus, 'Sigma': PdMatrix(n), 'mu': Vector(R, n)},
                                  mvt_logpdf)
 
-    @parameterized.expand([(2,), (3,)])
+    @pytest.mark.parametrize('n', [2, 3])
     def test_wishart(self, n):
         # This check compares the autodiff gradient to the numdiff gradient.
         # However, due to the strict constraints of the wishart,
@@ -561,7 +562,7 @@ class TestMatchesScipy(SeededTest):
         #             checks=[self.check_dlogp])
         pass
 
-    @parameterized.expand(gen_lkj_cases)
+    @pytest.mark.parametrize('x,n,p,lp', LKJ_CASES)
     def test_lkj(self, x, n, p, lp):
         with Model() as model:
             LKJCorr('lkj', n=n, p=p, transform=None)
@@ -569,7 +570,7 @@ class TestMatchesScipy(SeededTest):
         pt = {'lkj': x}
         assert_almost_equal(model.fastlogp(pt), lp, decimal=select_by_precision(float64=6, float32=4), err_msg=str(pt))
 
-    @parameterized.expand([(2,), (3,)])
+    @pytest.mark.parametrize('n', [2, 3])
     def test_dirichlet(self, n):
         self.pymc3_matches_scipy(Dirichlet, Simplex(
             n), {'a': Vector(Rplus, n)}, dirichlet_logpdf)
@@ -578,7 +579,7 @@ class TestMatchesScipy(SeededTest):
         self.pymc3_matches_scipy(Dirichlet, MultiSimplex(2, 2),
                                  {'a': Vector(Vector(Rplus, 2), 2)}, dirichlet_logpdf)
 
-    @parameterized.expand([(2,), (3,)])
+    @pytest.mark.parametrize('n', [2, 3])
     def test_multinomial(self, n):
         self.pymc3_matches_scipy(Multinomial, Vector(Nat, n), {'p': Simplex(n), 'n': Nat},
                                  multinomial_logpdf)
@@ -642,7 +643,7 @@ class TestMatchesScipy(SeededTest):
             assert np.isinf(x.logp({'x': -1}))
             assert np.isinf(x.logp({'x': 3}))
 
-    @parameterized.expand([(2,), (3,), (4,)])
+    @pytest.mark.parametrize('n', [2, 3, 4])
     def test_categorical(self, n):
         self.pymc3_matches_scipy(Categorical, Domain(range(n), 'int64'), {'p': Simplex(n)},
                                  lambda value, p: categorical_logpdf(value, p))
@@ -669,10 +670,10 @@ class TestMatchesScipy(SeededTest):
         tau, cov = multivariate.get_tau_cov(mu, cov=cov)
         assert_almost_equal(tau.eval(), np.linalg.inv(cov))
 
-        with self.assertRaises(ValueError):
+        with pytest.raises(ValueError):
             tau, cov = multivariate.get_tau_cov(mu)
 
-    @parameterized.expand([
+    @pytest.mark.parametrize('value,mu,sigma,nu,logp', [
         (0.5, -50.000, 0.500, 0.500, -99.8068528),
         (1.0, -1.000, 0.001, 0.001, -1992.5922447),
         (2.0, 0.001, 1.000, 1.000, -1.6720416),

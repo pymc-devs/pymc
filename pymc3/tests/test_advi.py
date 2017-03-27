@@ -9,12 +9,13 @@ from pymc3.theanof import floatX
 from theano import function, shared
 import theano.tensor as tt
 
-from .helpers import SeededTest, TestHandler, Matcher
+from .helpers import SeededTest, LoggingHandler, Matcher
+import pytest
 
 
 class TestADVI(SeededTest):
-    def setUp(self):
-        super(TestADVI, self).setUp()
+    def setup_method(self):
+        super(TestADVI, self).setup_method()
         self.disaster_data = np.ma.masked_values([4, 5, 4, 0, 1, 4, 3, 4, 0, 6, 3, 3, 4, 0, 2, 6,
                                                  3, 3, 5, 4, 5, 3, 1, 4, 4, 1, 5, 5, 3, 4, 2, 5,
                                                  2, 2, 3, 4, 2, 1, 3, -999, 2, 1, 1, 1, 1, 3, 0, 0,
@@ -25,10 +26,10 @@ class TestADVI(SeededTest):
                                                  value=-999)
         self.year = np.arange(1851, 1962)
 
-        self.handler = h = TestHandler(Matcher())
+        self.handler = h = LoggingHandler(Matcher())
         pm._log.addHandler(h)
 
-    def tearDown(self):
+    def teardown_method(self):
         pm._log.removeHandler(self.handler)
         self.handler.close()
 
@@ -78,7 +79,7 @@ class TestADVI(SeededTest):
             Poisson('disasters', rate, observed=self.disaster_data)
 
             # This should raise ValueError
-            with self.assertRaises(ValueError):
+            with pytest.raises(ValueError):
                 advi(n=10)
 
     def test_check_discrete_minibatch(self):
@@ -101,7 +102,7 @@ class TestADVI(SeededTest):
             rate = tt.switch(switchpoint >= self.year, early_rate, late_rate)
             disasters = Poisson('disasters', rate, observed=disaster_data_t)
 
-            with self.assertRaises(ValueError):
+            with pytest.raises(ValueError):
                 advi_minibatch(n=10, minibatch_RVs=[disasters], minibatch_tensors=[disaster_data_t],
                                minibatches=create_minibatches())
 
@@ -128,7 +129,7 @@ class TestADVI(SeededTest):
         np.testing.assert_allclose(np.std(trace['mu']), np.sqrt(1. / d), rtol=0.4)
 
         h = self.handler
-        self.assertTrue(h.matches(msg="converged"))
+        assert h.matches(msg="converged")
 
         # Test for n < 10
         with Model():
@@ -137,7 +138,7 @@ class TestADVI(SeededTest):
             advi_fit = advi(n=5, accurate_elbo=False, learning_rate=1e-1)
 
         # Check to raise NaN with a large learning coefficient
-        with self.assertRaises(FloatingPointError):
+        with pytest.raises(FloatingPointError):
             with Model():
                 mu_ = Normal('mu', mu=mu0, sd=sd0, testval=0)
                 Normal('x', mu=mu_, sd=sd, observed=data)
@@ -212,7 +213,7 @@ class TestADVI(SeededTest):
                 total_size=n, learning_rate=1e-1)
 
         # Check to raise NaN with a large learning coefficient
-        with self.assertRaises(FloatingPointError):
+        with pytest.raises(FloatingPointError):
             with Model():
                 mu_ = Normal('mu', mu=mu0, sd=sd0, testval=0)
                 x = Normal('x', mu=mu_, sd=sd, observed=data_t)
@@ -261,6 +262,6 @@ class TestADVI(SeededTest):
             pm.Binomial('xs', n=1, p=p, observed=xs)
             v_params = advi(n=1000)
             trace = sample_vp(v_params, draws=1, hide_transformed=True)
-            self.assertListEqual(trace.varnames, ['p'])
+            assert trace.varnames == ['p']
             trace = sample_vp(v_params, draws=1, hide_transformed=False)
-            self.assertListEqual(sorted(trace.varnames), ['p', 'p_logodds_'])
+            assert sorted(trace.varnames) == ['p', 'p_logodds_']

@@ -1,4 +1,3 @@
-import functools
 import numpy as np
 import scipy.sparse
 import theano.tensor as tt
@@ -6,30 +5,19 @@ import theano
 
 from pymc3.step_methods.hmc import quadpotential
 import pymc3
-
-from nose.tools import raises
-from nose.plugins.skip import SkipTest
+import pytest
 
 
-def require_sparse(f):
-    @functools.wraps(f)
-    def inner():
-        if not quadpotential.chol_available:
-            raise SkipTest("Test requires sksparse.cholmod")
-        f()
-    return inner
-
-
-@raises(quadpotential.PositiveDefiniteError)
 def test_elemwise_posdef():
     scaling = np.array([0, 2, 3])
-    quadpotential.quad_potential(scaling, True, True)
+    with pytest.raises(quadpotential.PositiveDefiniteError):
+        quadpotential.quad_potential(scaling, True, True)
 
 
-@raises(quadpotential.PositiveDefiniteError)
 def test_elemwise_posdef2():
     scaling = np.array([0, 2, 3])
-    quadpotential.quad_potential(scaling, True, False)
+    with pytest.raises(quadpotential.PositiveDefiniteError):
+        quadpotential.quad_potential(scaling, True, False)
 
 
 def test_elemwise_velocity():

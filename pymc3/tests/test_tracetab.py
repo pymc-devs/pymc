@@ -13,7 +13,7 @@ class TestTraceToDf(bf.ModelBackendSampledTestCase):
     def test_trace_to_dataframe(self):
         mtrace = self.mtrace
         df = ttab.trace_to_dataframe(mtrace)
-        self.assertEqual(len(mtrace) * mtrace.nchains, df.shape[0])
+        assert len(mtrace) * mtrace.nchains == df.shape[0]
 
         checked = False
         for varname in self.test_point.keys():
@@ -26,12 +26,12 @@ class TestTraceToDf(bf.ModelBackendSampledTestCase):
             npt.assert_equal(vararr[:, 1, 0], df[varname + '__1_0'].values)
             npt.assert_equal(vararr[:, 1, 2], df[varname + '__1_2'].values)
             checked = True
-        self.assertTrue(checked)
+        assert checked
 
     def test_trace_to_dataframe_chain_arg(self):
         mtrace = self.mtrace
         df = ttab.trace_to_dataframe(mtrace, chains=0)
-        self.assertEqual(len(mtrace), df.shape[0])
+        assert len(mtrace) == df.shape[0]
 
         checked = False
         for varname in self.test_point.keys():
@@ -44,7 +44,7 @@ class TestTraceToDf(bf.ModelBackendSampledTestCase):
             npt.assert_equal(vararr[:, 1, 0], df[varname + '__1_0'].values)
             npt.assert_equal(vararr[:, 1, 2], df[varname + '__1_2'].values)
             checked = True
-        self.assertTrue(checked)
+        assert checked
 
 
 def test_create_flat_names_0d():

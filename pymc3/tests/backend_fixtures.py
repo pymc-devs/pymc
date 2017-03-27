@@ -1,4 +1,3 @@
-import unittest
 import numpy as np
 import numpy.testing as npt
 import os
@@ -7,9 +6,10 @@ import collections
 
 from pymc3.tests import models
 from pymc3.backends import base
+import pytest
 
 
-class ModelBackendSetupTestCase(unittest.TestCase):
+class ModelBackendSetupTestCase(object):
     """Set up a backend trace.
 
     Provides the attributes
@@ -27,7 +27,7 @@ class ModelBackendSetupTestCase(unittest.TestCase):
     - sampler_vars
     """
 
-    def setUp(self):
+    def setup_method(self):
         self.test_point, self.model, _ = models.beta_bernoulli(self.shape)
         with self.model:
             self.strace = self.backend(self.name)
@@ -42,13 +42,13 @@ class ModelBackendSetupTestCase(unittest.TestCase):
 
     def test_append_invalid(self):
         if self.sampler_vars is not None:
-            with self.assertRaises(ValueError):
+            with pytest.raises(ValueError):
                 self.strace.setup(self.draws, self.chain)
-            with self.assertRaises(ValueError):
+            with pytest.raises(ValueError):
                 vars = self.sampler_vars + [{'a': np.bool}]
                 self.strace.setup(self.draws, self.chain, vars)
         else:
-            with self.assertRaises((ValueError, TypeError)):
+            with pytest.raises((ValueError, TypeError)):
                 self.strace.setup(self.draws, self.chain, [{'a': np.bool}])
 
     def test_append(self):
@@ -59,12 +59,12 @@ class ModelBackendSetupTestCase(unittest.TestCase):
             self.strace.setup(self.draws, self.chain, self.sampler_vars)
             assert len(self.strace) == 0
 
-    def tearDown(self):
+    def teardown_method(self):
         if self.name is not None:
             remove_file_or_directory(self.name)
 
 
-class StatsTestCase(unittest.TestCase):
+class StatsTestCase(object):
     """Test for init and setup of backups.
 
     Provides the attributes
@@ -77,7 +77,7 @@ class StatsTestCase(unittest.TestCase):
     - name
     - shape
     """
-    def setUp(self):
+    def setup_method(self):
         self.test_point, self.model, _ = models.beta_bernoulli(self.shape)
         self.draws, self.chain = 3, 0
 
@@ -86,21 +86,21 @@ class StatsTestCase(unittest.TestCase):
         good_vars = [{'a': np.float64}, {'a': np.float64}]
         with self.model:
             strace = self.backend(self.name)
-        with self.assertRaises((ValueError, TypeError)):
+        with pytest.raises((ValueError, TypeError)):
             strace.setup(self.draws, self.chain, bad_vars)
         strace.setup(self.draws, self.chain, good_vars)
         if strace.supports_sampler_stats:
             assert strace.stat_names == set(['a'])
         else:
-            with self.assertRaises((ValueError, TypeError)):
+            with pytest.raises((ValueError, TypeError)):
                 strace.setup(self.draws, self.chain, good_vars)
 
-    def tearDown(self):
+    def teardown_method(self):
         if self.name is not None:
             remove_file_or_directory(self.name)
 
 
-class ModelBackendSampledTestCase(unittest.TestCase):
+class ModelBackendSampledTestCase(object):
     """Setup and sample a backend trace.
 
     Provides the attributes
@@ -121,7 +121,7 @@ class ModelBackendSampledTestCase(unittest.TestCase):
     - sampler_vars
     """
     @classmethod
-    def setUpClass(cls):
+    def setup_class(cls):
         cls.test_point, cls.model, _ = models.beta_bernoulli(cls.shape)
         with cls.model:
             strace0 = cls.backend(cls.name)
@@ -191,7 +191,7 @@ class ModelBackendSampledTestCase(unittest.TestCase):
             cls.stats_counts.update(stats.keys())
 
     @classmethod
-    def tearDownClass(cls):
+    def teardown_class(cls):
         if cls.name is not None:
             remove_file_or_directory(cls.name)
 
@@ -245,16 +245,16 @@ class SamplingTestCase(ModelBackendSetupTestCase):
 
     def test_missing_stats(self):
         if self.sampler_vars is not None:
-            with self.assertRaises(ValueError):
+            with pytest.raises(ValueError):
                 self.strace.record(point=self.test_point)
 
     def test_clean_interrupt(self):
         self.record_point(0)
         self.strace.close()
         for varname in self.test_point.keys():
-            self.assertEqual(self.strace.get_values(varname).shape[0], 1)
+            assert self.strace.get_values(varname).shape[0] == 1
         for statname in self.strace.stat_names:
-            self.assertEqual(self.strace.get_sampler_stats(statname).shape[0], 1)
+            assert self.strace.get_sampler_stats(statname).shape[0] == 1
 
 
 class SelectionTestCase(ModelBackendSampledTestCase):
@@ -282,16 +282,16 @@ class SelectionTestCase(ModelBackendSampledTestCase):
             npt.assert_equal(result, expected)
 
     def test_len(self):
-        self.assertEqual(len(self.mtrace), self.draws)
+        assert len(self.mtrace) == self.draws
 
     def test_dtypes(self):
         for varname in self.test_point.keys():
-            self.assertEqual(self.expected[0][varname].dtype,
-                             self.mtrace.get_values(varname, chains=0).dtype)
+            assert self.expected[0][varname].dtype == \
+                             self.mtrace.get_values(varname, chains=0).dtype
 
         for statname in self.mtrace.stat_names:
-            self.assertEqual(self.stat_dtypes[statname],
-                             self.mtrace.get_sampler_stats(statname, chains=0).dtype)
+            assert self.stat_dtypes[statname] == \
+                             self.mtrace.get_sampler_stats(statname, chains=0).dtype
 
     def test_get_values_nocombine_thin_keyword(self):
         thin = 2
@@ -321,10 +321,10 @@ class SelectionTestCase(ModelBackendSampledTestCase):
 
     def test_get_slice_step(self):
         result = self.mtrace[:]
-        self.assertEqual(len(result), self.draws)
+        assert len(result) == self.draws
 
         result = self.mtrace[::2]
-        self.assertEqual(len(result), self.draws // 2)
+        assert len(result) == self.draws // 2
 
 
     def test_get_slice_neg_step(self):
@@ -332,10 +332,10 @@ class SelectionTestCase(ModelBackendSampledTestCase):
             return
 
         result = self.mtrace[::-1]
-        self.assertEqual(len(result), self.draws)
+        assert len(result) == self.draws
 
         result = self.mtrace[::-2]
-        self.assertEqual(len(result), self.draws // 2)
+        assert len(result) == self.draws // 2
 
 
     def test_get_neg_slice(self):
@@ -425,8 +425,8 @@ class DumpLoadTestCase(ModelBackendSampledTestCase):
     - shape
     """
     @classmethod
-    def setUpClass(cls):
-        super(DumpLoadTestCase, cls).setUpClass()
+    def setup_class(cls):
+        super(DumpLoadTestCase, cls).setup_class()
         try:
             with cls.model:
                 cls.dumped = cls.load_func(cls.name)
@@ -435,16 +435,16 @@ class DumpLoadTestCase(ModelBackendSampledTestCase):
             raise
 
     @classmethod
-    def tearDownClass(cls):
+    def teardown_class(cls):
         remove_file_or_directory(cls.name)
 
     def test_nchains(self):
-        self.assertEqual(self.mtrace.nchains, self.dumped.nchains)
+        assert self.mtrace.nchains == self.dumped.nchains
 
     def test_varnames(self):
         trace_names = list(sorted(self.mtrace.varnames))
         dumped_names = list(sorted(self.dumped.varnames))
-        self.assertEqual(trace_names, dumped_names)
+        assert trace_names == dumped_names
 
     def test_values(self):
         trace = self.mtrace
@@ -467,19 +467,19 @@ class BackendEqualityTestCase(ModelBackendSampledTestCase):
     - shape
     """
     @classmethod
-    def setUpClass(cls):
+    def setup_class(cls):
         cls.backend = cls.backend0
         cls.name = cls.name0
-        super(BackendEqualityTestCase, cls).setUpClass()
+        super(BackendEqualityTestCase, cls).setup_class()
         cls.mtrace0 = cls.mtrace
 
         cls.backend = cls.backend1
         cls.name = cls.name1
-        super(BackendEqualityTestCase, cls).setUpClass()
+        super(BackendEqualityTestCase, cls).setup_class()
         cls.mtrace1 = cls.mtrace
 
     @classmethod
-    def tearDownClass(cls):
+    def teardown_class(cls):
         for name in [cls.name0, cls.name1]:
             if name is not None:
                 remove_file_or_directory(name)
@@ -490,8 +490,8 @@ class BackendEqualityTestCase(ModelBackendSampledTestCase):
 
     def test_dtype(self):
         for varname in self.test_point.keys():
-            self.assertEqual(self.mtrace0.get_values(varname, chains=0).dtype,
-                             self.mtrace1.get_values(varname, chains=0).dtype)
+            assert self.mtrace0.get_values(varname, chains=0).dtype == \
+                             self.mtrace1.get_values(varname, chains=0).dtype
 
     def test_number_of_draws(self):
         for varname in self.test_point.keys():

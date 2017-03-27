@@ -14,8 +14,8 @@ def generate_data(intercept, slope, size=700):
 
 class TestGLM(SeededTest):
     @classmethod
-    def setUpClass(cls):
-        super(TestGLM, cls).setUpClass()
+    def setup_class(cls):
+        super(TestGLM, cls).setup_class()
         cls.intercept = 1
         cls.slope = 3
         cls.sd = .05
@@ -37,9 +37,9 @@ class TestGLM(SeededTest):
             step = Slice(model.vars)
             trace = sample(500, step=step, start=start, progressbar=False, random_seed=self.random_seed)
 
-            self.assertAlmostEqual(np.mean(trace['Intercept']), self.intercept, 1)
-            self.assertAlmostEqual(np.mean(trace['x']), self.slope, 1)
-            self.assertAlmostEqual(np.mean(trace['sigma']), self.sd, 1)
+            assert round(abs(np.mean(trace['Intercept'])-self.intercept), 1) == 0
+            assert round(abs(np.mean(trace['x'])-self.slope), 1) == 0
+            assert round(abs(np.mean(trace['sigma'])-self.sd), 1) == 0
 
     def test_glm(self):
         with Model() as model:
@@ -47,9 +47,9 @@ class TestGLM(SeededTest):
             step = Slice(model.vars)
             trace = sample(500, step, progressbar=False, random_seed=self.random_seed)
 
-            self.assertAlmostEqual(np.mean(trace['Intercept']), self.intercept, 1)
-            self.assertAlmostEqual(np.mean(trace['x']), self.slope, 1)
-            self.assertAlmostEqual(np.mean(trace['sd']), self.sd, 1)
+            assert round(abs(np.mean(trace['Intercept'])-self.intercept), 1) == 0
+            assert round(abs(np.mean(trace['x'])-self.slope), 1) == 0
+            assert round(abs(np.mean(trace['sd'])-self.sd), 1) == 0
 
     def test_glm_link_func(self):
         with Model() as model:
@@ -58,8 +58,8 @@ class TestGLM(SeededTest):
             step = Slice(model.vars)
             trace = sample(1000, step, progressbar=False, random_seed=self.random_seed)
 
-            self.assertAlmostEqual(np.mean(trace['Intercept']), self.intercept, 1)
-            self.assertAlmostEqual(np.mean(trace['x']), self.slope, 1)
+            assert round(abs(np.mean(trace['Intercept'])-self.intercept), 1) == 0
+            assert round(abs(np.mean(trace['x'])-self.slope), 1) == 0
 
     def test_more_than_one_glm_is_ok(self):
         with Model():
