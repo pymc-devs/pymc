@@ -13,6 +13,7 @@ Howto
    notebooks/posterior_predictive.ipynb
    notebooks/howto_debugging.ipynb
    notebooks/LKJ.ipynb
+   notebooks/live_sample_plots.ipynb
 
 Applied
 =======
