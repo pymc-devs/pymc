@@ -202,8 +202,6 @@ class TestApproximates:
             inference.fit(20)
 
         def test_aevb(self):
-            if self.inference is SVGD:
-                raise unittest.SkipTest('Not for svgd')
             _, model, _ = models.exponential_beta(n=2)
             x = model.x
             y = model.y
@@ -252,8 +250,11 @@ class TestMeanField(TestApproximates.Base):
 
 
 class TestSVGD(TestApproximates.Base):
-    inference = SVGD
-    NITER = 50000
+    inference = lambda *a, **k: SVGD(1000)
+    NITER = 5000
+
+    def test_aevb(self):
+        raise unittest.skip('not for svgd')
 
 
 class TestFullRank(TestApproximates.Base):
