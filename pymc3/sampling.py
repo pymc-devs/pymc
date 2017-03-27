@@ -181,7 +181,9 @@ def sample(draws, step=None, init='ADVI', n_init=200000, start=None,
                    'model': model,
                    'random_seed': random_seed,
                    'live_plot': live_plot,
-                   **kwargs}
+                   }
+
+    sample_args.update(kwargs)
 
     if njobs > 1:
         sample_func = _mp_sample
