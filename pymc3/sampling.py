@@ -11,7 +11,6 @@ from .model import modelcontext, Point
 from .step_methods import (NUTS, HamiltonianMC, Metropolis, BinaryMetropolis,
                            BinaryGibbsMetropolis, CategoricalGibbsMetropolis,
                            Slice, CompoundStep)
-from .plots.utils import identity_transform
 from .plots.traceplot import traceplot
 from tqdm import tqdm
 
