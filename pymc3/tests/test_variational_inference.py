@@ -318,6 +318,10 @@ class TestHistogram(SeededTest):
             histogram.random_fn(no_rand=False)
             histogram.histogram_logp.eval()
 
+    def test_init_from_noize(self):
+        with models.multidimensional_model()[1]:
+            histogram = Histogram.from_noise(100)
+            self.assertEquals(histogram.histogram.eval().shape, (100, 6))
 
 if __name__ == '__main__':
     object.main()
