@@ -7,7 +7,8 @@ from .utils import identity_transform, get_default_varnames, get_axis, make_2d
 
 def traceplot(trace, varnames=None, transform=identity_transform, figsize=None, lines=None,
               combined=False, plot_transformed=False, grid=False, alpha=0.35, priors=None,
-              prior_alpha=1, prior_style='--', ax=None, live_plot=False, skip_first=0, refresh_every=100, roll_over=1000):
+              prior_alpha=1, prior_style='--', ax=None, live_plot=False,
+              skip_first=0, refresh_every=100, roll_over=1000):
     """Plot samples histograms and values.
 
     Parameters
