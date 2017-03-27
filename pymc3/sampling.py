@@ -11,6 +11,8 @@ from .model import modelcontext, Point
 from .step_methods import (NUTS, HamiltonianMC, Metropolis, BinaryMetropolis,
                            BinaryGibbsMetropolis, CategoricalGibbsMetropolis,
                            Slice, CompoundStep)
+from .plots.utils import identity_transform
+from .plots.traceplot import traceplot
 from tqdm import tqdm
 
 import warnings
@@ -85,7 +87,7 @@ def assign_step_methods(model, step=None, methods=(NUTS, HamiltonianMC, Metropol
 
 def sample(draws, step=None, init='ADVI', n_init=200000, start=None,
            trace=None, chain=0, njobs=1, tune=None, progressbar=True,
-           model=None, random_seed=-1):
+           model=None, random_seed=-1, live_plot=False, **kwargs):
     """Draw samples from the posterior using the given step methods.
 
     Multiple step methods are supported via compound step methods.
@@ -141,6 +143,8 @@ def sample(draws, step=None, init='ADVI', n_init=200000, start=None,
     model : Model (optional if in `with` context)
     random_seed : int or list of ints
         A list is accepted if more if `njobs` is greater than one.
+    live_plot: bool
+        Flag for live plotting the trace while sampling
 
     Returns
     -------
@@ -175,7 +179,9 @@ def sample(draws, step=None, init='ADVI', n_init=200000, start=None,
                    'tune': tune,
                    'progressbar': progressbar,
                    'model': model,
-                   'random_seed': random_seed}
+                   'random_seed': random_seed,
+                   'live_plot': live_plot,
+                   **kwargs}
 
     if njobs > 1:
         sample_func = _mp_sample
@@ -187,15 +193,27 @@ def sample(draws, step=None, init='ADVI', n_init=200000, start=None,
 
 
 def _sample(draws, step=None, start=None, trace=None, chain=0, tune=None,
-            progressbar=True, model=None, random_seed=-1):
+            progressbar=True, model=None, random_seed=-1, live_plot=False,
+            **kwargs):
+    live_plot_args = {'skip_first': 0, 'refresh_every': 100}
+    live_plot_args = {arg: kwargs[arg] if arg in kwargs else live_plot_args[arg] for arg in live_plot_args}
+    skip_first = live_plot_args['skip_first']
+    refresh_every = live_plot_args['refresh_every']
+
     sampling = _iter_sample(draws, step, start, trace, chain,
                             tune, model, random_seed)
     if progressbar:
         sampling = tqdm(sampling, total=draws)
     try:
         strace = None
-        for strace in sampling:
-            pass
+        for it, strace in enumerate(sampling):
+            if live_plot:
+                if it >= skip_first:
+                    trace = MultiTrace([strace])
+                    if it == skip_first:
+                        ax = traceplot(trace, live_plot=False, **kwargs)
+                    elif (it - skip_first) % refresh_every == 0 or it == draws - 1:
+                        traceplot(trace, ax=ax, live_plot=True, **kwargs)
     except KeyboardInterrupt:
         pass
     finally:

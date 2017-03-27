@@ -7,7 +7,8 @@ from .utils import identity_transform, get_default_varnames, get_axis, make_2d
 
 def traceplot(trace, varnames=None, transform=identity_transform, figsize=None, lines=None,
               combined=False, plot_transformed=False, grid=False, alpha=0.35, priors=None,
-              prior_alpha=1, prior_style='--', ax=None):
+              prior_alpha=1, prior_style='--', ax=None, live_plot=False,
+              skip_first=0, refresh_every=100, roll_over=1000):
     """Plot samples histograms and values.
 
     Parameters
@@ -45,6 +46,16 @@ def traceplot(trace, varnames=None, transform=identity_transform, figsize=None, 
         Line style for prior plot. Defaults to '--' (dashed line).
     ax : axes
         Matplotlib axes. Accepts an array of axes, e.g.:
+    live_plot: bool
+        Flag for updating the current figure while sampling
+    skip_first : int
+        Number of first samples not shown in plots (burn-in). This affects
+        frequency and stream plots.
+    refresh_every : int
+        Period of plot updates (in sample number)
+    roll_over : int
+        Width of the sliding window for the sample stream plots: last roll_over
+        samples are shown (no effect on frequency plots).
 
         >>> fig, axs = plt.subplots(3, 2) # 3 RVs
         >>> pymc3.traceplot(trace, ax=axs)
@@ -57,6 +68,8 @@ def traceplot(trace, varnames=None, transform=identity_transform, figsize=None, 
     ax : matplotlib axes
 
     """
+    trace = trace[skip_first:]
+
     if varnames is None:
         varnames = get_default_varnames(trace, plot_transformed)
 
@@ -70,9 +83,23 @@ def traceplot(trace, varnames=None, transform=identity_transform, figsize=None, 
             prior = priors[i]
         else:
             prior = None
+        first_time = True
         for d in trace.get_values(v, combine=combined, squeeze=False):
             d = np.squeeze(transform(d))
             d = make_2d(d)
+            d_stream = d
+            x0 = 0
+            if live_plot:
+                x0 = skip_first
+                if first_time:
+                    ax[i, 0].cla()
+                    ax[i, 1].cla()
+                    first_time = False
+                if roll_over is not None:
+                    if len(d) >= roll_over:
+                        x0 = len(d) - roll_over + skip_first
+                    d_stream = d[-roll_over:]
+            width = len(d_stream)
             if d.dtype.kind == 'i':
                 hist_objs = histplot_op(ax[i, 0], d, alpha=alpha)
                 colors = [h[-1][0].get_facecolor() for h in hist_objs]
@@ -82,7 +109,7 @@ def traceplot(trace, varnames=None, transform=identity_transform, figsize=None, 
             ax[i, 0].set_title(str(v))
             ax[i, 0].grid(grid)
             ax[i, 1].set_title(str(v))
-            ax[i, 1].plot(d, alpha=alpha)
+            ax[i, 1].plot(range(x0, x0 + width), d_stream, alpha=alpha)
 
             ax[i, 0].set_ylabel("Frequency")
             ax[i, 1].set_ylabel("Sample value")
@@ -103,6 +130,13 @@ def traceplot(trace, varnames=None, transform=identity_transform, figsize=None, 
                                          lw=1.5, alpha=alpha)
                 except KeyError:
                     pass
+        if live_plot:
+            for j in [0, 1]:
+                ax[i, j].relim()
+                ax[i, j].autoscale_view(True, True, True)
+            ax[i, 1].set_xlim(x0, x0 + width)
         ax[i, 0].set_ylim(ymin=0)
+    if live_plot:
+        ax[0, 0].figure.canvas.draw()
     plt.tight_layout()
     return ax
