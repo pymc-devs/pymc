@@ -93,10 +93,10 @@ class Inference(object):
             callbacks = []
         step_func = self.objective.step_function(score=score, **kwargs)
         i = 0
-        scores = np.empty(n)
-        scores[:] = np.nan
         progress = tqdm.trange(n)
         if score:
+            scores = np.empty(n)
+            scores[:] = np.nan
             try:
                 for i in progress:
                     e = step_func()
@@ -129,6 +129,7 @@ class Inference(object):
             finally:
                 progress.close()
         else:   # pragma: no cover
+            scores = np.asarray(())
             try:
                 for _ in progress:
                     step_func()
@@ -276,7 +277,8 @@ class SVGD(Inference):
 
     def fit(self, n=10000, callbacks=None, callback_every=1,
             **kwargs):
-        return Inference.fit(self, n=10000, callbacks=None, callback_every=1, score=False, **kwargs)
+        return Inference.fit(self, n=n, callbacks=callbacks,
+                             callback_every=callback_every, score=False, **kwargs)
 
     def run_profiling(self, n=1000, **kwargs):
         return Inference.run_profiling(self, n=1000, score=False, **kwargs)
