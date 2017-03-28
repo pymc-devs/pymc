@@ -252,9 +252,7 @@ class TestMeanField(TestApproximates.Base):
 class TestSVGD(TestApproximates.Base):
     inference = lambda *a, **k: SVGD(1000)
     NITER = 5000
-
-    def test_aevb(self):
-        raise unittest.skip('not for svgd')
+    test_aevb = None
 
 
 class TestFullRank(TestApproximates.Base):
@@ -329,7 +327,4 @@ class TestHistogram(SeededTest):
     def test_init_from_noize(self):
         with models.multidimensional_model()[1]:
             histogram = Histogram.from_noise(100)
-            self.assertEquals(histogram.histogram.eval().shape, (100, 6))
-
-if __name__ == '__main__':
-    object.main()
+            assert histogram.histogram.eval().shape == (100, 6)
