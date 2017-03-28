@@ -106,9 +106,11 @@ class MvNormal(Continuous):
         k = chol_cov.shape[0]
 
         delta_trans = self.solve(chol_cov, delta)
-        return -0.5 * (k * tt.log(2 * np.pi) +
-                       2.0 * tt.sum(tt.log(tt.nlinalg.diag(chol_cov))) +
-                       tt.dot(tt.transpose(delta_trans), delta_trans))
+
+        result = k * tt.log(2 * np.pi)
+        result += 2.0 * tt.sum(tt.log(tt.nlinalg.diag(chol_cov)))
+        result += tt.dot(tt.transpose(delta_trans), delta_trans)
+        return -0.5 * result
 
     def _logp_tau(self, value):
         mu = self.mu
@@ -118,9 +120,11 @@ class MvNormal(Continuous):
         k = chol_tau.shape[0]
 
         delta_trans = tt.dot(chol_tau.T, delta)
-        return -0.5 * (k * tt.log(2 * np.pi) -
-                       2.0 * tt.sum(tt.log(tt.nlinalg.diag(chol_tau))) +
-                       tt.dot(tt.transpose(delta_trans), delta_trans))
+
+        result = k * tt.log(2 * np.pi)
+        result -= 2.0 * tt.sum(tt.log(tt.nlinalg.diag(chol_tau)))
+        result += tt.dot(tt.transpose(delta_trans), delta_trans)
+        return -0.5 * result
 
 
 class MvStudentT(Continuous):
