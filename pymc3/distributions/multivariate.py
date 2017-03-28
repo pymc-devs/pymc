@@ -54,15 +54,9 @@ class MvNormal(Continuous):
         Cholesky decomposition of covariance matrix. Exactly one of cov,
         tau, or chol is needed.
 
-    Flags
-    ----------
-    gpu_compat : False, because LogDet is not GPU compatible yet.
-                 If this is set as true, the GPU compatible (but numerically unstable) log(det) is used.
-
     """
 
-    def __init__(self, mu, cov=None, tau=None, chol=None, gpu_compat=False,
-                 *args, **kwargs):
+    def __init__(self, mu, cov=None, tau=None, chol=None, *args, **kwargs):
         super(MvNormal, self).__init__(*args, **kwargs)
         if len([i for i in [tau, cov, chol] if i is not None]) != 1:
             raise ValueError('Incompatible parameterization. Specify exactly '
@@ -78,10 +72,6 @@ class MvNormal(Continuous):
             self.chol_tau = tt.slinalg.cholesky(tt.as_tensor_variable(tau))
         else:
             self.chol_cov = tt.as_tensor_variable(chol)
-
-        self.gpu_compat = gpu_compat
-        if gpu_compat is False and theano.config.device == 'gpu':
-            warnings.warn("The function used is not GPU compatible. Please check the gpu_compat flag")
 
     def random(self, point=None, size=None):
         if self.has_tau:
