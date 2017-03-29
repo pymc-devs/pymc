@@ -149,6 +149,30 @@ def sample(draws, step=None, init='ADVI', n_init=200000, start=None,
     -------
     trace : pymc3.backends.base.MultiTrace
         A `MultiTrace` object that contains the samples.
+
+        Examples
+    --------
+    .. code:: ipython
+
+        >>> import pymc3 as pm
+        ... import numpy as np
+        ... np.random.seed(20090425)
+        ... n = 20
+        ... X = np.sort(3*np.random.rand(n))
+
+    Now let's set up a model and sample from it.
+
+    .. code:: ipython
+        >>> with pm.Model() as model:
+        ...  b0 = pm.Normal('b0', mu=0, sd=100)
+        ...  yest = b0 * X
+        ...
+        >>> with model:
+        ...      trc = pm.sample(100)
+        ...
+        >>> pm.df_summary(trc)
+                mean         sd  mc_error     hpd_2.5    hpd_97.5
+        b0  7.004575  76.547562  7.654756 -161.098322  136.327346
     """
     model = modelcontext(model)
 
