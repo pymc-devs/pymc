@@ -665,7 +665,6 @@ def ATMIP_sample(n_steps, step=None, start=None, homepath=None, chain=0,
             else:
                 draws = n_steps
 
-            print('Beta: %f Stage: %i' % (step.beta, step.stage))
             pm._log.info('Beta: %f Stage: %i' % (step.beta, step.stage))
 
             # Metropolis sampling intermediate stages

@@ -1,21 +1,22 @@
 import pymc3 as pm
 import numpy as np
 from pymc3.step_methods import smc
+import pytest
 from tempfile import mkdtemp
 import shutil
 import theano.tensor as tt
-import multiprocessing as mp
 
 from .helpers import SeededTest
 
 
 class TestSMC(SeededTest):
 
-    def setUp(self):
-        super(TestSMC, self).setUp()
+    def setup_method(self):
+        super(TestSMC, self).setup_method()
         self.test_folder = mkdtemp(prefix='ATMIP_TEST')
 
-    def test_sample_n_core(self, n_jobs=1):
+    @pytest.mark.parametrize('n_jobs', [1, 2])
+    def test_sample_n_core(self, n_jobs):
         n_chains = 300
         n_steps = 100
         tune_interval = 25
@@ -53,7 +54,7 @@ class TestSMC(SeededTest):
                            testval=-1. * np.ones_like(mu1),
                            transform=None)
             like = pm.Deterministic('like', two_gaussians(X))
-            llk = pm.Potential('like', like)
+            llk = pm.Potential('like_potential', like)
 
         with ATMIP_test:
             step = smc.SMC(
@@ -77,15 +78,5 @@ class TestSMC(SeededTest):
 
         np.testing.assert_allclose(mu1, mu1d, rtol=0., atol=0.03)
 
-    def test_sample_multi_core(self):
-        self.tearDown()
-        cpus = mp.cpu_count()
-        if cpus > 3:
-            n_jobs = 4
-        else:
-            n_jobs = 2
-
-        self.test_sample_n_core(n_jobs=n_jobs)
-
-    def tearDown(self):
+    def teardown_method(self):
         shutil.rmtree(self.test_folder)
