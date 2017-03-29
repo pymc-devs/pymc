@@ -108,7 +108,7 @@ class MvNormal(Continuous):
 
         result = k * tt.log(2 * np.pi)
         result += 2.0 * tt.sum(tt.log(tt.nlinalg.diag(chol_cov)))
-        result += (delta_trans ** 2).sum()
+        result += (delta_trans ** 2).sum(axis=0).T
         return -0.5 * result
 
     def _logp_tau(self, value):
@@ -121,7 +121,7 @@ class MvNormal(Continuous):
 
         result = k * tt.log(2 * np.pi)
         result -= 2.0 * tt.sum(tt.log(tt.nlinalg.diag(chol_tau)))
-        result += (delta_trans ** 2).sum()
+        result += (delta_trans ** 2).sum(axis=0).T
         return -0.5 * result
 
 
