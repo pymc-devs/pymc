@@ -343,5 +343,9 @@ class Histogram(Approximation):
 
         """
         hist = cls(None, local_rv, model=model)
-        hist.histogram.set_value(jitter * np.random.randn(size, hist.global_size))
+        start = hist._bij.map(hist.model.test_point)
+        # Initialize particles
+        x0 = np.tile(start, (size, 1))
+        x0 += np.random.normal(0, jitter, x0.shape)
+        hist.histogram.set_value(x0)
         return hist
