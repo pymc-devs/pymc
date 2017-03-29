@@ -548,9 +548,9 @@ class TestMatchesScipy(SeededTest):
 
     def test_mvnormal_init_fail(self):
         with Model():
-            with self.assertRaises(ValueError):
+            with pytest.raises(ValueError):
                 x = MvNormal('x', mu=np.zeros(3), shape=3)
-            with self.assertRaises(ValueError):
+            with pytest.raises(ValueError):
                 x = MvNormal('x', mu=np.zeros(3), cov=np.eye(3), tau=np.eye(3), shape=3)
 
     @pytest.mark.parametrize('n', [1, 2])
@@ -671,7 +671,7 @@ class TestMatchesScipy(SeededTest):
         sd = np.array([2])
         assert_almost_equal(continuous.get_tau_sd(sd=sd), [1. / sd**2, sd])
 
-    @parameterized.expand([
+    @pytest.mark.parametrize('value,mu,sigma,nu,logp', [
         (0.5, -50.000, 0.500, 0.500, -99.8068528),
         (1.0, -1.000, 0.001, 0.001, -1992.5922447),
         (2.0, 0.001, 1.000, 1.000, -1.6720416),
