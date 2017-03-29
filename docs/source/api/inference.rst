@@ -55,6 +55,13 @@ ADVI
 
 .. currentmodule:: pymc3.variational.advi
 
+.. autosummary::
+
+   TestFunction
+   ADVI
+   FullRankADVI
+   Inference
+
 .. automodule:: pymc3.variational.advi
    :members:
 
@@ -64,4 +71,36 @@ ADVI minibatch
 .. currentmodule:: pymc3.variational.advi_minibatch
 
 .. automodule:: pymc3.variational.advi_minibatch
+   :members:
+
+Inference
+^^^^^^^^^
+
+.. currentmodule:: pymc3.variational.operators
+
+.. automodule:: pymc3.variational.operators
+   :members:
+
+OPVI
+^^^^
+
+.. currentmodule:: pymc3.variational.opvi
+
+.. automodule:: pymc3.variational.opvi
+   :members:
+
+SVGD
+^^^^
+
+.. currentmodule:: pymc3.variational.svgd
+
+.. automodule:: pymc3.variational.svgd
+   :members:
+
+Updates
+^^^^^^^
+
+.. currentmodule:: pymc3.variational.updates
+
+.. automodule:: pymc3.variational.updates
    :members:
