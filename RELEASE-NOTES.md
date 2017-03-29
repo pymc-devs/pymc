@@ -4,8 +4,6 @@
 
 ### New features
 
-* Theano's floatX setting is no respected, enabling GPU support.
-
 * [Add Gaussian Process submodule](http://pymc-devs.github.io/pymc3/notebooks/GP-introduction.html)
 
 * Many optimizations and speed-ups.
@@ -16,11 +14,19 @@
 
 * [Add sampler statistics.](http://pymc-devs.github.io/pymc3/notebooks/sampler-stats.html)
 
+* [Add live-trace to see samples in real-time.](http://pymc-devs.github.io/pymc3/notebooks/live_sample_plots.html)
+
 * ADVI stopping criterion implemented.
+
+* Theano's floatX setting is now respected, enabling GPU support.
 
 * [Add Elliptical Slice Sampler.](http://pymc-devs.github.io/pymc3/notebooks/GP-slice-sampling.html)
 
 * Add Stein-Variational Gradient Descent (experimental).
+
+* [Add Operator Variational Inference (experimental).](http://pymc-devs.github.io/pymc3/notebooks/bayesian_neural_network_opvi-advi.html).
+
+* [Add pm.generator() to easily specify mini-batches.](http://pymc-devs.github.io/pymc3/notebooks/bayesian_neural_network_opvi-advi.html#Minibatch-ADVI)
 
 * `Model` can now be inherited from and act as a base class for user specified models (see pymc3.models.linear).
 
@@ -29,6 +35,8 @@
 * Add `EdwardModel` wrapper to run PyMC3 models in Edward.
 
 * GLM models do not need a left-hand variable anymore.
+
+* Add support for cholesky parametrizations for cov/corr matrices.
 
 * Refactored HMC and NUTS for better readability.
 
