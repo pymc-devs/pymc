@@ -99,31 +99,29 @@ class MvNormal(Continuous):
         return self._logp_chol(value)
 
     def _logp_chol(self, value):
-        mu = self.mu
-        delta = value - mu
-
         chol_cov = self.chol_cov
         k = chol_cov.shape[0]
 
-        delta_trans = self.solve(chol_cov, delta)
+        mu = self.mu
+        delta = value.reshape((-1, k)) - mu
+        delta_trans = self.solve(chol_cov, delta.T)
 
         result = k * tt.log(2 * np.pi)
         result += 2.0 * tt.sum(tt.log(tt.nlinalg.diag(chol_cov)))
-        result += tt.dot(tt.transpose(delta_trans), delta_trans)
+        result += (delta_trans ** 2).sum()
         return -0.5 * result
 
     def _logp_tau(self, value):
-        mu = self.mu
-        delta = value - mu
-
         chol_tau = self.chol_tau
         k = chol_tau.shape[0]
 
-        delta_trans = tt.dot(chol_tau.T, delta)
+        mu = self.mu
+        delta = value.reshape((-1, k)) - mu
+        delta_trans = tt.dot(chol_tau.T, delta.T)
 
         result = k * tt.log(2 * np.pi)
         result -= 2.0 * tt.sum(tt.log(tt.nlinalg.diag(chol_tau)))
-        result += tt.dot(tt.transpose(delta_trans), delta_trans)
+        result += (delta_trans ** 2).sum()
         return -0.5 * result
 
 
