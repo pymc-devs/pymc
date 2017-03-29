@@ -14,7 +14,8 @@ from ..distributions import (DensityDist, Categorical, Multinomial, VonMises, Di
                              Flat, LKJCorr, Wald, ChiSquared, HalfNormal, DiscreteUniform,
                              Bound, Uniform, Triangular, Binomial, SkewNormal, DiscreteWeibull)
 from ..distributions import continuous
-from nose_parameterized import parameterized
+from pymc3.theanof import floatX
+import theano
 from numpy import array, inf, log, exp
 from numpy.testing import assert_almost_equal
 import numpy.random as nr
