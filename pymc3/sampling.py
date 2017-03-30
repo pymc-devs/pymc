@@ -158,7 +158,9 @@ def sample(draws, step=None, init='ADVI', n_init=200000, start=None,
     if step is None and init is not None and pm.model.all_continuous(model.vars):
         # By default, use NUTS sampler
         pm._log.info('Auto-assigning NUTS sampler...')
-        start_, step = init_nuts(init=init, njobs=njobs, n_init=n_init, model=model, random_seed=random_seed)
+        start_, step = init_nuts(init=init, njobs=njobs, n_init=n_init,
+                                 model=model, random_seed=random_seed,
+                                 progressbar=progressbar)
         if start is None:
             start = start_
     else:
@@ -389,7 +391,8 @@ def _soft_update(a, b):
     a.update({k: v for k, v in b.items() if k not in a})
 
 
-def sample_ppc(trace, samples=None, model=None, vars=None, size=None, random_seed=None, progressbar=True):
+def sample_ppc(trace, samples=None, model=None, vars=None, size=None,
+               random_seed=None, progressbar=True):
     """Generate posterior predictive samples from a model given a trace.
 
     Parameters
@@ -441,7 +444,7 @@ def sample_ppc(trace, samples=None, model=None, vars=None, size=None, random_see
 
 
 def init_nuts(init='ADVI', njobs=1, n_init=500000, model=None,
-              random_seed=-1, **kwargs):
+              random_seed=-1, progressbar=True, **kwargs):
     """Initialize and sample from posterior of a continuous model.
 
     This is a convenience function. NUTS convergence and sampling speed is extremely
@@ -463,6 +466,8 @@ def init_nuts(init='ADVI', njobs=1, n_init=500000, model=None,
         Number of iterations of initializer
         If 'ADVI', number of iterations, if 'metropolis', number of draws.
     model : Model (optional if in `with` context)
+    progressbar : bool
+        Whether or not to display a progressbar for advi sampling.
     **kwargs : keyword arguments
         Extra keyword arguments are forwarded to pymc3.NUTS.
 
@@ -484,7 +489,8 @@ def init_nuts(init='ADVI', njobs=1, n_init=500000, model=None,
         init = init.lower()
 
     if init == 'advi':
-        v_params = pm.variational.advi(n=n_init, random_seed=random_seed)
+        v_params = pm.variational.advi(n=n_init, random_seed=random_seed,
+                                       progressbar=progressbar)
         start = pm.variational.sample_vp(v_params, njobs, progressbar=False,
                                          hide_transformed=False,
                                          random_seed=random_seed)
