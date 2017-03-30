@@ -18,7 +18,9 @@
 
 * ADVI stopping criterion implemented.
 
-* Theano's floatX setting is now respected, enabling GPU support.
+* Improved support for theano's floatX setting to enable GPU computatiosn (experimental).
+
+* MvNormal supports Cholesky Decomposition now for increased speed and numerical stability.
 
 * [Add Elliptical Slice Sampler.](http://pymc-devs.github.io/pymc3/notebooks/GP-slice-sampling.html)
 
