@@ -13,7 +13,7 @@ from ..distributions import (DensityDist, Categorical, Multinomial, VonMises, Di
                              NegativeBinomial, Geometric, Exponential, ExGaussian, Normal,
                              Flat, LKJCorr, Wald, ChiSquared, HalfNormal, DiscreteUniform,
                              Bound, Uniform, Triangular, Binomial, SkewNormal, DiscreteWeibull)
-from ..distributions import continuous, multivariate
+from ..distributions import continuous
 from pymc3.theanof import floatX
 import theano
 from numpy import array, inf, log, exp
@@ -223,10 +223,14 @@ def scipy_exponweib_sucks(value, alpha, beta):
     return floatX(pdf)
 
 
-def normal_logpdf(value, mu, tau):
+def normal_logpdf_tau(value, mu, tau):
     (k,) = value.shape
     constant = -0.5 * k * np.log(2 * np.pi) + 0.5 * np.log(np.linalg.det(tau))
     return constant - 0.5 * (value - mu).dot(tau).dot(value - mu)
+
+
+def normal_logpdf_cov(value, mu, cov):
+    return scipy.stats.multivariate_normal.logpdf(value, mu, cov)
 
 
 def betafn(a):
@@ -538,12 +542,16 @@ class TestMatchesScipy(SeededTest):
     @pytest.mark.parametrize('n', [1, 2])
     def test_mvnormal(self, n):
         self.pymc3_matches_scipy(MvNormal, Vector(R, n),
-                                 {'mu': Vector(R, n), 'tau': PdMatrix(n)}, normal_logpdf)
+                                 {'mu': Vector(R, n), 'tau': PdMatrix(n)}, normal_logpdf_tau)
+        self.pymc3_matches_scipy(MvNormal, Vector(R, n),
+                                 {'mu': Vector(R, n), 'cov': PdMatrix(n)}, normal_logpdf_cov)
 
     def test_mvnormal_init_fail(self):
         with Model():
             with pytest.raises(ValueError):
-                x = MvNormal('x', np.zeros(3), shape=3)
+                x = MvNormal('x', mu=np.zeros(3), shape=3)
+            with pytest.raises(ValueError):
+                x = MvNormal('x', mu=np.zeros(3), cov=np.eye(3), tau=np.eye(3), shape=3)
 
     @pytest.mark.parametrize('n', [1, 2])
     def test_mvt(self, n):
@@ -662,16 +670,6 @@ class TestMatchesScipy(SeededTest):
     def test_get_tau_sd(self):
         sd = np.array([2])
         assert_almost_equal(continuous.get_tau_sd(sd=sd), [1. / sd**2, sd])
-
-    def test_get_tau_cov(self):
-        cov = np.random.randn(3, 3)
-        cov = np.dot(cov, cov.T)
-        mu = np.ones(3)
-        tau, cov = multivariate.get_tau_cov(mu, cov=cov)
-        assert_almost_equal(tau.eval(), np.linalg.inv(cov))
-
-        with pytest.raises(ValueError):
-            tau, cov = multivariate.get_tau_cov(mu)
 
     @pytest.mark.parametrize('value,mu,sigma,nu,logp', [
         (0.5, -50.000, 0.500, 0.500, -99.8068528),

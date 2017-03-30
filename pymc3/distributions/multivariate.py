@@ -13,7 +13,7 @@ from theano.tensor.nlinalg import det, matrix_inverse, trace
 
 import pymc3 as pm
 
-from pymc3.math import logdet, tround
+from pymc3.math import tround
 from . import transforms
 from .distribution import Continuous, Discrete, draw_values, generate_samples
 from ..model import Deterministic
@@ -25,42 +25,6 @@ __all__ = ['MvNormal', 'MvStudentT', 'Dirichlet',
            'Multinomial', 'Wishart', 'WishartBartlett',
            'LKJCorr', 'LKJCholeskyCov']
 
-
-def get_tau_cov(mu, tau=None, cov=None):
-    """
-    Find precision and standard deviation
-
-    .. math::
-        \Tau = \Sigma^-1
-
-    Parameters
-    ----------
-    mu : array-like
-    tau : array-like, not required if cov is passed
-    cov : array-like, not required if tau is passed
-
-    Results
-    -------
-    Returns tuple (tau, sd)
-
-    Notes
-    -----
-    If neither tau nor cov is provided, returns an identity matrix.
-    """
-    if tau is None:
-        if cov is None:
-            raise ValueError('Incompatible parameterization. Either use tau'
-                             'or cov to specify distribution.')
-        else:
-            tau = tt.nlinalg.matrix_inverse(cov)
-
-    else:
-        if cov is not None:
-            raise ValueError("Can't pass both tau and sd")
-        else:
-            cov = tt.nlinalg.matrix_inverse(tau)
-
-    return (tau, cov)
 
 class MvNormal(Continuous):
     R"""
@@ -83,55 +47,82 @@ class MvNormal(Continuous):
     mu : array
         Vector of means.
     cov : array
-        Covariance matrix. Not required if tau is passed.
+        Covariance matrix. Exactly one of cov, tau, or chol is needed.
     tau : array
-        Precision matrix. Not required if tau is passed.
-
-    Flags
-    ----------
-    gpu_compat : False, because LogDet is not GPU compatible yet.
-                 If this is set as true, the GPU compatible (but numerically unstable) log(det) is used.
+        Precision matrix. Exactly one of cov, tau, or chol is needed.
+    chol : array
+        Cholesky decomposition of covariance matrix. Exactly one of cov,
+        tau, or chol is needed.
 
     """
 
-    def __init__(self, mu, cov=None, tau=None, gpu_compat=False, *args, **kwargs):
+    def __init__(self, mu, cov=None, tau=None, chol=None, *args, **kwargs):
         super(MvNormal, self).__init__(*args, **kwargs)
-        self.mean = self.median = self.mode = self.mu = mu = tt.as_tensor_variable(mu)
-        tau, cov = get_tau_cov(mu, tau=tau, cov=cov)
-        self.tau = tt.as_tensor_variable(tau)
-        self.cov = tt.as_tensor_variable(cov)
-        self.gpu_compat = gpu_compat
-        if gpu_compat is False and theano.config.device == 'gpu':
-            warnings.warn("The function used is not GPU compatible. Please check the gpu_compat flag")
+        if len([i for i in [tau, cov, chol] if i is not None]) != 1:
+            raise ValueError('Incompatible parameterization. Specify exactly '
+                             'one of tau, cov, or chol to specify '
+                             'distribution.')
+        self.mean = self.median = self.mode = self.mu = tt.as_tensor_variable(mu)
+        self.solve = tt.slinalg.Solve(A_structure="lower_triangular", lower=True)
+
+        self.has_tau = tau is not None
+        if cov is not None:
+            self.chol_cov = tt.slinalg.cholesky(tt.as_tensor_variable(cov))
+        elif tau is not None:
+            self.chol_tau = tt.slinalg.cholesky(tt.as_tensor_variable(tau))
+        else:
+            self.chol_cov = tt.as_tensor_variable(chol)
 
     def random(self, point=None, size=None):
-        mu, cov = draw_values([self.mu, self.cov], point=point)
+        if self.has_tau:
+            mu, chol_tau = draw_values([self.mu, self.chol_tau], point=point)
+        else:
+            mu, chol_cov = draw_values([self.mu, self.chol_cov], point=point)
 
-        def _random(mean, cov, size=None):
-            return stats.multivariate_normal.rvs(
-                mean, cov, None if size == mean.shape else size)
+        if size is None:
+            size = []
+        else:
+            try:
+                size = list(size)
+            except TypeError:
+                size = [size]
+        size.append(mu.shape[0])
 
-        samples = generate_samples(_random,
-                                   mean=mu, cov=cov,
-                                   dist_shape=self.shape,
-                                   broadcast_shape=mu.shape,
-                                   size=size)
-        return samples
+        standard_normal = np.random.standard_normal(size)
+        if self.has_tau:
+            return mu + scipy.linalg.solve_triangular(chol_tau, standard_normal.T, lower=True).T
+        return mu + np.dot(standard_normal, chol_cov)
 
     def logp(self, value):
-        mu = self.mu
-        tau = self.tau
+        if self.has_tau:
+            return self._logp_tau(value)
+        return self._logp_chol(value)
 
-        delta = value - mu
-        k = tau.shape[0]
+    def _logp_chol(self, value):
+        chol_cov = self.chol_cov
+        k = chol_cov.shape[0]
+
+        mu = self.mu
+        delta = value.reshape((-1, k)) - mu
+        delta_trans = self.solve(chol_cov, delta.T)
 
         result = k * tt.log(2 * np.pi)
-        if self.gpu_compat:
-            result -= tt.log(det(tau))
-        else:
-            result -= logdet(tau)
-        result += (tt.dot(delta, tau) * delta).sum(axis=delta.ndim - 1)
-        return -1 / 2. * result
+        result += 2.0 * tt.sum(tt.log(tt.nlinalg.diag(chol_cov)))
+        result += (delta_trans ** 2).sum(axis=0).T
+        return -0.5 * result
+
+    def _logp_tau(self, value):
+        chol_tau = self.chol_tau
+        k = chol_tau.shape[0]
+
+        mu = self.mu
+        delta = value.reshape((-1, k)) - mu
+        delta_trans = tt.dot(chol_tau.T, delta.T)
+
+        result = k * tt.log(2 * np.pi)
+        result -= 2.0 * tt.sum(tt.log(tt.nlinalg.diag(chol_tau)))
+        result += (delta_trans ** 2).sum(axis=0).T
+        return -0.5 * result
 
 
 class MvStudentT(Continuous):
