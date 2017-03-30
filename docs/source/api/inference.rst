@@ -65,3 +65,11 @@ ADVI minibatch
 
 .. automodule:: pymc3.variational.advi_minibatch
    :members:
+
+ADVI approximations
+^^^^^^^^^^^^^^^^^^^
+
+.. currentmodule:: pymc3.variational.approximations
+
+.. automodule:: pymc3.variational.approximations
+   :members:
