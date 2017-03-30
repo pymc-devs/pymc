@@ -16,3 +16,4 @@ API Reference
    api/diagnostics
    api/backends
    api/math
+   api/data
