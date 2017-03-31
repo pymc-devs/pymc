@@ -242,8 +242,8 @@ def forestplot(trace_obj, varnames=None, transform=identity_transform, alpha=0.0
             if k > 1:
                 for q in np.transpose(quants).squeeze():
                     # Multiple y values
-                    y -= 1
                     interval_plot = _plot_tree(interval_plot, y, q, quartiles)
+                    y -= 1
             else:
                 interval_plot = _plot_tree(interval_plot, y, quants, quartiles)
 
