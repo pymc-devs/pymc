@@ -1,5 +1,4 @@
 import os
-import unittest
 
 from .checks import close_to
 from .models import simple_categorical, mv_simple, mv_simple_discrete, simple_2model, mv_prior_simple
@@ -15,9 +14,10 @@ from numpy.testing import assert_array_almost_equal
 import numpy as np
 import numpy.testing as npt
 from tqdm import tqdm
+import pytest
 
 
-class TestStepMethods(object):  # yield test doesn't work subclassing unittest.TestCase
+class TestStepMethods(object):  # yield test doesn't work subclassing object
     master_samples = {
         Slice: np.array([
             -8.13087389e-01, -3.08921856e-01, -6.79377098e-01, 6.50812585e-01, -7.63577596e-01,
@@ -208,7 +208,7 @@ class TestStepMethods(object):  # yield test doesn't work subclassing unittest.T
             yield self.check_stat, check, trace, step.__class__.__name__
 
 
-class TestMetropolisProposal(unittest.TestCase):
+class TestMetropolisProposal(object):
     def test_proposal_choice(self):
         _, model, _ = mv_simple()
         with model:
@@ -219,7 +219,7 @@ class TestMetropolisProposal(unittest.TestCase):
             sampler = Metropolis(S=s)
             assert isinstance(sampler.proposal_dist, MultivariateNormalProposal)
             s[0, 0] = -s[0, 0]
-            with self.assertRaises(np.linalg.LinAlgError):
+            with pytest.raises(np.linalg.LinAlgError):
                 sampler = Metropolis(S=s)
 
     def test_mv_proposal(self):
@@ -231,7 +231,7 @@ class TestMetropolisProposal(unittest.TestCase):
         npt.assert_allclose(np.cov(samples.T), cov, rtol=0.2)
 
 
-class TestCompoundStep(unittest.TestCase):
+class TestCompoundStep(object):
     samplers = (Metropolis, Slice, HamiltonianMC, NUTS)
 
     def test_non_blocked(self):
@@ -239,46 +239,46 @@ class TestCompoundStep(unittest.TestCase):
         _, model = simple_2model()
         with model:
             for sampler in self.samplers:
-                self.assertIsInstance(sampler(blocked=False), CompoundStep)
+                assert isinstance(sampler(blocked=False), CompoundStep)
 
     def test_blocked(self):
         _, model = simple_2model()
         with model:
             for sampler in self.samplers:
                 sampler_instance = sampler(blocked=True)
-                self.assertNotIsInstance(sampler_instance, CompoundStep)
-                self.assertIsInstance(sampler_instance, sampler)
+                assert not isinstance(sampler_instance, CompoundStep)
+                assert isinstance(sampler_instance, sampler)
 
 
-class TestAssignStepMethods(unittest.TestCase):
+class TestAssignStepMethods(object):
     def test_bernoulli(self):
         """Test bernoulli distribution is assigned binary gibbs metropolis method"""
         with Model() as model:
             Bernoulli('x', 0.5)
             steps = assign_step_methods(model, [])
-        self.assertIsInstance(steps, BinaryGibbsMetropolis)
+        assert isinstance(steps, BinaryGibbsMetropolis)
 
     def test_normal(self):
         """Test normal distribution is assigned NUTS method"""
         with Model() as model:
             Normal('x', 0, 1)
             steps = assign_step_methods(model, [])
-        self.assertIsInstance(steps, NUTS)
+        assert isinstance(steps, NUTS)
 
     def test_categorical(self):
         """Test categorical distribution is assigned categorical gibbs metropolis method"""
         with Model() as model:
             Categorical('x', np.array([0.25, 0.75]))
             steps = assign_step_methods(model, [])
-        self.assertIsInstance(steps, BinaryGibbsMetropolis)
+        assert isinstance(steps, BinaryGibbsMetropolis)
         with Model() as model:
             Categorical('y', np.array([0.25, 0.70, 0.05]))
             steps = assign_step_methods(model, [])
-        self.assertIsInstance(steps, CategoricalGibbsMetropolis)
+        assert isinstance(steps, CategoricalGibbsMetropolis)
 
     def test_binomial(self):
         """Test binomial distribution is assigned metropolis method."""
         with Model() as model:
             Binomial('x', 10, 0.5)
             steps = assign_step_methods(model, [])
-        self.assertIsInstance(steps, Metropolis)
+        assert isinstance(steps, Metropolis)

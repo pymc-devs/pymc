@@ -1,10 +1,8 @@
 import threading
-import unittest
-
 from pymc3 import Model, Normal
 
 
-class TestModelContext(unittest.TestCase):
+class TestModelContext(object):
     def test_thread_safety(self):
         """ Regression test for issue #1552: Thread safety of model context manager
 
@@ -40,9 +38,7 @@ class TestModelContext(unittest.TestCase):
         # - B enters it's model context after A, but before a is declared -> a goes into B
         # - A leaves it's model context before B attempts to declare b. A's context manager
         #   takes B from the stack, such that b ends up in model A
-        self.assertEqual(
-            (
+        assert (
                 list(modelA.named_vars),
                 list(modelB.named_vars),
-            ), (['a'],['b'])
-        )
+            ) == (['a'],['b'])

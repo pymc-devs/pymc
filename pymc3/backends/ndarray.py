@@ -154,6 +154,8 @@ class NDArray(base.BaseTrace):
         sliced.samples = {varname: values[idx]
                           for varname, values in self.samples.items()}
         sliced.sampler_vars = self.sampler_vars
+        sliced.draw_idx = (idx.stop - idx.start) // idx.step
+
         if self._stats is None:
             return sliced
         sliced._stats = []
@@ -163,7 +165,6 @@ class NDArray(base.BaseTrace):
             for key, vals in vars.items():
                 var_sliced[key] = vals[idx]
 
-        sliced.draw_idx = idx.stop - idx.start
         return sliced
 
     def point(self, idx):
@@ -176,17 +177,20 @@ class NDArray(base.BaseTrace):
 
 
 def _slice_as_ndarray(strace, idx):
-    if idx.start is None:
-        burn = 0
-    else:
-        burn = idx.start
-    if idx.step is None:
-        thin = 1
-    else:
-        thin = idx.step
-
     sliced = NDArray(model=strace.model, vars=strace.vars)
     sliced.chain = strace.chain
-    sliced.samples = {v: strace.get_values(v, burn=burn, thin=thin)
-                      for v in strace.varnames}
+
+    # Happy path where we do not need to load everything from the trace
+    if ((idx.step is None or idx.step >= 1) and
+            (idx.stop is None or idx.stop == len(strace))):
+        start, stop, step = idx.indices(len(strace))
+        sliced.samples = {v: strace.get_values(v, burn=idx.start, thin=idx.step)
+                          for v in strace.varnames}
+        sliced.draw_idx = (stop - start) // step
+    else:
+        start, stop, step = idx.indices(len(strace))
+        sliced.samples = {v: strace.get_values(v)[start:stop:step]
+                          for v in strace.varnames}
+        sliced.draw_idx = (stop - start) // step
+
     return sliced

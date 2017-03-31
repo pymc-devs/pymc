@@ -1,16 +1,19 @@
-from six.moves import cPickle as pickle
-import unittest
+import pickle
 import numpy as np
 from theano import theano, tensor as tt
 import pymc3 as pm
 from pymc3 import Model, Normal
-from pymc3.variational.inference import (
-    KL, MeanField, ADVI, FullRankADVI,
+from pymc3.variational import (
+    ADVI, FullRankADVI,
+    Histogram,
     fit
 )
+from pymc3.variational.operators import KL
+from pymc3.variational.approximations import MeanField
 
 from pymc3.tests import models
 from pymc3.tests.helpers import SeededTest
+import pytest
 
 
 class TestELBO(SeededTest):
@@ -55,7 +58,7 @@ class TestApproximates:
                 app = self.inference().approx
                 posterior = app.random(10)
                 x_sampled = app.view(posterior, 'x').eval()
-            self.assertEqual(x_sampled.shape, (10,) + model['x'].dshape)
+            assert x_sampled.shape == (10,) + model['x'].dshape
 
         def test_vars_view_dynamic_size(self):
             _, model, _ = models.multidimensional_model()
@@ -65,9 +68,9 @@ class TestApproximates:
                 i.tag.test_value = 1
                 posterior = app.random(i)
             x_sampled = app.view(posterior, 'x').eval({i: 10})
-            self.assertEqual(x_sampled.shape, (10,) + model['x'].dshape)
+            assert x_sampled.shape == (10,) + model['x'].dshape
             x_sampled = app.view(posterior, 'x').eval({i: 1})
-            self.assertEqual(x_sampled.shape, (1,) + model['x'].dshape)
+            assert x_sampled.shape == (1,) + model['x'].dshape
 
         def test_vars_view_dynamic_size_numpy(self):
             _, model, _ = models.multidimensional_model()
@@ -76,11 +79,11 @@ class TestApproximates:
                 i = tt.iscalar('i')
                 i.tag.test_value = 1
             x_sampled = app.view(app.random_fn(10), 'x')
-            self.assertEqual(x_sampled.shape, (10,) + model['x'].dshape)
+            assert x_sampled.shape == (10,) + model['x'].dshape
             x_sampled = app.view(app.random_fn(1), 'x')
-            self.assertEqual(x_sampled.shape, (1,) + model['x'].dshape)
+            assert x_sampled.shape == (1,) + model['x'].dshape
             x_sampled = app.view(app.random_fn(), 'x')
-            self.assertEqual(x_sampled.shape, () + model['x'].dshape)
+            assert x_sampled.shape == () + model['x'].dshape
 
         def test_sample_vp(self):
             n_samples = 100
@@ -90,11 +93,11 @@ class TestApproximates:
                 pm.Binomial('xs', n=1, p=p, observed=xs)
                 app = self.inference().approx
                 trace = app.sample_vp(draws=1, hide_transformed=True)
-                self.assertListEqual(trace.varnames, ['p'])
-                self.assertEqual(len(trace), 1)
+                assert trace.varnames == ['p']
+                assert len(trace) == 1
                 trace = app.sample_vp(draws=10, hide_transformed=False)
-                self.assertListEqual(sorted(trace.varnames), ['p', 'p_logodds_'])
-                self.assertEqual(len(trace), 10)
+                assert sorted(trace.varnames) == ['p', 'p_logodds_']
+                assert len(trace) == 10
 
         def test_sample_node(self):
             n_samples = 100
@@ -122,13 +125,13 @@ class TestApproximates:
                 Normal('x', mu=mu_, sd=sd, observed=data)
                 pm.Deterministic('mu_sq', mu_**2)
                 inf = self.inference()
-                self.assertEqual(len(inf.hist), 0)
+                assert len(inf.hist) == 0
                 inf.fit(10)
-                self.assertEqual(len(inf.hist), 10)
-                self.assertFalse(np.isnan(inf.hist).any())
+                assert len(inf.hist) == 10
+                assert not np.isnan(inf.hist).any()
                 approx = inf.fit(self.NITER)
-                self.assertEqual(len(inf.hist), self.NITER + 10)
-                self.assertFalse(np.isnan(inf.hist).any())
+                assert len(inf.hist) == self.NITER + 10
+                assert not np.isnan(inf.hist).any()
                 trace = approx.sample_vp(10000)
             np.testing.assert_allclose(np.mean(trace['mu']), mu_post, rtol=0.1)
             np.testing.assert_allclose(np.std(trace['mu']), np.sqrt(1. / d), rtol=0.2)
@@ -186,7 +189,7 @@ class TestApproximates:
                 mu_ = Normal('mu', mu=mu0, sd=sd0, testval=0)
                 Normal('x', mu=mu_, sd=sd, observed=data_t, total_size=n)
                 inf = self.inference()
-                approx = inf.fit(self.NITER, callbacks=[cb])
+                approx = inf.fit(self.NITER, callbacks=[cb], obj_n_mc=10)
                 trace = approx.sample_vp(10000)
             np.testing.assert_allclose(np.mean(trace['mu']), mu_post, rtol=0.4)
             np.testing.assert_allclose(np.std(trace['mu']), np.sqrt(1. / d), rtol=0.4)
@@ -199,14 +202,38 @@ class TestApproximates:
             inference.fit(20)
 
         def test_aevb(self):
-            _, model, _ = models.exponential_beta()
+            _, model, _ = models.exponential_beta(n=2)
             x = model.x
             y = model.y
             mu = theano.shared(x.init_value) * 2
-            sd = theano.shared(x.init_value) * 3
+            rho = theano.shared(np.zeros_like(x.init_value))
             with model:
-                inference = self.inference(local_rv={y: (mu, sd)})
-                inference.fit(3)
+                inference = self.inference(local_rv={y: (mu, rho)})
+                approx = inference.fit(3, obj_n_mc=2)
+                approx.sample_vp(10)
+                approx.apply_replacements(
+                    y,
+                    more_replacements={x: np.asarray([1, 1], dtype=x.dtype)}
+                ).eval()
+
+        def test_profile(self):
+            with models.multidimensional_model()[1]:
+                self.inference().run_profiling(10)
+
+        def test_multiple_replacements(self):
+            _, model, _ = models.exponential_beta(n=2)
+            x = model.x
+            y = model.y
+            xy = x*y
+            xpy = x+y
+            with model:
+                mf = self.inference().approx
+                xy_, xpy_ = mf.apply_replacements([xy, xpy])
+                xy_s, xpy_s = mf.sample_node([xy, xpy])
+                xy_.eval()
+                xpy_.eval()
+                xy_s.eval()
+                xpy_s.eval()
 
 
 class TestMeanField(TestApproximates.Base):
@@ -214,7 +241,12 @@ class TestMeanField(TestApproximates.Base):
 
     def test_approximate(self):
         with models.multidimensional_model()[1]:
-            fit(10, method='advi')
+            meth = ADVI()
+            fit(10, method=meth)
+            with pytest.raises(KeyError):
+                fit(10, method='undefined')
+            with pytest.raises(TypeError):
+                fit(10, method=1)
 
 
 class TestFullRank(TestApproximates.Base):
@@ -234,11 +266,58 @@ class TestFullRank(TestApproximates.Base):
 
     def test_combined(self):
         with models.multidimensional_model()[1]:
+            with pytest.raises(ValueError):
+                fit(10, method='advi->fullrank_advi', frac=1)
             fit(10, method='advi->fullrank_advi', frac=.5)
 
     def test_approximate(self):
         with models.multidimensional_model()[1]:
             fit(10, method='fullrank_advi')
 
+
+class TestHistogram(SeededTest):
+    def test_sampling(self):
+        with models.multidimensional_model()[1]:
+            full_rank = FullRankADVI()
+            approx = full_rank.fit(20)
+            trace0 = approx.sample_vp(10000)
+            histogram = Histogram(trace0)
+        trace1 = histogram.sample_vp(100000)
+        np.testing.assert_allclose(trace0['x'].mean(0), trace1['x'].mean(0), atol=0.01)
+        np.testing.assert_allclose(trace0['x'].var(0), trace1['x'].var(0), atol=0.01)
+
+    def test_aevb_histogram(self):
+        _, model, _ = models.exponential_beta(n=2)
+        x = model.x
+        mu = theano.shared(x.init_value)
+        rho = theano.shared(np.zeros_like(x.init_value))
+        with model:
+            inference = ADVI(local_rv={x: (mu, rho)})
+            approx = inference.approx
+            trace0 = approx.sample_vp(10000)
+            histogram = Histogram(trace0, local_rv={x: (mu, rho)})
+            trace1 = histogram.sample_vp(10000)
+            histogram.random(no_rand=True)
+            histogram.random_fn(no_rand=True)
+        np.testing.assert_allclose(trace0['y'].mean(0), trace1['y'].mean(0), atol=0.02)
+        np.testing.assert_allclose(trace0['y'].var(0), trace1['y'].var(0), atol=0.02)
+        np.testing.assert_allclose(trace0['x'].mean(0), trace1['x'].mean(0), atol=0.02)
+        np.testing.assert_allclose(trace0['x'].var(0), trace1['x'].var(0), atol=0.02)
+
+    def test_random_with_transformed(self):
+        p = .2
+        trials = (np.random.uniform(size=10) < p).astype('int8')
+        with pm.Model():
+            p = pm.Uniform('p')
+            pm.Bernoulli('trials', p, observed=trials)
+            trace = pm.sample(1000, step=pm.Metropolis())
+            histogram = Histogram(trace)
+            histogram.randidx(None).eval()
+            histogram.randidx(1).eval()
+            histogram.random_fn(no_rand=True)
+            histogram.random_fn(no_rand=False)
+            histogram.histogram_logp.eval()
+
+
 if __name__ == '__main__':
-    unittest.main()
+    object.main()

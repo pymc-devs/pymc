@@ -14,8 +14,8 @@ from scipy import stats as st
 
 class TestStats(SeededTest):
     @classmethod
-    def setUpClass(cls):
-        super(TestStats, cls).setUpClass()
+    def setup_class(cls):
+        super(TestStats, cls).setup_class()
         cls.normal_sample = normal(0, 1, 200000)
 
     def test_autocorr(self):

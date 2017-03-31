@@ -36,17 +36,15 @@ fi
 
 pip install jupyter
 conda install --yes pyqt matplotlib --channel conda-forge
-conda install --yes pyzmq numpy scipy nose pandas Cython patsy statsmodels joblib coverage mkl-service
+conda install --yes pyzmq numpy scipy pytest pytest-cov pandas Cython patsy statsmodels joblib coverage mkl-service
 if [ ${PYTHON_VERSION} == "2.7" ]; then
     conda install --yes mock enum34;
 fi
 
 pip install --upgrade pip
 pip install tqdm
-pip install nose_parameterized
 pip install --no-deps numdifftools
 pip install git+https://github.com/Theano/Theano.git
-pip install git+https://github.com/mahmoudimus/nose-timer.git
 pip install h5py
 
 if [ -z ${NO_SETUP} ]
