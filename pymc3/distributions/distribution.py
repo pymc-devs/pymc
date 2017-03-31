@@ -6,7 +6,6 @@ from ..memoize import memoize
 from ..model import Model, get_named_nodes, FreeRV, ObservedRV
 from ..vartypes import string_types
 from .dist_math import bound
-from . import transforms
 
 
 __all__ = ['DensityDist', 'Distribution', 'Continuous', 'Bound',
@@ -388,13 +387,14 @@ class Bounded(Distribution):
         Lower bound of the distribution, set to -inf to disable.
     upper : float (optional)
         Upper bound of the distribibution, set to inf to disable.
-    tranform : 'infer' or object
+    transform : 'infer' or object
         If 'infer', infers the right transform to apply from the supplied bounds.
         If transform object, has to supply .forward() and .backward() methods.
         See pymc3.distributions.transforms for more information.
     """
 
     def __init__(self, distribution, lower, upper, transform='infer', *args, **kwargs):
+        import pymc3.distributions.transforms as transforms
         self.dist = distribution.dist(*args, **kwargs)
 
         self.__dict__.update(self.dist.__dict__)
@@ -424,6 +424,14 @@ class Bounded(Distribution):
 
         if issubclass(distribution, Discrete):
             self.transform = None
+
+    def __getstate__(self):
+        # Hack to get around pickling failure due to import of .transforms
+        # inside __init__. Sampling will fail with njobs > 1 if this is
+        # removed. Ideally, this should be fixed in a more principled way by
+        # fixing the circular import that caused this problem in the first
+        # place.
+        pass
 
     def _random(self, lower, upper, point=None, size=None):
         samples = np.zeros(size).flatten()
