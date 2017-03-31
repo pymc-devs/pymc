@@ -431,7 +431,14 @@ class Bounded(Distribution):
         # removed. Ideally, this should be fixed in a more principled way by
         # fixing the circular import that caused this problem in the first
         # place.
-        pass
+        try:
+            self.__dict__.pop('transforms')
+        except:
+            pass
+        return self.__dict__
+
+    def __setstate__(self, state):
+        import pymc3.distributions.transforms as transforms
 
     def _random(self, lower, upper, point=None, size=None):
         samples = np.zeros(size).flatten()
