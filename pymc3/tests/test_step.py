@@ -139,7 +139,7 @@ class TestStepMethods(object):  # yield test doesn't work subclassing object
             trace = sample(n_steps, step=step_method(), random_seed=1)
 
         if not benchmarking:
-            assert_array_almost_equal(trace.get_values('x'), self.master_samples[step_method], decimal=select_by_precision(float64=6, float32=5))
+            assert_array_almost_equal(trace.get_values('x'), self.master_samples[step_method], decimal=select_by_precision(float64=6, float32=4))
 
     def check_stat(self, check, trace, name):
         for (var, stat, value, bound) in check:
