@@ -1,7 +1,7 @@
 from __future__ import division
 
 import itertools
-from .helpers import SeededTest
+from .helpers import SeededTest, fxarray, select_by_precision
 from ..vartypes import continuous_types
 from ..model import Model, Point, Potential
 from ..blocking import DictToVarBijection, DictToArrayBijection, ArrayOrdering
@@ -15,7 +15,6 @@ from ..distributions import (DensityDist, Categorical, Multinomial, VonMises, Di
                              Bound, Uniform, Triangular, Binomial, SkewNormal, DiscreteWeibull)
 from ..distributions import continuous
 from pymc3.theanof import floatX
-import theano
 from numpy import array, inf, log, exp
 from numpy.testing import assert_almost_equal
 import numpy.random as nr
@@ -27,24 +26,18 @@ import scipy.stats.distributions as sp
 import scipy.stats
 
 
-def select_by_precision(float64, float32):
-    """Helper function to choose reasonable decimal cutoffs for different floatX modes."""
-    decimal = float64 if theano.config.floatX == "float64" else float32
-    return decimal
-
-
 def get_lkj_cases():
     """
     Log probabilities calculated using the formulas in:
     http://www.sciencedirect.com/science/article/pii/S0047259X09000876
     """
-    tri = np.array([0.7, 0.0, -0.7])
+    tri = fxarray([0.7, 0.0, -0.7])
     return [
         (tri, 1, 3, 1.5963125911388549),
         (tri, 3, 3, -7.7963493376312742),
         (tri, 0, 3, -np.inf),
-        (np.array([1.1, 0.0, -0.7]), 1, 3, -np.inf),
-        (np.array([0.7, 0.0, -1.1]), 1, 3, -np.inf)
+        (fxarray([1.1, 0.0, -0.7]), 1, 3, -np.inf),
+        (fxarray([0.7, 0.0, -1.1]), 1, 3, -np.inf)
     ]
 
 
@@ -594,7 +587,7 @@ class TestMatchesScipy(SeededTest):
 
     def test_multinomial_vec(self):
         vals = np.array([[2,4,4], [3,3,4]])
-        p = np.array([0.2, 0.3, 0.5])
+        p = fxarray([0.2, 0.3, 0.5])
         n = 10
 
         with Model() as model_single:
@@ -609,7 +602,7 @@ class TestMatchesScipy(SeededTest):
 
     def test_multinomial_vec_1d_n(self):
         vals = np.array([[2,4,4], [4,3,4]])
-        p = np.array([0.2, 0.3, 0.5])
+        p = fxarray([0.2, 0.3, 0.5])
         ns = np.array([10, 11])
 
         with Model() as model:
@@ -621,7 +614,7 @@ class TestMatchesScipy(SeededTest):
 
     def test_multinomial_vec_1d_n_2d_p(self):
         vals = np.array([[2,4,4], [4,3,4]])
-        ps = np.array([[0.2, 0.3, 0.5],
+        ps = fxarray([[0.2, 0.3, 0.5],
                        [0.9, 0.09, 0.01]])
         ns = np.array([10, 11])
 
@@ -634,7 +627,7 @@ class TestMatchesScipy(SeededTest):
 
     def test_multinomial_vec_2d_p(self):
         vals = np.array([[2,4,4], [3,3,4]])
-        ps = np.array([[0.2, 0.3, 0.5],
+        ps = fxarray([[0.2, 0.3, 0.5],
                        [0.3, 0.3, 0.4]])
         n = 10
 
@@ -647,7 +640,7 @@ class TestMatchesScipy(SeededTest):
 
     def test_categorical_bounds(self):
         with Model():
-            x = Categorical('x', p=np.array([0.2, 0.3, 0.5]))
+            x = Categorical('x', p=fxarray([0.2, 0.3, 0.5]))
             assert np.isinf(x.logp({'x': -1}))
             assert np.isinf(x.logp({'x': 3}))
 
@@ -668,7 +661,7 @@ class TestMatchesScipy(SeededTest):
             self.check_dlogp(model, value, R, {})
 
     def test_get_tau_sd(self):
-        sd = np.array([2])
+        sd = fxarray([2])
         assert_almost_equal(continuous.get_tau_sd(sd=sd), [1. / sd**2, sd])
 
     @pytest.mark.parametrize('value,mu,sigma,nu,logp', [

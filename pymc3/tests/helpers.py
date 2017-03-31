@@ -1,7 +1,10 @@
 from logging.handlers import BufferingHandler
 import numpy.random as nr
+import numpy as np
 from theano.sandbox.rng_mrg import MRG_RandomStreams
 from ..theanof import set_tt_rng, tt_rng
+from pymc3.theanof import floatX
+import theano
 
 
 class SeededTest(object):
@@ -77,3 +80,13 @@ class Matcher(object):
         else:
             result = dv.find(v) >= 0
         return result
+
+
+def select_by_precision(float64, float32):
+    """Helper function to choose reasonable decimal cutoffs for different floatX modes."""
+    decimal = float64 if theano.config.floatX == "float64" else float32
+    return decimal
+
+
+def fxarray(x):
+    return floatX(np.array(x))

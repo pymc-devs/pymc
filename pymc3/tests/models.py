@@ -4,7 +4,7 @@ import pymc3 as pm
 from itertools import product
 import theano.tensor as tt
 from theano.compile.ops import as_op
-
+from .helpers import fxarray
 
 def simple_model():
     mu = -2.1
@@ -16,8 +16,8 @@ def simple_model():
 
 
 def simple_categorical():
-    p = np.array([0.1, 0.2, 0.3, 0.4])
-    v = np.array([0.0, 1.0, 2.0, 3.0])
+    p = fxarray([0.1, 0.2, 0.3, 0.4])
+    v = fxarray([0.0, 1.0, 2.0, 3.0])
     with Model() as model:
         Categorical('x', p, shape=3, testval=[1, 2, 3])
 
@@ -43,7 +43,7 @@ def simple_arbitrary_det():
     with Model() as model:
         a = Normal('a')
         b = arbitrary_det(a)
-        Normal('obs', mu=b.astype('float64'), observed=np.array([1, 3, 5]))
+        Normal('obs', mu=b.astype('float64'), observed=fxarray([1, 3, 5]))
 
     return model.test_point, model
 
@@ -66,15 +66,15 @@ def simple_2model():
 
 
 def mv_simple():
-    mu = np.array([-.1, .5, 1.1])
-    p = np.array([
+    mu = fxarray([-.1, .5, 1.1])
+    p = fxarray([
         [2., 0, 0],
         [.05, .1, 0],
         [1., -0.05, 5.5]])
     tau = np.dot(p, p.T)
     with pm.Model() as model:
         pm.MvNormal('x', tt.constant(mu), tau=tt.constant(tau),
-                    shape=3, testval=np.array([.1, 1., .8]))
+                    shape=3, testval=fxarray([.1, 1., .8]))
     H = tau
     C = np.linalg.inv(H)
     return model.test_point, model, (mu, C)
@@ -83,7 +83,7 @@ def mv_simple():
 def mv_simple_discrete():
     d = 2
     n = 5
-    p = np.array([.15, .85])
+    p = fxarray([.15, .85])
     with pm.Model() as model:
         pm.Multinomial('x', n, tt.constant(p), shape=d, testval=np.array([1, 4]))
         mu = n * p
@@ -106,7 +106,7 @@ def mv_prior_simple():
     K = pm.gp.cov.ExpQuad(1, 1)(X).eval()
     L = np.linalg.cholesky(K)
     K_noise = K + noise * np.eye(n)
-    obs = np.array([-0.1, 0.5, 1.1])
+    obs = fxarray([-0.1, 0.5, 1.1])
 
     # Posterior mean
     L_noise = np.linalg.cholesky(K_noise)
