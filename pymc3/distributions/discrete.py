@@ -56,7 +56,7 @@ class Binomial(Discrete):
         p = self.p
 
         return bound(
-            binomln(floatX(n), floatX(value)) + logpow(p, floatX(value)) + logpow(1 - p, floatX(n - value)),
+            binomln(floatX(n), floatX(value)) + logpow(p, value) + logpow(1 - p, n - value),
             0 <= value, value <= n,
             0 <= p, p <= 1)
 
