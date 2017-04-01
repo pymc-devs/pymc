@@ -36,6 +36,12 @@ def find_MAP(start=None, vars=None, fmin=None,
     return_raw : Bool
         Whether to return extra value returned by fmin (Defaults to `False`)
     model : Model (optional if in `with` context)
+    live_disp : Bool
+        Display table tracking optimization progress when run from within
+        an IPython notebook.
+    callback : callable
+        Callback function to pass to scipy optimization routine.  Overrides
+        live_disp if callback is given.
     *args, **kwargs
         Extra args passed to fmin
     """
@@ -89,13 +95,13 @@ def find_MAP(start=None, vars=None, fmin=None,
         def grad_logp_o(point):
             return nan_to_num(-dlogp(point))
 
-        if live_disp:
+        if live_disp and callback is not None:
             callback = Monitor(bij, logp_o, model, grad_logp_o)
 
         r = fmin(logp_o, bij.map(start), fprime=grad_logp_o, callback=callback, *args, **kwargs)
         compute_gradient = True
     else:
-        if live_disp:
+        if live_disp and callback is not None:
             callback = Monitor(bij, logp_o, dlogp=None)
 
         # Check to see if minimization function uses a starting value
@@ -111,7 +117,10 @@ def find_MAP(start=None, vars=None, fmin=None,
         mx0 = r
 
     if live_disp:
-        callback(mx0)
+        try:
+            callback.update(mx0)
+        except:
+            pass
 
     mx = bij.rmap(mx0)
 
@@ -208,12 +217,15 @@ class Monitor(object):
 
     def __call__(self, x):
         self.iters += 1
-        if time.time() - self.t0 > self.update_interval:
-            self._update_progtable(x)
-            self._update_paramtable(x)
-            if self.using_notebook:
-                self._display_notebook()
-                self.t0 = time.time()
+        if time.time() - self.t0 > self.update_interval or self.iters == 1:
+            self.update(x)
+
+    def update(self, x):
+        self._update_progtable(x)
+        self._update_paramtable(x)
+        if self.using_notebook:
+            self._display_notebook()
+            self.t0 = time.time()
 
     def _update_progtable(self, x):
         s = time.time() - self.t_initial
@@ -237,7 +249,7 @@ class Monitor(object):
         .tg {border-collapse:collapse;border-spacing:0;border:none;}
         .tg td{font-family:Arial, sans-serif;font-size:14px;padding:3px 3px;border-style:solid;border-width:0px;overflow:hidden;word-break:normal;}
         .tg th{Impact, Charcoal, sans-serif;font-size:13px;font-weight:bold;padding:3px 3px;border-style:solid;border-width:0px;overflow:hidden;word-break:normal; background-color:#0E688A;color:#ffffff;}
-        .tg .tg-vkoh{font-weight:normal;font-family:"Lucida Console", Monaco, monospace !important; background-color:#ffffff;color:#000000}
+        .tg .tg-vkoh{white-space:pre;font-weight:normal;font-family:"Lucida Console", Monaco, monospace !important; background-color:#ffffff;color:#000000}
         .tg .tg-suao{font-weight:bold;font-family:"Lucida Console", Monaco, monospace !important;background-color:#0E688A;color:#ffffff;}
         """
         html += r"""
@@ -294,8 +306,8 @@ def format_values(val):
     if val.size == 1:
         return fmt.format(np.float(val))
     elif val.size < 9:
-        return ", ".join([fmt.format(v) for v in val])
+        return "[" + ", ".join([fmt.format(v) for v in val]) + "]"
     else:
-        start = ", ".join([fmt.format(v) for v in val[:4]])
-        end   = ", ".join([fmt.format(v) for v in val[-4:]])
-        return start + ", ... , " + end
+        start = "[" + ", ".join([fmt.format(v) for v in val[:4]])
+        end   = ", ".join([fmt.format(v) for v in val[-4:]]) +"]"
+        return start + ",   ...   ,  " + end
