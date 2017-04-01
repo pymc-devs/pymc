@@ -180,6 +180,8 @@ class ObjectiveFunction(object):
             Add custom params for test function optimizer
         more_updates : dict
             Add custom updates to resulting updates
+        more_replacements : dict
+            Apply custom replacements before calculating gradients
 
         Returns
         -------
@@ -224,7 +226,7 @@ class ObjectiveFunction(object):
     def step_function(self, obj_n_mc=None, tf_n_mc=None,
                       obj_optimizer=adam, test_optimizer=adam,
                       more_obj_params=None, more_tf_params=None,
-                      more_updates=None, score=False,
+                      more_updates=None, more_replacements=None, score=False,
                       fn_kwargs=None):
         """
         Step function that should be called on each optimization step.
@@ -254,6 +256,9 @@ class ObjectiveFunction(object):
             calculate loss on each step? Defaults to False for speed
         fn_kwargs : dict
             Add kwargs to theano.function (e.g. `{'profile': True}`)
+        more_replacements : dict
+            Apply custom replacements before calculating gradients
+
         Returns
         -------
         theano.function
@@ -265,7 +270,8 @@ class ObjectiveFunction(object):
                                test_optimizer=test_optimizer,
                                more_obj_params=more_obj_params,
                                more_tf_params=more_tf_params,
-                               more_updates=more_updates)
+                               more_updates=more_updates,
+                               more_replacements=more_replacements)
         if score and updates.loss is not None:
             step_fn = theano.function([], updates.loss, updates=updates, **fn_kwargs)
         else:
@@ -273,10 +279,31 @@ class ObjectiveFunction(object):
         return step_fn
 
     @memoize
-    def score_function(self, sc_n_mc=None, fn_kwargs=None):   # pragma: no cover
+    def score_function(self, sc_n_mc=None, more_replacements=None, fn_kwargs=None):   # pragma: no cover
+        """
+        Compiles scoring function that operates which takes no inputs and returns Loss
+
+        Parameters
+        ----------
+        sc_n_mc : int
+            number of scoring MC samples
+        more_replacements:
+            Apply custom replacements before compiling a function
+        fn_kwargs:
+            arbitrary kwargs passed to theano.function
+
+        Returns
+        -------
+        theano.function
+        """
         if fn_kwargs is None:
             fn_kwargs = {}
-        return theano.function([], self(self.random(sc_n_mc)), **fn_kwargs)
+        if not self.op.RETURNS_LOSS:
+            raise NotImplementedError('%s does not have loss' % self.op)
+        if more_replacements is None:
+            more_replacements = {}
+        loss = theano.clone(self(self.random(sc_n_mc), more_replacements), strict=False)
+        return theano.function([], loss, **fn_kwargs)
 
     def __getstate__(self):
         return self.op, self.tf
