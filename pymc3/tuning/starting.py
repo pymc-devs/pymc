@@ -310,4 +310,4 @@ def format_values(val):
     else:
         start = "[" + ", ".join([fmt.format(v) for v in val[:4]])
         end   = ", ".join([fmt.format(v) for v in val[-4:]]) +"]"
-        return start + ",   ...   ,  " + end
+        return start + ",   ...   , " + end
