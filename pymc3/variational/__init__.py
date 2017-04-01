@@ -16,8 +16,6 @@ from .updates import (
     total_norm_constraint
 )
 
-from .svgd import svgd
-
 from .inference import (
     ADVI,
     FullRankADVI,
