@@ -95,13 +95,13 @@ def find_MAP(start=None, vars=None, fmin=None,
         def grad_logp_o(point):
             return nan_to_num(-dlogp(point))
 
-        if live_disp and callback is not None:
+        if live_disp and callback is None:
             callback = Monitor(bij, logp_o, model, grad_logp_o)
 
         r = fmin(logp_o, bij.map(start), fprime=grad_logp_o, callback=callback, *args, **kwargs)
         compute_gradient = True
     else:
-        if live_disp and callback is not None:
+        if live_disp and callback is None:
             callback = Monitor(bij, logp_o, dlogp=None)
 
         # Check to see if minimization function uses a starting value
