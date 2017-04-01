@@ -43,8 +43,10 @@ class KSD(Operator):
         Stein Variational Gradient Descent: A General Purpose Bayesian Inference Algorithm
         arXiv:1608.04471
     """
-    NEED_F = True
+    NEED_FUNCTION = True
     HISTOGRAM_BASED = True
+    RETURNS_LOSS = False
+    SUPPORT_AEVB = False
 
     def __init__(self, approx):
         if not isinstance(approx, pm.Histogram):
@@ -55,8 +57,8 @@ class KSD(Operator):
         # f: kernel function for KSD f(histogram) -> (k(x,.), \nabla_x k(x,.))
         X = self.approx.histogram
         dlogpdx = theano.scan(
-            fn=lambda z: theano.grad(self.logp(z), z),
-            sequences=X
+            fn=lambda zg: theano.grad(self.logp(zg), zg),
+            sequences=[X]
         )[0]    # bottleneck
         Kxy, dxkxy = f(X)
         svgd_grad = (tt.dot(Kxy, dlogpdx) + dxkxy) / X.shape[0].astype('float32')

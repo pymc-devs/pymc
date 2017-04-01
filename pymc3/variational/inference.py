@@ -39,6 +39,8 @@ class Inference(object):
     kwargs : kwargs for Approximation
     """
     def __init__(self, op, approx, tf, local_rv=None, model=None, **kwargs):
+        if local_rv is not None and not op.SUPPORT_AEVB:
+            raise ValueError('%s does not support AEVB' % op)
         self.hist = np.asarray(())
         if isinstance(approx, type) and issubclass(approx, Approximation):
             approx = approx(
@@ -312,6 +314,7 @@ def fit(n=10000, local_rv=None, method='advi', model=None, **kwargs):
     _select = dict(
         advi=ADVI,
         fullrank_advi=FullRankADVI,
+        svgd=SVGD
     )
     if isinstance(method, str) and method.lower() == 'advi->fullrank_advi':
         frac = kwargs.pop('frac', .5)

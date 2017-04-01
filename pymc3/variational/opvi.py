@@ -1,3 +1,4 @@
+import warnings
 import numpy as np
 import theano
 import theano.tensor as tt
@@ -29,8 +30,10 @@ class Operator(object):
     For implementing Custom operator it is needed to define `.apply(f)` method
     """
 
-    NEED_F = False
+    NEED_FUNCTION = False
     HISTOGRAM_BASED = False
+    RETURNS_LOSS = True
+    SUPPORT_AEVB = True
 
     def __init__(self, approx):
         self.model = approx.model
@@ -41,7 +44,7 @@ class Operator(object):
 
     def logp(self, z):
         p = self.approx.to_flat_input(self.model.logpt)
-        p = theano.clone(p, {self.input: z})
+        p = theano.clone(p, {self.input: z}, strict=False)
         return p
 
     def logp_norm(self, z):
@@ -78,13 +81,18 @@ class Operator(object):
         raise NotImplementedError
 
     def __call__(self, f=None):
-        if f is None:
-            if self.NEED_F:
+        if self.NEED_FUNCTION:
+            if f is None:
                 raise ValueError('Operator %s requires TestFunction' % self)
             else:
-                f = TestFunction()
-        elif not isinstance(f, TestFunction):
-            f = TestFunction.from_function(f)
+                if not isinstance(f, TestFunction):
+                    f = TestFunction.from_function(f)
+        else:
+            if f is not None:
+                warnings.warn('TestFunction for %s is redundant and removed' % self)
+            else:
+                pass
+            f = TestFunction()
         f.setup(self.approx.total_size)
         return ObjectiveFunction(self, f)
 
@@ -135,10 +143,10 @@ class ObjectiveFunction(object):
     def __call__non_histogram__(self, z):
         if z.ndim > 1:
             a = theano.scan(
-                lambda z_: theano.clone(self.op.apply(self.tf), {self.op.input: z_}),
+                lambda z_: theano.clone(self.op.apply(self.tf), {self.op.input: z_}, strict=False),
                 sequences=z, n_steps=z.shape[0])[0].mean()
         else:
-            a = theano.clone(self.op.apply(self.tf), {self.op.input: z})
+            a = theano.clone(self.op.apply(self.tf), {self.op.input: z}, strict=False)
         return tt.abs_(a)
 
     def __call__histogram__(self, z):
@@ -151,7 +159,7 @@ class ObjectiveFunction(object):
             return self.__call__non_histogram__(z)
 
     def updates(self, obj_n_mc=None, tf_n_mc=None, obj_optimizer=adam, test_optimizer=adam,
-                more_obj_params=None, more_tf_params=None, more_updates=None):
+                more_obj_params=None, more_tf_params=None, more_updates=None, more_replacements=None):
         """
         Calculates gradients for objective function, test function and then
         constructs updates for optimization step
@@ -183,6 +191,12 @@ class ObjectiveFunction(object):
             more_tf_params = []
         if more_updates is None:
             more_updates = dict()
+        if more_replacements is None:
+            more_replacements = dict()
+        if not self.op.RETURNS_LOSS and (more_obj_params or more_tf_params):
+            raise ValueError('%s does not support, differentiation with '
+                             'additional params, try passing your updates '
+                             'via more_updates kwarg' % self.op.__class__)
         resulting_updates = ObjectiveUpdates()
         if self.test_params:
             if not self.op.HISTOGRAM_BASED:
@@ -190,6 +204,7 @@ class ObjectiveFunction(object):
                 tf_target = -self(tf_z)
             else:
                 tf_target = -self(None)
+            tf_target = theano.clone(tf_target, more_replacements, strict=False)
             resulting_updates.update(test_optimizer(tf_target, self.test_params + more_tf_params))
         else:
             pass
@@ -198,9 +213,11 @@ class ObjectiveFunction(object):
             obj_target = self(obj_z)
         else:
             obj_target = self(None)
+        obj_target = theano.clone(obj_target, more_replacements, strict=False)
         resulting_updates.update(obj_optimizer(obj_target, self.obj_params + more_obj_params))
         resulting_updates.update(more_updates)
-        resulting_updates.loss = obj_target
+        if self.op.RETURNS_LOSS:
+            resulting_updates.loss = obj_target
         return resulting_updates
 
     @memoize
@@ -541,7 +558,7 @@ class Approximation(object):
         )
         node = theano.clone(node, replacements, strict=False)
         posterior = self.random(no_rand=deterministic)
-        return theano.clone(node, {self.input: posterior})
+        return theano.clone(node, {self.input: posterior}, strict=False)
 
     def sample_node(self, node, size=100,
                     more_replacements=None):
@@ -561,11 +578,11 @@ class Approximation(object):
         sampled node(s) with replacements
         """
         if more_replacements is not None:   # pragma: no cover
-            node = theano.clone(node, more_replacements)
+            node = theano.clone(node, more_replacements, strict=False)
         posterior = self.random(size)
         node = self.to_flat_input(node)
 
-        def sample(z): return theano.clone(node, {self.input: z})
+        def sample(z): return theano.clone(node, {self.input: z}, strict=False)
         nodes, _ = theano.scan(sample, posterior, n_steps=size)
         return nodes
 
