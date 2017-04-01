@@ -1,4 +1,6 @@
+import pytest
 import pickle
+import functools
 import numpy as np
 from theano import theano, tensor as tt
 import pymc3 as pm
@@ -13,7 +15,6 @@ from pymc3.variational.approximations import MeanField
 
 from pymc3.tests import models
 from pymc3.tests.helpers import SeededTest
-import pytest
 
 
 class TestELBO(SeededTest):
@@ -47,10 +48,28 @@ class TestELBO(SeededTest):
         np.testing.assert_allclose(elbo_mc, elbo_true, rtol=0, atol=1e-1)
 
 
+def _test_aevb(self):
+    # add to inference that supports aevb
+    _, model, _ = models.exponential_beta(n=2)
+    x = model.x
+    y = model.y
+    mu = theano.shared(x.init_value) * 2
+    rho = theano.shared(np.zeros_like(x.init_value))
+    with model:
+        inference = self.inference(local_rv={y: (mu, rho)})
+        approx = inference.fit(3, obj_n_mc=2, obj_optimizer=self.optimizer)
+        approx.sample_vp(10)
+        approx.apply_replacements(
+            y,
+            more_replacements={x: np.asarray([1, 1], dtype=x.dtype)}
+        ).eval()
+
+
 class TestApproximates:
     class Base(SeededTest):
         inference = None
         NITER = 30000
+        optimizer = pm.adam
 
         def test_vars_view(self):
             _, model, _ = models.multidimensional_model()
@@ -129,7 +148,7 @@ class TestApproximates:
                 inf.fit(10)
                 assert len(inf.hist) == 10
                 assert not np.isnan(inf.hist).any()
-                approx = inf.fit(self.NITER)
+                approx = inf.fit(self.NITER, obj_optimizer=self.optimizer)
                 assert len(inf.hist) == self.NITER + 10
                 assert not np.isnan(inf.hist).any()
                 trace = approx.sample_vp(10000)
@@ -158,7 +177,7 @@ class TestApproximates:
                 mu_ = Normal('mu', mu=mu0, sd=sd0, testval=0)
                 Normal('x', mu=mu_, sd=sd, observed=minibatches, total_size=n)
                 inf = self.inference()
-                approx = inf.fit(self.NITER)
+                approx = inf.fit(self.NITER, obj_optimizer=self.optimizer)
                 trace = approx.sample_vp(10000)
             np.testing.assert_allclose(np.mean(trace['mu']), mu_post, rtol=0.4)
             np.testing.assert_allclose(np.std(trace['mu']), np.sqrt(1. / d), rtol=0.4)
@@ -189,7 +208,7 @@ class TestApproximates:
                 mu_ = Normal('mu', mu=mu0, sd=sd0, testval=0)
                 Normal('x', mu=mu_, sd=sd, observed=data_t, total_size=n)
                 inf = self.inference()
-                approx = inf.fit(self.NITER, callbacks=[cb], obj_n_mc=10)
+                approx = inf.fit(self.NITER, callbacks=[cb], obj_n_mc=10, obj_optimizer=self.optimizer)
                 trace = approx.sample_vp(10000)
             np.testing.assert_allclose(np.mean(trace['mu']), mu_post, rtol=0.4)
             np.testing.assert_allclose(np.std(trace['mu']), np.sqrt(1. / d), rtol=0.4)
@@ -200,21 +219,6 @@ class TestApproximates:
 
             inference = pickle.loads(pickle.dumps(inference))
             inference.fit(20)
-
-        def test_aevb(self):
-            _, model, _ = models.exponential_beta(n=2)
-            x = model.x
-            y = model.y
-            mu = theano.shared(x.init_value) * 2
-            rho = theano.shared(np.zeros_like(x.init_value))
-            with model:
-                inference = self.inference(local_rv={y: (mu, rho)})
-                approx = inference.fit(3, obj_n_mc=2)
-                approx.sample_vp(10)
-                approx.apply_replacements(
-                    y,
-                    more_replacements={x: np.asarray([1, 1], dtype=x.dtype)}
-                ).eval()
 
         def test_profile(self):
             with models.multidimensional_model()[1]:
@@ -238,6 +242,7 @@ class TestApproximates:
 
 class TestMeanField(TestApproximates.Base):
     inference = ADVI
+    test_sevb = _test_aevb
 
     def test_approximate(self):
         with models.multidimensional_model()[1]:
@@ -250,13 +255,13 @@ class TestMeanField(TestApproximates.Base):
 
 
 class TestSVGD(TestApproximates.Base):
-    inference = lambda *a, **k: SVGD(1000)
-    NITER = 5000
-    test_aevb = None
+    inference = lambda *a, **k: SVGD(500)
+    optimizer = functools.partial(pm.adagrad, learning_rate=1e-3)
 
 
 class TestFullRank(TestApproximates.Base):
     inference = FullRankADVI
+    test_sevb = _test_aevb
 
     def test_from_mean_field(self):
         with models.multidimensional_model()[1]:
