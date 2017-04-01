@@ -249,7 +249,7 @@ class ObjectiveFunction(object):
                                more_obj_params=more_obj_params,
                                more_tf_params=more_tf_params,
                                more_updates=more_updates)
-        if score:
+        if score and updates.loss is not None:
             step_fn = theano.function([], updates.loss, updates=updates, **fn_kwargs)
         else:
             step_fn = theano.function([], None, updates=updates, **fn_kwargs)
