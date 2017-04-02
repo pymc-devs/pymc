@@ -225,7 +225,7 @@ class Histogram(Approximation):
     Builds Approximation instance from a given trace,
     it has the same interface as variational approximation
 
-    Prameters
+    Parameters
     ----------
     trace : MultiTrace
     local_rv : dict
@@ -324,7 +324,7 @@ class Histogram(Approximation):
         return self.histogram.mean(0)
 
     @classmethod
-    def from_noise(cls, size, jitter=.01, local_rv=None, model=None):
+    def from_noise(cls, size, jitter=.01, local_rv=None, start=None, model=None):
         """
         Initialize Histogram with random noise
 
@@ -336,14 +336,18 @@ class Histogram(Approximation):
             mapping {model_variable -> local_variable}
             Local Vars are used for Autoencoding Variational Bayes
             See (AEVB; Kingma and Welling, 2014) for details
-        model : PyMC3 Model
+        start : initial point
+        model : pm.Model
+            PyMC3 Model
 
         Returns
         -------
-
+        Histogram
         """
-        hist = cls(None, local_rv, model=model)
-        start = hist._bij.map(hist.model.test_point)
+        hist = cls(None, local_rv=local_rv, model=model)
+        if start is None:
+            start = hist.model.test_point
+        start = hist._bij.map(start)
         # Initialize particles
         x0 = np.tile(start, (size, 1))
         x0 += np.random.normal(0, jitter, x0.shape)
