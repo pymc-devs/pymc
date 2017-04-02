@@ -10,102 +10,19 @@ from ..model import modelcontext, ArrayOrdering
 from ..theanof import tt_rng, memoize, change_flags, GradScale
 
 
+__all__ = [
+    'ObjectiveFunction',
+    'Operator',
+    'TestFunction'
+    'Approximation'
+]
+
+
 class ObjectiveUpdates(theano.OrderedUpdates):
     """
     OrderedUpdates extension for storing loss
     """
     loss = None
-
-
-class Operator(object):
-    """
-    Base class for Operator
-
-    Parameters
-    ----------
-    approx : Approximation
-
-    Subclassing
-    -----------
-    For implementing Custom operator it is needed to define `.apply(f)` method
-    """
-
-    NEED_FUNCTION = False
-    HISTOGRAM_BASED = False
-    RETURNS_LOSS = True
-    SUPPORT_AEVB = True
-
-    def __init__(self, approx):
-        self.model = approx.model
-        self.approx = approx
-
-    flat_view = property(lambda self: self.approx.flat_view)
-    input = property(lambda self: self.approx.flat_view.input)
-
-    def logp(self, z):
-        p = self.approx.to_flat_input(self.model.logpt)
-        p = theano.clone(p, {self.input: z}, strict=False)
-        return p
-
-    def logp_norm(self, z):
-        t = self.approx.normalizing_constant
-        factors = [tt.sum(var.logpt)/t for var in self.model.basic_RVs + self.model.potentials]
-        logpt = tt.add(*factors)
-        p = self.approx.to_flat_input(logpt)
-        p = theano.clone(p, {self.input: z})
-        return p
-
-    def logq(self, z):
-        return self.approx.logq(z)
-
-    def logq_norm(self, z):
-        return self.approx.logq_norm(z)
-
-    def apply(self, f):   # pragma: no cover
-        """
-        Operator itself
-        .. math::
-
-            (O^{p,q}f_{\theta})(z)
-
-        Parameters
-        ----------
-        f : function or None
-            function that takes `z = self.input` and returns
-            same dimension output
-
-        Returns
-        -------
-        symbolically applied operator
-        """
-        raise NotImplementedError
-
-    def __call__(self, f=None):
-        if self.NEED_FUNCTION:
-            if f is None:
-                raise ValueError('Operator %s requires TestFunction' % self)
-            else:
-                if not isinstance(f, TestFunction):
-                    f = TestFunction.from_function(f)
-        else:
-            if f is not None:
-                warnings.warn('TestFunction for %s is redundant and removed' % self)
-            else:
-                pass
-            f = TestFunction()
-        f.setup(self.approx.total_size)
-        return ObjectiveFunction(self, f)
-
-    def __getstate__(self):
-        # pickle only important parts
-        return self.approx
-
-    def __setstate__(self, approx):
-        self.__init__(approx)
-
-    def __str__(self):    # pragma: no cover
-        return '%(op)s[%(ap)s]' % dict(op=self.__class__.__name__,
-                                       ap=self.approx.__class__.__name__)
 
 
 class ObjectiveFunction(object):
@@ -139,24 +56,6 @@ class ObjectiveFunction(object):
         posterior space (theano)
         """
         return self.op.approx.random(size)
-
-    def __call__non_histogram__(self, z):
-        if z.ndim > 1:
-            a = theano.scan(
-                lambda z_: theano.clone(self.op.apply(self.tf), {self.op.input: z_}, strict=False),
-                sequences=z, n_steps=z.shape[0])[0].mean()
-        else:
-            a = theano.clone(self.op.apply(self.tf), {self.op.input: z}, strict=False)
-        return tt.abs_(a)
-
-    def __call__histogram__(self, z):
-        return self.op.apply(self.tf)   # histogram should be used inside apply
-
-    def __call__(self, z):
-        if self.op.HISTOGRAM_BASED:
-            return self.__call__histogram__(z)
-        else:
-            return self.__call__non_histogram__(z)
 
     def updates(self, obj_n_mc=None, tf_n_mc=None, obj_optimizer=adam, test_optimizer=adam,
                 more_obj_params=None, more_tf_params=None, more_updates=None, more_replacements=None):
@@ -201,26 +100,36 @@ class ObjectiveFunction(object):
                              'via more_updates kwarg' % self.op.__class__)
         resulting_updates = ObjectiveUpdates()
         if self.test_params:
-            if not self.op.HISTOGRAM_BASED:
-                tf_z = self.random(tf_n_mc)
-                tf_target = -self(tf_z)
-            else:
-                tf_target = -self(None)
-            tf_target = theano.clone(tf_target, more_replacements, strict=False)
-            resulting_updates.update(test_optimizer(tf_target, self.test_params + more_tf_params))
-        else:
-            pass
-        if not self.op.HISTOGRAM_BASED:
-            obj_z = self.random(obj_n_mc)
-            obj_target = self(obj_z)
-        else:
-            obj_target = self(None)
-        obj_target = theano.clone(obj_target, more_replacements, strict=False)
-        resulting_updates.update(obj_optimizer(obj_target, self.obj_params + more_obj_params))
+            self.add_test_updates(
+                resulting_updates,
+                tf_n_mc=tf_n_mc,
+                test_optimizer=test_optimizer,
+                more_tf_params=more_tf_params,
+                more_replacements=more_replacements
+            )
+        self.add_obj_updates(
+            resulting_updates,
+            obj_n_mc=obj_n_mc,
+            obj_optimizer=obj_optimizer,
+            more_obj_params=more_obj_params,
+            more_replacements=more_replacements
+        )
         resulting_updates.update(more_updates)
-        if self.op.RETURNS_LOSS:
-            resulting_updates.loss = obj_target
         return resulting_updates
+
+    def add_test_updates(self, updates, tf_n_mc=None, test_optimizer=adam, more_tf_params=None, more_replacements=None):
+        tf_z = self.random(tf_n_mc)
+        tf_target = -self(tf_z)
+        tf_target = theano.clone(tf_target, more_replacements, strict=False)
+        updates.update(test_optimizer(tf_target, self.test_params + more_tf_params))
+
+    def add_obj_updates(self, updates, obj_n_mc=None, obj_optimizer=adam, more_obj_params=None, more_replacements=None):
+        obj_z = self.random(obj_n_mc)
+        obj_target = self(obj_z)
+        obj_target = theano.clone(obj_target, more_replacements, strict=False)
+        updates.update(obj_optimizer(obj_target, self.obj_params + more_obj_params))
+        if self.op.RETURNS_LOSS:
+            updates.loss = obj_target
 
     @memoize
     def step_function(self, obj_n_mc=None, tf_n_mc=None,
@@ -310,6 +219,98 @@ class ObjectiveFunction(object):
 
     def __setstate__(self, state):
         self.__init__(*state)
+
+    def __call__(self, z):
+        if z.ndim > 1:
+            a = theano.scan(
+                lambda z_: theano.clone(self.op.apply(self.tf), {self.op.input: z_}, strict=False),
+                sequences=z, n_steps=z.shape[0])[0].mean()
+        else:
+            a = theano.clone(self.op.apply(self.tf), {self.op.input: z}, strict=False)
+        return tt.abs_(a)
+
+
+class Operator(object):
+    """
+    Base class for Operator
+
+    Parameters
+    ----------
+    approx : Approximation
+
+    Subclassing
+    -----------
+    For implementing Custom operator it is needed to define `.apply(f)` method
+    """
+
+    HAS_TEST_FUNCTION = False
+    RETURNS_LOSS = True
+    SUPPORT_AEVB = True
+    OBJECTIVE = ObjectiveFunction
+
+    def __init__(self, approx):
+        if not self.SUPPORT_AEVB and approx.local_vars:
+            raise ValueError('%s does not support AEVB, '
+                             'please change inference method' % type(self))
+        self.model = approx.model
+        self.approx = approx
+
+    flat_view = property(lambda self: self.approx.flat_view)
+    input = property(lambda self: self.approx.flat_view.input)
+
+    def logp(self, z):
+        p = self.approx.to_flat_input(self.model.logpt)
+        p = theano.clone(p, {self.input: z}, strict=False)
+        return p
+
+    def logq(self, z):
+        return self.approx.logq(z)
+
+    def apply(self, f):   # pragma: no cover
+        """
+        Operator itself
+        .. math::
+
+            (O^{p,q}f_{\theta})(z)
+
+        Parameters
+        ----------
+        f : function or None
+            function that takes `z = self.input` and returns
+            same dimension output
+
+        Returns
+        -------
+        symbolically applied operator
+        """
+        raise NotImplementedError
+
+    def __call__(self, f=None):
+        if self.HAS_TEST_FUNCTION:
+            if f is None:
+                raise ValueError('Operator %s requires TestFunction' % self)
+            else:
+                if not isinstance(f, TestFunction):
+                    f = TestFunction.from_function(f)
+        else:
+            if f is not None:
+                warnings.warn('TestFunction for %s is redundant and removed' % self)
+            else:
+                pass
+            f = TestFunction()
+        f.setup(self.approx.total_size)
+        return self.OBJECTIVE(self, f)
+
+    def __getstate__(self):
+        # pickle only important parts
+        return self.approx
+
+    def __setstate__(self, approx):
+        self.__init__(approx)
+
+    def __str__(self):    # pragma: no cover
+        return '%(op)s[%(ap)s]' % dict(op=self.__class__.__name__,
+                                       ap=self.approx.__class__.__name__)
 
 
 def cast_to_list(params):

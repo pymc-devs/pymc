@@ -1,9 +1,11 @@
 from theano import theano, tensor as tt
-from pymc3.variational.opvi import Operator
+from pymc3.variational.opvi import Operator, ObjectiveFunction
+from pymc3.variational.updates import adam
 import pymc3 as pm
 
 __all__ = [
-    'KL'
+    'KL',
+    'KSD'
 ]
 
 
@@ -21,9 +23,20 @@ class KL(Operator):
 # SVGD Implementation
 
 
+class KSDObjective(ObjectiveFunction):
+    def add_obj_updates(self, updates, obj_n_mc=None, obj_optimizer=adam,
+                        more_obj_params=None, more_replacements=None):
+        d_obj_padams = self(None)
+        d_obj_padams = theano.clone(d_obj_padams, more_replacements, strict=False)
+        updates.update(obj_optimizer([d_obj_padams], self.obj_params))
+
+    def __call__(self, z):
+        return self.op.apply(self.tf)
+
+
 class KSD(Operator):
     """
-    Kernelized Stein Discrepancy
+    Operator based on Kernelized Stein Discrepancy
 
     Input: A target distribution with density function :math:`p(x)`
         and a set of initial particles :math:`{x^0_i}^n_{i=1}`
@@ -43,10 +56,10 @@ class KSD(Operator):
         Stein Variational Gradient Descent: A General Purpose Bayesian Inference Algorithm
         arXiv:1608.04471
     """
-    NEED_FUNCTION = True
-    HISTOGRAM_BASED = True
+    HAS_TEST_FUNCTION = True
     RETURNS_LOSS = False
     SUPPORT_AEVB = False
+    OBJECTIVE = KSDObjective
 
     def __init__(self, approx):
         if not isinstance(approx, pm.Histogram):
@@ -62,4 +75,4 @@ class KSD(Operator):
         )[0]    # bottleneck
         Kxy, dxkxy = f(X)
         svgd_grad = (tt.dot(Kxy, dlogpdx) + dxkxy) / X.shape[0].astype('float32')
-        return [-1 * svgd_grad]
+        return -1 * svgd_grad   # gradient
