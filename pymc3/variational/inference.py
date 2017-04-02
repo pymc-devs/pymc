@@ -8,18 +8,18 @@ import tqdm
 import pymc3 as pm
 from pymc3.variational.approximations import MeanField, FullRank, Histogram
 from pymc3.variational.operators import KL, KSD
-from pymc3.variational.opvi import Approximation, TestFunction
+from pymc3.variational.opvi import Approximation
 from pymc3.variational import test_functions
 
 
 logger = logging.getLogger(__name__)
 
 __all__ = [
-    'TestFunction',
     'ADVI',
     'FullRankADVI',
     'SVGD',
-    'Inference'
+    'Inference',
+    'fit'
 ]
 
 
@@ -34,8 +34,12 @@ class Inference(object):
     op : Operator class
     approx : Approximation class or instance
     tf : TestFunction instance
-    local_rv : list
-    model : PyMC3 Model
+    local_rv : dict
+        mapping {model_variable -> local_variable}
+        Local Vars are used for Autoencoding Variational Bayes
+        See (AEVB; Kingma and Welling, 2014) for details
+    model : Model
+        PyMC3 Model
     kwargs : kwargs for Approximation
     """
     def __init__(self, op, approx, tf, local_rv=None, model=None, **kwargs):
@@ -270,12 +274,48 @@ class FullRankADVI(Inference):
 
 
 class SVGD(Inference):
-    def __init__(self, n_particles=100, jitter=.01, local_rv=None, model=None, kernel=test_functions.rbf):
+    """
+    Stein Variational Gradient Descent
+
+    This inference is based on Kernelized Stein Discrepancy
+    it's main idea is to move initial noisy particles so that
+    they fit target distribution best.
+
+    Algorithm is outlined below
+
+    Input: A target distribution with density function :math:`p(x)`
+        and a set of initial particles :math:`{x^0_i}^n_{i=1}`
+    Output: A set of particles :math:`{x_i}^n_{i=1}` that approximates the target distribution.
+    .. math::
+
+        x_i^{l+1} \leftarrow \epsilon_l \hat{\phi}^{*}(x_i^l)
+        \hat{\phi}^{*}(x) = \frac{1}{n}\sum^{n}_{j=1}[k(x^l_j,x) \nabla_{x^l_j} logp(x^l_j)+ \nabla_{x^l_j} k(x^l_j,x)]
+
+    Parameters
+    ----------
+    n_particles : int
+        number of particles to use for approximation
+    jitter :
+        noise sd for initial point
+    model : pm.Model
+    kernel : callable
+        kernel function for KSD f(histogram) -> (k(x,.), \nabla_x k(x,.))
+
+    References
+    ----------
+    - Qiang Liu, Dilin Wang (2016)
+        Stein Variational Gradient Descent: A General Purpose Bayesian Inference Algorithm
+        arXiv:1608.04471
+    """
+    def __init__(self, n_particles=100, jitter=.01, model=None, kernel=test_functions.rbf,
+                 histogram=None):
+        if histogram is None:
+            histogram = Histogram.from_noise(
+                n_particles, jitter=jitter, model=model)
         super(SVGD, self).__init__(
-            KSD, Histogram.from_noise(
-                n_particles, jitter=jitter, local_rv=local_rv, model=model),
+            KSD, histogram,
             kernel,
-            local_rv=local_rv, model=model)
+            model=model)
 
     def fit(self, n=10000, callbacks=None, callback_every=1,
             **kwargs):
