@@ -68,8 +68,8 @@ def _test_aevb(self):
 class TestApproximates:
     class Base(SeededTest):
         inference = None
-        NITER = 30000
-        optimizer = pm.adam
+        NITER = 12000
+        optimizer = functools.partial(pm.adam, learning_rate=.01)
 
         def test_vars_view(self):
             _, model, _ = models.multidimensional_model()
@@ -174,7 +174,7 @@ class TestApproximates:
                 inf = self.inference()
                 approx = inf.fit(self.NITER, obj_optimizer=self.optimizer)
                 trace = approx.sample_vp(10000)
-            np.testing.assert_allclose(np.mean(trace['mu']), mu_post, rtol=0.4)
+            np.testing.assert_allclose(np.mean(trace['mu']), mu_post, rtol=0.1)
             np.testing.assert_allclose(np.std(trace['mu']), np.sqrt(1. / d), rtol=0.4)
 
         def test_optimizer_minibatch_with_callback(self):
@@ -203,7 +203,7 @@ class TestApproximates:
                 mu_ = Normal('mu', mu=mu0, sd=sd0, testval=0)
                 Normal('x', mu=mu_, sd=sd, observed=data_t, total_size=n)
                 inf = self.inference()
-                approx = inf.fit(self.NITER, callbacks=[cb], obj_n_mc=10, obj_optimizer=self.optimizer)
+                approx = inf.fit(self.NITER * 3, callbacks=[cb], obj_n_mc=10, obj_optimizer=self.optimizer)
                 trace = approx.sample_vp(10000)
             np.testing.assert_allclose(np.mean(trace['mu']), mu_post, rtol=0.4)
             np.testing.assert_allclose(np.std(trace['mu']), np.sqrt(1. / d), rtol=0.4)
@@ -254,16 +254,10 @@ class TestMeanField(TestApproximates.Base):
             assert len(inf.hist) == 0
             inf.fit(10)
             assert len(inf.hist) == 10
-            assert np.isnan(inf.hist).any()
+            assert not np.isnan(inf.hist).any()
             inf.fit(self.NITER, obj_optimizer=self.optimizer)
             assert len(inf.hist) == self.NITER + 10
             assert not np.isnan(inf.hist).any()
-
-
-class TestSVGD(TestApproximates.Base):
-    inference = functools.partial(SVGD, n_particles=100)
-    optimizer = functools.partial(pm.adagrad, learning_rate=.7)
-    NITER = 1500
 
 
 class TestFullRank(TestApproximates.Base):
@@ -291,6 +285,12 @@ class TestFullRank(TestApproximates.Base):
     def test_approximate(self):
         with models.multidimensional_model()[1]:
             fit(10, method='fullrank_advi')
+
+
+class TestSVGD(TestApproximates.Base):
+    inference = functools.partial(SVGD, n_particles=100)
+    optimizer = functools.partial(pm.adagrad, learning_rate=.7)
+    NITER = 1500
 
 
 class TestHistogram(SeededTest):
