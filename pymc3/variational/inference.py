@@ -1,9 +1,10 @@
 from __future__ import division
 
 import logging
+import warnings
+import tqdm
 
 import numpy as np
-import tqdm
 
 import pymc3 as pm
 from pymc3.variational.approximations import MeanField, FullRank, Histogram
@@ -58,7 +59,21 @@ class Inference(object):
 
     approx = property(lambda self: self.objective.approx)
 
-    def run_profiling(self, n=1000, score=True, **kwargs):
+    def _maybe_score(self, score):
+        returns_loss = self.objective.op.RETURNS_LOSS
+        if score is None:
+            score = returns_loss
+        elif score and not returns_loss:
+            warnings.warn('method `fit` got `score == True` but %s '
+                          'does not return loss. Ignoring `score` argument'
+                          % self.objective.op)
+            score = False
+        else:
+            pass
+        return score
+
+    def run_profiling(self, n=1000, score=None, **kwargs):
+        score = self._maybe_score(score)
         fn_kwargs = kwargs.pop('fn_kwargs', dict())
         fn_kwargs.update(profile=True)
         step_func = self.objective.step_function(
@@ -75,7 +90,7 @@ class Inference(object):
             progress.close()
         return step_func.profile
 
-    def fit(self, n=10000, score=True, callbacks=None, callback_every=1,
+    def fit(self, n=10000, score=None, callbacks=None, callback_every=1,
             **kwargs):
         """
         Performs Operator Variational Inference
@@ -88,7 +103,8 @@ class Inference(object):
             evaluate loss on each iteration or not
         callbacks : list[function : (Approximation, losses, i) -> any]
         callback_every : int
-            call callback functions on `callback_every` step
+            call callback functions on `callback_every` step, to
+            interrupt inference raise `StopIteration` exception inside callback
         kwargs : kwargs for ObjectiveFunction.step_function
 
         Returns
@@ -97,6 +113,7 @@ class Inference(object):
         """
         if callbacks is None:
             callbacks = []
+        score = self._maybe_score(score)
         step_func = self.objective.step_function(score=score, **kwargs)
         i = 0
         progress = tqdm.trange(n)
@@ -112,26 +129,28 @@ class Inference(object):
                         raise FloatingPointError('NaN occurred in optimization.')
                     scores[i] = e
                     if i % 10 == 0:
-                        avg_elbo = scores[max(0, i - 1000):i+1].mean()
-                        progress.set_description('Average Loss = {:,.5g}'.format(avg_elbo))
+                        avg_loss = scores[max(0, i - 1000):i+1].mean()
+                        progress.set_description('Average Loss = {:,.5g}'.format(avg_loss))
                     if i % callback_every == 0:
                         for callback in callbacks:
                             callback(self.approx, scores[:i+1], i)
-            except KeyboardInterrupt:   # pragma: no cover
+            except (KeyboardInterrupt, StopIteration):   # pragma: no cover
+                # do not print log on the same line
+                progress.close()
                 scores = scores[:i]
                 if n < 10:
                     logger.info('Interrupted at {:,d} [{:.0f}%]: Loss = {:,.5g}'.format(
                         i, 100 * i // n, scores[i]))
                 else:
-                    avg_elbo = scores[min(0, i - 1000):i].mean()
+                    avg_loss = scores[min(0, i - 1000):i+1].mean()
                     logger.info('Interrupted at {:,d} [{:.0f}%]: Average Loss = {:,.5g}'.format(
-                        i, 100 * i // n, avg_elbo))
+                        i, 100 * i // n, avg_loss))
             else:
                 if n < 10:
                     logger.info('Finished [100%]: Loss = {:,.5g}'.format(scores[-1]))
                 else:
-                    avg_elbo = scores[max(0, i - 1000):i].mean()
-                    logger.info('Finished [100%]: Average Loss = {:,.5g}'.format(avg_elbo))
+                    avg_loss = scores[max(0, i - 1000):i+1].mean()
+                    logger.info('Finished [100%]: Average Loss = {:,.5g}'.format(avg_loss))
             finally:
                 progress.close()
         else:   # pragma: no cover
@@ -316,14 +335,6 @@ class SVGD(Inference):
             KSD, histogram,
             kernel,
             model=model)
-
-    def fit(self, n=10000, callbacks=None, callback_every=1,
-            **kwargs):
-        return Inference.fit(self, n=n, callbacks=callbacks,
-                             callback_every=callback_every, score=False, **kwargs)
-
-    def run_profiling(self, n=1000, **kwargs):
-        return Inference.run_profiling(self, n=1000, score=False, **kwargs)
 
 
 def fit(n=10000, local_rv=None, method='advi', model=None, **kwargs):

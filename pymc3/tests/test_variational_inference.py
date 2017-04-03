@@ -50,13 +50,15 @@ class TestELBO(SeededTest):
 
 def _test_aevb(self):
     # add to inference that supports aevb
-    _, model, _ = models.exponential_beta(n=2)
+    with pm.Model() as model:
+        x = pm.Normal('x')
+        pm.Normal('y', x)
     x = model.x
     y = model.y
     mu = theano.shared(x.init_value) * 2
     rho = theano.shared(np.zeros_like(x.init_value))
     with model:
-        inference = self.inference(local_rv={y: (mu, rho)})
+        inference = self.inference(local_rv={x: (mu, rho)})
         approx = inference.fit(3, obj_n_mc=2, obj_optimizer=self.optimizer)
         approx.sample_vp(10)
         approx.apply_replacements(
