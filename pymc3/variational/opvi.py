@@ -13,7 +13,7 @@ from ..theanof import tt_rng, memoize, change_flags, GradScale
 __all__ = [
     'ObjectiveFunction',
     'Operator',
-    'TestFunction'
+    'TestFunction',
     'Approximation'
 ]
 
