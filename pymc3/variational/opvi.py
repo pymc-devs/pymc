@@ -43,8 +43,19 @@ class Operator(object):
         p = theano.clone(p, {self.input: z})
         return p
 
+    def logp_norm(self, z):
+        t = self.approx.normalizing_constant
+        factors = [tt.sum(var.logpt)/t for var in self.model.basic_RVs + self.model.potentials]
+        logpt = tt.add(*factors)
+        p = self.approx.to_flat_input(logpt)
+        p = theano.clone(p, {self.input: z})
+        return p
+
     def logq(self, z):
         return self.approx.logq(z)
+
+    def logq_norm(self, z):
+        return self.approx.logq_norm(z)
 
     def apply(self, f):   # pragma: no cover
         """
@@ -396,6 +407,10 @@ class Approximation(object):
         self.grad_scale_op = GradScale(cost_part_grad_scale)
         self._setup()
         self.shared_params = self.create_shared_params()
+
+    @property
+    def normalizing_constant(self):
+        return self.to_flat_input(tt.max([v.scaling for v in self.model.basic_RVs]))
 
     def _setup(self):
         pass
@@ -768,6 +783,9 @@ class Approximation(object):
         Total logq for approximation
         """
         return self.log_q_W_global(z) + self.log_q_W_local(z)
+
+    def logq_norm(self, z):
+        return self.logq(z) / self.normalizing_constant
 
     def view(self, space, name, reshape=True):
         """

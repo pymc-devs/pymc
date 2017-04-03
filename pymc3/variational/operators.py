@@ -14,4 +14,4 @@ class KL(Operator):
     """
     def apply(self, f):
         z = self.input
-        return self.logq(z) - self.logp(z)
+        return self.logq_norm(z) - self.logp_norm(z)
