@@ -1,5 +1,5 @@
 from theano import theano, tensor as tt
-from pymc3.variational.opvi import Operator, ObjectiveFunction
+from pymc3.variational.opvi import Operator, ObjectiveFunction, _warn_not_used
 from pymc3.variational.updates import adam
 import pymc3 as pm
 
@@ -26,6 +26,8 @@ class KL(Operator):
 class KSDObjective(ObjectiveFunction):
     def add_obj_updates(self, updates, obj_n_mc=None, obj_optimizer=adam,
                         more_obj_params=None, more_replacements=None):
+        if obj_n_mc is not None:
+            _warn_not_used('obj_n_mc', self.op)
         d_obj_padams = self(None)
         d_obj_padams = theano.clone(d_obj_padams, more_replacements, strict=False)
         updates.update(obj_optimizer([d_obj_padams], self.obj_params))

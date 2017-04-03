@@ -25,6 +25,10 @@ class ObjectiveUpdates(theano.OrderedUpdates):
     loss = None
 
 
+def _warn_not_used(smth, where):
+    warnings.warn('`%s` is not used for %s and ignored' % (smth, where))
+
+
 class ObjectiveFunction(object):
     """
     Helper class for construction loss and updates for variational inference
@@ -107,6 +111,11 @@ class ObjectiveFunction(object):
                 more_tf_params=more_tf_params,
                 more_replacements=more_replacements
             )
+        else:
+            if tf_n_mc is not None:
+                _warn_not_used('tf_n_mc', self.op)
+            if more_tf_params:
+                _warn_not_used('more_tf_params', self.op)
         self.add_obj_updates(
             resulting_updates,
             obj_n_mc=obj_n_mc,
@@ -174,6 +183,8 @@ class ObjectiveFunction(object):
         """
         if fn_kwargs is None:
             fn_kwargs = {}
+        if score and not self.op.RETURNS_LOSS:
+            raise NotImplementedError('%s does not have loss' % self.op)
         updates = self.updates(obj_n_mc=obj_n_mc, tf_n_mc=tf_n_mc,
                                obj_optimizer=obj_optimizer,
                                test_optimizer=test_optimizer,
@@ -181,7 +192,7 @@ class ObjectiveFunction(object):
                                more_tf_params=more_tf_params,
                                more_updates=more_updates,
                                more_replacements=more_replacements)
-        if score and updates.loss is not None:
+        if score:
             step_fn = theano.function([], updates.loss, updates=updates, **fn_kwargs)
         else:
             step_fn = theano.function([], None, updates=updates, **fn_kwargs)
