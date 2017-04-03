@@ -22,8 +22,15 @@ from .inference import (
     SVGD,
     fit,
 )
-from .approximations import Histogram
+from .approximations import (
+    Histogram,
+    FullRank,
+    MeanField
+)
 
 from . import approximations
 from . import operators
 from . import test_functions
+from . import opvi
+from . import updates
+from . import inference
