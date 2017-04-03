@@ -410,7 +410,7 @@ class Approximation(object):
 
     @property
     def normalizing_constant(self):
-        return tt.max([v.scaling for v in self.model.free_RVs])
+        return self.to_flat_input(tt.max([v.scaling for v in self.model.basic_RVs]))
 
     def _setup(self):
         pass
