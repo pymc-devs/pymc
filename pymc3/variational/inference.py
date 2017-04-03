@@ -44,8 +44,6 @@ class Inference(object):
     kwargs : kwargs for Approximation
     """
     def __init__(self, op, approx, tf, local_rv=None, model=None, **kwargs):
-        if local_rv is not None and not op.SUPPORT_AEVB:
-            raise ValueError('%s does not support AEVB' % op)
         self.hist = np.asarray(())
         if isinstance(approx, type) and issubclass(approx, Approximation):
             approx = approx(
