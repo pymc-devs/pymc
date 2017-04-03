@@ -174,7 +174,7 @@ class TestApproximates:
                 mu_ = Normal('mu', mu=mu0, sd=sd0, testval=0)
                 Normal('x', mu=mu_, sd=sd, observed=minibatches, total_size=n)
                 inf = self.inference()
-                approx = inf.fit(self.NITER, obj_optimizer=self.optimizer)
+                approx = inf.fit(self.NITER * 3, obj_optimizer=self.optimizer)
                 trace = approx.sample_vp(10000)
             np.testing.assert_allclose(np.mean(trace['mu']), mu_post, rtol=0.1)
             np.testing.assert_allclose(np.std(trace['mu']), np.sqrt(1. / d), rtol=0.4)
@@ -291,8 +291,8 @@ class TestFullRank(TestApproximates.Base):
 
 class TestSVGD(TestApproximates.Base):
     inference = functools.partial(SVGD, n_particles=100)
-    optimizer = functools.partial(pm.adagrad, learning_rate=.7)
-    NITER = 1500
+    NITER = 2500
+    optimizer = functools.partial(pm.adam, learning_rate=.1)
 
 
 class TestHistogram(SeededTest):

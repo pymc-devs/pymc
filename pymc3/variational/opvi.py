@@ -259,12 +259,24 @@ class Operator(object):
     input = property(lambda self: self.approx.flat_view.input)
 
     def logp(self, z):
-        p = self.approx.to_flat_input(self.model.logpt)
-        p = theano.clone(p, {self.input: z}, strict=False)
+        factors = [tt.sum(var.logpt)for var in self.model.basic_RVs + self.model.potentials]
+        p = self.approx.to_flat_input(tt.add(*factors))
+        p = theano.clone(p, {self.input: z})
+        return p
+
+    def logp_norm(self, z):
+        t = self.approx.normalizing_constant
+        factors = [tt.sum(var.logpt) / t for var in self.model.basic_RVs + self.model.potentials]
+        logpt = tt.add(*factors)
+        p = self.approx.to_flat_input(logpt)
+        p = theano.clone(p, {self.input: z})
         return p
 
     def logq(self, z):
         return self.approx.logq(z)
+
+    def logq_norm(self, z):
+        return self.approx.logq_norm(z)
 
     def apply(self, f):   # pragma: no cover
         """
@@ -470,7 +482,9 @@ class Approximation(object):
 
     @property
     def normalizing_constant(self):
-        return self.to_flat_input(tt.max([v.scaling for v in self.model.basic_RVs]))
+        t = self.to_flat_input(tt.max([v.scaling for v in self.model.basic_RVs]))
+        t = theano.clone(t, {self.input: tt.zeros(self.total_size)})
+        return t
 
     def _setup(self, **kwargs):
         pass

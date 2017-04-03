@@ -69,10 +69,15 @@ class KSD(Operator):
     def apply(self, f):
         # f: kernel function for KSD f(histogram) -> (k(x,.), \nabla_x k(x,.))
         X = self.approx.histogram
+        t = self.approx.normalizing_constant
         dlogpdx = theano.scan(
-            fn=lambda zg: theano.grad(self.logp(zg), zg),
+            fn=lambda zg: theano.grad(self.logp_norm(zg), zg),
             sequences=[X]
         )[0]    # bottleneck
         Kxy, dxkxy = f(X)
-        svgd_grad = (tt.dot(Kxy, dlogpdx) + dxkxy) / X.shape[0].astype('float32')
+        # scaling factor
+        # not needed for Kxy as we already scaled dlogpdx
+        dxkxy /= t
+        n = X.shape[0].astype('float32') / t
+        svgd_grad = (tt.dot(Kxy, dlogpdx) + dxkxy) / n
         return -1 * svgd_grad   # gradient
