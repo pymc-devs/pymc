@@ -1,3 +1,4 @@
+import warnings
 import numpy as np
 import theano
 import theano.tensor as tt
@@ -9,6 +10,14 @@ from ..model import modelcontext, ArrayOrdering
 from ..theanof import tt_rng, memoize, change_flags, GradScale
 
 
+__all__ = [
+    'ObjectiveFunction',
+    'Operator',
+    'TestFunction',
+    'Approximation'
+]
+
+
 class ObjectiveUpdates(theano.OrderedUpdates):
     """
     OrderedUpdates extension for storing loss
@@ -16,87 +25,8 @@ class ObjectiveUpdates(theano.OrderedUpdates):
     loss = None
 
 
-class Operator(object):
-    """
-    Base class for Operator
-
-    Parameters
-    ----------
-    approx : Approximation
-
-    Subclassing
-    -----------
-    For implementing Custom operator it is needed to define `.apply(f)` method
-    """
-
-    NEED_F = False
-
-    def __init__(self, approx):
-        self.model = approx.model
-        self.approx = approx
-
-    flat_view = property(lambda self: self.approx.flat_view)
-    input = property(lambda self: self.approx.flat_view.input)
-
-    def logp(self, z):
-        p = self.approx.to_flat_input(self.model.logpt)
-        p = theano.clone(p, {self.input: z})
-        return p
-
-    def logp_norm(self, z):
-        t = self.approx.normalizing_constant
-        factors = [tt.sum(var.logpt)/t for var in self.model.basic_RVs + self.model.potentials]
-        logpt = tt.add(*factors)
-        p = self.approx.to_flat_input(logpt)
-        p = theano.clone(p, {self.input: z})
-        return p
-
-    def logq(self, z):
-        return self.approx.logq(z)
-
-    def logq_norm(self, z):
-        return self.approx.logq_norm(z)
-
-    def apply(self, f):   # pragma: no cover
-        """
-        Operator itself
-        .. math::
-
-            (O^{p,q}f_{\theta})(z)
-
-        Parameters
-        ----------
-        f : function or None
-            function that takes `z = self.input` and returns
-            same dimension output
-
-        Returns
-        -------
-        symbolically applied operator
-        """
-        raise NotImplementedError
-
-    def __call__(self, f=None):
-        if f is None:
-            if self.NEED_F:
-                raise ValueError('Operator %s requires TestFunction' % self)
-            else:
-                f = TestFunction()
-        elif not isinstance(f, TestFunction):
-            f = TestFunction.from_function(f)
-        f.setup(self.approx.total_size)
-        return ObjectiveFunction(self, f)
-
-    def __getstate__(self):
-        # pickle only important parts
-        return self.approx
-
-    def __setstate__(self, approx):
-        self.__init__(approx)
-
-    def __str__(self):    # pragma: no cover
-        return '%(op)s[%(ap)s]' % dict(op=self.__class__.__name__,
-                                       ap=self.approx.__class__.__name__)
+def _warn_not_used(smth, where):
+    warnings.warn('`%s` is not used for %s and ignored' % (smth, where))
 
 
 class ObjectiveFunction(object):
@@ -131,17 +61,8 @@ class ObjectiveFunction(object):
         """
         return self.op.approx.random(size)
 
-    def __call__(self, z):
-        if z.ndim > 1:
-            a = theano.scan(
-                lambda z_: theano.clone(self.op.apply(self.tf), {self.op.input: z_}),
-                sequences=z, n_steps=z.shape[0])[0].mean()
-        else:
-            a = theano.clone(self.op.apply(self.tf), {self.op.input: z})
-        return tt.abs_(a)
-
     def updates(self, obj_n_mc=None, tf_n_mc=None, obj_optimizer=adam, test_optimizer=adam,
-                more_obj_params=None, more_tf_params=None, more_updates=None):
+                more_obj_params=None, more_tf_params=None, more_updates=None, more_replacements=None):
         """
         Calculates gradients for objective function, test function and then
         constructs updates for optimization step
@@ -162,6 +83,8 @@ class ObjectiveFunction(object):
             Add custom params for test function optimizer
         more_updates : dict
             Add custom updates to resulting updates
+        more_replacements : dict
+            Apply custom replacements before calculating gradients
 
         Returns
         -------
@@ -173,26 +96,55 @@ class ObjectiveFunction(object):
             more_tf_params = []
         if more_updates is None:
             more_updates = dict()
+        if more_replacements is None:
+            more_replacements = dict()
+        if not self.op.RETURNS_LOSS and (more_obj_params or more_tf_params):
+            raise ValueError('%s does not support, differentiation with '
+                             'additional params, try passing your updates '
+                             'via more_updates kwarg' % self.op.__class__)
         resulting_updates = ObjectiveUpdates()
-
         if self.test_params:
-            tf_z = self.random(tf_n_mc)
-            tf_target = -self(tf_z)
-            resulting_updates.update(test_optimizer(tf_target, self.test_params + more_tf_params))
+            self.add_test_updates(
+                resulting_updates,
+                tf_n_mc=tf_n_mc,
+                test_optimizer=test_optimizer,
+                more_tf_params=more_tf_params,
+                more_replacements=more_replacements
+            )
         else:
-            pass
+            if tf_n_mc is not None:
+                _warn_not_used('tf_n_mc', self.op)
+            if more_tf_params:
+                _warn_not_used('more_tf_params', self.op)
+        self.add_obj_updates(
+            resulting_updates,
+            obj_n_mc=obj_n_mc,
+            obj_optimizer=obj_optimizer,
+            more_obj_params=more_obj_params,
+            more_replacements=more_replacements
+        )
+        resulting_updates.update(more_updates)
+        return resulting_updates
+
+    def add_test_updates(self, updates, tf_n_mc=None, test_optimizer=adam, more_tf_params=None, more_replacements=None):
+        tf_z = self.random(tf_n_mc)
+        tf_target = -self(tf_z)
+        tf_target = theano.clone(tf_target, more_replacements, strict=False)
+        updates.update(test_optimizer(tf_target, self.test_params + more_tf_params))
+
+    def add_obj_updates(self, updates, obj_n_mc=None, obj_optimizer=adam, more_obj_params=None, more_replacements=None):
         obj_z = self.random(obj_n_mc)
         obj_target = self(obj_z)
-        resulting_updates.update(obj_optimizer(obj_target, self.obj_params + more_obj_params))
-        resulting_updates.update(more_updates)
-        resulting_updates.loss = obj_target
-        return resulting_updates
+        obj_target = theano.clone(obj_target, more_replacements, strict=False)
+        updates.update(obj_optimizer(obj_target, self.obj_params + more_obj_params))
+        if self.op.RETURNS_LOSS:
+            updates.loss = obj_target
 
     @memoize
     def step_function(self, obj_n_mc=None, tf_n_mc=None,
                       obj_optimizer=adam, test_optimizer=adam,
                       more_obj_params=None, more_tf_params=None,
-                      more_updates=None, score=False,
+                      more_updates=None, more_replacements=None, score=False,
                       fn_kwargs=None):
         """
         Step function that should be called on each optimization step.
@@ -222,18 +174,24 @@ class ObjectiveFunction(object):
             calculate loss on each step? Defaults to False for speed
         fn_kwargs : dict
             Add kwargs to theano.function (e.g. `{'profile': True}`)
+        more_replacements : dict
+            Apply custom replacements before calculating gradients
+
         Returns
         -------
         theano.function
         """
         if fn_kwargs is None:
             fn_kwargs = {}
+        if score and not self.op.RETURNS_LOSS:
+            raise NotImplementedError('%s does not have loss' % self.op)
         updates = self.updates(obj_n_mc=obj_n_mc, tf_n_mc=tf_n_mc,
                                obj_optimizer=obj_optimizer,
                                test_optimizer=test_optimizer,
                                more_obj_params=more_obj_params,
                                more_tf_params=more_tf_params,
-                               more_updates=more_updates)
+                               more_updates=more_updates,
+                               more_replacements=more_replacements)
         if score:
             step_fn = theano.function([], updates.loss, updates=updates, **fn_kwargs)
         else:
@@ -241,16 +199,141 @@ class ObjectiveFunction(object):
         return step_fn
 
     @memoize
-    def score_function(self, sc_n_mc=None, fn_kwargs=None):   # pragma: no cover
+    def score_function(self, sc_n_mc=None, more_replacements=None, fn_kwargs=None):   # pragma: no cover
+        """
+        Compiles scoring function that operates which takes no inputs and returns Loss
+
+        Parameters
+        ----------
+        sc_n_mc : int
+            number of scoring MC samples
+        more_replacements:
+            Apply custom replacements before compiling a function
+        fn_kwargs:
+            arbitrary kwargs passed to theano.function
+
+        Returns
+        -------
+        theano.function
+        """
         if fn_kwargs is None:
             fn_kwargs = {}
-        return theano.function([], self(self.random(sc_n_mc)), **fn_kwargs)
+        if not self.op.RETURNS_LOSS:
+            raise NotImplementedError('%s does not have loss' % self.op)
+        if more_replacements is None:
+            more_replacements = {}
+        loss = theano.clone(self(self.random(sc_n_mc), more_replacements), strict=False)
+        return theano.function([], loss, **fn_kwargs)
 
     def __getstate__(self):
         return self.op, self.tf
 
     def __setstate__(self, state):
         self.__init__(*state)
+
+    def __call__(self, z):
+        if z.ndim > 1:
+            a = theano.scan(
+                lambda z_: theano.clone(self.op.apply(self.tf), {self.op.input: z_}, strict=False),
+                sequences=z, n_steps=z.shape[0])[0].mean()
+        else:
+            a = theano.clone(self.op.apply(self.tf), {self.op.input: z}, strict=False)
+        return tt.abs_(a)
+
+
+class Operator(object):
+    """
+    Base class for Operator
+
+    Parameters
+    ----------
+    approx : Approximation
+
+    Subclassing
+    -----------
+    For implementing Custom operator it is needed to define `.apply(f)` method
+    """
+
+    HAS_TEST_FUNCTION = False
+    RETURNS_LOSS = True
+    SUPPORT_AEVB = True
+    OBJECTIVE = ObjectiveFunction
+
+    def __init__(self, approx):
+        if not self.SUPPORT_AEVB and approx.local_vars:
+            raise ValueError('%s does not support AEVB, '
+                             'please change inference method' % type(self))
+        self.model = approx.model
+        self.approx = approx
+
+    flat_view = property(lambda self: self.approx.flat_view)
+    input = property(lambda self: self.approx.flat_view.input)
+
+    def logp(self, z):
+        factors = [tt.sum(var.logpt)for var in self.model.basic_RVs + self.model.potentials]
+        p = self.approx.to_flat_input(tt.add(*factors))
+        p = theano.clone(p, {self.input: z})
+        return p
+
+    def logp_norm(self, z):
+        t = self.approx.normalizing_constant
+        factors = [tt.sum(var.logpt) / t for var in self.model.basic_RVs + self.model.potentials]
+        logpt = tt.add(*factors)
+        p = self.approx.to_flat_input(logpt)
+        p = theano.clone(p, {self.input: z})
+        return p
+
+    def logq(self, z):
+        return self.approx.logq(z)
+
+    def logq_norm(self, z):
+        return self.approx.logq_norm(z)
+
+    def apply(self, f):   # pragma: no cover
+        """
+        Operator itself
+        .. math::
+
+            (O^{p,q}f_{\theta})(z)
+
+        Parameters
+        ----------
+        f : function or None
+            function that takes `z = self.input` and returns
+            same dimension output
+
+        Returns
+        -------
+        symbolically applied operator
+        """
+        raise NotImplementedError
+
+    def __call__(self, f=None):
+        if self.HAS_TEST_FUNCTION:
+            if f is None:
+                raise ValueError('Operator %s requires TestFunction' % self)
+            else:
+                if not isinstance(f, TestFunction):
+                    f = TestFunction.from_function(f)
+        else:
+            if f is not None:
+                warnings.warn('TestFunction for %s is redundant and removed' % self)
+            else:
+                pass
+            f = TestFunction()
+        f.setup(self.approx.total_size)
+        return self.OBJECTIVE(self, f)
+
+    def __getstate__(self):
+        # pickle only important parts
+        return self.approx
+
+    def __setstate__(self, approx):
+        self.__init__(approx)
+
+    def __str__(self):    # pragma: no cover
+        return '%(op)s[%(ap)s]' % dict(op=self.__class__.__name__,
+                                       ap=self.approx.__class__.__name__)
 
 
 def cast_to_list(params):
@@ -384,10 +467,10 @@ class Approximation(object):
     initial_dist_name = 'normal'
     initial_dist_map = 0.
 
-    def __init__(self, local_rv=None, model=None, cost_part_grad_scale=1):
+    def __init__(self, local_rv=None, model=None, cost_part_grad_scale=1, **kwargs):
         model = modelcontext(model)
         self.model = model
-        self.check_model(model)
+        self.check_model(model, **kwargs)
         if local_rv is None:
             local_rv = {}
 
@@ -398,27 +481,29 @@ class Approximation(object):
 
         known = {get_transformed(k): v for k, v in local_rv.items()}
         self.known = known
-        self.local_vars = self.get_local_vars()
-        self.global_vars = self.get_global_vars()
+        self.local_vars = self.get_local_vars(**kwargs)
+        self.global_vars = self.get_global_vars(**kwargs)
         self.order = ArrayOrdering(self.local_vars + self.global_vars)
         self.flat_view = model.flatten(
             vars=self.local_vars + self.global_vars
         )
         self.grad_scale_op = GradScale(cost_part_grad_scale)
-        self._setup()
-        self.shared_params = self.create_shared_params()
+        self._setup(**kwargs)
+        self.shared_params = self.create_shared_params(**kwargs)
 
     @property
     def normalizing_constant(self):
-        return self.to_flat_input(tt.max([v.scaling for v in self.model.basic_RVs]))
+        t = self.to_flat_input(tt.max([v.scaling for v in self.model.basic_RVs]))
+        t = theano.clone(t, {self.input: tt.zeros(self.total_size)})
+        return t
 
-    def _setup(self):
+    def _setup(self, **kwargs):
         pass
 
-    def get_global_vars(self):
+    def get_global_vars(self, **kwargs):
         return [v for v in self.model.free_RVs if v not in self.known]
 
-    def get_local_vars(self):
+    def get_local_vars(self, **kwargs):
         return [v for v in self.model.free_RVs if v in self.known]
 
     def __getstate__(self):
@@ -438,7 +523,7 @@ class Approximation(object):
     _view = property(lambda self: self.flat_view.view)
     input = property(lambda self: self.flat_view.input)
 
-    def check_model(self, model):
+    def check_model(self, model, **kwargs):
         """
         Checks that model is valid for variational inference
         """
@@ -446,7 +531,7 @@ class Approximation(object):
         if any([var.dtype in pm.discrete_types for var in vars_]):  # pragma: no cover
             raise ValueError('Model should not include discrete RVs')
 
-    def create_shared_params(self):
+    def create_shared_params(self, **kwargs):
         """
         Returns
         -------
@@ -526,7 +611,7 @@ class Approximation(object):
         )
         node = theano.clone(node, replacements, strict=False)
         posterior = self.random(no_rand=deterministic)
-        return theano.clone(node, {self.input: posterior})
+        return theano.clone(node, {self.input: posterior}, strict=False)
 
     def sample_node(self, node, size=100,
                     more_replacements=None):
@@ -546,11 +631,11 @@ class Approximation(object):
         sampled node(s) with replacements
         """
         if more_replacements is not None:   # pragma: no cover
-            node = theano.clone(node, more_replacements)
+            node = theano.clone(node, more_replacements, strict=False)
         posterior = self.random(size)
         node = self.to_flat_input(node)
 
-        def sample(z): return theano.clone(node, {self.input: z})
+        def sample(z): return theano.clone(node, {self.input: z}, strict=False)
         nodes, _ = theano.scan(sample, posterior, n_steps=size)
         return nodes
 

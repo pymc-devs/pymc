@@ -225,7 +225,7 @@ class Histogram(Approximation):
     Builds Approximation instance from a given trace,
     it has the same interface as variational approximation
 
-    Prameters
+    Parameters
     ----------
     trace : MultiTrace
     local_rv : dict
@@ -245,22 +245,27 @@ class Histogram(Approximation):
     """
     def __init__(self, trace, local_rv=None, model=None):
         self.trace = trace
-        super(Histogram, self).__init__(local_rv=local_rv, model=model)
+        super(Histogram, self).__init__(local_rv=local_rv, model=model, trace=trace)
 
-    def check_model(self, model):
-        if not all([var.name in self.trace.varnames
-                    for var in model.free_RVs]):
+    def check_model(self, model, **kwargs):
+        trace = kwargs.get('trace')
+        if (trace is not None
+            and not all([var.name in self.trace.varnames
+                         for var in model.free_RVs])):
             raise ValueError('trace has not all FreeRV')
 
-    def _setup(self):
+    def _setup(self, **kwargs):
         self._histogram_order = ArrayOrdering(self.global_vars)
         self._bij = DictToArrayBijection(self._histogram_order, dict())
 
-    def create_shared_params(self):
-        trace = self.trace
-        histogram = np.empty((len(trace), self.global_size))
-        for i in range(len(trace)):
-            histogram[i] = self._bij.map(trace[i])
+    def create_shared_params(self, **kwargs):
+        trace = kwargs.get('trace')
+        if trace is None:
+            histogram = np.empty((1, self.global_size))
+        else:
+            histogram = np.empty((len(trace), self.global_size))
+            for i in range(len(trace)):
+                histogram[i] = self._bij.map(trace[i])
         return theano.shared(histogram, 'histogram')
 
     def randidx(self, size=None):
@@ -318,6 +323,33 @@ class Histogram(Approximation):
     def mean(self):
         return self.histogram.mean(0)
 
-    @property
-    def params(self):
-        return []
+    @classmethod
+    def from_noise(cls, size, jitter=.01, local_rv=None, start=None, model=None):
+        """
+        Initialize Histogram with random noise
+
+        Parameters
+        ----------
+        size : number of initial particles
+        jitter : initial sd
+        local_rv : dict
+            mapping {model_variable -> local_variable}
+            Local Vars are used for Autoencoding Variational Bayes
+            See (AEVB; Kingma and Welling, 2014) for details
+        start : initial point
+        model : pm.Model
+            PyMC3 Model
+
+        Returns
+        -------
+        Histogram
+        """
+        hist = cls(None, local_rv=local_rv, model=model)
+        if start is None:
+            start = hist.model.test_point
+        start = hist._bij.map(start)
+        # Initialize particles
+        x0 = np.tile(start, (size, 1))
+        x0 += np.random.normal(0, jitter, x0.shape)
+        hist.histogram.set_value(x0)
+        return hist
