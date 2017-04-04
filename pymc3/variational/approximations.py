@@ -59,7 +59,7 @@ class MeanField(Approximation):
 
     def create_shared_params(self):
         return {'mu': theano.shared(
-                    self.input.tag.test_value[self.global_slc],
+                    pm.floatX(self.input.tag.test_value[self.global_slc]),
                     'mu'),
                 'rho': theano.shared(
                     np.zeros((self.global_size,), dtype=theano.config.floatX),
