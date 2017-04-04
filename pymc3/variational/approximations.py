@@ -245,13 +245,12 @@ class Histogram(Approximation):
     ...     histogram = Histogram(trace[100:])
     """
     def __init__(self, trace, local_rv=None, model=None):
-        self.trace = trace
         super(Histogram, self).__init__(local_rv=local_rv, model=model, trace=trace)
 
     def check_model(self, model, **kwargs):
         trace = kwargs.get('trace')
         if (trace is not None
-            and not all([var.name in self.trace.varnames
+            and not all([var.name in trace.varnames
                          for var in model.free_RVs])):
             raise ValueError('trace has not all FreeRV')
 
