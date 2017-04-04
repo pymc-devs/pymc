@@ -2,6 +2,7 @@ import numpy as np
 import theano
 from theano import tensor as tt
 
+import pymc3 as pm
 from pymc3 import ArrayOrdering, DictToArrayBijection
 from pymc3.distributions.dist_math import rho2sd, log_normal, log_normal_mv
 from pymc3.variational.opvi import Approximation
@@ -261,12 +262,12 @@ class Histogram(Approximation):
     def create_shared_params(self, **kwargs):
         trace = kwargs.get('trace')
         if trace is None:
-            histogram = np.empty((1, self.global_size))
+            histogram = np.atleast_2d(self._bij.map(self.model.test_point))
         else:
             histogram = np.empty((len(trace), self.global_size))
             for i in range(len(trace)):
                 histogram[i] = self._bij.map(trace[i])
-        return theano.shared(histogram, 'histogram')
+        return theano.shared(pm.floatX(histogram), 'histogram')
 
     def randidx(self, size=None):
         if size is None:
