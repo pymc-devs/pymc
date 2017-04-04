@@ -317,7 +317,10 @@ class SVGD(Inference):
     model : pm.Model
     kernel : callable
         kernel function for KSD f(histogram) -> (k(x,.), \nabla_x k(x,.))
-
+    start : dict
+        initial point for inference
+    histogram : Histogram
+        initialize SVGD with given Histogram instead of default initial particles
     References
     ----------
     - Qiang Liu, Dilin Wang (2016)
@@ -325,10 +328,10 @@ class SVGD(Inference):
         arXiv:1608.04471
     """
     def __init__(self, n_particles=100, jitter=.01, model=None, kernel=test_functions.rbf,
-                 histogram=None):
+                 start=None, histogram=None):
         if histogram is None:
             histogram = Histogram.from_noise(
-                n_particles, jitter=jitter, model=model)
+                n_particles, jitter=jitter, start=start, model=model)
         super(SVGD, self).__init__(
             KSD, histogram,
             kernel,
