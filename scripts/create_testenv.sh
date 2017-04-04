@@ -42,10 +42,9 @@ if [ ${PYTHON_VERSION} == "2.7" ]; then
 fi
 
 pip install --upgrade pip
-pip install tqdm
 pip install --no-deps numdifftools
 pip install git+https://github.com/Theano/Theano.git
-pip install h5py
+pip install tqdm h5py parameterized
 
 if [ -z ${NO_SETUP} ]
 then

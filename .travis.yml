@@ -9,7 +9,7 @@ before_install:
 
 install:
   - . ./scripts/create_testenv.sh
-  - pip install coveralls pylint nose_parameterized
+  - pip install coveralls pylint
 
 env:
   - PYTHON_VERSION=2.7 TESTCMD="--durations=10 --ignore=pymc3/tests/test_examples.py --cov-append --ignore=pymc3/tests/test_distributions_random.py --ignore=pymc3/tests/test_variational_inference.py --ignore=pymc3/tests/test_shared.py"
