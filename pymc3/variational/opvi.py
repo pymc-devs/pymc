@@ -222,7 +222,7 @@ class ObjectiveFunction(object):
             raise NotImplementedError('%s does not have loss' % self.op)
         if more_replacements is None:
             more_replacements = {}
-        loss = theano.clone(self(self.random(sc_n_mc), more_replacements), strict=False)
+        loss = theano.clone(self(self.random(sc_n_mc)), more_replacements, strict=False)
         return theano.function([], loss, **fn_kwargs)
 
     def __getstate__(self):
