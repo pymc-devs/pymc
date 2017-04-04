@@ -17,35 +17,34 @@ from pymc3.tests import models
 from pymc3.tests.helpers import SeededTest
 
 
-class TestELBO(SeededTest):
-    def test_elbo(self):
-        mu0 = 1.5
-        sigma = 1.0
-        y_obs = np.array([1.6, 1.4])
+def test_elbo():
+    mu0 = 1.5
+    sigma = 1.0
+    y_obs = np.array([1.6, 1.4])
 
-        post_mu = np.array([1.88], dtype=theano.config.floatX)
-        post_sd = np.array([1], dtype=theano.config.floatX)
-        # Create a model for test
-        with Model() as model:
-            mu = Normal('mu', mu=mu0, sd=sigma)
-            Normal('y', mu=mu, sd=1, observed=y_obs)
+    post_mu = np.array([1.88], dtype=theano.config.floatX)
+    post_sd = np.array([1], dtype=theano.config.floatX)
+    # Create a model for test
+    with Model() as model:
+        mu = Normal('mu', mu=mu0, sd=sigma)
+        Normal('y', mu=mu, sd=1, observed=y_obs)
 
-        # Create variational gradient tensor
-        mean_field = MeanField(model=model)
-        elbo = -KL(mean_field)()(mean_field.random())
+    # Create variational gradient tensor
+    mean_field = MeanField(model=model)
+    elbo = -KL(mean_field)()(mean_field.random())
 
-        mean_field.shared_params['mu'].set_value(post_mu)
-        mean_field.shared_params['rho'].set_value(np.log(np.exp(post_sd) - 1))
+    mean_field.shared_params['mu'].set_value(post_mu)
+    mean_field.shared_params['rho'].set_value(np.log(np.exp(post_sd) - 1))
 
-        f = theano.function([], elbo)
-        elbo_mc = sum(f() for _ in range(10000)) / 10000
+    f = theano.function([], elbo)
+    elbo_mc = sum(f() for _ in range(10000)) / 10000
 
-        # Exact value
-        elbo_true = (-0.5 * (
-            3 + 3 * post_mu ** 2 - 2 * (y_obs[0] + y_obs[1] + mu0) * post_mu +
-            y_obs[0] ** 2 + y_obs[1] ** 2 + mu0 ** 2 + 3 * np.log(2 * np.pi)) +
-                     0.5 * (np.log(2 * np.pi) + 1))
-        np.testing.assert_allclose(elbo_mc, elbo_true, rtol=0, atol=1e-1)
+    # Exact value
+    elbo_true = (-0.5 * (
+        3 + 3 * post_mu ** 2 - 2 * (y_obs[0] + y_obs[1] + mu0) * post_mu +
+        y_obs[0] ** 2 + y_obs[1] ** 2 + mu0 ** 2 + 3 * np.log(2 * np.pi)) +
+                 0.5 * (np.log(2 * np.pi) + 1))
+    np.testing.assert_allclose(elbo_mc, elbo_true, rtol=0, atol=1e-1)
 
 
 def _test_aevb(self):
@@ -144,7 +143,6 @@ class TestApproximates:
             with Model():
                 mu_ = Normal('mu', mu=mu0, sd=sd0, testval=0)
                 Normal('x', mu=mu_, sd=sd, observed=data)
-                pm.Deterministic('mu_sq', mu_**2)
                 inf = self.inference()
                 inf.fit(10)
                 approx = inf.fit(self.NITER, obj_optimizer=self.optimizer)
@@ -241,15 +239,6 @@ class TestMeanField(TestApproximates.Base):
     inference = ADVI
     test_aevb = _test_aevb
 
-    def test_approximate(self):
-        with models.multidimensional_model()[1]:
-            meth = ADVI()
-            fit(10, method=meth)
-            with pytest.raises(KeyError):
-                fit(10, method='undefined')
-            with pytest.raises(TypeError):
-                fit(10, method=1)
-
     def test_length_of_hist(self):
         with models.multidimensional_model()[1]:
             inf = self.inference()
@@ -277,16 +266,6 @@ class TestFullRank(TestApproximates.Base):
             advi = ADVI()
             full_rank = FullRankADVI.from_advi(advi)
             full_rank.fit(20)
-
-    def test_combined(self):
-        with models.multidimensional_model()[1]:
-            with pytest.raises(ValueError):
-                fit(10, method='advi->fullrank_advi', frac=1)
-            fit(10, method='advi->fullrank_advi', frac=.5)
-
-    def test_approximate(self):
-        with models.multidimensional_model()[1]:
-            fit(10, method='fullrank_advi')
 
 
 class TestSVGD(TestApproximates.Base):
@@ -342,3 +321,34 @@ class TestHistogram(SeededTest):
         with models.multidimensional_model()[1]:
             histogram = Histogram.from_noise(100)
             assert histogram.histogram.eval().shape == (100, 6)
+
+_model = models.simple_model()[1]
+with _model:
+    _advi = ADVI()
+    _fullrank_advi = FullRankADVI()
+    _svgd = SVGD()
+
+
+@pytest.mark.parametrize(
+    ['method', 'kwargs', 'error'],
+    [
+        ('undefined', dict(), KeyError),
+        (1, dict(), TypeError),
+        (_advi, dict(), None),
+        (_fullrank_advi, dict(), None),
+        (_svgd, dict(), None),
+        ('advi', dict(), None),
+        ('advi->fullrank_advi', dict(frac=.1), None),
+        ('advi->fullrank_advi', dict(frac=1), ValueError),
+        ('fullrank_advi', dict(), None),
+        ('svgd', dict(), None),
+        ('svgd', dict(local_rv={_model.free_RVs[0]: (0, 1)}), ValueError)
+    ]
+)
+def test_fit(method, kwargs, error):
+    with _model:
+        if error is not None:
+            with pytest.raises(error):
+                fit(10, method=method, **kwargs)
+        else:
+            fit(10, method=method, **kwargs)
