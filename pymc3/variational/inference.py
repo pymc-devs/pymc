@@ -353,8 +353,6 @@ def fit(n=10000, local_rv=None, method='advi', model=None, **kwargs):
         See (AEVB; Kingma and Welling, 2014) for details
     method : str or Inference
         string name is case insensitive in {'advi', 'fullrank_advi', 'advi->fullrank_advi'}
-    init_kw : dict
-        kwargs passed to Inference.__init__
     model : Model
     kwargs : kwargs for Inference.fit
     frac : float
