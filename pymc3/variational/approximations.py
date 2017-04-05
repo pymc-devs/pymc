@@ -2,6 +2,7 @@ import numpy as np
 import theano
 from theano import tensor as tt
 
+import pymc3 as pm
 from pymc3 import ArrayOrdering, DictToArrayBijection
 from pymc3.distributions.dist_math import rho2sd, log_normal, log_normal_mv
 from pymc3.variational.opvi import Approximation
@@ -58,7 +59,7 @@ class MeanField(Approximation):
 
     def create_shared_params(self):
         return {'mu': theano.shared(
-                    self.input.tag.test_value[self.global_slc],
+                    pm.floatX(self.input.tag.test_value[self.global_slc]),
                     'mu'),
                 'rho': theano.shared(
                     np.zeros((self.global_size,), dtype=theano.config.floatX),
@@ -244,13 +245,12 @@ class Histogram(Approximation):
     ...     histogram = Histogram(trace[100:])
     """
     def __init__(self, trace, local_rv=None, model=None):
-        self.trace = trace
         super(Histogram, self).__init__(local_rv=local_rv, model=model, trace=trace)
 
     def check_model(self, model, **kwargs):
         trace = kwargs.get('trace')
         if (trace is not None
-            and not all([var.name in self.trace.varnames
+            and not all([var.name in trace.varnames
                          for var in model.free_RVs])):
             raise ValueError('trace has not all FreeRV')
 
@@ -261,12 +261,12 @@ class Histogram(Approximation):
     def create_shared_params(self, **kwargs):
         trace = kwargs.get('trace')
         if trace is None:
-            histogram = np.empty((1, self.global_size))
+            histogram = np.atleast_2d(self._bij.map(self.model.test_point))
         else:
             histogram = np.empty((len(trace), self.global_size))
             for i in range(len(trace)):
                 histogram[i] = self._bij.map(trace[i])
-        return theano.shared(histogram, 'histogram')
+        return theano.shared(pm.floatX(histogram), 'histogram')
 
     def randidx(self, size=None):
         if size is None:

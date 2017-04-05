@@ -321,6 +321,7 @@ class SVGD(Inference):
         initial point for inference
     histogram : Histogram
         initialize SVGD with given Histogram instead of default initial particles
+
     References
     ----------
     - Qiang Liu, Dilin Wang (2016)
@@ -328,10 +329,10 @@ class SVGD(Inference):
         arXiv:1608.04471
     """
     def __init__(self, n_particles=100, jitter=.01, model=None, kernel=test_functions.rbf,
-                 start=None, histogram=None):
+                 start=None, histogram=None, local_rv=None):
         if histogram is None:
             histogram = Histogram.from_noise(
-                n_particles, jitter=jitter, start=start, model=model)
+                n_particles, jitter=jitter, start=start, model=model, local_rv=local_rv)
         super(SVGD, self).__init__(
             KSD, histogram,
             kernel,
@@ -352,10 +353,10 @@ def fit(n=10000, local_rv=None, method='advi', model=None, **kwargs):
         See (AEVB; Kingma and Welling, 2014) for details
     method : str or Inference
         string name is case insensitive in {'advi', 'fullrank_advi', 'advi->fullrank_advi'}
-    model : None or Model
+    model : Model
+    kwargs : kwargs for Inference.fit
     frac : float
         if method is 'advi->fullrank_advi' represents advi fraction when training
-    kwargs : kwargs for Inference.fit
 
     Returns
     -------
