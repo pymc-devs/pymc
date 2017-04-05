@@ -324,6 +324,7 @@ class TestHistogram(SeededTest):
 
 _model = models.simple_model()[1]
 with _model:
+    pm.Potential('pot', tt.ones((10, 10)))
     _advi = ADVI()
     _fullrank_advi = FullRankADVI()
     _svgd = SVGD()
