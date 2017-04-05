@@ -8,9 +8,11 @@ from nbconvert.preprocessors import ExecutePreprocessor
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 NOTEBOOK_DIR = os.path.join(BASE_DIR, 'docs', 'source', 'notebooks')
 
+
 def list_notebooks():
     """Get an iterator of filepaths to notebooks in NOTEBOOK_DIR"""
     return glob.glob(os.path.join(NOTEBOOK_DIR, '*.ipynb'))
+
 
 def execute_notebook(notebook_path):
     """Run and overwrite a notebook file."""
@@ -19,8 +21,11 @@ def execute_notebook(notebook_path):
         nb = nbformat.read(buff, as_version=nbformat.NO_CONVERT)
     try:
         t0 = time.time()
-        _ = ep.preprocess(nb, {'metadata': {'path': NOTEBOOK_DIR}})
+        ep.preprocess(nb, {'metadata': {'path': NOTEBOOK_DIR}})
         t1 = time.time()
+
+    except KeyboardInterrupt:
+        raise
 
     except BaseException as e:
         t1 = time.time()
@@ -31,8 +36,9 @@ def execute_notebook(notebook_path):
 
     return True, 'Succeeded after {:.1f}s'.format(t1 - t0)
 
+
 def run_all_notebooks():
-    """Tries to re-run all notebooks.  Prints failures at end."""
+    """Try to re-run all notebooks.  Print failures at end."""
     failed = []
     for notebook_path in list_notebooks():
         print('Executing {}'.format(os.path.basename(notebook_path)))
@@ -44,7 +50,6 @@ def run_all_notebooks():
     if failed:
         print('The following notebooks had errors!')
         print('\n'.join(failed))
-
 
 
 if __name__ == '__main__':
