@@ -22,7 +22,7 @@ def histplot_op(ax, data, alpha=.35):
 
 
 def kdeplot_op(ax, data, prior=None, prior_alpha=1, prior_style='--'):
-    """Geet a list of density and likelihood plots, if a prior is provided."""
+    """Get a list of density and likelihood plots, if a prior is provided."""
     ls = []
     pls = []
     errored = []
