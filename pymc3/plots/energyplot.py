@@ -3,7 +3,7 @@ import numpy as np
 
 from .utils import fast_kde
 
-def energyplot(trace, kind='kde', figsize=None, ax=None, legend=True, lw=0, alpha=0.5, frame=False, **kwargs):
+def energyplot(trace, kind='kde', figsize=None, ax=None, legend=True, lw=0, alpha=0.5, frame=True, **kwargs):
     """Plot energy transition distribution and marginal energy distribution in order
     to diagnose poor exploration by HMC algorithms.
 
