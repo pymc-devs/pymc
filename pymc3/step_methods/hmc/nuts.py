@@ -210,9 +210,24 @@ class NUTS(BaseHMC):
         """Print warnings for obviously problematic chains."""
         n = len(strace)
         chain = strace.chain
+
         diverging = strace.get_sampler_stats('diverging')
+        if diverging.ndim == 2:
+            diverging = np.any(diverging, axis=0)
+
         tuning = strace.get_sampler_stats('tune')
+        if tuning.ndim == 2:
+            tuning = np.any(tuning, axis=0)
+
         accept = strace.get_sampler_stats('mean_tree_accept')
+        if accept.ndim == 2:
+            accept = np.mean(accept, axis=0)
+
+        depth = strace.get_sampler_stats('depth')
+        if depth.ndim == 2:
+            depth = np.max(depth, axis=0)
+
+        n_samples = n - (~tuning).sum()
 
         if n < 1000:
             warnings.warn('Chain %s contains only %s samples.' % (chain, n))
@@ -222,15 +237,22 @@ class NUTS(BaseHMC):
         if np.all(tuning):
             warnings.warn('Step size tuning was enabled throughout the whole '
                           'trace. You might want to specify the number of '
-                          'tuning steps')
+                          'tuning steps.')
         if np.any(diverging[~tuning]):
             warnings.warn("Chain %s contains diverging samples after tuning. "
                           "If increasing `target_accept` doesn't help, "
                           "try to reparameterize." % chain)
+        if n_samples > 0:
+            depth_samples = depth[~tuning]
+        else:
+            depth_samples = depth[n // 2:]
+        if np.mean(depth_samples == self.max_treedepth) > 0.05:
+            warnings.warn('Chain %s reached the maximum tree depth. Increase '
+                          'max_treedepth, increase target_accept or '
+                          'reparameterize.' % chain)
 
         mean_accept = np.mean(accept[~tuning])
         target_accept = self.target_accept
-
         # Try to find a reasonable interval for acceptable acceptance
         # probabilities. Finding this was mostry trial and error.
         n_bound = min(100, n)
@@ -249,7 +271,9 @@ Edge = namedtuple("Edge", 'q, p, v, q_grad, energy')
 Proposal = namedtuple("Proposal", "q, energy, p_accept")
 
 # A subtree of the binary tree built by nuts.
-Subtree = namedtuple("Subtree", "left, right, p_sum, proposal, log_size, accept_sum, n_proposals")
+Subtree = namedtuple(
+    "Subtree",
+    "left, right, p_sum, proposal, log_size, accept_sum, n_proposals")
 
 
 class Tree(object):
