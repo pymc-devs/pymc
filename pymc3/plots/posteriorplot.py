@@ -100,3 +100,5 @@ def plot_posterior(trace, varnames=None, transform=identity_transform, figsize=N
 
         plt.tight_layout()
     return ax
+
+posteriorplot = plot_posterior
