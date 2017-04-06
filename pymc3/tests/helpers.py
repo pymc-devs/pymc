@@ -1,9 +1,7 @@
 from logging.handlers import BufferingHandler
 import numpy.random as nr
-import numpy as np
 from theano.sandbox.rng_mrg import MRG_RandomStreams
 from ..theanof import set_tt_rng, tt_rng
-from pymc3.theanof import floatX
 import theano
 
 
