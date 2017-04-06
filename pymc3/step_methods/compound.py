@@ -33,5 +33,5 @@ class CompoundStep(object):
 
     def check_trace(self, trace):
         for method in self.methods:
-            if hasattr(self, 'check_trace'):
+            if hasattr(method, 'check_trace'):
                 method.check_trace(trace)
