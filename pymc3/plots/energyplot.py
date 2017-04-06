@@ -37,8 +37,8 @@ def energyplot(trace, kind='kde', figsize=None, ax=None, legend=True, lw=0, alph
     except KeyError:
         print('There is no energy information in the passed trace.')
         return ax
-    series_dict = {'Energy': energy - energy.mean(),
-                'Energy difference': np.diff(energy)}
+    series_dict = {'Marginal energy distribution': energy - energy.mean(),
+                'Energy transition distribution': np.diff(energy)}
 
     if figsize is None:
         figsize = (8, 6)
