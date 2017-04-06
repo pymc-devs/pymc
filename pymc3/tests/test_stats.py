@@ -7,6 +7,7 @@ from .helpers import SeededTest
 from ..tests import backend_fixtures as bf
 from ..backends import ndarray
 from ..stats import df_summary, autocorr, hpd, mc_error, quantiles, make_indices
+from ..theanof import floatX_array
 from numpy.random import random, normal
 from numpy.testing import assert_equal, assert_almost_equal, assert_array_almost_equal
 from scipy import stats as st
@@ -116,7 +117,7 @@ class TestStats(SeededTest):
         mu = -2.1
         tau = 1.3
         with Model() as model:
-            Normal('x', mu, tau, testval=.1)
+            Normal('x', mu, tau, testval=floatX_array(.1))
             step = Metropolis(model.vars, np.diag([1.]), blocked=True)
             trace = pm.sample(100, step=step)
         pm.summary(trace)
@@ -125,7 +126,7 @@ class TestStats(SeededTest):
         mu = -2.1
         tau = 1.3
         with Model() as model:
-            Normal('x', mu, tau, shape=2, testval=[.1, .1])
+            Normal('x', mu, tau, shape=2, testval=floatX_array([.1, .1]))
             step = Metropolis(model.vars, np.diag([1.]), blocked=True)
             trace = pm.sample(100, step=step)
         pm.summary(trace)
@@ -135,7 +136,7 @@ class TestStats(SeededTest):
         tau = 1.3
         with Model() as model:
             Normal('x', mu, tau, shape=(2, 2),
-                   testval=np.tile(.1, (2, 2)))
+                   testval=floatX_array(np.tile(.1, (2, 2))))
             step = Metropolis(model.vars, np.diag([1.]), blocked=True)
             trace = pm.sample(100, step=step)
         pm.summary(trace)
