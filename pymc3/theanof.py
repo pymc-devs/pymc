@@ -409,3 +409,7 @@ class GradScale(theano.compile.ViewOp):
 
     def grad(self, args, g_outs):
         return [self.multiplier * g_out for g_out in g_outs]
+
+
+def floatX_array(x):
+    return floatX(np.array(x))

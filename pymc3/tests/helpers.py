@@ -22,6 +22,7 @@ class SeededTest(object):
     def teardown_method(self):
         set_tt_rng(self.old_tt_rng)
 
+
 class LoggingHandler(BufferingHandler):
     def __init__(self, matcher):
         # BufferingHandler takes a "capacity" argument
@@ -47,6 +48,7 @@ class LoggingHandler(BufferingHandler):
                 result = True
                 break
         return result
+
 
 class Matcher(object):
 
@@ -86,7 +88,3 @@ def select_by_precision(float64, float32):
     """Helper function to choose reasonable decimal cutoffs for different floatX modes."""
     decimal = float64 if theano.config.floatX == "float64" else float32
     return decimal
-
-
-def fxarray(x):
-    return floatX(np.array(x))
