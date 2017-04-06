@@ -32,7 +32,11 @@ def energyplot(trace, kind='kde', figsize=None, ax=None, legend=True, lw=0, alph
     ax : matplotlib axes
     """
     
-    energy = trace['energy']
+    try:
+        energy = trace['energy']
+    except KeyError:
+        print('There is no energy information in the passed trace.')
+        return ax
     series_dict = {'Energy': energy - energy.mean(),
                 'Energy difference': np.diff(energy)}
 
