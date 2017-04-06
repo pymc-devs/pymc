@@ -3,6 +3,7 @@ import numpy as np
 import pymc3 as pm
 from itertools import product
 import theano.tensor as tt
+import theano
 from theano.compile.ops import as_op
 from pymc3.theanof import floatX_array
 
@@ -37,7 +38,9 @@ def multidimensional_model():
 
 
 def simple_arbitrary_det():
-    @as_op(itypes=[tt.dscalar], otypes=[tt.dscalar])
+    scalar_type = tt.dscalar if theano.config.floatX == "float64" else tt.fscalar
+
+    @as_op(itypes=[scalar_type], otypes=[scalar_type])
     def arbitrary_det(value):
         return value
 
