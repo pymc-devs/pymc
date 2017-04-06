@@ -30,3 +30,8 @@ class CompoundStep(object):
             for method in self.methods:
                 point = method.step(point)
             return point
+
+    def check_trace(self, trace):
+        for method in self.methods:
+            if hasattr(self, 'check_trace'):
+                method.check_trace(trace)

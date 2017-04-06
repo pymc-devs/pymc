@@ -1,4 +1,5 @@
 from collections import namedtuple
+import warnings
 
 from ..arraystep import Competence
 from .base_hmc import BaseHMC
@@ -7,6 +8,7 @@ from pymc3.vartypes import continuous_types
 
 import numpy as np
 import numpy.random as nr
+from scipy import stats
 
 __all__ = ['NUTS']
 
@@ -204,6 +206,41 @@ class NUTS(BaseHMC):
             return Competence.IDEAL
         return Competence.INCOMPATIBLE
 
+    def check_trace(self, strace):
+        """Print warnings for obviously problematic chains."""
+        n = len(strace)
+        chain = strace.chain
+        diverging = strace.get_sampler_stats('diverging')
+        tuning = strace.get_sampler_stats('tune')
+        accept = strace.get_sampler_stats('mean_tree_accept')
+
+        if n < 1000:
+            warnings.warn('Chain %s contains only %s samples.' % (chain, n))
+        if np.all(diverging):
+            warnings.warn('Chain %s contains only diverging samples. '
+                          'The model is probably misspecified.' % chain)
+        if np.all(tuning):
+            warnings.warn('Step size tuning was enabled throughout the whole '
+                          'trace. You might want to specify the number of '
+                          'tuning steps')
+        if np.any(diverging[~tuning]):
+            warnings.warn("Chain %s contains diverging samples after tuning. "
+                          "If increasing `target_accept` doesn't help, "
+                          "try to reparameterize." % chain)
+
+        mean_accept = np.mean(accept[~tuning])
+        target_accept = self.target_accept
+
+        # Try to find a reasonable interval for acceptable acceptance
+        # probabilities. Finding this was mostry trial and error.
+        n_bound = min(100, n)
+        n_good, n_bad = mean_accept * n_bound, (1 - mean_accept) * n_bound
+        lower, upper = stats.beta(n_good + 1, n_bad + 1).interval(0.95)
+        if target_accept < lower or target_accept > upper:
+            warnings.warn('The acceptance probability in chain %s does not '
+                          'match the target. It is %s, but should be close '
+                          'to %s. Try to increase the number of tuning steps.'
+                          % (chain, mean_accept, target_accept))
 
 # A node in the NUTS tree that is at the far right or left of the tree
 Edge = namedtuple("Edge", 'q, p, v, q_grad, energy')
