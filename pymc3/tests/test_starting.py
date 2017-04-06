@@ -3,19 +3,21 @@ import numpy as np
 from pymc3.tuning import starting
 from pymc3 import Model, Uniform, Normal, Beta, Binomial, find_MAP, Point
 from .models import simple_model, non_normal, exponential_beta, simple_arbitrary_det
+from .helpers import select_by_precision
+
 
 def test_accuracy_normal():
     _, model, (mu, _) = simple_model()
     with model:
         newstart = find_MAP(Point(x=[-10.5, 100.5]))
-        close_to(newstart['x'], [mu, mu], 1e-5)
+        close_to(newstart['x'], [mu, mu], select_by_precision(float64=1e-5, float32=1E-4))
 
 
 def test_accuracy_non_normal():
     _, model, (mu, _) = non_normal(4)
     with model:
         newstart = find_MAP(Point(x=[.5, .01, .95, .99]))
-        close_to(newstart['x'], mu, 1e-5)
+        close_to(newstart['x'], mu, select_by_precision(float64=1e-5, float32=1E-4))
 
 
 def test_errors():

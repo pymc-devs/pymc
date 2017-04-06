@@ -3,8 +3,10 @@ import numpy as np
 import pymc3 as pm
 from itertools import product
 import theano.tensor as tt
+import theano
 from theano.compile.ops import as_op
-from .helpers import fxarray
+from pymc3.theanof import floatX_array
+
 
 def simple_model():
     mu = -2.1
@@ -16,8 +18,8 @@ def simple_model():
 
 
 def simple_categorical():
-    p = fxarray([0.1, 0.2, 0.3, 0.4])
-    v = fxarray([0.0, 1.0, 2.0, 3.0])
+    p = floatX_array([0.1, 0.2, 0.3, 0.4])
+    v = floatX_array([0.0, 1.0, 2.0, 3.0])
     with Model() as model:
         Categorical('x', p, shape=3, testval=[1, 2, 3])
 
@@ -36,14 +38,16 @@ def multidimensional_model():
 
 
 def simple_arbitrary_det():
-    @as_op(itypes=[tt.dscalar], otypes=[tt.dscalar])
+    scalar_type = tt.dscalar if theano.config.floatX == "float64" else tt.fscalar
+
+    @as_op(itypes=[scalar_type], otypes=[scalar_type])
     def arbitrary_det(value):
         return value
 
     with Model() as model:
         a = Normal('a')
         b = arbitrary_det(a)
-        Normal('obs', mu=b.astype('float64'), observed=fxarray([1, 3, 5]))
+        Normal('obs', mu=b.astype('float64'), observed=floatX_array([1, 3, 5]))
 
     return model.test_point, model
 
@@ -66,15 +70,15 @@ def simple_2model():
 
 
 def mv_simple():
-    mu = fxarray([-.1, .5, 1.1])
-    p = fxarray([
+    mu = floatX_array([-.1, .5, 1.1])
+    p = floatX_array([
         [2., 0, 0],
         [.05, .1, 0],
         [1., -0.05, 5.5]])
     tau = np.dot(p, p.T)
     with pm.Model() as model:
         pm.MvNormal('x', tt.constant(mu), tau=tt.constant(tau),
-                    shape=3, testval=fxarray([.1, 1., .8]))
+                    shape=3, testval=floatX_array([.1, 1., .8]))
     H = tau
     C = np.linalg.inv(H)
     return model.test_point, model, (mu, C)
@@ -83,7 +87,7 @@ def mv_simple():
 def mv_simple_discrete():
     d = 2
     n = 5
-    p = fxarray([.15, .85])
+    p = floatX_array([.15, .85])
     with pm.Model() as model:
         pm.Multinomial('x', n, tt.constant(p), shape=d, testval=np.array([1, 4]))
         mu = n * p
@@ -106,7 +110,7 @@ def mv_prior_simple():
     K = pm.gp.cov.ExpQuad(1, 1)(X).eval()
     L = np.linalg.cholesky(K)
     K_noise = K + noise * np.eye(n)
-    obs = fxarray([-0.1, 0.5, 1.1])
+    obs = floatX_array([-0.1, 0.5, 1.1])
 
     # Posterior mean
     L_noise = np.linalg.cholesky(K_noise)

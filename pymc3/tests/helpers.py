@@ -1,9 +1,7 @@
 from logging.handlers import BufferingHandler
 import numpy.random as nr
-import numpy as np
 from theano.sandbox.rng_mrg import MRG_RandomStreams
 from ..theanof import set_tt_rng, tt_rng
-from pymc3.theanof import floatX
 import theano
 
 
@@ -21,6 +19,7 @@ class SeededTest(object):
 
     def teardown_method(self):
         set_tt_rng(self.old_tt_rng)
+
 
 class LoggingHandler(BufferingHandler):
     def __init__(self, matcher):
@@ -47,6 +46,7 @@ class LoggingHandler(BufferingHandler):
                 result = True
                 break
         return result
+
 
 class Matcher(object):
 
@@ -86,7 +86,3 @@ def select_by_precision(float64, float32):
     """Helper function to choose reasonable decimal cutoffs for different floatX modes."""
     decimal = float64 if theano.config.floatX == "float64" else float32
     return decimal
-
-
-def fxarray(x):
-    return floatX(np.array(x))
