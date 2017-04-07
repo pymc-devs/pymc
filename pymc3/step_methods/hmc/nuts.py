@@ -66,6 +66,8 @@ class NUTS(BaseHMC):
     .. [1] Hoffman, Matthew D., & Gelman, Andrew. (2011). The No-U-Turn Sampler:
        Adaptively Setting Path Lengths in Hamiltonian Monte Carlo.
     """
+    name = 'nuts'
+
     default_blocked = True
     generates_stats = True
     stats_dtypes = [{
@@ -107,13 +109,13 @@ class NUTS(BaseHMC):
         adapt_step_size : bool, default=True
             Whether step size adaptation should be enabled. If this is
             disabled, `k`, `t0`, `gamma` and `target_accept` are ignored.
+        max_treedepth : int, default=10
+            The maximum tree depth. Trajectories are stoped when this
+            depth is reached.
         integrator : str, default "leapfrog"
             The integrator to use for the trajectories. One of "leapfrog",
             "two-stage" or "three-stage". The second two can increase
             sampling speed for some high dimensional problems.
-        step_scale : float, default=0.25
-            Initial size of steps to take, automatically scaled down
-            by 1/n**(1/4).
         scaling : array_like, ndim = {1,2}
             The inverse mass, or precision matrix. One dimensional arrays are
             interpreted as diagonal matrices. If `is_cov` is set to True,
