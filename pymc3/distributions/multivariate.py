@@ -67,21 +67,29 @@ class MvNormal(Continuous):
         self.has_tau = tau is not None
         if cov is not None:
             self.chol_cov = tt.slinalg.cholesky(tt.as_tensor_variable(cov))
+            chol = self.chol_cov
         elif tau is not None:
             self.chol_tau = tt.slinalg.cholesky(tt.as_tensor_variable(tau))
+            chol = self.chol_tau
         else:
             self.chol_cov = tt.as_tensor_variable(chol)
+            chol = self.chol_cov
         self.parents.update(
             mean=self.mean,
-            chol=None # TODO self.chol_tau if self.has_tau else self.chol_cov
+            chol=chol,
+            is_tau=self.has_tau
         )
 
     def random(self, point=None, size=None):
         if self.has_tau:
-            mu, chol_tau = draw_values([self.mu, self.chol_tau], point=point)
+            mu, chol = draw_values([self.mu, self.chol_tau], point=point)
         else:
-            mu, chol_cov = draw_values([self.mu, self.chol_cov], point=point)
+            mu, chol = draw_values([self.mu, self.chol_cov], point=point)
+        return self._st_random(dist_shape=self.shape, size=size,
+                               mean=mu, chol=chol, is_tau=self.has_tau)
 
+    @staticmethod
+    def rng(mean, chol, is_tau, size=None):
         if size is None:
             size = []
         else:
@@ -89,12 +97,12 @@ class MvNormal(Continuous):
                 size = list(size)
             except TypeError:
                 size = [size]
-        size.append(mu.shape[0])
-
+        size.append(mean.shape[0])
         standard_normal = np.random.standard_normal(size)
-        if self.has_tau:
-            return mu + scipy.linalg.solve_triangular(chol_tau, standard_normal.T, lower=True).T
-        return mu + np.dot(standard_normal, chol_cov)
+        if is_tau:
+            return mean + scipy.linalg.solve_triangular(chol, standard_normal.T, lower=True).T
+        else:
+            return mean + np.dot(standard_normal, chol)
 
     def logp(self, value):
         if self.has_tau:
