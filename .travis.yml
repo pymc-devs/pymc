@@ -22,4 +22,4 @@ script:
   - . ./scripts/test.sh $TESTCMD
 
 after_success:
-  - coveralls
+  - coveralls --exclude examples --exclude tests
