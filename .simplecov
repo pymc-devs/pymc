@@ -3,5 +3,5 @@ require 'coveralls'
 
 SimpleCov.formatter = Coveralls::SimpleCov::Formatter
 SimpleCov.start do
-  add_filter 'pymc3/examples'
+  add_filter 'examples'
 end
