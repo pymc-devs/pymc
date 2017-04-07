@@ -37,6 +37,10 @@ class Optimizer(object):
         """
         Recompile step_function and reset updates
 
+        This can be needed sometimes when
+        you use stateful optimizers like ADAM
+        and want to reuse the function for new problem
+
         Parameters
         ----------
         kwargs : kwargs for theano.function
