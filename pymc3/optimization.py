@@ -69,8 +69,9 @@ class Optimizer(object):
                     progress.set_description(
                         'E_q[Loss] = %.4f' % scores[max(0, i - n//50):i+1].mean()
                     )
-        except KeyboardInterrupt:
-            pass
-        finally:
+        except (KeyboardInterrupt, StopIteration):
             self.hist = np.concatenate((self.hist, scores[:i]))
+        else:
+            self.hist = np.concatenate((self.hist, scores))
+        finally:
             progress.close()
