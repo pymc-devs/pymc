@@ -83,7 +83,7 @@ def assign_step_methods(model, step=None, methods=STEP_METHODS,
     # Instantiate all selected step methods
     used_keys = set()
     for step_class, vars in selected_steps.items():
-        if not vars:
+        if len(vars) == 0:
             continue
         args = step_kwargs.get(step_class.name, {})
         used_keys.add(step_class.name)
@@ -101,9 +101,9 @@ def assign_step_methods(model, step=None, methods=STEP_METHODS,
 
 
 def sample(draws, step=None, init='ADVI', n_init=200000, start=None,
-           trace=None, chain=0, njobs=1, tune=None, step_kwargs=None,
-           progressbar=True, model=None, random_seed=-1, live_plot=False,
-           **kwargs):
+           trace=None, chain=0, njobs=1, tune=None, nuts_kwargs=None,
+           step_kwargs=None, progressbar=True, model=None, random_seed=-1,
+           live_plot=False, **kwargs):
     """Draw samples from the posterior using the given step methods.
 
     Multiple step methods are supported via compound step methods.
@@ -151,13 +151,9 @@ def sample(draws, step=None, init='ADVI', n_init=200000, start=None,
         in the system - 2.
     tune : int
         Number of iterations to tune, if applicable (defaults to None)
-    step_kwargs: dict
-        Options for step methods. Keys are the lower case names of
-        the step method, values are dicts of keyword arguments.
-        You can find a full list of arguments in the docstring of
-        the step methods.
-
-        Common arguments for the step method `"nuts"` are
+    nuts_kwargs : dict
+        Options for the NUTS sampler. See the docstring of NUTS
+        for a complete list of options. Common options are
 
         * target_accept: float in [0, 1]. The step size is tuned such
           that we approximate this acceptance rate. Higher values like 0.9
@@ -165,6 +161,15 @@ def sample(draws, step=None, init='ADVI', n_init=200000, start=None,
         * max_treedepth: The maximum depth of the trajectory tree.
         * step_scale: float, default 0.25
           The initial guess for the step size scaled down by `1/n**(1/4)`.
+
+        If you want to pass options to other step methods, please use
+        `step_kwargs`.
+    step_kwargs : dict
+        Options for step methods. Keys are the lower case names of
+        the step method, values are dicts of keyword arguments.
+        You can find a full list of arguments in the docstring of
+        the step methods. If you want to pass arguments only to nuts,
+        you can use `nuts_kwargs`.
     progressbar : bool
         Whether or not to display a progress bar in the command line. The
         bar shows the percentage of completion, the sampling speed in
@@ -205,6 +210,11 @@ def sample(draws, step=None, init='ADVI', n_init=200000, start=None,
 
     if init is not None:
         init = init.lower()
+
+    if nuts_kwargs is not None:
+        if step_kwargs is not None:
+            raise ValueError("Specify only one of step_kwargs and nuts_kwargs")
+        step_kwargs = {'nuts': nuts_kwargs}
 
     if step is None and init is not None and pm.model.all_continuous(model.vars):
         # By default, use NUTS sampler
@@ -255,10 +265,8 @@ def sample(draws, step=None, init='ADVI', n_init=200000, start=None,
 def _sample(draws, step=None, start=None, trace=None, chain=0, tune=None,
             progressbar=True, model=None, random_seed=-1, live_plot=False,
             **kwargs):
-    live_plot_args = {'skip_first': 0, 'refresh_every': 100}
-    live_plot_args.update(kwargs)
-    skip_first = live_plot_args['skip_first']
-    refresh_every = live_plot_args['refresh_every']
+    skip_first = kwargs.get('skip_first', 0)
+    refresh_every = kwargs.get('refresh_every', 100)
 
     sampling = _iter_sample(draws, step, start, trace, chain,
                             tune, model, random_seed)
