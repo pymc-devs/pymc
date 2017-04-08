@@ -112,7 +112,13 @@ Install [Docker](https://www.docker.com/) for your operating system, clone this 
 run `./scripts/start_container.sh`. This should start a local docker container called `pymc3`,
 as well as a [`jupyter`](http://jupyter.org/) notebook server running on port 8888. You will have to open
 a browser at `localhost:8888`. The repo will be running the code from your local copy of `pymc3`,
-so it is good for development.  You may also use it to run the test suite, with
+so it is good for development.  To find the token necessary to access the notebooks, run
+
+```bash
+$ docker exec -it pymc3 jupyter notebook list
+```
+
+You may also use it to run the test suite, with
 
 ```bash
 $  docker exec -it pymc3  bash # logon to the container
