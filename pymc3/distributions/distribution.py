@@ -6,7 +6,8 @@ from ..memoize import memoize
 from ..model import Model, get_named_nodes, FreeRV, ObservedRV
 from ..vartypes import string_types
 from .dist_math import bound
-
+# To avoid circular import for transform below
+import pymc3 as pm
 
 __all__ = ['DensityDist', 'Distribution', 'Continuous', 'Bound',
            'Discrete', 'NoDistribution', 'TensorType', 'draw_values']
@@ -394,7 +395,6 @@ class Bounded(Distribution):
     """
 
     def __init__(self, distribution, lower, upper, transform='infer', *args, **kwargs):
-        import pymc3.distributions.transforms as transforms
         self.dist = distribution.dist(*args, **kwargs)
 
         self.__dict__.update(self.dist.__dict__)
@@ -408,17 +408,17 @@ class Bounded(Distribution):
             default = self.dist.default()
 
             if not np.isinf(lower) and not np.isinf(upper):
-                self.transform = transforms.interval(lower, upper)
+                self.transform = pm.distributions.transforms.interval(lower, upper)
                 if default <= lower or default >= upper:
                     self.testval = 0.5 * (upper + lower)
 
             if not np.isinf(lower) and np.isinf(upper):
-                self.transform = transforms.lowerbound(lower)
+                self.transform = pm.distributions.transforms.lowerbound(lower)
                 if default <= lower:
                     self.testval = lower + 1
 
             if np.isinf(lower) and not np.isinf(upper):
-                self.transform = transforms.upperbound(upper)
+                self.transform = pm.distributions.transforms.upperbound(upper)
                 if default >= upper:
                     self.testval = upper - 1
 
