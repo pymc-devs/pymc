@@ -9,5 +9,4 @@ docker run -d \
     -p $PORT:8888 \
     -v $SRC_DIR:/home/jovyan/pymc3 \
     -v $NOTEBOOK_DIR:/home/jovyan/work/ \
-    --name pymc3 pymc3 \
-    start-notebook.sh --NotebookApp.token=''
+    --name pymc3 pymc3
