@@ -7,7 +7,7 @@ import scipy.sparse as sps
 import theano.sparse as sparse
 from theano import theano, tensor as tt
 from theano.tensor.var import TensorVariable
-
+from theano.compile.ops import FromFunctionOp
 import pymc3 as pm
 from pymc3.math import flatten_list
 from .memoize import memoize
@@ -771,6 +771,71 @@ class LoosePointFunc(object):
 compilef = fastfn
 
 
+def _op_args_from(rv):
+    par = rv.distribution.parents
+    args = par.keys()
+    vals = par.values()
+    rng = rv.distribution.rng
+    itypes = [tt.lscalar] + [v.type for v in vals]
+    otype = tt.TensorType(
+        rv.dtype,
+        (False,) + rv.broadcastable
+    )
+
+    def inner_fn(*_args):
+        kwargs = dict(zip(args, _args[1:]))
+        size = _args[0]
+        sample = rng(size=(size,), **kwargs).astype(rv.dtype)
+        return sample
+
+    return inner_fn, itypes, [otype], None
+
+
+class FromFunctionOpForSymbRand(FromFunctionOp):
+    def __init__(self, rv):
+        self.rv = rv
+        FromFunctionOp.__init__(self, *_op_args_from(rv))
+
+    def __reduce__(self):
+        return type(self), (self.rv, )
+
+
+class SymbRand(object):
+    def __init__(self, rv):
+        self.rv = rv
+        self.args = self.rv.distribution.parents.keys()
+        self.vals = self.rv.distribution.parents.values()
+        self.op = FromFunctionOpForSymbRand(rv)
+
+    def __getstate__(self):
+        return self.rv
+
+    def __setstate__(self, state):
+        SymbRand.__init__(self, state)
+
+    def __call__(self, size=None, size_length_hint=None):
+        if size is None:
+            return self.op(tt.constant(1).astype('int64'), *self.vals)[0]
+        else:
+            if not isinstance(size, tt.Variable):
+                size = np.asarray(size)
+                size_length_hint = len(size)
+                size = tt.as_tensor(size).astype('int64')
+            _size = tt.prod(size)
+            samples = self.op(_size, *self.vals)
+            if size_length_hint is None:
+                if size.ndim == 0:
+                    size_length_hint = 1
+                else:
+                    raise ValueError('Symbolic size with ndim>0 provided but '
+                                     'length hint is not provided')
+            return (
+                samples
+                .reshape(tt.concatenate([size, self.rv.shape]),
+                         ndim=size_length_hint+len(self.rv.dshape))
+            )
+
+
 class FreeRV(Factor, TensorVariable):
     """Unobserved random variable that a model is specified in terms of."""
 
@@ -804,6 +869,17 @@ class FreeRV(Factor, TensorVariable):
             incorporate_methods(source=distribution, destination=self,
                                 methods=['random'],
                                 wrapper=InstanceMethod)
+
+            self.randomt = SymbRand(self)
+
+    def __getstate__(self):
+        dic = self.__dict__.copy()
+        dic.pop('randomt')
+        return dic
+
+    def __setstate__(self, state):
+        self.__dict__.update(state)
+        self.randomt = SymbRand(self)
 
     @property
     def init_value(self):
@@ -875,13 +951,19 @@ class ObservedRV(Factor, TensorVariable):
             needed for upscaling logp
         """
         from .distributions import TensorType
+        from .distributions.distribution import BoundedIndicator
         if type is None:
             data = pandas_to_array(data)
             type = TensorType(distribution.dtype, data.shape)
 
-        super(TensorVariable, self).__init__(type, None, None, name)
+        TensorVariable.__init__(self, type, owner, index, name)
 
         if distribution is not None:
+            if isinstance(distribution, BoundedIndicator):
+                raise ValueError('Observed Bound distributions are not allowed. '
+                                 'If you want to model truncated data '
+                                 'you can use a pm.Potential in combination '
+                                 'with the cumulative probability function.')
             data = as_tensor(data, name, model, distribution)
 
             self.missing_values = data.missing_values
@@ -896,11 +978,21 @@ class ObservedRV(Factor, TensorVariable):
                              inputs=[data], outputs=[self])
 
             self.tag.test_value = theano.compile.view_op(data).tag.test_value
+            self.randomt = SymbRand(self)
 
     @property
     def init_value(self):
         """Convenience attribute to return tag.test_value"""
         return self.tag.test_value
+
+    def __getstate__(self):
+        dic = self.__dict__.copy()
+        dic.pop('randomt')
+        return dic
+
+    def __setstate__(self, state):
+        self.__dict__.update(state)
+        self.randomt = SymbRand(self)
 
 
 class MultiObservedRV(Factor):
@@ -920,6 +1012,12 @@ class MultiObservedRV(Factor):
         total_size : scalar Tensor (optional)
             needed for upscaling logp
         """
+        from .distributions.distribution import BoundedIndicator
+        if isinstance(distribution, BoundedIndicator):
+            raise ValueError('Observed Bound distributions are not allowed. '
+                             'If you want to model truncated data '
+                             'you can use a pm.Potential in combination '
+                             'with the cumulative probability function.')
         self.name = name
         self.data = {name: as_tensor(data, name, model, distribution)
                      for name, data in data.items()}
@@ -929,7 +1027,6 @@ class MultiObservedRV(Factor):
         self.logp_elemwiset = distribution.logp(**self.data)
         self.total_size = total_size
         self.model = model
-        self.distribution = distribution
 
 
 def Deterministic(name, var, model=None):
@@ -988,11 +1085,11 @@ class TransformedRV(TensorVariable):
         """
         if type is None:
             type = distribution.type
-        super(TransformedRV, self).__init__(type, owner, index, name)
+        TensorVariable.__init__(self, type, owner, index, name)
 
         if distribution is not None:
             self.model = model
-
+            self.distribution = distribution
             transformed_name = "{}_{}_".format(name, transform.name)
             self.transformed = model.Var(
                 transformed_name, transform.apply(distribution), total_size=total_size)
@@ -1006,11 +1103,21 @@ class TransformedRV(TensorVariable):
             incorporate_methods(source=distribution, destination=self,
                                 methods=['random'],
                                 wrapper=InstanceMethod)
+            self.randomt = SymbRand(self)
 
     @property
     def init_value(self):
         """Convenience attribute to return tag.test_value"""
         return self.tag.test_value
+
+    def __getstate__(self):
+        dic = self.__dict__.copy()
+        dic.pop('randomt')
+        return dic
+
+    def __setstate__(self, state):
+        self.__dict__.update(state)
+        self.randomt = SymbRand(self)
 
 
 def as_iterargs(data):

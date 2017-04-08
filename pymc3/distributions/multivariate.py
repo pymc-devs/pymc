@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
 import warnings
@@ -68,17 +67,29 @@ class MvNormal(Continuous):
         self.has_tau = tau is not None
         if cov is not None:
             self.chol_cov = tt.slinalg.cholesky(tt.as_tensor_variable(cov))
+            chol = self.chol_cov
         elif tau is not None:
             self.chol_tau = tt.slinalg.cholesky(tt.as_tensor_variable(tau))
+            chol = self.chol_tau
         else:
             self.chol_cov = tt.as_tensor_variable(chol)
+            chol = self.chol_cov
+        self.parents.update(
+            mean=self.mean,
+            chol=chol,
+            is_tau=self.has_tau
+        )
 
     def random(self, point=None, size=None):
         if self.has_tau:
-            mu, chol_tau = draw_values([self.mu, self.chol_tau], point=point)
+            mu, chol = draw_values([self.mu, self.chol_tau], point=point)
         else:
-            mu, chol_cov = draw_values([self.mu, self.chol_cov], point=point)
+            mu, chol = draw_values([self.mu, self.chol_cov], point=point)
+        return self._st_random(dist_shape=self.shape, size=size,
+                               mean=mu, chol=chol, is_tau=self.has_tau)
 
+    @staticmethod
+    def rng(mean, chol, is_tau, size=None):
         if size is None:
             size = []
         else:
@@ -86,12 +97,12 @@ class MvNormal(Continuous):
                 size = list(size)
             except TypeError:
                 size = [size]
-        size.append(mu.shape[0])
-
+        size.append(mean.shape[0])
         standard_normal = np.random.standard_normal(size)
-        if self.has_tau:
-            return mu + scipy.linalg.solve_triangular(chol_tau, standard_normal.T, lower=True).T
-        return mu + np.dot(standard_normal, chol_cov)
+        if is_tau:
+            return mean + scipy.linalg.solve_triangular(chol, standard_normal.T, lower=True).T
+        else:
+            return mean + np.dot(standard_normal, chol)
 
     def logp(self, value):
         if self.has_tau:
@@ -154,19 +165,20 @@ class MvStudentT(Continuous):
 
     def __init__(self, nu, Sigma, mu=None, *args, **kwargs):
         super(MvStudentT, self).__init__(*args, **kwargs)
-        self.nu = nu = tt.as_tensor_variable(nu)
+        self.nu = tt.as_tensor_variable(nu)
         self.mu = tt.zeros(Sigma.shape[0]) if mu is None else tt.as_tensor_variable(mu)
-        self.Sigma = Sigma = tt.as_tensor_variable(Sigma)
+        self.Sigma = tt.as_tensor_variable(Sigma)
 
         self.mean = self.median = self.mode = self.mu = mu
+        self.parents.update(
+            nu=self.nu, sigma=self.Sigma, mu=self.mu
+        )
 
-    def random(self, point=None, size=None):
+    @staticmethod
+    def rng(nu, sigma, mu, size=None):
         chi2 = np.random.chisquare
         mvn = np.random.multivariate_normal
-
-        nu, S, mu = draw_values([self.nu, self.Sigma, self.mu], point=point)
-
-        return (np.sqrt(nu) * (mvn(np.zeros(len(S)), S, size).T
+        return (np.sqrt(nu) * (mvn(np.zeros(len(sigma)), sigma, size).T
                                / chi2(nu, size))).T + mu
 
     def logp(self, value):
@@ -231,17 +243,13 @@ class Dirichlet(Continuous):
         self.mode = tt.switch(tt.all(a > 1),
                               (a - 1) / tt.sum(a - 1),
                               np.nan)
+        self.parents.update(
+            a=self.a
+        )
 
-    def random(self, point=None, size=None):
-        a = draw_values([self.a], point=point)
-
-        def _random(a, size=None):
-            return stats.dirichlet.rvs(a, None if size == a.shape else size)
-
-        samples = generate_samples(_random, a,
-                                   dist_shape=self.shape,
-                                   size=size)
-        return samples
+    @staticmethod
+    def rng(a, size=None):
+        return stats.dirichlet.rvs(a, None if size == a.shape else size)
 
     def logp(self, value):
         k = self.k
@@ -307,18 +315,16 @@ class Multinomial(Discrete):
 
         self.mean = self.n * self.p
         self.mode = tt.cast(tround(self.mean), 'int32')
+        self.parents.update(
+            n=self.n,
+            p=self.p
+        )
 
-    def _random(self, n, p, size=None):
+    @staticmethod
+    def rng(n, p, size=None):
         if size == p.shape:
             size = None
         return np.random.multinomial(n, p, size=size)
-
-    def random(self, point=None, size=None):
-        n, p = draw_values([self.n, self.p], point=point)
-        samples = generate_samples(self._random, n, p,
-                                   dist_shape=self.shape,
-                                   size=size)
-        return samples
 
     def logp(self, x):
         n = self.n
@@ -361,7 +367,7 @@ class PosDefMatrix(theano.Op):
         return theano.Apply(self, [x], [o])
 
     # Python implementation:
-    def perform(self, node, inputs, outputs):
+    def perform(self, node, inputs, outputs, params=None):
 
         (x,) = inputs
         (z,) = outputs
@@ -453,8 +459,7 @@ class Wishart(Continuous):
                      matrix_pos_def(X),
                      tt.eq(X, X.T),
                      n > (p - 1),
-                     broadcast_conditions=False
-        )
+                     broadcast_conditions=False)
 
 
 def WishartBartlett(name, S, nu, is_cholesky=False, return_cholesky=False, testval=None):
@@ -789,5 +794,4 @@ class LKJCorr(Continuous):
                      tt.all(X <= 1), tt.all(X >= -1),
                      matrix_pos_def(X),
                      n > 0,
-                     broadcast_conditions=False
-        )
+                     broadcast_conditions=False)

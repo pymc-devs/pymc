@@ -1,11 +1,10 @@
-from functools import partial 
 import numpy as np
 import theano
 import theano.tensor as tt
 from scipy import stats
 
 from .dist_math import bound, factln, binomln, betaln, logpow
-from .distribution import Discrete, draw_values, generate_samples, reshape_sampled
+from .distribution import Discrete, generate_samples
 from pymc3.math import tround
 
 __all__ = ['Binomial',  'BetaBinomial',  'Bernoulli',  'DiscreteWeibull',
@@ -38,17 +37,16 @@ class Binomial(Discrete):
         Probability of success in each trial (0 < p < 1).
     """
 
+    rng = stats.binom.rvs
+
     def __init__(self, n, p, *args, **kwargs):
         super(Binomial, self).__init__(*args, **kwargs)
         self.n = n = tt.as_tensor_variable(n)
         self.p = p = tt.as_tensor_variable(p)
         self.mode = tt.cast(tround(n * p), self.dtype)
-
-    def random(self, point=None, size=None, repeat=None):
-        n, p = draw_values([self.n, self.p], point=point)
-        return generate_samples(stats.binom.rvs, n=n, p=p,
-                                dist_shape=self.shape,
-                                size=size)
+        self.parents.update(
+            n=n, p=p
+        )
 
     def logp(self, value):
         n = self.n
@@ -95,8 +93,12 @@ class BetaBinomial(Discrete):
         self.beta = beta = tt.as_tensor_variable(beta)
         self.n = n = tt.as_tensor_variable(n)
         self.mode = tt.cast(tround(alpha / (alpha + beta)), 'int8')
+        self.parents.update(
+            alpha=alpha, beta=beta, n=n
+        )
 
-    def _random(self, alpha, beta, n, size=None):
+    @staticmethod
+    def rng(alpha, beta, n, size=None):
         size = size or 1
         p = np.atleast_1d(stats.beta.rvs(a=alpha, b=beta, size=np.prod(size)))
         # Sometimes scipy.beta returns nan. Ugh.
@@ -107,13 +109,6 @@ class BetaBinomial(Discrete):
         _n, _p, _size = np.atleast_1d(n).flatten(), p.flatten(), np.prod(size)
         samples = np.reshape(stats.binom.rvs(n=_n, p=_p, size=_size), size)
         return samples
-
-    def random(self, point=None, size=None, repeat=None):
-        alpha, beta, n = \
-            draw_values([self.alpha, self.beta, self.n], point=point)
-        return generate_samples(self._random, alpha=alpha, beta=beta, n=n,
-                                dist_shape=self.shape,
-                                size=size)
 
     def logp(self, value):
         alpha = self.alpha
@@ -145,16 +140,15 @@ class Bernoulli(Discrete):
         Probability of success (0 < p < 1).
     """
 
+    rng = stats.bernoulli.rvs
+
     def __init__(self, p, *args, **kwargs):
         super(Bernoulli, self).__init__(*args, **kwargs)
         self.p = p = tt.as_tensor_variable(p)
         self.mode = tt.cast(tround(p), 'int8')
-
-    def random(self, point=None, size=None, repeat=None):
-        p = draw_values([self.p], point=point)
-        return generate_samples(stats.bernoulli.rvs, p,
-                                dist_shape=self.shape,
-                                size=size)
+        self.parents.update(
+            p=p
+        )
 
     def logp(self, value):
         p = self.p
@@ -178,14 +172,17 @@ class DiscreteWeibull(Discrete):
     Variance  :math:`2 \sum_{x = 1}^{\infty} x q^{x^{\beta}} - \mu - \mu^2`
     ========  ======================
     """
+
     def __init__(self, q, beta, *args, **kwargs):
         super(DiscreteWeibull, self).__init__(*args, defaults=['median'], **kwargs)
         
-        self.q = q
-        self.beta = beta
-
+        self.q = q = tt.as_tensor_variable(q)
+        self.beta = beta = tt.as_tensor_variable(beta)
         self.median = self._ppf(0.5)
-    
+        self.parents.update(
+            q=q, beta=beta
+        )
+
     def logp(self, value):
         q = self.q
         beta = self.beta
@@ -202,20 +199,12 @@ class DiscreteWeibull(Discrete):
         """
         q = self.q
         beta = self.beta
-
         return (tt.ceil(tt.power(tt.log(1 - p) / tt.log(q), 1. / beta)) - 1).astype('int64')
 
-    def _random(self, q, beta, size=None):
+    @staticmethod
+    def rng(q, beta, size=None):
         p = np.random.uniform(size=size)
-
         return np.ceil(np.power(np.log(1 - p) / np.log(q), 1. / beta)) - 1
-
-    def random(self, point=None, size=None, repeat=None):
-        q, beta = draw_values([self.q, self.beta], point=point)
-
-        return generate_samples(self._random, q, beta,
-                                dist_shape=self.shape,
-                                size=size)
 
 
 class Poisson(Discrete):
@@ -245,16 +234,15 @@ class Poisson(Discrete):
     binomial distribution.
     """
 
+    rng = stats.poisson.rvs
+
     def __init__(self, mu, *args, **kwargs):
         super(Poisson, self).__init__(*args, **kwargs)
         self.mu = mu = tt.as_tensor_variable(mu)
         self.mode = tt.floor(mu).astype('int32')
-
-    def random(self, point=None, size=None, repeat=None):
-        mu = draw_values([self.mu], point=point)
-        return generate_samples(stats.poisson.rvs, mu,
-                                dist_shape=self.shape,
-                                size=size)
+        self.parents.update(
+            mu=mu
+        )
 
     def logp(self, value):
         mu = self.mu
@@ -297,14 +285,15 @@ class NegativeBinomial(Discrete):
         self.mu = mu = tt.as_tensor_variable(mu)
         self.alpha = alpha = tt.as_tensor_variable(alpha)
         self.mode = tt.floor(mu).astype('int32')
+        self.parents.update(
+            mu=mu, alpha=alpha
+        )
 
-    def random(self, point=None, size=None, repeat=None):
-        mu, alpha = draw_values([self.mu, self.alpha], point=point)
-        g = generate_samples(stats.gamma.rvs, alpha, scale=mu / alpha,
-                             dist_shape=self.shape,
-                             size=size)
+    @staticmethod
+    def rng(mu, alpha, size=None):
+        g = stats.gamma.rvs(a=alpha, scale=mu / alpha, size=size)
         g[g == 0] = np.finfo(float).eps  # Just in case
-        return reshape_sampled(stats.poisson.rvs(g), size, self.shape)
+        return stats.poisson.rvs(g)
 
     def logp(self, value):
         mu = self.mu
@@ -341,16 +330,15 @@ class Geometric(Discrete):
         Probability of success on an individual trial (0 < p <= 1).
     """
 
+    rng = np.random.geometric
+
     def __init__(self, p, *args, **kwargs):
         super(Geometric, self).__init__(*args, **kwargs)
         self.p = p = tt.as_tensor_variable(p)
         self.mode = 1
-
-    def random(self, point=None, size=None, repeat=None):
-        p = draw_values([self.p], point=point)
-        return generate_samples(np.random.geometric, p,
-                                dist_shape=self.shape,
-                                size=size)
+        self.parents.update(
+            p=p
+        )
 
     def logp(self, value):
         p = self.p
@@ -380,24 +368,19 @@ class DiscreteUniform(Discrete):
 
     def __init__(self, lower, upper, *args, **kwargs):
         super(DiscreteUniform, self).__init__(*args, **kwargs)
-        self.lower = tt.floor(lower).astype('int32')
-        self.upper = tt.floor(upper).astype('int32')
+        self.lower = lower = tt.floor(lower).astype('int32')
+        self.upper = upper = tt.floor(upper).astype('int32')
         self.mode = tt.maximum(
             tt.floor((upper - lower) / 2.).astype('int32'), self.lower)
+        self.parents.update(
+            lower=lower, upper=upper
+        )
 
-    def _random(self, lower, upper, size=None):
-        # This way seems to be the only to deal with lower and upper
-        # as array-like.
+    @staticmethod
+    def rng(lower, upper, size=None):
         samples = stats.uniform.rvs(lower, upper - lower - np.finfo(float).eps,
                                     size=size)
         return np.floor(samples).astype('int32')
-
-    def random(self, point=None, size=None, repeat=None):
-        lower, upper = draw_values([self.lower, self.upper], point=point)
-        return generate_samples(self._random,
-                                lower, upper,
-                                dist_shape=self.shape,
-                                size=size)
 
     def logp(self, value):
         upper = self.upper
@@ -428,29 +411,32 @@ class Categorical(Discrete):
     def __init__(self, p, *args, **kwargs):
         super(Categorical, self).__init__(*args, **kwargs)
         try:
-            self.k = tt.shape(p)[-1].tag.test_value
+            self.k = k = tt.shape(p)[-1].tag.test_value
         except AttributeError:
-            self.k = tt.shape(p)[-1]
-        self.p = p = tt.as_tensor_variable(p)
-        self.p = (p.T / tt.sum(p, -1)).T
+            self.k = k = tt.shape(p)[-1]
+        p = tt.as_tensor_variable(p)
+        self.p = p = (p.T / tt.sum(p, -1)).T
         self.mode = tt.argmax(p)
+        self.parents.update(
+            p=p, k=k
+        )
 
-    def random(self, point=None, size=None, repeat=None):
-        def random_choice(k, *args, **kwargs):
-            if len(kwargs['p'].shape) > 1:
-                return np.asarray(
-                    [np.random.choice(k, p=p)
-                     for p in kwargs['p']]
-                )
-            else:
-                return np.random.choice(k, *args, **kwargs)
+    @staticmethod
+    def rng(k, p, size=None):
+        if p.ndim > 1:
+            return np.asarray(
+                [np.random.choice(k, p=_p)
+                 for _p in p]
+            )
+        else:
+            return np.random.choice(a=k, p=p, size=size)
 
-        p, k = draw_values([self.p, self.k], point=point)
-        return generate_samples(partial(random_choice, np.arange(k)),
-                                p=p,
-                                broadcast_shape=p.shape[:-1] or (1,),
-                                dist_shape=self.shape,
-                                size=size)
+    @classmethod
+    def _st_random(cls, dist_shape, size, **kwargs):
+        p = kwargs['p']
+        k = kwargs['k']
+        return generate_samples(cls.rng, k=np.arange(k), p=p, dist_shape=dist_shape, size=size,
+                                broadcast_shape=p.shape[:-1] or (1,))
 
     def logp(self, value):
         p = self.p
@@ -483,16 +469,13 @@ class Constant(Discrete):
     def __init__(self, c, *args, **kwargs):
         super(Constant, self).__init__(*args, **kwargs)
         self.mean = self.median = self.mode = self.c = c = tt.as_tensor_variable(c)
+        self.parents.update(
+            c=c
+        )
 
-    def random(self, point=None, size=None, repeat=None):
-        c = draw_values([self.c], point=point)
-        dtype = np.array(c).dtype
-
-        def _random(c, dtype=dtype, size=None):
-            return np.full(size, fill_value=c, dtype=dtype)
-
-        return generate_samples(_random, c=c, dist_shape=self.shape,
-                                size=size).astype(dtype)
+    @staticmethod
+    def rng(c, size=None):
+        return np.full(size, fill_value=c, dtype=np.array(c).dtype)
 
     def logp(self, value):
         c = self.c
@@ -539,17 +522,17 @@ class ZeroInflatedPoisson(Discrete):
     def __init__(self, theta, psi, *args, **kwargs):
         super(ZeroInflatedPoisson, self).__init__(*args, **kwargs)
         self.theta = theta = tt.as_tensor_variable(theta)
-        self.psi = psi = tt.as_tensor_variable(psi)
+        self.psi = tt.as_tensor_variable(psi)
         self.pois = Poisson.dist(theta)
         self.mode = self.pois.mode
+        self.parents.update(
+            theta=theta, psi=psi
+        )
 
-    def random(self, point=None, size=None, repeat=None):
-        theta, psi = draw_values([self.theta, self.psi], point=point)
-        g = generate_samples(stats.poisson.rvs, theta,
-                             dist_shape=self.shape,
-                             size=size)
-        sampled = g * (np.random.random(np.squeeze(g.shape)) < psi)
-        return reshape_sampled(sampled, size, self.shape)
+    @staticmethod
+    def rng(theta, psi, size=None):
+        g = stats.poisson.rvs(theta, size=size)
+        return g * (np.random.random(np.squeeze(g.shape)) < psi)
 
     def logp(self, value):
         return tt.switch(value > 0,
@@ -595,16 +578,15 @@ class ZeroInflatedNegativeBinomial(Discrete):
         self.psi = psi = tt.as_tensor_variable(psi)
         self.nb = NegativeBinomial.dist(mu, alpha)
         self.mode = self.nb.mode
+        self.parents.update(
+            mu=mu, alpha=alpha, psi=psi
+        )
 
-    def random(self, point=None, size=None, repeat=None):
-        mu, alpha, psi = draw_values(
-            [self.mu, self.alpha, self.psi], point=point)
-        g = generate_samples(stats.gamma.rvs, alpha, scale=mu / alpha,
-                             dist_shape=self.shape,
-                             size=size)
+    @staticmethod
+    def rng(mu, alpha, psi, size=None):
+        g = stats.gamma.rvs(alpha, scale=mu / alpha, size=size)
         g[g == 0] = np.finfo(float).eps  # Just in case
-        sampled = stats.poisson.rvs(g) * (np.random.random(np.squeeze(g.shape)) < psi)
-        return reshape_sampled(sampled, size, self.shape)
+        return stats.poisson.rvs(g) * (np.random.random(np.squeeze(g.shape)) < psi)
 
     def logp(self, value):
         return tt.switch(value > 0,

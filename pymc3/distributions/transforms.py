@@ -36,14 +36,15 @@ class Transform(object):
 
 
 class ElemwiseTransform(Transform):
-
     def jacobian_det(self, x):
         grad = tt.reshape(gradient(tt.sum(self.backward(x)), [x]), x.shape)
         return tt.log(tt.abs_(grad))
 
 
 class TransformedDistribution(distribution.Distribution):
-    """A distribution that has been transformed from one space into another."""
+    """
+    A distribution that has been transformed from one space into another.
+    """
 
     def __init__(self, dist, transform, *args, **kwargs):
         """
