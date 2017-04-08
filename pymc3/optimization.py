@@ -12,6 +12,7 @@ __all__ = [
 class Optimizer(object):
     """
     Optimization with posterior replacements
+
     Parameters
     ----------
     approx : Approximation
@@ -52,6 +53,7 @@ class Optimizer(object):
     def fit(self, n=5000, callbacks=()):
         """
         Perform optimization steps
+
         Parameters
         ----------
         n : int
