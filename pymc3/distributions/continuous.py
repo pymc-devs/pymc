@@ -127,15 +127,15 @@ class Uniform(Continuous):
 
     def __init__(self, lower=0, upper=1, transform='interval',
                  *args, **kwargs):
-        super(Uniform, self).__init__(*args, **kwargs)
+        if transform == 'interval':
+            transform = transforms.interval(lower, upper)
+        super(Uniform, self).__init__(transform=transform, *args, **kwargs)
 
         self.lower = lower = tt.as_tensor_variable(lower)
         self.upper = upper = tt.as_tensor_variable(upper)
         self.mean = (upper + lower) / 2.
         self.median = self.mean
 
-        if transform == 'interval':
-            self.transform = transforms.interval(lower, upper)
 
     def random(self, point=None, size=None, repeat=None):
         lower, upper = draw_values([self.lower, self.upper],
@@ -594,11 +594,11 @@ class Lognormal(PositiveContinuous):
            \frac{1}{x} \sqrt{\frac{\tau}{2\pi}}
            \exp\left\{ -\frac{\tau}{2} (\ln(x)-\mu)^2 \right\}
 
-    ========  ================================================================
+    ========  =========================================================================
     Support   :math:`x \in (0, 1)`
     Mean      :math:`\exp\{\mu + \frac{1}{2\tau}\}`
-    Variance  :math:`\exp\{\frac{1}{\tau} - 1\} \exp\{2\mu + \frac{1}{\tau}\}`
-    ========  ================================================================
+    Variance  :math:\(\exp\{\frac{1}{\tau}\} - 1\) \times \exp\{2\mu + \frac{1}{\tau}\}
+    ========  =========================================================================
 
     Parameters
     ----------
@@ -1209,13 +1209,12 @@ class VonMises(Continuous):
 
     def __init__(self, mu=0.0, kappa=None, transform='circular',
                  *args, **kwargs):
-        super(VonMises, self).__init__(*args, **kwargs)
+        if transform == 'circular':
+            transform = transforms.Circular()
+        super(VonMises, self).__init__(transform=transform, *args, **kwargs)
         self.mean = self.median = self.mode = self.mu = mu = tt.as_tensor_variable(mu)
         self.kappa = kappa = tt.as_tensor_variable(kappa)
         self.variance = 1 - i1(kappa) / i0(kappa)
-
-        if transform == 'circular':
-            self.transform = transforms.Circular()
 
         assert_negative_support(kappa, 'kappa', 'VonMises')
 

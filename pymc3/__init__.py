@@ -1,12 +1,12 @@
 # pylint: disable=wildcard-import
-__version__ = "3.1.rc1"
+__version__ = "3.1rc3"
 
 from .blocking import *
 from .distributions import *
 from .external import *
 from .glm import *
 from . import gp
-from .math import logsumexp, logit, invlogit
+from .math import logsumexp, logit, invlogit, expand_packed_triangular
 from .model import *
 from .stats import *
 from .sampling import *

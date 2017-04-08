@@ -1,4 +1,5 @@
 from collections import namedtuple
+import warnings
 
 from ..arraystep import Competence
 from .base_hmc import BaseHMC
@@ -7,6 +8,7 @@ from pymc3.vartypes import continuous_types
 
 import numpy as np
 import numpy.random as nr
+from scipy import stats
 
 __all__ = ['NUTS']
 
@@ -18,15 +20,13 @@ def logbern(log_p):
 
 
 class NUTS(BaseHMC):
-    """
-    Automatically tunes step size and adjust number of steps for good performance.
+    R"""A sampler for continuous variables based on Hamiltonian mechanics.
 
-    Implements "Algorithm 6: Efficient No-U-Turn Sampler with Dual Averaging" in:
+    NUTS automatically tunes the step size and the number of steps per
+    sample. A detailed description can be found at [1], "Algorithm 6:
+    Efficient No-U-Turn Sampler with Dual Averaging".
 
-    Hoffman, Matthew D., & Gelman, Andrew. (2011).
-    The No-U-Turn Sampler: Adaptively Setting Path Lengths in Hamiltonian Monte Carlo.
-
-    Nuts provides a number of statistics, that can be accessed using
+    Nuts provides a number of statistics that can be accessed with
     `trace.get_sampler_stats`:
 
     - `mean_tree_accept`: The mean acceptance probability for the tree
@@ -34,8 +34,8 @@ class NUTS(BaseHMC):
       samples but the burn-in should be approximately `target_accept`
       (the default for this is 0.8).
     - `diverging`: Whether the trajectory for this sample diverged. If
-      there are many diverging samples, this usually indicates that a
-      region of the posterior has high curvature. Reparametrization can
+      there are any divergences after burnin, this indicates that
+      the results might not be reliable. Reparametrization can
       often help, but you can also try to increase `target_accept` to
       something like 0.9 or 0.95.
     - `energy`: The energy at the point in phase-space where the sample
@@ -49,8 +49,8 @@ class NUTS(BaseHMC):
     - `depth`: The depth of the tree that was used to generate this sample
     - `tree_size`: The number of leafs of the sampling tree, when the
       sample was accepted. This is usually a bit less than
-      $2 ^ \text{depth}$. If the tree size is large, the sampler is using
-      a lot of leapfrog steps to find the next sample. This can for
+      `2 ** depth`. If the tree size is large, the sampler is
+      using a lot of leapfrog steps to find the next sample. This can for
       example happen if there are strong correlations in the posterior,
       if the posterior has long tails, if there are regions of high
       curvature ("funnels"), or if the variance estimates in the mass
@@ -60,8 +60,13 @@ class NUTS(BaseHMC):
       this sample was generated.
     - `step_size`: The step size used for this sample.
     - `step_size_bar`: The current best known step-size. After the tuning
-       samples, the step size is set to this value. This should converge
-       during tuning.
+      samples, the step size is set to this value. This should converge
+      during tuning.
+
+    References
+    ----------
+    .. [1] Hoffman, Matthew D., & Gelman, Andrew. (2011). The No-U-Turn Sampler:
+       Adaptively Setting Path Lengths in Hamiltonian Monte Carlo.
     """
     default_blocked = True
     generates_stats = True
@@ -81,34 +86,55 @@ class NUTS(BaseHMC):
     def __init__(self, vars=None, Emax=1000, target_accept=0.8,
                  gamma=0.05, k=0.75, t0=10, adapt_step_size=True,
                  max_treedepth=10, **kwargs):
-        """
+        R"""
         Parameters
         ----------
-        vars : list of Theano variables, default continuous vars
+        vars : list of Theano variables, default all continuous vars
         Emax : float, default 1000
             Maximum energy change allowed during leapfrog steps. Larger
             deviations will abort the integration.
-        target_accept : float (0,1) default .8
-            target for avg accept probability between final branch and initial position
+        target_accept : float (0,1), default .8
+            Try to find a step size such that the average acceptance
+            probability across the trajectories are close to target_accept.
+            Higher values for target_accept lead to smaller step sizes.
         step_scale : float, default 0.25
-            Size of steps to take, automatically scaled down by 1/n**(1/4).
+            Size of steps to take, automatically scaled down by `1/n**(1/4)`.
             If step size adaptation is switched off, the resulting step size
             is used. If adaptation is enabled, it is used as initial guess.
         gamma : float, default .05
         k : float (.5,1) default .75
             scaling of speed of adaptation
         t0 : int, default 10
-            slows inital adapatation
-        adapt_step_size : bool
-            Whether step size should be enabled. If this is disabled,
-            `k`, `t0`, `gamma` and `target_accept` are ignored.
+            slows initial adaptation
+        adapt_step_size : bool, default=True
+            Whether step size adaptation should be enabled. If this is
+            disabled, `k`, `t0`, `gamma` and `target_accept` are ignored.
         integrator : str, default "leapfrog"
             The integrator to use for the trajectories. One of "leapfrog",
             "two-stage" or "three-stage". The second two can increase
             sampling speed for some high dimensional problems.
+        step_scale : float, default=0.25
+            Initial size of steps to take, automatically scaled down
+            by 1/n**(1/4).
+        scaling : array_like, ndim = {1,2}
+            The inverse mass, or precision matrix. One dimensional arrays are
+            interpreted as diagonal matrices. If `is_cov` is set to True,
+            this will be interpreded as the mass or covariance matrix.
+        is_cov : bool, default=False
+            Treat the scaling as mass or covariance matrix.
+        potential : Potential, optional
+            An object that represents the Hamiltonian with methods `velocity`,
+            `energy`, and `random` methods. It can be specified instead
+            of the scaling matrix.
+        model : pymc3.Model
+            The model
         kwargs: passed to BaseHMC
 
+        Notes
+        -----
         The step size adaptation stops when `self.tune` is set to False.
+        This is usually achieved by setting the `tune` parameter if
+        `pm.sample` to the desired number of tuning steps.
         """
         super(NUTS, self).__init__(vars, use_single_leapfrog=True, **kwargs)
 
@@ -180,6 +206,63 @@ class NUTS(BaseHMC):
             return Competence.IDEAL
         return Competence.INCOMPATIBLE
 
+    def check_trace(self, strace):
+        """Print warnings for obviously problematic chains."""
+        n = len(strace)
+        chain = strace.chain
+
+        diverging = strace.get_sampler_stats('diverging')
+        if diverging.ndim == 2:
+            diverging = np.any(diverging, axis=0)
+
+        tuning = strace.get_sampler_stats('tune')
+        if tuning.ndim == 2:
+            tuning = np.any(tuning, axis=0)
+
+        accept = strace.get_sampler_stats('mean_tree_accept')
+        if accept.ndim == 2:
+            accept = np.mean(accept, axis=0)
+
+        depth = strace.get_sampler_stats('depth')
+        if depth.ndim == 2:
+            depth = np.max(depth, axis=0)
+
+        n_samples = n - (~tuning).sum()
+
+        if n < 1000:
+            warnings.warn('Chain %s contains only %s samples.' % (chain, n))
+        if np.all(diverging):
+            warnings.warn('Chain %s contains only diverging samples. '
+                          'The model is probably misspecified.' % chain)
+        if np.all(tuning):
+            warnings.warn('Step size tuning was enabled throughout the whole '
+                          'trace. You might want to specify the number of '
+                          'tuning steps.')
+        if np.any(diverging[~tuning]):
+            warnings.warn("Chain %s contains diverging samples after tuning. "
+                          "If increasing `target_accept` doesn't help, "
+                          "try to reparameterize." % chain)
+        if n_samples > 0:
+            depth_samples = depth[~tuning]
+        else:
+            depth_samples = depth[n // 2:]
+        if np.mean(depth_samples == self.max_treedepth) > 0.05:
+            warnings.warn('Chain %s reached the maximum tree depth. Increase '
+                          'max_treedepth, increase target_accept or '
+                          'reparameterize.' % chain)
+
+        mean_accept = np.mean(accept[~tuning])
+        target_accept = self.target_accept
+        # Try to find a reasonable interval for acceptable acceptance
+        # probabilities. Finding this was mostry trial and error.
+        n_bound = min(100, n)
+        n_good, n_bad = mean_accept * n_bound, (1 - mean_accept) * n_bound
+        lower, upper = stats.beta(n_good + 1, n_bad + 1).interval(0.95)
+        if target_accept < lower or target_accept > upper:
+            warnings.warn('The acceptance probability in chain %s does not '
+                          'match the target. It is %s, but should be close '
+                          'to %s. Try to increase the number of tuning steps.'
+                          % (chain, mean_accept, target_accept))
 
 # A node in the NUTS tree that is at the far right or left of the tree
 Edge = namedtuple("Edge", 'q, p, v, q_grad, energy')
@@ -188,7 +271,9 @@ Edge = namedtuple("Edge", 'q, p, v, q_grad, energy')
 Proposal = namedtuple("Proposal", "q, energy, p_accept")
 
 # A subtree of the binary tree built by nuts.
-Subtree = namedtuple("Subtree", "left, right, p_sum, proposal, log_size, accept_sum, n_proposals")
+Subtree = namedtuple(
+    "Subtree",
+    "left, right, p_sum, proposal, log_size, accept_sum, n_proposals")
 
 
 class Tree(object):

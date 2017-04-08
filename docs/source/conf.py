@@ -35,13 +35,19 @@ extensions = [
     'sphinx.ext.autosummary',
     'sphinx.ext.doctest',
     'sphinx.ext.mathjax',
-    'numpydoc',
+    'sphinx.ext.napoleon',
     'nbsphinx',
     'IPython.sphinxext.ipython_console_highlighting',
 ]
 
 # Don't auto-generate summary for class members.
 numpydoc_show_class_members = False
+
+# Show the documentation of __init__ and the class docstring
+autoclass_content = 'both'
+
+# Do not show the return type as seperate section
+napoleon_use_rtype = False
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']

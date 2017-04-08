@@ -13,6 +13,7 @@ Howto
    notebooks/posterior_predictive.ipynb
    notebooks/howto_debugging.ipynb
    notebooks/LKJ.ipynb
+   notebooks/live_sample_plots.ipynb
 
 Applied
 =======
@@ -67,4 +68,4 @@ Variational Inference
    notebooks/lda-advi-aevb.ipynb
    notebooks/bayesian_neural_network_advi.ipynb
    notebooks/convolutional_vae_keras_advi.ipynb
-
+   notebooks/bayesian_neural_network_opvi-advi.ipynb

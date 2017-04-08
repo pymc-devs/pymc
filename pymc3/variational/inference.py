@@ -1,244 +1,27 @@
 from __future__ import division
 
 import logging
-
-import numpy as np
-import theano
-from theano import tensor as tt
+import warnings
 import tqdm
 
+import numpy as np
+
 import pymc3 as pm
-from pymc3.distributions.dist_math import log_normal, rho2sd, log_normal_mv
-from pymc3.variational.opvi import Operator, Approximation, TestFunction
+from pymc3.variational.approximations import MeanField, FullRank, Histogram
+from pymc3.variational.operators import KL, KSD
+from pymc3.variational.opvi import Approximation
+from pymc3.variational import test_functions
+
 
 logger = logging.getLogger(__name__)
 
 __all__ = [
-    'TestFunction',
-    'KL',
-    'MeanField',
-    'FullRank',
     'ADVI',
     'FullRankADVI',
-    'Inference'
+    'SVGD',
+    'Inference',
+    'fit'
 ]
-# OPERATORS
-
-
-class KL(Operator):
-    """
-    Operator based on Kullback Leibler Divergence
-    .. math::
-
-        KL[q(v)||p(v)] = \int q(v)\log\\frac{q(v)}{p(v)}dv
-    """
-    def apply(self, f):
-        z = self.input
-        return self.logq(z) - self.logp(z)
-
-# APPROXIMATIONS
-
-
-class MeanField(Approximation):
-    """
-    Mean Field approximation to the posterior where spherical Gaussian family
-    is fitted to minimize KL divergence from True posterior. It is assumed
-    that latent space variables are uncorrelated that is the main drawback
-    of the method
-
-    Parameters
-    ----------
-    local_rv : dict
-        mapping {model_variable -> local_variable}
-        Local Vars are used for Autoencoding Variational Bayes
-        See (AEVB; Kingma and Welling, 2014) for details
-
-    model : PyMC3 model for inference
-
-    cost_part_grad_scale : float or scalar tensor
-        Scaling score part of gradient can be useful near optimum for
-        archiving better convergence properties. Common schedule is
-        1 at the start and 0 in the end. So slow decay will be ok.
-        See (Sticking the Landing; Geoffrey Roeder,
-        Yuhuai Wu, David Duvenaud, 2016) for details
-
-    References
-    ----------
-    Geoffrey Roeder, Yuhuai Wu, David Duvenaud, 2016
-        Sticking the Landing: A Simple Reduced-Variance Gradient for ADVI
-        approximateinference.org/accepted/RoederEtAl2016.pdf
-    """
-    @property
-    def mu(self):
-        return self.shared_params['mu']
-
-    @property
-    def rho(self):
-        return self.shared_params['rho']
-
-    @property
-    def cov(self):
-        return tt.diag(rho2sd(self.rho))
-
-    def create_shared_params(self):
-        return {'mu': theano.shared(
-                    self.input.tag.test_value[self.global_slc]),
-                'rho': theano.shared(
-                    np.zeros((self.global_size,), dtype=theano.config.floatX))
-                }
-
-    def log_q_W_global(self, z):
-        """
-        log_q_W samples over q for global vars
-        Gradient wrt mu, rho in density parametrization
-        is set to zero to lower variance of ELBO
-        """
-        mu = self.scale_grad(self.mu)
-        rho = self.scale_grad(self.rho)
-        z = z[self.global_slc]
-        logq = tt.sum(log_normal(z, mu, rho=rho))
-        return logq
-
-    def random_global(self, size=None, no_rand=False):
-        initial = self.initial(size, no_rand, l=self.global_size)
-        sd = rho2sd(self.rho)
-        mu = self.mu
-        return sd * initial + mu
-
-
-class FullRank(Approximation):
-    """
-    Full Rank approximation to the posterior where Multivariate Gaussian family
-    is fitted to minimize KL divergence from True posterior. In contrast to
-    MeanField approach correlations between variables are taken in account. The
-    main drawback of the method is computational cost.
-
-    Parameters
-    ----------
-    local_rv : dict
-        mapping {model_variable -> local_variable}
-        Local Vars are used for Autoencoding Variational Bayes
-        See (AEVB; Kingma and Welling, 2014) for details
-
-    model : PyMC3 model for inference
-
-    cost_part_grad_scale : float or scalar tensor
-        Scaling score part of gradient can be useful near optimum for
-        archiving better convergence properties. Common schedule is
-        1 at the start and 0 in the end. So slow decay will be ok.
-        See (Sticking the Landing; Geoffrey Roeder,
-        Yuhuai Wu, David Duvenaud, 2016) for details
-
-    References
-    ----------
-    Geoffrey Roeder, Yuhuai Wu, David Duvenaud, 2016
-        Sticking the Landing: A Simple Reduced-Variance Gradient for ADVI
-        approximateinference.org/accepted/RoederEtAl2016.pdf
-    """
-    def __init__(self, local_rv=None, model=None, cost_part_grad_scale=1, gpu_compat=False):
-        super(FullRank, self).__init__(
-            local_rv=local_rv, model=model,
-            cost_part_grad_scale=cost_part_grad_scale
-        )
-        self.gpu_compat = gpu_compat
-
-    @property
-    def L(self):
-        return self.shared_params['L_tril'][self.tril_index_matrix]
-
-    @property
-    def mu(self):
-        return self.shared_params['mu']
-
-    @property
-    def cov(self):
-        L = self.L
-        return L.dot(L.T)
-
-    @property
-    def num_tril_entries(self):
-        n = self.global_size
-        return int(n * (n + 1) / 2)
-
-    @property
-    def tril_index_matrix(self):
-        n = self.global_size
-        num_tril_entries = self.num_tril_entries
-        tril_index_matrix = np.zeros([n, n], dtype=int)
-        tril_index_matrix[np.tril_indices(n)] = np.arange(num_tril_entries)
-        tril_index_matrix[np.tril_indices(n)[::-1]] = np.arange(num_tril_entries)
-        return tril_index_matrix
-
-    def create_shared_params(self):
-        n = self.global_size
-        L_tril = (
-            np.eye(n)
-            [np.tril_indices(n)]
-            .astype(theano.config.floatX)
-        )
-        return {'mu': theano.shared(
-                    self.input.tag.test_value[self.global_slc]),
-                'L_tril': theano.shared(L_tril)
-                }
-
-    def log_q_W_global(self, z):
-        """
-        log_q_W samples over q for global vars
-        Gradient wrt mu, rho in density parametrization
-        is set to zero to lower variance of ELBO
-        """
-        mu = self.scale_grad(self.mu)
-        L = self.scale_grad(self.L)
-        z = z[self.global_slc]
-        return log_normal_mv(z, mu, chol=L, gpu_compat=self.gpu_compat)
-
-    def random_global(self, size=None, no_rand=False):
-        # (samples, dim) or (dim, )
-        initial = self.initial(size, no_rand, l=self.global_size).T
-        # (dim, dim)
-        L = self.L
-        # (dim, )
-        mu = self.mu
-        # x = Az + m, but it assumes z is vector
-        # When we get z with shape (samples, dim)
-        # we need to transpose Az
-        return L.dot(initial).T + mu
-
-    @classmethod
-    def from_mean_field(cls, mean_field, gpu_compat=False):
-        """
-        Construct FullRank from MeanField approximation
-
-        Parameters
-        ----------
-        mean_field : MeanField
-            approximation to start with
-
-        Flags
-        -----
-        gpu_compat : bool
-            use GPU compatible version or not
-
-        Returns
-        -------
-        FullRank
-        """
-        full_rank = object.__new__(cls)  # type: FullRank
-        full_rank.gpu_compat = gpu_compat
-        full_rank.__dict__.update(mean_field.__dict__)
-        full_rank.shared_params = full_rank.create_shared_params()
-        full_rank.shared_params['mu'].set_value(
-            mean_field.shared_params['mu'].get_value()
-        )
-        rho = mean_field.shared_params['rho'].get_value()
-        n = full_rank.global_size
-        L_tril = (
-            np.diag(np.log1p(np.exp(rho)))  # rho2sd
-            [np.tril_indices(n)]
-            .astype(theano.config.floatX)
-        )
-        full_rank.shared_params['L_tril'].set_value(L_tril)
-        return full_rank
 
 
 class Inference(object):
@@ -252,8 +35,12 @@ class Inference(object):
     op : Operator class
     approx : Approximation class or instance
     tf : TestFunction instance
-    local_rv : list
-    model : PyMC3 Model
+    local_rv : dict
+        mapping {model_variable -> local_variable}
+        Local Vars are used for Autoencoding Variational Bayes
+        See (AEVB; Kingma and Welling, 2014) for details
+    model : Model
+        PyMC3 Model
     kwargs : kwargs for Approximation
     """
     def __init__(self, op, approx, tf, local_rv=None, model=None, **kwargs):
@@ -262,15 +49,29 @@ class Inference(object):
             approx = approx(
                 local_rv=local_rv,
                 model=model, **kwargs)
-        elif isinstance(approx, Approximation):
+        elif isinstance(approx, Approximation):    # pragma: no cover
             pass
-        else:
+        else:   # pragma: no cover
             raise TypeError('approx should be Approximation instance or Approximation subclass')
         self.objective = op(approx)(tf)
 
     approx = property(lambda self: self.objective.approx)
 
-    def run_profiling(self, n=1000, score=True, **kwargs):
+    def _maybe_score(self, score):
+        returns_loss = self.objective.op.RETURNS_LOSS
+        if score is None:
+            score = returns_loss
+        elif score and not returns_loss:
+            warnings.warn('method `fit` got `score == True` but %s '
+                          'does not return loss. Ignoring `score` argument'
+                          % self.objective.op)
+            score = False
+        else:
+            pass
+        return score
+
+    def run_profiling(self, n=1000, score=None, **kwargs):
+        score = self._maybe_score(score)
         fn_kwargs = kwargs.pop('fn_kwargs', dict())
         fn_kwargs.update(profile=True)
         step_func = self.objective.step_function(
@@ -287,7 +88,7 @@ class Inference(object):
             progress.close()
         return step_func.profile
 
-    def fit(self, n=10000, score=True, callbacks=None, callback_every=1,
+    def fit(self, n=10000, score=None, callbacks=None, callback_every=1,
             **kwargs):
         """
         Performs Operator Variational Inference
@@ -300,7 +101,8 @@ class Inference(object):
             evaluate loss on each iteration or not
         callbacks : list[function : (Approximation, losses, i) -> any]
         callback_every : int
-            call callback functions on `callback_every` step
+            call callback functions on `callback_every` step, to
+            interrupt inference raise `StopIteration` exception inside callback
         kwargs : kwargs for ObjectiveFunction.step_function
 
         Returns
@@ -309,44 +111,48 @@ class Inference(object):
         """
         if callbacks is None:
             callbacks = []
+        score = self._maybe_score(score)
         step_func = self.objective.step_function(score=score, **kwargs)
         i = 0
-        scores = np.empty(n)
-        scores[:] = np.nan
         progress = tqdm.trange(n)
         if score:
+            scores = np.empty(n)
+            scores[:] = np.nan
             try:
                 for i in progress:
                     e = step_func()
-                    if np.isnan(e):
+                    if np.isnan(e):     # pragma: no cover
                         scores = scores[:i]
                         self.hist = np.concatenate([self.hist, scores])
                         raise FloatingPointError('NaN occurred in optimization.')
                     scores[i] = e
                     if i % 10 == 0:
-                        avg_elbo = scores[max(0, i - 1000):i+1].mean()
-                        progress.set_description('Average Loss = {:,.5g}'.format(avg_elbo))
+                        avg_loss = scores[max(0, i - 1000):i+1].mean()
+                        progress.set_description('Average Loss = {:,.5g}'.format(avg_loss))
                     if i % callback_every == 0:
                         for callback in callbacks:
                             callback(self.approx, scores[:i+1], i)
-            except KeyboardInterrupt:
+            except (KeyboardInterrupt, StopIteration):   # pragma: no cover
+                # do not print log on the same line
+                progress.close()
                 scores = scores[:i]
                 if n < 10:
                     logger.info('Interrupted at {:,d} [{:.0f}%]: Loss = {:,.5g}'.format(
                         i, 100 * i // n, scores[i]))
                 else:
-                    avg_elbo = scores[min(0, i - 1000):i].mean()
+                    avg_loss = scores[min(0, i - 1000):i+1].mean()
                     logger.info('Interrupted at {:,d} [{:.0f}%]: Average Loss = {:,.5g}'.format(
-                        i, 100 * i // n, avg_elbo))
+                        i, 100 * i // n, avg_loss))
             else:
                 if n < 10:
                     logger.info('Finished [100%]: Loss = {:,.5g}'.format(scores[-1]))
                 else:
-                    avg_elbo = scores[max(0, i - 1000):i].mean()
-                    logger.info('Finished [100%]: Average Loss = {:,.5g}'.format(avg_elbo))
+                    avg_loss = scores[max(0, i - 1000):i+1].mean()
+                    logger.info('Finished [100%]: Average Loss = {:,.5g}'.format(avg_loss))
             finally:
                 progress.close()
-        else:
+        else:   # pragma: no cover
+            scores = np.asarray(())
             try:
                 for _ in progress:
                     step_func()
@@ -484,6 +290,55 @@ class FullRankADVI(Inference):
         return inference
 
 
+class SVGD(Inference):
+    """
+    Stein Variational Gradient Descent
+
+    This inference is based on Kernelized Stein Discrepancy
+    it's main idea is to move initial noisy particles so that
+    they fit target distribution best.
+
+    Algorithm is outlined below
+
+    Input: A target distribution with density function :math:`p(x)`
+        and a set of initial particles :math:`{x^0_i}^n_{i=1}`
+    Output: A set of particles :math:`{x_i}^n_{i=1}` that approximates the target distribution.
+    .. math::
+
+        x_i^{l+1} \leftarrow \epsilon_l \hat{\phi}^{*}(x_i^l)
+        \hat{\phi}^{*}(x) = \frac{1}{n}\sum^{n}_{j=1}[k(x^l_j,x) \nabla_{x^l_j} logp(x^l_j)+ \nabla_{x^l_j} k(x^l_j,x)]
+
+    Parameters
+    ----------
+    n_particles : int
+        number of particles to use for approximation
+    jitter :
+        noise sd for initial point
+    model : pm.Model
+    kernel : callable
+        kernel function for KSD f(histogram) -> (k(x,.), \nabla_x k(x,.))
+    start : dict
+        initial point for inference
+    histogram : Histogram
+        initialize SVGD with given Histogram instead of default initial particles
+
+    References
+    ----------
+    - Qiang Liu, Dilin Wang (2016)
+        Stein Variational Gradient Descent: A General Purpose Bayesian Inference Algorithm
+        arXiv:1608.04471
+    """
+    def __init__(self, n_particles=100, jitter=.01, model=None, kernel=test_functions.rbf,
+                 start=None, histogram=None, local_rv=None):
+        if histogram is None:
+            histogram = Histogram.from_noise(
+                n_particles, jitter=jitter, start=start, model=model, local_rv=local_rv)
+        super(SVGD, self).__init__(
+            KSD, histogram,
+            kernel,
+            model=model)
+
+
 def fit(n=10000, local_rv=None, method='advi', model=None, **kwargs):
     """
     Handy shortcut for using inference methods in functional way
@@ -498,10 +353,10 @@ def fit(n=10000, local_rv=None, method='advi', model=None, **kwargs):
         See (AEVB; Kingma and Welling, 2014) for details
     method : str or Inference
         string name is case insensitive in {'advi', 'fullrank_advi', 'advi->fullrank_advi'}
-    model : None or Model
+    model : Model
+    kwargs : kwargs for Inference.fit
     frac : float
         if method is 'advi->fullrank_advi' represents advi fraction when training
-    kwargs : kwargs for Inference.fit
 
     Returns
     -------
@@ -512,6 +367,7 @@ def fit(n=10000, local_rv=None, method='advi', model=None, **kwargs):
     _select = dict(
         advi=ADVI,
         fullrank_advi=FullRankADVI,
+        svgd=SVGD
     )
     if isinstance(method, str) and method.lower() == 'advi->fullrank_advi':
         frac = kwargs.pop('frac', .5)

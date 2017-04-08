@@ -1,5 +1,3 @@
-import unittest
-
 import numpy as np
 import numpy.ma as ma
 import numpy.testing as npt
@@ -12,7 +10,7 @@ import theano.tensor as tt
 import theano.sparse as sparse
 
 
-class HelperFuncTests(unittest.TestCase):
+class TestHelperFunc(object):
     def test_pandas_to_array(self):
         """
         Ensure that pandas_to_array returns the dense array, masked array,
@@ -48,14 +46,14 @@ class HelperFuncTests(unittest.TestCase):
         # without missing values
         for input_value in [dense_input, pandas_input]:
             func_output = func(input_value)
-            self.assertIsInstance(func_output, np.ndarray)
-            self.assertEqual(func_output.shape, input_value.shape)
+            assert isinstance(func_output, np.ndarray)
+            assert func_output.shape == input_value.shape
             npt.assert_allclose(func_output, dense_input)
 
         # Check function behavior with sparse matrix inputs
         sparse_output = func(sparse_input)
-        self.assertTrue(sps.issparse(sparse_output))
-        self.assertEqual(sparse_output.shape, sparse_input.shape)
+        assert sps.issparse(sparse_output)
+        assert sparse_output.shape == sparse_input.shape
         npt.assert_allclose(sparse_output.toarray(),
                             sparse_input.toarray())
 
@@ -63,22 +61,22 @@ class HelperFuncTests(unittest.TestCase):
         # objects with missing data
         for input_value in [masked_array_input, missing_pandas_input]:
             func_output = func(input_value)
-            self.assertIsInstance(func_output, ma.core.MaskedArray)
-            self.assertEqual(func_output.shape, input_value.shape)
+            assert isinstance(func_output, ma.core.MaskedArray)
+            assert func_output.shape == input_value.shape
             npt.assert_allclose(func_output, masked_array_input)
 
         # Check function behavior with Theano graph variable
         theano_output = func(theano_graph_input)
-        self.assertIsInstance(theano_output, theano.gof.graph.Variable)
-        self.assertEqual(theano_output.name, input_name)
+        assert isinstance(theano_output, theano.gof.graph.Variable)
+        assert theano_output.name == input_name
 
         # Check function behavior with generator data
         generator_output = func(square_generator)
         # Make sure the returned object has .set_gen and .set_default methods
-        self.assertTrue(hasattr(generator_output, "set_gen"))
-        self.assertTrue(hasattr(generator_output, "set_default"))
+        assert hasattr(generator_output, "set_gen")
+        assert hasattr(generator_output, "set_default")
         # Make sure the returned object is a Theano TensorVariable
-        self.assertIsInstance(generator_output, tt.TensorVariable)
+        assert isinstance(generator_output, tt.TensorVariable)
 
         return None
 
@@ -122,20 +120,20 @@ class HelperFuncTests(unittest.TestCase):
 
         # Ensure that the missing values are appropriately set to None
         for func_output in [dense_output, sparse_output]:
-            self.assertIsNone(func_output.missing_values)
+            assert func_output.missing_values is None
 
         # Ensure that the Theano variable names are correctly set.
         # Note that the output for masked inputs do not have their names set
         # to the passed value.
         for func_output in [dense_output, sparse_output]:
-            self.assertEqual(func_output.name, input_name)
+            assert func_output.name == input_name
 
         # Ensure the that returned functions are all of the correct type
-        self.assertIsInstance(dense_output, tt.TensorConstant)
-        self.assertTrue(sparse.basic._is_sparse_variable(sparse_output))
+        assert isinstance(dense_output, tt.TensorConstant)
+        assert sparse.basic._is_sparse_variable(sparse_output)
 
         # Masked output is something weird. Just ensure it has missing values
         # self.assertIsInstance(masked_output, tt.TensorConstant)
-        self.assertIsNotNone(masked_output.missing_values)
+        assert masked_output.missing_values is not None
 
         return None

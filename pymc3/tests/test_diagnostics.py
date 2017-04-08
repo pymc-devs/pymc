@@ -9,6 +9,7 @@ from ..tuning import find_MAP
 from ..sampling import sample
 from ..diagnostics import effective_n, geweke, gelman_rubin
 from .test_examples import build_disaster_model
+import pytest
 
 
 class TestGelmanRubin(SeededTest):
@@ -29,15 +30,15 @@ class TestGelmanRubin(SeededTest):
         """Confirm Gelman-Rubin statistic is close to 1 for a reasonable number of samples."""
         n_samples = 1000
         rhat = gelman_rubin(self.get_ptrace(n_samples))
-        self.assertTrue(all(1 / self.good_ratio < r <
-                            self.good_ratio for r in rhat.values()))
+        assert all(1 / self.good_ratio < r <
+                            self.good_ratio for r in rhat.values())
 
     def test_bad(self):
         """Confirm Gelman-Rubin statistic is far from 1 for a small number of samples."""
         n_samples = 10
         rhat = gelman_rubin(self.get_ptrace(n_samples))
-        self.assertFalse(all(1 / self.good_ratio < r <
-                             self.good_ratio for r in rhat.values()))
+        assert not all(1 / self.good_ratio < r <
+                             self.good_ratio for r in rhat.values())
 
     def test_right_shape_python_float(self, shape=None, test_shape=None):
         """Check Gelman-Rubin statistic shape is correct w/ python float"""
@@ -62,10 +63,10 @@ class TestGelmanRubin(SeededTest):
             test_shape = shape
 
         if shape is None or shape == ():
-            self.assertTrue(isinstance(rhat, float))
+            assert isinstance(rhat, float)
         else:
-            self.assertTrue(isinstance(rhat, np.ndarray))
-            self.assertEqual(rhat.shape, test_shape)
+            assert isinstance(rhat, np.ndarray)
+            assert rhat.shape == test_shape
 
     def test_right_shape_scalar_tuple(self):
         """Check Gelman-Rubin statistic shape is correct w/ scalar as shape=()"""
@@ -108,7 +109,7 @@ class TestDiagnostics(SeededTest):
                           last=last, intervals=n_intervals)
 
         # These z-scores should be larger, since there are not many samples.
-        self.assertGreater(max(abs(z_switch[:, 1])), 1)
+        assert max(abs(z_switch[:, 1])) > 1
 
     def test_geweke_positive(self):
         """Confirm Geweke diagnostic is smaller than 1 for a reasonable number of samples."""
@@ -116,11 +117,11 @@ class TestDiagnostics(SeededTest):
         n_intervals = 20
         switchpoint = self.get_switchpoint(n_samples)
 
-        with self.assertRaises(ValueError):
+        with pytest.raises(ValueError):
             # first and last must be between 0 and 1
             geweke(switchpoint, first=-0.3, last=1.1, intervals=n_intervals)
 
-        with self.assertRaises(ValueError):
+        with pytest.raises(ValueError):
             # first and last must add to < 1
             geweke(switchpoint, first=0.3, last=0.7, intervals=n_intervals)
 
@@ -134,13 +135,13 @@ class TestDiagnostics(SeededTest):
         z_scores = z_switch[:, 1]
 
         # Ensure `intervals` argument is honored
-        self.assertEqual(z_switch.shape[0], n_intervals)
+        assert z_switch.shape[0] == n_intervals
 
         # Start index should not be in the last <last>% of samples
         assert_array_less(start, (1 - last) * n_samples)
 
         # These z-scores should be small, since there are more samples.
-        self.assertLess(max(abs(z_scores)), 1)
+        assert max(abs(z_scores)) < 1
 
     def test_effective_n(self):
         """Check effective sample size is equal to number of samples when initializing with MAP"""
@@ -183,10 +184,10 @@ class TestDiagnostics(SeededTest):
             test_shape = shape
 
         if shape is None or shape == ():
-            self.assertTrue(isinstance(n_effective, float))
+            assert isinstance(n_effective, float)
         else:
-            self.assertTrue(isinstance(n_effective, np.ndarray))
-            self.assertEqual(n_effective.shape, test_shape)
+            assert isinstance(n_effective, np.ndarray)
+            assert n_effective.shape == test_shape
 
     def test_effective_n_right_shape_scalar_tuple(self):
         """Check effective sample size shape is correct w/ scalar as shape=()"""

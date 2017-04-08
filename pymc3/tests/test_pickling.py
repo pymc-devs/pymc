@@ -1,11 +1,10 @@
-import unittest
 import pickle
 import traceback
 from .models import simple_model
 
 
-class TestPickling(unittest.TestCase):
-    def setUp(self):
+class TestPickling(object):
+    def setup_method(self):
         _, self.model, _ = simple_model()
 
     def test_model_roundtrip(self):

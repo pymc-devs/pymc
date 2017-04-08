@@ -22,8 +22,8 @@ def generate_poisson_mixture_data(w, mu, size=1000):
 
 class TestMixture(SeededTest):
     @classmethod
-    def setUpClass(cls):
-        super(TestMixture, cls).setUpClass()
+    def setup_class(cls):
+        super(TestMixture, cls).setup_class()
 
         cls.norm_w = np.array([0.75, 0.25])
         cls.norm_mu = np.array([0., 5.])

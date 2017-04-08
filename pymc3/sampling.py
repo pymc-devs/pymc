@@ -11,6 +11,7 @@ from .model import modelcontext, Point
 from .step_methods import (NUTS, HamiltonianMC, Metropolis, BinaryMetropolis,
                            BinaryGibbsMetropolis, CategoricalGibbsMetropolis,
                            Slice, CompoundStep)
+from .plots.traceplot import traceplot
 from tqdm import tqdm
 
 import warnings
@@ -85,32 +86,31 @@ def assign_step_methods(model, step=None, methods=(NUTS, HamiltonianMC, Metropol
 
 def sample(draws, step=None, init='ADVI', n_init=200000, start=None,
            trace=None, chain=0, njobs=1, tune=None, progressbar=True,
-           model=None, random_seed=-1):
-    """
-    Draw a number of samples using the given step method.
-    Multiple step methods supported via compound step method
-    returns the amount of time taken.
+           model=None, random_seed=-1, live_plot=False, **kwargs):
+    """Draw samples from the posterior using the given step methods.
+
+    Multiple step methods are supported via compound step methods.
 
     Parameters
     ----------
-
     draws : int
         The number of samples to draw.
     step : function or iterable of functions
-        A step function or collection of functions. If no step methods are
-        specified, or are partially specified, they will be assigned
-        automatically (defaults to None).
+        A step function or collection of functions. If there are variables
+        without a step methods, step methods for those variables will
+        be assigned automatically.
     init : str {'ADVI', 'ADVI_MAP', 'MAP', 'NUTS', None}
         Initialization method to use. Only works for auto-assigned step methods.
-        * ADVI : Run ADVI to estimate starting points and diagonal covariance
-        matrix. If njobs > 1 it will sample starting points from the estimated
-        posterior, otherwise it will use the estimated posterior mean.
+
+        * ADVI: Run ADVI to estimate starting points and diagonal covariance
+          matrix. If njobs > 1 it will sample starting points from the estimated
+          posterior, otherwise it will use the estimated posterior mean.
         * ADVI_MAP: Initialize ADVI with MAP and use MAP as starting point.
-        * MAP : Use the MAP as starting point.
-        * NUTS : Run NUTS to estimate starting points and covariance matrix. If
-        njobs > 1 it will sample starting points from the estimated posterior,
-        otherwise it will use the estimated posterior mean.
-        * None : Do not initialize.
+        * MAP: Use the MAP as starting point.
+        * NUTS: Run NUTS to estimate starting points and covariance matrix. If
+          njobs > 1 it will sample starting points from the estimated posterior,
+          otherwise it will use the estimated posterior mean.
+        * None: Do not initialize.
     n_init : int
         Number of iterations of initializer
         If 'ADVI', number of iterations, if 'nuts', number of draws.
@@ -142,10 +142,33 @@ def sample(draws, step=None, init='ADVI', n_init=200000, start=None,
     model : Model (optional if in `with` context)
     random_seed : int or list of ints
         A list is accepted if more if `njobs` is greater than one.
+    live_plot: bool
+        Flag for live plotting the trace while sampling
 
     Returns
     -------
-    MultiTrace object with access to sampling values
+    trace : pymc3.backends.base.MultiTrace
+        A `MultiTrace` object that contains the samples.
+
+    Examples
+    --------
+    .. code:: ipython
+
+        >>> import pymc3 as pm
+        ... n = 100
+        ... h = 61
+        ... alpha = 2
+        ... beta = 2
+
+    .. code:: ipython
+
+        >>> with pm.Model() as model: # context management
+        ...     p = pm.Beta('p', alpha=alpha, beta=beta)
+        ...     y = pm.Binomial('y', n=n, p=p, observed=h)
+        ...     trace = pm.sample(2000, tune=1000, njobs=4)
+        >>> pm.df_summary(trace)
+               mean        sd  mc_error   hpd_2.5  hpd_97.5
+        p  0.604625  0.047086   0.00078  0.510498  0.694774
     """
     model = modelcontext(model)
 
@@ -155,7 +178,9 @@ def sample(draws, step=None, init='ADVI', n_init=200000, start=None,
     if step is None and init is not None and pm.model.all_continuous(model.vars):
         # By default, use NUTS sampler
         pm._log.info('Auto-assigning NUTS sampler...')
-        start_, step = init_nuts(init=init, njobs=njobs, n_init=n_init, model=model, random_seed=random_seed)
+        start_, step = init_nuts(init=init, njobs=njobs, n_init=n_init,
+                                 model=model, random_seed=random_seed,
+                                 progressbar=progressbar)
         if start is None:
             start = start_
     else:
@@ -175,7 +200,11 @@ def sample(draws, step=None, init='ADVI', n_init=200000, start=None,
                    'tune': tune,
                    'progressbar': progressbar,
                    'model': model,
-                   'random_seed': random_seed}
+                   'random_seed': random_seed,
+                   'live_plot': live_plot,
+                   }
+
+    sample_args.update(kwargs)
 
     if njobs > 1:
         sample_func = _mp_sample
@@ -187,15 +216,27 @@ def sample(draws, step=None, init='ADVI', n_init=200000, start=None,
 
 
 def _sample(draws, step=None, start=None, trace=None, chain=0, tune=None,
-            progressbar=True, model=None, random_seed=-1):
+            progressbar=True, model=None, random_seed=-1, live_plot=False,
+            **kwargs):
+    live_plot_args = {'skip_first': 0, 'refresh_every': 100}
+    live_plot_args = {arg: kwargs[arg] if arg in kwargs else live_plot_args[arg] for arg in live_plot_args}
+    skip_first = live_plot_args['skip_first']
+    refresh_every = live_plot_args['refresh_every']
+
     sampling = _iter_sample(draws, step, start, trace, chain,
                             tune, model, random_seed)
     if progressbar:
         sampling = tqdm(sampling, total=draws)
     try:
         strace = None
-        for strace in sampling:
-            pass
+        for it, strace in enumerate(sampling):
+            if live_plot:
+                if it >= skip_first:
+                    trace = MultiTrace([strace])
+                    if it == skip_first:
+                        ax = traceplot(trace, live_plot=False, **kwargs)
+                    elif (it - skip_first) % refresh_every == 0 or it == draws - 1:
+                        traceplot(trace, ax=ax, live_plot=True, **kwargs)
     except KeyboardInterrupt:
         pass
     finally:
@@ -242,9 +283,10 @@ def iter_sample(draws, step, start=None, trace=None, chain=0, tune=None,
 
     Example
     -------
+    ::
 
-    for trace in iter_sample(500, step):
-        ...
+        for trace in iter_sample(500, step):
+            ...
     """
     sampling = _iter_sample(draws, step, start, trace, chain, tune,
                             model, random_seed)
@@ -282,19 +324,27 @@ def _iter_sample(draws, step, start=None, trace=None, chain=0, tune=None,
         strace.setup(draws, chain, step.stats_dtypes)
     else:
         strace.setup(draws, chain)
-    for i in range(draws):
-        if i == tune:
-            step = stop_tuning(step)
-        if step.generates_stats:
-            point, states = step.step(point)
-            if strace.supports_sampler_stats:
-                strace.record(point, states)
+    try:
+        for i in range(draws):
+            if i == tune:
+                step = stop_tuning(step)
+            if step.generates_stats:
+                point, states = step.step(point)
+                if strace.supports_sampler_stats:
+                    strace.record(point, states)
+                else:
+                    strace.record(point)
             else:
+                point = step.step(point)
                 strace.record(point)
-        else:
-            point = step.step(point)
-            strace.record(point)
-        yield strace
+            yield strace
+    except KeyboardInterrupt:
+        if hasattr(step, 'check_trace'):
+            step.check_trace(strace)
+        raise
+    else:
+        if hasattr(step, 'check_trace'):
+            step.check_trace(strace)
 
 
 def _choose_backend(trace, chain, shortcuts=None, **kwds):
@@ -369,7 +419,8 @@ def _soft_update(a, b):
     a.update({k: v for k, v in b.items() if k not in a})
 
 
-def sample_ppc(trace, samples=None, model=None, vars=None, size=None, random_seed=None, progressbar=True):
+def sample_ppc(trace, samples=None, model=None, vars=None, size=None,
+               random_seed=None, progressbar=True):
     """Generate posterior predictive samples from a model given a trace.
 
     Parameters
@@ -390,8 +441,9 @@ def sample_ppc(trace, samples=None, model=None, vars=None, size=None, random_see
 
     Returns
     -------
-    Dictionary keyed by `vars`, where the values are the corresponding
-    posterior predictive samples.
+    samples : dict
+        Dictionary with the variables as keys. The values corresponding
+        to the posterior predictive samples.
     """
     if samples is None:
         samples = len(trace)
@@ -420,7 +472,7 @@ def sample_ppc(trace, samples=None, model=None, vars=None, size=None, random_see
 
 
 def init_nuts(init='ADVI', njobs=1, n_init=500000, model=None,
-              random_seed=-1, **kwargs):
+              random_seed=-1, progressbar=True, **kwargs):
     """Initialize and sample from posterior of a continuous model.
 
     This is a convenience function. NUTS convergence and sampling speed is extremely
@@ -442,13 +494,13 @@ def init_nuts(init='ADVI', njobs=1, n_init=500000, model=None,
         Number of iterations of initializer
         If 'ADVI', number of iterations, if 'metropolis', number of draws.
     model : Model (optional if in `with` context)
+    progressbar : bool
+        Whether or not to display a progressbar for advi sampling.
     **kwargs : keyword arguments
         Extra keyword arguments are forwarded to pymc3.NUTS.
 
     Returns
     -------
-    start, nuts_sampler
-
     start : pymc3.model.Point
         Starting point for sampler
     nuts_sampler : pymc3.step_methods.NUTS
@@ -465,7 +517,8 @@ def init_nuts(init='ADVI', njobs=1, n_init=500000, model=None,
         init = init.lower()
 
     if init == 'advi':
-        v_params = pm.variational.advi(n=n_init, random_seed=random_seed)
+        v_params = pm.variational.advi(n=n_init, random_seed=random_seed,
+                                       progressbar=progressbar)
         start = pm.variational.sample_vp(v_params, njobs, progressbar=False,
                                          hide_transformed=False,
                                          random_seed=random_seed)
