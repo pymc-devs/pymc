@@ -110,13 +110,10 @@ tools:
 We have provided a Dockerfile which helps for isolating build problems, and local development.
 Install [Docker](https://www.docker.com/) for your operating system, clone this repo, then
 run `./scripts/start_container.sh`. This should start a local docker container called `pymc3`,
-as well as a [`jupyter`](http://jupyter.org/) notebook server running on port 8888. You will have to open
-a browser at `localhost:8888`. The repo will be running the code from your local copy of `pymc3`,
+as well as a [`jupyter`](http://jupyter.org/) notebook server running on port 8888. The
+notebook should be opened in your browser automatically (you can disable this by passing
+`--no-browser`). The repo will be running the code from your local copy of `pymc3`,
 so it is good for development.  To find the token necessary to access the notebooks, run
-
-```bash
-$ docker exec -it pymc3 jupyter notebook list
-```
 
 You may also use it to run the test suite, with
 
@@ -128,6 +125,13 @@ $  . ./scripts/test.sh # takes a while!
 
 This should be quite close to how the tests run on TravisCI.
 
+If the container was started without opening the browser, you
+need the a token to work with the notebook. This token can be
+access with
+
+```
+docker exec -it pymc3 jupyter notebook list
+```
 
 ## Style guide
 
