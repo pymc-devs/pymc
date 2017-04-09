@@ -231,13 +231,14 @@ class NUTS(BaseHMC):
 
         if n < 1000:
             warnings.warn('Chain %s contains only %s samples.' % (chain, n))
-        if np.all(diverging):
-            warnings.warn('Chain %s contains only diverging samples. '
-                          'The model is probably misspecified.' % chain)
         if np.all(tuning):
             warnings.warn('Step size tuning was enabled throughout the whole '
                           'trace. You might want to specify the number of '
                           'tuning steps.')
+        if np.all(diverging):
+            warnings.warn('Chain %s contains only diverging samples. '
+                          'The model is probably misspecified.' % chain)
+            return
         if np.any(diverging[~tuning]):
             warnings.warn("Chain %s contains diverging samples after tuning. "
                           "If increasing `target_accept` doesn't help, "

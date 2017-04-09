@@ -242,8 +242,6 @@ def _sample(draws, step=None, start=None, trace=None, chain=0, tune=None,
     finally:
         if progressbar:
             sampling.close()
-    if strace is not None:
-        strace.close()
     result = [] if strace is None else [strace]
     return MultiTrace(result)
 
@@ -324,6 +322,7 @@ def _iter_sample(draws, step, start=None, trace=None, chain=0, tune=None,
         strace.setup(draws, chain, step.stats_dtypes)
     else:
         strace.setup(draws, chain)
+
     try:
         for i in range(draws):
             if i == tune:
@@ -339,10 +338,15 @@ def _iter_sample(draws, step, start=None, trace=None, chain=0, tune=None,
                 strace.record(point)
             yield strace
     except KeyboardInterrupt:
+        strace.close()
         if hasattr(step, 'check_trace'):
             step.check_trace(strace)
         raise
+    except BaseException:
+        strace.close()
+        raise
     else:
+        strace.close()
         if hasattr(step, 'check_trace'):
             step.check_trace(strace)
 
