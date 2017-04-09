@@ -22,6 +22,7 @@ def unif(step_size, elow=.85, ehigh=1.15):
 
 
 class HamiltonianMC(BaseHMC):
+    name = 'hmc'
     default_blocked = True
 
     def __init__(self, vars=None, path_length=2., step_rand=unif, **kwargs):

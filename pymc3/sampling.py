@@ -21,23 +21,23 @@ sys.setrecursionlimit(10000)
 
 __all__ = ['sample', 'iter_sample', 'sample_ppc', 'init_nuts']
 
+STEP_METHODS = (NUTS, HamiltonianMC, Metropolis, BinaryMetropolis,
+                BinaryGibbsMetropolis, Slice, CategoricalGibbsMetropolis)
 
-def assign_step_methods(model, step=None, methods=(NUTS, HamiltonianMC, Metropolis,
-                                                   BinaryMetropolis, BinaryGibbsMetropolis,
-                                                   Slice, CategoricalGibbsMetropolis)):
-    '''
-    Assign model variables to appropriate step methods. Passing a specified
-    model will auto-assign its constituent stochastic variables to step methods
-    based on the characteristics of the variables. This function is intended to
-    be called automatically from `sample()`, but may be called manually. Each
-    step method passed should have a `competence()` method that returns an
-    ordinal competence value corresponding to the variable passed to it. This
-    value quantifies the appropriateness of the step method for sampling the
-    variable.
+def assign_step_methods(model, step=None, methods=STEP_METHODS,
+                        step_kwargs=None):
+    """Assign model variables to appropriate step methods.
+
+    Passing a specified model will auto-assign its constituent stochastic
+    variables to step methods based on the characteristics of the variables.
+    This function is intended to be called automatically from `sample()`, but
+    may be called manually. Each step method passed should have a
+    `competence()` method that returns an ordinal competence value
+    corresponding to the variable passed to it. This value quantifies the
+    appropriateness of the step method for sampling the variable.
 
     Parameters
     ----------
-
     model : Model object
         A fully-specified model object
     step : step function or vector of step functions
@@ -46,12 +46,17 @@ def assign_step_methods(model, step=None, methods=(NUTS, HamiltonianMC, Metropol
     methods : vector of step method classes
         The set of step methods from which the function may choose. Defaults
         to the main step methods provided by PyMC3.
+    step_kwargs : dict
+        Parameters for the samplers. Keys are the lower case names of
+        the step method, values a dict of arguments.
 
     Returns
     -------
-    List of step methods associated with the model's variables.
-    '''
-
+    methods : list
+        List of step methods associated with the model's variables.
+    """
+    if step_kwargs is None:
+        step_kwargs = {}
     steps = []
     assigned_vars = set()
     if step is not None:
@@ -76,7 +81,18 @@ def assign_step_methods(model, step=None, methods=(NUTS, HamiltonianMC, Metropol
             selected_steps[selected].append(var)
 
     # Instantiate all selected step methods
-    steps += [step(vars=selected_steps[step]) for step in selected_steps if selected_steps[step]]
+    used_keys = set()
+    for step_class, vars in selected_steps.items():
+        if len(vars) == 0:
+            continue
+        args = step_kwargs.get(step_class.name, {})
+        used_keys.add(step_class.name)
+        step = step_class(vars=vars, **args)
+        steps.append(step)
+
+    unused_args = set(step_kwargs).difference(used_keys)
+    if unused_args:
+        raise ValueError('Unused step method arguments: %s' % unused_args)
 
     if len(steps) == 1:
         steps = steps[0]
@@ -85,8 +101,9 @@ def assign_step_methods(model, step=None, methods=(NUTS, HamiltonianMC, Metropol
 
 
 def sample(draws, step=None, init='ADVI', n_init=200000, start=None,
-           trace=None, chain=0, njobs=1, tune=None, progressbar=True,
-           model=None, random_seed=-1, live_plot=False, **kwargs):
+           trace=None, chain=0, njobs=1, tune=None, nuts_kwargs=None,
+           step_kwargs=None, progressbar=True, model=None, random_seed=-1,
+           live_plot=False, **kwargs):
     """Draw samples from the posterior using the given step methods.
 
     Multiple step methods are supported via compound step methods.
@@ -134,6 +151,25 @@ def sample(draws, step=None, init='ADVI', n_init=200000, start=None,
         in the system - 2.
     tune : int
         Number of iterations to tune, if applicable (defaults to None)
+    nuts_kwargs : dict
+        Options for the NUTS sampler. See the docstring of NUTS
+        for a complete list of options. Common options are
+
+        * target_accept: float in [0, 1]. The step size is tuned such
+          that we approximate this acceptance rate. Higher values like 0.9
+          or 0.95 often work better for problematic posteriors.
+        * max_treedepth: The maximum depth of the trajectory tree.
+        * step_scale: float, default 0.25
+          The initial guess for the step size scaled down by `1/n**(1/4)`.
+
+        If you want to pass options to other step methods, please use
+        `step_kwargs`.
+    step_kwargs : dict
+        Options for step methods. Keys are the lower case names of
+        the step method, values are dicts of keyword arguments.
+        You can find a full list of arguments in the docstring of
+        the step methods. If you want to pass arguments only to nuts,
+        you can use `nuts_kwargs`.
     progressbar : bool
         Whether or not to display a progress bar in the command line. The
         bar shows the percentage of completion, the sampling speed in
@@ -175,18 +211,29 @@ def sample(draws, step=None, init='ADVI', n_init=200000, start=None,
     if init is not None:
         init = init.lower()
 
+    if nuts_kwargs is not None:
+        if step_kwargs is not None:
+            raise ValueError("Specify only one of step_kwargs and nuts_kwargs")
+        step_kwargs = {'nuts': nuts_kwargs}
+
     if step is None and init is not None and pm.model.all_continuous(model.vars):
         # By default, use NUTS sampler
         pm._log.info('Auto-assigning NUTS sampler...')
+        args = step_kwargs if step_kwargs is not None else {}
+        args = args.get('nuts', {})
         start_, step = init_nuts(init=init, njobs=njobs, n_init=n_init,
                                  model=model, random_seed=random_seed,
-                                 progressbar=progressbar)
+                                 progressbar=progressbar, **args)
         if start is None:
             start = start_
     else:
         if step is not None and init is not None:
-            warnings.warn('Instantiated step methods cannot be automatically initialized. init argument ignored.')
-        step = assign_step_methods(model, step)
+            warnings.warn('Instantiated step methods cannot be automatically '
+                          'initialized. init argument ignored.')
+        if init is not None and not pm.model.all_continuous(model.vars):
+            warnings.warn('Automatic initialization is not supported '
+                          'for discrete variables. Ignoring init argument.')
+        step = assign_step_methods(model, step, step_kwargs=step_kwargs)
 
     if njobs is None:
         import multiprocessing as mp
@@ -218,10 +265,8 @@ def sample(draws, step=None, init='ADVI', n_init=200000, start=None,
 def _sample(draws, step=None, start=None, trace=None, chain=0, tune=None,
             progressbar=True, model=None, random_seed=-1, live_plot=False,
             **kwargs):
-    live_plot_args = {'skip_first': 0, 'refresh_every': 100}
-    live_plot_args = {arg: kwargs[arg] if arg in kwargs else live_plot_args[arg] for arg in live_plot_args}
-    skip_first = live_plot_args['skip_first']
-    refresh_every = live_plot_args['refresh_every']
+    skip_first = kwargs.get('skip_first', 0)
+    refresh_every = kwargs.get('refresh_every', 100)
 
     sampling = _iter_sample(draws, step, start, trace, chain,
                             tune, model, random_seed)

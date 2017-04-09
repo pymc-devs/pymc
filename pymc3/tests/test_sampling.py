@@ -69,6 +69,22 @@ class TestSample(SeededTest):
                           random_seed=self.random_seed)
 
 
+    def test_sample_args(self):
+        with self.model:
+            with pytest.raises(TypeError) as excinfo:
+                pm.sample(50, init=None, step_kwargs={'nuts': {'foo': 1}})
+            assert "'foo'" in str(excinfo.value)
+
+            with pytest.raises(ValueError) as excinfo:
+                pm.sample(50, init=None, step_kwargs={'foo': {}})
+            assert 'foo' in str(excinfo.value)
+
+            pm.sample(10, init=None, nuts_kwargs={'target_accept': 0.9})
+
+            with pytest.raises(ValueError) as excinfo:
+                pm.sample(5, init=None, step_kwargs={}, nuts_kwargs={})
+            assert 'Specify only one' in str(excinfo.value)
+
     def test_iter_sample(self):
         with self.model:
             samps = pm.sampling.iter_sample(5, self.step, self.start, random_seed=self.random_seed)

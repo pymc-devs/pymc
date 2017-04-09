@@ -78,6 +78,8 @@ class Metropolis(ArrayStepShared):
     mode :  string or `Mode` instance.
         compilation mode passed to Theano functions
     """
+    name = 'metropolis'
+
     default_blocked = False
     generates_stats = True
     stats_dtypes = [{
@@ -225,6 +227,8 @@ class BinaryMetropolis(ArrayStep):
         Optional model for sampling step. Defaults to None (taken from context).
 
     """
+    name = 'binary_metropolis'
+
     generates_stats = True
     stats_dtypes = [{
         'accept': np.float64,
@@ -287,6 +291,7 @@ class BinaryMetropolis(ArrayStep):
 
 class BinaryGibbsMetropolis(ArrayStep):
     """A Metropolis-within-Gibbs step method optimized for binary variables"""
+    name = 'binary_gibbs_metropolis'
 
     def __init__(self, vars, order='random', model=None):
 
@@ -348,6 +353,7 @@ class CategoricalGibbsMetropolis(ArrayStep):
        which was introduced by Liu in his 1996 technical report
        "Metropolized Gibbs Sampler: An Improvement".
     """
+    name = 'caregorical_gibbs_metropolis'
 
     def __init__(self, vars, proposal='uniform', order='random', model=None):
 
