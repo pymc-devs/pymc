@@ -391,26 +391,26 @@ class Wishart(Continuous):
     The Wishart distribution is the probability distribution of the
     maximum-likelihood estimator (MLE) of the precision matrix of a
     multivariate normal distribution.  If V=1, the distribution is
-    identical to the chi-square distribution with n degrees of
+    identical to the chi-square distribution with nu degrees of
     freedom.
 
     .. math::
 
-       f(X \mid n, T) =
-           \frac{{\mid T \mid}^{n/2}{\mid X \mid}^{(n-k-1)/2}}{2^{nk/2}
-           \Gamma_p(n/2)} \exp\left\{ -\frac{1}{2} Tr(TX) \right\}
+       f(X \mid nu, T) =
+           \frac{{\mid T \mid}^{nu/2}{\mid X \mid}^{(nu-k-1)/2}}{2^{nu k/2}
+           \Gamma_p(nu/2)} \exp\left\{ -\frac{1}{2} Tr(TX) \right\}
 
     where :math:`k` is the rank of :math:`X`.
 
     ========  =========================================
     Support   :math:`X(p x p)` positive definite matrix
-    Mean      :math:`n V`
-    Variance  :math:`n (v_{ij}^2 + v_{ii} v_{jj})`
+    Mean      :math:`nu V`
+    Variance  :math:`nu (v_{ij}^2 + v_{ii} v_{jj})`
     ========  =========================================
 
     Parameters
     ----------
-    n : int
+    nu : int
         Degrees of freedom, > 0.
     V : array
         p x p positive definite matrix.
@@ -418,41 +418,41 @@ class Wishart(Continuous):
     Note
     ----
     This distribution is unusable in a PyMC3 model. You should instead
-    use WishartBartlett or LKJCorr.
+    use WishartBartlett or LKJCholeskyCov, LKJCorr.
     """
 
-    def __init__(self, n, V, *args, **kwargs):
+    def __init__(self, nu, V, *args, **kwargs):
         super(Wishart, self).__init__(*args, **kwargs)
         warnings.warn('The Wishart distribution can currently not be used '
                       'for MCMC sampling. The probability of sampling a '
                       'symmetric matrix is basically zero. Instead, please '
-                      'use WishartBartlett or better yet, LKJCorr.'
+                      'use WishartBartlett or better yet, LKJCholeskyCov/LKJCorr.'
                       'For more information on the issues surrounding the '
                       'Wishart see here: https://github.com/pymc-devs/pymc3/issues/538.',
                       UserWarning)
-        self.n = n
+        self.nu = nu
         self.p = p = V.shape[0]
         self.V = V
-        self.mean = n * V
-        self.mode = tt.switch(1 * (n >= p + 1),
-                              (n - p - 1) * V,
+        self.mean = nu * V
+        self.mode = tt.switch(1 * (nu >= p + 1),
+                              (nu - p - 1) * V,
                               np.nan)
 
     def logp(self, X):
-        n = self.n
+        nu = self.nu
         p = self.p
         V = self.V
 
         IVI = det(V)
         IXI = det(X)
 
-        return bound(((n - p - 1) * tt.log(IXI)
+        return bound(((nu - p - 1) * tt.log(IXI)
                       - trace(matrix_inverse(V).dot(X))
-                      - n * p * tt.log(2) - n * tt.log(IVI)
-                      - 2 * multigammaln(n / 2., p)) / 2,
+                      - nu * p * tt.log(2) - nu * tt.log(IVI)
+                      - 2 * multigammaln(nu / 2., p)) / 2,
                      matrix_pos_def(X),
                      tt.eq(X, X.T),
-                     n > (p - 1),
+                     nu > (p - 1),
                      broadcast_conditions=False
         )
 
@@ -564,12 +564,12 @@ class LKJCholeskyCov(Continuous):
 
     Parameters
     ----------
-    n : int
-        The number of rows of the covariance matrix.
-    eta : float
-        The shape parameter of the LKJ distribution. A value of one
+    n : float
+        The shape parameter (n > 0) of the LKJ distribution. n = 1
         implies a uniform distribution of the correlation matrices;
         larger values put more weight on matrices with few correlations.
+    p : int
+        Dimension of correlation matrix (p > 0).
     sd_dist : pm.Distribution
         A distribution for the standard deviations.
 
@@ -596,18 +596,17 @@ class LKJCholeskyCov(Continuous):
             # Note that we access the distribution for the standard
             # deviations, and do not create a new random variable.
             sd_dist = pm.HalfCauchy.dist(beta=2.5)
-            packed_chol = pm.LKJCholeskyCov('chol_cov', 10, 2, sd_dist)
+            packed_chol = pm.LKJCholeskyCov('chol_cov', n=2, p=10, sd_dist)
+            chol = pm.expand_packed_triangular(10, packed_chol, lower=True)
 
             # Define a new MvNormal with the given covariance
-            vals = pm.MvNormal('vals', mu=np.zeros(10), packed_chol=packed_chol)
+            vals = pm.MvNormal('vals', mu=np.zeros(10), chol=chol)
 
             # Or transform an uncorrelated normal:
             vals_raw = pm.Normal('vals_raw', mu=np.zeros(10), sd=1)
-            chol = pm.expand_packed_triangular(10, packed_chol, lower=True)
             vals = tt.dot(chol, vals_raw)
 
             # Or compute the covariance matrix
-            chol = pm.expand_packed_triangular(10, packed_chol, lower=True)
             cov = tt.dot(chol, chol.T)
 
             # Extract the standard deviations
@@ -665,25 +664,26 @@ class LKJCholeskyCov(Continuous):
        determinant, URL (version: 2012-04-14):
        http://math.stackexchange.com/q/130026
     """
-    def __init__(self, n, eta, sd_dist, *args, **kwargs):
+    def __init__(self, n, p, sd_dist, *args, **kwargs):
         self.n = n
+        self.p = p
 
         if 'transform' in kwargs:
             raise ValueError('Invalid parameter: transform.')
         if 'shape' in kwargs:
             raise ValueError('Invalid parameter: shape.')
 
-        shape = self.n * (self.n + 1) // 2
+        shape = self.p * (self.p + 1) // 2
 
         if sd_dist.shape.ndim not in [0, 1]:
             raise ValueError('Invalid shape for sd_dist.')
 
-        transform = transforms.CholeskyCovPacked(self.n)
+        transform = transforms.CholeskyCovPacked(self.p)
 
         kwargs['shape'] = shape
         kwargs['transform'] = transform
         super(LKJCholeskyCov, self).__init__(*args, **kwargs)
-        self.eta = eta
+        
         self.sd_dist = sd_dist
         self.diag_idxs = transform.diag_idxs
 
@@ -692,11 +692,11 @@ class LKJCholeskyCov(Continuous):
 
     def logp(self, x):
         n = self.n
-        eta = self.eta
-
+        p = self.p
+        
         diag_idxs = self.diag_idxs
         cumsum = tt.cumsum(x ** 2)
-        variance = tt.zeros(n)
+        variance = tt.zeros(p)
         variance = tt.inc_subtensor(variance[0], x[0] ** 2)
         variance = tt.inc_subtensor(
             variance[1:],
@@ -706,16 +706,16 @@ class LKJCholeskyCov(Continuous):
         logp_sd = self.sd_dist.logp(sd_vals).sum()
         corr_diag = x[diag_idxs] / sd_vals
 
-        logp_lkj = (2 * eta - 3 + n - tt.arange(n)) * tt.log(corr_diag)
+        logp_lkj = (2 * n - 3 + p - tt.arange(p)) * tt.log(corr_diag)
         logp_lkj = tt.sum(logp_lkj)
 
         # Compute the log det jacobian of the second transformation
         # described in the docstring.
-        idx = tt.arange(n)
+        idx = tt.arange(p)
         det_invjac = tt.log(corr_diag) - idx * tt.log(sd_vals)
         det_invjac = det_invjac.sum()
 
-        norm = _lkj_normalizing_constant(eta, self.n)
+        norm = _lkj_normalizing_constant(n, p)
 
         return norm + logp_lkj + logp_sd + det_invjac
 
@@ -735,7 +735,9 @@ class LKJCorr(Continuous):
     Parameters
     ----------
     n : float
-        Shape parameter (n > 0). Uniform distribution at n = 1.
+        The shape parameter (n > 0) of the LKJ distribution. n = 1
+        implies a uniform distribution of the correlation matrices;
+        larger values put more weight on matrices with few correlations.
     p : int
         Dimension of correlation matrix (p > 0).
 
