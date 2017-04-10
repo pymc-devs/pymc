@@ -591,7 +591,7 @@ class LKJCholeskyCov(Continuous):
             # Note that we access the distribution for the standard
             # deviations, and do not create a new random variable.
             sd_dist = pm.HalfCauchy.dist(beta=2.5)
-            packed_chol = pm.LKJCholeskyCov('chol_cov', n=10, eta=2, sd_dist)
+            packed_chol = pm.LKJCholeskyCov('chol_cov', n=10, eta=2, sd_dist=sd_dist)
             chol = pm.expand_packed_triangular(10, packed_chol, lower=True)
 
             # Define a new MvNormal with the given covariance
@@ -662,12 +662,12 @@ class LKJCholeskyCov(Continuous):
         if 'shape' in kwargs:
             raise ValueError('Invalid parameter: shape.')
 
-        shape = self.n * (self.n + 1) // 2
+        shape = n * (n + 1) // 2
 
         if sd_dist.shape.ndim not in [0, 1]:
             raise ValueError('Invalid shape for sd_dist.')
 
-        transform = transforms.CholeskyCovPacked(self.n)
+        transform = transforms.CholeskyCovPacked(n)
 
         kwargs['shape'] = shape
         kwargs['transform'] = transform
