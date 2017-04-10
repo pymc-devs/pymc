@@ -74,6 +74,8 @@ We recommended that your contribution complies with the following guidelines bef
 
 * Documentation and high-coverage tests are necessary for enhancements to be accepted.
 
+* Run any of the pre-existing examples in ``docs/source/notebooks`` that contain analyses that would be affected by your changes to ensure that nothing breaks. This is a useful opportunity to not only check your work for bugs that might not be revealed by unit test, but also to show how your contribution improves PyMC3 for end users.
+
 You can also check for common programming errors with the following
 tools:
 
