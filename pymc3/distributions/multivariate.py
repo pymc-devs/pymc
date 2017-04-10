@@ -755,7 +755,9 @@ class LKJCorr(Continuous):
 
         super(LKJCorr, self).__init__(shape=n_elem, transform=transform,
                                       *args, **kwargs)
-
+        warnings.warn('Parameters in LKJCorr have been rename: shape parameter n -> eta '
+                      'dimension parameter p -> n. Please double check your initialization.',
+                      DeprecationWarning)
         self.tri_index = np.zeros([n, n], dtype='int32')
         self.tri_index[np.triu_indices(n, k=1)] = np.arange(n_elem)
         self.tri_index[np.triu_indices(n, k=1)[::-1]] = np.arange(n_elem)
