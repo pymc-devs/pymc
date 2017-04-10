@@ -556,7 +556,7 @@ class TestScalarParameterSamples(SeededTest):
         #                           st.wishart(V, df=n, size=size))
         pass
 
-    @pytest.mark.skip('LJK random sampling not implemented yet.')
+    @pytest.mark.skip('LKJ random sampling not implemented yet.')
     def test_lkj(self):
         # TODO: generate random numbers.
         pass

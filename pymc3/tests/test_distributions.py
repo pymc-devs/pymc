@@ -33,11 +33,11 @@ def get_lkj_cases():
     """
     tri = np.array([0.7, 0.0, -0.7])
     return [
-        (tri, 1, 3, 1.5963125911388549),
-        (tri, 3, 3, -7.7963493376312742),
-        (tri, 0, 3, -np.inf),
-        (np.array([1.1, 0.0, -0.7]), 1, 3, -np.inf),
-        (np.array([0.7, 0.0, -1.1]), 1, 3, -np.inf)
+        (tri, 3, 1, 1.5963125911388549),
+        (tri, 3, 1, -7.7963493376312742),
+        (tri, 3, 0, -np.inf),
+        (np.array([1.1, 0.0, -0.7]), 3, 1, -np.inf),
+        (np.array([0.7, 0.0, -1.1]), 3, 1, -np.inf)
     ]
 
 
@@ -563,10 +563,10 @@ class TestMatchesScipy(SeededTest):
         #             checks=[self.check_dlogp])
         pass
 
-    @pytest.mark.parametrize('x,n,p,lp', LKJ_CASES)
-    def test_lkj(self, x, n, p, lp):
+    @pytest.mark.parametrize('x,n,eta,lp', LKJ_CASES)
+    def test_lkj(self, x, n, eta, lp):
         with Model() as model:
-            LKJCorr('lkj', n=n, p=p, transform=None)
+            LKJCorr('lkj', n=n, eta=eta, transform=None)
 
         pt = {'lkj': x}
         assert_almost_equal(model.fastlogp(pt), lp, decimal=select_by_precision(float64=6, float32=4), err_msg=str(pt))
