@@ -563,10 +563,10 @@ class TestMatchesScipy(SeededTest):
         #             checks=[self.check_dlogp])
         pass
 
-    @pytest.mark.parametrize('x,n,eta,lp', LKJ_CASES)
-    def test_lkj(self, x, n, eta, lp):
+    @pytest.mark.parametrize('x,eta,n,lp', LKJ_CASES)
+    def test_lkj(self, x, eta, n, lp):
         with Model() as model:
-            LKJCorr('lkj', n=n, eta=eta, transform=None)
+            LKJCorr('lkj', eta=eta, n=n, transform=None)
 
         pt = {'lkj': x}
         assert_almost_equal(model.fastlogp(pt), lp, decimal=select_by_precision(float64=6, float32=4), err_msg=str(pt))
