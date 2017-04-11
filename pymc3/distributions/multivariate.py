@@ -596,7 +596,7 @@ class LKJCholeskyCov(Continuous):
             # Note that we access the distribution for the standard
             # deviations, and do not create a new random variable.
             sd_dist = pm.HalfCauchy.dist(beta=2.5)
-            packed_chol = pm.LKJCholeskyCov('chol_cov', n=10, eta=2, sd_dist=sd_dist)
+            packed_chol = pm.LKJCholeskyCov('chol_cov', eta=2, n=10, sd_dist=sd_dist)
             chol = pm.expand_packed_triangular(10, packed_chol, lower=True)
 
             # Define a new MvNormal with the given covariance
@@ -664,7 +664,7 @@ class LKJCholeskyCov(Continuous):
        determinant, URL (version: 2012-04-14):
        http://math.stackexchange.com/q/130026
     """
-    def __init__(self, n, eta, sd_dist, *args, **kwargs):
+    def __init__(self, eta, n, sd_dist, *args, **kwargs):
         self.n = n
         self.eta = eta
         
@@ -762,9 +762,16 @@ class LKJCorr(Continuous):
         100(9), pp.1989-2001.
     """
 
-    def __init__(self, n, eta, transform='interval', *args, **kwargs):
-        self.n = n
-        self.eta = eta
+    def __init__(self, eta=None, n=None, p=None, transform='interval', *args, **kwargs):
+        if p is not None:
+            self.n = p
+            self.eta = n
+            eta = self.eta
+            n = self.n
+        else:
+            self.n = n
+            self.eta = eta
+            
         n_elem = int(n * (n - 1) / 2)
         self.mean = np.zeros(n_elem, dtype=theano.config.floatX)
 
