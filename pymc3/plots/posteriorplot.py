@@ -117,8 +117,6 @@ def plot_posterior_predictive_glm(trace, eval=None, lm=None, samples=30, **kwarg
             How many posterior samples to draw.
     Additional keyword arguments are passed to pylab.plot().
     """
-    import matplotlib.pyplot as plt
-
     if lm is None:
         lm = lambda x, sample: sample['Intercept'] + sample['x'] * x
 
