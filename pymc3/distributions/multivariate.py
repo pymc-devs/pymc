@@ -763,14 +763,20 @@ class LKJCorr(Continuous):
     """
 
     def __init__(self, eta=None, n=None, p=None, transform='interval', *args, **kwargs):
-        if p is not None:
+        if (p is not None) & (n is not None) & (eta is None):
+            warnings.warn('Reasigning input argument: shape parameter n -> eta; '
+                          'dimension parameter p -> n.',
+                          DeprecationWarning)
             self.n = p
             self.eta = n
             eta = self.eta
             n = self.n
-        else:
+        elif (n is not None) & (eta is not None) & (p is None):
             self.n = n
             self.eta = eta
+        else:
+            raise ValueError('Invalid parameter: please use eta as the shape parameter and '
+                             'n as the dimension parameter.')
             
         n_elem = int(n * (n - 1) / 2)
         self.mean = np.zeros(n_elem, dtype=theano.config.floatX)
