@@ -763,15 +763,16 @@ class LKJCorr(Continuous):
     """
 
     def __init__(self, eta=None, n=None, p=None, transform='interval', *args, **kwargs):
-        if (p is not None) & (n is not None) & (eta is None):
-            warnings.warn('Reasigning input argument: shape parameter n -> eta; '
-                          'dimension parameter p -> n.',
+        if (p is not None) and (n is not None) and (eta is None):
+            warnings.warn('Parameters to LKJCorr have changed: shape parameter n -> eta '
+                          'dimension parameter p -> n. Please update your code. '
+                          'Automatically re-assigning parameters for backwards compatibility.',
                           DeprecationWarning)
             self.n = p
             self.eta = n
             eta = self.eta
             n = self.n
-        elif (n is not None) & (eta is not None) & (p is None):
+        elif (n is not None) and (eta is not None) and (p is None):
             self.n = n
             self.eta = eta
         else:
