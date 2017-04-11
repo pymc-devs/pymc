@@ -579,7 +579,7 @@ class LKJCholeskyCov(Continuous):
     packed storge for the matrix: We store and return the values of
     the lower triangular matrix in a one-dimensional array, numbered
     by row::
-    
+
         [[0 - - -]
          [1 2 - -]
          [3 4 5 -]
