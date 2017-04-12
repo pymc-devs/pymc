@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 
-from pymc3 import HalfCauchy, Model, NUTS, Normal, find_MAP, get_data_file, sample
+from pymc3 import HalfCauchy, Model, Normal, get_data_file, sample
 from pymc3.distributions.timeseries import GaussianRandomWalk
 
 data = pd.read_csv(get_data_file('pymc3.examples', 'data/pancreatitis.csv'))
