@@ -811,7 +811,7 @@ class Approximation(object):
         Returns
         -------
         trace : pymc3.backends.base.MultiTrace
-            Samples drawn from the variational posterior.
+            Samples drawn from variational posterior.
         """
         if hide_transformed:
             vars_sampled = [v_ for v_ in self.model.unobserved_RVs
