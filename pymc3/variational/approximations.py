@@ -70,8 +70,6 @@ class MeanField(Approximation):
     def log_q_W_global(self, z):
         """
         log_q_W samples over q for global vars
-        Gradient wrt mu, rho in density parametrization
-        is set to zero to lower variance of ELBO
         """
         mu = self.scale_grad(self.mean)
         rho = self.scale_grad(self.rho)
@@ -165,8 +163,6 @@ class FullRank(Approximation):
     def log_q_W_global(self, z):
         """
         log_q_W samples over q for global vars
-        Gradient wrt mu, rho in density parametrization
-        is set to zero to lower variance of ELBO
         """
         mu = self.scale_grad(self.mean)
         L = self.scale_grad(self.L)
