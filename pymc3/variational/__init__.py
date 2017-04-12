@@ -25,7 +25,8 @@ from .inference import (
 from .approximations import (
     Histogram,
     FullRank,
-    MeanField
+    MeanField,
+    sample_vp
 )
 
 from . import approximations
