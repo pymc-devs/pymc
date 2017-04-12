@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 
-from pymc3 import StudentT, Model, NUTS, Normal, find_MAP, get_data_file, sample
+from pymc3 import HalfCauchy, Model, NUTS, Normal, find_MAP, get_data_file, sample
 from pymc3.distributions.timeseries import GaussianRandomWalk
 
 data = pd.read_csv(get_data_file('pymc3.examples', 'data/pancreatitis.csv'))
@@ -43,33 +43,22 @@ def interpolate(x0, y0, x, group):
 
 
 with Model() as model:
-    coeff_sd = StudentT('coeff_sd', 10, 1, 5**-2)
+    coeff_sd = HalfCauchy('coeff_sd', 5)
 
     y = GaussianRandomWalk('y', sd=coeff_sd, shape=(nknots, ncountries))
 
     p = interpolate(knots, y, age, group)
 
-    sd = StudentT('sd', 10, 2, 5**-2)
+    sd = HalfCauchy('sd', 5)
 
     vals = Normal('vals', p, sd=sd, observed=rate)
-
-
-with model:
-    s = find_MAP(vars=[sd, y])
-
-    step = NUTS(scaling=s)
-    trace = sample(100, step, s)
-
-    s = trace[-1]
-
-    step = NUTS(scaling=s)
 
 
 def run(n=3000):
     if n == "short":
         n = 150
     with model:
-        trace = sample(n, step, s)
+        trace = sample(n, tune=int(n/2))
 
     for i, country in enumerate(countries):
         plt.subplot(2, 3, i + 1)
