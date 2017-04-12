@@ -56,7 +56,7 @@ class MeanField(Approximation):
 
     @property
     def cov(self):
-        return tt.diag(rho2sd(self.rho))
+        return tt.diag(rho2sd(self.rho)**2)
 
     def create_shared_params(self):
         return {'mu': theano.shared(
