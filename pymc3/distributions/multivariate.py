@@ -13,7 +13,7 @@ from theano.tensor.nlinalg import det, matrix_inverse, trace
 
 import pymc3 as pm
 
-from pymc3.math import tround, Cholesky
+from pymc3.math import tround, Cholesky, mvnormal_logp, logdet
 from . import transforms
 from .distribution import Continuous, Discrete, draw_values, generate_samples
 from ..model import Deterministic
@@ -113,16 +113,24 @@ class MvNormal(Continuous):
 
         self.has_tau = tau is not None
         if cov is not None:
+            self.k = cov.shape[0]
+            self._cov_type = 'cov'
             cov = tt.as_tensor_variable(cov)
             if cov.ndim != 2:
                 raise ValueError('cov must be two dimensional.')
+            self.cov = cov
             self.chol_cov = cholesky(cov)
         elif tau is not None:
+            self.k = tau.shape[0]
+            self._cov_type = 'tau'
             tau = tt.as_tensor_variable(tau)
             if tau.ndim != 2:
                 raise ValueError('tau must be two dimensional.')
             self.chol_tau = cholesky(tau)
+            self.tau = tau
         else:
+            self.k = chol.shape[0]
+            self._cov_type = 'chol'
             if chol.ndim != 2:
                 raise ValueError('chol must be two dimensional.')
             self.chol_cov = tt.as_tensor_variable(chol)
@@ -156,6 +164,8 @@ class MvNormal(Continuous):
         value = value.reshape((-1, k))
         delta = value - mu
 
+        if self._cov_type == 'cov':
+            return mvnormal_logp()(self.cov, delta)
         if self.has_tau:
             return self._logp_tau(delta)
         return self._logp_chol(delta)
@@ -195,6 +205,18 @@ class MvNormal(Continuous):
         result += (delta_trans ** 2).sum()
         result = -0.5 * result
         return bound(result, ok)
+
+
+    def _logp_tau_(self, delta):
+        tau = self.tau
+        n, k = delta.shape
+
+        delta_trans = tt.dot(tau, delta.T).T
+
+        result = n * k * tt.log(2 * np.pi)
+        result -= n * logdet(tau)
+        result += (delta * delta_trans).sum()
+        return -0.5 * result
 
 
 class MvStudentT(Continuous):

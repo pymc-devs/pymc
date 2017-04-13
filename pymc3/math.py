@@ -18,6 +18,50 @@ from pymc3.theanof import floatX
 # pylint: enable=unused-import
 
 
+def mvnormal_logp():
+    cov = tt.matrix('cov')
+    cov.tag.test_value = floatX(np.eye(3))
+    delta = tt.matrix('delta')
+    delta.tag.test_value = floatX(np.zeros((2, 3)))
+
+    solve_lower = tt.slinalg.Solve(A_structure='lower_triangular')
+    solve_upper = tt.slinalg.Solve(A_structure='upper_triangular')
+    cholesky = Cholesky(nofail=True, lower=True)
+
+    n, k = delta.shape
+
+    chol_cov = cholesky(cov)
+    diag = tt.nlinalg.diag(chol_cov)
+    ok = tt.all(diag > 0)
+
+    delta_trans = solve_lower(chol_cov, delta.T).T
+
+    result = n * k * tt.log(2 * np.pi)
+    result += 2.0 * n * tt.sum(tt.log(diag))
+    result += (delta_trans ** 2).sum()
+    result = -0.5 * result
+    logp = theano.ifelse.ifelse(ok, result, floatX(-np.inf))
+
+    def dlogp(inputs, gradients):
+        g_logp, = gradients
+        cov, delta = inputs
+
+        g_logp.tag.test_value = floatX(np.array(1.))
+        n, k = delta.shape
+
+        chol_cov = cholesky(cov)
+        delta_trans = solve_lower(chol_cov, delta.T).T
+        inner = n * tt.eye(k) - tt.dot(delta_trans.T, delta_trans)
+        g_cov = solve_upper(chol_cov.T, inner)
+        g_cov = solve_upper(chol_cov.T, g_cov.T)
+
+        tau_delta = solve_lower(chol_cov, delta_trans.T)
+        g_delta = tau_delta.T
+        return [-0.5 * g_cov * g_logp, -0.5 * g_delta * g_logp]
+
+    return theano.OpFromGraph([cov, delta], [logp], grad_overrides=dlogp, inline=True)
+
+
 class Cholesky(Op):
     """
     Return a triangular matrix square root of positive semi-definite `x`.
