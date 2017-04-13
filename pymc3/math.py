@@ -29,12 +29,12 @@ class Cholesky(Op):
     L = cholesky(X, lower=True) implies dot(L, L.T) == X.
 
     """
-    __props__ = ('lower', 'destructive', 'safe')
+    __props__ = ('lower', 'destructive', 'nofail')
 
-    def __init__(self, lower=True, safe=True):
+    def __init__(self, lower=True, nofail=False):
         self.lower = lower
         self.destructive = False
-        self.safe = safe
+        self.nofail = nofail
 
     def make_node(self, x):
         x = tt.as_tensor_variable(x)
@@ -48,7 +48,7 @@ class Cholesky(Op):
         try:
             z[0] = scipy.linalg.cholesky(x, lower=self.lower).astype(x.dtype)
         except scipy.linalg.LinAlgError:
-            if self.safe:
+            if self.nofail:
                 z[0] = np.eye(x.shape[-1])
                 z[0][0, 0] = np.nan
             else:

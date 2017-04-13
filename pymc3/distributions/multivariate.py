@@ -10,12 +10,10 @@ import theano.tensor as tt
 from scipy import stats
 
 from theano.tensor.nlinalg import det, matrix_inverse, trace
-import theano.ifelse
 
 import pymc3 as pm
 
 from pymc3.math import tround, Cholesky
-from pymc3.theanof import floatX
 from . import transforms
 from .distribution import Continuous, Discrete, draw_values, generate_samples
 from ..model import Deterministic
@@ -57,6 +55,42 @@ class MvNormal(Continuous):
         tau, or chol is needed.
     lower : bool, default=True
         Whether chol is the lower tridiagonal cholesky factor.
+
+    Examples
+    --------
+    Define a multivariate normal variable for a given covariance
+    matrix::
+
+        cov = np.array([[1., 0.5], [0.5, 2]])
+        mu = np.zeros(2)
+        vals = pm.MvNormal('vals', mu=mu, cov=cov, shape=(5, 2))
+
+    Most of the time it is preferable to specify the cholesky
+    factor of the covariance instead. For example, we could
+    fit a multivariate outcome like this (see the docstring
+    of `LKJCholeskyCov` for more information about this)::
+
+        mu = np.zeros(3)
+        true_cov = np.array([[1.0, 0.5, 0.1],
+                             [0.5, 2.0, 0.2],
+                             [0.1, 0.2, 1.0]])
+        data = np.random.multivariate_normal(mu, true_cov, 10)
+
+        sd_dist = pm.HalfCauchy.dist(beta=2.5, shape=3)
+        chol_packed = pm.LKJCholeskyCov('chol_packed',
+            n=3, eta=2, sd_dist=sd_dist)
+        chol = pm.expand_packed_triangular(3, chol_packed)
+        vals = pm.MvNormal('vals', mu=mu, chol=chol, observed=data)
+
+    For unobserved values it can be better to use a non-centered
+    parametrization::
+
+        sd_dist = pm.HalfCauchy.dist(beta=2.5, shape=3)
+        chol_packed = pm.LKJCholeskyCov('chol_packed',
+            n=3, eta=2, sd_dist=sd_dist)
+        chol = pm.expand_packed_triangular(3, chol_packed)
+        vals_raw = pm.Normal('vals_raw', mu=0, sd=1, shape=(5, 3))
+        vals = pm.Deterministic('vals', tt.dot(chol, vals_raw.T).T)
     """
 
     def __init__(self, mu, cov=None, tau=None, chol=None, lower=True,
@@ -75,7 +109,7 @@ class MvNormal(Continuous):
         # moment. We work around that by using a cholesky op
         # that returns a nan as first entry instead of raising
         # an error.
-        cholesky = Cholesky(safe=True, lower=True)
+        cholesky = Cholesky(nofail=True, lower=True)
 
         self.has_tau = tau is not None
         if cov is not None:
