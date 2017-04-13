@@ -371,7 +371,7 @@ def sample_vp(approx, draws=100, hide_transformed=False, **kwargs):
     """
     if approx.__class__.__name__ == 'ADVIFit':
         import warnings
-        warnings.warn('Old ADVI interface is deprecated and be removed in future',
+        warnings.warn('Old ADVI interface is deprecated and will be removed in future',
                       DeprecationWarning, stacklevel=2)
         _approx = approx
         model = kwargs.get('model')

@@ -109,7 +109,8 @@ def advi(vars=None, start=None, model=None, n=5000, accurate_elbo=False,
         Inference. arXiv preprint arXiv:1603.00788.
     """
     import warnings
-    warnings.warn('Old ADVI interface is deprecated and be removed in future, use pm.ADVI instead',
+    warnings.warn('Old ADVI interface is deprecated and will '
+                  'be removed in future, use pm.ADVI instead',
                   DeprecationWarning, stacklevel=2)
     model = pm.modelcontext(model)
     if start is None:
