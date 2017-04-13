@@ -12,7 +12,90 @@ from theano.tensor.nlinalg import det, matrix_inverse, extract_diag, matrix_dot,
 from theano.tensor.nnet import sigmoid
 from theano.gof import Op, Apply
 import numpy as np
+import scipy.linalg
+from pymc3.theanof import floatX
+
 # pylint: enable=unused-import
+
+
+class Cholesky(Op):
+    """
+    Return a triangular matrix square root of positive semi-definite `x`.
+
+    This is a copy of the cholesky op in theano, that doesn't throw an
+    error if the matrix is not positive definite, but instead returns
+    nan.
+
+    L = cholesky(X, lower=True) implies dot(L, L.T) == X.
+
+    """
+    __props__ = ('lower', 'destructive', 'safe')
+
+    def __init__(self, lower=True, safe=True):
+        self.lower = lower
+        self.destructive = False
+        self.safe = safe
+
+    def make_node(self, x):
+        x = tt.as_tensor_variable(x)
+        if x.ndim != 2:
+            raise ValueError('Matrix must me two dimensional.')
+        return Apply(self, [x], [x.type()])
+
+    def perform(self, node, inputs, outputs):
+        x = inputs[0]
+        z = outputs[0]
+        try:
+            z[0] = scipy.linalg.cholesky(x, lower=self.lower).astype(x.dtype)
+        except scipy.linalg.LinAlgError:
+            if self.safe:
+                z[0] = np.eye(x.shape[-1])
+                z[0][0, 0] = np.nan
+            else:
+                raise
+
+    def grad(self, inputs, gradients):
+        """
+        Cholesky decomposition reverse-mode gradient update.
+
+        Symbolic expression for reverse-mode Cholesky gradient taken from [0]_
+
+        References
+        ----------
+        .. [0] I. Murray, "Differentiation of the Cholesky decomposition",
+           http://arxiv.org/abs/1602.07527
+
+        """
+
+        x = inputs[0]
+        dz = gradients[0]
+        chol_x = self(x)
+        ok = tt.all(tt.nlinalg.diag(chol_x) > 0)
+        chol_x = tt.switch(ok, chol_x, tt.fill_diagonal(chol_x, 1))
+        dz = tt.switch(ok, dz, floatX(1))
+
+        # deal with upper triangular by converting to lower triangular
+        if not self.lower:
+            chol_x = chol_x.T
+            dz = dz.T
+
+        def tril_and_halve_diagonal(mtx):
+            """Extracts lower triangle of square matrix and halves diagonal."""
+            return tt.tril(mtx) - tt.diag(tt.diagonal(mtx) / 2.)
+
+        def conjugate_solve_triangular(outer, inner):
+            """Computes L^{-T} P L^{-1} for lower-triangular L."""
+            solve = tt.slinalg.Solve(A_structure="upper_triangular")
+            return solve(outer.T, solve(outer.T, inner.T).T)
+
+        s = conjugate_solve_triangular(
+            chol_x, tril_and_halve_diagonal(chol_x.T.dot(dz)))
+
+        if self.lower:
+            grad = tt.tril(s + s.T) - tt.diag(tt.diagonal(s))
+        else:
+            grad = tt.triu(s + s.T) - tt.diag(tt.diagonal(s))
+        return [tt.switch(ok, grad, floatX(np.nan))]
 
 
 def tround(*args, **kwargs):
@@ -87,7 +170,7 @@ def invprobit(x):
     return 0.5 * erfc(-x / sqrt(2))
 
 
-def expand_packed_triangular(n, packed, lower=False, diagonal_only=False):
+def expand_packed_triangular(n, packed, lower=True, diagonal_only=False):
     R"""Convert a packed triangular matrix into a two dimensional array.
 
     Triangular matrices can be stored with better space efficiancy by
@@ -105,7 +188,7 @@ def expand_packed_triangular(n, packed, lower=False, diagonal_only=False):
         The number of rows of the triangular matrix.
     packed : theano.vector
         The matrix in packed format.
-    lower : bool
+    lower : bool, default=True
         If true, assume that the matrix is lower triangular.
     diagonal_only : bool
         If true, return only the diagonal of the matrix.
