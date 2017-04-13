@@ -19,6 +19,7 @@ shape of (3, 2).
 """
 from glob import glob
 
+import itertools
 from joblib import Parallel, delayed
 import pickle
 import os
@@ -247,14 +248,7 @@ class Text(BaseSMCTrace):
         lpoint : List of variable values
             Values mapped to variable names
         """
-
-        vals = {}
-        for varname, value in zip(self.varnames, lpoint):
-
-            vals[varname] = value.ravel()
-
-        columns = [str(val) for var in self.varnames for val in vals[var]]
-
+        columns = itertools.chain.from_iterable(map(str, value.ravel()) for value in lpoint)
         with open(self.filename, 'a') as fh:
             fh.write(','.join(columns) + '\n')
 
