@@ -33,6 +33,9 @@ class MeanField(Approximation):
 
     model : PyMC3 model for inference
 
+    start : Point
+        initial mean
+
     cost_part_grad_scale : float or scalar tensor
         Scaling score part of gradient can be useful near optimum for
         archiving better convergence properties. Common schedule is
@@ -58,9 +61,10 @@ class MeanField(Approximation):
     def cov(self):
         return tt.diag(rho2sd(self.rho)**2)
 
-    def create_shared_params(self):
+    def create_shared_params(self, **kwargs):
+        start = self.gbij(kwargs.get('start', self.model.test_point))
         return {'mu': theano.shared(
-                    pm.floatX(self.input.tag.test_value[self.global_slc]),
+                    pm.floatX(start),
                     'mu'),
                 'rho': theano.shared(
                     np.zeros((self.global_size,), dtype=theano.config.floatX),
@@ -99,6 +103,9 @@ class FullRank(Approximation):
         See (AEVB; Kingma and Welling, 2014) for details
 
     model : PyMC3 model for inference
+
+    start : Point
+        initial mean
 
     cost_part_grad_scale : float or scalar tensor
         Scaling score part of gradient can be useful near optimum for
@@ -147,16 +154,15 @@ class FullRank(Approximation):
         tril_index_matrix[np.tril_indices(n)[::-1]] = np.arange(num_tril_entries)
         return tril_index_matrix
 
-    def create_shared_params(self):
+    def create_shared_params(self, **kwargs):
+        start = self.gbij(kwargs.get('start', self.model.test_point))
         n = self.global_size
         L_tril = (
             np.eye(n)
             [np.tril_indices(n)]
             .astype(theano.config.floatX)
         )
-        return {'mu': theano.shared(
-                    self.input.tag.test_value[self.global_slc],
-                    'mu'),
+        return {'mu': theano.shared(pm.floatX(start), 'mu'),
                 'L_tril': theano.shared(L_tril, 'L_tril')
                 }
 
@@ -251,18 +257,14 @@ class Histogram(Approximation):
                          for var in model.free_RVs])):
             raise ValueError('trace has not all FreeRV')
 
-    def _setup(self, **kwargs):
-        self._histogram_order = ArrayOrdering(self.global_vars)
-        self._bij = DictToArrayBijection(self._histogram_order, dict())
-
     def create_shared_params(self, **kwargs):
         trace = kwargs.get('trace')
         if trace is None:
-            histogram = np.atleast_2d(self._bij.map(self.model.test_point))
+            histogram = np.atleast_2d(self.gbij.map(self.model.test_point))
         else:
             histogram = np.empty((len(trace), self.global_size))
             for i in range(len(trace)):
-                histogram[i] = self._bij.map(trace[i])
+                histogram[i] = self.gbij.map(trace[i])
         return theano.shared(pm.floatX(histogram), 'histogram')
 
     def randidx(self, size=None):
@@ -320,6 +322,11 @@ class Histogram(Approximation):
     def mean(self):
         return self.histogram.mean(0)
 
+    @property
+    def cov(self):
+        x = (self.histogram - self.mean)
+        return x.T.dot(x) / self.histogram.shape[0]
+
     @classmethod
     def from_noise(cls, size, jitter=.01, local_rv=None, start=None, model=None):
         """
@@ -344,7 +351,7 @@ class Histogram(Approximation):
         hist = cls(None, local_rv=local_rv, model=model)
         if start is None:
             start = hist.model.test_point
-        start = hist._bij.map(start)
+        start = hist.gbij.map(start)
         # Initialize particles
         x0 = np.tile(start, (size, 1))
         x0 += np.random.normal(0, jitter, x0.shape)

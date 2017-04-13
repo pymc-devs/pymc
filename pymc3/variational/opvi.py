@@ -6,7 +6,7 @@ import theano.tensor as tt
 import pymc3 as pm
 from .updates import adam
 from ..distributions.dist_math import rho2sd, log_normal
-from ..model import modelcontext, ArrayOrdering
+from ..model import modelcontext, ArrayOrdering, DictToArrayBijection
 from ..theanof import tt_rng, memoize, change_flags, GradScale
 
 
@@ -487,6 +487,8 @@ class Approximation(object):
         self.local_vars = self.get_local_vars(**kwargs)
         self.global_vars = self.get_global_vars(**kwargs)
         self.order = ArrayOrdering(self.local_vars + self.global_vars)
+        self.gbij = DictToArrayBijection(ArrayOrdering(self.global_vars), {})
+        self.lbij = DictToArrayBijection(ArrayOrdering(self.local_vars), {})
         self.flat_view = model.flatten(
             vars=self.local_vars + self.global_vars
         )
@@ -508,20 +510,6 @@ class Approximation(object):
 
     def get_local_vars(self, **kwargs):
         return [v for v in self.model.free_RVs if v in self.known]
-
-    def __getstate__(self):
-        state = self.__dict__.copy()
-        # can be inferred from the rest parts
-        state.pop('flat_view')
-        state.pop('order')
-        return state
-
-    def __setstate__(self, state):
-        self.__dict__.update(state)
-        self.order = ArrayOrdering(self.local_vars + self.global_vars)
-        self.flat_view = self.model.flatten(
-            vars=self.local_vars + self.global_vars
-        )
 
     _view = property(lambda self: self.flat_view.view)
     input = property(lambda self: self.flat_view.input)

@@ -202,6 +202,28 @@ class ADVI(Inference):
             KL, MeanField, None,
             local_rv=local_rv, model=model, cost_part_grad_scale=cost_part_grad_scale)
 
+    @classmethod
+    def from_mean_field(cls, mean_field):
+        """
+        Construct ADVI from MeanField approximation
+
+        Parameters
+        ----------
+        mean_field : MeanField
+            approximation to start with
+
+        Returns
+        -------
+        ADVI
+        """
+        if not isinstance(mean_field, MeanField):
+            raise TypeError('Expected MeanField, got %r' % mean_field)
+        inference = object.__new__(cls)
+        objective = KL(mean_field)(None)
+        inference.hist = np.asarray(())
+        inference.objective = objective
+        return inference
+
 
 class FullRankADVI(Inference):
     """
@@ -240,6 +262,28 @@ class FullRankADVI(Inference):
         super(FullRankADVI, self).__init__(
             KL, FullRank, None,
             local_rv=local_rv, model=model, cost_part_grad_scale=cost_part_grad_scale, gpu_compat=gpu_compat)
+
+    @classmethod
+    def from_full_rank(cls, full_rank):
+        """
+        Construct FullRankADVI from FullRank approximation
+
+        Parameters
+        ----------
+        full_rank : FullRank
+            approximation to start with
+
+        Returns
+        -------
+        FullRankADVI
+        """
+        if not isinstance(full_rank, FullRank):
+            raise TypeError('Expected MeanField, got %r' % full_rank)
+        inference = object.__new__(cls)
+        objective = KL(full_rank)(None)
+        inference.hist = np.asarray(())
+        inference.objective = objective
+        return inference
 
     @classmethod
     def from_mean_field(cls, mean_field, gpu_compat=False):
