@@ -1,4 +1,5 @@
 import scipy.stats as stats
+import numpy as np
 
 
 class Callback(object):
@@ -26,10 +27,11 @@ class CheckLossConvergence(Callback):
     def __call__(self, approx, hist, i):
         if hist is None or i < self.window_size or i % self.every:
             return
-        diff = hist[-self.window_size:] - hist[-self.window_size-1:-1]
+        diff = ((hist[-self.window_size:] - hist[-self.window_size-1:-1])
+                / hist[-self.window_size-1:-1])
         mean = diff.mean()
         # unbiased std of mean
-        std = diff.std() / (self.window_size - 1)
+        std = diff.std() / (self.window_size - 1)**.5
         t = abs(mean / std)
         p = stats.t.cdf(t, df=self.window_size) - .5
         # 1 - confidence is lower allowed p
