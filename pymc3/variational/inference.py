@@ -88,7 +88,7 @@ class Inference(object):
             progress.close()
         return step_func.profile
 
-    def fit(self, n=10000, score=None, callbacks=None, callback_every=1,
+    def fit(self, n=10000, score=None, callbacks=None,
             **kwargs):
         """
         Performs Operator Variational Inference
@@ -129,9 +129,8 @@ class Inference(object):
                     if i % 10 == 0:
                         avg_loss = scores[max(0, i - 1000):i+1].mean()
                         progress.set_description('Average Loss = {:,.5g}'.format(avg_loss))
-                    if i % callback_every == 0:
-                        for callback in callbacks:
-                            callback(self.approx, scores[:i+1], i)
+                    for callback in callbacks:
+                        callback(self.approx, scores[:i+1], i)
             except (KeyboardInterrupt, StopIteration):   # pragma: no cover
                 # do not print log on the same line
                 progress.close()
@@ -156,7 +155,9 @@ class Inference(object):
             try:
                 for _ in progress:
                     step_func()
-            except KeyboardInterrupt:
+                    for callback in callbacks:
+                        callback(self.approx, None, i)
+            except (KeyboardInterrupt, StopIteration):
                 pass
             finally:
                 progress.close()

@@ -62,7 +62,7 @@ class MeanField(Approximation):
         return tt.diag(rho2sd(self.rho)**2)
 
     def create_shared_params(self, **kwargs):
-        start = self.gbij(kwargs.get('start', self.model.test_point))
+        start = self.gbij.map(kwargs.get('start', self.model.test_point))
         return {'mu': theano.shared(
                     pm.floatX(start),
                     'mu'),
@@ -155,7 +155,7 @@ class FullRank(Approximation):
         return tril_index_matrix
 
     def create_shared_params(self, **kwargs):
-        start = self.gbij(kwargs.get('start', self.model.test_point))
+        start = self.gbij.map(kwargs.get('start', self.model.test_point))
         n = self.global_size
         L_tril = (
             np.eye(n)

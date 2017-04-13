@@ -568,7 +568,8 @@ def init_nuts(init='ADVI', njobs=1, n_init=500000, model=None,
 
     if init == 'advi':
         approx = pm.fit(
-            n=n_init, method='advi', model=model
+            n=n_init, method='advi', model=model,
+            callbacks=[pm.callbacks.CheckLossConvergence()]
         )  # type: pm.MeanField
         start = approx.sample_vp(draws=njobs)
         cov = approx.cov.eval()
@@ -577,7 +578,8 @@ def init_nuts(init='ADVI', njobs=1, n_init=500000, model=None,
     elif init == 'advi_map':
         start = pm.find_MAP()
         approx = pm.MeanField(model=model, start=start)
-        pm.fit(n=n_init, method=pm.ADVI.from_mean_field(approx))
+        pm.fit(n=n_init, method=pm.ADVI.from_mean_field(approx),
+               callbacks=[pm.callbacks.CheckLossConvergence()])
         start = approx.sample_vp(draws=n_init)
         cov = approx.cov.eval()
         if njobs == 1:

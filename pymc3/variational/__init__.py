@@ -35,3 +35,4 @@ from . import test_functions
 from . import opvi
 from . import updates
 from . import inference
+from . import callbacks
