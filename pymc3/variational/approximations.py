@@ -42,6 +42,10 @@ class MeanField(Approximation):
         See (Sticking the Landing; Geoffrey Roeder,
         Yuhuai Wu, David Duvenaud, 2016) for details
 
+    seed : None or int
+        leave None to use package global RandomStream or other
+        valid value to create instance specific one
+
     References
     ----------
     Geoffrey Roeder, Yuhuai Wu, David Duvenaud, 2016
@@ -113,16 +117,21 @@ class FullRank(Approximation):
         See (Sticking the Landing; Geoffrey Roeder,
         Yuhuai Wu, David Duvenaud, 2016) for details
 
+    seed : None or int
+        leave None to use package global RandomStream or other
+        valid value to create instance specific one
+
     References
     ----------
     Geoffrey Roeder, Yuhuai Wu, David Duvenaud, 2016
         Sticking the Landing: A Simple Reduced-Variance Gradient for ADVI
         approximateinference.org/accepted/RoederEtAl2016.pdf
     """
-    def __init__(self, local_rv=None, model=None, cost_part_grad_scale=1, gpu_compat=False):
+    def __init__(self, local_rv=None, model=None, cost_part_grad_scale=1, gpu_compat=False, seed=None):
         super(FullRank, self).__init__(
             local_rv=local_rv, model=model,
-            cost_part_grad_scale=cost_part_grad_scale
+            cost_part_grad_scale=cost_part_grad_scale,
+            seed=seed
         )
         self.gpu_compat = gpu_compat
 
@@ -239,6 +248,10 @@ class Histogram(Approximation):
 
     model : PyMC3 model
 
+    seed : None or int
+        leave None to use package global RandomStream or other
+        valid value to create instance specific one
+
     Usage
     -----
     >>> with model:
@@ -246,8 +259,8 @@ class Histogram(Approximation):
     ...     trace = sample(1000, step=step)
     ...     histogram = Histogram(trace[100:])
     """
-    def __init__(self, trace, local_rv=None, model=None):
-        super(Histogram, self).__init__(local_rv=local_rv, model=model, trace=trace)
+    def __init__(self, trace, local_rv=None, model=None, seed=None):
+        super(Histogram, self).__init__(local_rv=local_rv, model=model, trace=trace, seed=seed)
 
     def check_model(self, model, **kwargs):
         trace = kwargs.get('trace')
@@ -327,7 +340,7 @@ class Histogram(Approximation):
         return x.T.dot(x) / self.histogram.shape[0]
 
     @classmethod
-    def from_noise(cls, size, jitter=.01, local_rv=None, start=None, model=None):
+    def from_noise(cls, size, jitter=.01, local_rv=None, start=None, model=None, seed=None):
         """
         Initialize Histogram with random noise
 
@@ -347,7 +360,7 @@ class Histogram(Approximation):
         -------
         Histogram
         """
-        hist = cls(None, local_rv=local_rv, model=model)
+        hist = cls(None, local_rv=local_rv, model=model, seed=seed)
         if start is None:
             start = hist.model.test_point
         start = hist.gbij.map(start)

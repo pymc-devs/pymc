@@ -147,7 +147,8 @@ class TestApproximates:
                 inf.fit(10)
                 approx = inf.fit(self.NITER,
                                  obj_optimizer=self.optimizer,
-                                 callbacks=[pm.callbacks.CheckLossConvergence()])
+                                 callbacks=
+                                 [pm.callbacks.CheckLossConvergence1()])
                 trace = approx.sample(10000)
             np.testing.assert_allclose(np.mean(trace['mu']), mu_post, rtol=0.1)
             np.testing.assert_allclose(np.std(trace['mu']), np.sqrt(1. / d), rtol=0.4)
@@ -174,7 +175,9 @@ class TestApproximates:
                 mu_ = Normal('mu', mu=mu0, sd=sd0, testval=0)
                 Normal('x', mu=mu_, sd=sd, observed=minibatches, total_size=n)
                 inf = self.inference()
-                approx = inf.fit(self.NITER * 3, obj_optimizer=self.optimizer)
+                approx = inf.fit(self.NITER * 3, obj_optimizer=self.optimizer,
+                                 callbacks=
+                                 [pm.callbacks.CheckLossConvergence1()])
                 trace = approx.sample(10000)
             np.testing.assert_allclose(np.mean(trace['mu']), mu_post, rtol=0.1)
             np.testing.assert_allclose(np.std(trace['mu']), np.sqrt(1. / d), rtol=0.4)
@@ -205,7 +208,9 @@ class TestApproximates:
                 mu_ = Normal('mu', mu=mu0, sd=sd0, testval=0)
                 Normal('x', mu=mu_, sd=sd, observed=data_t, total_size=n)
                 inf = self.inference()
-                approx = inf.fit(self.NITER * 3, callbacks=[cb], obj_n_mc=10, obj_optimizer=self.optimizer)
+                approx = inf.fit(self.NITER * 3, callbacks=
+                [cb, pm.callbacks.CheckLossConvergence1()],
+                                 obj_n_mc=10, obj_optimizer=self.optimizer)
                 trace = approx.sample(10000)
             np.testing.assert_allclose(np.mean(trace['mu']), mu_post, rtol=0.4)
             np.testing.assert_allclose(np.std(trace['mu']), np.sqrt(1. / d), rtol=0.4)

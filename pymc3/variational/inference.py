@@ -184,6 +184,9 @@ class ADVI(Inference):
         1 at the start and 0 in the end. So slow decay will be ok.
         See (Sticking the Landing; Geoffrey Roeder,
         Yuhuai Wu, David Duvenaud, 2016) for details
+    seed : None or int
+        leave None to use package global RandomStream or other
+        valid value to create instance specific one
 
     References
     ----------
@@ -198,10 +201,10 @@ class ADVI(Inference):
     - Kingma, D. P., & Welling, M. (2014).
       Auto-Encoding Variational Bayes. stat, 1050, 1.
     """
-    def __init__(self, local_rv=None, model=None, cost_part_grad_scale=1):
+    def __init__(self, local_rv=None, model=None, cost_part_grad_scale=1, seed=None):
         super(ADVI, self).__init__(
             KL, MeanField, None,
-            local_rv=local_rv, model=model, cost_part_grad_scale=cost_part_grad_scale)
+            local_rv=local_rv, model=model, cost_part_grad_scale=cost_part_grad_scale, seed=seed)
 
     @classmethod
     def from_mean_field(cls, mean_field):
@@ -246,6 +249,10 @@ class FullRankADVI(Inference):
         See (Sticking the Landing; Geoffrey Roeder,
         Yuhuai Wu, David Duvenaud, 2016) for details
 
+    seed : None or int
+        leave None to use package global RandomStream or other
+        valid value to create instance specific one
+
     References
     ----------
     - Kucukelbir, A., Tran, D., Ranganath, R., Gelman, A.,
@@ -259,10 +266,11 @@ class FullRankADVI(Inference):
     - Kingma, D. P., & Welling, M. (2014).
       Auto-Encoding Variational Bayes. stat, 1050, 1.
     """
-    def __init__(self, local_rv=None, model=None, cost_part_grad_scale=1, gpu_compat=False):
+    def __init__(self, local_rv=None, model=None, cost_part_grad_scale=1, gpu_compat=False, seed=None):
         super(FullRankADVI, self).__init__(
             KL, FullRank, None,
-            local_rv=local_rv, model=model, cost_part_grad_scale=cost_part_grad_scale, gpu_compat=gpu_compat)
+            local_rv=local_rv, model=model, cost_part_grad_scale=cost_part_grad_scale,
+            gpu_compat=gpu_compat, seed=seed)
 
     @classmethod
     def from_full_rank(cls, full_rank):
@@ -366,6 +374,9 @@ class SVGD(Inference):
         initial point for inference
     histogram : Histogram
         initialize SVGD with given Histogram instead of default initial particles
+    seed : None or int
+        leave None to use package global RandomStream or other
+        valid value to create instance specific one
 
     References
     ----------
@@ -374,17 +385,17 @@ class SVGD(Inference):
         arXiv:1608.04471
     """
     def __init__(self, n_particles=100, jitter=.01, model=None, kernel=test_functions.rbf,
-                 start=None, histogram=None, local_rv=None):
+                 start=None, histogram=None, seed=None, local_rv=None):
         if histogram is None:
             histogram = Histogram.from_noise(
-                n_particles, jitter=jitter, start=start, model=model, local_rv=local_rv)
+                n_particles, jitter=jitter, start=start, model=model, local_rv=local_rv, seed=seed)
         super(SVGD, self).__init__(
             KSD, histogram,
             kernel,
-            model=model)
+            model=model, seed=seed)
 
 
-def fit(n=10000, local_rv=None, method='advi', model=None, **kwargs):
+def fit(n=10000, local_rv=None, method='advi', model=None, seed=None, **kwargs):
     """
     Handy shortcut for using inference methods in functional way
 
@@ -402,6 +413,9 @@ def fit(n=10000, local_rv=None, method='advi', model=None, **kwargs):
     kwargs : kwargs for Inference.fit
     frac : float
         if method is 'advi->fullrank_advi' represents advi fraction when training
+    seed : None or int
+        leave None to use package global RandomStream or other
+        valid value to create instance specific one
 
     Returns
     -------
@@ -420,7 +434,7 @@ def fit(n=10000, local_rv=None, method='advi', model=None, **kwargs):
             raise ValueError('frac should be in (0, 1)')
         n1 = int(n * frac)
         n2 = n-n1
-        inference = ADVI(local_rv=local_rv, model=model)
+        inference = ADVI(local_rv=local_rv, model=model, seed=seed)
         logger.info('fitting advi ...')
         inference.fit(n1, **kwargs)
         inference = FullRankADVI.from_advi(inference)
@@ -430,7 +444,7 @@ def fit(n=10000, local_rv=None, method='advi', model=None, **kwargs):
     elif isinstance(method, str):
         try:
             inference = _select[method.lower()](
-                local_rv=local_rv, model=model
+                local_rv=local_rv, model=model, seed=seed
             )
         except KeyError:
             raise KeyError('method should be one of %s '

@@ -1,4 +1,11 @@
 import scipy.stats as stats
+import numpy as np
+
+__all__ = [
+    'Callback',
+    'CheckLossConvergence1',
+    'CheckLossConvergence2'
+]
 
 
 class Callback(object):
@@ -6,8 +13,8 @@ class Callback(object):
         raise NotImplementedError
 
 
-class CheckLossConvergence(Callback):
-    def __init__(self, every=100, window_size=1000, tolerance=1e-3):
+class CheckLossConvergence1(Callback):
+    def __init__(self, every=100, window_size=2000, tolerance=1e-3):
         """
 
         Parameters
@@ -35,4 +42,25 @@ class CheckLossConvergence(Callback):
         p = stats.t.cdf(t, df=self.window_size) - .5
         # 1 - confidence is lower allowed p
         if p < self.critical:
+            raise StopIteration
+
+
+class CheckLossConvergence2(Callback):
+    def __init__(self, every=100, tolerance=1e-2, steps=None):
+        self.steps = steps
+        self.every = every
+        self.tolerance = tolerance
+
+    def __call__(self, approx, hist, i):
+        if hist is None or i < self.every or i % self.every:
+            return
+        if self.steps is None:
+            window = int(max(0.1 * hist.size // self.every, 2.0))
+        else:
+            window = int(max(0.1 * self.steps // self.every, 2.0))
+        losses = hist[::self.every][-window:]
+        diff = np.abs((losses[1:]-losses[:-1])/losses[:-1])
+        mean = np.mean(diff)
+        med = np.median(diff)
+        if mean < self.tolerance or med < self.tolerance:
             raise StopIteration
