@@ -1,5 +1,4 @@
 import scipy.stats as stats
-import numpy as np
 
 
 class Callback(object):
