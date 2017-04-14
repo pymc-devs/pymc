@@ -5,7 +5,7 @@ from theano import tensor as tt
 import pymc3 as pm
 from pymc3.distributions.dist_math import rho2sd, log_normal, log_normal_mv
 from pymc3.variational.opvi import Approximation
-from pymc3.theanof import tt_rng, memoize
+from pymc3.theanof import memoize
 
 
 __all__ = [
@@ -278,7 +278,7 @@ class Histogram(Approximation):
                 pass
         else:
             size = tuple(np.atleast_1d(size))
-        return (tt_rng()
+        return (self._rng
                 .uniform(size=size, low=0.0, high=self.histogram.shape[0] - 1e-16)
                 .astype('int64'))
 

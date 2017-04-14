@@ -431,6 +431,10 @@ class Approximation(object):
         See (Sticking the Landing; Geoffrey Roeder,
         Yuhuai Wu, David Duvenaud, 2016) for details
 
+    seed : None or int
+        leave None to use package global RandomStream or other
+        valid value to create instance specific one
+
     Subclassing
     -----------
     Defining an approximation needs
@@ -470,8 +474,10 @@ class Approximation(object):
     initial_dist_name = 'normal'
     initial_dist_map = 0.
 
-    def __init__(self, local_rv=None, model=None, cost_part_grad_scale=1, **kwargs):
+    def __init__(self, local_rv=None, model=None, cost_part_grad_scale=1, seed=None, **kwargs):
         model = modelcontext(model)
+        self._seed = seed
+        self._rng = tt_rng(seed)
         self.model = model
         self.check_model(model, **kwargs)
         if local_rv is None:
@@ -495,6 +501,17 @@ class Approximation(object):
         self.grad_scale_op = GradScale(cost_part_grad_scale)
         self._setup(**kwargs)
         self.shared_params = self.create_shared_params(**kwargs)
+
+    def seed(self, seed=None):
+        """
+        Reinitialize RandomStream used by this approximation
+
+        Parameters
+        ----------
+        seed : int
+        """
+        self._seed = seed
+        self._rng.seed(seed)
 
     @property
     def normalizing_constant(self):
@@ -678,7 +695,7 @@ class Approximation(object):
         shape = tt.stack(*shape)
         if theano_condition_is_here:
             no_rand = tt.as_tensor(no_rand)
-            sample = getattr(tt_rng(), self.initial_dist_name)(shape)
+            sample = getattr(self._rng, self.initial_dist_name)(shape)
             space = tt.switch(
                 no_rand,
                 tt.ones_like(sample) * self.initial_dist_map,
@@ -688,7 +705,7 @@ class Approximation(object):
             if no_rand:
                 return tt.ones(shape) * self.initial_dist_map
             else:
-                return getattr(tt_rng(), self.initial_dist_name)(shape)
+                return getattr(self._rng, self.initial_dist_name)(shape)
         return space
 
     def random_local(self, size=None, no_rand=False):
