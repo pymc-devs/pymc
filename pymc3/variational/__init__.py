@@ -1,4 +1,4 @@
-from .advi import advi
+from .advi import advi, sample_vp
 from .advi_minibatch import advi_minibatch
 
 from .updates import (
@@ -26,7 +26,7 @@ from .approximations import (
     Histogram,
     FullRank,
     MeanField,
-    sample_vp
+    sample_approx
 )
 
 from . import approximations

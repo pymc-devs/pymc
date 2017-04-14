@@ -571,7 +571,7 @@ def init_nuts(init='ADVI', njobs=1, n_init=500000, model=None,
             n=n_init, method='advi', model=model,
             callbacks=[pm.callbacks.CheckLossConvergence()]
         )  # type: pm.MeanField
-        start = approx.sample_vp(draws=njobs)
+        start = approx.sample(draws=njobs)
         cov = approx.cov.eval()
         if njobs == 1:
             start = start[0]
@@ -580,7 +580,7 @@ def init_nuts(init='ADVI', njobs=1, n_init=500000, model=None,
         approx = pm.MeanField(model=model, start=start)
         pm.fit(n=n_init, method=pm.ADVI.from_mean_field(approx),
                callbacks=[pm.callbacks.CheckLossConvergence()])
-        start = approx.sample_vp(draws=n_init)
+        start = approx.sample(draws=n_init)
         cov = approx.cov.eval()
         if njobs == 1:
             start = start[0]

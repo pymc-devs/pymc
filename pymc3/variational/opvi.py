@@ -785,7 +785,7 @@ class Approximation(object):
 
         return inner
 
-    def sample_vp(self, draws=1, hide_transformed=False):
+    def sample(self, draws=1, hide_transformed=False):
         """
         Draw samples from variational posterior.
 

@@ -359,7 +359,7 @@ class Histogram(Approximation):
         return hist
 
 
-def sample_vp(approx, draws=100, hide_transformed=False, **kwargs):
+def sample_approx(approx, draws=100, hide_transformed=False):
     """
     Draw samples from variational posterior.
 
@@ -376,20 +376,6 @@ def sample_vp(approx, draws=100, hide_transformed=False, **kwargs):
     trace : pymc3.backends.base.MultiTrace
         Samples drawn from variational posterior.
     """
-    if approx.__class__.__name__ == 'ADVIFit':
-        import warnings
-        warnings.warn('Old ADVI interface is deprecated and will be removed in future',
-                      DeprecationWarning, stacklevel=2)
-        _approx = approx
-        model = kwargs.get('model')
-        local_rv = kwargs.get('local_RVs')
-        approx = MeanField(model=model, local_rv=local_rv)
-        bij = DictToArrayBijection(approx.order, {})
-        means = bij.map(_approx.means)
-        stds = bij.map(_approx.stds)
-        rhos = np.log(np.exp(stds) - 1)
-        approx.mean.set_value(means.astype(approx.mean.dtype))
-        approx.rho.set_value(rhos.astype(approx.rho.dtype))
     if not isinstance(approx, Approximation):
         raise TypeError('Need Approximation instance, got %r' % approx)
-    return approx.sample_vp(draws=draws, hide_transformed=hide_transformed)
+    return approx.sample(draws=draws, hide_transformed=hide_transformed)

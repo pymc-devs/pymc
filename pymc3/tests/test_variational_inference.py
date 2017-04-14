@@ -59,7 +59,7 @@ def _test_aevb(self):
     with model:
         inference = self.inference(local_rv={x: (mu, rho)})
         approx = inference.fit(3, obj_n_mc=2, obj_optimizer=self.optimizer)
-        approx.sample_vp(10)
+        approx.sample(10)
         approx.apply_replacements(
             y,
             more_replacements={x: np.asarray([1, 1], dtype=x.dtype)}
@@ -105,17 +105,17 @@ class TestApproximates:
             x_sampled = app.view(app.random_fn(), 'x')
             assert x_sampled.shape == () + model['x'].dshape
 
-        def test_sample_vp(self):
+        def test_sample(self):
             n_samples = 100
             xs = np.random.binomial(n=1, p=0.2, size=n_samples)
             with pm.Model():
                 p = pm.Beta('p', alpha=1, beta=1)
                 pm.Binomial('xs', n=1, p=p, observed=xs)
                 app = self.inference().approx
-                trace = app.sample_vp(draws=1, hide_transformed=True)
+                trace = app.sample(draws=1, hide_transformed=True)
                 assert trace.varnames == ['p']
                 assert len(trace) == 1
-                trace = app.sample_vp(draws=10, hide_transformed=False)
+                trace = app.sample(draws=10, hide_transformed=False)
                 assert sorted(trace.varnames) == ['p', 'p_logodds_']
                 assert len(trace) == 10
 
@@ -148,7 +148,7 @@ class TestApproximates:
                 approx = inf.fit(self.NITER,
                                  obj_optimizer=self.optimizer,
                                  callbacks=[pm.callbacks.CheckLossConvergence()])
-                trace = approx.sample_vp(10000)
+                trace = approx.sample(10000)
             np.testing.assert_allclose(np.mean(trace['mu']), mu_post, rtol=0.1)
             np.testing.assert_allclose(np.std(trace['mu']), np.sqrt(1. / d), rtol=0.4)
 
@@ -175,7 +175,7 @@ class TestApproximates:
                 Normal('x', mu=mu_, sd=sd, observed=minibatches, total_size=n)
                 inf = self.inference()
                 approx = inf.fit(self.NITER * 3, obj_optimizer=self.optimizer)
-                trace = approx.sample_vp(10000)
+                trace = approx.sample(10000)
             np.testing.assert_allclose(np.mean(trace['mu']), mu_post, rtol=0.1)
             np.testing.assert_allclose(np.std(trace['mu']), np.sqrt(1. / d), rtol=0.4)
 
@@ -206,7 +206,7 @@ class TestApproximates:
                 Normal('x', mu=mu_, sd=sd, observed=data_t, total_size=n)
                 inf = self.inference()
                 approx = inf.fit(self.NITER * 3, callbacks=[cb], obj_n_mc=10, obj_optimizer=self.optimizer)
-                trace = approx.sample_vp(10000)
+                trace = approx.sample(10000)
             np.testing.assert_allclose(np.mean(trace['mu']), mu_post, rtol=0.4)
             np.testing.assert_allclose(np.std(trace['mu']), np.sqrt(1. / d), rtol=0.4)
 
@@ -281,9 +281,9 @@ class TestHistogram(SeededTest):
         with models.multidimensional_model()[1]:
             full_rank = FullRankADVI()
             approx = full_rank.fit(20)
-            trace0 = approx.sample_vp(10000)
+            trace0 = approx.sample(10000)
             histogram = Histogram(trace0)
-        trace1 = histogram.sample_vp(100000)
+        trace1 = histogram.sample(100000)
         np.testing.assert_allclose(trace0['x'].mean(0), trace1['x'].mean(0), atol=0.01)
         np.testing.assert_allclose(trace0['x'].var(0), trace1['x'].var(0), atol=0.01)
 
@@ -295,9 +295,9 @@ class TestHistogram(SeededTest):
         with model:
             inference = ADVI(local_rv={x: (mu, rho)})
             approx = inference.approx
-            trace0 = approx.sample_vp(10000)
+            trace0 = approx.sample(10000)
             histogram = Histogram(trace0, local_rv={x: (mu, rho)})
-            trace1 = histogram.sample_vp(10000)
+            trace1 = histogram.sample(10000)
             histogram.random(no_rand=True)
             histogram.random_fn(no_rand=True)
         np.testing.assert_allclose(trace0['y'].mean(0), trace1['y'].mean(0), atol=0.02)
