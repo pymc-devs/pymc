@@ -143,7 +143,7 @@ class ArrayStepShared(BlockedStep):
 
     def step(self, point):
         for var, share in self.shared.items():
-            share.container.storage[0] = point[var]
+            share.set_value(point[var])
 
         bij = DictToArrayBijection(self.ordering, point)
 
