@@ -195,12 +195,14 @@ def expand_packed_triangular(n, packed, lower=True, diagonal_only=False):
     """
     if packed.ndim != 1:
         raise ValueError('Packed triagular is not one dimensional.')
+    if not isinstance(n, int):
+        raise TypeError('n must be an integer')
 
     if diagonal_only and lower:
         diag_idxs = np.arange(1, n + 1).cumsum() - 1
         return packed[diag_idxs]
     elif diagonal_only and not lower:
-        diag_idxs = np.arange(n)[::-1].cumsum() - n
+        diag_idxs = np.arange(2, n + 2)[::-1].cumsum() - n - 1
         return packed[diag_idxs]
     elif lower:
         out = tt.zeros((n, n), dtype=theano.config.floatX)
