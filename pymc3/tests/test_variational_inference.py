@@ -148,7 +148,7 @@ class TestApproximates:
                 approx = inf.fit(self.NITER,
                                  obj_optimizer=self.optimizer,
                                  callbacks=
-                                 [pm.callbacks.CheckLossConvergence1()])
+                                 [pm.callbacks.CheckParametersConvergence()])
                 trace = approx.sample(10000)
             np.testing.assert_allclose(np.mean(trace['mu']), mu_post, rtol=0.1)
             np.testing.assert_allclose(np.std(trace['mu']), np.sqrt(1. / d), rtol=0.4)
@@ -177,7 +177,7 @@ class TestApproximates:
                 inf = self.inference()
                 approx = inf.fit(self.NITER * 3, obj_optimizer=self.optimizer,
                                  callbacks=
-                                 [pm.callbacks.CheckLossConvergence1()])
+                                 [pm.callbacks.CheckParametersConvergence()])
                 trace = approx.sample(10000)
             np.testing.assert_allclose(np.mean(trace['mu']), mu_post, rtol=0.1)
             np.testing.assert_allclose(np.std(trace['mu']), np.sqrt(1. / d), rtol=0.4)
@@ -209,7 +209,7 @@ class TestApproximates:
                 Normal('x', mu=mu_, sd=sd, observed=data_t, total_size=n)
                 inf = self.inference()
                 approx = inf.fit(self.NITER * 3, callbacks=
-                [cb, pm.callbacks.CheckLossConvergence1()],
+                [cb, pm.callbacks.CheckParametersConvergence()],
                                  obj_n_mc=10, obj_optimizer=self.optimizer)
                 trace = approx.sample(10000)
             np.testing.assert_allclose(np.mean(trace['mu']), mu_post, rtol=0.4)
