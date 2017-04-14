@@ -5,11 +5,12 @@
 
 import pymc3 as pm
 import numpy as np
+import theano
 
 data = np.loadtxt( 'data/efron-morris-75-data.tsv', delimiter="\t", skiprows=1, usecols=(2,3) )
 
-atBats = data[:,0]
-hits = data[:,1]
+atBats = data[:,0].astype(theano.config.floatX)
+hits = data[:,1].astype(theano.config.floatX)
 
 N = len( hits )
 
@@ -20,8 +21,8 @@ BoundedKappa = pm.Bound( pm.Pareto, lower=1.0 )
 
 with model:
     phi = pm.Uniform( 'phi', lower=0.0, upper=1.0 )
-    kappa = BoundedKappa( 'kappa', alpha=1.0001, m=1.5 )
-    thetas = pm.Beta( 'thetas', alpha=phi*kappa, beta=(1.0-phi)*kappa, shape=N )
+    kappa = BoundedKappa( 'kappa', alpha=1.0001,  m=1.5 )
+    thetas = pm.Beta( 'thetas', alpha=phi*kappa , beta=(1.0-phi)*kappa, shape=N )
     ys = pm.Binomial( 'ys', n=atBats, p=thetas, observed=hits )
 
 def run( n=100000 ):
