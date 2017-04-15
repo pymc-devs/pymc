@@ -2,7 +2,7 @@ import pickle
 import itertools
 import numpy as np
 from theano import theano
-from pymc3.theanof import GeneratorOp, generator, tt_rng
+from pymc3.theanof import GeneratorOp, generator, tt_rng, floatX
 from pymc3.data import DataSampler, GeneratorAdapter
 import pytest
 
@@ -89,7 +89,7 @@ class TestGenerator(object):
             pickle.dumps(bad_gen)
 
     def test_gen_cloning_with_shape_change(self):
-        data = np.random.uniform(size=(1000, 10))
+        data = floatX(np.random.uniform(size=(1000, 10)))
         minibatches = DataSampler(data, batchsize=50)
         gen = generator(minibatches)
         gen_r = tt_rng().normal(size=gen.shape).T
