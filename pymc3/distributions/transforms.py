@@ -113,8 +113,8 @@ class Interval(ElemwiseTransform):
     name = "interval"
 
     def __init__(self, a, b):
-        self.a = a
-        self.b = b
+        self.a = tt.as_tensor_variable(a)
+        self.b = tt.as_tensor_variable(b)
 
     def backward(self, x):
         a, b = self.a, self.b
@@ -138,7 +138,7 @@ class LowerBound(ElemwiseTransform):
     name = "lowerbound"
 
     def __init__(self, a):
-        self.a = a
+        self.a = tt.as_tensor_variable(a)
 
     def backward(self, x):
         a = self.a
@@ -162,7 +162,7 @@ class UpperBound(ElemwiseTransform):
     name = "upperbound"
 
     def __init__(self, b):
-        self.b = b
+        self.b = tt.as_tensor_variable(b)
 
     def backward(self, x):
         b = self.b
