@@ -46,7 +46,7 @@ class ElemwiseCategorical(ArrayStep):
     @staticmethod
     def competence(var):
         if isinstance(var.distribution, Categorical):
-            return Competence.COMPATIBLE
+            return Competence.IDEAL
         return Competence.INCOMPATIBLE
 
 
