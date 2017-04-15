@@ -582,7 +582,7 @@ def init_nuts(init='ADVI', njobs=1, n_init=500000, model=None,
         pm.fit(
             seed=random_seed,
             n=n_init, method=pm.ADVI.from_mean_field(approx),
-            callbacks=[pm.callbacks.CheckLossConvergence()]
+            callbacks=[pm.callbacks.CheckParametersConvergence()]
         )
         start = approx.sample(draws=njobs)
         cov = approx.cov.eval()
