@@ -14,8 +14,6 @@ from .step_methods import (NUTS, HamiltonianMC, Metropolis, BinaryMetropolis,
 from .plots.traceplot import traceplot
 from tqdm import tqdm
 
-import warnings
-
 import sys
 sys.setrecursionlimit(10000)
 
