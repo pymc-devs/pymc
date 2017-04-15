@@ -223,7 +223,7 @@ def sample(draws, step=None, init='auto', n_init=200000, start=None,
         pm._log.info('Auto-assigning NUTS sampler...')
         args = step_kwargs if step_kwargs is not None else {}
         args = args.get('nuts', {})
-        if init is 'auto':
+        if init == 'auto':
             init = 'ADVI'
         start_, step = init_nuts(init=init, njobs=njobs, n_init=n_init,
                                  model=model, random_seed=random_seed,
