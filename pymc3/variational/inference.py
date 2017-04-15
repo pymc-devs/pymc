@@ -153,8 +153,10 @@ class Inference(object):
         else:   # pragma: no cover
             scores = np.asarray(())
             try:
-                for _ in progress:
+                for i in progress:
                     step_func()
+                    if np.isnan(self.approx.params[0].get_value()).any():
+                        raise FloatingPointError('NaN occurred in optimization.')
                     for callback in callbacks:
                         callback(self.approx, None, i)
             except (KeyboardInterrupt, StopIteration):
