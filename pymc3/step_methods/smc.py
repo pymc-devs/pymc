@@ -22,18 +22,21 @@ import os
 import shutil
 import theano
 import copy
+import warnings
 
 from six.moves import map, zip
 from ..model import modelcontext
 from ..vartypes import discrete_types
-from ..theanof import inputvars, make_shared_replacements, \
-    join_nonshared_inputs
+from ..theanof import inputvars, make_shared_replacements, join_nonshared_inputs
 from numpy.random import seed, randint
 
 from .arraystep import metrop_select
 from ..backends import smc_text as atext
 
-__all__ = ['SMC', 'ATMIP_sample', 'logp_forw']
+__all__ = ('SMC', 'ATMIP_sample')
+
+EXPERIMENTAL_WARNING = "Warning: SMC is an experimental step method, and not yet"\
+" recommended for use in PyMC3!"
 
 
 class Proposal(object):
@@ -138,6 +141,7 @@ class SMC(atext.ArrayStepSharedLLK):
                  check_bound=True, likelihood_name='like',
                  proposal_name='MultivariateNormal',
                  coef_variation=1., **kwargs):
+        warnings.warn(EXPERIMENTAL_WARNING)
 
         model = modelcontext(model)
 
@@ -542,6 +546,7 @@ def ATMIP_sample(n_steps, step=None, start=None, homepath=None, chain=0,
         194(3), pp.1701-1726,
         `link <https://gji.oxfordjournals.org/content/194/3/1701.full>`__
     """
+    warnings.warn(EXPERIMENTAL_WARNING)
 
     model = modelcontext(model)
     step.n_steps = int(n_steps)
