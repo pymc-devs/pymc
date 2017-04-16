@@ -77,8 +77,12 @@ def paripool(function, work, **kwargs):
 
     if nprocs is None:
         nprocs = multiprocessing.cpu_count()
-    pool = multiprocessing.Pool(processes=nprocs)
-    yield pool.map(function, work, chunksize=chunksize)
+
+    try:
+        pool = multiprocessing.Pool(processes=nprocs)
+        yield pool.map(function, work, chunksize=chunksize)
+    finally:
+        pool.terminate()
 
 
 class ArrayStepSharedLLK(BlockedStep):
