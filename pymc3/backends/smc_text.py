@@ -78,13 +78,8 @@ def paripool(function, work, **kwargs):
 
     if nprocs is None:
         nprocs = multiprocessing.cpu_count()
-
-    try:
-        yield Parallel(n_jobs=nprocs, batch_size=chunksize, verbose=verbose)(
-            delayed(function)(job) for job in work)
-
-    except KeyboardInterrupt:
-        pm._log.warn('User interrupt! Ctrl + C')
+    pool = multiprocessing.Pool(processes=nprocs)
+    yield pool.map(function, work, chunksize=chunksize)
 
 
 class ArrayStepSharedLLK(BlockedStep):
