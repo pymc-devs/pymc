@@ -12,6 +12,7 @@ from .step_methods import (NUTS, HamiltonianMC, Metropolis, BinaryMetropolis,
                            BinaryGibbsMetropolis, CategoricalGibbsMetropolis,
                            Slice, CompoundStep)
 from .plots.traceplot import traceplot
+import pymc3.distributions as distributions
 from tqdm import tqdm
 
 import sys
@@ -457,12 +458,25 @@ def stop_tuning(step):
 
     return step
 
+def _transformed_init(a, b):
+    """Transforms original starting values for transformed variables specified by 
+    the user (dict a) and inserts them into the init dict (dict b).
+    """
+
+    for name in a:
+        for tname in b:
+            if tname.startswith(name) and tname!=name:
+                transform = tname.split(name)[-1][1:-1]
+                transform_func = distributions.__dict__[transform]
+                b[tname] = transform_func.forward(a[name]).eval()
+                
+    return b
 
 def _soft_update(a, b):
     """As opposed to dict.update, don't overwrite keys if present.
     """
+    b = _transformed_init(a, b)
     a.update({k: v for k, v in b.items() if k not in a})
-
 
 def sample_ppc(trace, samples=None, model=None, vars=None, size=None,
                random_seed=None, progressbar=True):
