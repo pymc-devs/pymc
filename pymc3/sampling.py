@@ -461,6 +461,15 @@ def stop_tuning(step):
 def _transformed_init(a, b):
     """Transforms original starting values for transformed variables specified by 
     the user (dict a) and inserts them into the init dict (dict b).
+    
+    Examples
+    --------
+    .. code:: ipython
+
+        >>> a = {'alpha': 5.0}
+        >>> b = {'alpha_log_': 0}
+        >>> _transformed_init(a, b)
+        {'alpha_log_': array(1.6094379425048828, dtype=float32)}
     """
 
     for name in a:
