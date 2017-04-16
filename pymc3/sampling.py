@@ -458,9 +458,9 @@ def stop_tuning(step):
 
     return step
 
-def _transformed_init(a, b):
+def _transformed_init(start_vals, other_start_vals):
     """Transforms original starting values for transformed variables specified by 
-    the user (dict a) and inserts them into the init dict (dict b).
+    the user (dict1) and inserts them into the init dict (dict2).
     
     Examples
     --------
@@ -472,14 +472,28 @@ def _transformed_init(a, b):
         {'alpha_log_': array(1.6094379425048828, dtype=float32)}
     """
 
-    for name in a:
-        for tname in b:
+    for name in start_vals:
+        for tname in other_start_vals:
             if tname.startswith(name) and tname!=name:
                 transform = tname.split(name)[-1][1:-1]
+                bound_dict = {}
+                # Check if bounds are encoded in name
+                if transform.find('(') > -1:
+                    transform, interval = transform.split('_(')
+                    a, b = interval[:-1].split(',')
+                    if a:
+                        bound_dict['a'] = float(a)
+                    if b:
+                        bound_dict['b'] = float(b)
                 transform_func = distributions.transforms.__dict__[transform]
-                b[tname] = transform_func.forward(a[name]).eval()
+                try:
+                    # Some transformations need to be instantiated
+                    transform_func = transform_func(**bound_dict)
+                except TypeError:
+                    pass
+                other_start_vals[tname] = transform_func.forward(start_vals[name]).eval()
                 
-    return b
+    return other_start_vals
 
 def _soft_update(a, b):
     """As opposed to dict.update, don't overwrite keys if present.
