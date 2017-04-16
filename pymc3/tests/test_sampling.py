@@ -1,5 +1,7 @@
 from itertools import combinations
 import numpy as np
+from numpy.testing import assert_almost_equal
+
 try:
     import unittest.mock as mock  # py3
 except ImportError:
@@ -117,6 +119,12 @@ class SoftUpdate(SeededTest):
         test_point = {'a': 3, 'b': 4}
         pm.sampling._soft_update(start, test_point)
         assert start == test_point
+        
+    def test_soft_update_transformed(self):
+        start = {'a': 2}
+        test_point = {'a_log_': 0}
+        pm.sampling._soft_update(start, test_point)
+        assert assert_almost_equal(start['a_log_'], np.log(start['a']))
 
 
 class TestNamedSampling(SeededTest):
