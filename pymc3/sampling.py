@@ -476,7 +476,7 @@ def _transformed_init(a, b):
         for tname in b:
             if tname.startswith(name) and tname!=name:
                 transform = tname.split(name)[-1][1:-1]
-                transform_func = distributions.__dict__[transform]
+                transform_func = distributions.transforms.__dict__[transform]
                 b[tname] = transform_func.forward(a[name]).eval()
                 
     return b
