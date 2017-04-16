@@ -14,8 +14,6 @@ from .step_methods import (NUTS, HamiltonianMC, Metropolis, BinaryMetropolis,
 from .plots.traceplot import traceplot
 from tqdm import tqdm
 
-import warnings
-
 import sys
 sys.setrecursionlimit(10000)
 
@@ -100,7 +98,7 @@ def assign_step_methods(model, step=None, methods=STEP_METHODS,
     return steps
 
 
-def sample(draws, step=None, init='ADVI', n_init=200000, start=None,
+def sample(draws, step=None, init='auto', n_init=200000, start=None,
            trace=None, chain=0, njobs=1, tune=None, nuts_kwargs=None,
            step_kwargs=None, progressbar=True, model=None, random_seed=-1,
            live_plot=False, **kwargs):
@@ -127,6 +125,8 @@ def sample(draws, step=None, init='ADVI', n_init=200000, start=None,
         * NUTS: Run NUTS to estimate starting points and covariance matrix. If
           njobs > 1 it will sample starting points from the estimated posterior,
           otherwise it will use the estimated posterior mean.
+        * auto : Auto-initialize, if possible. Currently only works when NUTS
+          is auto-assigned as step method (default).
         * None: Do not initialize.
     n_init : int
         Number of iterations of initializer
@@ -221,18 +221,14 @@ def sample(draws, step=None, init='ADVI', n_init=200000, start=None,
         pm._log.info('Auto-assigning NUTS sampler...')
         args = step_kwargs if step_kwargs is not None else {}
         args = args.get('nuts', {})
+        if init == 'auto':
+            init = 'ADVI'
         start_, step = init_nuts(init=init, njobs=njobs, n_init=n_init,
                                  model=model, random_seed=random_seed,
                                  progressbar=progressbar, **args)
         if start is None:
             start = start_
     else:
-        if step is not None and init is not None:
-            warnings.warn('Instantiated step methods cannot be automatically '
-                          'initialized. init argument ignored.')
-        if init is not None and not pm.model.all_continuous(model.vars):
-            warnings.warn('Automatic initialization is not supported '
-                          'for discrete variables. Ignoring init argument.')
         step = assign_step_methods(model, step, step_kwargs=step_kwargs)
 
     if njobs is None:
