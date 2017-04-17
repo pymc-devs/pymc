@@ -989,19 +989,14 @@ class TransformedRV(TensorVariable):
         if type is None:
             type = distribution.type
         super(TransformedRV, self).__init__(type, owner, index, name)
+        
+        self.transformation = transform
 
         if distribution is not None:
             self.model = model
 
             transformed_name = "{}_{}_".format(name, transform.name)
-            bound_dict = {'a':None, 'b':None}
-            for key in bound_dict:
-                try:
-                    bound_dict[key] = transform.__dict__[key].eval()
-                except KeyError:
-                    pass
-            if bound_dict['a'] is not None or bound_dict['b'] is not None:
-                transformed_name += '({},{})_'.format(bound_dict['a'], bound_dict['b'])                  
+
             self.transformed = model.Var(
                 transformed_name, transform.apply(distribution), total_size=total_size)
 

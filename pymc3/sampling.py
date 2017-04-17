@@ -12,7 +12,6 @@ from .step_methods import (NUTS, HamiltonianMC, Metropolis, BinaryMetropolis,
                            BinaryGibbsMetropolis, CategoricalGibbsMetropolis,
                            Slice, CompoundStep)
 from .plots.traceplot import traceplot
-import pymc3.distributions as distributions
 from tqdm import tqdm
 
 import sys
@@ -349,9 +348,9 @@ def _iter_sample(draws, step, start=None, trace=None, chain=0, tune=None,
     strace = _choose_backend(trace, chain, model=model)
 
     if len(strace) > 0:
-        _soft_update(start, strace.point(-1))
+        _soft_update(start, strace.point(-1), model)
     else:
-        _soft_update(start, model.test_point)
+        _soft_update(start, model.test_point, model)
 
     try:
         step = CompoundStep(step)
@@ -458,47 +457,17 @@ def stop_tuning(step):
 
     return step
 
-def _transformed_init(start_vals, other_start_vals):
-    """Transforms original starting values for transformed variables specified by 
-    the user (dict1) and inserts them into the init dict (dict2).
+def _soft_update(a, b, model):
+    """Update a with b, without overwriting existing keys. Values specified for
+    transformed variables on the original scale are also transformed and inserted.
+    """
     
-    Examples
-    --------
-    .. code:: ipython
-
-        >>> a = {'alpha': 5.0}
-        >>> b = {'alpha_log_': 0}
-        >>> _transformed_init(a, b)
-        {'alpha_log_': array(1.6094379425048828, dtype=float32)}
-    """
-
-    for name in start_vals:
-        for tname in other_start_vals:
+    for name in a:
+        for tname in b:
             if tname.startswith(name) and tname!=name:
-                transform = tname.split(name)[-1][1:-1]
-                bound_dict = {}
-                # Check if bounds are encoded in name
-                if transform.find('(') > -1:
-                    transform, interval = transform.split('_(')
-                    a, b = interval[:-1].split(',')
-                    if a:
-                        bound_dict['a'] = float(a)
-                    if b:
-                        bound_dict['b'] = float(b)
-                transform_func = distributions.transforms.__dict__[transform]
-                try:
-                    # Some transformations need to be instantiated
-                    transform_func = transform_func(**bound_dict)
-                except TypeError:
-                    pass
-                other_start_vals[tname] = transform_func.forward(start_vals[name]).eval()
-                
-    return other_start_vals
-
-def _soft_update(a, b):
-    """As opposed to dict.update, don't overwrite keys if present.
-    """
-    b = _transformed_init(a, b)
+                transform_func = [d.transformation for d in model.deterministics if d.name==name][0]
+                b[tname] = transform_func.forward(a[name]).eval()
+    
     a.update({k: v for k, v in b.items() if k not in a})
 
 def sample_ppc(trace, samples=None, model=None, vars=None, size=None,
