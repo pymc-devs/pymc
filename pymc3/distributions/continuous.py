@@ -1874,6 +1874,20 @@ class Pareto(Continuous):
                                                                 get_variable_name(alpha),
                                                                 get_variable_name(m))
 
+    def logcdf(self, value):
+        m = self.m
+        alpha = self.alpha
+        arg = (m / value) ** alpha
+        return tt.switch(
+            tt.lt(value, m),
+            -np.inf,
+            tt.switch(
+                tt.le(arg, 1e-5),
+                tt.log1p(-arg),
+                tt.log(1 - arg)
+            )
+        )
+
 
 class Cauchy(Continuous):
     R"""
