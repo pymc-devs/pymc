@@ -539,6 +539,10 @@ class TestMatchesScipy(SeededTest):
         with Model():
             x = Flat('a')
             assert_allclose(x.tag.test_value, 0)
+        self.check_logcdf(Flat, Runif, {}, lambda value: np.log(0.5))
+        # Check infinite cases individually.
+        assert 0. == Flat.dist().logcdf(np.inf).tag.test_value
+        assert -np.inf == Flat.dist().logcdf(-np.inf).tag.test_value
 
     def test_half_flat(self):
         self.pymc3_matches_scipy(HalfFlat, Rplus, {}, lambda value: 0)
