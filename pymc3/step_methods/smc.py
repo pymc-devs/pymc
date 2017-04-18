@@ -1,5 +1,4 @@
-"""
-Sequential Monte Carlo sampler also known as
+"""Sequential Monte Carlo sampler also known as
 Adaptive Transitional Marcov Chain Monte Carlo sampler.
 
 Runs on any pymc3 model.
@@ -13,7 +12,7 @@ Renamed to SMC and further improvements March 2017
 
 @author: Hannes Vasyura-Bathke
 """
-
+from itertools import chain as ichain
 import numpy as np
 import pymc3 as pm
 from tqdm import tqdm
@@ -24,7 +23,6 @@ import theano
 import copy
 import warnings
 
-from six.moves import map, zip
 from ..model import modelcontext
 from ..vartypes import discrete_types
 from ..theanof import inputvars, make_shared_replacements, join_nonshared_inputs
@@ -36,13 +34,12 @@ from ..backends import smc_text as atext
 __all__ = ('SMC', 'ATMIP_sample')
 
 EXPERIMENTAL_WARNING = "Warning: SMC is an experimental step method, and not yet"\
-" recommended for use in PyMC3!"
+    " recommended for use in PyMC3!"
 
 
 class Proposal(object):
-    """
-    Proposal distributions modified from pymc3 to initially create all the
-    Proposal steps without repeated execution of the RNG- significant speedup!
+    """Proposal distributions modified from pymc3 to initially create all the
+    Proposal steps without repeated execution of the RNG - significant speedup!
 
     Parameters
     ----------
@@ -64,8 +61,7 @@ proposal_dists = {
 
 
 def choose_proposal(proposal_name, scale=1.):
-    """
-    Initialises and selects proposal distribution.
+    """Initialise and select proposal distribution.
 
     Parameters
     ----------
@@ -81,8 +77,7 @@ def choose_proposal(proposal_name, scale=1.):
 
 
 class SMC(atext.ArrayStepSharedLLK):
-    """
-    Adaptive Transitional Markov-Chain Monte-Carlo sampler class.
+    """Adaptive Transitional Markov-Chain Monte-Carlo sampler class.
 
     Creates initial samples and framework around the (C)ATMIP parameters
 
@@ -137,7 +132,6 @@ class SMC(atext.ArrayStepSharedLLK):
         `link <http://ascelibrary.org/doi/abs/10.1061/%28ASCE%290733-9399
         %282007%29133:7%28816%29>`__
     """
-
     default_blocked = True
 
     def __init__(self, vars=None, out_vars=None, n_chains=100, scaling=1., covariance=None,
@@ -222,14 +216,12 @@ class SMC(atext.ArrayStepSharedLLK):
 
             if not self.steps_until_tune and self.tune:
                 # Tune scaling parameter
-                self.scaling = tune(self.accepted /
-                                    float(self.tune_interval))
+                self.scaling = tune(self.accepted / float(self.tune_interval))
                 # Reset counter
                 self.steps_until_tune = self.tune_interval
                 self.accepted = 0
 
-            delta = self.proposal_samples_array[self.stage_sample, :] * \
-                                                                self.scaling
+            delta = self.proposal_samples_array[self.stage_sample, :] * self.scaling
 
             if self.any_discrete:
                 if self.all_discrete:
@@ -237,8 +229,7 @@ class SMC(atext.ArrayStepSharedLLK):
                     q0 = q0.astype(int)
                     q = (q0 + delta).astype(int)
                 else:
-                    delta[self.discrete] = np.round(
-                                        delta[self.discrete], 0).astype(int)
+                    delta[self.discrete] = np.round(delta[self.discrete], 0).astype(int)
                     q = q0 + delta
                     q = q[self.discrete].astype(int)
             else:
@@ -250,15 +241,13 @@ class SMC(atext.ArrayStepSharedLLK):
                 varlogp = self.check_bnd(q)
 
                 if np.isfinite(varlogp):
-                    l = self.logp_forw(q)
-
+                    logp = self.logp_forw(q)
                     q_new = metrop_select(
-                        self.beta * (l[self._llk_index] - l0[self._llk_index]),
-                        q, q0)
+                        self.beta * (logp[self._llk_index] - l0[self._llk_index]), q, q0)
 
                     if q_new is q:
                         self.accepted += 1
-                        l_new = l
+                        l_new = logp
                         self.chain_previous_lpoint[self.chain_index] = l_new
                     else:
                         l_new = l0
@@ -267,14 +256,13 @@ class SMC(atext.ArrayStepSharedLLK):
                     l_new = l0
 
             else:
-                l = self.logp_forw(q)
+                logp = self.logp_forw(q)
                 q_new = metrop_select(
-                    self.beta * (l[self._llk_index] - l0[self._llk_index]),
-                    q, q0)
+                    self.beta * (logp[self._llk_index] - l0[self._llk_index]), q, q0)
 
                 if q_new is q:
                     self.accepted += 1
-                    l_new = l
+                    l_new = logp
                     self.chain_previous_lpoint[self.chain_index] = l_new
                 else:
                     l_new = l0
@@ -289,8 +277,7 @@ class SMC(atext.ArrayStepSharedLLK):
         return q_new, l_new
 
     def calc_beta(self):
-        """
-        Calculate next tempering beta and importance weights based on
+        """Calculate next tempering beta and importance weights based on
         current beta and sample likelihoods.
 
         Returns
@@ -302,15 +289,13 @@ class SMC(atext.ArrayStepSharedLLK):
         weights : :class:`numpy.ndarray`
             Importance weights (floats)
         """
-
         low_beta = self.beta
         up_beta = 2.
         old_beta = self.beta
 
         while up_beta - low_beta > 1e-6:
             current_beta = (low_beta + up_beta) / 2.
-            temp = np.exp((current_beta - self.beta) * \
-                           (self.likelihoods - self.likelihoods.max()))
+            temp = np.exp((current_beta - self.beta) * (self.likelihoods - self.likelihoods.max()))
             cov_temp = np.std(temp) / np.mean(temp)
             if cov_temp > self.coef_variation:
                 up_beta = current_beta
@@ -322,28 +307,20 @@ class SMC(atext.ArrayStepSharedLLK):
         return beta, old_beta, weights
 
     def calc_covariance(self):
-        """
-        Calculate trace covariance matrix based on importance weights.
+        """Calculate trace covariance matrix based on importance weights.
 
         Returns
         -------
         cov : :class:`numpy.ndarray`
             weighted covariances (NumPy > 1.10. required)
         """
-
-        cov = np.cov(self.array_population,
-                      aweights=self.weights.ravel(),
-                      bias=False,
-                      rowvar=0)
-
+        cov = np.cov(self.array_population, aweights=self.weights.ravel(), bias=False, rowvar=0)
         if np.isnan(cov).any() or np.isinf(cov).any():
-            raise Exception('Sample covariances not valid! Likely "n_chains"'
-                            ' is too small!')
+            raise ValueError('Sample covariances not valid! Likely "n_chains" is too small!')
         return cov
 
     def select_end_points(self, mtrace):
-        """
-        Read trace results (variables and model likelihood) and take end points
+        """Read trace results (variables and model likelihood) and take end points
         for each chain and set as start population for the next stage.
 
         Parameters
@@ -359,39 +336,28 @@ class SMC(atext.ArrayStepSharedLLK):
         likelihoods : :class:`numpy.ndarray`
             Array of likelihoods of the trace end-points
         """
-
-        array_population = np.zeros((self.n_chains,
-                                      self.ordering.dimensions))
-
+        array_population = np.zeros((self.n_chains, self.ordering.dimensions))
         n_steps = len(mtrace)
 
         # collect end points of each chain and put into array
         for var, slc, shp, _ in self.ordering.vmap:
+            slc_population = mtrace.get_values(varname=var, burn=n_steps - 1, combine=True)
             if len(shp) == 0:
-                array_population[:, slc] = np.atleast_2d(
-                                    mtrace.get_values(varname=var,
-                                                burn=n_steps - 1,
-                                                combine=True)).T
+                array_population[:, slc] = np.atleast_2d(slc_population).T
             else:
-                array_population[:, slc] = mtrace.get_values(
-                                                    varname=var,
-                                                    burn=n_steps - 1,
-                                                    combine=True)
+                array_population[:, slc] = slc_population
         # get likelihoods
         likelihoods = mtrace.get_values(varname=self.likelihood_name,
                                         burn=n_steps - 1,
                                         combine=True)
-        population = []
 
         # map end array_endpoints to dict points
-        for i in range(self.n_chains):
-            population.append(self.bij.rmap(array_population[i, :]))
+        population = [self.bij.rmap(row) for row in array_population]
 
         return population, array_population, likelihoods
 
     def get_chain_previous_lpoint(self, mtrace):
-        """
-        Read trace results and take end points for each chain and set as
+        """Read trace results and take end points for each chain and set as
         previous chain result for comparison of metropolis select.
 
         Parameters
@@ -403,50 +369,28 @@ class SMC(atext.ArrayStepSharedLLK):
         chain_previous_lpoint : list
             all unobservedRV values, including dataset likelihoods
         """
-
-        array_population = np.zeros((self.n_chains,
-                                      self.lordering.dimensions))
-
+        array_population = np.zeros((self.n_chains, self.lordering.dimensions))
         n_steps = len(mtrace)
-
-        for var, vmap in zip(mtrace.varnames, self.lordering.vmap):
-
-            list_ind, slc, shp, _ = vmap
-
+        for var, (_, slc, shp, _) in zip(mtrace.varnames, self.lordering.vmap):
+            slc_population = mtrace.get_values(varname=var, burn=n_steps - 1, combine=True)
             if len(shp) == 0:
-                array_population[:, slc] = np.atleast_2d(
-                    mtrace.get_values(varname=var,
-                                      burn=n_steps - 1,
-                                      combine=True)).T
+                array_population[:, slc] = np.atleast_2d(slc_population).T
             else:
-                array_population[:, slc] = mtrace.get_values(
-                                      varname=var,
-                                      burn=n_steps - 1,
-                                      combine=True)
+                array_population[:, slc] = slc_population
 
-        chain_previous_lpoint = []
-
-        # map end array_endpoints to list lpoints and apply resampling
-        for r_idx in self.resampling_indexes:
-            chain_previous_lpoint.append(
-                self.lij.rmap(array_population[r_idx, :]))
-
-        return chain_previous_lpoint
+        return [self.lij.rmap(row) for row in array_population[self.resampling_indexes, :]]
 
     def mean_end_points(self):
-        """
-        Calculate mean of the end-points and return point.
+        """Calculate mean of the end-points and return point.
 
         Returns
         -------
         Dictionary of trace variables
         """
-
         return self.bij.rmap(self.array_population.mean(axis=0))
 
     def resample(self):
-        """
-        Resample pdf based on importance weights.
+        """Resample pdf based on importance weights.
         based on Kitagawas deterministic resampling algorithm.
 
         Returns
@@ -454,14 +398,11 @@ class SMC(atext.ArrayStepSharedLLK):
         outindex : :class:`numpy.ndarray`
             Array of resampled trace indexes
         """
-
-        parents = np.array(range(self.n_chains))
+        parents = np.arange(self.n_chains)
         N_childs = np.zeros(self.n_chains, dtype=int)
 
         cum_dist = np.cumsum(self.weights)
-        aux = np.random.rand(1)
-        u = parents + aux
-        u /= self.n_chains
+        u = (parents + np.random.rand()) / self.n_chains
         j = 0
         for i in parents:
             while u[i] > cum_dist[j]:
@@ -483,9 +424,7 @@ class SMC(atext.ArrayStepSharedLLK):
 
 def ATMIP_sample(n_steps, step=None, start=None, homepath=None, chain=0, stage=None, n_jobs=1,
                  tune=None, progressbar=False, model=None, random_seed=-1, rm_flag=False):
-    """
-    (C)ATMIP sampling algorithm
-    (Cascading - (C) not always relevant)
+    """(C)ATMIP sampling algorithm (Cascading - (C) not always relevant)
 
     Samples the solution space with n_chains of Metropolis chains, where each
     chain has n_steps iterations. Once finished, the sampled traces are
@@ -510,6 +449,8 @@ def ATMIP_sample(n_steps, step=None, start=None, homepath=None, chain=0, stage=N
         with length of (n_chains)
         Starting points in parameter space (or partial point)
         Defaults to random draws from variables (defaults to empty dict)
+    homepath : string
+        Result_folder for storing stages, will be created if not existing.
     chain : int
         Chain number used to store sample in backend. If `n_jobs` is
         greater than one, chain numbers will start here.
@@ -524,8 +465,6 @@ def ATMIP_sample(n_steps, step=None, start=None, homepath=None, chain=0, stage=N
         step.n_chains / n_jobs has to be an integer number!
     tune : int
         Number of iterations to tune, if applicable (defaults to None)
-    homepath : string
-        Result_folder for storing stages, will be created if not existing.
     progressbar : bool
         Flag for displaying a progress bar
     model : :class:`pymc3.Model`
@@ -619,8 +558,7 @@ def ATMIP_sample(n_steps, step=None, start=None, homepath=None, chain=0, stage=N
         if rm_flag:
             chains = None
             if os.path.exists(stage_path):
-                pm._log.info('Removing previous sampling results ... '
-                    '%s' % stage_path)
+                pm._log.info('Removing previous sampling results ... %s' % stage_path)
                 shutil.rmtree(stage_path)
         else:
             with model:
@@ -688,8 +626,8 @@ def ATMIP_sample(n_steps, step=None, start=None, homepath=None, chain=0, stage=N
 
             mtrace = atext.load(stage_path, model)
 
-            step.population, step.array_population, step.likelihoods = \
-                                    step.select_end_points(mtrace)
+            step.population, step.array_population, step.likelihoods = step.select_end_points(
+                mtrace)
             step.beta, step.old_beta, step.weights = step.calc_beta()
 
             if step.beta > 1.:
@@ -721,8 +659,7 @@ def ATMIP_sample(n_steps, step=None, start=None, homepath=None, chain=0, stage=N
         # Metropolis sampling final stage
         pm._log.info('Sample final stage')
         stage_path = os.path.join(homepath, 'stage_final')
-        temp = np.exp((1 - step.old_beta) * \
-                           (step.likelihoods - step.likelihoods.max()))
+        temp = np.exp((1 - step.old_beta) * (step.likelihoods - step.likelihoods.max()))
         step.weights = temp / np.sum(temp)
         step.covariance = step.calc_covariance()
         step.proposal_dist = choose_proposal(
@@ -762,15 +699,9 @@ def _sample(draws, step=None, start=None, trace=None, chain=0, tune=None,
 
 def _iter_sample(draws, step, start=None, trace=None, chain=0, tune=None,
                  model=None, random_seed=-1):
-    """
-    Modified from :func:`pymc3.sampling._iter_sample` to be more efficient with
-    the SMC algorithm.
-    """
-
+    """Modified from :func:`pymc3.sampling._iter_sample` to be more efficient with SMC algorithm."""
     model = modelcontext(model)
-
     draws = int(draws)
-
     if draws < 1:
         raise ValueError('Argument `draws` should be above 0.')
 
@@ -786,9 +717,7 @@ def _iter_sample(draws, step, start=None, trace=None, chain=0, tune=None,
         pass
 
     point = pm.Point(start, model=model)
-
     step.chain_index = chain
-
     trace.setup(draws, chain)
     for i in range(draws):
         if i == tune:
@@ -796,13 +725,11 @@ def _iter_sample(draws, step, start=None, trace=None, chain=0, tune=None,
 
         point, out_list = step.step(point)
         trace.record(out_list)
-
         yield trace
 
 
 def _work_chain(work):
-    """
-    Wrapper function for parallel execution of _sample i.e. the Markov Chains.
+    """Wrapper function for parallel execution of _sample i.e. the Markov Chains.
 
     Parameters
     ----------
@@ -820,54 +747,39 @@ def _work_chain(work):
 
 
 def _iter_parallel_chains(draws, step, stage_path, progressbar, model, n_jobs, chains=None):
-    """
-    Do Metropolis sampling over all the chains with each chain being
+    """Do Metropolis sampling over all the chains with each chain being
     sampled 'draws' times. Parallel execution according to n_jobs.
     """
-
     if chains is None:
-        chains = list(range(step.n_chains))
+        chains = range(step.n_chains)
 
-    trace_list = []
-
-    display = False
-
-    pack_pb = ['False' for i in range(n_jobs - 1)] + [display]
-    block_pb = []
-    list_pb = []
-
-    for i in range(int(len(chains) / n_jobs)):
-        block_pb.append(pack_pb)
-
-    list(map(list_pb.extend, block_pb))
+    pack_pb = [False for _ in range(n_jobs - 1)] + [progressbar]
+    progressbars = ichain.from_iterable(pack_pb for _ in range(int(step.n_chains / n_jobs)))
 
     pm._log.info('Initialising chain traces ...')
-    for chain in chains:
-        trace_list.append(atext.Text(stage_path, model=model))
+    trace_list = (atext.Text(stage_path, model=model) for _ in chains)
 
     max_int = np.iinfo(np.int32).max
     random_seeds = nr.randint(1, max_int, size=len(chains))
 
     pm._log.info('Sampling ...')
-
-    work = [(draws, step, step.population[step.resampling_indexes[chain]], trace,
-             chain, None, progressbar, model, rseed) for chain, rseed, trace, progressbar in
-            zip(chains, random_seeds, trace_list, list_pb)]
+    work = [(draws,
+             step,
+             step.population[step.resampling_indexes[chain]],
+             trace,
+             chain,
+             None,
+             pbar,
+             model,
+             rseed) for trace, chain, pbar, rseed in
+            zip(trace_list, chains, progressbars, random_seeds)]
 
     if draws < 10:
         chunksize = n_jobs
     else:
         chunksize = 1
 
-    if n_jobs == 1:
-        verbose = 0
-    elif n_jobs > 1:
-        if progressbar:
-            verbose = 7
-        else:
-            verbose = 0
-
-    p = atext.paripool(_work_chain, work, chunksize=chunksize, nprocs=n_jobs, verbose=verbose)
+    p = atext.paripool(_work_chain, work, chunksize=chunksize, nprocs=n_jobs)
 
     if n_jobs == 1 and progressbar:
         p = tqdm(p, total=len(chains))
@@ -875,12 +787,9 @@ def _iter_parallel_chains(draws, step, stage_path, progressbar, model, n_jobs, c
     for i in p:
         pass
 
-    p.close
-
 
 def tune(acc_rate):
-    """
-    Tune adaptively based on the acceptance rate.
+    """Tune adaptively based on the acceptance rate.
 
     Parameters
     ----------
@@ -891,7 +800,6 @@ def tune(acc_rate):
     -------
     scaling: scalar float
     """
-
     # a and b after Muto & Beck 2008 .
     a = 1. / 9
     b = 8. / 9
@@ -899,8 +807,7 @@ def tune(acc_rate):
 
 
 def logp_forw(out_vars, vars, shared):
-    """
-    Compile Theano function of the model and the input and output variables.
+    """Compile Theano function of the model and the input and output variables.
 
     Parameters
     ----------
