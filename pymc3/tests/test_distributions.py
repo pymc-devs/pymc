@@ -637,6 +637,8 @@ class TestMatchesScipy(SeededTest):
     def test_exponential(self):
         self.pymc3_matches_scipy(Exponential, Rplus, {'lam': Rplus},
                                  lambda value, lam: sp.expon.logpdf(value, 0, 1 / lam))
+        self.check_logcdf(Exponential, Rplus, {'lam': Rplus},
+                          lambda value, lam: sp.expon.logcdf(value, 0, 1 / lam))
 
     def test_geometric(self):
         self.pymc3_matches_scipy(Geometric, Nat, {'p': Unit},
