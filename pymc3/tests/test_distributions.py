@@ -588,11 +588,14 @@ class TestMatchesScipy(SeededTest):
         self.pymc3_matches_scipy(ChiSquared, Rplus, {'nu': Rplusdunif},
                                  lambda value, nu: sp.chi2.logpdf(value, df=nu))
 
+    @pytest.mark.xfail(reason="Poor CDF in SciPy. See scipy/scipy#869 for details.")
     def test_wald_scipy(self):
-        self.pymc3_matches_scipy(Wald, Rplus, {'mu': Rplus},
-                                 lambda value, mu: sp.invgauss.logpdf(value, mu),
+        self.pymc3_matches_scipy(Wald, Rplus, {'mu': Rplus, 'alpha': Rplus},
+                                 lambda value, mu, alpha: sp.invgauss.logpdf(value, mu=mu, loc=alpha),
                                  decimal=select_by_precision(float64=6, float32=1)
                                  )
+        self.check_logcdf(Wald, Rplus, {'mu': Rplus, 'alpha': Rplus},
+                          lambda value, mu, alpha: sp.invgauss.logcdf(value, mu=mu, loc=alpha))
 
     @pytest.mark.parametrize('value,mu,lam,phi,alpha,logp', [
         (.5, .001, .5, None, 0., -124500.7257914),

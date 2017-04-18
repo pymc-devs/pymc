@@ -1,3 +1,4 @@
+# coding: utf-8
 """
 A collection of common probability distributions for stochastic
 nodes in PyMC.
@@ -887,6 +888,9 @@ class Wald(PositiveContinuous):
     .. [Michael1976] Michael, J. R., Schucany, W. R. and Hass, R. W. (1976).
         Generating Random Variates Using Transformations with Multiple Roots.
         The American Statistician, Vol. 30, No. 2, pp. 88-90
+
+    .. [Giner2016] Göknur Giner, Gordon K. Smyth (2016)
+       statmod: Probability Calculations for the Inverse Gaussian Distribution
     """
 
     def __init__(self, mu=None, lam=None, phi=None, alpha=0., *args, **kwargs):
@@ -993,6 +997,46 @@ class Wald(PositiveContinuous):
                                                                 get_variable_name(mu),
                                                                 get_variable_name(lam),
                                                                 get_variable_name(alpha))
+
+    def logcdf(self, value):
+        # Distribution parameters
+        mu = self.mu
+        lam = self.lam
+        alpha = self.alpha
+
+        value -= alpha
+        q = value / mu
+        l = lam * mu
+        r = tt.sqrt(value * lam)
+
+        a = normal_lcdf(0, 1, (q - 1.)/r)
+        b = 2./l + normal_lcdf(0, 1, -(q + 1.)/r)
+        return tt.switch(
+            (
+                # Left limit
+                tt.lt(value, 0) |
+                (tt.eq(value, 0) & tt.gt(mu, 0) & tt.lt(lam, np.inf)) |
+                (tt.lt(value, mu) & tt.eq(lam, 0))
+            ),
+            -np.inf,
+            tt.switch(
+                (
+                    # Right limit
+                    tt.eq(value, np.inf) |
+                    (tt.eq(lam, 0) & tt.gt(value, mu)) |
+                    (tt.gt(value, 0) & tt.eq(lam, np.inf)) |
+                    # Degenerate distribution
+                    (
+                        tt.lt(mu, np.inf) &
+                        tt.eq(mu, value) &
+                        tt.eq(lam, 0)
+                    ) |
+                    (tt.eq(value, 0) & tt.eq(lam, np.inf))
+                ),
+                0,
+                a + tt.log1p(tt.exp(b - a))
+            )
+        )
 
 
 class Beta(UnitContinuous):
