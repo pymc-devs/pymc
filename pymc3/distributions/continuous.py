@@ -624,6 +624,29 @@ class Exponential(PositiveContinuous):
         lam = self.lam
         return bound(tt.log(lam) - lam * value, value > 0, lam > 0)
 
+    def logcdf(self, value):
+        """
+        Compute the log CDF for the Exponential distribution
+
+        References
+        ----------
+        .. [Machler2012] Martin Mächler (2012).
+            "Accurately computing log(1-exp(-|a|)) Assessed by the Rmpfr package"
+        """
+        lam = self.lam
+        a = lam * float(value)
+        return tt.switch(
+            tt.le(value, 0.0),
+            -np.inf,
+            tt.switch(
+                tt.le(a, tt.log(2.0)),
+                tt.log(-tt.expm1(-a)),
+                tt.log1p(-tt.exp(-a)),
+            )
+        )
+
+
+
 
 class Laplace(Continuous):
     R"""
