@@ -1,3 +1,4 @@
+# coding: utf-8
 """
 pymc3.distributions
 
@@ -256,16 +257,18 @@ class Normal(Continuous):
                      sd > 0)
 
     def logcdf(self, value):
-        mu = self.mu
-        sd = self.sd
-        z = zvalue(value, mu=mu, sd=sd)
+        return normallogcdf(value, mu=self.mu, sd=self.sd)
 
-        return tt.switch(
-            tt.lt(z, -1.0),
-            tt.log(tt.erfcx(-z / tt.sqrt(2.)) / 2.) -
-            tt.sqr(z) / 2,
-            tt.log1p(-tt.erfc(z / tt.sqrt(2.)) / 2.)
-        )
+
+# TODO: Decide where to put this, or inline it everywhere it is used...
+def normallogcdf(value, mu=0, sd=1):
+    z = zvalue(value, mu=mu, sd=sd)
+    return tt.switch(
+        tt.lt(z, -1.0),
+        tt.log(tt.erfcx(-z / tt.sqrt(2.)) / 2.) -
+        tt.sqr(z) / 2,
+        tt.log1p(-tt.erfc(z / tt.sqrt(2.)) / 2.)
+    )
 
 
 class HalfNormal(PositiveContinuous):
@@ -382,6 +385,9 @@ class Wald(PositiveContinuous):
     .. [Michael1976] Michael, J. R., Schucany, W. R. and Hass, R. W. (1976).
         Generating Random Variates Using Transformations with Multiple Roots.
         The American Statistician, Vol. 30, No. 2, pp. 88-90
+
+    .. [Giner2016] Göknur Giner, Gordon K. Smyth (2016)
+       statmod: Probability Calculations for the Inverse Gaussian Distribution
     """
 
     def __init__(self, mu=None, lam=None, phi=None, alpha=0., *args, **kwargs):
@@ -390,7 +396,7 @@ class Wald(PositiveContinuous):
         self.alpha = alpha = tt.as_tensor_variable(alpha)
         self.mu = mu = tt.as_tensor_variable(mu)
         self.lam = lam = tt.as_tensor_variable(lam)
-        self.phi = phi =tt.as_tensor_variable(phi)
+        self.phi = phi = tt.as_tensor_variable(phi)
 
         self.mean = self.mu + self.alpha
         self.mode = self.mu * (tt.sqrt(1. + (1.5 * self.mu / self.lam)**2)
@@ -447,6 +453,46 @@ class Wald(PositiveContinuous):
                      # XXX these two are redundant. Please, check.
                      value > 0, value - alpha > 0,
                      mu > 0, lam > 0, alpha >= 0)
+
+    def logcdf(self, value):
+        # Distribution parameters
+        mu = self.mu
+        lam = self.lam
+        alpha = self.alpha
+
+        value = value - alpha
+        q = value / mu
+        l = lam * mu
+        r = tt.sqrt(value * lam)
+
+        a = normallogcdf((q - 1.)/r)
+        b = 2./l + normallogcdf(-(q + 1.)/r)
+        return tt.switch(
+            (
+                # Left limit
+                tt.lt(value, 0) |
+                (tt.eq(value, 0) & tt.gt(mu, 0) & tt.lt(lam, np.inf)) |
+                (tt.lt(value, mu) & tt.eq(lam, 0))
+            ),
+            -np.inf,
+            tt.switch(
+                (
+                    # Right limit
+                    tt.eq(value, np.inf) |
+                    (tt.eq(lam, 0) & tt.gt(value, mu)) |
+                    (tt.gt(value, 0) & tt.eq(lam, np.inf)) |
+                    # Degenerate distribution
+                    (
+                        tt.lt(mu, np.inf) &
+                        tt.eq(mu, value) &
+                        tt.eq(lam, 0)
+                    ) |
+                    (tt.eq(value, 0) & tt.eq(lam, np.inf))
+                ),
+                0,
+                a + tt.log1p(tt.exp(b - a))
+            )
+        )
 
 
 class Beta(UnitContinuous):

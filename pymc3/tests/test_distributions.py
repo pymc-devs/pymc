@@ -410,8 +410,10 @@ class TestMatchesScipy(SeededTest):
                                  lambda value, nu: sp.chi2.logpdf(value, df=nu))
 
     def test_wald_scipy(self):
-        self.pymc3_matches_scipy(Wald, Rplus, {'mu': Rplus},
-                                 lambda value, mu: sp.invgauss.logpdf(value, mu))
+        self.pymc3_matches_scipy(Wald, Rplus, {'mu': Rplus, 'alpha': Rplus},
+                                 lambda value, mu, alpha: sp.invgauss.logpdf(value, mu=mu, loc=alpha))
+        self.check_logcdf(Wald, Rplus, {'mu': Rplus, 'alpha': Rplus},
+                          lambda value, mu, alpha: sp.invgauss.logcdf(value, mu=mu, loc=alpha))
 
     @parameterized.expand([
         (.5, .001, .5, None, 0., -124500.7257914),
