@@ -28,7 +28,7 @@ from six.moves import map, zip
 from ..model import modelcontext
 from ..vartypes import discrete_types
 from ..theanof import inputvars, make_shared_replacements, join_nonshared_inputs
-from numpy.random import seed, randint
+import numpy.random as nr
 
 from .arraystep import metrop_select
 from ..backends import smc_text as atext
@@ -111,6 +111,8 @@ class SMC(atext.ArrayStepSharedLLK):
         smc.proposal_dists.keys() for options
     tune : boolean
         Flag for adaptive scaling based on the acceptance rate
+    tune_interval : int
+        Number of steps to tune for
     coef_variation : scalar, float
         Coefficient of variation, determines the change of beta
         from stage to stage, i.e.indirectly the number of stages,
@@ -123,6 +125,8 @@ class SMC(atext.ArrayStepSharedLLK):
     model : :class:`pymc3.Model`
         Optional model for sampling step.
         Defaults to None (taken from context).
+    random_seed : int
+        Optional to set the random seed.  Necessary for initial population.
 
     References
     ----------
@@ -136,12 +140,13 @@ class SMC(atext.ArrayStepSharedLLK):
 
     default_blocked = True
 
-    def __init__(self, vars=None, out_vars=None, covariance=None, scaling=1.,
-                 n_chains=100, tune=True, tune_interval=100, model=None,
-                 check_bound=True, likelihood_name='like',
-                 proposal_name='MultivariateNormal',
-                 coef_variation=1., **kwargs):
+    def __init__(self, vars=None, out_vars=None, n_chains=100, scaling=1., covariance=None,
+                 likelihood_name='like', proposal_name='MultivariateNormal', tune=True,
+                 tune_interval=100, coef_variation=1., check_bound=True, model=None,
+                 random_seed=-1):
         warnings.warn(EXPERIMENTAL_WARNING)
+        if random_seed != -1:
+            nr.seed(random_seed)
 
         model = modelcontext(model)
 
@@ -170,8 +175,7 @@ class SMC(atext.ArrayStepSharedLLK):
         self.steps_until_tune = tune_interval
 
         self.proposal_name = proposal_name
-        self.proposal_dist = choose_proposal(
-            self.proposal_name, scale=scale)
+        self.proposal_dist = choose_proposal(self.proposal_name, scale=scale)
 
         self.proposal_samples_array = self.proposal_dist(n_chains)
 
@@ -189,18 +193,15 @@ class SMC(atext.ArrayStepSharedLLK):
 
         self.likelihood_name = likelihood_name
         self._llk_index = out_varnames.index(likelihood_name)
-        self.discrete = np.concatenate(
-            [[v.dtype in discrete_types] * (v.dsize or 1) for v in vars])
+        self.discrete = np.concatenate([[v.dtype in discrete_types] * (v.dsize or 1) for v in vars])
         self.any_discrete = self.discrete.any()
         self.all_discrete = self.discrete.all()
 
         # create initial population
         self.population = []
         self.array_population = np.zeros(n_chains)
-        for i in range(self.n_chains):
-            dummy = pm.Point({v.name: v.random() for v in vars},
-                                                            model=model)
-            self.population.append(dummy)
+        for _ in range(self.n_chains):
+            self.population.append(pm.Point({v.name: v.random() for v in vars}, model=model))
 
         self.chain_previous_lpoint = copy.deepcopy(self.population)
 
@@ -480,9 +481,8 @@ class SMC(atext.ArrayStepSharedLLK):
         return outindx
 
 
-def ATMIP_sample(n_steps, step=None, start=None, homepath=None, chain=0,
-                  stage=None, n_jobs=1, tune=None, progressbar=False,
-                  model=None, random_seed=None, rm_flag=False):
+def ATMIP_sample(n_steps, step=None, start=None, homepath=None, chain=0, stage=None, n_jobs=1,
+                 tune=None, progressbar=False, model=None, random_seed=-1, rm_flag=False):
     """
     (C)ATMIP sampling algorithm
     (Cascading - (C) not always relevant)
@@ -550,34 +550,29 @@ def ATMIP_sample(n_steps, step=None, start=None, homepath=None, chain=0,
 
     model = modelcontext(model)
     step.n_steps = int(n_steps)
-    seed(random_seed)
-
-    if n_steps < 1:
-        raise Exception('Argument `n_steps` should be above 0.', exc_info=1)
+    if random_seed != -1:
+        nr.seed(random_seed)
 
     if step is None:
-        raise Exception('Argument `step` has to be a TMCMC step object.')
+        raise TypeError('Argument `step` has to be a TMCMC step object.')
 
     if homepath is None:
-        raise Exception('Argument `homepath` should be path to'
-            ' result_directory.')
+        raise TypeError('Argument `homepath` should be path to result_directory.')
 
     if n_jobs > 1:
         if not (step.n_chains / float(n_jobs)).is_integer():
-            raise Exception('n_chains / n_jobs has to be a whole number!')
+            raise TypeError('n_chains / n_jobs has to be a whole number!')
 
     if start is not None:
         if len(start) != step.n_chains:
-            raise Exception('Argument `start` should have dicts equal the '
+            raise TypeError('Argument `start` should have dicts equal the '
                             'number of chains (step.N-chains)')
         else:
             step.population = start
 
-    if not any(
-            step.likelihood_name in var.name for var in model.deterministics):
-            raise Exception('Model (deterministic) variables need to contain '
-                            'a variable %s '
-                            'as defined in `step`.' % step.likelihood_name)
+    if not any(step.likelihood_name in var.name for var in model.deterministics):
+        raise TypeError('Model (deterministic) variables need to contain a variable %s '
+                        'as defined in `step`.' % step.likelihood_name)
 
     if not os.path.exists(homepath):
         os.mkdir(homepath)
@@ -752,7 +747,7 @@ def _sample(draws, step=None, start=None, trace=None, chain=0, tune=None,
     sampling = _iter_sample(draws, step, start, trace, chain,
                             tune, model, random_seed)
 
-    if progressbar == True:
+    if progressbar:
         sampling = tqdm(sampling, total=draws)
 
     try:
@@ -783,7 +778,7 @@ def _iter_sample(draws, step, start=None, trace=None, chain=0, tune=None,
         start = {}
 
     if random_seed != -1:
-        seed(random_seed)
+        nr.seed(random_seed)
 
     try:
         step = pm.step_methods.CompoundStep(step)
@@ -824,8 +819,7 @@ def _work_chain(work):
     return _sample(*work)
 
 
-def _iter_parallel_chains(draws, step, stage_path, progressbar, model, n_jobs,
-        chains=None):
+def _iter_parallel_chains(draws, step, stage_path, progressbar, model, n_jobs, chains=None):
     """
     Do Metropolis sampling over all the chains with each chain being
     sampled 'draws' times. Parallel execution according to n_jobs.
@@ -852,14 +846,13 @@ def _iter_parallel_chains(draws, step, stage_path, progressbar, model, n_jobs,
         trace_list.append(atext.Text(stage_path, model=model))
 
     max_int = np.iinfo(np.int32).max
-    random_seeds = [randint(max_int) for _ in range(len(chains))]
+    random_seeds = nr.randint(1, max_int, size=len(chains))
 
     pm._log.info('Sampling ...')
 
-    work = [(draws, step, step.population[step.resampling_indexes[chain]],
-        trace, chain, None, progressbar, model, rseed)
-            for chain, rseed, trace, progressbar in zip(
-                chains, random_seeds, trace_list, list_pb)]
+    work = [(draws, step, step.population[step.resampling_indexes[chain]], trace,
+             chain, None, progressbar, model, rseed) for chain, rseed, trace, progressbar in
+            zip(chains, random_seeds, trace_list, list_pb)]
 
     if draws < 10:
         chunksize = n_jobs
@@ -869,13 +862,12 @@ def _iter_parallel_chains(draws, step, stage_path, progressbar, model, n_jobs,
     if n_jobs == 1:
         verbose = 0
     elif n_jobs > 1:
-        if progressbar == True:
+        if progressbar:
             verbose = 7
         else:
             verbose = 0
 
-    p = atext.paripool(
-        _work_chain, work, chunksize=chunksize, nprocs=n_jobs, verbose=verbose)
+    p = atext.paripool(_work_chain, work, chunksize=chunksize, nprocs=n_jobs, verbose=verbose)
 
     if n_jobs == 1 and progressbar:
         p = tqdm(p, total=len(chains))
