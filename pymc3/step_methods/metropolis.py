@@ -322,6 +322,7 @@ class BinaryGibbsMetropolis(ArrayStep):
         q = np.copy(q0)
         logp_curr = logp(q)
 
+        # TODO Replace loop with theano.scan
         for idx in order:
             curr_val, q[idx] = q[idx], True - q[idx]
             logp_prop = logp(q)
@@ -340,7 +341,7 @@ class BinaryGibbsMetropolis(ArrayStep):
         distribution = getattr(
             var.distribution, 'parent_dist', var.distribution)
         if isinstance(distribution, pm.Bernoulli) or (var.dtype in pm.bool_types):
-            return Competence.IDEAL
+            return Competence.COMPATIBLE
         elif isinstance(distribution, pm.Categorical) and (distribution.k == 2):
             return Competence.IDEAL
         return Competence.INCOMPATIBLE

@@ -4,7 +4,7 @@ from .checks import close_to
 from .models import simple_categorical, mv_simple, mv_simple_discrete, simple_2model, mv_prior_simple
 from pymc3.sampling import assign_step_methods, sample
 from pymc3.model import Model
-from pymc3.step_methods import (NUTS, BinaryGibbsMetropolis, CategoricalGibbsMetropolis,
+from pymc3.step_methods import (NUTS, ElemwiseCategorical, CategoricalGibbsMetropolis,
                                 Metropolis, Slice, CompoundStep, NormalProposal,
                                 MultivariateNormalProposal, HamiltonianMC,
                                 EllipticalSlice)
@@ -262,7 +262,7 @@ class TestAssignStepMethods(object):
         with Model() as model:
             Bernoulli('x', 0.5)
             steps = assign_step_methods(model, [])
-        assert isinstance(steps, BinaryGibbsMetropolis)
+        assert isinstance(steps, ElemwiseCategorical)
 
     def test_normal(self):
         """Test normal distribution is assigned NUTS method"""
