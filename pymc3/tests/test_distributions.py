@@ -500,6 +500,8 @@ class TestMatchesScipy(SeededTest):
     def test_pareto(self):
         self.pymc3_matches_scipy(Pareto, Rplus, {'alpha': Rplusbig, 'm': Rplusbig},
                                  lambda value, alpha, m: sp.pareto.logpdf(value, alpha, scale=m))
+        self.check_logcdf(Pareto, Rplus, {'alpha': Rplusbig, 'm': Rplusbig},
+                          lambda value, alpha, m: sp.pareto.logcdf(value, alpha, scale=m))
 
     def test_weibull(self):
         self.pymc3_matches_scipy(Weibull, Rplus, {'alpha': Rplusbig, 'beta': Rplusbig},
