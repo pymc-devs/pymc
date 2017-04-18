@@ -181,6 +181,17 @@ class Flat(Continuous):
     def logp(self, value):
         return tt.zeros_like(value)
 
+    def logcdf(self, value):
+        return tt.switch(
+            tt.eq(value, -np.inf),
+            -np.inf,
+            tt.switch(
+                tt.eq(value, np.inf),
+                0,
+                tt.log(0.5)
+            )
+        )
+
 
 class Normal(Continuous):
     R"""
