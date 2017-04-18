@@ -686,6 +686,8 @@ class TestMatchesScipy(SeededTest):
     def test_pareto(self):
         self.pymc3_matches_scipy(Pareto, Rplus, {'alpha': Rplusbig, 'm': Rplusbig},
                                  lambda value, alpha, m: sp.pareto.logpdf(value, alpha, scale=m))
+        self.check_logcdf(Pareto, Rplus, {'alpha': Rplusbig, 'm': Rplusbig},
+                          lambda value, alpha, m: sp.pareto.logcdf(value, alpha, scale=m))
 
     @pytest.mark.xfail(condition=(theano.config.floatX == "float32"), reason="Fails on float32 due to inf issues")
     def test_weibull(self):
