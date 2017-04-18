@@ -12,11 +12,11 @@ install:
   - pip install coveralls pylint
 
 env:
-  - PYTHON_VERSION=2.7 TESTCMD="--durations=10 --ignore=pymc3/tests/test_examples.py --cov-append --ignore=pymc3/tests/test_distributions_random.py --ignore=pymc3/tests/test_variational_inference.py --ignore=pymc3/tests/test_shared.py --ignore=pymc3/tests/test_smc.py"
-  - PYTHON_VERSION=2.7 RUN_PYLINT="true" TESTCMD="--durations=10 --cov-append pymc3/tests/test_distributions_random.py pymc3/tests/test_shared.py pymc3/tests/test_smc.py"
+  - PYTHON_VERSION=2.7 TESTCMD="--durations=10 --ignore=pymc3/tests/test_examples.py --cov-append --ignore=pymc3/tests/test_distributions_random.py --ignore=pymc3/tests/test_variational_inference.py --ignore=pymc3/tests/test_shared.py"
+  - PYTHON_VERSION=2.7 RUN_PYLINT="true" TESTCMD="--durations=10 --cov-append pymc3/tests/test_distributions_random.py pymc3/tests/test_shared.py"
   - PYTHON_VERSION=2.7 TESTCMD="--durations=10 --cov-append pymc3/tests/test_examples.py pymc3/tests/test_variational_inference.py"
-  - PYTHON_VERSION=3.6 TESTCMD="--durations=10 --cov-append --ignore=pymc3/tests/test_examples.py --ignore=pymc3/tests/test_distributions_random.py --ignore=pymc3/tests/test_variational_inference.py --ignore=pymc3/tests/test_shared.py --ignore=pymc3/tests/test_smc.py"
-  - PYTHON_VERSION=3.6 TESTCMD="--durations=10 --cov-append pymc3/tests/test_distributions_random.py pymc3/tests/test_shared.py pymc3/tests/test_smc.py"
+  - PYTHON_VERSION=3.6 TESTCMD="--durations=10 --cov-append --ignore=pymc3/tests/test_examples.py --ignore=pymc3/tests/test_distributions_random.py --ignore=pymc3/tests/test_variational_inference.py --ignore=pymc3/tests/test_shared.py"
+  - PYTHON_VERSION=3.6 TESTCMD="--durations=10 --cov-append pymc3/tests/test_distributions_random.py pymc3/tests/test_shared.py"
   - PYTHON_VERSION=3.6 TESTCMD="--durations=10 --cov-append pymc3/tests/test_examples.py pymc3/tests/test_variational_inference.py"
 script:
   - . ./scripts/test.sh $TESTCMD
