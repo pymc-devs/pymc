@@ -1401,6 +1401,30 @@ class Exponential(PositiveContinuous):
         return r'${} \sim \text{{Exponential}}(\mathit{{lam}}={})$'.format(name,
                                                                 get_variable_name(lam))
 
+    def logcdf(self, value):
+        """
+        Compute the log CDF for the Exponential distribution
+
+        References
+        ----------
+        .. [Machler2012] Martin Mächler (2012).
+            "Accurately computing log(1-exp(-|a|)) Assessed by the Rmpfr
+            package"
+        """
+        value = floatX(tt.as_tensor(value))
+        lam = self.lam
+        a = lam * value
+        return tt.switch(
+            tt.le(value, 0.0),
+            -np.inf,
+            tt.switch(
+                tt.le(a, tt.log(2.0)),
+                tt.log(-tt.expm1(-a)),
+                tt.log1p(-tt.exp(-a)),
+            )
+        )
+
+
 class Laplace(Continuous):
     R"""
     Laplace log-likelihood.
