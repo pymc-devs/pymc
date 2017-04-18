@@ -296,6 +296,17 @@ class Flat(Continuous):
         name = r'\text{%s}' % name
         return r'${} \sim \text{{Flat}}()$'.format(name)
 
+    def logcdf(self, value):
+        return tt.switch(
+            tt.eq(value, -np.inf),
+            -np.inf,
+            tt.switch(
+                tt.eq(value, np.inf),
+                0,
+                tt.log(0.5)
+            )
+        )
+
 
 class HalfFlat(PositiveContinuous):
     """Improper flat prior over the positive reals."""
