@@ -7,7 +7,7 @@ import tqdm
 import numpy as np
 
 import pymc3 as pm
-from pymc3.variational.approximations import MeanField, FullRank, Histogram
+from pymc3.variational.approximations import MeanField, FullRank, Empirical
 from pymc3.variational.operators import KL, KSD
 from pymc3.variational.opvi import Approximation
 from pymc3.variational import test_functions
@@ -377,8 +377,8 @@ class SVGD(Inference):
         kernel function for KSD f(histogram) -> (k(x,.), \nabla_x k(x,.))
     start : dict
         initial point for inference
-    histogram : Histogram
-        initialize SVGD with given Histogram instead of default initial particles
+    histogram : Empirical
+        initialize SVGD with given Empirical approximation instead of default initial particles
     seed : None or int
         leave None to use package global RandomStream or other
         valid value to create instance specific one
@@ -392,7 +392,7 @@ class SVGD(Inference):
     def __init__(self, n_particles=100, jitter=.01, model=None, kernel=test_functions.rbf,
                  start=None, histogram=None, seed=None, local_rv=None):
         if histogram is None:
-            histogram = Histogram.from_noise(
+            histogram = Empirical.from_noise(
                 n_particles, jitter=jitter, start=start, model=model, local_rv=local_rv, seed=seed)
         super(SVGD, self).__init__(
             KSD, histogram,

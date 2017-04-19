@@ -7,7 +7,7 @@ import pymc3 as pm
 from pymc3 import Model, Normal
 from pymc3.variational import (
     ADVI, FullRankADVI, SVGD,
-    Histogram,
+    Empirical,
     fit
 )
 from pymc3.variational.operators import KL
@@ -281,18 +281,18 @@ class TestSVGD(TestApproximates.Base):
     optimizer = functools.partial(pm.adam, learning_rate=.1)
 
 
-class TestHistogram(SeededTest):
+class TestEmpirical(SeededTest):
     def test_sampling(self):
         with models.multidimensional_model()[1]:
             full_rank = FullRankADVI()
             approx = full_rank.fit(20)
             trace0 = approx.sample(10000)
-            histogram = Histogram(trace0)
-        trace1 = histogram.sample(100000)
+            approx = Empirical(trace0)
+        trace1 = approx.sample(100000)
         np.testing.assert_allclose(trace0['x'].mean(0), trace1['x'].mean(0), atol=0.01)
         np.testing.assert_allclose(trace0['x'].var(0), trace1['x'].var(0), atol=0.01)
 
-    def test_aevb_histogram(self):
+    def test_aevb_empirical(self):
         _, model, _ = models.exponential_beta(n=2)
         x = model.x
         mu = theano.shared(x.init_value)
@@ -301,10 +301,10 @@ class TestHistogram(SeededTest):
             inference = ADVI(local_rv={x: (mu, rho)})
             approx = inference.approx
             trace0 = approx.sample(10000)
-            histogram = Histogram(trace0, local_rv={x: (mu, rho)})
-            trace1 = histogram.sample(10000)
-            histogram.random(no_rand=True)
-            histogram.random_fn(no_rand=True)
+            approx = Empirical(trace0, local_rv={x: (mu, rho)})
+            trace1 = approx.sample(10000)
+            approx.random(no_rand=True)
+            approx.random_fn(no_rand=True)
         np.testing.assert_allclose(trace0['y'].mean(0), trace1['y'].mean(0), atol=0.02)
         np.testing.assert_allclose(trace0['y'].var(0), trace1['y'].var(0), atol=0.02)
         np.testing.assert_allclose(trace0['x'].mean(0), trace1['x'].mean(0), atol=0.02)
@@ -317,17 +317,17 @@ class TestHistogram(SeededTest):
             p = pm.Uniform('p')
             pm.Bernoulli('trials', p, observed=trials)
             trace = pm.sample(1000, step=pm.Metropolis())
-            histogram = Histogram(trace)
-            histogram.randidx(None).eval()
-            histogram.randidx(1).eval()
-            histogram.random_fn(no_rand=True)
-            histogram.random_fn(no_rand=False)
-            histogram.histogram_logp.eval()
+            approx = Empirical(trace)
+            approx.randidx(None).eval()
+            approx.randidx(1).eval()
+            approx.random_fn(no_rand=True)
+            approx.random_fn(no_rand=False)
+            approx.histogram_logp.eval()
 
     def test_init_from_noize(self):
         with models.multidimensional_model()[1]:
-            histogram = Histogram.from_noise(100)
-            assert histogram.histogram.eval().shape == (100, 6)
+            approx = Empirical.from_noise(100)
+            assert approx.histogram.eval().shape == (100, 6)
 
 _model = models.simple_model()[1]
 with _model:

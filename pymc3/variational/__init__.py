@@ -23,7 +23,7 @@ from .inference import (
     fit,
 )
 from .approximations import (
-    Histogram,
+    Empirical,
     FullRank,
     MeanField,
     sample_approx

@@ -11,7 +11,7 @@ from pymc3.theanof import memoize
 __all__ = [
     'MeanField',
     'FullRank',
-    'Histogram',
+    'Empirical',
     'sample_approx'
 ]
 
@@ -232,7 +232,7 @@ class FullRank(Approximation):
         return full_rank
 
 
-class Histogram(Approximation):
+class Empirical(Approximation):
     """
     Builds Approximation instance from a given trace,
     it has the same interface as variational approximation
@@ -241,7 +241,7 @@ class Histogram(Approximation):
     ----------
     trace : MultiTrace
     local_rv : dict
-        Experimental for Histogram
+        Experimental for Histogram approximation
         mapping {model_variable -> local_variable}
         Local Vars are used for Autoencoding Variational Bayes
         See (AEVB; Kingma and Welling, 2014) for details
@@ -257,10 +257,10 @@ class Histogram(Approximation):
     >>> with model:
     ...     step = NUTS()
     ...     trace = sample(1000, step=step)
-    ...     histogram = Histogram(trace[100:])
+    ...     histogram = Empirical(trace[100:])
     """
     def __init__(self, trace, local_rv=None, model=None, seed=None):
-        super(Histogram, self).__init__(local_rv=local_rv, model=model, trace=trace, seed=seed)
+        super(Empirical, self).__init__(local_rv=local_rv, model=model, trace=trace, seed=seed)
 
     def check_model(self, model, **kwargs):
         trace = kwargs.get('trace')
@@ -358,7 +358,7 @@ class Histogram(Approximation):
 
         Returns
         -------
-        Histogram
+        Empirical
         """
         hist = cls(None, local_rv=local_rv, model=model, seed=seed)
         if start is None:
