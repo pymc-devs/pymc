@@ -131,10 +131,12 @@ class Inference(object):
                         progress.set_description('Average Loss = {:,.5g}'.format(avg_loss))
                     for callback in callbacks:
                         callback(self.approx, scores[:i+1], i)
-            except (KeyboardInterrupt, StopIteration):   # pragma: no cover
+            except (KeyboardInterrupt, StopIteration) as e:
                 # do not print log on the same line
                 progress.close()
                 scores = scores[:i]
+                if isinstance(e, StopIteration):
+                    logger.info(str(e))
                 if n < 10:
                     logger.info('Interrupted at {:,d} [{:.0f}%]: Loss = {:,.5g}'.format(
                         i, 100 * i // n, scores[i]))
@@ -159,8 +161,9 @@ class Inference(object):
                         raise FloatingPointError('NaN occurred in optimization.')
                     for callback in callbacks:
                         callback(self.approx, None, i)
-            except (KeyboardInterrupt, StopIteration):
-                pass
+            except (KeyboardInterrupt, StopIteration) as e:
+                if isinstance(e, StopIteration):
+                    logger.info(str(e))
             finally:
                 progress.close()
         self.hist = np.concatenate([self.hist, scores])

@@ -12,10 +12,11 @@ class Callback(object):
 
 
 class CheckParametersConvergence(Callback):
-    def __init__(self, every=1000, tolerance=1e-2):
+    def __init__(self, every=1000, tolerance=1e-3, eps=1e-10):
         self.every = every
         self.prev = None
         self.tolerance = tolerance
+        self.eps = np.float32(eps)
 
     def __call__(self, approx, _, i):
         if self.prev is None:
@@ -23,12 +24,13 @@ class CheckParametersConvergence(Callback):
         if i < self.every or i % self.every:
             return
         current = self.flatten_shared(approx.params)
-        delta = (current - self.prev)/self.prev
+        prev = self.prev
+        eps = self.eps
+        delta = (np.abs(current - prev)+eps)/(np.abs(prev)+eps)
         self.prev = current
-        delta[np.isnan(delta)] = 0
-        norm = delta.dot(delta)**.5
+        norm = delta.max()
         if norm < self.tolerance:
-            raise StopIteration
+            raise StopIteration('Convergence archived')
 
     @staticmethod
     def flatten_shared(shared_list):
