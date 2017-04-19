@@ -6,9 +6,10 @@ from ..distributions.timeseries import EulerMaruyama
 from ..tuning.starting import find_MAP
 from ..sampling import sample, sample_ppc
 from ..step_methods import NUTS
+from ..theanof import floatX
 
 import numpy as np
-from scipy.optimize import fmin_l_bfgs_b
+from scipy.optimize import fmin_bfgs
 
 
 def _gen_sde_path(sde, pars, dt, n, x0):
@@ -28,7 +29,7 @@ def test_linear():
     N = 300
     dt = 1e-1
     sde = lambda x, lam: (lam * x, sig2)
-    x = _gen_sde_path(sde, (lam,), dt, N, 5.0)
+    x = floatX(_gen_sde_path(sde, (lam,), dt, N, 5.0))
     z = x + np.random.randn(x.size) * 5e-3
     # build model
     with Model() as model:
@@ -37,7 +38,7 @@ def test_linear():
         Normal('zh', mu=xh, sd=5e-3, observed=z)
     # invert
     with model:
-        start = find_MAP(vars=[xh], fmin=fmin_l_bfgs_b)
+        start = find_MAP(vars=[xh], fmin=fmin_bfgs)  # So l_bfgs_b requires float64 dtypes and won't work for floatX
         warmup = sample(200, NUTS(scaling=start))
         trace = sample(1000, NUTS(scaling=warmup[-1], gamma=0.25), start=warmup[-1])
     ppc = sample_ppc(trace, model=model)
