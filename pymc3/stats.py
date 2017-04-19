@@ -58,21 +58,35 @@ def statfunc(f):
 @statfunc
 def autocorr(x, lag=1):
     """Sample autocorrelation at specified lag.
-    The autocorrelation is the correlation of x_i with x_{i+lag}.
-    """
 
+    Parameters
+    ----------
+    x : Numpy array
+        An array containing MCMC samples
+    lag : int
+        The desidered lag to take in consideration
+    """
     S = autocov(x, lag)
     return S[0, 1] / np.sqrt(np.prod(np.diag(S)))
 
 
 @statfunc
 def autocov(x, lag=1):
-    """
-    Sample autocovariance at specified lag.
-    The autocovariance is a 2x2 matrix with the variances of
-    x[:-lag] and x[lag:] in the diagonal and the autocovariance
-    on the off-diagonal.
-    """
+    """Sample autocovariance at specified lag.
+
+        Parameters
+        ----------
+        x : Numpy array
+            An array containing MCMC samples
+        lag : int
+            The desidered lag to take in consideration
+
+        Returns
+        -------
+        2x2 matrix with the variances of
+        x[:-lag] and x[lag:] in the diagonal and the autocovariance
+        on the off-diagonal.
+        """
     x = np.asarray(x)
 
     if not lag:
@@ -85,7 +99,18 @@ def autocov(x, lag=1):
 def dic(trace, model=None):
     """
     Calculate the deviance information criterion of the samples in trace from model
-    Read more theory here - in a paper by some of the leading authorities on Model Selection - dx.doi.org/10.1111/1467-9868.00353
+    Read more theory here - in a paper by some of the leading authorities on Model Selection - 
+    dx.doi.org/10.1111/1467-9868.00353
+
+    Parameters
+    ----------
+    trace : result of MCMC run
+    model : PyMC Model
+        Optional model. Default None, taken from context.
+
+    Returns
+    -------
+    `float` representing the deviance information criterion of the model and trace
     """
     model = modelcontext(model)
 
@@ -99,9 +124,15 @@ def dic(trace, model=None):
 
 
 def log_post_trace(trace, model):
-    '''
+    """
     Calculate the elementwise log-posterior for the sampled trace.
-    '''
+
+    Parameters
+    ----------
+    trace : result of MCMC run
+    model : PyMC Model
+        Optional model. Default None, taken from context.
+    """
     return np.vstack([obs.logp_elemwise(pt) for obs in model.observed_RVs] for pt in trace)
 
 
@@ -249,7 +280,14 @@ def loo(trace, model=None, pointwise=False):
 def bpic(trace, model=None):
     """
     Calculates Bayesian predictive information criterion n of the samples in trace from model
-    Read more theory here - in a paper by some of the leading authorities on Model Selection - dx.doi.org/10.1111/1467-9868.00353
+    Read more theory here - in a paper by some of the leading authorities on Model Selection - 
+    dx.doi.org/10.1111/1467-9868.00353
+
+    Parameters
+    ----------
+    trace : result of MCMC run
+    model : PyMC Model
+        Optional model. Default None, taken from context.
     """
     model = modelcontext(model)
 
@@ -319,6 +357,7 @@ def compare(traces, models, ic='WAIC'):
     warns = np.zeros(len(models))
 
     c = 0
+
     def add_warns(*args):
         warns[c] = 1
 
@@ -450,18 +489,21 @@ def hpd(x, alpha=0.05, transform=lambda x: x):
 
 @statfunc
 def mc_error(x, batches=5):
-    """
-    Calculates the simulation standard error, accounting for non-independent
-    samples. The trace is divided into batches, and the standard deviation of
-    the batch means is calculated.
+    R"""Calculates the simulation standard error, accounting for non-independent
+        samples. The trace is divided into batches, and the standard deviation of
+        the batch means is calculated.
 
-    :Arguments:
-      x : Numpy array
-          An array containing MCMC samples
-      batches : integer
-          Number of batches
-    """
+    Parameters
+    ----------
+    x : Numpy array
+              An array containing MCMC samples
+    batches : integer
+              Number of batches
 
+    Returns
+    -------
+    `float` representing the error
+    """
     if x.ndim > 1:
 
         dims = np.shape(x)
@@ -489,17 +531,21 @@ def mc_error(x, batches=5):
 
 @statfunc
 def quantiles(x, qlist=(2.5, 25, 50, 75, 97.5), transform=lambda x: x):
-    """Returns a dictionary of requested quantiles from array
+    R"""Returns a dictionary of requested quantiles from array
 
-    :Arguments:
-      x : Numpy array
-          An array containing MCMC samples
-      qlist : tuple or list
-          A list of desired quantiles (defaults to (2.5, 25, 50, 75, 97.5))
-      transform : callable
-          Function to transform data (defaults to identity)
+    Parameters
+    ----------
+    x : Numpy array
+        An array containing MCMC samples
+    qlist : tuple or list
+        A list of desired quantiles (defaults to (2.5, 25, 50, 75, 97.5))
+    transform : callable
+        Function to transform data (defaults to identity)
+
+    Returns
+    -------
+    `dictionary` with the quantiles {quantile: value}
     """
-
     # Make a copy of trace
     x = transform(x.copy())
 
