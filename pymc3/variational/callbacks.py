@@ -21,7 +21,7 @@ class CheckParametersConvergence(Callback):
     def __call__(self, approx, _, i):
         if self.prev is None:
             self.prev = self.flatten_shared(approx.params)
-        if i < self.every or i % self.every:
+        if i % self.every or i < self.every:
             return
         current = self.flatten_shared(approx.params)
         prev = self.prev
@@ -30,7 +30,7 @@ class CheckParametersConvergence(Callback):
         self.prev = current
         norm = delta.max()
         if norm < self.tolerance:
-            raise StopIteration('Convergence archived')
+            raise StopIteration('Convergence archived at %d' % i)
 
     @staticmethod
     def flatten_shared(shared_list):
