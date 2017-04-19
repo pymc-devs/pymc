@@ -159,7 +159,8 @@ def metrop_select(mr, q, q0):
     """Perform rejection/acceptance step for Metropolis class samplers.
 
     Returns the new sample q if a uniform random number is less than the
-    metropolis acceptance rate (`mr`), and the old sample otherwise.
+    metropolis acceptance rate (`mr`), and the old sample otherwise, along
+    with a boolean indicating whether the sample was accepted.
 
     Parameters
     ----------
@@ -173,6 +174,6 @@ def metrop_select(mr, q, q0):
     """
     # Compare acceptance ratio to uniform random number
     if np.isfinite(mr) and np.log(uniform()) < mr:
-        return q
+        return q, True
     else:
-        return q0
+        return q0, False
