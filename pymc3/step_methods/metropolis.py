@@ -150,10 +150,8 @@ class Metropolis(ArrayStepShared):
             q = floatX(q0 + delta)
 
         accept = self.delta_logp(q, q0)
-        q_new = metrop_select(accept, q, q0)
-
-        if q_new is q:
-            self.accepted += 1
+        q_new, accepted = metrop_select(accept, q, q0)
+        self.accepted += accepted
 
         self.steps_until_tune -= 1
 
@@ -264,7 +262,8 @@ class BinaryMetropolis(ArrayStep):
         q[switch_locs] = True - q[switch_locs]
 
         accept = logp(q) - logp(q0)
-        q_new = metrop_select(accept, q, q0)
+        q_new, accepted = metrop_select(accept, q, q0)
+        self.accepted += accepted
 
         stats = {
             'tune': self.tune,
@@ -325,8 +324,8 @@ class BinaryGibbsMetropolis(ArrayStep):
         for idx in order:
             curr_val, q[idx] = q[idx], True - q[idx]
             logp_prop = logp(q)
-            q[idx] = metrop_select(logp_prop - logp_curr, q[idx], curr_val)
-            if q[idx] != curr_val:
+            q[idx], accepted = metrop_select(logp_prop - logp_curr, q[idx], curr_val)
+            if accepted:
                 logp_curr = logp_prop
 
         return q
@@ -408,10 +407,9 @@ class CategoricalGibbsMetropolis(ArrayStep):
         for dim, k in dimcats:
             curr_val, q[dim] = q[dim], sample_except(k, q[dim])
             logp_prop = logp(q)
-            q[dim] = metrop_select(logp_prop - logp_curr, q[dim], curr_val)
-            if q[dim] != curr_val:
+            q[dim], accepted = metrop_select(logp_prop - logp_curr, q[dim], curr_val)
+            if accepted:
                 logp_curr = logp_prop
-
         return q
 
     def astep_prop(self, q0, logp):
