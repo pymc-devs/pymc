@@ -21,7 +21,7 @@ class TestGelmanRubin(SeededTest):
             # Run sampler
             step1 = Slice([model.early_mean_log_, model.late_mean_log_])
             step2 = Metropolis([model.switchpoint])
-            start = {'early_mean': 3., 'late_mean': 1., 'switchpoint': 100}
+            start = {'early_mean': 7., 'late_mean': 1., 'switchpoint': 100}
             ptrace = sample(n_samples, step=[step1, step2], start=start, njobs=2, 
                     progressbar=False, random_seed=[20090425, 19700903])
         return ptrace
@@ -35,7 +35,7 @@ class TestGelmanRubin(SeededTest):
 
     def test_bad(self):
         """Confirm Gelman-Rubin statistic is far from 1 for a small number of samples."""
-        n_samples = 10
+        n_samples = 5
         rhat = gelman_rubin(self.get_ptrace(n_samples))
         assert not all(1 / self.good_ratio < r <
                              self.good_ratio for r in rhat.values())
@@ -43,7 +43,7 @@ class TestGelmanRubin(SeededTest):
     def test_right_shape_python_float(self, shape=None, test_shape=None):
         """Check Gelman-Rubin statistic shape is correct w/ python float"""
         n_jobs = 3
-        n_samples = 10
+        n_samples = 5
 
         with Model():
             if shape is not None:
