@@ -88,7 +88,7 @@ class Inference(object):
             progress.close()
         return step_func.profile
 
-    def fit(self, n=10000, score=None, callbacks=None,
+    def fit(self, n=10000, score=None, callbacks=None, progressbar=True,
             **kwargs):
         """
         Performs Operator Variational Inference
@@ -100,9 +100,9 @@ class Inference(object):
         score : bool
             evaluate loss on each iteration or not
         callbacks : list[function : (Approximation, losses, i) -> any]
-        callback_every : int
-            call callback functions on `callback_every` step, to
-            interrupt inference raise `StopIteration` exception inside callback
+            calls provided functions after each iteration step
+        progressbar : bool
+            whether to show progressbar or not
         kwargs : kwargs for ObjectiveFunction.step_function
 
         Returns
@@ -113,61 +113,67 @@ class Inference(object):
             callbacks = []
         score = self._maybe_score(score)
         step_func = self.objective.step_function(score=score, **kwargs)
-        i = 0
-        progress = tqdm.trange(n)
+        progress = tqdm.trange(n, disable=not progressbar)
         if score:
-            scores = np.empty(n)
-            scores[:] = np.nan
-            try:
-                for i in progress:
-                    e = step_func()
-                    if np.isnan(e):     # pragma: no cover
-                        scores = scores[:i]
-                        self.hist = np.concatenate([self.hist, scores])
-                        raise FloatingPointError('NaN occurred in optimization.')
-                    scores[i] = e
-                    if i % 10 == 0:
-                        avg_loss = scores[max(0, i - 1000):i+1].mean()
-                        progress.set_description('Average Loss = {:,.5g}'.format(avg_loss))
-                    for callback in callbacks:
-                        callback(self.approx, scores[:i+1], i)
-            except (KeyboardInterrupt, StopIteration) as e:
-                # do not print log on the same line
-                progress.close()
-                scores = scores[:i]
-                if isinstance(e, StopIteration):
-                    logger.info(str(e))
-                if n < 10:
-                    logger.info('Interrupted at {:,d} [{:.0f}%]: Loss = {:,.5g}'.format(
-                        i, 100 * i // n, scores[i]))
-                else:
-                    avg_loss = scores[min(0, i - 1000):i+1].mean()
-                    logger.info('Interrupted at {:,d} [{:.0f}%]: Average Loss = {:,.5g}'.format(
-                        i, 100 * i // n, avg_loss))
-            else:
-                if n < 10:
-                    logger.info('Finished [100%]: Loss = {:,.5g}'.format(scores[-1]))
-                else:
-                    avg_loss = scores[max(0, i - 1000):i+1].mean()
-                    logger.info('Finished [100%]: Average Loss = {:,.5g}'.format(avg_loss))
-            finally:
-                progress.close()
-        else:   # pragma: no cover
-            scores = np.asarray(())
-            try:
-                for i in progress:
-                    step_func()
-                    if np.isnan(self.approx.params[0].get_value()).any():
-                        raise FloatingPointError('NaN occurred in optimization.')
-                    for callback in callbacks:
-                        callback(self.approx, None, i)
-            except (KeyboardInterrupt, StopIteration) as e:
-                if isinstance(e, StopIteration):
-                    logger.info(str(e))
-            finally:
-                progress.close()
-        self.hist = np.concatenate([self.hist, scores])
+            self._iterate_with_loss(n, step_func, progress, callbacks)
+        else:
+            self._iterate_without_loss(n, step_func, progress, callbacks)
         return self.approx
+
+    def _iterate_without_loss(self, _, step_func, progress, callbacks):
+        try:
+            for i in progress:
+                step_func()
+                if np.isnan(self.approx.params[0].get_value()).any():
+                    raise FloatingPointError('NaN occurred in optimization.')
+                for callback in callbacks:
+                    callback(self.approx, None, i)
+        except (KeyboardInterrupt, StopIteration) as e:
+            progress.close()
+            if isinstance(e, StopIteration):
+                logger.info(str(e))
+        finally:
+            progress.close()
+
+    def _iterate_with_loss(self, n, step_func, progress, callbacks):
+        scores = np.empty(n)
+        scores[:] = np.nan
+        i = 0
+        try:
+            for i in progress:
+                e = step_func()
+                if np.isnan(e):  # pragma: no cover
+                    scores = scores[:i]
+                    self.hist = np.concatenate([self.hist, scores])
+                    raise FloatingPointError('NaN occurred in optimization.')
+                scores[i] = e
+                if i % 10 == 0:
+                    avg_loss = scores[max(0, i - 1000):i + 1].mean()
+                    progress.set_description('Average Loss = {:,.5g}'.format(avg_loss))
+                for callback in callbacks:
+                    callback(self.approx, scores[:i + 1], i)
+        except (KeyboardInterrupt, StopIteration) as e:
+            # do not print log on the same line
+            progress.close()
+            scores = scores[:i]
+            if isinstance(e, StopIteration):
+                logger.info(str(e))
+            if n < 10:
+                logger.info('Interrupted at {:,d} [{:.0f}%]: Loss = {:,.5g}'.format(
+                    i, 100 * i // n, scores[i]))
+            else:
+                avg_loss = scores[min(0, i - 1000):i + 1].mean()
+                logger.info('Interrupted at {:,d} [{:.0f}%]: Average Loss = {:,.5g}'.format(
+                    i, 100 * i // n, avg_loss))
+        else:
+            if n < 10:
+                logger.info('Finished [100%]: Loss = {:,.5g}'.format(scores[-1]))
+            else:
+                avg_loss = scores[max(0, i - 1000):i + 1].mean()
+                logger.info('Finished [100%]: Average Loss = {:,.5g}'.format(avg_loss))
+        finally:
+            progress.close()
+        self.hist = np.concatenate([self.hist, scores])
 
 
 class ADVI(Inference):
