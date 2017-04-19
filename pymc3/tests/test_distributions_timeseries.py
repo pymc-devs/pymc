@@ -38,7 +38,7 @@ def test_linear():
         Normal('zh', mu=xh, sd=5e-3, observed=z)
     # invert
     with model:
-        start = find_MAP(vars=[xh], fmin=fmin_bfgs)  # So l_bfgs_b requires float64 dtypes and won't work for floatX
+        start = find_MAP(vars=[xh], fmin=fmin_bfgs)  # So fmin_l_bfgs_b requires float64 dtypes and won't work for floatX; use fmin_bfgs instead
         warmup = sample(200, NUTS(scaling=start))
         trace = sample(1000, NUTS(scaling=warmup[-1], gamma=0.25), start=warmup[-1])
     ppc = sample_ppc(trace, model=model)
