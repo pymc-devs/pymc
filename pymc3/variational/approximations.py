@@ -12,7 +12,7 @@ __all__ = [
     'MeanField',
     'FullRank',
     'Histogram',
-    'sample_vp'
+    'sample_approx'
 ]
 
 
