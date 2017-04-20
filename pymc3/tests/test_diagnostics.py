@@ -21,7 +21,7 @@ class TestGelmanRubin(SeededTest):
             # Run sampler
             step1 = Slice([model.early_mean_log_, model.late_mean_log_])
             step2 = Metropolis([model.switchpoint])
-            start = {'early_mean': 7., 'late_mean': 1., 'switchpoint': 100}
+            start = {'early_mean': 7., 'late_mean': 5., 'switchpoint': 10}
             ptrace = sample(n_samples, step=[step1, step2], start=start, njobs=2, 
                     progressbar=False, random_seed=[20090425, 19700903])
         return ptrace
