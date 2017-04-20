@@ -348,9 +348,9 @@ def _iter_sample(draws, step, start=None, trace=None, chain=0, tune=None,
     strace = _choose_backend(trace, chain, model=model)
 
     if len(strace) > 0:
-        _soft_update(start, strace.point(-1), model)
+        _update_start_vals(start, strace.point(-1), model)
     else:
-        _soft_update(start, model.test_point, model)
+        _update_start_vals(start, model.test_point, model)
 
     try:
         step = CompoundStep(step)
@@ -457,7 +457,7 @@ def stop_tuning(step):
 
     return step
 
-def _soft_update(a, b, model):
+def _update_start_vals(a, b, model):
     """Update a with b, without overwriting existing keys. Values specified for
     transformed variables on the original scale are also transformed and inserted.
     """
