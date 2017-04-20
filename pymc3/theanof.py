@@ -391,7 +391,9 @@ def tt_rng(seed=None):
     if seed is None:
         return _tt_rng
     else:
-        return MRG_RandomStreams(seed)
+        ret = MRG_RandomStreams(seed)
+        launch_rng(ret)
+        return ret
 
 
 def set_tt_rng(new_rng):
