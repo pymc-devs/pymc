@@ -50,26 +50,34 @@ Hamiltonian Monte Carlo
 Variational
 -----------
 
-ADVI
+OPVI
 ^^^^
 
-.. currentmodule:: pymc3.variational.advi
+.. currentmodule:: pymc3.variational.opvi
 
-.. automodule:: pymc3.variational.advi
+.. automodule:: pymc3.variational.opvi
    :members:
 
-ADVI minibatch
+Inference
+^^^^^^^^^
+
+.. currentmodule:: pymc3.variational.inference
+
+.. automodule:: pymc3.variational.inference
+   :members:
+
+Approximations
 ^^^^^^^^^^^^^^
-
-.. currentmodule:: pymc3.variational.advi_minibatch
-
-.. automodule:: pymc3.variational.advi_minibatch
-   :members:
-
-ADVI approximations
-^^^^^^^^^^^^^^^^^^^
 
 .. currentmodule:: pymc3.variational.approximations
 
 .. automodule:: pymc3.variational.approximations
+   :members:
+
+Operators
+^^^^^^^^^
+
+.. currentmodule:: pymc3.variational.operators
+
+.. automodule:: pymc3.variational.operators
    :members:
