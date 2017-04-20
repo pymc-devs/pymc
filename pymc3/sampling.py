@@ -348,9 +348,9 @@ def _iter_sample(draws, step, start=None, trace=None, chain=0, tune=None,
     strace = _choose_backend(trace, chain, model=model)
 
     if len(strace) > 0:
-        _soft_update(start, strace.point(-1))
+        _update_start_vals(start, strace.point(-1), model)
     else:
-        _soft_update(start, model.test_point)
+        _update_start_vals(start, model.test_point, model)
 
     try:
         step = CompoundStep(step)
@@ -457,12 +457,18 @@ def stop_tuning(step):
 
     return step
 
-
-def _soft_update(a, b):
-    """As opposed to dict.update, don't overwrite keys if present.
+def _update_start_vals(a, b, model):
+    """Update a with b, without overwriting existing keys. Values specified for
+    transformed variables on the original scale are also transformed and inserted.
     """
+    
+    for name in a:
+        for tname in b:
+            if tname.startswith(name) and tname!=name:
+                transform_func = [d.transformation for d in model.deterministics if d.name==name][0]
+                b[tname] = transform_func.forward(a[name]).eval()
+    
     a.update({k: v for k, v in b.items() if k not in a})
-
 
 def sample_ppc(trace, samples=None, model=None, vars=None, size=None,
                random_seed=None, progressbar=True):
