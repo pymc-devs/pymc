@@ -25,8 +25,8 @@ class MeanField(Approximation):
 
     Parameters
     ----------
-    local_rv : dict
-        mapping {model_variable -> local_variable}
+    local_rv : dict[var->tuple]
+        mapping {model_variable -> local_variable (:math:`\\mu`, math:`\\rho`)}
         Local Vars are used for Autoencoding Variational Bayes
         See (AEVB; Kingma and Welling, 2014) for details
 
@@ -100,8 +100,8 @@ class FullRank(Approximation):
 
     Parameters
     ----------
-    local_rv : dict
-        mapping {model_variable -> local_variable}
+    local_rv : dict[var->tuple]
+        mapping {model_variable -> local_variable (:math:`\\mu`, math:`\\rho`)}
         Local Vars are used for Autoencoding Variational Bayes
         See (AEVB; Kingma and Welling, 2014) for details
 
@@ -240,9 +240,9 @@ class Empirical(Approximation):
     Parameters
     ----------
     trace : MultiTrace
-    local_rv : dict
-        Experimental for Histogram approximation
-        mapping {model_variable -> local_variable}
+    local_rv : dict[var->tuple]
+        Experimental for Empirical Distribution
+        mapping {model_variable -> local_variable (:math:`\\mu`, math:`\\rho`)}
         Local Vars are used for Autoencoding Variational Bayes
         See (AEVB; Kingma and Welling, 2014) for details
 
