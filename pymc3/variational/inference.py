@@ -179,11 +179,120 @@ class Inference(object):
 class ADVI(Inference):
     """
     Automatic Differentiation Variational Inference (ADVI)
+    
+    This class implements the meanfield ADVI, where the variational
+    posterior distribution is assumed to be spherical Gaussian without
+    correlation of parameters and fit to the true posterior distribution.
+    The means and standard deviations of the variational posterior are referred
+    to as variational parameters.
+    
+    For explanation, we classify random variables in probabilistic models into
+    three types. Observed random variables
+    :math:`{\cal Y}=\{\mathbf{y}_{i}\}_{i=1}^{N}` are :math:`N` observations.
+    Each :math:`\mathbf{y}_{i}` can be a set of observed random variables,
+    i.e., :math:`\mathbf{y}_{i}=\{\mathbf{y}_{i}^{k}\}_{k=1}^{V_{o}}`, where
+    :math:`V_{k}` is the number of the types of observed random variables
+    in the model.
 
+    The next ones are global random variables
+    :math:`\Theta=\{\\theta^{k}\}_{k=1}^{V_{g}}`, which are used to calculate
+    the probabilities for all observed samples.
+
+    The last ones are local random variables
+    :math:`{\cal Z}=\{\mathbf{z}_{i}\}_{i=1}^{N}`, where
+    :math:`\mathbf{z}_{i}=\{\mathbf{z}_{i}^{k}\}_{k=1}^{V_{l}}`.
+    These RVs are used only in AEVB.
+
+    The goal of ADVI is to approximate the posterior distribution
+    :math:`p(\Theta,{\cal Z}|{\cal Y})` by variational posterior
+    :math:`q(\Theta)\prod_{i=1}^{N}q(\mathbf{z}_{i})`. All of these terms
+    are normal distributions (mean-field approximation).
+
+    :math:`q(\Theta)` is parametrized with its means and standard deviations.
+    These parameters are denoted as :math:`\gamma`. While :math:`\gamma` is
+    a constant, the parameters of :math:`q(\mathbf{z}_{i})` are dependent on
+    each observation. Therefore these parameters are denoted as
+    :math:`\\xi(\mathbf{y}_{i}; \\nu)`, where :math:`\\nu` is the parameters
+    of :math:`\\xi(\cdot)`. For example, :math:`\\xi(\cdot)` can be a
+    multilayer perceptron or convolutional neural network.
+
+    In addition to :math:`\\xi(\cdot)`, we can also include deterministic
+    mappings for the likelihood of observations. We denote the parameters of
+    the deterministic mappings as :math:`\eta`. An example of such mappings is
+    the deconvolutional neural network used in the convolutional VAE example
+    in the PyMC3 notebook directory.
+
+    This function maximizes the evidence lower bound (ELBO)
+    :math:`{\cal L}(\gamma, \\nu, \eta)` defined as follows:
+
+    .. math::
+
+        {\cal L}(\gamma,\\nu,\eta) & =
+        \mathbf{c}_{o}\mathbb{E}_{q(\Theta)}\left[
+        \sum_{i=1}^{N}\mathbb{E}_{q(\mathbf{z}_{i})}\left[
+        \log p(\mathbf{y}_{i}|\mathbf{z}_{i},\Theta,\eta)
+        \\right]\\right] \\\\ &
+        - \mathbf{c}_{g}KL\left[q(\Theta)||p(\Theta)\\right]
+        - \mathbf{c}_{l}\sum_{i=1}^{N}
+            KL\left[q(\mathbf{z}_{i})||p(\mathbf{z}_{i})\\right],
+
+    where :math:`KL[q(v)||p(v)]` is the Kullback-Leibler divergence
+
+    .. math::
+
+        KL[q(v)||p(v)] = \int q(v)\log\\frac{q(v)}{p(v)}dv,
+
+    :math:`\mathbf{c}_{o/g/l}` are vectors for weighting each term of ELBO.
+    More precisely, we can write each of the terms in ELBO as follows:
+
+    .. math::
+
+        \mathbf{c}_{o}\log p(\mathbf{y}_{i}|\mathbf{z}_{i},\Theta,\eta) & = &
+        \sum_{k=1}^{V_{o}}c_{o}^{k}
+            \log p(\mathbf{y}_{i}^{k}|
+                   {\\rm pa}(\mathbf{y}_{i}^{k},\Theta,\eta)) \\\\
+        \mathbf{c}_{g}KL\left[q(\Theta)||p(\Theta)\\right] & = &
+        \sum_{k=1}^{V_{g}}c_{g}^{k}KL\left[
+            q(\\theta^{k})||p(\\theta^{k}|{\\rm pa(\\theta^{k})})\\right] \\\\
+        \mathbf{c}_{l}KL\left[q(\mathbf{z}_{i}||p(\mathbf{z}_{i})\\right] & = &
+        \sum_{k=1}^{V_{l}}c_{l}^{k}KL\left[
+            q(\mathbf{z}_{i}^{k})||
+            p(\mathbf{z}_{i}^{k}|{\\rm pa}(\mathbf{z}_{i}^{k}))\\right],
+
+    where :math:`{\\rm pa}(v)` denotes the set of parent variables of :math:`v`
+    in the directed acyclic graph of the model.
+
+    When using mini-batches, :math:`c_{o}^{k}` and :math:`c_{l}^{k}` should be
+    set to :math:`N/M`, where :math:`M` is the number of observations in each
+    mini-batch. This is done with supplying :code:`total_size` parameter to 
+    observed nodes (e.g. :code:`Normal('x', 0, 1, observed=data, total_size=10000)`).
+    In this case it is possible to automatically determine appropriate scaling for :math:`logp`
+    of observed nodes. Interesting to note that it is possible to have two independent 
+    observed variables with different :code:`total_size` and iterate them independently
+    during inference.  
+
+    For working with ADVI, we need to give 
+    -   The probabilistic model
+        (:code:`model`), the three types of RVs (:code:`observed_RVs`,
+        :code:`global_RVs` and :code:`local_RVs`). 
+    
+    -   (optional) Minibatches
+        The tensors to which mini-bathced samples are supplied are 
+        handled separately by using callbacks in :code:`.fit` method 
+        that change storage of shared theano variable or by :code:`pm.generator` 
+        that automatically iterates over minibatches and defined beforehand. 
+    
+    -   (optional) Parameters of deterministic mappings
+        They have to be passed along with other params to :code:`.fit` method 
+        as :code:`more_obj_params` argument. 
+    
+    For more information concerning training stage please reference 
+    :code:`pymc3.variational.opvi.ObjectiveFunction.step_function`
+    
     Parameters
     ----------
-    local_rv : dict
-        mapping {model_variable -> local_variable}
+    local_rv : dict[var->tuple]
+        mapping {model_variable -> local_variable (:math:`\\mu`, math:`\\rho`)}
         Local Vars are used for Autoencoding Variational Bayes
         See (AEVB; Kingma and Welling, 2014) for details
 
@@ -246,8 +355,8 @@ class FullRankADVI(Inference):
 
     Parameters
     ----------
-    local_rv : dict
-        mapping {model_variable -> local_variable}
+    local_rv : dict[var->tuple]
+        mapping {model_variable -> local_variable (:math:`\\mu`, math:`\\rho`)}
         Local Vars are used for Autoencoding Variational Bayes
         See (AEVB; Kingma and Welling, 2014) for details
 

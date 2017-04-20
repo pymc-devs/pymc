@@ -1,3 +1,36 @@
+"""
+Variational inference is a great approach for doing really complex, 
+often intractable Bayesian inference in approximate form. Common methods 
+(e.g. ADVI) lack from complexity so that approximate posterior does not 
+reveal the true nature of underlying problem. In some applications it can 
+yield unreliable decisions. 
+
+Recently on NIPS 2017 [OPVI](https://arxiv.org/abs/1610.09033) framework 
+was presented. It generalizes variational inverence so that the problem is 
+build with blocks. The first and essential block is Model itself. Second is 
+Approximation, in some cases :math:`log Q(D)` is not really needed. Necessity 
+depends on the third and forth part of that black box, Operator and 
+Test Function respectively. 
+
+Operator is like an approach we use, it constructs loss from given Model, 
+Approximation and Test Function. The last one is not needed if we minimize 
+KL Divergence from Q to posterior. As a drawback we need to compute :math:`loq Q(D)`. 
+Sometimes approximation family is intractable and :math:`loq Q(D)` is not available, 
+here comes LS(Langevin Stein) Operator with a set of test functions.
+
+Test Function has more unintuitive meaning. It is usually used with LS operator 
+and represents all we want from our approximate distribution. For any given vector 
+based function of :math:`z` LS operator yields zero mean function under posterior. 
+:math:`loq Q(D)` is no more needed. That opens a door to rich approximation 
+families as neural networks.
+
+References
+----------
+-   Rajesh Ranganath, Jaan Altosaar, Dustin Tran, David M. Blei 
+    Operator Variational Inference 
+    https://arxiv.org/abs/1610.09033 (2016)
+"""
+
 import warnings
 import numpy as np
 import theano
@@ -251,7 +284,7 @@ class Operator(object):
 
     Subclassing
     -----------
-    For implementing Custom operator it is needed to define `.apply(f)` method
+    For implementing Custom operator it is needed to define :code:`.apply(f)` method
     """
 
     HAS_TEST_FUNCTION = False
@@ -417,8 +450,8 @@ class Approximation(object):
 
     Parameters
     ----------
-    local_rv : dict
-        mapping {model_variable -> local_variable}
+    local_rv : dict[var->tuple]
+        mapping {model_variable -> local_variable (:math:`\\mu`, math:`\\rho`)}
         Local Vars are used for Autoencoding Variational Bayes
         See (AEVB; Kingma and Welling, 2014) for details
 
@@ -439,37 +472,49 @@ class Approximation(object):
     -----------
     Defining an approximation needs
     custom implementation of the following methods:
-        - `.create_shared_params()`
+        - :code:`.create_shared_params(**kwargs)`
             Returns {dict|list|theano.shared}
 
-        - `.random_global(size=None, no_rand=False)`
+        - :code:`.random_global(size=None, no_rand=False)`
             Generate samples from posterior. If `no_rand==False`:
             sample from MAP of initial distribution.
             Returns TensorVariable
 
-        - `.log_q_W_global(z)`
+        - :code:`.log_q_W_global(z)`
             It is needed only if used with operator
             that requires :math:`logq` of an approximation
             Returns Scalar
+            
+    You can also override the following methods:
+        - :code:`._setup(**kwargs)`
+            Do some specific stuff having :code:`kwargs` before calling :code:`.create_shared_params`
+            
+        - :code:`.check_model(model, **kwargs)`
+            Do some specific check for model having :code:`kwargs`
 
     Notes
     -----
-    There are some defaults for approximation classes that can be
+    :code:`kwargs` mentioned above are supplied as additional arguments 
+    for :code:`Approximation.__init__`
+    
+    There are some defaults class attributes for approximation classes that can be
     optionally overriden.
-        - `initial_dist_name`
+        - :code:`initial_dist_name`
             string that represents name of the initial distribution.
             In most cases if will be `uniform` or `normal`
-        - `initial_dist_map`
-            float where initial distribution has maximum density
 
+        - :code:`initial_dist_map`
+            float where initial distribution has maximum density
+        
+        
     References
     ----------
-    - Geoffrey Roeder, Yuhuai Wu, David Duvenaud, 2016
+    -   Geoffrey Roeder, Yuhuai Wu, David Duvenaud, 2016
         Sticking the Landing: A Simple Reduced-Variance Gradient for ADVI
         approximateinference.org/accepted/RoederEtAl2016.pdf
 
-    - Kingma, D. P., & Welling, M. (2014).
-      Auto-Encoding Variational Bayes. stat, 1050, 1.
+    -   Kingma, D. P., & Welling, M. (2014).
+        Auto-Encoding Variational Bayes. stat, 1050, 1.
     """
     initial_dist_name = 'normal'
     initial_dist_map = 0.
