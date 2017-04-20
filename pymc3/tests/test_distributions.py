@@ -390,8 +390,10 @@ class TestMatchesScipy(SeededTest):
 
     def test_flat(self):
         self.pymc3_matches_scipy(Flat, Runif, {}, lambda value: 0)
-        # TODO: Check infinite values?
         self.check_logcdf(Flat, Runif, {}, lambda value: np.log(0.5))
+        # Check infinite cases individually.
+        assert 0. == Flat.dist().logcdf(np.inf).tag.test_value
+        assert -np.inf == Flat.dist().logcdf(-np.inf).tag.test_value
 
     def test_normal(self):
         self.pymc3_matches_scipy(Normal, R, {'mu': R, 'sd': Rplus},
