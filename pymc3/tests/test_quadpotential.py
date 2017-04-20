@@ -5,6 +5,7 @@ import theano
 
 from pymc3.step_methods.hmc import quadpotential
 import pymc3
+from pymc3.theanof import floatX
 import pytest
 
 
@@ -22,7 +23,7 @@ def test_elemwise_posdef2():
 
 def test_elemwise_velocity():
     scaling = np.array([1, 2, 3])
-    x_ = np.ones_like(scaling)
+    x_ = floatX(np.ones_like(scaling))
     x = tt.vector()
     x.tag.test_value = x_
     pot = quadpotential.quad_potential(scaling, True, False)
@@ -35,7 +36,7 @@ def test_elemwise_velocity():
 
 def test_elemwise_energy():
     scaling = np.array([1, 2, 3])
-    x_ = np.ones_like(scaling)
+    x_ = floatX(np.ones_like(scaling))
     x = tt.vector()
     x.tag.test_value = x_
     pot = quadpotential.quad_potential(scaling, True, False)
@@ -50,7 +51,7 @@ def test_equal_diag():
     np.random.seed(42)
     for _ in range(3):
         diag = np.random.rand(5)
-        x_ = np.random.randn(5)
+        x_ = floatX(np.random.randn(5))
         x = tt.vector()
         x.tag.test_value = x_
         pots = [
@@ -80,7 +81,7 @@ def test_equal_dense():
         cov += 10 * np.eye(5)
         inv = np.linalg.inv(cov)
         assert np.allclose(inv.dot(cov), np.eye(5))
-        x_ = np.random.randn(5)
+        x_ = floatX(np.random.randn(5))
         x = tt.vector()
         x.tag.test_value = x_
         pots = [

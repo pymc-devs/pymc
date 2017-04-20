@@ -5,6 +5,7 @@ import pymc3 as pm
 from pymc3.distributions import HalfCauchy, Normal
 from pymc3 import Potential, Deterministic
 from pymc3.theanof import generator
+from .helpers import select_by_precision
 import pytest
 
 
@@ -171,7 +172,7 @@ class TestScaling(object):
 
         for i in range(10):
             _1, _2, _t = p1(), p2(), next(t)
-            np.testing.assert_almost_equal(_1, _t)
+            np.testing.assert_almost_equal(_1, _t, decimal=select_by_precision(float64=7, float32=2))  # Value O(-50,000)
             np.testing.assert_almost_equal(_1, _2)
         # Done
 
