@@ -2,6 +2,7 @@ import numpy as np
 import theano.tensor as tt
 import pymc3 as pm
 
+from ..theanof import floatX
 from ..distributions import Discrete
 from ..distributions.dist_math import bound, factln, alltrue_scalar
 
@@ -103,11 +104,11 @@ def test_multinomial_bound():
     n = x.sum()
 
     with pm.Model() as modelA:
-        p_a = pm.Dirichlet('p', np.ones(2))
+        p_a = pm.Dirichlet('p', floatX(np.ones(2)))
         MultinomialA('x', n, p_a, observed=x)
 
     with pm.Model() as modelB:
-        p_b = pm.Dirichlet('p', np.ones(2))
+        p_b = pm.Dirichlet('p', floatX(np.ones(2)))
         MultinomialB('x', n, p_b, observed=x)
 
     assert np.isclose(modelA.logp({'p_stickbreaking_': [0]}),

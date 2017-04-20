@@ -1,21 +1,22 @@
-import os
+import shutil
+import tempfile
 
 from .checks import close_to
 from .models import simple_categorical, mv_simple, mv_simple_discrete, simple_2model, mv_prior_simple
 from pymc3.sampling import assign_step_methods, sample
-from pymc3.model import Model
+from pymc3.model import Model, Deterministic
 from pymc3.step_methods import (NUTS, BinaryGibbsMetropolis, CategoricalGibbsMetropolis,
                                 Metropolis, Slice, CompoundStep, NormalProposal,
                                 MultivariateNormalProposal, HamiltonianMC,
-                                EllipticalSlice)
+                                EllipticalSlice, smc)
 from pymc3.distributions import Binomial, Normal, Bernoulli, Categorical
 
 from numpy.testing import assert_array_almost_equal
 import numpy as np
 import numpy.testing as npt
-from tqdm import tqdm
 import pytest
 import theano
+import theano.tensor as tt
 from .helpers import select_by_precision
 
 
@@ -104,8 +105,34 @@ class TestStepMethods(object):  # yield test doesn't work subclassing object
                2.81141081e-03,   3.25839131e-01,   1.33638823e+00,   1.59391112e+00,
               -3.91174647e-01,  -2.60664979e+00,  -2.27637534e+00,  -2.81505065e+00,
               -2.24238542e+00,  -1.01648100e+00,  -1.01648100e+00,  -7.60912865e-01,
-               1.44384812e+00,   2.07355127e+00,   1.91390340e+00,   1.66559696e+00])
+               1.44384812e+00,   2.07355127e+00,   1.91390340e+00,   1.66559696e+00]),
+        smc.SMC: np.array([-0.44712856, -0.44712856,  0.40349164,  0.40349164,  0.59357852,
+                           -1.09491185,  0.16938243,  0.74055645, -0.9537006 , -0.26621851,
+                            0.03261455, -1.37311732,  0.31515939,  0.84616065, -0.85951594,
+                            0.35054598, -1.31228341, -0.03869551, -1.61577235,  1.12141771,
+                            0.40890054, -0.02461696, -0.77516162,  1.27375593,  1.23616403,
+                            0.3380117 , -1.19926803,  0.86334532, -0.1809203 , -0.60392063,
+                           -0.60392063,  0.5505375 ,  0.79280687, -0.62353073,  0.52057634,
+                            0.52057634,  0.80186103,  0.0465673 ,  0.0465673 , -0.18656977,
+                           -0.10174587,  0.86888616,  0.75041164,  0.52946532,  0.52946532,
+                            0.13770121,  0.07782113,  0.61838026,  0.23249456,  0.23249456,
+                            0.68255141, -0.31011677,  1.0388246 ,  0.44136444, -0.10015523,
+                           -0.10015523, -0.13644474, -0.11905419,  0.01740941,  0.01740941,
+                           -1.12201873, -0.51709446, -0.99702683,  0.24879916, -0.29664115,
+                            0.49521132, -0.17470316, -0.17470316,  0.98633519,  0.2135339 ,
+                           -0.64691669,  0.90148689, -0.24863478, -0.24863478,  0.04366899,
+                           -0.22631424,  1.33145711, -0.28730786,  0.68006984, -0.3198016 ,
+                           -0.3198016 ,  0.31354772,  0.31354772,  0.50318481, -0.11044703,
+                           -0.11044703, -0.61736206,  0.5627611 ,  0.24073709,  0.28066508,
+                            0.28066508, -0.0731127 ,  1.16033857,  0.36949272,  1.1110567 ,
+                            0.6590498 ,  0.60231928,  0.4202822 ,  0.4202822 ,  0.81095167]),
     }
+
+    def setup_class(self):
+        self.temp_dir = tempfile.mkdtemp()
+
+    def teardown_class(self):
+        shutil.rmtree(self.temp_dir)
 
     def test_sample_exact(self):
         for step_method in self.master_samples:
@@ -127,19 +154,22 @@ class TestStepMethods(object):  # yield test doesn't work subclassing object
 
         on multiple commits.
         """
-        test_steps = 100
-        n_steps = int(os.getenv('BENCHMARK', 100))
-        benchmarking = (n_steps != test_steps)
-        if benchmarking:
-            tqdm.write('Benchmarking {} with {:,d} samples'.format(step_method.__name__, n_steps))
-        else:
-            tqdm.write('Checking {} has same trace as on master'.format(step_method.__name__))
-        with Model() as model:
-            Normal('x', mu=0, sd=1)
-            trace = sample(n_steps, step=step_method(), random_seed=1)
+        n_steps = 100
+        with Model():
+            x = Normal('x', mu=0, sd=1)
+            if step_method.__name__ == 'SMC':
+                Deterministic('like', - 0.5 * tt.log(2 * np.pi) - 0.5 * x.T.dot(x))
+                trace = smc.ATMIP_sample(n_steps=n_steps, step=step_method(random_seed=1),
+                                         n_jobs=1, progressbar=False, stage='0',
+                                         homepath=self.temp_dir)
+            else:
+                trace = sample(n_steps, step=step_method(), random_seed=1)
 
-        if not benchmarking:
-            assert_array_almost_equal(trace.get_values('x'), self.master_samples[step_method], decimal=select_by_precision(float64=6, float32=4))
+        print(repr(trace.get_values('x')))
+        assert_array_almost_equal(
+            trace.get_values('x'),
+            self.master_samples[step_method],
+            decimal=select_by_precision(float64=6, float32=4))
 
     def check_stat(self, check, trace, name):
         for (var, stat, value, bound) in check:
