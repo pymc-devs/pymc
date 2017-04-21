@@ -260,7 +260,7 @@ class Circular(Transform):
         return tt.arctan2(tt.sin(y), tt.cos(y))
 
     def forward(self, x):
-        return x
+        return tt.as_tensor_variable(x)
 
     def jacobian_det(self, x):
         return 0
