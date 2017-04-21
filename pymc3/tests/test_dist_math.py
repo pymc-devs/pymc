@@ -1,10 +1,15 @@
 import numpy as np
+import numpy.testing as npt
 import theano.tensor as tt
+import theano
+import theano.tests.unittest_tools as utt
 import pymc3 as pm
+from scipy import stats
 
 from ..theanof import floatX
 from ..distributions import Discrete
-from ..distributions.dist_math import bound, factln, alltrue_scalar
+from ..distributions.dist_math import (
+    bound, factln, alltrue_scalar, MvNormalLogp)
 
 
 def test_bound():
@@ -113,3 +118,73 @@ def test_multinomial_bound():
 
     assert np.isclose(modelA.logp({'p_stickbreaking__': [0]}),
                       modelB.logp({'p_stickbreaking__': [0]}))
+
+
+class TestMvNormalLogp():
+    def test_logp(self):
+        np.random.seed(42)
+
+        chol_val = np.array([[1, 0.9], [0, 2]])
+        cov_val = np.dot(chol_val, chol_val.T)
+        cov = tt.matrix('cov')
+        cov.tag.test_value = cov_val
+        delta_val = np.random.randn(5, 2)
+        delta = tt.matrix('delta')
+        delta.tag.test_value = delta_val
+        expect = stats.multivariate_normal(mean=np.zeros(2), cov=cov_val)
+        expect = expect.logpdf(delta_val).sum()
+        logp = MvNormalLogp()(cov, delta)
+        logp_f = theano.function([cov, delta], logp)
+        logp = logp_f(cov_val, delta_val)
+        npt.assert_allclose(logp, expect)
+
+    def test_grad(self):
+        np.random.seed(42)
+
+        def func(chol_vec, delta):
+            chol = tt.stack([
+                tt.stack([tt.exp(0.1 * chol_vec[0]), 0]),
+                tt.stack([chol_vec[1], 2 * tt.exp(chol_vec[2])]),
+            ])
+            cov = tt.dot(chol, chol.T)
+            return MvNormalLogp()(cov, delta)
+
+        chol_vec_val = np.array([0.5, 1., -0.1])
+
+        delta_val = np.random.randn(1, 2)
+        try:
+            utt.verify_grad(func, [chol_vec_val, delta_val])
+        except ValueError as e:
+            print(e.args[0])
+
+        delta_val = np.random.randn(5, 2)
+        utt.verify_grad(func, [chol_vec_val, delta_val])
+
+    def test_graphop(self):
+        x = tt.scalar('x')
+        x.tag.test_value = np.array(1.)
+        op = theano.OpFromGraph([x], [x ** 3])
+        y = tt.scalar('y')
+        y.tag.test_value = np.array(1.)
+        f = op(y)
+        # this works
+        grad_f = tt.grad(f, y)
+        print(grad_f.tag.test_value)
+        # This throws an error about a missing test value
+        tt.grad(grad_f, y)
+
+    def test_hessian(self):
+        chol_vec = tt.vector('chol_vec')
+        chol_vec.tag.test_value = np.array([0.1, 2, 3])
+        chol = tt.stack([
+            tt.stack([tt.exp(0.1 * chol_vec[0]), 0]),
+            tt.stack([chol_vec[1], 2 * tt.exp(chol_vec[2])]),
+        ])
+        cov = tt.dot(chol, chol.T)
+        delta = tt.matrix('delta')
+        delta.tag.test_value = np.ones((5, 2))
+        logp = MvNormalLogp()(cov, delta)
+        g_cov, g_delta = tt.grad(logp, [cov, delta])
+        print(g_delta.sum().tag.test_value)
+        tt.grad(g_delta[0, 0], [cov])
+        #tt.grad(g_cov.sum(), [cov])

@@ -2,7 +2,8 @@ import numpy as np
 import theano
 import theano.tensor as tt
 from theano.tests import unittest_tools as utt
-from pymc3.math import LogDet, logdet, probit, invprobit, expand_packed_triangular
+from pymc3.math import (
+    LogDet, logdet, probit, invprobit, expand_packed_triangular)
 from .helpers import SeededTest
 import pytest
 
@@ -32,7 +33,8 @@ class TestLogDet(SeededTest):
         # Test gradient:
         utt.verify_grad(self.op, [input_mat])
 
-    @pytest.mark.skipif(theano.config.device in ["cuda", "gpu"], reason="No logDet implementation on GPU.")
+    @pytest.mark.skipif(theano.config.device in ["cuda", "gpu"],
+                        reason="No logDet implementation on GPU.")
     def test_basic(self):
         # Calls validate with different params
         test_case_1 = np.random.randn(3, 3) / np.sqrt(3)

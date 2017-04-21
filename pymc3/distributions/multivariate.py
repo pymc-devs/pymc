@@ -13,13 +13,13 @@ from theano.tensor.nlinalg import det, matrix_inverse, trace
 
 import pymc3 as pm
 
-from pymc3.math import tround, Cholesky, mvnormal_logp, logdet
+from pymc3.math import tround, logdet
 from . import transforms
 from .distribution import Continuous, Discrete, draw_values, generate_samples
 from ..model import Deterministic
 from .continuous import ChiSquared, Normal
 from .special import gammaln, multigammaln
-from .dist_math import bound, logpow, factln
+from .dist_math import bound, logpow, factln, Cholesky, MvNormalLogp
 
 __all__ = ['MvNormal', 'MvStudentT', 'Dirichlet',
            'Multinomial', 'Wishart', 'WishartBartlett',
@@ -111,7 +111,6 @@ class MvNormal(Continuous):
         # an error.
         cholesky = Cholesky(nofail=True, lower=True)
 
-        self.has_tau = tau is not None
         if cov is not None:
             self.k = cov.shape[0]
             self._cov_type = 'cov'
@@ -136,11 +135,6 @@ class MvNormal(Continuous):
             self.chol_cov = tt.as_tensor_variable(chol)
 
     def random(self, point=None, size=None):
-        if self.has_tau:
-            mu, chol_tau = draw_values([self.mu, self.chol_tau], point=point)
-        else:
-            mu, chol_cov = draw_values([self.mu, self.chol_cov], point=point)
-
         if size is None:
             size = []
         else:
@@ -148,14 +142,30 @@ class MvNormal(Continuous):
                 size = list(size)
             except TypeError:
                 size = [size]
-        size.append(mu.shape[0])
+        size.append(self.mu.shape[0])
 
         standard_normal = np.random.standard_normal(size)
-        if self.has_tau:
+
+        if self._cov_type in ['cov', 'chol']:
+            if self._cov_type == 'cov':
+                mu, cov = draw_values([self.mu, self.cov], point=point)
+                try:
+                    chol = scipy.linalg.cholesky(cov, lower=True)
+                except scipy.linalg.LinAlgError:
+                    return np.nan * np.zeros(size)
+            else:
+                mu, chol = draw_values([self.mu, self.chol_cov], point=point)
+
+            return mu + np.dot(standard_normal, chol)
+        else:
+            mu, tau = draw_values([self.mu, self.tau], point=point)
+            try:
+                chol = scipy.linalg.cholesky(cov, lower=True)
+            except scipy.linalg.LinAlgError:
+                return np.nan * np.zeros(size)
             transformed = scipy.linalg.solve_triangular(
-                chol_tau, standard_normal.T, lower=True)
+                chol, standard_normal.T, lower=True)
             return mu + transformed.T
-        return mu + np.dot(standard_normal, chol_cov)
 
     def logp(self, value):
         mu = self.mu
@@ -165,18 +175,21 @@ class MvNormal(Continuous):
         delta = value - mu
 
         if self._cov_type == 'cov':
-            return mvnormal_logp()(self.cov, delta)
-        if self.has_tau:
+            return MvNormalLogp()(self.cov, delta)
+        elif self._cov_type == 'tau':
             return self._logp_tau(delta)
-        return self._logp_chol(delta)
+        else:
+            return self._logp_chol(delta)
 
     def _logp_chol(self, delta):
         chol_cov = self.chol_cov
         n, k = delta.shape
 
         diag = tt.nlinalg.diag(chol_cov)
-        # Whether the covariance matrix is positive definite.
+        # Check if the covariance matrix is positive definite.
         ok = tt.all(diag > 0)
+        # If not, replace the diagonal. We return -inf later, but
+        # need to prevent solve_lower from throwing an exception.
         chol_cov = tt.switch(
             ok,
             chol_cov,
@@ -184,12 +197,11 @@ class MvNormal(Continuous):
 
         delta_trans = self.solve_lower(chol_cov, delta.T)
 
-        result = n * k * tt.log(2 * np.pi)
+        result = n * k * np.log(2 * np.pi)
         result += 2.0 * n * tt.sum(tt.log(diag))
         result += (delta_trans ** 2).sum()
         result = -0.5 * result
         return bound(result, ok)
-
 
     def _logp_tau(self, delta):
         chol_tau = self.chol_tau
@@ -198,6 +210,7 @@ class MvNormal(Continuous):
         diag = tt.nlinalg.diag(chol_tau)
         ok = tt.all(diag > 0)
 
+        chol_tau = tt.switch(ok, chol_tau, 1)
         delta_trans = tt.dot(chol_tau.T, delta.T)
 
         result = n * k * tt.log(2 * np.pi)
@@ -205,7 +218,6 @@ class MvNormal(Continuous):
         result += (delta_trans ** 2).sum()
         result = -0.5 * result
         return bound(result, ok)
-
 
     def _logp_tau_(self, delta):
         tau = self.tau
@@ -702,7 +714,7 @@ class LKJCholeskyCov(Continuous):
             chol = pm.expand_packed_triangular(10, packed_chol, lower=True)
 
             # Define a new MvNormal with the given covariance
-            vals = pm.MvNormal('vals', mu=np.zeros(10), chol=chol)
+            vals = pm.MvNormal('vals', mu=np.zeros(10), chol=chol, shape=10)
 
             # Or transform an uncorrelated normal:
             vals_raw = pm.Normal('vals_raw', mu=np.zeros(10), sd=1)

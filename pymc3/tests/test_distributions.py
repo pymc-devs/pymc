@@ -227,7 +227,7 @@ def scipy_exponweib_sucks(value, alpha, beta):
 
 
 def normal_logpdf_tau(value, mu, tau):
-    return normal_logpdf_cov(value, mu, np.linalg.inv(tau))
+    return normal_logpdf_cov(value, mu, np.linalg.inv(tau)).sum()
 
 
 def normal_logpdf_cov(value, mu, cov):
@@ -603,8 +603,10 @@ class TestMatchesScipy(SeededTest):
         self.pymc3_matches_scipy(MvNormal, Vector(R, n),
                                  {'mu': Vector(R, n), 'chol': PdMatrixChol(n)},
                                  normal_logpdf_chol)
+
         def MvNormalUpper(*args, **kwargs):
             return MvNormal(lower=False, *args, **kwargs)
+
         self.pymc3_matches_scipy(MvNormalUpper, Vector(R, n),
                                  {'mu': Vector(R, n), 'chol': PdMatrixCholUpper(n)},
                                  normal_logpdf_chol_upper)
