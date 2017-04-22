@@ -11,6 +11,7 @@ from .model import modelcontext, Point
 from .step_methods import (NUTS, HamiltonianMC, Metropolis, BinaryMetropolis,
                            BinaryGibbsMetropolis, CategoricalGibbsMetropolis,
                            Slice, CompoundStep)
+from .plots.traceplot import traceplot
 from tqdm import tqdm
 
 import sys
@@ -18,23 +19,24 @@ sys.setrecursionlimit(10000)
 
 __all__ = ['sample', 'iter_sample', 'sample_ppc', 'init_nuts']
 
+STEP_METHODS = (NUTS, HamiltonianMC, Metropolis, BinaryMetropolis,
+                BinaryGibbsMetropolis, Slice, CategoricalGibbsMetropolis)
 
-def assign_step_methods(model, step=None, methods=(NUTS, HamiltonianMC, Metropolis,
-                                                   BinaryMetropolis, BinaryGibbsMetropolis,
-                                                   Slice, CategoricalGibbsMetropolis)):
-    '''
-    Assign model variables to appropriate step methods. Passing a specified
-    model will auto-assign its constituent stochastic variables to step methods
-    based on the characteristics of the variables. This function is intended to
-    be called automatically from `sample()`, but may be called manually. Each
-    step method passed should have a `competence()` method that returns an
-    ordinal competence value corresponding to the variable passed to it. This
-    value quantifies the appropriateness of the step method for sampling the
-    variable.
+
+def assign_step_methods(model, step=None, methods=STEP_METHODS,
+                        step_kwargs=None):
+    """Assign model variables to appropriate step methods.
+
+    Passing a specified model will auto-assign its constituent stochastic
+    variables to step methods based on the characteristics of the variables.
+    This function is intended to be called automatically from `sample()`, but
+    may be called manually. Each step method passed should have a
+    `competence()` method that returns an ordinal competence value
+    corresponding to the variable passed to it. This value quantifies the
+    appropriateness of the step method for sampling the variable.
 
     Parameters
     ----------
-
     model : Model object
         A fully-specified model object
     step : step function or vector of step functions
@@ -43,12 +45,17 @@ def assign_step_methods(model, step=None, methods=(NUTS, HamiltonianMC, Metropol
     methods : vector of step method classes
         The set of step methods from which the function may choose. Defaults
         to the main step methods provided by PyMC3.
+    step_kwargs : dict
+        Parameters for the samplers. Keys are the lower case names of
+        the step method, values a dict of arguments.
 
     Returns
     -------
-    List of step methods associated with the model's variables.
-    '''
-
+    methods : list
+        List of step methods associated with the model's variables.
+    """
+    if step_kwargs is None:
+        step_kwargs = {}
     steps = []
     assigned_vars = set()
     if step is not None:
@@ -73,7 +80,18 @@ def assign_step_methods(model, step=None, methods=(NUTS, HamiltonianMC, Metropol
             selected_steps[selected].append(var)
 
     # Instantiate all selected step methods
-    steps += [step(vars=selected_steps[step]) for step in selected_steps if selected_steps[step]]
+    used_keys = set()
+    for step_class, vars in selected_steps.items():
+        if len(vars) == 0:
+            continue
+        args = step_kwargs.get(step_class.name, {})
+        used_keys.add(step_class.name)
+        step = step_class(vars=vars, **args)
+        steps.append(step)
+
+    unused_args = set(step_kwargs).difference(used_keys)
+    if unused_args:
+        raise ValueError('Unused step method arguments: %s' % unused_args)
 
     if len(steps) == 1:
         steps = steps[0]
@@ -81,34 +99,36 @@ def assign_step_methods(model, step=None, methods=(NUTS, HamiltonianMC, Metropol
     return steps
 
 
-def sample(draws, step=None, init='advi', n_init=200000, start=None,
-           trace=None, chain=0, njobs=1, tune=None, progressbar=True,
-           model=None, random_seed=-1):
-    """
-    Draw a number of samples using the given step method.
-    Multiple step methods supported via compound step method
-    returns the amount of time taken.
+def sample(draws, step=None, init='auto', n_init=200000, start=None,
+           trace=None, chain=0, njobs=1, tune=None, nuts_kwargs=None,
+           step_kwargs=None, progressbar=True, model=None, random_seed=-1,
+           live_plot=False, **kwargs):
+    """Draw samples from the posterior using the given step methods.
+
+    Multiple step methods are supported via compound step methods.
 
     Parameters
     ----------
-
     draws : int
         The number of samples to draw.
     step : function or iterable of functions
-        A step function or collection of functions. If no step methods are
-        specified, or are partially specified, they will be assigned
-        automatically (defaults to None).
+        A step function or collection of functions. If there are variables
+        without a step methods, step methods for those variables will
+        be assigned automatically.
     init : str {'ADVI', 'ADVI_MAP', 'MAP', 'NUTS', None}
-        Initialization method to use.
-        * ADVI : Run ADVI to estimate starting points and diagonal covariance
-        matrix. If njobs > 1 it will sample starting points from the estimated
-        posterior, otherwise it will use the estimated posterior mean.
+        Initialization method to use. Only works for auto-assigned step methods.
+
+        * ADVI: Run ADVI to estimate starting points and diagonal covariance
+          matrix. If njobs > 1 it will sample starting points from the estimated
+          posterior, otherwise it will use the estimated posterior mean.
         * ADVI_MAP: Initialize ADVI with MAP and use MAP as starting point.
-        * MAP : Use the MAP as starting point.
-        * NUTS : Run NUTS to estimate starting points and covariance matrix. If
-        njobs > 1 it will sample starting points from the estimated posterior,
-        otherwise it will use the estimated posterior mean.
-        * None : Do not initialize.
+        * MAP: Use the MAP as starting point.
+        * NUTS: Run NUTS to estimate starting points and covariance matrix. If
+          njobs > 1 it will sample starting points from the estimated posterior,
+          otherwise it will use the estimated posterior mean.
+        * auto : Auto-initialize, if possible. Currently only works when NUTS
+          is auto-assigned as step method (default).
+        * None: Do not initialize.
     n_init : int
         Number of iterations of initializer
         If 'ADVI', number of iterations, if 'nuts', number of draws.
@@ -132,6 +152,25 @@ def sample(draws, step=None, init='advi', n_init=200000, start=None,
         in the system - 2.
     tune : int
         Number of iterations to tune, if applicable (defaults to None)
+    nuts_kwargs : dict
+        Options for the NUTS sampler. See the docstring of NUTS
+        for a complete list of options. Common options are
+
+        * target_accept: float in [0, 1]. The step size is tuned such
+          that we approximate this acceptance rate. Higher values like 0.9
+          or 0.95 often work better for problematic posteriors.
+        * max_treedepth: The maximum depth of the trajectory tree.
+        * step_scale: float, default 0.25
+          The initial guess for the step size scaled down by `1/n**(1/4)`.
+
+        If you want to pass options to other step methods, please use
+        `step_kwargs`.
+    step_kwargs : dict
+        Options for step methods. Keys are the lower case names of
+        the step method, values are dicts of keyword arguments.
+        You can find a full list of arguments in the docstring of
+        the step methods. If you want to pass arguments only to nuts,
+        you can use `nuts_kwargs`.
     progressbar : bool
         Whether or not to display a progress bar in the command line. The
         bar shows the percentage of completion, the sampling speed in
@@ -140,24 +179,58 @@ def sample(draws, step=None, init='advi', n_init=200000, start=None,
     model : Model (optional if in `with` context)
     random_seed : int or list of ints
         A list is accepted if more if `njobs` is greater than one.
+    live_plot: bool
+        Flag for live plotting the trace while sampling
 
     Returns
     -------
-    MultiTrace object with access to sampling values
+    trace : pymc3.backends.base.MultiTrace
+        A `MultiTrace` object that contains the samples.
+
+    Examples
+    --------
+    .. code:: ipython
+
+        >>> import pymc3 as pm
+        ... n = 100
+        ... h = 61
+        ... alpha = 2
+        ... beta = 2
+
+    .. code:: ipython
+
+        >>> with pm.Model() as model: # context management
+        ...     p = pm.Beta('p', alpha=alpha, beta=beta)
+        ...     y = pm.Binomial('y', n=n, p=p, observed=h)
+        ...     trace = pm.sample(2000, tune=1000, njobs=4)
+        >>> pm.df_summary(trace)
+               mean        sd  mc_error   hpd_2.5  hpd_97.5
+        p  0.604625  0.047086   0.00078  0.510498  0.694774
     """
     model = modelcontext(model)
 
     if init is not None:
         init = init.lower()
 
+    if nuts_kwargs is not None:
+        if step_kwargs is not None:
+            raise ValueError("Specify only one of step_kwargs and nuts_kwargs")
+        step_kwargs = {'nuts': nuts_kwargs}
+
     if step is None and init is not None and pm.model.all_continuous(model.vars):
         # By default, use NUTS sampler
         pm._log.info('Auto-assigning NUTS sampler...')
-        start_, step = init_nuts(init=init, njobs=njobs, n_init=n_init, model=model, random_seed=random_seed)
+        args = step_kwargs if step_kwargs is not None else {}
+        args = args.get('nuts', {})
+        if init == 'auto':
+            init = 'ADVI'
+        start_, step = init_nuts(init=init, njobs=njobs, n_init=n_init,
+                                 model=model, random_seed=random_seed,
+                                 progressbar=progressbar, **args)
         if start is None:
             start = start_
     else:
-        step = assign_step_methods(model, step)
+        step = assign_step_methods(model, step, step_kwargs=step_kwargs)
 
     if njobs is None:
         import multiprocessing as mp
@@ -171,7 +244,11 @@ def sample(draws, step=None, init='advi', n_init=200000, start=None,
                    'tune': tune,
                    'progressbar': progressbar,
                    'model': model,
-                   'random_seed': random_seed}
+                   'random_seed': random_seed,
+                   'live_plot': live_plot,
+                   }
+
+    sample_args.update(kwargs)
 
     if njobs > 1:
         sample_func = _mp_sample
@@ -183,22 +260,30 @@ def sample(draws, step=None, init='advi', n_init=200000, start=None,
 
 
 def _sample(draws, step=None, start=None, trace=None, chain=0, tune=None,
-            progressbar=True, model=None, random_seed=-1):
+            progressbar=True, model=None, random_seed=-1, live_plot=False,
+            **kwargs):
+    skip_first = kwargs.get('skip_first', 0)
+    refresh_every = kwargs.get('refresh_every', 100)
+
     sampling = _iter_sample(draws, step, start, trace, chain,
                             tune, model, random_seed)
     if progressbar:
         sampling = tqdm(sampling, total=draws)
     try:
         strace = None
-        for strace in sampling:
-            pass
+        for it, strace in enumerate(sampling):
+            if live_plot:
+                if it >= skip_first:
+                    trace = MultiTrace([strace])
+                    if it == skip_first:
+                        ax = traceplot(trace, live_plot=False, **kwargs)
+                    elif (it - skip_first) % refresh_every == 0 or it == draws - 1:
+                        traceplot(trace, ax=ax, live_plot=True, **kwargs)
     except KeyboardInterrupt:
         pass
     finally:
         if progressbar:
             sampling.close()
-    if strace is not None:
-        strace.close()
     result = [] if strace is None else [strace]
     return MultiTrace(result)
 
@@ -238,9 +323,10 @@ def iter_sample(draws, step, start=None, trace=None, chain=0, tune=None,
 
     Example
     -------
+    ::
 
-    for trace in iter_sample(500, step):
-        ...
+        for trace in iter_sample(500, step):
+            ...
     """
     sampling = _iter_sample(draws, step, start, trace, chain, tune,
                             model, random_seed)
@@ -263,9 +349,9 @@ def _iter_sample(draws, step, start=None, trace=None, chain=0, tune=None,
     strace = _choose_backend(trace, chain, model=model)
 
     if len(strace) > 0:
-        _soft_update(start, strace.point(-1))
+        _update_start_vals(start, strace.point(-1), model)
     else:
-        _soft_update(start, model.test_point)
+        _update_start_vals(start, model.test_point, model)
 
     try:
         step = CompoundStep(step)
@@ -278,19 +364,33 @@ def _iter_sample(draws, step, start=None, trace=None, chain=0, tune=None,
         strace.setup(draws, chain, step.stats_dtypes)
     else:
         strace.setup(draws, chain)
-    for i in range(draws):
-        if i == tune:
-            step = stop_tuning(step)
-        if step.generates_stats:
-            point, states = step.step(point)
-            if strace.supports_sampler_stats:
-                strace.record(point, states)
+
+    try:
+        for i in range(draws):
+            if i == tune:
+                step = stop_tuning(step)
+            if step.generates_stats:
+                point, states = step.step(point)
+                if strace.supports_sampler_stats:
+                    strace.record(point, states)
+                else:
+                    strace.record(point)
             else:
+                point = step.step(point)
                 strace.record(point)
-        else:
-            point = step.step(point)
-            strace.record(point)
-        yield strace
+            yield strace
+    except KeyboardInterrupt:
+        strace.close()
+        if hasattr(step, 'check_trace'):
+            step.check_trace(strace)
+        raise
+    except BaseException:
+        strace.close()
+        raise
+    else:
+        strace.close()
+        if hasattr(step, 'check_trace'):
+            step.check_trace(strace)
 
 
 def _choose_backend(trace, chain, shortcuts=None, **kwds):
@@ -358,14 +458,21 @@ def stop_tuning(step):
 
     return step
 
-
-def _soft_update(a, b):
-    """As opposed to dict.update, don't overwrite keys if present.
+def _update_start_vals(a, b, model):
+    """Update a with b, without overwriting existing keys. Values specified for
+    transformed variables on the original scale are also transformed and inserted.
     """
+    
+    for name in a:
+        for tname in b:
+            if tname.startswith(name) and tname!=name:
+                transform_func = [d.transformation for d in model.deterministics if d.name==name][0]
+                b[tname] = transform_func.forward(a[name]).eval()
+    
     a.update({k: v for k, v in b.items() if k not in a})
 
-
-def sample_ppc(trace, samples=None, model=None, vars=None, size=None, random_seed=None, progressbar=True):
+def sample_ppc(trace, samples=None, model=None, vars=None, size=None,
+               random_seed=None, progressbar=True):
     """Generate posterior predictive samples from a model given a trace.
 
     Parameters
@@ -386,8 +493,9 @@ def sample_ppc(trace, samples=None, model=None, vars=None, size=None, random_see
 
     Returns
     -------
-    Dictionary keyed by `vars`, where the values are the corresponding
-    posterior predictive samples.
+    samples : dict
+        Dictionary with the variables as keys. The values corresponding
+        to the posterior predictive samples.
     """
     if samples is None:
         samples = len(trace)
@@ -416,7 +524,7 @@ def sample_ppc(trace, samples=None, model=None, vars=None, size=None, random_see
 
 
 def init_nuts(init='ADVI', njobs=1, n_init=500000, model=None,
-              random_seed=-1, **kwargs):
+              random_seed=-1, progressbar=True, **kwargs):
     """Initialize and sample from posterior of a continuous model.
 
     This is a convenience function. NUTS convergence and sampling speed is extremely
@@ -438,13 +546,13 @@ def init_nuts(init='ADVI', njobs=1, n_init=500000, model=None,
         Number of iterations of initializer
         If 'ADVI', number of iterations, if 'metropolis', number of draws.
     model : Model (optional if in `with` context)
+    progressbar : bool
+        Whether or not to display a progressbar for advi sampling.
     **kwargs : keyword arguments
         Extra keyword arguments are forwarded to pymc3.NUTS.
 
     Returns
     -------
-    start, nuts_sampler
-
     start : pymc3.model.Point
         Starting point for sampler
     nuts_sampler : pymc3.step_methods.NUTS
@@ -461,18 +569,29 @@ def init_nuts(init='ADVI', njobs=1, n_init=500000, model=None,
         init = init.lower()
 
     if init == 'advi':
-        v_params = pm.variational.advi(n=n_init, random_seed=random_seed)
-        start = pm.variational.sample_vp(v_params, njobs, progressbar=False,
-                                         hide_transformed=False,
-                                         random_seed=random_seed)
+        approx = pm.fit(
+            seed=random_seed,
+            n=n_init, method='advi', model=model,
+            callbacks=[pm.callbacks.CheckParametersConvergence(tolerance=1e-2)],
+            progressbar=progressbar
+        )  # type: pm.MeanField
+        start = approx.sample(draws=njobs)
+        cov = approx.cov.eval()
         if njobs == 1:
             start = start[0]
-        cov = np.power(model.dict_to_array(v_params.stds), 2)
     elif init == 'advi_map':
         start = pm.find_MAP()
-        v_params = pm.variational.advi(n=n_init, start=start,
-                                       random_seed=random_seed)
-        cov = np.power(model.dict_to_array(v_params.stds), 2)
+        approx = pm.MeanField(model=model, start=start)
+        pm.fit(
+            seed=random_seed,
+            n=n_init, method=pm.ADVI.from_mean_field(approx),
+            callbacks=[pm.callbacks.CheckParametersConvergence(tolerance=1e-2)],
+            progressbar=progressbar
+        )
+        start = approx.sample(draws=njobs)
+        cov = approx.cov.eval()
+        if njobs == 1:
+            start = start[0]
     elif init == 'map':
         start = pm.find_MAP()
         cov = pm.find_hessian(point=start)

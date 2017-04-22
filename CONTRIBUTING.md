@@ -74,14 +74,16 @@ We recommended that your contribution complies with the following guidelines bef
 
 * Documentation and high-coverage tests are necessary for enhancements to be accepted.
 
+* Run any of the pre-existing examples in ``docs/source/notebooks`` that contain analyses that would be affected by your changes to ensure that nothing breaks. This is a useful opportunity to not only check your work for bugs that might not be revealed by unit test, but also to show how your contribution improves PyMC3 for end users.
+
 You can also check for common programming errors with the following
 tools:
 
-* Code with good unittest **coverage** (at least 80%), check with:
+* Code with good test **coverage** (at least 80%), check with:
 
   ```bash
-  $ pip install nose coverage
-  $ nosetests --with-coverage path/to/tests_for_package
+  $ pip install pytest pytest-cov coverage
+  $ pytest --cov=pymc3 pymc3/tests/tests_for_package.py
   ```
 
 * No `pyflakes` warnings, check with:
@@ -110,9 +112,12 @@ tools:
 We have provided a Dockerfile which helps for isolating build problems, and local development.
 Install [Docker](https://www.docker.com/) for your operating system, clone this repo, then
 run `./scripts/start_container.sh`. This should start a local docker container called `pymc3`,
-as well as a [`jupyter`](http://jupyter.org/) notebook server running on port 8888. You will have to open
-a browser at `localhost:8888`. The repo will be running the code from your local copy of `pymc3`, 
-so it is good for development.  You may also use it to run the test suite, with
+as well as a [`jupyter`](http://jupyter.org/) notebook server running on port 8888. The
+notebook should be opened in your browser automatically (you can disable this by passing
+`--no-browser`). The repo will be running the code from your local copy of `pymc3`,
+so it is good for development.  To find the token necessary to access the notebooks, run
+
+You may also use it to run the test suite, with
 
 ```bash
 $  docker exec -it pymc3  bash # logon to the container
@@ -122,6 +127,13 @@ $  . ./scripts/test.sh # takes a while!
 
 This should be quite close to how the tests run on TravisCI.
 
+If the container was started without opening the browser, you
+need the a token to work with the notebook. This token can be
+access with
+
+```
+docker exec -it pymc3 jupyter notebook list
+```
 
 ## Style guide
 

@@ -49,6 +49,9 @@ class BlockedStep(object):
         # get the actual inputs from the vars
         vars = inputvars(vars)
 
+        if len(vars) == 0:
+            raise ValueError('No free random variables to sample.')
+
         if not blocked and len(vars) > 1:
             # In this case we create a separate sampler for each var
             # and append them to a CompoundStep
@@ -140,7 +143,7 @@ class ArrayStepShared(BlockedStep):
 
     def step(self, point):
         for var, share in self.shared.items():
-            share.container.storage[0] = point[var]
+            share.set_value(point[var])
 
         bij = DictToArrayBijection(self.ordering, point)
 
@@ -156,7 +159,8 @@ def metrop_select(mr, q, q0):
     """Perform rejection/acceptance step for Metropolis class samplers.
 
     Returns the new sample q if a uniform random number is less than the
-    metropolis acceptance rate (`mr`), and the old sample otherwise.
+    metropolis acceptance rate (`mr`), and the old sample otherwise, along
+    with a boolean indicating whether the sample was accepted.
 
     Parameters
     ----------
@@ -170,6 +174,6 @@ def metrop_select(mr, q, q0):
     """
     # Compare acceptance ratio to uniform random number
     if np.isfinite(mr) and np.log(uniform()) < mr:
-        return q
+        return q, True
     else:
-        return q0
+        return q0, False

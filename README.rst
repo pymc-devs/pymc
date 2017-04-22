@@ -46,6 +46,7 @@ Getting started
 -  `PyMC3 port of the models presented in the book "Doing Bayesian Data
    Analysis" by John
    Kruschke <https://github.com/aloctavodia/Doing_bayesian_data_analysis>`__
+-  `PyMC3 port of the models presented in the book "Bayesian Cognitive Modeling" by Michael Lee and EJ Wagenmakers <https://github.com/junpenglao/Bayesian-Cognitive-Modeling-in-Pymc3>`__
 -  `Coyle P. (2016) Probabilistic programming and PyMC3. European Scientific Python Conference 2015 (Cambridge, UK) <http://adsabs.harvard.edu/abs/2016arXiv160700379C>`__
 -  `Bayesian Analysis with Python by Osvaldo Martin <https://www.packtpub.com/big-data-and-business-intelligence/bayesian-analysis-python>`__ (and `errata <https://github.com/aloctavodia/BAP>`__)
 

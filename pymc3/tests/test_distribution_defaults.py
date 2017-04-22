@@ -4,7 +4,7 @@ from ..model import Model
 from ..distributions import DiscreteUniform, Continuous
 
 import numpy as np
-from nose.tools import raises
+import pytest
 
 
 class DistTest(Continuous):
@@ -18,15 +18,13 @@ class DistTest(Continuous):
         return 0
 
 
-@raises(AttributeError)
 def test_default_nan_fail():
-    with Model():
+    with Model(), pytest.raises(AttributeError):
         DistTest('x', np.nan, 2, defaults=['a'])
 
 
-@raises(AttributeError)
 def test_default_empty_fail():
-    with Model():
+    with Model(), pytest.raises(AttributeError):
         DistTest('x', 1, 2, defaults=[])
 
 

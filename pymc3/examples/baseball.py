@@ -5,11 +5,12 @@
 
 import pymc3 as pm
 import numpy as np
+import theano
 
 data = np.loadtxt( 'data/efron-morris-75-data.tsv', delimiter="\t", skiprows=1, usecols=(2,3) )
 
-atBats = data[:,0]
-hits = data[:,1]
+atBats = data[:,0].astype(theano.config.floatX)
+hits = data[:,1].astype(theano.config.floatX)
 
 N = len( hits )
 

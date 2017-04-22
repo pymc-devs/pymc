@@ -27,6 +27,7 @@ class Slice(ArrayStep):
         Optional model for sampling step. Defaults to None (taken from context).
 
     """
+    name = 'slice'
     default_blocked = False
 
     def __init__(self, vars=None, w=1., tune=True, model=None, **kwargs):

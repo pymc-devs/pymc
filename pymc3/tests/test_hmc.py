@@ -4,7 +4,9 @@ from pymc3.blocking import DictToArrayBijection
 from . import models
 from pymc3.step_methods.hmc.base_hmc import BaseHMC
 import pymc3
+from pymc3.theanof import floatX
 from .checks import close_to
+from .helpers import select_by_precision
 
 
 def test_leapfrog_reversible():
@@ -13,17 +15,16 @@ def test_leapfrog_reversible():
     step = BaseHMC(vars=model.vars, model=model)
     bij = DictToArrayBijection(step.ordering, start)
     q0 = bij.map(start)
-    p0 = np.ones(n) * .05
-
+    p0 = floatX(np.ones(n) * .05)
+    precision = select_by_precision(float64=1E-8, float32=1E-5)
     for epsilon in [.01, .1, 1.2]:
         for n_steps in [1, 2, 3, 4, 20]:
 
             q, p = q0, p0
-            q, p, _ = step.leapfrog(q, p, np.array(epsilon), np.array(n_steps, dtype='int32'))
-            q, p, _ = step.leapfrog(q, -p, np.array(epsilon), np.array(n_steps, dtype='int32'))
-
-            close_to(q, q0, 1e-8, str((n_steps, epsilon)))
-            close_to(-p, p0, 1e-8, str((n_steps, epsilon)))
+            q, p, _ = step.leapfrog(q, p, floatX(np.array(epsilon)), np.array(n_steps, dtype='int32'))
+            q, p, _ = step.leapfrog(q, -p, floatX(np.array(epsilon)), np.array(n_steps, dtype='int32'))
+            close_to(q, q0, precision, str((n_steps, epsilon)))
+            close_to(-p, p0, precision, str((n_steps, epsilon)))
 
 
 def test_leapfrog_reversible_single():
@@ -36,7 +37,8 @@ def test_leapfrog_reversible_single():
     for method, step in zip(integrators, steps):
         bij = DictToArrayBijection(step.ordering, start)
         q0 = bij.map(start)
-        p0 = np.ones(n) * .05
+        p0 = floatX(np.ones(n) * .05)
+        precision = select_by_precision(float64=1E-8, float32=1E-5)
         for epsilon in [0.01, 0.1, 1.2]:
             for n_steps in [1, 2, 3, 4, 20]:
                 dlogp0 = step.dlogp(q0)
@@ -46,13 +48,13 @@ def test_leapfrog_reversible_single():
 
                 energy = step.compute_energy(q, p)
                 for _ in range(n_steps):
-                    q, p, v, dlogp, _ = step.leapfrog(q, p, dlogp, np.array(epsilon))
+                    q, p, v, dlogp, _ = step.leapfrog(q, p, dlogp, floatX(np.array(epsilon)))
                 p = -p
                 for _ in range(n_steps):
-                    q, p, v, dlogp, _ = step.leapfrog(q, p, dlogp, np.array(epsilon))
+                    q, p, v, dlogp, _ = step.leapfrog(q, p, dlogp, floatX(np.array(epsilon)))
 
-                close_to(q, q0, 1e-8, str(('q', method, n_steps, epsilon)))
-                close_to(-p, p0, 1e-8, str(('p', method, n_steps, epsilon)))
+                close_to(q, q0, precision, str(('q', method, n_steps, epsilon)))
+                close_to(-p, p0, precision, str(('p', method, n_steps, epsilon)))
 
 
 def test_nuts_tuning():

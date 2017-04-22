@@ -30,7 +30,7 @@ def gen_random_state():
 
 def advi(vars=None, start=None, model=None, n=5000, accurate_elbo=False,
          optimizer=None, learning_rate=.001, epsilon=.1, mode=None,
-         tol_obj=0.01, eval_elbo=100, random_seed=None):
+         tol_obj=0.01, eval_elbo=100, random_seed=None, progressbar=True):
     """Perform automatic differentiation variational inference (ADVI).
 
     This function implements the meanfield ADVI, where the variational
@@ -88,6 +88,11 @@ def advi(vars=None, start=None, model=None, n=5000, accurate_elbo=False,
         Seed to initialize random state. None uses current seed.
     mode :  string or `Mode` instance.
         Compilation mode passed to Theano functions
+    progressbar : bool
+        Whether or not to display a progress bar in the command line. The
+        bar shows the percentage of completion, the sampling speed in
+        samples per second (SPS), the estimated remaining time until
+        completion ("expected time of arrival"; ETA), and the current ELBO.
 
     Returns
     -------
@@ -103,6 +108,10 @@ def advi(vars=None, start=None, model=None, n=5000, accurate_elbo=False,
         and Blei, D. M. (2016). Automatic Differentiation Variational
         Inference. arXiv preprint arXiv:1603.00788.
     """
+    import warnings
+    warnings.warn('Old ADVI interface and sample_vp is deprecated and will '
+                  'be removed in future, use pm.fit and pm.sample_approx instead',
+                  DeprecationWarning, stacklevel=2)
     model = pm.modelcontext(model)
     if start is None:
         start = model.test_point
@@ -110,6 +119,9 @@ def advi(vars=None, start=None, model=None, n=5000, accurate_elbo=False,
     if vars is None:
         vars = model.vars
     vars = pm.inputvars(vars)
+
+    if len(vars) == 0:
+        raise ValueError('No free random variables to fit.')
 
     if not pm.model.all_continuous(vars):
         raise ValueError('Model can not include discrete RVs for ADVI.')
@@ -147,7 +159,7 @@ def advi(vars=None, start=None, model=None, n=5000, accurate_elbo=False,
     # Optimization loop
     elbos = np.empty(n)
     divergence_flag = False
-    progress = trange(n)
+    progress = trange(n) if progressbar else range(n)
     try:
         uw_i, elbo_current = f()
         if np.isnan(elbo_current):
@@ -157,11 +169,14 @@ def advi(vars=None, start=None, model=None, n=5000, accurate_elbo=False,
             if np.isnan(e):
                 raise FloatingPointError('NaN occurred in ADVI optimization.')
             elbos[i] = e
-            if n < 10:
-                progress.set_description('ELBO = {:,.5g}'.format(elbos[i]))
-            elif i % (n // 10) == 0 and i > 0:
-                avg_elbo = elbos[i - n // 10:i].mean()
-                progress.set_description('Average ELBO = {:,.5g}'.format(avg_elbo))
+
+            if progressbar:
+                if n < 10:
+                    progress.set_description('ELBO = {:,.5g}'.format(elbos[i]))
+                elif i % (n // 10) == 0 and i > 0:
+                    avg_elbo = infmean(elbos[i - n // 10:i])
+                    progress.set_description(
+                        'Average ELBO = {:,.5g}'.format(avg_elbo))
 
             if i % eval_elbo == 0:
                 elbo_prev = elbo_current
@@ -173,12 +188,10 @@ def advi(vars=None, start=None, model=None, n=5000, accurate_elbo=False,
 
                 if i > 0 and avg_delta < tol_obj:
                     pm._log.info('Mean ELBO converged.')
-                    converged = True
                     elbos = elbos[:(i + 1)]
                     break
                 elif i > 0 and med_delta < tol_obj:
                     pm._log.info('Median ELBO converged.')
-                    converged = True
                     elbos = elbos[:(i + 1)]
                     break
                 if i > 10 * eval_elbo:
@@ -193,17 +206,18 @@ def advi(vars=None, start=None, model=None, n=5000, accurate_elbo=False,
             pm._log.info('Interrupted at {:,d} [{:.0f}%]: ELBO = {:,.5g}'.format(
                 i, 100 * i // n, elbos[i]))
         else:
-            avg_elbo = elbos[i - n // 10:i].mean()
+            avg_elbo = infmean(elbos[i - n // 10:i])
             pm._log.info('Interrupted at {:,d} [{:.0f}%]: Average ELBO = {:,.5g}'.format(
                 i, 100 * i // n, avg_elbo))
     else:
         if n < 10:
             pm._log.info('Finished [100%]: ELBO = {:,.5g}'.format(elbos[-1]))
         else:
-            avg_elbo = elbos[-n // 10:].mean()
+            avg_elbo = infmean(elbos[-n // 10:])
             pm._log.info('Finished [100%]: Average ELBO = {:,.5g}'.format(avg_elbo))
     finally:
-        progress.close()
+        if progressbar:
+            progress.close()
 
     if divergence_flag:
         pm._log.info('Evidence of divergence detected, inspect ELBO.')
@@ -347,6 +361,10 @@ def sample_vp(
     trace : pymc3.backends.base.MultiTrace
         Samples drawn from the variational posterior.
     """
+    import warnings
+    warnings.warn('Old ADVI interface and sample_vp is deprecated and will '
+                  'be removed in future, use pm.fit and pm.sample_approx instead',
+                  DeprecationWarning, stacklevel=2)
     model = pm.modelcontext(model)
 
     if isinstance(vparams, ADVIFit):
@@ -410,3 +428,8 @@ def sample_vp(
         trace.record(point)
 
     return MultiTrace([trace])
+
+
+def infmean(input_array):
+    """Return the mean of the finite values of the array"""
+    return np.mean(np.asarray(input_array)[np.isfinite(input_array)])

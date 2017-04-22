@@ -78,6 +78,8 @@ class Metropolis(ArrayStepShared):
     mode :  string or `Mode` instance.
         compilation mode passed to Theano functions
     """
+    name = 'metropolis'
+
     default_blocked = False
     generates_stats = True
     stats_dtypes = [{
@@ -148,10 +150,8 @@ class Metropolis(ArrayStepShared):
             q = floatX(q0 + delta)
 
         accept = self.delta_logp(q, q0)
-        q_new = metrop_select(accept, q, q0)
-
-        if q_new is q:
-            self.accepted += 1
+        q_new, accepted = metrop_select(accept, q, q0)
+        self.accepted += accepted
 
         self.steps_until_tune -= 1
 
@@ -225,6 +225,8 @@ class BinaryMetropolis(ArrayStep):
         Optional model for sampling step. Defaults to None (taken from context).
 
     """
+    name = 'binary_metropolis'
+
     generates_stats = True
     stats_dtypes = [{
         'accept': np.float64,
@@ -260,7 +262,8 @@ class BinaryMetropolis(ArrayStep):
         q[switch_locs] = True - q[switch_locs]
 
         accept = logp(q) - logp(q0)
-        q_new = metrop_select(accept, q, q0)
+        q_new, accepted = metrop_select(accept, q, q0)
+        self.accepted += accepted
 
         stats = {
             'tune': self.tune,
@@ -287,6 +290,7 @@ class BinaryMetropolis(ArrayStep):
 
 class BinaryGibbsMetropolis(ArrayStep):
     """A Metropolis-within-Gibbs step method optimized for binary variables"""
+    name = 'binary_gibbs_metropolis'
 
     def __init__(self, vars, order='random', model=None):
 
@@ -320,8 +324,8 @@ class BinaryGibbsMetropolis(ArrayStep):
         for idx in order:
             curr_val, q[idx] = q[idx], True - q[idx]
             logp_prop = logp(q)
-            q[idx] = metrop_select(logp_prop - logp_curr, q[idx], curr_val)
-            if q[idx] != curr_val:
+            q[idx], accepted = metrop_select(logp_prop - logp_curr, q[idx], curr_val)
+            if accepted:
                 logp_curr = logp_prop
 
         return q
@@ -348,6 +352,7 @@ class CategoricalGibbsMetropolis(ArrayStep):
        which was introduced by Liu in his 1996 technical report
        "Metropolized Gibbs Sampler: An Improvement".
     """
+    name = 'caregorical_gibbs_metropolis'
 
     def __init__(self, vars, proposal='uniform', order='random', model=None):
 
@@ -402,10 +407,9 @@ class CategoricalGibbsMetropolis(ArrayStep):
         for dim, k in dimcats:
             curr_val, q[dim] = q[dim], sample_except(k, q[dim])
             logp_prop = logp(q)
-            q[dim] = metrop_select(logp_prop - logp_curr, q[dim], curr_val)
-            if q[dim] != curr_val:
+            q[dim], accepted = metrop_select(logp_prop - logp_curr, q[dim], curr_val)
+            if accepted:
                 logp_curr = logp_prop
-
         return q
 
     def astep_prop(self, q0, logp):
