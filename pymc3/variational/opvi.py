@@ -61,7 +61,7 @@ class ObjectiveFunction(object):
         """
         return self.op.approx.random(size)
 
-    def updates(self, obj_n_mc=None, tf_n_mc=None, obj_optimizer=adam, test_optimizer=adam,
+    def updates(self, obj_n_mc=None, tf_n_mc=None, optimizer=adam, test_optimizer=adam,
                 more_obj_params=None, more_tf_params=None, more_updates=None, more_replacements=None):
         """
         Calculates gradients for objective function, test function and then
@@ -73,7 +73,7 @@ class ObjectiveFunction(object):
             Number of monte carlo samples used for approximation of objective gradients
         tf_n_mc : int
             Number of monte carlo samples used for approximation of test function gradients
-        obj_optimizer : function (loss, params) -> updates
+        optimizer : function (loss, params) -> updates
             Optimizer that is used for objective params
         test_optimizer : function (loss, params) -> updates
             Optimizer that is used for test function params
@@ -119,7 +119,7 @@ class ObjectiveFunction(object):
         self.add_obj_updates(
             resulting_updates,
             obj_n_mc=obj_n_mc,
-            obj_optimizer=obj_optimizer,
+            optimizer=optimizer,
             more_obj_params=more_obj_params,
             more_replacements=more_replacements
         )
@@ -132,17 +132,17 @@ class ObjectiveFunction(object):
         tf_target = theano.clone(tf_target, more_replacements, strict=False)
         updates.update(test_optimizer(tf_target, self.test_params + more_tf_params))
 
-    def add_obj_updates(self, updates, obj_n_mc=None, obj_optimizer=adam, more_obj_params=None, more_replacements=None):
+    def add_obj_updates(self, updates, obj_n_mc=None, optimizer=adam, more_obj_params=None, more_replacements=None):
         obj_z = self.random(obj_n_mc)
         obj_target = self(obj_z)
         obj_target = theano.clone(obj_target, more_replacements, strict=False)
-        updates.update(obj_optimizer(obj_target, self.obj_params + more_obj_params))
+        updates.update(optimizer(obj_target, self.obj_params + more_obj_params))
         if self.op.RETURNS_LOSS:
             updates.loss = obj_target
 
     @memoize
     def step_function(self, obj_n_mc=None, tf_n_mc=None,
-                      obj_optimizer=adam, test_optimizer=adam,
+                      optimizer=adam, test_optimizer=adam,
                       more_obj_params=None, more_tf_params=None,
                       more_updates=None, more_replacements=None, score=False,
                       fn_kwargs=None):
@@ -160,7 +160,7 @@ class ObjectiveFunction(object):
             Number of monte carlo samples used for approximation of objective gradients
         tf_n_mc : int
             Number of monte carlo samples used for approximation of test function gradients
-        obj_optimizer : function (loss, params) -> updates
+        optimizer : function (loss, params) -> updates
             Optimizer that is used for objective params
         test_optimizer : function (loss, params) -> updates
             Optimizer that is used for test function params
@@ -186,7 +186,7 @@ class ObjectiveFunction(object):
         if score and not self.op.RETURNS_LOSS:
             raise NotImplementedError('%s does not have loss' % self.op)
         updates = self.updates(obj_n_mc=obj_n_mc, tf_n_mc=tf_n_mc,
-                               obj_optimizer=obj_optimizer,
+                               optimizer=optimizer,
                                test_optimizer=test_optimizer,
                                more_obj_params=more_obj_params,
                                more_tf_params=more_tf_params,

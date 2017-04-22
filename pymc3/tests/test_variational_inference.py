@@ -58,7 +58,7 @@ def _test_aevb(self):
     rho = theano.shared(np.zeros_like(x.init_value))
     with model:
         inference = self.inference(local_rv={x: (mu, rho)})
-        approx = inference.fit(3, obj_n_mc=2, obj_optimizer=self.optimizer)
+        approx = inference.fit(3, obj_n_mc=2, optimizer=self.optimizer)
         approx.sample_vp(10)
         approx.apply_replacements(
             y,
@@ -145,7 +145,7 @@ class TestApproximates:
                 Normal('x', mu=mu_, sd=sd, observed=data)
                 inf = self.inference()
                 inf.fit(10)
-                approx = inf.fit(self.NITER, obj_optimizer=self.optimizer)
+                approx = inf.fit(self.NITER, optimizer=self.optimizer)
                 trace = approx.sample_vp(10000)
             np.testing.assert_allclose(np.mean(trace['mu']), mu_post, rtol=0.1)
             np.testing.assert_allclose(np.std(trace['mu']), np.sqrt(1. / d), rtol=0.4)
@@ -172,7 +172,7 @@ class TestApproximates:
                 mu_ = Normal('mu', mu=mu0, sd=sd0, testval=0)
                 Normal('x', mu=mu_, sd=sd, observed=minibatches, total_size=n)
                 inf = self.inference()
-                approx = inf.fit(self.NITER * 3, obj_optimizer=self.optimizer)
+                approx = inf.fit(self.NITER * 3, optimizer=self.optimizer)
                 trace = approx.sample_vp(10000)
             np.testing.assert_allclose(np.mean(trace['mu']), mu_post, rtol=0.1)
             np.testing.assert_allclose(np.std(trace['mu']), np.sqrt(1. / d), rtol=0.4)
@@ -203,7 +203,7 @@ class TestApproximates:
                 mu_ = Normal('mu', mu=mu0, sd=sd0, testval=0)
                 Normal('x', mu=mu_, sd=sd, observed=data_t, total_size=n)
                 inf = self.inference()
-                approx = inf.fit(self.NITER * 3, callbacks=[cb], obj_n_mc=10, obj_optimizer=self.optimizer)
+                approx = inf.fit(self.NITER * 3, callbacks=[cb], obj_n_mc=10, optimizer=self.optimizer)
                 trace = approx.sample_vp(10000)
             np.testing.assert_allclose(np.mean(trace['mu']), mu_post, rtol=0.4)
             np.testing.assert_allclose(np.std(trace['mu']), np.sqrt(1. / d), rtol=0.4)
@@ -246,7 +246,7 @@ class TestMeanField(TestApproximates.Base):
             inf.fit(10)
             assert len(inf.hist) == 10
             assert not np.isnan(inf.hist).any()
-            inf.fit(self.NITER, obj_optimizer=self.optimizer)
+            inf.fit(self.NITER, optimizer=self.optimizer)
             assert len(inf.hist) == self.NITER + 10
             assert not np.isnan(inf.hist).any()
 

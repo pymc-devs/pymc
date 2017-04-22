@@ -119,7 +119,7 @@ class DataSampler(object):
     ...                          observed=minibatches,
     ...                          total_size=data.shape[0])
     ...     adam = partial(pm.adam, learning_rate=.8) # easy problem
-    ...     approx = pm.fit(10000, method='advi', obj_optimizer=adam)
+    ...     approx = pm.fit(10000, method='advi', optimizer=adam)
     >>> new = pickle.loads(pickle.dumps(approx))
     >>> new #doctest: +ELLIPSIS
     <pymc3.variational.approximations.MeanField object at 0x...>

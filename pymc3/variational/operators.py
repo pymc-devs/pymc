@@ -24,13 +24,13 @@ class KL(Operator):
 
 
 class KSDObjective(ObjectiveFunction):
-    def add_obj_updates(self, updates, obj_n_mc=None, obj_optimizer=adam,
+    def add_obj_updates(self, updates, obj_n_mc=None, optimizer=adam,
                         more_obj_params=None, more_replacements=None):
         if obj_n_mc is not None:
             _warn_not_used('obj_n_mc', self.op)
         d_obj_padams = self(None)
         d_obj_padams = theano.clone(d_obj_padams, more_replacements, strict=False)
-        updates.update(obj_optimizer([d_obj_padams], self.obj_params))
+        updates.update(optimizer([d_obj_padams], self.obj_params))
 
     def __call__(self, z):
         return self.op.apply(self.tf)
