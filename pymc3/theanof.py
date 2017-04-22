@@ -372,9 +372,15 @@ _tt_rng = MRG_RandomStreams()
 launch_rng(_tt_rng)
 
 
-def tt_rng():
+def tt_rng(seed=None):
     """
-    Get the package-level random number generator.
+    Get the package-level random number generator or new with specified seed.
+
+    Parameters
+    ----------
+    seed : int
+        If not None
+        returns *new* theano random generator without replacing package global one
 
     Returns
     -------
@@ -382,7 +388,12 @@ def tt_rng():
         `theano.sandbox.rng_mrg.MRG_RandomStreams`
         instance passed to the most recent call of `set_tt_rng`
     """
-    return _tt_rng
+    if seed is None:
+        return _tt_rng
+    else:
+        ret = MRG_RandomStreams(seed)
+        launch_rng(ret)
+        return ret
 
 
 def set_tt_rng(new_rng):
