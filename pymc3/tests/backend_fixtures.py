@@ -493,7 +493,7 @@ class BackendEqualityTestCase(ModelBackendSampledTestCase):
 
     def test_dtype(self):
         for varname in self.test_point.keys():
-            dtype_equals_modulo_precision(
+            assert dtype_equals_modulo_precision(
                              self.mtrace0.get_values(varname, chains=0).dtype,
                              self.mtrace1.get_values(varname, chains=0).dtype
                              )
