@@ -20,8 +20,8 @@ from pymc3.util import get_variable_name
 from .special import log_i0
 from ..math import invlogit, logit, logdiffexp
 from .dist_math import (
-    alltrue_elemwise, betaln, bound, gammaln, i0e, logpow, normal_lccdf,
-    normal_lcdf, SplineWrapper, std_cdf, zvalue,
+    alltrue_elemwise, betaln, bound, gammaln, i0e, incomplete_beta, logpow,
+    normal_lccdf, normal_lcdf, SplineWrapper, std_cdf, zvalue,
 )
 from .distribution import Continuous, draw_values, generate_samples
 
@@ -1180,6 +1180,20 @@ class Beta(UnitContinuous):
                      value >= 0, value <= 1,
                      alpha > 0, beta > 0)
 
+    def logcdf(self, value):
+        value = floatX(tt.as_tensor(value))
+        a = floatX(tt.as_tensor(self.alpha))
+        b = floatX(tt.as_tensor(self.beta))
+        return tt.switch(
+            tt.le(value, 0),
+            -np.inf,
+            tt.switch(
+                tt.ge(value, 1),
+                0,
+                tt.log(incomplete_beta(a, b, value))
+            )
+        )
+
     def _repr_latex_(self, name=None, dist=None):
         if dist is None:
             dist = self
@@ -1305,6 +1319,7 @@ class Kumaraswamy(UnitContinuous):
         return r'${} \sim \text{{Kumaraswamy}}(\mathit{{a}}={},~\mathit{{b}}={})$'.format(name,
                                                                                           get_variable_name(a),
                                                                                           get_variable_name(b))
+
 
 class Exponential(PositiveContinuous):
     R"""
