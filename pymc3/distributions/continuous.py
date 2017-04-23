@@ -438,6 +438,33 @@ class Wald(PositiveContinuous):
                      mu > 0, lam > 0, alpha >= 0)
 
 
+def _cont_fraction_beta(value, a, b, max_iter=200):
+     
+    EPS = 3.0e-7
+    bm = az = am = 1.0
+    qab = a + b
+    qap = a + 1.0
+    qam = a - 1.0
+    bz = 1.0 - qab * x / qap
+     
+    for i in range(max_iter):
+        em = float(i + 1)
+        tem = em + em
+        d = em * (b - em) * x / ((qam + tem) * (a + tem))
+        ap = az + d * am
+        bp = bz + d * bm
+        d =- (a + em) * (qab + em) * x / ((qap + tem) * (a + tem))
+        app = ap + d * az
+        bpp = bp + d * bz
+        aold = az
+        am = ap / bpp
+        bm = bp / bpp
+        az = app / bpp
+        bz = 1.0
+        if (abs(az - aold) < (EPS * abs(az))):
+            return az
+
+
 class Beta(UnitContinuous):
     R"""
     Beta log-likelihood.
@@ -524,7 +551,26 @@ class Beta(UnitContinuous):
                      - betaln(alpha, beta),
                      value >= 0, value <= 1,
                      alpha > 0, beta > 0)
-
+                     
+    def logcdf(self, value):
+        a = self.alpha
+        b = self.beta
+        log_beta = tt.gammaln(a) + tt.gammaln(b) - tt.gammaln(a + b)
+        return tt.switch(
+            tt.le(value, 0),
+            -np.inf,
+            tt.switch(
+                tt.ge(value, 1),
+                0,
+                tt.switch(
+                    tt.lt(value, (a + 1) / (a + b + 2)),
+                    log_beta + contfractbeta(a, b, x) - a,
+                    1 - tt.exp(log_beta) * 
+                )
+            )
+        )
+        
+        
 
 class Exponential(PositiveContinuous):
     R"""
