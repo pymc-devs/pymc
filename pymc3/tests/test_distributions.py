@@ -627,6 +627,8 @@ class TestMatchesScipy(SeededTest):
         self.pymc3_matches_scipy(Beta, Unit, {'alpha': Rplus, 'beta': Rplus},
                                  lambda value, alpha, beta: sp.beta.logpdf(value, alpha, beta))
         self.pymc3_matches_scipy(Beta, Unit, {'mu': Unit, 'sd': Rplus}, beta_mu_sd)
+        self.check_logcdf(Beta, Unit, {'alpha': Rplus, 'beta': Rplus},
+                                lambda value, alpha, beta: sp.beta.logcdf(value, alpha, beta))
 
     def test_kumaraswamy(self):
         # Scipy does not have a built-in Kumaraswamy pdf
