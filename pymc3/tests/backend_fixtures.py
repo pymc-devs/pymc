@@ -6,6 +6,7 @@ import collections
 
 from pymc3.tests import models
 from pymc3.backends import base
+from .helpers import dtype_equals_modulo_precision
 import pytest
 
 
@@ -286,8 +287,10 @@ class SelectionTestCase(ModelBackendSampledTestCase):
 
     def test_dtypes(self):
         for varname in self.test_point.keys():
-            assert self.expected[0][varname].dtype == \
-                             self.mtrace.get_values(varname, chains=0).dtype
+            assert dtype_equals_modulo_precision(
+                self.expected[0][varname].dtype,
+                self.mtrace.get_values(varname, chains=0).dtype
+                    )
 
         for statname in self.mtrace.stat_names:
             assert self.stat_dtypes[statname] == \
@@ -490,8 +493,10 @@ class BackendEqualityTestCase(ModelBackendSampledTestCase):
 
     def test_dtype(self):
         for varname in self.test_point.keys():
-            assert self.mtrace0.get_values(varname, chains=0).dtype == \
+            dtype_equals_modulo_precision(
+                             self.mtrace0.get_values(varname, chains=0).dtype,
                              self.mtrace1.get_values(varname, chains=0).dtype
+                             )
 
     def test_number_of_draws(self):
         for varname in self.test_point.keys():
