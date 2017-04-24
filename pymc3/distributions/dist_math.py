@@ -215,9 +215,9 @@ def log_normal_mv(x, mean, gpu_compat=False, **kwargs):
     return -1 / 2. * result
 
 
-def zvalue(value, sd=1, mu=0):
+def zvalue(value, sd, mu):
     """
-    Calculate the z-value for a normal distribution. By default standard normal.
+    Calculate the z-value for a normal distribution.
     """
     return (value - mu) / sd
 
