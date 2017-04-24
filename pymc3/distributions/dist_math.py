@@ -102,3 +102,16 @@ def zvalue(value, sd=1, mu=0):
     Calculate the z-value for a normal distribution. By default standard normal.
     """
     return (value - mu) / sd
+
+
+def normallogcdf(value, mu=0, sd=1):
+    """
+    Normal log CDF. Useful for many log CDF methods.
+    """
+    z = zvalue(value, mu=mu, sd=sd)
+    return tt.switch(
+        tt.lt(z, -1.0),
+        tt.log(tt.erfcx(-z / tt.sqrt(2.)) / 2.) -
+        tt.sqr(z) / 2,
+        tt.log1p(-tt.erfc(z / tt.sqrt(2.)) / 2.)
+    )

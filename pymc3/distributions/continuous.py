@@ -16,8 +16,10 @@ import warnings
 from pymc3.theanof import floatX
 from . import transforms
 
-from .dist_math import (bound, logpow, gammaln, betaln, std_cdf, i0, i1, 
-                        alltrue_elemwise, zvalue)
+from .dist_math import (
+    alltrue_elemwise, betaln, bound, gammaln, i0, i1, logpow, normallogcdf,
+    std_cdf, zvalue
+)
 from .distribution import Continuous, draw_values, generate_samples, Bound
 
 __all__ = ['Uniform', 'Flat', 'Normal', 'Beta', 'Exponential', 'Laplace',
@@ -258,17 +260,6 @@ class Normal(Continuous):
 
     def logcdf(self, value):
         return normallogcdf(value, mu=self.mu, sd=self.sd)
-
-
-# TODO: Decide where to put this, or inline it everywhere it is used...
-def normallogcdf(value, mu=0, sd=1):
-    z = zvalue(value, mu=mu, sd=sd)
-    return tt.switch(
-        tt.lt(z, -1.0),
-        tt.log(tt.erfcx(-z / tt.sqrt(2.)) / 2.) -
-        tt.sqr(z) / 2,
-        tt.log1p(-tt.erfc(z / tt.sqrt(2.)) / 2.)
-    )
 
 
 class HalfNormal(PositiveContinuous):
