@@ -9,14 +9,16 @@ from __future__ import division
 
 import numpy as np
 import theano.tensor as tt
+from theano.scan_module import until
+from theano import scan, shared, Constant
 from scipy import stats
 import warnings
 
 from pymc3.theanof import floatX
 from . import transforms
 
-from .dist_math import (bound, logpow, gammaln, betaln, std_cdf, i0, i1, 
-                        alltrue_elemwise, zvalue)
+from .dist_math import (bound, logpow, gammaln, betaln, std_cdf, i0, i1,
+                        alltrue_elemwise)
 from .distribution import Continuous, draw_values, generate_samples, Bound
 
 __all__ = ['Uniform', 'Flat', 'Normal', 'Beta', 'Exponential', 'Laplace',
@@ -438,31 +440,43 @@ class Wald(PositiveContinuous):
                      mu > 0, lam > 0, alpha >= 0)
 
 
-def _cont_fraction_beta(value, a, b, max_iter=200):
-     
+def cont_fraction_beta(value, a, b, max_iter=200):
+    '''Evaluates the continued fraction form of the incomplete Beta function.
+    Derived from implementation by Ali Shoaib (https://goo.gl/HxjIJx).
+    '''
+
     EPS = 3.0e-7
-    bm = az = am = 1.0
     qab = a + b
     qap = a + 1.0
     qam = a - 1.0
-    bz = 1.0 - qab * x / qap
-     
-    for i in range(max_iter):
-        em = float(i + 1)
-        tem = em + em
-        d = em * (b - em) * x / ((qam + tem) * (a + tem))
+
+    def _step(i, az, bm, am, bz):
+
+        tem = i + i
+        d = i * (b - i) * value / ((qam + tem) * (a + tem))
+        d =- (a + i) * i * value / ((qap + tem) * (a + tem))
+
         ap = az + d * am
         bp = bz + d * bm
-        d =- (a + em) * (qab + em) * x / ((qap + tem) * (a + tem))
+
         app = ap + d * az
         bpp = bp + d * bz
+
         aold = az
+
         am = ap / bpp
         bm = bp / bpp
         az = app / bpp
-        bz = 1.0
-        if (abs(az - aold) < (EPS * abs(az))):
-            return az
+
+        bz = tt.constant(1.0, dtype='float64')
+
+        return (az, bm, am, bz), until(abs(az - aold) < (EPS * abs(az)))
+
+    (az, bm, am, bz), _ = scan(_step,
+                sequences=[tt.arange(1, max_iter)],
+                outputs_info=[*tt.cast((1., 1., 1., 1. - qab * value / qap), 'float64')])
+
+    return az[-1]
 
 
 class Beta(UnitContinuous):
@@ -551,11 +565,12 @@ class Beta(UnitContinuous):
                      - betaln(alpha, beta),
                      value >= 0, value <= 1,
                      alpha > 0, beta > 0)
-                     
+
     def logcdf(self, value):
         a = self.alpha
         b = self.beta
-        log_beta = tt.gammaln(a) + tt.gammaln(b) - tt.gammaln(a + b)
+        log_beta = tt.gammaln(a+b) - tt.gammaln(a) - tt.gammaln(b)
+        log_beta += a * tt.log(value) + b * tt.log(1 - value)
         return tt.switch(
             tt.le(value, 0),
             -np.inf,
@@ -564,13 +579,12 @@ class Beta(UnitContinuous):
                 0,
                 tt.switch(
                     tt.lt(value, (a + 1) / (a + b + 2)),
-                    log_beta + contfractbeta(a, b, x) - a,
-                    1 - tt.exp(log_beta) * 
+                    log_beta + cont_fraction_beta(value, a, b) - a,
+                    tt.log(1. - tt.exp(log_beta) * cont_fraction_beta(1. - value, b, a) / b)
                 )
             )
         )
-        
-        
+
 
 class Exponential(PositiveContinuous):
     R"""
