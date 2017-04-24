@@ -213,3 +213,16 @@ def log_normal_mv(x, mean, gpu_compat=False, **kwargs):
     result = k * tt.log(2 * np.pi) - log_det
     result += delta.dot(T).dot(delta)
     return -1 / 2. * result
+
+
+def normallogcdf(value, mu=0, sd=1):
+    """
+    Normal log CDF. Useful for many log CDF methods.
+    """
+    z = zvalue(value, mu=mu, sd=sd)
+    return tt.switch(
+        tt.lt(z, -1.0),
+        tt.log(tt.erfcx(-z / tt.sqrt(2.)) / 2.) -
+        tt.sqr(z) / 2,
+        tt.log1p(-tt.erfc(z / tt.sqrt(2.)) / 2.)
+    )

@@ -1,3 +1,4 @@
+# coding: utf-8
 """
 pymc3.distributions
 
@@ -17,8 +18,11 @@ import warnings
 from pymc3.theanof import floatX
 from . import transforms
 
-from .dist_math import (bound, logpow, gammaln, betaln, std_cdf, i0, i1,
-                        alltrue_elemwise)
+from .dist_math import (
+    alltrue_elemwise, betaln, bound, gammaln, i0, i1, logpow, normallogcdf,
+    std_cdf, zvalue
+)
+
 from .distribution import Continuous, draw_values, generate_samples, Bound
 
 __all__ = ['Uniform', 'Flat', 'Normal', 'Beta', 'Exponential', 'Laplace',
@@ -183,6 +187,17 @@ class Flat(Continuous):
     def logp(self, value):
         return tt.zeros_like(value)
 
+    def logcdf(self, value):
+        return tt.switch(
+            tt.eq(value, -np.inf),
+            -np.inf,
+            tt.switch(
+                tt.eq(value, np.inf),
+                0,
+                tt.log(0.5)
+            )
+        )
+
 
 class Normal(Continuous):
     R"""
@@ -247,16 +262,7 @@ class Normal(Continuous):
                      sd > 0)
 
     def logcdf(self, value):
-        mu = self.mu
-        sd = self.sd
-        z = zvalue(value, mu=mu, sd=sd)
-
-        return tt.switch(
-            tt.lt(z, -1.0),
-            tt.log(tt.erfcx(-z / tt.sqrt(2.)) / 2.) -
-            tt.sqr(z) / 2,
-            tt.log1p(-tt.erfc(z / tt.sqrt(2.)) / 2.)
-        )
+        return normallogcdf(value, mu=self.mu, sd=self.sd)
 
 
 class HalfNormal(PositiveContinuous):
@@ -373,6 +379,9 @@ class Wald(PositiveContinuous):
     .. [Michael1976] Michael, J. R., Schucany, W. R. and Hass, R. W. (1976).
         Generating Random Variates Using Transformations with Multiple Roots.
         The American Statistician, Vol. 30, No. 2, pp. 88-90
+
+    .. [Giner2016] Göknur Giner, Gordon K. Smyth (2016)
+       statmod: Probability Calculations for the Inverse Gaussian Distribution
     """
 
     def __init__(self, mu=None, lam=None, phi=None, alpha=0., *args, **kwargs):
@@ -381,7 +390,7 @@ class Wald(PositiveContinuous):
         self.alpha = alpha = tt.as_tensor_variable(alpha)
         self.mu = mu = tt.as_tensor_variable(mu)
         self.lam = lam = tt.as_tensor_variable(lam)
-        self.phi = phi =tt.as_tensor_variable(phi)
+        self.phi = phi = tt.as_tensor_variable(phi)
 
         self.mean = self.mu + self.alpha
         self.mode = self.mu * (tt.sqrt(1. + (1.5 * self.mu / self.lam)**2)
@@ -438,6 +447,46 @@ class Wald(PositiveContinuous):
                      # XXX these two are redundant. Please, check.
                      value > 0, value - alpha > 0,
                      mu > 0, lam > 0, alpha >= 0)
+
+    def logcdf(self, value):
+        # Distribution parameters
+        mu = self.mu
+        lam = self.lam
+        alpha = self.alpha
+
+        value -= alpha
+        q = value / mu
+        l = lam * mu
+        r = tt.sqrt(value * lam)
+
+        a = normallogcdf((q - 1.)/r)
+        b = 2./l + normallogcdf(-(q + 1.)/r)
+        return tt.switch(
+            (
+                # Left limit
+                tt.lt(value, 0) |
+                (tt.eq(value, 0) & tt.gt(mu, 0) & tt.lt(lam, np.inf)) |
+                (tt.lt(value, mu) & tt.eq(lam, 0))
+            ),
+            -np.inf,
+            tt.switch(
+                (
+                    # Right limit
+                    tt.eq(value, np.inf) |
+                    (tt.eq(lam, 0) & tt.gt(value, mu)) |
+                    (tt.gt(value, 0) & tt.eq(lam, np.inf)) |
+                    # Degenerate distribution
+                    (
+                        tt.lt(mu, np.inf) &
+                        tt.eq(mu, value) &
+                        tt.eq(lam, 0)
+                    ) |
+                    (tt.eq(value, 0) & tt.eq(lam, np.inf))
+                ),
+                0,
+                a + tt.log1p(tt.exp(b - a))
+            )
+        )
 
 
 def cont_fraction_beta(value, a, b, max_iter=200):
@@ -626,6 +675,31 @@ class Exponential(PositiveContinuous):
     def logp(self, value):
         lam = self.lam
         return bound(tt.log(lam) - lam * value, value > 0, lam > 0)
+
+    def logcdf(self, value):
+        """
+        Compute the log CDF for the Exponential distribution
+
+        References
+        ----------
+        .. [Machler2012] Martin Mächler (2012).
+            "Accurately computing log(1-exp(-|a|)) Assessed by the Rmpfr
+            package"
+        """
+        value = floatX(tt.as_tensor(value))
+        lam = self.lam
+        a = lam * value
+        return tt.switch(
+            tt.le(value, 0.0),
+            -np.inf,
+            tt.switch(
+                tt.le(a, tt.log(2.0)),
+                tt.log(-tt.expm1(-a)),
+                tt.log1p(-tt.exp(-a)),
+            )
+        )
+
+
 
 
 class Laplace(Continuous):
@@ -891,6 +965,20 @@ class Pareto(PositiveContinuous):
         return bound(tt.log(alpha) + logpow(m, alpha)
                      - logpow(value, alpha + 1),
                      value >= m, alpha > 0, m > 0)
+
+    def logcdf(self, value):
+        m = self.m
+        alpha = self.alpha
+        arg = (m / value) ** alpha
+        return tt.switch(
+            tt.lt(value, m),
+            -np.inf,
+            tt.switch(
+                tt.le(arg, 1e-5),
+                tt.log1p(-arg),
+                tt.log(1 - arg)
+            )
+        )
 
 
 class Cauchy(Continuous):
