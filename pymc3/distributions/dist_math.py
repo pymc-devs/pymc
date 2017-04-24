@@ -215,6 +215,13 @@ def log_normal_mv(x, mean, gpu_compat=False, **kwargs):
     return -1 / 2. * result
 
 
+def zvalue(value, sd=1, mu=0):
+    """
+    Calculate the z-value for a normal distribution. By default standard normal.
+    """
+    return (value - mu) / sd
+
+
 def normallogcdf(value, mu=0, sd=1):
     """
     Normal log CDF. Useful for many log CDF methods.
