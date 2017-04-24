@@ -74,19 +74,19 @@ def autocorr(x, lag=1):
 def autocov(x, lag=1):
     """Sample autocovariance at specified lag.
 
-        Parameters
-        ----------
-        x : Numpy array
-            An array containing MCMC samples
-        lag : int
-            The desidered lag to take in consideration
+    Parameters
+    ----------
+    x : Numpy array
+        An array containing MCMC samples
+    lag : int
+        The desidered lag to take in consideration
 
-        Returns
-        -------
-        2x2 matrix with the variances of
-        x[:-lag] and x[lag:] in the diagonal and the autocovariance
-        on the off-diagonal.
-        """
+    Returns
+    -------
+    2x2 matrix with the variances of
+    x[:-lag] and x[lag:] in the diagonal and the autocovariance
+    on the off-diagonal.
+    """
     x = np.asarray(x)
 
     if not lag:
@@ -97,8 +97,7 @@ def autocov(x, lag=1):
 
 
 def dic(trace, model=None):
-    """
-    Calculate the deviance information criterion of the samples in trace from model
+    """Calculate the deviance information criterion of the samples in trace from model
     Read more theory here - in a paper by some of the leading authorities on Model Selection - 
     dx.doi.org/10.1111/1467-9868.00353
 
@@ -124,8 +123,7 @@ def dic(trace, model=None):
 
 
 def log_post_trace(trace, model):
-    """
-    Calculate the elementwise log-posterior for the sampled trace.
+    """Calculate the elementwise log-posterior for the sampled trace.
 
     Parameters
     ----------
@@ -137,12 +135,10 @@ def log_post_trace(trace, model):
 
 
 def waic(trace, model=None, pointwise=False):
-    """
-    Calculate the widely available information criterion, its standard error
+    """Calculate the widely available information criterion, its standard error
     and the effective number of parameters of the samples in trace from model.
     Read more theory here - in a paper by some of the leading authorities on
     Model Selection - dx.doi.org/10.1111/1467-9868.00353
-
 
     Parameters
     ----------
@@ -152,7 +148,6 @@ def waic(trace, model=None, pointwise=False):
     pointwise: bool
         if True the pointwise predictive accuracy will be returned.
         Default False
-
 
     Returns
     -------
@@ -191,11 +186,9 @@ def waic(trace, model=None, pointwise=False):
 
 
 def loo(trace, model=None, pointwise=False):
-    """
-    Calculates leave-one-out (LOO) cross-validation for out of sample predictive
+    """Calculates leave-one-out (LOO) cross-validation for out of sample predictive
     model fit, following Vehtari et al. (2015). Cross-validation is computed using
     Pareto-smoothed importance sampling (PSIS).
-
 
     Parameters
     ----------
@@ -206,7 +199,6 @@ def loo(trace, model=None, pointwise=False):
         if True the pointwise predictive accuracy will be returned.
         Default False
 
-
     Returns
     -------
     namedtuple with the following elements:
@@ -215,7 +207,6 @@ def loo(trace, model=None, pointwise=False):
     p_loo: effective number of parameters
     loo_i: and array of the pointwise predictive accuracy, only if pointwise True
     """
-
     model = modelcontext(model)
 
     log_py = log_post_trace(trace, model)
@@ -301,8 +292,7 @@ def bpic(trace, model=None):
 
 
 def compare(traces, models, ic='WAIC'):
-    """
-    Compare models based on the widely available information criterion (WAIC)
+    """Compare models based on the widely available information criterion (WAIC)
     or leave-one-out (LOO) cross-validation.
     Read more theory here - in a paper by some of the leading authorities on
     Model Selection - dx.doi.org/10.1111/1467-9868.00353
@@ -419,7 +409,6 @@ def calc_min_interval(x, alpha):
 
     Assumes that x is sorted numpy array.
     """
-
     n = len(x)
     cred_mass = 1.0 - alpha
 
@@ -450,7 +439,6 @@ def hpd(x, alpha=0.05, transform=lambda x: x):
           Function to transform data (defaults to identity)
 
     """
-
     # Make a copy of trace
     x = transform(x.copy())
 
@@ -609,16 +597,13 @@ def df_summary(trace, varnames=None, stat_funcs=None, extend=False, include_tran
         samples. Defaults to the smaller of 100 or the number of samples.
         This is only meaningful when `stat_funcs` is None.
 
-
     See also
     --------
     summary : Generate a pretty-printed summary of a trace.
 
-
     Returns
     -------
     `pandas.DataFrame` with summary statistics for each variable
-
 
     Examples
     --------
@@ -714,7 +699,6 @@ def summary(trace, varnames=None, transform=lambda x: x, alpha=0.05, start=0,
       original variables (defaults to False).
     to_file : None or string
       File to write results to. If not given, print to stdout.
-
     """
     if varnames is None:
         if include_transformed:
