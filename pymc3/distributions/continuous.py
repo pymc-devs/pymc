@@ -628,7 +628,7 @@ class Beta(UnitContinuous):
                 0,
                 tt.switch(
                     tt.lt(value, (a + 1) / (a + b + 2)),
-                    log_beta + cont_fraction_beta(value, a, b) - a,
+                    tt.log(tt.exp(log_beta) * cont_fraction_beta(value, a, b) / a),
                     tt.log(1. - tt.exp(log_beta) * cont_fraction_beta(1. - value, b, a) / b)
                 )
             )
