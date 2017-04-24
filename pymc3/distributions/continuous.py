@@ -451,7 +451,7 @@ class Wald(PositiveContinuous):
         lam = self.lam
         alpha = self.alpha
 
-        value = value - alpha
+        value -= alpha
         q = value / mu
         l = lam * mu
         r = tt.sqrt(value * lam)
