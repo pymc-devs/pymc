@@ -622,10 +622,12 @@ class Exponential(PositiveContinuous):
         References
         ----------
         .. [Machler2012] Martin Mächler (2012).
-            "Accurately computing log(1-exp(-|a|)) Assessed by the Rmpfr package"
+            "Accurately computing log(1-exp(-|a|)) Assessed by the Rmpfr
+            package"
         """
+        value = floatX(tt.as_tensor(value))
         lam = self.lam
-        a = lam * float(value)
+        a = lam * value
         return tt.switch(
             tt.le(value, 0.0),
             -np.inf,
