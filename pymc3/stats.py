@@ -283,13 +283,13 @@ def compare(traces, models, ic='WAIC'):
     A DataFrame, ordered from lowest to highest IC. The index reflects
     the order in which the models are passed to this function. The columns are:
     IC : Information Criteria (WAIC or LOO).
-        Smaller IC indicates higher out-of-sample predictive fit ("better" model). 
-        Default WAIC. 
+        Smaller IC indicates higher out-of-sample predictive fit ("better" model).
+        Default WAIC.
     pIC : Estimated effective number of parameters.
     dIC : Relative difference between each IC (WAIC or LOO)
     and the lowest IC (WAIC or LOO).
         It's always 0 for the top-ranked model.
-    weight: Akaike weights for each model. 
+    weight: Akaike weights for each model.
         This can be loosely interpreted as the probability of each model
         (among the compared model) given the data. Be careful that these
         weights are based on point estimates of the IC (uncertainty is ignored).
@@ -540,6 +540,7 @@ def df_summary(trace, varnames=None, stat_funcs=None, extend=False, include_tran
         corresponds to sampling iterations and the second axis
         represents the flattened variable (e.g., x__0, x__1,...). Each
         function should return either
+
         1) A `pandas.Series` instance containing the result of
            calculating the statistic along the first axis. The name
            attribute will be taken as the name of the statistic.
@@ -575,27 +576,31 @@ def df_summary(trace, varnames=None, stat_funcs=None, extend=False, include_tran
 
     Examples
     --------
-    >>> import pymc3 as pm
-    >>> trace.mu.shape
-    (1000, 2)
-    >>> pm.df_summary(trace, ['mu'])
-               mean        sd  mc_error     hpd_5    hpd_95
-    mu__0  0.106897  0.066473  0.001818 -0.020612  0.231626
-    mu__1 -0.046597  0.067513  0.002048 -0.174753  0.081924
+    .. code:: ipython
+
+        >>> import pymc3 as pm
+        >>> trace.mu.shape
+        (1000, 2)
+        >>> pm.df_summary(trace, ['mu'])
+                   mean        sd  mc_error     hpd_5    hpd_95
+        mu__0  0.106897  0.066473  0.001818 -0.020612  0.231626
+        mu__1 -0.046597  0.067513  0.002048 -0.174753  0.081924
 
     Other statistics can be calculated by passing a list of functions.
 
-    >>> import pandas as pd
-    >>> def trace_sd(x):
-    ...     return pd.Series(np.std(x, 0), name='sd')
-    ...
-    >>> def trace_quantiles(x):
-    ...     return pd.DataFrame(pm.quantiles(x, [5, 50, 95]))
-    ...
-    >>> pm.df_summary(trace, ['mu'], stat_funcs=[trace_sd, trace_quantiles])
-                 sd         5        50        95
-    mu__0  0.066473  0.000312  0.105039  0.214242
-    mu__1  0.067513 -0.159097 -0.045637  0.062912
+    .. code:: ipython
+
+        >>> import pandas as pd
+        >>> def trace_sd(x):
+        ...     return pd.Series(np.std(x, 0), name='sd')
+        ...
+        >>> def trace_quantiles(x):
+        ...     return pd.DataFrame(pm.quantiles(x, [5, 50, 95]))
+        ...
+        >>> pm.df_summary(trace, ['mu'], stat_funcs=[trace_sd, trace_quantiles])
+                     sd         5        50        95
+        mu__0  0.066473  0.000312  0.105039  0.214242
+        mu__1  0.067513 -0.159097 -0.045637  0.062912
     """
     if varnames is None:
         if include_transformed:
@@ -632,8 +637,8 @@ def _hpd_df(x, alpha):
     return pd.DataFrame(hpd(x, alpha), columns=cnames)
 
 
-def summary(trace, varnames=None, alpha=0.05, start=0, batches=None, roundto=3,
-            include_transformed=False, to_file=None):
+def summary(trace, varnames=None, transform=lambda x: x, alpha=0.05, start=0,
+            batches=None, roundto=3, include_transformed=False, to_file=None):
     R"""
     Generate a pretty-printed summary of the node.
 
@@ -644,6 +649,8 @@ def summary(trace, varnames=None, alpha=0.05, start=0, batches=None, roundto=3,
     varnames : list of strings
       List of variables to summarize. Defaults to None, which results
       in all variables summarized.
+    transform : callable
+      Function to transform data (defaults to identity)
     alpha : float
       The alpha level for generating posterior intervals. Defaults to
       0.05.
@@ -682,7 +689,7 @@ def summary(trace, varnames=None, alpha=0.05, start=0, batches=None, roundto=3,
 
     for var in varnames:
         # Extract sampled values
-        sample = trace.get_values(var, burn=start, combine=True)
+        sample = transform(trace.get_values(var, burn=start, combine=True))
 
         fh.write('\n%s:\n\n' % var)
 

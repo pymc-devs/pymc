@@ -10,6 +10,8 @@ from __future__ import division
 
 import numpy as np
 import theano.tensor as tt
+from theano.scan_module import until
+from theano import scan, shared, Constant
 from scipy import stats
 import warnings
 
@@ -20,6 +22,7 @@ from .dist_math import (
     alltrue_elemwise, betaln, bound, gammaln, i0, i1, logpow, normallogcdf,
     std_cdf, zvalue
 )
+
 from .distribution import Continuous, draw_values, generate_samples, Bound
 
 __all__ = ['Uniform', 'Flat', 'Normal', 'Beta', 'Exponential', 'Laplace',
@@ -131,15 +134,15 @@ class Uniform(Continuous):
 
     def __init__(self, lower=0, upper=1, transform='interval',
                  *args, **kwargs):
-        super(Uniform, self).__init__(*args, **kwargs)
+        if transform == 'interval':
+            transform = transforms.interval(lower, upper)
+        super(Uniform, self).__init__(transform=transform, *args, **kwargs)
 
         self.lower = lower = tt.as_tensor_variable(lower)
         self.upper = upper = tt.as_tensor_variable(upper)
         self.mean = (upper + lower) / 2.
         self.median = self.mean
 
-        if transform == 'interval':
-            self.transform = transforms.interval(lower, upper)
 
     def random(self, point=None, size=None, repeat=None):
         lower, upper = draw_values([self.lower, self.upper],
@@ -486,6 +489,45 @@ class Wald(PositiveContinuous):
         )
 
 
+def cont_fraction_beta(value, a, b, max_iter=200):
+    '''Evaluates the continued fraction form of the incomplete Beta function.
+    Derived from implementation by Ali Shoaib (https://goo.gl/HxjIJx).
+    '''
+
+    EPS = 3.0e-7
+    qab = a + b
+    qap = a + 1.0
+    qam = a - 1.0
+
+    def _step(i, az, bm, am, bz):
+
+        tem = i + i
+        d = i * (b - i) * value / ((qam + tem) * (a + tem))
+        d =- (a + i) * i * value / ((qap + tem) * (a + tem))
+
+        ap = az + d * am
+        bp = bz + d * bm
+
+        app = ap + d * az
+        bpp = bp + d * bz
+
+        aold = az
+
+        am = ap / bpp
+        bm = bp / bpp
+        az = app / bpp
+
+        bz = tt.constant(1.0, dtype='float64')
+
+        return (az, bm, am, bz), until(abs(az - aold) < (EPS * abs(az)))
+
+    (az, bm, am, bz), _ = scan(_step,
+                sequences=[tt.arange(1, max_iter)],
+                outputs_info=[*tt.cast((1., 1., 1., 1. - qab * value / qap), 'float64')])
+
+    return az[-1]
+
+
 class Beta(UnitContinuous):
     R"""
     Beta log-likelihood.
@@ -573,6 +615,25 @@ class Beta(UnitContinuous):
                      value >= 0, value <= 1,
                      alpha > 0, beta > 0)
 
+    def logcdf(self, value):
+        a = self.alpha
+        b = self.beta
+        log_beta = tt.gammaln(a+b) - tt.gammaln(a) - tt.gammaln(b)
+        log_beta += a * tt.log(value) + b * tt.log(1 - value)
+        return tt.switch(
+            tt.le(value, 0),
+            -np.inf,
+            tt.switch(
+                tt.ge(value, 1),
+                0,
+                tt.switch(
+                    tt.lt(value, (a + 1) / (a + b + 2)),
+                    log_beta + cont_fraction_beta(value, a, b) - a,
+                    tt.log(1. - tt.exp(log_beta) * cont_fraction_beta(1. - value, b, a) / b)
+                )
+            )
+        )
+
 
 class Exponential(PositiveContinuous):
     R"""
@@ -599,7 +660,7 @@ class Exponential(PositiveContinuous):
         self.lam = lam = tt.as_tensor_variable(lam)
         self.mean = 1. / self.lam
         self.median = self.mean * tt.log(2)
-        self.mode = 0
+        self.mode = tt.zeros_like(self.lam)
 
         self.variance = self.lam**-2
 
@@ -712,14 +773,14 @@ class Lognormal(PositiveContinuous):
     .. math::
 
        f(x \mid \mu, \tau) =
-           \sqrt{\frac{\tau}{2\pi}}
-           \frac{\exp\left\{ -\frac{\tau}{2} (\ln(x)-\mu)^2 \right\}}{x}
+           \frac{1}{x} \sqrt{\frac{\tau}{2\pi}}
+           \exp\left\{ -\frac{\tau}{2} (\ln(x)-\mu)^2 \right\}
 
-    ========  ================================================================
+    ========  =========================================================================
     Support   :math:`x \in (0, 1)`
     Mean      :math:`\exp\{\mu + \frac{1}{2\tau}\}`
-    Variance  :math:`\exp\{\frac{1}{\tau} - 1\} \exp\{2\mu + \frac{1}{\tau}\}`
-    ========  ================================================================
+    Variance  :math:\(\exp\{\frac{1}{\tau}\} - 1\) \times \exp\{2\mu + \frac{1}{\tau}\}
+    ========  =========================================================================
 
     Parameters
     ----------
@@ -1363,13 +1424,12 @@ class VonMises(Continuous):
 
     def __init__(self, mu=0.0, kappa=None, transform='circular',
                  *args, **kwargs):
-        super(VonMises, self).__init__(*args, **kwargs)
+        if transform == 'circular':
+            transform = transforms.Circular()
+        super(VonMises, self).__init__(transform=transform, *args, **kwargs)
         self.mean = self.median = self.mode = self.mu = mu = tt.as_tensor_variable(mu)
         self.kappa = kappa = tt.as_tensor_variable(kappa)
         self.variance = 1 - i1(kappa) / i0(kappa)
-
-        if transform == 'circular':
-            self.transform = transforms.Circular()
 
         assert_negative_support(kappa, 'kappa', 'VonMises')
 

@@ -15,7 +15,7 @@ __all__ = ['ExpQuad',
 
 class Covariance(object):
     R"""
-    Base class for all covariance functions.
+    Base class for all kernels/covariance functions.
 
     Parameters
     ----------
@@ -37,7 +37,7 @@ class Covariance(object):
 
     def __call__(self, X, Z):
         R"""
-        Evaluate the covariance function.
+        Evaluate the kernel/covariance function.
 
         Parameters
         ----------
@@ -108,7 +108,7 @@ class Prod(Combination):
 
 class Stationary(Covariance):
     R"""
-    Base class for stationary covariance functions.
+    Base class for stationary kernels/covariance functions.
 
     Parameters
     ----------
@@ -126,13 +126,14 @@ class Stationary(Covariance):
         X = tt.mul(X, 1.0 / self.lengthscales)
         Xs = tt.sum(tt.square(X), 1)
         if Z is None:
-            return -2.0 * tt.dot(X, tt.transpose(X)) +\
-                   (tt.reshape(Xs, (-1, 1)) + tt.reshape(Xs, (1, -1)))
+            sqd = -2.0 * tt.dot(X, tt.transpose(X)) +\
+                  (tt.reshape(Xs, (-1, 1)) + tt.reshape(Xs, (1, -1)))
         else:
             Z = tt.mul(Z, 1.0 / self.lengthscales)
             Zs = tt.sum(tt.square(Z), 1)
-            return -2.0 * tt.dot(X, tt.transpose(Z)) +\
-                   (tt.reshape(Xs, (-1, 1)) + tt.reshape(Zs, (1, -1)))
+            sqd = -2.0 * tt.dot(X, tt.transpose(Z)) +\
+                  (tt.reshape(Xs, (-1, 1)) + tt.reshape(Zs, (1, -1)))
+        return tt.clip(sqd, 0.0, np.inf)
 
     def euclidean_dist(self, X, Z):
         r2 = self.square_dist(X, Z)
@@ -141,8 +142,8 @@ class Stationary(Covariance):
 
 class ExpQuad(Stationary):
     R"""
-    The exponentiated quadratic kernel.  Also refered to as the squared
-    exponential, or radial basis function kernel.
+    The Exponentiated Quadratic kernel.  Also refered to as the Squared
+    Exponential, or Radial Basis Function kernel.
 
     .. math::
 
@@ -156,7 +157,7 @@ class ExpQuad(Stationary):
 
 class RatQuad(Stationary):
     R"""
-    The rational quadratic kernel.
+    The Rational Quadratic kernel.
 
     .. math::
 
@@ -219,7 +220,7 @@ class Exponential(Stationary):
 
 class Cosine(Stationary):
     R"""
-    The cosine kernel.
+    The Cosine kernel.
 
     .. math::
        k(x, x') = \mathrm{cos}\left( \frac{||x - x'||}{ \ell^2} \right)
@@ -232,7 +233,7 @@ class Cosine(Stationary):
 
 class Linear(Covariance):
     R"""
-    The linear kernel.
+    The Linear kernel.
 
     .. math::
        k(x, x') = (x - c)(x' - c)
@@ -254,7 +255,7 @@ class Linear(Covariance):
 
 class Polynomial(Linear):
     R"""
-    The polynomial covariance function.
+    The Polynomial kernel.
 
     .. math::
        k(x, x') = [(x - c)(x' - c) + \mathrm{offset}]^{d}
@@ -272,11 +273,11 @@ class Polynomial(Linear):
 
 class WarpedInput(Covariance):
     R"""
-    Warp the inputs of any covariance function using an arbitrary function
+    Warp the inputs of any kernel using an arbitrary function
     defined using Theano.
 
     .. math::
-       k_{\mathrm{warped}}(x, x') = k(w(x), w(x'))
+       k(x, x') = k(w(x), w(x'))
 
     Parameters
     ----------
@@ -307,18 +308,19 @@ class WarpedInput(Covariance):
 
 class Gibbs(Covariance):
     R"""
-    Use an arbitrary lengthscale function defined using Theano.  Operates on a single input dimension.
+    The Gibbs kernel.  Use an arbitrary lengthscale function defined
+    using Theano.  Only tested in one dimension.
 
     .. math::
-       k_{\mathrm{gibbs}}(x, x') = \sqrt{\frac{2\ell(x)\ell(x')}{\ell^2(x) + \ell^2(x')}}
-                                   \mathrm{exp}\left[ -\frac{(x - x')^2}{\ell(x)^2 + \ell^2(x')} \right]
+       k(x, x') = \sqrt{\frac{2\ell(x)\ell(x')}{\ell^2(x) + \ell^2(x')}}
+                  \mathrm{exp}\left[ -\frac{(x - x')^2}{\ell^2(x) + \ell^2(x')} \right]
 
     Parameters
     ----------
     lengthscale_func : callable
         Theano function of X and additional optional arguments.
     args : optional, tuple or list of scalars or PyMC3 variables
-        Additional inputs (besides X or Z) to warp_func.
+        Additional inputs (besides X or Z) to lengthscale_func.
     """
     def __init__(self, input_dim, lengthscale_func, args=None, active_dims=None):
         Covariance.__init__(self, input_dim, active_dims)
@@ -337,13 +339,14 @@ class Gibbs(Covariance):
         X = tt.as_tensor_variable(X)
         Xs = tt.sum(tt.square(X), 1)
         if Z is None:
-            return -2.0 * tt.dot(X, tt.transpose(X)) +\
-                   (tt.reshape(Xs, (-1, 1)) + tt.reshape(Xs, (1, -1)))
+            sqd = -2.0 * tt.dot(X, tt.transpose(X)) +\
+                  (tt.reshape(Xs, (-1, 1)) + tt.reshape(Xs, (1, -1)))
         else:
             Z = tt.as_tensor_variable(Z)
             Zs = tt.sum(tt.square(Z), 1)
-            return -2.0 * tt.dot(X, tt.transpose(Z)) +\
-                   (tt.reshape(Xs, (-1, 1)) + tt.reshape(Zs, (1, -1)))
+            sqd = -2.0 * tt.dot(X, tt.transpose(Z)) +\
+                  (tt.reshape(Xs, (-1, 1)) + tt.reshape(Zs, (1, -1)))
+        return tt.clip(sqd, 0.0, np.inf)
 
     def __call__(self, X, Z=None):
         X, Z = self._slice(X, Z)

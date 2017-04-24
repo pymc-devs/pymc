@@ -1,7 +1,7 @@
 from __future__ import division
 
 import itertools
-from .helpers import SeededTest
+from .helpers import SeededTest, select_by_precision
 from ..vartypes import continuous_types
 from ..model import Model, Point, Potential
 from ..blocking import DictToVarBijection, DictToArrayBijection, ArrayOrdering
@@ -13,33 +13,35 @@ from ..distributions import (DensityDist, Categorical, Multinomial, VonMises, Di
                              NegativeBinomial, Geometric, Exponential, ExGaussian, Normal,
                              Flat, LKJCorr, Wald, ChiSquared, HalfNormal, DiscreteUniform,
                              Bound, Uniform, Triangular, Binomial, SkewNormal, DiscreteWeibull)
-from ..distributions import continuous, multivariate
-from nose_parameterized import parameterized
+from ..distributions import continuous
+from pymc3.theanof import floatX
 from numpy import array, inf, log, exp
 from numpy.testing import assert_almost_equal
 import numpy.random as nr
 import numpy as np
+import pytest
 
 from scipy import integrate
 import scipy.stats.distributions as sp
 import scipy.stats
 
 
-def gen_lkj_cases():
+def get_lkj_cases():
     """
     Log probabilities calculated using the formulas in:
     http://www.sciencedirect.com/science/article/pii/S0047259X09000876
     """
     tri = np.array([0.7, 0.0, -0.7])
-    test_cases = [
-        (tri, 1, 1.5963125911388549),
-        (tri, 3, -7.7963493376312742),
-        (tri, 0, -np.inf),
-        (np.array([1.1, 0.0, -0.7]), 1, -np.inf),
-        (np.array([0.7, 0.0, -1.1]), 1, -np.inf)
+    return [
+        (tri, 1, 3, 1.5963125911388549),
+        (tri, 3, 3, -7.7963493376312742),
+        (tri, 0, 3, -np.inf),
+        (np.array([1.1, 0.0, -0.7]), 1, 3, -np.inf),
+        (np.array([0.7, 0.0, -1.1]), 1, 3, -np.inf)
     ]
-    for t, n, logp in test_cases:
-        yield t, n, 3, logp
+
+
+LKJ_CASES = get_lkj_cases()
 
 
 class Domain(object):
@@ -211,17 +213,21 @@ def scipy_exponweib_sucks(value, alpha, beta):
     pdf = np.log(sp.exponweib.pdf(value, 1, alpha, scale=beta))
     if np.isinf(pdf):
         return sp.exponweib.logpdf(value, 1, alpha, scale=beta)
-    return pdf
+    return floatX(pdf)
 
 
-def normal_logpdf(value, mu, tau):
+def normal_logpdf_tau(value, mu, tau):
     (k,) = value.shape
     constant = -0.5 * k * np.log(2 * np.pi) + 0.5 * np.log(np.linalg.det(tau))
     return constant - 0.5 * (value - mu).dot(tau).dot(value - mu)
 
 
+def normal_logpdf_cov(value, mu, cov):
+    return scipy.stats.multivariate_normal.logpdf(value, mu, cov)
+
+
 def betafn(a):
-    return scipy.special.gammaln(a).sum(-1) - scipy.special.gammaln(a.sum(-1))
+    return floatX(scipy.special.gammaln(a).sum(-1) - scipy.special.gammaln(a.sum(-1)))
 
 
 def logpow(v, p):
@@ -229,16 +235,16 @@ def logpow(v, p):
 
 
 def discrete_weibull_logpmf(value, q, beta):
-    return np.log(np.power(q, np.power(value, beta)) - np.power(q, np.power(value + 1, beta)))
+    return floatX(np.log(np.power(q, np.power(value, beta)) - np.power(q, np.power(value + 1, beta))))
 
 
 def dirichlet_logpdf(value, a):
-    return (-betafn(a) + logpow(value, a - 1).sum(-1)).sum()
+    return floatX((-betafn(a) + logpow(value, a - 1).sum(-1)).sum())
 
 
 def categorical_logpdf(value, p):
     if value >= 0 and value <= len(p):
-        return np.log(p[value])
+        return floatX(np.log(p[value]))
     else:
         return -inf
 
@@ -306,18 +312,7 @@ class TestMatchesScipy(SeededTest):
         logp = model.fastlogp
         for pt in product(domains, n_samples=100):
             pt = Point(pt, model=model)
-            assert_almost_equal(logp(pt), logp_reference(pt), decimal=6, err_msg=str(pt))
-            
-    def check_logcdf(self, pymc3_dist, domain, paramdomains, scipy_logcdf):
-        domains = paramdomains.copy()
-        domains['value'] = domain
-        for pt in product(domains, n_samples=100):
-            params = dict(pt)
-            scipy_cdf = scipy_logcdf(**params)
-            value = params.pop('value')
-            dist = pymc3_dist.dist(**params)
-            assert_almost_equal(dist.logcdf(value).tag.test_value, scipy_cdf, 
-                                decimal=6, err_msg=str(pt))
+            assert_almost_equal(logp(pt), logp_reference(pt), decimal=select_by_precision(float64=6, float32=2), err_msg=str(pt))
 
     def check_int_to_1(self, model, value, domain, paramdomains):
         pdf = model.fastfn(exp(model.logpt))
@@ -353,7 +348,7 @@ class TestMatchesScipy(SeededTest):
         for pt in product(domains, n_samples=100):
             pt = Point(pt, model=model)
             pt = bij.map(pt)
-            assert_almost_equal(dlogp(pt), ndlogp(pt), decimal=6, err_msg=str(pt))
+            assert_almost_equal(dlogp(pt), ndlogp(pt), decimal=select_by_precision(float64=6, float32=4), err_msg=str(pt))
 
     def checkd(self, distfam, valuedomain, vardomains, checks=None, extra_args={}):
         if checks is None:
@@ -417,7 +412,7 @@ class TestMatchesScipy(SeededTest):
         self.check_logcdf(Wald, Rplus, {'mu': Rplus, 'alpha': Rplus},
                           lambda value, mu, alpha: sp.invgauss.logcdf(value, mu=mu, loc=alpha))
 
-    @parameterized.expand([
+    @pytest.mark.parametrize('value,mu,lam,phi,alpha,logp', [
         (.5, .001, .5, None, 0., -124500.7257914),
         (1., .5, .001, None, 0., -4.3733162),
         (2., 1., None, None, 0., -2.2086593),
@@ -440,12 +435,14 @@ class TestMatchesScipy(SeededTest):
         with Model() as model:
             Wald('wald', mu=mu, lam=lam, phi=phi, alpha=alpha, transform=None)
         pt = {'wald': value}
-        assert_almost_equal(model.fastlogp(pt), logp, decimal=6, err_msg=str(pt))
+        assert_almost_equal(model.fastlogp(pt), logp, decimal=select_by_precision(float64=6, float32=1), err_msg=str(pt))
 
     def test_beta(self):
         self.pymc3_matches_scipy(Beta, Unit, {'alpha': Rplus, 'beta': Rplus},
                                  lambda value, alpha, beta: sp.beta.logpdf(value, alpha, beta))
         self.pymc3_matches_scipy(Beta, Unit, {'mu': Unit, 'sd': Rplus}, beta_mu_sd)
+        self.check_logcdf(Beta, Unit, {'alpha': Rplus, 'beta': Rplus}, 
+                                lambda value, alpha, beta: sp.beta.logcdf(value, alpha, beta))
 
     def test_exponential(self):
         self.pymc3_matches_scipy(Exponential, Rplus, {'lam': Rplus},
@@ -472,9 +469,7 @@ class TestMatchesScipy(SeededTest):
     def test_lognormal(self):
         self.pymc3_matches_scipy(
             Lognormal, Rplus, {'mu': R, 'tau': Rplusbig},
-            lambda value, mu, tau: sp.lognorm.logpdf(value, tau**-.5, 0, np.exp(mu)))
-        self.check_logcdf(Lognormal, Rplus, {'mu': R, 'tau': Rplusbig},
-                          lambda value, mu, tau: sp.lognorm.logcdf(value, tau**-.5, 0, np.exp(mu)))
+            lambda value, mu, tau: floatX(sp.lognorm.logpdf(value, tau**-.5, 0, np.exp(mu))))
 
     def test_t(self):
         self.pymc3_matches_scipy(StudentT, R, {'nu': Rplus, 'mu': R, 'lam': Rplus},
@@ -561,23 +556,27 @@ class TestMatchesScipy(SeededTest):
         self.checkd(ZeroInflatedNegativeBinomial, Nat,
                     {'mu': Rplusbig, 'alpha': Rplusbig, 'psi': Unit})
 
-    @parameterized.expand([(1,), (2,)])
+    @pytest.mark.parametrize('n', [1, 2])
     def test_mvnormal(self, n):
         self.pymc3_matches_scipy(MvNormal, Vector(R, n),
-                                 {'mu': Vector(R, n), 'tau': PdMatrix(n)}, normal_logpdf)
-                                 
+                                 {'mu': Vector(R, n), 'tau': PdMatrix(n)}, normal_logpdf_tau)
+        self.pymc3_matches_scipy(MvNormal, Vector(R, n),
+                                 {'mu': Vector(R, n), 'cov': PdMatrix(n)}, normal_logpdf_cov)
+
     def test_mvnormal_init_fail(self):
         with Model():
-            with self.assertRaises(ValueError):
-                x = MvNormal('x', np.zeros(3), shape=3)
+            with pytest.raises(ValueError):
+                x = MvNormal('x', mu=np.zeros(3), shape=3)
+            with pytest.raises(ValueError):
+                x = MvNormal('x', mu=np.zeros(3), cov=np.eye(3), tau=np.eye(3), shape=3)
 
-    @parameterized.expand([(1,), (2,)])
+    @pytest.mark.parametrize('n', [1, 2])
     def test_mvt(self, n):
         self.pymc3_matches_scipy(MvStudentT, Vector(R, n),
                                  {'nu': Rplus, 'Sigma': PdMatrix(n), 'mu': Vector(R, n)},
                                  mvt_logpdf)
 
-    @parameterized.expand([(2,), (3,)])
+    @pytest.mark.parametrize('n', [2, 3])
     def test_wishart(self, n):
         # This check compares the autodiff gradient to the numdiff gradient.
         # However, due to the strict constraints of the wishart,
@@ -588,14 +587,15 @@ class TestMatchesScipy(SeededTest):
         #             checks=[self.check_dlogp])
         pass
 
-    @parameterized.expand(gen_lkj_cases)
-    def test_lkj(self, x, n, p, lp):
+    @pytest.mark.parametrize('x,eta,n,lp', LKJ_CASES)
+    def test_lkj(self, x, eta, n, lp):
         with Model() as model:
-            LKJCorr('lkj', n=n, p=p)
-        pt = {'lkj': x}
-        assert_almost_equal(model.fastlogp(pt), lp, decimal=6, err_msg=str(pt))
+            LKJCorr('lkj', eta=eta, n=n, transform=None)
 
-    @parameterized.expand([(2,), (3,)])
+        pt = {'lkj': x}
+        assert_almost_equal(model.fastlogp(pt), lp, decimal=select_by_precision(float64=6, float32=4), err_msg=str(pt))
+
+    @pytest.mark.parametrize('n', [2, 3])
     def test_dirichlet(self, n):
         self.pymc3_matches_scipy(Dirichlet, Simplex(
             n), {'a': Vector(Rplus, n)}, dirichlet_logpdf)
@@ -604,7 +604,7 @@ class TestMatchesScipy(SeededTest):
         self.pymc3_matches_scipy(Dirichlet, MultiSimplex(2, 2),
                                  {'a': Vector(Vector(Rplus, 2), 2)}, dirichlet_logpdf)
 
-    @parameterized.expand([(2,), (3,)])
+    @pytest.mark.parametrize('n', [2, 3])
     def test_multinomial(self, n):
         self.pymc3_matches_scipy(Multinomial, Vector(Nat, n), {'p': Simplex(n), 'n': Nat},
                                  multinomial_logpdf)
@@ -668,7 +668,7 @@ class TestMatchesScipy(SeededTest):
             assert np.isinf(x.logp({'x': -1}))
             assert np.isinf(x.logp({'x': 3}))
 
-    @parameterized.expand([(2,), (3,), (4,)])
+    @pytest.mark.parametrize('n', [2, 3, 4])
     def test_categorical(self, n):
         self.pymc3_matches_scipy(Categorical, Domain(range(n), 'int64'), {'p': Simplex(n)},
                                  lambda value, p: categorical_logpdf(value, p))
@@ -688,17 +688,7 @@ class TestMatchesScipy(SeededTest):
         sd = np.array([2])
         assert_almost_equal(continuous.get_tau_sd(sd=sd), [1. / sd**2, sd])
 
-    def test_get_tau_cov(self):
-        cov = np.random.randn(3, 3)
-        cov = np.dot(cov, cov.T)
-        mu = np.ones(3)
-        tau, cov = multivariate.get_tau_cov(mu, cov=cov)
-        assert_almost_equal(tau.eval(), np.linalg.inv(cov))
-
-        with self.assertRaises(ValueError):
-            tau, cov = multivariate.get_tau_cov(mu)
-
-    @parameterized.expand([
+    @pytest.mark.parametrize('value,mu,sigma,nu,logp', [
         (0.5, -50.000, 0.500, 0.500, -99.8068528),
         (1.0, -1.000, 0.001, 0.001, -1992.5922447),
         (2.0, 0.001, 1.000, 1.000, -1.6720416),
@@ -718,7 +708,7 @@ class TestMatchesScipy(SeededTest):
 
     def test_vonmises(self):
         self.pymc3_matches_scipy(VonMises, R, {'mu': Circ, 'kappa': Rplus},
-                                 lambda value, mu, kappa: sp.vonmises.logpdf(value, kappa, loc=mu))
+                                 lambda value, mu, kappa: floatX(sp.vonmises.logpdf(value, kappa, loc=mu)))
 
     def test_multidimensional_beta_construction(self):
         with Model():

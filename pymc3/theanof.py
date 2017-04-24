@@ -1,19 +1,31 @@
 import numpy as np
 import theano
 
-from .vartypes import typefilter, continuous_types
 from theano import theano, scalar, tensor as tt
+from theano.sandbox.rng_mrg import MRG_RandomStreams
 from theano.gof.graph import inputs
 from theano.gof import Op
 from theano.configparser import change_flags
+
+from .vartypes import typefilter, continuous_types
 from .memoize import memoize
 from .blocking import ArrayOrdering
-from .data import DataGenerator
+from .data import GeneratorAdapter
 
-__all__ = ['gradient', 'hessian', 'hessian_diag', 'inputvars',
-           'cont_inputs', 'floatX', 'jacobian',
-           'CallableTensor', 'join_nonshared_inputs',
-           'make_shared_replacements', 'generator']
+__all__ = ['gradient',
+           'hessian',
+           'hessian_diag',
+           'inputvars',
+           'cont_inputs',
+           'floatX',
+           'jacobian',
+           'CallableTensor',
+           'join_nonshared_inputs',
+           'make_shared_replacements',
+           'generator',
+           'GradScale',
+           'set_tt_rng',
+           'tt_rng']
 
 
 def inputvars(a):
@@ -60,6 +72,7 @@ def floatX(X):
 Theano derivative functions
 """
 
+
 def gradient1(f, v):
     """flat gradient of f wrt v"""
     return tt.flatten(tt.grad(f, v, disconnected_inputs='warn'))
@@ -98,6 +111,17 @@ def jacobian(f, vars=None):
         return tt.concatenate([jacobian1(f, v) for v in vars], axis=1)
     else:
         return empty_gradient
+
+
+def jacobian_diag(f, x):
+    idx = tt.arange(f.shape[0], dtype='int32')
+
+    def grad_ii(i):
+        return theano.grad(f[i], x)[i]
+
+    return theano.scan(grad_ii, sequences=[idx],
+                       n_steps=f.shape[0],
+                       name='jacobian_diag')[0]
 
 
 @memoize
@@ -190,6 +214,9 @@ def join_nonshared_inputs(xs, vars, shared, make_shared=False):
     tensors : list of same tensors but with inarray as input
     inarray : vector of inputs
     """
+    if not vars:
+        raise ValueError('Empty list of variables.')
+
     joined = tt.concatenate([var.ravel() for var in vars])
 
     if not make_shared:
@@ -264,8 +291,8 @@ class GeneratorOp(Op):
 
     def __init__(self, gen, default=None):
         super(GeneratorOp, self).__init__()
-        if not isinstance(gen, DataGenerator):
-            gen = DataGenerator(gen)
+        if not isinstance(gen, GeneratorAdapter):
+            gen = GeneratorAdapter(gen)
         self.generator = gen
         self.set_default(default)
 
@@ -285,8 +312,8 @@ class GeneratorOp(Op):
     __call__ = change_flags(compute_test_value='off')(Op.__call__)
 
     def set_gen(self, gen):
-        if not isinstance(gen, DataGenerator):
-            gen = DataGenerator(gen)
+        if not isinstance(gen, GeneratorAdapter):
+            gen = GeneratorAdapter(gen)
         if not gen.tensortype == self.generator.tensortype:
             raise ValueError('New generator should yield the same type')
         self.generator = gen
@@ -325,3 +352,75 @@ def generator(gen, default=None):
         - var.set_default(value) : sets new default value (None erases default value)
     """
     return GeneratorOp(gen, default)()
+
+
+@change_flags(compute_test_value='off')
+def launch_rng(rng):
+    """
+    Helper function for safe launch of theano random generator.
+    If not launched, there will be problems with test_value
+
+    Parameters
+    ----------
+    rng : `theano.sandbox.rng_mrg.MRG_RandomStreams` instance
+    """
+    state = rng.rstate
+    rng.inc_rstate()
+    rng.set_rstate(state)
+
+_tt_rng = MRG_RandomStreams()
+launch_rng(_tt_rng)
+
+
+def tt_rng(seed=None):
+    """
+    Get the package-level random number generator or new with specified seed.
+
+    Parameters
+    ----------
+    seed : int
+        If not None
+        returns *new* theano random generator without replacing package global one
+
+    Returns
+    -------
+    `theano.sandbox.rng_mrg.MRG_RandomStreams` instance
+        `theano.sandbox.rng_mrg.MRG_RandomStreams`
+        instance passed to the most recent call of `set_tt_rng`
+    """
+    if seed is None:
+        return _tt_rng
+    else:
+        ret = MRG_RandomStreams(seed)
+        launch_rng(ret)
+        return ret
+
+
+def set_tt_rng(new_rng):
+    """
+    Set the package-level random number generator.
+
+    Parameters
+    ----------
+    new_rng : `theano.sandbox.rng_mrg.MRG_RandomStreams` instance
+        The random number generator to use.
+    """
+    # pylint: disable=global-statement
+    global _tt_rng
+    # pylint: enable=global-statement
+    if isinstance(new_rng, int):
+        new_rng = MRG_RandomStreams(new_rng)
+    _tt_rng = new_rng
+    launch_rng(_tt_rng)
+
+
+class GradScale(theano.compile.ViewOp):
+    def __init__(self, multiplier):
+        self.multiplier = multiplier
+
+    def grad(self, args, g_outs):
+        return [self.multiplier * g_out for g_out in g_outs]
+
+
+def floatX_array(x):
+    return floatX(np.array(x))

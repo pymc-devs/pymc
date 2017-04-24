@@ -58,6 +58,7 @@ from .multivariate import Dirichlet
 from .multivariate import Multinomial
 from .multivariate import Wishart
 from .multivariate import WishartBartlett
+from .multivariate import LKJCholeskyCov
 from .multivariate import LKJCorr
 
 from .timeseries import AR1
@@ -118,6 +119,7 @@ __all__ = ['Uniform',
            'Multinomial',
            'Wishart',
            'WishartBartlett',
+           'LKJCholeskyCov',
            'LKJCorr',
            'AR1',
            'GaussianRandomWalk',

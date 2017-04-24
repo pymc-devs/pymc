@@ -60,6 +60,7 @@ class TestHDF50dSelection(bf.SelectionTestCase):
     backend = hdf5.HDF5
     name = DBNAME
     shape = ()
+    skip_test_get_slice_neg_step = True
 
 
 class TestHDF50dSelectionStats1(bf.SelectionTestCase):
@@ -67,6 +68,7 @@ class TestHDF50dSelectionStats1(bf.SelectionTestCase):
     name = DBNAME
     shape = ()
     sampler_vars = STATS1
+    skip_test_get_slice_neg_step = True
 
 
 class TestHDF50dSelectionStats2(bf.SelectionTestCase):
@@ -74,18 +76,21 @@ class TestHDF50dSelectionStats2(bf.SelectionTestCase):
     name = DBNAME
     shape = ()
     sampler_vars = STATS2
+    skip_test_get_slice_neg_step = True
 
 
 class TestHDF51dSelection(bf.SelectionTestCase):
     backend = hdf5.HDF5
     name = DBNAME
     shape = 2
+    skip_test_get_slice_neg_step = True
 
 
 class TestHDF52dSelection(bf.SelectionTestCase):
     backend = hdf5.HDF5
     name = DBNAME
     shape = (2, 3)
+    skip_test_get_slice_neg_step = True
 
 
 class TestHDF5DumpLoad(bf.DumpLoadTestCase):

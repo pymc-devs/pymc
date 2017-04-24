@@ -1,45 +1,44 @@
-import unittest
-
 import pymc3 as pm
 import numpy as np
 import numpy.testing as npt
 from scipy import stats
-
+import theano.tensor as tt
 
 from .helpers import SeededTest
 
 
-class KnownMean(unittest.TestCase):
+class KnownMean(object):
     def test_mean(self):
         for varname, expected in self.means.items():
             samples = self.samples[varname]
             npt.assert_allclose(expected, samples.mean(0), self.rtol, self.atol)
 
 
-class KnownVariance(unittest.TestCase):
+class KnownVariance(object):
     def test_var(self):
         for varname, expected in self.variances.items():
             samples = self.samples[varname]
             npt.assert_allclose(expected, samples.var(0), self.rtol, self.atol)
 
 
-class KnownCDF(unittest.TestCase):
+class KnownCDF(object):
     ks_thin = 5
     alpha = 0.001
 
     def test_kstest(self):
         for varname, cdf in self.cdfs.items():
+            print('checking', varname)
             samples = self.samples[varname]
             if samples.ndim == 1:
                 t, p = stats.kstest(samples[::self.ks_thin], cdf=cdf)
-                self.assertLess(self.alpha, p)
+                assert self.alpha < p
             elif samples.ndim == 2:
                 pvals = []
                 for samples_, cdf_ in zip(samples.T, cdf):
                     t, p = stats.kstest(samples_[::self.ks_thin], cdf=cdf_)
                     pvals.append(p)
                 t, p = stats.combine_pvalues(pvals)
-                self.assertLess(self.alpha, p)
+                assert self.alpha < p
             else:
                 raise NotImplementedError()
 
@@ -94,15 +93,43 @@ class StudentTFixture(KnownMean, KnownCDF):
         return model
 
 
+class LKJCholeskyCovFixture(KnownCDF):
+    cdfs = {
+        'log_stds': [stats.norm(loc=x, scale=x / 10.).cdf
+                     for x in [1, 2, 3, 4, 5]],
+        # The entries of the correlation matrix should follow
+        # beta(eta - 1 + d/2, eta - 1 + d/2) on (-1, 1).
+        # See https://arxiv.org/abs/1309.7268
+        'corr_entries_unit': [
+            stats.beta(3 - 1 + 2.5, 3 - 1 + 2.5).cdf
+            for _ in range(10)
+        ],
+    }
+
+    @classmethod
+    def make_model(cls):
+        with pm.Model() as model:
+            sd_mu = np.array([1, 2, 3, 4, 5])
+            sd_dist = pm.Lognormal.dist(mu=sd_mu, sd=sd_mu / 10., shape=5)
+            chol_packed = pm.LKJCholeskyCov('chol_packed', 5, 3, sd_dist)
+            chol = pm.expand_packed_triangular(5, chol_packed, lower=True)
+            cov = tt.dot(chol, chol.T)
+            stds = tt.sqrt(tt.diag(cov))
+            pm.Deterministic('log_stds', tt.log(stds))
+            corr = cov / stds[None, :] / stds[:, None]
+            corr_entries_unit = (corr[np.tril_indices(5, -1)] + 1) / 2
+            pm.Deterministic('corr_entries_unit', corr_entries_unit)
+        return model
+
+
 class BaseSampler(SeededTest):
     @classmethod
-    def setUpClass(cls):
-        super(BaseSampler, cls).setUpClass()
+    def setup_class(cls):
+        super(BaseSampler, cls).setup_class()
         cls.model = cls.make_model()
         with cls.model:
             cls.step = cls.make_step()
-            cls.trace = pm.sample(
-                cls.n_samples, tune=cls.tune, step=cls.step, njobs=cls.chains)
+            cls.trace = pm.sample(cls.n_samples, tune=cls.tune, step=cls.step, njobs=cls.chains)
         cls.samples = {}
         for var in cls.model.unobserved_RVs:
             cls.samples[str(var)] = cls.trace.get_values(var, burn=cls.burn)
@@ -125,6 +152,11 @@ class NutsFixture(BaseSampler):
         args = {}
         if hasattr(cls, 'step_args'):
             args.update(cls.step_args)
+        if 'scaling' not in args:
+            mu, stds, elbo = pm.advi(n=50000)
+            scaling = cls.model.dict_to_array(stds) ** 2
+            args['scaling'] = scaling
+            args['is_cov'] = True
         return pm.NUTS(**args)
 
     def test_target_accept(self):
