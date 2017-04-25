@@ -290,7 +290,7 @@ class SelectionTestCase(ModelBackendSampledTestCase):
             assert dtype_equals_modulo_precision(
                 self.expected[0][varname].dtype,
                 self.mtrace.get_values(varname, chains=0).dtype
-                    )
+                )
 
         for statname in self.mtrace.stat_names:
             assert self.stat_dtypes[statname] == \
