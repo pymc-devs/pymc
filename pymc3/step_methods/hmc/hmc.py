@@ -64,7 +64,7 @@ class HamiltonianMC(BaseHMC):
         initial_energy = self.compute_energy(q, p)
         q, p, current_energy = self.leapfrog(q, p, e, n_steps)
         energy_change = initial_energy - current_energy
-        return metrop_select(energy_change, q, q0)
+        return metrop_select(energy_change, q, q0)[0]
 
     @staticmethod
     def competence(var):

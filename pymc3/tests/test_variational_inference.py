@@ -7,7 +7,7 @@ import pymc3 as pm
 from pymc3 import Model, Normal
 from pymc3.variational import (
     ADVI, FullRankADVI, SVGD,
-    Histogram,
+    Empirical,
     fit
 )
 from pymc3.variational.operators import KL
@@ -59,7 +59,7 @@ def _test_aevb(self):
     with model:
         inference = self.inference(local_rv={x: (mu, rho)})
         approx = inference.fit(3, obj_n_mc=2, obj_optimizer=self.optimizer)
-        approx.sample_vp(10)
+        approx.sample(10)
         approx.apply_replacements(
             y,
             more_replacements={x: np.asarray([1, 1], dtype=x.dtype)}
@@ -105,17 +105,17 @@ class TestApproximates:
             x_sampled = app.view(app.random_fn(), 'x')
             assert x_sampled.shape == () + model['x'].dshape
 
-        def test_sample_vp(self):
+        def test_sample(self):
             n_samples = 100
             xs = np.random.binomial(n=1, p=0.2, size=n_samples)
             with pm.Model():
                 p = pm.Beta('p', alpha=1, beta=1)
                 pm.Binomial('xs', n=1, p=p, observed=xs)
                 app = self.inference().approx
-                trace = app.sample_vp(draws=1, hide_transformed=True)
+                trace = app.sample(draws=1, hide_transformed=True)
                 assert trace.varnames == ['p']
                 assert len(trace) == 1
-                trace = app.sample_vp(draws=10, hide_transformed=False)
+                trace = app.sample(draws=10, hide_transformed=False)
                 assert sorted(trace.varnames) == ['p', 'p_logodds_']
                 assert len(trace) == 10
 
@@ -145,8 +145,11 @@ class TestApproximates:
                 Normal('x', mu=mu_, sd=sd, observed=data)
                 inf = self.inference()
                 inf.fit(10)
-                approx = inf.fit(self.NITER, obj_optimizer=self.optimizer)
-                trace = approx.sample_vp(10000)
+                approx = inf.fit(self.NITER,
+                                 obj_optimizer=self.optimizer,
+                                 callbacks=
+                                 [pm.callbacks.CheckParametersConvergence()])
+                trace = approx.sample(10000)
             np.testing.assert_allclose(np.mean(trace['mu']), mu_post, rtol=0.1)
             np.testing.assert_allclose(np.std(trace['mu']), np.sqrt(1. / d), rtol=0.4)
 
@@ -172,8 +175,10 @@ class TestApproximates:
                 mu_ = Normal('mu', mu=mu0, sd=sd0, testval=0)
                 Normal('x', mu=mu_, sd=sd, observed=minibatches, total_size=n)
                 inf = self.inference()
-                approx = inf.fit(self.NITER * 3, obj_optimizer=self.optimizer)
-                trace = approx.sample_vp(10000)
+                approx = inf.fit(self.NITER * 3, obj_optimizer=self.optimizer,
+                                 callbacks=
+                                 [pm.callbacks.CheckParametersConvergence()])
+                trace = approx.sample(10000)
             np.testing.assert_allclose(np.mean(trace['mu']), mu_post, rtol=0.1)
             np.testing.assert_allclose(np.std(trace['mu']), np.sqrt(1. / d), rtol=0.4)
 
@@ -203,8 +208,10 @@ class TestApproximates:
                 mu_ = Normal('mu', mu=mu0, sd=sd0, testval=0)
                 Normal('x', mu=mu_, sd=sd, observed=data_t, total_size=n)
                 inf = self.inference()
-                approx = inf.fit(self.NITER * 3, callbacks=[cb], obj_n_mc=10, obj_optimizer=self.optimizer)
-                trace = approx.sample_vp(10000)
+                approx = inf.fit(self.NITER * 3, callbacks=
+                [cb, pm.callbacks.CheckParametersConvergence()],
+                                 obj_n_mc=10, obj_optimizer=self.optimizer)
+                trace = approx.sample(10000)
             np.testing.assert_allclose(np.mean(trace['mu']), mu_post, rtol=0.4)
             np.testing.assert_allclose(np.std(trace['mu']), np.sqrt(1. / d), rtol=0.4)
 
@@ -274,18 +281,18 @@ class TestSVGD(TestApproximates.Base):
     optimizer = functools.partial(pm.adam, learning_rate=.1)
 
 
-class TestHistogram(SeededTest):
+class TestEmpirical(SeededTest):
     def test_sampling(self):
         with models.multidimensional_model()[1]:
             full_rank = FullRankADVI()
             approx = full_rank.fit(20)
-            trace0 = approx.sample_vp(10000)
-            histogram = Histogram(trace0)
-        trace1 = histogram.sample_vp(100000)
+            trace0 = approx.sample(10000)
+            approx = Empirical(trace0)
+        trace1 = approx.sample(100000)
         np.testing.assert_allclose(trace0['x'].mean(0), trace1['x'].mean(0), atol=0.01)
         np.testing.assert_allclose(trace0['x'].var(0), trace1['x'].var(0), atol=0.01)
 
-    def test_aevb_histogram(self):
+    def test_aevb_empirical(self):
         _, model, _ = models.exponential_beta(n=2)
         x = model.x
         mu = theano.shared(x.init_value)
@@ -293,11 +300,11 @@ class TestHistogram(SeededTest):
         with model:
             inference = ADVI(local_rv={x: (mu, rho)})
             approx = inference.approx
-            trace0 = approx.sample_vp(10000)
-            histogram = Histogram(trace0, local_rv={x: (mu, rho)})
-            trace1 = histogram.sample_vp(10000)
-            histogram.random(no_rand=True)
-            histogram.random_fn(no_rand=True)
+            trace0 = approx.sample(10000)
+            approx = Empirical(trace0, local_rv={x: (mu, rho)})
+            trace1 = approx.sample(10000)
+            approx.random(no_rand=True)
+            approx.random_fn(no_rand=True)
         np.testing.assert_allclose(trace0['y'].mean(0), trace1['y'].mean(0), atol=0.02)
         np.testing.assert_allclose(trace0['y'].var(0), trace1['y'].var(0), atol=0.02)
         np.testing.assert_allclose(trace0['x'].mean(0), trace1['x'].mean(0), atol=0.02)
@@ -310,17 +317,17 @@ class TestHistogram(SeededTest):
             p = pm.Uniform('p')
             pm.Bernoulli('trials', p, observed=trials)
             trace = pm.sample(1000, step=pm.Metropolis())
-            histogram = Histogram(trace)
-            histogram.randidx(None).eval()
-            histogram.randidx(1).eval()
-            histogram.random_fn(no_rand=True)
-            histogram.random_fn(no_rand=False)
-            histogram.histogram_logp.eval()
+            approx = Empirical(trace)
+            approx.randidx(None).eval()
+            approx.randidx(1).eval()
+            approx.random_fn(no_rand=True)
+            approx.random_fn(no_rand=False)
+            approx.histogram_logp.eval()
 
     def test_init_from_noize(self):
         with models.multidimensional_model()[1]:
-            histogram = Histogram.from_noise(100)
-            assert histogram.histogram.eval().shape == (100, 6)
+            approx = Empirical.from_noise(100)
+            assert approx.histogram.eval().shape == (100, 6)
 
 _model = models.simple_model()[1]
 with _model:

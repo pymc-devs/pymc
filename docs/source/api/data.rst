@@ -1,6 +1,6 @@
-*****
+****
 Data
-*****
+****
 
 .. currentmodule:: pymc3.data
 

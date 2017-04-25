@@ -3,16 +3,16 @@ import theano
 from theano import tensor as tt
 
 import pymc3 as pm
-from pymc3 import ArrayOrdering, DictToArrayBijection
 from pymc3.distributions.dist_math import rho2sd, log_normal, log_normal_mv
 from pymc3.variational.opvi import Approximation
-from pymc3.theanof import tt_rng, memoize
+from pymc3.theanof import memoize
 
 
 __all__ = [
     'MeanField',
     'FullRank',
-    'Histogram'
+    'Empirical',
+    'sample_approx'
 ]
 
 
@@ -25,12 +25,15 @@ class MeanField(Approximation):
 
     Parameters
     ----------
-    local_rv : dict
-        mapping {model_variable -> local_variable}
+    local_rv : dict[var->tuple]
+        mapping {model_variable -> local_variable (:math:`\\mu`, :math:`\\rho`)}
         Local Vars are used for Autoencoding Variational Bayes
         See (AEVB; Kingma and Welling, 2014) for details
 
     model : PyMC3 model for inference
+
+    start : Point
+        initial mean
 
     cost_part_grad_scale : float or scalar tensor
         Scaling score part of gradient can be useful near optimum for
@@ -38,6 +41,10 @@ class MeanField(Approximation):
         1 at the start and 0 in the end. So slow decay will be ok.
         See (Sticking the Landing; Geoffrey Roeder,
         Yuhuai Wu, David Duvenaud, 2016) for details
+
+    seed : None or int
+        leave None to use package global RandomStream or other
+        valid value to create instance specific one
 
     References
     ----------
@@ -55,11 +62,12 @@ class MeanField(Approximation):
 
     @property
     def cov(self):
-        return tt.diag(rho2sd(self.rho))
+        return tt.diag(rho2sd(self.rho)**2)
 
-    def create_shared_params(self):
+    def create_shared_params(self, **kwargs):
+        start = self.gbij.map(kwargs.get('start', self.model.test_point))
         return {'mu': theano.shared(
-                    pm.floatX(self.input.tag.test_value[self.global_slc]),
+                    pm.floatX(start),
                     'mu'),
                 'rho': theano.shared(
                     np.zeros((self.global_size,), dtype=theano.config.floatX),
@@ -69,8 +77,6 @@ class MeanField(Approximation):
     def log_q_W_global(self, z):
         """
         log_q_W samples over q for global vars
-        Gradient wrt mu, rho in density parametrization
-        is set to zero to lower variance of ELBO
         """
         mu = self.scale_grad(self.mean)
         rho = self.scale_grad(self.rho)
@@ -94,12 +100,15 @@ class FullRank(Approximation):
 
     Parameters
     ----------
-    local_rv : dict
-        mapping {model_variable -> local_variable}
+    local_rv : dict[var->tuple]
+        mapping {model_variable -> local_variable (:math:`\\mu`, :math:`\\rho`)}
         Local Vars are used for Autoencoding Variational Bayes
         See (AEVB; Kingma and Welling, 2014) for details
 
     model : PyMC3 model for inference
+
+    start : Point
+        initial mean
 
     cost_part_grad_scale : float or scalar tensor
         Scaling score part of gradient can be useful near optimum for
@@ -108,16 +117,21 @@ class FullRank(Approximation):
         See (Sticking the Landing; Geoffrey Roeder,
         Yuhuai Wu, David Duvenaud, 2016) for details
 
+    seed : None or int
+        leave None to use package global RandomStream or other
+        valid value to create instance specific one
+
     References
     ----------
     Geoffrey Roeder, Yuhuai Wu, David Duvenaud, 2016
         Sticking the Landing: A Simple Reduced-Variance Gradient for ADVI
         approximateinference.org/accepted/RoederEtAl2016.pdf
     """
-    def __init__(self, local_rv=None, model=None, cost_part_grad_scale=1, gpu_compat=False):
+    def __init__(self, local_rv=None, model=None, cost_part_grad_scale=1, gpu_compat=False, seed=None):
         super(FullRank, self).__init__(
             local_rv=local_rv, model=model,
-            cost_part_grad_scale=cost_part_grad_scale
+            cost_part_grad_scale=cost_part_grad_scale,
+            seed=seed
         )
         self.gpu_compat = gpu_compat
 
@@ -148,24 +162,21 @@ class FullRank(Approximation):
         tril_index_matrix[np.tril_indices(n)[::-1]] = np.arange(num_tril_entries)
         return tril_index_matrix
 
-    def create_shared_params(self):
+    def create_shared_params(self, **kwargs):
+        start = self.gbij.map(kwargs.get('start', self.model.test_point))
         n = self.global_size
         L_tril = (
             np.eye(n)
             [np.tril_indices(n)]
             .astype(theano.config.floatX)
         )
-        return {'mu': theano.shared(
-                    self.input.tag.test_value[self.global_slc],
-                    'mu'),
+        return {'mu': theano.shared(pm.floatX(start), 'mu'),
                 'L_tril': theano.shared(L_tril, 'L_tril')
                 }
 
     def log_q_W_global(self, z):
         """
         log_q_W samples over q for global vars
-        Gradient wrt mu, rho in density parametrization
-        is set to zero to lower variance of ELBO
         """
         mu = self.scale_grad(self.mean)
         L = self.scale_grad(self.L)
@@ -221,7 +232,7 @@ class FullRank(Approximation):
         return full_rank
 
 
-class Histogram(Approximation):
+class Empirical(Approximation):
     """
     Builds Approximation instance from a given trace,
     it has the same interface as variational approximation
@@ -229,23 +240,27 @@ class Histogram(Approximation):
     Parameters
     ----------
     trace : MultiTrace
-    local_rv : dict
-        Experimental for Histogram
-        mapping {model_variable -> local_variable}
+    local_rv : dict[var->tuple]
+        Experimental for Empirical Approximation
+        mapping {model_variable -> local_variable (:math:`\\mu`, :math:`\\rho`)}
         Local Vars are used for Autoencoding Variational Bayes
         See (AEVB; Kingma and Welling, 2014) for details
 
     model : PyMC3 model
+
+    seed : None or int
+        leave None to use package global RandomStream or other
+        valid value to create instance specific one
 
     Usage
     -----
     >>> with model:
     ...     step = NUTS()
     ...     trace = sample(1000, step=step)
-    ...     histogram = Histogram(trace[100:])
+    ...     histogram = Empirical(trace[100:])
     """
-    def __init__(self, trace, local_rv=None, model=None):
-        super(Histogram, self).__init__(local_rv=local_rv, model=model, trace=trace)
+    def __init__(self, trace, local_rv=None, model=None, seed=None):
+        super(Empirical, self).__init__(local_rv=local_rv, model=model, trace=trace, seed=seed)
 
     def check_model(self, model, **kwargs):
         trace = kwargs.get('trace')
@@ -254,18 +269,14 @@ class Histogram(Approximation):
                          for var in model.free_RVs])):
             raise ValueError('trace has not all FreeRV')
 
-    def _setup(self, **kwargs):
-        self._histogram_order = ArrayOrdering(self.global_vars)
-        self._bij = DictToArrayBijection(self._histogram_order, dict())
-
     def create_shared_params(self, **kwargs):
         trace = kwargs.get('trace')
         if trace is None:
-            histogram = np.atleast_2d(self._bij.map(self.model.test_point))
+            histogram = np.atleast_2d(self.gbij.map(self.model.test_point))
         else:
             histogram = np.empty((len(trace), self.global_size))
             for i in range(len(trace)):
-                histogram[i] = self._bij.map(trace[i])
+                histogram[i] = self.gbij.map(trace[i])
         return theano.shared(pm.floatX(histogram), 'histogram')
 
     def randidx(self, size=None):
@@ -280,7 +291,7 @@ class Histogram(Approximation):
                 pass
         else:
             size = tuple(np.atleast_1d(size))
-        return (tt_rng()
+        return (self._rng
                 .uniform(size=size, low=0.0, high=self.histogram.shape[0] - 1e-16)
                 .astype('int64'))
 
@@ -323,8 +334,13 @@ class Histogram(Approximation):
     def mean(self):
         return self.histogram.mean(0)
 
+    @property
+    def cov(self):
+        x = (self.histogram - self.mean)
+        return x.T.dot(x) / self.histogram.shape[0]
+
     @classmethod
-    def from_noise(cls, size, jitter=.01, local_rv=None, start=None, model=None):
+    def from_noise(cls, size, jitter=.01, local_rv=None, start=None, model=None, seed=None):
         """
         Initialize Histogram with random noise
 
@@ -342,14 +358,36 @@ class Histogram(Approximation):
 
         Returns
         -------
-        Histogram
+        Empirical
         """
-        hist = cls(None, local_rv=local_rv, model=model)
+        hist = cls(None, local_rv=local_rv, model=model, seed=seed)
         if start is None:
             start = hist.model.test_point
-        start = hist._bij.map(start)
+        start = hist.gbij.map(start)
         # Initialize particles
         x0 = np.tile(start, (size, 1))
         x0 += np.random.normal(0, jitter, x0.shape)
         hist.histogram.set_value(x0)
         return hist
+
+
+def sample_approx(approx, draws=100, hide_transformed=False):
+    """
+    Draw samples from variational posterior.
+
+    Parameters
+    ----------
+    approx : Approximation
+    draws : int
+        Number of random samples.
+    hide_transformed : bool
+        If False, transformed variables are also sampled. Default is True.
+
+    Returns
+    -------
+    trace : pymc3.backends.base.MultiTrace
+        Samples drawn from variational posterior.
+    """
+    if not isinstance(approx, Approximation):
+        raise TypeError('Need Approximation instance, got %r' % approx)
+    return approx.sample(draws=draws, hide_transformed=hide_transformed)

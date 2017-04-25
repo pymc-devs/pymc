@@ -22,6 +22,7 @@ __all__ = ['sample', 'iter_sample', 'sample_ppc', 'init_nuts']
 STEP_METHODS = (NUTS, HamiltonianMC, Metropolis, BinaryMetropolis,
                 BinaryGibbsMetropolis, Slice, CategoricalGibbsMetropolis)
 
+
 def assign_step_methods(model, step=None, methods=STEP_METHODS,
                         step_kwargs=None):
     """Assign model variables to appropriate step methods.
@@ -348,9 +349,9 @@ def _iter_sample(draws, step, start=None, trace=None, chain=0, tune=None,
     strace = _choose_backend(trace, chain, model=model)
 
     if len(strace) > 0:
-        _soft_update(start, strace.point(-1))
+        _update_start_vals(start, strace.point(-1), model)
     else:
-        _soft_update(start, model.test_point)
+        _update_start_vals(start, model.test_point, model)
 
     try:
         step = CompoundStep(step)
@@ -457,12 +458,18 @@ def stop_tuning(step):
 
     return step
 
-
-def _soft_update(a, b):
-    """As opposed to dict.update, don't overwrite keys if present.
+def _update_start_vals(a, b, model):
+    """Update a with b, without overwriting existing keys. Values specified for
+    transformed variables on the original scale are also transformed and inserted.
     """
+    
+    for name in a:
+        for tname in b:
+            if tname.startswith(name) and tname!=name:
+                transform_func = [d.transformation for d in model.deterministics if d.name==name][0]
+                b[tname] = transform_func.forward(a[name]).eval()
+    
     a.update({k: v for k, v in b.items() if k not in a})
-
 
 def sample_ppc(trace, samples=None, model=None, vars=None, size=None,
                random_seed=None, progressbar=True):
@@ -562,19 +569,29 @@ def init_nuts(init='ADVI', njobs=1, n_init=500000, model=None,
         init = init.lower()
 
     if init == 'advi':
-        v_params = pm.variational.advi(n=n_init, random_seed=random_seed,
-                                       progressbar=progressbar)
-        start = pm.variational.sample_vp(v_params, njobs, progressbar=False,
-                                         hide_transformed=False,
-                                         random_seed=random_seed)
+        approx = pm.fit(
+            seed=random_seed,
+            n=n_init, method='advi', model=model,
+            callbacks=[pm.callbacks.CheckParametersConvergence(tolerance=1e-2)],
+            progressbar=progressbar
+        )  # type: pm.MeanField
+        start = approx.sample(draws=njobs)
+        cov = approx.cov.eval()
         if njobs == 1:
             start = start[0]
-        cov = np.power(model.dict_to_array(v_params.stds), 2)
     elif init == 'advi_map':
         start = pm.find_MAP()
-        v_params = pm.variational.advi(n=n_init, start=start,
-                                       random_seed=random_seed)
-        cov = np.power(model.dict_to_array(v_params.stds), 2)
+        approx = pm.MeanField(model=model, start=start)
+        pm.fit(
+            seed=random_seed,
+            n=n_init, method=pm.ADVI.from_mean_field(approx),
+            callbacks=[pm.callbacks.CheckParametersConvergence(tolerance=1e-2)],
+            progressbar=progressbar
+        )
+        start = approx.sample(draws=njobs)
+        cov = approx.cov.eval()
+        if njobs == 1:
+            start = start[0]
     elif init == 'map':
         start = pm.find_MAP()
         cov = pm.find_hessian(point=start)

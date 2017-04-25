@@ -50,7 +50,7 @@ class KSD(Operator):
 
     Parameters
     ----------
-    approx : pm.Histogram
+    approx : pm.Empirical
 
     References
     ----------
@@ -64,8 +64,8 @@ class KSD(Operator):
     OBJECTIVE = KSDObjective
 
     def __init__(self, approx):
-        if not isinstance(approx, pm.Histogram):
-            raise ValueError('approx should be a Histogram, got %r' % approx)
+        if not isinstance(approx, pm.Empirical):
+            raise ValueError('approx should be an Empirical approximation, got %r' % approx)
         Operator.__init__(self, approx)
 
     def apply(self, f):

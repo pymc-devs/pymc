@@ -3,6 +3,7 @@ from numpy.testing import assert_allclose
 
 from .helpers import SeededTest
 from pymc3 import Dirichlet, Gamma, Metropolis, Mixture, Model, Normal, NormalMixture, Poisson, sample
+from pymc3.theanof import floatX
 
 
 # Generate data
@@ -36,7 +37,7 @@ class TestMixture(SeededTest):
 
     def test_mixture_list_of_normals(self):
         with Model() as model:
-            w = Dirichlet('w', np.ones_like(self.norm_w))
+            w = Dirichlet('w', floatX(np.ones_like(self.norm_w)))
             mu = Normal('mu', 0., 10., shape=self.norm_w.size)
             tau = Gamma('tau', 1., 1., shape=self.norm_w.size)
             Mixture('x_obs', w,
@@ -54,7 +55,7 @@ class TestMixture(SeededTest):
 
     def test_normal_mixture(self):
         with Model() as model:
-            w = Dirichlet('w', np.ones_like(self.norm_w))
+            w = Dirichlet('w', floatX(np.ones_like(self.norm_w)))
             mu = Normal('mu', 0., 10., shape=self.norm_w.size)
             tau = Gamma('tau', 1., 1., shape=self.norm_w.size)
             NormalMixture('x_obs', w, mu, tau=tau, observed=self.norm_x)
@@ -70,7 +71,7 @@ class TestMixture(SeededTest):
 
     def test_poisson_mixture(self):
         with Model() as model:
-            w = Dirichlet('w', np.ones_like(self.pois_w))
+            w = Dirichlet('w', floatX(np.ones_like(self.pois_w)))
             mu = Gamma('mu', 1., 1., shape=self.pois_w.size)
             Mixture('x_obs', w, Poisson.dist(mu), observed=self.pois_x)
             step = Metropolis()
@@ -85,7 +86,7 @@ class TestMixture(SeededTest):
 
     def test_mixture_list_of_poissons(self):
         with Model() as model:
-            w = Dirichlet('w', np.ones_like(self.pois_w))
+            w = Dirichlet('w', floatX(np.ones_like(self.pois_w)))
             mu = Gamma('mu', 1., 1., shape=self.pois_w.size)
             Mixture('x_obs', w,
                     [Poisson.dist(mu[0]), Poisson.dist(mu[1])],

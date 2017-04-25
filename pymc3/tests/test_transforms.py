@@ -2,7 +2,7 @@ import pymc3.distributions.transforms as tr
 import numpy as np
 import theano
 import theano.tensor as tt
-from .test_distributions import Simplex, Rplusbig, Rminusbig, Unit, R, Vector, MultiSimplex
+from .test_distributions import Simplex, Rplusbig, Rminusbig, Unit, R, Vector, MultiSimplex, Circ
 
 from .checks import close_to
 from ..theanof import jacobian
@@ -144,3 +144,15 @@ def test_interval():
         vals = get_values(trans)
         close_to(vals > a, True, tol)
         close_to(vals < b, True, tol)
+
+
+def test_circular():
+    trans = tr.circular
+    check_transform_identity(trans, Circ)
+    check_jacobian_det(trans, Circ)
+
+    vals = get_values(trans)
+    close_to(vals > -np.pi, True, tol)
+    close_to(vals < np.pi, True, tol)
+
+    assert isinstance(trans.forward(1), tt.TensorConstant)

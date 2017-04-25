@@ -6,8 +6,8 @@ from . import distribution
 from ..math import logit, invlogit
 import numpy as np
 
-__all__ = ['transform', 'stick_breaking', 'logodds',
-           'log', 'sum_to_1', 't_stick_breaking']
+__all__ = ['transform', 'stick_breaking', 'logodds', 'interval',
+          'lowerbound', 'upperbound', 'log', 'sum_to_1', 't_stick_breaking']
 
 
 class Transform(object):
@@ -260,7 +260,7 @@ class Circular(Transform):
         return tt.arctan2(tt.sin(y), tt.cos(y))
 
     def forward(self, x):
-        return x
+        return tt.as_tensor_variable(x)
 
     def jacobian_det(self, x):
         return 0

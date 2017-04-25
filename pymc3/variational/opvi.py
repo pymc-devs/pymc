@@ -1,3 +1,36 @@
+"""
+Variational inference is a great approach for doing really complex, 
+often intractable Bayesian inference in approximate form. Common methods 
+(e.g. ADVI) lack from complexity so that approximate posterior does not 
+reveal the true nature of underlying problem. In some applications it can 
+yield unreliable decisions. 
+
+Recently on NIPS 2017 [OPVI](https://arxiv.org/abs/1610.09033) framework 
+was presented. It generalizes variational inverence so that the problem is 
+build with blocks. The first and essential block is Model itself. Second is 
+Approximation, in some cases :math:`log Q(D)` is not really needed. Necessity 
+depends on the third and forth part of that black box, Operator and 
+Test Function respectively. 
+
+Operator is like an approach we use, it constructs loss from given Model, 
+Approximation and Test Function. The last one is not needed if we minimize 
+KL Divergence from Q to posterior. As a drawback we need to compute :math:`loq Q(D)`. 
+Sometimes approximation family is intractable and :math:`loq Q(D)` is not available, 
+here comes LS(Langevin Stein) Operator with a set of test functions.
+
+Test Function has more unintuitive meaning. It is usually used with LS operator 
+and represents all we want from our approximate distribution. For any given vector 
+based function of :math:`z` LS operator yields zero mean function under posterior. 
+:math:`loq Q(D)` is no more needed. That opens a door to rich approximation 
+families as neural networks.
+
+References
+----------
+-   Rajesh Ranganath, Jaan Altosaar, Dustin Tran, David M. Blei 
+    Operator Variational Inference 
+    https://arxiv.org/abs/1610.09033 (2016)
+"""
+
 import warnings
 import numpy as np
 import theano
@@ -6,7 +39,7 @@ import theano.tensor as tt
 import pymc3 as pm
 from .updates import adam
 from ..distributions.dist_math import rho2sd, log_normal
-from ..model import modelcontext, ArrayOrdering
+from ..model import modelcontext, ArrayOrdering, DictToArrayBijection
 from ..theanof import tt_rng, memoize, change_flags, GradScale
 
 
@@ -251,7 +284,7 @@ class Operator(object):
 
     Subclassing
     -----------
-    For implementing Custom operator it is needed to define `.apply(f)` method
+    For implementing Custom operator it is needed to define :code:`.apply(f)` method
     """
 
     HAS_TEST_FUNCTION = False
@@ -417,8 +450,8 @@ class Approximation(object):
 
     Parameters
     ----------
-    local_rv : dict
-        mapping {model_variable -> local_variable}
+    local_rv : dict[var->tuple]
+        mapping {model_variable -> local_variable (:math:`\\mu`, math:`\\rho`)}
         Local Vars are used for Autoencoding Variational Bayes
         See (AEVB; Kingma and Welling, 2014) for details
 
@@ -431,47 +464,65 @@ class Approximation(object):
         See (Sticking the Landing; Geoffrey Roeder,
         Yuhuai Wu, David Duvenaud, 2016) for details
 
+    seed : None or int
+        leave None to use package global RandomStream or other
+        valid value to create instance specific one
+
     Subclassing
     -----------
     Defining an approximation needs
     custom implementation of the following methods:
-        - `.create_shared_params()`
+        - :code:`.create_shared_params(**kwargs)`
             Returns {dict|list|theano.shared}
 
-        - `.random_global(size=None, no_rand=False)`
+        - :code:`.random_global(size=None, no_rand=False)`
             Generate samples from posterior. If `no_rand==False`:
             sample from MAP of initial distribution.
             Returns TensorVariable
 
-        - `.log_q_W_global(z)`
+        - :code:`.log_q_W_global(z)`
             It is needed only if used with operator
             that requires :math:`logq` of an approximation
             Returns Scalar
+            
+    You can also override the following methods:
+        - :code:`._setup(**kwargs)`
+            Do some specific stuff having :code:`kwargs` before calling :code:`.create_shared_params`
+            
+        - :code:`.check_model(model, **kwargs)`
+            Do some specific check for model having :code:`kwargs`
 
     Notes
     -----
-    There are some defaults for approximation classes that can be
+    :code:`kwargs` mentioned above are supplied as additional arguments 
+    for :code:`Approximation.__init__`
+    
+    There are some defaults class attributes for approximation classes that can be
     optionally overriden.
-        - `initial_dist_name`
+        - :code:`initial_dist_name`
             string that represents name of the initial distribution.
             In most cases if will be `uniform` or `normal`
-        - `initial_dist_map`
-            float where initial distribution has maximum density
 
+        - :code:`initial_dist_map`
+            float where initial distribution has maximum density
+        
+        
     References
     ----------
-    - Geoffrey Roeder, Yuhuai Wu, David Duvenaud, 2016
+    -   Geoffrey Roeder, Yuhuai Wu, David Duvenaud, 2016
         Sticking the Landing: A Simple Reduced-Variance Gradient for ADVI
         approximateinference.org/accepted/RoederEtAl2016.pdf
 
-    - Kingma, D. P., & Welling, M. (2014).
-      Auto-Encoding Variational Bayes. stat, 1050, 1.
+    -   Kingma, D. P., & Welling, M. (2014).
+        Auto-Encoding Variational Bayes. stat, 1050, 1.
     """
     initial_dist_name = 'normal'
     initial_dist_map = 0.
 
-    def __init__(self, local_rv=None, model=None, cost_part_grad_scale=1, **kwargs):
+    def __init__(self, local_rv=None, model=None, cost_part_grad_scale=1, seed=None, **kwargs):
         model = modelcontext(model)
+        self._seed = seed
+        self._rng = tt_rng(seed)
         self.model = model
         self.check_model(model, **kwargs)
         if local_rv is None:
@@ -487,12 +538,25 @@ class Approximation(object):
         self.local_vars = self.get_local_vars(**kwargs)
         self.global_vars = self.get_global_vars(**kwargs)
         self.order = ArrayOrdering(self.local_vars + self.global_vars)
+        self.gbij = DictToArrayBijection(ArrayOrdering(self.global_vars), {})
+        self.lbij = DictToArrayBijection(ArrayOrdering(self.local_vars), {})
         self.flat_view = model.flatten(
             vars=self.local_vars + self.global_vars
         )
         self.grad_scale_op = GradScale(cost_part_grad_scale)
         self._setup(**kwargs)
         self.shared_params = self.create_shared_params(**kwargs)
+
+    def seed(self, seed=None):
+        """
+        Reinitialize RandomStream used by this approximation
+
+        Parameters
+        ----------
+        seed : int
+        """
+        self._seed = seed
+        self._rng.seed(seed)
 
     @property
     def normalizing_constant(self):
@@ -508,20 +572,6 @@ class Approximation(object):
 
     def get_local_vars(self, **kwargs):
         return [v for v in self.model.free_RVs if v in self.known]
-
-    def __getstate__(self):
-        state = self.__dict__.copy()
-        # can be inferred from the rest parts
-        state.pop('flat_view')
-        state.pop('order')
-        return state
-
-    def __setstate__(self, state):
-        self.__dict__.update(state)
-        self.order = ArrayOrdering(self.local_vars + self.global_vars)
-        self.flat_view = self.model.flatten(
-            vars=self.local_vars + self.global_vars
-        )
 
     _view = property(lambda self: self.flat_view.view)
     input = property(lambda self: self.flat_view.input)
@@ -690,7 +740,7 @@ class Approximation(object):
         shape = tt.stack(*shape)
         if theano_condition_is_here:
             no_rand = tt.as_tensor(no_rand)
-            sample = getattr(tt_rng(), self.initial_dist_name)(shape)
+            sample = getattr(self._rng, self.initial_dist_name)(shape)
             space = tt.switch(
                 no_rand,
                 tt.ones_like(sample) * self.initial_dist_map,
@@ -700,7 +750,7 @@ class Approximation(object):
             if no_rand:
                 return tt.ones(shape) * self.initial_dist_map
             else:
-                return getattr(tt_rng(), self.initial_dist_name)(shape)
+                return getattr(self._rng, self.initial_dist_name)(shape)
         return space
 
     def random_local(self, size=None, no_rand=False):
@@ -797,7 +847,7 @@ class Approximation(object):
 
         return inner
 
-    def sample_vp(self, draws=1, hide_transformed=False):
+    def sample(self, draws=1, hide_transformed=False):
         """
         Draw samples from variational posterior.
 
@@ -811,7 +861,7 @@ class Approximation(object):
         Returns
         -------
         trace : pymc3.backends.base.MultiTrace
-            Samples drawn from the variational posterior.
+            Samples drawn from variational posterior.
         """
         if hide_transformed:
             vars_sampled = [v_ for v_ in self.model.unobserved_RVs

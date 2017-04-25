@@ -31,7 +31,7 @@ import numpy.random as nr
 from .arraystep import metrop_select
 from ..backends import smc_text as atext
 
-__all__ = ('SMC', 'ATMIP_sample')
+__all__ = ['SMC', 'ATMIP_sample']
 
 EXPERIMENTAL_WARNING = "Warning: SMC is an experimental step method, and not yet"\
     " recommended for use in PyMC3!"
@@ -242,10 +242,10 @@ class SMC(atext.ArrayStepSharedLLK):
 
                 if np.isfinite(varlogp):
                     logp = self.logp_forw(q)
-                    q_new = metrop_select(
+                    q_new, accepted = metrop_select(
                         self.beta * (logp[self._llk_index] - l0[self._llk_index]), q, q0)
 
-                    if q_new is q:
+                    if accepted:
                         self.accepted += 1
                         l_new = logp
                         self.chain_previous_lpoint[self.chain_index] = l_new
@@ -257,10 +257,10 @@ class SMC(atext.ArrayStepSharedLLK):
 
             else:
                 logp = self.logp_forw(q)
-                q_new = metrop_select(
+                q_new, accepted = metrop_select(
                     self.beta * (logp[self._llk_index] - l0[self._llk_index]), q, q0)
 
-                if q_new is q:
+                if accepted:
                     self.accepted += 1
                     l_new = logp
                     self.chain_previous_lpoint[self.chain_index] = l_new

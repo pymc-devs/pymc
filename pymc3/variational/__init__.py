@@ -23,9 +23,10 @@ from .inference import (
     fit,
 )
 from .approximations import (
-    Histogram,
+    Empirical,
     FullRank,
-    MeanField
+    MeanField,
+    sample_approx
 )
 
 from . import approximations
@@ -34,3 +35,4 @@ from . import test_functions
 from . import opvi
 from . import updates
 from . import inference
+from . import callbacks

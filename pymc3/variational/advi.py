@@ -108,6 +108,10 @@ def advi(vars=None, start=None, model=None, n=5000, accurate_elbo=False,
         and Blei, D. M. (2016). Automatic Differentiation Variational
         Inference. arXiv preprint arXiv:1603.00788.
     """
+    import warnings
+    warnings.warn('Old ADVI interface and sample_vp is deprecated and will '
+                  'be removed in future, use pm.fit and pm.sample_approx instead',
+                  DeprecationWarning, stacklevel=2)
     model = pm.modelcontext(model)
     if start is None:
         start = model.test_point
@@ -357,6 +361,10 @@ def sample_vp(
     trace : pymc3.backends.base.MultiTrace
         Samples drawn from the variational posterior.
     """
+    import warnings
+    warnings.warn('Old ADVI interface and sample_vp is deprecated and will '
+                  'be removed in future, use pm.fit and pm.sample_approx instead',
+                  DeprecationWarning, stacklevel=2)
     model = pm.modelcontext(model)
 
     if isinstance(vparams, ADVIFit):
