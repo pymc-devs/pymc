@@ -21,6 +21,7 @@ import pandas as pd
 
 from ..backends import base, ndarray
 from . import tracetab as ttab
+from ..theanof import floatX
 
 
 class Text(base.BaseTrace):
@@ -104,6 +105,10 @@ class Text(base.BaseTrace):
     def _load_df(self):
         if self.df is None:
             self.df = pd.read_csv(self.filename)
+            for key, dtype in self.df.dtypes.items():
+                if "float" in str(dtype):
+                    self.df[key] = floatX(self.df[key])
+
 
     def __len__(self):
         if self.filename is None:
