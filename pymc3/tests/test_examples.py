@@ -12,8 +12,8 @@ matplotlib.use('Agg', warn=False)
 
 def get_city_data():
     """Helper to get city data"""
-    data = pd.read_csv(pm.get_data_file('pymc3.examples', 'data/srrs2.dat'))
-    cty_data = pd.read_csv(pm.get_data_file('pymc3.examples', 'data/cty.dat'))
+    data = pd.read_csv(pm.get_data('srrs2.dat'))
+    cty_data = pd.read_csv(pm.get_data('cty.dat'))
 
     data = data[data.state == 'MN']
 
@@ -30,8 +30,8 @@ def get_city_data():
 
 class TestARM5_4(SeededTest):
     def build_model(self):
-        wells = pm.get_data_file('pymc3.examples', 'data/wells.dat')
-        data = pd.read_csv(wells, delimiter=u' ', index_col=u'id', dtype={u'switch': np.int8})
+        data = pd.read_csv(pm.get_data('wells.dat'),
+                           delimiter=u' ', index_col=u'id', dtype={u'switch': np.int8})
         data.dist /= 100
         data.educ /= 4
         col = data.columns
