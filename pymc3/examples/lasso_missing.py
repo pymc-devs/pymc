@@ -3,8 +3,7 @@ import pandas as pd
 from numpy.ma import masked_values
 
 # Import data, filling missing values with sentinels (-999)
-test_scores = pd.read_csv(pm.get_data_file(
-    'pymc3.examples', 'data/test_scores.csv')).fillna(-999)
+test_scores = pd.read_csv(pm.get_data('test_scores.csv')).fillna(-999)
 
 # Extract variables: test score, gender, number of siblings, previous disability, age,
 # mother with HS education or better, hearing loss identified by 3 months

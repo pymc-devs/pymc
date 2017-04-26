@@ -1,33 +1,33 @@
-import pkgutil
-import io
 from copy import copy
+import io
+import os
+import pkgutil
+
 import numpy as np
+import pymc3 as pm
 import theano.tensor as tt
 import theano
-import pymc3 as pm
 
 __all__ = [
-    'get_data_file',
+    'get_data',
     'GeneratorAdapter',
     'DataSampler'
 ]
 
 
-def get_data_file(pkg, path):
-    """Returns a file object for a package data file.
+def get_data(filename):
+    """Returns a BytesIO object for a package data file.
 
     Parameters
     ----------
-    pkg : str
-        dotted package hierarchy. e.g. "pymc3.examples"
-    path : str 
-        file path within package. e.g. "data/wells.dat"
-    Returns 
+    filename : str
+        file to load
+    Returns
     -------
     BytesIO of the data
     """
-
-    return io.BytesIO(pkgutil.get_data(pkg, path))
+    data_pkg = 'pymc3.examples'
+    return io.BytesIO(pkgutil.get_data(data_pkg, os.path.join('data', filename)))
 
 
 class GenTensorVariable(tt.TensorVariable):
