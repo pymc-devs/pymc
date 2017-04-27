@@ -105,7 +105,7 @@ class Text(base.BaseTrace):
     def _load_df(self):
         if self.df is None:
             self.df = pd.read_csv(self.filename)
-            for key, dtype in self.df.dtypes.items():
+            for key, dtype in self.df.dtypes.iteritems():
                 if "float" in str(dtype):
                     self.df[key] = floatX(self.df[key])
 
