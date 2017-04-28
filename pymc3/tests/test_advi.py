@@ -264,4 +264,4 @@ class TestADVI(SeededTest):
             trace = sample_vp(v_params, draws=1, hide_transformed=True)
             assert trace.varnames == ['p']
             trace = sample_vp(v_params, draws=1, hide_transformed=False)
-            assert sorted(trace.varnames) == ['p', 'p_logodds_']
+            assert sorted(trace.varnames) == ['p', 'p_logodds__']

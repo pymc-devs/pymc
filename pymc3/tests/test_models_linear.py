@@ -30,7 +30,7 @@ class TestGLM(SeededTest):
 
     def test_linear_component(self):
         vars_to_create = {
-            'sigma_interval_',
+            'sigma_interval__',
             'y_obs',
             'lm_x0',
             'lm_Intercept'
@@ -41,7 +41,7 @@ class TestGLM(SeededTest):
                 self.data_linear['y'],
                 name='lm'
             )   # yields lm_x0, lm_Intercept
-            sigma = Uniform('sigma', 0, 20)     # yields sigma_interval_
+            sigma = Uniform('sigma', 0, 20)     # yields sigma_interval__
             Normal('y_obs', mu=lm.y_est, sd=sigma, observed=self.y_linear)  # yields y_obs
             start = find_MAP(vars=[sigma])
             step = Slice(model.vars)
@@ -68,7 +68,7 @@ class TestGLM(SeededTest):
     def test_glm(self):
         with Model() as model:
             vars_to_create = {
-                'glm_sd_log_',
+                'glm_sd_log__',
                 'glm_y',
                 'glm_x0',
                 'glm_Intercept'

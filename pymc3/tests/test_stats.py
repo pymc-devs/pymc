@@ -378,5 +378,5 @@ class TestDfSummary(bf.ModelBackendSampledTestCase):
             step = Metropolis()
             trace = pm.sample(100, step=step)
         ds = df_summary(trace, batches=3, include_transformed=True)
-        npt.assert_equal(np.array(['x_interval_', 'x']),
+        npt.assert_equal(np.array(['x_interval__', 'x']),
                          ds.index)

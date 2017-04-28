@@ -3,6 +3,7 @@ import scipy.stats as stats
 import numpy as np
 import pymc3 as pm
 from pymc3.distributions import HalfCauchy, Normal
+from pymc3.distributions.transforms import Transform
 from pymc3 import Potential, Deterministic
 from pymc3.theanof import generator
 from .helpers import select_by_precision
@@ -193,3 +194,28 @@ class TestScaling(object):
             g1 = grad1(1)
             g2 = grad2(1)
             np.testing.assert_almost_equal(g1, g2)
+
+
+class TestTransformName(object):
+    cases = [
+        ('var', 'var_test__'),
+        ('var_test_', 'var_test__test__')
+    ]
+    transform_name = 'test'
+
+    def test_get_transformed_name(self):
+        test_transform = Transform()
+        test_transform.name = self.transform_name
+        for name, transformed in self.cases:
+            assert pm.model.get_transformed_name(name, test_transform) == transformed
+
+    def test_is_transformed_name(self):
+        for name, transformed in self.cases:
+            assert pm.model.is_transformed_name(transformed)
+            assert not pm.model.is_transformed_name(name)
+
+    def test_get_untransformed_name(self):
+        for name, transformed in self.cases:
+            assert pm.model.get_untransformed_name(transformed) == name
+            with pytest.raises(ValueError):
+                pm.model.get_untransformed_name(name)
