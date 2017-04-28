@@ -15,6 +15,7 @@ from ..distributions import (DensityDist, Categorical, Multinomial, VonMises, Di
                              Bound, Uniform, Triangular, Binomial, SkewNormal, DiscreteWeibull)
 from ..distributions import continuous
 from pymc3.theanof import floatX
+from pymc3 import sample
 from numpy import array, inf, log, exp
 from numpy.testing import assert_almost_equal
 import numpy.random as nr
@@ -689,3 +690,13 @@ class TestMatchesScipy(SeededTest):
     def test_multidimensional_beta_construction(self):
         with Model():
             Beta('beta', alpha=1., beta=1., shape=(10, 20))
+
+
+def test_incorrect_parameter_exponential():
+    with pytest.warns(RuntimeWarning) as record:
+        with Model():
+            x = Exponential("x", -0.5)
+            # tr = sample(1)  # Not sure if need to sample to trigger warning
+        assert len(record) == 1, "Model should give one warning."
+        print(record[0].message.args[0])
+        assert "negative support" in record[0].message.args[0]
