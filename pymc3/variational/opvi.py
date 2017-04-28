@@ -271,7 +271,7 @@ class ObjectiveFunction(object):
                 sequences=z, n_steps=z.shape[0])[0].mean()
         else:
             a = theano.clone(self.op.apply(self.tf), {self.op.input: z}, strict=False)
-        return tt.abs_(a)
+        return self.op.T(a)
 
 
 class Operator(object):
@@ -291,6 +291,7 @@ class Operator(object):
     RETURNS_LOSS = True
     SUPPORT_AEVB = True
     OBJECTIVE = ObjectiveFunction
+    T = pm.theanof.identity
 
     def __init__(self, approx):
         if not self.SUPPORT_AEVB and approx.local_vars:
@@ -334,9 +335,9 @@ class Operator(object):
 
         Parameters
         ----------
-        f : function or None
+        f : TestFunction or None if not required
             function that takes `z = self.input` and returns
-            same dimension output
+            same dimensional output
 
         Returns
         -------
