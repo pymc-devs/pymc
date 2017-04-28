@@ -693,7 +693,7 @@ class TestMatchesScipy(SeededTest):
 
 
 def test_incorrect_parameter_exponential():
-    with pytest.warns(RuntimeWarning) as record:
+    with pytest.warns(UserWarning) as record:
         with Model():
             x = Exponential("x", -0.5)
             # tr = sample(1)  # Not sure if need to sample to trigger warning
