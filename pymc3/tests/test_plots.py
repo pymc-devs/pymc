@@ -57,7 +57,7 @@ def test_multichain_plots():
     model = build_disaster_model()
     with model:
         # Run sampler
-        step1 = Slice([model.early_mean_log_, model.late_mean_log_])
+        step1 = Slice([model.early_mean_log__, model.late_mean_log__])
         step2 = Metropolis([model.switchpoint])
         start = {'early_mean': 2., 'late_mean': 3., 'switchpoint': 50}
         ptrace = sample(1000, step=[step1, step2], start=start, njobs=2)

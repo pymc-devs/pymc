@@ -79,14 +79,14 @@ class TestARM12_6(SeededTest):
     def too_slow(self):
         model = self.build_model()
         start = {'groupmean': self.obs_means.mean(),
-                 'groupsd_interval_': 0,
-                 'sd_interval_': 0,
+                 'groupsd_interval__': 0,
+                 'sd_interval__': 0,
                  'means': self.obs_means,
                  'floor_m': 0.,
                  }
         with model:
             start = pm.find_MAP(start=start,
-                                vars=[model['groupmean'], model['sd_interval_'], model['floor_m']])
+                                vars=[model['groupmean'], model['sd_interval__'], model['floor_m']])
             step = pm.NUTS(model.vars, scaling=start)
             pm.sample(50, step=step, start=start)
 
@@ -117,8 +117,8 @@ class TestARM12_6Uranium(SeededTest):
         with model:
             start = pm.Point({
                 'groupmean': self.obs_means.mean(),
-                'groupsd_interval_': 0,
-                'sd_interval_': 0,
+                'groupsd_interval__': 0,
+                'sd_interval__': 0,
                 'means': np.array(self.obs_means),
                 'u_m': np.array([.72]),
                 'floor_m': 0.,
@@ -168,7 +168,7 @@ class TestDisasterModel(SeededTest):
             # Initial values for stochastic nodes
             start = {'early_mean': 2., 'late_mean': 3.}
             # Use slice sampler for means (other varibles auto-selected)
-            step = pm.Slice([model.early_mean_log_, model.late_mean_log_])
+            step = pm.Slice([model.early_mean_log__, model.late_mean_log__])
             tr = pm.sample(500, tune=50, start=start, step=step)
             pm.summary(tr)
 
@@ -178,7 +178,7 @@ class TestDisasterModel(SeededTest):
             # Initial values for stochastic nodes
             start = {'early_mean': 2., 'late_mean': 3.}
             # Use slice sampler for means (other varibles auto-selected)
-            step = pm.Slice([model.early_mean_log_, model.late_mean_log_])
+            step = pm.Slice([model.early_mean_log__, model.late_mean_log__])
             tr = pm.sample(500, tune=50, start=start, step=step)
             pm.summary(tr)
 
@@ -260,7 +260,7 @@ class TestLatentOccupancy(SeededTest):
         model = self.build_model()
         with model:
             start = {'psi': 0.5, 'z': (self.y > 0).astype(int), 'theta': 5}
-            step_one = pm.Metropolis([model.theta_interval_, model.psi_logodds_])
+            step_one = pm.Metropolis([model.theta_interval__, model.psi_logodds__])
             step_two = pm.BinaryMetropolis([model.z])
             pm.sample(50, step=[step_one, step_two], start=start)
 

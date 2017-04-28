@@ -116,7 +116,7 @@ class TestApproximates:
                 assert trace.varnames == ['p']
                 assert len(trace) == 1
                 trace = app.sample(draws=10, hide_transformed=False)
-                assert sorted(trace.varnames) == ['p', 'p_logodds_']
+                assert sorted(trace.varnames) == ['p', 'p_logodds__']
                 assert len(trace) == 10
 
         def test_sample_node(self):

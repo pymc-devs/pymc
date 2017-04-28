@@ -23,6 +23,55 @@ __all__ = [
 FlatView = collections.namedtuple('FlatView', 'input, replacements, view')
 
 
+def get_transformed_name(name, transform):
+    """
+    Consistent way of transforming names
+
+    Parameters
+    ----------
+    name : str
+        Name to transform
+    transform : object
+        Should be a subclass of `transforms.Transform`
+
+    Returns:
+    A string to use for the transformed variable
+    """
+    return "{}_{}__".format(name, transform.name)
+
+
+def is_transformed_name(name):
+    """
+    Quickly check if a name was transformed with `get_transormed_name`
+
+    Parameters
+    ----------
+    name : str
+        Name to check
+
+    Returns:
+    Boolean, whether the string could have been produced by `get_transormed_name`
+    """
+    return name.endswith('__') and name.count('_') >= 3
+
+
+def get_untransformed_name(name):
+    """
+    Undo transformation in `get_transformed_name`. Throws ValueError if name wasn't transformed
+
+    Parameters
+    ----------
+    name : str
+        Name to untransform
+
+    Returns:
+    String with untransformed version of the name.
+    """
+    if not is_transformed_name(name):
+        raise ValueError(u'{} does not appear to be a transformed name'.format(name))
+    return '_'.join(name.split('_')[:-3])
+
+
 class InstanceMethod(object):
     """Class for hiding references to instance methods so they can be pickled.
 
@@ -516,7 +565,7 @@ class Model(six.with_metaclass(InitContextMeta, Context, Factor)):
                               ' and added transformed {orig_name} to model.'.format(
                                 transform=dist.transform.name,
                                 name=name,
-                                orig_name='{}_{}_'.format(name, dist.transform.name)))
+                                orig_name=get_transformed_name(name, dist.transform)))
                 self.deterministics.append(var)
                 return var
         elif isinstance(data, dict):
@@ -989,13 +1038,13 @@ class TransformedRV(TensorVariable):
         if type is None:
             type = distribution.type
         super(TransformedRV, self).__init__(type, owner, index, name)
-        
+
         self.transformation = transform
 
         if distribution is not None:
             self.model = model
 
-            transformed_name = "{}_{}_".format(name, transform.name)
+            transformed_name = get_transformed_name(name, transform)
 
             self.transformed = model.Var(
                 transformed_name, transform.apply(distribution), total_size=total_size)

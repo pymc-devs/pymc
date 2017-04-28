@@ -119,12 +119,12 @@ class SoftUpdate(SeededTest):
         test_point = {'a': 3, 'b': 4}
         pm.sampling._soft_update(start, test_point)
         assert start == test_point
-        
+
     def test_soft_update_transformed(self):
         start = {'a': 2}
-        test_point = {'a_log_': 0}
+        test_point = {'a_log__': 0}
         pm.sampling._soft_update(start, test_point)
-        assert assert_almost_equal(start['a_log_'], np.log(start['a']))
+        assert assert_almost_equal(start['a_log__'], np.log(start['a']))
 
 
 class TestNamedSampling(SeededTest):

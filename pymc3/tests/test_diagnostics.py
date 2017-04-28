@@ -19,10 +19,10 @@ class TestGelmanRubin(SeededTest):
         model = build_disaster_model()
         with model:
             # Run sampler
-            step1 = Slice([model.early_mean_log_, model.late_mean_log_])
+            step1 = Slice([model.early_mean_log__, model.late_mean_log__])
             step2 = Metropolis([model.switchpoint])
             start = {'early_mean': 7., 'late_mean': 5., 'switchpoint': 10}
-            ptrace = sample(n_samples, step=[step1, step2], start=start, njobs=2, 
+            ptrace = sample(n_samples, step=[step1, step2], start=start, njobs=2,
                     progressbar=False, random_seed=[20090425, 19700903])
         return ptrace
 
@@ -91,7 +91,7 @@ class TestDiagnostics(SeededTest):
         model = build_disaster_model()
         with model:
             # Run sampler
-            step1 = Slice([model.early_mean_log_, model.late_mean_log_])
+            step1 = Slice([model.early_mean_log__, model.late_mean_log__])
             step2 = Metropolis([model.switchpoint])
             trace = sample(n_samples, step=[step1, step2], progressbar=False, random_seed=1)
         return trace['switchpoint']
