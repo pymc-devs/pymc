@@ -2,18 +2,208 @@ import numpy as np
 from scipy import stats
 from tqdm import tqdm
 
+from theano import printing
 from theano.tensor.nlinalg import matrix_inverse
 import theano.tensor as tt
+from theano.tensor.var import TensorVariable
+import theano
 
 from .mean import Zero, Mean
 from .cov import Covariance
-from ..distributions import TensorType, Normal, MvNormal, Continuous, draw_values, generate_samples
-from ..model import Model, modelcontext, Deterministic, ObservedRV, FreeRV
+from ..distributions import NoDistribution, Distribution, TensorType, Normal, MvNormal, Continuous, draw_values, generate_samples
+from ..model import Model, modelcontext, Deterministic, ObservedRV, FreeRV, Factor
 from ..vartypes import string_types
 
-__all__ = ['GP', 'sample_gp']
+from ..distributions import transforms
 
-class GP(Continuous):
+__all__ = ['GP2', 'GPOriginal', 'GP', 'sample_gp']
+
+class GP(NoDistribution):
+    def __init__(self, mean_func=None, cov_func=None, X=None, sigma2=None, dtype=None, *args, **kwargs):
+        if dtype is None:
+            dtype = theano.config.floatX
+
+        if mean_func is None:
+            mean_func = Zero()
+        else:
+            if not isinstance(mean_func, Mean):
+                raise ValueError('mean_func must be a subclass of Mean')
+
+        if cov_func is None:
+            raise ValueError('A covariance function must be specified for GP')
+        if not isinstance(cov_func, Covariance):
+            raise ValueError('cov_func must be a subclass of Covariance')
+
+        if sigma2 is None:
+            # set sigma2 to some small value to prevent numerical instability in Cholesky decomp.
+            use_conjugate = False
+            sigma2 = 1e-6
+        else:
+            use_conjugate = True
+
+        self.X = tt.as_tensor_variable(X)
+        self.n = tt.shape(X)[0]
+
+        # put params inside args and kwargs because of Distribution call to __new__
+        self.mean_func = mean_func
+        self.cov_func = cov_func
+        self.sigma2 = sigma2
+
+        Kx = cov_func(X) + sigma2 * tt.eye(self.n)
+        self.solve = tt.slinalg.Solve("lower_triangular", lower=True)
+        self.Kx = Kx
+        self.chol = tt.slinalg.cholesky(Kx)
+        self.mu = tt.squeeze(mean_func(X))
+
+        print(self.__dict__)
+        #try:
+        #    model = Model.get_context()
+        #except TypeError:
+        #    raise TypeError("No model on context stack, which is needed to "
+        #                    "use the Normal('x', 0,1) syntax. "
+        #                    "Add a 'with model:' block")
+        #v = model.Var(name, Normal.dist(mu=mean, sd=sd))
+
+        #self.name = name
+        #print(self.name)
+        v = Normal("_rotated_", mu=0.0, sd=1.0)
+        kwargs["parent_dist"] = v
+        kwargs["defaults"] = "mu"
+
+        super(GP, self).__init__(*args, **kwargs)
+
+    def __getattr__(self, name):
+        return getattr(self, name)
+
+
+def GP2(name="gp", mean_func=None, cov_func=None, X=None, sigma2=None, model=None, *args, **kwargs):
+    if mean_func is None:
+        mean_func = Zero()
+    else:
+        if not isinstance(mean_func, Mean):
+            raise ValueError('mean_func must be a subclass of Mean')
+
+    if cov_func is None:
+        raise ValueError('A covariance function must be specified for GP')
+    if not isinstance(cov_func, Covariance):
+        raise ValueError('cov_func must be a subclass of Covariance')
+
+    if sigma2 is None:
+        # set sigma2 to some small value to prevent numerical instability in Cholesky decomp.
+        use_conjugate = False
+        sigma2 = 1e-6
+    else:
+        use_conjugate = True
+
+    n = X.shape[0]
+    kwargs.setdefault("shape", n)
+
+    # put params inside args and kwargs because of Distribution call to __new__
+    kwargs.setdefault("mean_func", mean_func)
+    kwargs.setdefault("cov_func", cov_func)
+    kwargs.setdefault("sigma2", sigma2)
+    kwargs.setdefault("X", X)
+
+    Kx = cov_func(X) + sigma2 * tt.eye(n)
+    kwargs.setdefault("solve", tt.slinalg.Solve("lower_triangular", lower=True))
+    kwargs.setdefault("Kx", Kx)
+    kwargs.setdefault("chol", tt.slinalg.cholesky(Kx))
+    kwargs.setdefault("mu", tt.squeeze(mean_func(X)))
+
+    args = list(args)
+    args.insert(0, name)
+
+    class GPConjugate(MvNormal):
+        def __init__(self, *args, **kwargs):
+            mu = kwargs.pop("mu")
+            chol = kwargs.pop("chol")
+            super(GPConjugate, self).__init__(mu=mu, chol=chol)
+
+            self.X = kwargs["X"]
+            self.shape = kwargs["shape"]
+            self.sigma2 = kwargs["sigma2"]
+            self.solve = kwargs["solve"]
+
+            self.cov_func = kwargs["cov_func"]
+            self.Kx = kwargs["Kx"]
+            self.mean_func = kwargs["mean_func"]
+
+        def conditional(self, Z=None):
+            if Z is None:
+                Kxz = self.Kx
+                Kzz = self.Kx
+                mu = self.mu
+            else:
+                Kxz = self.cov_func(self.X, Z)
+                Kzz = self.cov_func(Z, Z)
+                mu = tt.squeeze(self.mean_func(Z))
+            A = self.solve(tt.transpose(self.chol), self.solve(self.chol, y))
+            v = self.solve(self.chol, Kxz)
+            if post_pred:
+                K_post = Kzz - tt.dot(tt.transpose(v), v) + self.sigma2 * tt.eye(tt.shape(Kzz)[0])
+            else:
+                K_post = Kzz - tt.dot(tt.transpose(v), v) + 1e-8 * tt.eye(tt.shape(Kzz)[0])
+            mu_post = mu + tt.dot(tt.transpose(Kxz), A)
+            return mu_post, K_post
+
+    class GPFull(object):
+        def __init__(self, *args, **kwargs):
+            self._been_called = False
+
+            self.name = args[0]
+
+            self.X = kwargs["X"]
+            self.shape = kwargs["shape"]
+            self.sigma2 = kwargs["sigma2"]
+            self.solve = kwargs["solve"]
+
+            self.cov_func = kwargs["cov_func"]
+            self.Kx = kwargs["Kx"]
+            self.chol = kwargs["chol"]
+
+            self.mean_func = kwargs["mean_func"]
+            self.mu = kwargs["mu"]
+
+        def __call__(self):
+            if not self._been_called:
+                self._been_called = True
+            else:
+                raise RuntimeError("Can only be called once")
+            self.v = Normal(self.name + "_rotated_", mu=0.0, sd=1.0, shape=self.shape)
+            f = Deterministic(self.name, tt.dot(self.chol, self.v))
+            # attach gp class to deterministic f
+            f.gp = self
+            return f
+
+        def conditional(self, Z=None):
+            if Z is None:
+                Kxz = self.Kx
+                Kzz = self.Kx
+                mu = self.mu
+            else:
+                Z = tt.as_tensor_variable(Z)
+                Kxz = self.cov_func(self.X, Z)
+                Kzz = self.cov_func(Z, Z)
+                mu = tt.squeeze(self.mean_func(Z))
+            A = self.solve(self.chol, Kxz)
+            K_post = Kzz - tt.dot(tt.transpose(A), A) + self.sigma2 * tt.eye(tt.shape(Z)[0])
+            mu_post = mu + tt.squeeze(tt.transpose(tt.dot(tt.transpose(A), self.v)))
+            return mu_post, K_post
+
+    if use_conjugate:
+        gp = GPConjugate(*args, **kwargs)
+        return gp
+    else:
+        gp = GPFull(*args, **kwargs)
+        #f = gp()
+        #f.gp = gp
+        return gp()
+
+
+
+
+
+class GPOriginal(Continuous):
     """Gausian process
 
     Parameters
@@ -28,31 +218,8 @@ class GP(Continuous):
     sigma : scalar or array
         Observation standard deviation (defaults to zero)
     """
-    def __new__(cls, name, *args, **kwargs):
-        #if name is _Unpickling:
-        #    return object.__new__(cls)  # for pickle
-        try:
-            model = Model.get_context()
-        except TypeError:
-            raise TypeError("No model on context stack, which is needed to "
-                            "use the Normal('x', 0,1) syntax. "
-                            "Add a 'with model:' block")
+    def __init__(self, mean_func=None, cov_func=None, X=None, sigma=0, *args, **kwargs):
 
-        if isinstance(name, string_types):
-            total_size = kwargs.pop('total_size', None)
-            dist = cls.dist(*args, **kwargs)
-            if abs(dist.sigma2 - 1e-6) > 1e-10:
-                # If dist.sigma2 is not a small float, it is a normal GP
-                return model.Var(name, dist, None, total_size)
-            else:
-                v = model.Var(name + "_n", Normal.dist(mu=0.0, sd=1.0, shape=dist.X.shape[0]))
-                f = Deterministic(name, tt.dot(dist.Lx, v))
-                return f
-        else:
-            raise TypeError("Name needs to be a string but got: {}".format(name))
-
-    def __init__(self, name="gp", mean_func=None, cov_func=None, X=None,
-                       sigma2=None, model=None, *args, **kwargs):
         if mean_func is None:
             self.M = Zero()
         else:
@@ -64,56 +231,43 @@ class GP(Continuous):
             raise ValueError('A covariance function must be specified for GPP')
         if not isinstance(cov_func, Covariance):
             raise ValueError('cov_func must be a subclass of Covariance')
-
-        if sigma2 is None:
-            self.sigma2 = 1e-6
-        else:
-            self.sigma2 = sigma2
         self.K = cov_func
-        self.triangular_solve = tt.slinalg.Solve("lower_triangular", lower=True)
-        self.Kx = self.K(X) + self.sigma2 * tt.eye(X.shape[0])
-        self.Lx = tt.slinalg.cholesky(self.Kx)
+
+        self.sigma = sigma
+
         if X is not None:
             self.X = X
             self.mean = self.mode = self.M(X)
             kwargs.setdefault("shape", X.squeeze().shape)
+
         super(GP, self).__init__(*args, **kwargs)
-
-    def logp(self, Y, X=None):
-        print("here")
-        if X is not None:
-            Lx = tt.slinalg.cholesky(self.K(X) + self.sigma2 * tt.eye(X.shape[0]))
-            mu = self.M(X)
-        else:
-            Lx = self.Lx
-            mu = self.mean
-        return MvNormal.dist(mu, chol=Lx).logp(Y)
-
-    @classmethod
-    def _conditional(self, X, Z=None):
-        if Z is None:
-            S = self.Kx
-            Lx = self.Lx
-            mu = self.mean
-        else:
-            K_xz = self.K(X, Z)
-            K_zz = self.K(Z, Z)
-            A = self.triangular_solve(self.Lx, K_xz)
-            S = K_zz - tt.dot(tt.transpose(A), A)
-            Lx = tt.slinalg.cholesky(S + self.sigma2 * tt.eye(X.shape[0]))
-            mu = tt.dot(tt.transpose(A), v).T  ## WHERE IS V?
-        return mu, Lx
 
     def random(self, point=None, size=None, **kwargs):
         X = self.X
-        Z = kwargs.pop("Z", None)
-        mu, L = self._conditional(X, Z)
-        return MvNormal.dist(mu, chol=L).random(point, size, **kwargs)
+        mu, cov = draw_values([self.M(X).squeeze(), self.K(X) + np.eye(X.shape[0])*self.sigma**2], point=point)
+
+        def _random(mean, cov, size=None):
+            return stats.multivariate_normal.rvs(
+                mean, cov, None if size == mean.shape else size)
+
+        samples = generate_samples(_random,
+                                   mean=mu, cov=cov,
+                                   dist_shape=mu.shape,
+                                   broadcast_shape=mu.shape,
+                                   size=size)
+        return samples
+
+    def logp(self, Y, X=None):
+        if X is None:
+            X = self.X
+        mu = self.M(X).squeeze()
+        Sigma = self.K(X) + tt.eye(X.shape[0])*self.sigma**2
+
+        return MvNormal.dist(mu, Sigma).logp(Y)
 
 
 def sample_gp(trace, gp, X_values, samples=None, obs_noise=True, model=None, random_seed=None, progressbar=True):
     """Generate samples from a posterior Gaussian process.
-
     Parameters
     ----------
     trace : backend, list, or MultiTrace
@@ -176,3 +330,10 @@ def sample_gp(trace, gp, X_values, samples=None, obs_noise=True, model=None, ran
     samples = [gp_post.random(point=trace[idx]) for idx in indices]
 
     return np.array(samples)
+
+
+
+
+
+
+
