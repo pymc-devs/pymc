@@ -174,6 +174,7 @@ class ObjectiveFunction(object):
             updates.loss = obj_target
 
     @memoize
+    @change_flags(compute_test_value='off')
     def step_function(self, obj_n_mc=None, tf_n_mc=None,
                       obj_optimizer=adam, test_optimizer=adam,
                       more_obj_params=None, more_tf_params=None,
@@ -232,6 +233,7 @@ class ObjectiveFunction(object):
         return step_fn
 
     @memoize
+    @change_flags(compute_test_value='off')
     def score_function(self, sc_n_mc=None, more_replacements=None, fn_kwargs=None):   # pragma: no cover
         """
         Compiles scoring function that operates which takes no inputs and returns Loss
