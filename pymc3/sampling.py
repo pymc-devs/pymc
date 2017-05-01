@@ -115,7 +115,7 @@ def sample(draws, step=None, init='auto', n_init=200000, start=None,
         A step function or collection of functions. If there are variables
         without a step methods, step methods for those variables will
         be assigned automatically.
-    init : str {'ADVI', 'ADVI_MAP', 'MAP', 'NUTS', None}
+    init : str {'ADVI', 'ADVI_MAP', 'MAP', 'NUTS', 'auto', None}
         Initialization method to use. Only works for auto-assigned step methods.
 
         * ADVI: Run ADVI to estimate starting points and diagonal covariance
@@ -290,15 +290,12 @@ def _sample(draws, step=None, start=None, trace=None, chain=0, tune=None,
 
 def iter_sample(draws, step, start=None, trace=None, chain=0, tune=None,
                 model=None, random_seed=-1):
-    """
-    Generator that returns a trace on each iteration using the given
+    """Generator that returns a trace on each iteration using the given
     step method.  Multiple step methods supported via compound step
     method returns the amount of time taken.
 
-
     Parameters
     ----------
-
     draws : int
         The number of samples to draw
     step : function
