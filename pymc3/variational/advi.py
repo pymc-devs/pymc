@@ -412,7 +412,7 @@ def sample_vp(
     # Random variables which will be sampled
     if hide_transformed:
         vars_sampled = [v_ for v_ in model.unobserved_RVs
-                        if not str(v_).endswith('_')]
+                        if not pm.model.is_transformed_name(str(v_))]
     else:
         vars_sampled = [v_ for v_ in model.unobserved_RVs]
 

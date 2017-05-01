@@ -1,6 +1,7 @@
 import matplotlib.pyplot as plt
 import numpy as np
 from scipy.signal import gaussian, convolve
+from .model import is_transformed_name
 
 
 def identity_transform(x):
@@ -13,7 +14,7 @@ def get_default_varnames(trace, include_transformed):
     if include_transformed:
         return [name for name in trace.varnames]
     else:
-        return [name for name in trace.varnames if not name.endswith('_')]
+        return [name for name in trace.varnames if not is_transformed_name(name)]
 
 
 def get_axis(ax, default_rows, default_columns, **default_kwargs):
