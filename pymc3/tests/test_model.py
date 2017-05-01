@@ -22,6 +22,7 @@ def gen2():
         yield np.ones((20, 100)) * i
         i += 1
 
+
 class NewModel(pm.Model):
     def __init__(self, name='', model=None):
         super(NewModel, self).__init__(name, model)
@@ -133,12 +134,14 @@ class TestNested(object):
             with pm.Model() as sub:
                 assert model is sub.root
 
+
 class TestObserved(object):
     def test_observed_rv_fail(self):
         with pytest.raises(TypeError):
-            with pm.Model() as model:
+            with pm.Model():
                 x = Normal('x')
                 Normal('n', observed=x)
+
 
 class TestScaling(object):
     def test_density_scaling(self):
@@ -171,7 +174,8 @@ class TestScaling(object):
 
         for i in range(10):
             _1, _2, _t = p1(), p2(), next(t)
-            np.testing.assert_almost_equal(_1, _t, decimal=select_by_precision(float64=7, float32=2))  # Value O(-50,000)
+            decimals = select_by_precision(float64=7, float32=2)
+            np.testing.assert_almost_equal(_1, _t, decimal=decimals)  # Value O(-50,000)
             np.testing.assert_almost_equal(_1, _2)
         # Done
 
@@ -192,3 +196,20 @@ class TestScaling(object):
             g1 = grad1(1)
             g2 = grad2(1)
             np.testing.assert_almost_equal(g1, g2)
+
+
+class TestTheanoConfig(object):
+    def test_set_testval_raise(self):
+        with theano.configparser.change_flags(compute_test_value='off'):
+            with pm.Model():
+                assert theano.config.compute_test_value == 'raise'
+            assert theano.config.compute_test_value == 'off'
+
+    def test_nested(self):
+        with theano.configparser.change_flags(compute_test_value='off'):
+            with pm.Model(theano_config={'compute_test_value': 'ignore'}):
+                assert theano.config.compute_test_value == 'ignore'
+                with pm.Model(theano_config={'compute_test_value': 'warn'}):
+                    assert theano.config.compute_test_value == 'warn'
+                assert theano.config.compute_test_value == 'ignore'
+            assert theano.config.compute_test_value == 'off'
