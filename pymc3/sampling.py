@@ -573,15 +573,8 @@ def init_nuts(init='ADVI', njobs=1, n_init=500000, model=None,
             progressbar=progressbar
         )  # type: pm.MeanField
         start = approx.sample(draws=njobs)
-        cov_ = approx.cov.eval()
-        v1 = model.bijection.map(start[0])
-        v2 = approx.gbij.map(start[0])
-        as1 = np.argsort(v1)
-        as1_ = np.argsort(as1)
-        as2 = np.argsort(v2)
-        P = [as2[as1_]]
-        cov = np.take(cov_,P, axis=0).squeeze()
-        cov = np.take(cov, P, axis=1).squeeze()
+        stds = approx.gbij.rmap((tt.diag(approx.cov).eval()))
+        cov = model.dict_to_array(stds)
         if njobs == 1:
             start = start[0]
     elif init == 'advi_map':
