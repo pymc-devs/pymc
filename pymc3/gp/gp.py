@@ -18,11 +18,55 @@ from ..distributions import transforms
 
 __all__ = ['GP2', 'GPOriginal', 'GP', 'sample_gp']
 
-class GP(NoDistribution):
-    def __init__(self, mean_func=None, cov_func=None, X=None, sigma2=None, dtype=None, *args, **kwargs):
-        if dtype is None:
-            dtype = theano.config.floatX
 
+class GP(Distribution):
+    def __new__(cls, name, *args, **kwargs):
+        try:
+            model = Model.get_context()
+        except TypeError:
+            raise TypeError("No model on context stack, which is needed to "
+                            "use the Normal('x', 0,1) syntax. "
+                            "Add a 'with model:' block")
+
+        if isinstance(name, string_types):
+            total_size = kwargs.pop('total_size', None)
+
+            distribution = cls.dist(*args, **kwargs)
+            v = model.Var(name + "_rotated_", Normal.dist(mu=0.0, sd=1.0, shape=distribution.shape))
+            f = tt.dot(distribution.chol, v)
+
+            f.name = name
+            f.dshape = tuple
+            f.dsize = int(np.prod(distribution.shape))
+            f.distribution = distribution
+            f.distribution.rotated = v
+
+            f.tag.test_value = np.ones(distribution.shape, distribution.dtype) * distribution.default()
+            f.logp_elemwiset = lambda x: 0
+            f.total_size = total_size
+            f.model = model
+
+            #incorporate_methods(source=distribution, destination=self,
+            #                    methods=['random'],
+            #                    wrapper=InstanceMethod)
+
+            model.deterministics.append(f)
+            return f
+        else:
+            raise TypeError("Name needs to be a string but got: {}".format(name))
+
+    @property
+    def init_value(self):
+        """Convenience attribute to return tag.test_value"""
+        return self.tag.test_value
+
+    @classmethod
+    def dist(cls, *args, **kwargs):
+        dist = object.__new__(cls)
+        dist._construct(*args, **kwargs)
+        return dist
+
+    def _construct(self, mean_func=None, cov_func=None, X=None, sigma2=None, dtype=None, *args, **kwargs):
         if mean_func is None:
             mean_func = Zero()
         else:
@@ -36,15 +80,13 @@ class GP(NoDistribution):
 
         if sigma2 is None:
             # set sigma2 to some small value to prevent numerical instability in Cholesky decomp.
-            use_conjugate = False
             sigma2 = 1e-6
         else:
-            use_conjugate = True
+            pass
 
         self.X = tt.as_tensor_variable(X)
         self.n = tt.shape(X)[0]
 
-        # put params inside args and kwargs because of Distribution call to __new__
         self.mean_func = mean_func
         self.cov_func = cov_func
         self.sigma2 = sigma2
@@ -55,25 +97,41 @@ class GP(NoDistribution):
         self.chol = tt.slinalg.cholesky(Kx)
         self.mu = tt.squeeze(mean_func(X))
 
-        print(self.__dict__)
-        #try:
-        #    model = Model.get_context()
-        #except TypeError:
-        #    raise TypeError("No model on context stack, which is needed to "
-        #                    "use the Normal('x', 0,1) syntax. "
-        #                    "Add a 'with model:' block")
-        #v = model.Var(name, Normal.dist(mu=mean, sd=sd))
+        self.prior_sample = MvNormal.dist(chol=self.chol, mu=self.mu).random()
+        super(GP, self).__init__(shape=np.shape(X)[0], dtype=theano.config.floatX,
+                                 testval=None, defaults=["prior_sample"],
+                                 *args, **kwargs)
+    def logp(self, x):
+        return 0
 
-        #self.name = name
-        #print(self.name)
-        v = Normal("_rotated_", mu=0.0, sd=1.0)
-        kwargs["parent_dist"] = v
-        kwargs["defaults"] = "mu"
+    def random(self, point=None, size=None, Z=None, **kwargs):
+        # this version seems to pretty much repeat samples from trace
+        mu, K = self.conditional(Z)
+        return MvNormal.dist(mu=mu, cov=K).random(point, size, **kwargs)
 
-        super(GP, self).__init__(*args, **kwargs)
+    #def random(self, point=None, size=None, Z=None, **kwargs):
+    #    v = self.rotated.random(point, size, **kwargs)
+    #    chol = draw_values([self.chol], point)
+    #    return np.dot(chol, v.T).T
 
-    def __getattr__(self, name):
-        return getattr(self, name)
+    def conditional(self, Z=None):
+        if Z is None:
+            Z = tt.as_tensor_variable(self.X)
+            Kxz = self.cov_func(self.X, Z)
+            Kzz = self.cov_func(Z, Z)
+            mu = tt.squeeze(self.mean_func(Z))
+            #print(Z, Kxz, Kzz, mu, self.chol, self.sigma2, tt.shape(Z)[0], self.rotated)
+        else:
+            Kxz = self.Kx
+            Kzz = self.Kx
+            mu = self.mu
+        A = self.solve(self.chol, Kxz)
+        #print(A)
+        K_post = Kzz - tt.dot(tt.transpose(A), A) + self.sigma2 * tt.eye(tt.shape(Z)[0])
+        mu_post = mu + tt.squeeze(tt.transpose(tt.dot(tt.transpose(A), self.rotated)))
+        return mu_post, K_post
+
+
 
 
 def GP2(name="gp", mean_func=None, cov_func=None, X=None, sigma2=None, model=None, *args, **kwargs):
