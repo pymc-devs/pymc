@@ -13,9 +13,10 @@ from ..model import modelcontext
 
 __all__ = ['GP', 'sample_gp']
 
+
 class GP(Continuous):
     """Gausian process
-    
+
     Parameters
     ----------
     mean_func : Mean
@@ -23,39 +24,40 @@ class GP(Continuous):
     cov_func : Covariance
         Covariance function of Gaussian process
     X : array
-        Grid of points to evaluate Gaussian process over. Only required if the 
+        Grid of points to evaluate Gaussian process over. Only required if the
         GP is not an observed variable.
     sigma : scalar or array
         Observation standard deviation (defaults to zero)
     """
     def __init__(self, mean_func=None, cov_func=None, X=None, sigma=0, *args, **kwargs):
-        
-        if mean_func is None:
-            self.M = Zero()
-        else:
-            if not isinstance(mean_func, Mean):
-                raise ValueError('mean_func must be a subclass of Mean')
-            self.M = mean_func
-            
+
         if cov_func is None:
             raise ValueError('A covariance function must be specified for GPP')
         if not isinstance(cov_func, Covariance):
             raise ValueError('cov_func must be a subclass of Covariance')
         self.K = cov_func
-        
+
+        if mean_func is None:
+            self.M = Zero(input_dim=cov_func.active_dims)
+        else:
+            if not isinstance(mean_func, Mean):
+                raise ValueError('mean_func must be a subclass of Mean')
+            self.M = mean_func
+
+
         self.sigma = sigma
-        
+
         if X is not None:
             self.X = X
             self.mean = self.mode = self.M(X)
             kwargs.setdefault("shape", X.squeeze().shape)
-            
+
         super(GP, self).__init__(*args, **kwargs)
-                
+
     def random(self, point=None, size=None, **kwargs):
         X = self.X
         mu, cov = draw_values([self.M(X).squeeze(), self.K(X) + np.eye(X.shape[0])*self.sigma**2], point=point)
-        
+
         def _random(mean, cov, size=None):
             return stats.multivariate_normal.rvs(
                 mean, cov, None if size == mean.shape else size)
@@ -74,7 +76,7 @@ class GP(Continuous):
         Sigma = self.K(X) + tt.eye(X.shape[0])*self.sigma**2
 
         return MvNormal.dist(mu, Sigma).logp(Y)
-        
+
 
 def sample_gp(trace, gp, X_values, samples=None, obs_noise=True, model=None, random_seed=None, progressbar=True):
     """Generate samples from a posterior Gaussian process.
@@ -92,38 +94,38 @@ def sample_gp(trace, gp, X_values, samples=None, obs_noise=True, model=None, ran
         length of `trace`
     obs_noise : bool
         Flag for including observation noise in sample. Defaults to True.
-    model : Model 
+    model : Model
         Model used to generate `trace`. Optional if in `with` context manager.
     random_seed : integer > 0
         Random number seed for sampling.
     progressbar : bool
         Flag for showing progress bar.
-    
+
     Returns
     -------
     Array of samples from posterior GP evaluated at Z.
     """
     model = modelcontext(model)
-    
+
     if samples is None:
         samples = len(trace)
-    
+
     if random_seed:
         np.random.seed(random_seed)
-    
+
     if progressbar:
         indices = tqdm(np.random.randint(0, len(trace), samples), total=samples)
     else:
         indices = np.random.randint(0, len(trace), samples)
 
-    K = gp.distribution.K 
-        
+    K = gp.distribution.K
+
     data = [v for v in model.observed_RVs if v.name==gp.name][0].data
 
     X = data['X']
     Y = data['Y']
     Z = X_values
-    
+
     S_xz = K(X, Z)
     S_zz = K(Z)
     if obs_noise:
@@ -137,7 +139,7 @@ def sample_gp(trace, gp, X_values, samples=None, obs_noise=True, model=None, ran
     S_post = S_zz - tt.dot(tt.dot(S_xz.T, S_inv), S_xz)
 
     gp_post = MvNormal.dist(m_post, S_post, shape=Z.shape[0])
-    
+
     samples = [gp_post.random(point=trace[idx]) for idx in indices]
-    
+
     return np.array(samples)
