@@ -142,9 +142,6 @@ class MvNormal(Continuous):
                 size = list(size)
             except TypeError:
                 size = [size]
-        size.append(self.mu.shape[0])
-
-        standard_normal = np.random.standard_normal(size)
 
         if self._cov_type in ['cov', 'chol']:
             if self._cov_type == 'cov':
@@ -155,10 +152,13 @@ class MvNormal(Continuous):
                     return np.nan * np.zeros(size)
             else:
                 mu, chol = draw_values([self.mu, self.chol_cov], point=point)
-
+            size.append(mu.shape[0])
+            standard_normal = np.random.standard_normal(size)
             return mu + np.dot(standard_normal, chol)
         else:
             mu, tau = draw_values([self.mu, self.tau], point=point)
+            size.append(mu.shape[0])
+            standard_normal = np.random.standard_normal(size)
             try:
                 chol = scipy.linalg.cholesky(cov, lower=True)
             except scipy.linalg.LinAlgError:
@@ -193,7 +193,7 @@ class MvNormal(Continuous):
         chol_cov = tt.switch(
             ok,
             chol_cov,
-            tt.fill_diagonal(chol_cov, 1))
+            tt.fill(chol_cov, 1))
 
         delta_trans = self.solve_lower(chol_cov, delta.T)
 
