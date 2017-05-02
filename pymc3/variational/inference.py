@@ -304,6 +304,8 @@ class ADVI(Inference):
         1 at the start and 0 in the end. So slow decay will be ok.
         See (Sticking the Landing; Geoffrey Roeder,
         Yuhuai Wu, David Duvenaud, 2016) for details
+    scale_cost_to_minibatch : bool, default False
+        Scale cost to minibatch instead of full dataset
     seed : None or int
         leave None to use package global RandomStream or other
         valid value to create instance specific one    
@@ -323,11 +325,15 @@ class ADVI(Inference):
     - Kingma, D. P., & Welling, M. (2014).
       Auto-Encoding Variational Bayes. stat, 1050, 1.
     """
-    def __init__(self, local_rv=None, model=None, cost_part_grad_scale=1,
+    def __init__(self, local_rv=None, model=None,
+                 cost_part_grad_scale=1,
+                 scale_cost_to_minibatch=False,
                  seed=None, start=None):
         super(ADVI, self).__init__(
             KL, MeanField, None,
-            local_rv=local_rv, model=model, cost_part_grad_scale=cost_part_grad_scale,
+            local_rv=local_rv, model=model,
+            cost_part_grad_scale=cost_part_grad_scale,
+            scale_cost_to_minibatch=scale_cost_to_minibatch,
             seed=seed, start=start)
 
     @classmethod
@@ -372,7 +378,8 @@ class FullRankADVI(Inference):
         1 at the start and 0 in the end. So slow decay will be ok.
         See (Sticking the Landing; Geoffrey Roeder,
         Yuhuai Wu, David Duvenaud, 2016) for details
-
+    scale_cost_to_minibatch : bool, default False
+        Scale cost to minibatch instead of full dataset
     seed : None or int
         leave None to use package global RandomStream or other
         valid value to create instance specific one
@@ -392,11 +399,15 @@ class FullRankADVI(Inference):
     - Kingma, D. P., & Welling, M. (2014).
       Auto-Encoding Variational Bayes. stat, 1050, 1.
     """
-    def __init__(self, local_rv=None, model=None, cost_part_grad_scale=1,
+    def __init__(self, local_rv=None, model=None,
+                 cost_part_grad_scale=1,
+                 scale_cost_to_minibatch=False,
                  gpu_compat=False, seed=None, start=None):
         super(FullRankADVI, self).__init__(
             KL, FullRank, None,
-            local_rv=local_rv, model=model, cost_part_grad_scale=cost_part_grad_scale,
+            local_rv=local_rv, model=model,
+            cost_part_grad_scale=cost_part_grad_scale,
+            scale_cost_to_minibatch=scale_cost_to_minibatch,
             gpu_compat=gpu_compat, seed=seed, start=start)
 
     @classmethod
@@ -497,6 +508,8 @@ class SVGD(Inference):
     model : pm.Model
     kernel : callable
         kernel function for KSD f(histogram) -> (k(x,.), \nabla_x k(x,.))
+    scale_cost_to_minibatch : bool, default False
+        Scale cost to minibatch instead of full dataset
     start : dict
         initial point for inference
     histogram : Empirical
@@ -514,10 +527,13 @@ class SVGD(Inference):
         arXiv:1608.04471
     """
     def __init__(self, n_particles=100, jitter=.01, model=None, kernel=test_functions.rbf,
-                 start=None, histogram=None, seed=None, local_rv=None):
+                 scale_cost_to_minibatch=False, start=None, histogram=None,
+                 seed=None, local_rv=None):
         if histogram is None:
             histogram = Empirical.from_noise(
-                n_particles, jitter=jitter, start=start, model=model, local_rv=local_rv, seed=seed)
+                n_particles, jitter=jitter,
+                scale_cost_to_minibatch=scale_cost_to_minibatch,
+                start=start, model=model, local_rv=local_rv, seed=seed)
         super(SVGD, self).__init__(
             KSD, histogram,
             kernel,

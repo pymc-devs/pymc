@@ -41,7 +41,7 @@ from .updates import adam
 from ..distributions.dist_math import rho2sd, log_normal
 from ..model import modelcontext, ArrayOrdering, DictToArrayBijection
 from ..util import get_default_varnames
-from ..theanof import tt_rng, memoize, change_flags, GradScale, identity
+from ..theanof import tt_rng, memoize, change_flags, identity
 
 
 __all__ = [
@@ -456,8 +456,9 @@ class Approximation(object):
         archiving better convergence properties. Common schedule is
         1 at the start and 0 in the end. So slow decay will be ok.
         See (Sticking the Landing; Geoffrey Roeder,
-        Yuhuai Wu, David Duvenaud, 2016) for details
-
+        Yuhuai Wu, David Duvenaud, 2016) for details     
+    scale_cost_to_minibatch : bool, default False
+        Scale cost to minibatch instead of full dataset
     seed : None or int
         leave None to use package global RandomStream or other
         valid value to create instance specific one
@@ -512,8 +513,15 @@ class Approximation(object):
     initial_dist_name = 'normal'
     initial_dist_map = 0.
 
-    def __init__(self, local_rv=None, model=None, cost_part_grad_scale=1, seed=None, **kwargs):
+    def __init__(self, local_rv=None, model=None,
+                 cost_part_grad_scale=1,
+                 scale_cost_to_minibatch=False,
+                 seed=None, **kwargs):
         model = modelcontext(model)
+        self.scale_cost_to_minibatch = theano.shared(np.int8(0))
+        if scale_cost_to_minibatch:
+            self.scale_cost_to_minibatch.set_value(1)
+        self.cost_part_grad_scale = pm.floatX(cost_part_grad_scale)
         self._seed = seed
         self._rng = tt_rng(seed)
         self.model = model
@@ -536,7 +544,6 @@ class Approximation(object):
         self.flat_view = model.flatten(
             vars=self.local_vars + self.global_vars
         )
-        self.grad_scale_op = GradScale(cost_part_grad_scale)
         self._setup(**kwargs)
         self.shared_params = self.create_shared_params(**kwargs)
 
@@ -555,6 +562,8 @@ class Approximation(object):
     def normalizing_constant(self):
         t = self.to_flat_input(tt.max([v.scaling for v in self.model.basic_RVs]))
         t = theano.clone(t, {self.input: tt.zeros(self.total_size)})
+        # if not scale_cost_to_minibatch: t=1
+        t = tt.switch(self.scale_cost_to_minibatch, t, tt.constant(1, dtype=t.dtype))
         return t
 
     def _setup(self, **kwargs):
@@ -690,7 +699,7 @@ class Approximation(object):
             Sticking the Landing: A Simple Reduced-Variance Gradient for ADVI
             approximateinference.org/accepted/RoederEtAl2016.pdf
         """
-        return self.grad_scale_op(inp)
+        return theano.gradient.grad_scale(inp, self.cost_part_grad_scale)
 
     def to_flat_input(self, node):
         """
@@ -868,7 +877,7 @@ class Approximation(object):
     def log_q_W_local(self, z):
         """log_q_W samples over q for local vars
         Gradient wrt mu, rho in density parametrization
-        is set to zero to lower variance of ELBO
+        can be scaled to lower variance of ELBO
         """
         if not self.local_vars:
             return tt.constant(0)
@@ -878,13 +887,9 @@ class Approximation(object):
         logp = log_normal(z[self.local_slc], mu, rho=rho)
         scaling = []
         for var in self.local_vars:
-            scaling.append(tt.ones(var.dsize)*var.scaling)
+            scaling.append(tt.repeat(var.scaling, var.dsize))
         scaling = tt.concatenate(scaling)
-        if z.ndim > 1:  # pragma: no cover
-            # rare case when logq(z) is called directly
-            logp *= scaling[None]
-        else:
-            logp *= scaling
+        logp *= scaling
         return self.to_flat_input(tt.sum(logp))
 
     def log_q_W_global(self, z):    # pragma: no cover
