@@ -1,6 +1,7 @@
 import theano.tensor as tt
 import numpy as np
 from functools import reduce
+from .mean import ParameterizedFunction
 
 __all__ = ['ExpQuad',
            'RatQuad',
@@ -13,7 +14,7 @@ __all__ = ['ExpQuad',
            'WarpedInput',
            'Gibbs']
 
-class Covariance(object):
+class Covariance(ParameterizedFunction):
     R"""
     Base class for all kernels/covariance functions.
 
@@ -26,15 +27,6 @@ class Covariance(object):
         over that dimension or column of X.
     """
 
-    def __init__(self, input_dim, active_dims=None):
-        self.input_dim = input_dim
-        if active_dims is None:
-            self.active_dims = np.arange(input_dim)
-        else:
-            self.active_dims = np.array(active_dims)
-            if len(active_dims) != input_dim:
-                raise ValueError("Length of active_dims must match input_dim")
-
     def __call__(self, X, Z):
         R"""
         Evaluate the kernel/covariance function.
@@ -46,7 +38,7 @@ class Covariance(object):
         """
         raise NotImplementedError
 
-    def _slice(self, X, Z):
+    def _slice(self, X, Z=None):
         X = X[:, self.active_dims]
         if Z is not None:
             Z = Z[:, self.active_dims]
@@ -65,6 +57,7 @@ class Covariance(object):
         return self.__mul__(other)
 
     def __array_wrap__(self, result):
+        # can this be moved to parameterizedfunction?
         """
         Required to allow radd/rmul by numpy arrays.
         """
@@ -78,7 +71,7 @@ class Covariance(object):
         elif isinstance(result[0][0], Prod):
             return result[0][0].factor_list[0] * A
         else:
-            raise RuntimeError
+            raise RuntimeError(result[0][0])
 
 
 class Combination(Covariance):
@@ -123,12 +116,14 @@ class Stationary(Covariance):
         self.lengthscales = lengthscales
 
     def square_dist(self, X, Z):
+        X = tt.as_tensor_variable(X)
         X = tt.mul(X, 1.0 / self.lengthscales)
         Xs = tt.sum(tt.square(X), 1)
         if Z is None:
             sqd = -2.0 * tt.dot(X, tt.transpose(X)) +\
                   (tt.reshape(Xs, (-1, 1)) + tt.reshape(Xs, (1, -1)))
         else:
+            Z = tt.as_tensor_variable(Z)
             Z = tt.mul(Z, 1.0 / self.lengthscales)
             Zs = tt.sum(tt.square(Z), 1)
             sqd = -2.0 * tt.dot(X, tt.transpose(Z)) +\
@@ -342,7 +337,7 @@ class Gibbs(Covariance):
             sqd = -2.0 * tt.dot(X, tt.transpose(X)) +\
                   (tt.reshape(Xs, (-1, 1)) + tt.reshape(Xs, (1, -1)))
         else:
-            Z = tt.as_tensor_variable(Z)
+            Z = tt.as_tensor_variable(X)
             Zs = tt.sum(tt.square(Z), 1)
             sqd = -2.0 * tt.dot(X, tt.transpose(Z)) +\
                   (tt.reshape(Xs, (-1, 1)) + tt.reshape(Zs, (1, -1)))
