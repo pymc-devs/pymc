@@ -1344,5 +1344,49 @@ class Triangular(Continuous):
         return tt.switch(alltrue_elemwise([lower <= value, value < c]),
                          tt.log(2 * (value - lower) / ((upper - lower) * (c - lower))),
                          tt.switch(tt.eq(value, c), tt.log(2 / (upper - lower)),
-                         tt.switch(alltrue_elemwise([c < value, value <= upper]),
-                         tt.log(2 * (upper - value) / ((upper - lower) * (upper - c))),np.inf)))
+                                   tt.switch(alltrue_elemwise([c < value, value <= upper]),
+                                             tt.log(2 * (upper - value) / ((upper - lower) * (upper - c))), np.inf)))
+
+
+class Gumbel(Continuous):
+    R"""
+        Univariate Gumbel log-likelihood
+
+        .. math::
+           f(x \mid \mu, \beta) = -\frac{x - \mu}{\beta} - \exp \left(-\frac{x - \mu}{\beta} \right) - \log(\beta)
+        ========  ==========================================
+        Support   :math:`x \in \mathbb{R}`
+        Mean      :math:`\mu + \beta\gamma`, where \gamma is the Euler-Mascheroni constant
+        Variance  :math:`\frac{\pi^2}{6} \beta^2)`
+        ========  ==========================================
+
+        Parameters
+        ----------
+        mu : float
+            Location parameter.
+        beta : float
+            Scale parameter (beta > 0).
+        """
+
+    def __init__(self, mu=0, beta=1.0, **kwargs):
+        self.mu = tt.as_tensor_variable(mu)
+        self.beta = tt.as_tensor_variable(beta)
+
+        assert_negative_support(beta, 'beta', 'Gumbel')
+
+        self.mean = self.mu + self.beta * np.euler_gamma
+        self.median = self.mu - self.beta * tt.log(tt.log(2))
+        self.mode = self.mu
+        self.variance = (np.pi ** 2 / 6.0) * self.beta ** 2
+
+        super(Gumbel, self).__init__(**kwargs)
+
+    def random(self, point=None, size=None, repeat=None):
+        mu, sd = draw_values([self.mu, self.beta], point=point)
+        return generate_samples(stats.gumbel_r.rvs, loc=mu, scale=sd,
+                                dist_shape=self.shape,
+                                size=size)
+
+    def logp(self, value):
+        scaled = (value - self.mu) / self.beta
+        return -scaled - tt.exp(-scaled) - tt.log(self.beta)

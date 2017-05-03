@@ -1,6 +1,8 @@
 from __future__ import division
 
 import itertools
+
+from pymc3.distributions.continuous import Gumbel
 from .helpers import SeededTest, select_by_precision
 from ..vartypes import continuous_types
 from ..model import Model, Point, Potential
@@ -685,6 +687,10 @@ class TestMatchesScipy(SeededTest):
     def test_vonmises(self):
         self.pymc3_matches_scipy(VonMises, R, {'mu': Circ, 'kappa': Rplus},
                                  lambda value, mu, kappa: floatX(sp.vonmises.logpdf(value, kappa, loc=mu)))
+
+    def test_gumbel(self):
+        self.pymc3_matches_scipy(Gumbel, R, {'mu': R, 'beta': Rplusbig},
+                                 lambda value, mu, beta: floatX(sp.gumbel_r.logpdf(value, loc=mu, scale=beta)))
 
     def test_multidimensional_beta_construction(self):
         with Model():

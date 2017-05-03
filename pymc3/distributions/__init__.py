@@ -24,6 +24,7 @@ from .continuous import ExGaussian
 from .continuous import VonMises
 from .continuous import SkewNormal
 from .continuous import Triangular
+from .continuous import Gumbel
 
 from .discrete import Binomial
 from .discrete import BetaBinomial
@@ -130,5 +131,6 @@ __all__ = ['Uniform',
            'Mixture',
            'NormalMixture',
            'Triangular',
-           'DiscreteWeibull'
+           'DiscreteWeibull',
+           'Gumbel'
            ]
