@@ -54,7 +54,7 @@ class Mean(ParameterizedFunction):
     Base class for mean functions
     """
     def __init__(self, input_dim, active_dims=None):
-        ParameterizedFunction.__init__(self, input_dim, active_dims)
+        super(Mean, self).__init__(input_dim, active_dims)
 
     def __call__(self, X):
         R"""
@@ -88,7 +88,7 @@ class Constant(Mean):
     """
 
     def __init__(self, input_dim, c=0, active_dims=None):
-        Mean.__init__(self, input_dim, active_dims)
+        super(Constant, self).__init__(input_dim, active_dims)
         self.c = c
 
     def __call__(self, X):
@@ -107,7 +107,7 @@ class Linear(Mean):
         intercept : variable, array or integer
             Intercept for linear function (Defaults to zero)
         """
-        Mean.__init__(self, input_dim, active_dims)
+        super(Linear, self).__init__(input_dim, active_dims)
         self.b = intercept
         self.A = coeffs
 

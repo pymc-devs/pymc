@@ -337,7 +337,7 @@ class Gibbs(Covariance):
             sqd = -2.0 * tt.dot(X, tt.transpose(X)) +\
                   (tt.reshape(Xs, (-1, 1)) + tt.reshape(Xs, (1, -1)))
         else:
-            Z = tt.as_tensor_variable(X)
+            Z = tt.as_tensor_variable(Z)
             Zs = tt.sum(tt.square(Z), 1)
             sqd = -2.0 * tt.dot(X, tt.transpose(Z)) +\
                   (tt.reshape(Xs, (-1, 1)) + tt.reshape(Zs, (1, -1)))
