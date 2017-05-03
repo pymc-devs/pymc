@@ -111,9 +111,15 @@ class NoDistribution(Distribution):
 class Discrete(Distribution):
     """Base class for discrete distributions"""
 
-    def __init__(self, shape=(), dtype='int64', defaults=['mode'], *args, **kwargs):
-        if dtype != 'int64':
-            raise TypeError('Discrete classes expect dtype to be int64.')
+    def __init__(self, shape=(), dtype=None, defaults=['mode'],
+                 *args, **kwargs):
+        if dtype is None:
+            if theano.config.floatX == 'float32':
+                dtype = 'int16'
+            else:
+                dtype = 'int64'
+        if dtype != 'int16' and dtype != 'int64':
+            raise TypeError('Discrete classes expect dtype to be int16 or int64.')
         super(Discrete, self).__init__(
             shape, dtype, defaults=defaults, *args, **kwargs)
 
