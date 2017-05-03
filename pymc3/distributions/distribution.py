@@ -119,7 +119,7 @@ class Discrete(Distribution):
             else:
                 dtype = 'int32'
         if dtype != 'int16' and dtype != 'int32':
-            raise TypeError('Discrete classes expect dtype to be int16 or int 32.')
+            raise TypeError('Discrete classes expect dtype to be int16 or int32.')
         super(Discrete, self).__init__(
             shape, dtype, defaults=defaults, *args, **kwargs)
 
