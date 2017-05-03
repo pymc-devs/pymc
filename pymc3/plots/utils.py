@@ -2,7 +2,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from scipy.signal import gaussian, convolve
 # plotting utilities can all be in this namespace
-from ..util import get_default_varnames  # noqa
+from ..util import get_default_varnames  # pylint: disable=unused-import
 
 
 def identity_transform(x):
