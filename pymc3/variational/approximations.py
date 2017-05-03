@@ -64,7 +64,14 @@ class MeanField(Approximation):
         return tt.diag(rho2sd(self.rho)**2)
 
     def create_shared_params(self, **kwargs):
-        start = self.gbij.map(kwargs.get('start', self.model.test_point))
+        start = kwargs.get('start')
+        if start is None:
+            start = self.model.test_point
+        else:
+            start_ = self.model.test_point.copy()
+            pm.sampling._update_start_vals(start_, start, self.model)
+            start = start_
+        start = self.gbij.map(start)
         return {'mu': theano.shared(
                     pm.floatX(start),
                     'mu'),
@@ -125,11 +132,13 @@ class FullRank(Approximation):
         Sticking the Landing: A Simple Reduced-Variance Gradient for ADVI
         approximateinference.org/accepted/RoederEtAl2016.pdf
     """
-    def __init__(self, local_rv=None, model=None, cost_part_grad_scale=1, gpu_compat=False, seed=None):
+    def __init__(self, local_rv=None, model=None, cost_part_grad_scale=1,
+                 gpu_compat=False, seed=None, **kwargs):
         super(FullRank, self).__init__(
             local_rv=local_rv, model=model,
             cost_part_grad_scale=cost_part_grad_scale,
-            seed=seed
+            seed=seed,
+            **kwargs
         )
         self.gpu_compat = gpu_compat
 
@@ -161,7 +170,14 @@ class FullRank(Approximation):
         return tril_index_matrix
 
     def create_shared_params(self, **kwargs):
-        start = self.gbij.map(kwargs.get('start', self.model.test_point))
+        start = kwargs.get('start')
+        if start is None:
+            start = self.model.test_point
+        else:
+            start_ = self.model.test_point.copy()
+            pm.sampling._update_start_vals(start_, start, self.model)
+            start = start_
+        start = self.gbij.map(start)
         n = self.global_size
         L_tril = (
             np.eye(n)
@@ -254,8 +270,11 @@ class Empirical(Approximation):
     ...     trace = sample(1000, step=step)
     ...     histogram = Empirical(trace[100:])
     """
-    def __init__(self, trace, local_rv=None, model=None, seed=None):
-        super(Empirical, self).__init__(local_rv=local_rv, model=model, trace=trace, seed=seed)
+    def __init__(self, trace, local_rv=None, model=None, seed=None, **kwargs):
+        super(Empirical, self).__init__(
+            local_rv=local_rv, model=model, trace=trace, seed=seed,
+            **kwargs
+        )
 
     def check_model(self, model, **kwargs):
         trace = kwargs.get('trace')
@@ -355,6 +374,10 @@ class Empirical(Approximation):
         hist = cls(None, local_rv=local_rv, model=model, seed=seed)
         if start is None:
             start = hist.model.test_point
+        else:
+            start_ = hist.model.test_point.copy()
+            pm.sampling._update_start_vals(start_, start, hist.model)
+            start = start_
         start = hist.gbij.map(start)
         # Initialize particles
         x0 = np.tile(start, (size, 1))

@@ -143,12 +143,12 @@ class TestApproximates:
             with Model():
                 mu_ = Normal('mu', mu=mu0, sd=sd0, testval=0)
                 Normal('x', mu=mu_, sd=sd, observed=data)
-                inf = self.inference()
+                inf = self.inference(start={})
                 inf.fit(10)
                 approx = inf.fit(self.NITER,
                                  obj_optimizer=self.optimizer,
                                  callbacks=
-                                 [pm.callbacks.CheckParametersConvergence()])
+                                 [pm.callbacks.CheckParametersConvergence()],)
                 trace = approx.sample(10000)
             np.testing.assert_allclose(np.mean(trace['mu']), mu_post, rtol=0.1)
             np.testing.assert_allclose(np.std(trace['mu']), np.sqrt(1. / d), rtol=0.4)
@@ -342,7 +342,7 @@ with _model:
     [
         ('undefined', dict(), KeyError),
         (1, dict(), TypeError),
-        (_advi, dict(), None),
+        (_advi, dict(start={}), None),
         (_fullrank_advi, dict(), None),
         (_svgd, dict(), None),
         ('advi', dict(), None),
@@ -350,6 +350,7 @@ with _model:
         ('advi->fullrank_advi', dict(frac=1), ValueError),
         ('fullrank_advi', dict(), None),
         ('svgd', dict(), None),
+        ('svgd', dict(start={}), None),
         ('svgd', dict(local_rv={_model.free_RVs[0]: (0, 1)}), ValueError)
     ]
 )
