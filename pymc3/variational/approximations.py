@@ -371,7 +371,7 @@ class Empirical(Approximation):
         return hist
 
 
-def sample_approx(approx, draws=100, hide_transformed=False):
+def sample_approx(approx, draws=100, include_transformed=False):
     """
     Draw samples from variational posterior.
 
@@ -380,8 +380,8 @@ def sample_approx(approx, draws=100, hide_transformed=False):
     approx : Approximation
     draws : int
         Number of random samples.
-    hide_transformed : bool
-        If False, transformed variables are also sampled. Default is True.
+    include_transformed : bool
+        If True, transformed variables are also sampled. Default is False.
 
     Returns
     -------
@@ -390,4 +390,4 @@ def sample_approx(approx, draws=100, hide_transformed=False):
     """
     if not isinstance(approx, Approximation):
         raise TypeError('Need Approximation instance, got %r' % approx)
-    return approx.sample(draws=draws, hide_transformed=hide_transformed)
+    return approx.sample(draws=draws, include_transformed=include_transformed)
