@@ -851,7 +851,7 @@ class Approximation(object):
 
         return inner
 
-    def sample(self, draws=1, hide_transformed=False):
+    def sample(self, draws=1, include_transformed=False):
         """
         Draw samples from variational posterior.
 
@@ -859,8 +859,8 @@ class Approximation(object):
         ----------
         draws : int
             Number of random samples.
-        hide_transformed : bool
-            If False, transformed variables are also sampled. Default is True.
+        include_transformed : bool
+            If True, transformed variables are also sampled. Default is False.
 
         Returns
         -------
@@ -868,7 +868,7 @@ class Approximation(object):
             Samples drawn from variational posterior.
         """
         vars_sampled = get_default_varnames(self.model.unobserved_RVs,
-                                            include_transformed=not hide_transformed)
+                                            include_transformed=include_transformed)
         posterior = self.random_fn(draws)
         names = [var.name for var in self.local_vars + self.global_vars]
         samples = {name: self.view(posterior, name)
