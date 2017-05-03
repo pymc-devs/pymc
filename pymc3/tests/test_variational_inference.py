@@ -112,10 +112,10 @@ class TestApproximates:
                 p = pm.Beta('p', alpha=1, beta=1)
                 pm.Binomial('xs', n=1, p=p, observed=xs)
                 app = self.inference().approx
-                trace = app.sample(draws=1, hide_transformed=True)
+                trace = app.sample(draws=1, include_transformed=False)
                 assert trace.varnames == ['p']
                 assert len(trace) == 1
-                trace = app.sample(draws=10, hide_transformed=False)
+                trace = app.sample(draws=10, include_transformed=True)
                 assert sorted(trace.varnames) == ['p', 'p_logodds__']
                 assert len(trace) == 10
 
