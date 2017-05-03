@@ -306,7 +306,9 @@ class ADVI(Inference):
         Yuhuai Wu, David Duvenaud, 2016) for details
     seed : None or int
         leave None to use package global RandomStream or other
-        valid value to create instance specific one
+        valid value to create instance specific one    
+    start : Point
+        starting point for inference
 
     References
     ----------
@@ -321,10 +323,12 @@ class ADVI(Inference):
     - Kingma, D. P., & Welling, M. (2014).
       Auto-Encoding Variational Bayes. stat, 1050, 1.
     """
-    def __init__(self, local_rv=None, model=None, cost_part_grad_scale=1, seed=None):
+    def __init__(self, local_rv=None, model=None, cost_part_grad_scale=1,
+                 seed=None, start=None):
         super(ADVI, self).__init__(
             KL, MeanField, None,
-            local_rv=local_rv, model=model, cost_part_grad_scale=cost_part_grad_scale, seed=seed)
+            local_rv=local_rv, model=model, cost_part_grad_scale=cost_part_grad_scale,
+            seed=seed, start=start)
 
     @classmethod
     def from_mean_field(cls, mean_field):
@@ -372,6 +376,8 @@ class FullRankADVI(Inference):
     seed : None or int
         leave None to use package global RandomStream or other
         valid value to create instance specific one
+    start : Point
+        starting point for inference
 
     References
     ----------
@@ -386,11 +392,12 @@ class FullRankADVI(Inference):
     - Kingma, D. P., & Welling, M. (2014).
       Auto-Encoding Variational Bayes. stat, 1050, 1.
     """
-    def __init__(self, local_rv=None, model=None, cost_part_grad_scale=1, gpu_compat=False, seed=None):
+    def __init__(self, local_rv=None, model=None, cost_part_grad_scale=1,
+                 gpu_compat=False, seed=None, start=None):
         super(FullRankADVI, self).__init__(
             KL, FullRank, None,
             local_rv=local_rv, model=model, cost_part_grad_scale=cost_part_grad_scale,
-            gpu_compat=gpu_compat, seed=seed)
+            gpu_compat=gpu_compat, seed=seed, start=start)
 
     @classmethod
     def from_full_rank(cls, full_rank):
@@ -497,6 +504,8 @@ class SVGD(Inference):
     seed : None or int
         leave None to use package global RandomStream or other
         valid value to create instance specific one
+    start : Point
+        starting point for inference
 
     References
     ----------
@@ -515,7 +524,7 @@ class SVGD(Inference):
             model=model, seed=seed)
 
 
-def fit(n=10000, local_rv=None, method='advi', model=None, seed=None, **kwargs):
+def fit(n=10000, local_rv=None, method='advi', model=None, seed=None, start=None, **kwargs):
     """
     Handy shortcut for using inference methods in functional way
 
@@ -536,7 +545,8 @@ def fit(n=10000, local_rv=None, method='advi', model=None, seed=None, **kwargs):
     seed : None or int
         leave None to use package global RandomStream or other
         valid value to create instance specific one
-
+    start : Point
+        starting point for inference
     Returns
     -------
     Approximation
@@ -554,7 +564,7 @@ def fit(n=10000, local_rv=None, method='advi', model=None, seed=None, **kwargs):
             raise ValueError('frac should be in (0, 1)')
         n1 = int(n * frac)
         n2 = n-n1
-        inference = ADVI(local_rv=local_rv, model=model, seed=seed)
+        inference = ADVI(local_rv=local_rv, model=model, seed=seed, start=start)
         logger.info('fitting advi ...')
         inference.fit(n1, **kwargs)
         inference = FullRankADVI.from_advi(inference)
@@ -564,7 +574,8 @@ def fit(n=10000, local_rv=None, method='advi', model=None, seed=None, **kwargs):
     elif isinstance(method, str):
         try:
             inference = _select[method.lower()](
-                local_rv=local_rv, model=model, seed=seed
+                local_rv=local_rv, model=model, seed=seed,
+                start=start
             )
         except KeyError:
             raise KeyError('method should be one of %s '
