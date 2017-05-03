@@ -6,7 +6,8 @@ import itertools
 import sys
 import warnings
 from collections import namedtuple
-from .model import modelcontext, is_transformed_name
+from .model import modelcontext
+from .util import get_default_varnames
 
 from scipy.misc import logsumexp
 from scipy.stats.distributions import pareto
@@ -634,10 +635,7 @@ def df_summary(trace, varnames=None, stat_funcs=None, extend=False, include_tran
         mu__1  0.067513 -0.159097 -0.045637  0.062912
     """
     if varnames is None:
-        if include_transformed:
-            varnames = [name for name in trace.varnames]
-        else:
-            varnames = [name for name in trace.varnames if not is_transformed_name(name)]
+        varnames = get_default_varnames(trace.varnames, include_transformed=include_transformed)
 
     if batches is None:
         batches = min([100, len(trace)])
@@ -701,10 +699,7 @@ def summary(trace, varnames=None, transform=lambda x: x, alpha=0.05, start=0,
       File to write results to. If not given, print to stdout.
     """
     if varnames is None:
-        if include_transformed:
-            varnames = [name for name in trace.varnames]
-        else:
-            varnames = [name for name in trace.varnames if not is_transformed_name(name)]
+        varnames = get_default_varnames(trace.varnames, include_transformed=include_transformed)
 
     if batches is None:
         batches = min([100, len(trace)])

@@ -14,6 +14,7 @@ from .memoize import memoize
 from .theanof import gradient, hessian, inputvars, generator
 from .vartypes import typefilter, discrete_types, continuous_types, isgenerator
 from .blocking import DictToArrayBijection, ArrayOrdering
+from .util import get_transformed_name
 
 __all__ = [
     'Model', 'Factor', 'compilef', 'fn', 'fastfn', 'modelcontext',
@@ -21,55 +22,6 @@ __all__ = [
 ]
 
 FlatView = collections.namedtuple('FlatView', 'input, replacements, view')
-
-
-def get_transformed_name(name, transform):
-    """
-    Consistent way of transforming names
-
-    Parameters
-    ----------
-    name : str
-        Name to transform
-    transform : object
-        Should be a subclass of `transforms.Transform`
-
-    Returns:
-    A string to use for the transformed variable
-    """
-    return "{}_{}__".format(name, transform.name)
-
-
-def is_transformed_name(name):
-    """
-    Quickly check if a name was transformed with `get_transormed_name`
-
-    Parameters
-    ----------
-    name : str
-        Name to check
-
-    Returns:
-    Boolean, whether the string could have been produced by `get_transormed_name`
-    """
-    return name.endswith('__') and name.count('_') >= 3
-
-
-def get_untransformed_name(name):
-    """
-    Undo transformation in `get_transformed_name`. Throws ValueError if name wasn't transformed
-
-    Parameters
-    ----------
-    name : str
-        Name to untransform
-
-    Returns:
-    String with untransformed version of the name.
-    """
-    if not is_transformed_name(name):
-        raise ValueError(u'{} does not appear to be a transformed name'.format(name))
-    return '_'.join(name.split('_')[:-3])
 
 
 class InstanceMethod(object):

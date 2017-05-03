@@ -4,7 +4,7 @@
 import numpy as np
 import pandas as pd
 
-from .model import is_transformed_name
+from ..util import get_default_varnames
 
 __all__ = ['trace_to_dataframe']
 
@@ -28,18 +28,16 @@ def trace_to_dataframe(trace, chains=None, varnames=None, hide_transformed_vars=
     var_shapes = trace._straces[0].var_shapes
 
     if varnames is None:
-        varnames = var_shapes.keys()
+        varnames = get_default_varnames(var_shapes.keys(),
+                                        include_transformed=not hide_transformed_vars)
 
-    flat_names = {v: create_flat_names(v, shape) for v, shape in var_shapes.items()
-                  if not (hide_transformed_vars and is_transformed_name(v))}
+    flat_names = {v: create_flat_names(v, var_shapes[v]) for v in varnames}
 
     var_dfs = []
     for v in var_shapes:
-        if v in varnames:
-            if not hide_transformed_vars or not is_transformed_name(v):
-                vals = trace.get_values(v, combine=True, chains=chains)
-                flat_vals = vals.reshape(vals.shape[0], -1)
-                var_dfs.append(pd.DataFrame(flat_vals, columns=flat_names[v]))
+        vals = trace.get_values(v, combine=True, chains=chains)
+        flat_vals = vals.reshape(vals.shape[0], -1)
+        var_dfs.append(pd.DataFrame(flat_vals, columns=flat_names[v]))
     return pd.concat(var_dfs, axis=1)
 
 

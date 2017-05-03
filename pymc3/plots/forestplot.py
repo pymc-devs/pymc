@@ -40,7 +40,7 @@ def _make_rhat_plot(trace, ax, title, labels, varnames, include_transformed):
 
     """
     if varnames is None:
-        varnames = get_default_varnames(trace, include_transformed)
+        varnames = get_default_varnames(trace.varnames, include_transformed)
 
     R = gelman_rubin(trace)
     R = {v: R[v] for v in varnames}
@@ -182,7 +182,7 @@ def forestplot(trace_obj, varnames=None, transform=identity_transform, alpha=0.0
     nchains = trace_obj.nchains
 
     if varnames is None:
-        varnames = get_default_varnames(trace_obj, plot_transformed)
+        varnames = get_default_varnames(trace_obj.varnames, plot_transformed)
 
     plot_rhat = (rhat and nchains > 1)
     # Empty list for y-axis labels

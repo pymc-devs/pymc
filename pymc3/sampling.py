@@ -7,11 +7,12 @@ import numpy as np
 import pymc3 as pm
 from .backends.base import merge_traces, BaseTrace, MultiTrace
 from .backends.ndarray import NDArray
-from .model import modelcontext, Point, is_transformed_name, get_untransformed_name
+from .model import modelcontext, Point
 from .step_methods import (NUTS, HamiltonianMC, Metropolis, BinaryMetropolis,
                            BinaryGibbsMetropolis, CategoricalGibbsMetropolis,
                            Slice, CompoundStep)
 from .plots.traceplot import traceplot
+from .util import is_transformed_name, get_untransformed_name
 from tqdm import tqdm
 
 import sys

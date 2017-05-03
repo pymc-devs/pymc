@@ -39,7 +39,8 @@ import theano.tensor as tt
 import pymc3 as pm
 from .updates import adam
 from ..distributions.dist_math import rho2sd, log_normal
-from ..model import modelcontext, ArrayOrdering, DictToArrayBijection, is_transformed_name
+from ..model import modelcontext, ArrayOrdering, DictToArrayBijection
+from ..util import get_default_varnames
 from ..theanof import tt_rng, memoize, change_flags, GradScale
 
 
@@ -866,11 +867,8 @@ class Approximation(object):
         trace : pymc3.backends.base.MultiTrace
             Samples drawn from variational posterior.
         """
-        if hide_transformed:
-            vars_sampled = [v_ for v_ in self.model.unobserved_RVs
-                            if not is_transformed_name(str(v_))]
-        else:
-            vars_sampled = [v_ for v_ in self.model.unobserved_RVs]
+        vars_sampled = get_default_varnames(self.model.unobserved_RVs,
+                                            include_transformed=not hide_transformed)
         posterior = self.random_fn(draws)
         names = [var.name for var in self.local_vars + self.global_vars]
         samples = {name: self.view(posterior, name)
@@ -878,8 +876,7 @@ class Approximation(object):
 
         def points():
             for i in range(draws):
-                yield {name: samples[name][i]
-                       for name in names}
+                yield {name: samples[name][i] for name in names}
 
         trace = pm.sampling.NDArray(model=self.model, vars=vars_sampled)
         try:
