@@ -117,9 +117,9 @@ class Discrete(Distribution):
             if theano.config.floatX == 'float32':
                 dtype = 'int16'
             else:
-                dtype = 'int32'
-        if dtype != 'int16' and dtype != 'int32':
-            raise TypeError('Discrete classes expect dtype to be int16 or int32.')
+                dtype = 'int64'
+        if dtype != 'int16' and dtype != 'int64':
+            raise TypeError('Discrete classes expect dtype to be int16 or int64.')
         super(Discrete, self).__init__(
             shape, dtype, defaults=defaults, *args, **kwargs)
 
