@@ -1344,9 +1344,8 @@ class Triangular(Continuous):
         return tt.switch(alltrue_elemwise([lower <= value, value < c]),
                          tt.log(2 * (value - lower) / ((upper - lower) * (c - lower))),
                          tt.switch(tt.eq(value, c), tt.log(2 / (upper - lower)),
-                                   tt.switch(alltrue_elemwise([c < value, value <= upper]),
-                                             tt.log(2 * (upper - value) / ((upper - lower) * (upper - c))), np.inf)))
-
+                         tt.switch(alltrue_elemwise([c < value, value <= upper]),
+                         tt.log(2 * (upper - value) / ((upper - lower) * (upper - c))),np.inf)))
 
 class Gumbel(Continuous):
     R"""
@@ -1389,4 +1388,4 @@ class Gumbel(Continuous):
 
     def logp(self, value):
         scaled = (value - self.mu) / self.beta
-        return -scaled - tt.exp(-scaled) - tt.log(self.beta)
+        return bound(-scaled - tt.exp(-scaled) - tt.log(self.beta), self.beta > 0)
