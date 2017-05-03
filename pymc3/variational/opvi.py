@@ -1,33 +1,33 @@
 """
-Variational inference is a great approach for doing really complex, 
-often intractable Bayesian inference in approximate form. Common methods 
-(e.g. ADVI) lack from complexity so that approximate posterior does not 
-reveal the true nature of underlying problem. In some applications it can 
-yield unreliable decisions. 
+Variational inference is a great approach for doing really complex,
+often intractable Bayesian inference in approximate form. Common methods
+(e.g. ADVI) lack from complexity so that approximate posterior does not
+reveal the true nature of underlying problem. In some applications it can
+yield unreliable decisions.
 
-Recently on NIPS 2017 [OPVI](https://arxiv.org/abs/1610.09033) framework 
-was presented. It generalizes variational inverence so that the problem is 
-build with blocks. The first and essential block is Model itself. Second is 
-Approximation, in some cases :math:`log Q(D)` is not really needed. Necessity 
-depends on the third and forth part of that black box, Operator and 
-Test Function respectively. 
+Recently on NIPS 2017 [OPVI](https://arxiv.org/abs/1610.09033) framework
+was presented. It generalizes variational inverence so that the problem is
+build with blocks. The first and essential block is Model itself. Second is
+Approximation, in some cases :math:`log Q(D)` is not really needed. Necessity
+depends on the third and forth part of that black box, Operator and
+Test Function respectively.
 
-Operator is like an approach we use, it constructs loss from given Model, 
-Approximation and Test Function. The last one is not needed if we minimize 
-KL Divergence from Q to posterior. As a drawback we need to compute :math:`loq Q(D)`. 
-Sometimes approximation family is intractable and :math:`loq Q(D)` is not available, 
+Operator is like an approach we use, it constructs loss from given Model,
+Approximation and Test Function. The last one is not needed if we minimize
+KL Divergence from Q to posterior. As a drawback we need to compute :math:`loq Q(D)`.
+Sometimes approximation family is intractable and :math:`loq Q(D)` is not available,
 here comes LS(Langevin Stein) Operator with a set of test functions.
 
-Test Function has more unintuitive meaning. It is usually used with LS operator 
-and represents all we want from our approximate distribution. For any given vector 
-based function of :math:`z` LS operator yields zero mean function under posterior. 
-:math:`loq Q(D)` is no more needed. That opens a door to rich approximation 
+Test Function has more unintuitive meaning. It is usually used with LS operator
+and represents all we want from our approximate distribution. For any given vector
+based function of :math:`z` LS operator yields zero mean function under posterior.
+:math:`loq Q(D)` is no more needed. That opens a door to rich approximation
 families as neural networks.
 
 References
 ----------
--   Rajesh Ranganath, Jaan Altosaar, Dustin Tran, David M. Blei 
-    Operator Variational Inference 
+-   Rajesh Ranganath, Jaan Altosaar, Dustin Tran, David M. Blei
+    Operator Variational Inference
     https://arxiv.org/abs/1610.09033 (2016)
 """
 
@@ -40,6 +40,7 @@ import pymc3 as pm
 from .updates import adam
 from ..distributions.dist_math import rho2sd, log_normal
 from ..model import modelcontext, ArrayOrdering, DictToArrayBijection
+from ..util import get_default_varnames
 from ..theanof import tt_rng, memoize, change_flags, GradScale
 
 
@@ -487,19 +488,19 @@ class Approximation(object):
             It is needed only if used with operator
             that requires :math:`logq` of an approximation
             Returns Scalar
-            
+
     You can also override the following methods:
         - :code:`._setup(**kwargs)`
             Do some specific stuff having :code:`kwargs` before calling :code:`.create_shared_params`
-            
+
         - :code:`.check_model(model, **kwargs)`
             Do some specific check for model having :code:`kwargs`
 
     Notes
     -----
-    :code:`kwargs` mentioned above are supplied as additional arguments 
+    :code:`kwargs` mentioned above are supplied as additional arguments
     for :code:`Approximation.__init__`
-    
+
     There are some defaults class attributes for approximation classes that can be
     optionally overriden.
         - :code:`initial_dist_name`
@@ -508,8 +509,8 @@ class Approximation(object):
 
         - :code:`initial_dist_map`
             float where initial distribution has maximum density
-        
-        
+
+
     References
     ----------
     -   Geoffrey Roeder, Yuhuai Wu, David Duvenaud, 2016
@@ -866,11 +867,8 @@ class Approximation(object):
         trace : pymc3.backends.base.MultiTrace
             Samples drawn from variational posterior.
         """
-        if hide_transformed:
-            vars_sampled = [v_ for v_ in self.model.unobserved_RVs
-                            if not str(v_).endswith('_')]
-        else:
-            vars_sampled = [v_ for v_ in self.model.unobserved_RVs]
+        vars_sampled = get_default_varnames(self.model.unobserved_RVs,
+                                            include_transformed=not hide_transformed)
         posterior = self.random_fn(draws)
         names = [var.name for var in self.local_vars + self.global_vars]
         samples = {name: self.view(posterior, name)
@@ -878,8 +876,7 @@ class Approximation(object):
 
         def points():
             for i in range(draws):
-                yield {name: samples[name][i]
-                       for name in names}
+                yield {name: samples[name][i] for name in names}
 
         trace = pm.sampling.NDArray(model=self.model, vars=vars_sampled)
         try:

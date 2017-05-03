@@ -410,11 +410,8 @@ def sample_vp(
     f = theano.function([], samples)
 
     # Random variables which will be sampled
-    if hide_transformed:
-        vars_sampled = [v_ for v_ in model.unobserved_RVs
-                        if not str(v_).endswith('_')]
-    else:
-        vars_sampled = [v_ for v_ in model.unobserved_RVs]
+    vars_sampled = pm.util.get_default_varnames(model.unobserved_RVs,
+                                                include_transformed=not hide_transformed)
 
     varnames = [str(var) for var in model.unobserved_RVs]
     trace = pm.sampling.NDArray(model=model, vars=vars_sampled)

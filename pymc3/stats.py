@@ -7,6 +7,7 @@ import sys
 import warnings
 from collections import namedtuple
 from .model import modelcontext
+from .util import get_default_varnames
 
 from scipy.misc import logsumexp
 from scipy.stats.distributions import pareto
@@ -98,7 +99,7 @@ def autocov(x, lag=1):
 
 def dic(trace, model=None):
     """Calculate the deviance information criterion of the samples in trace from model
-    Read more theory here - in a paper by some of the leading authorities on Model Selection - 
+    Read more theory here - in a paper by some of the leading authorities on Model Selection -
     dx.doi.org/10.1111/1467-9868.00353
 
     Parameters
@@ -271,7 +272,7 @@ def loo(trace, model=None, pointwise=False):
 def bpic(trace, model=None):
     """
     Calculates Bayesian predictive information criterion n of the samples in trace from model
-    Read more theory here - in a paper by some of the leading authorities on Model Selection - 
+    Read more theory here - in a paper by some of the leading authorities on Model Selection -
     dx.doi.org/10.1111/1467-9868.00353
 
     Parameters
@@ -634,10 +635,7 @@ def df_summary(trace, varnames=None, stat_funcs=None, extend=False, include_tran
         mu__1  0.067513 -0.159097 -0.045637  0.062912
     """
     if varnames is None:
-        if include_transformed:
-            varnames = [name for name in trace.varnames]
-        else:
-            varnames = [name for name in trace.varnames if not name.endswith('_')]
+        varnames = get_default_varnames(trace.varnames, include_transformed=include_transformed)
 
     if batches is None:
         batches = min([100, len(trace)])
@@ -701,10 +699,7 @@ def summary(trace, varnames=None, transform=lambda x: x, alpha=0.05, start=0,
       File to write results to. If not given, print to stdout.
     """
     if varnames is None:
-        if include_transformed:
-            varnames = [name for name in trace.varnames]
-        else:
-            varnames = [name for name in trace.varnames if not name.endswith('_')]
+        varnames = get_default_varnames(trace.varnames, include_transformed=include_transformed)
 
     if batches is None:
         batches = min([100, len(trace)])
