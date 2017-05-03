@@ -95,7 +95,7 @@ Note
 Taken from the Lasagne project: http://lasagne.readthedocs.io/en/latest/
 
 """
-
+import re
 from collections import OrderedDict
 import functools
 import numpy as np
@@ -127,6 +127,23 @@ __all__ = [
     "AdaMax",
     "Adam",
 ]
+
+
+def _make_doc(doc):
+    """
+    Modify docstring for class
+    
+    Parameters
+    ----------
+    doc : docstring
+
+    Returns
+    -------
+    class docstring
+    """
+    doc = re.sub(r'\n.+loss_or_grads : .+\n.+', '', doc)
+    doc = re.sub(r'\n.+params : .+\n.+', '', doc)
+    return doc
 
 
 class Optimizer(object):
@@ -209,6 +226,7 @@ def sgd(loss_or_grads, params, learning_rate=1e-3):
 
 
 class Sgd(Optimizer):
+    __doc__ = _make_doc(sgd.__doc__)
     _opt = sgd
 
 
@@ -300,6 +318,7 @@ def momentum(loss_or_grads, params, learning_rate, momentum=0.9):
 
 
 class Momentum(Optimizer):
+    __doc__ = _make_doc(momentum.__doc__)
     _opt = momentum
 
 
@@ -402,6 +421,7 @@ def nesterov_momentum(loss_or_grads, params, learning_rate=1e-3, momentum=0.9):
 
 
 class NesterovMomentum(Optimizer):
+    __doc__ = _make_doc(nesterov_momentum.__doc__)
     _opt = nesterov_momentum
 
 
@@ -465,6 +485,7 @@ def adagrad(loss_or_grads, params, learning_rate=1.0, epsilon=1e-6):
 
 
 class Adagrad(Optimizer):
+    __doc__ = _make_doc(adagrad.__doc__)
     _opt = adagrad
 
 
@@ -530,6 +551,7 @@ def rmsprop(loss_or_grads, params, learning_rate=1.0, rho=0.9, epsilon=1e-6):
 
 
 class RMSProp(Optimizer):
+    __doc__ = _make_doc(rmsprop.__doc__)
     _opt = rmsprop
 
 
@@ -618,6 +640,7 @@ def adadelta(loss_or_grads, params, learning_rate=1.0, rho=0.95, epsilon=1e-6):
 
 
 class AdaDelta(Optimizer):
+    __doc__ = _make_doc(adadelta.__doc__)
     _opt = adadelta
 
 
@@ -689,6 +712,7 @@ def adam(loss_or_grads, params, learning_rate=0.001, beta1=0.9,
 
 
 class Adam(Optimizer):
+    __doc__ = _make_doc(adam.__doc__)
     _opt = adam
 
 
@@ -755,6 +779,7 @@ def adamax(loss_or_grads, params, learning_rate=0.002, beta1=0.9,
 
 
 class AdaMax(Optimizer):
+    __doc__ = _make_doc(adamax.__doc__)
     _opt = adamax
 
 

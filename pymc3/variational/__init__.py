@@ -13,7 +13,15 @@ from .updates import (
     adam,
     adamax,
     norm_constraint,
-    total_norm_constraint
+    total_norm_constraint,
+    Sgd,
+    Momentum,
+    NesterovMomentum,
+    Adagrad,
+    RMSProp,
+    AdaDelta,
+    AdaMax,
+    Adam
 )
 
 from .inference import (
