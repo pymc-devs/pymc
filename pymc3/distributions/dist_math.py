@@ -221,6 +221,8 @@ def log_normal_mv(x, mean, gpu_compat=False, **kwargs):
 def MvNormalLogp():
     """Compute the log pdf of a multivariate normal distribution.
 
+    This should be used in MvNormal.logp once Theano#5908 is released.
+
     Parameters
     ----------
     cov : tt.matrix
@@ -311,7 +313,7 @@ class Cholesky(theano.Op):
         z = outputs[0]
         try:
             z[0] = scipy.linalg.cholesky(x, lower=self.lower).astype(x.dtype)
-        except scipy.linalg.LinAlgError:
+        except (ValueError, scipy.linalg.LinAlgError):
             if self.nofail:
                 z[0] = np.eye(x.shape[-1])
                 z[0][0, 0] = np.nan

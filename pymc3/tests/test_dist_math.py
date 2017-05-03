@@ -5,6 +5,7 @@ import theano
 import theano.tests.unittest_tools as utt
 import pymc3 as pm
 from scipy import stats
+import pytest
 
 from ..theanof import floatX
 from ..distributions import Discrete
@@ -160,19 +161,8 @@ class TestMvNormalLogp():
         delta_val = np.random.randn(5, 2)
         utt.verify_grad(func, [chol_vec_val, delta_val])
 
-    def test_graphop(self):
-        x = tt.scalar('x')
-        x.tag.test_value = np.array(1.)
-        op = theano.OpFromGraph([x], [x ** 3])
-        y = tt.scalar('y')
-        y.tag.test_value = np.array(1.)
-        f = op(y)
-        # this works
-        grad_f = tt.grad(f, y)
-        print(grad_f.tag.test_value)
-        # This throws an error about a missing test value
-        tt.grad(grad_f, y)
-
+    @pytest.mark.skip(reason="Fix in theano not released yet: Theano#5908")
+    @theano.configparser.change_flags(compute_test_value="ignore")
     def test_hessian(self):
         chol_vec = tt.vector('chol_vec')
         chol_vec.tag.test_value = np.array([0.1, 2, 3])
@@ -185,6 +175,4 @@ class TestMvNormalLogp():
         delta.tag.test_value = np.ones((5, 2))
         logp = MvNormalLogp()(cov, delta)
         g_cov, g_delta = tt.grad(logp, [cov, delta])
-        print(g_delta.sum().tag.test_value)
-        tt.grad(g_delta[0, 0], [cov])
-        #tt.grad(g_cov.sum(), [cov])
+        tt.grad(g_delta.sum() + g_cov.sum(), [delta, cov])

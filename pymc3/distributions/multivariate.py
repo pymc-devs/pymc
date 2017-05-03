@@ -13,13 +13,13 @@ from theano.tensor.nlinalg import det, matrix_inverse, trace
 
 import pymc3 as pm
 
-from pymc3.math import tround, logdet
+from pymc3.math import tround
 from . import transforms
 from .distribution import Continuous, Discrete, draw_values, generate_samples
 from ..model import Deterministic
 from .continuous import ChiSquared, Normal
 from .special import gammaln, multigammaln
-from .dist_math import bound, logpow, factln, Cholesky, MvNormalLogp
+from .dist_math import bound, logpow, factln, Cholesky
 
 __all__ = ['MvNormal', 'MvStudentT', 'Dirichlet',
            'Multinomial', 'Wishart', 'WishartBartlett',
@@ -117,8 +117,8 @@ class MvNormal(Continuous):
             cov = tt.as_tensor_variable(cov)
             if cov.ndim != 2:
                 raise ValueError('cov must be two dimensional.')
-            self.cov = cov
             self.chol_cov = cholesky(cov)
+            self.cov = cov
         elif tau is not None:
             self.k = tau.shape[0]
             self._cov_type = 'tau'
@@ -175,7 +175,9 @@ class MvNormal(Continuous):
         delta = value - mu
 
         if self._cov_type == 'cov':
-            return MvNormalLogp()(self.cov, delta)
+            # Use this when Theano#5908 is released.
+            # return MvNormalLogp()(self.cov, delta)
+            return self._logp_cov(delta)
         elif self._cov_type == 'tau':
             return self._logp_tau(delta)
         else:
@@ -190,14 +192,28 @@ class MvNormal(Continuous):
         ok = tt.all(diag > 0)
         # If not, replace the diagonal. We return -inf later, but
         # need to prevent solve_lower from throwing an exception.
-        chol_cov = tt.switch(
-            ok,
-            chol_cov,
-            tt.fill(chol_cov, 1))
+        chol_cov = tt.switch(ok, chol_cov, 1)
 
         delta_trans = self.solve_lower(chol_cov, delta.T)
 
         result = n * k * np.log(2 * np.pi)
+        result += 2.0 * n * tt.sum(tt.log(diag))
+        result += (delta_trans ** 2).sum()
+        result = -0.5 * result
+        return bound(result, ok)
+
+    def _logp_cov(self, delta):
+        chol_cov = self.chol_cov
+        n, k = delta.shape
+
+        diag = tt.nlinalg.diag(chol_cov)
+        ok = tt.all(diag > 0)
+
+        chol_cov = tt.switch(ok, chol_cov, 1)
+        diag = tt.nlinalg.diag(chol_cov)
+        delta_trans = self.solve_lower(chol_cov, delta.T)
+
+        result = n * k * tt.log(2 * np.pi)
         result += 2.0 * n * tt.sum(tt.log(diag))
         result += (delta_trans ** 2).sum()
         result = -0.5 * result
@@ -211,6 +227,7 @@ class MvNormal(Continuous):
         ok = tt.all(diag > 0)
 
         chol_tau = tt.switch(ok, chol_tau, 1)
+        diag = tt.nlinalg.diag(chol_tau)
         delta_trans = tt.dot(chol_tau.T, delta.T)
 
         result = n * k * tt.log(2 * np.pi)
@@ -218,17 +235,6 @@ class MvNormal(Continuous):
         result += (delta_trans ** 2).sum()
         result = -0.5 * result
         return bound(result, ok)
-
-    def _logp_tau_(self, delta):
-        tau = self.tau
-        n, k = delta.shape
-
-        delta_trans = tt.dot(tau, delta.T).T
-
-        result = n * k * tt.log(2 * np.pi)
-        result -= n * logdet(tau)
-        result += (delta * delta_trans).sum()
-        return -0.5 * result
 
 
 class MvStudentT(Continuous):
