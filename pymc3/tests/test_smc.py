@@ -67,7 +67,6 @@ class TestSMC(SeededTest):
             step=step,
             n_jobs=n_jobs,
             progressbar=True,
-            stage='0',
             homepath=self.test_folder,
             model=ATMIP_test,
             rm_flag=True)

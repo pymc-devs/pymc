@@ -291,7 +291,7 @@ class Text(BaseSMCTrace):
         return pt
 
 
-def get_highest_sampled_stage(homedir, return_final=False):
+def get_highest_sampled_stage(homedir):
     """Return stage number of stage that has been sampled before the final stage.
 
     Paramaeters
@@ -306,14 +306,8 @@ def get_highest_sampled_stage(homedir, return_final=False):
     stages = glob(os.path.join(homedir, 'stage_*'))
     stagenumbers = []
     for s in stages:
-        stage_ending = os.path.splitext(s)[0].rsplit('_', 1)[1]
-        try:
-            stagenumbers.append(int(stage_ending))
-        except ValueError:
-            pm._log.debug('string - Thats the final stage!')
-            if return_final:
-                return stage_ending
-
+        stage_ending = os.path.basename(s).split('_')[-1]
+        stagenumbers.append(int(stage_ending))
     return max(stagenumbers)
 
 
@@ -441,12 +435,12 @@ def load_atmip_params(project_dir, stage_number, mode):
     ----------
     project_dir : str
         absolute path to directory of BEAT project
-    stage number : string
-        of stage number or 'final' for last stage
+    stage number : int
+        of stage number or -1 for last stage
     mode : str
         problem mode that has been solved ('geometry', 'static', 'kinematic')
     """
-    stage_path = os.path.join(project_dir, mode, 'stage_%s' % stage_number, 'atmip.params')
+    stage_path = os.path.join(project_dir, mode, 'stage_%i' % stage_number, 'atmip.params')
     step = load_objects(stage_path)
     return step
 
