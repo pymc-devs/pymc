@@ -222,7 +222,7 @@
 <col width="90%" />
 </colgroup>
 <tbody valign="top">
-<tr class="row-odd"><td><a class="reference internal" href="#pymc3.distributions.multivariate.MvNormal" title="pymc3.distributions.multivariate.MvNormal"><code class="xref py py-obj docutils literal"><span class="pre">MvNormal</span></code></a>(mu[,&nbsp;cov,&nbsp;tau,&nbsp;chol])</td>
+<tr class="row-odd"><td><a class="reference internal" href="#pymc3.distributions.multivariate.MvNormal" title="pymc3.distributions.multivariate.MvNormal"><code class="xref py py-obj docutils literal"><span class="pre">MvNormal</span></code></a>(mu[,&nbsp;cov,&nbsp;tau,&nbsp;chol,&nbsp;lower])</td>
 <td>Multivariate normal log-likelihood.</td>
 </tr>
 <tr class="row-even"><td><a class="reference internal" href="#pymc3.distributions.multivariate.Wishart" title="pymc3.distributions.multivariate.Wishart"><code class="xref py py-obj docutils literal"><span class="pre">Wishart</span></code></a>(nu,&nbsp;V,&nbsp;\*args,&nbsp;\*\*kwargs)</td>
@@ -244,7 +244,7 @@
 </table>
 <span class="target" id="module-pymc3.distributions.multivariate"></span><dl class="class">
 <dt id="pymc3.distributions.multivariate.MvNormal">
-<em class="property">class </em><code class="descclassname">pymc3.distributions.multivariate.</code><code class="descname">MvNormal</code><span class="sig-paren">(</span><em>mu</em>, <em>cov=None</em>, <em>tau=None</em>, <em>chol=None</em>, <em>*args</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.distributions.multivariate.MvNormal" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><code class="descclassname">pymc3.distributions.multivariate.</code><code class="descname">MvNormal</code><span class="sig-paren">(</span><em>mu</em>, <em>cov=None</em>, <em>tau=None</em>, <em>chol=None</em>, <em>lower=True</em>, <em>*args</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.distributions.multivariate.MvNormal" title="Permalink to this definition">¶</a></dt>
 <dd><p>Multivariate normal log-likelihood.</p>
 <div class="math">
 \[f(x \mid \pi, T) =
@@ -277,11 +277,47 @@
 <li><strong>tau</strong> (<em>array</em>) &#8211; Precision matrix. Exactly one of cov, tau, or chol is needed.</li>
 <li><strong>chol</strong> (<em>array</em>) &#8211; Cholesky decomposition of covariance matrix. Exactly one of cov,
 tau, or chol is needed.</li>
+<li><strong>lower</strong> (<em>bool</em><em>, </em><em>default=True</em>) &#8211; Whether chol is the lower tridiagonal cholesky factor.</li>
 </ul>
 </td>
 </tr>
 </tbody>
 </table>
+<p class="rubric">Examples</p>
+<p>Define a multivariate normal variable for a given covariance
+matrix:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">cov</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([[</span><span class="mf">1.</span><span class="p">,</span> <span class="mf">0.5</span><span class="p">],</span> <span class="p">[</span><span class="mf">0.5</span><span class="p">,</span> <span class="mi">2</span><span class="p">]])</span>
+<span class="n">mu</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span>
+<span class="n">vals</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">MvNormal</span><span class="p">(</span><span class="s1">&#39;vals&#39;</span><span class="p">,</span> <span class="n">mu</span><span class="o">=</span><span class="n">mu</span><span class="p">,</span> <span class="n">cov</span><span class="o">=</span><span class="n">cov</span><span class="p">,</span> <span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="mi">5</span><span class="p">,</span> <span class="mi">2</span><span class="p">))</span>
+</pre></div>
+</div>
+<p>Most of the time it is preferable to specify the cholesky
+factor of the covariance instead. For example, we could
+fit a multivariate outcome like this (see the docstring
+of <cite>LKJCholeskyCov</cite> for more information about this):</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">mu</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="mi">3</span><span class="p">)</span>
+<span class="n">true_cov</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([[</span><span class="mf">1.0</span><span class="p">,</span> <span class="mf">0.5</span><span class="p">,</span> <span class="mf">0.1</span><span class="p">],</span>
+                     <span class="p">[</span><span class="mf">0.5</span><span class="p">,</span> <span class="mf">2.0</span><span class="p">,</span> <span class="mf">0.2</span><span class="p">],</span>
+                     <span class="p">[</span><span class="mf">0.1</span><span class="p">,</span> <span class="mf">0.2</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">]])</span>
+<span class="n">data</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">multivariate_normal</span><span class="p">(</span><span class="n">mu</span><span class="p">,</span> <span class="n">true_cov</span><span class="p">,</span> <span class="mi">10</span><span class="p">)</span>
+
+<span class="n">sd_dist</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">HalfCauchy</span><span class="o">.</span><span class="n">dist</span><span class="p">(</span><span class="n">beta</span><span class="o">=</span><span class="mf">2.5</span><span class="p">,</span> <span class="n">shape</span><span class="o">=</span><span class="mi">3</span><span class="p">)</span>
+<span class="n">chol_packed</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">LKJCholeskyCov</span><span class="p">(</span><span class="s1">&#39;chol_packed&#39;</span><span class="p">,</span>
+    <span class="n">n</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span> <span class="n">eta</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">sd_dist</span><span class="o">=</span><span class="n">sd_dist</span><span class="p">)</span>
+<span class="n">chol</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">expand_packed_triangular</span><span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="n">chol_packed</span><span class="p">)</span>
+<span class="n">vals</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">MvNormal</span><span class="p">(</span><span class="s1">&#39;vals&#39;</span><span class="p">,</span> <span class="n">mu</span><span class="o">=</span><span class="n">mu</span><span class="p">,</span> <span class="n">chol</span><span class="o">=</span><span class="n">chol</span><span class="p">,</span> <span class="n">observed</span><span class="o">=</span><span class="n">data</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>For unobserved values it can be better to use a non-centered
+parametrization:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">sd_dist</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">HalfCauchy</span><span class="o">.</span><span class="n">dist</span><span class="p">(</span><span class="n">beta</span><span class="o">=</span><span class="mf">2.5</span><span class="p">,</span> <span class="n">shape</span><span class="o">=</span><span class="mi">3</span><span class="p">)</span>
+<span class="n">chol_packed</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">LKJCholeskyCov</span><span class="p">(</span><span class="s1">&#39;chol_packed&#39;</span><span class="p">,</span>
+    <span class="n">n</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span> <span class="n">eta</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">sd_dist</span><span class="o">=</span><span class="n">sd_dist</span><span class="p">)</span>
+<span class="n">chol</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">expand_packed_triangular</span><span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="n">chol_packed</span><span class="p">)</span>
+<span class="n">vals_raw</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Normal</span><span class="p">(</span><span class="s1">&#39;vals_raw&#39;</span><span class="p">,</span> <span class="n">mu</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">sd</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="mi">5</span><span class="p">,</span> <span class="mi">3</span><span class="p">))</span>
+<span class="n">vals</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Deterministic</span><span class="p">(</span><span class="s1">&#39;vals&#39;</span><span class="p">,</span> <span class="n">tt</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">chol</span><span class="p">,</span> <span class="n">vals_raw</span><span class="o">.</span><span class="n">T</span><span class="p">)</span><span class="o">.</span><span class="n">T</span><span class="p">)</span>
+</pre></div>
+</div>
 </dd></dl>
 
 <dl class="class">
@@ -290,7 +326,15 @@ tau, or chol is needed.</li>
 <dd><p>Multivariate Student-T log-likelihood.</p>
 <div class="math">
 \[f(\mathbf{x}| \nu,\mu,\Sigma) =
-\frac{\Gamma\left[(\nu+p)/2\right]}{\Gamma(\nu/2)\nu^{p/2}\pi^{p/2}\left|{\Sigma}\right|^{1/2}\left[1+\frac{1}{\nu}({\mathbf x}-{\mu})^T{\Sigma}^{-1}({\mathbf x}-{\mu})\right]^{(\nu+p)/2}}\]</div>
+\frac
+    {\Gamma\left[(\nu+p)/2\right]}
+    {\Gamma(\nu/2)\nu^{p/2}\pi^{p/2}
+     \left|{\Sigma}\right|^{1/2}
+     \left[
+       1+\frac{1}{\nu}
+       ({\mathbf x}-{\mu})^T
+       {\Sigma}^{-1}({\mathbf x}-{\mu})
+     \right]^{(\nu+p)/2}}\]</div>
 <table border="1" class="docutils">
 <colgroup>
 <col width="15%" />
@@ -609,7 +653,7 @@ to convert this to a regular two-dimensional array.</p>
     <span class="n">chol</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">expand_packed_triangular</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="n">packed_chol</span><span class="p">,</span> <span class="n">lower</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
 
     <span class="c1"># Define a new MvNormal with the given covariance</span>
-    <span class="n">vals</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">MvNormal</span><span class="p">(</span><span class="s1">&#39;vals&#39;</span><span class="p">,</span> <span class="n">mu</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="mi">10</span><span class="p">),</span> <span class="n">chol</span><span class="o">=</span><span class="n">chol</span><span class="p">)</span>
+    <span class="n">vals</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">MvNormal</span><span class="p">(</span><span class="s1">&#39;vals&#39;</span><span class="p">,</span> <span class="n">mu</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="mi">10</span><span class="p">),</span> <span class="n">chol</span><span class="o">=</span><span class="n">chol</span><span class="p">,</span> <span class="n">shape</span><span class="o">=</span><span class="mi">10</span><span class="p">)</span>
 
     <span class="c1"># Or transform an uncorrelated normal:</span>
     <span class="n">vals_raw</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Normal</span><span class="p">(</span><span class="s1">&#39;vals_raw&#39;</span><span class="p">,</span> <span class="n">mu</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="mi">10</span><span class="p">),</span> <span class="n">sd</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
@@ -700,7 +744,7 @@ determinant, URL (version: 2012-04-14):
 
   <div role="contentinfo">
     <p>
-        &copy; Copyright 2017, John Salvatier, Christopher Fonnesbeck, Thomas Wiecki.
+        &copy; Copyright 2016, John Salvatier, Christopher Fonnesbeck, Thomas Wiecki.
 
     </p>
   </div>

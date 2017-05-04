@@ -100,17 +100,16 @@
 <li class="toctree-l3"><a class="reference internal" href="Diagnosing_biased_Inference_with_Divergences.html">Diagnosing Biased Inference with Divergences</a></li>
 <li class="toctree-l3"><a class="reference internal" href="posterior_predictive.html">Posterior Predictive Checks</a></li>
 <li class="toctree-l3"><a class="reference internal" href="howto_debugging.html">How to debug a model</a></li>
-<li class="toctree-l3 current"><a class="current reference internal" href="#">PyMC3 Modeling tips and heuristic</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#Background-information">Background information</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#A-WinBugs/PyMC2-implementation">A WinBugs/PyMC2 implementation</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#PyMC3-implementation-using-theano.scan">PyMC3 implementation using <code class="docutils literal"><span class="pre">theano.scan</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="#PyMC3-implementation-using-some-matrix-&quot;trick&quot;">PyMC3 implementation using some matrix &#8220;trick&#8221;</a><ul>
-<li class="toctree-l4"><a class="reference internal" href="#As-you-can-see,-its-6x-faster-using-matrix-multiplication.">As you can see, its 6x faster using matrix multiplication.</a></li>
+<li class="toctree-l3 current"><a class="current reference internal" href="#">PyMC3 Modeling tips and heuristic</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#Background-information">Background information</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#A-WinBugs/PyMC2-implementation">A WinBugs/PyMC2 implementation</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#PyMC3-implementation-using-theano.scan">PyMC3 implementation using <code class="docutils literal"><span class="pre">theano.scan</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#PyMC3-implementation-using-some-matrix-&quot;trick&quot;">PyMC3 implementation using some matrix &#8220;trick&#8221;</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#PyMC3-implementation-using-Matrix-multiplication">PyMC3 implementation using Matrix multiplication</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#PyMC3-implementation-using-Sparse-Matrix">PyMC3 implementation using Sparse Matrix</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#Final-remarks">Final remarks</a></li>
 </ul>
 </li>
-<li class="toctree-l3"><a class="reference internal" href="#PyMC3-implementation-using-Matrix-multiplication">PyMC3 implementation using Matrix multiplication</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#PyMC3-implementation-using-Sparse-Matrix">PyMC3 implementation using Sparse Matrix</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#Final-remarks">Final remarks</a></li>
 <li class="toctree-l3"><a class="reference internal" href="LKJ.html">LKJ Prior for fitting a Multivariate Normal Model</a></li>
 <li class="toctree-l3"><a class="reference internal" href="live_sample_plots.html">Live sample plots</a></li>
 </ul>
@@ -432,11 +431,11 @@ between <code class="docutils literal"><span class="pre">PyMC3</span></code> and
 and <code class="docutils literal"><span class="pre">STAN</span></code>. In this notebook, I will summarise some heuristics and
 intuition I got over the past two years using <code class="docutils literal"><span class="pre">PyMC3</span></code>. I will outline
 some thinking process of how I approach a modelling problem using
-<code class="docutils literal"><span class="pre">PyMC3</span></code>, and how to think in linear algebra solving most of the
-programming problem. I hope this notebook will shell some light into the
+<code class="docutils literal"><span class="pre">PyMC3</span></code>, and how thinking in linear algebra solves most of the
+programming problem. I hope this notebook will shed some light into the
 design and feature of <code class="docutils literal"><span class="pre">PyMC3</span></code>, and similar language built on linear
 algebra package with a static world view (e.g., Edward, which is based
-upon Tensorflow).</p>
+on Tensorflow).</p>
 <p>For more resources comparing between PyMC3 codes and other probabilistic
 languages: * <a class="reference external" href="https://github.com/aloctavodia/Doing_bayesian_data_analysis">PyMC3 port of &#8220;Doing Bayesian Data Analysis&#8221; - PyMC3 vs
 WinBugs/JAGS/STAN</a>
@@ -444,9 +443,8 @@ WinBugs/JAGS/STAN</a>
 WinBugs/JAGS/STAN</a>
 * <a class="reference external" href="https://github.com/aloctavodia/Statistical-Rethinking-with-Python-and-PyMC3">[WIP] PyMC3 port of &#8220;Statistical Rethinking&#8221; - PyMC3 vs
 STAN</a></p>
-</div>
 <div class="section" id="Background-information">
-<h1>Background information<a class="headerlink" href="#Background-information" title="Permalink to this headline">¶</a></h1>
+<h2>Background information<a class="headerlink" href="#Background-information" title="Permalink to this headline">¶</a></h2>
 <div class="line-block">
 <div class="line">Supposed we want to implement a <a class="reference external" href="http://www.statsref.com/HTML/index.html?car_models.html">Conditional Autoregressive (CAR)
 model</a>
@@ -642,9 +640,9 @@ below), as exposure to sunlight is a risk factor.</p>
 </div>
 </div>
 <div class="section" id="A-WinBugs/PyMC2-implementation">
-<h1>A WinBugs/PyMC2 implementation<a class="headerlink" href="#A-WinBugs/PyMC2-implementation" title="Permalink to this headline">¶</a></h1>
+<h2>A WinBugs/PyMC2 implementation<a class="headerlink" href="#A-WinBugs/PyMC2-implementation" title="Permalink to this headline">¶</a></h2>
 <p>The classical <code class="docutils literal"><span class="pre">WinBugs</span></code> implementation (more information
-<a class="reference external" href="http://glau.ca/?p=340">here</a>) <code class="docutils literal"><span class="pre">WinBugs</span></code> model:</p>
+<a class="reference external" href="http://glau.ca/?p=340">here</a>):</p>
 <div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">model</span>
 <span class="p">{</span>
    <span class="k">for</span> <span class="p">(</span><span class="n">i</span> <span class="ow">in</span> <span class="mi">1</span> <span class="p">:</span> <span class="n">regions</span><span class="p">)</span> <span class="p">{</span>
@@ -667,11 +665,11 @@ below), as exposure to sunlight is a risk factor.</p>
 <span class="p">}</span>
 </pre></div>
 </div>
-<p>The major challenge to port this model to <code class="docutils literal"><span class="pre">PyMC3</span></code> is the
-<code class="docutils literal"><span class="pre">car.normal</span></code> in <code class="docutils literal"><span class="pre">WinBugs</span></code>. It is a likelihood function that each
-realization is conditioned on some neigbour realization (a smoothed
-property). In <code class="docutils literal"><span class="pre">PyMC2</span></code>, it is implemented as a custom likelihood
-function (a <code class="docutils literal"><span class="pre">&#64;stochastic</span></code> node) <code class="docutils literal"><span class="pre">mu_phi</span></code>:</p>
+<p>The main challenge to port this model to <code class="docutils literal"><span class="pre">PyMC3</span></code> is the <code class="docutils literal"><span class="pre">car.normal</span></code>
+in <code class="docutils literal"><span class="pre">WinBugs</span></code>. It is a likelihood function that each realization is
+conditioned on some neigbour realization (a smoothed property). In
+<code class="docutils literal"><span class="pre">PyMC2</span></code>, it could be implemented as a <cite>custom likelihood function (a
+``&#64;stochastic`</cite> node) <code class="docutils literal"><span class="pre">mu_phi</span></code> &lt;<a class="reference external" href="http://glau.ca/?p=340">http://glau.ca/?p=340</a>&gt;`__:</p>
 <div class="highlight-python"><div class="highlight"><pre><span></span><span class="nd">@stochastic</span>
 <span class="k">def</span> <span class="nf">mu_phi</span><span class="p">(</span><span class="n">tau</span><span class="o">=</span><span class="n">tau_c</span><span class="p">,</span> <span class="n">value</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">N</span><span class="p">)):</span>
     <span class="c1"># Calculate mu based on average of neighbours</span>
@@ -681,18 +679,19 @@ function (a <code class="docutils literal"><span class="pre">&#64;stochastic</sp
     <span class="k">return</span> <span class="n">normal_like</span><span class="p">(</span><span class="n">value</span><span class="p">,</span><span class="n">mu</span><span class="p">,</span><span class="n">taux</span><span class="p">)</span>
 </pre></div>
 </div>
-<p>We can of course just defined a <code class="docutils literal"><span class="pre">mu_phi</span></code> similarly and wrap it in a
+<p>We can of course just define <code class="docutils literal"><span class="pre">mu_phi</span></code> similarly and wrap it in a
 <code class="docutils literal"><span class="pre">pymc3.DensityDist</span></code>, however, doing so is usually resulting a very
 slow model (both in compling and sampling). It is a general challenge of
 porting pymc2 code into pymc3 (or even generally porting <code class="docutils literal"><span class="pre">WinBugs</span></code>,
-<code class="docutils literal"><span class="pre">JAGS</span></code>, or <code class="docutils literal"><span class="pre">STAN</span></code> code into <code class="docutils literal"><span class="pre">PyMC3</span></code>), as porting the <code class="docutils literal"><span class="pre">for-loop</span></code>
-directly in <code class="docutils literal"><span class="pre">pm.Model</span></code> perform poorly in <code class="docutils literal"><span class="pre">theano</span></code>, the backend of
+<code class="docutils literal"><span class="pre">JAGS</span></code>, or <code class="docutils literal"><span class="pre">STAN</span></code> code into <code class="docutils literal"><span class="pre">PyMC3</span></code>), as using a <code class="docutils literal"><span class="pre">for-loop</span></code>
+under <code class="docutils literal"><span class="pre">pm.Model</span></code> perform poorly in <code class="docutils literal"><span class="pre">theano</span></code>, the backend of
 <code class="docutils literal"><span class="pre">PyMC3</span></code>.</p>
 <p>The underlying mechanism in <code class="docutils literal"><span class="pre">PyMC3</span></code> is very different compared to
-<code class="docutils literal"><span class="pre">PyMC2</span></code>, using for-loop to generate RV or stacking multiple RV with
-arguments such as <code class="docutils literal"><span class="pre">[pm.Binomial('obs%'%i,</span> <span class="pre">p[i],</span> <span class="pre">n)</span> <span class="pre">for</span> <span class="pre">i</span> <span class="pre">in</span> <span class="pre">range(K)]</span></code>
-generate unnecessary large number of nodes in theano graph, which then
-slow down the compiling to an unbearable amount.</p>
+<code class="docutils literal"><span class="pre">PyMC2</span></code>, using <code class="docutils literal"><span class="pre">for-loop</span></code> to generate RV or stacking multiple RV
+with arguments such as
+<code class="docutils literal"><span class="pre">[pm.Binomial('obs%'%i,</span> <span class="pre">p[i],</span> <span class="pre">n)</span> <span class="pre">for</span> <span class="pre">i</span> <span class="pre">in</span> <span class="pre">range(K)]</span></code> generate
+unnecessary large number of nodes in <code class="docutils literal"><span class="pre">theano</span></code> graph, which then slow
+down the compiling to an unbearable amount.</p>
 <p>The easiest way is to move the <code class="docutils literal"><span class="pre">for-loop</span></code> outside of <code class="docutils literal"><span class="pre">pm.Model</span></code>. And
 usually is not difficult to do. For example, in <code class="docutils literal"><span class="pre">STAN</span></code> you can have a
 <code class="docutils literal"><span class="pre">transformed</span> <span class="pre">data{}</span></code> block, in <code class="docutils literal"><span class="pre">PyMC3</span></code> you just need to computed it
@@ -705,7 +704,7 @@ and see a usecase in PyMC3 <a class="reference external" href="https://github.co
 distribution</a>.</p>
 </div>
 <div class="section" id="PyMC3-implementation-using-theano.scan">
-<h1>PyMC3 implementation using <code class="docutils literal"><span class="pre">theano.scan</span></code><a class="headerlink" href="#PyMC3-implementation-using-theano.scan" title="Permalink to this headline">¶</a></h1>
+<h2>PyMC3 implementation using <code class="docutils literal"><span class="pre">theano.scan</span></code><a class="headerlink" href="#PyMC3-implementation-using-theano.scan" title="Permalink to this headline">¶</a></h2>
 <p>So lets try to implement the CAR model using <code class="docutils literal"><span class="pre">theano.scan</span></code>. First we
 create a <code class="docutils literal"><span class="pre">theano</span></code> function with <code class="docutils literal"><span class="pre">theano.scan</span></code> and check if it really
 works by comparing its result to the for-loop.</p>
@@ -760,26 +759,26 @@ works by comparing its result to the for-loop.</p>
 </div>
 <div class="output_area docutils container">
 <div class="highlight"><pre>
-[ 0.0563896  -0.20624652 -0.2603191  -0.23436462 -0.01479503  0.61817012
-  0.84766853  0.63839422  0.12431801  0.59045645 -0.40280124  0.75236162
-  0.20069683  0.00504351 -0.27858398  0.30231535 -0.08461685  0.09584093
-  0.26986988 -0.7439052   0.06392224  0.41555103 -0.08834851 -0.45122966
- -0.13761904  0.09582733  0.06123518 -0.25597013 -0.0195057   0.50132523
- -0.0357394  -0.84573728 -0.08726508  0.32431846  0.2499915   0.43837775
-  0.1112158   0.46432585  0.1034997   0.68608437 -0.28043477 -0.17164378
-  0.41359791 -0.29855734 -0.19544189 -0.61260185 -0.34533893  0.46177861
- -0.21274361 -0.11914921  0.17096478  0.25431531  0.32544853  0.29664874
-  0.08467978 -0.39349831]
-[ 0.0563896  -0.20624652 -0.2603191  -0.23436462 -0.01479503  0.61817012
-  0.84766853  0.63839422  0.12431801  0.59045645 -0.40280124  0.75236162
-  0.20069683  0.00504351 -0.27858398  0.30231535 -0.08461685  0.09584093
-  0.26986988 -0.7439052   0.06392224  0.41555103 -0.08834851 -0.45122966
- -0.13761904  0.09582733  0.06123518 -0.25597013 -0.0195057   0.50132523
- -0.0357394  -0.84573728 -0.08726508  0.32431846  0.2499915   0.43837775
-  0.1112158   0.46432585  0.1034997   0.68608437 -0.28043477 -0.17164378
-  0.41359791 -0.29855734 -0.19544189 -0.61260185 -0.34533893  0.46177861
- -0.21274361 -0.11914921  0.17096478  0.25431531  0.32544853  0.29664874
-  0.08467978 -0.39349831]
+[-0.7262698  -0.19464001  1.2447247   0.91028862  0.48019585 -0.12314021
+  0.61752909  0.8290796   0.17211909  0.13488299  0.05822185 -0.66311846
+  0.14072665 -0.58768472 -0.85116069 -0.57142579 -0.23657148 -0.029287
+ -0.21303528  0.23304545  0.32101417  1.16749356 -0.56715508 -0.00217314
+  0.49132628 -0.41000239 -0.15339209  0.03657351  0.10162203 -0.13041494
+ -0.27656829 -0.28027749  0.67922877 -0.07007063 -0.7102033  -0.42948526
+  0.39632315 -0.14337468  0.81233437  0.00928236  0.05616355  0.41481222
+ -0.14425494  0.21514306  0.11647711 -1.06662197 -0.20823904 -0.11103388
+ -0.35744216 -0.20328596 -0.75186322 -0.32078315 -0.35868683  0.26409215
+  0.11042538  0.2115762 ]
+[-0.7262698  -0.19464001  1.2447247   0.91028862  0.48019585 -0.12314021
+  0.61752909  0.8290796   0.17211909  0.13488299  0.05822185 -0.66311846
+  0.14072665 -0.58768472 -0.85116069 -0.57142579 -0.23657148 -0.029287
+ -0.21303528  0.23304545  0.32101417  1.16749356 -0.56715508 -0.00217314
+  0.49132628 -0.41000239 -0.15339209  0.03657351  0.10162203 -0.13041494
+ -0.27656829 -0.28027749  0.67922877 -0.07007063 -0.7102033  -0.42948526
+  0.39632315 -0.14337468  0.81233437  0.00928236  0.05616355  0.41481222
+ -0.14425494  0.21514306  0.11647711 -1.06662197 -0.20823904 -0.11103388
+ -0.35744216 -0.20328596 -0.75186322 -0.32078315 -0.35868683  0.26409215
+  0.11042538  0.2115762 ]
 </pre></div></div>
 </div>
 <p>Since it produce the same result as the orignial for-loop, we now wrap
@@ -877,7 +876,7 @@ it as a new distribution with a loglikelihood function in <code class="docutils 
     <span class="c1"># Proportion sptial variance</span>
     <span class="n">alpha</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Deterministic</span><span class="p">(</span><span class="s1">&#39;alpha&#39;</span><span class="p">,</span> <span class="n">sd_c</span><span class="o">/</span><span class="p">(</span><span class="n">sd_h</span><span class="o">+</span><span class="n">sd_c</span><span class="p">))</span>
 
-    <span class="n">trace1</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="mf">3e3</span><span class="p">,</span> <span class="n">njobs</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">tune</span><span class="o">=</span><span class="mi">1000</span><span class="p">)</span>
+    <span class="n">trace1</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="mf">3e3</span><span class="p">,</span> <span class="n">njobs</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">tune</span><span class="o">=</span><span class="mi">1000</span><span class="p">,</span> <span class="n">nuts_kwargs</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;max_treedepth&#39;</span><span class="p">:</span> <span class="mi">15</span><span class="p">})</span>
 </pre></div>
 </div>
 </div>
@@ -887,10 +886,10 @@ it as a new distribution with a loglikelihood function in <code class="docutils 
 <div class="stderr output_area docutils container">
 <div class="highlight"><pre>
 Auto-assigning NUTS sampler...
-Initializing NUTS using advi...
-Average ELBO = -191.47: 100%|██████████| 200000/200000 [03:59&lt;00:00, 836.57it/s]
-Finished [100%]: Average ELBO = -191.54
-100%|██████████| 3000/3000.0 [11:56&lt;00:00,  4.19it/s]
+Initializing NUTS using ADVI...
+Average Loss = 189.45: 100%|██████████| 200000/200000 [02:32&lt;00:00, 1313.68it/s]
+Finished [100%]: Average Loss = 189.42
+100%|██████████| 3000/3000.0 [29:42&lt;00:00,  1.20it/s]
 </pre></div></div>
 </div>
 <div class="nbinput docutils container">
@@ -916,7 +915,7 @@ Finished [100%]: Average ELBO = -191.54
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3"><div class="highlight"><pre>
-<span></span><span class="n">pm</span><span class="o">.</span><span class="n">posteriorplot</span><span class="p">(</span><span class="n">trace1</span><span class="p">,</span> <span class="n">varnames</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;alpha&#39;</span><span class="p">]);</span>
+<span></span><span class="n">pm</span><span class="o">.</span><span class="n">plot_posterior</span><span class="p">(</span><span class="n">trace1</span><span class="p">,</span> <span class="n">varnames</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;alpha&#39;</span><span class="p">]);</span>
 </pre></div>
 </div>
 </div>
@@ -944,7 +943,7 @@ etc</a>
 to archive the same purpose.</p>
 </div>
 <div class="section" id="PyMC3-implementation-using-some-matrix-&quot;trick&quot;">
-<h1>PyMC3 implementation using some matrix &#8220;trick&#8221;<a class="headerlink" href="#PyMC3-implementation-using-some-matrix-"trick"" title="Permalink to this headline">¶</a></h1>
+<h2>PyMC3 implementation using some matrix &#8220;trick&#8221;<a class="headerlink" href="#PyMC3-implementation-using-some-matrix-"trick"" title="Permalink to this headline">¶</a></h2>
 <p>Again, we try on some simulation data to make sure the implementation is
 correct.</p>
 <div class="nbinput docutils container">
@@ -981,26 +980,34 @@ correct.</p>
 </div>
 <div class="output_area docutils container">
 <div class="highlight"><pre>
-[-0.11297049 -0.18520049 -0.67620654  0.13745654  0.18035736  0.58190985
- -0.16221448 -1.22924503  0.19284887 -0.31970749  0.30250633  0.18305134
- -0.49923106 -0.31677725  0.57871789 -0.0583915  -0.00903053  0.55097481
-  0.10759741 -0.24925107  0.48187775  0.44166743  0.40870503  0.39809787
- -0.57536384  0.34654324 -0.34670418 -0.17254384 -0.13765777  0.11806337
- -0.12646348  0.48020419  0.30024464  0.44182682  0.04818574  0.62451985
-  0.25007979  0.6398977   0.40674001  0.57458903 -0.14582     0.63759476
- -0.05395416  0.07391604  1.09054879  0.10529052 -0.3147926  -0.40484874
-  0.27897928 -0.4602735   0.47972578  0.38067863  0.11779316  0.24366539
-  0.22868717 -0.02419255]
-[-0.11297049 -0.18520049 -0.67620654  0.13745654  0.18035736  0.58190985
- -0.16221448 -1.22924503  0.19284887 -0.31970749  0.30250633  0.18305134
- -0.49923106 -0.31677725  0.57871789 -0.0583915  -0.00903053  0.55097481
-  0.10759741 -0.24925107  0.48187775  0.44166743  0.40870503  0.39809787
- -0.57536384  0.34654324 -0.34670418 -0.17254384 -0.13765777  0.11806337
- -0.12646348  0.48020419  0.30024464  0.44182682  0.04818574  0.62451985
-  0.25007979  0.6398977   0.40674001  0.57458903 -0.14582     0.63759476
- -0.05395416  0.07391604  1.09054879  0.10529052 -0.3147926  -0.40484874
-  0.27897928 -0.4602735   0.47972578  0.38067863  0.11779316  0.24366539
-  0.22868717 -0.02419255]
+[  4.72851002e-03  -3.04469723e-02   5.41328197e-01   7.40375578e-02
+   6.22067155e-02   3.53464086e-01   2.17902136e-01   1.22560096e+00
+  -1.57001257e-01   4.56155778e-01   4.25493319e-02   1.08399705e-01
+   1.09115834e-02   1.05034514e-01  -1.54246912e-01   5.61784940e-01
+   3.28490437e-01  -2.27265493e-01   4.64110608e-02  -1.46752608e-01
+   4.04662801e-01   5.30307370e-01   2.81718432e-01   3.80404007e-02
+   4.77864332e-01   1.56162457e-01  -2.94062164e-01   1.07509342e-04
+  -1.18272199e-01   3.06665469e-01  -1.88346866e-02   5.54271790e-01
+  -7.69124198e-03  -4.88672383e-01  -2.79492093e-01   4.15785838e-02
+  -4.20684949e-01   1.93611559e-02  -6.82509482e-01   7.30231843e-02
+  -5.11949160e-02   3.38524523e-01   5.70051335e-01   7.08699561e-01
+   2.04210784e-01   1.31835923e-01  -1.80565441e-01   4.28414046e-01
+  -2.71581234e-01   3.05553904e-01  -2.43524803e-01  -4.17353353e-01
+  -4.12929153e-01  -6.66452987e-02   4.90242678e-01   1.97548165e-01]
+[  4.72851002e-03  -3.04469723e-02   5.41328197e-01   7.40375578e-02
+   6.22067155e-02   3.53464086e-01   2.17902136e-01   1.22560096e+00
+  -1.57001257e-01   4.56155778e-01   4.25493319e-02   1.08399705e-01
+   1.09115834e-02   1.05034514e-01  -1.54246912e-01   5.61784940e-01
+   3.28490437e-01  -2.27265493e-01   4.64110608e-02  -1.46752608e-01
+   4.04662801e-01   5.30307370e-01   2.81718432e-01   3.80404007e-02
+   4.77864332e-01   1.56162457e-01  -2.94062164e-01   1.07509342e-04
+  -1.18272199e-01   3.06665469e-01  -1.88346866e-02   5.54271790e-01
+  -7.69124198e-03  -4.88672383e-01  -2.79492093e-01   4.15785838e-02
+  -4.20684949e-01   1.93611559e-02  -6.82509482e-01   7.30231843e-02
+  -5.11949160e-02   3.38524523e-01   5.70051335e-01   7.08699561e-01
+   2.04210784e-01   1.31835923e-01  -1.80565441e-01   4.28414046e-01
+  -2.71581234e-01   3.05553904e-01  -2.43524803e-01  -4.17353353e-01
+  -4.12929153e-01  -6.66452987e-02   4.90242678e-01   1.97548165e-01]
 </pre></div></div>
 </div>
 <p>Now create a new CAR distribution with the matrix multiplication instead
@@ -1076,7 +1083,7 @@ of <code class="docutils literal"><span class="pre">theano.scan</span></code> to
     <span class="c1"># Proportion sptial variance</span>
     <span class="n">alpha</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Deterministic</span><span class="p">(</span><span class="s1">&#39;alpha&#39;</span><span class="p">,</span> <span class="n">sd_c</span><span class="o">/</span><span class="p">(</span><span class="n">sd_h</span><span class="o">+</span><span class="n">sd_c</span><span class="p">))</span>
 
-    <span class="n">trace2</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="mf">3e3</span><span class="p">,</span> <span class="n">njobs</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">tune</span><span class="o">=</span><span class="mi">1000</span><span class="p">)</span>
+    <span class="n">trace2</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="mf">3e3</span><span class="p">,</span> <span class="n">njobs</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">tune</span><span class="o">=</span><span class="mi">1000</span><span class="p">,</span> <span class="n">nuts_kwargs</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;max_treedepth&#39;</span><span class="p">:</span> <span class="mi">15</span><span class="p">})</span>
 </pre></div>
 </div>
 </div>
@@ -1086,14 +1093,13 @@ of <code class="docutils literal"><span class="pre">theano.scan</span></code> to
 <div class="stderr output_area docutils container">
 <div class="highlight"><pre>
 Auto-assigning NUTS sampler...
-Initializing NUTS using advi...
-Average ELBO = -191.47: 100%|██████████| 200000/200000 [00:35&lt;00:00, 5639.71it/s]
-Finished [100%]: Average ELBO = -191.54
-100%|██████████| 3000/3000.0 [01:50&lt;00:00, 25.27it/s]
+Initializing NUTS using ADVI...
+Average Loss = 189.45: 100%|██████████| 200000/200000 [00:27&lt;00:00, 7303.90it/s]
+Finished [100%]: Average Loss = 189.42
+100%|██████████| 3000/3000.0 [04:02&lt;00:00, 14.20it/s]
 </pre></div></div>
 </div>
-<div class="section" id="As-you-can-see,-its-6x-faster-using-matrix-multiplication.">
-<h2>As you can see, its 6x faster using matrix multiplication.<a class="headerlink" href="#As-you-can-see,-its-6x-faster-using-matrix-multiplication." title="Permalink to this headline">¶</a></h2>
+<p><strong>As you can see, its 6x faster using matrix multiplication.</strong></p>
 <div class="nbinput docutils container">
 <div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [12]:
@@ -1117,7 +1123,7 @@ Finished [100%]: Average ELBO = -191.54
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3"><div class="highlight"><pre>
-<span></span><span class="n">pm</span><span class="o">.</span><span class="n">posteriorplot</span><span class="p">(</span><span class="n">trace2</span><span class="p">,</span> <span class="n">varnames</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;alpha&#39;</span><span class="p">]);</span>
+<span></span><span class="n">pm</span><span class="o">.</span><span class="n">plot_posterior</span><span class="p">(</span><span class="n">trace2</span><span class="p">,</span> <span class="n">varnames</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;alpha&#39;</span><span class="p">]);</span>
 </pre></div>
 </div>
 </div>
@@ -1129,9 +1135,8 @@ Finished [100%]: Average ELBO = -191.54
 </div>
 </div>
 </div>
-</div>
 <div class="section" id="PyMC3-implementation-using-Matrix-multiplication">
-<h1>PyMC3 implementation using Matrix multiplication<a class="headerlink" href="#PyMC3-implementation-using-Matrix-multiplication" title="Permalink to this headline">¶</a></h1>
+<h2>PyMC3 implementation using Matrix multiplication<a class="headerlink" href="#PyMC3-implementation-using-Matrix-multiplication" title="Permalink to this headline">¶</a></h2>
 <p>There are (almost) always many ways to formulate your model. And some
 works better than the others under different context (size of your
 dataset, properties of the sampler, etc). In this case, we can expressed
@@ -1214,10 +1219,10 @@ we can do just that in <code class="docutils literal"><span class="pre">PyMC3</s
 <div class="stderr output_area docutils container">
 <div class="highlight"><pre>
 Auto-assigning NUTS sampler...
-Initializing NUTS using advi...
-Average ELBO = -173.18: 100%|██████████| 200000/200000 [02:31&lt;00:00, 1320.40it/s]
-Finished [100%]: Average ELBO = -173.16
-100%|██████████| 3000/3000.0 [01:01&lt;00:00, 49.14it/s]
+Initializing NUTS using ADVI...
+Average Loss = 171.81: 100%|██████████| 200000/200000 [02:44&lt;00:00, 1219.39it/s]
+Finished [100%]: Average Loss = 171.81
+100%|██████████| 3000/3000.0 [01:39&lt;00:00, 30.01it/s]
 </pre></div></div>
 </div>
 <div class="nbinput docutils container">
@@ -1243,7 +1248,7 @@ Finished [100%]: Average ELBO = -173.16
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3"><div class="highlight"><pre>
-<span></span><span class="n">pm</span><span class="o">.</span><span class="n">posteriorplot</span><span class="p">(</span><span class="n">trace3</span><span class="p">,</span> <span class="n">varnames</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;alpha&#39;</span><span class="p">]);</span>
+<span></span><span class="n">pm</span><span class="o">.</span><span class="n">plot_posterior</span><span class="p">(</span><span class="n">trace3</span><span class="p">,</span> <span class="n">varnames</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;alpha&#39;</span><span class="p">]);</span>
 </pre></div>
 </div>
 </div>
@@ -1258,7 +1263,7 @@ Finished [100%]: Average ELBO = -173.16
 <code class="docutils literal"><span class="pre">WinBugs</span></code> model, the <code class="docutils literal"><span class="pre">alpha</span></code> doesn&#8217;t bear the same interpretation.</p>
 </div>
 <div class="section" id="PyMC3-implementation-using-Sparse-Matrix">
-<h1>PyMC3 implementation using Sparse Matrix<a class="headerlink" href="#PyMC3-implementation-using-Sparse-Matrix" title="Permalink to this headline">¶</a></h1>
+<h2>PyMC3 implementation using Sparse Matrix<a class="headerlink" href="#PyMC3-implementation-using-Sparse-Matrix" title="Permalink to this headline">¶</a></h2>
 <p>Note that in the node
 <span class="math">\(\phi \sim \mathcal{N}(0, [D_\tau (I - \alpha B)]^{-1})\)</span>, we are
 computing the log-likelihood for a multivariate Gaussian distribution,
@@ -1358,7 +1363,6 @@ Again, we try to avoide using any for-loop as in <code class="docutils literal">
 <div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="kn">import</span> <span class="nn">scipy</span>
 
-
 <span class="k">class</span> <span class="nc">Sparse_CAR</span><span class="p">(</span><span class="n">distribution</span><span class="o">.</span><span class="n">Continuous</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Sparse Conditional Autoregressive (CAR) distribution</span>
@@ -1439,10 +1443,10 @@ Again, we try to avoide using any for-loop as in <code class="docutils literal">
 <div class="stderr output_area docutils container">
 <div class="highlight"><pre>
 Auto-assigning NUTS sampler...
-Initializing NUTS using advi...
-Average ELBO = -162.87: 100%|██████████| 200000/200000 [01:02&lt;00:00, 3219.31it/s]
-Finished [100%]: Average ELBO = -162.86
-100%|██████████| 3000/3000.0 [00:21&lt;00:00, 140.42it/s]
+Initializing NUTS using ADVI...
+Average Loss = 161.51: 100%|██████████| 200000/200000 [00:31&lt;00:00, 6371.06it/s]
+Finished [100%]: Average Loss = 161.51
+100%|██████████| 3000/3000.0 [00:09&lt;00:00, 329.12it/s]
 </pre></div></div>
 </div>
 <div class="nbinput docutils container">
@@ -1468,7 +1472,7 @@ Finished [100%]: Average ELBO = -162.86
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3"><div class="highlight"><pre>
-<span></span><span class="n">pm</span><span class="o">.</span><span class="n">posteriorplot</span><span class="p">(</span><span class="n">trace4</span><span class="p">,</span> <span class="n">varnames</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;alpha&#39;</span><span class="p">]);</span>
+<span></span><span class="n">pm</span><span class="o">.</span><span class="n">plot_posterior</span><span class="p">(</span><span class="n">trace4</span><span class="p">,</span> <span class="n">varnames</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;alpha&#39;</span><span class="p">]);</span>
 </pre></div>
 </div>
 </div>
@@ -1483,7 +1487,7 @@ Finished [100%]: Average ELBO = -162.86
 estimation, while being much faster than any other implementation.</p>
 </div>
 <div class="section" id="Final-remarks">
-<h1>Final remarks<a class="headerlink" href="#Final-remarks" title="Permalink to this headline">¶</a></h1>
+<h2>Final remarks<a class="headerlink" href="#Final-remarks" title="Permalink to this headline">¶</a></h2>
 <p>In this notebook, most of the parameter conventions (e.g., using <code class="docutils literal"><span class="pre">tau</span></code>
 when defining a Normal distribution) and choice of priors are strictly
 matched with the original code in <code class="docutils literal"><span class="pre">Winbugs</span></code> or <code class="docutils literal"><span class="pre">Stan</span></code>. However, it
@@ -1510,16 +1514,19 @@ wiki</a>.</p>
 matrix multiplication, etc,.). Since our computational graph under
 <code class="docutils literal"><span class="pre">pm.Model()</span></code> are all <code class="docutils literal"><span class="pre">theano</span></code> objects, we can always do
 <code class="docutils literal"><span class="pre">print(VAR_TO_CHECK.tag.test_value)</span></code> right after the declaration or
-computation to check the shape. For example, in our last example, there
-seem to be a lot of correlations in the posterior. That probably slows
-down NUTS quite a bit. As a debugging tool and guide for
+computation to check the shape. For example, in our last example, as
+suggested by
+[&#64;aseyboldt](<a class="reference external" href="https://github.com/pymc-devs/pymc3/pull/2080#issuecomment-297456574">https://github.com/pymc-devs/pymc3/pull/2080#issuecomment-297456574</a>)
+there seem to be a lot of correlations in the posterior. That probably
+slows down NUTS quite a bit. As a debugging tool and guide for
 reparametrization you can look at the singular value decomposition of
-the standardized samples – basically the eigenvalues of the correlation
-matrix. If the problem is high dimensional you can use stuff from
-scipy.sparse.linalg to only compute the largest svdvals:</p>
+the standardized samples from the trace – basically the eigenvalues of
+the correlation matrix. If the problem is high dimensional you can use
+stuff from <code class="docutils literal"><span class="pre">scipy.sparse.linalg</span></code> to only compute the largest singular
+value:</p>
 <div class="highlight-python"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">scipy</span> <span class="kn">import</span> <span class="n">linalg</span><span class="p">,</span> <span class="n">sparse</span>
 
-<span class="n">vals</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">model2</span><span class="o">.</span><span class="n">dict_to_array</span><span class="p">(</span><span class="n">v</span><span class="p">)</span> <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">trace2</span><span class="p">[</span><span class="mi">1000</span><span class="p">:]])</span><span class="o">.</span><span class="n">T</span>
+<span class="n">vals</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">model</span><span class="o">.</span><span class="n">dict_to_array</span><span class="p">(</span><span class="n">v</span><span class="p">)</span> <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">trace</span><span class="p">[</span><span class="mi">1000</span><span class="p">:]])</span><span class="o">.</span><span class="n">T</span>
 <span class="n">vals</span><span class="p">[:]</span> <span class="o">-=</span> <span class="n">vals</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)[:,</span> <span class="bp">None</span><span class="p">]</span>
 <span class="n">vals</span><span class="p">[:]</span> <span class="o">/=</span> <span class="n">vals</span><span class="o">.</span><span class="n">std</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)[:,</span> <span class="bp">None</span><span class="p">]</span>
 
@@ -1529,7 +1536,85 @@ scipy.sparse.linalg to only compute the largest svdvals:</p>
 <p>Then look at <code class="docutils literal"><span class="pre">plt.plot(S)</span></code> to see if any principal components stick
 out, and check which variables are involved by looking at the singular
 vectors: <code class="docutils literal"><span class="pre">plt.plot(U[:,</span> <span class="pre">-1]</span> <span class="pre">**</span> <span class="pre">2)</span></code>. You can get the indices by looking
-at <code class="docutils literal"><span class="pre">model2.bijection.ordering.vmap</span></code>.</p>
+at <code class="docutils literal"><span class="pre">model.bijection.ordering.vmap</span></code>.</p>
+<p>Another great way to check the correlations in the posterior is to do a
+pairplot of the posterior (if your model doesn&#8217;t contain too many
+parameters). You can see quite clearly if and where the the posterior
+parameters are correlated.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
+<span></span>In [22]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">seaborn</span> <span class="kn">as</span> <span class="nn">sns</span>
+<span class="n">tracedf1</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">trace_to_dataframe</span><span class="p">(</span><span class="n">trace1</span><span class="p">,</span> <span class="n">varnames</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;beta0&#39;</span><span class="p">,</span> <span class="s1">&#39;beta1&#39;</span><span class="p">,</span> <span class="s1">&#39;tau_h&#39;</span><span class="p">,</span> <span class="s1">&#39;tau_c&#39;</span><span class="p">])</span>
+<span class="n">sns</span><span class="o">.</span><span class="n">pairplot</span><span class="p">(</span><span class="n">tracedf1</span><span class="p">);</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/notebooks_PyMC3_tips_and_heuristic_38_0.png" src="../_images/notebooks_PyMC3_tips_and_heuristic_38_0.png" />
+</div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
+<span></span>In [23]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">tracedf2</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">trace_to_dataframe</span><span class="p">(</span><span class="n">trace2</span><span class="p">,</span> <span class="n">varnames</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;beta0&#39;</span><span class="p">,</span> <span class="s1">&#39;beta1&#39;</span><span class="p">,</span> <span class="s1">&#39;tau_h&#39;</span><span class="p">,</span> <span class="s1">&#39;tau_c&#39;</span><span class="p">])</span>
+<span class="n">sns</span><span class="o">.</span><span class="n">pairplot</span><span class="p">(</span><span class="n">tracedf2</span><span class="p">);</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/notebooks_PyMC3_tips_and_heuristic_39_0.png" src="../_images/notebooks_PyMC3_tips_and_heuristic_39_0.png" />
+</div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
+<span></span>In [24]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">tracedf3</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">trace_to_dataframe</span><span class="p">(</span><span class="n">trace3</span><span class="p">,</span> <span class="n">varnames</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;beta&#39;</span><span class="p">,</span> <span class="s1">&#39;tau&#39;</span><span class="p">,</span> <span class="s1">&#39;alpha&#39;</span><span class="p">])</span>
+<span class="n">sns</span><span class="o">.</span><span class="n">pairplot</span><span class="p">(</span><span class="n">tracedf3</span><span class="p">);</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/notebooks_PyMC3_tips_and_heuristic_40_0.png" src="../_images/notebooks_PyMC3_tips_and_heuristic_40_0.png" />
+</div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
+<span></span>In [25]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">tracedf4</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">trace_to_dataframe</span><span class="p">(</span><span class="n">trace4</span><span class="p">,</span> <span class="n">varnames</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;beta&#39;</span><span class="p">,</span> <span class="s1">&#39;tau&#39;</span><span class="p">,</span> <span class="s1">&#39;alpha&#39;</span><span class="p">])</span>
+<span class="n">sns</span><span class="o">.</span><span class="n">pairplot</span><span class="p">(</span><span class="n">tracedf4</span><span class="p">);</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/notebooks_PyMC3_tips_and_heuristic_41_0.png" src="../_images/notebooks_PyMC3_tips_and_heuristic_41_0.png" />
+</div>
+</div>
+</div>
 </div>
 
 
@@ -1554,7 +1639,7 @@ at <code class="docutils literal"><span class="pre">model2.bijection.ordering.vm
 
   <div role="contentinfo">
     <p>
-        &copy; Copyright 2017, John Salvatier, Christopher Fonnesbeck, Thomas Wiecki.
+        &copy; Copyright 2016, John Salvatier, Christopher Fonnesbeck, Thomas Wiecki.
 
     </p>
   </div>

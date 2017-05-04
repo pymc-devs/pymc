@@ -4,7 +4,7 @@
    "cell_type": "markdown",
    "metadata": {},
    "source": [
-    "# PyMC3 HowTo"
+    "# HowTo: API overview"
    ]
   },
   {
@@ -4162,27 +4162,10 @@
    ]
   },
   {
-   "cell_type": "code",
-   "execution_count": null,
-   "metadata": {
-    "collapsed": true
-   },
-   "outputs": [],
-   "source": []
-  },
-  {
-   "cell_type": "code",
-   "execution_count": 30,
-   "metadata": {
-    "collapsed": true
-   },
-   "outputs": [],
+   "cell_type": "markdown",
+   "metadata": {},
    "source": [
-    "## 4. Analyzing results\n",
-    "## 5. Interfacing with Theano\n",
-    "## 5.1. Setting shared vars\n",
-    "## 6. Prediction and posterior predictive sampling\n",
-    "## 6. User-defined functions"
+    "The `variational` submodule offers a lot of flexibility in which VI to use."
    ]
   }
  ],

@@ -98,23 +98,15 @@
 <li class="toctree-l3"><a class="reference internal" href="sampler-stats.html">Sampler statistics</a></li>
 <li class="toctree-l3"><a class="reference internal" href="sampler-stats.html#Multiple-samplers">Multiple samplers</a></li>
 <li class="toctree-l3 current"><a class="current reference internal" href="#">Diagnosing Biased Inference with Divergences</a><ul>
-<li class="toctree-l4"><a class="reference internal" href="#PyMC3-port-of-Michael-Betancourt's-post-on-ms-stan.-For-detailed-explanation-of-the-underlying-mechanism-please-check-the-original-post-and-Betancourt's-excellent-paper.">PyMC3 port of Michael Betancourt&#8217;s post on ms-stan. For detailed explanation of the underlying mechanism please check the original post and Betancourt&#8217;s excellent paper.</a></li>
-<li class="toctree-l4"><a class="reference internal" href="#More-formally,-as-explained-in-the-original-post-(in-markdown-block,-same-below):">More formally, as explained in the original post (in markdown block, same below):</a></li>
-<li class="toctree-l4"><a class="reference internal" href="#A-Dangerously-Short-Markov-Chain">A Dangerously-Short Markov Chain</a></li>
-<li class="toctree-l4"><a class="reference internal" href="#A-Safer,-Longer-Markov-Chain">A Safer, Longer Markov Chain</a></li>
-<li class="toctree-l4"><a class="reference internal" href="#Adjusting-Adaptation-Routine">Adjusting Adaptation Routine</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#The-Eight-Schools-Model">The Eight Schools Model</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#A-Centered-Eight-Schools-Implementation">A Centered Eight Schools Implementation</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#Mitigating-Divergences-by-Adjusting-PyMC3's-Adaptation-Routine">Mitigating Divergences by Adjusting PyMC3&#8217;s Adaptation Routine</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#A-Non-Centered-Eight-Schools-Implementation">A Non-Centered Eight Schools Implementation</a></li>
 </ul>
 </li>
 <li class="toctree-l3"><a class="reference internal" href="posterior_predictive.html">Posterior Predictive Checks</a></li>
 <li class="toctree-l3"><a class="reference internal" href="howto_debugging.html">How to debug a model</a></li>
 <li class="toctree-l3"><a class="reference internal" href="PyMC3_tips_and_heuristic.html">PyMC3 Modeling tips and heuristic</a></li>
-<li class="toctree-l3"><a class="reference internal" href="PyMC3_tips_and_heuristic.html#Background-information">Background information</a></li>
-<li class="toctree-l3"><a class="reference internal" href="PyMC3_tips_and_heuristic.html#A-WinBugs/PyMC2-implementation">A WinBugs/PyMC2 implementation</a></li>
-<li class="toctree-l3"><a class="reference internal" href="PyMC3_tips_and_heuristic.html#PyMC3-implementation-using-theano.scan">PyMC3 implementation using <code class="docutils literal"><span class="pre">theano.scan</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="PyMC3_tips_and_heuristic.html#PyMC3-implementation-using-some-matrix-&quot;trick&quot;">PyMC3 implementation using some matrix &#8220;trick&#8221;</a></li>
-<li class="toctree-l3"><a class="reference internal" href="PyMC3_tips_and_heuristic.html#PyMC3-implementation-using-Matrix-multiplication">PyMC3 implementation using Matrix multiplication</a></li>
-<li class="toctree-l3"><a class="reference internal" href="PyMC3_tips_and_heuristic.html#PyMC3-implementation-using-Sparse-Matrix">PyMC3 implementation using Sparse Matrix</a></li>
-<li class="toctree-l3"><a class="reference internal" href="PyMC3_tips_and_heuristic.html#Final-remarks">Final remarks</a></li>
 <li class="toctree-l3"><a class="reference internal" href="LKJ.html">LKJ Prior for fitting a Multivariate Normal Model</a></li>
 <li class="toctree-l3"><a class="reference internal" href="live_sample_plots.html">Live sample plots</a></li>
 </ul>
@@ -388,8 +380,13 @@ div.nboutput div.output_area.stderr {
 </style>
 <div class="section" id="Diagnosing-Biased-Inference-with-Divergences">
 <h1>Diagnosing Biased Inference with Divergences<a class="headerlink" href="#Diagnosing-Biased-Inference-with-Divergences" title="Permalink to this headline">¶</a></h1>
-<div class="section" id="PyMC3-port-of-Michael-Betancourt's-post-on-ms-stan.-For-detailed-explanation-of-the-underlying-mechanism-please-check-the-original-post-and-Betancourt's-excellent-paper.">
-<h2>PyMC3 port of <a class="reference external" href="http://mc-stan.org/documentation/case-studies/divergences_and_bias.html">Michael Betancourt&#8217;s post on ms-stan</a>. For detailed explanation of the underlying mechanism please check <a class="reference external" href="http://mc-stan.org/documentation/case-studies/divergences_and_bias.html">the original post</a> and Betancourt&#8217;s <a class="reference external" href="https://arxiv.org/abs/1701.02434">excellent paper</a>.<a class="headerlink" href="#PyMC3-port-of-Michael-Betancourt's-post-on-ms-stan.-For-detailed-explanation-of-the-underlying-mechanism-please-check-the-original-post-and-Betancourt's-excellent-paper." title="Permalink to this headline">¶</a></h2>
+<p>** PyMC3 port of <a class="reference external" href="http://mc-stan.org/documentation/case-studies/divergences_and_bias.html">Michael Betancourt&#8217;s post on
+ms-stan</a>.
+For detailed explanation of the underlying mechanism please check <a class="reference external" href="http://mc-stan.org/documentation/case-studies/divergences_and_bias.html">the
+original
+post</a>
+and Betancourt&#8217;s <a class="reference external" href="https://arxiv.org/abs/1701.02434">excellent
+paper</a>.**</p>
 <p>Bayesian statistics is all about building your model and estimating the
 parameters in the model. However, due to limitations in our current
 mathematical understanding and computation capacity, naive or direct
@@ -398,22 +395,20 @@ can check out Thomas Wiecki&#8217;s blog post on the same issue in
 PyMC3</a>).
 Suboptimal parameterization is often lead to slow sampling, and more
 problematic, biased MCMC estimators.</p>
+<div class="line-block">
+<div class="line">** More formally, as explained in <a class="reference external" href="http://mc-stan.org/documentation/case-studies/divergences_and_bias.html">the original
+post</a>
+(in markdown block, same below):**</div>
+<div class="line">&gt; Markov chain Monte Carlo (MCMC) approximates expectations with
+respect to a given target distribution,</div>
 </div>
-<div class="section" id="More-formally,-as-explained-in-the-original-post-(in-markdown-block,-same-below):">
-<h2>More formally, as explained in <a class="reference external" href="http://mc-stan.org/documentation/case-studies/divergences_and_bias.html">the original post</a> (in markdown block, same below):<a class="headerlink" href="#More-formally,-as-explained-in-the-original-post-(in-markdown-block,-same-below):" title="Permalink to this headline">¶</a></h2>
 <blockquote>
-<div><p>Markov chain Monte Carlo (MCMC) approximates expectations with
-respect to a given target distribution,</p>
-<div class="math">
+<div><div class="math">
 \[\mathbb{E}{\pi} [ f ] = \int \mathrm{d}q \, \pi (q) \, f(q),\]</div>
 <p>using the states of a Markov chain, <span class="math">\({q{0}, \ldots, q_{N} }\)</span>,</p>
 <div class="math">
-\[\mathbb{E}{\pi} [ f ] \approx \hat{f}{N} = \frac{1}{N + 1} \sum_{n = 0}^{N} f(q_{n}).\]</div>
-<p>These estimators, however, are guaranteed to be accurate only
-asymptotically as the chain grows to be infinitely long,</p>
-<div class="math">
-\[\lim_{N \rightarrow \infty} \hat{f}{N} = \mathbb{E}{\pi} [ f ].\]</div>
-<p>To be useful in applied analyses, we need MCMC estimators to
+\[ \begin{align}\begin{aligned}\mathbb{E}{\pi} [ f ] \approx \hat{f}{N} = \frac{1}{N + 1} \sum_{n = 0}^{N} f(q_{n}).\\These estimators, however, are guaranteed to be accurate only
+asymptotically as the chain grows to be infinitely long,\\.. math::  \lim_{N \rightarrow \infty} \hat{f}{N} = \mathbb{E}{\pi} [ f ].\\To be useful in applied analyses, we need MCMC estimators to
 converge to the true expectation values sufficiently quickly that
 they are reasonably accurate before we exhaust our finite
 computational resources. This fast convergence requires strong
@@ -423,23 +418,21 @@ ergodicity is usually the necessary condition for MCMC estimators to
 follow a central limit theorem, which ensures not only that they are
 unbiased even after only a finite number of iterations but also that
 we can empirically quantify their precision using the MCMC standard
-error.</p>
-<p>Unfortunately, proving geometric ergodicity theoretically is
+error.\\Unfortunately, proving geometric ergodicity theoretically is
 infeasible for any nontrivial problem. Instead we must rely on
 empirical diagnostics that identify obstructions to geometric
 ergodicity, and hence well-behaved MCMC estimators. For a general
 Markov transition and target distribution, the best known diagnostic
-is the split <span class="math">\(\hat{R}\)</span> statistic over an ensemble of Markov
+is the split :math:`\hat{R}` statistic over an ensemble of Markov
 chains initialized from diffuse points in parameter space; to do any
 better we need to exploit the particular structure of a given
-transition or target distribution.</p>
-<p>Hamiltonian Monte Carlo, for example, is especially powerful in this
+transition or target distribution.\\Hamiltonian Monte Carlo, for example, is especially powerful in this
 regard as its failures to be geometrically ergodic with respect to
 any target distribution manifest in distinct behaviors that have
 been developed into sensitive diagnostics. One of these behaviors is
 the appearance of divergences that indicate the Hamiltonian Markov
 chain has encountered regions of high curvature in the target
-distribution which it cannot adequately explore.</p>
+distribution which it cannot adequately explore.\end{aligned}\end{align} \]</div>
 </div></blockquote>
 <p>In this notebook we aim to replicated the identification of divergences
 sample and the underlying pathologies in <code class="docutils literal"><span class="pre">PyMC3</span></code> similar to <a class="reference external" href="http://mc-stan.org/documentation/case-studies/divergences_and_bias.html">the
@@ -463,7 +456,7 @@ post</a>.</p>
 </div>
 </div>
 <div class="section" id="The-Eight-Schools-Model">
-<h3>The Eight Schools Model<a class="headerlink" href="#The-Eight-Schools-Model" title="Permalink to this headline">¶</a></h3>
+<h2>The Eight Schools Model<a class="headerlink" href="#The-Eight-Schools-Model" title="Permalink to this headline">¶</a></h2>
 <blockquote>
 <div><p>The hierarchical model of the the Eight Schools dataset (Rubin 1981)
 as seen in <code class="docutils literal"><span class="pre">Stan</span></code>:</p>
@@ -502,7 +495,7 @@ estimation.</p>
 </div>
 </div>
 <div class="section" id="A-Centered-Eight-Schools-Implementation">
-<h3>A Centered Eight Schools Implementation<a class="headerlink" href="#A-Centered-Eight-Schools-Implementation" title="Permalink to this headline">¶</a></h3>
+<h2>A Centered Eight Schools Implementation<a class="headerlink" href="#A-Centered-Eight-Schools-Implementation" title="Permalink to this headline">¶</a></h2>
 <p><code class="docutils literal"><span class="pre">Stan</span></code> model:</p>
 <div class="highlight-c"><div class="highlight"><pre><span></span><span class="n">data</span> <span class="p">{</span>
   <span class="kt">int</span><span class="o">&lt;</span><span class="n">lower</span><span class="o">=</span><span class="mi">0</span><span class="o">&gt;</span> <span class="n">J</span><span class="p">;</span>
@@ -550,10 +543,8 @@ estimation.</p>
 </pre></div>
 </div>
 </div>
-</div>
-</div>
 <div class="section" id="A-Dangerously-Short-Markov-Chain">
-<h2>A Dangerously-Short Markov Chain<a class="headerlink" href="#A-Dangerously-Short-Markov-Chain" title="Permalink to this headline">¶</a></h2>
+<h3>A Dangerously-Short Markov Chain<a class="headerlink" href="#A-Dangerously-Short-Markov-Chain" title="Permalink to this headline">¶</a></h3>
 <div class="nbinput docutils container">
 <div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [7]:
@@ -782,7 +773,7 @@ diverging before it can fully explore the neck of the funnel.</p>
 </div>
 </div>
 <div class="section" id="A-Safer,-Longer-Markov-Chain">
-<h2>A Safer, Longer Markov Chain<a class="headerlink" href="#A-Safer,-Longer-Markov-Chain" title="Permalink to this headline">¶</a></h2>
+<h3>A Safer, Longer Markov Chain<a class="headerlink" href="#A-Safer,-Longer-Markov-Chain" title="Permalink to this headline">¶</a></h3>
 <blockquote>
 <div>Given the potential insensitivity of split <span class="math">\(\hat{R}\)</span> on single
 short chains, <code class="docutils literal"><span class="pre">Stan</span></code> recommend always running multiple chains as
@@ -887,8 +878,10 @@ leaves us with a significant bias.</p>
 </div>
 <p>More details can be found in Betancourt&#8217;s <a class="reference external" href="https://arxiv.org/abs/1701.02434">recent
 paper</a>.</p>
+</div>
+</div>
 <div class="section" id="Mitigating-Divergences-by-Adjusting-PyMC3's-Adaptation-Routine">
-<h3>Mitigating Divergences by Adjusting PyMC3&#8217;s Adaptation Routine<a class="headerlink" href="#Mitigating-Divergences-by-Adjusting-PyMC3's-Adaptation-Routine" title="Permalink to this headline">¶</a></h3>
+<h2>Mitigating Divergences by Adjusting PyMC3&#8217;s Adaptation Routine<a class="headerlink" href="#Mitigating-Divergences-by-Adjusting-PyMC3's-Adaptation-Routine" title="Permalink to this headline">¶</a></h2>
 <blockquote>
 <div><p>Divergences in Hamiltonian Monte Carlo arise when the Hamiltonian
 transition encounters regions of extremely large curvature, such as
@@ -918,10 +911,8 @@ warm up, but we can coerce smaller step sizes by tweaking the
 configuration of <code class="docutils literal"><span class="pre">PyMC3</span></code>&#8216;s adaptation routine. In particular, we can
 increase the <code class="docutils literal"><span class="pre">target_accept</span></code> parameter from its default value of 0.8
 closer to its maximum value of 1.</p>
-</div>
-</div>
 <div class="section" id="Adjusting-Adaptation-Routine">
-<h2>Adjusting Adaptation Routine<a class="headerlink" href="#Adjusting-Adaptation-Routine" title="Permalink to this headline">¶</a></h2>
+<h3>Adjusting Adaptation Routine<a class="headerlink" href="#Adjusting-Adaptation-Routine" title="Permalink to this headline">¶</a></h3>
 <div class="nbinput docutils container">
 <div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [48]:
@@ -1059,8 +1050,10 @@ expected given the observed bias.</p>
 <img alt="../_images/notebooks_Diagnosing_biased_Inference_with_Divergences_31_1.png" src="../_images/notebooks_Diagnosing_biased_Inference_with_Divergences_31_1.png" />
 </div>
 </div>
+</div>
+</div>
 <div class="section" id="A-Non-Centered-Eight-Schools-Implementation">
-<h3>A Non-Centered Eight Schools Implementation<a class="headerlink" href="#A-Non-Centered-Eight-Schools-Implementation" title="Permalink to this headline">¶</a></h3>
+<h2>A Non-Centered Eight Schools Implementation<a class="headerlink" href="#A-Non-Centered-Eight-Schools-Implementation" title="Permalink to this headline">¶</a></h2>
 <blockquote>
 <div><p>Although reducing the step size improves exploration, ultimately it
 only reveals the true extent the pathology in the centered
@@ -1329,7 +1322,6 @@ expectation values.</p>
 </div>
 </div>
 </div>
-</div>
 
 
            </div>
@@ -1353,7 +1345,7 @@ expectation values.</p>
 
   <div role="contentinfo">
     <p>
-        &copy; Copyright 2017, John Salvatier, Christopher Fonnesbeck, Thomas Wiecki.
+        &copy; Copyright 2016, John Salvatier, Christopher Fonnesbeck, Thomas Wiecki.
 
     </p>
   </div>

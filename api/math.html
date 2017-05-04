@@ -380,7 +380,7 @@ this must be removed.</p>
 
 <dl class="function">
 <dt id="pymc3.math.expand_packed_triangular">
-<code class="descclassname">pymc3.math.</code><code class="descname">expand_packed_triangular</code><span class="sig-paren">(</span><em>n</em>, <em>packed</em>, <em>lower=False</em>, <em>diagonal_only=False</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.math.expand_packed_triangular" title="Permalink to this definition">¶</a></dt>
+<code class="descclassname">pymc3.math.</code><code class="descname">expand_packed_triangular</code><span class="sig-paren">(</span><em>n</em>, <em>packed</em>, <em>lower=True</em>, <em>diagonal_only=False</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.math.expand_packed_triangular" title="Permalink to this definition">¶</a></dt>
 <dd><p>Convert a packed triangular matrix into a two dimensional array.</p>
 <p>Triangular matrices can be stored with better space efficiancy by
 storing the non-zero values in a one-dimensional array. We number
@@ -398,7 +398,7 @@ the elements by row like this (for lower or upper triangular matrices):</p>
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
 <li><strong>n</strong> (<em>int</em>) &#8211; The number of rows of the triangular matrix.</li>
 <li><strong>packed</strong> (<em>theano.vector</em>) &#8211; The matrix in packed format.</li>
-<li><strong>lower</strong> (<em>bool</em>) &#8211; If true, assume that the matrix is lower triangular.</li>
+<li><strong>lower</strong> (<em>bool</em><em>, </em><em>default=True</em>) &#8211; If true, assume that the matrix is lower triangular.</li>
 <li><strong>diagonal_only</strong> (<em>bool</em>) &#8211; If true, return only the diagonal of the matrix.</li>
 </ul>
 </td>
@@ -438,7 +438,7 @@ when the warning disappears.</p>
 
   <div role="contentinfo">
     <p>
-        &copy; Copyright 2017, John Salvatier, Christopher Fonnesbeck, Thomas Wiecki.
+        &copy; Copyright 2016, John Salvatier, Christopher Fonnesbeck, Thomas Wiecki.
 
     </p>
   </div>
