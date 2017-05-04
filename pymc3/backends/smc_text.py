@@ -1,4 +1,4 @@
-"""Text file trace backend modified from pymc3 to work efficiently with SMC
+"""Text file trace backend modified to work efficiently with SMC
 
 Store sampling values as CSV files.
 
@@ -54,24 +54,14 @@ def paripool(function, work, nprocs=None, chunksize=1):
         nprocs = multiprocessing.cpu_count()
 
     if nprocs == 1:
-        def pack_one_worker(*work):
-            iterables = list(map(iter, work))
-            return iterables
-
-        iterables = pack_one_worker(work)
-        kwargs = {}
-
-        while(True):
-            args = [next(it) for it in iterables]
-            yield function(*args, **kwargs)
-
-        return
-
-    try:
-        pool = multiprocessing.Pool(processes=nprocs)
-        yield pool.map(function, work, chunksize=chunksize)
-    finally:
-        pool.terminate()
+        for work_item in work:
+            yield function(work_item)
+    else:
+        try:
+            pool = multiprocessing.Pool(processes=nprocs)
+            yield pool.map(function, work, chunksize=chunksize)
+        finally:
+            pool.terminate()
 
 
 class ArrayStepSharedLLK(BlockedStep):
