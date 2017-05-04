@@ -261,7 +261,7 @@ class TestADVI(SeededTest):
             p = pm.Beta('p', alpha=1, beta=1)
             pm.Binomial('xs', n=1, p=p, observed=xs)
             v_params = advi(n=1000)
-            trace = sample_vp(v_params, draws=1, hide_transformed=True)
+            trace = sample_vp(v_params, draws=1, include_transformed=False)
             assert trace.varnames == ['p']
-            trace = sample_vp(v_params, draws=1, hide_transformed=False)
+            trace = sample_vp(v_params, draws=1, include_transformed=True)
             assert sorted(trace.varnames) == ['p', 'p_logodds__']

@@ -17,8 +17,7 @@ __all__ = [
 
 
 class MeanField(Approximation):
-    """
-    Mean Field approximation to the posterior where spherical Gaussian family
+    """Mean Field approximation to the posterior where spherical Gaussian family
     is fitted to minimize KL divergence from True posterior. It is assumed
     that latent space variables are uncorrelated that is the main drawback
     of the method
@@ -92,8 +91,7 @@ class MeanField(Approximation):
 
 
 class FullRank(Approximation):
-    """
-    Full Rank approximation to the posterior where Multivariate Gaussian family
+    """Full Rank approximation to the posterior where Multivariate Gaussian family
     is fitted to minimize KL divergence from True posterior. In contrast to
     MeanField approach correlations between variables are taken in account. The
     main drawback of the method is computational cost.
@@ -175,8 +173,7 @@ class FullRank(Approximation):
                 }
 
     def log_q_W_global(self, z):
-        """
-        log_q_W samples over q for global vars
+        """log_q_W samples over q for global vars
         """
         mu = self.scale_grad(self.mean)
         L = self.scale_grad(self.L)
@@ -197,8 +194,7 @@ class FullRank(Approximation):
 
     @classmethod
     def from_mean_field(cls, mean_field, gpu_compat=False):
-        """
-        Construct FullRank from MeanField approximation
+        """Construct FullRank from MeanField approximation
 
         Parameters
         ----------
@@ -233,8 +229,7 @@ class FullRank(Approximation):
 
 
 class Empirical(Approximation):
-    """
-    Builds Approximation instance from a given trace,
+    """Builds Approximation instance from a given trace,
     it has the same interface as variational approximation
 
     Parameters
@@ -309,16 +304,14 @@ class Empirical(Approximation):
 
     @property
     def histogram(self):
-        """
-        Shortcut to flattened Trace
+        """Shortcut to flattened Trace
         """
         return self.shared_params
 
     @property
     @memoize
     def histogram_logp(self):
-        """
-        Symbolic logp for every point in trace
+        """Symbolic logp for every point in trace
         """
         node = self.to_flat_input(self.model.logpt)
 
@@ -341,8 +334,7 @@ class Empirical(Approximation):
 
     @classmethod
     def from_noise(cls, size, jitter=.01, local_rv=None, start=None, model=None, seed=None):
-        """
-        Initialize Histogram with random noise
+        """Initialize Histogram with random noise
 
         Parameters
         ----------
@@ -371,17 +363,16 @@ class Empirical(Approximation):
         return hist
 
 
-def sample_approx(approx, draws=100, hide_transformed=False):
-    """
-    Draw samples from variational posterior.
+def sample_approx(approx, draws=100, include_transformed=True):
+    """Draw samples from variational posterior.
 
     Parameters
     ----------
     approx : Approximation
     draws : int
         Number of random samples.
-    hide_transformed : bool
-        If False, transformed variables are also sampled. Default is True.
+    include_transformed : bool
+        If True, transformed variables are also sampled. Default is True.
 
     Returns
     -------
@@ -390,4 +381,4 @@ def sample_approx(approx, draws=100, hide_transformed=False):
     """
     if not isinstance(approx, Approximation):
         raise TypeError('Need Approximation instance, got %r' % approx)
-    return approx.sample(draws=draws, hide_transformed=hide_transformed)
+    return approx.sample(draws=draws, include_transformed=include_transformed)

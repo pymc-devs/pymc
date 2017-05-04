@@ -9,7 +9,7 @@ from ..util import get_default_varnames
 __all__ = ['trace_to_dataframe']
 
 
-def trace_to_dataframe(trace, chains=None, varnames=None, hide_transformed_vars=True):
+def trace_to_dataframe(trace, chains=None, varnames=None, include_transformed=False):
     """Convert trace to Pandas DataFrame.
 
     Parameters
@@ -21,15 +21,15 @@ def trace_to_dataframe(trace, chains=None, varnames=None, hide_transformed_vars=
     varnames : list of variable names
         Variables to be included in the DataFrame, if None all variable are
         included.
-    hide_transformed_vars: boolean
-        If true transformed variables will not be included in the resulting
+    include_transformed: boolean
+        If true transformed variables will be included in the resulting
         DataFrame.
     """
     var_shapes = trace._straces[0].var_shapes
 
     if varnames is None:
         varnames = get_default_varnames(var_shapes.keys(),
-                                        include_transformed=not hide_transformed_vars)
+                                        include_transformed=include_transformed)
 
     flat_names = {v: create_flat_names(v, var_shapes[v]) for v in varnames}
 
@@ -60,7 +60,7 @@ def create_flat_names(varname, shape):
 
 
 def _create_shape(flat_names):
-    "Determine shape from `create_flat_names` output."
+    """Determine shape from `create_flat_names` output."""
     try:
         _, shape_str = flat_names[-1].rsplit('__', 1)
     except ValueError:

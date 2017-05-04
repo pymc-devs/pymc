@@ -340,7 +340,7 @@ def adagrad_optimizer(learning_rate, epsilon, n_win=10):
 
 def sample_vp(
         vparams, draws=1000, model=None, local_RVs=None, random_seed=None,
-        hide_transformed=True, progressbar=True):
+        include_transformed=False, progressbar=True):
     """Draw samples from variational posterior.
 
     Parameters
@@ -353,8 +353,8 @@ def sample_vp(
         Probabilistic model.
     random_seed : int or None
         Seed of random number generator.  None to use current seed.
-    hide_transformed : bool
-        If False, transformed variables are also sampled. Default is True.
+    include_transformed : bool
+        If True, transformed variables are also sampled. Default is False.
 
     Returns
     -------
@@ -411,7 +411,7 @@ def sample_vp(
 
     # Random variables which will be sampled
     vars_sampled = pm.util.get_default_varnames(model.unobserved_RVs,
-                                                include_transformed=not hide_transformed)
+                                                include_transformed=include_transformed)
 
     varnames = [str(var) for var in model.unobserved_RVs]
     trace = pm.sampling.NDArray(model=model, vars=vars_sampled)

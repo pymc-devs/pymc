@@ -64,8 +64,7 @@ def _warn_not_used(smth, where):
 
 
 class ObjectiveFunction(object):
-    """
-    Helper class for construction loss and updates for variational inference
+    """Helper class for construction loss and updates for variational inference
 
     Parameters
     ----------
@@ -97,8 +96,7 @@ class ObjectiveFunction(object):
 
     def updates(self, obj_n_mc=None, tf_n_mc=None, obj_optimizer=adam, test_optimizer=adam,
                 more_obj_params=None, more_tf_params=None, more_updates=None, more_replacements=None):
-        """
-        Calculates gradients for objective function, test function and then
+        """Calculates gradients for objective function, test function and then
         constructs updates for optimization step
 
         Parameters
@@ -181,8 +179,7 @@ class ObjectiveFunction(object):
                       more_obj_params=None, more_tf_params=None,
                       more_updates=None, more_replacements=None, score=False,
                       fn_kwargs=None):
-        """
-        Step function that should be called on each optimization step.
+        """Step function that should be called on each optimization step.
 
         Generally it solves the following problem:
         .. math::
@@ -236,8 +233,7 @@ class ObjectiveFunction(object):
     @memoize
     @change_flags(compute_test_value='off')
     def score_function(self, sc_n_mc=None, more_replacements=None, fn_kwargs=None):   # pragma: no cover
-        """
-        Compiles scoring function that operates which takes no inputs and returns Loss
+        """Compiles scoring function that operates which takes no inputs and returns Loss
 
         Parameters
         ----------
@@ -278,8 +274,7 @@ class ObjectiveFunction(object):
 
 
 class Operator(object):
-    """
-    Base class for Operator
+    """Base class for Operator
 
     Parameters
     ----------
@@ -330,8 +325,7 @@ class Operator(object):
         return self.approx.logq_norm(z)
 
     def apply(self, f):   # pragma: no cover
-        """
-        Operator itself
+        """Operator itself
         .. math::
 
             (O^{p,q}f_{\theta})(z)
@@ -377,8 +371,7 @@ class Operator(object):
 
 
 def cast_to_list(params):
-    """
-    Helper function for getting a list from
+    """Helper function for getting a list from
     usable representation of parameters
 
     Parameters
@@ -409,8 +402,7 @@ class TestFunction(object):
         self.shared_params = None
 
     def create_shared_params(self, dim):
-        """
-        Returns
+        """Returns
         -------
         {dict|list|theano.shared}
         """
@@ -430,8 +422,7 @@ class TestFunction(object):
             self._inited = True
 
     def _setup(self, dim):
-        """
-        Does some preparation stuff before calling `.create_shared_params()`
+        """Does some preparation stuff before calling `.create_shared_params()`
 
         Parameters
         ----------
@@ -449,8 +440,7 @@ class TestFunction(object):
 
 
 class Approximation(object):
-    """
-    Base class for approximations.
+    """Base class for approximations.
 
     Parameters
     ----------
@@ -509,7 +499,6 @@ class Approximation(object):
 
         - :code:`initial_dist_map`
             float where initial distribution has maximum density
-
 
     References
     ----------
@@ -581,8 +570,7 @@ class Approximation(object):
     input = property(lambda self: self.flat_view.input)
 
     def check_model(self, model, **kwargs):
-        """
-        Checks that model is valid for variational inference
+        """Checks that model is valid for variational inference
         """
         vars_ = [var for var in model.vars if not isinstance(var, pm.model.ObservedRV)]
         if any([var.dtype in pm.discrete_types for var in vars_]):  # pragma: no cover
@@ -608,8 +596,7 @@ class Approximation(object):
 
     def construct_replacements(self, include=None, exclude=None,
                                more_replacements=None):
-        """
-        Construct replacements with given conditions
+        """Construct replacements with given conditions
 
         Parameters
         ----------
@@ -642,8 +629,7 @@ class Approximation(object):
     def apply_replacements(self, node, deterministic=False,
                            include=None, exclude=None,
                            more_replacements=None):
-        """
-        Replace variables in graph with variational approximation. By default, replaces all variables
+        """Replace variables in graph with variational approximation. By default, replaces all variables
 
         Parameters
         ----------
@@ -672,8 +658,7 @@ class Approximation(object):
 
     def sample_node(self, node, size=100,
                     more_replacements=None):
-        """
-        Samples given node or nodes over shared posterior
+        """Samples given node or nodes over shared posterior
 
         Parameters
         ----------
@@ -697,8 +682,7 @@ class Approximation(object):
         return nodes
 
     def scale_grad(self, inp):
-        """
-        Rescale gradient of input
+        """Rescale gradient of input
 
         References
         ----------
@@ -719,8 +703,7 @@ class Approximation(object):
         return cast_to_list(self.shared_params)
 
     def initial(self, size, no_rand=False, l=None):
-        """
-        Initial distribution for constructing posterior
+        """Initial distribution for constructing posterior
 
         Parameters
         ----------
@@ -758,8 +741,7 @@ class Approximation(object):
         return space
 
     def random_local(self, size=None, no_rand=False):
-        """
-        Implements posterior distribution from initial latent space
+        """Implements posterior distribution from initial latent space
 
         Parameters
         ----------
@@ -776,8 +758,7 @@ class Approximation(object):
         return e * rho2sd(rho) + mu
 
     def random_global(self, size=None, no_rand=False):  # pragma: no cover
-        """
-        Implements posterior distribution from initial latent space
+        """Implements posterior distribution from initial latent space
 
         Parameters
         ----------
@@ -791,8 +772,7 @@ class Approximation(object):
         raise NotImplementedError
 
     def random(self, size=None, no_rand=False):
-        """
-        Implements posterior distribution from initial latent space
+        """Implements posterior distribution from initial latent space
 
         Parameters
         ----------
@@ -823,8 +803,7 @@ class Approximation(object):
     @memoize
     @change_flags(compute_test_value='off')
     def random_fn(self):
-        """
-        Implements posterior distribution from initial latent space
+        """Implements posterior distribution from initial latent space
 
         Parameters
         ----------
@@ -851,16 +830,15 @@ class Approximation(object):
 
         return inner
 
-    def sample(self, draws=1, hide_transformed=False):
-        """
-        Draw samples from variational posterior.
+    def sample(self, draws=1, include_transformed=False):
+        """Draw samples from variational posterior.
 
         Parameters
         ----------
         draws : int
             Number of random samples.
-        hide_transformed : bool
-            If False, transformed variables are also sampled. Default is True.
+        include_transformed : bool
+            If True, transformed variables are also sampled. Default is False.
 
         Returns
         -------
@@ -868,7 +846,7 @@ class Approximation(object):
             Samples drawn from variational posterior.
         """
         vars_sampled = get_default_varnames(self.model.unobserved_RVs,
-                                            include_transformed=not hide_transformed)
+                                            include_transformed=include_transformed)
         posterior = self.random_fn(draws)
         names = [var.name for var in self.local_vars + self.global_vars]
         samples = {name: self.view(posterior, name)
@@ -888,8 +866,7 @@ class Approximation(object):
         return pm.sampling.MultiTrace([trace])
 
     def log_q_W_local(self, z):
-        """
-        log_q_W samples over q for local vars
+        """log_q_W samples over q for local vars
         Gradient wrt mu, rho in density parametrization
         is set to zero to lower variance of ELBO
         """
@@ -911,14 +888,12 @@ class Approximation(object):
         return self.to_flat_input(tt.sum(logp))
 
     def log_q_W_global(self, z):    # pragma: no cover
-        """
-        log_q_W samples over q for global vars
+        """log_q_W samples over q for global vars
         """
         raise NotImplementedError
 
     def logq(self, z):
-        """
-        Total logq for approximation
+        """Total logq for approximation
         """
         return self.log_q_W_global(z) + self.log_q_W_local(z)
 
@@ -926,8 +901,7 @@ class Approximation(object):
         return self.logq(z) / self.normalizing_constant
 
     def view(self, space, name, reshape=True):
-        """
-        Construct view on a variable from flattened `space`
+        """Construct view on a variable from flattened `space`
 
         Parameters
         ----------
