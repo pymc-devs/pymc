@@ -34,7 +34,7 @@ def trace_to_dataframe(trace, chains=None, varnames=None, include_transformed=Fa
     flat_names = {v: create_flat_names(v, var_shapes[v]) for v in varnames}
 
     var_dfs = []
-    for v in var_shapes:
+    for v in varnames:
         vals = trace.get_values(v, combine=True, chains=chains)
         flat_vals = vals.reshape(vals.shape[0], -1)
         var_dfs.append(pd.DataFrame(flat_vals, columns=flat_names[v]))
