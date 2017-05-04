@@ -292,8 +292,10 @@ class Cholesky(theano.Op):
     error if the matrix is not positive definite, but instead returns
     nan.
 
-    L = cholesky(X, lower=True) implies dot(L, L.T) == X.
+    This has been merged upstream and we should switch to that
+    version after the next theano release.
 
+    L = cholesky(X, lower=True) implies dot(L, L.T) == X.
     """
     __props__ = ('lower', 'destructive', 'nofail')
 
