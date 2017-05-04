@@ -125,10 +125,12 @@ def jacobian_diag(f, x):
 
 
 @memoize
+@change_flags(compute_test_value='ignore')
 def hessian(f, vars=None):
     return -jacobian(gradient(f, vars), vars)
 
 
+@change_flags(compute_test_value='ignore')
 def hessian_diag1(f, v):
     g = gradient1(f, v)
     idx = tt.arange(g.shape[0], dtype='int32')
@@ -140,6 +142,7 @@ def hessian_diag1(f, v):
 
 
 @memoize
+@change_flags(compute_test_value='ignore')
 def hessian_diag(f, vars=None):
     if vars is None:
         vars = cont_inputs(f)

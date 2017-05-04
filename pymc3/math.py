@@ -12,6 +12,8 @@ from theano.tensor.nlinalg import det, matrix_inverse, extract_diag, matrix_dot,
 from theano.tensor.nnet import sigmoid
 from theano.gof import Op, Apply
 import numpy as np
+from pymc3.theanof import floatX
+
 # pylint: enable=unused-import
 
 
@@ -87,7 +89,7 @@ def invprobit(x):
     return 0.5 * erfc(-x / sqrt(2))
 
 
-def expand_packed_triangular(n, packed, lower=False, diagonal_only=False):
+def expand_packed_triangular(n, packed, lower=True, diagonal_only=False):
     R"""Convert a packed triangular matrix into a two dimensional array.
 
     Triangular matrices can be stored with better space efficiancy by
@@ -105,19 +107,21 @@ def expand_packed_triangular(n, packed, lower=False, diagonal_only=False):
         The number of rows of the triangular matrix.
     packed : theano.vector
         The matrix in packed format.
-    lower : bool
+    lower : bool, default=True
         If true, assume that the matrix is lower triangular.
     diagonal_only : bool
         If true, return only the diagonal of the matrix.
     """
     if packed.ndim != 1:
         raise ValueError('Packed triagular is not one dimensional.')
+    if not isinstance(n, int):
+        raise TypeError('n must be an integer')
 
     if diagonal_only and lower:
         diag_idxs = np.arange(1, n + 1).cumsum() - 1
         return packed[diag_idxs]
     elif diagonal_only and not lower:
-        diag_idxs = np.arange(n)[::-1].cumsum() - n
+        diag_idxs = np.arange(2, n + 2)[::-1].cumsum() - n - 1
         return packed[diag_idxs]
     elif lower:
         out = tt.zeros((n, n), dtype=theano.config.floatX)

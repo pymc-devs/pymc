@@ -19,7 +19,7 @@ from .distribution import Continuous, Discrete, draw_values, generate_samples
 from ..model import Deterministic
 from .continuous import ChiSquared, Normal
 from .special import gammaln, multigammaln
-from .dist_math import bound, logpow, factln
+from .dist_math import bound, logpow, factln, Cholesky
 
 __all__ = ['MvNormal', 'MvStudentT', 'Dirichlet',
            'Multinomial', 'Wishart', 'WishartBartlett',
@@ -53,32 +53,88 @@ class MvNormal(Continuous):
     chol : array
         Cholesky decomposition of covariance matrix. Exactly one of cov,
         tau, or chol is needed.
+    lower : bool, default=True
+        Whether chol is the lower tridiagonal cholesky factor.
 
+    Examples
+    --------
+    Define a multivariate normal variable for a given covariance
+    matrix::
+
+        cov = np.array([[1., 0.5], [0.5, 2]])
+        mu = np.zeros(2)
+        vals = pm.MvNormal('vals', mu=mu, cov=cov, shape=(5, 2))
+
+    Most of the time it is preferable to specify the cholesky
+    factor of the covariance instead. For example, we could
+    fit a multivariate outcome like this (see the docstring
+    of `LKJCholeskyCov` for more information about this)::
+
+        mu = np.zeros(3)
+        true_cov = np.array([[1.0, 0.5, 0.1],
+                             [0.5, 2.0, 0.2],
+                             [0.1, 0.2, 1.0]])
+        data = np.random.multivariate_normal(mu, true_cov, 10)
+
+        sd_dist = pm.HalfCauchy.dist(beta=2.5, shape=3)
+        chol_packed = pm.LKJCholeskyCov('chol_packed',
+            n=3, eta=2, sd_dist=sd_dist)
+        chol = pm.expand_packed_triangular(3, chol_packed)
+        vals = pm.MvNormal('vals', mu=mu, chol=chol, observed=data)
+
+    For unobserved values it can be better to use a non-centered
+    parametrization::
+
+        sd_dist = pm.HalfCauchy.dist(beta=2.5, shape=3)
+        chol_packed = pm.LKJCholeskyCov('chol_packed',
+            n=3, eta=2, sd_dist=sd_dist)
+        chol = pm.expand_packed_triangular(3, chol_packed)
+        vals_raw = pm.Normal('vals_raw', mu=0, sd=1, shape=(5, 3))
+        vals = pm.Deterministic('vals', tt.dot(chol, vals_raw.T).T)
     """
 
-    def __init__(self, mu, cov=None, tau=None, chol=None, *args, **kwargs):
+    def __init__(self, mu, cov=None, tau=None, chol=None, lower=True,
+                 *args, **kwargs):
         super(MvNormal, self).__init__(*args, **kwargs)
+        if not lower:
+            chol = chol.T
         if len([i for i in [tau, cov, chol] if i is not None]) != 1:
-            raise ValueError('Incompatible parameterization. Specify exactly '
-                             'one of tau, cov, or chol to specify '
-                             'distribution.')
-        self.mean = self.median = self.mode = self.mu = tt.as_tensor_variable(mu)
-        self.solve = tt.slinalg.Solve(A_structure="lower_triangular", lower=True)
+            raise ValueError('Incompatible parameterization. '
+                             'Specify exactly one of tau, cov, '
+                             'or chol.')
+        mu = tt.as_tensor_variable(mu)
+        self.mean = self.median = self.mode = self.mu = mu
+        self.solve_lower = tt.slinalg.Solve(A_structure="lower_triangular")
+        # Step methods and advi do not catch LinAlgErrors at the
+        # moment. We work around that by using a cholesky op
+        # that returns a nan as first entry instead of raising
+        # an error.
+        cholesky = Cholesky(nofail=True, lower=True)
 
-        self.has_tau = tau is not None
         if cov is not None:
-            self.chol_cov = tt.slinalg.cholesky(tt.as_tensor_variable(cov))
+            self.k = cov.shape[0]
+            self._cov_type = 'cov'
+            cov = tt.as_tensor_variable(cov)
+            if cov.ndim != 2:
+                raise ValueError('cov must be two dimensional.')
+            self.chol_cov = cholesky(cov)
+            self.cov = cov
         elif tau is not None:
-            self.chol_tau = tt.slinalg.cholesky(tt.as_tensor_variable(tau))
+            self.k = tau.shape[0]
+            self._cov_type = 'tau'
+            tau = tt.as_tensor_variable(tau)
+            if tau.ndim != 2:
+                raise ValueError('tau must be two dimensional.')
+            self.chol_tau = cholesky(tau)
+            self.tau = tau
         else:
+            self.k = chol.shape[0]
+            self._cov_type = 'chol'
+            if chol.ndim != 2:
+                raise ValueError('chol must be two dimensional.')
             self.chol_cov = tt.as_tensor_variable(chol)
 
     def random(self, point=None, size=None):
-        if self.has_tau:
-            mu, chol_tau = draw_values([self.mu, self.chol_tau], point=point)
-        else:
-            mu, chol_cov = draw_values([self.mu, self.chol_cov], point=point)
-
         if size is None:
             size = []
         else:
@@ -86,43 +142,99 @@ class MvNormal(Continuous):
                 size = list(size)
             except TypeError:
                 size = [size]
-        size.append(mu.shape[0])
 
-        standard_normal = np.random.standard_normal(size)
-        if self.has_tau:
-            return mu + scipy.linalg.solve_triangular(chol_tau, standard_normal.T, lower=True).T
-        return mu + np.dot(standard_normal, chol_cov)
+        if self._cov_type in ['cov', 'chol']:
+            if self._cov_type == 'cov':
+                mu, cov = draw_values([self.mu, self.cov], point=point)
+                try:
+                    chol = scipy.linalg.cholesky(cov, lower=True)
+                except scipy.linalg.LinAlgError:
+                    return np.nan * np.zeros(size)
+            else:
+                mu, chol = draw_values([self.mu, self.chol_cov], point=point)
+            size.append(mu.shape[0])
+            standard_normal = np.random.standard_normal(size)
+            return mu + np.dot(standard_normal, chol)
+        else:
+            mu, tau = draw_values([self.mu, self.tau], point=point)
+            size.append(mu.shape[0])
+            standard_normal = np.random.standard_normal(size)
+            try:
+                chol = scipy.linalg.cholesky(cov, lower=True)
+            except scipy.linalg.LinAlgError:
+                return np.nan * np.zeros(size)
+            transformed = scipy.linalg.solve_triangular(
+                chol, standard_normal.T, lower=True)
+            return mu + transformed.T
 
     def logp(self, value):
-        if self.has_tau:
-            return self._logp_tau(value)
-        return self._logp_chol(value)
+        mu = self.mu
+        k = mu.shape[-1]
 
-    def _logp_chol(self, value):
+        value = value.reshape((-1, k))
+        delta = value - mu
+
+        if self._cov_type == 'cov':
+            # Use this when Theano#5908 is released.
+            # return MvNormalLogp()(self.cov, delta)
+            return self._logp_cov(delta)
+        elif self._cov_type == 'tau':
+            return self._logp_tau(delta)
+        else:
+            return self._logp_chol(delta)
+
+    def _logp_chol(self, delta):
         chol_cov = self.chol_cov
-        k = chol_cov.shape[0]
+        n, k = delta.shape
 
-        mu = self.mu
-        delta = value.reshape((-1, k)) - mu
-        delta_trans = self.solve(chol_cov, delta.T)
+        diag = tt.nlinalg.diag(chol_cov)
+        # Check if the covariance matrix is positive definite.
+        ok = tt.all(diag > 0)
+        # If not, replace the diagonal. We return -inf later, but
+        # need to prevent solve_lower from throwing an exception.
+        chol_cov = tt.switch(ok, chol_cov, 1)
 
-        result = k * tt.log(2 * np.pi)
-        result += 2.0 * tt.sum(tt.log(tt.nlinalg.diag(chol_cov)))
-        result += (delta_trans ** 2).sum(axis=0).T
-        return -0.5 * result
+        delta_trans = self.solve_lower(chol_cov, delta.T)
 
-    def _logp_tau(self, value):
+        result = n * k * np.log(2 * np.pi)
+        result += 2.0 * n * tt.sum(tt.log(diag))
+        result += (delta_trans ** 2).sum()
+        result = -0.5 * result
+        return bound(result, ok)
+
+    def _logp_cov(self, delta):
+        chol_cov = self.chol_cov
+        n, k = delta.shape
+
+        diag = tt.nlinalg.diag(chol_cov)
+        ok = tt.all(diag > 0)
+
+        chol_cov = tt.switch(ok, chol_cov, 1)
+        diag = tt.nlinalg.diag(chol_cov)
+        delta_trans = self.solve_lower(chol_cov, delta.T)
+
+        result = n * k * tt.log(2 * np.pi)
+        result += 2.0 * n * tt.sum(tt.log(diag))
+        result += (delta_trans ** 2).sum()
+        result = -0.5 * result
+        return bound(result, ok)
+
+    def _logp_tau(self, delta):
         chol_tau = self.chol_tau
-        k = chol_tau.shape[0]
+        n, k = delta.shape
 
-        mu = self.mu
-        delta = value.reshape((-1, k)) - mu
+        diag = tt.nlinalg.diag(chol_tau)
+        ok = tt.all(diag > 0)
+
+        chol_tau = tt.switch(ok, chol_tau, 1)
+        diag = tt.nlinalg.diag(chol_tau)
         delta_trans = tt.dot(chol_tau.T, delta.T)
 
-        result = k * tt.log(2 * np.pi)
-        result -= 2.0 * tt.sum(tt.log(tt.nlinalg.diag(chol_tau)))
-        result += (delta_trans ** 2).sum(axis=0).T
-        return -0.5 * result
+        result = n * k * tt.log(2 * np.pi)
+        result -= 2.0 * n * tt.sum(tt.log(diag))
+        result += (delta_trans ** 2).sum()
+        result = -0.5 * result
+        return bound(result, ok)
 
 
 class MvStudentT(Continuous):
@@ -131,7 +243,15 @@ class MvStudentT(Continuous):
 
     .. math::
         f(\mathbf{x}| \nu,\mu,\Sigma) =
-        \frac{\Gamma\left[(\nu+p)/2\right]}{\Gamma(\nu/2)\nu^{p/2}\pi^{p/2}\left|{\Sigma}\right|^{1/2}\left[1+\frac{1}{\nu}({\mathbf x}-{\mu})^T{\Sigma}^{-1}({\mathbf x}-{\mu})\right]^{(\nu+p)/2}}
+        \frac
+            {\Gamma\left[(\nu+p)/2\right]}
+            {\Gamma(\nu/2)\nu^{p/2}\pi^{p/2}
+             \left|{\Sigma}\right|^{1/2}
+             \left[
+               1+\frac{1}{\nu}
+               ({\mathbf x}-{\mu})^T
+               {\Sigma}^{-1}({\mathbf x}-{\mu})
+             \right]^{(\nu+p)/2}}
 
 
     ========  =============================================
@@ -600,7 +720,7 @@ class LKJCholeskyCov(Continuous):
             chol = pm.expand_packed_triangular(10, packed_chol, lower=True)
 
             # Define a new MvNormal with the given covariance
-            vals = pm.MvNormal('vals', mu=np.zeros(10), chol=chol)
+            vals = pm.MvNormal('vals', mu=np.zeros(10), chol=chol, shape=10)
 
             # Or transform an uncorrelated normal:
             vals_raw = pm.Normal('vals_raw', mu=np.zeros(10), sd=1)
@@ -667,7 +787,7 @@ class LKJCholeskyCov(Continuous):
     def __init__(self, eta, n, sd_dist, *args, **kwargs):
         self.n = n
         self.eta = eta
-        
+
         if 'transform' in kwargs:
             raise ValueError('Invalid parameter: transform.')
         if 'shape' in kwargs:
@@ -683,7 +803,7 @@ class LKJCholeskyCov(Continuous):
         kwargs['shape'] = shape
         kwargs['transform'] = transform
         super(LKJCholeskyCov, self).__init__(*args, **kwargs)
-        
+
         self.sd_dist = sd_dist
         self.diag_idxs = transform.diag_idxs
 
@@ -778,7 +898,7 @@ class LKJCorr(Continuous):
         else:
             raise ValueError('Invalid parameter: please use eta as the shape parameter and '
                              'n as the dimension parameter.')
-            
+
         n_elem = int(n * (n - 1) / 2)
         self.mean = np.zeros(n_elem, dtype=theano.config.floatX)
 

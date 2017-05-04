@@ -1,7 +1,9 @@
 import numpy as np
 import theano
+import theano.tensor as tt
 from theano.tests import unittest_tools as utt
-from pymc3.math import LogDet, logdet, probit, invprobit
+from pymc3.math import (
+    LogDet, logdet, probit, invprobit, expand_packed_triangular)
 from .helpers import SeededTest
 import pytest
 
@@ -31,10 +33,37 @@ class TestLogDet(SeededTest):
         # Test gradient:
         utt.verify_grad(self.op, [input_mat])
 
-    @pytest.mark.skipif(theano.config.device in ["cuda", "gpu"], reason="No logDet implementation on GPU.")
+    @pytest.mark.skipif(theano.config.device in ["cuda", "gpu"],
+                        reason="No logDet implementation on GPU.")
     def test_basic(self):
         # Calls validate with different params
         test_case_1 = np.random.randn(3, 3) / np.sqrt(3)
         test_case_2 = np.random.randn(10, 10) / np.sqrt(10)
         self.validate(test_case_1.astype(theano.config.floatX))
         self.validate(test_case_2.astype(theano.config.floatX))
+
+
+def test_expand_packed_triangular():
+    with pytest.raises(ValueError):
+        x = tt.matrix('x')
+        x.tag.test_value = np.array([[1.]])
+        expand_packed_triangular(5, x)
+    N = 5
+    packed = tt.vector('packed')
+    packed.tag.test_value = np.zeros(N * (N + 1) // 2)
+    with pytest.raises(TypeError):
+        expand_packed_triangular(packed.shape[0], packed)
+    np.random.seed(42)
+    vals = np.random.randn(N, N)
+    lower = np.tril(vals)
+    lower_packed = vals[lower != 0]
+    upper = np.triu(vals)
+    upper_packed = vals[upper != 0]
+    expand_lower = expand_packed_triangular(N, packed, lower=True)
+    expand_upper = expand_packed_triangular(N, packed, lower=False)
+    expand_diag_lower = expand_packed_triangular(N, packed, lower=True, diagonal_only=True)
+    expand_diag_upper = expand_packed_triangular(N, packed, lower=False, diagonal_only=True)
+    assert np.all(expand_lower.eval({packed: lower_packed}) == lower)
+    assert np.all(expand_upper.eval({packed: upper_packed}) == upper)
+    assert np.all(expand_diag_lower.eval({packed: lower_packed}) == np.diag(vals))
+    assert np.all(expand_diag_upper.eval({packed: upper_packed}) == np.diag(vals))
