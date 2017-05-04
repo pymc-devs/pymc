@@ -399,16 +399,20 @@ problematic, biased MCMC estimators.</p>
 <div class="line">** More formally, as explained in <a class="reference external" href="http://mc-stan.org/documentation/case-studies/divergences_and_bias.html">the original
 post</a>
 (in markdown block, same below):**</div>
-<div class="line">&gt; Markov chain Monte Carlo (MCMC) approximates expectations with
-respect to a given target distribution,</div>
 </div>
 <blockquote>
+<div class="line">Markov chain Monte Carlo (MCMC) approximates expectations with
+respect to a given target distribution,</div>
 <div><div class="math">
 \[\mathbb{E}{\pi} [ f ] = \int \mathrm{d}q \, \pi (q) \, f(q),\]</div>
 <p>using the states of a Markov chain, <span class="math">\({q{0}, \ldots, q_{N} }\)</span>,</p>
 <div class="math">
-\[ \begin{align}\begin{aligned}\mathbb{E}{\pi} [ f ] \approx \hat{f}{N} = \frac{1}{N + 1} \sum_{n = 0}^{N} f(q_{n}).\\These estimators, however, are guaranteed to be accurate only
-asymptotically as the chain grows to be infinitely long,\\.. math::  \lim_{N \rightarrow \infty} \hat{f}{N} = \mathbb{E}{\pi} [ f ].\\To be useful in applied analyses, we need MCMC estimators to
+\[\mathbb{E}{\pi} [ f ] \approx \hat{f}{N} = \frac{1}{N + 1} \sum_{n = 0}^{N} f(q_{n}).\]</div>
+<p>These estimators, however, are guaranteed to be accurate only
+asymptotically as the chain grows to be infinitely long,</p>
+<div class="math">
+\[\lim_{N \rightarrow \infty} \hat{f}{N} = \mathbb{E}{\pi} [ f ].\]</div>
+<p>To be useful in applied analyses, we need MCMC estimators to
 converge to the true expectation values sufficiently quickly that
 they are reasonably accurate before we exhaust our finite
 computational resources. This fast convergence requires strong
@@ -418,21 +422,23 @@ ergodicity is usually the necessary condition for MCMC estimators to
 follow a central limit theorem, which ensures not only that they are
 unbiased even after only a finite number of iterations but also that
 we can empirically quantify their precision using the MCMC standard
-error.\\Unfortunately, proving geometric ergodicity theoretically is
+error.</p>
+<p>Unfortunately, proving geometric ergodicity theoretically is
 infeasible for any nontrivial problem. Instead we must rely on
 empirical diagnostics that identify obstructions to geometric
 ergodicity, and hence well-behaved MCMC estimators. For a general
 Markov transition and target distribution, the best known diagnostic
-is the split :math:`\hat{R}` statistic over an ensemble of Markov
+is the split <span class="math">\(\hat{R}\)</span> statistic over an ensemble of Markov
 chains initialized from diffuse points in parameter space; to do any
 better we need to exploit the particular structure of a given
-transition or target distribution.\\Hamiltonian Monte Carlo, for example, is especially powerful in this
+transition or target distribution.</p>
+<p>Hamiltonian Monte Carlo, for example, is especially powerful in this
 regard as its failures to be geometrically ergodic with respect to
 any target distribution manifest in distinct behaviors that have
 been developed into sensitive diagnostics. One of these behaviors is
 the appearance of divergences that indicate the Hamiltonian Markov
 chain has encountered regions of high curvature in the target
-distribution which it cannot adequately explore.\end{aligned}\end{align} \]</div>
+distribution which it cannot adequately explore.</p>
 </div></blockquote>
 <p>In this notebook we aim to replicated the identification of divergences
 sample and the underlying pathologies in <code class="docutils literal"><span class="pre">PyMC3</span></code> similar to <a class="reference external" href="http://mc-stan.org/documentation/case-studies/divergences_and_bias.html">the
