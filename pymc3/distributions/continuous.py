@@ -1,3 +1,4 @@
+# coding: utf-8
 """
 pymc3.distributions
 
@@ -9,13 +10,19 @@ from __future__ import division
 
 import numpy as np
 import theano.tensor as tt
+from theano.scan_module import until
+from theano import scan, shared, Constant
 from scipy import stats
 import warnings
 
 from pymc3.theanof import floatX
 from . import transforms
 
-from .dist_math import bound, logpow, gammaln, betaln, std_cdf, i0, i1, alltrue_elemwise
+from .dist_math import (
+    alltrue_elemwise, betaln, bound, gammaln, i0, i1, logpow, normallogcdf,
+    std_cdf, zvalue
+)
+
 from .distribution import Continuous, draw_values, generate_samples, Bound
 
 __all__ = ['Uniform', 'Flat', 'Normal', 'Beta', 'Exponential', 'Laplace',
@@ -151,6 +158,18 @@ class Uniform(Continuous):
         return bound(-tt.log(upper - lower),
                      value >= lower, value <= upper)
 
+    def logcdf(self, value):
+        return tt.switch(
+            tt.or_(tt.lt(value, self.lower), tt.gt(value, self.upper)),
+            -np.inf,
+            tt.switch(
+                tt.eq(value, self.upper),
+                0,
+                tt.log((value - self.lower)) -
+                tt.log((self.upper - self.lower))
+            )
+        )
+
 
 class Flat(Continuous):
     """
@@ -167,6 +186,17 @@ class Flat(Continuous):
 
     def logp(self, value):
         return tt.zeros_like(value)
+
+    def logcdf(self, value):
+        return tt.switch(
+            tt.eq(value, -np.inf),
+            -np.inf,
+            tt.switch(
+                tt.eq(value, np.inf),
+                0,
+                tt.log(0.5)
+            )
+        )
 
 
 class Normal(Continuous):
@@ -231,6 +261,9 @@ class Normal(Continuous):
         return bound((-tau * (value - mu)**2 + tt.log(tau / np.pi / 2.)) / 2.,
                      sd > 0)
 
+    def logcdf(self, value):
+        return normallogcdf(value, mu=self.mu, sd=self.sd)
+
 
 class HalfNormal(PositiveContinuous):
     R"""
@@ -281,6 +314,15 @@ class HalfNormal(PositiveContinuous):
         return bound(-0.5 * tau * value**2 + 0.5 * tt.log(tau * 2. / np.pi),
                      value >= 0,
                      tau > 0, sd > 0)
+
+    def logcdf(self, value):
+        sd = self.sd
+        z = zvalue(value, mu=0, sd=sd)
+        return tt.switch(
+            tt.lt(z, -1.0),
+            tt.log(tt.erfcx(-z / tt.sqrt(2.))) - tt.sqr(z),
+            tt.log1p(-tt.erfc(z / tt.sqrt(2.)))
+        )
 
 
 class Wald(PositiveContinuous):
@@ -337,6 +379,9 @@ class Wald(PositiveContinuous):
     .. [Michael1976] Michael, J. R., Schucany, W. R. and Hass, R. W. (1976).
         Generating Random Variates Using Transformations with Multiple Roots.
         The American Statistician, Vol. 30, No. 2, pp. 88-90
+
+    .. [Giner2016] Göknur Giner, Gordon K. Smyth (2016)
+       statmod: Probability Calculations for the Inverse Gaussian Distribution
     """
 
     def __init__(self, mu=None, lam=None, phi=None, alpha=0., *args, **kwargs):
@@ -345,7 +390,7 @@ class Wald(PositiveContinuous):
         self.alpha = alpha = tt.as_tensor_variable(alpha)
         self.mu = mu = tt.as_tensor_variable(mu)
         self.lam = lam = tt.as_tensor_variable(lam)
-        self.phi = phi =tt.as_tensor_variable(phi)
+        self.phi = phi = tt.as_tensor_variable(phi)
 
         self.mean = self.mu + self.alpha
         self.mode = self.mu * (tt.sqrt(1. + (1.5 * self.mu / self.lam)**2)
@@ -402,6 +447,85 @@ class Wald(PositiveContinuous):
                      # XXX these two are redundant. Please, check.
                      value > 0, value - alpha > 0,
                      mu > 0, lam > 0, alpha >= 0)
+
+    def logcdf(self, value):
+        # Distribution parameters
+        mu = self.mu
+        lam = self.lam
+        alpha = self.alpha
+
+        value -= alpha
+        q = value / mu
+        l = lam * mu
+        r = tt.sqrt(value * lam)
+
+        a = normallogcdf((q - 1.)/r)
+        b = 2./l + normallogcdf(-(q + 1.)/r)
+        return tt.switch(
+            (
+                # Left limit
+                tt.lt(value, 0) |
+                (tt.eq(value, 0) & tt.gt(mu, 0) & tt.lt(lam, np.inf)) |
+                (tt.lt(value, mu) & tt.eq(lam, 0))
+            ),
+            -np.inf,
+            tt.switch(
+                (
+                    # Right limit
+                    tt.eq(value, np.inf) |
+                    (tt.eq(lam, 0) & tt.gt(value, mu)) |
+                    (tt.gt(value, 0) & tt.eq(lam, np.inf)) |
+                    # Degenerate distribution
+                    (
+                        tt.lt(mu, np.inf) &
+                        tt.eq(mu, value) &
+                        tt.eq(lam, 0)
+                    ) |
+                    (tt.eq(value, 0) & tt.eq(lam, np.inf))
+                ),
+                0,
+                a + tt.log1p(tt.exp(b - a))
+            )
+        )
+
+
+def cont_fraction_beta(value, a, b, max_iter=200):
+    '''Evaluates the continued fraction form of the incomplete Beta function.
+    Derived from implementation by Ali Shoaib (https://goo.gl/HxjIJx).
+    '''
+
+    EPS = 3.0e-7
+    qab = a + b
+    qap = a + 1.0
+    qam = a - 1.0
+
+    def _step(i, az, bm, am, bz):
+
+        tem = i + i
+        d = i * (b - i) * value / ((qam + tem) * (a + tem))
+        d =- (a + i) * i * value / ((qap + tem) * (a + tem))
+
+        ap = az + d * am
+        bp = bz + d * bm
+
+        app = ap + d * az
+        bpp = bp + d * bz
+
+        aold = az
+
+        am = ap / bpp
+        bm = bp / bpp
+        az = app / bpp
+
+        bz = tt.constant(1.0, dtype='float64')
+
+        return (az, bm, am, bz), until(abs(az - aold) < (EPS * abs(az)))
+
+    (az, bm, am, bz), _ = scan(_step,
+                sequences=[tt.arange(1, max_iter)],
+                outputs_info=[*tt.cast((1., 1., 1., 1. - qab * value / qap), 'float64')])
+
+    return az[-1]
 
 
 class Beta(UnitContinuous):
@@ -491,6 +615,25 @@ class Beta(UnitContinuous):
                      value >= 0, value <= 1,
                      alpha > 0, beta > 0)
 
+    def logcdf(self, value):
+        a = self.alpha
+        b = self.beta
+        log_beta = tt.gammaln(a+b) - tt.gammaln(a) - tt.gammaln(b)
+        log_beta += a * tt.log(value) + b * tt.log(1 - value)
+        return tt.switch(
+            tt.le(value, 0),
+            -np.inf,
+            tt.switch(
+                tt.ge(value, 1),
+                0,
+                tt.switch(
+                    tt.lt(value, (a + 1) / (a + b + 2)),
+                    tt.log(tt.exp(log_beta) * cont_fraction_beta(value, a, b) / a),
+                    tt.log(1. - tt.exp(log_beta) * cont_fraction_beta(1. - value, b, a) / b)
+                )
+            )
+        )
+
 
 class Exponential(PositiveContinuous):
     R"""
@@ -532,6 +675,31 @@ class Exponential(PositiveContinuous):
     def logp(self, value):
         lam = self.lam
         return bound(tt.log(lam) - lam * value, value > 0, lam > 0)
+
+    def logcdf(self, value):
+        """
+        Compute the log CDF for the Exponential distribution
+
+        References
+        ----------
+        .. [Machler2012] Martin Mächler (2012).
+            "Accurately computing log(1-exp(-|a|)) Assessed by the Rmpfr
+            package"
+        """
+        value = floatX(tt.as_tensor(value))
+        lam = self.lam
+        a = lam * value
+        return tt.switch(
+            tt.le(value, 0.0),
+            -np.inf,
+            tt.switch(
+                tt.le(a, tt.log(2.0)),
+                tt.log(-tt.expm1(-a)),
+                tt.log1p(-tt.exp(-a)),
+            )
+        )
+
+
 
 
 class Laplace(Continuous):
@@ -577,6 +745,20 @@ class Laplace(Continuous):
         b = self.b
 
         return -tt.log(2 * b) - abs(value - mu) / b
+
+    def logcdf(self, value):
+        a = self.mu
+        b = self.b
+        y = (value - a) / b
+        return tt.switch(
+            tt.le(value, a),
+            tt.log(0.5) + y,
+            tt.switch(
+                tt.gt(y, 1),
+                tt.log1p(-0.5 * tt.exp(-y)),
+                tt.log(1 - 0.5 * tt.exp(-y))
+            )
+        )
 
 
 class Lognormal(PositiveContinuous):
@@ -641,6 +823,22 @@ class Lognormal(PositiveContinuous):
                      + 0.5 * tt.log(tau / (2. * np.pi))
                      - tt.log(value),
                      tau > 0)
+
+    def logcdf(self, value):
+        mu = self.mu
+        sd = self.sd
+        z = zvalue(tt.log(value), mu=mu, sd=sd)
+
+        return tt.switch(
+            tt.le(value, 0),
+            -np.inf,
+            tt.switch(
+                tt.lt(z, -1.0),
+                tt.log(tt.erfcx(-z / tt.sqrt(2.)) / 2.) -
+                tt.sqr(z) / 2,
+                tt.log1p(-tt.erfc(z / tt.sqrt(2.)) / 2.)
+            )
+        )
 
 
 class StudentT(Continuous):
@@ -768,6 +966,20 @@ class Pareto(PositiveContinuous):
                      - logpow(value, alpha + 1),
                      value >= m, alpha > 0, m > 0)
 
+    def logcdf(self, value):
+        m = self.m
+        alpha = self.alpha
+        arg = (m / value) ** alpha
+        return tt.switch(
+            tt.lt(value, m),
+            -np.inf,
+            tt.switch(
+                tt.le(arg, 1e-5),
+                tt.log1p(-arg),
+                tt.log(1 - arg)
+            )
+        )
+
 
 class Cauchy(Continuous):
     R"""
@@ -819,6 +1031,9 @@ class Cauchy(Continuous):
         return bound(- tt.log(np.pi) - tt.log(beta)
                      - tt.log1p(((value - alpha) / beta)**2),
                      beta > 0)
+
+    def logcdf (self, value):
+          return tt.log(0.5 + tt.arctan ((value - self.alpha) / self.beta) / np.pi)
 
 
 class HalfCauchy(PositiveContinuous):
@@ -1346,3 +1561,21 @@ class Triangular(Continuous):
                          tt.switch(tt.eq(value, c), tt.log(2 / (upper - lower)),
                          tt.switch(alltrue_elemwise([c < value, value <= upper]),
                          tt.log(2 * (upper - value) / ((upper - lower) * (upper - c))),np.inf)))
+
+    def logcdf(self, value):
+        l = self.lower
+        u = self.upper
+        c = self.c
+        return tt.switch(
+            tt.le(value, l),
+            -np.inf,
+            tt.switch(
+                tt.le(value, c),
+                tt.log(((value - l) ** 2) / ((u - l) * (c - l))),
+                tt.switch(
+                    tt.lt(value, u),
+                    tt.log1p(-((u - value) ** 2) / ((u - l) * (u - c))),
+                    0
+                )
+            )
+        )
