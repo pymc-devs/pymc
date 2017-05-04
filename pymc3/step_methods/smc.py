@@ -422,7 +422,7 @@ class SMC(atext.ArrayStepSharedLLK):
         return outindx
 
 
-def ATMIP_sample(n_steps, step=None, start=None, homepath=None, chain=0, stage=None, n_jobs=1,
+def ATMIP_sample(n_steps, step=None, start=None, homepath=None, chain=0, stage=0, n_jobs=1,
                  tune=None, progressbar=False, model=None, random_seed=-1, rm_flag=False):
     """(C)ATMIP sampling algorithm (Cascading - (C) not always relevant)
 
@@ -454,7 +454,7 @@ def ATMIP_sample(n_steps, step=None, start=None, homepath=None, chain=0, stage=N
     chain : int
         Chain number used to store sample in backend. If `n_jobs` is
         greater than one, chain numbers will start here.
-    stage : str
+    stage : int
         Stage where to start or continue the calculation. It is possible to
         continue after completed stages (stage should be the number of the
         completed stage + 1). If None the start will be at stage = 0.
@@ -519,80 +519,71 @@ def ATMIP_sample(n_steps, step=None, start=None, homepath=None, chain=0, stage=N
     if progressbar and n_jobs > 1:
         progressbar = False
 
-    if stage is not None:
-        if stage == '0':
-            # continue or start initial stage
-            step.stage = int(stage)
-            stage_path = os.path.join(homepath, 'stage_%i' % step.stage)
-            draws = 1
+    if stage == 0:
+        # continue or start initial stage
+        step.stage = stage
+        stage_path = os.path.join(homepath, 'stage_%i' % step.stage)
+        draws = 1
 
-        elif stage == 'final':
-            # continue sampling final stage
-            last = atext.get_highest_sampled_stage(homepath)
+    elif stage == -1:
+        # continue sampling final stage
+        last = atext.get_highest_sampled_stage(homepath)
 
-            pm._log.info(
-                'Loading parameters from completed stage_%i' % last)
-            project_dir = os.path.dirname(homepath)
-            mode = os.path.basename(homepath)
-            step = atext.load_atmip_params(
-                project_dir, str(last), mode)
+        pm._log.info('Loading parameters from completed stage_%i' % last)
+        project_dir = os.path.dirname(homepath)
+        mode = os.path.basename(homepath)
+        step = atext.load_atmip_params(project_dir, last, mode)
 
-            stage_path = os.path.join(homepath, 'stage_final')
-            draws = step.n_steps
+        stage_path = os.path.join(homepath, 'stage_-1')
+        draws = step.n_steps
 
-        else:
-            # continue sampling intermediate
-            stage = int(stage)
-            pm._log.info(
-                'Loading parameters from completed stage_%i' % (stage - 1))
-            project_dir = os.path.dirname(homepath)
-            mode = os.path.basename(homepath)
-            step = atext.load_atmip_params(
-                project_dir, str(stage - 1), mode)
-
-            step.stage += 1
-
-            stage_path = os.path.join(homepath, 'stage_%i' % step.stage)
-            draws = step.n_steps
-
-        if rm_flag:
-            chains = None
-            if os.path.exists(stage_path):
-                pm._log.info('Removing previous sampling results ... %s' % stage_path)
-                shutil.rmtree(stage_path)
-        else:
-            with model:
-                if os.path.exists(stage_path):
-                    # load incomplete stage results
-                    pm._log.info('Reloading existing results ...')
-                    mtrace = atext.load(stage_path, model=model)
-                    if len(mtrace) > 0:
-                        # continue sampling if traces exist
-                        pm._log.info('Checking for corrupted files ...')
-                        chains = atext.check_multitrace(
-                            mtrace, draws=draws, n_chains=step.n_chains)
-                        rest = len(chains) % n_jobs
-
-                        if rest > 0.:
-                            pm._log.info('Fixing %i chains ...' % rest)
-                            rest_chains = atext.split_off_list(chains, rest)
-                            # process traces that are not a multiple of n_jobs
-                            sample_args = {
-                                'draws': draws,
-                                'step': step,
-                                'stage_path': stage_path,
-                                'progressbar': progressbar,
-                                'model': model,
-                                'n_jobs': rest,
-                                'chains': rest_chains}
-
-                            _iter_parallel_chains(**sample_args)
-                            pm._log.info('Back to normal!')
-                else:
-                    pm._log.info('Init new trace!')
-                    chains = None
     else:
-        raise Exception('stage has to be not None!')
+        # continue sampling intermediate
+        pm._log.info('Loading parameters from completed stage_%i' % (stage - 1))
+        project_dir = os.path.dirname(homepath)
+        mode = os.path.basename(homepath)
+        step = atext.load_atmip_params(project_dir, stage - 1, mode)
+
+        step.stage += 1
+
+        stage_path = os.path.join(homepath, 'stage_%i' % step.stage)
+        draws = step.n_steps
+
+    if rm_flag:
+        chains = None
+        if os.path.exists(stage_path):
+            pm._log.info('Removing previous sampling results ... %s' % stage_path)
+            shutil.rmtree(stage_path)
+    else:
+        with model:
+            if os.path.exists(stage_path):
+                # load incomplete stage results
+                pm._log.info('Reloading existing results ...')
+                mtrace = atext.load(stage_path, model=model)
+                if len(mtrace) > 0:
+                    # continue sampling if traces exist
+                    pm._log.info('Checking for corrupted files ...')
+                    chains = atext.check_multitrace(mtrace, draws=draws, n_chains=step.n_chains)
+                    rest = len(chains) % n_jobs
+
+                    if rest > 0.:
+                        pm._log.info('Fixing %i chains ...' % rest)
+                        rest_chains = atext.split_off_list(chains, rest)
+                        # process traces that are not a multiple of n_jobs
+                        sample_args = {
+                            'draws': draws,
+                            'step': step,
+                            'stage_path': stage_path,
+                            'progressbar': progressbar,
+                            'model': model,
+                            'n_jobs': rest,
+                            'chains': rest_chains}
+
+                        _iter_parallel_chains(**sample_args)
+                        pm._log.info('Back to normal!')
+            else:
+                pm._log.info('Init new trace!')
+                chains = None
 
     with model:
         while step.beta < 1.:
@@ -636,7 +627,7 @@ def ATMIP_sample(n_steps, step=None, start=None, homepath=None, chain=0, stage=N
                 outpath = os.path.join(stage_path, 'atmip.params')
                 outparam_list = [step]
                 atext.dump_objects(outpath, outparam_list)
-                if stage == 'final':
+                if stage == -1:
                     chains = []
                 else:
                     chains = None
@@ -658,7 +649,7 @@ def ATMIP_sample(n_steps, step=None, start=None, homepath=None, chain=0, stage=N
 
         # Metropolis sampling final stage
         pm._log.info('Sample final stage')
-        stage_path = os.path.join(homepath, 'stage_final')
+        stage_path = os.path.join(homepath, 'stage_-1')
         temp = np.exp((1 - step.old_beta) * (step.likelihoods - step.likelihoods.max()))
         step.weights = temp / np.sum(temp)
         step.covariance = step.calc_covariance()
