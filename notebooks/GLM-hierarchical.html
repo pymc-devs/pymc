@@ -465,7 +465,7 @@ measurements are taken, ranging from 2 to 116 measurements per county.</p>
 <span class="kn">import</span> <span class="nn">pandas</span> <span class="kn">as</span> <span class="nn">pd</span>
 <span class="kn">import</span> <span class="nn">theano</span>
 
-<span class="n">data</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="s1">&#39;../data/radon.csv&#39;</span><span class="p">)</span>
+<span class="n">data</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="n">pm</span><span class="o">.</span><span class="n">get_data</span><span class="p">(</span><span class="s1">&#39;radon.csv&#39;</span><span class="p">))</span>
 <span class="n">data</span><span class="p">[</span><span class="s1">&#39;log_radon&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="s1">&#39;log_radon&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">theano</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">floatX</span><span class="p">)</span>
 <span class="n">county_names</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">county</span><span class="o">.</span><span class="n">unique</span><span class="p">()</span>
 <span class="n">county_idx</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">county_code</span><span class="o">.</span><span class="n">values</span>
@@ -477,7 +477,7 @@ measurements are taken, ranging from 2 to 116 measurements per county.</p>
 <p>The relevant part of the data we will model looks as follows:</p>
 <div class="nbinput docutils container">
 <div class="prompt highlight-none"><div class="highlight"><pre>
-<span></span>In [6]:
+<span></span>In [2]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3"><div class="highlight"><pre>
@@ -487,7 +487,7 @@ measurements are taken, ranging from 2 to 116 measurements per county.</p>
 </div>
 <div class="nboutput nblast docutils container">
 <div class="prompt highlight-none"><div class="highlight"><pre>
-<span></span>Out[6]:
+<span></span>Out[2]:
 </pre></div>
 </div>
 <div class="output_area docutils container">
@@ -630,7 +630,7 @@ are normally distributed with noise <span class="math">\(\epsilon\)</span> on wh
 uniform distribution.</p>
 <div class="nbinput nblast docutils container">
 <div class="prompt highlight-none"><div class="highlight"><pre>
-<span></span>In [2]:
+<span></span>In [3]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3"><div class="highlight"><pre>
@@ -671,10 +671,14 @@ uniform distribution.</p>
 <div class="stderr output_area docutils container">
 <div class="highlight"><pre>
 Auto-assigning NUTS sampler...
-Initializing NUTS using advi...
-Average ELBO = -1,745.39: 100%|██████████| 500000/500000 [01:26&lt;00:00, 5800.64it/s]
-Finished [100%]: Average ELBO = -1,745.30
-100%|██████████| 5000/5000 [00:20&lt;00:00, 238.98it/s]
+Initializing NUTS using ADVI...
+Average Loss = 1,744.1: 100%|██████████| 200000/200000 [00:40&lt;00:00, 4993.16it/s]
+Finished [100%]: Average Loss = 1,744.1
+100%|██████████| 5000/5000 [23:20&lt;00:00,  1.85it/s] /home/jovyan/pymc3/pymc3/step_methods/hmc/nuts.py:237: UserWarning: Step size tuning was enabled throughout the whole trace. You might want to specify the number of tuning steps.
+  warnings.warn(&#39;Step size tuning was enabled throughout the whole &#39;
+/opt/conda/lib/python3.5/site-packages/numpy/core/fromnumeric.py:2889: RuntimeWarning: Mean of empty slice.
+  out=out, **kwargs)
+
 </pre></div></div>
 </div>
 </div>
@@ -687,7 +691,7 @@ subsequently used to influence the distribution of each county&#8217;s
 <span class="math">\(\alpha\)</span> and <span class="math">\(\beta\)</span>.</p>
 <div class="nbinput nblast docutils container">
 <div class="prompt highlight-none"><div class="highlight"><pre>
-<span></span>In [2]:
+<span></span>In [5]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3"><div class="highlight"><pre>
@@ -718,351 +722,13 @@ subsequently used to influence the distribution of each county&#8217;s
 </div>
 <div class="nbinput docutils container">
 <div class="prompt highlight-none"><div class="highlight"><pre>
-<span></span>In [4]:
-</pre></div>
-</div>
-<div class="input_area highlight-ipython3"><div class="highlight"><pre>
-<span></span><span class="o">%</span><span class="k">pdb</span>
-</pre></div>
-</div>
-</div>
-<div class="nboutput nblast docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area docutils container">
-<div class="highlight"><pre>
-Automatic pdb calling has been turned ON
-</pre></div></div>
-</div>
-<div class="nbinput docutils container">
-<div class="prompt highlight-none"><div class="highlight"><pre>
-<span></span>In [10]:
-</pre></div>
-</div>
-<div class="input_area highlight-ipython3"><div class="highlight"><pre>
-<span></span><span class="c1"># Inference button (TM)!</span>
-<span class="k">with</span> <span class="n">hierarchical_model</span><span class="p">:</span>
-    <span class="n">start</span><span class="p">,</span> <span class="n">step</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">init_nuts</span><span class="p">(</span><span class="n">n_advi</span><span class="o">=</span><span class="mi">20000</span><span class="p">,</span> <span class="n">n_nuts</span><span class="o">=</span><span class="mi">2000</span><span class="p">)</span>
-</pre></div>
-</div>
-</div>
-<div class="nboutput nblast docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="stderr output_area docutils container">
-<div class="highlight"><pre>
-Initializing NUTS...
-
-
-  0%|          | 0/20000 [00:00&lt;?, ?it/s]
-
-  3%|▎         | 543/20000 [00:00&lt;00:03, 5421.25it/s]
-
-  5%|▌         | 1000/20000 [00:00&lt;00:03, 5130.69it/s]
-
-  7%|▋         | 1438/20000 [00:00&lt;00:03, 4877.42it/s]
-
- 10%|▉         | 1939/20000 [00:00&lt;00:03, 4901.83it/s]
-
-Average ELBO = -2,802.1:  12%|█▏        | 2415/20000 [00:00&lt;00:03, 4857.76it/s]
-
-Average ELBO = -2,802.1:  14%|█▍        | 2875/20000 [00:00&lt;00:03, 4769.82it/s]
-
-Average ELBO = -2,802.1:  17%|█▋        | 3414/20000 [00:00&lt;00:03, 4938.47it/s]
-
-Average ELBO = -2,802.1:  20%|█▉        | 3958/20000 [00:00&lt;00:03, 5078.93it/s]
-
-Average ELBO = -2,275.8:  23%|██▎       | 4520/20000 [00:00&lt;00:02, 5228.12it/s]
-
-Average ELBO = -2,275.8:  26%|██▌       | 5100/20000 [00:01&lt;00:02, 5371.62it/s]
-
-Average ELBO = -2,275.8:  28%|██▊       | 5626/20000 [00:01&lt;00:02, 5301.94it/s]
-
-Average ELBO = -1,921.1:  31%|███       | 6148/20000 [00:01&lt;00:02, 4786.83it/s]
-
-Average ELBO = -1,921.1:  33%|███▎      | 6635/20000 [00:01&lt;00:02, 4810.05it/s]
-
-Average ELBO = -1,921.1:  36%|███▌      | 7205/20000 [00:01&lt;00:02, 5046.32it/s]
-
-Average ELBO = -1,921.1:  39%|███▉      | 7779/20000 [00:01&lt;00:02, 5219.64it/s]
-
-Average ELBO = -1,617.3:  42%|████▏     | 8348/20000 [00:01&lt;00:02, 5351.21it/s]
-
-Average ELBO = -1,617.3:  45%|████▍     | 8916/20000 [00:01&lt;00:02, 5445.16it/s]
-
-Average ELBO = -1,617.3:  47%|████▋     | 9464/20000 [00:01&lt;00:01, 5299.74it/s]
-
-Average ELBO = -1,414.5:  50%|█████     | 10019/20000 [00:01&lt;00:01, 5371.52it/s]
-
-Average ELBO = -1,414.5:  53%|█████▎    | 10598/20000 [00:02&lt;00:01, 5480.20it/s]
-
-Average ELBO = -1,414.5:  56%|█████▌    | 11161/20000 [00:02&lt;00:01, 5521.99it/s]
-
-Average ELBO = -1,414.5:  59%|█████▊    | 11715/20000 [00:02&lt;00:01, 5489.58it/s]
-
-Average ELBO = -1,273.8:  61%|██████▏   | 12266/20000 [00:02&lt;00:01, 5434.43it/s]
-
-Average ELBO = -1,273.8:  64%|██████▍   | 12832/20000 [00:02&lt;00:01, 5499.73it/s]
-
-Average ELBO = -1,273.8:  67%|██████▋   | 13391/20000 [00:02&lt;00:01, 5526.03it/s]
-
-Average ELBO = -1,273.8:  70%|██████▉   | 13945/20000 [00:02&lt;00:01, 5376.40it/s]
-
-Average ELBO = -1,193.3:  72%|███████▏  | 14484/20000 [00:02&lt;00:01, 4900.92it/s]
-
-Average ELBO = -1,193.3:  75%|███████▍  | 14984/20000 [00:02&lt;00:01, 3975.10it/s]
-
-Average ELBO = -1,193.3:  77%|███████▋  | 15473/20000 [00:03&lt;00:01, 4211.40it/s]
-
-Average ELBO = -1,193.3:  80%|███████▉  | 15996/20000 [00:03&lt;00:00, 4472.29it/s]
-
-Average ELBO = -1,148.2:  82%|████████▏ | 16483/20000 [00:03&lt;00:00, 4575.30it/s]
-
-Average ELBO = -1,148.2:  85%|████████▌ | 17048/20000 [00:03&lt;00:00, 4851.30it/s]
-
-Average ELBO = -1,148.2:  88%|████████▊ | 17550/20000 [00:03&lt;00:00, 4818.63it/s]
-
-Average ELBO = -1,123.7:  91%|█████████ | 18135/20000 [00:03&lt;00:00, 5085.61it/s]
-
-Average ELBO = -1,123.7:  94%|█████████▎| 18703/20000 [00:03&lt;00:00, 5246.94it/s]
-
-Average ELBO = -1,123.7:  96%|█████████▌| 19238/20000 [00:03&lt;00:00, 4620.63it/s]
-
-Average ELBO = -1,123.7:  99%|█████████▊| 19721/20000 [00:04&lt;00:00, 3742.92it/s]
-
-Average ELBO = -1,123.7: 100%|██████████| 20000/20000 [00:04&lt;00:00, 4877.19it/s]Finished [100%]: Average ELBO = -1,111.7
-
-
-  0%|          | 0/2000 [00:00&lt;?, ?it/s]
-
-  1%|          | 12/2000 [00:00&lt;00:16, 118.44it/s]
-
-  1%|▏         | 25/2000 [00:00&lt;00:16, 117.32it/s]
-
-  2%|▏         | 39/2000 [00:00&lt;00:16, 122.23it/s]
-
-  3%|▎         | 51/2000 [00:00&lt;00:16, 120.93it/s]
-
-  3%|▎         | 61/2000 [00:00&lt;00:19, 100.88it/s]
-
-  4%|▎         | 70/2000 [00:00&lt;00:21, 87.88it/s]
-
-  4%|▍         | 82/2000 [00:00&lt;00:20, 95.55it/s]
-
-  5%|▍         | 99/2000 [00:00&lt;00:17, 109.75it/s]
-
-  6%|▌         | 116/2000 [00:00&lt;00:15, 122.69it/s]
-
-  7%|▋         | 142/2000 [00:01&lt;00:12, 145.29it/s]
-
-  8%|▊         | 162/2000 [00:01&lt;00:11, 157.19it/s]
-
-  9%|▉         | 180/2000 [00:01&lt;00:12, 144.60it/s]
-
- 10%|▉         | 197/2000 [00:01&lt;00:11, 151.11it/s]
-
- 11%|█         | 214/2000 [00:01&lt;00:12, 144.01it/s]
-
- 12%|█▏        | 230/2000 [00:01&lt;00:12, 140.98it/s]
-
- 12%|█▏        | 245/2000 [00:01&lt;00:13, 127.33it/s]
-
- 13%|█▎        | 259/2000 [00:01&lt;00:13, 128.37it/s]
-
- 14%|█▍        | 280/2000 [00:02&lt;00:11, 144.82it/s]
-
- 15%|█▌        | 300/2000 [00:02&lt;00:10, 157.18it/s]
-
- 16%|█▌        | 319/2000 [00:02&lt;00:10, 164.46it/s]
-
- 17%|█▋        | 342/2000 [00:02&lt;00:09, 178.68it/s]
-
- 18%|█▊        | 362/2000 [00:02&lt;00:08, 183.01it/s]
-
- 19%|█▉        | 381/2000 [00:02&lt;00:09, 162.13it/s]
-
- 20%|█▉        | 399/2000 [00:02&lt;00:12, 126.56it/s]
-
- 21%|██        | 417/2000 [00:02&lt;00:11, 138.65it/s]
-
- 22%|██▏       | 439/2000 [00:03&lt;00:10, 154.91it/s]
-
- 23%|██▎       | 457/2000 [00:03&lt;00:09, 157.82it/s]
-
- 24%|██▍       | 475/2000 [00:03&lt;00:10, 140.47it/s]
-
- 25%|██▍       | 491/2000 [00:03&lt;00:10, 141.98it/s]
-
- 25%|██▌       | 507/2000 [00:03&lt;00:11, 128.69it/s]
-
- 26%|██▌       | 521/2000 [00:03&lt;00:11, 130.77it/s]
-
- 27%|██▋       | 535/2000 [00:03&lt;00:12, 114.51it/s]
-
- 27%|██▋       | 549/2000 [00:03&lt;00:12, 120.32it/s]
-
- 28%|██▊       | 570/2000 [00:04&lt;00:10, 137.57it/s]
-
- 29%|██▉       | 586/2000 [00:04&lt;00:10, 133.77it/s]
-
- 30%|███       | 601/2000 [00:04&lt;00:10, 127.78it/s]
-
- 31%|███       | 615/2000 [00:04&lt;00:11, 119.04it/s]
-
- 31%|███▏      | 628/2000 [00:04&lt;00:12, 114.05it/s]
-
- 32%|███▏      | 647/2000 [00:04&lt;00:10, 129.53it/s]
-
- 33%|███▎      | 667/2000 [00:04&lt;00:09, 143.28it/s]
-
- 34%|███▍      | 683/2000 [00:04&lt;00:09, 138.33it/s]
-
- 35%|███▍      | 698/2000 [00:04&lt;00:09, 132.78it/s]
-
- 36%|███▋      | 725/2000 [00:05&lt;00:08, 155.72it/s]
-
- 37%|███▋      | 746/2000 [00:05&lt;00:07, 168.33it/s]
-
- 38%|███▊      | 767/2000 [00:05&lt;00:06, 178.08it/s]
-
- 39%|███▉      | 787/2000 [00:05&lt;00:06, 183.83it/s]
-
- 40%|████      | 807/2000 [00:05&lt;00:07, 164.30it/s]
-
- 41%|████▏     | 829/2000 [00:05&lt;00:06, 176.69it/s]
-
- 42%|████▏     | 848/2000 [00:05&lt;00:07, 155.85it/s]
-
- 43%|████▎     | 865/2000 [00:05&lt;00:07, 148.24it/s]
-
- 44%|████▍     | 881/2000 [00:06&lt;00:07, 142.47it/s]
-
- 45%|████▍     | 896/2000 [00:06&lt;00:08, 137.96it/s]
-
- 46%|████▌     | 911/2000 [00:06&lt;00:08, 134.22it/s]
-
- 46%|████▋     | 925/2000 [00:06&lt;00:09, 116.74it/s]
-
- 47%|████▋     | 940/2000 [00:06&lt;00:08, 124.64it/s]
-
- 48%|████▊     | 962/2000 [00:06&lt;00:07, 141.05it/s]
-
- 49%|████▉     | 978/2000 [00:06&lt;00:08, 118.11it/s]
-
- 50%|████▉     | 992/2000 [00:06&lt;00:08, 123.23it/s]
-
- 51%|█████     | 1013/2000 [00:07&lt;00:07, 139.81it/s]
-
- 52%|█████▏    | 1037/2000 [00:07&lt;00:06, 158.76it/s]
-
- 53%|█████▎    | 1057/2000 [00:07&lt;00:05, 168.88it/s]
-Exception in thread Thread-6:
-Traceback (most recent call last):
-  File &#34;/home/wiecki/miniconda3/lib/python3.5/threading.py&#34;, line 914, in _bootstrap_inner
-    self.run()
-  File &#34;/home/wiecki/miniconda3/lib/python3.5/site-packages/tqdm/_tqdm.py&#34;, line 102, in run
-    for instance in self.tqdm_cls._instances:
-  File &#34;/home/wiecki/miniconda3/lib/python3.5/_weakrefset.py&#34;, line 60, in __iter__
-    for itemref in self.data:
-RuntimeError: Set changed size during iteration
-
-
- 54%|█████▍    | 1078/2000 [00:07&lt;00:05, 176.87it/s]
- 55%|█████▍    | 1097/2000 [00:07&lt;00:05, 163.95it/s]
- 56%|█████▌    | 1115/2000 [00:07&lt;00:05, 167.45it/s]
- 57%|█████▋    | 1135/2000 [00:07&lt;00:04, 174.30it/s]
- 58%|█████▊    | 1155/2000 [00:07&lt;00:04, 179.13it/s]
- 59%|█████▊    | 1174/2000 [00:07&lt;00:04, 179.48it/s]
- 60%|█████▉    | 1193/2000 [00:08&lt;00:04, 177.25it/s]
- 61%|██████    | 1211/2000 [00:08&lt;00:04, 164.17it/s]
- 61%|██████▏   | 1228/2000 [00:08&lt;00:04, 164.48it/s]
- 62%|██████▏   | 1246/2000 [00:08&lt;00:04, 168.09it/s]
- 63%|██████▎   | 1265/2000 [00:08&lt;00:04, 173.01it/s]
- 64%|██████▍   | 1287/2000 [00:08&lt;00:03, 183.01it/s]
- 65%|██████▌   | 1306/2000 [00:08&lt;00:04, 149.82it/s]
- 66%|██████▌   | 1323/2000 [00:08&lt;00:04, 143.70it/s]
- 67%|██████▋   | 1346/2000 [00:08&lt;00:04, 161.23it/s]
- 68%|██████▊   | 1367/2000 [00:09&lt;00:03, 172.68it/s]
- 70%|██████▉   | 1390/2000 [00:09&lt;00:03, 185.08it/s]
- 70%|███████   | 1410/2000 [00:09&lt;00:03, 186.49it/s]
- 72%|███████▏  | 1433/2000 [00:09&lt;00:02, 197.58it/s]
- 73%|███████▎  | 1455/2000 [00:09&lt;00:02, 200.65it/s]
- 74%|███████▍  | 1476/2000 [00:09&lt;00:02, 194.10it/s]
- 75%|███████▍  | 1496/2000 [00:09&lt;00:02, 179.14it/s]
- 76%|███████▌  | 1515/2000 [00:09&lt;00:02, 170.39it/s]
- 77%|███████▋  | 1539/2000 [00:09&lt;00:02, 186.37it/s]
- 78%|███████▊  | 1564/2000 [00:10&lt;00:02, 199.56it/s]
- 79%|███████▉  | 1589/2000 [00:10&lt;00:01, 209.68it/s]
- 81%|████████  | 1611/2000 [00:10&lt;00:01, 211.40it/s]
- 82%|████████▏ | 1633/2000 [00:10&lt;00:01, 206.52it/s]
- 83%|████████▎ | 1655/2000 [00:10&lt;00:01, 196.99it/s]
- 84%|████████▍ | 1676/2000 [00:10&lt;00:01, 183.07it/s]
- 85%|████████▍ | 1696/2000 [00:10&lt;00:01, 185.91it/s]
- 86%|████████▌ | 1718/2000 [00:10&lt;00:01, 192.40it/s]
- 87%|████████▋ | 1738/2000 [00:10&lt;00:01, 176.37it/s]
- 88%|████████▊ | 1762/2000 [00:11&lt;00:01, 191.45it/s]
- 89%|████████▉ | 1784/2000 [00:11&lt;00:01, 197.58it/s]
- 90%|█████████ | 1805/2000 [00:11&lt;00:01, 182.52it/s]
- 91%|█████████ | 1824/2000 [00:11&lt;00:01, 152.10it/s]
- 92%|█████████▏| 1844/2000 [00:11&lt;00:00, 162.35it/s]
- 93%|█████████▎| 1862/2000 [00:11&lt;00:00, 161.03it/s]
- 94%|█████████▍| 1883/2000 [00:11&lt;00:00, 172.46it/s]
- 95%|█████████▌| 1902/2000 [00:11&lt;00:00, 164.61it/s]
- 96%|█████████▌| 1920/2000 [00:12&lt;00:00, 153.81it/s]
- 97%|█████████▋| 1938/2000 [00:12&lt;00:00, 159.28it/s]
- 98%|█████████▊| 1956/2000 [00:12&lt;00:00, 163.15it/s]
- 99%|█████████▉| 1976/2000 [00:12&lt;00:00, 172.23it/s]
-100%|█████████▉| 1996/2000 [00:12&lt;00:00, 179.58it/s]
-100%|██████████| 2000/2000 [00:12&lt;00:00, 159.78it/s]
-</pre></div></div>
-</div>
-<div class="nbinput docutils container">
-<div class="prompt highlight-none"><div class="highlight"><pre>
-<span></span>In [14]:
-</pre></div>
-</div>
-<div class="input_area highlight-ipython3"><div class="highlight"><pre>
-<span></span><span class="n">step</span>
-</pre></div>
-</div>
-</div>
-<div class="nboutput nblast docutils container">
-<div class="prompt highlight-none"><div class="highlight"><pre>
-<span></span>Out[14]:
-</pre></div>
-</div>
-<div class="output_area highlight-none"><div class="highlight"><pre>
-<span></span>&lt;pymc3.step_methods.hmc.nuts.NUTS at 0x7f56932e0ba8&gt;
-</pre></div>
-</div>
-</div>
-<div class="nbinput docutils container">
-<div class="prompt highlight-none"><div class="highlight"><pre>
-<span></span>In [4]:
-</pre></div>
-</div>
-<div class="input_area highlight-ipython3"><div class="highlight"><pre>
-<span></span><span class="o">%</span><span class="k">pdb</span>
-</pre></div>
-</div>
-</div>
-<div class="nboutput nblast docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area docutils container">
-<div class="highlight"><pre>
-Automatic pdb calling has been turned ON
-</pre></div></div>
-</div>
-<div class="nbinput docutils container">
-<div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [6]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="c1"># Inference button (TM)!</span>
 <span class="k">with</span> <span class="n">hierarchical_model</span><span class="p">:</span>
-    <span class="n">hierarchical_trace</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="n">draws</span><span class="o">=</span><span class="mi">5000</span><span class="p">,</span> <span class="n">n_advi</span><span class="o">=</span><span class="mi">50000</span><span class="p">,</span> <span class="n">n_nuts</span><span class="o">=</span><span class="mi">20000</span><span class="p">)</span>
+    <span class="n">hierarchical_trace</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="n">draws</span><span class="o">=</span><span class="mi">2000</span><span class="p">,</span> <span class="n">n_init</span><span class="o">=</span><span class="mi">1000</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
@@ -1072,30 +738,19 @@ Automatic pdb calling has been turned ON
 <div class="stderr output_area docutils container">
 <div class="highlight"><pre>
 Auto-assigning NUTS sampler...
-Initializing NUTS...
-Average ELBO = -1,091.8: 100%|██████████| 50000/50000 [00:08&lt;00:00, 6051.64it/s]
-Finished [100%]: Average ELBO = -1,091.1
-100%|██████████| 20000/20000 [01:28&lt;00:00, 226.30it/s]
-100%|██████████| 5000/5000 [01:23&lt;00:00, 59.90it/s]
+Initializing NUTS using ADVI...
+Average Loss = 2,382: 100%|██████████| 1000/1000 [00:00&lt;00:00, 1687.66it/s]
+Finished [100%]: Average Loss = 2,378.9
+100%|█████████▉| 1998/2000 [01:03&lt;00:00, 36.82it/s]/home/jovyan/pymc3/pymc3/step_methods/hmc/nuts.py:237: UserWarning: Step size tuning was enabled throughout the whole trace. You might want to specify the number of tuning steps.
+  warnings.warn(&#39;Step size tuning was enabled throughout the whole &#39;
+/opt/conda/lib/python3.5/site-packages/numpy/core/fromnumeric.py:2889: RuntimeWarning: Mean of empty slice.
+  out=out, **kwargs)
+100%|██████████| 2000/2000 [01:03&lt;00:00, 31.26it/s]
 </pre></div></div>
 </div>
-<p>Plotting the hierarchical model trace -its found values- from 2000
+<p>Plotting the hierarchical model trace - its found values - from 2000
 iterations onwards (right side plot) and its accumulated marginal values
 (left side plot)</p>
-<div class="nbinput nblast docutils container">
-<div class="prompt highlight-none"><div class="highlight"><pre>
-<span></span>In [ ]:
-</pre></div>
-</div>
-<div class="input_area highlight-ipython3"><div class="highlight"><pre>
-<span></span><span class="n">Auto</span><span class="o">-</span><span class="n">assigning</span> <span class="n">NUTS</span> <span class="n">sampler</span><span class="o">...</span>
-<span class="n">Initializing</span> <span class="n">NUTS</span> <span class="n">using</span> <span class="n">advi</span><span class="o">...</span>
-<span class="n">Average</span> <span class="n">ELBO</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span><span class="mf">123.7</span><span class="p">:</span> <span class="mi">100</span><span class="o">%|</span><span class="err">██████████</span><span class="o">|</span> <span class="mi">20000</span><span class="o">/</span><span class="mi">20000</span> <span class="p">[</span><span class="mo">00</span><span class="p">:</span><span class="mo">03</span><span class="o">&lt;</span><span class="mo">00</span><span class="p">:</span><span class="mo">00</span><span class="p">,</span> <span class="mf">6007.96</span><span class="n">it</span><span class="o">/</span><span class="n">s</span><span class="p">]</span>
-<span class="n">Finished</span> <span class="p">[</span><span class="mi">100</span><span class="o">%</span><span class="p">]:</span> <span class="n">Average</span> <span class="n">ELBO</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span><span class="mf">111.7</span>
-<span class="mi">100</span><span class="o">%|</span><span class="err">██████████</span><span class="o">|</span> <span class="mi">5000</span><span class="o">/</span><span class="mi">5000</span> <span class="p">[</span><span class="mo">00</span><span class="p">:</span><span class="mi">36</span><span class="o">&lt;</span><span class="mo">00</span><span class="p">:</span><span class="mo">00</span><span class="p">,</span> <span class="mf">137.46</span><span class="n">it</span><span class="o">/</span><span class="n">s</span><span class="p">]</span>
-</pre></div>
-</div>
-</div>
 <div class="nbinput docutils container">
 <div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [7]:
@@ -1110,7 +765,7 @@ iterations onwards (right side plot) and its accumulated marginal values
 <div class="prompt empty docutils container">
 </div>
 <div class="output_area docutils container">
-<img alt="../_images/notebooks_GLM-hierarchical_20_0.png" src="../_images/notebooks_GLM-hierarchical_20_0.png" />
+<img alt="../_images/notebooks_GLM-hierarchical_15_0.png" src="../_images/notebooks_GLM-hierarchical_15_0.png" />
 </div>
 </div>
 <p>The marginal posteriors in the left column are highly informative.
@@ -1184,7 +839,7 @@ predictions.</p>
 <div class="prompt empty docutils container">
 </div>
 <div class="output_area docutils container">
-<img alt="../_images/notebooks_GLM-hierarchical_23_0.png" src="../_images/notebooks_GLM-hierarchical_23_0.png" />
+<img alt="../_images/notebooks_GLM-hierarchical_18_0.png" src="../_images/notebooks_GLM-hierarchical_18_0.png" />
 </div>
 </div>
 <p>In the above plot we have the data points in black of three selected
@@ -1255,7 +910,7 @@ using each county&#8217;s data, resulting in a model more prone to outliers
 <div class="prompt empty docutils container">
 </div>
 <div class="output_area docutils container">
-<img alt="../_images/notebooks_GLM-hierarchical_27_0.png" src="../_images/notebooks_GLM-hierarchical_27_0.png" />
+<img alt="../_images/notebooks_GLM-hierarchical_22_0.png" src="../_images/notebooks_GLM-hierarchical_22_0.png" />
 </div>
 </div>
 <p>In the shrinkage plot above we show the coefficients of each county&#8217;s

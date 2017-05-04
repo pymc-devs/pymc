@@ -241,6 +241,7 @@ PyMC3</a></li>
 <li><a class="reference external" href="https://github.com/aloctavodia/Doing_bayesian_data_analysis">PyMC3 port of the models presented in the book &#8220;Doing Bayesian Data
 Analysis&#8221; by John
 Kruschke</a></li>
+<li><a class="reference external" href="https://github.com/junpenglao/Bayesian-Cognitive-Modeling-in-Pymc3">PyMC3 port of the models presented in the book &#8220;Bayesian Cognitive Modeling&#8221; by Michael Lee and EJ Wagenmakers</a></li>
 <li><a class="reference external" href="http://adsabs.harvard.edu/abs/2016arXiv160700379C">Coyle P. (2016) Probabilistic programming and PyMC3. European Scientific Python Conference 2015 (Cambridge, UK)</a></li>
 <li><a class="reference external" href="https://www.packtpub.com/big-data-and-business-intelligence/bayesian-analysis-python">Bayesian Analysis with Python by Osvaldo Martin</a> (and <a class="reference external" href="https://github.com/aloctavodia/BAP">errata</a>)</li>
 </ul>
@@ -359,6 +360,14 @@ page</a></p>
 <li class="toctree-l3"><a class="reference internal" href="notebooks/Diagnosing_biased_Inference_with_Divergences.html">Diagnosing Biased Inference with Divergences</a></li>
 <li class="toctree-l3"><a class="reference internal" href="notebooks/posterior_predictive.html">Posterior Predictive Checks</a></li>
 <li class="toctree-l3"><a class="reference internal" href="notebooks/howto_debugging.html">How to debug a model</a></li>
+<li class="toctree-l3"><a class="reference internal" href="notebooks/PyMC3_tips_and_heuristic.html">PyMC3 Modeling tips and heuristic</a></li>
+<li class="toctree-l3"><a class="reference internal" href="notebooks/PyMC3_tips_and_heuristic.html#Background-information">Background information</a></li>
+<li class="toctree-l3"><a class="reference internal" href="notebooks/PyMC3_tips_and_heuristic.html#A-WinBugs/PyMC2-implementation">A WinBugs/PyMC2 implementation</a></li>
+<li class="toctree-l3"><a class="reference internal" href="notebooks/PyMC3_tips_and_heuristic.html#PyMC3-implementation-using-theano.scan">PyMC3 implementation using <code class="docutils literal"><span class="pre">theano.scan</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="notebooks/PyMC3_tips_and_heuristic.html#PyMC3-implementation-using-some-matrix-&quot;trick&quot;">PyMC3 implementation using some matrix &#8220;trick&#8221;</a></li>
+<li class="toctree-l3"><a class="reference internal" href="notebooks/PyMC3_tips_and_heuristic.html#PyMC3-implementation-using-Matrix-multiplication">PyMC3 implementation using Matrix multiplication</a></li>
+<li class="toctree-l3"><a class="reference internal" href="notebooks/PyMC3_tips_and_heuristic.html#PyMC3-implementation-using-Sparse-Matrix">PyMC3 implementation using Sparse Matrix</a></li>
+<li class="toctree-l3"><a class="reference internal" href="notebooks/PyMC3_tips_and_heuristic.html#Final-remarks">Final remarks</a></li>
 <li class="toctree-l3"><a class="reference internal" href="notebooks/LKJ.html">LKJ Prior for fitting a Multivariate Normal Model</a></li>
 <li class="toctree-l3"><a class="reference internal" href="notebooks/live_sample_plots.html">Live sample plots</a></li>
 </ul>
@@ -425,7 +434,11 @@ page</a></p>
 </ul>
 </li>
 <li class="toctree-l2"><a class="reference internal" href="api/glm.html">Generalized Linear Models</a></li>
-<li class="toctree-l2"><a class="reference internal" href="api/gp.html">Gaussian Processes</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api/gp.html">Gaussian Processes</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="api/gp.html#module-pymc3.gp.gp">GP</a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/gp.html#covariance-functions-kernels">Covariance Functions / Kernels</a></li>
+</ul>
+</li>
 <li class="toctree-l2"><a class="reference internal" href="api/plots.html">Plots</a></li>
 <li class="toctree-l2"><a class="reference internal" href="api/stats.html">Stats</a></li>
 <li class="toctree-l2"><a class="reference internal" href="api/diagnostics.html">Diagnostics</a></li>
@@ -442,6 +455,7 @@ page</a></p>
 </ul>
 </li>
 <li class="toctree-l2"><a class="reference internal" href="api/math.html">Math</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api/data.html">Data</a></li>
 </ul>
 </li>
 </ul>

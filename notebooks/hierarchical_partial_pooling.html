@@ -431,7 +431,7 @@ on the subject. The model and parameter values were taken from that
 example.</p>
 <div class="nbinput nblast docutils container">
 <div class="prompt highlight-none"><div class="highlight"><pre>
-<span></span>In [2]:
+<span></span>In [1]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3"><div class="highlight"><pre>
@@ -446,11 +446,11 @@ example.</p>
 <p>Now we can load the dataset using pandas:</p>
 <div class="nbinput nblast docutils container">
 <div class="prompt highlight-none"><div class="highlight"><pre>
-<span></span>In [7]:
+<span></span>In [2]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3"><div class="highlight"><pre>
-<span></span><span class="n">data</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_table</span><span class="p">(</span> <span class="s1">&#39;../../../pymc3/examples/data/efron-morris-75-data.tsv&#39;</span><span class="p">,</span> <span class="n">sep</span><span class="o">=</span><span class="s2">&quot;</span><span class="se">\t</span><span class="s2">&quot;</span><span class="p">)</span>
+<span></span><span class="n">data</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_table</span><span class="p">(</span><span class="n">pm</span><span class="o">.</span><span class="n">get_data</span><span class="p">(</span><span class="s1">&#39;efron-morris-75-data.tsv&#39;</span><span class="p">),</span> <span class="n">sep</span><span class="o">=</span><span class="s2">&quot;</span><span class="se">\t</span><span class="s2">&quot;</span><span class="p">)</span>
 <span class="n">at_bats</span><span class="p">,</span> <span class="n">hits</span> <span class="o">=</span> <span class="n">data</span><span class="p">[[</span><span class="s1">&#39;At-Bats&#39;</span><span class="p">,</span> <span class="s1">&#39;Hits&#39;</span><span class="p">]]</span><span class="o">.</span><span class="n">values</span><span class="o">.</span><span class="n">T</span>
 </pre></div>
 </div>
@@ -476,7 +476,7 @@ or miss) for every player, using a Binomial distribution. This is where
 the data are brought to bear on the model.</p>
 <div class="nbinput nblast docutils container">
 <div class="prompt highlight-none"><div class="highlight"><pre>
-<span></span>In [8]:
+<span></span>In [3]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3"><div class="highlight"><pre>
@@ -498,7 +498,7 @@ for a player with only 4 at bats and no hits. We can add this as an
 additional variable in the model</p>
 <div class="nbinput nblast docutils container">
 <div class="prompt highlight-none"><div class="highlight"><pre>
-<span></span>In [9]:
+<span></span>In [4]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3"><div class="highlight"><pre>
@@ -512,7 +512,7 @@ additional variable in the model</p>
 <p>We can now fit the model using MCMC:</p>
 <div class="nbinput docutils container">
 <div class="prompt highlight-none"><div class="highlight"><pre>
-<span></span>In [20]:
+<span></span>In [5]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3"><div class="highlight"><pre>
@@ -530,14 +530,18 @@ Assigned NUTS to phi_interval_
 Assigned NUTS to kappa_lowerbound_
 Assigned NUTS to thetas_logodds_
 Assigned NUTS to theta_new_logodds_
-100%|██████████| 2000/2000 [00:26&lt;00:00, 76.47it/s]
+ 99%|█████████▉| 1985/2000 [00:07&lt;00:00, 287.32it/s]/home/jovyan/pymc3/pymc3/step_methods/hmc/nuts.py:237: UserWarning: Step size tuning was enabled throughout the whole trace. You might want to specify the number of tuning steps.
+  warnings.warn(&#39;Step size tuning was enabled throughout the whole &#39;
+/opt/conda/lib/python3.5/site-packages/numpy/core/fromnumeric.py:2889: RuntimeWarning: Mean of empty slice.
+  out=out, **kwargs)
+100%|██████████| 2000/2000 [00:07&lt;00:00, 264.07it/s]
 </pre></div></div>
 </div>
 <p>Now we can plot the posteriors distribution of the parameters. First,
 the population hyperparameters:</p>
 <div class="nbinput docutils container">
 <div class="prompt highlight-none"><div class="highlight"><pre>
-<span></span>In [21]:
+<span></span>In [6]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3"><div class="highlight"><pre>
@@ -557,7 +561,7 @@ with an expected value of around 0.26.</p>
 <p>Next, the estimates for all 18 players in the dataset:</p>
 <div class="nbinput docutils container">
 <div class="prompt highlight-none"><div class="highlight"><pre>
-<span></span>In [26]:
+<span></span>In [7]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3"><div class="highlight"><pre>
@@ -568,11 +572,11 @@ with an expected value of around 0.26.</p>
 </div>
 <div class="nboutput docutils container">
 <div class="prompt highlight-none"><div class="highlight"><pre>
-<span></span>Out[26]:
+<span></span>Out[7]:
 </pre></div>
 </div>
 <div class="output_area highlight-none"><div class="highlight"><pre>
-<span></span>&lt;matplotlib.gridspec.GridSpec at 0x11ec769b0&gt;
+<span></span>&lt;matplotlib.gridspec.GridSpec at 0x7f80bf7d9748&gt;
 </pre></div>
 </div>
 </div>
@@ -586,7 +590,7 @@ with an expected value of around 0.26.</p>
 <p>Finally, let&#8217;s get the estimate for our 0-for-4 player:</p>
 <div class="nbinput docutils container">
 <div class="prompt highlight-none"><div class="highlight"><pre>
-<span></span>In [23]:
+<span></span>In [8]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3"><div class="highlight"><pre>

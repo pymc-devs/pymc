@@ -105,6 +105,8 @@
 <li class="toctree-l3"><a class="reference internal" href="lda-advi-aevb.html">Automatic autoencoding variational Bayes for latent dirichlet allocation with PyMC3</a></li>
 <li class="toctree-l3"><a class="reference internal" href="bayesian_neural_network_advi.html">Variational Inference: Bayesian Neural Networks</a></li>
 <li class="toctree-l3"><a class="reference internal" href="convolutional_vae_keras_advi.html">Convolutional variational autoencoder with PyMC3 and Keras</a></li>
+<li class="toctree-l3"><a class="reference internal" href="bayesian_neural_network_opvi-advi.html">Changes in API: Variational Inference: Bayesian Neural Networks</a></li>
+<li class="toctree-l3"><a class="reference internal" href="bayesian_neural_network_opvi-advi.html#Minibatch-ADVI">Minibatch ADVI</a></li>
 </ul>
 </li>
 </ul>
@@ -389,7 +391,7 @@ of that.</p>
 <span class="kn">import</span> <span class="nn">pymc3</span> <span class="kn">as</span> <span class="nn">pm</span>
 <span class="kn">import</span> <span class="nn">pandas</span> <span class="kn">as</span> <span class="nn">pd</span>
 
-<span class="n">data</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="s1">&#39;../data/radon.csv&#39;</span><span class="p">)</span>
+<span class="n">data</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="n">pm</span><span class="o">.</span><span class="n">get_data</span><span class="p">(</span><span class="s1">&#39;radon.csv&#39;</span><span class="p">))</span>
 
 <span class="n">county_names</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">county</span><span class="o">.</span><span class="n">unique</span><span class="p">()</span>
 <span class="n">county_idx</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="s1">&#39;county_code&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">values</span>
@@ -509,8 +511,8 @@ above.</p>
 </div>
 <div class="stderr output_area docutils container">
 <div class="highlight"><pre>
-Average ELBO = -1,112.85: 100%|██████████| 40000/40000 [00:37&lt;00:00, 1073.74it/s]
-Finished minibatch ADVI: ELBO = -1,066.92
+Average ELBO = -1,113.44: 100%|██████████| 40000/40000 [00:18&lt;00:00, 2135.78it/s]
+Finished minibatch ADVI: ELBO = -1,037.40
 </pre></div></div>
 </div>
 <p>Check the trace of ELBO and compare the result with MCMC.</p>
@@ -527,14 +529,23 @@ Finished minibatch ADVI: ELBO = -1,066.92
 </pre></div>
 </div>
 </div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="stderr output_area docutils container">
+<div class="highlight"><pre>
+/opt/conda/lib/python3.5/site-packages/matplotlib/font_manager.py:1297: UserWarning: findfont: Font family [&#39;sans-serif&#39;] not found. Falling back to DejaVu Sans
+  (prop.get_family(), self.defaultFamily[fontext]))
+</pre></div></div>
+</div>
 <div class="nboutput nblast docutils container">
 <div class="prompt empty docutils container">
 </div>
 <div class="output_area docutils container">
-<img alt="../_images/notebooks_GLM-hierarchical-advi-minibatch_12_0.png" src="../_images/notebooks_GLM-hierarchical-advi-minibatch_12_0.png" />
+<img alt="../_images/notebooks_GLM-hierarchical-advi-minibatch_12_1.png" src="../_images/notebooks_GLM-hierarchical-advi-minibatch_12_1.png" />
 </div>
 </div>
-<div class="nbinput nblast docutils container">
+<div class="nbinput docutils container">
 <div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [8]:
 </pre></div>
@@ -575,6 +586,17 @@ Finished minibatch ADVI: ELBO = -1,066.92
 </pre></div>
 </div>
 </div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="stderr output_area docutils container">
+<div class="highlight"><pre>
+/home/jovyan/pymc3/pymc3/step_methods/hmc/nuts.py:237: UserWarning: Step size tuning was enabled throughout the whole trace. You might want to specify the number of tuning steps.
+  warnings.warn(&#39;Step size tuning was enabled throughout the whole &#39;
+/opt/conda/lib/python3.5/site-packages/numpy/core/fromnumeric.py:2889: RuntimeWarning: Mean of empty slice.
+  out=out, **kwargs)
+</pre></div></div>
+</div>
 <div class="nbinput docutils container">
 <div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [9]:
@@ -603,11 +625,30 @@ Finished minibatch ADVI: ELBO = -1,066.92
 </pre></div>
 </div>
 </div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="stderr output_area docutils container">
+<div class="highlight"><pre>
+/opt/conda/lib/python3.5/site-packages/matplotlib/font_manager.py:1297: UserWarning: findfont: Font family [&#39;sans-serif&#39;] not found. Falling back to DejaVu Sans
+  (prop.get_family(), self.defaultFamily[fontext]))
+</pre></div></div>
+</div>
 <div class="nboutput nblast docutils container">
 <div class="prompt empty docutils container">
 </div>
 <div class="output_area docutils container">
-<img alt="../_images/notebooks_GLM-hierarchical-advi-minibatch_14_0.png" src="../_images/notebooks_GLM-hierarchical-advi-minibatch_14_0.png" />
+<img alt="../_images/notebooks_GLM-hierarchical-advi-minibatch_14_1.png" src="../_images/notebooks_GLM-hierarchical-advi-minibatch_14_1.png" />
+</div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
+<span></span>In [ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<span></span>
+</pre></div>
 </div>
 </div>
 </div>

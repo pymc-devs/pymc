@@ -117,6 +117,8 @@
 </li>
 <li class="toctree-l3"><a class="reference internal" href="bayesian_neural_network_advi.html">Variational Inference: Bayesian Neural Networks</a></li>
 <li class="toctree-l3"><a class="reference internal" href="convolutional_vae_keras_advi.html">Convolutional variational autoencoder with PyMC3 and Keras</a></li>
+<li class="toctree-l3"><a class="reference internal" href="bayesian_neural_network_opvi-advi.html">Changes in API: Variational Inference: Bayesian Neural Networks</a></li>
+<li class="toctree-l3"><a class="reference internal" href="bayesian_neural_network_opvi-advi.html#Minibatch-ADVI">Minibatch ADVI</a></li>
 </ul>
 </li>
 </ul>
@@ -927,7 +929,7 @@ words in the topics are qualitatively similar.</p>
 <span class="n">lda</span> <span class="o">=</span> <span class="n">LatentDirichletAllocation</span><span class="p">(</span><span class="n">n_topics</span><span class="o">=</span><span class="n">n_topics</span><span class="p">,</span> <span class="n">max_iter</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span>
                                 <span class="n">learning_method</span><span class="o">=</span><span class="s1">&#39;online&#39;</span><span class="p">,</span> <span class="n">learning_offset</span><span class="o">=</span><span class="mf">50.</span><span class="p">,</span>
                                 <span class="n">random_state</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
-<span class="o">%</span><span class="k">time</span> lda.fit(docs_tr)
+<span class="o">%</span><span class="k">time</span> pm.fit(docs_tr, method=lda)
 <span class="n">beta_sklearn</span> <span class="o">=</span> <span class="n">lda</span><span class="o">.</span><span class="n">components_</span> <span class="o">/</span> <span class="n">lda</span><span class="o">.</span><span class="n">components_</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)[:,</span> <span class="n">np</span><span class="o">.</span><span class="n">newaxis</span><span class="p">]</span>
 
 <span class="n">print_top_words</span><span class="p">(</span><span class="n">beta_sklearn</span><span class="p">,</span> <span class="n">feature_names</span><span class="p">)</span>

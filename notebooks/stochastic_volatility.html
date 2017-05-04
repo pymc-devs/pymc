@@ -378,7 +378,7 @@ div.nboutput div.output_area.stderr {
 <h1>Stochastic Volatility model<a class="headerlink" href="#Stochastic-Volatility-model" title="Permalink to this headline">¶</a></h1>
 <div class="nbinput docutils container">
 <div class="prompt highlight-none"><div class="highlight"><pre>
-<span></span>In [2]:
+<span></span>In [1]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3"><div class="highlight"><pre>
@@ -421,19 +421,19 @@ log volatility process.</p>
 <p>First we load some daily returns of the S&amp;P 500.</p>
 <div class="nbinput docutils container">
 <div class="prompt highlight-none"><div class="highlight"><pre>
-<span></span>In [3]:
+<span></span>In [2]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="n">n</span> <span class="o">=</span> <span class="mi">400</span>
-<span class="n">returns</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">genfromtxt</span><span class="p">(</span><span class="s2">&quot;../data/SP500.csv&quot;</span><span class="p">)[</span><span class="o">-</span><span class="n">n</span><span class="p">:]</span>
+<span class="n">returns</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">genfromtxt</span><span class="p">(</span><span class="n">pm</span><span class="o">.</span><span class="n">get_data</span><span class="p">(</span><span class="s2">&quot;SP500.csv&quot;</span><span class="p">))[</span><span class="o">-</span><span class="n">n</span><span class="p">:]</span>
 <span class="n">returns</span><span class="p">[:</span><span class="mi">5</span><span class="p">]</span>
 </pre></div>
 </div>
 </div>
 <div class="nboutput nblast docutils container">
 <div class="prompt highlight-none"><div class="highlight"><pre>
-<span></span>Out[3]:
+<span></span>Out[2]:
 </pre></div>
 </div>
 <div class="output_area highlight-none"><div class="highlight"><pre>
@@ -443,7 +443,7 @@ log volatility process.</p>
 </div>
 <div class="nbinput docutils container">
 <div class="prompt highlight-none"><div class="highlight"><pre>
-<span></span>In [4]:
+<span></span>In [3]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3"><div class="highlight"><pre>
@@ -453,11 +453,11 @@ log volatility process.</p>
 </div>
 <div class="nboutput docutils container">
 <div class="prompt highlight-none"><div class="highlight"><pre>
-<span></span>Out[4]:
+<span></span>Out[3]:
 </pre></div>
 </div>
 <div class="output_area highlight-none"><div class="highlight"><pre>
-<span></span>[&lt;matplotlib.lines.Line2D at 0x7f64eab559b0&gt;]
+<span></span>[&lt;matplotlib.lines.Line2D at 0x7fae8c869a20&gt;]
 </pre></div>
 </div>
 </div>
@@ -471,7 +471,7 @@ log volatility process.</p>
 <p>Specifying the model in pymc3 mirrors its statistical specification.</p>
 <div class="nbinput nblast docutils container">
 <div class="prompt highlight-none"><div class="highlight"><pre>
-<span></span>In [5]:
+<span></span>In [4]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3"><div class="highlight"><pre>
@@ -491,16 +491,15 @@ log volatility process.</p>
 <h2>Fit Model<a class="headerlink" href="#Fit-Model" title="Permalink to this headline">¶</a></h2>
 <p>For this model, the full maximum a posteriori (MAP) point is degenerate
 and has infinite density. To get good convergence with NUTS we use ADVI
-(autodiff variational inference) for initialization. This is done under
-the hood by the <code class="docutils literal"><span class="pre">sample_init()</span></code> function.</p>
+(autodiff variational inference) for initialization.</p>
 <div class="nbinput docutils container">
 <div class="prompt highlight-none"><div class="highlight"><pre>
-<span></span>In [7]:
+<span></span>In [9]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="k">with</span> <span class="n">model</span><span class="p">:</span>
-    <span class="n">trace</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="mi">2000</span><span class="p">)</span>
+    <span class="n">trace</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="mi">2000</span><span class="p">,</span> <span class="n">tune</span><span class="o">=</span><span class="mi">1000</span><span class="p">)[</span><span class="mi">1000</span><span class="p">:]</span>
 </pre></div>
 </div>
 </div>
@@ -510,18 +509,19 @@ the hood by the <code class="docutils literal"><span class="pre">sample_init()</
 <div class="stderr output_area docutils container">
 <div class="highlight"><pre>
 Auto-assigning NUTS sampler...
-Initializing NUTS using advi...
-INFO (theano.gof.compilelock): Waiting for existing lock by process &#39;19349&#39; (I am process &#39;19302&#39;)
-INFO (theano.gof.compilelock): To manually release the lock, delete /home/wiecki/.theano/compiledir_Linux-4.4--generic-x86_64-with-debian-stretch-sid-x86_64-3.5.2-64/lock_dir
-Average ELBO = 1,138.51: 100%|██████████| 500000/500000 [04:55&lt;00:00, 1693.17it/s]
-Finished [100%]: Average ELBO = 1,138.62
-100%|██████████| 1/1 [00:00&lt;00:00, 1837.99it/s]
-100%|██████████| 2000/2000 [04:27&lt;00:00, 11.80it/s]
+Initializing NUTS using ADVI...
+Average Loss = 7.9136: 100%|██████████| 200000/200000 [01:14&lt;00:00, 2691.66it/s]
+Finished [100%]: Average Loss = 7.896
+100%|██████████| 2000/2000 [04:47&lt;00:00,  8.48it/s]/home/jovyan/pymc3/pymc3/step_methods/hmc/nuts.py:255: UserWarning: Chain 0 reached the maximum tree depth. Increase max_treedepth, increase target_accept or reparameterize.
+  &#39;reparameterize.&#39; % chain)
+/home/jovyan/pymc3/pymc3/step_methods/hmc/nuts.py:268: UserWarning: The acceptance probability in chain 0 does not match the target. It is 0.688505126364, but should be close to 0.8. Try to increase the number of tuning steps.
+  % (chain, mean_accept, target_accept))
+
 </pre></div></div>
 </div>
 <div class="nbinput docutils container">
 <div class="prompt highlight-none"><div class="highlight"><pre>
-<span></span>In [8]:
+<span></span>In [10]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3"><div class="highlight"><pre>
@@ -539,13 +539,13 @@ Finished [100%]: Average ELBO = 1,138.62
 </div>
 <div class="nbinput docutils container">
 <div class="prompt highlight-none"><div class="highlight"><pre>
-<span></span>In [9]:
+<span></span>In [11]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="n">figsize</span><span class="p">(</span><span class="mi">12</span><span class="p">,</span><span class="mi">6</span><span class="p">)</span>
 <span class="n">title</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">s</span><span class="p">))</span>
-<span class="n">plot</span><span class="p">(</span><span class="n">trace</span><span class="p">[</span><span class="n">s</span><span class="p">][::</span><span class="mi">10</span><span class="p">]</span><span class="o">.</span><span class="n">T</span><span class="p">,</span><span class="s1">&#39;b&#39;</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=.</span><span class="mo">03</span><span class="p">);</span>
+<span class="n">plot</span><span class="p">(</span><span class="n">trace</span><span class="p">[</span><span class="n">s</span><span class="p">][::</span><span class="mi">10</span><span class="p">]</span><span class="o">.</span><span class="n">T</span><span class="p">,</span> <span class="s1">&#39;b&#39;</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=.</span><span class="mo">03</span><span class="p">);</span>
 <span class="n">xlabel</span><span class="p">(</span><span class="s1">&#39;time&#39;</span><span class="p">)</span>
 <span class="n">ylabel</span><span class="p">(</span><span class="s1">&#39;log volatility&#39;</span><span class="p">)</span>
 </pre></div>
@@ -553,11 +553,11 @@ Finished [100%]: Average ELBO = 1,138.62
 </div>
 <div class="nboutput docutils container">
 <div class="prompt highlight-none"><div class="highlight"><pre>
-<span></span>Out[9]:
+<span></span>Out[11]:
 </pre></div>
 </div>
 <div class="output_area highlight-none"><div class="highlight"><pre>
-<span></span>&lt;matplotlib.text.Text at 0x7f64c41f4048&gt;
+<span></span>&lt;matplotlib.text.Text at 0x7fae6019f8d0&gt;
 </pre></div>
 </div>
 </div>
@@ -572,7 +572,7 @@ Finished [100%]: Average ELBO = 1,138.62
 deviation we can see how the model tracks the volatility over time.</p>
 <div class="nbinput docutils container">
 <div class="prompt highlight-none"><div class="highlight"><pre>
-<span></span>In [9]:
+<span></span>In [12]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3"><div class="highlight"><pre>
@@ -586,11 +586,11 @@ deviation we can see how the model tracks the volatility over time.</p>
 </div>
 <div class="nboutput docutils container">
 <div class="prompt highlight-none"><div class="highlight"><pre>
-<span></span>Out[9]:
+<span></span>Out[12]:
 </pre></div>
 </div>
 <div class="output_area highlight-none"><div class="highlight"><pre>
-<span></span>&lt;matplotlib.text.Text at 0x7f8e7a93d160&gt;
+<span></span>&lt;matplotlib.text.Text at 0x7fae64197c50&gt;
 </pre></div>
 </div>
 </div>

@@ -427,11 +427,8 @@ all observations.</p>
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3"><div class="highlight"><pre>
-<span></span><span class="n">data_file</span> <span class="o">=</span> <span class="s1">&#39;../../../pymc3/examples/data/extrahard_MC_500_5_4.npz.npy&#39;</span>
-<span class="n">truth_file</span> <span class="o">=</span> <span class="s1">&#39;../../../pymc3/examples/data/extrahard_MC_500_5_4_reference_classes.npy&#39;</span>
-
-<span class="n">data</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">load</span><span class="p">(</span> <span class="n">data_file</span> <span class="p">)</span>
-<span class="n">z_true</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">load</span><span class="p">(</span> <span class="n">truth_file</span> <span class="p">)</span>
+<span></span><span class="n">data</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">pm</span><span class="o">.</span><span class="n">get_data</span><span class="p">(</span><span class="s1">&#39;extrahard_MC_500_5_4.npz.npy&#39;</span><span class="p">))</span>
+<span class="n">z_true</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">pm</span><span class="o">.</span><span class="n">get_data</span><span class="p">(</span><span class="s1">&#39;extrahard_MC_500_5_4_reference_classes.npy&#39;</span><span class="p">))</span>
 
 <span class="n">I</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>               <span class="c1"># number of items</span>
 <span class="n">J</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>               <span class="c1"># number of annotators</span>
@@ -593,7 +590,7 @@ all work items.</p>
 </div>
 <div class="stderr output_area docutils container">
 <div class="highlight"><pre>
-100%|██████████████████████████████████████████████████████████████████████████████| 5000/5000 [16:49&lt;00:00,  5.27it/s]
+100%|██████████| 5000/5000 [28:06&lt;00:00,  4.73it/s]
 </pre></div></div>
 </div>
 </div>
@@ -609,7 +606,7 @@ posteriors, the plots are of little utility. We will explore other
 variables in other form.</p>
 <div class="nbinput docutils container">
 <div class="prompt highlight-none"><div class="highlight"><pre>
-<span></span>In [9]:
+<span></span>In [8]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3"><div class="highlight"><pre>
@@ -619,12 +616,12 @@ variables in other form.</p>
 </div>
 <div class="nboutput docutils container">
 <div class="prompt highlight-none"><div class="highlight"><pre>
-<span></span>Out[9]:
+<span></span>Out[8]:
 </pre></div>
 </div>
 <div class="output_area highlight-none"><div class="highlight"><pre>
-<span></span>array([[&lt;matplotlib.axes._subplots.AxesSubplot object at 0x00000229DE3EBCC0&gt;,
-        &lt;matplotlib.axes._subplots.AxesSubplot object at 0x00000229DDE9CDA0&gt;]], dtype=object)
+<span></span>array([[&lt;matplotlib.axes._subplots.AxesSubplot object at 0x7f245d5c2048&gt;,
+        &lt;matplotlib.axes._subplots.AxesSubplot object at 0x7f2456cb76a0&gt;]], dtype=object)
 </pre></div>
 </div>
 </div>
@@ -640,7 +637,7 @@ The majority vote from 1000 samples will give us our estimate of true
 item labels.</p>
 <div class="nbinput nblast docutils container">
 <div class="prompt highlight-none"><div class="highlight"><pre>
-<span></span>In [10]:
+<span></span>In [9]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3"><div class="highlight"><pre>
@@ -657,7 +654,7 @@ the ground truth. Compare it to the baseline: a better estimate has less
 off diagonal values (and more on main diagonal).</p>
 <div class="nbinput docutils container">
 <div class="prompt highlight-none"><div class="highlight"><pre>
-<span></span>In [11]:
+<span></span>In [10]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3"><div class="highlight"><pre>
@@ -673,9 +670,9 @@ off diagonal values (and more on main diagonal).</p>
 <div class="highlight"><pre>
 Dawid-Skene estimate of true category:
  [[122   1   1   1]
- [  2 118   3   2]
- [  3   1 118   3]
- [  4   1   1 119]]
+ [  0 121   1   3]
+ [  4   1 115   5]
+ [  2   1   1 121]]
 </pre></div></div>
 </div>
 <p>Finally, let&#8217;s plot the confusion matrices of annotators. Notice the
@@ -683,7 +680,7 @@ dominant diagonal nature of matrices &#8211; measure of annotator
 performance. Compare the first annotator (j=0) and the last one (j=4).</p>
 <div class="nbinput docutils container">
 <div class="prompt highlight-none"><div class="highlight"><pre>
-<span></span>In [18]:
+<span></span>In [11]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3"><div class="highlight"><pre>
@@ -701,30 +698,30 @@ performance. Compare the first annotator (j=0) and the last one (j=4).</p>
 <div class="output_area docutils container">
 <div class="highlight"><pre>
 Annotator j=0
-[[  8.71e-01   4.00e-02   4.69e-02   4.17e-02]
- [  1.13e-02   9.26e-01   1.56e-02   4.69e-02]
- [  5.82e-02   3.62e-02   8.65e-01   4.01e-02]
- [  4.53e-02   1.33e-02   7.79e-04   9.41e-01]]
+[[ 0.89  0.    0.07  0.03]
+ [ 0.    0.97  0.03  0.  ]
+ [ 0.02  0.01  0.95  0.02]
+ [ 0.06  0.02  0.    0.92]]
 Annotator j=1
-[[ 0.66  0.13  0.08  0.14]
- [ 0.11  0.69  0.12  0.08]
- [ 0.11  0.13  0.62  0.15]
- [ 0.08  0.13  0.15  0.65]]
+[[ 0.62  0.13  0.09  0.16]
+ [ 0.15  0.61  0.09  0.16]
+ [ 0.11  0.18  0.66  0.04]
+ [ 0.06  0.15  0.1   0.68]]
 Annotator j=2
-[[ 0.62  0.17  0.15  0.07]
- [ 0.1   0.58  0.18  0.14]
- [ 0.2   0.02  0.57  0.2 ]
- [ 0.1   0.14  0.16  0.6 ]]
+[[ 0.57  0.17  0.15  0.11]
+ [ 0.13  0.5   0.25  0.12]
+ [ 0.11  0.02  0.68  0.19]
+ [ 0.13  0.14  0.12  0.62]]
 Annotator j=3
-[[ 0.68  0.17  0.05  0.1 ]
- [ 0.09  0.7   0.11  0.1 ]
- [ 0.1   0.16  0.68  0.07]
- [ 0.09  0.09  0.08  0.73]]
+[[ 0.68  0.14  0.1   0.07]
+ [ 0.09  0.73  0.08  0.11]
+ [ 0.12  0.05  0.74  0.1 ]
+ [ 0.07  0.07  0.12  0.73]]
 Annotator j=4
-[[ 0.55  0.14  0.09  0.21]
- [ 0.18  0.51  0.19  0.12]
- [ 0.11  0.1   0.58  0.21]
- [ 0.25  0.23  0.1   0.42]]
+[[ 0.56  0.17  0.15  0.12]
+ [ 0.14  0.53  0.22  0.11]
+ [ 0.12  0.19  0.51  0.18]
+ [ 0.22  0.12  0.13  0.53]]
 </pre></div></div>
 </div>
 </div>

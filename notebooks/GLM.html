@@ -351,7 +351,7 @@ div.nboutput div.output_area.stderr {
 </style>
 <div class="section" id="GLM:-Linear-Regression">
 <h1>GLM: Linear Regression<a class="headerlink" href="#GLM:-Linear-Regression" title="Permalink to this headline">¶</a></h1>
-<div class="nbinput docutils container">
+<div class="nbinput nblast docutils container">
 <div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [1]:
 </pre></div>
@@ -368,14 +368,6 @@ div.nboutput div.output_area.stderr {
 <span class="kn">from</span> <span class="nn">pandas.tools.plotting</span> <span class="kn">import</span> <span class="n">scatter_matrix</span>
 </pre></div>
 </div>
-</div>
-<div class="nboutput nblast docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="stderr output_area docutils container">
-<div class="highlight"><pre>
-WARNING (theano.configdefaults): Only clang++ is supported. With g++, we end up with strange g++/OSX bugs.
-</pre></div></div>
 </div>
 </div>
 <div class="section" id="Simple-example">
@@ -406,35 +398,44 @@ output variable y_est and coefficients of the specified linear model.</p>
 </div>
 <div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="k">with</span> <span class="n">Model</span><span class="p">()</span> <span class="k">as</span> <span class="n">model</span><span class="p">:</span>
-    <span class="n">y_est</span><span class="p">,</span> <span class="n">coeffs</span> <span class="o">=</span> <span class="n">glm</span><span class="o">.</span><span class="n">linear_component</span><span class="p">(</span><span class="s1">&#39;y ~ x&#39;</span><span class="p">,</span> <span class="n">data</span><span class="p">)</span>
+    <span class="n">lm</span> <span class="o">=</span> <span class="n">glm</span><span class="o">.</span><span class="n">LinearComponent</span><span class="o">.</span><span class="n">from_formula</span><span class="p">(</span><span class="s1">&#39;y ~ x&#39;</span><span class="p">,</span> <span class="n">data</span><span class="p">)</span>
     <span class="n">sigma</span> <span class="o">=</span> <span class="n">Uniform</span><span class="p">(</span><span class="s1">&#39;sigma&#39;</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">20</span><span class="p">)</span>
-    <span class="n">y_obs</span> <span class="o">=</span> <span class="n">Normal</span><span class="p">(</span><span class="s1">&#39;y_obs&#39;</span><span class="p">,</span> <span class="n">mu</span><span class="o">=</span><span class="n">y_est</span><span class="p">,</span> <span class="n">sd</span><span class="o">=</span><span class="n">sigma</span><span class="p">,</span> <span class="n">observed</span><span class="o">=</span><span class="n">y</span><span class="p">)</span>
+    <span class="n">y_obs</span> <span class="o">=</span> <span class="n">Normal</span><span class="p">(</span><span class="s1">&#39;y_obs&#39;</span><span class="p">,</span> <span class="n">mu</span><span class="o">=</span><span class="n">lm</span><span class="o">.</span><span class="n">y_est</span><span class="p">,</span> <span class="n">sd</span><span class="o">=</span><span class="n">sigma</span><span class="p">,</span> <span class="n">observed</span><span class="o">=</span><span class="n">y</span><span class="p">)</span>
     <span class="n">start</span> <span class="o">=</span> <span class="n">find_MAP</span><span class="p">(</span><span class="nb">vars</span><span class="o">=</span><span class="p">[</span><span class="n">sigma</span><span class="p">])</span>
     <span class="n">step</span> <span class="o">=</span> <span class="n">Slice</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">vars</span><span class="p">)</span>
-    <span class="n">trace</span> <span class="o">=</span> <span class="n">sample</span><span class="p">(</span><span class="mi">2000</span><span class="p">,</span> <span class="n">step</span><span class="p">,</span> <span class="n">start</span><span class="p">)</span>
+    <span class="n">trace</span> <span class="o">=</span> <span class="n">sample</span><span class="p">(</span><span class="mi">2000</span><span class="p">,</span> <span class="n">step</span><span class="o">=</span><span class="n">step</span><span class="p">,</span> <span class="n">start</span><span class="o">=</span><span class="n">start</span><span class="p">)</span>
 
 <span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">5</span><span class="p">,</span> <span class="mi">5</span><span class="p">))</span>
 <span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="s1">&#39;x&#39;</span><span class="p">)</span>
-<span class="n">glm</span><span class="o">.</span><span class="n">plot_posterior_predictive</span><span class="p">(</span><span class="n">trace</span><span class="p">)</span>
+<span class="n">plot_posterior_predictive_glm</span><span class="p">(</span><span class="n">trace</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
 <div class="nboutput docutils container">
 <div class="prompt empty docutils container">
 </div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Optimization terminated successfully.
+         Current function value: 119.399118
+         Iterations: 4
+         Function evaluations: 8
+         Gradient evaluations: 8
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
 <div class="stderr output_area docutils container">
 <div class="highlight"><pre>
-/usr/local/var/pyenv/versions/miniconda3-4.0.5/envs/testenv/lib/python3.5/site-packages/ipykernel/__main__.py:2: DeprecationWarning: stack(*tensors) interface is deprecated, use stack(tensors, axis=0) instead.
-  from ipykernel import kernelapp as app
-Applied interval-transform to sigma and added transformed sigma_interval_ to model.
-100%|██████████| 2000/2000 [00:02&lt;00:00, 932.70it/s]
+100%|██████████| 2000/2000 [00:03&lt;00:00, 500.92it/s]
 </pre></div></div>
 </div>
 <div class="nboutput nblast docutils container">
 <div class="prompt empty docutils container">
 </div>
 <div class="output_area docutils container">
-<img alt="../_images/notebooks_GLM_5_1.png" src="../_images/notebooks_GLM_5_1.png" />
+<img alt="../_images/notebooks_GLM_5_2.png" src="../_images/notebooks_GLM_5_2.png" />
 </div>
 </div>
 <p>Since there are a couple of general linear models that are being used
@@ -453,12 +454,12 @@ model as above, just more succinctly.</p>
 </div>
 <div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="k">with</span> <span class="n">Model</span><span class="p">()</span> <span class="k">as</span> <span class="n">model</span><span class="p">:</span>
-    <span class="n">glm</span><span class="o">.</span><span class="n">glm</span><span class="p">(</span><span class="s1">&#39;y ~ x&#39;</span><span class="p">,</span> <span class="n">data</span><span class="p">)</span>
+    <span class="n">GLM</span><span class="o">.</span><span class="n">from_formula</span><span class="p">(</span><span class="s1">&#39;y ~ x&#39;</span><span class="p">,</span> <span class="n">data</span><span class="p">)</span>
     <span class="n">trace</span> <span class="o">=</span> <span class="n">sample</span><span class="p">(</span><span class="mi">2000</span><span class="p">,</span> <span class="n">Slice</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">vars</span><span class="p">))</span>
 
 <span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">5</span><span class="p">,</span> <span class="mi">5</span><span class="p">))</span>
 <span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="s1">&#39;x&#39;</span><span class="p">)</span>
-<span class="n">glm</span><span class="o">.</span><span class="n">plot_posterior_predictive</span><span class="p">(</span><span class="n">trace</span><span class="p">)</span>
+<span class="n">plot_posterior_predictive_glm</span><span class="p">(</span><span class="n">trace</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
@@ -467,8 +468,7 @@ model as above, just more succinctly.</p>
 </div>
 <div class="stderr output_area docutils container">
 <div class="highlight"><pre>
-Applied log-transform to sd and added transformed sd_log_ to model.
-100%|██████████| 2000/2000 [00:02&lt;00:00, 887.52it/s]
+100%|██████████| 2000/2000 [00:04&lt;00:00, 495.69it/s]
 </pre></div></div>
 </div>
 <div class="nboutput nblast docutils container">
@@ -501,12 +501,12 @@ Applied log-transform to sd and added transformed sd_log_ to model.
 </div>
 <div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="k">with</span> <span class="n">Model</span><span class="p">()</span> <span class="k">as</span> <span class="n">model</span><span class="p">:</span>
-    <span class="n">glm</span><span class="o">.</span><span class="n">glm</span><span class="p">(</span><span class="s1">&#39;y ~ x&#39;</span><span class="p">,</span> <span class="n">data_outlier</span><span class="p">)</span>
+    <span class="n">GLM</span><span class="o">.</span><span class="n">from_formula</span><span class="p">(</span><span class="s1">&#39;y ~ x&#39;</span><span class="p">,</span> <span class="n">data_outlier</span><span class="p">)</span>
     <span class="n">trace</span> <span class="o">=</span> <span class="n">sample</span><span class="p">(</span><span class="mi">2000</span><span class="p">,</span> <span class="n">Slice</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">vars</span><span class="p">))</span>
 
 <span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">5</span><span class="p">,</span> <span class="mi">5</span><span class="p">))</span>
 <span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">x_out</span><span class="p">,</span> <span class="n">y_out</span><span class="p">,</span> <span class="s1">&#39;x&#39;</span><span class="p">)</span>
-<span class="n">glm</span><span class="o">.</span><span class="n">plot_posterior_predictive</span><span class="p">(</span><span class="n">trace</span><span class="p">)</span>
+<span class="n">plot_posterior_predictive_glm</span><span class="p">(</span><span class="n">trace</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
@@ -515,8 +515,7 @@ Applied log-transform to sd and added transformed sd_log_ to model.
 </div>
 <div class="stderr output_area docutils container">
 <div class="highlight"><pre>
-Applied log-transform to sd and added transformed sd_log_ to model.
-100%|██████████| 2000/2000 [00:02&lt;00:00, 885.06it/s]
+100%|██████████| 2000/2000 [00:03&lt;00:00, 530.20it/s]
 </pre></div></div>
 </div>
 <div class="nboutput nblast docutils container">
@@ -548,12 +547,12 @@ are. Here we fix the degrees of freedom <code class="docutils literal"><span cla
     <span class="n">family</span> <span class="o">=</span> <span class="n">glm</span><span class="o">.</span><span class="n">families</span><span class="o">.</span><span class="n">StudentT</span><span class="p">(</span><span class="n">link</span><span class="o">=</span><span class="n">glm</span><span class="o">.</span><span class="n">families</span><span class="o">.</span><span class="n">Identity</span><span class="p">(),</span>
                                    <span class="n">priors</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;nu&#39;</span><span class="p">:</span> <span class="mf">1.5</span><span class="p">,</span>
                                            <span class="s1">&#39;lam&#39;</span><span class="p">:</span> <span class="n">Uniform</span><span class="o">.</span><span class="n">dist</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">20</span><span class="p">)})</span>
-    <span class="n">glm</span><span class="o">.</span><span class="n">glm</span><span class="p">(</span><span class="s1">&#39;y ~ x&#39;</span><span class="p">,</span> <span class="n">data_outlier</span><span class="p">,</span> <span class="n">family</span><span class="o">=</span><span class="n">family</span><span class="p">)</span>
+    <span class="n">GLM</span><span class="o">.</span><span class="n">from_formula</span><span class="p">(</span><span class="s1">&#39;y ~ x&#39;</span><span class="p">,</span> <span class="n">data_outlier</span><span class="p">,</span> <span class="n">family</span><span class="o">=</span><span class="n">family</span><span class="p">)</span>
     <span class="n">trace</span> <span class="o">=</span> <span class="n">sample</span><span class="p">(</span><span class="mi">2000</span><span class="p">,</span> <span class="n">Slice</span><span class="p">(</span><span class="n">model_robust</span><span class="o">.</span><span class="n">vars</span><span class="p">))</span>
 
 <span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">5</span><span class="p">,</span> <span class="mi">5</span><span class="p">))</span>
 <span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">x_out</span><span class="p">,</span> <span class="n">y_out</span><span class="p">,</span> <span class="s1">&#39;x&#39;</span><span class="p">)</span>
-<span class="n">glm</span><span class="o">.</span><span class="n">plot_posterior_predictive</span><span class="p">(</span><span class="n">trace</span><span class="p">)</span>
+<span class="n">plot_posterior_predictive_glm</span><span class="p">(</span><span class="n">trace</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
@@ -562,8 +561,7 @@ are. Here we fix the degrees of freedom <code class="docutils literal"><span cla
 </div>
 <div class="stderr output_area docutils container">
 <div class="highlight"><pre>
-Applied interval-transform to lam and added transformed lam_interval_ to model.
-100%|██████████| 2000/2000 [00:02&lt;00:00, 870.31it/s]
+100%|██████████| 2000/2000 [00:03&lt;00:00, 528.11it/s]
 </pre></div></div>
 </div>
 <div class="nboutput nblast docutils container">
@@ -582,7 +580,7 @@ Applied interval-transform to lam and added transformed lam_interval_ to model.
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3"><div class="highlight"><pre>
-<span></span><span class="n">sat_data</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="s1">&#39;../data/Guber1999data.txt&#39;</span><span class="p">)</span>
+<span></span><span class="n">sat_data</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="n">get_data</span><span class="p">(</span><span class="s1">&#39;Guber1999data.txt&#39;</span><span class="p">))</span>
 </pre></div>
 </div>
 </div>
@@ -602,7 +600,7 @@ Applied interval-transform to lam and added transformed lam_interval_ to model.
           <span class="s1">&#39;salary&#39;</span><span class="p">:</span> <span class="n">Normal</span><span class="o">.</span><span class="n">dist</span><span class="p">(</span><span class="n">mu</span><span class="o">=</span><span class="n">grp_mean</span><span class="p">,</span> <span class="n">sd</span><span class="o">=</span><span class="n">grp_sd</span><span class="p">),</span>
           <span class="s1">&#39;prcnt_take&#39;</span><span class="p">:</span> <span class="n">Normal</span><span class="o">.</span><span class="n">dist</span><span class="p">(</span><span class="n">mu</span><span class="o">=</span><span class="n">grp_mean</span><span class="p">,</span> <span class="n">sd</span><span class="o">=</span><span class="n">grp_sd</span><span class="p">)</span>
     <span class="p">}</span>
-    <span class="n">glm</span><span class="o">.</span><span class="n">glm</span><span class="p">(</span><span class="s1">&#39;sat_t ~ spend + stu_tea_rat + salary + prcnt_take&#39;</span><span class="p">,</span> <span class="n">sat_data</span><span class="p">,</span> <span class="n">priors</span><span class="o">=</span><span class="n">priors</span><span class="p">)</span>
+    <span class="n">GLM</span><span class="o">.</span><span class="n">from_formula</span><span class="p">(</span><span class="s1">&#39;sat_t ~ spend + stu_tea_rat + salary + prcnt_take&#39;</span><span class="p">,</span> <span class="n">sat_data</span><span class="p">,</span> <span class="n">priors</span><span class="o">=</span><span class="n">priors</span><span class="p">)</span>
     <span class="n">trace_sat</span> <span class="o">=</span> <span class="n">sample</span><span class="p">(</span><span class="mi">500</span><span class="p">,</span> <span class="n">NUTS</span><span class="p">())</span>
 </pre></div>
 </div>
@@ -612,9 +610,13 @@ Applied interval-transform to lam and added transformed lam_interval_ to model.
 </div>
 <div class="stderr output_area docutils container">
 <div class="highlight"><pre>
-Applied interval-transform to grp_sd and added transformed grp_sd_interval_ to model.
-Applied log-transform to sd and added transformed sd_log_ to model.
-100%|██████████| 500/500 [04:03&lt;00:00,  1.01s/it]
+100%|█████████▉| 499/500 [00:49&lt;00:00,  8.14it/s]/home/jovyan/pymc3/pymc3/step_methods/hmc/nuts.py:235: UserWarning: Chain 0 contains only 500 samples.
+  warnings.warn(&#39;Chain %s contains only %s samples.&#39; % (chain, n))
+/home/jovyan/pymc3/pymc3/step_methods/hmc/nuts.py:237: UserWarning: Step size tuning was enabled throughout the whole trace. You might want to specify the number of tuning steps.
+  warnings.warn(&#39;Step size tuning was enabled throughout the whole &#39;
+/opt/conda/lib/python3.5/site-packages/numpy/core/fromnumeric.py:2889: RuntimeWarning: Mean of empty slice.
+  out=out, **kwargs)
+100%|██████████| 500/500 [00:49&lt;00:00, 10.06it/s]
 </pre></div></div>
 </div>
 <div class="nbinput docutils container">
@@ -645,8 +647,8 @@ Applied log-transform to sd and added transformed sd_log_ to model.
     <span class="n">grp_prec</span> <span class="o">=</span> <span class="n">Gamma</span><span class="p">(</span><span class="s1">&#39;grp_prec&#39;</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">beta</span><span class="o">=.</span><span class="mi">1</span><span class="p">,</span> <span class="n">testval</span><span class="o">=</span><span class="mf">1.</span><span class="p">)</span>
     <span class="n">slope</span> <span class="o">=</span> <span class="n">StudentT</span><span class="o">.</span><span class="n">dist</span><span class="p">(</span><span class="n">mu</span><span class="o">=</span><span class="n">grp_mean</span><span class="p">,</span> <span class="n">lam</span><span class="o">=</span><span class="n">grp_prec</span><span class="p">,</span> <span class="n">nu</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
     <span class="n">intercept</span> <span class="o">=</span> <span class="n">Normal</span><span class="o">.</span><span class="n">dist</span><span class="p">(</span><span class="n">mu</span><span class="o">=</span><span class="n">sat_data</span><span class="o">.</span><span class="n">sat_t</span><span class="o">.</span><span class="n">mean</span><span class="p">(),</span> <span class="n">sd</span><span class="o">=</span><span class="n">sat_data</span><span class="o">.</span><span class="n">sat_t</span><span class="o">.</span><span class="n">std</span><span class="p">())</span>
-    <span class="n">glm</span><span class="o">.</span><span class="n">glm</span><span class="p">(</span><span class="s1">&#39;sat_t ~ spend + stu_tea_rat + salary + prcnt_take&#39;</span><span class="p">,</span> <span class="n">sat_data</span><span class="p">,</span>
-        <span class="n">intercept_prior</span><span class="o">=</span><span class="n">intercept</span><span class="p">,</span> <span class="n">regressor_prior</span><span class="o">=</span><span class="n">slope</span><span class="p">)</span>
+    <span class="n">GLM</span><span class="o">.</span><span class="n">from_formula</span><span class="p">(</span><span class="s1">&#39;sat_t ~ spend + stu_tea_rat + salary + prcnt_take&#39;</span><span class="p">,</span> <span class="n">sat_data</span><span class="p">,</span>
+        <span class="n">priors</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;Intercept&#39;</span><span class="p">:</span> <span class="n">intercept</span><span class="p">,</span> <span class="s1">&#39;Regressor&#39;</span><span class="p">:</span> <span class="n">slope</span><span class="p">})</span>
     <span class="n">trace_sat</span> <span class="o">=</span> <span class="n">sample</span><span class="p">(</span><span class="mi">500</span><span class="p">,</span> <span class="n">NUTS</span><span class="p">())</span>
 </pre></div>
 </div>
@@ -656,9 +658,13 @@ Applied log-transform to sd and added transformed sd_log_ to model.
 </div>
 <div class="stderr output_area docutils container">
 <div class="highlight"><pre>
-Applied log-transform to grp_prec and added transformed grp_prec_log_ to model.
-Applied log-transform to sd and added transformed sd_log_ to model.
-100%|██████████| 500/500 [02:14&lt;00:00,  1.69it/s]
+100%|██████████| 500/500 [00:46&lt;00:00,  8.75it/s]/home/jovyan/pymc3/pymc3/step_methods/hmc/nuts.py:235: UserWarning: Chain 0 contains only 500 samples.
+  warnings.warn(&#39;Chain %s contains only %s samples.&#39; % (chain, n))
+/home/jovyan/pymc3/pymc3/step_methods/hmc/nuts.py:237: UserWarning: Step size tuning was enabled throughout the whole trace. You might want to specify the number of tuning steps.
+  warnings.warn(&#39;Step size tuning was enabled throughout the whole &#39;
+/opt/conda/lib/python3.5/site-packages/numpy/core/fromnumeric.py:2889: RuntimeWarning: Mean of empty slice.
+  out=out, **kwargs)
+
 </pre></div></div>
 </div>
 <div class="nbinput docutils container">
@@ -690,8 +696,8 @@ Applied log-transform to sd and added transformed sd_log_ to model.
     <span class="n">grp_prec</span> <span class="o">=</span> <span class="n">Gamma</span><span class="p">(</span><span class="s1">&#39;grp_prec&#39;</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">beta</span><span class="o">=.</span><span class="mi">1</span><span class="p">,</span> <span class="n">testval</span><span class="o">=</span><span class="mf">1.</span><span class="p">)</span>
     <span class="n">slope</span> <span class="o">=</span> <span class="n">StudentT</span><span class="o">.</span><span class="n">dist</span><span class="p">(</span><span class="n">mu</span><span class="o">=</span><span class="n">grp_mean</span><span class="p">,</span> <span class="n">lam</span><span class="o">=</span><span class="n">grp_prec</span><span class="p">,</span> <span class="n">nu</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span> <span class="c1">#grp_df)</span>
     <span class="n">intercept</span> <span class="o">=</span> <span class="n">Normal</span><span class="o">.</span><span class="n">dist</span><span class="p">(</span><span class="n">mu</span><span class="o">=</span><span class="n">sat_data</span><span class="o">.</span><span class="n">sat_t</span><span class="o">.</span><span class="n">mean</span><span class="p">(),</span> <span class="n">sd</span><span class="o">=</span><span class="n">sat_data</span><span class="o">.</span><span class="n">sat_t</span><span class="o">.</span><span class="n">std</span><span class="p">())</span>
-    <span class="n">glm</span><span class="o">.</span><span class="n">glm</span><span class="p">(</span><span class="s1">&#39;sat_t ~ spend + stu_tea_rat + salary + prcnt_take&#39;</span><span class="p">,</span> <span class="n">sat_data</span><span class="p">,</span>
-                <span class="n">intercept_prior</span><span class="o">=</span><span class="n">intercept</span><span class="p">,</span> <span class="n">regressor_prior</span><span class="o">=</span><span class="n">slope</span><span class="p">)</span>
+    <span class="n">GLM</span><span class="o">.</span><span class="n">from_formula</span><span class="p">(</span><span class="s1">&#39;sat_t ~ spend + stu_tea_rat + salary + prcnt_take&#39;</span><span class="p">,</span> <span class="n">sat_data</span><span class="p">,</span>
+                <span class="n">priors</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;Intercept&#39;</span><span class="p">:</span> <span class="n">intercept</span><span class="p">,</span> <span class="s1">&#39;Regressor&#39;</span><span class="p">:</span> <span class="n">slope</span><span class="p">})</span>
 
     <span class="n">trace_sat</span> <span class="o">=</span> <span class="n">sample</span><span class="p">(</span><span class="mi">2000</span><span class="p">,</span> <span class="n">NUTS</span><span class="p">())</span>
 </pre></div>
@@ -702,9 +708,11 @@ Applied log-transform to sd and added transformed sd_log_ to model.
 </div>
 <div class="stderr output_area docutils container">
 <div class="highlight"><pre>
-Applied log-transform to grp_prec and added transformed grp_prec_log_ to model.
-Applied log-transform to sd and added transformed sd_log_ to model.
-100%|██████████| 2000/2000 [14:45&lt;00:00,  2.26it/s]
+100%|██████████| 2000/2000 [04:06&lt;00:00,  8.15it/s]/home/jovyan/pymc3/pymc3/step_methods/hmc/nuts.py:237: UserWarning: Step size tuning was enabled throughout the whole trace. You might want to specify the number of tuning steps.
+  warnings.warn(&#39;Step size tuning was enabled throughout the whole &#39;
+/opt/conda/lib/python3.5/site-packages/numpy/core/fromnumeric.py:2889: RuntimeWarning: Mean of empty slice.
+  out=out, **kwargs)
+
 </pre></div></div>
 </div>
 </div>
@@ -716,7 +724,7 @@ Applied log-transform to sd and added transformed sd_log_ to model.
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3"><div class="highlight"><pre>
-<span></span><span class="n">htwt_data</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="s1">&#39;../data/HtWt.csv&#39;</span><span class="p">)</span>
+<span></span><span class="n">htwt_data</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="n">get_data</span><span class="p">(</span><span class="s1">&#39;HtWt.csv&#39;</span><span class="p">))</span>
 <span class="n">htwt_data</span><span class="o">.</span><span class="n">head</span><span class="p">()</span>
 </pre></div>
 </div>
@@ -795,15 +803,15 @@ Model:                            GLM   Df Residuals:                       67
 Model Family:                Binomial   Df Model:                            2
 Link Function:                  logit   Scale:                             1.0
 Method:                          IRLS   Log-Likelihood:                -28.298
-Date:                Thu, 13 Oct 2016   Deviance:                       56.597
-Time:                        10:09:12   Pearson chi2:                     62.8
-No. Iterations:                     8
+Date:                Wed, 26 Apr 2017   Deviance:                       56.597
+Time:                        13:38:28   Pearson chi2:                     62.8
+No. Iterations:                     6
 ==============================================================================
-                 coef    std err          z      P&gt;|z|      [95.0% Conf. Int.]
+                 coef    std err          z      P&gt;|z|      [0.025      0.975]
 ------------------------------------------------------------------------------
-Intercept    -45.2059     10.887     -4.152      0.000       -66.545   -23.867
-height         0.6571      0.164      4.018      0.000         0.337     0.978
-weight         0.0096      0.011      0.892      0.372        -0.012     0.031
+Intercept    -45.2059     10.887     -4.152      0.000     -66.545     -23.867
+height         0.6571      0.164      4.018      0.000       0.337       0.978
+weight         0.0096      0.011      0.892      0.372      -0.012       0.031
 ==============================================================================
 </pre></div></div>
 </div>
@@ -814,7 +822,7 @@ weight         0.0096      0.011      0.892      0.372        -0.012     0.031
 </div>
 <div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="k">with</span> <span class="n">Model</span><span class="p">()</span> <span class="k">as</span> <span class="n">model_htwt</span><span class="p">:</span>
-    <span class="n">glm</span><span class="o">.</span><span class="n">glm</span><span class="p">(</span><span class="s1">&#39;male ~ height + weight&#39;</span><span class="p">,</span> <span class="n">htwt_data</span><span class="p">,</span> <span class="n">family</span><span class="o">=</span><span class="n">glm</span><span class="o">.</span><span class="n">families</span><span class="o">.</span><span class="n">Binomial</span><span class="p">())</span>
+    <span class="n">GLM</span><span class="o">.</span><span class="n">from_formula</span><span class="p">(</span><span class="s1">&#39;male ~ height + weight&#39;</span><span class="p">,</span> <span class="n">htwt_data</span><span class="p">,</span> <span class="n">family</span><span class="o">=</span><span class="n">glm</span><span class="o">.</span><span class="n">families</span><span class="o">.</span><span class="n">Binomial</span><span class="p">())</span>
     <span class="n">trace_htwt</span> <span class="o">=</span> <span class="n">sample</span><span class="p">(</span><span class="mi">1000</span><span class="p">,</span> <span class="n">NUTS</span><span class="p">())</span>
 </pre></div>
 </div>
@@ -824,9 +832,11 @@ weight         0.0096      0.011      0.892      0.372        -0.012     0.031
 </div>
 <div class="stderr output_area docutils container">
 <div class="highlight"><pre>
-Applied logodds-transform to p and added transformed p_logodds_ to model.
-INFO:pymc3:Applied logodds-transform to p and added transformed p_logodds_ to model.
-100%|██████████| 1000/1000 [00:04&lt;00:00, 209.06it/s]
+ 99%|█████████▉| 994/1000 [00:06&lt;00:00, 154.11it/s]/home/jovyan/pymc3/pymc3/step_methods/hmc/nuts.py:237: UserWarning: Step size tuning was enabled throughout the whole trace. You might want to specify the number of tuning steps.
+  warnings.warn(&#39;Step size tuning was enabled throughout the whole &#39;
+/opt/conda/lib/python3.5/site-packages/numpy/core/fromnumeric.py:2889: RuntimeWarning: Mean of empty slice.
+  out=out, **kwargs)
+100%|██████████| 1000/1000 [00:06&lt;00:00, 154.89it/s]
 </pre></div></div>
 </div>
 <div class="nbinput docutils container">
@@ -848,19 +858,17 @@ INFO:pymc3:Applied logodds-transform to p and added transformed p_logodds_ to mo
 </div>
 <div class="output_area docutils container">
 <div class="highlight"><pre>
-                mean        std         min        25%        50%        75%  \
-Intercept -50.709383  13.193083 -103.853682 -60.323900 -51.081365 -42.115205
-height      0.734066   0.198251    0.001119   0.610875   0.734487   0.874961
-weight      0.012040   0.011574   -0.019890   0.003990   0.011760   0.019576
-p           0.501184   0.285154    0.000300   0.261417   0.497641   0.738970
+                mean        std        min        25%        50%        75%  \
+height      0.736415   0.203463  -0.059605   0.609917   0.743361   0.849871
+Intercept -50.604382  13.547952 -95.424476 -58.374699 -50.709506 -42.690393
+weight      0.010281   0.011235  -0.033394   0.002963   0.010126   0.017817
 
                 max
-Intercept -0.089848
-height     1.530992
-weight     0.045454
-p          0.998552
-P(weight &lt; 0) =  0.146
-P(height &lt; 0) =  0.0
+height     1.373401
+Intercept  1.076201
+weight     0.046414
+P(weight &lt; 0) =  0.163
+P(height &lt; 0) =  0.006
 </pre></div></div>
 </div>
 <div class="nboutput nblast docutils container">
@@ -903,10 +911,9 @@ P(height &lt; 0) =  0.0
 <span></span><span class="k">with</span> <span class="n">Model</span><span class="p">()</span> <span class="k">as</span> <span class="n">model_lasso</span><span class="p">:</span>
     <span class="c1"># Define priors for intercept and regression coefficients.</span>
     <span class="n">priors</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;Intercept&#39;</span><span class="p">:</span> <span class="n">Normal</span><span class="o">.</span><span class="n">dist</span><span class="p">(</span><span class="n">mu</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">sd</span><span class="o">=</span><span class="mi">50</span><span class="p">),</span>
-              <span class="s1">&#39;height&#39;</span><span class="p">:</span> <span class="n">Laplace</span><span class="o">.</span><span class="n">dist</span><span class="p">(</span><span class="n">mu</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">b</span><span class="o">=</span><span class="mf">0.05</span><span class="p">),</span>
-              <span class="s1">&#39;weight&#39;</span><span class="p">:</span> <span class="n">Laplace</span><span class="o">.</span><span class="n">dist</span><span class="p">(</span><span class="n">mu</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">b</span><span class="o">=</span><span class="mf">0.05</span><span class="p">)</span>
+              <span class="s1">&#39;Regressor&#39;</span><span class="p">:</span> <span class="n">Laplace</span><span class="o">.</span><span class="n">dist</span><span class="p">(</span><span class="n">mu</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">b</span><span class="o">=</span><span class="mf">0.05</span><span class="p">)</span>
     <span class="p">}</span>
-    <span class="n">glm</span><span class="o">.</span><span class="n">glm</span><span class="p">(</span><span class="s1">&#39;male ~ height + weight&#39;</span><span class="p">,</span> <span class="n">htwt_data</span><span class="p">,</span> <span class="n">family</span><span class="o">=</span><span class="n">glm</span><span class="o">.</span><span class="n">families</span><span class="o">.</span><span class="n">Binomial</span><span class="p">(),</span>
+    <span class="n">GLM</span><span class="o">.</span><span class="n">from_formula</span><span class="p">(</span><span class="s1">&#39;male ~ height + weight&#39;</span><span class="p">,</span> <span class="n">htwt_data</span><span class="p">,</span> <span class="n">family</span><span class="o">=</span><span class="n">glm</span><span class="o">.</span><span class="n">families</span><span class="o">.</span><span class="n">Binomial</span><span class="p">(),</span>
                     <span class="n">priors</span><span class="o">=</span><span class="n">priors</span><span class="p">)</span>
 
     <span class="n">trace_lasso</span> <span class="o">=</span> <span class="n">sample</span><span class="p">(</span><span class="mi">500</span><span class="p">,</span> <span class="n">NUTS</span><span class="p">())</span>
@@ -922,9 +929,13 @@ P(height &lt; 0) =  0.0
 </div>
 <div class="stderr output_area docutils container">
 <div class="highlight"><pre>
-Applied logodds-transform to p and added transformed p_logodds_ to model.
-INFO:pymc3:Applied logodds-transform to p and added transformed p_logodds_ to model.
-100%|██████████| 500/500 [00:02&lt;00:00, 207.93it/s]
+ 96%|█████████▌| 480/500 [00:02&lt;00:00, 193.51it/s]/home/jovyan/pymc3/pymc3/step_methods/hmc/nuts.py:235: UserWarning: Chain 0 contains only 500 samples.
+  warnings.warn(&#39;Chain %s contains only %s samples.&#39; % (chain, n))
+/home/jovyan/pymc3/pymc3/step_methods/hmc/nuts.py:237: UserWarning: Step size tuning was enabled throughout the whole trace. You might want to specify the number of tuning steps.
+  warnings.warn(&#39;Step size tuning was enabled throughout the whole &#39;
+/opt/conda/lib/python3.5/site-packages/numpy/core/fromnumeric.py:2889: RuntimeWarning: Mean of empty slice.
+  out=out, **kwargs)
+100%|██████████| 500/500 [00:02&lt;00:00, 170.32it/s]
 </pre></div></div>
 </div>
 <div class="nboutput docutils container">
@@ -933,16 +944,14 @@ INFO:pymc3:Applied logodds-transform to p and added transformed p_logodds_ to mo
 <div class="output_area docutils container">
 <div class="highlight"><pre>
                 mean       std        min        25%        50%        75%  \
-Intercept -24.586548  7.999507 -43.240430 -30.782016 -23.721298 -19.595319
-height      0.341485  0.124828  -0.006850   0.261879   0.331836   0.432426
-weight      0.012132  0.008559  -0.011290   0.006719   0.011425   0.017528
-p           0.490834  0.289292   0.008668   0.229746   0.476395   0.731364
+height      0.335467  0.106041  -0.033747   0.265635   0.335860   0.408644
+Intercept -24.118712  6.938635 -41.729539 -28.794806 -24.183141 -19.480237
+weight      0.011749  0.008146  -0.012925   0.006426   0.011893   0.017335
 
                 max
-Intercept  0.375426
-height     0.619124
-weight     0.038408
-p          0.999594
+height     0.627600
+Intercept -1.642436
+weight     0.034942
 </pre></div></div>
 </div>
 <div class="nboutput nblast docutils container">
@@ -950,16 +959,6 @@ p          0.999594
 </div>
 <div class="output_area docutils container">
 <img alt="../_images/notebooks_GLM_27_2.png" src="../_images/notebooks_GLM_27_2.png" />
-</div>
-</div>
-<div class="nbinput nblast docutils container">
-<div class="prompt highlight-none"><div class="highlight"><pre>
-<span></span>In [ ]:
-</pre></div>
-</div>
-<div class="input_area highlight-ipython3"><div class="highlight"><pre>
-<span></span>
-</pre></div>
 </div>
 </div>
 </div>

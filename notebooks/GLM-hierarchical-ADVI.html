@@ -108,6 +108,8 @@
 <li class="toctree-l3"><a class="reference internal" href="lda-advi-aevb.html">Automatic autoencoding variational Bayes for latent dirichlet allocation with PyMC3</a></li>
 <li class="toctree-l3"><a class="reference internal" href="bayesian_neural_network_advi.html">Variational Inference: Bayesian Neural Networks</a></li>
 <li class="toctree-l3"><a class="reference internal" href="convolutional_vae_keras_advi.html">Convolutional variational autoencoder with PyMC3 and Keras</a></li>
+<li class="toctree-l3"><a class="reference internal" href="bayesian_neural_network_opvi-advi.html">Changes in API: Variational Inference: Bayesian Neural Networks</a></li>
+<li class="toctree-l3"><a class="reference internal" href="bayesian_neural_network_opvi-advi.html#Minibatch-ADVI">Minibatch ADVI</a></li>
 </ul>
 </li>
 </ul>
@@ -383,7 +385,6 @@ div.nboutput div.output_area.stderr {
 <div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="o">%</span><span class="k">matplotlib</span> inline
 <span class="kn">import</span> <span class="nn">sys</span><span class="o">,</span> <span class="nn">os</span>
-<span class="n">sys</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">insert</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">expanduser</span><span class="p">(</span><span class="s1">&#39;~/work/git/github/taku-y/pymc3&#39;</span><span class="p">))</span>
 <span class="kn">import</span> <span class="nn">theano</span>
 <span class="n">theano</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">floatX</span> <span class="o">=</span> <span class="s1">&#39;float64&#39;</span>
 <span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="kn">as</span> <span class="nn">plt</span>
@@ -391,7 +392,7 @@ div.nboutput div.output_area.stderr {
 <span class="kn">import</span> <span class="nn">pymc3</span> <span class="kn">as</span> <span class="nn">pm</span>
 <span class="kn">import</span> <span class="nn">pandas</span> <span class="kn">as</span> <span class="nn">pd</span>
 
-<span class="n">data</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="s1">&#39;../data/radon.csv&#39;</span><span class="p">)</span>
+<span class="n">data</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="n">pm</span><span class="o">.</span><span class="n">get_data</span><span class="p">(</span><span class="s1">&#39;radon.csv&#39;</span><span class="p">))</span>
 
 <span class="n">county_names</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">county</span><span class="o">.</span><span class="n">unique</span><span class="p">()</span>
 <span class="n">county_idx</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="s1">&#39;county_code&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">values</span>
@@ -450,11 +451,14 @@ div.nboutput div.output_area.stderr {
 </div>
 <div class="stderr output_area docutils container">
 <div class="highlight"><pre>
-Average ELBO = -1,098.31: 100%|██████████| 100000/100000 [00:23&lt;00:00, 4255.25it/s]
-Finished [100%]: Average ELBO = -1,098.06
+/opt/conda/lib/python3.5/site-packages/ipykernel/__main__.py:2: DeprecationWarning: Old ADVI interface and sample_vp is deprecated and will be removed in future, use pm.fit and pm.sample_approx instead
+  from ipykernel import kernelapp as app
+Average ELBO = -1,117.8:  45%|████▍     | 44977/100000 [00:09&lt;00:11, 4686.75it/s]Median ELBO converged.
+Finished [100%]: Average ELBO = -1,107.1
+
 </pre></div></div>
 </div>
-<div class="nbinput nblast docutils container">
+<div class="nbinput docutils container">
 <div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [4]:
 </pre></div>
@@ -467,6 +471,17 @@ Finished [100%]: Average ELBO = -1,098.06
     <span class="n">hierarchical_trace</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="mi">5000</span><span class="p">,</span> <span class="n">step</span><span class="p">,</span> <span class="n">start</span><span class="o">=</span><span class="n">means</span><span class="p">,</span> <span class="n">progressbar</span><span class="o">=</span><span class="bp">False</span><span class="p">)</span>
 </pre></div>
 </div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="stderr output_area docutils container">
+<div class="highlight"><pre>
+/home/jovyan/pymc3/pymc3/step_methods/hmc/nuts.py:237: UserWarning: Step size tuning was enabled throughout the whole trace. You might want to specify the number of tuning steps.
+  warnings.warn(&#39;Step size tuning was enabled throughout the whole &#39;
+/opt/conda/lib/python3.5/site-packages/numpy/core/fromnumeric.py:2889: RuntimeWarning: Mean of empty slice.
+  out=out, **kwargs)
+</pre></div></div>
 </div>
 <div class="nbinput docutils container">
 <div class="prompt highlight-none"><div class="highlight"><pre>
@@ -496,11 +511,20 @@ Finished [100%]: Average ELBO = -1,098.06
 </pre></div>
 </div>
 </div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="stderr output_area docutils container">
+<div class="highlight"><pre>
+/opt/conda/lib/python3.5/site-packages/matplotlib/font_manager.py:1297: UserWarning: findfont: Font family [&#39;sans-serif&#39;] not found. Falling back to DejaVu Sans
+  (prop.get_family(), self.defaultFamily[fontext]))
+</pre></div></div>
+</div>
 <div class="nboutput nblast docutils container">
 <div class="prompt empty docutils container">
 </div>
 <div class="output_area docutils container">
-<img alt="../_images/notebooks_GLM-hierarchical-ADVI_6_0.png" src="../_images/notebooks_GLM-hierarchical-ADVI_6_0.png" />
+<img alt="../_images/notebooks_GLM-hierarchical-ADVI_6_1.png" src="../_images/notebooks_GLM-hierarchical-ADVI_6_1.png" />
 </div>
 </div>
 <p>Plotting the hierarchical model trace -its found values- from 500
@@ -516,11 +540,20 @@ iterations onwards (right side plot) and its accumulated marginal values
 </pre></div>
 </div>
 </div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="stderr output_area docutils container">
+<div class="highlight"><pre>
+/opt/conda/lib/python3.5/site-packages/matplotlib/font_manager.py:1297: UserWarning: findfont: Font family [&#39;sans-serif&#39;] not found. Falling back to DejaVu Sans
+  (prop.get_family(), self.defaultFamily[fontext]))
+</pre></div></div>
+</div>
 <div class="nboutput nblast docutils container">
 <div class="prompt empty docutils container">
 </div>
 <div class="output_area docutils container">
-<img alt="../_images/notebooks_GLM-hierarchical-ADVI_8_0.png" src="../_images/notebooks_GLM-hierarchical-ADVI_8_0.png" />
+<img alt="../_images/notebooks_GLM-hierarchical-ADVI_8_1.png" src="../_images/notebooks_GLM-hierarchical-ADVI_8_1.png" />
 </div>
 </div>
 <p>The marginal posteriors in the left column are highly informative.
@@ -597,17 +630,23 @@ predictions.</p>
 <div class="stderr output_area docutils container">
 <div class="highlight"><pre>
 Auto-assigning NUTS sampler...
-Initializing NUTS using advi...
-Average ELBO = -19.21: 100%|██████████| 500000/500000 [00:45&lt;00:00, 11104.16it/s]
-Finished [100%]: Average ELBO = -19.20
+Initializing NUTS using ADVI...
+Finished [100%]: Average Loss = 22.56
+/home/jovyan/pymc3/pymc3/step_methods/hmc/nuts.py:237: UserWarning: Step size tuning was enabled throughout the whole trace. You might want to specify the number of tuning steps.
+  warnings.warn(&#39;Step size tuning was enabled throughout the whole &#39;
+/opt/conda/lib/python3.5/site-packages/numpy/core/fromnumeric.py:2889: RuntimeWarning: Mean of empty slice.
+  out=out, **kwargs)
 Auto-assigning NUTS sampler...
-Initializing NUTS using advi...
-Average ELBO = -37.91: 100%|██████████| 500000/500000 [01:11&lt;00:00, 7003.49it/s]
-Finished [100%]: Average ELBO = -37.89
+Initializing NUTS using ADVI...
+Finished [100%]: Average Loss = 37.849
+/home/jovyan/pymc3/pymc3/step_methods/hmc/nuts.py:237: UserWarning: Step size tuning was enabled throughout the whole trace. You might want to specify the number of tuning steps.
+  warnings.warn(&#39;Step size tuning was enabled throughout the whole &#39;
+/opt/conda/lib/python3.5/site-packages/numpy/core/fromnumeric.py:2889: RuntimeWarning: Mean of empty slice.
+  out=out, **kwargs)
 Auto-assigning NUTS sampler...
-Initializing NUTS using advi...
-Average ELBO = -34.96: 100%|██████████| 500000/500000 [01:14&lt;00:00, 6685.85it/s]
-Finished [100%]: Average ELBO = -34.96
+Initializing NUTS using ADVI...
+Convergence archived at 39000
+Interrupted at 39,000 [19%]: Average Loss = 37.975
 </pre></div></div>
 </div>
 <div class="nbinput docutils container">
@@ -645,11 +684,20 @@ Finished [100%]: Average ELBO = -34.96
 </pre></div>
 </div>
 </div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="stderr output_area docutils container">
+<div class="highlight"><pre>
+/opt/conda/lib/python3.5/site-packages/matplotlib/font_manager.py:1297: UserWarning: findfont: Font family [&#39;sans-serif&#39;] not found. Falling back to DejaVu Sans
+  (prop.get_family(), self.defaultFamily[fontext]))
+</pre></div></div>
+</div>
 <div class="nboutput nblast docutils container">
 <div class="prompt empty docutils container">
 </div>
 <div class="output_area docutils container">
-<img alt="../_images/notebooks_GLM-hierarchical-ADVI_12_0.png" src="../_images/notebooks_GLM-hierarchical-ADVI_12_0.png" />
+<img alt="../_images/notebooks_GLM-hierarchical-ADVI_12_1.png" src="../_images/notebooks_GLM-hierarchical-ADVI_12_1.png" />
 </div>
 </div>
 <p>In the above plot we have the data points in black of three selected

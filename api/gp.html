@@ -98,12 +98,17 @@
 <li class="toctree-l2"><a class="reference internal" href="distributions.html">Distributions</a></li>
 <li class="toctree-l2"><a class="reference internal" href="inference.html">Inference</a></li>
 <li class="toctree-l2"><a class="reference internal" href="glm.html">Generalized Linear Models</a></li>
-<li class="toctree-l2 current"><a class="current reference internal" href="#">Gaussian Processes</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">Gaussian Processes</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#module-pymc3.gp.gp">GP</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#covariance-functions-kernels">Covariance Functions / Kernels</a></li>
+</ul>
+</li>
 <li class="toctree-l2"><a class="reference internal" href="plots.html">Plots</a></li>
 <li class="toctree-l2"><a class="reference internal" href="stats.html">Stats</a></li>
 <li class="toctree-l2"><a class="reference internal" href="diagnostics.html">Diagnostics</a></li>
 <li class="toctree-l2"><a class="reference internal" href="backends.html">Backends</a></li>
 <li class="toctree-l2"><a class="reference internal" href="math.html">Math</a></li>
+<li class="toctree-l2"><a class="reference internal" href="data.html">Data</a></li>
 </ul>
 </li>
 </ul>
@@ -207,6 +212,60 @@
 </style>
 <div class="section" id="gaussian-processes">
 <h1>Gaussian Processes<a class="headerlink" href="#gaussian-processes" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="module-pymc3.gp.gp">
+<span id="gp"></span><h2>GP<a class="headerlink" href="#module-pymc3.gp.gp" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="pymc3.gp.gp.GP">
+<em class="property">class </em><code class="descclassname">pymc3.gp.gp.</code><code class="descname">GP</code><span class="sig-paren">(</span><em>mean_func=None</em>, <em>cov_func=None</em>, <em>X=None</em>, <em>sigma=0</em>, <em>*args</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.gp.gp.GP" title="Permalink to this definition">¶</a></dt>
+<dd><p>Gausian process</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>mean_func</strong> (<em>Mean</em>) &#8211; Mean function of Gaussian process</li>
+<li><strong>cov_func</strong> (<em>Covariance</em>) &#8211; Covariance function of Gaussian process</li>
+<li><strong>X</strong> (<em>array</em>) &#8211; Grid of points to evaluate Gaussian process over. Only required if the
+GP is not an observed variable.</li>
+<li><strong>sigma</strong> (<em>scalar</em><em> or </em><em>array</em>) &#8211; Observation standard deviation (defaults to zero)</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="pymc3.gp.gp.sample_gp">
+<code class="descclassname">pymc3.gp.gp.</code><code class="descname">sample_gp</code><span class="sig-paren">(</span><em>trace</em>, <em>gp</em>, <em>X_values</em>, <em>samples=None</em>, <em>obs_noise=True</em>, <em>model=None</em>, <em>random_seed=None</em>, <em>progressbar=True</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.gp.gp.sample_gp" title="Permalink to this definition">¶</a></dt>
+<dd><p>Generate samples from a posterior Gaussian process.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>trace</strong> (<em>backend</em><em>, </em><em>list</em><em>, or </em><em>MultiTrace</em>) &#8211; Trace generated from MCMC sampling.</li>
+<li><strong>gp</strong> (<em>Gaussian process object</em>) &#8211; The GP variable to sample from.</li>
+<li><strong>X_values</strong> (<em>array</em>) &#8211; Grid of values at which to sample GP.</li>
+<li><strong>samples</strong> (<em>int</em>) &#8211; Number of posterior predictive samples to generate. Defaults to the
+length of <cite>trace</cite></li>
+<li><strong>obs_noise</strong> (<em>bool</em>) &#8211; Flag for including observation noise in sample. Defaults to True.</li>
+<li><strong>model</strong> (<em>Model</em>) &#8211; Model used to generate <cite>trace</cite>. Optional if in <cite>with</cite> context manager.</li>
+<li><strong>random_seed</strong> (<em>integer &gt; 0</em>) &#8211; Random number seed for sampling.</li>
+<li><strong>progressbar</strong> (<em>bool</em>) &#8211; Flag for showing progress bar.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last"><em>Array of samples from posterior GP evaluated at Z.</em></p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</div>
+<div class="section" id="covariance-functions-kernels">
+<h2>Covariance Functions / Kernels<a class="headerlink" href="#covariance-functions-kernels" title="Permalink to this headline">¶</a></h2>
 <table border="1" class="longtable docutils">
 <colgroup>
 <col width="10%" />
@@ -214,10 +273,10 @@
 </colgroup>
 <tbody valign="top">
 <tr class="row-odd"><td><a class="reference internal" href="#pymc3.gp.cov.ExpQuad" title="pymc3.gp.cov.ExpQuad"><code class="xref py py-obj docutils literal"><span class="pre">ExpQuad</span></code></a>(input_dim,&nbsp;lengthscales[,&nbsp;active_dims])</td>
-<td>The exponentiated quadratic kernel.</td>
+<td>The Exponentiated Quadratic kernel.</td>
 </tr>
 <tr class="row-even"><td><a class="reference internal" href="#pymc3.gp.cov.RatQuad" title="pymc3.gp.cov.RatQuad"><code class="xref py py-obj docutils literal"><span class="pre">RatQuad</span></code></a>(input_dim,&nbsp;lengthscales,&nbsp;alpha[,&nbsp;...])</td>
-<td>The rational quadratic kernel.</td>
+<td>The Rational Quadratic kernel.</td>
 </tr>
 <tr class="row-odd"><td><a class="reference internal" href="#pymc3.gp.cov.Matern32" title="pymc3.gp.cov.Matern32"><code class="xref py py-obj docutils literal"><span class="pre">Matern32</span></code></a>(input_dim,&nbsp;lengthscales[,&nbsp;active_dims])</td>
 <td>The Matern kernel with nu = 3/2.</td>
@@ -229,27 +288,27 @@
 <td>The Exponential kernel.</td>
 </tr>
 <tr class="row-even"><td><a class="reference internal" href="#pymc3.gp.cov.Cosine" title="pymc3.gp.cov.Cosine"><code class="xref py py-obj docutils literal"><span class="pre">Cosine</span></code></a>(input_dim,&nbsp;lengthscales[,&nbsp;active_dims])</td>
-<td>The cosine kernel.</td>
+<td>The Cosine kernel.</td>
 </tr>
 <tr class="row-odd"><td><a class="reference internal" href="#pymc3.gp.cov.Linear" title="pymc3.gp.cov.Linear"><code class="xref py py-obj docutils literal"><span class="pre">Linear</span></code></a>(input_dim,&nbsp;c[,&nbsp;active_dims])</td>
-<td>The linear kernel.</td>
+<td>The Linear kernel.</td>
 </tr>
 <tr class="row-even"><td><a class="reference internal" href="#pymc3.gp.cov.Polynomial" title="pymc3.gp.cov.Polynomial"><code class="xref py py-obj docutils literal"><span class="pre">Polynomial</span></code></a>(input_dim,&nbsp;c,&nbsp;d,&nbsp;offset[,&nbsp;...])</td>
-<td>The polynomial covariance function.</td>
+<td>The Polynomial kernel.</td>
 </tr>
 <tr class="row-odd"><td><a class="reference internal" href="#pymc3.gp.cov.WarpedInput" title="pymc3.gp.cov.WarpedInput"><code class="xref py py-obj docutils literal"><span class="pre">WarpedInput</span></code></a>(input_dim,&nbsp;cov_func,&nbsp;warp_func)</td>
-<td>Warp the inputs of any covariance function using an arbitrary function defined using Theano.</td>
+<td>Warp the inputs of any kernel using an arbitrary function defined using Theano.</td>
 </tr>
 <tr class="row-even"><td><a class="reference internal" href="#pymc3.gp.cov.Gibbs" title="pymc3.gp.cov.Gibbs"><code class="xref py py-obj docutils literal"><span class="pre">Gibbs</span></code></a>(input_dim,&nbsp;lengthscale_func[,&nbsp;args,&nbsp;...])</td>
-<td>Use an arbitrary lengthscale function defined using Theano.</td>
+<td>The Gibbs kernel.</td>
 </tr>
 </tbody>
 </table>
 <span class="target" id="module-pymc3.gp.cov"></span><dl class="class">
 <dt id="pymc3.gp.cov.ExpQuad">
 <em class="property">class </em><code class="descclassname">pymc3.gp.cov.</code><code class="descname">ExpQuad</code><span class="sig-paren">(</span><em>input_dim</em>, <em>lengthscales</em>, <em>active_dims=None</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.gp.cov.ExpQuad" title="Permalink to this definition">¶</a></dt>
-<dd><p>The exponentiated quadratic kernel.  Also refered to as the squared
-exponential, or radial basis function kernel.</p>
+<dd><p>The Exponentiated Quadratic kernel.  Also refered to as the Squared
+Exponential, or Radial Basis Function kernel.</p>
 <div class="math">
 \[k(x, x') = \mathrm{exp}\left[ -\frac{(x - x')^2}{2 \ell^2} \right]\]</div>
 </dd></dl>
@@ -257,7 +316,7 @@ exponential, or radial basis function kernel.</p>
 <dl class="class">
 <dt id="pymc3.gp.cov.RatQuad">
 <em class="property">class </em><code class="descclassname">pymc3.gp.cov.</code><code class="descname">RatQuad</code><span class="sig-paren">(</span><em>input_dim</em>, <em>lengthscales</em>, <em>alpha</em>, <em>active_dims=None</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.gp.cov.RatQuad" title="Permalink to this definition">¶</a></dt>
-<dd><p>The rational quadratic kernel.</p>
+<dd><p>The Rational Quadratic kernel.</p>
 <div class="math">
 \[k(x, x') = \left(1 + \frac{(x - x')^2}{2\alpha\ell^2} \right)^{-\alpha}\]</div>
 </dd></dl>
@@ -289,7 +348,7 @@ exponential, or radial basis function kernel.</p>
 <dl class="class">
 <dt id="pymc3.gp.cov.Linear">
 <em class="property">class </em><code class="descclassname">pymc3.gp.cov.</code><code class="descname">Linear</code><span class="sig-paren">(</span><em>input_dim</em>, <em>c</em>, <em>active_dims=None</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.gp.cov.Linear" title="Permalink to this definition">¶</a></dt>
-<dd><p>The linear kernel.</p>
+<dd><p>The Linear kernel.</p>
 <div class="math">
 \[k(x, x') = (x - c)(x' - c)\]</div>
 </dd></dl>
@@ -297,7 +356,7 @@ exponential, or radial basis function kernel.</p>
 <dl class="class">
 <dt id="pymc3.gp.cov.Polynomial">
 <em class="property">class </em><code class="descclassname">pymc3.gp.cov.</code><code class="descname">Polynomial</code><span class="sig-paren">(</span><em>input_dim</em>, <em>c</em>, <em>d</em>, <em>offset</em>, <em>active_dims=None</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.gp.cov.Polynomial" title="Permalink to this definition">¶</a></dt>
-<dd><p>The polynomial covariance function.</p>
+<dd><p>The Polynomial kernel.</p>
 <div class="math">
 \[k(x, x') = [(x - c)(x' - c) + \mathrm{offset}]^{d}\]</div>
 </dd></dl>
@@ -305,7 +364,7 @@ exponential, or radial basis function kernel.</p>
 <dl class="class">
 <dt id="pymc3.gp.cov.Cosine">
 <em class="property">class </em><code class="descclassname">pymc3.gp.cov.</code><code class="descname">Cosine</code><span class="sig-paren">(</span><em>input_dim</em>, <em>lengthscales</em>, <em>active_dims=None</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.gp.cov.Cosine" title="Permalink to this definition">¶</a></dt>
-<dd><p>The cosine kernel.</p>
+<dd><p>The Cosine kernel.</p>
 <div class="math">
 \[k(x, x') = \mathrm{cos}\left( \frac{||x - x'||}{ \ell^2} \right)\]</div>
 </dd></dl>
@@ -313,10 +372,10 @@ exponential, or radial basis function kernel.</p>
 <dl class="class">
 <dt id="pymc3.gp.cov.WarpedInput">
 <em class="property">class </em><code class="descclassname">pymc3.gp.cov.</code><code class="descname">WarpedInput</code><span class="sig-paren">(</span><em>input_dim</em>, <em>cov_func</em>, <em>warp_func</em>, <em>args=None</em>, <em>active_dims=None</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.gp.cov.WarpedInput" title="Permalink to this definition">¶</a></dt>
-<dd><p>Warp the inputs of any covariance function using an arbitrary function
+<dd><p>Warp the inputs of any kernel using an arbitrary function
 defined using Theano.</p>
 <div class="math">
-\[k_{\mathrm{warped}}(x, x') = k(w(x), w(x'))\]</div>
+\[k(x, x') = k(w(x), w(x'))\]</div>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />
@@ -335,17 +394,18 @@ defined using Theano.</p>
 <dl class="class">
 <dt id="pymc3.gp.cov.Gibbs">
 <em class="property">class </em><code class="descclassname">pymc3.gp.cov.</code><code class="descname">Gibbs</code><span class="sig-paren">(</span><em>input_dim</em>, <em>lengthscale_func</em>, <em>args=None</em>, <em>active_dims=None</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.gp.cov.Gibbs" title="Permalink to this definition">¶</a></dt>
-<dd><p>Use an arbitrary lengthscale function defined using Theano.  Operates on a single input dimension.</p>
+<dd><p>The Gibbs kernel.  Use an arbitrary lengthscale function defined
+using Theano.  Only tested in one dimension.</p>
 <div class="math">
-\[k_{\mathrm{gibbs}}(x, x') = \sqrt{\frac{2\ell(x)\ell(x')}{\ell^2(x) + \ell^2(x')}}
-                            \mathrm{exp}\left[ -\frac{(x - x')^2}{\ell(x)^2 + \ell^2(x')} \right]\]</div>
+\[k(x, x') = \sqrt{\frac{2\ell(x)\ell(x')}{\ell^2(x) + \ell^2(x')}}
+           \mathrm{exp}\left[ -\frac{(x - x')^2}{\ell^2(x) + \ell^2(x')} \right]\]</div>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
 <li><strong>lengthscale_func</strong> (<em>callable</em>) &#8211; Theano function of X and additional optional arguments.</li>
-<li><strong>args</strong> (<em>optional</em><em>, </em><em>tuple</em><em> or </em><em>list of scalars</em><em> or </em><em>PyMC3 variables</em>) &#8211; Additional inputs (besides X or Z) to warp_func.</li>
+<li><strong>args</strong> (<em>optional</em><em>, </em><em>tuple</em><em> or </em><em>list of scalars</em><em> or </em><em>PyMC3 variables</em>) &#8211; Additional inputs (besides X or Z) to lengthscale_func.</li>
 </ul>
 </td>
 </tr>
@@ -353,6 +413,7 @@ defined using Theano.</p>
 </table>
 </dd></dl>
 
+</div>
 </div>
 
 

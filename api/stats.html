@@ -104,6 +104,7 @@
 <li class="toctree-l2"><a class="reference internal" href="diagnostics.html">Diagnostics</a></li>
 <li class="toctree-l2"><a class="reference internal" href="backends.html">Backends</a></li>
 <li class="toctree-l2"><a class="reference internal" href="math.html">Math</a></li>
+<li class="toctree-l2"><a class="reference internal" href="data.html">Data</a></li>
 </ul>
 </li>
 </ul>
@@ -211,31 +212,88 @@
 <dl class="function">
 <dt id="pymc3.stats.autocorr">
 <code class="descclassname">pymc3.stats.</code><code class="descname">autocorr</code><span class="sig-paren">(</span><em>pymc3_obj</em>, <em>*args</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.stats.autocorr" title="Permalink to this definition">¶</a></dt>
-<dd><p>Sample autocorrelation at specified lag.
-The autocorrelation is the correlation of x_i with x_{i+lag}.</p>
+<dd><p>Sample autocorrelation at specified lag.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>x</strong> (<em>Numpy array</em>) &#8211; An array containing MCMC samples</li>
+<li><strong>lag</strong> (<em>int</em>) &#8211; The desidered lag to take in consideration</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
 </dd></dl>
 
 <dl class="function">
 <dt id="pymc3.stats.autocov">
 <code class="descclassname">pymc3.stats.</code><code class="descname">autocov</code><span class="sig-paren">(</span><em>pymc3_obj</em>, <em>*args</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.stats.autocov" title="Permalink to this definition">¶</a></dt>
-<dd><p>Sample autocovariance at specified lag.
-The autocovariance is a 2x2 matrix with the variances of
-x[:-lag] and x[lag:] in the diagonal and the autocovariance
-on the off-diagonal.</p>
+<dd><p>Sample autocovariance at specified lag.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>x</strong> (<em>Numpy array</em>) &#8211; An array containing MCMC samples</li>
+<li><strong>lag</strong> (<em>int</em>) &#8211; The desidered lag to take in consideration</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last"><ul class="simple">
+<li><em>2x2 matrix with the variances of</em></li>
+<li><strong>x[</strong> (<em>-lag] and x[lag:] in the diagonal and the autocovariance</em>)</li>
+<li><em>on the off-diagonal.</em></li>
+</ul>
+</p>
+</td>
+</tr>
+</tbody>
+</table>
 </dd></dl>
 
 <dl class="function">
 <dt id="pymc3.stats.dic">
 <code class="descclassname">pymc3.stats.</code><code class="descname">dic</code><span class="sig-paren">(</span><em>trace</em>, <em>model=None</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.stats.dic" title="Permalink to this definition">¶</a></dt>
 <dd><p>Calculate the deviance information criterion of the samples in trace from model
-Read more theory here - in a paper by some of the leading authorities on Model Selection - dx.doi.org/10.1111/1467-9868.00353</p>
+Read more theory here - in a paper by some of the leading authorities on Model Selection -
+dx.doi.org/10.1111/1467-9868.00353</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>trace</strong> (<em>result of MCMC run</em>) &#8211; </li>
+<li><strong>model</strong> (<em>PyMC Model</em>) &#8211; Optional model. Default None, taken from context.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last"><cite>float</cite> representing the deviance information criterion of the model and trace</p>
+</td>
+</tr>
+</tbody>
+</table>
 </dd></dl>
 
 <dl class="function">
 <dt id="pymc3.stats.bpic">
 <code class="descclassname">pymc3.stats.</code><code class="descname">bpic</code><span class="sig-paren">(</span><em>trace</em>, <em>model=None</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.stats.bpic" title="Permalink to this definition">¶</a></dt>
 <dd><p>Calculates Bayesian predictive information criterion n of the samples in trace from model
-Read more theory here - in a paper by some of the leading authorities on Model Selection - dx.doi.org/10.1111/1467-9868.00353</p>
+Read more theory here - in a paper by some of the leading authorities on Model Selection -
+dx.doi.org/10.1111/1467-9868.00353</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>trace</strong> (<em>result of MCMC run</em>) &#8211; </li>
+<li><strong>model</strong> (<em>PyMC Model</em>) &#8211; Optional model. Default None, taken from context.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
 </dd></dl>
 
 <dl class="function">
@@ -337,17 +395,14 @@ minimum width Bayesian credible interval (BCI).</p>
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Arguments:</th><td class="field-body"><dl class="first last docutils">
-<dt>x</dt>
- <span class="classifier-delimiter">:</span> <span class="classifier">Numpy array</span><dd><p class="first last">An array containing MCMC samples</p>
-</dd>
-<dt>qlist</dt>
- <span class="classifier-delimiter">:</span> <span class="classifier">tuple or list</span><dd><p class="first last">A list of desired quantiles (defaults to (2.5, 25, 50, 75, 97.5))</p>
-</dd>
-<dt>transform</dt>
- <span class="classifier-delimiter">:</span> <span class="classifier">callable</span><dd><p class="first last">Function to transform data (defaults to identity)</p>
-</dd>
-</dl>
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>x</strong> (<em>Numpy array</em>) &#8211; An array containing MCMC samples</li>
+<li><strong>qlist</strong> (<em>tuple</em><em> or </em><em>list</em>) &#8211; A list of desired quantiles (defaults to (2.5, 25, 50, 75, 97.5))</li>
+<li><strong>transform</strong> (<em>callable</em>) &#8211; Function to transform data (defaults to identity)</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last"><strong>`dictionary` with the quantiles {quantile</strong> (<em>value}</em>)</p>
 </td>
 </tr>
 </tbody>
@@ -357,21 +412,22 @@ minimum width Bayesian credible interval (BCI).</p>
 <dl class="function">
 <dt id="pymc3.stats.mc_error">
 <code class="descclassname">pymc3.stats.</code><code class="descname">mc_error</code><span class="sig-paren">(</span><em>pymc3_obj</em>, <em>*args</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.stats.mc_error" title="Permalink to this definition">¶</a></dt>
-<dd><p>Calculates the simulation standard error, accounting for non-independent
-samples. The trace is divided into batches, and the standard deviation of
-the batch means is calculated.</p>
+<dd><dl class="docutils">
+<dt>Calculates the simulation standard error, accounting for non-independent</dt>
+<dd>samples. The trace is divided into batches, and the standard deviation of
+the batch means is calculated.</dd>
+</dl>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Arguments:</th><td class="field-body"><dl class="first last docutils">
-<dt>x</dt>
- <span class="classifier-delimiter">:</span> <span class="classifier">Numpy array</span><dd><p class="first last">An array containing MCMC samples</p>
-</dd>
-<dt>batches</dt>
- <span class="classifier-delimiter">:</span> <span class="classifier">integer</span><dd><p class="first last">Number of batches</p>
-</dd>
-</dl>
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>x</strong> (<em>Numpy array</em>) &#8211; An array containing MCMC samples</li>
+<li><strong>batches</strong> (<em>integer</em>) &#8211; Number of batches</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last"><cite>float</cite> representing the error</p>
 </td>
 </tr>
 </tbody>

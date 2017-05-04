@@ -121,6 +121,7 @@
 </ul>
 </li>
 <li class="toctree-l2"><a class="reference internal" href="math.html">Math</a></li>
+<li class="toctree-l2"><a class="reference internal" href="data.html">Data</a></li>
 </ul>
 </li>
 </ul>
@@ -676,7 +677,7 @@ with variables names as keys.</p>
 <p>Functions for converting traces into a table-like format</p>
 <dl class="function">
 <dt id="pymc3.backends.tracetab.trace_to_dataframe">
-<code class="descclassname">pymc3.backends.tracetab.</code><code class="descname">trace_to_dataframe</code><span class="sig-paren">(</span><em>trace</em>, <em>chains=None</em>, <em>varnames=None</em>, <em>hide_transformed_vars=True</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.backends.tracetab.trace_to_dataframe" title="Permalink to this definition">¶</a></dt>
+<code class="descclassname">pymc3.backends.tracetab.</code><code class="descname">trace_to_dataframe</code><span class="sig-paren">(</span><em>trace</em>, <em>chains=None</em>, <em>varnames=None</em>, <em>include_transformed=False</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.backends.tracetab.trace_to_dataframe" title="Permalink to this definition">¶</a></dt>
 <dd><p>Convert trace to Pandas DataFrame.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
@@ -688,7 +689,7 @@ with variables names as keys.</p>
 chain value can also be given.</li>
 <li><strong>varnames</strong> (<em>list of variable names</em>) &#8211; Variables to be included in the DataFrame, if None all variable are
 included.</li>
-<li><strong>hide_transformed_vars</strong> (<em>boolean</em>) &#8211; If true transformed variables will not be included in the resulting
+<li><strong>include_transformed</strong> (<em>boolean</em>) &#8211; If true transformed variables will be included in the resulting
 DataFrame.</li>
 </ul>
 </td>

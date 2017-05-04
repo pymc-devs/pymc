@@ -35,7 +35,10 @@
         <link rel="index" title="Index"
               href="../genindex.html"/>
         <link rel="search" title="Search" href="../search.html"/>
-    <link rel="top" title="PyMC3 3.0 documentation" href="../index.html"/> 
+    <link rel="top" title="PyMC3 3.0 documentation" href="../index.html"/>
+        <link rel="up" title="Examples" href="../examples.html"/>
+        <link rel="next" title="API Reference" href="../api.html"/>
+        <link rel="prev" title="Convolutional variational autoencoder with PyMC3 and Keras" href="convolutional_vae_keras_advi.html"/> 
 
   
   <script src="../_static/js/modernizr.min.js"></script>
@@ -88,9 +91,31 @@
               
             
             
-              <ul>
+              <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="../getting_started.html">Getting started</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../examples.html">Examples</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="../examples.html">Examples</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="../examples.html#howto">Howto</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../examples.html#applied">Applied</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../examples.html#glm">GLM</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../examples.html#gaussian-processes">Gaussian Processes</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../examples.html#mixture-models">Mixture Models</a></li>
+<li class="toctree-l2 current"><a class="reference internal" href="../examples.html#variational-inference">Variational Inference</a><ul class="current">
+<li class="toctree-l3"><a class="reference internal" href="GLM-hierarchical-ADVI.html">GLM: Hierarchical Linear Regression with ADVI</a></li>
+<li class="toctree-l3"><a class="reference internal" href="GLM-hierarchical-advi-minibatch.html">GLM: Mini-batch ADVI on hierarchical regression model</a></li>
+<li class="toctree-l3"><a class="reference internal" href="lda-advi-aevb.html">Automatic autoencoding variational Bayes for latent dirichlet allocation with PyMC3</a></li>
+<li class="toctree-l3"><a class="reference internal" href="bayesian_neural_network_advi.html">Variational Inference: Bayesian Neural Networks</a></li>
+<li class="toctree-l3"><a class="reference internal" href="convolutional_vae_keras_advi.html">Convolutional variational autoencoder with PyMC3 and Keras</a></li>
+<li class="toctree-l3 current"><a class="current reference internal" href="#">Changes in API: Variational Inference: Bayesian Neural Networks</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#Bayesian-Neural-Networks-in-PyMC3">Bayesian Neural Networks in PyMC3</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#Lets-look-at-what-the-classifier-has-learned">Lets look at what the classifier has learned</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#Mini-batch-ADVI:-Scaling-data-size">Mini-batch ADVI: Scaling data size</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#Minibatch-ADVI">Minibatch ADVI</a></li>
+</ul>
+</li>
+</ul>
+</li>
 <li class="toctree-l1"><a class="reference internal" href="../api.html">API Reference</a></li>
 </ul>
 
@@ -135,6 +160,8 @@
   <ul class="wy-breadcrumbs">
     
       <li><a href="../index.html">Docs</a> &raquo;</li>
+        
+          <li><a href="../examples.html">Examples</a> &raquo;</li>
         
       <li>Changes in API: Variational Inference: Bayesian Neural Networks</li>
     
@@ -507,7 +534,7 @@ implemented via <a class="reference external" href="https://arxiv.org/abs/1610.0
 </div>
 <div class="nbinput docutils container">
 <div class="prompt highlight-none"><div class="highlight"><pre>
-<span></span>In [6]:
+<span></span>In [7]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3"><div class="highlight"><pre>
@@ -521,12 +548,10 @@ with neural_network:
     s = theano.shared(pm.floatX(1))
     inference = pm.ADVI(cost_part_grad_scale=s)
     # ADVI has nearly converged
-    inference.fit(n=20000)
+    pm.fit(n=20000, method=inference)
     # It is time to set `s` to zero
     s.set_value(0)
-    approx = inference.fit(n=10000)
-    # or you can just use `pm.fit` if you don&#39;t need ELBO history, ADVI will be used as default
-    #approx = pm.fit(n=30000)
+    approx = pm.fit(n=30000)
 </pre></div>
 </div>
 </div>
@@ -535,11 +560,10 @@ with neural_network:
 </div>
 <div class="stderr output_area docutils container">
 <div class="highlight"><pre>
-WARNING (theano.tensor.blas): We did not found a dynamic library into the library_dir of the library we use for blas. If you use ATLAS, make sure to compile it with dynamics library.
-Average Loss = 112.04: 100%|██████████| 20000/20000 [00:24&lt;00:00, 821.54it/s]
-Finished [100%]: Average Loss = 112.05
-Average Loss = 109.76: 100%|██████████| 10000/10000 [00:08&lt;00:00, 1225.38it/s]
-Finished [100%]: Average Loss = 109.79
+Average Loss = 123.45: 100%|██████████| 20000/20000 [00:05&lt;00:00, 3756.62it/s]
+Finished [100%]: Average Loss = 123.48
+Average Loss = 121.91: 100%|██████████| 30000/30000 [00:07&lt;00:00, 3860.27it/s]
+Finished [100%]: Average Loss = 121.87
 </pre></div></div>
 </div>
 <div class="nboutput nblast docutils container">
@@ -547,14 +571,14 @@ Finished [100%]: Average Loss = 109.79
 </div>
 <div class="output_area docutils container">
 <div class="highlight"><pre>
-CPU times: user 32.4 s, sys: 1min 38s, total: 2min 10s
-Wall time: 35.3 s
+CPU times: user 19.3 s, sys: 1.51 s, total: 20.9 s
+Wall time: 40.2 s
 </pre></div></div>
 </div>
 <p>Let&#8217;s compare performance with no grad scaling</p>
 <div class="nbinput nblast docutils container">
 <div class="prompt highlight-none"><div class="highlight"><pre>
-<span></span>In [7]:
+<span></span>In [8]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3"><div class="highlight"><pre>
@@ -564,7 +588,7 @@ Wall time: 35.3 s
 </div>
 <div class="nbinput docutils container">
 <div class="prompt highlight-none"><div class="highlight"><pre>
-<span></span>In [8]:
+<span></span>In [9]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3"><div class="highlight"><pre>
@@ -572,7 +596,7 @@ Wall time: 35.3 s
 
 with neural_network:
     inference_no_s = pm.ADVI()
-    approx_no_s = inference_no_s.fit(n=30000)
+    approx_no_s = pm.fit(n=30000, method=inference_no_s)
 </pre></div>
 </div>
 </div>
@@ -581,8 +605,8 @@ with neural_network:
 </div>
 <div class="stderr output_area docutils container">
 <div class="highlight"><pre>
-Average Loss = 109.83: 100%|██████████| 30000/30000 [00:32&lt;00:00, 917.54it/s]
-Finished [100%]: Average Loss = 109.86
+Average Loss = 121.93: 100%|██████████| 30000/30000 [00:07&lt;00:00, 3790.07it/s]
+Finished [100%]: Average Loss = 121.9
 </pre></div></div>
 </div>
 <div class="nboutput nblast docutils container">
@@ -590,14 +614,14 @@ Finished [100%]: Average Loss = 109.86
 </div>
 <div class="output_area docutils container">
 <div class="highlight"><pre>
-CPU times: user 34.4 s, sys: 1min 37s, total: 2min 12s
-Wall time: 36.7 s
+CPU times: user 10.3 s, sys: 403 ms, total: 10.7 s
+Wall time: 11.1 s
 </pre></div></div>
 </div>
 <p>And using old interface. Performance is nearly the same</p>
 <div class="nbinput docutils container">
 <div class="prompt highlight-none"><div class="highlight"><pre>
-<span></span>In [9]:
+<span></span>In [10]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3"><div class="highlight"><pre>
@@ -613,8 +637,8 @@ with neural_network:
 </div>
 <div class="stderr output_area docutils container">
 <div class="highlight"><pre>
-Average ELBO = -151.21: 100%|██████████| 30000/30000 [00:24&lt;00:00, 1236.55it/s]
-Finished [100%]: Average ELBO = -135.19
+Average ELBO = -181.77: 100%|██████████| 30000/30000 [00:06&lt;00:00, 4398.06it/s]
+Finished [100%]: Average ELBO = -165.16
 </pre></div></div>
 </div>
 <div class="nboutput nblast docutils container">
@@ -622,8 +646,8 @@ Finished [100%]: Average ELBO = -135.19
 </div>
 <div class="output_area docutils container">
 <div class="highlight"><pre>
-CPU times: user 26.5 s, sys: 1min 11s, total: 1min 38s
-Wall time: 26.1 s
+CPU times: user 8.3 s, sys: 389 ms, total: 8.69 s
+Wall time: 12.6 s
 </pre></div></div>
 </div>
 <p>~ 30 sec on my laptop. That&#8217;s pretty good considering that NUTS is
@@ -636,7 +660,7 @@ samples from the variational posterior using <code class="docutils literal"><spa
 like MCMC):</p>
 <div class="nbinput nblast docutils container">
 <div class="prompt highlight-none"><div class="highlight"><pre>
-<span></span>In [10]:
+<span></span>In [11]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3"><div class="highlight"><pre>
@@ -648,7 +672,7 @@ like MCMC):</p>
 slowly improves the fit over time.</p>
 <div class="nbinput docutils container">
 <div class="prompt highlight-none"><div class="highlight"><pre>
-<span></span>In [11]:
+<span></span>In [12]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3"><div class="highlight"><pre>
@@ -672,7 +696,7 @@ slowly improves the fit over time.</p>
 variance of ELBO, that&#8217;s really what is expected</p>
 <div class="nbinput docutils container">
 <div class="prompt highlight-none"><div class="highlight"><pre>
-<span></span>In [12]:
+<span></span>In [13]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3"><div class="highlight"><pre>
@@ -682,11 +706,11 @@ variance of ELBO, that&#8217;s really what is expected</p>
 </div>
 <div class="nboutput nblast docutils container">
 <div class="prompt highlight-none"><div class="highlight"><pre>
-<span></span>Out[12]:
+<span></span>Out[13]:
 </pre></div>
 </div>
 <div class="output_area highlight-none"><div class="highlight"><pre>
-<span></span>(63.055858777972695, 64.433532941142403)
+<span></span>(nan, 112.48609441184267)
 </pre></div>
 </div>
 </div>
@@ -702,7 +726,7 @@ our approximation (<code class="docutils literal"><span class="pre">approx.sampl
 </ol>
 <div class="nbinput docutils container">
 <div class="prompt highlight-none"><div class="highlight"><pre>
-<span></span>In [13]:
+<span></span>In [14]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3"><div class="highlight"><pre>
@@ -713,7 +737,7 @@ our approximation (<code class="docutils literal"><span class="pre">approx.sampl
 </div>
 <div class="nboutput nblast docutils container">
 <div class="prompt highlight-none"><div class="highlight"><pre>
-<span></span>Out[13]:
+<span></span>Out[14]:
 </pre></div>
 </div>
 <div class="output_area highlight-none"><div class="highlight"><pre>
@@ -723,7 +747,7 @@ our approximation (<code class="docutils literal"><span class="pre">approx.sampl
 </div>
 <div class="nbinput nblast docutils container">
 <div class="prompt highlight-none"><div class="highlight"><pre>
-<span></span>In [14]:
+<span></span>In [15]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3"><div class="highlight"><pre>
@@ -758,7 +782,7 @@ our approximation (<code class="docutils literal"><span class="pre">approx.sampl
 <p>See the difference</p>
 <div class="nbinput docutils container">
 <div class="prompt highlight-none"><div class="highlight"><pre>
-<span></span>In [15]:
+<span></span>In [16]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3"><div class="highlight"><pre>
@@ -771,12 +795,12 @@ our approximation (<code class="docutils literal"><span class="pre">approx.sampl
 </div>
 <div class="output_area docutils container">
 <div class="highlight"><pre>
-1 loop, best of 3: 6.75 s per loop
+1 loop, best of 3: 4.89 s per loop
 </pre></div></div>
 </div>
 <div class="nbinput docutils container">
 <div class="prompt highlight-none"><div class="highlight"><pre>
-<span></span>In [16]:
+<span></span>In [17]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3"><div class="highlight"><pre>
@@ -789,12 +813,12 @@ our approximation (<code class="docutils literal"><span class="pre">approx.sampl
 </div>
 <div class="output_area docutils container">
 <div class="highlight"><pre>
-1 loop, best of 3: 146 ms per loop
+10 loops, best of 3: 48.7 ms per loop
 </pre></div></div>
 </div>
 <div class="nbinput nblast docutils container">
 <div class="prompt highlight-none"><div class="highlight"><pre>
-<span></span>In [17]:
+<span></span>In [18]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3"><div class="highlight"><pre>
@@ -804,7 +828,7 @@ our approximation (<code class="docutils literal"><span class="pre">approx.sampl
 </div>
 <div class="nbinput docutils container">
 <div class="prompt highlight-none"><div class="highlight"><pre>
-<span></span>In [18]:
+<span></span>In [19]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3"><div class="highlight"><pre>
@@ -825,7 +849,7 @@ our approximation (<code class="docutils literal"><span class="pre">approx.sampl
 </div>
 <div class="nbinput docutils container">
 <div class="prompt highlight-none"><div class="highlight"><pre>
-<span></span>In [19]:
+<span></span>In [20]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3"><div class="highlight"><pre>
@@ -838,7 +862,7 @@ our approximation (<code class="docutils literal"><span class="pre">approx.sampl
 </div>
 <div class="output_area docutils container">
 <div class="highlight"><pre>
-Accuracy = 95.8%
+Accuracy = 96.8%
 </pre></div></div>
 </div>
 <p>Hey, our neural network did all right!</p>
@@ -850,7 +874,7 @@ Accuracy = 95.8%
 the whole input space.</p>
 <div class="nbinput nblast docutils container">
 <div class="prompt highlight-none"><div class="highlight"><pre>
-<span></span>In [20]:
+<span></span>In [21]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3"><div class="highlight"><pre>
@@ -862,7 +886,7 @@ the whole input space.</p>
 </div>
 <div class="nbinput nblast docutils container">
 <div class="prompt highlight-none"><div class="highlight"><pre>
-<span></span>In [21]:
+<span></span>In [22]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3"><div class="highlight"><pre>
@@ -875,7 +899,7 @@ the whole input space.</p>
 <h3>Probability surface<a class="headerlink" href="#Probability-surface" title="Permalink to this headline">¶</a></h3>
 <div class="nbinput docutils container">
 <div class="prompt highlight-none"><div class="highlight"><pre>
-<span></span>In [22]:
+<span></span>In [23]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3"><div class="highlight"><pre>
@@ -908,7 +932,7 @@ predictive to get a sense for the uncertainty in our predictions. Here
 is what that looks like:</p>
 <div class="nbinput docutils container">
 <div class="prompt highlight-none"><div class="highlight"><pre>
-<span></span>In [23]:
+<span></span>In [24]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3"><div class="highlight"><pre>
@@ -948,7 +972,7 @@ and can lead to faster convergence.</p>
 some setting up:</p>
 <div class="nbinput nblast docutils container">
 <div class="prompt highlight-none"><div class="highlight"><pre>
-<span></span>In [24]:
+<span></span>In [25]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3"><div class="highlight"><pre>
@@ -973,7 +997,7 @@ some setting up:</p>
 let&#8217;s see it</p>
 <div class="nbinput docutils container">
 <div class="prompt highlight-none"><div class="highlight"><pre>
-<span></span>In [25]:
+<span></span>In [26]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3"><div class="highlight"><pre>
@@ -981,8 +1005,7 @@ let&#8217;s see it</p>
 <span class="n">minibatch_y</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">generator</span><span class="p">(</span><span class="n">create_minibatch</span><span class="p">(</span><span class="n">Y_train</span><span class="p">))</span>
 <span class="n">neural_network_minibatch</span> <span class="o">=</span> <span class="n">construct_nn</span><span class="p">(</span><span class="n">minibatch_x</span><span class="p">,</span> <span class="n">minibatch_y</span><span class="p">)</span>
 <span class="k">with</span> <span class="n">neural_network_minibatch</span><span class="p">:</span>
-    <span class="n">inference</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">ADVI</span><span class="p">()</span>
-    <span class="n">approx</span> <span class="o">=</span> <span class="n">inference</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="mi">40000</span><span class="p">)</span>
+    <span class="n">approx</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="mi">40000</span><span class="p">,</span> <span class="n">method</span><span class="o">=</span><span class="n">pm</span><span class="o">.</span><span class="n">ADVI</span><span class="p">())</span>
 </pre></div>
 </div>
 </div>
@@ -991,13 +1014,13 @@ let&#8217;s see it</p>
 </div>
 <div class="stderr output_area docutils container">
 <div class="highlight"><pre>
-Average Loss = 117.12: 100%|██████████| 40000/40000 [00:26&lt;00:00, 1526.66it/s]
-Finished [100%]: Average Loss = 117.17
+Average Loss = 11.782: 100%|██████████| 40000/40000 [00:08&lt;00:00, 4682.06it/s]
+Finished [100%]: Average Loss = 11.798
 </pre></div></div>
 </div>
 <div class="nbinput docutils container">
 <div class="prompt highlight-none"><div class="highlight"><pre>
-<span></span>In [26]:
+<span></span>In [27]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3"><div class="highlight"><pre>
@@ -1024,6 +1047,15 @@ Finished [100%]: Average Loss = 117.17
            </div>
           </div>
           <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="../api.html" class="btn btn-neutral float-right" title="API Reference" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="convolutional_vae_keras_advi.html" class="btn btn-neutral" title="Convolutional variational autoencoder with PyMC3 and Keras" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
   
 
   <hr/>

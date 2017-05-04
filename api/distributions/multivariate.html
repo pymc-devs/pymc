@@ -110,6 +110,7 @@
 <li class="toctree-l2"><a class="reference internal" href="../diagnostics.html">Diagnostics</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../backends.html">Backends</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../math.html">Math</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../data.html">Data</a></li>
 </ul>
 </li>
 </ul>
@@ -221,16 +222,16 @@
 <col width="90%" />
 </colgroup>
 <tbody valign="top">
-<tr class="row-odd"><td><a class="reference internal" href="#pymc3.distributions.multivariate.MvNormal" title="pymc3.distributions.multivariate.MvNormal"><code class="xref py py-obj docutils literal"><span class="pre">MvNormal</span></code></a>(mu[,&nbsp;cov,&nbsp;tau,&nbsp;gpu_compat])</td>
+<tr class="row-odd"><td><a class="reference internal" href="#pymc3.distributions.multivariate.MvNormal" title="pymc3.distributions.multivariate.MvNormal"><code class="xref py py-obj docutils literal"><span class="pre">MvNormal</span></code></a>(mu[,&nbsp;cov,&nbsp;tau,&nbsp;chol])</td>
 <td>Multivariate normal log-likelihood.</td>
 </tr>
-<tr class="row-even"><td><a class="reference internal" href="#pymc3.distributions.multivariate.Wishart" title="pymc3.distributions.multivariate.Wishart"><code class="xref py py-obj docutils literal"><span class="pre">Wishart</span></code></a>(n,&nbsp;V,&nbsp;\*args,&nbsp;\*\*kwargs)</td>
+<tr class="row-even"><td><a class="reference internal" href="#pymc3.distributions.multivariate.Wishart" title="pymc3.distributions.multivariate.Wishart"><code class="xref py py-obj docutils literal"><span class="pre">Wishart</span></code></a>(nu,&nbsp;V,&nbsp;\*args,&nbsp;\*\*kwargs)</td>
 <td>Wishart log-likelihood.</td>
 </tr>
-<tr class="row-odd"><td><a class="reference internal" href="#pymc3.distributions.multivariate.LKJCholeskyCov" title="pymc3.distributions.multivariate.LKJCholeskyCov"><code class="xref py py-obj docutils literal"><span class="pre">LKJCholeskyCov</span></code></a>(n,&nbsp;eta,&nbsp;sd_dist,&nbsp;\*args,&nbsp;\*\*kwargs)</td>
+<tr class="row-odd"><td><a class="reference internal" href="#pymc3.distributions.multivariate.LKJCholeskyCov" title="pymc3.distributions.multivariate.LKJCholeskyCov"><code class="xref py py-obj docutils literal"><span class="pre">LKJCholeskyCov</span></code></a>(eta,&nbsp;n,&nbsp;sd_dist,&nbsp;\*args,&nbsp;\*\*kwargs)</td>
 <td>Covariance matrix with LKJ distributed correlations.</td>
 </tr>
-<tr class="row-even"><td><a class="reference internal" href="#pymc3.distributions.multivariate.LKJCorr" title="pymc3.distributions.multivariate.LKJCorr"><code class="xref py py-obj docutils literal"><span class="pre">LKJCorr</span></code></a>(n,&nbsp;p[,&nbsp;transform])</td>
+<tr class="row-even"><td><a class="reference internal" href="#pymc3.distributions.multivariate.LKJCorr" title="pymc3.distributions.multivariate.LKJCorr"><code class="xref py py-obj docutils literal"><span class="pre">LKJCorr</span></code></a>([eta,&nbsp;n,&nbsp;p,&nbsp;transform])</td>
 <td>The LKJ (Lewandowski, Kurowicka and Joe) log-likelihood.</td>
 </tr>
 <tr class="row-odd"><td><a class="reference internal" href="#pymc3.distributions.multivariate.Multinomial" title="pymc3.distributions.multivariate.Multinomial"><code class="xref py py-obj docutils literal"><span class="pre">Multinomial</span></code></a>(n,&nbsp;p,&nbsp;\*args,&nbsp;\*\*kwargs)</td>
@@ -243,7 +244,7 @@
 </table>
 <span class="target" id="module-pymc3.distributions.multivariate"></span><dl class="class">
 <dt id="pymc3.distributions.multivariate.MvNormal">
-<em class="property">class </em><code class="descclassname">pymc3.distributions.multivariate.</code><code class="descname">MvNormal</code><span class="sig-paren">(</span><em>mu</em>, <em>cov=None</em>, <em>tau=None</em>, <em>gpu_compat=False</em>, <em>*args</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.distributions.multivariate.MvNormal" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><code class="descclassname">pymc3.distributions.multivariate.</code><code class="descname">MvNormal</code><span class="sig-paren">(</span><em>mu</em>, <em>cov=None</em>, <em>tau=None</em>, <em>chol=None</em>, <em>*args</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.distributions.multivariate.MvNormal" title="Permalink to this definition">¶</a></dt>
 <dd><p>Multivariate normal log-likelihood.</p>
 <div class="math">
 \[f(x \mid \pi, T) =
@@ -272,11 +273,10 @@
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
 <li><strong>mu</strong> (<em>array</em>) &#8211; Vector of means.</li>
-<li><strong>cov</strong> (<em>array</em>) &#8211; Covariance matrix. Not required if tau is passed.</li>
-<li><strong>tau</strong> (<em>array</em>) &#8211; Precision matrix. Not required if tau is passed.</li>
-<li><strong>Flags</strong> &#8211; </li>
-<li><strong>----------</strong> &#8211; </li>
-<li><strong>gpu_compat</strong> (<em>False</em><em>, </em><em>because LogDet is not GPU compatible yet.</em>) &#8211; If this is set as true, the GPU compatible (but numerically unstable) log(det) is used.</li>
+<li><strong>cov</strong> (<em>array</em>) &#8211; Covariance matrix. Exactly one of cov, tau, or chol is needed.</li>
+<li><strong>tau</strong> (<em>array</em>) &#8211; Precision matrix. Exactly one of cov, tau, or chol is needed.</li>
+<li><strong>chol</strong> (<em>array</em>) &#8211; Cholesky decomposition of covariance matrix. Exactly one of cov,
+tau, or chol is needed.</li>
 </ul>
 </td>
 </tr>
@@ -418,17 +418,17 @@ rescaled otherwise.</li>
 
 <dl class="class">
 <dt id="pymc3.distributions.multivariate.Wishart">
-<em class="property">class </em><code class="descclassname">pymc3.distributions.multivariate.</code><code class="descname">Wishart</code><span class="sig-paren">(</span><em>n</em>, <em>V</em>, <em>*args</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.distributions.multivariate.Wishart" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><code class="descclassname">pymc3.distributions.multivariate.</code><code class="descname">Wishart</code><span class="sig-paren">(</span><em>nu</em>, <em>V</em>, <em>*args</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.distributions.multivariate.Wishart" title="Permalink to this definition">¶</a></dt>
 <dd><p>Wishart log-likelihood.</p>
 <p>The Wishart distribution is the probability distribution of the
 maximum-likelihood estimator (MLE) of the precision matrix of a
 multivariate normal distribution.  If V=1, the distribution is
-identical to the chi-square distribution with n degrees of
+identical to the chi-square distribution with nu degrees of
 freedom.</p>
 <div class="math">
-\[f(X \mid n, T) =
-    \frac{{\mid T \mid}^{n/2}{\mid X \mid}^{(n-k-1)/2}}{2^{nk/2}
-    \Gamma_p(n/2)} \exp\left\{ -\frac{1}{2} Tr(TX) \right\}\]</div>
+\[f(X \mid nu, T) =
+    \frac{{\mid T \mid}^{nu/2}{\mid X \mid}^{(nu-k-1)/2}}{2^{nu k/2}
+    \Gamma_p(nu/2)} \exp\left\{ -\frac{1}{2} Tr(TX) \right\}\]</div>
 <p>where <span class="math">\(k\)</span> is the rank of <span class="math">\(X\)</span>.</p>
 <table border="1" class="docutils">
 <colgroup>
@@ -440,10 +440,10 @@ freedom.</p>
 <td><span class="math">\(X(p x p)\)</span> positive definite matrix</td>
 </tr>
 <tr class="row-even"><td>Mean</td>
-<td><span class="math">\(n V\)</span></td>
+<td><span class="math">\(nu V\)</span></td>
 </tr>
 <tr class="row-odd"><td>Variance</td>
-<td><span class="math">\(n (v_{ij}^2 + v_{ii} v_{jj})\)</span></td>
+<td><span class="math">\(nu (v_{ij}^2 + v_{ii} v_{jj})\)</span></td>
 </tr>
 </tbody>
 </table>
@@ -452,7 +452,7 @@ freedom.</p>
 <col class="field-body" />
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
-<li><strong>n</strong> (<em>int</em>) &#8211; Degrees of freedom, &gt; 0.</li>
+<li><strong>nu</strong> (<em>int</em>) &#8211; Degrees of freedom, &gt; 0.</li>
 <li><strong>V</strong> (<em>array</em>) &#8211; p x p positive definite matrix.</li>
 </ul>
 </td>
@@ -462,7 +462,7 @@ freedom.</p>
 <div class="admonition note">
 <p class="first admonition-title">Note</p>
 <p class="last">This distribution is unusable in a PyMC3 model. You should instead
-use WishartBartlett or LKJCorr.</p>
+use WishartBartlett or LKJCholeskyCov, LKJCorr.</p>
 </div>
 </dd></dl>
 
@@ -511,11 +511,11 @@ c and z to your model which make up the matrix.</p>
 
 <dl class="class">
 <dt id="pymc3.distributions.multivariate.LKJCorr">
-<em class="property">class </em><code class="descclassname">pymc3.distributions.multivariate.</code><code class="descname">LKJCorr</code><span class="sig-paren">(</span><em>n</em>, <em>p</em>, <em>transform='interval'</em>, <em>*args</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.distributions.multivariate.LKJCorr" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><code class="descclassname">pymc3.distributions.multivariate.</code><code class="descname">LKJCorr</code><span class="sig-paren">(</span><em>eta=None</em>, <em>n=None</em>, <em>p=None</em>, <em>transform='interval'</em>, <em>*args</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.distributions.multivariate.LKJCorr" title="Permalink to this definition">¶</a></dt>
 <dd><p>The LKJ (Lewandowski, Kurowicka and Joe) log-likelihood.</p>
 <p>The LKJ distribution is a prior distribution for correlation matrices.
-If n = 1 this corresponds to the uniform distribution over correlation
-matrices. For n -&gt; oo the LKJ prior approaches the identity matrix.</p>
+If eta = 1 this corresponds to the uniform distribution over correlation
+matrices. For eta -&gt; oo the LKJ prior approaches the identity matrix.</p>
 <table border="1" class="docutils">
 <colgroup>
 <col width="15%" />
@@ -532,8 +532,10 @@ matrices. For n -&gt; oo the LKJ prior approaches the identity matrix.</p>
 <col class="field-body" />
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
-<li><strong>n</strong> (<em>float</em>) &#8211; Shape parameter (n &gt; 0). Uniform distribution at n = 1.</li>
-<li><strong>p</strong> (<em>int</em>) &#8211; Dimension of correlation matrix (p &gt; 0).</li>
+<li><strong>n</strong> (<em>int</em>) &#8211; Dimension of the covariance matrix (n &gt; 0).</li>
+<li><strong>eta</strong> (<em>float</em>) &#8211; The shape parameter (eta &gt; 0) of the LKJ distribution. eta = 1
+implies a uniform distribution of the correlation matrices;
+larger values put more weight on matrices with few correlations.</li>
 </ul>
 </td>
 </tr>
@@ -541,7 +543,7 @@ matrices. For n -&gt; oo the LKJ prior approaches the identity matrix.</p>
 </table>
 <p class="rubric">Notes</p>
 <p>This implementation only returns the values of the upper triangular
-matrix excluding the diagonal. Here is a schematic for p = 5, showing
+matrix excluding the diagonal. Here is a schematic for n = 5, showing
 the indexes of the elements:</p>
 <div class="highlight-default"><div class="highlight"><pre><span></span><span class="p">[[</span><span class="o">-</span> <span class="mi">0</span> <span class="mi">1</span> <span class="mi">2</span> <span class="mi">3</span><span class="p">]</span>
  <span class="p">[</span><span class="o">-</span> <span class="o">-</span> <span class="mi">4</span> <span class="mi">5</span> <span class="mi">6</span><span class="p">]</span>
@@ -564,7 +566,7 @@ extended onion method.&#8221; Journal of multivariate analysis,
 
 <dl class="class">
 <dt id="pymc3.distributions.multivariate.LKJCholeskyCov">
-<em class="property">class </em><code class="descclassname">pymc3.distributions.multivariate.</code><code class="descname">LKJCholeskyCov</code><span class="sig-paren">(</span><em>n</em>, <em>eta</em>, <em>sd_dist</em>, <em>*args</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.distributions.multivariate.LKJCholeskyCov" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><code class="descclassname">pymc3.distributions.multivariate.</code><code class="descname">LKJCholeskyCov</code><span class="sig-paren">(</span><em>eta</em>, <em>n</em>, <em>sd_dist</em>, <em>*args</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.distributions.multivariate.LKJCholeskyCov" title="Permalink to this definition">¶</a></dt>
 <dd><p>Covariance matrix with LKJ distributed correlations.</p>
 <p>This defines a distribution over cholesky decomposed covariance
 matrices, such that the underlying correlation matrices follow an
@@ -575,8 +577,8 @@ distribution specified by the user.</p>
 <col class="field-body" />
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
-<li><strong>n</strong> (<em>int</em>) &#8211; The number of rows of the covariance matrix.</li>
-<li><strong>eta</strong> (<em>float</em>) &#8211; The shape parameter of the LKJ distribution. A value of one
+<li><strong>n</strong> (<em>int</em>) &#8211; Dimension of the covariance matrix (n &gt; 0).</li>
+<li><strong>eta</strong> (<em>float</em>) &#8211; The shape parameter (eta &gt; 0) of the LKJ distribution. eta = 1
 implies a uniform distribution of the correlation matrices;
 larger values put more weight on matrices with few correlations.</li>
 <li><strong>sd_dist</strong> (<em>pm.Distribution</em>) &#8211; A distribution for the standard deviations.</li>
@@ -603,18 +605,17 @@ to convert this to a regular two-dimensional array.</p>
     <span class="c1"># Note that we access the distribution for the standard</span>
     <span class="c1"># deviations, and do not create a new random variable.</span>
     <span class="n">sd_dist</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">HalfCauchy</span><span class="o">.</span><span class="n">dist</span><span class="p">(</span><span class="n">beta</span><span class="o">=</span><span class="mf">2.5</span><span class="p">)</span>
-    <span class="n">packed_chol</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">LKJCholeskyCov</span><span class="p">(</span><span class="s1">&#39;chol_cov&#39;</span><span class="p">,</span> <span class="mi">10</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="n">sd_dist</span><span class="p">)</span>
+    <span class="n">packed_chol</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">LKJCholeskyCov</span><span class="p">(</span><span class="s1">&#39;chol_cov&#39;</span><span class="p">,</span> <span class="n">eta</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">n</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span> <span class="n">sd_dist</span><span class="o">=</span><span class="n">sd_dist</span><span class="p">)</span>
+    <span class="n">chol</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">expand_packed_triangular</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="n">packed_chol</span><span class="p">,</span> <span class="n">lower</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
 
     <span class="c1"># Define a new MvNormal with the given covariance</span>
-    <span class="n">vals</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">MvNormal</span><span class="p">(</span><span class="s1">&#39;vals&#39;</span><span class="p">,</span> <span class="n">mu</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="mi">10</span><span class="p">),</span> <span class="n">packed_chol</span><span class="o">=</span><span class="n">packed_chol</span><span class="p">)</span>
+    <span class="n">vals</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">MvNormal</span><span class="p">(</span><span class="s1">&#39;vals&#39;</span><span class="p">,</span> <span class="n">mu</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="mi">10</span><span class="p">),</span> <span class="n">chol</span><span class="o">=</span><span class="n">chol</span><span class="p">)</span>
 
     <span class="c1"># Or transform an uncorrelated normal:</span>
     <span class="n">vals_raw</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Normal</span><span class="p">(</span><span class="s1">&#39;vals_raw&#39;</span><span class="p">,</span> <span class="n">mu</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="mi">10</span><span class="p">),</span> <span class="n">sd</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
-    <span class="n">chol</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">expand_packed_triangular</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="n">packed_chol</span><span class="p">,</span> <span class="n">lower</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
     <span class="n">vals</span> <span class="o">=</span> <span class="n">tt</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">chol</span><span class="p">,</span> <span class="n">vals_raw</span><span class="p">)</span>
 
     <span class="c1"># Or compute the covariance matrix</span>
-    <span class="n">chol</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">expand_packed_triangular</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="n">packed_chol</span><span class="p">,</span> <span class="n">lower</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
     <span class="n">cov</span> <span class="o">=</span> <span class="n">tt</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">chol</span><span class="p">,</span> <span class="n">chol</span><span class="o">.</span><span class="n">T</span><span class="p">)</span>
 
     <span class="c1"># Extract the standard deviations</span>

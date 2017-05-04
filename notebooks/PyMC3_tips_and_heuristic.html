@@ -1,0 +1,1608 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>PyMC3 Modeling tips and heuristic &mdash; PyMC3 3.0 documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  
+  
+    <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  
+
+  
+
+  
+        <link rel="index" title="Index"
+              href="../genindex.html"/>
+        <link rel="search" title="Search" href="../search.html"/>
+    <link rel="top" title="PyMC3 3.0 documentation" href="../index.html"/>
+        <link rel="up" title="Examples" href="../examples.html"/>
+        <link rel="next" title="LKJ Prior for fitting a Multivariate Normal Model" href="LKJ.html"/>
+        <link rel="prev" title="How to debug a model" href="howto_debugging.html"/> 
+
+  
+  <script src="../_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+   
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+          
+            <a href="../index.html" class="icon icon-home"> PyMC3
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                3.0
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../getting_started.html">Getting started</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="../examples.html">Examples</a><ul class="current">
+<li class="toctree-l2 current"><a class="reference internal" href="../examples.html#howto">Howto</a><ul class="current">
+<li class="toctree-l3"><a class="reference internal" href="sampler-stats.html">Sampler statistics</a></li>
+<li class="toctree-l3"><a class="reference internal" href="sampler-stats.html#Multiple-samplers">Multiple samplers</a></li>
+<li class="toctree-l3"><a class="reference internal" href="Diagnosing_biased_Inference_with_Divergences.html">Diagnosing Biased Inference with Divergences</a></li>
+<li class="toctree-l3"><a class="reference internal" href="posterior_predictive.html">Posterior Predictive Checks</a></li>
+<li class="toctree-l3"><a class="reference internal" href="howto_debugging.html">How to debug a model</a></li>
+<li class="toctree-l3 current"><a class="current reference internal" href="#">PyMC3 Modeling tips and heuristic</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#Background-information">Background information</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#A-WinBugs/PyMC2-implementation">A WinBugs/PyMC2 implementation</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#PyMC3-implementation-using-theano.scan">PyMC3 implementation using <code class="docutils literal"><span class="pre">theano.scan</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#PyMC3-implementation-using-some-matrix-&quot;trick&quot;">PyMC3 implementation using some matrix &#8220;trick&#8221;</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#As-you-can-see,-its-6x-faster-using-matrix-multiplication.">As you can see, its 6x faster using matrix multiplication.</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#PyMC3-implementation-using-Matrix-multiplication">PyMC3 implementation using Matrix multiplication</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#PyMC3-implementation-using-Sparse-Matrix">PyMC3 implementation using Sparse Matrix</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#Final-remarks">Final remarks</a></li>
+<li class="toctree-l3"><a class="reference internal" href="LKJ.html">LKJ Prior for fitting a Multivariate Normal Model</a></li>
+<li class="toctree-l3"><a class="reference internal" href="live_sample_plots.html">Live sample plots</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../examples.html#applied">Applied</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../examples.html#glm">GLM</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../examples.html#gaussian-processes">Gaussian Processes</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../examples.html#mixture-models">Mixture Models</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../examples.html#variational-inference">Variational Inference</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../api.html">API Reference</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">PyMC3</a>
+        
+      </nav>
+
+
+      
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../index.html">Docs</a> &raquo;</li>
+        
+          <li><a href="../examples.html">Examples</a> &raquo;</li>
+        
+      <li>PyMC3 Modeling tips and heuristic</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            <a href="../_sources/notebooks/PyMC3_tips_and_heuristic.ipynb.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  
+<style>
+/* CSS for nbsphinx extension */
+
+/* remove conflicting styling from Sphinx themes */
+div.nbinput,
+div.nbinput div.prompt,
+div.nbinput div.input_area,
+div.nbinput div[class*=highlight],
+div.nbinput div[class*=highlight] pre,
+div.nboutput,
+div.nbinput div.prompt,
+div.nbinput div.output_area,
+div.nboutput div[class*=highlight],
+div.nboutput div[class*=highlight] pre {
+    background: none;
+    border: none;
+    padding: 0 0;
+    margin: 0;
+    box-shadow: none;
+}
+
+/* avoid gaps between output lines */
+div.nboutput div[class*=highlight] pre {
+    line-height: normal;
+}
+
+/* input/output containers */
+div.nbinput,
+div.nboutput {
+    display: -webkit-flex;
+    display: flex;
+    align-items: flex-start;
+    margin: 0;
+    width: 100%;
+}
+@media (max-width: 540px) {
+    div.nbinput,
+    div.nboutput {
+        flex-direction: column;
+    }
+}
+
+/* input container */
+div.nbinput {
+    padding-top: 5px;
+}
+
+/* last container */
+div.nblast {
+    padding-bottom: 5px;
+}
+
+/* input prompt */
+div.nbinput div.prompt pre {
+    color: #303F9F;
+}
+
+/* output prompt */
+div.nboutput div.prompt pre {
+    color: #D84315;
+}
+
+/* all prompts */
+div.nbinput div.prompt,
+div.nboutput div.prompt {
+    min-width: 8ex;
+    padding-top: 0.4em;
+    padding-right: 0.4em;
+    text-align: right;
+    flex: 0;
+}
+@media (max-width: 540px) {
+    div.nbinput div.prompt,
+    div.nboutput div.prompt {
+        text-align: left;
+        padding: 0.4em;
+    }
+    div.nboutput div.prompt.empty {
+        padding: 0;
+    }
+}
+
+/* disable scrollbars on prompts */
+div.nbinput div.prompt pre,
+div.nboutput div.prompt pre {
+    overflow: hidden;
+}
+
+/* input/output area */
+div.nbinput div.input_area,
+div.nboutput div.output_area {
+    padding: 0.4em;
+    -webkit-flex: 1;
+    flex: 1;
+    overflow: auto;
+}
+@media (max-width: 540px) {
+    div.nbinput div.input_area,
+    div.nboutput div.output_area {
+        width: 100%;
+    }
+}
+
+/* input area */
+div.nbinput div.input_area {
+    border: 1px solid #cfcfcf;
+    border-radius: 2px;
+    background: #f7f7f7;
+}
+
+/* override MathJax center alignment in output cells */
+div.nboutput div[class*=MathJax] {
+    text-align: left !important;
+}
+
+/* override sphinx.ext.pngmath center alignment in output cells */
+div.nboutput div.math p {
+    text-align: left;
+}
+
+/* standard error */
+div.nboutput div.output_area.stderr {
+    background: #fdd;
+}
+
+/* ANSI colors */
+.ansi-black-fg { color: #3E424D; }
+.ansi-black-bg { background-color: #3E424D; }
+.ansi-black-intense-fg { color: #282C36; }
+.ansi-black-intense-bg { background-color: #282C36; }
+.ansi-red-fg { color: #E75C58; }
+.ansi-red-bg { background-color: #E75C58; }
+.ansi-red-intense-fg { color: #B22B31; }
+.ansi-red-intense-bg { background-color: #B22B31; }
+.ansi-green-fg { color: #00A250; }
+.ansi-green-bg { background-color: #00A250; }
+.ansi-green-intense-fg { color: #007427; }
+.ansi-green-intense-bg { background-color: #007427; }
+.ansi-yellow-fg { color: #DDB62B; }
+.ansi-yellow-bg { background-color: #DDB62B; }
+.ansi-yellow-intense-fg { color: #B27D12; }
+.ansi-yellow-intense-bg { background-color: #B27D12; }
+.ansi-blue-fg { color: #208FFB; }
+.ansi-blue-bg { background-color: #208FFB; }
+.ansi-blue-intense-fg { color: #0065CA; }
+.ansi-blue-intense-bg { background-color: #0065CA; }
+.ansi-magenta-fg { color: #D160C4; }
+.ansi-magenta-bg { background-color: #D160C4; }
+.ansi-magenta-intense-fg { color: #A03196; }
+.ansi-magenta-intense-bg { background-color: #A03196; }
+.ansi-cyan-fg { color: #60C6C8; }
+.ansi-cyan-bg { background-color: #60C6C8; }
+.ansi-cyan-intense-fg { color: #258F8F; }
+.ansi-cyan-intense-bg { background-color: #258F8F; }
+.ansi-white-fg { color: #C5C1B4; }
+.ansi-white-bg { background-color: #C5C1B4; }
+.ansi-white-intense-fg { color: #A1A6B2; }
+.ansi-white-intense-bg { background-color: #A1A6B2; }
+
+.ansi-bold { font-weight: bold; }
+
+/* CSS overrides for sphinx_rtd_theme */
+
+/* 24px margin */
+.nbinput.nblast,
+.nboutput.nblast {
+    margin-bottom: 19px;  /* padding has already 5px */
+}
+
+/* ... except between code cells! */
+.nblast + .nbinput {
+    margin-top: -19px;
+}
+
+/* nice headers on first paragraph of info/warning boxes */
+.admonition .first {
+    margin: -12px;
+    padding: 6px 12px;
+    margin-bottom: 12px;
+    color: #fff;
+    line-height: 1;
+    display: block;
+}
+.admonition.warning .first {
+    background: #f0b37e;
+}
+.admonition.note .first {
+    background: #6ab0de;
+}
+.admonition > p:before {
+    margin-right: 4px;  /* make room for the exclamation icon */
+}
+</style>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
+<span></span>In [1]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="o">%</span><span class="k">pylab</span> inline
+
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="kn">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">scipy.stats</span> <span class="kn">as</span> <span class="nn">stats</span>
+<span class="kn">import</span> <span class="nn">pymc3</span> <span class="kn">as</span> <span class="nn">pm</span>
+<span class="kn">from</span> <span class="nn">theano</span> <span class="kn">import</span> <span class="n">shared</span>
+<span class="kn">import</span> <span class="nn">theano</span>
+<span class="kn">import</span> <span class="nn">theano.tensor</span> <span class="kn">as</span> <span class="nn">tt</span>
+<span class="n">floatX</span> <span class="o">=</span> <span class="s2">&quot;float32&quot;</span>
+
+<span class="o">%</span><span class="k">config</span> InlineBackend.figure_format = &#39;retina&#39;
+<span class="o">%</span><span class="k">qtconsole</span> --colors=linux
+<span class="n">plt</span><span class="o">.</span><span class="n">style</span><span class="o">.</span><span class="n">use</span><span class="p">(</span><span class="s1">&#39;ggplot&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Populating the interactive namespace from numpy and matplotlib
+</pre></div></div>
+</div>
+<div class="section" id="PyMC3-Modeling-tips-and-heuristic">
+<h1>PyMC3 Modeling tips and heuristic<a class="headerlink" href="#PyMC3-Modeling-tips-and-heuristic" title="Permalink to this headline">¶</a></h1>
+<p>A walkthrough of implementing a Conditional Autoregressive (CAR) model
+in <code class="docutils literal"><span class="pre">PyMC3</span></code>, with <code class="docutils literal"><span class="pre">WinBugs</span></code>/<code class="docutils literal"><span class="pre">PyMC2</span></code> and <code class="docutils literal"><span class="pre">STAN</span></code> code as
+references.</p>
+<ul class="simple">
+<li>Notebook Written by <a class="reference external" href="https://www.github.com/junpenglao/">Junpeng
+Lao</a>, inspired by <code class="docutils literal"><span class="pre">PyMC3</span></code>
+<a class="reference external" href="https://github.com/pymc-devs/pymc3/issues/2022">issue#2022</a>,
+<a class="reference external" href="https://github.com/pymc-devs/pymc3/issues/2066">issue#2066</a> and
+<a class="reference external" href="https://github.com/pymc-devs/pymc3/issues/2066#issuecomment-296397012">comments</a>.
+I would like to thank [&#64;denadai2](<a class="reference external" href="https://github.com/denadai2">https://github.com/denadai2</a>),
+[&#64;aseyboldt](<a class="reference external" href="https://github.com/aseyboldt">https://github.com/aseyboldt</a>), and
+[&#64;twiecki](<a class="reference external" href="https://github.com/twiecki">https://github.com/twiecki</a>) for the helpful discussion.</li>
+</ul>
+<p>As a probabilistic language, there are some fundamental differences
+between <code class="docutils literal"><span class="pre">PyMC3</span></code> and other alternatives such as <code class="docutils literal"><span class="pre">WinBugs</span></code>, <code class="docutils literal"><span class="pre">JAGS</span></code>,
+and <code class="docutils literal"><span class="pre">STAN</span></code>. In this notebook, I will summarise some heuristics and
+intuition I got over the past two years using <code class="docutils literal"><span class="pre">PyMC3</span></code>. I will outline
+some thinking process of how I approach a modelling problem using
+<code class="docutils literal"><span class="pre">PyMC3</span></code>, and how to think in linear algebra solving most of the
+programming problem. I hope this notebook will shell some light into the
+design and feature of <code class="docutils literal"><span class="pre">PyMC3</span></code>, and similar language built on linear
+algebra package with a static world view (e.g., Edward, which is based
+upon Tensorflow).</p>
+<p>For more resources comparing between PyMC3 codes and other probabilistic
+languages: * <a class="reference external" href="https://github.com/aloctavodia/Doing_bayesian_data_analysis">PyMC3 port of &#8220;Doing Bayesian Data Analysis&#8221; - PyMC3 vs
+WinBugs/JAGS/STAN</a>
+* <a class="reference external" href="https://github.com/junpenglao/Bayesian-Cognitive-Modeling-in-Pymc3">PyMC3 port of &#8220;Bayesian Cognitive Modeling&#8221; - PyMC3 vs
+WinBugs/JAGS/STAN</a>
+* <a class="reference external" href="https://github.com/aloctavodia/Statistical-Rethinking-with-Python-and-PyMC3">[WIP] PyMC3 port of &#8220;Statistical Rethinking&#8221; - PyMC3 vs
+STAN</a></p>
+</div>
+<div class="section" id="Background-information">
+<h1>Background information<a class="headerlink" href="#Background-information" title="Permalink to this headline">¶</a></h1>
+<div class="line-block">
+<div class="line">Supposed we want to implement a <a class="reference external" href="http://www.statsref.com/HTML/index.html?car_models.html">Conditional Autoregressive (CAR)
+model</a>
+with some reference codes in <a class="reference external" href="http://glau.ca/?p=340">WinBugs/PyMC2</a>
+and
+<a class="reference external" href="http://mc-stan.org/documentation/case-studies/mbjoseph-CARStan.html">STAN</a>.</div>
+<div class="line">For the sake of brevity, I will not go into the details of the CAR
+model. The essential idea of this kind model is autocorrelation, which
+is informally speaking &#8220;correlation with itself&#8221;. In a CAR model, the
+probability of values estimated at any given location <span class="math">\(y_i\)</span> are
+conditional on some neighboring values <span class="math">\(y_j, _{j \neq i}\)</span> (in
+another word, correlated/covariated with these values):</div>
+</div>
+<div class="math">
+\[y_i \mid y_j, j \neq i \sim \mathcal{N}(\alpha \sum_{j = 1}^n b_{ij} y_j, \sigma_i^{2})\]</div>
+<p>where <span class="math">\(\sigma_i^{2}\)</span> is a spatially varying covariance parameter,
+and <span class="math">\(b_{ii} = 0\)</span>.</p>
+<p>Here we will demonstrate the implementation of a CAR model using the
+canonical example: the lip cancer risk data in Scotland between 1975 and
+1980. The original data is from (Kemp et al. 1985). This data set
+includes observed lip cancer case counts at 56 spatial units in
+Scotland, with the expected number of cases as intercept, and an
+area-specific continuous variable coded for the proportion of the
+population employed in agriculture, fishing, or forestry (AFF). We want
+to model how lip cancer rates (<code class="docutils literal"><span class="pre">O</span></code> below) relate to AFF (<code class="docutils literal"><span class="pre">aff</span></code>
+below), as exposure to sunlight is a risk factor.</p>
+<div class="math">
+\[O_i \sim \mathcal{Poisson}(\text{exp}(\beta_0 + \beta_1*aff + \phi_i + \log(\text{E}_i)))\]</div>
+<div class="math">
+\[\phi_i \mid \phi_j, j \neq i \sim \mathcal{N}(\alpha \sum_{j = 1}^n b_{ij} \phi_j, \sigma_i^{2})\]</div>
+<p>Setting up the data:</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
+<span></span>In [2]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">county</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="s2">&quot;skye_lochalsh&quot;</span><span class="p">,</span> <span class="s2">&quot;banff_buchan&quot;</span><span class="p">,</span> <span class="s2">&quot;caithness,berwickshire&quot;</span><span class="p">,</span> <span class="s2">&quot;ross_cromarty&quot;</span><span class="p">,</span>
+                   <span class="s2">&quot;orkney&quot;</span><span class="p">,</span> <span class="s2">&quot;moray&quot;</span><span class="p">,</span> <span class="s2">&quot;shetland&quot;</span><span class="p">,</span> <span class="s2">&quot;lochaber&quot;</span><span class="p">,</span> <span class="s2">&quot;gordon&quot;</span><span class="p">,</span> <span class="s2">&quot;western_isles&quot;</span><span class="p">,</span>
+                   <span class="s2">&quot;sutherland&quot;</span><span class="p">,</span> <span class="s2">&quot;nairn&quot;</span><span class="p">,</span> <span class="s2">&quot;wigtown&quot;</span><span class="p">,</span> <span class="s2">&quot;NE.fife&quot;</span><span class="p">,</span> <span class="s2">&quot;kincardine&quot;</span><span class="p">,</span> <span class="s2">&quot;badenoch&quot;</span><span class="p">,</span>
+                   <span class="s2">&quot;ettrick&quot;</span><span class="p">,</span> <span class="s2">&quot;inverness&quot;</span><span class="p">,</span> <span class="s2">&quot;roxburgh&quot;</span><span class="p">,</span> <span class="s2">&quot;angus&quot;</span><span class="p">,</span> <span class="s2">&quot;aberdeen&quot;</span><span class="p">,</span> <span class="s2">&quot;argyll_bute&quot;</span><span class="p">,</span>
+                   <span class="s2">&quot;clydesdale&quot;</span><span class="p">,</span> <span class="s2">&quot;kirkcaldy&quot;</span><span class="p">,</span> <span class="s2">&quot;dunfermline&quot;</span><span class="p">,</span> <span class="s2">&quot;nithsdale&quot;</span><span class="p">,</span> <span class="s2">&quot;east_lothian&quot;</span><span class="p">,</span>
+                   <span class="s2">&quot;perth_kinross&quot;</span><span class="p">,</span> <span class="s2">&quot;west_lothian&quot;</span><span class="p">,</span> <span class="s2">&quot;cumnock_doon&quot;</span><span class="p">,</span> <span class="s2">&quot;stewartry&quot;</span><span class="p">,</span> <span class="s2">&quot;midlothian&quot;</span><span class="p">,</span>
+                   <span class="s2">&quot;stirling&quot;</span><span class="p">,</span> <span class="s2">&quot;kyle_carrick&quot;</span><span class="p">,</span> <span class="s2">&quot;inverclyde&quot;</span><span class="p">,</span> <span class="s2">&quot;cunninghame&quot;</span><span class="p">,</span> <span class="s2">&quot;monklands&quot;</span><span class="p">,</span>
+                   <span class="s2">&quot;dumbarton&quot;</span><span class="p">,</span> <span class="s2">&quot;clydebank&quot;</span><span class="p">,</span> <span class="s2">&quot;renfrew&quot;</span><span class="p">,</span> <span class="s2">&quot;falkirk&quot;</span><span class="p">,</span> <span class="s2">&quot;clackmannan&quot;</span><span class="p">,</span> <span class="s2">&quot;motherwell&quot;</span><span class="p">,</span>
+                   <span class="s2">&quot;edinburgh&quot;</span><span class="p">,</span> <span class="s2">&quot;kilmarnock&quot;</span><span class="p">,</span> <span class="s2">&quot;east_kilbride&quot;</span><span class="p">,</span> <span class="s2">&quot;hamilton&quot;</span><span class="p">,</span> <span class="s2">&quot;glasgow&quot;</span><span class="p">,</span> <span class="s2">&quot;dundee&quot;</span><span class="p">,</span>
+                   <span class="s2">&quot;cumbernauld&quot;</span><span class="p">,</span> <span class="s2">&quot;bearsden&quot;</span><span class="p">,</span> <span class="s2">&quot;eastwood&quot;</span><span class="p">,</span> <span class="s2">&quot;strathkelvin&quot;</span><span class="p">,</span> <span class="s2">&quot;tweeddale&quot;</span><span class="p">,</span>
+                   <span class="s2">&quot;annandale&quot;</span><span class="p">])</span>
+
+<span class="c1"># observed</span>
+<span class="n">O</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mi">9</span><span class="p">,</span> <span class="mi">39</span><span class="p">,</span> <span class="mi">11</span><span class="p">,</span> <span class="mi">9</span><span class="p">,</span> <span class="mi">15</span><span class="p">,</span> <span class="mi">8</span><span class="p">,</span> <span class="mi">26</span><span class="p">,</span> <span class="mi">7</span><span class="p">,</span> <span class="mi">6</span><span class="p">,</span> <span class="mi">20</span><span class="p">,</span> <span class="mi">13</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">8</span><span class="p">,</span> <span class="mi">17</span><span class="p">,</span> <span class="mi">9</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">7</span><span class="p">,</span> <span class="mi">9</span><span class="p">,</span> <span class="mi">7</span><span class="p">,</span> <span class="mi">16</span><span class="p">,</span>
+              <span class="mi">31</span><span class="p">,</span> <span class="mi">11</span><span class="p">,</span> <span class="mi">7</span><span class="p">,</span> <span class="mi">19</span><span class="p">,</span> <span class="mi">15</span><span class="p">,</span> <span class="mi">7</span><span class="p">,</span> <span class="mi">10</span><span class="p">,</span> <span class="mi">16</span><span class="p">,</span> <span class="mi">11</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">7</span><span class="p">,</span> <span class="mi">8</span><span class="p">,</span> <span class="mi">11</span><span class="p">,</span> <span class="mi">9</span><span class="p">,</span> <span class="mi">11</span><span class="p">,</span> <span class="mi">8</span><span class="p">,</span> <span class="mi">6</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">10</span><span class="p">,</span>
+              <span class="mi">8</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">6</span><span class="p">,</span> <span class="mi">19</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">28</span><span class="p">,</span> <span class="mi">6</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">])</span>
+<span class="n">N</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">O</span><span class="p">)</span>
+
+<span class="c1"># expected (E) rates, based on the age of the local population</span>
+<span class="n">E</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mf">1.4</span><span class="p">,</span> <span class="mf">8.7</span><span class="p">,</span> <span class="mf">3.0</span><span class="p">,</span> <span class="mf">2.5</span><span class="p">,</span> <span class="mf">4.3</span><span class="p">,</span> <span class="mf">2.4</span><span class="p">,</span> <span class="mf">8.1</span><span class="p">,</span> <span class="mf">2.3</span><span class="p">,</span> <span class="mf">2.0</span><span class="p">,</span> <span class="mf">6.6</span><span class="p">,</span> <span class="mf">4.4</span><span class="p">,</span> <span class="mf">1.8</span><span class="p">,</span> <span class="mf">1.1</span><span class="p">,</span> <span class="mf">3.3</span><span class="p">,</span>
+              <span class="mf">7.8</span><span class="p">,</span> <span class="mf">4.6</span><span class="p">,</span> <span class="mf">1.1</span><span class="p">,</span> <span class="mf">4.2</span><span class="p">,</span> <span class="mf">5.5</span><span class="p">,</span> <span class="mf">4.4</span><span class="p">,</span> <span class="mf">10.5</span><span class="p">,</span> <span class="mf">22.7</span><span class="p">,</span> <span class="mf">8.8</span><span class="p">,</span> <span class="mf">5.6</span><span class="p">,</span> <span class="mf">15.5</span><span class="p">,</span> <span class="mf">12.5</span><span class="p">,</span> <span class="mf">6.0</span><span class="p">,</span>
+              <span class="mf">9.0</span><span class="p">,</span> <span class="mf">14.4</span><span class="p">,</span> <span class="mf">10.2</span><span class="p">,</span> <span class="mf">4.8</span><span class="p">,</span> <span class="mf">2.9</span><span class="p">,</span> <span class="mf">7.0</span><span class="p">,</span> <span class="mf">8.5</span><span class="p">,</span> <span class="mf">12.3</span><span class="p">,</span> <span class="mf">10.1</span><span class="p">,</span> <span class="mf">12.7</span><span class="p">,</span> <span class="mf">9.4</span><span class="p">,</span> <span class="mf">7.2</span><span class="p">,</span> <span class="mf">5.3</span><span class="p">,</span>
+              <span class="mf">18.8</span><span class="p">,</span> <span class="mf">15.8</span><span class="p">,</span> <span class="mf">4.3</span><span class="p">,</span> <span class="mf">14.6</span><span class="p">,</span> <span class="mf">50.7</span><span class="p">,</span> <span class="mf">8.2</span><span class="p">,</span> <span class="mf">5.6</span><span class="p">,</span> <span class="mf">9.3</span><span class="p">,</span> <span class="mf">88.7</span><span class="p">,</span> <span class="mf">19.6</span><span class="p">,</span> <span class="mf">3.4</span><span class="p">,</span> <span class="mf">3.6</span><span class="p">,</span> <span class="mf">5.7</span><span class="p">,</span>
+              <span class="mf">7.0</span><span class="p">,</span> <span class="mf">4.2</span><span class="p">,</span> <span class="mf">1.8</span><span class="p">])</span>
+<span class="n">logE</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">E</span><span class="p">)</span>
+
+<span class="c1"># proportion of the population engaged in agriculture, forestry, or fishing (AFF)</span>
+<span class="n">aff</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mi">16</span><span class="p">,</span> <span class="mi">16</span><span class="p">,</span> <span class="mi">10</span><span class="p">,</span> <span class="mi">24</span><span class="p">,</span> <span class="mi">10</span><span class="p">,</span> <span class="mi">24</span><span class="p">,</span> <span class="mi">10</span><span class="p">,</span> <span class="mi">7</span><span class="p">,</span> <span class="mi">7</span><span class="p">,</span> <span class="mi">16</span><span class="p">,</span> <span class="mi">7</span><span class="p">,</span> <span class="mi">16</span><span class="p">,</span> <span class="mi">10</span><span class="p">,</span> <span class="mi">24</span><span class="p">,</span> <span class="mi">7</span><span class="p">,</span> <span class="mi">16</span><span class="p">,</span> <span class="mi">10</span><span class="p">,</span> <span class="mi">7</span><span class="p">,</span>
+                <span class="mi">7</span><span class="p">,</span> <span class="mi">10</span><span class="p">,</span> <span class="mi">7</span><span class="p">,</span> <span class="mi">16</span><span class="p">,</span> <span class="mi">10</span><span class="p">,</span> <span class="mi">7</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">7</span><span class="p">,</span> <span class="mi">7</span><span class="p">,</span> <span class="mi">10</span><span class="p">,</span> <span class="mi">10</span><span class="p">,</span> <span class="mi">7</span><span class="p">,</span> <span class="mi">24</span><span class="p">,</span> <span class="mi">10</span><span class="p">,</span> <span class="mi">7</span><span class="p">,</span> <span class="mi">7</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">10</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span>
+                <span class="mi">16</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">16</span><span class="p">,</span> <span class="mi">16</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">7</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">16</span><span class="p">,</span> <span class="mi">10</span><span class="p">])</span><span class="o">/</span><span class="mf">10.</span>
+
+<span class="c1"># Spatial adjacency information</span>
+<span class="n">adj</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([[</span><span class="mi">5</span><span class="p">,</span> <span class="mi">9</span><span class="p">,</span> <span class="mi">11</span><span class="p">,</span><span class="mi">19</span><span class="p">],</span>
+                <span class="p">[</span><span class="mi">7</span><span class="p">,</span> <span class="mi">10</span><span class="p">],</span>
+                <span class="p">[</span><span class="mi">6</span><span class="p">,</span> <span class="mi">12</span><span class="p">],</span>
+                <span class="p">[</span><span class="mi">18</span><span class="p">,</span><span class="mi">20</span><span class="p">,</span><span class="mi">28</span><span class="p">],</span>
+                <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">11</span><span class="p">,</span><span class="mi">12</span><span class="p">,</span><span class="mi">13</span><span class="p">,</span><span class="mi">19</span><span class="p">],</span>
+                <span class="p">[</span><span class="mi">3</span><span class="p">,</span> <span class="mi">8</span><span class="p">],</span>
+                <span class="p">[</span><span class="mi">2</span><span class="p">,</span> <span class="mi">10</span><span class="p">,</span><span class="mi">13</span><span class="p">,</span><span class="mi">16</span><span class="p">,</span><span class="mi">17</span><span class="p">],</span>
+                <span class="p">[</span><span class="mi">6</span><span class="p">],</span>
+                <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">11</span><span class="p">,</span><span class="mi">17</span><span class="p">,</span><span class="mi">19</span><span class="p">,</span><span class="mi">23</span><span class="p">,</span><span class="mi">29</span><span class="p">],</span>
+                <span class="p">[</span><span class="mi">2</span><span class="p">,</span> <span class="mi">7</span><span class="p">,</span> <span class="mi">16</span><span class="p">,</span><span class="mi">22</span><span class="p">],</span>
+                <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">9</span><span class="p">,</span> <span class="mi">12</span><span class="p">],</span>
+                <span class="p">[</span><span class="mi">3</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">11</span><span class="p">],</span>
+                <span class="p">[</span><span class="mi">5</span><span class="p">,</span> <span class="mi">7</span><span class="p">,</span> <span class="mi">17</span><span class="p">,</span><span class="mi">19</span><span class="p">],</span>
+                <span class="p">[</span><span class="mi">31</span><span class="p">,</span><span class="mi">32</span><span class="p">,</span><span class="mi">35</span><span class="p">],</span>
+                <span class="p">[</span><span class="mi">25</span><span class="p">,</span><span class="mi">29</span><span class="p">,</span><span class="mi">50</span><span class="p">],</span>
+                <span class="p">[</span><span class="mi">7</span><span class="p">,</span> <span class="mi">10</span><span class="p">,</span><span class="mi">17</span><span class="p">,</span><span class="mi">21</span><span class="p">,</span><span class="mi">22</span><span class="p">,</span><span class="mi">29</span><span class="p">],</span>
+                <span class="p">[</span><span class="mi">7</span><span class="p">,</span> <span class="mi">9</span><span class="p">,</span> <span class="mi">13</span><span class="p">,</span><span class="mi">16</span><span class="p">,</span><span class="mi">19</span><span class="p">,</span><span class="mi">29</span><span class="p">],</span>
+                <span class="p">[</span><span class="mi">4</span><span class="p">,</span><span class="mi">20</span><span class="p">,</span> <span class="mi">28</span><span class="p">,</span><span class="mi">33</span><span class="p">,</span><span class="mi">55</span><span class="p">,</span><span class="mi">56</span><span class="p">],</span>
+                <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">9</span><span class="p">,</span> <span class="mi">13</span><span class="p">,</span><span class="mi">17</span><span class="p">],</span>
+                <span class="p">[</span><span class="mi">4</span><span class="p">,</span> <span class="mi">18</span><span class="p">,</span><span class="mi">55</span><span class="p">],</span>
+                <span class="p">[</span><span class="mi">16</span><span class="p">,</span><span class="mi">29</span><span class="p">,</span><span class="mi">50</span><span class="p">],</span>
+                <span class="p">[</span><span class="mi">10</span><span class="p">,</span><span class="mi">16</span><span class="p">],</span>
+                <span class="p">[</span><span class="mi">9</span><span class="p">,</span> <span class="mi">29</span><span class="p">,</span><span class="mi">34</span><span class="p">,</span><span class="mi">36</span><span class="p">,</span><span class="mi">37</span><span class="p">,</span><span class="mi">39</span><span class="p">],</span>
+                <span class="p">[</span><span class="mi">27</span><span class="p">,</span><span class="mi">30</span><span class="p">,</span><span class="mi">31</span><span class="p">,</span><span class="mi">44</span><span class="p">,</span><span class="mi">47</span><span class="p">,</span><span class="mi">48</span><span class="p">,</span><span class="mi">55</span><span class="p">,</span><span class="mi">56</span><span class="p">],</span>
+                <span class="p">[</span><span class="mi">15</span><span class="p">,</span><span class="mi">26</span><span class="p">,</span><span class="mi">29</span><span class="p">],</span>
+                <span class="p">[</span><span class="mi">25</span><span class="p">,</span><span class="mi">29</span><span class="p">,</span><span class="mi">42</span><span class="p">,</span><span class="mi">43</span><span class="p">],</span>
+                <span class="p">[</span><span class="mi">24</span><span class="p">,</span><span class="mi">31</span><span class="p">,</span><span class="mi">32</span><span class="p">,</span><span class="mi">55</span><span class="p">],</span>
+                <span class="p">[</span><span class="mi">4</span><span class="p">,</span> <span class="mi">18</span><span class="p">,</span><span class="mi">33</span><span class="p">,</span><span class="mi">45</span><span class="p">],</span>
+                <span class="p">[</span><span class="mi">9</span><span class="p">,</span> <span class="mi">15</span><span class="p">,</span><span class="mi">16</span><span class="p">,</span><span class="mi">17</span><span class="p">,</span><span class="mi">21</span><span class="p">,</span><span class="mi">23</span><span class="p">,</span><span class="mi">25</span><span class="p">,</span><span class="mi">26</span><span class="p">,</span><span class="mi">34</span><span class="p">,</span><span class="mi">43</span><span class="p">,</span><span class="mi">50</span><span class="p">],</span>
+                <span class="p">[</span><span class="mi">24</span><span class="p">,</span><span class="mi">38</span><span class="p">,</span><span class="mi">42</span><span class="p">,</span><span class="mi">44</span><span class="p">,</span><span class="mi">45</span><span class="p">,</span><span class="mi">56</span><span class="p">],</span>
+                <span class="p">[</span><span class="mi">14</span><span class="p">,</span><span class="mi">24</span><span class="p">,</span><span class="mi">27</span><span class="p">,</span><span class="mi">32</span><span class="p">,</span><span class="mi">35</span><span class="p">,</span><span class="mi">46</span><span class="p">,</span><span class="mi">47</span><span class="p">],</span>
+                <span class="p">[</span><span class="mi">14</span><span class="p">,</span><span class="mi">27</span><span class="p">,</span><span class="mi">31</span><span class="p">,</span><span class="mi">35</span><span class="p">],</span>
+                <span class="p">[</span><span class="mi">18</span><span class="p">,</span><span class="mi">28</span><span class="p">,</span><span class="mi">45</span><span class="p">,</span><span class="mi">56</span><span class="p">],</span>
+                <span class="p">[</span><span class="mi">23</span><span class="p">,</span><span class="mi">29</span><span class="p">,</span><span class="mi">39</span><span class="p">,</span><span class="mi">40</span><span class="p">,</span><span class="mi">42</span><span class="p">,</span><span class="mi">43</span><span class="p">,</span><span class="mi">51</span><span class="p">,</span><span class="mi">52</span><span class="p">,</span><span class="mi">54</span><span class="p">],</span>
+                <span class="p">[</span><span class="mi">14</span><span class="p">,</span><span class="mi">31</span><span class="p">,</span><span class="mi">32</span><span class="p">,</span><span class="mi">37</span><span class="p">,</span><span class="mi">46</span><span class="p">],</span>
+                <span class="p">[</span><span class="mi">23</span><span class="p">,</span><span class="mi">37</span><span class="p">,</span><span class="mi">39</span><span class="p">,</span><span class="mi">41</span><span class="p">],</span>
+                <span class="p">[</span><span class="mi">23</span><span class="p">,</span><span class="mi">35</span><span class="p">,</span><span class="mi">36</span><span class="p">,</span><span class="mi">41</span><span class="p">,</span><span class="mi">46</span><span class="p">],</span>
+                <span class="p">[</span><span class="mi">30</span><span class="p">,</span><span class="mi">42</span><span class="p">,</span><span class="mi">44</span><span class="p">,</span><span class="mi">49</span><span class="p">,</span><span class="mi">51</span><span class="p">,</span><span class="mi">54</span><span class="p">],</span>
+                <span class="p">[</span><span class="mi">23</span><span class="p">,</span><span class="mi">34</span><span class="p">,</span><span class="mi">36</span><span class="p">,</span><span class="mi">40</span><span class="p">,</span><span class="mi">41</span><span class="p">],</span>
+                <span class="p">[</span><span class="mi">34</span><span class="p">,</span><span class="mi">39</span><span class="p">,</span><span class="mi">41</span><span class="p">,</span><span class="mi">49</span><span class="p">,</span><span class="mi">52</span><span class="p">],</span>
+                <span class="p">[</span><span class="mi">36</span><span class="p">,</span><span class="mi">37</span><span class="p">,</span><span class="mi">39</span><span class="p">,</span><span class="mi">40</span><span class="p">,</span><span class="mi">46</span><span class="p">,</span><span class="mi">49</span><span class="p">,</span><span class="mi">53</span><span class="p">],</span>
+                <span class="p">[</span><span class="mi">26</span><span class="p">,</span><span class="mi">30</span><span class="p">,</span><span class="mi">34</span><span class="p">,</span><span class="mi">38</span><span class="p">,</span><span class="mi">43</span><span class="p">,</span><span class="mi">51</span><span class="p">],</span>
+                <span class="p">[</span><span class="mi">26</span><span class="p">,</span><span class="mi">29</span><span class="p">,</span><span class="mi">34</span><span class="p">,</span><span class="mi">42</span><span class="p">],</span>
+                <span class="p">[</span><span class="mi">24</span><span class="p">,</span><span class="mi">30</span><span class="p">,</span><span class="mi">38</span><span class="p">,</span><span class="mi">48</span><span class="p">,</span><span class="mi">49</span><span class="p">],</span>
+                <span class="p">[</span><span class="mi">28</span><span class="p">,</span><span class="mi">30</span><span class="p">,</span><span class="mi">33</span><span class="p">,</span><span class="mi">56</span><span class="p">],</span>
+                <span class="p">[</span><span class="mi">31</span><span class="p">,</span><span class="mi">35</span><span class="p">,</span><span class="mi">37</span><span class="p">,</span><span class="mi">41</span><span class="p">,</span><span class="mi">47</span><span class="p">,</span><span class="mi">53</span><span class="p">],</span>
+                <span class="p">[</span><span class="mi">24</span><span class="p">,</span><span class="mi">31</span><span class="p">,</span><span class="mi">46</span><span class="p">,</span><span class="mi">48</span><span class="p">,</span><span class="mi">49</span><span class="p">,</span><span class="mi">53</span><span class="p">],</span>
+                <span class="p">[</span><span class="mi">24</span><span class="p">,</span><span class="mi">44</span><span class="p">,</span><span class="mi">47</span><span class="p">,</span><span class="mi">49</span><span class="p">],</span>
+                <span class="p">[</span><span class="mi">38</span><span class="p">,</span><span class="mi">40</span><span class="p">,</span><span class="mi">41</span><span class="p">,</span><span class="mi">44</span><span class="p">,</span><span class="mi">47</span><span class="p">,</span><span class="mi">48</span><span class="p">,</span><span class="mi">52</span><span class="p">,</span><span class="mi">53</span><span class="p">,</span><span class="mi">54</span><span class="p">],</span>
+                <span class="p">[</span><span class="mi">15</span><span class="p">,</span><span class="mi">21</span><span class="p">,</span><span class="mi">29</span><span class="p">],</span>
+                <span class="p">[</span><span class="mi">34</span><span class="p">,</span><span class="mi">38</span><span class="p">,</span><span class="mi">42</span><span class="p">,</span><span class="mi">54</span><span class="p">],</span>
+                <span class="p">[</span><span class="mi">34</span><span class="p">,</span><span class="mi">40</span><span class="p">,</span><span class="mi">49</span><span class="p">,</span><span class="mi">54</span><span class="p">],</span>
+                <span class="p">[</span><span class="mi">41</span><span class="p">,</span><span class="mi">46</span><span class="p">,</span><span class="mi">47</span><span class="p">,</span><span class="mi">49</span><span class="p">],</span>
+                <span class="p">[</span><span class="mi">34</span><span class="p">,</span><span class="mi">38</span><span class="p">,</span><span class="mi">49</span><span class="p">,</span><span class="mi">51</span><span class="p">,</span><span class="mi">52</span><span class="p">],</span>
+                <span class="p">[</span><span class="mi">18</span><span class="p">,</span><span class="mi">20</span><span class="p">,</span><span class="mi">24</span><span class="p">,</span><span class="mi">27</span><span class="p">,</span><span class="mi">56</span><span class="p">],</span>
+                <span class="p">[</span><span class="mi">18</span><span class="p">,</span><span class="mi">24</span><span class="p">,</span><span class="mi">30</span><span class="p">,</span><span class="mi">33</span><span class="p">,</span><span class="mi">45</span><span class="p">,</span><span class="mi">55</span><span class="p">]])</span>
+
+<span class="c1"># Change to Python indexing (i.e. -1)</span>
+<span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">adj</span><span class="p">)):</span>
+    <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">adj</span><span class="p">[</span><span class="n">i</span><span class="p">])):</span>
+        <span class="n">adj</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="n">j</span><span class="p">]</span> <span class="o">=</span> <span class="n">adj</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="n">j</span><span class="p">]</span><span class="o">-</span><span class="mi">1</span>
+
+<span class="c1"># spatial weight</span>
+<span class="n">weights</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([[</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">],</span>
+                    <span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">],</span>
+                    <span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">],</span>
+                    <span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">],</span>
+                    <span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">],</span>
+                    <span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">],</span>
+                    <span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">],</span>
+                    <span class="p">[</span><span class="mi">1</span><span class="p">],</span>
+                    <span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">],</span>
+                    <span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">],</span>
+                    <span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">],</span>
+                    <span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">],</span>
+                    <span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">],</span>
+                    <span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">],</span>
+                    <span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">],</span>
+                    <span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">],</span>
+                    <span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">],</span>
+                    <span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">],</span>
+                    <span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">],</span>
+                    <span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">],</span>
+                    <span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">],</span>
+                    <span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">],</span>
+                    <span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">],</span>
+                    <span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">],</span>
+                    <span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">],</span>
+                    <span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">],</span>
+                    <span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">],</span>
+                    <span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">],</span>
+                    <span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">],</span>
+                    <span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">],</span>
+                    <span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">],</span>
+                    <span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">],</span>
+                    <span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">],</span>
+                    <span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">],</span>
+                    <span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">],</span>
+                    <span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">],</span>
+                    <span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">],</span>
+                    <span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">],</span>
+                    <span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">],</span>
+                    <span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">],</span>
+                    <span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">],</span>
+                    <span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">],</span>
+                    <span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">],</span>
+                    <span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">],</span>
+                    <span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">],</span>
+                    <span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">],</span>
+                    <span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">],</span>
+                    <span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">],</span>
+                    <span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">],</span>
+                    <span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">],</span>
+                    <span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">],</span>
+                    <span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">],</span>
+                    <span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">],</span>
+                    <span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">],</span>
+                    <span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">],</span>
+                    <span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">]])</span>
+
+<span class="n">Wplus</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">([</span><span class="nb">sum</span><span class="p">(</span><span class="n">w</span><span class="p">)</span> <span class="k">for</span> <span class="n">w</span> <span class="ow">in</span> <span class="n">weights</span><span class="p">])</span>
+</pre></div>
+</div>
+</div>
+</div>
+<div class="section" id="A-WinBugs/PyMC2-implementation">
+<h1>A WinBugs/PyMC2 implementation<a class="headerlink" href="#A-WinBugs/PyMC2-implementation" title="Permalink to this headline">¶</a></h1>
+<p>The classical <code class="docutils literal"><span class="pre">WinBugs</span></code> implementation (more information
+<a class="reference external" href="http://glau.ca/?p=340">here</a>) <code class="docutils literal"><span class="pre">WinBugs</span></code> model:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">model</span>
+<span class="p">{</span>
+   <span class="k">for</span> <span class="p">(</span><span class="n">i</span> <span class="ow">in</span> <span class="mi">1</span> <span class="p">:</span> <span class="n">regions</span><span class="p">)</span> <span class="p">{</span>
+      <span class="n">O</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">~</span> <span class="n">dpois</span><span class="p">(</span><span class="n">mu</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
+      <span class="n">log</span><span class="p">(</span><span class="n">mu</span><span class="p">[</span><span class="n">i</span><span class="p">])</span> <span class="o">&lt;-</span> <span class="n">log</span><span class="p">(</span><span class="n">E</span><span class="p">[</span><span class="n">i</span><span class="p">])</span> <span class="o">+</span> <span class="n">beta0</span> <span class="o">+</span> <span class="n">beta1</span><span class="o">*</span><span class="n">aff</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">/</span><span class="mi">10</span> <span class="o">+</span> <span class="n">phi</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">+</span> <span class="n">theta</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+      <span class="n">theta</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">~</span> <span class="n">dnorm</span><span class="p">(</span><span class="mf">0.0</span><span class="p">,</span><span class="n">tau</span><span class="o">.</span><span class="n">h</span><span class="p">)</span>
+   <span class="p">}</span>
+   <span class="n">phi</span><span class="p">[</span><span class="mi">1</span><span class="p">:</span><span class="n">regions</span><span class="p">]</span> <span class="o">~</span> <span class="n">car</span><span class="o">.</span><span class="n">normal</span><span class="p">(</span><span class="n">adj</span><span class="p">[],</span> <span class="n">weights</span><span class="p">[],</span> <span class="n">Wplus</span><span class="p">[],</span> <span class="n">tau</span><span class="o">.</span><span class="n">c</span><span class="p">)</span>
+
+   <span class="n">beta0</span> <span class="o">~</span> <span class="n">dnorm</span><span class="p">(</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">1.0E-5</span><span class="p">)</span>  <span class="c1"># vague prior on grand intercept</span>
+   <span class="n">beta1</span> <span class="o">~</span> <span class="n">dnorm</span><span class="p">(</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">1.0E-5</span><span class="p">)</span>  <span class="c1"># vague prior on covariate effect</span>
+
+   <span class="n">tau</span><span class="o">.</span><span class="n">h</span> <span class="o">~</span> <span class="n">dgamma</span><span class="p">(</span><span class="mf">3.2761</span><span class="p">,</span> <span class="mf">1.81</span><span class="p">)</span>
+   <span class="n">tau</span><span class="o">.</span><span class="n">c</span> <span class="o">~</span> <span class="n">dgamma</span><span class="p">(</span><span class="mf">1.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">)</span>
+
+   <span class="n">sd</span><span class="o">.</span><span class="n">h</span> <span class="o">&lt;-</span> <span class="n">sd</span><span class="p">(</span><span class="n">theta</span><span class="p">[])</span> <span class="c1"># marginal SD of heterogeneity effects</span>
+   <span class="n">sd</span><span class="o">.</span><span class="n">c</span> <span class="o">&lt;-</span> <span class="n">sd</span><span class="p">(</span><span class="n">phi</span><span class="p">[])</span>   <span class="c1"># marginal SD of clustering (spatial) effects</span>
+
+   <span class="n">alpha</span> <span class="o">&lt;-</span> <span class="n">sd</span><span class="o">.</span><span class="n">c</span> <span class="o">/</span> <span class="p">(</span><span class="n">sd</span><span class="o">.</span><span class="n">h</span> <span class="o">+</span> <span class="n">sd</span><span class="o">.</span><span class="n">c</span><span class="p">)</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>The major challenge to port this model to <code class="docutils literal"><span class="pre">PyMC3</span></code> is the
+<code class="docutils literal"><span class="pre">car.normal</span></code> in <code class="docutils literal"><span class="pre">WinBugs</span></code>. It is a likelihood function that each
+realization is conditioned on some neigbour realization (a smoothed
+property). In <code class="docutils literal"><span class="pre">PyMC2</span></code>, it is implemented as a custom likelihood
+function (a <code class="docutils literal"><span class="pre">&#64;stochastic</span></code> node) <code class="docutils literal"><span class="pre">mu_phi</span></code>:</p>
+<div class="highlight-python"><div class="highlight"><pre><span></span><span class="nd">@stochastic</span>
+<span class="k">def</span> <span class="nf">mu_phi</span><span class="p">(</span><span class="n">tau</span><span class="o">=</span><span class="n">tau_c</span><span class="p">,</span> <span class="n">value</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">N</span><span class="p">)):</span>
+    <span class="c1"># Calculate mu based on average of neighbours</span>
+    <span class="n">mu</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span> <span class="nb">sum</span><span class="p">(</span><span class="n">weights</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">*</span><span class="n">value</span><span class="p">[</span><span class="n">adj</span><span class="p">[</span><span class="n">i</span><span class="p">]])</span><span class="o">/</span><span class="n">Wplus</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">xrange</span><span class="p">(</span><span class="n">N</span><span class="p">)])</span>
+    <span class="c1"># Scale precision to the number of neighbours</span>
+    <span class="n">taux</span> <span class="o">=</span> <span class="n">tau</span><span class="o">*</span><span class="n">Wplus</span>
+    <span class="k">return</span> <span class="n">normal_like</span><span class="p">(</span><span class="n">value</span><span class="p">,</span><span class="n">mu</span><span class="p">,</span><span class="n">taux</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>We can of course just defined a <code class="docutils literal"><span class="pre">mu_phi</span></code> similarly and wrap it in a
+<code class="docutils literal"><span class="pre">pymc3.DensityDist</span></code>, however, doing so is usually resulting a very
+slow model (both in compling and sampling). It is a general challenge of
+porting pymc2 code into pymc3 (or even generally porting <code class="docutils literal"><span class="pre">WinBugs</span></code>,
+<code class="docutils literal"><span class="pre">JAGS</span></code>, or <code class="docutils literal"><span class="pre">STAN</span></code> code into <code class="docutils literal"><span class="pre">PyMC3</span></code>), as porting the <code class="docutils literal"><span class="pre">for-loop</span></code>
+directly in <code class="docutils literal"><span class="pre">pm.Model</span></code> perform poorly in <code class="docutils literal"><span class="pre">theano</span></code>, the backend of
+<code class="docutils literal"><span class="pre">PyMC3</span></code>.</p>
+<p>The underlying mechanism in <code class="docutils literal"><span class="pre">PyMC3</span></code> is very different compared to
+<code class="docutils literal"><span class="pre">PyMC2</span></code>, using for-loop to generate RV or stacking multiple RV with
+arguments such as <code class="docutils literal"><span class="pre">[pm.Binomial('obs%'%i,</span> <span class="pre">p[i],</span> <span class="pre">n)</span> <span class="pre">for</span> <span class="pre">i</span> <span class="pre">in</span> <span class="pre">range(K)]</span></code>
+generate unnecessary large number of nodes in theano graph, which then
+slow down the compiling to an unbearable amount.</p>
+<p>The easiest way is to move the <code class="docutils literal"><span class="pre">for-loop</span></code> outside of <code class="docutils literal"><span class="pre">pm.Model</span></code>. And
+usually is not difficult to do. For example, in <code class="docutils literal"><span class="pre">STAN</span></code> you can have a
+<code class="docutils literal"><span class="pre">transformed</span> <span class="pre">data{}</span></code> block, in <code class="docutils literal"><span class="pre">PyMC3</span></code> you just need to computed it
+before defining your Model.</p>
+<p>And if it is absolutely necessary to use a <code class="docutils literal"><span class="pre">for-loop</span></code>, you can use a
+theano loop (i.e., <code class="docutils literal"><span class="pre">theano.scan</span></code>), which you can find some
+introduction on the <a class="reference external" href="http://deeplearning.net/software/theano/tutorial/loop.html">theano
+website</a>
+and see a usecase in PyMC3 <a class="reference external" href="https://github.com/pymc-devs/pymc3/blob/master/pymc3/distributions/timeseries.py#L125-L130">timeseries
+distribution</a>.</p>
+</div>
+<div class="section" id="PyMC3-implementation-using-theano.scan">
+<h1>PyMC3 implementation using <code class="docutils literal"><span class="pre">theano.scan</span></code><a class="headerlink" href="#PyMC3-implementation-using-theano.scan" title="Permalink to this headline">¶</a></h1>
+<p>So lets try to implement the CAR model using <code class="docutils literal"><span class="pre">theano.scan</span></code>. First we
+create a <code class="docutils literal"><span class="pre">theano</span></code> function with <code class="docutils literal"><span class="pre">theano.scan</span></code> and check if it really
+works by comparing its result to the for-loop.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
+<span></span>In [3]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">value</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="n">N</span><span class="p">,),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">theano</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">floatX</span><span class="p">)</span>
+
+<span class="n">maxwz</span> <span class="o">=</span> <span class="nb">max</span><span class="p">([</span><span class="nb">sum</span><span class="p">(</span><span class="n">w</span><span class="p">)</span> <span class="k">for</span> <span class="n">w</span> <span class="ow">in</span> <span class="n">weights</span><span class="p">])</span>
+<span class="n">N</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">weights</span><span class="p">)</span>
+<span class="n">wmat</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">N</span><span class="p">,</span> <span class="n">maxwz</span><span class="p">))</span>
+<span class="n">amat</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">N</span><span class="p">,</span> <span class="n">maxwz</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="s1">&#39;int32&#39;</span><span class="p">)</span>
+<span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">w</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">weights</span><span class="p">):</span>
+    <span class="n">wmat</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">w</span><span class="p">))]</span> <span class="o">=</span> <span class="n">w</span>
+    <span class="n">amat</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">w</span><span class="p">))]</span> <span class="o">=</span> <span class="n">adj</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+
+<span class="c1"># defining the tensor variables</span>
+<span class="n">x</span> <span class="o">=</span> <span class="n">tt</span><span class="o">.</span><span class="n">vector</span><span class="p">(</span><span class="s2">&quot;x&quot;</span><span class="p">)</span>
+<span class="n">x</span><span class="o">.</span><span class="n">tag</span><span class="o">.</span><span class="n">test_value</span> <span class="o">=</span> <span class="n">value</span>
+<span class="n">w</span> <span class="o">=</span> <span class="n">tt</span><span class="o">.</span><span class="n">matrix</span><span class="p">(</span><span class="s2">&quot;w&quot;</span><span class="p">)</span>
+<span class="c1"># provide Theano with a default test-value</span>
+<span class="n">w</span><span class="o">.</span><span class="n">tag</span><span class="o">.</span><span class="n">test_value</span> <span class="o">=</span> <span class="n">wmat</span>
+<span class="n">a</span> <span class="o">=</span> <span class="n">tt</span><span class="o">.</span><span class="n">matrix</span><span class="p">(</span><span class="s2">&quot;a&quot;</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="s1">&#39;int32&#39;</span><span class="p">)</span>
+<span class="n">a</span><span class="o">.</span><span class="n">tag</span><span class="o">.</span><span class="n">test_value</span> <span class="o">=</span> <span class="n">amat</span>
+
+
+<span class="k">def</span> <span class="nf">get_mu</span><span class="p">(</span><span class="n">w</span><span class="p">,</span> <span class="n">a</span><span class="p">):</span>
+    <span class="n">a1</span> <span class="o">=</span> <span class="n">tt</span><span class="o">.</span><span class="n">cast</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="s1">&#39;int32&#39;</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">tt</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">w</span><span class="o">*</span><span class="n">x</span><span class="p">[</span><span class="n">a1</span><span class="p">])</span><span class="o">/</span><span class="n">tt</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">w</span><span class="p">)</span>
+
+<span class="n">results</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">theano</span><span class="o">.</span><span class="n">scan</span><span class="p">(</span><span class="n">fn</span><span class="o">=</span><span class="n">get_mu</span><span class="p">,</span> <span class="n">sequences</span><span class="o">=</span><span class="p">[</span><span class="n">w</span><span class="p">,</span> <span class="n">a</span><span class="p">])</span>
+<span class="n">compute_elementwise</span> <span class="o">=</span> <span class="n">theano</span><span class="o">.</span><span class="n">function</span><span class="p">(</span><span class="n">inputs</span><span class="o">=</span><span class="p">[</span><span class="n">x</span><span class="p">,</span> <span class="n">w</span><span class="p">,</span> <span class="n">a</span><span class="p">],</span> <span class="n">outputs</span><span class="o">=</span><span class="n">results</span><span class="p">)</span>
+
+<span class="k">print</span><span class="p">(</span><span class="n">compute_elementwise</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">wmat</span><span class="p">,</span> <span class="n">amat</span><span class="p">))</span>
+
+
+<span class="k">def</span> <span class="nf">mu_phi</span><span class="p">(</span><span class="n">value</span><span class="p">):</span>
+    <span class="n">N</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">weights</span><span class="p">)</span>
+    <span class="c1"># Calculate mu based on average of neighbours</span>
+    <span class="n">mu</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">weights</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">*</span><span class="n">value</span><span class="p">[</span><span class="n">adj</span><span class="p">[</span><span class="n">i</span><span class="p">]])</span><span class="o">/</span><span class="n">Wplus</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">N</span><span class="p">)])</span>
+    <span class="k">return</span> <span class="n">mu</span>
+
+<span class="k">print</span><span class="p">(</span><span class="n">mu_phi</span><span class="p">(</span><span class="n">value</span><span class="p">))</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+[ 0.0563896  -0.20624652 -0.2603191  -0.23436462 -0.01479503  0.61817012
+  0.84766853  0.63839422  0.12431801  0.59045645 -0.40280124  0.75236162
+  0.20069683  0.00504351 -0.27858398  0.30231535 -0.08461685  0.09584093
+  0.26986988 -0.7439052   0.06392224  0.41555103 -0.08834851 -0.45122966
+ -0.13761904  0.09582733  0.06123518 -0.25597013 -0.0195057   0.50132523
+ -0.0357394  -0.84573728 -0.08726508  0.32431846  0.2499915   0.43837775
+  0.1112158   0.46432585  0.1034997   0.68608437 -0.28043477 -0.17164378
+  0.41359791 -0.29855734 -0.19544189 -0.61260185 -0.34533893  0.46177861
+ -0.21274361 -0.11914921  0.17096478  0.25431531  0.32544853  0.29664874
+  0.08467978 -0.39349831]
+[ 0.0563896  -0.20624652 -0.2603191  -0.23436462 -0.01479503  0.61817012
+  0.84766853  0.63839422  0.12431801  0.59045645 -0.40280124  0.75236162
+  0.20069683  0.00504351 -0.27858398  0.30231535 -0.08461685  0.09584093
+  0.26986988 -0.7439052   0.06392224  0.41555103 -0.08834851 -0.45122966
+ -0.13761904  0.09582733  0.06123518 -0.25597013 -0.0195057   0.50132523
+ -0.0357394  -0.84573728 -0.08726508  0.32431846  0.2499915   0.43837775
+  0.1112158   0.46432585  0.1034997   0.68608437 -0.28043477 -0.17164378
+  0.41359791 -0.29855734 -0.19544189 -0.61260185 -0.34533893  0.46177861
+ -0.21274361 -0.11914921  0.17096478  0.25431531  0.32544853  0.29664874
+  0.08467978 -0.39349831]
+</pre></div></div>
+</div>
+<p>Since it produce the same result as the orignial for-loop, we now wrap
+it as a new distribution with a loglikelihood function in <code class="docutils literal"><span class="pre">PyMC3</span></code>.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
+<span></span>In [4]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="kn">from</span> <span class="nn">theano</span> <span class="kn">import</span> <span class="n">scan</span>
+<span class="n">floatX</span> <span class="o">=</span> <span class="s2">&quot;float32&quot;</span>
+
+<span class="kn">from</span> <span class="nn">pymc3.distributions</span> <span class="kn">import</span> <span class="n">continuous</span>
+<span class="kn">from</span> <span class="nn">pymc3.distributions</span> <span class="kn">import</span> <span class="n">distribution</span>
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
+<span></span>In [5]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="k">class</span> <span class="nc">CAR</span><span class="p">(</span><span class="n">distribution</span><span class="o">.</span><span class="n">Continuous</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Conditional Autoregressive (CAR) distribution</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    a : list of adjacency information</span>
+<span class="sd">    w : list of weight information</span>
+<span class="sd">    tau : precision at each location</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">w</span><span class="p">,</span> <span class="n">a</span><span class="p">,</span> <span class="n">tau</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">CAR</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">a</span> <span class="o">=</span> <span class="n">a</span> <span class="o">=</span> <span class="n">tt</span><span class="o">.</span><span class="n">as_tensor_variable</span><span class="p">(</span><span class="n">a</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">w</span> <span class="o">=</span> <span class="n">w</span> <span class="o">=</span> <span class="n">tt</span><span class="o">.</span><span class="n">as_tensor_variable</span><span class="p">(</span><span class="n">w</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">tau</span> <span class="o">=</span> <span class="n">tau</span><span class="o">*</span><span class="n">tt</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">w</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">mode</span> <span class="o">=</span> <span class="mf">0.</span>
+
+    <span class="k">def</span> <span class="nf">get_mu</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">):</span>
+
+        <span class="k">def</span> <span class="nf">weigth_mu</span><span class="p">(</span><span class="n">w</span><span class="p">,</span> <span class="n">a</span><span class="p">):</span>
+            <span class="n">a1</span> <span class="o">=</span> <span class="n">tt</span><span class="o">.</span><span class="n">cast</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="s1">&#39;int32&#39;</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">tt</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">w</span><span class="o">*</span><span class="n">x</span><span class="p">[</span><span class="n">a1</span><span class="p">])</span><span class="o">/</span><span class="n">tt</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">w</span><span class="p">)</span>
+
+        <span class="n">mu_w</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">scan</span><span class="p">(</span><span class="n">fn</span><span class="o">=</span><span class="n">weigth_mu</span><span class="p">,</span>
+                       <span class="n">sequences</span><span class="o">=</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">w</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">a</span><span class="p">])</span>
+
+        <span class="k">return</span> <span class="n">mu_w</span>
+
+    <span class="k">def</span> <span class="nf">logp</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">):</span>
+        <span class="n">mu_w</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_mu</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+        <span class="n">tau</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">tau</span>
+        <span class="k">return</span> <span class="n">tt</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">continuous</span><span class="o">.</span><span class="n">Normal</span><span class="o">.</span><span class="n">dist</span><span class="p">(</span><span class="n">mu</span><span class="o">=</span><span class="n">mu_w</span><span class="p">,</span> <span class="n">tau</span><span class="o">=</span><span class="n">tau</span><span class="p">)</span><span class="o">.</span><span class="n">logp</span><span class="p">(</span><span class="n">x</span><span class="p">))</span>
+</pre></div>
+</div>
+</div>
+<p>We then use it in our <code class="docutils literal"><span class="pre">PyMC3</span></code> version of the CAR model:</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
+<span></span>In [6]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="k">with</span> <span class="n">pm</span><span class="o">.</span><span class="n">Model</span><span class="p">()</span> <span class="k">as</span> <span class="n">model1</span><span class="p">:</span>
+    <span class="c1"># Vague prior on intercept</span>
+    <span class="n">beta0</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Normal</span><span class="p">(</span><span class="s1">&#39;beta0&#39;</span><span class="p">,</span> <span class="n">mu</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span> <span class="n">tau</span><span class="o">=</span><span class="mf">1.0e-5</span><span class="p">)</span>
+    <span class="c1"># Vague prior on covariate effect</span>
+    <span class="n">beta1</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Normal</span><span class="p">(</span><span class="s1">&#39;beta1&#39;</span><span class="p">,</span> <span class="n">mu</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span> <span class="n">tau</span><span class="o">=</span><span class="mf">1.0e-5</span><span class="p">)</span>
+
+    <span class="c1"># Random effects (hierarchial) prior</span>
+    <span class="n">tau_h</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Gamma</span><span class="p">(</span><span class="s1">&#39;tau_h&#39;</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">3.2761</span><span class="p">,</span> <span class="n">beta</span><span class="o">=</span><span class="mf">1.81</span><span class="p">)</span>
+    <span class="c1"># Spatial clustering prior</span>
+    <span class="n">tau_c</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Gamma</span><span class="p">(</span><span class="s1">&#39;tau_c&#39;</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span> <span class="n">beta</span><span class="o">=</span><span class="mf">1.0</span><span class="p">)</span>
+
+    <span class="c1"># Regional random effects</span>
+    <span class="n">theta</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Normal</span><span class="p">(</span><span class="s1">&#39;theta&#39;</span><span class="p">,</span> <span class="n">mu</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span> <span class="n">tau</span><span class="o">=</span><span class="n">tau_h</span><span class="p">,</span> <span class="n">shape</span><span class="o">=</span><span class="n">N</span><span class="p">)</span>
+    <span class="n">mu_phi</span> <span class="o">=</span> <span class="n">CAR</span><span class="p">(</span><span class="s1">&#39;mu_phi&#39;</span><span class="p">,</span> <span class="n">w</span><span class="o">=</span><span class="n">wmat</span><span class="p">,</span> <span class="n">a</span><span class="o">=</span><span class="n">amat</span><span class="p">,</span> <span class="n">tau</span><span class="o">=</span><span class="n">tau_c</span><span class="p">,</span> <span class="n">shape</span><span class="o">=</span><span class="n">N</span><span class="p">)</span>
+
+    <span class="c1"># Zero-centre phi</span>
+    <span class="n">phi</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Deterministic</span><span class="p">(</span><span class="s1">&#39;phi&#39;</span><span class="p">,</span> <span class="n">mu_phi</span><span class="o">-</span><span class="n">tt</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">mu_phi</span><span class="p">))</span>
+
+    <span class="c1"># Mean model</span>
+    <span class="n">mu</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Deterministic</span><span class="p">(</span><span class="s1">&#39;mu&#39;</span><span class="p">,</span> <span class="n">tt</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="n">logE</span> <span class="o">+</span> <span class="n">beta0</span> <span class="o">+</span> <span class="n">beta1</span><span class="o">*</span><span class="n">aff</span> <span class="o">+</span> <span class="n">theta</span> <span class="o">+</span> <span class="n">phi</span><span class="p">))</span>
+
+    <span class="c1"># Likelihood</span>
+    <span class="n">Yi</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Poisson</span><span class="p">(</span><span class="s1">&#39;Yi&#39;</span><span class="p">,</span> <span class="n">mu</span><span class="o">=</span><span class="n">mu</span><span class="p">,</span> <span class="n">observed</span><span class="o">=</span><span class="n">O</span><span class="p">)</span>
+
+    <span class="c1"># Marginal SD of heterogeniety effects</span>
+    <span class="n">sd_h</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Deterministic</span><span class="p">(</span><span class="s1">&#39;sd_h&#39;</span><span class="p">,</span> <span class="n">tt</span><span class="o">.</span><span class="n">std</span><span class="p">(</span><span class="n">theta</span><span class="p">))</span>
+    <span class="c1"># Marginal SD of clustering (spatial) effects</span>
+    <span class="n">sd_c</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Deterministic</span><span class="p">(</span><span class="s1">&#39;sd_c&#39;</span><span class="p">,</span> <span class="n">tt</span><span class="o">.</span><span class="n">std</span><span class="p">(</span><span class="n">phi</span><span class="p">))</span>
+    <span class="c1"># Proportion sptial variance</span>
+    <span class="n">alpha</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Deterministic</span><span class="p">(</span><span class="s1">&#39;alpha&#39;</span><span class="p">,</span> <span class="n">sd_c</span><span class="o">/</span><span class="p">(</span><span class="n">sd_h</span><span class="o">+</span><span class="n">sd_c</span><span class="p">))</span>
+
+    <span class="n">trace1</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="mf">3e3</span><span class="p">,</span> <span class="n">njobs</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">tune</span><span class="o">=</span><span class="mi">1000</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="stderr output_area docutils container">
+<div class="highlight"><pre>
+Auto-assigning NUTS sampler...
+Initializing NUTS using advi...
+Average ELBO = -191.47: 100%|██████████| 200000/200000 [03:59&lt;00:00, 836.57it/s]
+Finished [100%]: Average ELBO = -191.54
+100%|██████████| 3000/3000.0 [11:56&lt;00:00,  4.19it/s]
+</pre></div></div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
+<span></span>In [7]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">pm</span><span class="o">.</span><span class="n">traceplot</span><span class="p">(</span><span class="n">trace1</span><span class="p">,</span> <span class="n">varnames</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;alpha&#39;</span><span class="p">,</span> <span class="s1">&#39;sd_h&#39;</span><span class="p">,</span> <span class="s1">&#39;sd_c&#39;</span><span class="p">]);</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/notebooks_PyMC3_tips_and_heuristic_13_0.png" src="../_images/notebooks_PyMC3_tips_and_heuristic_13_0.png" />
+</div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
+<span></span>In [8]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">pm</span><span class="o">.</span><span class="n">posteriorplot</span><span class="p">(</span><span class="n">trace1</span><span class="p">,</span> <span class="n">varnames</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;alpha&#39;</span><span class="p">]);</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/notebooks_PyMC3_tips_and_heuristic_14_0.png" src="../_images/notebooks_PyMC3_tips_and_heuristic_14_0.png" />
+</div>
+</div>
+<p><code class="docutils literal"><span class="pre">theano.scan</span></code> is much faster than using a python for loop, but it is
+still quite slow. One of the way to improve is to use linear algebra and
+matrix multiplication. In another word, we should try to find a way to
+use matrix multiplication instead of for-loop (if you have experience in
+using MATLAB, it is the same philosophy). In our case, we can totally do
+that.</p>
+<p>For a similar problem, you can also have a look of <a class="reference external" href="https://github.com/junpenglao/Bayesian-Cognitive-Modeling-in-Pymc3">my port of Lee and
+Wagenmakers&#8217;
+book</a>.
+For example, in Chapter 19, the STAN code use <a class="reference external" href="https://github.com/stan-dev/example-models/blob/master/Bayesian_Cognitive_Modeling/CaseStudies/NumberConcepts/NumberConcept_1_Stan.R#L28-L59">a for loop to generate
+the likelihood
+function</a>,
+and I <a class="reference external" href="http://nbviewer.jupyter.org/github/junpenglao/Bayesian-Cognitive-Modeling-in-Pymc3/blob/master/CaseStudies/NumberConceptDevelopment.ipynb#19.1-Knower-level-model-for-Give-N">generate the matrix outside and use matrix multiplication
+etc</a>
+to archive the same purpose.</p>
+</div>
+<div class="section" id="PyMC3-implementation-using-some-matrix-&quot;trick&quot;">
+<h1>PyMC3 implementation using some matrix &#8220;trick&#8221;<a class="headerlink" href="#PyMC3-implementation-using-some-matrix-"trick"" title="Permalink to this headline">¶</a></h1>
+<p>Again, we try on some simulation data to make sure the implementation is
+correct.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
+<span></span>In [9]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">maxwz</span> <span class="o">=</span> <span class="nb">max</span><span class="p">([</span><span class="nb">sum</span><span class="p">(</span><span class="n">w</span><span class="p">)</span> <span class="k">for</span> <span class="n">w</span> <span class="ow">in</span> <span class="n">weights</span><span class="p">])</span>
+<span class="n">N</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">weights</span><span class="p">)</span>
+<span class="n">wmat2</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">N</span><span class="p">,</span> <span class="n">N</span><span class="p">))</span>
+<span class="n">amat2</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">N</span><span class="p">,</span> <span class="n">N</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="s1">&#39;int32&#39;</span><span class="p">)</span>
+<span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">a</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">adj</span><span class="p">):</span>
+    <span class="n">amat2</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="n">a</span><span class="p">]</span> <span class="o">=</span> <span class="mi">1</span>
+    <span class="n">wmat2</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="n">a</span><span class="p">]</span> <span class="o">=</span> <span class="n">weights</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+
+<span class="n">value</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="n">N</span><span class="p">,),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">theano</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">floatX</span><span class="p">)</span>
+
+<span class="k">print</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">value</span><span class="o">*</span><span class="n">amat2</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span><span class="o">/</span><span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">wmat2</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">))</span>
+
+
+<span class="k">def</span> <span class="nf">mu_phi</span><span class="p">(</span><span class="n">value</span><span class="p">):</span>
+    <span class="n">N</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">weights</span><span class="p">)</span>
+    <span class="c1"># Calculate mu based on average of neighbours</span>
+    <span class="n">mu</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">weights</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">*</span><span class="n">value</span><span class="p">[</span><span class="n">adj</span><span class="p">[</span><span class="n">i</span><span class="p">]])</span><span class="o">/</span><span class="n">Wplus</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">N</span><span class="p">)])</span>
+    <span class="k">return</span> <span class="n">mu</span>
+
+<span class="k">print</span><span class="p">(</span><span class="n">mu_phi</span><span class="p">(</span><span class="n">value</span><span class="p">))</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+[-0.11297049 -0.18520049 -0.67620654  0.13745654  0.18035736  0.58190985
+ -0.16221448 -1.22924503  0.19284887 -0.31970749  0.30250633  0.18305134
+ -0.49923106 -0.31677725  0.57871789 -0.0583915  -0.00903053  0.55097481
+  0.10759741 -0.24925107  0.48187775  0.44166743  0.40870503  0.39809787
+ -0.57536384  0.34654324 -0.34670418 -0.17254384 -0.13765777  0.11806337
+ -0.12646348  0.48020419  0.30024464  0.44182682  0.04818574  0.62451985
+  0.25007979  0.6398977   0.40674001  0.57458903 -0.14582     0.63759476
+ -0.05395416  0.07391604  1.09054879  0.10529052 -0.3147926  -0.40484874
+  0.27897928 -0.4602735   0.47972578  0.38067863  0.11779316  0.24366539
+  0.22868717 -0.02419255]
+[-0.11297049 -0.18520049 -0.67620654  0.13745654  0.18035736  0.58190985
+ -0.16221448 -1.22924503  0.19284887 -0.31970749  0.30250633  0.18305134
+ -0.49923106 -0.31677725  0.57871789 -0.0583915  -0.00903053  0.55097481
+  0.10759741 -0.24925107  0.48187775  0.44166743  0.40870503  0.39809787
+ -0.57536384  0.34654324 -0.34670418 -0.17254384 -0.13765777  0.11806337
+ -0.12646348  0.48020419  0.30024464  0.44182682  0.04818574  0.62451985
+  0.25007979  0.6398977   0.40674001  0.57458903 -0.14582     0.63759476
+ -0.05395416  0.07391604  1.09054879  0.10529052 -0.3147926  -0.40484874
+  0.27897928 -0.4602735   0.47972578  0.38067863  0.11779316  0.24366539
+  0.22868717 -0.02419255]
+</pre></div></div>
+</div>
+<p>Now create a new CAR distribution with the matrix multiplication instead
+of <code class="docutils literal"><span class="pre">theano.scan</span></code> to get the <code class="docutils literal"><span class="pre">mu</span></code></p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
+<span></span>In [10]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="k">class</span> <span class="nc">CAR2</span><span class="p">(</span><span class="n">distribution</span><span class="o">.</span><span class="n">Continuous</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Conditional Autoregressive (CAR) distribution</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    a : adjacency matrix</span>
+<span class="sd">    w : weight matrix</span>
+<span class="sd">    tau : precision at each location</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">w</span><span class="p">,</span> <span class="n">a</span><span class="p">,</span> <span class="n">tau</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">CAR2</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">a</span> <span class="o">=</span> <span class="n">a</span> <span class="o">=</span> <span class="n">tt</span><span class="o">.</span><span class="n">as_tensor_variable</span><span class="p">(</span><span class="n">a</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">w</span> <span class="o">=</span> <span class="n">w</span> <span class="o">=</span> <span class="n">tt</span><span class="o">.</span><span class="n">as_tensor_variable</span><span class="p">(</span><span class="n">w</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">tau</span> <span class="o">=</span> <span class="n">tau</span><span class="o">*</span><span class="n">tt</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">w</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">mode</span> <span class="o">=</span> <span class="mf">0.</span>
+
+    <span class="k">def</span> <span class="nf">logp</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">):</span>
+        <span class="n">tau</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">tau</span>
+        <span class="n">w</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">w</span>
+        <span class="n">a</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">a</span>
+
+        <span class="n">mu_w</span> <span class="o">=</span> <span class="n">tt</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">x</span><span class="o">*</span><span class="n">a</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span><span class="o">/</span><span class="n">tt</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">w</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">tt</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">continuous</span><span class="o">.</span><span class="n">Normal</span><span class="o">.</span><span class="n">dist</span><span class="p">(</span><span class="n">mu</span><span class="o">=</span><span class="n">mu_w</span><span class="p">,</span> <span class="n">tau</span><span class="o">=</span><span class="n">tau</span><span class="p">)</span><span class="o">.</span><span class="n">logp</span><span class="p">(</span><span class="n">x</span><span class="p">))</span>
+</pre></div>
+</div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
+<span></span>In [11]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="k">with</span> <span class="n">pm</span><span class="o">.</span><span class="n">Model</span><span class="p">()</span> <span class="k">as</span> <span class="n">model2</span><span class="p">:</span>
+    <span class="c1"># Vague prior on intercept</span>
+    <span class="n">beta0</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Normal</span><span class="p">(</span><span class="s1">&#39;beta0&#39;</span><span class="p">,</span> <span class="n">mu</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span> <span class="n">tau</span><span class="o">=</span><span class="mf">1.0e-5</span><span class="p">)</span>
+    <span class="c1"># Vague prior on covariate effect</span>
+    <span class="n">beta1</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Normal</span><span class="p">(</span><span class="s1">&#39;beta1&#39;</span><span class="p">,</span> <span class="n">mu</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span> <span class="n">tau</span><span class="o">=</span><span class="mf">1.0e-5</span><span class="p">)</span>
+
+    <span class="c1"># Random effects (hierarchial) prior</span>
+    <span class="n">tau_h</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Gamma</span><span class="p">(</span><span class="s1">&#39;tau_h&#39;</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">3.2761</span><span class="p">,</span> <span class="n">beta</span><span class="o">=</span><span class="mf">1.81</span><span class="p">)</span>
+    <span class="c1"># Spatial clustering prior</span>
+    <span class="n">tau_c</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Gamma</span><span class="p">(</span><span class="s1">&#39;tau_c&#39;</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span> <span class="n">beta</span><span class="o">=</span><span class="mf">1.0</span><span class="p">)</span>
+
+    <span class="c1"># Regional random effects</span>
+    <span class="n">theta</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Normal</span><span class="p">(</span><span class="s1">&#39;theta&#39;</span><span class="p">,</span> <span class="n">mu</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span> <span class="n">tau</span><span class="o">=</span><span class="n">tau_h</span><span class="p">,</span> <span class="n">shape</span><span class="o">=</span><span class="n">N</span><span class="p">)</span>
+    <span class="n">mu_phi</span> <span class="o">=</span> <span class="n">CAR2</span><span class="p">(</span><span class="s1">&#39;mu_phi&#39;</span><span class="p">,</span> <span class="n">w</span><span class="o">=</span><span class="n">wmat2</span><span class="p">,</span> <span class="n">a</span><span class="o">=</span><span class="n">amat2</span><span class="p">,</span> <span class="n">tau</span><span class="o">=</span><span class="n">tau_c</span><span class="p">,</span> <span class="n">shape</span><span class="o">=</span><span class="n">N</span><span class="p">)</span>
+
+    <span class="c1"># Zero-centre phi</span>
+    <span class="n">phi</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Deterministic</span><span class="p">(</span><span class="s1">&#39;phi&#39;</span><span class="p">,</span> <span class="n">mu_phi</span><span class="o">-</span><span class="n">tt</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">mu_phi</span><span class="p">))</span>
+
+    <span class="c1"># Mean model</span>
+    <span class="n">mu</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Deterministic</span><span class="p">(</span><span class="s1">&#39;mu&#39;</span><span class="p">,</span> <span class="n">tt</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="n">logE</span> <span class="o">+</span> <span class="n">beta0</span> <span class="o">+</span> <span class="n">beta1</span><span class="o">*</span><span class="n">aff</span> <span class="o">+</span> <span class="n">theta</span> <span class="o">+</span> <span class="n">phi</span><span class="p">))</span>
+
+    <span class="c1"># Likelihood</span>
+    <span class="n">Yi</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Poisson</span><span class="p">(</span><span class="s1">&#39;Yi&#39;</span><span class="p">,</span> <span class="n">mu</span><span class="o">=</span><span class="n">mu</span><span class="p">,</span> <span class="n">observed</span><span class="o">=</span><span class="n">O</span><span class="p">)</span>
+
+    <span class="c1"># Marginal SD of heterogeniety effects</span>
+    <span class="n">sd_h</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Deterministic</span><span class="p">(</span><span class="s1">&#39;sd_h&#39;</span><span class="p">,</span> <span class="n">tt</span><span class="o">.</span><span class="n">std</span><span class="p">(</span><span class="n">theta</span><span class="p">))</span>
+    <span class="c1"># Marginal SD of clustering (spatial) effects</span>
+    <span class="n">sd_c</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Deterministic</span><span class="p">(</span><span class="s1">&#39;sd_c&#39;</span><span class="p">,</span> <span class="n">tt</span><span class="o">.</span><span class="n">std</span><span class="p">(</span><span class="n">phi</span><span class="p">))</span>
+    <span class="c1"># Proportion sptial variance</span>
+    <span class="n">alpha</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Deterministic</span><span class="p">(</span><span class="s1">&#39;alpha&#39;</span><span class="p">,</span> <span class="n">sd_c</span><span class="o">/</span><span class="p">(</span><span class="n">sd_h</span><span class="o">+</span><span class="n">sd_c</span><span class="p">))</span>
+
+    <span class="n">trace2</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="mf">3e3</span><span class="p">,</span> <span class="n">njobs</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">tune</span><span class="o">=</span><span class="mi">1000</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="stderr output_area docutils container">
+<div class="highlight"><pre>
+Auto-assigning NUTS sampler...
+Initializing NUTS using advi...
+Average ELBO = -191.47: 100%|██████████| 200000/200000 [00:35&lt;00:00, 5639.71it/s]
+Finished [100%]: Average ELBO = -191.54
+100%|██████████| 3000/3000.0 [01:50&lt;00:00, 25.27it/s]
+</pre></div></div>
+</div>
+<div class="section" id="As-you-can-see,-its-6x-faster-using-matrix-multiplication.">
+<h2>As you can see, its 6x faster using matrix multiplication.<a class="headerlink" href="#As-you-can-see,-its-6x-faster-using-matrix-multiplication." title="Permalink to this headline">¶</a></h2>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
+<span></span>In [12]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">pm</span><span class="o">.</span><span class="n">traceplot</span><span class="p">(</span><span class="n">trace2</span><span class="p">,</span> <span class="n">varnames</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;alpha&#39;</span><span class="p">,</span> <span class="s1">&#39;sd_h&#39;</span><span class="p">,</span> <span class="s1">&#39;sd_c&#39;</span><span class="p">]);</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/notebooks_PyMC3_tips_and_heuristic_22_0.png" src="../_images/notebooks_PyMC3_tips_and_heuristic_22_0.png" />
+</div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
+<span></span>In [13]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">pm</span><span class="o">.</span><span class="n">posteriorplot</span><span class="p">(</span><span class="n">trace2</span><span class="p">,</span> <span class="n">varnames</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;alpha&#39;</span><span class="p">]);</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/notebooks_PyMC3_tips_and_heuristic_23_0.png" src="../_images/notebooks_PyMC3_tips_and_heuristic_23_0.png" />
+</div>
+</div>
+</div>
+</div>
+<div class="section" id="PyMC3-implementation-using-Matrix-multiplication">
+<h1>PyMC3 implementation using Matrix multiplication<a class="headerlink" href="#PyMC3-implementation-using-Matrix-multiplication" title="Permalink to this headline">¶</a></h1>
+<p>There are (almost) always many ways to formulate your model. And some
+works better than the others under different context (size of your
+dataset, properties of the sampler, etc). In this case, we can expressed
+the CAR prior as:</p>
+<div class="math">
+\[\phi \sim \mathcal{N}(0, [D_\tau (I - \alpha B)]^{-1}).\]</div>
+<p>For the sake of brevity, you can find more details in the original <a class="reference external" href="http://mc-stan.org/documentation/case-studies/mbjoseph-CARStan.html">Stan
+case
+study</a>.
+You might come across similar deviation in Gaussian Process, which
+result in a zero-mean Gaussian distribution conditioned on a covariance
+function.</p>
+<p>In the <code class="docutils literal"><span class="pre">Stan</span></code> Code, matrix D is generated in the model using a
+<code class="docutils literal"><span class="pre">transformed</span> <span class="pre">data{}</span></code> block:</p>
+<div class="highlight-stan"><div class="highlight"><pre><span></span><span class="kn">transformed data</span><span class="p">{</span>
+  <span class="kt">vector</span><span class="p">[</span><span class="n">n</span><span class="p">]</span> <span class="n">zeros</span><span class="p">;</span>
+  <span class="kt">matrix</span><span class="o">&lt;</span><span class="n">lower</span> <span class="o">=</span> <span class="mi">0</span><span class="o">&gt;</span><span class="p">[</span><span class="n">n</span><span class="p">,</span> <span class="n">n</span><span class="p">]</span> <span class="n">D</span><span class="p">;</span>
+  <span class="p">{</span>
+    <span class="kt">vector</span><span class="p">[</span><span class="n">n</span><span class="p">]</span> <span class="n">W_rowsums</span><span class="p">;</span>
+    <span class="k">for</span> <span class="p">(</span><span class="n">i</span> <span class="k">in</span> <span class="mi">1</span><span class="p">:</span><span class="n">n</span><span class="p">)</span> <span class="p">{</span>
+      <span class="n">W_rowsums</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">(</span><span class="n">W</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="p">]);</span>
+    <span class="p">}</span>
+    <span class="n">D</span> <span class="o">=</span> <span class="nb">diag_matrix</span><span class="p">(</span><span class="n">W_rowsums</span><span class="p">);</span>
+  <span class="p">}</span>
+  <span class="n">zeros</span> <span class="o">=</span> <span class="nb">rep_vector</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">n</span><span class="p">);</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>We can generate the same matrix quite easily:</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
+<span></span>In [14]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">X</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">hstack</span><span class="p">((</span><span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">((</span><span class="n">N</span><span class="p">,</span> <span class="mi">1</span><span class="p">)),</span> <span class="n">stats</span><span class="o">.</span><span class="n">zscore</span><span class="p">(</span><span class="n">aff</span><span class="p">,</span> <span class="n">ddof</span><span class="o">=</span><span class="mi">1</span><span class="p">)[:,</span> <span class="bp">None</span><span class="p">]))</span>
+<span class="n">W</span> <span class="o">=</span> <span class="n">wmat2</span>
+<span class="n">D</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">diag</span><span class="p">(</span><span class="n">W</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">))</span>
+<span class="n">log_offset</span> <span class="o">=</span> <span class="n">logE</span><span class="p">[:,</span> <span class="bp">None</span><span class="p">]</span>
+</pre></div>
+</div>
+</div>
+<p>Then in the <code class="docutils literal"><span class="pre">STAN</span></code> model:</p>
+<div class="highlight-stan"><div class="highlight"><pre><span></span><span class="kn">model</span> <span class="p">{</span>
+  <span class="n">phi</span> <span class="o">~</span> <span class="nb">multi_normal_prec</span><span class="p">(</span><span class="n">zeros</span><span class="p">,</span> <span class="n">tau</span> <span class="o">*</span> <span class="p">(</span><span class="n">D</span> <span class="o">-</span> <span class="n">alpha</span> <span class="o">*</span> <span class="n">W</span><span class="p">));</span>
+  <span class="mf">...</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>since the precision matrix just generated by some matrix multiplication,
+we can do just that in <code class="docutils literal"><span class="pre">PyMC3</span></code>:</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
+<span></span>In [15]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="k">with</span> <span class="n">pm</span><span class="o">.</span><span class="n">Model</span><span class="p">()</span> <span class="k">as</span> <span class="n">model3</span><span class="p">:</span>
+    <span class="c1"># Vague prior on intercept and effect</span>
+    <span class="n">beta</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Normal</span><span class="p">(</span><span class="s1">&#39;beta&#39;</span><span class="p">,</span> <span class="n">mu</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span> <span class="n">tau</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span> <span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">1</span><span class="p">))</span>
+
+    <span class="c1"># Priors for spatial random effects</span>
+    <span class="n">tau</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Gamma</span><span class="p">(</span><span class="s1">&#39;tau&#39;</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">2.</span><span class="p">,</span> <span class="n">beta</span><span class="o">=</span><span class="mf">2.</span><span class="p">)</span>
+    <span class="n">alpha</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Uniform</span><span class="p">(</span><span class="s1">&#39;alpha&#39;</span><span class="p">,</span> <span class="n">lower</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">upper</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+    <span class="n">phi</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">MvNormal</span><span class="p">(</span><span class="s1">&#39;phi&#39;</span><span class="p">,</span> <span class="n">mu</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">tau</span><span class="o">=</span><span class="n">tau</span><span class="o">*</span><span class="p">(</span><span class="n">D</span> <span class="o">-</span> <span class="n">alpha</span><span class="o">*</span><span class="n">W</span><span class="p">),</span> <span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="n">N</span><span class="p">,</span> <span class="mi">1</span><span class="p">))</span>
+
+    <span class="c1"># Mean model</span>
+    <span class="n">mu</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Deterministic</span><span class="p">(</span><span class="s1">&#39;mu&#39;</span><span class="p">,</span> <span class="n">tt</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="n">tt</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">beta</span><span class="p">)</span> <span class="o">+</span> <span class="n">phi</span> <span class="o">+</span> <span class="n">log_offset</span><span class="p">))</span>
+
+    <span class="c1"># Likelihood</span>
+    <span class="n">Yi</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Poisson</span><span class="p">(</span><span class="s1">&#39;Yi&#39;</span><span class="p">,</span> <span class="n">mu</span><span class="o">=</span><span class="n">mu</span><span class="o">.</span><span class="n">ravel</span><span class="p">(),</span> <span class="n">observed</span><span class="o">=</span><span class="n">O</span><span class="p">)</span>
+
+    <span class="n">trace3</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="mf">3e3</span><span class="p">,</span> <span class="n">njobs</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">tune</span><span class="o">=</span><span class="mi">1000</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="stderr output_area docutils container">
+<div class="highlight"><pre>
+Auto-assigning NUTS sampler...
+Initializing NUTS using advi...
+Average ELBO = -173.18: 100%|██████████| 200000/200000 [02:31&lt;00:00, 1320.40it/s]
+Finished [100%]: Average ELBO = -173.16
+100%|██████████| 3000/3000.0 [01:01&lt;00:00, 49.14it/s]
+</pre></div></div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
+<span></span>In [16]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">pm</span><span class="o">.</span><span class="n">traceplot</span><span class="p">(</span><span class="n">trace3</span><span class="p">,</span> <span class="n">varnames</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;alpha&#39;</span><span class="p">,</span> <span class="s1">&#39;beta&#39;</span><span class="p">,</span> <span class="s1">&#39;tau&#39;</span><span class="p">]);</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/notebooks_PyMC3_tips_and_heuristic_28_0.png" src="../_images/notebooks_PyMC3_tips_and_heuristic_28_0.png" />
+</div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
+<span></span>In [17]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">pm</span><span class="o">.</span><span class="n">posteriorplot</span><span class="p">(</span><span class="n">trace3</span><span class="p">,</span> <span class="n">varnames</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;alpha&#39;</span><span class="p">]);</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/notebooks_PyMC3_tips_and_heuristic_29_0.png" src="../_images/notebooks_PyMC3_tips_and_heuristic_29_0.png" />
+</div>
+</div>
+<p>Notice that since the model parameterization is different than in the
+<code class="docutils literal"><span class="pre">WinBugs</span></code> model, the <code class="docutils literal"><span class="pre">alpha</span></code> doesn&#8217;t bear the same interpretation.</p>
+</div>
+<div class="section" id="PyMC3-implementation-using-Sparse-Matrix">
+<h1>PyMC3 implementation using Sparse Matrix<a class="headerlink" href="#PyMC3-implementation-using-Sparse-Matrix" title="Permalink to this headline">¶</a></h1>
+<p>Note that in the node
+<span class="math">\(\phi \sim \mathcal{N}(0, [D_\tau (I - \alpha B)]^{-1})\)</span>, we are
+computing the log-likelihood for a multivariate Gaussian distribution,
+which might not scale well in high-dimension. We can take advantage of
+the fact that the covariance matrix here
+<span class="math">\([D_\tau (I - \alpha B)]^{-1}\)</span> is sparse, and there are faster
+ways to compute log-likelihood.</p>
+<p>For example, a more efficient sparse representation of the CAR in
+<code class="docutils literal"><span class="pre">STAN</span></code>:</p>
+<div class="highlight-stan"><div class="highlight"><pre><span></span><span class="kn">functions</span> <span class="p">{</span>
+  <span class="cm">/**</span>
+<span class="cm">  * Return the log probability of a proper conditional autoregressive (CAR) prior</span>
+<span class="cm">  * with a sparse representation for the adjacency matrix</span>
+<span class="cm">  *</span>
+<span class="cm">  * @param phi Vector containing the parameters with a CAR prior</span>
+<span class="cm">  * @param tau Precision parameter for the CAR prior (real)</span>
+<span class="cm">  * @param alpha Dependence (usually spatial) parameter for the CAR prior (real)</span>
+<span class="cm">  * @param W_sparse Sparse representation of adjacency matrix (int array)</span>
+<span class="cm">  * @param n Length of phi (int)</span>
+<span class="cm">  * @param W_n Number of adjacent pairs (int)</span>
+<span class="cm">  * @param D_sparse Number of neighbors for each location (vector)</span>
+<span class="cm">  * @param lambda Eigenvalues of D^{-1/2}*W*D^{-1/2} (vector)</span>
+<span class="cm">  *</span>
+<span class="cm">  * @return Log probability density of CAR prior up to additive constant</span>
+<span class="cm">  */</span>
+  <span class="kt">real</span> <span class="n">sparse_car_lpdf</span><span class="p">(</span><span class="kt">vector</span> <span class="n">phi</span><span class="p">,</span> <span class="kt">real</span> <span class="n">tau</span><span class="p">,</span> <span class="kt">real</span> <span class="n">alpha</span><span class="p">,</span>
+    <span class="kt">int</span><span class="p">[,]</span> <span class="n">W_sparse</span><span class="p">,</span> <span class="kt">vector</span> <span class="n">D_sparse</span><span class="p">,</span> <span class="kt">vector</span> <span class="n">lambda</span><span class="p">,</span> <span class="kt">int</span> <span class="n">n</span><span class="p">,</span> <span class="kt">int</span> <span class="n">W_n</span><span class="p">)</span> <span class="p">{</span>
+      <span class="kt">row_vector</span><span class="p">[</span><span class="n">n</span><span class="p">]</span> <span class="n">phit_D</span><span class="p">;</span> <span class="c1">// phi&#39; * D</span>
+      <span class="kt">row_vector</span><span class="p">[</span><span class="n">n</span><span class="p">]</span> <span class="n">phit_W</span><span class="p">;</span> <span class="c1">// phi&#39; * W</span>
+      <span class="kt">vector</span><span class="p">[</span><span class="n">n</span><span class="p">]</span> <span class="n">ldet_terms</span><span class="p">;</span>
+
+      <span class="n">phit_D</span> <span class="o">=</span> <span class="p">(</span><span class="n">phi</span> <span class="mf">.</span><span class="o">*</span> <span class="n">D_sparse</span><span class="p">)</span><span class="o">&#39;</span><span class="p">;</span>
+      <span class="n">phit_W</span> <span class="o">=</span> <span class="nb">rep_row_vector</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">n</span><span class="p">);</span>
+      <span class="k">for</span> <span class="p">(</span><span class="n">i</span> <span class="k">in</span> <span class="mi">1</span><span class="p">:</span><span class="n">W_n</span><span class="p">)</span> <span class="p">{</span>
+        <span class="n">phit_W</span><span class="p">[</span><span class="n">W_sparse</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="mi">1</span><span class="p">]]</span> <span class="o">=</span> <span class="n">phit_W</span><span class="p">[</span><span class="n">W_sparse</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="mi">1</span><span class="p">]]</span> <span class="o">+</span> <span class="n">phi</span><span class="p">[</span><span class="n">W_sparse</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="mi">2</span><span class="p">]];</span>
+        <span class="n">phit_W</span><span class="p">[</span><span class="n">W_sparse</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="mi">2</span><span class="p">]]</span> <span class="o">=</span> <span class="n">phit_W</span><span class="p">[</span><span class="n">W_sparse</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="mi">2</span><span class="p">]]</span> <span class="o">+</span> <span class="n">phi</span><span class="p">[</span><span class="n">W_sparse</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="mi">1</span><span class="p">]];</span>
+      <span class="p">}</span>
+
+      <span class="k">for</span> <span class="p">(</span><span class="n">i</span> <span class="k">in</span> <span class="mi">1</span><span class="p">:</span><span class="n">n</span><span class="p">)</span> <span class="n">ldet_terms</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="nb">log1m</span><span class="p">(</span><span class="n">alpha</span> <span class="o">*</span> <span class="n">lambda</span><span class="p">[</span><span class="n">i</span><span class="p">]);</span>
+      <span class="k">return</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="p">(</span><span class="n">n</span> <span class="o">*</span> <span class="nb">log</span><span class="p">(</span><span class="n">tau</span><span class="p">)</span>
+                    <span class="o">+</span> <span class="nb">sum</span><span class="p">(</span><span class="n">ldet_terms</span><span class="p">)</span>
+                    <span class="o">-</span> <span class="n">tau</span> <span class="o">*</span> <span class="p">(</span><span class="n">phit_D</span> <span class="o">*</span> <span class="n">phi</span> <span class="o">-</span> <span class="n">alpha</span> <span class="o">*</span> <span class="p">(</span><span class="n">phit_W</span> <span class="o">*</span> <span class="n">phi</span><span class="p">)));</span>
+  <span class="p">}</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>with the data transformed in the model:</p>
+<div class="highlight-stan"><div class="highlight"><pre><span></span><span class="kn">transformed data</span> <span class="p">{</span>
+  <span class="kt">int</span> <span class="n">W_sparse</span><span class="p">[</span><span class="n">W_n</span><span class="p">,</span> <span class="mi">2</span><span class="p">];</span>   <span class="c1">// adjacency pairs</span>
+  <span class="kt">vector</span><span class="p">[</span><span class="n">n</span><span class="p">]</span> <span class="n">D_sparse</span><span class="p">;</span>     <span class="c1">// diagonal of D (number of neigbors for each site)</span>
+  <span class="kt">vector</span><span class="p">[</span><span class="n">n</span><span class="p">]</span> <span class="n">lambda</span><span class="p">;</span>       <span class="c1">// eigenvalues of invsqrtD * W * invsqrtD</span>
+
+  <span class="p">{</span> <span class="c1">// generate sparse representation for W</span>
+  <span class="kt">int</span> <span class="n">counter</span><span class="p">;</span>
+  <span class="n">counter</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span>
+  <span class="c1">// loop over upper triangular part of W to identify neighbor pairs</span>
+    <span class="k">for</span> <span class="p">(</span><span class="n">i</span> <span class="k">in</span> <span class="mi">1</span><span class="p">:(</span><span class="n">n</span> <span class="o">-</span> <span class="mi">1</span><span class="p">))</span> <span class="p">{</span>
+      <span class="k">for</span> <span class="p">(</span><span class="n">j</span> <span class="k">in</span> <span class="p">(</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">):</span><span class="n">n</span><span class="p">)</span> <span class="p">{</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">W</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="n">j</span><span class="p">]</span> <span class="o">==</span> <span class="mi">1</span><span class="p">)</span> <span class="p">{</span>
+          <span class="n">W_sparse</span><span class="p">[</span><span class="n">counter</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">i</span><span class="p">;</span>
+          <span class="n">W_sparse</span><span class="p">[</span><span class="n">counter</span><span class="p">,</span> <span class="mi">2</span><span class="p">]</span> <span class="o">=</span> <span class="n">j</span><span class="p">;</span>
+          <span class="n">counter</span> <span class="o">=</span> <span class="n">counter</span> <span class="o">+</span> <span class="mi">1</span><span class="p">;</span>
+        <span class="p">}</span>
+      <span class="p">}</span>
+    <span class="p">}</span>
+  <span class="p">}</span>
+  <span class="k">for</span> <span class="p">(</span><span class="n">i</span> <span class="k">in</span> <span class="mi">1</span><span class="p">:</span><span class="n">n</span><span class="p">)</span> <span class="n">D_sparse</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">(</span><span class="n">W</span><span class="p">[</span><span class="n">i</span><span class="p">]);</span>
+  <span class="p">{</span>
+    <span class="kt">vector</span><span class="p">[</span><span class="n">n</span><span class="p">]</span> <span class="n">invsqrtD</span><span class="p">;</span>
+    <span class="k">for</span> <span class="p">(</span><span class="n">i</span> <span class="k">in</span> <span class="mi">1</span><span class="p">:</span><span class="n">n</span><span class="p">)</span> <span class="p">{</span>
+      <span class="n">invsqrtD</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="mi">1</span> <span class="o">/</span> <span class="nb">sqrt</span><span class="p">(</span><span class="n">D_sparse</span><span class="p">[</span><span class="n">i</span><span class="p">]);</span>
+    <span class="p">}</span>
+    <span class="n">lambda</span> <span class="o">=</span> <span class="nb">eigenvalues_sym</span><span class="p">(</span><span class="nb">quad_form</span><span class="p">(</span><span class="n">W</span><span class="p">,</span> <span class="nb">diag_matrix</span><span class="p">(</span><span class="n">invsqrtD</span><span class="p">)));</span>
+  <span class="p">}</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>and the likelihood:</p>
+<div class="highlight-stan"><div class="highlight"><pre><span></span><span class="kn">model</span> <span class="p">{</span>
+  <span class="n">phi</span> <span class="o">~</span> <span class="n">sparse_car</span><span class="p">(</span><span class="n">tau</span><span class="p">,</span> <span class="n">alpha</span><span class="p">,</span> <span class="n">W_sparse</span><span class="p">,</span> <span class="n">D_sparse</span><span class="p">,</span> <span class="n">lambda</span><span class="p">,</span> <span class="n">n</span><span class="p">,</span> <span class="n">W_n</span><span class="p">);</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>There are quite a lot of codes to digest, my general approach is to
+compare the intermedia step whenever possible with <code class="docutils literal"><span class="pre">STAN</span></code>. In this
+case, I will try to compute
+<code class="docutils literal"><span class="pre">tau,</span> <span class="pre">alpha,</span> <span class="pre">W_sparse,</span> <span class="pre">D_sparse,</span> <span class="pre">lambda,</span> <span class="pre">n,</span> <span class="pre">W_n</span></code> outside of the
+<code class="docutils literal"><span class="pre">STAN</span></code> model in <code class="docutils literal"><span class="pre">R</span></code> and compare with my own implementation.</p>
+<p>Below is a Sparse CAR implementation in <code class="docutils literal"><span class="pre">PyMC3</span></code> (<a class="reference external" href="https://github.com/pymc-devs/pymc3/issues/2066#issuecomment-296397012">see also
+here</a>).
+Again, we try to avoide using any for-loop as in <code class="docutils literal"><span class="pre">STAN</span></code>.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
+<span></span>In [18]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">scipy</span>
+
+
+<span class="k">class</span> <span class="nc">Sparse_CAR</span><span class="p">(</span><span class="n">distribution</span><span class="o">.</span><span class="n">Continuous</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Sparse Conditional Autoregressive (CAR) distribution</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    alpha : spatial smoothing term</span>
+<span class="sd">    W : adjacency matrix</span>
+<span class="sd">    tau : precision at each location</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">alpha</span><span class="p">,</span> <span class="n">W</span><span class="p">,</span> <span class="n">tau</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">alpha</span> <span class="o">=</span> <span class="n">alpha</span> <span class="o">=</span> <span class="n">tt</span><span class="o">.</span><span class="n">as_tensor_variable</span><span class="p">(</span><span class="n">alpha</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">tau</span> <span class="o">=</span> <span class="n">tau</span> <span class="o">=</span> <span class="n">tt</span><span class="o">.</span><span class="n">as_tensor_variable</span><span class="p">(</span><span class="n">tau</span><span class="p">)</span>
+        <span class="n">D</span> <span class="o">=</span> <span class="n">W</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+        <span class="n">n</span><span class="p">,</span> <span class="n">m</span> <span class="o">=</span> <span class="n">W</span><span class="o">.</span><span class="n">shape</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">n</span> <span class="o">=</span> <span class="n">n</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">median</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">mode</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">mean</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">Sparse_CAR</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+        <span class="c1"># eigenvalues of D^−1/2 * W * D^−1/2</span>
+        <span class="n">Dinv_sqrt</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">diag</span><span class="p">(</span><span class="mi">1</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">D</span><span class="p">))</span>
+        <span class="n">DWD</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">matmul</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">matmul</span><span class="p">(</span><span class="n">Dinv_sqrt</span><span class="p">,</span> <span class="n">W</span><span class="p">),</span> <span class="n">Dinv_sqrt</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">lam</span> <span class="o">=</span> <span class="n">scipy</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">eigvalsh</span><span class="p">(</span><span class="n">DWD</span><span class="p">)</span>
+
+        <span class="c1"># sparse representation of W</span>
+        <span class="n">w_sparse</span> <span class="o">=</span> <span class="n">scipy</span><span class="o">.</span><span class="n">sparse</span><span class="o">.</span><span class="n">csr_matrix</span><span class="p">(</span><span class="n">W</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">W</span> <span class="o">=</span> <span class="n">theano</span><span class="o">.</span><span class="n">sparse</span><span class="o">.</span><span class="n">as_sparse_variable</span><span class="p">(</span><span class="n">w_sparse</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">D</span> <span class="o">=</span> <span class="n">tt</span><span class="o">.</span><span class="n">as_tensor_variable</span><span class="p">(</span><span class="n">D</span><span class="p">)</span>
+
+        <span class="c1"># Presicion Matrix (inverse of Covariance matrix)</span>
+        <span class="c1"># d_sparse = scipy.sparse.csr_matrix(np.diag(D))</span>
+        <span class="c1"># self.D = theano.sparse.as_sparse_variable(d_sparse)</span>
+        <span class="c1"># self.Phi = self.tau * (self.D - self.alpha*self.W)</span>
+
+    <span class="k">def</span> <span class="nf">logp</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">):</span>
+        <span class="n">logtau</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">n</span> <span class="o">*</span> <span class="n">tt</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">tau</span><span class="p">)</span>
+        <span class="n">logdet</span> <span class="o">=</span> <span class="n">tt</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">alpha</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">lam</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>
+
+        <span class="c1"># tau * ((phi .* D_sparse)&#39; * phi - alpha * (phit_W * phi))</span>
+        <span class="n">Wx</span> <span class="o">=</span> <span class="n">theano</span><span class="o">.</span><span class="n">sparse</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">W</span><span class="p">,</span> <span class="n">x</span><span class="p">)</span>
+        <span class="n">tau_dot_x</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">D</span> <span class="o">*</span> <span class="n">x</span><span class="o">.</span><span class="n">T</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">alpha</span> <span class="o">*</span> <span class="n">Wx</span><span class="o">.</span><span class="n">ravel</span><span class="p">()</span>
+        <span class="n">logquad</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">tau</span> <span class="o">*</span> <span class="n">tt</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">x</span><span class="o">.</span><span class="n">ravel</span><span class="p">(),</span> <span class="n">tau_dot_x</span><span class="o">.</span><span class="n">ravel</span><span class="p">())</span>
+
+        <span class="c1"># logquad = tt.dot(x.T, theano.sparse.dot(self.Phi, x)).sum()</span>
+        <span class="k">return</span> <span class="mf">0.5</span><span class="o">*</span><span class="p">(</span><span class="n">logtau</span> <span class="o">+</span> <span class="n">logdet</span> <span class="o">-</span> <span class="n">logquad</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
+<span></span>In [19]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="k">with</span> <span class="n">pm</span><span class="o">.</span><span class="n">Model</span><span class="p">()</span> <span class="k">as</span> <span class="n">model4</span><span class="p">:</span>
+    <span class="c1"># Vague prior on intercept and effect</span>
+    <span class="n">beta</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Normal</span><span class="p">(</span><span class="s1">&#39;beta&#39;</span><span class="p">,</span> <span class="n">mu</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span> <span class="n">tau</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span> <span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">1</span><span class="p">))</span>
+
+    <span class="c1"># Priors for spatial random effects</span>
+    <span class="n">tau</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Gamma</span><span class="p">(</span><span class="s1">&#39;tau&#39;</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">2.</span><span class="p">,</span> <span class="n">beta</span><span class="o">=</span><span class="mf">2.</span><span class="p">)</span>
+    <span class="n">alpha</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Uniform</span><span class="p">(</span><span class="s1">&#39;alpha&#39;</span><span class="p">,</span> <span class="n">lower</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">upper</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+    <span class="n">phi</span> <span class="o">=</span> <span class="n">Sparse_CAR</span><span class="p">(</span><span class="s1">&#39;phi&#39;</span><span class="p">,</span> <span class="n">alpha</span><span class="p">,</span> <span class="n">W</span><span class="p">,</span> <span class="n">tau</span><span class="p">,</span> <span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="n">N</span><span class="p">,</span> <span class="mi">1</span><span class="p">))</span>
+
+    <span class="c1"># Mean model</span>
+    <span class="n">mu</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Deterministic</span><span class="p">(</span><span class="s1">&#39;mu&#39;</span><span class="p">,</span> <span class="n">tt</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="n">tt</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">beta</span><span class="p">)</span> <span class="o">+</span> <span class="n">phi</span> <span class="o">+</span> <span class="n">log_offset</span><span class="p">))</span>
+
+    <span class="c1"># Likelihood</span>
+    <span class="n">Yi</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Poisson</span><span class="p">(</span><span class="s1">&#39;Yi&#39;</span><span class="p">,</span> <span class="n">mu</span><span class="o">=</span><span class="n">mu</span><span class="o">.</span><span class="n">ravel</span><span class="p">(),</span> <span class="n">observed</span><span class="o">=</span><span class="n">O</span><span class="p">)</span>
+
+    <span class="n">trace4</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="mf">3e3</span><span class="p">,</span> <span class="n">njobs</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">tune</span><span class="o">=</span><span class="mi">1000</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="stderr output_area docutils container">
+<div class="highlight"><pre>
+Auto-assigning NUTS sampler...
+Initializing NUTS using advi...
+Average ELBO = -162.87: 100%|██████████| 200000/200000 [01:02&lt;00:00, 3219.31it/s]
+Finished [100%]: Average ELBO = -162.86
+100%|██████████| 3000/3000.0 [00:21&lt;00:00, 140.42it/s]
+</pre></div></div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
+<span></span>In [20]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">pm</span><span class="o">.</span><span class="n">traceplot</span><span class="p">(</span><span class="n">trace4</span><span class="p">,</span> <span class="n">varnames</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;alpha&#39;</span><span class="p">,</span> <span class="s1">&#39;beta&#39;</span><span class="p">,</span> <span class="s1">&#39;tau&#39;</span><span class="p">]);</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/notebooks_PyMC3_tips_and_heuristic_35_0.png" src="../_images/notebooks_PyMC3_tips_and_heuristic_35_0.png" />
+</div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
+<span></span>In [21]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">pm</span><span class="o">.</span><span class="n">posteriorplot</span><span class="p">(</span><span class="n">trace4</span><span class="p">,</span> <span class="n">varnames</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;alpha&#39;</span><span class="p">]);</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/notebooks_PyMC3_tips_and_heuristic_36_0.png" src="../_images/notebooks_PyMC3_tips_and_heuristic_36_0.png" />
+</div>
+</div>
+<p>As you can see above, the sparse representation returns the same
+estimation, while being much faster than any other implementation.</p>
+</div>
+<div class="section" id="Final-remarks">
+<h1>Final remarks<a class="headerlink" href="#Final-remarks" title="Permalink to this headline">¶</a></h1>
+<p>In this notebook, most of the parameter conventions (e.g., using <code class="docutils literal"><span class="pre">tau</span></code>
+when defining a Normal distribution) and choice of priors are strictly
+matched with the original code in <code class="docutils literal"><span class="pre">Winbugs</span></code> or <code class="docutils literal"><span class="pre">Stan</span></code>. However, it
+is important to note that merely porting the code from one to the other
+is not always the best practice. The aims are not just to run the code
+in <code class="docutils literal"><span class="pre">PyMC3</span></code>, but to make sure the model is appropriate as it returns
+correct estimation, and runs efficiently (fast sampling).</p>
+<p>For example, as [&#64;aseyboldt](<a class="reference external" href="https://github.com/aseyboldt">https://github.com/aseyboldt</a>) pointed out
+<a class="reference external" href="https://github.com/pymc-devs/pymc3/pull/2080#issuecomment-297456574">here</a>
+and
+<a class="reference external" href="https://github.com/pymc-devs/pymc3/issues/1924#issue-215496293">here</a>,
+non-centered parametrizations are often a better choice than the
+centered parametrizations. In our case here, <code class="docutils literal"><span class="pre">phi</span></code> is following a
+zero-mean Normal distribution, thus it can be leaved out in the
+beginning and just scale the values afterwards. In many cases doing this
+can avoids correlations in the posterior (it will be slower in some
+cases, however).</p>
+<p>Another thing to keep in mind is that sometimes your model is sensitive
+to prior choice: for example, you can have a bad experiences using
+Normals with a large sd as prior. Gelman often recommends Cauchy or
+StudentT, and more heuristic on prior could be found on the <a class="reference external" href="https://github.com/stan-dev/stan/wiki/Prior-Choice-Recommendations">Stan
+wiki</a>.</p>
+<p>There are always ways to improve (tidy up the code, more careful on the
+matrix multiplication, etc,.). Since our computational graph under
+<code class="docutils literal"><span class="pre">pm.Model()</span></code> are all <code class="docutils literal"><span class="pre">theano</span></code> objects, we can always do
+<code class="docutils literal"><span class="pre">print(VAR_TO_CHECK.tag.test_value)</span></code> right after the declaration or
+computation to check the shape. For example, in our last example, there
+seem to be a lot of correlations in the posterior. That probably slows
+down NUTS quite a bit. As a debugging tool and guide for
+reparametrization you can look at the singular value decomposition of
+the standardized samples – basically the eigenvalues of the correlation
+matrix. If the problem is high dimensional you can use stuff from
+scipy.sparse.linalg to only compute the largest svdvals:</p>
+<div class="highlight-python"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">scipy</span> <span class="kn">import</span> <span class="n">linalg</span><span class="p">,</span> <span class="n">sparse</span>
+
+<span class="n">vals</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">model2</span><span class="o">.</span><span class="n">dict_to_array</span><span class="p">(</span><span class="n">v</span><span class="p">)</span> <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">trace2</span><span class="p">[</span><span class="mi">1000</span><span class="p">:]])</span><span class="o">.</span><span class="n">T</span>
+<span class="n">vals</span><span class="p">[:]</span> <span class="o">-=</span> <span class="n">vals</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)[:,</span> <span class="bp">None</span><span class="p">]</span>
+<span class="n">vals</span><span class="p">[:]</span> <span class="o">/=</span> <span class="n">vals</span><span class="o">.</span><span class="n">std</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)[:,</span> <span class="bp">None</span><span class="p">]</span>
+
+<span class="n">U</span><span class="p">,</span> <span class="n">S</span><span class="p">,</span> <span class="n">Vh</span> <span class="o">=</span> <span class="n">sparse</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">svds</span><span class="p">(</span><span class="n">vals</span><span class="p">,</span> <span class="n">k</span><span class="o">=</span><span class="mi">20</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Then look at <code class="docutils literal"><span class="pre">plt.plot(S)</span></code> to see if any principal components stick
+out, and check which variables are involved by looking at the singular
+vectors: <code class="docutils literal"><span class="pre">plt.plot(U[:,</span> <span class="pre">-1]</span> <span class="pre">**</span> <span class="pre">2)</span></code>. You can get the indices by looking
+at <code class="docutils literal"><span class="pre">model2.bijection.ordering.vmap</span></code>.</p>
+</div>
+
+
+           </div>
+           <div class="articleComments">
+            
+           </div>
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="LKJ.html" class="btn btn-neutral float-right" title="LKJ Prior for fitting a Multivariate Normal Model" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="howto_debugging.html" class="btn btn-neutral" title="How to debug a model" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2016, John Salvatier, Christopher Fonnesbeck, Thomas Wiecki.
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'../',
+            VERSION:'3.0',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true,
+            SOURCELINK_SUFFIX: '.txt'
+        };
+    </script>
+      <script type="text/javascript" src="../_static/jquery.js"></script>
+      <script type="text/javascript" src="../_static/underscore.js"></script>
+      <script type="text/javascript" src="../_static/doctools.js"></script>
+      <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+  
+
+  
+  
+    <script type="text/javascript" src="../_static/js/theme.js"></script>
+  
+
+  
+  
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.StickyNav.enable();
+      });
+  </script>
+   
+
+</body>
+</html>

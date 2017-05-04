@@ -167,9 +167,11 @@
  | <a href="#G"><strong>G</strong></a>
  | <a href="#H"><strong>H</strong></a>
  | <a href="#I"><strong>I</strong></a>
+ | <a href="#K"><strong>K</strong></a>
  | <a href="#L"><strong>L</strong></a>
  | <a href="#M"><strong>M</strong></a>
  | <a href="#N"><strong>N</strong></a>
+ | <a href="#O"><strong>O</strong></a>
  | <a href="#P"><strong>P</strong></a>
  | <a href="#Q"><strong>Q</strong></a>
  | <a href="#R"><strong>R</strong></a>
@@ -184,14 +186,18 @@
 <h2 id="A">A</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="api/inference.html#pymc3.variational.advi.advi">advi() (in module pymc3.variational.advi)</a>
-</li>
-      <li><a href="api/inference.html#pymc3.variational.advi_minibatch.advi_minibatch">advi_minibatch() (in module pymc3.variational.advi_minibatch)</a>
+      <li><a href="api/inference.html#pymc3.variational.inference.ADVI">ADVI (class in pymc3.variational.inference)</a>
 </li>
       <li><a href="api/distributions/mixture.html#pymc3.distributions.mixture.all_discrete">all_discrete() (in module pymc3.distributions.mixture)</a>
 </li>
+      <li><a href="api/inference.html#pymc3.variational.opvi.Operator.apply">apply() (pymc3.variational.opvi.Operator method)</a>
+</li>
+      <li><a href="api/inference.html#pymc3.variational.opvi.Approximation.apply_replacements">apply_replacements() (pymc3.variational.opvi.Approximation method)</a>
+</li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api/inference.html#pymc3.variational.opvi.Approximation">Approximation (class in pymc3.variational.opvi)</a>
+</li>
       <li><a href="api/stats.html#pymc3.stats.autocorr">autocorr() (in module pymc3.stats)</a>
 </li>
       <li><a href="api/plots.html#pymc3.plots.autocorrplot">autocorrplot() (in module pymc3.plots)</a>
@@ -232,14 +238,16 @@
 </li>
       <li><a href="api/distributions/continuous.html#pymc3.distributions.continuous.Cauchy">Cauchy (class in pymc3.distributions.continuous)</a>
 </li>
+      <li><a href="api/inference.html#pymc3.variational.opvi.Approximation.check_model">check_model() (pymc3.variational.opvi.Approximation method)</a>
+</li>
+      <li><a href="api/inference.html#pymc3.step_methods.hmc.nuts.NUTS.check_trace">check_trace() (pymc3.step_methods.hmc.nuts.NUTS method)</a>
+</li>
       <li><a href="api/distributions/continuous.html#pymc3.distributions.continuous.ChiSquared">ChiSquared (class in pymc3.distributions.continuous)</a>
 </li>
       <li><a href="api/stats.html#pymc3.stats.compare">compare() (in module pymc3.stats)</a>
 </li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="api/plots.html#pymc3.plots.compare_plot">compare_plot() (in module pymc3.plots)</a>
-</li>
       <li><a href="api/inference.html#pymc3.step_methods.metropolis.BinaryGibbsMetropolis.competence">competence() (pymc3.step_methods.metropolis.BinaryGibbsMetropolis static method)</a>
 
       <ul>
@@ -250,7 +258,11 @@
       </ul></li>
       <li><a href="api/distributions/discrete.html#pymc3.distributions.discrete.Constant">Constant (class in pymc3.distributions.discrete)</a>
 </li>
+      <li><a href="api/inference.html#pymc3.variational.opvi.Approximation.construct_replacements">construct_replacements() (pymc3.variational.opvi.Approximation method)</a>
+</li>
       <li><a href="api/gp.html#pymc3.gp.cov.Cosine">Cosine (class in pymc3.gp.cov)</a>
+</li>
+      <li><a href="api/inference.html#pymc3.variational.opvi.Approximation.create_shared_params">create_shared_params() (pymc3.variational.opvi.Approximation method)</a>
 </li>
   </ul></td>
 </tr></table>
@@ -258,14 +270,16 @@
 <h2 id="D">D</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api/data.html#pymc3.data.DataSampler">DataSampler (class in pymc3.data)</a>
+</li>
       <li><a href="api/stats.html#pymc3.stats.df_summary">df_summary() (in module pymc3.stats)</a>
 </li>
       <li><a href="api/stats.html#pymc3.stats.dic">dic() (in module pymc3.stats)</a>
 </li>
-      <li><a href="api/distributions/multivariate.html#pymc3.distributions.multivariate.Dirichlet">Dirichlet (class in pymc3.distributions.multivariate)</a>
-</li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api/distributions/multivariate.html#pymc3.distributions.multivariate.Dirichlet">Dirichlet (class in pymc3.distributions.multivariate)</a>
+</li>
       <li><a href="api/distributions/discrete.html#pymc3.distributions.discrete.DiscreteUniform">DiscreteUniform (class in pymc3.distributions.discrete)</a>
 </li>
       <li><a href="api/distributions/discrete.html#pymc3.distributions.discrete.DiscreteWeibull">DiscreteWeibull (class in pymc3.distributions.discrete)</a>
@@ -280,12 +294,14 @@
   <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="api/diagnostics.html#pymc3.diagnostics.effective_n">effective_n() (in module pymc3.diagnostics)</a>
 </li>
-      <li><a href="api/distributions/continuous.html#pymc3.distributions.continuous.ExGaussian">ExGaussian (class in pymc3.distributions.continuous)</a>
+      <li><a href="api/inference.html#pymc3.variational.approximations.Empirical">Empirical (class in pymc3.variational.approximations)</a>
 </li>
-      <li><a href="api/math.html#pymc3.math.expand_packed_triangular">expand_packed_triangular() (in module pymc3.math)</a>
+      <li><a href="api/distributions/continuous.html#pymc3.distributions.continuous.ExGaussian">ExGaussian (class in pymc3.distributions.continuous)</a>
 </li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api/math.html#pymc3.math.expand_packed_triangular">expand_packed_triangular() (in module pymc3.math)</a>
+</li>
       <li><a href="api/distributions/continuous.html#pymc3.distributions.continuous.Exponential">Exponential (class in pymc3.distributions.continuous)</a>
 
       <ul>
@@ -300,11 +316,35 @@
 <h2 id="F">F</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api/inference.html#pymc3.variational.inference.fit">fit() (in module pymc3.variational.inference)</a>
+
+      <ul>
+        <li><a href="api/inference.html#pymc3.variational.inference.Inference.fit">(pymc3.variational.inference.Inference method)</a>
+</li>
+      </ul></li>
       <li><a href="api/distributions/continuous.html#pymc3.distributions.continuous.Flat">Flat (class in pymc3.distributions.continuous)</a>
+</li>
+      <li><a href="api/plots.html#pymc3.plots.forestplot">forestplot() (in module pymc3.plots)</a>
+</li>
+      <li><a href="api/inference.html#pymc3.variational.inference.FullRankADVI.from_advi">from_advi() (pymc3.variational.inference.FullRankADVI class method)</a>
+</li>
+      <li><a href="api/inference.html#pymc3.variational.inference.FullRankADVI.from_full_rank">from_full_rank() (pymc3.variational.inference.FullRankADVI class method)</a>
 </li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="api/plots.html#pymc3.plots.forestplot">forestplot() (in module pymc3.plots)</a>
+      <li><a href="api/inference.html#pymc3.variational.approximations.FullRank.from_mean_field">from_mean_field() (pymc3.variational.approximations.FullRank class method)</a>
+
+      <ul>
+        <li><a href="api/inference.html#pymc3.variational.inference.ADVI.from_mean_field">(pymc3.variational.inference.ADVI class method)</a>
+</li>
+        <li><a href="api/inference.html#pymc3.variational.inference.FullRankADVI.from_mean_field">(pymc3.variational.inference.FullRankADVI class method)</a>
+</li>
+      </ul></li>
+      <li><a href="api/inference.html#pymc3.variational.approximations.Empirical.from_noise">from_noise() (pymc3.variational.approximations.Empirical class method)</a>
+</li>
+      <li><a href="api/inference.html#pymc3.variational.approximations.FullRank">FullRank (class in pymc3.variational.approximations)</a>
+</li>
+      <li><a href="api/inference.html#pymc3.variational.inference.FullRankADVI">FullRankADVI (class in pymc3.variational.inference)</a>
 </li>
   </ul></td>
 </tr></table>
@@ -316,7 +356,11 @@
 </li>
       <li><a href="api/diagnostics.html#pymc3.diagnostics.gelman_rubin">gelman_rubin() (in module pymc3.diagnostics)</a>
 </li>
+      <li><a href="api/data.html#pymc3.data.GeneratorAdapter">GeneratorAdapter (class in pymc3.data)</a>
+</li>
       <li><a href="api/distributions/discrete.html#pymc3.distributions.discrete.Geometric">Geometric (class in pymc3.distributions.discrete)</a>
+</li>
+      <li><a href="api/data.html#pymc3.data.get_data">get_data() (in module pymc3.data)</a>
 </li>
       <li><a href="api/backends.html#pymc3.backends.ndarray.NDArray.get_values">get_values() (pymc3.backends.ndarray.NDArray method)</a>
 
@@ -334,6 +378,8 @@
 </li>
       <li><a href="api/glm.html#pymc3.glm.linear.GLM">GLM (class in pymc3.glm.linear)</a>
 </li>
+      <li><a href="api/gp.html#pymc3.gp.gp.GP">GP (class in pymc3.gp.gp)</a>
+</li>
   </ul></td>
 </tr></table>
 
@@ -344,9 +390,13 @@
 </li>
       <li><a href="api/distributions/continuous.html#pymc3.distributions.continuous.HalfNormal">HalfNormal (class in pymc3.distributions.continuous)</a>
 </li>
+      <li><a href="api/inference.html#pymc3.step_methods.hmc.hmc.HamiltonianMC">HamiltonianMC (class in pymc3.step_methods.hmc.hmc)</a>
+</li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="api/inference.html#pymc3.step_methods.hmc.hmc.HamiltonianMC">HamiltonianMC (class in pymc3.step_methods.hmc.hmc)</a>
+      <li><a href="api/inference.html#pymc3.variational.approximations.Empirical.histogram">histogram (pymc3.variational.approximations.Empirical attribute)</a>
+</li>
+      <li><a href="api/inference.html#pymc3.variational.approximations.Empirical.histogram_logp">histogram_logp (pymc3.variational.approximations.Empirical attribute)</a>
 </li>
       <li><a href="api/stats.html#pymc3.stats.hpd">hpd() (in module pymc3.stats)</a>
 </li>
@@ -356,13 +406,29 @@
 <h2 id="I">I</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api/inference.html#pymc3.variational.inference.Inference">Inference (class in pymc3.variational.inference)</a>
+</li>
       <li><a href="api/inference.html#pymc3.sampling.init_nuts">init_nuts() (in module pymc3.sampling)</a>
 </li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api/inference.html#pymc3.variational.opvi.Approximation.initial">initial() (pymc3.variational.opvi.Approximation method)</a>
+</li>
       <li><a href="api/distributions/continuous.html#pymc3.distributions.continuous.InverseGamma">InverseGamma (class in pymc3.distributions.continuous)</a>
 </li>
       <li><a href="api/inference.html#pymc3.sampling.iter_sample">iter_sample() (in module pymc3.sampling)</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="K">K</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api/inference.html#pymc3.variational.operators.KL">KL (class in pymc3.variational.operators)</a>
+</li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api/inference.html#pymc3.variational.operators.KSD">KSD (class in pymc3.variational.operators)</a>
 </li>
   </ul></td>
 </tr></table>
@@ -380,17 +446,29 @@
 </li>
       <li><a href="api/distributions/multivariate.html#pymc3.distributions.multivariate.LKJCorr">LKJCorr (class in pymc3.distributions.multivariate)</a>
 </li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="api/backends.html#pymc3.backends.sqlite.load">load() (in module pymc3.backends.sqlite)</a>
 
       <ul>
         <li><a href="api/backends.html#pymc3.backends.text.load">(in module pymc3.backends.text)</a>
 </li>
       </ul></li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api/inference.html#pymc3.variational.approximations.FullRank.log_q_W_global">log_q_W_global() (pymc3.variational.approximations.FullRank method)</a>
+
+      <ul>
+        <li><a href="api/inference.html#pymc3.variational.approximations.MeanField.log_q_W_global">(pymc3.variational.approximations.MeanField method)</a>
+</li>
+        <li><a href="api/inference.html#pymc3.variational.opvi.Approximation.log_q_W_global">(pymc3.variational.opvi.Approximation method)</a>
+</li>
+      </ul></li>
+      <li><a href="api/inference.html#pymc3.variational.opvi.Approximation.log_q_W_local">log_q_W_local() (pymc3.variational.opvi.Approximation method)</a>
+</li>
       <li><a href="api/math.html#pymc3.math.LogDet">LogDet (class in pymc3.math)</a>
 </li>
       <li><a href="api/distributions/continuous.html#pymc3.distributions.continuous.Lognormal">Lognormal (class in pymc3.distributions.continuous)</a>
+</li>
+      <li><a href="api/inference.html#pymc3.variational.opvi.Approximation.logq">logq() (pymc3.variational.opvi.Approximation method)</a>
 </li>
       <li><a href="api/stats.html#pymc3.stats.loo">loo() (in module pymc3.stats)</a>
 </li>
@@ -406,10 +484,12 @@
 </li>
       <li><a href="api/stats.html#pymc3.stats.mc_error">mc_error() (in module pymc3.stats)</a>
 </li>
-      <li><a href="api/inference.html#pymc3.step_methods.metropolis.Metropolis">Metropolis (class in pymc3.step_methods.metropolis)</a>
+      <li><a href="api/inference.html#pymc3.variational.approximations.MeanField">MeanField (class in pymc3.variational.approximations)</a>
 </li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api/inference.html#pymc3.step_methods.metropolis.Metropolis">Metropolis (class in pymc3.step_methods.metropolis)</a>
+</li>
       <li><a href="api/distributions/mixture.html#pymc3.distributions.mixture.Mixture">Mixture (class in pymc3.distributions.mixture)</a>
 </li>
       <li><a href="api/distributions/multivariate.html#pymc3.distributions.multivariate.Multinomial">Multinomial (class in pymc3.distributions.multivariate)</a>
@@ -435,6 +515,20 @@
       <li><a href="api/distributions/mixture.html#pymc3.distributions.mixture.NormalMixture">NormalMixture (class in pymc3.distributions.mixture)</a>
 </li>
       <li><a href="api/inference.html#pymc3.step_methods.hmc.nuts.NUTS">NUTS (class in pymc3.step_methods.hmc.nuts)</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="O">O</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api/inference.html#pymc3.variational.opvi.Operator.OBJECTIVE">OBJECTIVE (pymc3.variational.opvi.Operator attribute)</a>
+</li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api/inference.html#pymc3.variational.opvi.ObjectiveFunction">ObjectiveFunction (class in pymc3.variational.opvi)</a>
+</li>
+      <li><a href="api/inference.html#pymc3.variational.opvi.Operator">Operator (class in pymc3.variational.opvi)</a>
 </li>
   </ul></td>
 </tr></table>
@@ -468,14 +562,16 @@
 </li>
       <li><a href="api/backends.html#module-pymc3.backends.tracetab">pymc3.backends.tracetab (module)</a>
 </li>
+      <li><a href="api/data.html#module-pymc3.data">pymc3.data (module)</a>
+</li>
       <li><a href="api/diagnostics.html#module-pymc3.diagnostics">pymc3.diagnostics (module)</a>
 </li>
       <li><a href="api/distributions/continuous.html#module-pymc3.distributions.continuous">pymc3.distributions.continuous (module)</a>
 </li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="api/distributions/discrete.html#module-pymc3.distributions.discrete">pymc3.distributions.discrete (module)</a>
 </li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="api/distributions/mixture.html#module-pymc3.distributions.mixture">pymc3.distributions.mixture (module)</a>
 </li>
       <li><a href="api/distributions/multivariate.html#module-pymc3.distributions.multivariate">pymc3.distributions.multivariate (module)</a>
@@ -483,6 +579,8 @@
       <li><a href="api/glm.html#module-pymc3.glm.linear">pymc3.glm.linear (module)</a>
 </li>
       <li><a href="api/gp.html#module-pymc3.gp.cov">pymc3.gp.cov (module)</a>
+</li>
+      <li><a href="api/gp.html#module-pymc3.gp.gp">pymc3.gp.gp (module)</a>
 </li>
       <li><a href="api/math.html#module-pymc3.math">pymc3.math (module)</a>
 </li>
@@ -498,9 +596,13 @@
 </li>
       <li><a href="api/inference.html#module-pymc3.step_methods.slicer">pymc3.step_methods.slicer (module)</a>
 </li>
-      <li><a href="api/inference.html#module-pymc3.variational.advi">pymc3.variational.advi (module)</a>
+      <li><a href="api/inference.html#module-pymc3.variational.approximations">pymc3.variational.approximations (module)</a>
 </li>
-      <li><a href="api/inference.html#module-pymc3.variational.advi_minibatch">pymc3.variational.advi_minibatch (module)</a>
+      <li><a href="api/inference.html#module-pymc3.variational.inference">pymc3.variational.inference (module)</a>
+</li>
+      <li><a href="api/inference.html#module-pymc3.variational.operators">pymc3.variational.operators (module)</a>
+</li>
+      <li><a href="api/inference.html#module-pymc3.variational.opvi">pymc3.variational.opvi (module)</a>
 </li>
   </ul></td>
 </tr></table>
@@ -516,6 +618,20 @@
 <h2 id="R">R</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api/inference.html#pymc3.variational.opvi.Approximation.random">random() (pymc3.variational.opvi.Approximation method)</a>
+
+      <ul>
+        <li><a href="api/inference.html#pymc3.variational.opvi.ObjectiveFunction.random">(pymc3.variational.opvi.ObjectiveFunction method)</a>
+</li>
+      </ul></li>
+      <li><a href="api/inference.html#pymc3.variational.opvi.Approximation.random_fn">random_fn (pymc3.variational.opvi.Approximation attribute)</a>
+</li>
+      <li><a href="api/inference.html#pymc3.variational.opvi.Approximation.random_global">random_global() (pymc3.variational.opvi.Approximation method)</a>
+</li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api/inference.html#pymc3.variational.opvi.Approximation.random_local">random_local() (pymc3.variational.opvi.Approximation method)</a>
+</li>
       <li><a href="api/gp.html#pymc3.gp.cov.RatQuad">RatQuad (class in pymc3.gp.cov)</a>
 </li>
       <li><a href="api/backends.html#pymc3.backends.ndarray.NDArray.record">record() (pymc3.backends.ndarray.NDArray method)</a>
@@ -533,11 +649,27 @@
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="api/inference.html#pymc3.sampling.sample">sample() (in module pymc3.sampling)</a>
+
+      <ul>
+        <li><a href="api/inference.html#pymc3.variational.opvi.Approximation.sample">(pymc3.variational.opvi.Approximation method)</a>
+</li>
+      </ul></li>
+      <li><a href="api/inference.html#pymc3.variational.approximations.sample_approx">sample_approx() (in module pymc3.variational.approximations)</a>
+</li>
+      <li><a href="api/gp.html#pymc3.gp.gp.sample_gp">sample_gp() (in module pymc3.gp.gp)</a>
+</li>
+      <li><a href="api/inference.html#pymc3.variational.opvi.Approximation.sample_node">sample_node() (pymc3.variational.opvi.Approximation method)</a>
 </li>
       <li><a href="api/inference.html#pymc3.sampling.sample_ppc">sample_ppc() (in module pymc3.sampling)</a>
 </li>
-      <li><a href="api/inference.html#pymc3.variational.advi.sample_vp">sample_vp() (in module pymc3.variational.advi)</a>
+      <li><a href="api/inference.html#pymc3.variational.opvi.Approximation.scale_grad">scale_grad() (pymc3.variational.opvi.Approximation method)</a>
 </li>
+      <li><a href="api/inference.html#pymc3.variational.opvi.ObjectiveFunction.score_function">score_function() (pymc3.variational.opvi.ObjectiveFunction method)</a>
+</li>
+      <li><a href="api/inference.html#pymc3.variational.opvi.Approximation.seed">seed() (pymc3.variational.opvi.Approximation method)</a>
+</li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="api/backends.html#pymc3.backends.ndarray.NDArray.setup">setup() (pymc3.backends.ndarray.NDArray method)</a>
 
       <ul>
@@ -546,17 +678,19 @@
         <li><a href="api/backends.html#pymc3.backends.text.Text.setup">(pymc3.backends.text.Text method)</a>
 </li>
       </ul></li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="api/distributions/continuous.html#pymc3.distributions.continuous.SkewNormal">SkewNormal (class in pymc3.distributions.continuous)</a>
 </li>
       <li><a href="api/inference.html#pymc3.step_methods.slicer.Slice">Slice (class in pymc3.step_methods.slicer)</a>
 </li>
       <li><a href="api/backends.html#pymc3.backends.sqlite.SQLite">SQLite (class in pymc3.backends.sqlite)</a>
 </li>
+      <li><a href="api/inference.html#pymc3.variational.opvi.ObjectiveFunction.step_function">step_function() (pymc3.variational.opvi.ObjectiveFunction method)</a>
+</li>
       <li><a href="api/distributions/continuous.html#pymc3.distributions.continuous.StudentT">StudentT (class in pymc3.distributions.continuous)</a>
 </li>
       <li><a href="api/stats.html#pymc3.stats.summary">summary() (in module pymc3.stats)</a>
+</li>
+      <li><a href="api/inference.html#pymc3.variational.inference.SVGD">SVGD (class in pymc3.variational.inference)</a>
 </li>
   </ul></td>
 </tr></table>
@@ -566,10 +700,12 @@
   <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="api/backends.html#pymc3.backends.text.Text">Text (class in pymc3.backends.text)</a>
 </li>
-      <li><a href="api/backends.html#pymc3.backends.tracetab.trace_to_dataframe">trace_to_dataframe() (in module pymc3.backends.tracetab)</a>
+      <li><a href="api/inference.html#pymc3.variational.opvi.Approximation.to_flat_input">to_flat_input() (pymc3.variational.opvi.Approximation method)</a>
 </li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api/backends.html#pymc3.backends.tracetab.trace_to_dataframe">trace_to_dataframe() (in module pymc3.backends.tracetab)</a>
+</li>
       <li><a href="api/plots.html#pymc3.plots.traceplot">traceplot() (in module pymc3.plots)</a>
 </li>
       <li><a href="api/math.html#pymc3.math.tround">tround() (in module pymc3.math)</a>
@@ -583,10 +719,18 @@
       <li><a href="api/distributions/continuous.html#pymc3.distributions.continuous.Uniform">Uniform (class in pymc3.distributions.continuous)</a>
 </li>
   </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api/inference.html#pymc3.variational.opvi.ObjectiveFunction.updates">updates() (pymc3.variational.opvi.ObjectiveFunction method)</a>
+</li>
+  </ul></td>
 </tr></table>
 
 <h2 id="V">V</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api/inference.html#pymc3.variational.opvi.Approximation.view">view() (pymc3.variational.opvi.Approximation method)</a>
+</li>
+  </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="api/distributions/continuous.html#pymc3.distributions.continuous.VonMises">VonMises (class in pymc3.distributions.continuous)</a>
 </li>

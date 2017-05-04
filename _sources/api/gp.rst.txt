@@ -2,6 +2,18 @@
 Gaussian Processes
 ******************
 
+
+GP
+--
+
+.. currentmodule:: pymc3.gp.gp
+.. automodule:: pymc3.gp.gp
+   :members:
+
+
+Covariance Functions / Kernels
+------------------------------
+
 .. currentmodule:: pymc3.gp.cov
 .. autosummary::
 

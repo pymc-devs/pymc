@@ -100,7 +100,16 @@
 <li class="toctree-l3"><a class="reference internal" href="Diagnosing_biased_Inference_with_Divergences.html">Diagnosing Biased Inference with Divergences</a></li>
 <li class="toctree-l3"><a class="reference internal" href="posterior_predictive.html">Posterior Predictive Checks</a></li>
 <li class="toctree-l3"><a class="reference internal" href="howto_debugging.html">How to debug a model</a></li>
+<li class="toctree-l3"><a class="reference internal" href="PyMC3_tips_and_heuristic.html">PyMC3 Modeling tips and heuristic</a></li>
+<li class="toctree-l3"><a class="reference internal" href="PyMC3_tips_and_heuristic.html#Background-information">Background information</a></li>
+<li class="toctree-l3"><a class="reference internal" href="PyMC3_tips_and_heuristic.html#A-WinBugs/PyMC2-implementation">A WinBugs/PyMC2 implementation</a></li>
+<li class="toctree-l3"><a class="reference internal" href="PyMC3_tips_and_heuristic.html#PyMC3-implementation-using-theano.scan">PyMC3 implementation using <code class="docutils literal"><span class="pre">theano.scan</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="PyMC3_tips_and_heuristic.html#PyMC3-implementation-using-some-matrix-&quot;trick&quot;">PyMC3 implementation using some matrix &#8220;trick&#8221;</a></li>
+<li class="toctree-l3"><a class="reference internal" href="PyMC3_tips_and_heuristic.html#PyMC3-implementation-using-Matrix-multiplication">PyMC3 implementation using Matrix multiplication</a></li>
+<li class="toctree-l3"><a class="reference internal" href="PyMC3_tips_and_heuristic.html#PyMC3-implementation-using-Sparse-Matrix">PyMC3 implementation using Sparse Matrix</a></li>
+<li class="toctree-l3"><a class="reference internal" href="PyMC3_tips_and_heuristic.html#Final-remarks">Final remarks</a></li>
 <li class="toctree-l3"><a class="reference internal" href="LKJ.html">LKJ Prior for fitting a Multivariate Normal Model</a></li>
+<li class="toctree-l3"><a class="reference internal" href="live_sample_plots.html">Live sample plots</a></li>
 </ul>
 </li>
 <li class="toctree-l2"><a class="reference internal" href="../examples.html#applied">Applied</a></li>
@@ -422,7 +431,7 @@ generated sample.</p>
 </div>
 <div class="stderr output_area docutils container">
 <div class="highlight"><pre>
-100%|██████████| 2000/2000 [00:01&lt;00:00, 1361.25it/s]
+100%|██████████| 2000/2000 [00:18&lt;00:00, 107.36it/s]
 </pre></div></div>
 </div>
 <p>NUTS provides the following statistics:</p>
@@ -513,7 +522,7 @@ chain 1, the second 2000 from chain 2.</p>
 </pre></div>
 </div>
 <div class="output_area highlight-none"><div class="highlight"><pre>
-<span></span>[&lt;matplotlib.lines.Line2D at 0x7f234bfd5588&gt;]
+<span></span>[&lt;matplotlib.lines.Line2D at 0x1224dc940&gt;]
 </pre></div>
 </div>
 </div>
@@ -548,7 +557,7 @@ set <code class="docutils literal"><span class="pre">combine=False</span></code>
 </pre></div>
 </div>
 <div class="output_area highlight-none"><div class="highlight"><pre>
-<span></span>[&lt;matplotlib.lines.Line2D at 0x7f23417d0dd8&gt;]
+<span></span>[&lt;matplotlib.lines.Line2D at 0x12284ec50&gt;]
 </pre></div>
 </div>
 </div>
@@ -576,7 +585,7 @@ set <code class="docutils literal"><span class="pre">combine=False</span></code>
 </pre></div>
 </div>
 <div class="output_area highlight-none"><div class="highlight"><pre>
-<span></span>&lt;matplotlib.axes._subplots.AxesSubplot at 0x7f23480810f0&gt;
+<span></span>&lt;matplotlib.axes._subplots.AxesSubplot at 0x122897240&gt;
 </pre></div>
 </div>
 </div>
@@ -603,7 +612,7 @@ set <code class="docutils literal"><span class="pre">combine=False</span></code>
 </pre></div>
 </div>
 <div class="output_area highlight-none"><div class="highlight"><pre>
-<span></span>0.80329863296935067
+<span></span>0.82722919848786325
 </pre></div>
 </div>
 </div>
@@ -633,7 +642,7 @@ levels with the change of energy between successive samples. Ideally,
 they should be very similar:</p>
 <div class="nbinput docutils container">
 <div class="prompt highlight-none"><div class="highlight"><pre>
-<span></span>In [10]:
+<span></span>In [11]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3"><div class="highlight"><pre>
@@ -647,11 +656,11 @@ they should be very similar:</p>
 </div>
 <div class="nboutput docutils container">
 <div class="prompt highlight-none"><div class="highlight"><pre>
-<span></span>Out[10]:
+<span></span>Out[11]:
 </pre></div>
 </div>
 <div class="output_area highlight-none"><div class="highlight"><pre>
-<span></span>&lt;matplotlib.legend.Legend at 0x7f234168ada0&gt;
+<span></span>&lt;matplotlib.legend.Legend at 0x122d5fda0&gt;
 </pre></div>
 </div>
 </div>
@@ -663,7 +672,8 @@ they should be very similar:</p>
 </div>
 </div>
 <p>If the overall distribution of energy levels has longer tails, the
-efficiency of the sampler will deteriorate quickly.</p>
+efficiency of the sampler will deteriorate quickly. This plot can also
+directly be created using <code class="docutils literal"><span class="pre">pm.energyplot(trace)</span></code>.</p>
 </div>
 <div class="section" id="Multiple-samplers">
 <h1>Multiple samplers<a class="headerlink" href="#Multiple-samplers" title="Permalink to this headline">¶</a></h1>
@@ -672,7 +682,7 @@ and discrete variables), the exported values are merged or stacked along
 a new axis.</p>
 <div class="nbinput nblast docutils container">
 <div class="prompt highlight-none"><div class="highlight"><pre>
-<span></span>In [11]:
+<span></span>In [12]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3"><div class="highlight"><pre>
@@ -685,7 +695,7 @@ a new axis.</p>
 </div>
 <div class="nbinput docutils container">
 <div class="prompt highlight-none"><div class="highlight"><pre>
-<span></span>In [12]:
+<span></span>In [13]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3"><div class="highlight"><pre>
@@ -701,12 +711,12 @@ a new axis.</p>
 </div>
 <div class="stderr output_area docutils container">
 <div class="highlight"><pre>
-100%|██████████| 10000/10000 [00:02&lt;00:00, 3695.88it/s]
+100%|██████████| 10000/10000 [00:08&lt;00:00, 1132.74it/s]
 </pre></div></div>
 </div>
 <div class="nbinput docutils container">
 <div class="prompt highlight-none"><div class="highlight"><pre>
-<span></span>In [13]:
+<span></span>In [14]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3"><div class="highlight"><pre>
@@ -716,7 +726,7 @@ a new axis.</p>
 </div>
 <div class="nboutput nblast docutils container">
 <div class="prompt highlight-none"><div class="highlight"><pre>
-<span></span>Out[13]:
+<span></span>Out[14]:
 </pre></div>
 </div>
 <div class="output_area highlight-none"><div class="highlight"><pre>
@@ -728,7 +738,7 @@ a new axis.</p>
 for each sampler:</p>
 <div class="nbinput docutils container">
 <div class="prompt highlight-none"><div class="highlight"><pre>
-<span></span>In [14]:
+<span></span>In [15]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3"><div class="highlight"><pre>
@@ -738,17 +748,17 @@ for each sampler:</p>
 </div>
 <div class="nboutput nblast docutils container">
 <div class="prompt highlight-none"><div class="highlight"><pre>
-<span></span>Out[14]:
+<span></span>Out[15]:
 </pre></div>
 </div>
 <div class="output_area highlight-none"><div class="highlight"><pre>
-<span></span>array([[  1.00000000e+00,   2.99250475e-05],
-       [  2.50000000e-01,   2.58944314e-04],
-       [  1.00000000e+00,   5.89596665e-03],
+<span></span>array([[  2.50000000e-01,   5.82658453e-04],
+       [  2.50000000e-01,   1.13308087e-01],
+       [  2.50000000e-01,   1.63830665e-03],
        ...,
-       [  2.50000000e-01,   7.71917301e-02],
-       [  1.00000000e+00,   2.43450517e-01],
-       [  1.00000000e+00,   2.40661294e-02]])
+       [  1.00000000e+00,   1.14103585e-01],
+       [  1.00000000e+00,   1.23165436e-01],
+       [  2.50000000e-01,   1.69118059e+00]])
 </pre></div>
 </div>
 </div>
