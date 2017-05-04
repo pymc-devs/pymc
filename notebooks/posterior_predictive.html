@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>Posterior Predictive Checks &mdash; PyMC3 3.0 documentation</title>
+  <title>Posterior Predictive Checks &mdash; PyMC3 3.1rc3 documentation</title>
   
 
   
@@ -35,7 +35,7 @@
         <link rel="index" title="Index"
               href="../genindex.html"/>
         <link rel="search" title="Search" href="../search.html"/>
-    <link rel="top" title="PyMC3 3.0 documentation" href="../index.html"/>
+    <link rel="top" title="PyMC3 3.1rc3 documentation" href="../index.html"/>
         <link rel="up" title="Examples" href="../examples.html"/>
         <link rel="next" title="How to debug a model" href="howto_debugging.html"/>
         <link rel="prev" title="Diagnosing Biased Inference with Divergences" href="Diagnosing_biased_Inference_with_Divergences.html"/> 
@@ -67,7 +67,7 @@
             
             
               <div class="version">
-                3.0
+                3.1
               </div>
             
           
@@ -104,7 +104,16 @@
 </ul>
 </li>
 <li class="toctree-l3"><a class="reference internal" href="howto_debugging.html">How to debug a model</a></li>
+<li class="toctree-l3"><a class="reference internal" href="PyMC3_tips_and_heuristic.html">PyMC3 Modeling tips and heuristic</a></li>
+<li class="toctree-l3"><a class="reference internal" href="PyMC3_tips_and_heuristic.html#Background-information">Background information</a></li>
+<li class="toctree-l3"><a class="reference internal" href="PyMC3_tips_and_heuristic.html#A-WinBugs/PyMC2-implementation">A WinBugs/PyMC2 implementation</a></li>
+<li class="toctree-l3"><a class="reference internal" href="PyMC3_tips_and_heuristic.html#PyMC3-implementation-using-theano.scan">PyMC3 implementation using <code class="docutils literal"><span class="pre">theano.scan</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="PyMC3_tips_and_heuristic.html#PyMC3-implementation-using-some-matrix-&quot;trick&quot;">PyMC3 implementation using some matrix &#8220;trick&#8221;</a></li>
+<li class="toctree-l3"><a class="reference internal" href="PyMC3_tips_and_heuristic.html#PyMC3-implementation-using-Matrix-multiplication">PyMC3 implementation using Matrix multiplication</a></li>
+<li class="toctree-l3"><a class="reference internal" href="PyMC3_tips_and_heuristic.html#PyMC3-implementation-using-Sparse-Matrix">PyMC3 implementation using Sparse Matrix</a></li>
+<li class="toctree-l3"><a class="reference internal" href="PyMC3_tips_and_heuristic.html#Final-remarks">Final remarks</a></li>
 <li class="toctree-l3"><a class="reference internal" href="LKJ.html">LKJ Prior for fitting a Multivariate Normal Model</a></li>
+<li class="toctree-l3"><a class="reference internal" href="live_sample_plots.html">Live sample plots</a></li>
 </ul>
 </li>
 <li class="toctree-l2"><a class="reference internal" href="../examples.html#applied">Applied</a></li>
@@ -732,7 +741,7 @@ Finished [100%]: Average ELBO = -2,434.84
 
   <div role="contentinfo">
     <p>
-        &copy; Copyright 2016, John Salvatier, Christopher Fonnesbeck, Thomas Wiecki.
+        &copy; Copyright 2017, John Salvatier, Christopher Fonnesbeck, Thomas Wiecki.
 
     </p>
   </div>
@@ -754,7 +763,7 @@ Finished [100%]: Average ELBO = -2,434.84
     <script type="text/javascript">
         var DOCUMENTATION_OPTIONS = {
             URL_ROOT:'../',
-            VERSION:'3.0',
+            VERSION:'3.1rc3',
             COLLAPSE_INDEX:false,
             FILE_SUFFIX:'.html',
             HAS_SOURCE:  true,

@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>LKJ Prior for fitting a Multivariate Normal Model &mdash; PyMC3 3.0 documentation</title>
+  <title>LKJ Prior for fitting a Multivariate Normal Model &mdash; PyMC3 3.1rc3 documentation</title>
   
 
   
@@ -35,10 +35,10 @@
         <link rel="index" title="Index"
               href="../genindex.html"/>
         <link rel="search" title="Search" href="../search.html"/>
-    <link rel="top" title="PyMC3 3.0 documentation" href="../index.html"/>
+    <link rel="top" title="PyMC3 3.1rc3 documentation" href="../index.html"/>
         <link rel="up" title="Examples" href="../examples.html"/>
-        <link rel="next" title="Bayesian Estimation Supersedes the T-Test" href="BEST.html"/>
-        <link rel="prev" title="How to debug a model" href="howto_debugging.html"/> 
+        <link rel="next" title="Live sample plots" href="live_sample_plots.html"/>
+        <link rel="prev" title="PyMC3 Modeling tips and heuristic" href="PyMC3_tips_and_heuristic.html"/> 
 
   
   <script src="../_static/js/modernizr.min.js"></script>
@@ -67,7 +67,7 @@
             
             
               <div class="version">
-                3.0
+                3.1
               </div>
             
           
@@ -100,7 +100,16 @@
 <li class="toctree-l3"><a class="reference internal" href="Diagnosing_biased_Inference_with_Divergences.html">Diagnosing Biased Inference with Divergences</a></li>
 <li class="toctree-l3"><a class="reference internal" href="posterior_predictive.html">Posterior Predictive Checks</a></li>
 <li class="toctree-l3"><a class="reference internal" href="howto_debugging.html">How to debug a model</a></li>
+<li class="toctree-l3"><a class="reference internal" href="PyMC3_tips_and_heuristic.html">PyMC3 Modeling tips and heuristic</a></li>
+<li class="toctree-l3"><a class="reference internal" href="PyMC3_tips_and_heuristic.html#Background-information">Background information</a></li>
+<li class="toctree-l3"><a class="reference internal" href="PyMC3_tips_and_heuristic.html#A-WinBugs/PyMC2-implementation">A WinBugs/PyMC2 implementation</a></li>
+<li class="toctree-l3"><a class="reference internal" href="PyMC3_tips_and_heuristic.html#PyMC3-implementation-using-theano.scan">PyMC3 implementation using <code class="docutils literal"><span class="pre">theano.scan</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="PyMC3_tips_and_heuristic.html#PyMC3-implementation-using-some-matrix-&quot;trick&quot;">PyMC3 implementation using some matrix &#8220;trick&#8221;</a></li>
+<li class="toctree-l3"><a class="reference internal" href="PyMC3_tips_and_heuristic.html#PyMC3-implementation-using-Matrix-multiplication">PyMC3 implementation using Matrix multiplication</a></li>
+<li class="toctree-l3"><a class="reference internal" href="PyMC3_tips_and_heuristic.html#PyMC3-implementation-using-Sparse-Matrix">PyMC3 implementation using Sparse Matrix</a></li>
+<li class="toctree-l3"><a class="reference internal" href="PyMC3_tips_and_heuristic.html#Final-remarks">Final remarks</a></li>
 <li class="toctree-l3 current"><a class="current reference internal" href="#">LKJ Prior for fitting a Multivariate Normal Model</a></li>
+<li class="toctree-l3"><a class="reference internal" href="live_sample_plots.html">Live sample plots</a></li>
 </ul>
 </li>
 <li class="toctree-l2"><a class="reference internal" href="../examples.html#applied">Applied</a></li>
@@ -820,10 +829,10 @@ the true credible region, so we can be fairly satisfied with our model.</p>
   
     <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
       
-        <a href="BEST.html" class="btn btn-neutral float-right" title="Bayesian Estimation Supersedes the T-Test" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+        <a href="live_sample_plots.html" class="btn btn-neutral float-right" title="Live sample plots" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
       
       
-        <a href="howto_debugging.html" class="btn btn-neutral" title="How to debug a model" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+        <a href="PyMC3_tips_and_heuristic.html" class="btn btn-neutral" title="PyMC3 Modeling tips and heuristic" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
       
     </div>
   
@@ -832,7 +841,7 @@ the true credible region, so we can be fairly satisfied with our model.</p>
 
   <div role="contentinfo">
     <p>
-        &copy; Copyright 2016, John Salvatier, Christopher Fonnesbeck, Thomas Wiecki.
+        &copy; Copyright 2017, John Salvatier, Christopher Fonnesbeck, Thomas Wiecki.
 
     </p>
   </div>
@@ -854,7 +863,7 @@ the true credible region, so we can be fairly satisfied with our model.</p>
     <script type="text/javascript">
         var DOCUMENTATION_OPTIONS = {
             URL_ROOT:'../',
-            VERSION:'3.0',
+            VERSION:'3.1rc3',
             COLLAPSE_INDEX:false,
             FILE_SUFFIX:'.html',
             HAS_SOURCE:  true,
