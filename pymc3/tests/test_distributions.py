@@ -1,6 +1,7 @@
 from __future__ import division
 
 import itertools
+
 from .helpers import SeededTest, select_by_precision
 from ..vartypes import continuous_types
 from ..model import Model, Point, Potential
@@ -12,7 +13,7 @@ from ..distributions import (DensityDist, Categorical, Multinomial, VonMises, Di
                              InverseGamma, Gamma, Cauchy, HalfCauchy, Lognormal, Laplace,
                              NegativeBinomial, Geometric, Exponential, ExGaussian, Normal,
                              Flat, LKJCorr, Wald, ChiSquared, HalfNormal, DiscreteUniform,
-                             Bound, Uniform, Triangular, Binomial, SkewNormal, DiscreteWeibull)
+                             Bound, Uniform, Triangular, Binomial, SkewNormal, DiscreteWeibull, Gumbel)
 from ..distributions import continuous
 from pymc3.theanof import floatX
 from numpy import array, inf, log, exp
@@ -780,6 +781,10 @@ class TestMatchesScipy(SeededTest):
         self.pymc3_matches_scipy(
             VonMises, R, {'mu': Circ, 'kappa': Rplus},
             lambda value, mu, kappa: floatX(sp.vonmises.logpdf(value, kappa, loc=mu)))
+
+    def test_gumbel(self):
+        self.pymc3_matches_scipy(Gumbel, R, {'mu': R, 'beta': Rplusbig},
+                                 lambda value, mu, beta: floatX(sp.gumbel_r.logpdf(value, loc=mu, scale=beta)))
 
     def test_multidimensional_beta_construction(self):
         with Model():

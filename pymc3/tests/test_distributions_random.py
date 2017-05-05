@@ -285,6 +285,11 @@ class TestVonMises(BaseTestCases.BaseTestCase):
     params = {'mu': 0., 'kappa': 1.}
 
 
+class TestGumbel(BaseTestCases.BaseTestCase):
+    distribution = pm.Gumbel
+    params = {'mu': 0., 'beta': 1.}
+
+
 class TestBinomial(BaseTestCases.BaseTestCase):
     distribution = pm.Binomial
     params = {'n': 5, 'p': 0.5}
@@ -542,6 +547,11 @@ class TestScalarParameterSamples(SeededTest):
         for n in [2, 3]:
             pymc3_random_discrete(pm.Multinomial, {'p': Simplex(n), 'n': Nat},
                                   valuedomain=Vector(Nat, n), size=100, ref_rand=ref_rand)
+
+    def test_gumbel(self):
+        def ref_rand(size, mu, beta):
+            return st.gumbel_r.rvs(loc=mu, scale=beta, size=size)
+        pymc3_random(pm.Gumbel, {'mu': R, 'beta': Rplus}, ref_rand=ref_rand)
 
     @pytest.mark.skip('Wishart random sampling not implemented.\n'
                       'See https://github.com/pymc-devs/pymc3/issues/538')
