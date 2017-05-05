@@ -41,7 +41,7 @@ from .updates import adam
 from ..distributions.dist_math import rho2sd, log_normal
 from ..model import modelcontext, ArrayOrdering, DictToArrayBijection
 from ..util import get_default_varnames
-from ..theanof import tt_rng, memoize, change_flags, GradScale
+from ..theanof import tt_rng, memoize, change_flags, GradScale, identity
 
 
 __all__ = [
@@ -289,7 +289,7 @@ class Operator(object):
     RETURNS_LOSS = True
     SUPPORT_AEVB = True
     OBJECTIVE = ObjectiveFunction
-    T = pm.theanof.identity
+    T = identity
 
     def __init__(self, approx):
         if not self.SUPPORT_AEVB and approx.local_vars:
