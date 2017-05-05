@@ -21,6 +21,7 @@ Applied
 
 .. toctree::
    notebooks/BEST.ipynb
+   notebooks/multilevel_modeling.ipynb
    notebooks/stochastic_volatility.ipynb
    notebooks/probabilistic-matrix-factorization.ipynb
    notebooks/rugby_analytics.ipynb
