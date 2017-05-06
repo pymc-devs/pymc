@@ -7,7 +7,7 @@ import scipy
 import theano
 import theano.tensor as tt
 
-from scipy import stats
+from scipy import stats, linalg
 
 from theano.tensor.nlinalg import det, matrix_inverse, trace
 
@@ -20,6 +20,7 @@ from ..model import Deterministic
 from .continuous import ChiSquared, Normal
 from .special import gammaln, multigammaln
 from .dist_math import bound, logpow, factln, Cholesky
+
 
 __all__ = ['MvNormal', 'MvStudentT', 'Dirichlet',
            'Multinomial', 'Wishart', 'WishartBartlett',
@@ -143,27 +144,29 @@ class MvNormal(Continuous):
             except TypeError:
                 size = [size]
 
-        if self._cov_type in ['cov', 'chol']:
-            if self._cov_type == 'cov':
-                mu, cov = draw_values([self.mu, self.cov], point=point)
-                try:
-                    chol = scipy.linalg.cholesky(cov, lower=True)
-                except scipy.linalg.LinAlgError:
-                    return np.nan * np.zeros(size)
-            else:
-                mu, chol = draw_values([self.mu, self.chol_cov], point=point)
+        if self._cov_type == 'cov':
+            mu, cov = draw_values([self.mu, self.cov], point=point)
+            try:
+                dist = stats.multivariate_normal(
+                    mean=mu, cov=cov, allow_singular=True)
+            except ValueError as error:
+                size.append(mu.shape[0])
+                return np.nan * np.zeros(size)
+            return dist.rvs(size)
+        elif self._cov_type == 'chol':
+            mu, chol = draw_values([self.mu, self.chol_cov], point=point)
             size.append(mu.shape[0])
             standard_normal = np.random.standard_normal(size)
-            return mu + np.dot(standard_normal, chol)
+            return mu + np.dot(standard_normal, chol.T)
         else:
             mu, tau = draw_values([self.mu, self.tau], point=point)
             size.append(mu.shape[0])
             standard_normal = np.random.standard_normal(size)
             try:
-                chol = scipy.linalg.cholesky(cov, lower=True)
-            except scipy.linalg.LinAlgError:
+                chol = linalg.cholesky(tau, lower=True)
+            except linalg.LinAlgError:
                 return np.nan * np.zeros(size)
-            transformed = scipy.linalg.solve_triangular(
+            transformed = linalg.solve_triangular(
                 chol, standard_normal.T, lower=True)
             return mu + transformed.T
 
