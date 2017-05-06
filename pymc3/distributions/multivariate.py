@@ -17,7 +17,7 @@ from pymc3.math import tround
 from . import transforms
 from .distribution import Continuous, Discrete, draw_values, generate_samples
 from ..model import Deterministic
-from .continuous import ChiSquared, Normal
+from .continuous import Beta, ChiSquared, Normal
 from .special import gammaln, multigammaln
 from .dist_math import bound, logpow, factln, Cholesky
 
@@ -929,3 +929,17 @@ class LKJCorr(Continuous):
                      eta > 0,
                      broadcast_conditions=False
         )
+
+
+class TruncatedStrickBreaking(Continuous):
+    def __init__(self, alpha=1., *args, **kwargs):
+        self.alpha = alpha
+
+        super(TruncatedStrickBreaking, self).__init__(self, *args, **kwargs)
+
+    def logp(self, value):
+        beta_like = Beta.dist(1., self.alpha) 
+        beta_value = value / tt.concatenate([1.], 1. - value[:-1].cumsum())
+
+        return bound(beta_like.logp(beta_value[:-1]),
+                     tt.eq(value.sum(), 1))
