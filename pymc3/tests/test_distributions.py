@@ -130,7 +130,9 @@ PosNat = Domain([1, 2, 3, 2000], 'int64')
 Bool = Domain([0, 0, 1, 1], 'int64')
 
 
-def build_model(distfam, valuedomain, vardomains, extra_args={}):
+def build_model(distfam, valuedomain, vardomains, extra_args=None):
+    if extra_args is None:
+        extra_args = {}
     with Model() as m:
         vals = {}
         for v, dom in vardomains.items():
