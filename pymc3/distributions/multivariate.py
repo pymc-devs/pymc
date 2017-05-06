@@ -23,7 +23,7 @@ from .dist_math import bound, logpow, factln, Cholesky
 
 __all__ = ['MvNormal', 'MvStudentT', 'Dirichlet',
            'Multinomial', 'Wishart', 'WishartBartlett',
-           'LKJCorr', 'LKJCholeskyCov']
+           'LKJCorr', 'LKJCholeskyCov', 'TruncatedStickBreaking']
 
 
 class MvNormal(Continuous):
@@ -931,7 +931,7 @@ class LKJCorr(Continuous):
         )
 
 
-class TruncatedStrickBreaking(Continuous):
+class TruncatedStickBreaking(Continuous):
     def __init__(self, alpha=1., *args, **kwargs):
         self.alpha = alpha
 

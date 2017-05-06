@@ -61,6 +61,7 @@ from .multivariate import Wishart
 from .multivariate import WishartBartlett
 from .multivariate import LKJCholeskyCov
 from .multivariate import LKJCorr
+from .multivariate import TruncatedStickBreaking
 
 from .timeseries import AR1
 from .timeseries import GaussianRandomWalk
@@ -132,5 +133,6 @@ __all__ = ['Uniform',
            'NormalMixture',
            'Triangular',
            'DiscreteWeibull',
-           'Gumbel'
+           'Gumbel',
+           'TruncatedStickBreaking'
            ]
