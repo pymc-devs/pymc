@@ -115,7 +115,7 @@ run `./scripts/start_container.sh`. This should start a local docker container c
 as well as a [`jupyter`](http://jupyter.org/) notebook server running on port 8888. The
 notebook should be opened in your browser automatically (you can disable this by passing
 `--no-browser`). The repo will be running the code from your local copy of `pymc3`,
-so it is good for development.  To find the token necessary to access the notebooks, run
+so it is good for development.
 
 You may also use it to run the test suite, with
 
