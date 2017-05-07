@@ -207,7 +207,7 @@ class TestApproximates:
                     data_t.set_value(next(minibatches))
                 mu_ = Normal('mu', mu=mu0, sd=sd0, testval=0)
                 Normal('x', mu=mu_, sd=sd, observed=data_t, total_size=n)
-                inf = self.inference()
+                inf = self.inference(scale_cost_to_minibatch=True)
                 approx = inf.fit(self.NITER * 3, callbacks=
                 [cb, pm.callbacks.CheckParametersConvergence()],
                                  obj_n_mc=10, obj_optimizer=self.optimizer)
