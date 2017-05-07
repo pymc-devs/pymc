@@ -1,11 +1,9 @@
 import theano
-
-config = theano.configparser.change_flags(compute_test_value='raise')
-
-
-def pytest_sessionstart(session):
-    config.__enter__()
+import pytest
 
 
-def pytest_sessionfinish(session, exitstatus):
-    config.__exit__()
+@pytest.fixture(scope="session", autouse=True)
+def theano_config():
+    config = theano.configparser.change_flags(compute_test_value='raise')
+    with config:
+        yield
