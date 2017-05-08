@@ -3,13 +3,10 @@ from __future__ import division
 from ..model import Model
 from ..distributions.continuous import Flat, Normal
 from ..distributions.timeseries import EulerMaruyama
-from ..tuning.starting import find_MAP
 from ..sampling import sample, sample_ppc
-from ..step_methods import NUTS
 from ..theanof import floatX
 
 import numpy as np
-from scipy.optimize import fmin_bfgs
 
 
 def _gen_sde_path(sde, pars, dt, n, x0):
@@ -38,9 +35,8 @@ def test_linear():
         Normal('zh', mu=xh, sd=5e-3, observed=z)
     # invert
     with model:
-        start = find_MAP(vars=[xh], fmin=fmin_bfgs)  # So fmin_l_bfgs_b requires float64 dtypes and won't work for floatX; use fmin_bfgs instead
-        warmup = sample(200, NUTS(scaling=start))
-        trace = sample(1000, NUTS(scaling=warmup[-1], gamma=0.25), start=warmup[-1])
+        trace = sample()
+
     ppc = sample_ppc(trace, model=model)
     # test
     p95 = [2.5, 97.5]

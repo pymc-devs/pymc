@@ -35,7 +35,8 @@ class TestGLM(SeededTest):
             Normal('y_obs', mu=lm.y_est, sd=sigma, observed=self.y_linear)
             start = find_MAP(vars=[sigma])
             step = Slice(model.vars)
-            trace = sample(500, step=step, start=start, progressbar=False, random_seed=self.random_seed)
+            trace = sample(500, tune=0, step=step, start=start,
+                           progressbar=False, random_seed=self.random_seed)
 
             assert round(abs(np.mean(trace['Intercept'])-self.intercept), 1) == 0
             assert round(abs(np.mean(trace['x'])-self.slope), 1) == 0
@@ -45,7 +46,8 @@ class TestGLM(SeededTest):
         with Model() as model:
             GLM.from_formula('y ~ x', self.data_linear)
             step = Slice(model.vars)
-            trace = sample(500, step, progressbar=False, random_seed=self.random_seed)
+            trace = sample(500, step=step, tune=0, progressbar=False,
+                           random_seed=self.random_seed)
 
             assert round(abs(np.mean(trace['Intercept'])-self.intercept), 1) == 0
             assert round(abs(np.mean(trace['x'])-self.slope), 1) == 0
@@ -56,7 +58,8 @@ class TestGLM(SeededTest):
             GLM.from_formula('y ~ x', self.data_logistic,
                     family=families.Binomial(link=families.logit))
             step = Slice(model.vars)
-            trace = sample(1000, step, progressbar=False, random_seed=self.random_seed)
+            trace = sample(1000, step=step, tune=0, progressbar=False,
+                           random_seed=self.random_seed)
 
             assert round(abs(np.mean(trace['Intercept'])-self.intercept), 1) == 0
             assert round(abs(np.mean(trace['x'])-self.slope), 1) == 0

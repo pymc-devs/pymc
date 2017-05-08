@@ -45,7 +45,8 @@ class TestGLM(SeededTest):
             Normal('y_obs', mu=lm.y_est, sd=sigma, observed=self.y_linear)  # yields y_obs
             start = find_MAP(vars=[sigma])
             step = Slice(model.vars)
-            trace = sample(500, step=step, start=start, progressbar=False, random_seed=self.random_seed)
+            trace = sample(500, tune=0, step=step, start=start,
+                           progressbar=False, random_seed=self.random_seed)
 
             assert round(abs(np.mean(trace['lm_Intercept'])-self.intercept), 1) == 0
             assert round(abs(np.mean(trace['lm_x0'])-self.slope), 1) == 0
@@ -59,7 +60,9 @@ class TestGLM(SeededTest):
             Normal('y_obs', mu=lm.y_est, sd=sigma, observed=self.y_linear)
             start = find_MAP(vars=[sigma])
             step = Slice(model.vars)
-            trace = sample(500, step=step, start=start, progressbar=False, random_seed=self.random_seed)
+            trace = sample(500, tune=0, step=step, start=start,
+                           progressbar=False,
+                           random_seed=self.random_seed)
 
             assert round(abs(np.mean(trace['Intercept'])-self.intercept), 1) == 0
             assert round(abs(np.mean(trace['x'])-self.slope), 1) == 0
@@ -80,7 +83,8 @@ class TestGLM(SeededTest):
             )
             start = find_MAP()
             step = Slice(model.vars)
-            trace = sample(500, step=step, start=start, progressbar=False, random_seed=self.random_seed)
+            trace = sample(500, tune=0, step=step, start=start,
+                           progressbar=False, random_seed=self.random_seed)
             assert round(abs(np.mean(trace['glm_Intercept'])-self.intercept), 1) == 0
             assert round(abs(np.mean(trace['glm_x0'])-self.slope), 1) == 0
             assert round(abs(np.mean(trace['glm_sd'])-self.sd), 1) == 0
@@ -92,7 +96,8 @@ class TestGLM(SeededTest):
             GLM.from_formula('y ~ x', self.data_linear, name=NAME)
             start = find_MAP()
             step = Slice(model.vars)
-            trace = sample(500, step=step, start=start, progressbar=False, random_seed=self.random_seed)
+            trace = sample(500, tune=0, step=step, start=start,
+                           progressbar=False, random_seed=self.random_seed)
 
             assert round(abs(np.mean(trace['%s_Intercept' % NAME])-self.intercept), 1) == 0
             assert round(abs(np.mean(trace['%s_x' % NAME])-self.slope), 1) == 0
