@@ -12,6 +12,7 @@ __all__ = [
 class KL(Operator):
     """
     Operator based on Kullback Leibler Divergence
+
     .. math::
 
         KL[q(v)||p(v)] = \int q(v)\log\\frac{q(v)}{p(v)}dv
@@ -41,8 +42,9 @@ class KSD(Operator):
     Operator based on Kernelized Stein Discrepancy
 
     Input: A target distribution with density function :math:`p(x)`
-        and a set of initial particles :math:`{x^0_i}^n_{i=1}`
-    Output: A set of particles :math:`{x_i}^n_{i=1}` that approximates the target distribution.
+        and a set of initial particles :math:`\{x^0_i\}^n_{i=1}`
+    Output: A set of particles :math:`\{x_i\}^n_{i=1}` that approximates the target distribution.
+    
     .. math::
 
         x_i^{l+1} \leftarrow \epsilon_l \hat{\phi}^{*}(x_i^l)
@@ -50,11 +52,12 @@ class KSD(Operator):
 
     Parameters
     ----------
-    approx : pm.Empirical
+    approx : :class:`pm.Empirical`
+        Empirical Approximation used for inference
 
     References
     ----------
-    - Qiang Liu, Dilin Wang (2016)
+    -   Qiang Liu, Dilin Wang (2016)
         Stein Variational Gradient Descent: A General Purpose Bayesian Inference Algorithm
         arXiv:1608.04471
     """
