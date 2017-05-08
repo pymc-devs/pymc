@@ -215,19 +215,19 @@ class NUTS(BaseHMC):
 
         diverging = strace.get_sampler_stats('diverging')
         if diverging.ndim == 2:
-            diverging = np.any(diverging, axis=0)
+            diverging = np.any(diverging, axis=-1)
 
         tuning = strace.get_sampler_stats('tune')
         if tuning.ndim == 2:
-            tuning = np.any(tuning, axis=0)
+            tuning = np.any(tuning, axis=-1)
 
         accept = strace.get_sampler_stats('mean_tree_accept')
         if accept.ndim == 2:
-            accept = np.mean(accept, axis=0)
+            accept = np.mean(accept, axis=-1)
 
         depth = strace.get_sampler_stats('depth')
         if depth.ndim == 2:
-            depth = np.max(depth, axis=0)
+            depth = np.max(depth, axis=-1)
 
         n_samples = n - (~tuning).sum()
 
