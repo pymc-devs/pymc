@@ -15,7 +15,7 @@ class TestNUTSUniform(sf.NutsFixture, sf.UniformFixture):
 class TestMetropolisUniform(sf.MetropolisFixture, sf.UniformFixture):
     n_samples = 50000
     tune = 10000
-    burn = 10000
+    burn = 0
     chains = 4
     min_n_eff = 10000
     rtol = 0.1
@@ -25,7 +25,7 @@ class TestMetropolisUniform(sf.MetropolisFixture, sf.UniformFixture):
 class TestSliceUniform(sf.SliceFixture, sf.UniformFixture):
     n_samples = 10000
     tune = 1000
-    burn = 1000
+    burn = 0
     chains = 4
     min_n_eff = 5000
     rtol = 0.1
@@ -51,7 +51,7 @@ class TestNUTSUniform5(TestNUTSUniform):
 class TestNUTSNormal(sf.NutsFixture, sf.NormalFixture):
     n_samples = 10000
     tune = 1000
-    burn = 1000
+    burn = 0
     chains = 2
     min_n_eff = 10000
     rtol = 0.1
@@ -62,7 +62,7 @@ class TestNUTSBetaBinomial(sf.NutsFixture, sf.BetaBinomialFixture):
     n_samples = 2000
     ks_thin = 5
     tune = 1000
-    burn = 1000
+    burn = 0
     chains = 2
     min_n_eff = 400
 
@@ -70,7 +70,7 @@ class TestNUTSBetaBinomial(sf.NutsFixture, sf.BetaBinomialFixture):
 class TestNUTSStudentT(sf.NutsFixture, sf.StudentTFixture):
     n_samples = 100000
     tune = 1000
-    burn = 1000
+    burn = 0
     chains = 2
     min_n_eff = 5000
     rtol = 0.1
@@ -81,7 +81,7 @@ class TestNUTSStudentT(sf.NutsFixture, sf.StudentTFixture):
 class TestNUTSNormalLong(sf.NutsFixture, sf.NormalFixture):
     n_samples = 500000
     tune = 5000
-    burn = 5000
+    burn = 0
     chains = 2
     min_n_eff = 300000
     rtol = 0.01
@@ -91,6 +91,6 @@ class TestNUTSNormalLong(sf.NutsFixture, sf.NormalFixture):
 class TestNUTSLKJCholeskyCov(sf.NutsFixture, sf.LKJCholeskyCovFixture):
     n_samples = 2000
     tune = 1000
-    burn = 1000
+    burn = 0
     chains = 2
     min_n_eff = 200

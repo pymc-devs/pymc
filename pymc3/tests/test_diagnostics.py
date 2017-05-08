@@ -22,7 +22,7 @@ class TestGelmanRubin(SeededTest):
             step1 = Slice([model.early_mean_log__, model.late_mean_log__])
             step2 = Metropolis([model.switchpoint])
             start = {'early_mean': 7., 'late_mean': 5., 'switchpoint': 10}
-            ptrace = sample(n_samples, step=[step1, step2], start=start, njobs=2,
+            ptrace = sample(n_samples, tune=0, step=[step1, step2], start=start, njobs=2,
                     progressbar=False, random_seed=[20090425, 19700903])
         return ptrace
 
@@ -54,7 +54,7 @@ class TestGelmanRubin(SeededTest):
             # start sampling at the MAP
             start = find_MAP()
             step = NUTS(scaling=start)
-            ptrace = sample(n_samples, step=step, start=start,
+            ptrace = sample(n_samples, tune=0, step=step, start=start,
                             njobs=n_jobs, random_seed=42)
 
         rhat = gelman_rubin(ptrace)['x']
@@ -93,7 +93,7 @@ class TestDiagnostics(SeededTest):
             # Run sampler
             step1 = Slice([model.early_mean_log__, model.late_mean_log__])
             step2 = Metropolis([model.switchpoint])
-            trace = sample(n_samples, step=[step1, step2], progressbar=False, random_seed=1)
+            trace = sample(0, tune=n_samples, step=[step1, step2], progressbar=False, random_seed=1, discard_tuned_samples=False)
         return trace['switchpoint']
 
     def test_geweke_negative(self):
@@ -154,8 +154,9 @@ class TestDiagnostics(SeededTest):
             # start sampling at the MAP
             start = find_MAP()
             step = NUTS(scaling=start)
-            ptrace = sample(n_samples, step=step, start=start,
-                            njobs=n_jobs, random_seed=42)
+            ptrace = sample(0, tune=n_samples, step=step, start=start,
+                            njobs=n_jobs, discard_tuned_samples=False,
+                            random_seed=42)
 
         n_effective = effective_n(ptrace)['x']
         assert_allclose(n_effective, n_jobs * n_samples, 2)
@@ -175,8 +176,9 @@ class TestDiagnostics(SeededTest):
             # start sampling at the MAP
             start = find_MAP()
             step = NUTS(scaling=start)
-            ptrace = sample(n_samples, step=step, start=start,
-                            njobs=n_jobs, random_seed=42)
+            ptrace = sample(0, tune=n_samples, step=step, start=start,
+                            njobs=n_jobs, discard_tuned_samples=False,
+                            random_seed=42)
 
         n_effective = effective_n(ptrace)['x']
 

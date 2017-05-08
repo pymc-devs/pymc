@@ -1,6 +1,5 @@
 import shutil
 import tempfile
-import warnings
 
 from .checks import close_to
 from .models import simple_categorical, mv_simple, mv_simple_discrete, simple_2model, mv_prior_simple
@@ -10,7 +9,6 @@ from pymc3.step_methods import (NUTS, BinaryGibbsMetropolis, CategoricalGibbsMet
                                 Metropolis, Slice, CompoundStep, NormalProposal,
                                 MultivariateNormalProposal, HamiltonianMC,
                                 EllipticalSlice, smc)
-from pymc3.distributions import Binomial, Normal, Bernoulli, Categorical, Beta
 
 from numpy.testing import assert_array_almost_equal
 import numpy as np
@@ -160,12 +158,13 @@ class TestStepMethods(object):  # yield test doesn't work subclassing object
             x = Normal('x', mu=0, sd=1)
             if step_method.__name__ == 'SMC':
                 Deterministic('like', - 0.5 * tt.log(2 * np.pi) - 0.5 * x.T.dot(x))
-                trace = smc.ATMIP_sample(n_steps=1000,
-                                         step=step_method(n_chains=n_steps, random_seed=1),
+                trace = smc.ATMIP_sample(n_steps=n_steps, step=step_method(random_seed=1),
                                          n_jobs=1, progressbar=False,
                                          homepath=self.temp_dir)
             else:
-                trace = sample(n_steps, step=step_method(), random_seed=1)
+                trace = sample(0, tune=n_steps,
+                               discard_tuned_samples=False,
+                               step=step_method(), random_seed=1)
 
         assert_array_almost_equal(
             trace.get_values('x'),
@@ -196,7 +195,9 @@ class TestStepMethods(object):  # yield test doesn't work subclassing object
                     HamiltonianMC(scaling=C, is_cov=True, blocked=False)]),
             )
         for step in steps:
-            trace = sample(8000, step=step, start=start, model=model, random_seed=1)
+            trace = sample(0, tune=8000,
+                           discard_tuned_samples=False, step=step,
+                           start=start, model=model, random_seed=1)
             self.check_stat(check, trace, step.__class__.__name__)
 
     def test_step_discrete(self):
@@ -211,7 +212,7 @@ class TestStepMethods(object):  # yield test doesn't work subclassing object
                 Metropolis(S=C, proposal_dist=MultivariateNormalProposal),
             )
         for step in steps:
-            trace = sample(20000, step=step, start=start, model=model, random_seed=1)
+            trace = sample(20000, tune=0, step=step, start=start, model=model, random_seed=1)
             self.check_stat(check, trace, step.__class__.__name__)
 
     def test_step_categorical(self):
@@ -225,7 +226,7 @@ class TestStepMethods(object):  # yield test doesn't work subclassing object
                 CategoricalGibbsMetropolis(model.x, proposal='proportional'),
             )
         for step in steps:
-            trace = sample(8000, step=step, start=start, model=model, random_seed=1)
+            trace = sample(8000, tune=0, step=step, start=start, model=model, random_seed=1)
             self.check_stat(check, trace, step.__class__.__name__)
 
     def test_step_elliptical_slice(self):
@@ -239,7 +240,7 @@ class TestStepMethods(object):  # yield test doesn't work subclassing object
                 EllipticalSlice(prior_chol=L),
             )
         for step in steps:
-            trace = sample(5000, step=step, start=start, model=model, random_seed=1)
+            trace = sample(5000, tune=0, step=step, start=start, model=model, random_seed=1)
             self.check_stat(check, trace, step.__class__.__name__)
 
 
@@ -329,7 +330,7 @@ class TestNutsCheckTrace(object):
             prob = Beta('prob', alpha=5, beta=3)
             Binomial('outcome', n=1, p=prob)
             with warnings.catch_warnings(record=True) as warns:
-                sample(5, n_init=None, tune=2)
+                sample(0, draws=5, discard_tuned_samples=False, n_init=None, tune=2)
             messages = [warn.message.args[0] for warn in warns]
             assert any("contains only 5" in msg for msg in messages)
             assert all('boolean index did not' not in msg for msg in messages)
