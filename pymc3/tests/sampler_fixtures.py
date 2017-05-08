@@ -27,7 +27,6 @@ class KnownCDF(object):
 
     def test_kstest(self):
         for varname, cdf in self.cdfs.items():
-            print('checking', varname)
             samples = self.samples[varname]
             if samples.ndim == 1:
                 t, p = stats.kstest(samples[::self.ks_thin], cdf=cdf)
