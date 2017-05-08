@@ -18,10 +18,10 @@ Features
 -  Intuitive model specification syntax, for example, ``x ~ N(0,1)``
    translates to ``x = Normal('x',0,1)``
 -  **Powerful sampling algorithms**, such as the `No U-Turn
-   Sampler <http://arxiv.org/abs/1111.4246>`__, allow complex models
+   Sampler <http://www.jmlr.org/papers/v15/hoffman14a.html>`__, allow complex models
    with thousands of parameters with little specialized knowledge of
    fitting algorithms.
--  **Variational inference**: `ADVI <http://arxiv.org/abs/1506.03431>`__
+-  **Variational inference**: `ADVI <http://www.jmlr.org/papers/v18/16-107.html>`__
    for fast approximate posterior estimation as well as mini-batch ADVI
    for large data sets.
 -  Relies on `Theano <http://deeplearning.net/software/theano/>`__ which provides:
