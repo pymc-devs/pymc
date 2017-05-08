@@ -249,7 +249,7 @@ def draw_value(param, point=None, givens=()):
         try:
             shape = param.shape.tag.test_value
         except:
-            shape = param.shape
+            shape = param.shape.eval()
         if len(shape) == 0 and len(value) == 1:
             value = value[0]
     return value
