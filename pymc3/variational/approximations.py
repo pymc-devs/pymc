@@ -351,7 +351,7 @@ class Empirical(Approximation):
 
     @classmethod
     def from_noise(cls, size, jitter=.01, local_rv=None,
-                   start=None, model=None, seed=None, **kwargs):
+                   start=None, model=None, random_seed=None, **kwargs):
         """Initialize Histogram with random noise
 
         Parameters
@@ -365,7 +365,7 @@ class Empirical(Approximation):
         start : initial point
         model : pm.Model
             PyMC3 Model
-        seed : None or int
+        random_seed : None or int
             leave None to use package global RandomStream or other
             valid value to create instance specific one
         kwargs : other kwargs passed to init
@@ -374,7 +374,7 @@ class Empirical(Approximation):
         -------    
         Empirical
         """
-        hist = cls(None, local_rv=local_rv, model=model, seed=seed, **kwargs)
+        hist = cls(None, local_rv=local_rv, model=model, random_seed=random_seed, **kwargs)
         if start is None:
             start = hist.model.test_point
         else:

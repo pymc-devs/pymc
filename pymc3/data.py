@@ -130,7 +130,7 @@ class DataSampler(object):
     """
     def __init__(self, data, batchsize=50, random_seed=42, dtype='floatX'):
         self.dtype = theano.config.floatX if dtype == 'floatX' else dtype
-        self.rng = np.random.RandomState(seed)
+        self.rng = np.random.RandomState(random_seed)
         self.data = data
         self.n = batchsize
 
