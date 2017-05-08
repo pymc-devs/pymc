@@ -136,7 +136,7 @@ class TestStepMethods(object):  # yield test doesn't work subclassing object
 
     def test_sample_exact(self):
         for step_method in self.master_samples:
-            yield self.check_trace, step_method
+            self.check_trace(step_method)
 
     def check_trace(self, step_method):
         """Tests whether the trace for step methods is exactly the same as on master.
@@ -196,7 +196,7 @@ class TestStepMethods(object):  # yield test doesn't work subclassing object
             )
         for step in steps:
             trace = sample(8000, step=step, start=start, model=model, random_seed=1)
-            yield self.check_stat, check, trace, step.__class__.__name__
+            self.check_stat(check, trace, step.__class__.__name__)
 
     def test_step_discrete(self):
         if theano.config.floatX == "float32":
@@ -211,7 +211,7 @@ class TestStepMethods(object):  # yield test doesn't work subclassing object
             )
         for step in steps:
             trace = sample(20000, step=step, start=start, model=model, random_seed=1)
-            yield self.check_stat, check, trace, step.__class__.__name__
+            self.check_stat(check, trace, step.__class__.__name__)
 
     def test_step_categorical(self):
         start, model, (mu, C) = simple_categorical()
@@ -225,7 +225,7 @@ class TestStepMethods(object):  # yield test doesn't work subclassing object
             )
         for step in steps:
             trace = sample(8000, step=step, start=start, model=model, random_seed=1)
-            yield self.check_stat, check, trace, step.__class__.__name__
+            self.check_stat(check, trace, step.__class__.__name__)
 
     def test_step_elliptical_slice(self):
         start, model, (K, L, mu, std, noise) = mv_prior_simple()
@@ -239,7 +239,7 @@ class TestStepMethods(object):  # yield test doesn't work subclassing object
             )
         for step in steps:
             trace = sample(5000, step=step, start=start, model=model, random_seed=1)
-            yield self.check_stat, check, trace, step.__class__.__name__
+            self.check_stat(check, trace, step.__class__.__name__)
 
 
 class TestMetropolisProposal(object):
