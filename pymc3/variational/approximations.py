@@ -28,24 +28,25 @@ class MeanField(Approximation):
         mapping {model_variable -> local_variable (:math:`\\mu`, :math:`\\rho`)}
         Local Vars are used for Autoencoding Variational Bayes
         See (AEVB; Kingma and Welling, 2014) for details
-    model : PyMC3 model for inference
-    start : Point
+    model : :class:`Model` 
+        PyMC3 model for inference
+    start : `Point`
         initial mean
-    cost_part_grad_scale : float or scalar tensor
+    cost_part_grad_scale : `scalar`
         Scaling score part of gradient can be useful near optimum for
         archiving better convergence properties. Common schedule is
         1 at the start and 0 in the end. So slow decay will be ok.
         See (Sticking the Landing; Geoffrey Roeder,
         Yuhuai Wu, David Duvenaud, 2016) for details
-    scale_cost_to_minibatch : bool, default False
-        Scale cost to minibatch instead of full dataset
+    scale_cost_to_minibatch : `bool` 
+        Scale cost to minibatch instead of full dataset, default False
     seed : None or int
         leave None to use package global RandomStream or other
         valid value to create instance specific one
 
     References
     ----------   
-    Geoffrey Roeder, Yuhuai Wu, David Duvenaud, 2016
+    -   Geoffrey Roeder, Yuhuai Wu, David Duvenaud, 2016
         Sticking the Landing: A Simple Reduced-Variance Gradient for ADVI
         approximateinference.org/accepted/RoederEtAl2016.pdf
     """
@@ -121,10 +122,15 @@ class FullRank(Approximation):
     seed : None or int
         leave None to use package global RandomStream or other
         valid value to create instance specific one
+    
+    Other Parameters
+    ----------------
+    gpu_compat : bool
+        use GPU compatible version or not
 
     References
     ----------
-    Geoffrey Roeder, Yuhuai Wu, David Duvenaud, 2016
+    -   Geoffrey Roeder, Yuhuai Wu, David Duvenaud, 2016
         Sticking the Landing: A Simple Reduced-Variance Gradient for ADVI
         approximateinference.org/accepted/RoederEtAl2016.pdf
     """
@@ -211,17 +217,17 @@ class FullRank(Approximation):
 
         Parameters
         ----------  
-        mean_field : MeanField
+        mean_field : :class:`MeanField`
             approximation to start with
 
-        Flags
-        -----
-        gpu_compat : bool
+        Other Parameters
+        ----------------
+        gpu_compat : `bool`
             use GPU compatible version or not
 
         Returns
         -------
-        FullRank
+        :class:`FullRank`
         """
         full_rank = object.__new__(cls)  # type: FullRank
         full_rank.gpu_compat = gpu_compat
@@ -247,15 +253,16 @@ class Empirical(Approximation):
 
     Parameters
     ----------
-    trace : MultiTrace
+    trace : :class:`MultiTrace`
     local_rv : dict[var->tuple]
         Experimental for Empirical Approximation
         mapping {model_variable -> local_variable (:math:`\\mu`, :math:`\\rho`)}
         Local Vars are used for Autoencoding Variational Bayes
         See (AEVB; Kingma and Welling, 2014) for details
-    scale_cost_to_minibatch : bool, default False
-        Scale cost to minibatch instead of full dataset
-    model : PyMC3 model
+    scale_cost_to_minibatch : `bool` 
+        Scale cost to minibatch instead of full dataset, default False
+    model : :class:`Model` 
+        PyMC3 model for inference
     seed : None or int
         leave None to use package global RandomStream or other
         valid value to create instance specific one
@@ -356,15 +363,18 @@ class Empirical(Approximation):
 
         Parameters
         ----------
-        size : number of initial particles
-        jitter : initial sd
-        local_rv : dict
+        size : `int` 
+            number of initial particles
+        jitter : `float` 
+            initial sd
+        local_rv : `dict`
             mapping {model_variable -> local_variable}
             Local Vars are used for Autoencoding Variational Bayes
             See (AEVB; Kingma and Welling, 2014) for details
-        start : initial point
-        model : pm.Model
-            PyMC3 Model
+        start : `Point` 
+            initial point
+        model : :class:`Model`
+            PyMC3 model for inference
         seed : None or int
             leave None to use package global RandomStream or other
             valid value to create instance specific one
@@ -372,7 +382,7 @@ class Empirical(Approximation):
 
         Returns
         -------    
-        Empirical
+        :class:`Empirical`
         """
         hist = cls(None, local_rv=local_rv, model=model, seed=seed, **kwargs)
         if start is None:
@@ -394,15 +404,16 @@ def sample_approx(approx, draws=100, include_transformed=True):
 
     Parameters
     ----------  
-    approx : Approximation
-    draws : int
+    approx : :class:`Approximation`
+        Approximation to sample from
+    draws : `int`
         Number of random samples.
-    include_transformed : bool
+    include_transformed : `bool`
         If True, transformed variables are also sampled. Default is True.
 
     Returns
     -------    
-    trace : pymc3.backends.base.MultiTrace
+    trace : class:`pymc3.backends.base.MultiTrace`
         Samples drawn from variational posterior.
     """
     if not isinstance(approx, Approximation):
