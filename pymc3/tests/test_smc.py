@@ -74,7 +74,6 @@ class TestSMC(SeededTest):
         d = mtrace.get_values('X', combine=True, squeeze=True)
         x = last_sample(d)
         mu1d = np.abs(x).mean(axis=0)
-
         np.testing.assert_allclose(mu1, mu1d, rtol=0., atol=0.03)
 
     def teardown_method(self):

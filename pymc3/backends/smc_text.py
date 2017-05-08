@@ -16,22 +16,22 @@ represents two variables, x and y, where x is a scalar and y has a
 shape of (3, 2).
 """
 from glob import glob
-
 import itertools
+import multiprocessing
 import pickle
 import os
-import pandas as pd
+import shutil
 from six.moves import map, zip
 
+import pandas as pd
 import pymc3 as pm
+
 from ..model import modelcontext
 from ..backends import base, ndarray
 from . import tracetab as ttab
 from ..blocking import DictToArrayBijection, ArrayOrdering,\
                        ListArrayOrdering, ListToArrayBijection
 from ..step_methods.arraystep import BlockedStep
-
-import multiprocessing
 
 
 def paripool(function, work, nprocs=None, chunksize=1):
@@ -101,7 +101,6 @@ class ArrayStepSharedLLK(BlockedStep):
             share.container.storage[0] = point[var]
 
         apoint, alist = self.astep(self.bij.map(point))
-
         return self.bij.rmap(apoint), alist
 
 
@@ -156,7 +155,138 @@ class BaseSMCTrace(object):
         self.__dict__.update(state)
 
 
-class Text(BaseSMCTrace):
+class TextStage(object):
+    def __init__(self, base_dir):
+        self.base_dir = base_dir
+        self.project_dir = os.path.dirname(base_dir)
+        self.mode = os.path.basename(base_dir)
+        if not os.path.isdir(base_dir):
+            os.mkdir(self.base_dir)
+
+    def stage_path(self, stage):
+        return os.path.join(self.base_dir, 'stage_{}'.format(stage))
+
+    def stage_number(self, stage_path):
+        """Inverse function of TextStage.path"""
+        return int(os.path.basename(stage_path).split('_')[-1])
+
+    def highest_sampled_stage(self):
+        """Return stage number of stage that has been sampled before the final stage.
+
+        Returns
+        -------
+        stage number : int
+        """
+        return max(self.stage_number(s) for s in glob(self.path('*')))
+
+    def atmip_path(self, stage_number):
+        """Consistent naming for atmip params."""
+        return os.path.join(self.stage_path(stage_number), 'atmip.params.pkl')
+
+    def load_atmip_params(self, stage_number):
+        """Load saved parameters from last sampled ATMIP stage.
+
+        Parameters
+        ----------
+        stage number : int
+            of stage number or -1 for last stage
+        """
+        if stage_number == -1:
+            prev = self.highest_sampled_stage()
+        else:
+            prev = stage_number - 1
+        pm._log.info('Loading parameters from completed stage {}'.format(prev))
+        with open(self.atmip_path(prev), 'rb') as buff:
+            return pickle.load(buff)
+
+    def dump_atmip_params(self, step):
+        """Save atmip params to file."""
+        with open(self.atmip_path(step.stage), 'wb') as buff:
+            pickle.dump(step, buff, protocol=pickle.HIGHEST_PROTOCOL)
+
+    def clean_directory(self, stage, chains, rm_flag):
+        """Optionally remove directory for the stage.  Does nothing if rm_flag is False."""
+        stage_path = self.stage_path(stage)
+        if rm_flag:
+            if os.path.exists(stage_path):
+                pm._log.info('Removing previous sampling results ... %s' % stage_path)
+                shutil.rmtree(stage_path)
+            chains = None
+        elif not os.path.exists(stage_path):
+            chains = None
+        return chains
+
+    def load_multitrace(self, stage, model=None):
+        """Load TextChain database.
+
+        Parameters
+        ----------
+        name : str
+            Name of directory with files (one per chain)
+        model : Model
+            If None, the model is taken from the `with` context.
+
+        Returns
+        -------
+
+        A :class:`pymc3.backend.base.MultiTrace` instance
+        """
+        dirname = self.stage_path(stage)
+        files = glob(os.path.join(dirname, 'chain_*.csv'))
+        straces = []
+        for f in files:
+            chain = int(os.path.basename(f).split('_')[-1].split('.')[0])
+            strace = TextChain(dirname, model=model)
+            strace.chain = chain
+            strace.filename = f
+            straces.append(strace)
+        return base.MultiTrace(straces)
+
+    def check_multitrace(self, mtrace, draws, n_chains):
+        """Check multitrace for incomplete sampling and return indexes from chains
+        that need to be resampled.
+
+        Parameters
+        ----------
+        mtrace : :class:`pymc3.backend.base.MultiTrace`
+            Multitrace object containing the sampling traces
+        draws : int
+            Number of steps (i.e. chain length for each Markov Chain)
+        n_chains : int
+            Number of Markov Chains
+
+        Returns
+        -------
+        list of indexes for chains that need to be resampled
+        """
+        not_sampled_idx = []
+        for chain in range(n_chains):
+            if chain in mtrace.chains:
+                if len(mtrace._straces[chain]) != draws:
+                    pm._log.warn('Trace number %i incomplete' % chain)
+                    mtrace._straces[chain].corrupted_flag = True
+            else:
+                not_sampled_idx.append(chain)
+
+        flag_bool = [mtrace._straces[chain].corrupted_flag for chain in mtrace.chains]
+        corrupted_idx = [i for i, x in enumerate(flag_bool) if x]
+        return corrupted_idx + not_sampled_idx
+
+    def recover_existing_results(self, stage, draws, step, n_jobs, model=None):
+        stage_path = self.stage_path(stage)
+        if os.path.exists(stage_path):
+            # load incomplete stage results
+            pm._log.info('Reloading existing results ...')
+            mtrace = self.load_multitrace(stage, model=model)
+            if len(mtrace) > 0:
+                # continue sampling if traces exist
+                pm._log.info('Checking for corrupted files ...')
+                return self.check_multitrace(mtrace, draws=draws, n_chains=step.n_chains)
+        pm._log.info('Init new trace!')
+        return None
+
+
+class TextChain(BaseSMCTrace):
     """Text trace object
 
     Parameters
@@ -174,7 +304,7 @@ class Text(BaseSMCTrace):
     def __init__(self, name, model=None, vars=None):
         if not os.path.exists(name):
             os.mkdir(name)
-        super(Text, self).__init__(name, model, vars)
+        super(TextChain, self).__init__(name, model, vars)
 
         self.flat_names = {v: ttab.create_flat_names(v, shape)
                            for v, shape in self.var_shapes.items()}
@@ -194,7 +324,7 @@ class Text(BaseSMCTrace):
             Chain number
         """
         self.chain = chain
-        self.filename = os.path.join(self.name, 'chain-{}.csv'.format(chain))
+        self.filename = os.path.join(self.name, 'chain_{}.csv'.format(chain))
 
         cnames = [fv for v in self.varnames for fv in self.flat_names[v]]
 
@@ -289,175 +419,3 @@ class Text(BaseSMCTrace):
             vals = self.df[self.flat_names[varname]].iloc[idx]
             pt[varname] = vals.reshape(self.var_shapes[varname])
         return pt
-
-
-def get_highest_sampled_stage(homedir):
-    """Return stage number of stage that has been sampled before the final stage.
-
-    Paramaeters
-    -----------
-    homedir : str
-        Directory to the sampled stage results
-
-    Returns
-    -------
-    stage number : int
-    """
-    stages = glob(os.path.join(homedir, 'stage_*'))
-    stagenumbers = []
-    for s in stages:
-        stage_ending = os.path.basename(s).split('_')[-1]
-        stagenumbers.append(int(stage_ending))
-    return max(stagenumbers)
-
-
-def check_multitrace(mtrace, draws, n_chains):
-    """Check multitrace for incomplete sampling and return indexes from chains
-    that need to be resampled.
-
-    Parameters
-    ----------
-    mtrace : :class:`pymc3.backend.base.MultiTrace`
-        Mutlitrace object containing the sampling traces
-    draws : int
-        Number of steps (i.e. chain length for each Marcov Chain)
-    n_chains : int
-        Number of Marcov Chains
-
-    Returns
-    -------
-    list of indexes for chains that need to be resampled
-    """
-    not_sampled_idx = []
-    for chain in range(n_chains):
-        if chain in mtrace.chains:
-            if len(mtrace._straces[chain]) != draws:
-                pm._log.warn('Trace number %i incomplete' % chain)
-                mtrace._straces[chain].corrupted_flag = True
-        else:
-            not_sampled_idx.append(chain)
-
-    flag_bool = [mtrace._straces[chain].corrupted_flag for chain in mtrace.chains]
-    corrupted_idx = [i for i, x in enumerate(flag_bool) if x]
-    return corrupted_idx + not_sampled_idx
-
-
-def load(name, model=None):
-    """Load Text database.
-
-    Parameters
-    ----------
-    name : str
-        Name of directory with files (one per chain)
-    model : Model
-        If None, the model is taken from the `with` context.
-
-    Returns
-    -------
-
-    A :class:`pymc3.backend.base.MultiTrace` instance
-    """
-    files = glob(os.path.join(name, 'chain-*.csv'))
-
-    straces = []
-    for f in files:
-        chain = int(os.path.splitext(f)[0].rsplit('-', 1)[1])
-        strace = Text(name, model=model)
-        strace.chain = chain
-        strace.filename = f
-        straces.append(strace)
-    return base.MultiTrace(straces)
-
-
-def dump(name, trace, chains=None):
-    """Store values from NDArray trace as CSV files.
-
-    Parameters
-    ----------
-    name : str
-        Name of directory to store CSV files in
-    trace : :class:`pymc3.backend.base.MultiTrace` of NDArray traces
-        Result of MCMC run with default NDArray backend
-    chains : list
-        Chains to dump. If None, all chains are dumped.
-    """
-    if not os.path.exists(name):
-        os.mkdir(name)
-    if chains is None:
-        chains = trace.chains
-
-    var_shapes = trace._straces[chains[0]].var_shapes
-    flat_names = {v: ttab.create_flat_names(v, shape) for v, shape in var_shapes.items()}
-
-    for chain in chains:
-        filename = os.path.join(name, 'chain-{}.csv'.format(chain))
-        df = ttab.trace_to_dataframe(trace, chains=chain, flat_names=flat_names)
-        df.to_csv(filename, index=False)
-
-
-def dump_objects(outpath, outlist):
-    """Dump objects in outlist into pickle file.
-
-    Parameters
-    ----------
-    outpath : str
-        absolute path and file name for the file to be stored
-    outlist : list
-        of objects to save pickle
-    """
-    with open(outpath, 'wb') as f:
-        pickle.dump(outlist, f, protocol=pickle.HIGHEST_PROTOCOL)
-
-
-def load_objects(loadpath):
-    """Load (unpickle) saved (pickled) objects from specified loadpath.
-
-    Parameters
-    ----------
-    loadpath : absolute path and file name to the file to be loaded
-
-    Returns
-    -------
-    objects : list
-        of saved objects
-    """
-    try:
-        with open(loadpath, 'rb') as buff:
-            return pickle.load(buff)
-    except IOError:
-        raise Exception('File %s does not exist! Data already imported?' % loadpath)
-
-
-def load_atmip_params(project_dir, stage_number, mode):
-    """Load saved parameters from given ATMIP stage.
-
-    Parameters
-    ----------
-    project_dir : str
-        absolute path to directory of BEAT project
-    stage number : int
-        of stage number or -1 for last stage
-    mode : str
-        problem mode that has been solved ('geometry', 'static', 'kinematic')
-    """
-    stage_path = os.path.join(project_dir, mode, 'stage_%i' % stage_number, 'atmip.params')
-    step = load_objects(stage_path)
-    return step
-
-
-def split_off_list(l, off_length):
-    """Split a list with length 'off_length' from the beginning of an input list l.
-    Modifies input list!
-
-    Parameters
-    ----------
-    l : list
-        of objects to be seperated
-    off_length : int
-        number of elements from l to be split off
-
-    Returns
-    -------
-    list
-    """
-    return [l.pop(0) for _ in range(off_length)]
