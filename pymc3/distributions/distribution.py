@@ -248,8 +248,11 @@ def draw_value(param, point=None, givens=()):
     if hasattr(param, 'shape'):
         try:
             shape = param.shape.tag.test_value
-        except:
-            shape = param.shape.eval()
+        except AttributeError:
+            try:
+                shape = param.shape.eval()
+            except AttributeError:
+                shape = param.shape
         if len(shape) == 0 and len(value) == 1:
             value = value[0]
     return value
