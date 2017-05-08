@@ -374,7 +374,7 @@ _tt_rng = MRG_RandomStreams()
 launch_rng(_tt_rng)
 
 
-def tt_rng(seed=None):
+def tt_rng(random_seed=None):
     """
     Get the package-level random number generator or new with specified seed.
 
@@ -393,7 +393,7 @@ def tt_rng(seed=None):
     if seed is None:
         return _tt_rng
     else:
-        ret = MRG_RandomStreams(seed)
+        ret = MRG_RandomStreams(random_seed)
         launch_rng(ret)
         return ret
 
