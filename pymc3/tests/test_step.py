@@ -1,5 +1,6 @@
 import shutil
 import tempfile
+import warnings
 
 from .checks import close_to
 from .models import simple_categorical, mv_simple, mv_simple_discrete, simple_2model, mv_prior_simple
@@ -9,7 +10,7 @@ from pymc3.step_methods import (NUTS, BinaryGibbsMetropolis, CategoricalGibbsMet
                                 Metropolis, Slice, CompoundStep, NormalProposal,
                                 MultivariateNormalProposal, HamiltonianMC,
                                 EllipticalSlice, smc)
-from pymc3.distributions import Binomial, Normal, Bernoulli, Categorical
+from pymc3.distributions import Binomial, Normal, Bernoulli, Categorical, Beta
 
 from numpy.testing import assert_array_almost_equal
 import numpy as np
@@ -268,7 +269,8 @@ class TestMetropolisProposal(object):
 class TestCompoundStep(object):
     samplers = (Metropolis, Slice, HamiltonianMC, NUTS)
 
-    @pytest.mark.skipif(theano.config.floatX == "float32", reason="Test fails on 32 bit due to linalg issues")
+    @pytest.mark.skipif(theano.config.floatX == "float32",
+                        reason="Test fails on 32 bit due to linalg issues")
     def test_non_blocked(self):
         """Test that samplers correctly create non-blocked compound steps."""
         _, model = simple_2model()
@@ -276,7 +278,8 @@ class TestCompoundStep(object):
             for sampler in self.samplers:
                 assert isinstance(sampler(blocked=False), CompoundStep)
 
-    @pytest.mark.skipif(theano.config.floatX == "float32", reason="Test fails on 32 bit due to linalg issues")
+    @pytest.mark.skipif(theano.config.floatX == "float32",
+                        reason="Test fails on 32 bit due to linalg issues")
     def test_blocked(self):
         _, model = simple_2model()
         with model:
@@ -318,3 +321,15 @@ class TestAssignStepMethods(object):
             Binomial('x', 10, 0.5)
             steps = assign_step_methods(model, [])
         assert isinstance(steps, Metropolis)
+
+
+class TestNutsCheckTrace(object):
+    def test_multiple_samplers(self):
+        with Model():
+            prob = Beta('prob', alpha=5, beta=3)
+            Binomial('outcome', n=1, p=prob)
+            with warnings.catch_warnings(record=True) as warns:
+                sample(5, n_init=None, tune=2)
+            messages = [warn.message.args[0] for warn in warns]
+            assert any("contains only 5" in msg for msg in messages)
+            assert all('boolean index did not' not in msg for msg in messages)
