@@ -6,10 +6,13 @@ Created on Mar 7, 2011
 from __future__ import division
 
 import numpy as np
+import scipy.linalg
 import theano.tensor as tt
+import theano
 
 from .special import gammaln
 from ..math import logdet as _logdet
+from pymc3.theanof import floatX
 
 c = - 0.5 * np.log(2 * np.pi)
 
@@ -213,3 +216,151 @@ def log_normal_mv(x, mean, gpu_compat=False, **kwargs):
     result = k * tt.log(2 * np.pi) - log_det
     result += delta.dot(T).dot(delta)
     return -1 / 2. * result
+
+
+def MvNormalLogp():
+    """Compute the log pdf of a multivariate normal distribution.
+
+    This should be used in MvNormal.logp once Theano#5908 is released.
+
+    Parameters
+    ----------
+    cov : tt.matrix
+        The covariance matrix.
+    delta : tt.matrix
+        Array of deviations from the mean.
+    """
+    cov = tt.matrix('cov')
+    cov.tag.test_value = floatX(np.eye(3))
+    delta = tt.matrix('delta')
+    delta.tag.test_value = floatX(np.zeros((2, 3)))
+
+    solve_lower = tt.slinalg.Solve(A_structure='lower_triangular')
+    solve_upper = tt.slinalg.Solve(A_structure='upper_triangular')
+    cholesky = Cholesky(nofail=True, lower=True)
+
+    n, k = delta.shape
+
+    chol_cov = cholesky(cov)
+    diag = tt.nlinalg.diag(chol_cov)
+    ok = tt.all(diag > 0)
+
+    chol_cov = tt.switch(ok, chol_cov, tt.fill(chol_cov, 1))
+    delta_trans = solve_lower(chol_cov, delta.T).T
+
+    result = n * k * tt.log(2 * np.pi)
+    result += 2.0 * n * tt.sum(tt.log(diag))
+    result += (delta_trans ** 2).sum()
+    result = -0.5 * result
+    logp = tt.switch(ok, result, -np.inf)
+
+    def dlogp(inputs, gradients):
+        g_logp, = gradients
+        cov, delta = inputs
+
+        g_logp.tag.test_value = floatX(np.array(1.))
+        n, k = delta.shape
+
+        chol_cov = cholesky(cov)
+        diag = tt.nlinalg.diag(chol_cov)
+        ok = tt.all(diag > 0)
+
+        chol_cov = tt.switch(ok, chol_cov, tt.fill(chol_cov, 1))
+        delta_trans = solve_lower(chol_cov, delta.T).T
+
+        inner = n * tt.eye(k) - tt.dot(delta_trans.T, delta_trans)
+        g_cov = solve_upper(chol_cov.T, inner)
+        g_cov = solve_upper(chol_cov.T, g_cov.T)
+
+        tau_delta = solve_upper(chol_cov.T, delta_trans.T)
+        g_delta = tau_delta.T
+
+        g_cov = tt.switch(ok, g_cov, -np.nan)
+        g_delta = tt.switch(ok, g_delta, -np.nan)
+
+        return [-0.5 * g_cov * g_logp, -g_delta * g_logp]
+
+    return theano.OpFromGraph(
+        [cov, delta], [logp], grad_overrides=dlogp, inline=True)
+
+
+class Cholesky(theano.Op):
+    """
+    Return a triangular matrix square root of positive semi-definite `x`.
+
+    This is a copy of the cholesky op in theano, that doesn't throw an
+    error if the matrix is not positive definite, but instead returns
+    nan.
+
+    This has been merged upstream and we should switch to that
+    version after the next theano release.
+
+    L = cholesky(X, lower=True) implies dot(L, L.T) == X.
+    """
+    __props__ = ('lower', 'destructive', 'nofail')
+
+    def __init__(self, lower=True, nofail=False):
+        self.lower = lower
+        self.destructive = False
+        self.nofail = nofail
+
+    def make_node(self, x):
+        x = tt.as_tensor_variable(x)
+        if x.ndim != 2:
+            raise ValueError('Matrix must me two dimensional.')
+        return tt.Apply(self, [x], [x.type()])
+
+    def perform(self, node, inputs, outputs):
+        x = inputs[0]
+        z = outputs[0]
+        try:
+            z[0] = scipy.linalg.cholesky(x, lower=self.lower).astype(x.dtype)
+        except (ValueError, scipy.linalg.LinAlgError):
+            if self.nofail:
+                z[0] = np.eye(x.shape[-1])
+                z[0][0, 0] = np.nan
+            else:
+                raise
+
+    def grad(self, inputs, gradients):
+        """
+        Cholesky decomposition reverse-mode gradient update.
+
+        Symbolic expression for reverse-mode Cholesky gradient taken from [0]_
+
+        References
+        ----------
+        .. [0] I. Murray, "Differentiation of the Cholesky decomposition",
+           http://arxiv.org/abs/1602.07527
+
+        """
+
+        x = inputs[0]
+        dz = gradients[0]
+        chol_x = self(x)
+        ok = tt.all(tt.nlinalg.diag(chol_x) > 0)
+        chol_x = tt.switch(ok, chol_x, tt.fill_diagonal(chol_x, 1))
+        dz = tt.switch(ok, dz, floatX(1))
+
+        # deal with upper triangular by converting to lower triangular
+        if not self.lower:
+            chol_x = chol_x.T
+            dz = dz.T
+
+        def tril_and_halve_diagonal(mtx):
+            """Extracts lower triangle of square matrix and halves diagonal."""
+            return tt.tril(mtx) - tt.diag(tt.diagonal(mtx) / 2.)
+
+        def conjugate_solve_triangular(outer, inner):
+            """Computes L^{-T} P L^{-1} for lower-triangular L."""
+            solve = tt.slinalg.Solve(A_structure="upper_triangular")
+            return solve(outer.T, solve(outer.T, inner.T).T)
+
+        s = conjugate_solve_triangular(
+            chol_x, tril_and_halve_diagonal(chol_x.T.dot(dz)))
+
+        if self.lower:
+            grad = tt.tril(s + s.T) - tt.diag(tt.diagonal(s))
+        else:
+            grad = tt.triu(s + s.T) - tt.diag(tt.diagonal(s))
+        return [tt.switch(ok, grad, floatX(np.nan))]

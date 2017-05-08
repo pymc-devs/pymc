@@ -7,11 +7,12 @@ import numpy as np
 import pymc3 as pm
 from .backends.base import merge_traces, BaseTrace, MultiTrace
 from .backends.ndarray import NDArray
-from .model import modelcontext, Point, is_transformed_name, get_untransformed_name
+from .model import modelcontext, Point
 from .step_methods import (NUTS, HamiltonianMC, Metropolis, BinaryMetropolis,
                            BinaryGibbsMetropolis, CategoricalGibbsMetropolis,
                            Slice, CompoundStep)
 from .plots.traceplot import traceplot
+from .util import is_transformed_name, get_untransformed_name
 from tqdm import tqdm
 
 import sys
@@ -573,7 +574,8 @@ def init_nuts(init='ADVI', njobs=1, n_init=500000, model=None,
             progressbar=progressbar
         )  # type: pm.MeanField
         start = approx.sample(draws=njobs)
-        cov = approx.cov.eval()
+        stds = approx.gbij.rmap(np.diag(approx.cov.eval()))
+        cov = model.dict_to_array(stds)
         if njobs == 1:
             start = start[0]
     elif init == 'advi_map':

@@ -95,9 +95,9 @@ Note
 Taken from the Lasagne project: http://lasagne.readthedocs.io/en/latest/
 
 """
-
+import re
 from collections import OrderedDict
-
+import functools
 import numpy as np
 
 import theano
@@ -117,8 +117,43 @@ __all__ = [
     "adam",
     "adamax",
     "norm_constraint",
-    "total_norm_constraint"
+    "total_norm_constraint",
+    "Sgd",
+    "Momentum",
+    "NesterovMomentum",
+    "Adagrad",
+    "RMSProp",
+    "AdaDelta",
+    "AdaMax",
+    "Adam",
 ]
+
+
+def _make_doc(doc):
+    """
+    Modify docstring for class
+    
+    Parameters
+    ----------
+    doc : docstring
+
+    Returns
+    -------
+    class docstring
+    """
+    doc = re.sub(r'\n.+loss_or_grads : .+\n.+', '', doc)
+    doc = re.sub(r'\n.+params : .+\n.+', '', doc)
+    return doc
+
+
+class Optimizer(object):
+    _opt = None
+
+    def __init__(self, *args, **kwargs):
+        self.opt = functools.partial(self._opt, *args, **kwargs)
+
+    def __call__(self, loss_or_grads, params):
+        return self.opt(loss_or_grads, params)
 
 
 def get_or_compute_grads(loss_or_grads, params):
@@ -160,7 +195,7 @@ def get_or_compute_grads(loss_or_grads, params):
         return theano.grad(loss_or_grads, params)
 
 
-def sgd(loss_or_grads, params, learning_rate):
+def sgd(loss_or_grads, params, learning_rate=1e-3):
     """Stochastic Gradient Descent (SGD) updates
 
     Generates update expressions of the form:
@@ -188,6 +223,11 @@ def sgd(loss_or_grads, params, learning_rate):
         updates[param] = param - learning_rate * grad
 
     return updates
+
+
+class Sgd(Optimizer):
+    __doc__ = _make_doc(sgd.__doc__)
+    _opt = sgd
 
 
 def apply_momentum(updates, params=None, momentum=0.9):
@@ -277,6 +317,11 @@ def momentum(loss_or_grads, params, learning_rate, momentum=0.9):
     return apply_momentum(updates, momentum=momentum)
 
 
+class Momentum(Optimizer):
+    __doc__ = _make_doc(momentum.__doc__)
+    _opt = momentum
+
+
 def apply_nesterov_momentum(updates, params=None, momentum=0.9):
     """Returns a modified update dictionary including Nesterov momentum
 
@@ -331,7 +376,7 @@ def apply_nesterov_momentum(updates, params=None, momentum=0.9):
     return updates
 
 
-def nesterov_momentum(loss_or_grads, params, learning_rate, momentum=0.9):
+def nesterov_momentum(loss_or_grads, params, learning_rate=1e-3, momentum=0.9):
     """Stochastic Gradient Descent (SGD) updates with Nesterov momentum
 
     Generates update expressions of the form:
@@ -373,6 +418,11 @@ def nesterov_momentum(loss_or_grads, params, learning_rate, momentum=0.9):
     """
     updates = sgd(loss_or_grads, params, learning_rate)
     return apply_nesterov_momentum(updates, momentum=momentum)
+
+
+class NesterovMomentum(Optimizer):
+    __doc__ = _make_doc(nesterov_momentum.__doc__)
+    _opt = nesterov_momentum
 
 
 def adagrad(loss_or_grads, params, learning_rate=1.0, epsilon=1e-6):
@@ -434,6 +484,11 @@ def adagrad(loss_or_grads, params, learning_rate=1.0, epsilon=1e-6):
     return updates
 
 
+class Adagrad(Optimizer):
+    __doc__ = _make_doc(adagrad.__doc__)
+    _opt = adagrad
+
+
 def rmsprop(loss_or_grads, params, learning_rate=1.0, rho=0.9, epsilon=1e-6):
     """RMSProp updates
 
@@ -493,6 +548,11 @@ def rmsprop(loss_or_grads, params, learning_rate=1.0, rho=0.9, epsilon=1e-6):
                                   tt.sqrt(accu_new + epsilon))
 
     return updates
+
+
+class RMSProp(Optimizer):
+    __doc__ = _make_doc(rmsprop.__doc__)
+    _opt = rmsprop
 
 
 def adadelta(loss_or_grads, params, learning_rate=1.0, rho=0.95, epsilon=1e-6):
@@ -579,6 +639,11 @@ def adadelta(loss_or_grads, params, learning_rate=1.0, rho=0.95, epsilon=1e-6):
     return updates
 
 
+class AdaDelta(Optimizer):
+    __doc__ = _make_doc(adadelta.__doc__)
+    _opt = adadelta
+
+
 def adam(loss_or_grads, params, learning_rate=0.001, beta1=0.9,
          beta2=0.999, epsilon=1e-8):
     """Adam updates
@@ -646,6 +711,11 @@ def adam(loss_or_grads, params, learning_rate=0.001, beta1=0.9,
     return updates
 
 
+class Adam(Optimizer):
+    __doc__ = _make_doc(adam.__doc__)
+    _opt = adam
+
+
 def adamax(loss_or_grads, params, learning_rate=0.002, beta1=0.9,
            beta2=0.999, epsilon=1e-8):
     """Adamax updates
@@ -706,6 +776,11 @@ def adamax(loss_or_grads, params, learning_rate=0.002, beta1=0.9,
 
     updates[t_prev] = t
     return updates
+
+
+class AdaMax(Optimizer):
+    __doc__ = _make_doc(adamax.__doc__)
+    _opt = adamax
 
 
 def norm_constraint(tensor_var, max_norm, norm_axes=None, epsilon=1e-7):

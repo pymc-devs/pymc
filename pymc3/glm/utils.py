@@ -1,6 +1,5 @@
 import six
 import pandas as pd
-from pandas.core.common import PandasError
 import numpy as np
 import theano.tensor as tt
 
@@ -58,7 +57,7 @@ def any_to_tensor_and_labels(x, labels=None):
         # some types fail there
         # another approach is to construct
         # variable by hand
-        except (PandasError, TypeError):
+        except (ValueError, TypeError):
             res = []
             labels = []
             for k, v in x.items():

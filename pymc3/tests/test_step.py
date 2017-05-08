@@ -1,5 +1,6 @@
 import shutil
 import tempfile
+import warnings
 
 from .checks import close_to
 from .models import simple_categorical, mv_simple, mv_simple_discrete, simple_2model, mv_prior_simple
@@ -9,7 +10,7 @@ from pymc3.step_methods import (NUTS, BinaryGibbsMetropolis, CategoricalGibbsMet
                                 Metropolis, Slice, CompoundStep, NormalProposal,
                                 MultivariateNormalProposal, HamiltonianMC,
                                 EllipticalSlice, smc)
-from pymc3.distributions import Binomial, Normal, Bernoulli, Categorical
+from pymc3.distributions import Binomial, Normal, Bernoulli, Categorical, Beta
 
 from numpy.testing import assert_array_almost_equal
 import numpy as np
@@ -136,7 +137,7 @@ class TestStepMethods(object):  # yield test doesn't work subclassing object
 
     def test_sample_exact(self):
         for step_method in self.master_samples:
-            yield self.check_trace, step_method
+            self.check_trace(step_method)
 
     def check_trace(self, step_method):
         """Tests whether the trace for step methods is exactly the same as on master.
@@ -160,7 +161,7 @@ class TestStepMethods(object):  # yield test doesn't work subclassing object
             if step_method.__name__ == 'SMC':
                 Deterministic('like', - 0.5 * tt.log(2 * np.pi) - 0.5 * x.T.dot(x))
                 trace = smc.ATMIP_sample(n_steps=n_steps, step=step_method(random_seed=1),
-                                         n_jobs=1, progressbar=False, stage='0',
+                                         n_jobs=1, progressbar=False,
                                          homepath=self.temp_dir)
             else:
                 trace = sample(n_steps, step=step_method(), random_seed=1)
@@ -196,7 +197,7 @@ class TestStepMethods(object):  # yield test doesn't work subclassing object
             )
         for step in steps:
             trace = sample(8000, step=step, start=start, model=model, random_seed=1)
-            yield self.check_stat, check, trace, step.__class__.__name__
+            self.check_stat(check, trace, step.__class__.__name__)
 
     def test_step_discrete(self):
         if theano.config.floatX == "float32":
@@ -211,7 +212,7 @@ class TestStepMethods(object):  # yield test doesn't work subclassing object
             )
         for step in steps:
             trace = sample(20000, step=step, start=start, model=model, random_seed=1)
-            yield self.check_stat, check, trace, step.__class__.__name__
+            self.check_stat(check, trace, step.__class__.__name__)
 
     def test_step_categorical(self):
         start, model, (mu, C) = simple_categorical()
@@ -225,7 +226,7 @@ class TestStepMethods(object):  # yield test doesn't work subclassing object
             )
         for step in steps:
             trace = sample(8000, step=step, start=start, model=model, random_seed=1)
-            yield self.check_stat, check, trace, step.__class__.__name__
+            self.check_stat(check, trace, step.__class__.__name__)
 
     def test_step_elliptical_slice(self):
         start, model, (K, L, mu, std, noise) = mv_prior_simple()
@@ -239,7 +240,7 @@ class TestStepMethods(object):  # yield test doesn't work subclassing object
             )
         for step in steps:
             trace = sample(5000, step=step, start=start, model=model, random_seed=1)
-            yield self.check_stat, check, trace, step.__class__.__name__
+            self.check_stat(check, trace, step.__class__.__name__)
 
 
 class TestMetropolisProposal(object):
@@ -268,7 +269,8 @@ class TestMetropolisProposal(object):
 class TestCompoundStep(object):
     samplers = (Metropolis, Slice, HamiltonianMC, NUTS)
 
-    @pytest.mark.skipif(theano.config.floatX == "float32", reason="Test fails on 32 bit due to linalg issues")
+    @pytest.mark.skipif(theano.config.floatX == "float32",
+                        reason="Test fails on 32 bit due to linalg issues")
     def test_non_blocked(self):
         """Test that samplers correctly create non-blocked compound steps."""
         _, model = simple_2model()
@@ -276,7 +278,8 @@ class TestCompoundStep(object):
             for sampler in self.samplers:
                 assert isinstance(sampler(blocked=False), CompoundStep)
 
-    @pytest.mark.skipif(theano.config.floatX == "float32", reason="Test fails on 32 bit due to linalg issues")
+    @pytest.mark.skipif(theano.config.floatX == "float32",
+                        reason="Test fails on 32 bit due to linalg issues")
     def test_blocked(self):
         _, model = simple_2model()
         with model:
@@ -318,3 +321,15 @@ class TestAssignStepMethods(object):
             Binomial('x', 10, 0.5)
             steps = assign_step_methods(model, [])
         assert isinstance(steps, Metropolis)
+
+
+class TestNutsCheckTrace(object):
+    def test_multiple_samplers(self):
+        with Model():
+            prob = Beta('prob', alpha=5, beta=3)
+            Binomial('outcome', n=1, p=prob)
+            with warnings.catch_warnings(record=True) as warns:
+                sample(5, n_init=None, tune=2)
+            messages = [warn.message.args[0] for warn in warns]
+            assert any("contains only 5" in msg for msg in messages)
+            assert all('boolean index did not' not in msg for msg in messages)

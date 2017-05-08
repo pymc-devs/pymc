@@ -3,12 +3,10 @@ import scipy.stats as stats
 import numpy as np
 import pymc3 as pm
 from pymc3.distributions import HalfCauchy, Normal
-from pymc3.distributions.transforms import Transform
 from pymc3 import Potential, Deterministic
 from pymc3.theanof import generator
 from .helpers import select_by_precision
 import pytest
-
 
 
 def gen1():
@@ -23,6 +21,7 @@ def gen2():
     while True:
         yield np.ones((20, 100)) * i
         i += 1
+
 
 class NewModel(pm.Model):
     def __init__(self, name='', model=None):
@@ -135,12 +134,14 @@ class TestNested(object):
             with pm.Model() as sub:
                 assert model is sub.root
 
+
 class TestObserved(object):
     def test_observed_rv_fail(self):
         with pytest.raises(TypeError):
-            with pm.Model() as model:
+            with pm.Model():
                 x = Normal('x')
                 Normal('n', observed=x)
+
 
 class TestScaling(object):
     def test_density_scaling(self):
@@ -173,7 +174,8 @@ class TestScaling(object):
 
         for i in range(10):
             _1, _2, _t = p1(), p2(), next(t)
-            np.testing.assert_almost_equal(_1, _t, decimal=select_by_precision(float64=7, float32=2))  # Value O(-50,000)
+            decimals = select_by_precision(float64=7, float32=2)
+            np.testing.assert_almost_equal(_1, _t, decimal=decimals)  # Value O(-50,000)
             np.testing.assert_almost_equal(_1, _2)
         # Done
 
@@ -196,26 +198,18 @@ class TestScaling(object):
             np.testing.assert_almost_equal(g1, g2)
 
 
-class TestTransformName(object):
-    cases = [
-        ('var', 'var_test__'),
-        ('var_test_', 'var_test__test__')
-    ]
-    transform_name = 'test'
+class TestTheanoConfig(object):
+    def test_set_testval_raise(self):
+        with theano.configparser.change_flags(compute_test_value='off'):
+            with pm.Model():
+                assert theano.config.compute_test_value == 'raise'
+            assert theano.config.compute_test_value == 'off'
 
-    def test_get_transformed_name(self):
-        test_transform = Transform()
-        test_transform.name = self.transform_name
-        for name, transformed in self.cases:
-            assert pm.model.get_transformed_name(name, test_transform) == transformed
-
-    def test_is_transformed_name(self):
-        for name, transformed in self.cases:
-            assert pm.model.is_transformed_name(transformed)
-            assert not pm.model.is_transformed_name(name)
-
-    def test_get_untransformed_name(self):
-        for name, transformed in self.cases:
-            assert pm.model.get_untransformed_name(transformed) == name
-            with pytest.raises(ValueError):
-                pm.model.get_untransformed_name(name)
+    def test_nested(self):
+        with theano.configparser.change_flags(compute_test_value='off'):
+            with pm.Model(theano_config={'compute_test_value': 'ignore'}):
+                assert theano.config.compute_test_value == 'ignore'
+                with pm.Model(theano_config={'compute_test_value': 'warn'}):
+                    assert theano.config.compute_test_value == 'warn'
+                assert theano.config.compute_test_value == 'ignore'
+            assert theano.config.compute_test_value == 'off'

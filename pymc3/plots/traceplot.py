@@ -71,7 +71,7 @@ def traceplot(trace, varnames=None, transform=identity_transform, figsize=None, 
     trace = trace[skip_first:]
 
     if varnames is None:
-        varnames = get_default_varnames(trace, plot_transformed)
+        varnames = get_default_varnames(trace.varnames, plot_transformed)
 
     if figsize is None:
         figsize = (12, len(varnames) * 2)

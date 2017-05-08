@@ -23,7 +23,6 @@ __all__ = ['gradient',
            'join_nonshared_inputs',
            'make_shared_replacements',
            'generator',
-           'GradScale',
            'set_tt_rng',
            'tt_rng']
 
@@ -125,10 +124,12 @@ def jacobian_diag(f, x):
 
 
 @memoize
+@change_flags(compute_test_value='ignore')
 def hessian(f, vars=None):
     return -jacobian(gradient(f, vars), vars)
 
 
+@change_flags(compute_test_value='ignore')
 def hessian_diag1(f, v):
     g = gradient1(f, v)
     idx = tt.arange(g.shape[0], dtype='int32')
@@ -140,6 +141,7 @@ def hessian_diag1(f, v):
 
 
 @memoize
+@change_flags(compute_test_value='ignore')
 def hessian_diag(f, vars=None):
     if vars is None:
         vars = cont_inputs(f)
@@ -414,13 +416,33 @@ def set_tt_rng(new_rng):
     launch_rng(_tt_rng)
 
 
-class GradScale(theano.compile.ViewOp):
-    def __init__(self, multiplier):
-        self.multiplier = multiplier
-
-    def grad(self, args, g_outs):
-        return [self.multiplier * g_out for g_out in g_outs]
-
-
 def floatX_array(x):
     return floatX(np.array(x))
+
+
+def set_theano_conf(values):
+    """Change the theano configuration and return old values.
+
+    This is similar to `theano.configparser.change_flags`, but it
+    returns the original values in a pickleable form.
+    """
+    variables = {}
+    unknown = set(values.keys())
+    for variable in theano.configparser._config_var_list:
+        if variable.fullname in values:
+            variables[variable.fullname] = variable
+            unknown.remove(variable.fullname)
+    if len(unknown) > 0:
+        raise ValueError("Unknown theano config settings: %s" % unknown)
+
+    old = {}
+    for name, variable in variables.items():
+        old_value = variable.__get__(True, None)
+        try:
+            variable.__set__(None, values[name])
+        except Exception:
+            for key, old_value in old.items():
+                variables[key].__set__(None, old_value)
+            raise
+        old[name] = old_value
+    return old

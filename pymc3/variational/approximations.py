@@ -17,8 +17,7 @@ __all__ = [
 
 
 class MeanField(Approximation):
-    """
-    Mean Field approximation to the posterior where spherical Gaussian family
+    """Mean Field approximation to the posterior where spherical Gaussian family
     is fitted to minimize KL divergence from True posterior. It is assumed
     that latent space variables are uncorrelated that is the main drawback
     of the method
@@ -29,25 +28,23 @@ class MeanField(Approximation):
         mapping {model_variable -> local_variable (:math:`\\mu`, :math:`\\rho`)}
         Local Vars are used for Autoencoding Variational Bayes
         See (AEVB; Kingma and Welling, 2014) for details
-
     model : PyMC3 model for inference
-
     start : Point
         initial mean
-
     cost_part_grad_scale : float or scalar tensor
         Scaling score part of gradient can be useful near optimum for
         archiving better convergence properties. Common schedule is
         1 at the start and 0 in the end. So slow decay will be ok.
         See (Sticking the Landing; Geoffrey Roeder,
         Yuhuai Wu, David Duvenaud, 2016) for details
-
+    scale_cost_to_minibatch : bool, default False
+        Scale cost to minibatch instead of full dataset
     seed : None or int
         leave None to use package global RandomStream or other
         valid value to create instance specific one
 
     References
-    ----------
+    ----------   
     Geoffrey Roeder, Yuhuai Wu, David Duvenaud, 2016
         Sticking the Landing: A Simple Reduced-Variance Gradient for ADVI
         approximateinference.org/accepted/RoederEtAl2016.pdf
@@ -65,7 +62,14 @@ class MeanField(Approximation):
         return tt.diag(rho2sd(self.rho)**2)
 
     def create_shared_params(self, **kwargs):
-        start = self.gbij.map(kwargs.get('start', self.model.test_point))
+        start = kwargs.get('start')
+        if start is None:
+            start = self.model.test_point
+        else:
+            start_ = self.model.test_point.copy()
+            pm.sampling._update_start_vals(start_, start, self.model)
+            start = start_
+        start = self.gbij.map(start)
         return {'mu': theano.shared(
                     pm.floatX(start),
                     'mu'),
@@ -92,8 +96,7 @@ class MeanField(Approximation):
 
 
 class FullRank(Approximation):
-    """
-    Full Rank approximation to the posterior where Multivariate Gaussian family
+    """Full Rank approximation to the posterior where Multivariate Gaussian family
     is fitted to minimize KL divergence from True posterior. In contrast to
     MeanField approach correlations between variables are taken in account. The
     main drawback of the method is computational cost.
@@ -104,19 +107,17 @@ class FullRank(Approximation):
         mapping {model_variable -> local_variable (:math:`\\mu`, :math:`\\rho`)}
         Local Vars are used for Autoencoding Variational Bayes
         See (AEVB; Kingma and Welling, 2014) for details
-
     model : PyMC3 model for inference
-
     start : Point
         initial mean
-
     cost_part_grad_scale : float or scalar tensor
         Scaling score part of gradient can be useful near optimum for
         archiving better convergence properties. Common schedule is
         1 at the start and 0 in the end. So slow decay will be ok.
         See (Sticking the Landing; Geoffrey Roeder,
-        Yuhuai Wu, David Duvenaud, 2016) for details
-
+        Yuhuai Wu, David Duvenaud, 2016) for details   
+    scale_cost_to_minibatch : bool, default False
+        Scale cost to minibatch instead of full dataset
     seed : None or int
         leave None to use package global RandomStream or other
         valid value to create instance specific one
@@ -127,11 +128,14 @@ class FullRank(Approximation):
         Sticking the Landing: A Simple Reduced-Variance Gradient for ADVI
         approximateinference.org/accepted/RoederEtAl2016.pdf
     """
-    def __init__(self, local_rv=None, model=None, cost_part_grad_scale=1, gpu_compat=False, seed=None):
+    def __init__(self, local_rv=None, model=None, cost_part_grad_scale=1,
+                 scale_cost_to_minibatch=False,
+                 gpu_compat=False, seed=None, **kwargs):
         super(FullRank, self).__init__(
             local_rv=local_rv, model=model,
             cost_part_grad_scale=cost_part_grad_scale,
-            seed=seed
+            scale_cost_to_minibatch=scale_cost_to_minibatch,
+            seed=seed, **kwargs
         )
         self.gpu_compat = gpu_compat
 
@@ -163,7 +167,14 @@ class FullRank(Approximation):
         return tril_index_matrix
 
     def create_shared_params(self, **kwargs):
-        start = self.gbij.map(kwargs.get('start', self.model.test_point))
+        start = kwargs.get('start')
+        if start is None:
+            start = self.model.test_point
+        else:
+            start_ = self.model.test_point.copy()
+            pm.sampling._update_start_vals(start_, start, self.model)
+            start = start_
+        start = self.gbij.map(start)
         n = self.global_size
         L_tril = (
             np.eye(n)
@@ -175,8 +186,7 @@ class FullRank(Approximation):
                 }
 
     def log_q_W_global(self, z):
-        """
-        log_q_W samples over q for global vars
+        """log_q_W samples over q for global vars
         """
         mu = self.scale_grad(self.mean)
         L = self.scale_grad(self.L)
@@ -197,11 +207,10 @@ class FullRank(Approximation):
 
     @classmethod
     def from_mean_field(cls, mean_field, gpu_compat=False):
-        """
-        Construct FullRank from MeanField approximation
+        """Construct FullRank from MeanField approximation
 
         Parameters
-        ----------
+        ----------  
         mean_field : MeanField
             approximation to start with
 
@@ -233,8 +242,7 @@ class FullRank(Approximation):
 
 
 class Empirical(Approximation):
-    """
-    Builds Approximation instance from a given trace,
+    """Builds Approximation instance from a given trace,
     it has the same interface as variational approximation
 
     Parameters
@@ -245,9 +253,9 @@ class Empirical(Approximation):
         mapping {model_variable -> local_variable (:math:`\\mu`, :math:`\\rho`)}
         Local Vars are used for Autoencoding Variational Bayes
         See (AEVB; Kingma and Welling, 2014) for details
-
+    scale_cost_to_minibatch : bool, default False
+        Scale cost to minibatch instead of full dataset
     model : PyMC3 model
-
     seed : None or int
         leave None to use package global RandomStream or other
         valid value to create instance specific one
@@ -259,8 +267,12 @@ class Empirical(Approximation):
     ...     trace = sample(1000, step=step)
     ...     histogram = Empirical(trace[100:])
     """
-    def __init__(self, trace, local_rv=None, model=None, seed=None):
-        super(Empirical, self).__init__(local_rv=local_rv, model=model, trace=trace, seed=seed)
+    def __init__(self, trace, local_rv=None,
+                 scale_cost_to_minibatch=False,
+                 model=None, seed=None, **kwargs):
+        super(Empirical, self).__init__(
+            local_rv=local_rv, scale_cost_to_minibatch=scale_cost_to_minibatch,
+            model=model, trace=trace, seed=seed, **kwargs)
 
     def check_model(self, model, **kwargs):
         trace = kwargs.get('trace')
@@ -309,16 +321,14 @@ class Empirical(Approximation):
 
     @property
     def histogram(self):
-        """
-        Shortcut to flattened Trace
+        """Shortcut to flattened Trace
         """
         return self.shared_params
 
     @property
     @memoize
     def histogram_logp(self):
-        """
-        Symbolic logp for every point in trace
+        """Symbolic logp for every point in trace
         """
         node = self.to_flat_input(self.model.logpt)
 
@@ -340,9 +350,9 @@ class Empirical(Approximation):
         return x.T.dot(x) / self.histogram.shape[0]
 
     @classmethod
-    def from_noise(cls, size, jitter=.01, local_rv=None, start=None, model=None, seed=None):
-        """
-        Initialize Histogram with random noise
+    def from_noise(cls, size, jitter=.01, local_rv=None,
+                   start=None, model=None, seed=None, **kwargs):
+        """Initialize Histogram with random noise
 
         Parameters
         ----------
@@ -355,14 +365,22 @@ class Empirical(Approximation):
         start : initial point
         model : pm.Model
             PyMC3 Model
+        seed : None or int
+            leave None to use package global RandomStream or other
+            valid value to create instance specific one
+        kwargs : other kwargs passed to init
 
         Returns
-        -------
+        -------    
         Empirical
         """
-        hist = cls(None, local_rv=local_rv, model=model, seed=seed)
+        hist = cls(None, local_rv=local_rv, model=model, seed=seed, **kwargs)
         if start is None:
             start = hist.model.test_point
+        else:
+            start_ = hist.model.test_point.copy()
+            pm.sampling._update_start_vals(start_, start, hist.model)
+            start = start_
         start = hist.gbij.map(start)
         # Initialize particles
         x0 = np.tile(start, (size, 1))
@@ -371,23 +389,22 @@ class Empirical(Approximation):
         return hist
 
 
-def sample_approx(approx, draws=100, hide_transformed=False):
-    """
-    Draw samples from variational posterior.
+def sample_approx(approx, draws=100, include_transformed=True):
+    """Draw samples from variational posterior.
 
     Parameters
-    ----------
+    ----------  
     approx : Approximation
     draws : int
         Number of random samples.
-    hide_transformed : bool
-        If False, transformed variables are also sampled. Default is True.
+    include_transformed : bool
+        If True, transformed variables are also sampled. Default is True.
 
     Returns
-    -------
+    -------    
     trace : pymc3.backends.base.MultiTrace
         Samples drawn from variational posterior.
     """
     if not isinstance(approx, Approximation):
         raise TypeError('Need Approximation instance, got %r' % approx)
-    return approx.sample(draws=draws, hide_transformed=hide_transformed)
+    return approx.sample(draws=draws, include_transformed=include_transformed)

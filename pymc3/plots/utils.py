@@ -1,19 +1,13 @@
 import matplotlib.pyplot as plt
 import numpy as np
 from scipy.signal import gaussian, convolve
+# plotting utilities can all be in this namespace
+from ..util import get_default_varnames  # pylint: disable=unused-import
 
 
 def identity_transform(x):
     """f(x) = x"""
     return x
-
-
-def get_default_varnames(trace, include_transformed):
-    """Helper to extract default varnames from a trace."""
-    if include_transformed:
-        return [name for name in trace.varnames]
-    else:
-        return [name for name in trace.varnames if not name.endswith('_')]
 
 
 def get_axis(ax, default_rows, default_columns, **default_kwargs):

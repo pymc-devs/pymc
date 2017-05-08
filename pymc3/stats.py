@@ -7,6 +7,7 @@ import sys
 import warnings
 from collections import namedtuple
 from .model import modelcontext
+from .util import get_default_varnames
 
 from scipy.misc import logsumexp
 from scipy.stats.distributions import pareto
@@ -98,7 +99,7 @@ def autocov(x, lag=1):
 
 def dic(trace, model=None):
     """Calculate the deviance information criterion of the samples in trace from model
-    Read more theory here - in a paper by some of the leading authorities on Model Selection - 
+    Read more theory here - in a paper by some of the leading authorities on Model Selection -
     dx.doi.org/10.1111/1467-9868.00353
 
     Parameters
@@ -271,7 +272,7 @@ def loo(trace, model=None, pointwise=False):
 def bpic(trace, model=None):
     """
     Calculates Bayesian predictive information criterion n of the samples in trace from model
-    Read more theory here - in a paper by some of the leading authorities on Model Selection - 
+    Read more theory here - in a paper by some of the leading authorities on Model Selection -
     dx.doi.org/10.1111/1467-9868.00353
 
     Parameters
@@ -377,26 +378,16 @@ def compare(traces, models, ic='WAIC'):
 
 def make_indices(dimensions):
     # Generates complete set of indices for given dimensions
-
     level = len(dimensions)
-
     if level == 1:
         return list(range(dimensions[0]))
-
     indices = [[]]
-
     while level:
-
         _indices = []
-
         for j in range(dimensions[level - 1]):
-
             _indices += [[j] + i for i in indices]
-
         indices = _indices
-
         level -= 1
-
     try:
         return [tuple(i) for i in indices]
     except TypeError:
@@ -555,8 +546,9 @@ def quantiles(x, qlist=(2.5, 25, 50, 75, 97.5), transform=lambda x: x):
         _log.warning("Too few elements for quantile calculation")
 
 
-def df_summary(trace, varnames=None, stat_funcs=None, extend=False, include_transformed=False,
-               alpha=0.05, batches=None):
+def df_summary(trace, varnames=None, transform=lambda x: x, stat_funcs=None, 
+               extend=False, include_transformed=False,
+               alpha=0.05, start=0, batches=None):
     R"""Create a data frame with summary statistics.
 
     Parameters
@@ -564,6 +556,8 @@ def df_summary(trace, varnames=None, stat_funcs=None, extend=False, include_tran
     trace : MultiTrace instance
     varnames : list
         Names of variables to include in summary
+    transform : callable
+        Function to transform data (defaults to identity)
     stat_funcs : None or list
         A list of functions used to calculate statistics. By default,
         the mean, standard deviation, simulation standard error, and
@@ -592,6 +586,9 @@ def df_summary(trace, varnames=None, stat_funcs=None, extend=False, include_tran
     alpha : float
         The alpha level for generating posterior intervals. Defaults
         to 0.05. This is only meaningful when `stat_funcs` is None.
+    start : int
+        The starting index from which to summarize (each) chain. Defaults
+        to zero.
     batches : None or int
         Batch size for calculating standard deviation for non-independent
         samples. Defaults to the smaller of 100 or the number of samples.
@@ -634,10 +631,7 @@ def df_summary(trace, varnames=None, stat_funcs=None, extend=False, include_tran
         mu__1  0.067513 -0.159097 -0.045637  0.062912
     """
     if varnames is None:
-        if include_transformed:
-            varnames = [name for name in trace.varnames]
-        else:
-            varnames = [name for name in trace.varnames if not name.endswith('_')]
+        varnames = get_default_varnames(trace.varnames, include_transformed=include_transformed)
 
     if batches is None:
         batches = min([100, len(trace)])
@@ -654,7 +648,7 @@ def df_summary(trace, varnames=None, stat_funcs=None, extend=False, include_tran
 
     var_dfs = []
     for var in varnames:
-        vals = trace.get_values(var, combine=True)
+        vals = transform(trace.get_values(var, burn=start, combine=True))
         flat_vals = vals.reshape(vals.shape[0], -1)
         var_df = pd.concat([f(flat_vals) for f in stat_funcs], axis=1)
         var_df.index = ttab.create_flat_names(var, vals.shape[1:])
@@ -701,10 +695,7 @@ def summary(trace, varnames=None, transform=lambda x: x, alpha=0.05, start=0,
       File to write results to. If not given, print to stdout.
     """
     if varnames is None:
-        if include_transformed:
-            varnames = [name for name in trace.varnames]
-        else:
-            varnames = [name for name in trace.varnames if not name.endswith('_')]
+        varnames = get_default_varnames(trace.varnames, include_transformed=include_transformed)
 
     if batches is None:
         batches = min([100, len(trace)])

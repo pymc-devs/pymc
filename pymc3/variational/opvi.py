@@ -1,33 +1,33 @@
 """
-Variational inference is a great approach for doing really complex, 
-often intractable Bayesian inference in approximate form. Common methods 
-(e.g. ADVI) lack from complexity so that approximate posterior does not 
-reveal the true nature of underlying problem. In some applications it can 
-yield unreliable decisions. 
+Variational inference is a great approach for doing really complex,
+often intractable Bayesian inference in approximate form. Common methods
+(e.g. ADVI) lack from complexity so that approximate posterior does not
+reveal the true nature of underlying problem. In some applications it can
+yield unreliable decisions.
 
-Recently on NIPS 2017 [OPVI](https://arxiv.org/abs/1610.09033) framework 
-was presented. It generalizes variational inverence so that the problem is 
-build with blocks. The first and essential block is Model itself. Second is 
-Approximation, in some cases :math:`log Q(D)` is not really needed. Necessity 
-depends on the third and forth part of that black box, Operator and 
-Test Function respectively. 
+Recently on NIPS 2017 [OPVI](https://arxiv.org/abs/1610.09033) framework
+was presented. It generalizes variational inverence so that the problem is
+build with blocks. The first and essential block is Model itself. Second is
+Approximation, in some cases :math:`log Q(D)` is not really needed. Necessity
+depends on the third and forth part of that black box, Operator and
+Test Function respectively.
 
-Operator is like an approach we use, it constructs loss from given Model, 
-Approximation and Test Function. The last one is not needed if we minimize 
-KL Divergence from Q to posterior. As a drawback we need to compute :math:`loq Q(D)`. 
-Sometimes approximation family is intractable and :math:`loq Q(D)` is not available, 
+Operator is like an approach we use, it constructs loss from given Model,
+Approximation and Test Function. The last one is not needed if we minimize
+KL Divergence from Q to posterior. As a drawback we need to compute :math:`loq Q(D)`.
+Sometimes approximation family is intractable and :math:`loq Q(D)` is not available,
 here comes LS(Langevin Stein) Operator with a set of test functions.
 
-Test Function has more unintuitive meaning. It is usually used with LS operator 
-and represents all we want from our approximate distribution. For any given vector 
-based function of :math:`z` LS operator yields zero mean function under posterior. 
-:math:`loq Q(D)` is no more needed. That opens a door to rich approximation 
+Test Function has more unintuitive meaning. It is usually used with LS operator
+and represents all we want from our approximate distribution. For any given vector
+based function of :math:`z` LS operator yields zero mean function under posterior.
+:math:`loq Q(D)` is no more needed. That opens a door to rich approximation
 families as neural networks.
 
 References
 ----------
--   Rajesh Ranganath, Jaan Altosaar, Dustin Tran, David M. Blei 
-    Operator Variational Inference 
+-   Rajesh Ranganath, Jaan Altosaar, Dustin Tran, David M. Blei
+    Operator Variational Inference
     https://arxiv.org/abs/1610.09033 (2016)
 """
 
@@ -40,7 +40,8 @@ import pymc3 as pm
 from .updates import adam
 from ..distributions.dist_math import rho2sd, log_normal
 from ..model import modelcontext, ArrayOrdering, DictToArrayBijection
-from ..theanof import tt_rng, memoize, change_flags, GradScale
+from ..util import get_default_varnames
+from ..theanof import tt_rng, memoize, change_flags, identity
 
 
 __all__ = [
@@ -63,8 +64,7 @@ def _warn_not_used(smth, where):
 
 
 class ObjectiveFunction(object):
-    """
-    Helper class for construction loss and updates for variational inference
+    """Helper class for construction loss and updates for variational inference
 
     Parameters
     ----------
@@ -96,8 +96,7 @@ class ObjectiveFunction(object):
 
     def updates(self, obj_n_mc=None, tf_n_mc=None, obj_optimizer=adam, test_optimizer=adam,
                 more_obj_params=None, more_tf_params=None, more_updates=None, more_replacements=None):
-        """
-        Calculates gradients for objective function, test function and then
+        """Calculates gradients for objective function, test function and then
         constructs updates for optimization step
 
         Parameters
@@ -180,8 +179,7 @@ class ObjectiveFunction(object):
                       more_obj_params=None, more_tf_params=None,
                       more_updates=None, more_replacements=None, score=False,
                       fn_kwargs=None):
-        """
-        Step function that should be called on each optimization step.
+        """Step function that should be called on each optimization step.
 
         Generally it solves the following problem:
         .. math::
@@ -235,8 +233,7 @@ class ObjectiveFunction(object):
     @memoize
     @change_flags(compute_test_value='off')
     def score_function(self, sc_n_mc=None, more_replacements=None, fn_kwargs=None):   # pragma: no cover
-        """
-        Compiles scoring function that operates which takes no inputs and returns Loss
+        """Compiles scoring function that operates which takes no inputs and returns Loss
 
         Parameters
         ----------
@@ -277,8 +274,7 @@ class ObjectiveFunction(object):
 
 
 class Operator(object):
-    """
-    Base class for Operator
+    """Base class for Operator
 
     Parameters
     ----------
@@ -293,7 +289,7 @@ class Operator(object):
     RETURNS_LOSS = True
     SUPPORT_AEVB = True
     OBJECTIVE = ObjectiveFunction
-    T = pm.theanof.identity
+    T = identity
 
     def __init__(self, approx):
         if not self.SUPPORT_AEVB and approx.local_vars:
@@ -329,8 +325,7 @@ class Operator(object):
         return self.approx.logq_norm(z)
 
     def apply(self, f):   # pragma: no cover
-        """
-        Operator itself
+        """Operator itself
         .. math::
 
             (O^{p,q}f_{\theta})(z)
@@ -376,8 +371,7 @@ class Operator(object):
 
 
 def cast_to_list(params):
-    """
-    Helper function for getting a list from
+    """Helper function for getting a list from
     usable representation of parameters
 
     Parameters
@@ -408,8 +402,7 @@ class TestFunction(object):
         self.shared_params = None
 
     def create_shared_params(self, dim):
-        """
-        Returns
+        """Returns
         -------
         {dict|list|theano.shared}
         """
@@ -429,8 +422,7 @@ class TestFunction(object):
             self._inited = True
 
     def _setup(self, dim):
-        """
-        Does some preparation stuff before calling `.create_shared_params()`
+        """Does some preparation stuff before calling `.create_shared_params()`
 
         Parameters
         ----------
@@ -448,8 +440,7 @@ class TestFunction(object):
 
 
 class Approximation(object):
-    """
-    Base class for approximations.
+    """Base class for approximations.
 
     Parameters
     ----------
@@ -465,8 +456,9 @@ class Approximation(object):
         archiving better convergence properties. Common schedule is
         1 at the start and 0 in the end. So slow decay will be ok.
         See (Sticking the Landing; Geoffrey Roeder,
-        Yuhuai Wu, David Duvenaud, 2016) for details
-
+        Yuhuai Wu, David Duvenaud, 2016) for details     
+    scale_cost_to_minibatch : bool, default False
+        Scale cost to minibatch instead of full dataset
     seed : None or int
         leave None to use package global RandomStream or other
         valid value to create instance specific one
@@ -487,19 +479,19 @@ class Approximation(object):
             It is needed only if used with operator
             that requires :math:`logq` of an approximation
             Returns Scalar
-            
+
     You can also override the following methods:
         - :code:`._setup(**kwargs)`
             Do some specific stuff having :code:`kwargs` before calling :code:`.create_shared_params`
-            
+
         - :code:`.check_model(model, **kwargs)`
             Do some specific check for model having :code:`kwargs`
 
     Notes
     -----
-    :code:`kwargs` mentioned above are supplied as additional arguments 
+    :code:`kwargs` mentioned above are supplied as additional arguments
     for :code:`Approximation.__init__`
-    
+
     There are some defaults class attributes for approximation classes that can be
     optionally overriden.
         - :code:`initial_dist_name`
@@ -508,8 +500,7 @@ class Approximation(object):
 
         - :code:`initial_dist_map`
             float where initial distribution has maximum density
-        
-        
+
     References
     ----------
     -   Geoffrey Roeder, Yuhuai Wu, David Duvenaud, 2016
@@ -522,8 +513,15 @@ class Approximation(object):
     initial_dist_name = 'normal'
     initial_dist_map = 0.
 
-    def __init__(self, local_rv=None, model=None, cost_part_grad_scale=1, seed=None, **kwargs):
+    def __init__(self, local_rv=None, model=None,
+                 cost_part_grad_scale=1,
+                 scale_cost_to_minibatch=False,
+                 seed=None, **kwargs):
         model = modelcontext(model)
+        self.scale_cost_to_minibatch = theano.shared(np.int8(0))
+        if scale_cost_to_minibatch:
+            self.scale_cost_to_minibatch.set_value(1)
+        self.cost_part_grad_scale = pm.floatX(cost_part_grad_scale)
         self._seed = seed
         self._rng = tt_rng(seed)
         self.model = model
@@ -546,7 +544,6 @@ class Approximation(object):
         self.flat_view = model.flatten(
             vars=self.local_vars + self.global_vars
         )
-        self.grad_scale_op = GradScale(cost_part_grad_scale)
         self._setup(**kwargs)
         self.shared_params = self.create_shared_params(**kwargs)
 
@@ -565,6 +562,8 @@ class Approximation(object):
     def normalizing_constant(self):
         t = self.to_flat_input(tt.max([v.scaling for v in self.model.basic_RVs]))
         t = theano.clone(t, {self.input: tt.zeros(self.total_size)})
+        # if not scale_cost_to_minibatch: t=1
+        t = tt.switch(self.scale_cost_to_minibatch, t, tt.constant(1, dtype=t.dtype))
         return t
 
     def _setup(self, **kwargs):
@@ -580,8 +579,7 @@ class Approximation(object):
     input = property(lambda self: self.flat_view.input)
 
     def check_model(self, model, **kwargs):
-        """
-        Checks that model is valid for variational inference
+        """Checks that model is valid for variational inference
         """
         vars_ = [var for var in model.vars if not isinstance(var, pm.model.ObservedRV)]
         if any([var.dtype in pm.discrete_types for var in vars_]):  # pragma: no cover
@@ -607,8 +605,7 @@ class Approximation(object):
 
     def construct_replacements(self, include=None, exclude=None,
                                more_replacements=None):
-        """
-        Construct replacements with given conditions
+        """Construct replacements with given conditions
 
         Parameters
         ----------
@@ -641,8 +638,7 @@ class Approximation(object):
     def apply_replacements(self, node, deterministic=False,
                            include=None, exclude=None,
                            more_replacements=None):
-        """
-        Replace variables in graph with variational approximation. By default, replaces all variables
+        """Replace variables in graph with variational approximation. By default, replaces all variables
 
         Parameters
         ----------
@@ -671,8 +667,7 @@ class Approximation(object):
 
     def sample_node(self, node, size=100,
                     more_replacements=None):
-        """
-        Samples given node or nodes over shared posterior
+        """Samples given node or nodes over shared posterior
 
         Parameters
         ----------
@@ -696,8 +691,7 @@ class Approximation(object):
         return nodes
 
     def scale_grad(self, inp):
-        """
-        Rescale gradient of input
+        """Rescale gradient of input
 
         References
         ----------
@@ -705,7 +699,7 @@ class Approximation(object):
             Sticking the Landing: A Simple Reduced-Variance Gradient for ADVI
             approximateinference.org/accepted/RoederEtAl2016.pdf
         """
-        return self.grad_scale_op(inp)
+        return theano.gradient.grad_scale(inp, self.cost_part_grad_scale)
 
     def to_flat_input(self, node):
         """
@@ -718,8 +712,7 @@ class Approximation(object):
         return cast_to_list(self.shared_params)
 
     def initial(self, size, no_rand=False, l=None):
-        """
-        Initial distribution for constructing posterior
+        """Initial distribution for constructing posterior
 
         Parameters
         ----------
@@ -757,8 +750,7 @@ class Approximation(object):
         return space
 
     def random_local(self, size=None, no_rand=False):
-        """
-        Implements posterior distribution from initial latent space
+        """Implements posterior distribution from initial latent space
 
         Parameters
         ----------
@@ -775,8 +767,7 @@ class Approximation(object):
         return e * rho2sd(rho) + mu
 
     def random_global(self, size=None, no_rand=False):  # pragma: no cover
-        """
-        Implements posterior distribution from initial latent space
+        """Implements posterior distribution from initial latent space
 
         Parameters
         ----------
@@ -790,8 +781,7 @@ class Approximation(object):
         raise NotImplementedError
 
     def random(self, size=None, no_rand=False):
-        """
-        Implements posterior distribution from initial latent space
+        """Implements posterior distribution from initial latent space
 
         Parameters
         ----------
@@ -822,8 +812,7 @@ class Approximation(object):
     @memoize
     @change_flags(compute_test_value='off')
     def random_fn(self):
-        """
-        Implements posterior distribution from initial latent space
+        """Implements posterior distribution from initial latent space
 
         Parameters
         ----------
@@ -850,27 +839,23 @@ class Approximation(object):
 
         return inner
 
-    def sample(self, draws=1, hide_transformed=False):
-        """
-        Draw samples from variational posterior.
+    def sample(self, draws=1, include_transformed=False):
+        """Draw samples from variational posterior.
 
         Parameters
         ----------
         draws : int
             Number of random samples.
-        hide_transformed : bool
-            If False, transformed variables are also sampled. Default is True.
+        include_transformed : bool
+            If True, transformed variables are also sampled. Default is False.
 
         Returns
         -------
         trace : pymc3.backends.base.MultiTrace
             Samples drawn from variational posterior.
         """
-        if hide_transformed:
-            vars_sampled = [v_ for v_ in self.model.unobserved_RVs
-                            if not str(v_).endswith('_')]
-        else:
-            vars_sampled = [v_ for v_ in self.model.unobserved_RVs]
+        vars_sampled = get_default_varnames(self.model.unobserved_RVs,
+                                            include_transformed=include_transformed)
         posterior = self.random_fn(draws)
         names = [var.name for var in self.local_vars + self.global_vars]
         samples = {name: self.view(posterior, name)
@@ -878,8 +863,7 @@ class Approximation(object):
 
         def points():
             for i in range(draws):
-                yield {name: samples[name][i]
-                       for name in names}
+                yield {name: samples[name][i] for name in names}
 
         trace = pm.sampling.NDArray(model=self.model, vars=vars_sampled)
         try:
@@ -891,10 +875,9 @@ class Approximation(object):
         return pm.sampling.MultiTrace([trace])
 
     def log_q_W_local(self, z):
-        """
-        log_q_W samples over q for local vars
+        """log_q_W samples over q for local vars
         Gradient wrt mu, rho in density parametrization
-        is set to zero to lower variance of ELBO
+        can be scaled to lower variance of ELBO
         """
         if not self.local_vars:
             return tt.constant(0)
@@ -904,24 +887,18 @@ class Approximation(object):
         logp = log_normal(z[self.local_slc], mu, rho=rho)
         scaling = []
         for var in self.local_vars:
-            scaling.append(tt.ones(var.dsize)*var.scaling)
+            scaling.append(tt.repeat(var.scaling, var.dsize))
         scaling = tt.concatenate(scaling)
-        if z.ndim > 1:  # pragma: no cover
-            # rare case when logq(z) is called directly
-            logp *= scaling[None]
-        else:
-            logp *= scaling
+        logp *= scaling
         return self.to_flat_input(tt.sum(logp))
 
     def log_q_W_global(self, z):    # pragma: no cover
-        """
-        log_q_W samples over q for global vars
+        """log_q_W samples over q for global vars
         """
         raise NotImplementedError
 
     def logq(self, z):
-        """
-        Total logq for approximation
+        """Total logq for approximation
         """
         return self.log_q_W_global(z) + self.log_q_W_local(z)
 
@@ -929,8 +906,7 @@ class Approximation(object):
         return self.logq(z) / self.normalizing_constant
 
     def view(self, space, name, reshape=True):
-        """
-        Construct view on a variable from flattened `space`
+        """Construct view on a variable from flattened `space`
 
         Parameters
         ----------

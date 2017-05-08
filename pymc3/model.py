@@ -8,12 +8,14 @@ import theano.sparse as sparse
 from theano import theano, tensor as tt
 from theano.tensor.var import TensorVariable
 
+from pymc3.theanof import set_theano_conf
 import pymc3 as pm
 from pymc3.math import flatten_list
 from .memoize import memoize
 from .theanof import gradient, hessian, inputvars, generator
 from .vartypes import typefilter, discrete_types, continuous_types, isgenerator
 from .blocking import DictToArrayBijection, ArrayOrdering
+from .util import get_transformed_name
 
 __all__ = [
     'Model', 'Factor', 'compilef', 'fn', 'fastfn', 'modelcontext',
@@ -21,55 +23,6 @@ __all__ = [
 ]
 
 FlatView = collections.namedtuple('FlatView', 'input, replacements, view')
-
-
-def get_transformed_name(name, transform):
-    """
-    Consistent way of transforming names
-
-    Parameters
-    ----------
-    name : str
-        Name to transform
-    transform : object
-        Should be a subclass of `transforms.Transform`
-
-    Returns:
-    A string to use for the transformed variable
-    """
-    return "{}_{}__".format(name, transform.name)
-
-
-def is_transformed_name(name):
-    """
-    Quickly check if a name was transformed with `get_transormed_name`
-
-    Parameters
-    ----------
-    name : str
-        Name to check
-
-    Returns:
-    Boolean, whether the string could have been produced by `get_transormed_name`
-    """
-    return name.endswith('__') and name.count('_') >= 3
-
-
-def get_untransformed_name(name):
-    """
-    Undo transformation in `get_transformed_name`. Throws ValueError if name wasn't transformed
-
-    Parameters
-    ----------
-    name : str
-        Name to untransform
-
-    Returns:
-    String with untransformed version of the name.
-    """
-    if not is_transformed_name(name):
-        raise ValueError(u'{} does not appear to be a transformed name'.format(name))
-    return '_'.join(name.split('_')[:-3])
 
 
 class InstanceMethod(object):
@@ -156,10 +109,16 @@ class Context(object):
 
     def __enter__(self):
         type(self).get_contexts().append(self)
+        # self._theano_config is set in Model.__new__
+        if hasattr(self, '_theano_config'):
+            self._old_theano_config = set_theano_conf(self._theano_config)
         return self
 
     def __exit__(self, typ, value, traceback):
         type(self).get_contexts().pop()
+        # self._theano_config is set in Model.__new__
+        if hasattr(self, '_old_theano_config'):
+            set_theano_conf(self._old_theano_config)
 
     @classmethod
     def get_contexts(cls):
@@ -349,6 +308,11 @@ class Model(six.with_metaclass(InitContextMeta, Context, Factor)):
         will be passed to the parent instance. So that 'nested' model
         contributes to the variables and likelihood factors of
         parent model.
+    theano_config : dict, default=None
+        A dictionary of theano config values that should be set
+        temporarily in the model context. See the documentation
+        of theano for a complete list. Set `compute_test_value` to
+        `raise` if it is None.
 
     Examples
     --------
@@ -415,9 +379,13 @@ class Model(six.with_metaclass(InitContextMeta, Context, Factor)):
             instance._parent = cls.get_contexts()[-1]
         else:
             instance._parent = None
+        theano_config = kwargs.get('theano_config', None)
+        if theano_config is None or 'compute_test_value' not in theano_config:
+            theano_config = {'compute_test_value': 'raise'}
+        instance._theano_config = theano_config
         return instance
 
-    def __init__(self, name='', model=None):
+    def __init__(self, name='', model=None, theano_config=None):
         self.name = name
         if self.parent is not None:
             self.named_vars = treedict(parent=self.parent.named_vars)
@@ -1080,7 +1048,3 @@ def all_continuous(vars):
         return False
     else:
         return True
-
-# theano stuff
-theano.config.warn.sum_div_dimshuffle_bug = False
-theano.config.compute_test_value = 'raise'

@@ -4,17 +4,21 @@ import pytest
 import numpy as np
 import numpy.testing as npt
 import scipy.stats as st
+from scipy import linalg
 import numpy.random as nr
 
 import pymc3 as pm
 from .helpers import SeededTest
-from .test_distributions import (build_model, Domain, product, R, Rplus, Rplusbig, Rplusdunif, Unit, Nat,
-                                 NatSmall, I, Simplex, Vector, PdMatrix)
+from .test_distributions import (
+    build_model, Domain, product, R, Rplus, Rplusbig, Rplusdunif,
+    Unit, Nat, NatSmall, I, Simplex, Vector, PdMatrix,
+    PdMatrixChol, PdMatrixCholUpper
+)
 
 
 def pymc3_random(dist, paramdomains, ref_rand, valuedomain=Domain([0]),
-                 size=10000, alpha=0.05, fails=10):
-    model = build_model(dist, valuedomain, paramdomains)
+                 size=10000, alpha=0.05, fails=10, extra_args=None):
+    model = build_model(dist, valuedomain, paramdomains, extra_args)
     domains = paramdomains.copy()
     for pt in product(domains, n_samples=100):
         pt = pm.Point(pt, model=model)
@@ -285,6 +289,11 @@ class TestVonMises(BaseTestCases.BaseTestCase):
     params = {'mu': 0., 'kappa': 1.}
 
 
+class TestGumbel(BaseTestCases.BaseTestCase):
+    distribution = pm.Gumbel
+    params = {'mu': 0., 'beta': 1.}
+
+
 class TestBinomial(BaseTestCases.BaseTestCase):
     distribution = pm.Binomial
     params = {'n': 5, 'p': 0.5}
@@ -514,9 +523,29 @@ class TestScalarParameterSamples(SeededTest):
     def test_mv_normal(self):
         def ref_rand(size, mu, cov):
             return st.multivariate_normal.rvs(mean=mu, cov=cov, size=size)
+
+        def ref_rand_tau(size, mu, tau):
+            return ref_rand(size, mu, linalg.inv(tau))
+
+        def ref_rand_chol(size, mu, chol):
+            return ref_rand(size, mu, np.dot(chol, chol.T))
+
+        def ref_rand_uchol(size, mu, chol):
+            return ref_rand(size, mu, np.dot(chol.T, chol))
+
         for n in [2, 3]:
             pymc3_random(pm.MvNormal, {'mu': Vector(R, n), 'cov': PdMatrix(n)},
                          size=100, valuedomain=Vector(R, n), ref_rand=ref_rand)
+            pymc3_random(pm.MvNormal, {'mu': Vector(R, n), 'tau': PdMatrix(n)},
+                         size=100, valuedomain=Vector(R, n), ref_rand=ref_rand_tau)
+            pymc3_random(pm.MvNormal, {'mu': Vector(R, n), 'chol': PdMatrixChol(n)},
+                         size=100, valuedomain=Vector(R, n), ref_rand=ref_rand_chol)
+            pymc3_random(
+                pm.MvNormal,
+                {'mu': Vector(R, n), 'chol': PdMatrixCholUpper(n)},
+                size=100, valuedomain=Vector(R, n), ref_rand=ref_rand_uchol,
+                extra_args={'lower': False}
+            )
 
     def test_mv_t(self):
         def ref_rand(size, nu, Sigma, mu):
@@ -542,6 +571,11 @@ class TestScalarParameterSamples(SeededTest):
         for n in [2, 3]:
             pymc3_random_discrete(pm.Multinomial, {'p': Simplex(n), 'n': Nat},
                                   valuedomain=Vector(Nat, n), size=100, ref_rand=ref_rand)
+
+    def test_gumbel(self):
+        def ref_rand(size, mu, beta):
+            return st.gumbel_r.rvs(loc=mu, scale=beta, size=size)
+        pymc3_random(pm.Gumbel, {'mu': R, 'beta': Rplus}, ref_rand=ref_rand)
 
     @pytest.mark.skip('Wishart random sampling not implemented.\n'
                       'See https://github.com/pymc-devs/pymc3/issues/538')
