@@ -14,7 +14,7 @@ from .updates import (
     adamax,
     norm_constraint,
     total_norm_constraint,
-    Sgd,
+    SGD,
     Momentum,
     NesterovMomentum,
     Adagrad,
