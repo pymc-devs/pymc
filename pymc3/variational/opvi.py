@@ -523,7 +523,7 @@ class Approximation(object):
             self.scale_cost_to_minibatch.set_value(1)
         self.cost_part_grad_scale = pm.floatX(cost_part_grad_scale)
         self._seed = random_seed
-        self._rng = tt_rng(seed)
+        self._rng = tt_rng(random_seed)
         self.model = model
         self.check_model(model, **kwargs)
         if local_rv is None:

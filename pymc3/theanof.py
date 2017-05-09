@@ -390,7 +390,7 @@ def tt_rng(random_seed=None):
         `theano.sandbox.rng_mrg.MRG_RandomStreams`
         instance passed to the most recent call of `set_tt_rng`
     """
-    if seed is None:
+    if random_seed is None:
         return _tt_rng
     else:
         ret = MRG_RandomStreams(random_seed)
