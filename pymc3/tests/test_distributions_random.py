@@ -577,6 +577,29 @@ class TestScalarParameterSamples(SeededTest):
             return st.gumbel_r.rvs(loc=mu, scale=beta, size=size)
         pymc3_random(pm.Gumbel, {'mu': R, 'beta': Rplus}, ref_rand=ref_rand)
 
+    def test_interpolated(self):
+        alpha = 0.05
+        size = 10000
+        tries = 10
+
+        # Interpolated model doesn't support variables as inputs, so it is necessary
+        # to use custom code instead of pymc3_random for it
+        for mu in R.vals:
+            for sd in Rplus.vals:
+                with pm.Model():
+                    x_points = np.linspace(mu - 5 * sd, mu + 5 * sd, 100)
+                    pdf_points = st.norm.pdf(x_points, loc=mu, scale=sd)
+                    dist = pm.Interpolated('dist', x_points=x_points, pdf_points=pdf_points)
+
+                    p = alpha
+                    f = tries
+                    while p <= alpha and f > 0:
+                        s0 = dist.random(size=size)
+                        s1 = st.norm.rvs(size=size, loc=mu, scale=sd)
+                        _, p = st.ks_2samp(s0, s1)
+                        f -= 1
+                    assert p > alpha, 'Failed KS test for mu = %s, sd = %s' % (mu, sd)
+
     @pytest.mark.skip('Wishart random sampling not implemented.\n'
                       'See https://github.com/pymc-devs/pymc3/issues/538')
     def test_wishart(self):
