@@ -213,8 +213,8 @@ class Normal(Continuous):
         self.variance = 1. / self.tau
         
         if self.sd.ndim > self.mu.ndim:
-            raise ValueError('sd or tau should not have larger dimension than mu.'
-                            + ' Covariance matrices should only be used with MvNormal.')
+            warnings.warn('The dimension of sd or tau is larger than mu.'
+                        + ' Covariance matrices should only be used with MvNormal.')
 
         assert_negative_support(sd, 'sd', 'Normal')
         assert_negative_support(tau, 'tau', 'Normal')
