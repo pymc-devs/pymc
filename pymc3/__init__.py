@@ -27,6 +27,7 @@ from .plots import *
 from .tests import test
 
 from .data import *
+from .optimization import *
 
 import logging
 _log = logging.getLogger('pymc3')

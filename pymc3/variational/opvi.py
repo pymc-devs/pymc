@@ -642,11 +642,11 @@ class Approximation(object):
 
         Parameters
         ----------
-        node : Theano Variables (or Theano expressions)
+        node : Theano Variable(s)
             node or nodes for replacements
         deterministic : bool
-            whether to use zeros as initial distribution
-            if True - zero initial point will produce constant latent variables
+            whether to use point with highest density as initial point for distribution
+            if True - constant initial point will produce constant latent variables
         include : list
             latent variables to be replaced
         exclude : list
@@ -671,7 +671,7 @@ class Approximation(object):
 
         Parameters
         ----------
-        node : Theano Variables (or Theano expressions)
+        node : Theano Variable(s)
         size : scalar
             number of samples
         more_replacements : dict
