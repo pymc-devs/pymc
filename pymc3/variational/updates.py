@@ -118,7 +118,7 @@ __all__ = [
     "adamax",
     "norm_constraint",
     "total_norm_constraint",
-    "SGD",
+    "Sgd",
     "Momentum",
     "NesterovMomentum",
     "Adagrad",
@@ -225,7 +225,7 @@ def sgd(loss_or_grads, params, learning_rate=1e-3):
     return updates
 
 
-class SGD(Optimizer):
+class Sgd(Optimizer):
     __doc__ = _make_doc(sgd.__doc__)
     _opt = sgd
 
