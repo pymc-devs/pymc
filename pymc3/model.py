@@ -193,12 +193,30 @@ class Factor(object):
         total_size = getattr(self, 'total_size', None)
         if total_size is None:
             coef = tt.constant(1)
-        else:
+        elif isinstance(total_size, (int, float)):
             if self.logp_elemwiset.ndim >= 1:
                 denom = self.logp_elemwiset.shape[0]
             else:
-                denom = 1
-            coef = pm.floatX(tt.as_tensor(total_size)) / pm.floatX(denom)
+                denom = 1.
+            coef = pm.floatX(total_size) / pm.floatX(denom)
+        elif isinstance(total_size, (list, tuple)):
+            shape = self.logp_elemwiset.shape
+            if Ellipsis in total_size:
+                sep = total_size.index(Ellipsis)
+                begin = total_size[:sep]
+                end = total_size[sep:]
+            else:
+                begin = total_size
+                end = []
+            if len(end) > 0:
+                shp_end = shape[-len(end):]
+            else:
+                shp_end = np.asarray([])
+            shp_begin = shape[:len(begin)]
+            begin_coef = [t/shp_begin[i] for i, t in enumerate(begin) if t is not None]
+            end_coef = [t/shp_end[i] for i, t in enumerate(end) if t is not None]
+            coefs = begin_coef + end_coef
+            coef = tt.prod(coefs)
         return pm.floatX(coef)
 
 
@@ -1064,7 +1082,7 @@ class TransformedRV(TensorVariable):
         if dist is None:
             dist = self.distribution
         return self.distribution._repr_latex_(name=name, dist=dist)
-        
+
     @property
     def init_value(self):
         """Convenience attribute to return tag.test_value"""
