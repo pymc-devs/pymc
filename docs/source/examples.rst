@@ -8,6 +8,7 @@ Howto
 =====
 
 .. toctree::
+   notebooks/api_quickstart.ipynb
    notebooks/sampler-stats.ipynb
    notebooks/Diagnosing_biased_Inference_with_Divergences.ipynb
    notebooks/posterior_predictive.ipynb
