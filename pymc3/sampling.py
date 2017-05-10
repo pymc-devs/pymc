@@ -100,10 +100,10 @@ def assign_step_methods(model, step=None, methods=STEP_METHODS,
     return steps
 
 
-def sample(draws, step=None, init='auto', n_init=200000, start=None,
-           trace=None, chain=0, njobs=1, tune=None, nuts_kwargs=None,
+def sample(draws=500, step=None, init='auto', n_init=200000, start=None,
+           trace=None, chain=0, njobs=1, tune=500, nuts_kwargs=None,
            step_kwargs=None, progressbar=True, model=None, random_seed=-1,
-           live_plot=False, **kwargs):
+           live_plot=False, discard_tuned_samples=True, **kwargs):
     """Draw samples from the posterior using the given step methods.
 
     Multiple step methods are supported via compound step methods.
@@ -111,7 +111,8 @@ def sample(draws, step=None, init='auto', n_init=200000, start=None,
     Parameters
     ----------
     draws : int
-        The number of samples to draw.
+        The number of samples to draw. Defaults to 500. The number of tuned
+        samples are discarded by default. See discard_tuned_samples.
     step : function or iterable of functions
         A step function or collection of functions. If there are variables
         without a step methods, step methods for those variables will
@@ -152,7 +153,9 @@ def sample(draws, step=None, init='auto', n_init=200000, start=None,
         Number of parallel jobs to start. If None, set to number of cpus
         in the system - 2.
     tune : int
-        Number of iterations to tune, if applicable (defaults to None)
+        Number of iterations to tune, if applicable (defaults to 500).
+        These samples will be drawn in addition to samples and discarded
+        unless discard_tuned_samples is set to True.
     nuts_kwargs : dict
         Options for the NUTS sampler. See the docstring of NUTS
         for a complete list of options. Common options are
@@ -180,8 +183,10 @@ def sample(draws, step=None, init='auto', n_init=200000, start=None,
     model : Model (optional if in `with` context)
     random_seed : int or list of ints
         A list is accepted if more if `njobs` is greater than one.
-    live_plot: bool
+    live_plot : bool
         Flag for live plotting the trace while sampling
+    discard_tuned_samples : bool
+        Whether to discard posterior samples of the tune interval.
 
     Returns
     -------
@@ -209,6 +214,8 @@ def sample(draws, step=None, init='auto', n_init=200000, start=None,
         p  0.604625  0.047086   0.00078  0.510498  0.694774
     """
     model = modelcontext(model)
+
+    draws += tune
 
     if init is not None:
         init = init.lower()
@@ -257,7 +264,9 @@ def sample(draws, step=None, init='auto', n_init=200000, start=None,
     else:
         sample_func = _sample
 
-    return sample_func(**sample_args)
+    discard = tune if discard_tuned_samples else 0
+
+    return sample_func(**sample_args)[discard:]
 
 
 def _sample(draws, step=None, start=None, trace=None, chain=0, tune=None,
@@ -595,8 +604,9 @@ def init_nuts(init='ADVI', njobs=1, n_init=500000, model=None,
         start = pm.find_MAP()
         cov = pm.find_hessian(point=start)
     elif init == 'nuts':
-        init_trace = pm.sample(step=pm.NUTS(), draws=n_init,
-                               random_seed=random_seed)[n_init // 2:]
+        init_trace = pm.sample(draws=n_init, step=pm.NUTS(),
+                               tune=n_init // 2,
+                               random_seed=random_seed)
         cov = np.atleast_1d(pm.trace_cov(init_trace))
         start = np.random.choice(init_trace, njobs)
         if njobs == 1:
