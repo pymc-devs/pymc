@@ -101,7 +101,7 @@ class DataSampler(object):
     ----------
     data : array like
     batchsize : sample size over zero axis
-    seed : int for numpy random generator
+    random_seed : int for numpy random generator
     dtype : str representing dtype
 
     Usage
@@ -128,9 +128,9 @@ class DataSampler(object):
     >>> new.sample_vp(draws=1000)['sd'].mean()
     1.2178044136104513
     """
-    def __init__(self, data, batchsize=50, seed=42, dtype='floatX'):
+    def __init__(self, data, batchsize=50, random_seed=42, dtype='floatX'):
         self.dtype = theano.config.floatX if dtype == 'floatX' else dtype
-        self.rng = np.random.RandomState(seed)
+        self.rng = np.random.RandomState(random_seed)
         self.data = data
         self.n = batchsize
 

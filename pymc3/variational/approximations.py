@@ -119,7 +119,7 @@ class FullRank(Approximation):
         Yuhuai Wu, David Duvenaud, 2016) for details   
     scale_cost_to_minibatch : bool, default False
         Scale cost to minibatch instead of full dataset
-    seed : None or int
+    random_seed : None or int
         leave None to use package global RandomStream or other
         valid value to create instance specific one
     
@@ -136,12 +136,12 @@ class FullRank(Approximation):
     """
     def __init__(self, local_rv=None, model=None, cost_part_grad_scale=1,
                  scale_cost_to_minibatch=False,
-                 gpu_compat=False, seed=None, **kwargs):
+                 gpu_compat=False, random_seed=None, **kwargs):
         super(FullRank, self).__init__(
             local_rv=local_rv, model=model,
             cost_part_grad_scale=cost_part_grad_scale,
             scale_cost_to_minibatch=scale_cost_to_minibatch,
-            seed=seed, **kwargs
+            random_seed=random_seed, **kwargs
         )
         self.gpu_compat = gpu_compat
 
@@ -276,10 +276,10 @@ class Empirical(Approximation):
     """
     def __init__(self, trace, local_rv=None,
                  scale_cost_to_minibatch=False,
-                 model=None, seed=None, **kwargs):
+                 model=None, random_seed=None, **kwargs):
         super(Empirical, self).__init__(
             local_rv=local_rv, scale_cost_to_minibatch=scale_cost_to_minibatch,
-            model=model, trace=trace, seed=seed, **kwargs)
+            model=model, trace=trace, random_seed=random_seed, **kwargs)
 
     def check_model(self, model, **kwargs):
         trace = kwargs.get('trace')
@@ -358,7 +358,7 @@ class Empirical(Approximation):
 
     @classmethod
     def from_noise(cls, size, jitter=.01, local_rv=None,
-                   start=None, model=None, seed=None, **kwargs):
+                   start=None, model=None, random_seed=None, **kwargs):
         """Initialize Histogram with random noise
 
         Parameters
@@ -384,7 +384,7 @@ class Empirical(Approximation):
         -------    
         :class:`Empirical`
         """
-        hist = cls(None, local_rv=local_rv, model=model, seed=seed, **kwargs)
+        hist = cls(None, local_rv=local_rv, model=model, random_seed=random_seed, **kwargs)
         if start is None:
             start = hist.model.test_point
         else:

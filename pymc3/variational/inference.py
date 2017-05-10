@@ -334,13 +334,13 @@ class ADVI(Inference):
     def __init__(self, local_rv=None, model=None,
                  cost_part_grad_scale=1,
                  scale_cost_to_minibatch=False,
-                 seed=None, start=None):
+                 random_seed=None, start=None):
         super(ADVI, self).__init__(
             KL, MeanField, None,
             local_rv=local_rv, model=model,
             cost_part_grad_scale=cost_part_grad_scale,
             scale_cost_to_minibatch=scale_cost_to_minibatch,
-            seed=seed, start=start)
+            random_seed=random_seed, start=start)
 
     @classmethod
     def from_mean_field(cls, mean_field):
@@ -385,7 +385,7 @@ class FullRankADVI(Inference):
         Yuhuai Wu, David Duvenaud, 2016) for details
     scale_cost_to_minibatch : bool, default False
         Scale cost to minibatch instead of full dataset
-    seed : None or int
+    random_seed : None or int
         leave None to use package global RandomStream or other
         valid value to create instance specific one
     start : `Point`
@@ -407,13 +407,13 @@ class FullRankADVI(Inference):
     def __init__(self, local_rv=None, model=None,
                  cost_part_grad_scale=1,
                  scale_cost_to_minibatch=False,
-                 gpu_compat=False, seed=None, start=None):
+                 gpu_compat=False, random_seed=None, start=None):
         super(FullRankADVI, self).__init__(
             KL, FullRank, None,
             local_rv=local_rv, model=model,
             cost_part_grad_scale=cost_part_grad_scale,
             scale_cost_to_minibatch=scale_cost_to_minibatch,
-            gpu_compat=gpu_compat, seed=seed, start=start)
+            gpu_compat=gpu_compat, random_seed=random_seed, start=start)
 
     @classmethod
     def from_full_rank(cls, full_rank):
@@ -521,7 +521,7 @@ class SVGD(Inference):
         initial point for inference
     histogram : :class:`Empirical`
         initialize SVGD with given Empirical approximation instead of default initial particles
-    seed : None or int
+    random_seed : None or int
         leave None to use package global RandomStream or other
         valid value to create instance specific one
     start : `Point`
@@ -535,19 +535,19 @@ class SVGD(Inference):
     """
     def __init__(self, n_particles=100, jitter=.01, model=None, kernel=test_functions.rbf,
                  scale_cost_to_minibatch=False, start=None, histogram=None,
-                 seed=None, local_rv=None):
+                 random_seed=None, local_rv=None):
         if histogram is None:
             histogram = Empirical.from_noise(
                 n_particles, jitter=jitter,
                 scale_cost_to_minibatch=scale_cost_to_minibatch,
-                start=start, model=model, local_rv=local_rv, seed=seed)
+                start=start, model=model, local_rv=local_rv, random_seed=random_seed)
         super(SVGD, self).__init__(
             KSD, histogram,
             kernel,
-            model=model, seed=seed)
+            model=model, random_seed=random_seed)
 
 
-def fit(n=10000, local_rv=None, method='advi', model=None, seed=None, start=None, **kwargs):
+def fit(n=10000, local_rv=None, method='advi', model=None, random_seed=None, start=None, **kwargs):
     """
     Handy shortcut for using inference methods in functional way
 
@@ -568,7 +568,7 @@ def fit(n=10000, local_rv=None, method='advi', model=None, seed=None, start=None
     ----------------
     frac : `float`
         if method is 'advi->fullrank_advi' represents advi fraction when training
-    seed : None or int
+    random_seed : None or int
         leave None to use package global RandomStream or other
         valid value to create instance specific one
     start : `Point`
@@ -592,7 +592,7 @@ def fit(n=10000, local_rv=None, method='advi', model=None, seed=None, start=None
             raise ValueError('frac should be in (0, 1)')
         n1 = int(n * frac)
         n2 = n-n1
-        inference = ADVI(local_rv=local_rv, model=model, seed=seed, start=start)
+        inference = ADVI(local_rv=local_rv, model=model, random_seed=random_seed, start=start)
         logger.info('fitting advi ...')
         inference.fit(n1, **kwargs)
         inference = FullRankADVI.from_advi(inference)
@@ -602,7 +602,7 @@ def fit(n=10000, local_rv=None, method='advi', model=None, seed=None, start=None
     elif isinstance(method, str):
         try:
             inference = _select[method.lower()](
-                local_rv=local_rv, model=model, seed=seed,
+                local_rv=local_rv, model=model, random_seed=random_seed,
                 start=start
             )
         except KeyError:

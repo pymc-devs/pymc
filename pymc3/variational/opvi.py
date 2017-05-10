@@ -465,7 +465,7 @@ class Approximation(object):
         Yuhuai Wu, David Duvenaud, 2016) for details     
     scale_cost_to_minibatch : bool, default False
         Scale cost to minibatch instead of full dataset
-    seed : None or int
+    random_seed : None or int
         leave None to use package global RandomStream or other
         valid value to create instance specific one
 
@@ -525,14 +525,14 @@ class Approximation(object):
     def __init__(self, local_rv=None, model=None,
                  cost_part_grad_scale=1,
                  scale_cost_to_minibatch=False,
-                 seed=None, **kwargs):
+                 random_seed=None, **kwargs):
         model = modelcontext(model)
         self.scale_cost_to_minibatch = theano.shared(np.int8(0))
         if scale_cost_to_minibatch:
             self.scale_cost_to_minibatch.set_value(1)
         self.cost_part_grad_scale = pm.floatX(cost_part_grad_scale)
-        self._seed = seed
-        self._rng = tt_rng(seed)
+        self._seed = random_seed
+        self._rng = tt_rng(random_seed)
         self.model = model
         self.check_model(model, **kwargs)
         if local_rv is None:
@@ -556,7 +556,7 @@ class Approximation(object):
         self._setup(**kwargs)
         self.shared_params = self.create_shared_params(**kwargs)
 
-    def seed(self, seed=None):
+    def seed(self, random_seed=None):
         """
         Reinitialize RandomStream used by this approximation
 
@@ -564,7 +564,7 @@ class Approximation(object):
         ----------
         seed : `int`
         """
-        self._seed = seed
+        self._seed = random_seed
         self._rng.seed(seed)
 
     @property
