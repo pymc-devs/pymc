@@ -34,7 +34,7 @@ _without_params = dict(loss_or_grads=None, params=None)
     [dict(), dict(learning_rate=1e-2)]
 )
 @change_flags(compute_test_value='ignore')
-def test_updates(opt, loss_and_params, kwargs):
+def test_updates_fast(opt, loss_and_params, kwargs):
     args = dict(
     )
     args.update(**kwargs)
