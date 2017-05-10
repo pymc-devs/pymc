@@ -102,7 +102,7 @@ def plot_posterior_op(trace_values, figsize, ax, kde_plot, point_estimate, round
             point_value = mode(trace_values.round(round_to))[0][0]
         elif point_estimate == 'median':
             point_value = np.median(trace_values)
-        point_text = '{point_estimate}={point_value:.{round_to}g}'.format(point_estimate=point_estimate,
+        point_text = '{point_estimate}={point_value:.{round_to}f}'.format(point_estimate=point_estimate,
                                                                           point_value=point_value, round_to=round_to)
 
         ax.text(point_value, plot_height * 0.8, point_text,
