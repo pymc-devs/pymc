@@ -793,14 +793,29 @@ class TestMatchesScipy(SeededTest):
         with Model():
             Beta('beta', alpha=1., beta=1., shape=(10, 20))
 
-    @pytest.mark.skip('Interpolated logp testing is not implemented yet')
     def test_interpolated(self):
         for mu in R.vals:
             for sd in Rplus.vals:
-                with Model() as model:
-                    x_points = np.linspace(mu - 5 * sd, mu + 5 * sd, 100)
-                    pdf_points = sp.norm.pdf(x_points, loc=mu, scale=sd)
-                    dist = Interpolated('dist', x_points=x_points, pdf_points=pdf_points)
-                    # TODO evalute logp at x_points somehow
-                    # pdf_output_points = <evaluated logp>
-                    # assert_almost_equal(pdf_output_points, pdf_points, decimal=3)
+                #pylint: disable=cell-var-from-loop
+                xmin = mu - 5 * sd
+                xmax = mu + 5 * sd
+
+                class TestedInterpolated (Interpolated):
+
+                    def __init__(self, **kwargs):
+                        x_points = np.linspace(xmin, xmax, 100000)
+                        pdf_points = sp.norm.pdf(x_points, loc=mu, scale=sd)
+                        super(TestedInterpolated, self).__init__(
+                            x_points=x_points,
+                            pdf_points=pdf_points,
+                            **kwargs
+                        )
+
+                def ref_pdf(value):
+                    return np.where(
+                        np.logical_and(value >= xmin, value <= xmax),
+                        sp.norm.logpdf(value, mu, sd),
+                        -np.inf * np.ones(value.shape)
+                    )
+
+                self.pymc3_matches_scipy(TestedInterpolated, R, {}, ref_pdf)
