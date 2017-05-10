@@ -95,9 +95,8 @@ Note
 Taken from the Lasagne project: http://lasagne.readthedocs.io/en/latest/
 
 """
-import re
+from functools import partial
 from collections import OrderedDict
-import functools
 import numpy as np
 
 import theano
@@ -118,42 +117,7 @@ __all__ = [
     "adamax",
     "norm_constraint",
     "total_norm_constraint",
-    "Sgd",
-    "Momentum",
-    "NesterovMomentum",
-    "Adagrad",
-    "RMSProp",
-    "AdaDelta",
-    "AdaMax",
-    "Adam",
 ]
-
-
-def _make_doc(doc):
-    """
-    Modify docstring for class
-    
-    Parameters
-    ----------
-    doc : docstring
-
-    Returns
-    -------
-    class docstring
-    """
-    doc = re.sub(r'\n.+loss_or_grads : .+\n.+', '', doc)
-    doc = re.sub(r'\n.+params : .+\n.+', '', doc)
-    return doc
-
-
-class Optimizer(object):
-    _opt = None
-
-    def __init__(self, *args, **kwargs):
-        self.opt = functools.partial(self._opt, *args, **kwargs)
-
-    def __call__(self, loss_or_grads, params):
-        return self.opt(loss_or_grads, params)
 
 
 def get_or_compute_grads(loss_or_grads, params):
@@ -195,7 +159,14 @@ def get_or_compute_grads(loss_or_grads, params):
         return theano.grad(loss_or_grads, params)
 
 
-def sgd(loss_or_grads, params, learning_rate=1e-3):
+def _get_call_kwargs(_locals_):
+    _locals_ = _locals_.copy()
+    _locals_.pop('loss_or_grads')
+    _locals_.pop('params')
+    return _locals_
+
+
+def sgd(loss_or_grads=None, params=None, learning_rate=1e-3):
     """Stochastic Gradient Descent (SGD) updates
 
     Generates update expressions of the form:
@@ -215,7 +186,27 @@ def sgd(loss_or_grads, params, learning_rate=1e-3):
     -------
     OrderedDict
         A dictionary mapping each parameter to its update expression
+        
+    Notes
+    -----
+    Optimizer can be called without both loss_or_grads and params
+    in that case partial fuction is returned
+    
+    Examples
+    --------
+    >>> a = theano.shared(1.)
+    >>> b = a*2
+    >>> updates = sgd(b, [a], learning_rate=.01)
+    >>> assert isinstance(updates, dict)
+    >>> optimizer = sgd(learning_rate=.01)
+    >>> assert callable(optimizer)
+    >>> updates = optimizer(b, [a])
+    >>> assert isinstance(updates, dict)
     """
+    if loss_or_grads is None and params is None:
+        return partial(sgd, **_get_call_kwargs(locals()))
+    elif loss_or_grads is None or params is None:
+        raise ValueError('Please provide both `loss_or_grads` and `params` to get updates')
     grads = get_or_compute_grads(loss_or_grads, params)
     updates = OrderedDict()
 
@@ -223,11 +214,6 @@ def sgd(loss_or_grads, params, learning_rate=1e-3):
         updates[param] = param - learning_rate * grad
 
     return updates
-
-
-class Sgd(Optimizer):
-    __doc__ = _make_doc(sgd.__doc__)
-    _opt = sgd
 
 
 def apply_momentum(updates, params=None, momentum=0.9):
@@ -278,7 +264,7 @@ def apply_momentum(updates, params=None, momentum=0.9):
     return updates
 
 
-def momentum(loss_or_grads, params, learning_rate, momentum=0.9):
+def momentum(loss_or_grads=None, params=None, learning_rate=1e-3, momentum=0.9):
     """Stochastic Gradient Descent (SGD) updates with momentum
 
     Generates update expressions of the form:
@@ -313,13 +299,12 @@ def momentum(loss_or_grads, params, learning_rate, momentum=0.9):
     apply_momentum : Generic function applying momentum to updates
     nesterov_momentum : Nesterov's variant of SGD with momentum
     """
+    if loss_or_grads is None and params is None:
+        return partial(pm.updates.momentum, **_get_call_kwargs(locals()))
+    elif loss_or_grads is None or params is None:
+        raise ValueError('Please provide both `loss_or_grads` and `params` to get updates')
     updates = sgd(loss_or_grads, params, learning_rate)
     return apply_momentum(updates, momentum=momentum)
-
-
-class Momentum(Optimizer):
-    __doc__ = _make_doc(momentum.__doc__)
-    _opt = momentum
 
 
 def apply_nesterov_momentum(updates, params=None, momentum=0.9):
@@ -376,7 +361,7 @@ def apply_nesterov_momentum(updates, params=None, momentum=0.9):
     return updates
 
 
-def nesterov_momentum(loss_or_grads, params, learning_rate=1e-3, momentum=0.9):
+def nesterov_momentum(loss_or_grads=None, params=None, learning_rate=1e-3, momentum=0.9):
     """Stochastic Gradient Descent (SGD) updates with Nesterov momentum
 
     Generates update expressions of the form:
@@ -416,16 +401,15 @@ def nesterov_momentum(loss_or_grads, params, learning_rate=1e-3, momentum=0.9):
     --------
     apply_nesterov_momentum : Function applying momentum to updates
     """
+    if loss_or_grads is None and params is None:
+        return partial(nesterov_momentum, **_get_call_kwargs(locals()))
+    elif loss_or_grads is None or params is None:
+        raise ValueError('Please provide both `loss_or_grads` and `params` to get updates')
     updates = sgd(loss_or_grads, params, learning_rate)
     return apply_nesterov_momentum(updates, momentum=momentum)
 
 
-class NesterovMomentum(Optimizer):
-    __doc__ = _make_doc(nesterov_momentum.__doc__)
-    _opt = nesterov_momentum
-
-
-def adagrad(loss_or_grads, params, learning_rate=1.0, epsilon=1e-6):
+def adagrad(loss_or_grads=None, params=None, learning_rate=1.0, epsilon=1e-6):
     """Adagrad updates
 
     Scale learning rates by dividing with the square root of accumulated
@@ -468,7 +452,10 @@ def adagrad(loss_or_grads, params, learning_rate=1.0, epsilon=1e-6):
     .. [2] Chris Dyer:
            Notes on AdaGrad. http://www.ark.cs.cmu.edu/cdyer/adagrad.pdf
     """
-
+    if loss_or_grads is None and params is None:
+        return partial(adagrad, **_get_call_kwargs(locals()))
+    elif loss_or_grads is None or params is None:
+        raise ValueError('Please provide both `loss_or_grads` and `params` to get updates')
     grads = get_or_compute_grads(loss_or_grads, params)
     updates = OrderedDict()
 
@@ -484,12 +471,7 @@ def adagrad(loss_or_grads, params, learning_rate=1.0, epsilon=1e-6):
     return updates
 
 
-class Adagrad(Optimizer):
-    __doc__ = _make_doc(adagrad.__doc__)
-    _opt = adagrad
-
-
-def rmsprop(loss_or_grads, params, learning_rate=1.0, rho=0.9, epsilon=1e-6):
+def rmsprop(loss_or_grads=None, params=None, learning_rate=1.0, rho=0.9, epsilon=1e-6):
     """RMSProp updates
 
     Scale learning rates by dividing with the moving average of the root mean
@@ -532,6 +514,10 @@ def rmsprop(loss_or_grads, params, learning_rate=1.0, rho=0.9, epsilon=1e-6):
            Neural Networks for Machine Learning, Lecture 6.5 - rmsprop.
            Coursera. http://www.youtube.com/watch?v=O3sxAc4hxZU (formula @5:20)
     """
+    if loss_or_grads is None and params is None:
+        return partial(rmsprop, **_get_call_kwargs(locals()))
+    elif loss_or_grads is None or params is None:
+        raise ValueError('Please provide both `loss_or_grads` and `params` to get updates')
     grads = get_or_compute_grads(loss_or_grads, params)
     updates = OrderedDict()
 
@@ -550,12 +536,7 @@ def rmsprop(loss_or_grads, params, learning_rate=1.0, rho=0.9, epsilon=1e-6):
     return updates
 
 
-class RMSProp(Optimizer):
-    __doc__ = _make_doc(rmsprop.__doc__)
-    _opt = rmsprop
-
-
-def adadelta(loss_or_grads, params, learning_rate=1.0, rho=0.95, epsilon=1e-6):
+def adadelta(loss_or_grads=None, params=None, learning_rate=1.0, rho=0.95, epsilon=1e-6):
     """ Adadelta updates
 
     Scale learning rates by the ratio of accumulated gradients to accumulated
@@ -608,6 +589,10 @@ def adadelta(loss_or_grads, params, learning_rate=1.0, rho=0.95, epsilon=1e-6):
            ADADELTA: An Adaptive Learning Rate Method.
            arXiv Preprint arXiv:1212.5701.
     """
+    if loss_or_grads is None and params is None:
+        return partial(adadelta, **_get_call_kwargs(locals()))
+    elif loss_or_grads is None or params is None:
+        raise ValueError('Please provide both `loss_or_grads` and `params` to get updates')
     grads = get_or_compute_grads(loss_or_grads, params)
     updates = OrderedDict()
 
@@ -639,12 +624,7 @@ def adadelta(loss_or_grads, params, learning_rate=1.0, rho=0.95, epsilon=1e-6):
     return updates
 
 
-class AdaDelta(Optimizer):
-    __doc__ = _make_doc(adadelta.__doc__)
-    _opt = adadelta
-
-
-def adam(loss_or_grads, params, learning_rate=0.001, beta1=0.9,
+def adam(loss_or_grads=None, params=None, learning_rate=0.001, beta1=0.9,
          beta2=0.999, epsilon=1e-8):
     """Adam updates
 
@@ -682,6 +662,10 @@ def adam(loss_or_grads, params, learning_rate=0.001, beta1=0.9,
            Adam: A Method for Stochastic Optimization.
            arXiv preprint arXiv:1412.6980.
     """
+    if loss_or_grads is None and params is None:
+        return partial(adam, **_get_call_kwargs(locals()))
+    elif loss_or_grads is None or params is None:
+        raise ValueError('Please provide both `loss_or_grads` and `params` to get updates')
     all_grads = get_or_compute_grads(loss_or_grads, params)
     t_prev = theano.shared(pm.theanof.floatX(0.))
     updates = OrderedDict()
@@ -711,12 +695,7 @@ def adam(loss_or_grads, params, learning_rate=0.001, beta1=0.9,
     return updates
 
 
-class Adam(Optimizer):
-    __doc__ = _make_doc(adam.__doc__)
-    _opt = adam
-
-
-def adamax(loss_or_grads, params, learning_rate=0.002, beta1=0.9,
+def adamax(loss_or_grads=None, params=None, learning_rate=0.002, beta1=0.9,
            beta2=0.999, epsilon=1e-8):
     """Adamax updates
 
@@ -749,6 +728,10 @@ def adamax(loss_or_grads, params, learning_rate=0.002, beta1=0.9,
            Adam: A Method for Stochastic Optimization.
            arXiv preprint arXiv:1412.6980.
     """
+    if loss_or_grads is None and params is None:
+        return partial(adamax, **_get_call_kwargs(locals()))
+    elif loss_or_grads is None or params is None:
+        raise ValueError('Please provide both `loss_or_grads` and `params` to get updates')
     all_grads = get_or_compute_grads(loss_or_grads, params)
     t_prev = theano.shared(pm.theanof.floatX(0.))
     updates = OrderedDict()
@@ -776,11 +759,6 @@ def adamax(loss_or_grads, params, learning_rate=0.002, beta1=0.9,
 
     updates[t_prev] = t
     return updates
-
-
-class AdaMax(Optimizer):
-    __doc__ = _make_doc(adamax.__doc__)
-    _opt = adamax
 
 
 def norm_constraint(tensor_var, max_norm, norm_axes=None, epsilon=1e-7):
