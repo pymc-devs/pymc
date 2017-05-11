@@ -13,7 +13,8 @@ from ..distributions import (DensityDist, Categorical, Multinomial, VonMises, Di
                              InverseGamma, Gamma, Cauchy, HalfCauchy, Lognormal, Laplace,
                              NegativeBinomial, Geometric, Exponential, ExGaussian, Normal,
                              Flat, LKJCorr, Wald, ChiSquared, HalfNormal, DiscreteUniform,
-                             Bound, Uniform, Triangular, Binomial, SkewNormal, DiscreteWeibull, Gumbel)
+                             Bound, Uniform, Triangular, Binomial, SkewNormal, DiscreteWeibull, Gumbel,
+                             Interpolated)
 from ..distributions import continuous
 from pymc3.theanof import floatX
 from numpy import array, inf, log, exp
@@ -791,3 +792,30 @@ class TestMatchesScipy(SeededTest):
     def test_multidimensional_beta_construction(self):
         with Model():
             Beta('beta', alpha=1., beta=1., shape=(10, 20))
+
+    def test_interpolated(self):
+        for mu in R.vals:
+            for sd in Rplus.vals:
+                #pylint: disable=cell-var-from-loop
+                xmin = mu - 5 * sd
+                xmax = mu + 5 * sd
+
+                class TestedInterpolated (Interpolated):
+
+                    def __init__(self, **kwargs):
+                        x_points = np.linspace(xmin, xmax, 100000)
+                        pdf_points = sp.norm.pdf(x_points, loc=mu, scale=sd)
+                        super(TestedInterpolated, self).__init__(
+                            x_points=x_points,
+                            pdf_points=pdf_points,
+                            **kwargs
+                        )
+
+                def ref_pdf(value):
+                    return np.where(
+                        np.logical_and(value >= xmin, value <= xmax),
+                        sp.norm.logpdf(value, mu, sd),
+                        -np.inf * np.ones(value.shape)
+                    )
+
+                self.pymc3_matches_scipy(TestedInterpolated, R, {}, ref_pdf)
