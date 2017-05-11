@@ -95,7 +95,7 @@ def TensorType(dtype, shape):
 
 class NoDistribution(Distribution):
 
-    def __init__(self, shape, dtype, testval=None, defaults=[], transform=None, parent_dist=None, *args, **kwargs):
+    def __init__(self, shape, dtype, testval=None, defaults=(), transform=None, parent_dist=None, *args, **kwargs):
         super(NoDistribution, self).__init__(shape=shape, dtype=dtype,
                                              testval=testval, defaults=defaults,
                                              *args, **kwargs)
@@ -114,7 +114,7 @@ class NoDistribution(Distribution):
 class Discrete(Distribution):
     """Base class for discrete distributions"""
 
-    def __init__(self, shape=(), dtype=None, defaults=['mode'],
+    def __init__(self, shape=(), dtype=None, defaults=('mode',),
                  *args, **kwargs):
         if dtype is None:
             if theano.config.floatX == 'float32':
@@ -135,7 +135,7 @@ class Discrete(Distribution):
 class Continuous(Distribution):
     """Base class for continuous distributions"""
 
-    def __init__(self, shape=(), dtype=None, defaults=['median', 'mean', 'mode'], *args, **kwargs):
+    def __init__(self, shape=(), dtype=None, defaults=('median', 'mean', 'mode'), *args, **kwargs):
         if dtype is None:
             dtype = theano.config.floatX
         super(Continuous, self).__init__(
