@@ -65,8 +65,8 @@ def kde2plot_op(ax, x, y, grid=200, **kwargs):
     ax.imshow(np.rot90(Z), extent=extent, **kwargs)
 
 
-def plot_posterior_op(trace_values, ax, kde_plot, point_estimate, round_to,
-                      alpha_level, ref_val, rope, **kwargs):
+def plot_posterior_op(trace_values, figsize, ax, kde_plot, point_estimate, round_to,
+                      alpha_level, ref_val, rope, text_size=16, **kwargs):
     """Artist to draw posterior."""
     def format_as_percent(x, round_to=0):
         return '{0:.{1:d}f}%'.format(100 * x, round_to)
@@ -95,28 +95,24 @@ def plot_posterior_op(trace_values, ax, kde_plot, point_estimate, round_to,
             return
         if point_estimate not in ('mode', 'mean', 'median'):
             raise ValueError(
-                "Point Estimate should be in ('mode','mean','median', None)")
+                "Point Estimate should be in ('mode','mean','median')")
         if point_estimate == 'mean':
             point_value = trace_values.mean()
-            point_text = '{}={}'.format(
-                point_estimate, point_value.round(round_to))
         elif point_estimate == 'mode':
             point_value = mode(trace_values.round(round_to))[0][0]
-            point_text = '{}={}'.format(
-                point_estimate, point_value.round(round_to))
         elif point_estimate == 'median':
             point_value = np.median(trace_values)
-            point_text = '{}={}'.format(
-                point_estimate, point_value.round(round_to))
+        point_text = '{point_estimate}={point_value:.{round_to}f}'.format(point_estimate=point_estimate,
+                                                                          point_value=point_value, round_to=round_to)
 
         ax.text(point_value, plot_height * 0.8, point_text,
-                size=16, horizontalalignment='center')
+                size=text_size, horizontalalignment='center')
 
     def display_hpd():
         hpd_intervals = hpd(trace_values, alpha=alpha_level)
         ax.plot(hpd_intervals, (plot_height * 0.02,
                                 plot_height * 0.02), linewidth=4, color='k')
-        text_props = dict(size=16, horizontalalignment='center')
+        text_props = dict(size=text_size, horizontalalignment='center')
         ax.text(hpd_intervals[0], plot_height * 0.07,
                 hpd_intervals[0].round(round_to), **text_props)
         ax.text(hpd_intervals[1], plot_height * 0.07,
@@ -143,7 +139,7 @@ def plot_posterior_op(trace_values, ax, kde_plot, point_estimate, round_to,
     if kde_plot:
         density, l, u = fast_kde(trace_values)
         x = np.linspace(l, u, len(density))
-        ax.plot(x, density, **kwargs)
+        ax.plot(x, density, figsize=figsize, **kwargs)
     else:
         set_key_if_doesnt_exist(kwargs, 'bins', 30)
         set_key_if_doesnt_exist(kwargs, 'edgecolor', 'w')
