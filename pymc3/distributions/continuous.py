@@ -541,7 +541,7 @@ class Laplace(Continuous):
 
     .. math::
 
-       f(x \mid \alpha, \beta) =
+       f(x \mid \mu, b) =
            \frac{1}{2b} \exp \left\{ - \frac{|x - \mu|}{b} \right\}
 
     ========  ========================
