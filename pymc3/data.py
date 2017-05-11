@@ -123,9 +123,9 @@ class DataSampler(object):
     >>> new = pickle.loads(pickle.dumps(approx))
     >>> new #doctest: +ELLIPSIS
     <pymc3.variational.approximations.MeanField object at 0x...>
-    >>> new.sample_vp(draws=1000)['mu'].mean()
+    >>> new.sample(draws=1000)['mu'].mean()
     10.08339999101371
-    >>> new.sample_vp(draws=1000)['sd'].mean()
+    >>> new.sample(draws=1000)['sd'].mean()
     1.2178044136104513
     """
     def __init__(self, data, batchsize=50, random_seed=42, dtype='floatX'):
