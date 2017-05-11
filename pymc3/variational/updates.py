@@ -190,18 +190,21 @@ def sgd(loss_or_grads=None, params=None, learning_rate=1e-3):
     Notes
     -----
     Optimizer can be called without both loss_or_grads and params
-    in that case partial fuction is returned
+    in that case partial function is returned
     
     Examples
     --------
     >>> a = theano.shared(1.)
     >>> b = a*2
     >>> updates = sgd(b, [a], learning_rate=.01)
-    >>> assert isinstance(updates, dict)
+    >>> isinstance(updates, dict)
+    True
     >>> optimizer = sgd(learning_rate=.01)
-    >>> assert callable(optimizer)
+    >>> callable(optimizer)
+    True
     >>> updates = optimizer(b, [a])
-    >>> assert isinstance(updates, dict)
+    >>> isinstance(updates, dict)
+    True
     """
     if loss_or_grads is None and params is None:
         return partial(sgd, **_get_call_kwargs(locals()))
@@ -294,10 +297,27 @@ def momentum(loss_or_grads=None, params=None, learning_rate=1e-3, momentum=0.9):
     Higher momentum also results in larger update steps. To counter that,
     you can optionally scale your learning rate by `1 - momentum`.
 
+    Optimizer can be called without both loss_or_grads and params
+    in that case partial function is returned
+    
     See Also
     --------
     apply_momentum : Generic function applying momentum to updates
     nesterov_momentum : Nesterov's variant of SGD with momentum
+    
+    Examples
+    --------
+    >>> a = theano.shared(1.)
+    >>> b = a*2
+    >>> updates = momentum(b, [a], learning_rate=.01)
+    >>> isinstance(updates, dict)
+    True
+    >>> optimizer = momentum(learning_rate=.01)
+    >>> callable(optimizer)
+    True
+    >>> updates = optimizer(b, [a])
+    >>> isinstance(updates, dict)
+    True
     """
     if loss_or_grads is None and params is None:
         return partial(pm.updates.momentum, **_get_call_kwargs(locals()))
@@ -396,10 +416,27 @@ def nesterov_momentum(loss_or_grads=None, params=None, learning_rate=1e-3, momen
     position in parameter space. Here, we use the formulation described at
     https://github.com/lisa-lab/pylearn2/pull/136#issuecomment-10381617,
     which allows the gradient to be evaluated at the current parameters.
+    
+    Optimizer can be called without both loss_or_grads and params
+    in that case partial function is returned
 
     See Also
     --------
     apply_nesterov_momentum : Function applying momentum to updates
+
+    Examples
+    --------
+    >>> a = theano.shared(1.)
+    >>> b = a*2
+    >>> updates = nesterov_momentum(b, [a], learning_rate=.01)
+    >>> isinstance(updates, dict)
+    True
+    >>> optimizer = nesterov_momentum(learning_rate=.01)
+    >>> callable(optimizer)
+    True
+    >>> updates = optimizer(b, [a])
+    >>> isinstance(updates, dict)
+    True
     """
     if loss_or_grads is None and params is None:
         return partial(nesterov_momentum, **_get_call_kwargs(locals()))
@@ -442,6 +479,9 @@ def adagrad(loss_or_grads=None, params=None, learning_rate=1.0, epsilon=1e-6):
     as such the learning rate is monotonically decreasing.
 
     Epsilon is not included in the typical formula, see [2]_.
+    
+    Optimizer can be called without both loss_or_grads and params
+    in that case partial function is returned
 
     References
     ----------
@@ -451,6 +491,20 @@ def adagrad(loss_or_grads=None, params=None, learning_rate=1.0, epsilon=1e-6):
 
     .. [2] Chris Dyer:
            Notes on AdaGrad. http://www.ark.cs.cmu.edu/cdyer/adagrad.pdf
+    
+    Examples
+    --------
+    >>> a = theano.shared(1.)
+    >>> b = a*2
+    >>> updates = adagrad(b, [a], learning_rate=.01)
+    >>> isinstance(updates, dict)
+    True
+    >>> optimizer = adagrad(learning_rate=.01)
+    >>> callable(optimizer)
+    True
+    >>> updates = optimizer(b, [a])
+    >>> isinstance(updates, dict)
+    True
     """
     if loss_or_grads is None and params is None:
         return partial(adagrad, **_get_call_kwargs(locals()))
@@ -507,12 +561,30 @@ def rmsprop(loss_or_grads=None, params=None, learning_rate=1.0, rho=0.9, epsilon
     .. math::
        r_t &= \\rho r_{t-1} + (1-\\rho)*g^2\\\\
        \\eta_t &= \\frac{\\eta}{\\sqrt{r_t + \\epsilon}}
+    
+    
+    Optimizer can be called without both loss_or_grads and params
+    in that case partial function is returned
 
     References
     ----------
     .. [1] Tieleman, tt. and Hinton, G. (2012):
            Neural Networks for Machine Learning, Lecture 6.5 - rmsprop.
            Coursera. http://www.youtube.com/watch?v=O3sxAc4hxZU (formula @5:20)
+           
+    Examples
+    --------
+    >>> a = theano.shared(1.)
+    >>> b = a*2
+    >>> updates = rmsprop(b, [a], learning_rate=.01)
+    >>> isinstance(updates, dict)
+    True
+    >>> optimizer = rmsprop(learning_rate=.01)
+    >>> callable(optimizer)
+    True
+    >>> updates = optimizer(b, [a])
+    >>> isinstance(updates, dict)
+    True
     """
     if loss_or_grads is None and params is None:
         return partial(rmsprop, **_get_call_kwargs(locals()))
@@ -582,12 +654,29 @@ def adadelta(loss_or_grads=None, params=None, learning_rate=1.0, rho=0.95, epsil
        \\eta_t &= \\eta \\frac{\\sqrt{s_{t-1} + \\epsilon}}
                              {\sqrt{r_t + \epsilon}}\\\\
        s_t &= \\rho s_{t-1} + (1-\\rho)*(\\eta_t*g)^2
+    
+    Optimizer can be called without both loss_or_grads and params
+    in that case partial function is returned
 
     References
     ----------
     .. [1] Zeiler, M. D. (2012):
            ADADELTA: An Adaptive Learning Rate Method.
            arXiv Preprint arXiv:1212.5701.
+
+    Examples
+    --------
+    >>> a = theano.shared(1.)
+    >>> b = a*2
+    >>> updates = adadelta(b, [a], learning_rate=.01)
+    >>> isinstance(updates, dict)
+    True
+    >>> optimizer = adadelta(learning_rate=.01)
+    >>> callable(optimizer)
+    True
+    >>> updates = optimizer(b, [a])
+    >>> isinstance(updates, dict)
+    True
     """
     if loss_or_grads is None and params is None:
         return partial(adadelta, **_get_call_kwargs(locals()))
@@ -655,12 +744,29 @@ def adam(loss_or_grads=None, params=None, learning_rate=0.001, beta1=0.9,
     The paper [1]_ includes an additional hyperparameter lambda. This is only
     needed to prove convergence of the algorithm and has no practical use
     (personal communication with the authors), it is therefore omitted here.
+    
+    Optimizer can be called without both loss_or_grads and params
+    in that case partial function is returned
 
     References
     ----------
     .. [1] Kingma, Diederik, and Jimmy Ba (2014):
            Adam: A Method for Stochastic Optimization.
            arXiv preprint arXiv:1412.6980.
+    
+    Examples
+    --------
+    >>> a = theano.shared(1.)
+    >>> b = a*2
+    >>> updates = adam(b, [a], learning_rate=.01)
+    >>> isinstance(updates, dict)
+    True
+    >>> optimizer = adam(learning_rate=.01)
+    >>> callable(optimizer)
+    True
+    >>> updates = optimizer(b, [a])
+    >>> isinstance(updates, dict)
+    True
     """
     if loss_or_grads is None and params is None:
         return partial(adam, **_get_call_kwargs(locals()))
@@ -721,12 +827,31 @@ def adamax(loss_or_grads=None, params=None, learning_rate=0.002, beta1=0.9,
     -------
     OrderedDict
         A dictionary mapping each parameter to its update expression
+    
+    Notes
+    -----
+    Optimizer can be called without both loss_or_grads and params
+    in that case partial function is returned
 
     References
     ----------
     .. [1] Kingma, Diederik, and Jimmy Ba (2014):
            Adam: A Method for Stochastic Optimization.
            arXiv preprint arXiv:1412.6980.
+    
+    Examples
+    --------
+    >>> a = theano.shared(1.)
+    >>> b = a*2
+    >>> updates = adamax(b, [a], learning_rate=.01)
+    >>> isinstance(updates, dict)
+    True
+    >>> optimizer = adamax(learning_rate=.01)
+    >>> callable(optimizer)
+    True
+    >>> updates = optimizer(b, [a])
+    >>> isinstance(updates, dict)
+    True
     """
     if loss_or_grads is None and params is None:
         return partial(adamax, **_get_call_kwargs(locals()))
