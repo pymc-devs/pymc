@@ -33,25 +33,24 @@ _without_params = dict(loss_or_grads=None, params=None)
     'kwargs',
     [dict(), dict(learning_rate=1e-2)]
 )
-@change_flags(compute_test_value='ignore')
 def test_updates_fast(opt, loss_and_params, kwargs):
-    args = dict(
-    )
-    args.update(**kwargs)
-    args.update(**loss_and_params)
-    if loss_and_params['loss_or_grads'] is None and loss_and_params['params'] is None:
-        updates = opt(**args)
-        # Here we should get new callable
-        assert callable(updates)
-        # And be able to get updates
-        updates = opt(_b, [_a])
-        assert isinstance(updates, dict)
-    elif loss_and_params['loss_or_grads'] is None or loss_and_params['params'] is None:
-        # Here something goes wrong and user provides not full set of [params + loss_or_grads]
-        # We raise Value error
-        with pytest.raises(ValueError):
-            opt(**args)
-    else:
-        # Usual call to optimizer, old behaviour
-        updates = opt(**args)
-        assert isinstance(updates, dict)
+    with change_flags(compute_test_value='ignore'):
+        args = dict()
+        args.update(**kwargs)
+        args.update(**loss_and_params)
+        if loss_and_params['loss_or_grads'] is None and loss_and_params['params'] is None:
+            updates = opt(**args)
+            # Here we should get new callable
+            assert callable(updates)
+            # And be able to get updates
+            updates = opt(_b, [_a])
+            assert isinstance(updates, dict)
+        elif loss_and_params['loss_or_grads'] is None or loss_and_params['params'] is None:
+            # Here something goes wrong and user provides not full set of [params + loss_or_grads]
+            # We raise Value error
+            with pytest.raises(ValueError):
+                opt(**args)
+        else:
+            # Usual call to optimizer, old behaviour
+            updates = opt(**args)
+            assert isinstance(updates, dict)
