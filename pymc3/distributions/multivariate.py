@@ -14,6 +14,7 @@ from theano.tensor.nlinalg import det, matrix_inverse, trace
 import pymc3 as pm
 
 from pymc3.math import tround
+from pymc3.theanof import floatX
 from . import transforms
 from .distribution import Continuous, Discrete, draw_values, generate_samples
 from ..model import Deterministic
@@ -810,7 +811,7 @@ class LKJCholeskyCov(Continuous):
         self.sd_dist = sd_dist
         self.diag_idxs = transform.diag_idxs
 
-        self.mode = np.zeros(shape)
+        self.mode = floatX(np.zeros(shape))
         self.mode[self.diag_idxs] = 1
 
     def logp(self, x):
