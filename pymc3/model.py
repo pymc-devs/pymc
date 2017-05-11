@@ -188,37 +188,6 @@ class Factor(object):
         else:
             return tt.sum(self.logp_elemwiset)
 
-    @property
-    def scaling(self):
-        total_size = getattr(self, 'total_size', None)
-        if total_size is None:
-            coef = tt.constant(1)
-        elif isinstance(total_size, (int, float)):
-            if self.logp_elemwiset.ndim >= 1:
-                denom = self.logp_elemwiset.shape[0]
-            else:
-                denom = 1.
-            coef = pm.floatX(total_size) / pm.floatX(denom)
-        elif isinstance(total_size, (list, tuple)):
-            shape = self.logp_elemwiset.shape
-            if Ellipsis in total_size:
-                sep = total_size.index(Ellipsis)
-                begin = total_size[:sep]
-                end = total_size[sep:]
-            else:
-                begin = total_size
-                end = []
-            if len(end) > 0:
-                shp_end = shape[-len(end):]
-            else:
-                shp_end = np.asarray([])
-            shp_begin = shape[:len(begin)]
-            begin_coef = [t/shp_begin[i] for i, t in enumerate(begin) if t is not None]
-            end_coef = [t/shp_end[i] for i, t in enumerate(end) if t is not None]
-            coefs = begin_coef + end_coef
-            coef = tt.prod(coefs)
-        return pm.floatX(coef)
-
 
 class InitContextMeta(type):
     """Metaclass that executes `__init__` of instance in it's context"""
@@ -814,6 +783,60 @@ class LoosePointFunc(object):
 compilef = fastfn
 
 
+def _get_scaling(total_size, data):
+    """
+
+    Parameters
+    ----------
+    total_size : int or list[int]
+    data : n-dimentional tensor
+
+    Returns
+    -------
+    scalar
+    """
+    if total_size is None:
+        coef = pm.floatX(1)
+    elif isinstance(total_size, int):
+        if data.ndim >= 1:
+            denom = data.shape[0]
+        else:
+            denom = 1
+        coef = pm.floatX(total_size) / pm.floatX(denom)
+    elif isinstance(total_size, (list, tuple)):
+        if not all(isinstance(i, int) for i in total_size if i is not Ellipsis):
+            raise TypeError('Unrecognized `total_size` type, expected '
+                            'int or list of ints')
+        shape = data.shape
+        if Ellipsis in total_size:
+            sep = total_size.index(Ellipsis)
+            begin = total_size[:sep]
+            end = total_size[sep+1:]
+            if Ellipsis in end:
+                raise ValueError('Double Ellipsis in `total_size` is restricted')
+        else:
+            begin = total_size
+            end = []
+        if (len(begin) + len(end)) > data.ndim:
+            raise ValueError('Length of `total_size` is too big, '
+                             'number of scalings is bigger that ndim')
+        elif (len(begin) + len(end)) == 0:
+            return pm.floatX(1)
+        if len(end) > 0:
+            shp_end = shape[-len(end):]
+        else:
+            shp_end = np.asarray([])
+        shp_begin = shape[:len(begin)]
+        begin_coef = [pm.floatX(t) / shp_begin[i] for i, t in enumerate(begin) if t is not None]
+        end_coef = [pm.floatX(t) / shp_end[i] for i, t in enumerate(end) if t is not None]
+        coefs = begin_coef + end_coef
+        coef = tt.prod(coefs)
+    else:
+        raise TypeError('Unrecognized `total_size` type, expected '
+                        'int or list of ints')
+    return pm.floatX(coef)
+
+
 class FreeRV(Factor, TensorVariable):
     """Unobserved random variable that a model is specified in terms of."""
 
@@ -843,6 +866,7 @@ class FreeRV(Factor, TensorVariable):
             self.logp_elemwiset = distribution.logp(self)
             self.total_size = total_size
             self.model = model
+            self.scaling = _get_scaling(total_size, self)
 
             incorporate_methods(source=distribution, destination=self,
                                 methods=['random'],
@@ -932,7 +956,7 @@ class ObservedRV(Factor, TensorVariable):
             data = pandas_to_array(data)
             type = TensorType(distribution.dtype, data.shape)
 
-        super(TensorVariable, self).__init__(type, None, None, name)
+        super(ObservedRV, self).__init__(type, owner, index, name)
 
         if distribution is not None:
             data = as_tensor(data, name, model, distribution)
@@ -947,8 +971,8 @@ class ObservedRV(Factor, TensorVariable):
             # make this RV a view on the combined missing/nonmissing array
             theano.gof.Apply(theano.compile.view_op,
                              inputs=[data], outputs=[self])
-
             self.tag.test_value = theano.compile.view_op(data).tag.test_value
+            self.scaling = _get_scaling(total_size, data)
 
     def _repr_latex_(self, name=None, dist=None):
         if self.distribution is None:
