@@ -197,6 +197,67 @@ class TestScaling(object):
             g2 = grad2(1)
             np.testing.assert_almost_equal(g1, g2)
 
+    def test_multidim_scaling(self):
+        with pm.Model() as model0:
+            Normal('n', observed=[[1, 1],
+                                  [1, 1]], total_size=[])
+            p0 = theano.function([], model0.logpt)
+
+        with pm.Model() as model1:
+            Normal('n', observed=[[1, 1],
+                                  [1, 1]], total_size=[2, 2])
+            p1 = theano.function([], model1.logpt)
+
+        with pm.Model() as model2:
+            Normal('n', observed=[[1],
+                                  [1]], total_size=[2, 2])
+            p2 = theano.function([], model2.logpt)
+
+        with pm.Model() as model3:
+            Normal('n', observed=[[1, 1]], total_size=[2, 2])
+            p3 = theano.function([], model3.logpt)
+
+        with pm.Model() as model4:
+            Normal('n', observed=[[1]], total_size=[2, 2])
+            p4 = theano.function([], model4.logpt)
+
+        with pm.Model() as model5:
+            Normal('n', observed=[[1]], total_size=[2, Ellipsis, 2])
+            p5 = theano.function([], model5.logpt)
+        assert p0() == p1() == p2() == p3() == p4() == p5()
+
+    def test_common_errors(self):
+        with pm.Model():
+            with pytest.raises(ValueError) as e:
+                Normal('n', observed=[[1]], total_size=[2, Ellipsis, 2, 2])
+            assert 'Length of' in str(e.value)
+            with pytest.raises(ValueError) as e:
+                Normal('n', observed=[[1]], total_size=[2, 2, 2])
+            assert 'Length of' in str(e.value)
+            with pytest.raises(TypeError) as e:
+                Normal('n', observed=[[1]], total_size='foo')
+            assert 'Unrecognized' in str(e.value)
+            with pytest.raises(TypeError) as e:
+                Normal('n', observed=[[1]], total_size=['foo'])
+            assert 'Unrecognized' in str(e.value)
+            with pytest.raises(ValueError) as e:
+                Normal('n', observed=[[1]], total_size=[Ellipsis, Ellipsis])
+            assert 'Double Ellipsis' in str(e.value)
+
+    @pytest.mark.skip()
+    def test_free_rv(self):
+        with pm.Model() as model4:
+            Normal('n', observed=[[1, 1],
+                                  [1, 1]], total_size=[2, 2])
+            p4 = theano.function([], model4.logpt)
+
+        with pm.Model() as model5:
+            Normal('n', total_size=[2, Ellipsis, 2], shape=(1, 1), broadcastable=(False, False))
+            p5 = theano.function([model5.n], model5.logpt)
+        assert p4() == p5(pm.floatX([[1]]))
+        assert p4() == p5(pm.floatX([[1, 1],
+                                     [1, 1]]))
+
 
 class TestTheanoConfig(object):
     def test_set_testval_raise(self):
