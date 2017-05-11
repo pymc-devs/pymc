@@ -62,6 +62,10 @@ class MeanField(Approximation):
     def cov(self):
         return tt.diag(rho2sd(self.rho)**2)
 
+    @property
+    def std(self):
+        return rho2sd(self.rho)
+
     def create_shared_params(self, **kwargs):
         start = kwargs.get('start')
         if start is None:
