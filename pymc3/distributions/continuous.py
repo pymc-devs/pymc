@@ -13,6 +13,7 @@ from scipy import stats
 import warnings
 
 from pymc3.theanof import floatX
+from pymc3.math import logit
 from . import transforms
 
 from .dist_math import bound, logpow, gammaln, betaln, std_cdf, i0, i1, alltrue_elemwise
@@ -20,9 +21,9 @@ from .distribution import Continuous, draw_values, generate_samples, Bound
 
 __all__ = ['Uniform', 'Flat', 'Normal', 'Beta', 'Exponential', 'Laplace',
            'StudentT', 'Cauchy', 'HalfCauchy', 'Gamma', 'Weibull',
-           'HalfStudentT', 'StudentTpos', 'Lognormal', 'ChiSquared',
-           'HalfNormal', 'Wald', 'Pareto', 'InverseGamma', 'ExGaussian',
-           'VonMises', 'SkewNormal']
+           'HalfStudentT', 'StudentTpos', 'Lognormal', 'Logitnormal',
+           'ChiSquared', 'HalfNormal', 'Wald', 'Pareto', 'InverseGamma',
+           'ExGaussian', 'VonMises', 'SkewNormal']
 
 
 class PositiveContinuous(Continuous):
@@ -641,6 +642,47 @@ class Lognormal(PositiveContinuous):
                      + 0.5 * tt.log(tau / (2. * np.pi))
                      - tt.log(value),
                      tau > 0)
+
+
+class Logitnormal(PositiveContinuous):
+    R"""
+    Logit-normal log-likelihood.
+
+    .. math::
+
+       f(x \mid \mu, \tau) =
+           \frac{1}{x(1-x)} \sqrt{\frac{\tau}{2\pi}}
+           \exp\left\{ -\frac{\tau}{2} (logit(x)-\mu)^2 \right\}
+
+    ========  =========================================================================
+    Support   :math:`x \in (0, 1)`
+    Mean      no analytical solution
+    Variance  no analytical solution
+    ========  =========================================================================
+
+    Parameters
+    ----------
+    mu : float
+        Location parameter.
+    tau : float
+        Scale parameter (tau > 0).
+    """
+
+    def __init__(self, mu=0.5, tau=None, *args, **kwargs):
+        super(Logitnormal, self).__init__(*args, **kwargs)
+
+        self.mu = mu = tt.as_tensor_variable(mu)
+        self.tau = tau = tt.as_tensor_variable(tau)
+
+        self.median = logit(mu)
+        assert_negative_support(tau, 'tau', 'Logitnormal')
+
+    def logp(self, value):
+        mu = self.mu
+        tau = self.tau
+        return bound(-0.5 * tau * (logit(value) - mu) ** 2
+                     + 0.5 * tt.log(tau / (2. * np.pi))
+                     - tt.log(value * (1 - value)), value > 0, value < 1, tau > 0)
 
 
 class StudentT(Continuous):
