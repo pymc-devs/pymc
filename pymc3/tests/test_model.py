@@ -244,7 +244,6 @@ class TestScaling(object):
                 Normal('n', observed=[[1]], total_size=[Ellipsis, Ellipsis])
             assert 'Double Ellipsis' in str(e.value)
 
-    @pytest.mark.skip()
     def test_free_rv(self):
         with pm.Model() as model4:
             Normal('n', observed=[[1, 1],
