@@ -356,22 +356,7 @@ def generator(gen, default=None):
     return GeneratorOp(gen, default)()
 
 
-@change_flags(compute_test_value='off')
-def launch_rng(rng):
-    """
-    Helper function for safe launch of theano random generator.
-    If not launched, there will be problems with test_value
-
-    Parameters
-    ----------
-    rng : `theano.sandbox.rng_mrg.MRG_RandomStreams` instance
-    """
-    state = rng.rstate
-    rng.inc_rstate()
-    rng.set_rstate(state)
-
 _tt_rng = MRG_RandomStreams()
-launch_rng(_tt_rng)
 
 
 def tt_rng(random_seed=None):
@@ -380,7 +365,7 @@ def tt_rng(random_seed=None):
 
     Parameters
     ----------
-    seed : int
+    random_seed : int
         If not None
         returns *new* theano random generator without replacing package global one
 
@@ -394,7 +379,6 @@ def tt_rng(random_seed=None):
         return _tt_rng
     else:
         ret = MRG_RandomStreams(random_seed)
-        launch_rng(ret)
         return ret
 
 
@@ -413,7 +397,6 @@ def set_tt_rng(new_rng):
     if isinstance(new_rng, int):
         new_rng = MRG_RandomStreams(new_rng)
     _tt_rng = new_rng
-    launch_rng(_tt_rng)
 
 
 def floatX_array(x):

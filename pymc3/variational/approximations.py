@@ -40,7 +40,7 @@ class MeanField(Approximation):
         Yuhuai Wu, David Duvenaud, 2016) for details
     scale_cost_to_minibatch : `bool` 
         Scale cost to minibatch instead of full dataset, default False
-    seed : None or int
+    random  seed : None or int
         leave None to use package global RandomStream or other
         valid value to create instance specific one
 
@@ -267,7 +267,7 @@ class Empirical(Approximation):
         Scale cost to minibatch instead of full dataset, default False
     model : :class:`Model` 
         PyMC3 model for inference
-    seed : None or int
+    random_seed : None or int
         leave None to use package global RandomStream or other
         valid value to create instance specific one
 
@@ -379,7 +379,7 @@ class Empirical(Approximation):
             initial point
         model : :class:`Model`
             PyMC3 model for inference
-        seed : None or int
+        random_seed : None or int
             leave None to use package global RandomStream or other
             valid value to create instance specific one
         kwargs : other kwargs passed to init

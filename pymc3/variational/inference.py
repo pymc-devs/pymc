@@ -312,7 +312,7 @@ class ADVI(Inference):
         Yuhuai Wu, David Duvenaud, 2016) for details
     scale_cost_to_minibatch : `bool`
         Scale cost to minibatch instead of full dataset, default False
-    seed : None or int
+    random_seed : None or int
         leave None to use package global RandomStream or other
         valid value to create instance specific one    
     start : `Point`
@@ -560,19 +560,19 @@ def fit(n=10000, local_rv=None, method='advi', model=None, random_seed=None, sta
         Local Vars are used for Autoencoding Variational Bayes
         See (AEVB; Kingma and Welling, 2014) for details
     method : str or :class:`Inference`
-        string name is case insensitive in {'advi', 'fullrank_advi', 'advi->fullrank_advi'}
+        string name is case insensitive in {'advi', 'fullrank_advi', 'advi->fullrank_advi', 'svgd'}
     model : :class:`Model`
         PyMC3 model for inference
-
-    Other Parameters
-    ----------------
-    frac : `float`
-        if method is 'advi->fullrank_advi' represents advi fraction when training
     random_seed : None or int
         leave None to use package global RandomStream or other
         valid value to create instance specific one
     start : `Point`
         starting point for inference
+
+    Other Parameters
+    ----------------
+    frac : `float`
+        if method is 'advi->fullrank_advi' represents advi fraction when training
     kwargs : kwargs for :method:`Inference.fit`
 
     Returns
