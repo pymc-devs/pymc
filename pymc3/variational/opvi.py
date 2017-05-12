@@ -562,10 +562,10 @@ class Approximation(object):
 
         Parameters
         ----------
-        seed : `int`
+        random_seed : `int`
         """
         self._seed = random_seed
-        self._rng.seed(seed)
+        self._rng.seed(random_seed)
 
     @property
     def normalizing_constant(self):
