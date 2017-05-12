@@ -40,7 +40,7 @@ class MeanField(Approximation):
         Yuhuai Wu, David Duvenaud, 2016) for details
     scale_cost_to_minibatch : `bool` 
         Scale cost to minibatch instead of full dataset, default False
-    random  seed : None or int
+    random_seed : None or int
         leave None to use package global RandomStream or other
         valid value to create instance specific one
 
@@ -258,6 +258,7 @@ class Empirical(Approximation):
     Parameters
     ----------
     trace : :class:`MultiTrace`
+        Trace storing samples (e.g. from step methods)
     local_rv : dict[var->tuple]
         Experimental for Empirical Approximation
         mapping {model_variable -> local_variable (:math:`\\mu`, :math:`\\rho`)}
@@ -271,8 +272,8 @@ class Empirical(Approximation):
         leave None to use package global RandomStream or other
         valid value to create instance specific one
 
-    Usage
-    -----
+    Examples
+    --------
     >>> with model:
     ...     step = NUTS()
     ...     trace = sample(1000, step=step)

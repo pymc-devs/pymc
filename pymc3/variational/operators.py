@@ -38,21 +38,22 @@ class KSDObjective(ObjectiveFunction):
 
 
 class KSD(Operator):
-    """
+    R"""
     Operator based on Kernelized Stein Discrepancy
 
     Input: A target distribution with density function :math:`p(x)`
         and a set of initial particles :math:`\{x^0_i\}^n_{i=1}`
+
     Output: A set of particles :math:`\{x_i\}^n_{i=1}` that approximates the target distribution.
     
     .. math::
 
-        x_i^{l+1} \leftarrow \epsilon_l \hat{\phi}^{*}(x_i^l)
+        x_i^{l+1} \leftarrow \epsilon_l \hat{\phi}^{*}(x_i^l) \\
         \hat{\phi}^{*}(x) = \frac{1}{n}\sum^{n}_{j=1}[k(x^l_j,x) \nabla_{x^l_j} logp(x^l_j)+ \nabla_{x^l_j} k(x^l_j,x)]
 
     Parameters
     ----------
-    approx : :class:`pm.Empirical`
+    approx : :class:`Empirical`
         Empirical Approximation used for inference
 
     References
