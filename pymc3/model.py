@@ -804,7 +804,7 @@ def _get_scaling(total_size, data):
             denom = 1
         coef = pm.floatX(total_size) / pm.floatX(denom)
     elif isinstance(total_size, (list, tuple)):
-        if not all(isinstance(i, int) for i in total_size if i is not Ellipsis):
+        if not all(isinstance(i, int) for i in total_size if (i is not Ellipsis or i is not None)):
             raise TypeError('Unrecognized `total_size` type, expected '
                             'int or list of ints')
         shape = data.shape
