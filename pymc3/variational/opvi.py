@@ -286,7 +286,7 @@ class Operator(object):
 
     Notes
     -----
-    For implementing Custom operator it is needed to define :code:`.apply(f)` method
+    For implementing Custom operator it is needed to define :func:`Operator.apply` method
     """
 
     HAS_TEST_FUNCTION = False
@@ -337,13 +337,13 @@ class Operator(object):
 
         Parameters
         ----------
-        f : :class:`TestFunction` or None if not required
+        f : :class:`TestFunction` or None
             function that takes `z = self.input` and returns
             same dimensional output
 
         Returns
         -------
-        tt.TensorVariable
+        `TensorVariable`
             symbolically applied operator
         """
         raise NotImplementedError
@@ -428,7 +428,7 @@ class TestFunction(object):
             self._inited = True
 
     def _setup(self, dim):
-        R"""Does some preparation stuff before calling :code:`.create_shared_params()`
+        R"""Does some preparation stuff before calling :func:`Approximation.create_shared_params`
 
         Parameters
         ----------
@@ -490,13 +490,13 @@ class Approximation(object):
     You can also override the following methods:
 
         -   :code:`._setup(**kwargs)`
-            Do some specific stuff having :code:`kwargs` before calling :code:`.create_shared_params`
+            Do some specific stuff having `kwargs` before calling :func:`Approximation.create_shared_params`
 
         -   :code:`.check_model(model, **kwargs)`
-            Do some specific check for model having :code:`kwargs`
+            Do some specific check for model having `kwargs`
 
-    :code:`kwargs` mentioned above are supplied as additional arguments
-    for :code:`Approximation.__init__`
+    `kwargs` mentioned above are supplied as additional arguments
+    for :class:`Approximation`
 
     There are some defaults class attributes for approximation classes that can be
     optionally overridden.
@@ -734,7 +734,7 @@ class Approximation(object):
         Returns
         -------
         `tt.TensorVariable`
-            sampled latent space :code:`shape == size + latent_dim`
+            sampled latent space
         """
 
         theano_condition_is_here = isinstance(no_rand, tt.Variable)

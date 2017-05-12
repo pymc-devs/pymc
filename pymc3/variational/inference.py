@@ -41,8 +41,9 @@ class Inference(object):
         See (AEVB; Kingma and Welling, 2014) for details
     model : Model
         PyMC3 Model
-    kwargs : kwargs for Approximation
+    kwargs : kwargs for :class:`Approximation`
     """
+
     def __init__(self, op, approx, tf, local_rv=None, model=None, **kwargs):
         self.hist = np.asarray(())
         if isinstance(approx, type) and issubclass(approx, Approximation):
@@ -103,7 +104,7 @@ class Inference(object):
             calls provided functions after each iteration step
         progressbar : bool
             whether to show progressbar or not
-        kwargs : kwargs for ObjectiveFunction.step_function
+        kwargs : kwargs for :func:`ObjectiveFunction.step_function`
 
         Returns
         -------
@@ -264,31 +265,31 @@ class ADVI(Inference):
 
     When using mini-batches, :math:`c_{o}^{k}` and :math:`c_{l}^{k}` should be
     set to :math:`N/M`, where :math:`M` is the number of observations in each
-    mini-batch. This is done with supplying :code:`total_size` parameter to 
+    mini-batch. This is done with supplying `total_size` parameter to 
     observed nodes (e.g. :code:`Normal('x', 0, 1, observed=data, total_size=10000)`).
     In this case it is possible to automatically determine appropriate scaling for :math:`logp`
     of observed nodes. Interesting to note that it is possible to have two independent 
-    observed variables with different :code:`total_size` and iterate them independently
+    observed variables with different `total_size` and iterate them independently
     during inference.  
 
     For working with ADVI, we need to give
     
     -   The probabilistic model
 
-        :code:`model` with three types of RVs (:code:`observed_RVs`,
-        :code:`global_RVs` and :code:`local_RVs`). 
+        `model` with three types of RVs (`observed_RVs`,
+        `global_RVs` and `local_RVs`). 
     
     -   (optional) Minibatches
 
         The tensors to which mini-bathced samples are supplied are 
-        handled separately by using callbacks in :code:`.fit` method 
-        that change storage of shared theano variable or by :code:`pm.generator` 
+        handled separately by using callbacks in :func:`Inference.fit` method 
+        that change storage of shared theano variable or by :func:`pymc3.generator` 
         that automatically iterates over minibatches and defined beforehand. 
     
     -   (optional) Parameters of deterministic mappings
 
-        They have to be passed along with other params to :code:`.fit` method 
-        as :code:`more_obj_params` argument. 
+        They have to be passed along with other params to :func:`Inference.fit` method 
+        as `more_obj_params` argument. 
 
     For more information concerning training stage please reference 
     :func:`pymc3.variational.opvi.ObjectiveFunction.step_function`
@@ -299,7 +300,7 @@ class ADVI(Inference):
         mapping {model_variable -> local_variable (:math:`\mu`, :math:`\rho`)}
         Local Vars are used for Autoencoding Variational Bayes
         See (AEVB; Kingma and Welling, 2014) for details
-    model : :class:`Model` 
+    model : :class:`pymc3.Model` 
         PyMC3 model for inference
     cost_part_grad_scale : `scalar`
         Scaling score part of gradient can be useful near optimum for
@@ -373,7 +374,7 @@ class FullRankADVI(Inference):
         mapping {model_variable -> local_variable (:math:`\\mu`, :math:`\\rho`)}
         Local Vars are used for Autoencoding Variational Bayes
         See (AEVB; Kingma and Welling, 2014) for details
-    model : :class:`Model` 
+    model : :class:`pymc3.Model` 
         PyMC3 model for inference
     cost_part_grad_scale : `scalar`
         Scaling score part of gradient can be useful near optimum for
@@ -511,7 +512,7 @@ class SVGD(Inference):
         number of particles to use for approximation
     jitter : `float`
         noise sd for initial point
-    model : :class:`Model`
+    model : :class:`pymc3.Model`
         PyMC3 model for inference
     kernel : `callable`
         kernel function for KSD :math:`f(histogram) -> (k(x,.), \nabla_x k(x,.))`
@@ -562,7 +563,7 @@ def fit(n=10000, local_rv=None, method='advi', model=None, random_seed=None, sta
         See (AEVB; Kingma and Welling, 2014) for details
     method : str or :class:`Inference`
         string name is case insensitive in {'advi', 'fullrank_advi', 'advi->fullrank_advi', 'svgd'}
-    model : :class:`Model`
+    model : :class:`pymc3.Model`
         PyMC3 model for inference
     random_seed : None or int
         leave None to use package global RandomStream or other
@@ -574,7 +575,7 @@ def fit(n=10000, local_rv=None, method='advi', model=None, random_seed=None, sta
     ----------------
     frac : `float`
         if method is 'advi->fullrank_advi' represents advi fraction when training
-    kwargs : kwargs for :code:`Inference.fit`
+    kwargs : kwargs for :func:`Inference.fit`
 
     Returns
     -------
