@@ -11,7 +11,7 @@ class Callback(object):
         raise NotImplementedError
 
 
-def percentage(current, prev, eps=1e-6):
+def relative(current, prev, eps=1e-6):
     return (np.abs(current - prev)+eps)/(np.abs(prev)+eps)
 
 
@@ -19,13 +19,13 @@ def absolute(current, prev):
     return np.abs(current - prev)
 
 _diff = dict(
-    percentage=percentage,
+    relative=relative,
     absolute=absolute
 )
 
 
 class CheckParametersConvergence(Callback):
-    """
+    """Convergence stopping check
 
     Parameters
     ----------
@@ -34,12 +34,23 @@ class CheckParametersConvergence(Callback):
     tolerance : float
         if diff norm < tolerance : break 
     diff : str
-        difference type one of {'absolute', 'percentage'}
+        difference type one of {'absolute', 'relative'}
     ord : {non-zero int, inf, -inf, 'fro', 'nuc'}, optional
-        see more info in np.linalg.norm 
+        see more info in :func:`numpy.linalg.norm`
+
+    Examples
+    --------
+    >>> with model:
+    ...     approx = pm.fit(
+    ...         n=10000, callbacks=[
+    ...             CheckParametersConvergence(
+    ...                 every=50, diff='absolute',
+    ...                 tolerance=1e-4)
+    ...         ]
+    ...     )
     """
 
-    def __init__(self, every=1000, tolerance=1e-3, diff='percentage', ord=np.inf):
+    def __init__(self, every=1000, tolerance=1e-3, diff='relative', ord=np.inf):
         self._diff = _diff[diff]
         self.ord = ord
         self.every = every
