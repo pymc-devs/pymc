@@ -54,7 +54,7 @@ class CheckParametersConvergence(Callback):
             return
         current = self.flatten_shared(approx.params)
         prev = self.prev
-        delta = self._diff(current - prev)  # type: np.ndarray
+        delta = self._diff(current, prev)  # type: np.ndarray
         self.prev = current
         norm = np.linalg.norm(delta, self.ord)
         if norm < self.tolerance:
