@@ -19,6 +19,7 @@ __all__ = [
     'ADVI',
     'FullRankADVI',
     'SVGD',
+    'ASVGD',
     'Inference',
     'fit'
 ]
@@ -550,6 +551,18 @@ class SVGD(Inference):
             KSD, histogram,
             kernel,
             model=model, random_seed=random_seed)
+
+
+class ASVGD(Inference):
+    def __init__(self, approx, local_rv=None, kernel=test_functions.rbf, model=None, **kwargs):
+        super(ASVGD, self).__init__(
+            op=KSD,
+            approx=approx,
+            local_rv=local_rv,
+            tf=kernel,
+            model=model,
+            **kwargs
+        )
 
 
 def fit(n=10000, local_rv=None, method='advi', model=None, random_seed=None, start=None, **kwargs):
