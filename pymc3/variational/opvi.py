@@ -132,10 +132,6 @@ class ObjectiveFunction(object):
             more_updates = dict()
         if more_replacements is None:
             more_replacements = dict()
-        if not self.op.RETURNS_LOSS and (more_obj_params or more_tf_params):
-            raise ValueError('%s does not support, differentiation with '
-                             'additional params, try passing your updates '
-                             'via more_updates kwarg' % self.op.__class__)
         resulting_updates = ObjectiveUpdates()
         if self.test_params:
             self.add_test_updates(
@@ -161,18 +157,21 @@ class ObjectiveFunction(object):
         return resulting_updates
 
     def add_test_updates(self, updates, tf_n_mc=None, test_optimizer=adam, more_tf_params=None, more_replacements=None):
-        tf_z = self.random(tf_n_mc)
-        tf_target = -self(tf_z)
+        tf_z = self.get_input(tf_n_mc)
+        tf_target = self(tf_z, more_tf_params=more_tf_params)
         tf_target = theano.clone(tf_target, more_replacements, strict=False)
         updates.update(test_optimizer(tf_target, self.test_params + more_tf_params))
 
     def add_obj_updates(self, updates, obj_n_mc=None, obj_optimizer=adam, more_obj_params=None, more_replacements=None):
-        obj_z = self.random(obj_n_mc)
-        obj_target = self(obj_z)
+        obj_z = self.get_input(obj_n_mc)
+        obj_target = self(obj_z, more_obj_params=more_obj_params)
         obj_target = theano.clone(obj_target, more_replacements, strict=False)
         updates.update(obj_optimizer(obj_target, self.obj_params + more_obj_params))
         if self.op.RETURNS_LOSS:
             updates.loss = obj_target
+
+    def get_input(self, n_mc):
+        return self.random(n_mc)
 
     @memoize
     @change_flags(compute_test_value='off')
@@ -266,14 +265,18 @@ class ObjectiveFunction(object):
     def __setstate__(self, state):
         self.__init__(*state)
 
-    def __call__(self, z):
+    def __call__(self, z, **kwargs):
+        if 'more_tf_params' in kwargs:
+            m = -1
+        else:
+            m = 1
         if z.ndim > 1:
             a = theano.scan(
                 lambda z_: theano.clone(self.op.apply(self.tf), {self.op.input: z_}, strict=False),
                 sequences=z, n_steps=z.shape[0])[0].mean()
         else:
             a = theano.clone(self.op.apply(self.tf), {self.op.input: z}, strict=False)
-        return self.op.T(a)
+        return m * self.op.T(a)
 
 
 class Operator(object):
@@ -305,28 +308,10 @@ class Operator(object):
     flat_view = property(lambda self: self.approx.flat_view)
     input = property(lambda self: self.approx.flat_view.input)
 
-    def logp(self, z):
-        factors = ([tt.sum(var.logpt)for var in self.model.basic_RVs] +
-                   [tt.sum(var) for var in self.model.potentials])
-
-        p = self.approx.to_flat_input(tt.add(*factors))
-        p = theano.clone(p, {self.input: z})
-        return p
-
-    def logp_norm(self, z):
-        t = self.approx.normalizing_constant
-        factors = ([tt.sum(var.logpt) / t for var in self.model.basic_RVs] +
-                   [tt.sum(var) / t for var in self.model.potentials])
-        logpt = tt.add(*factors)
-        p = self.approx.to_flat_input(logpt)
-        p = theano.clone(p, {self.input: z})
-        return p
-
-    def logq(self, z):
-        return self.approx.logq(z)
-
-    def logq_norm(self, z):
-        return self.approx.logq_norm(z)
+    logp = property(lambda self: self.approx.logp)
+    logq = property(lambda self: self.approx.logq)
+    logp_norm = property(lambda self: self.approx.logp_norm)
+    logq_norm = property(lambda self: self.approx.logq_norm)
 
     def apply(self, f):   # pragma: no cover
         R"""Operator itself
@@ -923,6 +908,22 @@ class Approximation(object):
 
     def logq_norm(self, z):
         return self.logq(z) / self.normalizing_constant
+
+    def logp(self, z):
+        factors = ([tt.sum(var.logpt)for var in self.model.basic_RVs] +
+                   [tt.sum(var) for var in self.model.potentials])
+        p = self.to_flat_input(tt.add(*factors))
+        p = theano.clone(p, {self.input: z})
+        return p
+
+    def logp_norm(self, z):
+        t = self.normalizing_constant
+        factors = ([tt.sum(var.logpt) / t for var in self.model.basic_RVs] +
+                   [tt.sum(var) / t for var in self.model.potentials])
+        logpt = tt.add(*factors)
+        p = self.to_flat_input(logpt)
+        p = theano.clone(p, {self.input: z})
+        return p
 
     def view(self, space, name, reshape=True):
         """Construct view on a variable from flattened `space`

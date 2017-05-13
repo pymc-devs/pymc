@@ -1,7 +1,6 @@
 from theano import theano, tensor as tt
 from pymc3.variational.opvi import Operator, ObjectiveFunction, _warn_not_used
-from pymc3.variational.updates import adam
-import pymc3 as pm
+from pymc3.variational.stein import Stein
 
 __all__ = [
     'KL',
@@ -25,16 +24,43 @@ class KL(Operator):
 
 
 class KSDObjective(ObjectiveFunction):
-    def add_obj_updates(self, updates, obj_n_mc=None, obj_optimizer=adam,
-                        more_obj_params=None, more_replacements=None):
-        if obj_n_mc is not None:
-            _warn_not_used('obj_n_mc', self.op)
-        d_obj_padams = self(None)
-        d_obj_padams = theano.clone(d_obj_padams, more_replacements, strict=False)
-        updates.update(obj_optimizer([d_obj_padams], self.obj_params))
+    """Helper class for construction loss and updates for variational inference
 
-    def __call__(self, z):
-        return self.op.apply(self.tf)
+    Parameters
+    ----------
+    op : :class:`KSD`
+        OPVI Functional operator 
+    tf : :class:`TestFunction`
+        OPVI TestFunction
+    """
+
+    def __init__(self, op, tf):
+        if not isinstance(op, KSD):
+            raise TypeError('Op should be KSD')
+        ObjectiveFunction.__init__(self, op, tf)
+
+    def get_input(self, n_mc):
+        if hasattr(self.approx, 'histogram'):
+            if n_mc is not None:
+                _warn_not_used('n_mc', self.op)
+            return self.approx.histogram
+        elif n_mc is not None and n_mc > 1:
+            return self.approx.random(n_mc)
+        else:
+            raise ValueError('Variational type approximation requires '
+                             'full sample size (int > 1 should not be passed)')
+
+    def __call__(self, z, **kwargs):
+        op = self.op  # type: KSD
+        grad = op.apply(self.tf)
+        if 'more_obj_params' in kwargs:
+            params = self.obj_params + kwargs['more_obj_params']
+        else:
+            params = self.test_params + kwargs['more_tf_params']
+            grad *= -1
+        grad = theano.clone(grad, {op.input_matrix: z})
+        grad = tt.grad(None, params, known_grads={z: grad})
+        return grad
 
 
 class KSD(Operator):
@@ -68,22 +94,11 @@ class KSD(Operator):
     OBJECTIVE = KSDObjective
 
     def __init__(self, approx):
-        if not isinstance(approx, pm.Empirical):
-            raise ValueError('approx should be an Empirical approximation, got %r' % approx)
         Operator.__init__(self, approx)
+        self.input_matrix = tt.matrix('KSD input matrix')
 
     def apply(self, f):
         # f: kernel function for KSD f(histogram) -> (k(x,.), \nabla_x k(x,.))
-        X = self.approx.histogram
-        t = self.approx.normalizing_constant
-        dlogpdx = theano.scan(
-            fn=lambda zg: theano.grad(self.logp_norm(zg), zg),
-            sequences=[X]
-        )[0]    # bottleneck
-        Kxy, dxkxy = f(X)
-        # scaling factor
-        # not needed for Kxy as we already scaled dlogpdx
-        dxkxy /= t
-        n = X.shape[0].astype('float32') / t
-        svgd_grad = (tt.dot(Kxy, dlogpdx) + dxkxy) / n
-        return -1 * svgd_grad   # gradient
+        stein = Stein(self.approx, f, self.input_matrix)
+        return -1 * stein.grad
+
