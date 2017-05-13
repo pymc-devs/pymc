@@ -112,13 +112,15 @@ def plot_posterior_op(trace_values, figsize, ax, kde_plot, point_estimate, round
         hpd_intervals = hpd(trace_values, alpha=alpha_level)
         ax.plot(hpd_intervals, (plot_height * 0.02,
                                 plot_height * 0.02), linewidth=4, color='k')
-        text_props = dict(size=text_size, horizontalalignment='center')
         ax.text(hpd_intervals[0], plot_height * 0.07,
-                hpd_intervals[0].round(round_to), **text_props)
+                hpd_intervals[0].round(round_to),
+                size=16, horizontalalignment='right')
         ax.text(hpd_intervals[1], plot_height * 0.07,
-                hpd_intervals[1].round(round_to), **text_props)
+                hpd_intervals[1].round(round_to),
+                size=16, horizontalalignment='left')
         ax.text((hpd_intervals[0] + hpd_intervals[1]) / 2, plot_height * 0.2,
-                format_as_percent(1 - alpha_level) + ' HPD', **text_props)
+                format_as_percent(1 - alpha_level) + ' HPD',
+                size=16, horizontalalignment='center')
 
     def format_axes():
         ax.yaxis.set_ticklabels([])
