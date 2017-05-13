@@ -2,6 +2,10 @@ from theano import theano, tensor as tt
 from pymc3.variational.test_functions import rbf
 from pymc3.theanof import memoize
 
+__all__ = [
+    'Stein'
+]
+
 
 class Stein(object):
     def __init__(self, approx, kernel=rbf, input_matrix=None):

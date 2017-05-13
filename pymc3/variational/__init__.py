@@ -30,6 +30,7 @@ from .approximations import (
     sample_approx
 )
 
+from .stein import Stein
 from . import approximations
 from . import operators
 from . import test_functions
