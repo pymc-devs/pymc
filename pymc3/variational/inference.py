@@ -25,7 +25,7 @@ __all__ = [
 
 
 class Inference(object):
-    """
+    R"""
     Base class for Variational Inference
 
     Communicates Operator, Approximation and Test Function to build Objective Function
@@ -41,8 +41,9 @@ class Inference(object):
         See (AEVB; Kingma and Welling, 2014) for details
     model : Model
         PyMC3 Model
-    kwargs : kwargs for Approximation
+    kwargs : kwargs for :class:`Approximation`
     """
+
     def __init__(self, op, approx, tf, local_rv=None, model=None, **kwargs):
         self.hist = np.asarray(())
         if isinstance(approx, type) and issubclass(approx, Approximation):
@@ -99,11 +100,11 @@ class Inference(object):
             number of iterations
         score : bool
             evaluate loss on each iteration or not
-        callbacks : list[function : (Approximation, losses, i) -> any]
+        callbacks : list[function : (Approximation, losses, i) -> None]
             calls provided functions after each iteration step
         progressbar : bool
             whether to show progressbar or not
-        kwargs : kwargs for ObjectiveFunction.step_function
+        kwargs : kwargs for :func:`ObjectiveFunction.step_function`
 
         Returns
         -------
@@ -177,7 +178,7 @@ class Inference(object):
 
 
 class ADVI(Inference):
-    """
+    R"""
     Automatic Differentiation Variational Inference (ADVI)
     
     This class implements the meanfield ADVI, where the variational
@@ -195,7 +196,7 @@ class ADVI(Inference):
     in the model.
 
     The next ones are global random variables
-    :math:`\Theta=\{\\theta^{k}\}_{k=1}^{V_{g}}`, which are used to calculate
+    :math:`\Theta=\{\theta^{k}\}_{k=1}^{V_{g}}`, which are used to calculate
     the probabilities for all observed samples.
 
     The last ones are local random variables
@@ -212,35 +213,35 @@ class ADVI(Inference):
     These parameters are denoted as :math:`\gamma`. While :math:`\gamma` is
     a constant, the parameters of :math:`q(\mathbf{z}_{i})` are dependent on
     each observation. Therefore these parameters are denoted as
-    :math:`\\xi(\mathbf{y}_{i}; \\nu)`, where :math:`\\nu` is the parameters
-    of :math:`\\xi(\cdot)`. For example, :math:`\\xi(\cdot)` can be a
+    :math:`\xi(\mathbf{y}_{i}; \nu)`, where :math:`\nu` is the parameters
+    of :math:`\xi(\cdot)`. For example, :math:`\xi(\cdot)` can be a
     multilayer perceptron or convolutional neural network.
 
-    In addition to :math:`\\xi(\cdot)`, we can also include deterministic
+    In addition to :math:`\xi(\cdot)`, we can also include deterministic
     mappings for the likelihood of observations. We denote the parameters of
     the deterministic mappings as :math:`\eta`. An example of such mappings is
     the deconvolutional neural network used in the convolutional VAE example
     in the PyMC3 notebook directory.
 
     This function maximizes the evidence lower bound (ELBO)
-    :math:`{\cal L}(\gamma, \\nu, \eta)` defined as follows:
+    :math:`{\cal L}(\gamma, \nu, \eta)` defined as follows:
 
     .. math::
 
-        {\cal L}(\gamma,\\nu,\eta) & =
+        {\cal L}(\gamma,\nu,\eta) & =
         \mathbf{c}_{o}\mathbb{E}_{q(\Theta)}\left[
         \sum_{i=1}^{N}\mathbb{E}_{q(\mathbf{z}_{i})}\left[
         \log p(\mathbf{y}_{i}|\mathbf{z}_{i},\Theta,\eta)
-        \\right]\\right] \\\\ &
-        - \mathbf{c}_{g}KL\left[q(\Theta)||p(\Theta)\\right]
+        \right]\right] \\ &
+        - \mathbf{c}_{g}KL\left[q(\Theta)||p(\Theta)\right]
         - \mathbf{c}_{l}\sum_{i=1}^{N}
-            KL\left[q(\mathbf{z}_{i})||p(\mathbf{z}_{i})\\right],
+            KL\left[q(\mathbf{z}_{i})||p(\mathbf{z}_{i})\right],
 
     where :math:`KL[q(v)||p(v)]` is the Kullback-Leibler divergence
 
     .. math::
 
-        KL[q(v)||p(v)] = \int q(v)\log\\frac{q(v)}{p(v)}dv,
+        KL[q(v)||p(v)] = \int q(v)\log\frac{q(v)}{p(v)}dv,
 
     :math:`\mathbf{c}_{o/g/l}` are vectors for weighting each term of ELBO.
     More precisely, we can write each of the terms in ELBO as follows:
@@ -250,59 +251,56 @@ class ADVI(Inference):
         \mathbf{c}_{o}\log p(\mathbf{y}_{i}|\mathbf{z}_{i},\Theta,\eta) & = &
         \sum_{k=1}^{V_{o}}c_{o}^{k}
             \log p(\mathbf{y}_{i}^{k}|
-                   {\\rm pa}(\mathbf{y}_{i}^{k},\Theta,\eta)) \\\\
-        \mathbf{c}_{g}KL\left[q(\Theta)||p(\Theta)\\right] & = &
+                   {\rm pa}(\mathbf{y}_{i}^{k},\Theta,\eta)) \\
+        \mathbf{c}_{g}KL\left[q(\Theta)||p(\Theta)\right] & = &
         \sum_{k=1}^{V_{g}}c_{g}^{k}KL\left[
-            q(\\theta^{k})||p(\\theta^{k}|{\\rm pa(\\theta^{k})})\\right] \\\\
-        \mathbf{c}_{l}KL\left[q(\mathbf{z}_{i}||p(\mathbf{z}_{i})\\right] & = &
+            q(\theta^{k})||p(\theta^{k}|{\rm pa(\theta^{k})})\right] \\
+        \mathbf{c}_{l}KL\left[q(\mathbf{z}_{i}||p(\mathbf{z}_{i})\right] & = &
         \sum_{k=1}^{V_{l}}c_{l}^{k}KL\left[
             q(\mathbf{z}_{i}^{k})||
-            p(\mathbf{z}_{i}^{k}|{\\rm pa}(\mathbf{z}_{i}^{k}))\\right],
+            p(\mathbf{z}_{i}^{k}|{\rm pa}(\mathbf{z}_{i}^{k}))\right],
 
-    where :math:`{\\rm pa}(v)` denotes the set of parent variables of :math:`v`
+    where :math:`{\rm pa}(v)` denotes the set of parent variables of :math:`v`
     in the directed acyclic graph of the model.
 
     When using mini-batches, :math:`c_{o}^{k}` and :math:`c_{l}^{k}` should be
     set to :math:`N/M`, where :math:`M` is the number of observations in each
-    mini-batch. This is done with supplying :code:`total_size` parameter to 
+    mini-batch. This is done with supplying `total_size` parameter to 
     observed nodes (e.g. :code:`Normal('x', 0, 1, observed=data, total_size=10000)`).
     In this case it is possible to automatically determine appropriate scaling for :math:`logp`
     of observed nodes. Interesting to note that it is possible to have two independent 
-    observed variables with different :code:`total_size` and iterate them independently
+    observed variables with different `total_size` and iterate them independently
     during inference.  
 
     For working with ADVI, we need to give
     
     -   The probabilistic model
 
-        :code:`model` with three types of RVs (:code:`observed_RVs`,
-        :code:`global_RVs` and :code:`local_RVs`). 
+        `model` with three types of RVs (`observed_RVs`,
+        `global_RVs` and `local_RVs`). 
     
     -   (optional) Minibatches
 
         The tensors to which mini-bathced samples are supplied are 
-        handled separately by using callbacks in :code:`.fit` method 
-        that change storage of shared theano variable or by :code:`pm.generator` 
+        handled separately by using callbacks in :func:`Inference.fit` method 
+        that change storage of shared theano variable or by :func:`pymc3.generator` 
         that automatically iterates over minibatches and defined beforehand. 
     
     -   (optional) Parameters of deterministic mappings
 
-        They have to be passed along with other params to :code:`.fit` method 
-        as :code:`more_obj_params` argument. 
-    
-    
-    See Also
-    --------
+        They have to be passed along with other params to :func:`Inference.fit` method 
+        as `more_obj_params` argument. 
+
     For more information concerning training stage please reference 
-    :code:`pymc3.variational.opvi.ObjectiveFunction.step_function`
+    :func:`pymc3.variational.opvi.ObjectiveFunction.step_function`
     
     Parameters
     ----------
     local_rv : dict[var->tuple]
-        mapping {model_variable -> local_variable (:math:`\\mu`, :math:`\\rho`)}
+        mapping {model_variable -> local_variable (:math:`\mu`, :math:`\rho`)}
         Local Vars are used for Autoencoding Variational Bayes
         See (AEVB; Kingma and Welling, 2014) for details
-    model : :class:`Model` 
+    model : :class:`pymc3.Model` 
         PyMC3 model for inference
     cost_part_grad_scale : `scalar`
         Scaling score part of gradient can be useful near optimum for
@@ -331,6 +329,7 @@ class ADVI(Inference):
     -   Kingma, D. P., & Welling, M. (2014).
         Auto-Encoding Variational Bayes. stat, 1050, 1.
     """
+
     def __init__(self, local_rv=None, model=None,
                  cost_part_grad_scale=1,
                  scale_cost_to_minibatch=False,
@@ -366,7 +365,7 @@ class ADVI(Inference):
 
 
 class FullRankADVI(Inference):
-    """
+    R"""
     Full Rank Automatic Differentiation Variational Inference (ADVI)
 
     Parameters
@@ -375,7 +374,7 @@ class FullRankADVI(Inference):
         mapping {model_variable -> local_variable (:math:`\\mu`, :math:`\\rho`)}
         Local Vars are used for Autoencoding Variational Bayes
         See (AEVB; Kingma and Welling, 2014) for details
-    model : :class:`Model` 
+    model : :class:`pymc3.Model` 
         PyMC3 model for inference
     cost_part_grad_scale : `scalar`
         Scaling score part of gradient can be useful near optimum for
@@ -404,6 +403,7 @@ class FullRankADVI(Inference):
     -   Kingma, D. P., & Welling, M. (2014).
         Auto-Encoding Variational Bayes. stat, 1050, 1.
     """
+
     def __init__(self, local_rv=None, model=None,
                  cost_part_grad_scale=1,
                  scale_cost_to_minibatch=False,
@@ -487,7 +487,7 @@ class FullRankADVI(Inference):
 
 
 class SVGD(Inference):
-    """
+    R"""
     Stein Variational Gradient Descent
 
     This inference is based on Kernelized Stein Discrepancy
@@ -495,14 +495,15 @@ class SVGD(Inference):
     they fit target distribution best.
 
     Algorithm is outlined below
+    
+    *Input:* A target distribution with density function :math:`p(x)`
+            and a set of initial particles :math:`{x^0_i}^n_{i=1}`
 
-    Input: A target distribution with density function :math:`p(x)`
-        and a set of initial particles :math:`{x^0_i}^n_{i=1}`
-    Output: A set of particles :math:`{x_i}^n_{i=1}` that approximates the target distribution.
+    *Output:* A set of particles :math:`{x_i}^n_{i=1}` that approximates the target distribution.
 
     .. math::
 
-        x_i^{l+1} \leftarrow \epsilon_l \hat{\phi}^{*}(x_i^l)
+        x_i^{l+1} \leftarrow \epsilon_l \hat{\phi}^{*}(x_i^l) \\
         \hat{\phi}^{*}(x) = \frac{1}{n}\sum^{n}_{j=1}[k(x^l_j,x) \nabla_{x^l_j} logp(x^l_j)+ \nabla_{x^l_j} k(x^l_j,x)]
 
     Parameters
@@ -511,10 +512,10 @@ class SVGD(Inference):
         number of particles to use for approximation
     jitter : `float`
         noise sd for initial point
-    model : :class:`Model`
+    model : :class:`pymc3.Model`
         PyMC3 model for inference
     kernel : `callable`
-        kernel function for KSD f(histogram) -> (k(x,.), \nabla_x k(x,.))
+        kernel function for KSD :math:`f(histogram) -> (k(x,.), \nabla_x k(x,.))`
     scale_cost_to_minibatch : bool, default False
         Scale cost to minibatch instead of full dataset
     start : `dict`
@@ -533,6 +534,7 @@ class SVGD(Inference):
         Stein Variational Gradient Descent: A General Purpose Bayesian Inference Algorithm
         arXiv:1608.04471
     """
+
     def __init__(self, n_particles=100, jitter=.01, model=None, kernel=test_functions.rbf,
                  scale_cost_to_minibatch=False, start=None, histogram=None,
                  random_seed=None, local_rv=None):
@@ -548,7 +550,7 @@ class SVGD(Inference):
 
 
 def fit(n=10000, local_rv=None, method='advi', model=None, random_seed=None, start=None, **kwargs):
-    """
+    R"""
     Handy shortcut for using inference methods in functional way
 
     Parameters
@@ -556,12 +558,12 @@ def fit(n=10000, local_rv=None, method='advi', model=None, random_seed=None, sta
     n : `int`
         number of iterations
     local_rv : dict[var->tuple]
-        mapping {model_variable -> local_variable (:math:`\\mu`, :math:`\\rho`)}
+        mapping {model_variable -> local_variable (:math:`\mu`, :math:`\rho`)}
         Local Vars are used for Autoencoding Variational Bayes
         See (AEVB; Kingma and Welling, 2014) for details
     method : str or :class:`Inference`
         string name is case insensitive in {'advi', 'fullrank_advi', 'advi->fullrank_advi', 'svgd'}
-    model : :class:`Model`
+    model : :class:`pymc3.Model`
         PyMC3 model for inference
     random_seed : None or int
         leave None to use package global RandomStream or other
@@ -573,7 +575,7 @@ def fit(n=10000, local_rv=None, method='advi', model=None, random_seed=None, sta
     ----------------
     frac : `float`
         if method is 'advi->fullrank_advi' represents advi fraction when training
-    kwargs : kwargs for :method:`Inference.fit`
+    kwargs : kwargs for :func:`Inference.fit`
 
     Returns
     -------

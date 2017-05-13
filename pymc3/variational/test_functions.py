@@ -10,7 +10,11 @@ __all__ = [
 class Kernel(TestFunction):
     """
     Dummy base class for kernel SVGD in case we implement more
-    f(x) -> (k(x,.), \nabla_x k(x,.))
+    
+    .. math::
+    
+        f(x) -> (k(x,.), \nabla_x k(x,.))
+
     """
 
 

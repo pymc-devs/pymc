@@ -1,4 +1,4 @@
-"""
+R"""
 Variational inference is a great approach for doing really complex,
 often intractable Bayesian inference in approximate form. Common methods
 (e.g. ADVI) lack from complexity so that approximate posterior does not
@@ -181,13 +181,13 @@ class ObjectiveFunction(object):
                       more_obj_params=None, more_tf_params=None,
                       more_updates=None, more_replacements=None, score=False,
                       fn_kwargs=None):
-        """Step function that should be called on each optimization step.
+        R"""Step function that should be called on each optimization step.
 
         Generally it solves the following problem:
         
         .. math::
 
-                \textbf{\lambda^{*}} = \inf_{\lambda} \sup_{\theta} t(\mathbb{E}_{\lambda}[(O^{p,q}f_{\theta})(z)])
+                \mathbf{\lambda^{*}} = \inf_{\lambda} \sup_{\theta} t(\mathbb{E}_{\lambda}[(O^{p,q}f_{\theta})(z)])
 
         Parameters
         ----------
@@ -236,7 +236,7 @@ class ObjectiveFunction(object):
     @memoize
     @change_flags(compute_test_value='off')
     def score_function(self, sc_n_mc=None, more_replacements=None, fn_kwargs=None):   # pragma: no cover
-        """Compiles scoring function that operates which takes no inputs and returns Loss
+        R"""Compiles scoring function that operates which takes no inputs and returns Loss
 
         Parameters
         ----------
@@ -277,7 +277,7 @@ class ObjectiveFunction(object):
 
 
 class Operator(object):
-    """Base class for Operator
+    R"""Base class for Operator
 
     Parameters
     ----------
@@ -286,7 +286,7 @@ class Operator(object):
 
     Notes
     -----
-    For implementing Custom operator it is needed to define :code:`.apply(f)` method
+    For implementing Custom operator it is needed to define :func:`Operator.apply` method
     """
 
     HAS_TEST_FUNCTION = False
@@ -329,7 +329,7 @@ class Operator(object):
         return self.approx.logq_norm(z)
 
     def apply(self, f):   # pragma: no cover
-        """Operator itself
+        R"""Operator itself
         
         .. math::
 
@@ -337,13 +337,13 @@ class Operator(object):
 
         Parameters
         ----------
-        f : :class:`TestFunction` or None if not required
+        f : :class:`TestFunction` or None
             function that takes `z = self.input` and returns
             same dimensional output
 
         Returns
         -------
-        tt.TensorVariable
+        `TensorVariable`
             symbolically applied operator
         """
         raise NotImplementedError
@@ -428,7 +428,7 @@ class TestFunction(object):
             self._inited = True
 
     def _setup(self, dim):
-        """Does some preparation stuff before calling `.create_shared_params()`
+        R"""Does some preparation stuff before calling :func:`Approximation.create_shared_params`
 
         Parameters
         ----------
@@ -447,12 +447,12 @@ class TestFunction(object):
 
 
 class Approximation(object):
-    """Base class for approximations.
+    R"""Base class for approximations.
 
     Parameters
     ----------
     local_rv : dict[var->tuple]
-        mapping {model_variable -> local_variable (:math:`\\mu`, :math:`\\rho`)}
+        mapping {model_variable -> local_variable (:math:`\mu`, :math:`\rho`)}
         Local Vars are used for Autoencoding Variational Bayes
         See (AEVB; Kingma and Welling, 2014) for details
     model : :class:`Model` 
@@ -489,25 +489,23 @@ class Approximation(object):
 
     You can also override the following methods:
 
-        - :code:`._setup(**kwargs)`
-            Do some specific stuff having :code:`kwargs` before calling :code:`.create_shared_params`
+        -   :code:`._setup(**kwargs)`
+            Do some specific stuff having `kwargs` before calling :func:`Approximation.create_shared_params`
 
-        - :code:`.check_model(model, **kwargs)`
-            Do some specific check for model having :code:`kwargs`
+        -   :code:`.check_model(model, **kwargs)`
+            Do some specific check for model having `kwargs`
 
-    See Also
-    --------
-    :code:`kwargs` mentioned above are supplied as additional arguments
-    for :code:`Approximation.__init__`
+    `kwargs` mentioned above are supplied as additional arguments
+    for :class:`Approximation`
 
     There are some defaults class attributes for approximation classes that can be
-    optionally overriden.
+    optionally overridden.
 
-        - :code:`initial_dist_name`
+        -   :code:`initial_dist_name`
             string that represents name of the initial distribution.
             In most cases if will be `uniform` or `normal`
 
-        - :code:`initial_dist_map`
+        -   :code:`initial_dist_map`
             float where initial distribution has maximum density
 
     References
@@ -563,6 +561,7 @@ class Approximation(object):
         Parameters
         ----------
         random_seed : `int`
+            New random seed
         """
         self._seed = random_seed
         self._rng.seed(random_seed)
@@ -735,7 +734,7 @@ class Approximation(object):
         Returns
         -------
         `tt.TensorVariable`
-            sampled latent space shape == size + latent_dim
+            sampled latent space
         """
 
         theano_condition_is_here = isinstance(no_rand, tt.Variable)
