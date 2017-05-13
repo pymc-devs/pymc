@@ -1,6 +1,7 @@
 from theano import theano, tensor as tt
 from pymc3.variational.opvi import Operator, ObjectiveFunction, _warn_not_used
 from pymc3.variational.stein import Stein
+from pymc3.variational import updates
 
 __all__ = [
     'KL',
@@ -48,7 +49,7 @@ class KSDObjective(ObjectiveFunction):
             return self.approx.random(n_mc)
         else:
             raise ValueError('Variational type approximation requires '
-                             'full sample size (int > 1 should not be passed)')
+                             'sample size (`n_mc` : int > 1 should be passed)')
 
     def __call__(self, z, **kwargs):
         op = self.op  # type: KSD
@@ -60,6 +61,7 @@ class KSDObjective(ObjectiveFunction):
             grad *= -1
         grad = theano.clone(grad, {op.input_matrix: z})
         grad = tt.grad(None, params, known_grads={z: grad})
+        grad = updates.total_norm_constraint(grad, 10)
         return grad
 
 
