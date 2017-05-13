@@ -107,26 +107,26 @@ class TestStepMethods(object):  # yield test doesn't work subclassing object
               -3.91174647e-01,  -2.60664979e+00,  -2.27637534e+00,  -2.81505065e+00,
               -2.24238542e+00,  -1.01648100e+00,  -1.01648100e+00,  -7.60912865e-01,
                1.44384812e+00,   2.07355127e+00,   1.91390340e+00,   1.66559696e+00]),
-        smc.SMC: np.array([-0.44712856, -0.44712856,  0.40349164,  0.40349164,  0.59357852,
-                           -1.09491185,  0.16938243,  0.74055645, -0.9537006 , -0.26621851,
-                            0.03261455, -1.37311732,  0.31515939,  0.84616065, -0.85951594,
-                            0.35054598, -1.31228341, -0.03869551, -1.61577235,  1.12141771,
-                            0.40890054, -0.02461696, -0.77516162,  1.27375593,  1.23616403,
-                            0.3380117 , -1.19926803,  0.86334532, -0.1809203 , -0.60392063,
-                           -0.60392063,  0.5505375 ,  0.79280687, -0.62353073,  0.52057634,
-                            0.52057634,  0.80186103,  0.0465673 ,  0.0465673 , -0.18656977,
-                           -0.10174587,  0.86888616,  0.75041164,  0.52946532,  0.52946532,
-                            0.13770121,  0.07782113,  0.61838026,  0.23249456,  0.23249456,
-                            0.68255141, -0.31011677,  1.0388246 ,  0.44136444, -0.10015523,
-                           -0.10015523, -0.13644474, -0.11905419,  0.01740941,  0.01740941,
-                           -1.12201873, -0.51709446, -0.99702683,  0.24879916, -0.29664115,
-                            0.49521132, -0.17470316, -0.17470316,  0.98633519,  0.2135339 ,
-                           -0.64691669,  0.90148689, -0.24863478, -0.24863478,  0.04366899,
-                           -0.22631424,  1.33145711, -0.28730786,  0.68006984, -0.3198016 ,
-                           -0.3198016 ,  0.31354772,  0.31354772,  0.50318481, -0.11044703,
-                           -0.11044703, -0.61736206,  0.5627611 ,  0.24073709,  0.28066508,
-                            0.28066508, -0.0731127 ,  1.16033857,  0.36949272,  1.1110567 ,
-                            0.6590498 ,  0.60231928,  0.4202822 ,  0.4202822 ,  0.81095167]),
+        smc.SMC: np.array([-0.94129179, -0.24527269, -0.21178402,  0.41638589,  0.98654812,
+                           -1.98046225,  1.12342667,  1.6415898 , -1.1200565 ,  0.32953477,
+                            1.39889789, -1.73171544,  0.0443656 ,  0.34281177, -0.56480463,
+                           -0.73692101, -0.51636731, -0.03384773, -1.38884227,  1.19531008,
+                            0.11847074,  0.48935035,  0.19281622, -0.29963799,  1.22910538,
+                            0.7410759 , -1.19513787,  1.13016882,  0.0564043 , -0.61605194,
+                           -0.0316803 ,  1.05364925,  0.69909548, -0.93454091,  0.52057634,
+                            0.56511333,  0.68718385, -0.17977616,  0.0465673 , -0.17018186,
+                            0.07703077,  0.75364315,  0.1199398 ,  0.99348863,  0.73182432,
+                            1.01110192,  0.07782113,  0.15190815, -0.2146857 ,  0.70445444,
+                            0.09726742,  0.47132485, -1.03145464,  0.44136444,  0.17668074,
+                           -0.42707508, -0.50563966, -0.39789354, -0.47026749,  0.35764632,
+                           -1.12201873, -0.44234106, -0.23588142,  0.94064406, -0.29664115,
+                            0.50927203,  0.12289724,  0.37487975,  0.69245379,  0.93506873,
+                           -0.38205722,  0.69079024,  0.15645901, -0.40054163, -0.56146871,
+                            0.08198217,  1.33145711, -0.28730786,  0.97928876, -0.11001317,
+                           -0.3198016 ,  0.29951594, -0.19081766,  0.50318481, -0.20971093,
+                           -0.26810202, -0.73819079,  0.5627611 , -0.48295116, -0.1490258 ,
+                           -0.25184255, -0.42765883,  1.45981846,  0.36949272,  1.1110567 ,
+                            0.4984653 , -0.13902672,  0.18949919, -0.54360687, -0.2740874 ]),
     }
 
     def setup_class(self):
@@ -164,9 +164,10 @@ class TestStepMethods(object):  # yield test doesn't work subclassing object
                                          n_jobs=1, progressbar=False,
                                          homepath=self.temp_dir)
             else:
-                trace = sample(n_steps, step=step_method(), random_seed=1)
+                trace = sample(0, tune=n_steps,
+                               discard_tuned_samples=False,
+                               step=step_method(), random_seed=1)
 
-        print(repr(trace.get_values('x')))
         assert_array_almost_equal(
             trace.get_values('x'),
             self.master_samples[step_method],
@@ -196,7 +197,9 @@ class TestStepMethods(object):  # yield test doesn't work subclassing object
                     HamiltonianMC(scaling=C, is_cov=True, blocked=False)]),
             )
         for step in steps:
-            trace = sample(8000, step=step, start=start, model=model, random_seed=1)
+            trace = sample(0, tune=8000,
+                           discard_tuned_samples=False, step=step,
+                           start=start, model=model, random_seed=1)
             self.check_stat(check, trace, step.__class__.__name__)
 
     def test_step_discrete(self):
@@ -211,7 +214,7 @@ class TestStepMethods(object):  # yield test doesn't work subclassing object
                 Metropolis(S=C, proposal_dist=MultivariateNormalProposal),
             )
         for step in steps:
-            trace = sample(20000, step=step, start=start, model=model, random_seed=1)
+            trace = sample(20000, tune=0, step=step, start=start, model=model, random_seed=1)
             self.check_stat(check, trace, step.__class__.__name__)
 
     def test_step_categorical(self):
@@ -225,7 +228,7 @@ class TestStepMethods(object):  # yield test doesn't work subclassing object
                 CategoricalGibbsMetropolis(model.x, proposal='proportional'),
             )
         for step in steps:
-            trace = sample(8000, step=step, start=start, model=model, random_seed=1)
+            trace = sample(8000, tune=0, step=step, start=start, model=model, random_seed=1)
             self.check_stat(check, trace, step.__class__.__name__)
 
     def test_step_elliptical_slice(self):
@@ -239,7 +242,7 @@ class TestStepMethods(object):  # yield test doesn't work subclassing object
                 EllipticalSlice(prior_chol=L),
             )
         for step in steps:
-            trace = sample(5000, step=step, start=start, model=model, random_seed=1)
+            trace = sample(5000, tune=0, step=step, start=start, model=model, random_seed=1)
             self.check_stat(check, trace, step.__class__.__name__)
 
 
@@ -329,7 +332,8 @@ class TestNutsCheckTrace(object):
             prob = Beta('prob', alpha=5, beta=3)
             Binomial('outcome', n=1, p=prob)
             with warnings.catch_warnings(record=True) as warns:
-                sample(5, n_init=None, tune=2)
+                sample(3, tune=2, discard_tuned_samples=False,
+                       n_init=None)
             messages = [warn.message.args[0] for warn in warns]
             assert any("contains only 5" in msg for msg in messages)
             assert all('boolean index did not' not in msg for msg in messages)

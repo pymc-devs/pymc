@@ -5,7 +5,7 @@ often intractable Bayesian inference in approximate form. Common methods
 reveal the true nature of underlying problem. In some applications it can
 yield unreliable decisions.
 
-Recently on NIPS 2017 [OPVI](https://arxiv.org/abs/1610.09033) framework
+Recently on NIPS 2017 `OPVI  <https://arxiv.org/abs/1610.09033/>`_ framework
 was presented. It generalizes variational inverence so that the problem is
 build with blocks. The first and essential block is Model itself. Second is
 Approximation, in some cases :math:`log Q(D)` is not really needed. Necessity
@@ -68,8 +68,10 @@ class ObjectiveFunction(object):
 
     Parameters
     ----------
-    op : Operator
-    tf : TestFunction
+    op : :class:`Operator`
+        OPVI Functional operator 
+    tf : :class:`TestFunction`
+        OPVI TestFunction
     """
     def __init__(self, op, tf):
         self.op = op
@@ -85,7 +87,7 @@ class ObjectiveFunction(object):
 
         Parameters
         ----------
-        size : int
+        size : `int`
             number of samples from distribution
 
         Returns
@@ -101,26 +103,26 @@ class ObjectiveFunction(object):
 
         Parameters
         ----------
-        obj_n_mc : int
+        obj_n_mc : `int`
             Number of monte carlo samples used for approximation of objective gradients
-        tf_n_mc : int
+        tf_n_mc : `int`
             Number of monte carlo samples used for approximation of test function gradients
         obj_optimizer : function (loss, params) -> updates
             Optimizer that is used for objective params
         test_optimizer : function (loss, params) -> updates
             Optimizer that is used for test function params
-        more_obj_params : list
+        more_obj_params : `list`
             Add custom params for objective optimizer
-        more_tf_params : list
+        more_tf_params : `list`
             Add custom params for test function optimizer
-        more_updates : dict
+        more_updates : `dict`
             Add custom updates to resulting updates
-        more_replacements : dict
+        more_replacements : `dict`
             Apply custom replacements before calculating gradients
 
         Returns
         -------
-        ObjectiveUpdates
+        :class:`ObjectiveUpdates`
         """
         if more_obj_params is None:
             more_obj_params = []
@@ -182,36 +184,37 @@ class ObjectiveFunction(object):
         """Step function that should be called on each optimization step.
 
         Generally it solves the following problem:
+        
         .. math::
 
                 \textbf{\lambda^{*}} = \inf_{\lambda} \sup_{\theta} t(\mathbb{E}_{\lambda}[(O^{p,q}f_{\theta})(z)])
 
         Parameters
         ----------
-        obj_n_mc : int
+        obj_n_mc : `int`
             Number of monte carlo samples used for approximation of objective gradients
-        tf_n_mc : int
+        tf_n_mc : `int`
             Number of monte carlo samples used for approximation of test function gradients
         obj_optimizer : function (loss, params) -> updates
             Optimizer that is used for objective params
         test_optimizer : function (loss, params) -> updates
             Optimizer that is used for test function params
-        more_obj_params : list
+        more_obj_params : `list`
             Add custom params for objective optimizer
-        more_tf_params : list
+        more_tf_params : `list`
             Add custom params for test function optimizer
-        more_updates : dict
+        more_updates : `dict`
             Add custom updates to resulting updates
-        score : bool
+        score : `bool`
             calculate loss on each step? Defaults to False for speed
-        fn_kwargs : dict
+        fn_kwargs : `dict`
             Add kwargs to theano.function (e.g. `{'profile': True}`)
-        more_replacements : dict
+        more_replacements : `dict`
             Apply custom replacements before calculating gradients
 
         Returns
         -------
-        theano.function
+        `theano.function`
         """
         if fn_kwargs is None:
             fn_kwargs = {}
@@ -237,11 +240,11 @@ class ObjectiveFunction(object):
 
         Parameters
         ----------
-        sc_n_mc : int
+        sc_n_mc : `int`
             number of scoring MC samples
         more_replacements:
             Apply custom replacements before compiling a function
-        fn_kwargs:
+        fn_kwargs: `dict`
             arbitrary kwargs passed to theano.function
 
         Returns
@@ -278,10 +281,11 @@ class Operator(object):
 
     Parameters
     ----------
-    approx : Approximation
+    approx : :class:`Approximation`
+        an approximation instance
 
-    Subclassing
-    -----------
+    Notes
+    -----
     For implementing Custom operator it is needed to define :code:`.apply(f)` method
     """
 
@@ -326,19 +330,21 @@ class Operator(object):
 
     def apply(self, f):   # pragma: no cover
         """Operator itself
+        
         .. math::
 
             (O^{p,q}f_{\theta})(z)
 
         Parameters
         ----------
-        f : TestFunction or None if not required
+        f : :class:`TestFunction` or None if not required
             function that takes `z = self.input` and returns
             same dimensional output
 
         Returns
         -------
-        symbolically applied operator
+        tt.TensorVariable
+            symbolically applied operator
         """
         raise NotImplementedError
 
@@ -426,7 +432,8 @@ class TestFunction(object):
 
         Parameters
         ----------
-        dim : int dimension of posterior distribution
+        dim : int 
+            dimension of posterior distribution
         """
         pass
 
@@ -445,12 +452,11 @@ class Approximation(object):
     Parameters
     ----------
     local_rv : dict[var->tuple]
-        mapping {model_variable -> local_variable (:math:`\\mu`, math:`\\rho`)}
+        mapping {model_variable -> local_variable (:math:`\\mu`, :math:`\\rho`)}
         Local Vars are used for Autoencoding Variational Bayes
         See (AEVB; Kingma and Welling, 2014) for details
-
-    model : PyMC3 model for inference
-
+    model : :class:`Model` 
+        PyMC3 model for inference
     cost_part_grad_scale : float or scalar tensor
         Scaling score part of gradient can be useful near optimum for
         archiving better convergence properties. Common schedule is
@@ -459,14 +465,15 @@ class Approximation(object):
         Yuhuai Wu, David Duvenaud, 2016) for details     
     scale_cost_to_minibatch : bool, default False
         Scale cost to minibatch instead of full dataset
-    seed : None or int
+    random_seed : None or int
         leave None to use package global RandomStream or other
         valid value to create instance specific one
 
-    Subclassing
-    -----------
+    Notes
+    -----
     Defining an approximation needs
     custom implementation of the following methods:
+
         - :code:`.create_shared_params(**kwargs)`
             Returns {dict|list|theano.shared}
 
@@ -481,19 +488,21 @@ class Approximation(object):
             Returns Scalar
 
     You can also override the following methods:
+
         - :code:`._setup(**kwargs)`
             Do some specific stuff having :code:`kwargs` before calling :code:`.create_shared_params`
 
         - :code:`.check_model(model, **kwargs)`
             Do some specific check for model having :code:`kwargs`
 
-    Notes
-    -----
+    See Also
+    --------
     :code:`kwargs` mentioned above are supplied as additional arguments
     for :code:`Approximation.__init__`
 
     There are some defaults class attributes for approximation classes that can be
     optionally overriden.
+
         - :code:`initial_dist_name`
             string that represents name of the initial distribution.
             In most cases if will be `uniform` or `normal`
@@ -516,14 +525,14 @@ class Approximation(object):
     def __init__(self, local_rv=None, model=None,
                  cost_part_grad_scale=1,
                  scale_cost_to_minibatch=False,
-                 seed=None, **kwargs):
+                 random_seed=None, **kwargs):
         model = modelcontext(model)
         self.scale_cost_to_minibatch = theano.shared(np.int8(0))
         if scale_cost_to_minibatch:
             self.scale_cost_to_minibatch.set_value(1)
         self.cost_part_grad_scale = pm.floatX(cost_part_grad_scale)
-        self._seed = seed
-        self._rng = tt_rng(seed)
+        self._seed = random_seed
+        self._rng = tt_rng(random_seed)
         self.model = model
         self.check_model(model, **kwargs)
         if local_rv is None:
@@ -547,16 +556,16 @@ class Approximation(object):
         self._setup(**kwargs)
         self.shared_params = self.create_shared_params(**kwargs)
 
-    def seed(self, seed=None):
+    def seed(self, random_seed=None):
         """
         Reinitialize RandomStream used by this approximation
 
         Parameters
         ----------
-        seed : int
+        random_seed : `int`
         """
-        self._seed = seed
-        self._rng.seed(seed)
+        self._seed = random_seed
+        self._rng.seed(random_seed)
 
     @property
     def normalizing_constant(self):
@@ -609,16 +618,16 @@ class Approximation(object):
 
         Parameters
         ----------
-        include : list
+        include : `list`
             latent variables to be replaced
-        exclude : list
+        exclude : `list`
             latent variables to be excluded for replacements
-        more_replacements : dict
+        more_replacements : `dict`
             add custom replacements to graph, e.g. change input source
 
         Returns
         -------
-        dict
+        `dict`
             Replacements
         """
         if include is not None and exclude is not None:
@@ -647,11 +656,11 @@ class Approximation(object):
         deterministic : bool
             whether to use zeros as initial distribution
             if True - zero initial point will produce constant latent variables
-        include : list
+        include : `list`
             latent variables to be replaced
-        exclude : list
+        exclude : `list`
             latent variables to be excluded for replacements
-        more_replacements : dict
+        more_replacements : `dict`
             add custom replacements to graph, e.g. change input source
 
         Returns
@@ -674,7 +683,7 @@ class Approximation(object):
         node : Theano Variables (or Theano expressions)
         size : scalar
             number of samples
-        more_replacements : dict
+        more_replacements : `dict`
             add custom replacements to graph, e.g. change input source
 
         Returns
@@ -716,13 +725,16 @@ class Approximation(object):
 
         Parameters
         ----------
-        size : int - number of samples
-        no_rand : bool - return zeros if True
-        l : length of sample, defaults to latent space dim
+        size : `int` 
+            number of samples
+        no_rand : `bool`
+            return zeros if True
+        l : `int` 
+            length of sample, defaults to latent space dim
 
         Returns
         -------
-        Tensor
+        `tt.TensorVariable`
             sampled latent space shape == size + latent_dim
         """
 
@@ -754,8 +766,10 @@ class Approximation(object):
 
         Parameters
         ----------
-        size : number of samples from distribution
-        no_rand : whether use deterministic distribution
+        size : `scalar`
+            number of samples from distribution
+        no_rand : `bool`
+            whether use deterministic distribution
 
         Returns
         -------
@@ -771,8 +785,10 @@ class Approximation(object):
 
         Parameters
         ----------
-        size : number of samples from distribution
-        no_rand : whether use deterministic distribution
+        size : `scalar`
+            number of samples from distribution
+        no_rand : `bool`
+            whether use deterministic distribution
 
         Returns
         -------
@@ -785,8 +801,10 @@ class Approximation(object):
 
         Parameters
         ----------
-        size : number of samples from distribution
-        no_rand : whether use deterministic distribution
+        size : `scalar`
+            number of samples from distribution
+        no_rand : `bool`
+            whether use deterministic distribution
 
         Returns
         -------
@@ -816,8 +834,10 @@ class Approximation(object):
 
         Parameters
         ----------
-        size : number of samples from distribution
-        no_rand : whether use deterministic distribution
+        size : `int`
+            number of samples from distribution
+        no_rand : `bool`
+            whether use deterministic distribution
 
         Returns
         -------
@@ -844,14 +864,14 @@ class Approximation(object):
 
         Parameters
         ----------
-        draws : int
+        draws : `int`
             Number of random samples.
-        include_transformed : bool
+        include_transformed : `bool`
             If True, transformed variables are also sampled. Default is False.
 
         Returns
         -------
-        trace : pymc3.backends.base.MultiTrace
+        trace : :class:`pymc3.backends.base.MultiTrace`
             Samples drawn from variational posterior.
         """
         vars_sampled = get_default_varnames(self.model.unobserved_RVs,
@@ -910,15 +930,17 @@ class Approximation(object):
 
         Parameters
         ----------
-        space : space to take view of variable from
-        name : str
+        space : matrix or vector
+            space to take view of variable from
+        name : `str`
             name of variable
-        reshape : bool
+        reshape : `bool`
             whether to reshape variable from vectorized view
 
         Returns
         -------
-        variable view
+        (reshaped) slice of matrix
+            variable view
         """
         theano_is_here = isinstance(space, tt.TensorVariable)
         slc = self._view[name].slc

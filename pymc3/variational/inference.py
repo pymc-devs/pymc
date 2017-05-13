@@ -271,21 +271,28 @@ class ADVI(Inference):
     observed variables with different :code:`total_size` and iterate them independently
     during inference.  
 
-    For working with ADVI, we need to give 
+    For working with ADVI, we need to give
+    
     -   The probabilistic model
-        (:code:`model`), the three types of RVs (:code:`observed_RVs`,
+
+        :code:`model` with three types of RVs (:code:`observed_RVs`,
         :code:`global_RVs` and :code:`local_RVs`). 
     
     -   (optional) Minibatches
+
         The tensors to which mini-bathced samples are supplied are 
         handled separately by using callbacks in :code:`.fit` method 
         that change storage of shared theano variable or by :code:`pm.generator` 
         that automatically iterates over minibatches and defined beforehand. 
     
     -   (optional) Parameters of deterministic mappings
+
         They have to be passed along with other params to :code:`.fit` method 
         as :code:`more_obj_params` argument. 
     
+    
+    See Also
+    --------
     For more information concerning training stage please reference 
     :code:`pymc3.variational.opvi.ObjectiveFunction.step_function`
     
@@ -295,46 +302,45 @@ class ADVI(Inference):
         mapping {model_variable -> local_variable (:math:`\\mu`, :math:`\\rho`)}
         Local Vars are used for Autoencoding Variational Bayes
         See (AEVB; Kingma and Welling, 2014) for details
-
-    model : PyMC3 model for inference
-
-    cost_part_grad_scale : float or scalar tensor
+    model : :class:`Model` 
+        PyMC3 model for inference
+    cost_part_grad_scale : `scalar`
         Scaling score part of gradient can be useful near optimum for
         archiving better convergence properties. Common schedule is
         1 at the start and 0 in the end. So slow decay will be ok.
         See (Sticking the Landing; Geoffrey Roeder,
         Yuhuai Wu, David Duvenaud, 2016) for details
-    scale_cost_to_minibatch : bool, default False
-        Scale cost to minibatch instead of full dataset
-    seed : None or int
+    scale_cost_to_minibatch : `bool`
+        Scale cost to minibatch instead of full dataset, default False
+    random_seed : None or int
         leave None to use package global RandomStream or other
         valid value to create instance specific one    
-    start : Point
+    start : `Point`
         starting point for inference
 
     References
     ----------
-    - Kucukelbir, A., Tran, D., Ranganath, R., Gelman, A.,
+    -   Kucukelbir, A., Tran, D., Ranganath, R., Gelman, A.,
         and Blei, D. M. (2016). Automatic Differentiation Variational
         Inference. arXiv preprint arXiv:1603.00788.
 
-    - Geoffrey Roeder, Yuhuai Wu, David Duvenaud, 2016
+    -   Geoffrey Roeder, Yuhuai Wu, David Duvenaud, 2016
         Sticking the Landing: A Simple Reduced-Variance Gradient for ADVI
         approximateinference.org/accepted/RoederEtAl2016.pdf
 
-    - Kingma, D. P., & Welling, M. (2014).
-      Auto-Encoding Variational Bayes. stat, 1050, 1.
+    -   Kingma, D. P., & Welling, M. (2014).
+        Auto-Encoding Variational Bayes. stat, 1050, 1.
     """
     def __init__(self, local_rv=None, model=None,
                  cost_part_grad_scale=1,
                  scale_cost_to_minibatch=False,
-                 seed=None, start=None):
+                 random_seed=None, start=None):
         super(ADVI, self).__init__(
             KL, MeanField, None,
             local_rv=local_rv, model=model,
             cost_part_grad_scale=cost_part_grad_scale,
             scale_cost_to_minibatch=scale_cost_to_minibatch,
-            seed=seed, start=start)
+            random_seed=random_seed, start=start)
 
     @classmethod
     def from_mean_field(cls, mean_field):
@@ -343,12 +349,12 @@ class ADVI(Inference):
 
         Parameters
         ----------
-        mean_field : MeanField
+        mean_field : :class:`MeanField`
             approximation to start with
 
         Returns
         -------
-        ADVI
+        :class:`ADVI`
         """
         if not isinstance(mean_field, MeanField):
             raise TypeError('Expected MeanField, got %r' % mean_field)
@@ -369,10 +375,9 @@ class FullRankADVI(Inference):
         mapping {model_variable -> local_variable (:math:`\\mu`, :math:`\\rho`)}
         Local Vars are used for Autoencoding Variational Bayes
         See (AEVB; Kingma and Welling, 2014) for details
-
-    model : PyMC3 model for inference
-
-    cost_part_grad_scale : float or scalar tensor
+    model : :class:`Model` 
+        PyMC3 model for inference
+    cost_part_grad_scale : `scalar`
         Scaling score part of gradient can be useful near optimum for
         archiving better convergence properties. Common schedule is
         1 at the start and 0 in the end. So slow decay will be ok.
@@ -380,35 +385,35 @@ class FullRankADVI(Inference):
         Yuhuai Wu, David Duvenaud, 2016) for details
     scale_cost_to_minibatch : bool, default False
         Scale cost to minibatch instead of full dataset
-    seed : None or int
+    random_seed : None or int
         leave None to use package global RandomStream or other
         valid value to create instance specific one
-    start : Point
+    start : `Point`
         starting point for inference
 
     References
     ----------
-    - Kucukelbir, A., Tran, D., Ranganath, R., Gelman, A.,
+    -   Kucukelbir, A., Tran, D., Ranganath, R., Gelman, A.,
         and Blei, D. M. (2016). Automatic Differentiation Variational
         Inference. arXiv preprint arXiv:1603.00788.
 
-    - Geoffrey Roeder, Yuhuai Wu, David Duvenaud, 2016
+    -   Geoffrey Roeder, Yuhuai Wu, David Duvenaud, 2016
         Sticking the Landing: A Simple Reduced-Variance Gradient for ADVI
         approximateinference.org/accepted/RoederEtAl2016.pdf
 
-    - Kingma, D. P., & Welling, M. (2014).
-      Auto-Encoding Variational Bayes. stat, 1050, 1.
+    -   Kingma, D. P., & Welling, M. (2014).
+        Auto-Encoding Variational Bayes. stat, 1050, 1.
     """
     def __init__(self, local_rv=None, model=None,
                  cost_part_grad_scale=1,
                  scale_cost_to_minibatch=False,
-                 gpu_compat=False, seed=None, start=None):
+                 gpu_compat=False, random_seed=None, start=None):
         super(FullRankADVI, self).__init__(
             KL, FullRank, None,
             local_rv=local_rv, model=model,
             cost_part_grad_scale=cost_part_grad_scale,
             scale_cost_to_minibatch=scale_cost_to_minibatch,
-            gpu_compat=gpu_compat, seed=seed, start=start)
+            gpu_compat=gpu_compat, random_seed=random_seed, start=start)
 
     @classmethod
     def from_full_rank(cls, full_rank):
@@ -417,12 +422,12 @@ class FullRankADVI(Inference):
 
         Parameters
         ----------
-        full_rank : FullRank
+        full_rank : :class:`FullRank`
             approximation to start with
 
         Returns
         -------
-        FullRankADVI
+        :class:`FullRankADVI`
         """
         if not isinstance(full_rank, FullRank):
             raise TypeError('Expected MeanField, got %r' % full_rank)
@@ -439,17 +444,17 @@ class FullRankADVI(Inference):
 
         Parameters
         ----------
-        mean_field : MeanField
+        mean_field : :class:`MeanField`
             approximation to start with
 
-        Flags
-        -----
-        gpu_compat : bool
+        Other Parameters
+        ----------------
+        gpu_compat : `bool`
             use GPU compatible version or not
 
         Returns
         -------
-        FullRankADVI
+        :class:`FullRankADVI`
         """
         full_rank = FullRank.from_mean_field(mean_field, gpu_compat)
         inference = object.__new__(cls)
@@ -465,16 +470,16 @@ class FullRankADVI(Inference):
 
         Parameters
         ----------
-        advi : ADVI
+        advi : :class:`ADVI`
 
-        Flags
-        -----
+        Other Parameters
+        ----------------
         gpu_compat : bool
             use GPU compatible version or not
 
         Returns
         -------
-        FullRankADVI
+        :class:`FullRankADVI`
         """
         inference = cls.from_mean_field(advi.approx, gpu_compat)
         inference.hist = advi.hist
@@ -494,6 +499,7 @@ class SVGD(Inference):
     Input: A target distribution with density function :math:`p(x)`
         and a set of initial particles :math:`{x^0_i}^n_{i=1}`
     Output: A set of particles :math:`{x_i}^n_{i=1}` that approximates the target distribution.
+
     .. math::
 
         x_i^{l+1} \leftarrow \epsilon_l \hat{\phi}^{*}(x_i^l)
@@ -501,71 +507,77 @@ class SVGD(Inference):
 
     Parameters
     ----------
-    n_particles : int
+    n_particles : `int`
         number of particles to use for approximation
-    jitter :
+    jitter : `float`
         noise sd for initial point
-    model : pm.Model
-    kernel : callable
+    model : :class:`Model`
+        PyMC3 model for inference
+    kernel : `callable`
         kernel function for KSD f(histogram) -> (k(x,.), \nabla_x k(x,.))
     scale_cost_to_minibatch : bool, default False
         Scale cost to minibatch instead of full dataset
-    start : dict
+    start : `dict`
         initial point for inference
-    histogram : Empirical
+    histogram : :class:`Empirical`
         initialize SVGD with given Empirical approximation instead of default initial particles
-    seed : None or int
+    random_seed : None or int
         leave None to use package global RandomStream or other
         valid value to create instance specific one
-    start : Point
+    start : `Point`
         starting point for inference
 
     References
     ----------
-    - Qiang Liu, Dilin Wang (2016)
+    -   Qiang Liu, Dilin Wang (2016)
         Stein Variational Gradient Descent: A General Purpose Bayesian Inference Algorithm
         arXiv:1608.04471
     """
     def __init__(self, n_particles=100, jitter=.01, model=None, kernel=test_functions.rbf,
                  scale_cost_to_minibatch=False, start=None, histogram=None,
-                 seed=None, local_rv=None):
+                 random_seed=None, local_rv=None):
         if histogram is None:
             histogram = Empirical.from_noise(
                 n_particles, jitter=jitter,
                 scale_cost_to_minibatch=scale_cost_to_minibatch,
-                start=start, model=model, local_rv=local_rv, seed=seed)
+                start=start, model=model, local_rv=local_rv, random_seed=random_seed)
         super(SVGD, self).__init__(
             KSD, histogram,
             kernel,
-            model=model, seed=seed)
+            model=model, random_seed=random_seed)
 
 
-def fit(n=10000, local_rv=None, method='advi', model=None, seed=None, start=None, **kwargs):
+def fit(n=10000, local_rv=None, method='advi', model=None, random_seed=None, start=None, **kwargs):
     """
     Handy shortcut for using inference methods in functional way
 
     Parameters
     ----------
-    n : int
+    n : `int`
         number of iterations
     local_rv : dict[var->tuple]
         mapping {model_variable -> local_variable (:math:`\\mu`, :math:`\\rho`)}
         Local Vars are used for Autoencoding Variational Bayes
         See (AEVB; Kingma and Welling, 2014) for details
-    method : str or Inference
-        string name is case insensitive in {'advi', 'fullrank_advi', 'advi->fullrank_advi'}
-    model : Model
-    kwargs : kwargs for Inference.fit
-    frac : float
-        if method is 'advi->fullrank_advi' represents advi fraction when training
-    seed : None or int
+    method : str or :class:`Inference`
+        string name is case insensitive in {'advi', 'fullrank_advi', 'advi->fullrank_advi', 'svgd'}
+    model : :class:`Model`
+        PyMC3 model for inference
+    random_seed : None or int
         leave None to use package global RandomStream or other
         valid value to create instance specific one
-    start : Point
+    start : `Point`
         starting point for inference
+
+    Other Parameters
+    ----------------
+    frac : `float`
+        if method is 'advi->fullrank_advi' represents advi fraction when training
+    kwargs : kwargs for :method:`Inference.fit`
+
     Returns
     -------
-    Approximation
+    :class:`Approximation`
     """
     if model is None:
         model = pm.modelcontext(model)
@@ -580,7 +592,7 @@ def fit(n=10000, local_rv=None, method='advi', model=None, seed=None, start=None
             raise ValueError('frac should be in (0, 1)')
         n1 = int(n * frac)
         n2 = n-n1
-        inference = ADVI(local_rv=local_rv, model=model, seed=seed, start=start)
+        inference = ADVI(local_rv=local_rv, model=model, random_seed=random_seed, start=start)
         logger.info('fitting advi ...')
         inference.fit(n1, **kwargs)
         inference = FullRankADVI.from_advi(inference)
@@ -590,7 +602,7 @@ def fit(n=10000, local_rv=None, method='advi', model=None, seed=None, start=None
     elif isinstance(method, str):
         try:
             inference = _select[method.lower()](
-                local_rv=local_rv, model=model, seed=seed,
+                local_rv=local_rv, model=model, random_seed=random_seed,
                 start=start
             )
         except KeyError:

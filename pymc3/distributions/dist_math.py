@@ -364,3 +364,35 @@ class Cholesky(theano.Op):
         else:
             grad = tt.triu(s + s.T) - tt.diag(tt.diagonal(s))
         return [tt.switch(ok, grad, floatX(np.nan))]
+
+class SplineWrapper (theano.Op):
+    """
+    Creates a theano operation from scipy.interpolate.UnivariateSpline
+    """
+
+    __props__ = ('spline',)
+    itypes = [tt.dscalar]
+    otypes = [tt.dscalar]
+
+    def __init__(self, spline):
+        self.spline = spline
+
+    def perform(self, node, inputs, output_storage):
+        x, = inputs
+        output_storage[0][0] = np.asarray(self.spline(x))
+
+class DifferentiableSplineWrapper (SplineWrapper):
+    """
+    Creates a theano operation with defined gradient from
+    scipy.interpolate.UnivariateSpline
+    """
+
+    def __init__(self, spline):
+        super(DifferentiableSplineWrapper, self).__init__(spline)
+        self.spline_grad = SplineWrapper(spline.derivative())
+        self.__props__ += ('spline_grad',)
+
+    def grad(self, inputs, grads):
+        x, = inputs
+        x_grad, = grads
+        return [x_grad * self.spline_grad(x)]

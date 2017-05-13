@@ -6,7 +6,7 @@ from .distributions import *
 from .external import *
 from .glm import *
 from . import gp
-from .math import logsumexp, logit, invlogit, expand_packed_triangular
+from .math import logsumexp, logit, invlogit, expand_packed_triangular, probit, invprobit
 from .model import *
 from .stats import *
 from .sampling import *

@@ -6,6 +6,8 @@
 
 * [Add Gaussian Process submodule](http://pymc-devs.github.io/pymc3/notebooks/GP-introduction.html)
 
+* sample() defaults changed: tuning is enabled for the first 500 samples which are then discarded from the trace as burn-in.
+
 * Many optimizations and speed-ups.
 
 * NUTS implementation now matches current Stan implementation.
