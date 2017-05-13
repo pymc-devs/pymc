@@ -361,3 +361,27 @@ def test_fit(method, kwargs, error):
                 fit(10, method=method, **kwargs)
         else:
             fit(10, method=method, **kwargs)
+
+
+@pytest.mark.parametrize(
+    'diff',
+    [
+        'relative',
+        'absolute'
+    ]
+)
+@pytest.mark.parametrize(
+    'ord',
+    [1, 2, np.inf]
+)
+def test_callbacks(diff, ord):
+    cb = pm.variational.callbacks.CheckParametersConvergence(every=1, diff=diff, ord=ord)
+
+    class _approx:
+        params = (theano.shared(np.asarray([1, 2, 3])), )
+
+    approx = _approx()
+
+    with pytest.raises(StopIteration):
+        cb(approx, None, 1)
+        cb(approx, None, 10)
