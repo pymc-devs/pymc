@@ -366,7 +366,7 @@ def test_fit(method, kwargs, error):
 @pytest.mark.parametrize(
     'diff',
     [
-        'percentage',
+        'relative',
         'absolute'
     ]
 )
