@@ -1,4 +1,4 @@
-from functools import partial 
+from functools import partial
 import numpy as np
 import theano
 import theano.tensor as tt
@@ -7,6 +7,7 @@ from scipy import stats
 from .dist_math import bound, factln, binomln, betaln, logpow
 from .distribution import Discrete, draw_values, generate_samples, reshape_sampled
 from pymc3.math import tround
+from pymc3.theanof import floatX
 
 __all__ = ['Binomial',  'BetaBinomial',  'Bernoulli',  'DiscreteWeibull',
            'Poisson', 'NegativeBinomial', 'ConstantDist', 'Constant',
@@ -55,7 +56,7 @@ class Binomial(Discrete):
         p = self.p
 
         return bound(
-            binomln(n, value) + logpow(p, value) + logpow(1 - p, n - value),
+            binomln(floatX(n), floatX(value)) + logpow(p, value) + logpow(1 - p, n - value),
             0 <= value, value <= n,
             0 <= p, p <= 1)
 
@@ -180,16 +181,16 @@ class DiscreteWeibull(Discrete):
     """
     def __init__(self, q, beta, *args, **kwargs):
         super(DiscreteWeibull, self).__init__(*args, defaults=['median'], **kwargs)
-        
+
         self.q = q
         self.beta = beta
 
         self.median = self._ppf(0.5)
-    
+
     def logp(self, value):
         q = self.q
         beta = self.beta
-        
+
         return bound(tt.log(tt.power(q, tt.power(value, beta)) - tt.power(q, tt.power(value + 1, beta))),
                      0 <= value,
                      0 < q, q < 1,
