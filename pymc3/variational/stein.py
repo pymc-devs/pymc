@@ -16,8 +16,6 @@ class Stein(object):
             input_matrix.tag.test_value = approx.random(10).tag.test_value
         self.input_matrix = input_matrix
 
-    logp = property(lambda self: self.approx.input_matrix_logp)
-
     @property
     @memoize
     def grad(self):
@@ -36,6 +34,14 @@ class Stein(object):
     @property
     def dxkxy(self):
         return self._kernel()[1]
+
+    @property
+    @memoize
+    def logp(self):
+        return theano.scan(
+            fn=lambda zg: self.approx.logp_norm(zg),
+            sequences=[self.input_matrix]
+        )[0]
 
     @property
     @memoize
