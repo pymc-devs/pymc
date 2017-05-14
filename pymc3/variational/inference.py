@@ -375,7 +375,7 @@ class FullRankADVI(Inference):
     Parameters
     ----------
     local_rv : dict[var->tuple]
-        mapping {model_variable -> local_variable (:math:`\\mu`, :math:`\\rho`)}
+        mapping {model_variable -> local_variable (:math:`\mu`, :math:`\rho`)}
         Local Vars are used for Autoencoding Variational Bayes
         See (AEVB; Kingma and Welling, 2014) for details
     model : :class:`pymc3.Model` 
@@ -555,6 +555,20 @@ class SVGD(Inference):
 
 class ASVGD(Inference):
     def __init__(self, approx, local_rv=None, kernel=test_functions.rbf, model=None, **kwargs):
+        R"""
+        
+        Parameters
+        ----------
+        approx : :class:`Approximation`
+        local_rv : dict[var->tuple]
+            mapping {model_variable -> local_variable (:math:`\mu`, :math:`\rho`)}
+            Local Vars are used for Autoencoding Variational Bayes
+            See (AEVB; Kingma and Welling, 2014) for details
+        kernel : `callable`
+            kernel function for KSD :math:`f(histogram) -> (k(x,.), \nabla_x k(x,.))`
+        model : :class:`Model`
+        kwargs : kwargs for :class:`Approximation`
+        """
         super(ASVGD, self).__init__(
             op=KSD,
             approx=approx,
