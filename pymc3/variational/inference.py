@@ -630,7 +630,7 @@ def fit(n=10000, local_rv=None, method='advi', model=None,
         Local Vars are used for Autoencoding Variational Bayes
         See (AEVB; Kingma and Welling, 2014) for details
     method : str or :class:`Inference`
-        string name is case insensitive in {'advi', 'fullrank_advi', 'advi->fullrank_advi', 'svgd'}
+        string name is case insensitive in {'advi', 'fullrank_advi', 'advi->fullrank_advi', 'svgd', 'asvgd'}
     model : :class:`pymc3.Model`
         PyMC3 model for inference
     random_seed : None or int
