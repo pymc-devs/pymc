@@ -269,8 +269,7 @@ class ObjectiveFunction(object):
         if more_replacements is None:
             more_replacements = {}
         loss = theano.clone(
-            self(
-                self.random(sc_n_mc)),
+            self(self.random(sc_n_mc)),
             more_replacements,
             strict=False)
         return theano.function([], loss, **fn_kwargs)
@@ -289,15 +288,13 @@ class ObjectiveFunction(object):
         if z.ndim > 1:
             a = theano.scan(
                 lambda z_: theano.clone(
-                    self.op.apply(
-                        self.tf), {
-                        self.op.input: z_}, strict=False),
+                    self.op.apply(self.tf),
+                    {self.op.input: z_}, strict=False),
                 sequences=z, n_steps=z.shape[0])[0].mean()
         else:
             a = theano.clone(
-                self.op.apply(
-                    self.tf), {
-                    self.op.input: z}, strict=False)
+                self.op.apply(self.tf),
+                {self.op.input: z}, strict=False)
         return m * self.op.T(a)
 
 
@@ -602,8 +599,9 @@ class Approximation(object):
         """Checks that model is valid for variational inference
         """
         vars_ = [
-            var for var in model.vars if not isinstance(
-                var, pm.model.ObservedRV)]
+            var for var in model.vars
+            if not isinstance(var, pm.model.ObservedRV)
+        ]
         if any([var.dtype in pm.discrete_types for var in vars_]
                ):  # pragma: no cover
             raise ValueError('Model should not include discrete RVs')
