@@ -42,7 +42,8 @@ class Inference(object):
         See (AEVB; Kingma and Welling, 2014) for details
     model : Model
         PyMC3 Model
-    kwargs : kwargs for :class:`Approximation`
+    kwargs : kwargs
+        additional kwargs for :class:`Approximation`
     """
 
     def __init__(self, op, approx, tf, local_rv=None, model=None, **kwargs):
@@ -106,7 +107,8 @@ class Inference(object):
             calls provided functions after each iteration step
         progressbar : bool
             whether to show progressbar or not
-        kwargs : kwargs for :func:`ObjectiveFunction.step_function`
+        kwargs : kwargs
+            additional kwargs for :func:`ObjectiveFunction.step_function`
 
         Returns
         -------
@@ -630,7 +632,8 @@ class ASVGD(Inference):
             whether to show progressbar or not
         obj_n_mc : int
             sample `n` particles for Stein gradient
-        kwargs : kwargs for :func:`ObjectiveFunction.step_function`
+        kwargs : kwargs
+            additional kwargs for :func:`ObjectiveFunction.step_function`
 
         Returns
         -------
@@ -673,7 +676,8 @@ def fit(n=10000, local_rv=None, method='advi', model=None,
     ----------------
     frac : `float`
         if method is 'advi->fullrank_advi' represents advi fraction when training
-    kwargs : kwargs for :func:`Inference.fit`
+    kwargs : kwargs
+        additional kwargs for :func:`Inference.fit`
 
     Returns
     -------
