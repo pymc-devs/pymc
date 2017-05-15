@@ -679,6 +679,8 @@ def fit(n=10000, local_rv=None, method='advi', model=None,
     -------
     :class:`Approximation`
     """
+    if inf_kwargs is None:
+        inf_kwargs = dict()
     if model is None:
         model = pm.modelcontext(model)
     _select = dict(
