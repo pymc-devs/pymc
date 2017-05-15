@@ -104,3 +104,7 @@ class KSD(Operator):
         # f: kernel function for KSD f(histogram) -> (k(x,.), \nabla_x k(x,.))
         stein = Stein(self.approx, f, self.input_matrix)
         return -1 * stein.grad
+
+
+class AKSD(KSD):
+    SUPPORT_AEVB = True

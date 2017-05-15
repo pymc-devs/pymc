@@ -285,6 +285,7 @@ class TestASVGD(TestApproximates.Base):
     inference = functools.partial(ASVGD, FullRank)
     NITER = 4000
     optimizer = functools.partial(pm.adam, learning_rate=.05)
+    test_aevb = _test_aevb
 
 
 class TestEmpirical(SeededTest):
