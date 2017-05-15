@@ -513,8 +513,8 @@ class SVGD(Inference):
 
     .. math::
 
-        x_i^{l+1} \leftarrow \epsilon_l \hat{\phi}^{*}(x_i^l) \\
-        \hat{\phi}^{*}(x) = \frac{1}{n}\sum^{n}_{j=1}[k(x^l_j,x) \nabla_{x^l_j} logp(x^l_j)+ \nabla_{x^l_j} k(x^l_j,x)]
+        x_i^{l+1} &\leftarrow x_i^{l} + \epsilon_l \hat{\phi}^{*}(x_i^l) \\
+        \hat{\phi}^{*}(x) &= \frac{1}{n}\sum^{n}_{j=1}[k(x^l_j,x) \nabla_{x^l_j} logp(x^l_j)+ \nabla_{x^l_j} k(x^l_j,x)]
 
     Parameters
     ----------
@@ -560,22 +560,50 @@ class SVGD(Inference):
 
 
 class ASVGD(Inference):
+    R"""
+    Amortized Stein Variational Gradient Descent
+
+    This inference is based on Kernelized Stein Discrepancy
+    it's main idea is to move initial noisy particles so that
+    they fit target distribution best.
+
+    Algorithm is outlined below
+
+    *Input:* Parametrized random generator :math:`R_{\theta}`
+
+    *Output:* :math:`R_{\theta^{*}}` that approximates the target distribution.
+
+    .. math::
+
+        \Delta x_i &= \hat{\phi}^{*}(x_i) \\
+        \hat{\phi}^{*}(x) &= \frac{1}{n}\sum^{n}_{j=1}[k(x_j,x) \nabla_{x_j} logp(x_j)+ \nabla_{x_j} k(x_j,x)] \\
+        \Delta_{\theta} &= \frac{1}{n}\sum^{n}_{i=1}\Delta x_i\frac{\partial x_i}{\partial \theta} 
+
+    Parameters
+    ----------
+    approx : :class:`Approximation`
+    local_rv : dict[var->tuple]
+        mapping {model_variable -> local_variable (:math:`\mu`, :math:`\rho`)}
+        Local Vars are used for Autoencoding Variational Bayes
+        See (AEVB; Kingma and Welling, 2014) for details
+    kernel : `callable`
+        kernel function for KSD :math:`f(histogram) -> (k(x,.), \nabla_x k(x,.))`
+    model : :class:`Model`
+    kwargs : kwargs for :class:`Approximation`
+
+    References
+    ----------
+    -   Dilin Wang, Yihao Feng, Qiang Liu (2016)
+        Learning to Sample Using Stein Discrepancy
+        http://bayesiandeeplearning.org/papers/BDL_21.pdf
+
+    -   Dilin Wang, Qiang Liu (2016)
+        Learning to Draw Samples: With Application to Amortized MLE for Generative Adversarial Learning
+        https://arxiv.org/abs/1611.01722
+    """
+
     def __init__(self, approx, local_rv=None,
                  kernel=test_functions.rbf, model=None, **kwargs):
-        R"""
-
-        Parameters
-        ----------
-        approx : :class:`Approximation`
-        local_rv : dict[var->tuple]
-            mapping {model_variable -> local_variable (:math:`\mu`, :math:`\rho`)}
-            Local Vars are used for Autoencoding Variational Bayes
-            See (AEVB; Kingma and Welling, 2014) for details
-        kernel : `callable`
-            kernel function for KSD :math:`f(histogram) -> (k(x,.), \nabla_x k(x,.))`
-        model : :class:`Model`
-        kwargs : kwargs for :class:`Approximation`
-        """
         super(ASVGD, self).__init__(
             op=KSD,
             approx=approx,
@@ -588,7 +616,7 @@ class ASVGD(Inference):
     def fit(self, n=10000, score=None, callbacks=None, progressbar=True,
             obj_n_mc=30, **kwargs):
         """
-        Performs Operator Variational Inference
+        Performs Amortized Stein Variational Gradient Descent
 
         Parameters
         ----------
