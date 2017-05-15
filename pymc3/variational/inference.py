@@ -617,7 +617,7 @@ class ASVGD(Inference):
 
 
 def fit(n=10000, local_rv=None, method='advi', model=None,
-        random_seed=None, start=None, **kwargs):
+        random_seed=None, start=None, inf_kwargs=None, **kwargs):
     R"""
     Handy shortcut for using inference methods in functional way
 
@@ -636,6 +636,8 @@ def fit(n=10000, local_rv=None, method='advi', model=None,
     random_seed : None or int
         leave None to use package global RandomStream or other
         valid value to create instance specific one
+    inf_kwargs : dict
+        additional kwargs passed to :class:`Inference`
     start : `Point`
         starting point for inference
 
@@ -654,7 +656,8 @@ def fit(n=10000, local_rv=None, method='advi', model=None,
     _select = dict(
         advi=ADVI,
         fullrank_advi=FullRankADVI,
-        svgd=SVGD
+        svgd=SVGD,
+        asvgd=ASVGD
     )
     if isinstance(method, str) and method.lower() == 'advi->fullrank_advi':
         frac = kwargs.pop('frac', .5)
@@ -677,7 +680,8 @@ def fit(n=10000, local_rv=None, method='advi', model=None,
         try:
             inference = _select[method.lower()](
                 local_rv=local_rv, model=model, random_seed=random_seed,
-                start=start
+                start=start,
+                **inf_kwargs
             )
         except KeyError:
             raise KeyError('method should be one of %s '
