@@ -8,7 +8,7 @@ import numpy as np
 
 import pymc3 as pm
 from pymc3.variational.approximations import MeanField, FullRank, Empirical
-from pymc3.variational.operators import KL, KSD
+from pymc3.variational.operators import KL, KSD, AKSD
 from pymc3.variational.opvi import Approximation
 from pymc3.variational import test_functions
 
@@ -605,7 +605,7 @@ class ASVGD(Inference):
     def __init__(self, approx, local_rv=None,
                  kernel=test_functions.rbf, model=None, **kwargs):
         super(ASVGD, self).__init__(
-            op=KSD,
+            op=AKSD,
             approx=approx,
             local_rv=local_rv,
             tf=kernel,
