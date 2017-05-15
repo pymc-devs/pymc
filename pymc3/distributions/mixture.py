@@ -6,6 +6,8 @@ from .dist_math import bound
 from .distribution import Discrete, Distribution, draw_values, generate_samples
 from .continuous import get_tau_sd, Normal
 
+__all__ = ['Mixture', 'NormalMixture']
+
 
 def all_discrete(comp_dists):
     """
@@ -170,3 +172,26 @@ class NormalMixture(Mixture):
 
         super(NormalMixture, self).__init__(w, Normal.dist(mu, sd=sd),
                                             *args, **kwargs)
+
+
+class Zero(Discrete):
+    def __init__(self, *args, **kwargs):
+        super(Zero, self).__init__(*args, **kwargs)
+        
+    def logp(self, value):
+        return tt.switch(tt.eq(value, 0), 0., -np.inf)
+
+    def random(self, point=None, size=None, repeat=None):
+        def _random(dtype=self.dtype, size=None):
+            return np.full(size, fill_value=0, dtype=dtype)
+
+        return generate_samples(_random, dist_shape=self.shape,
+                                size=size).astype(self.dtype)
+
+
+class ZeroInflatedPoisson(Mixture):
+    def __init__(self, theta, psi, *args, **kwargs):
+        w = tt.stack([psi, 1 - psi])
+        comp_dists = [Zero.dist(), Poisson.dist(theta)]
+
+        super(ZeroInflatedPoisson, self).__init__(w, comp_dists, *args, **kwargs)
