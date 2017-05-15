@@ -54,7 +54,8 @@ class Inference(object):
         elif isinstance(approx, Approximation):    # pragma: no cover
             pass
         else:   # pragma: no cover
-            raise TypeError('approx should be Approximation instance or Approximation subclass')
+            raise TypeError(
+                'approx should be Approximation instance or Approximation subclass')
         self.objective = op(approx)(tf)
 
     approx = property(lambda self: self.objective.approx)
@@ -155,6 +156,9 @@ class Inference(object):
                 if i % 10 == 0:
                     avg_loss = _infmean(scores[max(0, i - 1000):i + 1])
                     progress.set_description('Average Loss = {:,.5g}'.format(avg_loss))
+                    avg_loss = scores[max(0, i - 1000):i + 1].mean()
+                    progress.set_description(
+                        'Average Loss = {:,.5g}'.format(avg_loss))
                 for callback in callbacks:
                     callback(self.approx, scores[:i + 1], i)
         except (KeyboardInterrupt, StopIteration) as e:
@@ -172,10 +176,12 @@ class Inference(object):
                     i, 100 * i // n, avg_loss))
         else:
             if n < 10:
-                logger.info('Finished [100%]: Loss = {:,.5g}'.format(scores[-1]))
+                logger.info(
+                    'Finished [100%]: Loss = {:,.5g}'.format(scores[-1]))
             else:
                 avg_loss = _infmean(scores[max(0, i - 1000):i + 1])
-                logger.info('Finished [100%]: Average Loss = {:,.5g}'.format(avg_loss))
+                logger.info(
+                    'Finished [100%]: Average Loss = {:,.5g}'.format(avg_loss))
         finally:
             progress.close()
         self.hist = np.concatenate([self.hist, scores])
@@ -184,13 +190,13 @@ class Inference(object):
 class ADVI(Inference):
     R"""
     Automatic Differentiation Variational Inference (ADVI)
-    
+
     This class implements the meanfield ADVI, where the variational
     posterior distribution is assumed to be spherical Gaussian without
     correlation of parameters and fit to the true posterior distribution.
     The means and standard deviations of the variational posterior are referred
     to as variational parameters.
-    
+
     For explanation, we classify random variables in probabilistic models into
     three types. Observed random variables
     :math:`{\cal Y}=\{\mathbf{y}_{i}\}_{i=1}^{N}` are :math:`N` observations.
@@ -269,42 +275,42 @@ class ADVI(Inference):
 
     When using mini-batches, :math:`c_{o}^{k}` and :math:`c_{l}^{k}` should be
     set to :math:`N/M`, where :math:`M` is the number of observations in each
-    mini-batch. This is done with supplying `total_size` parameter to 
+    mini-batch. This is done with supplying `total_size` parameter to
     observed nodes (e.g. :code:`Normal('x', 0, 1, observed=data, total_size=10000)`).
     In this case it is possible to automatically determine appropriate scaling for :math:`logp`
-    of observed nodes. Interesting to note that it is possible to have two independent 
+    of observed nodes. Interesting to note that it is possible to have two independent
     observed variables with different `total_size` and iterate them independently
-    during inference.  
+    during inference.
 
     For working with ADVI, we need to give
-    
+
     -   The probabilistic model
 
         `model` with three types of RVs (`observed_RVs`,
-        `global_RVs` and `local_RVs`). 
-    
+        `global_RVs` and `local_RVs`).
+
     -   (optional) Minibatches
 
-        The tensors to which mini-bathced samples are supplied are 
-        handled separately by using callbacks in :func:`Inference.fit` method 
-        that change storage of shared theano variable or by :func:`pymc3.generator` 
-        that automatically iterates over minibatches and defined beforehand. 
-    
+        The tensors to which mini-bathced samples are supplied are
+        handled separately by using callbacks in :func:`Inference.fit` method
+        that change storage of shared theano variable or by :func:`pymc3.generator`
+        that automatically iterates over minibatches and defined beforehand.
+
     -   (optional) Parameters of deterministic mappings
 
-        They have to be passed along with other params to :func:`Inference.fit` method 
-        as `more_obj_params` argument. 
+        They have to be passed along with other params to :func:`Inference.fit` method
+        as `more_obj_params` argument.
 
-    For more information concerning training stage please reference 
+    For more information concerning training stage please reference
     :func:`pymc3.variational.opvi.ObjectiveFunction.step_function`
-    
+
     Parameters
     ----------
     local_rv : dict[var->tuple]
         mapping {model_variable -> local_variable (:math:`\mu`, :math:`\rho`)}
         Local Vars are used for Autoencoding Variational Bayes
         See (AEVB; Kingma and Welling, 2014) for details
-    model : :class:`pymc3.Model` 
+    model : :class:`pymc3.Model`
         PyMC3 model for inference
     cost_part_grad_scale : `scalar`
         Scaling score part of gradient can be useful near optimum for
@@ -316,7 +322,7 @@ class ADVI(Inference):
         Scale cost to minibatch instead of full dataset, default False
     random_seed : None or int
         leave None to use package global RandomStream or other
-        valid value to create instance specific one    
+        valid value to create instance specific one
     start : `Point`
         starting point for inference
 
@@ -378,7 +384,7 @@ class FullRankADVI(Inference):
         mapping {model_variable -> local_variable (:math:`\mu`, :math:`\rho`)}
         Local Vars are used for Autoencoding Variational Bayes
         See (AEVB; Kingma and Welling, 2014) for details
-    model : :class:`pymc3.Model` 
+    model : :class:`pymc3.Model`
         PyMC3 model for inference
     cost_part_grad_scale : `scalar`
         Scaling score part of gradient can be useful near optimum for
@@ -499,7 +505,7 @@ class SVGD(Inference):
     they fit target distribution best.
 
     Algorithm is outlined below
-    
+
     *Input:* A target distribution with density function :math:`p(x)`
             and a set of initial particles :math:`{x^0_i}^n_{i=1}`
 
@@ -554,9 +560,10 @@ class SVGD(Inference):
 
 
 class ASVGD(Inference):
-    def __init__(self, approx, local_rv=None, kernel=test_functions.rbf, model=None, **kwargs):
+    def __init__(self, approx, local_rv=None,
+                 kernel=test_functions.rbf, model=None, **kwargs):
         R"""
-        
+
         Parameters
         ----------
         approx : :class:`Approximation`
@@ -578,8 +585,39 @@ class ASVGD(Inference):
             **kwargs
         )
 
+    def fit(self, n=10000, score=None, callbacks=None, progressbar=True,
+            obj_n_mc=30, **kwargs):
+        """
+        Performs Operator Variational Inference
 
-def fit(n=10000, local_rv=None, method='advi', model=None, random_seed=None, start=None, **kwargs):
+        Parameters
+        ----------
+        n : int
+            number of iterations
+        score : bool
+            evaluate loss on each iteration or not
+        callbacks : list[function : (Approximation, losses, i) -> None]
+            calls provided functions after each iteration step
+        progressbar : bool
+            whether to show progressbar or not
+        obj_n_mc : int
+            sample `n` particles for Stein gradient
+        kwargs : kwargs for :func:`ObjectiveFunction.step_function`
+
+        Returns
+        -------
+        Approximation
+        """
+        return super(ASVGD, self).fit(n=n, score=score, callbacks=callbacks,
+                                      progressbar=progressbar, obj_n_mc=obj_n_mc, **kwargs)
+
+    def run_profiling(self, n=1000, score=None, obj_n_mc=30, **kwargs):
+        return super(ASVGD, self).run_profiling(
+            n=n, score=score, obj_n_mc=obj_n_mc, **kwargs)
+
+
+def fit(n=10000, local_rv=None, method='advi', model=None,
+        random_seed=None, start=None, **kwargs):
     R"""
     Handy shortcut for using inference methods in functional way
 
@@ -623,8 +661,12 @@ def fit(n=10000, local_rv=None, method='advi', model=None, random_seed=None, sta
         if not 0. < frac < 1.:
             raise ValueError('frac should be in (0, 1)')
         n1 = int(n * frac)
-        n2 = n-n1
-        inference = ADVI(local_rv=local_rv, model=model, random_seed=random_seed, start=start)
+        n2 = n - n1
+        inference = ADVI(
+            local_rv=local_rv,
+            model=model,
+            random_seed=random_seed,
+            start=start)
         logger.info('fitting advi ...')
         inference.fit(n1, **kwargs)
         inference = FullRankADVI.from_advi(inference)

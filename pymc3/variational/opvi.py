@@ -69,10 +69,11 @@ class ObjectiveFunction(object):
     Parameters
     ----------
     op : :class:`Operator`
-        OPVI Functional operator 
+        OPVI Functional operator
     tf : :class:`TestFunction`
         OPVI TestFunction
     """
+
     def __init__(self, op, tf):
         self.op = op
         self.tf = tf
@@ -156,17 +157,27 @@ class ObjectiveFunction(object):
         resulting_updates.update(more_updates)
         return resulting_updates
 
-    def add_test_updates(self, updates, tf_n_mc=None, test_optimizer=adam, more_tf_params=None, more_replacements=None):
+    def add_test_updates(self, updates, tf_n_mc=None, test_optimizer=adam,
+                         more_tf_params=None, more_replacements=None):
         tf_z = self.get_input(tf_n_mc)
         tf_target = self(tf_z, more_tf_params=more_tf_params)
         tf_target = theano.clone(tf_target, more_replacements, strict=False)
-        updates.update(test_optimizer(tf_target, self.test_params + more_tf_params))
+        updates.update(
+            test_optimizer(
+                tf_target,
+                self.test_params +
+                more_tf_params))
 
-    def add_obj_updates(self, updates, obj_n_mc=None, obj_optimizer=adam, more_obj_params=None, more_replacements=None):
+    def add_obj_updates(self, updates, obj_n_mc=None, obj_optimizer=adam,
+                        more_obj_params=None, more_replacements=None):
         obj_z = self.get_input(obj_n_mc)
         obj_target = self(obj_z, more_obj_params=more_obj_params)
         obj_target = theano.clone(obj_target, more_replacements, strict=False)
-        updates.update(obj_optimizer(obj_target, self.obj_params + more_obj_params))
+        updates.update(
+            obj_optimizer(
+                obj_target,
+                self.obj_params +
+                more_obj_params))
         if self.op.RETURNS_LOSS:
             updates.loss = obj_target
 
@@ -183,7 +194,7 @@ class ObjectiveFunction(object):
         R"""Step function that should be called on each optimization step.
 
         Generally it solves the following problem:
-        
+
         .. math::
 
                 \mathbf{\lambda^{*}} = \inf_{\lambda} \sup_{\theta} t(\mathbb{E}_{\lambda}[(O^{p,q}f_{\theta})(z)])
@@ -227,7 +238,8 @@ class ObjectiveFunction(object):
                                more_updates=more_updates,
                                more_replacements=more_replacements)
         if score:
-            step_fn = theano.function([], updates.loss, updates=updates, **fn_kwargs)
+            step_fn = theano.function(
+                [], updates.loss, updates=updates, **fn_kwargs)
         else:
             step_fn = theano.function([], None, updates=updates, **fn_kwargs)
         return step_fn
@@ -256,7 +268,11 @@ class ObjectiveFunction(object):
             raise NotImplementedError('%s does not have loss' % self.op)
         if more_replacements is None:
             more_replacements = {}
-        loss = theano.clone(self(self.random(sc_n_mc)), more_replacements, strict=False)
+        loss = theano.clone(
+            self(
+                self.random(sc_n_mc)),
+            more_replacements,
+            strict=False)
         return theano.function([], loss, **fn_kwargs)
 
     def __getstate__(self):
@@ -272,10 +288,16 @@ class ObjectiveFunction(object):
             m = 1
         if z.ndim > 1:
             a = theano.scan(
-                lambda z_: theano.clone(self.op.apply(self.tf), {self.op.input: z_}, strict=False),
+                lambda z_: theano.clone(
+                    self.op.apply(
+                        self.tf), {
+                        self.op.input: z_}, strict=False),
                 sequences=z, n_steps=z.shape[0])[0].mean()
         else:
-            a = theano.clone(self.op.apply(self.tf), {self.op.input: z}, strict=False)
+            a = theano.clone(
+                self.op.apply(
+                    self.tf), {
+                    self.op.input: z}, strict=False)
         return m * self.op.T(a)
 
 
@@ -315,7 +337,7 @@ class Operator(object):
 
     def apply(self, f):   # pragma: no cover
         R"""Operator itself
-        
+
         .. math::
 
             (O^{p,q}f_{\theta})(z)
@@ -342,7 +364,9 @@ class Operator(object):
                     f = TestFunction.from_function(f)
         else:
             if f is not None:
-                warnings.warn('TestFunction for %s is redundant and removed' % self)
+                warnings.warn(
+                    'TestFunction for %s is redundant and removed' %
+                    self)
             else:
                 pass
             f = TestFunction()
@@ -384,7 +408,8 @@ def cast_to_list(params):
     elif params is None:
         return []
     else:
-        raise TypeError('Unknown type %s for %r, need list, dict or shared variable')
+        raise TypeError(
+            'Unknown type %s for %r, need list, dict or shared variable')
 
 
 class TestFunction(object):
@@ -417,7 +442,7 @@ class TestFunction(object):
 
         Parameters
         ----------
-        dim : int 
+        dim : int
             dimension of posterior distribution
         """
         pass
@@ -440,14 +465,14 @@ class Approximation(object):
         mapping {model_variable -> local_variable (:math:`\mu`, :math:`\rho`)}
         Local Vars are used for Autoencoding Variational Bayes
         See (AEVB; Kingma and Welling, 2014) for details
-    model : :class:`Model` 
+    model : :class:`Model`
         PyMC3 model for inference
     cost_part_grad_scale : float or scalar tensor
         Scaling score part of gradient can be useful near optimum for
         archiving better convergence properties. Common schedule is
         1 at the start and 0 in the end. So slow decay will be ok.
         See (Sticking the Landing; Geoffrey Roeder,
-        Yuhuai Wu, David Duvenaud, 2016) for details     
+        Yuhuai Wu, David Duvenaud, 2016) for details
     scale_cost_to_minibatch : bool, default False
         Scale cost to minibatch instead of full dataset
     random_seed : None or int
@@ -553,10 +578,12 @@ class Approximation(object):
 
     @property
     def normalizing_constant(self):
-        t = self.to_flat_input(tt.max([v.scaling for v in self.model.basic_RVs]))
+        t = self.to_flat_input(
+            tt.max([v.scaling for v in self.model.basic_RVs]))
         t = theano.clone(t, {self.input: tt.zeros(self.total_size)})
         # if not scale_cost_to_minibatch: t=1
-        t = tt.switch(self.scale_cost_to_minibatch, t, tt.constant(1, dtype=t.dtype))
+        t = tt.switch(self.scale_cost_to_minibatch, t,
+                      tt.constant(1, dtype=t.dtype))
         return t
 
     def _setup(self, **kwargs):
@@ -574,8 +601,11 @@ class Approximation(object):
     def check_model(self, model, **kwargs):
         """Checks that model is valid for variational inference
         """
-        vars_ = [var for var in model.vars if not isinstance(var, pm.model.ObservedRV)]
-        if any([var.dtype in pm.discrete_types for var in vars_]):  # pragma: no cover
+        vars_ = [
+            var for var in model.vars if not isinstance(
+                var, pm.model.ObservedRV)]
+        if any([var.dtype in pm.discrete_types for var in vars_]
+               ):  # pragma: no cover
             raise ValueError('Model should not include discrete RVs')
 
     def create_shared_params(self, **kwargs):
@@ -615,7 +645,8 @@ class Approximation(object):
             Replacements
         """
         if include is not None and exclude is not None:
-            raise ValueError('Only one parameter is supported {include|exclude}, got two')
+            raise ValueError(
+                'Only one parameter is supported {include|exclude}, got two')
         if include is not None:    # pragma: no cover
             replacements = {k: v for k, v
                             in self.flat_view.replacements.items() if k in include}
@@ -709,11 +740,11 @@ class Approximation(object):
 
         Parameters
         ----------
-        size : `int` 
+        size : `int`
             number of samples
         no_rand : `bool`
             return zeros if True
-        l : `int` 
+        l : `int`
             length of sample, defaults to latent space dim
 
         Returns
@@ -950,7 +981,9 @@ class Approximation(object):
         elif space.ndim < 2:
             view = space[slc]
         else:   # pragma: no cover
-            raise ValueError('Space should have no more than 2 dims, got %d' % space.ndim)
+            raise ValueError(
+                'Space should have no more than 2 dims, got %d' %
+                space.ndim)
         if reshape:
             if len(_shape) > 0:
                 if theano_is_here:

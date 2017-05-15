@@ -28,7 +28,7 @@ class MeanField(Approximation):
         mapping {model_variable -> local_variable (:math:`\\mu`, :math:`\\rho`)}
         Local Vars are used for Autoencoding Variational Bayes
         See (AEVB; Kingma and Welling, 2014) for details
-    model : :class:`pymc3.Model` 
+    model : :class:`pymc3.Model`
         PyMC3 model for inference
     start : `Point`
         initial mean
@@ -38,14 +38,14 @@ class MeanField(Approximation):
         1 at the start and 0 in the end. So slow decay will be ok.
         See (Sticking the Landing; Geoffrey Roeder,
         Yuhuai Wu, David Duvenaud, 2016) for details
-    scale_cost_to_minibatch : `bool` 
+    scale_cost_to_minibatch : `bool`
         Scale cost to minibatch instead of full dataset, default False
     random_seed : None or int
         leave None to use package global RandomStream or other
         valid value to create instance specific one
 
     References
-    ----------   
+    ----------
     -   Geoffrey Roeder, Yuhuai Wu, David Duvenaud, 2016
         Sticking the Landing: A Simple Reduced-Variance Gradient for ADVI
         approximateinference.org/accepted/RoederEtAl2016.pdf
@@ -76,12 +76,12 @@ class MeanField(Approximation):
             start = start_
         start = self.gbij.map(start)
         return {'mu': theano.shared(
-                    pm.floatX(start),
-                    'mu'),
-                'rho': theano.shared(
-                    np.zeros((self.global_size,), dtype=theano.config.floatX),
-                    'rho')
-                }
+            pm.floatX(start),
+            'mu'),
+            'rho': theano.shared(
+            np.zeros((self.global_size,), dtype=theano.config.floatX),
+            'rho')
+        }
 
     def log_q_W_global(self, z):
         """
@@ -120,13 +120,13 @@ class FullRank(Approximation):
         archiving better convergence properties. Common schedule is
         1 at the start and 0 in the end. So slow decay will be ok.
         See (Sticking the Landing; Geoffrey Roeder,
-        Yuhuai Wu, David Duvenaud, 2016) for details   
+        Yuhuai Wu, David Duvenaud, 2016) for details
     scale_cost_to_minibatch : bool, default False
         Scale cost to minibatch instead of full dataset
     random_seed : None or int
         leave None to use package global RandomStream or other
         valid value to create instance specific one
-    
+
     Other Parameters
     ----------------
     gpu_compat : bool
@@ -138,6 +138,7 @@ class FullRank(Approximation):
         Sticking the Landing: A Simple Reduced-Variance Gradient for ADVI
         approximateinference.org/accepted/RoederEtAl2016.pdf
     """
+
     def __init__(self, local_rv=None, model=None, cost_part_grad_scale=1,
                  scale_cost_to_minibatch=False,
                  gpu_compat=False, random_seed=None, **kwargs):
@@ -173,7 +174,8 @@ class FullRank(Approximation):
         num_tril_entries = self.num_tril_entries
         tril_index_matrix = np.zeros([n, n], dtype=int)
         tril_index_matrix[np.tril_indices(n)] = np.arange(num_tril_entries)
-        tril_index_matrix[np.tril_indices(n)[::-1]] = np.arange(num_tril_entries)
+        tril_index_matrix[np.tril_indices(
+            n)[::-1]] = np.arange(num_tril_entries)
         return tril_index_matrix
 
     def create_shared_params(self, **kwargs):
@@ -220,7 +222,7 @@ class FullRank(Approximation):
         """Construct FullRank from MeanField approximation
 
         Parameters
-        ----------  
+        ----------
         mean_field : :class:`MeanField`
             approximation to start with
 
@@ -264,9 +266,9 @@ class Empirical(Approximation):
         mapping {model_variable -> local_variable (:math:`\\mu`, :math:`\\rho`)}
         Local Vars are used for Autoencoding Variational Bayes
         See (AEVB; Kingma and Welling, 2014) for details
-    scale_cost_to_minibatch : `bool` 
+    scale_cost_to_minibatch : `bool`
         Scale cost to minibatch instead of full dataset, default False
-    model : :class:`pymc3.Model` 
+    model : :class:`pymc3.Model`
         PyMC3 model for inference
     random_seed : None or int
         leave None to use package global RandomStream or other
@@ -279,6 +281,7 @@ class Empirical(Approximation):
     ...     trace = sample(1000, step=step)
     ...     histogram = Empirical(trace[100:])
     """
+
     def __init__(self, trace, local_rv=None,
                  scale_cost_to_minibatch=False,
                  model=None, random_seed=None, **kwargs):
@@ -368,15 +371,15 @@ class Empirical(Approximation):
 
         Parameters
         ----------
-        size : `int` 
+        size : `int`
             number of initial particles
-        jitter : `float` 
+        jitter : `float`
             initial sd
         local_rv : `dict`
             mapping {model_variable -> local_variable}
             Local Vars are used for Autoencoding Variational Bayes
             See (AEVB; Kingma and Welling, 2014) for details
-        start : `Point` 
+        start : `Point`
             initial point
         model : :class:`pymc3.Model`
             PyMC3 model for inference
@@ -386,10 +389,15 @@ class Empirical(Approximation):
         kwargs : other kwargs passed to init
 
         Returns
-        -------    
+        -------
         :class:`Empirical`
         """
-        hist = cls(None, local_rv=local_rv, model=model, random_seed=random_seed, **kwargs)
+        hist = cls(
+            None,
+            local_rv=local_rv,
+            model=model,
+            random_seed=random_seed,
+            **kwargs)
         if start is None:
             start = hist.model.test_point
         else:
@@ -408,7 +416,7 @@ def sample_approx(approx, draws=100, include_transformed=True):
     """Draw samples from variational posterior.
 
     Parameters
-    ----------  
+    ----------
     approx : :class:`Approximation`
         Approximation to sample from
     draws : `int`
@@ -417,7 +425,7 @@ def sample_approx(approx, draws=100, include_transformed=True):
         If True, transformed variables are also sampled. Default is True.
 
     Returns
-    -------    
+    -------
     trace : class:`pymc3.backends.base.MultiTrace`
         Samples drawn from variational posterior.
     """
