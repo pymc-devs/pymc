@@ -57,7 +57,7 @@ class Stein(object):
 
     def get_approx_input(self, size=100):
         """
-        
+
         Parameters
         ----------
         size : if approx is not Empirical, takes `n=size` random samples

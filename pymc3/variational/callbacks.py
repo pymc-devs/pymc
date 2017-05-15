@@ -12,11 +12,12 @@ class Callback(object):
 
 
 def relative(current, prev, eps=1e-6):
-    return (np.abs(current - prev)+eps)/(np.abs(prev)+eps)
+    return (np.abs(current - prev) + eps) / (np.abs(prev) + eps)
 
 
 def absolute(current, prev):
     return np.abs(current - prev)
+
 
 _diff = dict(
     relative=relative,
@@ -32,7 +33,7 @@ class CheckParametersConvergence(Callback):
     every : int
         check frequency
     tolerance : float
-        if diff norm < tolerance : break 
+        if diff norm < tolerance : break
     diff : str
         difference type one of {'absolute', 'relative'}
     ord : {non-zero int, inf, -inf, 'fro', 'nuc'}, optional
@@ -50,7 +51,8 @@ class CheckParametersConvergence(Callback):
     ...     )
     """
 
-    def __init__(self, every=100, tolerance=1e-3, diff='relative', ord=np.inf):
+    def __init__(self, every=100, tolerance=1e-3,
+                 diff='relative', ord=np.inf):
         self._diff = _diff[diff]
         self.ord = ord
         self.every = every

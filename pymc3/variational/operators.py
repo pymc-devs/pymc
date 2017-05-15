@@ -17,6 +17,7 @@ class KL(Operator):
 
         KL[q(v)||p(v)] = \int q(v)\log\\frac{q(v)}{p(v)}dv
     """
+
     def apply(self, f):
         z = self.input
         return self.logq_norm(z) - self.logp_norm(z)
@@ -30,7 +31,7 @@ class KSDObjective(ObjectiveFunction):
     Parameters
     ----------
     op : :class:`KSD`
-        OPVI Functional operator 
+        OPVI Functional operator
     tf : :class:`TestFunction`
         OPVI TestFunction
     """
@@ -73,7 +74,7 @@ class KSD(Operator):
         and a set of initial particles :math:`\{x^0_i\}^n_{i=1}`
 
     Output: A set of particles :math:`\{x_i\}^n_{i=1}` that approximates the target distribution.
-    
+
     .. math::
 
         x_i^{l+1} \leftarrow \epsilon_l \hat{\phi}^{*}(x_i^l) \\
@@ -103,4 +104,3 @@ class KSD(Operator):
         # f: kernel function for KSD f(histogram) -> (k(x,.), \nabla_x k(x,.))
         stein = Stein(self.approx, f, self.input_matrix)
         return -1 * stein.grad
-

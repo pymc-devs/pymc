@@ -10,9 +10,9 @@ __all__ = [
 class Kernel(TestFunction):
     """
     Dummy base class for kernel SVGD in case we implement more
-    
+
     .. math::
-    
+
         f(x) -> (k(x,.), \nabla_x k(x,.))
 
     """
@@ -28,19 +28,20 @@ class RBF(Kernel):
         V = tt.sort(H.flatten())
         length = V.shape[0]
         # median distance
-        h = tt.switch(tt.eq((length % 2), 0),
+        m = tt.switch(tt.eq((length % 2), 0),
                       # if even vector
-                      tt.mean(V[((length//2)-1):((length//2)+1)]),
+                      tt.mean(V[((length // 2) - 1):((length // 2) + 1)]),
                       # if odd vector
                       V[length // 2])
 
-        h = tt.sqrt(0.5 * h / tt.log(X.shape[0].astype('float32') + 1.0))
+        h = 0.5 * m / tt.log(X.shape[0].astype('float32') + 1.0)
 
-        Kxy = tt.exp(-H / h ** 2 / 2.0)
+        Kxy = tt.exp(-H / h / 2.0)
         dxkxy = -tt.dot(Kxy, X)
         sumkxy = tt.sum(Kxy, axis=1).dimshuffle(0, 'x')
-        dxkxy = tt.add(dxkxy, tt.mul(X, sumkxy)) / (h ** 2)
+        dxkxy = tt.add(dxkxy, tt.mul(X, sumkxy)) / h
 
         return Kxy, dxkxy
+
 
 rbf = RBF()

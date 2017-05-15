@@ -7,11 +7,10 @@ import pymc3 as pm
 from pymc3 import Model, Normal
 from pymc3.variational import (
     ADVI, FullRankADVI, SVGD,
-    Empirical,
-    fit
+    Empirical, ASVGD, FullRank,
+    MeanField, fit
 )
 from pymc3.variational.operators import KL
-from pymc3.variational.approximations import MeanField
 
 from pymc3.tests import models
 from pymc3.tests.helpers import SeededTest
@@ -208,9 +207,10 @@ class TestApproximates:
                 mu_ = Normal('mu', mu=mu0, sd=sd0, testval=0)
                 Normal('x', mu=mu_, sd=sd, observed=data_t, total_size=n)
                 inf = self.inference(scale_cost_to_minibatch=True)
-                approx = inf.fit(self.NITER * 3, callbacks=
-                [cb, pm.callbacks.CheckParametersConvergence()],
-                                 obj_n_mc=10, obj_optimizer=self.optimizer)
+                approx = inf.fit(
+                    self.NITER * 3, callbacks=[
+                        cb, pm.callbacks.CheckParametersConvergence()
+                    ], obj_n_mc=10, obj_optimizer=self.optimizer)
                 trace = approx.sample(10000)
             np.testing.assert_allclose(np.mean(trace['mu']), mu_post, rtol=0.4)
             np.testing.assert_allclose(np.std(trace['mu']), np.sqrt(1. / d), rtol=0.4)
@@ -279,6 +279,12 @@ class TestSVGD(TestApproximates.Base):
     inference = functools.partial(SVGD, n_particles=100)
     NITER = 2500
     optimizer = functools.partial(pm.adam, learning_rate=.1)
+
+
+class TestASVGD(TestApproximates.Base):
+    inference = functools.partial(ASVGD, FullRank)
+    NITER = 4000
+    optimizer = functools.partial(pm.adam, learning_rate=.05)
 
 
 class TestEmpirical(SeededTest):
