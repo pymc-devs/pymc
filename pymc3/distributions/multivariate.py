@@ -542,7 +542,7 @@ class Wishart(Continuous):
     Note
     ----
     This distribution is unusable in a PyMC3 model. You should instead
-    use WishartBartlett or LKJCholeskyCov, LKJCorr.
+    use LKJCholeskyCov or LKJCorr.
     """
 
     def __init__(self, nu, V, *args, **kwargs):
@@ -550,9 +550,9 @@ class Wishart(Continuous):
         warnings.warn('The Wishart distribution can currently not be used '
                       'for MCMC sampling. The probability of sampling a '
                       'symmetric matrix is basically zero. Instead, please '
-                      'use WishartBartlett or better yet, LKJCholeskyCov/LKJCorr.'
-                      'For more information on the issues surrounding the '
-                      'Wishart see here: https://github.com/pymc-devs/pymc3/issues/538.',
+                      'use LKJCholeskyCov or LKJCorr. For more information '
+                      'on the issues surrounding the Wishart see here: '
+                      'https://github.com/pymc-devs/pymc3/issues/538.',
                       UserWarning)
         self.nu = nu
         self.p = p = V.shape[0]
@@ -624,6 +624,9 @@ def WishartBartlett(name, S, nu, is_cholesky=False, return_cholesky=False, testv
     This is not a standard Distribution class but follows a similar
     interface. Besides the Wishart distribution, it will add RVs
     c and z to your model which make up the matrix.
+
+    This distribution is usually a bad idea to use as a prior for multivariate
+    normal. You should instead use LKJCholeskyCov or LKJCorr.
     """
 
     L = S if is_cholesky else scipy.linalg.cholesky(S)
