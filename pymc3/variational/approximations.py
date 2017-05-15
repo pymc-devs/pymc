@@ -76,12 +76,9 @@ class MeanField(Approximation):
             start = start_
         start = self.gbij.map(start)
         return {'mu': theano.shared(
-            pm.floatX(start),
-            'mu'),
-            'rho': theano.shared(
-            np.zeros((self.global_size,), dtype=theano.config.floatX),
-            'rho')
-        }
+                    pm.floatX(start), 'mu'),
+                'rho': theano.shared(
+                    pm.floatX(np.zeros((self.global_size,))), 'rho')}
 
     def log_q_W_global(self, z):
         """
@@ -174,8 +171,9 @@ class FullRank(Approximation):
         num_tril_entries = self.num_tril_entries
         tril_index_matrix = np.zeros([n, n], dtype=int)
         tril_index_matrix[np.tril_indices(n)] = np.arange(num_tril_entries)
-        tril_index_matrix[np.tril_indices(
-            n)[::-1]] = np.arange(num_tril_entries)
+        tril_index_matrix[
+            np.tril_indices(n)[::-1]
+        ] = np.arange(num_tril_entries)
         return tril_index_matrix
 
     def create_shared_params(self, **kwargs):
@@ -186,14 +184,14 @@ class FullRank(Approximation):
             start_ = self.model.test_point.copy()
             pm.sampling._update_start_vals(start_, start, self.model)
             start = start_
-        start = self.gbij.map(start)
+        start = pm.floatX(self.gbij.map(start))
         n = self.global_size
         L_tril = (
             np.eye(n)
             [np.tril_indices(n)]
             .astype(theano.config.floatX)
         )
-        return {'mu': theano.shared(pm.floatX(start), 'mu'),
+        return {'mu': theano.shared(start, 'mu'),
                 'L_tril': theano.shared(L_tril, 'L_tril')
                 }
 
@@ -404,10 +402,10 @@ class Empirical(Approximation):
             start_ = hist.model.test_point.copy()
             pm.sampling._update_start_vals(start_, start, hist.model)
             start = start_
-        start = hist.gbij.map(start)
+        start = pm.floatX(hist.gbij.map(start))
         # Initialize particles
         x0 = np.tile(start, (size, 1))
-        x0 += np.random.normal(0, jitter, x0.shape)
+        x0 += pm.floatX(np.random.normal(0, jitter, x0.shape))
         hist.histogram.set_value(x0)
         return hist
 

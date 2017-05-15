@@ -639,8 +639,9 @@ class ASVGD(Inference):
         -------
         Approximation
         """
-        return super(ASVGD, self).fit(n=n, score=score, callbacks=callbacks,
-                                      progressbar=progressbar, obj_n_mc=obj_n_mc, **kwargs)
+        return super(ASVGD, self).fit(
+            n=n, score=score, callbacks=callbacks,
+            progressbar=progressbar, obj_n_mc=obj_n_mc, **kwargs)
 
     def run_profiling(self, n=1000, score=None, obj_n_mc=30, **kwargs):
         return super(ASVGD, self).run_profiling(
