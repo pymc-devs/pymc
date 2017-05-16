@@ -21,10 +21,9 @@ class Stein(object):
     def grad(self):
         t = self.approx.normalizing_constant
         Kxy, dxkxy = self.Kxy, self.dxkxy
-        dlogpdx = self.dlogp
-        dxkxy /= t
-        n = self.input_matrix.shape[0].astype('float32') / t
-        svgd_grad = (tt.dot(Kxy, dlogpdx) + dxkxy) / n
+        dlogpdx = self.dlogp  # Normalized
+        n = self.input_matrix.shape[0].astype('float32')
+        svgd_grad = (tt.dot(Kxy, dlogpdx) + dxkxy/t) / n
         return svgd_grad
 
     @property
