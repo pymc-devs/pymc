@@ -604,7 +604,7 @@ class ASVGD(Inference):
         https://arxiv.org/abs/1611.01722
     """
 
-    def __init__(self, approx, local_rv=None,
+    def __init__(self, approx=FullRank, local_rv=None,
                  kernel=test_functions.rbf, model=None, **kwargs):
         super(ASVGD, self).__init__(
             op=AKSD,
