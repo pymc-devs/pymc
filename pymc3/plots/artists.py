@@ -1,8 +1,8 @@
 import numpy as np
-from scipy.stats import kde, mode
+from scipy.stats import mode
 
 from pymc3.stats import hpd
-from .utils import fast_kde
+from .kdeplot import fast_kde, kdeplot
 
 
 def _histplot_bins(column, bins=100):
@@ -46,26 +46,7 @@ def kdeplot_op(ax, data, prior=None, prior_alpha=1, prior_style='--'):
     return ls, pls
 
 
-def kde2plot_op(ax, x, y, grid=200, **kwargs):
-    xmin = x.min()
-    xmax = x.max()
-    ymin = y.min()
-    ymax = y.max()
-    extent = kwargs.pop('extent', [])
-    if len(extent) != 4:
-        extent = [xmin, xmax, ymin, ymax]
-
-    grid = grid * 1j
-    X, Y = np.mgrid[xmin:xmax:grid, ymin:ymax:grid]
-    positions = np.vstack([X.ravel(), Y.ravel()])
-    values = np.vstack([x, y])
-    kernel = kde.gaussian_kde(values)
-    Z = np.reshape(kernel(positions).T, X.shape)
-
-    ax.imshow(np.rot90(Z), extent=extent, **kwargs)
-
-
-def plot_posterior_op(trace_values, figsize, ax, kde_plot, point_estimate, round_to,
+def plot_posterior_op(trace_values, ax, kde_plot, point_estimate, round_to,
                       alpha_level, ref_val, rope, text_size=16, **kwargs):
     """Artist to draw posterior."""
     def format_as_percent(x, round_to=0):
@@ -139,9 +120,8 @@ def plot_posterior_op(trace_values, figsize, ax, kde_plot, point_estimate, round
             d[key] = value
 
     if kde_plot:
-        density, l, u = fast_kde(trace_values)
-        x = np.linspace(l, u, len(density))
-        ax.plot(x, density, figsize=figsize, **kwargs)
+        kdeplot(trace_values, alpha=0.35, ax=ax, **kwargs)
+
     else:
         set_key_if_doesnt_exist(kwargs, 'bins', 30)
         set_key_if_doesnt_exist(kwargs, 'edgecolor', 'w')
@@ -157,3 +137,5 @@ def plot_posterior_op(trace_values, figsize, ax, kde_plot, point_estimate, round
         display_ref_val(ref_val)
     if rope is not None:
         display_rope(rope)
+
+
