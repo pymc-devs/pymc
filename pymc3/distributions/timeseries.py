@@ -171,30 +171,32 @@ class MvGaussianRandomWalk(distribution.Continuous):
         innovation drift, defaults to 0.0
     cov : tensor
         pos def matrix, innovation covariance matrix
-    tau : tensor
-        pos def matrix, innovation precision (alternative to specifying cov)
     init : distribution
         distribution for initial value (Defaults to Flat())
     """
-    def __init__(self, mu=0., cov=None, tau=None, init=continuous.Flat.dist(),
+    def __init__(self, mu=0., cov=None, init=continuous.Flat.dist(),
                  *args, **kwargs):
         super(MvGaussianRandomWalk, self).__init__(*args, **kwargs)
-        tau, cov = multivariate.get_tau_cov(mu, tau=tau, cov=cov)
-        self.tau = tau
+        if cov is None:
+            raise ValueError('A covariance matrix must be provided as cov argument.')
+        self.k = cov.shape[0]
+        cov = tt.as_tensor_variable(cov)
+        if cov.ndim != 2:
+            raise ValueError('cov must be two dimensional.')
         self.cov = cov
         self.mu = mu
         self.init = init
         self.mean = 0.
 
     def logp(self, x):
-        tau = self.tau
+        cov = self.cov
         mu = self.mu
         init = self.init
 
         x_im1 = x[:-1]
         x_i = x[1:]
 
-        innov_like = multivariate.MvNormal.dist(mu=x_im1 + mu, tau=tau).logp(x_i)
+        innov_like = multivariate.MvNormal.dist(mu=x_im1 + mu, cov=cov).logp(x_i)
         return init.logp(x[0]) + tt.sum(innov_like)
 
 
@@ -209,21 +211,24 @@ class MvStudentTRandomWalk(distribution.Continuous):
         innovation drift, defaults to 0.0
     cov : tensor
         pos def matrix, innovation covariance matrix
-    tau : tensor
-        pos def matrix, innovation precision (alternative to specifying cov)
     init : distribution
         distribution for initial value (Defaults to Flat())
     """
-    def __init__(self, nu, mu=0., cov=None, tau=None, init=continuous.Flat.dist(),
+    def __init__(self, nu, mu=0., cov=None, init=continuous.Flat.dist(),
                  *args, **kwargs):
         super(MvStudentTRandomWalk, self).__init__(*args, **kwargs)
-        tau, cov = multivariate.get_tau_cov(mu, tau=tau, cov=cov)
-        self.tau = tau
-        self.cov = cov
         self.mu = mu
         self.nu = nu
         self.init = init
         self.mean = 0.
+        
+        if cov is None:
+            raise ValueError('A covariance matrix must be provided as cov argument.')
+        self.k = cov.shape[0]
+        cov = tt.as_tensor_variable(cov)
+        if cov.ndim != 2:
+            raise ValueError('cov must be two dimensional.')
+        self.cov = cov
 
     def logp(self, x):
         cov = self.cov
