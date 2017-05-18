@@ -4,7 +4,7 @@ from scipy.signal import gaussian, convolve
 
 
 def kdeplot(trace_values, label=None, alpha=0.35, shade=False, ax=None,
-             **kwargs):
+            **kwargs):
     if ax is None:
         _, ax = plt.subplots()
     density, l, u = fast_kde(trace_values)
@@ -13,7 +13,8 @@ def kdeplot(trace_values, label=None, alpha=0.35, shade=False, ax=None,
     if shade:
         ax.fill_between(x, density, alpha=alpha, **kwargs)
     return ax
-    
+
+
 def fast_kde(x):
     """
     A fft-based Gaussian kernel density estimate (KDE) for computing
@@ -69,5 +70,3 @@ def fast_kde(x):
     grid = grid / norm_factor
 
     return grid, xmin, xmax
-
-

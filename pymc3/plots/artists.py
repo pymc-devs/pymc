@@ -16,7 +16,8 @@ def histplot_op(ax, data, alpha=.35):
     """Add a histogram for each column of the data to the provided axes."""
     hs = []
     for column in data.T:
-        hs.append(ax.hist(column, bins=_histplot_bins(column), alpha=alpha, align='left'))
+        hs.append(ax.hist(column, bins=_histplot_bins(
+                  column), alpha=alpha, align='left'))
     ax.set_xlim(np.min(data) - 0.5, np.max(data) + 0.5)
     return hs
 
@@ -32,7 +33,8 @@ def kdeplot_op(ax, data, prior=None, prior_alpha=1, prior_style='--'):
             x = np.linspace(l, u, len(density))
             if prior is not None:
                 p = prior.logp(x).eval()
-                pls.append(ax.plot(x, np.exp(p), alpha=prior_alpha, ls=prior_style))
+                pls.append(ax.plot(x, np.exp(p),
+                                   alpha=prior_alpha, ls=prior_style))
 
             ls.append(ax.plot(x, density))
         except ValueError:
@@ -137,5 +139,3 @@ def plot_posterior_op(trace_values, ax, kde_plot, point_estimate, round_to,
         display_ref_val(ref_val)
     if rope is not None:
         display_rope(rope)
-
-

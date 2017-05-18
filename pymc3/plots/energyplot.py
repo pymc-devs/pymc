@@ -3,6 +3,7 @@ import numpy as np
 
 from .kdeplot import kdeplot
 
+
 def energyplot(trace, kind='kde', figsize=None, ax=None, legend=True, lw=0,
                alpha=0.35, frame=True, **kwargs):
     """Plot energy transition distribution and marginal energy distribution in order
@@ -26,13 +27,13 @@ def energyplot(trace, kind='kde', figsize=None, ax=None, legend=True, lw=0,
         Alpha value for plot line. Defaults to 0.35.
     frame : bool
         Flag for plotting frame around figure.
-    
+
     Returns
     -------
 
     ax : matplotlib axes
     """
-    
+
     try:
         energy = trace['energy']
     except KeyError:
@@ -43,30 +44,30 @@ def energyplot(trace, kind='kde', figsize=None, ax=None, legend=True, lw=0,
 
     if figsize is None:
         figsize = (8, 6)
-        
+
     if ax is None:
         _, ax = plt.subplots(figsize=figsize)
 
     if kind == 'kde':
         for label, value in series:
             kdeplot(value, label=label, alpha=alpha, shade=True, ax=ax,
-                     **kwargs)
+                    **kwargs)
 
     elif kind == 'hist':
         for label, value in series:
             ax.hist(value, lw=lw, alpha=alpha, label=label, **kwargs)
-            
+
     else:
         raise ValueError('Plot type {} not recognized.'.format(kind))
 
     ax.set_xticks([])
     ax.set_yticks([])
-    
+
     if not frame:
         for spine in ax.spines.values():
             spine.set_visible(False)
 
     if legend:
         ax.legend()
-    
+
     return ax

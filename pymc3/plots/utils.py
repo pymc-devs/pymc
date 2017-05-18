@@ -38,5 +38,3 @@ def make_2d(a):
     newshape = np.product(a.shape[1:]).astype(int)
     a = a.reshape((n, newshape), order='F')
     return a
-
-

@@ -138,5 +138,3 @@ def plot_posterior_predictive_glm(trace, eval=None, lm=None, samples=30, **kwarg
         kwargs.pop('label', None)
 
     plt.title('Posterior predictive')
-
-
