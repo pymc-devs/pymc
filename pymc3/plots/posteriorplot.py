@@ -79,8 +79,8 @@ def plot_posterior(trace, varnames=None, transform=identity_transform, figsize=N
         if figsize is None:
             figsize = (6, 2)
         if ax is None:
-            fig, ax = plt.subplots()
-        plot_posterior_op(transform(trace), figsize=figsize, ax=ax, kde_plot=kde_plot,
+            fig, ax = plt.subplots(figsize=figsize)
+        plot_posterior_op(transform(trace), ax=ax, kde_plot=kde_plot,
                           point_estimate=point_estimate, round_to=round_to,
                           alpha_level=alpha_level, ref_val=ref_val, rope=rope, text_size=text_size, **kwargs)
     else:
@@ -94,7 +94,7 @@ def plot_posterior(trace, varnames=None, transform=identity_transform, figsize=N
 
         for a, v in zip(np.atleast_1d(ax), trace_dict):
             tr_values = transform(trace_dict[v])
-            plot_posterior_op(tr_values, figsize=figsize, ax=a, kde_plot=kde_plot,
+            plot_posterior_op(tr_values, ax=a, kde_plot=kde_plot,
                               point_estimate=point_estimate, round_to=round_to,
                               alpha_level=alpha_level, ref_val=ref_val, rope=rope, text_size=text_size, **kwargs)
             a.set_title(v)
