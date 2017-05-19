@@ -781,17 +781,17 @@ class StudentT(Continuous):
                      - (nu + 1.0) / 2.0 * tt.log1p(lam * (value - mu)**2 / nu),
                      lam > 0, nu > 0, sd > 0)
 
-        def _repr_latex_(self, name=None, dist=None):
-            if dist is None:
-                dist = self
-            nu = dist.nu
-            mu = dist.mu
-            lam = dist.lam
-            return r'$%s \sim \text{StudentT}(\mathit{nu}=%s, \mathit{mu}=%s, \mathit{lam}=%s)$' % (name,
-                                                                    get_variable_name(nu), 
-                                                                    get_variable_name(mu),
-                                                                    get_variable_name(lam))
-                                                                    
+    def _repr_latex_(self, name=None, dist=None):
+        if dist is None:
+            dist = self
+        nu = dist.nu
+        mu = dist.mu
+        lam = dist.lam
+        return r'$%s \sim \text{StudentT}(\mathit{nu}=%s, \mathit{mu}=%s, \mathit{lam}=%s)$' % (name,
+                                                                get_variable_name(nu), 
+                                                                get_variable_name(mu),
+                                                                get_variable_name(lam))
+                                                                
 
 class Pareto(PositiveContinuous):
     R"""
