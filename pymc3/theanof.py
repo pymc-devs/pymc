@@ -25,6 +25,7 @@ __all__ = ['gradient',
            'make_shared_replacements',
            'generator',
            'set_tt_rng',
+           'ttix_',
            'tt_rng']
 
 
@@ -439,3 +440,20 @@ def set_theano_conf(values):
             raise
         old[name] = old_value
     return old
+
+
+def ix_(*args):
+    """
+    Theano np.ix_ analog
+
+    See numpy.lib.index_tricks.ix_ for reference
+    """
+    out = []
+    nd = len(args)
+    for k, new in enumerate(args):
+        new = tt.as_tensor(new)
+        if new.ndim != 1:
+            raise ValueError("Cross index must be 1 dimensional")
+        new = new.reshape((1,)*k + (new.size,) + (1,)*(nd-k-1))
+        out.append(new)
+    return tuple(out)

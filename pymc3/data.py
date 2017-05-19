@@ -11,7 +11,8 @@ import theano
 __all__ = [
     'get_data',
     'GeneratorAdapter',
-    'DataSampler'
+    'DataSampler',
+    'Minibatch'
 ]
 
 
@@ -149,17 +150,50 @@ class DataSampler(object):
 
 
 class Minibatch(object):
-    """
+    """Multidimensional minibatch
 
     Parameters
     ----------
     data : ndarray
         initial data
-    batch_size : int or list of ints
-        batch size for inference
-    in_memory_size : int or list of ints, slices, Ellipsis
+    batch_size : int or List[tuple(size, random_seed)]
+        batch size for inference, random seed is needed 
+        for child random generators
+    in_memory_size : int or List[int,slice,Ellipsis]
         data size for storing in theano.shared
+    random_seed : int
+        random seed that is used for 1d random slice
+    update_shared_f : callable
+        gets in_memory_shape and returns np.ndarray
+
+    Attributes
+    ----------
+    shared : shared tensor
+        Used for storing data
+    minibatch : minibatch tensor
+        Used for training
     """
+    def __init__(self, data, batch_size, in_memory_size=None, random_seed=42, update_shared_f=None):
+        self._random_seed = random_seed
+        in_memory_slc = self._to_slices(in_memory_size)
+        self.data = data
+        self.batch_size = batch_size
+        self.shared = theano.shared(data[in_memory_slc])
+        self.in_memory_shape = self.shared.get_value().shape
+        self.update_shared_f = update_shared_f
+        self.random_slc = self._to_random_slices(self.in_memory_shape, batch_size)
+        self.minibatch = self.shared[self.random_slc]
+
+    def rslice(self, total, size, seed):
+        if size is None:
+            return slice(None)
+        elif isinstance(size, int):
+            return (pm.tt_rng(seed)
+                    .uniform(size=(size, ), low=0.0, high=total - 1e-16)
+                    .astype('int64'))
+        else:
+            raise TypeError('Unrecognized size type, %r' % size)
+
     @staticmethod
     def _to_slices(user_size):
         if user_size is None:
@@ -183,23 +217,28 @@ class Minibatch(object):
         else:
             raise TypeError('Unrecognized size type, %r' % user_size)
 
-    def rslice(self, total, size):
-        if size is None:
-            return slice(None)
-        elif isinstance(size, int):
-            return (self._rng
-                    .uniform(size=size, low=0.0, high=total - 1e-16)
-                    .astype('int64'))
-
     def _to_random_slices(self, in_memory_shape, batch_size):
         if batch_size is None:
             return [Ellipsis]
         elif isinstance(batch_size, int):
-            return [self.rslice(in_memory_shape[0], batch_size)]
+            slc = [self.rslice(in_memory_shape[0], batch_size, self._random_seed)]
         elif isinstance(batch_size, (list, tuple)):
-            if not all(isinstance(i, int) for i in batch_size if (i is not Ellipsis or i is not None)):
+            def check(t):
+                if t is Ellipsis or t is None:
+                    return True
+                else:
+                    if not isinstance(t, (tuple, list)):
+                        return False
+                    else:
+                        if not len(t) == 2:
+                            return False
+                        else:
+                            return isinstance(t[0], int) and isinstance(t[1], int)
+
+            if not all(check(t) for t in batch_size):
                 raise TypeError('Unrecognized `batch_size` type, expected '
-                                'int or list of ints')
+                                'int or List[tuple(size, random_seed)] where '
+                                'size and random seed are both ints')
             shape = in_memory_shape
             if Ellipsis in batch_size:
                 sep = batch_size.index(Ellipsis)
@@ -220,36 +259,19 @@ class Minibatch(object):
             else:
                 shp_end = np.asarray([])
             shp_begin = shape[:len(begin)]
-            slc_begin = [self.rslice(shp_begin[i], bs) for i, bs in enumerate(begin)]
-            slc_end = [self.rslice(shp_end[i], bs) for i, bs in enumerate(end)]
+            slc_begin = [self.rslice(shp_begin[i], bs, s) for i, (bs, s) in enumerate(begin)]
+            slc_end = [self.rslice(shp_end[i], bs, s) for i, (bs, s) in enumerate(end)]
             slc = slc_begin + mid + slc_end
-            return slc
+            slc = slc
         else:
             raise TypeError('Unrecognized size type, %r' % batch_size)
-
-    def __init__(self, data, batch_size, in_memory_size=None, random_seed=42, update_shared_f=None):
-        self._rng = pm.tt_rng(random_seed)
-        in_memory_slc = self._to_slices(in_memory_size)
-        self.data = data
-        self.batch_size = batch_size
-        self.shared = theano.shared(data[in_memory_slc])
-        self.in_memory_shape = self.shared.shape.get_value()
-        self.update_shared_f = update_shared_f
-        self.random_slc = self._to_random_slices(self.in_memory_shape, batch_size)
-        self.minibatch = self.shared[self.random_slc]
-        self._use_minibatch = theano.shared(np.uint8(1))
-        self.value = tt.switch(self._use_minibatch, self.minibatch, self.shared)
+        return pm.theanof.ix_(*slc)
 
     def refresh(self):
         self.shared.set_value(self.update_shared_f(self.in_memory_shape))
 
-    def _set_use(self, v):
-        self._use_minibatch.set_value(np.uint8(bool(v)))
-
-    def _get_use(self):
-        return bool(self._use_minibatch.get_value())
-
-    use_minibatch = property(_get_use, _set_use)
+    def set_value(self, value):
+        self.shared.set_value(value)
 
     def __repr__(self):
         return '<Minibatch of %s from memory of shape %s>' % (self.batch_size, list(self.in_memory_shape))
