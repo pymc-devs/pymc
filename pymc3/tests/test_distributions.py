@@ -1,4 +1,5 @@
 from __future__ import division
+from __future__ import division
 
 import itertools
 
@@ -51,7 +52,10 @@ LKJ_CASES = get_lkj_cases()
 class Domain(object):
 
     def __init__(self, vals, dtype=None, edges=None, shape=None):
-        avals = array(vals)
+        avals = array(vals, dtype=dtype)
+        if dtype is None and not str(avals.dtype).startswith('int'):
+            avals = avals.astype(theano.config.floatX)
+        vals = [array(v, dtype=avals.dtype) for v in vals]
 
         if edges is None:
             edges = array(vals[0]), array(vals[-1])
