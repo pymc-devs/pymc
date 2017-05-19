@@ -580,7 +580,8 @@ def init_nuts(init='ADVI', njobs=1, n_init=500000, model=None,
             random_seed=random_seed,
             n=n_init, method='advi', model=model,
             callbacks=[pm.callbacks.CheckParametersConvergence(tolerance=1e-2)],
-            progressbar=progressbar
+            progressbar=progressbar,
+            obj_optimizer=pm.adagrad_window
         )  # type: pm.MeanField
         start = approx.sample(draws=njobs)
         stds = approx.gbij.rmap(approx.std.eval())
@@ -594,7 +595,8 @@ def init_nuts(init='ADVI', njobs=1, n_init=500000, model=None,
             random_seed=random_seed,
             n=n_init, method=pm.ADVI.from_mean_field(approx),
             callbacks=[pm.callbacks.CheckParametersConvergence(tolerance=1e-2)],
-            progressbar=progressbar
+            progressbar=progressbar,
+            obj_optimizer=pm.adagrad_window
         )
         start = approx.sample(draws=njobs)
         cov = approx.cov.eval()
