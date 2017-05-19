@@ -1,6 +1,7 @@
 import collections
 import threading
 import six
+from functools import partial
 
 import numpy as np
 import scipy.sparse as sps
@@ -822,6 +823,8 @@ class FreeRV(Factor, TensorVariable):
                                 methods=['random'],
                                 wrapper=InstanceMethod)
 
+            self._repr_latex_ = partial(distribution._repr_latex_, name=name, dist=distribution)
+
     @property
     def init_value(self):
         """Convenience attribute to return tag.test_value"""
@@ -913,6 +916,8 @@ class ObservedRV(Factor, TensorVariable):
                              inputs=[data], outputs=[self])
 
             self.tag.test_value = theano.compile.view_op(data).tag.test_value
+            
+            self._repr_latex_ = partial(distribution._repr_latex_, name=name, dist=distribution)
 
     @property
     def init_value(self):
@@ -1027,6 +1032,8 @@ class TransformedRV(TensorVariable):
                                 methods=['random'],
                                 wrapper=InstanceMethod)
 
+            self._repr_latex_ = partial(distribution._repr_latex_, name=name, dist=distribution)
+        
     @property
     def init_value(self):
         """Convenience attribute to return tag.test_value"""

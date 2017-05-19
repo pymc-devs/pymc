@@ -1,3 +1,5 @@
+from numpy import asscalar
+
 def get_transformed_name(name, transform):
     """
     Consistent way of transforming names
@@ -72,3 +74,22 @@ def get_default_varnames(var_iterator, include_transformed):
         return list(var_iterator)
     else:
         return [var for var in var_iterator if not is_transformed_name(str(var))]
+
+
+def get_variable_name(variable):
+    """Returns the variable data type if it is a constant, otherwise
+    returns the argument name.
+    """
+    name = variable.name
+    if name is None:
+        if hasattr(variable, 'get_parents'):
+            try:
+                names = [get_variable_name(item) for item in variable.get_parents()[0].inputs]
+                return 'f(%s)' % ','.join([n for n in names if isinstance(n, str)]) 
+            except IndexError:
+                pass
+        value = variable.eval()
+        if not value.shape:
+            return asscalar(value)
+        return 'array'
+    return name
