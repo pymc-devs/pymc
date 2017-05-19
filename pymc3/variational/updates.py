@@ -563,13 +563,12 @@ def adagrad_window(loss_or_grads=None, params=None,
             np.zeros(value.shape + (n_win,), dtype=value.dtype))
 
         # Append squared gradient vector to accu_new
-        accu_new = tt.set_subtensor(accu[:, i_int], grad ** 2)
+        accu_new = tt.set_subtensor(accu[..., i_int], grad ** 2)
         i_new = tt.switch((i + 1) < n_win, i + 1, 0)
-
         updates[accu] = accu_new
         updates[i] = i_new
 
-        accu_sum = accu_new.sum(axis=1)
+        accu_sum = accu_new.sum(axis=-1)
         updates[param] = param - (learning_rate * grad /
                                   tt.sqrt(accu_sum + epsilon))
     return updates
