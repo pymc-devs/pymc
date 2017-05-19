@@ -25,7 +25,6 @@ __all__ = ['gradient',
            'make_shared_replacements',
            'generator',
            'set_tt_rng',
-           'ttix_',
            'tt_rng']
 
 
@@ -451,6 +450,8 @@ def ix_(*args):
     out = []
     nd = len(args)
     for k, new in enumerate(args):
+        if new is None:
+            out.append(slice(None))
         new = tt.as_tensor(new)
         if new.ndim != 1:
             raise ValueError("Cross index must be 1 dimensional")
