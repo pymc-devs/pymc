@@ -158,7 +158,7 @@ class Uniform(Continuous):
             dist = self
         lower = dist.lower
         upper = dist.upper
-        return r'$%s \sim \text{Uniform}(\mathit{lower}=%s, \mathit{upper}=%s)$' % (name,
+        return r'${} \sim \text{{Uniform}}(\mathit{{lower}}={}, \mathit{{upper}}={})$'.format(name,
                                                                 get_variable_name(lower), 
                                                                 get_variable_name(upper))
                                                                      
@@ -182,7 +182,7 @@ class Flat(Continuous):
     def _repr_latex_(self, name=None, dist=None):
         if dist is None:
             dist = self
-        return r'$%s \sim \text{Flat}()$'                                            
+        return r'${} \sim \text{{Flat}()$'                                            
     
 
 class Normal(Continuous):
@@ -252,7 +252,7 @@ class Normal(Continuous):
             dist = self
         sd = dist.sd
         mu = dist.mu
-        return r'$%s \sim \text{Normal}(\mathit{mu}=%s, \mathit{sd}=%s)$' % (name,
+        return r'${} \sim \text{{Normal}}(\mathit{{mu}}={}, \mathit{{sd}}={})$'.format(name,
                                                                 get_variable_name(mu), 
                                                                 get_variable_name(sd))
                                                                 
@@ -311,7 +311,7 @@ class HalfNormal(PositiveContinuous):
         if dist is None:
             dist = self
         sd = dist.sd
-        return r'$%s \sim \text{HalfNormal}(\mathit{sd}=%s)$' % (name,
+        return r'${} \sim \text{{HalfNormal}}(\mathit{{sd}}={})$'.format(name,
                                                                 get_variable_name(sd))
 
 class Wald(PositiveContinuous):
@@ -440,7 +440,7 @@ class Wald(PositiveContinuous):
         lam = dist.lam
         mu = dist.mu
         alpha = dist.alpha
-        return r'$%s \sim \text{Wald}(\mathit{mu}=%s, \mathit{lam}=%s, \mathit{alpha}=%s)$' % (name,
+        return r'${} \sim \text{{Wald}}(\mathit{{mu}}={}, \mathit{{lam}}={}, \mathit{{alpha}}={})$'.format(name,
                                                                 get_variable_name(mu), 
                                                                 get_variable_name(lam),
                                                                 get_variable_name(alpha))
@@ -538,7 +538,7 @@ class Beta(UnitContinuous):
             dist = self
         alpha = dist.alpha
         beta = dist.beta
-        return r'$%s \sim \text{Beta}(\mathit{alpha}=%s, \mathit{alpha}=%s)$' % (name,
+        return r'${} \sim \text{{Beta}}(\mathit{{alpha}}={}, \mathit{{alpha}}={})$'.format(name,
                                                                 get_variable_name(alpha), 
                                                                 get_variable_name(beta))
     
@@ -588,7 +588,7 @@ class Exponential(PositiveContinuous):
         if dist is None:
             dist = self
         lam = dist.lam
-        return r'$%s \sim \text{Exponential}(\mathit{lam}=%s)$' % (name,
+        return r'${} \sim \text{{Exponential}}(\mathit{{lam}}={})$'.format(name,
                                                                 get_variable_name(lam))
 
 class Laplace(Continuous):
@@ -640,7 +640,7 @@ class Laplace(Continuous):
             dist = self
         b = dist.b
         mu = dist.mu
-        return r'$%s \sim \text{Laplace}(\mathit{mu}=%s, \mathit{b}=%s)$' % (name,
+        return r'${} \sim \text{{Laplace}}(\mathit{{mu}}={}, \mathit{{b}}={})$'.format(name,
                                                                 get_variable_name(mu), 
                                                                 get_variable_name(b))
                                                                 
@@ -713,7 +713,7 @@ class Lognormal(PositiveContinuous):
             dist = self
         tau = dist.tau
         mu = dist.mu
-        return r'$%s \sim \text{Lognormal}(\mathit{mu}=%s, \mathit{tau}=%s)$' % (name,
+        return r'${} \sim \text{{Lognormal}}(\mathit{{mu}}={}, \mathit{{tau}}={})$'.format(name,
                                                                 get_variable_name(mu), 
                                                                 get_variable_name(tau))
                                                                 
@@ -787,7 +787,7 @@ class StudentT(Continuous):
         nu = dist.nu
         mu = dist.mu
         lam = dist.lam
-        return r'$%s \sim \text{StudentT}(\mathit{nu}=%s, \mathit{mu}=%s, \mathit{lam}=%s)$' % (name,
+        return r'${} \sim \text{{StudentT}}(\mathit{{nu}}={}, \mathit{{mu}}={}, \mathit{{lam}}={})$'.format(name,
                                                                 get_variable_name(nu), 
                                                                 get_variable_name(mu),
                                                                 get_variable_name(lam))
@@ -859,7 +859,7 @@ class Pareto(PositiveContinuous):
             dist = self
         alpha = dist.alpha
         m = dist.m
-        return r'$%s \sim \text{Pareto}(\mathit{alpha}=%s, \mathit{m}=%s)$' % (name,
+        return r'${} \sim \text{{Pareto}}(\mathit{{alpha}}={}, \mathit{{m}}={})$'.format(name,
                                                                 get_variable_name(alpha), 
                                                                 get_variable_name(m))
                                                                 
@@ -920,7 +920,7 @@ class Cauchy(Continuous):
             dist = self
         alpha = dist.alpha
         beta = dist.beta
-        return r'$%s \sim \text{Cauchy}(\mathit{alpha}=%s, \mathit{beta}=%s)$' % (name,
+        return r'${} \sim \text{{Cauchy}}(\mathit{{alpha}}={}, \mathit{{beta}}={})$'.format(name,
                                                                 get_variable_name(alpha), 
                                                                 get_variable_name(beta))
                                                                 
@@ -974,7 +974,7 @@ class HalfCauchy(PositiveContinuous):
         if dist is None:
             dist = self
         beta = dist.beta
-        return r'$%s \sim \text{HalfCauchy}(\mathit{beta}=%s)$' % (name,
+        return r'${} \sim \text{{HalfCauchy}}(\mathit{{beta}}={})$'.format(name,
                                                                 get_variable_name(beta))
 
 class Gamma(PositiveContinuous):
@@ -1064,7 +1064,7 @@ class Gamma(PositiveContinuous):
             dist = self
         beta = dist.beta
         alpha = dist.alpha
-        return r'$%s \sim \text{Gamma}(\mathit{alpha}=%s, \mathit{beta}=%s)$' % (name,
+        return r'${} \sim \text{{Gamma}}(\mathit{{alpha}}={}, \mathit{{beta}}={})$'.format(name,
                                                                 get_variable_name(alpha), 
                                                                 get_variable_name(beta))
                                                                 
@@ -1134,7 +1134,7 @@ class InverseGamma(PositiveContinuous):
             dist = self
         beta = dist.beta
         alpha = dist.alpha
-        return r'$%s \sim \text{InverseGamma}(\mathit{alpha}=%s, \mathit{beta}=%s)$' % (name,
+        return r'${} \sim \text{{InverseGamma}}(\mathit{{alpha}}={}, \mathit{{beta}}={})$'.format(name,
                                                                 get_variable_name(alpha), 
                                                                 get_variable_name(beta))
                                                                 
@@ -1168,7 +1168,7 @@ class ChiSquared(Gamma):
         if dist is None:
             dist = self
         nu = dist.nu
-        return r'$%s \sim \Chi^2(\mathit{nu}=%s)$' % (name,
+        return r'${} \sim \Chi^2(\mathit{{nu}}={})$'.format(name,
                                                                 get_variable_name(nu))
                                                                 
 
@@ -1232,7 +1232,7 @@ class Weibull(PositiveContinuous):
             dist = self
         beta = dist.beta
         alpha = dist.alpha
-        return r'$%s \sim \text{Weibull}(\mathit{alpha}=%s, \mathit{beta}=%s)$' % (name,
+        return r'${} \sim \text{{Weibull}}(\mathit{{alpha}}={}, \mathit{{beta}}={})$'.format(name,
                                                                 get_variable_name(alpha), 
                                                                 get_variable_name(beta))
                                                                 
@@ -1332,7 +1332,7 @@ class ExGaussian(Continuous):
         sigma = dist.sigma
         mu = dist.mu
         nu = dist.nu
-        return r'$%s \sim \text{ExGaussian}(\mathit{mu}=%s, \mathit{sigma}=%s, \mathit{nu}=%s)$' % (name,
+        return r'${} \sim \text{{ExGaussian}}(\mathit{{mu}}={}, \mathit{{sigma}}={}, \mathit{{nu}}={})$'.format(name,
                                                                 get_variable_name(mu), 
                                                                 get_variable_name(sigma),
                                                                 get_variable_name(nu))
@@ -1390,7 +1390,7 @@ class VonMises(Continuous):
             dist = self
         kappa = dist.kappa
         mu = dist.mu
-        return r'$%s \sim \text{VonMises}(\mathit{mu}=%s, \mathit{kappa}=%s)$' % (name,
+        return r'${} \sim \text{{VonMises}}(\mathit{{mu}}={}, \mathit{{kappa}}={})$'.format(name,
                                                                 get_variable_name(mu), 
                                                                 get_variable_name(kappa))
                                                                 
@@ -1476,7 +1476,7 @@ class SkewNormal(Continuous):
         sd = dist.sd
         mu = dist.mu
         alpha = dist.alpha
-        return r'$%s \sim \text{Skew-Normal}(\mathit{mu}=%s, \mathit{sd}=%s, \mathit{alpha}=%s)$' % (name,
+        return r'${} \sim \text{{Skew-Normal}}(\mathit{{mu}}={}, \mathit{{sd}}={}, \mathit{{alpha}}={})$'.format(name,
                                                                 get_variable_name(mu), 
                                                                 get_variable_name(sd),
                                                                 get_variable_name(alpha))
@@ -1529,7 +1529,7 @@ class Triangular(Continuous):
         lower = dist.lower
         upper = dist.upper
         c = dist.c
-        return r'$%s \sim \text{Triangular}(\mathit{c}=%s, \mathit{lower}=%s, \mathit{upper}=%s)$' % (name,
+        return r'${} \sim \text{{Triangular}}(\mathit{{c}}={}, \mathit{{lower}}={}, \mathit{{upper}}={})$'.format(name,
                                                                 get_variable_name(c), 
                                                                 get_variable_name(lower),
                                                                 get_variable_name(upper))
@@ -1583,7 +1583,7 @@ class Gumbel(Continuous):
             dist = self
         beta = dist.beta
         mu = dist.mu
-        return r'$%s \sim \text{Gumbel}(\mathit{mu}=%s, \mathit{beta}=%s)$' % (name,
+        return r'${} \sim \text{{Gumbel}}(\mathit{{mu}}={}, \mathit{{beta}}={})$'.format(name,
                                                                 get_variable_name(mu), 
                                                                 get_variable_name(beta))
                                                                 
