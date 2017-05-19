@@ -1,5 +1,5 @@
 import pytest
-
+import numpy as np
 from pymc3.distributions.transforms import Transform
 import pymc3 as pm
 
@@ -27,3 +27,23 @@ class TestTransformName(object):
             assert pm.util.get_untransformed_name(transformed) == name
             with pytest.raises(ValueError):
                 pm.util.get_untransformed_name(name)
+
+
+class TestMinibatch(object):
+    data = np.random.rand(30, 10, 40, 10, 50)
+
+    def test_1d(self):
+        mb = pm.Minibatch(self.data, 20)
+        assert mb.minibatch_shape == (20, 10, 40, 10, 50)
+
+    def test_2d(self):
+        with pytest.raises(TypeError):
+            pm.Minibatch(self.data, (10, 5))
+        mb = pm.Minibatch(self.data, [(10, 42), (4, 42)])
+        assert mb.minibatch_shape == (10, 4, 40, 10, 50)
+
+    def test_special(self):
+        mb = pm.Minibatch(self.data, [(10, 42), None, (4, 42)])
+        assert mb.minibatch_shape == (10, 10, 4, 10, 50)
+        mb = pm.Minibatch(self.data, [(10, 42), Ellipsis, (4, 42)])
+        assert mb.minibatch_shape == (10, 10, 40, 10, 4)

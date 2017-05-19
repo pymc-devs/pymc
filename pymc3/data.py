@@ -173,7 +173,7 @@ class Minibatch(object):
     minibatch : minibatch tensor
         Used for training
     """
-    def __init__(self, data, batch_size, in_memory_size=None, random_seed=42, update_shared_f=None):
+    def __init__(self, data, batch_size=128, in_memory_size=None, random_seed=42, update_shared_f=None):
         self._random_seed = random_seed
         in_memory_slc = self._to_slices(in_memory_size)
         self.data = data
@@ -183,6 +183,7 @@ class Minibatch(object):
         self.update_shared_f = update_shared_f
         self.random_slc = self._to_random_slices(self.in_memory_shape, batch_size)
         self.minibatch = self.shared[self.random_slc]
+        self.minibatch_shape = tuple(self.minibatch.shape.eval())
 
     def rslice(self, total, size, seed):
         if size is None:
@@ -246,7 +247,9 @@ class Minibatch(object):
                 end = batch_size[sep + 1:]
                 if Ellipsis in end:
                     raise ValueError('Double Ellipsis in `batch_size` is restricted')
-                mid = [Ellipsis]
+                if len(end) > 0:
+                    shp_mid = shape[sep:-len(end)]
+                    mid = [tt.arange(s) for s in shp_mid]
             else:
                 begin = batch_size
                 end = []
@@ -255,12 +258,16 @@ class Minibatch(object):
                 raise ValueError('Length of `batch_size` is too big, '
                                  'number of ints is bigger that ndim')
             if len(end) > 0:
-                shp_end = shape[-len(end):]
+                shp_end = shape[-len([end]):]
             else:
                 shp_end = np.asarray([])
             shp_begin = shape[:len(begin)]
-            slc_begin = [self.rslice(shp_begin[i], bs, s) for i, (bs, s) in enumerate(begin)]
-            slc_end = [self.rslice(shp_end[i], bs, s) for i, (bs, s) in enumerate(end)]
+            slc_begin = [self.rslice(shp_begin[i], t[0], t[1])
+                         if t is not None else tt.arange(shp_begin[i])
+                         for i, t in enumerate(begin)]
+            slc_end = [self.rslice(shp_end[i], t[0], t[1])
+                       if t is not None else tt.arange(shp_end[i])
+                       for i, t in enumerate(end)]
             slc = slc_begin + mid + slc_end
             slc = slc
         else:
