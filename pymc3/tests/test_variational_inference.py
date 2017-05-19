@@ -7,7 +7,7 @@ import pymc3 as pm
 from pymc3 import Model, Normal
 from pymc3.variational import (
     ADVI, FullRankADVI, SVGD,
-    Empirical, ASVGD, FullRank,
+    Empirical, ASVGD,
     MeanField, fit
 )
 from pymc3.variational.operators import KL
