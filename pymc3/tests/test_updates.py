@@ -9,7 +9,8 @@ from pymc3.variational.updates import (
     rmsprop,
     adadelta,
     adam,
-    adamax
+    adamax,
+    adagrad_window
 )
 
 _a = theano.shared(1.)
@@ -23,7 +24,9 @@ _without_params = dict(loss_or_grads=None, params=None)
 
 @pytest.mark.parametrize(
     'opt',
-    [sgd, momentum, nesterov_momentum, adagrad, rmsprop, adadelta, adam, adamax]
+    [sgd, momentum, nesterov_momentum,
+     adagrad, rmsprop, adadelta, adam,
+     adamax, adagrad_window]
 )
 @pytest.mark.parametrize(
     'loss_and_params',
