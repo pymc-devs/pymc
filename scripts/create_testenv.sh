@@ -44,7 +44,7 @@ fi
 pip install --upgrade pip
 pip install --no-deps numdifftools
 pip install git+https://github.com/Theano/Theano.git
-pip install tqdm h5py
+pip install tqdm h5py nose-parameterized==0.6.0
 
 if [ -z ${NO_SETUP} ]; then
     python setup.py build_ext --inplace
