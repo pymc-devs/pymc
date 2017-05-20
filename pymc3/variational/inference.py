@@ -137,6 +137,9 @@ class Inference(object):
             progress.close()
 
     def _iterate_with_loss(self, n, step_func, progress, callbacks):
+        def _infmean(input_array):
+            """Return the mean of the finite values of the array"""
+            return np.mean(np.asarray(input_array)[np.isfinite(input_array)])
         scores = np.empty(n)
         scores[:] = np.nan
         i = 0
@@ -618,7 +621,3 @@ def fit(n=10000, local_rv=None, method='advi', model=None, random_seed=None, sta
                         'or Inference instance' %
                         set(_select.keys()))
     return inference.fit(n, **kwargs)
-
-def _infmean(input_array):
-    """Return the mean of the finite values of the array"""
-    return np.mean(np.asarray(input_array)[np.isfinite(input_array)])
