@@ -6,10 +6,7 @@ pandas>=0.18.0
 patsy>=0.4.0
 joblib>=0.9
 tqdm>=4.8.4
-CommonMark==0.5.4
-recommonmark
-sphinx
-nbsphinx
-numdifftools
-six
-h5py
+six>=1.10.0
+h5py>=2.7.0
+numdifftools>=0.9.20
+enum34>=1.1.6; python_version < '3.4'
