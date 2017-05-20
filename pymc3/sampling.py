@@ -574,12 +574,15 @@ def init_nuts(init='ADVI', njobs=1, n_init=500000, model=None,
 
     if init is not None:
         init = init.lower()
-
+    cb = [
+        pm.callbacks.CheckParametersConvergence(tolerance=1e-2, diff='absolute'),
+        pm.callbacks.CheckParametersConvergence(tolerance=1e-3, diff='relative'),
+    ]
     if init == 'advi':
         approx = pm.fit(
             random_seed=random_seed,
             n=n_init, method='advi', model=model,
-            callbacks=[pm.callbacks.CheckParametersConvergence(tolerance=1e-2)],
+            callbacks=cb,
             progressbar=progressbar,
             obj_optimizer=pm.adagrad_window
         )  # type: pm.MeanField
@@ -594,7 +597,7 @@ def init_nuts(init='ADVI', njobs=1, n_init=500000, model=None,
         pm.fit(
             random_seed=random_seed,
             n=n_init, method=pm.ADVI.from_mean_field(approx),
-            callbacks=[pm.callbacks.CheckParametersConvergence(tolerance=1e-2)],
+            callbacks=cb,
             progressbar=progressbar,
             obj_optimizer=pm.adagrad_window
         )
