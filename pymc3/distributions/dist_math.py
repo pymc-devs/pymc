@@ -382,6 +382,9 @@ class SplineWrapper (theano.Op):
         x, = inputs
         output_storage[0][0] = np.asarray(self.spline(x))
 
+    def grad(self, inputs, grads):
+        raise NotImplementedError
+
 
 class DifferentiableSplineWrapper (SplineWrapper):
     """
