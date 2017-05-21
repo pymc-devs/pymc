@@ -50,7 +50,7 @@ class CheckParametersConvergence(Callback):
     ...     )
     """
 
-    def __init__(self, every=1000, tolerance=1e-3, diff='relative', ord=np.inf):
+    def __init__(self, every=100, tolerance=1e-3, diff='relative', ord=np.inf):
         self._diff = _diff[diff]
         self.ord = ord
         self.every = every

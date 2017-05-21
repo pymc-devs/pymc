@@ -137,6 +137,9 @@ class Inference(object):
             progress.close()
 
     def _iterate_with_loss(self, n, step_func, progress, callbacks):
+        def _infmean(input_array):
+            """Return the mean of the finite values of the array"""
+            return np.mean(np.asarray(input_array)[np.isfinite(input_array)])
         scores = np.empty(n)
         scores[:] = np.nan
         i = 0
@@ -149,7 +152,7 @@ class Inference(object):
                     raise FloatingPointError('NaN occurred in optimization.')
                 scores[i] = e
                 if i % 10 == 0:
-                    avg_loss = scores[max(0, i - 1000):i + 1].mean()
+                    avg_loss = _infmean(scores[max(0, i - 1000):i + 1])
                     progress.set_description('Average Loss = {:,.5g}'.format(avg_loss))
                 for callback in callbacks:
                     callback(self.approx, scores[:i + 1], i)
@@ -163,14 +166,14 @@ class Inference(object):
                 logger.info('Interrupted at {:,d} [{:.0f}%]: Loss = {:,.5g}'.format(
                     i, 100 * i // n, scores[i]))
             else:
-                avg_loss = scores[min(0, i - 1000):i + 1].mean()
+                avg_loss = _infmean(scores[min(0, i - 1000):i + 1])
                 logger.info('Interrupted at {:,d} [{:.0f}%]: Average Loss = {:,.5g}'.format(
                     i, 100 * i // n, avg_loss))
         else:
             if n < 10:
                 logger.info('Finished [100%]: Loss = {:,.5g}'.format(scores[-1]))
             else:
-                avg_loss = scores[max(0, i - 1000):i + 1].mean()
+                avg_loss = _infmean(scores[max(0, i - 1000):i + 1])
                 logger.info('Finished [100%]: Average Loss = {:,.5g}'.format(avg_loss))
         finally:
             progress.close()

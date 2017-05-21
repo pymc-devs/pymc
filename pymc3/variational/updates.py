@@ -111,6 +111,7 @@ __all__ = [
     "apply_nesterov_momentum",
     "nesterov_momentum",
     "adagrad",
+    "adagrad_window",
     "rmsprop",
     "adadelta",
     "adam",
@@ -522,6 +523,54 @@ def adagrad(loss_or_grads=None, params=None, learning_rate=1.0, epsilon=1e-6):
         updates[param] = param - (learning_rate * grad /
                                   tt.sqrt(accu_new + epsilon))
 
+    return updates
+
+
+def adagrad_window(loss_or_grads=None, params=None,
+                   learning_rate=0.001, epsilon=.1, n_win=10):
+    """Returns a function that returns parameter updates.
+    Instead of accumulated estimate, uses running window 
+
+    Parameters
+    ----------
+    loss_or_grads : symbolic expression or list of expressions
+        A scalar loss expression, or a list of gradient expressions
+    params : list of shared variables
+        The variables to generate update expressions for
+    learning_rate : float
+        Learning rate.
+    epsilon : float
+        Offset to avoid zero-division in the normalizer of adagrad.
+    n_win : int
+        Number of past steps to calculate scales of parameter gradients.
+
+    Returns
+    -------
+    OrderedDict
+        A dictionary mapping each parameter to its update expression
+    """
+    if loss_or_grads is None and params is None:
+        return partial(adagrad_window, **_get_call_kwargs(locals()))
+    elif loss_or_grads is None or params is None:
+        raise ValueError('Please provide both `loss_or_grads` and `params` to get updates')
+    grads = get_or_compute_grads(loss_or_grads, params)
+    updates = OrderedDict()
+    for param, grad in zip(params, grads):
+        i = theano.shared(pm.floatX(0))
+        i_int = i.astype('int32')
+        value = param.get_value(borrow=True)
+        accu = theano.shared(
+            np.zeros(value.shape + (n_win,), dtype=value.dtype))
+
+        # Append squared gradient vector to accu_new
+        accu_new = tt.set_subtensor(accu[..., i_int], grad ** 2)
+        i_new = tt.switch((i + 1) < n_win, i + 1, 0)
+        updates[accu] = accu_new
+        updates[i] = i_new
+
+        accu_sum = accu_new.sum(axis=-1)
+        updates[param] = param - (learning_rate * grad /
+                                  tt.sqrt(accu_sum + epsilon))
     return updates
 
 

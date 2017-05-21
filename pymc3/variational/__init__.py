@@ -8,6 +8,7 @@ from .updates import (
     apply_nesterov_momentum,
     nesterov_momentum,
     adagrad,
+    adagrad_window,
     rmsprop,
     adadelta,
     adam,
