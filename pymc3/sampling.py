@@ -576,7 +576,7 @@ def init_nuts(init='ADVI', njobs=1, n_init=500000, model=None,
         init = init.lower()
     cb = [
         pm.callbacks.CheckParametersConvergence(tolerance=1e-2, diff='absolute'),
-        pm.callbacks.CheckParametersConvergence(tolerance=1e-3, diff='relative'),
+        pm.callbacks.CheckParametersConvergence(tolerance=1e-2, diff='relative'),
     ]
     if init == 'advi':
         approx = pm.fit(
