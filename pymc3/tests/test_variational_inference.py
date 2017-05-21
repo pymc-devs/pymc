@@ -297,7 +297,7 @@ class TestASVGD(TestApproximates.Base):
     NITER = 15000
     inference = ASVGD
     test_aevb = _test_aevb
-    optimizer = pm.adagrad_window(learning_rate=0.001)
+    optimizer = pm.adagrad_window(learning_rate=0.002)
     conv_cb = []
 
 
