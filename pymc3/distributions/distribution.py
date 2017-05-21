@@ -48,7 +48,7 @@ class Distribution(object):
         dist.__init__(*args, **kwargs)
         return dist
 
-    def __init__(self, shape, dtype, testval=None, defaults=[], transform=None):
+    def __init__(self, shape, dtype, testval=None, defaults=(), transform=None):
         self.shape = np.atleast_1d(shape)
         if False in (np.floor(self.shape) == self.shape):
             raise TypeError("Expected int elements in shape")
@@ -59,7 +59,7 @@ class Distribution(object):
         self.transform = transform
 
     def default(self):
-        return self.get_test_val(self.testval, self.defaults)
+        return np.asarray(self.get_test_val(self.testval, self.defaults), self.dtype)
 
     def get_test_val(self, val, defaults):
         if val is None:
@@ -92,7 +92,7 @@ def TensorType(dtype, shape):
 
 class NoDistribution(Distribution):
 
-    def __init__(self, shape, dtype, testval=None, defaults=[], transform=None, parent_dist=None, *args, **kwargs):
+    def __init__(self, shape, dtype, testval=None, defaults=(), transform=None, parent_dist=None, *args, **kwargs):
         super(NoDistribution, self).__init__(shape=shape, dtype=dtype,
                                              testval=testval, defaults=defaults,
                                              *args, **kwargs)
@@ -111,7 +111,7 @@ class NoDistribution(Distribution):
 class Discrete(Distribution):
     """Base class for discrete distributions"""
 
-    def __init__(self, shape=(), dtype=None, defaults=['mode'],
+    def __init__(self, shape=(), dtype=None, defaults=('mode', ),
                  *args, **kwargs):
         if dtype is None:
             if theano.config.floatX == 'float32':
@@ -127,7 +127,7 @@ class Discrete(Distribution):
 class Continuous(Distribution):
     """Base class for continuous distributions"""
 
-    def __init__(self, shape=(), dtype=None, defaults=['median', 'mean', 'mode'], *args, **kwargs):
+    def __init__(self, shape=(), dtype=None, defaults=('median', 'mean', 'mode'), *args, **kwargs):
         if dtype is None:
             dtype = theano.config.floatX
         super(Continuous, self).__init__(
