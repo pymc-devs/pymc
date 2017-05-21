@@ -1393,23 +1393,30 @@ class Gumbel(Continuous):
 
 class Interpolated(Continuous):
     R"""
-    Probability distribution defined as a linear interpolation of
-    of a set of points and values of probability density function
-    evaluated on them.
+    Univariate probability distribution defined as a linear interpolation
+    of probability density function evaluated on some lattice of points.
 
-    The points are not variables, but plain array-like objects, so
-    they are constant and cannot be sampled.
+    The lattice can be uneven, so the steps between different points can have
+    different size and it is possible to vary the precision between regions
+    of the support.
 
-    ========  =========================================
-    Support   :math:`x \in [x_points[0], x_points[-1]]`
-    ========  =========================================
+    The probability density function values don not have to be normalized, as the
+    interpolated density is any way normalized to make the total probability
+    equal to $1$.
+
+    Both parameters `x_points` and values `pdf_points` are not variables, but
+    plain array-like objects, so they are constant and cannot be sampled.
+
+    ========  ===========================================
+    Support   :math:`x \in [x\_points[0], x\_points[-1]]`
+    ========  ===========================================
 
     Parameters
     ----------
     x_points : array-like
         A monotonically growing list of values
     pdf_points : array-like
-        Probability density function evaluated at points from `x`
+        Probability density function evaluated on lattice `x_points`
     """
 
     def __init__(self, x_points, pdf_points, transform='interval',
