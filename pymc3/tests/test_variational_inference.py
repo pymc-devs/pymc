@@ -69,7 +69,15 @@ class TestApproximates:
     class Base(SeededTest):
         inference = None
         NITER = 12000
-        optimizer = functools.partial(pm.adam, learning_rate=.01)
+        optimizer = pm.adagrad_window(learning_rate=0.01)
+        conv_cb = property(lambda self: [
+            pm.callbacks.CheckParametersConvergence(
+                every=500,
+                diff='relative', tolerance=0.001),
+            pm.callbacks.CheckParametersConvergence(
+                every=500,
+                diff='absolute', tolerance=0.0001)
+        ])
 
         def test_vars_view(self):
             _, model, _ = models.multidimensional_model()
@@ -146,11 +154,10 @@ class TestApproximates:
                 inf.fit(10)
                 approx = inf.fit(self.NITER,
                                  obj_optimizer=self.optimizer,
-                                 callbacks=
-                                 [pm.callbacks.CheckParametersConvergence()],)
+                                 callbacks=self.conv_cb,)
                 trace = approx.sample(10000)
-            np.testing.assert_allclose(np.mean(trace['mu']), mu_post, rtol=0.1)
-            np.testing.assert_allclose(np.std(trace['mu']), np.sqrt(1. / d), rtol=0.4)
+            np.testing.assert_allclose(np.mean(trace['mu']), mu_post, rtol=0.05)
+            np.testing.assert_allclose(np.std(trace['mu']), np.sqrt(1. / d), rtol=0.1)
 
         def test_optimizer_minibatch_with_generator(self):
             n = 1000
@@ -175,11 +182,10 @@ class TestApproximates:
                 Normal('x', mu=mu_, sd=sd, observed=minibatches, total_size=n)
                 inf = self.inference()
                 approx = inf.fit(self.NITER * 3, obj_optimizer=self.optimizer,
-                                 callbacks=
-                                 [pm.callbacks.CheckParametersConvergence()])
+                                 callbacks=self.conv_cb)
                 trace = approx.sample(10000)
-            np.testing.assert_allclose(np.mean(trace['mu']), mu_post, rtol=0.1)
-            np.testing.assert_allclose(np.std(trace['mu']), np.sqrt(1. / d), rtol=0.4)
+            np.testing.assert_allclose(np.mean(trace['mu']), mu_post, rtol=0.05)
+            np.testing.assert_allclose(np.std(trace['mu']), np.sqrt(1. / d), rtol=0.1)
 
         def test_optimizer_minibatch_with_callback(self):
             n = 1000
@@ -208,12 +214,20 @@ class TestApproximates:
                 Normal('x', mu=mu_, sd=sd, observed=data_t, total_size=n)
                 inf = self.inference(scale_cost_to_minibatch=True)
                 approx = inf.fit(
-                    self.NITER * 3, callbacks=[
-                        cb, pm.callbacks.CheckParametersConvergence()
-                    ], obj_n_mc=10, obj_optimizer=self.optimizer)
+                    self.NITER * 3, callbacks=[cb] + self.conv_cb, obj_optimizer=self.optimizer)
                 trace = approx.sample(10000)
-            np.testing.assert_allclose(np.mean(trace['mu']), mu_post, rtol=0.4)
-            np.testing.assert_allclose(np.std(trace['mu']), np.sqrt(1. / d), rtol=0.4)
+            np.testing.assert_allclose(np.mean(trace['mu']), mu_post, rtol=0.05)
+            np.testing.assert_allclose(np.std(trace['mu']), np.sqrt(1. / d), rtol=0.1)
+
+        def test_n_obj_mc(self):
+            n_samples = 100
+            xs = np.random.binomial(n=1, p=0.2, size=n_samples)
+            with pm.Model():
+                p = pm.Beta('p', alpha=1, beta=1)
+                pm.Binomial('xs', n=1, p=p, observed=xs)
+                inf = self.inference(scale_cost_to_minibatch=True)
+                # should just work
+                inf.fit(10, obj_n_mc=10, obj_optimizer=self.optimizer)
 
         def test_pickling(self):
             with models.multidimensional_model()[1]:
@@ -277,15 +291,14 @@ class TestFullRank(TestApproximates.Base):
 
 class TestSVGD(TestApproximates.Base):
     inference = functools.partial(SVGD, n_particles=100)
-    NITER = 2500
-    optimizer = functools.partial(pm.adam, learning_rate=.1)
 
 
 class TestASVGD(TestApproximates.Base):
+    NITER = 15000
     inference = ASVGD
-    NITER = 4000
-    optimizer = functools.partial(pm.adam, learning_rate=.05)
     test_aevb = _test_aevb
+    optimizer = pm.adagrad_window(learning_rate=0.001)
+    conv_cb = []
 
 
 class TestEmpirical(SeededTest):
