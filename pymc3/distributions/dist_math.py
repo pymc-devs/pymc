@@ -371,33 +371,25 @@ class SplineWrapper (theano.Op):
     Creates a theano operation from scipy.interpolate.UnivariateSpline
     """
 
-    __props__ = ('spline',)
+    __props__ = ('spline', 'grad_op')
     itypes = [tt.dscalar]
     otypes = [tt.dscalar]
 
-    def __init__(self, spline):
+    def __init__(self, spline, n_derivatives):
         self.spline = spline
+
+        if n_derivatives > 0:
+            self.grad_op = SplineWrapper(spline.derivative(), n_derivatives - 1)
+        else:
+            self.grad_op = None
 
     def perform(self, node, inputs, output_storage):
         x, = inputs
         output_storage[0][0] = np.asarray(self.spline(x))
 
     def grad(self, inputs, grads):
-        raise NotImplementedError
-
-
-class DifferentiableSplineWrapper (SplineWrapper):
-    """
-    Creates a theano operation with defined gradient from
-    scipy.interpolate.UnivariateSpline
-    """
-
-    def __init__(self, spline):
-        super(DifferentiableSplineWrapper, self).__init__(spline)
-        self.spline_grad = SplineWrapper(spline.derivative())
-        self.__props__ += ('spline_grad',)
-
-    def grad(self, inputs, grads):
+        if self.grad_op is None:
+            raise NotImplementedError
         x, = inputs
         x_grad, = grads
-        return [x_grad * self.spline_grad(x)]
+        return [x_grad * self.grad_op(x)]

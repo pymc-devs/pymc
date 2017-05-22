@@ -16,7 +16,7 @@ import warnings
 from pymc3.theanof import floatX
 from . import transforms
 
-from .dist_math import bound, logpow, gammaln, betaln, std_cdf, i0, i1, alltrue_elemwise, DifferentiableSplineWrapper
+from .dist_math import bound, logpow, gammaln, betaln, std_cdf, i0, i1, alltrue_elemwise, SplineWrapper
 from .distribution import Continuous, draw_values, generate_samples, Bound
 
 __all__ = ['Uniform', 'Flat', 'Normal', 'Beta', 'Exponential', 'Laplace',
@@ -1430,7 +1430,7 @@ class Interpolated(Continuous):
         Z = interp.integral(x_points[0], x_points[-1])
 
         self.Z = tt.as_tensor_variable(Z)
-        self.interp_op = DifferentiableSplineWrapper(interp)
+        self.interp_op = SplineWrapper(interp, n_derivatives=1)
         self.x_points = x_points
         self.pdf_points = pdf_points / Z
         self.cdf_points = interp.antiderivative()(x_points) / Z
