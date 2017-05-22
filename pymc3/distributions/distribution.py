@@ -48,7 +48,7 @@ class Distribution(object):
         dist.__init__(*args, **kwargs)
         return dist
 
-    def __init__(self, shape, dtype, testval=None, defaults=(), transform=None):
+    def __init__(self, shape, dtype, testval=None, defaults=(), transform=None, broadcastable=None):
         self.shape = np.atleast_1d(shape)
         if False in (np.floor(self.shape) == self.shape):
             raise TypeError("Expected int elements in shape")
@@ -89,8 +89,10 @@ class Distribution(object):
         return None
 
 
-def TensorType(dtype, shape):
-    return tt.TensorType(str(dtype), np.atleast_1d(shape) == 1)
+def TensorType(dtype, shape, broadcastable=None):
+    if broadcastable is None:
+        broadcastable = np.atleast_1d(shape) == 1
+    return tt.TensorType(str(dtype), broadcastable)
 
 
 class NoDistribution(Distribution):
