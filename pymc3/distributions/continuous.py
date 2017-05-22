@@ -1430,7 +1430,7 @@ class Interpolated(Continuous):
         Z = interp.integral(x_points[0], x_points[-1])
 
         self.Z = tt.as_tensor_variable(Z)
-        self.interp_op = SplineWrapper(interp, n_derivatives=1)
+        self.interp_op = SplineWrapper(interp)
         self.x_points = x_points
         self.pdf_points = pdf_points / Z
         self.cdf_points = interp.antiderivative()(x_points) / Z
