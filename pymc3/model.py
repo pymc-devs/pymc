@@ -1,7 +1,6 @@
 import collections
 import threading
 import six
-from functools import partial
 
 import numpy as np
 import scipy.sparse as sps
@@ -823,7 +822,14 @@ class FreeRV(Factor, TensorVariable):
                                 methods=['random'],
                                 wrapper=InstanceMethod)
 
-            self._repr_latex_ = partial(distribution._repr_latex_, name=name, dist=distribution)
+    def _repr_latex_(self, name=None, dist=None):
+        if self.distribution is None:
+            return None
+        if name is None:
+            name = self.name
+        if dist is None:
+            dist = self.distribution
+        return self.distribution._repr_latex_(name=name, dist=dist)
 
     @property
     def init_value(self):
@@ -916,8 +922,15 @@ class ObservedRV(Factor, TensorVariable):
                              inputs=[data], outputs=[self])
 
             self.tag.test_value = theano.compile.view_op(data).tag.test_value
-            
-            self._repr_latex_ = partial(distribution._repr_latex_, name=name, dist=distribution)
+
+    def _repr_latex_(self, name=None, dist=None):
+        if self.distribution is None:
+            return None
+        if name is None:
+            name = self.name
+        if dist is None:
+            dist = self.distribution
+        return self.distribution._repr_latex_(name=name, dist=dist)
 
     @property
     def init_value(self):
@@ -1016,6 +1029,7 @@ class TransformedRV(TensorVariable):
 
         if distribution is not None:
             self.model = model
+            self.distribution = distribution
 
             transformed_name = get_transformed_name(name, transform)
 
@@ -1032,7 +1046,14 @@ class TransformedRV(TensorVariable):
                                 methods=['random'],
                                 wrapper=InstanceMethod)
 
-            self._repr_latex_ = partial(distribution._repr_latex_, name=name, dist=distribution)
+    def _repr_latex_(self, name=None, dist=None):
+        if self.distribution is None:
+            return None
+        if name is None:
+            name = self.name
+        if dist is None:
+            dist = self.distribution
+        return self.distribution._repr_latex_(name=name, dist=dist)
         
     @property
     def init_value(self):

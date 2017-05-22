@@ -5,7 +5,6 @@ from ..theanof import gradient
 from . import distribution
 from ..math import logit, invlogit
 import numpy as np
-from functools import partial
 
 __all__ = ['transform', 'stick_breaking', 'logodds', 'interval',
           'lowerbound', 'upperbound', 'log', 'sum_to_1', 't_stick_breaking']
@@ -70,8 +69,13 @@ class TransformedDistribution(distribution.Distribution):
             b = np.hstack(((np.atleast_1d(self.shape) == 1)[:-1], False))
             # force the last dim not broadcastable
             self.type = tt.TensorType(v.dtype, b)
-            
-        self._repr_latex_ = partial(dist._repr_latex_, dist=dist)
+
+    def _repr_latex_(self, name=None, dist=None):
+        if name is None:
+            name = self.name
+        if dist is None:
+            dist = self.dist
+        return dist._repr_latex_(self, name=name, dist=dist)
 
     def logp(self, x):
         return (self.dist.logp(self.transform_used.backward(x)) +
