@@ -388,16 +388,16 @@ def _iter_sample(draws, step, start=None, trace=None, chain=0, tune=None,
             yield strace
     except KeyboardInterrupt:
         strace.close()
-        if hasattr(step, 'check_trace'):
-            step.check_trace(strace)
+        if hasattr(step, 'report'):
+            step.report._finalize(strace)
         raise
     except BaseException:
         strace.close()
         raise
     else:
         strace.close()
-        if hasattr(step, 'check_trace'):
-            step.check_trace(strace)
+        if hasattr(step, 'report'):
+            step.report._finalize(strace)
 
 
 def _choose_backend(trace, chain, shortcuts=None, **kwds):
