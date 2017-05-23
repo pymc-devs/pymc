@@ -268,7 +268,7 @@ class MvStudentT(Continuous):
                ({\mathbf x}-{\mu})^T
                {\Sigma}^{-1}({\mathbf x}-{\mu})
              \right]^{(\nu+p)/2}}
-
+    
     
     ========  =============================================
     Support   :math:`x \in \mathbb{R}^k`
@@ -276,7 +276,7 @@ class MvStudentT(Continuous):
     Variance  :math:`\frac{\nu}{\mu-2}\Sigma`
                   if :math:`\nu>2` else undefined
     ========  =============================================
-
+    
     
     Parameters
     ----------
@@ -926,7 +926,7 @@ class LKJCorr(Continuous):
          [- - - 7 8]
          [- - - - 9]
          [- - - - -]]
-
+    
     
     References
     ----------

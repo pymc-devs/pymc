@@ -1592,22 +1592,22 @@ class Interpolated(Continuous):
     R"""
     Univariate probability distribution defined as a linear interpolation
     of probability density function evaluated on some lattice of points.
-
+    
     The lattice can be uneven, so the steps between different points can have
     different size and it is possible to vary the precision between regions
     of the support.
-
+    
     The probability density function values don not have to be normalized, as the
     interpolated density is any way normalized to make the total probability
     equal to $1$.
-
+    
     Both parameters `x_points` and values `pdf_points` are not variables, but
     plain array-like objects, so they are constant and cannot be sampled.
-
+    
     ========  ===========================================
     Support   :math:`x \in [x\_points[0], x\_points[-1]]`
     ========  ===========================================
-
+    
     Parameters
     ----------
     x_points : array-like

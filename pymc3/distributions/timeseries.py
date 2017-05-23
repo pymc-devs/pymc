@@ -296,4 +296,3 @@ class MvStudentTRandomWalk(distribution.Continuous):
                                                 get_variable_name(nu),
                                                 get_variable_name(mu),
                                                 get_variable_name(cov))
-                                                
