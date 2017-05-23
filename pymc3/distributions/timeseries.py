@@ -231,7 +231,7 @@ class MvGaussianRandomWalk(distribution.Continuous):
         
         x_im1 = x[:-1]
         x_i = x[1:]
-
+        
         innov_like = multivariate.MvNormal.dist(mu=x_im1 + mu, cov=cov).logp(x_i)
         return init.logp(x[0]) + tt.sum(innov_like)
     
@@ -274,7 +274,7 @@ class MvStudentTRandomWalk(distribution.Continuous):
         if cov.ndim != 2:
             raise ValueError('cov must be two dimensional.')
         self.cov = cov
-
+    
     def logp(self, x):
         cov = self.cov
         mu = self.mu

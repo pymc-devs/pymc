@@ -469,7 +469,7 @@ class DiscreteUniform(Discrete):
         return r'${} \sim \text{{DiscreteUniform}}(\mathit{{lower}}={}, \mathit{{upper}}={})$'.format(name,
                                                 get_variable_name(lower),
                                                 get_variable_name(upper))
-                                                
+
 
 class Categorical(Discrete):
     R"""
