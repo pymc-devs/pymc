@@ -336,7 +336,7 @@ class _Tree(object):
                 error_msg = "Bad energy after leapfrog step."
                 error = None
         tree = Subtree(None, None, None, None, -np.inf, 0, 1)
-        return tree, (error_msg, error), False
+        return tree, (error_msg, error, left), False
 
     def _build_subtree(self, left, depth, epsilon):
         if depth == 0:
@@ -392,11 +392,11 @@ class NutsReport(object):
         self._divs_tune = []
         self._divs_after_tune = []
 
-    def _add_divergence(self, tuning, msg, error=None):
+    def _add_divergence(self, tuning, msg, error=None, point=None):
         if tuning:
-            self._divs_tune.append((msg, error))
+            self._divs_tune.append((msg, error, point))
         else:
-            self._divs_after_tune((msg, error))
+            self._divs_after_tune((msg, error, point))
         if self._on_error == 'raise':
             err = SamplingError('Divergence after tuning: ' + msg)
             six.raise_from(err, error)
