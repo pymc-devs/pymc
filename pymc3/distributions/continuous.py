@@ -137,7 +137,7 @@ class Uniform(Continuous):
         self.upper = upper = tt.as_tensor_variable(upper)
         self.mean = (upper + lower) / 2.
         self.median = self.mean
-
+    
     
     def random(self, point=None, size=None, repeat=None):
         lower, upper = draw_values([self.lower, self.upper],
@@ -834,7 +834,7 @@ class Pareto(PositiveContinuous):
         
         assert_negative_support(alpha, 'alpha', 'Pareto')
         assert_negative_support(m, 'm', 'Pareto')
-
+    
     
     def _random(self, alpha, m, size=None):
         u = np.random.uniform(size=size)
@@ -1533,7 +1533,7 @@ class Triangular(Continuous):
                                                                 get_variable_name(c),
                                                                 get_variable_name(lower),
                                                                 get_variable_name(upper))
-                                                                
+
 
 class Gumbel(Continuous):
     R"""
