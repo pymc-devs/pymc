@@ -7,12 +7,7 @@ from numpy.random import uniform
 from enum import IntEnum, unique
 
 __all__ = [
-    'ArrayStep', 'ArrayStepShared', 'metrop_select',
-    'Competence', 'SamplingError']
-
-
-class SamplingError(RuntimeError):
-    pass
+    'ArrayStep', 'ArrayStepShared', 'metrop_select', 'Competence']
 
 
 @unique

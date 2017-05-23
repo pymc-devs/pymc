@@ -1,7 +1,8 @@
 from collections import namedtuple
 import warnings
 
-from ..arraystep import Competence, SamplingError
+from ..arraystep import Competence
+from pymc3.exceptions import SamplingError
 from .base_hmc import BaseHMC
 from pymc3.theanof import floatX
 from pymc3.vartypes import continuous_types
@@ -170,7 +171,8 @@ class NUTS(BaseHMC):
         v0 = self.compute_velocity(p0)
         start_energy = self.compute_energy(q0, p0)
         if not np.isfinite(start_energy):
-            raise ValueError('The initial energy is inf or nan.')
+            raise ValueError('Bad initial energy: %s. The model '
+                             'might be misspecified.' % start_energy)
 
         if not self.adapt_step_size:
             step_size = self.step_size
@@ -310,12 +312,15 @@ class _Tree(object):
         """Perform a leapfrog step and handle error cases."""
         try:
             right = self.leapfrog(left.q, left.p, left.q_grad, epsilon)
-        except linalg.LinalgError as error:
+        except linalg.LinAlgError as err:
             error_msg = "LinAlgError during leapfrog step."
-        except ValueError as error:
+            error = err
+        except ValueError as err:
             # Raised by many scipy.linalg functions
-            if error.args[0].lower() == 'array must not contain infs or nans':
+            scipy_msg = "array must not contain infs or nans"
+            if len(err.args) > 0 and scipy_msg in err.args[0].lower():
                 error_msg = "Infs or nans in scipy.linalg during leapfrog step."
+                error = err
             else:
                 raise
         else:
@@ -396,7 +401,7 @@ class NutsReport(object):
         if tuning:
             self._divs_tune.append((msg, error, point))
         else:
-            self._divs_after_tune((msg, error, point))
+            self._divs_after_tune.append((msg, error, point))
         if self._on_error == 'raise':
             err = SamplingError('Divergence after tuning: ' + msg)
             six.raise_from(err, error)
