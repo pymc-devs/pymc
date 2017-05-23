@@ -111,6 +111,7 @@ __all__ = [
     "apply_nesterov_momentum",
     "nesterov_momentum",
     "adagrad",
+    "adagrad_window",
     "rmsprop",
     "adadelta",
     "adam",
@@ -186,12 +187,12 @@ def sgd(loss_or_grads=None, params=None, learning_rate=1e-3):
     -------
     OrderedDict
         A dictionary mapping each parameter to its update expression
-        
+
     Notes
     -----
     Optimizer can be called without both loss_or_grads and params
     in that case partial function is returned
-    
+
     Examples
     --------
     >>> a = theano.shared(1.)
@@ -209,7 +210,8 @@ def sgd(loss_or_grads=None, params=None, learning_rate=1e-3):
     if loss_or_grads is None and params is None:
         return partial(sgd, **_get_call_kwargs(locals()))
     elif loss_or_grads is None or params is None:
-        raise ValueError('Please provide both `loss_or_grads` and `params` to get updates')
+        raise ValueError(
+            'Please provide both `loss_or_grads` and `params` to get updates')
     grads = get_or_compute_grads(loss_or_grads, params)
     updates = OrderedDict()
 
@@ -267,7 +269,8 @@ def apply_momentum(updates, params=None, momentum=0.9):
     return updates
 
 
-def momentum(loss_or_grads=None, params=None, learning_rate=1e-3, momentum=0.9):
+def momentum(loss_or_grads=None, params=None,
+             learning_rate=1e-3, momentum=0.9):
     """Stochastic Gradient Descent (SGD) updates with momentum
 
     Generates update expressions of the form:
@@ -299,12 +302,12 @@ def momentum(loss_or_grads=None, params=None, learning_rate=1e-3, momentum=0.9):
 
     Optimizer can be called without both loss_or_grads and params
     in that case partial function is returned
-    
+
     See Also
     --------
     apply_momentum : Generic function applying momentum to updates
     nesterov_momentum : Nesterov's variant of SGD with momentum
-    
+
     Examples
     --------
     >>> a = theano.shared(1.)
@@ -322,7 +325,8 @@ def momentum(loss_or_grads=None, params=None, learning_rate=1e-3, momentum=0.9):
     if loss_or_grads is None and params is None:
         return partial(pm.updates.momentum, **_get_call_kwargs(locals()))
     elif loss_or_grads is None or params is None:
-        raise ValueError('Please provide both `loss_or_grads` and `params` to get updates')
+        raise ValueError(
+            'Please provide both `loss_or_grads` and `params` to get updates')
     updates = sgd(loss_or_grads, params, learning_rate)
     return apply_momentum(updates, momentum=momentum)
 
@@ -381,7 +385,8 @@ def apply_nesterov_momentum(updates, params=None, momentum=0.9):
     return updates
 
 
-def nesterov_momentum(loss_or_grads=None, params=None, learning_rate=1e-3, momentum=0.9):
+def nesterov_momentum(loss_or_grads=None, params=None,
+                      learning_rate=1e-3, momentum=0.9):
     """Stochastic Gradient Descent (SGD) updates with Nesterov momentum
 
     Generates update expressions of the form:
@@ -416,7 +421,7 @@ def nesterov_momentum(loss_or_grads=None, params=None, learning_rate=1e-3, momen
     position in parameter space. Here, we use the formulation described at
     https://github.com/lisa-lab/pylearn2/pull/136#issuecomment-10381617,
     which allows the gradient to be evaluated at the current parameters.
-    
+
     Optimizer can be called without both loss_or_grads and params
     in that case partial function is returned
 
@@ -441,7 +446,8 @@ def nesterov_momentum(loss_or_grads=None, params=None, learning_rate=1e-3, momen
     if loss_or_grads is None and params is None:
         return partial(nesterov_momentum, **_get_call_kwargs(locals()))
     elif loss_or_grads is None or params is None:
-        raise ValueError('Please provide both `loss_or_grads` and `params` to get updates')
+        raise ValueError(
+            'Please provide both `loss_or_grads` and `params` to get updates')
     updates = sgd(loss_or_grads, params, learning_rate)
     return apply_nesterov_momentum(updates, momentum=momentum)
 
@@ -479,7 +485,7 @@ def adagrad(loss_or_grads=None, params=None, learning_rate=1.0, epsilon=1e-6):
     as such the learning rate is monotonically decreasing.
 
     Epsilon is not included in the typical formula, see [2]_.
-    
+
     Optimizer can be called without both loss_or_grads and params
     in that case partial function is returned
 
@@ -491,7 +497,7 @@ def adagrad(loss_or_grads=None, params=None, learning_rate=1.0, epsilon=1e-6):
 
     .. [2] Chris Dyer:
            Notes on AdaGrad. http://www.ark.cs.cmu.edu/cdyer/adagrad.pdf
-    
+
     Examples
     --------
     >>> a = theano.shared(1.)
@@ -509,7 +515,8 @@ def adagrad(loss_or_grads=None, params=None, learning_rate=1.0, epsilon=1e-6):
     if loss_or_grads is None and params is None:
         return partial(adagrad, **_get_call_kwargs(locals()))
     elif loss_or_grads is None or params is None:
-        raise ValueError('Please provide both `loss_or_grads` and `params` to get updates')
+        raise ValueError(
+            'Please provide both `loss_or_grads` and `params` to get updates')
     grads = get_or_compute_grads(loss_or_grads, params)
     updates = OrderedDict()
 
@@ -525,7 +532,56 @@ def adagrad(loss_or_grads=None, params=None, learning_rate=1.0, epsilon=1e-6):
     return updates
 
 
-def rmsprop(loss_or_grads=None, params=None, learning_rate=1.0, rho=0.9, epsilon=1e-6):
+def adagrad_window(loss_or_grads=None, params=None,
+                   learning_rate=0.001, epsilon=.1, n_win=10):
+    """Returns a function that returns parameter updates.
+    Instead of accumulated estimate, uses running window 
+
+    Parameters
+    ----------
+    loss_or_grads : symbolic expression or list of expressions
+        A scalar loss expression, or a list of gradient expressions
+    params : list of shared variables
+        The variables to generate update expressions for
+    learning_rate : float
+        Learning rate.
+    epsilon : float
+        Offset to avoid zero-division in the normalizer of adagrad.
+    n_win : int
+        Number of past steps to calculate scales of parameter gradients.
+
+    Returns
+    -------
+    OrderedDict
+        A dictionary mapping each parameter to its update expression
+    """
+    if loss_or_grads is None and params is None:
+        return partial(adagrad_window, **_get_call_kwargs(locals()))
+    elif loss_or_grads is None or params is None:
+        raise ValueError('Please provide both `loss_or_grads` and `params` to get updates')
+    grads = get_or_compute_grads(loss_or_grads, params)
+    updates = OrderedDict()
+    for param, grad in zip(params, grads):
+        i = theano.shared(pm.floatX(0))
+        i_int = i.astype('int32')
+        value = param.get_value(borrow=True)
+        accu = theano.shared(
+            np.zeros(value.shape + (n_win,), dtype=value.dtype))
+
+        # Append squared gradient vector to accu_new
+        accu_new = tt.set_subtensor(accu[..., i_int], grad ** 2)
+        i_new = tt.switch((i + 1) < n_win, i + 1, 0)
+        updates[accu] = accu_new
+        updates[i] = i_new
+
+        accu_sum = accu_new.sum(axis=-1)
+        updates[param] = param - (learning_rate * grad /
+                                  tt.sqrt(accu_sum + epsilon))
+    return updates
+
+
+def rmsprop(loss_or_grads=None, params=None,
+            learning_rate=1.0, rho=0.9, epsilon=1e-6):
     """RMSProp updates
 
     Scale learning rates by dividing with the moving average of the root mean
@@ -561,8 +617,8 @@ def rmsprop(loss_or_grads=None, params=None, learning_rate=1.0, rho=0.9, epsilon
     .. math::
        r_t &= \\rho r_{t-1} + (1-\\rho)*g^2\\\\
        \\eta_t &= \\frac{\\eta}{\\sqrt{r_t + \\epsilon}}
-    
-    
+
+
     Optimizer can be called without both loss_or_grads and params
     in that case partial function is returned
 
@@ -571,7 +627,7 @@ def rmsprop(loss_or_grads=None, params=None, learning_rate=1.0, rho=0.9, epsilon
     .. [1] Tieleman, tt. and Hinton, G. (2012):
            Neural Networks for Machine Learning, Lecture 6.5 - rmsprop.
            Coursera. http://www.youtube.com/watch?v=O3sxAc4hxZU (formula @5:20)
-           
+
     Examples
     --------
     >>> a = theano.shared(1.)
@@ -589,7 +645,8 @@ def rmsprop(loss_or_grads=None, params=None, learning_rate=1.0, rho=0.9, epsilon
     if loss_or_grads is None and params is None:
         return partial(rmsprop, **_get_call_kwargs(locals()))
     elif loss_or_grads is None or params is None:
-        raise ValueError('Please provide both `loss_or_grads` and `params` to get updates')
+        raise ValueError(
+            'Please provide both `loss_or_grads` and `params` to get updates')
     grads = get_or_compute_grads(loss_or_grads, params)
     updates = OrderedDict()
 
@@ -608,7 +665,8 @@ def rmsprop(loss_or_grads=None, params=None, learning_rate=1.0, rho=0.9, epsilon
     return updates
 
 
-def adadelta(loss_or_grads=None, params=None, learning_rate=1.0, rho=0.95, epsilon=1e-6):
+def adadelta(loss_or_grads=None, params=None,
+             learning_rate=1.0, rho=0.95, epsilon=1e-6):
     """ Adadelta updates
 
     Scale learning rates by the ratio of accumulated gradients to accumulated
@@ -654,7 +712,7 @@ def adadelta(loss_or_grads=None, params=None, learning_rate=1.0, rho=0.95, epsil
        \\eta_t &= \\eta \\frac{\\sqrt{s_{t-1} + \\epsilon}}
                              {\sqrt{r_t + \epsilon}}\\\\
        s_t &= \\rho s_{t-1} + (1-\\rho)*(\\eta_t*g)^2
-    
+
     Optimizer can be called without both loss_or_grads and params
     in that case partial function is returned
 
@@ -681,7 +739,8 @@ def adadelta(loss_or_grads=None, params=None, learning_rate=1.0, rho=0.95, epsil
     if loss_or_grads is None and params is None:
         return partial(adadelta, **_get_call_kwargs(locals()))
     elif loss_or_grads is None or params is None:
-        raise ValueError('Please provide both `loss_or_grads` and `params` to get updates')
+        raise ValueError(
+            'Please provide both `loss_or_grads` and `params` to get updates')
     grads = get_or_compute_grads(loss_or_grads, params)
     updates = OrderedDict()
 
@@ -744,7 +803,7 @@ def adam(loss_or_grads=None, params=None, learning_rate=0.001, beta1=0.9,
     The paper [1]_ includes an additional hyperparameter lambda. This is only
     needed to prove convergence of the algorithm and has no practical use
     (personal communication with the authors), it is therefore omitted here.
-    
+
     Optimizer can be called without both loss_or_grads and params
     in that case partial function is returned
 
@@ -753,7 +812,7 @@ def adam(loss_or_grads=None, params=None, learning_rate=0.001, beta1=0.9,
     .. [1] Kingma, Diederik, and Jimmy Ba (2014):
            Adam: A Method for Stochastic Optimization.
            arXiv preprint arXiv:1412.6980.
-    
+
     Examples
     --------
     >>> a = theano.shared(1.)
@@ -771,7 +830,8 @@ def adam(loss_or_grads=None, params=None, learning_rate=0.001, beta1=0.9,
     if loss_or_grads is None and params is None:
         return partial(adam, **_get_call_kwargs(locals()))
     elif loss_or_grads is None or params is None:
-        raise ValueError('Please provide both `loss_or_grads` and `params` to get updates')
+        raise ValueError(
+            'Please provide both `loss_or_grads` and `params` to get updates')
     all_grads = get_or_compute_grads(loss_or_grads, params)
     t_prev = theano.shared(pm.theanof.floatX(0.))
     updates = OrderedDict()
@@ -780,7 +840,7 @@ def adam(loss_or_grads=None, params=None, learning_rate=0.001, beta1=0.9,
     one = tt.constant(1)
 
     t = t_prev + 1
-    a_t = learning_rate*tt.sqrt(one-beta2**t)/(one-beta1**t)
+    a_t = learning_rate * tt.sqrt(one - beta2**t) / (one - beta1**t)
 
     for param, g_t in zip(params, all_grads):
         value = param.get_value(borrow=True)
@@ -789,9 +849,9 @@ def adam(loss_or_grads=None, params=None, learning_rate=0.001, beta1=0.9,
         v_prev = theano.shared(np.zeros(value.shape, dtype=value.dtype),
                                broadcastable=param.broadcastable)
 
-        m_t = beta1*m_prev + (one-beta1)*g_t
-        v_t = beta2*v_prev + (one-beta2)*g_t**2
-        step = a_t*m_t/(tt.sqrt(v_t) + epsilon)
+        m_t = beta1 * m_prev + (one - beta1) * g_t
+        v_t = beta2 * v_prev + (one - beta2) * g_t**2
+        step = a_t * m_t / (tt.sqrt(v_t) + epsilon)
 
         updates[m_prev] = m_t
         updates[v_prev] = v_t
@@ -827,7 +887,7 @@ def adamax(loss_or_grads=None, params=None, learning_rate=0.002, beta1=0.9,
     -------
     OrderedDict
         A dictionary mapping each parameter to its update expression
-    
+
     Notes
     -----
     Optimizer can be called without both loss_or_grads and params
@@ -838,7 +898,7 @@ def adamax(loss_or_grads=None, params=None, learning_rate=0.002, beta1=0.9,
     .. [1] Kingma, Diederik, and Jimmy Ba (2014):
            Adam: A Method for Stochastic Optimization.
            arXiv preprint arXiv:1412.6980.
-    
+
     Examples
     --------
     >>> a = theano.shared(1.)
@@ -856,7 +916,8 @@ def adamax(loss_or_grads=None, params=None, learning_rate=0.002, beta1=0.9,
     if loss_or_grads is None and params is None:
         return partial(adamax, **_get_call_kwargs(locals()))
     elif loss_or_grads is None or params is None:
-        raise ValueError('Please provide both `loss_or_grads` and `params` to get updates')
+        raise ValueError(
+            'Please provide both `loss_or_grads` and `params` to get updates')
     all_grads = get_or_compute_grads(loss_or_grads, params)
     t_prev = theano.shared(pm.theanof.floatX(0.))
     updates = OrderedDict()
@@ -865,7 +926,7 @@ def adamax(loss_or_grads=None, params=None, learning_rate=0.002, beta1=0.9,
     one = tt.constant(1)
 
     t = t_prev + 1
-    a_t = learning_rate/(one-beta1**t)
+    a_t = learning_rate / (one - beta1**t)
 
     for param, g_t in zip(params, all_grads):
         value = param.get_value(borrow=True)
@@ -874,9 +935,9 @@ def adamax(loss_or_grads=None, params=None, learning_rate=0.002, beta1=0.9,
         u_prev = theano.shared(np.zeros(value.shape, dtype=value.dtype),
                                broadcastable=param.broadcastable)
 
-        m_t = beta1*m_prev + (one-beta1)*g_t
-        u_t = tt.maximum(beta2*u_prev, abs(g_t))
-        step = a_t*m_t/(u_t + epsilon)
+        m_t = beta1 * m_prev + (one - beta1) * g_t
+        u_t = tt.maximum(beta2 * u_prev, abs(g_t))
+        step = a_t * m_t / (u_t + epsilon)
 
         updates[m_prev] = m_t
         updates[u_prev] = u_t
@@ -1026,7 +1087,7 @@ def total_norm_constraint(tensor_vars, max_norm, epsilon=1e-7,
     dtype = np.dtype(theano.config.floatX).type
     target_norm = tt.clip(norm, 0, dtype(max_norm))
     multiplier = target_norm / (dtype(epsilon) + norm)
-    tensor_vars_scaled = [step*multiplier for step in tensor_vars]
+    tensor_vars_scaled = [step * multiplier for step in tensor_vars]
 
     if return_norm:
         return tensor_vars_scaled, norm

@@ -49,9 +49,11 @@ LKJ_CASES = get_lkj_cases()
 
 
 class Domain(object):
-
     def __init__(self, vals, dtype=None, edges=None, shape=None):
-        avals = array(vals)
+        avals = array(vals, dtype=dtype)
+        if dtype is None and not str(avals.dtype).startswith('int'):
+            avals = avals.astype(theano.config.floatX)
+        vals = [array(v, dtype=avals.dtype) for v in vals]
 
         if edges is None:
             edges = array(vals[0]), array(vals[-1])
@@ -283,7 +285,6 @@ def mvt_logpdf(value, nu, Sigma, mu=0):
 
 
 class Simplex(object):
-
     def __init__(self, n):
         self.vals = list(simplex_values(n))
         self.shape = (n,)
@@ -322,6 +323,7 @@ PdMatrixChol2 = Domain([np.eye(2), [[0.1, 0], [10, 1]]], edges=(None, None))
 PdMatrixChol3 = Domain([np.eye(3), [[0.1, 0, 0], [10, 100, 0], [0, 1, 10]]],
                        edges=(None, None))
 
+
 def PdMatrixChol(n):
     if n == 1:
         return PdMatrixChol1
@@ -336,7 +338,8 @@ def PdMatrixChol(n):
 PdMatrixCholUpper1 = Domain([np.eye(1), [[0.001]]], edges=(None, None))
 PdMatrixCholUpper2 = Domain([np.eye(2), [[0.1, 10], [0, 1]]], edges=(None, None))
 PdMatrixCholUpper3 = Domain([np.eye(3), [[0.1, 10, 0], [0, 100, 1], [0, 0, 10]]],
-                       edges=(None, None))
+                            edges=(None, None))
+
 
 def PdMatrixCholUpper(n):
     if n == 1:
@@ -549,6 +552,7 @@ class TestMatchesScipy(SeededTest):
     def test_skew_normal(self):
         self.pymc3_matches_scipy(SkewNormal, R, {'mu': R, 'sd': Rplusbig, 'alpha': R},
                                  lambda value, alpha, mu, sd: sp.skewnorm.logpdf(value, alpha, mu, sd))
+
     def test_binomial(self):
         self.pymc3_matches_scipy(Binomial, Nat, {'n': NatSmall, 'p': Unit},
                                  lambda value, n, p: sp.binom.logpmf(value, n, p))
@@ -801,7 +805,6 @@ class TestMatchesScipy(SeededTest):
                 xmax = mu + 5 * sd
 
                 class TestedInterpolated (Interpolated):
-
                     def __init__(self, **kwargs):
                         x_points = np.linspace(xmin, xmax, 100000)
                         pdf_points = sp.norm.pdf(x_points, loc=mu, scale=sd)
