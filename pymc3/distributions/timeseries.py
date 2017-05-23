@@ -18,7 +18,7 @@ __all__ = [
 class AR1(distribution.Continuous):
     """
     Autoregressive process with 1 lag.
-    
+
     Parameters
     ----------
     k : tensor
@@ -26,25 +26,25 @@ class AR1(distribution.Continuous):
     tau_e : tensor
        precision for innovations
     """
-    
+
     def __init__(self, k, tau_e, *args, **kwargs):
         super(AR1, self).__init__(*args, **kwargs)
         self.k = k
         self.tau_e = tau_e
         self.tau = tau_e * (1 - k ** 2)
         self.mode = 0.
-    
+
     def logp(self, x):
         k = self.k
         tau_e = self.tau_e
-        
+
         x_im1 = x[:-1]
         x_i = x[1:]
         boundary = continuous.Normal.dist(0, tau_e).logp
-        
+
         innov_like = continuous.Normal.dist(k * x_im1, tau_e).logp(x_i)
         return boundary(x[0]) + tt.sum(innov_like) + boundary(x[-1])
-    
+
     def _repr_latex_(self, name=None, dist=None):
         if dist is None:
             dist = self
@@ -58,7 +58,7 @@ class AR1(distribution.Continuous):
 class GaussianRandomWalk(distribution.Continuous):
     """
     Random Walk with Normal innovations
-    
+
     Parameters
     ----------
     tau : tensor
@@ -70,7 +70,7 @@ class GaussianRandomWalk(distribution.Continuous):
     init : distribution
         distribution for initial value (Defaults to Flat())
     """
-    
+
     def __init__(self, tau=None, init=continuous.Flat.dist(), sd=None, mu=0.,
                  *args, **kwargs):
         super(GaussianRandomWalk, self).__init__(*args, **kwargs)
@@ -79,19 +79,19 @@ class GaussianRandomWalk(distribution.Continuous):
         self.mu = mu
         self.init = init
         self.mean = 0.
-    
+
     def logp(self, x):
         tau = self.tau
         sd = self.sd
         mu = self.mu
         init = self.init
-        
+
         x_im1 = x[:-1]
         x_i = x[1:]
-        
+
         innov_like = continuous.Normal.dist(mu=x_im1 + mu, tau=tau, sd=sd).logp(x_i)
         return init.logp(x[0]) + tt.sum(innov_like)
-    
+
     def _repr_latex_(self, name=None, dist=None):
         if dist is None:
             dist = self
@@ -105,12 +105,12 @@ class GaussianRandomWalk(distribution.Continuous):
 class GARCH11(distribution.Continuous):
     """
     GARCH(1,1) with Normal innovations. The model is specified by
-    
+
     y_t = sigma_t * z_t
     sigma_t^2 = omega + alpha_1 * y_{t-1}^2 + beta_1 * sigma_{t-1}^2
-    
+
     with z_t iid and Normal with mean zero and unit standard deviation.
-    
+
     Parameters
     ----------
     omega : distribution
@@ -123,34 +123,34 @@ class GARCH11(distribution.Continuous):
     initial_vol : distribution
         initial_vol >= 0, distribution for initial volatility, sigma_0
     """
-    
+
     def __init__(self, omega=None, alpha_1=None, beta_1=None,
                  initial_vol=None, *args, **kwargs):
         super(GARCH11, self).__init__(*args, **kwargs)
-        
+
         self.omega = omega
         self.alpha_1 = alpha_1
         self.beta_1 = beta_1
         self.initial_vol = initial_vol
         self.mean = 0
-    
+
     def get_volatility(self, x):
         x = x[:-1]
-        
+
         def volatility_update(x, vol, w, a, b):
             return tt.sqrt(w + a * tt.square(x) + b * tt.square(vol))
-        
+
         vol, _ = scan(fn=volatility_update,
                       sequences=[x],
                       outputs_info=[self.initial_vol],
                       non_sequences=[self.omega, self.alpha_1,
                                      self.beta_1])
         return tt.concatenate(self.initial_vol, vol)
-    
+
     def logp(self, x):
         vol = self.get_volatility(x)
         return tt.sum(continuous.Normal.dist(0, sd=vol).logp(x))
-    
+
     def _repr_latex_(self, name=None, dist=None):
         if dist is None:
             dist = self
@@ -166,7 +166,7 @@ class GARCH11(distribution.Continuous):
 class EulerMaruyama(distribution.Continuous):
     """
     Stochastic differential equation discretized with the Euler-Maruyama method.
-    
+
     Parameters
     ----------
     dt : float
@@ -181,14 +181,14 @@ class EulerMaruyama(distribution.Continuous):
         self.dt = dt
         self.sde_fn = sde_fn
         self.sde_pars = sde_pars
-    
+
     def logp(self, x):
         xt = x[:-1]
         f, g = self.sde_fn(x[:-1], *self.sde_pars)
         mu = xt + self.dt * f
         sd = tt.sqrt(self.dt) * g
         return tt.sum(continuous.Normal.dist(mu=mu, sd=sd).logp(x[1:]))
-    
+
     def _repr_latex_(self, name=None, dist=None):
         if dist is None:
             dist = self
@@ -200,7 +200,7 @@ class EulerMaruyama(distribution.Continuous):
 class MvGaussianRandomWalk(distribution.Continuous):
     """
     Multivariate Random Walk with Normal innovations
-    
+
     Parameters
     ----------
     mu : tensor
@@ -223,18 +223,18 @@ class MvGaussianRandomWalk(distribution.Continuous):
         self.mu = mu
         self.init = init
         self.mean = 0.
-    
+
     def logp(self, x):
         cov = self.cov
         mu = self.mu
         init = self.init
-        
+
         x_im1 = x[:-1]
         x_i = x[1:]
-        
+
         innov_like = multivariate.MvNormal.dist(mu=x_im1 + mu, cov=cov).logp(x_i)
         return init.logp(x[0]) + tt.sum(innov_like)
-    
+
     def _repr_latex_(self, name=None, dist=None):
         if dist is None:
             dist = self
@@ -248,7 +248,7 @@ class MvGaussianRandomWalk(distribution.Continuous):
 class MvStudentTRandomWalk(distribution.Continuous):
     """
     Multivariate Random Walk with StudentT innovations
-    
+
     Parameters
     ----------
     nu : degrees of freedom
@@ -266,7 +266,7 @@ class MvStudentTRandomWalk(distribution.Continuous):
         self.nu = nu
         self.init = init
         self.mean = 0.
-        
+
         if cov is None:
             raise ValueError('A covariance matrix must be provided as cov argument.')
         self.k = cov.shape[0]
@@ -274,18 +274,18 @@ class MvStudentTRandomWalk(distribution.Continuous):
         if cov.ndim != 2:
             raise ValueError('cov must be two dimensional.')
         self.cov = cov
-    
+
     def logp(self, x):
         cov = self.cov
         mu = self.mu
         nu = self.nu
         init = self.init
-        
+
         x_im1 = x[:-1]
         x_i = x[1:]
         innov_like = multivariate.MvStudentT.dist(nu, cov, mu=x_im1 + mu).logp(x_i)
         return init.logp(x[0]) + tt.sum(innov_like)
-    
+
     def _repr_latex_(self, name=None, dist=None):
         if dist is None:
             dist = self
