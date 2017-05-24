@@ -13,7 +13,7 @@ Check out the `getting started
 guide <http://pymc-devs.github.io/pymc3/notebooks/getting_started.html>`__!
 
 Features
---------
+========
 
 -  Intuitive model specification syntax, for example, ``x ~ N(0,1)``
    translates to ``x = Normal('x',0,1)``
@@ -32,16 +32,18 @@ Features
 -  Transparent support for missing value imputation
 
 Getting started
----------------
+===============
 
 If you already know about Bayesian statistics:
+----------------------------------------------
 
 -  `API quickstart guide <http://pymc-devs.github.io/pymc3/notebooks/api_quickstart.html>`__
 -  The `PyMC3 tutorial <http://pymc-devs.github.io/pymc3/notebooks/getting_started.html>`__
 -  `PyMC3 examples <http://pymc-devs.github.io/pymc3/examples.html>`__
    and the `API reference <http://pymc-devs.github.io/pymc3/api.html>`__
 
-If you want to learn Bayesian statistics with a book together with PyMC3:
+Learn Bayesian statistics with a book together with PyMC3:
+----------------------------------------------------------
 
 -  `Probabilistic Programming and Bayesian Methods for Hackers <https://github.com/CamDavidsonPilon/Probabilistic-Programming-and-Bayesian-Methods-for-Hackers>`__: Fantastic book with many applied code examples.
 -  `PyMC3 port of the book "Doing Bayesian Data Analysis" by John Kruschke <https://github.com/aloctavodia/Doing_bayesian_data_analysis>`__ as well as the `second edition <https://github.com/JWarmenhoven/DBDA-python>`__: Principled introduction to Bayesian data analysis.
@@ -49,10 +51,13 @@ If you want to learn Bayesian statistics with a book together with PyMC3:
 -  `PyMC3 port of the book "Bayesian Cognitive Modeling" by Michael Lee and EJ Wagenmakers <https://github.com/junpenglao/Bayesian-Cognitive-Modeling-in-Pymc3>`__: Focused on using Bayesian statistics in cognitive modeling.
 -  `Bayesian Analysis with Python by Osvaldo Martin <https://www.packtpub.com/big-data-and-business-intelligence/bayesian-analysis-python>`__ (and `errata <https://github.com/aloctavodia/BAP>`__): Great introductory book.
 
+PyMC3 talks
+-----------
+
 There are also several talks on PyMC3 which are gathered in this `YouTube playlist <https://www.youtube.com/playlist?list=PL1Ma_1DBbE82OVW8Fz_6Ts1oOeyOAiovy>`__
 
 Installation
-------------
+============
 
 The latest release of PyMC3 can be installed from PyPI using ``pip``:
 
@@ -93,14 +98,14 @@ Another option is to clone the repository and install PyMC3 using
 
 
 Dependencies
-------------
+============
 
 PyMC3 is tested on Python 2.7 and 3.6 and depends on Theano, NumPy,
 SciPy, Pandas, and Matplotlib (see ``requirements.txt`` for version
 information).
 
 Optional
-~~~~~~~~
+--------
 
 In addtion to the above dependencies, the GLM submodule relies on
 `Patsy <http://patsy.readthedocs.io/en/latest/>`__.
@@ -109,14 +114,14 @@ In addtion to the above dependencies, the GLM submodule relies on
 enables sparse scaling matrices which are useful for large problems.
 
 Citing PyMC3
-------------
+============
 
 Salvatier J, Wiecki TV, Fonnesbeck C. (2016) Probabilistic programming
 in Python using PyMC3. PeerJ Computer Science 2:e55
 https://doi.org/10.7717/peerj-cs.55
 
 Contact
--------
+=======
 
 To report an issue with PyMC3 or to suggest a feature please use the `issue tracker <https://github.com/pymc-devs/pymc3/issues>`__.
 
@@ -127,36 +132,41 @@ To interact with PyMC3 developers, visit the `pymc Gitter channel <https://gitte
 Finally, if you need to get in touch for non-technical information about the project, `send us an e-mail <fonnesbeck+pymc@gmail.com>`__.
 
 License
--------
+=======
 
 `Apache License, Version
 2.0 <https://github.com/pymc-devs/pymc3/blob/master/LICENSE>`__
 
 
 Software using PyMC3
---------------------
+====================
 
  - `Bambi <https://github.com/bambinos/bambi>`__: BAyesian Model-Building Interface (BAMBI) in Python.
- - `NiPyMC <https://github.com/PsychoinformaticsLab/nipymc>`__: Bayesian mixed-effects modeling of fMRI data in Python.
  - `gelato <https://github.com/ferrine/gelato>`__: Bayesian Neural Networks with PyMC3 and Lasagne.
+ - `NiPyMC <https://github.com/PsychoinformaticsLab/nipymc>`__: Bayesian mixed-effects modeling of fMRI data in Python.
  - `beat <https://github.com/hvasbath/beat>`__: Bayesian Earthquake Analysis Tool.
  - `Edward <https://github.com/blei-lab/edward>`__: A library for probabilistic modeling, inference, and criticism.
 
 Please contact us if your software is not listed here.
 
 Papers citing PyMC3
--------------------
+===================
 
 See `Google Scholar <https://scholar.google.de/scholar?oi=bibs&hl=en&authuser=1&cites=6936955228135731011>`__ for a continuously updated list.
 
 Contributors
-------------
+============
 
 See the `GitHub contributor
 page <https://github.com/pymc-devs/pymc3/graphs/contributors>`__
 
+Support
+=======
+
+PyMC3 is a non-profit project under NumFOCUS umbrella. If you want to support PyMC3 financially, you can donate `here <https://www.flipcause.com/widget/widget_home/MTE4OTc=>`__.
+
 Sponsors
---------
+========
 
 |NumFOCUS|
 
@@ -168,7 +178,7 @@ Sponsors
    :target: https://travis-ci.org/pymc-devs/pymc3
 .. |Coverage| image:: https://coveralls.io/repos/github/pymc-devs/pymc3/badge.svg?branch=master
    :target: https://coveralls.io/github/pymc-devs/pymc3?branch=master
-.. |NumFOCUS| image:: http://www.numfocus.org/uploads/6/0/6/9/60696727/1457562110.png
+.. |NumFOCUS| image:: https://www.numfocus.org/wp-content/uploads/2017/03/1457562110.png
    :target: http://www.numfocus.org/
 .. |Quantopian| image:: https://raw.githubusercontent.com/pymc-devs/pymc3/master/docs/quantopianlogo.jpg
    :target: https://quantopian.com
