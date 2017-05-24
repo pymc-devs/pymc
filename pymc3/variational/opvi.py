@@ -37,7 +37,7 @@ import theano
 import theano.tensor as tt
 
 import pymc3 as pm
-from .updates import adam
+from .updates import adagrad_window
 from ..distributions.dist_math import rho2sd, log_normal
 from ..model import modelcontext, ArrayOrdering, DictToArrayBijection
 from ..util import get_default_varnames
@@ -97,7 +97,7 @@ class ObjectiveFunction(object):
         """
         return self.op.approx.random(size)
 
-    def updates(self, obj_n_mc=None, tf_n_mc=None, obj_optimizer=adam, test_optimizer=adam,
+    def updates(self, obj_n_mc=None, tf_n_mc=None, obj_optimizer=adagrad_window, test_optimizer=adagrad_window,
                 more_obj_params=None, more_tf_params=None, more_updates=None, more_replacements=None):
         """Calculates gradients for objective function, test function and then
         constructs updates for optimization step
@@ -157,7 +157,7 @@ class ObjectiveFunction(object):
         resulting_updates.update(more_updates)
         return resulting_updates
 
-    def add_test_updates(self, updates, tf_n_mc=None, test_optimizer=adam,
+    def add_test_updates(self, updates, tf_n_mc=None, test_optimizer=adagrad_window,
                          more_tf_params=None, more_replacements=None):
         tf_z = self.get_input(tf_n_mc)
         tf_target = self(tf_z, more_tf_params=more_tf_params)
@@ -168,7 +168,7 @@ class ObjectiveFunction(object):
                 self.test_params +
                 more_tf_params))
 
-    def add_obj_updates(self, updates, obj_n_mc=None, obj_optimizer=adam,
+    def add_obj_updates(self, updates, obj_n_mc=None, obj_optimizer=adagrad_window,
                         more_obj_params=None, more_replacements=None):
         obj_z = self.get_input(obj_n_mc)
         obj_target = self(obj_z, more_obj_params=more_obj_params)
@@ -187,7 +187,7 @@ class ObjectiveFunction(object):
     @memoize
     @change_flags(compute_test_value='off')
     def step_function(self, obj_n_mc=None, tf_n_mc=None,
-                      obj_optimizer=adam, test_optimizer=adam,
+                      obj_optimizer=adagrad_window, test_optimizer=adagrad_window,
                       more_obj_params=None, more_tf_params=None,
                       more_updates=None, more_replacements=None, score=False,
                       fn_kwargs=None):
