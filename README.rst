@@ -41,13 +41,13 @@ If you already know about Bayesian statistics:
 -  `PyMC3 examples <http://pymc-devs.github.io/pymc3/examples.html>`__
    and the `API reference <http://pymc-devs.github.io/pymc3/api.html>`__
 
-If you want to learn Bayesian statistics together with PyMC3:
+If you want to learn Bayesian statistics with a book together with PyMC3:
 
 -  `Probabilistic Programming and Bayesian Methods for Hackers <https://github.com/CamDavidsonPilon/Probabilistic-Programming-and-Bayesian-Methods-for-Hackers>`__: Fantastic book with many applied code examples.
--  `PyMC3 port of the models presented in the book "Doing Bayesian Data Analysis" by John Kruschke <https://github.com/aloctavodia/Doing_bayesian_data_analysis>`__: Principled introduction to Bayesian data analysis.
--  `PyMC3 port of the examples in "Statistical Rethinking A Bayesian Course with Examples in R and Stan" by Richard McElreath <https://github.com/aloctavodia/Statistical-Rethinking-with-Python-and-PyMC3>`__
--  `PyMC3 port of the models presented in the book "Bayesian Cognitive Modeling" by Michael Lee and EJ Wagenmakers <https://github.com/junpenglao/Bayesian-Cognitive-Modeling-in-Pymc3>`__: Focused on using Bayesian statistics in cognitive modeling.
--  `Bayesian Analysis with Python by Osvaldo Martin <https://www.packtpub.com/big-data-and-business-intelligence/bayesian-analysis-python>`__ (and `errata <https://github.com/aloctavodia/BAP>`__): Great introduction.
+-  `PyMC3 port of the book "Doing Bayesian Data Analysis" by John Kruschke <https://github.com/aloctavodia/Doing_bayesian_data_analysis>`__ as well as the `second edition <https://github.com/JWarmenhoven/DBDA-python>`__: Principled introduction to Bayesian data analysis.
+-  `PyMC3 port of the book "Statistical Rethinking A Bayesian Course with Examples in R and Stan" by Richard McElreath <https://github.com/aloctavodia/Statistical-Rethinking-with-Python-and-PyMC3>`__
+-  `PyMC3 port of the book "Bayesian Cognitive Modeling" by Michael Lee and EJ Wagenmakers <https://github.com/junpenglao/Bayesian-Cognitive-Modeling-in-Pymc3>`__: Focused on using Bayesian statistics in cognitive modeling.
+-  `Bayesian Analysis with Python by Osvaldo Martin <https://www.packtpub.com/big-data-and-business-intelligence/bayesian-analysis-python>`__ (and `errata <https://github.com/aloctavodia/BAP>`__): Great introductory book.
 
 There are also several talks on PyMC3 which are gathered in this `YouTube playlist <https://www.youtube.com/playlist?list=PL1Ma_1DBbE82OVW8Fz_6Ts1oOeyOAiovy>`__
 
