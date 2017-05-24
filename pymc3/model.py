@@ -822,6 +822,15 @@ class FreeRV(Factor, TensorVariable):
                                 methods=['random'],
                                 wrapper=InstanceMethod)
 
+    def _repr_latex_(self, name=None, dist=None):
+        if self.distribution is None:
+            return None
+        if name is None:
+            name = self.name
+        if dist is None:
+            dist = self.distribution
+        return self.distribution._repr_latex_(name=name, dist=dist)
+
     @property
     def init_value(self):
         """Convenience attribute to return tag.test_value"""
@@ -913,6 +922,15 @@ class ObservedRV(Factor, TensorVariable):
                              inputs=[data], outputs=[self])
 
             self.tag.test_value = theano.compile.view_op(data).tag.test_value
+
+    def _repr_latex_(self, name=None, dist=None):
+        if self.distribution is None:
+            return None
+        if name is None:
+            name = self.name
+        if dist is None:
+            dist = self.distribution
+        return self.distribution._repr_latex_(name=name, dist=dist)
 
     @property
     def init_value(self):
@@ -1011,6 +1029,7 @@ class TransformedRV(TensorVariable):
 
         if distribution is not None:
             self.model = model
+            self.distribution = distribution
 
             transformed_name = get_transformed_name(name, transform)
 
@@ -1027,6 +1046,15 @@ class TransformedRV(TensorVariable):
                                 methods=['random'],
                                 wrapper=InstanceMethod)
 
+    def _repr_latex_(self, name=None, dist=None):
+        if self.distribution is None:
+            return None
+        if name is None:
+            name = self.name
+        if dist is None:
+            dist = self.distribution
+        return self.distribution._repr_latex_(name=name, dist=dist)
+        
     @property
     def init_value(self):
         """Convenience attribute to return tag.test_value"""

@@ -15,6 +15,7 @@ import warnings
 
 from pymc3.theanof import floatX
 from . import transforms
+from pymc3.util import get_variable_name
 
 from .dist_math import bound, logpow, gammaln, betaln, std_cdf, i0, i1, alltrue_elemwise, DifferentiableSplineWrapper
 from .distribution import Continuous, draw_values, generate_samples, Bound
@@ -152,6 +153,15 @@ class Uniform(Continuous):
         return bound(-tt.log(upper - lower),
                      value >= lower, value <= upper)
 
+    def _repr_latex_(self, name=None, dist=None):
+        if dist is None:
+            dist = self
+        lower = dist.lower
+        upper = dist.upper
+        return r'${} \sim \text{{Uniform}}(\mathit{{lower}}={}, \mathit{{upper}}={})$'.format(name,
+                                                                get_variable_name(lower),
+                                                                get_variable_name(upper))
+
 
 class Flat(Continuous):
     """
@@ -168,6 +178,11 @@ class Flat(Continuous):
 
     def logp(self, value):
         return tt.zeros_like(value)
+
+    def _repr_latex_(self, name=None, dist=None):
+        if dist is None:
+            dist = self
+        return r'${} \sim \text{{Flat}()$'
 
 
 class Normal(Continuous):
@@ -232,6 +247,15 @@ class Normal(Continuous):
         return bound((-tau * (value - mu)**2 + tt.log(tau / np.pi / 2.)) / 2.,
                      sd > 0)
 
+    def _repr_latex_(self, name=None, dist=None):
+        if dist is None:
+            dist = self
+        sd = dist.sd
+        mu = dist.mu
+        return r'${} \sim \text{{Normal}}(\mathit{{mu}}={}, \mathit{{sd}}={})$'.format(name,
+                                                                get_variable_name(mu),
+                                                                get_variable_name(sd))
+
 
 class HalfNormal(PositiveContinuous):
     R"""
@@ -283,6 +307,12 @@ class HalfNormal(PositiveContinuous):
                      value >= 0,
                      tau > 0, sd > 0)
 
+    def _repr_latex_(self, name=None, dist=None):
+        if dist is None:
+            dist = self
+        sd = dist.sd
+        return r'${} \sim \text{{HalfNormal}}(\mathit{{sd}}={})$'.format(name,
+                                                                get_variable_name(sd))
 
 class Wald(PositiveContinuous):
     R"""
@@ -404,6 +434,17 @@ class Wald(PositiveContinuous):
                      value > 0, value - alpha > 0,
                      mu > 0, lam > 0, alpha >= 0)
 
+    def _repr_latex_(self, name=None, dist=None):
+        if dist is None:
+            dist = self
+        lam = dist.lam
+        mu = dist.mu
+        alpha = dist.alpha
+        return r'${} \sim \text{{Wald}}(\mathit{{mu}}={}, \mathit{{lam}}={}, \mathit{{alpha}}={})$'.format(name,
+                                                                get_variable_name(mu),
+                                                                get_variable_name(lam),
+                                                                get_variable_name(alpha))
+
 
 class Beta(UnitContinuous):
     R"""
@@ -492,6 +533,15 @@ class Beta(UnitContinuous):
                      value >= 0, value <= 1,
                      alpha > 0, beta > 0)
 
+    def _repr_latex_(self, name=None, dist=None):
+        if dist is None:
+            dist = self
+        alpha = dist.alpha
+        beta = dist.beta
+        return r'${} \sim \text{{Beta}}(\mathit{{alpha}}={}, \mathit{{alpha}}={})$'.format(name,
+                                                                get_variable_name(alpha),
+                                                                get_variable_name(beta))
+
 
 class Exponential(PositiveContinuous):
     R"""
@@ -534,6 +584,12 @@ class Exponential(PositiveContinuous):
         lam = self.lam
         return bound(tt.log(lam) - lam * value, value > 0, lam > 0)
 
+    def _repr_latex_(self, name=None, dist=None):
+        if dist is None:
+            dist = self
+        lam = dist.lam
+        return r'${} \sim \text{{Exponential}}(\mathit{{lam}}={})$'.format(name,
+                                                                get_variable_name(lam))
 
 class Laplace(Continuous):
     R"""
@@ -578,6 +634,15 @@ class Laplace(Continuous):
         b = self.b
 
         return -tt.log(2 * b) - abs(value - mu) / b
+
+    def _repr_latex_(self, name=None, dist=None):
+        if dist is None:
+            dist = self
+        b = dist.b
+        mu = dist.mu
+        return r'${} \sim \text{{Laplace}}(\mathit{{mu}}={}, \mathit{{b}}={})$'.format(name,
+                                                                get_variable_name(mu),
+                                                                get_variable_name(b))
 
 
 class Lognormal(PositiveContinuous):
@@ -643,6 +708,15 @@ class Lognormal(PositiveContinuous):
                      - tt.log(value),
                      tau > 0)
 
+    def _repr_latex_(self, name=None, dist=None):
+        if dist is None:
+            dist = self
+        tau = dist.tau
+        mu = dist.mu
+        return r'${} \sim \text{{Lognormal}}(\mathit{{mu}}={}, \mathit{{tau}}={})$'.format(name,
+                                                                get_variable_name(mu),
+                                                                get_variable_name(tau))
+
 
 class StudentT(Continuous):
     R"""
@@ -707,6 +781,17 @@ class StudentT(Continuous):
                      - (nu + 1.0) / 2.0 * tt.log1p(lam * (value - mu)**2 / nu),
                      lam > 0, nu > 0, sd > 0)
 
+    def _repr_latex_(self, name=None, dist=None):
+        if dist is None:
+            dist = self
+        nu = dist.nu
+        mu = dist.mu
+        lam = dist.lam
+        return r'${} \sim \text{{StudentT}}(\mathit{{nu}}={}, \mathit{{mu}}={}, \mathit{{lam}}={})$'.format(name,
+                                                                get_variable_name(nu),
+                                                                get_variable_name(mu),
+                                                                get_variable_name(lam))
+
 
 class Pareto(PositiveContinuous):
     R"""
@@ -769,6 +854,15 @@ class Pareto(PositiveContinuous):
                      - logpow(value, alpha + 1),
                      value >= m, alpha > 0, m > 0)
 
+    def _repr_latex_(self, name=None, dist=None):
+        if dist is None:
+            dist = self
+        alpha = dist.alpha
+        m = dist.m
+        return r'${} \sim \text{{Pareto}}(\mathit{{alpha}}={}, \mathit{{m}}={})$'.format(name,
+                                                                get_variable_name(alpha),
+                                                                get_variable_name(m))
+
 
 class Cauchy(Continuous):
     R"""
@@ -821,6 +915,15 @@ class Cauchy(Continuous):
                      - tt.log1p(((value - alpha) / beta)**2),
                      beta > 0)
 
+    def _repr_latex_(self, name=None, dist=None):
+        if dist is None:
+            dist = self
+        alpha = dist.alpha
+        beta = dist.beta
+        return r'${} \sim \text{{Cauchy}}(\mathit{{alpha}}={}, \mathit{{beta}}={})$'.format(name,
+                                                                get_variable_name(alpha),
+                                                                get_variable_name(beta))
+
 
 class HalfCauchy(PositiveContinuous):
     R"""
@@ -867,6 +970,12 @@ class HalfCauchy(PositiveContinuous):
                      - tt.log1p((value / beta)**2),
                      value >= 0, beta > 0)
 
+    def _repr_latex_(self, name=None, dist=None):
+        if dist is None:
+            dist = self
+        beta = dist.beta
+        return r'${} \sim \text{{HalfCauchy}}(\mathit{{beta}}={})$'.format(name,
+                                                                get_variable_name(beta))
 
 class Gamma(PositiveContinuous):
     R"""
@@ -950,6 +1059,15 @@ class Gamma(PositiveContinuous):
             alpha > 0,
             beta > 0)
 
+    def _repr_latex_(self, name=None, dist=None):
+        if dist is None:
+            dist = self
+        beta = dist.beta
+        alpha = dist.alpha
+        return r'${} \sim \text{{Gamma}}(\mathit{{alpha}}={}, \mathit{{beta}}={})$'.format(name,
+                                                                get_variable_name(alpha),
+                                                                get_variable_name(beta))
+
 
 class InverseGamma(PositiveContinuous):
     R"""
@@ -1011,6 +1129,15 @@ class InverseGamma(PositiveContinuous):
                      + logpow(value, -alpha - 1),
                      value > 0, alpha > 0, beta > 0)
 
+    def _repr_latex_(self, name=None, dist=None):
+        if dist is None:
+            dist = self
+        beta = dist.beta
+        alpha = dist.alpha
+        return r'${} \sim \text{{InverseGamma}}(\mathit{{alpha}}={}, \mathit{{beta}}={})$'.format(name,
+                                                                get_variable_name(alpha),
+                                                                get_variable_name(beta))
+
 
 class ChiSquared(Gamma):
     R"""
@@ -1036,6 +1163,13 @@ class ChiSquared(Gamma):
         self.nu = nu = tt.as_tensor_variable(nu)
         super(ChiSquared, self).__init__(alpha=nu / 2., beta=0.5,
                                          *args, **kwargs)
+
+    def _repr_latex_(self, name=None, dist=None):
+        if dist is None:
+            dist = self
+        nu = dist.nu
+        return r'${} \sim \Chi^2(\mathit{{nu}}={})$'.format(name,
+                                                                get_variable_name(nu))
 
 
 class Weibull(PositiveContinuous):
@@ -1092,6 +1226,15 @@ class Weibull(PositiveContinuous):
                      + (alpha - 1) * tt.log(value / beta)
                      - (value / beta)**alpha,
                      value >= 0, alpha > 0, beta > 0)
+
+    def _repr_latex_(self, name=None, dist=None):
+        if dist is None:
+            dist = self
+        beta = dist.beta
+        alpha = dist.alpha
+        return r'${} \sim \text{{Weibull}}(\mathit{{alpha}}={}, \mathit{{beta}}={})$'.format(name,
+                                                                get_variable_name(alpha),
+                                                                get_variable_name(beta))
 
 
 def StudentTpos(*args, **kwargs):
@@ -1183,6 +1326,17 @@ class ExGaussian(Continuous):
                        - 0.5 * ((value - mu) / sigma)**2)
         return bound(lp, sigma > 0., nu > 0.)
 
+    def _repr_latex_(self, name=None, dist=None):
+        if dist is None:
+            dist = self
+        sigma = dist.sigma
+        mu = dist.mu
+        nu = dist.nu
+        return r'${} \sim \text{{ExGaussian}}(\mathit{{mu}}={}, \mathit{{sigma}}={}, \mathit{{nu}}={})$'.format(name,
+                                                                get_variable_name(mu),
+                                                                get_variable_name(sigma),
+                                                                get_variable_name(nu))
+
 
 class VonMises(Continuous):
     R"""
@@ -1230,6 +1384,16 @@ class VonMises(Continuous):
         mu = self.mu
         kappa = self.kappa
         return bound(kappa * tt.cos(mu - value) - tt.log(2 * np.pi * i0(kappa)), value >= -np.pi, value <= np.pi, kappa >= 0)
+
+    def _repr_latex_(self, name=None, dist=None):
+        if dist is None:
+            dist = self
+        kappa = dist.kappa
+        mu = dist.mu
+        return r'${} \sim \text{{VonMises}}(\mathit{{mu}}={}, \mathit{{kappa}}={})$'.format(name,
+                                                                get_variable_name(mu),
+                                                                get_variable_name(kappa))
+
 
 
 class SkewNormal(Continuous):
@@ -1306,6 +1470,17 @@ class SkewNormal(Continuous):
             + tt.log(tau / np.pi / 2.)) / 2.,
             tau > 0, sd > 0)
 
+    def _repr_latex_(self, name=None, dist=None):
+        if dist is None:
+            dist = self
+        sd = dist.sd
+        mu = dist.mu
+        alpha = dist.alpha
+        return r'${} \sim \text{{Skew-Normal}}(\mathit{{mu}}={}, \mathit{{sd}}={}, \mathit{{alpha}}={})$'.format(name,
+                                                                get_variable_name(mu),
+                                                                get_variable_name(sd),
+                                                                get_variable_name(alpha))
+
 
 class Triangular(Continuous):
     """
@@ -1347,6 +1522,18 @@ class Triangular(Continuous):
                          tt.switch(tt.eq(value, c), tt.log(2 / (upper - lower)),
                          tt.switch(alltrue_elemwise([c < value, value <= upper]),
                          tt.log(2 * (upper - value) / ((upper - lower) * (upper - c))),np.inf)))
+
+    def _repr_latex_(self, name=None, dist=None):
+        if dist is None:
+            dist = self
+        lower = dist.lower
+        upper = dist.upper
+        c = dist.c
+        return r'${} \sim \text{{Triangular}}(\mathit{{c}}={}, \mathit{{lower}}={}, \mathit{{upper}}={})$'.format(name,
+                                                                get_variable_name(c),
+                                                                get_variable_name(lower),
+                                                                get_variable_name(upper))
+
 
 class Gumbel(Continuous):
     R"""
@@ -1390,6 +1577,16 @@ class Gumbel(Continuous):
     def logp(self, value):
         scaled = (value - self.mu) / self.beta
         return bound(-scaled - tt.exp(-scaled) - tt.log(self.beta), self.beta > 0)
+
+    def _repr_latex_(self, name=None, dist=None):
+        if dist is None:
+            dist = self
+        beta = dist.beta
+        mu = dist.mu
+        return r'${} \sim \text{{Gumbel}}(\mathit{{mu}}={}, \mathit{{beta}}={})$'.format(name,
+                                                                get_variable_name(mu),
+                                                                get_variable_name(beta))
+
 
 class Interpolated(Continuous):
     R"""

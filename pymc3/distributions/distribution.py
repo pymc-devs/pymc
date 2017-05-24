@@ -85,6 +85,9 @@ class Distribution(object):
 
         return val
 
+    def _repr_latex_(self, name=None, dist=None):
+        return None
+                                                                     
 
 def TensorType(dtype, shape):
     return tt.TensorType(str(dtype), np.atleast_1d(shape) == 1)

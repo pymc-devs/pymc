@@ -1,4 +1,4 @@
-from functools import partial 
+from functools import partial
 import numpy as np
 import theano
 import theano.tensor as tt
@@ -59,6 +59,14 @@ class Binomial(Discrete):
             0 <= value, value <= n,
             0 <= p, p <= 1)
 
+    def _repr_latex_(self, name=None, dist=None):
+        if dist is None:
+            dist = self
+        n = dist.n
+        p = dist.p
+        return r'${} \sim \text{{Binomial}}(\mathit{{n}}={}, \mathit{{p}}={})$'.format(name,
+                                                get_variable_name(n),
+                                                get_variable_name(p))
 
 class BetaBinomial(Discrete):
     R"""
@@ -124,6 +132,15 @@ class BetaBinomial(Discrete):
                      value >= 0, value <= self.n,
                      alpha > 0, beta > 0)
 
+    def _repr_latex_(self, name=None, dist=None):
+        if dist is None:
+            dist = self
+        alpha = dist.alpha
+        beta = dist.beta
+        return r'${} \sim \text{{NegativeBinomial}}(\mathit{{alpha}}={}, \mathit{{beta}}={})$'.format(name,
+                                                get_variable_name(alpha),
+                                                get_variable_name(beta))
+
 
 class Bernoulli(Discrete):
     R"""Bernoulli log-likelihood
@@ -163,6 +180,13 @@ class Bernoulli(Discrete):
             value >= 0, value <= 1,
             p >= 0, p <= 1)
 
+    def _repr_latex_(self, name=None, dist=None):
+        if dist is None:
+            dist = self
+        p = dist.p
+        return r'${} \sim \text{{Bernoulli}}(\mathit{{p}}={})$'.format(name,
+                                                get_variable_name(p))
+
 
 class DiscreteWeibull(Discrete):
     R"""Discrete Weibull log-likelihood
@@ -180,16 +204,16 @@ class DiscreteWeibull(Discrete):
     """
     def __init__(self, q, beta, *args, **kwargs):
         super(DiscreteWeibull, self).__init__(*args, defaults=['median'], **kwargs)
-        
+
         self.q = q
         self.beta = beta
 
         self.median = self._ppf(0.5)
-    
+
     def logp(self, value):
         q = self.q
         beta = self.beta
-        
+
         return bound(tt.log(tt.power(q, tt.power(value, beta)) - tt.power(q, tt.power(value + 1, beta))),
                      0 <= value,
                      0 < q, q < 1,
@@ -216,6 +240,15 @@ class DiscreteWeibull(Discrete):
         return generate_samples(self._random, q, beta,
                                 dist_shape=self.shape,
                                 size=size)
+
+    def _repr_latex_(self, name=None, dist=None):
+        if dist is None:
+            dist = self
+        q = dist.q
+        beta = dist.beta
+        return r'${} \sim \text{{DiscreteWeibull}}(\mathit{{q}}={}, \mathit{{beta}}={})$'.format(name,
+                                                get_variable_name(q),
+                                                get_variable_name(beta))
 
 
 class Poisson(Discrete):
@@ -264,6 +297,13 @@ class Poisson(Discrete):
         # Return zero when mu and value are both zero
         return tt.switch(1 * tt.eq(mu, 0) * tt.eq(value, 0),
                          0, log_prob)
+
+    def _repr_latex_(self, name=None, dist=None):
+        if dist is None:
+            dist = self
+        mu = dist.mu
+        return r'${} \sim \text{{Poisson}}(\mathit{{mu}}={})$'.format(name,
+                                                get_variable_name(mu))
 
 
 class NegativeBinomial(Discrete):
@@ -319,6 +359,15 @@ class NegativeBinomial(Discrete):
                          Poisson.dist(self.mu).logp(value),
                          negbinom)
 
+    def _repr_latex_(self, name=None, dist=None):
+        if dist is None:
+            dist = self
+        mu = dist.mu
+        alpha = dist.alpha
+        return r'${} \sim \text{{NegativeBinomial}}(\mathit{{mu}}={}, \mathit{{alpha}}={})$'.format(name,
+                                                get_variable_name(mu),
+                                                get_variable_name(alpha))
+
 
 class Geometric(Discrete):
     R"""
@@ -356,6 +405,13 @@ class Geometric(Discrete):
         p = self.p
         return bound(tt.log(p) + logpow(1 - p, value - 1),
                      0 <= p, p <= 1, value >= 1)
+
+    def _repr_latex_(self, name=None, dist=None):
+        if dist is None:
+            dist = self
+        p = dist.p
+        return r'${} \sim \text{{Geometric}}(\mathit{{p}}={})$'.format(name,
+                                                get_variable_name(p))
 
 
 class DiscreteUniform(Discrete):
@@ -404,6 +460,15 @@ class DiscreteUniform(Discrete):
         lower = self.lower
         return bound(-tt.log(upper - lower + 1),
                      lower <= value, value <= upper)
+
+    def _repr_latex_(self, name=None, dist=None):
+        if dist is None:
+            dist = self
+        lower = dist.lower
+        upper = dist.upper
+        return r'${} \sim \text{{DiscreteUniform}}(\mathit{{lower}}={}, \mathit{{upper}}={})$'.format(name,
+                                                get_variable_name(lower),
+                                                get_variable_name(upper))
 
 
 class Categorical(Discrete):
@@ -469,6 +534,13 @@ class Categorical(Discrete):
 
         return bound(a, value >= 0, value <= (k - 1), sumto1)
 
+    def _repr_latex_(self, name=None, dist=None):
+        if dist is None:
+            dist = self
+        p = dist.p
+        return r'${} \sim \text{{Categorical}}(\mathit{{p}}={})$'.format(name,
+                                                get_variable_name(p))
+
 
 class Constant(Discrete):
     """
@@ -497,6 +569,11 @@ class Constant(Discrete):
     def logp(self, value):
         c = self.c
         return bound(0, tt.eq(value, c))
+
+    def _repr_latex_(self, name=None, dist=None):
+        if dist is None:
+            dist = self
+        return r'${} \sim \text{{Constant}}()$'.format(name)
 
 
 def ConstantDist(*args, **kwargs):
@@ -556,6 +633,15 @@ class ZeroInflatedPoisson(Discrete):
                          tt.log(self.psi) + self.pois.logp(value),
                          tt.log((1. - self.psi) + self.psi * tt.exp(-self.theta)))
 
+    def _repr_latex_(self, name=None, dist=None):
+        if dist is None:
+            dist = self
+        theta = dist.theta
+        psi = dist.psi
+        return r'${} \sim \text{{ZeroInflatedPoisson}}(\mathit{{theta}}={}, \mathit{{psi}}={})$'.format(name,
+                                                get_variable_name(theta),
+                                                get_variable_name(psi))
+
 
 class ZeroInflatedNegativeBinomial(Discrete):
     R"""
@@ -610,3 +696,14 @@ class ZeroInflatedNegativeBinomial(Discrete):
         return tt.switch(value > 0,
                          tt.log(self.psi) + self.nb.logp(value),
                          tt.log((1. - self.psi) + self.psi * (self.alpha / (self.alpha + self.mu))**self.alpha))
+
+    def _repr_latex_(self, name=None, dist=None):
+        if dist is None:
+            dist = self
+        mu = dist.mu
+        alpha = dist.alpha
+        psi = dist.psi
+        return r'${} \sim \text{{ZeroInflatedNegativeBinomial}}(\mathit{{mu}}={}, \mathit{{alpha}}={}, \mathit{{psi}}={})$'.format(name,
+                                                get_variable_name(mu),
+                                                get_variable_name(alpha),
+                                                get_variable_name(psi))

@@ -170,3 +170,14 @@ class NormalMixture(Mixture):
 
         super(NormalMixture, self).__init__(w, Normal.dist(mu, sd=sd),
                                             *args, **kwargs)
+
+    def _repr_latex_(self, name=None, dist=None):
+        if dist is None:
+            dist = self
+        mu = dist.mu
+        w = dist.w
+        sigma = dist.sigma
+        return r'${} \sim \text{{NormalMixture}}(\mathit{{w}}={}, \mathit{{mu}}={}, \mathit{{sigma}}={})$'.format(name,
+                                                get_variable_name(w),
+                                                get_variable_name(mu),
+                                                get_variable_name(sigma))

@@ -70,6 +70,13 @@ class TransformedDistribution(distribution.Distribution):
             # force the last dim not broadcastable
             self.type = tt.TensorType(v.dtype, b)
 
+    def _repr_latex_(self, name=None, dist=None):
+        if name is None:
+            name = self.name
+        if dist is None:
+            dist = self.dist
+        return dist._repr_latex_(self, name=name, dist=dist)
+
     def logp(self, x):
         return (self.dist.logp(self.transform_used.backward(x)) +
                 self.transform_used.jacobian_det(x))

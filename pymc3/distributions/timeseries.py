@@ -45,6 +45,15 @@ class AR1(distribution.Continuous):
         innov_like = continuous.Normal.dist(k * x_im1, tau_e).logp(x_i)
         return boundary(x[0]) + tt.sum(innov_like) + boundary(x[-1])
 
+    def _repr_latex_(self, name=None, dist=None):
+        if dist is None:
+            dist = self
+        k = dist.k
+        tau_e = dist.tau_e
+        return r'${} \sim \text{{AR1}}(\mathit{{k}}={}, \mathit{{tau_e}}={})$'.format(name,
+                                                get_variable_name(k),
+                                                get_variable_name(tau_e))
+
 
 class GaussianRandomWalk(distribution.Continuous):
     """
@@ -82,6 +91,15 @@ class GaussianRandomWalk(distribution.Continuous):
 
         innov_like = continuous.Normal.dist(mu=x_im1 + mu, tau=tau, sd=sd).logp(x_i)
         return init.logp(x[0]) + tt.sum(innov_like)
+
+    def _repr_latex_(self, name=None, dist=None):
+        if dist is None:
+            dist = self
+        mu = dist.mu
+        sd = dist.sd
+        return r'${} \sim \text{{GaussianRandomWalk}}(\mathit{{mu}}={}, \mathit{{sd}}={})$'.format(name,
+                                                get_variable_name(mu),
+                                                get_variable_name(sd))
 
 
 class GARCH11(distribution.Continuous):
@@ -133,6 +151,17 @@ class GARCH11(distribution.Continuous):
         vol = self.get_volatility(x)
         return tt.sum(continuous.Normal.dist(0, sd=vol).logp(x))
 
+    def _repr_latex_(self, name=None, dist=None):
+        if dist is None:
+            dist = self
+        omega = dist.omega
+        alpha_1 = dist.alpha_1
+        beta_1 = dist.beta_1
+        return r'${} \sim \text{GARCH}(1, 1, \mathit{{omega}}={}, \mathit{{alpha_1}}={}, \mathit{{beta_1}}={})$'.format(name,
+                                                get_variable_name(omega),
+                                                get_variable_name(alpha_1),
+                                                get_variable_name(beta_1))
+
 
 class EulerMaruyama(distribution.Continuous):
     """
@@ -159,6 +188,13 @@ class EulerMaruyama(distribution.Continuous):
         mu = xt + self.dt * f
         sd = tt.sqrt(self.dt) * g
         return tt.sum(continuous.Normal.dist(mu=mu, sd=sd).logp(x[1:]))
+
+    def _repr_latex_(self, name=None, dist=None):
+        if dist is None:
+            dist = self
+        dt = dist.dt
+        return r'${} \sim \text{EulerMaruyama}(\mathit{{dt}}={})$'.format(name,
+                                                get_variable_name(dt))
 
 
 class MvGaussianRandomWalk(distribution.Continuous):
@@ -199,6 +235,15 @@ class MvGaussianRandomWalk(distribution.Continuous):
         innov_like = multivariate.MvNormal.dist(mu=x_im1 + mu, cov=cov).logp(x_i)
         return init.logp(x[0]) + tt.sum(innov_like)
 
+    def _repr_latex_(self, name=None, dist=None):
+        if dist is None:
+            dist = self
+        mu = dist.mu
+        cov = dist.cov
+        return r'${} \sim \text{MvGaussianRandomWalk}(\mathit{{mu}}={}, \mathit{{cov}}={})$'.format(name,
+                                                get_variable_name(mu),
+                                                get_variable_name(cov))
+
 
 class MvStudentTRandomWalk(distribution.Continuous):
     """
@@ -221,7 +266,7 @@ class MvStudentTRandomWalk(distribution.Continuous):
         self.nu = nu
         self.init = init
         self.mean = 0.
-        
+
         if cov is None:
             raise ValueError('A covariance matrix must be provided as cov argument.')
         self.k = cov.shape[0]
@@ -240,3 +285,14 @@ class MvStudentTRandomWalk(distribution.Continuous):
         x_i = x[1:]
         innov_like = multivariate.MvStudentT.dist(nu, cov, mu=x_im1 + mu).logp(x_i)
         return init.logp(x[0]) + tt.sum(innov_like)
+
+    def _repr_latex_(self, name=None, dist=None):
+        if dist is None:
+            dist = self
+        nu = dist.nu
+        mu = dist.mu
+        cov = dist.cov
+        return r'${} \sim \text{MvStudentTRandomWalk}(\mathit{{nu}}={}, \mathit{{mu}}={}, \mathit{{cov}}={})$'.format(name,
+                                                get_variable_name(nu),
+                                                get_variable_name(mu),
+                                                get_variable_name(cov))
