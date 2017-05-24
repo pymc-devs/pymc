@@ -123,6 +123,10 @@ class Inference(object):
             self._iterate_with_loss(n, step_func, progress, callbacks)
         else:
             self._iterate_without_loss(n, step_func, progress, callbacks)
+
+        # hack to allow pm.fit() access to loss hist
+        self.approx.hist = self.hist
+
         return self.approx
 
     def _iterate_without_loss(self, _, step_func, progress, callbacks):
@@ -579,7 +583,7 @@ class ASVGD(Inference):
 
         \Delta x_i &= \hat{\phi}^{*}(x_i) \\
         \hat{\phi}^{*}(x) &= \frac{1}{n}\sum^{n}_{j=1}[k(x_j,x) \nabla_{x_j} logp(x_j)+ \nabla_{x_j} k(x_j,x)] \\
-        \Delta_{\theta} &= \frac{1}{n}\sum^{n}_{i=1}\Delta x_i\frac{\partial x_i}{\partial \theta} 
+        \Delta_{\theta} &= \frac{1}{n}\sum^{n}_{i=1}\Delta x_i\frac{\partial x_i}{\partial \theta}
 
     Parameters
     ----------
