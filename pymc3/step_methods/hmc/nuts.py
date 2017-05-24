@@ -338,7 +338,8 @@ class _Tree(object):
                 tree = Subtree(right, right, right.p, proposal, log_size, p_accept, 1)
                 return tree, False, False
             else:
-                error_msg = "Bad energy after leapfrog step."
+                error_msg = ("Energy change in leapfrog step is too large: %s. "
+                             % energy_change)
                 error = None
         tree = Subtree(None, None, None, None, -np.inf, 0, 1)
         return tree, (error_msg, error, left), False
@@ -403,14 +404,16 @@ class NutsReport(object):
         else:
             self._divs_after_tune.append((msg, error, point))
         if self._on_error == 'raise':
-            err = SamplingError('Divergence after tuning: ' + msg)
+            err = SamplingError('Divergence after tuning: %s Increase '
+                                'target_accept or reparameterize.' % msg)
             six.raise_from(err, error)
         elif self._on_error == 'warn':
-            warnings.warn('Divergence detected: ' + msg)
+            warnings.warn('Divergence detected: %s Increase target_accept '
+                          'or reparameterize.' % msg)
 
     def _check_len(self, tuning):
         n = (~tuning).sum()
-        if n < 1000:
+        if n < 500:
             warnings.warn('Chain %s contains only %s samples.'
                           % (self._chain_id, n))
         if np.all(tuning):
