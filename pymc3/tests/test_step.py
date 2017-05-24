@@ -10,7 +10,10 @@ from pymc3.step_methods import (NUTS, BinaryGibbsMetropolis, CategoricalGibbsMet
                                 Metropolis, Slice, CompoundStep, NormalProposal,
                                 MultivariateNormalProposal, HamiltonianMC,
                                 EllipticalSlice, smc)
-from pymc3.distributions import Binomial, Normal, Bernoulli, Categorical, Beta
+from pymc3.theanof import floatX
+from pymc3 import SamplingError
+from pymc3.distributions import (
+    Binomial, Normal, Bernoulli, Categorical, Beta, HalfNormal)
 
 from numpy.testing import assert_array_almost_equal
 import numpy as np
@@ -335,5 +338,28 @@ class TestNutsCheckTrace(object):
                 sample(3, tune=2, discard_tuned_samples=False,
                        n_init=None)
             messages = [warn.message.args[0] for warn in warns]
-            assert any("contains only 5" in msg for msg in messages)
+            assert any("contains only 3" in msg for msg in messages)
             assert all('boolean index did not' not in msg for msg in messages)
+
+    def test_bad_init(self):
+        with Model():
+            HalfNormal('a', sd=1, testval=-1, transform=None)
+            with pytest.raises(ValueError) as error:
+                sample(init=None)
+            error.match('Bad initial')
+
+    def test_linalg(self):
+        with Model():
+            a = Normal('a', shape=2)
+            a = tt.switch(a > 0, np.inf, a)
+            b = tt.slinalg.solve(floatX(np.eye(2)), a)
+            Normal('c', mu=b, shape=2)
+            with warnings.catch_warnings(record=True) as warns:
+                trace = sample(20, init=None, tune=5)
+            assert np.any(trace['diverging'])
+            assert any('diverging samples after tuning' in str(warn.message)
+                       for warn in warns)
+            assert any('contains only' in str(warn.message) for warn in warns)
+
+            with pytest.raises(SamplingError):
+                sample(20, init=None, nuts_kwargs={'on_error': 'raise'})
