@@ -80,8 +80,7 @@ def _make_rhat_plot(trace, ax, title, labels, varnames, include_transformed):
     return ax
 
 
-def _plot_tree(ax, y, ntiles, show_quartiles,
-                marker='o', markersize=4, color='blue', linewidth=2):
+def _plot_tree(ax, y, ntiles, show_quartiles, **plot_kwargs):
     """Helper to plot errorbars for the forestplot.
 
     Parameters
@@ -93,14 +92,6 @@ def _plot_tree(ax, y, ntiles, show_quartiles,
         A list or array of length 5 or 3
     show_quartiles: boolean
         Whether to plot the interquartile range
-    marker: str
-        Marker character for median
-    markersize: int
-        Marker size
-    color: str
-        Matplotlib color
-    linewidth: int
-        Line width
 
     Returns
     -------
@@ -110,16 +101,25 @@ def _plot_tree(ax, y, ntiles, show_quartiles,
     """
     if show_quartiles:
         # Plot median
-        ax.plot(ntiles[2], y, color=color, marker=marker, markersize=markersize)
+        ax.plot(ntiles[2], y, color=plot_kwargs.get('color', 'blue'), 
+                        marker=plot_kwargs.get('marker', 'o'), 
+                        markersize=plot_kwargs.get('markersize', 4))
         # Plot quartile interval
-        ax.errorbar(x=(ntiles[1], ntiles[3]), y=(y, y), linewidth=linewidth, color=color)
+        ax.errorbar(x=(ntiles[1], ntiles[3]), y=(y, y), 
+                        linewidth=plot_kwargs.get('linewidth', 2), 
+                        color=plot_kwargs.get('color', 'blue'))
 
     else:
         # Plot median
-        ax.plot(ntiles[1], y, marker=marker, color=color, markersize=markersize)
+        ax.plot(ntiles[1], y, marker=plot_kwargs.get('marker', 'o'), 
+                            color=plot_kwargs.get('color', 'blue'),
+                            markersize=plot_kwargs.get('markersize', 4))
 
     # Plot outer interval
-    ax.errorbar(x=(ntiles[0], ntiles[-1]), y=(y, y), linewidth=int(linewidth/2), color=color)
+    ax.errorbar(x=(ntiles[0], ntiles[-1]), y=(y, y), 
+                linewidth=int(plot_kwargs.get('linewidth', 2)/2), 
+                color=plot_kwargs.get('color', 'blue'))
+                
     return ax
 
 
@@ -250,25 +250,17 @@ def forestplot(trace_obj, varnames=None, transform=identity_transform, alpha=0.0
 
             # Y coordinate with offset
             y = -var + offset[j]
-            
-            marker = plot_kwargs.pop('marker', 'o')
-            markersize = plot_kwargs.pop('markersize', 4)
-            color = plot_kwargs.pop('color', 'blue')
-            linewidth = plot_kwargs.pop('linewidth', 2)
-            fontsize = plot_kwargs.pop('fontsize', None)
 
             # Deal with multivariate nodes
             if k > 1:
                 for q in np.transpose(quants).squeeze():
                     # Multiple y values
                     interval_plot = _plot_tree(interval_plot, y, q, quartiles,
-                                    marker=marker, markersize=markersize,
-                                    color=color, linewidth=linewidth)
+                                    **plot_kwargs)
                     y -= 1
             else:
                 interval_plot = _plot_tree(interval_plot, y, quants, quartiles,
-                                marker=marker, markersize=markersize,
-                                color=color, linewidth=linewidth)
+                                **plot_kwargs)
 
             # Increment index
             var += k
@@ -287,7 +279,7 @@ def forestplot(trace_obj, varnames=None, transform=identity_transform, alpha=0.0
 
     # Add variable labels
     interval_plot.set_yticks([-l for l in range(len(labels))])
-    interval_plot.set_yticklabels(labels, fontsize=fontsize)
+    interval_plot.set_yticklabels(labels, fontsize=plot_kwargs.get('fontsize', None))
 
     # Add title
     plot_title = ""
@@ -296,7 +288,7 @@ def forestplot(trace_obj, varnames=None, transform=identity_transform, alpha=0.0
     elif main:
         plot_title = main
     if plot_title:
-        interval_plot.set_title(plot_title, fontsize=fontsize)
+        interval_plot.set_title(plot_title, fontsize=plot_kwargs.get('fontsize', None))
 
     # Add x-axis label
     if xtitle is not None:
