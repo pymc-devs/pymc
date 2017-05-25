@@ -2,6 +2,7 @@ from theano import theano, tensor as tt
 from pymc3.variational.opvi import Operator, ObjectiveFunction, _warn_not_used
 from pymc3.variational.stein import Stein
 from pymc3.variational import updates
+import pymc3 as pm
 
 __all__ = [
     'KL',
@@ -59,7 +60,7 @@ class KSDObjective(ObjectiveFunction):
             params = self.obj_params + kwargs['more_obj_params']
         else:
             params = self.test_params + kwargs['more_tf_params']
-            grad *= -1
+            grad *= pm.floatX(-1)
         grad = theano.clone(grad, {op.input_matrix: z})
         grad = tt.grad(None, params, known_grads={z: grad})
         grad = updates.total_norm_constraint(grad, 10)
@@ -103,7 +104,7 @@ class KSD(Operator):
     def apply(self, f):
         # f: kernel function for KSD f(histogram) -> (k(x,.), \nabla_x k(x,.))
         stein = Stein(self.approx, f, self.input_matrix)
-        return -1 * stein.grad
+        return pm.floatX(-1) * stein.grad
 
 
 class AKSD(KSD):

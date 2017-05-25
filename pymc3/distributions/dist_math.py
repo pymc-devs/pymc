@@ -14,7 +14,8 @@ from .special import gammaln
 from ..math import logdet as _logdet
 from pymc3.theanof import floatX
 
-c = - 0.5 * np.log(2 * np.pi)
+f = floatX
+c = f(- 0.5 * np.log(2 * np.pi))
 
 
 def bound(logp, *conditions, **kwargs):
@@ -143,7 +144,7 @@ def log_normal(x, mean, **kwargs):
     w = kwargs.get('w')
     rho = kwargs.get('rho')
     tau = kwargs.get('tau')
-    eps = kwargs.get('eps', 0.0)
+    eps = kwargs.get('eps', f(0.0))
     check = sum(map(lambda a: a is not None, [sd, w, rho, tau]))
     if check > 1:
         raise ValueError('more than one required kwarg is passed')
@@ -156,9 +157,9 @@ def log_normal(x, mean, **kwargs):
     elif rho is not None:
         std = rho2sd(rho)
     else:
-        std = tau**(-1)
+        std = tau**(f(-1))
     std += eps
-    return c - tt.log(tt.abs_(std)) - (x - mean) ** 2 / (2 * std ** 2)
+    return c - tt.log(tt.abs_(std)) - (x - mean) ** f(2) / (f(2) * std ** f(2))
 
 
 def log_normal_mv(x, mean, gpu_compat=False, **kwargs):
@@ -212,10 +213,10 @@ def log_normal_mv(x, mean, gpu_compat=False, **kwargs):
         T = tt.nlinalg.matrix_inverse(S)
         log_det = -logdet(S)
     delta = x - mean
-    k = S.shape[0]
-    result = k * tt.log(2 * np.pi) - log_det
+    k = f(S.shape[0])
+    result = k * tt.log(f(2) * f(np.pi)) - log_det
     result += delta.dot(T).dot(delta)
-    return -1 / 2. * result
+    return f(-1) / f(2) * result
 
 
 def MvNormalLogp():
@@ -240,7 +241,7 @@ def MvNormalLogp():
     cholesky = Cholesky(nofail=True, lower=True)
 
     n, k = delta.shape
-
+    n, k = f(n), f(k)
     chol_cov = cholesky(cov)
     diag = tt.nlinalg.diag(chol_cov)
     ok = tt.all(diag > 0)
@@ -248,10 +249,10 @@ def MvNormalLogp():
     chol_cov = tt.switch(ok, chol_cov, tt.fill(chol_cov, 1))
     delta_trans = solve_lower(chol_cov, delta.T).T
 
-    result = n * k * tt.log(2 * np.pi)
-    result += 2.0 * n * tt.sum(tt.log(diag))
-    result += (delta_trans ** 2).sum()
-    result = -0.5 * result
+    result = n * k * tt.log(f(2) * np.pi)
+    result += f(2) * n * tt.sum(tt.log(diag))
+    result += (delta_trans ** f(2)).sum()
+    result = f(-.5) * result
     logp = tt.switch(ok, result, -np.inf)
 
     def dlogp(inputs, gradients):
@@ -278,7 +279,7 @@ def MvNormalLogp():
         g_cov = tt.switch(ok, g_cov, -np.nan)
         g_delta = tt.switch(ok, g_delta, -np.nan)
 
-        return [-0.5 * g_cov * g_logp, -g_delta * g_logp]
+        return [f(-0.5) * g_cov * g_logp, -g_delta * g_logp]
 
     return theano.OpFromGraph(
         [cov, delta], [logp], grad_overrides=dlogp, inline=True)

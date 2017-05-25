@@ -18,6 +18,7 @@ __all__ = ['gradient',
            'inputvars',
            'cont_inputs',
            'floatX',
+           'smartfloatX',
            'jacobian',
            'CallableTensor',
            'join_nonshared_inputs',
@@ -66,6 +67,15 @@ def floatX(X):
     except AttributeError:
         # Scalar passed
         return np.asarray(X, dtype=theano.config.floatX)
+
+
+def smartfloatX(x):
+    """
+    Convert non int types to floatX 
+    """
+    if str(x.dtype).startswith('float'):
+        x = floatX(x)
+    return x
 
 """
 Theano derivative functions

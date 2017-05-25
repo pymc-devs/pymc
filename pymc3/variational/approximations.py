@@ -317,8 +317,10 @@ class Empirical(Approximation):
         else:
             size = tuple(np.atleast_1d(size))
         return (self._rng
-                .uniform(size=size, low=0.0, high=self.histogram.shape[0] - 1e-16)
-                .astype('int64'))
+                .uniform(size=size,
+                         low=pm.floatX(0),
+                         high=pm.floatX(self.histogram.shape[0]) - pm.floatX(1e-16))
+                .astype('int32'))
 
     def random_global(self, size=None, no_rand=False):
         theano_condition_is_here = isinstance(no_rand, tt.Variable)
