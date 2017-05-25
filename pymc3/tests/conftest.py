@@ -9,7 +9,7 @@ def theano_config():
         yield
 
 
-@pytest.fixture(scope='session')
+@pytest.fixture(scope='function')
 def strict_float32():
     config = theano.configparser.change_flags(
         warn_float64='raise',
