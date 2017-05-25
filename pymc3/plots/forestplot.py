@@ -80,7 +80,8 @@ def _make_rhat_plot(trace, ax, title, labels, varnames, include_transformed):
     return ax
 
 
-def _plot_tree(ax, y, ntiles, show_quartiles):
+def _plot_tree(ax, y, ntiles, show_quartiles,
+                marker='o', markersize=4, color='blue', linewidth=2):
     """Helper to plot errorbars for the forestplot.
 
     Parameters
@@ -92,6 +93,14 @@ def _plot_tree(ax, y, ntiles, show_quartiles):
         A list or array of length 5 or 3
     show_quartiles: boolean
         Whether to plot the interquartile range
+    marker: str
+        Marker character for median
+    markersize: int
+        Marker size
+    color: str
+        Matplotlib color
+    linewidth: int
+        Line width
 
     Returns
     -------
@@ -101,22 +110,24 @@ def _plot_tree(ax, y, ntiles, show_quartiles):
     """
     if show_quartiles:
         # Plot median
-        ax.plot(ntiles[2], y, 'bo', markersize=4)
+        ax.plot(ntiles[2], y, marker=marker, markersize=markersize)
         # Plot quartile interval
-        ax.errorbar(x=(ntiles[1], ntiles[3]), y=(y, y), linewidth=2, color='b')
+        ax.errorbar(x=(ntiles[1], ntiles[3]), y=(y, y), linewidth=linewidth, color=color)
 
     else:
         # Plot median
-        ax.plot(ntiles[1], y, 'bo', markersize=4)
+        ax.plot(ntiles[1], y, marker=marker, color=color, markersize=markersize)
 
     # Plot outer interval
-    ax.errorbar(x=(ntiles[0], ntiles[-1]), y=(y, y), linewidth=1, color='b')
+    ax.errorbar(x=(ntiles[0], ntiles[-1]), y=(y, y), linewidth=int(linewidth/2), color=color)
     return ax
 
 
 def forestplot(trace_obj, varnames=None, transform=identity_transform, alpha=0.05, quartiles=True,
                rhat=True, main=None, xtitle=None, xlim=None, ylabels=None,
-               chain_spacing=0.05, vline=0, gs=None, plot_transformed=False):
+               chain_spacing=0.05, vline=0, gs=None, plot_transformed=False,
+               marker='o', markersize=4, color='blue', linewidth=2,
+               fontsize=None):
     """
     Forest plot (model summary plot).
 
@@ -160,6 +171,16 @@ def forestplot(trace_obj, varnames=None, transform=identity_transform, alpha=0.0
     plot_transformed : bool
         Flag for plotting automatically transformed variables in addition to
         original variables (defaults to False).
+    marker: str
+        Marker character for median
+    markersize: int
+        Marker size
+    color: str
+        Matplotlib color
+    linewidth: int
+        Line width
+    fontsize: int
+        Font size for variable labels and title
 
     Returns
     -------
@@ -242,10 +263,14 @@ def forestplot(trace_obj, varnames=None, transform=identity_transform, alpha=0.0
             if k > 1:
                 for q in np.transpose(quants).squeeze():
                     # Multiple y values
-                    interval_plot = _plot_tree(interval_plot, y, q, quartiles)
+                    interval_plot = _plot_tree(interval_plot, y, q, quartiles,
+                                    marker=marker, markersize=markersize,
+                                    color=color, linewidth=linewidth)
                     y -= 1
             else:
-                interval_plot = _plot_tree(interval_plot, y, quants, quartiles)
+                interval_plot = _plot_tree(interval_plot, y, quants, quartiles,
+                                marker=marker, markersize=markersize,
+                                color=color, linewidth=linewidth)
 
             # Increment index
             var += k
@@ -264,7 +289,7 @@ def forestplot(trace_obj, varnames=None, transform=identity_transform, alpha=0.0
 
     # Add variable labels
     interval_plot.set_yticks([-l for l in range(len(labels))])
-    interval_plot.set_yticklabels(labels)
+    interval_plot.set_yticklabels(labels, fontsize=fontsize)
 
     # Add title
     plot_title = ""
@@ -273,7 +298,7 @@ def forestplot(trace_obj, varnames=None, transform=identity_transform, alpha=0.0
     elif main:
         plot_title = main
     if plot_title:
-        interval_plot.set_title(plot_title)
+        interval_plot.set_title(plot_title, fontsize=fontsize)
 
     # Add x-axis label
     if xtitle is not None:
@@ -293,7 +318,7 @@ def forestplot(trace_obj, varnames=None, transform=identity_transform, alpha=0.0
             spine.set_color('none')  # don't draw spine
 
     # Reference line
-    interval_plot.axvline(vline, color='k', linestyle='--')
+    interval_plot.axvline(vline, color='k', linestyle=':')
 
     # Genenerate Gelman-Rubin plot
     if plot_rhat:
