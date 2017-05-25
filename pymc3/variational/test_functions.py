@@ -1,4 +1,4 @@
-from theano import theano, tensor as tt
+from theano import tensor as tt
 from .opvi import TestFunction
 from pymc3.theanof import floatX
 
