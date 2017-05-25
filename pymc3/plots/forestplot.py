@@ -126,8 +126,7 @@ def _plot_tree(ax, y, ntiles, show_quartiles,
 def forestplot(trace_obj, varnames=None, transform=identity_transform, alpha=0.05, quartiles=True,
                rhat=True, main=None, xtitle=None, xlim=None, ylabels=None,
                chain_spacing=0.05, vline=0, gs=None, plot_transformed=False,
-               marker='o', markersize=4, color='blue', linewidth=2,
-               fontsize=None):
+               **plot_kwargs):
     """
     Forest plot (model summary plot).
 
@@ -171,16 +170,9 @@ def forestplot(trace_obj, varnames=None, transform=identity_transform, alpha=0.0
     plot_transformed : bool
         Flag for plotting automatically transformed variables in addition to
         original variables (defaults to False).
-    marker: str
-        Marker character for median
-    markersize: int
-        Marker size
-    color: str
-        Matplotlib color
-    linewidth: int
-        Line width
-    fontsize: int
-        Font size for variable labels and title
+    plot_kwargs : dict
+        Optional arguments for plot elements. Currently accepts 'fontsize',
+        'linewidth', 'color', 'marker', and 'markersize'.
 
     Returns
     -------
@@ -258,6 +250,12 @@ def forestplot(trace_obj, varnames=None, transform=identity_transform, alpha=0.0
 
             # Y coordinate with offset
             y = -var + offset[j]
+            
+            marker = plot_kwargs.pop('marker', 'o')
+            markersize = plot_kwargs.pop('markersize', 4)
+            color = plot_kwargs.pop('color', 'blue')
+            linewidth = plot_kwargs.pop('linewidth', 2)
+            fontsize = plot_kwargs.pop('fontsize', None)
 
             # Deal with multivariate nodes
             if k > 1:
