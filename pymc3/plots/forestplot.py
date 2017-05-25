@@ -110,7 +110,7 @@ def _plot_tree(ax, y, ntiles, show_quartiles,
     """
     if show_quartiles:
         # Plot median
-        ax.plot(ntiles[2], y, marker=marker, markersize=markersize)
+        ax.plot(ntiles[2], y, color=color, marker=marker, markersize=markersize)
         # Plot quartile interval
         ax.errorbar(x=(ntiles[1], ntiles[3]), y=(y, y), linewidth=linewidth, color=color)
 
