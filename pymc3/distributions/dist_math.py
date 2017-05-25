@@ -15,7 +15,7 @@ from ..math import logdet as _logdet
 from pymc3.theanof import floatX
 
 f = floatX
-c = f(- 0.5 * np.log(2 * np.pi))
+c = - 0.5 * np.log(2 * np.pi)
 
 
 def bound(logp, *conditions, **kwargs):
@@ -159,7 +159,7 @@ def log_normal(x, mean, **kwargs):
     else:
         std = tau**(f(-1))
     std += eps
-    return c - tt.log(tt.abs_(std)) - (x - mean) ** f(2) / (f(2) * std ** f(2))
+    return f(c) - tt.log(tt.abs_(std)) - (x - mean) ** f(2) / (f(2) * std ** f(2))
 
 
 def log_normal_mv(x, mean, gpu_compat=False, **kwargs):
