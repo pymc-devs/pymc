@@ -696,7 +696,7 @@ def WishartBartlett(name, S, nu, is_cholesky=False, return_cholesky=False, testv
     c = tt.sqrt(ChiSquared('c', nu - np.arange(2, 2 + n_diag), shape=n_diag,
                            testval=diag_testval))
     pm._log.info('Added new variable c to model diagonal of Wishart.')
-    z = Normal('z', 0, 1, shape=n_tril, testval=tril_testval)
+    z = Normal('z', 0., 1., shape=n_tril, testval=tril_testval)
     pm._log.info('Added new variable z to model off-diagonals of Wishart.')
     # Construct A matrix
     A = tt.zeros(S.shape, dtype=np.float32)
