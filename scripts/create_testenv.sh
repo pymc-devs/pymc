@@ -35,8 +35,8 @@ then
 fi
 
 pip install jupyter
-conda install --yes pyqt matplotlib --channel conda-forge
-conda install --yes pyzmq numpy scipy pytest pytest-cov pandas Cython patsy statsmodels joblib coverage mkl-service
+conda install --yes matplotlib --channel conda-forge
+conda install --yes numpy scipy pytest pytest-cov pandas patsy joblib mkl-service
 if [ ${PYTHON_VERSION} == "2.7" ]; then
     conda install --yes mock enum34;
 fi
@@ -44,9 +44,8 @@ fi
 pip install --upgrade pip
 pip install --no-deps numdifftools
 pip install git+https://github.com/Theano/Theano.git
-pip install tqdm h5py parameterized
+pip install tqdm h5py nose-parameterized==0.6.0
 
-if [ -z ${NO_SETUP} ]
-then
+if [ -z ${NO_SETUP} ]; then
     python setup.py build_ext --inplace
 fi

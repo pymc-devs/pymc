@@ -19,7 +19,7 @@ Please verify that your issue is not being currently addressed by other issues o
 
 While issue reporting is valuable, we strongly encourage users who are inclined to do so to submit patches for new or existing issues via pull requests. This is particularly the case for simple fixes, such as typos or tweaks to documentation, which do not require a heavy investment of time and attention.
 
-Contributors are also encouraged to contribute new code to enhance PyMC's functionality, also via pull requests. Please consult the [PyMC3 documentation](https://pymc-devs.github.io/pymc3/) to ensure that any new contribution does not strongly overlap with existing functionality.
+Contributors are also encouraged to contribute new code to enhance PyMC3's functionality, also via pull requests. Please consult the [PyMC3 documentation](https://pymc-devs.github.io/pymc3/) to ensure that any new contribution does not strongly overlap with existing functionality.
 
 The preferred workflow for contributing to PyMC3 is to fork the [GitHUb repository](https://github.com/pymc-devs/pymc3/), clone it to your local machine, and develop on a feature branch.
 
@@ -27,11 +27,12 @@ The preferred workflow for contributing to PyMC3 is to fork the [GitHUb reposito
 
 1. Fork the [project repository](https://github.com/pymc-devs/pymc3/) by clicking on the 'Fork' button near the top right of the main repository page. This creates a copy of the code under your GitHub user account.
 
-2. Clone your fork of the PyMC3 repo from your GitHub account to your local disk:
+2. Clone your fork of the PyMC3 repo from your GitHub account to your local disk, and add the base repository as a remote:
 
    ```bash
    $ git clone git@github.com:<your GitHub handle>/pymc3.git
-   $ cd pymc3-learn
+   $ cd pymc3
+   $ git remote add upstream git@github.com:pymc-devs/pymc3.git
    ```
 
 3. Create a ``feature`` branch to hold your development changes:
@@ -42,20 +43,36 @@ The preferred workflow for contributing to PyMC3 is to fork the [GitHUb reposito
 
    Always use a ``feature`` branch. It's good practice to never routinely work on the ``master`` branch of any repository.
 
-4. Develop the feature on your feature branch. Add changed files using ``git add`` and then ``git commit`` files:
+4. Project requirements are in ``requirements.txt``, and libraries used for development are in ``requirements-dev.txt``.  To set up a development environment, you may (probably in a [virtual environment](http://python-guide-pt-br.readthedocs.io/en/latest/dev/virtualenvs/)) run:
+
+   ```bash
+   $ pip install -r requirements.txt
+   $ pip install -r requirements-dev.txt
+   ```
+
+Alternatively, there is a script to create a docker environment for development.  See: [Developing in Docker](#Developing-in-Docker).
+
+5. Develop the feature on your feature branch. Add changed files using ``git add`` and then ``git commit`` files:
 
    ```bash
    $ git add modified_files
    $ git commit
    ```
 
-   to record your changes in Git locally, then push the changes to your GitHub account with:
+   to record your changes locally.
+   After committing, it is a good idea to sync with the base repository in case there have been any changes:
+   ```bash
+   $ git fetch upstream
+   $ git rebase upstream/master
+   ```
+
+   Then push the changes to your GitHub account with:
 
    ```bash
    $ git push -u origin my-feature
    ```
 
-5. Go to the GitHub web page of your fork of the PyMC3 repo. Click the 'Pull request' button to send your changes to the project's maintainers fo review. This will send an email to the committers.
+6. Go to the GitHub web page of your fork of the PyMC3 repo. Click the 'Pull request' button to send your changes to the project's maintainers for review. This will send an email to the committers.
 
 ## Pull request checklist
 
@@ -96,8 +113,8 @@ tools:
 * No PEP8 warnings, check with:
 
   ```bash
-  $ pip install pep8
-  $ pep8 path/to/module.py
+  $ pip install pycodestyle
+  $ pycodestyle path/to/module.py
   ```
 
 * AutoPEP8 can help you fix some of the easy redundant errors:
