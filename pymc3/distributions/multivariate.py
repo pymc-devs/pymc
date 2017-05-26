@@ -16,6 +16,7 @@ import pymc3 as pm
 from pymc3.math import tround
 from pymc3.theanof import floatX
 from . import transforms
+from pymc3.util import get_variable_name
 from .distribution import Continuous, Discrete, draw_values, generate_samples
 from ..model import Deterministic
 from .continuous import ChiSquared, Normal

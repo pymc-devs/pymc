@@ -1,6 +1,7 @@
 import numpy as np
 import theano.tensor as tt
 
+from pymc3.util import get_variable_name
 from ..math import logsumexp
 from .dist_math import bound
 from .distribution import Discrete, Distribution, draw_values, generate_samples

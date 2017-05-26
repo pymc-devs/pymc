@@ -1,6 +1,7 @@
 import theano.tensor as tt
 from theano import scan
 
+from pymc3.util import get_variable_name
 from . import multivariate
 from . import continuous
 from . import distribution
