@@ -840,8 +840,8 @@ class LKJCholeskyCov(Continuous):
        http://math.stackexchange.com/q/130026
     """
     def __init__(self, eta, n, sd_dist, *args, **kwargs):
-        self.n = n = tt.as_tensor_variable(n)
-        self.eta = eta = tt.as_tensor_variable(eta)
+        self.n = n
+        self.eta = eta
         
         if 'transform' in kwargs:
             raise ValueError('Invalid parameter: transform.')
@@ -943,13 +943,13 @@ class LKJCorr(Continuous):
                           'dimension parameter p -> n. Please update your code. '
                           'Automatically re-assigning parameters for backwards compatibility.',
                           DeprecationWarning)
-            self.n = p = tt.as_tensor_variable(p)
-            self.eta = n = tt.as_tensor_variable(n)
+            self.n = p
+            self.eta = n
             eta = self.eta
             n = self.n
         elif (n is not None) and (eta is not None) and (p is None):
-            self.n = n = tt.as_tensor_variable(n)
-            self.eta = eta = tt.as_tensor_variable(eta)
+            self.n = n
+            self.eta = eta
         else:
             raise ValueError('Invalid parameter: please use eta as the shape parameter and '
                              'n as the dimension parameter.')
