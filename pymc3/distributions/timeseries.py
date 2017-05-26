@@ -30,10 +30,10 @@ class AR1(distribution.Continuous):
 
     def __init__(self, k, tau_e, *args, **kwargs):
         super(AR1, self).__init__(*args, **kwargs)
-        self.k = k
-        self.tau_e = tau_e
+        self.k = k = tt.as_tensor_variable(k)
+        self.tau_e = tau_e = tt.as_tensor_variable(tau_e)
         self.tau = tau_e * (1 - k ** 2)
-        self.mode = 0.
+        self.mode = tt.as_tensor_variable(0.)
 
     def logp(self, x):
         k = self.k
@@ -75,11 +75,11 @@ class GaussianRandomWalk(distribution.Continuous):
     def __init__(self, tau=None, init=continuous.Flat.dist(), sd=None, mu=0.,
                  *args, **kwargs):
         super(GaussianRandomWalk, self).__init__(*args, **kwargs)
-        self.tau = tau
-        self.sd = sd
-        self.mu = mu
+        self.tau = tau = tt.as_tensor_variable(tau)
+        self.sd = sd = tt.as_tensor_variable(sd)
+        self.mu = mu = tt.as_tensor_variable(mu)
         self.init = init
-        self.mean = 0.
+        self.mean = tt.as_tensor_variable(0.)
 
     def logp(self, x):
         tau = self.tau
@@ -129,11 +129,11 @@ class GARCH11(distribution.Continuous):
                  initial_vol=None, *args, **kwargs):
         super(GARCH11, self).__init__(*args, **kwargs)
 
-        self.omega = omega
-        self.alpha_1 = alpha_1
-        self.beta_1 = beta_1
+        self.omega = omega = tt.as_tensor_variable(omega)
+        self.alpha_1 = alpha_1 = tt.as_tensor_variable(alpha_1)
+        self.beta_1 = beta_1 = tt.as_tensor_variable(beta_1)
         self.initial_vol = initial_vol
-        self.mean = 0
+        self.mean = tt.as_tensor_variable(0.)
 
     def get_volatility(self, x):
         x = x[:-1]
@@ -179,7 +179,7 @@ class EulerMaruyama(distribution.Continuous):
     """
     def __init__(self, dt, sde_fn, sde_pars, *args, **kwds):
         super(EulerMaruyama, self).__init__(*args, **kwds)
-        self.dt = dt
+        self.dt = dt = tt.as_tensor_variable(dt)
         self.sde_fn = sde_fn
         self.sde_pars = sde_pars
 
@@ -221,9 +221,9 @@ class MvGaussianRandomWalk(distribution.Continuous):
         if cov.ndim != 2:
             raise ValueError('cov must be two dimensional.')
         self.cov = cov
-        self.mu = mu
+        self.mu = mu = tt.as_tensor_variable(mu)
         self.init = init
-        self.mean = 0.
+        self.mean = tt.as_tensor_variable(0.)
 
     def logp(self, x):
         cov = self.cov
@@ -263,10 +263,10 @@ class MvStudentTRandomWalk(distribution.Continuous):
     def __init__(self, nu, mu=0., cov=None, init=continuous.Flat.dist(),
                  *args, **kwargs):
         super(MvStudentTRandomWalk, self).__init__(*args, **kwargs)
-        self.mu = mu
-        self.nu = nu
+        self.mu = mu = tt.as_tensor_variable(mu)
+        self.nu = nu = tt.as_tensor_variable(nu)
         self.init = init
-        self.mean = 0.
+        self.mean = tt.as_tensor_variable(0.)
 
         if cov is None:
             raise ValueError('A covariance matrix must be provided as cov argument.')

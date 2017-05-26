@@ -42,7 +42,7 @@ class Mixture(Distribution):
     def __init__(self, w, comp_dists, *args, **kwargs):
         shape = kwargs.pop('shape', ())
 
-        self.w = w
+        self.w = w = tt.as_tensor_variable(w)
         self.comp_dists = comp_dists
 
         defaults = kwargs.pop('defaults', [])

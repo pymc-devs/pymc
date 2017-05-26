@@ -376,7 +376,7 @@ class Wald(PositiveContinuous):
         self.alpha = alpha = tt.as_tensor_variable(alpha)
         self.mu = mu = tt.as_tensor_variable(mu)
         self.lam = lam = tt.as_tensor_variable(lam)
-        self.phi = phi =tt.as_tensor_variable(phi)
+        self.phi = phi = tt.as_tensor_variable(phi)
 
         self.mean = self.mu + self.alpha
         self.mode = self.mu * (tt.sqrt(1. + (1.5 * self.mu / self.lam)**2)
@@ -1501,11 +1501,9 @@ class Triangular(Continuous):
                  *args, **kwargs):
         super(Triangular, self).__init__(*args, **kwargs)
 
-        self.c = c
-        self.lower = lower
-        self.upper = upper
-        self.mean = c
-        self.median = self.mean
+        self.median = self.mean = self.c = c  = tt.as_tensor_variable(c)
+        self.lower = lower = tt.as_tensor_variable(lower)
+        self.upper = upper = tt.as_tensor_variable(upper)
 
     def random(self, point=None, size=None):
         c, lower, upper = draw_values([self.c, self.lower, self.upper],

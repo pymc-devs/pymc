@@ -594,9 +594,9 @@ class Wishart(Continuous):
                       'on the issues surrounding the Wishart see here: '
                       'https://github.com/pymc-devs/pymc3/issues/538.',
                       UserWarning)
-        self.nu = nu
-        self.p = p = V.shape[0]
-        self.V = V
+        self.nu = nu = tt.as_tensor_variable(nu)
+        self.p = p = tt.as_tensor_variable(V.shape[0])
+        self.V = V = tt.as_tensor_variable(V)
         self.mean = nu * V
         self.mode = tt.switch(1 * (nu >= p + 1),
                               (nu - p - 1) * V,
@@ -840,8 +840,8 @@ class LKJCholeskyCov(Continuous):
        http://math.stackexchange.com/q/130026
     """
     def __init__(self, eta, n, sd_dist, *args, **kwargs):
-        self.n = n
-        self.eta = eta
+        self.n = n = tt.as_tensor_variable(n)
+        self.eta = eta = tt.as_tensor_variable(eta)
         
         if 'transform' in kwargs:
             raise ValueError('Invalid parameter: transform.')
@@ -943,13 +943,13 @@ class LKJCorr(Continuous):
                           'dimension parameter p -> n. Please update your code. '
                           'Automatically re-assigning parameters for backwards compatibility.',
                           DeprecationWarning)
-            self.n = p
-            self.eta = n
+            self.n = p = tt.as_tensor_variable(p)
+            self.eta = n = tt.as_tensor_variable(n)
             eta = self.eta
             n = self.n
         elif (n is not None) and (eta is not None) and (p is None):
-            self.n = n
-            self.eta = eta
+            self.n = n = tt.as_tensor_variable(n)
+            self.eta = eta = tt.as_tensor_variable(eta)
         else:
             raise ValueError('Invalid parameter: please use eta as the shape parameter and '
                              'n as the dimension parameter.')
