@@ -292,7 +292,7 @@ class MvStudentT(Continuous):
     def __init__(self, nu, Sigma, mu=None, *args, **kwargs):
         super(MvStudentT, self).__init__(*args, **kwargs)
         self.nu = nu = tt.as_tensor_variable(nu)
-        self.mu = tt.zeros(Sigma.shape[0]) if mu is None else tt.as_tensor_variable(mu)
+        mu = tt.zeros(Sigma.shape[0]) if mu is None else tt.as_tensor_variable(mu)
         self.Sigma = Sigma = tt.as_tensor_variable(Sigma)
         
         self.mean = self.median = self.mode = self.mu = mu
