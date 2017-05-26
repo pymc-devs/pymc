@@ -7,9 +7,9 @@ from ..vartypes import continuous_types
 from ..model import Model, Point, Potential
 from ..blocking import DictToVarBijection, DictToArrayBijection, ArrayOrdering
 from ..distributions import (DensityDist, Categorical, Multinomial, VonMises, Dirichlet,
-                             MvStudentT, MvNormal, ZeroInflatedPoisson,
+                             MvStudentT, MvNormal, ZeroInflatedPoisson, GaussianRandomWalk,
                              ZeroInflatedNegativeBinomial, Constant, Poisson, Bernoulli, Beta,
-                             BetaBinomial, HalfStudentT, StudentT, Weibull, Pareto,
+                             BetaBinomial, HalfStudentT, StudentT, Weibull, Pareto, NormalMixture,
                              InverseGamma, Gamma, Cauchy, HalfCauchy, Lognormal, Laplace,
                              NegativeBinomial, Geometric, Exponential, ExGaussian, Normal,
                              Flat, LKJCorr, Wald, ChiSquared, HalfNormal, DiscreteUniform,
@@ -822,3 +822,17 @@ class TestMatchesScipy(SeededTest):
                     )
 
                 self.pymc3_matches_scipy(TestedInterpolated, R, {}, ref_pdf)
+
+
+def test_repr_latex_():
+    with Model():
+        x0 = Binomial('Discrete', p=.5, n=10)
+        x1 = Normal('Continuous', mu=0., sd=1.)
+        x2 = GaussianRandomWalk('Timeseries', mu=x1, sd=1., shape=2)
+        x3 = MvStudentT('Multivariate', nu=5, mu=x2, Sigma=np.diag(np.ones(2)), shape=2)
+        x4 = NormalMixture('Mixture', w=np.array([.5, .5]), mu=x3, sd=x0)
+    assert x0._repr_latex_()=='$Discrete \\sim \\text{Binomial}(\\mathit{n}=10, \\mathit{p}=0.5)$'
+    assert x1._repr_latex_()=='$Continuous \\sim \\text{Normal}(\\mathit{mu}=0.0, \\mathit{sd}=1.0)$'
+    assert x2._repr_latex_()=='$Timeseries \\sim \\text{GaussianRandomWalk}(\\mathit{mu}=Continuous, \\mathit{sd}=1.0)$'
+    assert x3._repr_latex_()=='$Multivariate \\sim \\text{MvStudentT}(\\mathit{nu}=5, \\mathit{mu}=Timeseries, \\mathit{Sigma}=array)$'
+    assert x4._repr_latex_()=='$Mixture \\sim \\text{NormalMixture}(\\mathit{w}=array, \\mathit{mu}=Multivariate, \\mathit{sigma}=f(Discrete))$'

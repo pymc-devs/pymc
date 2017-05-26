@@ -1,6 +1,7 @@
 import numpy as np
 import theano.tensor as tt
 
+from pymc3.util import get_variable_name
 from ..math import logsumexp
 from .dist_math import bound
 from .distribution import Discrete, Distribution, draw_values, generate_samples
@@ -41,7 +42,7 @@ class Mixture(Distribution):
     def __init__(self, w, comp_dists, *args, **kwargs):
         shape = kwargs.pop('shape', ())
 
-        self.w = w
+        self.w = w = tt.as_tensor_variable(w)
         self.comp_dists = comp_dists
 
         defaults = kwargs.pop('defaults', [])
@@ -167,7 +168,8 @@ class NormalMixture(Mixture):
     def __init__(self, w, mu, *args, **kwargs):
         _, sd = get_tau_sd(tau=kwargs.pop('tau', None),
                            sd=kwargs.pop('sd', None))
-
+        self.mu = mu = tt.as_tensor_variable(mu)
+        self.sd = sd = tt.as_tensor_variable(sd)
         super(NormalMixture, self).__init__(w, Normal.dist(mu, sd=sd),
                                             *args, **kwargs)
 
@@ -176,8 +178,8 @@ class NormalMixture(Mixture):
             dist = self
         mu = dist.mu
         w = dist.w
-        sigma = dist.sigma
+        sd = dist.sd
         return r'${} \sim \text{{NormalMixture}}(\mathit{{w}}={}, \mathit{{mu}}={}, \mathit{{sigma}}={})$'.format(name,
                                                 get_variable_name(w),
                                                 get_variable_name(mu),
-                                                get_variable_name(sigma))
+                                                get_variable_name(sd))

@@ -16,6 +16,7 @@ import pymc3 as pm
 from pymc3.math import tround
 from pymc3.theanof import floatX
 from . import transforms
+from pymc3.util import get_variable_name
 from .distribution import Continuous, Discrete, draw_values, generate_samples
 from ..model import Deterministic
 from .continuous import ChiSquared, Normal
@@ -291,7 +292,7 @@ class MvStudentT(Continuous):
     def __init__(self, nu, Sigma, mu=None, *args, **kwargs):
         super(MvStudentT, self).__init__(*args, **kwargs)
         self.nu = nu = tt.as_tensor_variable(nu)
-        self.mu = tt.zeros(Sigma.shape[0]) if mu is None else tt.as_tensor_variable(mu)
+        mu = tt.zeros(Sigma.shape[0]) if mu is None else tt.as_tensor_variable(mu)
         self.Sigma = Sigma = tt.as_tensor_variable(Sigma)
         
         self.mean = self.median = self.mode = self.mu = mu
@@ -593,9 +594,9 @@ class Wishart(Continuous):
                       'on the issues surrounding the Wishart see here: '
                       'https://github.com/pymc-devs/pymc3/issues/538.',
                       UserWarning)
-        self.nu = nu
-        self.p = p = V.shape[0]
-        self.V = V
+        self.nu = nu = tt.as_tensor_variable(nu)
+        self.p = p = tt.as_tensor_variable(V.shape[0])
+        self.V = V = tt.as_tensor_variable(V)
         self.mean = nu * V
         self.mode = tt.switch(1 * (nu >= p + 1),
                               (nu - p - 1) * V,
@@ -695,7 +696,7 @@ def WishartBartlett(name, S, nu, is_cholesky=False, return_cholesky=False, testv
     c = tt.sqrt(ChiSquared('c', nu - np.arange(2, 2 + n_diag), shape=n_diag,
                            testval=diag_testval))
     pm._log.info('Added new variable c to model diagonal of Wishart.')
-    z = Normal('z', 0, 1, shape=n_tril, testval=tril_testval)
+    z = Normal('z', 0., 1., shape=n_tril, testval=tril_testval)
     pm._log.info('Added new variable z to model off-diagonals of Wishart.')
     # Construct A matrix
     A = tt.zeros(S.shape, dtype=np.float32)

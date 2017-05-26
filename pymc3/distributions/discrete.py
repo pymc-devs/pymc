@@ -4,6 +4,7 @@ import theano
 import theano.tensor as tt
 from scipy import stats
 
+from pymc3.util import get_variable_name
 from .dist_math import bound, factln, binomln, betaln, logpow
 from .distribution import Discrete, draw_values, generate_samples, reshape_sampled
 from pymc3.math import tround
@@ -205,8 +206,8 @@ class DiscreteWeibull(Discrete):
     def __init__(self, q, beta, *args, **kwargs):
         super(DiscreteWeibull, self).__init__(*args, defaults=['median'], **kwargs)
 
-        self.q = q
-        self.beta = beta
+        self.q = q = tt.as_tensor_variable(q)
+        self.beta = beta = tt.as_tensor_variable(beta)
 
         self.median = self._ppf(0.5)
 
