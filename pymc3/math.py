@@ -33,7 +33,7 @@ def logsumexp(x, axis=None):
 
 
 def invlogit(x, eps=sys.float_info.epsilon):
-    return (floatX(1) - floatX(2 * eps)) / (floatX(1) + tt.exp(-x)) + floatX(eps)
+    return (1. - 2. * eps) / (1. + tt.exp(-x)) + eps
 
 
 def logit(p):
@@ -82,11 +82,11 @@ logdet = LogDet()
 
 
 def probit(p):
-    return -sqrt(floatX(2)) * erfcinv(floatX(2) * p)
+    return -sqrt(2.) * erfcinv(2. * p)
 
 
 def invprobit(x):
-    return floatX(.5) * erfc(-x / sqrt(floatX(2)))
+    return .5 * erfc(-x / sqrt(2.))
 
 
 def expand_packed_triangular(n, packed, lower=True, diagonal_only=False):
