@@ -1,6 +1,6 @@
-from theano import theano, tensor as tt
+from theano import tensor as tt
 from .opvi import TestFunction
-
+from pymc3.theanof import floatX
 
 __all__ = [
     'rbf'
@@ -34,7 +34,7 @@ class RBF(Kernel):
                       # if odd vector
                       V[length // 2])
 
-        h = .5 * m / tt.log(tt.cast(H.shape[0] + 1., theano.config.floatX))
+        h = .5 * m / tt.log(floatX(H.shape[0]) + floatX(1))
 
         #  RBF
         Kxy = tt.exp(-H / h / 2.0)

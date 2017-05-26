@@ -14,7 +14,8 @@ from .special import gammaln
 from ..math import logdet as _logdet
 from pymc3.theanof import floatX
 
-c = - 0.5 * np.log(2 * np.pi)
+f = floatX
+c = - .5 * np.log(2. * np.pi)
 
 
 def bound(logp, *conditions, **kwargs):
@@ -81,34 +82,34 @@ def std_cdf(x):
     """
     Calculates the standard normal cumulative distribution function.
     """
-    return 0.5 + 0.5 * tt.erf(x / tt.sqrt(2.))
+    return .5 + .5 * tt.erf(x / tt.sqrt(2.))
 
 
 def i0(x):
     """
     Calculates the 0 order modified Bessel function of the first kind""
     """
-    return tt.switch(tt.lt(x, 5), 1 + x**2 / 4 + x**4 / 64 + x**6 / 2304 + x**8 / 147456
-                     + x**10 / 14745600 + x**12 / 2123366400,
-                     np.e**x / (2 * np.pi * x)**0.5 * (1 + 1 / (8 * x) + 9 / (128 * x**2) + 225 / (3072 * x**3)
-                                                       + 11025 / (98304 * x**4)))
+    return tt.switch(tt.lt(x, 5), 1. + x**2 / 4. + x**4 / 64. + x**6 / 2304. + x**8 / 147456.
+                     + x**10 / 14745600. + x**12 / 2123366400.,
+                     np.e**x / (2. * np.pi * x)**0.5 * (1. + 1. / (8. * x) + 9. / (128. * x**2) + 225. / (3072 * x**3)
+                                                       + 11025. / (98304. * x**4)))
 
 
 def i1(x):
     """
     Calculates the 1 order modified Bessel function of the first kind""
     """
-    return tt.switch(tt.lt(x, 5), x / 2 + x**3 / 16 + x**5 / 384 + x**7 / 18432 +
-                     x**9 / 1474560 + x**11 / 176947200 + x**13 / 29727129600,
-                     np.e**x / (2 * np.pi * x)**0.5 * (1 - 3 / (8 * x) + 15 / (128 * x**2) + 315 / (3072 * x**3)
-                                                       + 14175 / (98304 * x**4)))
+    return tt.switch(tt.lt(x, 5), x / 2. + x**3 / 16. + x**5 / 384. + x**7 / 18432. +
+                     x**9 / 1474560. + x**11 / 176947200. + x**13 / 29727129600.,
+                     np.e**x / (2. * np.pi * x)**0.5 * (1. - 3. / (8. * x) + 15. / (128. * x**2) + 315. / (3072. * x**3)
+                                                        + 14175. / (98304. * x**4)))
 
 
 def sd2rho(sd):
     """
     `sd -> rho` theano converter
     :math:`mu + sd*e = mu + log(1+exp(rho))*e`"""
-    return tt.log(tt.exp(sd) - 1)
+    return tt.log(tt.exp(sd) - 1.)
 
 
 def rho2sd(rho):
@@ -122,6 +123,7 @@ def log_normal(x, mean, **kwargs):
     """
     Calculate logarithm of normal distribution at point `x`
     with given `mean` and `std`
+
     Parameters
     ----------
     x : Tensor
@@ -129,6 +131,7 @@ def log_normal(x, mean, **kwargs):
     mean : Tensor
         mean of normal distribution
     kwargs : one of parameters `{sd, tau, w, rho}`
+
     Notes
     -----
     There are four variants for density parametrization.
@@ -143,7 +146,7 @@ def log_normal(x, mean, **kwargs):
     w = kwargs.get('w')
     rho = kwargs.get('rho')
     tau = kwargs.get('tau')
-    eps = kwargs.get('eps', 0.0)
+    eps = kwargs.get('eps', 0.)
     check = sum(map(lambda a: a is not None, [sd, w, rho, tau]))
     if check > 1:
         raise ValueError('more than one required kwarg is passed')
@@ -157,14 +160,15 @@ def log_normal(x, mean, **kwargs):
         std = rho2sd(rho)
     else:
         std = tau**(-1)
-    std += eps
-    return c - tt.log(tt.abs_(std)) - (x - mean) ** 2 / (2 * std ** 2)
+    std += f(eps)
+    return f(c) - tt.log(tt.abs_(std)) - (x - mean) ** 2 / (2. * std ** 2)
 
 
 def log_normal_mv(x, mean, gpu_compat=False, **kwargs):
     """
     Calculate logarithm of normal distribution at point `x`
     with given `mean` and `sigma` matrix
+
     Parameters
     ----------
     x : Tensor
@@ -173,8 +177,8 @@ def log_normal_mv(x, mean, gpu_compat=False, **kwargs):
         mean of normal distribution
     kwargs : one of parameters `{cov, tau, chol}`
 
-    Flags
-    ----------
+    Other Parameters
+    ----------------
     gpu_compat : False, because LogDet is not GPU compatible yet.
                  If this is set as true, the GPU compatible (but numerically unstable) log(det) is used.
 
@@ -212,10 +216,10 @@ def log_normal_mv(x, mean, gpu_compat=False, **kwargs):
         T = tt.nlinalg.matrix_inverse(S)
         log_det = -logdet(S)
     delta = x - mean
-    k = S.shape[0]
-    result = k * tt.log(2 * np.pi) - log_det
+    k = f(S.shape[0])
+    result = k * tt.log(2. * np.pi) - log_det
     result += delta.dot(T).dot(delta)
-    return -1 / 2. * result
+    return -.5 * result
 
 
 def MvNormalLogp():
@@ -240,7 +244,7 @@ def MvNormalLogp():
     cholesky = Cholesky(nofail=True, lower=True)
 
     n, k = delta.shape
-
+    n, k = f(n), f(k)
     chol_cov = cholesky(cov)
     diag = tt.nlinalg.diag(chol_cov)
     ok = tt.all(diag > 0)
@@ -248,17 +252,17 @@ def MvNormalLogp():
     chol_cov = tt.switch(ok, chol_cov, tt.fill(chol_cov, 1))
     delta_trans = solve_lower(chol_cov, delta.T).T
 
-    result = n * k * tt.log(2 * np.pi)
-    result += 2.0 * n * tt.sum(tt.log(diag))
-    result += (delta_trans ** 2).sum()
-    result = -0.5 * result
+    result = n * k * tt.log(f(2) * np.pi)
+    result += f(2) * n * tt.sum(tt.log(diag))
+    result += (delta_trans ** f(2)).sum()
+    result = f(-.5) * result
     logp = tt.switch(ok, result, -np.inf)
 
     def dlogp(inputs, gradients):
         g_logp, = gradients
         cov, delta = inputs
 
-        g_logp.tag.test_value = floatX(np.array(1.))
+        g_logp.tag.test_value = floatX(1.)
         n, k = delta.shape
 
         chol_cov = cholesky(cov)

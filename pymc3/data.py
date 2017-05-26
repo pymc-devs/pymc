@@ -61,7 +61,7 @@ class GeneratorAdapter(object):
     def __init__(self, generator):
         if not pm.vartypes.isgenerator(generator):
             raise TypeError('Object should be generator like')
-        self.test_value = copy(next(generator))
+        self.test_value = pm.smartfloatX(copy(next(generator)))
         # make pickling potentially possible
         self._yielded_test_value = False
         self.gen = generator
@@ -75,7 +75,7 @@ class GeneratorAdapter(object):
             self._yielded_test_value = True
             return self.test_value
         else:
-            return copy(next(self.gen))
+            return pm.smartfloatX(copy(next(self.gen)))
 
     # python2 generator
     next = __next__

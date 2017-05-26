@@ -581,7 +581,7 @@ class Approximation(object):
         # if not scale_cost_to_minibatch: t=1
         t = tt.switch(self.scale_cost_to_minibatch, t,
                       tt.constant(1, dtype=t.dtype))
-        return t
+        return pm.floatX(t)
 
     def _setup(self, **kwargs):
         pass

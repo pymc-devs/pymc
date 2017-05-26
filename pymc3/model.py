@@ -198,8 +198,8 @@ class Factor(object):
                 denom = self.logp_elemwiset.shape[0]
             else:
                 denom = 1
-            coef = tt.as_tensor(total_size) / denom
-        return coef
+            coef = pm.floatX(tt.as_tensor(total_size)) / pm.floatX(denom)
+        return pm.floatX(coef)
 
 
 class InitContextMeta(type):
@@ -840,19 +840,20 @@ class FreeRV(Factor, TensorVariable):
 def pandas_to_array(data):
     if hasattr(data, 'values'):  # pandas
         if data.isnull().any().any():  # missing values
-            return np.ma.MaskedArray(data.values, data.isnull().values)
+            ret = np.ma.MaskedArray(data.values, data.isnull().values)
         else:
-            return data.values
+            ret = data.values
     elif hasattr(data, 'mask'):
-        return data
+        ret = data
     elif isinstance(data, theano.gof.graph.Variable):
-        return data
+        ret = data
     elif sps.issparse(data):
-        return data
+        ret = data
     elif isgenerator(data):
-        return generator(data)
+        ret = generator(data)
     else:
-        return np.asarray(data)
+        ret = np.asarray(data)
+    return pm.smartfloatX(ret)
 
 
 def as_tensor(data, name, model, distribution):

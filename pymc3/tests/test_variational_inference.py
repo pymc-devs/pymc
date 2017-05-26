@@ -66,6 +66,7 @@ def _test_aevb(self):
 
 
 class TestApproximates:
+    @pytest.mark.usefixtures('strict_float32')
     class Base(SeededTest):
         inference = None
         NITER = 12000
@@ -202,7 +203,7 @@ class TestApproximates:
             def create_minibatch(data):
                 while True:
                     data = np.roll(data, 100, axis=0)
-                    yield data[:100]
+                    yield pm.floatX(data[:100])
 
             minibatches = create_minibatch(data)
             with Model():
