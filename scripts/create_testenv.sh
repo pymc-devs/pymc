@@ -46,6 +46,9 @@ fi
 
 pip install pytest pytest-cov nose-parameterized pylint
 
+# Install untested, non-required code (linter fails without them)
+pip install ipython ipywidgets numdifftools
+
 if [ -z ${NO_SETUP} ]; then
     python setup.py build_ext --inplace
 fi
