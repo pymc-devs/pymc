@@ -378,6 +378,18 @@ class SplineWrapper (theano.Op):
     def __init__(self, spline):
         self.spline = spline
 
+    @property
+    def grad_op(self):
+        if not hasattr(self, '_grad_op'):
+            try:
+                self._grad_op = SplineWrapper(self.spline.derivative())
+            except ValueError:
+                self._grad_op = None
+
+        if self._grad_op is None:
+            raise NotImplementedError('Spline of order 0 is not differentiable')
+        return self._grad_op
+
     def perform(self, node, inputs, output_storage):
         x, = inputs
         output_storage[0][0] = np.asarray(self.spline(x))
@@ -386,13 +398,4 @@ class SplineWrapper (theano.Op):
         x, = inputs
         x_grad, = grads
 
-        if not hasattr(self, 'grad_op'):
-            try:
-                self.grad_op = SplineWrapper(self.spline.derivative())
-            except ValueError:
-                self.grad_op = None
-
-        if self.grad_op is None:
-            raise NotImplementedError('Spline of order 0 is not differentiable')
-        else:
-            return [x_grad * self.grad_op(x)]
+        return [x_grad * self.grad_op(x)]
