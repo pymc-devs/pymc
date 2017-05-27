@@ -2,6 +2,7 @@ from __future__ import division
 
 import logging
 import warnings
+import collections
 import tqdm
 
 import numpy as np
@@ -191,6 +192,32 @@ class Inference(object):
         finally:
             progress.close()
         self.hist = np.concatenate([self.hist, scores])
+
+
+class Summary(object):
+    """
+    Helper class to record arbitrary stats during VI
+    
+    Parameters
+    ----------
+    whatchlist : dict
+        dict with mapping statname to callable that records the stat
+    """
+    def __init__(self, whatchdict):
+        self.whatchdict = whatchdict
+        self.hist = collections.defaultdict(list)
+
+    def record(self, approx, hist, i):
+        for key, fn in self.whatchdict.items():
+            self.hist[key].append(fn(approx, hist, i))
+
+    def clear(self):
+        self.hist = collections.defaultdict(list)
+
+    def __getitem__(self, item):
+        return self.hist[item]
+
+    __call__ = record
 
 
 class ADVI(Inference):
