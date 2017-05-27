@@ -334,10 +334,9 @@ class GeneratorOp(Op):
         if value is None:
             self.default = None
         else:
-            value = np.asarray(value)
-            t1 = (value.dtype, ((False,) * value.ndim))
-            t2 = (self.generator.tensortype.dtype,
-                  self.generator.tensortype.broadcastable)
+            value = np.asarray(value, self.generator.tensortype.dtype)
+            t1 = (False,) * value.ndim
+            t2 = self.generator.tensortype.broadcastable
             if not t1 == t2:
                 raise ValueError('Default value should have the '
                                  'same type as generator')
