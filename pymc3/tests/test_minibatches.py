@@ -16,17 +16,18 @@ from pymc3.theanof import GeneratorOp
 def integers():
     i = 0
     while True:
-        yield floatX(i)
+        yield pm.floatX(i)
         i += 1
 
 
 def integers_ndim(ndim):
     i = 0
     while True:
-        yield floatX(np.ones((2,) * ndim) * i)
+        yield np.ones((2,) * ndim) * i
         i += 1
 
 
+@pytest.mark.usefixtures('strict_float32')
 class TestGenerator(object):
     def test_basic(self):
         generator = GeneratorAdapter(integers())
@@ -239,6 +240,7 @@ class TestScaling(object):
                                      [1, 1]]))
 
 
+@pytest.mark.usefixtures('strict_float32')
 class TestMinibatch(object):
     data = np.random.rand(30, 10, 40, 10, 50)
 
