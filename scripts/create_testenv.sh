@@ -35,8 +35,16 @@ then
 fi
 
 pip install --upgrade pip
+
+#  Install editable using the setup.py
 pip install -e .
-pip install pytest pytest-cov nose-parameterized==0.6.0 pylint
+
+# Install extra testing stuff
+if [ ${PYTHON_VERSION} == "2.7" ]; then
+    pip install mock
+fi
+
+pip install pytest pytest-cov nose-parameterized pylint
 
 if [ -z ${NO_SETUP} ]; then
     python setup.py build_ext --inplace
