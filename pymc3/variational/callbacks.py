@@ -123,7 +123,14 @@ class Tracker(Callback):
         for key, fn in self.whatchdict.items():
             try:
                 res = fn()
-            except TypeError:
+            # if `*t` argument is used
+            # fail will be somehow detected.
+            # We want both calls to be tried.
+            # Upper one has more priority as
+            # arbitrary functions can have some
+            # defaults in positionals. Bad idea
+            # to try fn(approx, hist, i) first
+            except Exception:
                 res = fn(approx, hist, i)
             self.hist[key].append(res)
 
