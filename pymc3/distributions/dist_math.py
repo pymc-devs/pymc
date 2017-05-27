@@ -366,7 +366,7 @@ class Cholesky(theano.Op):
         return [tt.switch(ok, grad, floatX(np.nan))]
 
 
-class SplineWrapper (theano.Op):
+class SplineWrapper(theano.Op):
     """
     Creates a theano operation from scipy.interpolate.UnivariateSpline
     """

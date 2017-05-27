@@ -178,8 +178,7 @@ class TestMvNormalLogp():
         tt.grad(g_delta.sum() + g_cov.sum(), [delta, cov])
 
 
-class TestSplineWrapper:
-
+class TestSplineWrapper(object):
     def test_grad(self):
         x = np.linspace(0, 1, 100)
         y = x * x
