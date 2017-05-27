@@ -37,6 +37,7 @@ from .discrete import ConstantDist
 from .discrete import Constant
 from .discrete import ZeroInflatedPoisson
 from .discrete import ZeroInflatedNegativeBinomial
+from .discrete import ZeroInflatedBinomial
 from .discrete import DiscreteUniform
 from .discrete import Geometric
 from .discrete import Categorical
