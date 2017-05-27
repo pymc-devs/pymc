@@ -22,6 +22,7 @@ __all__ = [
     'SVGD',
     'ASVGD',
     'Inference',
+    'Summary',
     'fit'
 ]
 
@@ -197,19 +198,43 @@ class Inference(object):
 class Summary(object):
     """
     Helper class to record arbitrary stats during VI
-    
+
+    It is possible to pass a function that takes no arguments
+    If call fails then (approx, hist, i) are passed
+
+
     Parameters
     ----------
-    whatchlist : dict
-        dict with mapping statname to callable that records the stat
+    kwargs : key word arguments
+        keys mapping statname to callable that records the stat
+
+    Examples
+    --------
+    Consider we want time on each iteration    
+    >>> import time
+    >>> summary = Summary(time=time.time)
+    >>> with model:
+    ...     approx = pm.fit(callbacks=[summary])
+    Time can be accessed via :code:`summary['time']` now
+
+    For more complex summary one can use callable that takes
+    (approx, hist, i) as arguments
+    >>> with model:
+    ...     my_callable = lambda ap, h, i: h[-1]
+    ...     summary = Summary(some_stat=my_callable)
+    ...     approx = pm.fit(callbacks=[summary])
     """
-    def __init__(self, whatchdict):
-        self.whatchdict = whatchdict
+    def __init__(self, **kwargs):
+        self.whatchdict = kwargs
         self.hist = collections.defaultdict(list)
 
     def record(self, approx, hist, i):
         for key, fn in self.whatchdict.items():
-            self.hist[key].append(fn(approx, hist, i))
+            try:
+                res = fn()
+            except TypeError:
+                res = fn(approx, hist, i)
+            self.hist[key].append(res)
 
     def clear(self):
         self.hist = collections.defaultdict(list)
