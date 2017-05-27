@@ -174,6 +174,7 @@ class Minibatch(object):
         Used for training
     """
     def __init__(self, data, batch_size=128, in_memory_size=None, random_seed=42, update_shared_f=None):
+        data = pm.smartfloatX(np.asarray(data))
         self._random_seed = random_seed
         in_memory_slc = self._to_slices(in_memory_size)
         self.data = data
@@ -278,10 +279,18 @@ class Minibatch(object):
         return pm.theanof.ix_(*slc)
 
     def update_shared(self):
-        self.set_value(self.update_shared_f())
+        self.set_value(np.asarray(self.update_shared_f(), self.dtype))
 
     def set_value(self, value):
-        self.shared.set_value(value)
+        self.shared.set_value(np.asarray(value, self.dtype))
+
+    @property
+    def dtype(self):
+        return self.shared.dtype
+
+    @property
+    def type(self):
+        return self.shared.type
 
     def __repr__(self):
         return '<Minibatch of %s>' % self.batch_size
