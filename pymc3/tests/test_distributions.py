@@ -591,6 +591,10 @@ class TestMatchesScipy(SeededTest):
         self.checkd(ZeroInflatedNegativeBinomial, Nat,
                     {'mu': Rplusbig, 'alpha': Rplusbig, 'psi': Unit})
 
+    def test_zeroinflatedbinomial(self):
+        self.checkd(ZeroInflatedBinomial, Nat,
+                    {'n': NatSmall, 'p': Unit, 'psi': Unit})
+
     @pytest.mark.parametrize('n', [1, 2, 3])
     def test_mvnormal(self, n):
         self.pymc3_matches_scipy(MvNormal, RealMatrix(5, n),

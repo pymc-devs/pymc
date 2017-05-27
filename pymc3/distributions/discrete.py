@@ -11,7 +11,7 @@ from pymc3.math import tround
 
 __all__ = ['Binomial',  'BetaBinomial',  'Bernoulli',  'DiscreteWeibull',
            'Poisson', 'NegativeBinomial', 'ConstantDist', 'Constant',
-           'ZeroInflatedPoisson', 'ZeroInflatedNegativeBinomial',
+           'ZeroInflatedPoisson', 'ZeroInflatedBinomial', 'ZeroInflatedNegativeBinomial',
            'DiscreteUniform', 'Geometric', 'Categorical']
 
 
@@ -643,6 +643,67 @@ class ZeroInflatedPoisson(Discrete):
                                                 get_variable_name(theta),
                                                 get_variable_name(psi))
 
+
+class ZeroInflatedBinomial(Discrete):
+    R"""
+    Zero-inflated Binomial log-likelihood.
+
+    .. math::
+
+        f(x \mid n, p, \psi) = \left\{ \begin{array}{l}
+            (1-\psi) + \psi (1-p)^{n}, \text{if } x = 0 \\
+            \psi {n \choose x} p^x (1-p)^{n-x}, \text{if } x=1,2,3,\ldots,n
+            \end{array} \right.
+
+    ========  ==========================
+    Support   :math:`x \in \mathbb{N}_0`
+    Mean      :math:`(1 - \psi) n p`
+    Variance  :math:`(1-\psi) n p [1 - p(1 - \psi n)].`
+    ========  ==========================
+
+    Parameters
+    ----------
+    n : int
+        Number of Bernoulli trials (n >= 0).
+    p : float
+        Probability of success in each trial (0 < p < 1).
+    psi : float
+        Expected proportion of Poisson variates (0 < psi < 1)
+
+    """
+
+    def __init__(self, n, p, psi, *args, **kwargs):
+        super(ZeroInflatedBinomial, self).__init__(*args, **kwargs)
+        self.n = n = tt.as_tensor_variable(n)
+        self.p = p = tt.as_tensor_variable(p)
+        self.psi = psi = tt.as_tensor_variable(psi)
+        self.bin = Binomial.dist(n, p)
+        self.mode = self.bin.mode
+
+    def random(self, point=None, size=None, repeat=None):
+        n, p, psi = draw_values([self.n, self.p, self.psi], point=point)
+        g = generate_samples(stats.binomial.rvs, n, p,
+                             dist_shape=self.shape,
+                             size=size)
+        sampled = g * (np.random.random(np.squeeze(g.shape)) < psi)
+        return reshape_sampled(sampled, size, self.shape)
+
+    def logp(self, value):
+        return tt.switch(value > 0,
+                         tt.log(self.psi) + self.bin.logp(value),
+                         tt.log((1. - self.psi) + self.psi * tt.pow(1 - self.p, self.n))
+
+    def _repr_latex_(self, name=None, dist=None):
+        if dist is None:
+            dist = self
+        n = dist.n
+        p = dist.p
+        psi = dist.psi
+        return r'${} \sim \text{{ZeroInflatedBinomial}}(\mathit{{n}}={}, \mathit{{p}}={}, \mathit{{psi}}={})$'.format(name,
+                                                get_variable_name(n),
+                                                get_variable_name(p),
+                                                get_variable_name(psi))
+                                                
 
 class ZeroInflatedNegativeBinomial(Discrete):
     R"""
