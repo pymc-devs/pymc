@@ -691,7 +691,7 @@ class ZeroInflatedBinomial(Discrete):
     def logp(self, value):
         return tt.switch(value > 0,
                          tt.log(self.psi) + self.bin.logp(value),
-                         tt.log((1. - self.psi) + self.psi * tt.pow(1 - self.p, self.n))
+                         tt.log((1. - self.psi) + self.psi * tt.pow(1 - self.p, self.n)))
 
     def _repr_latex_(self, name=None, dist=None):
         if dist is None:
