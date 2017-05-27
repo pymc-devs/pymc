@@ -804,22 +804,22 @@ def _get_scaling(total_size, data):
             denom = 1
         coef = pm.floatX(total_size) / pm.floatX(denom)
     elif isinstance(total_size, (list, tuple)):
-        if not all(isinstance(i, int) for i in total_size if (i is not Ellipsis or i is not None)):
+        if not all(isinstance(i, int) for i in total_size if (i is not Ellipsis and i is not None)):
             raise TypeError('Unrecognized `total_size` type, expected '
-                            'int or list of ints')
+                            'int or list of ints, got %r' % total_size)
         shape = data.shape
         if Ellipsis in total_size:
             sep = total_size.index(Ellipsis)
             begin = total_size[:sep]
             end = total_size[sep+1:]
             if Ellipsis in end:
-                raise ValueError('Double Ellipsis in `total_size` is restricted')
+                raise ValueError('Double Ellipsis in `total_size` is restricted, got %r' % total_size)
         else:
             begin = total_size
             end = []
         if (len(begin) + len(end)) > data.ndim:
             raise ValueError('Length of `total_size` is too big, '
-                             'number of scalings is bigger that ndim')
+                             'number of scalings is bigger that ndim, got %r' % total_size)
         elif (len(begin) + len(end)) == 0:
             return pm.floatX(1)
         if len(end) > 0:
@@ -833,8 +833,8 @@ def _get_scaling(total_size, data):
         coef = tt.prod(coefs)
     else:
         raise TypeError('Unrecognized `total_size` type, expected '
-                        'int or list of ints')
-    return pm.floatX(coef)
+                        'int or list of ints, got %r' % total_size)
+    return tt.as_tensor(pm.floatX(coef))
 
 
 class FreeRV(Factor, TensorVariable):

@@ -181,7 +181,7 @@ class Minibatch(object):
         self.shared = theano.shared(data[in_memory_slc])
         self.in_memory_shape = self.shared.get_value().shape
         self.update_shared_f = update_shared_f
-        self.random_slc = self._to_random_slices(self.in_memory_shape, batch_size)
+        self.random_slc = self._to_random_slices(self.shared.shape, batch_size)
         self.minibatch = self.shared[self.random_slc]
         self.minibatch_shape = tuple(self.minibatch.shape.eval())
 
@@ -190,7 +190,7 @@ class Minibatch(object):
             return slice(None)
         elif isinstance(size, int):
             return (pm.tt_rng(seed)
-                    .uniform(size=(size, ), low=0.0, high=total - 1e-16)
+                    .uniform(size=(size, ), low=0.0, high=pm.floatX(total) - 1e-16)
                     .astype('int64'))
         else:
             raise TypeError('Unrecognized size type, %r' % size)
@@ -239,26 +239,31 @@ class Minibatch(object):
             if not all(check(t) for t in batch_size):
                 raise TypeError('Unrecognized `batch_size` type, expected '
                                 'int or List[tuple(size, random_seed)] where '
-                                'size and random seed are both ints')
+                                'size and random seed are both ints, got %r' %
+                                batch_size)
             shape = in_memory_shape
             if Ellipsis in batch_size:
                 sep = batch_size.index(Ellipsis)
                 begin = batch_size[:sep]
                 end = batch_size[sep + 1:]
                 if Ellipsis in end:
-                    raise ValueError('Double Ellipsis in `batch_size` is restricted')
+                    raise ValueError('Double Ellipsis in `batch_size` is restricted, got %r' %
+                                     batch_size)
                 if len(end) > 0:
                     shp_mid = shape[sep:-len(end)]
                     mid = [tt.arange(s) for s in shp_mid]
+                else:
+                    mid = []
             else:
                 begin = batch_size
                 end = []
                 mid = []
             if (len(begin) + len(end)) > len(in_memory_shape):
                 raise ValueError('Length of `batch_size` is too big, '
-                                 'number of ints is bigger that ndim')
+                                 'number of ints is bigger that ndim, got %r'
+                                 % batch_size)
             if len(end) > 0:
-                shp_end = shape[-len([end]):]
+                shp_end = shape[-len(end):]
             else:
                 shp_end = np.asarray([])
             shp_begin = shape[:len(begin)]
