@@ -4,13 +4,13 @@ import theano.tensor as tt
 import theano
 import theano.tests.unittest_tools as utt
 import pymc3 as pm
-from scipy import stats
+from scipy import stats, interpolate
 import pytest
 
 from ..theanof import floatX
 from ..distributions import Discrete
 from ..distributions.dist_math import (
-    bound, factln, alltrue_scalar, MvNormalLogp)
+    bound, factln, alltrue_scalar, MvNormalLogp, SplineWrapper)
 
 
 def test_bound():
@@ -176,3 +176,20 @@ class TestMvNormalLogp():
         logp = MvNormalLogp()(cov, delta)
         g_cov, g_delta = tt.grad(logp, [cov, delta])
         tt.grad(g_delta.sum() + g_cov.sum(), [delta, cov])
+
+
+class TestSplineWrapper(object):
+    def test_grad(self):
+        x = np.linspace(0, 1, 100)
+        y = x * x
+        spline = SplineWrapper(interpolate.InterpolatedUnivariateSpline(x, y, k=1))
+        utt.verify_grad(spline, [0.5])
+
+    def test_hessian(self):
+        x = np.linspace(0, 1, 100)
+        y = x * x
+        spline = SplineWrapper(interpolate.InterpolatedUnivariateSpline(x, y, k=1))
+        x_var = tt.dscalar('x')
+        g_x, = tt.grad(spline(x_var), [x_var])
+        with pytest.raises(NotImplementedError):
+            tt.grad(g_x, [x_var])
