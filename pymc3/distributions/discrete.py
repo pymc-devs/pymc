@@ -682,7 +682,7 @@ class ZeroInflatedBinomial(Discrete):
 
     def random(self, point=None, size=None, repeat=None):
         n, p, psi = draw_values([self.n, self.p, self.psi], point=point)
-        g = generate_samples(stats.binomial.rvs, n, p,
+        g = generate_samples(stats.binom.rvs, n, p,
                              dist_shape=self.shape,
                              size=size)
         sampled = g * (np.random.random(np.squeeze(g.shape)) < psi)
