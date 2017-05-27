@@ -179,11 +179,9 @@ class Minibatch(object):
         self.data = data
         self.batch_size = batch_size
         self.shared = theano.shared(data[in_memory_slc])
-        self.in_memory_shape = self.shared.get_value().shape
         self.update_shared_f = update_shared_f
         self.random_slc = self._to_random_slices(self.shared.shape, batch_size)
         self.minibatch = self.shared[self.random_slc]
-        self.minibatch_shape = tuple(self.minibatch.shape.eval())
 
     def rslice(self, total, size, seed):
         if size is None:
@@ -258,7 +256,7 @@ class Minibatch(object):
                 begin = batch_size
                 end = []
                 mid = []
-            if (len(begin) + len(end)) > len(in_memory_shape):
+            if (len(begin) + len(end)) > len(in_memory_shape.eval()):
                 raise ValueError('Length of `batch_size` is too big, '
                                  'number of ints is bigger that ndim, got %r'
                                  % batch_size)
@@ -279,11 +277,11 @@ class Minibatch(object):
             raise TypeError('Unrecognized size type, %r' % batch_size)
         return pm.theanof.ix_(*slc)
 
-    def refresh(self):
-        self.shared.set_value(self.update_shared_f(self.in_memory_shape))
+    def update_shared(self):
+        self.set_value(self.update_shared_f())
 
     def set_value(self, value):
         self.shared.set_value(value)
 
     def __repr__(self):
-        return '<Minibatch of %s from memory of shape %s>' % (self.batch_size, list(self.in_memory_shape))
+        return '<Minibatch of %s>' % self.batch_size

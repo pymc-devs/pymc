@@ -1,26 +1,9 @@
+import pytest
 from theano import theano, tensor as tt
-import scipy.stats as stats
-import numpy as np
+
 import pymc3 as pm
 from pymc3.distributions import HalfCauchy, Normal, transforms
 from pymc3 import Potential, Deterministic
-from pymc3.theanof import generator
-from .helpers import select_by_precision
-import pytest
-
-
-def gen1():
-    i = 0
-    while True:
-        yield np.ones((10, 100)) * i
-        i += 1
-
-
-def gen2():
-    i = 0
-    while True:
-        yield np.ones((20, 100)) * i
-        i += 1
 
 
 class NewModel(pm.Model):
@@ -141,121 +124,6 @@ class TestObserved(object):
             with pm.Model():
                 x = Normal('x')
                 Normal('n', observed=x)
-
-
-class TestScaling(object):
-    def test_density_scaling(self):
-        with pm.Model() as model1:
-            Normal('n', observed=[[1]], total_size=1)
-            p1 = theano.function([], model1.logpt)
-
-        with pm.Model() as model2:
-            Normal('n', observed=[[1]], total_size=2)
-            p2 = theano.function([], model2.logpt)
-        assert p1() * 2 == p2()
-
-    def test_density_scaling_with_genarator(self):
-        # We have different size generators
-
-        def true_dens():
-            g = gen1()
-            for i, point in enumerate(g):
-                yield stats.norm.logpdf(point).sum() * 10
-        t = true_dens()
-        # We have same size models
-        with pm.Model() as model1:
-            Normal('n', observed=gen1(), total_size=100)
-            p1 = theano.function([], model1.logpt)
-
-        with pm.Model() as model2:
-            gen_var = generator(gen2())
-            Normal('n', observed=gen_var, total_size=100)
-            p2 = theano.function([], model2.logpt)
-
-        for i in range(10):
-            _1, _2, _t = p1(), p2(), next(t)
-            decimals = select_by_precision(float64=7, float32=2)
-            np.testing.assert_almost_equal(_1, _t, decimal=decimals)  # Value O(-50,000)
-            np.testing.assert_almost_equal(_1, _2)
-        # Done
-
-    def test_gradient_with_scaling(self):
-        with pm.Model() as model1:
-            genvar = generator(gen1())
-            m = Normal('m')
-            Normal('n', observed=genvar, total_size=1000)
-            grad1 = theano.function([m], tt.grad(model1.logpt, m))
-        with pm.Model() as model2:
-            m = Normal('m')
-            shavar = theano.shared(np.ones((1000, 100)))
-            Normal('n', observed=shavar)
-            grad2 = theano.function([m], tt.grad(model2.logpt, m))
-
-        for i in range(10):
-            shavar.set_value(np.ones((100, 100)) * i)
-            g1 = grad1(1)
-            g2 = grad2(1)
-            np.testing.assert_almost_equal(g1, g2)
-
-    def test_multidim_scaling(self):
-        with pm.Model() as model0:
-            Normal('n', observed=[[1, 1],
-                                  [1, 1]], total_size=[])
-            p0 = theano.function([], model0.logpt)
-
-        with pm.Model() as model1:
-            Normal('n', observed=[[1, 1],
-                                  [1, 1]], total_size=[2, 2])
-            p1 = theano.function([], model1.logpt)
-
-        with pm.Model() as model2:
-            Normal('n', observed=[[1],
-                                  [1]], total_size=[2, 2])
-            p2 = theano.function([], model2.logpt)
-
-        with pm.Model() as model3:
-            Normal('n', observed=[[1, 1]], total_size=[2, 2])
-            p3 = theano.function([], model3.logpt)
-
-        with pm.Model() as model4:
-            Normal('n', observed=[[1]], total_size=[2, 2])
-            p4 = theano.function([], model4.logpt)
-
-        with pm.Model() as model5:
-            Normal('n', observed=[[1]], total_size=[2, Ellipsis, 2])
-            p5 = theano.function([], model5.logpt)
-        assert p0() == p1() == p2() == p3() == p4() == p5()
-
-    def test_common_errors(self):
-        with pm.Model():
-            with pytest.raises(ValueError) as e:
-                Normal('n', observed=[[1]], total_size=[2, Ellipsis, 2, 2])
-            assert 'Length of' in str(e.value)
-            with pytest.raises(ValueError) as e:
-                Normal('n', observed=[[1]], total_size=[2, 2, 2])
-            assert 'Length of' in str(e.value)
-            with pytest.raises(TypeError) as e:
-                Normal('n', observed=[[1]], total_size='foo')
-            assert 'Unrecognized' in str(e.value)
-            with pytest.raises(TypeError) as e:
-                Normal('n', observed=[[1]], total_size=['foo'])
-            assert 'Unrecognized' in str(e.value)
-            with pytest.raises(ValueError) as e:
-                Normal('n', observed=[[1]], total_size=[Ellipsis, Ellipsis])
-            assert 'Double Ellipsis' in str(e.value)
-
-    def test_free_rv(self):
-        with pm.Model() as model4:
-            Normal('n', observed=[[1, 1],
-                                  [1, 1]], total_size=[2, 2])
-            p4 = theano.function([], model4.logpt)
-
-        with pm.Model() as model5:
-            Normal('n', total_size=[2, Ellipsis, 2], shape=(1, 1), broadcastable=(False, False))
-            p5 = theano.function([model5.n], model5.logpt)
-        assert p4() == p5(pm.floatX([[1]]))
-        assert p4() == p5(pm.floatX([[1, 1],
-                                     [1, 1]]))
 
 
 class TestTheanoConfig(object):
