@@ -58,6 +58,11 @@ class EnsembleNDArray(NDArray):
                     new = np.zeros((draws, self.nparticles), dtype=dtype)
                     data[varname] = np.concatenate([old, new])
 
+    def multi_fn(self, point):
+        l = [self.fn({k: point[k][i] for k in self.varnames}) for i in range(self.nparticles)]
+        return map(np.asarray, zip(*l))
+
+
     def record(self, point, sampler_stats=None):
         """Record results of a sampling iteration.
 
@@ -66,7 +71,7 @@ class EnsembleNDArray(NDArray):
         point : dict
             Values mapped to variable names
         """
-        for varname, value in zip(self.varnames, self.fn(point)):
+        for varname, value in zip(self.varnames, self.multi_fn(point)):
             self.samples[varname][self.draw_idx] = value
 
         if self._stats is not None and sampler_stats is None:
@@ -244,7 +249,7 @@ class ExternalEnsembleStepShared(ArrayStepShared):
         blocked : Boolean (default True)
         """
         self.vars = vars
-        self.dimensions = max(v.dsize for v in vars)
+        self.dimensions = sum(v.dsize for v in vars)
         if nparticles is None:
             nparticles = self.dimensions * 2
         self.nparticles = nparticles
@@ -319,19 +324,22 @@ class AffineInvariantEnsemble(ExternalEnsembleStepShared):
         self.logp = logpostfn(model.logpt, vars, shared)
         self.emcee_kwargs = kwargs.pop('emcee_kwargs', {})
         super(AffineInvariantEnsemble, self).__init__(vars, shared, nparticles=nparticles)
-        self.sampler = None
-        self.sampler = emcee.EnsembleSampler(self.nparticles, self.dimensions, self.logp, **self.emcee_kwargs)
-        self.generator_state = (None, None, None)
-        self.generator = self.sampler.sample(iterations=LARGENUMBER, storechain=False)
+        self.sample_generator = None
 
+    def setup_step(self, point_array):
+        # very hacky way to make emcee keep going without `iterations` information
+        self.emcee_sampler = emcee.EnsembleSampler(self.nparticles, self.dimensions, self.logp, **self.emcee_kwargs)
+        self.sample_generator = self.emcee_sampler.sample(point_array, storechain=False, iterations=100000)
 
-    def astep(self, points):
+    def astep(self, point_array):
+        if self.sample_generator is None:
+            self.setup_step(point_array)
         try:
-            self.generator_state = next(self.generator)
+            q, lnprob, state = next(self.sample_generator)
         except StopIteration:
-            self.generator = self.sampler.sample(*self.generator_state, iterations=LARGENUMBER, storechain=False)
-            self.generator_state = next(self.generator)
-        return self.generator_state
+            self.sample_generator = None
+            return self.astep(point_array)
+        return q
 
 
 def get_random_starters(nparticles, model):
@@ -357,15 +365,22 @@ def sample(draws=500, step=AffineInvariantEnsemble, init='random', n_init=200000
     vars = pm.inputvars(vars)
 
     sampler = step(vars, nparticles, tune>0, tune, model, **kwargs)
+    nparticles = sampler.nparticles
     if trace is None:
-        trace = EnsembleNDArray('mcmc', model, vars, sampler.nparticles)
+        trace = EnsembleNDArray('mcmc', model, vars, nparticles)
     elif not isinstance(trace, EnsembleNDArray):
         raise TypeError("trace must be of type EnsembleNDArray")
 
-    start = build_start_point(sampler.nparticles, init, model)
+    start = build_start_point(nparticles, init, model)
     trace = pm.sample(draws, sampler, init, n_init, start, trace, 0, 1, tune, None, None, progressbar, model,
                       random_seed, live_plot, discard_tuned_samples, **kwargs)
-    traces = [[trace[v][:, i, :] for v in trace] for i in range(nparticles)]
-    for i, tr in enumerate(traces):
-        tr.chain = i
-    return MultiTrace([traces])
+
+    traces = []
+    for i in range(nparticles):
+        tr = NDArray('mcmc', model, vars)
+        tr.setup(len(trace), i)
+        for varname in trace.varnames:
+            tr.samples[varname] = trace[varname][:, i]
+            tr.draw_idx = len(trace)
+        traces.append(tr)
+    return MultiTrace(traces)
