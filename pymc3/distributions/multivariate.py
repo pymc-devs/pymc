@@ -105,7 +105,7 @@ class MvNormal(Continuous):
             raise ValueError('Incompatible parameterization. '
                              'Specify exactly one of tau, cov, '
                              'or chol.')
-        mu = tt.as_tensor_variable(mu)
+        mu = floatX(mu)
         self.mean = self.median = self.mode = self.mu = mu
         self.solve_lower = tt.slinalg.Solve(A_structure="lower_triangular")
         # Step methods and advi do not catch LinAlgErrors at the
@@ -117,7 +117,7 @@ class MvNormal(Continuous):
         if cov is not None:
             self.k = cov.shape[0]
             self._cov_type = 'cov'
-            cov = tt.as_tensor_variable(cov)
+            cov = floatX(cov)
             if cov.ndim != 2:
                 raise ValueError('cov must be two dimensional.')
             self.chol_cov = cholesky(cov)
@@ -125,7 +125,7 @@ class MvNormal(Continuous):
         elif tau is not None:
             self.k = tau.shape[0]
             self._cov_type = 'tau'
-            tau = tt.as_tensor_variable(tau)
+            tau = floatX(tau)
             if tau.ndim != 2:
                 raise ValueError('tau must be two dimensional.')
             self.chol_tau = cholesky(tau)
@@ -135,7 +135,7 @@ class MvNormal(Continuous):
             self._cov_type = 'chol'
             if chol.ndim != 2:
                 raise ValueError('chol must be two dimensional.')
-            self.chol_cov = tt.as_tensor_variable(chol)
+            self.chol_cov = floatX(chol)
     
     def random(self, point=None, size=None):
         if size is None:
@@ -247,7 +247,7 @@ class MvNormal(Continuous):
         mu = dist.mu
         try:
             cov = dist.cov
-        except AttributeErrir:
+        except AttributeError:
             cov = dist.chol_cov
         return r'${} \sim \text{{MvNormal}}(\mathit{{mu}}={}, \mathit{{cov}}={})$'.format(name,
                                                 get_variable_name(mu),
@@ -291,9 +291,9 @@ class MvStudentT(Continuous):
     
     def __init__(self, nu, Sigma, mu=None, *args, **kwargs):
         super(MvStudentT, self).__init__(*args, **kwargs)
-        self.nu = nu = tt.as_tensor_variable(nu)
-        mu = tt.zeros(Sigma.shape[0]) if mu is None else tt.as_tensor_variable(mu)
-        self.Sigma = Sigma = tt.as_tensor_variable(Sigma)
+        self.nu = nu = floatX(nu)
+        mu = tt.zeros(Sigma.shape[0]) if mu is None else floatX(mu)
+        self.Sigma = Sigma = floatX(Sigma)
         
         self.mean = self.median = self.mode = self.mu = mu
     
@@ -372,8 +372,8 @@ class Dirichlet(Continuous):
         kwargs.setdefault("shape", shape)
         super(Dirichlet, self).__init__(transform=transform, *args, **kwargs)
         
-        self.k = tt.as_tensor_variable(shape)
-        self.a = a = tt.as_tensor_variable(a)
+        self.k = floatX(shape)
+        self.a = a = floatX(a)
         self.mean = a / tt.sum(a)
         
         self.mode = tt.switch(tt.all(a > 1),
@@ -457,8 +457,8 @@ class Multinomial(Discrete):
             self.n = tt.shape_padright(n)
             self.p = p if p.ndim == 2 else tt.shape_padleft(p)
         else:
-            self.n = tt.as_tensor_variable(n)
-            self.p = tt.as_tensor_variable(p)
+            self.n = floatX(n)
+            self.p = floatX(p)
         
         self.mean = self.n * self.p
         self.mode = tt.cast(tround(self.mean), 'int32')
@@ -594,9 +594,9 @@ class Wishart(Continuous):
                       'on the issues surrounding the Wishart see here: '
                       'https://github.com/pymc-devs/pymc3/issues/538.',
                       UserWarning)
-        self.nu = nu = tt.as_tensor_variable(nu)
-        self.p = p = tt.as_tensor_variable(V.shape[0])
-        self.V = V = tt.as_tensor_variable(V)
+        self.nu = nu = floatX(nu)
+        self.p = p = floatX(V.shape[0])
+        self.V = V = floatX(V)
         self.mean = nu * V
         self.mode = tt.switch(1 * (nu >= p + 1),
                               (nu - p - 1) * V,
