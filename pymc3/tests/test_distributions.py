@@ -585,15 +585,15 @@ class TestMatchesScipy(SeededTest):
                                  lambda value, c: np.log(c == value))
 
     def test_zeroinflatedpoisson(self):
-        self.checkd(ZeroInflatedPoisson, Nat, {'theta': Rplus, 'psi': Unit})
+        self.checkd(ZeroInflatedPoisson, Nat, {'psi': Unit, 'theta': Rplus})
 
     def test_zeroinflatednegativebinomial(self):
         self.checkd(ZeroInflatedNegativeBinomial, Nat,
-                    {'mu': Rplusbig, 'alpha': Rplusbig, 'psi': Unit})
+                    {'psi': Unit, 'mu': Rplusbig, 'alpha': Rplusbig})
 
     def test_zeroinflatedbinomial(self):
         self.checkd(ZeroInflatedBinomial, Nat,
-                    {'n': NatSmall, 'p': Unit, 'psi': Unit})
+                    {'psi': Unit, 'n': NatSmall, 'p': Unit})
 
     @pytest.mark.parametrize('n', [1, 2, 3])
     def test_mvnormal(self, n):
