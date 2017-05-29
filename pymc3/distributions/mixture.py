@@ -145,6 +145,8 @@ class Mixture(Distribution):
 class ZeroInflatedPoisson(Mixture):
     R"""
     Zero-inflated Poisson log-likelihood.
+    
+    Two-component mixture of zeros and Poisson-distributed data.
 
     Often used to model the number of events occurring in a fixed period
     of time when the times at which events occur are independent.
@@ -192,6 +194,8 @@ class ZeroInflatedPoisson(Mixture):
 class ZeroInflatedBinomial(Mixture):
     R"""
     Zero-inflated Binomial log-likelihood.
+    
+    Two-component mixture of zeros and binomial-distributed data.
 
     .. math::
 
@@ -239,6 +243,8 @@ class ZeroInflatedBinomial(Mixture):
 class ZeroInflatedNegativeBinomial(Mixture):
     R"""
     Zero-Inflated Negative binomial log-likelihood.
+    
+    Two-component mixture of zeros and negative binomial-distributed data.
 
     The Zero-inflated version of the Negative Binomial (NB).
     The NB distribution describes a Poisson random variable
