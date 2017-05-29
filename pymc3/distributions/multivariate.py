@@ -14,7 +14,7 @@ from theano.tensor.nlinalg import det, matrix_inverse, trace
 import pymc3 as pm
 
 from pymc3.math import tround
-from pymc3.theanof import floatX
+from pymc3.theanof import floatX, intX
 from . import transforms
 from pymc3.util import get_variable_name
 from .distribution import Continuous, Discrete, draw_values, generate_samples
@@ -105,8 +105,7 @@ class MvNormal(Continuous):
             raise ValueError('Incompatible parameterization. '
                              'Specify exactly one of tau, cov, '
                              'or chol.')
-        mu = floatX(mu)
-        self.mean = self.median = self.mode = self.mu = mu
+        self.mean = self.median = self.mode = self.mu = floatX(mu)
         self.solve_lower = tt.slinalg.Solve(A_structure="lower_triangular")
         # Step methods and advi do not catch LinAlgErrors at the
         # moment. We work around that by using a cholesky op
@@ -291,9 +290,9 @@ class MvStudentT(Continuous):
     
     def __init__(self, nu, Sigma, mu=None, *args, **kwargs):
         super(MvStudentT, self).__init__(*args, **kwargs)
-        self.nu = nu = floatX(nu)
+        self.nu = floatX(nu)
         mu = tt.zeros(Sigma.shape[0]) if mu is None else floatX(mu)
-        self.Sigma = Sigma = floatX(Sigma)
+        self.Sigma = floatX(Sigma)
         
         self.mean = self.median = self.mode = self.mu = mu
     
@@ -373,11 +372,11 @@ class Dirichlet(Continuous):
         super(Dirichlet, self).__init__(transform=transform, *args, **kwargs)
         
         self.k = floatX(shape)
-        self.a = a = floatX(a)
+        self.a = floatX(a)
         self.mean = a / tt.sum(a)
         
-        self.mode = tt.switch(tt.all(a > 1),
-                              (a - 1) / tt.sum(a - 1),
+        self.mode = tt.switch(tt.all(self.a > 1),
+                              (a - 1) / tt.sum(self.a - 1),
                               np.nan)
     
     def random(self, point=None, size=None):
@@ -457,7 +456,7 @@ class Multinomial(Discrete):
             self.n = tt.shape_padright(n)
             self.p = p if p.ndim == 2 else tt.shape_padleft(p)
         else:
-            self.n = floatX(n)
+            self.n = intX(n)
             self.p = floatX(p)
         
         self.mean = self.n * self.p
@@ -594,12 +593,12 @@ class Wishart(Continuous):
                       'on the issues surrounding the Wishart see here: '
                       'https://github.com/pymc-devs/pymc3/issues/538.',
                       UserWarning)
-        self.nu = nu = floatX(nu)
-        self.p = p = floatX(V.shape[0])
-        self.V = V = floatX(V)
+        self.nu = intX(nu)
+        self.p = floatX(V.shape[0])
+        self.V = floatX(V)
         self.mean = nu * V
-        self.mode = tt.switch(1 * (nu >= p + 1),
-                              (nu - p - 1) * V,
+        self.mode = tt.switch(1 * (self.nu >= self.p + 1),
+                              (self.nu - self.p - 1) * self.V,
                               np.nan)
     
     def logp(self, X):
@@ -840,7 +839,7 @@ class LKJCholeskyCov(Continuous):
        http://math.stackexchange.com/q/130026
     """
     def __init__(self, eta, n, sd_dist, *args, **kwargs):
-        self.n = n
+        self.n = intX(n)
         self.eta = eta
         
         if 'transform' in kwargs:
@@ -943,13 +942,13 @@ class LKJCorr(Continuous):
                           'dimension parameter p -> n. Please update your code. '
                           'Automatically re-assigning parameters for backwards compatibility.',
                           DeprecationWarning)
-            self.n = p
-            self.eta = n
+            self.n = floatX(p)
+            self.eta = intX(n)
             eta = self.eta
             n = self.n
         elif (n is not None) and (eta is not None) and (p is None):
-            self.n = n
-            self.eta = eta
+            self.n = intX(n)
+            self.eta = floatX(eta)
         else:
             raise ValueError('Invalid parameter: please use eta as the shape parameter and '
                              'n as the dimension parameter.')

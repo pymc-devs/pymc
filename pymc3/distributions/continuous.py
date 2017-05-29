@@ -13,7 +13,7 @@ from scipy import stats
 from scipy.interpolate import InterpolatedUnivariateSpline
 import warnings
 
-from pymc3.theanof import floatX
+from pymc3.theanof import floatX, intX
 from . import transforms
 from pymc3.util import get_variable_name
 
@@ -136,9 +136,9 @@ class Uniform(Continuous):
             transform = transforms.interval(lower, upper)
         super(Uniform, self).__init__(transform=transform, *args, **kwargs)
 
-        self.lower = lower = floatX(lower)
-        self.upper = upper = floatX(upper)
-        self.mean = (upper + lower) / 2.
+        self.lower = floatX(lower)
+        self.upper = floatX(upper)
+        self.mean = (self.upper + self.lower) / 2.
         self.median = self.mean
 
 
@@ -227,7 +227,7 @@ class Normal(Continuous):
         self.sd = floatX(sd)
         self.tau = floatX(tau)
 
-        self.mean = self.median = self.mode = self.mu = mu = floatX(mu)
+        self.mean = self.median = self.mode = self.mu = floatX(mu)
         self.variance = 1. / self.tau
 
         assert_negative_support(sd, 'sd', 'Normal')
@@ -288,14 +288,14 @@ class HalfNormal(PositiveContinuous):
         super(HalfNormal, self).__init__(*args, **kwargs)
         tau, sd = get_tau_sd(tau=tau, sd=sd)
 
-        self.sd = sd = floatX(sd)
-        self.tau = tau = floatX(tau)
+        self.sd = floatX(sd)
+        self.tau = floatX(tau)
 
         self.mean = tt.sqrt(2 / (np.pi * self.tau))
         self.variance = (1. - 2 / np.pi) / self.tau
 
-        assert_negative_support(tau, 'tau', 'HalfNormal')
-        assert_negative_support(sd, 'sd', 'HalfNormal')
+        assert_negative_support(self.tau, 'tau', 'HalfNormal')
+        assert_negative_support(self.sd, 'sd', 'HalfNormal')
 
     def random(self, point=None, size=None, repeat=None):
         sd = draw_values([self.sd], point=point)
@@ -376,19 +376,19 @@ class Wald(PositiveContinuous):
     def __init__(self, mu=None, lam=None, phi=None, alpha=0., *args, **kwargs):
         super(Wald, self).__init__(*args, **kwargs)
         mu, lam, phi = self.get_mu_lam_phi(mu, lam, phi)
-        self.alpha = alpha = floatX(alpha)
-        self.mu = mu = floatX(mu)
-        self.lam = lam = floatX(lam)
-        self.phi = phi = floatX(phi)
+        self.alpha = floatX(alpha)
+        self.mu = floatX(mu)
+        self.lam = floatX(lam)
+        self.phi = floatX(phi)
 
         self.mean = self.mu + self.alpha
         self.mode = self.mu * (tt.sqrt(1. + (1.5 * self.mu / self.lam)**2)
                                - 1.5 * self.mu / self.lam) + self.alpha
         self.variance = (self.mu**3) / self.lam
 
-        assert_negative_support(phi, 'phi', 'Wald')
-        assert_negative_support(mu, 'mu', 'Wald')
-        assert_negative_support(lam, 'lam', 'Wald')
+        assert_negative_support(self.phi, 'phi', 'Wald')
+        assert_negative_support(self.mu, 'mu', 'Wald')
+        assert_negative_support(self.lam, 'lam', 'Wald')
 
     def get_mu_lam_phi(self, mu, lam, phi):
         if mu is None:
@@ -497,15 +497,15 @@ class Beta(UnitContinuous):
         super(Beta, self).__init__(*args, **kwargs)
 
         alpha, beta = self.get_alpha_beta(alpha, beta, mu, sd)
-        self.alpha = alpha = floatX(alpha)
-        self.beta = beta = floatX(beta)
+        self.alpha = floatX(alpha)
+        self.beta = floatX(beta)
 
         self.mean = self.alpha / (self.alpha + self.beta)
         self.variance = self.alpha * self.beta / (
             (self.alpha + self.beta)**2 * (self.alpha + self.beta + 1))
 
-        assert_negative_support(alpha, 'alpha', 'Beta')
-        assert_negative_support(beta, 'beta', 'Beta')
+        assert_negative_support(self.alpha, 'alpha', 'Beta')
+        assert_negative_support(self.beta, 'beta', 'Beta')
 
     def get_alpha_beta(self, alpha=None, beta=None, mu=None, sd=None):
         if (alpha is not None) and (beta is not None):
@@ -568,14 +568,14 @@ class Exponential(PositiveContinuous):
 
     def __init__(self, lam, *args, **kwargs):
         super(Exponential, self).__init__(*args, **kwargs)
-        self.lam = lam = floatX(lam)
+        self.lam = floatX(lam)
         self.mean = 1. / self.lam
         self.median = self.mean * tt.log(2)
         self.mode = tt.zeros_like(self.lam)
 
         self.variance = self.lam**-2
 
-        assert_negative_support(lam, 'lam', 'Exponential')
+        assert_negative_support(self.lam, 'lam', 'Exponential')
 
     def random(self, point=None, size=None, repeat=None):
         lam = draw_values([self.lam], point=point)
