@@ -602,7 +602,8 @@ def init_nuts(init='ADVI', njobs=1, n_init=500000, model=None,
             obj_optimizer=pm.adagrad_window
         )
         start = approx.sample(draws=njobs)
-        cov = approx.cov.eval()
+        stds = approx.gbij.rmap(approx.std.eval())
+        cov = model.dict_to_array(stds) ** 2
         if njobs == 1:
             start = start[0]
     elif init == 'map':
