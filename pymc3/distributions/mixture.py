@@ -174,10 +174,10 @@ class ZeroInflatedPoisson(Mixture):
 
 
     """
-
+    
     def __init__(self, psi, theta, *args, **kwargs):
         self.theta = theta = tt.as_tensor_variable(theta)
-        super(ZeroInflatedPoisson, self).__init__(psi, 
+        super(ZeroInflatedPoisson, self).__init__([psi, 1-psi], 
                         (Constant.dist(0), Poisson.dist(theta)),
                         *args, **kwargs)
                         
@@ -224,7 +224,7 @@ class ZeroInflatedBinomial(Mixture):
     def __init__(self, psi, n, p, *args, **kwargs):
         self.n = n = tt.as_tensor_variable(n)
         self.p = p = tt.as_tensor_variable(p)
-        super(ZeroInflatedBinomial, self).__init__(psi, 
+        super(ZeroInflatedBinomial, self).__init__([psi, 1-psi], 
                         (Constant.dist(0), Binomial.dist(n, p)),
                         *args, **kwargs)
 
@@ -276,7 +276,7 @@ class ZeroInflatedNegativeBinomial(Mixture):
     def __init__(self, psi, mu, alpha, *args, **kwargs):
         self.mu = mu = tt.as_tensor_variable(mu)
         self.alpha = alpha = tt.as_tensor_variable(alpha)
-        super(ZeroInflatedNegativeBinomial, self).__init__(psi, 
+        super(ZeroInflatedNegativeBinomial, self).__init__([psi, 1-psi], 
                         (Constant.dist(0), NegativeBinomial.dist(mu, alpha)),
                         *args, **kwargs)
 
