@@ -103,7 +103,7 @@ def assign_step_methods(model, step=None, methods=STEP_METHODS,
 def sample(draws=500, step=None, init='auto', n_init=200000, start=None,
            trace=None, chain=0, njobs=1, tune=500, nuts_kwargs=None,
            step_kwargs=None, progressbar=True, model=None, random_seed=-1,
-           live_plot=False, discard_tuned_samples=True, **kwargs):
+           live_plot=False, discard_tuned_samples=True, live_plot_kwargs=None):
     """Draw samples from the posterior using the given step methods.
 
     Multiple step methods are supported via compound step methods.
@@ -185,6 +185,8 @@ def sample(draws=500, step=None, init='auto', n_init=200000, start=None,
         A list is accepted if more if `njobs` is greater than one.
     live_plot : bool
         Flag for live plotting the trace while sampling
+    live_plot_kwargs : dict
+        Options for traceplot. Example: live_plot_kwargs={'varnames': ['x']}
     discard_tuned_samples : bool
         Whether to discard posterior samples of the tune interval.
 
@@ -254,9 +256,8 @@ def sample(draws=500, step=None, init='auto', n_init=200000, start=None,
                    'model': model,
                    'random_seed': random_seed,
                    'live_plot': live_plot,
+                   'live_plot_kwargs': live_plot_kwargs,
                    }
-
-    sample_args.update(kwargs)
 
     if njobs > 1:
         sample_func = _mp_sample
@@ -271,7 +272,7 @@ def sample(draws=500, step=None, init='auto', n_init=200000, start=None,
 
 def _sample(draws, step=None, start=None, trace=None, chain=0, tune=None,
             progressbar=True, model=None, random_seed=-1, live_plot=False,
-            **kwargs):
+            live_plot_kwargs=None):
     skip_first = kwargs.get('skip_first', 0)
     refresh_every = kwargs.get('refresh_every', 100)
 
@@ -283,12 +284,14 @@ def _sample(draws, step=None, start=None, trace=None, chain=0, tune=None,
         strace = None
         for it, strace in enumerate(sampling):
             if live_plot:
+                if live_plot_kwargs is None:
+                    live_plot_kwargs = {}
                 if it >= skip_first:
                     trace = MultiTrace([strace])
                     if it == skip_first:
-                        ax = traceplot(trace, live_plot=False, **kwargs)
+                        ax = traceplot(trace, live_plot=False, **live_plot_kwargs)
                     elif (it - skip_first) % refresh_every == 0 or it == draws - 1:
-                        traceplot(trace, ax=ax, live_plot=True, **kwargs)
+                        traceplot(trace, ax=ax, live_plot=True, **live_plot_kwargs)
     except KeyboardInterrupt:
         pass
     finally:
