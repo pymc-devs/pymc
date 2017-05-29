@@ -69,6 +69,23 @@ def floatX(X):
         return np.asarray(X, dtype=theano.config.floatX)
 
 
+def intX(X):
+    """
+    Convert a theano tensor or numpy array to int16 or int64
+    depending on theano.config.floatX type.
+    """
+    if theano.config.floatX == 'float32':
+        inttype = 'int16'
+    elif theano.config.floatX == 'float64':
+        inttype = 'int64'
+
+    try:
+        return X.astype(inttype)
+    except AttributeError:
+        # Scalar passed
+        return np.asarray(X, dtype=inttype)
+
+
 def smartfloatX(x):
     """
     Convert non int types to floatX 
