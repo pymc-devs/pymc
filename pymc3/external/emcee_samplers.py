@@ -356,18 +356,21 @@ def build_start_points(nparticles, method='random', model=None, **kwargs):
         return {v: start.get_values(v) for v in start.varnames}
 
 
-def sample(draws=500, step=AffineInvariantEnsemble, init='random', n_init=200000, start=None,
-           trace=None, nparticles=None, tune=500,
-           step_kwargs=None, progressbar=True, model=None, random_seed=-1,
+def sample(draws=500, step='affine_invariant', init='random', n_init=200000, start=None,
+           trace=None, nparticles=None, tune=500, progressbar=True, model=None, random_seed=-1,
            live_plot=False, discard_tuned_samples=True, **kwargs):
 
     if start is None:
         start = {}
 
     model = pm.modelcontext(model)
+    vars = pm.inputvars(model.vars)
 
-    vars = model.vars
-    vars = pm.inputvars(vars)
+    if step == 'affine_invariant':
+        step = AffineInvariantEnsemble
+    elif not isinstance(step, ExternalEnsembleStepShared):
+        raise ValueError("Unknown step {}".format(step))
+
 
     sampler = step(vars, nparticles, tune>0, tune, model, **kwargs)
     nparticles = sampler.nparticles
