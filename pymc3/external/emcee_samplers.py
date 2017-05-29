@@ -1,9 +1,11 @@
 import collections
 import pymc3 as pm
 import theano
+
 from pymc3.backends import NDArray, base
 from pymc3.backends.base import MultiTrace
 from pymc3.blocking import Compose, VarMap
+from pymc3.sampling import _update_start_vals
 
 from pymc3.step_methods.arraystep import ArrayStepShared
 from theano.gradient import np
@@ -346,7 +348,7 @@ def get_random_starters(nparticles, model):
     return {v.name: np.asarray([v.distribution.random() for i in range(nparticles)]) for v in model.vars}
 
 
-def build_start_point(nparticles, method='random', model=None, **kwargs):
+def build_start_points(nparticles, method='random', model=None, **kwargs):
     if method == 'random':
         return get_random_starters(nparticles, model)
     else:
@@ -358,6 +360,9 @@ def sample(draws=500, step=AffineInvariantEnsemble, init='random', n_init=200000
            trace=None, nparticles=None, tune=500,
            step_kwargs=None, progressbar=True, model=None, random_seed=-1,
            live_plot=False, discard_tuned_samples=True, **kwargs):
+
+    if start is None:
+        start = {}
 
     model = pm.modelcontext(model)
 
@@ -371,7 +376,8 @@ def sample(draws=500, step=AffineInvariantEnsemble, init='random', n_init=200000
     elif not isinstance(trace, EnsembleNDArray):
         raise TypeError("trace must be of type EnsembleNDArray")
 
-    start = build_start_point(nparticles, init, model)
+    _start = build_start_points(nparticles, init, model)
+    _update_start_vals(start, _start, model)
     trace = pm.sample(draws, sampler, init, n_init, start, trace, 0, 1, tune, None, None, progressbar, model,
                       random_seed, live_plot, discard_tuned_samples, **kwargs)
 
