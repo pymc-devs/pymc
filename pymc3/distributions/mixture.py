@@ -35,7 +35,7 @@ class Mixture(Distribution):
     ----------
     w : array of floats
         w >= 0 and w <= 1
-        the mixutre weights
+        the mixture weights
     comp_dists : multidimensional PyMC3 distribution or iterable of one-dimensional PyMC3 distributions
         the component distributions :math:`f_1, \ldots, f_n`
     """
@@ -157,7 +157,7 @@ class NormalMixture(Mixture):
     ----------
     w : array of floats
         w >= 0 and w <= 1
-        the mixutre weights
+        the mixture weights
     mu : array of floats
         the component means
     sd : array of floats
