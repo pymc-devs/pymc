@@ -1,5 +1,4 @@
 from ..arraystep import ArrayStepShared
-from ...blocking import DictToArrayBijection, ArrayOrdering
 from .trajectory import get_theano_hamiltonian_functions
 
 from pymc3.tuning import guess_scaling
@@ -43,8 +42,7 @@ class BaseHMC(ArrayStepShared):
         vars = inputvars(vars)
 
         if scaling is None and potential is None:
-            bij = DictToArrayBijection(ArrayOrdering(vars), model.test_point)
-            scaling = np.ones(bij.map(model.test_point).size)
+            scaling = np.ones(model.dict_to_array(model.test_point).size)
 
         if isinstance(scaling, dict):
             scaling = guess_scaling(Point(scaling, model=model), model=model, vars=vars)
