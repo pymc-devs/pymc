@@ -70,6 +70,9 @@ class TransformedDistribution(distribution.Distribution):
             # force the last dim not broadcastable
             self.type = tt.TensorType(v.dtype, b)
 
+    def random(self, point=None, size=None, repeat=None):
+        return self.transform_used.forward(self.dist.random(point, size, repeat)).eval()
+
     def _repr_latex_(self, name=None, dist=None):
         if name is None:
             name = self.name
