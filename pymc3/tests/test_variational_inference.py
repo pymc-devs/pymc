@@ -7,11 +7,10 @@ import pymc3 as pm
 from pymc3 import Model, Normal
 from pymc3.variational import (
     ADVI, FullRankADVI, SVGD,
-    Empirical,
-    fit
+    Empirical, ASVGD,
+    MeanField, fit
 )
 from pymc3.variational.operators import KL
-from pymc3.variational.approximations import MeanField
 
 from pymc3.tests import models
 from pymc3.tests.helpers import SeededTest
@@ -67,10 +66,19 @@ def _test_aevb(self):
 
 
 class TestApproximates:
+    @pytest.mark.usefixtures('strict_float32')
     class Base(SeededTest):
         inference = None
         NITER = 12000
-        optimizer = functools.partial(pm.adam, learning_rate=.01)
+        optimizer = pm.adagrad_window(learning_rate=0.01)
+        conv_cb = property(lambda self: [
+            pm.callbacks.CheckParametersConvergence(
+                every=500,
+                diff='relative', tolerance=0.001),
+            pm.callbacks.CheckParametersConvergence(
+                every=500,
+                diff='absolute', tolerance=0.0001)
+        ])
 
         def test_vars_view(self):
             _, model, _ = models.multidimensional_model()
@@ -147,11 +155,10 @@ class TestApproximates:
                 inf.fit(10)
                 approx = inf.fit(self.NITER,
                                  obj_optimizer=self.optimizer,
-                                 callbacks=
-                                 [pm.callbacks.CheckParametersConvergence()],)
+                                 callbacks=self.conv_cb,)
                 trace = approx.sample(10000)
-            np.testing.assert_allclose(np.mean(trace['mu']), mu_post, rtol=0.1)
-            np.testing.assert_allclose(np.std(trace['mu']), np.sqrt(1. / d), rtol=0.4)
+            np.testing.assert_allclose(np.mean(trace['mu']), mu_post, rtol=0.05)
+            np.testing.assert_allclose(np.std(trace['mu']), np.sqrt(1. / d), rtol=0.1)
 
         def test_optimizer_minibatch_with_generator(self):
             n = 1000
@@ -176,11 +183,10 @@ class TestApproximates:
                 Normal('x', mu=mu_, sd=sd, observed=minibatches, total_size=n)
                 inf = self.inference()
                 approx = inf.fit(self.NITER * 3, obj_optimizer=self.optimizer,
-                                 callbacks=
-                                 [pm.callbacks.CheckParametersConvergence()])
+                                 callbacks=self.conv_cb)
                 trace = approx.sample(10000)
-            np.testing.assert_allclose(np.mean(trace['mu']), mu_post, rtol=0.1)
-            np.testing.assert_allclose(np.std(trace['mu']), np.sqrt(1. / d), rtol=0.4)
+            np.testing.assert_allclose(np.mean(trace['mu']), mu_post, rtol=0.05)
+            np.testing.assert_allclose(np.std(trace['mu']), np.sqrt(1. / d), rtol=0.1)
 
         def test_optimizer_minibatch_with_callback(self):
             n = 1000
@@ -197,7 +203,7 @@ class TestApproximates:
             def create_minibatch(data):
                 while True:
                     data = np.roll(data, 100, axis=0)
-                    yield data[:100]
+                    yield pm.floatX(data[:100])
 
             minibatches = create_minibatch(data)
             with Model():
@@ -208,12 +214,21 @@ class TestApproximates:
                 mu_ = Normal('mu', mu=mu0, sd=sd0, testval=0)
                 Normal('x', mu=mu_, sd=sd, observed=data_t, total_size=n)
                 inf = self.inference(scale_cost_to_minibatch=True)
-                approx = inf.fit(self.NITER * 3, callbacks=
-                [cb, pm.callbacks.CheckParametersConvergence()],
-                                 obj_n_mc=10, obj_optimizer=self.optimizer)
+                approx = inf.fit(
+                    self.NITER * 3, callbacks=[cb] + self.conv_cb, obj_optimizer=self.optimizer)
                 trace = approx.sample(10000)
-            np.testing.assert_allclose(np.mean(trace['mu']), mu_post, rtol=0.4)
-            np.testing.assert_allclose(np.std(trace['mu']), np.sqrt(1. / d), rtol=0.4)
+            np.testing.assert_allclose(np.mean(trace['mu']), mu_post, rtol=0.05)
+            np.testing.assert_allclose(np.std(trace['mu']), np.sqrt(1. / d), rtol=0.1)
+
+        def test_n_obj_mc(self):
+            n_samples = 100
+            xs = np.random.binomial(n=1, p=0.2, size=n_samples)
+            with pm.Model():
+                p = pm.Beta('p', alpha=1, beta=1)
+                pm.Binomial('xs', n=1, p=p, observed=xs)
+                inf = self.inference(scale_cost_to_minibatch=True)
+                # should just work
+                inf.fit(10, obj_n_mc=10, obj_optimizer=self.optimizer)
 
         def test_pickling(self):
             with models.multidimensional_model()[1]:
@@ -277,8 +292,14 @@ class TestFullRank(TestApproximates.Base):
 
 class TestSVGD(TestApproximates.Base):
     inference = functools.partial(SVGD, n_particles=100)
-    NITER = 2500
-    optimizer = functools.partial(pm.adam, learning_rate=.1)
+
+
+class TestASVGD(TestApproximates.Base):
+    NITER = 15000
+    inference = ASVGD
+    test_aevb = _test_aevb
+    optimizer = pm.adagrad_window(learning_rate=0.002)
+    conv_cb = []
 
 
 class TestEmpirical(SeededTest):
@@ -374,7 +395,7 @@ def test_fit(method, kwargs, error):
     'ord',
     [1, 2, np.inf]
 )
-def test_callbacks(diff, ord):
+def test_callbacks_convergence(diff, ord):
     cb = pm.variational.callbacks.CheckParametersConvergence(every=1, diff=diff, ord=ord)
 
     class _approx:
@@ -385,3 +406,27 @@ def test_callbacks(diff, ord):
     with pytest.raises(StopIteration):
         cb(approx, None, 1)
         cb(approx, None, 10)
+
+
+def test_tracker_callback():
+    import time
+    tracker = pm.callbacks.Tracker(
+        ints=lambda *t: t[-1],
+        ints2=lambda ap, h, j: j,
+        time=time.time,
+    )
+    for i in range(10):
+        tracker(None, None, i)
+    assert 'time' in tracker.hist
+    assert 'ints' in tracker.hist
+    assert 'ints2' in tracker.hist
+    assert (len(tracker['ints'])
+            == len(tracker['ints2'])
+            == len(tracker['time'])
+            == 10)
+    assert tracker['ints'] == tracker['ints2'] == list(range(10))
+    tracker = pm.callbacks.Tracker(
+        bad=lambda t: t  # bad signature
+    )
+    with pytest.raises(TypeError):
+        tracker(None, None, 1)

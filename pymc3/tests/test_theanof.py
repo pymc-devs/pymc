@@ -11,14 +11,14 @@ import pytest
 def integers():
     i = 0
     while True:
-        yield np.float32(i)
+        yield floatX(i)
         i += 1
 
 
 def integers_ndim(ndim):
     i = 0
     while True:
-        yield np.ones((2,) * ndim) * i
+        yield floatX(np.ones((2,) * ndim) * i)
         i += 1
 
 
@@ -47,7 +47,7 @@ class TestGenerator(object):
     def test_cloning_available(self):
         gop = generator(integers())
         res = gop ** 2
-        shared = theano.shared(np.float32(10))
+        shared = theano.shared(floatX(10))
         res1 = theano.clone(res, {gop: shared})
         f = theano.function([], res1)
         assert f() == np.float32(100)
@@ -55,7 +55,7 @@ class TestGenerator(object):
     def test_default_value(self):
         def gen():
             for i in range(2):
-                yield np.ones((10, 10)) * i
+                yield floatX(np.ones((10, 10)) * i)
 
         gop = generator(gen(), np.ones((10, 10)) * 10)
         f = theano.function([], gop)
@@ -68,7 +68,7 @@ class TestGenerator(object):
     def test_set_gen_and_exc(self):
         def gen():
             for i in range(2):
-                yield np.ones((10, 10)) * i
+                yield floatX(np.ones((10, 10)) * i)
 
         gop = generator(gen())
         f = theano.function([], gop)

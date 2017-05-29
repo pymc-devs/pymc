@@ -31,7 +31,19 @@ class CompoundStep(object):
                 point = method.step(point)
             return point
 
-    def check_trace(self, trace):
+    @property
+    def report(self):
+        reports = []
         for method in self.methods:
-            if hasattr(method, 'check_trace'):
-                method.check_trace(trace)
+            if hasattr(method, 'report'):
+                reports.append(method.report)
+        return _CompoundReport(reports)
+
+
+class _CompoundReport(object):
+    def __init__(self, reports):
+        self._reports = reports
+
+    def _finalize(self, strace):
+        for report in self._reports:
+            report._finalize(strace)

@@ -33,11 +33,11 @@ def logsumexp(x, axis=None):
 
 
 def invlogit(x, eps=sys.float_info.epsilon):
-    return (1 - 2 * eps) / (1 + tt.exp(-x)) + eps
+    return (1. - 2. * eps) / (1. + tt.exp(-x)) + eps
 
 
 def logit(p):
-    return tt.log(p / (1 - p))
+    return tt.log(p / (floatX(1) - p))
 
 
 def flatten_list(tensors):
@@ -82,11 +82,11 @@ logdet = LogDet()
 
 
 def probit(p):
-    return -sqrt(2) * erfcinv(2 * p)
+    return -sqrt(2.) * erfcinv(2. * p)
 
 
 def invprobit(x):
-    return 0.5 * erfc(-x / sqrt(2))
+    return .5 * erfc(-x / sqrt(2.))
 
 
 def expand_packed_triangular(n, packed, lower=True, diagonal_only=False):

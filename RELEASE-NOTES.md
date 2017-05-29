@@ -20,17 +20,23 @@
 
 * ADVI stopping criterion implemented.
 
-* Improved support for theano's floatX setting to enable GPU computatiosn (experimental).
+* Improved support for theano's floatX setting to enable GPU computations (work in progress).
 
 * MvNormal supports Cholesky Decomposition now for increased speed and numerical stability.
 
 * [Add Elliptical Slice Sampler.](http://pymc-devs.github.io/pymc3/notebooks/GP-slice-sampling.html)
 
-* Add Stein-Variational Gradient Descent (experimental).
+* Much improved variational inference support:
 
-* [Add Operator Variational Inference (experimental).](http://pymc-devs.github.io/pymc3/notebooks/bayesian_neural_network_opvi-advi.html).
+  - [Add Operator Variational Inference (experimental).](http://pymc-devs.github.io/pymc3/notebooks/bayesian_neural_network_opvi-advi.html)
 
-* [Add pm.generator() to easily specify mini-batches.](http://pymc-devs.github.io/pymc3/notebooks/bayesian_neural_network_opvi-advi.html#Minibatch-ADVI)
+  - [Add Stein-Variational Gradient Descent as well as Amortized SVGD (experimental).](https://github.com/pymc-devs/pymc3/pull/2183)
+
+  - [Add pm.generator() to easily specify mini-batches.](http://pymc-devs.github.io/pymc3/notebooks/bayesian_neural_network_opvi-advi.html#Minibatch-ADVI)
+
+  - Added various optimizers including ADAM.
+
+* [Sampled posteriors can now be turned into priors for Bayesian updating with a new interpolated distribution.](https://github.com/pymc-devs/pymc3/pull/2163)
 
 * `Model` can now be inherited from and act as a base class for user specified models (see pymc3.models.linear).
 

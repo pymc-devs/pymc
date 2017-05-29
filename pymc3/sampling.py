@@ -388,16 +388,16 @@ def _iter_sample(draws, step, start=None, trace=None, chain=0, tune=None,
             yield strace
     except KeyboardInterrupt:
         strace.close()
-        if hasattr(step, 'check_trace'):
-            step.check_trace(strace)
+        if hasattr(step, 'report'):
+            step.report._finalize(strace)
         raise
     except BaseException:
         strace.close()
         raise
     else:
         strace.close()
-        if hasattr(step, 'check_trace'):
-            step.check_trace(strace)
+        if hasattr(step, 'report'):
+            step.report._finalize(strace)
 
 
 def _choose_backend(trace, chain, shortcuts=None, **kwds):
@@ -574,13 +574,17 @@ def init_nuts(init='ADVI', njobs=1, n_init=500000, model=None,
 
     if init is not None:
         init = init.lower()
-
+    cb = [
+        pm.callbacks.CheckParametersConvergence(tolerance=1e-2, diff='absolute'),
+        pm.callbacks.CheckParametersConvergence(tolerance=1e-2, diff='relative'),
+    ]
     if init == 'advi':
         approx = pm.fit(
             random_seed=random_seed,
             n=n_init, method='advi', model=model,
-            callbacks=[pm.callbacks.CheckParametersConvergence(tolerance=1e-2)],
-            progressbar=progressbar
+            callbacks=cb,
+            progressbar=progressbar,
+            obj_optimizer=pm.adagrad_window
         )  # type: pm.MeanField
         start = approx.sample(draws=njobs)
         stds = approx.gbij.rmap(approx.std.eval())
@@ -593,8 +597,9 @@ def init_nuts(init='ADVI', njobs=1, n_init=500000, model=None,
         pm.fit(
             random_seed=random_seed,
             n=n_init, method=pm.ADVI.from_mean_field(approx),
-            callbacks=[pm.callbacks.CheckParametersConvergence(tolerance=1e-2)],
-            progressbar=progressbar
+            callbacks=cb,
+            progressbar=progressbar,
+            obj_optimizer=pm.adagrad_window
         )
         start = approx.sample(draws=njobs)
         cov = approx.cov.eval()

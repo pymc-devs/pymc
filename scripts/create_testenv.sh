@@ -33,20 +33,23 @@ then
       source activate ${ENVNAME}
     fi
 fi
-
-pip install jupyter
-conda install --yes pyqt matplotlib --channel conda-forge
-conda install --yes pyzmq numpy scipy pytest pytest-cov pandas Cython patsy statsmodels joblib coverage mkl-service
-if [ ${PYTHON_VERSION} == "2.7" ]; then
-    conda install --yes mock enum34;
-fi
+conda install --yes numpy scipy mkl-service
 
 pip install --upgrade pip
-pip install --no-deps numdifftools
-pip install git+https://github.com/Theano/Theano.git
-pip install tqdm h5py parameterized
 
-if [ -z ${NO_SETUP} ]
-then
+#  Install editable using the setup.py
+pip install -e .
+
+# Install extra testing stuff
+if [ ${PYTHON_VERSION} == "2.7" ]; then
+    pip install mock
+fi
+
+pip install pytest pytest-cov nose-parameterized pylint
+
+# Install untested, non-required code (linter fails without them)
+pip install ipython ipywidgets numdifftools
+
+if [ -z ${NO_SETUP} ]; then
     python setup.py build_ext --inplace
 fi

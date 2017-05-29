@@ -122,7 +122,7 @@ def plot_posterior_op(trace_values, ax, kde_plot, point_estimate, round_to,
             d[key] = value
 
     if kde_plot:
-        kdeplot(trace_values, alpha=0.35, ax=ax, **kwargs)
+        kdeplot(trace_values, alpha=kwargs.pop('alpha', 0.35), ax=ax, **kwargs)
 
     else:
         set_key_if_doesnt_exist(kwargs, 'bins', 30)

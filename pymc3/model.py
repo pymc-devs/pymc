@@ -198,8 +198,8 @@ class Factor(object):
                 denom = self.logp_elemwiset.shape[0]
             else:
                 denom = 1
-            coef = tt.as_tensor(total_size) / denom
-        return coef
+            coef = pm.floatX(tt.as_tensor(total_size)) / pm.floatX(denom)
+        return pm.floatX(coef)
 
 
 class InitContextMeta(type):
@@ -822,6 +822,15 @@ class FreeRV(Factor, TensorVariable):
                                 methods=['random'],
                                 wrapper=InstanceMethod)
 
+    def _repr_latex_(self, name=None, dist=None):
+        if self.distribution is None:
+            return None
+        if name is None:
+            name = self.name
+        if dist is None:
+            dist = self.distribution
+        return self.distribution._repr_latex_(name=name, dist=dist)
+
     @property
     def init_value(self):
         """Convenience attribute to return tag.test_value"""
@@ -831,19 +840,20 @@ class FreeRV(Factor, TensorVariable):
 def pandas_to_array(data):
     if hasattr(data, 'values'):  # pandas
         if data.isnull().any().any():  # missing values
-            return np.ma.MaskedArray(data.values, data.isnull().values)
+            ret = np.ma.MaskedArray(data.values, data.isnull().values)
         else:
-            return data.values
+            ret = data.values
     elif hasattr(data, 'mask'):
-        return data
+        ret = data
     elif isinstance(data, theano.gof.graph.Variable):
-        return data
+        ret = data
     elif sps.issparse(data):
-        return data
+        ret = data
     elif isgenerator(data):
-        return generator(data)
+        ret = generator(data)
     else:
-        return np.asarray(data)
+        ret = np.asarray(data)
+    return pm.smartfloatX(ret)
 
 
 def as_tensor(data, name, model, distribution):
@@ -913,6 +923,15 @@ class ObservedRV(Factor, TensorVariable):
                              inputs=[data], outputs=[self])
 
             self.tag.test_value = theano.compile.view_op(data).tag.test_value
+
+    def _repr_latex_(self, name=None, dist=None):
+        if self.distribution is None:
+            return None
+        if name is None:
+            name = self.name
+        if dist is None:
+            dist = self.distribution
+        return self.distribution._repr_latex_(name=name, dist=dist)
 
     @property
     def init_value(self):
@@ -1011,6 +1030,7 @@ class TransformedRV(TensorVariable):
 
         if distribution is not None:
             self.model = model
+            self.distribution = distribution
 
             transformed_name = get_transformed_name(name, transform)
 
@@ -1027,6 +1047,15 @@ class TransformedRV(TensorVariable):
                                 methods=['random'],
                                 wrapper=InstanceMethod)
 
+    def _repr_latex_(self, name=None, dist=None):
+        if self.distribution is None:
+            return None
+        if name is None:
+            name = self.name
+        if dist is None:
+            dist = self.distribution
+        return self.distribution._repr_latex_(name=name, dist=dist)
+        
     @property
     def init_value(self):
         """Convenience attribute to return tag.test_value"""

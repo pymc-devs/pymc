@@ -15,6 +15,7 @@ from .theanof import *
 from .tuning import *
 from .variational import *
 from .vartypes import *
+from .exceptions import *
 from . import sampling
 
 from .debug import *
