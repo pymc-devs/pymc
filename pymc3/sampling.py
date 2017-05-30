@@ -104,7 +104,7 @@ def sample(draws=500, step=None, init='auto', n_init=200000, start=None,
            trace=None, chain=0, njobs=1, tune=500, nuts_kwargs=None,
            step_kwargs=None, progressbar=True, model=None, random_seed=-1,
            live_plot=False, discard_tuned_samples=True, live_plot_kwargs=None,
-           **wargs):
+           **kwargs):
     """Draw samples from the posterior using the given step methods.
 
     Multiple step methods are supported via compound step methods.
