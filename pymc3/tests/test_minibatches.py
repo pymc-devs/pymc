@@ -8,7 +8,7 @@ from theano import tensor as tt
 import theano
 
 import pymc3 as pm
-from pymc3 import floatX, GeneratorAdapter, generator, DataSampler, tt_rng, Normal
+from pymc3 import floatX, GeneratorAdapter, generator, tt_rng, Normal
 from pymc3.tests.helpers import select_by_precision
 from pymc3.theanof import GeneratorOp
 
@@ -29,6 +29,7 @@ def integers_ndim(ndim):
 
 @pytest.mark.usefixtures('strict_float32')
 class TestGenerator(object):
+
     def test_basic(self):
         generator = GeneratorAdapter(integers())
         gop = GeneratorOp(generator)()
@@ -86,24 +87,20 @@ class TestGenerator(object):
         np.testing.assert_equal(np.ones((10, 10)) * 0, f())
         np.testing.assert_equal(np.ones((10, 10)) * 1, f())
 
-    def test_pickling(self):
-        data = np.random.uniform(size=(1000, 10))
-        minibatches = DataSampler(data, batchsize=50)
-        gen = generator(minibatches)
+    def test_pickling(self, datagen):
+        gen = generator(datagen)
         pickle.loads(pickle.dumps(gen))
         bad_gen = generator(integers())
         with pytest.raises(Exception):
             pickle.dumps(bad_gen)
 
-    def test_gen_cloning_with_shape_change(self):
-        data = floatX(np.random.uniform(size=(1000, 10)))
-        minibatches = DataSampler(data, batchsize=50)
-        gen = generator(minibatches)
+    def test_gen_cloning_with_shape_change(self, datagen):
+        gen = generator(datagen)
         gen_r = tt_rng().normal(size=gen.shape).T
         X = gen.dot(gen_r)
         res, _ = theano.scan(lambda x: x.sum(), X, n_steps=X.shape[0])
         assert res.eval().shape == (50,)
-        shared = theano.shared(data)
+        shared = theano.shared(datagen.data.astype(gen.dtype))
         res2 = theano.clone(res, {gen: shared**2})
         assert res2.eval().shape == (1000,)
 

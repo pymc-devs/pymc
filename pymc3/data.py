@@ -12,7 +12,6 @@ import theano
 __all__ = [
     'get_data',
     'GeneratorAdapter',
-    'DataSampler',
     'Minibatch'
 ]
 
@@ -90,64 +89,6 @@ class GeneratorAdapter(object):
 
     def __hash__(self):
         return hash(id(self))
-
-
-class DataSampler(object):
-    """
-    Convenient picklable data sampler for minibatch inference.
-
-    This generator can be used for passing to pm.generator
-    creating picklable theano computational grapf
-
-    Parameters
-    ----------
-    data : array like
-    batchsize : sample size over zero axis
-    random_seed : int for numpy random generator
-    dtype : str representing dtype
-
-    Usage
-    -----
-    >>> import pickle
-    >>> from functools import partial
-    >>> np.random.seed(42) # reproducibility
-    >>> pm.set_tt_rng(42)
-    >>> data = np.random.normal(size=(1000,)) + 10
-    >>> minibatches = DataSampler(data, batchsize=50)
-    >>> with pm.Model():
-    ...     sd = pm.Uniform('sd', 0, 10)
-    ...     mu = pm.Normal('mu', sd=10)
-    ...     obs_norm = pm.Normal('obs_norm', mu=mu, sd=sd,
-    ...                          observed=minibatches,
-    ...                          total_size=data.shape[0])
-    ...     adam = partial(pm.adam, learning_rate=.8) # easy problem
-    ...     approx = pm.fit(10000, method='advi', obj_optimizer=adam)
-    >>> new = pickle.loads(pickle.dumps(approx))
-    >>> new #doctest: +ELLIPSIS
-    <pymc3.variational.approximations.MeanField object at 0x...>
-    >>> new.sample(draws=1000)['mu'].mean()
-    10.08339999101371
-    >>> new.sample(draws=1000)['sd'].mean()
-    1.2178044136104513
-    """
-    def __init__(self, data, batchsize=50, random_seed=42, dtype='floatX'):
-        self.dtype = theano.config.floatX if dtype == 'floatX' else dtype
-        self.rng = np.random.RandomState(random_seed)
-        self.data = data
-        self.n = batchsize
-
-    def __iter__(self):
-        return self
-
-    def __next__(self):
-        idx = (self.rng
-               .uniform(size=self.n,
-                        low=0.0,
-                        high=self.data.shape[0] - 1e-16)
-               .astype('int64'))
-        return np.asarray(self.data[idx], self.dtype)
-
-    next = __next__
 
 
 class Minibatch(tt.TensorVariable):
