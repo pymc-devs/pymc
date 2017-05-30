@@ -5,6 +5,7 @@ import pkgutil
 
 import numpy as np
 import pymc3 as pm
+from pymc3 import theanof
 import theano.tensor as tt
 import theano
 
@@ -149,7 +150,7 @@ class DataSampler(object):
     next = __next__
 
 
-class Minibatch(object):
+class Minibatch(tt.TensorVariable):
     """Multidimensional minibatch
 
     Parameters
@@ -173,18 +174,31 @@ class Minibatch(object):
     minibatch : minibatch tensor
         Used for training
     """
-    def __init__(self, data, batch_size=128, in_memory_size=None, random_seed=42, update_shared_f=None):
+    @theanof.change_flags(compute_test_value='raise')
+    def __init__(self, data, batch_size=128, in_memory_size=None,
+                 random_seed=42, update_shared_f=None,
+                 broadcastable=None, name='Minibatch'):
         data = pm.smartfloatX(np.asarray(data))
         self._random_seed = random_seed
         in_memory_slc = self._to_slices(in_memory_size)
-        self.data = data
         self.batch_size = batch_size
         self.shared = theano.shared(data[in_memory_slc])
         self.update_shared_f = update_shared_f
         self.random_slc = self._to_random_slices(self.shared.shape, batch_size)
-        self.minibatch = self.shared[self.random_slc]
+        minibatch = self.shared[self.random_slc]
+        if broadcastable is None:
+            broadcastable = (False, ) * minibatch.ndim
+        minibatch = tt.patternbroadcast(minibatch, broadcastable)
+        self.minibatch = minibatch
+        super(Minibatch, self).__init__(
+            self.minibatch.type, None, None, name=name)
+        theano.Apply(
+            theano.compile.view_op,
+            inputs=[self.minibatch], outputs=[self])
+        self.tag.test_value = copy(self.minibatch.tag.test_value)
 
-    def rslice(self, total, size, seed):
+    @staticmethod
+    def rslice(total, size, seed):
         if size is None:
             return slice(None)
         elif isinstance(size, int):
@@ -284,13 +298,8 @@ class Minibatch(object):
     def set_value(self, value):
         self.shared.set_value(np.asarray(value, self.dtype))
 
-    @property
-    def dtype(self):
-        return self.shared.dtype
-
-    @property
-    def type(self):
-        return self.shared.type
-
-    def __repr__(self):
-        return '<Minibatch of %s>' % self.batch_size
+    def clone(self):
+        ret = self.type()
+        ret.name = self.name
+        ret.tag = copy(self.tag)
+        return ret
