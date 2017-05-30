@@ -246,22 +246,30 @@ class TestMinibatch(object):
 
     def test_1d(self):
         mb = pm.Minibatch(self.data, 20)
-        assert mb.minibatch.eval().shape == (20, 10, 40, 10, 50)
+        assert mb.eval().shape == (20, 10, 40, 10, 50)
 
     def test_2d(self):
         with pytest.raises(TypeError):
             pm.Minibatch(self.data, (10, 5))
         mb = pm.Minibatch(self.data, [(10, 42), (4, 42)])
-        assert mb.minibatch.eval().shape == (10, 4, 40, 10, 50)
+        assert mb.eval().shape == (10, 4, 40, 10, 50)
 
     def test_special1(self):
         mb = pm.Minibatch(self.data, [(10, 42), None, (4, 42)])
-        assert mb.minibatch.eval().shape == (10, 10, 4, 10, 50)
+        assert mb.eval().shape == (10, 10, 4, 10, 50)
 
     def test_special2(self):
         mb = pm.Minibatch(self.data, [(10, 42), Ellipsis, (4, 42)])
-        assert mb.minibatch.eval().shape == (10, 10, 40, 10, 4)
+        assert mb.eval().shape == (10, 10, 40, 10, 4)
 
     def test_special3(self):
         mb = pm.Minibatch(self.data, [(10, 42), None, Ellipsis, (4, 42)])
-        assert mb.minibatch.eval().shape == (10, 10, 40, 10, 4)
+        assert mb.eval().shape == (10, 10, 40, 10, 4)
+
+    def test_cloning_available(self):
+        gop = pm.Minibatch(np.arange(100), 1)
+        res = gop ** 2
+        shared = theano.shared(np.array([10]))
+        res1 = theano.clone(res, {gop: shared})
+        f = theano.function([], res1)
+        assert f() == np.array([100])
