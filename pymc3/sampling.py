@@ -275,7 +275,7 @@ def sample(draws=500, step=None, init='auto', n_init=200000, start=None,
 
 def _sample(draws, step=None, start=None, trace=None, chain=0, tune=None,
             progressbar=True, model=None, random_seed=-1, live_plot=False,
-            live_plot_kwargs=None):
+            live_plot_kwargs=None, **kwargs):
     skip_first = kwargs.get('skip_first', 0)
     refresh_every = kwargs.get('refresh_every', 100)
 
