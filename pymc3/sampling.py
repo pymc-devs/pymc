@@ -103,7 +103,8 @@ def assign_step_methods(model, step=None, methods=STEP_METHODS,
 def sample(draws=500, step=None, init='auto', n_init=200000, start=None,
            trace=None, chain=0, njobs=1, tune=500, nuts_kwargs=None,
            step_kwargs=None, progressbar=True, model=None, random_seed=-1,
-           live_plot=False, discard_tuned_samples=True, live_plot_kwargs=None):
+           live_plot=False, discard_tuned_samples=True, live_plot_kwargs=None,
+           **wargs):
     """Draw samples from the posterior using the given step methods.
 
     Multiple step methods are supported via compound step methods.
@@ -258,6 +259,8 @@ def sample(draws=500, step=None, init='auto', n_init=200000, start=None,
                    'live_plot': live_plot,
                    'live_plot_kwargs': live_plot_kwargs,
                    }
+
+    sample_args.update(kwargs)
 
     if njobs > 1:
         sample_func = _mp_sample
