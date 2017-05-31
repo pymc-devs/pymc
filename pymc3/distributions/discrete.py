@@ -668,7 +668,7 @@ class ZeroInflatedBinomial(Discrete):
     p : float
         Probability of success in each trial (0 < p < 1).
     psi : float
-        Expected proportion of Poisson variates (0 < psi < 1)
+        Expected proportion of Binomial variates (0 < psi < 1)
 
     """
 
