@@ -14,7 +14,6 @@ test_scores = pd.read_csv(pm.get_data('test_scores.csv')).fillna(-999)
                                                 'mother_hs', 'early_ident']].astype(float).values.T
 
 with pm.Model() as model:
-
     # Impute missing values
     sib_mean = pm.Exponential('sib_mean', 1.)
     siblings_imp = pm.Poisson('siblings_imp', sib_mean,
@@ -35,7 +34,7 @@ with pm.Model() as model:
                       beta[4] * age + beta[5] * mother_imp + beta[6] * early_ident)
 
     observed_score = pm.Normal(
-        'observed_score', expected_score, tau=s, observed=score)
+        'observed_score', expected_score, s, observed=score)
 
 
 with model:
@@ -50,7 +49,7 @@ def run(n=5000):
     if n == 'short':
         n = 100
     with model:
-        pm.sample(n, [step1, step2], start)
+        pm.sample(n, step=[step1, step2], start=start)
 
 
 if __name__ == '__main__':
