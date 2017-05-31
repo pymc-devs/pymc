@@ -5,7 +5,6 @@ import pkgutil
 
 import numpy as np
 import pymc3 as pm
-from pymc3 import theanof
 import theano.tensor as tt
 import theano
 
@@ -115,7 +114,7 @@ class Minibatch(tt.TensorVariable):
     minibatch : minibatch tensor
         Used for training
     """
-    @theanof.change_flags(compute_test_value='raise')
+    @theano.configparser.change_flags(compute_test_value='raise')
     def __init__(self, data, batch_size=128, in_memory_size=None,
                  random_seed=42, update_shared_f=None,
                  broadcastable=None, name='Minibatch'):
