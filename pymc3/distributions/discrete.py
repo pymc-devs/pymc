@@ -440,7 +440,7 @@ class DiscreteUniform(Discrete):
         self.lower = tt.floor(lower).astype('int32')
         self.upper = tt.floor(upper).astype('int32')
         self.mode = tt.maximum(
-            tt.floor((upper - lower) / 2.).astype('int32'), self.lower)
+            tt.floor((upper + lower) / 2.).astype('int32'), self.lower)
 
     def _random(self, lower, upper, size=None):
         # This way seems to be the only to deal with lower and upper
