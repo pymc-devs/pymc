@@ -263,6 +263,10 @@ class TestMinibatch(object):
         mb = pm.Minibatch(self.data, [(10, 42), None, Ellipsis, (4, 42)])
         assert mb.eval().shape == (10, 10, 40, 10, 4)
 
+    def test_special4(self):
+        mb = pm.Minibatch(self.data, [10, None, Ellipsis, (4, 42)])
+        assert mb.eval().shape == (10, 10, 40, 10, 4)
+
     def test_cloning_available(self):
         gop = pm.Minibatch(np.arange(100), 1)
         res = gop ** 2

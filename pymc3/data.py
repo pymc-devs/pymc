@@ -97,15 +97,18 @@ class Minibatch(tt.TensorVariable):
     ----------
     data : ndarray
         initial data
-    batch_size : int or List[tuple(size, random_seed)]
+    batch_size : int or List[int|tuple(size, random_seed)]
         batch size for inference, random seed is needed 
         for child random generators
-    in_memory_size : int or List[int,slice,Ellipsis]
+    in_memory_size : int or List[int|slice|Ellipsis]
         data size for storing in theano.shared
     random_seed : int
-        random seed that is used for 1d random slice
+        random seed that is used by default
     update_shared_f : callable
-        gets in_memory_shape and returns np.ndarray
+        returns np.ndarray that will be carefully 
+        stored to underlying shared variable
+        you can use it to change source of 
+        minibatches programmatically 
 
     Attributes
     ----------
@@ -113,6 +116,80 @@ class Minibatch(tt.TensorVariable):
         Used for storing data
     minibatch : minibatch tensor
         Used for training
+
+    Examples
+    --------
+    Consider we have data
+    >>> data = np.random.rand(100, 100)
+
+    if we want 1d slice of size 10
+    >>> x = Minibatch(data, batch_size=10)
+
+    in case we want 10 sampled rows and columns
+    [(size, seed), (size, seed)]
+    >>> x = Minibatch(data, batch_size=[(10, 42), (10, 42)])
+
+    or simpler with default random seed = 42
+    [size, size]
+    >>> x = Minibatch(data, batch_size=[10, 10])
+
+    x is a regular TensorVariable that supports any math
+    >>> assert x.eval().shape == (10, 10)
+
+    You can pass it to your desired model
+    >>> with pm.Model() as model:
+    ...     mu = pm.Flat('mu')
+    ...     sd = pm.HalfNormal('sd')
+    ...     lik = pm.Normal('lik', mu, sd, observed=x)
+
+    Then you can perform regular Variational Inference out of the box
+    >>> with model:
+    ...     approx = pm.fit()
+
+    Notable thing is that Minibatch has `shared`, `minibatch`, attributes
+    you can call later
+    >>> x.set_value(np.random.laplace(size=(100, 100)))
+
+    and minibatches will be then from new storage
+    it directly affects `x.shared`. 
+
+    To be more precise of how we get minibatch, here is a demo
+    1) create shared variable 
+    >>> shared = theano.shared(data)
+
+    2) create random slice of size 10
+    >>> ridx = pm.tt_rng().uniform(size=(10,), low=0, high=data.shape[0]-1e-10).astype('int64')
+
+    3) take that slice
+    >>> minibatch = shared[ridx]
+
+    That's done. So if you'll need some replacements in the graph 
+    >>> testdata = pm.floatX(np.random.laplace(size=(1000, 10)))
+
+    you are free to use a kind of this one as `x` as it is Theano Tensor
+    >>> replacements = {x: testdata}
+    >>> node = x ** 2  # arbitrary expressions
+    >>> rnode = theano.clone(node, replacements)
+    >>> assert (testdata ** 2 == rnode.eval()).all()
+
+    For more complex slices some more code is needed that can seem not so clear
+    They are
+    >>> moredata = np.random.rand(10, 20, 30, 40, 50)
+
+    1) Advanced indexing
+    >>> x = Minibatch(moredata, [2, Ellipsis, 10])
+
+    We take slice only for the first and last dimension
+    >>> assert x.eval().shape == (2, 20, 30, 40, 10)
+
+    2) skipping particular dimension
+    >>> x = Minibatch(moredata, [2, None, 20])
+    >>> assert x.eval().shape == (2, 20, 20, 40, 50)
+
+    3) mixing that all
+    >>> x = Minibatch(moredata, [2, None, 20, Ellipsis, 10])
+    >>> assert x.eval().shape == (2, 20, 20, 40, 10)
+
     """
     @theano.configparser.change_flags(compute_test_value='raise')
     def __init__(self, data, batch_size=128, in_memory_size=None,
@@ -181,19 +258,25 @@ class Minibatch(tt.TensorVariable):
                 if t is Ellipsis or t is None:
                     return True
                 else:
-                    if not isinstance(t, (tuple, list)):
-                        return False
-                    else:
+                    if isinstance(t, (tuple, list)):
                         if not len(t) == 2:
                             return False
                         else:
                             return isinstance(t[0], int) and isinstance(t[1], int)
-
+                    elif isinstance(t, int):
+                        return True
+                    else:
+                        return False
+            # end check definition
             if not all(check(t) for t in batch_size):
                 raise TypeError('Unrecognized `batch_size` type, expected '
-                                'int or List[tuple(size, random_seed)] where '
+                                'int or List[int|tuple(size, random_seed)] where '
                                 'size and random seed are both ints, got %r' %
                                 batch_size)
+            batch_size = [
+                (i, self._random_seed) if isinstance(i, int) else i
+                for i in batch_size
+            ]
             shape = in_memory_shape
             if Ellipsis in batch_size:
                 sep = batch_size.index(Ellipsis)
