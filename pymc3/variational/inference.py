@@ -2,16 +2,15 @@ from __future__ import division
 
 import logging
 import warnings
-import tqdm
 
 import numpy as np
+import tqdm
 
 import pymc3 as pm
+from pymc3.variational import test_functions
 from pymc3.variational.approximations import MeanField, FullRank, Empirical
 from pymc3.variational.operators import KL, KSD, AKSD
 from pymc3.variational.opvi import Approximation
-from pymc3.variational import test_functions
-
 
 logger = logging.getLogger(__name__)
 
