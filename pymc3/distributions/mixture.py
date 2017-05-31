@@ -111,7 +111,8 @@ class Mixture(Distribution):
         w = self.w
 
         return bound(logsumexp(tt.log(w) + self._comp_logp(value), axis=-1).sum(),
-                     w >= 0, w <= 1, tt.allclose(w.sum(axis=-1), 1))
+                     w >= 0, w <= 1, tt.allclose(w.sum(axis=-1), 1),
+                     broadcast_conditions=False)
 
     def random(self, point=None, size=None, repeat=None):
         def random_choice(*args, **kwargs):
