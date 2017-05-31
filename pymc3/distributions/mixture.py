@@ -35,7 +35,7 @@ class Mixture(Distribution):
     ----------
     w : array of floats
         w >= 0 and w <= 1
-        the mixutre weights
+        the mixture weights
     comp_dists : multidimensional PyMC3 distribution or iterable of one-dimensional PyMC3 distributions
         the component distributions :math:`f_1, \ldots, f_n`
     """
@@ -111,7 +111,8 @@ class Mixture(Distribution):
         w = self.w
 
         return bound(logsumexp(tt.log(w) + self._comp_logp(value), axis=-1).sum(),
-                     w >= 0, w <= 1, tt.allclose(w.sum(axis=-1), 1))
+                     w >= 0, w <= 1, tt.allclose(w.sum(axis=-1), 1),
+                     broadcast_conditions=False)
 
     def random(self, point=None, size=None, repeat=None):
         def random_choice(*args, **kwargs):
@@ -157,7 +158,7 @@ class NormalMixture(Mixture):
     ----------
     w : array of floats
         w >= 0 and w <= 1
-        the mixutre weights
+        the mixture weights
     mu : array of floats
         the component means
     sd : array of floats
