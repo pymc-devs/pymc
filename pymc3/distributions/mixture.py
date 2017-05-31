@@ -214,7 +214,7 @@ class ZeroInflatedBinomial(Mixture):
     Parameters
     ----------
     psi : float
-        Expected proportion of Poisson variates (0 < psi < 1)
+        Expected proportion of Binomial variates (0 < psi < 1)
     n : int
         Number of Bernoulli trials (n >= 0).
     p : float
