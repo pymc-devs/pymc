@@ -91,7 +91,7 @@ class GeneratorAdapter(object):
 
 
 class Minibatch(tt.TensorVariable):
-    """Multidimensional minibatch
+    """Multidimensional minibatch that is pure TensorVariable
 
     Parameters
     ----------
@@ -122,12 +122,16 @@ class Minibatch(tt.TensorVariable):
     Consider we have data
     >>> data = np.random.rand(100, 100)
 
-    if we want 1d slice of size 10
+    if we want 1d slice of size 10 we do
     >>> x = Minibatch(data, batch_size=10)
+    
+    Note, that your data is casted to `floatX` if it is not integer type
+    But you still can add dtype kwarg for :class:`Minibatch` 
 
     in case we want 10 sampled rows and columns
-    [(size, seed), (size, seed)]
-    >>> x = Minibatch(data, batch_size=[(10, 42), (10, 42)])
+    [(size, seed), (size, seed)] it is
+    >>> x = Minibatch(data, batch_size=[(10, 42), (10, 42)], dtype='int32')
+    >>> assert str(x.dtype) == 'int32'
 
     or simpler with default random seed = 42
     [size, size]
@@ -146,12 +150,21 @@ class Minibatch(tt.TensorVariable):
     >>> with model:
     ...     approx = pm.fit()
 
-    Notable thing is that Minibatch has `shared`, `minibatch`, attributes
+    Notable thing is that :class:`Minibatch` has `shared`, `minibatch`, attributes
     you can call later
     >>> x.set_value(np.random.laplace(size=(100, 100)))
 
     and minibatches will be then from new storage
-    it directly affects `x.shared`. 
+    it directly affects `x.shared`.
+    the same thing would be but less convenient
+    >>> x.shared.set_value(pm.floatX(np.random.laplace(size=(100, 100))))
+    
+    programmatic way to change storage is as following
+    I import `partial` for simplicity
+    >>> from functools import partial
+    >>> datagen = partial(np.random.laplace, size=(100, 100))
+    >>> x = Minibatch(datagen(), batch_size=100, update_shared_f=datagen)
+    >>> x.update_shared()
 
     To be more precise of how we get minibatch, here is a demo
     1) create shared variable 
@@ -166,7 +179,7 @@ class Minibatch(tt.TensorVariable):
     That's done. So if you'll need some replacements in the graph 
     >>> testdata = pm.floatX(np.random.laplace(size=(1000, 10)))
 
-    you are free to use a kind of this one as `x` as it is Theano Tensor
+    you are free to use a kind of this one as `x` is regular Theano Tensor
     >>> replacements = {x: testdata}
     >>> node = x ** 2  # arbitrary expressions
     >>> rnode = theano.clone(node, replacements)
@@ -194,8 +207,11 @@ class Minibatch(tt.TensorVariable):
     @theano.configparser.change_flags(compute_test_value='raise')
     def __init__(self, data, batch_size=128, in_memory_size=None,
                  random_seed=42, update_shared_f=None,
-                 broadcastable=None, name='Minibatch'):
-        data = pm.smartfloatX(np.asarray(data))
+                 broadcastable=None, dtype=None, name='Minibatch'):
+        if dtype is None:
+            data = pm.smartfloatX(np.asarray(data))
+        else:
+            data = np.asarray(data, dtype)
         self._random_seed = random_seed
         in_memory_slc = self._to_slices(in_memory_size)
         self.batch_size = batch_size
