@@ -223,6 +223,18 @@ class TestScaling(object):
                 Normal('n', observed=[[1]], total_size=[Ellipsis, Ellipsis])
             assert 'Double Ellipsis' in str(e.value)
 
+    def test_mixed1(self):
+        with pm.Model():
+            data = np.random.rand(10, 20, 30, 40, 50)
+            mb = pm.Minibatch(data, [2, None, 20, Ellipsis, 10])
+            Normal('n', observed=mb, total_size=(10, None, 30, Ellipsis, 50))
+
+    def test_mixed2(self):
+        with pm.Model():
+            data = np.random.rand(10, 20, 30, 40, 50)
+            mb = pm.Minibatch(data, [2, None, 20])
+            Normal('n', observed=mb, total_size=(10, None, 30))
+
     def test_free_rv(self):
         with pm.Model() as model4:
             Normal('n', observed=[[1, 1],

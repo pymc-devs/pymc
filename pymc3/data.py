@@ -144,7 +144,7 @@ class Minibatch(tt.TensorVariable):
     >>> with pm.Model() as model:
     ...     mu = pm.Flat('mu')
     ...     sd = pm.HalfNormal('sd')
-    ...     lik = pm.Normal('lik', mu, sd, observed=x)
+    ...     lik = pm.Normal('lik', mu, sd, observed=x, total_size=(100, 100))
 
     Then you can perform regular Variational Inference out of the box
     >>> with model:
@@ -188,18 +188,21 @@ class Minibatch(tt.TensorVariable):
     For more complex slices some more code is needed that can seem not so clear
     They are
     >>> moredata = np.random.rand(10, 20, 30, 40, 50)
+    
+    default total_size is then (10, 20, 30, 40, 50) but 
+    can be less verbose in sove cases
 
-    1) Advanced indexing
+    1) Advanced indexing, `total_size = (10, Ellipsis, 50)`
     >>> x = Minibatch(moredata, [2, Ellipsis, 10])
 
     We take slice only for the first and last dimension
     >>> assert x.eval().shape == (2, 20, 30, 40, 10)
 
-    2) skipping particular dimension
+    2) skipping particular dimension, total_size = (10, None, 30) 
     >>> x = Minibatch(moredata, [2, None, 20])
     >>> assert x.eval().shape == (2, 20, 20, 40, 50)
 
-    3) mixing that all
+    3) mixing that all, total_size = (10, None, 30, Ellipsis, 50)
     >>> x = Minibatch(moredata, [2, None, 20, Ellipsis, 10])
     >>> assert x.eval().shape == (2, 20, 20, 40, 10)
 
