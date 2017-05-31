@@ -5,8 +5,11 @@ from pymc3.util import get_variable_name
 from ..math import logsumexp
 from .dist_math import bound
 from .distribution import Discrete, Distribution, draw_values, generate_samples
+from .discrete import Constant, Poisson, Binomial, NegativeBinomial
 from .continuous import get_tau_sd, Normal
 
+__all__ = ['ZeroInflatedPoisson', 'ZeroInflatedBinomial', 
+            'ZeroInflatedNegativeBinomial', 'NormalMixture']
 
 def all_discrete(comp_dists):
     """
@@ -139,6 +142,156 @@ class Mixture(Distribution):
         else:
             return np.squeeze(comp_samples[w_samples])
 
+
+class ZeroInflatedPoisson(Mixture):
+    R"""
+    Zero-inflated Poisson log-likelihood.
+    
+    Two-component mixture of zeros and Poisson-distributed data.
+
+    Often used to model the number of events occurring in a fixed period
+    of time when the times at which events occur are independent.
+
+    .. math::
+
+        f(x \mid \psi, \theta) = \left\{ \begin{array}{l}
+            (1-\psi) + \psi e^{-\theta}, \text{if } x = 0 \\
+            \psi \frac{e^{-\theta}\theta^x}{x!}, \text{if } x=1,2,3,\ldots
+            \end{array} \right.
+
+    ========  ==========================
+    Support   :math:`x \in \mathbb{N}_0`
+    Mean      :math:`\psi\theta`
+    Variance  :math:`\theta + \frac{1-\psi}{\psi}\theta^2`
+    ========  ==========================
+
+    Parameters
+    ----------
+    psi : float
+        Expected proportion of Poisson variates (0 < psi < 1)
+    theta : float
+        Expected number of occurrences during the given interval
+        (theta >= 0).
+
+
+    """
+    
+    def __init__(self, psi, theta, *args, **kwargs):
+        self.theta = theta = tt.as_tensor_variable(theta)
+        super(ZeroInflatedPoisson, self).__init__([1-psi, psi], 
+                        (Constant.dist(0), Poisson.dist(theta)),
+                        *args, **kwargs)
+                        
+    def _repr_latex_(self, name=None, dist=None):
+        if dist is None:
+            dist = self
+        theta = dist.theta
+        psi = dist.w
+        return r'${} \sim \text{{ZeroInflatedPoisson}}(\mathit{{psi}}={}, \mathit{{theta}}={})$'.format(name,
+                                                get_variable_name(psi),
+                                                get_variable_name(theta))
+    
+
+class ZeroInflatedBinomial(Mixture):
+    R"""
+    Zero-inflated Binomial log-likelihood.
+    
+    Two-component mixture of zeros and binomial-distributed data.
+
+    .. math::
+
+        f(x \mid \psi, n, p) = \left\{ \begin{array}{l}
+            (1-\psi) + \psi (1-p)^{n}, \text{if } x = 0 \\
+            \psi {n \choose x} p^x (1-p)^{n-x}, \text{if } x=1,2,3,\ldots,n
+            \end{array} \right.
+
+    ========  ==========================
+    Support   :math:`x \in \mathbb{N}_0`
+    Mean      :math:`(1 - \psi) n p`
+    Variance  :math:`(1-\psi) n p [1 - p(1 - \psi n)].`
+    ========  ==========================
+
+    Parameters
+    ----------
+    psi : float
+        Expected proportion of Poisson variates (0 < psi < 1)
+    n : int
+        Number of Bernoulli trials (n >= 0).
+    p : float
+        Probability of success in each trial (0 < p < 1).
+
+    """
+
+    def __init__(self, psi, n, p, *args, **kwargs):
+        self.n = n = tt.as_tensor_variable(n)
+        self.p = p = tt.as_tensor_variable(p)
+        super(ZeroInflatedBinomial, self).__init__([1-psi, psi], 
+                        (Constant.dist(0), Binomial.dist(n, p)),
+                        *args, **kwargs)
+
+    def _repr_latex_(self, name=None, dist=None):
+        if dist is None:
+            dist = self
+        n = dist.n
+        p = dist.p
+        psi = dist.w
+        return r'${} \sim \text{{ZeroInflatedBinomial}}(\mathit{{psi}}={}, \mathit{{n}}={}, \mathit{{p}}={})$'.format(name,
+                                                get_variable_name(psi),
+                                                get_variable_name(n),
+                                                get_variable_name(p))
+                                                
+
+class ZeroInflatedNegativeBinomial(Mixture):
+    R"""
+    Zero-Inflated Negative binomial log-likelihood.
+    
+    Two-component mixture of zeros and negative binomial-distributed data.
+
+    The Zero-inflated version of the Negative Binomial (NB).
+    The NB distribution describes a Poisson random variable
+    whose rate parameter is gamma distributed.
+
+    .. math::
+
+       f(x \mid \psi, \mu, \alpha) = \left\{ \begin{array}{l}
+            (1-\psi) + \psi \left (\frac{\alpha}{\alpha+\mu} \right) ^\alpha, \text{if } x = 0 \\
+            \psi \frac{\Gamma(x+\alpha)}{x! \Gamma(\alpha)} \left (\frac{\alpha}{\mu+\alpha} \right)^\alpha \left( \frac{\mu}{\mu+\alpha} \right)^x, \text{if } x=1,2,3,\ldots
+            \end{array} \right.
+
+    ========  ==========================
+    Support   :math:`x \in \mathbb{N}_0`
+    Mean      :math:`\psi\mu`
+    Var       :math:`\psi\mu +  \left (1 + \frac{\mu}{\alpha} + \frac{1-\psi}{\mu} \right)`
+    ========  ==========================
+
+    Parameters
+    ----------
+    psi : float
+        Expected proportion of NegativeBinomial variates (0 < psi < 1)
+    mu : float
+        Poission distribution parameter (mu > 0).
+    alpha : float
+        Gamma distribution parameter (alpha > 0).
+    """
+
+    def __init__(self, psi, mu, alpha, *args, **kwargs):
+        self.mu = mu = tt.as_tensor_variable(mu)
+        self.alpha = alpha = tt.as_tensor_variable(alpha)
+        super(ZeroInflatedNegativeBinomial, self).__init__([1-psi, psi], 
+                        (Constant.dist(0), NegativeBinomial.dist(mu, alpha)),
+                        *args, **kwargs)
+
+    def _repr_latex_(self, name=None, dist=None):
+        if dist is None:
+            dist = self
+        mu = dist.mu
+        alpha = dist.alpha
+        psi = dist.w
+        return r'${} \sim \text{{ZeroInflatedNegativeBinomial}}(\mathit{{psi}}={}, \mathit{{mu}}={}, \mathit{{alpha}}={})$'.format(name,
+                                                get_variable_name(psi),
+                                                get_variable_name(mu),
+                                                get_variable_name(alpha))
+                                                
 
 class NormalMixture(Mixture):
     R"""

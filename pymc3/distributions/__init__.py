@@ -35,8 +35,6 @@ from .discrete import Poisson
 from .discrete import NegativeBinomial
 from .discrete import ConstantDist
 from .discrete import Constant
-from .discrete import ZeroInflatedPoisson
-from .discrete import ZeroInflatedNegativeBinomial
 from .discrete import DiscreteUniform
 from .discrete import Geometric
 from .discrete import Categorical
@@ -53,6 +51,9 @@ from .distribution import generate_samples
 
 from .mixture import Mixture
 from .mixture import NormalMixture
+from .mixture import ZeroInflatedPoisson
+from .mixture import ZeroInflatedNegativeBinomial
+from .mixture import ZeroInflatedBinomial
 
 from .multivariate import MvNormal
 from .multivariate import MvStudentT
@@ -106,6 +107,7 @@ __all__ = ['Uniform',
            'Constant',
            'ZeroInflatedPoisson',
            'ZeroInflatedNegativeBinomial',
+           'ZeroInflatedBinomial',
            'DiscreteUniform',
            'Geometric',
            'Categorical',

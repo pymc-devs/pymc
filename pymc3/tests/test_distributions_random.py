@@ -331,13 +331,16 @@ class TestConstant(BaseTestCases.BaseTestCase):
 
 class TestZeroInflatedPoisson(BaseTestCases.BaseTestCase):
     distribution = pm.ZeroInflatedPoisson
-    params = {'theta': 1., 'psi': 0.3}
+    params = {'psi': 0.3, 'theta': 1.}
 
 
 class TestZeroInflatedNegativeBinomial(BaseTestCases.BaseTestCase):
     distribution = pm.ZeroInflatedNegativeBinomial
-    params = {'mu': 1., 'alpha': 1., 'psi': 0.3}
+    params = {'psi': 0.3, 'mu': 1., 'alpha': 1.}
 
+class TestZeroInflatedBinomial(BaseTestCases.BaseTestCase):
+    distribution = pm.ZeroInflatedBinomial
+    params = {'psi': 0.3, 'n': 10, 'p': 0.6}
 
 class TestDiscreteUniform(BaseTestCases.BaseTestCase):
     distribution = pm.DiscreteUniform
