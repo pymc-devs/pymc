@@ -156,6 +156,7 @@ class EnsembleNDArray(NDArray):
         return {varname: values[idx]
                 for varname, values in self.samples.items()}
 
+# TODO: create generic EnsembleTrace to use a normal Basetrace (create duplicate parameter names for particles?)
 
 class EnsembleArrayOrdering(object):
     """
