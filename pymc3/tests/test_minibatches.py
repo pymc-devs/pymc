@@ -258,8 +258,6 @@ class TestMinibatch(object):
         assert mb.eval().shape == (20, 10, 40, 10, 50)
 
     def test_2d(self):
-        with pytest.raises(TypeError):
-            pm.Minibatch(self.data, (10, 5))
         mb = pm.Minibatch(self.data, [(10, 42), (4, 42)])
         assert mb.eval().shape == (10, 4, 40, 10, 50)
 
