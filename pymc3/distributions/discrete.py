@@ -635,7 +635,7 @@ class ZeroInflatedPoisson(Discrete):
 
         logp_val = tt.switch(value > 0,
                      tt.log(psi) + self.pois.logp(value),
-                     logaddexp(tt.log(-psi), tt.log(psi) - theta))
+                     logaddexp(tt.log1p(-psi), tt.log(psi) - theta))
 
         return bound(logp_val,
             0 <= value,
