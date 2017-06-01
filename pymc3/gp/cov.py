@@ -56,22 +56,6 @@ class Covariance(ParameterizedFunction):
     def __rmul__(self, other):
         return self.__mul__(other)
 
-    def __array_wrap__(self, result):
-        # can this be moved to parameterizedfunction?
-        """
-        Required to allow radd/rmul by numpy arrays.
-        """
-        r,c = result.shape
-        A = np.zeros((r,c))
-        for i in range(r):
-            for j in range(c):
-                A[i,j] = result[i,j].factor_list[1]
-        if isinstance(result[0][0], Add):
-            return result[0][0].factor_list[0] + A
-        elif isinstance(result[0][0], Prod):
-            return result[0][0].factor_list[0] * A
-        else:
-            raise RuntimeError(result[0][0])
 
 
 class Combination(Covariance):

@@ -42,11 +42,59 @@ class ParameterizedFunction(object):
         X = X[:, self.active_dims]
         return X
 
+    def __add__(self, other):
+        return Add([self, other])
+
+    def __mul__(self, other):
+        return Prod([self, other])
+
     def __radd__(self, other):
         return self.__add__(other)
 
     def __rmul__(self, other):
         return self.__mul__(other)
+
+    def __array_wrap__(self, result):
+        # can this be moved to parameterizedfunction?
+        """
+        Required to allow radd/rmul by numpy arrays.
+        """
+        r,c = result.shape
+        A = np.zeros((r,c))
+        for i in range(r):
+            for j in range(c):
+                A[i,j] = result[i,j].factor_list[1]
+        if isinstance(result[0][0], Add):
+            return result[0][0].factor_list[0] + A
+        elif isinstance(result[0][0], Prod):
+            return result[0][0].factor_list[0] * A
+        else:
+            raise RuntimeError(result[0][0])
+
+
+class Combination(ParameterizedFunction):
+    def __init__(self, factor_list):
+        input_dim = np.max([factor.input_dim for factor in
+                            filter(lambda x: isinstance(x, ParameterizedFunction), factor_list)])
+        ParameterizedFunction.__init__(self, input_dim=input_dim)
+        self.factor_list = []
+        for factor in factor_list:
+            if isinstance(factor, self.__class__):
+                self.factor_list.extend(factor.factor_list)
+            else:
+                self.factor_list.append(factor)
+
+
+class Add(Combination):
+    def __call__(self, X):
+        return reduce((lambda x, y: x + y),
+                      [f(X) if isinstance(f, ParameterizedFunction) else f for f in self.factor_list])
+
+
+class Prod(Combination):
+    def __call__(self, X):
+        return reduce((lambda x, y: x * y),
+                      [f(X) if isinstance(f, ParameterizedFunction) else f for f in self.factor_list])
 
 
 class Mean(ParameterizedFunction):
@@ -66,12 +114,6 @@ class Mean(ParameterizedFunction):
         """
         raise NotImplementedError
 
-    def __add__(self, other):
-        return Add(self, other)
-
-    def __mul__(self, other):
-        return Prod(self, other)
-
 class Zero(Mean):
     def __call__(self, X):
         X = self._slice(X)
@@ -83,17 +125,18 @@ class Constant(Mean):
 
     Parameters
     ----------
-    c : variable, array or integer
+    c : variable, float, or integer
         Constant mean value
     """
 
-    def __init__(self, input_dim, c=0, active_dims=None):
+    def __init__(self, input_dim, c=0.0, active_dims=None):
         super(Constant, self).__init__(input_dim, active_dims)
         self.c = c
 
     def __call__(self, X):
         X = self._slice(X)
         return tt.ones(tt.stack([X.shape[0], 1])) * self.c
+
 
 class Linear(Mean):
     def __init__(self, input_dim, coeffs, intercept=0, active_dims=None):
@@ -116,22 +159,5 @@ class Linear(Mean):
         m = tt.dot(X, self.A) + self.b
         return tt.reshape(m, (X.shape[0], 1))
 
-class Add(Mean):
-    def __init__(self, first_mean, second_mean):
-        Mean.__init__(self)
-        self.m1 = first_mean
-        self.m2 = second_mean
 
-    def __call__(self, X):
-        return tt.add(self.m1(X), self.m2(X))
-
-
-class Prod(Mean):
-    def __init__(self, first_mean, second_mean):
-        Mean.__init__(self)
-        self.m1 = first_mean
-        self.m2 = second_mean
-
-    def __call__(self, X):
-        return tt.mul(self.m1(X), self.m2(X))
 
