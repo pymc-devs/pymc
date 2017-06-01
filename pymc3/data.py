@@ -95,20 +95,26 @@ class Minibatch(tt.TensorVariable):
 
     Parameters
     ----------
-    data : ndarray
+    data : :class:`ndarray`
         initial data
-    batch_size : int or List[int|tuple(size, random_seed)]
+    batch_size : `int` or `List[int|tuple(size, random_seed)]`
         batch size for inference, random seed is needed 
         for child random generators
-    in_memory_size : int or List[int|slice|Ellipsis]
-        data size for storing in theano.shared
-    random_seed : int
+    dtype : `str`
+        cast data to specific type
+    broadcastable : tuple[bool]
+        change broadcastable pattern that defaults to `(False, ) * ndim`
+    name : `str`
+        name for tensor, defaults to "Minibatch"
+    random_seed : `int`
         random seed that is used by default
-    update_shared_f : callable
-        returns np.ndarray that will be carefully 
+    update_shared_f : `callable`
+        returns :class:`ndarray` that will be carefully 
         stored to underlying shared variable
         you can use it to change source of 
         minibatches programmatically 
+    in_memory_size : `int` or `List[int|slice|Ellipsis]`
+        data size for storing in theano.shared
 
     Attributes
     ----------
@@ -126,18 +132,18 @@ class Minibatch(tt.TensorVariable):
     >>> x = Minibatch(data, batch_size=10)
 
     Note, that your data is cast to `floatX` if it is not integer type
-    But you still can add dtype kwarg for :class:`Minibatch` 
+    But you still can add `dtype` kwarg for :class:`Minibatch` 
 
     in case we want 10 sampled rows and columns
-    [(size, seed), (size, seed)] it is
+    `[(size, seed), (size, seed)]` it is
     >>> x = Minibatch(data, batch_size=[(10, 42), (10, 42)], dtype='int32')
     >>> assert str(x.dtype) == 'int32'
 
     or simpler with default random seed = 42
-    [size, size]
+    `[size, size]`
     >>> x = Minibatch(data, batch_size=[10, 10])
 
-    x is a regular TensorVariable that supports any math
+    x is a regular :class:`TensorVariable` that supports any math
     >>> assert x.eval().shape == (10, 10)
 
     You can pass it to your desired model
@@ -163,7 +169,7 @@ class Minibatch(tt.TensorVariable):
     I import `partial` for simplicity
     >>> from functools import partial
     >>> datagen = partial(np.random.laplace, size=(100, 100))
-    >>> x = Minibatch(datagen(), batch_size=100, update_shared_f=datagen)
+    >>> x = Minibatch(datagen(), batch_size=10, update_shared_f=datagen)
     >>> x.update_shared()
 
     To be more concrete about how we get minibatch, here is a demo
@@ -176,26 +182,29 @@ class Minibatch(tt.TensorVariable):
     3) take that slice
     >>> minibatch = shared[ridx]
 
-    That's done. So if you'll need some replacements in the graph 
+    That's done. Next you can use this minibatch somewhere else. 
+    You can see that in implementation minibatch does not require 
+    fixed shape for shared variable. Feel free to use that if needed.
+
+    So if you'll need some replacements in the graph, e.g. change it to testdata
     >>> testdata = pm.floatX(np.random.laplace(size=(1000, 10)))
 
-    To change minibatch with static data you can create a dict with replacements
+    You can change minibatch with static data you can create a dict with replacements
     >>> replacements = {x: testdata}
     >>> node = x ** 2  # arbitrary expressions
     >>> rnode = theano.clone(node, replacements)
     >>> assert (testdata ** 2 == rnode.eval()).all()
-    
+
     To replace minibatch with it's shared variable 
-    instead of static `np.array` you should do
+    instead of static :class:`ndarray` you should do
     >>> replacements = {x.minibatch: x.shared}
     >>> rnode = theano.clone(node, replacements)
 
     For more complex slices some more code is needed that can seem not so clear
-    They are
     >>> moredata = np.random.rand(10, 20, 30, 40, 50)
-    
-    default total_size is then (10, 20, 30, 40, 50) but 
-    can be less verbose in some cases
+
+    default `total_size` that can be passed to `PyMC3` random node
+    is then `(10, 20, 30, 40, 50)` but can be less verbose in some cases
 
     1) Advanced indexing, `total_size = (10, Ellipsis, 50)`
     >>> x = Minibatch(moredata, [2, Ellipsis, 10])
@@ -203,28 +212,25 @@ class Minibatch(tt.TensorVariable):
     We take slice only for the first and last dimension
     >>> assert x.eval().shape == (2, 20, 30, 40, 10)
 
-    2) skipping particular dimension, total_size = (10, None, 30) 
+    2) Skipping particular dimension, `total_size = (10, None, 30)` 
     >>> x = Minibatch(moredata, [2, None, 20])
     >>> assert x.eval().shape == (2, 20, 20, 40, 50)
 
-    3) mixing that all, total_size = (10, None, 30, Ellipsis, 50)
+    3) Mixing that all, `total_size = (10, None, 30, Ellipsis, 50)`
     >>> x = Minibatch(moredata, [2, None, 20, Ellipsis, 10])
     >>> assert x.eval().shape == (2, 20, 20, 40, 10)
     """
     @theano.configparser.change_flags(compute_test_value='raise')
-    def __init__(self, data, batch_size=128, in_memory_size=None,
-                 random_seed=42, update_shared_f=None,
-                 broadcastable=None, dtype=None, name='Minibatch'):
+    def __init__(self, data, batch_size=128, dtype=None, broadcastable=None, name='Minibatch',
+                 random_seed=42, update_shared_f=None, in_memory_size=None):
         if dtype is None:
             data = pm.smartfloatX(np.asarray(data))
         else:
             data = np.asarray(data, dtype)
-        self._random_seed = random_seed
-        in_memory_slc = self._to_slices(in_memory_size)
-        self.batch_size = batch_size
+        in_memory_slc = self.make_static_slices(in_memory_size)
         self.shared = theano.shared(data[in_memory_slc])
         self.update_shared_f = update_shared_f
-        self.random_slc = self._to_random_slices(self.shared.shape, batch_size)
+        self.random_slc = self.make_random_slices(self.shared.shape, batch_size, random_seed)
         minibatch = self.shared[self.random_slc]
         if broadcastable is None:
             broadcastable = (False, ) * minibatch.ndim
@@ -249,7 +255,7 @@ class Minibatch(tt.TensorVariable):
             raise TypeError('Unrecognized size type, %r' % size)
 
     @staticmethod
-    def _to_slices(user_size):
+    def make_static_slices(user_size):
         if user_size is None:
             return [Ellipsis]
         elif isinstance(user_size, int):
@@ -271,11 +277,12 @@ class Minibatch(tt.TensorVariable):
         else:
             raise TypeError('Unrecognized size type, %r' % user_size)
 
-    def _to_random_slices(self, in_memory_shape, batch_size):
+    @classmethod
+    def make_random_slices(cls, in_memory_shape, batch_size, default_random_seed):
         if batch_size is None:
             return [Ellipsis]
         elif isinstance(batch_size, int):
-            slc = [self.rslice(in_memory_shape[0], batch_size, self._random_seed)]
+            slc = [cls.rslice(in_memory_shape[0], batch_size, default_random_seed)]
         elif isinstance(batch_size, (list, tuple)):
             def check(t):
                 if t is Ellipsis or t is None:
@@ -297,7 +304,7 @@ class Minibatch(tt.TensorVariable):
                                 'size and random seed are both ints, got %r' %
                                 batch_size)
             batch_size = [
-                (i, self._random_seed) if isinstance(i, int) else i
+                (i, default_random_seed) if isinstance(i, int) else i
                 for i in batch_size
             ]
             shape = in_memory_shape
@@ -326,10 +333,10 @@ class Minibatch(tt.TensorVariable):
             else:
                 shp_end = np.asarray([])
             shp_begin = shape[:len(begin)]
-            slc_begin = [self.rslice(shp_begin[i], t[0], t[1])
+            slc_begin = [cls.rslice(shp_begin[i], t[0], t[1])
                          if t is not None else tt.arange(shp_begin[i])
                          for i, t in enumerate(begin)]
-            slc_end = [self.rslice(shp_end[i], t[0], t[1])
+            slc_end = [cls.rslice(shp_end[i], t[0], t[1])
                        if t is not None else tt.arange(shp_end[i])
                        for i, t in enumerate(end)]
             slc = slc_begin + mid + slc_end
@@ -339,6 +346,8 @@ class Minibatch(tt.TensorVariable):
         return pm.theanof.ix_(*slc)
 
     def update_shared(self):
+        if self.update_shared_f is None:
+            raise NotImplementedError("No `update_shared_f` was provided to `__init__`")
         self.set_value(np.asarray(self.update_shared_f(), self.dtype))
 
     def set_value(self, value):
