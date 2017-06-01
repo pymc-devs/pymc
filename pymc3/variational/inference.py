@@ -146,7 +146,11 @@ class Inference(object):
     def _iterate_with_loss(self, n, step_func, progress, callbacks):
         def _infmean(input_array):
             """Return the mean of the finite values of the array"""
-            return np.mean(np.asarray(input_array)[np.isfinite(input_array)])
+            input_array = input_array[np.isfinite(input_array)].astype('float64')
+            if len(input_array) == 0:
+                return np.nan
+            else:
+                return np.mean(input_array)
         scores = np.empty(n)
         scores[:] = np.nan
         i = 0
