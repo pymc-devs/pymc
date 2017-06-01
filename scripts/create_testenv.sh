@@ -53,3 +53,5 @@ pip install ipython ipywidgets numdifftools
 if [ -z ${NO_SETUP} ]; then
     python setup.py build_ext --inplace
 fi
+
+pip install emcee
