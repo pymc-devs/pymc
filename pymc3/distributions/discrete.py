@@ -8,6 +8,7 @@ from pymc3.util import get_variable_name
 from .dist_math import bound, factln, binomln, betaln, logpow
 from .distribution import Discrete, draw_values, generate_samples, reshape_sampled
 from pymc3.math import tround
+from ..math import logsumexp
 
 __all__ = ['Binomial',  'BetaBinomial',  'Bernoulli',  'DiscreteWeibull',
            'Poisson', 'NegativeBinomial', 'ConstantDist', 'Constant',
@@ -593,7 +594,7 @@ class ZeroInflatedPoisson(Discrete):
 
     .. math::
 
-        f(x \mid \theta, \psi) = \left\{ \begin{array}{l}
+        f(x \mid \psi, \theta) = \left\{ \begin{array}{l}
             (1-\psi) + \psi e^{-\theta}, \text{if } x = 0 \\
             \psi \frac{e^{-\theta}\theta^x}{x!}, \text{if } x=1,2,3,\ldots
             \end{array} \right.
@@ -606,15 +607,14 @@ class ZeroInflatedPoisson(Discrete):
 
     Parameters
     ----------
+    psi : float
+        Expected proportion of Poisson variates (0 < psi < 1)
     theta : float
         Expected number of occurrences during the given interval
         (theta >= 0).
-    psi : float
-        Expected proportion of Poisson variates (0 < psi < 1)
-
     """
 
-    def __init__(self, theta, psi, *args, **kwargs):
+    def __init__(self, psi, theta, *args, **kwargs):
         super(ZeroInflatedPoisson, self).__init__(*args, **kwargs)
         self.theta = theta = tt.as_tensor_variable(theta)
         self.psi = psi = tt.as_tensor_variable(psi)
@@ -630,9 +630,17 @@ class ZeroInflatedPoisson(Discrete):
         return reshape_sampled(sampled, size, self.shape)
 
     def logp(self, value):
-        return tt.switch(value > 0,
-                         tt.log(self.psi) + self.pois.logp(value),
-                         tt.log((1. - self.psi) + self.psi * tt.exp(-self.theta)))
+        psi = self.psi
+        theta = self.theta
+
+        logp_val = tt.switch(value > 0,
+                     logsumexp(tt.log(psi) + self.pois.logp(value)),
+                     logsumexp(tt.log((1. - psi) + psi * tt.exp(-theta))))
+
+        return bound(logp_val.sum(),
+            0 <= value,
+            0 <= psi, psi <= 1,
+            0 <= theta)
 
     def _repr_latex_(self, name=None, dist=None):
         if dist is None:
@@ -650,7 +658,7 @@ class ZeroInflatedBinomial(Discrete):
 
     .. math::
 
-        f(x \mid n, p, \psi) = \left\{ \begin{array}{l}
+        f(x \mid \psi, n, p) = \left\{ \begin{array}{l}
             (1-\psi) + \psi (1-p)^{n}, \text{if } x = 0 \\
             \psi {n \choose x} p^x (1-p)^{n-x}, \text{if } x=1,2,3,\ldots,n
             \end{array} \right.
@@ -663,16 +671,16 @@ class ZeroInflatedBinomial(Discrete):
 
     Parameters
     ----------
+    psi : float
+        Expected proportion of Binomial variates (0 < psi < 1)
     n : int
         Number of Bernoulli trials (n >= 0).
     p : float
         Probability of success in each trial (0 < p < 1).
-    psi : float
-        Expected proportion of Binomial variates (0 < psi < 1)
 
     """
 
-    def __init__(self, n, p, psi, *args, **kwargs):
+    def __init__(self, psi, n, p, *args, **kwargs):
         super(ZeroInflatedBinomial, self).__init__(*args, **kwargs)
         self.n = n = tt.as_tensor_variable(n)
         self.p = p = tt.as_tensor_variable(p)
@@ -689,9 +697,18 @@ class ZeroInflatedBinomial(Discrete):
         return reshape_sampled(sampled, size, self.shape)
 
     def logp(self, value):
-        return tt.switch(value > 0,
-                         tt.log(self.psi) + self.bin.logp(value),
-                         tt.log((1. - self.psi) + self.psi * tt.pow(1 - self.p, self.n)))
+        psi = self.psi
+        p = self.p
+        n = self.n
+
+        logp_val = tt.switch(value > 0,
+                 logsumexp(tt.log(psi) + self.bin.logp(value)),
+                 logsumexp(tt.log((1. - psi) + psi * tt.pow(1 - p, n))))
+
+        return bound(logp_val.sum(),
+            0 <= value, value <= n,
+            0 <= psi, psi <= 1,
+            0 <= p, p <= 1)
 
     def _repr_latex_(self, name=None, dist=None):
         if dist is None:
@@ -703,7 +720,7 @@ class ZeroInflatedBinomial(Discrete):
                                                 get_variable_name(n),
                                                 get_variable_name(p),
                                                 get_variable_name(psi))
-                                                
+
 
 class ZeroInflatedNegativeBinomial(Discrete):
     R"""
@@ -715,7 +732,7 @@ class ZeroInflatedNegativeBinomial(Discrete):
 
     .. math::
 
-       f(x \mid \mu, \alpha, \psi) = \left\{ \begin{array}{l}
+       f(x \mid \psi, \mu, \alpha) = \left\{ \begin{array}{l}
             (1-\psi) + \psi \left (\frac{\alpha}{\alpha+\mu} \right) ^\alpha, \text{if } x = 0 \\
             \psi \frac{\Gamma(x+\alpha)}{x! \Gamma(\alpha)} \left (\frac{\alpha}{\mu+\alpha} \right)^\alpha \left( \frac{\mu}{\mu+\alpha} \right)^x, \text{if } x=1,2,3,\ldots
             \end{array} \right.
@@ -728,15 +745,16 @@ class ZeroInflatedNegativeBinomial(Discrete):
 
     Parameters
     ----------
+    psi : float
+        Expected proportion of NegativeBinomial variates (0 < psi < 1)
     mu : float
         Poission distribution parameter (mu > 0).
     alpha : float
         Gamma distribution parameter (alpha > 0).
-    psi : float
-        Expected proportion of NegativeBinomial variates (0 < psi < 1)
+
     """
 
-    def __init__(self, mu, alpha, psi, *args, **kwargs):
+    def __init__(self, psi, mu, alpha, *args, **kwargs):
         super(ZeroInflatedNegativeBinomial, self).__init__(*args, **kwargs)
         self.mu = mu = tt.as_tensor_variable(mu)
         self.alpha = alpha = tt.as_tensor_variable(alpha)
@@ -755,9 +773,18 @@ class ZeroInflatedNegativeBinomial(Discrete):
         return reshape_sampled(sampled, size, self.shape)
 
     def logp(self, value):
-        return tt.switch(value > 0,
-                         tt.log(self.psi) + self.nb.logp(value),
-                         tt.log((1. - self.psi) + self.psi * (self.alpha / (self.alpha + self.mu))**self.alpha))
+        alpha = self.alpha
+        mu = self.mu
+        psi = self.psi
+
+        logp_val = tt.switch(value > 0,
+                     logsumexp(tt.log(psi) + self.nb.logp(value)),
+                     logsumexp(tt.log((1. - psi) + psi * (alpha / (alpha + mu))**alpha)))
+
+        return bound(logp_val.sum(),
+                    0 <= value,
+                    0 <= psi, psi <= 1,
+                    mu > 0, alpha > 0)
 
     def _repr_latex_(self, name=None, dist=None):
         if dist is None:
