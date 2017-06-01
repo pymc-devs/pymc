@@ -195,7 +195,7 @@ class Minibatch(tt.TensorVariable):
     >>> moredata = np.random.rand(10, 20, 30, 40, 50)
     
     default total_size is then (10, 20, 30, 40, 50) but 
-    can be less verbose in sove cases
+    can be less verbose in some cases
 
     1) Advanced indexing, `total_size = (10, Ellipsis, 50)`
     >>> x = Minibatch(moredata, [2, Ellipsis, 10])
