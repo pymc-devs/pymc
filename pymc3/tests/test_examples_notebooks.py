@@ -14,5 +14,5 @@ class TestExamplesNotebooks(SeededTest):
     def test_run_notebook(self, notebook_filename):
         with open(os.path.join(notebooks_dir, notebook_filename)) as f:
             nb = nbformat.read(f, as_version=4)
-        ep = ExecutePreprocessor(timeout=900)
+        ep = ExecutePreprocessor(timeout=300)
         ep.preprocess(nb, {'metadata': {'path': notebooks_dir}})
