@@ -8,7 +8,7 @@ from pymc3.util import get_variable_name
 from .dist_math import bound, factln, binomln, betaln, logpow
 from .distribution import Discrete, draw_values, generate_samples, reshape_sampled
 from pymc3.math import tround
-from ..math import logsumexp
+from ..math import logaddexp
 
 __all__ = ['Binomial',  'BetaBinomial',  'Bernoulli',  'DiscreteWeibull',
            'Poisson', 'NegativeBinomial', 'ConstantDist', 'Constant',
@@ -634,10 +634,10 @@ class ZeroInflatedPoisson(Discrete):
         theta = self.theta
 
         logp_val = tt.switch(value > 0,
-                     logsumexp(tt.log(psi) + self.pois.logp(value)),
-                     logsumexp(tt.log((1. - psi) + psi * tt.exp(-theta))))
+                     tt.log(psi) + self.pois.logp(value),
+                     logaddexp(tt.log(-psi), tt.log(psi) - theta))
 
-        return bound(logp_val.sum(),
+        return bound(logp_val,
             0 <= value,
             0 <= psi, psi <= 1,
             0 <= theta)
@@ -702,10 +702,10 @@ class ZeroInflatedBinomial(Discrete):
         n = self.n
 
         logp_val = tt.switch(value > 0,
-                 logsumexp(tt.log(psi) + self.bin.logp(value)),
-                 logsumexp(tt.log((1. - psi) + psi * tt.pow(1 - p, n))))
+                 tt.log(psi) + self.bin.logp(value),
+                 logsumexp(tt.log1p(-psi), tt.log(psi) + n * tt.log1p(-p)))
 
-        return bound(logp_val.sum(),
+        return bound(logp_val,
             0 <= value, value <= n,
             0 <= psi, psi <= 1,
             0 <= p, p <= 1)
@@ -778,10 +778,10 @@ class ZeroInflatedNegativeBinomial(Discrete):
         psi = self.psi
 
         logp_val = tt.switch(value > 0,
-                     logsumexp(tt.log(psi) + self.nb.logp(value)),
-                     logsumexp(tt.log((1. - psi) + psi * (alpha / (alpha + mu))**alpha)))
+                     tt.log(psi) + self.nb.logp(value),
+                     logaddexp(tt.log1p(-psi), tt.log(psi) + alpha * (tt.log(alpha) - tt.log(alpha + mu))))
 
-        return bound(logp_val.sum(),
+        return bound(logp_val,
                     0 <= value,
                     0 <= psi, psi <= 1,
                     mu > 0, alpha > 0)
