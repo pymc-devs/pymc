@@ -703,7 +703,7 @@ class ZeroInflatedBinomial(Discrete):
 
         logp_val = tt.switch(value > 0,
                  tt.log(psi) + self.bin.logp(value),
-                 logsumexp(tt.log1p(-psi), tt.log(psi) + n * tt.log1p(-p)))
+                 logaddexp(tt.log1p(-psi), tt.log(psi) + n * tt.log1p(-p)))
 
         return bound(logp_val,
             0 <= value, value <= n,
