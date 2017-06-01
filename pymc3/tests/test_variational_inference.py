@@ -366,12 +366,13 @@ with _model:
         (_advi, dict(start={}), None),
         (_fullrank_advi, dict(), None),
         (_svgd, dict(), None),
-        ('advi', dict(), None),
+        ('advi', dict(total_grad_norm_constraint=10), None),
         ('advi->fullrank_advi', dict(frac=.1), None),
         ('advi->fullrank_advi', dict(frac=1), ValueError),
         ('fullrank_advi', dict(), None),
-        ('svgd', dict(), None),
+        ('svgd', dict(total_grad_norm_constraint=10), None),
         ('svgd', dict(start={}), None),
+        ('asvgd', dict(start={}, total_grad_norm_constraint=10), None),
         ('svgd', dict(local_rv={_model.free_RVs[0]: (0, 1)}), ValueError)
     ]
 )

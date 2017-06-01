@@ -63,7 +63,6 @@ class KSDObjective(ObjectiveFunction):
             grad *= pm.floatX(-1)
         grad = theano.clone(grad, {op.input_matrix: z})
         grad = tt.grad(None, params, known_grads={z: grad})
-        grad = updates.total_norm_constraint(grad, 10)
         return grad
 
 
