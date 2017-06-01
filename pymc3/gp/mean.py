@@ -3,6 +3,14 @@ import theano.tensor as tt
 
 __all__ = ['Zero', 'Constant', 'Linear']
 
+"""
+how far to go with this?
+  - should i just keep as is?
+  - plan to include basis functions that follow the func(x, args=(,)) form or mean function form?
+    - is this form better/required for this to work cleanly?
+  - is there a way to factor Combination, Add, Prod, __array_wrap__ out of cov.py and into ParameterizedFunction?
+"""
+
 
 class ParameterizedFunction(object):
     R"""
