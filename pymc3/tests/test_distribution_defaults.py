@@ -63,3 +63,9 @@ def test_default_discrete_uniform():
     with Model():
         x = DiscreteUniform('x', lower=1, upper=2)
         assert x.init_value == 1
+
+def test_discrete_uniform_negative():
+    model = Model()
+    with model:
+        x = DiscreteUniform('x', lower=-10, upper=0)
+    assert model.test_point['x'] == -5
