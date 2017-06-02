@@ -20,6 +20,7 @@ class TestLogDet(SeededTest):
         self.op_class = LogDet
         self.op = logdet
 
+    @theano.configparser.change_flags(compute_test_value="ignore")
     def validate(self, input_mat):
         x = theano.tensor.matrix()
         f = theano.function([x], self.op(x))
