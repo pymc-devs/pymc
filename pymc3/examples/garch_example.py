@@ -38,13 +38,15 @@ def get_garch_model():
     shape = r.shape
 
     with Model() as garch:
-        alpha1 = Normal('alpha1', mu=np.zeros(shape=shape), sd=np.ones(shape=shape), shape=shape)
+        alpha1 = Normal('alpha1', mu=np.zeros(shape=shape), 
+                        sd=np.ones(shape=shape), shape=shape)
         BoundedNormal = Bound(Normal, upper=(1 - alpha1))
         beta1 = BoundedNormal('beta1',
                               mu=np.zeros(shape=shape),
                               sd=1e6 * np.ones(shape=shape),
                               shape=shape)
-        mu = Normal('mu', mu=np.zeros(shape=shape), sd=1e6 * np.ones(shape=shape), shape=shape)
+        mu = Normal('mu', mu=np.zeros(shape=shape), 
+                    sd=1e6 * np.ones(shape=shape), shape=shape)
         theta = tt.sqrt(alpha0 + alpha1 * tt.pow(r - mu, 2) +
                         beta1 * tt.pow(sigma1, 2))
         Normal('obs', mu, sd=theta, observed=r)

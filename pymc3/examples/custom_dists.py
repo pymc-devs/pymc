@@ -11,7 +11,7 @@
 import matplotlib.pyplot as plt
 import numpy as np
 
-import pymc3
+import pymc3 as pm
 import theano.tensor as tt
 
 np.random.seed(42)
@@ -24,20 +24,23 @@ xdata = np.random.normal(xdata, 10)
 ydata = np.random.normal(ydata, 10)
 data = {'x': xdata, 'y': ydata}
 
-with pymc3.Model() as model:
-    alpha = pymc3.Uniform('intercept', -100, 100)
+# define loglikelihood outside of the model context, otherwise njobs wont work:
+# Lambdas defined in local namespace are not picklable (see issue #1995)
+def loglike1(value):
+    return -1.5 * tt.log(1 + value**2)
+def loglike2(value):
+    return -tt.log(tt.abs_(value))
+
+with pm.Model() as model:
+    alpha = pm.Normal('intercept', mu=0, sd=100)
     # Create custom densities
-    beta = pymc3.DensityDist('slope', lambda value: -
-                             1.5 * tt.log(1 + value**2), testval=0)
-    sigma = pymc3.DensityDist(
-        'sigma', lambda value: -tt.log(tt.abs_(value)), testval=1)
+    beta = pm.DensityDist('slope', loglike1, testval=0)
+    sigma = pm.DensityDist('sigma', loglike2, testval=1)
     # Create likelihood
-    like = pymc3.Normal('y_est', mu=alpha + beta *
+    like = pm.Normal('y_est', mu=alpha + beta *
                         xdata, sd=sigma, observed=ydata)
 
-    start = pymc3.find_MAP()
-    step = pymc3.NUTS(scaling=start)  # Instantiate sampler
-    trace = pymc3.sample(10000, step, start=start)
+    trace = pm.sample(2000, njobs=2)
 
 
 #################################################
