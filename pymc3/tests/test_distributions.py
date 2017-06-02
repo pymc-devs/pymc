@@ -14,7 +14,7 @@ from ..distributions import (DensityDist, Categorical, Multinomial, VonMises, Di
                              NegativeBinomial, Geometric, Exponential, ExGaussian, Normal,
                              Flat, LKJCorr, Wald, ChiSquared, HalfNormal, DiscreteUniform,
                              Bound, Uniform, Triangular, Binomial, SkewNormal, DiscreteWeibull, Gumbel,
-                             Interpolated)
+                             Interpolated, ZeroInflatedBinomial)
 from ..distributions import continuous
 from pymc3.theanof import floatX
 from numpy import array, inf, log, exp
@@ -590,6 +590,10 @@ class TestMatchesScipy(SeededTest):
     def test_zeroinflatednegativebinomial(self):
         self.checkd(ZeroInflatedNegativeBinomial, Nat,
                     {'mu': Rplusbig, 'alpha': Rplusbig, 'psi': Unit})
+
+    def test_zeroinflatedbinomial(self):
+        self.checkd(ZeroInflatedBinomial, Nat,
+                    {'n': NatSmall, 'p': Unit, 'psi': Unit})
 
     @pytest.mark.parametrize('n', [1, 2, 3])
     def test_mvnormal(self, n):
