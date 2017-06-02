@@ -139,6 +139,7 @@ class TestMvNormalLogp():
         logp = logp_f(cov_val, delta_val)
         npt.assert_allclose(logp, expect)
 
+    @theano.configparser.change_flags(compute_test_value="ignore")
     def test_grad(self):
         np.random.seed(42)
 
@@ -179,12 +180,14 @@ class TestMvNormalLogp():
 
 
 class TestSplineWrapper(object):
+    @theano.configparser.change_flags(compute_test_value="ignore")
     def test_grad(self):
         x = np.linspace(0, 1, 100)
         y = x * x
         spline = SplineWrapper(interpolate.InterpolatedUnivariateSpline(x, y, k=1))
         utt.verify_grad(spline, [0.5])
 
+    @theano.configparser.change_flags(compute_test_value="ignore")
     def test_hessian(self):
         x = np.linspace(0, 1, 100)
         y = x * x
