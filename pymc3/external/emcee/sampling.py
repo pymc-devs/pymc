@@ -6,10 +6,6 @@ from pymc3.external.emcee.step_methods import ExternalEnsembleStepShared, Affine
 from pymc3.sampling import _update_start_vals
 from theano.gradient import np
 
-__all__ = ['sample', 'build_start_points', 'EnsembleNDArray', 'AffineInvariantEnsemble']
-
-# TODO: create generic EnsembleTrace to use a normal Basetrace (create duplicate parameter names for particles?)
-
 
 def get_random_starters(nparticles, model):
     return {v.name: np.asarray([v.distribution.random() for i in range(nparticles)]) for v in model.vars}

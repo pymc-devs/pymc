@@ -1,6 +1,7 @@
 from pymc3.backends import NDArray, base
 from theano.gradient import np
 
+# TODO: create generic EnsembleTrace to use a normal Basetrace (create duplicate parameter names for particles?)
 
 class EnsembleNDArray(NDArray):
     def __init__(self, name=None, model=None, vars=None, nparticles=None):
