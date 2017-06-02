@@ -11,7 +11,7 @@ class TestZero(object):
     def test_value(self):
         X = np.linspace(0,1,10)[:,None]
         with Model() as model:
-            zero_mean = gp.mean.Zero(1)
+            zero_mean = gp.mean.Zero()
         M = theano.function([], zero_mean(X))()
         assert np.all(M==0)
         assert M.shape == (10,1)
@@ -19,7 +19,7 @@ class TestZero(object):
     def test_multid(self):
         X = np.linspace(0,1,30).reshape(10,3)
         with Model() as model:
-            zero_mean = gp.mean.Zero(input_dim=3)
+            zero_mean = gp.mean.Zero()
         M = theano.function([], zero_mean(X))()
         assert np.all(M==0)
         assert M.shape == (10,1)
@@ -28,7 +28,7 @@ class TestConstant(object):
     def test_value(self):
         X = np.linspace(0,1,10)[:,None]
         with Model() as model:
-            const_mean = gp.mean.Constant(input_dim=1, c=6)
+            const_mean = gp.mean.Constant(c=6)
         M = theano.function([], const_mean(X))()
         assert np.all(M==6)
         assert M.shape == (10,1)
@@ -36,7 +36,7 @@ class TestConstant(object):
     def test_multid(self):
         X = np.linspace(0,1,30).reshape(10,3)
         with Model() as model:
-            const_mean = gp.mean.Constant(input_dim=3, c=6)
+            const_mean = gp.mean.Constant(c=6)
         M = theano.function([], const_mean(X))()
         assert np.all(M==6)
         assert M.shape == (10,1)
@@ -45,7 +45,7 @@ class TestLinearMean(object):
     def test_value(self):
         X = np.linspace(0,1,10)[:,None]
         with Model() as model:
-            linear_mean = gp.mean.Linear(input_dim=1, coeffs=2, intercept=0.5)
+            linear_mean = gp.mean.Linear(coeffs=2, intercept=0.5)
         M = theano.function([], linear_mean(X))()
         npt.assert_allclose(M[1, 0], 0.7222, atol=1e-3)
 
@@ -54,10 +54,51 @@ class TestLinearMean(object):
         A = np.array([1,2,3])
         b = 10
         with Model() as model:
-            linear_mean = gp.mean.Linear(input_dim=3, coeffs=A, intercept=b)
+            linear_mean = gp.mean.Linear(coeffs=A, intercept=b)
         M = theano.function([], linear_mean(X))()
         assert M.shape == (10,1)
         npt.assert_allclose(M[1, 0], 10.8965, atol=1e-3)
+
+class TestMeanAddProd(object):
+    def test_add(self):
+        X = np.linspace(0,1,10)[:,None]
+        with Model() as model:
+            mean1 = gp.mean.Linear(coeffs=2, intercept=0.5)
+            mean2 = gp.mean.Constant(2)
+            mean = mean1 + mean2 + mean2
+        M = theano.function([], mean(X))()
+        npt.assert_allclose(M[1, 0], 0.7222 + 2 + 2, atol=1e-3)
+
+    def test_prod(self):
+        X = np.linspace(0,1,10)[:,None]
+        with Model() as model:
+            mean1 = gp.mean.Linear(coeffs=2, intercept=0.5)
+            mean2 = gp.mean.Constant(2)
+            mean = mean1 * mean2 * mean2
+        M = theano.function([], mean(X))()
+        npt.assert_allclose(M[1, 0], 0.7222 * 2 * 2, atol=1e-3)
+
+    def test_add_multid(self):
+        X = np.linspace(0,1,30).reshape(10,3)
+        A = np.array([1,2,3])
+        b = 10
+        with Model() as model:
+            mean1 = gp.mean.Linear(coeffs=A, intercept=b)
+            mean2 = gp.mean.Constant(2)
+            mean = mean1 + mean2 + mean2
+        M = theano.function([], mean(X))()
+        npt.assert_allclose(M[1, 0], 10.8965 + 2 + 2, atol=1e-3)
+
+    def test_prod_multid(self):
+        X = np.linspace(0,1,30).reshape(10,3)
+        A = np.array([1,2,3])
+        b = 10
+        with Model() as model:
+            mean1 = gp.mean.Linear(coeffs=A, intercept=b)
+            mean2 = gp.mean.Constant(2)
+            mean = mean1 * mean2 * mean2
+        M = theano.function([], mean(X))()
+        npt.assert_allclose(M[1, 0], 10.8965 * 2 * 2, atol=1e-3)
 
 
 class TestCovAdd(object):
@@ -375,16 +416,19 @@ class TestGP(SeededTest):
         with Model() as model:
             # make a Gaussian model
             with pytest.raises(ValueError):
-                random_test = gp.GP('random_test', cov_func=gp.mean.Zero(1), observed={'X':X, 'Y':Y})
+                random_test = gp.GP('random_test', cov_func=gp.mean.Zero(), observed={'X':X, 'Y':Y})
             with pytest.raises(ValueError):
                 random_test = gp.GP('random_test', mean_func=gp.cov.Matern32(1, 1),
+                                        cov_func=gp.cov.Matern32(1, 1), observed={'X':X, 'Y':Y})
+            with pytest.raises(ValueError):
+                random_test = gp.GP('random_test', mean_func=2,
                                         cov_func=gp.cov.Matern32(1, 1), observed={'X':X, 'Y':Y})
 
     def test_sample(self):
         X = np.linspace(0,1,100)[:,None]
         Y = np.random.randn(100,1) + 1.0
         with Model() as model:
-            M = gp.mean.Constant(1, 1)
+            M = gp.mean.Constant(1)
             l = Uniform('l', 0, 5)
             K = gp.cov.Matern32(1, l)
             sigma = Uniform('sigma', 0, 10)

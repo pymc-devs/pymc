@@ -1,7 +1,6 @@
 import theano.tensor as tt
 import numpy as np
 from functools import reduce
-from .mean import ParameterizedFunction
 
 __all__ = ['ExpQuad',
            'RatQuad',
@@ -14,7 +13,7 @@ __all__ = ['ExpQuad',
            'WarpedInput',
            'Gibbs']
 
-class Covariance(ParameterizedFunction):
+class Covariance(object):
     R"""
     Base class for all kernels/covariance functions.
 
@@ -26,6 +25,15 @@ class Covariance(ParameterizedFunction):
 	The booleans indicate whether or not the covariance function operates
         over that dimension or column of X.
     """
+
+    def __init__(self, input_dim, active_dims=None):
+        self.input_dim = input_dim
+        if active_dims is None:
+            self.active_dims = np.arange(input_dim)
+        else:
+            self.active_dims = np.array(active_dims)
+            if len(active_dims) != input_dim:
+                raise ValueError("Length of active_dims must match input_dim")
 
     def __call__(self, X, Z):
         R"""
@@ -56,6 +64,22 @@ class Covariance(ParameterizedFunction):
     def __rmul__(self, other):
         return self.__mul__(other)
 
+    def __array_wrap__(self, result):
+        # can this be moved to parameterizedfunction?
+        """
+        Required to allow radd/rmul by numpy arrays.
+        """
+        r,c = result.shape
+        A = np.zeros((r,c))
+        for i in range(r):
+            for j in range(c):
+                A[i,j] = result[i,j].factor_list[1]
+        if isinstance(result[0][0], Add):
+            return result[0][0].factor_list[0] + A
+        elif isinstance(result[0][0], Prod):
+            return result[0][0].factor_list[0] * A
+        else:
+            raise RuntimeError(result[0][0])
 
 
 class Combination(Covariance):
