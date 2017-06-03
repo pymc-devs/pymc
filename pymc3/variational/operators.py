@@ -1,7 +1,6 @@
 from theano import theano, tensor as tt
 from pymc3.variational.opvi import Operator, ObjectiveFunction, _warn_not_used
 from pymc3.variational.stein import Stein
-from pymc3.variational import updates
 import pymc3 as pm
 
 __all__ = [
