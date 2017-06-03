@@ -152,7 +152,6 @@ class TestApproximates:
                 mu_ = Normal('mu', mu=mu0, sd=sd0, testval=0)
                 Normal('x', mu=mu_, sd=sd, observed=data)
                 inf = self.inference(start={})
-                inf.fit(10)
                 approx = inf.fit(self.NITER,
                                  obj_optimizer=self.optimizer,
                                  callbacks=self.conv_cb,)
@@ -295,11 +294,9 @@ class TestSVGD(TestApproximates.Base):
 
 
 class TestASVGD(TestApproximates.Base):
-    NITER = 15000
-    inference = ASVGD
+    NITER = 5000
+    inference = functools.partial(ASVGD, temperature=1.5)
     test_aevb = _test_aevb
-    optimizer = pm.adagrad_window(learning_rate=0.002)
-    conv_cb = []
 
 
 class TestEmpirical(SeededTest):
