@@ -364,4 +364,8 @@ class TestGP(SeededTest):
             sigma = Uniform('sigma', 0, 10)
             # make a Gaussian model
             random_test = gp.GP('random_test', mean_func=M, cov_func=K, sigma=sigma, observed={'X':X, 'Y':Y})
-            tr = sample(500, init=None, progressbar=False, random_seed=self.random_seed)
+            tr = sample(200, init=None, progressbar=False, random_seed=self.random_seed)
+
+        # test prediction
+        Z = np.linspace(0,1,5)[:,None]
+        out = gp.sample_gp(tr[-10:], random_test, Z, progressbar=False, model=model)
