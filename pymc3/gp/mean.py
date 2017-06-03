@@ -1,4 +1,3 @@
-import numpy as np
 import theano.tensor as tt
 
 __all__ = ['Zero', 'Constant', 'Linear']
