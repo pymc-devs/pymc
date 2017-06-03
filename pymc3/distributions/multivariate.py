@@ -99,6 +99,9 @@ class MvNormal(Continuous):
     def __init__(self, mu, cov=None, tau=None, chol=None, lower=True,
                  *args, **kwargs):
         super(MvNormal, self).__init__(*args, **kwargs)
+        if len(self.shape) > 2:
+            raise ValueError("Only 1 or 2 dimensions are allowed.")
+
         if not lower:
             chol = chol.T
         if len([i for i in [tau, cov, chol] if i is not None]) != 1:
@@ -122,6 +125,7 @@ class MvNormal(Continuous):
                 raise ValueError('cov must be two dimensional.')
             self.chol_cov = cholesky(cov)
             self.cov = cov
+            self._n = self.cov.shape[-1]
         elif tau is not None:
             self.k = tau.shape[0]
             self._cov_type = 'tau'
@@ -130,13 +134,15 @@ class MvNormal(Continuous):
                 raise ValueError('tau must be two dimensional.')
             self.chol_tau = cholesky(tau)
             self.tau = tau
+            self._n = self.tau.shape[-1]
         else:
             self.k = chol.shape[0]
             self._cov_type = 'chol'
             if chol.ndim != 2:
                 raise ValueError('chol must be two dimensional.')
             self.chol_cov = tt.as_tensor_variable(chol)
-    
+            self._n = self.chol_cov.shape[-1]
+
     def random(self, point=None, size=None):
         if size is None:
             size = []
@@ -148,6 +154,9 @@ class MvNormal(Continuous):
         
         if self._cov_type == 'cov':
             mu, cov = draw_values([self.mu, self.cov], point=point)
+            if mu.shape != cov[0].shape:
+                raise ValueError("Shapes for mu an cov don't match")
+
             try:
                 dist = stats.multivariate_normal(
                     mean=mu, cov=cov, allow_singular=True)
@@ -157,11 +166,17 @@ class MvNormal(Continuous):
             return dist.rvs(size)
         elif self._cov_type == 'chol':
             mu, chol = draw_values([self.mu, self.chol_cov], point=point)
+            if mu.shape != chol[0].shape:
+                raise ValueError("Shapes for mu an chol don't match")
+
             size.append(mu.shape[0])
             standard_normal = np.random.standard_normal(size)
             return mu + np.dot(standard_normal, chol.T)
         else:
             mu, tau = draw_values([self.mu, self.tau], point=point)
+            if mu.shape != tau[0].shape:
+                raise ValueError("Shapes for mu an tau don't match")
+
             size.append(mu.shape[0])
             standard_normal = np.random.standard_normal(size)
             try:
@@ -171,23 +186,32 @@ class MvNormal(Continuous):
             transformed = linalg.solve_triangular(
                 chol, standard_normal.T, lower=True)
             return mu + transformed.T
-    
+
     def logp(self, value):
         mu = self.mu
-        k = mu.shape[-1]
-        
-        value = value.reshape((-1, k))
+        if value.ndim > 2 or value.ndim == 0:
+            raise ValueError('Invalid dimension for value: %s' % value.ndim)
+        if value.ndim == 1:
+            onedim = True
+            value = value[None, :]
+        else:
+            onedim = False
+
         delta = value - mu
-        
+
         if self._cov_type == 'cov':
             # Use this when Theano#5908 is released.
             # return MvNormalLogp()(self.cov, delta)
-            return self._logp_cov(delta)
+            logp = self._logp_cov(delta)
         elif self._cov_type == 'tau':
-            return self._logp_tau(delta)
+            logp = self._logp_tau(delta)
         else:
-            return self._logp_chol(delta)
-    
+            logp = self._logp_chol(delta)
+
+        if onedim:
+            return logp[0]
+        return logp
+
     def _logp_chol(self, delta):
         chol_cov = self.chol_cov
         n, k = delta.shape
@@ -200,10 +224,10 @@ class MvNormal(Continuous):
         chol_cov = tt.switch(ok, chol_cov, 1)
         
         delta_trans = self.solve_lower(chol_cov, delta.T)
-        
-        result = n * k * np.log(2 * np.pi)
-        result += 2.0 * n * tt.sum(tt.log(diag))
-        result += (delta_trans ** 2).sum()
+
+        result = k * np.log(2 * np.pi)
+        result += 2.0 * tt.sum(tt.log(diag))
+        result += (delta_trans ** 2).sum(axis=0)
         result = -0.5 * result
         return bound(result, ok)
     
@@ -217,10 +241,10 @@ class MvNormal(Continuous):
         chol_cov = tt.switch(ok, chol_cov, 1)
         diag = tt.nlinalg.diag(chol_cov)
         delta_trans = self.solve_lower(chol_cov, delta.T)
-        
-        result = n * k * tt.log(2 * np.pi)
-        result += 2.0 * n * tt.sum(tt.log(diag))
-        result += (delta_trans ** 2).sum()
+
+        result = k * tt.log(2 * np.pi)
+        result += 2.0 * tt.sum(tt.log(diag))
+        result += (delta_trans ** 2).sum(axis=0)
         result = -0.5 * result
         return bound(result, ok)
     
@@ -234,10 +258,10 @@ class MvNormal(Continuous):
         chol_tau = tt.switch(ok, chol_tau, 1)
         diag = tt.nlinalg.diag(chol_tau)
         delta_trans = tt.dot(chol_tau.T, delta.T)
-        
-        result = n * k * tt.log(2 * np.pi)
-        result -= 2.0 * n * tt.sum(tt.log(diag))
-        result += (delta_trans ** 2).sum()
+
+        result = k * tt.log(2 * np.pi)
+        result -= 2.0 * tt.sum(tt.log(diag))
+        result += (delta_trans ** 2).sum(axis=0)
         result = -0.5 * result
         return bound(result, ok)
     
@@ -247,7 +271,7 @@ class MvNormal(Continuous):
         mu = dist.mu
         try:
             cov = dist.cov
-        except AttributeErrir:
+        except AttributeError:
             cov = dist.chol_cov
         return r'${} \sim \text{{MvNormal}}(\mathit{{mu}}={}, \mathit{{cov}}={})$'.format(name,
                                                 get_variable_name(mu),
