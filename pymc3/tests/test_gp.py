@@ -9,25 +9,25 @@ import pytest
 
 class TestZero(object):
     def test_value(self):
-        X = np.linspace(0,1,10)[:,None]
+        X = np.linspace(0, 1, 10)[:, None]
         with Model() as model:
             zero_mean = gp.mean.Zero()
         M = theano.function([], zero_mean(X))()
         assert np.all(M==0)
-        assert M.shape == (10,1)
+        assert M.shape == (10, 1)
 
 class TestConstant(object):
     def test_value(self):
-        X = np.linspace(0,1,10)[:,None]
+        X = np.linspace(0, 1, 10)[:, None]
         with Model() as model:
             const_mean = gp.mean.Constant(6)
         M = theano.function([], const_mean(X))()
         assert np.all(M==6)
-        assert M.shape == (10,1)
+        assert M.shape == (10, 1)
 
 class TestLinearMean(object):
     def test_value(self):
-        X = np.linspace(0,1,10)[:,None]
+        X = np.linspace(0, 1, 10)[:, None]
         with Model() as model:
             linear_mean = gp.mean.Linear(2, 0.5)
         M = theano.function([], linear_mean(X))()
@@ -36,7 +36,7 @@ class TestLinearMean(object):
 
 class TestCovAdd(object):
     def test_symadd_cov(self):
-        X = np.linspace(0,1,10)[:,None]
+        X = np.linspace(0, 1, 10)[:, None]
         with Model() as model:
             cov1 = gp.cov.ExpQuad(1, 0.1)
             cov2 = gp.cov.ExpQuad(1, 0.1)
@@ -45,7 +45,7 @@ class TestCovAdd(object):
         npt.assert_allclose(K[0, 1], 2 * 0.53940, atol=1e-3)
 
     def test_rightadd_scalar(self):
-        X = np.linspace(0,1,10)[:,None]
+        X = np.linspace(0, 1, 10)[:, None]
         with Model() as model:
             a = 1
             cov = gp.cov.ExpQuad(1, 0.1) + a
@@ -53,7 +53,7 @@ class TestCovAdd(object):
         npt.assert_allclose(K[0, 1], 1.53940, atol=1e-3)
 
     def test_leftadd_scalar(self):
-        X = np.linspace(0,1,10)[:,None]
+        X = np.linspace(0, 1, 10)[:, None]
         with Model() as model:
             a = 1
             cov = a + gp.cov.ExpQuad(1, 0.1)
@@ -61,16 +61,16 @@ class TestCovAdd(object):
         npt.assert_allclose(K[0, 1], 1.53940, atol=1e-3)
 
     def test_rightadd_matrix(self):
-        X = np.linspace(0,1,10)[:,None]
-        M = 2 * np.ones((10,10))
+        X = np.linspace(0, 1, 10)[:, None]
+        M = 2 * np.ones((10, 10))
         with Model() as model:
             cov = gp.cov.ExpQuad(1, 0.1) + M
         K = theano.function([], cov(X))()
         npt.assert_allclose(K[0, 1], 2.53940, atol=1e-3)
 
     def test_leftprod_matrix(self):
-        X = np.linspace(0,1,3)[:,None]
-        M = np.array([[1,2,3],[2,1,2],[3,2,1]])
+        X = np.linspace(0, 1, 3)[:, None]
+        M = np.array([[1, 2, 3], [2, 1, 2], [3, 2, 1]])
         with Model() as model:
             cov = M + gp.cov.ExpQuad(1, 0.1)
             cov_true = gp.cov.ExpQuad(1, 0.1) + M
@@ -81,7 +81,7 @@ class TestCovAdd(object):
 
 class TestCovProd(object):
     def test_symprod_cov(self):
-        X = np.linspace(0,1,10)[:,None]
+        X = np.linspace(0, 1, 10)[:, None]
         with Model() as model:
             cov1 = gp.cov.ExpQuad(1, 0.1)
             cov2 = gp.cov.ExpQuad(1, 0.1)
@@ -90,7 +90,7 @@ class TestCovProd(object):
         npt.assert_allclose(K[0, 1], 0.53940 * 0.53940, atol=1e-3)
 
     def test_rightprod_scalar(self):
-        X = np.linspace(0,1,10)[:,None]
+        X = np.linspace(0, 1, 10)[:, None]
         with Model() as model:
             a = 2
             cov = gp.cov.ExpQuad(1, 0.1) * a
@@ -98,7 +98,7 @@ class TestCovProd(object):
         npt.assert_allclose(K[0, 1], 2 * 0.53940, atol=1e-3)
 
     def test_leftprod_scalar(self):
-        X = np.linspace(0,1,10)[:,None]
+        X = np.linspace(0, 1, 10)[:, None]
         with Model() as model:
             a = 2
             cov = a * gp.cov.ExpQuad(1, 0.1)
@@ -106,16 +106,16 @@ class TestCovProd(object):
         npt.assert_allclose(K[0, 1], 2 * 0.53940, atol=1e-3)
 
     def test_rightprod_matrix(self):
-        X = np.linspace(0,1,10)[:,None]
-        M = 2 * np.ones((10,10))
+        X = np.linspace(0, 1, 10)[:, None]
+        M = 2 * np.ones((10, 10))
         with Model() as model:
             cov = gp.cov.ExpQuad(1, 0.1) * M
         K = theano.function([], cov(X))()
         npt.assert_allclose(K[0, 1], 2 * 0.53940, atol=1e-3)
 
     def test_leftprod_matrix(self):
-        X = np.linspace(0,1,3)[:,None]
-        M = np.array([[1,2,3],[2,1,2],[3,2,1]])
+        X = np.linspace(0, 1, 3)[:, None]
+        M = np.array([[1, 2, 3], [2, 1, 2], [3, 2, 1]])
         with Model() as model:
             cov = M * gp.cov.ExpQuad(1, 0.1)
             cov_true = gp.cov.ExpQuad(1, 0.1) * M
@@ -124,8 +124,8 @@ class TestCovProd(object):
         assert np.allclose(K, K_true)
 
     def test_multiops(self):
-        X = np.linspace(0,1,3)[:,None]
-        M = np.array([[1,2,3],[2,1,2],[3,2,1]])
+        X = np.linspace(0, 1, 3)[:, None]
+        M = np.array([[1, 2, 3], [2, 1, 2], [3, 2, 1]])
         with Model() as model:
             cov1 = 3 + gp.cov.ExpQuad(1, 0.1) + M * gp.cov.ExpQuad(1, 0.1) * M * gp.cov.ExpQuad(1, 0.1)
             cov2 = gp.cov.ExpQuad(1, 0.1) * M * gp.cov.ExpQuad(1, 0.1) * M + gp.cov.ExpQuad(1, 0.1) + 3
@@ -136,28 +136,28 @@ class TestCovProd(object):
 
 class TestCovSliceDim(object):
     def test_slice1(self):
-        X = np.linspace(0,1,30).reshape(10,3)
+        X = np.linspace(0, 1, 30).reshape(10, 3)
         with Model() as model:
-            cov = gp.cov.ExpQuad(3, 0.1, active_dims=[0,0,1])
+            cov = gp.cov.ExpQuad(3, 0.1, active_dims=[0, 0, 1])
         K = theano.function([], cov(X))()
         npt.assert_allclose(K[0, 1], 0.20084298, atol=1e-3)
 
     def test_slice2(self):
-        X = np.linspace(0,1,30).reshape(10,3)
+        X = np.linspace(0, 1, 30).reshape(10, 3)
         with Model() as model:
             cov = gp.cov.ExpQuad(3, [0.1, 0.1], active_dims=[False, True, True])
         K = theano.function([], cov(X))()
         npt.assert_allclose(K[0, 1], 0.34295549, atol=1e-3)
 
     def test_slice3(self):
-        X = np.linspace(0,1,30).reshape(10,3)
+        X = np.linspace(0, 1, 30).reshape(10, 3)
         with Model() as model:
             cov = gp.cov.ExpQuad(3, np.array([0.1, 0.1]), active_dims=[False, True, True])
         K = theano.function([], cov(X))()
         npt.assert_allclose(K[0, 1], 0.34295549, atol=1e-3)
 
     def test_diffslice(self):
-        X = np.linspace(0,1,30).reshape(10,3)
+        X = np.linspace(0, 1, 30).reshape(10, 3)
         with Model() as model:
             cov = gp.cov.ExpQuad(3, 0.1, [1, 0, 0]) + gp.cov.ExpQuad(3, [0.1, 0.2, 0.3])
         K = theano.function([], cov(X))()
@@ -172,7 +172,7 @@ class TestCovSliceDim(object):
 
 class TestStability(object):
     def test_stable(self):
-        X = np.random.uniform(low=320., high=400., size=[2000,2])
+        X = np.random.uniform(low=320., high=400., size=[2000, 2])
         with Model() as model:
             cov = gp.cov.ExpQuad(2, 0.1)
         dists = theano.function([], cov.square_dist(X, X))()
@@ -181,23 +181,23 @@ class TestStability(object):
 
 class TestExpQuad(object):
     def test_1d(self):
-        X = np.linspace(0,1,10)[:,None]
+        X = np.linspace(0, 1, 10)[:, None]
         with Model() as model:
             cov = gp.cov.ExpQuad(1, 0.1)
         K = theano.function([], cov(X))()
         npt.assert_allclose(K[0, 1], 0.53940, atol=1e-3)
-        K = theano.function([], cov(X,X))()
+        K = theano.function([], cov(X, X))()
         npt.assert_allclose(K[0, 1], 0.53940, atol=1e-3)
 
     def test_2d(self):
-        X = np.linspace(0,1,10).reshape(5,2)
+        X = np.linspace(0, 1, 10).reshape(5, 2)
         with Model() as model:
             cov = gp.cov.ExpQuad(2, 0.5)
         K = theano.function([], cov(X))()
         npt.assert_allclose(K[0, 1], 0.820754, atol=1e-3)
 
     def test_2dard(self):
-        X = np.linspace(0,1,10).reshape(5,2)
+        X = np.linspace(0, 1, 10).reshape(5, 2)
         with Model() as model:
             cov = gp.cov.ExpQuad(2, np.array([1, 2]))
         K = theano.function([], cov(X))()
@@ -206,92 +206,92 @@ class TestExpQuad(object):
 
 class TestRatQuad(object):
     def test_1d(self):
-        X = np.linspace(0,1,10)[:,None]
+        X = np.linspace(0, 1, 10)[:, None]
         with Model() as model:
             cov = gp.cov.RatQuad(1, 0.1, 0.5)
         K = theano.function([], cov(X))()
         npt.assert_allclose(K[0, 1], 0.66896, atol=1e-3)
-        K = theano.function([], cov(X,X))()
+        K = theano.function([], cov(X, X))()
         npt.assert_allclose(K[0, 1], 0.66896, atol=1e-3)
 
 
 class TestExponential(object):
     def test_1d(self):
-        X = np.linspace(0,1,10)[:,None]
+        X = np.linspace(0, 1, 10)[:, None]
         with Model() as model:
             cov = gp.cov.Exponential(1, 0.1)
         K = theano.function([], cov(X))()
         npt.assert_allclose(K[0, 1], 0.57375, atol=1e-3)
-        K = theano.function([], cov(X,X))()
+        K = theano.function([], cov(X, X))()
         npt.assert_allclose(K[0, 1], 0.57375, atol=1e-3)
 
 
 class TestMatern52(object):
     def test_1d(self):
-        X = np.linspace(0,1,10)[:,None]
+        X = np.linspace(0, 1, 10)[:, None]
         with Model() as model:
             cov = gp.cov.Matern52(1, 0.1)
         K = theano.function([], cov(X))()
         npt.assert_allclose(K[0, 1], 0.46202, atol=1e-3)
-        K = theano.function([], cov(X,X))()
+        K = theano.function([], cov(X, X))()
         npt.assert_allclose(K[0, 1], 0.46202, atol=1e-3)
 
 
 class TestMatern32(object):
     def test_1d(self):
-        X = np.linspace(0,1,10)[:,None]
+        X = np.linspace(0, 1, 10)[:, None]
         with Model() as model:
             cov = gp.cov.Matern32(1, 0.1)
         K = theano.function([], cov(X))()
         npt.assert_allclose(K[0, 1], 0.42682, atol=1e-3)
-        K = theano.function([], cov(X,X))()
+        K = theano.function([], cov(X, X))()
         npt.assert_allclose(K[0, 1], 0.42682, atol=1e-3)
 
 
 class TestCosine(object):
     def test_1d(self):
-        X = np.linspace(0,1,10)[:,None]
+        X = np.linspace(0, 1, 10)[:, None]
         with Model() as model:
             cov = gp.cov.Cosine(1, 0.1)
         K = theano.function([], cov(X))()
         npt.assert_allclose(K[0, 1], -0.93969, atol=1e-3)
-        K = theano.function([], cov(X,X))()
+        K = theano.function([], cov(X, X))()
         npt.assert_allclose(K[0, 1], -0.93969, atol=1e-3)
 
 
 class TestLinear(object):
     def test_1d(self):
-        X = np.linspace(0,1,10)[:,None]
+        X = np.linspace(0, 1, 10)[:, None]
         with Model() as model:
             cov = gp.cov.Linear(1, 0.5)
         K = theano.function([], cov(X))()
         npt.assert_allclose(K[0, 1], 0.19444, atol=1e-3)
-        K = theano.function([], cov(X,X))()
+        K = theano.function([], cov(X, X))()
         npt.assert_allclose(K[0, 1], 0.19444, atol=1e-3)
 
 
 class TestPolynomial(object):
     def test_1d(self):
-        X = np.linspace(0,1,10)[:,None]
+        X = np.linspace(0, 1, 10)[:, None]
         with Model() as model:
             cov = gp.cov.Polynomial(1, 0.5, 2, 0)
         K = theano.function([], cov(X))()
         npt.assert_allclose(K[0, 1], 0.03780, atol=1e-3)
-        K = theano.function([], cov(X,X))()
+        K = theano.function([], cov(X, X))()
         npt.assert_allclose(K[0, 1], 0.03780, atol=1e-3)
 
 
 class TestWarpedInput(object):
     def test_1d(self):
-        X = np.linspace(0,1,10)[:,None]
+        X = np.linspace(0, 1, 10)[:, None]
         def warp_func(x, a, b, c):
             return x + (a * tt.tanh(b * (x - c)))
         with Model() as model:
             cov_m52 = gp.cov.Matern52(1, 0.2)
-            cov = gp.cov.WarpedInput(1, warp_func=warp_func, args=(1,10,1), cov_func=cov_m52)
+            cov = gp.cov.WarpedInput(1, warp_func=warp_func, args=(1, 10, 1), cov_func=cov_m52)
         K = theano.function([], cov(X))()
         npt.assert_allclose(K[0, 1], 0.79593, atol=1e-3)
-        K = theano.function([], cov(X,X))()
+        K = theano.function([], cov(X, X))()
         npt.assert_allclose(K[0, 1], 0.79593, atol=1e-3)
 
     def test_raises(self):
@@ -304,14 +304,14 @@ class TestWarpedInput(object):
 
 class TestGibbs(object):
     def test_1d(self):
-        X = np.linspace(0, 2, 10)[:,None]
+        X = np.linspace(0, 2, 10)[:, None]
         def tanh_func(x, x1, x2, w, x0):
             return (x1 + x2) / 2.0 - (x1 - x2) / 2.0 * tt.tanh((x - x0) / w)
         with Model() as model:
             cov = gp.cov.Gibbs(1, tanh_func, args=(0.05, 0.6, 0.4, 1.0))
         K = theano.function([], cov(X))()
         npt.assert_allclose(K[2, 3], 0.136683, atol=1e-4)
-        K = theano.function([], cov(X,X))()
+        K = theano.function([], cov(X, X))()
         npt.assert_allclose(K[2, 3], 0.136683, atol=1e-4)
 
     def test_raises(self):
@@ -344,8 +344,8 @@ class TestHandleArgs(object):
 
 class TestGP(SeededTest):
     def test_func_args(self):
-        X = np.linspace(0,1,10)[:,None]
-        Y = np.random.randn(10,1)
+        X = np.linspace(0, 1, 10)[:, None]
+        Y = np.random.randn(10, 1)
         with Model() as model:
             # make a Gaussian model
             with pytest.raises(ValueError):
@@ -355,8 +355,8 @@ class TestGP(SeededTest):
                                         cov_func=gp.cov.Matern32(1, 1), observed={'X':X, 'Y':Y})
 
     def test_sample(self):
-        X = np.linspace(0,1,100)[:,None]
-        Y = np.random.randn(100,1)
+        X = np.linspace(0, 1, 100)[:, None]
+        Y = np.random.randn(100, 1)
         with Model() as model:
             M = gp.mean.Zero()
             l = Uniform('l', 0, 5)
@@ -367,5 +367,5 @@ class TestGP(SeededTest):
             tr = sample(200, init=None, progressbar=False, random_seed=self.random_seed)
 
         # test prediction
-        Z = np.linspace(0,1,5)[:,None]
+        Z = np.linspace(0, 1, 5)[:, None]
         out = gp.sample_gp(tr[-10:], random_test, Z, progressbar=False, model=model)
