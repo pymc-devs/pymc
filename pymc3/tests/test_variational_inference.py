@@ -70,7 +70,7 @@ class TestApproximates:
     class Base(SeededTest):
         inference = None
         NITER = 12000
-        optimizer = pm.adagrad_window(learning_rate=0.01)
+        optimizer = pm.adagrad_window(learning_rate=0.01, n_win=50)
         conv_cb = property(lambda self: [
             pm.callbacks.CheckParametersConvergence(
                 every=500,
