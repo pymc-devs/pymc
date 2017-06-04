@@ -283,7 +283,7 @@ class BinaryMetropolis(ArrayStep):
             var.distribution, 'parent_dist', var.distribution)
         if isinstance(distribution, pm.Bernoulli) or (var.dtype in pm.bool_types):
             return Competence.COMPATIBLE
-        elif isinstance(distribution, pm.Categorical) and (distribution.k == 2):
+        elif hasattr(distribution, 'k') and (distribution.k == 2):
             return Competence.COMPATIBLE
         return Competence.INCOMPATIBLE
 
@@ -340,7 +340,7 @@ class BinaryGibbsMetropolis(ArrayStep):
             var.distribution, 'parent_dist', var.distribution)
         if isinstance(distribution, pm.Bernoulli) or (var.dtype in pm.bool_types):
             return Competence.IDEAL
-        elif isinstance(distribution, pm.Categorical) and (distribution.k == 2):
+        elif hasattr(distribution, 'k') and (distribution.k == 2):
             return Competence.IDEAL
         return Competence.INCOMPATIBLE
 
@@ -366,7 +366,7 @@ class CategoricalGibbsMetropolis(ArrayStep):
         # categories, we will have dimcats = [(0, M), (1, M), (2, N), (3, N), (4, N)].
         for v in vars:
             distr = getattr(v.distribution, 'parent_dist', v.distribution)
-            if isinstance(distr, pm.Categorical):
+            if hasattr(distr, 'k'):
                 k = draw_values([distr.k])[0]
             elif isinstance(distr, pm.Bernoulli) or (v.dtype in pm.bool_types):
                 k = 2
@@ -453,7 +453,7 @@ class CategoricalGibbsMetropolis(ArrayStep):
         '''
         distribution = getattr(
             var.distribution, 'parent_dist', var.distribution)
-        if isinstance(distribution, pm.Categorical):
+        if hasattr(distribution, 'k'):
             if distribution.k > 2:
                 return Competence.IDEAL
             return Competence.COMPATIBLE
