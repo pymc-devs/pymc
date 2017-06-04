@@ -14,7 +14,7 @@ class TestZero(object):
             zero_mean = gp.mean.Zero()
         M = theano.function([], zero_mean(X))()
         assert np.all(M==0)
-        assert M.shape == (10,1)
+        assert M.shape == (10, )
 
     def test_multid(self):
         X = np.linspace(0,1,30).reshape(10,3)
@@ -22,7 +22,7 @@ class TestZero(object):
             zero_mean = gp.mean.Zero()
         M = theano.function([], zero_mean(X))()
         assert np.all(M==0)
-        assert M.shape == (10,1)
+        assert M.shape == (10, )
 
 class TestConstant(object):
     def test_value(self):
@@ -31,7 +31,7 @@ class TestConstant(object):
             const_mean = gp.mean.Constant(c=6)
         M = theano.function([], const_mean(X))()
         assert np.all(M==6)
-        assert M.shape == (10,1)
+        assert M.shape == (10, )
 
     def test_multid(self):
         X = np.linspace(0,1,30).reshape(10,3)
@@ -39,7 +39,7 @@ class TestConstant(object):
             const_mean = gp.mean.Constant(c=6)
         M = theano.function([], const_mean(X))()
         assert np.all(M==6)
-        assert M.shape == (10,1)
+        assert M.shape == (10, )
 
 class TestLinearMean(object):
     def test_value(self):
@@ -47,7 +47,7 @@ class TestLinearMean(object):
         with Model() as model:
             linear_mean = gp.mean.Linear(coeffs=2, intercept=0.5)
         M = theano.function([], linear_mean(X))()
-        npt.assert_allclose(M[1, 0], 0.7222, atol=1e-3)
+        npt.assert_allclose(M[1], 0.7222, atol=1e-3)
 
     def test_multid(self):
         X = np.linspace(0,1,30).reshape(10,3)
@@ -56,8 +56,8 @@ class TestLinearMean(object):
         with Model() as model:
             linear_mean = gp.mean.Linear(coeffs=A, intercept=b)
         M = theano.function([], linear_mean(X))()
-        assert M.shape == (10,1)
-        npt.assert_allclose(M[1, 0], 10.8965, atol=1e-3)
+        assert M.shape == (10, )
+        npt.assert_allclose(M[1], 10.8965, atol=1e-3)
 
 class TestMeanAddProd(object):
     def test_add(self):
@@ -67,7 +67,7 @@ class TestMeanAddProd(object):
             mean2 = gp.mean.Constant(2)
             mean = mean1 + mean2 + mean2
         M = theano.function([], mean(X))()
-        npt.assert_allclose(M[1, 0], 0.7222 + 2 + 2, atol=1e-3)
+        npt.assert_allclose(M[1], 0.7222 + 2 + 2, atol=1e-3)
 
     def test_prod(self):
         X = np.linspace(0,1,10)[:,None]
@@ -76,7 +76,7 @@ class TestMeanAddProd(object):
             mean2 = gp.mean.Constant(2)
             mean = mean1 * mean2 * mean2
         M = theano.function([], mean(X))()
-        npt.assert_allclose(M[1, 0], 0.7222 * 2 * 2, atol=1e-3)
+        npt.assert_allclose(M[1], 0.7222 * 2 * 2, atol=1e-3)
 
     def test_add_multid(self):
         X = np.linspace(0,1,30).reshape(10,3)
@@ -87,7 +87,7 @@ class TestMeanAddProd(object):
             mean2 = gp.mean.Constant(2)
             mean = mean1 + mean2 + mean2
         M = theano.function([], mean(X))()
-        npt.assert_allclose(M[1, 0], 10.8965 + 2 + 2, atol=1e-3)
+        npt.assert_allclose(M[1], 10.8965 + 2 + 2, atol=1e-3)
 
     def test_prod_multid(self):
         X = np.linspace(0,1,30).reshape(10,3)
@@ -98,7 +98,7 @@ class TestMeanAddProd(object):
             mean2 = gp.mean.Constant(2)
             mean = mean1 * mean2 * mean2
         M = theano.function([], mean(X))()
-        npt.assert_allclose(M[1, 0], 10.8965 * 2 * 2, atol=1e-3)
+        npt.assert_allclose(M[1], 10.8965 * 2 * 2, atol=1e-3)
 
 
 class TestCovAdd(object):
