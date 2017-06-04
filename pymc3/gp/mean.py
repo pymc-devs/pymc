@@ -24,9 +24,11 @@ class Mean(object):
     def __mul__(self, other):
         return Prod(self, other)
 
+
 class Zero(Mean):
     def __call__(self, X):
-        return tt.zeros(tt.stack([X.shape[0], 1]), dtype="float32")
+        return tt.zeros(X.shape[0], dtype="float32")
+
 
 class Constant(Mean):
     """
@@ -43,7 +45,7 @@ class Constant(Mean):
         self.c = c
 
     def __call__(self, X):
-        return tt.ones(tt.stack([X.shape[0], 1])) * self.c
+        return tt.ones(tt.stack([X.shape[0], ])) * self.c
 
 
 class Linear(Mean):
@@ -64,7 +66,7 @@ class Linear(Mean):
 
     def __call__(self, X):
         m = tt.dot(X, self.A) + self.b
-        return tt.reshape(m, (X.shape[0], 1))
+        return tt.reshape(m, (X.shape[0], ))
 
 
 class Add(Mean):
