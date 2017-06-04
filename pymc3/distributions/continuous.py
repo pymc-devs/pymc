@@ -22,6 +22,7 @@ from .dist_math import (
     i1, alltrue_elemwise, SplineWrapper
 )
 from .distribution import Continuous, draw_values, generate_samples, Bound
+from pymc3.math import logit
 
 __all__ = ['Uniform', 'Flat', 'Normal', 'Beta', 'Exponential', 'Laplace',
            'StudentT', 'Cauchy', 'HalfCauchy', 'Gamma', 'Weibull',
@@ -68,8 +69,7 @@ def assert_negative_support(var, label, distname, value=-1e-6):
 
 
 def get_tau_sd(tau=None, sd=None):
-    """
-    Find precision and standard deviation
+    """Find precision and standard deviation
 
     .. math::
         \tau = \frac{1}{\sigma^2}
@@ -109,8 +109,7 @@ def get_tau_sd(tau=None, sd=None):
 
 
 class Uniform(Continuous):
-    R"""
-    Continuous uniform log-likelihood.
+    R"""Continuous uniform log-likelihood.
 
     .. math::
 
@@ -167,8 +166,7 @@ class Uniform(Continuous):
 
 
 class Flat(Continuous):
-    """
-    Uninformative log-likelihood that returns 0 regardless of
+    """Uninformative log-likelihood that returns 0 regardless of
     the passed value.
     """
 
@@ -189,8 +187,7 @@ class Flat(Continuous):
 
 
 class Normal(Continuous):
-    R"""
-    Univariate normal log-likelihood.
+    R"""Univariate normal log-likelihood.
 
     .. math::
 
@@ -261,8 +258,7 @@ class Normal(Continuous):
 
 
 class HalfNormal(PositiveContinuous):
-    R"""
-    Half-normal log-likelihood.
+    R"""Half-normal log-likelihood.
 
     .. math::
 
@@ -318,8 +314,7 @@ class HalfNormal(PositiveContinuous):
                                                                 get_variable_name(sd))
 
 class Wald(PositiveContinuous):
-    R"""
-    Wald log-likelihood.
+    R"""Wald log-likelihood.
 
     .. math::
 
@@ -450,8 +445,7 @@ class Wald(PositiveContinuous):
 
 
 class Beta(UnitContinuous):
-    R"""
-    Beta log-likelihood.
+    R"""Beta log-likelihood.
 
     .. math::
 
@@ -547,8 +541,7 @@ class Beta(UnitContinuous):
 
 
 class Exponential(PositiveContinuous):
-    R"""
-    Exponential log-likelihood.
+    R"""Exponential log-likelihood.
 
     .. math::
 
@@ -595,8 +588,7 @@ class Exponential(PositiveContinuous):
                                                                 get_variable_name(lam))
 
 class Laplace(Continuous):
-    R"""
-    Laplace log-likelihood.
+    R"""Laplace log-likelihood.
 
     .. math::
 
@@ -649,8 +641,7 @@ class Laplace(Continuous):
 
 
 class Lognormal(PositiveContinuous):
-    R"""
-    Log-normal log-likelihood.
+    R"""Log-normal log-likelihood.
 
     Distribution of any random variable whose logarithm is normally
     distributed. A variable might be modeled as log-normal if it can
@@ -666,7 +657,7 @@ class Lognormal(PositiveContinuous):
     ========  =========================================================================
     Support   :math:`x \in (0, 1)`
     Mean      :math:`\exp\{\mu + \frac{1}{2\tau}\}`
-    Variance  :math:\(\exp\{\frac{1}{\tau}\} - 1\) \times \exp\{2\mu + \frac{1}{\tau}\}
+    Variance  :math:`\(\exp\{\frac{1}{\tau}\} - 1\) \times \exp\{2\mu + \frac{1}{\tau}\}`
     ========  =========================================================================
 
     Parameters
@@ -721,9 +712,48 @@ class Lognormal(PositiveContinuous):
                                                                 get_variable_name(tau))
 
 
+class Logitnormal(PositiveContinuous):
+    R"""Logit-normal log-likelihood.
+
+    .. math::
+
+       f(x \mid \mu, \tau) =
+           \frac{1}{x(x-1)} \sqrt{\frac{\tau}{2\pi}}
+           \exp\left\{ -\frac{\tau}{2} (\logit(x)-\mu)^2 \right\}
+
+    ========  =========================================================================
+    Support   :math:`x \in (0, 1)`
+    Mean      undefined
+    Variance  undefined
+    ========  =========================================================================
+
+    Parameters
+    ----------
+    mu : float
+        Location parameter.
+    tau : float
+        Scale parameter (tau > 0).
+    """
+
+    def __init__(self, mu=0.5, tau=None, *args, **kwargs):
+        super(Logitnormal, self).__init__(*args, **kwargs)
+
+        self.mu = mu = tt.as_tensor_variable(mu)
+        self.tau = tau = tt.as_tensor_variable(tau)
+
+        self.median = logit(mu)
+        assert_negative_support(tau, 'tau', 'Logitnormal')
+
+    def logp(self, value):
+        mu = self.mu
+        tau = self.tau
+        return bound(-0.5 * tau * (logit(value) - mu) ** 2
+                     + 0.5 * tt.log(tau / (2. * np.pi))
+                     - tt.log(value * (1 - value)), value > 0, value < 1, tau > 0)
+
+
 class StudentT(Continuous):
-    R"""
-    Non-central Student's T log-likelihood.
+    R"""Non-central Student's T log-likelihood.
 
     Describes a normal variable whose precision is gamma distributed.
     If only nu parameter is passed, this specifies a standard (central)
@@ -797,8 +827,7 @@ class StudentT(Continuous):
 
 
 class Pareto(PositiveContinuous):
-    R"""
-    Pareto log-likelihood.
+    R"""Pareto log-likelihood.
 
     Often used to characterize wealth distribution, or other examples of the
     80/20 rule.
@@ -868,8 +897,7 @@ class Pareto(PositiveContinuous):
 
 
 class Cauchy(Continuous):
-    R"""
-    Cauchy log-likelihood.
+    R"""Cauchy log-likelihood.
 
     Also known as the Lorentz or the Breit-Wigner distribution.
 
@@ -929,8 +957,7 @@ class Cauchy(Continuous):
 
 
 class HalfCauchy(PositiveContinuous):
-    R"""
-    Half-Cauchy log-likelihood.
+    R"""Half-Cauchy log-likelihood.
 
     .. math::
 
@@ -981,8 +1008,7 @@ class HalfCauchy(PositiveContinuous):
                                                                 get_variable_name(beta))
 
 class Gamma(PositiveContinuous):
-    R"""
-    Gamma log-likelihood.
+    R"""Gamma log-likelihood.
 
     Represents the sum of alpha exponentially distributed random variables,
     each of which has mean beta.
@@ -1073,8 +1099,7 @@ class Gamma(PositiveContinuous):
 
 
 class InverseGamma(PositiveContinuous):
-    R"""
-    Inverse gamma log-likelihood, the reciprocal of the gamma distribution.
+    R"""Inverse gamma log-likelihood, the reciprocal of the gamma distribution.
 
     .. math::
 
@@ -1143,8 +1168,7 @@ class InverseGamma(PositiveContinuous):
 
 
 class ChiSquared(Gamma):
-    R"""
-    :math:`\chi^2` log-likelihood.
+    R""":math:`\chi^2` log-likelihood.
 
     .. math::
 
@@ -1176,8 +1200,7 @@ class ChiSquared(Gamma):
 
 
 class Weibull(PositiveContinuous):
-    R"""
-    Weibull log-likelihood.
+    R"""Weibull log-likelihood.
 
     .. math::
 
@@ -1249,8 +1272,7 @@ HalfStudentT = Bound(StudentT, lower=0)
 
 
 class ExGaussian(Continuous):
-    R"""
-    Exponentially modified Gaussian log-likelihood.
+    R"""Exponentially modified Gaussian log-likelihood.
 
     Results from the convolution of a normal distribution with an exponential
     distribution.
@@ -1342,8 +1364,7 @@ class ExGaussian(Continuous):
 
 
 class VonMises(Continuous):
-    R"""
-    Univariate VonMises log-likelihood.
+    R"""Univariate VonMises log-likelihood.
 
     .. math::
         f(x \mid \mu, \kappa) =
@@ -1400,8 +1421,7 @@ class VonMises(Continuous):
 
 
 class SkewNormal(Continuous):
-    R"""
-    Univariate skew-normal log-likelihood.
+    R"""Univariate skew-normal log-likelihood.
 
     .. math::
        f(x \mid \mu, \tau, \alpha) =
@@ -1486,8 +1506,7 @@ class SkewNormal(Continuous):
 
 
 class Triangular(Continuous):
-    """
-    Continuous Triangular log-likelihood
+    """Continuous Triangular log-likelihood
     Implemented by J. A. Fonseca 22/12/16
 
     Parameters
