@@ -50,13 +50,13 @@ class GP(Continuous):
         if X is not None:
             self.X = X
             self.mean = self.mode = self.M(X)
-            kwargs.setdefault("shape", X.squeeze().shape)
+            kwargs.setdefault("shape", X.shape)
 
         super(GP, self).__init__(*args, **kwargs)
 
     def random(self, point=None, size=None, **kwargs):
         X = self.X
-        mu, cov = draw_values([self.M(X).squeeze(), self.K(X) + np.eye(X.shape[0])*self.sigma**2], point=point)
+        mu, cov = draw_values([self.M(X), self.K(X) + np.eye(X.shape[0])*self.sigma**2], point=point)
 
         def _random(mean, cov, size=None):
             return stats.multivariate_normal.rvs(
@@ -72,7 +72,7 @@ class GP(Continuous):
     def logp(self, Y, X=None):
         if X is None:
             X = self.X
-        mu = self.M(X).squeeze()
+        mu = self.M(X)
         Sigma = self.K(X) + tt.eye(X.shape[0])*self.sigma**2
 
         return MvNormal.dist(mu, Sigma).logp(Y)
