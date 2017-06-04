@@ -13,9 +13,6 @@ import pytest
 import theano
 
 
-NJOBS = 1 if theano.config.floatX == "float32" else 2  # TODO: fix parallel sampling on CUDA
-
-
 @pytest.mark.xfail(condition=(theano.config.floatX == "float32"), reason="Fails on float32")
 class TestGelmanRubin(SeededTest):
     good_ratio = 1.1
@@ -27,7 +24,7 @@ class TestGelmanRubin(SeededTest):
             step1 = Slice([model.early_mean_log__, model.late_mean_log__])
             step2 = Metropolis([model.switchpoint])
             start = {'early_mean': 7., 'late_mean': 5., 'switchpoint': 10}
-            ptrace = sample(n_samples, tune=0, step=[step1, step2], start=start, njobs=NJOBS,
+            ptrace = sample(n_samples, tune=0, step=[step1, step2], start=start, njobs=2,
                     progressbar=False, random_seed=[20090425, 19700903])
         return ptrace
 
