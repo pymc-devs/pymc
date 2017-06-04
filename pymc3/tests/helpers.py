@@ -86,3 +86,11 @@ def select_by_precision(float64, float32):
     """Helper function to choose reasonable decimal cutoffs for different floatX modes."""
     decimal = float64 if theano.config.floatX == "float64" else float32
     return decimal
+
+
+def dtype_equals_modulo_precision(arg0, arg1):
+    """Returns arg0 == arg1 modulo floating point precision.  Assumes numpy dtype objects."""
+    if ("float" in str(arg0)) and ("float" in str(arg1)):
+        return True
+    else:
+        return (arg0 == arg1)
