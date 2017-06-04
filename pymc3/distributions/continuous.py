@@ -224,11 +224,16 @@ class Normal(Continuous):
 
     def __init__(self, mu=0, sd=None, tau=None, **kwargs):
         tau, sd = get_tau_sd(tau=tau, sd=sd)
+        
         self.sd = tt.as_tensor_variable(sd)
         self.tau = tt.as_tensor_variable(tau)
 
         self.mean = self.median = self.mode = self.mu = mu = tt.as_tensor_variable(mu)
         self.variance = 1. / self.tau
+        
+        if self.sd.ndim > self.mu.ndim:
+            warnings.warn('The dimension of sd or tau is larger than mu.'
+                        + ' Covariance matrices should only be used with MvNormal.')
 
         assert_negative_support(sd, 'sd', 'Normal')
         assert_negative_support(tau, 'tau', 'Normal')
