@@ -1,6 +1,6 @@
 from theano import theano, tensor as tt
 from pymc3.variational.test_functions import rbf
-from pymc3.theanof import memoize
+from pymc3.theanof import memoize, floatX
 
 __all__ = [
     'Stein'
@@ -8,8 +8,9 @@ __all__ = [
 
 
 class Stein(object):
-    def __init__(self, approx, kernel=rbf, input_matrix=None):
+    def __init__(self, approx, kernel=rbf, input_matrix=None, temperature=1):
         self.approx = approx
+        self.temperature = floatX(temperature)
         self._kernel_f = kernel
         if input_matrix is None:
             input_matrix = tt.matrix('stein_input_matrix')
@@ -22,8 +23,9 @@ class Stein(object):
         t = self.approx.normalizing_constant
         Kxy, dxkxy = self.Kxy, self.dxkxy
         dlogpdx = self.dlogp  # Normalized
-        n = self.input_matrix.shape[0].astype('float32')
-        svgd_grad = (tt.dot(Kxy, dlogpdx) + dxkxy/t) / n
+        n = floatX(self.input_matrix.shape[0])
+        temperature = self.temperature
+        svgd_grad = (tt.dot(Kxy, dlogpdx)/temperature + dxkxy/t) / n
         return svgd_grad
 
     @property
