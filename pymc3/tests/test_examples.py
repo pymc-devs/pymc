@@ -6,7 +6,6 @@ import scipy.optimize as opt
 import theano.tensor as tt
 import pytest
 import theano
-from ..theanof import floatX
 
 from .helpers import SeededTest
 
