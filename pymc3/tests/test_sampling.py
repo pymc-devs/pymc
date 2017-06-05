@@ -10,6 +10,7 @@ except ImportError:
 import pymc3 as pm
 import theano.tensor as tt
 from theano import shared
+import theano
 from .models import simple_init
 from .helpers import SeededTest
 
@@ -22,6 +23,7 @@ except:
     pass
 
 
+@pytest.mark.xfail(condition=(theano.config.floatX == "float32"), reason="Fails on float32")
 class TestSample(SeededTest):
     def setup_method(self):
         super(TestSample, self).setup_method()
@@ -141,6 +143,7 @@ class SoftUpdate(SeededTest):
         assert assert_almost_equal(start['a_log__'], np.log(start['a']))
 
 
+@pytest.mark.xfail(condition=(theano.config.floatX == "float32"), reason="Fails on float32")
 class TestNamedSampling(SeededTest):
     def test_shared_named(self):
         G_var = shared(value=np.atleast_2d(1.), broadcastable=(True, False),

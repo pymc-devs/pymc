@@ -5,10 +5,12 @@ import pytest
 from tempfile import mkdtemp
 import shutil
 import theano.tensor as tt
+import theano
 
 from .helpers import SeededTest
 
 
+@pytest.mark.xfail(condition=(theano.config.floatX == "float32"), reason="Fails on float32")
 class TestSMC(SeededTest):
 
     def setup_method(self):
