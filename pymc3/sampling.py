@@ -484,14 +484,16 @@ def _update_start_vals(a, b, model):
 
     a.update({k: v for k, v in b.items() if k not in a})
 
+
 def sample_ppc(trace, samples=None, model=None, vars=None, size=None,
-               random_seed=None, progressbar=True):
+               weights=None, random_seed=None, progressbar=True):
     """Generate posterior predictive samples from a model given a trace.
 
     Parameters
     ----------
     trace : backend, list, or MultiTrace
-        Trace generated from MCMC sampling
+        Trace generated from MCMC sampling. If a set of weights is also passed
+        this can be a list of traces, useful for model averaging.
     samples : int
         Number of posterior predictive samples to generate. Defaults to the
         length of `trace`
@@ -503,16 +505,23 @@ def sample_ppc(trace, samples=None, model=None, vars=None, size=None,
     size : int
         The number of random draws from the distribution specified by the
         parameters in each sample of the trace.
+    weights: array-like
+        Individuals weights for each trace, useful for model averaging
+    random_seed : int
+        Seed for the random number generator.
+    progressbar : bool
+        Whether or not to display a progress bar in the command line. The
+        bar shows the percentage of completion, the sampling speed in
+        samples per second (SPS), and the estimated remaining time until
+        completion ("expected time of arrival"; ETA).
 
     Returns
     -------
     samples : dict
-        Dictionary with the variables as keys. The values corresponding
-        to the posterior predictive samples.
+        Dictionary with the variables as keys. The values corresponding to the
+        posterior predictive samples. If a set of weights and a matching number
+        of traces are provided, then the samples will be weighted.
     """
-    if samples is None:
-        samples = len(trace)
-
     if model is None:
         model = modelcontext(model)
 
@@ -521,10 +530,33 @@ def sample_ppc(trace, samples=None, model=None, vars=None, size=None,
 
     seed(random_seed)
 
+    if weights is not None:
+        if len(trace) != len(weights):
+            raise ValueError(
+                'The number of traces and weights should be the same')
+
+        weights = np.asarray(weights)
+        p = weights / np.sum(weights)
+
+        min_tr = min([len(i) for i in trace])
+
+        n = (min_tr * p).astype('int')
+        # ensure n sum up to min_tr
+        idx = np.argmax(n)
+        n[idx] = n[idx] + min_tr - np.sum(n)
+
+        trace = np.concatenate([np.random.choice(trace[i], j)
+                                for i, j in enumerate(n)])
+
+    len_trace = len(trace)
+
+    if samples is None:
+        samples = len_trace
+
+    indices = randint(0, len_trace, samples)
+
     if progressbar:
-        indices = tqdm(randint(0, len(trace), samples), total=samples)
-    else:
-        indices = randint(0, len(trace), samples)
+        indices = tqdm(indices, total=samples)
 
     ppc = defaultdict(list)
     for idx in indices:
