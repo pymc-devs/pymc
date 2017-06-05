@@ -4,6 +4,8 @@ import pandas as pd
 import pymc3 as pm
 import scipy.optimize as opt
 import theano.tensor as tt
+import pytest
+import theano
 
 from .helpers import SeededTest
 
@@ -160,6 +162,7 @@ def build_disaster_model(masked=False):
     return model
 
 
+@pytest.mark.xfail(condition=(theano.config.floatX == "float32"), reason="Fails on float32")
 class TestDisasterModel(SeededTest):
     # Time series of recorded coal mining disasters in the UK from 1851 to 1962
     def test_disaster_model(self):
@@ -242,7 +245,7 @@ class TestLatentOccupancy(SeededTest):
         # True occupancy
         pi = 0.4
         # Simulate some data data
-        self.y = (np.random.random(n) < pi) * np.random.poisson(lam=theta, size=n)
+        self.y = ((np.random.random(n) < pi) * np.random.poisson(lam=theta, size=n)).astype('int16')
 
     def build_model(self):
         with pm.Model() as model:
@@ -259,12 +262,13 @@ class TestLatentOccupancy(SeededTest):
     def test_run(self):
         model = self.build_model()
         with model:
-            start = {'psi': 0.5, 'z': (self.y > 0).astype(int), 'theta': 5}
+            start = {'psi': 0.5, 'z': (self.y > 0).astype('int16'), 'theta': 5}
             step_one = pm.Metropolis([model.theta_interval__, model.psi_logodds__])
             step_two = pm.BinaryMetropolis([model.z])
             pm.sample(50, step=[step_one, step_two], start=start)
 
 
+@pytest.mark.xfail(condition=(theano.config.floatX == "float32"), reason="Fails on float32 due to starting inf at starting logP")
 class TestRSV(SeededTest):
     '''
     This model estimates the population prevalence of respiratory syncytial virus

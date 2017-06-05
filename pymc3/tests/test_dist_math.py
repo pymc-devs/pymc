@@ -125,11 +125,11 @@ class TestMvNormalLogp():
     def test_logp(self):
         np.random.seed(42)
 
-        chol_val = np.array([[1, 0.9], [0, 2]])
-        cov_val = np.dot(chol_val, chol_val.T)
+        chol_val = floatX(np.array([[1, 0.9], [0, 2]]))
+        cov_val = floatX(np.dot(chol_val, chol_val.T))
         cov = tt.matrix('cov')
         cov.tag.test_value = cov_val
-        delta_val = np.random.randn(5, 2)
+        delta_val = floatX(np.random.randn(5, 2))
         delta = tt.matrix('delta')
         delta.tag.test_value = delta_val
         expect = stats.multivariate_normal(mean=np.zeros(2), cov=cov_val)
@@ -151,15 +151,15 @@ class TestMvNormalLogp():
             cov = tt.dot(chol, chol.T)
             return MvNormalLogp()(cov, delta)
 
-        chol_vec_val = np.array([0.5, 1., -0.1])
+        chol_vec_val = floatX(np.array([0.5, 1., -0.1]))
 
-        delta_val = np.random.randn(1, 2)
+        delta_val = floatX(np.random.randn(1, 2))
         try:
             utt.verify_grad(func, [chol_vec_val, delta_val])
         except ValueError as e:
             print(e.args[0])
 
-        delta_val = np.random.randn(5, 2)
+        delta_val = floatX(np.random.randn(5, 2))
         utt.verify_grad(func, [chol_vec_val, delta_val])
 
     @pytest.mark.skip(reason="Fix in theano not released yet: Theano#5908")

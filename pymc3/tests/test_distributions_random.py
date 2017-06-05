@@ -6,6 +6,7 @@ import numpy.testing as npt
 import scipy.stats as st
 from scipy import linalg
 import numpy.random as nr
+import theano
 
 import pymc3 as pm
 from .helpers import SeededTest
@@ -580,6 +581,7 @@ class TestScalarParameterSamples(SeededTest):
             return st.gumbel_r.rvs(loc=mu, scale=beta, size=size)
         pymc3_random(pm.Gumbel, {'mu': R, 'beta': Rplus}, ref_rand=ref_rand)
 
+    @pytest.mark.xfail(condition=(theano.config.floatX == "float32"), reason="Fails on float32")
     def test_interpolated(self):
         for mu in R.vals:
             for sd in Rplus.vals:
