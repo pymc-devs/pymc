@@ -430,7 +430,7 @@ class TestMatchesScipy(SeededTest):
         PositiveNormal = Bound(Normal, lower=0.)
         self.pymc3_matches_scipy(PositiveNormal, Rplus, {'mu': Rplus, 'sd': Rplus},
                                  lambda value, mu, sd: sp.norm.logpdf(value, mu, sd),
-                                 decimal=select_by_precision(float64=6, float32=0))
+                                 decimal=select_by_precision(float64=6, float32=-1))
         with Model(): x = PositiveNormal('x', mu=0, sd=1, transform=None)
         assert np.isinf(x.logp({'x':-1}))
 
@@ -445,7 +445,7 @@ class TestMatchesScipy(SeededTest):
     def test_normal(self):
         self.pymc3_matches_scipy(Normal, R, {'mu': R, 'sd': Rplus},
                                  lambda value, mu, sd: sp.norm.logpdf(value, mu, sd),
-                                 decimal=select_by_precision(float64=6, float32=2)
+                                 decimal=select_by_precision(float64=6, float32=1)
                                  )
 
     def test_half_normal(self):
