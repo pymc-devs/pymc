@@ -8,7 +8,7 @@ from ..model import Model, get_named_nodes, FreeRV, ObservedRV
 from ..vartypes import string_types
 from .dist_math import bound
 # To avoid circular import for transform below
-import pymc3 as pm
+from pymc3.distributions import transforms
 
 __all__ = ['DensityDist', 'Distribution', 'Continuous', 'Bound',
            'Discrete', 'NoDistribution', 'TensorType', 'draw_values']
@@ -416,42 +416,69 @@ class Bounded(Distribution):
         See pymc3.distributions.transforms for more information.
     """
 
-    def __init__(self, distribution, lower, upper, transform='infer', *args, **kwargs):
-        self.dist = distribution.dist(*args, **kwargs)
+    def __init__(self, distribution, lower, upper,
+                 transform='infer', *args, **kwargs):
+        if lower == -np.inf:
+            lower = None
+        if upper == np.inf:
+            upper = None
 
-        self.__dict__.update(self.dist.__dict__)
-        self.__dict__.update(locals())
+        if lower is not None:
+            lower = tt.as_tensor_variable(lower)
+        if upper is not None:
+            upper = tt.as_tensor_variable(upper)
 
-        if hasattr(self.dist, 'mode'):
-            self.mode = self.dist.mode
+        self.lower = lower
+        self.upper = upper
 
         if transform == 'infer':
+            if lower is None and upper is None:
+                transform = None
+                default = None
+            elif lower is not None and upper is not None:
+                transform = transforms.interval(lower, upper)
+                default = 0.5 * (lower + upper)
+            elif upper is not None:
+                transform = transforms.upperbound(upper)
+                default = upper - 1
+            else:
+                transform = transforms.lowerbound(lower)
+                default = lower + 1
 
-            default = self.dist.default()
-
-            if not np.isinf(lower) and not np.isinf(upper):
-                self.transform = pm.distributions.transforms.interval(lower, upper)
-                if default <= lower or default >= upper:
-                    self.testval = 0.5 * (upper + lower)
-
-            if not np.isinf(lower) and np.isinf(upper):
-                self.transform = pm.distributions.transforms.lowerbound(lower)
-                if default <= lower:
-                    self.testval = lower + 1
-
-            if np.isinf(lower) and not np.isinf(upper):
-                self.transform = pm.distributions.transforms.upperbound(upper)
-                if default >= upper:
-                    self.testval = upper - 1
-
+        # We only change logp and testval for
+        # discrete distributions
         if issubclass(distribution, Discrete):
-            self.transform = None
+            transform = None
+            if default is not None:
+                default = default.astype(self.dist.default.type())
+
+        self._wrapped = distribution.dist(*args, **kwargs)
+        self._default = default
+
+        if default is None:
+            defaults = self._wrapped.defaults
+            for name in defaults:
+                setattr(self, name, getattr(self._wrapped, name))
+        else:
+            defaults = ('_default',)
+
+        super(Bounded, self).__init__(
+            shape=self._wrapped.shape,
+            dtype=self._wrapped.dtype,
+            testval=self._wrapped.testval,
+            defaults=defaults,
+            transform=self._wrapped.transform)
 
     def _random(self, lower, upper, point=None, size=None):
+        if lower is None:
+            lower = -np.inf
+        if upper is None:
+            upper = np.inf
+
         samples = np.zeros(size).flatten()
         i, n = 0, len(samples)
         while i < len(samples):
-            sample = self.dist.random(point=point, size=n)
+            sample = self._wrapped.random(point=point, size=n)
             select = sample[np.logical_and(sample > lower, sample <= upper)]
             samples[i:(i + len(select))] = select[:]
             i += len(select)
@@ -468,21 +495,34 @@ class Bounded(Distribution):
                                 size=size)
 
     def logp(self, value):
-        return bound(self.dist.logp(value),
-                     value >= self.lower, value <= self.upper)
+        logp = self._wrapped.logp(value)
+        bounds = []
+        if self.lower is not None:
+            bounds.append(value > self.lower)
+        if self.upper is not None:
+            bounds.append(value < self.upper)
+        if len(bounds) > 0:
+            return bound(logp, *bounds)
+        else:
+            return logp
 
 
 class Bound(object):
     R"""
-    Creates a new upper, lower or upper+lower bounded distribution
+    Create a new upper, lower or upper+lower bounded distribution.
+
+    The resulting distribution is not normalized anymore. This
+    is usually fine if the bounds are constants. If you need
+    truncated distributions, use `Bound` in combination with
+    a `pm.Potential` with the cumulative probability function.
 
     Parameters
     ----------
     distribution : pymc3 distribution
         Distribution to be transformed into a bounded distribution
-    lower : float (optional)
+    lower : float or array like, optional
         Lower bound of the distribution
-    upper : float (optional)
+    upper : float or array like, optional
 
     Example
     -------
@@ -499,7 +539,7 @@ class Bound(object):
                 'par3', mu=0.0, sd=1.0, testval=1.0)
     """
 
-    def __init__(self, distribution, lower=-np.inf, upper=np.inf):
+    def __init__(self, distribution, lower=None, upper=None):
         self.distribution = distribution
         self.lower = lower
         self.upper = upper

@@ -18,7 +18,7 @@ from ..distributions import (DensityDist, Categorical, Multinomial, VonMises, Di
 from ..distributions import continuous
 from pymc3.theanof import floatX
 from numpy import array, inf, log, exp
-from numpy.testing import assert_almost_equal
+from numpy.testing import assert_almost_equal, assert_equal
 import numpy.random as nr
 import numpy as np
 import pytest
@@ -569,7 +569,8 @@ class TestMatchesScipy(SeededTest):
         self.pymc3_matches_scipy(Binomial, Nat, {'n': NatSmall, 'p': Unit},
                                  lambda value, n, p: sp.binom.logpmf(value, n, p))
 
-    @pytest.mark.xfail(condition=(theano.config.floatX == "float32"), reason="Fails on float32")  # Too lazy to propagate decimal parameter through the whole chain of deps
+    # Too lazy to propagate decimal parameter through the whole chain of deps
+    @pytest.mark.xfail(condition=(theano.config.floatX == "float32"), reason="Fails on float32")
     def test_beta_binomial(self):
         self.checkd(BetaBinomial, Nat, {'alpha': Rplus, 'beta': Rplus, 'n': NatSmall})
 
@@ -597,16 +598,19 @@ class TestMatchesScipy(SeededTest):
         self.pymc3_matches_scipy(Constant, I, {'c': I},
                                  lambda value, c: np.log(c == value))
 
-    @pytest.mark.xfail(condition=(theano.config.floatX == "float32"), reason="Fails on float32")  # Too lazy to propagate decimal parameter through the whole chain of deps
+    # Too lazy to propagate decimal parameter through the whole chain of deps
+    @pytest.mark.xfail(condition=(theano.config.floatX == "float32"), reason="Fails on float32")
     def test_zeroinflatedpoisson(self):
         self.checkd(ZeroInflatedPoisson, Nat, {'theta': Rplus, 'psi': Unit})
 
-    @pytest.mark.xfail(condition=(theano.config.floatX == "float32"), reason="Fails on float32")  # Too lazy to propagate decimal parameter through the whole chain of deps
+    # Too lazy to propagate decimal parameter through the whole chain of deps
+    @pytest.mark.xfail(condition=(theano.config.floatX == "float32"), reason="Fails on float32")
     def test_zeroinflatednegativebinomial(self):
         self.checkd(ZeroInflatedNegativeBinomial, Nat,
                     {'mu': Rplusbig, 'alpha': Rplusbig, 'psi': Unit})
 
-    @pytest.mark.xfail(condition=(theano.config.floatX == "float32"), reason="Fails on float32")  # Too lazy to propagate decimal parameter through the whole chain of deps
+    # Too lazy to propagate decimal parameter through the whole chain of deps
+    @pytest.mark.xfail(condition=(theano.config.floatX == "float32"), reason="Fails on float32")
     def test_zeroinflatedbinomial(self):
         self.checkd(ZeroInflatedBinomial, Nat,
                     {'n': NatSmall, 'p': Unit, 'psi': Unit})
@@ -848,6 +852,28 @@ class TestMatchesScipy(SeededTest):
                     )
 
                 self.pymc3_matches_scipy(TestedInterpolated, R, {}, ref_pdf)
+
+
+def test_bound():
+    UnboundNormal = Bound(Normal)
+    dist = UnboundNormal.dist(mu=0, sd=1)
+    assert dist.transform is None
+    assert dist.default() == 0.
+    LowerNormal = Bound(Normal, lower=1)
+    dist = LowerNormal.dist(mu=0, sd=1)
+    assert dist.logp(0).eval() == -np.inf
+    assert dist.default() > 1
+    UpperNormal = Bound(Normal, upper=-1)
+    dist = UpperNormal.dist(mu=0, sd=1)
+    assert dist.logp(-1).eval() == -np.inf
+    assert dist.default() < -1
+    ArrayNormal = Bound(Normal, lower=[1, 2], upper=[2, 3])
+    dist = ArrayNormal.dist(mu=0, sd=1)
+    assert_equal(dist.logp([1, 2]).eval(), -np.array([np.inf, np.inf]))
+    assert_equal(dist.default(), np.array([1.5, 2.5]))
+    with Model():
+        a = ArrayNormal('c', shape=2)
+        assert_equal(a.tag.test_value, np.array([1.5, 2.5]))
 
 
 def test_repr_latex_():
