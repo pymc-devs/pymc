@@ -444,16 +444,19 @@ class Bounded(Distribution):
             else:
                 transform = transforms.lowerbound(lower)
                 default = lower + 1
+        else:
+            default = None
 
-        # We only change logp and testval for
-        # discrete distributions
+        # We don't use transformations for dicrete variables
         if issubclass(distribution, Discrete):
             transform = None
-            if default is not None:
-                default = default.astype(self.dist.default.type())
 
+        kwargs['transform'] = transform
         self._wrapped = distribution.dist(*args, **kwargs)
         self._default = default
+
+        if issubclass(distribution, Discrete) and default is not None:
+            default = default.astype(str(self._wrapped.default().dtype))
 
         if default is None:
             defaults = self._wrapped.defaults
@@ -470,16 +473,16 @@ class Bounded(Distribution):
             transform=self._wrapped.transform)
 
     def _random(self, lower, upper, point=None, size=None):
-        if lower is None:
-            lower = -np.inf
-        if upper is None:
-            upper = np.inf
-
-        samples = np.zeros(size).flatten()
+        lower = np.asarray(lower)
+        upper = np.asarray(upper)
+        if lower.size > 1 or upper.size > 1:
+            raise ValueError('Drawing samples from distributions with '
+                             'array-valued bounds is not supported.')
+        samples = np.zeros(size, dtype=self.dtype).flatten()
         i, n = 0, len(samples)
         while i < len(samples):
             sample = self._wrapped.random(point=point, size=n)
-            select = sample[np.logical_and(sample > lower, sample <= upper)]
+            select = sample[np.logical_and(sample >= lower, sample <= upper)]
             samples[i:(i + len(select))] = select[:]
             i += len(select)
             n -= len(select)
@@ -489,18 +492,31 @@ class Bounded(Distribution):
             return samples
 
     def random(self, point=None, size=None, repeat=None):
-        lower, upper = draw_values([self.lower, self.upper], point=point)
-        return generate_samples(self._random, lower, upper, point,
-                                dist_shape=self.shape,
-                                size=size)
+        if self.lower is None and self.upper is None:
+            return self._wrapped.random(point=point, size=size)
+        elif self.lower is not None and self.upper is not None:
+            lower, upper = draw_values([self.lower, self.upper], point=point)
+            return generate_samples(self._random, lower, upper, point,
+                                    dist_shape=self.shape,
+                                    size=size)
+        elif self.lower is not None:
+            lower = draw_values([self.lower], point=point)
+            return generate_samples(self._random, lower, np.inf, point,
+                                    dist_shape=self.shape,
+                                    size=size)
+        else:
+            upper = draw_values([self.upper], point=point)
+            return generate_samples(self._random, -np.inf, upper, point,
+                                    dist_shape=self.shape,
+                                    size=size)
 
     def logp(self, value):
         logp = self._wrapped.logp(value)
         bounds = []
         if self.lower is not None:
-            bounds.append(value > self.lower)
+            bounds.append(value >= self.lower)
         if self.upper is not None:
-            bounds.append(value < self.upper)
+            bounds.append(value <= self.upper)
         if len(bounds) > 0:
             return bound(logp, *bounds)
         else:
@@ -516,13 +532,16 @@ class Bound(object):
     truncated distributions, use `Bound` in combination with
     a `pm.Potential` with the cumulative probability function.
 
+    The bounds are inclusive for discrete distributions.
+
     Parameters
     ----------
     distribution : pymc3 distribution
-        Distribution to be transformed into a bounded distribution
+        Distribution to be transformed into a bounded distribution.
     lower : float or array like, optional
-        Lower bound of the distribution
+        Lower bound of the distribution.
     upper : float or array like, optional
+        Upper bound of the distribution.
 
     Example
     -------

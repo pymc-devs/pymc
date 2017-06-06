@@ -855,25 +855,43 @@ class TestMatchesScipy(SeededTest):
 
 
 def test_bound():
+    np.random.seed(42)
     UnboundNormal = Bound(Normal)
     dist = UnboundNormal.dist(mu=0, sd=1)
     assert dist.transform is None
     assert dist.default() == 0.
+    assert isinstance(dist.random(), np.ndarray)
+
     LowerNormal = Bound(Normal, lower=1)
     dist = LowerNormal.dist(mu=0, sd=1)
     assert dist.logp(0).eval() == -np.inf
     assert dist.default() > 1
+    assert dist.transform is not None
+    assert np.all(dist.random() > 1)
+
     UpperNormal = Bound(Normal, upper=-1)
     dist = UpperNormal.dist(mu=0, sd=1)
-    assert dist.logp(-1).eval() == -np.inf
+    assert dist.logp(-0.5).eval() == -np.inf
     assert dist.default() < -1
+    assert dist.transform is not None
+    assert np.all(dist.random() < -1)
+
     ArrayNormal = Bound(Normal, lower=[1, 2], upper=[2, 3])
-    dist = ArrayNormal.dist(mu=0, sd=1)
-    assert_equal(dist.logp([1, 2]).eval(), -np.array([np.inf, np.inf]))
+    dist = ArrayNormal.dist(mu=0, sd=1, shape=2)
+    assert_equal(dist.logp([0.5, 3.5]).eval(), -np.array([np.inf, np.inf]))
     assert_equal(dist.default(), np.array([1.5, 2.5]))
+    assert dist.transform is not None
+    with pytest.raises(ValueError) as err:
+        dist.random()
+    err.match('Drawing samples from distributions with array-valued')
+
     with Model():
         a = ArrayNormal('c', shape=2)
         assert_equal(a.tag.test_value, np.array([1.5, 2.5]))
+
+    rand = Bound(Binomial, lower=10).dist(n=20, p=0.3).random()
+    assert rand.dtype in [np.int16, np.int32, np.int64]
+    assert rand >= 10
 
 
 def test_repr_latex_():
