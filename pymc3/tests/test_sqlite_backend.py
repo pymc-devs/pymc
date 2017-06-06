@@ -45,6 +45,7 @@ class TestSQLite2dSelection(bf.SelectionTestCase):
     shape = (2, 3)
 
 
+@pytest.mark.xfail(condition=(theano.config.floatX == "float32"), reason="Fails on float32 due to inf issues")
 class TestSQLiteDumpLoad(bf.DumpLoadTestCase):
     backend = sqlite.SQLite
     load_func = staticmethod(sqlite.load)
