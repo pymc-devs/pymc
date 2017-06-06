@@ -117,30 +117,35 @@ class TestSample(SeededTest):
             assert len(trace) == 100
 
 
-class SoftUpdate(SeededTest):
+class TestSoftUpdate(SeededTest):
+    def setup_method(self):
+        super(TestSoftUpdate, self).setup_method()
+        
     def test_soft_update_all_present(self):
         start = {'a': 1, 'b': 2}
         test_point = {'a': 3, 'b': 4}
-        pm.sampling._soft_update(start, test_point)
+        pm.sampling._update_start_vals(start, test_point, model=None)
         assert start == {'a': 1, 'b': 2}
 
     def test_soft_update_one_missing(self):
         start = {'a': 1, }
         test_point = {'a': 3, 'b': 4}
-        pm.sampling._soft_update(start, test_point)
+        pm.sampling._update_start_vals(start, test_point, model=None)
         assert start == {'a': 1, 'b': 4}
 
     def test_soft_update_empty(self):
         start = {}
         test_point = {'a': 3, 'b': 4}
-        pm.sampling._soft_update(start, test_point)
+        pm.sampling._update_start_vals(start, test_point, model=None)
         assert start == test_point
 
     def test_soft_update_transformed(self):
-        start = {'a': 2}
+        with pm.Model() as model:
+            pm.Exponential('a', 1)
+        start = {'a': 2.}
         test_point = {'a_log__': 0}
-        pm.sampling._soft_update(start, test_point)
-        assert assert_almost_equal(start['a_log__'], np.log(start['a']))
+        pm.sampling._update_start_vals(start, test_point, model)
+        assert_almost_equal(np.exp(start['a_log__']), start['a'])
 
 
 @pytest.mark.xfail(condition=(theano.config.floatX == "float32"), reason="Fails on float32")
