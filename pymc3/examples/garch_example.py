@@ -38,15 +38,10 @@ def get_garch_model():
     shape = r.shape
 
     with Model() as garch:
-        alpha1 = Normal('alpha1', mu=np.zeros(shape=shape), 
-                        sd=np.ones(shape=shape), shape=shape)
+        alpha1 = Normal('alpha1', mu=0., sd=1., shape=shape)
         BoundedNormal = Bound(Normal, upper=(1 - alpha1))
-        beta1 = BoundedNormal('beta1',
-                              mu=np.zeros(shape=shape),
-                              sd=1e6 * np.ones(shape=shape),
-                              shape=shape)
-        mu = Normal('mu', mu=np.zeros(shape=shape), 
-                    sd=1e6 * np.ones(shape=shape), shape=shape)
+        beta1 = BoundedNormal('beta1', mu=0., sd=1e6, shape=shape)
+        mu = Normal('mu', mu=0., sd=1e6, shape=shape)
         theta = tt.sqrt(alpha0 + alpha1 * tt.pow(r - mu, 2) +
                         beta1 * tt.pow(sigma1, 2))
         Normal('obs', mu, sd=theta, observed=r)
@@ -57,7 +52,7 @@ def run(n=1000):
     if n == "short":
         n = 50
     with get_garch_model():
-        tr = sample(n, n_init=10000)
+        tr = sample(n, init=None)
     return tr
 
 
