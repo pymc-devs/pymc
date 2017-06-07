@@ -183,20 +183,21 @@ class Minibatch(tt.TensorVariable):
     >>> minibatch = shared[ridx]
 
     That's done. Next you can use this minibatch somewhere else. 
-    You can see that in implementation minibatch does not require 
-    fixed shape for shared variable. Feel free to use that if needed.
+    You can see that implementation does not require fixed shape
+    for shared variable. Feel free to use that if needed.
 
-    So if you'll need some replacements in the graph, e.g. change it to testdata
+    Suppose you need some replacements in the graph, e.g. change minibatch to testdata
+    >>> node = x ** 2  # arbitrary expressions on minibatch `x`
     >>> testdata = pm.floatX(np.random.laplace(size=(1000, 10)))
 
-    You can change minibatch with static data you can create a dict with replacements
+    Then you should create a dict with replacements
     >>> replacements = {x: testdata}
-    >>> node = x ** 2  # arbitrary expressions
     >>> rnode = theano.clone(node, replacements)
     >>> assert (testdata ** 2 == rnode.eval()).all()
 
-    To replace minibatch with it's shared variable 
-    instead of static :class:`ndarray` you should do
+    To replace minibatch with it's shared variable you should do
+    the same things. Minibatch variable is accessible as an attribute
+    as well as shared, associated with minibatch
     >>> replacements = {x.minibatch: x.shared}
     >>> rnode = theano.clone(node, replacements)
 
