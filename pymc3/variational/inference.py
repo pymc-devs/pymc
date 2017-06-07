@@ -574,7 +574,7 @@ class SVGD(Inference):
                 start=start, model=model, local_rv=local_rv, random_seed=random_seed)
         super(SVGD, self).__init__(
             KSD, histogram,
-            kernel,
+            kernel, op_kwargs=dict(temperature=temperature),
             model=model, random_seed=random_seed)
 
 
