@@ -860,3 +860,13 @@ def test_repr_latex_():
     assert x2._repr_latex_()=='$Timeseries \\sim \\text{GaussianRandomWalk}(\\mathit{mu}=Continuous, \\mathit{sd}=1.0)$'
     assert x3._repr_latex_()=='$Multivariate \\sim \\text{MvStudentT}(\\mathit{nu}=5, \\mathit{mu}=Timeseries, \\mathit{Sigma}=array)$'
     assert x4._repr_latex_()=='$Mixture \\sim \\text{NormalMixture}(\\mathit{w}=array, \\mathit{mu}=Multivariate, \\mathit{sigma}=f(Discrete))$'
+
+
+def test_discrete_trafo():
+    with pytest.raises(ValueError) as err:
+        Binomial.dist(n=5, p=0.5, transform='log')
+    err.match('Transformations for discrete distributions')
+    with Model():
+        with pytest.raises(ValueError) as err:
+            Binomial('a', n=5, p=0.5, transform='log')
+        err.match('Transformations for discrete distributions')
