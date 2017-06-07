@@ -18,7 +18,7 @@ from tqdm import tqdm
 import sys
 sys.setrecursionlimit(10000)
 
-__all__ = ['sample', 'iter_sample', 'sample_ppc', 'init_nuts']
+__all__ = ['sample', 'iter_sample', 'sample_ppc', 'sample_ppc_w', 'init_nuts']
 
 STEP_METHODS = (NUTS, HamiltonianMC, Metropolis, BinaryMetropolis,
                 BinaryGibbsMetropolis, Slice, CategoricalGibbsMetropolis)
@@ -486,14 +486,13 @@ def _update_start_vals(a, b, model):
 
 
 def sample_ppc(trace, samples=None, model=None, vars=None, size=None,
-               weights=None, random_seed=None, progressbar=True):
+               random_seed=None, progressbar=True):
     """Generate posterior predictive samples from a model given a trace.
 
     Parameters
     ----------
     trace : backend, list, or MultiTrace
-        Trace generated from MCMC sampling. If a set of weights is also passed
-        this can be a list of traces, useful for model averaging.
+        Trace generated from MCMC sampling.
     samples : int
         Number of posterior predictive samples to generate. Defaults to the
         length of `trace`
@@ -505,8 +504,6 @@ def sample_ppc(trace, samples=None, model=None, vars=None, size=None,
     size : int
         The number of random draws from the distribution specified by the
         parameters in each sample of the trace.
-    weights: array-like
-        Individuals weights for each trace, useful for model averaging
     random_seed : int
         Seed for the random number generator.
     progressbar : bool
@@ -522,6 +519,9 @@ def sample_ppc(trace, samples=None, model=None, vars=None, size=None,
         posterior predictive samples. If a set of weights and a matching number
         of traces are provided, then the samples will be weighted.
     """
+    if samples is None:
+        samples = len(trace)
+
     if model is None:
         model = modelcontext(model)
 
@@ -530,23 +530,94 @@ def sample_ppc(trace, samples=None, model=None, vars=None, size=None,
 
     seed(random_seed)
 
-    if weights is not None:
-        if len(trace) != len(weights):
-            raise ValueError(
-                'The number of traces and weights should be the same')
+    indices = randint(0, len(trace), samples)
+    if progressbar:
+        indices = tqdm(indices, total=samples)
 
-        weights = np.asarray(weights)
-        p = weights / np.sum(weights)
+    ppc = defaultdict(list)
+    for idx in indices:
+        param = trace[idx]
+        for var in vars:
+            ppc[var.name].append(var.distribution.random(point=param,
+                                                         size=size))
 
-        min_tr = min([len(i) for i in trace])
+    return {k: np.asarray(v) for k, v in ppc.items()}
 
-        n = (min_tr * p).astype('int')
-        # ensure n sum up to min_tr
-        idx = np.argmax(n)
-        n[idx] = n[idx] + min_tr - np.sum(n)
 
-        trace = np.concatenate([np.random.choice(trace[i], j)
-                                for i, j in enumerate(n)])
+def sample_ppc_w(traces, samples=None, models=None, size=None, weights=None,
+                 random_seed=None, progressbar=True):
+    """Generate weighted posterior predictive samples from a list of models and
+    a list of traces according to a set of weights.
+
+    Parameters
+    ----------
+    traces : list
+        List of traces generated from MCMC sampling. The number of traces should
+        be equal to the number of weights.
+    samples : int
+        Number of posterior predictive samples to generate. Defaults to the
+        length of the shorter trace in traces.
+    models : list
+        List of models used to generate the list of traces. The number of models
+        should be equal to the number of weights and the number of observed RVs
+        should be the same for all models.
+        By default a single model will be inferred from `with` context, in this
+        case results will only be meaningful if all models share the same
+        distributions for the observed RVs.
+    size : int
+        The number of random draws from the distributions specified by the
+        parameters in each sample of the trace.
+    weights: array-like
+        Individual weights for each trace. Default, same weight for each model.
+    random_seed : int
+        Seed for the random number generator.
+    progressbar : bool
+        Whether or not to display a progress bar in the command line. The
+        bar shows the percentage of completion, the sampling speed in
+        samples per second (SPS), and the estimated remaining time until
+        completion ("expected time of arrival"; ETA).
+
+    Returns
+    -------
+    samples : dict
+        Dictionary with the variables as keys. The values corresponding to the
+        posterior predictive samples from the weighted models.
+    """
+    seed(random_seed)
+
+    if models is None:
+        models = [modelcontext(models)] * len(traces)
+
+    if weights is None:
+        weights = [1] * len(traces)
+
+    if len(traces) != len(weights):
+        raise ValueError('The number of traces and weights should be the same')
+
+    if len(models) != len(weights):
+        raise ValueError('The number of models and weights should be the same')
+
+    lenght_morv = len(models[0].observed_RVs)
+    if not all(len(i.observed_RVs) == lenght_morv for i in models):
+        raise ValueError(
+            'The number of observed RVs should be the same for all models')
+
+    weights = np.asarray(weights)
+    p = weights / np.sum(weights)
+
+    min_tr = min([len(i) for i in traces])
+
+    n = (min_tr * p).astype('int')
+    # ensure n sum up to min_tr
+    idx = np.argmax(n)
+    n[idx] = n[idx] + min_tr - np.sum(n)
+
+    trace = np.concatenate([np.random.choice(traces[i], j)
+                            for i, j in enumerate(n)])
+
+    variables = []
+    for i, m in enumerate(models):
+        variables.extend(m.observed_RVs * n[i])
 
     len_trace = len(trace)
 
@@ -561,9 +632,8 @@ def sample_ppc(trace, samples=None, model=None, vars=None, size=None,
     ppc = defaultdict(list)
     for idx in indices:
         param = trace[idx]
-        for var in vars:
-            ppc[var.name].append(var.distribution.random(point=param,
-                                                         size=size))
+        var = variables[idx]
+        ppc[var.name].append(var.distribution.random(point=param, size=size))
 
     return {k: np.asarray(v) for k, v in ppc.items()}
 
