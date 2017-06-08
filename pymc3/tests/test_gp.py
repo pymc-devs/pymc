@@ -355,8 +355,8 @@ class TestGP(SeededTest):
                                         cov_func=gp.cov.Matern32(1, 1), observed={'X':X, 'Y':Y})
 
     def test_sample(self):
-        X = np.linspace(0,1,100)[:,None]
-        Y = np.random.randn(100,1)
+        X = np.linspace(0,1,10)[:,None]
+        Y = np.random.randn(10,1)
         with Model() as model:
             M = gp.mean.Zero()
             l = Uniform('l', 0, 5)
@@ -364,4 +364,4 @@ class TestGP(SeededTest):
             sigma = Uniform('sigma', 0, 10)
             # make a Gaussian model
             random_test = gp.GP('random_test', mean_func=M, cov_func=K, sigma=sigma, observed={'X':X, 'Y':Y})
-            tr = sample(500, init=None, progressbar=False, random_seed=self.random_seed)
+            tr = sample(20, init=None, progressbar=False, random_seed=self.random_seed)
