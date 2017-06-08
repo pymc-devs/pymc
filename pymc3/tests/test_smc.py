@@ -56,7 +56,7 @@ class TestSMC(SeededTest):
 
         self.muref = mu1
 
-    @pytest.mark.parametrize('n_jobs', [1])
+    @pytest.mark.parametrize('n_jobs', [1, 2])
     def test_sample_n_core(self, n_jobs):
 
         def last_sample(x):
