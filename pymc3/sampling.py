@@ -534,12 +534,20 @@ def sample_ppc(trace, samples=None, model=None, vars=None, size=None,
     if progressbar:
         indices = tqdm(indices, total=samples)
 
-    ppc = defaultdict(list)
-    for idx in indices:
-        param = trace[idx]
-        for var in vars:
-            ppc[var.name].append(var.distribution.random(point=param,
-                                                         size=size))
+    try:
+        ppc = defaultdict(list)
+        for idx in indices:
+            param = trace[idx]
+            for var in vars:
+                ppc[var.name].append(var.distribution.random(point=param,
+                                                             size=size))
+
+    except KeyboardInterrupt:
+        pass
+
+    finally:
+        if progressbar:
+            indices.close()
 
     return {k: np.asarray(v) for k, v in ppc.items()}
 
@@ -629,11 +637,20 @@ def sample_ppc_w(traces, samples=None, models=None, size=None, weights=None,
     if progressbar:
         indices = tqdm(indices, total=samples)
 
-    ppc = defaultdict(list)
-    for idx in indices:
-        param = trace[idx]
-        var = variables[idx]
-        ppc[var.name].append(var.distribution.random(point=param, size=size))
+    try:
+        ppc = defaultdict(list)
+        for idx in indices:
+            param = trace[idx]
+            var = variables[idx]
+            ppc[var.name].append(var.distribution.random(point=param,
+                                                         size=size))
+
+    except KeyboardInterrupt:
+        pass
+
+    finally:
+        if progressbar:
+            indices.close()
 
     return {k: np.asarray(v) for k, v in ppc.items()}
 
