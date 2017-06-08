@@ -70,7 +70,7 @@ class TestApproximates:
     class Base(SeededTest):
         inference = None
         NITER = 12000
-        optimizer = pm.adagrad_window(learning_rate=0.01)
+        optimizer = pm.adagrad_window(learning_rate=0.01, n_win=50)
         conv_cb = property(lambda self: [
             pm.callbacks.CheckParametersConvergence(
                 every=500,
@@ -152,7 +152,6 @@ class TestApproximates:
                 mu_ = Normal('mu', mu=mu0, sd=sd0, testval=0)
                 Normal('x', mu=mu_, sd=sd, observed=data)
                 inf = self.inference(start={})
-                inf.fit(10)
                 approx = inf.fit(self.NITER,
                                  obj_optimizer=self.optimizer,
                                  callbacks=self.conv_cb,)
@@ -295,11 +294,9 @@ class TestSVGD(TestApproximates.Base):
 
 
 class TestASVGD(TestApproximates.Base):
-    NITER = 15000
-    inference = ASVGD
+    NITER = 5000
+    inference = functools.partial(ASVGD, temperature=1.5)
     test_aevb = _test_aevb
-    optimizer = pm.adagrad_window(learning_rate=0.002)
-    conv_cb = []
 
 
 class TestEmpirical(SeededTest):
@@ -366,12 +363,13 @@ with _model:
         (_advi, dict(start={}), None),
         (_fullrank_advi, dict(), None),
         (_svgd, dict(), None),
-        ('advi', dict(), None),
+        ('advi', dict(total_grad_norm_constraint=10), None),
         ('advi->fullrank_advi', dict(frac=.1), None),
         ('advi->fullrank_advi', dict(frac=1), ValueError),
         ('fullrank_advi', dict(), None),
-        ('svgd', dict(), None),
+        ('svgd', dict(total_grad_norm_constraint=10), None),
         ('svgd', dict(start={}), None),
+        ('asvgd', dict(start={}, total_grad_norm_constraint=10), None),
         ('svgd', dict(local_rv={_model.free_RVs[0]: (0, 1)}), ValueError)
     ]
 )

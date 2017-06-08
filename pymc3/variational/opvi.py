@@ -98,7 +98,8 @@ class ObjectiveFunction(object):
         return self.op.approx.random(size)
 
     def updates(self, obj_n_mc=None, tf_n_mc=None, obj_optimizer=adagrad_window, test_optimizer=adagrad_window,
-                more_obj_params=None, more_tf_params=None, more_updates=None, more_replacements=None):
+                more_obj_params=None, more_tf_params=None, more_updates=None,
+                more_replacements=None, total_grad_norm_constraint=None):
         """Calculates gradients for objective function, test function and then
         constructs updates for optimization step
 
@@ -120,19 +121,15 @@ class ObjectiveFunction(object):
             Add custom updates to resulting updates
         more_replacements : `dict`
             Apply custom replacements before calculating gradients
+        total_grad_norm_constraint : `float`
+            Bounds gradient norm, prevents exploding gradient problem
 
         Returns
         -------
         :class:`ObjectiveUpdates`
         """
-        if more_obj_params is None:
-            more_obj_params = []
-        if more_tf_params is None:
-            more_tf_params = []
         if more_updates is None:
             more_updates = dict()
-        if more_replacements is None:
-            more_replacements = dict()
         resulting_updates = ObjectiveUpdates()
         if self.test_params:
             self.add_test_updates(
@@ -140,7 +137,8 @@ class ObjectiveFunction(object):
                 tf_n_mc=tf_n_mc,
                 test_optimizer=test_optimizer,
                 more_tf_params=more_tf_params,
-                more_replacements=more_replacements
+                more_replacements=more_replacements,
+                total_grad_norm_constraint=total_grad_norm_constraint
             )
         else:
             if tf_n_mc is not None:
@@ -152,30 +150,47 @@ class ObjectiveFunction(object):
             obj_n_mc=obj_n_mc,
             obj_optimizer=obj_optimizer,
             more_obj_params=more_obj_params,
-            more_replacements=more_replacements
+            more_replacements=more_replacements,
+            total_grad_norm_constraint=total_grad_norm_constraint
         )
         resulting_updates.update(more_updates)
         return resulting_updates
 
     def add_test_updates(self, updates, tf_n_mc=None, test_optimizer=adagrad_window,
-                         more_tf_params=None, more_replacements=None):
+                         more_tf_params=None, more_replacements=None,
+                         total_grad_norm_constraint=None):
+        if more_tf_params is None:
+            more_tf_params = []
+        if more_replacements is None:
+            more_replacements = dict()
         tf_z = self.get_input(tf_n_mc)
         tf_target = self(tf_z, more_tf_params=more_tf_params)
         tf_target = theano.clone(tf_target, more_replacements, strict=False)
+        grads = pm.updates.get_or_compute_grads(tf_target, self.obj_params + more_tf_params)
+        if total_grad_norm_constraint is not None:
+            grads = pm.total_norm_constraint(grads, total_grad_norm_constraint)
         updates.update(
             test_optimizer(
-                tf_target,
+                grads,
                 self.test_params +
                 more_tf_params))
 
     def add_obj_updates(self, updates, obj_n_mc=None, obj_optimizer=adagrad_window,
-                        more_obj_params=None, more_replacements=None):
+                        more_obj_params=None, more_replacements=None,
+                        total_grad_norm_constraint=None):
+        if more_obj_params is None:
+            more_obj_params = []
+        if more_replacements is None:
+            more_replacements = dict()
         obj_z = self.get_input(obj_n_mc)
         obj_target = self(obj_z, more_obj_params=more_obj_params)
         obj_target = theano.clone(obj_target, more_replacements, strict=False)
+        grads = pm.updates.get_or_compute_grads(obj_target, self.obj_params + more_obj_params)
+        if total_grad_norm_constraint is not None:
+            grads = pm.total_norm_constraint(grads, total_grad_norm_constraint)
         updates.update(
             obj_optimizer(
-                obj_target,
+                grads,
                 self.obj_params +
                 more_obj_params))
         if self.op.RETURNS_LOSS:
@@ -189,8 +204,9 @@ class ObjectiveFunction(object):
     def step_function(self, obj_n_mc=None, tf_n_mc=None,
                       obj_optimizer=adagrad_window, test_optimizer=adagrad_window,
                       more_obj_params=None, more_tf_params=None,
-                      more_updates=None, more_replacements=None, score=False,
-                      fn_kwargs=None):
+                      more_updates=None, more_replacements=None,
+                      total_grad_norm_constraint=None,
+                      score=False, fn_kwargs=None):
         R"""Step function that should be called on each optimization step.
 
         Generally it solves the following problem:
@@ -215,6 +231,8 @@ class ObjectiveFunction(object):
             Add custom params for test function optimizer
         more_updates : `dict`
             Add custom updates to resulting updates
+        total_grad_norm_constraint : `float`
+            Bounds gradient norm, prevents exploding gradient problem
         score : `bool`
             calculate loss on each step? Defaults to False for speed
         fn_kwargs : `dict`
@@ -236,7 +254,8 @@ class ObjectiveFunction(object):
                                more_obj_params=more_obj_params,
                                more_tf_params=more_tf_params,
                                more_updates=more_updates,
-                               more_replacements=more_replacements)
+                               more_replacements=more_replacements,
+                               total_grad_norm_constraint=total_grad_norm_constraint)
         if score:
             step_fn = theano.function(
                 [], updates.loss, updates=updates, **fn_kwargs)

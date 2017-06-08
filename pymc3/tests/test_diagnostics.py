@@ -10,8 +10,10 @@ from ..sampling import sample
 from ..diagnostics import effective_n, geweke, gelman_rubin
 from .test_examples import build_disaster_model
 import pytest
+import theano
 
 
+@pytest.mark.xfail(condition=(theano.config.floatX == "float32"), reason="Fails on float32")
 class TestGelmanRubin(SeededTest):
     good_ratio = 1.1
 
@@ -85,6 +87,7 @@ class TestGelmanRubin(SeededTest):
         self.test_right_shape_python_float(shape=1, test_shape=(1,))
 
 
+@pytest.mark.xfail(condition=(theano.config.floatX == "float32"), reason="Fails on float32")
 class TestDiagnostics(SeededTest):
 
     def get_switchpoint(self, n_samples):

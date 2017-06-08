@@ -141,11 +141,12 @@ License
 Software using PyMC3
 ====================
 
+ - `sampled <https://github.com/ColCarroll/sampled>`__: Decorator for PyMC3.
  - `Bambi <https://github.com/bambinos/bambi>`__: BAyesian Model-Building Interface (BAMBI) in Python.
  - `gelato <https://github.com/ferrine/gelato>`__: Bayesian Neural Networks with PyMC3 and Lasagne.
  - `NiPyMC <https://github.com/PsychoinformaticsLab/nipymc>`__: Bayesian mixed-effects modeling of fMRI data in Python.
  - `beat <https://github.com/hvasbath/beat>`__: Bayesian Earthquake Analysis Tool.
- - `Edward <https://github.com/blei-lab/edward>`__: A library for probabilistic modeling, inference, and criticism.
+
 
 Please contact us if your software is not listed here.
 

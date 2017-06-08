@@ -2,7 +2,7 @@ from theano import theano, tensor as tt
 import scipy.stats as stats
 import numpy as np
 import pymc3 as pm
-from pymc3.distributions import HalfCauchy, Normal
+from pymc3.distributions import HalfCauchy, Normal, transforms
 from pymc3 import Potential, Deterministic
 from pymc3.theanof import generator
 from .helpers import select_by_precision
@@ -213,3 +213,28 @@ class TestTheanoConfig(object):
                     assert theano.config.compute_test_value == 'warn'
                 assert theano.config.compute_test_value == 'ignore'
             assert theano.config.compute_test_value == 'off'
+
+def test_duplicate_vars():
+    with pytest.raises(ValueError) as err:
+        with pm.Model():
+            pm.Normal('a')
+            pm.Normal('a')
+    err.match('already exists')
+
+    with pytest.raises(ValueError) as err:
+        with pm.Model():
+            pm.Normal('a')
+            pm.Normal('a', transform=transforms.log)
+    err.match('already exists')
+
+    with pytest.raises(ValueError) as err:
+        with pm.Model():
+            a = pm.Normal('a')
+            pm.Potential('a', a**2)
+    err.match('already exists')
+
+    with pytest.raises(ValueError) as err:
+        with pm.Model():
+            pm.Binomial('a', 10, .5)
+            pm.Normal('a', transform=transforms.log)
+    err.match('already exists')
