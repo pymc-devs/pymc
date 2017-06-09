@@ -520,7 +520,7 @@ def ATMIP_sample(n_steps, step=None, start=None, homepath=None, chain=0, stage=0
         step.stage = stage
         draws = 1
     else:
-        step = stage_handler.load_atmip_params(stage)
+        step = stage_handler.load_atmip_params(stage, model=model)
         draws = step.n_steps
 
     stage_handler.clean_directory(stage, None, rm_flag)

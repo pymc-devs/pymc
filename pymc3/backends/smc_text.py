@@ -177,13 +177,13 @@ class TextStage(object):
         -------
         stage number : int
         """
-        return max(self.stage_number(s) for s in glob(self.path('*')))
+        return max(self.stage_number(s) for s in glob(self.stage_path('*')))
 
     def atmip_path(self, stage_number):
         """Consistent naming for atmip params."""
         return os.path.join(self.stage_path(stage_number), 'atmip.params.pkl')
 
-    def load_atmip_params(self, stage_number):
+    def load_atmip_params(self, stage_number, model):
         """Load saved parameters from last sampled ATMIP stage.
 
         Parameters
@@ -196,8 +196,14 @@ class TextStage(object):
         else:
             prev = stage_number - 1
         pm._log.info('Loading parameters from completed stage {}'.format(prev))
-        with open(self.atmip_path(prev), 'rb') as buff:
-            return pickle.load(buff)
+
+        with model:
+            with open(self.atmip_path(prev), 'rb') as buff:
+                step = pickle.load(buff)
+
+        # update step stage to current stage
+        step.stage = stage_number
+        return step
 
     def dump_atmip_params(self, step):
         """Save atmip params to file."""
@@ -278,7 +284,7 @@ class TextStage(object):
             # load incomplete stage results
             pm._log.info('Reloading existing results ...')
             mtrace = self.load_multitrace(stage, model=model)
-            if len(mtrace) > 0:
+            if len(mtrace.chains) > 0:
                 # continue sampling if traces exist
                 pm._log.info('Checking for corrupted files ...')
                 return self.check_multitrace(mtrace, draws=draws, n_chains=step.n_chains)

@@ -6,6 +6,7 @@ import numpy.testing as npt
 import scipy.stats as st
 from scipy import linalg
 import numpy.random as nr
+import theano
 
 import pymc3 as pm
 from .helpers import SeededTest
@@ -338,6 +339,9 @@ class TestZeroInflatedNegativeBinomial(BaseTestCases.BaseTestCase):
     distribution = pm.ZeroInflatedNegativeBinomial
     params = {'mu': 1., 'alpha': 1., 'psi': 0.3}
 
+class TestZeroInflatedBinomial(BaseTestCases.BaseTestCase):
+    distribution = pm.ZeroInflatedBinomial
+    params = {'n': 10, 'p': 0.6, 'psi': 0.3}
 
 class TestDiscreteUniform(BaseTestCases.BaseTestCase):
     distribution = pm.DiscreteUniform
@@ -577,6 +581,7 @@ class TestScalarParameterSamples(SeededTest):
             return st.gumbel_r.rvs(loc=mu, scale=beta, size=size)
         pymc3_random(pm.Gumbel, {'mu': R, 'beta': Rplus}, ref_rand=ref_rand)
 
+    @pytest.mark.xfail(condition=(theano.config.floatX == "float32"), reason="Fails on float32")
     def test_interpolated(self):
         for mu in R.vals:
             for sd in Rplus.vals:

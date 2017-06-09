@@ -42,8 +42,6 @@
 
 * Add MvGaussianRandomWalk and MvStudentTRandomWalk distributions.
 
-* Add `EdwardModel` wrapper to run PyMC3 models in Edward.
-
 * GLM models do not need a left-hand variable anymore.
 
 * Add support for cholesky parametrizations for cov/corr matrices.

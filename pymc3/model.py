@@ -455,15 +455,17 @@ class Model(six.with_metaclass(InitContextMeta, Context, Factor)):
     @memoize
     def logpt(self):
         """Theano scalar of log-probability of the model"""
-        factors = [var.logpt for var in self.basic_RVs] + self.potentials
-        return tt.add(*map(tt.sum, factors))
+        with self:
+            factors = [var.logpt for var in self.basic_RVs] + self.potentials
+            return tt.add(*map(tt.sum, factors))
 
     @property
     def varlogpt(self):
         """Theano scalar of log-probability of the unobserved random variables
            (excluding deterministic)."""
-        factors = [var.logpt for var in self.vars]
-        return tt.add(*map(tt.sum, factors))
+        with self:
+            factors = [var.logpt for var in self.vars]
+            return tt.add(*map(tt.sum, factors))
 
     @property
     def vars(self):
@@ -521,24 +523,28 @@ class Model(six.with_metaclass(InitContextMeta, Context, Factor)):
         name = self.name_for(name)
         if data is None:
             if getattr(dist, "transform", None) is None:
-                var = FreeRV(name=name, distribution=dist,
-                             total_size=total_size, model=self)
+                with self:
+                    var = FreeRV(name=name, distribution=dist,
+                                 total_size=total_size, model=self)
                 self.free_RVs.append(var)
             else:
-                var = TransformedRV(name=name, distribution=dist,
-                                    transform=dist.transform,
-                                    total_size=total_size,
-                                    model=self)
+                with self:
+                    var = TransformedRV(name=name, distribution=dist,
+                                        transform=dist.transform,
+                                        total_size=total_size,
+                                        model=self)
                 pm._log.debug('Applied {transform}-transform to {name}'
                               ' and added transformed {orig_name} to model.'.format(
                                 transform=dist.transform.name,
                                 name=name,
                                 orig_name=get_transformed_name(name, dist.transform)))
                 self.deterministics.append(var)
+                self.add_random_variable(var)
                 return var
         elif isinstance(data, dict):
-            var = MultiObservedRV(name=name, data=data, distribution=dist,
-                                  total_size=total_size, model=self)
+            with self:
+                var = MultiObservedRV(name=name, data=data, distribution=dist,
+                                      total_size=total_size, model=self)
             self.observed_RVs.append(var)
             if var.missing_values:
                 self.free_RVs += var.missing_values
@@ -546,9 +552,10 @@ class Model(six.with_metaclass(InitContextMeta, Context, Factor)):
                 for v in var.missing_values:
                     self.named_vars[v.name] = v
         else:
-            var = ObservedRV(name=name, data=data,
-                             distribution=dist,
-                             total_size=total_size, model=self)
+            with self:
+                var = ObservedRV(name=name, data=data,
+                                 distribution=dist,
+                                 total_size=total_size, model=self)
             self.observed_RVs.append(var)
             if var.missing_values:
                 self.free_RVs.append(var.missing_values)
@@ -615,11 +622,12 @@ class Model(six.with_metaclass(InitContextMeta, Context, Factor)):
         -------
         Compiled Theano function
         """
-        return theano.function(self.vars, outs,
-                               allow_input_downcast=True,
-                               on_unused_input='ignore',
-                               accept_inplace=True,
-                               mode=mode, *args, **kwargs)
+        with self:
+            return theano.function(self.vars, outs,
+                                   allow_input_downcast=True,
+                                   on_unused_input='ignore',
+                                   accept_inplace=True,
+                                   mode=mode, *args, **kwargs)
 
     def fn(self, outs, mode=None, *args, **kwargs):
         """Compiles a Theano function which returns the values of `outs`
@@ -978,7 +986,7 @@ def Deterministic(name, var, model=None):
 
     Returns
     -------
-    n : var but with name name
+    var : var, with name attribute
     """
     model = modelcontext(model)
     var.name = model.name_for(name)
@@ -1002,6 +1010,7 @@ def Potential(name, var, model=None):
     model = modelcontext(model)
     var.name = model.name_for(name)
     model.potentials.append(var)
+    model.add_random_variable(var)
     return var
 
 
