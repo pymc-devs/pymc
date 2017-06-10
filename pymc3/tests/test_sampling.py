@@ -117,10 +117,18 @@ class TestSample(SeededTest):
             assert len(trace) == 100
 
 
+def test_empty_model():
+    with pm.Model():
+        pm.Normal('a', observed=1)
+        with pytest.raises(ValueError) as error:
+            pm.sample()
+        error.match('any free variables')
+
+
 class TestSoftUpdate(SeededTest):
     def setup_method(self):
         super(TestSoftUpdate, self).setup_method()
-        
+
     def test_soft_update_all_present(self):
         start = {'a': 1, 'b': 2}
         test_point = {'a': 3, 'b': 4}
