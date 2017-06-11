@@ -82,7 +82,12 @@ def plot_posterior_op(trace_values, ax, kde_plot, point_estimate, round_to,
         if point_estimate == 'mean':
             point_value = trace_values.mean()
         elif point_estimate == 'mode':
-            point_value = mode(trace_values.round(round_to))[0][0]
+            if isinstance(trace_values[0], float):
+                density, l, u = fast_kde(trace_values)
+                x = np.linspace(l, u, len(density))
+                point_value = x[np.argmax(density)]
+            else:
+                point_value = mode(trace_values.round(round_to))[0][0]
         elif point_estimate == 'median':
             point_value = np.median(trace_values)
         point_text = '{point_estimate}={point_value:.{round_to}f}'.format(point_estimate=point_estimate,
@@ -121,7 +126,7 @@ def plot_posterior_op(trace_values, ax, kde_plot, point_estimate, round_to,
         if key not in d:
             d[key] = value
 
-    if kde_plot:
+    if kde_plot and isinstance(trace_values[0], float):
         kdeplot(trace_values, alpha=kwargs.pop('alpha', 0.35), ax=ax, **kwargs)
 
     else:
