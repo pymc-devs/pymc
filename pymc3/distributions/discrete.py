@@ -49,7 +49,7 @@ class Binomial(Discrete):
 
     def random(self, point=None, size=None, repeat=None):
         n, p = draw_values([self.n, self.p], point=point)
-        return generate_samples(stats.binom.rvs, n=self.n, p=self.p,
+        return generate_samples(stats.binom.rvs, n=n, p=p,
                                 dist_shape=self.shape,
                                 size=size)
 
