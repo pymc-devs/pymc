@@ -224,14 +224,14 @@ class Normal(Continuous):
 
     def __init__(self, mu=0, sd=None, tau=None, **kwargs):
         tau, sd = get_tau_sd(tau=tau, sd=sd)
-        self.sd = floatX(sd)
-        self.tau = floatX(tau)
+        self.sd = sd
+        self.tau = tau
 
         self.mean = self.median = self.mode = self.mu = floatX(mu)
         self.variance = 1. / self.tau
 
-        assert_negative_support(sd, 'sd', 'Normal')
-        assert_negative_support(tau, 'tau', 'Normal')
+        assert_negative_support(self.sd, 'sd', 'Normal')
+        assert_negative_support(self.tau, 'tau', 'Normal')
 
         super(Normal, self).__init__(**kwargs)
 
@@ -246,9 +246,9 @@ class Normal(Continuous):
         sd = self.sd
         tau = self.tau
         mu = self.mu
-
-        return bound((-tau * (value - mu)**2 + tt.log(tau / np.pi / 2.)) / 2.,
-                     sd > 0)
+        return bound(
+            (-tau * (value - mu)**2 + tt.log(tau / floatX(np.pi * 2.))) / 2.,
+            sd > 0)
 
     def _repr_latex_(self, name=None, dist=None):
         if dist is None:
@@ -570,7 +570,7 @@ class Exponential(PositiveContinuous):
     def __init__(self, lam, *args, **kwargs):
         super(Exponential, self).__init__(*args, **kwargs)
         self.lam = floatX(lam)
-        self.mean = 1. / self.lam
+        self.mean = floatX(1.) / self.lam
         self.median = self.mean * tt.log(2)
         self.mode = tt.zeros_like(tt.as_tensor_variable(self.lam))
 
@@ -754,7 +754,7 @@ class StudentT(Continuous):
 
     def __init__(self, nu, mu=0, lam=None, sd=None, *args, **kwargs):
         super(StudentT, self).__init__(*args, **kwargs)
-        self.nu = intX(nu)
+        self.nu = floatX(nu)
         lam, sd = get_tau_sd(tau=lam, sd=sd)
         self.lam = floatX(lam)
         self.sd = floatX(sd)
