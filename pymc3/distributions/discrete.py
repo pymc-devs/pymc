@@ -285,7 +285,7 @@ class Poisson(Discrete):
     def __init__(self, mu, *args, **kwargs):
         super(Poisson, self).__init__(*args, **kwargs)
         self.mu = floatX(mu)
-        self.mode = tt.floor(intX(self.mu))
+        self.mode = intX(np.floor(self.mu))
 
     def random(self, point=None, size=None, repeat=None):
         mu = draw_values([self.mu], point=point)
@@ -340,7 +340,8 @@ class NegativeBinomial(Discrete):
         super(NegativeBinomial, self).__init__(*args, **kwargs)
         self.mu = floatX(mu)
         self.alpha = floatX(alpha)
-        self.mode = tt.floor(intX(self.mu))
+        self.mode = intX(np.floor(self.mu))
+
 
     def random(self, point=None, size=None, repeat=None):
         mu, alpha = draw_values([self.mu, self.alpha], point=point)
@@ -444,7 +445,6 @@ class DiscreteUniform(Discrete):
         self.upper = intX(np.floor(upper))
         self.mode = tt.maximum(
             intX(np.floor((upper + lower) / 2.)), self.lower)
-
 
     def _random(self, lower, upper, size=None):
         # This way seems to be the only to deal with lower and upper
