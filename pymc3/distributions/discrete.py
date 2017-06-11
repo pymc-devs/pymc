@@ -285,7 +285,7 @@ class Poisson(Discrete):
     def __init__(self, mu, *args, **kwargs):
         super(Poisson, self).__init__(*args, **kwargs)
         self.mu = floatX(mu)
-        self.mode = tt.floor(self.mu).astype('int32')
+        self.mode = tt.floor(intX(self.mu))
 
     def random(self, point=None, size=None, repeat=None):
         mu = draw_values([self.mu], point=point)
@@ -340,7 +340,7 @@ class NegativeBinomial(Discrete):
         super(NegativeBinomial, self).__init__(*args, **kwargs)
         self.mu = floatX(mu)
         self.alpha = floatX(alpha)
-        self.mode = tt.floor(self.mu).astype('int32')
+        self.mode = tt.floor(intX(self.mu))
 
     def random(self, point=None, size=None, repeat=None):
         mu, alpha = draw_values([self.mu, self.alpha], point=point)
@@ -684,9 +684,9 @@ class ZeroInflatedBinomial(Discrete):
 
     def __init__(self, psi, n, p, *args, **kwargs):
         super(ZeroInflatedBinomial, self).__init__(*args, **kwargs)
-        self.n = n = tt.as_tensor_variable(n)
-        self.p = p = tt.as_tensor_variable(p)
-        self.psi = psi = tt.as_tensor_variable(psi)
+        self.n = n = intX(n)
+        self.p = p = floatX(p)
+        self.psi = psi = floatX(psi)
         self.bin = Binomial.dist(n, p)
         self.mode = self.bin.mode
 
