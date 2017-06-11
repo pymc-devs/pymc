@@ -57,11 +57,11 @@ class TestGenerator(object):
             for i in range(2):
                 yield floatX(np.ones((10, 10)) * i)
 
-        gop = generator(gen(), np.ones((10, 10)) * 10)
+        gop = generator(gen(), floatX(np.ones((10, 10)) * 10))
         f = theano.function([], gop)
-        np.testing.assert_equal(np.ones((10, 10)) * 0, f())
-        np.testing.assert_equal(np.ones((10, 10)) * 1, f())
-        np.testing.assert_equal(np.ones((10, 10)) * 10, f())
+        np.testing.assert_equal(floatX(np.ones((10, 10)) * 0), f())
+        np.testing.assert_equal(floatX(np.ones((10, 10)) * 1), f())
+        np.testing.assert_equal(floatX(np.ones((10, 10)) * 10), f())
         with pytest.raises(ValueError):
             gop.set_default(1)
 
