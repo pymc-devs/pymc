@@ -516,8 +516,7 @@ def sample_ppc(trace, samples=None, model=None, vars=None, size=None,
     -------
     samples : dict
         Dictionary with the variables as keys. The values corresponding to the
-        posterior predictive samples. If a set of weights and a matching number
-        of traces are provided, then the samples will be weighted.
+        posterior predictive samples.
     """
     if samples is None:
         samples = len(trace)
