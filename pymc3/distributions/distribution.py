@@ -483,8 +483,17 @@ class Bound(object):
 
     Example
     -------
-    boundedNormal = pymc3.Bound(pymc3.Normal, lower=0.0)
-    par = boundedNormal(mu=0.0, sd=1.0, testval=1.0)
+    # Bounded distribution can be defined before the model context
+    PositiveNormal = pm.Bound(pm.Normal, lower=0.0)
+    with pm.Model():
+        par1 = PositiveNormal('par1', mu=0.0, sd=1.0, testval=1.0)
+        # or within the model context
+        NegativeNormal = pm.Bound(pm.Normal, upper=0.0)
+        par2 = NegativeNormal('par2', mu=0.0, sd=1.0, testval=1.0)
+        
+        # or you can define it implicitly within the model context 
+        par3 = pm.Bound(pm.Normal, lower=-1.0, upper=1.0)(
+                'par3', mu=0.0, sd=1.0, testval=1.0)
     """
 
     def __init__(self, distribution, lower=-np.inf, upper=np.inf):
@@ -497,7 +506,8 @@ class Bound(object):
             raise ValueError('Observed Bound distributions are not allowed. '
                              'If you want to model truncated data '
                              'you can use a pm.Potential in combination '
-                             'with the cumulative probability function.')
+                             'with the cumulative probability function. See '
+                             'pymc3/examples/censored_data.py for an example.')
         first, args = args[0], args[1:]
 
         return Bounded(first, self.distribution, self.lower, self.upper,

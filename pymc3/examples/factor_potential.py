@@ -1,19 +1,24 @@
 import pymc3 as pm
 
-with pm.Model() as model:
-    x = pm.Normal('x', 1, 1)
-    x2 = pm.Potential('x2', -x ** 2)
+"""
+You can add an arbitrary factor potential to the model likelihood using 
+pm.Potential. For example you can added Jacobian Adjustment using pm.Potential
+when you do model reparameterization. It's similar to `increment_log_prob` in 
+STAN.
+"""
 
-    start = model.test_point
-    h = pm.find_hessian(start)
-    step = pm.Metropolis(model.vars, h)
+def build_model():
+    with pm.Model() as model:
+        x = pm.Normal('x', 1, 1)
+        x2 = pm.Potential('x2', -x ** 2)
+    return model
 
-
-def run(n=3000):
+def run(n=1000):
+    model = build_model()
     if n == "short":
         n = 50
     with model:
-        pm.sample(n, step=step, start=start)
+        pm.sample(n)
 
 if __name__ == '__main__':
     run()
