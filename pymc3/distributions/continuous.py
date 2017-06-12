@@ -829,16 +829,16 @@ class Pareto(PositiveContinuous):
         self.alpha = floatX(alpha)
         self.m = floatX(m)
 
-        self.mean = tt.switch(tt.gt(alpha, 1), alpha *
-                              self.m / (alpha - 1.), np.inf)
-        self.median = self.m * 2.**(1. / alpha)
+        self.mean = tt.switch(tt.gt(self.alpha, 1), self.alpha *
+                              self.m / (self.alpha - 1.), np.inf)
+        self.median = self.m * 2.**(1. / self.alpha)
         self.variance = tt.switch(
-            tt.gt(alpha, 2),
-            (alpha * self.m**2) / ((alpha - 2.) * (alpha - 1.)**2),
+            tt.gt(self.alpha, 2),
+            (self.alpha * self.m**2) / ((self.alpha - 2.) * (self.alpha - 1.)**2),
             np.inf)
 
-        assert_negative_support(alpha, 'alpha', 'Pareto')
-        assert_negative_support(m, 'm', 'Pareto')
+        assert_negative_support(self.alpha, 'alpha', 'Pareto')
+        assert_negative_support(self.m, 'm', 'Pareto')
 
     def _random(self, alpha, m, size=None):
         u = np.random.uniform(size=size)
@@ -899,7 +899,7 @@ class Cauchy(Continuous):
         self.median = self.mode = self.alpha = floatX(alpha)
         self.beta = floatX(beta)
 
-        assert_negative_support(beta, 'beta', 'Cauchy')
+        assert_negative_support(self.beta, 'beta', 'Cauchy')
 
     def _random(self, alpha, beta, size=None):
         u = np.random.uniform(size=size)
@@ -956,7 +956,7 @@ class HalfCauchy(PositiveContinuous):
         self.median = floatX(beta)
         self.beta = floatX(beta)
 
-        assert_negative_support(beta, 'beta', 'HalfCauchy')
+        assert_negative_support(self.beta, 'beta', 'HalfCauchy')
 
     def _random(self, beta, size=None):
         u = np.random.uniform(size=size)
@@ -1109,8 +1109,8 @@ class InverseGamma(PositiveContinuous):
         self.variance = tt.switch(tt.gt(self.alpha, 2),
                                   (self.beta**2) / (self.alpha * (self.alpha - 1.)**2),
                                   np.inf)
-        assert_negative_support(alpha, 'alpha', 'InverseGamma')
-        assert_negative_support(beta, 'beta', 'InverseGamma')
+        assert_negative_support(self.alpha, 'alpha', 'InverseGamma')
+        assert_negative_support(self.beta, 'beta', 'InverseGamma')
 
     def _calculate_mean(self):
         m = self.beta / (self.alpha - 1.)
@@ -1300,7 +1300,7 @@ class ExGaussian(Continuous):
         self.mu = floatX(mu)
         self.sigma = floatX(sigma)
         self.nu = floatX(nu)
-        self.mean = mu + nu
+        self.mean = self.mu + self.nu
         self.variance = (self.sigma**2) + (self.nu**2)
 
         assert_negative_support(self.sigma, 'sigma', 'ExGaussian')
