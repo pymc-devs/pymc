@@ -34,7 +34,8 @@ def plot_posterior(trace, varnames=None, transform=identity_transform, figsize=N
     ref_val: bool
         display the percentage below and above ref_val
     kde_plot: bool
-        if True plot a KDE instead of a histogram
+        if True plot a KDE instead of a histogram. For discrete variables this
+        argument is ignored.
     plot_transformed : bool
         Flag for plotting automatically transformed variables in addition to
         original variables (defaults to False).
