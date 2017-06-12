@@ -783,13 +783,17 @@ class LoosePointFunc(object):
 compilef = fastfn
 
 
-def _get_scaling(total_size, data):
+def _get_scaling(total_size, shape, ndim):
     """
+    Gets scaling constant for logp
 
     Parameters
     ----------
     total_size : int or list[int]
-    data : n-dimentional tensor
+    shape : shape
+        shape to scale
+    ndim : int
+        ndim hint
 
     Returns
     -------
@@ -798,8 +802,8 @@ def _get_scaling(total_size, data):
     if total_size is None:
         coef = pm.floatX(1)
     elif isinstance(total_size, int):
-        if data.ndim >= 1:
-            denom = data.shape[0]
+        if ndim >= 1:
+            denom = shape[0]
         else:
             denom = 1
         coef = pm.floatX(total_size) / pm.floatX(denom)
@@ -807,7 +811,6 @@ def _get_scaling(total_size, data):
         if not all(isinstance(i, int) for i in total_size if (i is not Ellipsis and i is not None)):
             raise TypeError('Unrecognized `total_size` type, expected '
                             'int or list of ints, got %r' % total_size)
-        shape = data.shape
         if Ellipsis in total_size:
             sep = total_size.index(Ellipsis)
             begin = total_size[:sep]
@@ -817,7 +820,7 @@ def _get_scaling(total_size, data):
         else:
             begin = total_size
             end = []
-        if (len(begin) + len(end)) > data.ndim:
+        if (len(begin) + len(end)) > ndim:
             raise ValueError('Length of `total_size` is too big, '
                              'number of scalings is bigger that ndim, got %r' % total_size)
         elif (len(begin) + len(end)) == 0:
@@ -866,7 +869,7 @@ class FreeRV(Factor, TensorVariable):
             self.logp_elemwiset = distribution.logp(self)
             self.total_size = total_size
             self.model = model
-            self.scaling = _get_scaling(total_size, self)
+            self.scaling = _get_scaling(total_size, self.shape, self.ndim)
 
             incorporate_methods(source=distribution, destination=self,
                                 methods=['random'],
@@ -972,7 +975,7 @@ class ObservedRV(Factor, TensorVariable):
             theano.gof.Apply(theano.compile.view_op,
                              inputs=[data], outputs=[self])
             self.tag.test_value = theano.compile.view_op(data).tag.test_value
-            self.scaling = _get_scaling(total_size, data)
+            self.scaling = _get_scaling(total_size, data.shape, data.ndim)
 
     def _repr_latex_(self, name=None, dist=None):
         if self.distribution is None:
@@ -1016,6 +1019,7 @@ class MultiObservedRV(Factor):
         self.total_size = total_size
         self.model = model
         self.distribution = distribution
+        self.scaling = _get_scaling(total_size, self.logp_elemwiset.shape, self.logp_elemwiset.ndim)
 
 
 def Deterministic(name, var, model=None):
@@ -1093,7 +1097,7 @@ class TransformedRV(TensorVariable):
             theano.Apply(theano.compile.view_op, inputs=[
                          normalRV], outputs=[self])
             self.tag.test_value = normalRV.tag.test_value
-
+            self.scaling = _get_scaling(total_size, self.shape, self.ndim)
             incorporate_methods(source=distribution, destination=self,
                                 methods=['random'],
                                 wrapper=InstanceMethod)
