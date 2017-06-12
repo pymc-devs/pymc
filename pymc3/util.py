@@ -80,7 +80,11 @@ def get_variable_name(variable):
     """Returns the variable data type if it is a constant, otherwise
     returns the argument name.
     """
-    name = variable.name
+    try:
+        name = variable.name
+    except AttributeError:
+        name =None
+
     if name is None:
         if hasattr(variable, 'get_parents'):
             try:
@@ -88,7 +92,11 @@ def get_variable_name(variable):
                 return 'f(%s)' % ','.join([n for n in names if isinstance(n, str)]) 
             except IndexError:
                 pass
-        value = variable.eval()
+        try:
+            value = variable.eval()
+        except AttributeError:
+            value = variable
+
         if not value.shape:
             return asscalar(value)
         return 'array'

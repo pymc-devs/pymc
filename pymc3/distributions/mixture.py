@@ -1,6 +1,7 @@
 import numpy as np
 import theano.tensor as tt
 
+from pymc3.theanof import floatX
 from pymc3.util import get_variable_name
 from ..math import logsumexp
 from .dist_math import bound
@@ -42,7 +43,7 @@ class Mixture(Distribution):
     def __init__(self, w, comp_dists, *args, **kwargs):
         shape = kwargs.pop('shape', ())
 
-        self.w = w = tt.as_tensor_variable(w)
+        self.w = floatX(w)
         self.comp_dists = comp_dists
 
         defaults = kwargs.pop('defaults', [])
@@ -53,7 +54,7 @@ class Mixture(Distribution):
             dtype = kwargs.pop('dtype', 'float64')
 
             try:
-                self.mean = (w * self._comp_means()).sum(axis=-1)
+                self.mean = (self.w * self._comp_means()).sum(axis=-1)
 
                 if 'mean' not in defaults:
                     defaults.append('mean')
@@ -63,7 +64,7 @@ class Mixture(Distribution):
         try:
             comp_modes = self._comp_modes()
             comp_mode_logps = self.logp(comp_modes)
-            self.mode = comp_modes[tt.argmax(w * comp_mode_logps, axis=-1)]
+            self.mode = comp_modes[tt.argmax(self.w * comp_mode_logps, axis=-1)]
 
             if 'mode' not in defaults:
                 defaults.append('mode')
@@ -169,9 +170,9 @@ class NormalMixture(Mixture):
     def __init__(self, w, mu, *args, **kwargs):
         _, sd = get_tau_sd(tau=kwargs.pop('tau', None),
                            sd=kwargs.pop('sd', None))
-        self.mu = mu = tt.as_tensor_variable(mu)
-        self.sd = sd = tt.as_tensor_variable(sd)
-        super(NormalMixture, self).__init__(w, Normal.dist(mu, sd=sd),
+        self.mu = floatX(mu)
+        self.sd = floatX(sd)
+        super(NormalMixture, self).__init__(w, Normal.dist(self.mu, sd=self.sd),
                                             *args, **kwargs)
 
     def _repr_latex_(self, name=None, dist=None):

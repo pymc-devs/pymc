@@ -4,6 +4,7 @@ import theano
 import theano.tensor as tt
 from scipy import stats
 
+from pymc3.theanof import floatX, intX
 from pymc3.util import get_variable_name
 from .dist_math import bound, factln, binomln, betaln, logpow
 from .distribution import Discrete, draw_values, generate_samples, reshape_sampled
@@ -42,9 +43,9 @@ class Binomial(Discrete):
 
     def __init__(self, n, p, *args, **kwargs):
         super(Binomial, self).__init__(*args, **kwargs)
-        self.n = n = tt.as_tensor_variable(n)
-        self.p = p = tt.as_tensor_variable(p)
-        self.mode = tt.cast(tround(n * p), self.dtype)
+        self.n = intX(n)
+        self.p = floatX(p)
+        self.mode = tt.cast(tround(self.n * self.p), self.dtype)
 
     def random(self, point=None, size=None, repeat=None):
         n, p = draw_values([self.n, self.p], point=point)
@@ -101,10 +102,11 @@ class BetaBinomial(Discrete):
 
     def __init__(self, alpha, beta, n, *args, **kwargs):
         super(BetaBinomial, self).__init__(*args, **kwargs)
-        self.alpha = alpha = tt.as_tensor_variable(alpha)
-        self.beta = beta = tt.as_tensor_variable(beta)
-        self.n = n = tt.as_tensor_variable(n)
-        self.mode = tt.cast(tround(alpha / (alpha + beta)), 'int8')
+        self.alpha = floatX(alpha)
+        self.beta = floatX(beta)
+        self.n = intX(n)
+        self.mode = tt.cast(
+            tround(self.alpha / (self.alpha + self.beta)), 'int8')
 
     def _random(self, alpha, beta, n, size=None):
         size = size or 1
@@ -166,8 +168,8 @@ class Bernoulli(Discrete):
 
     def __init__(self, p, *args, **kwargs):
         super(Bernoulli, self).__init__(*args, **kwargs)
-        self.p = p = tt.as_tensor_variable(p)
-        self.mode = tt.cast(tround(p), 'int8')
+        self.p = floatX(p)
+        self.mode = tt.cast(tround(self.p), 'int8')
 
     def random(self, point=None, size=None, repeat=None):
         p = draw_values([self.p], point=point)
@@ -207,8 +209,8 @@ class DiscreteWeibull(Discrete):
     def __init__(self, q, beta, *args, **kwargs):
         super(DiscreteWeibull, self).__init__(*args, defaults=['median'], **kwargs)
 
-        self.q = q = tt.as_tensor_variable(q)
-        self.beta = beta = tt.as_tensor_variable(beta)
+        self.q = floatX(q)
+        self.beta = floatX(beta)
 
         self.median = self._ppf(0.5)
 
@@ -282,8 +284,8 @@ class Poisson(Discrete):
 
     def __init__(self, mu, *args, **kwargs):
         super(Poisson, self).__init__(*args, **kwargs)
-        self.mu = mu = tt.as_tensor_variable(mu)
-        self.mode = tt.floor(mu).astype('int32')
+        self.mu = floatX(mu)
+        self.mode = intX(np.floor(self.mu))
 
     def random(self, point=None, size=None, repeat=None):
         mu = draw_values([self.mu], point=point)
@@ -336,9 +338,10 @@ class NegativeBinomial(Discrete):
 
     def __init__(self, mu, alpha, *args, **kwargs):
         super(NegativeBinomial, self).__init__(*args, **kwargs)
-        self.mu = mu = tt.as_tensor_variable(mu)
-        self.alpha = alpha = tt.as_tensor_variable(alpha)
-        self.mode = tt.floor(mu).astype('int32')
+        self.mu = floatX(mu)
+        self.alpha = floatX(alpha)
+        self.mode = intX(np.floor(self.mu))
+
 
     def random(self, point=None, size=None, repeat=None):
         mu, alpha = draw_values([self.mu, self.alpha], point=point)
@@ -394,7 +397,7 @@ class Geometric(Discrete):
 
     def __init__(self, p, *args, **kwargs):
         super(Geometric, self).__init__(*args, **kwargs)
-        self.p = p = tt.as_tensor_variable(p)
+        self.p = floatX(p)
         self.mode = 1
 
     def random(self, point=None, size=None, repeat=None):
@@ -438,17 +441,17 @@ class DiscreteUniform(Discrete):
 
     def __init__(self, lower, upper, *args, **kwargs):
         super(DiscreteUniform, self).__init__(*args, **kwargs)
-        self.lower = tt.floor(lower).astype('int32')
-        self.upper = tt.floor(upper).astype('int32')
+        self.lower = intX(np.floor(lower))
+        self.upper = intX(np.floor(upper))
         self.mode = tt.maximum(
-            tt.floor((upper + lower) / 2.).astype('int32'), self.lower)
+            intX(np.floor((upper + lower) / 2.)), self.lower)
 
     def _random(self, lower, upper, size=None):
         # This way seems to be the only to deal with lower and upper
         # as array-like.
         samples = stats.uniform.rvs(lower, upper - lower - np.finfo(float).eps,
                                     size=size)
-        return np.floor(samples).astype('int32')
+        return intX(np.floor(samples))
 
     def random(self, point=None, size=None, repeat=None):
         lower, upper = draw_values([self.lower, self.upper], point=point)
@@ -498,9 +501,9 @@ class Categorical(Discrete):
             self.k = tt.shape(p)[-1].tag.test_value
         except AttributeError:
             self.k = tt.shape(p)[-1]
-        self.p = p = tt.as_tensor_variable(p)
+        p = floatX(p)
         self.p = (p.T / tt.sum(p, -1)).T
-        self.mode = tt.argmax(p)
+        self.mode = tt.argmax(self.p)
 
     def random(self, point=None, size=None, repeat=None):
         def random_choice(k, *args, **kwargs):
@@ -556,7 +559,7 @@ class Constant(Discrete):
 
     def __init__(self, c, *args, **kwargs):
         super(Constant, self).__init__(*args, **kwargs)
-        self.mean = self.median = self.mode = self.c = c = tt.as_tensor_variable(c)
+        self.mean = self.median = self.mode = self.c = floatX(c)
 
     def random(self, point=None, size=None, repeat=None):
         c = draw_values([self.c], point=point)
@@ -616,8 +619,8 @@ class ZeroInflatedPoisson(Discrete):
 
     def __init__(self, psi, theta, *args, **kwargs):
         super(ZeroInflatedPoisson, self).__init__(*args, **kwargs)
-        self.theta = theta = tt.as_tensor_variable(theta)
-        self.psi = psi = tt.as_tensor_variable(psi)
+        self.theta = floatX(theta)
+        self.psi = floatX(psi)
         self.pois = Poisson.dist(theta)
         self.mode = self.pois.mode
 
@@ -682,9 +685,9 @@ class ZeroInflatedBinomial(Discrete):
 
     def __init__(self, psi, n, p, *args, **kwargs):
         super(ZeroInflatedBinomial, self).__init__(*args, **kwargs)
-        self.n = n = tt.as_tensor_variable(n)
-        self.p = p = tt.as_tensor_variable(p)
-        self.psi = psi = tt.as_tensor_variable(psi)
+        self.n = n = intX(n)
+        self.p = p = floatX(p)
+        self.psi = psi = floatX(psi)
         self.bin = Binomial.dist(n, p)
         self.mode = self.bin.mode
 
@@ -756,10 +759,10 @@ class ZeroInflatedNegativeBinomial(Discrete):
 
     def __init__(self, psi, mu, alpha, *args, **kwargs):
         super(ZeroInflatedNegativeBinomial, self).__init__(*args, **kwargs)
-        self.mu = mu = tt.as_tensor_variable(mu)
-        self.alpha = alpha = tt.as_tensor_variable(alpha)
-        self.psi = psi = tt.as_tensor_variable(psi)
-        self.nb = NegativeBinomial.dist(mu, alpha)
+        self.mu = floatX(mu)
+        self.alpha = floatX(alpha)
+        self.psi = floatX(psi)
+        self.nb = NegativeBinomial.dist(self.mu, self.alpha)
         self.mode = self.nb.mode
 
     def random(self, point=None, size=None, repeat=None):

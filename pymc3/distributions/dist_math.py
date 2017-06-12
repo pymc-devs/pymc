@@ -12,7 +12,7 @@ import theano
 
 from .special import gammaln
 from ..math import logdet as _logdet
-from pymc3.theanof import floatX
+from pymc3.theanof import floatX, intX
 
 f = floatX
 c = - .5 * np.log(2. * np.pi)
@@ -44,7 +44,7 @@ def bound(logp, *conditions, **kwargs):
     else:
         alltrue = alltrue_scalar
 
-    return tt.switch(alltrue(conditions), logp, -np.inf)
+    return tt.switch(alltrue(conditions), logp, -f(np.inf))
 
 
 def alltrue_elemwise(vals):
@@ -62,12 +62,13 @@ def logpow(x, m):
     """
     Calculates log(x**m) since m*log(x) will fail when m, x = 0.
     """
+    m = f(m)
     # return m * log(x)
     return tt.switch(tt.eq(x, 0), -np.inf, m * tt.log(x))
 
 
 def factln(n):
-    return gammaln(n + 1)
+    return gammaln(n + intX(1))
 
 
 def binomln(n, k):
@@ -256,7 +257,7 @@ def MvNormalLogp():
     result += f(2) * n * tt.sum(tt.log(diag))
     result += (delta_trans ** f(2)).sum()
     result = f(-.5) * result
-    logp = tt.switch(ok, result, -np.inf)
+    logp = tt.switch(ok, result, -f(np.inf))
 
     def dlogp(inputs, gradients):
         g_logp, = gradients
