@@ -420,7 +420,7 @@ class NutsReport(object):
             warnings.warn('Step size tuning was enabled throughout the whole '
                           'trace. You might want to specify the number of '
                           'tuning steps.')
-        if n == len(self._divs_after_tune):
+        if n > 0 and n == len(self._divs_after_tune):
             warnings.warn('Chain %s contains only diverging samples. '
                           'The model is probably misspecified.'
                           % self._chain_id)

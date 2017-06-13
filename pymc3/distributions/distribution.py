@@ -87,7 +87,7 @@ class Distribution(object):
 
     def _repr_latex_(self, name=None, dist=None):
         return None
-                                                                     
+
 
 def TensorType(dtype, shape):
     return tt.TensorType(str(dtype), np.atleast_1d(shape) == 1)
@@ -123,6 +123,11 @@ class Discrete(Distribution):
                 dtype = 'int64'
         if dtype != 'int16' and dtype != 'int64':
             raise TypeError('Discrete classes expect dtype to be int16 or int64.')
+
+        if kwargs.get('transform', None) is not None:
+            raise ValueError("Transformations for discrete distributions "
+                             "are not allowed.")
+
         super(Discrete, self).__init__(
             shape, dtype, defaults=defaults, *args, **kwargs)
 
