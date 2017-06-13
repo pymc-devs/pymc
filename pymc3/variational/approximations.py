@@ -80,21 +80,25 @@ class MeanField(Approximation):
                 'rho': theano.shared(
                     pm.floatX(np.zeros((self.global_size,))), 'rho')}
 
-    def log_q_W_global(self, z):
+    @property
+    @memoize
+    def symbolic_random_global_matrix(self):
+        initial = self._symbolic_initial_global_matrix
+        sd = rho2sd(self.rho)
+        mu = self.mean
+        return sd * initial + mu
+
+    @property
+    @memoize
+    def _symbolic_log_q_W_global(self):
         """
         log_q_W samples over q for global vars
         """
         mu = self.scale_grad(self.mean)
         rho = self.scale_grad(self.rho)
-        z = z[self.global_slc]
+        z = self.symbolic_random_global_matrix
         logq = tt.sum(log_normal(z, mu, rho=rho))
         return logq
-
-    def random_global(self, size=None, no_rand=False):
-        initial = self.initial(size, no_rand, l=self.global_size)
-        sd = rho2sd(self.rho)
-        mu = self.mean
-        return sd * initial + mu
 
 
 class FullRank(Approximation):
@@ -203,9 +207,9 @@ class FullRank(Approximation):
         z = z[self.global_slc]
         return log_normal_mv(z, mu, chol=L, gpu_compat=self.gpu_compat)
 
-    def random_global(self, size=None, no_rand=False):
+    def random_global(self, size=None, deterministic=False):
         # (samples, dim) or (dim, )
-        initial = self.initial(size, no_rand, l=self.global_size).T
+        initial = self.initial(size, deterministic, l=self.global_size).T
         # (dim, dim)
         L = self.L
         # (dim, )
@@ -322,14 +326,14 @@ class Empirical(Approximation):
                          high=pm.floatX(self.histogram.shape[0]) - pm.floatX(1e-16))
                 .astype('int32'))
 
-    def random_global(self, size=None, no_rand=False):
-        theano_condition_is_here = isinstance(no_rand, tt.Variable)
+    def random_global(self, size=None, deterministic=False):
+        theano_condition_is_here = isinstance(deterministic, tt.Variable)
         if theano_condition_is_here:
-            return tt.switch(no_rand,
+            return tt.switch(deterministic,
                              self.mean,
                              self.histogram[self.randidx(size)])
         else:
-            if no_rand:
+            if deterministic:
                 return self.mean
             else:
                 return self.histogram[self.randidx(size)]

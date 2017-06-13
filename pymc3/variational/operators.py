@@ -19,9 +19,8 @@ class KL(Operator):
         KL[q(v)||p(v)] = \int q(v)\log\\frac{q(v)}{p(v)}dv
     """
 
-    def apply(self, f):
-        z = self.input
-        return self.logq_norm(z) - self.logp_norm(z)
+    def apply(self, f, nmc):
+        return self.logq_norm(nmc) - self.logp_norm(nmc)
 
 # SVGD Implementation
 
@@ -48,12 +47,12 @@ class KSDObjective(ObjectiveFunction):
                 _warn_not_used('n_mc', self.op)
             return self.approx.histogram
         elif n_mc is not None and n_mc > 1:
-            return self.approx.random(n_mc)
+            return self.approx.random_total(n_mc)
         else:
             raise ValueError('Variational type approximation requires '
                              'sample size (`n_mc` : int > 1 should be passed)')
 
-    def __call__(self, z, **kwargs):
+    def __call__(self, nmc, **kwargs):
         op = self.op  # type: KSD
         grad = op.apply(self.tf)
         if 'more_obj_params' in kwargs:
@@ -99,14 +98,13 @@ class KSD(Operator):
     def __init__(self, approx, temperature=1):
         Operator.__init__(self, approx)
         self.temperature = temperature
-        self.input_matrix = tt.matrix('KSD input matrix')
 
     def apply(self, f):
         # f: kernel function for KSD f(histogram) -> (k(x,.), \nabla_x k(x,.))
         stein = Stein(
             approx=self.approx,
             kernel=f,
-            input_matrix=self.input_matrix,
+            input_matrix=self.approx.symbolic_random_total_matrix,
             temperature=self.temperature)
         return pm.floatX(-1) * stein.grad
 

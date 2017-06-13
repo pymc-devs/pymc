@@ -39,7 +39,10 @@ import theano.tensor as tt
 import pymc3 as pm
 from .updates import adagrad_window
 from ..distributions.dist_math import rho2sd, log_normal
-from ..model import modelcontext, ArrayOrdering, DictToArrayBijection
+from ..model import modelcontext
+from ..blocking import (
+    ArrayOrdering, DictToArrayBijection,
+)
 from ..util import get_default_varnames
 from ..theanof import tt_rng, memoize, change_flags, identity
 
@@ -81,21 +84,6 @@ class ObjectiveFunction(object):
     obj_params = property(lambda self: self.op.approx.params)
     test_params = property(lambda self: self.tf.params)
     approx = property(lambda self: self.op.approx)
-
-    def random(self, size=None):
-        """
-        Posterior distribution from initial latent space
-
-        Parameters
-        ----------
-        size : `int`
-            number of samples from distribution
-
-        Returns
-        -------
-        posterior space (theano)
-        """
-        return self.op.approx.random(size)
 
     def updates(self, obj_n_mc=None, tf_n_mc=None, obj_optimizer=adagrad_window, test_optimizer=adagrad_window,
                 more_obj_params=None, more_tf_params=None, more_updates=None,
@@ -163,8 +151,7 @@ class ObjectiveFunction(object):
             more_tf_params = []
         if more_replacements is None:
             more_replacements = dict()
-        tf_z = self.get_input(tf_n_mc)
-        tf_target = self(tf_z, more_tf_params=more_tf_params)
+        tf_target = self(tf_n_mc, more_tf_params=more_tf_params)
         tf_target = theano.clone(tf_target, more_replacements, strict=False)
         grads = pm.updates.get_or_compute_grads(tf_target, self.obj_params + more_tf_params)
         if total_grad_norm_constraint is not None:
@@ -182,8 +169,7 @@ class ObjectiveFunction(object):
             more_obj_params = []
         if more_replacements is None:
             more_replacements = dict()
-        obj_z = self.get_input(obj_n_mc)
-        obj_target = self(obj_z, more_obj_params=more_obj_params)
+        obj_target = self(obj_n_mc, more_obj_params=more_obj_params)
         obj_target = theano.clone(obj_target, more_replacements, strict=False)
         grads = pm.updates.get_or_compute_grads(obj_target, self.obj_params + more_obj_params)
         if total_grad_norm_constraint is not None:
@@ -195,9 +181,6 @@ class ObjectiveFunction(object):
                 more_obj_params))
         if self.op.RETURNS_LOSS:
             updates.loss = obj_target
-
-    def get_input(self, n_mc):
-        return self.random(n_mc)
 
     @memoize
     @change_flags(compute_test_value='off')
@@ -288,7 +271,7 @@ class ObjectiveFunction(object):
         if more_replacements is None:
             more_replacements = {}
         loss = theano.clone(
-            self(self.random(sc_n_mc)),
+            self(sc_n_mc),
             more_replacements,
             strict=False)
         return theano.function([], loss, **fn_kwargs)
@@ -299,21 +282,13 @@ class ObjectiveFunction(object):
     def __setstate__(self, state):
         self.__init__(*state)
 
-    def __call__(self, z, **kwargs):
+    def __call__(self, nmc, **kwargs):
         if 'more_tf_params' in kwargs:
-            m = -1
+            m = -1.
         else:
-            m = 1
-        if z.ndim > 1:
-            a = theano.scan(
-                lambda z_: theano.clone(
-                    self.op.apply(self.tf),
-                    {self.op.input: z_}, strict=False),
-                sequences=z, n_steps=z.shape[0])[0].mean()
-        else:
-            a = theano.clone(
-                self.op.apply(self.tf),
-                {self.op.input: z}, strict=False)
+            m = 1.
+        a = self.op.apply(self.tf)
+        a = self.approx.set_size_deterministic(a, nmc, 0)
         return m * self.op.T(a)
 
 
@@ -363,6 +338,9 @@ class Operator(object):
         f : :class:`TestFunction` or None
             function that takes `z = self.input` and returns
             same dimensional output
+
+        nmc : n
+            monte carlo samples to use
 
         Returns
         -------
@@ -543,8 +521,10 @@ class Approximation(object):
     -   Kingma, D. P., & Welling, M. (2014).
         Auto-Encoding Variational Bayes. stat, 1050, 1.
     """
-    initial_dist_name = 'normal'
-    initial_dist_map = 0.
+    initial_dist_local_name = 'normal'
+    initial_dist_global_name = 'normal'
+    initial_dist_local_map = 0.
+    initial_dist_global_map = 0.
 
     def __init__(self, local_rv=None, model=None,
                  cost_part_grad_scale=1,
@@ -571,14 +551,48 @@ class Approximation(object):
         self.known = known
         self.local_vars = self.get_local_vars(**kwargs)
         self.global_vars = self.get_global_vars(**kwargs)
-        self.order = ArrayOrdering(self.local_vars + self.global_vars)
-        self.gbij = DictToArrayBijection(ArrayOrdering(self.global_vars), {})
-        self.lbij = DictToArrayBijection(ArrayOrdering(self.local_vars), {})
-        self.flat_view = model.flatten(
-            vars=self.local_vars + self.global_vars
+        self._g_order = ArrayOrdering(self.global_vars)
+        self._l_order = ArrayOrdering(self.local_vars)
+        self.gbij = DictToArrayBijection(self._g_order, {})
+        self._symbolic_initial_local_matrix = tt.matrix(self.__class__.__name__ + '_symbolic_initial_local_matrix')
+        self._symbolic_initial_local_matrix.tag.test_value = np.random.rand(1, self.local_size).astype(
+            self._symbolic_initial_local_matrix.dtype
+        )
+        self._symbolic_initial_global_matrix = tt.matrix(self.__class__.__name__ + '_symbolic_initial_global_matrix')
+        self._symbolic_initial_global_matrix.tag.test_value = np.random.rand(1, self.global_size).astype(
+            self._symbolic_initial_global_matrix.dtype
+        )
+
+        self.global_flat_view = model.flatten(
+            vars=self.global_vars,
+            order=self._g_order,
+            inputvar=self._symbolic_initial_global_matrix
+        )
+        self.local_flat_view = model.flatten(
+            vars=self.local_vars,
+            order=self._l_order,
+            inputvar=self._symbolic_initial_local_matrix
         )
         self._setup(**kwargs)
         self.shared_params = self.create_shared_params(**kwargs)
+        self._n_samples = self._symbolic_initial_global_matrix.shape[0]
+
+    _global_view = property(lambda self: self.global_flat_view.view)
+    _local_view = property(lambda self: self.local_flat_view.view)
+    local_input = property(lambda self: self.local_flat_view.input)
+    global_input = property(lambda self: self.global_flat_view.input)
+
+    local_names = property(lambda self: tuple(v.name for v in self.local_vars))
+    global_names = property(lambda self: tuple(v.name for v in self.global_vars))
+
+    @staticmethod
+    def _choose_alternative(part, loc, glob):
+        if part == 'local':
+            return loc
+        elif part == 'global':
+            return glob
+        else:
+            raise ValueError("part is restricted to be in {'local', 'global'}, got %r" % part)
 
     def seed(self, random_seed=None):
         """
@@ -592,16 +606,6 @@ class Approximation(object):
         self._seed = random_seed
         self._rng.seed(random_seed)
 
-    @property
-    def normalizing_constant(self):
-        t = self.to_flat_input(
-            tt.max([v.scaling for v in self.model.basic_RVs]))
-        t = theano.clone(t, {self.input: tt.zeros(self.total_size)})
-        # if not scale_cost_to_minibatch: t=1
-        t = tt.switch(self.scale_cost_to_minibatch, t,
-                      tt.constant(1, dtype=t.dtype))
-        return pm.floatX(t)
-
     def _setup(self, **kwargs):
         pass
 
@@ -610,9 +614,6 @@ class Approximation(object):
 
     def get_local_vars(self, **kwargs):
         return [v for v in self.model.free_RVs if v in self.known]
-
-    _view = property(lambda self: self.flat_view.view)
-    input = property(lambda self: self.flat_view.input)
 
     def check_model(self, model, **kwargs):
         """Checks that model is valid for variational inference
@@ -632,16 +633,6 @@ class Approximation(object):
         {dict|list|theano.shared}
         """
         pass
-
-    def _local_mu_rho(self):
-        mu = []
-        rho = []
-        for var in self.local_vars:
-            mu.append(self.known[var][0].ravel())
-            rho.append(self.known[var][1].ravel())
-        mu = tt.concatenate(mu)
-        rho = tt.concatenate(rho)
-        return mu, rho
 
     def construct_replacements(self, include=None, exclude=None,
                                more_replacements=None):
@@ -664,17 +655,27 @@ class Approximation(object):
         if include is not None and exclude is not None:
             raise ValueError(
                 'Only one parameter is supported {include|exclude}, got two')
+        _replacements = dict()
+        _replacements.update(self.global_flat_view.replacements)
+        _replacements.update(self.local_flat_view.replacements)
         if include is not None:    # pragma: no cover
             replacements = {k: v for k, v
-                            in self.flat_view.replacements.items() if k in include}
+                            in _replacements.items() if k in include}
         elif exclude is not None:  # pragma: no cover
             replacements = {k: v for k, v
-                            in self.flat_view.replacements.items() if k not in exclude}
+                            in _replacements.items() if k not in exclude}
         else:
-            replacements = self.flat_view.replacements.copy()
+            replacements = _replacements
         if more_replacements is not None:   # pragma: no cover
             replacements.update(more_replacements)
         return replacements
+
+    def to_flat_input(self, node):
+        """
+        Replaces vars with flattened view stored in self.input
+        """
+        replacements = self.construct_replacements()
+        return theano.clone(node, replacements, strict=False)
 
     def apply_replacements(self, node, deterministic=False,
                            include=None, exclude=None,
@@ -694,6 +695,8 @@ class Approximation(object):
             latent variables to be excluded for replacements
         more_replacements : `dict`
             add custom replacements to graph, e.g. change input source
+        new : bool
+            reinit random generator for replacements?
 
         Returns
         -------
@@ -703,8 +706,12 @@ class Approximation(object):
             include, exclude, more_replacements
         )
         node = theano.clone(node, replacements, strict=False)
-        posterior = self.random(no_rand=deterministic)
-        return theano.clone(node, {self.input: posterior}, strict=False)
+        posterior_glob = self.random_global(deterministic=deterministic)
+        posterior_loc = self.random_local(deterministic=deterministic)
+        return theano.clone(node, {
+            self.global_input: posterior_glob,
+            self.local_input: posterior_loc
+        }, strict=False)
 
     def sample_node(self, node, size=100,
                     more_replacements=None):
@@ -724,11 +731,32 @@ class Approximation(object):
         """
         if more_replacements is not None:   # pragma: no cover
             node = theano.clone(node, more_replacements, strict=False)
-        posterior = self.random(size)
+        if size is None:
+            size = 1
+        posterior_loc = self.random_local(size)
+        posterior_glob = self.random_global(size)
         node = self.to_flat_input(node)
 
-        def sample(z): return theano.clone(node, {self.input: z}, strict=False)
-        nodes, _ = theano.scan(sample, posterior, n_steps=size)
+        def sample(zl, zg):
+            return theano.clone(node, {
+                self.local_input: zl,
+                self.global_input: zg
+            }, strict=False)
+        nodes, _ = theano.scan(sample, [posterior_loc, posterior_glob], n_steps=size)
+        return nodes
+
+    def _sample_over_posterior(self, node):
+        node = self.to_flat_input(node)
+        posterior_loc = self.symbolic_random_local_matrix
+        posterior_glob = self.symbolic_random_global_matrix
+        def sample(zl, zg):
+            return theano.clone(node, {
+                self.local_input: zl,
+                self.global_input: zg
+            }, strict=False)
+        nodes, _ = theano.scan(
+            sample, [posterior_loc, posterior_glob],
+            n_steps=posterior_glob.shape[0])
         return nodes
 
     def scale_grad(self, inp):
@@ -742,156 +770,113 @@ class Approximation(object):
         """
         return theano.gradient.grad_scale(inp, self.cost_part_grad_scale)
 
-    def to_flat_input(self, node):
-        """
-        Replaces vars with flattened view stored in self.input
-        """
-        return theano.clone(node, self.flat_view.replacements, strict=False)
-
     @property
     def params(self):
         return cast_to_list(self.shared_params)
 
-    def initial(self, size, no_rand=False, l=None):
-        """Initial distribution for constructing posterior
-
-        Parameters
-        ----------
-        size : `int`
-            number of samples
-        no_rand : `bool`
-            return zeros if True
-        l : `int`
-            length of sample, defaults to latent space dim
-
-        Returns
-        -------
-        `tt.TensorVariable`
-            sampled latent space
-        """
-
-        theano_condition_is_here = isinstance(no_rand, tt.Variable)
-        if l is None:   # pragma: no cover
-            l = self.total_size
+    def _random_part(self, part, size=None, deterministic=False):
+        r_part = self._choose_alternative(
+            part,
+            self.symbolic_random_local_matrix,
+            self.symbolic_random_global_matrix
+        )
+        if not isinstance(deterministic, tt.Variable):
+            deterministic = np.int8(deterministic)
         if size is None:
-            shape = (l, )
+            i_size = np.int32(1)
         else:
-            shape = (size, l)
-        shape = tt.stack(*shape)
-        if theano_condition_is_here:
-            no_rand = tt.as_tensor(no_rand)
-            sample = getattr(self._rng, self.initial_dist_name)(shape)
-            space = tt.switch(
-                no_rand,
-                tt.ones_like(sample) * self.initial_dist_map,
+            i_size = size
+        r_part = self.set_size_deterministic(r_part, i_size, deterministic)
+        if size is None:
+            r_part = r_part[0]
+        return r_part
+
+    def _initial_part_matrix(self, part, size, deterministic):
+        length = self._choose_alternative(
+            part,
+            self.local_size,
+            self.global_size
+        )
+        dist_name = self._choose_alternative(
+            part,
+            self.initial_dist_local_name,
+            self.initial_dist_global_name,
+        )
+        dist_map = self._choose_alternative(
+            part,
+            self.initial_dist_local_map,
+            self.initial_dist_global_map,
+        )
+        length = tt.as_tensor(length)
+        size = tt.as_tensor(size)
+        shape = (size, length)
+        dtype = self._symbolic_initial_global_matrix.dtype
+        if not isinstance(deterministic, tt.Variable):
+            if deterministic:
+                return tt.ones(shape, dtype) * dist_map
+            else:
+                return getattr(self._rng, dist_name)(shape)
+        else:
+            deterministic = tt.as_tensor(deterministic)
+            sample = getattr(self._rng, dist_name)(shape)
+            initial = tt.switch(
+                deterministic,
+                tt.ones(shape, dtype) * dist_map,
                 sample
             )
-        else:
-            if no_rand:
-                return tt.ones(shape) * self.initial_dist_map
-            else:
-                return getattr(self._rng, self.initial_dist_name)(shape)
-        return space
+            return initial
 
-    def random_local(self, size=None, no_rand=False):
+    def random_local(self, size=None, deterministic=False):
         """Implements posterior distribution from initial latent space
 
         Parameters
         ----------
         size : `scalar`
             number of samples from distribution
-        no_rand : `bool`
+        deterministic : `bool`
             whether use deterministic distribution
 
         Returns
         -------
         local posterior space
         """
+        return self._random_part('local', size=size, deterministic=deterministic)
 
-        mu, rho = self._local_mu_rho()
-        e = self.initial(size, no_rand, self.local_size)
-        return e * rho2sd(rho) + mu
-
-    def random_global(self, size=None, no_rand=False):  # pragma: no cover
+    def random_global(self, size=None, deterministic=False):  # pragma: no cover
         """Implements posterior distribution from initial latent space
 
         Parameters
         ----------
         size : `scalar`
             number of samples from distribution
-        no_rand : `bool`
+        deterministic : `bool`
             whether use deterministic distribution
 
         Returns
         -------
         global posterior space
         """
-        raise NotImplementedError
-
-    def random(self, size=None, no_rand=False):
-        """Implements posterior distribution from initial latent space
-
-        Parameters
-        ----------
-        size : `scalar`
-            number of samples from distribution
-        no_rand : `bool`
-            whether use deterministic distribution
-
-        Returns
-        -------
-        posterior space (theano)
-        """
-        if size is None:
-            ax = 0
-        else:
-            ax = 1
-        if self.local_vars and self.global_vars:
-            return tt.concatenate([
-                self.random_local(size, no_rand),
-                self.random_global(size, no_rand)
-            ], axis=ax)
-        elif self.local_vars:   # pragma: no cover
-            return self.random_local(size, no_rand)
-        elif self.global_vars:
-            return self.random_global(size, no_rand)
-        else:   # pragma: no cover
-            raise ValueError('No FreeVARs in model')
+        return self._random_part('global', size=size, deterministic=deterministic)
 
     @property
     @memoize
-    @change_flags(compute_test_value='off')
-    def random_fn(self):
-        """Implements posterior distribution from initial latent space
+    def sample_dict_fn(self):
+        s = tt.iscalar()
+        l_posterior = self.random_local(s)
+        g_posterior = self.random_global(s)
+        sampled = ([self.view_global(g_posterior, name)
+                   for name in self.global_names] +
+                   [self.view_local(l_posterior, name)
+                    for name in self.local_names]
+                   )
+        sample_fn = theano.function([theano.In(s, 'draws', 1)], sampled)
 
-        Parameters
-        ----------
-        size : `int`
-            number of samples from distribution
-        no_rand : `bool`
-            whether use deterministic distribution
-
-        Returns
-        -------
-        posterior space (numpy)
-        """
-        In = theano.In
-        size = tt.iscalar('size')
-        no_rand = tt.bscalar('no_rand')
-        posterior = self.random(size, no_rand)
-        fn = theano.function([In(size, 'size', 1, allow_downcast=True),
-                              In(no_rand, 'no_rand', 0, allow_downcast=True)],
-                             posterior)
-
-        def inner(size=None, no_rand=False):
-            if size is None:
-                return fn(1, int(no_rand))[0]
-            else:
-                return fn(size, int(no_rand))
-
+        def inner(draws=1):
+            _samples = sample_fn(draws)
+            return dict([(n_, s_) for n_, s_ in zip(self.global_names+self.local_names, _samples)])
         return inner
 
-    def sample(self, draws=1, include_transformed=False):
+    def sample(self, draws=500, include_transformed=False):
         """Draw samples from variational posterior.
 
         Parameters
@@ -908,14 +893,11 @@ class Approximation(object):
         """
         vars_sampled = get_default_varnames(self.model.unobserved_RVs,
                                             include_transformed=include_transformed)
-        posterior = self.random_fn(draws)
-        names = [var.name for var in self.local_vars + self.global_vars]
-        samples = {name: self.view(posterior, name)
-                   for name in names}
+        samples = self.sample_dict_fn(draws)  # type: dict
 
         def points():
             for i in range(draws):
-                yield {name: samples[name][i] for name in names}
+                yield {name: samples[name][i] for name in samples.keys()}
 
         trace = pm.sampling.NDArray(model=self.model, vars=vars_sampled)
         try:
@@ -926,54 +908,223 @@ class Approximation(object):
             trace.close()
         return pm.sampling.MultiTrace([trace])
 
-    def log_q_W_local(self, z):
+    @property
+    @memoize
+    def __local_mu_rho(self):
+        if not self.local_vars:
+            mu, rho = (
+                tt.constant(pm.floatX(np.asarray([]))),
+                tt.constant(pm.floatX(np.asarray([])))
+            )
+        else:
+            mu = []
+            rho = []
+            for var in self.local_vars:
+                mu.append(self.known[var][0].ravel())
+                rho.append(self.known[var][1].ravel())
+            mu = tt.concatenate(mu)
+            rho = tt.concatenate(rho)
+        mu.name = self.__class__.__name__ + '_local_mu'
+        rho.name = self.__class__.__name__ + '_local_rho'
+        return mu, rho
+
+    @property
+    @memoize
+    def normalizing_constant(self):
+        """
+        Constant to divide when we want to scale down loss from minibatches
+        """
+        t = self.to_flat_input(
+            tt.max([v.scaling for v in self.model.basic_RVs]))
+        t = theano.clone(t, {
+            self.global_input: self.symbolic_random_global_matrix[0],
+            self.local_input: self.symbolic_random_local_matrix[0]
+        })
+        t = self.set_size_deterministic(t, 1, 1)  # remove random, we do not it here at all
+        # if not scale_cost_to_minibatch: t=1
+        t = tt.switch(self.scale_cost_to_minibatch, t,
+                      tt.constant(1, dtype=t.dtype))
+        return pm.floatX(t)
+
+    def set_size_deterministic(self, smth, s, d):
+        """
+        Replaces self._n_samples and self._deterministic_flag
+        with non symbolic input. Used whenever user specifies
+        `sample size` and `deterministic` option
+        """
+        initial_local = self._initial_part_matrix('local', s, d)
+        initial_global = self._initial_part_matrix('global', s, d)
+        return theano.clone(smth, {
+            self._symbolic_initial_local_matrix: initial_local,
+            self._symbolic_initial_global_matrix: initial_global,
+        }, strict=False)
+
+    @property
+    @memoize
+    def symbolic_random_global_matrix(self):
+        raise NotImplementedError
+
+    @property
+    @memoize
+    def symbolic_random_local_matrix(self):
+        mu, rho = self.__local_mu_rho
+        e = self._symbolic_initial_local_matrix
+        return e * rho2sd(rho) + mu
+
+    @property
+    @memoize
+    def symbolic_random_total_matrix(self):
+        if self.local_vars and self.global_vars:
+            return tt.stack([
+                self.symbolic_random_local_matrix,
+                self.symbolic_random_global_matrix,
+            ], axis=-1)
+        elif self.local_vars:
+            return self.symbolic_random_local_matrix
+        elif self.global_vars:
+            return self.symbolic_random_global_matrix
+        else:
+            raise TypeError('No free vars in the Model')
+
+    @property
+    @memoize
+    def _symbolic_log_q_W_local(self):
         """log_q_W samples over q for local vars
         Gradient wrt mu, rho in density parametrization
         can be scaled to lower variance of ELBO
         """
-        if not self.local_vars:
-            return tt.constant(0)
-        mu, rho = self._local_mu_rho()
+        mu, rho = self.__local_mu_rho
         mu = self.scale_grad(mu)
         rho = self.scale_grad(rho)
-        logp = log_normal(z[self.local_slc], mu, rho=rho)
+        z = self.symbolic_random_local_matrix
+        logp = log_normal(z, mu, rho=rho)
         scaling = []
         for var in self.local_vars:
-            scaling.append(tt.repeat(var.scaling, var.dsize))
+            scaling.append(tt.repeat(var.scaling, var.size))
         scaling = tt.concatenate(scaling)
+        # we need only dimensions here
+        # from incoming unobserved
+        # to get rid of input_view
+        # I replace it with the first row
+        # of total_random matrix
+        # that always exists
+        scaling = theano.clone(scaling, {
+            self.local_input: self.symbolic_random_local_matrix[0]
+        })
         logp *= scaling
-        return self.to_flat_input(tt.sum(logp))
+        logp = logp.sum()
+        return logp
 
-    def log_q_W_global(self, z):    # pragma: no cover
-        """log_q_W samples over q for global vars
-        """
+    @property
+    @memoize
+    def _symbolic_log_q_W_global(self):
         raise NotImplementedError
 
-    def logq(self, z):
+    @property
+    @memoize
+    def _symbolic_log_q_W(self):
+        q_w_local = self._symbolic_log_q_W_local
+        q_w_global = self._symbolic_log_q_W_global
+        return q_w_global + q_w_local
+
+    def logq(self, nmc=None):
         """Total logq for approximation
         """
-        return self.log_q_W_global(z) + self.log_q_W_local(z)
+        if nmc is None:
+            nmc = 1
+        log_q = self._symbolic_log_q_W / pm.floatX(self._n_samples)
+        return self.set_size_deterministic(log_q, nmc, 0)
 
-    def logq_norm(self, z):
-        return self.logq(z) / self.normalizing_constant
+    def logq_norm(self, nmc=None):
+        return self.logq(nmc) / self.normalizing_constant
 
-    def logp(self, z):
-        factors = ([tt.sum(var.logpt)for var in self.model.basic_RVs] +
-                   [tt.sum(var) for var in self.model.potentials])
-        p = self.to_flat_input(tt.add(*factors))
-        p = theano.clone(p, {self.input: z})
-        return p
+    @property
+    @memoize
+    def sized_symbolic_logp_local(self):
+        local_post = self.symbolic_random_local_matrix
+        free_logp_local = tt.sum([
+            var.distribution.logp(
+                self.view_local(local_post, var.name, reshape=True)
+            ) for var in self.model.free_RVs if var.name in self.local_names
+        ])
+        return free_logp_local
 
-    def logp_norm(self, z):
-        t = self.normalizing_constant
-        factors = ([tt.sum(var.logpt) / t for var in self.model.basic_RVs] +
-                   [tt.sum(var) / t for var in self.model.potentials])
-        logpt = tt.add(*factors)
-        p = self.to_flat_input(logpt)
-        p = theano.clone(p, {self.input: z})
-        return p
+    @property
+    @memoize
+    def sized_symbolic_logp_global(self):
+        global_post = self.symbolic_random_global_matrix
+        free_logp_global = tt.sum([
+            var.distribution.logp(
+                self.view_local(global_post, var.name, reshape=True)
+            ) for var in self.model.free_RVs if var.name in self.global_names
+        ])
+        return free_logp_global
 
-    def view(self, space, name, reshape=True):
+    @property
+    @memoize
+    def sized_symbolic_logp_observed(self):
+        observed_logp = tt.sum([
+            var.logpt
+            for var in self.model.observed_RVs
+        ])
+        observed_logp = self._sample_over_posterior(
+            observed_logp
+        )
+        return observed_logp
+
+    @property
+    @memoize
+    def sized_symbolic_logp_potentials(self):
+        potentials = [tt.sum(var) for var in self.model.potentials]
+        potentials = self.sample_node(potentials, size=self._n_samples).sum()
+        return potentials
+
+    @property
+    @memoize
+    def sized_symbolic_logp(self):
+        return (self.sized_symbolic_logp_local +
+                self.sized_symbolic_logp_global +
+                self.sized_symbolic_logp_observed +
+                self.sized_symbolic_logp_potentials)
+
+    @property
+    @memoize
+    def single_symbolic_logp(self):
+        return self.apply_replacements(self.model.logpt)
+
+    def logp(self, nmc=None):
+        if nmc is None:
+            _logp = self.single_symbolic_logp
+            nmc = 1
+        else:
+            _logp = self.sized_symbolic_logp
+        _logp = _logp / pm.floatX(self._n_samples)
+        return self.set_size_deterministic(_logp, nmc, 0)
+
+    def logp_norm(self, nmc):
+        return self.logp(nmc) / self.normalizing_constant
+
+    def _view_part(self, part, space, name, reshape=True):
+        theano_is_here = isinstance(space, tt.Variable)
+        if not theano_is_here:
+            raise TypeError('View on numpy arrays is not supported')
+        if part == 'global':
+            _, slc, _shape, dtype = self._global_view[name]
+        elif part == 'local':
+            _, slc, _shape, dtype = self._local_view[name]
+        else:
+            raise ValueError("%r part is not supported, you can use only {'local', 'global'}")
+        if space.ndim > 2:
+            raise ValueError('Space should have <= 2 dimensions, got %r' % space.ndim)
+        view = space[..., slc]
+        if reshape:
+            shape = np.asarray((-1,) + _shape, int)
+            view = view.reshape(shape, ndim=len(_shape) + 1)
+        if space.ndim == 1:
+            view = view[0]
+        return view.astype(dtype)
+
+    def view_global(self, space, name, reshape=True):
         """Construct view on a variable from flattened `space`
 
         Parameters
@@ -990,51 +1141,37 @@ class Approximation(object):
         (reshaped) slice of matrix
             variable view
         """
-        theano_is_here = isinstance(space, tt.TensorVariable)
-        slc = self._view[name].slc
-        _, _, _shape, dtype = self._view[name]
-        if space.ndim == 2:
-            view = space[:, slc]
-        elif space.ndim < 2:
-            view = space[slc]
-        else:   # pragma: no cover
-            raise ValueError(
-                'Space should have no more than 2 dims, got %d' %
-                space.ndim)
-        if reshape:
-            if len(_shape) > 0:
-                if theano_is_here:
-                    shape = tt.concatenate([space.shape[:-1],
-                                            tt.as_tensor(_shape)])
-                else:
-                    shape = np.concatenate([space.shape[:-1],
-                                            _shape]).astype(int)
+        return self._view_part('global', space, name, reshape)
 
-            else:
-                shape = space.shape[:-1]
-            if theano_is_here:
-                view = view.reshape(shape, ndim=space.ndim + len(_shape) - 1)
-            else:
-                view = view.reshape(shape)
-        return view.astype(dtype)
+    def view_local(self, space, name, reshape=True):
+        """Construct view on a variable from flattened `space`
+
+        Parameters
+        ----------
+        space : matrix or vector
+            space to take view of variable from
+        name : `str`
+            name of variable
+        reshape : `bool`
+            whether to reshape variable from vectorized view
+
+        Returns
+        -------
+        (reshaped) slice of matrix
+            variable view
+        """
+        return self._view_part('local', space, name, reshape)
 
     @property
+    @memoize
     def total_size(self):
-        return self.order.dimensions
+        return self.local_size + self.global_size
 
     @property
+    @memoize
     def local_size(self):
-        size = sum([0] + [v.dsize for v in self.local_vars])
-        return size
+        return self._l_order.dimensions
 
     @property
     def global_size(self):
-        return self.total_size - self.local_size
-
-    @property
-    def local_slc(self):
-        return slice(0, self.local_size)
-
-    @property
-    def global_slc(self):
-        return slice(self.local_size, self.total_size)
+        return self._g_order.dimensions

@@ -84,8 +84,8 @@ class TestApproximates:
             _, model, _ = models.multidimensional_model()
             with model:
                 app = self.inference().approx
-                posterior = app.random(10)
-                x_sampled = app.view(posterior, 'x').eval()
+                posterior = app.random_global(10)
+                x_sampled = app.view_global(posterior, 'x').eval()
             assert x_sampled.shape == (10,) + model['x'].dshape
 
         def test_vars_view_dynamic_size(self):
@@ -94,10 +94,10 @@ class TestApproximates:
                 app = self.inference().approx
                 i = tt.iscalar('i')
                 i.tag.test_value = 1
-                posterior = app.random(i)
-            x_sampled = app.view(posterior, 'x').eval({i: 10})
+                posterior = app.random_global(i)
+            x_sampled = app.view_global(posterior, 'x').eval({i: 10})
             assert x_sampled.shape == (10,) + model['x'].dshape
-            x_sampled = app.view(posterior, 'x').eval({i: 1})
+            x_sampled = app.view_global(posterior, 'x').eval({i: 1})
             assert x_sampled.shape == (1,) + model['x'].dshape
 
         def test_vars_view_dynamic_size_numpy(self):
