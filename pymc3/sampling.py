@@ -480,7 +480,12 @@ def _update_start_vals(a, b, model):
             if is_transformed_name(tname) and get_untransformed_name(tname) == name:
                 transform_func = [d.transformation for d in model.deterministics if d.name == name]
                 if transform_func:
-                    b[tname] = transform_func[0].forward(a[name]).eval()
+                    # TODO: Fix issue #2258 properly, bypassing for now 
+                    # (same as previous behavior)
+                    try:
+                        b[tname] = transform_func[0].forward(a[name]).eval()
+                    except:
+                        pass
 
     a.update({k: v for k, v in b.items() if k not in a})
 
@@ -594,9 +599,9 @@ def init_nuts(init='ADVI', njobs=1, n_init=500000, model=None,
             n=n_init, method='advi', model=model,
             callbacks=cb,
             progressbar=progressbar,
-            obj_optimizer=pm.adagrad_window
+            obj_optimizer=pm.adagrad_window,
         )  # type: pm.MeanField
-        start = approx.sample(draws=njobs)
+        start = approx.sample(draws=njobs, include_transformed=True)
         stds = approx.gbij.rmap(approx.std.eval())
         cov = model.dict_to_array(stds) ** 2
         if njobs == 1:
@@ -611,7 +616,7 @@ def init_nuts(init='ADVI', njobs=1, n_init=500000, model=None,
             progressbar=progressbar,
             obj_optimizer=pm.adagrad_window
         )
-        start = approx.sample(draws=njobs)
+        start = approx.sample(draws=njobs, include_transformed=True)
         stds = approx.gbij.rmap(approx.std.eval())
         cov = model.dict_to_array(stds) ** 2
         if njobs == 1:
