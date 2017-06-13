@@ -14,7 +14,7 @@ from theano.tensor.nlinalg import det, matrix_inverse, trace
 import pymc3 as pm
 
 from pymc3.math import tround
-from pymc3.theanof import floatX
+from pymc3.theanof import floatX, intX
 from . import transforms
 from pymc3.util import get_variable_name
 from .distribution import Continuous, Discrete, draw_values, generate_samples
@@ -105,8 +105,7 @@ class MvNormal(Continuous):
             raise ValueError('Incompatible parameterization. '
                              'Specify exactly one of tau, cov, '
                              'or chol.')
-        mu = tt.as_tensor_variable(mu)
-        self.mean = self.median = self.mode = self.mu = mu
+        self.mean = self.median = self.mode = self.mu = floatX(mu)
         self.solve_lower = tt.slinalg.Solve(A_structure="lower_triangular")
         # Step methods and advi do not catch LinAlgErrors at the
         # moment. We work around that by using a cholesky op
@@ -117,7 +116,7 @@ class MvNormal(Continuous):
         if cov is not None:
             self.k = cov.shape[0]
             self._cov_type = 'cov'
-            cov = tt.as_tensor_variable(cov)
+            cov = floatX(cov)
             if cov.ndim != 2:
                 raise ValueError('cov must be two dimensional.')
             self.chol_cov = cholesky(cov)
@@ -125,7 +124,7 @@ class MvNormal(Continuous):
         elif tau is not None:
             self.k = tau.shape[0]
             self._cov_type = 'tau'
-            tau = tt.as_tensor_variable(tau)
+            tau = floatX(tau)
             if tau.ndim != 2:
                 raise ValueError('tau must be two dimensional.')
             self.chol_tau = cholesky(tau)
@@ -135,7 +134,7 @@ class MvNormal(Continuous):
             self._cov_type = 'chol'
             if chol.ndim != 2:
                 raise ValueError('chol must be two dimensional.')
-            self.chol_cov = tt.as_tensor_variable(chol)
+            self.chol_cov = floatX(chol)
     
     def random(self, point=None, size=None):
         if size is None:
@@ -247,7 +246,7 @@ class MvNormal(Continuous):
         mu = dist.mu
         try:
             cov = dist.cov
-        except AttributeErrir:
+        except AttributeError:
             cov = dist.chol_cov
         return r'${} \sim \text{{MvNormal}}(\mathit{{mu}}={}, \mathit{{cov}}={})$'.format(name,
                                                 get_variable_name(mu),
@@ -291,9 +290,9 @@ class MvStudentT(Continuous):
     
     def __init__(self, nu, Sigma, mu=None, *args, **kwargs):
         super(MvStudentT, self).__init__(*args, **kwargs)
-        self.nu = nu = tt.as_tensor_variable(nu)
-        mu = tt.zeros(Sigma.shape[0]) if mu is None else tt.as_tensor_variable(mu)
-        self.Sigma = Sigma = tt.as_tensor_variable(Sigma)
+        self.nu = floatX(nu)
+        mu = tt.zeros(Sigma.shape[0]) if mu is None else floatX(mu)
+        self.Sigma = floatX(Sigma)
         
         self.mean = self.median = self.mode = self.mu = mu
     
@@ -372,12 +371,12 @@ class Dirichlet(Continuous):
         kwargs.setdefault("shape", shape)
         super(Dirichlet, self).__init__(transform=transform, *args, **kwargs)
         
-        self.k = tt.as_tensor_variable(shape)
-        self.a = a = tt.as_tensor_variable(a)
+        self.k = floatX(shape)
+        self.a = floatX(a)
         self.mean = a / tt.sum(a)
         
-        self.mode = tt.switch(tt.all(a > 1),
-                              (a - 1) / tt.sum(a - 1),
+        self.mode = tt.switch(tt.all(self.a > 1),
+                              (a - 1) / tt.sum(self.a - 1),
                               np.nan)
     
     def random(self, point=None, size=None):
@@ -457,8 +456,8 @@ class Multinomial(Discrete):
             self.n = tt.shape_padright(n)
             self.p = p if p.ndim == 2 else tt.shape_padleft(p)
         else:
-            self.n = tt.as_tensor_variable(n)
-            self.p = tt.as_tensor_variable(p)
+            self.n = intX(n)
+            self.p = floatX(p)
         
         self.mean = self.n * self.p
         self.mode = tt.cast(tround(self.mean), 'int32')
@@ -594,12 +593,12 @@ class Wishart(Continuous):
                       'on the issues surrounding the Wishart see here: '
                       'https://github.com/pymc-devs/pymc3/issues/538.',
                       UserWarning)
-        self.nu = nu = tt.as_tensor_variable(nu)
-        self.p = p = tt.as_tensor_variable(V.shape[0])
-        self.V = V = tt.as_tensor_variable(V)
+        self.nu = intX(nu)
+        self.p = floatX(V.shape[0])
+        self.V = floatX(V)
         self.mean = nu * V
-        self.mode = tt.switch(1 * (nu >= p + 1),
-                              (nu - p - 1) * V,
+        self.mode = tt.switch(1 * (self.nu >= self.p + 1),
+                              (self.nu - self.p - 1) * self.V,
                               np.nan)
     
     def logp(self, X):
@@ -840,7 +839,7 @@ class LKJCholeskyCov(Continuous):
        http://math.stackexchange.com/q/130026
     """
     def __init__(self, eta, n, sd_dist, *args, **kwargs):
-        self.n = n
+        self.n = intX(n)
         self.eta = eta
         
         if 'transform' in kwargs:
@@ -943,13 +942,13 @@ class LKJCorr(Continuous):
                           'dimension parameter p -> n. Please update your code. '
                           'Automatically re-assigning parameters for backwards compatibility.',
                           DeprecationWarning)
-            self.n = p
-            self.eta = n
+            self.n = floatX(p)
+            self.eta = intX(n)
             eta = self.eta
             n = self.n
         elif (n is not None) and (eta is not None) and (p is None):
-            self.n = n
-            self.eta = eta
+            self.n = intX(n)
+            self.eta = floatX(eta)
         else:
             raise ValueError('Invalid parameter: please use eta as the shape parameter and '
                              'n as the dimension parameter.')
