@@ -676,7 +676,7 @@ class Model(six.with_metaclass(InitContextMeta, Context, Factor)):
 
         return f.profile
 
-    def flatten(self, vars=None):
+    def flatten(self, vars=None, order=None, inputvar=None):
         """Flattens model's input and returns:
             FlatView with
             * input vector variable
@@ -687,6 +687,10 @@ class Model(six.with_metaclass(InitContextMeta, Context, Factor)):
         ----------
         vars : list of variables or None
             if None, then all model.free_RVs are used for flattening input
+        order : ArrayOrdering
+            Optional, use predefined ordering
+        inputvar : tt.vector
+            Optional, use predefined inputvar
 
         Returns
         -------
@@ -694,9 +698,14 @@ class Model(six.with_metaclass(InitContextMeta, Context, Factor)):
         """
         if vars is None:
             vars = self.free_RVs
-        order = ArrayOrdering(vars)
-        inputvar = tt.vector('flat_view', dtype=theano.config.floatX)
-        inputvar.tag.test_value = flatten_list(vars).tag.test_value
+        if order is None:
+            order = ArrayOrdering(vars)
+        if inputvar is None:
+            inputvar = tt.vector('flat_view', dtype=theano.config.floatX)
+            if vars:
+                inputvar.tag.test_value = flatten_list(vars).tag.test_value
+            else:
+                inputvar.tag.test_value = np.asarray([], inputvar.dtype)
         replacements = {self.named_vars[name]: inputvar[slc].reshape(shape).astype(dtype)
                         for name, slc, shape, dtype in order.vmap}
         view = {vm.var: vm for vm in order.vmap}
