@@ -22,7 +22,7 @@ def plot_posterior(trace, varnames=None, transform=identity_transform, figsize=N
     figsize : figure size tuple
         If None, size is (12, num of variables * 2) inch
     text_size : int
-        Text size of the point_estimates and HPD (Default:16)
+        Text size of the point_estimates, axis ticks, and HPD (Default:16)
     alpha_level : float
         Defines range for High Posterior Density
     round_to : int
