@@ -599,7 +599,7 @@ def init_nuts(init='ADVI', njobs=1, n_init=500000, model=None,
             n=n_init, method='advi', model=model,
             callbacks=cb,
             progressbar=progressbar,
-            obj_optimizer=pm.adagrad_window,
+            obj_optimizer=pm.adagrad_window
         )  # type: pm.MeanField
         start = approx.sample(draws=njobs, include_transformed=True)
         stds = approx.gbij.rmap(approx.std.eval())
