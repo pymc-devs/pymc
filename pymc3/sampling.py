@@ -1,21 +1,23 @@
+import sys
 from collections import defaultdict
 
+import numpy as np
+import pymc3 as pm
 from joblib import Parallel, delayed
 from numpy.random import randint, seed
-import numpy as np
+from pymc3.external.emcee.backends import EnsembleNDArray, ensure_multitrace
+from pymc3.external.emcee.step_methods import ExternalEnsembleStepShared
+from tqdm import tqdm
 
-import pymc3 as pm
 from .backends.base import merge_traces, BaseTrace, MultiTrace
 from .backends.ndarray import NDArray
 from .model import modelcontext, Point
+from .plots.traceplot import traceplot
 from .step_methods import (NUTS, HamiltonianMC, Metropolis, BinaryMetropolis,
                            BinaryGibbsMetropolis, CategoricalGibbsMetropolis,
                            Slice, CompoundStep)
-from .plots.traceplot import traceplot
 from .util import is_transformed_name, get_untransformed_name
-from tqdm import tqdm
 
-import sys
 sys.setrecursionlimit(10000)
 
 __all__ = ['sample', 'iter_sample', 'sample_ppc', 'init_nuts']
@@ -228,6 +230,18 @@ def sample(draws=500, step=None, init='auto', n_init=200000, start=None,
             raise ValueError("Specify only one of step_kwargs and nuts_kwargs")
         step_kwargs = {'nuts': nuts_kwargs}
 
+    if isinstance(step, ExternalEnsembleStepShared):
+        if trace is None:
+            trace = EnsembleNDArray('mcmc', model, step.vars, step.nparticles)
+        elif not isinstance(trace, EnsembleNDArray):
+            raise TypeError("trace must be of type EnsembleNDArray")
+
+        if start is None:
+            _start = build_start_points(step.nparticles, init, model)
+            if start is None: start = {}
+            _update_start_vals(start, _start, model)
+
+
     if step is None and init is not None and pm.model.all_continuous(model.vars):
         # By default, use NUTS sampler
         pm._log.info('Auto-assigning NUTS sampler...')
@@ -301,7 +315,7 @@ def _sample(draws, step=None, start=None, trace=None, chain=0, tune=None,
         if progressbar:
             sampling.close()
     result = [] if strace is None else [strace]
-    return MultiTrace(result)
+    return ensure_multitrace(result)
 
 
 def iter_sample(draws, step, start=None, trace=None, chain=0, tune=None,
@@ -344,7 +358,7 @@ def iter_sample(draws, step, start=None, trace=None, chain=0, tune=None,
     sampling = _iter_sample(draws, step, start, trace, chain, tune,
                             model, random_seed)
     for i, strace in enumerate(sampling):
-        yield MultiTrace([strace[:i + 1]])
+        yield ensure_multitrace([strace[:i + 1]])
 
 
 def _iter_sample(draws, step, start=None, trace=None, chain=0, tune=None,
@@ -629,3 +643,15 @@ def init_nuts(init='ADVI', njobs=1, n_init=500000, model=None,
     step = pm.NUTS(scaling=cov, is_cov=True, **kwargs)
 
     return start, step
+
+
+def get_random_starters(nparticles, model):
+    return {v.name: np.asarray([v.distribution.random() for i in range(nparticles)]) for v in model.vars}
+
+
+def build_start_points(nparticles, method='random', model=None, **kwargs):
+    if method == 'random':
+        return get_random_starters(nparticles, model)
+    else:
+        start, _ = pm.init_nuts(method, nparticles, model=model, **kwargs)
+        return {v: start.get_values(v) for v in start.varnames}

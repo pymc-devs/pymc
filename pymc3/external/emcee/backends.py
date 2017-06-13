@@ -1,4 +1,5 @@
 from pymc3.backends import NDArray, base
+from pymc3.backends.base import MultiTrace
 from theano.gradient import np
 
 # TODO: create generic EnsembleTrace to use a normal Basetrace (create duplicate parameter names for particles?)
@@ -145,3 +146,22 @@ class EnsembleNDArray(NDArray):
         return {varname: values[idx]
                 for varname, values in self.samples.items()}
 
+
+def repack_ensemble_trace(trace):
+    traces = []
+    for i in range(trace.nparticles):
+        tr = NDArray('mcmc', trace.model, trace.vars)
+        tr.setup(len(trace), i)
+        for varname in trace.varnames:
+            tr.samples[varname] = trace.samples[varname][:, i]
+            tr.draw_idx = len(trace)
+        traces.append(tr)
+    return MultiTrace(traces)
+
+
+def ensure_multitrace(trace):
+    if isinstance(trace, list) and isinstance(trace[0], EnsembleNDArray):
+        return repack_ensemble_trace(trace[0])
+    if isinstance(trace, EnsembleNDArray):
+        return repack_ensemble_trace(trace)
+    return MultiTrace(trace)
