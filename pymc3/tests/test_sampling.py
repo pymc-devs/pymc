@@ -13,14 +13,9 @@ from theano import shared
 import theano
 from .models import simple_init
 from .helpers import SeededTest
+from scipy import stats
 
-# Test if multiprocessing is available
-import multiprocessing
 import pytest
-try:
-    multiprocessing.Pool(2)
-except:
-    pass
 
 
 @pytest.mark.xfail(condition=(theano.config.floatX == "float32"), reason="Fails on float32")
@@ -63,7 +58,8 @@ class TestSample(SeededTest):
         with self.model:
             for njobs in test_njobs:
                 for steps in [1, 10, 300]:
-                    pm.sample(steps, tune=0, step=self.step, njobs=njobs, random_seed=self.random_seed)
+                    pm.sample(steps, tune=0, step=self.step, njobs=njobs,
+                              random_seed=self.random_seed)
 
     def test_sample_init(self):
         with self.model:
@@ -71,7 +67,6 @@ class TestSample(SeededTest):
                 pm.sample(init=init, tune=0,
                           n_init=1000, draws=50,
                           random_seed=self.random_seed)
-
 
     def test_sample_args(self):
         with self.model:
@@ -195,7 +190,6 @@ class TestNamedSampling(SeededTest):
             assert np.isclose(res, 0.)
 
 
-
 class TestChooseBackend(object):
     def test_choose_backend_none(self):
         with mock.patch('pymc3.sampling.NDArray') as nd:
@@ -217,3 +211,53 @@ class TestChooseBackend(object):
                                       'name': None}}
         pm.sampling._choose_backend('test_backend', 'chain', shortcuts=shortcuts)
         assert backend.called
+
+
+class TestSamplePPC(object):
+    def test_normal_scalar(self):
+        with pm.Model() as model:
+            a = pm.Normal('a', mu=0, sd=1)
+            trace = pm.sample()
+
+        with model:
+            ppc = pm.sample_ppc(trace, samples=1000, vars=[])
+            assert len(ppc) == 0
+            ppc = pm.sample_ppc(trace, samples=1000, vars=[a])
+            assert 'a' in ppc
+            assert ppc['a'].shape == (1000,)
+        _, pval = stats.kstest(ppc['a'], stats.norm().cdf)
+        assert pval > 0.001
+
+        with model:
+            ppc = pm.sample_ppc(trace, samples=10, size=5, vars=[a])
+            assert ppc['a'].shape == (10, 5)
+
+    def test_normal_vector(self):
+        with pm.Model() as model:
+            a = pm.Normal('a', mu=0, sd=1, shape=2)
+            trace = pm.sample()
+
+        with model:
+            ppc = pm.sample_ppc(trace, samples=10, vars=[])
+            assert len(ppc) == 0
+            ppc = pm.sample_ppc(trace, samples=10, vars=[a])
+            assert 'a' in ppc
+            assert ppc['a'].shape == (10, 2)
+
+            ppc = pm.sample_ppc(trace, samples=10, vars=[a], size=4)
+            assert 'a' in ppc
+            assert ppc['a'].shape == (10, 4, 2)
+
+    def test_sum_normal(self):
+        with pm.Model() as model:
+            a = pm.Normal('a', sd=0.2)
+            b = pm.Normal('b', mu=a)
+            trace = pm.sample()
+
+        with model:
+            ppc = pm.sample_ppc(trace, samples=1000, vars=[b])
+            assert len(ppc) == 1
+            assert ppc['b'].shape == (1000,)
+            scale = np.sqrt(1 + 0.2 ** 2)
+            _, pval = stats.kstest(ppc['b'], stats.norm(scale=scale).cdf)
+            assert pval > 0.001

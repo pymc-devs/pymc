@@ -410,7 +410,7 @@ class Dirichlet(Continuous):
                               np.nan)
 
     def random(self, point=None, size=None):
-        a = draw_values([self.a], point=point)
+        a = draw_values([self.a], point=point)[0]
 
         def _random(a, size=None):
             return stats.dirichlet.rvs(a, None if size == a.shape else size)
