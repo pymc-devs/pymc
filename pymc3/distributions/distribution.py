@@ -1,3 +1,4 @@
+import numbers
 import numpy as np
 import theano.tensor as tt
 from theano import function
@@ -48,7 +49,8 @@ class Distribution(object):
         dist.__init__(*args, **kwargs)
         return dist
 
-    def __init__(self, shape, dtype, testval=None, defaults=(), transform=None, broadcastable=None):
+    def __init__(self, shape, dtype, testval=None, defaults=(),
+                 transform=None, broadcastable=None):
         self.shape = np.atleast_1d(shape)
         if False in (np.floor(self.shape) == self.shape):
             raise TypeError("Expected int elements in shape")
@@ -70,8 +72,10 @@ class Distribution(object):
             return self.getattr_value(val)
 
         if val is None:
-            raise AttributeError(str(self) + " has no finite default value to use, checked: " +
-                                 str(defaults) + " pass testval argument or adjust so value is finite.")
+            raise AttributeError("%s has no finite default value to use, "
+                                 "checked: %s. Pass testval argument or "
+                                 "adjust so value is finite."
+                                 % (self, str(defaults)))
 
     def getattr_value(self, val):
         if isinstance(val, string_types):
@@ -97,7 +101,8 @@ def TensorType(dtype, shape, broadcastable=None):
 
 class NoDistribution(Distribution):
 
-    def __init__(self, shape, dtype, testval=None, defaults=(), transform=None, parent_dist=None, *args, **kwargs):
+    def __init__(self, shape, dtype, testval=None, defaults=(),
+                 transform=None, parent_dist=None, *args, **kwargs):
         super(NoDistribution, self).__init__(shape=shape, dtype=dtype,
                                              testval=testval, defaults=defaults,
                                              *args, **kwargs)
@@ -137,7 +142,8 @@ class Discrete(Distribution):
 class Continuous(Distribution):
     """Base class for continuous distributions"""
 
-    def __init__(self, shape=(), dtype=None, defaults=('median', 'mean', 'mode'), *args, **kwargs):
+    def __init__(self, shape=(), dtype=None, defaults=('median', 'mean', 'mode'),
+                 *args, **kwargs):
         if dtype is None:
             dtype = theano.config.floatX
         super(Continuous, self).__init__(
@@ -190,18 +196,13 @@ def draw_values(params, point=None):
             if param.name in named_nodes:
                 named_nodes.pop(param.name)
             for name, node in named_nodes.items():
-                if not isinstance(node, (tt.sharedvar.TensorSharedVariable,
+                if not isinstance(node, (tt.sharedvar.SharedVariable,
                                          tt.TensorConstant)):
-                    givens[name] = (node, draw_value(node, point=point))
-    values = [None for _ in params]
-    for i, param in enumerate(params):
-        # "Homogonise" output
-        values[i] = np.atleast_1d(draw_value(
-            param, point=point, givens=givens.values()))
-    if len(values) == 1:
-        return values[0]
-    else:
-        return values
+                    givens[name] = (node, _draw_value(node, point=point))
+    values = []
+    for param in params:
+        values.append(_draw_value(param, point=point, givens=givens.values()))
+    return values
 
 
 @memoize
@@ -229,43 +230,45 @@ def _compile_theano_function(param, vars, givens=None):
                     allow_input_downcast=True)
 
 
-def draw_value(param, point=None, givens=()):
-    if hasattr(param, 'name'):
-        if hasattr(param, 'model'):
-            if point is not None and param.name in point:
-                value = point[param.name]
-            elif hasattr(param, 'random') and param.random is not None:
-                value = param.random(point=point, size=None)
-            else:
-                value = param.tag.test_value
+def _draw_value(param, point=None, givens=None):
+    """Draw a random value from a distribution or return a constant.
+
+    Parameters
+    ----------
+    param : number, array like, theano variable or pymc3 random variable
+        The value or distribution. Constants or shared variables
+        will be converted to an array and returned. Theano variables
+        are evaluated. If `param` is a pymc3 random variables, draw
+        a new value from it and return that, unless a value is specified
+        in `point`.
+    point : dict, optional
+        A dictionary from pymc3 variable names to their values.
+    givens : dict, optional
+        A dictionary from theano variables to their values. These values
+        are used to evaluate `param` if it is a theano variable.
+    """
+    if isinstance(param, numbers.Number):
+        return param
+    elif isinstance(param, np.ndarray):
+        return param
+    elif isinstance(param, tt.TensorConstant):
+        return param.value
+    elif isinstance(param, tt.sharedvar.SharedVariable):
+        return param.get_value()
+    elif isinstance(param, tt.TensorVariable):
+        if point and hasattr(param, 'model') and param.name in point:
+            return point[param.name]
+        elif hasattr(param, 'random') and param.random is not None:
+            return param.random(point=point, size=None)
         else:
-            input_pairs = ([g[0] for g in givens],
-                           [g[1] for g in givens])
-
-            value = _compile_theano_function(param,
-                                             input_pairs[0])(*input_pairs[1])
+            if givens:
+                variables, values = list(zip(*givens))
+            else:
+                variables = values = []
+            func = _compile_theano_function(param, variables)
+            return func(*values)
     else:
-        value = param
-
-    # Sanitising values may be necessary.
-    if hasattr(value, 'value'):
-        value = value.value
-    elif hasattr(value, 'get_value'):
-        value = value.get_value()
-
-    if hasattr(param, 'dtype'):
-        value = np.atleast_1d(value).astype(param.dtype)
-    if hasattr(param, 'shape'):
-        try:
-            shape = param.shape.tag.test_value
-        except AttributeError:
-            try:
-                shape = param.shape.eval()
-            except AttributeError:
-                shape = param.shape
-        if len(shape) == 0 and len(value) == 1:
-            value = value[0]
-    return value
+        raise ValueError('Unexpected type in draw_value: %s' % type(param))
 
 
 def broadcast_shapes(*args):
@@ -490,8 +493,8 @@ class Bound(object):
         # or within the model context
         NegativeNormal = pm.Bound(pm.Normal, upper=0.0)
         par2 = NegativeNormal('par2', mu=0.0, sd=1.0, testval=1.0)
-        
-        # or you can define it implicitly within the model context 
+
+        # or you can define it implicitly within the model context
         par3 = pm.Bound(pm.Normal, lower=-1.0, upper=1.0)(
                 'par3', mu=0.0, sd=1.0, testval=1.0)
     """
