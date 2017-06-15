@@ -5,7 +5,7 @@ SRC_DIR=${SRC_DIR:-`pwd`}
 NOTEBOOK_DIR=${NOTEBOOK_DIR:-$SRC_DIR/notebooks}
 TOKEN=$(openssl rand -hex 24)
 
-docker build -t pymc3 $SRC_DIR/scripts
+docker build -t pymc3 -f $SRC_DIR/scripts/Dockerfile .
 docker run -d \
     -p $PORT:8888 \
     -v $SRC_DIR:/home/jovyan/pymc3 \

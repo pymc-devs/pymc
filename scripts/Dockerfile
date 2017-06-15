@@ -12,7 +12,9 @@ RUN apt-get update && \
 
 USER $NB_USER
 
-COPY create_testenv.sh /tmp/create_testenv.sh
+COPY scripts/create_testenv.sh /tmp/create_testenv.sh
+COPY setup.py $HOME/work/setup.py
+COPY requirements.txt $HOME/work/requirements.txt
 RUN /bin/bash /tmp/create_testenv.sh --global --no-setup
 
 #  matplotlib nonsense
