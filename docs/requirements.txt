@@ -1,0 +1,12 @@
+nbsphinx
+tqdm
+numpy
+theano
+pandas
+ipykernel
+matplotlib
+patsy
+joblib
+six
+h5py
+enum34
