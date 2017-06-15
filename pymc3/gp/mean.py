@@ -6,7 +6,7 @@ class Mean(object):
     """
     Base class for mean functions
     """
-    
+
     def __call__(self, X):
         R"""
         Evaluate the mean function.
@@ -22,15 +22,15 @@ class Mean(object):
 
     def __mul__(self, other):
         return Prod(self, other)
-        
+
 class Zero(Mean):
     def __call__(self, X):
-        return tt.zeros(X.shape, dtype='float32')
-        
+        return tt.zeros(X.shape[0], dtype='float32')
+
 class Constant(Mean):
     """
     Constant mean function for Gaussian process.
-    
+
     Parameters
     ----------
     c : variable, array or integer
@@ -45,11 +45,11 @@ class Constant(Mean):
         return tt.ones(X.shape) * self.c
 
 class Linear(Mean):
-    
+
     def __init__(self, coeffs, intercept=0):
         """
         Linear mean function for Gaussian process.
-        
+
         Parameters
         ----------
         coeffs : variables
@@ -60,11 +60,11 @@ class Linear(Mean):
         Mean.__init__(self)
         self.b = intercept
         self.A = coeffs
-        
+
     def __call__(self, X):
         return tt.dot(X, self.A) + self.b
 
-        
+
 class Add(Mean):
     def __init__(self, first_mean, second_mean):
         Mean.__init__(self)
@@ -83,4 +83,4 @@ class Prod(Mean):
 
     def __call__(self, X):
         return tt.mul(self.m1(X), self.m2(X))
-        
+
