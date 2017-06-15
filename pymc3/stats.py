@@ -8,6 +8,7 @@ import warnings
 from collections import namedtuple
 from .model import modelcontext
 from .util import get_default_varnames
+from pymc3.theanof import floatX
 
 from scipy.misc import logsumexp
 from scipy.stats.distributions import pareto
@@ -123,7 +124,7 @@ def dic(trace, model=None):
     return 2 * mean_deviance - deviance_at_mean
 
 
-def log_post_trace(trace, model):
+def _log_post_trace(trace, model):
     """Calculate the elementwise log-posterior for the sampled trace.
 
     Parameters
@@ -131,8 +132,27 @@ def log_post_trace(trace, model):
     trace : result of MCMC run
     model : PyMC Model
         Optional model. Default None, taken from context.
+
+    Returns
+    -------
+    logp : array of shape (n_samples, n_observations)
+        The contribution of the observations to the logp of the whole model.
     """
-    return np.vstack([obs.logp_elemwise(pt) for obs in model.observed_RVs] for pt in trace)
+    def logp_vals_point(pt):
+        if len(model.observed_RVs) == 0:
+            return floatX(np.array([], dtype='d'))
+
+        logp_vals = []
+        for var in model.observed_RVs:
+            logp = var.logp_elemwise(pt)
+            if var.missing_values:
+                logp = logp[~var.observations.mask]
+            logp_vals.append(logp.ravel())
+
+        return np.concatenate(logp_vals)
+
+    logp = (logp_vals_point(pt) for pt in trace)
+    return np.stack(logp)
 
 
 def waic(trace, model=None, pointwise=False):
@@ -160,7 +180,9 @@ def waic(trace, model=None, pointwise=False):
     """
     model = modelcontext(model)
 
-    log_py = log_post_trace(trace, model)
+    log_py = _log_post_trace(trace, model)
+    if log_py.size == 0:
+        raise ValueError('The model does not contain observed values.')
 
     lppd_i = logsumexp(log_py, axis=0, b=1.0 / log_py.shape[0])
 
@@ -210,7 +232,9 @@ def loo(trace, model=None, pointwise=False):
     """
     model = modelcontext(model)
 
-    log_py = log_post_trace(trace, model)
+    log_py = _log_post_trace(trace, model)
+    if log_py.size == 0:
+        raise ValueError('The model does not contain observed values.')
 
     # Importance ratios
     r = np.exp(-log_py)
