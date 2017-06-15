@@ -19,8 +19,8 @@ class KL(Operator):
         KL[q(v)||p(v)] = \int q(v)\log\\frac{q(v)}{p(v)}dv
     """
 
-    def apply(self, f, nmc):
-        return self.logq_norm(nmc) - self.logp_norm(nmc)
+    def apply(self, f):
+        return self.logq_norm - self.logp_norm
 
 # SVGD Implementation
 
@@ -60,7 +60,7 @@ class KSDObjective(ObjectiveFunction):
         else:
             params = self.test_params + kwargs['more_tf_params']
             grad *= pm.floatX(-1)
-        grad = theano.clone(grad, {op.input_matrix: z})
+        z = op.approx.symbolic_random_total_matrix
         grad = tt.grad(None, params, known_grads={z: grad})
         return grad
 

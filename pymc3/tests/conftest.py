@@ -34,7 +34,15 @@ def theano_config():
         yield
 
 
-@pytest.fixture(scope='function')
+@pytest.fixture(scope='session', autouse=True)
+def exception_verbosity():
+    config = theano.configparser.change_flags(
+        exception_verbosity='high')
+    with config:
+        yield
+
+
+@pytest.fixture(scope='session')
 def strict_float32():
     config = theano.configparser.change_flags(
         warn_float64='raise',

@@ -30,13 +30,13 @@ def test_elbo():
 
     # Create variational gradient tensor
     mean_field = MeanField(model=model)
-    elbo = -KL(mean_field)()(mean_field.random())
+    elbo = -KL(mean_field)()(10000)
 
     mean_field.shared_params['mu'].set_value(post_mu)
     mean_field.shared_params['rho'].set_value(np.log(np.exp(post_sd) - 1))
 
     f = theano.function([], elbo)
-    elbo_mc = sum(f() for _ in range(10000)) / 10000
+    elbo_mc = f()
 
     # Exact value
     elbo_true = (-0.5 * (
@@ -99,19 +99,6 @@ class TestApproximates:
             assert x_sampled.shape == (10,) + model['x'].dshape
             x_sampled = app.view_global(posterior, 'x').eval({i: 1})
             assert x_sampled.shape == (1,) + model['x'].dshape
-
-        def test_vars_view_dynamic_size_numpy(self):
-            _, model, _ = models.multidimensional_model()
-            with model:
-                app = self.inference().approx
-                i = tt.iscalar('i')
-                i.tag.test_value = 1
-            x_sampled = app.view(app.random_fn(10), 'x')
-            assert x_sampled.shape == (10,) + model['x'].dshape
-            x_sampled = app.view(app.random_fn(1), 'x')
-            assert x_sampled.shape == (1,) + model['x'].dshape
-            x_sampled = app.view(app.random_fn(), 'x')
-            assert x_sampled.shape == () + model['x'].dshape
 
         def test_sample(self):
             n_samples = 100
