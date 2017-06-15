@@ -1,5 +1,8 @@
 import pytest
 from theano import theano, tensor as tt
+import numpy as np
+import pandas as pd
+import numpy.testing as npt
 
 import pymc3 as pm
 from pymc3.distributions import HalfCauchy, Normal, transforms
@@ -166,3 +169,13 @@ def test_duplicate_vars():
             pm.Binomial('a', 10, .5)
             pm.Normal('a', transform=transforms.log)
     err.match('already exists')
+
+
+def test_empty_observed():
+    data = pd.DataFrame(np.ones((2, 3)) / 3)
+    data.values[:] = np.nan
+    with pm.Model():
+        a = pm.Normal('a', observed=data)
+        npt.assert_allclose(a.tag.test_value, np.zeros((2, 3)))
+        b = pm.Beta('b', alpha=1, beta=1, observed=data)
+        npt.assert_allclose(b.tag.test_value, np.ones((2, 3)) / 2)
