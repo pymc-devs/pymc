@@ -5,7 +5,7 @@ from theano import tensor as tt
 import pymc3 as pm
 from pymc3.distributions.dist_math import rho2sd, log_normal, log_normal_mv
 from pymc3.variational.opvi import Approximation
-from pymc3.theanof import memoize
+from pymc3.theanof import memoize, change_flags
 
 
 __all__ = [
@@ -82,6 +82,7 @@ class MeanField(Approximation):
 
     @property
     @memoize
+    @change_flags(compute_test_value='off')
     def symbolic_random_global_matrix(self):
         initial = self._symbolic_initial_global_matrix
         sd = rho2sd(self.rho)
@@ -90,15 +91,16 @@ class MeanField(Approximation):
 
     @property
     @memoize
-    def _symbolic_log_q_W_global(self):
+    @change_flags(compute_test_value='off')
+    def symbolic_log_q_W_global(self):
         """
         log_q_W samples over q for global vars
         """
         mu = self.scale_grad(self.mean)
         rho = self.scale_grad(self.rho)
         z = self.symbolic_random_global_matrix
-        logq = tt.sum(log_normal(z, mu, rho=rho))
-        return logq
+        logq = log_normal(z, mu, rho=rho)
+        return logq.sum(1)
 
 
 class FullRank(Approximation):
@@ -199,17 +201,23 @@ class FullRank(Approximation):
                 'L_tril': theano.shared(L_tril, 'L_tril')
                 }
 
-    def log_q_W_global(self, z):
+    @property
+    @memoize
+    @change_flags(compute_test_value='off')
+    def log_q_W_global(self):
         """log_q_W samples over q for global vars
         """
         mu = self.scale_grad(self.mean)
         L = self.scale_grad(self.L)
-        z = z[self.global_slc]
+        z = self.symbolic_random_global_matrix
         return log_normal_mv(z, mu, chol=L, gpu_compat=self.gpu_compat)
 
-    def random_global(self, size=None, deterministic=False):
+    @property
+    @memoize
+    @change_flags(compute_test_value='off')
+    def symbolic_random_global_matrix(self):
         # (samples, dim) or (dim, )
-        initial = self.initial(size, deterministic, l=self.global_size).T
+        initial = self._symbolic_initial_global_matrix.T
         # (dim, dim)
         L = self.L
         # (dim, )
