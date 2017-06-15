@@ -123,13 +123,13 @@ https://doi.org/10.7717/peerj-cs.55
 Contact
 =======
 
-To report an issue with PyMC3 or to suggest a feature please use the `issue tracker <https://github.com/pymc-devs/pymc3/issues>`__.
+We are using `discourse.pymc.io<https://discourse.pymc.io/>`__ as our main communication channel. You can also follow us on `Twitter @pymc_devs<https://twitter.com/pymc_devs>`__ for update and other announcements. Our `pymc Gitter channel <https://gitter.im/pymc-devs/pymc>`__ is still open if you want to have a quick interaction with PyMC3 developers and users.
 
-To ask a question regarding modeling or usage of PyMC3 we encourage posting to `StackOverflow using the "pymc" tag <http://stackoverflow.com/questions/tagged/pymc>`__.
+To ask a question regarding modeling or usage of PyMC3 we encourage posting to `Our Discourse forum under the “Questions” Category <https://discourse.pymc.io/c/questions>`__. You can also suggest feature in the “Development” Category <https://discourse.pymc.io/c/development>`__.
 
-To interact with PyMC3 developers, visit the `pymc Gitter channel <https://gitter.im/pymc-devs/pymc>`__.
+To report an issue with PyMC3 please use the `issue tracker <https://github.com/pymc-devs/pymc3/issues>`__.
 
-Finally, if you need to get in touch for non-technical information about the project, `send us an e-mail <fonnesbeck+pymc@gmail.com>`__.
+Finally, if you need to get in touch for non-technical information about the project, `send us an e-mail <pymc.devs@gmail.com>`__.
 
 License
 =======
