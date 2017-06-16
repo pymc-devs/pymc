@@ -16,9 +16,8 @@ from ..distributions.dist_math import Cholesky
 __all__ = ['GP', 'sample_gp']
 
 class GPBase(Continuous):
-
     def random(self, point=None, size=None, X_values=None, obs_noise=False, y=None, **kwargs):
-        if y is None:
+        if X_values is None:
             # draw from prior
             mean, cov = self._prior(obs_noise)
         else:
@@ -37,7 +36,17 @@ class GPBase(Continuous):
                                    size=size)
         return samples
 
-class GP(Continuous):
+    def _prior(self, obs_noise=False):
+        raise NotImplementedError
+
+    def _conditional(self, Z, y, obs_noise=False):
+        raise NotImplementedError
+
+    def logp(self, y):
+        raise NotImplementedError
+
+
+class GP(GPBase):
     """Gausian process
 
     Parameters
@@ -79,6 +88,7 @@ class GP(Continuous):
         super(GP, self).__init__(*args, **kwargs)
 
     def _prior(self, obs_noise=False):
+        mean = self.M(self.X).squeeze()
         if obs_noise:
             cov = self.K(self.X) + self.sigma2 * tt.eye(self.nx)
         else:
@@ -86,15 +96,25 @@ class GP(Continuous):
         return mean, cov
 
     def _conditional(self, Z, y, obs_noise=False):
-        return 10
+        nz = Z.shape[0]
+        Kxx = self.K(self.X)
+        Kxz = self.K(self.X, Z)
+        Kzz = self.K(Z)
 
-    def logp(self, Y, X=None):
-        if X is None:
-            X = self.X
-        mu = self.M(X).squeeze()
-        Sigma = self.K(X) + tt.eye(X.shape[0])*self.sigma**2
+        L = self.cholesky(Kxx + self.sigma2 * tt.eye(self.nx))
+        A = self.solve_lower(L, Kxz)
+        V = self.solve_lower(L, y - self.M(self.X).squeeze())
+        mean = tt.dot(tt.transpose(A), V) + self.M(Z).squeeze()
+        if obs_noise:
+            cov = Kzz - tt.dot(tt.transpose(A), A) + self.sigma2 * tt.eye(nz)
+        else:
+            cov = Kzz - tt.dot(tt.transpose(A), A) + 1e-6 * tt.eye(nz)
+        return mean, cov
 
-        return MvNormal.dist(mu, Sigma).logp(Y)
+    def logp(self, y):
+        mean = self.M(self.X).squeeze()
+        L = self.cholesky(self.K(self.X) + self.sigma2 * tt.eye(self.nx))
+        return MvNormal.dist(mu=mean, chol=L).logp(y)
 
 
 class GPfitc(GPBase):
@@ -130,21 +150,6 @@ class GPfitc(GPBase):
         self.nu = self.Xu.shape[0]
         super(GPfitc, self).__init__(*args, **kwargs)
 
-    def _prior(self, obs_noise=False):
-        Kuu = self.K(self.Xu, self.Xu) + 1e-6 * tt.eye(self.nu)
-        Kux = self.K(self.Xu, self.X)
-        Kdiag = tt.diag(self.K(self.X, self.X))  # need Kdiag methods for cov functions
-        Luu = self.cholesky(Kuu)
-        V = self.solve_lower(Luu, Kux)
-        Qff = tt.dot(tt.transpose(V), V)
-        mean = self.M(self.X).squeeze()
-
-        if obs_noise:
-            cov = Qff - (tt.diag(Qff) - Kdiag) + self.sigma2 * tt.eye(self.nx)
-        else:
-            cov = Qff - (tt.diag(Qff) - Kdiag) + 1e-6 * tt.eye(self.nx)
-        return mean, cov
-
     def _common(self, y):
         Kuu = self.K(self.Xu, self.Xu) + 1e-6 * tt.eye(self.nu)
         Kux = self.K(self.Xu, self.X)
@@ -159,6 +164,21 @@ class GPfitc(GPBase):
         alpha = tt.dot(V, beta)
         G = self.solve_lower(Lu, alpha)
         return Luu, Lu, g, G, r
+
+    def _prior(self, obs_noise=False):
+        Kuu = self.K(self.Xu, self.Xu) + 1e-6 * tt.eye(self.nu)
+        Kux = self.K(self.Xu, self.X)
+        Kdiag = tt.diag(self.K(self.X, self.X))  # need Kdiag methods for cov functions
+        Luu = self.cholesky(Kuu)
+        V = self.solve_lower(Luu, Kux)
+        Qff = tt.dot(tt.transpose(V), V)
+        mean = self.M(self.X).squeeze()
+
+        if obs_noise:
+            cov = Qff - (tt.diag(Qff) - Kdiag) + self.sigma2 * tt.eye(self.nx)
+        else:
+            cov = Qff - (tt.diag(Qff) - Kdiag) + 1e-6 * tt.eye(self.nx)
+        return mean, cov
 
     def _conditional(self, Z, y, obs_noise=False):
         Luu, Lu, g, G, r = self._common(y)
