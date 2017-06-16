@@ -228,6 +228,9 @@ def sample(draws=500, step=None, init='auto', n_init=200000, start=None,
             raise ValueError("Specify only one of step_kwargs and nuts_kwargs")
         step_kwargs = {'nuts': nuts_kwargs}
 
+    if model.ndim == 0:
+        raise ValueError('The model does not contain any free variables.')
+
     if step is None and init is not None and pm.model.all_continuous(model.vars):
         # By default, use NUTS sampler
         pm._log.info('Auto-assigning NUTS sampler...')

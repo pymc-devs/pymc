@@ -425,7 +425,7 @@ class Model(six.with_metaclass(InitContextMeta, Context, Factor)):
 
     @property
     def ndim(self):
-        return self.dict_to_array(self.test_point).shape[0]
+        return sum(var.dsize for var in self.free_RVs)
 
     @property
     @memoize
