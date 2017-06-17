@@ -56,7 +56,7 @@ class BaseHMC(ArrayStepShared):
         if potential is not None:
             self.potential = potential
         else:
-            self.potential = quad_potential(scaling, is_cov, as_cov=False)
+            self.potential = quad_potential(scaling, is_cov)
 
         shared = make_shared_replacements(vars, model)
         if theano_kwargs is None:

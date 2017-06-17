@@ -12,7 +12,8 @@ from .step_methods import (NUTS, HamiltonianMC, Metropolis, BinaryMetropolis,
                            BinaryGibbsMetropolis, CategoricalGibbsMetropolis,
                            Slice, CompoundStep)
 from .plots.traceplot import traceplot
-from .util import update_start_vals
+from .util import is_transformed_name, get_untransformed_name, update_start_vals
+from pymc3.step_methods.hmc import quadpotential
 from tqdm import tqdm
 
 import sys
@@ -236,8 +237,6 @@ def sample(draws=500, step=None, init='auto', n_init=200000, start=None,
         pm._log.info('Auto-assigning NUTS sampler...')
         args = step_kwargs if step_kwargs is not None else {}
         args = args.get('nuts', {})
-        if init == 'auto':
-            init = 'ADVI'
         start_, step = init_nuts(init=init, njobs=njobs, n_init=n_init,
                                  model=model, random_seed=random_seed,
                                  progressbar=progressbar, **args)
@@ -654,8 +653,9 @@ def init_nuts(init='ADVI', njobs=1, n_init=500000, model=None,
 
     Parameters
     ----------
-    init : str {'ADVI', 'ADVI_MAP', 'MAP', 'NUTS'}
+    init : str {'auto', 'ADVI', 'ADVI_MAP', 'MAP', 'NUTS'}
         Initialization method to use.
+        * auto : TODO
         * ADVI : Run ADVI to estimate posterior mean and diagonal covariance matrix.
         * ADVI_MAP: Initialize ADVI with MAP and use MAP as starting point.
         * MAP : Use the MAP as starting point.
@@ -691,7 +691,27 @@ def init_nuts(init='ADVI', njobs=1, n_init=500000, model=None,
         pm.callbacks.CheckParametersConvergence(tolerance=1e-2, diff='absolute'),
         pm.callbacks.CheckParametersConvergence(tolerance=1e-2, diff='relative'),
     ]
-    if init == 'advi':
+    if init == 'auto':
+        init = 'advi+adapt_diag'
+
+    if init == 'advi+adapt_diag':
+        approx = pm.fit(
+            random_seed=random_seed,
+            n=n_init, method='advi', model=model,
+            callbacks=cb,
+            progressbar=progressbar,
+            obj_optimizer=pm.adagrad_window,
+        )
+        start = approx.sample(draws=njobs)
+        stds = approx.gbij.rmap(approx.std.eval())
+        cov = model.dict_to_array(stds) ** 2
+        mean = approx.gbij.rmap(approx.mean.get_value())
+        mean = model.dict_to_array(mean)
+        weight = 30
+        potential = quadpotential.QuadPotentialDiagAdapt(mean, cov, weight)
+        if njobs == 1:
+            start = start[0]
+    elif init == 'advi':
         approx = pm.fit(
             random_seed=random_seed,
             n=n_init, method='advi', model=model,
@@ -702,6 +722,7 @@ def init_nuts(init='ADVI', njobs=1, n_init=500000, model=None,
         start = approx.sample(draws=njobs)
         stds = approx.gbij.rmap(approx.std.eval())
         cov = model.dict_to_array(stds) ** 2
+        potential = quadpotential.QuadPotentialDiag(cov)
         if njobs == 1:
             start = start[0]
     elif init == 'advi_map':
@@ -717,6 +738,7 @@ def init_nuts(init='ADVI', njobs=1, n_init=500000, model=None,
         start = approx.sample(draws=njobs)
         stds = approx.gbij.rmap(approx.std.eval())
         cov = model.dict_to_array(stds) ** 2
+        potential = quadpotential.QuadPotentialDiag(cov)
         if njobs == 1:
             start = start[0]
     elif init == 'map':
@@ -728,11 +750,12 @@ def init_nuts(init='ADVI', njobs=1, n_init=500000, model=None,
                                random_seed=random_seed)
         cov = np.atleast_1d(pm.trace_cov(init_trace))
         start = np.random.choice(init_trace, njobs)
+        potential = quadpotential.QuadPotentialFull(cov)
         if njobs == 1:
             start = start[0]
     else:
         raise NotImplementedError('Initializer {} is not supported.'.format(init))
 
-    step = pm.NUTS(scaling=cov, is_cov=True, **kwargs)
+    step = pm.NUTS(potential=potential, **kwargs)
 
     return start, step
