@@ -2,7 +2,7 @@
     :alt: PyMC3 logo
     :align: center
 
-|Gitter| |Build Status| |Coverage|
+|Build Status| |Coverage|
 
 PyMC3 is a Python package for Bayesian statistical modeling and Probabilistic Machine Learning
 which focuses on advanced Markov chain Monte Carlo and variational fitting
@@ -123,9 +123,9 @@ https://doi.org/10.7717/peerj-cs.55
 Contact
 =======
 
-We are using `discourse.pymc.io <https://discourse.pymc.io/>`__ as our main communication channel. You can also follow us on `Twitter @pymc_devs <https://twitter.com/pymc_devs>`__ for update and other announcements. Our `pymc Gitter channel <https://gitter.im/pymc-devs/pymc>`__ is still open if you want to have a quick interaction with PyMC3 developers and users.
+We are using `discourse.pymc.io <https://discourse.pymc.io/>`__ as our main communication channel. You can also follow us on `Twitter @pymc_devs <https://twitter.com/pymc_devs>`__ for updates and other announcements. 
 
-To ask a question regarding modeling or usage of PyMC3 we encourage posting to Our Discourse forum under the `“Questions” Category <https://discourse.pymc.io/c/questions>`__. You can also suggest feature in the `“Development” Category <https://discourse.pymc.io/c/development>`__.
+To ask a question regarding modeling or usage of PyMC3 we encourage posting to our Discourse forum under the `“Questions” Category <https://discourse.pymc.io/c/questions>`__. You can also suggest feature in the `“Development” Category <https://discourse.pymc.io/c/development>`__.
 
 To report an issue with PyMC3 please use the `issue tracker <https://github.com/pymc-devs/pymc3/issues>`__.
 
@@ -173,8 +173,6 @@ Sponsors
 
 |Quantopian|
 
-.. |Gitter| image:: https://badges.gitter.im/Join%20Chat.svg
-   :target: https://gitter.im/pymc-devs/pymc?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge
 .. |Build Status| image:: https://travis-ci.org/pymc-devs/pymc3.png?branch=master
    :target: https://travis-ci.org/pymc-devs/pymc3
 .. |Coverage| image:: https://coveralls.io/repos/github/pymc-devs/pymc3/badge.svg?branch=master
