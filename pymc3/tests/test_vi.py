@@ -11,6 +11,7 @@ from pymc3.variational import (
     MeanField, fit
 )
 from pymc3.variational.operators import KL
+from pymc3.tests import models
 
 
 @pytest.fixture('function', autouse=True)
@@ -173,7 +174,7 @@ def fit_kwargs(inference, using_minibatch):
     return _select[(type(inference), key)]
 
 
-def test_fit(inference,
+def test_fit_oo(inference,
              fit_kwargs,
              simple_model_data
              ):
@@ -182,3 +183,112 @@ def test_fit(inference,
     d = simple_model_data['d']
     np.testing.assert_allclose(np.mean(trace['mu']), mu_post, rtol=0.05)
     np.testing.assert_allclose(np.std(trace['mu']), np.sqrt(1. / d), rtol=0.1)
+
+
+@pytest.fixture('module')
+def another_simple_model():
+    _model = models.simple_model()[1]
+    with _model:
+        pm.Potential('pot', tt.ones((10, 10)))
+    return _model
+
+
+@pytest.fixture(params=[
+    dict(name='advi', kw=dict(start={})),
+    dict(name='fullrank_advi', kw=dict(start={})),
+    dict(name='svgd', kw=dict(start={}))],
+    ids=lambda d: d['name']
+)
+def fit_method_with_object(request, another_simple_model):
+    _select = dict(
+        advi=ADVI,
+        fullrank_advi=FullRankADVI,
+        svgd=SVGD
+    )
+    with another_simple_model:
+        return _select[request.param['name']](
+            **request.param['kw'])
+
+
+@pytest.mark.parametrize(
+    ['method', 'kwargs', 'error'],
+    [
+        ('undefined', dict(), KeyError),
+        (1, dict(), TypeError),
+        ('advi', dict(total_grad_norm_constraint=10), None),
+        ('advi->fullrank_advi', dict(frac=.1), None),
+        ('advi->fullrank_advi', dict(frac=1), ValueError),
+        ('fullrank_advi', dict(), None),
+        ('svgd', dict(total_grad_norm_constraint=10), None),
+        ('svgd', dict(start={}), None),
+        ('asvgd', dict(start={}, total_grad_norm_constraint=10), None),
+    ],
+)
+def test_fit_fn_text(method, kwargs, error, another_simple_model):
+    with another_simple_model:
+        if error is not None:
+            with pytest.raises(error):
+                fit(10, method=method, **kwargs)
+        else:
+            fit(10, method=method, **kwargs)
+
+
+def test_fit_fn_oo(fit_method_with_object, another_simple_model):
+    with another_simple_model:
+        fit(10, method=fit_method_with_object)
+
+
+def test_error_on_local_rv_for_svgd(another_simple_model):
+    with another_simple_model:
+        with pytest.raises(ValueError) as e:
+            fit(10, method='svgd', local_rv={
+                another_simple_model.free_RVs[0]: (0, 1)})
+        assert e.match('does not support AEVB')
+
+
+@pytest.mark.parametrize(
+    'diff',
+    [
+        'relative',
+        'absolute'
+    ]
+)
+@pytest.mark.parametrize(
+    'ord',
+    [1, 2, np.inf]
+)
+def test_callbacks_convergence(diff, ord):
+    cb = pm.variational.callbacks.CheckParametersConvergence(every=1, diff=diff, ord=ord)
+
+    class _approx:
+        params = (theano.shared(np.asarray([1, 2, 3])), )
+
+    approx = _approx()
+
+    with pytest.raises(StopIteration):
+        cb(approx, None, 1)
+        cb(approx, None, 10)
+
+
+def test_tracker_callback():
+    import time
+    tracker = pm.callbacks.Tracker(
+        ints=lambda *t: t[-1],
+        ints2=lambda ap, h, j: j,
+        time=time.time,
+    )
+    for i in range(10):
+        tracker(None, None, i)
+    assert 'time' in tracker.hist
+    assert 'ints' in tracker.hist
+    assert 'ints2' in tracker.hist
+    assert (len(tracker['ints'])
+            == len(tracker['ints2'])
+            == len(tracker['time'])
+            == 10)
+    assert tracker['ints'] == tracker['ints2'] == list(range(10))
+    tracker = pm.callbacks.Tracker(
+        bad=lambda t: t  # bad signature
+    )
+    with pytest.raises(TypeError):
+        tracker(None, None, 1)
