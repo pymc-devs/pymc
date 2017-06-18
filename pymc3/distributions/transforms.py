@@ -1,7 +1,7 @@
 import theano.tensor as tt
 
 from ..model import FreeRV
-from ..theanof import gradient
+from ..theanof import gradient, floatX
 from . import distribution
 from ..math import logit, invlogit
 from .distribution import draw_values
@@ -139,7 +139,7 @@ class Interval(ElemwiseTransform):
     def forward_val(self, x, point=None):
         a, b = draw_values([self.a, self.b],
                             point=point)
-        return tt.log(x - a) - tt.log(b - x)
+        return floatX(tt.log(x - a) - tt.log(b - x))
 
     def jacobian_det(self, x):
         s = tt.nnet.softplus(-x)
@@ -168,7 +168,7 @@ class LowerBound(ElemwiseTransform):
     def forward_val(self, x, point=None):
         a = draw_values([self.a],
                         point=point)[0]
-        return tt.log(x - a)
+        return floatX(tt.log(x - a))
 
     def jacobian_det(self, x):
         return x
@@ -196,7 +196,7 @@ class UpperBound(ElemwiseTransform):
     def forward_val(self, x, point=None):
         b = draw_values([self.b],
                         point=point)[0]
-        return tt.log(b - x)
+        return floatX(tt.log(b - x))
 
     def jacobian_det(self, x):
         return x
