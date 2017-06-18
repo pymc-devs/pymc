@@ -204,7 +204,7 @@ class FullRank(Approximation):
         mu = self.scale_grad(self.mean)
         L = self.scale_grad(self.L)
         z = self.symbolic_random_global_matrix
-        return log_normal_mv(z, mu, chol=L, gpu_compat=self.gpu_compat)
+        return pm.MvNormal.dist(mu=mu, chol=L).logp(z)
 
     @node_property
     def symbolic_random_global_matrix(self):
