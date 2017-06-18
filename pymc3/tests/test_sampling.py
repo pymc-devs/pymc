@@ -150,6 +150,19 @@ class TestSoftUpdate(SeededTest):
         pm.sampling._update_start_vals(start, test_point, model)
         assert_almost_equal(np.exp(start['a_log__']), start['a'])
 
+    def test_soft_update_transformed2(self):
+        with pm.Model() as model:
+            a = pm.Uniform('a', lower=0., upper=1.)
+            pm.Uniform('b', lower=0., upper=1.-a)
+        start = {'a': .3, 'b': .5}
+        test_point = {'a_interval__': -0.8472978603872037,
+                      'b_interval__': 0.9162907318741552}
+        pm.sampling._update_start_vals(start, model.test_point, model)
+        assert_almost_equal(start['a_interval__'], 
+                            test_point['a_interval__'])
+        assert_almost_equal(start['b_interval__'], 
+                            test_point['b_interval__'])
+
 
 @pytest.mark.xfail(condition=(theano.config.floatX == "float32"), reason="Fails on float32")
 class TestNamedSampling(SeededTest):
