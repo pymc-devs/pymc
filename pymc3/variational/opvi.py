@@ -55,6 +55,13 @@ __all__ = [
 ]
 
 
+def node_property(f):
+    """
+    A shortcut for wrapping method to accessible tensor
+    """
+    return property(memoize(change_flags(compute_test_value='raise')(f)))
+
+
 class ObjectiveUpdates(theano.OrderedUpdates):
     """
     OrderedUpdates extension for storing loss
@@ -909,9 +916,7 @@ class Approximation(object):
             trace.close()
         return pm.sampling.MultiTrace([trace])
 
-    @property
-    @memoize
-    @change_flags(compute_test_value='raise')
+    @node_property
     def __local_mu_rho(self):
         if not self.local_vars:
             mu, rho = (
@@ -930,9 +935,7 @@ class Approximation(object):
         rho.name = self.__class__.__name__ + '_local_rho'
         return mu, rho
 
-    @property
-    @memoize
-    @change_flags(compute_test_value='raise')
+    @node_property
     def normalizing_constant(self):
         """
         Constant to divide when we want to scale down loss from minibatches
@@ -949,22 +952,17 @@ class Approximation(object):
                       tt.constant(1, dtype=t.dtype))
         return pm.floatX(t)
 
-    @property
-    @memoize
+    @node_property
     def symbolic_random_global_matrix(self):
         raise NotImplementedError
 
-    @property
-    @memoize
-    @change_flags(compute_test_value='raise')
+    @node_property
     def symbolic_random_local_matrix(self):
         mu, rho = self.__local_mu_rho
         e = self._symbolic_initial_local_matrix
         return e * rho2sd(rho) + mu
 
-    @property
-    @memoize
-    @change_flags(compute_test_value='raise')
+    @node_property
     def symbolic_random_total_matrix(self):
         if self.local_vars and self.global_vars:
             return tt.stack([
@@ -978,9 +976,7 @@ class Approximation(object):
         else:
             raise TypeError('No free vars in the Model')
 
-    @property
-    @memoize
-    @change_flags(compute_test_value='raise')
+    @node_property
     def symbolic_log_q_W_local(self):
         mu, rho = self.__local_mu_rho
         mu = self.scale_grad(mu)
@@ -1009,36 +1005,27 @@ class Approximation(object):
         logp = logp.sum(1)
         return logp  # shape (s,)
 
-    @property
-    @memoize
+    @node_property
     def symbolic_log_q_W_global(self):
         raise NotImplementedError  # shape (s,)
 
-    @property
-    @memoize
-    @change_flags(compute_test_value='raise')
+    @node_property
     def symbolic_log_q_W(self):
         q_w_local = self.symbolic_log_q_W_local
         q_w_global = self.symbolic_log_q_W_global
         return q_w_global + q_w_local  # shape (s,)
 
-    @property
-    @memoize
-    @change_flags(compute_test_value='raise')
+    @node_property
     def logq(self):
         """Total logq for approximation
         """
         return self.symbolic_log_q_W.mean(0)
 
-    @property
-    @memoize
-    @change_flags(compute_test_value='raise')
+    @node_property
     def logq_norm(self):
         return self.logq / self.normalizing_constant
 
-    @property
-    @memoize
-    @change_flags(compute_test_value='raise')
+    @node_property
     def sized_symbolic_logp_local(self):
         free_logp_local = tt.sum([
             var.logpt
@@ -1047,9 +1034,7 @@ class Approximation(object):
         free_logp_local = self.sample_over_posterior(free_logp_local)
         return free_logp_local  # shape (s,)
 
-    @property
-    @memoize
-    @change_flags(compute_test_value='raise')
+    @node_property
     def sized_symbolic_logp_global(self):
         free_logp_global = tt.sum([
             var.logpt
@@ -1058,9 +1043,7 @@ class Approximation(object):
         free_logp_global = self.sample_over_posterior(free_logp_global)
         return free_logp_global  # shape (s,)
 
-    @property
-    @memoize
-    @change_flags(compute_test_value='raise')
+    @node_property
     def sized_symbolic_logp_observed(self):
         observed_logp = tt.sum([
             var.logpt
@@ -1069,26 +1052,20 @@ class Approximation(object):
         observed_logp = self.sample_over_posterior(observed_logp)
         return observed_logp  # shape (s,)
 
-    @property
-    @memoize
-    @change_flags(compute_test_value='raise')
+    @node_property
     def sized_symbolic_logp_potentials(self):
         potentials = tt.sum(self.model.potentials)
         potentials = self.sample_over_posterior(potentials)
         return potentials
 
-    @property
-    @memoize
-    @change_flags(compute_test_value='raise')
+    @node_property
     def sized_symbolic_logp(self):
         return (self.sized_symbolic_logp_local +
                 self.sized_symbolic_logp_global +
                 self.sized_symbolic_logp_observed +
                 self.sized_symbolic_logp_potentials)
 
-    @property
-    @memoize
-    @change_flags(compute_test_value='raise')
+    @node_property
     def single_symbolic_logp(self):
         logp = self.to_flat_input(self.model.logpt)
         loc = self.symbolic_random_local_matrix[0]
@@ -1102,9 +1079,7 @@ class Approximation(object):
             }
         )
 
-    @property
-    @memoize
-    @change_flags(compute_test_value='raise')
+    @node_property
     def logp(self):
         return ifelse(
             # computed first, so lazy evaluation will work
@@ -1113,9 +1088,7 @@ class Approximation(object):
             self.sized_symbolic_logp.mean(0)
         )
 
-    @property
-    @memoize
-    @change_flags(compute_test_value='raise')
+    @node_property
     def logp_norm(self):
         return self.logp / self.normalizing_constant
 

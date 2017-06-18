@@ -4,7 +4,7 @@ from theano import tensor as tt
 
 import pymc3 as pm
 from pymc3.distributions.dist_math import rho2sd, log_normal, log_normal_mv
-from pymc3.variational.opvi import Approximation
+from pymc3.variational.opvi import Approximation, node_property
 from pymc3.theanof import memoize, change_flags
 
 
@@ -50,19 +50,19 @@ class MeanField(Approximation):
         Sticking the Landing: A Simple Reduced-Variance Gradient for ADVI
         approximateinference.org/accepted/RoederEtAl2016.pdf
     """
-    @property
+    @node_property
     def mean(self):
         return self.shared_params['mu']
 
-    @property
+    @node_property
     def rho(self):
         return self.shared_params['rho']
 
-    @property
+    @node_property
     def cov(self):
         return tt.diag(rho2sd(self.rho)**2)
 
-    @property
+    @node_property
     def std(self):
         return rho2sd(self.rho)
 
@@ -80,18 +80,14 @@ class MeanField(Approximation):
                 'rho': theano.shared(
                     pm.floatX(np.zeros((self.global_size,))), 'rho')}
 
-    @property
-    @memoize
-    @change_flags(compute_test_value='off')
+    @node_property
     def symbolic_random_global_matrix(self):
         initial = self._symbolic_initial_global_matrix
         sd = rho2sd(self.rho)
         mu = self.mean
         return sd * initial + mu
 
-    @property
-    @memoize
-    @change_flags(compute_test_value='off')
+    @node_property
     def symbolic_log_q_W_global(self):
         """
         log_q_W samples over q for global vars
@@ -153,15 +149,15 @@ class FullRank(Approximation):
         )
         self.gpu_compat = gpu_compat
 
-    @property
+    @node_property
     def L(self):
         return self.shared_params['L_tril'][self.tril_index_matrix]
 
-    @property
+    @node_property
     def mean(self):
         return self.shared_params['mu']
 
-    @property
+    @node_property
     def cov(self):
         L = self.L
         return L.dot(L.T)
@@ -201,10 +197,8 @@ class FullRank(Approximation):
                 'L_tril': theano.shared(L_tril, 'L_tril')
                 }
 
-    @property
-    @memoize
-    @change_flags(compute_test_value='off')
-    def log_q_W_global(self):
+    @node_property
+    def symbolic_log_q_W_global(self):
         """log_q_W samples over q for global vars
         """
         mu = self.scale_grad(self.mean)
@@ -212,9 +206,7 @@ class FullRank(Approximation):
         z = self.symbolic_random_global_matrix
         return log_normal_mv(z, mu, chol=L, gpu_compat=self.gpu_compat)
 
-    @property
-    @memoize
-    @change_flags(compute_test_value='off')
+    @node_property
     def symbolic_random_global_matrix(self):
         # (samples, dim) or (dim, )
         initial = self._symbolic_initial_global_matrix.T

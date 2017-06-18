@@ -217,8 +217,12 @@ def log_normal_mv(x, mean, gpu_compat=False, **kwargs):
         log_det = -logdet(S)
     delta = x - mean
     k = f(S.shape[0])
-    result = k * tt.log(2. * np.pi) - log_det
-    result += delta.dot(T).dot(delta)
+    result = delta.dot(T)
+    if delta.ndim > 1:
+        result = tt.batched_dot(result, delta)
+    else:
+        result = result.dot(delta.T)
+    result += k * tt.log(2. * np.pi) - log_det
     return -.5 * result
 
 
