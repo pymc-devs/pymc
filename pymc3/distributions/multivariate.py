@@ -214,8 +214,8 @@ class MvNormal(Continuous):
 
     def _logp_chol(self, delta):
         chol_cov = self.chol_cov
-        n, k = delta.shape
-
+        _, k = delta.shape
+        k = pm.floatX(k)
         diag = tt.nlinalg.diag(chol_cov)
         # Check if the covariance matrix is positive definite.
         ok = tt.all(diag > 0)
@@ -225,7 +225,7 @@ class MvNormal(Continuous):
 
         delta_trans = self.solve_lower(chol_cov, delta.T)
 
-        result = k * np.log(2 * np.pi)
+        result = k * pm.floatX(np.log(2. * np.pi))
         result += 2.0 * tt.sum(tt.log(diag))
         result += (delta_trans ** 2).sum(axis=0)
         result = -0.5 * result
@@ -233,7 +233,8 @@ class MvNormal(Continuous):
 
     def _logp_cov(self, delta):
         chol_cov = self.chol_cov
-        n, k = delta.shape
+        _, k = delta.shape
+        k = pm.floatX(k)
 
         diag = tt.nlinalg.diag(chol_cov)
         ok = tt.all(diag > 0)
@@ -242,7 +243,7 @@ class MvNormal(Continuous):
         diag = tt.nlinalg.diag(chol_cov)
         delta_trans = self.solve_lower(chol_cov, delta.T)
 
-        result = k * tt.log(2 * np.pi)
+        result = k * pm.floatX(np.log(2. * np.pi))
         result += 2.0 * tt.sum(tt.log(diag))
         result += (delta_trans ** 2).sum(axis=0)
         result = -0.5 * result
@@ -250,7 +251,8 @@ class MvNormal(Continuous):
 
     def _logp_tau(self, delta):
         chol_tau = self.chol_tau
-        n, k = delta.shape
+        _, k = delta.shape
+        k = pm.floatX(k)
 
         diag = tt.nlinalg.diag(chol_tau)
         ok = tt.all(diag > 0)
@@ -259,7 +261,7 @@ class MvNormal(Continuous):
         diag = tt.nlinalg.diag(chol_tau)
         delta_trans = tt.dot(chol_tau.T, delta.T)
 
-        result = k * tt.log(2 * np.pi)
+        result = k * pm.floatX(np.log(2. * np.pi))
         result -= 2.0 * tt.sum(tt.log(diag))
         result += (delta_trans ** 2).sum(axis=0)
         result = -0.5 * result
