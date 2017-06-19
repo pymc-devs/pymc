@@ -1,9 +1,10 @@
 import theano.tensor as tt
 
 from ..model import FreeRV
-from ..theanof import gradient
+from ..theanof import gradient, floatX
 from . import distribution
 from ..math import logit, invlogit
+from .distribution import draw_values
 import numpy as np
 
 __all__ = ['transform', 'stick_breaking', 'logodds', 'interval',
@@ -20,6 +21,9 @@ class Transform(object):
     name = ""
 
     def forward(self, x):
+        raise NotImplementedError
+
+    def forward_val(self, x, point):
         raise NotImplementedError
 
     def backward(self, z):
@@ -55,6 +59,7 @@ class TransformedDistribution(distribution.Distribution):
             arguments to Distribution"""
         forward = transform.forward
         testval = forward(dist.default())
+        forward_val = transform.forward_val
 
         self.dist = dist
         self.transform_used = transform
@@ -85,6 +90,9 @@ class Log(ElemwiseTransform):
 
     def forward(self, x):
         return tt.log(x)
+    
+    def forward_val(self, x, point=None):
+        return self.forward(x)
 
     def jacobian_det(self, x):
         return x
@@ -103,6 +111,9 @@ class LogOdds(ElemwiseTransform):
 
     def forward(self, x):
         return logit(x)
+    
+    def forward_val(self, x, point=None):
+        return self.forward(x)
 
 logodds = LogOdds()
 
@@ -124,6 +135,14 @@ class Interval(ElemwiseTransform):
     def forward(self, x):
         a, b = self.a, self.b
         return tt.log(x - a) - tt.log(b - x)
+
+    def forward_val(self, x, point=None):
+        # 2017-06-19
+        # the `self.a-0.` below is important for the testval to propagates
+        # For an explanation see pull/2328#issuecomment-309303811
+        a, b = draw_values([self.a-0., self.b-0.],
+                            point=point)
+        return floatX(tt.log(x - a) - tt.log(b - x))
 
     def jacobian_det(self, x):
         s = tt.nnet.softplus(-x)
@@ -147,8 +166,15 @@ class LowerBound(ElemwiseTransform):
 
     def forward(self, x):
         a = self.a
-        r = tt.log(x - a)
-        return r
+        return tt.log(x - a)
+
+    def forward_val(self, x, point=None):
+        # 2017-06-19
+        # the `self.a-0.` below is important for the testval to propagates
+        # For an explanation see pull/2328#issuecomment-309303811
+        a = draw_values([self.a-0.],
+                        point=point)[0]
+        return floatX(tt.log(x - a))
 
     def jacobian_det(self, x):
         return x
@@ -171,8 +197,15 @@ class UpperBound(ElemwiseTransform):
 
     def forward(self, x):
         b = self.b
-        r = tt.log(b - x)
-        return r
+        return tt.log(b - x)
+
+    def forward_val(self, x, point=None):
+        # 2017-06-19
+        # the `self.b-0.` below is important for the testval to propagates
+        # For an explanation see pull/2328#issuecomment-309303811
+        b = draw_values([self.b-0.],
+                        point=point)[0]
+        return floatX(tt.log(b - x))
 
     def jacobian_det(self, x):
         return x
@@ -190,6 +223,9 @@ class SumTo1(Transform):
 
     def forward(self, x):
         return x[:-1]
+
+    def forward_val(self, x, point=None):
+        return self.forward(x)
 
     def jacobian_det(self, x):
         return 0
@@ -223,6 +259,9 @@ class StickBreaking(Transform):
         eq_share = logit(1. / (Km1 + 1 - k).astype(str(x_.dtype)))
         y = logit(z) - eq_share
         return y.T
+
+    def forward_val(self, x, point=None):
+        return self.forward(x)
 
     def backward(self, y_):
         y = y_.T
@@ -262,6 +301,9 @@ class Circular(Transform):
     def forward(self, x):
         return tt.as_tensor_variable(x)
 
+    def forward_val(self, x, point=None):
+        return self.forward(x)
+
     def jacobian_det(self, x):
         return 0
 
@@ -280,5 +322,8 @@ class CholeskyCovPacked(Transform):
     def forward(self, y):
         return tt.advanced_set_subtensor1(y, tt.log(y[self.diag_idxs]), self.diag_idxs)
 
+    def forward_val(self, x, point=None):
+        return self.forward(x)
+        
     def jacobian_det(self, y):
         return tt.sum(y[self.diag_idxs])
