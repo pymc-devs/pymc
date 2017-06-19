@@ -137,6 +137,9 @@ class Interval(ElemwiseTransform):
         return tt.log(x - a) - tt.log(b - x)
 
     def forward_val(self, x, point=None):
+        # 2017-06-19
+        # the `self.a-0.` below is important for the testval to propagates
+        # For an explanation see pull/2328#issuecomment-309303811
         a, b = draw_values([self.a-0., self.b-0.],
                             point=point)
         return floatX(tt.log(x - a) - tt.log(b - x))
@@ -166,6 +169,9 @@ class LowerBound(ElemwiseTransform):
         return tt.log(x - a)
 
     def forward_val(self, x, point=None):
+        # 2017-06-19
+        # the `self.a-0.` below is important for the testval to propagates
+        # For an explanation see pull/2328#issuecomment-309303811
         a = draw_values([self.a-0.],
                         point=point)[0]
         return floatX(tt.log(x - a))
@@ -194,6 +200,9 @@ class UpperBound(ElemwiseTransform):
         return tt.log(b - x)
 
     def forward_val(self, x, point=None):
+        # 2017-06-19
+        # the `self.b-0.` below is important for the testval to propagates
+        # For an explanation see pull/2328#issuecomment-309303811
         b = draw_values([self.b-0.],
                         point=point)[0]
         return floatX(tt.log(b - x))
