@@ -1,4 +1,5 @@
-.. image:: https://github.com/pymc-devs/pymc3/blob/master/docs/pymc3_logo.jpg?raw=true
+.. image:: https://cdn.rawgit.com/pymc-devs/pymc3/master/docs/logos/svg/PyMC3_banner.svg
+    :height: 100px
     :alt: PyMC3 logo
     :align: center
 
