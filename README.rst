@@ -1,4 +1,5 @@
 .. image:: https://cdn.rawgit.com/pymc-devs/pymc3/master/docs/logos/svg/PyMC3_banner.svg
+    :scale: 30 %
     :alt: PyMC3 logo
     :align: center
 
