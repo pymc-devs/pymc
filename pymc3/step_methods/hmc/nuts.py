@@ -201,7 +201,7 @@ class NUTS(BaseHMC):
         for _ in range(max_treedepth):
             direction = logbern(np.log(0.5)) * 2 - 1
             diverging, turning = tree.extend(direction)
-            q = tree.proposal.q
+            q, q_grad = tree.proposal.q, tree.proposal.q_grad
 
             if diverging or turning:
                 if diverging:
@@ -220,7 +220,7 @@ class NUTS(BaseHMC):
         self.m += 1
 
         if self.tune and self.adapt_mass_matrix:
-            self.potential.adapt(q)
+            self.potential.adapt(q, q_grad)
 
         stats = {
             'step_size': step_size,
@@ -244,7 +244,7 @@ class NUTS(BaseHMC):
 Edge = namedtuple("Edge", 'q, p, v, q_grad, energy')
 
 # A proposal for the next position
-Proposal = namedtuple("Proposal", "q, energy, p_accept")
+Proposal = namedtuple("Proposal", "q, q_grad, energy, p_accept")
 
 # A subtree of the binary tree built by nuts.
 Subtree = namedtuple(
@@ -276,7 +276,7 @@ class _Tree(object):
         self.start_energy = np.array(start.energy)
 
         self.left = self.right = start
-        self.proposal = Proposal(start.q, start.energy, 1.0)
+        self.proposal = Proposal(start.q, start.q_grad, start.energy, 1.0)
         self.depth = 0
         self.log_size = 0
         self.accept_sum = 0
@@ -351,7 +351,7 @@ class _Tree(object):
             if np.abs(energy_change) < self.Emax:
                 p_accept = min(1, np.exp(-energy_change))
                 log_size = -energy_change
-                proposal = Proposal(right.q, right.energy, p_accept)
+                proposal = Proposal(right.q, right.q_grad, right.energy, p_accept)
                 tree = Subtree(right, right, right.p, proposal, log_size, p_accept, 1)
                 return tree, False, False
             else:

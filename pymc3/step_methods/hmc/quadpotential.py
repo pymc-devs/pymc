@@ -4,6 +4,7 @@ import scipy.linalg
 import theano.tensor as tt
 from theano.tensor import slinalg
 from scipy.sparse import issparse
+import theano
 
 from pymc3.theanof import floatX
 
@@ -81,7 +82,7 @@ class QuadPotential(object):
     def random(self, x):
         raise NotImplementedError('Abstract method')
 
-    def adapt(self, sample):
+    def adapt(self, sample, grad):
         pass
 
 
@@ -90,18 +91,30 @@ def isquadpotential(value):
 
 
 class QuadPotentialDiagAdapt(QuadPotential):
-    def __init__(self, initial_mean=None, initial_diag=None, initial_weight=0):
-        if initial_diag.ndim != 1:
+    def __init__(self, n, initial_mean, initial_diag=None, initial_weight=0):
+        if initial_diag is not None and initial_diag.ndim != 1:
             raise ValueError('Initial diagonal must be one-dimensional.')
+        if initial_mean.ndim != 1:
+            raise ValueError('Initial mean must be one-dimensional.')
+        if initial_diag is not None and len(initial_diag) != n:
+            raise ValueError('Wrong shape for initial_diag: expected %s got %s'
+                             % (n, len(initial_diag)))
+        if len(initial_mean) != n:
+            raise ValueError('Wrong shape for initial_mean: expected %s got %s'
+                             % (n, len(initial_mean)))
 
-        self._n = len(initial_diag)
+        if initial_diag is None:
+            initial_diag = np.ones(n, dtype=theano.config.floatX)
+            initial_weight = 1
+
+        self._n = n
         self._var = np.array(initial_diag, dtype=theano.config.floatX, copy=True)
         self._var_theano = theano.shared(self._var)
         self._stds = np.sqrt(initial_diag)
         self._inv_stds = floatX(1.) / self._stds
-        self._weight_var = WeightedVariance(
+        self._foreground_var = WeightedVariance(
             self._n, initial_mean, initial_diag, initial_weight)
-        self._weight_var2 = WeightedVariance(self._n)
+        self._background_var = WeightedVariance(self._n)
         self._n_samples = 0
 
     def velocity(self, x):
@@ -120,20 +133,51 @@ class QuadPotentialDiagAdapt(QuadPotential):
         np.divide(1, self._stds, out=self._inv_stds)
         self._var_theano.set_value(self._var)
 
-    def adapt(self, sample):
+    def adapt(self, sample, grad):
         weight = 1
-        if self._n_samples < 200:
-            self._weight_var.add_sample(sample, weight)
-            self._update_from_weightvar(self._weight_var)
-        elif self._n_samples < 400:
-            self._weight_var.add_sample(sample, weight)
-            self._weight_var2.add_sample(sample, weight)
-            self._update_from_weightvar(self._weight_var)
-        else:
-            self._weight_var2.add_sample(sample, weight)
-            self._update_from_weightvar(self._weight_var2)
+        window = 100
+
+        self._foreground_var.add_sample(sample, weight)
+        self._background_var.add_sample(sample, weight)
+        self._update_from_weightvar(self._foreground_var)
+
+        if self._n_samples > 0 and self._n_samples % window == 0:
+            self._foreground_var = self._background_var
+            self._background_var = WeightedVariance(self._n)
 
         self._n_samples += 1
+
+
+class QuadPotentialDiagAdaptGrad(QuadPotentialDiagAdapt):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._grads1 = np.zeros(self._n)
+        self._ngrads1 = 0
+        self._grads2 = np.zeros(self._n)
+        self._ngrads2 = 0
+
+    def _update(self, var):
+        self._var[:] = var
+        np.sqrt(self._var, out=self._stds)
+        np.divide(1, self._stds, out=self._inv_stds)
+        self._var_theano.set_value(self._var)
+
+    def adapt(self, sample, grad):
+        self._grads1[:] += grad ** 2
+        self._grads2[:] += grad ** 2
+        self._ngrads1 += 1
+        self._ngrads2 += 1
+
+        if self._n_samples < 100:
+            super().adapt(sample, grad)
+        else:
+            self._update(self._ngrads1 / self._grads1)
+
+        if self._n_samples > 100 and self._n_samples % 100 == 0:
+            self._ngrads1 = self._ngrads2
+            self._ngrads2 = 0
+            self._grads1[:] = self._grads2
+            self._grads2[:] = 0
 
 
 class WeightedVariance(object):
@@ -245,7 +289,6 @@ except ImportError:
 if chol_available:
     __all__ += ['QuadPotentialSparse']
 
-    import theano
     import theano.sparse
 
     class QuadPotentialSparse(QuadPotential):

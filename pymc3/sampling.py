@@ -14,6 +14,7 @@ from .step_methods import (NUTS, HamiltonianMC, Metropolis, BinaryMetropolis,
 from .plots.traceplot import traceplot
 from .util import is_transformed_name, get_untransformed_name, update_start_vals
 from pymc3.step_methods.hmc import quadpotential
+from pymc3.distributions import distribution
 from tqdm import tqdm
 
 import sys
@@ -681,6 +682,9 @@ def init_nuts(init='ADVI', njobs=1, n_init=500000, model=None,
 
     model = pm.modelcontext(model)
 
+    if init == 'auto':
+        init = 'advi+adapt_diag'
+
     pm._log.info('Initializing NUTS using {}...'.format(init))
 
     random_seed = int(np.atleast_1d(random_seed)[0])
@@ -691,10 +695,19 @@ def init_nuts(init='ADVI', njobs=1, n_init=500000, model=None,
         pm.callbacks.CheckParametersConvergence(tolerance=1e-2, diff='absolute'),
         pm.callbacks.CheckParametersConvergence(tolerance=1e-2, diff='relative'),
     ]
-    if init == 'auto':
-        init = 'advi+adapt_diag'
 
-    if init == 'advi+adapt_diag':
+    if init == 'adapt_diag':
+        start = []
+        for _ in range(njobs):
+            vals = distribution.draw_values(model.free_RVs)
+            point = {var.name: vals[i] for i, var in enumerate(model.free_RVs)}
+            start.append(point)
+        mean = np.mean([model.dict_to_array(vals) for vals in start], axis=0)
+        var = np.ones_like(mean)
+        potential = quadpotential.QuadPotentialDiagAdapt(model.ndim, mean, var, 10)
+        if njobs == 1:
+            start = start[0]
+    elif init == 'advi+adapt_diag_prec':
         approx = pm.fit(
             random_seed=random_seed,
             n=n_init, method='advi', model=model,
@@ -707,8 +720,27 @@ def init_nuts(init='ADVI', njobs=1, n_init=500000, model=None,
         cov = model.dict_to_array(stds) ** 2
         mean = approx.gbij.rmap(approx.mean.get_value())
         mean = model.dict_to_array(mean)
-        weight = 30
-        potential = quadpotential.QuadPotentialDiagAdapt(mean, cov, weight)
+        weight = 50
+        potential = quadpotential.QuadPotentialDiagAdaptGrad(
+            model.ndim, mean, cov, weight)
+        if njobs == 1:
+            start = start[0]
+    elif init == 'advi+adapt_diag':
+        approx = pm.fit(
+            random_seed=random_seed,
+            n=n_init, method='advi', model=model,
+            callbacks=cb,
+            progressbar=progressbar,
+            obj_optimizer=pm.adagrad_window,
+        )
+        start = approx.sample(draws=njobs)
+        stds = approx.gbij.rmap(approx.std.eval())
+        cov = model.dict_to_array(stds) ** 2
+        mean = approx.gbij.rmap(approx.mean.get_value())
+        mean = model.dict_to_array(mean)
+        weight = 50
+        potential = quadpotential.QuadPotentialDiagAdapt(
+            model.ndim, mean, cov, weight)
         if njobs == 1:
             start = start[0]
     elif init == 'advi':
