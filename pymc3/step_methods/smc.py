@@ -25,6 +25,7 @@ from ..vartypes import discrete_types
 from ..theanof import inputvars, make_shared_replacements, join_nonshared_inputs
 import numpy.random as nr
 
+from .metropolis import MultivariateNormalProposal
 from .arraystep import metrop_select
 from ..backends import smc_text as atext
 
@@ -32,25 +33,6 @@ __all__ = ['SMC', 'sample_SMC']
 
 EXPERIMENTAL_WARNING = "Warning: SMC is an experimental step method, and not yet"\
     " recommended for use in PyMC3!"
-
-
-class Proposal(object):
-    """Proposal distributions modified from pymc3 to initially create all the
-    Proposal steps without repeated execution of the RNG - significant speedup!
-
-    Parameters
-    ----------
-    s : :class:`numpy.ndarray`
-    """
-    def __init__(self, s):
-        self.s = np.atleast_1d(s)
-
-
-class MultivariateNormalProposal(Proposal):
-    def __call__(self, num_draws=None):
-        return np.random.multivariate_normal(
-                mean=np.zeros(self.s.shape[0]), cov=self.s, size=num_draws)
-
 
 proposal_dists = {
     'MultivariateNormal': MultivariateNormalProposal,
