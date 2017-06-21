@@ -66,7 +66,7 @@ class TestSMC(SeededTest):
             tune_interval=self.tune_interval,
             model=self.ATMIP_test)
 
-        mtrace = smc.smc_sample(
+        mtrace = smc.sample_smc(
             n_steps=self.n_steps,
             step=step,
             stage=stage,

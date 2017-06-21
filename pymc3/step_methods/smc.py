@@ -28,7 +28,7 @@ import numpy.random as nr
 from .arraystep import metrop_select
 from ..backends import smc_text as atext
 
-__all__ = ['SMC', 'smc_sample']
+__all__ = ['SMC', 'sample_smc']
 
 EXPERIMENTAL_WARNING = "Warning: SMC is an experimental step method, and not yet"\
     " recommended for use in PyMC3!"
@@ -423,7 +423,7 @@ class SMC(atext.ArrayStepSharedLLK):
         return outindx
 
 
-def smc_sample(n_steps, step=None, start=None, homepath=None, chain=0, stage=0, n_jobs=1,
+def sample_smc(n_steps, step=None, start=None, homepath=None, chain=0, stage=0, n_jobs=1,
                  tune=None, progressbar=False, model=None, random_seed=-1, rm_flag=False):
     """Sequential Monte Carlo sampling
 
