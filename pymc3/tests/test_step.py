@@ -163,8 +163,7 @@ class TestStepMethods(object):  # yield test doesn't work subclassing object
         with Model():
             x = Normal('x', mu=0, sd=1)
             if step_method.__name__ == 'SMC':
-                Deterministic('like', - 0.5 * tt.log(2 * np.pi) - 0.5 * x.T.dot(x))
-                trace = smc.ATMIP_sample(n_steps=n_steps, step=step_method(random_seed=1),
+                trace = smc.sample_SMC(n_steps=n_steps, step=step_method(random_seed=1),
                                          n_jobs=1, progressbar=False,
                                          homepath=self.temp_dir)
             else:
