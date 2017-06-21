@@ -28,7 +28,7 @@ import numpy.random as nr
 from .arraystep import metrop_select
 from ..backends import smc_text as atext
 
-__all__ = ['SMC', 'ATMIP_sample']
+__all__ = ['SMC', 'smc_sample']
 
 EXPERIMENTAL_WARNING = "Warning: SMC is an experimental step method, and not yet"\
     " recommended for use in PyMC3!"
@@ -147,6 +147,10 @@ class SMC(atext.ArrayStepSharedLLK):
         vars = inputvars(vars)
 
         if out_vars is None:
+            if not any(likelihood_name == RV.name for RV in model.unobserved_RVs):
+                with model:
+                    llk = pm.Deterministic(likelihood_name, model.logpt)
+
             out_vars = model.unobserved_RVs
 
         out_varnames = [out_var.name for out_var in out_vars]
@@ -419,9 +423,9 @@ class SMC(atext.ArrayStepSharedLLK):
         return outindx
 
 
-def ATMIP_sample(n_steps, step=None, start=None, homepath=None, chain=0, stage=0, n_jobs=1,
+def smc_sample(n_steps, step=None, start=None, homepath=None, chain=0, stage=0, n_jobs=1,
                  tune=None, progressbar=False, model=None, random_seed=-1, rm_flag=False):
-    """(C)ATMIP sampling algorithm (Cascading - (C) not always relevant)
+    """Sequential Monte Carlo sampling
 
     Samples the solution space with n_chains of Metropolis chains, where each
     chain has n_steps iterations. Once finished, the sampled traces are
@@ -524,25 +528,8 @@ def ATMIP_sample(n_steps, step=None, start=None, homepath=None, chain=0, stage=0
         draws = step.n_steps
 
     stage_handler.clean_directory(stage, None, rm_flag)
-    with model:
-        chains = stage_handler.recover_existing_results(stage, draws, step, n_jobs)
-        if chains is not None:
-            rest = len(chains) % n_jobs
-            if rest > 0:
-                pm._log.info('Fixing %i chains ...' % rest)
-                chains, rest_chains = chains[:-rest], chains[-rest:]
-                # process traces that are not a multiple of n_jobs
-                sample_args = {
-                    'draws': draws,
-                    'step': step,
-                    'stage_path': stage_handler.stage_path(stage),
-                    'progressbar': progressbar,
-                    'model': model,
-                    'n_jobs': rest,
-                    'chains': rest_chains}
 
-                _iter_parallel_chains(**sample_args)
-                pm._log.info('Back to normal!')
+    chains = stage_handler.recover_existing_results(stage, draws, step, n_jobs)
 
     with model:
         while step.beta < 1:
@@ -556,7 +543,7 @@ def ATMIP_sample(n_steps, step=None, start=None, homepath=None, chain=0, stage=0
             pm._log.info('Beta: %f Stage: %i' % (step.beta, step.stage))
 
             # Metropolis sampling intermediate stages
-            chains = stage_handler.clean_directory(stage, chains, rm_flag)
+            chains = stage_handler.clean_directory(step.stage, chains, rm_flag)
             sample_args = {
                     'draws': draws,
                     'step': step,

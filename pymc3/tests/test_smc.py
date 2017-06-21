@@ -51,13 +51,12 @@ class TestSMC(SeededTest):
                            upper=2. * np.ones_like(mu1),
                            testval=-1. * np.ones_like(mu1),
                            transform=None)
-            like = pm.Deterministic('like', two_gaussians(X))
-            llk = pm.Potential('like_potential', like)
+            llk = pm.Potential('muh', two_gaussians(X))
 
         self.muref = mu1
 
-    @pytest.mark.parametrize('n_jobs', [1, 2])
-    def test_sample_n_core(self, n_jobs):
+    @pytest.mark.parametrize(['n_jobs', 'stage'], [[1, 0], [2, 5]])
+    def test_sample_n_core(self, n_jobs, stage):
 
         def last_sample(x):
             return x[(self.n_steps - 1)::self.n_steps]
@@ -65,12 +64,12 @@ class TestSMC(SeededTest):
         step = smc.SMC(
             n_chains=self.n_chains,
             tune_interval=self.tune_interval,
-            model=self.ATMIP_test,
-            likelihood_name=self.ATMIP_test.deterministics[0].name)
+            model=self.ATMIP_test)
 
-        mtrace = smc.ATMIP_sample(
+        mtrace = smc.smc_sample(
             n_steps=self.n_steps,
             step=step,
+            stage=stage,
             n_jobs=n_jobs,
             progressbar=True,
             homepath=self.test_folder,
