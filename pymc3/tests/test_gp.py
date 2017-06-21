@@ -34,7 +34,8 @@ class TestLinearMean(object):
         with Model() as model:
             linear_mean = gp.mean.Linear(2, 0.5)
         M = theano.function([], linear_mean(X))()
-        npt.assert_allclose(M[1, 0], 0.7222, atol=1e-3)
+        npt.assert_allclose(M[1], 0.7222, atol=1e-3)
+        assert M.shape == (10, )
 
 
 class TestAddProdMean(object):
