@@ -64,7 +64,7 @@ class Linear(Mean):
         self.A = coeffs
 
     def __call__(self, X):
-        return tt.dot(X, self.A) + self.b
+        return (tt.dot(X, self.A) + self.b).squeeze()
 
 
 class Add(Mean):
