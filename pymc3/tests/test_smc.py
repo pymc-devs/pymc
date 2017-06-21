@@ -53,22 +53,22 @@ class TestSMC(SeededTest):
                            transform=None)
             llk = pm.Potential('muh', two_gaussians(X))
 
+        self.step = smc.SMC(
+            n_chains=self.n_chains,
+            tune_interval=self.tune_interval,
+            model=self.ATMIP_test)
+
         self.muref = mu1
 
-    @pytest.mark.parametrize(['n_jobs', 'stage'], [[1, 0], [2, 5]])
+    @pytest.mark.parametrize(['n_jobs', 'stage'], [[1, 0], [2, 6]])
     def test_sample_n_core(self, n_jobs, stage):
 
         def last_sample(x):
             return x[(self.n_steps - 1)::self.n_steps]
 
-        step = smc.SMC(
-            n_chains=self.n_chains,
-            tune_interval=self.tune_interval,
-            model=self.ATMIP_test)
-
-        mtrace = smc.sample_smc(
+        mtrace = smc.sample_SMC(
             n_steps=self.n_steps,
-            step=step,
+            step=self.step,
             stage=stage,
             n_jobs=n_jobs,
             progressbar=True,
