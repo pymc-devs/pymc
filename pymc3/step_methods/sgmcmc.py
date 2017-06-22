@@ -42,12 +42,13 @@ def elemwise_dlogL(vars, model, flat_view):
     # tensor of shape (batch_size,)
     logL = obs_var.logp_elemwiset.sum(axis=tuple(range(1, obs_var.logp_elemwiset.ndim)))
     # calculate fisher information
-    terms = tt.concatenate([\
-                theano.scan(lambda i, logX: theano.grad(logX[i], v).flatten(),\
+    terms = []
+    for var in vars:
+         output, _ =  theano.scan(lambda i, logX: theano.grad(logX[i], var).flatten(),\
                             sequences=[tt.arange(logL.shape[0])],
-                            non_sequences=[logL])[0]\
-                for v in vars], axis=1)
-    dlogL = theano.clone(terms, flat_view.replacements, strict=False)
+                            non_sequences=[logL])
+         terms.append(output)
+    dlogL = theano.clone(tt.concatenate(terms, axis=1), flat_view.replacements, strict=False)
     return dlogL
 
 
@@ -235,8 +236,8 @@ class SGFS(BaseStochasticGradient):
             # if B is not specified 
             # B \propto I_t as given in
             # http://www.ics.uci.edu/~welling/publications/papers/SGFS_v10_final.pdf
-            # after 500 time steps to give a burn-in time to I_t
-            B = tt.switch(t < 500, np.eye(q_size), gamma * I_t)
+            # after iterating over the data few times to get a good approximation of I_N
+            B = tt.switch(t <= int(N/n)*50, tt.eye(q_size), gamma * I_t)
 
         # 8. Noise Term
         # The noise term is sampled from a normal distribution
