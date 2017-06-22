@@ -89,6 +89,9 @@ class TestCovAdd(object):
             cov = cov1 + cov2
         K = theano.function([], cov(X))()
         npt.assert_allclose(K[0, 1], 2 * 0.53940, atol=1e-3)
+        # check diagonal
+        Kd = theano.function([], cov(X, diag=True))()
+        npt.assert_allclose(np.diag(K), Kd, atol=1e-5)
 
     def test_rightadd_scalar(self):
         X = np.linspace(0, 1, 10)[:, None]
@@ -97,6 +100,9 @@ class TestCovAdd(object):
             cov = gp.cov.ExpQuad(1, 0.1) + a
         K = theano.function([], cov(X))()
         npt.assert_allclose(K[0, 1], 1.53940, atol=1e-3)
+        # check diagonal
+        Kd = theano.function([], cov(X, diag=True))()
+        npt.assert_allclose(np.diag(K), Kd, atol=1e-5)
 
     def test_leftadd_scalar(self):
         X = np.linspace(0, 1, 10)[:, None]
@@ -105,6 +111,9 @@ class TestCovAdd(object):
             cov = a + gp.cov.ExpQuad(1, 0.1)
         K = theano.function([], cov(X))()
         npt.assert_allclose(K[0, 1], 1.53940, atol=1e-3)
+        # check diagonal
+        Kd = theano.function([], cov(X, diag=True))()
+        npt.assert_allclose(np.diag(K), Kd, atol=1e-5)
 
     def test_rightadd_matrix(self):
         X = np.linspace(0, 1, 10)[:, None]
@@ -113,6 +122,9 @@ class TestCovAdd(object):
             cov = gp.cov.ExpQuad(1, 0.1) + M
         K = theano.function([], cov(X))()
         npt.assert_allclose(K[0, 1], 2.53940, atol=1e-3)
+        # check diagonal
+        Kd = theano.function([], cov(X, diag=True))()
+        npt.assert_allclose(np.diag(K), Kd, atol=1e-5)
 
     def test_leftprod_matrix(self):
         X = np.linspace(0, 1, 3)[:, None]
@@ -134,6 +146,9 @@ class TestCovProd(object):
             cov = cov1 * cov2
         K = theano.function([], cov(X))()
         npt.assert_allclose(K[0, 1], 0.53940 * 0.53940, atol=1e-3)
+        # check diagonal
+        Kd = theano.function([], cov(X, diag=True))()
+        npt.assert_allclose(np.diag(K), Kd, atol=1e-5)
 
     def test_rightprod_scalar(self):
         X = np.linspace(0, 1, 10)[:, None]
@@ -142,6 +157,9 @@ class TestCovProd(object):
             cov = gp.cov.ExpQuad(1, 0.1) * a
         K = theano.function([], cov(X))()
         npt.assert_allclose(K[0, 1], 2 * 0.53940, atol=1e-3)
+        # check diagonal
+        Kd = theano.function([], cov(X, diag=True))()
+        npt.assert_allclose(np.diag(K), Kd, atol=1e-5)
 
     def test_leftprod_scalar(self):
         X = np.linspace(0, 1, 10)[:, None]
@@ -150,6 +168,9 @@ class TestCovProd(object):
             cov = a * gp.cov.ExpQuad(1, 0.1)
         K = theano.function([], cov(X))()
         npt.assert_allclose(K[0, 1], 2 * 0.53940, atol=1e-3)
+        # check diagonal
+        Kd = theano.function([], cov(X, diag=True))()
+        npt.assert_allclose(np.diag(K), Kd, atol=1e-5)
 
     def test_rightprod_matrix(self):
         X = np.linspace(0, 1, 10)[:, None]
@@ -158,6 +179,9 @@ class TestCovProd(object):
             cov = gp.cov.ExpQuad(1, 0.1) * M
         K = theano.function([], cov(X))()
         npt.assert_allclose(K[0, 1], 2 * 0.53940, atol=1e-3)
+        # check diagonal
+        Kd = theano.function([], cov(X, diag=True))()
+        npt.assert_allclose(np.diag(K), Kd, atol=1e-5)
 
     def test_leftprod_matrix(self):
         X = np.linspace(0, 1, 3)[:, None]
@@ -178,6 +202,11 @@ class TestCovProd(object):
         K1 = theano.function([], cov1(X))()
         K2 = theano.function([], cov2(X))()
         assert np.allclose(K1, K2)
+        # check diagonal
+        K1d = theano.function([], cov1(X, diag=True))()
+        K2d = theano.function([], cov2(X, diag=True))()
+        npt.assert_allclose(np.diag(K1), K2d, atol=1e-5)
+        npt.assert_allclose(np.diag(K2), K1d, atol=1e-5)
 
 
 class TestCovSliceDim(object):
@@ -187,6 +216,9 @@ class TestCovSliceDim(object):
             cov = gp.cov.ExpQuad(3, 0.1, active_dims=[0, 0, 1])
         K = theano.function([], cov(X))()
         npt.assert_allclose(K[0, 1], 0.20084298, atol=1e-3)
+        # check diagonal
+        Kd = theano.function([], cov(X, diag=True))()
+        npt.assert_allclose(np.diag(K), Kd, atol=1e-5)
 
     def test_slice2(self):
         X = np.linspace(0, 1, 30).reshape(10, 3)
@@ -194,6 +226,9 @@ class TestCovSliceDim(object):
             cov = gp.cov.ExpQuad(3, [0.1, 0.1], active_dims=[False, True, True])
         K = theano.function([], cov(X))()
         npt.assert_allclose(K[0, 1], 0.34295549, atol=1e-3)
+        # check diagonal
+        Kd = theano.function([], cov(X, diag=True))()
+        npt.assert_allclose(np.diag(K), Kd, atol=1e-5)
 
     def test_slice3(self):
         X = np.linspace(0, 1, 30).reshape(10, 3)
@@ -201,6 +236,9 @@ class TestCovSliceDim(object):
             cov = gp.cov.ExpQuad(3, np.array([0.1, 0.1]), active_dims=[False, True, True])
         K = theano.function([], cov(X))()
         npt.assert_allclose(K[0, 1], 0.34295549, atol=1e-3)
+        # check diagonal
+        Kd = theano.function([], cov(X, diag=True))()
+        npt.assert_allclose(np.diag(K), Kd, atol=1e-5)
 
     def test_diffslice(self):
         X = np.linspace(0, 1, 30).reshape(10, 3)
@@ -208,6 +246,9 @@ class TestCovSliceDim(object):
             cov = gp.cov.ExpQuad(3, 0.1, [1, 0, 0]) + gp.cov.ExpQuad(3, [0.1, 0.2, 0.3])
         K = theano.function([], cov(X))()
         npt.assert_allclose(K[0, 1], 0.683572, atol=1e-3)
+        # check diagonal
+        Kd = theano.function([], cov(X, diag=True))()
+        npt.assert_allclose(np.diag(K), Kd, atol=1e-5)
 
     def test_raises(self):
         lengthscales = 2.0
@@ -234,6 +275,9 @@ class TestExpQuad(object):
         npt.assert_allclose(K[0, 1], 0.53940, atol=1e-3)
         K = theano.function([], cov(X, X))()
         npt.assert_allclose(K[0, 1], 0.53940, atol=1e-3)
+        # check diagonal
+        Kd = theano.function([], cov(X, diag=True))()
+        npt.assert_allclose(np.diag(K), Kd, atol=1e-5)
 
     def test_2d(self):
         X = np.linspace(0, 1, 10).reshape(5, 2)
@@ -241,6 +285,9 @@ class TestExpQuad(object):
             cov = gp.cov.ExpQuad(2, 0.5)
         K = theano.function([], cov(X))()
         npt.assert_allclose(K[0, 1], 0.820754, atol=1e-3)
+        # check diagonal
+        Kd = theano.function([], cov(X, diag=True))()
+        npt.assert_allclose(np.diag(K), Kd, atol=1e-5)
 
     def test_2dard(self):
         X = np.linspace(0, 1, 10).reshape(5, 2)
@@ -248,6 +295,9 @@ class TestExpQuad(object):
             cov = gp.cov.ExpQuad(2, np.array([1, 2]))
         K = theano.function([], cov(X))()
         npt.assert_allclose(K[0, 1], 0.969607, atol=1e-3)
+        # check diagonal
+        Kd = theano.function([], cov(X, diag=True))()
+        npt.assert_allclose(np.diag(K), Kd, atol=1e-5)
 
 
 class TestRatQuad(object):
@@ -259,6 +309,9 @@ class TestRatQuad(object):
         npt.assert_allclose(K[0, 1], 0.66896, atol=1e-3)
         K = theano.function([], cov(X, X))()
         npt.assert_allclose(K[0, 1], 0.66896, atol=1e-3)
+        # check diagonal
+        Kd = theano.function([], cov(X, diag=True))()
+        npt.assert_allclose(np.diag(K), Kd, atol=1e-5)
 
 
 class TestExponential(object):
@@ -270,6 +323,9 @@ class TestExponential(object):
         npt.assert_allclose(K[0, 1], 0.57375, atol=1e-3)
         K = theano.function([], cov(X, X))()
         npt.assert_allclose(K[0, 1], 0.57375, atol=1e-3)
+        # check diagonal
+        Kd = theano.function([], cov(X, diag=True))()
+        npt.assert_allclose(np.diag(K), Kd, atol=1e-5)
 
 
 class TestMatern52(object):
@@ -281,6 +337,9 @@ class TestMatern52(object):
         npt.assert_allclose(K[0, 1], 0.46202, atol=1e-3)
         K = theano.function([], cov(X, X))()
         npt.assert_allclose(K[0, 1], 0.46202, atol=1e-3)
+        # check diagonal
+        Kd = theano.function([], cov(X, diag=True))()
+        npt.assert_allclose(np.diag(K), Kd, atol=1e-5)
 
 
 class TestMatern32(object):
@@ -292,6 +351,9 @@ class TestMatern32(object):
         npt.assert_allclose(K[0, 1], 0.42682, atol=1e-3)
         K = theano.function([], cov(X, X))()
         npt.assert_allclose(K[0, 1], 0.42682, atol=1e-3)
+        # check diagonal
+        Kd = theano.function([], cov(X, diag=True))()
+        npt.assert_allclose(np.diag(K), Kd, atol=1e-5)
 
 
 class TestCosine(object):
@@ -303,6 +365,9 @@ class TestCosine(object):
         npt.assert_allclose(K[0, 1], -0.93969, atol=1e-3)
         K = theano.function([], cov(X, X))()
         npt.assert_allclose(K[0, 1], -0.93969, atol=1e-3)
+        # check diagonal
+        Kd = theano.function([], cov(X, diag=True))()
+        npt.assert_allclose(np.diag(K), Kd, atol=1e-5)
 
 
 class TestLinear(object):
@@ -314,6 +379,9 @@ class TestLinear(object):
         npt.assert_allclose(K[0, 1], 0.19444, atol=1e-3)
         K = theano.function([], cov(X, X))()
         npt.assert_allclose(K[0, 1], 0.19444, atol=1e-3)
+        # check diagonal
+        Kd = theano.function([], cov(X, diag=True))()
+        npt.assert_allclose(np.diag(K), Kd, atol=1e-5)
 
 
 class TestPolynomial(object):
@@ -325,6 +393,9 @@ class TestPolynomial(object):
         npt.assert_allclose(K[0, 1], 0.03780, atol=1e-3)
         K = theano.function([], cov(X, X))()
         npt.assert_allclose(K[0, 1], 0.03780, atol=1e-3)
+        # check diagonal
+        Kd = theano.function([], cov(X, diag=True))()
+        npt.assert_allclose(np.diag(K), Kd, atol=1e-5)
 
 
 class TestWarpedInput(object):
@@ -339,6 +410,9 @@ class TestWarpedInput(object):
         npt.assert_allclose(K[0, 1], 0.79593, atol=1e-3)
         K = theano.function([], cov(X, X))()
         npt.assert_allclose(K[0, 1], 0.79593, atol=1e-3)
+        # check diagonal
+        Kd = theano.function([], cov(X, diag=True))()
+        npt.assert_allclose(np.diag(K), Kd, atol=1e-5)
 
     def test_raises(self):
         cov_m52 = gp.cov.Matern52(1, 0.2)
@@ -359,6 +433,9 @@ class TestGibbs(object):
         npt.assert_allclose(K[2, 3], 0.136683, atol=1e-4)
         K = theano.function([], cov(X, X))()
         npt.assert_allclose(K[2, 3], 0.136683, atol=1e-4)
+        # check diagonal
+        Kd = theano.function([], cov(X, diag=True))()
+        npt.assert_allclose(np.diag(K), Kd, atol=1e-5)
 
     def test_raises(self):
         with pytest.raises(TypeError):
