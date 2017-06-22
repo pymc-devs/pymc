@@ -1,6 +1,5 @@
 import pytest
 import pickle
-import functools
 import numpy as np
 from theano import theano, tensor as tt
 import pymc3 as pm
@@ -8,12 +7,17 @@ from pymc3 import Model, Normal
 from pymc3.variational import (
     ADVI, FullRankADVI, SVGD,
     Empirical, ASVGD,
-    MeanField, fit
+    MeanField, FullRank,
+    fit
 )
 from pymc3.variational.operators import KL
-
 from pymc3.tests import models
-from pymc3.tests.helpers import SeededTest
+
+
+@pytest.fixture('function', autouse=True)
+def set_seed():
+    np.random.seed(42)
+    pm.set_tt_rng(42)
 
 
 def test_elbo():
@@ -46,300 +50,177 @@ def test_elbo():
     np.testing.assert_allclose(elbo_mc, elbo_true, rtol=0, atol=1e-1)
 
 
-def _test_aevb(self):
-    # add to inference that supports aevb
-    with pm.Model() as model:
-        x = pm.Normal('x')
-        pm.Normal('y', x)
-    x = model.x
-    y = model.y
-    mu = theano.shared(x.init_value) * 2
-    rho = theano.shared(np.zeros_like(x.init_value))
-    with model:
-        inference = self.inference(local_rv={x: (mu, rho)})
-        approx = inference.fit(3, obj_n_mc=2, obj_optimizer=self.optimizer)
-        approx.sample(10)
-        approx.apply_replacements(
-            y,
-            more_replacements={x: np.asarray([1, 1], dtype=x.dtype)}
-        ).eval()
+@pytest.fixture(
+    'module',
+    params=[
+        dict(mini=True, scale=False),
+        dict(mini=False, scale=True),
+    ],
+    ids=['mini-noscale', 'full-scale']
+)
+def minibatch_and_scaling(request):
+    return request.param
 
 
-class TestApproximates:
-    @pytest.mark.usefixtures('strict_float32')
-    class Base(SeededTest):
-        inference = None
-        NITER = 12000
-        optimizer = pm.adagrad_window(learning_rate=0.01, n_win=50)
-        conv_cb = property(lambda self: [
-            pm.callbacks.CheckParametersConvergence(
-                every=500,
-                diff='relative', tolerance=0.001),
-            pm.callbacks.CheckParametersConvergence(
-                every=500,
-                diff='absolute', tolerance=0.0001)
-        ])
-
-        def test_vars_view(self):
-            _, model, _ = models.multidimensional_model()
-            with model:
-                app = self.inference().approx
-                posterior = app.random_global(10)
-                x_sampled = app.view_global(posterior, 'x').eval()
-            assert x_sampled.shape == (10,) + model['x'].dshape
-
-        def test_vars_view_dynamic_size(self):
-            _, model, _ = models.multidimensional_model()
-            with model:
-                app = self.inference().approx
-                i = tt.iscalar('i')
-                i.tag.test_value = 1
-                posterior = app.random_global(i)
-            x_sampled = app.view_global(posterior, 'x').eval({i: 10})
-            assert x_sampled.shape == (10,) + model['x'].dshape
-            x_sampled = app.view_global(posterior, 'x').eval({i: 1})
-            assert x_sampled.shape == (1,) + model['x'].dshape
-
-        def test_sample(self):
-            n_samples = 100
-            xs = np.random.binomial(n=1, p=0.2, size=n_samples)
-            with pm.Model():
-                p = pm.Beta('p', alpha=1, beta=1)
-                pm.Binomial('xs', n=1, p=p, observed=xs)
-                app = self.inference().approx
-                trace = app.sample(draws=1, include_transformed=False)
-                assert trace.varnames == ['p']
-                assert len(trace) == 1
-                trace = app.sample(draws=10, include_transformed=True)
-                assert sorted(trace.varnames) == ['p', 'p_logodds__']
-                assert len(trace) == 10
-
-        def test_sample_node(self):
-            n_samples = 100
-            xs = np.random.binomial(n=1, p=0.2, size=n_samples)
-            with pm.Model():
-                p = pm.Beta('p', alpha=1, beta=1)
-                pm.Binomial('xs', n=1, p=p, observed=xs)
-                app = self.inference().approx
-            app.sample_node(p).eval()   # should be evaluated without errors
-
-        def test_optimizer_with_full_data(self):
-            n = 1000
-            sd0 = 2.
-            mu0 = 4.
-            sd = 3.
-            mu = -5.
-
-            data = sd * np.random.randn(n) + mu
-
-            d = n / sd ** 2 + 1 / sd0 ** 2
-            mu_post = (n * np.mean(data) / sd ** 2 + mu0 / sd0 ** 2) / d
-
-            with Model():
-                mu_ = Normal('mu', mu=mu0, sd=sd0, testval=0)
-                Normal('x', mu=mu_, sd=sd, observed=data)
-                inf = self.inference(start={})
-                approx = inf.fit(self.NITER,
-                                 obj_optimizer=self.optimizer,
-                                 callbacks=self.conv_cb,)
-                trace = approx.sample(10000)
-            np.testing.assert_allclose(np.mean(trace['mu']), mu_post, rtol=0.05)
-            np.testing.assert_allclose(np.std(trace['mu']), np.sqrt(1. / d), rtol=0.1)
-
-        def test_optimizer_minibatch_with_generator(self):
-            n = 1000
-            sd0 = 2.
-            mu0 = 4.
-            sd = 3.
-            mu = -5.
-
-            data = sd * np.random.randn(n) + mu
-
-            d = n / sd**2 + 1 / sd0**2
-            mu_post = (n * np.mean(data) / sd**2 + mu0 / sd0**2) / d
-
-            def create_minibatch(data):
-                while True:
-                    data = np.roll(data, 100, axis=0)
-                    yield data[:100]
-
-            minibatches = create_minibatch(data)
-            with Model():
-                mu_ = Normal('mu', mu=mu0, sd=sd0, testval=0)
-                Normal('x', mu=mu_, sd=sd, observed=minibatches, total_size=n)
-                inf = self.inference()
-                approx = inf.fit(self.NITER * 3, obj_optimizer=self.optimizer,
-                                 callbacks=self.conv_cb)
-                trace = approx.sample(10000)
-            np.testing.assert_allclose(np.mean(trace['mu']), mu_post, rtol=0.05)
-            np.testing.assert_allclose(np.std(trace['mu']), np.sqrt(1. / d), rtol=0.1)
-
-        def test_optimizer_minibatch_with_callback(self):
-            n = 1000
-            sd0 = 2.
-            mu0 = 4.
-            sd = 3.
-            mu = -5.
-
-            data = sd * np.random.randn(n) + mu
-
-            d = n / sd ** 2 + 1 / sd0 ** 2
-            mu_post = (n * np.mean(data) / sd ** 2 + mu0 / sd0 ** 2) / d
-
-            def create_minibatch(data):
-                while True:
-                    data = np.roll(data, 100, axis=0)
-                    yield pm.floatX(data[:100])
-
-            minibatches = create_minibatch(data)
-            with Model():
-                data_t = theano.shared(next(minibatches))
-
-                def cb(*_):
-                    data_t.set_value(next(minibatches))
-                mu_ = Normal('mu', mu=mu0, sd=sd0, testval=0)
-                Normal('x', mu=mu_, sd=sd, observed=data_t, total_size=n)
-                inf = self.inference(scale_cost_to_minibatch=True)
-                approx = inf.fit(
-                    self.NITER * 3, callbacks=[cb] + self.conv_cb, obj_optimizer=self.optimizer)
-                trace = approx.sample(10000)
-            np.testing.assert_allclose(np.mean(trace['mu']), mu_post, rtol=0.05)
-            np.testing.assert_allclose(np.std(trace['mu']), np.sqrt(1. / d), rtol=0.1)
-
-        def test_n_obj_mc(self):
-            n_samples = 100
-            xs = np.random.binomial(n=1, p=0.2, size=n_samples)
-            with pm.Model():
-                p = pm.Beta('p', alpha=1, beta=1)
-                pm.Binomial('xs', n=1, p=p, observed=xs)
-                inf = self.inference(scale_cost_to_minibatch=True)
-                # should just work
-                inf.fit(10, obj_n_mc=10, obj_optimizer=self.optimizer)
-
-        def test_pickling(self):
-            with models.multidimensional_model()[1]:
-                inference = self.inference()
-
-            inference = pickle.loads(pickle.dumps(inference))
-            inference.fit(20)
-
-        def test_profile(self):
-            with models.multidimensional_model()[1]:
-                self.inference().run_profiling(10)
-
-        def test_multiple_replacements(self):
-            _, model, _ = models.exponential_beta(n=2)
-            x = model.x
-            y = model.y
-            xy = x*y
-            xpy = x+y
-            with model:
-                mf = self.inference().approx
-                xy_, xpy_ = mf.apply_replacements([xy, xpy])
-                xy_s, xpy_s = mf.sample_node([xy, xpy])
-                xy_.eval()
-                xpy_.eval()
-                xy_s.eval()
-                xpy_s.eval()
+@pytest.fixture('module')
+def using_minibatch(minibatch_and_scaling):
+    return minibatch_and_scaling['mini']
 
 
-class TestMeanField(TestApproximates.Base):
-    inference = ADVI
-    test_aevb = _test_aevb
-
-    def test_length_of_hist(self):
-        with models.multidimensional_model()[1]:
-            inf = self.inference()
-            assert len(inf.hist) == 0
-            inf.fit(10)
-            assert len(inf.hist) == 10
-            assert not np.isnan(inf.hist).any()
-            inf.fit(self.NITER, obj_optimizer=self.optimizer)
-            assert len(inf.hist) == self.NITER + 10
-            assert not np.isnan(inf.hist).any()
+@pytest.fixture('module')
+def scale_cost_to_minibatch(minibatch_and_scaling):
+    return minibatch_and_scaling['scale']
 
 
-class TestFullRank(TestApproximates.Base):
-    inference = FullRankADVI
-    test_aevb = _test_aevb
+@pytest.fixture('module')
+def simple_model_data(using_minibatch):
+    n = 1000
+    sd0 = 2.
+    mu0 = 4.
+    sd = 3.
+    mu = -5.
 
-    def test_from_mean_field(self):
-        with models.multidimensional_model()[1]:
-            advi = ADVI()
-            full_rank = FullRankADVI.from_mean_field(advi.approx)
-            full_rank.fit(20)
-
-    def test_from_advi(self):
-        with models.multidimensional_model()[1]:
-            advi = ADVI()
-            full_rank = FullRankADVI.from_advi(advi)
-            full_rank.fit(20)
-
-
-class TestSVGD(TestApproximates.Base):
-    inference = functools.partial(SVGD, n_particles=100)
-
-
-class TestASVGD(TestApproximates.Base):
-    NITER = 5000
-    inference = functools.partial(ASVGD, temperature=1.5)
-    test_aevb = _test_aevb
+    data = sd * np.random.randn(n) + mu
+    d = n / sd ** 2 + 1 / sd0 ** 2
+    mu_post = (n * np.mean(data) / sd ** 2 + mu0 / sd0 ** 2) / d
+    if using_minibatch:
+        data = pm.Minibatch(data)
+    return dict(
+        n=n,
+        data=data,
+        mu_post=mu_post,
+        d=d,
+        mu0=mu0,
+        sd0=sd0,
+        sd=sd,
+    )
 
 
-class TestEmpirical(SeededTest):
-    def test_sampling(self):
-        with models.multidimensional_model()[1]:
-            full_rank = FullRankADVI()
-            approx = full_rank.fit(20)
-            trace0 = approx.sample(10000)
-            approx = Empirical(trace0)
-        trace1 = approx.sample(100000)
-        np.testing.assert_allclose(trace0['x'].mean(0), trace1['x'].mean(0), atol=0.01)
-        np.testing.assert_allclose(trace0['x'].var(0), trace1['x'].var(0), atol=0.01)
+@pytest.fixture(scope='module')
+def simple_model(simple_model_data):
+    with Model() as model:
+        mu_ = Normal(
+            'mu', mu=simple_model_data['mu0'],
+            sd=simple_model_data['sd0'], testval=0)
+        Normal('x', mu=mu_, sd=simple_model_data['sd'],
+               observed=simple_model_data['data'],
+               total_size=simple_model_data['n'])
+    return model
 
-    def test_aevb_empirical(self):
-        _, model, _ = models.exponential_beta(n=2)
-        x = model.x
-        mu = theano.shared(x.init_value)
-        rho = theano.shared(np.zeros_like(x.init_value))
-        with model:
-            inference = ADVI(local_rv={x: (mu, rho)})
-            approx = inference.approx
-            trace0 = approx.sample(10000)
-            approx = Empirical(trace0, local_rv={x: (mu, rho)})
-            trace1 = approx.sample(10000)
-            approx.random(no_rand=True)
-            approx.random_fn(no_rand=True)
-        np.testing.assert_allclose(trace0['y'].mean(0), trace1['y'].mean(0), atol=0.02)
-        np.testing.assert_allclose(trace0['y'].var(0), trace1['y'].var(0), atol=0.02)
-        np.testing.assert_allclose(trace0['x'].mean(0), trace1['x'].mean(0), atol=0.02)
-        np.testing.assert_allclose(trace0['x'].var(0), trace1['x'].var(0), atol=0.02)
 
-    def test_random_with_transformed(self):
-        p = .2
-        trials = (np.random.uniform(size=10) < p).astype('int8')
-        with pm.Model():
-            p = pm.Uniform('p')
-            pm.Bernoulli('trials', p, observed=trials)
-            trace = pm.sample(1000, step=pm.Metropolis())
-            approx = Empirical(trace)
-            approx.randidx(None).eval()
-            approx.randidx(1).eval()
-            approx.random_fn(no_rand=True)
-            approx.random_fn(no_rand=False)
-            approx.histogram_logp.eval()
+@pytest.fixture('module', params=[
+        dict(cls=ADVI, init=dict()),
+        dict(cls=FullRankADVI, init=dict()),
+        dict(cls=SVGD, init=dict(n_particles=500)),
+        dict(cls=ASVGD, init=dict(temperature=1.)),
+    ], ids=lambda d: d['cls'].__name__)
+def inference_spec(request):
+    cls = request.param['cls']
+    init = request.param['init']
 
-    def test_init_from_noize(self):
-        with models.multidimensional_model()[1]:
-            approx = Empirical.from_noise(100)
-            assert approx.histogram.eval().shape == (100, 6)
+    def init_(**kw):
+        k = init.copy()
+        k.update(kw)
+        return cls(**k)
+    init_.cls = cls
+    return init_
 
-_model = models.simple_model()[1]
-with _model:
-    pm.Potential('pot', tt.ones((10, 10)))
-    _advi = ADVI()
-    _fullrank_advi = FullRankADVI()
-    _svgd = SVGD()
+
+@pytest.fixture('function')
+def inference(inference_spec, simple_model, scale_cost_to_minibatch):
+
+    with simple_model:
+        return inference_spec(scale_cost_to_minibatch=scale_cost_to_minibatch)
+
+
+@pytest.fixture('function')
+def fit_kwargs(inference, using_minibatch):
+    cb = [pm.callbacks.CheckParametersConvergence(
+            every=500,
+            diff='relative', tolerance=0.001),
+          pm.callbacks.CheckParametersConvergence(
+            every=500,
+            diff='absolute', tolerance=0.0001)]
+    _select = {
+        (ADVI, 'full'): dict(
+            obj_optimizer=pm.adagrad_window(learning_rate=0.02, n_win=50),
+            n=5000, callbacks=cb
+        ),
+        (ADVI, 'mini'): dict(
+            obj_optimizer=pm.adagrad_window(learning_rate=0.01, n_win=50),
+            n=12000, callbacks=cb
+        ),
+        (FullRankADVI, 'full'): dict(
+            obj_optimizer=pm.adagrad_window(learning_rate=0.01, n_win=50),
+            n=6000, callbacks=cb
+        ),
+        (FullRankADVI, 'mini'): dict(
+            obj_optimizer=pm.rmsprop(learning_rate=0.007),
+            n=12000, callbacks=cb
+        ),
+        (SVGD, 'full'): dict(
+            obj_optimizer=pm.sgd(learning_rate=0.01),
+            n=1000, callbacks=cb
+        ),
+        (SVGD, 'mini'): dict(
+            obj_optimizer=pm.adagrad_window(learning_rate=0.01, n_win=5),
+            n=3000, callbacks=cb
+        ),
+        (ASVGD, 'full'): dict(
+            obj_optimizer=pm.adagrad_window(learning_rate=0.02, n_win=50),
+            n=2000, obj_n_mc=300, callbacks=cb
+        ),
+        (ASVGD, 'mini'): dict(
+            obj_optimizer=pm.adagrad_window(learning_rate=0.02, n_win=50),
+            n=1700, obj_n_mc=300, callbacks=cb
+        )
+    }
+    if using_minibatch:
+        key = 'mini'
+    else:
+        key = 'full'
+    return _select[(type(inference), key)]
+
+
+def test_fit_oo(inference,
+                fit_kwargs,
+                simple_model_data):
+    trace = inference.fit(**fit_kwargs).sample(10000)
+    mu_post = simple_model_data['mu_post']
+    d = simple_model_data['d']
+    np.testing.assert_allclose(np.mean(trace['mu']), mu_post, rtol=0.05)
+    np.testing.assert_allclose(np.std(trace['mu']), np.sqrt(1. / d), rtol=0.1)
+
+
+def test_profile(inference, fit_kwargs):
+    fit_kwargs['n'] = 100
+    fit_kwargs.pop('callbacks')
+    inference.run_profiling(**fit_kwargs).summary()
+
+
+@pytest.fixture('module')
+def another_simple_model():
+    _model = models.simple_model()[1]
+    with _model:
+        pm.Potential('pot', tt.ones((10, 10)))
+    return _model
+
+
+@pytest.fixture(params=[
+    dict(name='advi', kw=dict(start={})),
+    dict(name='fullrank_advi', kw=dict(start={})),
+    dict(name='svgd', kw=dict(start={}))],
+    ids=lambda d: d['name']
+)
+def fit_method_with_object(request, another_simple_model):
+    _select = dict(
+        advi=ADVI,
+        fullrank_advi=FullRankADVI,
+        svgd=SVGD
+    )
+    with another_simple_model:
+        return _select[request.param['name']](
+            **request.param['kw'])
 
 
 @pytest.mark.parametrize(
@@ -347,9 +228,6 @@ with _model:
     [
         ('undefined', dict(), KeyError),
         (1, dict(), TypeError),
-        (_advi, dict(start={}), None),
-        (_fullrank_advi, dict(), None),
-        (_svgd, dict(), None),
         ('advi', dict(total_grad_norm_constraint=10), None),
         ('advi->fullrank_advi', dict(frac=.1), None),
         ('advi->fullrank_advi', dict(frac=1), ValueError),
@@ -357,16 +235,150 @@ with _model:
         ('svgd', dict(total_grad_norm_constraint=10), None),
         ('svgd', dict(start={}), None),
         ('asvgd', dict(start={}, total_grad_norm_constraint=10), None),
-        ('svgd', dict(local_rv={_model.free_RVs[0]: (0, 1)}), ValueError)
-    ]
+    ],
 )
-def test_fit(method, kwargs, error):
-    with _model:
+def test_fit_fn_text(method, kwargs, error, another_simple_model):
+    with another_simple_model:
         if error is not None:
             with pytest.raises(error):
                 fit(10, method=method, **kwargs)
         else:
             fit(10, method=method, **kwargs)
+
+
+def test_fit_fn_oo(fit_method_with_object, another_simple_model):
+    with another_simple_model:
+        fit(10, method=fit_method_with_object)
+
+
+def test_error_on_local_rv_for_svgd(another_simple_model):
+    with another_simple_model:
+        with pytest.raises(ValueError) as e:
+            fit(10, method='svgd', local_rv={
+                another_simple_model.free_RVs[0]: (0, 1)})
+        assert e.match('does not support AEVB')
+
+
+@pytest.fixture('module')
+def aevb_model():
+    with pm.Model() as model:
+        x = pm.Normal('x')
+        pm.Normal('y', x)
+    x = model.x
+    y = model.y
+    mu = theano.shared(x.init_value) * 2
+    rho = theano.shared(np.zeros_like(x.init_value))
+    return {
+        'model': model,
+        'y': y,
+        'x': x,
+        'replace': (mu, rho)
+    }
+
+
+def test_aevb(inference_spec, aevb_model):
+    # add to inference that supports aevb
+    cls = inference_spec.cls
+    if not cls.OP.SUPPORT_AEVB:
+        raise pytest.skip('%s does not support aevb' % cls)
+    x = aevb_model['x']
+    y = aevb_model['y']
+    model = aevb_model['model']
+    replace = aevb_model['replace']
+    with model:
+        inference = inference_spec(local_rv={x: replace})
+        approx = inference.fit(3, obj_n_mc=2)
+        approx.sample(10)
+        approx.apply_replacements(
+            y,
+            more_replacements={x: np.asarray([1, 1], dtype=x.dtype)}
+        ).eval()
+
+
+@pytest.fixture('module')
+def binomial_model():
+    n_samples = 100
+    xs = np.random.binomial(n=1, p=0.2, size=n_samples)
+    with pm.Model() as model:
+        p = pm.Beta('p', alpha=1, beta=1)
+        pm.Binomial('xs', n=1, p=p, observed=xs)
+    return model
+
+
+@pytest.fixture('module')
+def binomial_model_inference(binomial_model, inference_spec):
+    with binomial_model:
+        return inference_spec()
+
+
+def test_n_mc(binomial_model_inference):
+    binomial_model_inference.fit(10, obj_n_mc=2)
+
+
+def test_pickling(binomial_model_inference):
+    inference = pickle.loads(pickle.dumps(binomial_model_inference))
+    inference.fit(20)
+
+
+def test_multiple_replacements(inference_spec):
+    _, model, _ = models.exponential_beta(n=2)
+    x = model.x
+    y = model.y
+    xy = x*y
+    xpy = x+y
+    with model:
+        ap = inference_spec().approx
+        xy_, xpy_ = ap.apply_replacements([xy, xpy])
+        xy_s, xpy_s = ap.sample_node([xy, xpy])
+        xy_.eval()
+        xpy_.eval()
+        xy_s.eval()
+        xpy_s.eval()
+
+
+def test_from_mean_field(another_simple_model):
+    with another_simple_model:
+        advi = ADVI()
+        full_rank = FullRankADVI.from_mean_field(advi.approx)
+        full_rank.fit(20)
+
+
+def test_from_advi(another_simple_model):
+    with another_simple_model:
+        advi = ADVI()
+        full_rank = FullRankADVI.from_advi(advi)
+        full_rank.fit(20)
+
+
+def test_from_full_rank(another_simple_model):
+    with another_simple_model:
+        fr = FullRank()
+        full_rank = FullRankADVI.from_full_rank(fr)
+        full_rank.fit(20)
+
+
+def test_from_empirical(another_simple_model):
+    with another_simple_model:
+        emp = Empirical.from_noise(1000)
+        svgd = SVGD.from_empirical(emp)
+        svgd.fit(20)
+
+
+def test_aevb_empirical():
+    _, model, _ = models.exponential_beta(n=2)
+    x = model.x
+    mu = theano.shared(x.init_value)
+    rho = theano.shared(np.zeros_like(x.init_value))
+    with model:
+        inference = ADVI(local_rv={x: (mu, rho)})
+        approx = inference.approx
+        trace0 = approx.sample(10000)
+        approx = Empirical(trace0, local_rv={x: (mu, rho)})
+        trace1 = approx.sample(10000)
+    np.testing.assert_allclose(trace0['y'].mean(0), trace1['y'].mean(0), atol=0.02)
+    np.testing.assert_allclose(trace0['y'].var(0), trace1['y'].var(0), atol=0.02)
+    np.testing.assert_allclose(trace0['x'].mean(0), trace1['x'].mean(0), atol=0.02)
+    np.testing.assert_allclose(trace0['x'].var(0), trace1['x'].var(0), atol=0.02)
 
 
 @pytest.mark.parametrize(
