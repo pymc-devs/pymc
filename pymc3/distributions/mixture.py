@@ -1,6 +1,7 @@
 import numpy as np
 import theano.tensor as tt
 
+from pymc3.util import get_variable_name
 from ..math import logsumexp
 from .dist_math import bound
 from .distribution import Discrete, Distribution, draw_values, generate_samples
@@ -34,14 +35,14 @@ class Mixture(Distribution):
     ----------
     w : array of floats
         w >= 0 and w <= 1
-        the mixutre weights
+        the mixture weights
     comp_dists : multidimensional PyMC3 distribution or iterable of one-dimensional PyMC3 distributions
         the component distributions :math:`f_1, \ldots, f_n`
     """
     def __init__(self, w, comp_dists, *args, **kwargs):
         shape = kwargs.pop('shape', ())
 
-        self.w = w
+        self.w = w = tt.as_tensor_variable(w)
         self.comp_dists = comp_dists
 
         defaults = kwargs.pop('defaults', [])
@@ -105,12 +106,13 @@ class Mixture(Distribution):
                                        for comp_dist in self.comp_dists])
 
         return np.squeeze(samples)
-        
+
     def logp(self, value):
         w = self.w
-        
+
         return bound(logsumexp(tt.log(w) + self._comp_logp(value), axis=-1).sum(),
-                     w >= 0, w <= 1, tt.allclose(w.sum(axis=-1), 1))
+                     w >= 0, w <= 1, tt.allclose(w.sum(axis=-1), 1),
+                     broadcast_conditions=False)
 
     def random(self, point=None, size=None, repeat=None):
         def random_choice(*args, **kwargs):
@@ -142,7 +144,9 @@ class NormalMixture(Mixture):
     R"""
     Normal mixture log-likelihood
 
-    .. math:: f(x \mid w, \mu, \sigma^2) = \sum_{i = 1}^n w_i N(x \mid \mu_i, \sigma^2_i)
+    .. math::
+
+        f(x \mid w, \mu, \sigma^2) = \sum_{i = 1}^n w_i N(x \mid \mu_i, \sigma^2_i)
 
     ========  =======================================
     Support   :math:`x \in \mathbb{R}`
@@ -151,9 +155,10 @@ class NormalMixture(Mixture):
     ========  =======================================
 
     Parameters
+    ----------
     w : array of floats
         w >= 0 and w <= 1
-        the mixutre weights
+        the mixture weights
     mu : array of floats
         the component means
     sd : array of floats
@@ -164,6 +169,18 @@ class NormalMixture(Mixture):
     def __init__(self, w, mu, *args, **kwargs):
         _, sd = get_tau_sd(tau=kwargs.pop('tau', None),
                            sd=kwargs.pop('sd', None))
-
+        self.mu = mu = tt.as_tensor_variable(mu)
+        self.sd = sd = tt.as_tensor_variable(sd)
         super(NormalMixture, self).__init__(w, Normal.dist(mu, sd=sd),
                                             *args, **kwargs)
+
+    def _repr_latex_(self, name=None, dist=None):
+        if dist is None:
+            dist = self
+        mu = dist.mu
+        w = dist.w
+        sd = dist.sd
+        return r'${} \sim \text{{NormalMixture}}(\mathit{{w}}={}, \mathit{{mu}}={}, \mathit{{sigma}}={})$'.format(name,
+                                                get_variable_name(w),
+                                                get_variable_name(mu),
+                                                get_variable_name(sd))

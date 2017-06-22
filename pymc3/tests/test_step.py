@@ -1,23 +1,30 @@
-import os
-import unittest
+import shutil
+import tempfile
+import warnings
 
 from .checks import close_to
 from .models import simple_categorical, mv_simple, mv_simple_discrete, simple_2model, mv_prior_simple
 from pymc3.sampling import assign_step_methods, sample
-from pymc3.model import Model
+from pymc3.model import Model, Deterministic
 from pymc3.step_methods import (NUTS, BinaryGibbsMetropolis, CategoricalGibbsMetropolis,
                                 Metropolis, Slice, CompoundStep, NormalProposal,
                                 MultivariateNormalProposal, HamiltonianMC,
-                                EllipticalSlice)
-from pymc3.distributions import Binomial, Normal, Bernoulli, Categorical
+                                EllipticalSlice, smc)
+from pymc3.theanof import floatX
+from pymc3 import SamplingError
+from pymc3.distributions import (
+    Binomial, Normal, Bernoulli, Categorical, Beta, HalfNormal)
 
 from numpy.testing import assert_array_almost_equal
 import numpy as np
 import numpy.testing as npt
-from tqdm import tqdm
+import pytest
+import theano
+import theano.tensor as tt
+from .helpers import select_by_precision
 
 
-class TestStepMethods(object):  # yield test doesn't work subclassing unittest.TestCase
+class TestStepMethods(object):  # yield test doesn't work subclassing object
     master_samples = {
         Slice: np.array([
             -8.13087389e-01, -3.08921856e-01, -6.79377098e-01, 6.50812585e-01, -7.63577596e-01,
@@ -102,12 +109,39 @@ class TestStepMethods(object):  # yield test doesn't work subclassing unittest.T
                2.81141081e-03,   3.25839131e-01,   1.33638823e+00,   1.59391112e+00,
               -3.91174647e-01,  -2.60664979e+00,  -2.27637534e+00,  -2.81505065e+00,
               -2.24238542e+00,  -1.01648100e+00,  -1.01648100e+00,  -7.60912865e-01,
-               1.44384812e+00,   2.07355127e+00,   1.91390340e+00,   1.66559696e+00])
+               1.44384812e+00,   2.07355127e+00,   1.91390340e+00,   1.66559696e+00]),
+        smc.SMC: np.array([-0.94129179, -0.24527269, -0.21178402,  0.41638589,  0.98654812,
+                           -1.98046225,  1.12342667,  1.6415898 , -1.1200565 ,  0.32953477,
+                            1.39889789, -1.73171544,  0.0443656 ,  0.34281177, -0.56480463,
+                           -0.73692101, -0.51636731, -0.03384773, -1.38884227,  1.19531008,
+                            0.11847074,  0.48935035,  0.19281622, -0.29963799,  1.22910538,
+                            0.7410759 , -1.19513787,  1.13016882,  0.0564043 , -0.61605194,
+                           -0.0316803 ,  1.05364925,  0.69909548, -0.93454091,  0.52057634,
+                            0.56511333,  0.68718385, -0.17977616,  0.0465673 , -0.17018186,
+                            0.07703077,  0.75364315,  0.1199398 ,  0.99348863,  0.73182432,
+                            1.01110192,  0.07782113,  0.15190815, -0.2146857 ,  0.70445444,
+                            0.09726742,  0.47132485, -1.03145464,  0.44136444,  0.17668074,
+                           -0.42707508, -0.50563966, -0.39789354, -0.47026749,  0.35764632,
+                           -1.12201873, -0.44234106, -0.23588142,  0.94064406, -0.29664115,
+                            0.50927203,  0.12289724,  0.37487975,  0.69245379,  0.93506873,
+                           -0.38205722,  0.69079024,  0.15645901, -0.40054163, -0.56146871,
+                            0.08198217,  1.33145711, -0.28730786,  0.97928876, -0.11001317,
+                           -0.3198016 ,  0.29951594, -0.19081766,  0.50318481, -0.20971093,
+                           -0.26810202, -0.73819079,  0.5627611 , -0.48295116, -0.1490258 ,
+                           -0.25184255, -0.42765883,  1.45981846,  0.36949272,  1.1110567 ,
+                            0.4984653 , -0.13902672,  0.18949919, -0.54360687, -0.2740874 ]),
     }
 
+    def setup_class(self):
+        self.temp_dir = tempfile.mkdtemp()
+
+    def teardown_class(self):
+        shutil.rmtree(self.temp_dir)
+
+    @pytest.mark.xfail(condition=(theano.config.floatX == "float32"), reason="Fails on float32")
     def test_sample_exact(self):
         for step_method in self.master_samples:
-            yield self.check_trace, step_method
+            self.check_trace(step_method)
 
     def check_trace(self, step_method):
         """Tests whether the trace for step methods is exactly the same as on master.
@@ -125,19 +159,23 @@ class TestStepMethods(object):  # yield test doesn't work subclassing unittest.T
 
         on multiple commits.
         """
-        test_steps = 100
-        n_steps = int(os.getenv('BENCHMARK', 100))
-        benchmarking = (n_steps != test_steps)
-        if benchmarking:
-            tqdm.write('Benchmarking {} with {:,d} samples'.format(step_method.__name__, n_steps))
-        else:
-            tqdm.write('Checking {} has same trace as on master'.format(step_method.__name__))
-        with Model() as model:
-            Normal('x', mu=0, sd=1)
-            trace = sample(n_steps, step=step_method(), random_seed=1)
+        n_steps = 100
+        with Model():
+            x = Normal('x', mu=0, sd=1)
+            if step_method.__name__ == 'SMC':
+                Deterministic('like', - 0.5 * tt.log(2 * np.pi) - 0.5 * x.T.dot(x))
+                trace = smc.ATMIP_sample(n_steps=n_steps, step=step_method(random_seed=1),
+                                         n_jobs=1, progressbar=False,
+                                         homepath=self.temp_dir)
+            else:
+                trace = sample(0, tune=n_steps,
+                               discard_tuned_samples=False,
+                               step=step_method(), random_seed=1)
 
-        if not benchmarking:
-            assert_array_almost_equal(trace.get_values('x'), self.master_samples[step_method])
+        assert_array_almost_equal(
+            trace.get_values('x'),
+            self.master_samples[step_method],
+            decimal=select_by_precision(float64=6, float32=4))
 
     def check_stat(self, check, trace, name):
         for (var, stat, value, bound) in check:
@@ -163,10 +201,14 @@ class TestStepMethods(object):  # yield test doesn't work subclassing unittest.T
                     HamiltonianMC(scaling=C, is_cov=True, blocked=False)]),
             )
         for step in steps:
-            trace = sample(8000, step=step, start=start, model=model, random_seed=1)
-            yield self.check_stat, check, trace, step.__class__.__name__
+            trace = sample(0, tune=8000,
+                           discard_tuned_samples=False, step=step,
+                           start=start, model=model, random_seed=1)
+            self.check_stat(check, trace, step.__class__.__name__)
 
     def test_step_discrete(self):
+        if theano.config.floatX == "float32":
+            return  # Cannot use @skip because it only skips one iteration of the yield
         start, model, (mu, C) = mv_simple_discrete()
         unc = np.diag(C) ** .5
         check = (('x', np.mean, mu, unc / 10.),
@@ -176,8 +218,8 @@ class TestStepMethods(object):  # yield test doesn't work subclassing unittest.T
                 Metropolis(S=C, proposal_dist=MultivariateNormalProposal),
             )
         for step in steps:
-            trace = sample(20000, step=step, start=start, model=model, random_seed=1)
-            yield self.check_stat, check, trace, step.__class__.__name__
+            trace = sample(20000, tune=0, step=step, start=start, model=model, random_seed=1)
+            self.check_stat(check, trace, step.__class__.__name__)
 
     def test_step_categorical(self):
         start, model, (mu, C) = simple_categorical()
@@ -190,8 +232,8 @@ class TestStepMethods(object):  # yield test doesn't work subclassing unittest.T
                 CategoricalGibbsMetropolis(model.x, proposal='proportional'),
             )
         for step in steps:
-            trace = sample(8000, step=step, start=start, model=model, random_seed=1)
-            yield self.check_stat, check, trace, step.__class__.__name__
+            trace = sample(8000, tune=0, step=step, start=start, model=model, random_seed=1)
+            self.check_stat(check, trace, step.__class__.__name__)
 
     def test_step_elliptical_slice(self):
         start, model, (K, L, mu, std, noise) = mv_prior_simple()
@@ -204,11 +246,11 @@ class TestStepMethods(object):  # yield test doesn't work subclassing unittest.T
                 EllipticalSlice(prior_chol=L),
             )
         for step in steps:
-            trace = sample(5000, step=step, start=start, model=model, random_seed=1)
-            yield self.check_stat, check, trace, step.__class__.__name__
+            trace = sample(5000, tune=0, step=step, start=start, model=model, random_seed=1)
+            self.check_stat(check, trace, step.__class__.__name__)
 
 
-class TestMetropolisProposal(unittest.TestCase):
+class TestMetropolisProposal(object):
     def test_proposal_choice(self):
         _, model, _ = mv_simple()
         with model:
@@ -219,7 +261,7 @@ class TestMetropolisProposal(unittest.TestCase):
             sampler = Metropolis(S=s)
             assert isinstance(sampler.proposal_dist, MultivariateNormalProposal)
             s[0, 0] = -s[0, 0]
-            with self.assertRaises(np.linalg.LinAlgError):
+            with pytest.raises(np.linalg.LinAlgError):
                 sampler = Metropolis(S=s)
 
     def test_mv_proposal(self):
@@ -231,54 +273,95 @@ class TestMetropolisProposal(unittest.TestCase):
         npt.assert_allclose(np.cov(samples.T), cov, rtol=0.2)
 
 
-class TestCompoundStep(unittest.TestCase):
+class TestCompoundStep(object):
     samplers = (Metropolis, Slice, HamiltonianMC, NUTS)
 
+    @pytest.mark.skipif(theano.config.floatX == "float32",
+                        reason="Test fails on 32 bit due to linalg issues")
     def test_non_blocked(self):
         """Test that samplers correctly create non-blocked compound steps."""
         _, model = simple_2model()
         with model:
             for sampler in self.samplers:
-                self.assertIsInstance(sampler(blocked=False), CompoundStep)
+                assert isinstance(sampler(blocked=False), CompoundStep)
 
+    @pytest.mark.skipif(theano.config.floatX == "float32",
+                        reason="Test fails on 32 bit due to linalg issues")
     def test_blocked(self):
         _, model = simple_2model()
         with model:
             for sampler in self.samplers:
                 sampler_instance = sampler(blocked=True)
-                self.assertNotIsInstance(sampler_instance, CompoundStep)
-                self.assertIsInstance(sampler_instance, sampler)
+                assert not isinstance(sampler_instance, CompoundStep)
+                assert isinstance(sampler_instance, sampler)
 
 
-class TestAssignStepMethods(unittest.TestCase):
+class TestAssignStepMethods(object):
     def test_bernoulli(self):
         """Test bernoulli distribution is assigned binary gibbs metropolis method"""
         with Model() as model:
             Bernoulli('x', 0.5)
             steps = assign_step_methods(model, [])
-        self.assertIsInstance(steps, BinaryGibbsMetropolis)
+        assert isinstance(steps, BinaryGibbsMetropolis)
 
     def test_normal(self):
         """Test normal distribution is assigned NUTS method"""
         with Model() as model:
             Normal('x', 0, 1)
             steps = assign_step_methods(model, [])
-        self.assertIsInstance(steps, NUTS)
+        assert isinstance(steps, NUTS)
 
     def test_categorical(self):
         """Test categorical distribution is assigned categorical gibbs metropolis method"""
         with Model() as model:
             Categorical('x', np.array([0.25, 0.75]))
             steps = assign_step_methods(model, [])
-        self.assertIsInstance(steps, BinaryGibbsMetropolis)
+        assert isinstance(steps, BinaryGibbsMetropolis)
         with Model() as model:
             Categorical('y', np.array([0.25, 0.70, 0.05]))
             steps = assign_step_methods(model, [])
-        self.assertIsInstance(steps, CategoricalGibbsMetropolis)
+        assert isinstance(steps, CategoricalGibbsMetropolis)
 
     def test_binomial(self):
         """Test binomial distribution is assigned metropolis method."""
         with Model() as model:
             Binomial('x', 10, 0.5)
             steps = assign_step_methods(model, [])
-        self.assertIsInstance(steps, Metropolis)
+        assert isinstance(steps, Metropolis)
+
+
+@pytest.mark.xfail(condition=(theano.config.floatX == "float32"), reason="Fails on float32")
+class TestNutsCheckTrace(object):
+    def test_multiple_samplers(self):
+        with Model():
+            prob = Beta('prob', alpha=5, beta=3)
+            Binomial('outcome', n=1, p=prob)
+            with warnings.catch_warnings(record=True) as warns:
+                sample(3, tune=2, discard_tuned_samples=False,
+                       n_init=None)
+            messages = [warn.message.args[0] for warn in warns]
+            assert any("contains only 3" in msg for msg in messages)
+            assert all('boolean index did not' not in msg for msg in messages)
+
+    def test_bad_init(self):
+        with Model():
+            HalfNormal('a', sd=1, testval=-1, transform=None)
+            with pytest.raises(ValueError) as error:
+                sample(init=None)
+            error.match('Bad initial')
+
+    def test_linalg(self):
+        with Model():
+            a = Normal('a', shape=2)
+            a = tt.switch(a > 0, np.inf, a)
+            b = tt.slinalg.solve(floatX(np.eye(2)), a)
+            Normal('c', mu=b, shape=2)
+            with warnings.catch_warnings(record=True) as warns:
+                trace = sample(20, init=None, tune=5)
+            assert np.any(trace['diverging'])
+            assert any('diverging samples after tuning' in str(warn.message)
+                       for warn in warns)
+            assert any('contains only' in str(warn.message) for warn in warns)
+
+            with pytest.raises(SamplingError):
+                sample(20, init=None, nuts_kwargs={'on_error': 'raise'})

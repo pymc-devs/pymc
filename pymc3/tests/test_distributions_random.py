@@ -1,21 +1,25 @@
 from __future__ import division
 
-from nose import SkipTest
-from nose_parameterized import parameterized
-from nose.plugins.attrib import attr
+import pytest
 import numpy as np
+import numpy.testing as npt
 import scipy.stats as st
+from scipy import linalg
 import numpy.random as nr
+import theano
 
 import pymc3 as pm
 from .helpers import SeededTest
-from .test_distributions import (build_model, Domain, product, R, Rplus, Rplusbig, Rplusdunif, Unit, Nat,
-                                 NatSmall, I, Simplex, Vector, PdMatrix)
+from .test_distributions import (
+    build_model, Domain, product, R, Rplus, Rplusbig, Rplusdunif,
+    Unit, Nat, NatSmall, I, Simplex, Vector, PdMatrix,
+    PdMatrixChol, PdMatrixCholUpper
+)
 
 
 def pymc3_random(dist, paramdomains, ref_rand, valuedomain=Domain([0]),
-                 size=10000, alpha=0.05, fails=10):
-    model = build_model(dist, valuedomain, paramdomains)
+                 size=10000, alpha=0.05, fails=10, extra_args=None):
+    model = build_model(dist, valuedomain, paramdomains, extra_args)
     domains = paramdomains.copy()
     for pt in product(domains, n_samples=100):
         pt = pm.Point(pt, model=model)
@@ -66,8 +70,8 @@ class TestDrawValues(SeededTest):
         with pm.Model():
             y = pm.Normal('y1', mu=0., sd=1.)
             mu, tau = pm.distributions.draw_values([y.distribution.mu, y.distribution.tau])
-        self.assertAlmostEqual(mu, 0.)
-        self.assertAlmostEqual(tau, 1.)
+        npt.assert_almost_equal(mu, 0)
+        npt.assert_almost_equal(tau, 1)
 
     def test_draw_point_replacement(self):
         with pm.Model():
@@ -76,8 +80,8 @@ class TestDrawValues(SeededTest):
             y = pm.Normal('y', mu=mu, sd=sigma)
             mu2, tau2 = pm.distributions.draw_values([y.distribution.mu, y.distribution.tau],
                                                      point={'mu': 5., 'sigma': 2.})
-        self.assertAlmostEqual(mu2, 5.)
-        self.assertAlmostEqual(tau2, 1 / 2.**2)
+        npt.assert_almost_equal(mu2, 5)
+        npt.assert_almost_equal(tau2, 1 / 2.**2)
 
     def test_random_sample_returns_nd_array(self):
         with pm.Model():
@@ -85,16 +89,16 @@ class TestDrawValues(SeededTest):
             sigma = pm.Gamma('sigma', alpha=1., beta=1., transform=None)
             y = pm.Normal('y', mu=mu, sd=sigma)
             mu, tau = pm.distributions.draw_values([y.distribution.mu, y.distribution.tau])
-        self.assertIsInstance(mu, np.ndarray)
-        self.assertIsInstance(tau, np.ndarray)
+        assert isinstance(mu, np.ndarray)
+        assert isinstance(tau, np.ndarray)
 
 
 class BaseTestCases(object):
     class BaseTestCase(SeededTest):
         shape = 5
 
-        def __init__(self, *args, **kwargs):
-            super(BaseTestCases.BaseTestCase, self).__init__(*args, **kwargs)
+        def setup_method(self, *args, **kwargs):
+            super(BaseTestCases.BaseTestCase, self).setup_method(*args, **kwargs)
             self.model = pm.Model()
 
         def get_random_variable(self, shape, with_vector_params=False, name=None):
@@ -126,7 +130,7 @@ class BaseTestCases(object):
                 else:
                     expected = np.atleast_1d(size).tolist()
                 actual = np.atleast_1d(self.sample_random_variable(rv, size)).shape
-                self.assertSequenceEqual(expected, actual)
+                assert tuple(expected) == actual
 
         def test_scalar_shape(self):
             shape = 10
@@ -138,7 +142,7 @@ class BaseTestCases(object):
                     expected = np.atleast_1d(size).tolist()
                 expected.append(shape)
                 actual = np.atleast_1d(self.sample_random_variable(rv, size)).shape
-                self.assertSequenceEqual(expected, actual)
+                assert tuple(expected) == actual
 
         def test_parameters_1d_shape(self):
             rv = self.get_random_variable(self.shape, with_vector_params=True)
@@ -149,7 +153,7 @@ class BaseTestCases(object):
                     expected = np.atleast_1d(size).tolist()
                 expected.append(self.shape)
                 actual = self.sample_random_variable(rv, size).shape
-                self.assertSequenceEqual(expected, actual)
+                assert tuple(expected) == actual
 
         def test_broadcast_shape(self):
             broadcast_shape = (2 * self.shape, self.shape)
@@ -161,7 +165,7 @@ class BaseTestCases(object):
                     expected = np.atleast_1d(size).tolist()
                 expected.extend(broadcast_shape)
                 actual = np.atleast_1d(self.sample_random_variable(rv, size)).shape
-                self.assertSequenceEqual(expected, actual)
+                assert tuple(expected) == actual
 
         def test_different_shapes_and_sample_sizes(self):
             shapes = [(), (1,), (1, 1), (1, 2), (10, 10, 1), (10, 10, 2)]
@@ -183,7 +187,7 @@ class BaseTestCases(object):
                     a = self.sample_random_variable(rv, size).shape
                     expected.append(e)
                     actual.append(a)
-            self.assertSequenceEqual(expected, actual)
+            assert expected == actual
 
 
 class TestNormal(BaseTestCases.BaseTestCase):
@@ -205,9 +209,10 @@ class TestUniform(BaseTestCases.BaseTestCase):
     distribution = pm.Uniform
     params = {'lower': 0., 'upper': 1.}
 
+
 class TestTriangular(BaseTestCases.BaseTestCase):
     distribution = pm.Triangular
-    params = {'c': 0.5,'lower': 0., 'upper': 1.}
+    params = {'c': 0.5, 'lower': 0., 'upper': 1.}
 
 
 class TestWald(BaseTestCases.BaseTestCase):
@@ -285,6 +290,11 @@ class TestVonMises(BaseTestCases.BaseTestCase):
     params = {'mu': 0., 'kappa': 1.}
 
 
+class TestGumbel(BaseTestCases.BaseTestCase):
+    distribution = pm.Gumbel
+    params = {'mu': 0., 'beta': 1.}
+
+
 class TestBinomial(BaseTestCases.BaseTestCase):
     distribution = pm.Binomial
     params = {'n': 5, 'p': 0.5}
@@ -329,6 +339,9 @@ class TestZeroInflatedNegativeBinomial(BaseTestCases.BaseTestCase):
     distribution = pm.ZeroInflatedNegativeBinomial
     params = {'mu': 1., 'alpha': 1., 'psi': 0.3}
 
+class TestZeroInflatedBinomial(BaseTestCases.BaseTestCase):
+    distribution = pm.ZeroInflatedBinomial
+    params = {'n': 10, 'p': 0.6, 'psi': 0.3}
 
 class TestDiscreteUniform(BaseTestCases.BaseTestCase):
     distribution = pm.DiscreteUniform
@@ -348,8 +361,7 @@ class TestCategorical(BaseTestCases.BaseTestCase):
         return super(TestCategorical, self).get_random_variable(shape, with_vector_params=False, **kwargs)
 
 
-@attr('scalar_parameter_samples')
-class ScalarParameterSamples(SeededTest):
+class TestScalarParameterSamples(SeededTest):
     def test_bounded(self):
         # A bit crude...
         BoundedNormal = pm.Bound(pm.Normal, upper=0)
@@ -457,7 +469,7 @@ class ScalarParameterSamples(SeededTest):
     def test_flat(self):
         with pm.Model():
             f = pm.Flat('f')
-            with self.assertRaises(ValueError):
+            with pytest.raises(ValueError):
                 f.random(1)
 
     def test_binomial(self):
@@ -501,7 +513,7 @@ class ScalarParameterSamples(SeededTest):
         pymc3_random_discrete(pm.DiscreteWeibull, {'q': Unit, 'beta': Rplusdunif},
                               ref_rand=ref_rand)
 
-    @parameterized.expand([(2,), (3,), (4,)])
+    @pytest.mark.parametrize('s', [2, 3, 4])
     def test_categorical_random(self, s):
         def ref_rand(size, p):
             return nr.choice(np.arange(p.shape[0]), p=p, size=size)
@@ -515,9 +527,29 @@ class ScalarParameterSamples(SeededTest):
     def test_mv_normal(self):
         def ref_rand(size, mu, cov):
             return st.multivariate_normal.rvs(mean=mu, cov=cov, size=size)
+
+        def ref_rand_tau(size, mu, tau):
+            return ref_rand(size, mu, linalg.inv(tau))
+
+        def ref_rand_chol(size, mu, chol):
+            return ref_rand(size, mu, np.dot(chol, chol.T))
+
+        def ref_rand_uchol(size, mu, chol):
+            return ref_rand(size, mu, np.dot(chol.T, chol))
+
         for n in [2, 3]:
             pymc3_random(pm.MvNormal, {'mu': Vector(R, n), 'cov': PdMatrix(n)},
                          size=100, valuedomain=Vector(R, n), ref_rand=ref_rand)
+            pymc3_random(pm.MvNormal, {'mu': Vector(R, n), 'tau': PdMatrix(n)},
+                         size=100, valuedomain=Vector(R, n), ref_rand=ref_rand_tau)
+            pymc3_random(pm.MvNormal, {'mu': Vector(R, n), 'chol': PdMatrixChol(n)},
+                         size=100, valuedomain=Vector(R, n), ref_rand=ref_rand_chol)
+            pymc3_random(
+                pm.MvNormal,
+                {'mu': Vector(R, n), 'chol': PdMatrixCholUpper(n)},
+                size=100, valuedomain=Vector(R, n), ref_rand=ref_rand_uchol,
+                extra_args={'lower': False}
+            )
 
     def test_mv_t(self):
         def ref_rand(size, nu, Sigma, mu):
@@ -544,18 +576,46 @@ class ScalarParameterSamples(SeededTest):
             pymc3_random_discrete(pm.Multinomial, {'p': Simplex(n), 'n': Nat},
                                   valuedomain=Vector(Nat, n), size=100, ref_rand=ref_rand)
 
+    def test_gumbel(self):
+        def ref_rand(size, mu, beta):
+            return st.gumbel_r.rvs(loc=mu, scale=beta, size=size)
+        pymc3_random(pm.Gumbel, {'mu': R, 'beta': Rplus}, ref_rand=ref_rand)
+
+    @pytest.mark.xfail(condition=(theano.config.floatX == "float32"), reason="Fails on float32")
+    def test_interpolated(self):
+        for mu in R.vals:
+            for sd in Rplus.vals:
+                #pylint: disable=cell-var-from-loop
+                def ref_rand(size):
+                    return st.norm.rvs(loc=mu, scale=sd, size=size)
+
+                class TestedInterpolated (pm.Interpolated):
+
+                    def __init__(self, **kwargs):
+                        x_points = np.linspace(mu - 5 * sd, mu + 5 * sd, 100)
+                        pdf_points = st.norm.pdf(x_points, loc=mu, scale=sd)
+                        super(TestedInterpolated, self).__init__(
+                            x_points=x_points,
+                            pdf_points=pdf_points,
+                            **kwargs
+                        )
+
+                pymc3_random(TestedInterpolated, {}, ref_rand=ref_rand)
+
+    @pytest.mark.skip('Wishart random sampling not implemented.\n'
+                      'See https://github.com/pymc-devs/pymc3/issues/538')
     def test_wishart(self):
         # Wishart non current recommended for use:
         # https://github.com/pymc-devs/pymc3/issues/538
-        raise SkipTest('Wishart random sampling not implemented.\n'
-                       'See https://github.com/pymc-devs/pymc3/issues/538')
         # for n in [2, 3]:
         #     pymc3_random_discrete(Wisvaluedomainhart,
         #                           {'n': Domain([2, 3, 4, 2000]) , 'V': PdMatrix(n) },
         #                           valuedomain=PdMatrix(n),
         #                           ref_rand=lambda n=None, V=None, size=None: \
         #                           st.wishart(V, df=n, size=size))
+        pass
 
+    @pytest.mark.skip('LKJ random sampling not implemented yet.')
     def test_lkj(self):
         # TODO: generate random numbers.
-        raise SkipTest('LJK random sampling not implemented yet.')
+        pass

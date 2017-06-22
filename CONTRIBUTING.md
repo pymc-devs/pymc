@@ -19,7 +19,7 @@ Please verify that your issue is not being currently addressed by other issues o
 
 While issue reporting is valuable, we strongly encourage users who are inclined to do so to submit patches for new or existing issues via pull requests. This is particularly the case for simple fixes, such as typos or tweaks to documentation, which do not require a heavy investment of time and attention.
 
-Contributors are also encouraged to contribute new code to enhance PyMC's functionality, also via pull requests. Please consult the [PyMC3 documentation](https://pymc-devs.github.io/pymc3/) to ensure that any new contribution does not strongly overlap with existing functionality.
+Contributors are also encouraged to contribute new code to enhance PyMC3's functionality, also via pull requests. Please consult the [PyMC3 documentation](https://pymc-devs.github.io/pymc3/) to ensure that any new contribution does not strongly overlap with existing functionality.
 
 The preferred workflow for contributing to PyMC3 is to fork the [GitHUb repository](https://github.com/pymc-devs/pymc3/), clone it to your local machine, and develop on a feature branch.
 
@@ -27,11 +27,12 @@ The preferred workflow for contributing to PyMC3 is to fork the [GitHUb reposito
 
 1. Fork the [project repository](https://github.com/pymc-devs/pymc3/) by clicking on the 'Fork' button near the top right of the main repository page. This creates a copy of the code under your GitHub user account.
 
-2. Clone your fork of the PyMC3 repo from your GitHub account to your local disk:
+2. Clone your fork of the PyMC3 repo from your GitHub account to your local disk, and add the base repository as a remote:
 
    ```bash
    $ git clone git@github.com:<your GitHub handle>/pymc3.git
-   $ cd pymc3-learn
+   $ cd pymc3
+   $ git remote add upstream git@github.com:pymc-devs/pymc3.git
    ```
 
 3. Create a ``feature`` branch to hold your development changes:
@@ -42,20 +43,36 @@ The preferred workflow for contributing to PyMC3 is to fork the [GitHUb reposito
 
    Always use a ``feature`` branch. It's good practice to never routinely work on the ``master`` branch of any repository.
 
-4. Develop the feature on your feature branch. Add changed files using ``git add`` and then ``git commit`` files:
+4. Project requirements are in ``requirements.txt``, and libraries used for development are in ``requirements-dev.txt``.  To set up a development environment, you may (probably in a [virtual environment](http://python-guide-pt-br.readthedocs.io/en/latest/dev/virtualenvs/)) run:
+
+   ```bash
+   $ pip install -r requirements.txt
+   $ pip install -r requirements-dev.txt
+   ```
+
+Alternatively, there is a script to create a docker environment for development.  See: [Developing in Docker](#Developing-in-Docker).
+
+5. Develop the feature on your feature branch. Add changed files using ``git add`` and then ``git commit`` files:
 
    ```bash
    $ git add modified_files
    $ git commit
    ```
 
-   to record your changes in Git locally, then push the changes to your GitHub account with:
+   to record your changes locally.
+   After committing, it is a good idea to sync with the base repository in case there have been any changes:
+   ```bash
+   $ git fetch upstream
+   $ git rebase upstream/master
+   ```
+
+   Then push the changes to your GitHub account with:
 
    ```bash
    $ git push -u origin my-feature
    ```
 
-5. Go to the GitHub web page of your fork of the PyMC3 repo. Click the 'Pull request' button to send your changes to the project's maintainers fo review. This will send an email to the committers.
+6. Go to the GitHub web page of your fork of the PyMC3 repo. Click the 'Pull request' button to send your changes to the project's maintainers for review. This will send an email to the committers.
 
 ## Pull request checklist
 
@@ -74,14 +91,16 @@ We recommended that your contribution complies with the following guidelines bef
 
 * Documentation and high-coverage tests are necessary for enhancements to be accepted.
 
+* Run any of the pre-existing examples in ``docs/source/notebooks`` that contain analyses that would be affected by your changes to ensure that nothing breaks. This is a useful opportunity to not only check your work for bugs that might not be revealed by unit test, but also to show how your contribution improves PyMC3 for end users.
+
 You can also check for common programming errors with the following
 tools:
 
-* Code with good unittest **coverage** (at least 80%), check with:
+* Code with good test **coverage** (at least 80%), check with:
 
   ```bash
-  $ pip install nose coverage
-  $ nosetests --with-coverage path/to/tests_for_package
+  $ pip install pytest pytest-cov coverage
+  $ pytest --cov=pymc3 pymc3/tests/tests_for_package.py
   ```
 
 * No `pyflakes` warnings, check with:
@@ -94,8 +113,8 @@ tools:
 * No PEP8 warnings, check with:
 
   ```bash
-  $ pip install pep8
-  $ pep8 path/to/module.py
+  $ pip install pycodestyle
+  $ pycodestyle path/to/module.py
   ```
 
 * AutoPEP8 can help you fix some of the easy redundant errors:
@@ -110,9 +129,12 @@ tools:
 We have provided a Dockerfile which helps for isolating build problems, and local development.
 Install [Docker](https://www.docker.com/) for your operating system, clone this repo, then
 run `./scripts/start_container.sh`. This should start a local docker container called `pymc3`,
-as well as a [`jupyter`](http://jupyter.org/) notebook server running on port 8888. You will have to open
-a browser at `localhost:8888`. The repo will be running the code from your local copy of `pymc3`, 
-so it is good for development.  You may also use it to run the test suite, with
+as well as a [`jupyter`](http://jupyter.org/) notebook server running on port 8888. The
+notebook should be opened in your browser automatically (you can disable this by passing
+`--no-browser`). The repo will be running the code from your local copy of `pymc3`,
+so it is good for development.
+
+You may also use it to run the test suite, with
 
 ```bash
 $  docker exec -it pymc3  bash # logon to the container
@@ -122,6 +144,13 @@ $  . ./scripts/test.sh # takes a while!
 
 This should be quite close to how the tests run on TravisCI.
 
+If the container was started without opening the browser, you
+need the a token to work with the notebook. This token can be
+access with
+
+```
+docker exec -it pymc3 jupyter notebook list
+```
 
 ## Style guide
 

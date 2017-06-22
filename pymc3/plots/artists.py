@@ -1,8 +1,8 @@
 import numpy as np
-from scipy.stats import kde, mode
+from scipy.stats import mode
 
 from pymc3.stats import hpd
-from .utils import fast_kde
+from .kdeplot import fast_kde, kdeplot
 
 
 def _histplot_bins(column, bins=100):
@@ -16,13 +16,14 @@ def histplot_op(ax, data, alpha=.35):
     """Add a histogram for each column of the data to the provided axes."""
     hs = []
     for column in data.T:
-        hs.append(ax.hist(column, bins=_histplot_bins(column), alpha=alpha, align='left'))
+        hs.append(ax.hist(column, bins=_histplot_bins(
+                  column), alpha=alpha, align='left'))
     ax.set_xlim(np.min(data) - 0.5, np.max(data) + 0.5)
     return hs
 
 
 def kdeplot_op(ax, data, prior=None, prior_alpha=1, prior_style='--'):
-    """Geet a list of density and likelihood plots, if a prior is provided."""
+    """Get a list of density and likelihood plots, if a prior is provided."""
     ls = []
     pls = []
     errored = []
@@ -32,7 +33,8 @@ def kdeplot_op(ax, data, prior=None, prior_alpha=1, prior_style='--'):
             x = np.linspace(l, u, len(density))
             if prior is not None:
                 p = prior.logp(x).eval()
-                pls.append(ax.plot(x, np.exp(p), alpha=prior_alpha, ls=prior_style))
+                pls.append(ax.plot(x, np.exp(p),
+                                   alpha=prior_alpha, ls=prior_style))
 
             ls.append(ax.plot(x, density))
         except ValueError:
@@ -46,27 +48,8 @@ def kdeplot_op(ax, data, prior=None, prior_alpha=1, prior_style='--'):
     return ls, pls
 
 
-def kde2plot_op(ax, x, y, grid=200, **kwargs):
-    xmin = x.min()
-    xmax = x.max()
-    ymin = y.min()
-    ymax = y.max()
-    extent = kwargs.pop('extent', [])
-    if len(extent) != 4:
-        extent = [xmin, xmax, ymin, ymax]
-
-    grid = grid * 1j
-    X, Y = np.mgrid[xmin:xmax:grid, ymin:ymax:grid]
-    positions = np.vstack([X.ravel(), Y.ravel()])
-    values = np.vstack([x, y])
-    kernel = kde.gaussian_kde(values)
-    Z = np.reshape(kernel(positions).T, X.shape)
-
-    ax.imshow(np.rot90(Z), extent=extent, **kwargs)
-
-
 def plot_posterior_op(trace_values, ax, kde_plot, point_estimate, round_to,
-                      alpha_level, ref_val, rope, **kwargs):
+                      alpha_level, ref_val, rope, text_size=16, **kwargs):
     """Artist to draw posterior."""
     def format_as_percent(x, round_to=0):
         return '{0:.{1:d}f}%'.format(100 * x, round_to)
@@ -81,12 +64,12 @@ def plot_posterior_op(trace_values, ax, kde_plot, point_estimate, round_to,
         ax.axvline(ref_val, ymin=0.02, ymax=.75, color='g',
                    linewidth=4, alpha=0.65)
         ax.text(trace_values.mean(), plot_height * 0.6, ref_in_posterior,
-                size=14, horizontalalignment='center')
+                size=text_size, horizontalalignment='center')
 
     def display_rope(rope):
         ax.plot(rope, (plot_height * 0.02, plot_height * 0.02),
                 linewidth=20, color='r', alpha=0.75)
-        text_props = dict(size=16, horizontalalignment='center', color='r')
+        text_props = dict(size=text_size, horizontalalignment='center', color='r')
         ax.text(rope[0], plot_height * 0.14, rope[0], **text_props)
         ax.text(rope[1], plot_height * 0.14, rope[1], **text_props)
 
@@ -95,34 +78,37 @@ def plot_posterior_op(trace_values, ax, kde_plot, point_estimate, round_to,
             return
         if point_estimate not in ('mode', 'mean', 'median'):
             raise ValueError(
-                "Point Estimate should be in ('mode','mean','median', None)")
+                "Point Estimate should be in ('mode','mean','median')")
         if point_estimate == 'mean':
             point_value = trace_values.mean()
-            point_text = '{}={}'.format(
-                point_estimate, point_value.round(round_to))
         elif point_estimate == 'mode':
-            point_value = mode(trace_values.round(round_to))[0][0]
-            point_text = '{}={}'.format(
-                point_estimate, point_value.round(round_to))
+            if isinstance(trace_values[0], float):
+                density, l, u = fast_kde(trace_values)
+                x = np.linspace(l, u, len(density))
+                point_value = x[np.argmax(density)]
+            else:
+                point_value = mode(trace_values.round(round_to))[0][0]
         elif point_estimate == 'median':
             point_value = np.median(trace_values)
-            point_text = '{}={}'.format(
-                point_estimate, point_value.round(round_to))
+        point_text = '{point_estimate}={point_value:.{round_to}f}'.format(point_estimate=point_estimate,
+                                                                          point_value=point_value, round_to=round_to)
 
         ax.text(point_value, plot_height * 0.8, point_text,
-                size=16, horizontalalignment='center')
+                size=text_size, horizontalalignment='center')
 
     def display_hpd():
         hpd_intervals = hpd(trace_values, alpha=alpha_level)
         ax.plot(hpd_intervals, (plot_height * 0.02,
                                 plot_height * 0.02), linewidth=4, color='k')
-        text_props = dict(size=16, horizontalalignment='center')
         ax.text(hpd_intervals[0], plot_height * 0.07,
-                hpd_intervals[0].round(round_to), **text_props)
+                hpd_intervals[0].round(round_to),
+                size=text_size, horizontalalignment='right')
         ax.text(hpd_intervals[1], plot_height * 0.07,
-                hpd_intervals[1].round(round_to), **text_props)
+                hpd_intervals[1].round(round_to),
+                size=text_size, horizontalalignment='left')
         ax.text((hpd_intervals[0] + hpd_intervals[1]) / 2, plot_height * 0.2,
-                format_as_percent(1 - alpha_level) + ' HPD', **text_props)
+                format_as_percent(1 - alpha_level) + ' HPD',
+                size=text_size, horizontalalignment='center')
 
     def format_axes():
         ax.yaxis.set_ticklabels([])
@@ -133,17 +119,16 @@ def plot_posterior_op(trace_values, ax, kde_plot, point_estimate, round_to,
         ax.yaxis.set_ticks_position('none')
         ax.xaxis.set_ticks_position('bottom')
         ax.tick_params(axis='x', direction='out', width=1, length=3,
-                       color='0.5')
+                       color='0.5', labelsize=text_size)
         ax.spines['bottom'].set_color('0.5')
 
     def set_key_if_doesnt_exist(d, key, value):
         if key not in d:
             d[key] = value
 
-    if kde_plot:
-        density, l, u = fast_kde(trace_values)
-        x = np.linspace(l, u, len(density))
-        ax.plot(x, density, **kwargs)
+    if kde_plot and isinstance(trace_values[0], float):
+        kdeplot(trace_values, alpha=kwargs.pop('alpha', 0.35), ax=ax, **kwargs)
+
     else:
         set_key_if_doesnt_exist(kwargs, 'bins', 30)
         set_key_if_doesnt_exist(kwargs, 'edgecolor', 'w')

@@ -44,7 +44,7 @@ def autocorrplot(trace, varnames=None, max_lag=100, burn=0, plot_transformed=Fal
             yield varname
 
     if varnames is None:
-        varnames = get_default_varnames(trace, plot_transformed)
+        varnames = get_default_varnames(trace.varnames, plot_transformed)
 
     varnames = list(itertools.chain.from_iterable(map(_handle_array_varnames, varnames)))
 

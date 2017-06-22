@@ -436,6 +436,9 @@ def advi_minibatch(vars=None, start=None, model=None, n=5000, n_mcsamples=1,
       Weight Uncertainty in Neural Network. In Proceedings of the 32nd
       International Conference on Machine Learning (ICML-15) (pp. 1613-1622).
     """
+    import warnings
+    warnings.warn('Old ADVI interface is deprecated and be removed in future, use pm.ADVI instead',
+                  DeprecationWarning, stacklevel=2)
     if encoder_params is None:
         encoder_params = []
 

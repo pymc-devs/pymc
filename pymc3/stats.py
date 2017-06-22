@@ -7,6 +7,8 @@ import sys
 import warnings
 from collections import namedtuple
 from .model import modelcontext
+from .util import get_default_varnames
+from pymc3.theanof import floatX
 
 from scipy.misc import logsumexp
 from scipy.stats.distributions import pareto
@@ -58,18 +60,32 @@ def statfunc(f):
 @statfunc
 def autocorr(x, lag=1):
     """Sample autocorrelation at specified lag.
-    The autocorrelation is the correlation of x_i with x_{i+lag}.
-    """
 
+    Parameters
+    ----------
+    x : Numpy array
+        An array containing MCMC samples
+    lag : int
+        The desidered lag to take in consideration
+    """
     S = autocov(x, lag)
     return S[0, 1] / np.sqrt(np.prod(np.diag(S)))
 
 
 @statfunc
 def autocov(x, lag=1):
-    """
-    Sample autocovariance at specified lag.
-    The autocovariance is a 2x2 matrix with the variances of
+    """Sample autocovariance at specified lag.
+
+    Parameters
+    ----------
+    x : Numpy array
+        An array containing MCMC samples
+    lag : int
+        The desidered lag to take in consideration
+
+    Returns
+    -------
+    2x2 matrix with the variances of
     x[:-lag] and x[lag:] in the diagonal and the autocovariance
     on the off-diagonal.
     """
@@ -83,9 +99,19 @@ def autocov(x, lag=1):
 
 
 def dic(trace, model=None):
-    """
-    Calculate the deviance information criterion of the samples in trace from model
-    Read more theory here - in a paper by some of the leading authorities on Model Selection - dx.doi.org/10.1111/1467-9868.00353
+    """Calculate the deviance information criterion of the samples in trace from model
+    Read more theory here - in a paper by some of the leading authorities on Model Selection -
+    dx.doi.org/10.1111/1467-9868.00353
+
+    Parameters
+    ----------
+    trace : result of MCMC run
+    model : PyMC Model
+        Optional model. Default None, taken from context.
+
+    Returns
+    -------
+    `float` representing the deviance information criterion of the model and trace
     """
     model = modelcontext(model)
 
@@ -98,20 +124,42 @@ def dic(trace, model=None):
     return 2 * mean_deviance - deviance_at_mean
 
 
-def log_post_trace(trace, model):
-    '''
-    Calculate the elementwise log-posterior for the sampled trace.
-    '''
-    return np.vstack([obs.logp_elemwise(pt) for obs in model.observed_RVs] for pt in trace)
+def _log_post_trace(trace, model):
+    """Calculate the elementwise log-posterior for the sampled trace.
+
+    Parameters
+    ----------
+    trace : result of MCMC run
+    model : PyMC Model
+        Optional model. Default None, taken from context.
+
+    Returns
+    -------
+    logp : array of shape (n_samples, n_observations)
+        The contribution of the observations to the logp of the whole model.
+    """
+    def logp_vals_point(pt):
+        if len(model.observed_RVs) == 0:
+            return floatX(np.array([], dtype='d'))
+
+        logp_vals = []
+        for var in model.observed_RVs:
+            logp = var.logp_elemwise(pt)
+            if var.missing_values:
+                logp = logp[~var.observations.mask]
+            logp_vals.append(logp.ravel())
+
+        return np.concatenate(logp_vals)
+
+    logp = (logp_vals_point(pt) for pt in trace)
+    return np.stack(logp)
 
 
 def waic(trace, model=None, pointwise=False):
-    """
-    Calculate the widely available information criterion, its standard error
+    """Calculate the widely available information criterion, its standard error
     and the effective number of parameters of the samples in trace from model.
     Read more theory here - in a paper by some of the leading authorities on
     Model Selection - dx.doi.org/10.1111/1467-9868.00353
-
 
     Parameters
     ----------
@@ -121,7 +169,6 @@ def waic(trace, model=None, pointwise=False):
     pointwise: bool
         if True the pointwise predictive accuracy will be returned.
         Default False
-
 
     Returns
     -------
@@ -133,7 +180,9 @@ def waic(trace, model=None, pointwise=False):
     """
     model = modelcontext(model)
 
-    log_py = log_post_trace(trace, model)
+    log_py = _log_post_trace(trace, model)
+    if log_py.size == 0:
+        raise ValueError('The model does not contain observed values.')
 
     lppd_i = logsumexp(log_py, axis=0, b=1.0 / log_py.shape[0])
 
@@ -160,11 +209,9 @@ def waic(trace, model=None, pointwise=False):
 
 
 def loo(trace, model=None, pointwise=False):
-    """
-    Calculates leave-one-out (LOO) cross-validation for out of sample predictive
+    """Calculates leave-one-out (LOO) cross-validation for out of sample predictive
     model fit, following Vehtari et al. (2015). Cross-validation is computed using
     Pareto-smoothed importance sampling (PSIS).
-
 
     Parameters
     ----------
@@ -175,7 +222,6 @@ def loo(trace, model=None, pointwise=False):
         if True the pointwise predictive accuracy will be returned.
         Default False
 
-
     Returns
     -------
     namedtuple with the following elements:
@@ -184,10 +230,11 @@ def loo(trace, model=None, pointwise=False):
     p_loo: effective number of parameters
     loo_i: and array of the pointwise predictive accuracy, only if pointwise True
     """
-
     model = modelcontext(model)
 
-    log_py = log_post_trace(trace, model)
+    log_py = _log_post_trace(trace, model)
+    if log_py.size == 0:
+        raise ValueError('The model does not contain observed values.')
 
     # Importance ratios
     r = np.exp(-log_py)
@@ -249,7 +296,14 @@ def loo(trace, model=None, pointwise=False):
 def bpic(trace, model=None):
     """
     Calculates Bayesian predictive information criterion n of the samples in trace from model
-    Read more theory here - in a paper by some of the leading authorities on Model Selection - dx.doi.org/10.1111/1467-9868.00353
+    Read more theory here - in a paper by some of the leading authorities on Model Selection -
+    dx.doi.org/10.1111/1467-9868.00353
+
+    Parameters
+    ----------
+    trace : result of MCMC run
+    model : PyMC Model
+        Optional model. Default None, taken from context.
     """
     model = modelcontext(model)
 
@@ -263,8 +317,7 @@ def bpic(trace, model=None):
 
 
 def compare(traces, models, ic='WAIC'):
-    """
-    Compare models based on the widely available information criterion (WAIC)
+    """Compare models based on the widely available information criterion (WAIC)
     or leave-one-out (LOO) cross-validation.
     Read more theory here - in a paper by some of the leading authorities on
     Model Selection - dx.doi.org/10.1111/1467-9868.00353
@@ -283,13 +336,13 @@ def compare(traces, models, ic='WAIC'):
     A DataFrame, ordered from lowest to highest IC. The index reflects
     the order in which the models are passed to this function. The columns are:
     IC : Information Criteria (WAIC or LOO).
-        Smaller IC indicates higher out-of-sample predictive fit ("better" model). 
-        Default WAIC. 
+        Smaller IC indicates higher out-of-sample predictive fit ("better" model).
+        Default WAIC.
     pIC : Estimated effective number of parameters.
     dIC : Relative difference between each IC (WAIC or LOO)
     and the lowest IC (WAIC or LOO).
         It's always 0 for the top-ranked model.
-    weight: Akaike weights for each model. 
+    weight: Akaike weights for each model.
         This can be loosely interpreted as the probability of each model
         (among the compared model) given the data. Be careful that these
         weights are based on point estimates of the IC (uncertainty is ignored).
@@ -319,6 +372,7 @@ def compare(traces, models, ic='WAIC'):
     warns = np.zeros(len(models))
 
     c = 0
+
     def add_warns(*args):
         warns[c] = 1
 
@@ -348,26 +402,16 @@ def compare(traces, models, ic='WAIC'):
 
 def make_indices(dimensions):
     # Generates complete set of indices for given dimensions
-
     level = len(dimensions)
-
     if level == 1:
         return list(range(dimensions[0]))
-
     indices = [[]]
-
     while level:
-
         _indices = []
-
         for j in range(dimensions[level - 1]):
-
             _indices += [[j] + i for i in indices]
-
         indices = _indices
-
         level -= 1
-
     try:
         return [tuple(i) for i in indices]
     except TypeError:
@@ -380,7 +424,6 @@ def calc_min_interval(x, alpha):
 
     Assumes that x is sorted numpy array.
     """
-
     n = len(x)
     cred_mass = 1.0 - alpha
 
@@ -411,7 +454,6 @@ def hpd(x, alpha=0.05, transform=lambda x: x):
           Function to transform data (defaults to identity)
 
     """
-
     # Make a copy of trace
     x = transform(x.copy())
 
@@ -450,18 +492,21 @@ def hpd(x, alpha=0.05, transform=lambda x: x):
 
 @statfunc
 def mc_error(x, batches=5):
-    """
-    Calculates the simulation standard error, accounting for non-independent
-    samples. The trace is divided into batches, and the standard deviation of
-    the batch means is calculated.
+    R"""Calculates the simulation standard error, accounting for non-independent
+        samples. The trace is divided into batches, and the standard deviation of
+        the batch means is calculated.
 
-    :Arguments:
-      x : Numpy array
-          An array containing MCMC samples
-      batches : integer
-          Number of batches
-    """
+    Parameters
+    ----------
+    x : Numpy array
+              An array containing MCMC samples
+    batches : integer
+              Number of batches
 
+    Returns
+    -------
+    `float` representing the error
+    """
     if x.ndim > 1:
 
         dims = np.shape(x)
@@ -489,17 +534,21 @@ def mc_error(x, batches=5):
 
 @statfunc
 def quantiles(x, qlist=(2.5, 25, 50, 75, 97.5), transform=lambda x: x):
-    """Returns a dictionary of requested quantiles from array
+    R"""Returns a dictionary of requested quantiles from array
 
-    :Arguments:
-      x : Numpy array
-          An array containing MCMC samples
-      qlist : tuple or list
-          A list of desired quantiles (defaults to (2.5, 25, 50, 75, 97.5))
-      transform : callable
-          Function to transform data (defaults to identity)
+    Parameters
+    ----------
+    x : Numpy array
+        An array containing MCMC samples
+    qlist : tuple or list
+        A list of desired quantiles (defaults to (2.5, 25, 50, 75, 97.5))
+    transform : callable
+        Function to transform data (defaults to identity)
+
+    Returns
+    -------
+    `dictionary` with the quantiles {quantile: value}
     """
-
     # Make a copy of trace
     x = transform(x.copy())
 
@@ -521,8 +570,9 @@ def quantiles(x, qlist=(2.5, 25, 50, 75, 97.5), transform=lambda x: x):
         _log.warning("Too few elements for quantile calculation")
 
 
-def df_summary(trace, varnames=None, stat_funcs=None, extend=False, include_transformed=False,
-               alpha=0.05, batches=None):
+def df_summary(trace, varnames=None, transform=lambda x: x, stat_funcs=None, 
+               extend=False, include_transformed=False,
+               alpha=0.05, start=0, batches=None):
     R"""Create a data frame with summary statistics.
 
     Parameters
@@ -530,6 +580,8 @@ def df_summary(trace, varnames=None, stat_funcs=None, extend=False, include_tran
     trace : MultiTrace instance
     varnames : list
         Names of variables to include in summary
+    transform : callable
+        Function to transform data (defaults to identity)
     stat_funcs : None or list
         A list of functions used to calculate statistics. By default,
         the mean, standard deviation, simulation standard error, and
@@ -540,6 +592,7 @@ def df_summary(trace, varnames=None, stat_funcs=None, extend=False, include_tran
         corresponds to sampling iterations and the second axis
         represents the flattened variable (e.g., x__0, x__1,...). Each
         function should return either
+
         1) A `pandas.Series` instance containing the result of
            calculating the statistic along the first axis. The name
            attribute will be taken as the name of the statistic.
@@ -557,51 +610,52 @@ def df_summary(trace, varnames=None, stat_funcs=None, extend=False, include_tran
     alpha : float
         The alpha level for generating posterior intervals. Defaults
         to 0.05. This is only meaningful when `stat_funcs` is None.
+    start : int
+        The starting index from which to summarize (each) chain. Defaults
+        to zero.
     batches : None or int
         Batch size for calculating standard deviation for non-independent
         samples. Defaults to the smaller of 100 or the number of samples.
         This is only meaningful when `stat_funcs` is None.
 
-
     See also
     --------
     summary : Generate a pretty-printed summary of a trace.
-
 
     Returns
     -------
     `pandas.DataFrame` with summary statistics for each variable
 
-
     Examples
     --------
-    >>> import pymc3 as pm
-    >>> trace.mu.shape
-    (1000, 2)
-    >>> pm.df_summary(trace, ['mu'])
-               mean        sd  mc_error     hpd_5    hpd_95
-    mu__0  0.106897  0.066473  0.001818 -0.020612  0.231626
-    mu__1 -0.046597  0.067513  0.002048 -0.174753  0.081924
+    .. code:: ipython
+
+        >>> import pymc3 as pm
+        >>> trace.mu.shape
+        (1000, 2)
+        >>> pm.df_summary(trace, ['mu'])
+                   mean        sd  mc_error     hpd_5    hpd_95
+        mu__0  0.106897  0.066473  0.001818 -0.020612  0.231626
+        mu__1 -0.046597  0.067513  0.002048 -0.174753  0.081924
 
     Other statistics can be calculated by passing a list of functions.
 
-    >>> import pandas as pd
-    >>> def trace_sd(x):
-    ...     return pd.Series(np.std(x, 0), name='sd')
-    ...
-    >>> def trace_quantiles(x):
-    ...     return pd.DataFrame(pm.quantiles(x, [5, 50, 95]))
-    ...
-    >>> pm.df_summary(trace, ['mu'], stat_funcs=[trace_sd, trace_quantiles])
-                 sd         5        50        95
-    mu__0  0.066473  0.000312  0.105039  0.214242
-    mu__1  0.067513 -0.159097 -0.045637  0.062912
+    .. code:: ipython
+
+        >>> import pandas as pd
+        >>> def trace_sd(x):
+        ...     return pd.Series(np.std(x, 0), name='sd')
+        ...
+        >>> def trace_quantiles(x):
+        ...     return pd.DataFrame(pm.quantiles(x, [5, 50, 95]))
+        ...
+        >>> pm.df_summary(trace, ['mu'], stat_funcs=[trace_sd, trace_quantiles])
+                     sd         5        50        95
+        mu__0  0.066473  0.000312  0.105039  0.214242
+        mu__1  0.067513 -0.159097 -0.045637  0.062912
     """
     if varnames is None:
-        if include_transformed:
-            varnames = [name for name in trace.varnames]
-        else:
-            varnames = [name for name in trace.varnames if not name.endswith('_')]
+        varnames = get_default_varnames(trace.varnames, include_transformed=include_transformed)
 
     if batches is None:
         batches = min([100, len(trace)])
@@ -618,7 +672,7 @@ def df_summary(trace, varnames=None, stat_funcs=None, extend=False, include_tran
 
     var_dfs = []
     for var in varnames:
-        vals = trace.get_values(var, combine=True)
+        vals = transform(trace.get_values(var, burn=start, combine=True))
         flat_vals = vals.reshape(vals.shape[0], -1)
         var_df = pd.concat([f(flat_vals) for f in stat_funcs], axis=1)
         var_df.index = ttab.create_flat_names(var, vals.shape[1:])
@@ -663,13 +717,9 @@ def summary(trace, varnames=None, transform=lambda x: x, alpha=0.05, start=0,
       original variables (defaults to False).
     to_file : None or string
       File to write results to. If not given, print to stdout.
-
     """
     if varnames is None:
-        if include_transformed:
-            varnames = [name for name in trace.varnames]
-        else:
-            varnames = [name for name in trace.varnames if not name.endswith('_')]
+        varnames = get_default_varnames(trace.varnames, include_transformed=include_transformed)
 
     if batches is None:
         batches = min([100, len(trace)])

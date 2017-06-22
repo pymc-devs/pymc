@@ -4,6 +4,8 @@ import pandas as pd
 import pymc3 as pm
 import scipy.optimize as opt
 import theano.tensor as tt
+import pytest
+import theano
 
 from .helpers import SeededTest
 
@@ -12,8 +14,8 @@ matplotlib.use('Agg', warn=False)
 
 def get_city_data():
     """Helper to get city data"""
-    data = pd.read_csv(pm.get_data_file('pymc3.examples', 'data/srrs2.dat'))
-    cty_data = pd.read_csv(pm.get_data_file('pymc3.examples', 'data/cty.dat'))
+    data = pd.read_csv(pm.get_data('srrs2.dat'))
+    cty_data = pd.read_csv(pm.get_data('cty.dat'))
 
     data = data[data.state == 'MN']
 
@@ -28,10 +30,10 @@ def get_city_data():
     return data.merge(unique, 'inner', on='fips')
 
 
-class ARM5_4(SeededTest):
+class TestARM5_4(SeededTest):
     def build_model(self):
-        wells = pm.get_data_file('pymc3.examples', 'data/wells.dat')
-        data = pd.read_csv(wells, delimiter=u' ', index_col=u'id', dtype={u'switch': np.int8})
+        data = pd.read_csv(pm.get_data('wells.dat'),
+                           delimiter=u' ', index_col=u'id', dtype={u'switch': np.int8})
         data.dist /= 100
         data.educ /= 4
         col = data.columns
@@ -79,14 +81,14 @@ class TestARM12_6(SeededTest):
     def too_slow(self):
         model = self.build_model()
         start = {'groupmean': self.obs_means.mean(),
-                 'groupsd_interval_': 0,
-                 'sd_interval_': 0,
+                 'groupsd_interval__': 0,
+                 'sd_interval__': 0,
                  'means': self.obs_means,
                  'floor_m': 0.,
                  }
         with model:
             start = pm.find_MAP(start=start,
-                                vars=[model['groupmean'], model['sd_interval_'], model['floor_m']])
+                                vars=[model['groupmean'], model['sd_interval__'], model['floor_m']])
             step = pm.NUTS(model.vars, scaling=start)
             pm.sample(50, step=step, start=start)
 
@@ -117,8 +119,8 @@ class TestARM12_6Uranium(SeededTest):
         with model:
             start = pm.Point({
                 'groupmean': self.obs_means.mean(),
-                'groupsd_interval_': 0,
-                'sd_interval_': 0,
+                'groupsd_interval__': 0,
+                'sd_interval__': 0,
                 'means': np.array(self.obs_means),
                 'u_m': np.array([.72]),
                 'floor_m': 0.,
@@ -160,6 +162,7 @@ def build_disaster_model(masked=False):
     return model
 
 
+@pytest.mark.xfail(condition=(theano.config.floatX == "float32"), reason="Fails on float32")
 class TestDisasterModel(SeededTest):
     # Time series of recorded coal mining disasters in the UK from 1851 to 1962
     def test_disaster_model(self):
@@ -168,7 +171,7 @@ class TestDisasterModel(SeededTest):
             # Initial values for stochastic nodes
             start = {'early_mean': 2., 'late_mean': 3.}
             # Use slice sampler for means (other varibles auto-selected)
-            step = pm.Slice([model.early_mean_log_, model.late_mean_log_])
+            step = pm.Slice([model.early_mean_log__, model.late_mean_log__])
             tr = pm.sample(500, tune=50, start=start, step=step)
             pm.summary(tr)
 
@@ -178,7 +181,7 @@ class TestDisasterModel(SeededTest):
             # Initial values for stochastic nodes
             start = {'early_mean': 2., 'late_mean': 3.}
             # Use slice sampler for means (other varibles auto-selected)
-            step = pm.Slice([model.early_mean_log_, model.late_mean_log_])
+            step = pm.Slice([model.early_mean_log__, model.late_mean_log__])
             tr = pm.sample(500, tune=50, start=start, step=step)
             pm.summary(tr)
 
@@ -233,8 +236,8 @@ class TestLatentOccupancy(SeededTest):
     Created by Chris Fonnesbeck on 2008-07-28.
     Copyright (c) 2008 University of Otago. All rights reserved.
     """
-    def setUp(self):
-        super(TestLatentOccupancy, self).setUp()
+    def setup_method(self):
+        super(TestLatentOccupancy, self).setup_method()
         # Sample size
         n = 100
         # True mean count, given occupancy
@@ -242,7 +245,7 @@ class TestLatentOccupancy(SeededTest):
         # True occupancy
         pi = 0.4
         # Simulate some data data
-        self.y = (np.random.random(n) < pi) * np.random.poisson(lam=theta, size=n)
+        self.y = ((np.random.random(n) < pi) * np.random.poisson(lam=theta, size=n)).astype('int16')
 
     def build_model(self):
         with pm.Model() as model:
@@ -259,12 +262,13 @@ class TestLatentOccupancy(SeededTest):
     def test_run(self):
         model = self.build_model()
         with model:
-            start = {'psi': 0.5, 'z': (self.y > 0).astype(int), 'theta': 5}
-            step_one = pm.Metropolis([model.theta_interval_, model.psi_logodds_])
+            start = {'psi': 0.5, 'z': (self.y > 0).astype('int16'), 'theta': 5}
+            step_one = pm.Metropolis([model.theta_interval__, model.psi_logodds__])
             step_two = pm.BinaryMetropolis([model.z])
             pm.sample(50, step=[step_one, step_two], start=start)
 
 
+@pytest.mark.xfail(condition=(theano.config.floatX == "float32"), reason="Fails on float32 due to starting inf at starting logP")
 class TestRSV(SeededTest):
     '''
     This model estimates the population prevalence of respiratory syncytial virus

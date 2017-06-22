@@ -13,6 +13,7 @@ __all__ = [
 
 class LinearComponent(Model):
     """Creates linear component, y_est is accessible via attribute
+
     Parameters
     ----------
     name : str - name, associated with the linear component
@@ -88,6 +89,7 @@ class LinearComponent(Model):
 
 class GLM(LinearComponent):
     """Creates glm model, y_est is accessible via attribute
+
     Parameters
     ----------
     name : str - name, associated with the linear component
@@ -132,3 +134,5 @@ class GLM(LinearComponent):
         labels = x.design_info.column_names
         return cls(np.asarray(x), np.asarray(y)[:, 0], intercept=False, labels=labels,
                    priors=priors, vars=vars, family=family, name=name, model=model)
+
+glm = GLM

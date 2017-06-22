@@ -8,17 +8,21 @@ Howto
 =====
 
 .. toctree::
+   notebooks/api_quickstart.ipynb
    notebooks/sampler-stats.ipynb
    notebooks/Diagnosing_biased_Inference_with_Divergences.ipynb
    notebooks/posterior_predictive.ipynb
    notebooks/howto_debugging.ipynb
+   notebooks/PyMC3_tips_and_heuristic.ipynb
    notebooks/LKJ.ipynb
+   notebooks/live_sample_plots.ipynb
 
 Applied
 =======
 
 .. toctree::
    notebooks/BEST.ipynb
+   notebooks/multilevel_modeling.ipynb
    notebooks/stochastic_volatility.ipynb
    notebooks/probabilistic-matrix-factorization.ipynb
    notebooks/rugby_analytics.ipynb
@@ -67,4 +71,4 @@ Variational Inference
    notebooks/lda-advi-aevb.ipynb
    notebooks/bayesian_neural_network_advi.ipynb
    notebooks/convolutional_vae_keras_advi.ipynb
-
+   notebooks/bayesian_neural_network_opvi-advi.ipynb

@@ -1,5 +1,3 @@
-import unittest
-
 import pymc3 as pm
 import numpy as np
 import numpy.testing as npt
@@ -9,38 +7,37 @@ import theano.tensor as tt
 from .helpers import SeededTest
 
 
-class KnownMean(unittest.TestCase):
+class KnownMean(object):
     def test_mean(self):
         for varname, expected in self.means.items():
             samples = self.samples[varname]
             npt.assert_allclose(expected, samples.mean(0), self.rtol, self.atol)
 
 
-class KnownVariance(unittest.TestCase):
+class KnownVariance(object):
     def test_var(self):
         for varname, expected in self.variances.items():
             samples = self.samples[varname]
             npt.assert_allclose(expected, samples.var(0), self.rtol, self.atol)
 
 
-class KnownCDF(unittest.TestCase):
+class KnownCDF(object):
     ks_thin = 5
     alpha = 0.001
 
     def test_kstest(self):
         for varname, cdf in self.cdfs.items():
-            print('checking', varname)
             samples = self.samples[varname]
             if samples.ndim == 1:
                 t, p = stats.kstest(samples[::self.ks_thin], cdf=cdf)
-                self.assertLess(self.alpha, p)
+                assert self.alpha < p
             elif samples.ndim == 2:
                 pvals = []
                 for samples_, cdf_ in zip(samples.T, cdf):
                     t, p = stats.kstest(samples_[::self.ks_thin], cdf=cdf_)
                     pvals.append(p)
                 t, p = stats.combine_pvalues(pvals)
-                self.assertLess(self.alpha, p)
+                assert self.alpha < p
             else:
                 raise NotImplementedError()
 
@@ -126,13 +123,12 @@ class LKJCholeskyCovFixture(KnownCDF):
 
 class BaseSampler(SeededTest):
     @classmethod
-    def setUpClass(cls):
-        super(BaseSampler, cls).setUpClass()
+    def setup_class(cls):
+        super(BaseSampler, cls).setup_class()
         cls.model = cls.make_model()
         with cls.model:
             cls.step = cls.make_step()
-            cls.trace = pm.sample(
-                cls.n_samples, tune=cls.tune, step=cls.step, njobs=cls.chains)
+            cls.trace = pm.sample(cls.n_samples, tune=cls.tune, step=cls.step, njobs=cls.chains)
         cls.samples = {}
         for var in cls.model.unobserved_RVs:
             cls.samples[str(var)] = cls.trace.get_values(var, burn=cls.burn)
@@ -156,11 +152,10 @@ class NutsFixture(BaseSampler):
         if hasattr(cls, 'step_args'):
             args.update(cls.step_args)
         if 'scaling' not in args:
-            mu, stds, elbo = pm.advi(n=50000)
-            scaling = cls.model.dict_to_array(stds) ** 2
-            args['scaling'] = scaling
-            args['is_cov'] = True
-        return pm.NUTS(**args)
+            _, step = pm.sampling.init_nuts(n_init=10000, **args)
+        else:
+            step = pm.NUTS(**args)
+        return step
 
     def test_target_accept(self):
         accept = self.trace[self.burn:]['mean_tree_accept']

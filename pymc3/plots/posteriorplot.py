@@ -6,7 +6,7 @@ from .artists import plot_posterior_op
 from .utils import identity_transform, get_default_varnames
 
 
-def plot_posterior(trace, varnames=None, transform=identity_transform, figsize=None,
+def plot_posterior(trace, varnames=None, transform=identity_transform, figsize=None, text_size=16,
                    alpha_level=0.05, round_to=3, point_estimate='mean', rope=None,
                    ref_val=None, kde_plot=False, plot_transformed=False, ax=None, **kwargs):
     """Plot Posterior densities in style of John K. Kruschke book.
@@ -21,6 +21,8 @@ def plot_posterior(trace, varnames=None, transform=identity_transform, figsize=N
         Function to transform data (defaults to identity)
     figsize : figure size tuple
         If None, size is (12, num of variables * 2) inch
+    text_size : int
+        Text size of the point_estimates, axis ticks, and HPD (Default:16)
     alpha_level : float
         Defines range for High Posterior Density
     round_to : int
@@ -32,7 +34,8 @@ def plot_posterior(trace, varnames=None, transform=identity_transform, figsize=N
     ref_val: bool
         display the percentage below and above ref_val
     kde_plot: bool
-        if True plot a KDE instead of a histogram
+        if True plot a KDE instead of a histogram. For discrete variables this
+        argument is ignored.
     plot_transformed : bool
         Flag for plotting automatically transformed variables in addition to
         original variables (defaults to False).
@@ -43,7 +46,6 @@ def plot_posterior(trace, varnames=None, transform=identity_transform, figsize=N
         value of the argument kde_plot
         Some defaults are added, if not specified
         color='#87ceeb' will match the style in the book
-
 
     Returns
     -------
@@ -78,13 +80,13 @@ def plot_posterior(trace, varnames=None, transform=identity_transform, figsize=N
         if figsize is None:
             figsize = (6, 2)
         if ax is None:
-            fig, ax = plt.subplots()
+            fig, ax = plt.subplots(figsize=figsize)
         plot_posterior_op(transform(trace), ax=ax, kde_plot=kde_plot,
                           point_estimate=point_estimate, round_to=round_to,
-                          alpha_level=alpha_level, ref_val=ref_val, rope=rope, **kwargs)
+                          alpha_level=alpha_level, ref_val=ref_val, rope=rope, text_size=text_size, **kwargs)
     else:
         if varnames is None:
-            varnames = get_default_varnames(trace, plot_transformed)
+            varnames = get_default_varnames(trace.varnames, plot_transformed)
 
         trace_dict = get_trace_dict(trace, varnames)
 
@@ -95,8 +97,45 @@ def plot_posterior(trace, varnames=None, transform=identity_transform, figsize=N
             tr_values = transform(trace_dict[v])
             plot_posterior_op(tr_values, ax=a, kde_plot=kde_plot,
                               point_estimate=point_estimate, round_to=round_to,
-                              alpha_level=alpha_level, ref_val=ref_val, rope=rope, **kwargs)
+                              alpha_level=alpha_level, ref_val=ref_val, rope=rope, text_size=text_size, **kwargs)
             a.set_title(v)
 
         plt.tight_layout()
     return ax
+
+
+def plot_posterior_predictive_glm(trace, eval=None, lm=None, samples=30, **kwargs):
+    """Plot posterior predictive of a linear model.
+    :Arguments:
+        trace : <array>
+            Array of posterior samples with columns
+        eval : <array>
+            Array over which to evaluate lm
+        lm : function <default: linear function>
+            Function mapping parameters at different points
+            to their respective outputs.
+            input: point, sample
+            output: estimated value
+        samples : int <default=30>
+            How many posterior samples to draw.
+    Additional keyword arguments are passed to pylab.plot().
+    """
+    if lm is None:
+        lm = lambda x, sample: sample['Intercept'] + sample['x'] * x
+
+    if eval is None:
+        eval = np.linspace(0, 1, 100)
+
+    # Set default plotting arguments
+    if 'lw' not in kwargs and 'linewidth' not in kwargs:
+        kwargs['lw'] = .2
+    if 'c' not in kwargs and 'color' not in kwargs:
+        kwargs['c'] = 'k'
+
+    for rand_loc in np.random.randint(0, len(trace), samples):
+        rand_sample = trace[rand_loc]
+        plt.plot(eval, lm(eval, rand_sample), **kwargs)
+    # Make sure to not plot label multiple times
+        kwargs.pop('label', None)
+
+    plt.title('Posterior predictive')

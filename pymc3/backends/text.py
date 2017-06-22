@@ -21,6 +21,7 @@ import pandas as pd
 
 from ..backends import base, ndarray
 from . import tracetab as ttab
+from ..theanof import floatX
 
 
 class Text(base.BaseTrace):
@@ -104,6 +105,10 @@ class Text(base.BaseTrace):
     def _load_df(self):
         if self.df is None:
             self.df = pd.read_csv(self.filename)
+            for key, dtype in self.df.dtypes.iteritems():
+                if "float" in str(dtype):
+                    self.df[key] = floatX(self.df[key])
+
 
     def __len__(self):
         if self.filename is None:
@@ -197,5 +202,5 @@ def dump(name, trace, chains=None):
     for chain in chains:
         filename = os.path.join(name, 'chain-{}.csv'.format(chain))
         df = ttab.trace_to_dataframe(
-            trace, chains=chain, hide_transformed_vars=False)
+            trace, chains=chain, include_transformed=True)
         df.to_csv(filename, index=False)

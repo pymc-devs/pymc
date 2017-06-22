@@ -7,15 +7,50 @@ from .helpers import SeededTest
 from ..tests import backend_fixtures as bf
 from ..backends import ndarray
 from ..stats import df_summary, autocorr, hpd, mc_error, quantiles, make_indices
+from ..theanof import floatX_array
+import pymc3.stats as pmstats
 from numpy.random import random, normal
 from numpy.testing import assert_equal, assert_almost_equal, assert_array_almost_equal
 from scipy import stats as st
 
 
+def test_log_post_trace():
+    with pm.Model() as model:
+        pm.Normal('y')
+        trace = pm.sample()
+
+    logp = pmstats._log_post_trace(trace, model)
+    assert logp.shape == (len(trace), 0)
+
+    with pm.Model() as model:
+        pm.Normal('a')
+        pm.Normal('y', observed=np.zeros((2, 3)))
+        trace = pm.sample()
+
+    logp = pmstats._log_post_trace(trace, model)
+    assert logp.shape == (len(trace), 6)
+    npt.assert_allclose(logp, -0.5 * np.log(2 * np.pi), atol=1e-7)
+
+    with pm.Model() as model:
+        pm.Normal('a')
+        pm.Normal('y', observed=np.zeros((2, 3)))
+        data = pd.DataFrame(np.zeros((3, 4)))
+        data.values[1, 1] = np.nan
+        pm.Normal('y2', observed=data)
+        data = data.copy()
+        data.values[:] = np.nan
+        pm.Normal('y3', observed=data)
+        trace = pm.sample()
+
+    logp = pmstats._log_post_trace(trace, model)
+    assert logp.shape == (len(trace), 17)
+    npt.assert_allclose(logp, -0.5 * np.log(2 * np.pi), atol=1e-7)
+
+
 class TestStats(SeededTest):
     @classmethod
-    def setUpClass(cls):
-        super(TestStats, cls).setUpClass()
+    def setup_class(cls):
+        super(TestStats, cls).setup_class()
         cls.normal_sample = normal(0, 1, 200000)
 
     def test_autocorr(self):
@@ -116,7 +151,7 @@ class TestStats(SeededTest):
         mu = -2.1
         tau = 1.3
         with Model() as model:
-            Normal('x', mu, tau, testval=.1)
+            Normal('x', mu, tau, testval=floatX_array(.1))
             step = Metropolis(model.vars, np.diag([1.]), blocked=True)
             trace = pm.sample(100, step=step)
         pm.summary(trace)
@@ -125,7 +160,7 @@ class TestStats(SeededTest):
         mu = -2.1
         tau = 1.3
         with Model() as model:
-            Normal('x', mu, tau, shape=2, testval=[.1, .1])
+            Normal('x', mu, tau, shape=2, testval=floatX_array([.1, .1]))
             step = Metropolis(model.vars, np.diag([1.]), blocked=True)
             trace = pm.sample(100, step=step)
         pm.summary(trace)
@@ -135,7 +170,7 @@ class TestStats(SeededTest):
         tau = 1.3
         with Model() as model:
             Normal('x', mu, tau, shape=(2, 2),
-                   testval=np.tile(.1, (2, 2)))
+                   testval=floatX_array(np.tile(.1, (2, 2))))
             step = Metropolis(model.vars, np.diag([1.]), blocked=True)
             trace = pm.sample(100, step=step)
         pm.summary(trace)
@@ -377,5 +412,5 @@ class TestDfSummary(bf.ModelBackendSampledTestCase):
             step = Metropolis()
             trace = pm.sample(100, step=step)
         ds = df_summary(trace, batches=3, include_transformed=True)
-        npt.assert_equal(np.array(['x_interval_', 'x']),
+        npt.assert_equal(np.array(['x_interval__', 'x']),
                          ds.index)

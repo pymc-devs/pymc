@@ -24,6 +24,8 @@ from .continuous import ExGaussian
 from .continuous import VonMises
 from .continuous import SkewNormal
 from .continuous import Triangular
+from .continuous import Gumbel
+from .continuous import Interpolated
 
 from .discrete import Binomial
 from .discrete import BetaBinomial
@@ -35,6 +37,7 @@ from .discrete import ConstantDist
 from .discrete import Constant
 from .discrete import ZeroInflatedPoisson
 from .discrete import ZeroInflatedNegativeBinomial
+from .discrete import ZeroInflatedBinomial
 from .discrete import DiscreteUniform
 from .discrete import Geometric
 from .discrete import Categorical
@@ -104,6 +107,7 @@ __all__ = ['Uniform',
            'Constant',
            'ZeroInflatedPoisson',
            'ZeroInflatedNegativeBinomial',
+           'ZeroInflatedBinomial',
            'DiscreteUniform',
            'Geometric',
            'Categorical',
@@ -130,5 +134,7 @@ __all__ = ['Uniform',
            'Mixture',
            'NormalMixture',
            'Triangular',
-           'DiscreteWeibull'
+           'DiscreteWeibull',
+           'Gumbel',
+           'Interpolated'
            ]

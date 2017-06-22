@@ -9,8 +9,11 @@ from ..tuning import find_MAP
 from ..sampling import sample
 from ..diagnostics import effective_n, geweke, gelman_rubin
 from .test_examples import build_disaster_model
+import pytest
+import theano
 
 
+@pytest.mark.xfail(condition=(theano.config.floatX == "float32"), reason="Fails on float32")
 class TestGelmanRubin(SeededTest):
     good_ratio = 1.1
 
@@ -18,10 +21,10 @@ class TestGelmanRubin(SeededTest):
         model = build_disaster_model()
         with model:
             # Run sampler
-            step1 = Slice([model.early_mean_log_, model.late_mean_log_])
+            step1 = Slice([model.early_mean_log__, model.late_mean_log__])
             step2 = Metropolis([model.switchpoint])
-            start = {'early_mean': 7., 'late_mean': 1., 'switchpoint': 100}
-            ptrace = sample(n_samples, step=[step1, step2], start=start, njobs=2, 
+            start = {'early_mean': 7., 'late_mean': 5., 'switchpoint': 10}
+            ptrace = sample(n_samples, tune=0, step=[step1, step2], start=start, njobs=2,
                     progressbar=False, random_seed=[20090425, 19700903])
         return ptrace
 
@@ -29,20 +32,20 @@ class TestGelmanRubin(SeededTest):
         """Confirm Gelman-Rubin statistic is close to 1 for a reasonable number of samples."""
         n_samples = 1000
         rhat = gelman_rubin(self.get_ptrace(n_samples))
-        self.assertTrue(all(1 / self.good_ratio < r <
-                            self.good_ratio for r in rhat.values()))
+        assert all(1 / self.good_ratio < r <
+                            self.good_ratio for r in rhat.values())
 
     def test_bad(self):
         """Confirm Gelman-Rubin statistic is far from 1 for a small number of samples."""
-        n_samples = 10
+        n_samples = 5
         rhat = gelman_rubin(self.get_ptrace(n_samples))
-        self.assertFalse(all(1 / self.good_ratio < r <
-                             self.good_ratio for r in rhat.values()))
+        assert not all(1 / self.good_ratio < r <
+                             self.good_ratio for r in rhat.values())
 
     def test_right_shape_python_float(self, shape=None, test_shape=None):
         """Check Gelman-Rubin statistic shape is correct w/ python float"""
         n_jobs = 3
-        n_samples = 10
+        n_samples = 5
 
         with Model():
             if shape is not None:
@@ -53,7 +56,7 @@ class TestGelmanRubin(SeededTest):
             # start sampling at the MAP
             start = find_MAP()
             step = NUTS(scaling=start)
-            ptrace = sample(n_samples, step=step, start=start,
+            ptrace = sample(n_samples, tune=0, step=step, start=start,
                             njobs=n_jobs, random_seed=42)
 
         rhat = gelman_rubin(ptrace)['x']
@@ -62,10 +65,10 @@ class TestGelmanRubin(SeededTest):
             test_shape = shape
 
         if shape is None or shape == ():
-            self.assertTrue(isinstance(rhat, float))
+            assert isinstance(rhat, float)
         else:
-            self.assertTrue(isinstance(rhat, np.ndarray))
-            self.assertEqual(rhat.shape, test_shape)
+            assert isinstance(rhat, np.ndarray)
+            assert rhat.shape == test_shape
 
     def test_right_shape_scalar_tuple(self):
         """Check Gelman-Rubin statistic shape is correct w/ scalar as shape=()"""
@@ -84,15 +87,16 @@ class TestGelmanRubin(SeededTest):
         self.test_right_shape_python_float(shape=1, test_shape=(1,))
 
 
+@pytest.mark.xfail(condition=(theano.config.floatX == "float32"), reason="Fails on float32")
 class TestDiagnostics(SeededTest):
 
     def get_switchpoint(self, n_samples):
         model = build_disaster_model()
         with model:
             # Run sampler
-            step1 = Slice([model.early_mean_log_, model.late_mean_log_])
+            step1 = Slice([model.early_mean_log__, model.late_mean_log__])
             step2 = Metropolis([model.switchpoint])
-            trace = sample(n_samples, step=[step1, step2], progressbar=False, random_seed=1)
+            trace = sample(0, tune=n_samples, step=[step1, step2], progressbar=False, random_seed=1, discard_tuned_samples=False)
         return trace['switchpoint']
 
     def test_geweke_negative(self):
@@ -108,7 +112,7 @@ class TestDiagnostics(SeededTest):
                           last=last, intervals=n_intervals)
 
         # These z-scores should be larger, since there are not many samples.
-        self.assertGreater(max(abs(z_switch[:, 1])), 1)
+        assert max(abs(z_switch[:, 1])) > 1
 
     def test_geweke_positive(self):
         """Confirm Geweke diagnostic is smaller than 1 for a reasonable number of samples."""
@@ -116,11 +120,11 @@ class TestDiagnostics(SeededTest):
         n_intervals = 20
         switchpoint = self.get_switchpoint(n_samples)
 
-        with self.assertRaises(ValueError):
+        with pytest.raises(ValueError):
             # first and last must be between 0 and 1
             geweke(switchpoint, first=-0.3, last=1.1, intervals=n_intervals)
 
-        with self.assertRaises(ValueError):
+        with pytest.raises(ValueError):
             # first and last must add to < 1
             geweke(switchpoint, first=0.3, last=0.7, intervals=n_intervals)
 
@@ -134,13 +138,13 @@ class TestDiagnostics(SeededTest):
         z_scores = z_switch[:, 1]
 
         # Ensure `intervals` argument is honored
-        self.assertEqual(z_switch.shape[0], n_intervals)
+        assert z_switch.shape[0] == n_intervals
 
         # Start index should not be in the last <last>% of samples
         assert_array_less(start, (1 - last) * n_samples)
 
         # These z-scores should be small, since there are more samples.
-        self.assertLess(max(abs(z_scores)), 1)
+        assert max(abs(z_scores)) < 1
 
     def test_effective_n(self):
         """Check effective sample size is equal to number of samples when initializing with MAP"""
@@ -153,8 +157,9 @@ class TestDiagnostics(SeededTest):
             # start sampling at the MAP
             start = find_MAP()
             step = NUTS(scaling=start)
-            ptrace = sample(n_samples, step=step, start=start,
-                            njobs=n_jobs, random_seed=42)
+            ptrace = sample(0, tune=n_samples, step=step, start=start,
+                            njobs=n_jobs, discard_tuned_samples=False,
+                            random_seed=42)
 
         n_effective = effective_n(ptrace)['x']
         assert_allclose(n_effective, n_jobs * n_samples, 2)
@@ -174,8 +179,9 @@ class TestDiagnostics(SeededTest):
             # start sampling at the MAP
             start = find_MAP()
             step = NUTS(scaling=start)
-            ptrace = sample(n_samples, step=step, start=start,
-                            njobs=n_jobs, random_seed=42)
+            ptrace = sample(0, tune=n_samples, step=step, start=start,
+                            njobs=n_jobs, discard_tuned_samples=False,
+                            random_seed=42)
 
         n_effective = effective_n(ptrace)['x']
 
@@ -183,10 +189,10 @@ class TestDiagnostics(SeededTest):
             test_shape = shape
 
         if shape is None or shape == ():
-            self.assertTrue(isinstance(n_effective, float))
+            assert isinstance(n_effective, float)
         else:
-            self.assertTrue(isinstance(n_effective, np.ndarray))
-            self.assertEqual(n_effective.shape, test_shape)
+            assert isinstance(n_effective, np.ndarray)
+            assert n_effective.shape == test_shape
 
     def test_effective_n_right_shape_scalar_tuple(self):
         """Check effective sample size shape is correct w/ scalar as shape=()"""

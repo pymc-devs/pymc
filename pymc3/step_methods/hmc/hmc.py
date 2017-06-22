@@ -22,6 +22,7 @@ def unif(step_size, elow=.85, ehigh=1.15):
 
 
 class HamiltonianMC(BaseHMC):
+    name = 'hmc'
     default_blocked = True
 
     def __init__(self, vars=None, path_length=2., step_rand=unif, **kwargs):
@@ -63,7 +64,7 @@ class HamiltonianMC(BaseHMC):
         initial_energy = self.compute_energy(q, p)
         q, p, current_energy = self.leapfrog(q, p, e, n_steps)
         energy_change = initial_energy - current_energy
-        return metrop_select(energy_change, q, q0)
+        return metrop_select(energy_change, q, q0)[0]
 
     @staticmethod
     def competence(var):

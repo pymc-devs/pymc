@@ -30,7 +30,7 @@ def gen_random_state():
 
 def advi(vars=None, start=None, model=None, n=5000, accurate_elbo=False,
          optimizer=None, learning_rate=.001, epsilon=.1, mode=None,
-         tol_obj=0.01, eval_elbo=100, random_seed=None):
+         tol_obj=0.01, eval_elbo=100, random_seed=None, progressbar=True):
     """Perform automatic differentiation variational inference (ADVI).
 
     This function implements the meanfield ADVI, where the variational
@@ -88,6 +88,11 @@ def advi(vars=None, start=None, model=None, n=5000, accurate_elbo=False,
         Seed to initialize random state. None uses current seed.
     mode :  string or `Mode` instance.
         Compilation mode passed to Theano functions
+    progressbar : bool
+        Whether or not to display a progress bar in the command line. The
+        bar shows the percentage of completion, the sampling speed in
+        samples per second (SPS), the estimated remaining time until
+        completion ("expected time of arrival"; ETA), and the current ELBO.
 
     Returns
     -------
@@ -103,6 +108,10 @@ def advi(vars=None, start=None, model=None, n=5000, accurate_elbo=False,
         and Blei, D. M. (2016). Automatic Differentiation Variational
         Inference. arXiv preprint arXiv:1603.00788.
     """
+    import warnings
+    warnings.warn('Old ADVI interface and sample_vp is deprecated and will '
+                  'be removed in future, use pm.fit and pm.sample_approx instead',
+                  DeprecationWarning, stacklevel=2)
     model = pm.modelcontext(model)
     if start is None:
         start = model.test_point
@@ -150,7 +159,7 @@ def advi(vars=None, start=None, model=None, n=5000, accurate_elbo=False,
     # Optimization loop
     elbos = np.empty(n)
     divergence_flag = False
-    progress = trange(n)
+    progress = trange(n) if progressbar else range(n)
     try:
         uw_i, elbo_current = f()
         if np.isnan(elbo_current):
@@ -160,11 +169,14 @@ def advi(vars=None, start=None, model=None, n=5000, accurate_elbo=False,
             if np.isnan(e):
                 raise FloatingPointError('NaN occurred in ADVI optimization.')
             elbos[i] = e
-            if n < 10:
-                progress.set_description('ELBO = {:,.5g}'.format(elbos[i]))
-            elif i % (n // 10) == 0 and i > 0:
-                avg_elbo = infmean(elbos[i - n // 10:i])
-                progress.set_description('Average ELBO = {:,.5g}'.format(avg_elbo))
+
+            if progressbar:
+                if n < 10:
+                    progress.set_description('ELBO = {:,.5g}'.format(elbos[i]))
+                elif i % (n // 10) == 0 and i > 0:
+                    avg_elbo = infmean(elbos[i - n // 10:i])
+                    progress.set_description(
+                        'Average ELBO = {:,.5g}'.format(avg_elbo))
 
             if i % eval_elbo == 0:
                 elbo_prev = elbo_current
@@ -176,12 +188,10 @@ def advi(vars=None, start=None, model=None, n=5000, accurate_elbo=False,
 
                 if i > 0 and avg_delta < tol_obj:
                     pm._log.info('Mean ELBO converged.')
-                    converged = True
                     elbos = elbos[:(i + 1)]
                     break
                 elif i > 0 and med_delta < tol_obj:
                     pm._log.info('Median ELBO converged.')
-                    converged = True
                     elbos = elbos[:(i + 1)]
                     break
                 if i > 10 * eval_elbo:
@@ -206,7 +216,8 @@ def advi(vars=None, start=None, model=None, n=5000, accurate_elbo=False,
             avg_elbo = infmean(elbos[-n // 10:])
             pm._log.info('Finished [100%]: Average ELBO = {:,.5g}'.format(avg_elbo))
     finally:
-        progress.close()
+        if progressbar:
+            progress.close()
 
     if divergence_flag:
         pm._log.info('Evidence of divergence detected, inspect ELBO.')
@@ -329,7 +340,7 @@ def adagrad_optimizer(learning_rate, epsilon, n_win=10):
 
 def sample_vp(
         vparams, draws=1000, model=None, local_RVs=None, random_seed=None,
-        hide_transformed=True, progressbar=True):
+        include_transformed=False, progressbar=True):
     """Draw samples from variational posterior.
 
     Parameters
@@ -342,14 +353,18 @@ def sample_vp(
         Probabilistic model.
     random_seed : int or None
         Seed of random number generator.  None to use current seed.
-    hide_transformed : bool
-        If False, transformed variables are also sampled. Default is True.
+    include_transformed : bool
+        If True, transformed variables are also sampled. Default is False.
 
     Returns
     -------
     trace : pymc3.backends.base.MultiTrace
         Samples drawn from the variational posterior.
     """
+    import warnings
+    warnings.warn('Old ADVI interface and sample_vp is deprecated and will '
+                  'be removed in future, use pm.fit and pm.sample_approx instead',
+                  DeprecationWarning, stacklevel=2)
     model = pm.modelcontext(model)
 
     if isinstance(vparams, ADVIFit):
@@ -395,11 +410,8 @@ def sample_vp(
     f = theano.function([], samples)
 
     # Random variables which will be sampled
-    if hide_transformed:
-        vars_sampled = [v_ for v_ in model.unobserved_RVs
-                        if not str(v_).endswith('_')]
-    else:
-        vars_sampled = [v_ for v_ in model.unobserved_RVs]
+    vars_sampled = pm.util.get_default_varnames(model.unobserved_RVs,
+                                                include_transformed=include_transformed)
 
     varnames = [str(var) for var in model.unobserved_RVs]
     trace = pm.sampling.NDArray(model=model, vars=vars_sampled)

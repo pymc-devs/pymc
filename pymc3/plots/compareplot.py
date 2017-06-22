@@ -2,7 +2,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 
-def compare_plot(comp_df, ax=None):
+def compareplot(comp_df, ax=None):
     """
     Model comparison summary plot in the style of the one used in the book
     Statistical Rethinking by Richard McElreath.

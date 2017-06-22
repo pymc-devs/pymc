@@ -13,7 +13,7 @@ AUTHOR = 'John Salvatier and Christopher Fonnesbeck'
 AUTHOR_EMAIL = 'chris.fonnesbeck@vanderbilt.edu'
 URL = "http://github.com/pymc-devs/pymc3"
 LICENSE = "Apache License, Version 2.0"
-VERSION = "3.1.rc2"
+VERSION = "3.1rc3"
 
 classifiers = ['Development Status :: 5 - Production/Stable',
                'Programming Language :: Python',
@@ -38,7 +38,7 @@ with open(REQUIREMENTS_FILE) as f:
 if sys.version_info < (3, 4):
     install_reqs.append('enum34')
 
-test_reqs = ['nose']
+test_reqs = ['pytest', 'pytest-cov']
 if sys.version_info[0] == 2:  # py3 has mock in stdlib
     test_reqs.append('mock')
 
@@ -53,9 +53,9 @@ if __name__ == "__main__":
           url=URL,
           long_description=LONG_DESCRIPTION,
           packages=find_packages(),
-          package_data={'docs': ['*'], 'pymc3.examples': ['data/*']},
+          package_data={'docs': ['*']},
+          include_package_data=True,
           classifiers=classifiers,
           install_requires=install_reqs,
           tests_require=test_reqs,
-          extras_require={'edward': ['edward>=1.1.6']},
           test_suite='nose.collector')

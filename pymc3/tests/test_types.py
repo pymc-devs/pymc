@@ -1,6 +1,5 @@
 from copy import copy
 
-import unittest
 import theano
 
 from pymc3.sampling import sample
@@ -11,14 +10,14 @@ from pymc3.distributions import Normal
 import numpy as np
 
 
-class TestType(unittest.TestCase):
+class TestType(object):
     samplers = (Metropolis, Slice, HamiltonianMC, NUTS)
 
-    def setUp(self):
+    def setup_method(self):
         # save theano config object
         self.theano_config = copy(theano.config)
 
-    def tearDown(self):
+    def teardown_method(self):
         # restore theano config
         theano.config = self.theano_config
 

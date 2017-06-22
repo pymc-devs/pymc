@@ -1,5 +1,5 @@
 import matplotlib
-matplotlib.use('Agg', warn=False)
+matplotlib.use('Agg', warn=False)  # noqa
 
 import numpy as np
 import pymc3 as pm
@@ -13,6 +13,8 @@ from ..sampling import sample
 from ..tuning.scaling import find_hessian
 from .test_examples import build_disaster_model
 from pymc3.examples import arbitrary_stochastic as asmod
+import theano
+import pytest
 
 
 def test_plots():
@@ -21,7 +23,7 @@ def test_plots():
         start = model.test_point
         h = find_hessian(start)
         step = Metropolis(model.vars, h)
-        trace = sample(3000, step=step, start=start)
+        trace = sample(3000, tune=0, step=step, start=start)
 
         traceplot(trace)
         forestplot(trace)
@@ -36,7 +38,7 @@ def test_plots_categorical():
         start = model.test_point
         h = find_hessian(start)
         step = Metropolis(model.vars, h)
-        trace = sample(3000, step=step, start=start)
+        trace = sample(3000, tune=0, step=step, start=start)
 
         traceplot(trace)
 
@@ -47,20 +49,20 @@ def test_plots_multidimensional():
     with model:
         h = np.diag(find_hessian(start))
         step = Metropolis(model.vars, h)
-        trace = sample(3000, step=step, start=start)
+        trace = sample(3000, tune=0, step=step, start=start)
 
         traceplot(trace)
         plot_posterior(trace)
 
-
+@pytest.mark.xfail(condition=(theano.config.floatX == "float32"), reason="Fails on GPU due to njobs=2")
 def test_multichain_plots():
     model = build_disaster_model()
     with model:
         # Run sampler
-        step1 = Slice([model.early_mean_log_, model.late_mean_log_])
+        step1 = Slice([model.early_mean_log__, model.late_mean_log__])
         step2 = Metropolis([model.switchpoint])
         start = {'early_mean': 2., 'late_mean': 3., 'switchpoint': 50}
-        ptrace = sample(1000, step=[step1, step2], start=start, njobs=2)
+        ptrace = sample(1000, tune=0, step=[step1, step2], start=start, njobs=2)
 
     forestplot(ptrace, varnames=['early_mean', 'late_mean'])
     autocorrplot(ptrace, varnames=['switchpoint'])
@@ -84,7 +86,7 @@ def test_plots_transformed():
     with pm.Model() as model:
         pm.Uniform('x', 0, 1)
         step = pm.Metropolis()
-        trace = pm.sample(100, step=step)
+        trace = pm.sample(100, tune=0, step=step)
 
     assert traceplot(trace).shape == (1, 2)
     assert traceplot(trace, plot_transformed=True).shape == (2, 2)

@@ -8,12 +8,14 @@ import theano.sparse as sparse
 from theano import theano, tensor as tt
 from theano.tensor.var import TensorVariable
 
+from pymc3.theanof import set_theano_conf
 import pymc3 as pm
 from pymc3.math import flatten_list
 from .memoize import memoize
 from .theanof import gradient, hessian, inputvars, generator
 from .vartypes import typefilter, discrete_types, continuous_types, isgenerator
 from .blocking import DictToArrayBijection, ArrayOrdering
+from .util import get_transformed_name
 
 __all__ = [
     'Model', 'Factor', 'compilef', 'fn', 'fastfn', 'modelcontext',
@@ -107,10 +109,16 @@ class Context(object):
 
     def __enter__(self):
         type(self).get_contexts().append(self)
+        # self._theano_config is set in Model.__new__
+        if hasattr(self, '_theano_config'):
+            self._old_theano_config = set_theano_conf(self._theano_config)
         return self
 
     def __exit__(self, typ, value, traceback):
         type(self).get_contexts().pop()
+        # self._theano_config is set in Model.__new__
+        if hasattr(self, '_old_theano_config'):
+            set_theano_conf(self._old_theano_config)
 
     @classmethod
     def get_contexts(cls):
@@ -179,19 +187,6 @@ class Factor(object):
             return tt.sum(self.logp_elemwiset) * self.scaling
         else:
             return tt.sum(self.logp_elemwiset)
-
-    @property
-    def scaling(self):
-        total_size = getattr(self, 'total_size', None)
-        if total_size is None:
-            coef = tt.constant(1)
-        else:
-            if self.logp_elemwiset.ndim >= 1:
-                denom = self.logp_elemwiset.shape[0]
-            else:
-                denom = 1
-            coef = tt.as_tensor(total_size) / denom
-        return coef
 
 
 class InitContextMeta(type):
@@ -300,6 +295,11 @@ class Model(six.with_metaclass(InitContextMeta, Context, Factor)):
         will be passed to the parent instance. So that 'nested' model
         contributes to the variables and likelihood factors of
         parent model.
+    theano_config : dict, default=None
+        A dictionary of theano config values that should be set
+        temporarily in the model context. See the documentation
+        of theano for a complete list. Set `compute_test_value` to
+        `raise` if it is None.
 
     Examples
     --------
@@ -366,9 +366,13 @@ class Model(six.with_metaclass(InitContextMeta, Context, Factor)):
             instance._parent = cls.get_contexts()[-1]
         else:
             instance._parent = None
+        theano_config = kwargs.get('theano_config', None)
+        if theano_config is None or 'compute_test_value' not in theano_config:
+            theano_config = {'compute_test_value': 'raise'}
+        instance._theano_config = theano_config
         return instance
 
-    def __init__(self, name='', model=None):
+    def __init__(self, name='', model=None, theano_config=None):
         self.name = name
         if self.parent is not None:
             self.named_vars = treedict(parent=self.parent.named_vars)
@@ -421,7 +425,7 @@ class Model(six.with_metaclass(InitContextMeta, Context, Factor)):
 
     @property
     def ndim(self):
-        return self.dict_to_array(self.test_point).shape[0]
+        return sum(var.dsize for var in self.free_RVs)
 
     @property
     @memoize
@@ -438,15 +442,17 @@ class Model(six.with_metaclass(InitContextMeta, Context, Factor)):
     @memoize
     def logpt(self):
         """Theano scalar of log-probability of the model"""
-        factors = [var.logpt for var in self.basic_RVs] + self.potentials
-        return tt.add(*map(tt.sum, factors))
+        with self:
+            factors = [var.logpt for var in self.basic_RVs] + self.potentials
+            return tt.add(*map(tt.sum, factors))
 
     @property
     def varlogpt(self):
         """Theano scalar of log-probability of the unobserved random variables
            (excluding deterministic)."""
-        factors = [var.logpt for var in self.vars]
-        return tt.add(*map(tt.sum, factors))
+        with self:
+            factors = [var.logpt for var in self.vars]
+            return tt.add(*map(tt.sum, factors))
 
     @property
     def vars(self):
@@ -504,24 +510,28 @@ class Model(six.with_metaclass(InitContextMeta, Context, Factor)):
         name = self.name_for(name)
         if data is None:
             if getattr(dist, "transform", None) is None:
-                var = FreeRV(name=name, distribution=dist,
-                             total_size=total_size, model=self)
+                with self:
+                    var = FreeRV(name=name, distribution=dist,
+                                 total_size=total_size, model=self)
                 self.free_RVs.append(var)
             else:
-                var = TransformedRV(name=name, distribution=dist,
-                                    transform=dist.transform,
-                                    total_size=total_size,
-                                    model=self)
+                with self:
+                    var = TransformedRV(name=name, distribution=dist,
+                                        transform=dist.transform,
+                                        total_size=total_size,
+                                        model=self)
                 pm._log.debug('Applied {transform}-transform to {name}'
                               ' and added transformed {orig_name} to model.'.format(
                                 transform=dist.transform.name,
                                 name=name,
-                                orig_name='{}_{}_'.format(name, dist.transform.name)))
+                                orig_name=get_transformed_name(name, dist.transform)))
                 self.deterministics.append(var)
+                self.add_random_variable(var)
                 return var
         elif isinstance(data, dict):
-            var = MultiObservedRV(name=name, data=data, distribution=dist,
-                                  total_size=total_size, model=self)
+            with self:
+                var = MultiObservedRV(name=name, data=data, distribution=dist,
+                                      total_size=total_size, model=self)
             self.observed_RVs.append(var)
             if var.missing_values:
                 self.free_RVs += var.missing_values
@@ -529,9 +539,10 @@ class Model(six.with_metaclass(InitContextMeta, Context, Factor)):
                 for v in var.missing_values:
                     self.named_vars[v.name] = v
         else:
-            var = ObservedRV(name=name, data=data,
-                             distribution=dist,
-                             total_size=total_size, model=self)
+            with self:
+                var = ObservedRV(name=name, data=data,
+                                 distribution=dist,
+                                 total_size=total_size, model=self)
             self.observed_RVs.append(var)
             if var.missing_values:
                 self.free_RVs.append(var.missing_values)
@@ -598,11 +609,12 @@ class Model(six.with_metaclass(InitContextMeta, Context, Factor)):
         -------
         Compiled Theano function
         """
-        return theano.function(self.vars, outs,
-                               allow_input_downcast=True,
-                               on_unused_input='ignore',
-                               accept_inplace=True,
-                               mode=mode, *args, **kwargs)
+        with self:
+            return theano.function(self.vars, outs,
+                                   allow_input_downcast=True,
+                                   on_unused_input='ignore',
+                                   accept_inplace=True,
+                                   mode=mode, *args, **kwargs)
 
     def fn(self, outs, mode=None, *args, **kwargs):
         """Compiles a Theano function which returns the values of `outs`
@@ -771,6 +783,63 @@ class LoosePointFunc(object):
 compilef = fastfn
 
 
+def _get_scaling(total_size, shape, ndim):
+    """
+    Gets scaling constant for logp
+
+    Parameters
+    ----------
+    total_size : int or list[int]
+    shape : shape
+        shape to scale
+    ndim : int
+        ndim hint
+
+    Returns
+    -------
+    scalar
+    """
+    if total_size is None:
+        coef = pm.floatX(1)
+    elif isinstance(total_size, int):
+        if ndim >= 1:
+            denom = shape[0]
+        else:
+            denom = 1
+        coef = pm.floatX(total_size) / pm.floatX(denom)
+    elif isinstance(total_size, (list, tuple)):
+        if not all(isinstance(i, int) for i in total_size if (i is not Ellipsis and i is not None)):
+            raise TypeError('Unrecognized `total_size` type, expected '
+                            'int or list of ints, got %r' % total_size)
+        if Ellipsis in total_size:
+            sep = total_size.index(Ellipsis)
+            begin = total_size[:sep]
+            end = total_size[sep+1:]
+            if Ellipsis in end:
+                raise ValueError('Double Ellipsis in `total_size` is restricted, got %r' % total_size)
+        else:
+            begin = total_size
+            end = []
+        if (len(begin) + len(end)) > ndim:
+            raise ValueError('Length of `total_size` is too big, '
+                             'number of scalings is bigger that ndim, got %r' % total_size)
+        elif (len(begin) + len(end)) == 0:
+            return pm.floatX(1)
+        if len(end) > 0:
+            shp_end = shape[-len(end):]
+        else:
+            shp_end = np.asarray([])
+        shp_begin = shape[:len(begin)]
+        begin_coef = [pm.floatX(t) / shp_begin[i] for i, t in enumerate(begin) if t is not None]
+        end_coef = [pm.floatX(t) / shp_end[i] for i, t in enumerate(end) if t is not None]
+        coefs = begin_coef + end_coef
+        coef = tt.prod(coefs)
+    else:
+        raise TypeError('Unrecognized `total_size` type, expected '
+                        'int or list of ints, got %r' % total_size)
+    return tt.as_tensor(pm.floatX(coef))
+
+
 class FreeRV(Factor, TensorVariable):
     """Unobserved random variable that a model is specified in terms of."""
 
@@ -800,10 +869,20 @@ class FreeRV(Factor, TensorVariable):
             self.logp_elemwiset = distribution.logp(self)
             self.total_size = total_size
             self.model = model
+            self.scaling = _get_scaling(total_size, self.shape, self.ndim)
 
             incorporate_methods(source=distribution, destination=self,
                                 methods=['random'],
                                 wrapper=InstanceMethod)
+
+    def _repr_latex_(self, name=None, dist=None):
+        if self.distribution is None:
+            return None
+        if name is None:
+            name = self.name
+        if dist is None:
+            dist = self.distribution
+        return self.distribution._repr_latex_(name=name, dist=dist)
 
     @property
     def init_value(self):
@@ -814,19 +893,20 @@ class FreeRV(Factor, TensorVariable):
 def pandas_to_array(data):
     if hasattr(data, 'values'):  # pandas
         if data.isnull().any().any():  # missing values
-            return np.ma.MaskedArray(data.values, data.isnull().values)
+            ret = np.ma.MaskedArray(data.values, data.isnull().values)
         else:
-            return data.values
+            ret = data.values
     elif hasattr(data, 'mask'):
-        return data
+        ret = data
     elif isinstance(data, theano.gof.graph.Variable):
-        return data
+        ret = data
     elif sps.issparse(data):
-        return data
+        ret = data
     elif isgenerator(data):
-        return generator(data)
+        ret = generator(data)
     else:
-        return np.asarray(data)
+        ret = np.asarray(data)
+    return pm.smartfloatX(ret)
 
 
 def as_tensor(data, name, model, distribution):
@@ -835,7 +915,7 @@ def as_tensor(data, name, model, distribution):
 
     if hasattr(data, 'mask'):
         from .distributions import NoDistribution
-        testval = distribution.testval or data.mean().astype(dtype)
+        testval = np.broadcast_to(distribution.default(), data.shape)[data.mask]
         fakedist = NoDistribution.dist(shape=data.mask.sum(), dtype=dtype,
                                        testval=testval, parent_dist=distribution)
         missing_values = FreeRV(name=name + '_missing', distribution=fakedist,
@@ -879,13 +959,14 @@ class ObservedRV(Factor, TensorVariable):
             data = pandas_to_array(data)
             type = TensorType(distribution.dtype, data.shape)
 
-        super(TensorVariable, self).__init__(type, None, None, name)
+        self.observations = data
+
+        super(ObservedRV, self).__init__(type, owner, index, name)
 
         if distribution is not None:
             data = as_tensor(data, name, model, distribution)
 
             self.missing_values = data.missing_values
-
             self.logp_elemwiset = distribution.logp(data)
             self.total_size = total_size
             self.model = model
@@ -894,8 +975,17 @@ class ObservedRV(Factor, TensorVariable):
             # make this RV a view on the combined missing/nonmissing array
             theano.gof.Apply(theano.compile.view_op,
                              inputs=[data], outputs=[self])
-
             self.tag.test_value = theano.compile.view_op(data).tag.test_value
+            self.scaling = _get_scaling(total_size, data.shape, data.ndim)
+
+    def _repr_latex_(self, name=None, dist=None):
+        if self.distribution is None:
+            return None
+        if name is None:
+            name = self.name
+        if dist is None:
+            dist = self.distribution
+        return self.distribution._repr_latex_(name=name, dist=dist)
 
     @property
     def init_value(self):
@@ -930,6 +1020,7 @@ class MultiObservedRV(Factor):
         self.total_size = total_size
         self.model = model
         self.distribution = distribution
+        self.scaling = _get_scaling(total_size, self.logp_elemwiset.shape, self.logp_elemwiset.ndim)
 
 
 def Deterministic(name, var, model=None):
@@ -942,7 +1033,7 @@ def Deterministic(name, var, model=None):
 
     Returns
     -------
-    n : var but with name name
+    var : var, with name attribute
     """
     model = modelcontext(model)
     var.name = model.name_for(name)
@@ -966,6 +1057,7 @@ def Potential(name, var, model=None):
     model = modelcontext(model)
     var.name = model.name_for(name)
     model.potentials.append(var)
+    model.add_random_variable(var)
     return var
 
 
@@ -990,10 +1082,14 @@ class TransformedRV(TensorVariable):
             type = distribution.type
         super(TransformedRV, self).__init__(type, owner, index, name)
 
+        self.transformation = transform
+
         if distribution is not None:
             self.model = model
+            self.distribution = distribution
 
-            transformed_name = "{}_{}_".format(name, transform.name)
+            transformed_name = get_transformed_name(name, transform)
+
             self.transformed = model.Var(
                 transformed_name, transform.apply(distribution), total_size=total_size)
 
@@ -1002,10 +1098,19 @@ class TransformedRV(TensorVariable):
             theano.Apply(theano.compile.view_op, inputs=[
                          normalRV], outputs=[self])
             self.tag.test_value = normalRV.tag.test_value
-
+            self.scaling = _get_scaling(total_size, self.shape, self.ndim)
             incorporate_methods(source=distribution, destination=self,
                                 methods=['random'],
                                 wrapper=InstanceMethod)
+
+    def _repr_latex_(self, name=None, dist=None):
+        if self.distribution is None:
+            return None
+        if name is None:
+            name = self.name
+        if dist is None:
+            dist = self.distribution
+        return self.distribution._repr_latex_(name=name, dist=dist)
 
     @property
     def init_value(self):
@@ -1028,7 +1133,3 @@ def all_continuous(vars):
         return False
     else:
         return True
-
-# theano stuff
-theano.config.warn.sum_div_dimshuffle_bug = False
-theano.config.compute_test_value = 'raise'

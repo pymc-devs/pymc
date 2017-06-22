@@ -1,9 +1,9 @@
-from nose.plugins.attrib import attr
-
+import pytest
 from . import sampler_fixtures as sf
+import theano
 
-
-class NUTSUniform(sf.NutsFixture, sf.UniformFixture):
+@pytest.mark.xfail(condition=(theano.config.floatX == "float32"), reason="Fails on float32")
+class TestNUTSUniform(sf.NutsFixture, sf.UniformFixture):
     n_samples = 10000
     tune = 1000
     burn = 1000
@@ -13,88 +13,85 @@ class NUTSUniform(sf.NutsFixture, sf.UniformFixture):
     atol = 0.05
 
 
-class MetropolisUniform(sf.MetropolisFixture, sf.UniformFixture):
+class TestMetropolisUniform(sf.MetropolisFixture, sf.UniformFixture):
     n_samples = 50000
     tune = 10000
-    burn = 10000
+    burn = 0
     chains = 4
     min_n_eff = 10000
     rtol = 0.1
     atol = 0.05
 
 
-class SliceUniform(sf.SliceFixture, sf.UniformFixture):
+class TestSliceUniform(sf.SliceFixture, sf.UniformFixture):
     n_samples = 10000
     tune = 1000
-    burn = 1000
+    burn = 0
     chains = 4
     min_n_eff = 5000
     rtol = 0.1
     atol = 0.05
 
 
-@attr('extra')
-class NUTSUniform2(NUTSUniform):
+class TestNUTSUniform2(TestNUTSUniform):
     step_args = {'target_accept': 0.95, 'integrator': 'two-stage'}
 
 
-class NUTSUniform3(NUTSUniform):
+class TestNUTSUniform3(TestNUTSUniform):
     step_args = {'target_accept': 0.80, 'integrator': 'two-stage'}
 
 
-@attr('extra')
-class NUTSUniform4(NUTSUniform):
+class TestNUTSUniform4(TestNUTSUniform):
     step_args = {'target_accept': 0.95, 'integrator': 'three-stage'}
 
 
-class NUTSUniform5(NUTSUniform):
+class TestNUTSUniform5(TestNUTSUniform):
     step_args = {'target_accept': 0.80, 'integrator': 'three-stage'}
 
 
-class NUTSNormal(sf.NutsFixture, sf.NormalFixture):
+class TestNUTSNormal(sf.NutsFixture, sf.NormalFixture):
     n_samples = 10000
     tune = 1000
-    burn = 1000
+    burn = 0
     chains = 2
     min_n_eff = 10000
     rtol = 0.1
     atol = 0.05
 
 
-class NUTSBetaBinomial(sf.NutsFixture, sf.BetaBinomialFixture):
+class TestNUTSBetaBinomial(sf.NutsFixture, sf.BetaBinomialFixture):
     n_samples = 2000
     ks_thin = 5
     tune = 1000
-    burn = 1000
+    burn = 0
     chains = 2
     min_n_eff = 400
 
 
-@attr('extra')
-class NUTSStudentT(sf.NutsFixture, sf.StudentTFixture):
-    n_samples = 100000
+class TestNUTSStudentT(sf.NutsFixture, sf.StudentTFixture):
+    n_samples = 10000
     tune = 1000
-    burn = 1000
+    burn = 0
     chains = 2
-    min_n_eff = 5000
+    min_n_eff = 1000
     rtol = 0.1
     atol = 0.05
 
 
-@attr('extra')
-class NUTSNormalLong(sf.NutsFixture, sf.NormalFixture):
+@pytest.mark.skip('Takes too long to run')
+class TestNUTSNormalLong(sf.NutsFixture, sf.NormalFixture):
     n_samples = 500000
     tune = 5000
-    burn = 5000
+    burn = 0
     chains = 2
     min_n_eff = 300000
     rtol = 0.01
     atol = 0.001
 
 
-class NUTSLKJCholeskyCov(sf.NutsFixture, sf.LKJCholeskyCovFixture):
+class TestNUTSLKJCholeskyCov(sf.NutsFixture, sf.LKJCholeskyCovFixture):
     n_samples = 2000
     tune = 1000
-    burn = 1000
+    burn = 0
     chains = 2
     min_n_eff = 200

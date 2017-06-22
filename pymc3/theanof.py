@@ -18,12 +18,12 @@ __all__ = ['gradient',
            'inputvars',
            'cont_inputs',
            'floatX',
+           'smartfloatX',
            'jacobian',
            'CallableTensor',
            'join_nonshared_inputs',
            'make_shared_replacements',
            'generator',
-           'GradScale',
            'set_tt_rng',
            'tt_rng']
 
@@ -67,6 +67,15 @@ def floatX(X):
     except AttributeError:
         # Scalar passed
         return np.asarray(X, dtype=theano.config.floatX)
+
+
+def smartfloatX(x):
+    """
+    Convert non int types to floatX 
+    """
+    if str(x.dtype).startswith('float'):
+        x = floatX(x)
+    return x
 
 """
 Theano derivative functions
@@ -125,10 +134,12 @@ def jacobian_diag(f, x):
 
 
 @memoize
+@change_flags(compute_test_value='ignore')
 def hessian(f, vars=None):
     return -jacobian(gradient(f, vars), vars)
 
 
+@change_flags(compute_test_value='ignore')
 def hessian_diag1(f, v):
     g = gradient1(f, v)
     idx = tt.arange(g.shape[0], dtype='int32')
@@ -140,6 +151,7 @@ def hessian_diag1(f, v):
 
 
 @memoize
+@change_flags(compute_test_value='ignore')
 def hessian_diag(f, vars=None):
     if vars is None:
         vars = cont_inputs(f)
@@ -322,10 +334,9 @@ class GeneratorOp(Op):
         if value is None:
             self.default = None
         else:
-            value = np.asarray(value)
-            t1 = (value.dtype, ((False,) * value.ndim))
-            t2 = (self.generator.tensortype.dtype,
-                  self.generator.tensortype.broadcastable)
+            value = np.asarray(value, self.generator.tensortype.dtype)
+            t1 = (False,) * value.ndim
+            t2 = self.generator.tensortype.broadcastable
             if not t1 == t2:
                 raise ValueError('Default value should have the '
                                  'same type as generator')
@@ -354,27 +365,18 @@ def generator(gen, default=None):
     return GeneratorOp(gen, default)()
 
 
-@change_flags(compute_test_value='off')
-def launch_rng(rng):
+_tt_rng = MRG_RandomStreams()
+
+
+def tt_rng(random_seed=None):
     """
-    Helper function for safe launch of theano random generator.
-    If not launched, there will be problems with test_value
+    Get the package-level random number generator or new with specified seed.
 
     Parameters
     ----------
-    rng : `theano.sandbox.rng_mrg.MRG_RandomStreams` instance
-    """
-    state = rng.rstate
-    rng.inc_rstate()
-    rng.set_rstate(state)
-
-_tt_rng = MRG_RandomStreams()
-launch_rng(_tt_rng)
-
-
-def tt_rng():
-    """
-    Get the package-level random number generator.
+    random_seed : int
+        If not None
+        returns *new* theano random generator without replacing package global one
 
     Returns
     -------
@@ -382,7 +384,11 @@ def tt_rng():
         `theano.sandbox.rng_mrg.MRG_RandomStreams`
         instance passed to the most recent call of `set_tt_rng`
     """
-    return _tt_rng
+    if random_seed is None:
+        return _tt_rng
+    else:
+        ret = MRG_RandomStreams(random_seed)
+        return ret
 
 
 def set_tt_rng(new_rng):
@@ -400,12 +406,54 @@ def set_tt_rng(new_rng):
     if isinstance(new_rng, int):
         new_rng = MRG_RandomStreams(new_rng)
     _tt_rng = new_rng
-    launch_rng(_tt_rng)
 
 
-class GradScale(theano.compile.ViewOp):
-    def __init__(self, multiplier):
-        self.multiplier = multiplier
+def floatX_array(x):
+    return floatX(np.array(x))
 
-    def grad(self, args, g_outs):
-        return [self.multiplier * g_out for g_out in g_outs]
+
+def set_theano_conf(values):
+    """Change the theano configuration and return old values.
+
+    This is similar to `theano.configparser.change_flags`, but it
+    returns the original values in a pickleable form.
+    """
+    variables = {}
+    unknown = set(values.keys())
+    for variable in theano.configparser._config_var_list:
+        if variable.fullname in values:
+            variables[variable.fullname] = variable
+            unknown.remove(variable.fullname)
+    if len(unknown) > 0:
+        raise ValueError("Unknown theano config settings: %s" % unknown)
+
+    old = {}
+    for name, variable in variables.items():
+        old_value = variable.__get__(True, None)
+        try:
+            variable.__set__(None, values[name])
+        except Exception:
+            for key, old_value in old.items():
+                variables[key].__set__(None, old_value)
+            raise
+        old[name] = old_value
+    return old
+
+
+def ix_(*args):
+    """
+    Theano np.ix_ analog
+
+    See numpy.lib.index_tricks.ix_ for reference
+    """
+    out = []
+    nd = len(args)
+    for k, new in enumerate(args):
+        if new is None:
+            out.append(slice(None))
+        new = tt.as_tensor(new)
+        if new.ndim != 1:
+            raise ValueError("Cross index must be 1 dimensional")
+        new = new.reshape((1,)*k + (new.size,) + (1,)*(nd-k-1))
+        out.append(new)
+    return tuple(out)

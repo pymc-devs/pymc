@@ -2,6 +2,7 @@ import numpy as np
 from .helpers import SeededTest
 from pymc3 import Model, Uniform, Normal, find_MAP, Slice, sample
 from pymc3.glm import LinearComponent, GLM
+import pytest
 
 
 # Generate data
@@ -13,8 +14,8 @@ def generate_data(intercept, slope, size=700):
 
 class TestGLM(SeededTest):
     @classmethod
-    def setUpClass(cls):
-        super(TestGLM, cls).setUpClass()
+    def setup_class(cls):
+        super(TestGLM, cls).setup_class()
         cls.intercept = 1
         cls.slope = 3
         cls.sd = .05
@@ -29,7 +30,8 @@ class TestGLM(SeededTest):
 
     def test_linear_component(self):
         vars_to_create = {
-            'sigma_interval_',
+            'sigma',
+            'sigma_interval__',
             'y_obs',
             'lm_x0',
             'lm_Intercept'
@@ -40,16 +42,17 @@ class TestGLM(SeededTest):
                 self.data_linear['y'],
                 name='lm'
             )   # yields lm_x0, lm_Intercept
-            sigma = Uniform('sigma', 0, 20)     # yields sigma_interval_
+            sigma = Uniform('sigma', 0, 20)     # yields sigma_interval__
             Normal('y_obs', mu=lm.y_est, sd=sigma, observed=self.y_linear)  # yields y_obs
             start = find_MAP(vars=[sigma])
             step = Slice(model.vars)
-            trace = sample(500, step=step, start=start, progressbar=False, random_seed=self.random_seed)
+            trace = sample(500, tune=0, step=step, start=start,
+                           progressbar=False, random_seed=self.random_seed)
 
-            self.assertAlmostEqual(np.mean(trace['lm_Intercept']), self.intercept, 1)
-            self.assertAlmostEqual(np.mean(trace['lm_x0']), self.slope, 1)
-            self.assertAlmostEqual(np.mean(trace['sigma']), self.sd, 1)
-        self.assertSetEqual(vars_to_create, set(model.named_vars.keys()))
+            assert round(abs(np.mean(trace['lm_Intercept'])-self.intercept), 1) == 0
+            assert round(abs(np.mean(trace['lm_x0'])-self.slope), 1) == 0
+            assert round(abs(np.mean(trace['sigma'])-self.sd), 1) == 0
+        assert vars_to_create == set(model.named_vars.keys())
 
     def test_linear_component_from_formula(self):
         with Model() as model:
@@ -58,16 +61,19 @@ class TestGLM(SeededTest):
             Normal('y_obs', mu=lm.y_est, sd=sigma, observed=self.y_linear)
             start = find_MAP(vars=[sigma])
             step = Slice(model.vars)
-            trace = sample(500, step=step, start=start, progressbar=False, random_seed=self.random_seed)
+            trace = sample(500, tune=0, step=step, start=start,
+                           progressbar=False,
+                           random_seed=self.random_seed)
 
-            self.assertAlmostEqual(np.mean(trace['Intercept']), self.intercept, 1)
-            self.assertAlmostEqual(np.mean(trace['x']), self.slope, 1)
-            self.assertAlmostEqual(np.mean(trace['sigma']), self.sd, 1)
+            assert round(abs(np.mean(trace['Intercept'])-self.intercept), 1) == 0
+            assert round(abs(np.mean(trace['x'])-self.slope), 1) == 0
+            assert round(abs(np.mean(trace['sigma'])-self.sd), 1) == 0
 
     def test_glm(self):
         with Model() as model:
             vars_to_create = {
-                'glm_sd_log_',
+                'glm_sd',
+                'glm_sd_log__',
                 'glm_y',
                 'glm_x0',
                 'glm_Intercept'
@@ -79,11 +85,12 @@ class TestGLM(SeededTest):
             )
             start = find_MAP()
             step = Slice(model.vars)
-            trace = sample(500, step=step, start=start, progressbar=False, random_seed=self.random_seed)
-            self.assertAlmostEqual(np.mean(trace['glm_Intercept']), self.intercept, 1)
-            self.assertAlmostEqual(np.mean(trace['glm_x0']), self.slope, 1)
-            self.assertAlmostEqual(np.mean(trace['glm_sd']), self.sd, 1)
-            self.assertSetEqual(vars_to_create, set(model.named_vars.keys()))
+            trace = sample(500, tune=0, step=step, start=start,
+                           progressbar=False, random_seed=self.random_seed)
+            assert round(abs(np.mean(trace['glm_Intercept'])-self.intercept), 1) == 0
+            assert round(abs(np.mean(trace['glm_x0'])-self.slope), 1) == 0
+            assert round(abs(np.mean(trace['glm_sd'])-self.sd), 1) == 0
+            assert vars_to_create == set(model.named_vars.keys())
 
     def test_glm_from_formula(self):
         with Model() as model:
@@ -91,18 +98,17 @@ class TestGLM(SeededTest):
             GLM.from_formula('y ~ x', self.data_linear, name=NAME)
             start = find_MAP()
             step = Slice(model.vars)
-            trace = sample(500, step=step, start=start, progressbar=False, random_seed=self.random_seed)
+            trace = sample(500, tune=0, step=step, start=start,
+                           progressbar=False, random_seed=self.random_seed)
 
-            self.assertAlmostEqual(np.mean(trace['%s_Intercept' % NAME]), self.intercept, 1)
-            self.assertAlmostEqual(np.mean(trace['%s_x' % NAME]), self.slope, 1)
-            self.assertAlmostEqual(np.mean(trace['%s_sd' % NAME]), self.sd, 1)
+            assert round(abs(np.mean(trace['%s_Intercept' % NAME])-self.intercept), 1) == 0
+            assert round(abs(np.mean(trace['%s_x' % NAME])-self.slope), 1) == 0
+            assert round(abs(np.mean(trace['%s_sd' % NAME])-self.sd), 1) == 0
 
     def test_strange_types(self):
         with Model():
-            self.assertRaises(
-                ValueError,
-                GLM,
-                1,
+            with pytest.raises(
+                ValueError):
+                GLM(1,
                 self.data_linear['y'],
-                name='lm'
-            )
+                name='lm')
