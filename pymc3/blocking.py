@@ -23,14 +23,28 @@ class ArrayOrdering(object):
 
     def __init__(self, vars):
         self.vmap = []
-        dim = 0
+        self._by_name = {}
+        size = 0
 
         for var in vars:
-            slc = slice(dim, dim + var.dsize)
-            self.vmap.append(VarMap(str(var), slc, var.dshape, var.dtype))
-            dim += var.dsize
+            name = var.name
+            if name is None:
+                raise ValueError('Unnamed variable in ArrayOrdering.')
+            if name in self._by_name:
+                raise ValueError('Name of variable not unique: %s.' % name)
+            if not hasattr(var, 'dshape') or not hasattr(var, 'dsize'):
+                raise ValueError('Shape of variable not known %s' % name)
 
-        self.dimensions = dim
+            slc = slice(size, size + var.dsize)
+            varmap = VarMap(name, slc, var.dshape, var.dtype)
+            self.vmap.append(varmap)
+            self._by_name[name] = varmap
+            size += var.dsize
+
+        self.size = size
+
+    def __getitem__(self, key):
+        return self._by_name[key]
 
 
 class DictToArrayBijection(object):
@@ -58,7 +72,7 @@ class DictToArrayBijection(object):
         ----------
         dpt : dict
         """
-        apt = np.empty(self.ordering.dimensions, dtype=self.array_dtype)
+        apt = np.empty(self.ordering.size, dtype=self.array_dtype)
         for var, slc, _, _ in self.ordering.vmap:
             apt[slc] = dpt[var].ravel()
         return apt
@@ -125,7 +139,7 @@ class ListArrayOrdering(object):
             dim += array.size
             count += 1
 
-        self.dimensions = dim
+        self.size = dim
 
 
 class ListToArrayBijection(object):
@@ -158,7 +172,7 @@ class ListToArrayBijection(object):
             single array comprising all the input arrays
         """
 
-        array = np.empty(self.ordering.dimensions)
+        array = np.empty(self.ordering.size)
         for list_ind, slc, _, _, _ in self.ordering.vmap:
             array[slc] = list_arrays[list_ind].ravel()
         return array

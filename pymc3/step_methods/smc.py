@@ -324,7 +324,7 @@ class SMC(atext.ArrayStepSharedLLK):
         likelihoods : :class:`numpy.ndarray`
             Array of likelihoods of the trace end-points
         """
-        array_population = np.zeros((self.n_chains, self.ordering.dimensions))
+        array_population = np.zeros((self.n_chains, self.ordering.size))
         n_steps = len(mtrace)
 
         # collect end points of each chain and put into array
@@ -357,7 +357,7 @@ class SMC(atext.ArrayStepSharedLLK):
         chain_previous_lpoint : list
             all unobservedRV values, including dataset likelihoods
         """
-        array_population = np.zeros((self.n_chains, self.lordering.dimensions))
+        array_population = np.zeros((self.n_chains, self.lordering.size))
         n_steps = len(mtrace)
         for _, slc, shp, _, var in self.lordering.vmap:
             slc_population = mtrace.get_values(varname=var, burn=n_steps - 1, combine=True)

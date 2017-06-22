@@ -3,10 +3,12 @@ from theano import theano, tensor as tt
 import numpy as np
 import pandas as pd
 import numpy.testing as npt
+import unittest
 
 import pymc3 as pm
 from pymc3.distributions import HalfCauchy, Normal, transforms
 from pymc3 import Potential, Deterministic
+from pymc3.model import ValueGradFunction
 
 
 class NewModel(pm.Model):
@@ -145,6 +147,7 @@ class TestTheanoConfig(object):
                 assert theano.config.compute_test_value == 'ignore'
             assert theano.config.compute_test_value == 'off'
 
+
 def test_duplicate_vars():
     with pytest.raises(ValueError) as err:
         with pm.Model():
@@ -179,3 +182,80 @@ def test_empty_observed():
         npt.assert_allclose(a.tag.test_value, np.zeros((2, 3)))
         b = pm.Beta('b', alpha=1, beta=1, observed=data)
         npt.assert_allclose(b.tag.test_value, np.ones((2, 3)) / 2)
+
+
+class TestValueGradFunction(unittest.TestCase):
+    def test_no_extra(self):
+        a = tt.vector('a')
+        a.tag.test_value = np.zeros(3)
+        a.dshape = (3,)
+        a.dsize = 3
+        f_grad = ValueGradFunction(a.sum(), [a], [], mode='FAST_COMPILE')
+        assert f_grad.size == 3
+
+    def test_invalid_type(self):
+        a = tt.ivector('a')
+        a.tag.test_value = np.zeros(3, dtype=a.dtype)
+        a.dshape = (3,)
+        a.dsize = 3
+        with pytest.raises(TypeError) as err:
+            ValueGradFunction(a.sum(), [a], [], mode='FAST_COMPILE')
+        err.match('Invalid dtype')
+
+    def setUp(self):
+        extra1 = tt.iscalar('extra1')
+        extra1_ = np.array(0, dtype=extra1.dtype)
+        extra1.tag.test_value = extra1_
+        extra1.dshape = tuple()
+        extra1.dsize = 1
+
+        val1 = tt.vector('val1')
+        val1_ = np.zeros(3, dtype=val1.dtype)
+        val1.tag.test_value = val1_
+        val1.dshape = (3,)
+        val1.dsize = 3
+
+        val2 = tt.matrix('val2')
+        val2_ = np.zeros((2, 3), dtype=val2.dtype)
+        val2.tag.test_value = val2_
+        val2.dshape = (2, 3)
+        val2.dsize = 6
+
+        self.val1, self.val1_ = val1, val1_
+        self.val2, self.val2_ = val2, val2_
+        self.extra1, self.extra1_ = extra1, extra1_
+
+        self.cost = extra1 * val1.sum() + val2.sum()
+
+        self.f_grad = ValueGradFunction(
+            self.cost, [val1, val2], [extra1], mode='FAST_COMPILE')
+
+    def test_extra_not_set(self):
+        with pytest.raises(ValueError) as err:
+            self.f_grad.get_extra_values()
+        err.match('Extra values are not set')
+
+        with pytest.raises(ValueError) as err:
+            self.f_grad(np.zeros(self.f_grad.size, dtype=self.f_grad._dtype))
+        err.match('Extra values are not set')
+
+    def test_grad(self):
+        self.f_grad.set_extra_values({'extra1': 5})
+        array = np.ones(self.f_grad.size, dtype=self.f_grad._dtype)
+        val, grad = self.f_grad(array)
+        assert val == 21
+        npt.assert_allclose(grad, [5, 5, 5, 1, 1, 1, 1, 1, 1])
+
+    def test_bij(self):
+        self.f_grad.set_extra_values({'extra1': 5})
+        array = np.ones(self.f_grad.size, dtype=self.f_grad._dtype)
+        point = self.f_grad.array_to_dict(array)
+        assert len(point) == 2
+        npt.assert_allclose(point['val1'], 1)
+        npt.assert_allclose(point['val2'], 1)
+
+        array2 = self.f_grad.dict_to_array(point)
+        npt.assert_allclose(array2, array)
+        point_ = self.f_grad.array_to_full_dict(array)
+        assert len(point_) == 3
+        assert point_['extra1'] == 5
