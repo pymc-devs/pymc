@@ -249,13 +249,19 @@ class QuadPotentialDiag(QuadPotential):
         self.inv_s = 1. / s
         self.v = v
 
-    def velocity(self, x):
+    def velocity(self, x, out=None):
+        if out is not None:
+            out[:] = self.v
+            out[:] *= x
+            return
         return self.v * x
 
     def random(self):
         return floatX(normal(size=self.s.shape)) * self.inv_s
 
-    def energy(self, x):
+    def energy(self, x, velocity=None):
+        if velocity is not None:
+            return 0.5 * scipy.linalg.blas.ddot(x, velocity)
         return .5 * x.dot(self.v * x)
 
 

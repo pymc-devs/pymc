@@ -1,14 +1,13 @@
-from ..arraystep import ArrayStepShared
-from .trajectory import get_theano_hamiltonian_functions
-
-from pymc3.tuning import guess_scaling
 from pymc3.model import modelcontext, Point
+from pymc3.step_methods import arraystep
 from .quadpotential import quad_potential, QuadPotentialDiagAdapt
-from pymc3.theanof import inputvars, make_shared_replacements, floatX
+from pymc3.step_methods.hmc import integration
+from pymc3.theanof import inputvars
 import numpy as np
+import theano
 
 
-class BaseHMC(ArrayStepShared):
+class BaseHMC(arraystep.GradientSharedStep):
     default_blocked = True
 
     def __init__(self, vars=None, scaling=None, step_scale=0.25, is_cov=False,
@@ -41,8 +40,11 @@ class BaseHMC(ArrayStepShared):
             vars = model.cont_vars
         vars = inputvars(vars)
 
+        super(BaseHMC, self).__init__(vars, blocked=blocked, **theano_kwargs)
+
+        size = self._logp_dlogp_func.size
+
         if scaling is None and potential is None:
-            size = sum(np.prod(var.dshape, dtype=int) for var in vars)
             mean = floatX(np.zeros(size))
             var = floatX(np.ones(size))
             potential = QuadPotentialDiagAdapt(size, mean, var, 10)
@@ -54,17 +56,11 @@ class BaseHMC(ArrayStepShared):
         if scaling is not None and potential is not None:
             raise ValueError("Can not specify both potential and scaling.")
 
-        self.step_size = step_scale / (model.ndim ** 0.25)
+        self.step_size = step_scale / (size ** 0.25)
         if potential is not None:
             self.potential = potential
         else:
             self.potential = quad_potential(scaling, is_cov)
 
-        shared = make_shared_replacements(vars, model)
-        if theano_kwargs is None:
-            theano_kwargs = {}
-
-        self.H, self.compute_energy, self.compute_velocity, self.leapfrog, self.dlogp = get_theano_hamiltonian_functions(
-            vars, shared, model.logpt, self.potential, use_single_leapfrog, integrator, **theano_kwargs)
-
-        super(BaseHMC, self).__init__(vars, shared, blocked=blocked)
+        self.integrator = integration.CpuLeapfrogIntegrator(
+            size, self.potential, self._logp_dlogp_func)
