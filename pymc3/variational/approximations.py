@@ -3,9 +3,8 @@ import theano
 from theano import tensor as tt
 
 import pymc3 as pm
-from pymc3.distributions.dist_math import rho2sd, log_normal, log_normal_mv
+from pymc3.distributions.dist_math import rho2sd, log_normal
 from pymc3.variational.opvi import Approximation, node_property
-from pymc3.theanof import memoize, change_flags
 
 
 __all__ = [
@@ -310,7 +309,7 @@ class Empirical(Approximation):
 
     def randidx(self, size=None):
         if size is None:
-            size = ()
+            size = (1,)
         elif isinstance(size, tt.TensorVariable):
             if size.ndim < 1:
                 size = size[None]
@@ -326,38 +325,37 @@ class Empirical(Approximation):
                          high=pm.floatX(self.histogram.shape[0]) - pm.floatX(1e-16))
                 .astype('int32'))
 
-    def random_global(self, size=None, deterministic=False):
-        theano_condition_is_here = isinstance(deterministic, tt.Variable)
-        if theano_condition_is_here:
-            return tt.switch(deterministic,
-                             self.mean,
-                             self.histogram[self.randidx(size)])
-        else:
-            if deterministic:
-                return self.mean
+    def _initial_part_matrix(self, part, size, deterministic):
+        if part == 'local':
+            return super(Empirical, self)._initial_part_matrix(
+                part, size, deterministic
+            )
+        elif part == 'global':
+            theano_condition_is_here = isinstance(deterministic, tt.Variable)
+            if theano_condition_is_here:
+                return tt.switch(
+                    deterministic,
+                    tt.repeat(
+                        self.mean.reshape((1, -1)),
+                        size if size is not None else 1),
+                    self.histogram[self.randidx(size)])
             else:
-                return self.histogram[self.randidx(size)]
+                if deterministic:
+                    return tt.repeat(
+                        self.mean.reshape((1, -1)),
+                        size if size is not None else 1)
+                else:
+                    return self.histogram[self.randidx(size)]
+
+    @property
+    def symbolic_random_global_matrix(self):
+        return self._symbolic_initial_global_matrix
 
     @property
     def histogram(self):
         """Shortcut to flattened Trace
         """
         return self.shared_params
-
-    @property
-    @memoize
-    def histogram_logp(self):
-        """Symbolic logp for every point in trace
-        """
-        node = self.to_flat_input(self.model.logpt)
-
-        def mapping(z):
-            return theano.clone(node, {self.input: z})
-        x = self.histogram
-        _histogram_logp, _ = theano.scan(
-            mapping, x, n_steps=x.shape[0]
-        )
-        return _histogram_logp
 
     @property
     def mean(self):

@@ -35,7 +35,6 @@ import warnings
 import numpy as np
 import theano
 import theano.tensor as tt
-from theano.ifelse import ifelse
 import pymc3 as pm
 from .updates import adagrad_window
 from ..distributions.dist_math import rho2sd, log_normal
@@ -860,6 +859,10 @@ class Approximation(object):
         """
         initial_local = self._initial_part_matrix('local', s, d)
         initial_global = self._initial_part_matrix('global', s, d)
+        if isinstance(s, int) and (s == 1) or s is None:
+            node = theano.clone(node, {
+                self.logp: self.single_symbolic_logp
+            })
         return theano.clone(node, {
             self._symbolic_initial_local_matrix: initial_local,
             self._symbolic_initial_global_matrix: initial_global,
@@ -965,7 +968,7 @@ class Approximation(object):
     @node_property
     def symbolic_random_total_matrix(self):
         if self.local_vars and self.global_vars:
-            return tt.stack([
+            return tt.concatenate([
                 self.symbolic_random_local_matrix,
                 self.symbolic_random_global_matrix,
             ], axis=-1)
@@ -1081,12 +1084,7 @@ class Approximation(object):
 
     @node_property
     def logp(self):
-        return ifelse(
-            # computed first, so lazy evaluation will work
-            tt.eq(self._symbolic_initial_global_matrix.shape[0], 1),
-            self.single_symbolic_logp,
-            self.sized_symbolic_logp.mean(0)
-        )
+        return self.sized_symbolic_logp.mean(0)
 
     @node_property
     def logp_norm(self):

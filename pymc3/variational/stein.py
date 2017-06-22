@@ -1,4 +1,5 @@
 from theano import theano, tensor as tt
+from pymc3.variational.opvi import node_property
 from pymc3.variational.test_functions import rbf
 from pymc3.theanof import memoize, floatX
 
@@ -49,37 +50,26 @@ class Stein(object):
         return self._kernel()[1]
 
     @property
-    @memoize
-    def logp(self):
-        return theano.scan(
-            fn=lambda zg: self.approx.logp_norm(zg),
-            sequences=[self.input_matrix]
-        )[0]
+    def logp_norm(self):
+        return self.approx.sized_symbolic_logp / self.approx.normalizing_constant
 
-    @property
-    @memoize
+    @node_property
     def dlogp(self):
-        return theano.scan(
-            fn=lambda zg: theano.grad(self.approx.logp_norm(zg), zg),
-            sequences=[self.input_matrix]
-        )[0]
+        loc_random = self.input_matrix[..., :self.approx.local_size]
+        glob_random = self.input_matrix[..., self.approx.local_size:]
+        loc_grad, glob_grad = tt.grad(
+            self.logp_norm.sum(),
+            [self.approx.symbolic_random_local_matrix,
+             self.approx.symbolic_random_global_matrix],
+            disconnected_inputs='ignore'
+        )
+        loc_grad, glob_grad = theano.clone(
+            [loc_grad, glob_grad],
+            {self.approx.symbolic_random_local_matrix: loc_random,
+             self.approx.symbolic_random_global_matrix: glob_random}
+        )
+        return tt.concatenate([loc_grad, glob_grad], axis=-1)
 
     @memoize
     def _kernel(self):
         return self._kernel_f(self.input_matrix)
-
-    def get_approx_input(self, size=100):
-        """
-
-        Parameters
-        ----------
-        size : if approx is not Empirical, takes `n=size` random samples
-
-        Returns
-        -------
-        matrix
-        """
-        if hasattr(self.approx, 'histogram'):
-            return self.approx.histogram
-        else:
-            return self.approx.random(size)
