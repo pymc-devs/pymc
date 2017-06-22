@@ -44,9 +44,8 @@ def elemwise_dlogL(vars, model, flat_view):
     # calculate fisher information
     terms = []
     for var in vars:
-         output, _ =  theano.scan(lambda i, logX: theano.grad(logX[i], var).flatten(),\
-                            sequences=[tt.arange(logL.shape[0])],
-                            non_sequences=[logL])
+         output, _ =  theano.scan(lambda i, logX=logL, v=var: theano.grad(logX[i], v).flatten(),\
+                            sequences=[tt.arange(logL.shape[0])])
          terms.append(output)
     dlogL = theano.clone(tt.concatenate(terms, axis=1), flat_view.replacements, strict=False)
     return dlogL
