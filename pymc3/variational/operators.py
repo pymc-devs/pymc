@@ -1,6 +1,7 @@
 import warnings
-from theano import theano, tensor as tt
-from pymc3.variational.opvi import Operator, ObjectiveFunction, _warn_not_used
+import collections
+from theano import tensor as tt
+from pymc3.variational.opvi import Operator, ObjectiveFunction
 from pymc3.variational.stein import Stein
 import pymc3 as pm
 
@@ -41,27 +42,31 @@ class KSDObjective(ObjectiveFunction):
             raise TypeError('Op should be KSD')
         ObjectiveFunction.__init__(self, op, tf)
 
-    def get_input(self, n_mc):
+    def get_input(self):
         if hasattr(self.approx, 'histogram'):
-            if n_mc is not None:
-                _warn_not_used('n_mc', self.op)
-            return self.approx.histogram
-        elif n_mc is not None and n_mc > 1:
-            return self.approx.random_total(n_mc)
+            return self.approx.symbolic_random_local_matrix, self.approx.histogram
         else:
-            raise ValueError('Variational type approximation requires '
-                             'sample size (`n_mc` : int > 1 should be passed)')
+            return self.approx.symbolic_random_local_matrix, self.approx.symbolic_random_global_matrix
 
     def __call__(self, nmc, **kwargs):
         op = self.op  # type: KSD
         grad = op.apply(self.tf)
+        loc_size = self.approx.local_size
+        local_grad = grad[..., :loc_size]
+        global_grad = grad[..., loc_size:]
         if 'more_obj_params' in kwargs:
             params = self.obj_params + kwargs['more_obj_params']
         else:
             params = self.test_params + kwargs['more_tf_params']
             grad *= pm.floatX(-1)
-        z = op.approx.symbolic_random_total_matrix
-        grad = tt.grad(None, params, known_grads={z: grad})
+        zl, zg = self.get_input()
+        zl, zg, grad, local_grad, global_grad = self.approx.set_size_and_deterministic(
+            (zl, zg, grad, local_grad, global_grad),
+            nmc, 0)
+        grad = tt.grad(None, params, known_grads=collections.OrderedDict([
+            (zl, local_grad),
+            (zg, global_grad)
+        ]), disconnected_inputs='ignore')
         return grad
 
 
@@ -99,12 +104,19 @@ class KSD(Operator):
         Operator.__init__(self, approx)
         self.temperature = temperature
 
+    def get_input(self):
+        if hasattr(self.approx, 'histogram'):
+            return self.approx.histogram
+        else:
+            return self.approx.symbolic_random_total_matrix
+
     def apply(self, f):
         # f: kernel function for KSD f(histogram) -> (k(x,.), \nabla_x k(x,.))
+        input_matrix = self.get_input()
         stein = Stein(
             approx=self.approx,
             kernel=f,
-            input_matrix=self.approx.symbolic_random_total_matrix,
+            input_matrix=input_matrix,
             temperature=self.temperature)
         return pm.floatX(-1) * stein.grad
 
