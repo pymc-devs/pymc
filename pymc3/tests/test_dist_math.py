@@ -4,13 +4,13 @@ import theano.tensor as tt
 import theano
 import theano.tests.unittest_tools as utt
 import pymc3 as pm
-from scipy import stats
+from scipy import stats, interpolate
 import pytest
 
 from ..theanof import floatX
 from ..distributions import Discrete
 from ..distributions.dist_math import (
-    bound, factln, alltrue_scalar, MvNormalLogp)
+    bound, factln, alltrue_scalar, MvNormalLogp, SplineWrapper)
 
 
 def test_bound():
@@ -125,11 +125,11 @@ class TestMvNormalLogp():
     def test_logp(self):
         np.random.seed(42)
 
-        chol_val = np.array([[1, 0.9], [0, 2]])
-        cov_val = np.dot(chol_val, chol_val.T)
+        chol_val = floatX(np.array([[1, 0.9], [0, 2]]))
+        cov_val = floatX(np.dot(chol_val, chol_val.T))
         cov = tt.matrix('cov')
         cov.tag.test_value = cov_val
-        delta_val = np.random.randn(5, 2)
+        delta_val = floatX(np.random.randn(5, 2))
         delta = tt.matrix('delta')
         delta.tag.test_value = delta_val
         expect = stats.multivariate_normal(mean=np.zeros(2), cov=cov_val)
@@ -139,6 +139,7 @@ class TestMvNormalLogp():
         logp = logp_f(cov_val, delta_val)
         npt.assert_allclose(logp, expect)
 
+    @theano.configparser.change_flags(compute_test_value="ignore")
     def test_grad(self):
         np.random.seed(42)
 
@@ -150,15 +151,15 @@ class TestMvNormalLogp():
             cov = tt.dot(chol, chol.T)
             return MvNormalLogp()(cov, delta)
 
-        chol_vec_val = np.array([0.5, 1., -0.1])
+        chol_vec_val = floatX(np.array([0.5, 1., -0.1]))
 
-        delta_val = np.random.randn(1, 2)
+        delta_val = floatX(np.random.randn(1, 2))
         try:
             utt.verify_grad(func, [chol_vec_val, delta_val])
         except ValueError as e:
             print(e.args[0])
 
-        delta_val = np.random.randn(5, 2)
+        delta_val = floatX(np.random.randn(5, 2))
         utt.verify_grad(func, [chol_vec_val, delta_val])
 
     @pytest.mark.skip(reason="Fix in theano not released yet: Theano#5908")
@@ -176,3 +177,22 @@ class TestMvNormalLogp():
         logp = MvNormalLogp()(cov, delta)
         g_cov, g_delta = tt.grad(logp, [cov, delta])
         tt.grad(g_delta.sum() + g_cov.sum(), [delta, cov])
+
+
+class TestSplineWrapper(object):
+    @theano.configparser.change_flags(compute_test_value="ignore")
+    def test_grad(self):
+        x = np.linspace(0, 1, 100)
+        y = x * x
+        spline = SplineWrapper(interpolate.InterpolatedUnivariateSpline(x, y, k=1))
+        utt.verify_grad(spline, [0.5])
+
+    @theano.configparser.change_flags(compute_test_value="ignore")
+    def test_hessian(self):
+        x = np.linspace(0, 1, 100)
+        y = x * x
+        spline = SplineWrapper(interpolate.InterpolatedUnivariateSpline(x, y, k=1))
+        x_var = tt.dscalar('x')
+        g_x, = tt.grad(spline(x_var), [x_var])
+        with pytest.raises(NotImplementedError):
+            tt.grad(g_x, [x_var])

@@ -103,7 +103,8 @@ def assign_step_methods(model, step=None, methods=STEP_METHODS,
 def sample(draws=500, step=None, init='auto', n_init=200000, start=None,
            trace=None, chain=0, njobs=1, tune=500, nuts_kwargs=None,
            step_kwargs=None, progressbar=True, model=None, random_seed=-1,
-           live_plot=False, discard_tuned_samples=True, **kwargs):
+           live_plot=False, discard_tuned_samples=True, live_plot_kwargs=None,
+           **kwargs):
     """Draw samples from the posterior using the given step methods.
 
     Multiple step methods are supported via compound step methods.
@@ -185,6 +186,8 @@ def sample(draws=500, step=None, init='auto', n_init=200000, start=None,
         A list is accepted if more if `njobs` is greater than one.
     live_plot : bool
         Flag for live plotting the trace while sampling
+    live_plot_kwargs : dict
+        Options for traceplot. Example: live_plot_kwargs={'varnames': ['x']}
     discard_tuned_samples : bool
         Whether to discard posterior samples of the tune interval.
 
@@ -225,6 +228,9 @@ def sample(draws=500, step=None, init='auto', n_init=200000, start=None,
             raise ValueError("Specify only one of step_kwargs and nuts_kwargs")
         step_kwargs = {'nuts': nuts_kwargs}
 
+    if model.ndim == 0:
+        raise ValueError('The model does not contain any free variables.')
+
     if step is None and init is not None and pm.model.all_continuous(model.vars):
         # By default, use NUTS sampler
         pm._log.info('Auto-assigning NUTS sampler...')
@@ -254,6 +260,7 @@ def sample(draws=500, step=None, init='auto', n_init=200000, start=None,
                    'model': model,
                    'random_seed': random_seed,
                    'live_plot': live_plot,
+                   'live_plot_kwargs': live_plot_kwargs,
                    }
 
     sample_args.update(kwargs)
@@ -271,7 +278,7 @@ def sample(draws=500, step=None, init='auto', n_init=200000, start=None,
 
 def _sample(draws, step=None, start=None, trace=None, chain=0, tune=None,
             progressbar=True, model=None, random_seed=-1, live_plot=False,
-            **kwargs):
+            live_plot_kwargs=None, **kwargs):
     skip_first = kwargs.get('skip_first', 0)
     refresh_every = kwargs.get('refresh_every', 100)
 
@@ -283,12 +290,14 @@ def _sample(draws, step=None, start=None, trace=None, chain=0, tune=None,
         strace = None
         for it, strace in enumerate(sampling):
             if live_plot:
+                if live_plot_kwargs is None:
+                    live_plot_kwargs = {}
                 if it >= skip_first:
                     trace = MultiTrace([strace])
                     if it == skip_first:
-                        ax = traceplot(trace, live_plot=False, **kwargs)
+                        ax = traceplot(trace, live_plot=False, **live_plot_kwargs)
                     elif (it - skip_first) % refresh_every == 0 or it == draws - 1:
-                        traceplot(trace, ax=ax, live_plot=True, **kwargs)
+                        traceplot(trace, ax=ax, live_plot=True, **live_plot_kwargs)
     except KeyboardInterrupt:
         pass
     finally:
@@ -469,12 +478,14 @@ def _update_start_vals(a, b, model):
     """Update a with b, without overwriting existing keys. Values specified for
     transformed variables on the original scale are also transformed and inserted.
     """
-    for name in a:
-        for tname in b:
-            if is_transformed_name(tname) and get_untransformed_name(tname) == name:
-                transform_func = [d.transformation for d in model.deterministics if d.name == name]
-                if transform_func:
-                    b[tname] = transform_func[0].forward(a[name]).eval()
+    if model is not None:
+        for free_RV in model.free_RVs:
+            tname = free_RV.name
+            for name in a:
+                if is_transformed_name(tname) and get_untransformed_name(tname) == name:
+                    transform_func = [d.transformation for d in model.deterministics if d.name == name]
+                    if transform_func:
+                        b[tname] = transform_func[0].forward_val(a[name], point=b).eval()
 
     a.update({k: v for k, v in b.items() if k not in a})
 
@@ -520,12 +531,16 @@ def sample_ppc(trace, samples=None, model=None, vars=None, size=None,
     else:
         indices = randint(0, len(trace), samples)
 
-    ppc = defaultdict(list)
-    for idx in indices:
-        param = trace[idx]
-        for var in vars:
-            ppc[var.name].append(var.distribution.random(point=param,
-                                                         size=size))
+    try:
+        ppc = defaultdict(list)
+        for idx in indices:
+            param = trace[idx]
+            for var in vars:
+                vals = var.distribution.random(point=param, size=size)
+                ppc[var.name].append(vals)
+    finally:
+        if progressbar:
+            indices.close()
 
     return {k: np.asarray(v) for k, v in ppc.items()}
 
@@ -602,7 +617,8 @@ def init_nuts(init='ADVI', njobs=1, n_init=500000, model=None,
             obj_optimizer=pm.adagrad_window
         )
         start = approx.sample(draws=njobs)
-        cov = approx.cov.eval()
+        stds = approx.gbij.rmap(approx.std.eval())
+        cov = model.dict_to_array(stds) ** 2
         if njobs == 1:
             start = start[0]
     elif init == 'map':

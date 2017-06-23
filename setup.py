@@ -58,5 +58,4 @@ if __name__ == "__main__":
           classifiers=classifiers,
           install_requires=install_reqs,
           tests_require=test_reqs,
-          extras_require={'edward': ['edward>=1.1.6']},
           test_suite='nose.collector')

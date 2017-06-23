@@ -31,6 +31,11 @@ def logsumexp(x, axis=None):
     x_max = tt.max(x, axis=axis, keepdims=True)
     return tt.log(tt.sum(tt.exp(x - x_max), axis=axis, keepdims=True)) + x_max
 
+def logaddexp(a, b):
+    diff = b - a
+    return tt.switch(diff > 0, 
+                    b + tt.log1p(tt.exp(-diff)), 
+                    a + tt.log1p(tt.exp(diff)))
 
 def invlogit(x, eps=sys.float_info.epsilon):
     return (1. - 2. * eps) / (1. + tt.exp(-x)) + eps

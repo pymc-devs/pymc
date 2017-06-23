@@ -17,7 +17,10 @@ from pymc3.theanof import floatX
 from . import transforms
 from pymc3.util import get_variable_name
 
-from .dist_math import bound, logpow, gammaln, betaln, std_cdf, i0, i1, alltrue_elemwise, DifferentiableSplineWrapper
+from .dist_math import (
+    bound, logpow, gammaln, betaln, std_cdf, i0,
+    i1, alltrue_elemwise, SplineWrapper
+)
 from .distribution import Continuous, draw_values, generate_samples, Bound
 
 __all__ = ['Uniform', 'Flat', 'Normal', 'Beta', 'Exponential', 'Laplace',
@@ -295,7 +298,7 @@ class HalfNormal(PositiveContinuous):
         assert_negative_support(sd, 'sd', 'HalfNormal')
 
     def random(self, point=None, size=None, repeat=None):
-        sd = draw_values([self.sd], point=point)
+        sd = draw_values([self.sd], point=point)[0]
         return generate_samples(stats.halfnorm.rvs, loc=0., scale=sd,
                                 dist_shape=self.shape,
                                 size=size)
@@ -376,7 +379,7 @@ class Wald(PositiveContinuous):
         self.alpha = alpha = tt.as_tensor_variable(alpha)
         self.mu = mu = tt.as_tensor_variable(mu)
         self.lam = lam = tt.as_tensor_variable(lam)
-        self.phi = phi =tt.as_tensor_variable(phi)
+        self.phi = phi = tt.as_tensor_variable(phi)
 
         self.mean = self.mu + self.alpha
         self.mode = self.mu * (tt.sqrt(1. + (1.5 * self.mu / self.lam)**2)
@@ -575,7 +578,7 @@ class Exponential(PositiveContinuous):
         assert_negative_support(lam, 'lam', 'Exponential')
 
     def random(self, point=None, size=None, repeat=None):
-        lam = draw_values([self.lam], point=point)
+        lam = draw_values([self.lam], point=point)[0]
         return generate_samples(np.random.exponential, scale=1. / lam,
                                 dist_shape=self.shape,
                                 size=size)
@@ -959,7 +962,7 @@ class HalfCauchy(PositiveContinuous):
         return beta * np.abs(np.tan(np.pi * (u - 0.5)))
 
     def random(self, point=None, size=None, repeat=None):
-        beta = draw_values([self.beta], point=point)
+        beta = draw_values([self.beta], point=point)[0]
         return generate_samples(self._random, beta,
                                 dist_shape=self.shape,
                                 size=size)
@@ -1501,11 +1504,9 @@ class Triangular(Continuous):
                  *args, **kwargs):
         super(Triangular, self).__init__(*args, **kwargs)
 
-        self.c = c
-        self.lower = lower
-        self.upper = upper
-        self.mean = c
-        self.median = self.mean
+        self.median = self.mean = self.c = c  = tt.as_tensor_variable(c)
+        self.lower = lower = tt.as_tensor_variable(lower)
+        self.upper = upper = tt.as_tensor_variable(upper)
 
     def random(self, point=None, size=None):
         c, lower, upper = draw_values([self.c, self.lower, self.upper],
@@ -1627,7 +1628,7 @@ class Interpolated(Continuous):
         Z = interp.integral(x_points[0], x_points[-1])
 
         self.Z = tt.as_tensor_variable(Z)
-        self.interp_op = DifferentiableSplineWrapper(interp)
+        self.interp_op = SplineWrapper(interp)
         self.x_points = x_points
         self.pdf_points = pdf_points / Z
         self.cdf_points = interp.antiderivative()(x_points) / Z

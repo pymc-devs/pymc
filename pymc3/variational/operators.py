@@ -1,7 +1,7 @@
+import warnings
 from theano import theano, tensor as tt
 from pymc3.variational.opvi import Operator, ObjectiveFunction, _warn_not_used
 from pymc3.variational.stein import Stein
-from pymc3.variational import updates
 import pymc3 as pm
 
 __all__ = [
@@ -63,7 +63,6 @@ class KSDObjective(ObjectiveFunction):
             grad *= pm.floatX(-1)
         grad = theano.clone(grad, {op.input_matrix: z})
         grad = tt.grad(None, params, known_grads={z: grad})
-        grad = updates.total_norm_constraint(grad, 10)
         return grad
 
 
@@ -97,15 +96,29 @@ class KSD(Operator):
     SUPPORT_AEVB = False
     OBJECTIVE = KSDObjective
 
-    def __init__(self, approx):
+    def __init__(self, approx, temperature=1):
         Operator.__init__(self, approx)
+        self.temperature = temperature
         self.input_matrix = tt.matrix('KSD input matrix')
 
     def apply(self, f):
         # f: kernel function for KSD f(histogram) -> (k(x,.), \nabla_x k(x,.))
-        stein = Stein(self.approx, f, self.input_matrix)
+        stein = Stein(
+            approx=self.approx,
+            kernel=f,
+            input_matrix=self.input_matrix,
+            temperature=self.temperature)
         return pm.floatX(-1) * stein.grad
 
 
 class AKSD(KSD):
+    def __init__(self, approx, temperature=1):
+        warnings.warn('You are using experimental inference Operator. '
+                      'It requires careful choice of temperature, default is 1. '
+                      'Default temperature works well for low dimensional problems and '
+                      'for significant `n_obj_mc`. Temperature > 1 gives more exploration '
+                      'power to algorithm, < 1 leads to undesirable results. Please take '
+                      'it in account when looking at inference result. Posterior variance '
+                      'is often **underestimated** when using temperature = 1.', stacklevel=2)
+        super(AKSD, self).__init__(approx, temperature)
     SUPPORT_AEVB = True

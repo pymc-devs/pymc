@@ -2,16 +2,15 @@ from __future__ import division
 
 import logging
 import warnings
-import tqdm
 
 import numpy as np
+import tqdm
 
 import pymc3 as pm
+from pymc3.variational import test_functions
 from pymc3.variational.approximations import MeanField, FullRank, Empirical
 from pymc3.variational.operators import KL, KSD, AKSD
 from pymc3.variational.opvi import Approximation
-from pymc3.variational import test_functions
-
 
 logger = logging.getLogger(__name__)
 
@@ -42,11 +41,15 @@ class Inference(object):
         See (AEVB; Kingma and Welling, 2014) for details
     model : Model
         PyMC3 Model
+    op_kwargs : dict
+        kwargs passed to :class:`Operator`
     kwargs : kwargs
         additional kwargs for :class:`Approximation`
     """
 
-    def __init__(self, op, approx, tf, local_rv=None, model=None, **kwargs):
+    def __init__(self, op, approx, tf, local_rv=None, model=None, op_kwargs=None, **kwargs):
+        if op_kwargs is None:
+            op_kwargs = dict()
         self.hist = np.asarray(())
         if isinstance(approx, type) and issubclass(approx, Approximation):
             approx = approx(
@@ -57,7 +60,7 @@ class Inference(object):
         else:   # pragma: no cover
             raise TypeError(
                 'approx should be Approximation instance or Approximation subclass')
-        self.objective = op(approx)(tf)
+        self.objective = op(approx, **op_kwargs)(tf)
 
     approx = property(lambda self: self.objective.approx)
 
@@ -147,7 +150,11 @@ class Inference(object):
     def _iterate_with_loss(self, n, step_func, progress, callbacks):
         def _infmean(input_array):
             """Return the mean of the finite values of the array"""
-            return np.mean(np.asarray(input_array)[np.isfinite(input_array)])
+            input_array = input_array[np.isfinite(input_array)].astype('float64')
+            if len(input_array) == 0:
+                return np.nan
+            else:
+                return np.mean(input_array)
         scores = np.empty(n)
         scores[:] = np.nan
         i = 0
@@ -532,6 +539,8 @@ class SVGD(Inference):
         PyMC3 model for inference
     kernel : `callable`
         kernel function for KSD :math:`f(histogram) -> (k(x,.), \nabla_x k(x,.))`
+    temperature : float
+        parameter responsible for exploration, higher temperature gives more broad posterior estimate
     scale_cost_to_minibatch : bool, default False
         Scale cost to minibatch instead of full dataset
     start : `dict`
@@ -549,10 +558,14 @@ class SVGD(Inference):
     -   Qiang Liu, Dilin Wang (2016)
         Stein Variational Gradient Descent: A General Purpose Bayesian Inference Algorithm
         arXiv:1608.04471
+
+    -   Yang Liu, Prajit Ramachandran, Qiang Liu, Jian Peng (2017)
+        Stein Variational Policy Gradient
+        arXiv:1704.02399
     """
 
     def __init__(self, n_particles=100, jitter=.01, model=None, kernel=test_functions.rbf,
-                 scale_cost_to_minibatch=False, start=None, histogram=None,
+                 temperature=1, scale_cost_to_minibatch=False, start=None, histogram=None,
                  random_seed=None, local_rv=None):
         if histogram is None:
             histogram = Empirical.from_noise(
@@ -561,7 +574,7 @@ class SVGD(Inference):
                 start=start, model=model, local_rv=local_rv, random_seed=random_seed)
         super(SVGD, self).__init__(
             KSD, histogram,
-            kernel,
+            kernel, op_kwargs=dict(temperature=temperature),
             model=model, random_seed=random_seed)
 
 
@@ -594,6 +607,8 @@ class ASVGD(Inference):
         See (AEVB; Kingma and Welling, 2014) for details
     kernel : `callable`
         kernel function for KSD :math:`f(histogram) -> (k(x,.), \nabla_x k(x,.))`
+    temperature : float
+        parameter responsible for exploration, higher temperature gives more broad posterior estimate
     model : :class:`Model`
     kwargs : kwargs for :class:`Approximation`
 
@@ -605,17 +620,22 @@ class ASVGD(Inference):
 
     -   Dilin Wang, Qiang Liu (2016)
         Learning to Draw Samples: With Application to Amortized MLE for Generative Adversarial Learning
-        https://arxiv.org/abs/1611.01722
+        arXiv:1611.01722
+    
+    -   Yang Liu, Prajit Ramachandran, Qiang Liu, Jian Peng (2017)
+        Stein Variational Policy Gradient
+        arXiv:1704.02399
     """
 
     def __init__(self, approx=FullRank, local_rv=None,
-                 kernel=test_functions.rbf, model=None, **kwargs):
+                 kernel=test_functions.rbf, temperature=1, model=None, **kwargs):
         super(ASVGD, self).__init__(
             op=AKSD,
             approx=approx,
             local_rv=local_rv,
             tf=kernel,
             model=model,
+            op_kwargs=dict(temperature=temperature),
             **kwargs
         )
 

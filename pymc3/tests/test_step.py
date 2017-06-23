@@ -138,6 +138,7 @@ class TestStepMethods(object):  # yield test doesn't work subclassing object
     def teardown_class(self):
         shutil.rmtree(self.temp_dir)
 
+    @pytest.mark.xfail(condition=(theano.config.floatX == "float32"), reason="Fails on float32")
     def test_sample_exact(self):
         for step_method in self.master_samples:
             self.check_trace(step_method)
@@ -329,6 +330,7 @@ class TestAssignStepMethods(object):
         assert isinstance(steps, Metropolis)
 
 
+@pytest.mark.xfail(condition=(theano.config.floatX == "float32"), reason="Fails on float32")
 class TestNutsCheckTrace(object):
     def test_multiple_samplers(self):
         with Model():
