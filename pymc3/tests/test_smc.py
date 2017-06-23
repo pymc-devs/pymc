@@ -66,7 +66,7 @@ class TestSMC(SeededTest):
         def last_sample(x):
             return x[(self.n_steps - 1)::self.n_steps]
 
-        mtrace = smc.sample_SMC(
+        mtrace = smc.sample_smc(
             n_steps=self.n_steps,
             step=self.step,
             stage=stage,
