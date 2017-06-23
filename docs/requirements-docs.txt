@@ -1,3 +1,0 @@
-nbsphinx
-ipykernel
-numpy
