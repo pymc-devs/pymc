@@ -28,7 +28,7 @@
 
 * Much improved variational inference support:
 
-  - [Added Operator Variational Inference (experimental).](http://pymc-devs.github.io/pymc3/notebooks/bayesian_neural_network_opvi-advi.html)
+  - [Added Operator Variational Inference (experimental).](http://pymc-devs.github.io/pymc3/notebooks/variational_api_quickstart.html)
 
   - [Added Stein-Variational Gradient Descent as well as Amortized SVGD (experimental).](https://github.com/pymc-devs/pymc3/pull/2183)
 
