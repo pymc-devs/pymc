@@ -76,7 +76,7 @@ class GP(Continuous):
         return MvNormal.dist(mu, Sigma).logp(Y)
 
 
-def sample_gp(trace, gp, X_values, samples=None, obs_noise=True, model=None, random_seed=None, progressbar=True, jitter=True):
+def sample_gp(trace, gp, X_values, samples=None, obs_noise=True, model=None, random_seed=None, progressbar=True, chol_const=True):
     """Generate samples from a posterior Gaussian process.
 
     Parameters
@@ -98,7 +98,7 @@ def sample_gp(trace, gp, X_values, samples=None, obs_noise=True, model=None, ran
         Random number seed for sampling.
     progressbar : bool
         Flag for showing progress bar.
-    jitter : bool
+    chol_const : bool
         Flag to a small diagonal to the posterior covariance
         for numerical stability
 
@@ -139,7 +139,7 @@ def sample_gp(trace, gp, X_values, samples=None, obs_noise=True, model=None, ran
     # Posterior covariance
     S_post = S_zz - tt.dot(tt.dot(S_xz.T, S_inv), S_xz)
 
-    if jitter:
+    if chol_const:
         n = S_post.shape[0]
         correction = 1e-6 * tt.nlinalg.trace(S_post) * tt.eye(n)
 
