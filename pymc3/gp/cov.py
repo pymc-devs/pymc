@@ -99,18 +99,18 @@ class Combination(Covariance):
                 self.factor_list.append(factor)
 
     def merge_factors(self, X, Z=None, diag=False):
-        factors = []
+        factor_list = []
         for factor in self.factor_list:
             if isinstance(factor, Covariance):
-                factors.append(factor(X, Z, diag))
+                factor_list.append(factor(X, Z, diag))
             elif hasattr(factor, "ndim"):
                 if diag:
-                    factors.append(tt.diag(factor))
+                    factor_list.append(tt.diag(factor))
                 else:
-                    factors.append(factor)
+                    factor_list.append(factor)
             else:
-                factors.append(factor)
-        return factors
+                factor_list.append(factor)
+        return factor_list
 
 
 class Add(Combination):
