@@ -415,4 +415,4 @@ class TestGP(SeededTest):
         Z = np.linspace(0, 1, 5)[:, None]
         with model:
             out = gp.sample_gp(tr[-3:], gp=random_test, X_values=Z, obs_noise=False,
-                               random_seed=self.random_seed, progressbar=False, jitter=True)
+                               random_seed=self.random_seed, progressbar=False, chol_const=True)
