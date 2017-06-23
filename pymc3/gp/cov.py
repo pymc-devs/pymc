@@ -85,7 +85,7 @@ class Combination(Covariance):
     def __init__(self, factor_list):
         input_dim = np.max([factor.input_dim for factor in
                             filter(lambda x: isinstance(x, Covariance), factor_list)])
-        Covariance.__init__(self, input_dim=input_dim)
+        super(Combination, self).__init__(input_dim=input_dim)
         self.factor_list = []
         for factor in factor_list:
             if isinstance(factor, self.__class__):
@@ -117,10 +117,8 @@ class Stationary(Covariance):
     """
 
     def __init__(self, input_dim, lengthscales, active_dims=None):
-        Covariance.__init__(self, input_dim, active_dims)
-        if isinstance(lengthscales, (list, tuple)):
-            lengthscales = np.array(lengthscales)
-        self.lengthscales = lengthscales
+        super(Stationary, self).__init__(input_dim, active_dims)
+        self.lengthscales = tt.as_tensor_variable(lengthscales)
 
     def square_dist(self, X, Z):
         X = tt.mul(X, 1.0 / self.lengthscales)
@@ -165,8 +163,7 @@ class RatQuad(Stationary):
     """
 
     def __init__(self, input_dim, lengthscales, alpha, active_dims=None):
-        Covariance.__init__(self, input_dim, active_dims)
-        self.lengthscales = lengthscales
+        super(RatQuad, self).__init__(input_dim, lengthscales, active_dims)
         self.alpha = alpha
 
     def __call__(self, X, Z=None):
@@ -240,7 +237,7 @@ class Linear(Covariance):
     """
 
     def __init__(self, input_dim, c, active_dims=None):
-        Covariance.__init__(self, input_dim, active_dims)
+        super(Linear, self).__init__(input_dim, active_dims)
         self.c = c
 
     def __call__(self, X, Z=None):
@@ -262,7 +259,7 @@ class Polynomial(Linear):
     """
 
     def __init__(self, input_dim, c, d, offset, active_dims=None):
-        Linear.__init__(self, input_dim, c, active_dims)
+        super(Polynomial, self).__init__(input_dim, c, active_dims)
         self.d = d
         self.offset = offset
 
@@ -289,7 +286,7 @@ class WarpedInput(Covariance):
     """
 
     def __init__(self, input_dim, cov_func, warp_func, args=None, active_dims=None):
-        Covariance.__init__(self, input_dim, active_dims)
+        super(WarpedInput, self).__init__(input_dim, active_dims)
         if not callable(warp_func):
             raise TypeError("warp_func must be callable")
         if not isinstance(cov_func, Covariance):
@@ -323,7 +320,7 @@ class Gibbs(Covariance):
         Additional inputs (besides X or Z) to lengthscale_func.
     """
     def __init__(self, input_dim, lengthscale_func, args=None, active_dims=None):
-        Covariance.__init__(self, input_dim, active_dims)
+        super(Gibbs, self).__init__(input_dim, active_dims)
         if active_dims is not None:
             if input_dim != 1 or sum(active_dims) == 1:
                 raise NotImplementedError("Higher dimensional inputs are untested")
