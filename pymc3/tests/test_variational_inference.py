@@ -14,10 +14,10 @@ from pymc3.variational.operators import KL
 from pymc3.tests import models
 
 
-@pytest.fixture('function', autouse=True)
-def set_seed():
-    np.random.seed(42)
-    pm.set_tt_rng(42)
+pytestmark = pytest.mark.usefixtures(
+    'strict_float32',
+    'seeded_test'
+)
 
 
 def test_elbo():
@@ -182,6 +182,7 @@ def fit_kwargs(inference, using_minibatch):
     return _select[(type(inference), key)]
 
 
+@pytest.mark.run('first')
 def test_fit_oo(inference,
                 fit_kwargs,
                 simple_model_data):
@@ -193,6 +194,7 @@ def test_fit_oo(inference,
 
 
 def test_profile(inference, fit_kwargs):
+    fit_kwargs = fit_kwargs.copy()  # they are module level
     fit_kwargs['n'] = 100
     fit_kwargs.pop('callbacks')
     inference.run_profiling(**fit_kwargs).summary()
