@@ -44,7 +44,7 @@ class Covariance(object):
         ----------
         X : The training inputs to the kernel.
         Z : The optional prediction set of inputs the kernel.  If Z is None, Z = X.
-        daig: Return only the diagonal of the covariance function.  Default is False.
+        diag: Return only the diagonal of the covariance function.  Default is False.
         """
         if diag:
             return self.diag(X)
