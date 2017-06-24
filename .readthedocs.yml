@@ -3,7 +3,7 @@ formats:
   - epub
 
 # pip requirements file for building sphinx docs (e.g. nbsphinx)
-requirements_file: docs/requirements-dev.txt
+requirements_file: requirements-dev.txt
 
 # can also specify a conda env file if pip isn't enough, for example:
 # conda:
