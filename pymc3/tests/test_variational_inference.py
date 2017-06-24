@@ -1,5 +1,6 @@
 import pytest
 import pickle
+import operator
 import numpy as np
 from theano import theano, tensor as tt
 import pymc3 as pm
@@ -111,7 +112,7 @@ def simple_model(simple_model_data):
 @pytest.fixture('module', params=[
         dict(cls=ADVI, init=dict()),
         dict(cls=FullRankADVI, init=dict()),
-        dict(cls=SVGD, init=dict(n_particles=500)),
+        dict(cls=SVGD, init=dict(n_particles=500, jitter=1)),
         dict(cls=ASVGD, init=dict(temperature=1.)),
     ], ids=lambda d: d['cls'].__name__)
 def inference_spec(request):
@@ -303,8 +304,68 @@ def binomial_model_inference(binomial_model, inference_spec):
         return inference_spec()
 
 
+@pytest.mark.run(after='test_replacements')
 def test_n_mc(binomial_model_inference):
     binomial_model_inference.fit(10, obj_n_mc=2)
+
+
+@pytest.mark.run(after='test_sample_replacements')
+def test_replacements(binomial_model_inference):
+    d = tt.bscalar()
+    d.tag.test_value = 1
+    approx = binomial_model_inference.approx
+    p = approx.model.p
+    p_t = p ** 3
+    p_s = approx.apply_replacements(p_t)
+    sampled = [p_s.eval() for _ in range(100)]
+    assert any(map(
+        operator.ne,
+        sampled[1:], sampled[:-1])
+    )  # stochastic
+
+    p_d = approx.apply_replacements(p_t, deterministic=True)
+    sampled = [p_d.eval() for _ in range(100)]
+    assert all(map(
+        operator.eq,
+        sampled[1:], sampled[:-1])
+    )  # deterministic
+
+    p_r = approx.apply_replacements(p_t, deterministic=d)
+    sampled = [p_r.eval({d: 1}) for _ in range(100)]
+    assert all(map(
+        operator.eq,
+        sampled[1:], sampled[:-1])
+    )  # deterministic
+    sampled = [p_r.eval({d: 0}) for _ in range(100)]
+    assert any(map(
+        operator.ne,
+        sampled[1:], sampled[:-1])
+    )  # stochastic
+
+
+def test_sample_replacements(binomial_model_inference):
+    i = tt.iscalar()
+    i.tag.test_value = 1
+    approx = binomial_model_inference.approx
+    p = approx.model.p
+    p_t = p ** 3
+    p_s = approx.sample_node(p_t, size=100)
+    sampled = p_s.eval()
+    assert any(map(
+        operator.ne,
+        sampled[1:], sampled[:-1])
+    )  # stochastic
+    assert sampled.shape[0] == 100
+
+    p_d = approx.sample_node(p_t, size=i)
+    sampled = p_d.eval({i: 100})
+    assert any(map(
+        operator.ne,
+        sampled[1:], sampled[:-1])
+    )  # deterministic
+    assert sampled.shape[0] == 100
+    sampled = p_d.eval({i: 101})
+    assert sampled.shape[0] == 101
 
 
 def test_pickling(binomial_model_inference):

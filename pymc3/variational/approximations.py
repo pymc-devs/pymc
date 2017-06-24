@@ -336,14 +336,14 @@ class Empirical(Approximation):
                 return tt.switch(
                     deterministic,
                     tt.repeat(
-                        self.mean.reshape((1, -1)),
-                        size if size is not None else 1),
+                        self.mean,
+                        size if size is not None else 1, -1),
                     self.histogram[self.randidx(size)])
             else:
                 if deterministic:
                     return tt.repeat(
-                        self.mean.reshape((1, -1)),
-                        size if size is not None else 1)
+                        self.mean,
+                        size if size is not None else 1, -1)
                 else:
                     return self.histogram[self.randidx(size)]
 
@@ -359,7 +359,7 @@ class Empirical(Approximation):
 
     @property
     def mean(self):
-        return self.histogram.mean(0)
+        return self.histogram.mean(0, keepdims=True)
 
     @property
     def cov(self):
