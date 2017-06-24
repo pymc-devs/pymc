@@ -373,6 +373,17 @@ def test_pickling(binomial_model_inference):
     inference.fit(20)
 
 
+def test_empirical_from_trace(another_simple_model):
+    with another_simple_model:
+        step = pm.Metropolis()
+        trace = pm.sample(100, step=step)
+        emp = Empirical(trace)
+        assert emp.histogram.shape[0].eval() == 100
+        trace = pm.sample(100, step=step, njobs=4)
+        emp = Empirical(trace)
+        assert emp.histogram.shape[0].eval() == 400
+
+
 def test_multiple_replacements(inference_spec):
     _, model, _ = models.exponential_beta(n=2)
     x = model.x
