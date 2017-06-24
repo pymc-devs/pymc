@@ -163,7 +163,7 @@ class TestStepMethods(object):  # yield test doesn't work subclassing object
         with Model():
             x = Normal('x', mu=0, sd=1)
             if step_method.__name__ == 'SMC':
-                trace = smc.sample_SMC(n_steps=n_steps, step=step_method(random_seed=1),
+                trace = smc.sample_smc(n_steps=n_steps, step=step_method(random_seed=1),
                                          n_jobs=1, progressbar=False,
                                          homepath=self.temp_dir)
             else:
