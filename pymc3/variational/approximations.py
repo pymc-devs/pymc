@@ -302,9 +302,12 @@ class Empirical(Approximation):
         if trace is None:
             histogram = np.atleast_2d(self.gbij.map(self.model.test_point))
         else:
-            histogram = np.empty((len(trace), self.global_size))
-            for i in range(len(trace)):
-                histogram[i] = self.gbij.map(trace[i])
+            histogram = np.empty((len(trace) * len(trace.chains), self.global_size))
+            i = 0
+            for t in trace.chains:
+                for j in range(len(trace)):
+                    histogram[i] = self.gbij.map(trace.point(j, t))
+                    i += 1
         return theano.shared(pm.floatX(histogram), 'histogram')
 
     def randidx(self, size=None):
