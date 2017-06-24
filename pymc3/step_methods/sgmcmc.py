@@ -52,7 +52,7 @@ def elemwise_dlogL(vars, model, flat_view):
 
 
 class BaseStochasticGradient(ArrayStepShared):
-    """
+    R"""
     BaseStochasticGradient Object
     
     For working with BaseStochasticGradient Object
@@ -79,6 +79,15 @@ class BaseStochasticGradient(ArrayStepShared):
     minibatch_tensor : list of tensors
         If the ObservedRV.observed is not a GeneratorOp then this parameter must not be None
         The length of this tensor should be the same as the next(minibatches)
+
+    Notes
+    -----
+    Defining a BaseStochasticGradient needs
+    custom implementation of the following methods:
+        - :code: `.mk_training_fn()`
+            Returns a theano function which is called for each sampling step
+        - :code: `._initialize_values()`
+            Returns None it creates class variables which are required for the training fn
     """
 
     def __init__(self,
@@ -177,10 +186,20 @@ class BaseStochasticGradient(ArrayStepShared):
 
 
 class SGFS(BaseStochasticGradient):
-    """
+    R"""
     StochasticGradientFisherScoring
-    Implements "Algorithm 1: Bayesian Posterior Sampling via Stochastic Gradient Fisher Scoring"
-    in http://people.ee.duke.edu/%7Elcarin/782.pdf
+    
+    Parameters
+    -----
+    vars : list
+        model variables
+    B : np.array
+        the pre-conditioner matrix for the fisher scoring step
+
+    References
+    -----
+    -   Bayesian Posterior Sampling via Stochastic Gradient Fisher Scoring
+        Implements Algorithm 1 from the publication http://people.ee.duke.edu/%7Elcarin/782.pdf
     """
 
     def __init__(self, vars=None, B=None, **kwargs):
