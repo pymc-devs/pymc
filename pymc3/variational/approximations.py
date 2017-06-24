@@ -336,13 +336,13 @@ class Empirical(Approximation):
                 return tt.switch(
                     deterministic,
                     tt.repeat(
-                        self.mean,
+                        self.mean.dimshuffle('x', 0),
                         size if size is not None else 1, -1),
                     self.histogram[self.randidx(size)])
             else:
                 if deterministic:
                     return tt.repeat(
-                        self.mean,
+                        self.mean.dimshuffle('x', 0),
                         size if size is not None else 1, -1)
                 else:
                     return self.histogram[self.randidx(size)]
@@ -359,12 +359,12 @@ class Empirical(Approximation):
 
     @property
     def mean(self):
-        return self.histogram.mean(0, keepdims=True)
+        return self.histogram.mean(0)
 
     @property
     def cov(self):
         x = (self.histogram - self.mean)
-        return x.T.dot(x) / self.histogram.shape[0]
+        return x.T.dot(x) / pm.floatX(self.histogram.shape[0])
 
     @classmethod
     def from_noise(cls, size, jitter=.01, local_rv=None,
