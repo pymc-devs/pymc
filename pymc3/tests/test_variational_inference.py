@@ -128,7 +128,6 @@ def inference_spec(request):
 
 @pytest.fixture('function')
 def inference(inference_spec, simple_model, scale_cost_to_minibatch):
-
     with simple_model:
         return inference_spec(scale_cost_to_minibatch=scale_cost_to_minibatch)
 
@@ -137,10 +136,10 @@ def inference(inference_spec, simple_model, scale_cost_to_minibatch):
 def fit_kwargs(inference, using_minibatch):
     cb = [pm.callbacks.CheckParametersConvergence(
             every=500,
-            diff='relative', tolerance=0.001),
+            diff='relative', tolerance=0.01),
           pm.callbacks.CheckParametersConvergence(
             every=500,
-            diff='absolute', tolerance=0.0001)]
+            diff='absolute', tolerance=0.01)]
     _select = {
         (ADVI, 'full'): dict(
             obj_optimizer=pm.adagrad_window(learning_rate=0.02, n_win=50),
@@ -151,28 +150,28 @@ def fit_kwargs(inference, using_minibatch):
             n=12000, callbacks=cb
         ),
         (FullRankADVI, 'full'): dict(
-            obj_optimizer=pm.adagrad_window(learning_rate=0.01, n_win=50),
+            obj_optimizer=pm.adagrad_window(learning_rate=0.007, n_win=50),
             n=6000, callbacks=cb
         ),
         (FullRankADVI, 'mini'): dict(
-            obj_optimizer=pm.rmsprop(learning_rate=0.007),
+            obj_optimizer=pm.adagrad_window(learning_rate=0.007, n_win=50),
             n=12000, callbacks=cb
         ),
         (SVGD, 'full'): dict(
-            obj_optimizer=pm.sgd(learning_rate=0.01),
-            n=1000, callbacks=cb
+            obj_optimizer=pm.adagrad_window(learning_rate=0.07, n_win=7),
+            n=200, callbacks=cb
         ),
         (SVGD, 'mini'): dict(
-            obj_optimizer=pm.adagrad_window(learning_rate=0.01, n_win=5),
-            n=3000, callbacks=cb
+            obj_optimizer=pm.adagrad_window(learning_rate=0.07, n_win=7),
+            n=200, callbacks=cb
         ),
         (ASVGD, 'full'): dict(
-            obj_optimizer=pm.adagrad_window(learning_rate=0.02, n_win=50),
-            n=2000, obj_n_mc=300, callbacks=cb
+            obj_optimizer=pm.adagrad_window(learning_rate=0.07, n_win=10),
+            n=500, obj_n_mc=300, callbacks=cb
         ),
         (ASVGD, 'mini'): dict(
-            obj_optimizer=pm.adagrad_window(learning_rate=0.02, n_win=50),
-            n=1700, obj_n_mc=300, callbacks=cb
+            obj_optimizer=pm.adagrad_window(learning_rate=0.07, n_win=10),
+            n=500, obj_n_mc=300, callbacks=cb
         )
     }
     if using_minibatch:
@@ -193,11 +192,8 @@ def test_fit_oo(inference,
     np.testing.assert_allclose(np.std(trace['mu']), np.sqrt(1. / d), rtol=0.1)
 
 
-def test_profile(inference, fit_kwargs):
-    fit_kwargs = fit_kwargs.copy()  # they are module level
-    fit_kwargs['n'] = 100
-    fit_kwargs.pop('callbacks')
-    inference.run_profiling(**fit_kwargs).summary()
+def test_profile(inference):
+    inference.run_profiling(n=100).summary()
 
 
 @pytest.fixture('module')
