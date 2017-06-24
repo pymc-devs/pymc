@@ -21,10 +21,12 @@ def exception_verbosity():
 
 @pytest.yield_fixture(scope='function', autouse=False)
 def strict_float32():
-    config = theano.configparser.change_flags(
-        warn_float64='raise',
-        floatX='float32')
-    with config:
+    if theano.config.floatX == 'float32':
+        config = theano.configparser.change_flags(
+            warn_float64='raise')
+        with config:
+            yield
+    else:
         yield
 
 
