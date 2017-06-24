@@ -4,9 +4,25 @@
 
 ### New features
 
-* [Add Gaussian Process submodule](http://pymc-devs.github.io/pymc3/notebooks/GP-introduction.html)
+* New user forum at http://discourse.pymc.io
+
+* [Gaussian Process submodule](http://pymc-devs.github.io/pymc3/notebooks/GP-introduction.html)
+
+* Much improved variational inference support:
+
+  - [Add Operator Variational Inference (experimental).](http://pymc-devs.github.io/pymc3/notebooks/bayesian_neural_network_opvi-advi.html)
+
+  - [Add Stein-Variational Gradient Descent as well as Amortized SVGD (experimental).](https://github.com/pymc-devs/pymc3/pull/2183)
+
+  - [Add pm.Minibatch() to easily specify mini-batches.](http://pymc-devs.github.io/pymc3/notebooks/bayesian_neural_network_opvi-advi.html#Minibatch-ADVI)
+
+  - Added various optimizers including ADAM.
+  
+  - Stopping criterion implemented via callbacks.
 
 * sample() defaults changed: tuning is enabled for the first 500 samples which are then discarded from the trace as burn-in.
+
+* MvNormal supports Cholesky Decomposition now for increased speed and numerical stability.
 
 * Many optimizations and speed-ups.
 
@@ -53,8 +69,6 @@
 * Add MvGaussianRandomWalk and MvStudentTRandomWalk distributions.
 
 * GLM models do not need a left-hand variable anymore.
-
-* Add support for cholesky parametrizations for cov/corr matrices.
 
 * Refactored HMC and NUTS for better readability.
 
