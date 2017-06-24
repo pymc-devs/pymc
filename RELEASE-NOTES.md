@@ -4,7 +4,9 @@
 
 ### New features
 
-* [Add Gaussian Process submodule](http://pymc-devs.github.io/pymc3/notebooks/GP-introduction.html)
+* New user forum at http://discourse.pymc.io
+
+* [Gaussian Process submodule](http://pymc-devs.github.io/pymc3/notebooks/GP-introduction.html)
 
 * Much improved variational inference support:
 
