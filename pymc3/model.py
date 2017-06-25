@@ -184,9 +184,12 @@ class Factor(object):
     def logpt(self):
         """Theano scalar of log-probability of the model"""
         if getattr(self, 'total_size', None) is not None:
-            return tt.sum(self.logp_elemwiset) * self.scaling
+            logp = tt.sum(self.logp_elemwiset) * self.scaling
         else:
-            return tt.sum(self.logp_elemwiset)
+            logp = tt.sum(self.logp_elemwiset)
+        if self.name is not None:
+            logp.name = '__logp_%s' % self.name
+        return logp
 
 
 class InitContextMeta(type):
@@ -350,6 +353,7 @@ class ValueGradFunction(object):
             self._cost, grad_vars, self._ordering.vmap)
 
         grad = tt.grad(self._cost_joined, self._vars_joined)
+        grad.name = '__grad'
 
         inputs = [self._vars_joined]
 
@@ -433,6 +437,7 @@ class ValueGradFunction(object):
         joined_slices = {}
         for vmap in vmap:
             sliced = args_joined[vmap.slc].reshape(vmap.shp)
+            sliced.name = vmap.var
             joined_slices[vmap.var] = sliced
 
         replace = {var: joined_slices[var.name] for var in args}
@@ -614,7 +619,9 @@ class Model(six.with_metaclass(InitContextMeta, Context, Factor)):
         """Theano scalar of log-probability of the model"""
         with self:
             factors = [var.logpt for var in self.basic_RVs] + self.potentials
-            return tt.add(*map(tt.sum, factors))
+            logp = tt.add(*map(tt.sum, factors))
+            logp.name = '__logp'
+            return logp
 
     @property
     def varlogpt(self):
