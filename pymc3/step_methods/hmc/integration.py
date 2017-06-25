@@ -21,6 +21,9 @@ class CpuLeapfrogIntegrator(object):
         return State(q, p, v, dlogp, energy)
 
     def step(self, epsilon, state, out=None):
+        pot = self._potential
+        blas = linalg.blas
+
         q, p, v, q_grad, energy = state
         if out is None:
             q_new = q.copy()
@@ -32,14 +35,13 @@ class CpuLeapfrogIntegrator(object):
             q_new[:] = q
             p_new[:] = p
 
-        blas = linalg.blas
         dt = 0.5 * epsilon
 
         # p is already stored in p_new
         # p_new = p + dt * q_grad
         blas.daxpy(q_grad, p_new, a=dt)
 
-        self._potential.velocity(p_new, out=v_new)
+        pot.velocity(p_new, out=v_new)
         # q is already stored in q_new
         # q_new = q + epsilon * v_new
         blas.daxpy(v_new, q_new, a=epsilon)
@@ -49,8 +51,7 @@ class CpuLeapfrogIntegrator(object):
         # p_new = p_new + dt * q_new_grad
         blas.daxpy(q_new_grad, p_new, a=dt)
 
-        self._potential.velocity(p_new, out=v_new)
-        kinetic = self._potential.energy(p_new, velocity=v_new)
+        kinetic = pot.velocity_energy(p_new, v_new)
         energy = kinetic - logp
 
         if out is not None:

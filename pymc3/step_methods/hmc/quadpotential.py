@@ -251,8 +251,7 @@ class QuadPotentialDiag(QuadPotential):
 
     def velocity(self, x, out=None):
         if out is not None:
-            out[:] = self.v
-            out[:] *= x
+            np.multiply(x, self.v, out=out)
             return
         return self.v * x
 
@@ -263,6 +262,10 @@ class QuadPotentialDiag(QuadPotential):
         if velocity is not None:
             return 0.5 * scipy.linalg.blas.ddot(x, velocity)
         return .5 * x.dot(self.v * x)
+
+    def velocity_energy(self, x, v_out):
+        np.multiply(x, self.v, out=v_out)
+        return 0.5 * scipy.linalg.blas.ddot(x, v_out)
 
 
 class QuadPotentialFullInv(QuadPotential):
