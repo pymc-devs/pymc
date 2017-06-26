@@ -1,7 +1,6 @@
 import theano.tensor as tt
 import numpy as np
 from functools import reduce
-from theano import Variable
 
 __all__ = ['ExpQuad',
            'RatQuad',
