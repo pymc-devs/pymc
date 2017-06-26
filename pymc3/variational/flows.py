@@ -10,6 +10,9 @@ from pymc3.theanof import change_flags
 from .opvi import node_property, cast_to_list
 
 __all__ = [
+    'Formula',
+    'link_flows',
+    'PlanarFlow'
 ]
 
 
@@ -88,7 +91,6 @@ def link_flows(flows, z0=None):
 
 
 class AbstractFlow(object):
-
     shared_params = None
 
     def __init__(self, z0=None, dim=None):
@@ -104,7 +106,7 @@ class AbstractFlow(object):
             raise ValueError('Cannot infer dimension of flow, '
                              'please provide dim or Flow instance as z0')
         if z0 is None:
-            self.z0 = tt.matrix()
+            self.z0 = tt.matrix()  # type: tt.TensorVariable
             self.z0.tag.test_value = np.random.rand(
                 2, dim
             ).astype(self.z0.dtype)
@@ -167,10 +169,10 @@ class AbstractFlow(object):
         while not current.isroot:
             current = current.parent
         return current
+
     @property
     def isroot(self):
         return self.parent is None
-
 
 
 FlowFn = collections.namedtuple('FlowFn', 'fn,inv,deriv')
@@ -205,7 +207,7 @@ class LinearFlow(AbstractFlow):
         z = self.z0  # sxd
         u = self.u   # dx1
         w = self.w   # dx1
-        b = self.b   # ()
+        b = self.b   # .
         h = self.h   # f
         # h(sxd \dot dx1 + .)  = sx1
         hwz = h(z.dot(w) + b)  # sx1
@@ -218,7 +220,7 @@ class LinearFlow(AbstractFlow):
         z = self.z0  # sxd
         u = self.u   # dx1
         w = self.w   # dx1
-        b = self.b   # ()
+        b = self.b   # .
         deriv = self.h.deriv  # f'
         # h^-1(sxd \dot dx1 + .) * 1xd   = sxd
         phi = deriv(z.dot(w) + b) * w.T  # sxd
