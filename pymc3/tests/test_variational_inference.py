@@ -513,9 +513,8 @@ def flow_spec(request):
 
 def test_flow_init_loop(flow_spec):
     flow = pm.tt_rng().normal(size=(10, 2))
-    flow = flow_spec(z0=flow, dim=2)
     for i in range(10):
-        flow = flow_spec(parent=flow, z0=flow.forward)
+        flow = flow_spec(z0=flow, dim=2)
     flow.forward.eval()
 
 
@@ -548,7 +547,25 @@ def test_flow_det(flow_spec):
 def test_flows_collect_chain():
     initial = tt.ones((3, 2))
     flow1 = flows.PlanarFlow(dim=2, z0=initial)
-    flow2 = flows.PlanarFlow(dim=2, parent=flow1)
+    flow2 = flows.PlanarFlow(dim=2, z0=flow1)
     assert len(flow2.params) == 3
     assert len(flow2.all_params) == 6
     np.testing.assert_allclose(flow1.det.eval() + flow2.det.eval(), flow2.all_dets.eval())
+
+
+@pytest.mark.parametrize(
+    'formula,length,order',
+    [
+        ('planar', 1, [flows.PlanarFlow]),
+        ('planar*2', 2, [flows.PlanarFlow] * 2),
+        ('planar-planar', 2, [flows.PlanarFlow] * 2),
+        ('planar-planar*2', 3, [flows.PlanarFlow] * 3)
+    ]
+)
+def test_flow_formula(formula, length, order):
+    spec = flows.Formula(formula)
+    flows_list = spec.flows
+    assert len(flows_list) == length
+    if order is not None:
+        assert flows_list == order
+    spec(dim=2)(tt.ones((3, 2))).eval()  # should work
