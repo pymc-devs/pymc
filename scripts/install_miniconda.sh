@@ -16,7 +16,7 @@ else
 fi
 
 
-if [ ! -d $INSTALL_FOLDER ]; then
+if [ ! -d $INSTALL_FOLDER ] || [ ! -e $INSTALL_FOLDER/bin/conda ]; then
   if [ "$(uname)" == "Darwin" ]; then
     URL_OS="MacOSX"
   elif [ "$(expr substr "$(uname -s)" 1 5)" == "Linux" ]; then

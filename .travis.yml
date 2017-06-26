@@ -1,6 +1,12 @@
 language: python
 sudo: false
 
+cache:
+  directories:
+    - $HOME/.theano
+    - $HOME/minicoda2
+    - $HOME/minicoda3
+
 before_install:
   - . ./scripts/install_miniconda.sh
   - sh -e /etc/init.d/xvfb start
