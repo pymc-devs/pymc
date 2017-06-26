@@ -13,31 +13,107 @@ __all__ = [
 ]
 
 
+class Formula(object):
+    """
+    Helpful class to use string like formulas with
+    __call__ syntax similar to Flow.__init__
+
+    Parameters
+    ----------
+    formula : str
+        string representing normalizing flow
+        e.g. 'planar', 'planar*4', 'planar*4-radial*3', 'planar-radial-planar'
+        Yet simple pattern is supported:
+
+            1. dash separated flow identifiers
+            2. star for replication after flow identifier
+
+    Methods
+    -------
+    __call__(z0, dim) - initializes and links all flows returning the last one
+    """
+    _select = dict(
+        planar=PlanarFlow
+    )
+
+    def __init__(self, formula):
+        self.formula = formula
+        _formula = formula.lower().replace(' ', '')
+        identifiers = _formula.split('-')
+        identifiers = [idf.split('*') for idf in identifiers]
+        self.flows = []
+
+        for tup in identifiers:
+            if len(tup) == 1:
+                self.flows.append(self._select[tup[0]])
+            elif len(tup) == 2:
+                self.flows.extend([self._select[tup[0]]]*int(tup[1]))
+            else:
+                raise ValueError('Wrong format: %s' % formula)
+
+    def __call__(self, z0=None, dim=None):
+        _flows = [flow(dim=dim) for flow in self.flows]
+        return link_flows(_flows, z0)[-1]
+
+    def __reduce__(self):
+        return self.__class__, self.formula
+
+
+def link_flows(flows, z0=None):
+    """Link flows in given order, optionally override
+    starting `z0` with new one. This operation can be
+    performed only once as `owner` attributes are set
+    on symbolic variables
+
+    Parameters
+    ----------
+    flows : list[AbstractFlow]
+    z0 : matrix
+
+    Returns
+    -------
+    list[AbstractFlow]
+    """
+    view_op = theano.compile.view_op
+    if z0 is not None:
+        if isinstance(z0, AbstractFlow):
+            z0 = z0.forward
+        theano.Apply(view_op, [z0], [flows[0].z0])
+    for f0, f1 in zip(flows[:-1], flows[1:]):
+        if f0.dim != f1.dim:
+            raise ValueError('Flows have different dims')
+        theano.Apply(view_op, [f0.forward], [f1.z0])
+        f1.parent = f0
+    return flows
+
+
 class AbstractFlow(object):
+
     shared_params = None
 
-    def __init__(self, z0=None, dim=None, parent=None):
-        if dim is not None and parent is not None:
-            if dim != parent.dim:
-                raise ValueError('Provided `dim` and `parent.dim` are not equal')
-        if parent is not None:
-            self.dim = parent.dim
-        elif dim is not None:
+    def __init__(self, z0=None, dim=None):
+        if isinstance(z0, AbstractFlow):
+            parent = z0
+            dim = parent.dim
+            z0 = parent.forward
+        else:
+            parent = None
+        if dim is not None:
             self.dim = dim
         else:
-            raise ValueError('Need `parent` or `dim` to infer dimension of flow')
-        if z0 is not None and parent is not None:
-            if z0 is not parent.forward:
-                raise ValueError('Provided `z0` and `parent.forward` are not equal')
-        elif z0 is not None:
-            self.z0 = z0
-        elif parent is not None:
-            self.z0 = parent.forward
-        else:
+            raise ValueError('Cannot infer dimension of flow, '
+                             'please provide dim or Flow instance as z0')
+        if z0 is None:
             self.z0 = tt.matrix()
             self.z0.tag.test_value = np.random.rand(
                 2, dim
             ).astype(self.z0.dtype)
+        else:
+            self.z0 = z0
+            if not hasattr(z0.tag, 'test_value'):
+                self.z0.tag.test_value = np.random.rand(
+                    2, dim
+                ).astype(self.z0.dtype)
         self.parent = parent
         self._initialize(self.dim)
 
@@ -83,51 +159,28 @@ class AbstractFlow(object):
         ).astype(self.z0.dtype)
         return ret
 
+    __call__ = forward_apply
+
     @property
     def root(self):
         current = self
         while not current.isroot:
             current = current.parent
         return current
-
     @property
     def isroot(self):
         return self.parent is None
 
 
-def link_flows(flows, z0=None):
-    """Link flows in given order, optionally override
-    starting `z0` with new one. This operation can be
-    performed only once as `owner` attributes are set
-    on symbolic variables
-
-    Parameters
-    ----------
-    flows : list[AbstractFlow]
-    z0 : matrix
-
-    Returns
-    -------
-    list[AbstractFlow]
-    """
-    view_op = theano.compile.view_op
-    if z0 is not None:
-        theano.Apply(view_op, [z0], [flows[0].z0])
-    for f0, f1 in zip(flows[:-1], flows[1:]):
-        if f0.dim != f1.dim:
-            raise ValueError('Flows have different dims')
-        theano.Apply(view_op, [f0.forward], [f1.z0])
-        f1.parent = f0
-    return flows
 
 FlowFn = collections.namedtuple('FlowFn', 'fn,inv,deriv')
 FlowFn.__call__ = lambda self, x: self.fn(x)
 
 
 class LinearFlow(AbstractFlow):
-    def __init__(self, h, z0=None, dim=None, parent=None):
+    def __init__(self, h, z0=None, dim=None):
         self.h = h
-        super(LinearFlow, self).__init__(dim=dim, z0=z0, parent=parent)
+        super(LinearFlow, self).__init__(dim=dim, z0=z0)
 
     def _initialize(self, dim):
         super(LinearFlow, self)._initialize(dim)
