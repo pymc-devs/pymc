@@ -532,9 +532,8 @@ class Approximation(object):
                  scale_cost_to_minibatch=False,
                  random_seed=None, **kwargs):
         model = modelcontext(model)
-        self.scale_cost_to_minibatch = theano.shared(np.int8(0))
-        if scale_cost_to_minibatch:
-            self.scale_cost_to_minibatch.set_value(1)
+        self._scale_cost_to_minibatch = theano.shared(np.int8(0))
+        self.scale_cost_to_minibatch = scale_cost_to_minibatch
         if not isinstance(cost_part_grad_scale, theano.Variable):
             self.cost_part_grad_scale = theano.shared(pm.floatX(cost_part_grad_scale))
         else:
@@ -585,6 +584,14 @@ class Approximation(object):
 
     local_names = property(lambda self: tuple(v.name for v in self.local_vars))
     global_names = property(lambda self: tuple(v.name for v in self.global_vars))
+
+    @property
+    def scale_cost_to_minibatch(self):
+        return bool(self._scale_cost_to_minibatch.get_value())
+
+    @scale_cost_to_minibatch.setter
+    def scale_cost_to_minibatch(self, value):
+        self._scale_cost_to_minibatch.set_value(int(bool(value)))
 
     @staticmethod
     def _choose_alternative(part, loc, glob):
@@ -841,6 +848,8 @@ class Approximation(object):
         """
         initial_local = self._initial_part_matrix('local', s, d)
         initial_global = self._initial_part_matrix('global', s, d)
+
+        # optimizations
         if isinstance(s, int) and (s == 1) or s is None:
             node = theano.clone(node, {
                 self.logp: self.single_symbolic_logp
@@ -933,7 +942,7 @@ class Approximation(object):
         })
         t = self.set_size_and_deterministic(t, 1, 1)  # remove random, we do not it here at all
         # if not scale_cost_to_minibatch: t=1
-        t = tt.switch(self.scale_cost_to_minibatch, t,
+        t = tt.switch(self._scale_cost_to_minibatch, t,
                       tt.constant(1, dtype=t.dtype))
         return pm.floatX(t)
 
