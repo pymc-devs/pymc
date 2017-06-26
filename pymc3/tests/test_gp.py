@@ -7,7 +7,6 @@ import numpy as np
 import numpy.testing as npt
 import pytest
 
-
 class TestZeroMean(object):
     def test_value(self):
         X = np.linspace(0, 1, 10)[:, None]
@@ -479,7 +478,7 @@ class TestGP(SeededTest):
 
     def test_sample(self):
         X = np.linspace(0, 1, 10)[:, None]
-        Y = np.random.randn(10, 1)
+        Y = np.random.randn(10)
         with Model() as model:
             M = gp.mean.Zero()
             l = Uniform('l', 0, 5)
@@ -488,3 +487,9 @@ class TestGP(SeededTest):
             # make a Gaussian model
             random_test = gp.GP('random_test', mean_func=M, cov_func=K, sigma=sigma, observed={'X':X, 'Y':Y})
             tr = sample(20, init=None, progressbar=False, random_seed=self.random_seed)
+
+        # test prediction
+        Z = np.linspace(0, 1, 5)[:, None]
+        with model:
+            out = gp.sample_gp(tr[-3:], gp=random_test, X_values=Z, obs_noise=False,
+                               random_seed=self.random_seed, progressbar=False, chol_const=True)
