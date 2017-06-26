@@ -1,6 +1,7 @@
 import theano.tensor as tt
 import numpy as np
 from functools import reduce
+from theano import Variable
 
 __all__ = ['ExpQuad',
            'RatQuad',
@@ -35,7 +36,7 @@ class Covariance(object):
             if len(active_dims) != input_dim:
                 raise ValueError("Length of active_dims must match input_dim")
 
-    def __call__(self, X, Z):
+    def __call__(self, X, Z=None, diag=False):
         R"""
         Evaluate the kernel/covariance function.
 
@@ -43,8 +44,12 @@ class Covariance(object):
         ----------
         X : The training inputs to the kernel.
         Z : The optional prediction set of inputs the kernel.  If Z is None, Z = X.
+        diag: Return only the diagonal of the covariance function.  Default is False.
         """
-        raise NotImplementedError
+        if diag:
+            return self.diag(X)
+        else:
+            return self.full(X, Z)
 
     def _slice(self, X, Z):
         X = X[:, self.active_dims]
@@ -93,17 +98,29 @@ class Combination(Covariance):
             else:
                 self.factor_list.append(factor)
 
+    def merge_factors(self, X, Z=None, diag=False):
+        factor_list = []
+        for factor in self.factor_list:
+            if isinstance(factor, Covariance):
+                factor_list.append(factor(X, Z, diag))
+            elif hasattr(factor, "ndim"):
+                if diag:
+                    factor_list.append(tt.diag(factor))
+                else:
+                    factor_list.append(factor)
+            else:
+                factor_list.append(factor)
+        return factor_list
+
 
 class Add(Combination):
-    def __call__(self, X, Z=None):
-        return reduce((lambda x, y: x + y),
-                      [k(X, Z) if isinstance(k, Covariance) else k for k in self.factor_list])
+    def __call__(self, X, Z=None, diag=False):
+        return reduce((lambda x, y: x + y), self.merge_factors(X, Z, diag))
 
 
 class Prod(Combination):
-    def __call__(self, X, Z=None):
-        return reduce((lambda x, y: x * y),
-                      [k(X, Z) if isinstance(k, Covariance) else k for k in self.factor_list])
+    def __call__(self, X, Z=None, diag=False):
+        return reduce((lambda x, y: x * y), self.merge_factors(X, Z, diag))
 
 
 class Stationary(Covariance):
@@ -137,6 +154,12 @@ class Stationary(Covariance):
         r2 = self.square_dist(X, Z)
         return tt.sqrt(r2 + 1e-12)
 
+    def diag(self, X):
+        return tt.ones(tt.stack([X.shape[0], ]))
+
+    def full(self, X, Z=None):
+        raise NotImplementedError
+
 
 class ExpQuad(Stationary):
     R"""
@@ -148,7 +171,7 @@ class ExpQuad(Stationary):
        k(x, x') = \mathrm{exp}\left[ -\frac{(x - x')^2}{2 \ell^2} \right]
     """
 
-    def __call__(self, X, Z=None):
+    def full(self, X, Z=None):
         X, Z = self._slice(X, Z)
         return tt.exp( -0.5 * self.square_dist(X, Z))
 
@@ -166,7 +189,7 @@ class RatQuad(Stationary):
         super(RatQuad, self).__init__(input_dim, lengthscales, active_dims)
         self.alpha = alpha
 
-    def __call__(self, X, Z=None):
+    def full(self, X, Z=None):
         X, Z = self._slice(X, Z)
         return tt.power((1.0 + 0.5 * self.square_dist(X, Z) * (1.0 / self.alpha)), -1.0 * self.alpha)
 
@@ -180,7 +203,7 @@ class Matern52(Stationary):
        k(x, x') = \left(1 + \frac{\sqrt{5(x - x')^2}}{\ell} + \frac{5(x-x')^2}{3\ell^2}\right) \mathrm{exp}\left[ - \frac{\sqrt{5(x - x')^2}}{\ell} \right]
     """
 
-    def __call__(self, X, Z=None):
+    def full(self, X, Z=None):
         X, Z = self._slice(X, Z)
         r = self.euclidean_dist(X, Z)
         return (1.0 + np.sqrt(5.0) * r + 5.0 / 3.0 * tt.square(r)) * tt.exp(-1.0 * np.sqrt(5.0) * r)
@@ -195,7 +218,7 @@ class Matern32(Stationary):
        k(x, x') = \left(1 + \frac{\sqrt{3(x - x')^2}}{\ell}\right)\mathrm{exp}\left[ - \frac{\sqrt{3(x - x')^2}}{\ell} \right]
     """
 
-    def __call__(self, X, Z=None):
+    def full(self, X, Z=None):
         X, Z = self._slice(X, Z)
         r = self.euclidean_dist(X, Z)
         return (1.0 + np.sqrt(3.0) * r) * tt.exp(-np.sqrt(3.0) * r)
@@ -210,7 +233,7 @@ class Exponential(Stationary):
        k(x, x') = \mathrm{exp}\left[ -\frac{||x - x'||}{2\ell^2} \right]
     """
 
-    def __call__(self, X, Z=None):
+    def full(self, X, Z=None):
         X, Z = self._slice(X, Z)
         return tt.exp(-0.5 * self.euclidean_dist(X, Z))
 
@@ -223,7 +246,7 @@ class Cosine(Stationary):
        k(x, x') = \mathrm{cos}\left( \frac{||x - x'||}{ \ell^2} \right)
     """
 
-    def __call__(self, X, Z=None):
+    def full(self, X, Z=None):
         X, Z = self._slice(X, Z)
         return tt.cos(np.pi * self.euclidean_dist(X, Z))
 
@@ -240,15 +263,22 @@ class Linear(Covariance):
         super(Linear, self).__init__(input_dim, active_dims)
         self.c = c
 
-    def __call__(self, X, Z=None):
+    def _common(self, X, Z=None):
         X, Z = self._slice(X, Z)
         Xc = tt.sub(X, self.c)
+        return X, Xc, Z
+
+    def full(self, X, Z=None):
+        X, Xc, Z = self._common(X, Z)
         if Z is None:
             return tt.dot(Xc, tt.transpose(Xc))
         else:
             Zc = tt.sub(Z, self.c)
             return tt.dot(Xc, tt.transpose(Zc))
 
+    def diag(self, X):
+        X, Xc, _ = self._common(X, None)
+        return tt.sum(tt.square(Xc), 1)
 
 class Polynomial(Linear):
     R"""
@@ -263,10 +293,13 @@ class Polynomial(Linear):
         self.d = d
         self.offset = offset
 
-    def __call__(self, X, Z=None):
-        linear = super(Polynomial, self).__call__(X, Z)
+    def full(self, X, Z=None):
+        linear = super(Polynomial, self).full(X, Z)
         return tt.power(linear + self.offset, self.d)
 
+    def diag(self, X):
+        linear = super(Polynomial, self).diag(X)
+        return tt.power(linear + self.offset, self.d)
 
 class WarpedInput(Covariance):
     R"""
@@ -295,12 +328,16 @@ class WarpedInput(Covariance):
         self.args = args
         self.cov_func = cov_func
 
-    def __call__(self, X, Z=None):
+    def full(self, X, Z=None):
         X, Z = self._slice(X, Z)
         if Z is None:
             return self.cov_func(self.w(X, self.args), Z)
         else:
             return self.cov_func(self.w(X, self.args), self.w(Z, self.args))
+
+    def diag(self, X):
+        X, _ = self._slice(X, None)
+        return self.cov_func(self.w(X, self.args), diag=True)
 
 
 class Gibbs(Covariance):
@@ -329,7 +366,7 @@ class Gibbs(Covariance):
                 raise NotImplementedError("Higher dimensional inputs are untested")
         if not callable(lengthscale_func):
             raise TypeError("lengthscale_func must be callable")
-        self.ell = handle_args(lengthscale_func, args)
+        self.lfunc = handle_args(lengthscale_func, args)
         self.args = args
 
     def square_dist(self, X, Z):
@@ -345,19 +382,22 @@ class Gibbs(Covariance):
                   (tt.reshape(Xs, (-1, 1)) + tt.reshape(Zs, (1, -1)))
         return tt.clip(sqd, 0.0, np.inf)
 
-    def __call__(self, X, Z=None):
+    def full(self, X, Z=None):
         X, Z = self._slice(X, Z)
-        rx = self.ell(X, self.args)
+        rx = self.lfunc(X, self.args)
         rx2 = tt.reshape(tt.square(rx), (-1, 1))
         if Z is None:
             r2 = self.square_dist(X,X)
-            rz = self.ell(X, self.args)
+            rz = self.lfunc(X, self.args)
         else:
             r2 = self.square_dist(X,Z)
-            rz = self.ell(Z, self.args)
+            rz = self.lfunc(Z, self.args)
         rz2 = tt.reshape(tt.square(rz), (1, -1))
         return tt.sqrt((2.0 * tt.dot(rx, tt.transpose(rz))) / (rx2 + rz2)) *\
                tt.exp(-1.0 * r2 / (rx2 + rz2))
+
+    def diag(self, X):
+        return tt.ones(tt.stack([X.shape[0], ]))
 
 
 def handle_args(func, args):
