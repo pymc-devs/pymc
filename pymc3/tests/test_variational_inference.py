@@ -540,3 +540,10 @@ def test_flow_det(flow_spec):
     det = flow.det
     det_dist = det.shape.eval()
     assert tuple(det_dist) == (10, )
+
+
+def test_params_collect():
+    flow = flows.PlanarFlow(dim=2)
+    flow = flows.PlanarFlow(dim=2, parent=flow)
+    assert len(flow.params) == 3
+    assert len(flow.all_params) == 6

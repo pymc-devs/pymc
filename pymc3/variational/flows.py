@@ -45,6 +45,25 @@ class AbstractFlow(object):
     def params(self):
         return cast_to_list(self.shared_params)
 
+    @property
+    def all_params(self):
+        params = self.params  # type: list
+        current = self
+        while not current.isroot:
+            current = current.parent
+            params.extend(current.params)
+        return params
+
+    @property
+    def all_dets(self):
+        dets = list()
+        dets.append(self.det)
+        current = self
+        while not current.isroot:
+            current = current.parent
+            dets.append(current.det)
+        return tt.add(*dets)
+
     def _initialize(self, dim):
         pass
 
