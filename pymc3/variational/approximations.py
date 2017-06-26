@@ -49,6 +49,18 @@ class MeanField(Approximation):
         Sticking the Landing: A Simple Reduced-Variance Gradient for ADVI
         approximateinference.org/accepted/RoederEtAl2016.pdf
     """
+
+    def __init__(self, local_rv=None, model=None, cost_part_grad_scale=1,
+                 scale_cost_to_minibatch=False,
+                 random_seed=None, start=None, **kwargs):
+        super(MeanField, self).__init__(
+            local_rv=local_rv, model=model,
+            cost_part_grad_scale=cost_part_grad_scale,
+            scale_cost_to_minibatch=scale_cost_to_minibatch,
+            random_seed=random_seed, **kwargs
+        )
+        self.shared_params = self.create_shared_params(start=start)
+
     @node_property
     def mean(self):
         return self.shared_params['mu']
@@ -65,8 +77,7 @@ class MeanField(Approximation):
     def std(self):
         return rho2sd(self.rho)
 
-    def create_shared_params(self, **kwargs):
-        start = kwargs.get('start')
+    def create_shared_params(self, start=None):
         if start is None:
             start = self.model.test_point
         else:
@@ -81,7 +92,7 @@ class MeanField(Approximation):
 
     @node_property
     def symbolic_random_global_matrix(self):
-        initial = self._symbolic_initial_global_matrix
+        initial = self.symbolic_initial_global_matrix
         sd = rho2sd(self.rho)
         mu = self.mean
         return sd * initial + mu
@@ -139,7 +150,7 @@ class FullRank(Approximation):
 
     def __init__(self, local_rv=None, model=None, cost_part_grad_scale=1,
                  scale_cost_to_minibatch=False,
-                 gpu_compat=False, random_seed=None, **kwargs):
+                 gpu_compat=False, random_seed=None, start=None, **kwargs):
         super(FullRank, self).__init__(
             local_rv=local_rv, model=model,
             cost_part_grad_scale=cost_part_grad_scale,
@@ -147,6 +158,24 @@ class FullRank(Approximation):
             random_seed=random_seed, **kwargs
         )
         self.gpu_compat = gpu_compat
+        self.shared_params = self.create_shared_params(start=start)
+
+    def create_shared_params(self, start=None):
+        if start is None:
+            start = self.model.test_point
+        else:
+            start_ = self.model.test_point.copy()
+            pm.sampling._update_start_vals(start_, start, self.model)
+            start = start_
+        start = pm.floatX(self.gbij.map(start))
+        n = self.global_size
+        L_tril = (
+            np.eye(n)
+            [np.tril_indices(n)]
+            .astype(theano.config.floatX)
+        )
+        return {'mu': theano.shared(start, 'mu'),
+                'L_tril': theano.shared(L_tril, 'L_tril')}
 
     @node_property
     def L(self):
@@ -177,25 +206,6 @@ class FullRank(Approximation):
         ] = np.arange(num_tril_entries)
         return tril_index_matrix
 
-    def create_shared_params(self, **kwargs):
-        start = kwargs.get('start')
-        if start is None:
-            start = self.model.test_point
-        else:
-            start_ = self.model.test_point.copy()
-            pm.sampling._update_start_vals(start_, start, self.model)
-            start = start_
-        start = pm.floatX(self.gbij.map(start))
-        n = self.global_size
-        L_tril = (
-            np.eye(n)
-            [np.tril_indices(n)]
-            .astype(theano.config.floatX)
-        )
-        return {'mu': theano.shared(start, 'mu'),
-                'L_tril': theano.shared(L_tril, 'L_tril')
-                }
-
     @node_property
     def symbolic_log_q_W_global(self):
         """log_q_W samples over q for global vars
@@ -208,7 +218,7 @@ class FullRank(Approximation):
     @node_property
     def symbolic_random_global_matrix(self):
         # (samples, dim) or (dim, )
-        initial = self._symbolic_initial_global_matrix.T
+        initial = self.symbolic_initial_global_matrix.T
         # (dim, dim)
         L = self.L
         # (dim, )
@@ -289,16 +299,9 @@ class Empirical(Approximation):
         super(Empirical, self).__init__(
             local_rv=local_rv, scale_cost_to_minibatch=scale_cost_to_minibatch,
             model=model, trace=trace, random_seed=random_seed, **kwargs)
+        self.shared_params = self.create_shared_params(trace=trace)
 
-    def check_model(self, model, **kwargs):
-        trace = kwargs.get('trace')
-        if (trace is not None
-            and not all([var.name in trace.varnames
-                         for var in model.free_RVs])):
-            raise ValueError('trace has not all FreeRV')
-
-    def create_shared_params(self, **kwargs):
-        trace = kwargs.get('trace')
+    def create_shared_params(self, trace=None):
         if trace is None:
             histogram = np.atleast_2d(self.gbij.map(self.model.test_point))
         else:
@@ -308,7 +311,14 @@ class Empirical(Approximation):
                 for j in range(len(trace)):
                     histogram[i] = self.gbij.map(trace.point(j, t))
                     i += 1
-        return theano.shared(pm.floatX(histogram), 'histogram')
+        return dict(histogram=theano.shared(pm.floatX(histogram), 'histogram'))
+
+    def check_model(self, model, **kwargs):
+        trace = kwargs.get('trace')
+        if (trace is not None
+            and not all([var.name in trace.varnames
+                         for var in model.free_RVs])):
+            raise ValueError('trace has not all FreeRV')
 
     def randidx(self, size=None):
         if size is None:
@@ -352,19 +362,19 @@ class Empirical(Approximation):
 
     @property
     def symbolic_random_global_matrix(self):
-        return self._symbolic_initial_global_matrix
+        return self.symbolic_initial_global_matrix
 
     @property
     def histogram(self):
         """Shortcut to flattened Trace
         """
-        return self.shared_params
+        return self.shared_params['histogram']
 
-    @property
+    @node_property
     def mean(self):
         return self.histogram.mean(0)
 
-    @property
+    @node_property
     def cov(self):
         x = (self.histogram - self.mean)
         return x.T.dot(x) / pm.floatX(self.histogram.shape[0])
