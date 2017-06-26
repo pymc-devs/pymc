@@ -39,6 +39,7 @@ from .approximations import (
 
 # special
 from .stein import Stein
+from . import flows
 from . import operators
 from . import test_functions
 from . import opvi
