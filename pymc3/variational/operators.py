@@ -105,7 +105,7 @@ class KSD(Operator):
         self.temperature = temperature
 
     def get_input(self):
-        if hasattr(self.approx, 'histogram'):
+        if isinstance(self.approx, pm.Empirical):
             return self.approx.histogram
         else:
             return self.approx.symbolic_random_total_matrix

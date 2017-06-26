@@ -397,14 +397,8 @@ def cast_to_list(params):
     -------
     list
     """
-    if isinstance(params, list):
-        return params
-    elif isinstance(params, tuple):
-        return list(params)
-    elif isinstance(params, dict):
+    if isinstance(params, dict):
         return list(params.values())
-    elif isinstance(params, theano.compile.SharedVariable):
-        return [params]
     elif params is None:
         return []
     else:
@@ -485,22 +479,20 @@ class Approximation(object):
     custom implementation of the following methods:
 
         - :code:`.create_shared_params(**kwargs)`
-            Returns {dict|list|theano.shared}
+            Returns dict
 
-        - :code:`.random_global(size=None, no_rand=False)`
-            Generate samples from posterior. If `no_rand==False`:
-            sample from MAP of initial distribution.
+        - :code:`symbolic_random_global_matrix` node property
+            It takes internally `symbolic_initial_global_matrix`
+            and performs appropriate transforms. To memoize result
+            one should use :code:`@node_property` wrapper instead :code:`@property`.
             Returns TensorVariable
 
-        - :code:`.log_q_W_global(z)`
-            It is needed only if used with operator
-            that requires :math:`logq` of an approximation
-            Returns Scalar
+        - :code:`.symbolic_log_q_W_global` node property
+            Should use vectorized form if possible and return vector of size `(s,)`
+            It is needed only if used with operator that requires :math:`logq`
+            of an approximation. Returns vector
 
     You can also override the following methods:
-
-        -   :code:`._setup(**kwargs)`
-            Do some specific stuff having `kwargs` before calling :func:`Approximation.create_shared_params`
 
         -   :code:`.check_model(model, **kwargs)`
             Do some specific check for model having `kwargs`
@@ -511,12 +503,14 @@ class Approximation(object):
     There are some defaults class attributes for approximation classes that can be
     optionally overridden.
 
-        -   :code:`initial_dist_name`
+        -   :code:`initial_dist_local_name = 'normal'`
+            :code:`initial_dist_global_name = 'normal'`
             string that represents name of the initial distribution.
             In most cases if will be `uniform` or `normal`
 
-        -   :code:`initial_dist_map`
-            float where initial distribution has maximum density
+        -   :code:`initial_dist_local_map = 0.
+            :code:`initial_dist_global_map = 0.`
+            point where initial distribution has maximum density
 
     References
     ----------
@@ -531,6 +525,7 @@ class Approximation(object):
     initial_dist_global_name = 'normal'
     initial_dist_local_map = 0.
     initial_dist_global_map = 0.
+    shared_params = None
 
     def __init__(self, local_rv=None, model=None,
                  cost_part_grad_scale=1,
@@ -540,7 +535,10 @@ class Approximation(object):
         self.scale_cost_to_minibatch = theano.shared(np.int8(0))
         if scale_cost_to_minibatch:
             self.scale_cost_to_minibatch.set_value(1)
-        self.cost_part_grad_scale = pm.floatX(cost_part_grad_scale)
+        if not isinstance(cost_part_grad_scale, theano.Variable):
+            self.cost_part_grad_scale = theano.shared(pm.floatX(cost_part_grad_scale))
+        else:
+            self.cost_part_grad_scale = pm.floatX(cost_part_grad_scale)
         self._seed = random_seed
         self._rng = tt_rng(random_seed)
         self.model = model
@@ -560,28 +558,25 @@ class Approximation(object):
         self._g_order = ArrayOrdering(self.global_vars)
         self._l_order = ArrayOrdering(self.local_vars)
         self.gbij = DictToArrayBijection(self._g_order, {})
-        self._symbolic_initial_local_matrix = tt.matrix(self.__class__.__name__ + '_symbolic_initial_local_matrix')
-        self._symbolic_initial_local_matrix.tag.test_value = np.random.rand(2, self.local_size).astype(
-            self._symbolic_initial_local_matrix.dtype
+        self.lbij = DictToArrayBijection(self._l_order, {})
+        self.symbolic_initial_local_matrix = tt.matrix(self.__class__.__name__ + '_symbolic_initial_local_matrix')
+        self.symbolic_initial_local_matrix.tag.test_value = np.random.rand(2, self.local_size).astype(
+            self.symbolic_initial_local_matrix.dtype
         )
-        self._symbolic_initial_global_matrix = tt.matrix(self.__class__.__name__ + '_symbolic_initial_global_matrix')
-        self._symbolic_initial_global_matrix.tag.test_value = np.random.rand(2, self.global_size).astype(
-            self._symbolic_initial_global_matrix.dtype
+        self.symbolic_initial_global_matrix = tt.matrix(self.__class__.__name__ + '_symbolic_initial_global_matrix')
+        self.symbolic_initial_global_matrix.tag.test_value = np.random.rand(2, self.global_size).astype(
+            self.symbolic_initial_global_matrix.dtype
         )
 
         self.global_flat_view = model.flatten(
             vars=self.global_vars,
             order=self._g_order,
-            # inputvar=self._symbolic_initial_global_matrix
         )
         self.local_flat_view = model.flatten(
             vars=self.local_vars,
             order=self._l_order,
-            # inputvar=self._symbolic_initial_local_matrix
         )
-        self._setup(**kwargs)
-        self.shared_params = self.create_shared_params(**kwargs)
-        self.symbolic_n_samples = self._symbolic_initial_global_matrix.shape[0]
+        self.symbolic_n_samples = self.symbolic_initial_global_matrix.shape[0]
 
     _global_view = property(lambda self: self.global_flat_view.view)
     _local_view = property(lambda self: self.local_flat_view.view)
@@ -612,9 +607,6 @@ class Approximation(object):
         self._seed = random_seed
         self._rng.seed(random_seed)
 
-    def _setup(self, **kwargs):
-        pass
-
     def get_global_vars(self, **kwargs):
         return [v for v in self.model.free_RVs if v not in self.known]
 
@@ -631,14 +623,6 @@ class Approximation(object):
         if any([var.dtype in pm.discrete_types for var in vars_]
                ):  # pragma: no cover
             raise ValueError('Model should not include discrete RVs')
-
-    def create_shared_params(self, **kwargs):
-        """
-        Returns
-        -------
-        {dict|list|theano.shared}
-        """
-        pass
 
     def construct_replacements(self, include=None, exclude=None,
                                more_replacements=None):
@@ -701,8 +685,6 @@ class Approximation(object):
             latent variables to be excluded for replacements
         more_replacements : `dict`
             add custom replacements to graph, e.g. change input source
-        new : bool
-            reinit random generator for replacements?
 
         Returns
         -------
@@ -796,7 +778,7 @@ class Approximation(object):
             (self.local_size, self.initial_dist_local_name, self.initial_dist_local_map),
             (self.global_size, self.initial_dist_global_name, self.initial_dist_global_map)
         )
-        dtype = self._symbolic_initial_global_matrix.dtype
+        dtype = self.symbolic_initial_global_matrix.dtype
         if size is None:
             size = 1
         if length == 0:  # in this case theano fails to compute sample of correct size
@@ -864,8 +846,8 @@ class Approximation(object):
                 self.logp: self.single_symbolic_logp
             })
         return theano.clone(node, {
-            self._symbolic_initial_local_matrix: initial_local,
-            self._symbolic_initial_global_matrix: initial_global,
+            self.symbolic_initial_local_matrix: initial_local,
+            self.symbolic_initial_global_matrix: initial_global,
         })
 
     @property
@@ -962,7 +944,7 @@ class Approximation(object):
     @node_property
     def symbolic_random_local_matrix(self):
         mu, rho = self.__local_mu_rho
-        e = self._symbolic_initial_local_matrix
+        e = self.symbolic_initial_local_matrix
         return e * rho2sd(rho) + mu
 
     @node_property
