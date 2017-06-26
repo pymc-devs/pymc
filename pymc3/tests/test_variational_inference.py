@@ -545,8 +545,10 @@ def test_flow_det(flow_spec):
     assert tuple(det_dist) == (10, )
 
 
-def test_params_collect():
-    flow = flows.PlanarFlow(dim=2)
-    flow = flows.PlanarFlow(dim=2, parent=flow)
-    assert len(flow.params) == 3
-    assert len(flow.all_params) == 6
+def test_flows_collect_chain():
+    initial = tt.ones((3, 2))
+    flow1 = flows.PlanarFlow(dim=2, z0=initial)
+    flow2 = flows.PlanarFlow(dim=2, parent=flow1)
+    assert len(flow2.params) == 3
+    assert len(flow2.all_params) == 6
+    np.testing.assert_allclose(flow1.det.eval() + flow2.det.eval(), flow2.all_dets.eval())
