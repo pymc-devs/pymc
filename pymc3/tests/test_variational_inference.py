@@ -9,8 +9,9 @@ from pymc3.variational import (
     ADVI, FullRankADVI, SVGD,
     Empirical, ASVGD,
     MeanField, FullRank,
-    fit
+    fit, flows
 )
+
 from pymc3.variational.operators import KL
 from pymc3.tests import models
 
@@ -19,6 +20,53 @@ pytestmark = pytest.mark.usefixtures(
     'strict_float32',
     'seeded_test'
 )
+
+@pytest.mark.parametrize(
+    'diff',
+    [
+        'relative',
+        'absolute'
+    ]
+)
+@pytest.mark.parametrize(
+    'ord',
+    [1, 2, np.inf]
+)
+def test_callbacks_convergence(diff, ord):
+    cb = pm.variational.callbacks.CheckParametersConvergence(every=1, diff=diff, ord=ord)
+
+    class _approx:
+        params = (theano.shared(np.asarray([1, 2, 3])), )
+
+    approx = _approx()
+
+    with pytest.raises(StopIteration):
+        cb(approx, None, 1)
+        cb(approx, None, 10)
+
+
+def test_tracker_callback():
+    import time
+    tracker = pm.callbacks.Tracker(
+        ints=lambda *t: t[-1],
+        ints2=lambda ap, h, j: j,
+        time=time.time,
+    )
+    for i in range(10):
+        tracker(None, None, i)
+    assert 'time' in tracker.hist
+    assert 'ints' in tracker.hist
+    assert 'ints2' in tracker.hist
+    assert (len(tracker['ints'])
+            == len(tracker['ints2'])
+            == len(tracker['time'])
+            == 10)
+    assert tracker['ints'] == tracker['ints2'] == list(range(10))
+    tracker = pm.callbacks.Tracker(
+        bad=lambda t: t  # bad signature
+    )
+    with pytest.raises(TypeError):
+        tracker(None, None, 1)
 
 
 def test_elbo():
@@ -445,49 +493,50 @@ def test_aevb_empirical():
     np.testing.assert_allclose(trace0['x'].var(0), trace1['x'].var(0), atol=0.02)
 
 
-@pytest.mark.parametrize(
-    'diff',
-    [
-        'relative',
-        'absolute'
-    ]
+@pytest.fixture(
+    params=[
+        dict(cls=flows.PlanarFlow, init=dict())
+    ],
+    ids=lambda d: d['cls'].__name__
 )
-@pytest.mark.parametrize(
-    'ord',
-    [1, 2, np.inf]
-)
-def test_callbacks_convergence(diff, ord):
-    cb = pm.variational.callbacks.CheckParametersConvergence(every=1, diff=diff, ord=ord)
+def flow_spec(request):
+    cls = request.param['cls']
+    init = request.param['init']
 
-    class _approx:
-        params = (theano.shared(np.asarray([1, 2, 3])), )
-
-    approx = _approx()
-
-    with pytest.raises(StopIteration):
-        cb(approx, None, 1)
-        cb(approx, None, 10)
+    def init_(**kw):
+        k = init.copy()
+        k.update(kw)
+        return cls(**k)
+    init_.cls = cls
+    return init_
 
 
-def test_tracker_callback():
-    import time
-    tracker = pm.callbacks.Tracker(
-        ints=lambda *t: t[-1],
-        ints2=lambda ap, h, j: j,
-        time=time.time,
-    )
+def test_flow_init_loop(flow_spec):
+    flow = pm.tt_rng().normal(size=(10, 2))
+    flow = flow_spec(z0=flow, dim=2)
     for i in range(10):
-        tracker(None, None, i)
-    assert 'time' in tracker.hist
-    assert 'ints' in tracker.hist
-    assert 'ints2' in tracker.hist
-    assert (len(tracker['ints'])
-            == len(tracker['ints2'])
-            == len(tracker['time'])
-            == 10)
-    assert tracker['ints'] == tracker['ints2'] == list(range(10))
-    tracker = pm.callbacks.Tracker(
-        bad=lambda t: t  # bad signature
-    )
-    with pytest.raises(TypeError):
-        tracker(None, None, 1)
+        flow = flow_spec(parent=flow)
+    flow.forward.eval()
+
+
+def test_flow_init_link(flow_spec):
+    initial = pm.tt_rng().normal(size=(10, 2))
+    flows_list = [flow_spec(dim=2) for _ in range(10)]
+    flow = flows.link_flows(flows_list, z0=initial)[-1]
+    flow.forward.eval()
+
+
+def test_flow_forward_apply(flow_spec):
+    z0 = pm.tt_rng().normal(size=(10, 20))
+    flow = flow_spec(dim=20, z0=z0)
+    dist = flow.forward
+    shape_dist = dist.shape.eval()
+    assert tuple(shape_dist) == (10, 20)
+
+
+def test_flow_det(flow_spec):
+    z0 = pm.tt_rng().normal(size=(10, 20))
+    flow = flow_spec(dim=20, z0=z0)
+    det = flow.det
+    det_dist = det.shape.eval()
+    assert tuple(det_dist) == (10, )
