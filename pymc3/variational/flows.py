@@ -120,12 +120,13 @@ def link_flows(flows, z0=None):
         f1.parent = f0
     return flows
 
-FlowFn = collections.namedtuple('FlowFn', 'h,inv,deriv')
+FlowFn = collections.namedtuple('FlowFn', 'fn,inv,deriv')
+FlowFn.__call__ = lambda self, x: self.fn(x)
 
 
 class LinearFlow(AbstractFlow):
     def __init__(self, h, z0=None, dim=None, parent=None):
-        self.h, self.h_inv, self.h_deriv = h
+        self.h = h
         super(LinearFlow, self).__init__(dim=dim, z0=z0, parent=parent)
 
     def _initialize(self, dim):
@@ -165,9 +166,9 @@ class LinearFlow(AbstractFlow):
         u = self.u   # dx1
         w = self.w   # dx1
         b = self.b   # ()
-        h_inv = self.h_inv  # f^-1
+        deriv = self.h.deriv  # f'
         # h^-1(sxd \dot dx1 + .) * 1xd   = sxd
-        phi = h_inv(z.dot(w) + b) * w.T  # sxd
+        phi = deriv(z.dot(w) + b) * w.T  # sxd
         # \abs(. + sxd \dot dx1) = sx1
         det = tt.abs_(1. + phi.dot(u))
         return det.flatten()  # s
