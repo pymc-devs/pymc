@@ -3,6 +3,7 @@ from . import transforms
 
 from .continuous import Uniform
 from .continuous import Flat
+from .continuous import HalfFlat
 from .continuous import Normal
 from .continuous import Beta
 from .continuous import Exponential
@@ -79,6 +80,7 @@ from .bound import Bound
 
 __all__ = ['Uniform',
            'Flat',
+           'HalfFlat',
            'Normal',
            'Beta',
            'Exponential',

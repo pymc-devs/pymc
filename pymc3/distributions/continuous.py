@@ -24,8 +24,8 @@ from .dist_math import (
 from .distribution import Continuous, draw_values, generate_samples
 from .bound import Bound
 
-__all__ = ['Uniform', 'Flat', 'Normal', 'Beta', 'Exponential', 'Laplace',
-           'StudentT', 'Cauchy', 'HalfCauchy', 'Gamma', 'Weibull',
+__all__ = ['Uniform', 'Flat', 'HalfFlat', 'Normal', 'Beta', 'Exponential',
+           'Laplace', 'StudentT', 'Cauchy', 'HalfCauchy', 'Gamma', 'Weibull',
            'HalfStudentT', 'StudentTpos', 'Lognormal', 'ChiSquared',
            'HalfNormal', 'Wald', 'Pareto', 'InverseGamma', 'ExGaussian',
            'VonMises', 'SkewNormal', 'Interpolated']
@@ -142,7 +142,6 @@ class Uniform(Continuous):
         self.mean = (upper + lower) / 2.
         self.median = self.mean
 
-
     def random(self, point=None, size=None, repeat=None):
         lower, upper = draw_values([self.lower, self.upper],
                                    point=point)
@@ -174,8 +173,8 @@ class Flat(Continuous):
     """
 
     def __init__(self, *args, **kwargs):
-        super(Flat, self).__init__(*args, **kwargs)
-        self.median = 0
+        self._default = 0
+        super(Flat, self).__init__(defaults=('_default',), *args, **kwargs)
 
     def random(self, point=None, size=None, repeat=None):
         raise ValueError('Cannot sample from Flat distribution')
@@ -187,6 +186,25 @@ class Flat(Continuous):
         if dist is None:
             dist = self
         return r'${} \sim \text{{Flat}()$'
+
+
+class HalfFlat(PositiveContinuous):
+    """Improper flat prior over the positive reals."""
+
+    def __init__(self, *args, **kwargs):
+        self._default = 1
+        super(HalfFlat, self).__init__(defaults=('_default',), *args, **kwargs)
+
+    def random(self, point=None, size=None, repeat=None):
+        raise ValueError('Cannot sample from HalfFlat distribution')
+
+    def logp(self, value):
+        return bound(tt.zeros_like(value), value > 0)
+
+    def _repr_latex_(self, name=None, dist=None):
+        if dist is None:
+            dist = self
+        return r'${} \sim \text{{HalfFlat}()$'
 
 
 class Normal(Continuous):
@@ -317,6 +335,7 @@ class HalfNormal(PositiveContinuous):
         sd = dist.sd
         return r'${} \sim \text{{HalfNormal}}(\mathit{{sd}}={})$'.format(name,
                                                                 get_variable_name(sd))
+
 
 class Wald(PositiveContinuous):
     R"""

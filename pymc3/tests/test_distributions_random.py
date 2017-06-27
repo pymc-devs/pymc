@@ -472,6 +472,12 @@ class TestScalarParameterSamples(SeededTest):
             with pytest.raises(ValueError):
                 f.random(1)
 
+    def test_half_flat(self):
+        with pm.Model():
+            f = pm.HalfFlat('f')
+            with pytest.raises(ValueError):
+                f.random(1)
+
     def test_binomial(self):
         pymc3_random_discrete(pm.Binomial, {'n': Nat, 'p': Unit}, ref_rand=st.binom.rvs)
 
