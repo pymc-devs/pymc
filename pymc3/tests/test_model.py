@@ -1,26 +1,12 @@
+import pytest
 from theano import theano, tensor as tt
-import scipy.stats as stats
 import numpy as np
+import pandas as pd
+import numpy.testing as npt
+
 import pymc3 as pm
 from pymc3.distributions import HalfCauchy, Normal, transforms
 from pymc3 import Potential, Deterministic
-from pymc3.theanof import generator
-from .helpers import select_by_precision
-import pytest
-
-
-def gen1():
-    i = 0
-    while True:
-        yield np.ones((10, 100)) * i
-        i += 1
-
-
-def gen2():
-    i = 0
-    while True:
-        yield np.ones((20, 100)) * i
-        i += 1
 
 
 class NewModel(pm.Model):
@@ -143,61 +129,6 @@ class TestObserved(object):
                 Normal('n', observed=x)
 
 
-class TestScaling(object):
-    def test_density_scaling(self):
-        with pm.Model() as model1:
-            Normal('n', observed=[[1]], total_size=1)
-            p1 = theano.function([], model1.logpt)
-
-        with pm.Model() as model2:
-            Normal('n', observed=[[1]], total_size=2)
-            p2 = theano.function([], model2.logpt)
-        assert p1() * 2 == p2()
-
-    def test_density_scaling_with_genarator(self):
-        # We have different size generators
-
-        def true_dens():
-            g = gen1()
-            for i, point in enumerate(g):
-                yield stats.norm.logpdf(point).sum() * 10
-        t = true_dens()
-        # We have same size models
-        with pm.Model() as model1:
-            Normal('n', observed=gen1(), total_size=100)
-            p1 = theano.function([], model1.logpt)
-
-        with pm.Model() as model2:
-            gen_var = generator(gen2())
-            Normal('n', observed=gen_var, total_size=100)
-            p2 = theano.function([], model2.logpt)
-
-        for i in range(10):
-            _1, _2, _t = p1(), p2(), next(t)
-            decimals = select_by_precision(float64=7, float32=2)
-            np.testing.assert_almost_equal(_1, _t, decimal=decimals)  # Value O(-50,000)
-            np.testing.assert_almost_equal(_1, _2)
-        # Done
-
-    def test_gradient_with_scaling(self):
-        with pm.Model() as model1:
-            genvar = generator(gen1())
-            m = Normal('m')
-            Normal('n', observed=genvar, total_size=1000)
-            grad1 = theano.function([m], tt.grad(model1.logpt, m))
-        with pm.Model() as model2:
-            m = Normal('m')
-            shavar = theano.shared(np.ones((1000, 100)))
-            Normal('n', observed=shavar)
-            grad2 = theano.function([m], tt.grad(model2.logpt, m))
-
-        for i in range(10):
-            shavar.set_value(np.ones((100, 100)) * i)
-            g1 = grad1(1)
-            g2 = grad2(1)
-            np.testing.assert_almost_equal(g1, g2)
-
-
 class TestTheanoConfig(object):
     def test_set_testval_raise(self):
         with theano.configparser.change_flags(compute_test_value='off'):
@@ -238,3 +169,13 @@ def test_duplicate_vars():
             pm.Binomial('a', 10, .5)
             pm.Normal('a', transform=transforms.log)
     err.match('already exists')
+
+
+def test_empty_observed():
+    data = pd.DataFrame(np.ones((2, 3)) / 3)
+    data.values[:] = np.nan
+    with pm.Model():
+        a = pm.Normal('a', observed=data)
+        npt.assert_allclose(a.tag.test_value, np.zeros((2, 3)))
+        b = pm.Beta('b', alpha=1, beta=1, observed=data)
+        npt.assert_allclose(b.tag.test_value, np.ones((2, 3)) / 2)

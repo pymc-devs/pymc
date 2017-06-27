@@ -4,7 +4,7 @@ import theano
 import theano.tensor as tt
 from .test_distributions import Simplex, Rplusbig, Rminusbig, Unit, R, Vector, MultiSimplex, Circ
 
-from .checks import close_to
+from .checks import close_to, close_to_logical
 from ..theanof import jacobian
 
 tol = 1e-7
@@ -43,8 +43,8 @@ def test_simplex_bounds():
                       tt.dvector, np.array([0, 0]))
 
     close_to(vals.sum(axis=1), 1, tol)
-    close_to(vals > 0, True, tol)
-    close_to(vals < 1, True, tol)
+    close_to_logical(vals > 0, True, tol)
+    close_to_logical(vals < 1, True, tol)
 
 
 def test_simplex_jacobian_det():
@@ -98,7 +98,7 @@ def test_log():
                        tt.dvector, [0, 0], elemwise=True)
 
     vals = get_values(tr.log)
-    close_to(vals > 0, True, tol)
+    close_to_logical(vals > 0, True, tol)
 
 
 def test_logodds():
@@ -108,8 +108,8 @@ def test_logodds():
                        tt.dvector, [.5, .5], elemwise=True)
 
     vals = get_values(tr.logodds)
-    close_to(vals > 0, True, tol)
-    close_to(vals < 1, True, tol)
+    close_to_logical(vals > 0, True, tol)
+    close_to_logical(vals < 1, True, tol)
 
 
 def test_lowerbound():
@@ -120,7 +120,7 @@ def test_lowerbound():
                        tt.dvector, [0, 0], elemwise=True)
 
     vals = get_values(trans)
-    close_to(vals > 0, True, tol)
+    close_to_logical(vals > 0, True, tol)
 
 
 def test_upperbound():
@@ -131,7 +131,7 @@ def test_upperbound():
                        tt.dvector, [-1, -1], elemwise=True)
 
     vals = get_values(trans)
-    close_to(vals < 0, True, tol)
+    close_to_logical(vals < 0, True, tol)
 
 
 def test_interval():
@@ -142,8 +142,8 @@ def test_interval():
         check_jacobian_det(trans, domain, elemwise=True)
 
         vals = get_values(trans)
-        close_to(vals > a, True, tol)
-        close_to(vals < b, True, tol)
+        close_to_logical(vals > a, True, tol)
+        close_to_logical(vals < b, True, tol)
 
 
 def test_circular():
@@ -152,7 +152,7 @@ def test_circular():
     check_jacobian_det(trans, Circ)
 
     vals = get_values(trans)
-    close_to(vals > -np.pi, True, tol)
-    close_to(vals < np.pi, True, tol)
+    close_to_logical(vals > -np.pi, True, tol)
+    close_to_logical(vals < np.pi, True, tol)
 
     assert isinstance(trans.forward(1), tt.TensorConstant)

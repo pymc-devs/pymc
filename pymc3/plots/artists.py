@@ -64,12 +64,12 @@ def plot_posterior_op(trace_values, ax, kde_plot, point_estimate, round_to,
         ax.axvline(ref_val, ymin=0.02, ymax=.75, color='g',
                    linewidth=4, alpha=0.65)
         ax.text(trace_values.mean(), plot_height * 0.6, ref_in_posterior,
-                size=14, horizontalalignment='center')
+                size=text_size, horizontalalignment='center')
 
     def display_rope(rope):
         ax.plot(rope, (plot_height * 0.02, plot_height * 0.02),
                 linewidth=20, color='r', alpha=0.75)
-        text_props = dict(size=16, horizontalalignment='center', color='r')
+        text_props = dict(size=text_size, horizontalalignment='center', color='r')
         ax.text(rope[0], plot_height * 0.14, rope[0], **text_props)
         ax.text(rope[1], plot_height * 0.14, rope[1], **text_props)
 
@@ -82,7 +82,12 @@ def plot_posterior_op(trace_values, ax, kde_plot, point_estimate, round_to,
         if point_estimate == 'mean':
             point_value = trace_values.mean()
         elif point_estimate == 'mode':
-            point_value = mode(trace_values.round(round_to))[0][0]
+            if isinstance(trace_values[0], float):
+                density, l, u = fast_kde(trace_values)
+                x = np.linspace(l, u, len(density))
+                point_value = x[np.argmax(density)]
+            else:
+                point_value = mode(trace_values.round(round_to))[0][0]
         elif point_estimate == 'median':
             point_value = np.median(trace_values)
         point_text = '{point_estimate}={point_value:.{round_to}f}'.format(point_estimate=point_estimate,
@@ -97,13 +102,13 @@ def plot_posterior_op(trace_values, ax, kde_plot, point_estimate, round_to,
                                 plot_height * 0.02), linewidth=4, color='k')
         ax.text(hpd_intervals[0], plot_height * 0.07,
                 hpd_intervals[0].round(round_to),
-                size=16, horizontalalignment='right')
+                size=text_size, horizontalalignment='right')
         ax.text(hpd_intervals[1], plot_height * 0.07,
                 hpd_intervals[1].round(round_to),
-                size=16, horizontalalignment='left')
+                size=text_size, horizontalalignment='left')
         ax.text((hpd_intervals[0] + hpd_intervals[1]) / 2, plot_height * 0.2,
                 format_as_percent(1 - alpha_level) + ' HPD',
-                size=16, horizontalalignment='center')
+                size=text_size, horizontalalignment='center')
 
     def format_axes():
         ax.yaxis.set_ticklabels([])
@@ -114,14 +119,14 @@ def plot_posterior_op(trace_values, ax, kde_plot, point_estimate, round_to,
         ax.yaxis.set_ticks_position('none')
         ax.xaxis.set_ticks_position('bottom')
         ax.tick_params(axis='x', direction='out', width=1, length=3,
-                       color='0.5')
+                       color='0.5', labelsize=text_size)
         ax.spines['bottom'].set_color('0.5')
 
     def set_key_if_doesnt_exist(d, key, value):
         if key not in d:
             d[key] = value
 
-    if kde_plot:
+    if kde_plot and isinstance(trace_values[0], float):
         kdeplot(trace_values, alpha=kwargs.pop('alpha', 0.35), ax=ax, **kwargs)
 
     else:

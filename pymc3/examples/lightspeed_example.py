@@ -23,21 +23,10 @@ with model_1:
     # define likelihood
     y_obs = pm.Normal('Y_obs', mu=mu, sd=sigma, observed=light_speed)
 
-    # inference fitting the model
-
-    # I have to use slice because the following command
-    # trace = pm.sample(5000)
-    # produce the error
-    # ValueError: Cannot construct a ufunc with more than 32 operands
-    # (requested number were: inputs = 51 and outputs = 1)valueerror
-
 
 def run(n=5000):
     with model_1:
-        xstart = pm.find_MAP()
-        xstep = pm.Slice()
-        trace = pm.sample(5000, xstep, start=xstart,
-                          random_seed=123, progressbar=True)
+        trace = pm.sample(n)
 
         pm.summary(trace)
 

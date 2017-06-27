@@ -257,7 +257,8 @@ def logpow(v, p):
 
 
 def discrete_weibull_logpmf(value, q, beta):
-    return floatX(np.log(np.power(q, np.power(value, beta)) - np.power(q, np.power(value + 1, beta))))
+    return floatX(np.log(np.power(q, np.power(value, beta))
+                  - np.power(q, np.power(value + 1, beta))))
 
 
 def dirichlet_logpdf(value, a):
@@ -813,8 +814,9 @@ class TestMatchesScipy(SeededTest):
             lambda value, mu, kappa: floatX(sp.vonmises.logpdf(value, kappa, loc=mu)))
 
     def test_gumbel(self):
-        self.pymc3_matches_scipy(Gumbel, R, {'mu': R, 'beta': Rplusbig},
-                                 lambda value, mu, beta: floatX(sp.gumbel_r.logpdf(value, loc=mu, scale=beta)))
+        def gumbel(value, mu, beta):
+            return floatX(sp.gumbel_r.logpdf(value, loc=mu, scale=beta))
+        self.pymc3_matches_scipy(Gumbel, R, {'mu': R, 'beta': Rplusbig}, gumbel)
 
     def test_multidimensional_beta_construction(self):
         with Model():
@@ -855,11 +857,20 @@ def test_repr_latex_():
         x2 = GaussianRandomWalk('Timeseries', mu=x1, sd=1., shape=2)
         x3 = MvStudentT('Multivariate', nu=5, mu=x2, Sigma=np.diag(np.ones(2)), shape=2)
         x4 = NormalMixture('Mixture', w=np.array([.5, .5]), mu=x3, sd=x0)
-    assert x0._repr_latex_()=='$Discrete \\sim \\text{Binomial}(\\mathit{n}=10, \\mathit{p}=0.5)$'
-    assert x1._repr_latex_()=='$Continuous \\sim \\text{Normal}(\\mathit{mu}=0.0, \\mathit{sd}=1.0)$'
-    assert x2._repr_latex_()=='$Timeseries \\sim \\text{GaussianRandomWalk}(\\mathit{mu}=Continuous, \\mathit{sd}=1.0)$'
-    assert x3._repr_latex_()=='$Multivariate \\sim \\text{MvStudentT}(\\mathit{nu}=5, \\mathit{mu}=Timeseries, \\mathit{Sigma}=array)$'
-    assert x4._repr_latex_()=='$Mixture \\sim \\text{NormalMixture}(\\mathit{w}=array, \\mathit{mu}=Multivariate, \\mathit{sigma}=f(Discrete))$'
+
+    assert x0._repr_latex_() == '$Discrete \\sim \\text{Binomial}' \
+                                '(\\mathit{n}=10, \\mathit{p}=0.5)$'
+    assert x1._repr_latex_() == '$Continuous \\sim \\text{Normal}' \
+                                '(\\mathit{mu}=0.0, \\mathit{sd}=1.0)$'
+    assert x2._repr_latex_() == '$Timeseries \\sim \\text' \
+                                '{GaussianRandomWalk}(\\mathit{mu}=Continuous, ' \
+                                '\\mathit{sd}=1.0)$'
+    assert x3._repr_latex_() == '$Multivariate \\sim \\text{MvStudentT}' \
+                                '(\\mathit{nu}=5, \\mathit{mu}=Timeseries, ' \
+                                '\\mathit{Sigma}=array)$'
+    assert x4._repr_latex_() == '$Mixture \\sim \\text{NormalMixture}' \
+                                '(\\mathit{w}=array, \\mathit{mu}=Multivariate, ' \
+                                '\\mathit{sigma}=f(Discrete))$'
 
 
 def test_discrete_trafo():

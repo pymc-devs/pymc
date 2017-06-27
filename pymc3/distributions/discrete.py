@@ -170,7 +170,7 @@ class Bernoulli(Discrete):
         self.mode = tt.cast(tround(p), 'int8')
 
     def random(self, point=None, size=None, repeat=None):
-        p = draw_values([self.p], point=point)
+        p = draw_values([self.p], point=point)[0]
         return generate_samples(stats.bernoulli.rvs, p,
                                 dist_shape=self.shape,
                                 size=size)
@@ -286,7 +286,7 @@ class Poisson(Discrete):
         self.mode = tt.floor(mu).astype('int32')
 
     def random(self, point=None, size=None, repeat=None):
-        mu = draw_values([self.mu], point=point)
+        mu = draw_values([self.mu], point=point)[0]
         return generate_samples(stats.poisson.rvs, mu,
                                 dist_shape=self.shape,
                                 size=size)
@@ -398,7 +398,7 @@ class Geometric(Discrete):
         self.mode = 1
 
     def random(self, point=None, size=None, repeat=None):
-        p = draw_values([self.p], point=point)
+        p = draw_values([self.p], point=point)[0]
         return generate_samples(np.random.geometric, p,
                                 dist_shape=self.shape,
                                 size=size)
@@ -559,7 +559,7 @@ class Constant(Discrete):
         self.mean = self.median = self.mode = self.c = c = tt.as_tensor_variable(c)
 
     def random(self, point=None, size=None, repeat=None):
-        c = draw_values([self.c], point=point)
+        c = draw_values([self.c], point=point)[0]
         dtype = np.array(c).dtype
 
         def _random(c, dtype=dtype, size=None):

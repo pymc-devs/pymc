@@ -1,5 +1,5 @@
 # pylint: disable=wildcard-import
-__version__ = "3.1rc3"
+__version__ = "3.1"
 
 from .blocking import *
 from .distributions import *

@@ -1,7 +1,7 @@
 import pytest
 
-from pymc3.distributions.transforms import Transform
 import pymc3 as pm
+from pymc3.distributions.transforms import Transform
 
 
 class TestTransformName(object):

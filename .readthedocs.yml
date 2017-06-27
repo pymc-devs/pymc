@@ -1,0 +1,14 @@
+# Build ePub (pdf is currently failing)
+formats:
+  - epub
+
+# pip requirements file for building sphinx docs (e.g. nbsphinx)
+requirements_file: docs/requirements-docs.txt
+
+# can also specify a conda env file if pip isn't enough, for example:
+# conda:
+#   file: environment.yml
+
+# Use python 3 for building
+python:
+  version: 3.5

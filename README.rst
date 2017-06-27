@@ -1,8 +1,9 @@
-.. image:: https://github.com/pymc-devs/pymc3/blob/master/docs/pymc3_logo.jpg?raw=true
+.. image:: https://cdn.rawgit.com/pymc-devs/pymc3/master/docs/logos/svg/PyMC3_banner.svg
+    :height: 100px
     :alt: PyMC3 logo
     :align: center
 
-|Gitter| |Build Status| |Coverage|
+|Build Status| |Coverage|
 
 PyMC3 is a Python package for Bayesian statistical modeling and Probabilistic Machine Learning
 which focuses on advanced Markov chain Monte Carlo and variational fitting
@@ -123,13 +124,13 @@ https://doi.org/10.7717/peerj-cs.55
 Contact
 =======
 
-To report an issue with PyMC3 or to suggest a feature please use the `issue tracker <https://github.com/pymc-devs/pymc3/issues>`__.
+We are using `discourse.pymc.io <https://discourse.pymc.io/>`__ as our main communication channel. You can also follow us on `Twitter @pymc_devs <https://twitter.com/pymc_devs>`__ for updates and other announcements. 
 
-To ask a question regarding modeling or usage of PyMC3 we encourage posting to `StackOverflow using the "pymc" tag <http://stackoverflow.com/questions/tagged/pymc>`__.
+To ask a question regarding modeling or usage of PyMC3 we encourage posting to our Discourse forum under the `“Questions” Category <https://discourse.pymc.io/c/questions>`__. You can also suggest feature in the `“Development” Category <https://discourse.pymc.io/c/development>`__.
 
-To interact with PyMC3 developers, visit the `pymc Gitter channel <https://gitter.im/pymc-devs/pymc>`__.
+To report an issue with PyMC3 please use the `issue tracker <https://github.com/pymc-devs/pymc3/issues>`__.
 
-Finally, if you need to get in touch for non-technical information about the project, `send us an e-mail <fonnesbeck+pymc@gmail.com>`__.
+Finally, if you need to get in touch for non-technical information about the project, `send us an e-mail <pymc.devs@gmail.com>`__.
 
 License
 =======
@@ -173,8 +174,6 @@ Sponsors
 
 |Quantopian|
 
-.. |Gitter| image:: https://badges.gitter.im/Join%20Chat.svg
-   :target: https://gitter.im/pymc-devs/pymc?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge
 .. |Build Status| image:: https://travis-ci.org/pymc-devs/pymc3.png?branch=master
    :target: https://travis-ci.org/pymc-devs/pymc3
 .. |Coverage| image:: https://coveralls.io/repos/github/pymc-devs/pymc3/badge.svg?branch=master

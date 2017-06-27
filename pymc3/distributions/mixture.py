@@ -125,7 +125,7 @@ class Mixture(Distribution):
             else:
                 return np.random.choice(k, p=w, *args, **kwargs)
 
-        w = draw_values([self.w], point=point)
+        w = draw_values([self.w], point=point)[0]
 
         w_samples = generate_samples(random_choice,
                                      w=w,

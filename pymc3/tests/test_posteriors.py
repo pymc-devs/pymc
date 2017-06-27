@@ -69,11 +69,11 @@ class TestNUTSBetaBinomial(sf.NutsFixture, sf.BetaBinomialFixture):
 
 
 class TestNUTSStudentT(sf.NutsFixture, sf.StudentTFixture):
-    n_samples = 100000
+    n_samples = 10000
     tune = 1000
     burn = 0
     chains = 2
-    min_n_eff = 5000
+    min_n_eff = 1000
     rtol = 0.1
     atol = 0.05
 
