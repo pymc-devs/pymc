@@ -1,7 +1,7 @@
 from theano import theano, tensor as tt
 from pymc3.variational.opvi import node_property
 from pymc3.variational.test_functions import rbf
-from pymc3.theanof import memoize, floatX
+from pymc3.theanof import memoize, floatX, change_flags
 
 __all__ = [
     'Stein'
@@ -15,11 +15,10 @@ class Stein(object):
         self._kernel_f = kernel
         if input_matrix is None:
             input_matrix = tt.matrix('stein_input_matrix')
-            input_matrix.tag.test_value = approx.random(10).tag.test_value
+            input_matrix.tag.test_value = approx.symbolic_random_total_matrix.tag.test_value
         self.input_matrix = input_matrix
 
-    @property
-    @memoize
+    @node_property
     def grad(self):
         n = floatX(self.input_matrix.shape[0])
         temperature = self.temperature
@@ -27,15 +26,13 @@ class Stein(object):
                      self.repulsive_part_grad)
         return svgd_grad / n
 
-    @property
-    @memoize
+    @node_property
     def density_part_grad(self):
         Kxy = self.Kxy
         dlogpdx = self.dlogp
         return tt.dot(Kxy, dlogpdx)
 
-    @property
-    @memoize
+    @node_property
     def repulsive_part_grad(self):
         t = self.approx.normalizing_constant
         dxkxy = self.dxkxy
@@ -49,7 +46,7 @@ class Stein(object):
     def dxkxy(self):
         return self._kernel()[1]
 
-    @property
+    @node_property
     def logp_norm(self):
         return self.approx.sized_symbolic_logp / self.approx.normalizing_constant
 
@@ -71,5 +68,6 @@ class Stein(object):
         return tt.concatenate([loc_grad, glob_grad], axis=-1)
 
     @memoize
+    @change_flags(compute_test_value='raise')
     def _kernel(self):
         return self._kernel_f(self.input_matrix)
