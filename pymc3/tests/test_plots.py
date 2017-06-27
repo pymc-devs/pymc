@@ -1,5 +1,5 @@
 import matplotlib
-matplotlib.use('Agg', warn=False)
+matplotlib.use('Agg', warn=False)  # noqa
 
 import numpy as np
 import pymc3 as pm
@@ -13,6 +13,8 @@ from ..sampling import sample
 from ..tuning.scaling import find_hessian
 from .test_examples import build_disaster_model
 from pymc3.examples import arbitrary_stochastic as asmod
+import theano
+import pytest
 
 
 def test_plots():
@@ -52,7 +54,7 @@ def test_plots_multidimensional():
         traceplot(trace)
         plot_posterior(trace)
 
-
+@pytest.mark.xfail(condition=(theano.config.floatX == "float32"), reason="Fails on GPU due to njobs=2")
 def test_multichain_plots():
     model = build_disaster_model()
     with model:

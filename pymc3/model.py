@@ -539,6 +539,7 @@ class Model(six.with_metaclass(InitContextMeta, Context, Factor)):
                                 name=name,
                                 orig_name=get_transformed_name(name, dist.transform)))
                 self.deterministics.append(var)
+                self.add_random_variable(var)
                 return var
         elif isinstance(data, dict):
             with self:
@@ -985,7 +986,7 @@ def Deterministic(name, var, model=None):
 
     Returns
     -------
-    n : var but with name name
+    var : var, with name attribute
     """
     model = modelcontext(model)
     var.name = model.name_for(name)
@@ -1009,6 +1010,7 @@ def Potential(name, var, model=None):
     model = modelcontext(model)
     var.name = model.name_for(name)
     model.potentials.append(var)
+    model.add_random_variable(var)
     return var
 
 

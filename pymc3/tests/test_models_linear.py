@@ -30,6 +30,7 @@ class TestGLM(SeededTest):
 
     def test_linear_component(self):
         vars_to_create = {
+            'sigma',
             'sigma_interval__',
             'y_obs',
             'lm_x0',
@@ -71,6 +72,7 @@ class TestGLM(SeededTest):
     def test_glm(self):
         with Model() as model:
             vars_to_create = {
+                'glm_sd',
                 'glm_sd_log__',
                 'glm_y',
                 'glm_x0',

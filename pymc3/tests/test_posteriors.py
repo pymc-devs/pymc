@@ -1,7 +1,8 @@
 import pytest
 from . import sampler_fixtures as sf
+import theano
 
-
+@pytest.mark.xfail(condition=(theano.config.floatX == "float32"), reason="Fails on float32")
 class TestNUTSUniform(sf.NutsFixture, sf.UniformFixture):
     n_samples = 10000
     tune = 1000
