@@ -915,7 +915,7 @@ def as_tensor(data, name, model, distribution):
 
     if hasattr(data, 'mask'):
         from .distributions import NoDistribution
-        testval = distribution.testval or data.mean().astype(dtype)
+        testval = np.broadcast_to(distribution.default(), data.shape)[data.mask]
         fakedist = NoDistribution.dist(shape=data.mask.sum(), dtype=dtype,
                                        testval=testval, parent_dist=distribution)
         missing_values = FreeRV(name=name + '_missing', distribution=fakedist,
@@ -959,13 +959,14 @@ class ObservedRV(Factor, TensorVariable):
             data = pandas_to_array(data)
             type = TensorType(distribution.dtype, data.shape)
 
+        self.observations = data
+
         super(ObservedRV, self).__init__(type, owner, index, name)
 
         if distribution is not None:
             data = as_tensor(data, name, model, distribution)
 
             self.missing_values = data.missing_values
-
             self.logp_elemwiset = distribution.logp(data)
             self.total_size = total_size
             self.model = model
