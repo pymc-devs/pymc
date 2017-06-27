@@ -188,19 +188,6 @@ class Factor(object):
         else:
             return tt.sum(self.logp_elemwiset)
 
-    @property
-    def scaling(self):
-        total_size = getattr(self, 'total_size', None)
-        if total_size is None:
-            coef = tt.constant(1)
-        else:
-            if self.logp_elemwiset.ndim >= 1:
-                denom = self.logp_elemwiset.shape[0]
-            else:
-                denom = 1
-            coef = pm.floatX(tt.as_tensor(total_size)) / pm.floatX(denom)
-        return pm.floatX(coef)
-
 
 class InitContextMeta(type):
     """Metaclass that executes `__init__` of instance in it's context"""
@@ -438,7 +425,7 @@ class Model(six.with_metaclass(InitContextMeta, Context, Factor)):
 
     @property
     def ndim(self):
-        return self.dict_to_array(self.test_point).shape[0]
+        return sum(var.dsize for var in self.free_RVs)
 
     @property
     @memoize
@@ -796,6 +783,63 @@ class LoosePointFunc(object):
 compilef = fastfn
 
 
+def _get_scaling(total_size, shape, ndim):
+    """
+    Gets scaling constant for logp
+
+    Parameters
+    ----------
+    total_size : int or list[int]
+    shape : shape
+        shape to scale
+    ndim : int
+        ndim hint
+
+    Returns
+    -------
+    scalar
+    """
+    if total_size is None:
+        coef = pm.floatX(1)
+    elif isinstance(total_size, int):
+        if ndim >= 1:
+            denom = shape[0]
+        else:
+            denom = 1
+        coef = pm.floatX(total_size) / pm.floatX(denom)
+    elif isinstance(total_size, (list, tuple)):
+        if not all(isinstance(i, int) for i in total_size if (i is not Ellipsis and i is not None)):
+            raise TypeError('Unrecognized `total_size` type, expected '
+                            'int or list of ints, got %r' % total_size)
+        if Ellipsis in total_size:
+            sep = total_size.index(Ellipsis)
+            begin = total_size[:sep]
+            end = total_size[sep+1:]
+            if Ellipsis in end:
+                raise ValueError('Double Ellipsis in `total_size` is restricted, got %r' % total_size)
+        else:
+            begin = total_size
+            end = []
+        if (len(begin) + len(end)) > ndim:
+            raise ValueError('Length of `total_size` is too big, '
+                             'number of scalings is bigger that ndim, got %r' % total_size)
+        elif (len(begin) + len(end)) == 0:
+            return pm.floatX(1)
+        if len(end) > 0:
+            shp_end = shape[-len(end):]
+        else:
+            shp_end = np.asarray([])
+        shp_begin = shape[:len(begin)]
+        begin_coef = [pm.floatX(t) / shp_begin[i] for i, t in enumerate(begin) if t is not None]
+        end_coef = [pm.floatX(t) / shp_end[i] for i, t in enumerate(end) if t is not None]
+        coefs = begin_coef + end_coef
+        coef = tt.prod(coefs)
+    else:
+        raise TypeError('Unrecognized `total_size` type, expected '
+                        'int or list of ints, got %r' % total_size)
+    return tt.as_tensor(pm.floatX(coef))
+
+
 class FreeRV(Factor, TensorVariable):
     """Unobserved random variable that a model is specified in terms of."""
 
@@ -825,6 +869,7 @@ class FreeRV(Factor, TensorVariable):
             self.logp_elemwiset = distribution.logp(self)
             self.total_size = total_size
             self.model = model
+            self.scaling = _get_scaling(total_size, self.shape, self.ndim)
 
             incorporate_methods(source=distribution, destination=self,
                                 methods=['random'],
@@ -870,7 +915,7 @@ def as_tensor(data, name, model, distribution):
 
     if hasattr(data, 'mask'):
         from .distributions import NoDistribution
-        testval = distribution.testval or data.mean().astype(dtype)
+        testval = np.broadcast_to(distribution.default(), data.shape)[data.mask]
         fakedist = NoDistribution.dist(shape=data.mask.sum(), dtype=dtype,
                                        testval=testval, parent_dist=distribution)
         missing_values = FreeRV(name=name + '_missing', distribution=fakedist,
@@ -914,13 +959,14 @@ class ObservedRV(Factor, TensorVariable):
             data = pandas_to_array(data)
             type = TensorType(distribution.dtype, data.shape)
 
-        super(TensorVariable, self).__init__(type, None, None, name)
+        self.observations = data
+
+        super(ObservedRV, self).__init__(type, owner, index, name)
 
         if distribution is not None:
             data = as_tensor(data, name, model, distribution)
 
             self.missing_values = data.missing_values
-
             self.logp_elemwiset = distribution.logp(data)
             self.total_size = total_size
             self.model = model
@@ -929,8 +975,8 @@ class ObservedRV(Factor, TensorVariable):
             # make this RV a view on the combined missing/nonmissing array
             theano.gof.Apply(theano.compile.view_op,
                              inputs=[data], outputs=[self])
-
             self.tag.test_value = theano.compile.view_op(data).tag.test_value
+            self.scaling = _get_scaling(total_size, data.shape, data.ndim)
 
     def _repr_latex_(self, name=None, dist=None):
         if self.distribution is None:
@@ -974,6 +1020,7 @@ class MultiObservedRV(Factor):
         self.total_size = total_size
         self.model = model
         self.distribution = distribution
+        self.scaling = _get_scaling(total_size, self.logp_elemwiset.shape, self.logp_elemwiset.ndim)
 
 
 def Deterministic(name, var, model=None):
@@ -1051,7 +1098,7 @@ class TransformedRV(TensorVariable):
             theano.Apply(theano.compile.view_op, inputs=[
                          normalRV], outputs=[self])
             self.tag.test_value = normalRV.tag.test_value
-
+            self.scaling = _get_scaling(total_size, self.shape, self.ndim)
             incorporate_methods(source=distribution, destination=self,
                                 methods=['random'],
                                 wrapper=InstanceMethod)
@@ -1064,7 +1111,7 @@ class TransformedRV(TensorVariable):
         if dist is None:
             dist = self.distribution
         return self.distribution._repr_latex_(name=name, dist=dist)
-        
+
     @property
     def init_value(self):
         """Convenience attribute to return tag.test_value"""

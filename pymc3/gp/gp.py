@@ -13,16 +13,16 @@ from ..distributions import MvNormal, Continuous, draw_values, generate_samples
 from ..model import modelcontext
 from ..distributions.dist_math import Cholesky
 
-__all__ = ['GP', 'sample_gp']
+__all__ = ['GPFullConjugate', 'GPFullConjugate', 'sample_gp']
 
 class GPBase(Continuous):
     def random(self, point=None, size=None, X_values=None, obs_noise=False, y=None, **kwargs):
         if X_values is None:
             # draw from prior
-            mean, cov = self._prior(obs_noise)
+            mean, cov = self.prior(obs_noise)
         else:
             # draw from conditional
-            mean, cov = self._conditional(X_values, y, obs_noise)
+            mean, cov = self.conditional(X_values, y, obs_noise)
 
         mu, cov = draw_values([mean, cov], point=point)
         def _random(mean, cov, size=None):
@@ -36,17 +36,17 @@ class GPBase(Continuous):
                                    size=size)
         return samples
 
-    def _prior(self, obs_noise=False):
+    def prior(self, obs_noise=False):
         raise NotImplementedError
 
-    def _conditional(self, Z, y, obs_noise=False):
+    def conditional(self, Z, y, obs_noise=False):
         raise NotImplementedError
 
     def logp(self, y):
         raise NotImplementedError
 
 
-class GP(GPBase):
+class GPFullConjugate(GPBase):
     """Gausian process
 
     Parameters
@@ -57,11 +57,10 @@ class GP(GPBase):
         Mean function of Gaussian process
     cov_func : Covariance
         Covariance function of Gaussian process
-    sigma : scalar or array
-        Observation standard deviation (defaults to zero)
+    sigma2 : scalar or array
+        Observation variance (defaults to zero)
     """
     def __init__(self, X, mean_func=None, cov_func=None, sigma2=None, *args, **kwargs):
-
         if mean_func is None:
             self.M = Zero()
         else:
@@ -81,30 +80,31 @@ class GP(GPBase):
         self.solve_upper = tt.slinalg.Solve(A_structure="upper_triangular")
 
         self.X = X
-        self.nx = self.X.shape[0]
+        self.nf = self.X.shape[0]
 
         self.mean = self.mode = self.M(X)
         kwargs.setdefault("shape", X.squeeze().shape)
-        super(GP, self).__init__(*args, **kwargs)
+        super(GPFullConjugate, self).__init__(*args, **kwargs)
 
-    def _prior(self, obs_noise=False):
-        mean = self.M(self.X).squeeze()
+    def prior(self, obs_noise=False):
+        mean = self.M(self.X)
         if obs_noise:
-            cov = self.K(self.X) + self.sigma2 * tt.eye(self.nx)
+            cov = self.K(self.X) + self.sigma2 * tt.eye(self.nf)
         else:
-            cov = self.K(self.X) + 1e-6 * tt.eye(self.nx)
+            cov = self.K(self.X) + 1e-6 * tt.eye(self.nf)
         return mean, cov
 
-    def _conditional(self, Z, y, obs_noise=False):
+    def conditional(self, Z, y, obs_noise=False):
         nz = Z.shape[0]
         Kxx = self.K(self.X)
         Kxz = self.K(self.X, Z)
         Kzz = self.K(Z)
 
-        L = self.cholesky(Kxx + self.sigma2 * tt.eye(self.nx))
+        r = y - self.M(self.X)
+        L = self.cholesky(Kxx + self.sigma2 * tt.eye(self.nf))
         A = self.solve_lower(L, Kxz)
-        V = self.solve_lower(L, y - self.M(self.X).squeeze())
-        mean = tt.dot(tt.transpose(A), V) + self.M(Z).squeeze()
+        V = self.solve_lower(L, r)
+        mean = tt.dot(tt.transpose(A), V) + self.M(Z)
         if obs_noise:
             cov = Kzz - tt.dot(tt.transpose(A), A) + self.sigma2 * tt.eye(nz)
         else:
@@ -112,15 +112,22 @@ class GP(GPBase):
         return mean, cov
 
     def logp(self, y):
-        mean = self.M(self.X).squeeze()
-        L = self.cholesky(self.K(self.X) + self.sigma2 * tt.eye(self.nx))
+        mean = self.M(self.X)
+        L = self.cholesky(self.K(self.X) + self.sigma2 * tt.eye(self.nf))
         return MvNormal.dist(mu=mean, chol=L).logp(y)
 
 
-class GPfitc(GPBase):
-    """Gausian process, fitc
+class GPSparseConjugate(GPBase):
+    """Sparse Gausian Process for IID Normal likelihoods.  Either VFE or FITC
     """
-    def __init__(self, X, mean_func=None, cov_func=None, inducing_points=None, sigma2=None, *args, **kwargs):
+    def __init__(self, X, mean_func=None, cov_func=None, inducing_points=None, sigma2=None, approx="FITC", *args, **kwargs):
+        if approx.upper() not in ["VFE", "FITC"]:
+            raise ValueError("'FITC' or 'VFE' are the implemented GP approximations")
+        else:
+            if approx.upper() == "FITC":
+                self.fitc = True
+            else: #VFE
+                self.fitc = False
 
         if mean_func is None:
             self.M = Zero()
@@ -141,67 +148,81 @@ class GPfitc(GPBase):
         self.solve_upper = tt.slinalg.Solve(A_structure="upper_triangular")
 
         self.X = X
-        self.nx = self.X.shape[0]
+        self.nf = self.X.shape[0]
 
         self.mean = self.mode = self.M(X)
         kwargs.setdefault("shape", X.squeeze().shape)
 
         self.Xu = inducing_points
         self.nu = self.Xu.shape[0]
-        super(GPfitc, self).__init__(*args, **kwargs)
+        super(GPSparseConjugate, self).__init__(*args, **kwargs)
 
-    def _common(self, y):
-        Kuu = self.K(self.Xu, self.Xu) + 1e-6 * tt.eye(self.nu)
-        Kux = self.K(self.Xu, self.X)
-        Kdiag = tt.diag(self.K(self.X, self.X))  # need Kdiag methods for cov functions, here is probably why we are slower
-        Luu = self.cholesky(Kuu)
-        V = self.solve_lower(Luu, Kux)
-        g = tt.clip(Kdiag - tt.sum(V * V, 0), 0.0, np.inf) + self.sigma2
-        Lu = self.cholesky(tt.eye(self.nu) + tt.dot(V / g, tt.transpose(V)))
-
-        r = y - self.M(self.X).squeeze()
-        beta = r / g
-        alpha = tt.dot(V, beta)
-        G = self.solve_lower(Lu, alpha)
-        return Luu, Lu, g, G, r
-
-    def _prior(self, obs_noise=False):
-        Kuu = self.K(self.Xu, self.Xu) + 1e-6 * tt.eye(self.nu)
-        Kux = self.K(self.Xu, self.X)
-        Kdiag = tt.diag(self.K(self.X, self.X))  # need Kdiag methods for cov functions
-        Luu = self.cholesky(Kuu)
-        V = self.solve_lower(Luu, Kux)
-        Qff = tt.dot(tt.transpose(V), V)
-        mean = self.M(self.X).squeeze()
+    def prior(self, obs_noise=False):
+        Kuu, Kuf, Kffd, Luu, A = self._common1()
+        Qff = tt.dot(tt.transpose(A), A)
+        mean = self.M(self.X)
 
         if obs_noise:
-            cov = Qff - (tt.diag(Qff) - Kdiag) + self.sigma2 * tt.eye(self.nx)
+            cov = Qff - (tt.diag(Qff) - Kdiag) + self.sigma2 * tt.eye(self.nf)
         else:
-            cov = Qff - (tt.diag(Qff) - Kdiag) + 1e-6 * tt.eye(self.nx)
+            cov = Qff - (tt.diag(Qff) - Kdiag) + 1e-6 * tt.eye(self.nf)
         return mean, cov
 
-    def _conditional(self, Z, y, obs_noise=False):
-        Luu, Lu, g, G, r = self._common(y)
-
-        Kuz = self.K(self.Xu, Z)
-        W = self.solve_lower(Luu, Kuz)
-        mean = tt.dot(tt.transpose(W), self.solve_upper(tt.transpose(Lu), G))
-
-        A = self.solve_lower(Lu, W)
+    def conditional(self, Xs, y, obs_noise=False):
+        Kuu = self.K(self.Xu, self.Xu) + 1e-6 * tt.eye(self.nu)
+        Kuf = self.K(self.Xu, self.X)
+        Luu = self.cholesky(Kuu)
+        A = self.solve_lower(Luu, Kuf)
+        Qffd = tt.sum(A * A, 0)
+        if self.fitc:
+            Kffd = self.K(self.X, diag=True)
+            Lamd = tt.clip(Kffd - Qffd, 0.0, np.inf) + self.sigma2
+        else: # VFE
+            Lamd = tt.ones_like(Qffd) * self.sigma2
+        A_l = A / Lamd
+        L_B = self.cholesky(tt.eye(self.nu) + tt.dot(A_l, tt.transpose(A)))
+        r = y - self.M(self.X)
+        r_l = r / Lamd
+        c = self.solve_lower(L_B, tt.dot(A, r_l))
+        Kus = self.K(self.Xu, Xs)
+        As = self.solve_lower(Luu, Kus)
+        mean = tt.dot(tt.transpose(As), self.solve_upper(tt.transpose(L_B), c))
+        C = self.solve_lower(L_B, As)
         if obs_noise:
-            cov = self.K(Z, Z) - tt.dot(tt.transpose(W), W) + tt.dot(tt.transpose(A), A) + self.sigma2*tt.eye(Z.shape[0])
+            cov = self.K(Xs, Xs) - tt.dot(tt.transpose(As), As)\
+                                 + tt.dot(tt.transpose(C), C)\
+                                 + self.sigma2*tt.eye(Xs.shape[0])
         else:
-            cov = self.K(Z, Z) - tt.dot(tt.transpose(W), W) + tt.dot(tt.transpose(A), A)
+            cov = self.K(Xs, Xs) - tt.dot(tt.transpose(As), As)\
+                                 + tt.dot(tt.transpose(C), C)\
+                                 + 1e-6 * tt.eye(Xs.shape[0])
         return mean, cov
 
     def logp(self, y):
-        Luu, Lu, g, G, r = self._common(y)
-        const = -0.5 * self.nu * self.nx * tt.log(2.0 * np.pi)
-        logdet = -0.5 * tt.sum(tt.log(g)) - tt.sum(tt.log(tt.diag(Lu)))
-        return -0.5 * tt.sum(tt.square(r) / g) + 0.5 * tt.sum(tt.square(G)) + logdet + const
+        Kuu = self.K(self.Xu, self.Xu) + 1e-6 * tt.eye(self.nu)
+        Kuf = self.K(self.Xu, self.X)
+        Luu = self.cholesky(Kuu)
+        A = self.solve_lower(Luu, Kuf)
+        Qffd = tt.sum(A * A, 0)
+        if self.fitc:
+            Kffd = self.K(self.X, diag=True)
+            Lamd = tt.clip(Kffd - Qffd, 0.0, np.inf) + self.sigma2
+            trace = 0.0
+        else: # VFE
+            Lamd = tt.ones_like(Qffd) * self.sigma2
+            trace = (1.0 / (2.0 * self.sigma2)) * (tt.sum(self.K(self.X, diag=True)) - tt.sum(tt.sum(A * A, 0)))
+        A_l = A / Lamd
+        L_B = self.cholesky(tt.eye(self.nu) + tt.dot(A_l, tt.transpose(A)))
+        r = y - self.M(self.X)
+        r_l = r / Lamd
+        c = self.solve_lower(L_B, tt.dot(A, r_l))
+        constant = 0.5 * self.nf * tt.log(2.0 * np.pi)
+        logdet = 0.5 * tt.sum(tt.log(Lamd)) + tt.sum(tt.log(tt.diag(L_B)))
+        quadratic = 0.5 * (tt.dot(r, r_l) - tt.dot(c, c))
+        return -1.0 * (constant + logdet + quadratic + trace)
 
 
-def sample_gp(trace, gp, X_values=None, samples=None, obs_noise=False, model=None, random_seed=None, progressbar=True):
+def sample_gp(trace, gp, X_values, samples=None, obs_noise=True, model=None, random_seed=None, progressbar=True):
     """Generate samples from a posterior Gaussian process.
 
     Parameters
