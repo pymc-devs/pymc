@@ -14,11 +14,11 @@ from ..distributions import (DensityDist, Categorical, Multinomial, VonMises, Di
                              NegativeBinomial, Geometric, Exponential, ExGaussian, Normal,
                              Flat, LKJCorr, Wald, ChiSquared, HalfNormal, DiscreteUniform,
                              Bound, Uniform, Triangular, Binomial, SkewNormal, DiscreteWeibull, Gumbel,
-                             Interpolated, ZeroInflatedBinomial)
+                             Interpolated, ZeroInflatedBinomial, HalfFlat)
 from ..distributions import continuous
 from pymc3.theanof import floatX
 from numpy import array, inf, log, exp
-from numpy.testing import assert_almost_equal, assert_equal
+from numpy.testing import assert_almost_equal, assert_allclose, assert_equal
 import numpy.random as nr
 import numpy as np
 import pytest
@@ -442,6 +442,16 @@ class TestMatchesScipy(SeededTest):
 
     def test_flat(self):
         self.pymc3_matches_scipy(Flat, Runif, {}, lambda value: 0)
+        with Model():
+            x = Flat('a')
+            assert_allclose(x.tag.test_value, 0)
+
+    def test_half_flat(self):
+        self.pymc3_matches_scipy(HalfFlat, Rplus, {}, lambda value: 0)
+        with Model():
+            x = HalfFlat('a', shape=2)
+            assert_allclose(x.tag.test_value, 1)
+            assert x.tag.test_value.shape == (2,)
 
     def test_normal(self):
         self.pymc3_matches_scipy(Normal, R, {'mu': R, 'sd': Rplus},
