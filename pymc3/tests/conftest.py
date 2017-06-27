@@ -4,14 +4,14 @@ import pymc3 as pm
 import pytest
 
 
-@pytest.yield_fixture(scope="function", autouse=True)
+@pytest.fixture(scope="function", autouse=True)
 def theano_config():
     config = theano.configparser.change_flags(compute_test_value='raise')
     with config:
         yield
 
 
-@pytest.yield_fixture(scope='function', autouse=True)
+@pytest.fixture(scope='function', autouse=True)
 def exception_verbosity():
     config = theano.configparser.change_flags(
         exception_verbosity='high')
@@ -19,7 +19,7 @@ def exception_verbosity():
         yield
 
 
-@pytest.yield_fixture(scope='function', autouse=False)
+@pytest.fixture(scope='function', autouse=False)
 def strict_float32():
     if theano.config.floatX == 'float32':
         config = theano.configparser.change_flags(

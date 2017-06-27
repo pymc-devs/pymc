@@ -11,7 +11,6 @@ import theano.tensor as tt
 import theano
 
 from .special import gammaln
-from ..math import logdet as _logdet
 from pymc3.theanof import floatX
 
 f = floatX
@@ -162,68 +161,6 @@ def log_normal(x, mean, **kwargs):
         std = tau**(-1)
     std += f(eps)
     return f(c) - tt.log(tt.abs_(std)) - (x - mean) ** 2 / (2. * std ** 2)
-
-
-def log_normal_mv(x, mean, gpu_compat=False, **kwargs):
-    """
-    Calculate logarithm of normal distribution at point `x`
-    with given `mean` and `sigma` matrix
-
-    Parameters
-    ----------
-    x : Tensor
-        point of evaluation
-    mean : Tensor
-        mean of normal distribution
-    kwargs : one of parameters `{cov, tau, chol}`
-
-    Other Parameters
-    ----------------
-    gpu_compat : False, because LogDet is not GPU compatible yet.
-                 If this is set as true, the GPU compatible (but numerically unstable) log(det) is used.
-
-    Notes
-    -----
-    There are three variants for density parametrization.
-    They are:
-        1) covariance matrix - `cov`
-        2) precision matrix - `tau`,
-        3) cholesky decomposition matrix  - `chol`
-    ----
-    """
-    if gpu_compat:
-        def logdet(m):
-            return tt.log(tt.abs_(tt.nlinalg.det(m)))
-    else:
-        logdet = _logdet
-
-    T = kwargs.get('tau')
-    S = kwargs.get('cov')
-    L = kwargs.get('chol')
-    check = sum(map(lambda a: a is not None, [T, S, L]))
-    if check > 1:
-        raise ValueError('more than one required kwarg is passed')
-    if check == 0:
-        raise ValueError('none of required kwarg is passed')
-    # avoid unnecessary computations
-    if L is not None:
-        S = L.dot(L.T)
-        T = tt.nlinalg.matrix_inverse(S)
-        log_det = -logdet(S)
-    elif T is not None:
-        log_det = logdet(T)
-    else:
-        T = tt.nlinalg.matrix_inverse(S)
-        log_det = -logdet(S)
-    delta = x - mean
-    k = f(S.shape[0])
-    result = delta.dot(T)
-    if delta.ndim > 1:
-        result = tt.batched_dot(result, delta)
-    else:
-        result = result.dot(delta.T)
-    result += k * tt.log(2. * np.pi) - log_det
-    return -.5 * result
 
 
 def MvNormalLogp():
