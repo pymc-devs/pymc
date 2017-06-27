@@ -152,11 +152,10 @@ class NutsFixture(BaseSampler):
         if hasattr(cls, 'step_args'):
             args.update(cls.step_args)
         if 'scaling' not in args:
-            mu, stds, elbo = pm.advi(n=50000)
-            scaling = cls.model.dict_to_array(stds) ** 2
-            args['scaling'] = scaling
-            args['is_cov'] = True
-        return pm.NUTS(**args)
+            _, step = pm.sampling.init_nuts(n_init=10000, **args)
+        else:
+            step = pm.NUTS(**args)
+        return step
 
     def test_target_accept(self):
         accept = self.trace[self.burn:]['mean_tree_accept']

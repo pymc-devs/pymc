@@ -20,13 +20,25 @@ class Stein(object):
     @property
     @memoize
     def grad(self):
-        t = self.approx.normalizing_constant
-        Kxy, dxkxy = self.Kxy, self.dxkxy
-        dlogpdx = self.dlogp  # Normalized
         n = floatX(self.input_matrix.shape[0])
         temperature = self.temperature
-        svgd_grad = (tt.dot(Kxy, dlogpdx)/temperature + dxkxy/t) / n
-        return svgd_grad
+        svgd_grad = (self.density_part_grad / temperature +
+                     self.repulsive_part_grad)
+        return svgd_grad / n
+
+    @property
+    @memoize
+    def density_part_grad(self):
+        Kxy = self.Kxy
+        dlogpdx = self.dlogp
+        return tt.dot(Kxy, dlogpdx)
+
+    @property
+    @memoize
+    def repulsive_part_grad(self):
+        t = self.approx.normalizing_constant
+        dxkxy = self.dxkxy
+        return dxkxy/t
 
     @property
     def Kxy(self):

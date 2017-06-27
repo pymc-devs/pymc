@@ -8,9 +8,43 @@ from ..tests import backend_fixtures as bf
 from ..backends import ndarray
 from ..stats import df_summary, autocorr, hpd, mc_error, quantiles, make_indices
 from ..theanof import floatX_array
+import pymc3.stats as pmstats
 from numpy.random import random, normal
 from numpy.testing import assert_equal, assert_almost_equal, assert_array_almost_equal
 from scipy import stats as st
+
+
+def test_log_post_trace():
+    with pm.Model() as model:
+        pm.Normal('y')
+        trace = pm.sample()
+
+    logp = pmstats._log_post_trace(trace, model)
+    assert logp.shape == (len(trace), 0)
+
+    with pm.Model() as model:
+        pm.Normal('a')
+        pm.Normal('y', observed=np.zeros((2, 3)))
+        trace = pm.sample()
+
+    logp = pmstats._log_post_trace(trace, model)
+    assert logp.shape == (len(trace), 6)
+    npt.assert_allclose(logp, -0.5 * np.log(2 * np.pi), atol=1e-7)
+
+    with pm.Model() as model:
+        pm.Normal('a')
+        pm.Normal('y', observed=np.zeros((2, 3)))
+        data = pd.DataFrame(np.zeros((3, 4)))
+        data.values[1, 1] = np.nan
+        pm.Normal('y2', observed=data)
+        data = data.copy()
+        data.values[:] = np.nan
+        pm.Normal('y3', observed=data)
+        trace = pm.sample()
+
+    logp = pmstats._log_post_trace(trace, model)
+    assert logp.shape == (len(trace), 17)
+    npt.assert_allclose(logp, -0.5 * np.log(2 * np.pi), atol=1e-7)
 
 
 class TestStats(SeededTest):

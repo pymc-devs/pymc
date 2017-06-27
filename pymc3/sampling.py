@@ -228,6 +228,9 @@ def sample(draws=500, step=None, init='auto', n_init=200000, start=None,
             raise ValueError("Specify only one of step_kwargs and nuts_kwargs")
         step_kwargs = {'nuts': nuts_kwargs}
 
+    if model.ndim == 0:
+        raise ValueError('The model does not contain any free variables.')
+
     if step is None and init is not None and pm.model.all_continuous(model.vars):
         # By default, use NUTS sampler
         pm._log.info('Auto-assigning NUTS sampler...')
@@ -475,12 +478,14 @@ def _update_start_vals(a, b, model):
     """Update a with b, without overwriting existing keys. Values specified for
     transformed variables on the original scale are also transformed and inserted.
     """
-    for name in a:
-        for tname in b:
-            if is_transformed_name(tname) and get_untransformed_name(tname) == name:
-                transform_func = [d.transformation for d in model.deterministics if d.name == name]
-                if transform_func:
-                    b[tname] = transform_func[0].forward(a[name]).eval()
+    if model is not None:
+        for free_RV in model.free_RVs:
+            tname = free_RV.name
+            for name in a:
+                if is_transformed_name(tname) and get_untransformed_name(tname) == name:
+                    transform_func = [d.transformation for d in model.deterministics if d.name == name]
+                    if transform_func:
+                        b[tname] = transform_func[0].forward_val(a[name], point=b).eval()
 
     a.update({k: v for k, v in b.items() if k not in a})
 
@@ -516,8 +521,7 @@ def sample_ppc(trace, samples=None, model=None, vars=None, size=None,
     -------
     samples : dict
         Dictionary with the variables as keys. The values corresponding to the
-        posterior predictive samples. If a set of weights and a matching number
-        of traces are provided, then the samples will be weighted.
+        posterior predictive samples.
     """
     if samples is None:
         samples = len(trace)

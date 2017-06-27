@@ -451,7 +451,7 @@ class NutsReport(object):
         n_diverging = len(self._divs_after_tune)
         if n_diverging > 0:
             warnings.warn("Chain %s contains %s diverging samples after "
-                          "tuning. If increasing `target_accept` doesn't help "
+                          "tuning. If increasing `target_accept` does not help "
                           "try to reparameterize."
                           % (self._chain_id, n_diverging))
 
