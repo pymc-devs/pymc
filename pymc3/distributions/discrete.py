@@ -633,7 +633,7 @@ class ZeroInflatedPoisson(Discrete):
         psi = self.psi
         theta = self.theta
 
-        logp_val = tt.switch(value > 0,
+        logp_val = tt.switch(1 * (value > 0),
                      tt.log(psi) + self.pois.logp(value),
                      logaddexp(tt.log1p(-psi), tt.log(psi) - theta))
 
@@ -701,7 +701,7 @@ class ZeroInflatedBinomial(Discrete):
         p = self.p
         n = self.n
 
-        logp_val = tt.switch(value > 0,
+        logp_val = tt.switch(1 * (value > 0),
                  tt.log(psi) + self.bin.logp(value),
                  logaddexp(tt.log1p(-psi), tt.log(psi) + n * tt.log1p(-p)))
 
@@ -777,7 +777,7 @@ class ZeroInflatedNegativeBinomial(Discrete):
         mu = self.mu
         psi = self.psi
 
-        logp_val = tt.switch(value > 0,
+        logp_val = tt.switch(1 * (value > 0),
                      tt.log(psi) + self.nb.logp(value),
                      logaddexp(tt.log1p(-psi), tt.log(psi) + alpha * (tt.log(alpha) - tt.log(alpha + mu))))
 
