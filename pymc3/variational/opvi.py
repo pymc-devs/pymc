@@ -391,19 +391,19 @@ def cast_to_list(params):
 
     Parameters
     ----------
-    params : {list|tuple|dict|theano.shared|None}
+    params : {dict|None}
 
     Returns
     -------
     list
     """
     if isinstance(params, dict):
-        return list(params.values())
+        return list(t[1] for t in sorted(params.items(), key=lambda t: t[0]))
     elif params is None:
         return []
     else:
         raise TypeError(
-            'Unknown type %s for %r, need list, dict or shared variable')
+            'Unknown type %s for %r, need dict or None')
 
 
 class TestFunction(object):
@@ -871,7 +871,7 @@ class Approximation(object):
                    [self.view_local(l_posterior, name)
                     for name in self.local_names]
                    )
-        sample_fn = theano.function([theano.In(s, 'draws', 1)], sampled)
+        sample_fn = theano.function([s], sampled)
 
         def inner(draws=1):
             _samples = sample_fn(draws)
