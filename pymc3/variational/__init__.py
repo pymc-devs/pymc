@@ -25,6 +25,7 @@ from .inference import (
     FullRankADVI,
     SVGD,
     ASVGD,
+    NF,
     Inference,
     fit
 )
@@ -34,6 +35,7 @@ from .approximations import (
     MeanField,
     FullRank,
     Empirical,
+    NormalizingFlows,
     sample_approx
 )
 

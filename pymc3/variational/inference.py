@@ -8,7 +8,8 @@ import tqdm
 
 import pymc3 as pm
 from pymc3.variational import test_functions
-from pymc3.variational.approximations import MeanField, FullRank, Empirical
+from pymc3.variational.approximations import (
+    MeanField, FullRank, Empirical, NormalizingFlows)
 from pymc3.variational.operators import KL, KSD, AKSD
 from pymc3.variational.opvi import Approximation
 
@@ -687,6 +688,23 @@ class ASVGD(Inference):
     def run_profiling(self, n=1000, score=None, obj_n_mc=300, **kwargs):
         return super(ASVGD, self).run_profiling(
             n=n, score=score, obj_n_mc=obj_n_mc, **kwargs)
+
+
+class NF(Inference):
+    OP = KL
+    APPROX = NormalizingFlows
+    TF = None
+
+    def __init__(self, flow='planar*3', initial_global='normal',
+                 local_rv=None, model=None,
+                 scale_cost_to_minibatch=False,
+                 random_seed=None, start=None):
+        super(NF, self).__init__(
+            self.OP, self.APPROX, self.TF,
+            flow=flow, initial_global=initial_global,
+            local_rv=local_rv, model=model,
+            scale_cost_to_minibatch=scale_cost_to_minibatch,
+            random_seed=random_seed, start=start)
 
 
 def fit(n=10000, local_rv=None, method='advi', model=None,
