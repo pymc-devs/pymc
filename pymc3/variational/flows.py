@@ -1,4 +1,3 @@
-import warnings
 import collections
 
 import numpy as np
@@ -12,7 +11,7 @@ from .opvi import node_property, cast_to_list
 __all__ = [
     'Formula',
     'link_flows',
-    'PlanarFlow'
+    'PlanarFlow',
 ]
 
 
@@ -39,7 +38,10 @@ class Formula(object):
     def __init__(self, formula):
         _select = dict(
             planar=PlanarFlow,
-            radial=RadialFlow
+            radial=RadialFlow,
+            # hh=HousefolderFlow,
+            # loc=LocFlow,
+            # scale=ScaleFlow,
         )
         self.formula = formula
         _formula = formula.lower().replace(' ', '')
@@ -94,6 +96,7 @@ def link_flows(flows, z0=None):
 class AbstractFlow(object):
     shared_params = None
 
+    @change_flags(compute_test_value='raise')
     def __init__(self, z0=None, dim=None):
         if isinstance(z0, AbstractFlow):
             parent = z0
@@ -156,9 +159,12 @@ class AbstractFlow(object):
     @change_flags(compute_test_value='off')
     def forward_apply(self, z0):
         ret = theano.clone(self.forward, {self.root.z0: z0})
-        ret.tag.test_value = np.random.normal(
-            size=z0.tag.test_value.shape
-        ).astype(self.z0.dtype)
+        try:
+            ret.tag.test_value = np.random.normal(
+                size=z0.tag.test_value.shape
+            ).astype(self.z0.dtype)
+        except AttributeError:
+            ret.tag.test_value = self.root.z0.tag.test_value
         return ret
 
     __call__ = forward_apply
@@ -227,7 +233,11 @@ class LinearFlow(AbstractFlow):
         det = tt.abs_(1. + phi.dot(u))
         return det.flatten()  # s
 
-Tanh = FlowFn(tt.tanh, tt.arctanh, lambda x: 1. - tt.tanh(x) ** 2)
+Tanh = FlowFn(
+    tt.tanh,
+    tt.arctanh,
+    lambda x: 1. - tt.tanh(x) ** 2
+)
 
 
 class PlanarFlow(LinearFlow):
@@ -243,7 +253,7 @@ class PlanarFlow(LinearFlow):
         wu = w.T.dot(u).reshape(())  # .
         mwu = -1. + tt.nnet.softplus(wu)  # .
         # dx1 + (1x1 - 1x1) * dx1 / .
-        u_h = u+(mwu-wu)*w/(w**2).sum()
+        u_h = u+(mwu-wu) * w/(w**2).sum()
         return u_h, w
 
 
@@ -269,10 +279,10 @@ class ReferencePointFlow(AbstractFlow):
         a = self.a  # .
         b = self.b  # .
         z_ref = self.z_ref  # d
-        z0 = self.z0  # sxd
+        z = self.z0  # sxd
         h = self.h  # h(a, r)
-        r = (z0 - z_ref).norm(2, axis=-1, keepdims=True)  # sx1
-        return z0 + b * h(a, r) * (z0-z_ref)
+        r = (z - z_ref).norm(2, axis=-1, keepdims=True)  # sx1
+        return z + b * h(a, r) * (z-z_ref)
 
     @node_property
     def det(self):
@@ -304,3 +314,56 @@ class RadialFlow(ReferencePointFlow):
         a = tt.exp(a)
         b = -a + tt.nnet.softplus(b)
         return a, b
+
+'''
+class LocFlow(AbstractFlow):
+    def _initialize(self, dim):
+        loc = theano.shared(pm.floatX(np.random.randn(dim)))
+        self.shared_params = dict(loc=loc)
+        self.loc = loc
+
+    @node_property
+    def forward(self):
+        loc = self.loc
+        z = self.z0
+        return z + loc
+
+    @node_property
+    def det(self):
+        return pm.floatX(1)
+
+
+class ScaleFlow(AbstractFlow):
+    def _initialize(self, dim):
+        log_scale = theano.shared(pm.floatX(np.random.randn(dim)))
+        scale = tt.exp(log_scale)
+        self.shared_params = dict(log_scale=log_scale)
+        self.scale = scale
+
+    @node_property
+    def forward(self):
+        z = self.z0
+        scale = self.scale
+        return z * scale
+
+    @node_property
+    def det(self):
+        return tt.prod(self.scale)
+
+
+class HousefolderFlow(AbstractFlow):
+    def _initialize(self, dim):
+        v = theano.shared(pm.floatX(np.random.randn(dim, 1)))
+        self.shared_params = dict(v=v)
+        self.H = tt.eye(dim) - 2. * v.dot(v.T) / (v**2).sum()
+
+    @node_property
+    def forward(self):
+        z = self.z0  # sxd
+        H = self.H   # dxd
+        return z.dot(tt.transpose(H))
+
+    @property
+    def det(self):
+        return 1.
+'''
