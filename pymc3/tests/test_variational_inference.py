@@ -6,7 +6,7 @@ from theano import theano, tensor as tt
 import pymc3 as pm
 from pymc3 import Model, Normal
 from pymc3.variational import (
-    ADVI, FullRankADVI, SVGD,
+    ADVI, FullRankADVI, SVGD, NF,
     Empirical, ASVGD,
     MeanField, FullRank,
     fit, flows
@@ -158,6 +158,8 @@ def simple_model(simple_model_data):
 
 
 @pytest.fixture('module', params=[
+        dict(cls=NF, init=dict(flow='planar*20')),
+        dict(cls=NF, init=dict(flow='radial*20')),
         dict(cls=ADVI, init=dict()),
         dict(cls=FullRankADVI, init=dict()),
         dict(cls=SVGD, init=dict(n_particles=500, jitter=1)),
@@ -190,6 +192,14 @@ def fit_kwargs(inference, using_minibatch):
         ),
         (ADVI, 'mini'): dict(
             obj_optimizer=pm.adagrad_window(learning_rate=0.01, n_win=50),
+            n=12000
+        ),
+        (NF, 'full'): dict(
+            obj_optimizer=pm.adagrad_window(learning_rate=0.01, n_win=10),
+            n=12000
+        ),
+        (NF, 'mini'): dict(
+            obj_optimizer=pm.adagrad_window(learning_rate=0.01, n_win=10),
             n=12000
         ),
         (FullRankADVI, 'full'): dict(

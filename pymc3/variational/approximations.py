@@ -6,6 +6,7 @@ import pymc3 as pm
 from pymc3.distributions.dist_math import rho2sd, log_normal
 from pymc3.variational.opvi import Approximation, node_property
 from pymc3.util import update_start_vals
+from pymc3.variational import flows
 
 
 __all__ = [
@@ -426,6 +427,54 @@ class Empirical(Approximation):
         x0 += pm.floatX(np.random.normal(0, jitter, x0.shape))
         hist.histogram.set_value(x0)
         return hist
+
+
+class NormalizingFlows(Approximation):
+    def __init__(self, flow='planar*3', initial_global='normal',
+                 local_rv=None, model=None,
+                 scale_cost_to_minibatch=False,
+                 random_seed=None, **kwargs):
+        super(NormalizingFlows, self).__init__(
+            local_rv=local_rv, scale_cost_to_minibatch=scale_cost_to_minibatch,
+            model=model, random_seed=random_seed, **kwargs)
+        self.initial_dist_global_name = initial_global
+        if isinstance(flow, str):
+            flow = flows.Formula(flow)
+        self.gflow = flow(dim=self.global_size, z0=self.symbolic_initial_global_matrix)
+
+    @property
+    def shared_params(self):
+        params = dict()
+        current = self.gflow
+        i = 0
+        params[i] = current.shared_params
+        while not current.isroot:
+            i += 1
+            current = current.parent
+            params[i] = current.shared_params
+        return params
+
+    @shared_params.setter
+    def shared_params(self, value):
+        current = self.gflow
+        i = 0
+        current.shared_params = value[i]
+        while not current.isroot:
+            i += 1
+            current = current.parent
+            current.shared_params = value[i]
+
+    @property
+    def params(self):
+        return self.gflow.params
+
+    @node_property
+    def symbolic_log_q_W_global(self):
+        return -self.gflow.all_log_dets
+
+    @property
+    def symbolic_random_global_matrix(self):
+        return self.gflow.forward
 
 
 def sample_approx(approx, draws=100, include_transformed=True):

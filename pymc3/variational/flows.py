@@ -35,11 +35,12 @@ class Formula(object):
     -------
     __call__(z0, dim) - initializes and links all flows returning the last one
     """
-    _select = dict(
-        planar=PlanarFlow
-    )
 
     def __init__(self, formula):
+        _select = dict(
+            planar=PlanarFlow,
+            radial=RadialFlow
+        )
         self.formula = formula
         _formula = formula.lower().replace(' ', '')
         identifiers = _formula.split('-')
@@ -48,9 +49,9 @@ class Formula(object):
 
         for tup in identifiers:
             if len(tup) == 1:
-                self.flows.append(self._select[tup[0]])
+                self.flows.append(_select[tup[0]])
             elif len(tup) == 2:
-                self.flows.extend([self._select[tup[0]]]*int(tup[1]))
+                self.flows.extend([_select[tup[0]]]*int(tup[1]))
             else:
                 raise ValueError('Wrong format: %s' % formula)
 
@@ -85,7 +86,7 @@ def link_flows(flows, z0=None):
     for f0, f1 in zip(flows[:-1], flows[1:]):
         if f0.dim != f1.dim:
             raise ValueError('Flows have different dims')
-        theano.Apply(view_op, [f0.forward], [f1.z0])
+        theano.Apply(view_op, [f0.forward.astype(f1.z0.dtype)], [f1.z0])
         f1.parent = f0
     return flows
 
@@ -133,13 +134,12 @@ class AbstractFlow(object):
         return params
 
     @property
-    def all_dets(self):
-        dets = list()
-        dets.append(self.det)
+    def all_log_dets(self):
+        dets = [tt.log(self.det)]
         current = self
         while not current.isroot:
             current = current.parent
-            dets.append(current.det)
+            dets.append(tt.log(current.det))
         return tt.add(*dets)
 
     def _initialize(self, dim):
@@ -176,7 +176,7 @@ class AbstractFlow(object):
 
 
 FlowFn = collections.namedtuple('FlowFn', 'fn,inv,deriv')
-FlowFn.__call__ = lambda self, x: self.fn(x)
+FlowFn.__call__ = lambda self, *args: self.fn(*args)
 
 
 class LinearFlow(AbstractFlow):
@@ -199,8 +199,7 @@ class LinearFlow(AbstractFlow):
     b = property(lambda self: self.shared_params['b'])
 
     def make_uw(self, u, w):
-        warnings.warn('flow can be not revertible', stacklevel=3)
-        return u, w
+        raise NotImplementedError('Need to implement valid U, W transform')
 
     @node_property
     def forward(self):
@@ -242,7 +241,66 @@ class PlanarFlow(LinearFlow):
         # u' : dx1
         # w : dx1
         wu = w.T.dot(u).reshape(())  # .
-        mwu = -1. + tt.log1p(tt.exp(wu))  # .
+        mwu = -1. + tt.nnet.softplus(wu)  # .
         # dx1 + (1x1 - 1x1) * dx1 / .
         u_h = u+(mwu-wu)*w/(w**2).sum()
         return u_h, w
+
+
+class ReferencePointFlow(AbstractFlow):
+    def __init__(self, h, z0=None, dim=None):
+        self.h = h
+        super(ReferencePointFlow, self).__init__(dim=dim, z0=z0)
+
+    def _initialize(self, dim):
+        super(ReferencePointFlow, self)._initialize(dim)
+        _a = theano.shared(pm.floatX(np.random.randn()))
+        _b = theano.shared(pm.floatX(np.random.randn()))
+        z_ref = theano.shared(pm.floatX(np.random.randn(dim)))
+        self.shared_params = dict(_a=_a, _b=_b, z_ref=z_ref)
+        self.a, self.b = self.make_ab(_a, _b)
+        self.z_ref = z_ref
+
+    def make_ab(self, a, b):
+        raise NotImplementedError('Need to specify how to get a, b')
+
+    @node_property
+    def forward(self):
+        a = self.a  # .
+        b = self.b  # .
+        z_ref = self.z_ref  # d
+        z0 = self.z0  # sxd
+        h = self.h  # h(a, r)
+        r = (z0 - z_ref).norm(2, axis=-1, keepdims=True)  # sx1
+        return z0 + b * h(a, r) * (z0-z_ref)
+
+    @node_property
+    def det(self):
+        d = self.dim
+        a = self.a  # .
+        b = self.b  # .
+        z_ref = self.z_ref  # d
+        z0 = self.z0  # sxd
+        h = self.h  # h(a, r)
+        r = (z0 - z_ref).norm(2, axis=-1)  # s
+        deriv = self.h.deriv  # h'(a, r)
+        har = h(a, r)
+        dar = deriv(a, r)
+        return (1. + b*har)**(d-1) * (1. + b*har + b*dar*r)
+
+
+Radial = FlowFn(
+    lambda a, r: 1./(a+r),
+    lambda a, y: 1./y - a,
+    lambda a, r: -1./(a+r)**2
+)
+
+
+class RadialFlow(ReferencePointFlow):
+    def __init__(self, **kwargs):
+        super(RadialFlow, self).__init__(Radial, **kwargs)
+
+    def make_ab(self, a, b):
+        a = tt.exp(a)
+        b = -a + tt.nnet.softplus(b)
+        return a, b
