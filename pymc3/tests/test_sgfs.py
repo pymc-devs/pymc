@@ -25,10 +25,10 @@ class TestSGFS(SeededTest):
         def f(x, a, b, c):
             return a*x**2 + b*x + c
         
-        a, b, c = 10, 20, 30
+        a, b, c = 1, 2, 3
 
         batch_size = 50
-        x_train = np.random(-10, 10, size=(batch_size*500,)).astype('float32')
+        x_train = np.random.uniform(-10, 10, size=(batch_size*500,)).astype('float32')
         x_obs = pm.data.Minibatch(x_train, batch_size=batch_size)
 
         y_train = f(x_train, a, b, c) + np.random.normal(size=x_train.shape).astype('float32')
@@ -46,4 +46,4 @@ class TestSGFS(SeededTest):
             step_method = pm.SGFS(vars=model.vars, batch_size=batch_size, step_size=1., total_size=draws*batch_size)
             trace = pm.sample(draws=draws, step=step_method, init=None)
 
-        np.testing.assert_allclose(np.mean(trace['abc']), np.asarray([a, b, c]), rtol=0.2)
+        np.testing.assert_allclose(np.mean(trace['abc'], axis=0), np.asarray([a, b, c]), rtol=0.2)
