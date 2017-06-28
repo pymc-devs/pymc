@@ -889,9 +889,31 @@ def test_bound():
         a = ArrayNormal('c', shape=2)
         assert_equal(a.tag.test_value, np.array([1.5, 2.5]))
 
+    lower = tt.vector('lower')
+    lower.tag.test_value = np.array([1, 2]).astype(theano.config.floatX)
+    upper = 3
+    ArrayNormal = Bound(Normal, lower=lower, upper=upper)
+    dist = ArrayNormal.dist(mu=0, sd=1, shape=2)
+    logp = dist.logp([0.5, 3.5]).eval({lower: lower.tag.test_value})
+    assert_equal(logp, -np.array([np.inf, np.inf]))
+    assert_equal(dist.default(), np.array([2, 2.5]))
+    assert dist.transform is not None
+
+    with Model():
+        a = ArrayNormal('c', shape=2)
+        assert_equal(a.tag.test_value, np.array([2, 2.5]))
+
     rand = Bound(Binomial, lower=10).dist(n=20, p=0.3).random()
     assert rand.dtype in [np.int16, np.int32, np.int64]
     assert rand >= 10
+
+    rand = Bound(Binomial, upper=10).dist(n=20, p=0.8).random()
+    assert rand.dtype in [np.int16, np.int32, np.int64]
+    assert rand <= 10
+
+    rand = Bound(Binomial, lower=5, upper=8).dist(n=10, p=0.6).random()
+    assert rand.dtype in [np.int16, np.int32, np.int64]
+    assert rand >= 5 and rand <= 8
 
 
 def test_repr_latex_():
