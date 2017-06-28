@@ -3,7 +3,7 @@
     :alt: PyMC3 logo
     :align: center
 
-|Build Status| |Coverage|
+|Build Status| |Coverage| |NumFOCUS_badge|
 
 PyMC3 is a Python package for Bayesian statistical modeling and Probabilistic Machine Learning
 which focuses on advanced Markov chain Monte Carlo and variational fitting
@@ -182,3 +182,4 @@ Sponsors
    :target: http://www.numfocus.org/
 .. |Quantopian| image:: https://raw.githubusercontent.com/pymc-devs/pymc3/master/docs/quantopianlogo.jpg
    :target: https://quantopian.com
+.. |NumFOCUS_badge| image:: https://img.shields.io/badge/powered%20by-NumFOCUS-orange.svg?style=flat&colorA=E1523D&colorB=007D8A
