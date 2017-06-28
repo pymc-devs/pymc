@@ -13,7 +13,7 @@ AUTHOR = 'John Salvatier and Christopher Fonnesbeck'
 AUTHOR_EMAIL = 'chris.fonnesbeck@vanderbilt.edu'
 URL = "http://github.com/pymc-devs/pymc3"
 LICENSE = "Apache License, Version 2.0"
-VERSION = "3.1rc3"
+VERSION = "3.1"
 
 classifiers = ['Development Status :: 5 - Production/Stable',
                'Programming Language :: Python',
@@ -58,5 +58,4 @@ if __name__ == "__main__":
           classifiers=classifiers,
           install_requires=install_reqs,
           tests_require=test_reqs,
-          extras_require={'edward': ['edward>=1.1.6']},
           test_suite='nose.collector')

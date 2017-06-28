@@ -18,7 +18,7 @@ from tqdm import tqdm
 import sys
 sys.setrecursionlimit(10000)
 
-__all__ = ['sample', 'iter_sample', 'sample_ppc', 'init_nuts']
+__all__ = ['sample', 'iter_sample', 'sample_ppc', 'sample_ppc_w', 'init_nuts']
 
 STEP_METHODS = (NUTS, HamiltonianMC, Metropolis, BinaryMetropolis,
                 BinaryGibbsMetropolis, Slice, CategoricalGibbsMetropolis)
@@ -103,7 +103,8 @@ def assign_step_methods(model, step=None, methods=STEP_METHODS,
 def sample(draws=500, step=None, init='auto', n_init=200000, start=None,
            trace=None, chain=0, njobs=1, tune=500, nuts_kwargs=None,
            step_kwargs=None, progressbar=True, model=None, random_seed=-1,
-           live_plot=False, discard_tuned_samples=True, **kwargs):
+           live_plot=False, discard_tuned_samples=True, live_plot_kwargs=None,
+           **kwargs):
     """Draw samples from the posterior using the given step methods.
 
     Multiple step methods are supported via compound step methods.
@@ -185,6 +186,8 @@ def sample(draws=500, step=None, init='auto', n_init=200000, start=None,
         A list is accepted if more if `njobs` is greater than one.
     live_plot : bool
         Flag for live plotting the trace while sampling
+    live_plot_kwargs : dict
+        Options for traceplot. Example: live_plot_kwargs={'varnames': ['x']}
     discard_tuned_samples : bool
         Whether to discard posterior samples of the tune interval.
 
@@ -225,6 +228,9 @@ def sample(draws=500, step=None, init='auto', n_init=200000, start=None,
             raise ValueError("Specify only one of step_kwargs and nuts_kwargs")
         step_kwargs = {'nuts': nuts_kwargs}
 
+    if model.ndim == 0:
+        raise ValueError('The model does not contain any free variables.')
+
     if step is None and init is not None and pm.model.all_continuous(model.vars):
         # By default, use NUTS sampler
         pm._log.info('Auto-assigning NUTS sampler...')
@@ -254,6 +260,7 @@ def sample(draws=500, step=None, init='auto', n_init=200000, start=None,
                    'model': model,
                    'random_seed': random_seed,
                    'live_plot': live_plot,
+                   'live_plot_kwargs': live_plot_kwargs,
                    }
 
     sample_args.update(kwargs)
@@ -271,7 +278,7 @@ def sample(draws=500, step=None, init='auto', n_init=200000, start=None,
 
 def _sample(draws, step=None, start=None, trace=None, chain=0, tune=None,
             progressbar=True, model=None, random_seed=-1, live_plot=False,
-            **kwargs):
+            live_plot_kwargs=None, **kwargs):
     skip_first = kwargs.get('skip_first', 0)
     refresh_every = kwargs.get('refresh_every', 100)
 
@@ -283,12 +290,14 @@ def _sample(draws, step=None, start=None, trace=None, chain=0, tune=None,
         strace = None
         for it, strace in enumerate(sampling):
             if live_plot:
+                if live_plot_kwargs is None:
+                    live_plot_kwargs = {}
                 if it >= skip_first:
                     trace = MultiTrace([strace])
                     if it == skip_first:
-                        ax = traceplot(trace, live_plot=False, **kwargs)
+                        ax = traceplot(trace, live_plot=False, **live_plot_kwargs)
                     elif (it - skip_first) % refresh_every == 0 or it == draws - 1:
-                        traceplot(trace, ax=ax, live_plot=True, **kwargs)
+                        traceplot(trace, ax=ax, live_plot=True, **live_plot_kwargs)
     except KeyboardInterrupt:
         pass
     finally:
@@ -469,14 +478,17 @@ def _update_start_vals(a, b, model):
     """Update a with b, without overwriting existing keys. Values specified for
     transformed variables on the original scale are also transformed and inserted.
     """
-    for name in a:
-        for tname in b:
-            if is_transformed_name(tname) and get_untransformed_name(tname) == name:
-                transform_func = [d.transformation for d in model.deterministics if d.name == name]
-                if transform_func:
-                    b[tname] = transform_func[0].forward(a[name]).eval()
+    if model is not None:
+        for free_RV in model.free_RVs:
+            tname = free_RV.name
+            for name in a:
+                if is_transformed_name(tname) and get_untransformed_name(tname) == name:
+                    transform_func = [d.transformation for d in model.deterministics if d.name == name]
+                    if transform_func:
+                        b[tname] = transform_func[0].forward_val(a[name], point=b).eval()
 
     a.update({k: v for k, v in b.items() if k not in a})
+
 
 def sample_ppc(trace, samples=None, model=None, vars=None, size=None,
                random_seed=None, progressbar=True):
@@ -485,7 +497,7 @@ def sample_ppc(trace, samples=None, model=None, vars=None, size=None,
     Parameters
     ----------
     trace : backend, list, or MultiTrace
-        Trace generated from MCMC sampling
+        Trace generated from MCMC sampling.
     samples : int
         Number of posterior predictive samples to generate. Defaults to the
         length of `trace`
@@ -497,12 +509,19 @@ def sample_ppc(trace, samples=None, model=None, vars=None, size=None,
     size : int
         The number of random draws from the distribution specified by the
         parameters in each sample of the trace.
+    random_seed : int
+        Seed for the random number generator.
+    progressbar : bool
+        Whether or not to display a progress bar in the command line. The
+        bar shows the percentage of completion, the sampling speed in
+        samples per second (SPS), and the estimated remaining time until
+        completion ("expected time of arrival"; ETA).
 
     Returns
     -------
     samples : dict
-        Dictionary with the variables as keys. The values corresponding
-        to the posterior predictive samples.
+        Dictionary with the variables as keys. The values corresponding to the
+        posterior predictive samples.
     """
     if samples is None:
         samples = len(trace)
@@ -515,17 +534,127 @@ def sample_ppc(trace, samples=None, model=None, vars=None, size=None,
 
     seed(random_seed)
 
+    indices = randint(0, len(trace), samples)
     if progressbar:
-        indices = tqdm(randint(0, len(trace), samples), total=samples)
-    else:
-        indices = randint(0, len(trace), samples)
+        indices = tqdm(indices, total=samples)
 
-    ppc = defaultdict(list)
-    for idx in indices:
-        param = trace[idx]
-        for var in vars:
+    try:
+        ppc = defaultdict(list)
+        for idx in indices:
+            param = trace[idx]
+            for var in vars:
+                ppc[var.name].append(var.distribution.random(point=param,
+                                                             size=size))
+
+    except KeyboardInterrupt:
+        pass
+
+    finally:
+        if progressbar:
+            indices.close()
+
+    return {k: np.asarray(v) for k, v in ppc.items()}
+
+
+def sample_ppc_w(traces, samples=None, models=None, size=None, weights=None,
+                 random_seed=None, progressbar=True):
+    """Generate weighted posterior predictive samples from a list of models and
+    a list of traces according to a set of weights.
+
+    Parameters
+    ----------
+    traces : list
+        List of traces generated from MCMC sampling. The number of traces should
+        be equal to the number of weights.
+    samples : int
+        Number of posterior predictive samples to generate. Defaults to the
+        length of the shorter trace in traces.
+    models : list
+        List of models used to generate the list of traces. The number of models
+        should be equal to the number of weights and the number of observed RVs
+        should be the same for all models.
+        By default a single model will be inferred from `with` context, in this
+        case results will only be meaningful if all models share the same
+        distributions for the observed RVs.
+    size : int
+        The number of random draws from the distributions specified by the
+        parameters in each sample of the trace.
+    weights: array-like
+        Individual weights for each trace. Default, same weight for each model.
+    random_seed : int
+        Seed for the random number generator.
+    progressbar : bool
+        Whether or not to display a progress bar in the command line. The
+        bar shows the percentage of completion, the sampling speed in
+        samples per second (SPS), and the estimated remaining time until
+        completion ("expected time of arrival"; ETA).
+
+    Returns
+    -------
+    samples : dict
+        Dictionary with the variables as keys. The values corresponding to the
+        posterior predictive samples from the weighted models.
+    """
+    seed(random_seed)
+
+    if models is None:
+        models = [modelcontext(models)] * len(traces)
+
+    if weights is None:
+        weights = [1] * len(traces)
+
+    if len(traces) != len(weights):
+        raise ValueError('The number of traces and weights should be the same')
+
+    if len(models) != len(weights):
+        raise ValueError('The number of models and weights should be the same')
+
+    lenght_morv = len(models[0].observed_RVs)
+    if not all(len(i.observed_RVs) == lenght_morv for i in models):
+        raise ValueError(
+            'The number of observed RVs should be the same for all models')
+
+    weights = np.asarray(weights)
+    p = weights / np.sum(weights)
+
+    min_tr = min([len(i) for i in traces])
+
+    n = (min_tr * p).astype('int')
+    # ensure n sum up to min_tr
+    idx = np.argmax(n)
+    n[idx] = n[idx] + min_tr - np.sum(n)
+
+    trace = np.concatenate([np.random.choice(traces[i], j)
+                            for i, j in enumerate(n)])
+
+    variables = []
+    for i, m in enumerate(models):
+        variables.extend(m.observed_RVs * n[i])
+
+    len_trace = len(trace)
+
+    if samples is None:
+        samples = len_trace
+
+    indices = randint(0, len_trace, samples)
+
+    if progressbar:
+        indices = tqdm(indices, total=samples)
+
+    try:
+        ppc = defaultdict(list)
+        for idx in indices:
+            param = trace[idx]
+            var = variables[idx]
             ppc[var.name].append(var.distribution.random(point=param,
                                                          size=size))
+
+    except KeyboardInterrupt:
+        pass
+
+    finally:
+        if progressbar:
+            indices.close()
 
     return {k: np.asarray(v) for k, v in ppc.items()}
 

@@ -334,10 +334,9 @@ class GeneratorOp(Op):
         if value is None:
             self.default = None
         else:
-            value = np.asarray(value)
-            t1 = (value.dtype, ((False,) * value.ndim))
-            t2 = (self.generator.tensortype.dtype,
-                  self.generator.tensortype.broadcastable)
+            value = np.asarray(value, self.generator.tensortype.dtype)
+            t1 = (False,) * value.ndim
+            t2 = self.generator.tensortype.broadcastable
             if not t1 == t2:
                 raise ValueError('Default value should have the '
                                  'same type as generator')
@@ -439,3 +438,22 @@ def set_theano_conf(values):
             raise
         old[name] = old_value
     return old
+
+
+def ix_(*args):
+    """
+    Theano np.ix_ analog
+
+    See numpy.lib.index_tricks.ix_ for reference
+    """
+    out = []
+    nd = len(args)
+    for k, new in enumerate(args):
+        if new is None:
+            out.append(slice(None))
+        new = tt.as_tensor(new)
+        if new.ndim != 1:
+            raise ValueError("Cross index must be 1 dimensional")
+        new = new.reshape((1,)*k + (new.size,) + (1,)*(nd-k-1))
+        out.append(new)
+    return tuple(out)

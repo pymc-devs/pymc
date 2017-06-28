@@ -298,7 +298,7 @@ class HalfNormal(PositiveContinuous):
         assert_negative_support(sd, 'sd', 'HalfNormal')
 
     def random(self, point=None, size=None, repeat=None):
-        sd = draw_values([self.sd], point=point)
+        sd = draw_values([self.sd], point=point)[0]
         return generate_samples(stats.halfnorm.rvs, loc=0., scale=sd,
                                 dist_shape=self.shape,
                                 size=size)
@@ -578,7 +578,7 @@ class Exponential(PositiveContinuous):
         assert_negative_support(lam, 'lam', 'Exponential')
 
     def random(self, point=None, size=None, repeat=None):
-        lam = draw_values([self.lam], point=point)
+        lam = draw_values([self.lam], point=point)[0]
         return generate_samples(np.random.exponential, scale=1. / lam,
                                 dist_shape=self.shape,
                                 size=size)
@@ -962,7 +962,7 @@ class HalfCauchy(PositiveContinuous):
         return beta * np.abs(np.tan(np.pi * (u - 0.5)))
 
     def random(self, point=None, size=None, repeat=None):
-        beta = draw_values([self.beta], point=point)
+        beta = draw_values([self.beta], point=point)[0]
         return generate_samples(self._random, beta,
                                 dist_shape=self.shape,
                                 size=size)

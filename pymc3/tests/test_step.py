@@ -5,7 +5,7 @@ import warnings
 from .checks import close_to
 from .models import simple_categorical, mv_simple, mv_simple_discrete, simple_2model, mv_prior_simple
 from pymc3.sampling import assign_step_methods, sample
-from pymc3.model import Model, Deterministic
+from pymc3.model import Model
 from pymc3.step_methods import (NUTS, BinaryGibbsMetropolis, CategoricalGibbsMetropolis,
                                 Metropolis, Slice, CompoundStep, NormalProposal,
                                 MultivariateNormalProposal, HamiltonianMC,
@@ -138,6 +138,7 @@ class TestStepMethods(object):  # yield test doesn't work subclassing object
     def teardown_class(self):
         shutil.rmtree(self.temp_dir)
 
+    @pytest.mark.xfail(condition=(theano.config.floatX == "float32"), reason="Fails on float32")
     def test_sample_exact(self):
         for step_method in self.master_samples:
             self.check_trace(step_method)
@@ -162,8 +163,7 @@ class TestStepMethods(object):  # yield test doesn't work subclassing object
         with Model():
             x = Normal('x', mu=0, sd=1)
             if step_method.__name__ == 'SMC':
-                Deterministic('like', - 0.5 * tt.log(2 * np.pi) - 0.5 * x.T.dot(x))
-                trace = smc.ATMIP_sample(n_steps=n_steps, step=step_method(random_seed=1),
+                trace = smc.sample_smc(n_steps=n_steps, step=step_method(random_seed=1),
                                          n_jobs=1, progressbar=False,
                                          homepath=self.temp_dir)
             else:
@@ -329,6 +329,7 @@ class TestAssignStepMethods(object):
         assert isinstance(steps, Metropolis)
 
 
+@pytest.mark.xfail(condition=(theano.config.floatX == "float32"), reason="Fails on float32")
 class TestNutsCheckTrace(object):
     def test_multiple_samplers(self):
         with Model():

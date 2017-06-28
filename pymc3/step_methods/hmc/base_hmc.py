@@ -4,7 +4,8 @@ from .trajectory import get_theano_hamiltonian_functions
 from pymc3.tuning import guess_scaling
 from pymc3.model import modelcontext, Point
 from .quadpotential import quad_potential
-from pymc3.theanof import inputvars, make_shared_replacements
+from pymc3.theanof import inputvars, make_shared_replacements, floatX
+import numpy as np
 
 
 class BaseHMC(ArrayStepShared):
@@ -41,7 +42,7 @@ class BaseHMC(ArrayStepShared):
         vars = inputvars(vars)
 
         if scaling is None and potential is None:
-            scaling = model.test_point
+            scaling = floatX(np.ones(model.dict_to_array(model.test_point).size))
 
         if isinstance(scaling, dict):
             scaling = guess_scaling(Point(scaling, model=model), model=model, vars=vars)
