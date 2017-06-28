@@ -65,6 +65,8 @@ class Stein(object):
             {self.approx.symbolic_random_local_matrix: loc_random,
              self.approx.symbolic_random_global_matrix: glob_random}
         )
+        loc_grad.tag.test_value = loc_random.tag.test_value
+        glob_grad.tag.test_value = glob_random.tag.test_value
         return tt.concatenate([loc_grad, glob_grad], axis=-1)
 
     @memoize
