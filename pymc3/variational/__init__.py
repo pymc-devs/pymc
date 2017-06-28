@@ -35,7 +35,7 @@ from .approximations import (
     MeanField,
     FullRank,
     Empirical,
-    NormalizingFlows,
+    NormalizingFlow,
     sample_approx
 )
 

@@ -158,13 +158,20 @@ def simple_model(simple_model_data):
 
 
 @pytest.fixture('module', params=[
-        dict(cls=NF, init=dict(flow='planar*20')),
-        dict(cls=NF, init=dict(flow='radial*20')),
+        dict(cls=NF, init=dict(flow='planar*2')),
+        dict(cls=NF, init=dict(flow='radial*2')),
         dict(cls=ADVI, init=dict()),
         dict(cls=FullRankADVI, init=dict()),
         dict(cls=SVGD, init=dict(n_particles=500, jitter=1)),
         dict(cls=ASVGD, init=dict(temperature=1.)),
-    ], ids=lambda d: d['cls'].__name__)
+    ], ids=[
+        'NF-planar',
+        'NF-radial',
+        'ADVI',
+        'FullRankADVI',
+        'SVGD',
+        'ASVGD'
+    ])
 def inference_spec(request):
     cls = request.param['cls']
     init = request.param['init']

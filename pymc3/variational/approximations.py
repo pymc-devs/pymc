@@ -13,6 +13,7 @@ __all__ = [
     'MeanField',
     'FullRank',
     'Empirical',
+    'NormalizingFlow'
     'sample_approx'
 ]
 
@@ -429,12 +430,12 @@ class Empirical(Approximation):
         return hist
 
 
-class NormalizingFlows(Approximation):
+class NormalizingFlow(Approximation):
     def __init__(self, flow='planar*3', initial_global='normal',
                  local_rv=None, model=None,
                  scale_cost_to_minibatch=False,
                  random_seed=None, **kwargs):
-        super(NormalizingFlows, self).__init__(
+        super(NormalizingFlow, self).__init__(
             local_rv=local_rv, scale_cost_to_minibatch=scale_cost_to_minibatch,
             model=model, random_seed=random_seed, **kwargs)
         self.initial_dist_global_name = initial_global

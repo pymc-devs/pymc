@@ -9,7 +9,8 @@ import tqdm
 import pymc3 as pm
 from pymc3.variational import test_functions
 from pymc3.variational.approximations import (
-    MeanField, FullRank, Empirical, NormalizingFlows)
+    MeanField, FullRank, Empirical, NormalizingFlow
+)
 from pymc3.variational.operators import KL, KSD, AKSD
 from pymc3.variational.opvi import Approximation
 
@@ -692,7 +693,7 @@ class ASVGD(Inference):
 
 class NF(Inference):
     OP = KL
-    APPROX = NormalizingFlows
+    APPROX = NormalizingFlow
     TF = None
 
     def __init__(self, flow='planar*3', initial_global='normal',
