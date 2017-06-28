@@ -291,6 +291,36 @@ def _theano_single_leapfrog(H, q, p, q_grad, **theano_kwargs):
     f.trust_input = True
     return f
 
+def get_theano_hamiltonian_manifold_functions(model_vars, shared, logpt, potential, **theano_kwargs):
+    """Construct theano functions for the Hamiltonian, energy, and leapfrog integrator when using Manifolds.
+
+    Parameters
+    ----------
+    model_vars : array of variables to be sampled
+    shared : theano tensors that are already shared
+    logpt : model log probability
+    potential : Hamiltonian potential
+    theano_kwargs : dictionary of keyword arguments to pass to theano functions
+    use_single_leapfrog : bool
+        if only 1 integration step is done at a time (as in NUTS), this
+        provides a ~2x speedup
+    integrator : str
+        Integration scheme to use. One of "leapfog", "two-stage", or
+        "three-stage".
+
+    Returns
+    -------
+    H : Hamiltonian namedtuple
+    energy_function : theano function computing energy at a point in phase space
+    leapfrog_integrator : theano function integrating the Hamiltonian from a point in phase space
+    theano_variables : dictionary of variables used in the computation graph which may be useful
+    """
+    H, q, dlogp = _theano_hamiltonian_manifold(model_vars, shared, logpt, potential)
+    energy_function, p = _theano_energy_function_softabs(H, q, **theano_kwargs)
+    velocity_function = _theano_velocity_function_softabs(H, p, **theano_kwargs)
+    integrator = _theano_integrator_softabs(H, q, p, H.dlogp(q), **theano_kwargs)
+    return H, energy_function, velocity_function, integrator, dlogp
+
 
 INTEGRATORS_SINGLE = {
     'leapfrog': _theano_single_leapfrog,
