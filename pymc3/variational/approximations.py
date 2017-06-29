@@ -431,14 +431,13 @@ class Empirical(Approximation):
 
 
 class NormalizingFlow(Approximation):
-    def __init__(self, flow='planar*3', initial_global='normal',
+    def __init__(self, flow='scale-loc',
                  local_rv=None, model=None,
                  scale_cost_to_minibatch=False,
                  random_seed=None, **kwargs):
         super(NormalizingFlow, self).__init__(
             local_rv=local_rv, scale_cost_to_minibatch=scale_cost_to_minibatch,
             model=model, random_seed=random_seed, **kwargs)
-        self.initial_dist_global_name = initial_global
         if isinstance(flow, str):
             flow = flows.Formula(flow)
         self.gflow = flow(dim=self.global_size, z0=self.symbolic_initial_global_matrix)
@@ -471,7 +470,9 @@ class NormalizingFlow(Approximation):
 
     @node_property
     def symbolic_log_q_W_global(self):
-        return -self.gflow.sum_logdets
+        z0 = self.symbolic_initial_global_matrix
+        q0 = pm.Normal.dist().logp(z0).sum(-1)
+        return q0-self.gflow.sum_logdets
 
     @property
     def symbolic_random_global_matrix(self):

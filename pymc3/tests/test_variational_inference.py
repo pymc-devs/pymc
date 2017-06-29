@@ -159,7 +159,6 @@ def simple_model(simple_model_data):
 
 
 @pytest.fixture('module', params=[
-        dict(cls=NF, init=dict(flow='hh-loc')),
         dict(cls=NF, init=dict(flow='scale-loc')),
         dict(cls=NF, init=dict(flow='planar*5')),
         dict(cls=NF, init=dict(flow='radial*5')),
@@ -168,7 +167,6 @@ def simple_model(simple_model_data):
         dict(cls=SVGD, init=dict(n_particles=500, jitter=1)),
         dict(cls=ASVGD, init=dict(temperature=1.)),
     ], ids=[
-        'NF-hh-loc',
         'NF-scale-loc',
         'NF-planar',
         'NF-radial',
@@ -591,3 +589,14 @@ def test_flow_formula(formula, length, order):
     if order is not None:
         assert flows_list == order
     spec(dim=2)(tt.ones((3, 2))).eval()  # should work
+
+
+def test_hh_flow():
+    cov = pm.floatX([[2, -1], [-1, 3]])
+    with pm.Model():
+        pm.MvNormal('mvN', mu=pm.floatX([0, 1]), cov=cov, shape=2)
+        nf = NF('scale-hh*2-loc')
+        nf.fit(15000, obj_optimizer=pm.adamax(learning_rate=0.01))
+        trace = nf.approx.sample(10000)
+        cov2 = pm.trace_cov(trace)
+    np.testing.assert_allclose(cov, cov2, rtol=0.07)
