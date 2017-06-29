@@ -570,7 +570,7 @@ def test_flows_collect_chain():
     flow2 = flows.PlanarFlow(dim=2, z0=flow1)
     assert len(flow2.params) == 3
     assert len(flow2.all_params) == 6
-    np.testing.assert_allclose(flow1.logdet.eval() + flow2.logdet.eval(), flow2.all_dets.eval())
+    np.testing.assert_allclose(flow1.logdet.eval() + flow2.logdet.eval(), flow2.sum_logdets.eval())
 
 
 @pytest.mark.parametrize(
@@ -579,7 +579,8 @@ def test_flows_collect_chain():
         ('planar', 1, [flows.PlanarFlow]),
         ('planar*2', 2, [flows.PlanarFlow] * 2),
         ('planar-planar', 2, [flows.PlanarFlow] * 2),
-        ('planar-planar*2', 3, [flows.PlanarFlow] * 3)
+        ('planar-planar*2', 3, [flows.PlanarFlow] * 3),
+        ('hh-planar*2', 3, [flows.HouseholderFlow]+[flows.PlanarFlow] * 2)
     ]
 )
 def test_flow_formula(formula, length, order):
