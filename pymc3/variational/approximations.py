@@ -467,11 +467,11 @@ class NormalizingFlow(Approximation):
 
     @property
     def params(self):
-        return self.gflow.params
+        return self.gflow.all_params
 
     @node_property
     def symbolic_log_q_W_global(self):
-        return -self.gflow.all_log_dets
+        return -self.gflow.sum_logdets
 
     @property
     def symbolic_random_global_matrix(self):
