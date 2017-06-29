@@ -21,6 +21,7 @@ pytestmark = pytest.mark.usefixtures(
     'seeded_test'
 )
 
+
 @pytest.mark.parametrize(
     'diff',
     [
@@ -158,13 +159,17 @@ def simple_model(simple_model_data):
 
 
 @pytest.fixture('module', params=[
-        dict(cls=NF, init=dict(flow='planar*2')),
-        dict(cls=NF, init=dict(flow='radial*2')),
+        dict(cls=NF, init=dict(flow='hh-loc')),
+        dict(cls=NF, init=dict(flow='scale-loc')),
+        dict(cls=NF, init=dict(flow='planar*5')),
+        dict(cls=NF, init=dict(flow='radial*5')),
         dict(cls=ADVI, init=dict()),
         dict(cls=FullRankADVI, init=dict()),
         dict(cls=SVGD, init=dict(n_particles=500, jitter=1)),
         dict(cls=ASVGD, init=dict(temperature=1.)),
     ], ids=[
+        'NF-hh-loc',
+        'NF-scale-loc',
         'NF-planar',
         'NF-radial',
         'ADVI',
@@ -202,11 +207,11 @@ def fit_kwargs(inference, using_minibatch):
             n=12000
         ),
         (NF, 'full'): dict(
-            obj_optimizer=pm.adagrad_window(learning_rate=0.01, n_win=10),
+            obj_optimizer=pm.adagrad_window(learning_rate=0.01, n_win=50),
             n=12000
         ),
         (NF, 'mini'): dict(
-            obj_optimizer=pm.adagrad_window(learning_rate=0.01, n_win=10),
+            obj_optimizer=pm.adagrad_window(learning_rate=0.01, n_win=50),
             n=12000
         ),
         (FullRankADVI, 'full'): dict(
@@ -556,7 +561,7 @@ def test_flow_forward_apply(flow_spec):
 def test_flow_det(flow_spec):
     z0 = pm.tt_rng().normal(size=(10, 20))
     flow = flow_spec(dim=20, z0=z0)
-    det = flow.det
+    det = flow.logdet
     det_dist = det.shape.eval()
     assert tuple(det_dist) == (10, )
 
@@ -567,7 +572,7 @@ def test_flows_collect_chain():
     flow2 = flows.PlanarFlow(dim=2, z0=flow1)
     assert len(flow2.params) == 3
     assert len(flow2.all_params) == 6
-    np.testing.assert_allclose(flow1.det.eval() + flow2.det.eval(), flow2.all_dets.eval())
+    np.testing.assert_allclose(flow1.logdet.eval() + flow2.logdet.eval(), flow2.all_dets.eval())
 
 
 @pytest.mark.parametrize(
