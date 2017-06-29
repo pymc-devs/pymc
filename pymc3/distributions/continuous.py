@@ -21,7 +21,8 @@ from .dist_math import (
     bound, logpow, gammaln, betaln, std_cdf, i0,
     i1, alltrue_elemwise, SplineWrapper
 )
-from .distribution import Continuous, draw_values, generate_samples, Bound
+from .distribution import Continuous, draw_values, generate_samples
+from .bound import Bound
 
 __all__ = ['Uniform', 'Flat', 'Normal', 'Beta', 'Exponential', 'Laplace',
            'StudentT', 'Cauchy', 'HalfCauchy', 'Gamma', 'Weibull',

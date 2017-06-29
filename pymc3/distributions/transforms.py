@@ -8,7 +8,7 @@ from .distribution import draw_values
 import numpy as np
 
 __all__ = ['transform', 'stick_breaking', 'logodds', 'interval',
-          'lowerbound', 'upperbound', 'log', 'sum_to_1', 't_stick_breaking']
+           'lowerbound', 'upperbound', 'log', 'sum_to_1', 't_stick_breaking']
 
 
 class Transform(object):
@@ -33,6 +33,7 @@ class Transform(object):
         raise NotImplementedError
 
     def apply(self, dist):
+        # avoid circular import
         return TransformedDistribution.dist(dist, self)
 
     def __str__(self):
@@ -90,7 +91,7 @@ class Log(ElemwiseTransform):
 
     def forward(self, x):
         return tt.log(x)
-    
+
     def forward_val(self, x, point=None):
         return self.forward(x)
 
@@ -111,7 +112,7 @@ class LogOdds(ElemwiseTransform):
 
     def forward(self, x):
         return logit(x)
-    
+
     def forward_val(self, x, point=None):
         return self.forward(x)
 
@@ -324,6 +325,6 @@ class CholeskyCovPacked(Transform):
 
     def forward_val(self, x, point=None):
         return self.forward(x)
-        
+
     def jacobian_det(self, y):
         return tt.sum(y[self.diag_idxs])

@@ -42,7 +42,6 @@ from .discrete import DiscreteUniform
 from .discrete import Geometric
 from .discrete import Categorical
 
-from .distribution import Bound
 from .distribution import DensityDist
 from .distribution import Distribution
 from .distribution import Continuous
@@ -75,6 +74,8 @@ from .transforms import stick_breaking
 from .transforms import logodds
 from .transforms import log
 from .transforms import sum_to_1
+
+from .bound import Bound
 
 __all__ = ['Uniform',
            'Flat',
@@ -136,5 +137,6 @@ __all__ = ['Uniform',
            'Triangular',
            'DiscreteWeibull',
            'Gumbel',
-           'Interpolated'
+           'Interpolated',
+           'Bound',
            ]
