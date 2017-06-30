@@ -137,8 +137,8 @@ class Uniform(Continuous):
             transform = transforms.interval(lower, upper)
         super(Uniform, self).__init__(transform=transform, *args, **kwargs)
 
-        self.lower = lower = tt.as_tensor_variable(lower)
-        self.upper = upper = tt.as_tensor_variable(upper)
+        self.lower = lower = floatX(tt.as_tensor_variable(lower))
+        self.upper = upper = floatX(tt.as_tensor_variable(upper))
         self.mean = (upper + lower) / 2.
         self.median = self.mean
 
