@@ -6,7 +6,7 @@ from theano import tensor as tt
 
 import pymc3 as pm
 from pymc3.theanof import change_flags
-from .opvi import node_property, cast_to_list
+from .opvi import node_property, collect_shared_to_list
 
 __all__ = [
     'Formula',
@@ -123,11 +123,10 @@ class AbstractFlow(object):
                     2, dim
                 ).astype(self.z0.dtype)
         self.parent = parent
-        self._initialize(self.dim)
 
     @property
     def params(self):
-        return cast_to_list(self.shared_params)
+        return collect_shared_to_list(self.shared_params)
 
     @property
     def all_params(self):
@@ -146,9 +145,6 @@ class AbstractFlow(object):
             current = current.parent
             dets.append(current.logdet)
         return tt.add(*dets)
-
-    def _initialize(self, dim):
-        pass
 
     @node_property
     def forward(self):
@@ -188,19 +184,24 @@ FlowFn.__call__ = lambda self, *args: self.fn(*args)
 
 
 class LinearFlow(AbstractFlow):
-    def __init__(self, h, z0=None, dim=None):
+    @change_flags(compute_test_value='raise')
+    def __init__(self, h, z0=None, dim=None, u=None, w=None, b=None):
         self.h = h
         super(LinearFlow, self).__init__(dim=dim, z0=z0)
-
-    def _initialize(self, dim):
-        super(LinearFlow, self)._initialize(dim)
-        _u = theano.shared(pm.floatX(np.random.randn(dim, 1)))
-        _w = theano.shared(pm.floatX(np.random.randn(dim, 1)))
-        b = theano.shared(pm.floatX(np.random.randn()))
+        if u is None:
+            _u = theano.shared(pm.floatX(np.random.randn(dim)))
+        else:
+            _u = u
+        if w is None:
+            _w = theano.shared(pm.floatX(np.random.randn(dim)))
+        else:
+            _w = w
+        if b is None:
+            b = theano.shared(pm.floatX(np.random.randn()))
         self.shared_params = dict(_u=_u, _w=_w, b=b)
         self.u, self.w = self.make_uw(self._u, self._w)
-        self.u = tt.patternbroadcast(self.u, (False, True))
-        self.w = tt.patternbroadcast(self.w, (False, True))
+        self.u = self.u.dimshuffle(0, 'x')
+        self.w = self.w.dimshuffle(0, 'x')
 
     _u = property(lambda self: self.shared_params['_u'])
     _w = property(lambda self: self.shared_params['_w'])
@@ -261,15 +262,20 @@ class PlanarFlow(LinearFlow):
 
 
 class ReferencePointFlow(AbstractFlow):
-    def __init__(self, h, z0=None, dim=None):
-        self.h = h
+    @change_flags(compute_test_value='raise')
+    def __init__(self, h, z0=None, dim=None, a=None, b=None, z_ref=None):
         super(ReferencePointFlow, self).__init__(dim=dim, z0=z0)
-
-    def _initialize(self, dim):
-        super(ReferencePointFlow, self)._initialize(dim)
-        _a = theano.shared(pm.floatX(np.random.randn()))
-        _b = theano.shared(pm.floatX(np.random.randn()))
-        z_ref = theano.shared(pm.floatX(np.random.randn(dim)))
+        if a is None:
+            _a = theano.shared(pm.floatX(np.random.randn()))
+        else:
+            _a = a
+        if b is None:
+            _b = theano.shared(pm.floatX(np.random.randn()))
+        else:
+            _b = b
+        if z_ref is None:
+            z_ref = theano.shared(pm.floatX(np.random.randn(dim)))
+        self.h = h
         self.shared_params = dict(_a=_a, _b=_b, z_ref=z_ref)
         self.a, self.b = self.make_ab(_a, _b)
         self.z_ref = z_ref
@@ -321,8 +327,10 @@ class RadialFlow(ReferencePointFlow):
 
 
 class LocFlow(AbstractFlow):
-    def _initialize(self, dim):
-        loc = theano.shared(pm.floatX(np.random.randn(dim)))
+    def __init__(self, z0=None, dim=None, loc=None):
+        super(LocFlow, self).__init__(dim=dim, z0=z0)
+        if loc is None:
+            loc = theano.shared(pm.floatX(np.random.randn(dim)))
         self.shared_params = dict(loc=loc)
         self.loc = loc
 
@@ -338,8 +346,11 @@ class LocFlow(AbstractFlow):
 
 
 class ScaleFlow(AbstractFlow):
-    def _initialize(self, dim):
-        log_scale = theano.shared(pm.floatX(np.random.randn(dim)))
+    @change_flags(compute_test_value='raise')
+    def __init__(self, z0=None, dim=None, log_scale=None):
+        super(ScaleFlow, self).__init__(dim=dim, z0=z0)
+        if log_scale is None:
+            log_scale = theano.shared(pm.floatX(np.random.randn(dim)))
         scale = tt.exp(log_scale)
         self.shared_params = dict(log_scale=log_scale)
         self.scale = scale
@@ -356,9 +367,13 @@ class ScaleFlow(AbstractFlow):
 
 
 class HouseholderFlow(AbstractFlow):
-    def _initialize(self, dim):
-        v = theano.shared(pm.floatX(np.random.randn(dim, 1)))
+    @change_flags(compute_test_value='raise')
+    def __init__(self, z0=None, dim=None, v=None):
+        super(HouseholderFlow, self).__init__(dim=dim, z0=z0)
+        if v is None:
+            v = theano.shared(pm.floatX(np.random.randn(dim)))
         self.shared_params = dict(v=v)
+        v = v.dimshuffle(0, 'x')
         self.H = tt.eye(dim) - 2. * v.dot(v.T) / (v**2).sum()
 
     @node_property

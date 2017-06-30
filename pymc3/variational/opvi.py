@@ -385,7 +385,7 @@ class Operator(object):
                                        ap=self.approx.__class__.__name__)
 
 
-def cast_to_list(params):
+def collect_shared_to_list(params):
     """Helper function for getting a list from
     usable representation of parameters
 
@@ -398,7 +398,10 @@ def cast_to_list(params):
     list
     """
     if isinstance(params, dict):
-        return list(t[1] for t in sorted(params.items(), key=lambda t: t[0]))
+        return list(
+            t[1] for t in sorted(params.items(), key=lambda t: t[0])
+            if isinstance(t[1], theano.compile.SharedVariable)
+        )
     elif params is None:
         return []
     else:
@@ -420,7 +423,7 @@ class TestFunction(object):
 
     @property
     def params(self):
-        return cast_to_list(self.shared_params)
+        return collect_shared_to_list(self.shared_params)
 
     def __call__(self, z):
         raise NotImplementedError
@@ -760,7 +763,7 @@ class Approximation(object):
 
     @property
     def params(self):
-        return cast_to_list(self.shared_params)
+        return collect_shared_to_list(self.shared_params)
 
     def _random_part(self, part, size=None, deterministic=False):
         r_part = self._choose_alternative(
