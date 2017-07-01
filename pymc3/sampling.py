@@ -526,8 +526,7 @@ def sample_ppc(trace, samples=None, model=None, vars=None, size=None,
     if samples is None:
         samples = len(trace)
 
-    if model is None:
-        model = modelcontext(model)
+    model = modelcontext(model)
 
     if vars is None:
         vars = model.observed_RVs

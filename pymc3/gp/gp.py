@@ -111,8 +111,7 @@ def sample_gp(trace, gp, X_values, samples=None, obs_noise=True, model=None, ran
     if samples is None:
         samples = len(trace)
 
-    if model is None:
-        model = modelcontext(model)
+    model = modelcontext(model)
 
     if random_seed:
         np.random.seed(random_seed)
