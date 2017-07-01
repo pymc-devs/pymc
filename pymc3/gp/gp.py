@@ -13,6 +13,7 @@ from ..model import modelcontext
 
 __all__ = ['GP', 'sample_gp']
 
+
 class GP(Continuous):
     """Gausian process
 
@@ -76,7 +77,8 @@ class GP(Continuous):
         return MvNormal.dist(mu, Sigma).logp(Y)
 
 
-def sample_gp(trace, gp, X_values, samples=None, obs_noise=True, model=None, random_seed=None, progressbar=True, chol_const=True):
+def sample_gp(trace, gp, X_values, samples=None, obs_noise=True, model=None, random_seed=None, progressbar=True,
+              chol_const=True):
     """Generate samples from a posterior Gaussian process.
 
     Parameters
@@ -106,18 +108,17 @@ def sample_gp(trace, gp, X_values, samples=None, obs_noise=True, model=None, ran
     -------
     Array of samples from posterior GP evaluated at Z.
     """
-    model = modelcontext(model)
-
     if samples is None:
         samples = len(trace)
+
+    model = modelcontext(model)
 
     if random_seed:
         np.random.seed(random_seed)
 
+    indices = np.random.randint(0, len(trace), samples)
     if progressbar:
-        indices = tqdm(np.random.randint(0, len(trace), samples), total=samples)
-    else:
-        indices = np.random.randint(0, len(trace), samples)
+        indices = tqdm(indices, total=samples)
 
     K = gp.distribution.K
 
@@ -134,11 +135,13 @@ def sample_gp(trace, gp, X_values, samples=None, obs_noise=True, model=None, ran
     else:
         S_inv = matrix_inverse(K(X))
 
+    S_xz_S_inv = tt.dot(S_xz.T, S_inv)
     # Posterior mean
-    m_post = tt.dot(tt.dot(S_xz.T, S_inv), Y)
+    m_post = tt.dot(S_xz_S_inv, Y)
     # Posterior covariance
-    S_post = S_zz - tt.dot(tt.dot(S_xz.T, S_inv), S_xz)
+    S_post = S_zz - tt.dot(S_xz_S_inv, S_xz)
 
+    correction = 0
     if chol_const:
         n = S_post.shape[0]
         correction = 1e-6 * tt.nlinalg.trace(S_post) * tt.eye(n)
