@@ -270,7 +270,7 @@ class Tanh(FlowFn):
 
 class PlanarFlow(LinearFlow):
     def __init__(self, **kwargs):
-        super(PlanarFlow, self).__init__(h=Tanh, **kwargs)
+        super(PlanarFlow, self).__init__(h=Tanh(), **kwargs)
 
     def make_uw(self, u, w):
         # u : dx1
@@ -344,6 +344,7 @@ class Radial(FlowFn):
         a, y = args
         return 1./y - a
 
+    @staticmethod
     def deriv(*args):
         a, r = args
         return -1. / (a + r) ** 2
@@ -351,7 +352,7 @@ class Radial(FlowFn):
 
 class RadialFlow(ReferencePointFlow):
     def __init__(self, **kwargs):
-        super(RadialFlow, self).__init__(Radial, **kwargs)
+        super(RadialFlow, self).__init__(Radial(), **kwargs)
 
     def make_ab(self, a, b):
         a = tt.exp(a)
