@@ -179,8 +179,28 @@ class AbstractFlow(object):
         return self.parent is None
 
 
-FlowFn = collections.namedtuple('FlowFn', 'fn,inv,deriv')
-FlowFn.__call__ = lambda self, *args: self.fn(*args)
+class FlowFn(object):
+    _instance = None
+
+    def __new__(cls, *args, **kwargs):
+        if not isinstance(cls._instance, cls):
+            cls._instance = object.__new__(cls)
+        return cls._instance
+
+    @staticmethod
+    def fn(*args):
+        raise NotImplementedError
+
+    @staticmethod
+    def inv(*args):
+        raise NotImplementedError
+
+    @staticmethod
+    def deriv(*args):
+        raise NotImplementedError
+
+    def __call__(self, *args):
+        return self.fn(*args)
 
 
 class LinearFlow(AbstractFlow):
@@ -237,11 +257,15 @@ class LinearFlow(AbstractFlow):
         det = det.flatten()  # s
         return tt.log(det)
 
-Tanh = FlowFn(
-    tt.tanh,
-    tt.arctanh,
-    lambda x: 1. - tt.tanh(x) ** 2
-)
+
+class Tanh(FlowFn):
+    fn = tt.tanh
+    inv = tt.arctanh
+
+    @staticmethod
+    def deriv(*args):
+        x, = args
+        return 1. - tt.tanh(x) ** 2
 
 
 class PlanarFlow(LinearFlow):
@@ -309,11 +333,20 @@ class ReferencePointFlow(AbstractFlow):
         return tt.log(det)
 
 
-Radial = FlowFn(
-    lambda a, r: 1./(a+r),
-    lambda a, y: 1./y - a,
-    lambda a, r: -1./(a+r)**2
-)
+class Radial(FlowFn):
+    @staticmethod
+    def fn(*args):
+        a, r = args
+        return 1./(a+r)
+
+    @staticmethod
+    def inv(*args):
+        a, y = args
+        return 1./y - a
+
+    def deriv(*args):
+        a, r = args
+        return -1. / (a + r) ** 2
 
 
 class RadialFlow(ReferencePointFlow):
