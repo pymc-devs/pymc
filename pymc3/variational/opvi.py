@@ -878,7 +878,7 @@ class Approximation(object):
             return dict([(n_, s_) for n_, s_ in zip(self.global_names+self.local_names, _samples)])
         return inner
 
-    def sample(self, draws=500, include_transformed=False):
+    def sample(self, draws=500, include_transformed=True):
         """Draw samples from variational posterior.
 
         Parameters
