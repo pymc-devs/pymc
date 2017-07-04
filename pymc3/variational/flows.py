@@ -63,7 +63,7 @@ class Formula(object):
     def __call__(self, z0=None, dim=None, jitter=.1):
         if len(self.flows) == 0:
             raise ValueError('No flows in formula')
-        flow = None
+        flow = z0
         for flow_cls in self.flows:
             flow = flow_cls(dim=dim, jitter=jitter, z0=flow)
         return flow
