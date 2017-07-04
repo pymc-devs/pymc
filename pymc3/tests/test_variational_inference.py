@@ -538,16 +538,6 @@ def test_flow_init_loop(flow_spec):
     flow.forward.eval()
 
 
-def test_flow_init_link(flow_spec):
-    initial = pm.tt_rng().normal(size=(10, 2))
-    flows_list = [flow_spec(dim=2) for _ in range(10)]
-    flow = flows.link_flows(flows_list, z0=initial)[-1]
-    flow.forward.eval()
-    with pytest.raises(ValueError) as e:
-        flows.link_flows([flow_spec(dim=2), flow_spec(dim=1)])
-        assert e.match('different dims')
-
-
 def test_flow_forward_apply(flow_spec):
     z0 = pm.tt_rng().normal(size=(10, 20))
     flow = flow_spec(dim=20, z0=z0)
