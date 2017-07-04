@@ -434,13 +434,17 @@ class NormalizingFlow(Approximation):
     def __init__(self, flow='scale-loc',
                  local_rv=None, model=None,
                  scale_cost_to_minibatch=False,
-                 random_seed=None, **kwargs):
+                 random_seed=None, jitter=.1, **kwargs):
         super(NormalizingFlow, self).__init__(
             local_rv=local_rv, scale_cost_to_minibatch=scale_cost_to_minibatch,
             model=model, random_seed=random_seed, **kwargs)
         if isinstance(flow, str):
-            flow = flows.Formula(flow)
-        self.gflow = flow(dim=self.global_size, z0=self.symbolic_initial_global_matrix)
+            flow = flows.Formula(flow)(
+                dim=self.global_size,
+                z0=self.symbolic_initial_global_matrix,
+                jitter=jitter
+            )
+        self.gflow = flow
 
     @property
     def shared_params(self):

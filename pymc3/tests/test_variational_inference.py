@@ -589,7 +589,7 @@ def test_flow_formula(formula, length, order):
     assert len(flows_list) == length
     if order is not None:
         assert flows_list == order
-    spec(dim=2)(tt.ones((3, 2))).eval()  # should work
+    spec(dim=2, jitter=1)(tt.ones((3, 2))).eval()  # should work
 
 
 def test_hh_flow():
