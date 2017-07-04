@@ -699,13 +699,13 @@ class NF(Inference):
     def __init__(self, flow='planar*3', initial_global='normal',
                  local_rv=None, model=None,
                  scale_cost_to_minibatch=False,
-                 random_seed=None, start=None):
+                 random_seed=None, start=None, jitter=.1):
         super(NF, self).__init__(
             self.OP, self.APPROX, self.TF,
             flow=flow, initial_global=initial_global,
             local_rv=local_rv, model=model,
             scale_cost_to_minibatch=scale_cost_to_minibatch,
-            random_seed=random_seed, start=start)
+            random_seed=random_seed, start=start, jitter=jitter)
 
 
 def fit(n=10000, local_rv=None, method='advi', model=None,
