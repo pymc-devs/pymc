@@ -217,7 +217,7 @@ class LinearFlow(AbstractFlow):
         else:
             _u = u
         if w is None:
-            _w = self.add_param(dim, '_w', 1e-2)
+            _w = self.add_param(dim, '_w', -3)
         else:
             _w = w
         if b is None:
