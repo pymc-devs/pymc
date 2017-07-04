@@ -57,44 +57,22 @@ class Formula(object):
                 self.flows.extend([_select[tup[0]]]*int(tup[1]))
             else:
                 raise ValueError('Wrong format: %s' % formula)
+        if len(self.flows) == 0:
+            raise ValueError('No flows in formula')
 
     def __call__(self, z0=None, dim=None, jitter=.1):
-        _flows = [flow(dim=dim, jitter=jitter) for flow in self.flows]
-        return link_flows(_flows, z0)[-1]
+        if len(self.flows) == 0:
+            raise ValueError('No flows in formula')
+        flow = None
+        for flow_cls in self.flows:
+            flow = flow_cls(dim=dim, jitter=jitter, z0=flow)
+        return flow
 
     def __reduce__(self):
         return self.__class__, self.formula
 
     def __repr__(self):
         return self.formula
-
-
-def link_flows(flows, z0=None):
-    """Link flows in given order, optionally override
-    starting `z0` with new one. This operation can be
-    performed only once as `owner` attributes are set
-    on symbolic variables
-
-    Parameters
-    ----------
-    flows : list[AbstractFlow]
-    z0 : matrix
-
-    Returns
-    -------
-    list[AbstractFlow]
-    """
-    view_op = theano.compile.view_op
-    if z0 is not None:
-        if isinstance(z0, AbstractFlow):
-            z0 = z0.forward
-        theano.Apply(view_op, [z0], [flows[0].z0])
-    for f0, f1 in zip(flows[:-1], flows[1:]):
-        if f0.dim != f1.dim:
-            raise ValueError('Flows have different dims')
-        theano.Apply(view_op, [f0.forward.astype(f1.z0.dtype)], [f1.z0])
-        f1.parent = f0
-    return flows
 
 
 class AbstractFlow(object):
