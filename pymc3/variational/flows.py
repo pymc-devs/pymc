@@ -127,7 +127,7 @@ class AbstractFlow(object):
                 ).astype(self.z0.dtype)
         self.parent = parent
 
-    def add_param(self, shape, name=None, ref=0, dtype='floatX'):
+    def add_param(self, shape, name=None, ref=0., dtype='floatX'):
         if dtype == 'floatX':
             dtype = theano.config.floatX
         return theano.shared(
@@ -217,7 +217,7 @@ class LinearFlow(AbstractFlow):
         else:
             _u = u
         if w is None:
-            _w = self.add_param(dim, '_w', 1)
+            _w = self.add_param(dim, '_w', 1e-2)
         else:
             _w = w
         if b is None:
