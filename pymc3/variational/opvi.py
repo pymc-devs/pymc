@@ -58,7 +58,7 @@ def node_property(f):
     """
     A shortcut for wrapping method to accessible tensor
     """
-    return property(memoize(change_flags(compute_test_value='raise')(f)))
+    return property(memoize(change_flags(compute_test_value='off')(f)))
 
 
 class ObjectiveUpdates(theano.OrderedUpdates):
@@ -530,6 +530,7 @@ class Approximation(object):
     initial_dist_global_map = 0.
     shared_params = None
 
+    @change_flags(compute_test_value='off')
     def __init__(self, local_rv=None, model=None,
                  cost_part_grad_scale=1,
                  scale_cost_to_minibatch=False,
@@ -562,13 +563,7 @@ class Approximation(object):
         self.gbij = DictToArrayBijection(self._g_order, {})
         self.lbij = DictToArrayBijection(self._l_order, {})
         self.symbolic_initial_local_matrix = tt.matrix(self.__class__.__name__ + '_symbolic_initial_local_matrix')
-        self.symbolic_initial_local_matrix.tag.test_value = np.random.rand(2, self.local_size).astype(
-            self.symbolic_initial_local_matrix.dtype
-        )
         self.symbolic_initial_global_matrix = tt.matrix(self.__class__.__name__ + '_symbolic_initial_global_matrix')
-        self.symbolic_initial_global_matrix.tag.test_value = np.random.rand(2, self.global_size).astype(
-            self.symbolic_initial_global_matrix.dtype
-        )
 
         self.global_flat_view = model.flatten(
             vars=self.global_vars,
