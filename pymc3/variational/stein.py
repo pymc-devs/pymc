@@ -1,6 +1,7 @@
 from theano import theano, tensor as tt
+from pymc3.variational.opvi import node_property
 from pymc3.variational.test_functions import rbf
-from pymc3.theanof import memoize, floatX
+from pymc3.theanof import memoize, floatX, change_flags
 
 __all__ = [
     'Stein'
@@ -14,11 +15,10 @@ class Stein(object):
         self._kernel_f = kernel
         if input_matrix is None:
             input_matrix = tt.matrix('stein_input_matrix')
-            input_matrix.tag.test_value = approx.random(10).tag.test_value
+            input_matrix.tag.test_value = approx.symbolic_random_total_matrix.tag.test_value
         self.input_matrix = input_matrix
 
-    @property
-    @memoize
+    @node_property
     def grad(self):
         n = floatX(self.input_matrix.shape[0])
         temperature = self.temperature
@@ -26,15 +26,13 @@ class Stein(object):
                      self.repulsive_part_grad)
         return svgd_grad / n
 
-    @property
-    @memoize
+    @node_property
     def density_part_grad(self):
         Kxy = self.Kxy
         dlogpdx = self.dlogp
         return tt.dot(Kxy, dlogpdx)
 
-    @property
-    @memoize
+    @node_property
     def repulsive_part_grad(self):
         t = self.approx.normalizing_constant
         dxkxy = self.dxkxy
@@ -48,38 +46,30 @@ class Stein(object):
     def dxkxy(self):
         return self._kernel()[1]
 
-    @property
-    @memoize
-    def logp(self):
-        return theano.scan(
-            fn=lambda zg: self.approx.logp_norm(zg),
-            sequences=[self.input_matrix]
-        )[0]
+    @node_property
+    def logp_norm(self):
+        return self.approx.sized_symbolic_logp / self.approx.normalizing_constant
 
-    @property
-    @memoize
+    @node_property
     def dlogp(self):
-        return theano.scan(
-            fn=lambda zg: theano.grad(self.approx.logp_norm(zg), zg),
-            sequences=[self.input_matrix]
-        )[0]
+        loc_random = self.input_matrix[..., :self.approx.local_size]
+        glob_random = self.input_matrix[..., self.approx.local_size:]
+        loc_grad, glob_grad = tt.grad(
+            self.logp_norm.sum(),
+            [self.approx.symbolic_random_local_matrix,
+             self.approx.symbolic_random_global_matrix],
+            disconnected_inputs='ignore'
+        )
+        loc_grad, glob_grad = theano.clone(
+            [loc_grad, glob_grad],
+            {self.approx.symbolic_random_local_matrix: loc_random,
+             self.approx.symbolic_random_global_matrix: glob_random}
+        )
+        loc_grad.tag.test_value = loc_random.tag.test_value
+        glob_grad.tag.test_value = glob_random.tag.test_value
+        return tt.concatenate([loc_grad, glob_grad], axis=-1)
 
     @memoize
+    @change_flags(compute_test_value='raise')
     def _kernel(self):
         return self._kernel_f(self.input_matrix)
-
-    def get_approx_input(self, size=100):
-        """
-
-        Parameters
-        ----------
-        size : if approx is not Empirical, takes `n=size` random samples
-
-        Returns
-        -------
-        matrix
-        """
-        if hasattr(self.approx, 'histogram'):
-            return self.approx.histogram
-        else:
-            return self.approx.random(size)

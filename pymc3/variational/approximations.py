@@ -3,9 +3,8 @@ import theano
 from theano import tensor as tt
 
 import pymc3 as pm
-from pymc3.distributions.dist_math import rho2sd, log_normal, log_normal_mv
-from pymc3.variational.opvi import Approximation
-from pymc3.theanof import memoize
+from pymc3.distributions.dist_math import rho2sd, log_normal
+from pymc3.variational.opvi import Approximation, node_property
 
 
 __all__ = [
@@ -50,24 +49,35 @@ class MeanField(Approximation):
         Sticking the Landing: A Simple Reduced-Variance Gradient for ADVI
         approximateinference.org/accepted/RoederEtAl2016.pdf
     """
-    @property
+
+    def __init__(self, local_rv=None, model=None, cost_part_grad_scale=1,
+                 scale_cost_to_minibatch=False,
+                 random_seed=None, start=None, **kwargs):
+        super(MeanField, self).__init__(
+            local_rv=local_rv, model=model,
+            cost_part_grad_scale=cost_part_grad_scale,
+            scale_cost_to_minibatch=scale_cost_to_minibatch,
+            random_seed=random_seed, **kwargs
+        )
+        self.shared_params = self.create_shared_params(start=start)
+
+    @node_property
     def mean(self):
         return self.shared_params['mu']
 
-    @property
+    @node_property
     def rho(self):
         return self.shared_params['rho']
 
-    @property
+    @node_property
     def cov(self):
         return tt.diag(rho2sd(self.rho)**2)
 
-    @property
+    @node_property
     def std(self):
         return rho2sd(self.rho)
 
-    def create_shared_params(self, **kwargs):
-        start = kwargs.get('start')
+    def create_shared_params(self, start=None):
         if start is None:
             start = self.model.test_point
         else:
@@ -80,21 +90,23 @@ class MeanField(Approximation):
                 'rho': theano.shared(
                     pm.floatX(np.zeros((self.global_size,))), 'rho')}
 
-    def log_q_W_global(self, z):
+    @node_property
+    def symbolic_random_global_matrix(self):
+        initial = self.symbolic_initial_global_matrix
+        sd = rho2sd(self.rho)
+        mu = self.mean
+        return sd * initial + mu
+
+    @node_property
+    def symbolic_log_q_W_global(self):
         """
         log_q_W samples over q for global vars
         """
         mu = self.scale_grad(self.mean)
         rho = self.scale_grad(self.rho)
-        z = z[self.global_slc]
-        logq = tt.sum(log_normal(z, mu, rho=rho))
-        return logq
-
-    def random_global(self, size=None, no_rand=False):
-        initial = self.initial(size, no_rand, l=self.global_size)
-        sd = rho2sd(self.rho)
-        mu = self.mean
-        return sd * initial + mu
+        z = self.symbolic_random_global_matrix
+        logq = log_normal(z, mu, rho=rho)
+        return logq.sum(1)
 
 
 class FullRank(Approximation):
@@ -138,7 +150,7 @@ class FullRank(Approximation):
 
     def __init__(self, local_rv=None, model=None, cost_part_grad_scale=1,
                  scale_cost_to_minibatch=False,
-                 gpu_compat=False, random_seed=None, **kwargs):
+                 gpu_compat=False, random_seed=None, start=None, **kwargs):
         super(FullRank, self).__init__(
             local_rv=local_rv, model=model,
             cost_part_grad_scale=cost_part_grad_scale,
@@ -146,16 +158,34 @@ class FullRank(Approximation):
             random_seed=random_seed, **kwargs
         )
         self.gpu_compat = gpu_compat
+        self.shared_params = self.create_shared_params(start=start)
 
-    @property
+    def create_shared_params(self, start=None):
+        if start is None:
+            start = self.model.test_point
+        else:
+            start_ = self.model.test_point.copy()
+            pm.sampling._update_start_vals(start_, start, self.model)
+            start = start_
+        start = pm.floatX(self.gbij.map(start))
+        n = self.global_size
+        L_tril = (
+            np.eye(n)
+            [np.tril_indices(n)]
+            .astype(theano.config.floatX)
+        )
+        return {'mu': theano.shared(start, 'mu'),
+                'L_tril': theano.shared(L_tril, 'L_tril')}
+
+    @node_property
     def L(self):
         return self.shared_params['L_tril'][self.tril_index_matrix]
 
-    @property
+    @node_property
     def mean(self):
         return self.shared_params['mu']
 
-    @property
+    @node_property
     def cov(self):
         L = self.L
         return L.dot(L.T)
@@ -176,36 +206,19 @@ class FullRank(Approximation):
         ] = np.arange(num_tril_entries)
         return tril_index_matrix
 
-    def create_shared_params(self, **kwargs):
-        start = kwargs.get('start')
-        if start is None:
-            start = self.model.test_point
-        else:
-            start_ = self.model.test_point.copy()
-            pm.sampling._update_start_vals(start_, start, self.model)
-            start = start_
-        start = pm.floatX(self.gbij.map(start))
-        n = self.global_size
-        L_tril = (
-            np.eye(n)
-            [np.tril_indices(n)]
-            .astype(theano.config.floatX)
-        )
-        return {'mu': theano.shared(start, 'mu'),
-                'L_tril': theano.shared(L_tril, 'L_tril')
-                }
-
-    def log_q_W_global(self, z):
+    @node_property
+    def symbolic_log_q_W_global(self):
         """log_q_W samples over q for global vars
         """
         mu = self.scale_grad(self.mean)
         L = self.scale_grad(self.L)
-        z = z[self.global_slc]
-        return log_normal_mv(z, mu, chol=L, gpu_compat=self.gpu_compat)
+        z = self.symbolic_random_global_matrix
+        return pm.MvNormal.dist(mu=mu, chol=L).logp(z)
 
-    def random_global(self, size=None, no_rand=False):
+    @node_property
+    def symbolic_random_global_matrix(self):
         # (samples, dim) or (dim, )
-        initial = self.initial(size, no_rand, l=self.global_size).T
+        initial = self.symbolic_initial_global_matrix.T
         # (dim, dim)
         L = self.L
         # (dim, )
@@ -286,6 +299,19 @@ class Empirical(Approximation):
         super(Empirical, self).__init__(
             local_rv=local_rv, scale_cost_to_minibatch=scale_cost_to_minibatch,
             model=model, trace=trace, random_seed=random_seed, **kwargs)
+        self.shared_params = self.create_shared_params(trace=trace)
+
+    def create_shared_params(self, trace=None):
+        if trace is None:
+            histogram = np.atleast_2d(self.gbij.map(self.model.test_point))
+        else:
+            histogram = np.empty((len(trace) * len(trace.chains), self.global_size))
+            i = 0
+            for t in trace.chains:
+                for j in range(len(trace)):
+                    histogram[i] = self.gbij.map(trace.point(j, t))
+                    i += 1
+        return dict(histogram=theano.shared(pm.floatX(histogram), 'histogram'))
 
     def check_model(self, model, **kwargs):
         trace = kwargs.get('trace')
@@ -294,19 +320,9 @@ class Empirical(Approximation):
                          for var in model.free_RVs])):
             raise ValueError('trace has not all FreeRV')
 
-    def create_shared_params(self, **kwargs):
-        trace = kwargs.get('trace')
-        if trace is None:
-            histogram = np.atleast_2d(self.gbij.map(self.model.test_point))
-        else:
-            histogram = np.empty((len(trace), self.global_size))
-            for i in range(len(trace)):
-                histogram[i] = self.gbij.map(trace[i])
-        return theano.shared(pm.floatX(histogram), 'histogram')
-
     def randidx(self, size=None):
         if size is None:
-            size = ()
+            size = (1,)
         elif isinstance(size, tt.TensorVariable):
             if size.ndim < 1:
                 size = size[None]
@@ -322,47 +338,46 @@ class Empirical(Approximation):
                          high=pm.floatX(self.histogram.shape[0]) - pm.floatX(1e-16))
                 .astype('int32'))
 
-    def random_global(self, size=None, no_rand=False):
-        theano_condition_is_here = isinstance(no_rand, tt.Variable)
-        if theano_condition_is_here:
-            return tt.switch(no_rand,
-                             self.mean,
-                             self.histogram[self.randidx(size)])
-        else:
-            if no_rand:
-                return self.mean
+    def _initial_part_matrix(self, part, size, deterministic):
+        if part == 'local':
+            return super(Empirical, self)._initial_part_matrix(
+                part, size, deterministic
+            )
+        elif part == 'global':
+            theano_condition_is_here = isinstance(deterministic, tt.Variable)
+            if theano_condition_is_here:
+                return tt.switch(
+                    deterministic,
+                    tt.repeat(
+                        self.mean.dimshuffle('x', 0),
+                        size if size is not None else 1, -1),
+                    self.histogram[self.randidx(size)])
             else:
-                return self.histogram[self.randidx(size)]
+                if deterministic:
+                    return tt.repeat(
+                        self.mean.dimshuffle('x', 0),
+                        size if size is not None else 1, -1)
+                else:
+                    return self.histogram[self.randidx(size)]
+
+    @property
+    def symbolic_random_global_matrix(self):
+        return self.symbolic_initial_global_matrix
 
     @property
     def histogram(self):
         """Shortcut to flattened Trace
         """
-        return self.shared_params
+        return self.shared_params['histogram']
 
-    @property
-    @memoize
-    def histogram_logp(self):
-        """Symbolic logp for every point in trace
-        """
-        node = self.to_flat_input(self.model.logpt)
-
-        def mapping(z):
-            return theano.clone(node, {self.input: z})
-        x = self.histogram
-        _histogram_logp, _ = theano.scan(
-            mapping, x, n_steps=x.shape[0]
-        )
-        return _histogram_logp
-
-    @property
+    @node_property
     def mean(self):
         return self.histogram.mean(0)
 
-    @property
+    @node_property
     def cov(self):
         x = (self.histogram - self.mean)
-        return x.T.dot(x) / self.histogram.shape[0]
+        return x.T.dot(x) / pm.floatX(self.histogram.shape[0])
 
     @classmethod
     def from_noise(cls, size, jitter=.01, local_rv=None,

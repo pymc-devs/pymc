@@ -33,7 +33,6 @@ def GP(name, X, mean_func=None, cov_func=None,
        approx=None, n_inducing=None, inducing_points=None,
        observed=None, chol_const=True, *args, **kwargs):
     """Gausian process constructor
-
     Parameters
     ----------
     X : array
@@ -378,18 +377,17 @@ def sample_gp(trace, gp, X_values, samples=None, obs_noise=True, model=None, ran
     -------
     Array of samples from posterior GP evaluated at Z.
     """
-    model = modelcontext(model)
-
     if samples is None:
         samples = len(trace)
+
+    model = modelcontext(model)
 
     if random_seed:
         np.random.seed(random_seed)
 
+    indices = np.random.randint(0, len(trace), samples)
     if progressbar:
-        indices = tqdm(np.random.randint(0, len(trace), samples), total=samples)
-    else:
-        indices = np.random.randint(0, len(trace), samples)
+        indices = tqdm(indices, total=samples)
 
     y = [v for v in model.observed_RVs if v.name==gp.name][0]
     samples = [gp.distribution.random(point=trace[idx], X_values=X_values, y=y, obs_noise=obs_noise) for idx in indices]
