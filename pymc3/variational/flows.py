@@ -1,10 +1,7 @@
-import collections
-
 import numpy as np
 import theano
 from theano import tensor as tt
 
-import pymc3 as pm
 from pymc3.theanof import change_flags
 from .opvi import node_property, collect_shared_to_list
 
@@ -78,7 +75,6 @@ class Formula(object):
 class AbstractFlow(object):
     shared_params = None
 
-    @change_flags(compute_test_value='raise')
     def __init__(self, z0=None, dim=None, jitter=.1):
         self.__jitter = jitter
         if isinstance(z0, AbstractFlow):
@@ -94,15 +90,8 @@ class AbstractFlow(object):
                              'please provide dim or Flow instance as z0')
         if z0 is None:
             self.z0 = tt.matrix()  # type: tt.TensorVariable
-            self.z0.tag.test_value = np.random.rand(
-                2, dim
-            ).astype(self.z0.dtype)
         else:
             self.z0 = z0
-            if not hasattr(z0.tag, 'test_value'):
-                self.z0.tag.test_value = np.random.rand(
-                    2, dim
-                ).astype(self.z0.dtype)
         self.parent = parent
 
     def add_param(self, shape, name=None, ref=0., dtype='floatX'):
@@ -186,7 +175,7 @@ class FlowFn(object):
 
 
 class LinearFlow(AbstractFlow):
-    @change_flags(compute_test_value='raise')
+    @change_flags(compute_test_value='off')
     def __init__(self, h, z0=None, dim=None, u=None, w=None, b=None, jitter=.1):
         self.h = h
         super(LinearFlow, self).__init__(dim=dim, z0=z0, jitter=jitter)
@@ -268,7 +257,7 @@ class PlanarFlow(LinearFlow):
 
 
 class ReferencePointFlow(AbstractFlow):
-    @change_flags(compute_test_value='raise')
+    @change_flags(compute_test_value='off')
     def __init__(self, h, z0=None, dim=None, a=None, b=None, z_ref=None, jitter=.1):
         super(ReferencePointFlow, self).__init__(dim=dim, z0=z0, jitter=jitter)
         if a is None:
@@ -371,7 +360,7 @@ class LocFlow(AbstractFlow):
 
 
 class ScaleFlow(AbstractFlow):
-    @change_flags(compute_test_value='raise')
+    @change_flags(compute_test_value='off')
     def __init__(self, z0=None, dim=None, log_scale=None, jitter=.1):
         super(ScaleFlow, self).__init__(dim=dim, z0=z0, jitter=jitter)
         if log_scale is None:
@@ -388,7 +377,7 @@ class ScaleFlow(AbstractFlow):
 
     @node_property
     def logdet(self):
-        return tt.sum(self.shared_params['log_scale'])
+        return tt.repeat(tt.sum(self.shared_params['log_scale']), self.z0.shape[0])
 
 
 class HouseholderFlow(AbstractFlow):
