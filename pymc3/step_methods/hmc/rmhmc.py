@@ -41,7 +41,7 @@ class RiemannianManifoldHMC(BaseManifoldHMC):
             The model
         **kwargs : passed to BaseHMC
         """
-        super(HamiltonianMC, self).__init__(vars, **kwargs)
+        super(HamiltonianMC, self).__init__(vars, manifold=True, **kwargs)
         self.path_length = path_length
         self.step_rand = step_rand
 

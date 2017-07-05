@@ -322,6 +322,31 @@ def get_theano_hamiltonian_manifold_functions(model_vars, shared, logpt, potenti
     return H, energy_function, velocity_function, integrator, dlogp
 
 
+
+def quadratic_gradient(H_ij, p):
+    """
+    pseudo-code of the gradient of the quadratic form p^T . H^-1 . p
+    To be used in the energy and velocity functions 
+    """
+    # Q, lambda_i = decompose(H_ij)
+    # D = diag(Q_t . p / (lambda_i . coth(alpha . lambda_i))
+    # J = d(lambda_i . coth(alpha . lambda_i))
+    # grad = - Trace(Q . D . J . D . Q_t . d(H))
+    # return grad
+    return None
+
+def log_gradient(H_ij):
+    """
+    pseduo-code of the gradient of the log determinant.
+    To be used in the energy and velocity functions 
+    """
+    # Q, lambda_i = decompose(H_ij)
+    # J = d(lambda_i . coth(alpha . lambda_i))
+    # R = diag(1 / lambda_i . coth(alpha . lambda_i)
+    # grad = Trace(Q . (R ◦ J). Q_t . dH)
+    # return grad
+    return None
+
 INTEGRATORS_SINGLE = {
     'leapfrog': _theano_single_leapfrog,
     'two-stage': _theano_single_twostage,
