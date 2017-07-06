@@ -1,11 +1,8 @@
+.. _intro:
+
 ************
 Introduction
 ************
-
-:Date: 2017-07-06
-:Authors: Chris Fonnesbeck
-:Contact: fonnesbeck@gmail.com
-:Web site: http://github.com/pymc-devs/pymc3
 
 
 Purpose
