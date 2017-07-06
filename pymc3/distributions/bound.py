@@ -176,17 +176,13 @@ class Bound(object):
 
     Example
     -------
-    # Bounded distribution can be defined before the model context
-    PositiveNormal = pm.Bound(pm.Normal, lower=0.0)
     with pm.Model():
-        par1 = PositiveNormal('par1', mu=0.0, sd=1.0, testval=1.0)
-        # or within the model context
         NegativeNormal = pm.Bound(pm.Normal, upper=0.0)
-        par2 = NegativeNormal('par2', mu=0.0, sd=1.0, testval=1.0)
+        par1 = NegativeNormal('par2', mu=0.0, sd=1.0, testval=1.0)
 
         # or you can define it implicitly within the model context
-        par3 = pm.Bound(pm.Normal, lower=-1.0, upper=1.0)(
-                'par3', mu=0.0, sd=1.0, testval=1.0)
+        par2 = pm.Bound(pm.Normal, lower=-1.0, upper=1.0)(
+                'par2', mu=0.0, sd=1.0, testval=1.0)
     """
 
     def __init__(self, distribution, lower=None, upper=None):
