@@ -13,9 +13,9 @@ symbolic manipulations of this function to also get access to its gradient.
 
 For a thorough introduction to Theano see the
 `theano docs <http://deeplearning.net/software/theano/introduction.html>`_,
-but for the most part you don't need many details about it as long
+but for the most part you don't need detailed knowledge about it as long
 as you are not trying to define new distributions or other extensions
-of PyMC3. But let's look at a simple example to give you a rough
+of PyMC3. But let's look at a simple example to get a rough
 idea about how it works. Say, we'd like to define the (completely
 arbitrarily chosen) function
 
@@ -52,8 +52,8 @@ do to compute the output::
    would also have worked if we used `np.exp`. This is because numpy
    gives objects it operates on a chance to define the results of
    operations themselves. Theano variables do this for a large number
-   of operations. We usually still prefer it if people use the theano
-   function instead of the numpy versions, as that makes it clear that
+   of operations. We usually still prefer the theano
+   functions instead of the numpy versions, as that makes it clear that
    we are working with symbolic input instead of plain arrays.
 
 Now we can tell Theano to build a function that does this computation.
@@ -78,10 +78,10 @@ operations respectively). Some support for sparse matrices is available
 in `theano.sparse`. For a detailed overview of available operations,
 see `the theano api docs <http://deeplearning.net/software/theano/library/tensor/index.html>`_.
 
-A notable exception where theano variables *don't* behave like
+A notable exception where theano variables do *not* behave like
 NumPy arrays are operations involving conditional execution:
 
-Code like this won't work as expected if used on Theano variables::
+Code like this won't work as expected::
 
     a = tt.vector('a')
     if (a > 0).all():
@@ -91,7 +91,7 @@ Code like this won't work as expected if used on Theano variables::
 
 `(a > 0).all()` isn't actually a boolean as it would be in NumPy, but
 still a symbolic variable. Python will convert this object to a boolean
-and according to the rules for this conversions, things that aren't empty
+and according to the rules for this conversion, things that aren't empty
 containers or zero are converted to `True`. So the code is equivalent
 to this::
 
@@ -103,7 +103,7 @@ To get the desired behaviour, we can use `tt.switch`::
     a = tt.vector('a')
     b = tt.switch((a > 0).all(), tt.sqrt(a), -a)
 
-Indexing also works similar to NumPy::
+Indexing also works similarly to NumPy::
 
     a = tt.vector('a')
     # Access the 10th element. This will fail when a function build
@@ -113,13 +113,13 @@ Indexing also works similar to NumPy::
     # Extract a subvector
     b = a[[1, 2, 10]]
 
-Changing element of an array is possible using `tt.set_subtensor`::
+Changing elements of an array is possible using `tt.set_subtensor`::
 
     a = tt.vector('a')
     b = tt.set_subtensor(a[:10], 1)
 
-    # is roughly equivalent to this (although theano is usually
-    # able to avoid the copy)
+    # is roughly equivalent to this (although theano avoids
+    # the copy if `a` isn't used anymore)
     a = np.random.randn(10)
     b = a.copy()
     b[:10] = 1
@@ -143,14 +143,14 @@ variable. To sample from the posterior we need to build the function
 
 .. math::
 
-   \log P(μ|y) + C = \log P(y|μ) + \log P(μ) =: f(μ)\\
+   \log P(μ|y) + C = \log P(y|μ) + \log P(μ) =: \text{logp}(μ)\\
 
 where with the normal likelihood :math:`N(x|μ,σ^2)`
 
 .. math::
 
-    f\colon \mathbb{R} \to \mathbb{R}\\
-    f(μ) = \log N(μ|0, 1) + \log N(y|0, 1),
+    \text{logp}\colon \mathbb{R} \to \mathbb{R}\\
+    μ \mapsto \log N(μ|0, 1) + \log N(y|0, 1),
 
 To build that function we need to keep track of two things: The parameter
 space (the *free variables*) and the logp function. For each free variable
@@ -164,6 +164,53 @@ this is happening::
 
     mu = tt.scalar('mu')
     model.add_free_variable(mu)
-    model.add_logp_term(normal_logp(μ| 0, 1))
+    model.add_logp_term(pm.Normal.dist(0, 1).logp(mu))
 
-    model.add_logp_term(normal_logp(data| mu, 1))
+    model.add_logp_term(pm.Normal.dist(mu, 1).logp(data))
+
+So calling `pm.Normal()` modifies the model: It changes the logp function
+of the model. If the `observed` keyword isn't set it also creates a new
+free variable. In contrast, `pm.Normal.dist()` doesn't care about the model,
+it just creates an object that represents the normal distribution. Calling
+`logp` on this object creates a theano variable for the logp probability
+or log probability density of the distribution, but again without changing
+the model in any way.
+
+Continuous variables with support only on a subset of the real numbers
+are treated a bit differently. We create a transformed variable
+that has support on the reals and then modify this variable. For
+example::
+
+    with pm.Model() as model:
+        mu = pm.Normal('mu', 0, 1)
+        sd = pm.HalfNormal('sd', 1)
+        y = pm.Normal('y', mu=mu, sd=sd, observed=data)
+
+is roughly equivalent to this::
+
+    # For illustration only, not real code!
+    model = pm.Model()
+    mu = tt.scalar('mu')
+    model.add_free_variable(mu)
+    model.add_logp_term(pm.Normal.dist(0, 1).logp(mu))
+
+    sd_log__ = tt.scalar('sd_log__')
+    model.add_free_variable(sd_log__)
+    model.add_logp_term(corrected_logp_half_normal(sd_log__))
+
+    sd = tt.exp(sd_log__)
+    model.add_deterministic_variable(sd)
+
+    model.add_logp_term(pm.Normal.dist(mu, sd).logp(data))
+
+The return values of the variable constructors are subclasses
+of theano variables, so when we define a variable we can use any
+theano operation on them::
+
+    design_matrix = np.array([[...]])
+    with pm.Model() as model:
+        # beta is a tt.dvector
+        beta = pm.Normal('beta', 0, 1, shape=len(design_matrix))
+        predict = tt.dot(design_matrix, beta)
+        sd = pm.HalfCauchy('sd', beta=2.5)
+        pm.Normal('y', mu=predict, sd=sd, observed=data)
