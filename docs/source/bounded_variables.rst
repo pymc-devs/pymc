@@ -31,8 +31,6 @@ specification of a bounded distribution should go within the model block::
 
     with pm.Model() as model:
         BoundedNormal = pm.Bound(pm.Normal, lower=0.0)
-
-    with model:
         x = BoundedNormal('x', mu=1.0, sd=3.0)
         
 If the bound will be applied to a single variable in the model, it may be
@@ -41,15 +39,14 @@ cleaner notationally to define both the bound and variable together. ::
     with model:
         x = pm.Bound(pm.Normal, lower=0.0)('x', mu=1.0, sd=3.0)
 
-Caveats
-#######
-
-* On the master branch, bounds can also be applied to vectors of random
-  variables.  With the same ``BoundedNormal`` object we created previously we 
-  can write::
+Bounds can also be applied to a vector of random variables.  With the same
+``BoundedNormal`` object we created previously we can write::
 
     with model: 
         x_vector = BoundedNormal('x_vector', mu=1.0, sd=3.0, shape=3)
+
+Caveats
+#######
 
 * Bounds cannot be given to variables that are ``observed``.  To model
   truncated data, use a ``Potential`` in combination with a cumulative
