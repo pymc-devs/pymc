@@ -8,3 +8,4 @@ Getting started
    notebooks/getting_started.ipynb
    notebooks/api_quickstart.ipynb
    notebooks/variational_api_quickstart.ipynb
+   theano
