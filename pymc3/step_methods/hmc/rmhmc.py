@@ -5,7 +5,7 @@ from pymc3.theanof import floatX
 import numpy as np
 
 
-__all__ = ['RiemannianManifoldHMC', 'rmhmc']
+__all__ = ['RiemannianManifoldHMC']
 
 def unif(step_size, elow=.85, ehigh=1.15):
     return np.random.uniform(elow, ehigh) * step_size
@@ -41,7 +41,7 @@ class RiemannianManifoldHMC(BaseManifoldHMC):
             The model
         **kwargs : passed to BaseHMC
         """
-        super(HamiltonianMC, self).__init__(vars, manifold=True, **kwargs)
+        super(RiemannianManifoldHMC, self).__init__(vars, manifold=True, **kwargs)
         self.path_length = path_length
         self.step_rand = step_rand
 
