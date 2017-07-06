@@ -134,6 +134,7 @@ class TestStepMethods(object):  # yield test doesn't work subclassing object
 
     def setup_class(self):
         self.temp_dir = tempfile.mkdtemp()
+        print(self.temp_dir)
 
     def teardown_class(self):
         shutil.rmtree(self.temp_dir)
@@ -159,20 +160,23 @@ class TestStepMethods(object):  # yield test doesn't work subclassing object
 
         on multiple commits.
         """
-        n_steps = 100
-        with Model():
-            x = Normal('x', mu=0, sd=1)
+n_steps = 100
+with Model():
+    x = Normal('x', mu=0, sd=1)
             if step_method.__name__ == 'SMC':
                 trace = smc.sample_smc(n_steps=n_steps, step=step_method(random_seed=1),
                                          n_jobs=1, progressbar=False,
                                          homepath=self.temp_dir)
+                slave_samples = trace.get_values('x')[n_steps::n_steps]
+                print(slave_samples.tolist())
             else:
                 trace = sample(0, tune=n_steps,
                                discard_tuned_samples=False,
                                step=step_method(), random_seed=1)
-
+                slave_samples = trace.get_values('x')
+                
         assert_array_almost_equal(
-            trace.get_values('x'),
+            slave_samples,
             self.master_samples[step_method],
             decimal=select_by_precision(float64=6, float32=4))
 

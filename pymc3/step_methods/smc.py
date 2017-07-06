@@ -410,8 +410,8 @@ class SMC(atext.ArrayStepSharedLLK):
         return outindx
 
 
-def sample_smc(n_steps, n_chains=1000, step=None, start=None, homepath=None, stage=0, n_jobs=1,
-                 tune_interval=10, tune=None, progressbar=False, model=None, random_seed=-1, rm_flag=False):
+def sample_smc(n_steps, n_chains=100, step=None, start=None, homepath=None, stage=0, n_jobs=1,
+                 tune_interval=10, tune=None, progressbar=False, model=None, random_seed=-1, rm_flag=True):
     """Sequential Monte Carlo sampling
 
     Samples the solution space with n_chains of Metropolis chains, where each
@@ -589,7 +589,7 @@ def sample_smc(n_steps, n_chains=1000, step=None, start=None, homepath=None, sta
         _iter_parallel_chains(**sample_args)
 
         stage_handler.dump_atmip_params(step)
-        return stage_handler.load_multitrace(step.stage, model=model)
+        return stage_handler.concatenate_traces(step.stage, model=model)
 
 
 def _sample(draws, step=None, start=None, trace=None, chain=0, tune=None,

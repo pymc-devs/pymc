@@ -291,7 +291,39 @@ class TextStage(object):
         pm._log.info('Init new trace!')
         return None
 
+    def concatenate_traces(self, stage=-1, idxs=[-1], model=None):
+        """
+        Concatenate points from all traces into one single trace, which can be used by
+        traceplot.
 
+        Parameters
+        ----------
+        stage : int
+            stage of which result traces are loaded
+        idxs : list
+            of indexes to chains to extract point and concatenate these
+
+        Returns
+        -------
+        TextChain
+        """
+        
+        dirname = self.stage_path(stage)
+        mtrace = self.load_multitrace(stage, model=model)
+        rtrace = TextChain(dirname, model=model)
+        draws = len(mtrace.chains) * len(idxs)
+        rtrace.setup(draws, chain=-1)
+
+        for idx in idxs:
+            for chain in mtrace.chains:
+                point = mtrace.point(idx, chain)
+                rtrace.record(point)
+
+        rtrace.history = mtrace
+                
+        return rtrace
+                
+                
 class TextChain(BaseSMCTrace):
     """Text trace object
 

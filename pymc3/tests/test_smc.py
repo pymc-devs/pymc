@@ -63,9 +63,6 @@ class TestSMC(SeededTest):
     @pytest.mark.parametrize(['n_jobs', 'stage'], [[1, 0], [2, 6]])
     def test_sample_n_core(self, n_jobs, stage):
 
-        def last_sample(x):
-            return x[(self.n_steps - 1)::self.n_steps]
-
         mtrace = smc.sample_smc(
             n_steps=self.n_steps,
             step=self.step,
@@ -76,8 +73,7 @@ class TestSMC(SeededTest):
             model=self.ATMIP_test,
             rm_flag=True)
 
-        d = mtrace.get_values('X', combine=True, squeeze=True)
-        x = last_sample(d)
+        x = mtrace.get_values('X')
         mu1d = np.abs(x).mean(axis=0)
         np.testing.assert_allclose(self.muref, mu1d, rtol=0., atol=0.03)
 
