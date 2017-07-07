@@ -89,7 +89,7 @@ Models are defined using a context manager (`with` statement). The model is spec
 
 Save this file, then from a python shell (or another file in the same directory), call::
 
-	with bioassay_model:
+    with bioassay_model:
     
         # Draw wamples
         trace = sample(1000, njobs=2)
