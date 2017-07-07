@@ -84,18 +84,20 @@ plotting, csv table output, improved imputation syntax, and posterior
 predictive check plots. PyMC 2.3 was released on October 31, 2013. It included 
 Python 3 compatibility, improved summary plots, and some important bug fixes.
 
-In 2011, John Salvatier began thinking about implementing gradient-based MCMC samplers, and developed the `mcex` package to experiment with his ideas. The following year, John was invited by the team to re-engineer PyMC to accomodate Hamiltonian Monte Carlo sampling. This led to the adoption of Theano as the computational back end, and marked the beginning of PyMC3's development. The first alpha version of PyMC3 was released in June 2015. Over the following 2 years, the core development team grew to 12 members, and the first release, PyMC3 3.0, was launched in January 2017. 
+In 2011, John Salvatier began thinking about implementing gradient-based MCMC samplers, and developed the ``mcex`` package to experiment with his ideas. The following year, John was invited by the team to re-engineer PyMC to accomodate Hamiltonian Monte Carlo sampling. This led to the adoption of Theano as the computational back end, and marked the beginning of PyMC3's development. The first alpha version of PyMC3 was released in June 2015. Over the following 2 years, the core development team grew to 12 members, and the first release, PyMC3 3.0, was launched in January 2017. 
 
 
 Usage Overview
 ==============
 
-First, import the PyMC3 functions and classes you will need for building your model. You can import the entire module via `import pymc3 as pm`, or just bring in what you need::
+For a detailed overview of building models in PyMC3, please read the appropriate sections in the rest of the documentation. For a flavor of what PyMC3 models look like, here is a quick example.
+
+First, import the PyMC3 functions and classes you will need for building your model. You can import the entire module via ``import pymc3 as pm``, or just bring in what you need::
 
     from pymc3 import Model, Normal, invlogit, Binomial, sample, traceplot
     import numpy as np
 
-Models are defined using a context manager (`with` statement). The model is specified declaratively inside the context manager, instantiating model variables and transforming them as necessary. Here is an example of a model for a bioassay experiment::
+Models are defined using a context manager (``with`` statement). The model is specified declaratively inside the context manager, instantiating model variables and transforming them as necessary. Here is an example of a model for a bioassay experiment::
 
     # Data
     n = 5
@@ -122,4 +124,4 @@ Save this file, then from a python shell (or another file in the same directory)
         # Plot two parameters
         traceplot(trace, varnames=['alpha', 'beta'])
 
-This example will generate 1000 posterior samples on each of two cores, preceded by 500 tuning samples (the default number). The sample is returned as arrays inside of a `MultiTrace` object, which is then passed to a plotting function.
+This example will generate 1000 posterior samples on each of two cores, preceded by 500 tuning samples (the default number). The sample is returned as arrays inside of a ``MultiTrace`` object, which is then passed to a plotting function.
