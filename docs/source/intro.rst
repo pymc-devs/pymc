@@ -100,8 +100,9 @@ First, import the PyMC3 functions and classes you will need for building your mo
 Models are defined using a context manager (``with`` statement). The model is specified declaratively inside the context manager, instantiating model variables and transforming them as necessary. Here is an example of a model for a bioassay experiment::
 
     # Data
-    n = 5
+    n = np.ones(4)*5
     y = np.array([0, 1, 3, 5])
+    dose = np.array([-.86,-.3,-.05,.73])
 
     with Model() as bioassay_model:
 
