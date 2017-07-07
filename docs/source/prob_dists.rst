@@ -70,7 +70,7 @@ Similarly, if a random number generator is required, a function returning random
 Using PyMC distributions without a Model
 ========================================
 
-Distribution objects, as we have defined them so far, are only usable inside of a ``Model`` context. 
+Distribution objects, as we have defined them so far, are only usable inside of a ``Model`` context. If they are created outside of the model context manager, it raises an error.
 
 ::
 
@@ -80,44 +80,52 @@ Distribution objects, as we have defined them so far, are only usable inside of 
 ::
 
     TypeError: No context on context stack
-    
+ 
+This is because the distribution classes are designed to integrate themselves automatically inside of a PyMC model. When a model cannot be found, it fails. However, each ``Distribution`` has a ``dist`` class method that returns a stripped-down distribution object that can be used outside of a PyMC model.
+
+For example, a standalone binomial distribution can be created by:   
     
 ::
 
     y = pm.Binomial.dist(n=10, p=0.5)
-    
+   
+This allows for probabilities to be calculated and random numbers to be drawn.
     
 ::
 
     >>> y.logp(4).eval()
     array(-1.5843639373779297, dtype=float32)
-    
-::
 
     >>> y.random(size=3)
     array([5, 4, 3])
 
-
-::
-
-    y = Binomial('y', n=10, p=0.5, model=model)
             
 Auto-transformation
 ===================
 
+To aid efficient MCMC sampling, any continuous variables that are constrained to a sub-interval of the real line are automatically transformed so that their support is unconstrained. This frees sampling algorithms from having to deal with boundary constraints.
 
+For example, the gamma distribution is positive-valued. If we define one for a model:
 
 ::
 
     with pm.Model() as model:
         g = pm.Gamma('g', 1, 1)
+
+We notice a modified variable inside the model ``vars`` attribute, which holds the free variables in the model. 
         
 ::
 
     >>> model.vars
     [g_log__]
+
+As the name suggests, the variable ``g`` has been log-transformed, and this is the space over which sampling takes place.
+
+The original variable is simply treated as a deterministic variable, since the value of the transformed variable is simply back-transformed when a sample is drawn in order to recover the original variable. Hence, ``g`` resides in the ``model.deterministics`` list.
     
 ::
 
     >>> model.deterministics
     [g]
+
+By default, auto-transformed variables are ignored when summarizing and plotting model output.
