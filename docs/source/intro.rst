@@ -41,7 +41,7 @@ What's new in version 3
 
 The third major version of PyMC has benefitted from being re-written from scratch. Substantial improvements in the user interface and performance have resulted from this. While PyMC2 relied on Fortran extensions (via f2py) for most of the computational heavy-lifting, PyMC3 leverages Theano, a library from the Montréal Institute for Learning Algorithms (MILA), for array-based expression evaluation, to perform its computation. What this provides, above all else, is fast automatic differentiation, which is at the heart of the gradient-based sampling and optimization methods currently providing inference for probabilistic programming. 
 
-Most notably, the PyMC3 provides:
+Major changes from previous versions:
 
 * New flexible object model and syntax (not backward-compatible with PyMC2).
 
