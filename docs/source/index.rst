@@ -8,6 +8,7 @@ Contents:
 .. toctree::
    :maxdepth: 3
 
+   intro
    getting_started
    examples
    api
