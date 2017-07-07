@@ -288,6 +288,7 @@ class ObjectiveFunction(object):
     def __setstate__(self, state):
         self.__init__(*state)
 
+    @change_flags(compute_test_value='off')
     def __call__(self, nmc, **kwargs):
         if 'more_tf_params' in kwargs:
             m = -1.
