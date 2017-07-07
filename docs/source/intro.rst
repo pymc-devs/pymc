@@ -127,7 +127,7 @@ Save this file, then from a python shell (or another file in the same directory)
         # Draw wamples
         trace = sample(1000, njobs=2)
         # Plot two parameters
-        traceplot(trace, varnames=['alpha', 'beta'])
+        forestplot(trace, varnames=['alpha', 'beta'])
 
 This example will generate 1000 posterior samples on each of two cores using the NUTS algorithm, preceded by 500 tuning samples (the default number). The sampler is also initialized using variational inference.
 
