@@ -61,6 +61,32 @@ Most notably, the PyMC3 provides:
 
 While the addition of Theano adds a level of complexity to the development of PyMC, fundamentally altering how the underlying computation is performed, we have worked hard to maintain the elegant simplicity of the original PyMC model specification syntax. 
 
+
+History
+=======
+
+PyMC began development in 2003, as an effort to generalize the process of
+building Metropolis-Hastings samplers, with an aim to making Markov chain Monte
+Carlo (MCMC) more accessible to applied scientists.
+The choice to develop PyMC as a python module, rather than a standalone
+application, allowed the use MCMC methods in a larger modeling framework. By
+2005, PyMC was reliable enough for version 1.0 to be released to the public. A
+small group of regular users, most associated with the University of Georgia,
+provided much of the feedback necessary for the refinement of PyMC to a usable
+state.
+
+In 2006, David Huard and Anand Patil joined Chris Fonnesbeck on the development
+team for PyMC 2.0. This iteration of the software strives for more flexibility,
+better performance and a better end-user experience than any previous version
+of PyMC. PyMC 2.2 was released in April 2012. It contained numerous bugfixes and
+optimizations, as well as a few new features, including improved output
+plotting, csv table output, improved imputation syntax, and posterior
+predictive check plots. PyMC 2.3 was released on October 31, 2013. It included 
+Python 3 compatibility, improved summary plots, and some important bug fixes.
+
+In 2011, John Salvatier began thinking about implementing gradient-based MCMC samplers, and developed the `mcex` package to experiment with his ideas. The following year, John was invited by the team to re-engineer PyMC to accomodate Hamiltonian Monte Carlo sampling. This led to the adoption of Theano as the computational back end, and marked the beginning of PyMC3's development. The first alpha version of PyMC3 was released in June 2015. Over the following 2 years, the core development team grew to 12 members, and the first release, PyMC3 3.0, was launched in January 2017. 
+
+
 Usage Overview
 ==============
 
@@ -97,28 +123,3 @@ Save this file, then from a python shell (or another file in the same directory)
         traceplot(trace, varnames=['alpha', 'beta'])
 
 This example will generate 1000 posterior samples on each of two cores, preceded by 500 tuning samples (the default number). The sample is returned as arrays inside of a `MultiTrace` object, which is then passed to a plotting function.
-
-
-History
-=======
-
-PyMC began development in 2003, as an effort to generalize the process of
-building Metropolis-Hastings samplers, with an aim to making Markov chain Monte
-Carlo (MCMC) more accessible to applied scientists.
-The choice to develop PyMC as a python module, rather than a standalone
-application, allowed the use MCMC methods in a larger modeling framework. By
-2005, PyMC was reliable enough for version 1.0 to be released to the public. A
-small group of regular users, most associated with the University of Georgia,
-provided much of the feedback necessary for the refinement of PyMC to a usable
-state.
-
-In 2006, David Huard and Anand Patil joined Chris Fonnesbeck on the development
-team for PyMC 2.0. This iteration of the software strives for more flexibility,
-better performance and a better end-user experience than any previous version
-of PyMC. PyMC 2.2 was released in April 2012. It contained numerous bugfixes and
-optimizations, as well as a few new features, including improved output
-plotting, csv table output, improved imputation syntax, and posterior
-predictive check plots. PyMC 2.3 was released on October 31, 2013. It included 
-Python 3 compatibility, improved summary plots, and some important bug fixes.
-
-In 2011, John Salvatier began thinking about implementing gradient-based MCMC samplers, and developed the `mcex` package to experiment with his ideas. The following year, John was invited by the team to re-engineer PyMC to accomodate Hamiltonian Monte Carlo sampling. This led to the adoption of Theano as the computational back end, and marked the beginning of PyMC3's development. The first alpha version of PyMC3 was released in June 2015. Over the following 2 years, the core development team grew to 12 members, and the first release, PyMC3 3.0, was launched in January 2017. 
