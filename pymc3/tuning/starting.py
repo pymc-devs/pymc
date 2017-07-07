@@ -48,6 +48,8 @@ def find_MAP(start=None, vars=None, fmin=None,
     model = modelcontext(model)
     if start is None:
         start = model.test_point
+    else:
+        pm.sampling._update_start_vals(start, model.test_point, model)
 
     if not set(start.keys()).issubset(model.named_vars.keys()):
         extra_keys = ', '.join(set(start.keys()) - set(model.named_vars.keys()))
