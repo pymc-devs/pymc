@@ -94,10 +94,12 @@ For a detailed overview of building models in PyMC3, please read the appropriate
 
 First, import the PyMC3 functions and classes you will need for building your model. You can import the entire module via ``import pymc3 as pm``, or just bring in what you need::
 
-    from pymc3 import Model, Normal, invlogit, Binomial, sample, traceplot
+    from pymc3 import Model, Normal, invlogit, Binomial, sample, forestplot
     import numpy as np
 
-Models are defined using a context manager (``with`` statement). The model is specified declaratively inside the context manager, instantiating model variables and transforming them as necessary. Here is an example of a model for a bioassay experiment::
+Models are defined using a context manager (``with`` statement). The model is specified declaratively inside the context manager, instantiating model variables and transforming them as necessary. Here is an example of a model for a bioassay experiment.
+
+::
 
     # Data
     n = np.ones(4)*5
@@ -116,7 +118,9 @@ Models are defined using a context manager (``with`` statement). The model is sp
         # Model likelihood
         deaths = Binomial('deaths', n=n, p=theta, observed=y)
 
-Save this file, then from a python shell (or another file in the same directory), call::
+Save this file, then from a python shell (or another file in the same directory), call.
+
+::
 
     with bioassay_model:
     
@@ -125,4 +129,17 @@ Save this file, then from a python shell (or another file in the same directory)
         # Plot two parameters
         traceplot(trace, varnames=['alpha', 'beta'])
 
-This example will generate 1000 posterior samples on each of two cores, preceded by 500 tuning samples (the default number). The sample is returned as arrays inside of a ``MultiTrace`` object, which is then passed to a plotting function.
+This example will generate 1000 posterior samples on each of two cores, preceded by 500 tuning samples (the default number). 
+
+::
+
+    Auto-assigning NUTS sampler...
+    Initializing NUTS using ADVI...
+    Average Loss = 12.562:   6%|▌         | 11412/200000 [00:00<00:14, 12815.82it/s]
+    Convergence archived at 11900
+    Interrupted at 11,900 [5%]: Average Loss = 15.168
+    100%|██████████████████████████████████████| 1500/1500 [00:01<00:00, 787.56it/s]
+
+The sample is returned as arrays inside of a ``MultiTrace`` object, which is then passed to a plotting function. The resulting graphic shows a forest plot of the random variables in the model, along with a convergence diagnostic (R-hat) that indicates our model has converged.
+
+.. image:: ./images/forestplot.png
