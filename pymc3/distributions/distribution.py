@@ -158,14 +158,6 @@ class DensityDist(Distribution):
         self.logp = logp
 
 
-class MultivariateContinuous(Continuous):
-    pass
-
-
-class MultivariateDiscrete(Discrete):
-    pass
-
-
 def draw_values(params, point=None):
     """
     Draw (fix) parameter values. Handles a number of cases:
