@@ -8,26 +8,26 @@ Introduction
 Purpose
 =======
 
-PyMC3 is a probabilistic programming module for Python that allows users to fit Bayesian models using a variety of numerical methods, most notably, Markov chain Monte Carlo (MCMC) and variational inference (VI). Its flexibility and extensibility make it applicable to a large suite of problems. Along with core model specification and fitting functionality, PyMC3 includes methods for summarizing output, plotting, goodness-of-fit and model diagnostics.
+PyMC3 is a probabilistic programming module for Python that allows users to fit Bayesian models using a variety of numerical methods, most notably Markov chain Monte Carlo (MCMC) and variational inference (VI). Its flexibility and extensibility make it applicable to a large suite of problems. Along with core model specification and fitting functionality, PyMC3 includes functionality for summarizing output and for model diagnostics.
 
 
 
 Features
 ========
 
-PyMC3 strives to make Bayesian modeling as simple and painless as possible, thereby allowing users to focus on their scientific problem, rather than on the methods used to solve it. Here is a partial list of its features:
+PyMC3 strives to make Bayesian modeling as simple and painless as possible,  allowing users to focus on their scientific problem, rather than on the methods used to solve it. Here is a partial list of its features:
 
-* Fits Bayesian statistical models using modern techniques, including MCMC and VI.
+* Modern methods for fitting Bayesian models, including MCMC and VI.
 
 * Includes a large suite of well-documented statistical distributions.
 
 * Uses Theano as the computational backend, allowing for fast expression evaluation, automatic gradient calculation, and GPU computing.
 
-* Includes a module for Gaussian process modeling.
+* Built-in support for Gaussian process modeling.
 
-* Creates summaries including tables and plots.
+* Model summarization and plotting.
 
-* Several convergence diagnostics are available.
+* Model checking and convergence detection.
 
 * Extensible: easily incorporates custom step methods and unusual probability
   distributions.
@@ -51,7 +51,7 @@ Most notably, the PyMC3 provides:
 
 * An interface for easy formula-based specification of generalized linear models (GLM).
 
-* New elliptical slice sampler method.
+* Elliptical slice sampling.
 
 * Specialized distributions for representing time series.
 
@@ -71,6 +71,10 @@ First, import the PyMC3 functions and classes you will need for building your mo
 
 Models are defined using a context manager (`with` statement). The model is specified declaratively inside the context manager, instantiating model variables and transforming them as necessary. Here is an example of a model for a bioassay experiment::
 
+    # Data
+    n = 5
+    y = np.array([0, 1, 3, 5])
+
     with Model() as bioassay_model:
 
         # Prior distributions for latent variables
@@ -81,11 +85,12 @@ Models are defined using a context manager (`with` statement). The model is spec
         theta = invlogit(alpha + beta*dose)
 
         # Model likelihood
-        deaths = Binomial('deaths', n=n, p=theta, observed=np.array([0, 1, 3, 5]))
+        deaths = Binomial('deaths', n=n, p=theta, observed=y)
 
 Save this file, then from a python shell (or another file in the same directory), call::
 
 	with bioassay_model:
+    
         # Draw wamples
         trace = sample(1000, njobs=2)
         # Plot two parameters
