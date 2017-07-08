@@ -13,7 +13,7 @@ __all__ = [
     'MeanField',
     'FullRank',
     'Empirical',
-    'NormalizingFlow'
+    'NormalizingFlow',
     'sample_approx'
 ]
 
