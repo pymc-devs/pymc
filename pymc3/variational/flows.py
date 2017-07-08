@@ -7,7 +7,6 @@ from .opvi import node_property, collect_shared_to_list
 
 __all__ = [
     'Formula',
-    'link_flows',
     'PlanarFlow',
     'LocFlow',
     'ScaleFlow'
