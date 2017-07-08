@@ -5,6 +5,7 @@ from theano import tensor as tt
 import pymc3 as pm
 from pymc3.distributions.dist_math import rho2sd, log_normal
 from pymc3.variational.opvi import Approximation, node_property
+from pymc3.util import update_start_vals
 
 
 __all__ = [
@@ -82,7 +83,7 @@ class MeanField(Approximation):
             start = self.model.test_point
         else:
             start_ = self.model.test_point.copy()
-            pm.sampling._update_start_vals(start_, start, self.model)
+            update_start_vals(start_, start, self.model)
             start = start_
         start = self.gbij.map(start)
         return {'mu': theano.shared(
@@ -165,7 +166,7 @@ class FullRank(Approximation):
             start = self.model.test_point
         else:
             start_ = self.model.test_point.copy()
-            pm.sampling._update_start_vals(start_, start, self.model)
+            update_start_vals(start_, start, self.model)
             start = start_
         start = pm.floatX(self.gbij.map(start))
         n = self.global_size
@@ -417,7 +418,7 @@ class Empirical(Approximation):
             start = hist.model.test_point
         else:
             start_ = hist.model.test_point.copy()
-            pm.sampling._update_start_vals(start_, start, hist.model)
+            update_start_vals(start_, start, hist.model)
             start = start_
         start = pm.floatX(hist.gbij.map(start))
         # Initialize particles
