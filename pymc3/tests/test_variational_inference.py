@@ -3,6 +3,7 @@ import pickle
 import operator
 import numpy as np
 from theano import theano, tensor as tt
+from theano.configparser import change_flags
 import pymc3 as pm
 from pymc3 import Model, Normal
 from pymc3.variational import (
@@ -160,16 +161,12 @@ def simple_model(simple_model_data):
 
 @pytest.fixture('module', params=[
         dict(cls=NF, init=dict(flow='scale-loc')),
-        dict(cls=NF, init=dict(flow='planar*5')),
-        dict(cls=NF, init=dict(flow='radial*5')),
         dict(cls=ADVI, init=dict()),
         dict(cls=FullRankADVI, init=dict()),
         dict(cls=SVGD, init=dict(n_particles=500, jitter=1)),
         dict(cls=ASVGD, init=dict(temperature=1.)),
     ], ids=[
         'NF-scale-loc',
-        'NF-planar',
-        'NF-radial',
         'ADVI',
         'FullRankADVI',
         'SVGD',
@@ -515,7 +512,11 @@ def test_aevb_empirical():
 
 @pytest.fixture(
     params=[
-        dict(cls=flows.PlanarFlow, init=dict())
+        dict(cls=flows.PlanarFlow, init=dict(jitter=.1)),
+        dict(cls=flows.RadialFlow, init=dict(jitter=.1)),
+        dict(cls=flows.ScaleFlow, init=dict(jitter=.1)),
+        dict(cls=flows.LocFlow, init=dict(jitter=.1)),
+        dict(cls=flows.HouseholderFlow, init=dict(jitter=.1)),
     ],
     ids=lambda d: d['cls'].__name__
 )
@@ -546,12 +547,23 @@ def test_flow_forward_apply(flow_spec):
     assert tuple(shape_dist) == (10, 20)
 
 
+@change_flags(compute_test_value='off')
 def test_flow_det(flow_spec):
+    z0 = tt.arange(0, 20).astype('float32')
+    flow = flow_spec(dim=20, z0=z0.dimshuffle('x', 0))
+    z1 = flow.forward.flatten()
+    J = tt.jacobian(z1, z0)
+    logJdet = tt.log(tt.abs_(tt.nlinalg.det(J)))
+    det = flow.logdet[0]
+    np.testing.assert_allclose(logJdet.eval(), det.eval(), atol=0.0001)
+
+
+def test_flow_det_shape(flow_spec):
     z0 = pm.tt_rng().normal(size=(10, 20))
     flow = flow_spec(dim=20, z0=z0)
     det = flow.logdet
     det_dist = det.shape.eval()
-    assert tuple(det_dist) == (10, )
+    assert tuple(det_dist) == (10,)
 
 
 def test_flows_collect_chain():
