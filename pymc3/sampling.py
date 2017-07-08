@@ -12,7 +12,7 @@ from .step_methods import (NUTS, HamiltonianMC, Metropolis, BinaryMetropolis,
                            BinaryGibbsMetropolis, CategoricalGibbsMetropolis,
                            Slice, CompoundStep)
 from .plots.traceplot import traceplot
-from .util import is_transformed_name, get_untransformed_name, update_start_vals
+from .util import update_start_vals
 from tqdm import tqdm
 
 import sys

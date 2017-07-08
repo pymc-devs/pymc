@@ -1,6 +1,5 @@
 from itertools import combinations
 import numpy as np
-from numpy.testing import assert_almost_equal
 
 try:
     import unittest.mock as mock  # py3

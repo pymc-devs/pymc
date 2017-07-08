@@ -1,6 +1,7 @@
 import pytest
 
 import pymc3 as pm
+from .helpers import SeededTest
 from pymc3.distributions.transforms import Transform
 
 
@@ -27,7 +28,6 @@ class TestTransformName(object):
             assert pm.util.get_untransformed_name(transformed) == name
             with pytest.raises(ValueError):
                 pm.util.get_untransformed_name(name)
-
 
 
 
