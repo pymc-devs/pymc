@@ -6,6 +6,7 @@ import scipy.optimize as opt
 import theano.tensor as tt
 import pytest
 import theano
+from pymc3.theanof import floatX
 
 from .helpers import SeededTest
 
@@ -43,20 +44,14 @@ class TestARM5_4(SeededTest):
 
         with pm.Model() as model:
             effects = pm.Normal('effects', mu=0, tau=100. ** -2, shape=len(P.columns))
-            p = tt.nnet.sigmoid(tt.dot(np.array(P), effects))
-            pm.Bernoulli('s', p, observed=np.array(data.switch))
+            p = tt.nnet.sigmoid(tt.dot(floatX(np.array(P)), effects))
+            pm.Bernoulli('s', p, observed=floatX(np.array(data.switch)))
         return model
 
     def test_run(self):
         model = self.build_model()
         with model:
-            # move the chain to the MAP which should be a good starting point
-            start = pm.find_MAP()
-            H = model.fastd2logp()  # find a good orientation using the hessian at the MAP
-            h = H(start)
-
-            step = pm.HamiltonianMC(model.vars, h)
-            pm.sample(50, step=step, start=start)
+            pm.sample(50, tune=50, n_init=1000)
 
 
 class TestARM12_6(SeededTest):

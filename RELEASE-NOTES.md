@@ -17,7 +17,7 @@
   - [Add pm.Minibatch() to easily specify mini-batches.](http://pymc-devs.github.io/pymc3/notebooks/bayesian_neural_network_opvi-advi.html#Minibatch-ADVI)
 
   - Added various optimizers including ADAM.
-  
+
   - Stopping criterion implemented via callbacks.
 
 * sample() defaults changed: tuning is enabled for the first 500 samples which are then discarded from the trace as burn-in.
@@ -41,22 +41,6 @@
 * MvNormal supports Cholesky Decomposition now for increased speed and numerical stability.
 
 * [Add Elliptical Slice Sampler.](http://pymc-devs.github.io/pymc3/notebooks/GP-slice-sampling.html)
-
-* Much improved variational inference support:
-
-  - [Added Operator Variational Inference (experimental).](http://pymc-devs.github.io/pymc3/notebooks/variational_api_quickstart.html)
-
-  - [Added Stein-Variational Gradient Descent as well as Amortized SVGD (experimental).](https://github.com/pymc-devs/pymc3/pull/2183)
-
-  - [Added `Minibatch` to easily specify mini-batches.](http://pymc-devs.github.io/pymc3/notebooks/bayesian_neural_network_opvi-advi.html#Minibatch-ADVI)
-  
-  - Added full-rank ADVI
-
-  - Added various optimizers including ADAM.
-  
-  - Deprecated old ADVI interface
-  
-  - implemented `fit` function as the primary interface to approximation algorithms
 
 * Added support for multidimensional minibatches
 

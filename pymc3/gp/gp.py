@@ -33,7 +33,6 @@ def GP(name, X, mean_func=None, cov_func=None,
        approx=None, n_inducing=None, inducing_points=None,
        observed=None, chol_const=True, *args, **kwargs):
     """Gausian process constructor
-
     Parameters
     ----------
     X : array

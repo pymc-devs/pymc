@@ -297,7 +297,7 @@ class Poisson(Discrete):
             logpow(mu, value) - factln(value) - mu,
             mu >= 0, value >= 0)
         # Return zero when mu and value are both zero
-        return tt.switch(1 * tt.eq(mu, 0) * tt.eq(value, 0),
+        return tt.switch(tt.eq(mu, 0) * tt.eq(value, 0),
                          0, log_prob)
 
     def _repr_latex_(self, name=None, dist=None):
@@ -357,7 +357,7 @@ class NegativeBinomial(Discrete):
                          value >= 0, mu > 0, alpha > 0)
 
         # Return Poisson when alpha gets very large.
-        return tt.switch(1 * (alpha > 1e10),
+        return tt.switch(tt.gt(alpha, 1e10),
                          Poisson.dist(self.mu).logp(value),
                          negbinom)
 
@@ -633,7 +633,7 @@ class ZeroInflatedPoisson(Discrete):
         psi = self.psi
         theta = self.theta
 
-        logp_val = tt.switch(value > 0,
+        logp_val = tt.switch(tt.gt(value, 0),
                      tt.log(psi) + self.pois.logp(value),
                      logaddexp(tt.log1p(-psi), tt.log(psi) - theta))
 
@@ -701,7 +701,7 @@ class ZeroInflatedBinomial(Discrete):
         p = self.p
         n = self.n
 
-        logp_val = tt.switch(value > 0,
+        logp_val = tt.switch(tt.gt(value, 0),
                  tt.log(psi) + self.bin.logp(value),
                  logaddexp(tt.log1p(-psi), tt.log(psi) + n * tt.log1p(-p)))
 
@@ -777,7 +777,7 @@ class ZeroInflatedNegativeBinomial(Discrete):
         mu = self.mu
         psi = self.psi
 
-        logp_val = tt.switch(value > 0,
+        logp_val = tt.switch(tt.gt(value, 0),
                      tt.log(psi) + self.nb.logp(value),
                      logaddexp(tt.log1p(-psi), tt.log(psi) + alpha * (tt.log(alpha) - tt.log(alpha + mu))))
 

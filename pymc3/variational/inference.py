@@ -46,6 +46,9 @@ class Inference(object):
     kwargs : kwargs
         additional kwargs for :class:`Approximation`
     """
+    OP = None
+    APPROX = None
+    TF = None
 
     def __init__(self, op, approx, tf, local_rv=None, model=None, op_kwargs=None, **kwargs):
         if op_kwargs is None:
@@ -174,7 +177,7 @@ class Inference(object):
                         'Average Loss = {:,.5g}'.format(avg_loss))
                 for callback in callbacks:
                     callback(self.approx, scores[:i + 1], i)
-        except (KeyboardInterrupt, StopIteration) as e:
+        except (KeyboardInterrupt, StopIteration) as e:  # pragma: no cover
             # do not print log on the same line
             progress.close()
             scores = scores[:i]
@@ -352,13 +355,16 @@ class ADVI(Inference):
     -   Kingma, D. P., & Welling, M. (2014).
         Auto-Encoding Variational Bayes. stat, 1050, 1.
     """
+    OP = KL
+    APPROX = MeanField
+    TF = None
 
     def __init__(self, local_rv=None, model=None,
                  cost_part_grad_scale=1,
                  scale_cost_to_minibatch=False,
                  random_seed=None, start=None):
         super(ADVI, self).__init__(
-            KL, MeanField, None,
+            self.OP, self.APPROX, self.TF,
             local_rv=local_rv, model=model,
             cost_part_grad_scale=cost_part_grad_scale,
             scale_cost_to_minibatch=scale_cost_to_minibatch,
@@ -381,9 +387,7 @@ class ADVI(Inference):
         if not isinstance(mean_field, MeanField):
             raise TypeError('Expected MeanField, got %r' % mean_field)
         inference = object.__new__(cls)
-        objective = KL(mean_field)(None)
-        inference.hist = np.asarray(())
-        inference.objective = objective
+        Inference.__init__(inference, KL, mean_field, None)
         return inference
 
 
@@ -426,13 +430,16 @@ class FullRankADVI(Inference):
     -   Kingma, D. P., & Welling, M. (2014).
         Auto-Encoding Variational Bayes. stat, 1050, 1.
     """
+    OP = KL
+    APPROX = FullRank
+    TF = None
 
     def __init__(self, local_rv=None, model=None,
                  cost_part_grad_scale=1,
                  scale_cost_to_minibatch=False,
                  gpu_compat=False, random_seed=None, start=None):
         super(FullRankADVI, self).__init__(
-            KL, FullRank, None,
+            self.OP, self.APPROX, self.TF,
             local_rv=local_rv, model=model,
             cost_part_grad_scale=cost_part_grad_scale,
             scale_cost_to_minibatch=scale_cost_to_minibatch,
@@ -453,11 +460,9 @@ class FullRankADVI(Inference):
         :class:`FullRankADVI`
         """
         if not isinstance(full_rank, FullRank):
-            raise TypeError('Expected MeanField, got %r' % full_rank)
+            raise TypeError('Expected FullRank, got %r' % full_rank)
         inference = object.__new__(cls)
-        objective = KL(full_rank)(None)
-        inference.hist = np.asarray(())
-        inference.objective = objective
+        Inference.__init__(inference, KL, full_rank, None)
         return inference
 
     @classmethod
@@ -481,9 +486,7 @@ class FullRankADVI(Inference):
         """
         full_rank = FullRank.from_mean_field(mean_field, gpu_compat)
         inference = object.__new__(cls)
-        objective = KL(full_rank)(None)
-        inference.objective = objective
-        inference.hist = np.asarray(())
+        Inference.__init__(inference, KL, full_rank, None)
         return inference
 
     @classmethod
@@ -563,19 +566,30 @@ class SVGD(Inference):
         Stein Variational Policy Gradient
         arXiv:1704.02399
     """
+    OP = KSD
+    APPROX = Empirical
+    TF = test_functions.Kernel
 
     def __init__(self, n_particles=100, jitter=.01, model=None, kernel=test_functions.rbf,
-                 temperature=1, scale_cost_to_minibatch=False, start=None, histogram=None,
+                 temperature=1, scale_cost_to_minibatch=False, start=None,
                  random_seed=None, local_rv=None):
-        if histogram is None:
-            histogram = Empirical.from_noise(
-                n_particles, jitter=jitter,
-                scale_cost_to_minibatch=scale_cost_to_minibatch,
-                start=start, model=model, local_rv=local_rv, random_seed=random_seed)
+        empirical = Empirical.from_noise(
+            n_particles, jitter=jitter,
+            scale_cost_to_minibatch=scale_cost_to_minibatch,
+            start=start, model=model, local_rv=local_rv, random_seed=random_seed)
         super(SVGD, self).__init__(
-            KSD, histogram,
+            KSD, empirical,
             kernel, op_kwargs=dict(temperature=temperature),
             model=model, random_seed=random_seed)
+
+    @classmethod
+    def from_empirical(cls, empirical, kernel=test_functions.rbf,
+                       temperature=1):
+        instance = object.__new__(cls)
+        Inference.__init__(
+            instance, KSD, empirical,
+            kernel, op_kwargs=dict(temperature=temperature))
+        return instance
 
 
 class ASVGD(Inference):
@@ -626,6 +640,9 @@ class ASVGD(Inference):
         Stein Variational Policy Gradient
         arXiv:1704.02399
     """
+    OP = AKSD
+    APPROX = None
+    TF = test_functions.Kernel
 
     def __init__(self, approx=FullRank, local_rv=None,
                  kernel=test_functions.rbf, temperature=1, model=None, **kwargs):
@@ -640,7 +657,7 @@ class ASVGD(Inference):
         )
 
     def fit(self, n=10000, score=None, callbacks=None, progressbar=True,
-            obj_n_mc=30, **kwargs):
+            obj_n_mc=300, **kwargs):
         """
         Performs Amortized Stein Variational Gradient Descent
 
@@ -667,7 +684,7 @@ class ASVGD(Inference):
             n=n, score=score, callbacks=callbacks,
             progressbar=progressbar, obj_n_mc=obj_n_mc, **kwargs)
 
-    def run_profiling(self, n=1000, score=None, obj_n_mc=30, **kwargs):
+    def run_profiling(self, n=1000, score=None, obj_n_mc=300, **kwargs):
         return super(ASVGD, self).run_profiling(
             n=n, score=score, obj_n_mc=obj_n_mc, **kwargs)
 
