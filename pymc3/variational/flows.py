@@ -115,6 +115,7 @@ class AbstractFlow(object):
         return params
 
     @property
+    @change_flags(compute_test_value='off')
     def sum_logdets(self):
         dets = [self.logdet]
         current = self
