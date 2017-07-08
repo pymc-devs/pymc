@@ -547,8 +547,9 @@ def test_flow_init_loop(flow_spec):
 def test_flow_forward_apply(flow_spec):
     z0 = pm.tt_rng().normal(size=(10, 20))
     flow = flow_spec(dim=20, z0=z0)
-    dist = flow.forward
-    shape_dist = dist.shape.eval()
+    with change_flags(compute_test_value='off'):
+        dist = flow.forward
+        shape_dist = dist.shape.eval()
     assert tuple(shape_dist) == (10, 20)
 
 
@@ -564,10 +565,11 @@ def test_flow_det(flow_spec):
 
 
 def test_flow_det_shape(flow_spec):
-    z0 = pm.tt_rng().normal(size=(10, 20))
-    flow = flow_spec(dim=20, z0=z0)
-    det = flow.logdet
-    det_dist = det.shape.eval()
+    with change_flags(compute_test_value='off'):
+        z0 = pm.tt_rng().normal(size=(10, 20))
+        flow = flow_spec(dim=20, z0=z0)
+        det = flow.logdet
+        det_dist = det.shape.eval()
     assert tuple(det_dist) == (10,)
 
 
@@ -604,7 +606,7 @@ def test_hh_flow():
     with pm.Model():
         pm.MvNormal('mvN', mu=pm.floatX([0, 1]), cov=cov, shape=2)
         nf = NF('scale-hh*2-loc')
-        nf.fit(15000, obj_optimizer=pm.adamax(learning_rate=0.01))
+        nf.fit(25000, obj_optimizer=pm.adam(learning_rate=0.001))
         trace = nf.approx.sample(10000)
         cov2 = pm.trace_cov(trace)
     np.testing.assert_allclose(cov, cov2, rtol=0.07)
