@@ -1,6 +1,7 @@
 import pytest
 
 import pymc3 as pm
+from numpy.testing import assert_almost_equal
 from .helpers import SeededTest
 from pymc3.distributions.transforms import Transform
 
