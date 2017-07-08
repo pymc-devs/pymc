@@ -2,15 +2,14 @@ import numpy as np
 from scipy import stats
 from tqdm import tqdm
 
-from theano.tensor.nlinalg import matrix_inverse
-import theano.tensor.nlinalg
-import theano.tensor.slinalg
 import theano.tensor as tt
+import theano.tensor.slinalg
 
+import pymc3 as pm
 from .mean import Zero, Mean
 from .cov import Covariance
 from ..distributions import Normal, MvNormal, Continuous, draw_values, generate_samples
-from ..model import modelcontext, Deterministic
+from ..model import modelcontext, Deterministic, ObservedRV
 from ..distributions.dist_math import Cholesky
 
 __all__ = ['GP', 'sample_gp']
@@ -19,6 +18,7 @@ CHOL_CONST = True
 cholesky = Cholesky(nofail=True, lower=True)
 solve_lower = tt.slinalg.Solve(A_structure="lower_triangular")
 solve_upper = tt.slinalg.Solve(A_structure="upper_triangular")
+
 
 def stabilize(K):
     if CHOL_CONST:
@@ -29,7 +29,7 @@ def stabilize(K):
 
 
 def GP(name, X, mean_func=None, cov_func=None,
-       cov_func_noise=None, sigma2=None,
+       cov_func_noise=None, sigma=None,
        approx=None, n_inducing=None, inducing_points=None,
        observed=None, chol_const=True, *args, **kwargs):
     """Gausian process constructor
@@ -44,8 +44,8 @@ def GP(name, X, mean_func=None, cov_func=None,
         Covariance function of Gaussian process
     cov_func_noise : Covariance
         Covariance function of noise process (ignored for approximations)
-    sigma2 : scalar or array
-        Observation variance
+    sigma : scalar or array
+        Noise standard deviation
     approx : None or string,
         Allowed values are 'FITC' and 'VFE'
     n_inducing : integer
@@ -57,6 +57,7 @@ def GP(name, X, mean_func=None, cov_func=None,
     chol_const: boolean
         Whether or not to stabilize Cholesky decompositions
     """
+    global CHOL_CONST
     CHOL_CONST = chol_const
 
     if mean_func is None:
@@ -69,29 +70,23 @@ def GP(name, X, mean_func=None, cov_func=None,
     if not isinstance(cov_func, Covariance):
         raise ValueError('cov_func must be a subclass of Covariance')
 
-    ##### NONCONJUGATE
+    # NONCONJUGATE
     if observed is None:
         gp = GPFullNonConjugate(name, X, mean_func, cov_func)
         return gp.RV
 
-    ##### CONJUGATE
-    if approx is None:
-        if sigma2 is None and cov_func_noise is None:
-            raise ValueError('Provide a value or a prior for the noise variance')
-        if sigma2 is not None and cov_func_noise is None:
-            cov_func_noise = lambda X: sigma2 * tt.eye(X.shape[0])
+    # CONJUGATE
+    if all(value is None for value in [approx, n_inducing, inducing_points]):
+        if sigma is None and cov_func_noise is None:
+            raise ValueError('Must provide a value or a prior for the noise variance')
+        if sigma is not None and cov_func_noise is None:
+            cov_func_noise = lambda X: tt.square(sigma) * tt.eye(X.shape[0])
         return GPFullConjugate(name, X, mean_func, cov_func, cov_func_noise, observed=observed)
     else:
         approx = approx.upper()
 
-    ##### CONJUGATE, APPROXIMATION
-    if approx not in ["VFE", "FITC"]:
-        raise ValueError("'FITC' or 'VFE' are the implemented GP approximations")
-
-    if inducing_points is None and n_inducing is None:
-        raise ValueError("Must specify one of 'inducing_points' or 'n_inducing'")
-
-    if inducing_points is None:
+    # CONJUGATE, APPROXIMATION
+    if inducing_points is None and n_inducing is not None:
         # initialize inducing points with K-means
         from scipy.cluster.vq import kmeans
         # first whiten X
@@ -101,7 +96,18 @@ def GP(name, X, mean_func=None, cov_func=None,
         Xw = X / scaling
         Xu, distortion = kmeans(Xw, n_inducing)
         inducing_points = Xu * scaling
-    return GPSparseConjugate(name, X, mean_func, cov_func, sigma2,
+
+    if approx is None:
+        pm._log.info("Using VFE approximation")
+        approx = "VFE"
+
+    if approx not in ["VFE", "FITC"]:
+        raise ValueError("'FITC' or 'VFE' are the implemented GP approximations")
+
+    if inducing_points is None and n_inducing is None:
+        raise ValueError("Must specify one of 'inducing_points' or 'n_inducing'")
+
+    return GPSparseConjugate(name, X, mean_func, cov_func, sigma,
                              approx, inducing_points, observed=observed)
 
 
@@ -115,6 +121,7 @@ class GPBase(object):
             # draw from conditional
             mean, cov = self.conditional(X_values, y, obs_noise)
         mu, cov = draw_values([mean, cov], point=point)
+
         def _random(mean, cov, size=None):
             return stats.multivariate_normal.rvs(
                 mean, cov, None if size == mean.shape else size)
@@ -139,7 +146,7 @@ class GPBase(object):
         return r"${} \sim \mathcal{{GP}}(\mathit{{\mu}}(x), \mathit{{K}}(x, x'))$".format(name)
 
 
-class GPFullNonConjugate(object):
+class GPFullNonConjugate(GPBase):
     """Gausian process
 
     Parameters
@@ -166,7 +173,6 @@ class GPFullNonConjugate(object):
 
     def conditional(self, Z, y=None, obs_noise=None):
         Z = tt.as_tensor_variable(Z)
-        nz = Z.shape[0]
         Kxx = self.K(self.X)
         Kxz = self.K(self.X, Z)
         Kzz = self.K(Z)
@@ -176,7 +182,7 @@ class GPFullNonConjugate(object):
 
         cov = Kzz - tt.dot(tt.transpose(A), A)
         mean = self.m(Z) + tt.squeeze(tt.transpose(tt.dot(tt.transpose(A), self.v)))
-        #mean = self.m(Z) + tt.dot(tt.transpose(A), self.v)
+        # mean = self.m(Z) + tt.dot(tt.transpose(A), self.v)
         return mean, stabilize(cov)
 
     @property
@@ -185,6 +191,10 @@ class GPFullNonConjugate(object):
         # i get an interesting error when i use the name _rotated__ with two underscores
         self.v = Normal(self.name + "_rotated_", mu=0.0, sd=1.0, shape=self.nf)
         self.f = Deterministic(self.name, tt.dot(self.L, self.v))
+        # monkey patch random method,
+        # would be nice to have behavior like
+        # f.distribution.random, f.distribution.logp, etc?
+        self.f.random = self.random
         return self.f
 
 
@@ -222,7 +232,6 @@ class GPFullConjugate(GPBase, Continuous):
         return mean, cov
 
     def conditional(self, Z, y, obs_noise=False):
-        nz = Z.shape[0]
         Kxx = self.K(self.X)
         Knx = self.Kn(self.X)
         Kxz = self.K(self.X, Z)
@@ -256,21 +265,21 @@ class GPSparseConjugate(GPBase, Continuous):
         Mean function of Gaussian process
     cov_func : Covariance
         Covariance function of Gaussian process
-    sigma2 : scalar or array
-        Observation variance
+    sigma : scalar or array
+        Noise standard deviation
     approx : string
         Allowed values are 'FITC' and 'VFE'
     inducing_points : array
         Grid of points to evaluate Gaussian process over.
     """
-    def __init__(self, X, mean_func, cov_func, sigma2, approx, inducing_points, *args, **kwargs):
+    def __init__(self, X, mean_func, cov_func, sigma, approx, inducing_points, *args, **kwargs):
         self.X = X
         self.nf = self.X.shape[0]
         self.K = cov_func
         self.m = mean_func
         self.mean = self.mode = self.m(X)
 
-        self.sigma2 = sigma2
+        self.sigma2 = tt.square(sigma)
         self.approx = approx
         kwargs.setdefault("shape", X.squeeze().shape)
 
@@ -335,8 +344,8 @@ class GPSparseConjugate(GPBase, Continuous):
             trace = 0.0
         elif self.approx == "VFE":
             Lamd = tt.ones_like(Qffd) * self.sigma2
-            trace = (1.0 / (2.0 * self.sigma2))\
-                  * (tt.sum(self.K(self.X, diag=True)) - tt.sum(tt.sum(A * A, 0)))
+            trace = ((1.0 / (2.0 * self.sigma2)) *
+                     (tt.sum(self.K(self.X, diag=True)) - tt.sum(tt.sum(A * A, 0))))
         else:
             raise ValueError("unknown approximation string", self.approx)
         A_l = A / Lamd
@@ -350,7 +359,8 @@ class GPSparseConjugate(GPBase, Continuous):
         return -1.0 * (constant + logdet + quadratic + trace)
 
 
-def sample_gp(trace, gp, X_values, samples=None, obs_noise=True, model=None, random_seed=None, progressbar=True):
+def sample_gp(trace, gp, X_values, samples=None, obs_noise=True,
+              model=None, random_seed=None, progressbar=True):
     """Generate samples from a posterior Gaussian process.
 
     Parameters
@@ -380,17 +390,28 @@ def sample_gp(trace, gp, X_values, samples=None, obs_noise=True, model=None, ran
     """
     model = modelcontext(model)
 
-    if samples is None:
-        samples = len(trace)
-
     if random_seed:
         np.random.seed(random_seed)
 
-    if progressbar:
-        indices = tqdm(np.random.randint(0, len(trace), samples), total=samples)
-    else:
-        indices = np.random.randint(0, len(trace), samples)
+    if samples is None:
+        samples = len(trace)
 
-    y = [v for v in model.observed_RVs if v.name==gp.name][0]
-    samples = [gp.distribution.random(point=trace[idx], X_values=X_values, y=y, obs_noise=obs_noise) for idx in indices]
+    indices = np.random.choice(np.arange(samples), len(trace), replace=False)
+    if progressbar:
+        indices = tqdm(indices, total=samples)
+
+    try:
+        # best to return a trace?
+        if isinstance(gp, ObservedRV):
+            y = [v for v in model.observed_RVs if v.name == gp.name][0]
+            samples = [gp.distribution.random(point=trace[idx],
+                       X_values=X_values, y=y, obs_noise=obs_noise) for idx in indices]
+        else:
+            samples = [gp.random(point=trace[idx], X_values=X_values,
+                       y=None, obs_noise=obs_noise) for idx in indices]
+    except KeyboardInterrupt:
+        pass  # no samples are returned, errors
+    finally:
+        if progressbar:
+            indices.close()
     return np.array(samples)
