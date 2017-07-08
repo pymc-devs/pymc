@@ -547,14 +547,14 @@ def test_flow_forward_apply(flow_spec):
     assert tuple(shape_dist) == (10, 20)
 
 
-@change_flags(compute_test_value='off')
 def test_flow_det(flow_spec):
     z0 = tt.arange(0, 20).astype('float32')
     flow = flow_spec(dim=20, z0=z0.dimshuffle('x', 0))
-    z1 = flow.forward.flatten()
-    J = tt.jacobian(z1, z0)
-    logJdet = tt.log(tt.abs_(tt.nlinalg.det(J)))
-    det = flow.logdet[0]
+    with change_flags(compute_test_value='off'):
+        z1 = flow.forward.flatten()
+        J = tt.jacobian(z1, z0)
+        logJdet = tt.log(tt.abs_(tt.nlinalg.det(J)))
+        det = flow.logdet[0]
     np.testing.assert_allclose(logJdet.eval(), det.eval(), atol=0.0001)
 
 
