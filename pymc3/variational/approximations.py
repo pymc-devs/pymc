@@ -431,6 +431,73 @@ class Empirical(Approximation):
 
 
 class NormalizingFlow(Approximation):
+    R"""
+    Normalizing flow is a series of invertible transformations on initial distribution.
+
+    .. math::
+
+        z_K = f_K \circ \dots \circ f_2 \circ f_1(z_0)
+
+    In that case we can compute tractable density for the flow.
+
+    .. math::
+
+        \ln q_K(z_K) = \ln q_0(z_0) - \sum_{k=1}^{K}\ln \left|\frac{\partial f_k}{\partial z_{k-1}}\right|
+
+
+    Every $f_k$ here is a parametric function with defined determinant.
+    We can choose every step here. For example the here is a simple flow
+    is an affine transform:
+
+    .. math::
+
+        z = loc(scale(z_0)) = \mu + \sigma * z_0
+
+    Here we get mean field approximation if :math:`z_0 \sim \mathcal{N}(0, 1)`
+
+    ## Flow Formulas
+    In PyMC3 there is a flexible way to define flows with formulas. We have 5 of them by the moment:
+
+    -   Loc (:code:`loc`): :math:`z' = z + \mu`
+    -   Scale (:code:`scale`): :math:`z' = \sigma * z`
+    -   Planar (:code:`planar`): :math:`z' = z + u * \tanh(w^T z + b)`
+    -   Radial (:code:`radial`): :math:`z' = z + \beta (\alpha + (z-z_r))^{-1}(z-z_r)`
+    -   Householder (:code:`hh`): :math:`z' = H z`
+
+    Formula can be written as a string, e.g. `'scale-loc'`, `'scale-hh*4-loc'`, `'panar*10'`.
+    Every step is separated with `'-'`, repeated flow is marked with `'*'` produsing `'flow*repeats'`.
+
+    Parameters
+    ----------
+    flow : str|AbstractFlow
+        formula or initialized Flow, default is `'scale-loc'` that
+        is identical to MeanField
+    local_rv : dict[var->tuple]
+        Experimental for Empirical Approximation
+        mapping {model_variable -> local_variable (:math:`\mu`, :math:`\rho`)}
+        Local Vars are used for Autoencoding Variational Bayes
+        See (AEVB; Kingma and Welling, 2014) for details
+    scale_cost_to_minibatch : `bool`
+        Scale cost to minibatch instead of full dataset, default False
+    model : :class:`pymc3.Model`
+        PyMC3 model for inference
+    random_seed : None or int
+        leave None to use package global RandomStream or other
+        valid value to create instance specific one
+    jitter : float
+        noise for flows' parameters initialization
+
+    References
+    ----------
+    -   Danilo Jimenez Rezende, Shakir Mohamed, 2015
+        Variational Inference with Normalizing Flows
+        arXiv:1505.05770
+
+    -   Jakub M. Tomczak, Max Welling, 2016
+        Improving Variational Auto-Encoders using Householder Flow
+        arXiv:1611.09630
+    """
+
     def __init__(self, flow='scale-loc',
                  local_rv=None, model=None,
                  scale_cost_to_minibatch=False,
