@@ -85,7 +85,8 @@ def test_elbo():
 
     # Create variational gradient tensor
     mean_field = MeanField(model=model)
-    elbo = -KL(mean_field)()(10000)
+    with change_flags(compute_test_value='off'):
+        elbo = -KL(mean_field)()(10000)
 
     mean_field.shared_params['mu'].set_value(post_mu)
     mean_field.shared_params['rho'].set_value(np.log(np.exp(post_sd) - 1))
@@ -382,6 +383,8 @@ def test_replacements(binomial_model_inference):
     p = approx.model.p
     p_t = p ** 3
     p_s = approx.apply_replacements(p_t)
+    if theano.config.compute_test_value != 'off':
+        assert p_s.tag.test_value.shape == p_t.tag.test_value.shape
     sampled = [p_s.eval() for _ in range(100)]
     assert any(map(
         operator.ne,
@@ -415,6 +418,8 @@ def test_sample_replacements(binomial_model_inference):
     p = approx.model.p
     p_t = p ** 3
     p_s = approx.sample_node(p_t, size=100)
+    if theano.config.compute_test_value != 'off':
+        assert p_s.tag.test_value.shape == (100, ) + p_t.tag.test_value.shape
     sampled = p_s.eval()
     assert any(map(
         operator.ne,
