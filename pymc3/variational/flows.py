@@ -57,7 +57,7 @@ class Formula(object):
         if len(self.flows) == 0:
             raise ValueError('No flows in formula')
 
-    def __call__(self, z0=None, dim=None, jitter=.1):
+    def __call__(self, z0=None, dim=None, jitter=.001):
         if len(self.flows) == 0:
             raise ValueError('No flows in formula')
         flow = z0
@@ -75,7 +75,7 @@ class Formula(object):
 class AbstractFlow(object):
     shared_params = None
 
-    def __init__(self, z0=None, dim=None, jitter=.1):
+    def __init__(self, z0=None, dim=None, jitter=.001):
         self.__jitter = jitter
         if isinstance(z0, AbstractFlow):
             parent = z0
@@ -176,7 +176,7 @@ class FlowFn(object):
 
 class LinearFlow(AbstractFlow):
     @change_flags(compute_test_value='off')
-    def __init__(self, h, z0=None, dim=None, u=None, w=None, b=None, jitter=.1):
+    def __init__(self, h, z0=None, dim=None, u=None, w=None, b=None, jitter=.001):
         self.h = h
         super(LinearFlow, self).__init__(dim=dim, z0=z0, jitter=jitter)
         if u is None:
@@ -184,7 +184,7 @@ class LinearFlow(AbstractFlow):
         else:
             _u = u
         if w is None:
-            _w = self.add_param(dim, '_w', -3)
+            _w = self.add_param(dim, '_w')
         else:
             _w = w
         if b is None:
@@ -341,7 +341,7 @@ class RadialFlow(ReferencePointFlow):
 
 
 class LocFlow(AbstractFlow):
-    def __init__(self, z0=None, dim=None, loc=None, jitter=.1):
+    def __init__(self, z0=None, dim=None, loc=None, jitter=0):
         super(LocFlow, self).__init__(dim=dim, z0=z0, jitter=jitter)
         if loc is None:
             loc = self.add_param(dim, 'loc')
