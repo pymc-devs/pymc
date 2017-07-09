@@ -575,6 +575,7 @@ def sample_smc(n_steps, n_chains=100, step=None, start=None, homepath=None, stag
         # Metropolis sampling final stage
         pm._log.info('Sample final stage')
         step.stage = -1
+        chains = stage_handler.clean_directory(step.stage, chains, rm_flag)
         temp = np.exp((1 - step.old_beta) * (step.likelihoods - step.likelihoods.max()))
         step.weights = temp / np.sum(temp)
         step.covariance = step.calc_covariance()
@@ -589,7 +590,7 @@ def sample_smc(n_steps, n_chains=100, step=None, start=None, homepath=None, stag
         _iter_parallel_chains(**sample_args)
 
         stage_handler.dump_atmip_params(step)
-        return stage_handler.concatenate_traces(step.stage, model=model)
+        return stage_handler.create_result_trace(step.stage, model=model)
 
 
 def _sample(draws, step=None, start=None, trace=None, chain=0, tune=None,

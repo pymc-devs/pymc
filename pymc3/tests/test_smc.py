@@ -88,5 +88,7 @@ class TestSMC(SeededTest):
             stage_number, self.n_steps, step, n_jobs=1, model=self.ATMIP_test)
         assert len(corrupted_chains) == 0
 
+        rtrace = stage_handler.load_result_trace(model=self.ATMIP_test)
+
     def teardown_class(self):
         shutil.rmtree(self.test_folder)

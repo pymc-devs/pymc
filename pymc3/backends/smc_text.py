@@ -227,8 +227,8 @@ class TextStage(object):
 
         Parameters
         ----------
-        name : str
-            Name of directory with files (one per chain)
+        stage : int
+            Number of stage to load files from (one per chain)
         model : Model
             If None, the model is taken from the `with` context.
 
@@ -239,6 +239,9 @@ class TextStage(object):
         """
         dirname = self.stage_path(stage)
         files = glob(os.path.join(dirname, 'chain_*.csv'))
+        if len(files) < 1:
+            pm._log.warn('Stage directory %s contains no traces!' % dirname)
+
         straces = []
         for f in files:
             chain = int(os.path.basename(f).split('_')[-1].split('.')[0])
@@ -291,37 +294,54 @@ class TextStage(object):
         pm._log.info('Init new trace!')
         return None
 
-    def concatenate_traces(self, stage=-1, idxs=[-1], model=None):
+    def create_result_trace(self, stage=-1, idxs=[-1], model=None):
         """
         Concatenate points from all traces into one single trace, which can be used by
-        traceplot.
+        traceplot. Stores result trace in stage_-2.
 
         Parameters
         ----------
         stage : int
             stage of which result traces are loaded
         idxs : list
-            of indexes to chains to extract point and concatenate these
+            of indexes to the point at each chain to extract and concatenate
 
         Returns
         -------
-        TextChain
+        MultiTrace
         """
         
         dirname = self.stage_path(stage)
         mtrace = self.load_multitrace(stage, model=model)
-        rtrace = TextChain(dirname, model=model)
+
+        summary_dir = self.stage_path(-2)
+        rtrace = TextChain(summary_dir, model=model)
         draws = len(mtrace.chains) * len(idxs)
-        rtrace.setup(draws, chain=-1)
+        rtrace.setup(draws, chain=0)
 
         for idx in idxs:
             for chain in mtrace.chains:
                 point = mtrace.point(idx, chain)
-                rtrace.record(point)
+                rtrace.record(point.values())
 
         rtrace.history = mtrace
                 
-        return rtrace
+        return base.MultiTrace([rtrace])
+
+    def load_result_trace(self, model=None):
+        """
+        Load pymc3 format trace object to be used for plotting and summary.
+
+        Parameters
+        ----------
+        model : Model
+            If None, the model is taken from the `with` context.
+
+        Returns
+        -------
+        MutliTrace
+        """
+        return self.load_multitrace(stage=-2, model=model)
                 
                 
 class TextChain(BaseSMCTrace):
