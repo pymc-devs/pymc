@@ -47,6 +47,8 @@ class Formula(object):
         self.flows = []
 
         for tup in identifiers:
+            if tup[0] not in _select:
+                raise ValueError('No such flow: %r' % tup[0])
             if len(tup) == 1:
                 self.flows.append(_select[tup[0]])
             elif len(tup) == 2:

@@ -167,7 +167,7 @@ def simple_model(simple_model_data):
         dict(cls=SVGD, init=dict(n_particles=500, jitter=1)),
         dict(cls=ASVGD, init=dict(temperature=1.)),
     ], ids=[
-        'NF-scale-loc',
+        'NF=scale-loc',
         'ADVI',
         'FullRankADVI',
         'SVGD',
@@ -294,6 +294,9 @@ def fit_method_with_object(request, another_simple_model):
         ('svgd', dict(total_grad_norm_constraint=10), None),
         ('svgd', dict(start={}), None),
         ('asvgd', dict(start={}, total_grad_norm_constraint=10), None),
+        ('nf', dict(start={}), None),
+        ('nf=scale-loc', dict(start={}), None),
+        ('nf=bad-formula', dict(start={}), ValueError),
     ],
 )
 def test_fit_fn_text(method, kwargs, error, another_simple_model):
