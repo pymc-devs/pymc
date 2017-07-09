@@ -359,7 +359,7 @@ class SMC(atext.ArrayStepSharedLLK):
         """
         array_population = np.zeros((self.n_chains, self.lordering.dimensions))
         n_steps = len(mtrace)
-        for var, (_, slc, shp, _) in zip(mtrace.varnames, self.lordering.vmap):
+        for _, slc, shp, _, var in self.lordering.vmap:
             slc_population = mtrace.get_values(varname=var, burn=n_steps - 1, combine=True)
             if len(shp) == 0:
                 array_population[:, slc] = np.atleast_2d(slc_population).T
@@ -590,7 +590,7 @@ def sample_smc(n_steps, n_chains=100, step=None, start=None, homepath=None, stag
         _iter_parallel_chains(**sample_args)
 
         stage_handler.dump_atmip_params(step)
-        return stage_handler.create_result_trace(step.stage, model=model)
+        return stage_handler.create_result_trace(step.stage, step=step, model=model)
 
 
 def _sample(draws, step=None, start=None, trace=None, chain=0, tune=None,
