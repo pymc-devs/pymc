@@ -130,11 +130,13 @@ class SMC(atext.ArrayStepSharedLLK):
 
         if out_vars is None:
             if not any(likelihood_name == RV.name for RV in model.unobserved_RVs):
+                pm._log.info(
+                    'Adding model likelihood to RVs!')
                 with model:
                     llk = pm.Deterministic(likelihood_name, model.logpt)
             else:
-                raise ValueError(
-                    'The model likelihood name is already being used by a RV!')
+                pm._log.info(
+                    'Using present model likelihood!')
 
             out_vars = model.unobserved_RVs
 
@@ -357,7 +359,7 @@ class SMC(atext.ArrayStepSharedLLK):
         """
         array_population = np.zeros((self.n_chains, self.lordering.dimensions))
         n_steps = len(mtrace)
-        for var, (_, slc, shp, _) in zip(mtrace.varnames, self.lordering.vmap):
+        for _, slc, shp, _, var in self.lordering.vmap:
             slc_population = mtrace.get_values(varname=var, burn=n_steps - 1, combine=True)
             if len(shp) == 0:
                 array_population[:, slc] = np.atleast_2d(slc_population).T
@@ -408,8 +410,8 @@ class SMC(atext.ArrayStepSharedLLK):
         return outindx
 
 
-def sample_smc(n_steps, step=None, start=None, homepath=None, chain=0, stage=0, n_jobs=1,
-                 tune=None, progressbar=False, model=None, random_seed=-1, rm_flag=False):
+def sample_smc(n_steps, n_chains=100, step=None, start=None, homepath=None, stage=0, n_jobs=1,
+                 tune_interval=10, tune=None, progressbar=False, model=None, random_seed=-1, rm_flag=True):
     """Sequential Monte Carlo sampling
 
     Samples the solution space with n_chains of Metropolis chains, where each
@@ -429,6 +431,8 @@ def sample_smc(n_steps, step=None, start=None, homepath=None, chain=0, stage=0, 
     ----------
     n_steps : int
         The number of samples to draw for each Markov-chain per stage
+    n_chains : int
+        Number of chains used to store samples in backend.
     step : :class:`SMC`
         SMC initialisation object
     start : List of dictionaries
@@ -437,9 +441,6 @@ def sample_smc(n_steps, step=None, start=None, homepath=None, chain=0, stage=0, 
         Defaults to random draws from variables (defaults to empty dict)
     homepath : string
         Result_folder for storing stages, will be created if not existing.
-    chain : int
-        Chain number used to store sample in backend. If `n_jobs` is
-        greater than one, chain numbers will start here.
     stage : int
         Stage where to start or continue the calculation. It is possible to
         continue after completed stages (stage should be the number of the
@@ -449,6 +450,8 @@ def sample_smc(n_steps, step=None, start=None, homepath=None, chain=0, stage=0, 
         internal parallelisation. Sometimes this is more efficient especially
         for simple models.
         step.n_chains / n_jobs has to be an integer number!
+    tune_interval : int
+        Number of steps to tune for
     tune : int
         Number of iterations to tune, if applicable (defaults to None)
     progressbar : bool
@@ -474,12 +477,14 @@ def sample_smc(n_steps, step=None, start=None, homepath=None, chain=0, stage=0, 
     warnings.warn(EXPERIMENTAL_WARNING)
 
     model = modelcontext(model)
-    step.n_steps = int(n_steps)
+
     if random_seed != -1:
         nr.seed(random_seed)
 
     if step is None:
-        raise TypeError('Argument `step` has to be a SMC step object.')
+        pm._log.info('Argument `step` is None. Auto-initialising step object '
+                     'using given/default parameters.')
+        step = SMC(n_chains=n_chains, tune_interval=tune_interval, model=model)
 
     if homepath is None:
         raise TypeError('Argument `homepath` should be path to result_directory.')
@@ -499,6 +504,8 @@ def sample_smc(n_steps, step=None, start=None, homepath=None, chain=0, stage=0, 
         raise TypeError('Model (deterministic) variables need to contain a variable %s '
                         'as defined in `step`.' % step.likelihood_name)
 
+    step.n_steps = int(n_steps)
+    
     stage_handler = atext.TextStage(homepath)
 
     if progressbar and n_jobs > 1:
@@ -568,6 +575,7 @@ def sample_smc(n_steps, step=None, start=None, homepath=None, chain=0, stage=0, 
         # Metropolis sampling final stage
         pm._log.info('Sample final stage')
         step.stage = -1
+        chains = stage_handler.clean_directory(step.stage, chains, rm_flag)
         temp = np.exp((1 - step.old_beta) * (step.likelihoods - step.likelihoods.max()))
         step.weights = temp / np.sum(temp)
         step.covariance = step.calc_covariance()
@@ -575,13 +583,14 @@ def sample_smc(n_steps, step=None, start=None, homepath=None, chain=0, stage=0, 
         step.resampling_indexes = step.resample()
         step.chain_previous_lpoint = step.get_chain_previous_lpoint(mtrace)
 
+        sample_args['draws'] = n_steps
         sample_args['step'] = step
         sample_args['stage_path'] = stage_handler.stage_path(step.stage)
         sample_args['chains'] = chains
         _iter_parallel_chains(**sample_args)
 
         stage_handler.dump_atmip_params(step)
-        return stage_handler.load_multitrace(step.stage, model=model)
+        return stage_handler.create_result_trace(step.stage, step=step, model=model)
 
 
 def _sample(draws, step=None, start=None, trace=None, chain=0, tune=None,

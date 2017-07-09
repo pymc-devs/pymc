@@ -222,13 +222,13 @@ class TextStage(object):
             chains = None
         return chains
 
-    def load_multitrace(self, stage, model=None):
+    def load_multitrace(self, stage_number, model=None):
         """Load TextChain database.
 
         Parameters
         ----------
-        name : str
-            Name of directory with files (one per chain)
+        stage_number : int
+            Number of stage to load files from (one per chain)
         model : Model
             If None, the model is taken from the `with` context.
 
@@ -237,8 +237,11 @@ class TextStage(object):
 
         A :class:`pymc3.backend.base.MultiTrace` instance
         """
-        dirname = self.stage_path(stage)
+        dirname = self.stage_path(stage_number)
         files = glob(os.path.join(dirname, 'chain_*.csv'))
+        if len(files) < 1:
+            pm._log.warn('Stage directory %s contains no traces!' % dirname)
+
         straces = []
         for f in files:
             chain = int(os.path.basename(f).split('_')[-1].split('.')[0])
@@ -278,12 +281,12 @@ class TextStage(object):
         corrupted_idx = [i for i, x in enumerate(flag_bool) if x]
         return corrupted_idx + not_sampled_idx
 
-    def recover_existing_results(self, stage, draws, step, n_jobs, model=None):
-        stage_path = self.stage_path(stage)
+    def recover_existing_results(self, stage_number, draws, step, n_jobs, model=None):
+        stage_path = self.stage_path(stage_number)
         if os.path.exists(stage_path):
             # load incomplete stage results
             pm._log.info('Reloading existing results ...')
-            mtrace = self.load_multitrace(stage, model=model)
+            mtrace = self.load_multitrace(stage_number, model=model)
             if len(mtrace.chains) > 0:
                 # continue sampling if traces exist
                 pm._log.info('Checking for corrupted files ...')
@@ -291,7 +294,61 @@ class TextStage(object):
         pm._log.info('Init new trace!')
         return None
 
+    def create_result_trace(self, stage_number=-1, idxs=[-1], step=None, model=None):
+        """
+        Concatenate points from all traces into one single trace, which can be used by
+        traceplot. Stores result trace in stage_-2.
 
+        Parameters
+        ----------
+        stage_number : int
+            stage of which result traces are loaded
+        idxs : list
+            of indexes to the point at each chain to extract and concatenate
+
+        Returns
+        -------
+        MultiTrace
+        """
+        if step is None:
+            step = self.load_atmip_params(stage_number, model)
+
+        dirname = self.stage_path(stage_number)
+        mtrace = self.load_multitrace(stage_number, model=model)
+
+        summary_dir = self.stage_path(-2)
+        rtrace = TextChain(summary_dir, model=model)
+        draws = len(mtrace.chains) * len(idxs)
+        rtrace.setup(draws, chain=0)
+
+        for idx in idxs:
+            for chain in mtrace.chains:
+                point = mtrace.point(idx, chain)
+                lpoint = step.lij.dmap(point)
+                rtrace.record(lpoint)
+
+        rtrace.history = mtrace
+                
+        return base.MultiTrace([rtrace])
+
+    def load_result_trace(self, model=None):
+        """
+        Load pymc3 format trace object to be used for plotting and summary.
+
+        Parameters
+        ----------
+        model : Model
+            If None, the model is taken from the `with` context.
+
+        Returns
+        -------
+        MutliTrace
+        """
+        rtrace = self.load_multitrace(stage_number=-2, model=model)
+        rtrace.history = self.load_multitrace(stage_number=-1, model=model)
+        return rtrace
+                
+                
 class TextChain(BaseSMCTrace):
     """Text trace object
 
