@@ -863,19 +863,18 @@ def fit(n=10000, local_rv=None, method='advi', model=None,
                 start=start,  # ignored by now, hope I'll find a good application for this argument
                 **inf_kwargs
                 )
+        elif method in _select:
+            inference = _select[method](
+                local_rv=local_rv,
+                model=model,
+                random_seed=random_seed,
+                start=start,
+                **inf_kwargs
+            )
         else:
-            try:
-                inference = _select[method.lower()](
-                    local_rv=local_rv,
-                    model=model,
-                    random_seed=random_seed,
-                    start=start,
-                    **inf_kwargs
-                )
-            except KeyError:
-                raise KeyError('method should be one of %s '
-                               'or Inference instance' %
-                               set(_select.keys()))
+            raise KeyError('method should be one of %s '
+                           'or Inference instance' %
+                           set(_select.keys()))
     elif isinstance(method, Inference):
         inference = method
     else:
