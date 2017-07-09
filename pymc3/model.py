@@ -1,5 +1,6 @@
 import collections
 import threading
+import warnings
 import six
 
 import numpy as np
@@ -366,9 +367,17 @@ class Model(six.with_metaclass(InitContextMeta, Context, Factor)):
             instance._parent = cls.get_contexts()[-1]
         else:
             instance._parent = None
-        theano_config = kwargs.get('theano_config', None)
-        if theano_config is None or 'compute_test_value' not in theano_config:
-            theano_config = {'compute_test_value': 'raise'}
+        theano_config = kwargs.get('theano_config', {})
+        if 'compute_test_value' not in theano_config:
+            theano_config['compute_test_value'] = 'raise'
+        if theano_config['compute_test_value'] != theano.config.compute_test_value:
+            warnings.warn("You are using theano config "
+                          "'compute_test_value':%r while Model requires "
+                          "'compute_test_value':%r. The latter is forced "
+                          "in context manager, we suggest you to use the "
+                          "same values to avoid weird bugs"
+                          % (theano.config.compute_test_value, theano_config['compute_test_value']),
+                          UserWarning, stacklevel=2)
         instance._theano_config = theano_config
         return instance
 
