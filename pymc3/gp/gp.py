@@ -3,12 +3,13 @@ from scipy import stats
 from tqdm import tqdm
 
 import theano.tensor as tt
-import theano.tensor.slinalg
+from theano.tensor.slinalg import Solve
 
 import pymc3 as pm
 from .mean import Zero, Mean
 from .cov import Covariance
-from ..distributions import Normal, MvNormal, Continuous, draw_values, generate_samples
+from ..distributions import (Normal, MvNormal, Continuous,
+                             draw_values, generate_samples)
 from ..model import modelcontext, Deterministic, ObservedRV
 from ..distributions.dist_math import Cholesky
 
@@ -16,8 +17,8 @@ __all__ = ['GP', 'sample_gp']
 
 CHOL_CONST = True
 cholesky = Cholesky(nofail=True, lower=True)
-solve_lower = tt.slinalg.Solve(A_structure="lower_triangular")
-solve_upper = tt.slinalg.Solve(A_structure="upper_triangular")
+solve_lower = Solve(A_structure="lower_triangular")
+solve_upper = Solve(A_structure="upper_triangular")
 
 
 def stabilize(K):
@@ -77,7 +78,8 @@ def GP(name, X, mean_func=None, cov_func=None,
     # CONJUGATE
     if all(value is None for value in [approx, n_inducing, inducing_points]):
         if sigma is None and cov_func_noise is None:
-            raise ValueError('Must provide a value or a prior for the noise variance')
+            raise ValueError(('Must provide a value or a prior '
+                              'for the noise variance'))
         if sigma is not None and cov_func_noise is None:
             cov_func_noise = lambda X: tt.square(sigma) * tt.eye(X.shape[0])
         return GPFullConjugate(name, X, mean_func, cov_func, cov_func_noise,
@@ -102,10 +104,12 @@ def GP(name, X, mean_func=None, cov_func=None,
         approx = "VFE"
 
     if approx not in ["VFE", "FITC"]:
-        raise ValueError("'FITC' or 'VFE' are the implemented GP approximations")
+        raise ValueError(("'FITC' or 'VFE' are the implemented "
+                          "GP approximations"))
 
     if inducing_points is None and n_inducing is None:
-        raise ValueError("Must specify one of 'inducing_points' or 'n_inducing'")
+        raise ValueError(("Must specify one of 'inducing_points' "
+                          "or 'n_inducing'"))
 
     inducing_points = tt.as_tensor_variable(inducing_points)
     return GPSparseConjugate(name, X, mean_func, cov_func, sigma,
@@ -113,9 +117,9 @@ def GP(name, X, mean_func=None, cov_func=None,
 
 
 class GPBase(object):
-    def random(self, point=None, size=None, X_values=None, obs_noise=False, y=None, **kwargs):
-        # see if we can get sample to draw from prior explicitly of observed is None
-        if X_values is None:
+    def random(self, point=None, size=None, X_values=None, obs_noise=False,
+               y=None, from_prior=False, **kwargs):
+        if from_prior:
             # draw from prior
             mean, cov = self.prior(obs_noise)
         else:
@@ -144,7 +148,8 @@ class GPBase(object):
         return 0.0
 
     def _repr_latex_(self, name=None):
-        return r"${} \sim \mathcal{{GP}}(\mathit{{\mu}}(x), \mathit{{K}}(x, x'))$".format(name)
+        return (r"${} \sim \mathcal{{GP}}".format(name) +
+                r"(\mathit{{\mu}}(x), \mathit{{K}}(x, x'))$")
 
 
 class GPFullNonConjugate(GPBase):
@@ -182,8 +187,7 @@ class GPFullNonConjugate(GPBase):
         A = solve_lower(L, Kxz)
 
         cov = Kzz - tt.dot(tt.transpose(A), A)
-        #mean = self.m(Z) + tt.squeeze(tt.transpose(tt.dot(tt.transpose(A), self.v)))
-        mean = self.m(Z) + tt.dot(tt.transpose(A), self.v)
+        mean = self.m(Z) + tt.squeeze(tt.dot(tt.transpose(A), self.v))
         return mean, stabilize(cov)
 
     @property
@@ -193,6 +197,7 @@ class GPFullNonConjugate(GPBase):
         self.f = Deterministic(self.name, tt.dot(self.L, self.v))
         # would be nice to have behavior like
         # f.distribution.random, f.distribution.logp, etc?
+        # see if/else block in sample_gp
         self.f.random = self.random
         return self.f
 
@@ -211,7 +216,8 @@ class GPFullConjugate(GPBase, Continuous):
     cov_func_noise : Covariance
         Covariance function of noise Gaussian process
     """
-    def __init__(self, X, mean_func, cov_func, cov_func_noise, *args, **kwargs):
+    def __init__(self, X, mean_func, cov_func, cov_func_noise,
+                 *args, **kwargs):
         self.X = X
         self.nf = self.X.shape[0]
         self.K = cov_func
@@ -345,7 +351,8 @@ class GPSparseConjugate(GPBase, Continuous):
         elif self.approx == "VFE":
             Lamd = tt.ones_like(Qffd) * self.sigma2
             trace = ((1.0 / (2.0 * self.sigma2)) *
-                     (tt.sum(self.K(self.X, diag=True)) - tt.sum(tt.sum(A * A, 0))))
+                     (tt.sum(self.K(self.X, diag=True)) -
+                      tt.sum(tt.sum(A * A, 0))))
         else:
             raise ValueError("unknown approximation string", self.approx)
         A_l = A / Lamd
@@ -360,7 +367,8 @@ class GPSparseConjugate(GPBase, Continuous):
 
 
 def sample_gp(trace, gp, X_values, samples=None, obs_noise=True,
-              model=None, random_seed=None, progressbar=True):
+              from_prior=False, model=None, random_seed=None,
+              progressbar=True):
     """Generate samples from a posterior Gaussian process.
 
     Parameters
@@ -377,6 +385,8 @@ def sample_gp(trace, gp, X_values, samples=None, obs_noise=True,
         length of `trace`
     obs_noise : bool
         Flag for including observation noise in sample. Defaults to False.
+    from_prior: bool
+        Flag for draw from GP prior.  Defaults to False.
     model : Model
         Model used to generate `trace`. Optional if in `with` context manager.
     random_seed : integer > 0
@@ -405,12 +415,12 @@ def sample_gp(trace, gp, X_values, samples=None, obs_noise=True,
         if isinstance(gp, ObservedRV):
             y = [v for v in model.observed_RVs if v.name == gp.name][0]
             for idx in indices:
-                samples.append(gp.distribution.random(point=trace[idx],
-                       X_values=X_values, y=y, obs_noise=obs_noise))
+                samples.append(gp.distribution.random(trace[idx], None,
+                               X_values, obs_noise, y, from_prior))
         else:
             for idx in indices:
-                samples.append(gp.random(point=trace[idx],
-                       X_values=X_values, y=y, obs_noise=obs_noise))
+                samples.append(gp.random(trace[idx], None, X_values,
+                               obs_noise, y, from_prior))
     except KeyboardInterrupt:
         pass
     finally:
