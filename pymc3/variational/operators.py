@@ -1,6 +1,7 @@
 import warnings
 import collections
 from theano import tensor as tt
+from pymc3.theanof import change_flags
 from pymc3.variational.opvi import Operator, ObjectiveFunction
 from pymc3.variational.stein import Stein
 import pymc3 as pm
@@ -48,6 +49,7 @@ class KSDObjective(ObjectiveFunction):
         else:
             return self.approx.symbolic_random_local_matrix, self.approx.symbolic_random_global_matrix
 
+    @change_flags(compute_test_value='off')
     def __call__(self, nmc, **kwargs):
         op = self.op  # type: KSD
         grad = op.apply(self.tf)

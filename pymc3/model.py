@@ -702,10 +702,11 @@ class Model(six.with_metaclass(InitContextMeta, Context, Factor)):
             order = ArrayOrdering(vars)
         if inputvar is None:
             inputvar = tt.vector('flat_view', dtype=theano.config.floatX)
-            if vars:
-                inputvar.tag.test_value = flatten_list(vars).tag.test_value
-            else:
-                inputvar.tag.test_value = np.asarray([], inputvar.dtype)
+            if theano.config.compute_test_value != 'off':
+                if vars:
+                    inputvar.tag.test_value = flatten_list(vars).tag.test_value
+                else:
+                    inputvar.tag.test_value = np.asarray([], inputvar.dtype)
         replacements = {self.named_vars[name]: inputvar[slc].reshape(shape).astype(dtype)
                         for name, slc, shape, dtype in order.vmap}
         view = {vm.var: vm for vm in order.vmap}

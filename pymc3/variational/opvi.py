@@ -58,7 +58,29 @@ def node_property(f):
     """
     A shortcut for wrapping method to accessible tensor
     """
-    return property(memoize(change_flags(compute_test_value='raise')(f)))
+    return property(memoize(change_flags(compute_test_value='off')(f)))
+
+
+@change_flags(compute_test_value='raise')
+def try_to_set_test_value(node_in, node_out, s):
+    _s = s
+    if s is None:
+        s = 1
+    s = theano.compile.view_op(tt.as_tensor(s))
+    if not isinstance(node_in, (list, tuple)):
+        node_in = [node_in]
+    if not isinstance(node_out, (list, tuple)):
+        node_out = [node_out]
+    for i, o in zip(node_in, node_out):
+        if hasattr(i.tag, 'test_value'):
+            if not hasattr(s.tag, 'test_value'):
+                continue
+            else:
+                tv = i.tag.test_value[None, ...]
+                tv = np.repeat(tv, s.tag.test_value, 0)
+                if _s is None:
+                    tv = tv[0]
+                o.tag.test_value = tv
 
 
 class ObjectiveUpdates(theano.OrderedUpdates):
@@ -288,6 +310,7 @@ class ObjectiveFunction(object):
     def __setstate__(self, state):
         self.__init__(*state)
 
+    @change_flags(compute_test_value='off')
     def __call__(self, nmc, **kwargs):
         if 'more_tf_params' in kwargs:
             m = -1.
@@ -345,9 +368,6 @@ class Operator(object):
             function that takes `z = self.input` and returns
             same dimensional output
 
-        nmc : n
-            monte carlo samples to use
-
         Returns
         -------
         `TensorVariable`
@@ -385,7 +405,7 @@ class Operator(object):
                                        ap=self.approx.__class__.__name__)
 
 
-def cast_to_list(params):
+def collect_shared_to_list(params):
     """Helper function for getting a list from
     usable representation of parameters
 
@@ -398,7 +418,10 @@ def cast_to_list(params):
     list
     """
     if isinstance(params, dict):
-        return list(t[1] for t in sorted(params.items(), key=lambda t: t[0]))
+        return list(
+            t[1] for t in sorted(params.items(), key=lambda t: t[0])
+            if isinstance(t[1], theano.compile.SharedVariable)
+        )
     elif params is None:
         return []
     else:
@@ -420,7 +443,7 @@ class TestFunction(object):
 
     @property
     def params(self):
-        return cast_to_list(self.shared_params)
+        return collect_shared_to_list(self.shared_params)
 
     def __call__(self, z):
         raise NotImplementedError
@@ -527,6 +550,7 @@ class Approximation(object):
     initial_dist_global_map = 0.
     shared_params = None
 
+    @change_flags(compute_test_value='off')
     def __init__(self, local_rv=None, model=None,
                  cost_part_grad_scale=1,
                  scale_cost_to_minibatch=False,
@@ -559,13 +583,7 @@ class Approximation(object):
         self.gbij = DictToArrayBijection(self._g_order, {})
         self.lbij = DictToArrayBijection(self._l_order, {})
         self.symbolic_initial_local_matrix = tt.matrix(self.__class__.__name__ + '_symbolic_initial_local_matrix')
-        self.symbolic_initial_local_matrix.tag.test_value = np.random.rand(2, self.local_size).astype(
-            self.symbolic_initial_local_matrix.dtype
-        )
         self.symbolic_initial_global_matrix = tt.matrix(self.__class__.__name__ + '_symbolic_initial_global_matrix')
-        self.symbolic_initial_global_matrix.tag.test_value = np.random.rand(2, self.global_size).astype(
-            self.symbolic_initial_global_matrix.dtype
-        )
 
         self.global_flat_view = model.flatten(
             vars=self.global_vars,
@@ -674,6 +692,7 @@ class Approximation(object):
         replacements = self.construct_replacements()
         return theano.clone(node, replacements, strict=False)
 
+    @change_flags(compute_test_value='off')
     def apply_replacements(self, node, deterministic=False,
                            include=None, exclude=None,
                            more_replacements=None):
@@ -700,14 +719,18 @@ class Approximation(object):
         replacements = self.construct_replacements(
             include, exclude, more_replacements
         )
+        node_in = node
         node = theano.clone(node, replacements, strict=False)
         posterior_glob = self.random_global(deterministic=deterministic)
         posterior_loc = self.random_local(deterministic=deterministic)
-        return theano.clone(node, {
+        out = theano.clone(node, {
             self.global_input: posterior_glob,
             self.local_input: posterior_loc
         }, strict=False)
+        try_to_set_test_value(node_in, out, None)
+        return out
 
+    @change_flags(compute_test_value='off')
     def sample_node(self, node, size=100,
                     more_replacements=None):
         """Samples given node or nodes over shared posterior
@@ -724,12 +747,14 @@ class Approximation(object):
         -------
         sampled node(s) with replacements
         """
+        node_in = node
         if more_replacements is not None:   # pragma: no cover
             node = theano.clone(node, more_replacements, strict=False)
         if size is None:
             size = 1
         nodes = self.sample_over_posterior(node)
         nodes = self.set_size_and_deterministic(nodes, size, 0)
+        try_to_set_test_value(node_in, nodes, size)
         return nodes
 
     def sample_over_posterior(self, node):
@@ -745,6 +770,7 @@ class Approximation(object):
 
         nodes, _ = theano.scan(
             sample, [posterior_loc, posterior_glob])
+        try_to_set_test_value(node, nodes, None)
         return nodes
 
     def scale_grad(self, inp):
@@ -760,8 +786,9 @@ class Approximation(object):
 
     @property
     def params(self):
-        return cast_to_list(self.shared_params)
+        return collect_shared_to_list(self.shared_params)
 
+    @change_flags(compute_test_value='off')
     def _random_part(self, part, size=None, deterministic=False):
         r_part = self._choose_alternative(
             part,
@@ -780,14 +807,14 @@ class Approximation(object):
         return r_part
 
     def _initial_part_matrix(self, part, size, deterministic):
+        if size is None:
+            size = 1
         length, dist_name, dist_map = self._choose_alternative(
             part,
             (self.local_size, self.initial_dist_local_name, self.initial_dist_local_map),
             (self.global_size, self.initial_dist_global_name, self.initial_dist_global_map)
         )
         dtype = self.symbolic_initial_global_matrix.dtype
-        if size is None:
-            size = 1
         if length == 0:  # in this case theano fails to compute sample of correct size
             return tt.ones((size, 0), dtype)
         length = tt.as_tensor(length)
@@ -840,24 +867,21 @@ class Approximation(object):
         """
         return self._random_part('global', size=size, deterministic=deterministic)
 
+    @change_flags(compute_test_value='off')
     def set_size_and_deterministic(self, node, s, d):
-        """
-        Replaces self.symbolic_n_samples and self._deterministic_flag
-        with non symbolic input. Used whenever user specifies
-        `sample size` and `deterministic` option
-        """
         initial_local = self._initial_part_matrix('local', s, d)
         initial_global = self._initial_part_matrix('global', s, d)
-
         # optimizations
         if isinstance(s, int) and (s == 1) or s is None:
             node = theano.clone(node, {
                 self.logp: self.single_symbolic_logp
             })
-        return theano.clone(node, {
+        out = theano.clone(node, {
             self.symbolic_initial_local_matrix: initial_local,
             self.symbolic_initial_global_matrix: initial_global,
         })
+        try_to_set_test_value(node, out, None)
+        return out
 
     @property
     @memoize
