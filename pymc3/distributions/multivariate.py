@@ -136,6 +136,19 @@ class _QuadFormBase(Continuous):
         logdet = -tt.sum(tt.log(diag))
         return quaddist, logdet, ok
 
+    def _repr_cov_params(self, dist=None):
+        if dist is None:
+            dist = self
+        if self._cov_type == 'chol':
+            chol = get_variable_name(self.chol)
+            return r'\mathit{{chol}}={}'.format(chol)
+        elif self._cov_type == 'cov':
+            cov = get_variable_name(self.cov)
+            return r'\mathit{{cov}}={}'.format(cov)
+        elif self._cov_type == 'tau':
+            tau = get_variable_name(self.tau)
+            return r'\mathit{{tau}}={}'.format(tau)
+
 
 class MvNormal(_QuadFormBase):
     R"""
@@ -264,15 +277,10 @@ class MvNormal(_QuadFormBase):
         if dist is None:
             dist = self
         mu = dist.mu
-        try:
-            cov = dist.cov
-        except AttributeError:
-            cov = dist.chol_cov
         name_mu = get_variable_name(mu)
-        name_cov = get_variable_name(cov)
         return (r'${} \sim \text{{MvNormal}}'
-                r'(\mathit{{mu}}={}, \mathit{{cov}}={})$'
-                .format(name, name_mu, name_cov))
+                r'(\mathit{{mu}}={}, {})$'
+                .format(name, name_mu, self._repr_cov_params(dist)))
 
 
 class MvStudentT(_QuadFormBase):
@@ -326,6 +334,7 @@ class MvStudentT(_QuadFormBase):
                                          lower=lower, *args, **kwargs)
         self.nu = nu = tt.as_tensor_variable(nu)
         self.mean = self.median = self.mode = self.mu = self.mu
+        self.Sigma = self.cov
 
     def random(self, point=None, size=None):
         chi2 = np.random.chisquare
@@ -356,11 +365,10 @@ class MvStudentT(_QuadFormBase):
         Sigma = dist.Sigma
         name_nu = get_variable_name(nu)
         name_mu = get_variable_name(mu)
-        name_sigma = get_variable_name(Sigma)
         return (r'${} \sim \text{{MvStudentT}}'
                 r'(\mathit{{nu}}={}, \mathit{{mu}}={}, '
-                r'\mathit{{Sigma}}={})$'
-                .format(name, name_nu, name_mu, name_sigma))
+                r'{})$'
+                .format(name, name_nu, name_mu, self._repr_cov_params(dist)))
 
 
 class Dirichlet(Continuous):

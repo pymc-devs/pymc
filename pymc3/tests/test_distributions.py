@@ -946,7 +946,7 @@ def test_repr_latex_():
                                 '\\mathit{sd}=1.0)$'
     assert x3._repr_latex_() == '$Multivariate \\sim \\text{MvStudentT}' \
                                 '(\\mathit{nu}=5, \\mathit{mu}=Timeseries, ' \
-                                '\\mathit{Sigma}=array)$'
+                                '\\mathit{cov}=array)$'
     assert x4._repr_latex_() == '$Mixture \\sim \\text{NormalMixture}' \
                                 '(\\mathit{w}=array, \\mathit{mu}=Multivariate, ' \
                                 '\\mathit{sigma}=f(Discrete))$'
