@@ -7,7 +7,7 @@ from theano.configparser import change_flags
 import pymc3 as pm
 from pymc3 import Model, Normal
 from pymc3.variational import (
-    ADVI, FullRankADVI, SVGD, NF,
+    ADVI, FullRankADVI, SVGD, NFVI,
     Empirical, ASVGD,
     MeanField, FullRank,
     fit, flows
@@ -161,13 +161,13 @@ def simple_model(simple_model_data):
 
 
 @pytest.fixture('module', params=[
-        dict(cls=NF, init=dict(flow='scale-loc')),
+        dict(cls=NFVI, init=dict(flow='scale-loc')),
         dict(cls=ADVI, init=dict()),
         dict(cls=FullRankADVI, init=dict()),
         dict(cls=SVGD, init=dict(n_particles=500, jitter=1)),
         dict(cls=ASVGD, init=dict(temperature=1.)),
     ], ids=[
-        'NF=scale-loc',
+        'NFVI=scale-loc',
         'ADVI',
         'FullRankADVI',
         'SVGD',
@@ -202,11 +202,11 @@ def fit_kwargs(inference, using_minibatch):
             obj_optimizer=pm.adagrad_window(learning_rate=0.01, n_win=50),
             n=12000
         ),
-        (NF, 'full'): dict(
+        (NFVI, 'full'): dict(
             obj_optimizer=pm.adagrad_window(learning_rate=0.01, n_win=50),
             n=12000
         ),
-        (NF, 'mini'): dict(
+        (NFVI, 'mini'): dict(
             obj_optimizer=pm.adagrad_window(learning_rate=0.01, n_win=50),
             n=12000
         ),
@@ -608,7 +608,7 @@ def test_hh_flow():
     cov = pm.floatX([[2, -1], [-1, 3]])
     with pm.Model():
         pm.MvNormal('mvN', mu=pm.floatX([0, 1]), cov=cov, shape=2)
-        nf = NF('scale-hh*2-loc')
+        nf = NFVI('scale-hh*2-loc')
         nf.fit(25000, obj_optimizer=pm.adam(learning_rate=0.001))
         trace = nf.approx.sample(10000)
         cov2 = pm.trace_cov(trace)
