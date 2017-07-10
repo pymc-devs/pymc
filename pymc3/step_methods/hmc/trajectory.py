@@ -1,11 +1,10 @@
 from collections import namedtuple
 
-from pymc3.theanof import join_nonshared_inputs, gradient, CallableTensor, floatX
-
 import theano
 import theano.tensor as tt
 import numpy as np
 
+from pymc3.theanof import join_nonshared_inputs, gradient, CallableTensor, floatX
 
 Hamiltonian = namedtuple("Hamiltonian", "logp, dlogp, pot")
 

@@ -1,16 +1,16 @@
 from collections import namedtuple
 import warnings
 
+import numpy as np
+import numpy.random as nr
+from scipy import stats, linalg
+import six
+
 from ..arraystep import Competence
 from pymc3.exceptions import SamplingError
 from .base_hmc import BaseHMC
 from pymc3.theanof import floatX
 from pymc3.vartypes import continuous_types
-
-import numpy as np
-import numpy.random as nr
-from scipy import stats, linalg
-import six
 
 __all__ = ['NUTS']
 
@@ -28,7 +28,7 @@ class NUTS(BaseHMC):
     sample. A detailed description can be found at [1], "Algorithm 6:
     Efficient No-U-Turn Sampler with Dual Averaging".
 
-    Nuts provides a number of statistics that can be accessed with
+    NUTS provides a number of statistics that can be accessed with
     `trace.get_sampler_stats`:
 
     - `mean_tree_accept`: The mean acceptance probability for the tree

@@ -1,9 +1,9 @@
+import numpy as np
+
 from ..arraystep import metrop_select, Competence
 from .base_hmc import BaseHMC
 from pymc3.vartypes import discrete_types
 from pymc3.theanof import floatX
-
-import numpy as np
 
 
 __all__ = ['HamiltonianMC']
@@ -20,7 +20,7 @@ def unif(step_size, elow=.85, ehigh=1.15):
 class HamiltonianMC(BaseHMC):
     R"""A sampler for continuous variables based on Hamiltonian mechanics.
 
-    See NUTS sampler for automatically tuned stopping time.
+    See NUTS sampler for automatically tuned stopping time and step size scaling.
     """
 
     name = 'hmc'

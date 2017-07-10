@@ -1,10 +1,11 @@
+import numpy as np
+
 from pymc3.model import modelcontext, Point
 from pymc3.step_methods import arraystep
-from .quadpotential import quad_potential, QuadPotentialDiagAdapt
 from pymc3.step_methods.hmc import integration
 from pymc3.theanof import inputvars, floatX
 from pymc3.tuning import guess_scaling
-import numpy as np
+from .quadpotential import quad_potential, QuadPotentialDiagAdapt
 
 
 class BaseHMC(arraystep.GradientSharedStep):
