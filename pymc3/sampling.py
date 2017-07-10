@@ -12,7 +12,7 @@ from .step_methods import (NUTS, HamiltonianMC, Metropolis, BinaryMetropolis,
                            BinaryGibbsMetropolis, CategoricalGibbsMetropolis,
                            Slice, CompoundStep)
 from .plots.traceplot import traceplot
-from .util import is_transformed_name, get_untransformed_name
+from .util import update_start_vals
 from tqdm import tqdm
 
 import sys
@@ -365,9 +365,9 @@ def _iter_sample(draws, step, start=None, trace=None, chain=0, tune=None,
     strace = _choose_backend(trace, chain, model=model)
 
     if len(strace) > 0:
-        _update_start_vals(start, strace.point(-1), model)
+        update_start_vals(start, strace.point(-1), model)
     else:
-        _update_start_vals(start, model.test_point, model)
+        update_start_vals(start, model.test_point, model)
 
     try:
         step = CompoundStep(step)
@@ -473,21 +473,6 @@ def stop_tuning(step):
         step.methods = [stop_tuning(s) for s in step.methods]
 
     return step
-
-def _update_start_vals(a, b, model):
-    """Update a with b, without overwriting existing keys. Values specified for
-    transformed variables on the original scale are also transformed and inserted.
-    """
-    if model is not None:
-        for free_RV in model.free_RVs:
-            tname = free_RV.name
-            for name in a:
-                if is_transformed_name(tname) and get_untransformed_name(tname) == name:
-                    transform_func = [d.transformation for d in model.deterministics if d.name == name]
-                    if transform_func:
-                        b[tname] = transform_func[0].forward_val(a[name], point=b).eval()
-
-    a.update({k: v for k, v in b.items() if k not in a})
 
 
 def sample_ppc(trace, samples=None, model=None, vars=None, size=None,
