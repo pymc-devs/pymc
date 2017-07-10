@@ -691,7 +691,7 @@ class ASVGD(Inference):
             n=n, score=score, obj_n_mc=obj_n_mc, **kwargs)
 
 
-class NF(Inference):
+class NFVI(Inference):
     R"""
     Normalizing flow is a series of invertible transformations on initial distribution.
 
@@ -753,7 +753,7 @@ class NF(Inference):
                  local_rv=None, model=None,
                  scale_cost_to_minibatch=False,
                  random_seed=None, start=None, jitter=.1):
-        super(NF, self).__init__(
+        super(NFVI, self).__init__(
             self.OP, self.APPROX, self.TF,
             flow=flow,
             local_rv=local_rv, model=model,
@@ -772,7 +772,7 @@ class NF(Inference):
 
         Returns
         -------
-        :class:`NF`
+        :class:`NFVI`
         """
         inference = object.__new__(cls)
         Inference.__init__(inference, KL, flow, None)
@@ -800,10 +800,10 @@ def fit(n=10000, local_rv=None, method='advi', model=None,
         -   'advi->fullrank_advi'  for fitting ADVI first and then FullRankADVI
         -   'svgd'  for Stein Variational Gradient Descent
         -   'asvgd'  for Amortized Stein Variational Gradient Descent
-        -   'nf'  for Normalizing Flow
-        -   'nf=formula'  for Normalizing Flow using formula
+        -   'nfvi'  for Normalizing Flow
+        -   'nfvi=formula'  for Normalizing Flow using formula
 
-    model : :class:`pymc3.Model`
+    model : :class:`Model`
         PyMC3 model for inference
     random_seed : None or int
         leave None to use package global RandomStream or other
@@ -833,7 +833,7 @@ def fit(n=10000, local_rv=None, method='advi', model=None,
         fullrank_advi=FullRankADVI,
         svgd=SVGD,
         asvgd=ASVGD,
-        nf=NF
+        nfvi=NFVI
     )
     if isinstance(method, str):
         method = method.lower()
@@ -853,9 +853,9 @@ def fit(n=10000, local_rv=None, method='advi', model=None,
             inference = FullRankADVI.from_advi(inference)
             logger.info('fitting fullrank advi ...')
             return inference.fit(n2, **kwargs)
-        elif method.startswith('nf='):
+        elif method.startswith('nfvi='):
             formula = method[3:]
-            inference = NF(
+            inference = NFVI(
                 formula,
                 local_rv=local_rv,
                 model=model,

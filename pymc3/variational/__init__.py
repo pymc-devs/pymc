@@ -25,7 +25,7 @@ from .inference import (
     FullRankADVI,
     SVGD,
     ASVGD,
-    NF,
+    NFVI,
     Inference,
     fit
 )
