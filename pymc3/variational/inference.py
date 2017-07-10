@@ -854,7 +854,7 @@ def fit(n=10000, local_rv=None, method='advi', model=None,
             logger.info('fitting fullrank advi ...')
             return inference.fit(n2, **kwargs)
         elif method.startswith('nfvi='):
-            formula = method[3:]
+            formula = method[5:]
             inference = NFVI(
                 formula,
                 local_rv=local_rv,
