@@ -269,7 +269,7 @@ class MvNormal(_QuadFormBase):
 
     def logp(self, value):
         quaddist, logdet, ok = self._quaddist(value)
-        k = value.shape[-1]
+        k = value.shape[-1].astype(theano.config.floatX)
         norm = - 0.5 * k * pm.floatX(np.log(2 * np.pi))
         return bound(norm - 0.5 * quaddist - logdet, ok)
 
@@ -349,11 +349,11 @@ class MvStudentT(_QuadFormBase):
 
     def logp(self, value):
         quaddist, logdet, ok = self._quaddist(value)
-        k = value.shape[-1]
+        k = value.shape[-1].astype(theano.config.floatX)
 
         norm = (gammaln((self.nu + k) / 2.)
                 - gammaln(self.nu / 2.)
-                - 0.5 * k * np.log(self.nu * np.pi))
+                - 0.5 * k * floatX(np.log(self.nu * np.pi)))
         inner = - (self.nu + k) / 2. * tt.log1p(quaddist / self.nu)
         return bound(norm + inner - logdet, ok)
 
