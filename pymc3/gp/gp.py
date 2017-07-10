@@ -80,7 +80,8 @@ def GP(name, X, mean_func=None, cov_func=None,
             raise ValueError('Must provide a value or a prior for the noise variance')
         if sigma is not None and cov_func_noise is None:
             cov_func_noise = lambda X: tt.square(sigma) * tt.eye(X.shape[0])
-        return GPFullConjugate(name, X, mean_func, cov_func, cov_func_noise, observed=observed)
+        return GPFullConjugate(name, X, mean_func, cov_func, cov_func_noise,
+                               observed=observed)
     else:
         approx = approx.upper()
 
@@ -106,6 +107,7 @@ def GP(name, X, mean_func=None, cov_func=None,
     if inducing_points is None and n_inducing is None:
         raise ValueError("Must specify one of 'inducing_points' or 'n_inducing'")
 
+    inducing_points = tt.as_tensor_variable(inducing_points)
     return GPSparseConjugate(name, X, mean_func, cov_func, sigma,
                              approx, inducing_points, observed=observed)
 
@@ -160,7 +162,7 @@ class GPFullNonConjugate(GPBase):
     def __init__(self, name, X, mean_func, cov_func):
         self.name = name
         self.X = X
-        self.nf = self.X.shape[0]
+        self.nf = X.shape[0]
         self.K = cov_func
         self.m = mean_func
         self.mean = self.mode = self.m(X)
@@ -180,17 +182,15 @@ class GPFullNonConjugate(GPBase):
         A = solve_lower(L, Kxz)
 
         cov = Kzz - tt.dot(tt.transpose(A), A)
-        mean = self.m(Z) + tt.squeeze(tt.transpose(tt.dot(tt.transpose(A), self.v)))
-        # mean = self.m(Z) + tt.dot(tt.transpose(A), self.v)
+        #mean = self.m(Z) + tt.squeeze(tt.transpose(tt.dot(tt.transpose(A), self.v)))
+        mean = self.m(Z) + tt.dot(tt.transpose(A), self.v)
         return mean, stabilize(cov)
 
     @property
     def RV(self):
         self.L = cholesky(stabilize(self.K(self.X)))
-        # i get an interesting error when i use the name _rotated__ with two underscores
         self.v = Normal(self.name + "_rotated_", mu=0.0, sd=1.0, shape=self.nf)
         self.f = Deterministic(self.name, tt.dot(self.L, self.v))
-        # monkey patch random method,
         # would be nice to have behavior like
         # f.distribution.random, f.distribution.logp, etc?
         self.f.random = self.random
@@ -271,19 +271,20 @@ class GPSparseConjugate(GPBase, Continuous):
     inducing_points : array
         Grid of points to evaluate Gaussian process over.
     """
-    def __init__(self, X, mean_func, cov_func, sigma, approx, inducing_points, *args, **kwargs):
+    def __init__(self, X, mean_func, cov_func, sigma, approx,
+                 inducing_points, *args, **kwargs):
         self.X = X
         self.nf = self.X.shape[0]
         self.K = cov_func
         self.m = mean_func
         self.mean = self.mode = self.m(X)
-
         self.sigma2 = tt.square(sigma)
-        self.approx = approx
-        kwargs.setdefault("shape", X.squeeze().shape)
 
+        self.approx = approx
         self.Xu = inducing_points
         self.nu = self.Xu.shape[0]
+
+        kwargs.setdefault("shape", X.squeeze().shape)
         super(GPSparseConjugate, self).__init__(*args, **kwargs)
 
     def prior(self, obs_noise=False):
@@ -400,16 +401,18 @@ def sample_gp(trace, gp, X_values, samples=None, obs_noise=True,
         indices = tqdm(indices, total=samples)
 
     try:
-        # best to return a trace?
+        samples = []
         if isinstance(gp, ObservedRV):
             y = [v for v in model.observed_RVs if v.name == gp.name][0]
-            samples = [gp.distribution.random(point=trace[idx],
-                       X_values=X_values, y=y, obs_noise=obs_noise) for idx in indices]
+            for idx in indices:
+                samples.append(gp.distribution.random(point=trace[idx],
+                       X_values=X_values, y=y, obs_noise=obs_noise))
         else:
-            samples = [gp.random(point=trace[idx], X_values=X_values,
-                       y=None, obs_noise=obs_noise) for idx in indices]
+            for idx in indices:
+                samples.append(gp.random(point=trace[idx],
+                       X_values=X_values, y=y, obs_noise=obs_noise))
     except KeyboardInterrupt:
-        pass  # no samples are returned, errors
+        pass
     finally:
         if progressbar:
             indices.close()
