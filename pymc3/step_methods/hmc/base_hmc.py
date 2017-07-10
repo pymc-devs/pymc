@@ -8,12 +8,13 @@ import numpy as np
 
 
 class BaseHMC(arraystep.GradientSharedStep):
+    """Superclass to implement Hamiltonian/hybrid monte carlo"""
     default_blocked = True
 
     def __init__(self, vars=None, scaling=None, step_scale=0.25, is_cov=False,
                  model=None, blocked=True, potential=None,
                  integrator="leapfrog", dtype=None, **theano_kwargs):
-        """Superclass to implement Hamiltonian/hybrid monte carlo
+        """Set up Hamiltonian samplers with common structures.
 
         Parameters
         ----------

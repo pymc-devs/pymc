@@ -70,6 +70,7 @@ class NUTS(BaseHMC):
     .. [1] Hoffman, Matthew D., & Gelman, Andrew. (2011). The No-U-Turn Sampler:
        Adaptively Setting Path Lengths in Hamiltonian Monte Carlo.
     """
+
     name = 'nuts'
 
     default_blocked = True
@@ -92,7 +93,8 @@ class NUTS(BaseHMC):
                  max_treedepth=10, on_error='summary',
                  early_max_treedepth=8,
                  **kwargs):
-        R"""
+        R"""Set up the No-U-Turn sampler.
+
         Parameters
         ----------
         vars : list of Theano variables, default all continuous vars
@@ -171,6 +173,7 @@ class NUTS(BaseHMC):
         self.report = NutsReport(on_error, max_treedepth, target_accept)
 
     def astep(self, q0):
+        """Perform a single NUTS iteration."""
         p0 = self.potential.random()
         start = self.integrator.compute_state(q0, p0)
 
@@ -229,6 +232,7 @@ class NUTS(BaseHMC):
 
     @staticmethod
     def competence(var):
+        """Check how appropriate this class is for sampling a random variable."""
         if var.dtype in continuous_types:
             return Competence.IDEAL
         return Competence.INCOMPATIBLE

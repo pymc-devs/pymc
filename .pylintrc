@@ -29,36 +29,37 @@ confidence=
 # --enable=similarities". If you want to run only the classes checker, but have
 # no Warning level messages displayed, use"--disable=all --enable=classes
 # --disable=W"
-disable=all
+# disable=all
 
 # Enable the message, report, category or checker with the given id(s). You can
 # either give multiple identifier separated by comma (,) or put this option
 # multiple time. See also the "--disable" option for examples.
-enable=import-error,
-       import-self,
-       reimported,
-       wildcard-import,
-       misplaced-future,
-       relative-import,
-       deprecated-module,
-       unpacking-non-sequence,
-       invalid-all-object,
-       undefined-all-variable,
-       used-before-assignment,
-       cell-var-from-loop,
-       global-variable-undefined,
-       # redefined-builtin,
-       redefine-in-handler,
-       unused-import,
-       unused-wildcard-import,
-       global-variable-not-assigned,
-       undefined-loop-variable,
-       global-statement,
-       global-at-module-level,
-       bad-open-mode,
-       redundant-unittest-assert,
-       boolean-datetime,
-       # unused-variable
+enable=all
+# enable=import-error,
+#        import-self,
+#        reimported,
+#        wildcard-import,
+#        misplaced-future,
+#        relative-import,
+#        deprecated-module,
+#        unpacking-non-sequence,
+#        invalid-all-object,
+#        undefined-all-variable,
+#        used-before-assignment,
+#        cell-var-from-loop,
+#        global-variable-undefined,
+#        # redefined-builtin,
+#        redefine-in-handler,
+#        unused-import,
+#        unused-wildcard-import,
+#        global-variable-not-assigned,
+#        undefined-loop-variable,
+#        global-statement,
+#        global-at-module-level,
+#        bad-open-mode,
+#        redundant-unittest-assert,
+#        boolean-datetime,
+#        # unused-variable
 
 
 [REPORTS]
