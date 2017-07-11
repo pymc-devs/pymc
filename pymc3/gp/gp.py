@@ -29,10 +29,14 @@ def stabilize(K):
         return K
 
 
+class GPValueError(Exception):
+    """Raise for exceptions involving invalid arguments to GP constructor"""
+
+
 def GP(name, X, mean_func=None, cov_func=None,
        cov_func_noise=None, sigma=None,
        approx=None, n_inducing=None, inducing_points=None,
-       observed=None, chol_const=True, *args, **kwargs):
+       observed=None, chol_const=True, model=None, *args, **kwargs):
     """Gausian process constructor
     Parameters
     ----------
@@ -56,19 +60,23 @@ def GP(name, X, mean_func=None, cov_func=None,
         The observed 'y' values, use if likelihood is Gaussian
     chol_const: boolean
         Whether or not to stabilize Cholesky decompositions
+    model : Model
+        Optional if in `with` context manager.
     """
     global CHOL_CONST
     CHOL_CONST = chol_const
+
+    model = modelcontext(model)
 
     if mean_func is None:
         mean_func = Zero()
     else:
         if not isinstance(mean_func, Mean):
-            raise ValueError('mean_func must be a subclass of Mean')
+            raise GPValueError('mean_func must be a subclass of Mean')
     if cov_func is None:
-        raise ValueError('A covariance function must be specified for GPP')
+        raise GPValueError('A covariance function must be specified for GP')
     if not isinstance(cov_func, Covariance):
-        raise ValueError('cov_func must be a subclass of Covariance')
+        raise GPValueError('cov_func must be a subclass of Covariance')
 
     # NONCONJUGATE
     if observed is None:
@@ -78,7 +86,7 @@ def GP(name, X, mean_func=None, cov_func=None,
     # CONJUGATE
     if all(value is None for value in [approx, n_inducing, inducing_points]):
         if sigma is None and cov_func_noise is None:
-            raise ValueError(('Must provide a value or a prior '
+            raise GPValueError(('Must provide a value or a prior '
                               'for the noise variance'))
         if sigma is not None and cov_func_noise is None:
             cov_func_noise = lambda X: tt.square(sigma) * tt.eye(X.shape[0])
@@ -104,11 +112,11 @@ def GP(name, X, mean_func=None, cov_func=None,
         approx = "VFE"
 
     if approx not in ["VFE", "FITC"]:
-        raise ValueError(("'FITC' or 'VFE' are the implemented "
+        raise GPValueError(("'FITC' or 'VFE' are the implemented "
                           "GP approximations"))
 
     if inducing_points is None and n_inducing is None:
-        raise ValueError(("Must specify one of 'inducing_points' "
+        raise GPValueError(("Must specify one of 'inducing_points' "
                           "or 'n_inducing'"))
 
     inducing_points = tt.as_tensor_variable(inducing_points)
@@ -177,7 +185,9 @@ class GPFullNonConjugate(GPBase):
         cov = self.K(self.X)
         return mean, stabilize(cov)
 
-    def conditional(self, Z, y=None, obs_noise=None):
+    def conditional(self, Z, *args, **kwargs):
+        v = kwargs.pop("v", self.v)
+
         Z = tt.as_tensor_variable(Z)
         Kxx = self.K(self.X)
         Kxz = self.K(self.X, Z)
@@ -187,12 +197,13 @@ class GPFullNonConjugate(GPBase):
         A = solve_lower(L, Kxz)
 
         cov = Kzz - tt.dot(tt.transpose(A), A)
-        mean = self.m(Z) + tt.squeeze(tt.dot(tt.transpose(A), self.v))
+        mean = self.m(Z) + tt.dot(tt.transpose(A), v)
         return mean, stabilize(cov)
 
     @property
     def RV(self):
-        self.v = Normal(self.name + "_rotated_", mu=0.0, sd=1.0, shape=self.nf)
+        self.v = Normal(self.name + "_rotated_", mu=0.0, sd=1.0,
+                        shape=self.nf, testval=np.zeros(self.nf))
         L = cholesky(stabilize(self.K(self.X)))
         f = Deterministic(self.name, tt.dot(L, self.v))
         f.distribution = self
@@ -316,7 +327,7 @@ class GPSparseConjugate(GPBase, Continuous):
         elif self.approx == "VFE":
             Lamd = tt.ones_like(Qffd) * self.sigma2
         else:
-            raise ValueError("unknown approximation string", self.approx)
+            raise NotImplementedError(self.approx)
         A_l = A / Lamd
         L_B = cholesky(tt.eye(self.nu) + tt.dot(A_l, tt.transpose(A)))
         r = y - self.m(self.X)
@@ -351,7 +362,7 @@ class GPSparseConjugate(GPBase, Continuous):
                      (tt.sum(self.K(self.X, diag=True)) -
                       tt.sum(tt.sum(A * A, 0))))
         else:
-            raise ValueError("unknown approximation string", self.approx)
+            raise NotImplementedError(self.approx)
         A_l = A / Lamd
         L_B = cholesky(tt.eye(self.nu) + tt.dot(A_l, tt.transpose(A)))
         r = y - self.m(self.X)
