@@ -1,7 +1,8 @@
-from .checks import close_to
 import numpy as np
+
 from pymc3.tuning import starting
 from pymc3 import Model, Uniform, Normal, Beta, Binomial, find_MAP, Point
+from .checks import close_to
 from .models import simple_model, non_normal, exponential_beta, simple_arbitrary_det
 from .helpers import select_by_precision
 

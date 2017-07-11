@@ -1,10 +1,14 @@
 from collections import defaultdict
+import sys
 
 from joblib import Parallel, delayed
-from numpy.random import randint, seed
 import numpy as np
+from numpy.random import randint, seed
+from tqdm import tqdm
 
 import pymc3 as pm
+from pymc3.distributions import distribution
+from pymc3.step_methods.hmc import quadpotential
 from .backends.base import merge_traces, BaseTrace, MultiTrace
 from .backends.ndarray import NDArray
 from .model import modelcontext, Point
@@ -13,11 +17,7 @@ from .step_methods import (NUTS, HamiltonianMC, SGFS, Metropolis, BinaryMetropol
                            Slice, CompoundStep)
 from .plots.traceplot import traceplot
 from .util import update_start_vals
-from pymc3.step_methods.hmc import quadpotential
-from pymc3.distributions import distribution
-from tqdm import tqdm
 
-import sys
 sys.setrecursionlimit(10000)
 
 __all__ = ['sample', 'iter_sample', 'sample_ppc', 'sample_ppc_w', 'init_nuts']

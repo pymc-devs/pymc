@@ -1,13 +1,14 @@
-import pymc3 as pm
-import numpy as np
-from pymc3.step_methods import smc
-from pymc3.backends.smc_text import TextStage
-import pytest
 from tempfile import mkdtemp
 import shutil
+
+import numpy as np
+import pytest
 import theano.tensor as tt
 import theano
 
+import pymc3 as pm
+from pymc3.step_methods import smc
+from pymc3.backends.smc_text import TextStage
 from .helpers import SeededTest
 
 

@@ -1,22 +1,17 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
-
 import warnings
+
 import numpy as np
 import scipy
+from scipy import stats, linalg
 import theano
 import theano.tensor as tt
-
-from scipy import stats, linalg
-
 from theano.tensor.nlinalg import det, matrix_inverse, trace
 
 import pymc3 as pm
-
 from pymc3.math import tround
 from pymc3.theanof import floatX
-from . import transforms
 from pymc3.util import get_variable_name
+from . import transforms
 from .distribution import Continuous, Discrete, draw_values, generate_samples
 from ..model import Deterministic
 from .continuous import ChiSquared, Normal
@@ -445,8 +440,7 @@ class Dirichlet(Continuous):
         if dist is None:
             dist = self
         a = dist.a
-        return r'${} \sim \text{{Dirichlet}}(\mathit{{a}}={})$'.format(name,
-                                                get_variable_name(a))
+        return r'${} \sim \text{{Dirichlet}}(\mathit{{a}}={})$'.format(name, get_variable_name(a))
 
 
 class Multinomial(Discrete):
@@ -533,9 +527,8 @@ class Multinomial(Discrete):
             dist = self
         n = dist.n
         p = dist.p
-        return r'${} \sim \text{{Multinomial}}(\mathit{{n}}={}, \mathit{{p}}={})$'.format(name,
-                                                get_variable_name(n),
-                                                get_variable_name(p))
+        return r'${} \sim \text{{Multinomial}}(\mathit{{n}}={}, \mathit{{p}}={})$'.format(
+            name, get_variable_name(n), get_variable_name(p))
 
 
 def posdef(AA):
@@ -583,6 +576,7 @@ class PosDefMatrix(theano.Op):
 
     def __str__(self):
         return "MatrixIsPositiveDefinite"
+
 
 matrix_pos_def = PosDefMatrix()
 
@@ -656,17 +650,16 @@ class Wishart(Continuous):
                      matrix_pos_def(X),
                      tt.eq(X, X.T),
                      nu > (p - 1),
-                     broadcast_conditions=False
-        )
+                     broadcast_conditions=False)
 
     def _repr_latex_(self, name=None, dist=None):
         if dist is None:
             dist = self
         nu = dist.nu
         V = dist.V
-        return r'${} \sim \text{{Wishart}}(\mathit{{nu}}={}, \mathit{{V}}={})$'.format(name,
-                                                get_variable_name(nu),
-                                                get_variable_name(V))
+        return r'${} \sim \text{{Wishart}}(\mathit{{nu}}={}, \mathit{{V}}={})$'.format(
+            name, get_variable_name(nu), get_variable_name(V))
+
 
 def WishartBartlett(name, S, nu, is_cholesky=False, return_cholesky=False, testval=None):
     R"""
@@ -878,6 +871,7 @@ class LKJCholeskyCov(Continuous):
        determinant, URL (version: 2012-04-14):
        http://math.stackexchange.com/q/130026
     """
+
     def __init__(self, eta, n, sd_dist, *args, **kwargs):
         self.n = n
         self.eta = eta
@@ -1021,5 +1015,4 @@ class LKJCorr(Continuous):
                      tt.all(X <= 1), tt.all(X >= -1),
                      matrix_pos_def(X),
                      eta > 0,
-                     broadcast_conditions=False
-        )
+                     broadcast_conditions=False)

@@ -1,18 +1,19 @@
 """Statistical utility functions for PyMC"""
 
-import numpy as np
-import pandas as pd
+from collections import namedtuple
 import itertools
 import sys
 import warnings
-from collections import namedtuple
-from .model import modelcontext
-from .util import get_default_varnames
-from pymc3.theanof import floatX
 
+import numpy as np
+import pandas as pd
 from scipy.misc import logsumexp
 from scipy.stats.distributions import pareto
 
+from pymc3 import _log
+from pymc3.theanof import floatX
+from .model import modelcontext
+from .util import get_default_varnames
 from .backends import tracetab as ttab
 
 __all__ = ['autocorr', 'autocov', 'dic', 'bpic', 'waic', 'loo', 'hpd', 'quantiles',
@@ -508,11 +509,8 @@ def mc_error(x, batches=5):
     `float` representing the error
     """
     if x.ndim > 1:
-
         dims = np.shape(x)
-        #ttrace = np.transpose(np.reshape(trace, (dims[0], sum(dims[1:]))))
         trace = np.transpose([t.ravel() for t in x])
-
         return np.reshape([mc_error(t, batches) for t in trace], dims[1:])
 
     else:
@@ -570,7 +568,7 @@ def quantiles(x, qlist=(2.5, 25, 50, 75, 97.5), transform=lambda x: x):
         _log.warning("Too few elements for quantile calculation")
 
 
-def df_summary(trace, varnames=None, transform=lambda x: x, stat_funcs=None, 
+def df_summary(trace, varnames=None, transform=lambda x: x, stat_funcs=None,
                extend=False, include_transformed=False,
                alpha=0.05, start=0, batches=None):
     R"""Create a data frame with summary statistics.

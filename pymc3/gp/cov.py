@@ -1,6 +1,7 @@
-import theano.tensor as tt
-import numpy as np
 from functools import reduce
+
+import numpy as np
+import theano.tensor as tt
 
 __all__ = ['ExpQuad',
            'RatQuad',
@@ -13,6 +14,7 @@ __all__ = ['ExpQuad',
            'WarpedInput',
            'Gibbs']
 
+
 class Covariance(object):
     R"""
     Base class for all kernels/covariance functions.
@@ -22,8 +24,8 @@ class Covariance(object):
     input_dim : integer
         The number of input dimensions, or columns of X (or Z) the kernel will operate on.
     active_dims : A list of booleans whose length equals input_dim.
-	The booleans indicate whether or not the covariance function operates
-        over that dimension or column of X.
+                  The booleans indicate whether or not the covariance function operates
+                  over that dimension or column of X.
     """
 
     def __init__(self, input_dim, active_dims=None):
@@ -72,11 +74,11 @@ class Covariance(object):
         """
         Required to allow radd/rmul by numpy arrays.
         """
-        r,c = result.shape
-        A = np.zeros((r,c))
+        r, c = result.shape
+        A = np.zeros((r, c))
         for i in range(r):
             for j in range(c):
-                A[i,j] = result[i,j].factor_list[1]
+                A[i, j] = result[i, j].factor_list[1]
         if isinstance(result[0][0], Add):
             return result[0][0].factor_list[0] + A
         elif isinstance(result[0][0], Prod):
@@ -145,8 +147,8 @@ class Stationary(Covariance):
         else:
             Z = tt.mul(Z, 1.0 / self.lengthscales)
             Zs = tt.sum(tt.square(Z), 1)
-            sqd = -2.0 * tt.dot(X, tt.transpose(Z)) +\
-                  (tt.reshape(Xs, (-1, 1)) + tt.reshape(Zs, (1, -1)))
+            sqd = -2.0 * tt.dot(X, tt.transpose(Z)) + (
+                tt.reshape(Xs, (-1, 1)) + tt.reshape(Zs, (1, -1)))
         return tt.clip(sqd, 0.0, np.inf)
 
     def euclidean_dist(self, X, Z):
@@ -172,7 +174,7 @@ class ExpQuad(Stationary):
 
     def full(self, X, Z=None):
         X, Z = self._slice(X, Z)
-        return tt.exp( -0.5 * self.square_dist(X, Z))
+        return tt.exp(-0.5 * self.square_dist(X, Z))
 
 
 class RatQuad(Stationary):
@@ -279,6 +281,7 @@ class Linear(Covariance):
         X, Xc, _ = self._common(X, None)
         return tt.sum(tt.square(Xc), 1)
 
+
 class Polynomial(Linear):
     R"""
     The Polynomial kernel.
@@ -299,6 +302,7 @@ class Polynomial(Linear):
     def diag(self, X):
         linear = super(Polynomial, self).diag(X)
         return tt.power(linear + self.offset, self.d)
+
 
 class WarpedInput(Covariance):
     R"""
@@ -355,6 +359,7 @@ class Gibbs(Covariance):
     args : optional, tuple or list of scalars or PyMC3 variables
         Additional inputs (besides X or Z) to lengthscale_func.
     """
+
     def __init__(self, input_dim, lengthscale_func, args=None, active_dims=None):
         super(Gibbs, self).__init__(input_dim, active_dims)
         if active_dims is not None:
@@ -377,8 +382,8 @@ class Gibbs(Covariance):
         else:
             Z = tt.as_tensor_variable(Z)
             Zs = tt.sum(tt.square(Z), 1)
-            sqd = -2.0 * tt.dot(X, tt.transpose(Z)) +\
-                  (tt.reshape(Xs, (-1, 1)) + tt.reshape(Zs, (1, -1)))
+            sqd = -2.0 * tt.dot(X, tt.transpose(Z)) + (
+                tt.reshape(Xs, (-1, 1)) + tt.reshape(Zs, (1, -1)))
         return tt.clip(sqd, 0.0, np.inf)
 
     def full(self, X, Z=None):
@@ -386,14 +391,14 @@ class Gibbs(Covariance):
         rx = self.lfunc(X, self.args)
         rx2 = tt.reshape(tt.square(rx), (-1, 1))
         if Z is None:
-            r2 = self.square_dist(X,X)
+            r2 = self.square_dist(X, X)
             rz = self.lfunc(X, self.args)
         else:
-            r2 = self.square_dist(X,Z)
+            r2 = self.square_dist(X, Z)
             rz = self.lfunc(Z, self.args)
         rz2 = tt.reshape(tt.square(rz), (1, -1))
-        return tt.sqrt((2.0 * tt.dot(rx, tt.transpose(rz))) / (rx2 + rz2)) *\
-               tt.exp(-1.0 * r2 / (rx2 + rz2))
+        return tt.sqrt((2.0 * tt.dot(rx, tt.transpose(rz))) / (rx2 + rz2)) * tt.exp(
+            -1.0 * r2 / (rx2 + rz2))
 
     def diag(self, X):
         return tt.ones(tt.stack([X.shape[0], ]))

@@ -1,9 +1,10 @@
 import numpy as np
+import pandas as pd
 
-from .helpers import SeededTest
 from pymc3 import Model, Uniform, Normal, find_MAP, Slice, sample
 from pymc3 import families, GLM, LinearComponent
-import pandas as pd
+from .helpers import SeededTest
+
 
 # Generate data
 def generate_data(intercept, slope, size=700):
@@ -56,7 +57,7 @@ class TestGLM(SeededTest):
     def test_glm_link_func(self):
         with Model() as model:
             GLM.from_formula('y ~ x', self.data_logistic,
-                    family=families.Binomial(link=families.logit))
+                             family=families.Binomial(link=families.logit))
             step = Slice(model.vars)
             trace = sample(1000, step=step, tune=0, progressbar=False,
                            random_seed=self.random_seed)
@@ -67,11 +68,11 @@ class TestGLM(SeededTest):
     def test_more_than_one_glm_is_ok(self):
         with Model():
             GLM.from_formula('y ~ x', self.data_logistic,
-                    family=families.Binomial(link=families.logit),
-                    name='glm1')
+                             family=families.Binomial(link=families.logit),
+                             name='glm1')
             GLM.from_formula('y ~ x', self.data_logistic,
-                    family=families.Binomial(link=families.logit),
-                    name='glm2')
+                             family=families.Binomial(link=families.logit),
+                             name='glm2')
 
     def test_from_xy(self):
         with Model():

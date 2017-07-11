@@ -12,19 +12,18 @@ Renamed to SMC and further improvements March 2017
 
 @author: Hannes Vasyura-Bathke
 """
-import numpy as np
-import pymc3 as pm
-from tqdm import tqdm
-
-import theano
 import copy
 import warnings
 
+import numpy as np
+import numpy.random as nr
+import theano
+from tqdm import tqdm
+
+import pymc3 as pm
 from ..model import modelcontext
 from ..vartypes import discrete_types
 from ..theanof import inputvars, make_shared_replacements, join_nonshared_inputs
-import numpy.random as nr
-
 from .metropolis import MultivariateNormalProposal
 from .arraystep import metrop_select
 from ..backends import smc_text as atext
@@ -411,7 +410,8 @@ class SMC(atext.ArrayStepSharedLLK):
 
 
 def sample_smc(n_steps, n_chains=100, step=None, start=None, homepath=None, stage=0, n_jobs=1,
-                 tune_interval=10, tune=None, progressbar=False, model=None, random_seed=-1, rm_flag=True):
+               tune_interval=10, tune=None, progressbar=False, model=None, random_seed=-1,
+               rm_flag=True):
     """Sequential Monte Carlo sampling
 
     Samples the solution space with n_chains of Metropolis chains, where each
@@ -505,7 +505,7 @@ def sample_smc(n_steps, n_chains=100, step=None, start=None, homepath=None, stag
                         'as defined in `step`.' % step.likelihood_name)
 
     step.n_steps = int(n_steps)
-    
+
     stage_handler = atext.TextStage(homepath)
 
     if progressbar and n_jobs > 1:

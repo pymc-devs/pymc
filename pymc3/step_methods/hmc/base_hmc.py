@@ -1,11 +1,11 @@
-from ..arraystep import ArrayStepShared
-from .trajectory import get_theano_hamiltonian_functions
+import numpy as np
 
+from pymc3.theanof import inputvars, make_shared_replacements, floatX
 from pymc3.tuning import guess_scaling
 from pymc3.model import modelcontext, Point
+from ..arraystep import ArrayStepShared
+from .trajectory import get_theano_hamiltonian_functions
 from .quadpotential import quad_potential, QuadPotentialDiagAdapt
-from pymc3.theanof import inputvars, make_shared_replacements, floatX
-import numpy as np
 
 
 class BaseHMC(ArrayStepShared):

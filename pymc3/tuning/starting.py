@@ -3,20 +3,23 @@ Created on Mar 12, 2011
 
 @author: johnsalvatier
 '''
+from inspect import getargspec
+import time
+
 from scipy import optimize
 import numpy as np
 from numpy import isfinite, nan_to_num, logical_not
+
 import pymc3 as pm
-import time
 from ..vartypes import discrete_types, typefilter
 from ..model import modelcontext, Point
 from ..theanof import inputvars
 from ..blocking import DictToArrayBijection, ArrayOrdering
 from ..util import update_start_vals
 
-from inspect import getargspec
 
 __all__ = ['find_MAP']
+
 
 def find_MAP(start=None, vars=None, fmin=None,
              return_raw=False, model=None, live_disp=False, callback=None, *args, **kwargs):

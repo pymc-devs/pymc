@@ -1,20 +1,20 @@
 from itertools import combinations
-import numpy as np
 
 try:
     import unittest.mock as mock  # py3
 except ImportError:
     import mock
 
-import pymc3 as pm
+import numpy as np
+import pytest
+from scipy import stats
 import theano.tensor as tt
 from theano import shared
 import theano
+
+import pymc3 as pm
 from .models import simple_init
 from .helpers import SeededTest
-from scipy import stats
-
-import pytest
 
 
 @pytest.mark.xfail(condition=(theano.config.floatX == "float32"), reason="Fails on float32")

@@ -1,8 +1,10 @@
 from logging.handlers import BufferingHandler
+
 import numpy.random as nr
-from theano.sandbox.rng_mrg import MRG_RandomStreams
-from ..theanof import set_tt_rng, tt_rng
 import theano
+from theano.sandbox.rng_mrg import MRG_RandomStreams
+
+from ..theanof import set_tt_rng, tt_rng
 
 
 class SeededTest(object):

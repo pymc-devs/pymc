@@ -1,7 +1,18 @@
 from __future__ import division
-
 import itertools
 
+import numpy as np
+from numpy import array, inf, log, exp
+import numpy.random as nr
+from numpy.testing import assert_almost_equal, assert_allclose, assert_equal
+import pytest
+from scipy import integrate
+import scipy.stats.distributions as sp
+import scipy.stats
+import theano
+import theano.tensor as tt
+
+from pymc3.theanof import floatX
 from .helpers import SeededTest, select_by_precision
 from ..vartypes import continuous_types
 from ..model import Model, Point, Potential
@@ -16,18 +27,6 @@ from ..distributions import (DensityDist, Categorical, Multinomial, VonMises, Di
                              Bound, Uniform, Triangular, Binomial, SkewNormal, DiscreteWeibull, Gumbel,
                              Interpolated, ZeroInflatedBinomial, HalfFlat)
 from ..distributions import continuous
-from pymc3.theanof import floatX
-from numpy import array, inf, log, exp
-from numpy.testing import assert_almost_equal, assert_allclose, assert_equal
-import numpy.random as nr
-import numpy as np
-import pytest
-
-from scipy import integrate
-import scipy.stats.distributions as sp
-import scipy.stats
-import theano
-import theano.tensor as tt
 
 
 def get_lkj_cases():
@@ -311,6 +310,7 @@ def PdMatrix(n):
     else:
         raise ValueError("n out of bounds")
 
+
 PdMatrix1 = Domain([np.eye(1), [[.5]]], edges=(None, None))
 
 PdMatrix2 = Domain([np.eye(2), [[.5, .05], [.05, 4.5]]], edges=(None, None))
@@ -426,14 +426,14 @@ class TestMatchesScipy(SeededTest):
             Triangular, Runif, {'lower': -Rplusunif, 'c': Runif, 'upper': Rplusunif},
             lambda value, c, lower, upper: sp.triang.logpdf(value, c-lower, lower, upper-lower))
 
-
     def test_bound_normal(self):
         PositiveNormal = Bound(Normal, lower=0.)
         self.pymc3_matches_scipy(PositiveNormal, Rplus, {'mu': Rplus, 'sd': Rplus},
                                  lambda value, mu, sd: sp.norm.logpdf(value, mu, sd),
                                  decimal=select_by_precision(float64=6, float32=-1))
-        with Model(): x = PositiveNormal('x', mu=0, sd=1, transform=None)
-        assert np.isinf(x.logp({'x':-1}))
+        with Model():
+            x = PositiveNormal('x', mu=0, sd=1, transform=None)
+        assert np.isinf(x.logp({'x': -1}))
 
     def test_discrete_unif(self):
         self.pymc3_matches_scipy(
@@ -590,7 +590,7 @@ class TestMatchesScipy(SeededTest):
 
     def test_discrete_weibull(self):
         self.pymc3_matches_scipy(DiscreteWeibull, Nat,
-                {'q': Unit, 'beta': Rplusdunif}, discrete_weibull_logpmf)
+                                 {'q': Unit, 'beta': Rplusdunif}, discrete_weibull_logpmf)
 
     def test_poisson(self):
         self.pymc3_matches_scipy(Poisson, Nat, {'mu': Rplus},
@@ -598,11 +598,11 @@ class TestMatchesScipy(SeededTest):
 
     def test_bound_poisson(self):
         NonZeroPoisson = Bound(Poisson, lower=1.)
-        self.pymc3_matches_scipy(NonZeroPoisson, PosNat, {'mu': Rplus},
-                                lambda value, mu: sp.poisson.logpmf(value, mu))
+        self.pymc3_matches_scipy(NonZeroPoisson, PosNat, {'mu': Rplus}, sp.poisson.logpmf)
 
-        with Model(): x = NonZeroPoisson('x', mu=4)
-        assert np.isinf(x.logp({'x':0}))
+        with Model():
+            x = NonZeroPoisson('x', mu=4)
+        assert np.isinf(x.logp({'x': 0}))
 
     def test_constantdist(self):
         self.pymc3_matches_scipy(Constant, I, {'c': I},
@@ -729,7 +729,7 @@ class TestMatchesScipy(SeededTest):
                                  multinomial_logpdf)
 
     def test_multinomial_vec(self):
-        vals = np.array([[2,4,4], [3,3,4]])
+        vals = np.array([[2, 4, 4], [3, 3, 4]])
         p = np.array([0.2, 0.3, 0.5])
         n = 10
 
@@ -744,7 +744,7 @@ class TestMatchesScipy(SeededTest):
                             decimal=4)
 
     def test_multinomial_vec_1d_n(self):
-        vals = np.array([[2,4,4], [4,3,4]])
+        vals = np.array([[2, 4, 4], [4, 3, 4]])
         p = np.array([0.2, 0.3, 0.5])
         ns = np.array([10, 11])
 
@@ -756,7 +756,7 @@ class TestMatchesScipy(SeededTest):
                             decimal=4)
 
     def test_multinomial_vec_1d_n_2d_p(self):
-        vals = np.array([[2,4,4], [4,3,4]])
+        vals = np.array([[2, 4, 4], [4, 3, 4]])
         ps = np.array([[0.2, 0.3, 0.5],
                        [0.9, 0.09, 0.01]])
         ns = np.array([10, 11])
@@ -769,7 +769,7 @@ class TestMatchesScipy(SeededTest):
                             decimal=4)
 
     def test_multinomial_vec_2d_p(self):
-        vals = np.array([[2,4,4], [3,3,4]])
+        vals = np.array([[2, 4, 4], [3, 3, 4]])
         ps = np.array([[0.2, 0.3, 0.5],
                        [0.3, 0.3, 0.4]])
         n = 10
@@ -843,7 +843,7 @@ class TestMatchesScipy(SeededTest):
     def test_interpolated(self):
         for mu in R.vals:
             for sd in Rplus.vals:
-                #pylint: disable=cell-var-from-loop
+                # pylint: disable=cell-var-from-loop
                 xmin = mu - 5 * sd
                 xmax = mu + 5 * sd
 

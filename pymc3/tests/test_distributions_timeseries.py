@@ -1,12 +1,12 @@
 from __future__ import division
 
+import numpy as np
+
 from ..model import Model
 from ..distributions.continuous import Flat, Normal
 from ..distributions.timeseries import EulerMaruyama
 from ..sampling import sample, sample_ppc
 from ..theanof import floatX
-
-import numpy as np
 
 
 def _gen_sde_path(sde, pars, dt, n, x0):
@@ -25,7 +25,9 @@ def test_linear():
     sig2 = 5e-3
     N = 300
     dt = 1e-1
-    sde = lambda x, lam: (lam * x, sig2)
+
+    def sde(x, lam):
+        return lam * x, sig2
     x = floatX(_gen_sde_path(sde, (lam,), dt, N, 5.0))
     z = x + np.random.randn(x.size) * 5e-3
     # build model

@@ -1,6 +1,8 @@
 # pylint: disable=wildcard-import
 __version__ = "3.1"
 
+import logging
+
 from .blocking import *
 from .distributions import *
 from .external import *
@@ -29,7 +31,6 @@ from .tests import test
 
 from .data import *
 
-import logging
 _log = logging.getLogger('pymc3')
 if not logging.root.handlers:
     _log.setLevel(logging.INFO)

@@ -1,3 +1,4 @@
+import numpy as np
 import theano.tensor as tt
 
 from ..model import FreeRV
@@ -5,7 +6,6 @@ from ..theanof import gradient, floatX
 from . import distribution
 from ..math import logit, invlogit
 from .distribution import draw_values
-import numpy as np
 
 __all__ = ['transform', 'stick_breaking', 'logodds', 'interval',
            'lowerbound', 'upperbound', 'log', 'sum_to_1', 't_stick_breaking']
@@ -80,6 +80,7 @@ class TransformedDistribution(distribution.Distribution):
         return (self.dist.logp(self.transform_used.backward(x)) +
                 self.transform_used.jacobian_det(x))
 
+
 transform = Transform
 
 
@@ -98,6 +99,7 @@ class Log(ElemwiseTransform):
     def jacobian_det(self, x):
         return x
 
+
 log = Log()
 
 
@@ -115,6 +117,7 @@ class LogOdds(ElemwiseTransform):
 
     def forward_val(self, x, point=None):
         return self.forward(x)
+
 
 logodds = LogOdds()
 
@@ -141,13 +144,13 @@ class Interval(ElemwiseTransform):
         # 2017-06-19
         # the `self.a-0.` below is important for the testval to propagates
         # For an explanation see pull/2328#issuecomment-309303811
-        a, b = draw_values([self.a-0., self.b-0.],
-                            point=point)
+        a, b = draw_values([self.a-0., self.b-0.], point=point)
         return floatX(tt.log(x - a) - tt.log(b - x))
 
     def jacobian_det(self, x):
         s = tt.nnet.softplus(-x)
         return tt.log(self.b - self.a) - 2 * s - x
+
 
 interval = Interval
 
@@ -180,6 +183,7 @@ class LowerBound(ElemwiseTransform):
     def jacobian_det(self, x):
         return x
 
+
 lowerbound = LowerBound
 
 
@@ -211,6 +215,7 @@ class UpperBound(ElemwiseTransform):
     def jacobian_det(self, x):
         return x
 
+
 upperbound = UpperBound
 
 
@@ -230,6 +235,7 @@ class SumTo1(Transform):
 
     def jacobian_det(self, x):
         return 0
+
 
 sum_to_1 = SumTo1()
 
@@ -286,9 +292,11 @@ class StickBreaking(Transform):
         S = tt.extra_ops.cumprod(yu, 0)
         return tt.sum(tt.log(S[:-1]) - tt.log1p(tt.exp(yl)) - tt.log1p(tt.exp(-yl)), 0).T
 
+
 stick_breaking = StickBreaking()
 
-t_stick_breaking = lambda eps: StickBreaking(eps)
+
+t_stick_breaking = StickBreaking
 
 
 class Circular(Transform):
@@ -307,6 +315,7 @@ class Circular(Transform):
 
     def jacobian_det(self, x):
         return 0
+
 
 circular = Circular()
 

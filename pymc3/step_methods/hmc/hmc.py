@@ -3,11 +3,12 @@ Created on Mar 7, 2011
 
 @author: johnsalvatier
 '''
-from ..arraystep import metrop_select, Competence
-from .base_hmc import BaseHMC
+import numpy as np
+
 from pymc3.vartypes import discrete_types
 from pymc3.theanof import floatX
-import numpy as np
+from ..arraystep import metrop_select, Competence
+from .base_hmc import BaseHMC
 
 
 __all__ = ['HamiltonianMC']

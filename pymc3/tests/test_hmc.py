@@ -1,14 +1,14 @@
 import numpy as np
-
-from pymc3.blocking import DictToArrayBijection
-from . import models
-from pymc3.step_methods.hmc.base_hmc import BaseHMC
-import pymc3
-from pymc3.theanof import floatX
-from .checks import close_to
-from .helpers import select_by_precision
 import pytest
 import theano
+
+import pymc3
+from pymc3.blocking import DictToArrayBijection
+from pymc3.step_methods.hmc.base_hmc import BaseHMC
+from pymc3.theanof import floatX
+from . import models
+from .checks import close_to
+from .helpers import select_by_precision
 
 
 def test_leapfrog_reversible():
@@ -27,6 +27,7 @@ def test_leapfrog_reversible():
             q, p, _ = step.leapfrog(q, -p, floatX(np.array(epsilon)), np.array(n_steps, dtype='int32'))
             close_to(q, q0, precision, str((n_steps, epsilon)))
             close_to(-p, p0, precision, str((n_steps, epsilon)))
+
 
 @pytest.mark.xfail(condition=(theano.config.floatX == "float32"), reason="Fails on float32")
 def test_leapfrog_reversible_single():

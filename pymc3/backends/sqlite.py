@@ -16,8 +16,9 @@ For example, a variable with the shape (2, 2) would be stored as
 The key is autoincremented each time a new row is added to the table.
 The chain column denotes the chain index and starts at 0.
 """
-import numpy as np
 import sqlite3
+
+import numpy as np
 
 from ..backends import base, ndarray
 from . import tracetab as ttab

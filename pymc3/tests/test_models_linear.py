@@ -1,8 +1,9 @@
 import numpy as np
-from .helpers import SeededTest
+import pytest
+
 from pymc3 import Model, Uniform, Normal, find_MAP, Slice, sample
 from pymc3.glm import LinearComponent, GLM
-import pytest
+from .helpers import SeededTest
 
 
 # Generate data
@@ -107,8 +108,5 @@ class TestGLM(SeededTest):
 
     def test_strange_types(self):
         with Model():
-            with pytest.raises(
-                ValueError):
-                GLM(1,
-                self.data_linear['y'],
-                name='lm')
+            with pytest.raises(ValueError):
+                GLM(1, self.data_linear['y'], name='lm')
