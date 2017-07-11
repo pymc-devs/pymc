@@ -334,18 +334,23 @@ class MvStudentT(_QuadFormBase):
                                          lower=lower, *args, **kwargs)
         self.nu = nu = tt.as_tensor_variable(nu)
         self.mean = self.median = self.mode = self.mu = self.mu
-        self.Sigma = self.cov
 
     def random(self, point=None, size=None):
+        nu, mu = draw_values([self.nu, self.mu], point=point)
+        if self._cov_type == 'cov':
+            cov, = draw_values([self.cov], point=point)
+            dist = MvNormal.dist(mu=np.zeros_like(mu), cov=cov)
+        elif self._cov_type == 'tau':
+            tau, = draw_values([self.tau], point=point)
+            dist = MvNormal.dist(mu=np.zeros_like(mu), tau=tau)
+        else:
+            chol, = draw_values([self.chol], point=point)
+            dist = MvNormal.dist(mu=np.zeros_like(mu), chol=chol)
+
+        samples = dist.random(point, size)
+
         chi2 = np.random.chisquare
-        mvn = np.random.multivariate_normal
-
-        if self.cov is None:
-            raise NotImplementedError()
-        nu, S, mu = draw_values([self.nu, self.cov, self.mu], point=point)
-
-        return (np.sqrt(nu) * (mvn(np.zeros(len(S)), S, size).T
-                               / chi2(nu, size))).T + mu
+        return (np.sqrt(nu) * samples.T / chi2(nu, size)).T + mu
 
     def logp(self, value):
         quaddist, logdet, ok = self._quaddist(value)
@@ -362,7 +367,6 @@ class MvStudentT(_QuadFormBase):
             dist = self
         mu = dist.mu
         nu = dist.nu
-        Sigma = dist.Sigma
         name_nu = get_variable_name(nu)
         name_mu = get_variable_name(mu)
         return (r'${} \sim \text{{MvStudentT}}'
