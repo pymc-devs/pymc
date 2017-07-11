@@ -274,15 +274,15 @@ def categorical_logpdf(value, p):
 
 def mvt_logpdf(value, nu, Sigma, mu=0):
     d = len(Sigma)
-    X = np.atleast_2d(value) - mu
-    Q = X.dot(np.linalg.inv(Sigma)).dot(X.T).sum()
-    log_det = np.log(np.linalg.det(Sigma))
+    dist = np.atleast_2d(value) - mu
+    chol = np.linalg.cholesky(Sigma)
+    trafo = np.linalg.solve(chol, dist.T).T
+    logdet = np.log(np.diag(chol)).sum()
 
-    log_pdf = scipy.special.gammaln(0.5 * (nu + d))
-    log_pdf -= 0.5 * (d * np.log(np.pi * nu) + log_det)
-    log_pdf -= scipy.special.gammaln(nu / 2.)
-    log_pdf -= 0.5 * (nu + d) * np.log(1 + Q / nu)
-    return log_pdf
+    lgamma = scipy.special.gammaln
+    norm = lgamma((nu + d) / 2.)  - 0.5 * d * np.log(nu * np.pi) - lgamma(nu / 2.)
+    logp = norm - logdet - (nu + d) / 2. * np.log1p((trafo * trafo).sum(-1) / nu)
+    return logp.sum()
 
 
 class Simplex(object):
@@ -690,6 +690,9 @@ class TestMatchesScipy(SeededTest):
         self.pymc3_matches_scipy(MvStudentT, Vector(R, n),
                                  {'nu': Rplus, 'Sigma': PdMatrix(n), 'mu': Vector(R, n)},
                                  mvt_logpdf)
+        self.pymc3_matches_scipy(MvStudentT, RealMatrix(2, n),
+                                 {'nu': Rplus, 'Sigma': PdMatrix(n), 'mu': Vector(R, n)},
+                                 mvt_logpdf)
 
     @pytest.mark.parametrize('n', [2, 3])
     def test_wishart(self, n):
@@ -943,7 +946,7 @@ def test_repr_latex_():
                                 '\\mathit{sd}=1.0)$'
     assert x3._repr_latex_() == '$Multivariate \\sim \\text{MvStudentT}' \
                                 '(\\mathit{nu}=5, \\mathit{mu}=Timeseries, ' \
-                                '\\mathit{Sigma}=array)$'
+                                '\\mathit{cov}=array)$'
     assert x4._repr_latex_() == '$Mixture \\sim \\text{NormalMixture}' \
                                 '(\\mathit{w}=array, \\mathit{mu}=Multivariate, ' \
                                 '\\mathit{sigma}=f(Discrete))$'
