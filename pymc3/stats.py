@@ -10,7 +10,6 @@ import pandas as pd
 from scipy.misc import logsumexp
 from scipy.stats.distributions import pareto
 
-from pymc3 import _log
 from pymc3.theanof import floatX
 from .model import modelcontext
 from .util import get_default_varnames
@@ -558,14 +557,8 @@ def quantiles(x, qlist=(2.5, 25, 50, 75, 97.5), transform=lambda x: x):
         # Sort univariate node
         sx = np.sort(x)
 
-    try:
-        # Generate specified quantiles
-        quants = [sx[int(len(sx) * q / 100.0)] for q in qlist]
-
-        return dict(zip(qlist, quants))
-
-    except IndexError:
-        _log.warning("Too few elements for quantile calculation")
+    # Generate specified quantiles
+    return {q: sx[int(len(sx) * q / 100.0)] for q in qlist}
 
 
 def df_summary(trace, varnames=None, transform=lambda x: x, stat_funcs=None,
