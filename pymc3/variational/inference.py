@@ -706,7 +706,7 @@ class NFVI(Inference):
         \ln q_K(z_K) = \ln q_0(z_0) - \sum_{k=1}^{K}\ln \left|\frac{\partial f_k}{\partial z_{k-1}}\right|
 
 
-    Every $f_k$ here is a parametric function with defined determinant.
+    Every :math:`f_k` here is a parametric function with defined determinant.
     We can choose every step here. For example the here is a simple flow
     is an affine transform:
 
@@ -716,7 +716,8 @@ class NFVI(Inference):
 
     Here we get mean field approximation if :math:`z_0 \sim \mathcal{N}(0, 1)`
 
-    ## Flow Formulas
+    **Flow Formulas**
+
     In PyMC3 there is a flexible way to define flows with formulas. We have 5 of them by the moment:
 
     -   Loc (:code:`loc`): :math:`z' = z + \mu`
