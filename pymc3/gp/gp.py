@@ -381,7 +381,8 @@ def sample_gp(trace, gp, X_values, n_samples=None, obs_noise=True,
         Number of posterior predictive samples to generate. Defaults to the
         length of `trace`
     obs_noise : bool
-        Flag for including observation noise in sample. Defaults to False.
+        Flag for including observation noise in sample.  Does not apply to GPs
+        used with non-conjugate likelihoods.  Defaults to False.
     from_prior: bool
         Flag for draw from GP prior.  Defaults to False.
     model : Model
@@ -403,9 +404,9 @@ def sample_gp(trace, gp, X_values, n_samples=None, obs_noise=True,
     if n_samples is None:
         n_samples = len(trace)
 
-    indices = np.random.choice(np.arange(n_samples), len(trace), replace=False)
-    if progressbar:
-        indices = tqdm(indices, total=samples)
+    indices = tqdm(np.random.choice(np.arange(len(trace)),
+                                    n_samples, replace=False),
+                   total=n_samples, disable=not progressbar)
 
     # using observed=y to determine conjugacy? think about more
     if isinstance(gp, ObservedRV):
@@ -415,8 +416,8 @@ def sample_gp(trace, gp, X_values, n_samples=None, obs_noise=True,
 
     try:
         samples = []
-        for idx in tqdm(indices, total=n_samples):
-            samples.append(gp.distribution.random(trace[idx], None,
+        for ix in indices:
+            samples.append(gp.distribution.random(trace[ix], None,
                            X_values, obs_noise, y, from_prior))
     except KeyboardInterrupt:
         pass
