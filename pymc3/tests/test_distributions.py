@@ -598,7 +598,8 @@ class TestMatchesScipy(SeededTest):
 
     def test_bound_poisson(self):
         NonZeroPoisson = Bound(Poisson, lower=1.)
-        self.pymc3_matches_scipy(NonZeroPoisson, PosNat, {'mu': Rplus}, sp.poisson.logpmf)
+        self.pymc3_matches_scipy(NonZeroPoisson, PosNat, {'mu': Rplus},
+                                 lambda value, mu: sp.poisson.logpmf(value, mu))
 
         with Model():
             x = NonZeroPoisson('x', mu=4)
