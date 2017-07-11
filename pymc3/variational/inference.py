@@ -716,8 +716,8 @@ class NFVI(Inference):
 
     Here we get mean field approximation if :math:`z_0 \sim \mathcal{N}(0, 1)`
 
-    Flow Formulas
-    -------------
+    **Flow Formulas**
+
     In PyMC3 there is a flexible way to define flows with formulas. We have 5 of them by the moment:
 
     -   Loc (:code:`loc`): :math:`z' = z + \mu`
