@@ -192,14 +192,11 @@ class GPFullNonConjugate(GPBase):
 
     @property
     def RV(self):
-        self.L = cholesky(stabilize(self.K(self.X)))
         self.v = Normal(self.name + "_rotated_", mu=0.0, sd=1.0, shape=self.nf)
-        self.f = Deterministic(self.name, tt.dot(self.L, self.v))
-        # would be nice to have behavior like
-        # f.distribution.random, f.distribution.logp, etc?
-        # see if/else block in sample_gp
-        self.f.random = self.random
-        return self.f
+        L = cholesky(stabilize(self.K(self.X)))
+        f = Deterministic(self.name, tt.dot(L, self.v))
+        f.distribution = self
+        return f
 
 
 class GPFullConjugate(GPBase, Continuous):
@@ -366,7 +363,7 @@ class GPSparseConjugate(GPBase, Continuous):
         return -1.0 * (constant + logdet + quadratic + trace)
 
 
-def sample_gp(trace, gp, X_values, samples=None, obs_noise=True,
+def sample_gp(trace, gp, X_values, n_samples=None, obs_noise=True,
               from_prior=False, model=None, random_seed=None,
               progressbar=True):
     """Generate samples from a posterior Gaussian process.
@@ -380,7 +377,7 @@ def sample_gp(trace, gp, X_values, samples=None, obs_noise=True,
     X_values : array
         Grid of new values at which to sample GP.  If `None`, returns
         samples from the prior.
-    samples : int
+    n_samples : int
         Number of posterior predictive samples to generate. Defaults to the
         length of `trace`
     obs_noise : bool
@@ -403,24 +400,24 @@ def sample_gp(trace, gp, X_values, samples=None, obs_noise=True,
     if random_seed:
         np.random.seed(random_seed)
 
-    if samples is None:
-        samples = len(trace)
+    if n_samples is None:
+        n_samples = len(trace)
 
-    indices = np.random.choice(np.arange(samples), len(trace), replace=False)
+    indices = np.random.choice(np.arange(n_samples), len(trace), replace=False)
     if progressbar:
         indices = tqdm(indices, total=samples)
 
+    # using observed=y to determine conjugacy? think about more
+    if isinstance(gp, ObservedRV):
+        y = [v for v in model.observed_RVs if v.name == gp.name][0]
+    else:
+        y = None
+
     try:
         samples = []
-        if isinstance(gp, ObservedRV):
-            y = [v for v in model.observed_RVs if v.name == gp.name][0]
-            for idx in indices:
-                samples.append(gp.distribution.random(trace[idx], None,
-                               X_values, obs_noise, y, from_prior))
-        else:
-            for idx in indices:
-                samples.append(gp.random(trace[idx], None, X_values,
-                               obs_noise, y, from_prior))
+        for idx in tqdm(indices, total=n_samples):
+            samples.append(gp.distribution.random(trace[idx], None,
+                           X_values, obs_noise, y, from_prior))
     except KeyboardInterrupt:
         pass
     finally:
