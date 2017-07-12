@@ -309,6 +309,7 @@ class GPSparseConjugate(GPBase, Continuous):
         Kffd = self.K(self.X, diag=True)
         Qff = tt.dot(tt.transpose(A), A)
         mean = self.m(self.X)
+        # fitc vs vfe prior?
         if obs_noise:
             cov = Qff - (tt.diag(Qff) - Kffd) + self.sigma2 * tt.eye(self.nf)
         else:
