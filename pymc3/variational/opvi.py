@@ -40,7 +40,7 @@ from .updates import adagrad_window
 from ..distributions.dist_math import rho2sd, log_normal
 from ..model import modelcontext
 from ..blocking import (
-    ArrayOrdering, DictToArrayBijection,
+    ArrayOrdering, DictToArrayBijection, VarMap
 )
 from ..util import get_default_varnames
 from ..theanof import tt_rng, memoize, change_flags, identity
@@ -471,6 +471,141 @@ class TestFunction(object):
         obj = TestFunction()
         obj.__call__ = f
         return obj
+
+
+class GroupApproximation(object):
+    """
+    Grouped Approximation that is used for modelling mutual dependencies
+    fro a specified group of variables.
+
+    Parameters
+    ----------
+    group : list or -1
+        represents grouped variables for approximation
+    shapes : dict
+        maps variable to it's shape if it is in local variable set
+        with None standing for flexible dimension
+    params : dict
+        custom params with valid shape they exactly the
+        params that are stored in shared_params dict.
+    size : scalar
+        needed when group has local variables
+    model : Model
+    """
+    shared_params = None
+
+    def __init__(self, group=None,
+                 shapes=None,
+                 params=None,
+                 size=None,
+                 random_seed=None,
+                 model=None,):
+        self._rng = tt_rng(random_seed)
+        if model is None:
+            model = modelcontext(model)
+        self.model = model
+        if group is None:
+            self.group = model.vars
+        elif group == -1:
+            self.group = -1
+        else:
+            self.group = group
+        if shapes is None:
+            shapes = dict()
+        if params is None:
+            params = dict()
+        self.shapes = shapes
+        self.user_params = params
+        self._mid_size = size
+        self.vmap = dict()
+        self.ndim = 0
+        self._global_ = True
+        self._freeze_ = False
+        if self.group != -1:
+            self.__init_group__(self.group)
+
+    @property
+    def params_dict(self):
+        if self.user_params is not None:
+            return self.user_params
+        else:
+            return self.shared_params
+
+    @property
+    def global_(self):
+        return self._global_
+
+    @global_.setter
+    def global_(self, v):
+        if self._freeze_:
+            raise TypeError('Cannot set state as this property is unchangeable')
+        self._global_ = v
+
+    @property
+    def local_(self):
+        return not self.global_
+
+    @local_.setter
+    def local_(self, v):
+        self.global_ = not v
+
+    def __init_group__(self, group):
+        seen_local = False
+        seen_global = False
+        if group is None:
+            raise ValueError('Got empty group')
+
+        def get_transformed(z):
+            if hasattr(z, 'transformed'):
+                z = z.transformed
+            return z
+        for var in group:
+            var = get_transformed(var)
+            shape = self.shapes.get(var, var.dshape)
+            check = sum(s is None for s in shape)
+            if check > 1:
+                raise ValueError('More than one flexible dim is not supported')
+            if None in shape:
+                vshape = tuple(s if s is not None else -1 for s in shape)
+                seen_local = True
+            else:
+                vshape = shape
+                seen_global = True
+            if seen_global and seen_local:
+                raise TypeError('Group can consist only with either '
+                                'local or global variables, but got both')
+            s_ = sum(s for s in shape if s is not None)
+            begin = self.ndim
+            self.ndim += s_
+            end = self.ndim
+            self.vmap[var] = VarMap(var.name, slice(begin, end), vshape, var.dtype)
+        if self.ndim == 0:
+            raise TypeError('Got empty latent space')
+        self.global_ = seen_global
+        self._freeze_ = True
+        # last dimension always stands for latent ndim
+        # first dimension always stands for sample size
+        # middle dimension is used only for local variables seamlessly
+        if self.global_:
+            self.symbolic_initial_ = tt.matrix(self.__class__.__name__ + '_symbolic_initial_matrix')
+            self.input = tt.vector(self.__class__.__name__ + '_symbolic_input')
+        else:
+            if self._mid_size is None:
+                raise TypeError('Got local variables without local size')
+            if self.user_params is None:
+                raise TypeError('Got local variables without parametrization')
+            self.symbolic_initial_ = tt.tensor3(self.__class__.__name__ + '_symbolic_initial_tensor')
+            self.input = tt.matrix(self.__class__.__name__ + '_symbolic_input')
+        self.replacements = dict()
+        for v, (name, slc, shape, dtype) in self.vmap.items():
+            # slice is taken only by last dimension
+            vr = self.input[..., slc].reshape(shape).astype(dtype)
+            vr.name = name + '_vi_replacement'
+            self.replacements[v] = vr
+
+    @property
+    def params(self):
+        return collect_shared_to_list(self.params_dict)
 
 
 class Approximation(object):
