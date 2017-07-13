@@ -6,7 +6,7 @@ from pymc3 import Normal
 import theano
 import theano.tensor as tt
 import numpy as np
-from scipy.linalg import cholesky as spcholesky
+from scipy.linalg import cholesky as sp_cholesky
 from scipy.linalg import solve_triangular as sp_solve_triangular
 import itertools
 import numpy.testing as npt
@@ -470,7 +470,11 @@ class TestHandleArgs(object):
         assert func_twoarg(x, a, b) == func_twoarg2(x, args=(a, b))
 
 
-
+"""The following set of tests use the conjugate gp without approx
+as a baseline  for the other gp models.  Fixtures for three
+different data sets are fed into each GP, and the key computations
+performed by each GP* class (logp, prior, conditional) are tested
+on each data set."""
 @pytest.fixture(scope='module', params=["1D", "2D", "3D"])
 def data(request):
     # generate data sets with different noise levels and dimension
@@ -481,40 +485,37 @@ def data(request):
         d, sigma = 2, 0.3
     if request.param == "3D":
         d, sigma = 3, 0.2
-    # X, Z, y, mu, cov, sigma
+    # X, Xs, y, mu, cov, cov_n, sigma
     n_data = 100
     return (np.random.rand(n_data, d), np.random.rand(n_data, d),
-            np.random.randn(n_data), gp.mean.Zero(), gp.cov.ExpQuad(d, 0.1), sigma)
+            np.random.randn(n_data), gp.mean.Zero(),
+            gp.cov.ExpQuad(d, 0.1), gp.cov.WhiteNoise(d, sigma), sigma)
 
 
 @pytest.fixture(scope='module')
 def nonconj_full(data):
-    X, Z, y, mu, cov, sigma = data
-    # add white noise covariance to cov, so model is
-    #   equivalent to conjugate gp
+    X, Xs, y, mu, cov, cov_n, sigma = data
+    # add white noise covariance so cov is equivalent to the conjugate
+    #   gp, which includes the variance from the normal likelihood.
     with Model() as model:
-        gp = GPFullNonConjugate("f", X, mu, cov)
-        f = gp.RV
-    # rotate y into v using cholesky decomp of K
-    K = cov(X).eval() + 1e-6*np.eye(X.shape[0])
-    L = sp_cholesky(K, lower=True)
-    v = sp_solve_triangular(L, y, lower=True)
+        input_dim = X.shape[0]
+        gp_cls = GPFullNonConjugate("f", X, mu, cov + cov_n)
+        f = gp_cls.RV
     return f
 
 
 @pytest.fixture(scope='module')
 def conj_full(data):
-    X, Z, y, mu, cov, sigma = data
+    X, Xs, y, mu, cov, cov_n, sigma = data
     with Model() as model:
-        cov_func_noise = lambda x: tt.square(sigma) * tt.eye(X.shape[0])
-        f = GPFullConjugate("f", X, mu, cov, cov_func_noise, observed=y)
+        f = GPFullConjugate("f", X, mu, cov, cov_n, observed=y)
     return f
 
 
 @pytest.fixture(scope='module')
 def conj_fitc(data):
-    # use X for inducing points, so results should nearly match conj full
-    X, Z, y, mu, cov, sigma = data
+    # use inputs for inducing points so results should nearly match full conj gp
+    X, Xs, y, mu, cov, cov_n, sigma = data
     with Model() as model:
         f = GPSparseConjugate("f", X, mu, cov, sigma, "FITC", X, observed=y)
     return f
@@ -522,32 +523,36 @@ def conj_fitc(data):
 
 @pytest.fixture(scope='module')
 def conj_vfe(data):
-    # use X for inducing points, so results should nearly match conj full
-    X, Z, y, mu, cov, sigma = data
+    # use inputs for inducing points so results should nearly match full conj gp
+    X, Xs, y, mu, cov, cov_n, sigma = data
     with Model() as model:
         f = GPSparseConjugate("f", X, mu, cov, sigma, "VFE", X, observed=y)
     return f
 
 
+# the non-approximated conjugate GP is used as a baseline for comparison
 class TestConjFITC(object):
-    """ Compare the FITC conjugate GP to the full conjugate GP.  inducing points are placed
-    at same location as the inputs, so the results should be approximately the same
+    """ Test that the conjugate GP with the FITC approx is similar to the
+    full conjugate GP.  Inducing points are placed at same location as the inputs,
+    so the results should be approximately the same.  As the number of inducing points
+    decreases, the approximation worsens.
     """
-    def test_prior(self, data, conj_full, conj_fitc):
-        X, Z, y, mu, cov, sigma = data
-        np.testing.assert_allclose(conj_full.logp(y=y), conj_fitc.logp(y=y), atol=0, rtol=1e-3)
+    def test_logp(self, data, conj_full, conj_fitc):
+        X, Xs, y, mu, cov, cov_n, sigma = data
+        np.testing.assert_allclose(conj_full.distribution.logp(y=y).eval(),
+                                   conj_fitc.distribution.logp(y=y).eval(), atol=0, rtol=1e-3)
 
     def test_conditional_with_obsnoise(self, data, conj_full, conj_fitc):
-        X, Z, y, mu, cov, sigma = data
-        c_mu1, c_cov1 = conj_full.distribution.conditional(Z, y, obs_noise=True)
-        c_mu2, c_cov2 = conj_fitc.distribution.conditional(Z, y, obs_noise=True)
+        X, Xs, y, mu, cov, cov_n, sigma = data
+        c_mu1, c_cov1 = conj_full.distribution.conditional(Xs, y, obs_noise=True)
+        c_mu2, c_cov2 = conj_fitc.distribution.conditional(Xs, y, obs_noise=True)
         np.testing.assert_allclose(c_mu1.eval(), c_mu2.eval(), atol=0.1, rtol=1e-3)
         np.testing.assert_allclose(c_cov1.eval(), c_cov2.eval(), atol=0.1, rtol=1e-3)
 
     def test_conditional_without_obsnoise(self, data, conj_full, conj_fitc):
-        X, Z, y, mu, cov, sigma = data
-        c_mu1, c_cov1 = conj_full.distribution.conditional(Z, y, obs_noise=False)
-        c_mu2, c_cov2 = conj_fitc.distribution.conditional(Z, y, obs_noise=False)
+        X, Xs, y, mu, cov, cov_n, sigma = data
+        c_mu1, c_cov1 = conj_full.distribution.conditional(Xs, y, obs_noise=False)
+        c_mu2, c_cov2 = conj_fitc.distribution.conditional(Xs, y, obs_noise=False)
         np.testing.assert_allclose(c_mu1.eval(), c_mu2.eval(), atol=0.1, rtol=1e-3)
         np.testing.assert_allclose(c_cov1.eval(), c_cov2.eval(), atol=0.1, rtol=1e-3)
 
@@ -557,26 +562,35 @@ class TestConjFITC(object):
         np.testing.assert_allclose(p_mu1.eval(), p_mu2.eval(), atol=0.1, rtol=1e-3)
         np.testing.assert_allclose(p_cov1.eval(), p_cov2.eval(), atol=0.1, rtol=1e-3)
 
+    def test_prior_without_obsnoise(self, data, conj_full, conj_fitc):
+        p_mu1, p_cov1 = conj_full.distribution.prior(obs_noise=True)
+        p_mu2, p_cov2 = conj_fitc.distribution.prior(obs_noise=True)
+        np.testing.assert_allclose(p_mu1.eval(), p_mu2.eval(), atol=0.1, rtol=1e-3)
+        np.testing.assert_allclose(p_cov1.eval(), p_cov2.eval(), atol=0.1, rtol=1e-3)
+
 
 class TestConjVFE(object):
-    """ Compare the VFE conjugate GP to the full conjugate GP.  inducing points are placed
-    at same location as the inputs, so the results should be approximately the same
+    """ Test that the conjugate GP with the VFE approx is similar to the
+    full conjugate GP.  Inducing points are placed at same location as the inputs,
+    so the results should be approximately the same.  As the number of inducing points
+    decreases, the approximation worsens.
     """
-    def test_prior(self, data, conj_full, conj_vfe):
-        X, Z, y, mu, cov, sigma = data
-        np.testing.assert_allclose(conj_full.logp(y=y), conj_vfe.logp(y=y), atol=0, rtol=1e-3)
+    def test_logp(self, data, conj_full, conj_vfe):
+        X, Xs, y, mu, cov, cov_n, sigma = data
+        np.testing.assert_allclose(conj_full.distribution.logp(y=y).eval(),
+                                   conj_vfe.distribution.logp(y=y).eval(), atol=0, rtol=1e-3)
 
     def test_conditional_with_obsnoise(self, data, conj_full, conj_vfe):
-        X, Z, y, mu, cov, sigma = data
-        c_mu1, c_cov1 = conj_full.distribution.conditional(Z, y, obs_noise=True)
-        c_mu2, c_cov2 = conj_vfe.distribution.conditional(Z, y, obs_noise=True)
+        X, Xs, y, mu, cov, cov_n, sigma = data
+        c_mu1, c_cov1 = conj_full.distribution.conditional(Xs, y, obs_noise=True)
+        c_mu2, c_cov2 = conj_vfe.distribution.conditional(Xs, y, obs_noise=True)
         np.testing.assert_allclose(c_mu1.eval(), c_mu2.eval(), atol=0.1, rtol=1e-3)
         np.testing.assert_allclose(c_cov1.eval(), c_cov2.eval(), atol=0.1, rtol=1e-3)
 
     def test_conditional_without_obsnoise(self, data, conj_full, conj_vfe):
-        X, Z, y, mu, cov, sigma = data
-        c_mu1, c_cov1 = conj_full.distribution.conditional(Z, y, obs_noise=False)
-        c_mu2, c_cov2 = conj_vfe.distribution.conditional(Z, y, obs_noise=False)
+        X, Xs, y, mu, cov, cov_n, sigma = data
+        c_mu1, c_cov1 = conj_full.distribution.conditional(Xs, y, obs_noise=False)
+        c_mu2, c_cov2 = conj_vfe.distribution.conditional(Xs, y, obs_noise=False)
         np.testing.assert_allclose(c_mu1.eval(), c_mu2.eval(), atol=0.1, rtol=1e-3)
         np.testing.assert_allclose(c_cov1.eval(), c_cov2.eval(), atol=0.1, rtol=1e-3)
 
@@ -586,12 +600,46 @@ class TestConjVFE(object):
         np.testing.assert_allclose(p_mu1.eval(), p_mu2.eval(), atol=0.1, rtol=1e-3)
         np.testing.assert_allclose(p_cov1.eval(), p_cov2.eval(), atol=0.1, rtol=1e-3)
 
+    def test_prior_with_obsnoise(self, data, conj_full, conj_vfe):
+        p_mu1, p_cov1 = conj_full.distribution.prior(obs_noise=True)
+        p_mu2, p_cov2 = conj_vfe.distribution.prior(obs_noise=True)
+        np.testing.assert_allclose(p_mu1.eval(), p_mu2.eval(), atol=0.1, rtol=1e-3)
+        np.testing.assert_allclose(p_cov1.eval(), p_cov2.eval(), atol=0.1, rtol=1e-3)
 
-class TestNonConj(object):
-    """ Non conjugate GP is equivalent to conjugate GP with sigma = 0
+
+class TestNonConjvsConj(object):
+    """ Test that the non conjugate GP is identical to the conjugate GP
+    (no approx) noise has been applied to the kernel of the non
+    conjugate GP so that it matches the conjugate GP fixture.  In order
+    for nonconjugate GP's `conditional` method to be comparable to the
+    conjugate GP's `conditional` method, the WhiteNoise covariance is
+    included in the nonconjugate GP model that is specified in the
+    tests.  There aren't special tests for when the obs_noise flag is
+    set to True because observation noise doesn't make sense in the
+    nonconjugate GP model.
     """
-    pass
+    def test_logp(self, data, conj_full, nonconj_full):
+        X, Xs, y, mu, cov, cov_n, sigma = data
+        # nonconj_full gp is deterministic, so logp comes from GPBase, which
+        # defaults to zero.
+        assert nonconj_full.distribution.logp(y=y) == 0.0
 
+    def test_conditional(self, data, conj_full, nonconj_full):
+        X, Xs, y, mu, cov, cov_n, sigma = data
+        # replace self.v in nonconj_full with rotated version of y for testing
+        K = (cov(X) + cov_n(X)).eval()
+        L = sp_cholesky(K, lower=True)
+        v = sp_solve_triangular(L, y, lower=True)
 
+        c_mu1, c_cov1 = conj_full.distribution.conditional(Xs, y, obs_noise=False)
+        c_mu2, c_cov2 = nonconj_full.distribution.conditional(Xs, v=v)
+        np.testing.assert_allclose(c_mu1.eval(), c_mu2.eval(), atol=0.1, rtol=1e-3)
+        np.testing.assert_allclose(c_cov1.eval(), c_cov2.eval(), atol=0.1, rtol=1e-3)
+
+    def test_prior(self, data, conj_full, nonconj_full):
+        p_mu1, p_cov1 = conj_full.distribution.prior(obs_noise=True)
+        p_mu2, p_cov2 = nonconj_full.distribution.prior()
+        np.testing.assert_allclose(p_mu1.eval(), p_mu2.eval(), atol=0.1, rtol=1e-3)
+        np.testing.assert_allclose(p_cov1.eval(), p_cov2.eval(), atol=0.1, rtol=1e-3)
 
 

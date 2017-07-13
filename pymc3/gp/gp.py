@@ -20,14 +20,9 @@ cholesky = Cholesky(nofail=True, lower=True)
 solve_lower = Solve(A_structure="lower_triangular")
 solve_upper = Solve(A_structure="upper_triangular")
 
-
 def stabilize(K):
-    if CHOL_CONST:
-        n = K.shape[0]
-        return K + 1e-6 * (tt.nlinalg.trace(K)/n) * tt.eye(n)
-    else:
-        return K
-
+    n = K.shape[0]
+    return K + 1e-6 * (tt.nlinalg.trace(K)/n) * tt.eye(n)
 
 class GPValueError(Exception):
     """Raise for exceptions involving invalid arguments to GP constructor"""
@@ -36,7 +31,7 @@ class GPValueError(Exception):
 def GP(name, X, mean_func=None, cov_func=None,
        cov_func_noise=None, sigma=None,
        approx=None, n_inducing=None, inducing_points=None,
-       observed=None, chol_const=True, model=None, *args, **kwargs):
+       observed=None, model=None, *args, **kwargs):
     """Gausian process constructor
     Parameters
     ----------
@@ -58,13 +53,9 @@ def GP(name, X, mean_func=None, cov_func=None,
         The inducing points to use
     observed : None or array
         The observed 'y' values, use if likelihood is Gaussian
-    chol_const: boolean
-        Whether or not to stabilize Cholesky decompositions
     model : Model
         Optional if in `with` context manager.
     """
-    global CHOL_CONST
-    CHOL_CONST = chol_const
 
     model = modelcontext(model)
 
@@ -149,7 +140,7 @@ class GPBase(object):
     def prior(self, obs_noise=False):
         raise NotImplementedError
 
-    def conditional(self, Z, y, obs_noise=False):
+    def conditional(self, Xs, y, obs_noise=False):
         raise NotImplementedError
 
     def logp(self, y):
@@ -185,19 +176,18 @@ class GPFullNonConjugate(GPBase):
         cov = self.K(self.X)
         return mean, stabilize(cov)
 
-    def conditional(self, Z, *args, **kwargs):
+    def conditional(self, Xs, *args, **kwargs):
         v = kwargs.pop("v", self.v)
-
-        Z = tt.as_tensor_variable(Z)
+        Xs = tt.as_tensor_variable(Xs)
         Kxx = self.K(self.X)
-        Kxz = self.K(self.X, Z)
-        Kzz = self.K(Z)
+        Kxs = self.K(self.X, Xs)
+        Kss = self.K(Xs)
 
         L = cholesky(stabilize(Kxx))
-        A = solve_lower(L, Kxz)
+        A = solve_lower(L, Kxs)
 
-        cov = Kzz - tt.dot(tt.transpose(A), A)
-        mean = self.m(Z) + tt.dot(tt.transpose(A), v)
+        cov = Kss - tt.dot(tt.transpose(A), A)
+        mean = self.m(Xs) + tt.dot(tt.transpose(A), v)
         return mean, stabilize(cov)
 
     @property
@@ -241,25 +231,25 @@ class GPFullConjugate(GPBase, Continuous):
         if obs_noise:
             cov = self.K(self.X) + self.Kn(self.X)
         else:
-            cov = stabilize(self.K(self.X))
-        return mean, cov
+            cov = self.K(self.X)
+        return mean, stabilize(cov)
 
-    def conditional(self, Z, y, obs_noise=False):
+    def conditional(self, Xs, y, obs_noise=False):
         Kxx = self.K(self.X)
         Knx = self.Kn(self.X)
-        Kxz = self.K(self.X, Z)
-        Kzz = self.K(Z)
+        Kxs = self.K(self.X, Xs)
+        Kss = self.K(Xs)
 
         r = y - self.m(self.X)
         L = cholesky(stabilize(Kxx) + Knx)
-        A = solve_lower(L, Kxz)
+        A = solve_lower(L, Kxs)
         V = solve_lower(L, r)
-        mean = tt.dot(tt.transpose(A), V) + self.m(Z)
+        mean = tt.dot(tt.transpose(A), V) + self.m(Xs)
         if obs_noise:
-            cov = self.Kn(Z) + Kzz - tt.dot(tt.transpose(A), A)
+            cov = self.Kn(Xs) + Kss - tt.dot(tt.transpose(A), A)
         else:
-            cov = stabilize(Kzz - tt.dot(tt.transpose(A), A))
-        return mean, cov
+            cov = Kss - tt.dot(tt.transpose(A), A)
+        return mean, stabilize(cov)
 
     def logp(self, y):
         mean = self.m(self.X)
@@ -313,8 +303,8 @@ class GPSparseConjugate(GPBase, Continuous):
         if obs_noise:
             cov = Qff - (tt.diag(Qff) - Kffd) + self.sigma2 * tt.eye(self.nf)
         else:
-            cov = stabilize(Qff - (tt.diag(Qff) - Kffd))
-        return mean, cov
+            cov = Qff - (tt.diag(Qff) - Kffd)
+        return mean, stabilize(cov)
 
     def conditional(self, Xs, y, obs_noise=False):
         Kuu = self.K(self.Xu)
@@ -406,7 +396,7 @@ def sample_gp(trace, gp, X_values, n_samples=None, obs_noise=True,
 
     Returns
     -------
-    Array of samples from posterior GP evaluated at Z.
+    Array of samples from posterior GP evaluated at X_values.
     """
     model = modelcontext(model)
 
