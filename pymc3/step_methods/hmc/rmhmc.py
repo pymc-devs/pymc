@@ -10,7 +10,7 @@ __all__ = ['RiemannianManifoldHMC']
 def unif(step_size, elow=.85, ehigh=1.15):
     return np.random.uniform(elow, ehigh) * step_size
 
-class RiemannianManifoldHMC(BaseManifoldHMC):
+class RiemannianManifoldHMC(BaseHMC):
     name = 'rmhmc'
     default_blocked = True
 

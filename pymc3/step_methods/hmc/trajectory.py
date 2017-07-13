@@ -319,7 +319,7 @@ def get_theano_hamiltonian_manifold_functions(model_vars, shared, logpt, potenti
     H, q, dlogp = _theano_hamiltonian_manifold(model_vars, shared, logpt, potential)
     energy_function, p = _theano_energy_function_softabs(H, q, **theano_kwargs)
     velocity_function = _theano_velocity_function_softabs(H, p, **theano_kwargs)
-    integrator = _theano_leapfrog_integrator_softabs(H, q, p, H.dlogp(q), **theano_kwargs)
+    integrator = _theano_leapfrog_integrator_softabs(H, q, p, **theano_kwargs)
     return H, energy_function, velocity_function, integrator, dlogp
 
 
