@@ -1,4 +1,5 @@
 from collections import OrderedDict
+import warnings
 
 from .arraystep import Competence, ArrayStepShared
 from ..vartypes import continuous_types
@@ -10,6 +11,8 @@ import numpy as np
 
 __all__ = ['SGFS']
 
+EXPERIMENTAL_WARNING = "Warning: Stochastic Gradient based sampling methods are experimental step methods and not yet"\
+    " recommended for use in PyMC3!"
 
 def _value_error(cond, str):
     """Throws ValueError if cond is False"""
@@ -101,7 +104,7 @@ class BaseStochasticGradient(ArrayStepShared):
                  minibatches=None,
                  minibatch_tensors=None,
                  **kwargs):
-
+        warnings.warn(EXPERIMENTAL_WARNING)
         if model is None:
             model = modelcontext(model)
         
