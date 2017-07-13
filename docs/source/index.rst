@@ -9,6 +9,7 @@ Contents:
    :maxdepth: 3
 
    getting_started
+   prob_dists
    examples
    api
 
