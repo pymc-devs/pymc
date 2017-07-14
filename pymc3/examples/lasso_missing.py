@@ -17,7 +17,7 @@ with pm.Model() as model:
     # Impute missing values
     sib_mean = pm.Exponential('sib_mean', 1.)
     siblings_imp = pm.Poisson('siblings_imp', sib_mean,
-                              observed=masked_values(siblings, value=-999))
+                              observed=siblings)
 
     p_disab = pm.Beta('p_disab', 1., 1.)
     disability_imp = pm.Bernoulli(
@@ -40,9 +40,8 @@ with pm.Model() as model:
 with model:
     start = pm.find_MAP()
     step1 = pm.NUTS([beta, s, p_disab, p_mother, sib_mean], scaling=start)
-    step2 = pm.Metropolis([mother_imp.missing_values,
-                           disability_imp.missing_values,
-                           siblings_imp.missing_values])
+    step2 = pm.BinaryGibbsMetropolis([mother_imp.missing_values,
+                                      disability_imp.missing_values])
 
 
 def run(n=5000):
