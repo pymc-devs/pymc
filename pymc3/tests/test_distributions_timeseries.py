@@ -17,7 +17,7 @@ def test_AR():
         z = Normal('z', mu=phi*data[:-1], sd=1, shape=len(data)-1)
     ar_like = t['y'].logp({'z':data[1:], 'y': data})
     reg_like = t['z'].logp({'z':data[1:], 'y': data})
-    assert ar_like == reg_like
+    np.testing.assert_allclose(ar_like, reg_like)
 
     # AR1 + constant
     with Model() as t:
@@ -25,7 +25,7 @@ def test_AR():
         z = Normal('z', mu=0.3 + phi*data[:-1], sd=1, shape=len(data)-1)
     ar_like = t['y'].logp({'z':data[1:], 'y': data})
     reg_like = t['z'].logp({'z':data[1:], 'y': data})
-    assert ar_like == reg_like
+    np.testing.assert_allclose(ar_like, reg_like)
 
     # AR2
     phi = np.array([0.84, 0.10])
@@ -34,7 +34,8 @@ def test_AR():
         z = Normal('z', mu=phi[0]*data[1:-1]+phi[1]*data[:-2], sd=1, shape=len(data)-2)
     ar_like = t['y'].logp({'z':data[2:], 'y': data})
     reg_like = t['z'].logp({'z':data[2:], 'y': data})
-    assert ar_like == reg_like
+    np.testing.assert_allclose(ar_like, reg_like)
+
 
 
 def _gen_sde_path(sde, pars, dt, n, x0):
