@@ -65,6 +65,7 @@ from .multivariate import LKJCholeskyCov
 from .multivariate import LKJCorr
 
 from .timeseries import AR1
+from .timeseries import AR
 from .timeseries import GaussianRandomWalk
 from .timeseries import GARCH11
 from .timeseries import MvGaussianRandomWalk
@@ -126,6 +127,7 @@ __all__ = ['Uniform',
            'LKJCholeskyCov',
            'LKJCorr',
            'AR1',
+           'AR',
            'GaussianRandomWalk',
            'MvGaussianRandomWalk',
            'MvStudentTRandomWalk',
