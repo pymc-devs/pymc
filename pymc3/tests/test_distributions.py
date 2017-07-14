@@ -14,7 +14,7 @@ from ..distributions import (DensityDist, Categorical, Multinomial, VonMises, Di
                              NegativeBinomial, Geometric, Exponential, ExGaussian, Normal,
                              Flat, LKJCorr, Wald, ChiSquared, HalfNormal, DiscreteUniform,
                              Bound, Uniform, Triangular, Binomial, SkewNormal, DiscreteWeibull, Gumbel,
-                             Interpolated, ZeroInflatedBinomial)
+                             Interpolated, ZeroInflatedBinomial, AR1)
 from ..distributions import continuous
 from pymc3.theanof import floatX
 from numpy import array, inf, log, exp
@@ -283,6 +283,10 @@ def mvt_logpdf(value, nu, Sigma, mu=0):
     log_pdf -= 0.5 * (nu + d) * np.log(1 + Q / nu)
     return log_pdf
 
+
+def AR1_logpdf(value, k, tau_e):
+    return (sp.norm(loc=0,scale=1/np.sqrt(tau_e)).logpdf(value[0]) +
+            sp.norm(loc=k*value[:-1],scale=1/np.sqrt(tau_e)).logpdf(value[1:]).sum())
 
 class Simplex(object):
     def __init__(self, n):
@@ -676,6 +680,11 @@ class TestMatchesScipy(SeededTest):
                                  {'nu': Rplus, 'Sigma': PdMatrix(n), 'mu': Vector(R, n)},
                                  mvt_logpdf)
 
+    @pytest.mark.parametrize('n',[2,3,4])
+    def test_AR1(self, n):
+        self.pymc3_matches_scipy(AR1, Vector(R, n), {'k': Unit, 'tau_e': Rplus}, AR1_logpdf)
+
+
     @pytest.mark.parametrize('n', [2, 3])
     def test_wishart(self, n):
         # This check compares the autodiff gradient to the numdiff gradient.
@@ -860,3 +869,13 @@ def test_repr_latex_():
     assert x2._repr_latex_()=='$Timeseries \\sim \\text{GaussianRandomWalk}(\\mathit{mu}=Continuous, \\mathit{sd}=1.0)$'
     assert x3._repr_latex_()=='$Multivariate \\sim \\text{MvStudentT}(\\mathit{nu}=5, \\mathit{mu}=Timeseries, \\mathit{Sigma}=array)$'
     assert x4._repr_latex_()=='$Mixture \\sim \\text{NormalMixture}(\\mathit{w}=array, \\mathit{mu}=Multivariate, \\mathit{sigma}=f(Discrete))$'
+
+
+def test_discrete_trafo():
+    with pytest.raises(ValueError) as err:
+        Binomial.dist(n=5, p=0.5, transform='log')
+    err.match('Transformations for discrete distributions')
+    with Model():
+        with pytest.raises(ValueError) as err:
+            Binomial('a', n=5, p=0.5, transform='log')
+        err.match('Transformations for discrete distributions')

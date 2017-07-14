@@ -45,7 +45,7 @@ class AR1(distribution.Continuous):
         boundary = Normal.dist(0., tau=tau_e).logp
 
         innov_like = Normal.dist(k * x_im1, tau=tau_e).logp(x_i)
-        return boundary(x[0]) + tt.sum(innov_like) + boundary(x[-1])
+        return boundary(x[0]) + tt.sum(innov_like)
 
     def _repr_latex_(self, name=None, dist=None):
         if dist is None:
