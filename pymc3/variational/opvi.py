@@ -476,7 +476,7 @@ class TestFunction(object):
 class GroupApproximation(object):
     """
     Grouped Approximation that is used for modelling mutual dependencies
-    fro a specified group of variables.
+    for a specified group of variables.
 
     Parameters
     ----------
@@ -585,7 +585,7 @@ class GroupApproximation(object):
         self._freeze_ = True
         # last dimension always stands for latent ndim
         # first dimension always stands for sample size
-        # middle dimension is used only for local variables seamlessly
+        # middle dimension is used only for local variables free dim
         if self.global_:
             self.symbolic_initial_ = tt.matrix(self.__class__.__name__ + '_symbolic_initial_matrix')
             self.input = tt.vector(self.__class__.__name__ + '_symbolic_input')
