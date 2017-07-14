@@ -1,16 +1,17 @@
 #  pylint:disable=unused-variable
-from .helpers import SeededTest
-from pymc3 import Model, gp, sample, Uniform
-from pymc3.gp.gp import GP, GPFullNonConjugate, GPFullConjugate, GPSparseConjugate
-from pymc3 import Normal
+import numpy as np
+import pymc3 as pm
 import theano
 import theano.tensor as tt
-import numpy as np
+import itertools
+from .helpers import SeededTest
+from pymc3 import fit, Model
+from pymc3.gp.gp import GPFullNonConjugate, GPFullConjugate, GPSparseConjugate
+import pymc3.gp as gp
 from scipy.linalg import cholesky as sp_cholesky
 from scipy.linalg import solve_triangular as sp_solve_triangular
-import itertools
-import numpy.testing as npt
 import pytest
+import numpy.testing as npt
 
 
 class TestZeroMean(object):
@@ -263,8 +264,10 @@ class TestCovSliceDim(object):
 
 
 class TestStability(object):
+    # even if X values are very near, no distances should be
+    #   less than zero
     def test_stable(self):
-        X = np.random.uniform(low=320., high=400., size=[2000, 2])
+        X = np.linspace(0, 1e-6, 20)[:, None]
         with Model() as model:
             cov = gp.cov.ExpQuad(2, 0.1)
         dists = theano.function([], cov.square_dist(X, X))()
@@ -470,6 +473,106 @@ class TestHandleArgs(object):
         assert func_twoarg(x, a, b) == func_twoarg2(x, args=(a, b))
 
 
+def constructor_inputs():
+    args = ["f", np.linspace(0, 1, 10)[:, None], gp.cov.ExpQuad(1, 0.1)]
+    kwargs = {"mean_func": gp.mean.Zero(),
+              "cov_func_noise": gp.cov.WhiteNoise(1, 0.1),
+              "sigma": 0.1,
+              "approx": "fitc",
+              "n_inducing": 10,
+              "inducing_points": np.linspace(0,1,5)[:, None],
+              "observed": np.random.randn(10)}
+    return args, kwargs
+
+
+# test valid signatures and errors for the GP constructor
+class TestGPConstructor(object):
+    def test_raises_mean_invalid(self):
+        args, kwargs = constructor_inputs()
+        kwargs["mean_func"] = "not a mean function"
+        with pytest.raises(ValueError):
+            with Model() as model:
+                gp.GP(*args, **kwargs)
+
+    def test_raises_cov_invalid(self):
+        args, kwargs = constructor_inputs()
+        args[2] = "not a covariance function"
+        with pytest.raises(ValueError):
+            with Model() as model:
+                f = gp.GP(*args, **kwargs)
+
+    def test_conj_full(self):
+        args, kwargs = constructor_inputs()
+        # observed given, the following None, indicating non approx conjugate GP
+        kwargs["approx"], kwargs["n_inducing"], kwargs["inducing_points"] = (None, None, None)
+        # one of sigma or cov_func_noise is provided
+        kwargs["cov_func_noise"] = None
+        with Model() as model:
+            f = gp.GP(*args, **kwargs)
+        assert isinstance(f.distribution, GPFullConjugate)
+        # test inference
+        with model:
+            fit(10, method='advi')
+
+    def test_conj_full_raises(self):
+        args, kwargs = constructor_inputs()
+        # observed given, the following None, indicating non approx conjugate GP
+        kwargs["approx"], kwargs["n_inducing"], kwargs["inducing_points"] = (None, None, None)
+        # both sigma and cov_func_noise are provided
+        with pytest.raises(ValueError):
+            with Model() as model:
+                f = gp.GP(*args, **kwargs)
+        # neither are provided
+        kwargs["sigma"], kwargs["cov_func_noise"] = (None, None)
+        with pytest.raises(ValueError):
+            with Model() as model:
+                f = gp.GP(*args, **kwargs)
+
+    def test_conj_approx_raises(self):
+        args, kwargs = constructor_inputs()
+        kwargs["approx"] = "unknown approximation"
+        with pytest.raises(ValueError):
+            with Model() as model:
+                f = gp.GP(*args, **kwargs)
+        # must provide only one of inducing_points or n_inducing
+        kwargs["approx"], kwargs["n_inducing"], kwargs["inducing_points"] = ("vfe", None, None)
+        with pytest.raises(ValueError):
+            with Model() as model:
+                f = gp.GP(*args, **kwargs)
+
+    def test_conj_approx(self):
+        args, kwargs = constructor_inputs()
+        # kmeans initialization runs without error
+        kwargs["inducing_points"], kwargs["approx"] = (None, None)
+        with Model() as model:
+            f = gp.GP(*args, **kwargs)
+        assert isinstance(f.distribution, GPSparseConjugate)
+        # test inference
+        with model:
+            pm.fit(10, method='advi')
+
+    def test_nonconj_full_raises(self):
+        args, kwargs = constructor_inputs()
+        # indicates non conjugate GP
+        kwargs["observed"] = None
+        # no approximation arguments may be given
+        kwargs["approx"], kwargs["n_inducing"], kwargs["inducing_points"] = (None, 10, None)
+        with pytest.raises(NotImplementedError):
+            with Model() as model:
+                f = gp.GP(*args, **kwargs)
+
+    def test_nonconj_full(self):
+        args, kwargs = constructor_inputs()
+        # indicates non conjugate GP
+        kwargs["observed"] = None
+        kwargs["approx"], kwargs["n_inducing"], kwargs["inducing_points"] = (None, None, None)
+        with Model() as model:
+            f = gp.GP(*args, **kwargs)
+        assert isinstance(f.distribution, GPFullNonConjugate)
+        # test inference
+        with model:
+            pm.fit(10, method='advi')
+
 """The following set of tests use the conjugate gp without approx
 as a baseline  for the other gp models.  Fixtures for three
 different data sets are fed into each GP, and the key computations
@@ -641,5 +744,3 @@ class TestNonConjvsConj(object):
         p_mu2, p_cov2 = nonconj_full.distribution.prior()
         np.testing.assert_allclose(p_mu1.eval(), p_mu2.eval(), atol=0.1, rtol=1e-3)
         np.testing.assert_allclose(p_cov1.eval(), p_cov2.eval(), atol=0.1, rtol=1e-3)
-
-

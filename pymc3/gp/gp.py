@@ -7,7 +7,7 @@ from theano.tensor.slinalg import Solve
 
 import pymc3 as pm
 from .mean import Zero, Mean
-from .cov import Covariance
+from .cov import Covariance, WhiteNoise
 from ..distributions import (Normal, MvNormal, Continuous,
                              draw_values, generate_samples)
 from ..model import modelcontext, Deterministic, ObservedRV
@@ -24,11 +24,8 @@ def stabilize(K):
     n = K.shape[0]
     return K + 1e-6 * (tt.nlinalg.trace(K)/n) * tt.eye(n)
 
-class GPValueError(Exception):
-    """Raise for exceptions involving invalid arguments to GP constructor"""
 
-
-def GP(name, X, mean_func=None, cov_func=None,
+def GP(name, X, cov_func, mean_func=None,
        cov_func_noise=None, sigma=None,
        approx=None, n_inducing=None, inducing_points=None,
        observed=None, model=None, *args, **kwargs):
@@ -37,10 +34,10 @@ def GP(name, X, mean_func=None, cov_func=None,
     ----------
     X : array
         Grid of points to evaluate Gaussian process over.
-    mean_func : Mean
-        Mean function of Gaussian process
     cov_func : Covariance
         Covariance function of Gaussian process
+    mean_func : Mean
+        Mean function of Gaussian process
     cov_func_noise : Covariance
         Covariance function of noise process (ignored for approximations)
     sigma : scalar or array
@@ -63,56 +60,64 @@ def GP(name, X, mean_func=None, cov_func=None,
         mean_func = Zero()
     else:
         if not isinstance(mean_func, Mean):
-            raise GPValueError('mean_func must be a subclass of Mean')
-    if cov_func is None:
-        raise GPValueError('A covariance function must be specified for GP')
+            raise ValueError('mean_func must be a subclass of Mean')
     if not isinstance(cov_func, Covariance):
-        raise GPValueError('cov_func must be a subclass of Covariance')
+        raise ValueError('cov_func must be a subclass of Covariance')
 
-    # NONCONJUGATE
-    if observed is None:
+    # use marginal form for GP
+    if observed is not None:
+        # no approximation indicated
+        if all(value is None for value in [approx, n_inducing, inducing_points]):
+            # provide only one of sigma, cov_func_noise
+            if sigma is not None and cov_func_noise is not None:
+                raise ValueError(('Must provide one of sigma or '
+                                  'cov_func_noise'))
+            if sigma is None and cov_func_noise is None:
+                raise ValueError(('Must provide a value or a prior '
+                                  'for the noise variance'))
+            if sigma is not None and cov_func_noise is None:
+                cov_func_noise = WhiteNoise(X.shape[0], sigma)
+            return GPFullConjugate(name, X, mean_func, cov_func, cov_func_noise,
+                                   observed=observed)
+        else:
+            # use an approximation
+            if approx is None:
+                pm._log.info("Using VFE approximation")
+                approx = "VFE"
+
+            approx = approx.upper()
+            if approx not in ["VFE", "FITC"]:
+                raise ValueError(("'FITC' or 'VFE' are the implemented "
+                                  "GP approximations"))
+
+            if inducing_points is None and n_inducing is None:
+                raise ValueError(("Must specify one of 'inducing_points' "
+                                  "or 'n_inducing'"))
+
+            if inducing_points is None and n_inducing is not None:
+                # initialize inducing points with K-means
+                from scipy.cluster.vq import kmeans
+                # first whiten X
+                if not isinstance(X, np.ndarray):
+                    X = X.value
+                scaling = np.std(X, 0)
+                Xw = X / scaling
+                Xu, distortion = kmeans(Xw, n_inducing)
+                inducing_points = Xu * scaling
+
+            inducing_points = tt.as_tensor_variable(inducing_points)
+            return GPSparseConjugate(name, X, mean_func, cov_func, sigma,
+                                     approx, inducing_points, observed=observed)
+
+    # full, non conjugate GP
+    else:
+        if any(value is not None for value in [approx, n_inducing, inducing_points]):
+            raise NotImplementedError(("No sparse approximation implemented for "
+                                       "full, nonconjugate GP"))
         gp = GPFullNonConjugate(name, X, mean_func, cov_func)
         return gp.RV
 
-    # CONJUGATE
-    if all(value is None for value in [approx, n_inducing, inducing_points]):
-        if sigma is None and cov_func_noise is None:
-            raise GPValueError(('Must provide a value or a prior '
-                              'for the noise variance'))
-        if sigma is not None and cov_func_noise is None:
-            cov_func_noise = lambda X: tt.square(sigma) * tt.eye(X.shape[0])
-        return GPFullConjugate(name, X, mean_func, cov_func, cov_func_noise,
-                               observed=observed)
-    else:
-        approx = approx.upper()
 
-    # CONJUGATE, APPROXIMATION
-    if inducing_points is None and n_inducing is not None:
-        # initialize inducing points with K-means
-        from scipy.cluster.vq import kmeans
-        # first whiten X
-        if not isinstance(X, np.ndarray):
-            X = X.value
-        scaling = np.std(X, 0)
-        Xw = X / scaling
-        Xu, distortion = kmeans(Xw, n_inducing)
-        inducing_points = Xu * scaling
-
-    if approx is None:
-        pm._log.info("Using VFE approximation")
-        approx = "VFE"
-
-    if approx not in ["VFE", "FITC"]:
-        raise GPValueError(("'FITC' or 'VFE' are the implemented "
-                          "GP approximations"))
-
-    if inducing_points is None and n_inducing is None:
-        raise GPValueError(("Must specify one of 'inducing_points' "
-                          "or 'n_inducing'"))
-
-    inducing_points = tt.as_tensor_variable(inducing_points)
-    return GPSparseConjugate(name, X, mean_func, cov_func, sigma,
-                             approx, inducing_points, observed=observed)
 
 
 class GPBase(object):
