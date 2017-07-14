@@ -368,16 +368,22 @@ class Model(six.with_metaclass(InitContextMeta, Context, Factor)):
         else:
             instance._parent = None
         theano_config = kwargs.get('theano_config', {})
-        if 'compute_test_value' not in theano_config:
-            theano_config['compute_test_value'] = 'raise'
-        if theano_config['compute_test_value'] != theano.config.compute_test_value:
+        if theano.config.compute_test_value == 'off':
             warnings.warn("You are using theano config "
-                          "'compute_test_value':%r while Model requires "
-                          "'compute_test_value':%r. The latter is forced "
+                          "'compute_test_value':'off' while Model requires "
+                          "'compute_test_value':'raise' or 'warn'. The latter is forced "
                           "in context manager, we suggest you to use the "
-                          "same values to avoid weird bugs"
-                          % (theano.config.compute_test_value, theano_config['compute_test_value']),
+                          "same values to avoid weird bugs",
                           UserWarning, stacklevel=2)
+            if 'compute_test_value' not in theano_config:
+                theano_config['compute_test_value'] = 'raise'
+        else:
+            if 'compute_test_value' not in theano_config:
+                theano_config['compute_test_value'] = theano.config.compute_test_value
+        if theano_config['compute_test_value'] not in {'raise', 'warn'}:
+            raise ValueError("Cannot use 'compute_test_value':%s, "
+                             "only {'raise', 'warn'} are allowed"
+                             % theano_config['compute_test_value'])
         instance._theano_config = theano_config
         return instance
 
