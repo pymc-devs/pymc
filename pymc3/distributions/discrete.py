@@ -170,7 +170,7 @@ class Bernoulli(Discrete):
         self.mode = tt.cast(tround(p), 'int8')
 
     def random(self, point=None, size=None, repeat=None):
-        p = draw_values([self.p], point=point)
+        p = draw_values([self.p], point=point)[0]
         return generate_samples(stats.bernoulli.rvs, p,
                                 dist_shape=self.shape,
                                 size=size)
@@ -286,7 +286,7 @@ class Poisson(Discrete):
         self.mode = tt.floor(mu).astype('int32')
 
     def random(self, point=None, size=None, repeat=None):
-        mu = draw_values([self.mu], point=point)
+        mu = draw_values([self.mu], point=point)[0]
         return generate_samples(stats.poisson.rvs, mu,
                                 dist_shape=self.shape,
                                 size=size)
@@ -297,7 +297,7 @@ class Poisson(Discrete):
             logpow(mu, value) - factln(value) - mu,
             mu >= 0, value >= 0)
         # Return zero when mu and value are both zero
-        return tt.switch(1 * tt.eq(mu, 0) * tt.eq(value, 0),
+        return tt.switch(tt.eq(mu, 0) * tt.eq(value, 0),
                          0, log_prob)
 
     def _repr_latex_(self, name=None, dist=None):
@@ -357,7 +357,7 @@ class NegativeBinomial(Discrete):
                          value >= 0, mu > 0, alpha > 0)
 
         # Return Poisson when alpha gets very large.
-        return tt.switch(1 * (alpha > 1e10),
+        return tt.switch(tt.gt(alpha, 1e10),
                          Poisson.dist(self.mu).logp(value),
                          negbinom)
 
@@ -398,7 +398,7 @@ class Geometric(Discrete):
         self.mode = 1
 
     def random(self, point=None, size=None, repeat=None):
-        p = draw_values([self.p], point=point)
+        p = draw_values([self.p], point=point)[0]
         return generate_samples(np.random.geometric, p,
                                 dist_shape=self.shape,
                                 size=size)
@@ -559,7 +559,7 @@ class Constant(Discrete):
         self.mean = self.median = self.mode = self.c = c = tt.as_tensor_variable(c)
 
     def random(self, point=None, size=None, repeat=None):
-        c = draw_values([self.c], point=point)
+        c = draw_values([self.c], point=point)[0]
         dtype = np.array(c).dtype
 
         def _random(c, dtype=dtype, size=None):
@@ -633,7 +633,7 @@ class ZeroInflatedPoisson(Discrete):
         psi = self.psi
         theta = self.theta
 
-        logp_val = tt.switch(value > 0,
+        logp_val = tt.switch(tt.gt(value, 0),
                      tt.log(psi) + self.pois.logp(value),
                      logaddexp(tt.log1p(-psi), tt.log(psi) - theta))
 
@@ -701,7 +701,7 @@ class ZeroInflatedBinomial(Discrete):
         p = self.p
         n = self.n
 
-        logp_val = tt.switch(value > 0,
+        logp_val = tt.switch(tt.gt(value, 0),
                  tt.log(psi) + self.bin.logp(value),
                  logaddexp(tt.log1p(-psi), tt.log(psi) + n * tt.log1p(-p)))
 
@@ -777,7 +777,7 @@ class ZeroInflatedNegativeBinomial(Discrete):
         mu = self.mu
         psi = self.psi
 
-        logp_val = tt.switch(value > 0,
+        logp_val = tt.switch(tt.gt(value, 0),
                      tt.log(psi) + self.nb.logp(value),
                      logaddexp(tt.log1p(-psi), tt.log(psi) + alpha * (tt.log(alpha) - tt.log(alpha + mu))))
 

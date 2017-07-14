@@ -50,8 +50,12 @@ class MultivariateNormalProposal(Proposal):
         self.chol = scipy.linalg.cholesky(s, lower=True)
 
     def __call__(self, num_draws=None):
-        b = np.random.randn(self.n)
-        return np.dot(self.chol, b)
+        if num_draws is not None:
+            b = np.random.randn(self.n, num_draws)
+            return np.dot(self.chol, b).T
+        else:
+            b = np.random.randn(self.n)
+            return np.dot(self.chol, b)
 
 
 class Metropolis(ArrayStepShared):

@@ -25,6 +25,7 @@ from .inference import (
     FullRankADVI,
     SVGD,
     ASVGD,
+    NFVI,
     Inference,
     fit
 )
@@ -34,11 +35,13 @@ from .approximations import (
     MeanField,
     FullRank,
     Empirical,
+    NormalizingFlow,
     sample_approx
 )
 
 # special
 from .stein import Stein
+from . import flows
 from . import operators
 from . import test_functions
 from . import opvi

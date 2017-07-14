@@ -14,11 +14,11 @@ from ..distributions import (DensityDist, Categorical, Multinomial, VonMises, Di
                              NegativeBinomial, Geometric, Exponential, ExGaussian, Normal,
                              Flat, LKJCorr, Wald, ChiSquared, HalfNormal, DiscreteUniform,
                              Bound, Uniform, Triangular, Binomial, SkewNormal, DiscreteWeibull, Gumbel,
-                             Interpolated, ZeroInflatedBinomial, AR1)
+                             Interpolated, ZeroInflatedBinomial, HalfFlat, AR1)
 from ..distributions import continuous
 from pymc3.theanof import floatX
 from numpy import array, inf, log, exp
-from numpy.testing import assert_almost_equal
+from numpy.testing import assert_almost_equal, assert_allclose, assert_equal
 import numpy.random as nr
 import numpy as np
 import pytest
@@ -257,7 +257,8 @@ def logpow(v, p):
 
 
 def discrete_weibull_logpmf(value, q, beta):
-    return floatX(np.log(np.power(q, np.power(value, beta)) - np.power(q, np.power(value + 1, beta))))
+    return floatX(np.log(np.power(q, np.power(value, beta))
+                  - np.power(q, np.power(value + 1, beta))))
 
 
 def dirichlet_logpdf(value, a):
@@ -273,15 +274,15 @@ def categorical_logpdf(value, p):
 
 def mvt_logpdf(value, nu, Sigma, mu=0):
     d = len(Sigma)
-    X = np.atleast_2d(value) - mu
-    Q = X.dot(np.linalg.inv(Sigma)).dot(X.T).sum()
-    log_det = np.log(np.linalg.det(Sigma))
+    dist = np.atleast_2d(value) - mu
+    chol = np.linalg.cholesky(Sigma)
+    trafo = np.linalg.solve(chol, dist.T).T
+    logdet = np.log(np.diag(chol)).sum()
 
-    log_pdf = scipy.special.gammaln(0.5 * (nu + d))
-    log_pdf -= 0.5 * (d * np.log(np.pi * nu) + log_det)
-    log_pdf -= scipy.special.gammaln(nu / 2.)
-    log_pdf -= 0.5 * (nu + d) * np.log(1 + Q / nu)
-    return log_pdf
+    lgamma = scipy.special.gammaln
+    norm = lgamma((nu + d) / 2.)  - 0.5 * d * np.log(nu * np.pi) - lgamma(nu / 2.)
+    logp = norm - logdet - (nu + d) / 2. * np.log1p((trafo * trafo).sum(-1) / nu)
+    return logp.sum()
 
 
 def AR1_logpdf(value, k, tau_e):
@@ -445,6 +446,16 @@ class TestMatchesScipy(SeededTest):
 
     def test_flat(self):
         self.pymc3_matches_scipy(Flat, Runif, {}, lambda value: 0)
+        with Model():
+            x = Flat('a')
+            assert_allclose(x.tag.test_value, 0)
+
+    def test_half_flat(self):
+        self.pymc3_matches_scipy(HalfFlat, Rplus, {}, lambda value: 0)
+        with Model():
+            x = HalfFlat('a', shape=2)
+            assert_allclose(x.tag.test_value, 1)
+            assert x.tag.test_value.shape == (2,)
 
     def test_normal(self):
         self.pymc3_matches_scipy(Normal, R, {'mu': R, 'sd': Rplus},
@@ -572,7 +583,8 @@ class TestMatchesScipy(SeededTest):
         self.pymc3_matches_scipy(Binomial, Nat, {'n': NatSmall, 'p': Unit},
                                  lambda value, n, p: sp.binom.logpmf(value, n, p))
 
-    @pytest.mark.xfail(condition=(theano.config.floatX == "float32"), reason="Fails on float32")  # Too lazy to propagate decimal parameter through the whole chain of deps
+    # Too lazy to propagate decimal parameter through the whole chain of deps
+    @pytest.mark.xfail(condition=(theano.config.floatX == "float32"), reason="Fails on float32")
     def test_beta_binomial(self):
         self.checkd(BetaBinomial, Nat, {'alpha': Rplus, 'beta': Rplus, 'n': NatSmall})
 
@@ -600,16 +612,19 @@ class TestMatchesScipy(SeededTest):
         self.pymc3_matches_scipy(Constant, I, {'c': I},
                                  lambda value, c: np.log(c == value))
 
-    @pytest.mark.xfail(condition=(theano.config.floatX == "float32"), reason="Fails on float32")  # Too lazy to propagate decimal parameter through the whole chain of deps
+    # Too lazy to propagate decimal parameter through the whole chain of deps
+    @pytest.mark.xfail(condition=(theano.config.floatX == "float32"), reason="Fails on float32")
     def test_zeroinflatedpoisson(self):
         self.checkd(ZeroInflatedPoisson, Nat, {'theta': Rplus, 'psi': Unit})
 
-    @pytest.mark.xfail(condition=(theano.config.floatX == "float32"), reason="Fails on float32")  # Too lazy to propagate decimal parameter through the whole chain of deps
+    # Too lazy to propagate decimal parameter through the whole chain of deps
+    @pytest.mark.xfail(condition=(theano.config.floatX == "float32"), reason="Fails on float32")
     def test_zeroinflatednegativebinomial(self):
         self.checkd(ZeroInflatedNegativeBinomial, Nat,
                     {'mu': Rplusbig, 'alpha': Rplusbig, 'psi': Unit})
 
-    @pytest.mark.xfail(condition=(theano.config.floatX == "float32"), reason="Fails on float32")  # Too lazy to propagate decimal parameter through the whole chain of deps
+    # Too lazy to propagate decimal parameter through the whole chain of deps
+    @pytest.mark.xfail(condition=(theano.config.floatX == "float32"), reason="Fails on float32")
     def test_zeroinflatedbinomial(self):
         self.checkd(ZeroInflatedBinomial, Nat,
                     {'n': NatSmall, 'p': Unit, 'psi': Unit})
@@ -677,6 +692,9 @@ class TestMatchesScipy(SeededTest):
     @pytest.mark.parametrize('n', [1, 2])
     def test_mvt(self, n):
         self.pymc3_matches_scipy(MvStudentT, Vector(R, n),
+                                 {'nu': Rplus, 'Sigma': PdMatrix(n), 'mu': Vector(R, n)},
+                                 mvt_logpdf)
+        self.pymc3_matches_scipy(MvStudentT, RealMatrix(2, n),
                                  {'nu': Rplus, 'Sigma': PdMatrix(n), 'mu': Vector(R, n)},
                                  mvt_logpdf)
 
@@ -822,8 +840,9 @@ class TestMatchesScipy(SeededTest):
             lambda value, mu, kappa: floatX(sp.vonmises.logpdf(value, kappa, loc=mu)))
 
     def test_gumbel(self):
-        self.pymc3_matches_scipy(Gumbel, R, {'mu': R, 'beta': Rplusbig},
-                                 lambda value, mu, beta: floatX(sp.gumbel_r.logpdf(value, loc=mu, scale=beta)))
+        def gumbel(value, mu, beta):
+            return floatX(sp.gumbel_r.logpdf(value, loc=mu, scale=beta))
+        self.pymc3_matches_scipy(Gumbel, R, {'mu': R, 'beta': Rplusbig}, gumbel)
 
     def test_multidimensional_beta_construction(self):
         with Model():
@@ -857,6 +876,68 @@ class TestMatchesScipy(SeededTest):
                 self.pymc3_matches_scipy(TestedInterpolated, R, {}, ref_pdf)
 
 
+def test_bound():
+    np.random.seed(42)
+    UnboundNormal = Bound(Normal)
+    dist = UnboundNormal.dist(mu=0, sd=1)
+    assert dist.transform is None
+    assert dist.default() == 0.
+    assert isinstance(dist.random(), np.ndarray)
+
+    LowerNormal = Bound(Normal, lower=1)
+    dist = LowerNormal.dist(mu=0, sd=1)
+    assert dist.logp(0).eval() == -np.inf
+    assert dist.default() > 1
+    assert dist.transform is not None
+    assert np.all(dist.random() > 1)
+
+    UpperNormal = Bound(Normal, upper=-1)
+    dist = UpperNormal.dist(mu=0, sd=1)
+    assert dist.logp(-0.5).eval() == -np.inf
+    assert dist.default() < -1
+    assert dist.transform is not None
+    assert np.all(dist.random() < -1)
+
+    ArrayNormal = Bound(Normal, lower=[1, 2], upper=[2, 3])
+    dist = ArrayNormal.dist(mu=0, sd=1, shape=2)
+    assert_equal(dist.logp([0.5, 3.5]).eval(), -np.array([np.inf, np.inf]))
+    assert_equal(dist.default(), np.array([1.5, 2.5]))
+    assert dist.transform is not None
+    with pytest.raises(ValueError) as err:
+        dist.random()
+    err.match('Drawing samples from distributions with array-valued')
+
+    with Model():
+        a = ArrayNormal('c', shape=2)
+        assert_equal(a.tag.test_value, np.array([1.5, 2.5]))
+
+    lower = tt.vector('lower')
+    lower.tag.test_value = np.array([1, 2]).astype(theano.config.floatX)
+    upper = 3
+    ArrayNormal = Bound(Normal, lower=lower, upper=upper)
+    dist = ArrayNormal.dist(mu=0, sd=1, shape=2)
+    logp = dist.logp([0.5, 3.5]).eval({lower: lower.tag.test_value})
+    assert_equal(logp, -np.array([np.inf, np.inf]))
+    assert_equal(dist.default(), np.array([2, 2.5]))
+    assert dist.transform is not None
+
+    with Model():
+        a = ArrayNormal('c', shape=2)
+        assert_equal(a.tag.test_value, np.array([2, 2.5]))
+
+    rand = Bound(Binomial, lower=10).dist(n=20, p=0.3).random()
+    assert rand.dtype in [np.int16, np.int32, np.int64]
+    assert rand >= 10
+
+    rand = Bound(Binomial, upper=10).dist(n=20, p=0.8).random()
+    assert rand.dtype in [np.int16, np.int32, np.int64]
+    assert rand <= 10
+
+    rand = Bound(Binomial, lower=5, upper=8).dist(n=10, p=0.6).random()
+    assert rand.dtype in [np.int16, np.int32, np.int64]
+    assert rand >= 5 and rand <= 8
+
+
 def test_repr_latex_():
     with Model():
         x0 = Binomial('Discrete', p=.5, n=10)
@@ -864,11 +945,20 @@ def test_repr_latex_():
         x2 = GaussianRandomWalk('Timeseries', mu=x1, sd=1., shape=2)
         x3 = MvStudentT('Multivariate', nu=5, mu=x2, Sigma=np.diag(np.ones(2)), shape=2)
         x4 = NormalMixture('Mixture', w=np.array([.5, .5]), mu=x3, sd=x0)
-    assert x0._repr_latex_()=='$Discrete \\sim \\text{Binomial}(\\mathit{n}=10, \\mathit{p}=0.5)$'
-    assert x1._repr_latex_()=='$Continuous \\sim \\text{Normal}(\\mathit{mu}=0.0, \\mathit{sd}=1.0)$'
-    assert x2._repr_latex_()=='$Timeseries \\sim \\text{GaussianRandomWalk}(\\mathit{mu}=Continuous, \\mathit{sd}=1.0)$'
-    assert x3._repr_latex_()=='$Multivariate \\sim \\text{MvStudentT}(\\mathit{nu}=5, \\mathit{mu}=Timeseries, \\mathit{Sigma}=array)$'
-    assert x4._repr_latex_()=='$Mixture \\sim \\text{NormalMixture}(\\mathit{w}=array, \\mathit{mu}=Multivariate, \\mathit{sigma}=f(Discrete))$'
+
+    assert x0._repr_latex_() == '$Discrete \\sim \\text{Binomial}' \
+                                '(\\mathit{n}=10, \\mathit{p}=0.5)$'
+    assert x1._repr_latex_() == '$Continuous \\sim \\text{Normal}' \
+                                '(\\mathit{mu}=0.0, \\mathit{sd}=1.0)$'
+    assert x2._repr_latex_() == '$Timeseries \\sim \\text' \
+                                '{GaussianRandomWalk}(\\mathit{mu}=Continuous, ' \
+                                '\\mathit{sd}=1.0)$'
+    assert x3._repr_latex_() == '$Multivariate \\sim \\text{MvStudentT}' \
+                                '(\\mathit{nu}=5, \\mathit{mu}=Timeseries, ' \
+                                '\\mathit{cov}=array)$'
+    assert x4._repr_latex_() == '$Mixture \\sim \\text{NormalMixture}' \
+                                '(\\mathit{w}=array, \\mathit{mu}=Multivariate, ' \
+                                '\\mathit{sigma}=f(Discrete))$'
 
 
 def test_discrete_trafo():

@@ -25,32 +25,14 @@ from ..vartypes import discrete_types
 from ..theanof import inputvars, make_shared_replacements, join_nonshared_inputs
 import numpy.random as nr
 
+from .metropolis import MultivariateNormalProposal
 from .arraystep import metrop_select
 from ..backends import smc_text as atext
 
-__all__ = ['SMC', 'ATMIP_sample']
+__all__ = ['SMC', 'sample_smc']
 
 EXPERIMENTAL_WARNING = "Warning: SMC is an experimental step method, and not yet"\
     " recommended for use in PyMC3!"
-
-
-class Proposal(object):
-    """Proposal distributions modified from pymc3 to initially create all the
-    Proposal steps without repeated execution of the RNG - significant speedup!
-
-    Parameters
-    ----------
-    s : :class:`numpy.ndarray`
-    """
-    def __init__(self, s):
-        self.s = np.atleast_1d(s)
-
-
-class MultivariateNormalProposal(Proposal):
-    def __call__(self, num_draws=None):
-        return np.random.multivariate_normal(
-                mean=np.zeros(self.s.shape[0]), cov=self.s, size=num_draws)
-
 
 proposal_dists = {
     'MultivariateNormal': MultivariateNormalProposal,
@@ -147,6 +129,15 @@ class SMC(atext.ArrayStepSharedLLK):
         vars = inputvars(vars)
 
         if out_vars is None:
+            if not any(likelihood_name == RV.name for RV in model.unobserved_RVs):
+                pm._log.info(
+                    'Adding model likelihood to RVs!')
+                with model:
+                    llk = pm.Deterministic(likelihood_name, model.logpt)
+            else:
+                pm._log.info(
+                    'Using present model likelihood!')
+
             out_vars = model.unobserved_RVs
 
         out_varnames = [out_var.name for out_var in out_vars]
@@ -368,7 +359,7 @@ class SMC(atext.ArrayStepSharedLLK):
         """
         array_population = np.zeros((self.n_chains, self.lordering.dimensions))
         n_steps = len(mtrace)
-        for var, (_, slc, shp, _) in zip(mtrace.varnames, self.lordering.vmap):
+        for _, slc, shp, _, var in self.lordering.vmap:
             slc_population = mtrace.get_values(varname=var, burn=n_steps - 1, combine=True)
             if len(shp) == 0:
                 array_population[:, slc] = np.atleast_2d(slc_population).T
@@ -419,9 +410,9 @@ class SMC(atext.ArrayStepSharedLLK):
         return outindx
 
 
-def ATMIP_sample(n_steps, step=None, start=None, homepath=None, chain=0, stage=0, n_jobs=1,
-                 tune=None, progressbar=False, model=None, random_seed=-1, rm_flag=False):
-    """(C)ATMIP sampling algorithm (Cascading - (C) not always relevant)
+def sample_smc(n_steps, n_chains=100, step=None, start=None, homepath=None, stage=0, n_jobs=1,
+                 tune_interval=10, tune=None, progressbar=False, model=None, random_seed=-1, rm_flag=True):
+    """Sequential Monte Carlo sampling
 
     Samples the solution space with n_chains of Metropolis chains, where each
     chain has n_steps iterations. Once finished, the sampled traces are
@@ -440,6 +431,8 @@ def ATMIP_sample(n_steps, step=None, start=None, homepath=None, chain=0, stage=0
     ----------
     n_steps : int
         The number of samples to draw for each Markov-chain per stage
+    n_chains : int
+        Number of chains used to store samples in backend.
     step : :class:`SMC`
         SMC initialisation object
     start : List of dictionaries
@@ -448,9 +441,6 @@ def ATMIP_sample(n_steps, step=None, start=None, homepath=None, chain=0, stage=0
         Defaults to random draws from variables (defaults to empty dict)
     homepath : string
         Result_folder for storing stages, will be created if not existing.
-    chain : int
-        Chain number used to store sample in backend. If `n_jobs` is
-        greater than one, chain numbers will start here.
     stage : int
         Stage where to start or continue the calculation. It is possible to
         continue after completed stages (stage should be the number of the
@@ -460,6 +450,8 @@ def ATMIP_sample(n_steps, step=None, start=None, homepath=None, chain=0, stage=0
         internal parallelisation. Sometimes this is more efficient especially
         for simple models.
         step.n_chains / n_jobs has to be an integer number!
+    tune_interval : int
+        Number of steps to tune for
     tune : int
         Number of iterations to tune, if applicable (defaults to None)
     progressbar : bool
@@ -485,12 +477,14 @@ def ATMIP_sample(n_steps, step=None, start=None, homepath=None, chain=0, stage=0
     warnings.warn(EXPERIMENTAL_WARNING)
 
     model = modelcontext(model)
-    step.n_steps = int(n_steps)
+
     if random_seed != -1:
         nr.seed(random_seed)
 
     if step is None:
-        raise TypeError('Argument `step` has to be a SMC step object.')
+        pm._log.info('Argument `step` is None. Auto-initialising step object '
+                     'using given/default parameters.')
+        step = SMC(n_chains=n_chains, tune_interval=tune_interval, model=model)
 
     if homepath is None:
         raise TypeError('Argument `homepath` should be path to result_directory.')
@@ -510,6 +504,8 @@ def ATMIP_sample(n_steps, step=None, start=None, homepath=None, chain=0, stage=0
         raise TypeError('Model (deterministic) variables need to contain a variable %s '
                         'as defined in `step`.' % step.likelihood_name)
 
+    step.n_steps = int(n_steps)
+    
     stage_handler = atext.TextStage(homepath)
 
     if progressbar and n_jobs > 1:
@@ -520,29 +516,12 @@ def ATMIP_sample(n_steps, step=None, start=None, homepath=None, chain=0, stage=0
         step.stage = stage
         draws = 1
     else:
-        step = stage_handler.load_atmip_params(stage)
+        step = stage_handler.load_atmip_params(stage, model=model)
         draws = step.n_steps
 
     stage_handler.clean_directory(stage, None, rm_flag)
-    with model:
-        chains = stage_handler.recover_existing_results(stage, draws, step, n_jobs)
-        if chains is not None:
-            rest = len(chains) % n_jobs
-            if rest > 0:
-                pm._log.info('Fixing %i chains ...' % rest)
-                chains, rest_chains = chains[:-rest], chains[-rest:]
-                # process traces that are not a multiple of n_jobs
-                sample_args = {
-                    'draws': draws,
-                    'step': step,
-                    'stage_path': stage_handler.stage_path(stage),
-                    'progressbar': progressbar,
-                    'model': model,
-                    'n_jobs': rest,
-                    'chains': rest_chains}
 
-                _iter_parallel_chains(**sample_args)
-                pm._log.info('Back to normal!')
+    chains = stage_handler.recover_existing_results(stage, draws, step, n_jobs)
 
     with model:
         while step.beta < 1:
@@ -556,7 +535,7 @@ def ATMIP_sample(n_steps, step=None, start=None, homepath=None, chain=0, stage=0
             pm._log.info('Beta: %f Stage: %i' % (step.beta, step.stage))
 
             # Metropolis sampling intermediate stages
-            chains = stage_handler.clean_directory(stage, chains, rm_flag)
+            chains = stage_handler.clean_directory(step.stage, chains, rm_flag)
             sample_args = {
                     'draws': draws,
                     'step': step,
@@ -596,6 +575,7 @@ def ATMIP_sample(n_steps, step=None, start=None, homepath=None, chain=0, stage=0
         # Metropolis sampling final stage
         pm._log.info('Sample final stage')
         step.stage = -1
+        chains = stage_handler.clean_directory(step.stage, chains, rm_flag)
         temp = np.exp((1 - step.old_beta) * (step.likelihoods - step.likelihoods.max()))
         step.weights = temp / np.sum(temp)
         step.covariance = step.calc_covariance()
@@ -603,13 +583,14 @@ def ATMIP_sample(n_steps, step=None, start=None, homepath=None, chain=0, stage=0
         step.resampling_indexes = step.resample()
         step.chain_previous_lpoint = step.get_chain_previous_lpoint(mtrace)
 
+        sample_args['draws'] = n_steps
         sample_args['step'] = step
         sample_args['stage_path'] = stage_handler.stage_path(step.stage)
         sample_args['chains'] = chains
         _iter_parallel_chains(**sample_args)
 
         stage_handler.dump_atmip_params(step)
-        return stage_handler.load_multitrace(step.stage, model=model)
+        return stage_handler.create_result_trace(step.stage, step=step, model=model)
 
 
 def _sample(draws, step=None, start=None, trace=None, chain=0, tune=None,

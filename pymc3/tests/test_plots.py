@@ -92,5 +92,5 @@ def test_plots_transformed():
     assert traceplot(trace, plot_transformed=True).shape == (2, 2)
     assert autocorrplot(trace).shape == (1, 1)
     assert autocorrplot(trace, plot_transformed=True).shape == (2, 1)
-    assert plot_posterior(trace).shape == (1, )
+    assert plot_posterior(trace).numCols == 1
     assert plot_posterior(trace, plot_transformed=True).shape == (2, )

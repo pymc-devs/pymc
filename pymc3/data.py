@@ -11,7 +11,7 @@ import theano
 __all__ = [
     'get_data',
     'GeneratorAdapter',
-    'DataSampler'
+    'Minibatch'
 ]
 
 
@@ -90,59 +90,272 @@ class GeneratorAdapter(object):
         return hash(id(self))
 
 
-class DataSampler(object):
-    """
-    Convenient picklable data sampler for minibatch inference.
-
-    This generator can be used for passing to pm.generator
-    creating picklable theano computational grapf
+class Minibatch(tt.TensorVariable):
+    """Multidimensional minibatch that is pure TensorVariable
 
     Parameters
     ----------
-    data : array like
-    batchsize : sample size over zero axis
-    random_seed : int for numpy random generator
-    dtype : str representing dtype
+    data : :class:`ndarray`
+        initial data
+    batch_size : `int` or `List[int|tuple(size, random_seed)]`
+        batch size for inference, random seed is needed 
+        for child random generators
+    dtype : `str`
+        cast data to specific type
+    broadcastable : tuple[bool]
+        change broadcastable pattern that defaults to `(False, ) * ndim`
+    name : `str`
+        name for tensor, defaults to "Minibatch"
+    random_seed : `int`
+        random seed that is used by default
+    update_shared_f : `callable`
+        returns :class:`ndarray` that will be carefully 
+        stored to underlying shared variable
+        you can use it to change source of 
+        minibatches programmatically 
+    in_memory_size : `int` or `List[int|slice|Ellipsis]`
+        data size for storing in theano.shared
 
-    Usage
-    -----
-    >>> import pickle
+    Attributes
+    ----------
+    shared : shared tensor
+        Used for storing data
+    minibatch : minibatch tensor
+        Used for training
+
+    Examples
+    --------
+    Consider we have data
+    >>> data = np.random.rand(100, 100)
+
+    if we want 1d slice of size 10 we do
+    >>> x = Minibatch(data, batch_size=10)
+
+    Note, that your data is cast to `floatX` if it is not integer type
+    But you still can add `dtype` kwarg for :class:`Minibatch` 
+
+    in case we want 10 sampled rows and columns
+    `[(size, seed), (size, seed)]` it is
+    >>> x = Minibatch(data, batch_size=[(10, 42), (10, 42)], dtype='int32')
+    >>> assert str(x.dtype) == 'int32'
+
+    or simpler with default random seed = 42
+    `[size, size]`
+    >>> x = Minibatch(data, batch_size=[10, 10])
+
+    x is a regular :class:`TensorVariable` that supports any math
+    >>> assert x.eval().shape == (10, 10)
+
+    You can pass it to your desired model
+    >>> with pm.Model() as model:
+    ...     mu = pm.Flat('mu')
+    ...     sd = pm.HalfNormal('sd')
+    ...     lik = pm.Normal('lik', mu, sd, observed=x, total_size=(100, 100))
+
+    Then you can perform regular Variational Inference out of the box
+    >>> with model:
+    ...     approx = pm.fit()
+
+    Notable thing is that :class:`Minibatch` has `shared`, `minibatch`, attributes
+    you can call later
+    >>> x.set_value(np.random.laplace(size=(100, 100)))
+
+    and minibatches will be then from new storage
+    it directly affects `x.shared`.
+    the same thing would be but less convenient
+    >>> x.shared.set_value(pm.floatX(np.random.laplace(size=(100, 100))))
+
+    programmatic way to change storage is as follows
+    I import `partial` for simplicity
     >>> from functools import partial
-    >>> np.random.seed(42) # reproducibility
-    >>> pm.set_tt_rng(42)
-    >>> data = np.random.normal(size=(1000,)) + 10
-    >>> minibatches = DataSampler(data, batchsize=50)
-    >>> with pm.Model():
-    ...     sd = pm.Uniform('sd', 0, 10)
-    ...     mu = pm.Normal('mu', sd=10)
-    ...     obs_norm = pm.Normal('obs_norm', mu=mu, sd=sd,
-    ...                          observed=minibatches,
-    ...                          total_size=data.shape[0])
-    ...     adam = partial(pm.adam, learning_rate=.8) # easy problem
-    ...     approx = pm.fit(10000, method='advi', obj_optimizer=adam)
-    >>> new = pickle.loads(pickle.dumps(approx))
-    >>> new #doctest: +ELLIPSIS
-    <pymc3.variational.approximations.MeanField object at 0x...>
-    >>> new.sample_vp(draws=1000)['mu'].mean()
-    10.08339999101371
-    >>> new.sample_vp(draws=1000)['sd'].mean()
-    1.2178044136104513
+    >>> datagen = partial(np.random.laplace, size=(100, 100))
+    >>> x = Minibatch(datagen(), batch_size=10, update_shared_f=datagen)
+    >>> x.update_shared()
+
+    To be more concrete about how we get minibatch, here is a demo
+    1) create shared variable 
+    >>> shared = theano.shared(data)
+
+    2) create random slice of size 10
+    >>> ridx = pm.tt_rng().uniform(size=(10,), low=0, high=data.shape[0]-1e-10).astype('int64')
+
+    3) take that slice
+    >>> minibatch = shared[ridx]
+
+    That's done. Next you can use this minibatch somewhere else. 
+    You can see that implementation does not require fixed shape
+    for shared variable. Feel free to use that if needed.
+
+    Suppose you need some replacements in the graph, e.g. change minibatch to testdata
+    >>> node = x ** 2  # arbitrary expressions on minibatch `x`
+    >>> testdata = pm.floatX(np.random.laplace(size=(1000, 10)))
+
+    Then you should create a dict with replacements
+    >>> replacements = {x: testdata}
+    >>> rnode = theano.clone(node, replacements)
+    >>> assert (testdata ** 2 == rnode.eval()).all()
+
+    To replace minibatch with it's shared variable you should do
+    the same things. Minibatch variable is accessible as an attribute
+    as well as shared, associated with minibatch
+    >>> replacements = {x.minibatch: x.shared}
+    >>> rnode = theano.clone(node, replacements)
+
+    For more complex slices some more code is needed that can seem not so clear
+    >>> moredata = np.random.rand(10, 20, 30, 40, 50)
+
+    default `total_size` that can be passed to `PyMC3` random node
+    is then `(10, 20, 30, 40, 50)` but can be less verbose in some cases
+
+    1) Advanced indexing, `total_size = (10, Ellipsis, 50)`
+    >>> x = Minibatch(moredata, [2, Ellipsis, 10])
+
+    We take slice only for the first and last dimension
+    >>> assert x.eval().shape == (2, 20, 30, 40, 10)
+
+    2) Skipping particular dimension, `total_size = (10, None, 30)` 
+    >>> x = Minibatch(moredata, [2, None, 20])
+    >>> assert x.eval().shape == (2, 20, 20, 40, 50)
+
+    3) Mixing that all, `total_size = (10, None, 30, Ellipsis, 50)`
+    >>> x = Minibatch(moredata, [2, None, 20, Ellipsis, 10])
+    >>> assert x.eval().shape == (2, 20, 20, 40, 10)
     """
-    def __init__(self, data, batchsize=50, random_seed=42, dtype='floatX'):
-        self.dtype = theano.config.floatX if dtype == 'floatX' else dtype
-        self.rng = np.random.RandomState(random_seed)
-        self.data = data
-        self.n = batchsize
+    @theano.configparser.change_flags(compute_test_value='raise')
+    def __init__(self, data, batch_size=128, dtype=None, broadcastable=None, name='Minibatch',
+                 random_seed=42, update_shared_f=None, in_memory_size=None):
+        if dtype is None:
+            data = pm.smartfloatX(np.asarray(data))
+        else:
+            data = np.asarray(data, dtype)
+        in_memory_slc = self.make_static_slices(in_memory_size)
+        self.shared = theano.shared(data[in_memory_slc])
+        self.update_shared_f = update_shared_f
+        self.random_slc = self.make_random_slices(self.shared.shape, batch_size, random_seed)
+        minibatch = self.shared[self.random_slc]
+        if broadcastable is None:
+            broadcastable = (False, ) * minibatch.ndim
+        minibatch = tt.patternbroadcast(minibatch, broadcastable)
+        self.minibatch = minibatch
+        super(Minibatch, self).__init__(
+            self.minibatch.type, None, None, name=name)
+        theano.Apply(
+            theano.compile.view_op,
+            inputs=[self.minibatch], outputs=[self])
+        self.tag.test_value = copy(self.minibatch.tag.test_value)
 
-    def __iter__(self):
-        return self
+    @staticmethod
+    def rslice(total, size, seed):
+        if size is None:
+            return slice(None)
+        elif isinstance(size, int):
+            return (pm.tt_rng(seed)
+                    .uniform(size=(size, ), low=0.0, high=pm.floatX(total) - 1e-16)
+                    .astype('int64'))
+        else:
+            raise TypeError('Unrecognized size type, %r' % size)
 
-    def __next__(self):
-        idx = (self.rng
-               .uniform(size=self.n,
-                        low=0.0,
-                        high=self.data.shape[0] - 1e-16)
-               .astype('int64'))
-        return np.asarray(self.data[idx], self.dtype)
+    @staticmethod
+    def make_static_slices(user_size):
+        if user_size is None:
+            return [Ellipsis]
+        elif isinstance(user_size, int):
+            return slice(None, user_size)
+        elif isinstance(user_size, (list, tuple)):
+            slc = list()
+            for i in user_size:
+                if isinstance(i, int):
+                    slc.append(i)
+                elif i is None:
+                    slc.append(slice(None))
+                elif i is Ellipsis:
+                    slc.append(Ellipsis)
+                elif isinstance(i, slice):
+                    slc.append(i)
+                else:
+                    raise TypeError('Unrecognized size type, %r' % user_size)
+            return slc
+        else:
+            raise TypeError('Unrecognized size type, %r' % user_size)
 
-    next = __next__
+    @classmethod
+    def make_random_slices(cls, in_memory_shape, batch_size, default_random_seed):
+        if batch_size is None:
+            return [Ellipsis]
+        elif isinstance(batch_size, int):
+            slc = [cls.rslice(in_memory_shape[0], batch_size, default_random_seed)]
+        elif isinstance(batch_size, (list, tuple)):
+            def check(t):
+                if t is Ellipsis or t is None:
+                    return True
+                else:
+                    if isinstance(t, (tuple, list)):
+                        if not len(t) == 2:
+                            return False
+                        else:
+                            return isinstance(t[0], int) and isinstance(t[1], int)
+                    elif isinstance(t, int):
+                        return True
+                    else:
+                        return False
+            # end check definition
+            if not all(check(t) for t in batch_size):
+                raise TypeError('Unrecognized `batch_size` type, expected '
+                                'int or List[int|tuple(size, random_seed)] where '
+                                'size and random seed are both ints, got %r' %
+                                batch_size)
+            batch_size = [
+                (i, default_random_seed) if isinstance(i, int) else i
+                for i in batch_size
+            ]
+            shape = in_memory_shape
+            if Ellipsis in batch_size:
+                sep = batch_size.index(Ellipsis)
+                begin = batch_size[:sep]
+                end = batch_size[sep + 1:]
+                if Ellipsis in end:
+                    raise ValueError('Double Ellipsis in `batch_size` is restricted, got %r' %
+                                     batch_size)
+                if len(end) > 0:
+                    shp_mid = shape[sep:-len(end)]
+                    mid = [tt.arange(s) for s in shp_mid]
+                else:
+                    mid = []
+            else:
+                begin = batch_size
+                end = []
+                mid = []
+            if (len(begin) + len(end)) > len(in_memory_shape.eval()):
+                raise ValueError('Length of `batch_size` is too big, '
+                                 'number of ints is bigger that ndim, got %r'
+                                 % batch_size)
+            if len(end) > 0:
+                shp_end = shape[-len(end):]
+            else:
+                shp_end = np.asarray([])
+            shp_begin = shape[:len(begin)]
+            slc_begin = [cls.rslice(shp_begin[i], t[0], t[1])
+                         if t is not None else tt.arange(shp_begin[i])
+                         for i, t in enumerate(begin)]
+            slc_end = [cls.rslice(shp_end[i], t[0], t[1])
+                       if t is not None else tt.arange(shp_end[i])
+                       for i, t in enumerate(end)]
+            slc = slc_begin + mid + slc_end
+            slc = slc
+        else:
+            raise TypeError('Unrecognized size type, %r' % batch_size)
+        return pm.theanof.ix_(*slc)
+
+    def update_shared(self):
+        if self.update_shared_f is None:
+            raise NotImplementedError("No `update_shared_f` was provided to `__init__`")
+        self.set_value(np.asarray(self.update_shared_f(), self.dtype))
+
+    def set_value(self, value):
+        self.shared.set_value(np.asarray(value, self.dtype))
+
+    def clone(self):
+        ret = self.type()
+        ret.name = self.name
+        ret.tag = copy(self.tag)
+        return ret

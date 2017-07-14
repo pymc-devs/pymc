@@ -8,10 +8,11 @@ Howto
 =====
 
 .. toctree::
-   notebooks/api_quickstart.ipynb
    notebooks/sampler-stats.ipynb
    notebooks/Diagnosing_biased_Inference_with_Divergences.ipynb
    notebooks/posterior_predictive.ipynb
+   notebooks/model_comparison.ipynb
+   notebooks/model_averaging.ipynb
    notebooks/howto_debugging.ipynb
    notebooks/PyMC3_tips_and_heuristic.ipynb
    notebooks/LKJ.ipynb
@@ -72,3 +73,5 @@ Variational Inference
    notebooks/bayesian_neural_network_advi.ipynb
    notebooks/convolutional_vae_keras_advi.ipynb
    notebooks/bayesian_neural_network_opvi-advi.ipynb
+   notebooks/empirical-approx-overvirew.ipynb
+   notebooks/normalizing_flows_overview.ipynb

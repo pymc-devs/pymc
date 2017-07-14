@@ -1,3 +1,4 @@
+import numbers
 import numpy as np
 import theano.tensor as tt
 from theano import function
@@ -5,12 +6,9 @@ import theano
 from ..memoize import memoize
 from ..model import Model, get_named_nodes, FreeRV, ObservedRV
 from ..vartypes import string_types
-from .dist_math import bound
-# To avoid circular import for transform below
-import pymc3 as pm
 
-__all__ = ['DensityDist', 'Distribution', 'Continuous', 'Bound',
-           'Discrete', 'NoDistribution', 'TensorType', 'draw_values']
+__all__ = ['DensityDist', 'Distribution', 'Continuous', 'Discrete',
+           'NoDistribution', 'TensorType', 'draw_values']
 
 
 class _Unpickling(object):
@@ -48,12 +46,13 @@ class Distribution(object):
         dist.__init__(*args, **kwargs)
         return dist
 
-    def __init__(self, shape, dtype, testval=None, defaults=(), transform=None):
+    def __init__(self, shape, dtype, testval=None, defaults=(),
+                 transform=None, broadcastable=None):
         self.shape = np.atleast_1d(shape)
         if False in (np.floor(self.shape) == self.shape):
             raise TypeError("Expected int elements in shape")
         self.dtype = dtype
-        self.type = TensorType(self.dtype, self.shape)
+        self.type = TensorType(self.dtype, self.shape, broadcastable)
         self.testval = testval
         self.defaults = defaults
         self.transform = transform
@@ -70,8 +69,10 @@ class Distribution(object):
             return self.getattr_value(val)
 
         if val is None:
-            raise AttributeError(str(self) + " has no finite default value to use, checked: " +
-                                 str(defaults) + " pass testval argument or adjust so value is finite.")
+            raise AttributeError("%s has no finite default value to use, "
+                                 "checked: %s. Pass testval argument or "
+                                 "adjust so value is finite."
+                                 % (self, str(defaults)))
 
     def getattr_value(self, val):
         if isinstance(val, string_types):
@@ -89,13 +90,16 @@ class Distribution(object):
         return None
                                                                      
 
-def TensorType(dtype, shape):
-    return tt.TensorType(str(dtype), np.atleast_1d(shape) == 1)
+def TensorType(dtype, shape, broadcastable=None):
+    if broadcastable is None:
+        broadcastable = np.atleast_1d(shape) == 1
+    return tt.TensorType(str(dtype), broadcastable)
 
 
 class NoDistribution(Distribution):
 
-    def __init__(self, shape, dtype, testval=None, defaults=(), transform=None, parent_dist=None, *args, **kwargs):
+    def __init__(self, shape, dtype, testval=None, defaults=(),
+                 transform=None, parent_dist=None, *args, **kwargs):
         super(NoDistribution, self).__init__(shape=shape, dtype=dtype,
                                              testval=testval, defaults=defaults,
                                              *args, **kwargs)
@@ -114,7 +118,7 @@ class NoDistribution(Distribution):
 class Discrete(Distribution):
     """Base class for discrete distributions"""
 
-    def __init__(self, shape=(), dtype=None, defaults=('mode', ),
+    def __init__(self, shape=(), dtype=None, defaults=('mode',),
                  *args, **kwargs):
         if dtype is None:
             if theano.config.floatX == 'float32':
@@ -130,7 +134,8 @@ class Discrete(Distribution):
 class Continuous(Distribution):
     """Base class for continuous distributions"""
 
-    def __init__(self, shape=(), dtype=None, defaults=('median', 'mean', 'mode'), *args, **kwargs):
+    def __init__(self, shape=(), dtype=None, defaults=('median', 'mean', 'mode'),
+                 *args, **kwargs):
         if dtype is None:
             dtype = theano.config.floatX
         super(Continuous, self).__init__(
@@ -146,14 +151,6 @@ class DensityDist(Distribution):
         super(DensityDist, self).__init__(
             shape, dtype, testval, *args, **kwargs)
         self.logp = logp
-
-
-class MultivariateContinuous(Continuous):
-    pass
-
-
-class MultivariateDiscrete(Discrete):
-    pass
 
 
 def draw_values(params, point=None):
@@ -183,18 +180,13 @@ def draw_values(params, point=None):
             if param.name in named_nodes:
                 named_nodes.pop(param.name)
             for name, node in named_nodes.items():
-                if not isinstance(node, (tt.sharedvar.TensorSharedVariable,
+                if not isinstance(node, (tt.sharedvar.SharedVariable,
                                          tt.TensorConstant)):
-                    givens[name] = (node, draw_value(node, point=point))
-    values = [None for _ in params]
-    for i, param in enumerate(params):
-        # "Homogonise" output
-        values[i] = np.atleast_1d(draw_value(
-            param, point=point, givens=givens.values()))
-    if len(values) == 1:
-        return values[0]
-    else:
-        return values
+                    givens[name] = (node, _draw_value(node, point=point))
+    values = []
+    for param in params:
+        values.append(_draw_value(param, point=point, givens=givens.values()))
+    return values
 
 
 @memoize
@@ -222,43 +214,45 @@ def _compile_theano_function(param, vars, givens=None):
                     allow_input_downcast=True)
 
 
-def draw_value(param, point=None, givens=()):
-    if hasattr(param, 'name'):
-        if hasattr(param, 'model'):
-            if point is not None and param.name in point:
-                value = point[param.name]
-            elif hasattr(param, 'random') and param.random is not None:
-                value = param.random(point=point, size=None)
-            else:
-                value = param.tag.test_value
+def _draw_value(param, point=None, givens=None):
+    """Draw a random value from a distribution or return a constant.
+
+    Parameters
+    ----------
+    param : number, array like, theano variable or pymc3 random variable
+        The value or distribution. Constants or shared variables
+        will be converted to an array and returned. Theano variables
+        are evaluated. If `param` is a pymc3 random variables, draw
+        a new value from it and return that, unless a value is specified
+        in `point`.
+    point : dict, optional
+        A dictionary from pymc3 variable names to their values.
+    givens : dict, optional
+        A dictionary from theano variables to their values. These values
+        are used to evaluate `param` if it is a theano variable.
+    """
+    if isinstance(param, numbers.Number):
+        return param
+    elif isinstance(param, np.ndarray):
+        return param
+    elif isinstance(param, tt.TensorConstant):
+        return param.value
+    elif isinstance(param, tt.sharedvar.SharedVariable):
+        return param.get_value()
+    elif isinstance(param, tt.TensorVariable):
+        if point and hasattr(param, 'model') and param.name in point:
+            return point[param.name]
+        elif hasattr(param, 'random') and param.random is not None:
+            return param.random(point=point, size=None)
         else:
-            input_pairs = ([g[0] for g in givens],
-                           [g[1] for g in givens])
-
-            value = _compile_theano_function(param,
-                                             input_pairs[0])(*input_pairs[1])
+            if givens:
+                variables, values = list(zip(*givens))
+            else:
+                variables = values = []
+            func = _compile_theano_function(param, variables)
+            return func(*values)
     else:
-        value = param
-
-    # Sanitising values may be necessary.
-    if hasattr(value, 'value'):
-        value = value.value
-    elif hasattr(value, 'get_value'):
-        value = value.get_value()
-
-    if hasattr(param, 'dtype'):
-        value = np.atleast_1d(value).astype(param.dtype)
-    if hasattr(param, 'shape'):
-        try:
-            shape = param.shape.tag.test_value
-        except AttributeError:
-            try:
-                shape = param.shape.eval()
-            except AttributeError:
-                shape = param.shape
-        if len(shape) == 0 and len(value) == 1:
-            value = value[0]
-    return value
+        raise ValueError('Unexpected type in draw_value: %s' % type(param))
 
 
 def broadcast_shapes(*args):
@@ -386,116 +380,3 @@ def generate_samples(generator, *args, **kwargs):
                                         prefix_shape,
                                         *args, **kwargs)
     return reshape_sampled(samples, size, dist_shape)
-
-
-class Bounded(Distribution):
-    R"""
-    An upper, lower or upper+lower bounded distribution
-
-    Parameters
-    ----------
-    distribution : pymc3 distribution
-        Distribution to be transformed into a bounded distribution
-    lower : float (optional)
-        Lower bound of the distribution, set to -inf to disable.
-    upper : float (optional)
-        Upper bound of the distribibution, set to inf to disable.
-    tranform : 'infer' or object
-        If 'infer', infers the right transform to apply from the supplied bounds.
-        If transform object, has to supply .forward() and .backward() methods.
-        See pymc3.distributions.transforms for more information.
-    """
-
-    def __init__(self, distribution, lower, upper, transform='infer', *args, **kwargs):
-        self.dist = distribution.dist(*args, **kwargs)
-
-        self.__dict__.update(self.dist.__dict__)
-        self.__dict__.update(locals())
-
-        if hasattr(self.dist, 'mode'):
-            self.mode = self.dist.mode
-
-        if transform == 'infer':
-
-            default = self.dist.default()
-
-            if not np.isinf(lower) and not np.isinf(upper):
-                self.transform = pm.distributions.transforms.interval(lower, upper)
-                if default <= lower or default >= upper:
-                    self.testval = 0.5 * (upper + lower)
-
-            if not np.isinf(lower) and np.isinf(upper):
-                self.transform = pm.distributions.transforms.lowerbound(lower)
-                if default <= lower:
-                    self.testval = lower + 1
-
-            if np.isinf(lower) and not np.isinf(upper):
-                self.transform = pm.distributions.transforms.upperbound(upper)
-                if default >= upper:
-                    self.testval = upper - 1
-
-        if issubclass(distribution, Discrete):
-            self.transform = None
-
-    def _random(self, lower, upper, point=None, size=None):
-        samples = np.zeros(size).flatten()
-        i, n = 0, len(samples)
-        while i < len(samples):
-            sample = self.dist.random(point=point, size=n)
-            select = sample[np.logical_and(sample > lower, sample <= upper)]
-            samples[i:(i + len(select))] = select[:]
-            i += len(select)
-            n -= len(select)
-        if size is not None:
-            return np.reshape(samples, size)
-        else:
-            return samples
-
-    def random(self, point=None, size=None, repeat=None):
-        lower, upper = draw_values([self.lower, self.upper], point=point)
-        return generate_samples(self._random, lower, upper, point,
-                                dist_shape=self.shape,
-                                size=size)
-
-    def logp(self, value):
-        return bound(self.dist.logp(value),
-                     value >= self.lower, value <= self.upper)
-
-
-class Bound(object):
-    R"""
-    Creates a new upper, lower or upper+lower bounded distribution
-
-    Parameters
-    ----------
-    distribution : pymc3 distribution
-        Distribution to be transformed into a bounded distribution
-    lower : float (optional)
-        Lower bound of the distribution
-    upper : float (optional)
-
-    Example
-    -------
-    boundedNormal = pymc3.Bound(pymc3.Normal, lower=0.0)
-    par = boundedNormal(mu=0.0, sd=1.0, testval=1.0)
-    """
-
-    def __init__(self, distribution, lower=-np.inf, upper=np.inf):
-        self.distribution = distribution
-        self.lower = lower
-        self.upper = upper
-
-    def __call__(self, *args, **kwargs):
-        if 'observed' in kwargs:
-            raise ValueError('Observed Bound distributions are not allowed. '
-                             'If you want to model truncated data '
-                             'you can use a pm.Potential in combination '
-                             'with the cumulative probability function.')
-        first, args = args[0], args[1:]
-
-        return Bounded(first, self.distribution, self.lower, self.upper,
-                       *args, **kwargs)
-
-    def dist(self, *args, **kwargs):
-        return Bounded.dist(self.distribution, self.lower, self.upper,
-                            *args, **kwargs)
