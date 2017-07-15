@@ -32,6 +32,7 @@ References
 """
 
 import warnings
+import itertools
 import numpy as np
 import theano
 import theano.tensor as tt
@@ -81,6 +82,12 @@ def try_to_set_test_value(node_in, node_out, s):
                 if _s is None:
                     tv = tv[0]
                 o.tag.test_value = tv
+
+
+def get_transformed(z):
+    if hasattr(z, 'transformed'):
+        z = z.transformed
+    return z
 
 
 class ObjectiveUpdates(theano.OrderedUpdates):
@@ -492,17 +499,19 @@ class GroupApproximation(object):
         needed when group has local variables
     model : Model
     """
+    SUPPORT_AEVB = True
     shared_params = None
+    initial_dist_name = 'normal'
+    initial_dist_map = 0.
 
     def __init__(self, group=None,
                  shapes=None,
                  params=None,
                  size=None,
                  random_seed=None,
-                 model=None,):
+                 model=None):
         self._rng = tt_rng(random_seed)
-        if model is None:
-            model = modelcontext(model)
+        model = modelcontext(model)
         self.model = model
         if group is None:
             self.group = model.vars
@@ -522,6 +531,7 @@ class GroupApproximation(object):
         self._global_ = True
         self._freeze_ = False
         if self.group != -1:
+            # init can be delayed
             self.__init_group__(self.group)
 
     @property
@@ -549,16 +559,17 @@ class GroupApproximation(object):
     def local_(self, v):
         self.global_ = not v
 
+    @change_flags(compute_test_value='off')
     def __init_group__(self, group):
-        seen_local = False
-        seen_global = False
         if group is None:
             raise ValueError('Got empty group')
+        if self.group == -1:
+            # delayed init
+            self.group = group
+        seen_local = False
+        seen_global = False
+        # unwrap transformed for replacements
 
-        def get_transformed(z):
-            if hasattr(z, 'transformed'):
-                z = z.transformed
-            return z
         for var in group:
             var = get_transformed(var)
             shape = self.shapes.get(var, var.dshape)
@@ -574,18 +585,16 @@ class GroupApproximation(object):
             if seen_global and seen_local:
                 raise TypeError('Group can consist only with either '
                                 'local or global variables, but got both')
-            s_ = sum(s for s in shape if s is not None)
+            s_ = np.prod([s for s in shape if s is not None])
             begin = self.ndim
             self.ndim += s_
             end = self.ndim
             self.vmap[var] = VarMap(var.name, slice(begin, end), vshape, var.dtype)
-        if self.ndim == 0:
-            raise TypeError('Got empty latent space')
         self.global_ = seen_global
         self._freeze_ = True
         # last dimension always stands for latent ndim
         # first dimension always stands for sample size
-        # middle dimension is used only for local variables free dim
+
         if self.global_:
             self.symbolic_initial_ = tt.matrix(self.__class__.__name__ + '_symbolic_initial_matrix')
             self.input = tt.vector(self.__class__.__name__ + '_symbolic_input')
@@ -606,6 +615,263 @@ class GroupApproximation(object):
     @property
     def params(self):
         return collect_shared_to_list(self.params_dict)
+
+    def to_flat_input(self, node):
+        """
+        Replaces vars with flattened view stored in self.input
+        """
+        return theano.clone(node, self.replacements, strict=False)
+
+    def _new_initial_(self, size, deterministic):
+        if size is None:
+            size = 1
+        if not isinstance(deterministic, tt.Variable):
+            deterministic = np.int8(deterministic)
+        ndim, dist_name, dist_map = (
+            self.ndim,
+            self.initial_dist_name,
+            self.initial_dist_map
+        )
+        dtype = self.symbolic_initial_.dtype
+        ndim = tt.as_tensor(ndim)
+        size = tt.as_tensor(size)
+        if self.local_:
+            shape = tt.stack((size, self._mid_size, ndim))
+        else:
+            shape = tt.stack((size, ndim))
+        # apply optimizations if possible
+        if not isinstance(deterministic, tt.Variable):
+            if deterministic:
+                return tt.ones(shape, dtype) * dist_map
+            else:
+                return getattr(self._rng, dist_name)(shape)
+        else:
+            sample = getattr(self._rng, dist_name)(shape)
+            initial = tt.switch(
+                deterministic,
+                tt.ones(shape, dtype) * dist_map,
+                sample
+            )
+            return initial
+
+    @node_property
+    def symbolic_random(self):
+        raise NotImplementedError
+
+    @change_flags(compute_test_value='off')
+    def set_size_and_deterministic(self, node, s, d):
+        initial_ = self._new_initial_(s, d)
+        # optimizations
+        out = theano.clone(node, {
+            self.symbolic_initial_: initial_,
+        })
+        try_to_set_test_value(node, out, None)
+        return out
+
+    @node_property
+    def symbolic_normalizing_constant(self):
+        """
+        Constant to divide when we want to scale down loss from minibatches
+        """
+        t = self.to_flat_input(
+            tt.max([v.scaling for v in self.group]))
+        t = theano.clone(t, {
+            self.input: self.symbolic_random[0]
+        })
+        t = self.set_size_and_deterministic(t, 1, 1)  # remove random, we do not it here at all
+        return pm.floatX(t)
+
+    @node_property
+    def symbolic_logq(self):
+        raise NotImplementedError  # shape (s,)
+
+    @node_property
+    def logq(self):
+        return self.symbolic_logq.mean(0)
+
+    @node_property
+    def logq_norm(self):
+        return self.logq / self.symbolic_normalizing_constant
+
+
+class GroupedApproximation(object):
+    def __init__(self, groups, model=None):
+        model = modelcontext(model)
+        seen = set()
+        rest = None
+        for g in groups:
+            if g.group is -1:
+                if rest is not None:
+                    raise TypeError('More that one group is specified for '
+                                    'the rest variables')
+                else:
+                    rest = g
+            if set(g.group) & seen:
+                raise ValueError('Found duplicates in groups')
+            seen.update(g.group)
+        if set(model.free_RVs) - seen:
+            if rest is None:
+                raise ValueError('No approximation is specified for the rest variables')
+            else:
+                rest.__init_group__(set(model.free_RVs) - seen)
+        self.groups = groups
+        self.model = model
+
+    def _collect(self, item):
+        return [getattr(g, item) for g in self.groups]
+
+    inputs = property(lambda self: self._collect('input'))
+    symbolic_randoms = property(lambda self: self._collect('symbolic_random'))
+
+    @node_property
+    def symbolic_normalizing_constant(self):
+        return tt.max(self._collect('symbolic_normalizing_constant'))
+
+    @node_property
+    def symbolic_logq(self):
+        return tt.add(*self._collect('symbolic_logq'))
+
+    @node_property
+    def logq(self):
+        return self.symbolic_logq.mean(0)
+
+    @node_property
+    def sized_symbolic_logp(self):
+        logp = self.to_flat_input(self.model.logpt)
+        free_logp_local = self.sample_over_posterior(logp)
+        return free_logp_local  # shape (s,)
+
+    @node_property
+    def logp(self):
+        return self.sized_symbolic_logp.mean(0)
+
+    @node_property
+    def single_symbolic_logp(self):
+        logp = self.to_flat_input(self.model.logpt)
+        post = [v[0] for v in self.symbolic_randoms]
+        inp = self.inputs
+        return theano.clone(
+            logp, dict(zip(inp, post))
+        )
+
+    @property
+    def replacements(self):
+        return dict(itertools.chain(
+            *[g.replacements.items()
+              for g in self.groups]
+        ))
+
+    def construct_replacements(self, more_replacements=None):
+        replacements = self.replacements
+        if more_replacements is not None:
+            replacements.update(more_replacements)
+        return more_replacements
+
+    @change_flags(compute_test_value='off')
+    def set_size_and_deterministic(self, node, s, d):
+        optimizations = self._get_optimization_replacements(s, d)
+        node = theano.clone(node, optimizations)
+        for g in self.groups:
+            node = g.set_size_and_deterministic(node, s, d)
+        return node
+
+    def to_flat_input(self, node):
+        """
+        Replaces vars with flattened view stored in self.inputs
+        """
+        return theano.clone(node, self.replacements, strict=False)
+
+    def sample_over_posterior(self, node):
+        node = self.to_flat_input(node)
+
+        def sample(*post):
+            return theano.clone(node, dict(zip(self.inputs, post)))
+
+        nodes, _ = theano.scan(
+            sample, self.symbolic_randoms)
+        return nodes
+
+    def _get_optimization_replacements(self, s, d):
+        repl = dict()
+        if isinstance(s, int) and (s == 1) or s is None:
+            repl[self.logp] = self.single_symbolic_logp
+        return repl
+
+    @change_flags(compute_test_value='off')
+    def sample_node(self, node, size=100,
+                    deterministic=False,
+                    more_replacements=None):
+        """Samples given node or nodes over shared posterior
+
+        Parameters
+        ----------
+        node : Theano Variables (or Theano expressions)
+        size : None or scalar
+            number of samples
+        more_replacements : `dict`
+            add custom replacements to graph, e.g. change input source
+        deterministic : bool
+            whether to use zeros as initial distribution
+            if True - zero initial point will produce constant latent variables
+
+        Returns
+        -------
+        sampled node(s) with replacements
+        """
+        node_in = node
+        node = theano.clone(node, more_replacements)
+        if size is None:
+            node_out = self.to_flat_input(node)
+            node_out = theano.clone(node_out, self.replacements)
+        else:
+            node_out = self.sample_over_posterior(node)
+        node_out = self.set_size_and_deterministic(node_out, size, deterministic)
+        try_to_set_test_value(node_in, node_out, size)
+        return node_out
+
+    @property
+    @memoize
+    @change_flags(compute_test_value='off')
+    def sample_dict_fn(self):
+        s = tt.iscalar()
+        flat_inp_vars = self.to_flat_input(self.model.free_RVs)
+        sampled = self.sample_over_posterior(flat_inp_vars)
+        sampled = self.set_size_and_deterministic(sampled, s, 0)
+        sample_fn = theano.function([s], sampled)
+
+        def inner(draws=100):
+            _samples = sample_fn(draws)
+            return dict([(v_.name, s_) for v_, s_ in zip(self.model.free_RVs, _samples)])
+
+        return inner
+
+    def sample(self, draws=500, include_transformed=True):
+        """Draw samples from variational posterior.
+
+        Parameters
+        ----------
+        draws : `int`
+            Number of random samples.
+        include_transformed : `bool`
+            If True, transformed variables are also sampled. Default is False.
+
+        Returns
+        -------
+        trace : :class:`pymc3.backends.base.MultiTrace`
+            Samples drawn from variational posterior.
+        """
+        vars_sampled = get_default_varnames(self.model.unobserved_RVs,
+                                            include_transformed=include_transformed)
+        samples = self.sample_dict_fn(draws)  # type: dict
+        trace = pm.sampling.NDArray(model=self.model, vars=vars_sampled)
+        points = ({name: samples[name][i] for name in samples.keys()} for i in range(draws))
+        try:
+            trace.setup(draws=draws, chain=0)
+            for point in points:
+                trace.record(point)
+        finally:
+            trace.close()
+        return pm.sampling.MultiTrace([trace])
 
 
 class Approximation(object):
@@ -1018,56 +1284,9 @@ class Approximation(object):
         try_to_set_test_value(node, out, None)
         return out
 
-    @property
-    @memoize
-    @change_flags(compute_test_value='off')
-    def sample_dict_fn(self):
-        s = tt.iscalar()
-        l_posterior = self.random_local(s)
-        g_posterior = self.random_global(s)
-        sampled = ([self.view_global(g_posterior, name)
-                   for name in self.global_names] +
-                   [self.view_local(l_posterior, name)
-                    for name in self.local_names]
-                   )
-        sample_fn = theano.function([s], sampled)
 
-        def inner(draws=1):
-            _samples = sample_fn(draws)
-            return dict([(n_, s_) for n_, s_ in zip(self.global_names+self.local_names, _samples)])
-        return inner
 
-    def sample(self, draws=500, include_transformed=True):
-        """Draw samples from variational posterior.
 
-        Parameters
-        ----------
-        draws : `int`
-            Number of random samples.
-        include_transformed : `bool`
-            If True, transformed variables are also sampled. Default is False.
-
-        Returns
-        -------
-        trace : :class:`pymc3.backends.base.MultiTrace`
-            Samples drawn from variational posterior.
-        """
-        vars_sampled = get_default_varnames(self.model.unobserved_RVs,
-                                            include_transformed=include_transformed)
-        samples = self.sample_dict_fn(draws)  # type: dict
-
-        def points():
-            for i in range(draws):
-                yield {name: samples[name][i] for name in samples.keys()}
-
-        trace = pm.sampling.NDArray(model=self.model, vars=vars_sampled)
-        try:
-            trace.setup(draws=draws, chain=0)
-            for point in points():
-                trace.record(point)
-        finally:
-            trace.close()
-        return pm.sampling.MultiTrace([trace])
 
     @node_property
     def __local_mu_rho(self):
