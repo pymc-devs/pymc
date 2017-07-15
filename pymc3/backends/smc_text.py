@@ -40,13 +40,13 @@ def paripool(function, work, nprocs=None, chunksize=1):
 
     Parameters
     ----------
-    function : function
+    function : callable
         python function to be executed in parallel
     work : list
         of iterables that are to be looped over/ executed in parallel usually
         these objects are different for each task.
     nprocs : int
-        number of processors to be used in paralell process
+        number of processors to be used in parallel process
     chunksize : int
         number of work packages to throw at workers in each instance
     """
@@ -57,8 +57,8 @@ def paripool(function, work, nprocs=None, chunksize=1):
         for work_item in work:
             yield function(work_item)
     else:
+        pool = multiprocessing.Pool(processes=nprocs)
         try:
-            pool = multiprocessing.Pool(processes=nprocs)
             yield pool.map(function, work, chunksize=chunksize)
         finally:
             pool.terminate()
@@ -281,7 +281,7 @@ class TextStage(object):
         corrupted_idx = [i for i, x in enumerate(flag_bool) if x]
         return corrupted_idx + not_sampled_idx
 
-    def recover_existing_results(self, stage_number, draws, step, n_jobs, model=None):
+    def recover_existing_results(self, stage_number, draws, step, model=None):
         stage_path = self.stage_path(stage_number)
         if os.path.exists(stage_path):
             # load incomplete stage results
@@ -294,7 +294,7 @@ class TextStage(object):
         pm._log.info('Init new trace!')
         return None
 
-    def create_result_trace(self, stage_number=-1, idxs=[-1], step=None, model=None):
+    def create_result_trace(self, stage_number=-1, idxs=(-1, ), step=None, model=None):
         """
         Concatenate points from all traces into one single trace, which can be used by
         traceplot. Stores result trace in stage_-2.
@@ -303,7 +303,7 @@ class TextStage(object):
         ----------
         stage_number : int
             stage of which result traces are loaded
-        idxs : list
+        idxs : iterable
             of indexes to the point at each chain to extract and concatenate
 
         Returns
@@ -313,7 +313,6 @@ class TextStage(object):
         if step is None:
             step = self.load_atmip_params(stage_number, model)
 
-        dirname = self.stage_path(stage_number)
         mtrace = self.load_multitrace(stage_number, model=model)
 
         summary_dir = self.stage_path(-2)

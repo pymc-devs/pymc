@@ -521,7 +521,7 @@ def sample_smc(n_steps, n_chains=100, step=None, start=None, homepath=None, stag
 
     stage_handler.clean_directory(stage, None, rm_flag)
 
-    chains = stage_handler.recover_existing_results(stage, draws, step, n_jobs)
+    chains = stage_handler.recover_existing_results(stage, draws, step)
 
     with model:
         while step.beta < 1:
