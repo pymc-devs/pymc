@@ -84,8 +84,8 @@ class TestSMC(SeededTest):
         step = stage_handler.load_atmip_params(stage_number, model=self.ATMIP_test)
         assert step.stage == stage_number
 
-        corrupted_chains = stage_handler.recover_existing_results(
-            stage_number, self.n_steps, step, n_jobs=1, model=self.ATMIP_test)
+        corrupted_chains = stage_handler.recover_existing_results(stage_number, self.n_steps, step,
+                                                                  model=self.ATMIP_test)
         assert len(corrupted_chains) == 0
 
         rtrace = stage_handler.load_result_trace(model=self.ATMIP_test)
