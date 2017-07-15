@@ -10,7 +10,7 @@ import collections
 __all__ = ['ArrayOrdering', 'DictToArrayBijection', 'DictToVarBijection']
 
 VarMap = collections.namedtuple('VarMap', 'var, slc, shp, dtyp')
-DataMap = collections.namedtuple('DataMap', 'list_ind, slc, shp, dtype')
+DataMap = collections.namedtuple('DataMap', 'list_ind, slc, shp, dtype, name')
 
 
 # TODO Classes and methods need to be fully documented.
@@ -114,13 +114,14 @@ class ListArrayOrdering(object):
         count = 0
         for array in list_arrays:
             if intype == 'tensor':
+                name = array.name
                 array = array.tag.test_value
             elif intype == 'numpy':
-                pass
+                name = 'numpy'
 
             slc = slice(dim, dim + array.size)
             self.vmap.append(DataMap(
-                count, slc, array.shape, array.dtype))
+                count, slc, array.shape, array.dtype, name))
             dim += array.size
             count += 1
 
@@ -158,9 +159,29 @@ class ListToArrayBijection(object):
         """
 
         array = np.empty(self.ordering.dimensions)
-        for list_ind, slc, _, _ in self.ordering.vmap:
+        for list_ind, slc, _, _, _ in self.ordering.vmap:
             array[slc] = list_arrays[list_ind].ravel()
         return array
+
+    def dmap(self, dpt):
+        """
+        Maps values from dict space to List space
+
+        Parameters
+        ----------
+        list_arrays : list
+            of :class:`numpy.ndarray`
+
+        Returns
+        -------
+        point
+        """
+        a_list = copy.copy(self.list_arrays)
+
+        for list_ind, _, _, _, var in self.ordering.vmap:
+            a_list[list_ind] = dpt[var].ravel()
+
+        return a_list
 
     def rmap(self, array):
         """
@@ -179,9 +200,9 @@ class ListToArrayBijection(object):
 
         a_list = copy.copy(self.list_arrays)
 
-        for list_ind, slc, shp, dtype in self.ordering.vmap:
+        for list_ind, slc, shp, dtype, _ in self.ordering.vmap:
             a_list[list_ind] = np.atleast_1d(
-                                        array)[slc].reshape(shp).astype(dtype)
+                                    array)[slc].reshape(shp).astype(dtype)
 
         return a_list
 

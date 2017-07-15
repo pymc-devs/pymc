@@ -6,7 +6,7 @@ creating custom backends).
 import numpy as np
 from ..model import modelcontext
 import warnings
-
+import theano.tensor as tt
 
 class BackendError(Exception):
     pass
@@ -335,6 +335,39 @@ class MultiTrace(object):
             for vars in trace.sampler_vars:
                 names.update(vars.keys())
         return names
+
+    def add_values(self, vals):
+        """add values to traces.
+        Parameters
+        ----------
+        vals : dict (str: array-like)
+             The keys should be the names of the new variables. The values are
+             expected to be array-like object.
+             For traces with more than one chain the lenght of each value
+             should match the number of total samples already in the trace
+             (chains * iterations), otherwise a warning is raised.
+        """
+        for k, v in vals.items():
+            if k in self.varnames:
+                raise ValueError("Variable name {} already exists.".format(k))
+
+            self.varnames.append(k)
+
+            chains = self._straces
+            l_samples = len(self) * len(self.chains)
+            l_v = len(v)
+            if l_v != l_samples:
+                warnings.warn("The lenght of the values you are trying to "
+                              "add ({}) does not match the number ({}) of "
+                              "total samples in the trace "
+                              "(chains * iterations)".format(l_v, l_samples))
+
+            v = v.reshape(len(chains), -1)
+
+            for idx, chain in enumerate(chains.values()):
+                chain.samples[k] = v[idx]
+                dummy = tt.as_tensor_variable([], k)
+                chain.vars.append(dummy)
 
     def get_values(self, varname, burn=0, thin=1, combine=True, chains=None,
                    squeeze=True):

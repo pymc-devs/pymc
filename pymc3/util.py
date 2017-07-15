@@ -1,5 +1,6 @@
 from numpy import asscalar
 
+
 def get_transformed_name(name, transform):
     """
     Consistent way of transforming names
@@ -51,7 +52,8 @@ def get_untransformed_name(name):
         String with untransformed version of the name.
     """
     if not is_transformed_name(name):
-        raise ValueError(u'{} does not appear to be a transformed name'.format(name))
+        raise ValueError(
+            u'{} does not appear to be a transformed name'.format(name))
     return '_'.join(name.split('_')[:-3])
 
 
@@ -84,8 +86,9 @@ def get_variable_name(variable):
     if name is None:
         if hasattr(variable, 'get_parents'):
             try:
-                names = [get_variable_name(item) for item in variable.get_parents()[0].inputs]
-                return 'f(%s)' % ','.join([n for n in names if isinstance(n, str)]) 
+                names = [get_variable_name(item)
+                         for item in variable.get_parents()[0].inputs]
+                return 'f(%s)' % ','.join([n for n in names if isinstance(n, str)])
             except IndexError:
                 pass
         value = variable.eval()
@@ -93,3 +96,22 @@ def get_variable_name(variable):
             return asscalar(value)
         return 'array'
     return name
+
+
+def update_start_vals(a, b, model):
+    """Update a with b, without overwriting existing keys. Values specified for
+    transformed variables on the original scale are also transformed and inserted.
+    """
+    if model is not None:
+        for free_RV in model.free_RVs:
+            tname = free_RV.name
+            for name in a:
+                if is_transformed_name(tname) and get_untransformed_name(tname) == name:
+                    transform_func = [
+                        d.transformation for d in model.deterministics if d.name == name]
+                    if transform_func:
+                        b[tname] = transform_func[0].forward_val(
+                            a[name], point=b).eval()
+
+    a.update({k: v for k, v in b.items() if k not in a})
+

@@ -29,7 +29,128 @@ __all__ = ['MvNormal', 'MvStudentT', 'Dirichlet',
            'LKJCorr', 'LKJCholeskyCov']
 
 
-class MvNormal(Continuous):
+class _QuadFormBase(Continuous):
+    def __init__(self, mu=None, cov=None, chol=None, tau=None, lower=True,
+                 *args, **kwargs):
+        super(_QuadFormBase, self).__init__(*args, **kwargs)
+        if len(self.shape) > 2:
+            raise ValueError("Only 1 or 2 dimensions are allowed.")
+
+        if chol is not None and not lower:
+            chol = chol.T
+        if len([i for i in [tau, cov, chol] if i is not None]) != 1:
+            raise ValueError('Incompatible parameterization. '
+                             'Specify exactly one of tau, cov, '
+                             'or chol.')
+        self.mu = mu = tt.as_tensor_variable(mu)
+        self.solve_lower = tt.slinalg.Solve(A_structure="lower_triangular")
+        # Step methods and advi do not catch LinAlgErrors at the
+        # moment. We work around that by using a cholesky op
+        # that returns a nan as first entry instead of raising
+        # an error.
+        cholesky = Cholesky(nofail=True, lower=True)
+
+        if cov is not None:
+            self.k = cov.shape[0]
+            self._cov_type = 'cov'
+            cov = tt.as_tensor_variable(cov)
+            if cov.ndim != 2:
+                raise ValueError('cov must be two dimensional.')
+            self.chol_cov = cholesky(cov)
+            self.cov = cov
+            self._n = self.cov.shape[-1]
+        elif tau is not None:
+            self.k = tau.shape[0]
+            self._cov_type = 'tau'
+            tau = tt.as_tensor_variable(tau)
+            if tau.ndim != 2:
+                raise ValueError('tau must be two dimensional.')
+            self.chol_tau = cholesky(tau)
+            self.tau = tau
+            self._n = self.tau.shape[-1]
+        else:
+            self.k = chol.shape[0]
+            self._cov_type = 'chol'
+            if chol.ndim != 2:
+                raise ValueError('chol must be two dimensional.')
+            self.chol_cov = tt.as_tensor_variable(chol)
+            self._n = self.chol_cov.shape[-1]
+
+    def _quaddist(self, value):
+        """Compute (x - mu).T @ Sigma^-1 @ (x - mu) and the logdet of Sigma."""
+        mu = self.mu
+        if value.ndim > 2 or value.ndim == 0:
+            raise ValueError('Invalid dimension for value: %s' % value.ndim)
+        if value.ndim == 1:
+            onedim = True
+            value = value[None, :]
+        else:
+            onedim = False
+
+        delta = value - mu
+
+        if self._cov_type == 'cov':
+            # Use this when Theano#5908 is released.
+            # return MvNormalLogp()(self.cov, delta)
+            dist, logdet, ok = self._quaddist_cov(delta)
+        elif self._cov_type == 'tau':
+            dist, logdet, ok = self._quaddist_tau(delta)
+        else:
+            dist, logdet, ok = self._quaddist_chol(delta)
+
+        if onedim:
+            return dist[0], logdet, ok
+        return dist, logdet, ok
+
+    def _quaddist_chol(self, delta):
+        chol_cov = self.chol_cov
+        _, k = delta.shape
+        k = pm.floatX(k)
+        diag = tt.nlinalg.diag(chol_cov)
+        # Check if the covariance matrix is positive definite.
+        ok = tt.all(diag > 0)
+        # If not, replace the diagonal. We return -inf later, but
+        # need to prevent solve_lower from throwing an exception.
+        chol_cov = tt.switch(ok, chol_cov, 1)
+
+        delta_trans = self.solve_lower(chol_cov, delta.T).T
+        quaddist = (delta_trans ** 2).sum(axis=-1)
+        logdet = tt.sum(tt.log(diag))
+        return quaddist, logdet, ok
+
+    def _quaddist_cov(self, delta):
+        return self._quaddist_chol(delta)
+
+    def _quaddist_tau(self, delta):
+        chol_tau = self.chol_tau
+        _, k = delta.shape
+        k = pm.floatX(k)
+
+        diag = tt.nlinalg.diag(chol_tau)
+        ok = tt.all(diag > 0)
+
+        chol_tau = tt.switch(ok, chol_tau, 1)
+        diag = tt.nlinalg.diag(chol_tau)
+        delta_trans = tt.dot(delta, chol_tau)
+        quaddist = (delta_trans ** 2).sum(axis=-1)
+        logdet = -tt.sum(tt.log(diag))
+        return quaddist, logdet, ok
+
+    def _repr_cov_params(self, dist=None):
+        if dist is None:
+            dist = self
+        if self._cov_type == 'chol':
+            chol = get_variable_name(self.chol)
+            return r'\mathit{{chol}}={}'.format(chol)
+        elif self._cov_type == 'cov':
+            cov = get_variable_name(self.cov)
+            return r'\mathit{{cov}}={}'.format(cov)
+        elif self._cov_type == 'tau':
+            tau = get_variable_name(self.tau)
+            return r'\mathit{{tau}}={}'.format(tau)
+
+
+class MvNormal(_QuadFormBase):
     R"""
     Multivariate normal log-likelihood.
 
@@ -98,50 +219,9 @@ class MvNormal(Continuous):
 
     def __init__(self, mu, cov=None, tau=None, chol=None, lower=True,
                  *args, **kwargs):
-        super(MvNormal, self).__init__(*args, **kwargs)
-        if len(self.shape) > 2:
-            raise ValueError("Only 1 or 2 dimensions are allowed.")
-
-        if not lower:
-            chol = chol.T
-        if len([i for i in [tau, cov, chol] if i is not None]) != 1:
-            raise ValueError('Incompatible parameterization. '
-                             'Specify exactly one of tau, cov, '
-                             'or chol.')
-        mu = tt.as_tensor_variable(mu)
-        self.mean = self.median = self.mode = self.mu = mu
-        self.solve_lower = tt.slinalg.Solve(A_structure="lower_triangular")
-        # Step methods and advi do not catch LinAlgErrors at the
-        # moment. We work around that by using a cholesky op
-        # that returns a nan as first entry instead of raising
-        # an error.
-        cholesky = Cholesky(nofail=True, lower=True)
-
-        if cov is not None:
-            self.k = cov.shape[0]
-            self._cov_type = 'cov'
-            cov = tt.as_tensor_variable(cov)
-            if cov.ndim != 2:
-                raise ValueError('cov must be two dimensional.')
-            self.chol_cov = cholesky(cov)
-            self.cov = cov
-            self._n = self.cov.shape[-1]
-        elif tau is not None:
-            self.k = tau.shape[0]
-            self._cov_type = 'tau'
-            tau = tt.as_tensor_variable(tau)
-            if tau.ndim != 2:
-                raise ValueError('tau must be two dimensional.')
-            self.chol_tau = cholesky(tau)
-            self.tau = tau
-            self._n = self.tau.shape[-1]
-        else:
-            self.k = chol.shape[0]
-            self._cov_type = 'chol'
-            if chol.ndim != 2:
-                raise ValueError('chol must be two dimensional.')
-            self.chol_cov = tt.as_tensor_variable(chol)
-            self._n = self.chol_cov.shape[-1]
+        super(MvNormal, self).__init__(mu=mu, cov=cov, tau=tau, chol=chol,
+                                       lower=lower, *args, **kwargs)
+        self.mean = self.median = self.mode = self.mu = self.mu
 
     def random(self, point=None, size=None):
         if size is None:
@@ -154,30 +234,30 @@ class MvNormal(Continuous):
 
         if self._cov_type == 'cov':
             mu, cov = draw_values([self.mu, self.cov], point=point)
-            if mu.shape != cov[0].shape:
-                raise ValueError("Shapes for mu an cov don't match")
+            if mu.shape[-1] != cov.shape[-1]:
+                raise ValueError("Shapes for mu and cov don't match")
 
             try:
                 dist = stats.multivariate_normal(
                     mean=mu, cov=cov, allow_singular=True)
             except ValueError as error:
-                size.append(mu.shape[0])
+                size.append(mu.shape[-1])
                 return np.nan * np.zeros(size)
             return dist.rvs(size)
         elif self._cov_type == 'chol':
             mu, chol = draw_values([self.mu, self.chol_cov], point=point)
-            if mu.shape != chol[0].shape:
-                raise ValueError("Shapes for mu an chol don't match")
+            if mu.shape[-1] != chol[0].shape[-1]:
+                raise ValueError("Shapes for mu and chol don't match")
 
-            size.append(mu.shape[0])
+            size.append(mu.shape[-1])
             standard_normal = np.random.standard_normal(size)
             return mu + np.dot(standard_normal, chol.T)
         else:
             mu, tau = draw_values([self.mu, self.tau], point=point)
-            if mu.shape != tau[0].shape:
-                raise ValueError("Shapes for mu an tau don't match")
+            if mu.shape[-1] != tau[0].shape[-1]:
+                raise ValueError("Shapes for mu and tau don't match")
 
-            size.append(mu.shape[0])
+            size.append(mu.shape[-1])
             standard_normal = np.random.standard_normal(size)
             try:
                 chol = linalg.cholesky(tau, lower=True)
@@ -188,101 +268,22 @@ class MvNormal(Continuous):
             return mu + transformed.T
 
     def logp(self, value):
-        mu = self.mu
-        if value.ndim > 2 or value.ndim == 0:
-            raise ValueError('Invalid dimension for value: %s' % value.ndim)
-        if value.ndim == 1:
-            onedim = True
-            value = value[None, :]
-        else:
-            onedim = False
-
-        delta = value - mu
-
-        if self._cov_type == 'cov':
-            # Use this when Theano#5908 is released.
-            # return MvNormalLogp()(self.cov, delta)
-            logp = self._logp_cov(delta)
-        elif self._cov_type == 'tau':
-            logp = self._logp_tau(delta)
-        else:
-            logp = self._logp_chol(delta)
-
-        if onedim:
-            return logp[0]
-        return logp
-
-    def _logp_chol(self, delta):
-        chol_cov = self.chol_cov
-        _, k = delta.shape
-        k = pm.floatX(k)
-        diag = tt.nlinalg.diag(chol_cov)
-        # Check if the covariance matrix is positive definite.
-        ok = tt.all(diag > 0)
-        # If not, replace the diagonal. We return -inf later, but
-        # need to prevent solve_lower from throwing an exception.
-        chol_cov = tt.switch(ok, chol_cov, 1)
-
-        delta_trans = self.solve_lower(chol_cov, delta.T)
-
-        result = k * pm.floatX(np.log(2. * np.pi))
-        result += 2.0 * tt.sum(tt.log(diag))
-        result += (delta_trans ** 2).sum(axis=0)
-        result = -0.5 * result
-        return bound(result, ok)
-
-    def _logp_cov(self, delta):
-        chol_cov = self.chol_cov
-        _, k = delta.shape
-        k = pm.floatX(k)
-
-        diag = tt.nlinalg.diag(chol_cov)
-        ok = tt.all(diag > 0)
-
-        chol_cov = tt.switch(ok, chol_cov, 1)
-        diag = tt.nlinalg.diag(chol_cov)
-        delta_trans = self.solve_lower(chol_cov, delta.T)
-
-        result = k * pm.floatX(np.log(2. * np.pi))
-        result += 2.0 * tt.sum(tt.log(diag))
-        result += (delta_trans ** 2).sum(axis=0)
-        result = -0.5 * result
-        return bound(result, ok)
-
-    def _logp_tau(self, delta):
-        chol_tau = self.chol_tau
-        _, k = delta.shape
-        k = pm.floatX(k)
-
-        diag = tt.nlinalg.diag(chol_tau)
-        ok = tt.all(diag > 0)
-
-        chol_tau = tt.switch(ok, chol_tau, 1)
-        diag = tt.nlinalg.diag(chol_tau)
-        delta_trans = tt.dot(chol_tau.T, delta.T)
-
-        result = k * pm.floatX(np.log(2. * np.pi))
-        result -= 2.0 * tt.sum(tt.log(diag))
-        result += (delta_trans ** 2).sum(axis=0)
-        result = -0.5 * result
-        return bound(result, ok)
+        quaddist, logdet, ok = self._quaddist(value)
+        k = value.shape[-1].astype(theano.config.floatX)
+        norm = - 0.5 * k * pm.floatX(np.log(2 * np.pi))
+        return bound(norm - 0.5 * quaddist - logdet, ok)
 
     def _repr_latex_(self, name=None, dist=None):
         if dist is None:
             dist = self
         mu = dist.mu
-        try:
-            cov = dist.cov
-        except AttributeError:
-            cov = dist.chol_cov
         name_mu = get_variable_name(mu)
-        name_cov = get_variable_name(cov)
         return (r'${} \sim \text{{MvNormal}}'
-                r'(\mathit{{mu}}={}, \mathit{{cov}}={})$'
-                .format(name, name_mu, name_cov))
+                r'(\mathit{{mu}}={}, {})$'
+                .format(name, name_mu, self._repr_cov_params(dist)))
 
 
-class MvStudentT(Continuous):
+class MvStudentT(_QuadFormBase):
     R"""
     Multivariate Student-T log-likelihood.
 
@@ -298,7 +299,6 @@ class MvStudentT(Continuous):
                {\Sigma}^{-1}({\mathbf x}-{\mu})
              \right]^{(\nu+p)/2}}
 
-
     ========  =============================================
     Support   :math:`x \in \mathbb{R}^k`
     Mean      :math:`\mu` if :math:`\nu > 1` else undefined
@@ -306,65 +306,73 @@ class MvStudentT(Continuous):
                   if :math:`\nu>2` else undefined
     ========  =============================================
 
-
     Parameters
     ----------
     nu : int
         Degrees of freedom.
     Sigma : matrix
-        Covariance matrix.
+        Covariance matrix. Use `cov` in new code.
     mu : array
         Vector of means.
+    cov : matrix
+        The covariance matrix.
+    tau : matrix
+        The precision matrix.
+    chol : matrix
+        The cholesky factor of the covariance matrix.
+    lower : bool, default=True
+        Whether the cholesky fatcor is given as a lower triangular matrix.
     """
 
-    def __init__(self, nu, Sigma, mu=None, *args, **kwargs):
-        super(MvStudentT, self).__init__(*args, **kwargs)
+    def __init__(self, nu, Sigma=None, mu=None, cov=None, tau=None, chol=None,
+                 lower=None, *args, **kwargs):
+        if Sigma is not None:
+            if cov is not None:
+                raise ValueError('Specify only one of cov and Sigma')
+            cov = Sigma
+        super(MvStudentT, self).__init__(mu=mu, cov=cov, tau=tau, chol=chol,
+                                         lower=lower, *args, **kwargs)
         self.nu = nu = tt.as_tensor_variable(nu)
-        mu = tt.zeros(Sigma.shape[0]) if mu is None else tt.as_tensor_variable(mu)
-        self.Sigma = Sigma = tt.as_tensor_variable(Sigma)
-
-        self.mean = self.median = self.mode = self.mu = mu
+        self.mean = self.median = self.mode = self.mu = self.mu
 
     def random(self, point=None, size=None):
+        nu, mu = draw_values([self.nu, self.mu], point=point)
+        if self._cov_type == 'cov':
+            cov, = draw_values([self.cov], point=point)
+            dist = MvNormal.dist(mu=np.zeros_like(mu), cov=cov)
+        elif self._cov_type == 'tau':
+            tau, = draw_values([self.tau], point=point)
+            dist = MvNormal.dist(mu=np.zeros_like(mu), tau=tau)
+        else:
+            chol, = draw_values([self.chol], point=point)
+            dist = MvNormal.dist(mu=np.zeros_like(mu), chol=chol)
+
+        samples = dist.random(point, size)
+
         chi2 = np.random.chisquare
-        mvn = np.random.multivariate_normal
-
-        nu, S, mu = draw_values([self.nu, self.Sigma, self.mu], point=point)
-
-        return (np.sqrt(nu) * (mvn(np.zeros(len(S)), S, size).T
-                               / chi2(nu, size))).T + mu
+        return (np.sqrt(nu) * samples.T / chi2(nu, size)).T + mu
 
     def logp(self, value):
+        quaddist, logdet, ok = self._quaddist(value)
+        k = value.shape[-1].astype(theano.config.floatX)
 
-        S = self.Sigma
-        nu = self.nu
-        mu = self.mu
-
-        d = S.shape[0]
-
-        X = value - mu
-
-        Q = X.dot(matrix_inverse(S)).dot(X.T).sum()
-        log_det = tt.log(det(S))
-        log_pdf = gammaln((nu + d) / 2.) - 0.5 * \
-            (d * tt.log(np.pi * nu) + log_det) - gammaln(nu / 2.)
-        log_pdf -= 0.5 * (nu + d) * tt.log(1 + Q / nu)
-
-        return log_pdf
+        norm = (gammaln((self.nu + k) / 2.)
+                - gammaln(self.nu / 2.)
+                - 0.5 * k * floatX(np.log(self.nu * np.pi)))
+        inner = - (self.nu + k) / 2. * tt.log1p(quaddist / self.nu)
+        return bound(norm + inner - logdet, ok)
 
     def _repr_latex_(self, name=None, dist=None):
         if dist is None:
             dist = self
         mu = dist.mu
         nu = dist.nu
-        Sigma = dist.Sigma
         name_nu = get_variable_name(nu)
         name_mu = get_variable_name(mu)
-        name_sigma = get_variable_name(Sigma)
         return (r'${} \sim \text{{MvStudentT}}'
                 r'(\mathit{{nu}}={}, \mathit{{mu}}={}, '
-                r'\mathit{{Sigma}}={})$'
-                .format(name, name_nu, name_mu, name_sigma))
+                r'{})$'
+                .format(name, name_nu, name_mu, self._repr_cov_params(dist)))
 
 
 class Dirichlet(Continuous):

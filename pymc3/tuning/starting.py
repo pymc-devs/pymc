@@ -12,6 +12,7 @@ from ..vartypes import discrete_types, typefilter
 from ..model import modelcontext, Point
 from ..theanof import inputvars
 from ..blocking import DictToArrayBijection, ArrayOrdering
+from ..util import update_start_vals
 
 from inspect import getargspec
 
@@ -48,6 +49,8 @@ def find_MAP(start=None, vars=None, fmin=None,
     model = modelcontext(model)
     if start is None:
         start = model.test_point
+    else:
+        update_start_vals(start, model.test_point, model)
 
     if not set(start.keys()).issubset(model.named_vars.keys()):
         extra_keys = ', '.join(set(start.keys()) - set(model.named_vars.keys()))

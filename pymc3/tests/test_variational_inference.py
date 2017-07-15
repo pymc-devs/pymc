@@ -3,14 +3,16 @@ import pickle
 import operator
 import numpy as np
 from theano import theano, tensor as tt
+from theano.configparser import change_flags
 import pymc3 as pm
 from pymc3 import Model, Normal
 from pymc3.variational import (
-    ADVI, FullRankADVI, SVGD,
+    ADVI, FullRankADVI, SVGD, NFVI,
     Empirical, ASVGD,
     MeanField, FullRank,
-    fit
+    fit, flows
 )
+
 from pymc3.variational.operators import KL
 from pymc3.tests import models
 
@@ -19,6 +21,54 @@ pytestmark = pytest.mark.usefixtures(
     'strict_float32',
     'seeded_test'
 )
+
+
+@pytest.mark.parametrize(
+    'diff',
+    [
+        'relative',
+        'absolute'
+    ]
+)
+@pytest.mark.parametrize(
+    'ord',
+    [1, 2, np.inf]
+)
+def test_callbacks_convergence(diff, ord):
+    cb = pm.variational.callbacks.CheckParametersConvergence(every=1, diff=diff, ord=ord)
+
+    class _approx:
+        params = (theano.shared(np.asarray([1, 2, 3])), )
+
+    approx = _approx()
+
+    with pytest.raises(StopIteration):
+        cb(approx, None, 1)
+        cb(approx, None, 10)
+
+
+def test_tracker_callback():
+    import time
+    tracker = pm.callbacks.Tracker(
+        ints=lambda *t: t[-1],
+        ints2=lambda ap, h, j: j,
+        time=time.time,
+    )
+    for i in range(10):
+        tracker(None, None, i)
+    assert 'time' in tracker.hist
+    assert 'ints' in tracker.hist
+    assert 'ints2' in tracker.hist
+    assert (len(tracker['ints'])
+            == len(tracker['ints2'])
+            == len(tracker['time'])
+            == 10)
+    assert tracker['ints'] == tracker['ints2'] == list(range(10))
+    tracker = pm.callbacks.Tracker(
+        bad=lambda t: t  # bad signature
+    )
+    with pytest.raises(TypeError):
+        tracker(None, None, 1)
 
 
 def test_elbo():
@@ -35,7 +85,8 @@ def test_elbo():
 
     # Create variational gradient tensor
     mean_field = MeanField(model=model)
-    elbo = -KL(mean_field)()(10000)
+    with change_flags(compute_test_value='off'):
+        elbo = -KL(mean_field)()(10000)
 
     mean_field.shared_params['mu'].set_value(post_mu)
     mean_field.shared_params['rho'].set_value(np.log(np.exp(post_sd) - 1))
@@ -110,11 +161,18 @@ def simple_model(simple_model_data):
 
 
 @pytest.fixture('module', params=[
+        dict(cls=NFVI, init=dict(flow='scale-loc')),
         dict(cls=ADVI, init=dict()),
         dict(cls=FullRankADVI, init=dict()),
         dict(cls=SVGD, init=dict(n_particles=500, jitter=1)),
         dict(cls=ASVGD, init=dict(temperature=1.)),
-    ], ids=lambda d: d['cls'].__name__)
+    ], ids=[
+        'NFVI=scale-loc',
+        'ADVI',
+        'FullRankADVI',
+        'SVGD',
+        'ASVGD'
+    ])
 def inference_spec(request):
     cls = request.param['cls']
     init = request.param['init']
@@ -141,6 +199,14 @@ def fit_kwargs(inference, using_minibatch):
             n=5000
         ),
         (ADVI, 'mini'): dict(
+            obj_optimizer=pm.adagrad_window(learning_rate=0.01, n_win=50),
+            n=12000
+        ),
+        (NFVI, 'full'): dict(
+            obj_optimizer=pm.adagrad_window(learning_rate=0.01, n_win=50),
+            n=12000
+        ),
+        (NFVI, 'mini'): dict(
             obj_optimizer=pm.adagrad_window(learning_rate=0.01, n_win=50),
             n=12000
         ),
@@ -228,6 +294,9 @@ def fit_method_with_object(request, another_simple_model):
         ('svgd', dict(total_grad_norm_constraint=10), None),
         ('svgd', dict(start={}), None),
         ('asvgd', dict(start={}, total_grad_norm_constraint=10), None),
+        ('nfvi', dict(start={}), None),
+        ('nfvi=scale-loc', dict(start={}), None),
+        ('nfvi=bad-formula', dict(start={}), ValueError),
     ],
 )
 def test_fit_fn_text(method, kwargs, error, another_simple_model):
@@ -317,6 +386,8 @@ def test_replacements(binomial_model_inference):
     p = approx.model.p
     p_t = p ** 3
     p_s = approx.apply_replacements(p_t)
+    if theano.config.compute_test_value != 'off':
+        assert p_s.tag.test_value.shape == p_t.tag.test_value.shape
     sampled = [p_s.eval() for _ in range(100)]
     assert any(map(
         operator.ne,
@@ -350,6 +421,8 @@ def test_sample_replacements(binomial_model_inference):
     p = approx.model.p
     p_t = p ** 3
     p_s = approx.sample_node(p_t, size=100)
+    if theano.config.compute_test_value != 'off':
+        assert p_s.tag.test_value.shape == (100, ) + p_t.tag.test_value.shape
     sampled = p_s.eval()
     assert any(map(
         operator.ne,
@@ -445,49 +518,98 @@ def test_aevb_empirical():
     np.testing.assert_allclose(trace0['x'].var(0), trace1['x'].var(0), atol=0.02)
 
 
+@pytest.fixture(
+    params=[
+        dict(cls=flows.PlanarFlow, init=dict(jitter=.1)),
+        dict(cls=flows.RadialFlow, init=dict(jitter=.1)),
+        dict(cls=flows.ScaleFlow, init=dict(jitter=.1)),
+        dict(cls=flows.LocFlow, init=dict(jitter=.1)),
+        dict(cls=flows.HouseholderFlow, init=dict(jitter=.1)),
+    ],
+    ids=lambda d: d['cls'].__name__
+)
+def flow_spec(request):
+    cls = request.param['cls']
+    init = request.param['init']
+
+    def init_(**kw):
+        k = init.copy()
+        k.update(kw)
+        return cls(**k)
+    init_.cls = cls
+    return init_
+
+
+def test_flow_init_loop(flow_spec):
+    flow = pm.tt_rng().normal(size=(10, 2))
+    for i in range(10):
+        flow = flow_spec(z0=flow, dim=2)
+    flow.forward.eval()
+
+
+def test_flow_forward_apply(flow_spec):
+    z0 = pm.tt_rng().normal(size=(10, 20))
+    flow = flow_spec(dim=20, z0=z0)
+    with change_flags(compute_test_value='off'):
+        dist = flow.forward
+        shape_dist = dist.shape.eval()
+    assert tuple(shape_dist) == (10, 20)
+
+
+def test_flow_det(flow_spec):
+    z0 = tt.arange(0, 20).astype('float32')
+    flow = flow_spec(dim=20, z0=z0.dimshuffle('x', 0))
+    with change_flags(compute_test_value='off'):
+        z1 = flow.forward.flatten()
+        J = tt.jacobian(z1, z0)
+        logJdet = tt.log(tt.abs_(tt.nlinalg.det(J)))
+        det = flow.logdet[0]
+    np.testing.assert_allclose(logJdet.eval(), det.eval(), atol=0.0001)
+
+
+def test_flow_det_shape(flow_spec):
+    with change_flags(compute_test_value='off'):
+        z0 = pm.tt_rng().normal(size=(10, 20))
+        flow = flow_spec(dim=20, z0=z0)
+        det = flow.logdet
+        det_dist = det.shape.eval()
+    assert tuple(det_dist) == (10,)
+
+
+def test_flows_collect_chain():
+    initial = tt.ones((3, 2))
+    flow1 = flows.PlanarFlow(dim=2, z0=initial)
+    flow2 = flows.PlanarFlow(dim=2, z0=flow1)
+    assert len(flow2.params) == 3
+    assert len(flow2.all_params) == 6
+    np.testing.assert_allclose(flow1.logdet.eval() + flow2.logdet.eval(), flow2.sum_logdets.eval())
+
+
 @pytest.mark.parametrize(
-    'diff',
+    'formula,length,order',
     [
-        'relative',
-        'absolute'
+        ('planar', 1, [flows.PlanarFlow]),
+        ('planar*2', 2, [flows.PlanarFlow] * 2),
+        ('planar-planar', 2, [flows.PlanarFlow] * 2),
+        ('planar-planar*2', 3, [flows.PlanarFlow] * 3),
+        ('hh-planar*2', 3, [flows.HouseholderFlow]+[flows.PlanarFlow] * 2)
     ]
 )
-@pytest.mark.parametrize(
-    'ord',
-    [1, 2, np.inf]
-)
-def test_callbacks_convergence(diff, ord):
-    cb = pm.variational.callbacks.CheckParametersConvergence(every=1, diff=diff, ord=ord)
-
-    class _approx:
-        params = (theano.shared(np.asarray([1, 2, 3])), )
-
-    approx = _approx()
-
-    with pytest.raises(StopIteration):
-        cb(approx, None, 1)
-        cb(approx, None, 10)
+def test_flow_formula(formula, length, order):
+    spec = flows.Formula(formula)
+    flows_list = spec.flows
+    assert len(flows_list) == length
+    if order is not None:
+        assert flows_list == order
+    spec(dim=2, jitter=1)(tt.ones((3, 2))).eval()  # should work
 
 
-def test_tracker_callback():
-    import time
-    tracker = pm.callbacks.Tracker(
-        ints=lambda *t: t[-1],
-        ints2=lambda ap, h, j: j,
-        time=time.time,
-    )
-    for i in range(10):
-        tracker(None, None, i)
-    assert 'time' in tracker.hist
-    assert 'ints' in tracker.hist
-    assert 'ints2' in tracker.hist
-    assert (len(tracker['ints'])
-            == len(tracker['ints2'])
-            == len(tracker['time'])
-            == 10)
-    assert tracker['ints'] == tracker['ints2'] == list(range(10))
-    tracker = pm.callbacks.Tracker(
-        bad=lambda t: t  # bad signature
-    )
-    with pytest.raises(TypeError):
-        tracker(None, None, 1)
+def test_hh_flow():
+    cov = pm.floatX([[2, -1], [-1, 3]])
+    with pm.Model():
+        pm.MvNormal('mvN', mu=pm.floatX([0, 1]), cov=cov, shape=2)
+        nf = NFVI('scale-hh*2-loc')
+        nf.fit(25000, obj_optimizer=pm.adam(learning_rate=0.001))
+        trace = nf.approx.sample(10000)
+        cov2 = pm.trace_cov(trace)
+    np.testing.assert_allclose(cov, cov2, rtol=0.07)

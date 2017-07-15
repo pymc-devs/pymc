@@ -31,8 +31,9 @@ def plot_posterior(trace, varnames=None, transform=identity_transform, figsize=N
         Must be in ('mode', 'mean', 'median')
     rope: list or numpy array
         Lower and upper values of the Region Of Practical Equivalence
-    ref_val: bool
-        display the percentage below and above ref_val
+    ref_val: float or list-like
+        display the percentage below and above the values in ref_val.
+        If a list is provided, its length should match the number of variables.
     kde_plot: bool
         if True plot a KDE instead of a histogram. For discrete variables this
         argument is ignored.
@@ -54,15 +55,19 @@ def plot_posterior(trace, varnames=None, transform=identity_transform, figsize=N
 
     """
     def create_axes_grid(figsize, traces):
-        n = np.ceil(len(traces) / 2.0).astype(int)
-        if figsize is None:
-            figsize = (12, n * 2.5)
-        fig, ax = plt.subplots(n, 2, figsize=figsize)
-        ax = ax.reshape(2 * n)
-        if len(traces) % 2 == 1:
-            ax[-1].set_axis_off()
-            ax = ax[:-1]
-        return ax, fig
+        l_trace = len(traces)
+        if l_trace == 1:
+            fig, ax = plt.subplots(figsize=figsize)
+        else:
+            n = np.ceil(l_trace / 2.0).astype(int)
+            if figsize is None:
+                figsize = (12, n * 2.5)
+            fig, ax = plt.subplots(n, 2, figsize=figsize)
+            ax = ax.reshape(2 * n)
+            if l_trace % 2 == 1:
+                ax[-1].set_axis_off()
+                ax = ax[:-1]
+        return fig, ax
 
     def get_trace_dict(tr, varnames):
         traces = OrderedDict()
@@ -91,13 +96,25 @@ def plot_posterior(trace, varnames=None, transform=identity_transform, figsize=N
         trace_dict = get_trace_dict(trace, varnames)
 
         if ax is None:
-            ax, fig = create_axes_grid(figsize, trace_dict)
+            fig, ax = create_axes_grid(figsize, trace_dict)
 
-        for a, v in zip(np.atleast_1d(ax), trace_dict):
+        var_num = len(trace_dict)
+        if ref_val is None:
+            ref_val = [None] * var_num
+        elif np.isscalar(ref_val):
+            ref_val = [ref_val for _ in range(var_num)]
+
+        if rope is None:
+            rope = [None] * var_num
+        elif np.ndim(rope) == 1:
+            rope = [rope] * var_num
+
+        for idx, (a, v) in enumerate(zip(np.atleast_1d(ax), trace_dict)):
             tr_values = transform(trace_dict[v])
             plot_posterior_op(tr_values, ax=a, kde_plot=kde_plot,
                               point_estimate=point_estimate, round_to=round_to,
-                              alpha_level=alpha_level, ref_val=ref_val, rope=rope, text_size=text_size, **kwargs)
+                              alpha_level=alpha_level, ref_val=ref_val[idx],
+                              rope=rope[idx], text_size=text_size, **kwargs)
             a.set_title(v)
 
         plt.tight_layout()

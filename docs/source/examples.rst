@@ -73,3 +73,5 @@ Variational Inference
    notebooks/bayesian_neural_network_advi.ipynb
    notebooks/convolutional_vae_keras_advi.ipynb
    notebooks/bayesian_neural_network_opvi-advi.ipynb
+   notebooks/empirical-approx-overvirew.ipynb
+   notebooks/normalizing_flows_overview.ipynb

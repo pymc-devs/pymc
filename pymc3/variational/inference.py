@@ -8,7 +8,9 @@ import tqdm
 
 import pymc3 as pm
 from pymc3.variational import test_functions
-from pymc3.variational.approximations import MeanField, FullRank, Empirical
+from pymc3.variational.approximations import (
+    MeanField, FullRank, Empirical, NormalizingFlow
+)
 from pymc3.variational.operators import KL, KSD, AKSD
 from pymc3.variational.opvi import Approximation
 
@@ -689,6 +691,95 @@ class ASVGD(Inference):
             n=n, score=score, obj_n_mc=obj_n_mc, **kwargs)
 
 
+class NFVI(Inference):
+    R"""
+    Normalizing flow is a series of invertible transformations on initial distribution.
+
+    .. math::
+
+        z_K = f_K \circ \dots \circ f_2 \circ f_1(z_0)
+
+    In that case we can compute tractable density for the flow.
+
+    .. math::
+
+        \ln q_K(z_K) = \ln q_0(z_0) - \sum_{k=1}^{K}\ln \left|\frac{\partial f_k}{\partial z_{k-1}}\right|
+
+
+    Every :math:`f_k` here is a parametric function with defined determinant.
+    We can choose every step here. For example the here is a simple flow
+    is an affine transform:
+
+    .. math::
+
+        z = loc(scale(z_0)) = \mu + \sigma * z_0
+
+    Here we get mean field approximation if :math:`z_0 \sim \mathcal{N}(0, 1)`
+
+    **Flow Formulas**
+
+    In PyMC3 there is a flexible way to define flows with formulas. We have 5 of them by the moment:
+
+    -   Loc (:code:`loc`): :math:`z' = z + \mu`
+    -   Scale (:code:`scale`): :math:`z' = \sigma * z`
+    -   Planar (:code:`planar`): :math:`z' = z + u * \tanh(w^T z + b)`
+    -   Radial (:code:`radial`): :math:`z' = z + \beta (\alpha + (z-z_r))^{-1}(z-z_r)`
+    -   Householder (:code:`hh`): :math:`z' = H z`
+
+    Formula can be written as a string, e.g. `'scale-loc'`, `'scale-hh*4-loc'`, `'panar*10'`.
+    Every step is separated with `'-'`, repeated flow is marked with `'*'` producing `'flow*repeats'`.
+
+    Parameters
+    ----------
+    flow : str|AbstractFlow
+        formula or initialized Flow, default is `'scale-loc'` that
+        is identical to MeanField
+    local_rv : dict[var->tuple]
+        mapping {model_variable -> local_variable (:math:`\mu`, :math:`\rho`)}
+        Local Vars are used for Autoencoding Variational Bayes
+        See (AEVB; Kingma and Welling, 2014) for details
+    model : :class:`pymc3.Model`
+        PyMC3 model for inference
+    scale_cost_to_minibatch : bool, default False
+        Scale cost to minibatch instead of full dataset
+    random_seed : None or int
+        leave None to use package global RandomStream or other
+        valid value to create instance specific one
+    """
+    OP = KL
+    APPROX = NormalizingFlow
+    TF = None
+
+    def __init__(self, flow='planar*3',
+                 local_rv=None, model=None,
+                 scale_cost_to_minibatch=False,
+                 random_seed=None, start=None, jitter=.1):
+        super(NFVI, self).__init__(
+            self.OP, self.APPROX, self.TF,
+            flow=flow,
+            local_rv=local_rv, model=model,
+            scale_cost_to_minibatch=scale_cost_to_minibatch,
+            random_seed=random_seed, start=start, jitter=jitter)
+
+    @classmethod
+    def from_flow(cls, flow):
+        """
+        Get inference from initialized :class:`NormalizingFlow`
+
+        Parameters
+        ----------
+        flow : :class:`NormalizingFlow`
+            initialized normalizing flow
+
+        Returns
+        -------
+        :class:`NFVI`
+        """
+        inference = object.__new__(cls)
+        Inference.__init__(inference, KL, flow, None)
+        return inference
+
+
 def fit(n=10000, local_rv=None, method='advi', model=None,
         random_seed=None, start=None, inf_kwargs=None, **kwargs):
     R"""
@@ -703,8 +794,17 @@ def fit(n=10000, local_rv=None, method='advi', model=None,
         Local Vars are used for Autoencoding Variational Bayes
         See (AEVB; Kingma and Welling, 2014) for details
     method : str or :class:`Inference`
-        string name is case insensitive in {'advi', 'fullrank_advi', 'advi->fullrank_advi', 'svgd', 'asvgd'}
-    model : :class:`pymc3.Model`
+        string name is case insensitive in:
+
+        -   'advi'  for ADVI
+        -   'fullrank_advi'  for FullRankADVI
+        -   'advi->fullrank_advi'  for fitting ADVI first and then FullRankADVI
+        -   'svgd'  for Stein Variational Gradient Descent
+        -   'asvgd'  for Amortized Stein Variational Gradient Descent
+        -   'nfvi'  for Normalizing Flow
+        -   'nfvi=formula'  for Normalizing Flow using formula
+
+    model : :class:`Model`
         PyMC3 model for inference
     random_seed : None or int
         leave None to use package global RandomStream or other
@@ -733,33 +833,46 @@ def fit(n=10000, local_rv=None, method='advi', model=None,
         advi=ADVI,
         fullrank_advi=FullRankADVI,
         svgd=SVGD,
-        asvgd=ASVGD
+        asvgd=ASVGD,
+        nfvi=NFVI
     )
-    if isinstance(method, str) and method.lower() == 'advi->fullrank_advi':
-        frac = kwargs.pop('frac', .5)
-        if not 0. < frac < 1.:
-            raise ValueError('frac should be in (0, 1)')
-        n1 = int(n * frac)
-        n2 = n - n1
-        inference = ADVI(
-            local_rv=local_rv,
-            model=model,
-            random_seed=random_seed,
-            start=start)
-        logger.info('fitting advi ...')
-        inference.fit(n1, **kwargs)
-        inference = FullRankADVI.from_advi(inference)
-        logger.info('fitting fullrank advi ...')
-        return inference.fit(n2, **kwargs)
-
-    elif isinstance(method, str):
-        try:
-            inference = _select[method.lower()](
-                local_rv=local_rv, model=model, random_seed=random_seed,
+    if isinstance(method, str):
+        method = method.lower()
+        if method == 'advi->fullrank_advi':
+            frac = kwargs.pop('frac', .5)
+            if not 0. < frac < 1.:
+                raise ValueError('frac should be in (0, 1)')
+            n1 = int(n * frac)
+            n2 = n - n1
+            inference = ADVI(
+                local_rv=local_rv,
+                model=model,
+                random_seed=random_seed,
+                start=start)
+            logger.info('fitting advi ...')
+            inference.fit(n1, **kwargs)
+            inference = FullRankADVI.from_advi(inference)
+            logger.info('fitting fullrank advi ...')
+            return inference.fit(n2, **kwargs)
+        elif method.startswith('nfvi='):
+            formula = method[5:]
+            inference = NFVI(
+                formula,
+                local_rv=local_rv,
+                model=model,
+                random_seed=random_seed,
+                start=start,  # ignored by now, hope I'll find a good application for this argument
+                **inf_kwargs
+                )
+        elif method in _select:
+            inference = _select[method](
+                local_rv=local_rv,
+                model=model,
+                random_seed=random_seed,
                 start=start,
                 **inf_kwargs
             )
-        except KeyError:
+        else:
             raise KeyError('method should be one of %s '
                            'or Inference instance' %
                            set(_select.keys()))
