@@ -3,7 +3,7 @@ from .trajectory import get_theano_hamiltonian_functions
 
 from pymc3.tuning import guess_scaling
 from pymc3.model import modelcontext, Point
-from .quadpotential import quad_potential
+from .quadpotential import quad_potential, QuadPotentialDiagAdapt
 from pymc3.theanof import inputvars, make_shared_replacements, floatX
 import numpy as np
 
@@ -42,12 +42,14 @@ class BaseHMC(ArrayStepShared):
         vars = inputvars(vars)
 
         if scaling is None and potential is None:
-            varnames = [var.name for var in vars]
-            size = sum(v.size for k, v in model.test_point.items() if k in varnames)
-            scaling = floatX(np.ones(size))
+            size = sum(np.prod(var.dshape, dtype=int) for var in vars)
+            mean = floatX(np.zeros(size))
+            var = floatX(np.ones(size))
+            potential = QuadPotentialDiagAdapt(size, mean, var, 10)
 
         if isinstance(scaling, dict):
-            scaling = guess_scaling(Point(scaling, model=model), model=model, vars=vars)
+            point = Point(scaling, model=model)
+            scaling = guess_scaling(point, model=model, vars=vars)
 
         if scaling is not None and potential is not None:
             raise ValueError("Can not specify both potential and scaling.")

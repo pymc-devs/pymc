@@ -1,14 +1,13 @@
-from numpy import dot
+import numpy as np
 from numpy.random import normal
 import scipy.linalg
+from scipy.sparse import issparse
 import theano.tensor as tt
 from theano.tensor import slinalg
-from scipy.sparse import issparse
 import theano
 
 from pymc3.theanof import floatX
 
-import numpy as np
 
 __all__ = ['quad_potential', 'QuadPotentialDiag', 'QuadPotentialFull',
            'QuadPotentialFullInv', 'QuadPotentialDiagAdapt', 'isquadpotential']
@@ -64,6 +63,7 @@ def partial_check_positive_definite(C):
 
 class PositiveDefiniteError(ValueError):
     def __init__(self, msg, idx):
+        super(PositiveDefiniteError, self).__init__(msg)
         self.idx = idx
         self.msg = msg
 
@@ -83,6 +83,11 @@ class QuadPotential(object):
         raise NotImplementedError('Abstract method')
 
     def adapt(self, sample, grad):
+        """Inform the potential about a new sample during tuning.
+
+        This can be used by adaptive potentials to change the
+        mass matrix.
+        """
         pass
 
 
@@ -91,7 +96,9 @@ def isquadpotential(value):
 
 
 class QuadPotentialDiagAdapt(QuadPotential):
-    def __init__(self, n, initial_mean, initial_diag=None, initial_weight=0):
+    """Adapt a diagonal mass matrix from the sample variances."""
+    def __init__(self, n, initial_mean, initial_diag=None, initial_weight=0,
+                 adaptation_window=100, dtype=None):
         if initial_diag is not None and initial_diag.ndim != 1:
             raise ValueError('Initial diagonal must be one-dimensional.')
         if initial_mean.ndim != 1:
@@ -107,15 +114,19 @@ class QuadPotentialDiagAdapt(QuadPotential):
             initial_diag = np.ones(n, dtype=theano.config.floatX)
             initial_weight = 1
 
+        if dtype is None:
+            dtype = theano.config.floatX
+        self._dtype = dtype
         self._n = n
-        self._var = np.array(initial_diag, dtype=theano.config.floatX, copy=True)
+        self._var = np.array(initial_diag, dtype=self._dtype, copy=True)
         self._var_theano = theano.shared(self._var)
         self._stds = np.sqrt(initial_diag)
         self._inv_stds = floatX(1.) / self._stds
-        self._foreground_var = WeightedVariance(
-            self._n, initial_mean, initial_diag, initial_weight)
-        self._background_var = WeightedVariance(self._n)
+        self._foreground_var = _WeightedVariance(
+            self._n, initial_mean, initial_diag, initial_weight, self._dtype)
+        self._background_var = _WeightedVariance(self._n, dtype=self._dtype)
         self._n_samples = 0
+        self.adaptation_window = adaptation_window
 
     def velocity(self, x):
         return self._var_theano * x
@@ -134,23 +145,26 @@ class QuadPotentialDiagAdapt(QuadPotential):
         self._var_theano.set_value(self._var)
 
     def adapt(self, sample, grad):
-        weight = 1
-        window = 100
+        window = self.adaptation_window
 
-        self._foreground_var.add_sample(sample, weight)
-        self._background_var.add_sample(sample, weight)
+        self._foreground_var.add_sample(sample, weight=1)
+        self._background_var.add_sample(sample, weight=1)
         self._update_from_weightvar(self._foreground_var)
 
         if self._n_samples > 0 and self._n_samples % window == 0:
             self._foreground_var = self._background_var
-            self._background_var = WeightedVariance(self._n)
+            self._background_var = _WeightedVariance(self._n, dtype=self._dtype)
 
         self._n_samples += 1
 
 
 class QuadPotentialDiagAdaptGrad(QuadPotentialDiagAdapt):
+    """Adapt a diagonal mass matrix from the variances of the gradients.
+
+    This is experimental, and may be removed without prior deprication.
+    """
     def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+        super(QuadPotentialDiagAdaptGrad, self).__init__(*args, **kwargs)
         self._grads1 = np.zeros(self._n)
         self._ngrads1 = 0
         self._grads2 = np.zeros(self._n)
@@ -168,23 +182,26 @@ class QuadPotentialDiagAdaptGrad(QuadPotentialDiagAdapt):
         self._ngrads1 += 1
         self._ngrads2 += 1
 
-        if self._n_samples < 100:
+        if self._n_samples <= 150:
             super().adapt(sample, grad)
         else:
             self._update(self._ngrads1 / self._grads1)
 
-        if self._n_samples > 100 and self._n_samples % 100 == 0:
+        if self._n_samples > 100 and self._n_samples % 100 == 50:
             self._ngrads1 = self._ngrads2
             self._ngrads2 = 0
             self._grads1[:] = self._grads2
             self._grads2[:] = 0
 
 
-class WeightedVariance(object):
+class _WeightedVariance(object):
+    """Online algorithm for computing mean of variance."""
+
     def __init__(self, nelem, initial_mean=None, initial_variance=None,
-                 initial_weight=0):
-        self.w_sum = initial_weight
-        self.w_sum2 = initial_weight ** 2
+                 initial_weight=0, dtype='d'):
+        self._dtype = dtype
+        self.w_sum = float(initial_weight)
+        self.w_sum2 = float(initial_weight) ** 2
         if initial_mean is None:
             self.mean = np.zeros(nelem, dtype='d')
         else:
@@ -213,14 +230,14 @@ class WeightedVariance(object):
 
     def current_variance(self, out=None):
         if self.w_sum == 0:
-            raise ValueError('Can not compute variance for empty set of samples.')
+            raise ValueError('Can not compute variance without samples.')
         if out is not None:
             return np.divide(self.raw_var, self.w_sum, out=out)
         else:
-            return floatX(self.raw_var / self.w_sum)
+            return (self.raw_var / self.w_sum).astype(self._dtype)
 
     def current_mean(self):
-        return floatX(self.mean.copy())
+        return self.mean.copy(dtype=self._dtype)
 
 
 class QuadPotentialDiag(QuadPotential):
@@ -254,7 +271,7 @@ class QuadPotentialFullInv(QuadPotential):
 
     def random(self):
         n = floatX(normal(size=self.L.shape[0]))
-        return dot(self.L, n)
+        return np.dot(self.L, n)
 
     def energy(self, x):
         L1x = slinalg.Solve(lower=True)(self.L, x)

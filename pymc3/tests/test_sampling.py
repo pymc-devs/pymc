@@ -229,3 +229,19 @@ class TestSamplePPC(object):
             scale = np.sqrt(1 + 0.2 ** 2)
             _, pval = stats.kstest(ppc['b'], stats.norm(scale=scale).cdf)
             assert pval > 0.001
+
+
+@pytest.mark.parametrize('method', [
+    'adapt_diag', 'advi', 'ADVI+adapt_diag', 'advi+adapt_diag_grad',
+    'map', 'advi_map', 'nuts'
+])
+def test_exec_nuts_init(method):
+    with pm.Model() as model:
+        pm.Normal('a', mu=0, sd=1, shape=2)
+    with model:
+        start, _ = pm.init_nuts(init=method, n_init=10)
+        assert isinstance(start, dict)
+        start, _ = pm.init_nuts(init=method, n_init=10, njobs=2)
+        assert isinstance(start, list)
+        assert len(start) == 2
+        assert isinstance(start[0], dict)
