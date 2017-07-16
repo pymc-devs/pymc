@@ -5,6 +5,7 @@ from pymc3.tuning import guess_scaling
 from pymc3.model import modelcontext, Point
 from .quadpotential import quad_potential
 from pymc3.theanof import inputvars, make_shared_replacements, floatX
+from pymc3.blocking import DictToArrayBijection, ArrayOrdering
 import numpy as np
 
 
@@ -42,7 +43,9 @@ class BaseHMC(ArrayStepShared):
         vars = inputvars(vars)
 
         if scaling is None and potential is None:
-            scaling = {k: floatX(np.ones(v.shape)) for k, v in model.test_point.items()}
+            varnames = [var.name for var in vars]
+            size = sum(v.size for k, v in model.test_point.items() if k in varnames)
+            scaling = floatX(np.ones(size))
 
         if isinstance(scaling, dict):
             scaling = guess_scaling(Point(scaling, model=model), model=model, vars=vars)
