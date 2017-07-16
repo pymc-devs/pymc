@@ -647,7 +647,7 @@ def sample_ppc_w(traces, samples=None, models=None, size=None, weights=None,
     return {k: np.asarray(v) for k, v in ppc.items()}
 
 
-def init_nuts(init='ADVI', njobs=1, n_init=500000, model=None,
+def init_nuts(init='auto', njobs=1, n_init=500000, model=None,
               random_seed=-1, progressbar=True, **kwargs):
     """Set up the mass matrix initialization for NUTS.
 
