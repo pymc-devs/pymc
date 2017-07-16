@@ -162,17 +162,23 @@ class TestStepMethods(object):  # yield test doesn't work subclassing object
         on multiple commits.
         """
         n_steps = 100
-        with Model():
+        with Model() as model:
             x = Normal('x', mu=0, sd=1)
             if step_method.__name__ == 'SMC':
-                trace = smc.sample_smc(n_steps=n_steps, step=step_method(random_seed=1),
-                                         n_jobs=1, progressbar=False,
-                                         homepath=self.temp_dir)
+                trace = smc.sample_smc(n_steps=n_steps,
+                                       step=step_method(random_seed=1),
+                                       n_jobs=1, progressbar=False,
+                                       homepath=self.temp_dir)
+            elif step_method.__name__ == 'NUTS':
+                step = step_method(scaling=model.test_point)
+                trace = sample(0, tune=n_steps,
+                               discard_tuned_samples=False,
+                               step=step, random_seed=1)
             else:
                 trace = sample(0, tune=n_steps,
                                discard_tuned_samples=False,
                                step=step_method(), random_seed=1)
-                
+
         assert_array_almost_equal(
             trace.get_values('x'),
             self.master_samples[step_method],

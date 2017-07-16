@@ -344,7 +344,7 @@ class MvStudentT(_QuadFormBase):
             tau, = draw_values([self.tau], point=point)
             dist = MvNormal.dist(mu=np.zeros_like(mu), tau=tau)
         else:
-            chol, = draw_values([self.chol], point=point)
+            chol, = draw_values([self.chol_cov], point=point)
             dist = MvNormal.dist(mu=np.zeros_like(mu), chol=chol)
 
         samples = dist.random(point, size)

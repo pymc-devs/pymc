@@ -89,7 +89,9 @@ class NUTS(BaseHMC):
 
     def __init__(self, vars=None, Emax=1000, target_accept=0.8,
                  gamma=0.05, k=0.75, t0=10, adapt_step_size=True,
-                 max_treedepth=10, on_error='summary', **kwargs):
+                 max_treedepth=10, on_error='summary',
+                 adapt_mass_matrix=True, early_max_treedepth=8,
+                 **kwargs):
         R"""
         Parameters
         ----------
@@ -113,9 +115,14 @@ class NUTS(BaseHMC):
         adapt_step_size : bool, default=True
             Whether step size adaptation should be enabled. If this is
             disabled, `k`, `t0`, `gamma` and `target_accept` are ignored.
+        adapt_mass_matrix : bool, default=True
+            Whether to adapt the mass matrix during tuning if the
+            potential supports tuning.
         max_treedepth : int, default=10
             The maximum tree depth. Trajectories are stoped when this
             depth is reached.
+        early_max_treedepth : int, default=8
+            The maximum tree depth during tuning.
         integrator : str, default "leapfrog"
             The integrator to use for the trajectories. One of "leapfrog",
             "two-stage" or "three-stage". The second two can increase
@@ -161,7 +168,9 @@ class NUTS(BaseHMC):
         self.log_step_size_bar = 0
         self.m = 1
         self.adapt_step_size = adapt_step_size
+        self.adapt_mass_matrix = adapt_mass_matrix
         self.max_treedepth = max_treedepth
+        self.early_max_treedepth = early_max_treedepth
 
         self.tune = True
         self.report = NutsReport(on_error, max_treedepth, target_accept)
@@ -170,7 +179,7 @@ class NUTS(BaseHMC):
         p0 = self.potential.random()
         v0 = self.compute_velocity(p0)
         start_energy = self.compute_energy(q0, p0)
-        if not np.isfinite(start_energy):
+        if not np.all(np.isfinite(start_energy)):
             raise ValueError('Bad initial energy: %s. The model '
                              'might be misspecified.' % start_energy)
 
@@ -181,13 +190,18 @@ class NUTS(BaseHMC):
         else:
             step_size = np.exp(self.log_step_size_bar)
 
+        if self.tune:
+            max_treedepth = self.early_max_treedepth
+        else:
+            max_treedepth = self.max_treedepth
+
         start = Edge(q0, p0, v0, self.dlogp(q0), start_energy)
         tree = _Tree(len(p0), self.leapfrog, start, step_size, self.Emax)
 
-        for _ in range(self.max_treedepth):
+        for _ in range(max_treedepth):
             direction = logbern(np.log(0.5)) * 2 - 1
             diverging, turning = tree.extend(direction)
-            q = tree.proposal.q
+            q, q_grad = tree.proposal.q, tree.proposal.q_grad
 
             if diverging or turning:
                 if diverging:
@@ -204,6 +218,9 @@ class NUTS(BaseHMC):
             self.log_step_size_bar = mk * self.log_step_size + (1 - mk) * self.log_step_size_bar
 
         self.m += 1
+
+        if self.tune and self.adapt_mass_matrix:
+            self.potential.adapt(q, q_grad)
 
         stats = {
             'step_size': step_size,
@@ -227,7 +244,7 @@ class NUTS(BaseHMC):
 Edge = namedtuple("Edge", 'q, p, v, q_grad, energy')
 
 # A proposal for the next position
-Proposal = namedtuple("Proposal", "q, energy, p_accept")
+Proposal = namedtuple("Proposal", "q, q_grad, energy, p_accept")
 
 # A subtree of the binary tree built by nuts.
 Subtree = namedtuple(
@@ -259,7 +276,7 @@ class _Tree(object):
         self.start_energy = np.array(start.energy)
 
         self.left = self.right = start
-        self.proposal = Proposal(start.q, start.energy, 1.0)
+        self.proposal = Proposal(start.q, start.q_grad, start.energy, 1.0)
         self.depth = 0
         self.log_size = 0
         self.accept_sum = 0
@@ -334,7 +351,7 @@ class _Tree(object):
             if np.abs(energy_change) < self.Emax:
                 p_accept = min(1, np.exp(-energy_change))
                 log_size = -energy_change
-                proposal = Proposal(right.q, right.energy, p_accept)
+                proposal = Proposal(right.q, right.q_grad, right.energy, p_accept)
                 tree = Subtree(right, right, right.p, proposal, log_size, p_accept, 1)
                 return tree, False, False
             else:
