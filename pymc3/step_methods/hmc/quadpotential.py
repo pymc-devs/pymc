@@ -73,13 +73,16 @@ class PositiveDefiniteError(ValueError):
 
 
 class QuadPotential(object):
-    def velocity(self, x):
+    def velocity(self, x, out=None):
         raise NotImplementedError('Abstract method')
 
-    def energy(self, x):
+    def energy(self, x, velocity=None):
         raise NotImplementedError('Abstract method')
 
     def random(self, x):
+        raise NotImplementedError('Abstract method')
+
+    def velocity_energy(self, x, v_out):
         raise NotImplementedError('Abstract method')
 
     def adapt(self, sample, grad):
@@ -128,11 +131,17 @@ class QuadPotentialDiagAdapt(QuadPotential):
         self._n_samples = 0
         self.adaptation_window = adaptation_window
 
-    def velocity(self, x):
-        return self._var_theano * x
+    def velocity(self, x, out=None):
+        return np.multiply(self._var, x, out=out)
 
-    def energy(self, x):
-        return 0.5 * x.dot(self._var_theano * x)
+    def energy(self, x, velocity=None):
+        if velocity is not None:
+            return 0.5 * x.dot(velocity)
+        return 0.5 * x.dot(self._var * x)
+
+    def velocity_energy(self, x, v_out):
+        self.velocity(x, out=v_out)
+        return 0.5 * scipy.linalg.blas.ddot(x, v_out)
 
     def random(self):
         vals = floatX(normal(size=self._n))
@@ -273,18 +282,20 @@ class QuadPotentialFullInv(QuadPotential):
     def __init__(self, A):
         self.L = floatX(scipy.linalg.cholesky(A, lower=True))
 
-    def velocity(self, x):
-        solve = slinalg.Solve(lower=True)
-        y = solve(self.L, x)
-        return solve(self.L.T, y)
+    def velocity(self, x, out=None):
+        vel = scipy.linalg.cho_solve((self.L, True), x)
+        if out is None:
+            return vel
+        out[:] = vel
 
     def random(self):
         n = floatX(normal(size=self.L.shape[0]))
         return np.dot(self.L, n)
 
-    def energy(self, x):
-        L1x = slinalg.Solve(lower=True)(self.L, x)
-        return .5 * L1x.T.dot(L1x)
+    def energy(self, x, velocity=None):
+        if velocity is None:
+            velocity = self.velocity(x)
+        return .5 * x.dot(velocity)
 
 
 class QuadPotentialFull(QuadPotential):

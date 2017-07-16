@@ -2,33 +2,32 @@ from pymc3.model import modelcontext, Point
 from pymc3.step_methods import arraystep
 from .quadpotential import quad_potential, QuadPotentialDiagAdapt
 from pymc3.step_methods.hmc import integration
-from pymc3.theanof import inputvars
+from pymc3.theanof import inputvars, floatX
+from pymc3.tuning import guess_scaling
 import numpy as np
-import theano
 
 
 class BaseHMC(arraystep.GradientSharedStep):
     default_blocked = True
 
     def __init__(self, vars=None, scaling=None, step_scale=0.25, is_cov=False,
-                 model=None, blocked=True, use_single_leapfrog=False,
-                 potential=None, integrator="leapfrog", **theano_kwargs):
+                 model=None, blocked=True, potential=None,
+                 integrator="leapfrog", **theano_kwargs):
         """Superclass to implement Hamiltonian/hybrid monte carlo
 
         Parameters
         ----------
         vars : list of theano variables
         scaling : array_like, ndim = {1,2}
-            Scaling for momentum distribution. 1d arrays interpreted matrix diagonal.
+            Scaling for momentum distribution. 1d arrays interpreted matrix
+            diagonal.
         step_scale : float, default=0.25
             Size of steps to take, automatically scaled down by 1/n**(1/4)
         is_cov : bool, default=False
-            Treat scaling as a covariance matrix/vector if True, else treat it as a
-            precision matrix/vector
-        model : pymc3 Model instance.  default=Context model
-        blocked: Boolean, default True
-        use_single_leapfrog: Boolean, will leapfrog steps take a single step at a time.
-            default False.
+            Treat scaling as a covariance matrix/vector if True, else treat
+            it as a precision matrix/vector
+        model : pymc3 Model instance
+        blocked: bool, default=True
         potential : Potential, optional
             An object that represents the Hamiltonian with methods `velocity`,
             `energy`, and `random` methods.
@@ -40,7 +39,8 @@ class BaseHMC(arraystep.GradientSharedStep):
             vars = model.cont_vars
         vars = inputvars(vars)
 
-        super(BaseHMC, self).__init__(vars, blocked=blocked, **theano_kwargs)
+        super(BaseHMC, self).__init__(vars, blocked=blocked, model=model,
+                                      **theano_kwargs)
 
         size = self._logp_dlogp_func.size
 

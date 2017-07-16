@@ -172,11 +172,11 @@ class GradientSharedStep(BlockedStep):
 
         if self.generates_stats:
             apoint, stats = self.astep(array)
-            point = self._logp_dlogp_func.array_to_dict(apoint)
+            point = self._logp_dlogp_func.array_to_full_dict(apoint)
             return point, stats
         else:
             apoint = self.astep(array)
-            point = self._logp_dlogp_func.array_to_dict(apoint)
+            point = self._logp_dlogp_func.array_to_full_dict(apoint)
             return point
 
 

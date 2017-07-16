@@ -90,7 +90,7 @@ class NUTS(BaseHMC):
     def __init__(self, vars=None, Emax=1000, target_accept=0.8,
                  gamma=0.05, k=0.75, t0=10, adapt_step_size=True,
                  max_treedepth=10, on_error='summary',
-                 adapt_mass_matrix=True, early_max_treedepth=8,
+                 early_max_treedepth=8,
                  **kwargs):
         R"""
         Parameters
@@ -115,9 +115,6 @@ class NUTS(BaseHMC):
         adapt_step_size : bool, default=True
             Whether step size adaptation should be enabled. If this is
             disabled, `k`, `t0`, `gamma` and `target_accept` are ignored.
-        adapt_mass_matrix : bool, default=True
-            Whether to adapt the mass matrix during tuning if the
-            potential supports tuning.
         max_treedepth : int, default=10
             The maximum tree depth. Trajectories are stoped when this
             depth is reached.
@@ -153,8 +150,7 @@ class NUTS(BaseHMC):
         This is usually achieved by setting the `tune` parameter if
         `pm.sample` to the desired number of tuning steps.
         """
-        super(NUTS, self).__init__(vars, use_single_leapfrog=True, **kwargs)
-
+        super(NUTS, self).__init__(vars, **kwargs)
         self.Emax = Emax
 
         self.target_accept = target_accept
@@ -168,7 +164,6 @@ class NUTS(BaseHMC):
         self.log_step_size_bar = 0
         self.m = 1
         self.adapt_step_size = adapt_step_size
-        self.adapt_mass_matrix = adapt_mass_matrix
         self.max_treedepth = max_treedepth
         self.early_max_treedepth = early_max_treedepth
 
@@ -218,7 +213,7 @@ class NUTS(BaseHMC):
 
         self.m += 1
 
-        if self.tune and self.adapt_mass_matrix:
+        if self.tune:
             self.potential.adapt(q, q_grad)
 
         stats = {
