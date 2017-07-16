@@ -24,7 +24,7 @@ class Distribution(object):
             model = Model.get_context()
         except TypeError:
             raise TypeError("No model on context stack, which is needed to "
-                            "instantiate distributions. Add variable inside"
+                            "instantiate distributions. Add variable inside "
                             "a 'with model:' block")
 
         if isinstance(name, string_types):
