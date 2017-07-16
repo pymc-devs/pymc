@@ -42,7 +42,9 @@ class BaseHMC(ArrayStepShared):
         vars = inputvars(vars)
 
         if scaling is None and potential is None:
-            scaling = floatX(np.ones(model.dict_to_array(model.test_point).size))
+            varnames = [var.name for var in vars]
+            size = sum(v.size for k, v in model.test_point.items() if k in varnames)
+            scaling = floatX(np.ones(size))
 
         if isinstance(scaling, dict):
             scaling = guess_scaling(Point(scaling, model=model), model=model, vars=vars)
