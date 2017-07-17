@@ -3,7 +3,6 @@ import numpy as np
 import pymc3 as pm
 import theano
 import theano.tensor as tt
-import itertools
 from .helpers import SeededTest
 from pymc3 import fit, Model
 from pymc3.gp.gp import GPFullNonConjugate, GPFullConjugate, GPSparseConjugate
@@ -20,7 +19,7 @@ class TestZeroMean(object):
         with Model() as model:
             zero_mean = gp.mean.Zero()
         M = theano.function([], zero_mean(X))()
-        assert np.all(M==0)
+        assert np.all(M == 0)
         assert M.shape == (10, )
 
 
@@ -30,7 +29,7 @@ class TestConstantMean(object):
         with Model() as model:
             const_mean = gp.mean.Constant(6)
         M = theano.function([], const_mean(X))()
-        assert np.all(M==6)
+        assert np.all(M == 6)
         assert M.shape == (10, )
 
 
@@ -260,6 +259,7 @@ class TestCovSliceDim(object):
         lengthscales = 2.0
         with pytest.raises(ValueError):
             gp.cov.ExpQuad(1, lengthscales, [True, False])
+        with pytest.raises(ValueError):
             gp.cov.ExpQuad(2, lengthscales, [True])
 
 
@@ -510,7 +510,7 @@ class TestGPConstructor(object):
         with Model() as model:
             f = gp.GP(*args, **kwargs)
         assert isinstance(f.distribution, GPFullConjugate)
-        # test inference
+        # test inference, advi faster than nuts, requires gradient
         with model:
             fit(10, method='advi')
 
@@ -547,7 +547,7 @@ class TestGPConstructor(object):
         with Model() as model:
             f = gp.GP(*args, **kwargs)
         assert isinstance(f.distribution, GPSparseConjugate)
-        # test inference
+        # test inference, advi faster than nuts, requires gradient
         with model:
             pm.fit(10, method='advi')
 
@@ -569,9 +569,43 @@ class TestGPConstructor(object):
         with Model() as model:
             f = gp.GP(*args, **kwargs)
         assert isinstance(f.distribution, GPFullNonConjugate)
-        # test inference
+        # test inference, advi faster than nuts, requires gradient
         with model:
             pm.fit(10, method='advi')
+
+
+# test sample_gp with combinations of arguments
+@pytest.fixture(scope="module")
+def sample_data():
+    X = np.linspace(0, 1, 10)[:, None]
+    X_new = np.random.rand(30, 1)
+    y = np.random.randn(10)
+    with pm.Model() as model:
+        lengthscale = 0.1
+        sigma = 0.1
+        mu = gp.mean.Zero()
+        cov = gp.cov.ExpQuad(1, lengthscale)
+        cov_n = gp.cov.WhiteNoise(1, sigma)
+        f_conj = GPFullConjugate("f_conj", X, mu, cov, cov_n, observed=y)
+        f_nonconj = GPFullNonConjugate("f_nonconj", X, mu, cov).RV
+    trace = 3*[{"sigma": sigma, "lengthscale": lengthscale}]
+    return (f_conj, f_nonconj, trace, X_new, model)
+
+@pytest.mark.parametrize('obs_noise', [True, False])
+@pytest.mark.parametrize('from_prior', [True, False])
+@pytest.mark.parametrize('n_samples', [2, None])
+def test_sample_gp(sample_data, obs_noise, from_prior, n_samples):
+    f_conj, f_nonconj, trace, X_new, model = sample_data
+    with model:
+        # test conjugate
+        gp.sample_gp(trace, f_conj, X_new, n_samples=n_samples,
+                     obs_noise=obs_noise, from_prior=from_prior,
+                     random_seed=200, progressbar=False)
+        # test nonconjugate
+        gp.sample_gp(trace, f_nonconj, X_new, n_samples=n_samples,
+                     obs_noise=obs_noise, from_prior=from_prior,
+                     random_seed=200, progressbar=False)
+
 
 """The following set of tests use the conjugate gp without approx
 as a baseline  for the other gp models.  Fixtures for three
@@ -633,7 +667,6 @@ def conj_vfe(data):
     return f
 
 
-# the non-approximated conjugate GP is used as a baseline for comparison
 class TestConjFITC(object):
     """ Test that the conjugate GP with the FITC approx is similar to the
     full conjugate GP.  Inducing points are placed at same location as the inputs,
@@ -642,6 +675,7 @@ class TestConjFITC(object):
     """
     def test_logp(self, data, conj_full, conj_fitc):
         X, Xs, y, mu, cov, cov_n, sigma = data
+        y = tt.as_tensor_variable(y)
         np.testing.assert_allclose(conj_full.distribution.logp(y=y).eval(),
                                    conj_fitc.distribution.logp(y=y).eval(), atol=0, rtol=1e-3)
 
@@ -660,14 +694,14 @@ class TestConjFITC(object):
         np.testing.assert_allclose(c_cov1.eval(), c_cov2.eval(), atol=0.1, rtol=1e-3)
 
     def test_prior_with_obsnoise(self, data, conj_full, conj_fitc):
-        p_mu1, p_cov1 = conj_full.distribution.prior()
-        p_mu2, p_cov2 = conj_fitc.distribution.prior()
+        p_mu1, p_cov1 = conj_full.distribution.prior(obs_noise=True)
+        p_mu2, p_cov2 = conj_fitc.distribution.prior(obs_noise=True)
         np.testing.assert_allclose(p_mu1.eval(), p_mu2.eval(), atol=0.1, rtol=1e-3)
         np.testing.assert_allclose(p_cov1.eval(), p_cov2.eval(), atol=0.1, rtol=1e-3)
 
     def test_prior_without_obsnoise(self, data, conj_full, conj_fitc):
-        p_mu1, p_cov1 = conj_full.distribution.prior(obs_noise=True)
-        p_mu2, p_cov2 = conj_fitc.distribution.prior(obs_noise=True)
+        p_mu1, p_cov1 = conj_full.distribution.prior(obs_noise=False)
+        p_mu2, p_cov2 = conj_fitc.distribution.prior(obs_noise=False)
         np.testing.assert_allclose(p_mu1.eval(), p_mu2.eval(), atol=0.1, rtol=1e-3)
         np.testing.assert_allclose(p_cov1.eval(), p_cov2.eval(), atol=0.1, rtol=1e-3)
 
@@ -680,6 +714,7 @@ class TestConjVFE(object):
     """
     def test_logp(self, data, conj_full, conj_vfe):
         X, Xs, y, mu, cov, cov_n, sigma = data
+        y = tt.as_tensor_variable(y)
         np.testing.assert_allclose(conj_full.distribution.logp(y=y).eval(),
                                    conj_vfe.distribution.logp(y=y).eval(), atol=0, rtol=1e-3)
 
@@ -698,14 +733,14 @@ class TestConjVFE(object):
         np.testing.assert_allclose(c_cov1.eval(), c_cov2.eval(), atol=0.1, rtol=1e-3)
 
     def test_prior_with_obsnoise(self, data, conj_full, conj_vfe):
-        p_mu1, p_cov1 = conj_full.distribution.prior()
-        p_mu2, p_cov2 = conj_vfe.distribution.prior()
+        p_mu1, p_cov1 = conj_full.distribution.prior(obs_noise=True)
+        p_mu2, p_cov2 = conj_vfe.distribution.prior(obs_noise=True)
         np.testing.assert_allclose(p_mu1.eval(), p_mu2.eval(), atol=0.1, rtol=1e-3)
         np.testing.assert_allclose(p_cov1.eval(), p_cov2.eval(), atol=0.1, rtol=1e-3)
 
-    def test_prior_with_obsnoise(self, data, conj_full, conj_vfe):
-        p_mu1, p_cov1 = conj_full.distribution.prior(obs_noise=True)
-        p_mu2, p_cov2 = conj_vfe.distribution.prior(obs_noise=True)
+    def test_prior_without_obsnoise(self, data, conj_full, conj_vfe):
+        p_mu1, p_cov1 = conj_full.distribution.prior(obs_noise=False)
+        p_mu2, p_cov2 = conj_vfe.distribution.prior(obs_noise=False)
         np.testing.assert_allclose(p_mu1.eval(), p_mu2.eval(), atol=0.1, rtol=1e-3)
         np.testing.assert_allclose(p_cov1.eval(), p_cov2.eval(), atol=0.1, rtol=1e-3)
 
@@ -723,6 +758,7 @@ class TestNonConjvsConj(object):
     """
     def test_logp(self, data, conj_full, nonconj_full):
         X, Xs, y, mu, cov, cov_n, sigma = data
+        y = tt.as_tensor_variable(y)
         # nonconj_full gp is deterministic, so logp comes from GPBase, which
         # defaults to zero.
         assert nonconj_full.distribution.logp(y=y) == 0.0

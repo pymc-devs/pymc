@@ -15,7 +15,6 @@ from ..distributions.dist_math import Cholesky
 
 __all__ = ['GP', 'sample_gp']
 
-CHOL_CONST = True
 cholesky = Cholesky(nofail=True, lower=True)
 solve_lower = Solve(A_structure="lower_triangular")
 solve_upper = Solve(A_structure="upper_triangular")
@@ -87,8 +86,8 @@ def GP(name, X, cov_func, mean_func=None,
 
             approx = approx.upper()
             if approx not in ["VFE", "FITC"]:
-                raise ValueError(("'FITC' or 'VFE' are the implemented "
-                                  "GP approximations"))
+                raise ValueError(("'FITC' or 'VFE' are the supported GP "
+                                  "approximations, not {}".format(approx)))
 
             if inducing_points is None and n_inducing is None:
                 raise ValueError(("Must specify one of 'inducing_points' "
@@ -98,8 +97,15 @@ def GP(name, X, cov_func, mean_func=None,
                 # initialize inducing points with K-means
                 from scipy.cluster.vq import kmeans
                 # first whiten X
-                if not isinstance(X, np.ndarray):
+                if isinstance(X, tt.TensorConstant):
                     X = X.value
+                elif isinstance(X, (np.ndarray, tuple, list)):
+                    X = np.asarray(X)
+                else:
+                    raise ValueError(("To use K-means initialization, "
+                                      "please provide X as a type that "
+                                      "can be cast to np.ndarray, instead "
+                                      "of {}".format(type(X))))
                 scaling = np.std(X, 0)
                 Xw = X / scaling
                 Xu, distortion = kmeans(Xw, n_inducing)
@@ -120,15 +126,15 @@ def GP(name, X, cov_func, mean_func=None,
 
 
 
-class GPBase(object):
-    def random(self, point=None, size=None, X_values=None, obs_noise=False,
+class _GP(object):
+    def random(self, point=None, size=None, X_new=None, obs_noise=False,
                y=None, from_prior=False, **kwargs):
         if from_prior:
             # draw from prior
             mean, cov = self.prior(obs_noise)
         else:
             # draw from conditional
-            mean, cov = self.conditional(X_values, y, obs_noise)
+            mean, cov = self.conditional(X_new, y, obs_noise)
         mu, cov = draw_values([mean, cov], point=point)
 
         def _random(mean, cov, size=None):
@@ -156,7 +162,7 @@ class GPBase(object):
                 r"(\mathit{{\mu}}(x), \mathit{{K}}(x, x'))$")
 
 
-class GPFullNonConjugate(GPBase):
+class GPFullNonConjugate(_GP):
     """Gausian process
 
     Parameters
@@ -176,7 +182,7 @@ class GPFullNonConjugate(GPBase):
         self.m = mean_func
         self.mean = self.mode = self.m(X)
 
-    def prior(self):
+    def prior(self, *args, **kwargs):
         mean = self.m(self.X)
         cov = self.K(self.X)
         return mean, stabilize(cov)
@@ -205,7 +211,7 @@ class GPFullNonConjugate(GPBase):
         return f
 
 
-class GPFullConjugate(GPBase, Continuous):
+class GPFullConjugate(_GP, Continuous):
     """Gausian process
 
     Parameters
@@ -262,7 +268,7 @@ class GPFullConjugate(GPBase, Continuous):
         return MvNormal.dist(mu=mean, chol=L).logp(y)
 
 
-class GPSparseConjugate(GPBase, Continuous):
+class GPSparseConjugate(_GP, Continuous):
     """Sparse Gausian process approximation
 
     Parameters
@@ -304,11 +310,14 @@ class GPSparseConjugate(GPBase, Continuous):
         Kffd = self.K(self.X, diag=True)
         Qff = tt.dot(tt.transpose(A), A)
         mean = self.m(self.X)
-        # fitc vs vfe prior?
-        if obs_noise:
-            cov = Qff - (tt.diag(Qff) - Kffd) + self.sigma2 * tt.eye(self.nf)
-        else:
+        if self.approx == "FITC":
             cov = Qff - (tt.diag(Qff) - Kffd)
+        elif self.approx == "VFE":
+            cov = Qff
+        else:
+            raise NotImplementedError(self.approx)
+        if obs_noise:
+            cov += self.sigma2 * tt.eye(self.nf)
         return mean, stabilize(cov)
 
     def conditional(self, Xs, y, obs_noise=False):
@@ -370,7 +379,7 @@ class GPSparseConjugate(GPBase, Continuous):
         return -1.0 * (constant + logdet + quadratic + trace)
 
 
-def sample_gp(trace, gp, X_values, n_samples=None, obs_noise=True,
+def sample_gp(trace, gp, X_new, n_samples=None, obs_noise=True,
               from_prior=False, model=None, random_seed=None,
               progressbar=True):
     """Generate samples from a posterior Gaussian process.
@@ -381,7 +390,7 @@ def sample_gp(trace, gp, X_values, n_samples=None, obs_noise=True,
         Trace generated from MCMC sampling.
     gp : Gaussian process object
         The GP variable to sample from.
-    X_values : array
+    X_new : array
         Grid of new values at which to sample GP.  If `None`, returns
         samples from the prior.
     n_samples : int
@@ -401,7 +410,7 @@ def sample_gp(trace, gp, X_values, n_samples=None, obs_noise=True,
 
     Returns
     -------
-    Array of samples from posterior GP evaluated at X_values.
+    Array of samples from posterior GP evaluated at X_new.
     """
     model = modelcontext(model)
 
@@ -415,7 +424,7 @@ def sample_gp(trace, gp, X_values, n_samples=None, obs_noise=True,
                                     n_samples, replace=False),
                    total=n_samples, disable=not progressbar)
 
-    # using observed=y to determine conjugacy? think about more
+    # using observed=y to determine conjugacy
     if isinstance(gp, ObservedRV):
         y = [v for v in model.observed_RVs if v.name == gp.name][0]
     else:
@@ -425,7 +434,7 @@ def sample_gp(trace, gp, X_values, n_samples=None, obs_noise=True,
         samples = []
         for ix in indices:
             samples.append(gp.distribution.random(trace[ix], None,
-                           X_values, obs_noise, y, from_prior))
+                           X_new, obs_noise, y, from_prior))
     except KeyboardInterrupt:
         pass
     finally:
