@@ -131,6 +131,10 @@ class Prod(Combination):
 class WhiteNoise(Covariance):
     R"""
     White noise covariance function.
+
+    .. math::
+
+       k(x, x') = \sigma^2 \mathrm{I}
     """
 
     def __init__(self, input_dim, sigma, active_dims=None):
