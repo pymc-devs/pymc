@@ -3,7 +3,6 @@ import numpy as np
 import pymc3 as pm
 import theano
 import theano.tensor as tt
-from .helpers import SeededTest
 from pymc3 import fit, Model
 from pymc3.gp.gp import GPFullNonConjugate, GPFullConjugate, GPSparseConjugate
 import pymc3.gp as gp
