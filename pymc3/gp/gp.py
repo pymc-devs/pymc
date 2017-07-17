@@ -90,11 +90,10 @@ def GP(name, X, cov_func, mean_func=None,
                                   "approximations, not {}".format(approx)))
 
             if inducing_points is None and n_inducing is None:
-                raise ValueError(("Must specify one of 'inducing_points' "
-                                  "or 'n_inducing'"))
+                raise ValueError("Must specify one of 'inducing_points' or 'n_inducing'")
 
             if inducing_points is None and n_inducing is not None:
-                # initialize inducing points with K-means
+                pm._log.info("Initializing inducing point locations with K-Means...")
                 from scipy.cluster.vq import kmeans
                 # first whiten X
                 if isinstance(X, tt.TensorConstant):
