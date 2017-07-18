@@ -37,6 +37,7 @@ class BlockedStep(object):
             kwargs['blocked'] = blocked
 
         model = modelcontext(kwargs.get('model'))
+        kwargs.update({'model':model})
 
         # vars can either be first arg or a kwarg
         if 'vars' not in kwargs and len(args) >= 1:
