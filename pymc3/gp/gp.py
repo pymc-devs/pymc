@@ -1,6 +1,7 @@
 import numpy as np
 from scipy import stats
 from tqdm import tqdm
+import copy
 
 import theano.tensor as tt
 from theano.tensor.slinalg import Solve
@@ -31,8 +32,10 @@ def GP(name, X, cov_func, mean_func=None,
     """Gausian process constructor
     Parameters
     ----------
+    name : string
+        Name of the GP
     X : array
-        Grid of points to evaluate Gaussian process over.
+        Grid of points to evaluate Gaussian process over
     cov_func : Covariance
         Covariance function of Gaussian process
     mean_func : Mean
@@ -50,7 +53,7 @@ def GP(name, X, cov_func, mean_func=None,
     observed : None or array
         The observed 'y' values, use if likelihood is Gaussian
     model : Model
-        Optional if in `with` context manager.
+        Optional if in `with` context manager
     """
 
     model = modelcontext(model)
@@ -81,8 +84,8 @@ def GP(name, X, cov_func, mean_func=None,
         else:
             # use an approximation
             if approx is None:
-                pm._log.info("Using VFE approximation")
-                approx = "VFE"
+                pm._log.info("Using FITC approximation for {}".format(name))
+                approx = "FITC"
 
             approx = approx.upper()
             if approx not in ["VFE", "FITC"]:
@@ -159,6 +162,12 @@ class _GP(object):
     def _repr_latex_(self, name=None):
         return (r"${} \sim \mathcal{{GP}}".format(name) +
                 r"(\mathit{{\mu}}(x), \mathit{{K}}(x, x'))$")
+
+    def _replace_cov_func(self, new_cov):
+        self.K = new_cov
+
+    def _replace_mean_func(self, new_mean):
+        self.m = new_mean
 
 
 class GPFullNonConjugate(_GP):
@@ -263,7 +272,9 @@ class GPFullConjugate(_GP, Continuous):
 
     def logp(self, y):
         mean = self.m(self.X)
-        L = cholesky(stabilize(self.K(self.X)) + self.Kn(self.X))
+        Kxx = self.K(self.X)
+        Knx = self.Kn(self.X)
+        L = cholesky(stabilize(Kxx + Knx))
         return MvNormal.dist(mu=mean, chol=L).logp(y)
 
 
@@ -379,8 +390,8 @@ class GPSparseConjugate(_GP, Continuous):
 
 
 def sample_gp(trace, gp, X_new, n_samples=None, obs_noise=True,
-              from_prior=False, model=None, random_seed=None,
-              progressbar=True):
+              cov_func=None, mean_func=None, from_prior=False,
+              model=None, random_seed=None, progressbar=True):
     """Generate samples from a posterior Gaussian process.
 
     Parameters
@@ -398,6 +409,10 @@ def sample_gp(trace, gp, X_new, n_samples=None, obs_noise=True,
     obs_noise : bool
         Flag for including observation noise in sample.  Does not apply to GPs
         used with non-conjugate likelihoods.  Defaults to False.
+    cov_func : Covariance
+        If not None, use this covariance function for sampling.
+    mean_func : Mean
+        If not None, use this mean function for sampling.
     from_prior: bool
         Flag for draw from GP prior.  Defaults to False.
     model : Model
@@ -422,6 +437,13 @@ def sample_gp(trace, gp, X_new, n_samples=None, obs_noise=True,
     indices = tqdm(np.random.choice(np.arange(len(trace)),
                                     n_samples, replace=False),
                    total=n_samples, disable=not progressbar)
+
+    if cov_func is not None:
+        gp = copy.deepcopy(gp)
+        gp.distribution._replace_cov_func(cov_func)
+    if mean_func is not None:
+        gp = copy.deepcopy(gp)
+        gp.distribution._replace_mean_func(mean_func)
 
     # using observed=y to determine conjugacy
     if isinstance(gp, ObservedRV):
