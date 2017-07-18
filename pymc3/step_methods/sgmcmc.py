@@ -105,11 +105,13 @@ class BaseStochasticGradient(ArrayStepShared):
                  minibatch_tensors=None,
                  **kwargs):
         warnings.warn(EXPERIMENTAL_WARNING)
-        if model is None:
-            model = modelcontext(model)
+        
+        model = modelcontext(model)
         
         if vars is None:
-            vars = inputvars(model)
+            vars = model.vars
+
+        vars = inputvars(vars)
 
         self.model = model
         self.vars = vars
