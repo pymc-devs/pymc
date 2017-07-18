@@ -108,30 +108,31 @@ class Combination(Covariance):
         # this function makes sure diag=True is handled properly
         factor_list = []
         for factor in self.factor_list:
+
             # if factor is a Covariance
             if isinstance(factor, Covariance):
                 factor_list.append(factor(X, Xs, diag))
+                continue
+
             # if factor is a numpy array
-            elif isinstance(factor, np.ndarray):
+            if isinstance(factor, np.ndarray):
                 if np.ndim(factor) == 2:
                     if diag:
                         factor_list.append(np.diag(factor))
-                    else:
-                        factor_list.append(factor)
-                else:
-                    raise ValueError("How to combine {} with Covariances "
-                                     "not understood".format(factor))
+                        continue
+
             # if factor is a theano variable with ndim attribute
-            elif isinstance(factor, (tt.TensorConstant,
+            if isinstance(factor, (tt.TensorConstant,
                                      tt.TensorVariable,
                                      tt.sharedvar.TensorSharedVariable)):
                 if factor.ndim == 2:
                     if diag:
                         factor_list.append(tt.diag(factor))
-                    else:
-                        factor_list.append(factor)
-            else:
-                factor_list.append(factor)
+                        continue
+
+            # othewise
+            factor_list.append(factor)
+
         return factor_list
 
 
