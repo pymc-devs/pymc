@@ -1,5 +1,4 @@
 import numpy as np
-import numpy.testing as npt
 import scipy.sparse
 import theano.tensor as tt
 import theano
@@ -10,21 +9,18 @@ from pymc3.theanof import floatX
 import pytest
 
 
-@pytest.mark.skip()
 def test_elemwise_posdef():
     scaling = np.array([0, 2, 3])
     with pytest.raises(quadpotential.PositiveDefiniteError):
         quadpotential.quad_potential(scaling, True, True)
 
 
-@pytest.mark.skip()
 def test_elemwise_posdef2():
     scaling = np.array([0, 2, 3])
     with pytest.raises(quadpotential.PositiveDefiniteError):
         quadpotential.quad_potential(scaling, True, False)
 
 
-@pytest.mark.skip()
 def test_elemwise_velocity():
     scaling = np.array([1, 2, 3])
     x_ = floatX(np.ones_like(scaling))
@@ -38,7 +34,6 @@ def test_elemwise_velocity():
     assert np.allclose(v(x_), 1. / scaling)
 
 
-@pytest.mark.skip()
 def test_elemwise_energy():
     scaling = np.array([1, 2, 3])
     x_ = floatX(np.ones_like(scaling))
@@ -52,7 +47,6 @@ def test_elemwise_energy():
     assert np.allclose(energy(x_), 0.5 * (1. / scaling).sum())
 
 
-@pytest.mark.skip()
 def test_equal_diag():
     np.random.seed(42)
     for _ in range(3):
@@ -79,7 +73,6 @@ def test_equal_diag():
             assert np.allclose(e_function(x_), e)
 
 
-@pytest.mark.skip()
 def test_equal_dense():
     np.random.seed(42)
     for _ in range(3):
@@ -107,7 +100,6 @@ def test_equal_dense():
             assert np.allclose(e_function(x_), e)
 
 
-@pytest.mark.skip()
 def test_random_diag():
     d = np.arange(10) + 1
     np.random.seed(42)
@@ -126,7 +118,6 @@ def test_random_diag():
         assert np.allclose(vals.std(0), np.sqrt(1./d), atol=0.1)
 
 
-@pytest.mark.skip()
 def test_random_dense():
     np.random.seed(42)
     for _ in range(3):
@@ -148,11 +139,10 @@ def test_random_dense():
             assert np.allclose(cov_, inv, atol=0.1)
 
 
-@pytest.mark.skip()
 def test_user_potential():
     model = pymc3.Model()
     with model:
-        pymc3.Normal("a", mu=0, sd=1)
+        a = pymc3.Normal("a", mu=0, sd=1)
 
     # Work around missing nonlocal in python2
     called = []
@@ -167,24 +157,3 @@ def test_user_potential():
         step = pymc3.NUTS(potential=pot)
         pymc3.sample(10, init=None, step=step)
     assert called
-
-
-class TestWeightedVariance(object):
-    def test_no_init(self):
-        var = quadpotential._WeightedVariance(3)
-        with pytest.raises(ValueError) as err:
-            var.current_variance()
-        err.match('without samples')
-
-        var.add_sample([0, 0, 0], 1)
-        npt.assert_allclose(var.current_variance(), [0, 0, 0])
-        var.add_sample([1, 1, 1], 1)
-        npt.assert_allclose(var.current_variance(), 0.25)
-        var.add_sample([-1, 0, 1], 2)
-        npt.assert_allclose(var.current_variance(), [0.6875, 0.1875,  0.1875])
-
-    def test_with_init(self):
-        var = quadpotential._WeightedVariance(3, [0.5, 0.5, 0.5], [0.25, 0.25, 0.25], 2)
-        npt.assert_allclose(var.current_variance(), 0.25)
-        var.add_sample([-1, 0, 1], 2)
-        npt.assert_allclose(var.current_variance(), [0.6875, 0.1875,  0.1875])

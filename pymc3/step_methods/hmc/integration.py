@@ -12,8 +12,15 @@ class CpuLeapfrogIntegrator(object):
         self._ndim = ndim
         self._potential = potential
         self._logp_dlogp_func = logp_dlogp_func
+        self._dtype = self._logp_dlogp_func.dtype
+        if self._potential.dtype != self._dtype:
+            raise ValueError("dtypes of potential and logp function "
+                             "don't match."
+                             % (self._potential.dtype, self._dtype))
 
     def compute_state(self, q, p):
+        if q.dtype != self._dtype or p.dtype != self._dtype:
+            raise ValueError('Invalid dtype. Must be %s' % self._dtype)
         logp, dlogp = self._logp_dlogp_func(q)
         v = self._potential.velocity(p)
         kinetic = self._potential.energy(p, velocity=v)
@@ -22,7 +29,7 @@ class CpuLeapfrogIntegrator(object):
 
     def step(self, epsilon, state, out=None):
         pot = self._potential
-        blas = linalg.blas
+        axpy = linalg.blas.get_blas_funcs('axpy', dtype=self._dtype)
 
         q, p, v, q_grad, energy = state
         if out is None:
@@ -39,17 +46,17 @@ class CpuLeapfrogIntegrator(object):
 
         # p is already stored in p_new
         # p_new = p + dt * q_grad
-        blas.daxpy(q_grad, p_new, a=dt)
+        axpy(q_grad, p_new, a=dt)
 
         pot.velocity(p_new, out=v_new)
         # q is already stored in q_new
         # q_new = q + epsilon * v_new
-        blas.daxpy(v_new, q_new, a=epsilon)
+        axpy(v_new, q_new, a=epsilon)
 
         logp = self._logp_dlogp_func(q_new, q_new_grad)
 
         # p_new = p_new + dt * q_new_grad
-        blas.daxpy(q_new_grad, p_new, a=dt)
+        axpy(q_new_grad, p_new, a=dt)
 
         kinetic = pot.velocity_energy(p_new, v_new)
         energy = kinetic - logp

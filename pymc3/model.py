@@ -335,12 +335,12 @@ class ValueGradFunction(object):
         self._extra_are_set = False
         if dtype is None:
             dtype = theano.config.floatX
-        self._dtype = dtype
+        self.dtype = dtype
         for var in self._grad_vars:
-            if not np.can_cast(var.dtype, self._dtype, casting):
+            if not np.can_cast(var.dtype, self.dtype, casting):
                 raise TypeError('Invalid dtype for variable %s. Can not '
                                 'cast to %s with casting rule %s.'
-                                % (var.name, self._dtype, casting))
+                                % (var.name, self.dtype, casting))
 
         givens = []
         self._extra_vars_shared = {}
@@ -402,9 +402,9 @@ class ValueGradFunction(object):
 
     def dict_to_array(self, point):
         """Convert a dictionary with values for grad_vars to an array."""
-        array = np.empty(self.size, dtype=self._dtype)
+        array = np.empty(self.size, dtype=self.dtype)
         for varmap in self._ordering.vmap:
-            array[varmap.slc] = point[varmap.var].ravel().astype(self._dtype)
+            array[varmap.slc] = point[varmap.var].ravel().astype(self.dtype)
         return array
 
     def array_to_dict(self, array):
@@ -412,9 +412,9 @@ class ValueGradFunction(object):
         if array.shape != (self.size,):
             raise ValueError('Array should have shape (%s,) but has %s'
                              % (self.size, array.shape))
-        if array.dtype != self._dtype:
+        if array.dtype != self.dtype:
             raise ValueError('Array has invalid dtype. Should be %s but is %s'
-                             % (self._dtype, self._dtype))
+                             % (self._dtype, self.dtype))
         point = {}
         for varmap in self._ordering.vmap:
             data = array[varmap.slc].reshape(varmap.shp)
@@ -431,8 +431,7 @@ class ValueGradFunction(object):
 
     def _build_joined(self, cost, args, vmap):
         args_joined = tt.vector('__args_joined')
-        dtype = theano.config.floatX
-        args_joined.tag.test_value = np.zeros(self.size, dtype=dtype)
+        args_joined.tag.test_value = np.zeros(self.size, dtype=self.dtype)
 
         joined_slices = {}
         for vmap in vmap:

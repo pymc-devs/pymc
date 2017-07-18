@@ -58,13 +58,21 @@ class HamiltonianMC(BaseHMC):
 
     def astep(self, q0):
         e = floatX(self.step_rand(self.step_size))
-        n_steps = np.array(self.path_length / e, dtype='int32')
-        q = q0
-        p = self.H.pot.random()  # initialize momentum
-        initial_energy = self.compute_energy(q, p)
-        q, p, current_energy = self.leapfrog(q, p, e, n_steps)
-        energy_change = initial_energy - current_energy
-        return metrop_select(energy_change, q, q0)[0]
+        n_steps = int(self.path_length / e)
+
+        p0 = self.potential.random()
+        start = self.integrator.compute_state(q0, p0)
+
+        if not np.isfinite(start.energy):
+            raise ValueError('Bad initial energy: %s. The model '
+                             'might be misspecified.' % start.energy)
+
+        state = start
+        for _ in range(n_steps):
+            state = self.integrator.step(e, state)
+
+        energy_change = start.energy - state.energy
+        return metrop_select(energy_change, state.q, start.q)[0]
 
     @staticmethod
     def competence(var):

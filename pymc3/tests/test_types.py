@@ -6,6 +6,7 @@ from pymc3.sampling import sample
 from pymc3.model import Model
 from pymc3.step_methods import NUTS, Metropolis, Slice, HamiltonianMC
 from pymc3.distributions import Normal
+from pymc3.theanof import change_flags
 
 import numpy as np
 
@@ -21,10 +22,8 @@ class TestType(object):
         # restore theano config
         theano.config = self.theano_config
 
+    @change_flags({'floatX': 'float64', 'warn_float64': 'ignore'})
     def test_float64(self):
-        theano.config.floatX = 'float64'
-        theano.config.warn_float64 = 'ignore'
-
         with Model() as model:
             x = Normal('x', testval=np.array(1., dtype='float64'))
             obs = Normal('obs', mu=x, sd=1., observed=np.random.randn(5))
@@ -36,10 +35,8 @@ class TestType(object):
             with model:
                 sample(10, sampler())
 
+    @change_flags({'floatX': 'float32', 'warn_float64': 'warn'})
     def test_float32(self):
-        theano.config.floatX = 'float32'
-        theano.config.warn_float64 = 'warn'
-
         with Model() as model:
             x = Normal('x', testval=np.array(1., dtype='float32'))
             obs = Normal('obs', mu=x, sd=1., observed=np.random.randn(5).astype('float32'))

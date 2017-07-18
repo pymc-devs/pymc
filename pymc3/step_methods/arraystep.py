@@ -158,13 +158,13 @@ class ArrayStepShared(BlockedStep):
 
 class GradientSharedStep(BlockedStep):
     def __init__(self, vars, model=None, blocked=True,
-                 gpu_ctx=None, **theano_kwargs):
+                 gpu_ctx=None, dtype=None, **theano_kwargs):
         model = modelcontext(model)
         self.vars = vars
         self.blocked = blocked
 
         self._logp_dlogp_func = model.logp_dlogp_function(
-            vars, **theano_kwargs)
+            vars, dtype=dtype, **theano_kwargs)
 
     def step(self, point):
         self._logp_dlogp_func.set_extra_values(point)
