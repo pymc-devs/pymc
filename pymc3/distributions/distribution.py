@@ -25,7 +25,8 @@ class Distribution(object):
         except TypeError:
             raise TypeError("No model on context stack, which is needed to "
                             "instantiate distributions. Add variable inside "
-                            "a 'with model:' block")
+                            "a 'with model:' block, or use the '.dist' syntax "
+                            "for a standalone distribution.")
 
         if isinstance(name, string_types):
             data = kwargs.pop('observed', None)
