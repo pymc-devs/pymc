@@ -1,12 +1,10 @@
 import numpy as np
+import numpy.testing as npt
 
-from pymc3.blocking import DictToArrayBijection
 from . import models
 from pymc3.step_methods.hmc.base_hmc import BaseHMC
 import pymc3
 from pymc3.theanof import floatX
-from .checks import close_to
-from .helpers import select_by_precision
 
 
 def test_leapfrog_reversible():
@@ -14,22 +12,21 @@ def test_leapfrog_reversible():
     np.random.seed(42)
     start, model, _ = models.non_normal(n)
     size = model.ndim
-    scaling = floatX(np.random.randn(size) ** 2)
+    scaling = floatX(np.random.rand(size))
     step = BaseHMC(vars=model.vars, model=model, scaling=scaling)
     step.integrator._logp_dlogp_func.set_extra_values({})
     p = floatX(step.potential.random())
     q = floatX(np.random.randn(size))
     start = step.integrator.compute_state(p, q)
-    precision = select_by_precision(float64=1E-8, float32=1E-4)
-    for epsilon in [.01, .1, 1.2]:
+    for epsilon in [.01, .1]:
         for n_steps in [1, 2, 3, 4, 20]:
             state = start
             for _ in range(n_steps):
                 state = step.integrator.step(epsilon, state)
             for _ in range(n_steps):
                 state = step.integrator.step(-epsilon, state)
-            close_to(state.q, start.q, precision, str((n_steps, epsilon)))
-            close_to(state.p, start.p, precision, str((n_steps, epsilon)))
+            npt.assert_allclose(state.q, start.q, rtol=1e-5)
+            npt.assert_allclose(state.p, start.p, rtol=1e-5)
 
 
 def test_nuts_tuning():

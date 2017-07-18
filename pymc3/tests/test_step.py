@@ -3,7 +3,8 @@ import tempfile
 import warnings
 
 from .checks import close_to
-from .models import simple_categorical, mv_simple, mv_simple_discrete, simple_2model, mv_prior_simple
+from .models import (simple_categorical, mv_simple, mv_simple_discrete,
+                     mv_prior_simple, simple_2model_continuous)
 from pymc3.sampling import assign_step_methods, sample
 from pymc3.model import Model
 from pymc3.step_methods import (NUTS, BinaryGibbsMetropolis, CategoricalGibbsMetropolis,
@@ -287,7 +288,7 @@ class TestCompoundStep(object):
                         reason="Test fails on 32 bit due to linalg issues")
     def test_non_blocked(self):
         """Test that samplers correctly create non-blocked compound steps."""
-        _, model = simple_2model()
+        _, model = simple_2model_continuous()
         with model:
             for sampler in self.samplers:
                 assert isinstance(sampler(blocked=False), CompoundStep)
@@ -295,7 +296,7 @@ class TestCompoundStep(object):
     @pytest.mark.skipif(theano.config.floatX == "float32",
                         reason="Test fails on 32 bit due to linalg issues")
     def test_blocked(self):
-        _, model = simple_2model()
+        _, model = simple_2model_continuous()
         with model:
             for sampler in self.samplers:
                 sampler_instance = sampler(blocked=True)

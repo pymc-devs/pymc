@@ -187,7 +187,7 @@ def test_empty_observed():
 class TestValueGradFunction(unittest.TestCase):
     def test_no_extra(self):
         a = tt.vector('a')
-        a.tag.test_value = np.zeros(3)
+        a.tag.test_value = np.zeros(3, dtype=a.dtype)
         a.dshape = (3,)
         a.dsize = 3
         f_grad = ValueGradFunction(a.sum(), [a], [], mode='FAST_COMPILE')
@@ -236,19 +236,19 @@ class TestValueGradFunction(unittest.TestCase):
         err.match('Extra values are not set')
 
         with pytest.raises(ValueError) as err:
-            self.f_grad(np.zeros(self.f_grad.size, dtype=self.f_grad._dtype))
+            self.f_grad(np.zeros(self.f_grad.size, dtype=self.f_grad.dtype))
         err.match('Extra values are not set')
 
     def test_grad(self):
         self.f_grad.set_extra_values({'extra1': 5})
-        array = np.ones(self.f_grad.size, dtype=self.f_grad._dtype)
+        array = np.ones(self.f_grad.size, dtype=self.f_grad.dtype)
         val, grad = self.f_grad(array)
         assert val == 21
         npt.assert_allclose(grad, [5, 5, 5, 1, 1, 1, 1, 1, 1])
 
     def test_bij(self):
         self.f_grad.set_extra_values({'extra1': 5})
-        array = np.ones(self.f_grad.size, dtype=self.f_grad._dtype)
+        array = np.ones(self.f_grad.size, dtype=self.f_grad.dtype)
         point = self.f_grad.array_to_dict(array)
         assert len(point) == 2
         npt.assert_allclose(point['val1'], 1)

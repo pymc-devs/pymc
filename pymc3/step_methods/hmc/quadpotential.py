@@ -324,7 +324,7 @@ class QuadPotentialFull(QuadPotential):
 
     def energy(self, x, velocity=None):
         if velocity is None:
-            velocity = self.velocity()
+            velocity = self.velocity(x)
         return .5 * x.dot(velocity)
 
     def velocity_energy(self, x, v_out):
