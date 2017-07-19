@@ -14,13 +14,14 @@ def test_minibatch():
     a, b, c = 1, 2, 3
 
     batch_size = 50
-    x_train = np.random.uniform(-10, 10, size=(batch_size*500,)).astype('float32')
+    total_size = batch_size*500
+    x_train = np.random.uniform(-10, 10, size=(total_size,)).astype('float32')
     x_obs = pm.data.Minibatch(x_train, batch_size=batch_size)
 
     y_train = f(x_train, a, b, c) + np.random.normal(size=x_train.shape).astype('float32')
     y_obs = pm.data.Minibatch(y_train, batch_size=batch_size)
 
-    with Model() as model:
+    with Model():
         abc = Normal('abc', mu=mu0, sd=sd0, shape=(3,))
         x = x_obs
         x2 = x**2
@@ -29,7 +30,7 @@ def test_minibatch():
         y = X.dot(abc)
         pm.Normal('y', mu=y, observed=y_obs)
 
-        step_method = pm.SGFS(vars=model.vars, batch_size=batch_size, step_size=1., total_size=draws*batch_size)
+        step_method = pm.SGFS(batch_size=batch_size, step_size=1., total_size=total_size)
         trace = pm.sample(draws=draws, step=step_method, init=None)
 
-    np.testing.assert_allclose(np.mean(trace['abc'], axis=0), np.asarray([a, b, c]), rtol=0.2)
+    np.testing.assert_allclose(np.mean(trace['abc'], axis=0), np.asarray([a, b, c]), rtol=0.1)

@@ -98,18 +98,19 @@ class BaseStochasticGradient(ArrayStepShared):
                  batch_size=None,
                  total_size=None,
                  step_size=1.0,
-                 step_size_decay=100,
                  model=None,
                  random_seed=None,
                  minibatches=None,
                  minibatch_tensors=None,
                  **kwargs):
         warnings.warn(EXPERIMENTAL_WARNING)
-        if model is None:
-            model = modelcontext(model)
+        
+        model = modelcontext(model)
         
         if vars is None:
-            vars = inputvars(model)
+            vars = model.vars
+
+        vars = inputvars(vars)
 
         self.model = model
         self.vars = vars
@@ -128,7 +129,6 @@ class BaseStochasticGradient(ArrayStepShared):
             self.random = tt_rng(random_seed)
 
         self.step_size = step_size
-        self.step_size_decay = step_size_decay
         shared = make_shared_replacements(vars, model)
         self.q_size = int(sum(v.dsize for v in self.vars))
         
@@ -237,7 +237,7 @@ class SGFS(BaseStochasticGradient):
         avg_I = self.avg_I
         t = self.t
         updates = self.updates
-        epsilon = self.step_size / pow(2.0, t // self.step_size_decay)
+        step_size = self.step_size
         random = self.random
         inarray = self.inarray
         gt, dlog_prior = self.dlogp_elemwise, self.dlog_prior
@@ -268,11 +268,11 @@ class SGFS(BaseStochasticGradient):
         # where B_ch is cholesky decomposition of B
         # i.e. B = dot(B_ch, B_ch^T)
         B_ch = tt.slinalg.cholesky(B)
-        noise_term = tt.dot((2.*B_ch)/tt.sqrt(epsilon), \
+        noise_term = tt.dot((2.*B_ch)/tt.sqrt(step_size), \
                 random.normal((q_size,), dtype=theano.config.floatX))
         # 9.
         # Inv. Fisher Cov. Matrix
-        cov_mat = (gamma * I_t * N) + ((4. / epsilon) * B)
+        cov_mat = (gamma * I_t * N) + ((4. / step_size) * B)
         inv_cov_mat = tt.nlinalg.matrix_inverse(cov_mat)
         # Noise Coefficient
         noise_coeff = (dlog_prior + (N * avg_gt) + noise_term)
