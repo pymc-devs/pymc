@@ -480,59 +480,65 @@ class TestFunction(object):
         return obj
 
 
-class GroupApproximation(object):
+class Group(object):
     """
     Grouped Approximation that is used for modelling mutual dependencies
-    for a specified group of variables.
-
-    Parameters
-    ----------
-    group : list or -1
-        represents grouped variables for approximation
-    shapes : dict
-        maps variable to it's shape if it is in local variable set
-        with None standing for flexible dimension
-    params : dict
-        custom params with valid shape they exactly the
-        params that are stored in shared_params dict.
-    size : scalar
-        needed when group has local variables
-    model : Model
+    for a specified group of variables. Base for local and global group
     """
-    SUPPORT_AEVB = True
+    # need to be defined in init
     shared_params = None
+    symbolic_initial = None
+    replacements = None
+    input = None
+
+    # defined by approximation
+    SUPPORT_AEVB = True
     initial_dist_name = 'normal'
     initial_dist_map = 0.
 
+    def __new__(cls, *args, **kwargs):
+        # dynamic dispatching
+        is_local = kwargs.get('local', False)
+        if is_local:
+            _cls = Local
+        else:
+            _cls = Global
+        return object.__new__(_cls)
+
     def __init__(self, group=None,
-                 shapes=None,
                  params=None,
-                 size=None,
                  random_seed=None,
-                 model=None):
+                 model=None,
+                 local=False):
+        self._is_local = local
         self._rng = tt_rng(random_seed)
         model = modelcontext(model)
         self.model = model
         if group is None:
             self.group = model.vars
-        elif group == -1:
+        elif group is -1:  # ints have unique pointer
             self.group = -1
         else:
             self.group = group
-        if shapes is None:
-            shapes = dict()
         if params is None:
             params = dict()
-        self.shapes = shapes
         self.user_params = params
-        self._mid_size = size
         self.vmap = dict()
         self.ndim = 0
-        self._global_ = True
-        self._freeze_ = False
-        if self.group != -1:
+        if self.group is not -1:
             # init can be delayed
             self.__init_group__(self.group)
+
+    def __init_group__(self, group):
+        if not group:
+            raise ValueError('Got empty group')
+        if self.group is -1:
+            # delayed init
+            self.group = group
+
+    @property
+    def is_local(self):
+        return self.is_local
 
     @property
     def params_dict(self):
@@ -540,77 +546,6 @@ class GroupApproximation(object):
             return self.user_params
         else:
             return self.shared_params
-
-    @property
-    def global_(self):
-        return self._global_
-
-    @global_.setter
-    def global_(self, v):
-        if self._freeze_:
-            raise TypeError('Cannot set state as this property is unchangeable')
-        self._global_ = v
-
-    @property
-    def local_(self):
-        return not self.global_
-
-    @local_.setter
-    def local_(self, v):
-        self.global_ = not v
-
-    @change_flags(compute_test_value='off')
-    def __init_group__(self, group):
-        if group is None:
-            raise ValueError('Got empty group')
-        if self.group == -1:
-            # delayed init
-            self.group = group
-        seen_local = False
-        seen_global = False
-        # unwrap transformed for replacements
-
-        for var in group:
-            var = get_transformed(var)
-            shape = self.shapes.get(var, var.dshape)
-            check = sum(s is None for s in shape)
-            if check > 1:
-                raise ValueError('More than one flexible dim is not supported')
-            if None in shape:
-                vshape = tuple(s if s is not None else -1 for s in shape)
-                seen_local = True
-            else:
-                vshape = shape
-                seen_global = True
-            if seen_global and seen_local:
-                raise TypeError('Group can consist only with either '
-                                'local or global variables, but got both')
-            s_ = np.prod([s for s in shape if s is not None])
-            begin = self.ndim
-            self.ndim += s_
-            end = self.ndim
-            self.vmap[var] = VarMap(var.name, slice(begin, end), vshape, var.dtype)
-        self.global_ = seen_global
-        self._freeze_ = True
-        # last dimension always stands for latent ndim
-        # first dimension always stands for sample size
-
-        if self.global_:
-            self.symbolic_initial_ = tt.matrix(self.__class__.__name__ + '_symbolic_initial_matrix')
-            self.input = tt.vector(self.__class__.__name__ + '_symbolic_input')
-        else:
-            if self._mid_size is None:
-                raise TypeError('Got local variables without local size')
-            if self.user_params is None:
-                raise TypeError('Got local variables without parametrization')
-            self.symbolic_initial_ = tt.tensor3(self.__class__.__name__ + '_symbolic_initial_tensor')
-            self.input = tt.matrix(self.__class__.__name__ + '_symbolic_input')
-        self.replacements = dict()
-        for v, (name, slc, shape, dtype) in self.vmap.items():
-            # slice is taken only by last dimension
-            vr = self.input[..., slc].reshape(shape).astype(dtype)
-            vr.name = name + '_vi_replacement'
-            self.replacements[v] = vr
 
     @property
     def params(self):
@@ -622,6 +557,9 @@ class GroupApproximation(object):
         """
         return theano.clone(node, self.replacements, strict=False)
 
+    def _new_initial_shape(self, size, ndim):
+        raise NotImplementedError
+
     def _new_initial_(self, size, deterministic):
         if size is None:
             size = 1
@@ -632,13 +570,10 @@ class GroupApproximation(object):
             self.initial_dist_name,
             self.initial_dist_map
         )
-        dtype = self.symbolic_initial_.dtype
+        dtype = self.symbolic_initial.dtype
         ndim = tt.as_tensor(ndim)
         size = tt.as_tensor(size)
-        if self.local_:
-            shape = tt.stack((size, self._mid_size, ndim))
-        else:
-            shape = tt.stack((size, ndim))
+        shape = self._new_initial_shape(size, ndim)
         # apply optimizations if possible
         if not isinstance(deterministic, tt.Variable):
             if deterministic:
@@ -663,7 +598,7 @@ class GroupApproximation(object):
         initial_ = self._new_initial_(s, d)
         # optimizations
         out = theano.clone(node, {
-            self.symbolic_initial_: initial_,
+            self.symbolic_initial: initial_,
         })
         try_to_set_test_value(node, out, None)
         return out
@@ -692,6 +627,64 @@ class GroupApproximation(object):
     @node_property
     def logq_norm(self):
         return self.logq / self.symbolic_normalizing_constant
+
+    def _get_batch_size(self):
+        raise NotImplementedError
+
+
+class Global(Group):
+    """
+    Base class for global variables
+    """
+    @change_flags(compute_test_value='off')
+    def __init_group__(self, group):
+        super(Global, self).__init_group__(group)
+        self.symbolic_initial = tt.matrix(self.__class__.__name__ + '_symbolic_initial_matrix')
+        self.input = tt.vector(self.__class__.__name__ + '_symbolic_input')
+        for var in group:
+            var = get_transformed(var)
+            begin = self.ndim
+            self.ndim += var.dsize
+            end = self.ndim
+            self.vmap[var] = VarMap(var.name, slice(begin, end), var.dshape, var.dtype)
+        self.replacements = dict()
+        for v, (name, slc, shape, dtype) in self.vmap.items():
+            # slice is taken only by last dimension
+            vr = self.input[slc].reshape(shape).astype(dtype)
+            vr.name = name + '_vi_replacement'
+            self.replacements[v] = vr
+
+    def _new_initial_shape(self, size, ndim):
+        raise tt.stack([size, ndim])
+
+
+class Local(Group):
+    """
+    Base class for local variables
+    """
+    @change_flags(compute_test_value='off')
+    def __init_group__(self, group):
+        super(Local, self).__init_group__(group)
+        if len(group) > 1:
+            raise TypeError('Local groups with more than 1 variable are not supported')
+        self.symbolic_initial = tt.tensor3(self.__class__.__name__ + '_symbolic_initial_tensor')
+        self.input = tt.matrix(self.__class__.__name__ + '_symbolic_input')
+        for var in group:
+            var = get_transformed(var)
+            begin = self.ndim
+            self.ndim += np.prod(var.dshape[1:])
+            end = self.ndim
+            shape = (-1, ) + var.dshape[1:]
+            self.vmap[var] = VarMap(var.name, slice(begin, end), shape, var.dtype)
+        self.replacements = dict()
+        for v, (name, slc, shape, dtype) in self.vmap.items():
+            # slice is taken only by last dimension
+            vr = self.input[..., slc].reshape(shape).astype(dtype)
+            vr.name = name + '_vi_replacement'
+            self.replacements[v] = vr
+
+    def _new_initial_shape(self, size, ndim):
+        raise tt.stack([size, self._get_batch_size(), ndim])
 
 
 class GroupedApproximation(object):
