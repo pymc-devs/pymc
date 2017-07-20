@@ -74,6 +74,7 @@ class PositiveDefiniteError(ValueError):
 
 class QuadPotential(object):
     def velocity(self, x, out=None):
+        """Compute the current velocity at a position in parameter space."""
         raise NotImplementedError('Abstract method')
 
     def energy(self, x, velocity=None):
@@ -95,13 +96,16 @@ class QuadPotential(object):
 
 
 def isquadpotential(value):
+    """Check whether an object might be a QuadPotential object."""
     return isinstance(value, QuadPotential)
 
 
 class QuadPotentialDiagAdapt(QuadPotential):
     """Adapt a diagonal mass matrix from the sample variances."""
+
     def __init__(self, n, initial_mean, initial_diag=None, initial_weight=0,
                  adaptation_window=100, dtype=None):
+        """Set up a diagonal mass matrix."""
         if initial_diag is not None and initial_diag.ndim != 1:
             raise ValueError('Initial diagonal must be one-dimensional.')
         if initial_mean.ndim != 1:
@@ -147,6 +151,7 @@ class QuadPotentialDiagAdapt(QuadPotential):
         return 0.5 * np.dot(x, v_out)
 
     def random(self):
+        """Draw random value from QuadPotential."""
         vals = normal(size=self._n).astype(self.dtype)
         return self._inv_stds * vals
 
@@ -157,6 +162,7 @@ class QuadPotentialDiagAdapt(QuadPotential):
         self._var_theano.set_value(self._var)
 
     def adapt(self, sample, grad):
+        """Inform the potential about a new sample during tuning."""
         window = self.adaptation_window
 
         self._foreground_var.add_sample(sample, weight=1)
@@ -175,6 +181,7 @@ class QuadPotentialDiagAdaptGrad(QuadPotentialDiagAdapt):
 
     This is experimental, and may be removed without prior deprication.
     """
+
     def __init__(self, *args, **kwargs):
         super(QuadPotentialDiagAdaptGrad, self).__init__(*args, **kwargs)
         self._grads1 = np.zeros(self._n, dtype=self.dtype)
@@ -189,6 +196,7 @@ class QuadPotentialDiagAdaptGrad(QuadPotentialDiagAdapt):
         self._var_theano.set_value(self._var)
 
     def adapt(self, sample, grad):
+        """Inform the potential about a new sample during tuning."""
         self._grads1[:] += grad ** 2
         self._grads2[:] += grad ** 2
         self._ngrads1 += 1
@@ -253,6 +261,7 @@ class _WeightedVariance(object):
 
 
 class QuadPotentialDiag(QuadPotential):
+    """Quad potential using a diagonal covariance matrix."""
     def __init__(self, v, dtype=None):
         """Use a vector to represent a diagonal matrix for a covariance matrix.
 
