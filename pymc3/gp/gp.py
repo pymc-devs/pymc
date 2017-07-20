@@ -109,6 +109,8 @@ def GP(name, X, cov_func, mean_func=None,
                                       "can be cast to np.ndarray, instead "
                                       "of {}".format(type(X))))
                 scaling = np.std(X, 0)
+                # if std of a column is very small, don't normalize that column
+                scaling[scaling <= 1e-6] = 1.0
                 Xw = X / scaling
                 Xu, distortion = kmeans(Xw, n_inducing)
                 inducing_points = Xu * scaling
@@ -431,13 +433,7 @@ def sample_gp(trace, gp, X_new, n_samples=None, obs_noise=True,
     if random_seed:
         np.random.seed(random_seed)
 
-    if n_samples is None:
-        n_samples = len(trace)
-
-    indices = tqdm(np.random.choice(np.arange(len(trace)),
-                                    n_samples, replace=False),
-                   total=n_samples, disable=not progressbar)
-
+    # swap cov_func or mean_func
     if cov_func is not None:
         gp = copy.deepcopy(gp)
         gp.distribution._replace_cov_func(cov_func)
@@ -451,14 +447,35 @@ def sample_gp(trace, gp, X_new, n_samples=None, obs_noise=True,
     else:
         y = None
 
+    # set up iterator over trace
+    if n_samples is None:
+        n_samples = len(trace)
+    sample_ixs = tqdm(np.random.choice(np.arange(len(trace)),
+                                       n_samples, replace=False),
+                      total=n_samples, disable=not progressbar)
+
+    # set up iterator over batch per sample
+    n_points = X_new.shape[0]
+    if n_points > 200:
+        # approximately 100 points per batch
+        batch_size = n_points // 100
+        points = np.arange(n_points)
+        batches = [points[i::batch_size] for i in range(batch_size)]
+    else:
+        batches = [np.arange(n_points)]
+
+    # sample from the GP
     try:
         samples = []
-        for ix in indices:
-            samples.append(gp.distribution.random(trace[ix], None,
-                           X_new, obs_noise, y, from_prior))
+        for sample_ix in sample_ixs:
+            sample = np.empty(n_points)
+            for batch_ix, points_ix in enumerate(batches):
+                sample[points_ix] = gp.distribution.random(trace[sample_ix], None,
+                                        X_new[points_ix, :], obs_noise, y, from_prior)
+            samples.append(sample)
     except KeyboardInterrupt:
         pass
     finally:
         if progressbar:
-            indices.close()
+            sample_ixs.close()
     return np.array(samples)
