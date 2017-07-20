@@ -24,9 +24,9 @@ class Covariance(object):
     input_dim : integer
         The number of input dimensions, or columns of X (or Xs)
         the kernel will operate on.
-    active_dims : A list of booleans whose length equals input_dim.
-        The booleans indicate whether or not the covariance function operates
-        over that dimension or column of X.
+    active_dims : List of integers
+        Indicate which dimension or column of X the covariance
+        function operates on.
     """
 
     def __init__(self, input_dim, active_dims=None):
@@ -34,9 +34,7 @@ class Covariance(object):
         if active_dims is None:
             self.active_dims = np.arange(input_dim)
         else:
-            self.active_dims = np.array(active_dims)
-            if len(active_dims) != input_dim:
-                raise ValueError("Length of active_dims must match input_dim")
+            self.active_dims = np.asarray(active_dims, np.int)
 
     def __call__(self, X, Xs=None, diag=False):
         R"""

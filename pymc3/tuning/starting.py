@@ -195,12 +195,12 @@ class Monitor(object):
     def __init__(self, bij, logp, model, dlogp=None):
         try:
             from IPython.display import display
-            from ipywidgets import HTML, VBox, HBox, FlexBox
+            from ipywidgets import HTML, VBox, HBox, Box
             self.prog_table  = HTML(width='100%')
             self.param_table = HTML(width='100%')
             r_col = VBox(children=[self.param_table], padding=3, width='100%')
             l_col = HBox(children=[self.prog_table],  padding=3, width='25%')
-            self.hor_align = FlexBox(children = [l_col, r_col], width='100%', orientation='vertical')
+            self.hor_align = Box(children = [l_col, r_col], width='100%', orientation='vertical')
             display(self.hor_align)
             self.using_notebook = True
             self.update_interval = 1
