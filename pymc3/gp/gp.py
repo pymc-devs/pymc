@@ -21,8 +21,7 @@ solve_lower = Solve(A_structure="lower_triangular")
 solve_upper = Solve(A_structure="upper_triangular")
 
 def stabilize(K):
-    n = K.shape[0]
-    return K + 1e-6 * (tt.nlinalg.trace(K)/n) * tt.eye(n)
+    return K + 1e-6 * tt.identity_like(K)
 
 
 def GP(name, X, cov_func, mean_func=None,
@@ -411,10 +410,6 @@ def sample_gp(trace, gp, X_new, n_samples=None, obs_noise=True,
     obs_noise : bool
         Flag for including observation noise in sample.  Does not apply to GPs
         used with non-conjugate likelihoods.  Defaults to False.
-    cov_func : Covariance
-        If not None, use this covariance function for sampling.
-    mean_func : Mean
-        If not None, use this mean function for sampling.
     from_prior: bool
         Flag for draw from GP prior.  Defaults to False.
     model : Model
@@ -432,14 +427,6 @@ def sample_gp(trace, gp, X_new, n_samples=None, obs_noise=True,
 
     if random_seed:
         np.random.seed(random_seed)
-
-    # swap cov_func or mean_func
-    if cov_func is not None:
-        gp = copy.deepcopy(gp)
-        gp.distribution._replace_cov_func(cov_func)
-    if mean_func is not None:
-        gp = copy.deepcopy(gp)
-        gp.distribution._replace_mean_func(mean_func)
 
     # using observed=y to determine conjugacy
     if isinstance(gp, ObservedRV):
