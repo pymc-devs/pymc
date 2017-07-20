@@ -73,6 +73,9 @@ class BaseStochasticGradient(ArrayStepShared):
         Total size of the training data
     step_size : float
         Step size for the parameter update
+    step_size_decay : int
+        Step size decay rate. Every `step_size_decay` iteration the step size reduce 
+        to the half of the previous step size
     model : PyMC Model
         Optional model for sampling step. Defaults to None (taken from context)
     random_seed : int
