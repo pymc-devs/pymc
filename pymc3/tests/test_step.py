@@ -1,9 +1,9 @@
 import shutil
 import tempfile
-import warnings
 
 from .checks import close_to
-from .models import simple_categorical, mv_simple, mv_simple_discrete, simple_2model, mv_prior_simple
+from .models import (simple_categorical, mv_simple, mv_simple_discrete,
+                     mv_prior_simple, simple_2model_continuous)
 from pymc3.sampling import assign_step_methods, sample
 from pymc3.model import Model
 from pymc3.step_methods import (NUTS, BinaryGibbsMetropolis, CategoricalGibbsMetropolis,
@@ -287,7 +287,7 @@ class TestCompoundStep(object):
                         reason="Test fails on 32 bit due to linalg issues")
     def test_non_blocked(self):
         """Test that samplers correctly create non-blocked compound steps."""
-        _, model = simple_2model()
+        _, model = simple_2model_continuous()
         with model:
             for sampler in self.samplers:
                 assert isinstance(sampler(blocked=False), CompoundStep)
@@ -295,7 +295,7 @@ class TestCompoundStep(object):
     @pytest.mark.skipif(theano.config.floatX == "float32",
                         reason="Test fails on 32 bit due to linalg issues")
     def test_blocked(self):
-        _, model = simple_2model()
+        _, model = simple_2model_continuous()
         with model:
             for sampler in self.samplers:
                 sampler_instance = sampler(blocked=True)
@@ -341,9 +341,9 @@ class TestAssignStepMethods(object):
 class TestNutsCheckTrace(object):
     def test_multiple_samplers(self):
         with Model():
-            prob = Beta('prob', alpha=5, beta=3)
+            prob = Beta('prob', alpha=5., beta=3.)
             Binomial('outcome', n=1, p=prob)
-            with warnings.catch_warnings(record=True) as warns:
+            with pytest.warns(None) as warns:
                 sample(3, tune=2, discard_tuned_samples=False,
                        n_init=None)
             messages = [warn.message.args[0] for warn in warns]
@@ -363,7 +363,7 @@ class TestNutsCheckTrace(object):
             a = tt.switch(a > 0, np.inf, a)
             b = tt.slinalg.solve(floatX(np.eye(2)), a)
             Normal('c', mu=b, shape=2)
-            with warnings.catch_warnings(record=True) as warns:
+            with pytest.warns(None) as warns:
                 trace = sample(20, init=None, tune=5)
             assert np.any(trace['diverging'])
             assert any('diverging samples after tuning' in str(warn.message)

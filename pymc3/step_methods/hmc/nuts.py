@@ -90,7 +90,7 @@ class NUTS(BaseHMC):
     def __init__(self, vars=None, Emax=1000, target_accept=0.8,
                  gamma=0.05, k=0.75, t0=10, adapt_step_size=True,
                  max_treedepth=10, on_error='summary',
-                 adapt_mass_matrix=True, early_max_treedepth=8,
+                 early_max_treedepth=8,
                  **kwargs):
         R"""
         Parameters
@@ -115,14 +115,11 @@ class NUTS(BaseHMC):
         adapt_step_size : bool, default=True
             Whether step size adaptation should be enabled. If this is
             disabled, `k`, `t0`, `gamma` and `target_accept` are ignored.
-        adapt_mass_matrix : bool, default=True
-            Whether to adapt the mass matrix during tuning if the
-            potential supports tuning.
         max_treedepth : int, default=10
             The maximum tree depth. Trajectories are stoped when this
             depth is reached.
         early_max_treedepth : int, default=8
-            The maximum tree depth during tuning.
+            The maximum tree depth during the first 200 tuning samples.
         integrator : str, default "leapfrog"
             The integrator to use for the trajectories. One of "leapfrog",
             "two-stage" or "three-stage". The second two can increase
@@ -153,8 +150,7 @@ class NUTS(BaseHMC):
         This is usually achieved by setting the `tune` parameter if
         `pm.sample` to the desired number of tuning steps.
         """
-        super(NUTS, self).__init__(vars, use_single_leapfrog=True, **kwargs)
-
+        super(NUTS, self).__init__(vars, **kwargs)
         self.Emax = Emax
 
         self.target_accept = target_accept
@@ -168,7 +164,6 @@ class NUTS(BaseHMC):
         self.log_step_size_bar = 0
         self.m = 1
         self.adapt_step_size = adapt_step_size
-        self.adapt_mass_matrix = adapt_mass_matrix
         self.max_treedepth = max_treedepth
         self.early_max_treedepth = early_max_treedepth
 
@@ -177,11 +172,11 @@ class NUTS(BaseHMC):
 
     def astep(self, q0):
         p0 = self.potential.random()
-        v0 = self.compute_velocity(p0)
-        start_energy = self.compute_energy(q0, p0)
-        if not np.all(np.isfinite(start_energy)):
+        start = self.integrator.compute_state(q0, p0)
+
+        if not np.isfinite(start.energy):
             raise ValueError('Bad initial energy: %s. The model '
-                             'might be misspecified.' % start_energy)
+                             'might be misspecified.' % start.energy)
 
         if not self.adapt_step_size:
             step_size = self.step_size
@@ -190,13 +185,12 @@ class NUTS(BaseHMC):
         else:
             step_size = np.exp(self.log_step_size_bar)
 
-        if self.tune:
+        if self.tune and self.m < 200:
             max_treedepth = self.early_max_treedepth
         else:
             max_treedepth = self.max_treedepth
 
-        start = Edge(q0, p0, v0, self.dlogp(q0), start_energy)
-        tree = _Tree(len(p0), self.leapfrog, start, step_size, self.Emax)
+        tree = _Tree(len(p0), self.integrator, start, step_size, self.Emax)
 
         for _ in range(max_treedepth):
             direction = logbern(np.log(0.5)) * 2 - 1
@@ -219,7 +213,7 @@ class NUTS(BaseHMC):
 
         self.m += 1
 
-        if self.tune and self.adapt_mass_matrix:
+        if self.tune:
             self.potential.adapt(q, q_grad)
 
         stats = {
@@ -240,9 +234,6 @@ class NUTS(BaseHMC):
         return Competence.INCOMPATIBLE
 
 
-# A node in the NUTS tree that is at the far right or left of the tree
-Edge = namedtuple("Edge", 'q, p, v, q_grad, energy')
-
 # A proposal for the next position
 Proposal = namedtuple("Proposal", "q, q_grad, energy, p_accept")
 
@@ -253,14 +244,14 @@ Subtree = namedtuple(
 
 
 class _Tree(object):
-    def __init__(self, ndim, leapfrog, start, step_size, Emax):
+    def __init__(self, ndim, integrator, start, step_size, Emax):
         """Binary tree from the NUTS algorithm.
 
         Parameters
         ----------
         leapfrog : function
             A function that performs a single leapfrog step.
-        start : Edge
+        start : integration.State
             The starting point of the trajectory.
         step_size : float
             The step size to use in this tree
@@ -269,7 +260,7 @@ class _Tree(object):
             transition as diverging.
         """
         self.ndim = ndim
-        self.leapfrog = leapfrog
+        self.integrator = integrator
         self.start = start
         self.step_size = step_size
         self.Emax = Emax
@@ -328,7 +319,7 @@ class _Tree(object):
     def _single_step(self, left, epsilon):
         """Perform a leapfrog step and handle error cases."""
         try:
-            right = self.leapfrog(left.q, left.p, left.q_grad, epsilon)
+            right = self.integrator.step(epsilon, left)
         except linalg.LinAlgError as err:
             error_msg = "LinAlgError during leapfrog step."
             error = err
@@ -341,7 +332,6 @@ class _Tree(object):
             else:
                 raise
         else:
-            right = Edge(*right)
             energy_change = right.energy - self.start_energy
             if np.isnan(energy_change):
                 energy_change = np.inf

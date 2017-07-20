@@ -2,8 +2,6 @@ import numpy as np
 from numpy.random import normal
 import scipy.linalg
 from scipy.sparse import issparse
-import theano.tensor as tt
-from theano.tensor import slinalg
 import theano
 
 from pymc3.theanof import floatX
@@ -73,13 +71,16 @@ class PositiveDefiniteError(ValueError):
 
 
 class QuadPotential(object):
-    def velocity(self, x):
+    def velocity(self, x, out=None):
         raise NotImplementedError('Abstract method')
 
-    def energy(self, x):
+    def energy(self, x, velocity=None):
         raise NotImplementedError('Abstract method')
 
     def random(self, x):
+        raise NotImplementedError('Abstract method')
+
+    def velocity_energy(self, x, v_out):
         raise NotImplementedError('Abstract method')
 
     def adapt(self, sample, grad):
@@ -116,26 +117,32 @@ class QuadPotentialDiagAdapt(QuadPotential):
 
         if dtype is None:
             dtype = theano.config.floatX
-        self._dtype = dtype
+        self.dtype = dtype
         self._n = n
-        self._var = np.array(initial_diag, dtype=self._dtype, copy=True)
+        self._var = np.array(initial_diag, dtype=self.dtype, copy=True)
         self._var_theano = theano.shared(self._var)
         self._stds = np.sqrt(initial_diag)
         self._inv_stds = floatX(1.) / self._stds
         self._foreground_var = _WeightedVariance(
-            self._n, initial_mean, initial_diag, initial_weight, self._dtype)
-        self._background_var = _WeightedVariance(self._n, dtype=self._dtype)
+            self._n, initial_mean, initial_diag, initial_weight, self.dtype)
+        self._background_var = _WeightedVariance(self._n, dtype=self.dtype)
         self._n_samples = 0
         self.adaptation_window = adaptation_window
 
-    def velocity(self, x):
-        return self._var_theano * x
+    def velocity(self, x, out=None):
+        return np.multiply(self._var, x, out=out)
 
-    def energy(self, x):
-        return 0.5 * x.dot(self._var_theano * x)
+    def energy(self, x, velocity=None):
+        if velocity is not None:
+            return 0.5 * x.dot(velocity)
+        return 0.5 * x.dot(self._var * x)
+
+    def velocity_energy(self, x, v_out):
+        self.velocity(x, out=v_out)
+        return 0.5 * np.dot(x, v_out)
 
     def random(self):
-        vals = floatX(normal(size=self._n))
+        vals = normal(size=self._n).astype(self.dtype)
         return self._inv_stds * vals
 
     def _update_from_weightvar(self, weightvar):
@@ -153,7 +160,7 @@ class QuadPotentialDiagAdapt(QuadPotential):
 
         if self._n_samples > 0 and self._n_samples % window == 0:
             self._foreground_var = self._background_var
-            self._background_var = _WeightedVariance(self._n, dtype=self._dtype)
+            self._background_var = _WeightedVariance(self._n, dtype=self.dtype)
 
         self._n_samples += 1
 
@@ -165,9 +172,9 @@ class QuadPotentialDiagAdaptGrad(QuadPotentialDiagAdapt):
     """
     def __init__(self, *args, **kwargs):
         super(QuadPotentialDiagAdaptGrad, self).__init__(*args, **kwargs)
-        self._grads1 = np.zeros(self._n)
+        self._grads1 = np.zeros(self._n, dtype=self.dtype)
         self._ngrads1 = 0
-        self._grads2 = np.zeros(self._n)
+        self._grads2 = np.zeros(self._n, dtype=self.dtype)
         self._ngrads2 = 0
 
     def _update(self, var):
@@ -241,58 +248,88 @@ class _WeightedVariance(object):
 
 
 class QuadPotentialDiag(QuadPotential):
-    def __init__(self, v):
-        v = floatX(v)
+    def __init__(self, v, dtype=None):
+        if dtype is None:
+            dtype = theano.config.floatX
+        self.dtype = dtype
+        v = v.astype(self.dtype)
         s = v ** .5
 
         self.s = s
         self.inv_s = 1. / s
         self.v = v
 
-    def velocity(self, x):
+    def velocity(self, x, out=None):
+        if out is not None:
+            np.multiply(x, self.v, out=out)
+            return
         return self.v * x
 
     def random(self):
         return floatX(normal(size=self.s.shape)) * self.inv_s
 
-    def energy(self, x):
+    def energy(self, x, velocity=None):
+        if velocity is not None:
+            return 0.5 * np.dot(x, velocity)
         return .5 * x.dot(self.v * x)
+
+    def velocity_energy(self, x, v_out):
+        np.multiply(x, self.v, out=v_out)
+        return 0.5 * np.dot(x, v_out)
 
 
 class QuadPotentialFullInv(QuadPotential):
 
-    def __init__(self, A):
+    def __init__(self, A, dtype=None):
+        if dtype is None:
+            dtype = theano.config.floatX
+        self.dtype = dtype
         self.L = floatX(scipy.linalg.cholesky(A, lower=True))
 
-    def velocity(self, x):
-        solve = slinalg.Solve(lower=True)
-        y = solve(self.L, x)
-        return solve(self.L.T, y)
+    def velocity(self, x, out=None):
+        vel = scipy.linalg.cho_solve((self.L, True), x)
+        if out is None:
+            return vel
+        out[:] = vel
 
     def random(self):
         n = floatX(normal(size=self.L.shape[0]))
         return np.dot(self.L, n)
 
-    def energy(self, x):
-        L1x = slinalg.Solve(lower=True)(self.L, x)
-        return .5 * L1x.T.dot(L1x)
+    def energy(self, x, velocity=None):
+        if velocity is None:
+            velocity = self.velocity(x)
+        return .5 * x.dot(velocity)
+
+    def velocity_energy(self, x, v_out):
+        self.velocity(x, out=v_out)
+        return 0.5 * np.dot(x, v_out)
 
 
 class QuadPotentialFull(QuadPotential):
 
-    def __init__(self, A):
-        self.A = floatX(A)
+    def __init__(self, A, dtype=None):
+        if dtype is None:
+            dtype = theano.config.floatX
+        self.dtype = dtype
+        self.A = A.astype(self.dtype)
         self.L = scipy.linalg.cholesky(A, lower=True)
 
-    def velocity(self, x):
-        return tt.dot(self.A, x)
+    def velocity(self, x, out=None):
+        return np.dot(self.A, x, out=out)
 
     def random(self):
         n = floatX(normal(size=self.L.shape[0]))
         return scipy.linalg.solve_triangular(self.L.T, n)
 
-    def energy(self, x):
-        return .5 * x.dot(self.A).dot(x)
+    def energy(self, x, velocity=None):
+        if velocity is None:
+            velocity = self.velocity(x)
+        return .5 * x.dot(velocity)
+
+    def velocity_energy(self, x, v_out):
+        self.velocity(x, out=v_out)
+        return 0.5 * np.dot(x, v_out)
 
     __call__ = random
 

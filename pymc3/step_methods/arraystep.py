@@ -157,6 +157,30 @@ class ArrayStepShared(BlockedStep):
             return bij.rmap(apoint)
 
 
+class GradientSharedStep(BlockedStep):
+    def __init__(self, vars, model=None, blocked=True,
+                 dtype=None, **theano_kwargs):
+        model = modelcontext(model)
+        self.vars = vars
+        self.blocked = blocked
+
+        self._logp_dlogp_func = model.logp_dlogp_function(
+            vars, dtype=dtype, **theano_kwargs)
+
+    def step(self, point):
+        self._logp_dlogp_func.set_extra_values(point)
+        array = self._logp_dlogp_func.dict_to_array(point)
+
+        if self.generates_stats:
+            apoint, stats = self.astep(array)
+            point = self._logp_dlogp_func.array_to_full_dict(apoint)
+            return point, stats
+        else:
+            apoint = self.astep(array)
+            point = self._logp_dlogp_func.array_to_full_dict(apoint)
+            return point
+
+
 def metrop_select(mr, q, q0):
     """Perform rejection/acceptance step for Metropolis class samplers.
 
