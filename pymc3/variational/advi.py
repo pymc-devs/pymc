@@ -1,4 +1,3 @@
-
 '''
 (c) 2016, John Salvatier & Taku Yoshioka
 '''
@@ -9,11 +8,11 @@ import theano
 import theano.tensor as tt
 from theano.sandbox.rng_mrg import MRG_RandomStreams
 
+from tqdm import trange
+
 import pymc3 as pm
 from pymc3.backends.base import MultiTrace
 from ..theanof import floatX
-
-from tqdm import trange
 
 __all__ = ['advi', 'sample_vp']
 

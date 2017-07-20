@@ -10,8 +10,8 @@ import scipy.linalg
 import theano.tensor as tt
 import theano
 
-from .special import gammaln
 from pymc3.theanof import floatX
+from .special import gammaln
 
 f = floatX
 c = - .5 * np.log(2. * np.pi)
@@ -91,7 +91,7 @@ def i0(x):
     return tt.switch(tt.lt(x, 5), 1. + x**2 / 4. + x**4 / 64. + x**6 / 2304. + x**8 / 147456.
                      + x**10 / 14745600. + x**12 / 2123366400.,
                      np.e**x / (2. * np.pi * x)**0.5 * (1. + 1. / (8. * x) + 9. / (128. * x**2) + 225. / (3072 * x**3)
-                                                       + 11025. / (98304. * x**4)))
+                                                        + 11025. / (98304. * x**4)))
 
 
 def i1(x):

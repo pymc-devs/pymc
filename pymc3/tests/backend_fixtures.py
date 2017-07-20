@@ -1,13 +1,14 @@
-import numpy as np
-import numpy.testing as npt
+import collections
 import os
 import shutil
-import collections
+
+import numpy as np
+import numpy.testing as npt
+import pytest
+import theano
 
 from pymc3.tests import models
 from pymc3.backends import base
-import pytest
-import theano
 
 
 class ModelBackendSetupTestCase(object):

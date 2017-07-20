@@ -1,7 +1,8 @@
-import pymc3 as pm
-from .helpers import SeededTest
 import numpy as np
 import theano
+
+import pymc3 as pm
+from .helpers import SeededTest
 
 
 class TestShared(SeededTest):

@@ -3,10 +3,13 @@
 See the docstring for pymc3.backends for more information (including
 creating custom backends).
 """
-import numpy as np
-from ..model import modelcontext
 import warnings
+
+import numpy as np
 import theano.tensor as tt
+
+from ..model import modelcontext
+
 
 class BackendError(Exception):
     pass
@@ -71,7 +74,6 @@ class BaseTrace(object):
                                      "different types." % key)
 
         self.sampler_vars = sampler_vars
-
 
     def setup(self, draws, chain, sampler_vars=None):
         """Perform chain-specific setup.
@@ -162,8 +164,7 @@ class BaseTrace(object):
         if sampler_idx is not None:
             return self._get_sampler_stats(varname, sampler_idx, burn, thin)
 
-        sampler_idxs = [i for i, s in enumerate(self.sampler_vars)
-                       if varname in s]
+        sampler_idxs = [i for i, s in enumerate(self.sampler_vars) if varname in s]
         if not sampler_idxs:
             raise KeyError("Unknown sampler stat %s" % varname)
 
@@ -173,7 +174,6 @@ class BaseTrace(object):
             return vals[..., 0]
         else:
             return vals
-
 
     def _get_sampler_stats(self, varname, sampler_idx, burn, thin):
         """Get sampler statistics."""
@@ -283,9 +283,9 @@ class MultiTrace(object):
         var = str(var)
         if var in self.varnames:
             if var in self.stat_names:
-                warnings.warn("Attribute access on a trace object is ambigous. "
-                "Sampler statistic and model variable share a name. Use "
-                "trace.get_values or trace.get_sampler_stats.")
+                warnings.warn("Attribute access on a trace object is ambiguous. "
+                              "Sampler statistic and model variable share a name. Use "
+                              "trace.get_values or trace.get_sampler_stats.")
             return self.get_values(var, burn=burn, thin=thin)
         if var in self.stat_names:
             return self.get_sampler_stats(var, burn=burn, thin=thin)
@@ -303,9 +303,9 @@ class MultiTrace(object):
         name = str(name)
         if name in self.varnames:
             if name in self.stat_names:
-                warnings.warn("Attribute access on a trace object is ambigous. "
-                "Sampler statistic and model variable share a name. Use "
-                "trace.get_values or trace.get_sampler_stats.")
+                warnings.warn("Attribute access on a trace object is ambiguous. "
+                              "Sampler statistic and model variable share a name. Use "
+                              "trace.get_values or trace.get_sampler_stats.")
             return self.get_values(name)
         if name in self.stat_names:
             return self.get_sampler_stats(name)

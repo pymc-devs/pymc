@@ -1,10 +1,12 @@
-from pymc3 import Model, Normal, Categorical, Metropolis
-import numpy as np
-import pymc3 as pm
 from itertools import product
-import theano.tensor as tt
+
+import numpy as np
 import theano
 from theano.compile.ops import as_op
+import theano.tensor as tt
+
+import pymc3 as pm
+from pymc3 import Model, Normal, Categorical, Metropolis
 from pymc3.theanof import floatX_array
 
 

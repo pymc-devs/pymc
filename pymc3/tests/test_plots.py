@@ -2,9 +2,12 @@ import matplotlib
 matplotlib.use('Agg', warn=False)  # noqa
 
 import numpy as np
-import pymc3 as pm
-from .checks import close_to
+import pytest
+import theano
 
+import pymc3 as pm
+from pymc3.examples import arbitrary_stochastic as asmod
+from .checks import close_to
 from .models import multidimensional_model, simple_categorical
 from ..plots import traceplot, forestplot, autocorrplot, plot_posterior
 from ..plots.utils import make_2d
@@ -12,9 +15,6 @@ from ..step_methods import Slice, Metropolis
 from ..sampling import sample
 from ..tuning.scaling import find_hessian
 from .test_examples import build_disaster_model
-from pymc3.examples import arbitrary_stochastic as asmod
-import theano
-import pytest
 
 
 def test_plots():

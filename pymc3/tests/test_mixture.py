@@ -1,9 +1,9 @@
 import numpy as np
 from numpy.testing import assert_allclose
 
-from .helpers import SeededTest
 from pymc3 import Dirichlet, Gamma, Metropolis, Mixture, Model, Normal, NormalMixture, Poisson, sample
 from pymc3.theanof import floatX
+from .helpers import SeededTest
 
 
 # Generate data

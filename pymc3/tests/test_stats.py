@@ -1,17 +1,18 @@
-from .models import Model, Normal, Metropolis
 import numpy as np
+from numpy.random import random, normal
 import numpy.testing as npt
+from numpy.testing import assert_equal, assert_almost_equal, assert_array_almost_equal
 import pandas as pd
+from scipy import stats as st
+
 import pymc3 as pm
+import pymc3.stats as pmstats
 from .helpers import SeededTest
+from .models import Model, Normal, Metropolis
 from ..tests import backend_fixtures as bf
 from ..backends import ndarray
 from ..stats import df_summary, autocorr, hpd, mc_error, quantiles, make_indices
 from ..theanof import floatX_array
-import pymc3.stats as pmstats
-from numpy.random import random, normal
-from numpy.testing import assert_equal, assert_almost_equal, assert_array_almost_equal
-from scipy import stats as st
 
 
 def test_log_post_trace():

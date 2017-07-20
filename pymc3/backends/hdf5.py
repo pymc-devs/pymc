@@ -1,6 +1,9 @@
-from ..backends import base, ndarray
-import h5py
 from contextlib import contextmanager
+
+import h5py
+
+from ..backends import base, ndarray
+
 
 @contextmanager
 def activator(instance):
@@ -99,15 +102,15 @@ class HDF5(base.BaseTrace):
     @property
     def sampler_vars(self):
         with self.activate_file:
-            l = []
+            s_vars = []
             for i, sampler in sorted(self.stats.items(), key=lambda x: int(x[0])):
                 d = {}
                 for varname, ds in sampler.items():
                     d[varname] = ds.dtype
-                l.append(d)
-        if not l:
+                s_vars.append(d)
+        if not s_vars:
             return None
-        return l
+        return s_vars
 
     @sampler_vars.setter
     def sampler_vars(self, values):
@@ -152,7 +155,6 @@ class HDF5(base.BaseTrace):
             self._set_sampler_vars(sampler_vars)
             self._is_base_setup = True
             self._resize(self.draws)
-
 
     def close(self):
         with self.activate_file:

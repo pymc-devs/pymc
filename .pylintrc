@@ -58,6 +58,7 @@ enable=import-error,
        bad-open-mode,
        redundant-unittest-assert,
        boolean-datetime,
+       wrong-import-order
        # unused-variable
 
 

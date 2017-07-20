@@ -1,13 +1,14 @@
 from functools import partial
+
 import numpy as np
+from scipy import stats
 import theano
 import theano.tensor as tt
-from scipy import stats
 
+from pymc3.math import tround
 from pymc3.util import get_variable_name
 from .dist_math import bound, factln, binomln, betaln, logpow
 from .distribution import Discrete, draw_values, generate_samples, reshape_sampled
-from pymc3.math import tround
 from ..math import logaddexp
 
 __all__ = ['Binomial',  'BetaBinomial',  'Bernoulli',  'DiscreteWeibull',

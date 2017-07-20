@@ -1,6 +1,8 @@
 from theano import tensor as tt
-from .opvi import TestFunction
+
 from pymc3.theanof import floatX
+
+from .opvi import TestFunction
 
 __all__ = [
     'rbf'
@@ -8,7 +10,7 @@ __all__ = [
 
 
 class Kernel(TestFunction):
-    """
+    r"""
     Dummy base class for kernel SVGD in case we implement more
 
     .. math::

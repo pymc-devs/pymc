@@ -2,8 +2,13 @@ import shutil
 import tempfile
 import warnings
 
-from .checks import close_to
-from .models import simple_categorical, mv_simple, mv_simple_discrete, simple_2model, mv_prior_simple
+from numpy.testing import assert_array_almost_equal
+import numpy as np
+import numpy.testing as npt
+import pytest
+import theano
+import theano.tensor as tt
+
 from pymc3.sampling import assign_step_methods, sample
 from pymc3.model import Model
 from pymc3.step_methods import (NUTS, BinaryGibbsMetropolis, CategoricalGibbsMetropolis,
@@ -12,16 +17,11 @@ from pymc3.step_methods import (NUTS, BinaryGibbsMetropolis, CategoricalGibbsMet
                                 EllipticalSlice, smc)
 from pymc3.theanof import floatX
 from pymc3 import SamplingError
-from pymc3.distributions import (
-    Binomial, Normal, Bernoulli, Categorical, Beta, HalfNormal)
-
-from numpy.testing import assert_array_almost_equal
-import numpy as np
-import numpy.testing as npt
-import pytest
-import theano
-import theano.tensor as tt
+from pymc3.distributions import Binomial, Normal, Bernoulli, Categorical, Beta, HalfNormal
+from .checks import close_to
 from .helpers import select_by_precision
+from .models import (simple_categorical, mv_simple, mv_simple_discrete,
+                     simple_2model, mv_prior_simple)
 
 
 class TestStepMethods(object):  # yield test doesn't work subclassing object

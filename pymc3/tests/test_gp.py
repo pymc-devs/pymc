@@ -1,11 +1,13 @@
 #  pylint:disable=unused-variable
-from .helpers import SeededTest
-from pymc3 import Model, gp, sample, Uniform
-import theano
-import theano.tensor as tt
 import numpy as np
 import numpy.testing as npt
 import pytest
+import theano
+import theano.tensor as tt
+
+from pymc3 import Model, gp, sample, Uniform
+from .helpers import SeededTest
+
 
 class TestZeroMean(object):
     def test_value(self):
@@ -13,7 +15,7 @@ class TestZeroMean(object):
         with Model() as model:
             zero_mean = gp.mean.Zero()
         M = theano.function([], zero_mean(X))()
-        assert np.all(M==0)
+        assert np.all(M == 0)
         assert M.shape == (10, )
 
 
@@ -23,7 +25,7 @@ class TestConstantMean(object):
         with Model() as model:
             const_mean = gp.mean.Constant(6)
         M = theano.function([], const_mean(X))()
-        assert np.all(M==6)
+        assert np.all(M == 6)
         assert M.shape == (10, )
 
 
@@ -400,6 +402,7 @@ class TestPolynomial(object):
 class TestWarpedInput(object):
     def test_1d(self):
         X = np.linspace(0, 1, 10)[:, None]
+
         def warp_func(x, a, b, c):
             return x + (a * tt.tanh(b * (x - c)))
         with Model() as model:
@@ -424,6 +427,7 @@ class TestWarpedInput(object):
 class TestGibbs(object):
     def test_1d(self):
         X = np.linspace(0, 2, 10)[:, None]
+
         def tanh_func(x, x1, x2, w, x0):
             return (x1 + x2) / 2.0 - (x1 - x2) / 2.0 * tt.tanh((x - x0) / w)
         with Model() as model:
@@ -449,8 +453,10 @@ class TestHandleArgs(object):
     def test_handleargs(self):
         def func_noargs(x):
             return x
+
         def func_onearg(x, a):
             return x + a
+
         def func_twoarg(x, a, b):
             return x + a + b
         x = 100
@@ -471,21 +477,24 @@ class TestGP(SeededTest):
         with Model() as model:
             # make a Gaussian model
             with pytest.raises(ValueError):
-                random_test = gp.GP('random_test', cov_func=gp.mean.Zero(), observed={'X':X, 'Y':Y})
+                random_test = gp.GP('random_test',
+                                    cov_func=gp.mean.Zero(),
+                                    observed={'X': X, 'Y': Y})
             with pytest.raises(ValueError):
                 random_test = gp.GP('random_test', mean_func=gp.cov.Matern32(1, 1),
-                                        cov_func=gp.cov.Matern32(1, 1), observed={'X':X, 'Y':Y})
+                                    cov_func=gp.cov.Matern32(1, 1), observed={'X': X, 'Y': Y})
 
     def test_sample(self):
         X = np.linspace(0, 1, 10)[:, None]
         Y = np.random.randn(10)
         with Model() as model:
             M = gp.mean.Zero()
-            l = Uniform('l', 0, 5)
-            K = gp.cov.Matern32(1, l)
+            length = Uniform('length', 0, 5)
+            K = gp.cov.Matern32(1, length)
             sigma = Uniform('sigma', 0, 10)
             # make a Gaussian model
-            random_test = gp.GP('random_test', mean_func=M, cov_func=K, sigma=sigma, observed={'X':X, 'Y':Y})
+            random_test = gp.GP('random_test', mean_func=M, cov_func=K, sigma=sigma,
+                                observed={'X': X, 'Y': Y})
             tr = sample(20, init=None, progressbar=False, random_seed=self.random_seed)
 
         # test prediction

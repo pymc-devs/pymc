@@ -3,9 +3,10 @@ pymc3.blocking
 
 Classes for working with subsets of parameters.
 """
-import copy
-import numpy as np
 import collections
+import copy
+
+import numpy as np
 
 __all__ = ['ArrayOrdering', 'DictToArrayBijection', 'DictToVarBijection']
 

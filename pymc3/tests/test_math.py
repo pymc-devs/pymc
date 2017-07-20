@@ -1,12 +1,12 @@
 import numpy as np
+import pytest
 import theano
 import theano.tensor as tt
 from theano.tests import unittest_tools as utt
-from pymc3.math import (
-    LogDet, logdet, probit, invprobit, expand_packed_triangular)
-from .helpers import SeededTest
-import pytest
+
+from pymc3.math import LogDet, logdet, probit, invprobit, expand_packed_triangular
 from pymc3.theanof import floatX
+from .helpers import SeededTest
 
 
 def test_probit():

@@ -1,5 +1,7 @@
 import numpy as np
 from numpy.testing import assert_allclose, assert_array_less
+import pytest
+import theano
 
 from .helpers import SeededTest
 from ..model import Model
@@ -9,8 +11,6 @@ from ..tuning import find_MAP
 from ..sampling import sample
 from ..diagnostics import effective_n, geweke, gelman_rubin
 from .test_examples import build_disaster_model
-import pytest
-import theano
 
 
 @pytest.mark.xfail(condition=(theano.config.floatX == "float32"), reason="Fails on float32")
@@ -25,22 +25,20 @@ class TestGelmanRubin(SeededTest):
             step2 = Metropolis([model.switchpoint])
             start = {'early_mean': 7., 'late_mean': 5., 'switchpoint': 10}
             ptrace = sample(n_samples, tune=0, step=[step1, step2], start=start, njobs=2,
-                    progressbar=False, random_seed=[20090425, 19700903])
+                            progressbar=False, random_seed=[20090425, 19700903])
         return ptrace
 
     def test_good(self):
         """Confirm Gelman-Rubin statistic is close to 1 for a reasonable number of samples."""
         n_samples = 1000
         rhat = gelman_rubin(self.get_ptrace(n_samples))
-        assert all(1 / self.good_ratio < r <
-                            self.good_ratio for r in rhat.values())
+        assert all(1 / self.good_ratio < r < self.good_ratio for r in rhat.values())
 
     def test_bad(self):
         """Confirm Gelman-Rubin statistic is far from 1 for a small number of samples."""
         n_samples = 5
         rhat = gelman_rubin(self.get_ptrace(n_samples))
-        assert not all(1 / self.good_ratio < r <
-                             self.good_ratio for r in rhat.values())
+        assert not all(1 / self.good_ratio < r < self.good_ratio for r in rhat.values())
 
     def test_right_shape_python_float(self, shape=None, test_shape=None):
         """Check Gelman-Rubin statistic shape is correct w/ python float"""

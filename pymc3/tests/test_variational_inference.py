@@ -1,18 +1,15 @@
-import pytest
 import pickle
 import operator
+
 import numpy as np
+import pytest
 from theano import theano, tensor as tt
 from theano.configparser import change_flags
+
 import pymc3 as pm
 from pymc3 import Model, Normal
-from pymc3.variational import (
-    ADVI, FullRankADVI, SVGD, NFVI,
-    Empirical, ASVGD,
-    MeanField, FullRank,
-    fit, flows
-)
-
+from pymc3.variational import (ADVI, FullRankADVI, SVGD, NFVI, Empirical, ASVGD, MeanField,
+                               FullRank, fit, flows)
 from pymc3.variational.operators import KL
 from pymc3.tests import models
 

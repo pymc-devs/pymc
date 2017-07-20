@@ -1,9 +1,11 @@
 import os
-from pymc3.tests import backend_fixtures as bf
-from pymc3.backends import ndarray, sqlite
 import tempfile
+
 import pytest
 import theano
+
+from pymc3.tests import backend_fixtures as bf
+from pymc3.backends import ndarray, sqlite
 
 DBNAME = os.path.join(tempfile.gettempdir(), 'test.db')
 

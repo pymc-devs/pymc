@@ -1,16 +1,17 @@
-'''
+"""
 Created on May 12, 2012
 
 @author: john
-'''
-from .arraystep import ArrayStep, Competence
-from ..distributions.discrete import Categorical
-from numpy import array, max, exp, cumsum, nested_iters, empty, searchsorted, ones, arange
-from numpy.random import uniform
+"""
 from warnings import warn
 
+from numpy import array, max, exp, cumsum, nested_iters, empty, searchsorted, ones, arange
+from numpy.random import uniform
 from theano.gof.graph import inputs
 from theano.tensor import add
+
+from .arraystep import ArrayStep, Competence
+from ..distributions.discrete import Categorical
 from ..model import modelcontext
 __all__ = ['ElemwiseCategorical']
 
@@ -27,7 +28,7 @@ class ElemwiseCategorical(ArrayStep):
 
     def __init__(self, vars, values=None, model=None):
         warn('ElemwiseCategorical is deprecated, switch to CategoricalGibbsMetropolis.',
-             DeprecationWarning, stacklevel = 2)
+             DeprecationWarning, stacklevel=2)
         model = modelcontext(model)
         self.var = vars[0]
         self.sh = ones(self.var.dshape, self.var.dtype)

@@ -1,16 +1,17 @@
 from collections import namedtuple
 import warnings
 
-from ..arraystep import Competence
-from pymc3.exceptions import SamplingError
-from .base_hmc import BaseHMC
-from pymc3.theanof import floatX
-from pymc3.vartypes import continuous_types
-
 import numpy as np
 import numpy.random as nr
 from scipy import stats, linalg
 import six
+
+from pymc3.theanof import floatX
+from pymc3.vartypes import continuous_types
+from pymc3.exceptions import SamplingError
+from ..arraystep import Competence
+from .base_hmc import BaseHMC
+
 
 __all__ = ['NUTS']
 

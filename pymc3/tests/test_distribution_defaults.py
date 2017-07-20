@@ -1,10 +1,10 @@
 from __future__ import division
 
-from ..model import Model
-from ..distributions import DiscreteUniform, Continuous
-
 import numpy as np
 import pytest
+
+from ..model import Model
+from ..distributions import DiscreteUniform, Continuous
 
 
 class DistTest(Continuous):
@@ -63,6 +63,7 @@ def test_default_discrete_uniform():
     with Model():
         x = DiscreteUniform('x', lower=1, upper=2)
         assert x.init_value == 1
+
 
 def test_discrete_uniform_negative():
     model = Model()

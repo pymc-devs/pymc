@@ -1,8 +1,9 @@
+import os
+import tempfile
+
 import numpy as np
 from pymc3.tests import backend_fixtures as bf
 from pymc3.backends import ndarray, hdf5
-import os
-import tempfile
 
 STATS1 = [{
     'a': np.float64,
@@ -17,6 +18,7 @@ STATS2 = [{
 }]
 
 DBNAME = os.path.join(tempfile.gettempdir(), 'test.h5')
+
 
 class TestHDF50dSampling(bf.SamplingTestCase):
     backend = hdf5.HDF5

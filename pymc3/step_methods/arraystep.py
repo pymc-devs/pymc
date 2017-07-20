@@ -1,10 +1,11 @@
+from enum import IntEnum, unique
+import numpy as np
+from numpy.random import uniform
+
 from .compound import CompoundStep
 from ..model import modelcontext
 from ..theanof import inputvars
 from ..blocking import ArrayOrdering, DictToArrayBijection
-import numpy as np
-from numpy.random import uniform
-from enum import IntEnum, unique
 
 __all__ = [
     'ArrayStep', 'ArrayStepShared', 'metrop_select', 'Competence']
