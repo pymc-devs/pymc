@@ -1169,8 +1169,8 @@ class Approximation(object):
 
     @property
     def local_size(self):
-        return self._l_order.dimensions
+        return self._l_order.size
 
     @property
     def global_size(self):
-        return self._g_order.dimensions
+        return self._g_order.size

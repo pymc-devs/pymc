@@ -37,6 +37,7 @@ class BlockedStep(object):
             kwargs['blocked'] = blocked
 
         model = modelcontext(kwargs.get('model'))
+        kwargs.update({'model':model})
 
         # vars can either be first arg or a kwarg
         if 'vars' not in kwargs and len(args) >= 1:
@@ -154,6 +155,30 @@ class ArrayStepShared(BlockedStep):
         else:
             apoint = self.astep(bij.map(point))
             return bij.rmap(apoint)
+
+
+class GradientSharedStep(BlockedStep):
+    def __init__(self, vars, model=None, blocked=True,
+                 dtype=None, **theano_kwargs):
+        model = modelcontext(model)
+        self.vars = vars
+        self.blocked = blocked
+
+        self._logp_dlogp_func = model.logp_dlogp_function(
+            vars, dtype=dtype, **theano_kwargs)
+
+    def step(self, point):
+        self._logp_dlogp_func.set_extra_values(point)
+        array = self._logp_dlogp_func.dict_to_array(point)
+
+        if self.generates_stats:
+            apoint, stats = self.astep(array)
+            point = self._logp_dlogp_func.array_to_full_dict(apoint)
+            return point, stats
+        else:
+            apoint = self.astep(array)
+            point = self._logp_dlogp_func.array_to_full_dict(apoint)
+            return point
 
 
 def metrop_select(mr, q, q0):
