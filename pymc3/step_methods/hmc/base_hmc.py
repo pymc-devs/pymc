@@ -12,7 +12,7 @@ class BaseHMC(arraystep.GradientSharedStep):
 
     def __init__(self, vars=None, scaling=None, step_scale=0.25, is_cov=False,
                  model=None, blocked=True, potential=None,
-                 integrator="leapfrog", dtype=None, **theano_kwargs):
+                 integrator="leapfrog", dtype=None, manifold=False, **theano_kwargs):
         """Superclass to implement Hamiltonian/hybrid monte carlo
 
         Parameters
@@ -62,5 +62,9 @@ class BaseHMC(arraystep.GradientSharedStep):
         else:
             self.potential = quad_potential(scaling, is_cov)
 
-        self.integrator = integration.CpuLeapfrogIntegrator(
-            size, self.potential, self._logp_dlogp_func)
+        if manifold:
+            self.integrator = integration.CpuLeapfrogIntegratorSoftabs(
+                size, self.potential, self._logp_dlogp_func)
+        else:
+            self.integrator = integration.CpuLeapfrogIntegrator(
+                size, self.potential, self._logp_dlogp_func)
