@@ -353,7 +353,7 @@ def compare(traces, models, ic='WAIC'):
     the top-ranked model.
         It's always 0 for the top-ranked model.
     warning : A value of 1 indicates that the computation of the IC may not be
-    reliable see http://arxiv.org/abs/1507.04544 for details.
+        reliable see http://arxiv.org/abs/1507.04544 for details.
     """
     if ic == 'WAIC':
         ic_func = waic
