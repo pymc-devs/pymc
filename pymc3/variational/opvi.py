@@ -490,7 +490,6 @@ class GroupApprox(object):
     symbolic_initial = None
     replacements = None
     input = None
-
     # defined by approximation
     SUPPORT_AEVB = True
     initial_dist_name = 'normal'
@@ -500,23 +499,20 @@ class GroupApprox(object):
                  params=None,
                  random_seed=None,
                  model=None,
-                 local=False):
+                 local=False, **kwargs):
+        if local and not self.SUPPORT_AEVB:
+            raise TypeError('%s does not support local groups' % self.__class__)
         self._is_local = local
         self._rng = tt_rng(random_seed)
         model = modelcontext(model)
         self.model = model
-        if group is None:
-            self.group = model.vars
-        elif group is -1:  # ints have unique pointer
-            self.group = -1
-        else:
-            self.group = group
+        self.group = group
         if params is None:
             params = dict()
         self.user_params = params
-        self.vmap = dict()
-        self.ndim = 0
-        if self.group is not -1:
+        # save this stuff to use in __init_group__ later
+        self._kwargs = kwargs
+        if self.group is not None:
             # init can be delayed
             self.__init_group__(self.group)
 
@@ -535,7 +531,7 @@ class GroupApprox(object):
     def __init_group__(self, group):
         if not group:
             raise ValueError('Got empty group')
-        if self.group is -1:
+        if self.group is None:
             # delayed init
             self.group = group
         if self.is_local and len(group) > 1:
@@ -546,27 +542,39 @@ class GroupApprox(object):
         self.input = self._input_type(
             self.__class__.__name__ + '_symbolic_input'
         )
-        for var in group:
+        # I do some staff that is not supported by standard __init__
+        # so I have to to it by myself
+        self.ordering = object.__new__(ArrayOrdering)
+        self.ordering.vmap = []
+        self.ordering.dimensions = 0
+        for var in self.group:
             var = get_transformed(var)
             begin = self.ndim
             if self.is_local:
-                self.ndim += np.prod(var.dshape[1:])
+                self.ordering.dimensions += np.prod(var.dshape[1:])
                 shape = (-1, ) + var.dshape[1:]
             else:
-                self.ndim += var.dsize
+                self.ordering.dimensions += var.dsize
                 shape = var.dshape
             end = self.ndim
-            self.vmap[var] = VarMap(var.name, slice(begin, end), shape, var.dtype)
+            self.vmap.append(VarMap(var.name, slice(begin, end), shape, var.dtype))
+        self.bij = DictToArrayBijection(self.ordering, {})
         self.replacements = dict()
         for v, (name, slc, shape, dtype) in self.vmap.items():
-            # slice is taken only by last dimension
+            # slice is taken by last dimension that is valid for both 1d and 2d input
             vr = self.input[..., slc].reshape(shape).astype(dtype)
             vr.name = name + '_vi_replacement'
             self.replacements[v] = vr
 
-    @property
-    def is_local(self):
-        return self._is_local
+    def _finalize_init(self):
+        """
+        Clean up after init
+        """
+        del self._kwargs
+
+    vmap = property(lambda self: self.ordering.vmap)
+    ndim = property(lambda self: self.ordering.dimensions)
+    is_local = property(lambda self: self._is_local)
 
     @property
     def params_dict(self):
@@ -668,15 +676,16 @@ class GroupedApproximation(object):
         seen = set()
         rest = None
         for g in groups:
-            if g.group is -1:
+            if g.group is None:
                 if rest is not None:
                     raise TypeError('More that one group is specified for '
                                     'the rest variables')
                 else:
                     rest = g
-            if set(g.group) & seen:
-                raise ValueError('Found duplicates in groups')
-            seen.update(g.group)
+            else:
+                if set(g.group) & seen:
+                    raise ValueError('Found duplicates in groups')
+                seen.update(g.group)
         if set(model.free_RVs) - seen:
             if rest is None:
                 raise ValueError('No approximation is specified for the rest variables')
@@ -724,9 +733,8 @@ class GroupedApproximation(object):
 
     @property
     def replacements(self):
-        return dict(itertools.chain(
-            *[g.replacements.items()
-              for g in self.groups]
+        return dict(itertools.chain.from_iterable(
+            g.replacements.items() for g in self.groups
         ))
 
     def construct_replacements(self, more_replacements=None):
@@ -761,6 +769,7 @@ class GroupedApproximation(object):
 
     def _get_optimization_replacements(self, s, d):
         repl = dict()
+        # avoid scan in size is constant and equal to one
         if isinstance(s, int) and (s == 1) or s is None:
             repl[self.logp] = self.single_symbolic_logp
         return repl
