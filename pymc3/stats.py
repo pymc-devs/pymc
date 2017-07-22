@@ -908,3 +908,28 @@ def _groupby_leading_idxs(shape):
     """
     idxs = itertools.product(*[range(s) for s in shape])
     return itertools.groupby(idxs, lambda x: x[:-1])
+
+
+def bfmi(trace):
+    """
+    Calculate the estimated Bayesian fraction of missing information (BFMI).
+
+    BFMI quantifies how well momentum resampling matches the marginal energy
+    distribution.  For more information on BFMI, see
+    https://arxiv.org/pdf/1604.00695.pdf.  The current advice is that values
+    smaller than 0.2 indicate por sampling.  However, this threshold is
+    provisional and may change.  See
+    http://mc-stan.org/users/documentation/case-studies/pystan_workflow.html
+    for more information.
+
+    Parameters
+    ----------
+    trace : result of an HMC/NUTS run, must contain energy information
+
+    Returns
+    -------
+    `float` representing the estimated BFMI.
+    """
+    energy = trace['energy']
+
+    return np.square(energy).mean() / np.var(energy)
