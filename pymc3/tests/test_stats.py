@@ -6,7 +6,7 @@ import pymc3 as pm
 from .helpers import SeededTest
 from ..tests import backend_fixtures as bf
 from ..backends import ndarray
-from ..stats import df_summary, autocorr, hpd, mc_error, quantiles, make_indices
+from ..stats import df_summary, autocorr, hpd, mc_error, quantiles, make_indices, bfmi
 from ..theanof import floatX_array
 import pymc3.stats as pmstats
 from numpy.random import random, normal
@@ -358,6 +358,11 @@ class TestStats(SeededTest):
         assert len(keys) == len(expected_keys)
         for key in keys:
             assert result[key] == [key + (0,), key + (1,)]
+
+    def test_bfmi(self):
+        trace = {'energy': np.array([1, 2, 3, 4])}
+
+        assert_almost_equal(bfmi(trace), 0.8)
 
 
 class TestDfSummary(bf.ModelBackendSampledTestCase):

@@ -16,7 +16,7 @@ from scipy.stats.distributions import pareto
 from .backends import tracetab as ttab
 
 __all__ = ['autocorr', 'autocov', 'dic', 'bpic', 'waic', 'loo', 'hpd', 'quantiles',
-           'mc_error', 'summary', 'df_summary', 'compare']
+           'mc_error', 'summary', 'df_summary', 'compare', 'bfmi']
 
 
 def statfunc(f):
@@ -908,3 +908,28 @@ def _groupby_leading_idxs(shape):
     """
     idxs = itertools.product(*[range(s) for s in shape])
     return itertools.groupby(idxs, lambda x: x[:-1])
+
+
+def bfmi(trace):
+    """
+    Calculate the estimated Bayesian fraction of missing information (BFMI).
+
+    BFMI quantifies how well momentum resampling matches the marginal energy
+    distribution.  For more information on BFMI, see
+    https://arxiv.org/pdf/1604.00695.pdf.  The current advice is that values
+    smaller than 0.2 indicate poor sampling.  However, this threshold is
+    provisional and may change.  See
+    http://mc-stan.org/users/documentation/case-studies/pystan_workflow.html
+    for more information.
+
+    Parameters
+    ----------
+    trace : result of an HMC/NUTS run, must contain energy information
+
+    Returns
+    -------
+    `float` representing the estimated BFMI.
+    """
+    energy = trace['energy']
+
+    return np.square(np.diff(energy)).mean() / np.var(energy)
