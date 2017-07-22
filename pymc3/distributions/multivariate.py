@@ -505,7 +505,14 @@ class Multinomial(Discrete):
     def _random(self, n, p, size=None):
         if size == p.shape:
             size = None
-        return np.random.multinomial(n, p, size=size)
+        # return np.random.multinomial(n, p, size=size)
+        # print(p.sum(axis=1))
+        if p.ndim > 1 and p.shape[0] > 1:
+            p = p / (p.sum(axis=1, keepdims=True)+1E-6)
+            randnum = np.asarray([np.random.multinomial(n, pp, size=size) for pp in p])
+        else:
+            randnum = np.random.multinomial(n, p, size=size)
+        return randnum
 
     def random(self, point=None, size=None):
         n, p = draw_values([self.n, self.p], point=point)
