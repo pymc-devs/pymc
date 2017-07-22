@@ -932,4 +932,4 @@ def bfmi(trace):
     """
     energy = trace['energy']
 
-    return np.square(energy).mean() / np.var(energy)
+    return np.square(np.diff(energy)).mean() / np.var(energy)
