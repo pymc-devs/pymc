@@ -457,3 +457,14 @@ def ix_(*args):
         new = new.reshape((1,)*k + (new.size,) + (1,)*(nd-k-1))
         out.append(new)
     return tuple(out)
+
+
+def batched_diag(C):
+    C1 = tt.concatenate([[0], C.flatten()])
+
+    def index_(b, d):
+        return tt.diag(tt.arange(1+b*d, 1+(b+1)*d))
+    index = theano.scan(
+        index_, tt.arange(C.shape[0]),
+        non_sequences=[C.shape[1]])[0]
+    return C1[index]
