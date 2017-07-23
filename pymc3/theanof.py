@@ -460,11 +460,28 @@ def ix_(*args):
 
 
 def batched_diag(C):
-    C1 = tt.concatenate([[0], C.flatten()])
+    C = tt.as_tensor(C)
+    bc = C.shape[0]
+    dim = C.shape[-1]
+    if C.ndim == 2:
+        # diag -> matrices
+        C1 = tt.concatenate([[0], C.flatten()])
+        diag_idx = tt.arange(1, dim + 1)
+        index = tt.diag(diag_idx).dimshuffle('x', 0, 1)
+        index = tt.repeat(index, bc, 0)
+        inc = tt.repeat(
+            tt.arange(0, C.size, C.shape[1]).reshape((-1, 1)),
+            C.shape[1], 1
+        )
+        index = tt.inc_subtensor(
+            index[index.nonzero()],
+            inc.flatten()
+        )
+        return C1[index]
+    elif C.ndim == 3:
+        # matrices -> diag
+        idx = tt.arange(dim)
+        return C[..., idx, idx]
+    else:
+        raise ValueError('Input should be 2 or 3 dimensional')
 
-    def index_(b, d):
-        return tt.diag(tt.arange(1+b*d, 1+(b+1)*d))
-    index = theano.scan(
-        index_, tt.arange(C.shape[0]),
-        non_sequences=[C.shape[1]])[0]
-    return C1[index]
