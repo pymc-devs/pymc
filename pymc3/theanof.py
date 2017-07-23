@@ -459,25 +459,50 @@ def ix_(*args):
     return tuple(out)
 
 
+class BatchedDiag(tt.Op):
+    """
+    Fast BatchedDiag allocation
+    """
+    __props__ = ()
+
+    def make_node(self, diag):
+        diag = tt.as_tensor_variable(diag)
+        if diag.type.ndim != 2:
+            raise TypeError('data argument must be a matrix', diag.type)
+
+        return tt.Apply(self, [diag], [tt.tensor3(dtype=diag.dtype)])
+
+    def perform(self, node, ins, outs, params=None):
+        (C,) = ins
+        (z,) = outs
+        C1 = np.concatenate([[0], C.flatten()])
+        bc = C.shape[0]
+        dim = C.shape[-1]
+        diag_idx = np.arange(1, dim + 1)
+        index = np.diag(diag_idx)[None, ...]
+        index = np.repeat(index, bc, 0)
+        inc = np.repeat(
+            np.arange(0, C.size, C.shape[1]).reshape((-1, 1)),
+            C.shape[1], 1
+        )
+        index[index.nonzero()] += inc.flatten()
+        z[0] = C1[index]
+
+    def grad(self, inputs, gout):
+        (gz,) = gout
+        idx = tt.arange(gz.shape[-1])
+        return gz[..., idx, idx]
+
+    def infer_shape(self, nodes, shapes):
+        return [(shapes[0][0], ) + (shapes[0][1],) * 2]
+
+
 def batched_diag(C):
     C = tt.as_tensor(C)
-    bc = C.shape[0]
     dim = C.shape[-1]
     if C.ndim == 2:
         # diag -> matrices
-        C1 = tt.concatenate([[0], C.flatten()])
-        diag_idx = tt.arange(1, dim + 1)
-        index = tt.diag(diag_idx).dimshuffle('x', 0, 1)
-        index = tt.repeat(index, bc, 0)
-        inc = tt.repeat(
-            tt.arange(0, C.size, C.shape[1]).reshape((-1, 1)),
-            C.shape[1], 1
-        )
-        index = tt.inc_subtensor(
-            index[index.nonzero()],
-            inc.flatten()
-        )
-        return C1[index]
+        return BatchedDiag()(C)
     elif C.ndim == 3:
         # matrices -> diag
         idx = tt.arange(dim)
