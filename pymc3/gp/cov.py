@@ -55,9 +55,9 @@ class Covariance(object):
             return self.full(X, Xs)
 
     def _slice(self, X, Xs):
-        X = X[:, self.active_dims]
+        X = tt.as_tensor_variable(X[:, self.active_dims])
         if Xs is not None:
-            Xs = Xs[:, self.active_dims]
+            Xs = tt.as_tensor_variable(Xs[:, self.active_dims])
         return X, Xs
 
     def __add__(self, other):
@@ -203,6 +203,21 @@ class Stationary(Covariance):
 
     def full(self, X, Xs=None):
         raise NotImplementedError
+
+
+class Periodic(Stationary):
+    def __init__(self, input_dim, lengthscales, period, active_dims=None):
+        super(Periodic, self).__init__(input_dim, lengthscales, active_dims)
+        self.period = period
+    def full(self, X, Xs=None):
+        X, Xs = self._slice(X, Xs)
+        if Xs is None:
+            Xs = X
+        f1 = X.dimshuffle(0, 'x', 1)
+        f2 = Xs.dimshuffle('x', 0, 1)
+        r = np.pi * (f1 - f2) / self.period
+        r = tt.sum(tt.square(tt.sin(r) / self.lengthscales), 2)
+        return tt.exp(-0.5 * r)
 
 
 class ExpQuad(Stationary):
@@ -427,13 +442,11 @@ class Gibbs(Covariance):
         self.args = args
 
     def square_dist(self, X, Xs):
-        X = tt.as_tensor_variable(X)
         X2 = tt.sum(tt.square(X), 1)
         if Xs is None:
             sqd = (-2.0 * tt.dot(X, tt.transpose(X))
                    + (tt.reshape(X2, (-1, 1)) + tt.reshape(X2, (1, -1))))
         else:
-            Xs = tt.as_tensor_variable(Xs)
             Xs2 = tt.sum(tt.square(Xs), 1)
             sqd = (-2.0 * tt.dot(X, tt.transpose(Xs))
                    + (tt.reshape(Xs2, (-1, 1)) + tt.reshape(Xs2, (1, -1))))
