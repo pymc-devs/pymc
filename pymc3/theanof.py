@@ -475,18 +475,14 @@ class BatchedDiag(tt.Op):
     def perform(self, node, ins, outs, params=None):
         (C,) = ins
         (z,) = outs
-        C1 = np.concatenate([[0], C.flatten()])
+
         bc = C.shape[0]
         dim = C.shape[-1]
-        diag_idx = np.arange(1, dim + 1)
-        index = np.diag(diag_idx)[None, ...]
-        index = np.repeat(index, bc, 0)
-        inc = np.repeat(
-            np.arange(0, C.size, C.shape[1]).reshape((-1, 1)),
-            C.shape[1], 1
-        )
-        index[index.nonzero()] += inc.flatten()
-        z[0] = C1[index]
+        Cd = np.zeros((bc, dim, dim), C.dtype)
+        bidx = np.repeat(np.arange(bc), dim)
+        didx = np.tile(np.arange(dim), bc)
+        Cd[bidx, didx, didx] = C.flatten()
+        z[0] = Cd
 
     def grad(self, inputs, gout):
         (gz,) = gout
