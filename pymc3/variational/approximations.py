@@ -25,6 +25,7 @@ class MeanField(GroupApprox):
     that latent space variables are uncorrelated that is the main drawback
     of the method
     """
+    __param_spec__ = dict(mu=('d', ), rho=('d', ))
 
     @node_property
     def mean(self):
@@ -67,7 +68,7 @@ class MeanField(GroupApprox):
         return {'mu': theano.shared(
                     pm.floatX(start), 'mu'),
                 'rho': theano.shared(
-                    pm.floatX(np.zeros((self.ndim,))), 'rho')}
+                    pm.floatX(np.zeros((self.dim,))), 'rho')}
 
     @node_property
     def symbolic_random(self):
@@ -98,6 +99,8 @@ class FullRank(GroupApprox):
         Sticking the Landing: A Simple Reduced-Variance Gradient for ADVI
         approximateinference.org/accepted/RoederEtAl2016.pdf
     """
+    __param_spec__ = dict(mu=('d',), L_tril=('int(d * (d + 1) / 2)',))
+
     def __init_group__(self, group):
         super(FullRank, self).__init_group__(group)
         if not self.user_params:
@@ -116,7 +119,7 @@ class FullRank(GroupApprox):
             update_start_vals(start_, start, self.model)
             start = start_
         start = pm.floatX(self.bij.map(start))
-        n = self.ndim
+        n = self.dim
         L_tril = (
             np.eye(n)
             [np.tril_indices(n)]
@@ -143,12 +146,12 @@ class FullRank(GroupApprox):
 
     @property
     def num_tril_entries(self):
-        n = self.ndim
+        n = self.dim
         return int(n * (n + 1) / 2)
 
     @property
     def tril_index_matrix(self):
-        n = self.ndim
+        n = self.dim
         num_tril_entries = self.num_tril_entries
         tril_index_matrix = np.zeros([n, n], dtype=int)
         tril_index_matrix[np.tril_indices(n)] = np.arange(num_tril_entries)
@@ -202,7 +205,7 @@ class FullRank(GroupApprox):
             mean_field.shared_params['mu'].get_value()
         )
         rho = mean_field.shared_params['rho'].get_value()
-        n = full_rank.ndim
+        n = full_rank.dim
         L_tril = (
             np.diag(np.log1p(np.exp(rho)))  # rho2sd
             [np.tril_indices(n)]
@@ -216,6 +219,8 @@ class Empirical(GroupApprox):
     """Builds Approximation instance from a given trace,
     it has the same interface as variational approximation
     """
+    SUPPORT_AEVB = False
+    __param_spec__ = dict(histogram=('s', 'd'))
 
     def __init_group__(self, group):
         super(Empirical, self).__init_group__(group)
@@ -248,7 +253,7 @@ class Empirical(GroupApprox):
                 histogram += pm.floatX(np.random.normal(0, jitter, histogram.shape))
 
         else:
-            histogram = np.empty((len(trace) * len(trace.chains), self.ndim))
+            histogram = np.empty((len(trace) * len(trace.chains), self.dim))
             i = 0
             for t in trace.chains:
                 for j in range(len(trace)):
@@ -401,7 +406,7 @@ class NormalizingFlow(GroupApprox):
             self.formula = flows.Formula(flow)
             self._check_user_params()
             flow = self.formula(
-                dim=self.ndim,
+                dim=self.dim,
                 z0=self.symbolic_initial,
                 jitter=jitter,
                 params=self.user_params
@@ -426,7 +431,7 @@ class NormalizingFlow(GroupApprox):
                               givens=list(sorted(givens)), needed='[0, 1, ..., %d]' % len(formula.flows)))
         for i in needed:
             flow = formula.flows[i]
-            flow_keys = set(flow.__param_keys__)
+            flow_keys = set(flow.__param_spec__)
             user_keys = set(params[i].keys())
             if flow_keys != user_keys:
                 raise ValueError('Passed parameters for flow `{i}` ({cls}) do not have a needed set of keys, '
@@ -472,6 +477,12 @@ class NormalizingFlow(GroupApprox):
     @property
     def symbolic_random(self):
         return self.flow.forward
+
+    def _infer_batch_size(self):
+        if not self.is_local:
+            raise NotImplementedError
+        else:
+            return next(iter(self.params_dict[0].items())).shape[0]
 
 
 def sample_approx(approx, draws=100, include_transformed=True):

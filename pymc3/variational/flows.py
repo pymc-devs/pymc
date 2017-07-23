@@ -79,7 +79,7 @@ class Formula(object):
 
 class AbstractFlow(object):
     shared_params = None
-    __param_keys__ = ()
+    __param_spec__ = dict()
 
     def __init__(self, z0=None, dim=None, jitter=.001):
         self.__jitter = jitter
@@ -100,13 +100,20 @@ class AbstractFlow(object):
             self.z0 = z0
         self.parent = parent
 
-    def add_param(self, shape, name=None, ref=0., dtype='floatX'):
+    def add_param(self, user=None, name=None, ref=0., dtype='floatX'):
         if dtype == 'floatX':
             dtype = theano.config.floatX
-        return theano.shared(
-            np.asarray(np.random.normal(size=shape) * self.__jitter + ref).astype(dtype),
-            name=name
-        )
+        spec = self.__param_spec__[name]
+        shape = tuple(eval(s, {'d': self.dim}) for s in spec)
+        if user is None:
+            return theano.shared(
+                np.asarray(np.random.normal(size=shape) * self.__jitter + ref).astype(dtype),
+                name=name
+            )
+        else:
+            if self.is_local:
+                shape = (-1, ) + shape
+            return user.reshape(shape)
 
     @property
     def params(self):
@@ -186,18 +193,15 @@ class FlowFn(object):
 
 
 class LinearFlow(AbstractFlow):
-    __param_keys__ = ('u', 'w_', 'b')
+    __param_spec__ = dict(u=('d', ), w=('d', ), b=())
 
     @change_flags(compute_test_value='off')
     def __init__(self, h, z0=None, dim=None, u=None, w=None, b=None, jitter=.001):
         self.h = h
         super(LinearFlow, self).__init__(dim=dim, z0=z0, jitter=jitter)
-        if u is None:
-            u = self.add_param(dim, 'u')
-        if w is None:
-            w = self.add_param(dim, 'w')
-        if b is None:
-            b = self.add_param(None, 'b')
+        u = self.add_param(u, 'u')
+        w = self.add_param(w, 'w')
+        b = self.add_param(b, 'b')
         self.shared_params = dict(u=u, w=w, b=b)
         self.u_, self.w_ = self.make_uw(self.u, self.w)
 
@@ -301,25 +305,23 @@ class PlanarFlow(LinearFlow):
 
 
 class ReferencePointFlow(AbstractFlow):
-    __param_keys__ = ('a', 'b', 'z_ref')
+    __param_spec__ = dict(a=(), b=(), z_ref=('d', ))
 
     @change_flags(compute_test_value='off')
     def __init__(self, h, z0=None, dim=None, a=None, b=None, z_ref=None, jitter=.1):
         super(ReferencePointFlow, self).__init__(dim=dim, z0=z0, jitter=jitter)
-        if a is None:
-            a = self.add_param(None, 'a')
-        if b is None:
-            b = self.add_param(None, 'b')
+        a = self.add_param(a, 'a')
+        b = self.add_param(b, 'b')
         if z_ref is None:
             if hasattr(self.z0, 'tag') and hasattr(self.z0.tag, 'test_value'):
                 z_ref = self.add_param(
-                    self.z0.tag.test_value[0].shape, 'z_ref',
+                    z_ref, 'z_ref',
                     ref=self.z0.tag.test_value[0],
                     dtype=self.z0.dtype
                 )
             else:
                 z_ref = self.add_param(
-                    dim, 'z_ref', dtype=self.z0.dtype
+                    z_ref, 'z_ref', dtype=self.z0.dtype
                 )
         self.h = h
         self.shared_params = dict(a=a, b=b, z_ref=z_ref)
@@ -397,12 +399,11 @@ class RadialFlow(ReferencePointFlow):
 
 
 class LocFlow(AbstractFlow):
-    __param_keys__ = ('loc', )
+    __param_spec__ = dict(loc=('d', ))
 
     def __init__(self, z0=None, dim=None, loc=None, jitter=0):
         super(LocFlow, self).__init__(dim=dim, z0=z0, jitter=jitter)
-        if loc is None:
-            loc = self.add_param(dim, 'loc')
+        loc = self.add_param(loc, 'loc')
         self.shared_params = dict(loc=loc)
 
     loc = property(lambda self: self.shared_params['loc'])
@@ -419,13 +420,12 @@ class LocFlow(AbstractFlow):
 
 
 class ScaleFlow(AbstractFlow):
-    __param_keys__ = ('log_scale', )
+    __param_spec__ = dict(log_scale=('d', ))
 
     @change_flags(compute_test_value='off')
     def __init__(self, z0=None, dim=None, log_scale=None, jitter=.1):
         super(ScaleFlow, self).__init__(dim=dim, z0=z0, jitter=jitter)
-        if log_scale is None:
-            log_scale = self.add_param(dim, 'log_scale')
+        log_scale = self.add_param(log_scale, 'log_scale')
         self.scale = tt.exp(log_scale)
         self.shared_params = dict(log_scale=log_scale)
 
@@ -443,13 +443,12 @@ class ScaleFlow(AbstractFlow):
 
 
 class HouseholderFlow(AbstractFlow):
-    __param_keys__ = ('v', )
+    __param_spec__ = dict(v=('d', ))
 
     @change_flags(compute_test_value='raise')
     def __init__(self, z0=None, dim=None, v=None, jitter=.1):
         super(HouseholderFlow, self).__init__(dim=dim, z0=z0, jitter=jitter)
-        if v is None:
-            v = self.add_param(dim, 'v')
+        v = self.add_param(v, 'v')
         self.shared_params = dict(v=v)
         if self.is_local:
             vv = v.dimshuffle(0, 1, 'x') * v.dimshuffle(0, 'x', 1)

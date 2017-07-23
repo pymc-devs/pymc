@@ -421,7 +421,7 @@ def collect_shared_to_list(params):
 
     Returns
     -------
-    list
+    List
     """
     if isinstance(params, dict):
         return list(
@@ -493,7 +493,7 @@ class GroupApprox(object):
     SUPPORT_AEVB = True
     initial_dist_name = 'normal'
     initial_dist_map = 0.
-    __param_keys__ = ()
+    __param_spec__ = ()
 
     def __init__(self, group=None,
                  params=None,
@@ -523,11 +523,19 @@ class GroupApprox(object):
         if not isinstance(user_params, dict):
             raise TypeError('params should be a dict')
         givens = set(user_params.keys())
-        needed = set(self.__param_keys__)
+        needed = set(self.__param_spec__)
         if givens != needed:
             raise ValueError('Passed parameters do not have a needed set of keys, '
                              'they should be equal, got {givens}, needed {needed}'.format(
                               givens=givens, needed=needed))
+        correct_shaped = dict()
+        for name, param in self.user_params.items():
+            spec = self.__param_spec__[name]
+            shape = tuple(eval(s, {'d': self.dim}) for s in spec)
+            if self.is_local:
+                shape = (-1, ) + shape
+            correct_shaped[name] = param.reshape(shape)
+        self.user_params.update(correct_shaped)
 
     def _initial_type(self, name):
         if self.is_local:
@@ -562,14 +570,14 @@ class GroupApprox(object):
         self.ordering.dimensions = 0
         for var in self.group:
             var = get_transformed(var)
-            begin = self.ndim
+            begin = self.dim
             if self.is_local:
                 self.ordering.dimensions += np.prod(var.dshape[1:])
                 shape = (-1, ) + var.dshape[1:]
             else:
                 self.ordering.dimensions += var.dsize
                 shape = var.dshape
-            end = self.ndim
+            end = self.dim
             self.vmap.append(VarMap(var.name, slice(begin, end), shape, var.dtype))
         self.bij = DictToArrayBijection(self.ordering, {})
         self.replacements = dict()
@@ -586,7 +594,7 @@ class GroupApprox(object):
         del self._kwargs
 
     vmap = property(lambda self: self.ordering.vmap)
-    ndim = property(lambda self: self.ordering.dimensions)
+    dim = property(lambda self: self.ordering.dimensions)
     is_local = property(lambda self: self._is_local)
 
     @property
@@ -606,29 +614,32 @@ class GroupApprox(object):
         """
         return theano.clone(node, self.replacements, strict=False)
 
-    def _new_initial_shape(self, size, ndim):
+    def _new_initial_shape(self, size, dim):
         if self.is_local:
-            return tt.stack([size, self._infer_batch_size(), ndim])
+            return tt.stack([size, self._infer_batch_size(), dim])
         else:
-            return tt.stack([size, ndim])
+            return tt.stack([size, dim])
 
     def _infer_batch_size(self):
-        raise NotImplementedError
+        if not self.is_local:
+            raise NotImplementedError
+        else:
+            return next(iter(self.params_dict.items())).shape[0]
 
     def _new_initial(self, size, deterministic):
         if size is None:
             size = 1
         if not isinstance(deterministic, tt.Variable):
             deterministic = np.int8(deterministic)
-        ndim, dist_name, dist_map = (
-            self.ndim,
+        dim, dist_name, dist_map = (
+            self.dim,
             self.initial_dist_name,
             self.initial_dist_map
         )
         dtype = self.symbolic_initial.dtype
-        ndim = tt.as_tensor(ndim)
+        dim = tt.as_tensor(dim)
         size = tt.as_tensor(size)
-        shape = self._new_initial_shape(size, ndim)
+        shape = self._new_initial_shape(size, dim)
         # apply optimizations if possible
         if not isinstance(deterministic, tt.Variable):
             if deterministic:
