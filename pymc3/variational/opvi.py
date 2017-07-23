@@ -38,7 +38,6 @@ import theano
 import theano.tensor as tt
 import pymc3 as pm
 from .updates import adagrad_window
-from ..distributions.dist_math import rho2sd, log_normal
 from ..model import modelcontext
 from ..blocking import (
     ArrayOrdering, DictToArrayBijection, VarMap
@@ -494,6 +493,7 @@ class GroupApprox(object):
     SUPPORT_AEVB = True
     initial_dist_name = 'normal'
     initial_dist_map = 0.
+    __param_keys__ = ()
 
     def __init__(self, group=None,
                  params=None,
@@ -515,6 +515,19 @@ class GroupApprox(object):
         if self.group is not None:
             # init can be delayed
             self.__init_group__(self.group)
+
+    def _check_user_params(self):
+        if self.user_params is None:
+            return
+        user_params = self.user_params
+        if not isinstance(user_params, dict):
+            raise TypeError('params should be a dict')
+        givens = set(user_params.keys())
+        needed = set(self.__param_keys__)
+        if givens != needed:
+            raise ValueError('Passed parameters do not have a needed set of keys, '
+                             'they should be equal, got {givens}, needed {needed}'.format(
+                              givens=givens, needed=needed))
 
     def _initial_type(self, name):
         if self.is_local:

@@ -487,7 +487,7 @@ class BatchedDiag(tt.Op):
     def grad(self, inputs, gout):
         (gz,) = gout
         idx = tt.arange(gz.shape[-1])
-        return gz[..., idx, idx]
+        return [gz[..., idx, idx]]
 
     def infer_shape(self, nodes, shapes):
         return [(shapes[0][0], ) + (shapes[0][1],) * 2]
