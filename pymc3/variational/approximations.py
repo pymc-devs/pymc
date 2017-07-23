@@ -52,6 +52,8 @@ class MeanField(GroupApprox):
             self.shared_params = self.create_shared_params(
                 self._kwargs.get('start', None)
             )
+        else:
+            self._check_user_params()
         self._finalize_init()
 
     def create_shared_params(self, start=None):
@@ -102,6 +104,8 @@ class FullRank(GroupApprox):
             self.shared_params = self.create_shared_params(
                 self._kwargs.get('start', None)
             )
+        else:
+            self._check_user_params()
         self._finalize_init()
 
     def create_shared_params(self, start=None):
@@ -123,11 +127,11 @@ class FullRank(GroupApprox):
 
     @node_property
     def L(self):
-        return self.shared_params['L_tril'][..., self.tril_index_matrix]
+        return self.params_dict['L_tril'][..., self.tril_index_matrix]
 
     @node_property
     def mean(self):
-        return self.shared_params['mu']
+        return self.params_dict['mu']
 
     @node_property
     def cov(self):
@@ -211,12 +215,6 @@ class FullRank(GroupApprox):
 class Empirical(GroupApprox):
     """Builds Approximation instance from a given trace,
     it has the same interface as variational approximation
-    Examples
-    --------
-    >>> with model:
-    ...     step = NUTS()
-    ...     trace = sample(1000, step=step)
-    ...     histogram = Empirical(trace[100:])
     """
 
     def __init_group__(self, group):
@@ -226,9 +224,11 @@ class Empirical(GroupApprox):
             self.shared_params = self.create_shared_params(
                 trace=self._kwargs.get('trace', None),
                 size=self._kwargs.get('size', None),
-                jitter=self._kwargs.get('size', 1),
+                jitter=self._kwargs.get('jitter', 1),
                 start=self._kwargs.get('start', 1)
             )
+        else:
+            self._check_user_params()
         self._finalize_init()
 
     def create_shared_params(self, trace=None, size=None, jitter=1, start=None):
@@ -306,7 +306,7 @@ class Empirical(GroupApprox):
     def histogram(self):
         """Shortcut to flattened Trace
         """
-        return self.shared_params['histogram']
+        return self.params_dict['histogram']
 
     @node_property
     def mean(self):
@@ -318,7 +318,7 @@ class Empirical(GroupApprox):
         return x.T.dot(x) / pm.floatX(self.histogram.shape[0])
 
     @classmethod
-    def from_noise(cls, size, jitter=.01, start=None, **kwargs):
+    def from_noise(cls, size, jitter=1, start=None, **kwargs):
         """Initialize Histogram with random noise
 
         Parameters
@@ -381,27 +381,7 @@ class NormalizingFlow(GroupApprox):
     -   Householder (:code:`hh`): :math:`z' = H z`
 
     Formula can be written as a string, e.g. `'scale-loc'`, `'scale-hh*4-loc'`, `'panar*10'`.
-    Every step is separated with `'-'`, repeated flow is marked with `'*'` produsing `'flow*repeats'`.
-
-    Parameters
-    ----------
-    flow : str|AbstractFlow
-        formula or initialized Flow, default is `'scale-loc'` that
-        is identical to MeanField
-    local_rv : dict[var->tuple]
-        Experimental for Empirical Approximation
-        mapping {model_variable -> local_variable (:math:`\mu`, :math:`\rho`)}
-        Local Vars are used for Autoencoding Variational Bayes
-        See (AEVB; Kingma and Welling, 2014) for details
-    scale_cost_to_minibatch : `bool`
-        Scale cost to minibatch instead of full dataset, default False
-    model : :class:`pymc3.Model`
-        PyMC3 model for inference
-    random_seed : None or int
-        leave None to use package global RandomStream or other
-        valid value to create instance specific one
-    jitter : float
-        noise for flows' parameters initialization
+    Every step is separated with `'-'`, repeated flow is marked with `'*'` producing `'flow*repeats'`.
 
     References
     ----------
@@ -418,15 +398,45 @@ class NormalizingFlow(GroupApprox):
         flow = self._kwargs.get('flow', 'scale-loc')
         jitter = self._kwargs.get('jitter', 1)
         if isinstance(flow, str):
-            flow = flows.Formula(flow)(
+            self.formula = flows.Formula(flow)
+            self._check_user_params()
+            flow = self.formula(
                 dim=self.ndim,
                 z0=self.symbolic_initial,
-                jitter=jitter
+                jitter=jitter,
+                params=self.user_params
             )
         self.flow = flow
+        self._finalize_init()
+
+    def _check_user_params(self):
+        params = self.user_params
+        if params is None:
+            return
+        formula = self.formula
+        if not isinstance(params, dict):
+            raise TypeError('params should be a dict')
+        if not all(isinstance(k, int) for k in params.keys()):
+            raise TypeError('params should be a dict with `int` keys')
+        needed = set(range(len(formula.flows)))
+        givens = set(params.keys())
+        if givens != needed:
+            raise ValueError('Passed parameters do not have a needed set of keys, '
+                             'they should be equal, needed {needed}, got {givens}'.format(
+                              givens=list(sorted(givens)), needed='[0, 1, ..., %d]' % len(formula.flows)))
+        for i in needed:
+            flow = formula.flows[i]
+            flow_keys = set(flow.__param_keys__)
+            user_keys = set(params[i].keys())
+            if flow_keys != user_keys:
+                raise ValueError('Passed parameters for flow `{i}` ({cls}) do not have a needed set of keys, '
+                                 'they should be equal, needed {needed}, got {givens}'.format(
+                                  givens=user_keys, needed=flow_keys, i=i, cls=flow.__name__))
 
     @property
     def shared_params(self):
+        if self.user_params is None:
+            return None
         params = dict()
         current = self.flow
         i = 0
@@ -439,6 +449,8 @@ class NormalizingFlow(GroupApprox):
 
     @shared_params.setter
     def shared_params(self, value):
+        if self.user_params is None:
+            raise AttributeError('Cannot set when having user params')
         current = self.flow
         i = 0
         current.shared_params = value[i]
@@ -452,14 +464,14 @@ class NormalizingFlow(GroupApprox):
         return self.flow.all_params
 
     @node_property
-    def symbolic_log_q_W_global(self):
-        z0 = self.symbolic_initial_global_matrix
-        q0 = pm.Normal.dist().logp(z0).sum(-1)
-        return q0-self.gflow.sum_logdets
+    def symbolic_logq(self):
+        z0 = self.symbolic_initial
+        q0 = pm.Normal.dist().logp(z0).sum(range(1, z0.ndim))
+        return q0-self.flow.sum_logdets
 
     @property
-    def symbolic_random_global_matrix(self):
-        return self.gflow.forward
+    def symbolic_random(self):
+        return self.flow.forward
 
 
 def sample_approx(approx, draws=100, include_transformed=True):
