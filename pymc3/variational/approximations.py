@@ -6,7 +6,7 @@ import pymc3 as pm
 from pymc3.distributions.dist_math import rho2sd, log_normal
 from pymc3.variational.opvi import GroupApprox, node_property
 from pymc3.util import update_start_vals
-from pymc3.theanof import batched_diag
+from pymc3.theanof import batched_diag, change_flags
 from pymc3.variational import flows
 
 
@@ -68,7 +68,7 @@ class MeanField(GroupApprox):
         return {'mu': theano.shared(
                     pm.floatX(start), 'mu'),
                 'rho': theano.shared(
-                    pm.floatX(np.zeros((self.dim,))), 'rho')}
+                    pm.floatX(np.zeros((self.ndim,))), 'rho')}
 
     @node_property
     def symbolic_random(self):
@@ -119,7 +119,7 @@ class FullRank(GroupApprox):
             update_start_vals(start_, start, self.model)
             start = start_
         start = pm.floatX(self.bij.map(start))
-        n = self.dim
+        n = self.ndim
         L_tril = (
             np.eye(n)
             [np.tril_indices(n)]
@@ -146,12 +146,12 @@ class FullRank(GroupApprox):
 
     @property
     def num_tril_entries(self):
-        n = self.dim
+        n = self.ndim
         return int(n * (n + 1) / 2)
 
     @property
     def tril_index_matrix(self):
-        n = self.dim
+        n = self.ndim
         num_tril_entries = self.num_tril_entries
         tril_index_matrix = np.zeros([n, n], dtype=int)
         tril_index_matrix[np.tril_indices(n)] = np.arange(num_tril_entries)
@@ -205,7 +205,7 @@ class FullRank(GroupApprox):
             mean_field.shared_params['mu'].get_value()
         )
         rho = mean_field.shared_params['rho'].get_value()
-        n = full_rank.dim
+        n = full_rank.ndim
         L_tril = (
             np.diag(np.log1p(np.exp(rho)))  # rho2sd
             [np.tril_indices(n)]
@@ -253,7 +253,7 @@ class Empirical(GroupApprox):
                 histogram += pm.floatX(np.random.normal(0, jitter, histogram.shape))
 
         else:
-            histogram = np.empty((len(trace) * len(trace.chains), self.dim))
+            histogram = np.empty((len(trace) * len(trace.chains), self.ndim))
             i = 0
             for t in trace.chains:
                 for j in range(len(trace)):
@@ -399,14 +399,16 @@ class NormalizingFlow(GroupApprox):
         arXiv:1611.09630
     """
 
+    @change_flags(compute_test_value='off')
     def __init_group__(self, group):
+        super(NormalizingFlow, self).__init_group__(group)
         flow = self._kwargs.get('flow', 'scale-loc')
         jitter = self._kwargs.get('jitter', 1)
         if isinstance(flow, str):
             self.formula = flows.Formula(flow)
             self._check_user_params()
             flow = self.formula(
-                dim=self.dim,
+                dim=self.ndim,
                 z0=self.symbolic_initial,
                 jitter=jitter,
                 params=self.user_params
@@ -478,7 +480,7 @@ class NormalizingFlow(GroupApprox):
     def symbolic_random(self):
         return self.flow.forward
 
-    def _infer_batch_size(self):
+    def batch_size(self):
         if not self.is_local:
             raise NotImplementedError
         else:

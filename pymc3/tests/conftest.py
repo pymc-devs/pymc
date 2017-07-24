@@ -1,3 +1,4 @@
+import contextlib
 import numpy as np
 import theano
 import pymc3 as pm
@@ -35,3 +36,8 @@ def seeded_test():
     # TODO: use this instead of SeededTest
     np.random.seed(42)
     pm.set_tt_rng(42)
+
+
+@contextlib.contextmanager
+def not_raises():
+    yield

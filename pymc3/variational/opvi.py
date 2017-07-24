@@ -396,7 +396,7 @@ class Operator(object):
             else:
                 pass
             f = TestFunction()
-        f.setup(self.approx.total_size)
+        f.setup(self.approx.ndim)
         return self.OBJECTIVE(self, f)
 
     def __getstate__(self):
@@ -493,7 +493,7 @@ class GroupApprox(object):
     SUPPORT_AEVB = True
     initial_dist_name = 'normal'
     initial_dist_map = 0.
-    __param_spec__ = ()
+    __param_spec__ = dict()
 
     def __init__(self, group=None,
                  params=None,
@@ -507,8 +507,6 @@ class GroupApprox(object):
         model = modelcontext(model)
         self.model = model
         self.group = group
-        if params is None:
-            params = dict()
         self.user_params = params
         # save this stuff to use in __init_group__ later
         self._kwargs = kwargs
@@ -517,9 +515,9 @@ class GroupApprox(object):
             self.__init_group__(self.group)
 
     def _check_user_params(self):
-        if self.user_params is None:
-            return
         user_params = self.user_params
+        if user_params is None:
+            return
         if not isinstance(user_params, dict):
             raise TypeError('params should be a dict')
         givens = set(user_params.keys())
@@ -531,7 +529,7 @@ class GroupApprox(object):
         correct_shaped = dict()
         for name, param in self.user_params.items():
             spec = self.__param_spec__[name]
-            shape = tuple(eval(s, {'d': self.dim}) for s in spec)
+            shape = tuple(eval(s, {'d': self.ndim}) for s in spec)
             if self.is_local:
                 shape = (-1, ) + shape
             correct_shaped[name] = param.reshape(shape)
@@ -549,6 +547,7 @@ class GroupApprox(object):
         else:
             return tt.vector(name)
 
+    @change_flags(compute_test_value='off')
     def __init_group__(self, group):
         if not group:
             raise ValueError('Got empty group')
@@ -570,22 +569,22 @@ class GroupApprox(object):
         self.ordering.dimensions = 0
         for var in self.group:
             var = get_transformed(var)
-            begin = self.dim
+            begin = self.ndim
             if self.is_local:
                 self.ordering.dimensions += np.prod(var.dshape[1:])
                 shape = (-1, ) + var.dshape[1:]
             else:
                 self.ordering.dimensions += var.dsize
                 shape = var.dshape
-            end = self.dim
+            end = self.ndim
             self.vmap.append(VarMap(var.name, slice(begin, end), shape, var.dtype))
         self.bij = DictToArrayBijection(self.ordering, {})
         self.replacements = dict()
-        for v, (name, slc, shape, dtype) in self.vmap.items():
+        for name, slc, shape, dtype in self.vmap:
             # slice is taken by last dimension that is valid for both 1d and 2d input
             vr = self.input[..., slc].reshape(shape).astype(dtype)
             vr.name = name + '_vi_replacement'
-            self.replacements[v] = vr
+            self.replacements[self.model.named_vars[name]] = vr
 
     def _finalize_init(self):
         """
@@ -594,7 +593,7 @@ class GroupApprox(object):
         del self._kwargs
 
     vmap = property(lambda self: self.ordering.vmap)
-    dim = property(lambda self: self.ordering.dimensions)
+    ndim = property(lambda self: self.ordering.dimensions)
     is_local = property(lambda self: self._is_local)
 
     @property
@@ -616,13 +615,14 @@ class GroupApprox(object):
 
     def _new_initial_shape(self, size, dim):
         if self.is_local:
-            return tt.stack([size, self._infer_batch_size(), dim])
+            return tt.stack([size, self.batch_size, dim])
         else:
             return tt.stack([size, dim])
 
-    def _infer_batch_size(self):
+    @node_property
+    def batch_size(self):
         if not self.is_local:
-            raise NotImplementedError
+            return 0
         else:
             return next(iter(self.params_dict.items())).shape[0]
 
@@ -632,7 +632,7 @@ class GroupApprox(object):
         if not isinstance(deterministic, tt.Variable):
             deterministic = np.int8(deterministic)
         dim, dist_name, dist_map = (
-            self.dim,
+            self.ndim,
             self.initial_dist_name,
             self.initial_dist_map
         )
@@ -718,8 +718,19 @@ class GroupedApproximation(object):
         self.groups = groups
         self.model = model
 
-    def _collect(self, item):
-        return [getattr(g, item) for g in self.groups]
+    @property
+    def SUPPORT_AEVB(self):
+        return all(self._collect('SUPPORT_AEVB'))
+
+    def _collect(self, item, part='total'):
+        if part == 'total':
+            return [getattr(g, item) for g in self.groups]
+        elif part == 'local':
+            return [getattr(g, item) for g in self.groups if g.is_local]
+        elif part == 'global':
+            return [getattr(g, item) for g in self.groups if not g.is_local]
+        else:
+            raise ValueError("unknown part %s, expected {'local', 'global', 'total'}")
 
     inputs = property(lambda self: self._collect('input'))
     symbolic_randoms = property(lambda self: self._collect('symbolic_random'))
@@ -873,3 +884,33 @@ class GroupedApproximation(object):
         finally:
             trace.close()
         return pm.sampling.MultiTrace([trace])
+
+    @node_property
+    def ndim(self):
+        return sum(self._collect('ndim'))
+
+    @node_property
+    def dim_local(self):
+        dims = self._collect('dim', 'local')
+        batches = self._collect('batch_size', 'local')
+        return tt.add(*map(tt.mul, dims, batches))
+
+    @property
+    def dim_global(self):
+        return sum(self._collect('dim', 'global'))
+
+    @property
+    def has_local(self):
+        return any(self._collect('is_local'))
+
+    @node_property
+    def symbolic_batched_random_local(self):
+        return tt.stack(self._collect('symbolic_random', 'local'), axis=-1)
+
+    @node_property
+    def symbolic_random_local(self):
+        return self.symbolic_batched_random_local.flatten(2)
+
+    @node_property
+    def symbolic_random_global(self):
+        return tt.stack(self._collect('symbolic_random', 'global'), axis=-1)
