@@ -1017,6 +1017,31 @@ class LKJCorr(Continuous):
         self.tri_index[np.triu_indices(n, k=1)] = np.arange(n_elem)
         self.tri_index[np.triu_indices(n, k=1)[::-1]] = np.arange(n_elem)
 
+    def _random(self, n, eta, size=None):
+        beta = eta + (n-1)/2
+        P = np.zeros((n, n)) # partial correlations
+        r_triu = []
+        
+        for k in range(n-1):
+            beta -= 1/2
+            for i in range(k+1, n):
+                P[k, i] = stats.beta.rvs(a=eta, b=eta) # sampling from beta
+                p = P[k, i] = (P[k, i]-0.5)*2
+                for l in range(k-1,-1,-1): # convert partial correlation to raw correlation
+                    p = p * np.sqrt((1-P[l,i]**2)*(1-P[l,k]**2)) + P[l,i]*P[l,k];
+
+                r_triu.append(p)
+
+        return np.asarray(r_triu)
+
+    def random(self, point=None, size=None):
+        n, eta = draw_values([self.n, self.eta], point=point)
+        samples = generate_samples(self._random, n, eta,
+                                   broadcast_shape=self.shape,
+                                   dist_shape=self.shape,
+                                   size=size)
+        return samples
+
     def logp(self, x):
         n = self.n
         eta = self.eta
