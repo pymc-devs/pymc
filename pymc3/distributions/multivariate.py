@@ -505,7 +505,16 @@ class Multinomial(Discrete):
     def _random(self, n, p, size=None):
         if size == p.shape:
             size = None
-        return np.random.multinomial(n, p, size=size)
+
+        if p.ndim == 1:
+            randnum = np.random.multinomial(n, p.squeeze(), size=size)
+        elif p.ndim == 2:
+            randnum = np.asarray([np.random.multinomial(n, pp, size=size) for pp in p])
+        else:
+            raise ValueError('Outcome probabilities must be 1- or 2-dimensional '
+                             '(supplied `p` has {} dimensions)'.format(p.ndim))
+
+        return randnum
 
     def random(self, point=None, size=None):
         n, p = draw_values([self.n, self.p], point=point)
