@@ -57,6 +57,7 @@ def test_init_groups(three_var_model, raises, grouping):
         ({}, {FullRank: (None, {}), MeanField: (['one'], {})}),
         ({}, {MeanField: (['one'], {}), FullRank: (['two'], {}), NormalizingFlow: (['three'], {})}),
         ({}, {MeanField: (['one'], {}), FullRank: (['two', 'three'], {})}),
+        ({}, {MeanField: (['one'], {}), Empirical.from_noise: (['two', 'three'], {'size': 100})})
 ])
 def three_var_approx(request, three_var_model):
     kw, grouping = request.param
