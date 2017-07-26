@@ -6,7 +6,7 @@ import theano.tensor.slinalg
 
 import pymc3 as pm
 
-__all__ = ['GPLatent', 'GPMarginal']
+__all__ = ['GPLatent', 'GPMarginal', 'TProcess', 'GPMarginalSparse']
 
 cholesky = pm.distributions.dist_math.Cholesky(nofail=True, lower=True)
 solve_lower = tt.slinalg.Solve(A_structure='lower_triangular')
@@ -42,8 +42,6 @@ class GPBase(object):
         self.size = size
         self.mean_func = mean_func
 
-        # help user keep track of GP since internal state changes
-        self.call_record.append((name, size))
         # force user to run `__call__` before `conditioned_on`
         self._ready = True
         return self
@@ -116,7 +114,7 @@ class GPLatent(GPBase):
 
 
 
-class StudentTProcess(GPLatent):
+class TProcess(GPLatent):
     """ StudentT process
     """
     def __init__(self, cov_func):
@@ -147,8 +145,6 @@ class GPMarginal(GPBase):
 
     def __init__(self, cov_func):
         super(GPMarginal, self).__init__(cov_func)
-        # if you want to predict or sample from noisy gp,
-        #   easy to add iid normal noise
 
     def __call__(self, name, size, mean_func, include_noise=False):
         self.include_noise = include_noise
