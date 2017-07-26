@@ -262,6 +262,7 @@ class _WeightedVariance(object):
 
 class QuadPotentialDiag(QuadPotential):
     """Quad potential using a diagonal covariance matrix."""
+
     def __init__(self, v, dtype=None):
         """Use a vector to represent a diagonal matrix for a covariance matrix.
 

@@ -9,7 +9,8 @@ from .quadpotential import quad_potential, QuadPotentialDiagAdapt
 
 
 class BaseHMC(arraystep.GradientSharedStep):
-    """Superclass to implement Hamiltonian/hybrid monte carlo"""
+    """Superclass to implement Hamiltonian/hybrid monte carlo."""
+
     default_blocked = True
 
     def __init__(self, vars=None, scaling=None, step_scale=0.25, is_cov=False,
