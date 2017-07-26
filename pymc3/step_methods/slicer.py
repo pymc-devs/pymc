@@ -34,7 +34,6 @@ class Slice(ArrayStep):
         self.model = modelcontext(model)
         self.w = w
         self.tune = tune
-        # self.w_sum = 0 #probably we don't need it now
         self.n_tunes = 0.
 
         if vars is None:
