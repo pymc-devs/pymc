@@ -83,4 +83,4 @@ class Slice(ArrayStep):
             if not var.shape:
                 return Competence.PREFERRED
             return Competence.COMPATIBLE
-return Competence.INCOMPATIBLE
+        return Competence.INCOMPATIBLE
