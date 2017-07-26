@@ -1,151 +1,312 @@
 import numpy as np
-from scipy import stats
-from tqdm import tqdm
 
-from theano.tensor.nlinalg import matrix_inverse
+import theano
 import theano.tensor as tt
+import theano.tensor.slinalg
 
-from .mean import Zero, Mean
-from .cov import Covariance
-from ..distributions import MvNormal, Continuous, draw_values, generate_samples
-from ..model import modelcontext
+import pymc3 as pm
+
+__all__ = ['GPLatent', 'GPMarginal']
+
+cholesky = pm.distributions.dist_math.Cholesky(nofail=True, lower=True)
+solve_lower = tt.slinalg.Solve(A_structure='lower_triangular')
+solve_upper = tt.slinalg.Solve(A_structure='upper_triangular')
+
+def stabilize(K):
+    """ adds small diagonal to a covariance matrix """
+    return K + 1e-6 * tt.identity_like(K)
 
 
-__all__ = ['GP', 'sample_gp']
-
-
-class GP(Continuous):
-    """Gausian process
-
-    Parameters
-    ----------
-    mean_func : Mean
-        Mean function of Gaussian process
-    cov_func : Covariance
-        Covariance function of Gaussian process
-    X : array
-        Grid of points to evaluate Gaussian process over. Only required if the
-        GP is not an observed variable.
-    sigma : scalar or array
-        Observation standard deviation (defaults to zero)
+class GPBase(object):
     """
-    def __init__(self, mean_func=None, cov_func=None, X=None, sigma=0, *args, **kwargs):
+    Base class
+    """
+    def __init__(self, cov_func):
+        self.cov_func = cov_func
+        # force user to run `__call__` before `conditioned_on`
+        self._ready = False
 
-        if mean_func is None:
-            self.M = Zero()
+    def __add__(self, other):
+        if not isinstance(self, type(other)):
+            raise ValueError("cant add different GP types")
+        cov_func = self.cov_func + other.cov_func
+        return type(self)(cov_func)
+
+    def __call__(self, name, size, mean_func):
+        """Set state of GP constructor, separate function parameters from
+        conditioning variables (data, random variables)
+        This helps syntax, makes code clearer when defining likelihood, then
+        predictive distribution off same gp object.
+        """
+        self.name = name
+        self.size = size
+        self.mean_func = mean_func
+
+        # help user keep track of GP since internal state changes
+        self.call_record.append((name, size))
+        # force user to run `__call__` before `conditioned_on`
+        self._ready = True
+        return self
+
+    def conditioned_on(self, X, Xs=None, **kwargs):
+        if self._ready:
+            self._ready = False
+            if Xs is None:
+                # likelihood distribution
+                X = tt.as_tensor_variable(X)
+                return self._prior_rv(X, **kwargs)
+            else:
+                # predictive distribution
+                #if not self._required_values_available:
+                #    raise ValueError("have to train gp on data first")
+                X = tt.as_tensor_variable(X)
+                Xs = tt.as_tensor_variable(Xs)
+                kwargs.update({"Xs": Xs})
+                return self._predictive_rv(X, **kwargs)
         else:
-            if not isinstance(mean_func, Mean):
-                raise ValueError('mean_func must be a subclass of Mean')
-            self.M = mean_func
+            raise ValueError("use syntax gp(name, size, mean).conditioned_on(...)")
 
-        if cov_func is None:
-            raise ValueError('A covariance function must be specified for GPP')
-        if not isinstance(cov_func, Covariance):
-            raise ValueError('cov_func must be a subclass of Covariance')
-        self.K = cov_func
+    def _prior_rv(self, X, **kwargs):
+        raise NotImplementedError
 
-        self.sigma = sigma
-
-        if X is not None:
-            self.X = X
-            self.mean = self.mode = self.M(X)
-            kwargs.setdefault("shape", X.squeeze().shape)
-
-        super(GP, self).__init__(*args, **kwargs)
-
-    def random(self, point=None, size=None, **kwargs):
-        X = self.X
-        mu, cov = draw_values([self.M(X).squeeze(), self.K(X) + np.eye(X.shape[0])*self.sigma**2], point=point)
-
-        def _random(mean, cov, size=None):
-            return stats.multivariate_normal.rvs(
-                mean, cov, None if size == mean.shape else size)
-
-        samples = generate_samples(_random,
-                                   mean=mu, cov=cov,
-                                   dist_shape=mu.shape,
-                                   broadcast_shape=mu.shape,
-                                   size=size)
-        return samples
-
-    def logp(self, Y, X=None):
-        if X is None:
-            X = self.X
-        mu = self.M(X).squeeze()
-        Sigma = self.K(X) + tt.eye(X.shape[0])*self.sigma**2
-
-        return MvNormal.dist(mu, Sigma).logp(Y)
+    def _predictive_rv(self, Xs, X, **kwargs):
+        raise NotImplementedError
 
 
-def sample_gp(trace, gp, X_values, samples=None, obs_noise=True, model=None, random_seed=None, progressbar=True,
-              chol_const=True):
-    """Generate samples from a posterior Gaussian process.
 
-    Parameters
-    ----------
-    trace : backend, list, or MultiTrace
-        Trace generated from MCMC sampling.
-    gp : Gaussian process object
-        The GP variable to sample from.
-    X_values : array
-        Grid of values at which to sample GP.
-    samples : int
-        Number of posterior predictive samples to generate. Defaults to the
-        length of `trace`
-    obs_noise : bool
-        Flag for including observation noise in sample. Defaults to True.
-    model : Model
-        Model used to generate `trace`. Optional if in `with` context manager.
-    random_seed : integer > 0
-        Random number seed for sampling.
-    progressbar : bool
-        Flag for showing progress bar.
-    chol_const : bool
-        Flag to a small diagonal to the posterior covariance
-        for numerical stability
-
-    Returns
-    -------
-    Array of samples from posterior GP evaluated at Z.
+class GPLatent(GPBase):
+    """ Where the GP f isnt integrated out, and is sampled explicitly
     """
-    if samples is None:
-        samples = len(trace)
+    def __init__(self, cov_func):
+        super(GPLatent, self).__init__(cov_func)
 
-    model = modelcontext(model)
+    def __call__(self, name, size, mean_func):
+        return super(GPLatent, self).__call__(name, size, mean_func)
 
-    if random_seed:
-        np.random.seed(random_seed)
+    def _build_predictive(self, X, f, Xs):
+        Kxx = self.cov_func(X)
+        Kxs = self.cov_func(X, Xs)
+        Kss = self.cov_func(Xs)
+        L = cholesky(stabilize(Kxx))
+        A = solve_lower(L, Kxs)
+        cov = Kss - tt.dot(tt.transpose(A), A)
+        mu = self.mean_func(Xs) + tt.dot(tt.transpose(A), f.rotated)
+        chol = cholesky(stabilize(cov))
+        return mu, chol
 
-    indices = np.random.randint(0, len(trace), samples)
-    if progressbar:
-        indices = tqdm(indices, total=samples)
+    def _build_prior(self, X):
+        mu = self.mean_func(X)
+        chol = cholesky(stabilize(self.cov_func(X)))
+        return mu, chol
 
-    K = gp.distribution.K
+    def _prior_rv(self, X):
+        rotated = pm.Normal(self.name + "_rotated_", mu=0.0, sd=1.0, shape=self.size)
+        mu, chol = self._build_prior(X)
+        # docstring of mvnormal uses:
+        #   tt.dot(chol, self.v.T).T
+        f = pm.Deterministic(self.name, mu + tt.dot(chol, rotated))
+        # attach a reference to the rotated random variable to
+        #   the deterministic f on the way out
+        f.rotated = rotated
+        return f
 
-    data = [v for v in model.observed_RVs if v.name==gp.name][0].data
+    def _predictive_rv(self, X, f, Xs):
+        mu, chol = self._build_predictive(X, f, Xs)
+        return pm.MvNormal(self.name, mu=mu, chol=chol, shape=self.size)
 
-    X = data['X']
-    Y = data['Y']
-    Z = X_values
 
-    S_xz = K(X, Z)
-    S_zz = K(Z)
-    if obs_noise:
-        S_inv = matrix_inverse(K(X) + tt.eye(X.shape[0])*gp.distribution.sigma**2)
-    else:
-        S_inv = matrix_inverse(K(X))
 
-    S_xz_S_inv = tt.dot(S_xz.T, S_inv)
-    # Posterior mean
-    m_post = tt.dot(S_xz_S_inv, Y)
-    # Posterior covariance
-    S_post = S_zz - tt.dot(S_xz_S_inv, S_xz)
+class StudentTProcess(GPLatent):
+    """ StudentT process
+    """
+    def __init__(self, cov_func):
+        super(GPLatentStudentT, self).__init__(cov_func)
 
-    correction = 0
-    if chol_const:
-        n = S_post.shape[0]
-        correction = 1e-6 * tt.nlinalg.trace(S_post) * tt.eye(n)
+    def __add__(self, other):
+        raise ValueError("Student T processes aren't additive")
 
-    gp_post = MvNormal.dist(m_post, S_post + correction, shape=Z.shape[0])
-    samples = [gp_post.random(point=trace[idx]) for idx in indices]
-    return np.array(samples)
+    def _prior_rv(self, X, nu):
+        rotated = pm.Normal(self.name + "_rotated_", mu=0.0, sd=1.0, shape=self.size)
+        mu, chol = self._build_prior(X)
+        # below follows
+        # https://stats.stackexchange.com/questions/68476/drawing-from-the-multivariate-students-t-distribution
+        # Pymc3's MvStudentT doesnt do sqrt(self.v_chi2)
+        v_chi2 = pm.ChiSquared("v_chi2_", nu)
+        f = pm.Deterministic(self.name, ((tt.sqrt(nu) / v_chi2) *
+                                   (mu + tt.dot(chol, rotated))))
+        f.rotated = rotated
+        return f
+
+    def _predictive_rv(self, X, f, Xs, nu):
+        mu, chol = self._build_predictive(X, f, Xs)
+        return pm.MvStudentT(self.name, nu, mu=mu, chol=chol, shape=self.size)
+
+
+
+class GPMarginal(GPBase):
+
+    def __init__(self, cov_func):
+        super(GPMarginal, self).__init__(cov_func)
+        # if you want to predict or sample from noisy gp,
+        #   easy to add iid normal noise
+
+    def __call__(self, name, size, mean_func, include_noise=False):
+        self.include_noise = include_noise
+        return super(GPMarginal, self).__call__(name, size, mean_func)
+
+    @staticmethod
+    def _to_noise_func(sigma, cov_func_noise):
+        # if sigma given, convert it to WhiteNoise covariance function
+        if sigma is not None and cov_func_noise is not None:
+            raise ValueError('Must provide one of sigma or cov_func_noise')
+        if sigma is None and cov_func_noise is None:
+            raise ValueError('Must provide a value or a prior for the noise variance')
+        if sigma is not None and cov_func_noise is None:
+            cov_func_noise = pm.gp.cov.WhiteNoise(sigma)
+        return cov_func_noise
+
+    def _build_prior(self, X, cov_func_noise):
+        mu = self.mean_func(X)
+        Kxx = self.cov_func(X)
+        Knx = cov_func_noise(X)
+        cov = Kxx + Knx
+        chol = cholesky(stabilize(cov))
+        return mu, chol
+
+    def _build_predictive(self, X, y, Xs, cov_func_noise):
+        Kxx = self.cov_func(X)
+        Kxs = self.cov_func(X, Xs)
+        Kss = self.cov_func(Xs)
+        Knx = cov_func_noise(X)
+        r = y - self.mean_func(X)
+        L = cholesky(stabilize(Kxx) + Knx)
+        A = solve_lower(L, Kxs)
+        v = solve_lower(L, r)
+        mu = self.mean_func(Xs) + tt.dot(tt.transpose(A), v)
+        if self.include_noise:
+            cov = cov_func_noise(Xs) + Kss - tt.dot(tt.transpose(A), A)
+        else:
+            cov = stabilize(Kss) - tt.dot(tt.transpose(A), A)
+        chol = cholesky(cov)
+        return mu, chol
+
+    def _prior_rv(self, X, y, sigma=None, cov_func_noise=None):
+        cov_func_noise = self._to_noise_func(sigma, cov_func_noise)
+        mu, chol = self._build_prior(X, cov_func_noise)
+        return pm.MvNormal(self.name, mu=mu, chol=chol, shape=self.size, observed=y)
+
+    def _predictive_rv(self, X, y, Xs, sigma=None, cov_func_noise=None):
+        cov_func_noise = self._to_noise_func(sigma, cov_func_noise)
+        mu, chol = self._build_predictive(X, Xs, y, cov_func_noise)
+        return pm.MvNormal(self.name, mu=mu, chol=chol, shape=self.size)
+
+
+
+class GPMarginalSparse(GPBase):
+    """ FITC and VFE sparse approximations
+    """
+    def __init__(self, cov_func):
+        super(GPMarginalSparse, self).__init__(cov_func)
+
+    def __call__(self, name, size, mean_func, include_noise=False, approx=None):
+        if hasattr(self, "approx") and self.approx != approx:
+            raise ValueError("dont use diff approx (should this be a warning?)")
+        else:
+            if approx is None:
+                pm._log.info("Using FITC approximation for {}".format(name))
+                approx = "FITC"
+            else:
+                approx = approx.upper()
+                if approx not in ["VFE", "FITC"]:
+                    raise ValueError(("'FITC' or 'VFE' are the supported GP "
+                                      "approximations, not {}".format(approx)))
+            self.approx = approx
+
+        self.include_noise = include_noise
+        return super(GPMarginalSparse, self).__call__(name, size, mean_func)
+
+    def kmeans_inducing_points(self, n_inducing, X):
+        from scipy.cluster.vq import kmeans
+        # first whiten X
+        if isinstance(X, tt.TensorConstant):
+            X = X.value
+        elif isinstance(X, (np.ndarray, tuple, list)):
+            X = np.asarray(X)
+        else:
+            raise ValueError(("To use K-means initialization, "
+                              "please provide X as a type that "
+                              "can be cast to np.ndarray, instead "
+                              "of {}".format(type(X))))
+        scaling = np.std(X, 0)
+        # if std of a column is very small (zero), don't normalize that column
+        scaling[scaling <= 1e-6] = 1.0
+        Xw = X / scaling
+        Xu, distortion = kmeans(Xw, n_inducing)
+        return Xu * scaling
+
+    def _build_prior(self, X, Xu, y, sigma):
+        sigma2 = tt.square(sigma)
+        Kuu = self.cov_func(Xu)
+        Kuf = self.cov_func(Xu, X)
+        Luu = cholesky(stabilize(Kuu))
+        A = solve_lower(Luu, Kuf)
+        Qffd = tt.sum(A * A, 0)
+        if self.approx == "FITC":
+            Kffd = self.cov_func(X, diag=True)
+            Lamd = tt.clip(Kffd - Qffd, 0.0, np.inf) + sigma2
+            trace = 0.0
+        elif self.approx == "VFE":
+            Lamd = tt.ones_like(Qffd) * sigma2
+            trace = ((1.0 / (2.0 * sigma2)) *
+                     (tt.sum(self.cov_func(X, diag=True)) -
+                      tt.sum(tt.sum(A * A, 0))))
+        else:
+            raise NotImplementedError(approx)
+        A_l = A / Lamd
+        L_B = cholesky(tt.eye(Xu.shape[0]) + tt.dot(A_l, tt.transpose(A)))
+        r = y - self.mean_func(X)
+        r_l = r / Lamd
+        c = solve_lower(L_B, tt.dot(A, r_l))
+        constant = 0.5 * self.size * tt.log(2.0 * np.pi)
+        logdet = 0.5 * tt.sum(tt.log(Lamd)) + tt.sum(tt.log(tt.diag(L_B)))
+        quadratic = 0.5 * (tt.dot(r, r_l) - tt.dot(c, c))
+        return -1.0 * (constant + logdet + quadratic + trace)
+
+    def _build_predictive(self, X, Xu, y, Xs, sigma):
+        sigma2 = tt.square(sigma)
+        Kuu = self.cov_func(Xu)
+        Kuf = self.cov_func(Xu, X)
+        Luu = cholesky(stabilize(Kuu))
+        A = solve_lower(Luu, Kuf)
+        Qffd = tt.sum(A * A, 0)
+        if self.approx == "FITC":
+            Kffd = self.cov_func(X, diag=True)
+            Lamd = tt.clip(Kffd - Qffd, 0.0, np.inf) + sigma2
+        elif self.approx == "VFE":
+            Lamd = tt.ones_like(Qffd) * sigma2
+        else:
+            raise NotImplementedError(self.approx)
+        A_l = A / Lamd
+        L_B = cholesky(tt.eye(Xu.shape[0]) + tt.dot(A_l, tt.transpose(A)))
+        r = y - self.mean_func(X)
+        r_l = r / Lamd
+        c = solve_lower(L_B, tt.dot(A, r_l))
+        Kus = self.cov_func(Xu, Xs)
+        As = solve_lower(Luu, Kus)
+        mean = self.mean_func(Xs) + tt.dot(tt.transpose(As), solve_upper(tt.transpose(L_B), c))
+        C = solve_lower(L_B, As)
+        if self.include_noise:
+            cov = (self.cov_func(Xs) - tt.dot(tt.transpose(As), As) +
+                   tt.dot(tt.transpose(C), C) + sigma2*tt.eye(Xs.shape[0]))
+        else:
+            cov = (self.cov_func(Xs) - tt.dot(tt.transpose(As), As) +
+                   tt.dot(tt.transpose(C), C))
+        return mean, stabilize(cov)
+
+    def _prior_rv(self, X, Xu, y, sigma):
+        logp = lambda y: self._build_prior_logp(X, Xu, y, sigma)
+        return pm.DensityDist(self.name, logp, observed=y)
+
+    def _predictive_rv(self, X, Xu, y, Xs, sigma):
+        mu, chol = self._build_predictive(X, Xu, y, Xs, sigma)
+        return pm.MvNormal(self.name, mu=mu, chol=chol, shape=self.size)
