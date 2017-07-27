@@ -193,7 +193,7 @@ class GPMarginal(GPBase):
 
     def _predictive_rv(self, X, y, Xs, sigma=None, cov_func_noise=None):
         cov_func_noise = self._to_noise_func(sigma, cov_func_noise)
-        mu, chol = self._build_predictive(X, Xs, y, cov_func_noise)
+        mu, chol = self._build_predictive(X, y, Xs, cov_func_noise)
         return pm.MvNormal(self.name, mu=mu, chol=chol, shape=self.size)
 
 
@@ -201,23 +201,20 @@ class GPMarginal(GPBase):
 class GPMarginalSparse(GPBase):
     """ FITC and VFE sparse approximations
     """
-    def __init__(self, cov_func):
+    def __init__(self, cov_func, approx=None):
+        if approx is None:
+            approx = "FITC"
+        self.approx = approx
         super(GPMarginalSparse, self).__init__(cov_func)
 
-    def __call__(self, name, size, mean_func, include_noise=False, approx=None):
-        if hasattr(self, "approx") and self.approx != approx:
-            raise ValueError("dont use diff approx (should this be a warning?)")
-        else:
-            if approx is None:
-                pm._log.info("Using FITC approximation for {}".format(name))
-                approx = "FITC"
-            else:
-                approx = approx.upper()
-                if approx not in ["VFE", "FITC"]:
-                    raise ValueError(("'FITC' or 'VFE' are the supported GP "
-                                      "approximations, not {}".format(approx)))
-            self.approx = approx
+    # overriding __add__, since whether its vfe or fitc determines its 'type'
+    def __add__(self, other):
+        if not (isinstance(self, type(other)) and self.approx == other.approx):
+            raise ValueError("cant add different GP types")
+        cov_func = self.cov_func + other.cov_func
+        return type(self)(cov_func)
 
+    def __call__(self, name, size, mean_func, include_noise=False):
         self.include_noise = include_noise
         return super(GPMarginalSparse, self).__call__(name, size, mean_func)
 
@@ -240,7 +237,7 @@ class GPMarginalSparse(GPBase):
         Xu, distortion = kmeans(Xw, n_inducing)
         return Xu * scaling
 
-    def _build_prior(self, X, Xu, y, sigma):
+    def _build_prior_logp(self, X, Xu, y, sigma):
         sigma2 = tt.square(sigma)
         Kuu = self.cov_func(Xu)
         Kuf = self.cov_func(Xu, X)
@@ -257,7 +254,7 @@ class GPMarginalSparse(GPBase):
                      (tt.sum(self.cov_func(X, diag=True)) -
                       tt.sum(tt.sum(A * A, 0))))
         else:
-            raise NotImplementedError(approx)
+            raise NotImplementedError(self.approx)
         A_l = A / Lamd
         L_B = cholesky(tt.eye(Xu.shape[0]) + tt.dot(A_l, tt.transpose(A)))
         r = y - self.mean_func(X)
