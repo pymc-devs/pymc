@@ -29,11 +29,11 @@ class MeanField(GroupApprox):
 
     @node_property
     def mean(self):
-        return self.shared_params['mu']
+        return self.params_dict['mu']
 
     @node_property
     def rho(self):
-        return self.shared_params['rho']
+        return self.params_dict['rho']
 
     @node_property
     def cov(self):
@@ -49,20 +49,19 @@ class MeanField(GroupApprox):
 
     def __init_group__(self, group):
         super(MeanField, self).__init_group__(group)
+        self._check_user_params()
         if not self.user_params:
             self.shared_params = self.create_shared_params(
                 self._kwargs.get('start', None)
             )
-        else:
-            self._check_user_params()
         self._finalize_init()
 
     def create_shared_params(self, start=None):
         if start is None:
             start = self.model.test_point
         else:
-            start_ = self.model.test_point.copy()
-            update_start_vals(start_, start, self.model)
+            start_ = start.copy()
+            update_start_vals(start_, self.model.test_point, self.model)
             start = start_
         start = self.bij.map(start)
         return {'mu': theano.shared(
@@ -103,20 +102,18 @@ class FullRank(GroupApprox):
 
     def __init_group__(self, group):
         super(FullRank, self).__init_group__(group)
-        if not self.user_params:
+        if not self._check_user_params():
             self.shared_params = self.create_shared_params(
                 self._kwargs.get('start', None)
             )
-        else:
-            self._check_user_params()
         self._finalize_init()
 
     def create_shared_params(self, start=None):
         if start is None:
             start = self.model.test_point
         else:
-            start_ = self.model.test_point.copy()
-            update_start_vals(start_, start, self.model)
+            start_ = start.copy()
+            update_start_vals(start_, self.model.test_point, self.model)
             start = start_
         start = pm.floatX(self.bij.map(start))
         n = self.ndim
@@ -175,13 +172,14 @@ class FullRank(GroupApprox):
 
     @node_property
     def symbolic_random(self):
-        initial = self.symbolic_initial.swapaxes(0, 1)
+        initial = self.symbolic_initial
         L = self.L
         mu = self.mean
         if self.is_local:
-            return tt.batched_dot(L, initial).T + mu
+            initial = initial.swapaxes(0, 1)
+            return tt.batched_dot(initial, L).swapaxes(0, 1) + mu
         else:
-            return L.dot(initial).T + mu
+            return initial.dot(L.T) + mu
 
     @classmethod
     def from_mean_field(cls, mean_field):
@@ -225,15 +223,13 @@ class Empirical(GroupApprox):
     def __init_group__(self, group):
         super(Empirical, self).__init_group__(group)
         self._check_trace()
-        if not self.user_params:
+        if not self._check_user_params(spec_kw=dict(s=-1)):
             self.shared_params = self.create_shared_params(
                 trace=self._kwargs.get('trace', None),
                 size=self._kwargs.get('size', None),
                 jitter=self._kwargs.get('jitter', 1),
                 start=self._kwargs.get('start', 1)
             )
-        else:
-            self._check_user_params()
         self._finalize_init()
 
     def create_shared_params(self, trace=None, size=None, jitter=1, start=None):
@@ -398,47 +394,67 @@ class NormalizingFlow(GroupApprox):
         Improving Variational Auto-Encoders using Householder Flow
         arXiv:1611.09630
     """
+    default_flow = 'scale-loc'
 
     @change_flags(compute_test_value='off')
     def __init_group__(self, group):
         super(NormalizingFlow, self).__init_group__(group)
-        flow = self._kwargs.get('flow', 'scale-loc')
+        flow = self._kwargs.get('flow', None)
         jitter = self._kwargs.get('jitter', 1)
         if isinstance(flow, str):
-            self.formula = flows.Formula(flow)
-            self._check_user_params()
-            flow = self.formula(
+            fstr = flow
+        elif flow is None:
+            fstr = None
+        else:
+            fstr = flow.formula
+        has_uparams = self._check_user_params(f=fstr)
+        if not has_uparams:
+            if flow is None:
+                flow = self.default_flow
+        else:
+            flow = '-'.join(
+                flows.flow_from_params(self.user_params[i]).short_name
+                for i in range(len(self.user_params))
+            )
+        if isinstance(flow, str):
+            self.flow = flows.Formula(flow)(
                 dim=self.ndim,
                 z0=self.symbolic_initial,
                 jitter=jitter,
                 params=self.user_params
             )
-        self.flow = flow
+        else:
+            self.flow = flow
         self._finalize_init()
 
-    def _check_user_params(self):
-        params = self.user_params
+    def _check_user_params(self, **kwargs):
+        params = self._user_params = self.user_params
+        formula = kwargs.pop('f')
         if params is None:
-            return
-        formula = self.formula
+            if formula is None:
+                raise ValueError('Need to specify flow if no user params are not provided')
+            return False
+        if formula is not None:
+            raise ValueError('No formula is allowed if user params are provided')
         if not isinstance(params, dict):
             raise TypeError('params should be a dict')
         if not all(isinstance(k, int) for k in params.keys()):
             raise TypeError('params should be a dict with `int` keys')
-        needed = set(range(len(formula.flows)))
+        needed = set(range(len(params)))
         givens = set(params.keys())
         if givens != needed:
             raise ValueError('Passed parameters do not have a needed set of keys, '
                              'they should be equal, needed {needed}, got {givens}'.format(
                               givens=list(sorted(givens)), needed='[0, 1, ..., %d]' % len(formula.flows)))
         for i in needed:
-            flow = formula.flows[i]
+            flow = flows.flow_from_params(params[i])
             flow_keys = set(flow.__param_spec__)
             user_keys = set(params[i].keys())
             if flow_keys != user_keys:
                 raise ValueError('Passed parameters for flow `{i}` ({cls}) do not have a needed set of keys, '
                                  'they should be equal, needed {needed}, got {givens}'.format(
                                   givens=user_keys, needed=flow_keys, i=i, cls=flow.__name__))
+        return True
 
     @property
     def shared_params(self):
@@ -480,11 +496,16 @@ class NormalizingFlow(GroupApprox):
     def symbolic_random(self):
         return self.flow.forward
 
+    @node_property
     def batch_size(self):
         if not self.is_local:
-            raise NotImplementedError
+            return 0
         else:
-            return next(iter(self.params_dict[0].items())).shape[0]
+            return next(iter(self.params_dict[0].values())).shape[0]
+
+    @classmethod
+    def get_param_spec_for(cls, flow, **kwargs):
+        return flows.Formula(flow).get_param_spec_for(**kwargs)
 
 
 def sample_approx(approx, draws=100, include_transformed=True):
