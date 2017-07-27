@@ -18,24 +18,26 @@ def activator(instance):
 class HDF5(base.BaseTrace):
     """HDF5 trace object
 
-        Parameters
-        ----------
-        name : str
-            Name of backend. This has no meaning for the HDF5 backend.
-        model : Model
-            If None, the model is taken from the `with` context.
-        vars : list of variables
-            Sampling values will be stored for these variables. If None,
-            `model.unobserved_RVs` is used.
+    Parameters
+    ----------
+    name : str
+        Name of backend. This has no meaning for the HDF5 backend.
+    model : Model
+        If None, the model is taken from the `with` context.
+    vars : list of variables
+        Sampling values will be stored for these variables. If None,
+        `model.unobserved_RVs` is used.
+    test_point : dict
+        use different test point that might be with changed variables shapes
         """
 
     supports_sampler_stats = True
 
-    def __init__(self, name=None, model=None, vars=None):
+    def __init__(self, name=None, model=None, vars=None, test_point=None):
         self.hdf5_file = None
         self.draw_idx = 0
         self.draws = None
-        super(HDF5, self).__init__(name, model, vars)
+        super(HDF5, self).__init__(name, model, vars, test_point)
 
     def _get_sampler_stats(self, varname, sampler_idx, burn, thin):
         with self.activate_file:

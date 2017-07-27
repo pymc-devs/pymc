@@ -514,10 +514,18 @@ class GroupApprox(object):
             # init can be delayed
             self.__init_group__(self.group)
 
-    def _check_user_params(self):
+    @classmethod
+    def get_param_spec_for(cls, **kwargs):
+        res = dict()
+        for name, fshape in cls.__param_spec__.items():
+            res[name] = tuple(eval(s, kwargs) for s in fshape)
+        return res
+
+    def _check_user_params(self, **kwargs):
         user_params = self.user_params
         if user_params is None:
-            return
+            self._user_params = None
+            return False
         if not isinstance(user_params, dict):
             raise TypeError('params should be a dict')
         givens = set(user_params.keys())
@@ -526,14 +534,14 @@ class GroupApprox(object):
             raise ValueError('Passed parameters do not have a needed set of keys, '
                              'they should be equal, got {givens}, needed {needed}'.format(
                               givens=givens, needed=needed))
-        correct_shaped = dict()
+        self._user_params = dict()
+        spec = self.get_param_spec_for(d=self.ndim, **kwargs.pop('spec_kw', {}))
         for name, param in self.user_params.items():
-            spec = self.__param_spec__[name]
-            shape = tuple(eval(s, {'d': self.ndim}) for s in spec)
+            shape = spec[name]
             if self.is_local:
                 shape = (-1, ) + shape
-            correct_shaped[name] = param.reshape(shape)
-        self.user_params.update(correct_shaped)
+            self._user_params[name] = param.reshape(shape)
+        return True
 
     def _initial_type(self, name):
         if self.is_local:
@@ -598,14 +606,19 @@ class GroupApprox(object):
 
     @property
     def params_dict(self):
-        if self.user_params is not None:
-            return self.user_params
+        # prefixed are correctly reshaped
+        if self._user_params is not None:
+            return self._user_params
         else:
             return self.shared_params
 
     @property
     def params(self):
-        return collect_shared_to_list(self.params_dict)
+        # raw user params possibly not reshaped
+        if self.user_params is not None:
+            return collect_shared_to_list(self.user_params)
+        else:
+            return collect_shared_to_list(self.shared_params)
 
     def to_flat_input(self, node):
         """
@@ -624,7 +637,7 @@ class GroupApprox(object):
         if not self.is_local:
             return 0
         else:
-            return next(iter(self.params_dict.items())).shape[0]
+            return next(iter(self.params_dict.values())).shape[0]
 
     def _new_initial(self, size, deterministic):
         if size is None:
@@ -875,8 +888,10 @@ class GroupedApproximation(object):
         vars_sampled = get_default_varnames(self.model.unobserved_RVs,
                                             include_transformed=include_transformed)
         samples = self.sample_dict_fn(draws)  # type: dict
-        trace = pm.sampling.NDArray(model=self.model, vars=vars_sampled)
         points = ({name: samples[name][i] for name in samples.keys()} for i in range(draws))
+        trace = pm.sampling.NDArray(model=self.model, vars=vars_sampled, test_point={
+            name: samples[name][0] for name in samples.keys()
+        })
         try:
             trace.setup(draws=draws, chain=0)
             for point in points:

@@ -13,6 +13,24 @@ __all__ = [
 ]
 
 
+_param_to_flow = dict()
+_short_name_to_flow = dict()
+
+
+def register_flow(cls):
+    _param_to_flow[frozenset(cls.__param_spec__)] = cls
+    _short_name_to_flow[cls.short_name] = cls
+    return cls
+
+
+def flow_from_params(params):
+    return _param_to_flow[frozenset(params)]
+
+
+def flow_from_short_name(name):
+    return _short_name_to_flow[name]
+
+
 class Formula(object):
     """
     Helpful class to use string like formulas with
@@ -34,25 +52,18 @@ class Formula(object):
     """
 
     def __init__(self, formula):
-        _select = dict(
-            planar=PlanarFlow,
-            radial=RadialFlow,
-            hh=HouseholderFlow,
-            loc=LocFlow,
-            scale=ScaleFlow,
-        )
         identifiers = formula.lower().replace(' ', '').split('-')
         self.formula = '-'.join(identifiers)
         identifiers = [idf.split('*') for idf in identifiers]
         self.flows = []
 
         for tup in identifiers:
-            if tup[0] not in _select:
+            if tup[0] not in _short_name_to_flow:
                 raise ValueError('No such flow: %r' % tup[0])
             if len(tup) == 1:
-                self.flows.append(_select[tup[0]])
+                self.flows.append(flow_from_short_name(tup[0]))
             elif len(tup) == 2:
-                self.flows.extend([_select[tup[0]]]*int(tup[1]))
+                self.flows.extend([flow_from_short_name(tup[0])]*int(tup[1]))
             else:
                 raise ValueError('Wrong format: %s' % formula)
         if len(self.flows) == 0:
@@ -76,10 +87,17 @@ class Formula(object):
 
     __repr__ = __latex__
 
+    def get_param_spec_for(self, **kwargs):
+        res = dict()
+        for i, cls in enumerate(self.flows):
+            res[i] = cls.get_param_spec_for(**kwargs)
+        return res
+
 
 class AbstractFlow(object):
     shared_params = None
     __param_spec__ = dict()
+    short_name = ''
 
     def __init__(self, z0=None, dim=None, jitter=.001):
         self.__jitter = jitter
@@ -167,12 +185,34 @@ class AbstractFlow(object):
         return current
 
     @property
+    def formula(self):
+        f = self.short_name
+        current = self
+        while not current.isroot:
+            current = current.parent
+            f = current.short_name + '-' + f
+        return f
+
+    @property
     def isroot(self):
         return self.parent is None
 
     @property
     def is_local(self):
-        return self.z0 == 3
+        return self.z0.ndim == 3
+
+    @classmethod
+    def get_param_spec_for(cls, **kwargs):
+        res = dict()
+        for name, fshape in cls.__param_spec__.items():
+            res[name] = tuple(eval(s, kwargs) for s in fshape)
+        return res
+
+    def __repr__(self):
+        return 'Flow{%s}' % self.short_name
+
+    def __str__(self):
+        return self.short_name
 
 
 class FlowFn(object):
@@ -274,7 +314,10 @@ class Tanh(FlowFn):
         return 1. - tt.tanh(x) ** 2
 
 
+@register_flow
 class PlanarFlow(LinearFlow):
+    short_name = 'planar'
+
     def __init__(self, **kwargs):
         super(PlanarFlow, self).__init__(h=Tanh(), **kwargs)
 
@@ -388,7 +431,10 @@ class Radial(FlowFn):
         return -1. / (a + r) ** 2
 
 
+@register_flow
 class RadialFlow(ReferencePointFlow):
+    short_name = 'radial'
+
     def __init__(self, **kwargs):
         super(RadialFlow, self).__init__(Radial(), **kwargs)
 
@@ -398,8 +444,10 @@ class RadialFlow(ReferencePointFlow):
         return a, b
 
 
+@register_flow
 class LocFlow(AbstractFlow):
     __param_spec__ = dict(loc=('d', ))
+    short_name = 'loc'
 
     def __init__(self, z0=None, dim=None, loc=None, jitter=0):
         super(LocFlow, self).__init__(dim=dim, z0=z0, jitter=jitter)
@@ -419,8 +467,10 @@ class LocFlow(AbstractFlow):
         return tt.zeros((self.z0.shape[0],))
 
 
+@register_flow
 class ScaleFlow(AbstractFlow):
     __param_spec__ = dict(log_scale=('d', ))
+    short_name = 'scale'
 
     @change_flags(compute_test_value='off')
     def __init__(self, z0=None, dim=None, log_scale=None, jitter=.1):
@@ -442,8 +492,10 @@ class ScaleFlow(AbstractFlow):
         return tt.repeat(tt.sum(self.log_scale), self.z0.shape[0])
 
 
+@register_flow
 class HouseholderFlow(AbstractFlow):
     __param_spec__ = dict(v=('d', ))
+    short_name = 'hh'
 
     @change_flags(compute_test_value='raise')
     def __init__(self, z0=None, dim=None, v=None, jitter=.1):
@@ -453,11 +505,12 @@ class HouseholderFlow(AbstractFlow):
         if self.is_local:
             vv = v.dimshuffle(0, 1, 'x') * v.dimshuffle(0, 'x', 1)
             I = tt.eye(dim).dimshuffle('x', 0, 1)
+            vvn = ((v**2).sum(-1)+1e-10).dimshuffle(0, 'x', 'x')
         else:
-            v = v.dimshuffle(0, 'x')
-            vv = v.dot(v.T)
+            vv = tt.outer(v, v)
             I = tt.eye(dim)
-        self.H = I - 2. * vv / ((v**2).sum(-1)+1e-10)
+            vvn = ((v**2).sum(-1)+1e-10)
+        self.H = I - 2. * vv / vvn
 
     @node_property
     def forward(self):
