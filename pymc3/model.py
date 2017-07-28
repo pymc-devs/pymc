@@ -893,7 +893,8 @@ class Model(six.with_metaclass(InitContextMeta, Context, Factor)):
         return flat_view
 
     def _repr_latex_(self, name=None, dist=None):
-        return u'$${}$$'.format('\\\\'.join([var.__latex__().strip('$') for var in self.vars]))
+        tex_vars = [var.__latex__() for var in self.vars]
+        return u'$${}$$'.format('\\\\'.join([tex.strip('$') for tex in tex_vars if tex is not None]))
 
     __latex__ = _repr_latex_
 
