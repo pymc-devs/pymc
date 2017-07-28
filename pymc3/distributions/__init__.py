@@ -27,6 +27,8 @@ from .continuous import SkewNormal
 from .continuous import Triangular
 from .continuous import Gumbel
 from .continuous import Interpolated
+from .continuous import ConstantDist
+from .continuous import Constant
 
 from .discrete import Binomial
 from .discrete import BetaBinomial
@@ -34,8 +36,6 @@ from .discrete import Bernoulli
 from .discrete import DiscreteWeibull
 from .discrete import Poisson
 from .discrete import NegativeBinomial
-from .discrete import ConstantDist
-from .discrete import Constant
 from .discrete import ZeroInflatedPoisson
 from .discrete import ZeroInflatedNegativeBinomial
 from .discrete import ZeroInflatedBinomial

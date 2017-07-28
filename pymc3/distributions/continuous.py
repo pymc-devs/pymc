@@ -28,7 +28,7 @@ __all__ = ['Uniform', 'Flat', 'HalfFlat', 'Normal', 'Beta', 'Exponential',
            'Laplace', 'StudentT', 'Cauchy', 'HalfCauchy', 'Gamma', 'Weibull',
            'HalfStudentT', 'StudentTpos', 'Lognormal', 'ChiSquared',
            'HalfNormal', 'Wald', 'Pareto', 'InverseGamma', 'ExGaussian',
-           'VonMises', 'SkewNormal', 'Interpolated']
+           'VonMises', 'SkewNormal', 'Interpolated', 'ConstantDist', 'Constant']
 
 
 class PositiveContinuous(Continuous):
@@ -1683,3 +1683,44 @@ class Interpolated(Continuous):
 
     def logp(self, value):
         return tt.log(self.interp_op(value) / self.Z)
+
+
+class Constant(Continuous):
+    """
+    Constant log-likelihood.
+
+    Parameters
+    ----------
+    value : float or int
+        Constant parameter.
+    """
+
+    def __init__(self, c, *args, **kwargs):
+        super(Constant, self).__init__(*args, **kwargs)
+        self.mean = self.median = self.mode = self.c = c = tt.as_tensor_variable(c)
+
+    def random(self, point=None, size=None, repeat=None):
+        c = draw_values([self.c], point=point)[0]
+        dtype = np.array(c).dtype
+
+        def _random(c, dtype=dtype, size=None):
+            return np.full(size, fill_value=c, dtype=dtype)
+
+        return generate_samples(_random, c=c, dist_shape=self.shape,
+                                size=size).astype(dtype)
+
+    def logp(self, value):
+        c = self.c
+        return bound(0, tt.eq(value, c))
+
+    def _repr_latex_(self, name=None, dist=None):
+        if dist is None:
+            dist = self
+        return r'${} \sim \text{{Constant}}()$'.format(name)
+
+
+def ConstantDist(*args, **kwargs):
+    import warnings
+    warnings.warn("ConstantDist has been deprecated. In future, use Constant instead.",
+                  DeprecationWarning)
+    return Constant(*args, **kwargs)
