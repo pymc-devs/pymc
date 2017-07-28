@@ -506,9 +506,16 @@ class Multinomial(Discrete):
         if size == p.shape:
             size = None
         if p.ndim == 1:
+            p = p.squeeze()
+            p[-1] = 1 - np.sum(p[:-1])
             randnum = np.random.multinomial(n, p.squeeze(), size=size)
         elif p.ndim == 2:
-            randnum = np.asarray([np.random.multinomial(n, pp, size=size) for pp in p])
+            nums = []
+            for pp in p:
+                pp[-1] = 1 - np.sum(p[:-1])
+                nums = np.random.multinomial(n, pp, size=size)
+            randnum = np.asarray(nums)
+            # randnum = np.asarray([np.random.multinomial(n, pp, size=size) for pp in p])
         else:
             raise ValueError('Outcome probabilities must be 1- or 2-dimensional '
                              '(supplied `p` has {} dimensions)'.format(p.ndim))
