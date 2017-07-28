@@ -27,8 +27,6 @@ from .continuous import SkewNormal
 from .continuous import Triangular
 from .continuous import Gumbel
 from .continuous import Interpolated
-from .continuous import ConstantDist
-from .continuous import Constant
 
 from .discrete import Binomial
 from .discrete import BetaBinomial
@@ -51,6 +49,8 @@ from .distribution import NoDistribution
 from .distribution import TensorType
 from .distribution import draw_values
 from .distribution import generate_samples
+from .distribution import ConstantDist
+from .distribution import Constant
 
 from .mixture import Mixture
 from .mixture import NormalMixture

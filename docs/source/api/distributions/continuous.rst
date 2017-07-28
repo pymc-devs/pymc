@@ -27,7 +27,6 @@ Continuous
    InverseGamma
    ExGaussian
    VonMises
-   Constant
    Triangular
    Gumbel
 
