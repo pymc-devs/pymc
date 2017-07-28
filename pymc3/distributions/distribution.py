@@ -88,7 +88,10 @@ class Distribution(object):
         return val
 
     def _repr_latex_(self, name=None, dist=None):
+        """Magic method name for IPython to use for LaTeX formatting."""
         return None
+
+    __latex__ = _repr_latex_
 
 
 def TensorType(dtype, shape, broadcastable=None):

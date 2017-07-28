@@ -892,6 +892,11 @@ class Model(six.with_metaclass(InitContextMeta, Context, Factor)):
         flat_view = FlatView(inputvar, replacements, view)
         return flat_view
 
+    def _repr_latex_(self, name=None, dist=None):
+        return u'$${}$$'.format('\\\\'.join([var.__latex__().strip('$') for var in self.vars]))
+
+    __latex__ = _repr_latex_
+
 
 def fn(outs, mode=None, model=None, *args, **kwargs):
     """Compiles a Theano function which returns the values of `outs` and
@@ -1073,6 +1078,8 @@ class FreeRV(Factor, TensorVariable):
             dist = self.distribution
         return self.distribution._repr_latex_(name=name, dist=dist)
 
+    __latex__ = _repr_latex_
+
     @property
     def init_value(self):
         """Convenience attribute to return tag.test_value"""
@@ -1175,6 +1182,8 @@ class ObservedRV(Factor, TensorVariable):
         if dist is None:
             dist = self.distribution
         return self.distribution._repr_latex_(name=name, dist=dist)
+
+    __latex__ = _repr_latex_
 
     @property
     def init_value(self):
@@ -1300,6 +1309,8 @@ class TransformedRV(TensorVariable):
         if dist is None:
             dist = self.distribution
         return self.distribution._repr_latex_(name=name, dist=dist)
+
+    __latex__ = _repr_latex_
 
     @property
     def init_value(self):
