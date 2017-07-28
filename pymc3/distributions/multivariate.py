@@ -503,16 +503,15 @@ class Multinomial(Discrete):
         self.mode = tt.cast(tround(self.mean), 'int32')
 
     def _random(self, n, p, size=None):
+        p = p / (np.sum(p, axis=1, keepdims=True) + 1E-6)
         if size == p.shape:
             size = None
         if p.ndim == 1:
-            p = p.squeeze()
-            p[-1] = 1 - np.sum(p[:-1])
             randnum = np.random.multinomial(n, p.squeeze(), size=size)
         elif p.ndim == 2:
             nums = []
             for pp in p:
-                pp[-1] = 1 - np.sum(p[:-1])
+                # pp = pp / (pp.sum(axis=1, keepdims=True) + 1E-6)
                 nums = np.random.multinomial(n, pp, size=size)
             randnum = np.asarray(nums)
             # randnum = np.asarray([np.random.multinomial(n, pp, size=size) for pp in p])
