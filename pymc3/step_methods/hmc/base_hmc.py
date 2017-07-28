@@ -65,5 +65,4 @@ class BaseHMC(arraystep.GradientSharedStep):
         else:
             self.potential = quad_potential(scaling, is_cov)
 
-        self.integrator = integration.CpuLeapfrogIntegrator(
-            size, self.potential, self._logp_dlogp_func)
+        self.integrator = integration.CpuLeapfrogIntegrator(self.potential, self._logp_dlogp_func)
