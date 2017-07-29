@@ -104,7 +104,8 @@ def aevb_initial():
         (NormalizingFlow, {'flow': 'planar'}),
         (NormalizingFlow, {'flow': 'radial'}),
         (NormalizingFlow, {'flow': 'radial-loc'})
-    ]
+    ],
+    ids=lambda t: '{c} : {d}'.format(c=t[0].__name__, d=t[1])
 )
 def three_var_aevb_groups(request, three_var_model, aevb_initial):
     dsize = np.prod(three_var_model.one.dshape[1:])
