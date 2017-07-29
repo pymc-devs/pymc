@@ -85,7 +85,7 @@ class Formula(object):
     def __latex__(self):
         return r'Formula{\mathcal{N}(0, 1) -> %s}' % self.formula
 
-    __repr__ = __latex__
+    __repr__ = _latex_repr_ = __latex__
 
     def get_param_spec_for(self, **kwargs):
         res = dict()
@@ -270,7 +270,8 @@ class LinearFlow(AbstractFlow):
             # z bxsxd
             # u bxd
             # w bxd
-            # b b
+            b = b.dimshuffle(0, 'x')
+            # b bx-
             hwz = h(tt.batched_dot(z, w) + b)  # bxs
             # bxsxd + (bxsx- * bx-xd) = bxsxd
             hwz = hwz.dimshuffle(0, 1, 'x')  # bxsx-
@@ -297,7 +298,7 @@ class LinearFlow(AbstractFlow):
             # u bxd
             # w bxd
             # b b
-            # f'(bxsxd \bdot bxd + b) * bx-xd = bxsxd
+            # f'(bxsxd \bdot bxd + bx-) * bx-xd = bxsxd
             phi = deriv(tt.batched_dot(z, w) + b) * w.dimshuffle(0, 'x', 1)
             # \abs(. + bxsxd \bdot bxd) = bxs
             det = tt.abs_(1. + tt.batched_dot(phi, u))
@@ -385,8 +386,15 @@ class ReferencePointFlow(AbstractFlow):
         z = self.z0  # sxd
         h = self.h  # h(a, r)
         if self.is_local:
+            # a bx-x-
+            # b bx-x-
+            # z bxsxd
+            # z_ref bx-xd
             z = z.swapaxes(0, 1)
-        r = (z - z_ref).norm(2, axis=-1, keepdims=True)  # sx-
+            a = a.dimshuffle(0, 'x', 'x')
+            b = b.dimshuffle(0, 'x', 'x')
+            z_ref = z_ref.dimshuffle(0, 'x', 1)
+        r = (z - z_ref).norm(2, axis=-1, keepdims=True)  # sx- (bxsx-)
         # global: sxd + . * h(., sx-) * (sxd - sxd) = sxd
         # local: bxsxd + b * h(b, bxsx-) * (bxsxd - bxsxd) = bxsxd
         z1 = z + b * h(a, r) * (z-z_ref)

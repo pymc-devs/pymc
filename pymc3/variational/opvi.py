@@ -574,15 +574,15 @@ class GroupApprox(object):
         # so I have to to it by myself
         self.ordering = object.__new__(ArrayOrdering)
         self.ordering.vmap = []
-        self.ordering.dimensions = 0
+        self.ordering.size = 0
         for var in self.group:
             var = get_transformed(var)
             begin = self.ndim
             if self.is_local:
-                self.ordering.dimensions += np.prod(var.dshape[1:])
+                self.ordering.size += np.prod(var.dshape[1:])
                 shape = (-1, ) + var.dshape[1:]
             else:
-                self.ordering.dimensions += var.dsize
+                self.ordering.size += var.dsize
                 shape = var.dshape
             end = self.ndim
             self.vmap.append(VarMap(var.name, slice(begin, end), shape, var.dtype))
@@ -601,7 +601,7 @@ class GroupApprox(object):
         del self._kwargs
 
     vmap = property(lambda self: self.ordering.vmap)
-    ndim = property(lambda self: self.ordering.dimensions)
+    ndim = property(lambda self: self.ordering.size)
     is_local = property(lambda self: self._is_local)
 
     @property
@@ -707,7 +707,7 @@ class GroupApprox(object):
         return self.logq / self.symbolic_normalizing_constant
 
 
-class GroupedApproximation(object):
+class Approximation(object):
     def __init__(self, groups, model=None):
         model = modelcontext(model)
         seen = set()
