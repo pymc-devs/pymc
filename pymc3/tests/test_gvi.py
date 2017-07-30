@@ -1,7 +1,7 @@
 import pytest
 import functools
 import numpy as np
-from theano import theano, tensor as tt
+from theano import theano
 
 from .conftest import not_raises
 import pymc3 as pm
@@ -62,7 +62,9 @@ def test_init_groups(three_var_model, raises, grouping):
               NormalizingFlow: (['three'], {'flow': 'scale-hh*2-planar-radial-loc'})}),
         ({}, {MeanField: (['one'], {}), FullRank: (['two', 'three'], {})}),
         ({}, {MeanField: (['one'], {}), Empirical.from_noise: (['two', 'three'], {'size': 100})})
-])
+],
+    ids=lambda t: ', '.join('%s: %s' % (k.__name__, v[0]) for k, v in t[1].items())
+)
 def three_var_groups(request, three_var_model):
     kw, grouping = request.param
     approxes, groups = zip(*grouping.items())
@@ -107,9 +109,14 @@ def aevb_initial():
     ],
     ids=lambda t: '{c} : {d}'.format(c=t[0].__name__, d=t[1])
 )
-def three_var_aevb_groups(request, three_var_model, aevb_initial):
+def parametric_grouped_approxes(request):
+    return request.param
+
+
+@pytest.fixture
+def three_var_aevb_groups(parametric_grouped_approxes, three_var_model, aevb_initial):
     dsize = np.prod(three_var_model.one.dshape[1:])
-    cls, kw = request.param
+    cls, kw = parametric_grouped_approxes
     spec = cls.get_param_spec_for(d=dsize, **kw)
     params = dict()
     for k, v in spec.items():
@@ -145,3 +152,33 @@ def test_sample_aevb(three_var_aevb_approx, aevb_initial):
     assert trace[0]['one'].shape == (13, 2)
     assert trace[0]['two'].shape == (10,)
     assert trace[0]['three'].shape == (10, 1, 2)
+
+
+def test_logq_1_sample_1_var(parametric_grouped_approxes, three_var_model):
+    cls, kw = parametric_grouped_approxes
+    approx = cls([three_var_model.one], model=three_var_model, **kw)
+    logq = approx.logq
+    logq = approx.set_size_and_deterministic(logq, 1, 0)
+    logq.eval()
+
+
+def test_logq_2_sample_2_var(parametric_grouped_approxes, three_var_model):
+    cls, kw = parametric_grouped_approxes
+    approx = cls([three_var_model.one, three_var_model.two], model=three_var_model, **kw)
+    logq = approx.logq
+    logq = approx.set_size_and_deterministic(logq, 2, 0)
+    logq.eval()
+
+
+def test_logq_1_sample_1_var_aevb(three_var_aevb_groups):
+    approx = three_var_aevb_groups[0]
+    logq = approx.logq
+    logq = approx.set_size_and_deterministic(logq, 1, 0)
+    logq.eval()
+
+
+def test_logq_2_sample_2_var_aevb(three_var_aevb_groups):
+    approx = three_var_aevb_groups[0]
+    logq = approx.logq
+    logq = approx.set_size_and_deterministic(logq, 2, 0)
+    logq.eval()
