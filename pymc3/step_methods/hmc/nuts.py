@@ -470,19 +470,20 @@ class NutsReport(object):
         """Print warnings for obviously problematic chains."""
         self._chain_id = strace.chain
 
-        tuning = strace.get_sampler_stats('tune')
-        if tuning.ndim == 2:
-            tuning = np.any(tuning, axis=-1)
+        if strace.supports_sampler_stats:
+            tuning = strace.get_sampler_stats('tune')
+            if tuning.ndim == 2:
+                tuning = np.any(tuning, axis=-1)
 
-        accept = strace.get_sampler_stats('mean_tree_accept')
-        if accept.ndim == 2:
-            accept = np.mean(accept, axis=-1)
+            accept = strace.get_sampler_stats('mean_tree_accept')
+            if accept.ndim == 2:
+                accept = np.mean(accept, axis=-1)
 
-        depth = strace.get_sampler_stats('depth')
-        if depth.ndim == 2:
-            depth = np.max(depth, axis=-1)
+            depth = strace.get_sampler_stats('depth')
+            if depth.ndim == 2:
+                depth = np.max(depth, axis=-1)
 
-        self._check_len(tuning)
-        self._check_depth(depth[~tuning])
-        self._check_accept(accept[~tuning])
-        self._check_divergence()
+            self._check_len(tuning)
+            self._check_depth(depth[~tuning])
+            self._check_accept(accept[~tuning])
+            self._check_divergence()
