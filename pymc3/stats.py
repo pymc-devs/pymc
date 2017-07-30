@@ -4,6 +4,7 @@ import numpy as np
 import pandas as pd
 import itertools
 import sys
+from tqdm import tqdm
 import warnings
 from collections import namedtuple
 from .model import modelcontext
@@ -155,7 +156,7 @@ def _log_post_trace(trace, model):
     return np.stack(logp)
 
 
-def waic(trace, model=None, pointwise=False):
+def waic(trace, model=None, pointwise=False, progressbar=False):
     """Calculate the widely available information criterion, its standard error
     and the effective number of parameters of the samples in trace from model.
     Read more theory here - in a paper by some of the leading authorities on
@@ -169,6 +170,10 @@ def waic(trace, model=None, pointwise=False):
     pointwise: bool
         if True the pointwise predictive accuracy will be returned.
         Default False
+    progressbar: bool
+        Whether or not to display a progress bar in the command line. The
+        bar shows the percentage of completion, the evaluation speed, and
+        the estimated time to completion
 
     Returns
     -------
@@ -180,7 +185,9 @@ def waic(trace, model=None, pointwise=False):
     """
     model = modelcontext(model)
 
-    log_py = _log_post_trace(trace, model)
+    points = tqdm(trace) if progressbar else trace
+    log_py = _log_post_trace(points, model)
+
     if log_py.size == 0:
         raise ValueError('The model does not contain observed values.')
 
