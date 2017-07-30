@@ -347,14 +347,13 @@ class Operator(object):
     T = identity
 
     def __init__(self, approx):
-        if not self.SUPPORT_AEVB and approx.local_vars:
+        if not self.SUPPORT_AEVB and approx.has_local:
             raise ValueError('%s does not support AEVB, '
                              'please change inference method' % type(self))
         self.model = approx.model
         self.approx = approx
 
-    flat_view = property(lambda self: self.approx.flat_view)
-    input = property(lambda self: self.approx.flat_view.input)
+    input = property(lambda self: self.approx.inputs)
 
     logp = property(lambda self: self.approx.logp)
     logq = property(lambda self: self.approx.logq)
@@ -761,6 +760,10 @@ class Approximation(object):
         return self.symbolic_logq.mean(0)
 
     @node_property
+    def logq_norm(self):
+        return self.logq / self.symbolic_normalizing_constant
+
+    @node_property
     def sized_symbolic_logp(self):
         logp = self.to_flat_input(self.model.logpt)
         free_logp_local = self.sample_over_posterior(logp)
@@ -778,6 +781,11 @@ class Approximation(object):
         return theano.clone(
             logp, dict(zip(inp, post))
         )
+
+    @node_property
+    def logp_norm(self):
+        return self.logp / self.symbolic_normalizing_constant
+
 
     @property
     def replacements(self):

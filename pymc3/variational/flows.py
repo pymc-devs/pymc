@@ -288,20 +288,21 @@ class LinearFlow(AbstractFlow):
         deriv = self.h.deriv  # f'
         if not self.is_local:
             # f'(sxd \dot d + .) * -xd = sxd
-            phi = deriv(z.dot(w) + b) * w.dimshuffle('x', 0)
+            phi = deriv(z.dot(w) + b).dimshuffle(0, 'x') * w.dimshuffle('x', 0)
             # \abs(. + sxd \dot d) = s
             det = tt.abs_(1. + phi.dot(u))
             return tt.log(det)
         else:
             z = z.swapaxes(0, 1)
+            b = b.dimshuffle(0, 'x')
             # z bxsxd
             # u bxd
             # w bxd
-            # b b
-            # f'(bxsxd \bdot bxd + bx-) * bx-xd = bxsxd
-            phi = deriv(tt.batched_dot(z, w) + b) * w.dimshuffle(0, 'x', 1)
+            # b bx-x-
+            # f'(bxsxd \bdot bxd + bx-x-) * bx-xd = bxsxd
+            phi = deriv(tt.batched_dot(z, w) + b).dimshuffle(0, 1, 'x') * w.dimshuffle(0, 'x', 1)
             # \abs(. + bxsxd \bdot bxd) = bxs
-            det = tt.abs_(1. + tt.batched_dot(phi, u))
+            det = tt.abs_(1. + tt.batched_dot(phi, u))  # bxs
             return tt.log(det).sum(0)  # s
 
 
@@ -404,7 +405,7 @@ class ReferencePointFlow(AbstractFlow):
 
     @node_property
     def logdet(self):
-        d = self.dim
+        d = float(self.dim)
         a = self.a_  # .
         b = self.b_  # .
         z_ref = self.z_ref  # d
@@ -413,10 +414,17 @@ class ReferencePointFlow(AbstractFlow):
         deriv = self.h.deriv  # h'(a, r)
         if self.is_local:
             z = z.swapaxes(0, 1)
+            a = a.dimshuffle(0, 'x', 'x')
+            b = b.dimshuffle(0, 'x', 'x')
+            z_ref = z_ref.dimshuffle(0, 'x', 1)
+            # a bx-x-
+            # b bx-x-
+            # z bxsxd
+            # z_ref bx-xd
         r = (z - z_ref).norm(2, axis=-1, keepdims=True)  # s
         har = h(a, r)
         dar = deriv(a, r)
-        logdet = tt.log((1. + b*har)**(d-1) * (1. + b*har + b*dar*r))
+        logdet = tt.log((1. + b*har)**(d-1.) * (1. + b*har + b*dar*r))
         if self.is_local:
             logdet = logdet.sum(0)
         return logdet
@@ -513,7 +521,7 @@ class HouseholderFlow(AbstractFlow):
         if self.is_local:
             vv = v.dimshuffle(0, 1, 'x') * v.dimshuffle(0, 'x', 1)
             I = tt.eye(dim).dimshuffle('x', 0, 1)
-            vvn = ((v**2).sum(-1)+1e-10).dimshuffle(0, 'x', 'x')
+            vvn = (1e-10+(v**2).sum(-1)).dimshuffle(0, 'x', 'x')
         else:
             vv = tt.outer(v, v)
             I = tt.eye(dim)
