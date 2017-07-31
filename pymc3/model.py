@@ -1,4 +1,6 @@
 import collections
+import functools
+import itertools
 import threading
 import six
 
@@ -893,7 +895,9 @@ class Model(six.with_metaclass(InitContextMeta, Context, Factor)):
         return flat_view
 
     def _repr_latex_(self, name=None, dist=None):
-        tex_vars = [var.__latex__() for var in self.vars]
+        tex_vars = []
+        for rv in itertools.chain(self.unobserved_RVs, self.observed_RVs):
+            tex_vars.append(rv.__latex__())
         return u'$${}$$'.format('\\\\'.join([tex.strip('$') for tex in tex_vars if tex is not None]))
 
     __latex__ = _repr_latex_
@@ -1222,6 +1226,26 @@ class MultiObservedRV(Factor):
         self.scaling = _get_scaling(total_size, self.logp_elemwiset.shape, self.logp_elemwiset.ndim)
 
 
+def _walk_up_rv(rv):
+    """Walk up theano graph to get inputs for deterministic RV."""
+    all_rvs = []
+    parents = list(itertools.chain(*[j.inputs for j in rv.get_parents()]))
+    if parents:
+        for parent in parents:
+            all_rvs.extend(_walk_up_rv(parent))
+    else:
+        if rv.name:
+            all_rvs.append(rv.name)
+        else:
+            all_rvs.append(r'\text{Constant}')
+    return all_rvs
+
+
+def _latex_repr_rv(rv):
+    """Make latex string for a Deterministic variable"""
+    return r'${} \sim \text{{Deterministic}}({})$'.format(rv.name, r', '.join(_walk_up_rv(rv)))
+
+
 def Deterministic(name, var, model=None):
     """Create a named deterministic variable
 
@@ -1238,6 +1262,8 @@ def Deterministic(name, var, model=None):
     var.name = model.name_for(name)
     model.deterministics.append(var)
     model.add_random_variable(var)
+    var._repr_latex_ = functools.partial(_latex_repr_rv, var)
+    var.__latex__ = var._repr_latex_
     return var
 
 
