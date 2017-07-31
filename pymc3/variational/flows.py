@@ -18,7 +18,9 @@ _short_name_to_flow = dict()
 
 
 def register_flow(cls):
+    assert frozenset(cls.__param_spec__) not in _param_to_flow, 'Duplicate __param_spec__'
     _param_to_flow[frozenset(cls.__param_spec__)] = cls
+    assert cls.short_name not in _short_name_to_flow, 'Duplicate short_name'
     _short_name_to_flow[cls.short_name] = cls
     return cls
 
