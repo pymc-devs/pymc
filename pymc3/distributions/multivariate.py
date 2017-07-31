@@ -1019,21 +1019,19 @@ class LKJCorr(Continuous):
 
     def _random(self, n, eta, size=None):
         beta = eta + (n-1)/2
-        # partial correlations sampled from beta dist.
-        P = np.ones((n, n))
-        P[np.triu_indices(n, 1)] = stats.beta.rvs(a=eta, b=eta, size=int(n*(n-1)/2))
-        # scale partial correlation matrix to [-1, 1]
-        P = (P-.5)*2
+        P = np.zeros((n, n))  # partial correlations
         r_triu = []
-    
+
         for k in range(n-1):
             beta -= 1/2
             for i in range(k+1, n):
-                p = P[k, i]
+                P[k, i] = stats.beta.rvs(a=eta, b=eta)  # sampling from beta
+                p = P[k, i] = (P[k, i]-0.5)*2
                 for l in range(k-1, -1, -1):  # convert partial correlation to raw correlation
                     p = p * np.sqrt((1-P[l, i]**2)*(1-P[l, k]**2)) + P[l, i]*P[l, k]
-    
+
                 r_triu.append(p)
+
         return np.asarray(r_triu)
 
     def random(self, point=None, size=None):
