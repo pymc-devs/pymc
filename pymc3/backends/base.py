@@ -3,6 +3,7 @@
 See the docstring for pymc3.backends for more information (including
 creating custom backends).
 """
+import itertools as itl
 import numpy as np
 from ..model import modelcontext
 import warnings
@@ -247,6 +248,9 @@ class MultiTrace(object):
                 raise ValueError("Chains are not unique.")
             self._straces[strace.chain] = strace
 
+    def __iter__(self):
+        return itl.chain.from_iterable(self._straces[chain] for chain in self.chains)
+
     def __repr__(self):
         template = '<{}: {} chains, {} iterations, {} variables>'
         return template.format(self.__class__.__name__,
@@ -313,8 +317,7 @@ class MultiTrace(object):
             type(self).__name__, name))
 
     def __len__(self):
-        chain = self.chains[-1]
-        return len(self._straces[chain])
+        return sum(len(self._straces[chain]) for chain in self.chains)
 
     @property
     def varnames(self):
