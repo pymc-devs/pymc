@@ -13,15 +13,15 @@ RUN apt-get update && \
 USER $NB_USER
 
 COPY scripts/create_testenv.sh /tmp/create_testenv.sh
-COPY setup.py $HOME/work/setup.py
-COPY requirements.txt $HOME/work/requirements.txt
+COPY setup.py $HOME/setup.py
+COPY requirements.txt $HOME/requirements.txt
 RUN /bin/bash /tmp/create_testenv.sh --global --no-setup
 
 #  matplotlib nonsense
 ENV XDG_CACHE_HOME /home/$NB_USER/.cache/
 ENV MPLBACKEND=Agg
 # for prettier default plot styling
-RUN pip3 install seaborn
+RUN pip install seaborn
 # Import matplotlib the first time to build the font cache.
 RUN python -c "import matplotlib.pyplot"
 
