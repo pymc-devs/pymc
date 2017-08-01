@@ -6,7 +6,8 @@ import pymc3 as pm
 from pymc3.distributions.dist_math import rho2sd, log_normal
 from pymc3.variational.opvi import GroupApprox, node_property
 from pymc3.util import update_start_vals
-from pymc3.theanof import batched_diag, change_flags
+from pymc3.theanof import change_flags
+from pymc3.math import batched_diag
 from pymc3.variational import flows
 
 
