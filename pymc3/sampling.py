@@ -144,7 +144,7 @@ def sample(draws=500, step=None, init='auto', n_init=200000, start=None,
     n_init : int
         Number of iterations of initializer
         If 'ADVI', number of iterations, if 'nuts', number of draws.
-    start : dict
+    start : dict, or array of dict
         Starting point in parameter space (or partial point)
         Defaults to trace.point(-1)) if there is a trace provided and
         model.test_point if not (defaults to empty dict).
@@ -286,13 +286,30 @@ def sample(draws=500, step=None, init='auto', n_init=200000, start=None,
 def _check_start_shape(model, start):
     e = ''
     for var in model.vars:
-        if var.name in start.keys():
+        if np.shape(start):
+            # to deal with iterable start argument
+            for start_iter in start:
+                _check_start_shape(model, start_iter)
+        elif not isinstance(start, dict):
+            raise TypeError("start argument must be a dict"
+                            "or an array-like of dicts")
+        elif var.name in start.keys():
             var_shape = var.shape.tag.test_value
-            start_shape = start[var.name].shape
-            if not np.array_equal(var_shape, start_shape):
-                e += "\nExpected shape {} for var '{}', got: {}".format(
-                    tuple(var_shape), var.name, start_shape
-                )
+            start_var_shape = np.shape(start[var.name])
+            if start_var_shape:
+                if not np.array_equal(var_shape, start_var_shape):
+                    e += "\nExpected shape {} for var '{}', got: {}".format(
+                        tuple(var_shape), var.name, start_var_shape
+                    )
+            # if start var has no shape
+            else:
+                # if model var has a specified shape
+                if var_shape:
+                    e += "\nExpected shape {} for var " \
+                         "'{}', got scalar {}".format(
+                        tuple(var_shape), var.name, start[var.name]
+                    )
+
     if e != '':
         raise ValueError("Bad shape for start argument:{}".format(e))
 
