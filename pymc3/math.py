@@ -9,6 +9,7 @@ from theano.tensor import (
     cos, sin, tan, cosh, sinh, tanh, sqr, sqrt, erf, erfc, erfinv, erfcinv, dot,
     maximum, minimum, sgn, ceil, floor)
 from theano.tensor.nlinalg import det, matrix_inverse, extract_diag, matrix_dot, trace
+import theano.tensor.slinalg
 from theano.tensor.nnet import sigmoid
 from theano.gof import Op, Apply
 import numpy as np
