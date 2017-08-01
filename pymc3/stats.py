@@ -4,6 +4,7 @@ import numpy as np
 import pandas as pd
 import itertools
 import sys
+from tqdm import tqdm
 import warnings
 from collections import namedtuple
 from .model import modelcontext
@@ -16,7 +17,7 @@ from scipy.stats.distributions import pareto
 from .backends import tracetab as ttab
 
 __all__ = ['autocorr', 'autocov', 'dic', 'bpic', 'waic', 'loo', 'hpd', 'quantiles',
-           'mc_error', 'summary', 'df_summary', 'compare']
+           'mc_error', 'summary', 'df_summary', 'compare', 'bfmi']
 
 
 def statfunc(f):
@@ -124,7 +125,7 @@ def dic(trace, model=None):
     return 2 * mean_deviance - deviance_at_mean
 
 
-def _log_post_trace(trace, model):
+def _log_post_trace(trace, model, progressbar=False):
     """Calculate the elementwise log-posterior for the sampled trace.
 
     Parameters
@@ -132,6 +133,10 @@ def _log_post_trace(trace, model):
     trace : result of MCMC run
     model : PyMC Model
         Optional model. Default None, taken from context.
+    progressbar: bool
+        Whether or not to display a progress bar in the command line. The
+        bar shows the percentage of completion, the evaluation speed, and
+        the estimated time to completion
 
     Returns
     -------
@@ -151,11 +156,17 @@ def _log_post_trace(trace, model):
 
         return np.concatenate(logp_vals)
 
-    logp = (logp_vals_point(pt) for pt in trace)
-    return np.stack(logp)
+    points = tqdm(trace) if progressbar else trace
+
+    try:
+        logp = (logp_vals_point(pt) for pt in points)
+        return np.stack(logp)
+    finally:
+        if progressbar:
+            points.close()
 
 
-def waic(trace, model=None, pointwise=False):
+def waic(trace, model=None, pointwise=False, progressbar=False):
     """Calculate the widely available information criterion, its standard error
     and the effective number of parameters of the samples in trace from model.
     Read more theory here - in a paper by some of the leading authorities on
@@ -169,6 +180,10 @@ def waic(trace, model=None, pointwise=False):
     pointwise: bool
         if True the pointwise predictive accuracy will be returned.
         Default False
+    progressbar: bool
+        Whether or not to display a progress bar in the command line. The
+        bar shows the percentage of completion, the evaluation speed, and
+        the estimated time to completion
 
     Returns
     -------
@@ -180,7 +195,7 @@ def waic(trace, model=None, pointwise=False):
     """
     model = modelcontext(model)
 
-    log_py = _log_post_trace(trace, model)
+    log_py = _log_post_trace(trace, model, progressbar=progressbar)
     if log_py.size == 0:
         raise ValueError('The model does not contain observed values.')
 
@@ -208,7 +223,7 @@ def waic(trace, model=None, pointwise=False):
         return WAIC_r(waic, waic_se, p_waic)
 
 
-def loo(trace, model=None, pointwise=False):
+def loo(trace, model=None, pointwise=False, progressbar=False):
     """Calculates leave-one-out (LOO) cross-validation for out of sample predictive
     model fit, following Vehtari et al. (2015). Cross-validation is computed using
     Pareto-smoothed importance sampling (PSIS).
@@ -221,6 +236,10 @@ def loo(trace, model=None, pointwise=False):
     pointwise: bool
         if True the pointwise predictive accuracy will be returned.
         Default False
+    progressbar: bool
+        Whether or not to display a progress bar in the command line. The
+        bar shows the percentage of completion, the evaluation speed, and
+        the estimated time to completion
 
     Returns
     -------
@@ -232,7 +251,7 @@ def loo(trace, model=None, pointwise=False):
     """
     model = modelcontext(model)
 
-    log_py = _log_post_trace(trace, model)
+    log_py = _log_post_trace(trace, model, progressbar=progressbar)
     if log_py.size == 0:
         raise ValueError('The model does not contain observed values.')
 
@@ -908,3 +927,28 @@ def _groupby_leading_idxs(shape):
     """
     idxs = itertools.product(*[range(s) for s in shape])
     return itertools.groupby(idxs, lambda x: x[:-1])
+
+
+def bfmi(trace):
+    """
+    Calculate the estimated Bayesian fraction of missing information (BFMI).
+
+    BFMI quantifies how well momentum resampling matches the marginal energy
+    distribution.  For more information on BFMI, see
+    https://arxiv.org/pdf/1604.00695.pdf.  The current advice is that values
+    smaller than 0.2 indicate poor sampling.  However, this threshold is
+    provisional and may change.  See
+    http://mc-stan.org/users/documentation/case-studies/pystan_workflow.html
+    for more information.
+
+    Parameters
+    ----------
+    trace : result of an HMC/NUTS run, must contain energy information
+
+    Returns
+    -------
+    `float` representing the estimated BFMI.
+    """
+    energy = trace['energy']
+
+    return np.square(np.diff(energy)).mean() / np.var(energy)

@@ -8,8 +8,8 @@ State = namedtuple("State", 'q, p, v, q_grad, energy')
 
 
 class CpuLeapfrogIntegrator(object):
-    def __init__(self, ndim, potential, logp_dlogp_func):
-        self._ndim = ndim
+    def __init__(self, potential, logp_dlogp_func):
+        """Leapfrog integrator using CPU."""
         self._potential = potential
         self._logp_dlogp_func = logp_dlogp_func
         self._dtype = self._logp_dlogp_func.dtype
@@ -19,6 +19,7 @@ class CpuLeapfrogIntegrator(object):
                              % (self._potential.dtype, self._dtype))
 
     def compute_state(self, q, p):
+        """Compute Hamiltonian functions using a position and momentum."""
         if q.dtype != self._dtype or p.dtype != self._dtype:
             raise ValueError('Invalid dtype. Must be %s' % self._dtype)
         logp, dlogp = self._logp_dlogp_func(q)
@@ -28,6 +29,23 @@ class CpuLeapfrogIntegrator(object):
         return State(q, p, v, dlogp, energy)
 
     def step(self, epsilon, state, out=None):
+        """Leapfrog integrator step.
+
+        Half a momentum update, full position update, half momentum update.
+
+        Parameters
+        ----------
+        epsilon: float, > 0
+            step scale
+        state: State namedtuple,
+            current position data
+        out: (optional) State namedtuple,
+            preallocated arrays to write to in place
+
+        Returns
+        -------
+        None if `out` is provided, else a State namedtuple
+        """
         pot = self._potential
         axpy = linalg.blas.get_blas_funcs('axpy', dtype=self._dtype)
 
