@@ -290,7 +290,7 @@ def _check_start_shape(model, start):
         for start_iter in start:
             _check_start_shape(model, start_iter)
     elif not isinstance(start, dict):
-        raise TypeError("start argument must be a dict"
+        raise TypeError("start argument must be a dict "
                         "or an array-like of dicts")
     for var in model.vars:
         if var.name in start.keys():
