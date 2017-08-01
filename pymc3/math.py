@@ -3,6 +3,7 @@ import sys
 import theano.tensor as tt
 # pylint: disable=unused-import
 import theano
+from theano import tensor as tt
 from theano.tensor import (
     constant, flatten, zeros_like, ones_like, stack, concatenate, sum, prod,
     lt, gt, le, ge, eq, neq, switch, clip, where, and_, or_, abs_, exp, log,
@@ -137,3 +138,51 @@ def expand_packed_triangular(n, packed, lower=True, diagonal_only=False):
         out = tt.zeros((n, n), dtype=theano.config.floatX)
         idxs = np.triu_indices(n)
         return tt.set_subtensor(out[idxs], packed)
+
+
+class BatchedDiag(tt.Op):
+    """
+    Fast BatchedDiag allocation
+    """
+    __props__ = ()
+
+    def make_node(self, diag):
+        diag = tt.as_tensor_variable(diag)
+        if diag.type.ndim != 2:
+            raise TypeError('data argument must be a matrix', diag.type)
+
+        return tt.Apply(self, [diag], [tt.tensor3(dtype=diag.dtype)])
+
+    def perform(self, node, ins, outs, params=None):
+        (C,) = ins
+        (z,) = outs
+
+        bc = C.shape[0]
+        dim = C.shape[-1]
+        Cd = np.zeros((bc, dim, dim), C.dtype)
+        bidx = np.repeat(np.arange(bc), dim)
+        didx = np.tile(np.arange(dim), bc)
+        Cd[bidx, didx, didx] = C.flatten()
+        z[0] = Cd
+
+    def grad(self, inputs, gout):
+        (gz,) = gout
+        idx = tt.arange(gz.shape[-1])
+        return [gz[..., idx, idx]]
+
+    def infer_shape(self, nodes, shapes):
+        return [(shapes[0][0], ) + (shapes[0][1],) * 2]
+
+
+def batched_diag(C):
+    C = tt.as_tensor(C)
+    dim = C.shape[-1]
+    if C.ndim == 2:
+        # diag -> matrices
+        return BatchedDiag()(C)
+    elif C.ndim == 3:
+        # matrices -> diag
+        idx = tt.arange(dim)
+        return C[..., idx, idx]
+    else:
+        raise ValueError('Input should be 2 or 3 dimensional')

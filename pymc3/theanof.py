@@ -1,16 +1,15 @@
 import numpy as np
 import theano
-
 from theano import theano, scalar, tensor as tt
-from theano.sandbox.rng_mrg import MRG_RandomStreams
-from theano.gof.graph import inputs
-from theano.gof import Op
 from theano.configparser import change_flags
+from theano.gof import Op
+from theano.gof.graph import inputs
+from theano.sandbox.rng_mrg import MRG_RandomStreams
 
-from .vartypes import typefilter, continuous_types
-from .memoize import memoize
 from .blocking import ArrayOrdering
 from .data import GeneratorAdapter
+from .memoize import memoize
+from .vartypes import typefilter, continuous_types
 
 __all__ = ['gradient',
            'hessian',
@@ -457,52 +456,3 @@ def ix_(*args):
         new = new.reshape((1,)*k + (new.size,) + (1,)*(nd-k-1))
         out.append(new)
     return tuple(out)
-
-
-class BatchedDiag(tt.Op):
-    """
-    Fast BatchedDiag allocation
-    """
-    __props__ = ()
-
-    def make_node(self, diag):
-        diag = tt.as_tensor_variable(diag)
-        if diag.type.ndim != 2:
-            raise TypeError('data argument must be a matrix', diag.type)
-
-        return tt.Apply(self, [diag], [tt.tensor3(dtype=diag.dtype)])
-
-    def perform(self, node, ins, outs, params=None):
-        (C,) = ins
-        (z,) = outs
-
-        bc = C.shape[0]
-        dim = C.shape[-1]
-        Cd = np.zeros((bc, dim, dim), C.dtype)
-        bidx = np.repeat(np.arange(bc), dim)
-        didx = np.tile(np.arange(dim), bc)
-        Cd[bidx, didx, didx] = C.flatten()
-        z[0] = Cd
-
-    def grad(self, inputs, gout):
-        (gz,) = gout
-        idx = tt.arange(gz.shape[-1])
-        return [gz[..., idx, idx]]
-
-    def infer_shape(self, nodes, shapes):
-        return [(shapes[0][0], ) + (shapes[0][1],) * 2]
-
-
-def batched_diag(C):
-    C = tt.as_tensor(C)
-    dim = C.shape[-1]
-    if C.ndim == 2:
-        # diag -> matrices
-        return BatchedDiag()(C)
-    elif C.ndim == 3:
-        # matrices -> diag
-        idx = tt.arange(dim)
-        return C[..., idx, idx]
-    else:
-        raise ValueError('Input should be 2 or 3 dimensional')
-
