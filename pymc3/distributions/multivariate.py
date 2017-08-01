@@ -1026,14 +1026,14 @@ class LKJCorr(Continuous):
         P = np.ones((n, n))
         P[triu_ind] = stats.beta.rvs(a=beta, b=beta)
         # scale partial correlation matrix to [-1, 1]
-        P = (P-.5)*2
+        P = (P - .5) * 2
         r_triu = []
 
         for k, i in zip(triu_ind[0], triu_ind[1]):
             p = P[k, i]
             for l in range(k-1, -1, -1):  # convert partial correlation to raw correlation
-                p = p * np.sqrt((1-P[l, i]**2)*(1-P[l, k]**2)) + P[l, i]*P[l, k]
-
+                p = p * np.sqrt((1 - P[l, i]**2) *
+                                (1 - P[l, k]**2)) + P[l, i] * P[l, k]
             r_triu.append(p)
 
         return np.asarray(r_triu)
@@ -1044,7 +1044,7 @@ class LKJCorr(Continuous):
             samples = generate_samples(stats.beta.rvs, eta, eta,
                                        dist_shape=self.shape,
                                        size=size)
-            samples = (samples-0.5)*2
+            samples = (samples - 0.5) * 2
         else:
             samples = generate_samples(self._random, n, eta,
                                        broadcast_shape=self.shape,

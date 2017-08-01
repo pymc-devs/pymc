@@ -623,6 +623,7 @@ class TestScalarParameterSamples(SeededTest):
 
     def test_lkj(self):
         for n in [2, 10, 50]:
+            #pylint: disable=cell-var-from-loop
             shape = n*(n-1)//2
             
             def ref_rand(size, eta):
