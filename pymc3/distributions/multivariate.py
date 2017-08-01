@@ -788,7 +788,7 @@ class LKJCholeskyCov(Continuous):
     Parameters
     ----------
     n : int
-        Dimension of the covariance matrix (n > 0).
+        Dimension of the covariance matrix (n > 1).
     eta : float
         The shape parameter (eta > 0) of the LKJ distribution. eta = 1
         implies a uniform distribution of the correlation matrices;
@@ -895,6 +895,8 @@ class LKJCholeskyCov(Continuous):
             raise ValueError('Invalid parameter: transform.')
         if 'shape' in kwargs:
             raise ValueError('Invalid parameter: shape.')
+        if not n > 1:
+            raise ValueError('Dimension parameter n must be larger than 1')
 
         shape = n * (n + 1) // 2
 
@@ -958,7 +960,7 @@ class LKJCorr(Continuous):
     Parameters
     ----------
     n : int
-        Dimension of the covariance matrix (n > 0).
+        Dimension of the covariance matrix (n > 1).
     eta : float
         The shape parameter (eta > 0) of the LKJ distribution. eta = 1
         implies a uniform distribution of the correlation matrices;
@@ -1001,6 +1003,8 @@ class LKJCorr(Continuous):
         else:
             raise ValueError('Invalid parameter: please use eta as the shape parameter and '
                              'n as the dimension parameter.')
+        if not n > 1:
+            raise ValueError('Dimension parameter n must be larger than 1')
 
         n_elem = int(n * (n - 1) / 2)
         self.mean = np.zeros(n_elem, dtype=theano.config.floatX)
@@ -1025,7 +1029,7 @@ class LKJCorr(Continuous):
         for k in range(n-1):
             beta -= 1/2
             for i in range(k+1, n):
-                P[k, i] = stats.beta.rvs(a=eta, b=eta)  # sampling from beta
+                P[k, i] = stats.beta.rvs(a=beta, b=beta)  # sampling from beta
                 p = P[k, i] = (P[k, i]-0.5)*2
                 for l in range(k-1, -1, -1):  # convert partial correlation to raw correlation
                     p = p * np.sqrt((1-P[l, i]**2)*(1-P[l, k]**2)) + P[l, i]*P[l, k]
@@ -1036,10 +1040,16 @@ class LKJCorr(Continuous):
 
     def random(self, point=None, size=None):
         n, eta = draw_values([self.n, self.eta], point=point)
-        samples = generate_samples(self._random, n, eta,
-                                   broadcast_shape=self.shape,
-                                   dist_shape=self.shape,
-                                   size=size)
+        if n < 3:
+            samples = generate_samples(stats.beta.rvs, eta, eta,
+                                       dist_shape=self.shape,
+                                       size=size)
+            samples = (samples-0.5)*2
+        else:
+            samples = generate_samples(self._random, n, eta,
+                                       broadcast_shape=self.shape,
+                                       dist_shape=self.shape,
+                                       size=size)
         return samples
 
     def logp(self, x):
