@@ -1,4 +1,4 @@
-from collections import defaultdict
+from collections import defaultdict, Sequence
 
 from joblib import Parallel, delayed
 from numpy.random import randint, seed
@@ -285,15 +285,15 @@ def sample(draws=500, step=None, init='auto', n_init=200000, start=None,
 
 def _check_start_shape(model, start):
     e = ''
+    if isinstance(start, (Sequence, np.ndarray)):
+        # to deal with iterable start argument
+        for start_iter in start:
+            _check_start_shape(model, start_iter)
+    elif not isinstance(start, dict):
+        raise TypeError("start argument must be a dict"
+                        "or an array-like of dicts")
     for var in model.vars:
-        if np.shape(start):
-            # to deal with iterable start argument
-            for start_iter in start:
-                _check_start_shape(model, start_iter)
-        elif not isinstance(start, dict):
-            raise TypeError("start argument must be a dict"
-                            "or an array-like of dicts")
-        elif var.name in start.keys():
+        if var.name in start.keys():
             var_shape = var.shape.tag.test_value
             start_var_shape = np.shape(start[var.name])
             if start_var_shape:
