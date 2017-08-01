@@ -131,7 +131,7 @@ class AbstractFlow(object):
                 name=name
             )
         else:
-            if self.is_local:
+            if self.islocal:
                 shape = (-1, ) + shape
             return user.reshape(shape)
 
@@ -200,7 +200,7 @@ class AbstractFlow(object):
         return self.parent is None
 
     @property
-    def is_local(self):
+    def islocal(self):
         return self.z0.ndim == 3
 
     @classmethod
@@ -262,7 +262,7 @@ class LinearFlow(AbstractFlow):
         b = self.b   # .
         h = self.h   # f
         # h(sxd \dot d + .)  = s
-        if not self.is_local:
+        if not self.islocal:
             hwz = h(z.dot(w) + b)  # s
             # sxd + (s \outer d) = sxd
             z1 = z + tt.outer(hwz,  u)  # sxd
@@ -288,7 +288,7 @@ class LinearFlow(AbstractFlow):
         w = self.w_  # d
         b = self.b  # .
         deriv = self.h.deriv  # f'
-        if not self.is_local:
+        if not self.islocal:
             # f'(sxd \dot d + .) * -xd = sxd
             phi = deriv(z.dot(w) + b).dimshuffle(0, 'x') * w.dimshuffle('x', 0)
             # \abs(. + sxd \dot d) = s
@@ -326,7 +326,7 @@ class PlanarFlow(LinearFlow):
         super(PlanarFlow, self).__init__(h=Tanh(), **kwargs)
 
     def make_uw(self, u, w):
-        if not self.is_local:
+        if not self.islocal:
             # u_ : d
             # w_ : d
             wu = u.dot(w)  # .
@@ -388,7 +388,7 @@ class ReferencePointFlow(AbstractFlow):
         z_ref = self.z_ref  # d
         z = self.z0  # sxd
         h = self.h  # h(a, r)
-        if self.is_local:
+        if self.islocal:
             # a bx-x-
             # b bx-x-
             # z bxsxd
@@ -401,7 +401,7 @@ class ReferencePointFlow(AbstractFlow):
         # global: sxd + . * h(., sx-) * (sxd - sxd) = sxd
         # local: bxsxd + b * h(b, bxsx-) * (bxsxd - bxsxd) = bxsxd
         z1 = z + b * h(a, r) * (z-z_ref)
-        if self.is_local:
+        if self.islocal:
             z1 = z1.swapaxes(0, 1)
         return z1
 
@@ -414,7 +414,7 @@ class ReferencePointFlow(AbstractFlow):
         z = self.z0  # sxd
         h = self.h  # h(a, r)
         deriv = self.h.deriv  # h'(a, r)
-        if self.is_local:
+        if self.islocal:
             z = z.swapaxes(0, 1)
             a = a.dimshuffle(0, 'x', 'x')
             b = b.dimshuffle(0, 'x', 'x')
@@ -427,9 +427,10 @@ class ReferencePointFlow(AbstractFlow):
         har = h(a, r)
         dar = deriv(a, r)
         logdet = tt.log((1. + b*har)**(d-1.) * (1. + b*har + b*dar*r))
-        if self.is_local:
-            logdet = logdet.sum(0)
-        return logdet
+        if self.islocal:
+            return logdet.sum([0, -1])
+        else:
+            return logdet.sum(-1)
 
 
 class Radial(FlowFn):
@@ -520,7 +521,7 @@ class HouseholderFlow(AbstractFlow):
         super(HouseholderFlow, self).__init__(dim=dim, z0=z0, jitter=jitter)
         v = self.add_param(v, 'v')
         self.shared_params = dict(v=v)
-        if self.is_local:
+        if self.islocal:
             vv = v.dimshuffle(0, 1, 'x') * v.dimshuffle(0, 'x', 1)
             I = tt.eye(dim).dimshuffle('x', 0, 1)
             vvn = (1e-10+(v**2).sum(-1)).dimshuffle(0, 'x', 'x')
@@ -534,7 +535,7 @@ class HouseholderFlow(AbstractFlow):
     def forward(self):
         z = self.z0  # sxd
         H = self.H   # dxd
-        if self.is_local:
+        if self.islocal:
             return tt.batched_dot(z.swapaxes(0, 1), H).swapaxes(0, 1)
         else:
             return z.dot(H)

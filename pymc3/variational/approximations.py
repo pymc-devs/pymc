@@ -39,7 +39,7 @@ class MeanField(GroupApprox):
     @node_property
     def cov(self):
         var = rho2sd(self.rho)**2
-        if self.is_local:
+        if self.islocal:
             return batched_diag(var)
         else:
             return tt.diag(var)
@@ -137,7 +137,7 @@ class FullRank(GroupApprox):
     @node_property
     def cov(self):
         L = self.L
-        if self.is_local:
+        if self.islocal:
             return tt.batched_dot(L, L.swapaxes(-1, -2))
         else:
             return L.dot(L.T)
@@ -161,7 +161,7 @@ class FullRank(GroupApprox):
     @node_property
     def symbolic_logq(self):
         z = self.symbolic_random
-        if self.is_local:
+        if self.islocal:
             def logq(z_b, mu_b, L_b):
                 return pm.MvNormal.dist(mu=mu_b, chol=L_b).logp(z_b)
             # it's gonna be so slow
@@ -176,7 +176,7 @@ class FullRank(GroupApprox):
         initial = self.symbolic_initial
         L = self.L
         mu = self.mean
-        if self.is_local:
+        if self.islocal:
             initial = initial.swapaxes(0, 1)
             return tt.batched_dot(initial, L).swapaxes(0, 1) + mu
         else:
@@ -195,7 +195,7 @@ class FullRank(GroupApprox):
         -------
         :class:`FullRank`
         """
-        if mean_field.is_local:
+        if mean_field.islocal:
             raise TypeError('Cannot init from local group')
         full_rank = object.__new__(cls)  # type: FullRank
         full_rank.__dict__.update(mean_field.__dict__)
@@ -219,6 +219,7 @@ class Empirical(GroupApprox):
     it has the same interface as variational approximation
     """
     SUPPORT_AEVB = False
+    HAS_LOGQ = False
     __param_spec__ = dict(histogram=('s', 'd'))
 
     def __init_group__(self, group):
@@ -345,6 +346,13 @@ class Empirical(GroupApprox):
             jitter=jitter,
             start=start,
             **kwargs)
+
+    def __str__(self):
+        if isinstance(self.histogram, theano.compile.SharedVariable):
+            shp = ', '.join(map(str, self.histogram.shape.eval()))
+        else:
+            shp = 'None, ' + str(self.ndim)
+        return '{cls}[{shp}]'.format(shp=shp, cls=self.__class__.__name__)
 
 
 class NormalizingFlow(GroupApprox):
@@ -499,7 +507,7 @@ class NormalizingFlow(GroupApprox):
 
     @node_property
     def batch_size(self):
-        if not self.is_local:
+        if not self.islocal:
             return 0
         else:
             return next(iter(self.params_dict[0].values())).shape[0]
@@ -507,6 +515,12 @@ class NormalizingFlow(GroupApprox):
     @classmethod
     def get_param_spec_for(cls, flow, **kwargs):
         return flows.Formula(flow).get_param_spec_for(**kwargs)
+
+    def __str__(self):
+        shp = str(self.ndim)
+        if self.islocal:
+            shp = 'None, ' + shp
+        return '{cls}[{shp}]'.format(shp=shp, cls=self.__class__.__name__)
 
 
 def sample_approx(approx, draws=100, include_transformed=True):
