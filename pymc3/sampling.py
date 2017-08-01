@@ -227,6 +227,9 @@ def sample(draws=500, step=None, init='auto', n_init=200000, start=None,
     """
     model = modelcontext(model)
 
+    if start is not None:
+        _check_start_shape(model, start)
+
     draws += tune
 
     if nuts_kwargs is not None:
@@ -278,6 +281,20 @@ def sample(draws=500, step=None, init='auto', n_init=200000, start=None,
     discard = tune if discard_tuned_samples else 0
 
     return sample_func(**sample_args)[discard:]
+
+
+def _check_start_shape(model, start):
+    e = ''
+    for var in model.vars:
+        if var.name in start.keys():
+            var_shape = var.shape.tag.test_value
+            start_shape = start[var.name].shape
+            if not np.array_equal(var_shape, start_shape):
+                e += "\nExpected shape {} for var '{}', got: {}".format(
+                    tuple(var_shape), var.name, start_shape
+                )
+    if e != '':
+        raise ValueError("Bad shape for start argument:{}".format(e))
 
 
 def _sample(draws, step=None, start=None, trace=None, chain=0, tune=None,
