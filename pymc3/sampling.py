@@ -289,6 +289,7 @@ def _check_start_shape(model, start):
         # to deal with iterable start argument
         for start_iter in start:
             _check_start_shape(model, start_iter)
+        return
     elif not isinstance(start, dict):
         raise TypeError("start argument must be a dict "
                         "or an array-like of dicts")
