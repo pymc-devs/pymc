@@ -621,7 +621,13 @@ class TestScalarParameterSamples(SeededTest):
         #                           st.wishart(V, df=n, size=size))
         pass
 
-    @pytest.mark.skip('LKJ random sampling not implemented yet.')
     def test_lkj(self):
-        # TODO: generate random numbers.
-        pass
+        def ref_rand(size, n, eta):
+            beta = eta - 1 + n/2
+            shape = n*(n-1)//2
+            return (st.beta.rvs(size=(size, shape), a=beta, b=beta)-.5)*2
+        pymc3_random(pm.LKJCorr,
+                     {'n': Domain([2, 5, 10]), 
+                      'eta': Domain([1., 10., 100.])},
+                     size=1000,
+                     ref_rand=ref_rand)

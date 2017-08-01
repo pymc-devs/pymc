@@ -1022,7 +1022,8 @@ class LKJCorr(Continuous):
         self.tri_index[np.triu_indices(n, k=1)[::-1]] = np.arange(shape)
 
     def _random(self, n, eta, size=None):
-        beta0 = eta + (n-1)/2 - 0.5
+        beta0 = eta - 1 + n/2
+
         triu_ind = np.triu_indices(n, 1)
         beta = np.array([beta0 - k/2 for k in triu_ind[0]])
         # partial correlations sampled from beta dist.
