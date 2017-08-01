@@ -1006,7 +1006,7 @@ class LKJCorr(Continuous):
         if not n > 1:
             raise ValueError('Dimension parameter n must be larger than 1')
 
-        shape = n * (n + 1) // 2
+        shape = n * (n - 1) // 2
         self.mean = np.zeros(shape, dtype=theano.config.floatX)
 
         if transform == 'interval':
