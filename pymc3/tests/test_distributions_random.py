@@ -622,12 +622,23 @@ class TestScalarParameterSamples(SeededTest):
         pass
 
     def test_lkj(self):
-        def ref_rand(size, n, eta):
-            beta = eta - 1 + n/2
+        for n in [2, 10, 50]:
             shape = n*(n-1)//2
-            return (st.beta.rvs(size=(size, shape), a=beta, b=beta)-.5)*2
-        pymc3_random(pm.LKJCorr,
-                     {'n': Domain([2, 5, 10]), 
-                      'eta': Domain([1., 10., 100.])},
-                     size=1000,
+            
+            def ref_rand(size, eta):
+                beta = eta - 1 + n/2
+                return (st.beta.rvs(size=(size, shape), a=beta, b=beta)-.5)*2
+
+            class TestedLKJCorr (pm.LKJCorr):
+                
+                def __init__(self, **kwargs):
+                    kwargs.pop('shape', None)
+                    super(TestedLKJCorr, self).__init__(
+                            n=n, 
+                            **kwargs
+                    )
+
+            pymc3_random(TestedLKJCorr,
+                     {'eta': Domain([1., 10., 100.])},
+                     size=10000//n,
                      ref_rand=ref_rand)

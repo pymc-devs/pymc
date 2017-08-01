@@ -895,8 +895,6 @@ class LKJCholeskyCov(Continuous):
             raise ValueError('Invalid parameter: transform.')
         if 'shape' in kwargs:
             raise ValueError('Invalid parameter: shape.')
-        if not n > 1:
-            raise ValueError('Dimension parameter n must be larger than 1')
 
         shape = n * (n + 1) // 2
 
@@ -1003,11 +1001,9 @@ class LKJCorr(Continuous):
         else:
             raise ValueError('Invalid parameter: please use eta as the shape parameter and '
                              'n as the dimension parameter.')
-        if not n > 1:
-            raise ValueError('Dimension parameter n must be larger than 1')
 
         shape = n * (n - 1) // 2
-        self.mean = np.zeros(shape, dtype=theano.config.floatX)
+        self.mean = floatX(np.zeros(shape))
 
         if transform == 'interval':
             transform = transforms.interval(-1, 1)
