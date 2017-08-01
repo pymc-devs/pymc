@@ -125,15 +125,14 @@ class Uniform(Continuous):
         a, b = 0.0, 2.0
         y = np.zeros(1000)
         y[(x<b) & (x>a)] = 1.0/(b-a)
-        plt.plot(x, y, label='lower=1, upper=2')
+        fig, ax = plt.subplots()
+        ax.plot(x, y, label='lower=1, upper=2')
         a, b = -2.0, 1.0
         y = np.zeros(1000)
         y[(x<b) & (x>a)] = 1.0/(b-a)
-        plt.plot(x, y, label='lower=-2, upper=1')
-        plt.legend(loc='upper right')
-        plt.ylim([-0.2,1.2])
-        plt.xlabel('x')
-        plt.ylabel('f(x)')
+        ax.plot(x, y, label='lower=-2, upper=1')
+        ax.legend(loc='upper right')
+        ax.set(ylim=[-0.2,1.2], xlabel='x', ylabel='f(x)')
         plt.show()
 
     ========  =====================================
@@ -256,15 +255,15 @@ class Normal(Continuous):
         import numpy as np
         import scipy.stats as st
         x = np.linspace(-5.0, 5.0, 1000)
+        fig, ax = plt.subplots()
         f = lambda mu, sd : st.norm.pdf(x, loc=mu, scale=sd)
-        plot_pdf = lambda a, b : plt.plot(x, f(a,b), label=r'$\mu$={0}, $\sigma$={1}'.format(a,b))
+        plot_pdf = lambda a, b : ax.plot(x, f(a,b), label=r'$\mu$={0}, $\sigma$={1}'.format(a,b))
         plot_pdf(0.0, 0.4)
         plot_pdf(0.0, 1.0)
         plot_pdf(0.0, 2.0)
         plot_pdf(-2.0, 0.4)
         plt.legend(loc='upper right', frameon=False)
-        plt.xlabel('x')
-        plt.ylabel('f(x)')
+        ax.set(xlim=[-5,5], ylim=[0,1.2], xlabel='x', ylabel='f(x)')
         plt.show()
 
     Parameters
@@ -331,16 +330,14 @@ class HalfNormal(PositiveContinuous):
         import numpy as np
         import scipy.stats as st
         x = np.linspace(0.0, 5.0, 1000)
+        fig, ax = plt.subplots()
         f = lambda b : st.halfnorm.pdf(x, scale=1.0/np.sqrt(b))
-        plot_pdf = lambda b : plt.plot(x, f(b), label=r'$\tau$={0}'.format(b))
+        plot_pdf = lambda b : ax.plot(x, f(b), label=r'$\tau$={0}'.format(b))
         plot_pdf(0.5)
         plot_pdf(1.0)
         plot_pdf(2.0)
         plt.legend(loc='upper right', frameon=False)
-        plt.xlabel('x')
-        plt.ylabel('f(x)')
-        plt.ylim([0,1.2])
-        plt.xlim([0.0,5.0])
+        ax.set(xlim=[0,5], ylim=[0,1.2], xlabel='x', ylabel='f(x)')
         plt.show()
 
     ========  ==========================================
@@ -408,17 +405,17 @@ class Wald(PositiveContinuous):
         import matplotlib.pyplot as plt
         import numpy as np
         import scipy.stats as st
-        x = np.linspace(0.0, 5.0, 1000)
-        f = lambda mu, lam : st.wald.pdf(x, loc=0, scale=mu)
-        plot_pdf = lambda a, b : plt.plot(x, f(a,b), label=r'$\mu$={0}, $\lambda$={1}'.format(a,b))
+        x = np.linspace(0.0, 3.0, 1000)
+        fig, ax = plt.subplots()
+        f = lambda mu, lam : st.invgauss.pdf(x, mu/lam, scale=lam)
+        plot_pdf = lambda a, b : ax.plot(x, f(a,b), label=r'$\mu$={0}, $\lambda$={1}'.format(a,b))
         plot_pdf(1.0,1.0)
         plot_pdf(1.0,0.2)
+        plot_pdf(1.0,3.0)
+        plot_pdf(3,1)
         plot_pdf(3,0.2)
         plt.legend(loc='upper right', frameon=False)
-        plt.xlabel('x')
-        plt.ylabel('f(x)')
-        plt.ylim([0,1.2])
-        plt.xlim([0.0,5.0])
+        ax.set(xlim=[0,3], ylim=[0,3.0], xlabel='x', ylabel='f(x)')
         plt.show()
 
     ========  =============================
@@ -556,17 +553,16 @@ class Beta(UnitContinuous):
         import numpy as np
         import scipy.stats as st
         x = np.linspace(0.0, 1.0, 1000)
+        fig, ax = plt.subplots()
         f = lambda a, b : st.beta.pdf(x, a, b)
-        plot_pdf = lambda a, b : plt.plot(x, f(a,b), label=r'$\alpha$={0}, $\beta$={1}'.format(a,b))
+        plot_pdf = lambda a, b : ax.plot(x, f(a,b), label=r'$\alpha$={0}, $\beta$={1}'.format(a,b))
         plot_pdf(0.5, 0.5)
         plot_pdf(5.0, 1.0)
         plot_pdf(1.0, 3.0)
         plot_pdf(2.0, 2.0)
         plot_pdf(2.0, 5.0)
         plt.legend(loc='upper center', frameon=False)
-        plt.xlabel('x')
-        plt.ylabel('f(x)')
-        plt.ylim([0,2.5])
+        ax.set(xlim=[0,1], ylim=[0,2.5], xlabel='x', ylabel='f(x)')
         plt.show()
 
     ========  ==============================================================
@@ -671,16 +667,14 @@ class Exponential(PositiveContinuous):
         import numpy as np
         import scipy.stats as st
         x = np.linspace(0.0, 5.0, 1000)
+        fig, ax = plt.subplots()
         f = lambda lam : st.expon.pdf(x, scale=1.0/lam)
-        plot_pdf = lambda lam : plt.plot(x, f(lam), label=r'$\lambda$={0}'.format(lam))
+        plot_pdf = lambda lam : ax.plot(x, f(lam), label=r'$\lambda$={0}'.format(lam))
         plot_pdf(0.5)
         plot_pdf(1.0)
         plot_pdf(1.5)
         plt.legend(loc='upper right', frameon=False)
-        plt.xlabel('x')
-        plt.ylabel('f(x)')
-        plt.ylim([0,1.6])
-        plt.xlim([0,5.0])
+        ax.set(xlim=[0,5], ylim=[0,1.6], xlabel='x', ylabel='f(x)')
         plt.show()
 
     ========  ============================
@@ -738,17 +732,15 @@ class Laplace(Continuous):
         import numpy as np
         import scipy.stats as st
         x = np.linspace(-10.0, 10.0, 1000)
+        fig, ax = plt.subplots()
         f = lambda mu, b : st.laplace.pdf(x, loc=mu, scale=b)
-        plot_pdf = lambda mu, b : plt.plot(x, f(mu, b), label=r'$\mu$={0}, $b$={1}'.format(mu, b))
+        plot_pdf = lambda mu, b : ax.plot(x, f(mu, b), label=r'$\mu$={0}, $b$={1}'.format(mu, b))
         plot_pdf(0.0, 1.0)
         plot_pdf(0.0, 2.0)
         plot_pdf(0.0, 4)
         plot_pdf(-5.0, 4)
         plt.legend(loc='upper right', frameon=False)
-        plt.xlabel('x')
-        plt.ylabel('f(x)')
-        plt.ylim([0,0.5])
-        plt.xlim([-10.0,10.0])
+        ax.set(xlim=[-10,10], ylim=[0,0.5], xlabel='x', ylabel='f(x)')
         plt.show()
 
     ========  ========================
@@ -817,16 +809,14 @@ class Lognormal(PositiveContinuous):
         import numpy as np
         import scipy.stats as st
         x = np.linspace(0.0, 3.0, 1000)
+        fig, ax = plt.subplots()
         f = lambda mu, sd : st.lognorm.pdf(x, sd, scale=np.exp(mu))
-        plot_pdf = lambda mu, sd : plt.plot(x, f(mu, sd), label=r'$\mu$={0}, $\sigma$={1}'.format(mu, sd))
+        plot_pdf = lambda mu, sd : ax.plot(x, f(mu, sd), label=r'$\mu$={0}, $\sigma$={1}'.format(mu, sd))
         plot_pdf(0.0, 0.25)
         plot_pdf(0.0, 0.5)
         plot_pdf(0.0, 1.0)
         plt.legend(loc='upper right', frameon=False)
-        plt.xlabel('x')
-        plt.ylabel('f(x)')
-        plt.ylim([0,1.8])
-        plt.xlim([0.0,3])
+        ax.set(xlim=[0,3], ylim=[0,1.8], xlabel='x', ylabel='f(x)')
         plt.show()
 
     ========  =========================================================================
@@ -908,18 +898,16 @@ class StudentT(Continuous):
         import numpy as np
         import scipy.stats as st
         x = np.linspace(-5.0, 5.0, 1000)
+        fig, ax = plt.subplots()
         f = lambda mu, lam, df : st.t.pdf(x, df, loc=mu, scale=1.0/np.sqrt(lam))
-        plot_pdf = lambda mu, lam, df : plt.plot(x, f(mu, lam, df), label=r'$\mu$={0}, $\lambda$={1}, $\nu$={2}'.format(mu, lam, df))
+        plot_pdf = lambda mu, lam, df : ax.plot(x, f(mu, lam, df), label=r'$\mu$={0}, $\lambda$={1}, $\nu$={2}'.format(mu, lam, df))
         plot_pdf(0.0, 1.0, 1.0)
         plot_pdf(0.0, 1.0, 2.0)
         plot_pdf(0.0, 1.0, 5)
         plot_pdf(-1.0, 1.0, 5)
         plot_pdf(-1.0, 2.0, 5)
         plt.legend(loc='upper right', frameon=False)
-        plt.xlabel('x')
-        plt.ylabel('f(x)')
-        plt.ylim([0,0.6])
-        plt.xlim([-5.0,5.0])
+        ax.set(xlim=[-5,5], ylim=[0,0.6], xlabel='x', ylabel='f(x)')
         plt.show()
 
     ========  ========================
@@ -999,16 +987,14 @@ class Pareto(PositiveContinuous):
         import numpy as np
         import scipy.stats as st
         x = np.linspace(0.0, 5.0, 1000)
+        fig, ax = plt.subplots()
         f = lambda m, alpha : st.pareto.pdf(x, alpha, scale=m)
-        plot_pdf = lambda m, alpha : plt.plot(x, f(m, alpha), label=r'm={0}, $\alpha$={1}'.format(m, alpha))
+        plot_pdf = lambda m, alpha : ax.plot(x, f(m, alpha), label=r'm={0}, $\alpha$={1}'.format(m, alpha))
         plot_pdf(1.0,1.0)
         plot_pdf(1.0,2.0)
         plot_pdf(1.0,3.0)
         plt.legend(loc='upper right', frameon=False)
-        plt.xlabel('x')
-        plt.ylabel('f(x)')
-        plt.ylim([0,3.0])
-        plt.xlim([0.0,5.0])
+        ax.set(xlim=[0,5], ylim=[0,3.0], xlabel='x', ylabel='f(x)')
         plt.show()
 
     ========  =============================================================
@@ -1088,17 +1074,15 @@ class Cauchy(Continuous):
         import numpy as np
         import scipy.stats as st
         x = np.linspace(-5.0, 5.0, 1000)
+        fig, ax = plt.subplots()
         f = lambda a, b : st.cauchy.pdf(x, loc=a, scale=b)
-        plot_pdf = lambda a, b : plt.plot(x, f(a, b), label=r'$\alpha$={0}, $\beta$={1}'.format(a, b))
+        plot_pdf = lambda a, b : ax.plot(x, f(a, b), label=r'$\alpha$={0}, $\beta$={1}'.format(a, b))
         plot_pdf(0.0, 0.5)
         plot_pdf(0.0, 1.0)
         plot_pdf(0.0, 2.0)
         plot_pdf(-2.0, 1.0)
         plt.legend(loc='upper right', frameon=False)
-        plt.xlabel('x')
-        plt.ylabel('f(x)')
-        plt.ylim([0,0.7])
-        plt.xlim([-5.0,5.0])
+        ax.set(xlim=[-5,5], ylim=[0,0.7], xlabel='x', ylabel='f(x)')
         plt.show()
 
     ========  ========================
@@ -1165,16 +1149,14 @@ class HalfCauchy(PositiveContinuous):
         import numpy as np
         import scipy.stats as st
         x = np.linspace(0.0, 5.0, 1000)
+        fig, ax = plt.subplots()
         f = lambda b : st.cauchy.pdf(x, scale=b)
-        plot_pdf = lambda b : plt.plot(x, f(b), label=r'$\beta$={0}'.format(b))
+        plot_pdf = lambda b : ax.plot(x, f(b), label=r'$\beta$={0}'.format(b))
         plot_pdf(0.5)
         plot_pdf(1.0)
         plot_pdf(2.0)
         plt.legend(loc='upper right', frameon=False)
-        plt.xlabel('x')
-        plt.ylabel('f(x)')
-        plt.ylim([0,0.7])
-        plt.xlim([0.0,5.0])
+        ax.set(xlim=[0,5], ylim=[0,0.7], xlabel='x', ylabel='f(x)')
         plt.show()
 
     ========  ========================
@@ -1239,17 +1221,15 @@ class Gamma(PositiveContinuous):
         import numpy as np
         import scipy.stats as st
         x = np.linspace(0.0, 20.0, 1000)
+        fig, ax = plt.subplots()
         f = lambda a, b : st.gamma.pdf(x, a, scale=1.0/b)
-        plot_pdf = lambda a, b : plt.plot(x, f(a, b), label=r'$\alpha$={0}, $\beta$={1}'.format(a, b))
+        plot_pdf = lambda a, b : ax.plot(x, f(a, b), label=r'$\alpha$={0}, $\beta$={1}'.format(a, b))
         plot_pdf(1.0, 0.5)
         plot_pdf(2.0, 0.5)
         plot_pdf(3.0, 1.0)
         plot_pdf(7.5, 1.0)
         plt.legend(loc='upper right', frameon=False)
-        plt.xlabel('x')
-        plt.ylabel('f(x)')
-        plt.ylim([0,0.5])
-        plt.xlim([0.0,20.0])
+        ax.set(xlim=[0,20], ylim=[0,0.5], xlabel='x', ylabel='f(x)')
         plt.show()
 
     ========  ===============================
@@ -1348,17 +1328,15 @@ class InverseGamma(PositiveContinuous):
         import numpy as np
         import scipy.stats as st
         x = np.linspace(0.0, 3.0, 1000)
+        fig, ax = plt.subplots()
         f = lambda alpha, beta : st.invgamma.pdf(x, alpha, scale=beta)
-        plot_pdf = lambda alpha, beta : plt.plot(x, f(alpha, beta), label=r'$\alpha$={0}, $\beta$={1}'.format(alpha, beta))
+        plot_pdf = lambda alpha, beta : ax.plot(x, f(alpha, beta), label=r'$\alpha$={0}, $\beta$={1}'.format(alpha, beta))
         plot_pdf(1.0,1.0)
         plot_pdf(2.0,1.0)
         plot_pdf(3.0,1.0)
         plot_pdf(3.0,0.5)
         plt.legend(loc='upper right', frameon=False)
-        plt.xlabel('x')
-        plt.ylabel('f(x)')
-        plt.ylim([0,5.0])
-        plt.xlim([0.0,3.0])
+        ax.set(xlim=[0,3], ylim=[0,5], xlabel='x', ylabel='f(x)')
         plt.show()
 
     ========  ======================================================
@@ -1435,8 +1413,9 @@ class ChiSquared(Gamma):
         import numpy as np
         import scipy.stats as st
         x = np.linspace(0.0, 8.0, 1000)
+        fig, ax = plt.subplots()
         f = lambda df : st.chi2.pdf(x, df)
-        plot_pdf = lambda df : plt.plot(x, f(df), label=r'$\nu$={0}'.format(df))
+        plot_pdf = lambda df : ax.plot(x, f(df), label=r'$\nu$={0}'.format(df))
         plot_pdf(1.0)
         plot_pdf(2.0)
         plot_pdf(3.0)
@@ -1444,10 +1423,7 @@ class ChiSquared(Gamma):
         plot_pdf(6.0)
         plot_pdf(9.0)
         plt.legend(loc='upper right', frameon=False)
-        plt.xlabel('x')
-        plt.ylabel('f(x)')
-        plt.ylim([0,0.5])
-        plt.xlim([0.0,8])
+        ax.set(xlim=[0,8], ylim=[0,0.5], xlabel='x', ylabel='f(x)')
         plt.show()
 
     ========  ===============================
@@ -1491,17 +1467,15 @@ class Weibull(PositiveContinuous):
         import numpy as np
         import scipy.stats as st
         x = np.linspace(0.0, 2.5, 1000)
+        fig, ax = plt.subplots()
         f = lambda alpha, beta : st.weibull_min.pdf(x, alpha, scale=beta)
-        plot_pdf = lambda alpha, beta : plt.plot(x, f(alpha, beta), label=r'$\alpha$={0}, $\beta$={1}'.format(alpha, beta))
+        plot_pdf = lambda alpha, beta : ax.plot(x, f(alpha, beta), label=r'$\alpha$={0}, $\beta$={1}'.format(alpha, beta))
         plot_pdf(0.5, 1.0)
         plot_pdf(1.0, 1.0)
         plot_pdf(1.5, 1.0)
         plot_pdf(5.0, 1.0)
         plt.legend(loc='upper right', frameon=False)
-        plt.xlabel('x')
-        plt.ylabel('f(x)')
-        plt.ylim([0,2.5])
-        plt.xlim([0.0,2.5])
+        ax.set(xlim=[0,2.5], ylim=[0,2.5], xlabel='x', ylabel='f(x)')
         plt.show()
 
     ========  ====================================================
@@ -1590,17 +1564,15 @@ class ExGaussian(Continuous):
         import numpy as np
         import scipy.stats as st
         x = np.linspace(-6.0, 6.0, 1000)
+        fig, ax = plt.subplots()
         f = lambda mu, sigma, nu : st.exponnorm.pdf(x, nu/sigma, loc=mu, scale=sigma)
-        plot_pdf = lambda mu, sigma, nu : plt.plot(x, f(mu, sigma, nu), label=r'$\mu$={0}, $\sigma$={1}, $\nu$={2}'.format(mu, sigma, nu))
+        plot_pdf = lambda mu, sigma, nu : ax.plot(x, f(mu, sigma, nu), label=r'$\mu$={0}, $\sigma$={1}, $\nu$={2}'.format(mu, sigma, nu))
         plot_pdf(0.0,1.0,1.0)
         plot_pdf(-2.0,1.0,1.0)
         plot_pdf(0.0,3.0,1.0)
         plot_pdf(-3.0,1.0,4.0)
         plt.legend(loc='upper right', frameon=False)
-        plt.xlabel('x')
-        plt.ylabel('f(x)')
-        plt.ylim([0,0.4])
-        plt.xlim([-6,6])
+        ax.set(xlim=[-6,6], ylim=[0,0.4], xlabel='x', ylabel='f(x)')
         plt.show()
 
     ========  ========================
@@ -1695,18 +1667,16 @@ class VonMises(Continuous):
         import numpy as np
         import scipy.stats as st
         x = np.linspace(-np.pi, np.pi, 1000)
+        fig, ax = plt.subplots()
         f = lambda mu, kappa : st.vonmises.pdf(x, kappa, loc=mu)
-        plot_pdf = lambda mu, kappa : plt.plot(x, f(mu, kappa), label=r'$\mu$={0}, $\kappa$={1}'.format(mu, kappa))
+        plot_pdf = lambda mu, kappa : ax.plot(x, f(mu, kappa), label=r'$\mu$={0}, $\kappa$={1}'.format(mu, kappa))
         plot_pdf(0.0,0.001)
         plot_pdf(0.0,0.5)
         plot_pdf(0.0,1.0)
         plot_pdf(0.0,2.0)
         plot_pdf(0.0,4.0)
         plt.legend(loc='upper right', frameon=False)
-        plt.xlabel('x')
-        plt.ylabel('f(x)')
-        plt.ylim([0,1.0])
-        plt.xlim([-np.pi,np.pi])
+        ax.set(xlim=[-np.pi,np.pi], ylim=[0,1.0], xlabel='x', ylabel='f(x)')
         plt.show()
 
     ========  ==========================================
@@ -1771,18 +1741,16 @@ class SkewNormal(Continuous):
         import numpy as np
         import scipy.stats as st
         x = np.linspace(-3.0, 3.0, 1000)
+        fig, ax = plt.subplots()
         f = lambda alpha, mu, sigma : st.skewnorm.pdf(x, alpha, loc=mu, scale=sigma)
-        plot_pdf = lambda alpha, mu, sigma : plt.plot(x, f(alpha, mu, sigma), label=r'$\mu$={0}, $\sigma$={1}, $\alpha$={2}'.format(mu, sigma, alpha))
+        plot_pdf = lambda alpha, mu, sigma : ax.plot(x, f(alpha, mu, sigma), label=r'$\mu$={0}, $\sigma$={1}, $\alpha$={2}'.format(mu, sigma, alpha))
         plot_pdf(-4.0,0.0,1.0)
         plot_pdf(-1.0,0.0,1.0)
         plot_pdf(0.0,0.0,1.0)
         plot_pdf(1.0,0.0,1.0)
         plot_pdf(4.0,0.0,1.0)
         plt.legend(loc='upper right', frameon=False)
-        plt.xlabel('x')
-        plt.ylabel('f(x)')
-        plt.ylim([0,0.7])
-        plt.xlim([-3,3])
+        ax.set(xlim=[-3,3], ylim=[0,0.7], xlabel='x', ylabel='f(x)')
         plt.show()
 
     ========  ==========================================
