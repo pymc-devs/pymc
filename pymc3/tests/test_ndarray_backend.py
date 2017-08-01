@@ -137,12 +137,6 @@ class TestMultiTrace_combine_chains(bf.ModelBackendSampledTestCase):
         
         assert len(list(mtrace)) == expected_len
 
-    def test_len(self):
-        mtrace = self.mtrace
-        expected_len = sum(len(mtrace._straces[chain]) for chain in mtrace.chains)
-
-        assert len(mtrace) == expected_len
-
 
 class TestMultiTrace_add_values(bf.ModelBackendSampledTestCase):
     name = None

@@ -317,7 +317,8 @@ class MultiTrace(object):
             type(self).__name__, name))
 
     def __len__(self):
-        return sum(len(self._straces[chain]) for chain in self.chains)
+        chain = self.chains[-1]
+        return len(self._straces[chain])
 
     @property
     def varnames(self):
