@@ -490,6 +490,8 @@ class GroupApprox(object):
     input = None
     # defined by approximation
     SUPPORT_AEVB = True
+    HAS_LOGQ = True
+
     initial_dist_name = 'normal'
     initial_dist_map = 0.
     __param_spec__ = dict()
@@ -501,7 +503,7 @@ class GroupApprox(object):
                  local=False, **kwargs):
         if local and not self.SUPPORT_AEVB:
             raise TypeError('%s does not support local groups' % self.__class__)
-        self._is_local = local
+        self._islocal = local
         self._rng = tt_rng(random_seed)
         model = modelcontext(model)
         self.model = model
@@ -537,19 +539,19 @@ class GroupApprox(object):
         spec = self.get_param_spec_for(d=self.ndim, **kwargs.pop('spec_kw', {}))
         for name, param in self.user_params.items():
             shape = spec[name]
-            if self.is_local:
+            if self.islocal:
                 shape = (-1, ) + shape
             self._user_params[name] = param.reshape(shape)
         return True
 
     def _initial_type(self, name):
-        if self.is_local:
+        if self.islocal:
             return tt.tensor3(name)
         else:
             return tt.matrix(name)
 
     def _input_type(self, name):
-        if self.is_local:
+        if self.islocal:
             return tt.matrix(name)
         else:
             return tt.vector(name)
@@ -561,7 +563,7 @@ class GroupApprox(object):
         if self.group is None:
             # delayed init
             self.group = group
-        if self.is_local and len(group) > 1:
+        if self.islocal and len(group) > 1:
             raise TypeError('Local groups with more than 1 variable are not supported')
         self.symbolic_initial = self._initial_type(
             self.__class__.__name__ + '_symbolic_initial_tensor'
@@ -577,7 +579,7 @@ class GroupApprox(object):
         for var in self.group:
             var = get_transformed(var)
             begin = self.ndim
-            if self.is_local:
+            if self.islocal:
                 self.ordering.size += np.prod(var.dshape[1:])
                 shape = (-1, ) + var.dshape[1:]
             else:
@@ -601,7 +603,7 @@ class GroupApprox(object):
 
     vmap = property(lambda self: self.ordering.vmap)
     ndim = property(lambda self: self.ordering.size)
-    is_local = property(lambda self: self._is_local)
+    islocal = property(lambda self: self._islocal)
 
     @property
     def params_dict(self):
@@ -626,14 +628,14 @@ class GroupApprox(object):
         return theano.clone(node, self.replacements, strict=False)
 
     def _new_initial_shape(self, size, dim):
-        if self.is_local:
+        if self.islocal:
             return tt.stack([size, self.batch_size, dim])
         else:
             return tt.stack([size, dim])
 
     @node_property
     def batch_size(self):
-        if not self.is_local:
+        if not self.islocal:
             return 0
         else:
             return next(iter(self.params_dict.values())).shape[0]
@@ -705,6 +707,12 @@ class GroupApprox(object):
     def logq_norm(self):
         return self.logq / self.symbolic_normalizing_constant
 
+    def __str__(self):
+        shp = str(self.ndim)
+        if self.islocal:
+            shp = 'None, ' + shp
+        return '{cls}[{shp}]'.format(shp=shp, cls=self.__class__.__name__)
+
 
 class Approximation(object):
     def __init__(self, groups, model=None):
@@ -734,13 +742,17 @@ class Approximation(object):
     def SUPPORT_AEVB(self):
         return all(self._collect('SUPPORT_AEVB'))
 
+    @property
+    def HAS_LOGQ(self):
+        return all(self._collect('HAS_LOGQ'))
+
     def _collect(self, item, part='total'):
         if part == 'total':
             return [getattr(g, item) for g in self.groups]
         elif part == 'local':
-            return [getattr(g, item) for g in self.groups if g.is_local]
+            return [getattr(g, item) for g in self.groups if g.islocal]
         elif part == 'global':
-            return [getattr(g, item) for g in self.groups if not g.is_local]
+            return [getattr(g, item) for g in self.groups if not g.islocal]
         else:
             raise ValueError("unknown part %s, expected {'local', 'global', 'total'}")
 
@@ -937,3 +949,10 @@ class Approximation(object):
     @node_property
     def symbolic_random_global(self):
         return tt.stack(self._collect('symbolic_random', 'global'), axis=-1)
+
+    def __str__(self):
+        if len(self.groups) < 5:
+            return 'Approximation{' + ' & '.join(map(str, self.groups)) + '}'
+        else:
+            forprint = self.groups[:2] + ['...'] + self.groups[-2:]
+            return 'Approximation{' + ' & '.join(map(str, forprint)) + '}'

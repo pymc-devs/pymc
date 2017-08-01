@@ -154,7 +154,7 @@ def test_sample_aevb(three_var_aevb_approx, aevb_initial):
     assert trace[0]['three'].shape == (10, 1, 2)
 
 
-def test_logq_1_sample_1_var(parametric_grouped_approxes, three_var_model):
+def test_logq_mini_1_sample_1_var(parametric_grouped_approxes, three_var_model):
     cls, kw = parametric_grouped_approxes
     approx = cls([three_var_model.one], model=three_var_model, **kw)
     logq = approx.logq
@@ -162,7 +162,7 @@ def test_logq_1_sample_1_var(parametric_grouped_approxes, three_var_model):
     logq.eval()
 
 
-def test_logq_2_sample_2_var(parametric_grouped_approxes, three_var_model):
+def test_logq_mini_2_sample_2_var(parametric_grouped_approxes, three_var_model):
     cls, kw = parametric_grouped_approxes
     approx = cls([three_var_model.one, three_var_model.two], model=three_var_model, **kw)
     logq = approx.logq
@@ -170,15 +170,42 @@ def test_logq_2_sample_2_var(parametric_grouped_approxes, three_var_model):
     logq.eval()
 
 
-def test_logq_1_sample_1_var_aevb(three_var_aevb_groups):
+def test_logq_mini_sample_aevb(three_var_aevb_groups):
     approx = three_var_aevb_groups[0]
-    logq = approx.logq
-    logq = approx.set_size_and_deterministic(logq, 1, 0)
-    logq.eval()
+    logq, symbolic_logq = approx.set_size_and_deterministic([approx.logq, approx.symbolic_logq], 3, 0)
+    e = logq.eval()
+    es = symbolic_logq.eval()
+    assert e.shape == ()
+    assert es.shape == (3,)
 
 
-def test_logq_2_sample_2_var_aevb(three_var_aevb_groups):
-    approx = three_var_aevb_groups[0]
-    logq = approx.logq
-    logq = approx.set_size_and_deterministic(logq, 2, 0)
-    logq.eval()
+def test_logq_aevb(three_var_aevb_approx):
+    approx = three_var_aevb_approx
+    logq, symbolic_logq = approx.set_size_and_deterministic([approx.logq, approx.symbolic_logq], 1, 0)
+    e = logq.eval()
+    es = symbolic_logq.eval()
+    assert e.shape == ()
+    assert es.shape == (1,)
+
+    logq, symbolic_logq = approx.set_size_and_deterministic([approx.logq, approx.symbolic_logq], 2, 0)
+    e = logq.eval()
+    es = symbolic_logq.eval()
+    assert e.shape == ()
+    assert es.shape == (2,)
+
+
+def test_logq_globals(three_var_approx):
+    if not three_var_approx.HAS_LOGQ:
+        pytest.skip('%s does not implement logq' % three_var_approx)
+    approx = three_var_approx
+    logq, symbolic_logq = approx.set_size_and_deterministic([approx.logq, approx.symbolic_logq], 1, 0)
+    e = logq.eval()
+    es = symbolic_logq.eval()
+    assert e.shape == ()
+    assert es.shape == (1,)
+
+    logq, symbolic_logq = approx.set_size_and_deterministic([approx.logq, approx.symbolic_logq], 2, 0)
+    e = logq.eval()
+    es = symbolic_logq.eval()
+    assert e.shape == ()
+    assert es.shape == (2,)
