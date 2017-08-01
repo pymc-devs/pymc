@@ -1006,20 +1006,20 @@ class LKJCorr(Continuous):
         if not n > 1:
             raise ValueError('Dimension parameter n must be larger than 1')
 
-        n_elem = int(n * (n - 1) / 2)
-        self.mean = np.zeros(n_elem, dtype=theano.config.floatX)
+        shape = n * (n + 1) // 2
+        self.mean = np.zeros(shape, dtype=theano.config.floatX)
 
         if transform == 'interval':
             transform = transforms.interval(-1, 1)
 
-        super(LKJCorr, self).__init__(shape=n_elem, transform=transform,
+        super(LKJCorr, self).__init__(shape=shape, transform=transform,
                                       *args, **kwargs)
         warnings.warn('Parameters in LKJCorr have been rename: shape parameter n -> eta '
                       'dimension parameter p -> n. Please double check your initialization.',
                       DeprecationWarning)
         self.tri_index = np.zeros([n, n], dtype='int32')
-        self.tri_index[np.triu_indices(n, k=1)] = np.arange(n_elem)
-        self.tri_index[np.triu_indices(n, k=1)[::-1]] = np.arange(n_elem)
+        self.tri_index[np.triu_indices(n, k=1)] = np.arange(shape)
+        self.tri_index[np.triu_indices(n, k=1)[::-1]] = np.arange(shape)
 
     def _random(self, n, eta, size=None):
         beta = eta + (n-1)/2
