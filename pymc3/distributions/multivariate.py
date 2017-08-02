@@ -503,16 +503,15 @@ class Multinomial(Discrete):
         self.mode = tt.cast(tround(self.mean), 'int32')
 
     def _random(self, n, p, size=None):
-        p = p / (p.sum(axis=1, keepdims=True) + 1E-6)
+        # Set float type to float64 for numpy.
+        p = p.astype('float64')
+        # Now, re-normalize all of the values in float64 precision.
+        p = p / (p.sum(axis=1, keepdims=True))
         if size == p.shape:
             size = None
         if p.ndim == 1:
             randnum = np.random.multinomial(n, p, size=size)
         elif p.ndim == 2:
-            # nums = []
-            # for pp in p:
-            #     nums = np.random.multinomial(n, pp, size=size)
-            # randnum = np.asarray(nums)
             randnum = np.asarray([np.random.multinomial(n, pp, size=size) for pp in p])
         else:
             raise ValueError('Outcome probabilities must be 1- or 2-dimensional '
