@@ -506,12 +506,13 @@ class Multinomial(Discrete):
         # Set float type to float64 for numpy.
         p = p.astype('float64')
         # Now, re-normalize all of the values in float64 precision.
-        p = p / (p.sum(axis=1, keepdims=True))
         if size == p.shape:
             size = None
         if p.ndim == 1:
+            p = p / (p.sum())
             randnum = np.random.multinomial(n, p.squeeze(), size=size)
         elif p.ndim == 2:
+            p = p / (p.sum(axis=1, keepdims=True))
             randnum = np.asarray([np.random.multinomial(n, pp, size=size) for pp in p])
         else:
             raise ValueError('Outcome probabilities must be 1- or 2-dimensional '
