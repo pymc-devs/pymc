@@ -510,7 +510,7 @@ class Multinomial(Discrete):
         if size == p.shape:
             size = None
         if p.ndim == 1:
-            randnum = np.random.multinomial(n, p, size=size)
+            randnum = np.random.multinomial(n, p.squeeze(), size=size)
         elif p.ndim == 2:
             randnum = np.asarray([np.random.multinomial(n, pp, size=size) for pp in p])
         else:
