@@ -1018,13 +1018,16 @@ class LKJCorr(Continuous):
         self.tri_index[np.triu_indices(n, k=1)[::-1]] = np.arange(shape)
 
     def _random(self, n, eta, size=None):
+        shape = self.shape if isinstance(self.shape, tuple) else (self.shape,)
+        size = size if isinstance(size, tuple) else (size,)
+    
         beta0 = eta - 1 + n/2
 
         triu_ind = np.triu_indices(n, 1)
         beta = np.array([beta0 - k/2 for k in triu_ind[0]])
         # partial correlations sampled from beta dist.
-        P = np.ones((n, n))
-        P[triu_ind] = stats.beta.rvs(a=beta, b=beta)
+        P = np.ones((n, n) + size)
+        P[triu_ind] = stats.beta.rvs(a=beta, b=beta, size=size + shape).T
         # scale partial correlation matrix to [-1, 1]
         P = (P - .5) * 2
         r_triu = []
@@ -1036,20 +1039,13 @@ class LKJCorr(Continuous):
                                 (1 - P[l, k]**2)) + P[l, i] * P[l, k]
             r_triu.append(p)
 
-        return np.asarray(r_triu)
+        return np.asarray(r_triu).T
 
     def random(self, point=None, size=None):
         n, eta = draw_values([self.n, self.eta], point=point)
-        if n < 3:
-            samples = generate_samples(stats.beta.rvs, eta, eta,
-                                       dist_shape=self.shape,
-                                       size=size)
-            samples = (samples - 0.5) * 2
-        else:
-            samples = generate_samples(self._random, n, eta,
-                                       broadcast_shape=self.shape,
-                                       dist_shape=self.shape,
-                                       size=size)
+        size= 1 if size is None else size
+        samples = generate_samples(self._random, n, eta,
+                                   broadcast_shape=(size,))
         return samples
 
     def logp(self, x):
