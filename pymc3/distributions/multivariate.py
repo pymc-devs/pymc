@@ -1018,28 +1018,25 @@ class LKJCorr(Continuous):
         self.tri_index[np.triu_indices(n, k=1)[::-1]] = np.arange(shape)
 
     def _random(self, n, eta, size=None):
-        shape = self.shape if isinstance(self.shape, tuple) else (self.shape,)
-        size = size if isinstance(size, tuple) else (size,)
-    
-        beta0 = eta - 1 + n/2
-
-        triu_ind = np.triu_indices(n, 1)
-        beta = np.array([beta0 - k/2 for k in triu_ind[0]])
-        # partial correlations sampled from beta dist.
-        P = np.ones((n, n) + size)
-        P[triu_ind] = stats.beta.rvs(a=beta, b=beta, size=size + shape).T
-        # scale partial correlation matrix to [-1, 1]
-        P = (P - .5) * 2
-        r_triu = []
-
-        for k, i in zip(triu_ind[0], triu_ind[1]):
-            p = P[k, i]
-            for l in range(k-1, -1, -1):  # convert partial correlation to raw correlation
-                p = p * np.sqrt((1 - P[l, i]**2) *
-                                (1 - P[l, k]**2)) + P[l, i] * P[l, k]
-            r_triu.append(p)
-
-        return np.asarray(r_triu).T
+        size = size if isinstance(size, tuple) else (size,) 
+        # original implementation in R see:
+        # https://github.com/rmcelreath/rethinking/blob/master/R/distributions.r
+        beta = eta - 1 + n/2
+        r12 = 2 * stats.beta.rvs(a=beta, b=beta, size=size) - 1
+        P = np.eye(n)[:, :, np.newaxis] * np.ones(size)
+        P[0, 1] = r12
+        P[1, 1] = np.sqrt(1 - r12**2)
+        if n > 2:
+            for m in range(1, n-1):
+                beta -= 0.5
+                y = stats.beta.rvs(a=(m+1) / 2., b=beta, size=size)
+                z = stats.norm.rvs(loc=0, scale=1, size=(m+1, ) + size)
+                z = z / np.sqrt(np.einsum('ij,ij->j', z, z))
+                P[0:m+1, m+1] = np.sqrt(y) * z
+                P[m+1, m+1] = np.sqrt(1 - y)
+        Pt = np.transpose(P, (2, 0 ,1))
+        C = np.einsum('...ji,...jk->...ik', Pt, Pt)
+        return C.transpose((1, 2, 0))[np.triu_indices(n, k=1)].T
 
     def random(self, point=None, size=None):
         n, eta = draw_values([self.n, self.eta], point=point)
