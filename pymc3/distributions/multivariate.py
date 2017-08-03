@@ -792,7 +792,7 @@ class LKJCholeskyCov(Continuous):
     Parameters
     ----------
     n : int
-        Dimension of the covariance matrix (n > 0).
+        Dimension of the covariance matrix (n > 1).
     eta : float
         The shape parameter (eta > 0) of the LKJ distribution. eta = 1
         implies a uniform distribution of the correlation matrices;
@@ -962,7 +962,7 @@ class LKJCorr(Continuous):
     Parameters
     ----------
     n : int
-        Dimension of the covariance matrix (n > 0).
+        Dimension of the covariance matrix (n > 1).
     eta : float
         The shape parameter (eta > 0) of the LKJ distribution. eta = 1
         implies a uniform distribution of the correlation matrices;
@@ -1006,20 +1006,48 @@ class LKJCorr(Continuous):
             raise ValueError('Invalid parameter: please use eta as the shape parameter and '
                              'n as the dimension parameter.')
 
-        n_elem = int(n * (n - 1) / 2)
-        self.mean = np.zeros(n_elem, dtype=theano.config.floatX)
+        shape = n * (n - 1) // 2
+        self.mean = floatX(np.zeros(shape))
 
         if transform == 'interval':
             transform = transforms.interval(-1, 1)
 
-        super(LKJCorr, self).__init__(shape=n_elem, transform=transform,
+        super(LKJCorr, self).__init__(shape=shape, transform=transform,
                                       *args, **kwargs)
         warnings.warn('Parameters in LKJCorr have been rename: shape parameter n -> eta '
                       'dimension parameter p -> n. Please double check your initialization.',
                       DeprecationWarning)
         self.tri_index = np.zeros([n, n], dtype='int32')
-        self.tri_index[np.triu_indices(n, k=1)] = np.arange(n_elem)
-        self.tri_index[np.triu_indices(n, k=1)[::-1]] = np.arange(n_elem)
+        self.tri_index[np.triu_indices(n, k=1)] = np.arange(shape)
+        self.tri_index[np.triu_indices(n, k=1)[::-1]] = np.arange(shape)
+
+    def _random(self, n, eta, size=None):
+        size = size if isinstance(size, tuple) else (size,) 
+        # original implementation in R see:
+        # https://github.com/rmcelreath/rethinking/blob/master/R/distributions.r
+        beta = eta - 1 + n/2
+        r12 = 2 * stats.beta.rvs(a=beta, b=beta, size=size) - 1
+        P = np.eye(n)[:, :, np.newaxis] * np.ones(size)
+        P[0, 1] = r12
+        P[1, 1] = np.sqrt(1 - r12**2)
+        if n > 2:
+            for m in range(1, n-1):
+                beta -= 0.5
+                y = stats.beta.rvs(a=(m+1) / 2., b=beta, size=size)
+                z = stats.norm.rvs(loc=0, scale=1, size=(m+1, ) + size)
+                z = z / np.sqrt(np.einsum('ij,ij->j', z, z))
+                P[0:m+1, m+1] = np.sqrt(y) * z
+                P[m+1, m+1] = np.sqrt(1 - y)
+        Pt = np.transpose(P, (2, 0 ,1))
+        C = np.einsum('...ji,...jk->...ik', Pt, Pt)
+        return C.transpose((1, 2, 0))[np.triu_indices(n, k=1)].T
+
+    def random(self, point=None, size=None):
+        n, eta = draw_values([self.n, self.eta], point=point)
+        size= 1 if size is None else size
+        samples = generate_samples(self._random, n, eta,
+                                   broadcast_shape=(size,))
+        return samples
 
     def logp(self, x):
         n = self.n
