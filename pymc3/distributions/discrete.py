@@ -581,11 +581,7 @@ class Constant(Discrete):
         return r'${} \sim \text{{Constant}}()$'.format(name)
 
 
-def ConstantDist(*args, **kwargs):
-    import warnings
-    warnings.warn("ConstantDist has been deprecated. In future, use Constant instead.",
-                  DeprecationWarning)
-    return Constant(*args, **kwargs)
+ConstantDist = Constant
 
 
 class ZeroInflatedPoisson(Discrete):
