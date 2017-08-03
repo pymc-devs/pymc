@@ -17,6 +17,7 @@ Discrete
    Geometric
    Categorical
    DiscreteWeibull
+   Constant
 
 .. automodule:: pymc3.distributions.discrete
    :members:
