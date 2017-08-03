@@ -9,7 +9,7 @@ import tqdm
 import pymc3 as pm
 from pymc3.variational import test_functions
 from pymc3.variational.approximations import (
-    MeanField, FullRank, Empirical, NormalizingFlow
+    MeanFieldGroup, FullRankGroup, EmpiricalGroup, NormalizingFlowGroup
 )
 from pymc3.variational.operators import KL, KSD, AKSD
 from pymc3.variational.opvi import Approximation
@@ -358,7 +358,7 @@ class ADVI(Inference):
         Auto-Encoding Variational Bayes. stat, 1050, 1.
     """
     OP = KL
-    APPROX = MeanField
+    APPROX = MeanFieldGroup
     TF = None
 
     def __init__(self, local_rv=None, model=None,
@@ -379,14 +379,14 @@ class ADVI(Inference):
 
         Parameters
         ----------
-        mean_field : :class:`MeanField`
+        mean_field : :class:`MeanFieldGroup`
             approximation to start with
 
         Returns
         -------
         :class:`ADVI`
         """
-        if not isinstance(mean_field, MeanField):
+        if not isinstance(mean_field, MeanFieldGroup):
             raise TypeError('Expected MeanField, got %r' % mean_field)
         inference = object.__new__(cls)
         Inference.__init__(inference, KL, mean_field, None)
@@ -433,7 +433,7 @@ class FullRankADVI(Inference):
         Auto-Encoding Variational Bayes. stat, 1050, 1.
     """
     OP = KL
-    APPROX = FullRank
+    APPROX = FullRankGroup
     TF = None
 
     def __init__(self, local_rv=None, model=None,
@@ -454,14 +454,14 @@ class FullRankADVI(Inference):
 
         Parameters
         ----------
-        full_rank : :class:`FullRank`
+        full_rank : :class:`FullRankGroup`
             approximation to start with
 
         Returns
         -------
         :class:`FullRankADVI`
         """
-        if not isinstance(full_rank, FullRank):
+        if not isinstance(full_rank, FullRankGroup):
             raise TypeError('Expected FullRank, got %r' % full_rank)
         inference = object.__new__(cls)
         Inference.__init__(inference, KL, full_rank, None)
@@ -474,7 +474,7 @@ class FullRankADVI(Inference):
 
         Parameters
         ----------
-        mean_field : :class:`MeanField`
+        mean_field : :class:`MeanFieldGroup`
             approximation to start with
 
         Other Parameters
@@ -486,7 +486,7 @@ class FullRankADVI(Inference):
         -------
         :class:`FullRankADVI`
         """
-        full_rank = FullRank.from_mean_field(mean_field, gpu_compat)
+        full_rank = FullRankGroup.from_mean_field(mean_field, gpu_compat)
         inference = object.__new__(cls)
         Inference.__init__(inference, KL, full_rank, None)
         return inference
@@ -550,7 +550,7 @@ class SVGD(Inference):
         Scale cost to minibatch instead of full dataset
     start : `dict`
         initial point for inference
-    histogram : :class:`Empirical`
+    histogram : :class:`EmpiricalGroup`
         initialize SVGD with given Empirical approximation instead of default initial particles
     random_seed : None or int
         leave None to use package global RandomStream or other
@@ -569,13 +569,13 @@ class SVGD(Inference):
         arXiv:1704.02399
     """
     OP = KSD
-    APPROX = Empirical
+    APPROX = EmpiricalGroup
     TF = test_functions.Kernel
 
     def __init__(self, n_particles=100, jitter=.01, model=None, kernel=test_functions.rbf,
                  temperature=1, scale_cost_to_minibatch=False, start=None,
                  random_seed=None, local_rv=None):
-        empirical = Empirical.from_noise(
+        empirical = EmpiricalGroup.from_noise(
             n_particles, jitter=jitter,
             scale_cost_to_minibatch=scale_cost_to_minibatch,
             start=start, model=model, local_rv=local_rv, random_seed=random_seed)
@@ -646,7 +646,7 @@ class ASVGD(Inference):
     APPROX = None
     TF = test_functions.Kernel
 
-    def __init__(self, approx=FullRank, local_rv=None,
+    def __init__(self, approx=FullRankGroup, local_rv=None,
                  kernel=test_functions.rbf, temperature=1, model=None, **kwargs):
         super(ASVGD, self).__init__(
             op=AKSD,
@@ -747,7 +747,7 @@ class NFVI(Inference):
         valid value to create instance specific one
     """
     OP = KL
-    APPROX = NormalizingFlow
+    APPROX = NormalizingFlowGroup
     TF = None
 
     def __init__(self, flow='planar*3',
@@ -768,7 +768,7 @@ class NFVI(Inference):
 
         Parameters
         ----------
-        flow : :class:`NormalizingFlow`
+        flow : :class:`NormalizingFlowGroup`
             initialized normalizing flow
 
         Returns

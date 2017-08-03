@@ -4,7 +4,7 @@ from theano import tensor as tt
 
 import pymc3 as pm
 from pymc3.distributions.dist_math import rho2sd, log_normal
-from pymc3.variational.opvi import GroupApprox, node_property
+from pymc3.variational.opvi import Group, node_property
 from pymc3.util import update_start_vals
 from pymc3.theanof import change_flags
 from pymc3.math import batched_diag
@@ -12,21 +12,24 @@ from pymc3.variational import flows
 
 
 __all__ = [
-    'MeanField',
-    'FullRank',
-    'Empirical',
-    'NormalizingFlow',
+    'MeanFieldGroup',
+    'FullRankGroup',
+    'EmpiricalGroup',
+    'NormalizingFlowGroup',
     'sample_approx'
 ]
 
 
-class MeanField(GroupApprox):
+@Group.register
+class MeanFieldGroup(Group):
     R"""Mean Field approximation to the posterior where spherical Gaussian family
     is fitted to minimize KL divergence from True posterior. It is assumed
     that latent space variables are uncorrelated that is the main drawback
     of the method
     """
     __param_spec__ = dict(mu=('d', ), rho=('d', ))
+    short_name = 'mean_field'
+    alias_names = frozenset(['mf'])
 
     @node_property
     def mean(self):
@@ -49,7 +52,7 @@ class MeanField(GroupApprox):
         return rho2sd(self.rho)
 
     def __init_group__(self, group):
-        super(MeanField, self).__init_group__(group)
+        super(MeanFieldGroup, self).__init_group__(group)
         self._check_user_params()
         if not self.user_params:
             self.shared_params = self.create_shared_params(
@@ -87,7 +90,8 @@ class MeanField(GroupApprox):
         return logq.sum(range(1, logq.ndim))
 
 
-class FullRank(GroupApprox):
+@Group.register
+class FullRankGroup(Group):
     """Full Rank approximation to the posterior where Multivariate Gaussian family
     is fitted to minimize KL divergence from True posterior. In contrast to
     MeanField approach correlations between variables are taken in account. The
@@ -100,9 +104,11 @@ class FullRank(GroupApprox):
         approximateinference.org/accepted/RoederEtAl2016.pdf
     """
     __param_spec__ = dict(mu=('d',), L_tril=('int(d * (d + 1) / 2)',))
+    short_name = 'full_rank'
+    alias_names = frozenset(['fr'])
 
     def __init_group__(self, group):
-        super(FullRank, self).__init_group__(group)
+        super(FullRankGroup, self).__init_group__(group)
         if not self._check_user_params():
             self.shared_params = self.create_shared_params(
                 self._kwargs.get('start', None)
@@ -188,16 +194,16 @@ class FullRank(GroupApprox):
 
         Parameters
         ----------
-        mean_field : :class:`MeanField`
+        mean_field : :class:`MeanFieldGroup`
             approximation to start with
 
         Returns
         -------
-        :class:`FullRank`
+        :class:`FullRankGroup`
         """
         if mean_field.islocal:
             raise TypeError('Cannot init from local group')
-        full_rank = object.__new__(cls)  # type: FullRank
+        full_rank = object.__new__(cls)  # type: FullRankGroup
         full_rank.__dict__.update(mean_field.__dict__)
         full_rank.shared_params = full_rank.create_shared_params()
         full_rank.shared_params['mu'].set_value(
@@ -214,23 +220,25 @@ class FullRank(GroupApprox):
         return full_rank
 
 
-class Empirical(GroupApprox):
+@Group.register
+class EmpiricalGroup(Group):
     """Builds Approximation instance from a given trace,
     it has the same interface as variational approximation
     """
     SUPPORT_AEVB = False
     HAS_LOGQ = False
     __param_spec__ = dict(histogram=('s', 'd'))
+    short_name = 'empirical'
 
     def __init_group__(self, group):
-        super(Empirical, self).__init_group__(group)
+        super(EmpiricalGroup, self).__init_group__(group)
         self._check_trace()
         if not self._check_user_params(spec_kw=dict(s=-1)):
             self.shared_params = self.create_shared_params(
                 trace=self._kwargs.get('trace', None),
                 size=self._kwargs.get('size', None),
                 jitter=self._kwargs.get('jitter', 1),
-                start=self._kwargs.get('start', 1)
+                start=self._kwargs.get('start', None)
             )
         self._finalize_init()
 
@@ -336,7 +344,7 @@ class Empirical(GroupApprox):
 
         Returns
         -------
-        :class:`Empirical`
+        :class:`EmpiricalGroup`
         """
         if 'trace' in kwargs:
             raise ValueError('Trace cannot be passed via kwargs in this constructor')
@@ -355,7 +363,7 @@ class Empirical(GroupApprox):
         return '{cls}[{shp}]'.format(shp=shp, cls=self.__class__.__name__)
 
 
-class NormalizingFlow(GroupApprox):
+class NormalizingFlowGroup(Group):
     R"""
     Normalizing flow is a series of invertible transformations on initial distribution.
 
@@ -407,41 +415,44 @@ class NormalizingFlow(GroupApprox):
 
     @change_flags(compute_test_value='off')
     def __init_group__(self, group):
-        super(NormalizingFlow, self).__init_group__(group)
-        flow = self._kwargs.get('flow', None)
+        super(NormalizingFlowGroup, self).__init_group__(group)
+        # objects to be resolved
+        # 1. string formula
+        # 2. not changed default value
+        # 3. Formula
+        formula = self._kwargs.get('flow', self.vfam)
         jitter = self._kwargs.get('jitter', 1)
-        if isinstance(flow, str):
-            fstr = flow
-        elif flow is None:
-            fstr = None
+        if formula is None or isinstance(formula, str):
+            # case 1 and 2
+            has_uparams = self._check_user_params(f=formula)
+        elif isinstance(formula, flows.Formula):
+            # case 3
+            has_uparams = self._check_user_params(f=formula.formula)
         else:
-            fstr = flow.formula
-        has_uparams = self._check_user_params(f=fstr)
+            raise TypeError('Wrong type provided for NormalizingFlow as `flow` argument, '
+                            'expected Formula or string')
         if not has_uparams:
-            if flow is None:
-                flow = self.default_flow
+            if formula is None:
+                formula = self.default_flow
         else:
-            flow = '-'.join(
-                flows.flow_from_params(self.user_params[i]).short_name
+            formula = '-'.join(
+                flows.flow_for_params(self.user_params[i]).short_name
                 for i in range(len(self.user_params))
             )
-        if isinstance(flow, str):
-            self.flow = flows.Formula(flow)(
+        if not isinstance(formula, flows.Formula):
+            formula = flows.Formula(formula)
+        self.flow = formula(
                 dim=self.ndim,
                 z0=self.symbolic_initial,
                 jitter=jitter,
                 params=self.user_params
             )
-        else:
-            self.flow = flow
         self._finalize_init()
 
     def _check_user_params(self, **kwargs):
         params = self._user_params = self.user_params
         formula = kwargs.pop('f')
         if params is None:
-            if formula is None:
-                raise ValueError('Need to specify flow if no user params are not provided')
             return False
         if formula is not None:
             raise ValueError('No formula is allowed if user params are provided')
@@ -456,7 +467,7 @@ class NormalizingFlow(GroupApprox):
                              'they should be equal, needed {needed}, got {givens}'.format(
                               givens=list(sorted(givens)), needed='[0, 1, ..., %d]' % len(formula.flows)))
         for i in needed:
-            flow = flows.flow_from_params(params[i])
+            flow = flows.flow_for_params(params[i])
             flow_keys = set(flow.__param_spec__)
             user_keys = set(params[i].keys())
             if flow_keys != user_keys:
