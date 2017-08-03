@@ -478,7 +478,7 @@ class TestFunction(object):
         return obj
 
 
-class GroupApprox(object):
+class Group(object):
     """
     Grouped Approximation that is used for modelling mutual dependencies
     for a specified group of variables. Base for local and global group
@@ -492,17 +492,66 @@ class GroupApprox(object):
     SUPPORT_AEVB = True
     HAS_LOGQ = True
 
+    # some important defaults
     initial_dist_name = 'normal'
     initial_dist_map = 0.
+
+    # for handy access using class methods
     __param_spec__ = dict()
+    short_name = ''
+    alias_names = frozenset()
+    __param_registry = dict()
+    __name_registry = dict()
+
+    @classmethod
+    def register(cls, sbcls):
+        assert frozenset(sbcls.__param_spec__) not in cls.__param_registry, 'Duplicate __param_spec__'
+        cls.__param_registry[frozenset(sbcls.__param_spec__)] = sbcls
+        assert sbcls.short_name not in cls.__name_registry, 'Duplicate short_name'
+        cls.__name_registry[sbcls.short_name] = sbcls
+        for alias in sbcls.alias_names:
+            assert alias not in cls.__name_registry, 'Duplicate alias_name'
+            cls.__name_registry[alias] = sbcls
+        return sbcls
+
+    @classmethod
+    def group_for_params(cls, params):
+        if pm.variational.flows.seems_like_flow_params(params):
+            return pm.variational.approximations.NormalizingFlowGroup
+        if frozenset(params) not in cls.__param_registry:
+            raise KeyError('No such group for the following params: %r' % params)
+        return cls.__param_registry[frozenset(params)]
+
+    @classmethod
+    def group_for_short_name(cls, name):
+        if pm.variational.flows.seems_like_formula(name):
+            return pm.variational.approximations.NormalizingFlowGroup
+        if name.lower() not in cls.__name_registry:
+            raise KeyError('No such group: %r' % name)
+        return cls.__name_registry[name.lower()]
+
+    def __new__(cls, group=None, vfam=None, params=None, *args, **kwargs):
+        if cls is Group:
+            if vfam is not None and params is not None:
+                raise TypeError('Cannot call Group with both `vfam` and `params` provided')
+            elif vfam is not None:
+                return object.__new__(cls.group_for_short_name(vfam))
+            elif params is not None:
+                return object.__new__(cls.group_for_params(params))
+            else:
+                raise TypeError('Need to call Group with either `vfam` or `params` provided')
+        else:
+            return object.__new__(cls)
 
     def __init__(self, group=None,
+                 vfam=None,
                  params=None,
                  random_seed=None,
                  model=None,
                  local=False, **kwargs):
         if local and not self.SUPPORT_AEVB:
             raise TypeError('%s does not support local groups' % self.__class__)
+        self.vfam = vfam
         self._islocal = local
         self._rng = tt_rng(random_seed)
         model = modelcontext(model)
@@ -541,7 +590,7 @@ class GroupApprox(object):
             shape = spec[name]
             if self.islocal:
                 shape = (-1, ) + shape
-            self._user_params[name] = param.reshape(shape)
+            self._user_params[name] = tt.as_tensor(param).reshape(shape)
         return True
 
     def _initial_type(self, name):
@@ -712,6 +761,9 @@ class GroupApprox(object):
         if self.islocal:
             shp = 'None, ' + shp
         return '{cls}[{shp}]'.format(shp=shp, cls=self.__class__.__name__)
+
+group_for_params = Group.group_for_params
+group_for_short_name = Group.group_for_short_name
 
 
 class Approximation(object):

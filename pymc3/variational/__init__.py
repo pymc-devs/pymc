@@ -32,10 +32,10 @@ from .inference import (
 
 from . import approximations
 from .approximations import (
-    MeanField,
-    FullRank,
-    Empirical,
-    NormalizingFlow,
+    MeanFieldGroup,
+    FullRankGroup,
+    EmpiricalGroup,
+    NormalizingFlowGroup,
     sample_approx
 )
 

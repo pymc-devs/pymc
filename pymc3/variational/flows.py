@@ -13,26 +13,6 @@ __all__ = [
 ]
 
 
-_param_to_flow = dict()
-_short_name_to_flow = dict()
-
-
-def register_flow(cls):
-    assert frozenset(cls.__param_spec__) not in _param_to_flow, 'Duplicate __param_spec__'
-    _param_to_flow[frozenset(cls.__param_spec__)] = cls
-    assert cls.short_name not in _short_name_to_flow, 'Duplicate short_name'
-    _short_name_to_flow[cls.short_name] = cls
-    return cls
-
-
-def flow_from_params(params):
-    return _param_to_flow[frozenset(params)]
-
-
-def flow_from_short_name(name):
-    return _short_name_to_flow[name]
-
-
 class Formula(object):
     """
     Helpful class to use string like formulas with
@@ -60,12 +40,10 @@ class Formula(object):
         self.flows = []
 
         for tup in identifiers:
-            if tup[0] not in _short_name_to_flow:
-                raise ValueError('No such flow: %r' % tup[0])
             if len(tup) == 1:
-                self.flows.append(flow_from_short_name(tup[0]))
+                self.flows.append(flow_for_short_name(tup[0]))
             elif len(tup) == 2:
-                self.flows.extend([flow_from_short_name(tup[0])]*int(tup[1]))
+                self.flows.extend([flow_for_short_name(tup[0])] * int(tup[1]))
             else:
                 raise ValueError('Wrong format: %s' % formula)
         if len(self.flows) == 0:
@@ -96,10 +74,53 @@ class Formula(object):
         return res
 
 
+def seems_like_formula(formula):
+    try:
+        Formula(formula)
+        return True
+    except (ValueError, KeyError):
+        return False
+
+
+def seems_like_flow_params(params):
+    if set(range(len(params))) == set(params):
+        for p in params.values():
+            try:
+                flow_for_params(p)
+            except KeyError:
+                return False
+        else:
+            return True
+    else:
+        return False
+
+
 class AbstractFlow(object):
     shared_params = None
     __param_spec__ = dict()
     short_name = ''
+    __param_registry = dict()
+    __name_registry = dict()
+
+    @classmethod
+    def register(cls, sbcls):
+        assert frozenset(sbcls.__param_spec__) not in cls.__param_registry, 'Duplicate __param_spec__'
+        cls.__param_registry[frozenset(sbcls.__param_spec__)] = sbcls
+        assert sbcls.short_name not in cls.__name_registry, 'Duplicate short_name'
+        cls.__name_registry[sbcls.short_name] = sbcls
+        return sbcls
+
+    @classmethod
+    def flow_for_params(cls, params):
+        if frozenset(params) not in cls.__param_registry:
+            raise KeyError('No such flow for the following params: %r' % params)
+        return cls.__param_registry[frozenset(params)]
+
+    @classmethod
+    def flow_for_short_name(cls, name):
+        if name.lower() not in cls.__name_registry:
+            raise KeyError('No such flow: %r' % name)
+        return cls.__name_registry[name.lower()]
 
     def __init__(self, z0=None, dim=None, jitter=.001):
         self.__jitter = jitter
@@ -133,7 +154,7 @@ class AbstractFlow(object):
         else:
             if self.islocal:
                 shape = (-1, ) + shape
-            return user.reshape(shape)
+            return tt.as_tensor(user).reshape(shape)
 
     @property
     def params(self):
@@ -215,6 +236,9 @@ class AbstractFlow(object):
 
     def __str__(self):
         return self.short_name
+
+flow_for_params = AbstractFlow.flow_for_params
+flow_for_short_name = AbstractFlow.flow_for_short_name
 
 
 class FlowFn(object):
@@ -318,7 +342,7 @@ class Tanh(FlowFn):
         return 1. - tt.tanh(x) ** 2
 
 
-@register_flow
+@AbstractFlow.register
 class PlanarFlow(LinearFlow):
     short_name = 'planar'
 
@@ -450,7 +474,7 @@ class Radial(FlowFn):
         return -1. / (a + r) ** 2
 
 
-@register_flow
+@AbstractFlow.register
 class RadialFlow(ReferencePointFlow):
     short_name = 'radial'
 
@@ -463,7 +487,7 @@ class RadialFlow(ReferencePointFlow):
         return a, b
 
 
-@register_flow
+@AbstractFlow.register
 class LocFlow(AbstractFlow):
     __param_spec__ = dict(loc=('d', ))
     short_name = 'loc'
@@ -486,7 +510,7 @@ class LocFlow(AbstractFlow):
         return tt.zeros((self.z0.shape[0],))
 
 
-@register_flow
+@AbstractFlow.register
 class ScaleFlow(AbstractFlow):
     __param_spec__ = dict(log_scale=('d', ))
     short_name = 'scale'
@@ -511,7 +535,7 @@ class ScaleFlow(AbstractFlow):
         return tt.repeat(tt.sum(self.log_scale), self.z0.shape[0])
 
 
-@register_flow
+@AbstractFlow.register
 class HouseholderFlow(AbstractFlow):
     __param_spec__ = dict(v=('d', ))
     short_name = 'hh'
