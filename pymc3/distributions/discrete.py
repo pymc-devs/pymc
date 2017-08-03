@@ -11,8 +11,9 @@ from pymc3.math import tround
 from ..math import logaddexp
 
 __all__ = ['Binomial',  'BetaBinomial',  'Bernoulli',  'DiscreteWeibull',
-           'Poisson', 'NegativeBinomial', 'ZeroInflatedPoisson', 'ZeroInflatedBinomial', 
-           'ZeroInflatedNegativeBinomial', 'DiscreteUniform', 'Geometric', 'Categorical']
+           'Poisson', 'NegativeBinomial', 'ConstantDist', 'Constant',
+           'ZeroInflatedPoisson', 'ZeroInflatedBinomial', 'ZeroInflatedNegativeBinomial',
+           'DiscreteUniform', 'Geometric', 'Categorical']
 
 
 class Binomial(Discrete):
@@ -541,6 +542,49 @@ class Categorical(Discrete):
         p = dist.p
         return r'${} \sim \text{{Categorical}}(\mathit{{p}}={})$'.format(name,
                                                 get_variable_name(p))
+
+
+class Constant(Discrete):
+    """
+    Constant log-likelihood.
+
+    Parameters
+    ----------
+    value : float or int
+        Constant parameter.
+    """
+
+    def __init__(self, c, *args, **kwargs):
+        warnings.warn("Constant has been deprecated. We recommend using a Determinstic object instead.",
+                    DeprecationWarning)
+        super(Constant, self).__init__(*args, **kwargs)
+        self.mean = self.median = self.mode = self.c = c = tt.as_tensor_variable(c)
+
+    def random(self, point=None, size=None, repeat=None):
+        c = draw_values([self.c], point=point)[0]
+        dtype = np.array(c).dtype
+
+        def _random(c, dtype=dtype, size=None):
+            return np.full(size, fill_value=c, dtype=dtype)
+
+        return generate_samples(_random, c=c, dist_shape=self.shape,
+                                size=size).astype(dtype)
+
+    def logp(self, value):
+        c = self.c
+        return bound(0, tt.eq(value, c))
+
+    def _repr_latex_(self, name=None, dist=None):
+        if dist is None:
+            dist = self
+        return r'${} \sim \text{{Constant}}()$'.format(name)
+
+
+def ConstantDist(*args, **kwargs):
+    import warnings
+    warnings.warn("ConstantDist has been deprecated. In future, use Constant instead.",
+                  DeprecationWarning)
+    return Constant(*args, **kwargs)
 
 
 class ZeroInflatedPoisson(Discrete):
