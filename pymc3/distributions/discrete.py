@@ -3,6 +3,7 @@ import numpy as np
 import theano
 import theano.tensor as tt
 from scipy import stats
+import warnings
 
 from pymc3.util import get_variable_name
 from .dist_math import bound, factln, binomln, betaln, logpow
