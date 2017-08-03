@@ -117,12 +117,13 @@ class QuadPotentialDiagAdapt(QuadPotential):
             raise ValueError('Wrong shape for initial_mean: expected %s got %s'
                              % (n, len(initial_mean)))
 
-        if initial_diag is None:
-            initial_diag = np.ones(n, dtype=theano.config.floatX)
-            initial_weight = 1
-
         if dtype is None:
             dtype = theano.config.floatX
+
+        if initial_diag is None:
+            initial_diag = np.ones(n, dtype=dtype)
+            initial_weight = 1
+
         self.dtype = dtype
         self._n = n
         self._var = np.array(initial_diag, dtype=self.dtype, copy=True)

@@ -259,6 +259,7 @@ class TestSamplePPC(object):
 def test_exec_nuts_init(method):
     with pm.Model() as model:
         pm.Normal('a', mu=0, sd=1, shape=2)
+        pm.HalfNormal('b', sd=1)
     with model:
         start, _ = pm.init_nuts(init=method, n_init=10)
         assert isinstance(start, dict)

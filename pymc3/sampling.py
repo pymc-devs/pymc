@@ -14,7 +14,6 @@ from .step_methods import (NUTS, HamiltonianMC, SGFS, Metropolis, BinaryMetropol
 from .plots.traceplot import traceplot
 from .util import update_start_vals
 from pymc3.step_methods.hmc import quadpotential
-from pymc3.distributions import distribution
 from tqdm import tqdm
 
 import sys
@@ -754,19 +753,18 @@ def init_nuts(init='auto', njobs=1, n_init=500000, model=None,
     random_seed = int(np.atleast_1d(random_seed)[0])
 
     cb = [
-        pm.callbacks.CheckParametersConvergence(tolerance=1e-2, diff='absolute'),
-        pm.callbacks.CheckParametersConvergence(tolerance=1e-2, diff='relative'),
+        pm.callbacks.CheckParametersConvergence(
+            tolerance=1e-2, diff='absolute'),
+        pm.callbacks.CheckParametersConvergence(
+            tolerance=1e-2, diff='relative'),
     ]
 
     if init == 'adapt_diag':
-        start = []
-        for _ in range(njobs):
-            vals = distribution.draw_values(model.free_RVs)
-            point = {var.name: vals[i] for i, var in enumerate(model.free_RVs)}
-            start.append(point)
+        start = [model.test_point] * njobs
         mean = np.mean([model.dict_to_array(vals) for vals in start], axis=0)
         var = np.ones_like(mean)
-        potential = quadpotential.QuadPotentialDiagAdapt(model.ndim, mean, var, 10)
+        potential = quadpotential.QuadPotentialDiagAdapt(
+            model.ndim, mean, var, 10)
         if njobs == 1:
             start = start[0]
     elif init == 'advi+adapt_diag_grad':
