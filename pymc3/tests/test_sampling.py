@@ -110,6 +110,27 @@ class TestSample(SeededTest):
             trace = pm.sample(draws=100, tune=50, njobs=4)
             assert len(trace) == 100
 
+    @pytest.mark.parametrize(
+        'start, error', [
+            ([1, 2], TypeError),
+            ({'x': 1}, ValueError),
+            ({'x': [1, 2, 3]}, ValueError),
+            ({'x': np.array([[1, 1], [1, 1]])}, ValueError)
+        ]
+    )
+    def test_sample_start_bad_shape(self, start, error):
+        with pytest.raises(error):
+            pm.sampling._check_start_shape(self.model, start)
+
+    @pytest.mark.parametrize(
+        'start', [
+            {'x': np.array([1, 1])},
+            [{'x': [10, 10]}, {'x': [-10, -10]}]
+        ]
+    )
+    def test_sample_start_good_shape(self, start):
+        pm.sampling._check_start_shape(self.model, start)
+
 
 def test_empty_model():
     with pm.Model():
@@ -238,6 +259,7 @@ class TestSamplePPC(object):
 def test_exec_nuts_init(method):
     with pm.Model() as model:
         pm.Normal('a', mu=0, sd=1, shape=2)
+        pm.HalfNormal('b', sd=1)
     with model:
         start, _ = pm.init_nuts(init=method, n_init=10)
         assert isinstance(start, dict)
