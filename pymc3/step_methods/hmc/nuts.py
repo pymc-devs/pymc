@@ -197,12 +197,12 @@ class NUTS(BaseHMC):
 
         for _ in range(max_treedepth):
             direction = logbern(np.log(0.5)) * 2 - 1
-            diverging, turning = tree.extend(direction)
+            diverging_info, turning = tree.extend(direction)
             q, q_grad = tree.proposal.q, tree.proposal.q_grad
 
-            if diverging or turning:
-                if diverging:
-                    self.report._add_divergence(self.tune, *diverging)
+            if diverging_info or turning:
+                if diverging_info:
+                    self.report._add_divergence(self.tune, *diverging_info)
                 break
 
         w = 1. / (self.m + self.t0)
@@ -223,7 +223,7 @@ class NUTS(BaseHMC):
             'step_size': step_size,
             'tune': self.tune,
             'step_size_bar': np.exp(self.log_step_size_bar),
-            'diverging': diverging,
+            'diverging': bool(diverging_info),
         }
 
         stats.update(tree.stats())
