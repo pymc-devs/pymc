@@ -203,7 +203,7 @@ class Flat(Continuous):
     def _repr_latex_(self, name=None, dist=None):
         if dist is None:
             dist = self
-        return r'${} \sim \text{{Flat}()$'
+        return r'${} \sim \text{Flat}()$'
 
 
 class HalfFlat(PositiveContinuous):
