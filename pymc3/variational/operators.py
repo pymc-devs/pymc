@@ -20,7 +20,6 @@ class KL(Operator):
 
         KL[q(v)||p(v)] = \int q(v)\log\\frac{q(v)}{p(v)}dv
     """
-
     def apply(self, f):
         return self.logq_norm - self.logp_norm
 
@@ -43,33 +42,21 @@ class KSDObjective(ObjectiveFunction):
             raise TypeError('Op should be KSD')
         ObjectiveFunction.__init__(self, op, tf)
 
-    def get_input(self):
-        if hasattr(self.approx, 'histogram'):
-            return self.approx.symbolic_random_local_matrix, self.approx.histogram
-        else:
-            return self.approx.symbolic_random_local_matrix, self.approx.symbolic_random_global_matrix
-
     @change_flags(compute_test_value='off')
     def __call__(self, nmc, **kwargs):
         op = self.op  # type: KSD
         grad = op.apply(self.tf)
-        loc_size = self.approx.local_size
-        local_grad = grad[..., :loc_size]
-        global_grad = grad[..., loc_size:]
+        if self.approx.all_histograms:
+            z = self.approx.joint_histogram
+        else:
+            z = self.approx.symbolic_random
         if 'more_obj_params' in kwargs:
             params = self.obj_params + kwargs['more_obj_params']
         else:
             params = self.test_params + kwargs['more_tf_params']
             grad *= pm.floatX(-1)
-        zl, zg = self.get_input()
-        zl, zg, grad, local_grad, global_grad = self.approx.set_size_and_deterministic(
-            (zl, zg, grad, local_grad, global_grad),
-            nmc, 0)
-        grad = tt.grad(None, params, known_grads=collections.OrderedDict([
-            (zl, local_grad),
-            (zg, global_grad)
-        ]), disconnected_inputs='ignore')
-        return grad
+        grads = tt.grad(None, params, known_grads={z: grad})
+        return self.approx.set_size_and_deterministic(grads, nmc, 0)
 
 
 class KSD(Operator):
@@ -97,40 +84,20 @@ class KSD(Operator):
         Stein Variational Gradient Descent: A General Purpose Bayesian Inference Algorithm
         arXiv:1608.04471
     """
-    HAS_TEST_FUNCTION = True
-    RETURNS_LOSS = False
-    SUPPORT_AEVB = False
-    OBJECTIVE = KSDObjective
+    has_test_function = True
+    returns_loss = False
+    require_logq = False
+    objective_class = KSDObjective
 
     def __init__(self, approx, temperature=1):
         Operator.__init__(self, approx)
         self.temperature = temperature
 
-    def get_input(self):
-        if isinstance(self.approx, pm.EmpiricalGroup):
-            return self.approx.histogram
-        else:
-            return self.approx.symbolic_random_total_matrix
-
     def apply(self, f):
         # f: kernel function for KSD f(histogram) -> (k(x,.), \nabla_x k(x,.))
-        input_matrix = self.get_input()
         stein = Stein(
             approx=self.approx,
             kernel=f,
-            input_matrix=input_matrix,
+            use_histogram=self.approx.all_histograms,
             temperature=self.temperature)
         return pm.floatX(-1) * stein.grad
-
-
-class AKSD(KSD):
-    def __init__(self, approx, temperature=1):
-        warnings.warn('You are using experimental inference Operator. '
-                      'It requires careful choice of temperature, default is 1. '
-                      'Default temperature works well for low dimensional problems and '
-                      'for significant `n_obj_mc`. Temperature > 1 gives more exploration '
-                      'power to algorithm, < 1 leads to undesirable results. Please take '
-                      'it in account when looking at inference result. Posterior variance '
-                      'is often **underestimated** when using temperature = 1.', stacklevel=2)
-        super(AKSD, self).__init__(approx, temperature)
-    SUPPORT_AEVB = True

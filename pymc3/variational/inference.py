@@ -9,9 +9,9 @@ import tqdm
 import pymc3 as pm
 from pymc3.variational import test_functions
 from pymc3.variational.approximations import (
-    MeanFieldGroup, FullRankGroup, EmpiricalGroup, NormalizingFlowGroup
+    MeanField, FullRank, Empirical, NormalizingFlow
 )
-from pymc3.variational.operators import KL, KSD, AKSD
+from pymc3.variational.operators import KL, KSD
 from pymc3.variational.opvi import Approximation
 
 logger = logging.getLogger(__name__)
@@ -22,6 +22,8 @@ __all__ = [
     'SVGD',
     'ASVGD',
     'Inference',
+    'ImplicitGradient',
+    'KLqp,'
     'fit'
 ]
 
@@ -48,29 +50,15 @@ class Inference(object):
     kwargs : kwargs
         additional kwargs for :class:`Approximation`
     """
-    OP = None
-    APPROX = None
-    TF = None
 
-    def __init__(self, op, approx, tf, local_rv=None, model=None, op_kwargs=None, **kwargs):
-        if op_kwargs is None:
-            op_kwargs = dict()
+    def __init__(self, op, approx, tf, **kwargs):
         self.hist = np.asarray(())
-        if isinstance(approx, type) and issubclass(approx, Approximation):
-            approx = approx(
-                local_rv=local_rv,
-                model=model, **kwargs)
-        elif isinstance(approx, Approximation):    # pragma: no cover
-            pass
-        else:   # pragma: no cover
-            raise TypeError(
-                'approx should be Approximation instance or Approximation subclass')
-        self.objective = op(approx, **op_kwargs)(tf)
+        self.objective = op(approx, **kwargs)(tf)
 
     approx = property(lambda self: self.objective.approx)
 
     def _maybe_score(self, score):
-        returns_loss = self.objective.op.RETURNS_LOSS
+        returns_loss = self.objective.op.returns_loss
         if score is None:
             score = returns_loss
         elif score and not returns_loss:
@@ -205,7 +193,15 @@ class Inference(object):
         self.hist = np.concatenate([self.hist, scores])
 
 
-class ADVI(Inference):
+class KLqp(Inference):
+    """
+    General approach to fit Approximations thet define :math:`logq`
+    """
+    def __init__(self, approx):
+        super(KLqp, self).__init__(KL, approx, None)
+
+
+class ADVI(KLqp):
     R"""
     Automatic Differentiation Variational Inference (ADVI)
 
@@ -357,43 +353,12 @@ class ADVI(Inference):
     -   Kingma, D. P., & Welling, M. (2014).
         Auto-Encoding Variational Bayes. stat, 1050, 1.
     """
-    OP = KL
-    APPROX = MeanFieldGroup
-    TF = None
 
-    def __init__(self, local_rv=None, model=None,
-                 cost_part_grad_scale=1,
-                 scale_cost_to_minibatch=False,
-                 random_seed=None, start=None):
-        super(ADVI, self).__init__(
-            self.OP, self.APPROX, self.TF,
-            local_rv=local_rv, model=model,
-            cost_part_grad_scale=cost_part_grad_scale,
-            scale_cost_to_minibatch=scale_cost_to_minibatch,
-            random_seed=random_seed, start=start)
-
-    @classmethod
-    def from_mean_field(cls, mean_field):
-        """
-        Construct ADVI from MeanField approximation
-
-        Parameters
-        ----------
-        mean_field : :class:`MeanFieldGroup`
-            approximation to start with
-
-        Returns
-        -------
-        :class:`ADVI`
-        """
-        if not isinstance(mean_field, MeanFieldGroup):
-            raise TypeError('Expected MeanField, got %r' % mean_field)
-        inference = object.__new__(cls)
-        Inference.__init__(inference, KL, mean_field, None)
-        return inference
+    def __init__(self, *args, **kwargs):
+        super(ADVI, self).__init__(MeanField(*args, **kwargs))
 
 
-class FullRankADVI(Inference):
+class FullRankADVI(KLqp):
     R"""
     Full Rank Automatic Differentiation Variational Inference (ADVI)
 
@@ -432,89 +397,22 @@ class FullRankADVI(Inference):
     -   Kingma, D. P., & Welling, M. (2014).
         Auto-Encoding Variational Bayes. stat, 1050, 1.
     """
-    OP = KL
-    APPROX = FullRankGroup
-    TF = None
 
-    def __init__(self, local_rv=None, model=None,
-                 cost_part_grad_scale=1,
-                 scale_cost_to_minibatch=False,
-                 gpu_compat=False, random_seed=None, start=None):
-        super(FullRankADVI, self).__init__(
-            self.OP, self.APPROX, self.TF,
-            local_rv=local_rv, model=model,
-            cost_part_grad_scale=cost_part_grad_scale,
-            scale_cost_to_minibatch=scale_cost_to_minibatch,
-            gpu_compat=gpu_compat, random_seed=random_seed, start=start)
-
-    @classmethod
-    def from_full_rank(cls, full_rank):
-        """
-        Construct FullRankADVI from FullRank approximation
-
-        Parameters
-        ----------
-        full_rank : :class:`FullRankGroup`
-            approximation to start with
-
-        Returns
-        -------
-        :class:`FullRankADVI`
-        """
-        if not isinstance(full_rank, FullRankGroup):
-            raise TypeError('Expected FullRank, got %r' % full_rank)
-        inference = object.__new__(cls)
-        Inference.__init__(inference, KL, full_rank, None)
-        return inference
-
-    @classmethod
-    def from_mean_field(cls, mean_field, gpu_compat=False):
-        """
-        Construct FullRankADVI from MeanField approximation
-
-        Parameters
-        ----------
-        mean_field : :class:`MeanFieldGroup`
-            approximation to start with
-
-        Other Parameters
-        ----------------
-        gpu_compat : `bool`
-            use GPU compatible version or not
-
-        Returns
-        -------
-        :class:`FullRankADVI`
-        """
-        full_rank = FullRankGroup.from_mean_field(mean_field, gpu_compat)
-        inference = object.__new__(cls)
-        Inference.__init__(inference, KL, full_rank, None)
-        return inference
-
-    @classmethod
-    def from_advi(cls, advi, gpu_compat=False):
-        """
-        Construct FullRankADVI from ADVI
-
-        Parameters
-        ----------
-        advi : :class:`ADVI`
-
-        Other Parameters
-        ----------------
-        gpu_compat : bool
-            use GPU compatible version or not
-
-        Returns
-        -------
-        :class:`FullRankADVI`
-        """
-        inference = cls.from_mean_field(advi.approx, gpu_compat)
-        inference.hist = advi.hist
-        return inference
+    def __init__(self, *args, **kwargs):
+        super(FullRankADVI, self).__init__(FullRank(*args, **kwargs))
 
 
-class SVGD(Inference):
+class ImplicitGradient(Inference):
+    def __init__(self, approx, estimator=KSD, kernel=test_functions.rbf, **kwargs):
+        super(ImplicitGradient, self).__init__(
+            op=estimator,
+            approx=approx,
+            tf=kernel,
+            **kwargs
+        )
+
+
+class SVGD(ImplicitGradient):
     R"""
     Stein Variational Gradient Descent
 
@@ -546,12 +444,8 @@ class SVGD(Inference):
         kernel function for KSD :math:`f(histogram) -> (k(x,.), \nabla_x k(x,.))`
     temperature : float
         parameter responsible for exploration, higher temperature gives more broad posterior estimate
-    scale_cost_to_minibatch : bool, default False
-        Scale cost to minibatch instead of full dataset
     start : `dict`
         initial point for inference
-    histogram : :class:`EmpiricalGroup`
-        initialize SVGD with given Empirical approximation instead of default initial particles
     random_seed : None or int
         leave None to use package global RandomStream or other
         valid value to create instance specific one
@@ -568,33 +462,21 @@ class SVGD(Inference):
         Stein Variational Policy Gradient
         arXiv:1704.02399
     """
-    OP = KSD
-    APPROX = EmpiricalGroup
-    TF = test_functions.Kernel
 
-    def __init__(self, n_particles=100, jitter=.01, model=None, kernel=test_functions.rbf,
-                 temperature=1, scale_cost_to_minibatch=False, start=None,
-                 random_seed=None, local_rv=None):
-        empirical = EmpiricalGroup.from_noise(
-            n_particles, jitter=jitter,
-            scale_cost_to_minibatch=scale_cost_to_minibatch,
-            start=start, model=model, local_rv=local_rv, random_seed=random_seed)
+    def __init__(self, n_particles=100, jitter=1, model=None, start=None,
+                 random_seed=None, estimator=KSD, kernel=test_functions.rbf, **kwargs):
+        empirical = Empirical(
+            size=n_particles, jitter=jitter,
+            start=start, model=model, random_seed=random_seed)
         super(SVGD, self).__init__(
-            KSD, empirical,
-            kernel, op_kwargs=dict(temperature=temperature),
-            model=model, random_seed=random_seed)
-
-    @classmethod
-    def from_empirical(cls, empirical, kernel=test_functions.rbf,
-                       temperature=1):
-        instance = object.__new__(cls)
-        Inference.__init__(
-            instance, KSD, empirical,
-            kernel, op_kwargs=dict(temperature=temperature))
-        return instance
+            approx=empirical,
+            estimator=estimator,
+            kernel=kernel,
+            **kwargs
+        )
 
 
-class ASVGD(Inference):
+class ASVGD(ImplicitGradient):
     R"""
     Amortized Stein Variational Gradient Descent
 
@@ -642,19 +524,24 @@ class ASVGD(Inference):
         Stein Variational Policy Gradient
         arXiv:1704.02399
     """
-    OP = AKSD
-    APPROX = None
-    TF = test_functions.Kernel
 
-    def __init__(self, approx=FullRankGroup, local_rv=None,
-                 kernel=test_functions.rbf, temperature=1, model=None, **kwargs):
+    def __init__(self, approx=None, estimator=KSD, kernel=test_functions.rbf, **kwargs):
+        warnings.warn('You are using experimental inference Operator. '
+                      'It requires careful choice of temperature, default is 1. '
+                      'Default temperature works well for low dimensional problems and '
+                      'for significant `n_obj_mc`. Temperature > 1 gives more exploration '
+                      'power to algorithm, < 1 leads to undesirable results. Please take '
+                      'it in account when looking at inference result. Posterior variance '
+                      'is often **underestimated** when using temperature = 1.', stacklevel=1)
+        if approx is None:
+            approx = FullRank(
+                model=kwargs.pop('model', None),
+                local_rv=kwargs.pop('local_rv', None)
+            )
         super(ASVGD, self).__init__(
-            op=AKSD,
+            estimator=estimator,
             approx=approx,
-            local_rv=local_rv,
-            tf=kernel,
-            model=model,
-            op_kwargs=dict(temperature=temperature),
+            kernel=kernel,
             **kwargs
         )
 
@@ -686,12 +573,12 @@ class ASVGD(Inference):
             n=n, score=score, callbacks=callbacks,
             progressbar=progressbar, obj_n_mc=obj_n_mc, **kwargs)
 
-    def run_profiling(self, n=1000, score=None, obj_n_mc=300, **kwargs):
+    def run_profiling(self, n=1000, score=None, obj_n_mc=500, **kwargs):
         return super(ASVGD, self).run_profiling(
             n=n, score=score, obj_n_mc=obj_n_mc, **kwargs)
 
 
-class NFVI(Inference):
+class NFVI(KLqp):
     R"""
     Normalizing flow is a series of invertible transformations on initial distribution.
 
@@ -734,10 +621,6 @@ class NFVI(Inference):
     flow : str|AbstractFlow
         formula or initialized Flow, default is `'scale-loc'` that
         is identical to MeanField
-    local_rv : dict[var->tuple]
-        mapping {model_variable -> local_variable (:math:`\mu`, :math:`\rho`)}
-        Local Vars are used for Autoencoding Variational Bayes
-        See (AEVB; Kingma and Welling, 2014) for details
     model : :class:`pymc3.Model`
         PyMC3 model for inference
     scale_cost_to_minibatch : bool, default False
@@ -746,38 +629,9 @@ class NFVI(Inference):
         leave None to use package global RandomStream or other
         valid value to create instance specific one
     """
-    OP = KL
-    APPROX = NormalizingFlowGroup
-    TF = None
 
-    def __init__(self, flow='planar*3',
-                 local_rv=None, model=None,
-                 scale_cost_to_minibatch=False,
-                 random_seed=None, start=None, jitter=.1):
-        super(NFVI, self).__init__(
-            self.OP, self.APPROX, self.TF,
-            flow=flow,
-            local_rv=local_rv, model=model,
-            scale_cost_to_minibatch=scale_cost_to_minibatch,
-            random_seed=random_seed, start=start, jitter=jitter)
-
-    @classmethod
-    def from_flow(cls, flow):
-        """
-        Get inference from initialized :class:`NormalizingFlow`
-
-        Parameters
-        ----------
-        flow : :class:`NormalizingFlowGroup`
-            initialized normalizing flow
-
-        Returns
-        -------
-        :class:`NFVI`
-        """
-        inference = object.__new__(cls)
-        Inference.__init__(inference, KL, flow, None)
-        return inference
+    def __init__(self, *args, **kwargs):
+        super(NFVI, self).__init__(NormalizingFlow(*args, **kwargs))
 
 
 def fit(n=10000, local_rv=None, method='advi', model=None,
@@ -827,6 +681,14 @@ def fit(n=10000, local_rv=None, method='advi', model=None,
     """
     if inf_kwargs is None:
         inf_kwargs = dict()
+    else:
+        inf_kwargs = inf_kwargs.copy()
+    if local_rv is not None:
+        inf_kwargs['local_rv'] = local_rv
+    if random_seed is not None:
+        inf_kwargs['random_seed'] = random_seed
+    if start is not None:
+        inf_kwargs['start'] = start
     if model is None:
         model = pm.modelcontext(model)
     _select = dict(
@@ -838,38 +700,16 @@ def fit(n=10000, local_rv=None, method='advi', model=None,
     )
     if isinstance(method, str):
         method = method.lower()
-        if method == 'advi->fullrank_advi':
-            frac = kwargs.pop('frac', .5)
-            if not 0. < frac < 1.:
-                raise ValueError('frac should be in (0, 1)')
-            n1 = int(n * frac)
-            n2 = n - n1
-            inference = ADVI(
-                local_rv=local_rv,
-                model=model,
-                random_seed=random_seed,
-                start=start)
-            logger.info('fitting advi ...')
-            inference.fit(n1, **kwargs)
-            inference = FullRankADVI.from_advi(inference)
-            logger.info('fitting fullrank advi ...')
-            return inference.fit(n2, **kwargs)
-        elif method.startswith('nfvi='):
+        if method.startswith('nfvi='):
             formula = method[5:]
             inference = NFVI(
                 formula,
-                local_rv=local_rv,
-                model=model,
-                random_seed=random_seed,
-                start=start,  # ignored by now, hope I'll find a good application for this argument
                 **inf_kwargs
                 )
         elif method in _select:
+
             inference = _select[method](
-                local_rv=local_rv,
                 model=model,
-                random_seed=random_seed,
-                start=start,
                 **inf_kwargs
             )
         else:

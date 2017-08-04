@@ -50,6 +50,7 @@ __all__ = [
     'ObjectiveFunction',
     'Operator',
     'TestFunction',
+    'Group'
     'Approximation'
 ]
 
@@ -213,7 +214,7 @@ class ObjectiveFunction(object):
                 grads,
                 self.obj_params +
                 more_obj_params))
-        if self.op.RETURNS_LOSS:
+        if self.op.returns_loss:
             updates.loss = obj_target
 
     @memoize
@@ -263,7 +264,7 @@ class ObjectiveFunction(object):
         """
         if fn_kwargs is None:
             fn_kwargs = {}
-        if score and not self.op.RETURNS_LOSS:
+        if score and not self.op.returns_loss:
             raise NotImplementedError('%s does not have loss' % self.op)
         updates = self.updates(obj_n_mc=obj_n_mc, tf_n_mc=tf_n_mc,
                                obj_optimizer=obj_optimizer,
@@ -300,7 +301,7 @@ class ObjectiveFunction(object):
         """
         if fn_kwargs is None:
             fn_kwargs = {}
-        if not self.op.RETURNS_LOSS:
+        if not self.op.returns_loss:
             raise NotImplementedError('%s does not have loss' % self.op)
         if more_replacements is None:
             more_replacements = {}
@@ -309,12 +310,6 @@ class ObjectiveFunction(object):
             more_replacements,
             strict=False)
         return theano.function([], loss, **fn_kwargs)
-
-    def __getstate__(self):
-        return self.op, self.tf
-
-    def __setstate__(self, state):
-        self.__init__(*state)
 
     @change_flags(compute_test_value='off')
     def __call__(self, nmc, **kwargs):
@@ -340,25 +335,28 @@ class Operator(object):
     For implementing Custom operator it is needed to define :func:`Operator.apply` method
     """
 
-    HAS_TEST_FUNCTION = False
-    RETURNS_LOSS = True
-    SUPPORT_AEVB = True
-    OBJECTIVE = ObjectiveFunction
+    has_test_function = False
+    returns_loss = True
+    require_logq = True
+    objective_class = ObjectiveFunction
+    supports_sevb = property(lambda self: not self.approx.any_histograms)
     T = identity
 
     def __init__(self, approx):
-        if not self.SUPPORT_AEVB and approx.has_local:
-            raise ValueError('%s does not support AEVB, '
-                             'please change inference method' % type(self))
-        self.model = approx.model
         self.approx = approx
+        if not self.supports_sevb and approx.has_local:
+            raise TypeError('%s does not support AEVB, '
+                            'please change inference method' % type(self))
+        if self.require_logq and not approx.has_logq:
+            raise TypeError('%s requires logq, but %s does not implement it'
+                            'please change inference method' % (type(self), approx))
 
     input = property(lambda self: self.approx.inputs)
-
     logp = property(lambda self: self.approx.logp)
     logq = property(lambda self: self.approx.logq)
     logp_norm = property(lambda self: self.approx.logp_norm)
     logq_norm = property(lambda self: self.approx.logq_norm)
+    model = property(lambda self: self.approx.model)
 
     def apply(self, f):   # pragma: no cover
         R"""Operator itself
@@ -381,7 +379,7 @@ class Operator(object):
         raise NotImplementedError
 
     def __call__(self, f=None):
-        if self.HAS_TEST_FUNCTION:
+        if self.has_test_function:
             if f is None:
                 raise ValueError('Operator %s requires TestFunction' % self)
             else:
@@ -396,14 +394,7 @@ class Operator(object):
                 pass
             f = TestFunction()
         f.setup(self.approx.ndim)
-        return self.OBJECTIVE(self, f)
-
-    def __getstate__(self):
-        # pickle only important parts
-        return self.approx
-
-    def __setstate__(self, approx):
-        self.__init__(approx)
+        return self.objective_class(self, f)
 
     def __str__(self):    # pragma: no cover
         return '%(op)s[%(ap)s]' % dict(op=self.__class__.__name__,
@@ -489,8 +480,9 @@ class Group(object):
     replacements = None
     input = None
     # defined by approximation
-    SUPPORT_AEVB = True
-    HAS_LOGQ = True
+    # class level constants, so capitalized
+    supports_local = True
+    has_logq = True
 
     # some important defaults
     initial_dist_name = 'normal'
@@ -519,7 +511,7 @@ class Group(object):
         if pm.variational.flows.seems_like_flow_params(params):
             return pm.variational.approximations.NormalizingFlowGroup
         if frozenset(params) not in cls.__param_registry:
-            raise KeyError('No such group for the following params: %r' % params)
+            raise KeyError('No such group for the following params: {!r}'.format(params))
         return cls.__param_registry[frozenset(params)]
 
     @classmethod
@@ -527,7 +519,7 @@ class Group(object):
         if pm.variational.flows.seems_like_formula(name):
             return pm.variational.approximations.NormalizingFlowGroup
         if name.lower() not in cls.__name_registry:
-            raise KeyError('No such group: %r' % name)
+            raise KeyError('No such group: {!r}'.format(name))
         return cls.__name_registry[name.lower()]
 
     def __new__(cls, group=None, vfam=None, params=None, *args, **kwargs):
@@ -549,7 +541,7 @@ class Group(object):
                  random_seed=None,
                  model=None,
                  local=False, **kwargs):
-        if local and not self.SUPPORT_AEVB:
+        if local and not self.supports_local:
             raise TypeError('%s does not support local groups' % self.__class__)
         if isinstance(vfam, str):
             vfam = vfam.lower()
@@ -624,23 +616,25 @@ class Group(object):
         )
         # I do some staff that is not supported by standard __init__
         # so I have to to it by myself
-        self.ordering = object.__new__(ArrayOrdering)
-        self.ordering.vmap = []
-        self.ordering.size = 0
+        self.ordering = ArrayOrdering([])
         for var in self.group:
             var = get_transformed(var)
             begin = self.ndim
             if self.islocal:
-                self.ordering.size += np.prod(var.dshape[1:])
+                if var.ndim < 1:
+                    raise ValueError('Local variable should not be scalar')
+                self.ordering.size += (np.prod(var.dshape[1:])).astype(int)
                 shape = (-1, ) + var.dshape[1:]
             else:
                 self.ordering.size += var.dsize
                 shape = var.dshape
             end = self.ndim
-            self.vmap.append(VarMap(var.name, slice(begin, end), shape, var.dtype))
+            vmap = VarMap(var.name, slice(begin, end), shape, var.dtype)
+            self.ordering.vmap.append(vmap)
+            self.ordering.by_name[vmap.var] = vmap
         self.bij = DictToArrayBijection(self.ordering, {})
         self.replacements = dict()
-        for name, slc, shape, dtype in self.vmap:
+        for name, slc, shape, dtype in self.ordering.vmap:
             # slice is taken by last dimension that is valid for both 1d and 2d input
             vr = self.input[..., slc].reshape(shape).astype(dtype)
             vr.name = name + '_vi_replacement'
@@ -652,7 +646,6 @@ class Group(object):
         """
         del self._kwargs
 
-    vmap = property(lambda self: self.ordering.vmap)
     ndim = property(lambda self: self.ordering.size)
     islocal = property(lambda self: self._islocal)
 
@@ -764,13 +757,28 @@ class Group(object):
             shp = 'None, ' + shp
         return '{cls}[{shp}]'.format(shp=shp, cls=self.__class__.__name__)
 
+    @node_property
+    def std(self):
+        raise NotImplementedError
+
+    @node_property
+    def cov(self):
+        raise NotImplementedError
+
+    @node_property
+    def mean(self):
+        raise NotImplementedError
+
 group_for_params = Group.group_for_params
 group_for_short_name = Group.group_for_short_name
 
 
 class Approximation(object):
     def __init__(self, groups, model=None):
+        self._scale_cost_to_minibatch = theano.shared(np.int8(1))
         model = modelcontext(model)
+        if not model.free_RVs:
+            raise TypeError('Model does not have FreeRVs')
         seen = set()
         rest = None
         for g in groups:
@@ -793,14 +801,10 @@ class Approximation(object):
         self.model = model
 
     @property
-    def SUPPORT_AEVB(self):
-        return all(self._collect('SUPPORT_AEVB'))
+    def has_logq(self):
+        return all(self.collect('HAS_LOGQ'))
 
-    @property
-    def HAS_LOGQ(self):
-        return all(self._collect('HAS_LOGQ'))
-
-    def _collect(self, item, part='total'):
+    def collect(self, item, part='total'):
         if part == 'total':
             return [getattr(g, item) for g in self.groups]
         elif part == 'local':
@@ -810,16 +814,27 @@ class Approximation(object):
         else:
             raise ValueError("unknown part %s, expected {'local', 'global', 'total'}")
 
-    inputs = property(lambda self: self._collect('input'))
-    symbolic_randoms = property(lambda self: self._collect('symbolic_random'))
+    inputs = property(lambda self: self.collect('input'))
+    symbolic_randoms = property(lambda self: self.collect('symbolic_random'))
+
+    @property
+    def scale_cost_to_minibatch(self):
+        return bool(self._scale_cost_to_minibatch.get_value())
+
+    @scale_cost_to_minibatch.setter
+    def scale_cost_to_minibatch(self, value):
+        self._scale_cost_to_minibatch.set_value(int(bool(value)))
 
     @node_property
     def symbolic_normalizing_constant(self):
-        return tt.max(self._collect('symbolic_normalizing_constant'))
+        t = tt.max(self.collect('symbolic_normalizing_constant'))
+        t = tt.switch(self._scale_cost_to_minibatch, t,
+                      tt.constant(1, dtype=t.dtype))
+        return pm.floatX(t)
 
     @node_property
     def symbolic_logq(self):
-        return tt.add(*self._collect('symbolic_logq'))
+        return tt.add(*self.collect('symbolic_logq'))
 
     @node_property
     def logq(self):
@@ -851,7 +866,6 @@ class Approximation(object):
     @node_property
     def logp_norm(self):
         return self.logp / self.symbolic_normalizing_constant
-
 
     @property
     def replacements(self):
@@ -897,7 +911,7 @@ class Approximation(object):
         return repl
 
     @change_flags(compute_test_value='off')
-    def sample_node(self, node, size=100,
+    def sample_node(self, node, size=None,
                     deterministic=False,
                     more_replacements=None):
         """Samples given node or nodes over shared posterior
@@ -918,23 +932,41 @@ class Approximation(object):
         sampled node(s) with replacements
         """
         node_in = node
-        node = theano.clone(node, more_replacements)
+        replacements = self.replacements
+        if more_replacements is not None:
+            replacements.update(more_replacements)
         if size is None:
             node_out = self.to_flat_input(node)
-            node_out = theano.clone(node_out, self.replacements)
+            node_out = theano.clone(node_out, replacements)
         else:
             node_out = self.sample_over_posterior(node)
         node_out = self.set_size_and_deterministic(node_out, size, deterministic)
         try_to_set_test_value(node_in, node_out, size)
         return node_out
 
+    def rslice(self, name):
+        def vars_names(vs):
+            return {v.name for v in vs}
+        for vars_, random, ordering in zip(
+                self.collect('group'),
+                self.symbolic_randoms,
+                self.collect('ordering')):
+            if name in vars_names(vars_):
+                name_, slc, shape, dtype = ordering[name]
+                found = random[..., slc].reshape((random.shape[0], ) + shape).astype(dtype)
+                found.name = name + '_vi_random_slice'
+                break
+        else:
+            raise KeyError('%r not found' % name)
+        return found
+
     @property
     @memoize
     @change_flags(compute_test_value='off')
     def sample_dict_fn(self):
         s = tt.iscalar()
-        flat_inp_vars = self.to_flat_input(self.model.free_RVs)
-        sampled = self.sample_over_posterior(flat_inp_vars)
+        names = [v.name for v in self.model.free_RVs]
+        sampled = [self.rslice(name) for name in names]
         sampled = self.set_size_and_deterministic(sampled, s, 0)
         sample_fn = theano.function([s], sampled)
 
@@ -962,9 +994,9 @@ class Approximation(object):
         vars_sampled = get_default_varnames(self.model.unobserved_RVs,
                                             include_transformed=include_transformed)
         samples = self.sample_dict_fn(draws)  # type: dict
-        points = ({name: samples[name][i] for name in samples.keys()} for i in range(draws))
+        points = ({name: records[i] for name, records in samples.items()} for i in range(draws))
         trace = pm.sampling.NDArray(model=self.model, vars=vars_sampled, test_point={
-            name: samples[name][0] for name in samples.keys()
+            name: records[0] for name, records in samples.items()
         })
         try:
             trace.setup(draws=draws, chain=0)
@@ -976,25 +1008,29 @@ class Approximation(object):
 
     @node_property
     def ndim(self):
-        return sum(self._collect('ndim'))
+        return sum(self.collect('ndim'))
 
     @node_property
     def dim_local(self):
-        dims = self._collect('dim', 'local')
-        batches = self._collect('batch_size', 'local')
+        dims = self.collect('dim', 'local')
+        batches = self.collect('batch_size', 'local')
         return tt.add(*map(tt.mul, dims, batches))
 
     @property
     def dim_global(self):
-        return sum(self._collect('dim', 'global'))
+        return sum(self.collect('dim', 'global'))
 
     @property
     def has_local(self):
-        return any(self._collect('is_local'))
+        return any(self.collect('islocal'))
+
+    @property
+    def has_global(self):
+        return any(not c for c in self.collect('islocal'))
 
     @node_property
     def symbolic_batched_random_local(self):
-        return tt.stack(self._collect('symbolic_random', 'local'), axis=-1)
+        return tt.concatenate(self.collect('symbolic_random', 'local'), axis=-1)
 
     @node_property
     def symbolic_random_local(self):
@@ -1002,7 +1038,16 @@ class Approximation(object):
 
     @node_property
     def symbolic_random_global(self):
-        return tt.stack(self._collect('symbolic_random', 'global'), axis=-1)
+        return tt.concatenate(self.collect('symbolic_random', 'global'), axis=-1)
+
+    @node_property
+    def symbolic_random(self):
+        def unpack(tensor):
+            if tensor.ndim == 3:
+                return tensor.flatten(2)
+            else:
+                return tensor
+        return tt.concatenate(list(map(unpack, self.symbolic_randoms)), axis=-1)
 
     def __str__(self):
         if len(self.groups) < 5:
@@ -1010,3 +1055,21 @@ class Approximation(object):
         else:
             forprint = self.groups[:2] + ['...'] + self.groups[-2:]
             return 'Approximation{' + ' & '.join(map(str, forprint)) + '}'
+
+    @property
+    def all_histograms(self):
+        return all(isinstance(g, pm.approximations.EmpiricalGroup) for g in self.groups)
+
+    @property
+    def any_histograms(self):
+        return any(isinstance(g, pm.approximations.EmpiricalGroup) for g in self.groups)
+
+    @node_property
+    def joint_histogram(self):
+        if not self.all_histograms:
+            raise TypeError('%s does not consist of all Empirical approximations')
+        return tt.concatenate(self.collect('histogram'), axis=-1)
+
+    @property
+    def params(self):
+        return sum(self.collect('params'), [])
