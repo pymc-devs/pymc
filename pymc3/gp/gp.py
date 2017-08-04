@@ -222,7 +222,7 @@ class Marginal(GPBase):
         v = solve_lower(L, rxx)
         mu = self.mean_func(Xnew) + tt.dot(tt.transpose(A), v)
         if pred_noise:
-            cov = cov_func_noise(Xnew) + Kss - tt.dot(tt.transpose(A), A)
+            cov = noise(Xnew) + Kss - tt.dot(tt.transpose(A), A)
         else:
             cov = stabilize(Kss) - tt.dot(tt.transpose(A), A)
         chol = cholesky(cov)
