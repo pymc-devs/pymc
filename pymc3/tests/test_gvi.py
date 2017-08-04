@@ -1,17 +1,23 @@
 import pytest
 import functools
 import numpy as np
-from theano import theano
+from theano import theano, tensor as tt
 
 from .conftest import not_raises
 import pymc3 as pm
 from pymc3.variational.approximations import (
-    MeanFieldGroup, FullRankGroup, NormalizingFlowGroup, EmpiricalGroup,
+    MeanFieldGroup, FullRankGroup,
+    NormalizingFlowGroup, EmpiricalGroup,
     MeanField, FullRank, NormalizingFlow, Empirical
+)
+from pymc3.variational.inference import (
+    ADVI, FullRankADVI, SVGD, NFVI, ASVGD,
+    fit
 )
 
 from pymc3.variational.opvi import Approximation, Group
 
+from . import models
 
 pytestmark = pytest.mark.usefixtures(
     'strict_float32',
@@ -63,7 +69,7 @@ def test_init_groups(three_var_model, raises, grouping):
         ({}, {MeanFieldGroup: (['one'], {}), FullRankGroup: (['two'], {}),
               NormalizingFlowGroup: (['three'], {'flow': 'scale-hh*2-planar-radial-loc'})}),
         ({}, {MeanFieldGroup: (['one'], {}), FullRankGroup: (['two', 'three'], {})}),
-        ({}, {MeanFieldGroup: (['one'], {}), EmpiricalGroup.from_noise: (['two', 'three'], {'size': 100})})
+        ({}, {MeanFieldGroup: (['one'], {}), EmpiricalGroup: (['two', 'three'], {'size': 100})})
 ],
     ids=lambda t: ', '.join('%s: %s' % (k.__name__, v[0]) for k, v in t[1].items())
 )
@@ -197,7 +203,7 @@ def test_logq_aevb(three_var_aevb_approx):
 
 
 def test_logq_globals(three_var_approx):
-    if not three_var_approx.HAS_LOGQ:
+    if not three_var_approx.has_logq:
         pytest.skip('%s does not implement logq' % three_var_approx)
     approx = three_var_approx
     logq, symbolic_logq = approx.set_size_and_deterministic([approx.logq, approx.symbolic_logq], 1, 0)
@@ -294,7 +300,7 @@ def test_group_api_params(three_var_model, raises, params, type_, kw, formula):
         assert isinstance(g, type_)
         if isinstance(g, NormalizingFlowGroup):
             assert g.flow.formula == formula
-        if g.HAS_LOGQ:
+        if g.has_logq:
             # should work as well
             logq = g.logq
             logq = g.set_size_and_deterministic(logq, 1, 0)
@@ -351,3 +357,235 @@ def test_elbo():
         y_obs[0] ** 2 + y_obs[1] ** 2 + mu0 ** 2 + 3 * np.log(2 * np.pi)) +
                  0.5 * (np.log(2 * np.pi) + 1))
     np.testing.assert_allclose(elbo_mc, elbo_true, rtol=0, atol=1e-1)
+
+
+@pytest.fixture(
+    'module',
+    params=[True, False],
+    ids=['mini', 'full']
+)
+def use_minibatch(request):
+    return request.param
+
+
+@pytest.fixture('module')
+def simple_model_data(use_minibatch):
+    n = 1000
+    sd0 = 2.
+    mu0 = 4.
+    sd = 3.
+    mu = -5.
+
+    data = sd * np.random.randn(n) + mu
+    d = n / sd ** 2 + 1 / sd0 ** 2
+    mu_post = (n * np.mean(data) / sd ** 2 + mu0 / sd0 ** 2) / d
+    if use_minibatch:
+        data = pm.Minibatch(data)
+    return dict(
+        n=n,
+        data=data,
+        mu_post=mu_post,
+        d=d,
+        mu0=mu0,
+        sd0=sd0,
+        sd=sd,
+    )
+
+
+@pytest.fixture(scope='module')
+def simple_model(simple_model_data):
+    with pm.Model() as model:
+        mu_ = pm.Normal(
+            'mu', mu=simple_model_data['mu0'],
+            sd=simple_model_data['sd0'], testval=0)
+        pm.Normal('x', mu=mu_, sd=simple_model_data['sd'],
+                  observed=simple_model_data['data'],
+                  total_size=simple_model_data['n'])
+    return model
+
+
+@pytest.fixture('module', params=[
+        dict(cls=NFVI, init=dict(flow='scale-loc')),
+        dict(cls=ADVI, init=dict()),
+        dict(cls=FullRankADVI, init=dict()),
+        dict(cls=SVGD, init=dict(n_particles=500, jitter=1)),
+        dict(cls=ASVGD, init=dict(temperature=1.)),
+    ], ids=[
+        'NFVI=scale-loc',
+        'ADVI',
+        'FullRankADVI',
+        'SVGD',
+        'ASVGD'
+    ])
+def inference_spec(request):
+    cls = request.param['cls']
+    init = request.param['init']
+
+    def init_(**kw):
+        k = init.copy()
+        k.update(kw)
+        return cls(**k)
+    init_.cls = cls
+    return init_
+
+
+@pytest.fixture('function')
+def inference(inference_spec, simple_model):
+    with simple_model:
+        return inference_spec()
+
+
+@pytest.fixture('function')
+def fit_kwargs(inference, use_minibatch):
+    _select = {
+        (ADVI, 'full'): dict(
+            obj_optimizer=pm.adagrad_window(learning_rate=0.02, n_win=50),
+            n=5000
+        ),
+        (ADVI, 'mini'): dict(
+            obj_optimizer=pm.adagrad_window(learning_rate=0.01, n_win=50),
+            n=12000
+        ),
+        (NFVI, 'full'): dict(
+            obj_optimizer=pm.adagrad_window(learning_rate=0.01, n_win=50),
+            n=12000
+        ),
+        (NFVI, 'mini'): dict(
+            obj_optimizer=pm.adagrad_window(learning_rate=0.01, n_win=50),
+            n=12000
+        ),
+        (FullRankADVI, 'full'): dict(
+            obj_optimizer=pm.adagrad_window(learning_rate=0.007, n_win=50),
+            n=6000
+        ),
+        (FullRankADVI, 'mini'): dict(
+            obj_optimizer=pm.adagrad_window(learning_rate=0.007, n_win=50),
+            n=12000
+        ),
+        (SVGD, 'full'): dict(
+            obj_optimizer=pm.adagrad_window(learning_rate=0.07, n_win=7),
+            n=300
+        ),
+        (SVGD, 'mini'): dict(
+            obj_optimizer=pm.adagrad_window(learning_rate=0.07, n_win=7),
+            n=300
+        ),
+        (ASVGD, 'full'): dict(
+            obj_optimizer=pm.adagrad_window(learning_rate=0.07, n_win=10),
+            n=500, obj_n_mc=300
+        ),
+        (ASVGD, 'mini'): dict(
+            obj_optimizer=pm.adagrad_window(learning_rate=0.07, n_win=10),
+            n=500, obj_n_mc=300
+        )
+    }
+    if use_minibatch:
+        key = 'mini'
+    else:
+        key = 'full'
+    return _select[(type(inference), key)]
+
+
+@pytest.mark.run('first')
+def test_fit_oo(inference,
+                fit_kwargs,
+                simple_model_data):
+    trace = inference.fit(**fit_kwargs).sample(10000)
+    mu_post = simple_model_data['mu_post']
+    d = simple_model_data['d']
+    np.testing.assert_allclose(np.mean(trace['mu']), mu_post, rtol=0.05)
+    np.testing.assert_allclose(np.std(trace['mu']), np.sqrt(1. / d), rtol=0.1)
+
+
+def test_profile(inference):
+    inference.run_profiling(n=100).summary()
+
+
+@pytest.fixture('module')
+def another_simple_model():
+    _model = models.simple_model()[1]
+    with _model:
+        pm.Potential('pot', tt.ones((10, 10)))
+    return _model
+
+
+@pytest.fixture(params=[
+    dict(name='advi', kw=dict(start={})),
+    dict(name='fullrank_advi', kw=dict(start={})),
+    dict(name='svgd', kw=dict(start={}))],
+    ids=lambda d: d['name']
+)
+def fit_method_with_object(request, another_simple_model):
+    _select = dict(
+        advi=ADVI,
+        fullrank_advi=FullRankADVI,
+        svgd=SVGD
+    )
+    with another_simple_model:
+        return _select[request.param['name']](
+            **request.param['kw'])
+
+
+@pytest.mark.parametrize(
+    ['method', 'kwargs', 'error'],
+    [
+        ('undefined', dict(), KeyError),
+        (1, dict(), TypeError),
+        ('advi', dict(total_grad_norm_constraint=10), None),
+        ('fullrank_advi', dict(), None),
+        ('svgd', dict(total_grad_norm_constraint=10), None),
+        ('svgd', dict(start={}), None),
+        # start argument is not allowed for ASVGD
+        ('asvgd', dict(start={}, total_grad_norm_constraint=10), TypeError),
+        ('asvgd', dict(total_grad_norm_constraint=10), None),
+        ('nfvi', dict(start={}), None),
+        ('nfvi=scale-loc', dict(start={}), None),
+        ('nfvi=bad-formula', dict(start={}), KeyError),
+    ],
+)
+def test_fit_fn_text(method, kwargs, error, another_simple_model):
+    with another_simple_model:
+        if error is not None:
+            with pytest.raises(error):
+                fit(10, method=method, **kwargs)
+        else:
+            fit(10, method=method, **kwargs)
+
+
+@pytest.fixture('module')
+def aevb_model():
+    with pm.Model() as model:
+        pm.Normal('x', shape=(2,))
+        pm.Normal('y', shape=(2,))
+    x = model.x
+    y = model.y
+    mu = theano.shared(x.init_value) * 2
+    rho = theano.shared(np.zeros_like(x.init_value))
+    return {
+        'model': model,
+        'y': y,
+        'x': x,
+        'replace': dict(mu=mu, rho=rho)
+    }
+
+
+def test_aevb(inference_spec, aevb_model):
+    # add to inference that supports aevb
+    x = aevb_model['x']
+    y = aevb_model['y']
+    model = aevb_model['model']
+    replace = aevb_model['replace']
+    with model:
+        try:
+            inference = inference_spec(local_rv={x: replace})
+            approx = inference.fit(3, obj_n_mc=2)
+            approx.sample(10)
+            approx.sample_node(
+                y,
+            #    more_replacements={x: np.asarray([1, 1], dtype=x.dtype)}
+            ).eval()
+        except TypeError as e:
+            if 'AEVB' in str(e):
+                pytest.skip('Does not support AEVB')
+            else:
+                raise

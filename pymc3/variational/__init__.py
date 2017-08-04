@@ -27,6 +27,8 @@ from .inference import (
     ASVGD,
     NFVI,
     Inference,
+    KLqp,
+    ImplicitGradient,
     fit
 )
 

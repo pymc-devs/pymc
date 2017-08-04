@@ -86,7 +86,9 @@ class MeanFieldGroup(Group):
         log_q_W samples over q for global vars
         """
         z = self.symbolic_random
-        logq = log_normal(z, self.mean, rho=self.rho)
+        std = rho2sd(self.rho)
+        logdet = tt.log(std)
+        logq = pm.Normal.dist().logp(z) - logdet
         return logq.sum(range(1, logq.ndim))
 
 
@@ -188,45 +190,14 @@ class FullRankGroup(Group):
         else:
             return initial.dot(L.T) + mu
 
-    @classmethod
-    def from_mean_field(cls, mean_field):
-        """Construct FullRank from MeanField approximation
-
-        Parameters
-        ----------
-        mean_field : :class:`MeanFieldGroup`
-            approximation to start with
-
-        Returns
-        -------
-        :class:`FullRankGroup`
-        """
-        if mean_field.islocal:
-            raise TypeError('Cannot init from local group')
-        full_rank = object.__new__(cls)  # type: FullRankGroup
-        full_rank.__dict__.update(mean_field.__dict__)
-        full_rank.shared_params = full_rank.create_shared_params()
-        full_rank.shared_params['mu'].set_value(
-            mean_field.shared_params['mu'].get_value()
-        )
-        rho = mean_field.shared_params['rho'].get_value()
-        n = full_rank.ndim
-        L_tril = (
-            np.diag(np.log1p(np.exp(rho)))  # rho2sd
-            [np.tril_indices(n)]
-            .astype(theano.config.floatX)
-        )
-        full_rank.shared_params['L_tril'].set_value(L_tril)
-        return full_rank
-
 
 @Group.register
 class EmpiricalGroup(Group):
     """Builds Approximation instance from a given trace,
     it has the same interface as variational approximation
     """
-    SUPPORT_AEVB = False
-    HAS_LOGQ = False
+    supports_local = False
+    has_logq = False
     __param_spec__ = dict(histogram=('s', 'd'))
     short_name = 'empirical'
 
@@ -327,33 +298,6 @@ class EmpiricalGroup(Group):
     def cov(self):
         x = (self.histogram - self.mean)
         return x.T.dot(x) / pm.floatX(self.histogram.shape[0])
-
-    @classmethod
-    def from_noise(cls, size, jitter=1, start=None, **kwargs):
-        """Initialize Histogram with random noise
-
-        Parameters
-        ----------
-        size : `int`
-            number of initial particles
-        jitter : `float`
-            initial sd
-        start : `Point`
-            initial point
-        kwargs : other kwargs passed to init
-
-        Returns
-        -------
-        :class:`EmpiricalGroup`
-        """
-        if 'trace' in kwargs:
-            raise ValueError('Trace cannot be passed via kwargs in this constructor')
-        return cls(
-            trace=None,
-            size=size,
-            jitter=jitter,
-            start=start,
-            **kwargs)
 
     def __str__(self):
         if isinstance(self.histogram, theano.compile.SharedVariable):
@@ -555,33 +499,38 @@ def sample_approx(approx, draws=100, include_transformed=True):
 
 
 # single group shortcuts exported to user
-class _SingleGroupApproximation(Approximation):
+class SingleGroupApproximation(Approximation):
     group_class = None
 
-    def __init__(self, *args, model=None, **kwargs):
-        g = self.group_class(None, *args, model=model, **kwargs)
-        super(_SingleGroupApproximation, self).__init__([g], model=model)
+    def __init__(self, *args, local_rv=None, model=None, **kwargs):
+        if local_rv is None:
+            local_rv = dict()
+        groups = [self.group_class(None, *args, model=model, **kwargs)]
+        groups.extend([Group([v], params=p, local=True, model=model) for v, p in local_rv.items()])
+        super(SingleGroupApproximation, self).__init__(groups, model=model)
 
     def __getattr__(self, item):
         return getattr(self.groups[0], item)
 
 
-class MeanField(_SingleGroupApproximation):
+class MeanField(SingleGroupApproximation):
     group_class = MeanFieldGroup
 
 
-class FullRank(_SingleGroupApproximation):
+class FullRank(SingleGroupApproximation):
     group_class = FullRankGroup
 
 
-class Empirical(_SingleGroupApproximation):
+class Empirical(SingleGroupApproximation):
     group_class = EmpiricalGroup
 
     def __init__(self, trace=None, size=None, *args, **kwargs):
+        if kwargs.get('local_rv', None) is not None:
+            raise ValueError('Empirical approximation does not support local variables')
         super(Empirical, self).__init__(*args, trace=trace, size=size, **kwargs)
 
 
-class NormalizingFlow(_SingleGroupApproximation):
+class NormalizingFlow(SingleGroupApproximation):
     group_class = NormalizingFlowGroup
 
     def __init__(self, flow=NormalizingFlowGroup.default_flow, *args, **kwargs):
