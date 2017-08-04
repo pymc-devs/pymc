@@ -6,8 +6,10 @@ from theano import theano
 from .conftest import not_raises
 import pymc3 as pm
 from pymc3.variational.approximations import (
-    MeanFieldGroup, FullRankGroup, NormalizingFlowGroup, EmpiricalGroup
+    MeanFieldGroup, FullRankGroup, NormalizingFlowGroup, EmpiricalGroup,
+    MeanField, FullRank, NormalizingFlow, Empirical
 )
+
 from pymc3.variational.opvi import Approximation, Group
 
 
@@ -297,3 +299,24 @@ def test_group_api_params(three_var_model, raises, params, type_, kw, formula):
             logq = g.logq
             logq = g.set_size_and_deterministic(logq, 1, 0)
             logq.eval()
+
+
+@pytest.mark.parametrize(
+    'gcls, approx, kw',
+    [
+        (MeanFieldGroup, MeanField, {}),
+        (FullRankGroup, FullRank, {}),
+        (EmpiricalGroup, Empirical, {'size': 100}),
+        (NormalizingFlowGroup, NormalizingFlow, {'flow': 'loc'}),
+        (NormalizingFlowGroup, NormalizingFlow, {'flow': 'scale-loc-scale'}),
+        (NormalizingFlowGroup, NormalizingFlow, {})
+    ]
+)
+def test_single_group_shortcuts(three_var_model, approx, kw, gcls):
+    with three_var_model:
+        a = approx(**kw)
+    assert isinstance(a, Approximation)
+    assert len(a.groups) == 1
+    assert isinstance(a.groups[0], gcls)
+    if isinstance(a, NormalizingFlow):
+        assert a.flow.formula == kw.get('flow', NormalizingFlowGroup.default_flow)

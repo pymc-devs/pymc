@@ -32,11 +32,16 @@ from .inference import (
 
 from . import approximations
 from .approximations import (
-    MeanFieldGroup,
-    FullRankGroup,
-    EmpiricalGroup,
-    NormalizingFlowGroup,
+    MeanField,
+    FullRank,
+    Empirical,
+    NormalizingFlow,
     sample_approx
+)
+from . import opvi
+from .opvi import (
+    Group,
+    Approximation
 )
 
 # special
@@ -44,5 +49,4 @@ from .stein import Stein
 from . import flows
 from . import operators
 from . import test_functions
-from . import opvi
 from . import callbacks

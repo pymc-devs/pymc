@@ -551,7 +551,9 @@ class Group(object):
                  local=False, **kwargs):
         if local and not self.SUPPORT_AEVB:
             raise TypeError('%s does not support local groups' % self.__class__)
-        self.vfam = vfam
+        if isinstance(vfam, str):
+            vfam = vfam.lower()
+        self._vfam = vfam
         self._islocal = local
         self._rng = tt_rng(random_seed)
         model = modelcontext(model)
@@ -1008,3 +1010,24 @@ class Approximation(object):
         else:
             forprint = self.groups[:2] + ['...'] + self.groups[-2:]
             return 'Approximation{' + ' & '.join(map(str, forprint)) + '}'
+
+    @classmethod
+    def single_group(cls, gcls, *args, model=None, **kwargs):
+        g = gcls(None, *args, model=model, **kwargs)
+        return cls([g], model=model)
+
+    @classmethod
+    def MeanField(cls, *args, **kwargs):
+        return cls.single_group(pm.approximations.MeanFieldGroup, *args, **kwargs)
+
+    @classmethod
+    def FullRank(cls, *args, **kwargs):
+        return cls.single_group(pm.approximations.FullRankGroup, *args, **kwargs)
+
+    @classmethod
+    def NormalizingFlow(cls, *args, **kwargs):
+        return cls.single_group(pm.approximations.NormalizingFlowGroup, *args, **kwargs)
+
+    @classmethod
+    def Empirical(cls, *args, **kwargs):
+        return cls.single_group(pm.approximations.EmpiricalGroup, *args, **kwargs)
