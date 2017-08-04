@@ -78,7 +78,10 @@ class GPBase(object):
     def prior(self, name, X, *args, **kwargs):
         raise NotImplementedError
 
-    def conditional(self, name, n_points, Xnew, **kwargs):
+    def marginal_likelihood(self, name, X, *args, **kwargs):
+        raise NotImplementedError
+
+    def conditional(self, name, n_points, Xnew, *args, **kwargs):
         raise NotImplementedError
 
 
@@ -183,10 +186,12 @@ class TP(Latent):
 
 @conditioned_vars(["X", "y", "noise"])
 class Marginal(GPBase):
+    # should I rename 'prior' method to 'marginal_likelihood'?
+
     def __init__(self, mean_func=None, cov_func=None):
         super(Marginal, self).__init__(mean_func, cov_func)
 
-    def _build_prior(self, X, noise):
+    def _build_marginal_likelihood(self, X, noise):
         mu = self.mean_func(X)
         Kxx = self.cov_total(X)
         Knx = noise(X)
@@ -194,14 +199,17 @@ class Marginal(GPBase):
         chol = cholesky(stabilize(cov))
         return mu, chol
 
-    def prior(self, name, X, y, noise):
+    def marginal_likelihood(self, name, n_points, X, y, noise, is_observed=True):
         if not isinstance(noise, Covariance):
             noise = pm.gp.cov.WhiteNoise(noise)
-        mu, chol = self._build_prior(X, noise)
+        mu, chol = self._build_marginal_likelihood(X, noise)
         self.X = X
         self.y = y
         self.noise = noise
-        return pm.MvNormal(name, mu=mu, chol=chol, observed=y)
+        if is_observed:
+            return pm.MvNormal(name, mu=mu, chol=chol, observed=y)
+        else:
+            return pm.MvNormal(name, mu=mu, chol=chol, size=n_points)
 
     def _build_conditional(self, Xnew, X, y, noise, pred_noise):
         Kxx = self.cov_total(X)
@@ -251,7 +259,7 @@ class MarginalSparse(GPBase):
         new_gp.approx = self.approx
         return new_gp
 
-    def _build_prior_logp(self, X, Xu, y, sigma):
+    def _build_marginal_likelihood_logp(self, X, Xu, y, sigma):
         sigma2 = tt.square(sigma)
         Kuu = self.cov_func(Xu)
         Kuf = self.cov_func(Xu, X)
@@ -282,13 +290,16 @@ class MarginalSparse(GPBase):
         quadratic = 0.5 * (tt.dot(r, r_l) - tt.dot(c, c))
         return -1.0 * (constant + logdet + quadratic + trace)
 
-    def prior(self, name, X, Xu, y, sigma):
+    def marginal_likelihood(self, name, n_points, X, Xu, y, sigma, is_observed=True):
         self.X = X
         self.Xu = Xu
         self.y = y
         self.sigma = sigma
-        logp = lambda y: self._build_prior_logp(X, Xu, y, sigma)
-        return pm.DensityDist(name, logp, observed=y)
+        logp = lambda y: self._build_marginal_likelihood_logp(X, Xu, y, sigma)
+        if is_observed:
+            return pm.DensityDist(name, logp, observed=y)
+        else:
+            return pm.DensityDist(name, logp, size=n_points) # need size? if not, dont need size arg
 
     def _build_conditional(self, Xnew, Xu, X, y, sigma, pred_noise):
         sigma2 = tt.square(sigma)
