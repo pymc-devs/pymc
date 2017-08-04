@@ -4,7 +4,7 @@ from theano import tensor as tt
 
 import pymc3 as pm
 from pymc3.distributions.dist_math import rho2sd, log_normal
-from pymc3.variational.opvi import Group, node_property
+from pymc3.variational.opvi import Group, Approximation, node_property
 from pymc3.util import update_start_vals
 from pymc3.theanof import change_flags
 from pymc3.math import batched_diag
@@ -12,10 +12,10 @@ from pymc3.variational import flows
 
 
 __all__ = [
-    'MeanFieldGroup',
-    'FullRankGroup',
-    'EmpiricalGroup',
-    'NormalizingFlowGroup',
+    'MeanField',
+    'FullRank',
+    'Empirical',
+    'NormalizingFlow'
     'sample_approx'
 ]
 
@@ -420,7 +420,7 @@ class NormalizingFlowGroup(Group):
         # 1. string formula
         # 2. not changed default value
         # 3. Formula
-        formula = self._kwargs.get('flow', self.vfam)
+        formula = self._kwargs.get('flow', self._vfam)
         jitter = self._kwargs.get('jitter', 1)
         if formula is None or isinstance(formula, str):
             # case 1 and 2
@@ -552,3 +552,37 @@ def sample_approx(approx, draws=100, include_transformed=True):
         Samples drawn from variational posterior.
     """
     return approx.sample(draws=draws, include_transformed=include_transformed)
+
+
+# single group shortcuts exported to user
+class _SingleGroupApproximation(Approximation):
+    group_class = None
+
+    def __init__(self, *args, model=None, **kwargs):
+        g = self.group_class(None, *args, model=model, **kwargs)
+        super(_SingleGroupApproximation, self).__init__([g], model=model)
+
+    def __getattr__(self, item):
+        return getattr(self.groups[0], item)
+
+
+class MeanField(_SingleGroupApproximation):
+    group_class = MeanFieldGroup
+
+
+class FullRank(_SingleGroupApproximation):
+    group_class = FullRankGroup
+
+
+class Empirical(_SingleGroupApproximation):
+    group_class = EmpiricalGroup
+
+    def __init__(self, trace=None, size=None, *args, **kwargs):
+        super(Empirical, self).__init__(*args, trace=trace, size=size, **kwargs)
+
+
+class NormalizingFlow(_SingleGroupApproximation):
+    group_class = NormalizingFlowGroup
+
+    def __init__(self, flow='scale-loc', *args, **kwargs):
+        super(NormalizingFlow, self).__init__(*args, flow=flow, **kwargs)
