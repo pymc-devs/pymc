@@ -584,5 +584,5 @@ class Empirical(_SingleGroupApproximation):
 class NormalizingFlow(_SingleGroupApproximation):
     group_class = NormalizingFlowGroup
 
-    def __init__(self, flow='scale-loc', *args, **kwargs):
+    def __init__(self, flow=NormalizingFlowGroup.default_flow, *args, **kwargs):
         super(NormalizingFlow, self).__init__(*args, flow=flow, **kwargs)
