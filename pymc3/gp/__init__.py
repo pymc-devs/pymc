@@ -1,3 +1,4 @@
 from . import cov
 from . import mean
-from .gp import Marginal, MarginalSparse, Latent
+from . import util
+from .gp import Latent, Marginal, MarginalSparse, TP
