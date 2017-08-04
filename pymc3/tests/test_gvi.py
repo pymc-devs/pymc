@@ -320,3 +320,34 @@ def test_single_group_shortcuts(three_var_model, approx, kw, gcls):
     assert isinstance(a.groups[0], gcls)
     if isinstance(a, NormalizingFlow):
         assert a.flow.formula == kw.get('flow', NormalizingFlowGroup.default_flow)
+
+
+def test_elbo():
+    mu0 = 1.5
+    sigma = 1.0
+    y_obs = np.array([1.6, 1.4])
+
+    post_mu = np.array([1.88], dtype=theano.config.floatX)
+    post_sd = np.array([1], dtype=theano.config.floatX)
+    # Create a model for test
+    with pm.Model() as model:
+        mu = pm.Normal('mu', mu=mu0, sd=sigma)
+        pm.Normal('y', mu=mu, sd=1, observed=y_obs)
+
+    # Create variational gradient tensor
+    mean_field = MeanField(model=model)
+    with pm.theanof.change_flags(compute_test_value='off'):
+        elbo = -pm.operators.KL(mean_field)()(10000)
+
+    mean_field.shared_params['mu'].set_value(post_mu)
+    mean_field.shared_params['rho'].set_value(np.log(np.exp(post_sd) - 1))
+
+    f = theano.function([], elbo)
+    elbo_mc = f()
+
+    # Exact value
+    elbo_true = (-0.5 * (
+        3 + 3 * post_mu ** 2 - 2 * (y_obs[0] + y_obs[1] + mu0) * post_mu +
+        y_obs[0] ** 2 + y_obs[1] ** 2 + mu0 ** 2 + 3 * np.log(2 * np.pi)) +
+                 0.5 * (np.log(2 * np.pi) + 1))
+    np.testing.assert_allclose(elbo_mc, elbo_true, rtol=0, atol=1e-1)

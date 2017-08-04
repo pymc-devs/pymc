@@ -1010,24 +1010,3 @@ class Approximation(object):
         else:
             forprint = self.groups[:2] + ['...'] + self.groups[-2:]
             return 'Approximation{' + ' & '.join(map(str, forprint)) + '}'
-
-    @classmethod
-    def single_group(cls, gcls, *args, model=None, **kwargs):
-        g = gcls(None, *args, model=model, **kwargs)
-        return cls([g], model=model)
-
-    @classmethod
-    def MeanField(cls, *args, **kwargs):
-        return cls.single_group(pm.approximations.MeanFieldGroup, *args, **kwargs)
-
-    @classmethod
-    def FullRank(cls, *args, **kwargs):
-        return cls.single_group(pm.approximations.FullRankGroup, *args, **kwargs)
-
-    @classmethod
-    def NormalizingFlow(cls, *args, **kwargs):
-        return cls.single_group(pm.approximations.NormalizingFlowGroup, *args, **kwargs)
-
-    @classmethod
-    def Empirical(cls, *args, **kwargs):
-        return cls.single_group(pm.approximations.EmpiricalGroup, *args, **kwargs)
