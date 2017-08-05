@@ -467,7 +467,7 @@ class SVGD(ImplicitGradient):
     def __init__(self, n_particles=100, jitter=1, model=None, start=None,
                  random_seed=None, estimator=KSD, kernel=test_functions.rbf, **kwargs):
         if kwargs.get('local_rv') is not None:
-            raise opvi.LocalGroupError('SVGD does not support local groups')
+            raise opvi.AEVBInferenceError('SVGD does not support local groups')
         empirical = Empirical(
             size=n_particles, jitter=jitter,
             start=start, model=model, random_seed=random_seed)
