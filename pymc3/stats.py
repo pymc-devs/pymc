@@ -144,13 +144,15 @@ def _log_post_trace(trace, model, progressbar=False):
     logp : array of shape (n_samples, n_observations)
         The contribution of the observations to the logp of the whole model.
     """
+    cached = [(var, var.logp_elemwise) for var in model.observed_RVs]
+
     def logp_vals_point(pt):
         if len(model.observed_RVs) == 0:
             return floatX(np.array([], dtype='d'))
 
         logp_vals = []
-        for var in model.observed_RVs:
-            logp = var.logp_elemwise(pt)
+        for var, logp in cached:
+            logp = logp(pt)
             if var.missing_values:
                 logp = logp[~var.observations.mask]
             logp_vals.append(logp.ravel())
