@@ -637,7 +637,7 @@ def test_aevb(inference_spec, aevb_model):
                 y,
                 more_replacements={x: np.asarray([1, 1], dtype=x.dtype)}
             ).eval()
-        except pm.opvi.LocalGroupError:
+        except pm.opvi.AEVBInferenceError:
             pytest.skip('Does not support AEVB')
 
 
