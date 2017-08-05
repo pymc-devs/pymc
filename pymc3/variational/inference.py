@@ -24,7 +24,7 @@ __all__ = [
     'ASVGD',
     'Inference',
     'ImplicitGradient',
-    'KLqp,'
+    'KLqp',
     'fit'
 ]
 

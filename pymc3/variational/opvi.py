@@ -51,7 +51,7 @@ __all__ = [
     'ObjectiveFunction',
     'Operator',
     'TestFunction',
-    'Group'
+    'Group',
     'Approximation'
 ]
 
