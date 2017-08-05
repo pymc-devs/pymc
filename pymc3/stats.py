@@ -338,7 +338,7 @@ def bpic(trace, model=None):
     return 3 * mean_deviance - 2 * deviance_at_mean
 
 
-def compare(traces, models, ic='WAIC', bootstrapping=True, b_samples=1000,
+def compare(traces, models, ic='WAIC', bootstrap=True, b_samples=1000,
             alpha=1, seed=None):
     """Compare models based on the widely available information criterion (WAIC)
     or leave-one-out (LOO) cross-validation.
@@ -353,18 +353,18 @@ def compare(traces, models, ic='WAIC', bootstrapping=True, b_samples=1000,
     ic : string
         Information Criterion (WAIC or LOO) used to compare models.
         Default WAIC.
-    bootstrapping : boolean
-        If True a Bayesian bootstrapping will be used to compute the weights
-        and the standard error of the IC estimate (SE).
+    bootstrap : boolean
+        If True a Bayesian bootstrap will be used to compute the weights and
+        the standard error of the IC estimate (SE).
     b_samples: int
-        Number of samples taken by the Bayesian bootstrapping estimation
+        Number of samples taken by the Bayesian bootstrap estimation
     alpha : float
         The shape parameter in the Dirichlet distribution used for the
-        Bayesian bootstrapping. When alpha=1 (default), the distribution is
-        uniform on the simplex. A smaller alpha will keeps the final weights
+        Bayesian bootstrap. When alpha=1 (default), the distribution is uniform
+        on the simplex. A smaller alpha will keeps the final weights
         more away from 0 and 1.
     seed : int or np.random.RandomState instance
-           If int or RandomState, use it for seeding Bayesian Bootstrapping.
+           If int or RandomState, use it for seeding Bayesian bootstrap.
            Default None the global np.random state is used.
 
     Returns
@@ -381,10 +381,10 @@ def compare(traces, models, ic='WAIC', bootstrapping=True, b_samples=1000,
     weight: Akaike-like weights for each model.
         This can be loosely interpreted as the probability of each model
         (among the compared model) given the data. By default the uncertainty 
-        in the weights estimation is considered using Bayesian bootstrapping.
+        in the weights estimation is considered using Bayesian bootstrap.
     SE : Standard error of the IC estimate.
-        By default these values are estimated using Bayesian bootstrapping
-        (best option) or, if bootstrapping=False, using a Gaussian approximation 
+        By default these values are estimated using Bayesian bootstrap (best
+        option) or, if bootstrap=False, using a Gaussian approximation
     dSE : Standard error of the difference in IC between each model and
     the top-ranked model.
         It's always 0 for the top-ranked model.
@@ -423,7 +423,7 @@ def compare(traces, models, ic='WAIC', bootstrapping=True, b_samples=1000,
 
     ics.sort(key=lambda x: x[1][0])
 
-    if bootstrapping:
+    if bootstrap:
         N = len(ics[0][1][3])
 
         ic_i = np.zeros((len(ics), N))
