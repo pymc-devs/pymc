@@ -547,7 +547,7 @@ def test_fit_oo(inference,
 
 def test_profile(inference):
     try:
-        inference.run_profiling(n=300).summary()
+        inference.run_profiling(n=100).summary()
     except ZeroDivisionError:
         # weird error in SVGD, ASVGD
         pass
