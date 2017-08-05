@@ -60,6 +60,14 @@ class VariationalInferenceError(Exception):
     """Exception for VI specific cases"""
 
 
+class ExplicitInferenceError(VariationalInferenceError, TypeError):
+    """Exception for bad explicit inference"""
+
+
+class AEVBInferenceError(VariationalInferenceError, TypeError):
+    """Exception for bad aevb inference"""
+
+
 class ParametrizationError(VariationalInferenceError, ValueError):
     """Error raised in case of bad parametrization"""
 
@@ -68,7 +76,7 @@ class GroupError(VariationalInferenceError, TypeError):
     """Error related to VI groups"""
 
 
-class LocalGroupError(GroupError):
+class LocalGroupError(GroupError, AEVBInferenceError):
     """Error raised in case of bad local_rv usage"""
 
 
@@ -356,17 +364,17 @@ class Operator(object):
     returns_loss = True
     require_logq = True
     objective_class = ObjectiveFunction
-    supports_sevb = property(lambda self: not self.approx.any_histograms)
+    supports_aevb = property(lambda self: not self.approx.any_histograms)
     T = identity
 
     def __init__(self, approx):
         self.approx = approx
-        if not self.supports_sevb and approx.has_local:
-            raise TypeError('%s does not support AEVB, '
-                            'please change inference method' % type(self))
+        if not self.supports_aevb and approx.has_local:
+            raise AEVBInferenceError('%s does not support AEVB, '
+                                     'please change inference method' % type(self))
         if self.require_logq and not approx.has_logq:
-            raise TypeError('%s requires logq, but %s does not implement it'
-                            'please change inference method' % (type(self), approx))
+            raise ExplicitInferenceError('%s requires logq, but %s does not implement it'
+                                         'please change inference method' % (type(self), approx))
 
     input = property(lambda self: self.approx.inputs)
     logp = property(lambda self: self.approx.logp)

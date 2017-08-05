@@ -151,6 +151,13 @@ class FullRankGroup(Group):
         else:
             return L.dot(L.T)
 
+    @node_property
+    def std(self):
+        if self.islocal:
+            return tt.sqrt(batched_diag(self.cov))
+        else:
+            return tt.sqrt(tt.diag(self.cov))
+
     @property
     def num_tril_entries(self):
         n = self.ndim
@@ -300,6 +307,10 @@ class EmpiricalGroup(Group):
         x = (self.histogram - self.mean)
         return x.T.dot(x) / pm.floatX(self.histogram.shape[0])
 
+    @node_property
+    def std(self):
+        return tt.sqrt(tt.diag(self.cov))
+
     def __str__(self):
         if isinstance(self.histogram, theano.compile.SharedVariable):
             shp = ', '.join(map(str, self.histogram.shape.eval()))
@@ -369,14 +380,14 @@ class NormalizingFlowGroup(Group):
         jitter = self._kwargs.get('jitter', 1)
         if formula is None or isinstance(formula, str):
             # case 1 and 2
-            has_uparams = self._check_user_params(f=formula)
+            has_params = self._check_user_params(f=formula)
         elif isinstance(formula, flows.Formula):
             # case 3
-            has_uparams = self._check_user_params(f=formula.formula)
+            has_params = self._check_user_params(f=formula.formula)
         else:
             raise TypeError('Wrong type provided for NormalizingFlow as `flow` argument, '
                             'expected Formula or string')
-        if not has_uparams:
+        if not has_params:
             if formula is None:
                 formula = self.default_flow
         else:
