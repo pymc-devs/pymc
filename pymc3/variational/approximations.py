@@ -3,7 +3,7 @@ import theano
 from theano import tensor as tt
 
 import pymc3 as pm
-from pymc3.distributions.dist_math import rho2sd, log_normal
+from pymc3.distributions.dist_math import rho2sd
 from pymc3.variational.opvi import Group, Approximation, node_property
 from pymc3.util import update_start_vals
 from pymc3.theanof import change_flags
@@ -85,10 +85,10 @@ class MeanFieldGroup(Group):
         """
         log_q_W samples over q for global vars
         """
-        z = self.symbolic_random
+        z0 = self.symbolic_initial
         std = rho2sd(self.rho)
         logdet = tt.log(std)
-        logq = pm.Normal.dist().logp(z) - logdet
+        logq = pm.Normal.dist().logp(z0) - logdet
         return logq.sum(range(1, logq.ndim))
 
 
