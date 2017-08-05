@@ -24,23 +24,10 @@ class Stein(object):
 
     @property
     def dlogp(self):
-        def unpack(tensor):
-            if tensor.ndim == 3:
-                return tensor.flatten(2)
-            else:
-                return tensor
-        gradients_for_rmatrices = tt.grad(
+        return tt.grad(
             self.logp_norm.sum(),
-            self.approx.symbolic_randoms
+            self.input_matrix
         )
-        dlogp = tt.concatenate(list(map(unpack, gradients_for_rmatrices)), axis=-1)
-
-        if self.use_histogram:
-            dlogp = theano.clone(
-                dlogp,
-                dict(zip(self.approx.symbolic_randoms, self.approx.collect('histogram')))
-            )
-        return dlogp
 
     @node_property
     def grad(self):
@@ -72,7 +59,13 @@ class Stein(object):
 
     @node_property
     def logp_norm(self):
-        return self.approx.sized_symbolic_logp / self.approx.symbolic_normalizing_constant
+        sized_symbolic_logp = self.approx.sized_symbolic_logp
+        if self.use_histogram:
+            sized_symbolic_logp = theano.clone(
+                sized_symbolic_logp,
+                dict(zip(self.approx.symbolic_randoms, self.approx.collect('histogram')))
+            )
+        return sized_symbolic_logp / self.approx.symbolic_normalizing_constant
 
     @memoize
     @change_flags(compute_test_value='off')

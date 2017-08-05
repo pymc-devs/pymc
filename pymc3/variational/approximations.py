@@ -4,6 +4,7 @@ from theano import tensor as tt
 
 import pymc3 as pm
 from pymc3.distributions.dist_math import rho2sd
+from . import opvi
 from pymc3.variational.opvi import Group, Approximation, node_property
 from pymc3.util import update_start_vals
 from pymc3.theanof import change_flags
@@ -216,7 +217,7 @@ class EmpiricalGroup(Group):
     def create_shared_params(self, trace=None, size=None, jitter=1, start=None):
         if trace is None:
             if size is None:
-                raise ValueError('Need `trace` or `size` to initialize')
+                raise opvi.ParametrizationError('Need `trace` or `size` to initialize')
             else:
                 if start is None:
                     start = self.model.test_point
@@ -399,7 +400,7 @@ class NormalizingFlowGroup(Group):
         if params is None:
             return False
         if formula is not None:
-            raise ValueError('No formula is allowed if user params are provided')
+            raise opvi.ParametrizationError('No formula is allowed if user params are provided')
         if not isinstance(params, dict):
             raise TypeError('params should be a dict')
         if not all(isinstance(k, int) for k in params.keys()):
@@ -407,17 +408,19 @@ class NormalizingFlowGroup(Group):
         needed = set(range(len(params)))
         givens = set(params.keys())
         if givens != needed:
-            raise ValueError('Passed parameters do not have a needed set of keys, '
-                             'they should be equal, needed {needed}, got {givens}'.format(
-                              givens=list(sorted(givens)), needed='[0, 1, ..., %d]' % len(formula.flows)))
+            raise opvi.ParametrizationError(
+                'Passed parameters do not have a needed set of keys, '
+                'they should be equal, needed {needed}, got {givens}'.format(
+                 givens=list(sorted(givens)), needed='[0, 1, ..., %d]' % len(formula.flows)))
         for i in needed:
             flow = flows.flow_for_params(params[i])
             flow_keys = set(flow.__param_spec__)
             user_keys = set(params[i].keys())
             if flow_keys != user_keys:
-                raise ValueError('Passed parameters for flow `{i}` ({cls}) do not have a needed set of keys, '
-                                 'they should be equal, needed {needed}, got {givens}'.format(
-                                  givens=user_keys, needed=flow_keys, i=i, cls=flow.__name__))
+                raise opvi.ParametrizationError(
+                    'Passed parameters for flow `{i}` ({cls}) do not have a needed set of keys, '
+                    'they should be equal, needed {needed}, got {givens}'.format(
+                     givens=user_keys, needed=flow_keys, i=i, cls=flow.__name__))
         return True
 
     @property
@@ -526,7 +529,7 @@ class Empirical(SingleGroupApproximation):
 
     def __init__(self, trace=None, size=None, *args, **kwargs):
         if kwargs.get('local_rv', None) is not None:
-            raise ValueError('Empirical approximation does not support local variables')
+            raise opvi.LocalGroupError('Empirical approximation does not support local variables')
         super(Empirical, self).__init__(*args, trace=trace, size=size, **kwargs)
 
 

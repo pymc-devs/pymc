@@ -1,7 +1,6 @@
-import warnings
-import collections
 from theano import tensor as tt
 from pymc3.theanof import change_flags
+from . import opvi
 from pymc3.variational.opvi import Operator, ObjectiveFunction
 from pymc3.variational.stein import Stein
 import pymc3 as pm
@@ -39,7 +38,7 @@ class KSDObjective(ObjectiveFunction):
 
     def __init__(self, op, tf):
         if not isinstance(op, KSD):
-            raise TypeError('Op should be KSD')
+            raise opvi.ParametrizationError('Op should be KSD')
         ObjectiveFunction.__init__(self, op, tf)
 
     @change_flags(compute_test_value='off')

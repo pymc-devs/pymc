@@ -4,7 +4,7 @@ from theano import tensor as tt
 
 from pymc3.distributions.dist_math import rho2sd
 from pymc3.theanof import change_flags
-from .opvi import node_property, collect_shared_to_list
+from .opvi import node_property, collect_shared_to_list, LocalGroupError
 
 __all__ = [
     'Formula',
@@ -147,15 +147,20 @@ class AbstractFlow(object):
             dtype = theano.config.floatX
         spec = self.__param_spec__[name]
         shape = tuple(eval(s, {'d': self.dim}) for s in spec)
-        if user is None:
-            return theano.shared(
-                np.asarray(np.random.normal(size=shape) * self.__jitter + ref).astype(dtype),
-                name=name
-            )
+        if self.islocal:
+            if user is None:
+                raise LocalGroupError('Need parameters for local group flow')
+            else:
+                shape = (-1,) + shape
+                return tt.as_tensor(user).reshape(shape)
         else:
-            if self.islocal:
-                shape = (-1, ) + shape
-            return tt.as_tensor(user).reshape(shape)
+            if user is None:
+                return theano.shared(
+                    np.asarray(np.random.normal(size=shape) * self.__jitter + ref).astype(dtype),
+                    name=name
+                )
+            else:
+                return tt.as_tensor(user).reshape(shape)
 
     @property
     def params(self):
@@ -384,17 +389,16 @@ class ReferencePointFlow(AbstractFlow):
         super(ReferencePointFlow, self).__init__(dim=dim, z0=z0, jitter=jitter)
         a = self.add_param(a, 'a')
         b = self.add_param(b, 'b')
-        if z_ref is None:
-            if hasattr(self.z0, 'tag') and hasattr(self.z0.tag, 'test_value'):
-                z_ref = self.add_param(
-                    z_ref, 'z_ref',
-                    ref=self.z0.tag.test_value[0],
-                    dtype=self.z0.dtype
-                )
-            else:
-                z_ref = self.add_param(
-                    z_ref, 'z_ref', dtype=self.z0.dtype
-                )
+        if hasattr(self.z0, 'tag') and hasattr(self.z0.tag, 'test_value'):
+            z_ref = self.add_param(
+                z_ref, 'z_ref',
+                ref=self.z0.tag.test_value[0],
+                dtype=self.z0.dtype
+            )
+        else:
+            z_ref = self.add_param(
+                z_ref, 'z_ref', dtype=self.z0.dtype
+            )
         self.h = h
         self.shared_params = dict(a=a, b=b, z_ref=z_ref)
         self.a_, self.b_ = self.make_ab(self.a, self.b)

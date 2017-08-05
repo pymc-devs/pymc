@@ -13,6 +13,7 @@ from pymc3.variational.approximations import (
 )
 from pymc3.variational.operators import KL, KSD
 from pymc3.variational.opvi import Approximation
+from . import opvi
 
 logger = logging.getLogger(__name__)
 
@@ -73,7 +74,7 @@ class Inference(object):
     def run_profiling(self, n=1000, score=None, **kwargs):
         score = self._maybe_score(score)
         fn_kwargs = kwargs.pop('fn_kwargs', dict())
-        fn_kwargs.update(profile=True)
+        fn_kwargs['profile'] = True
         step_func = self.objective.step_function(
             score=score, fn_kwargs=fn_kwargs,
             **kwargs
@@ -465,6 +466,8 @@ class SVGD(ImplicitGradient):
 
     def __init__(self, n_particles=100, jitter=1, model=None, start=None,
                  random_seed=None, estimator=KSD, kernel=test_functions.rbf, **kwargs):
+        if kwargs.get('local_rv') is not None:
+            raise opvi.LocalGroupError('SVGD does not support local groups')
         empirical = Empirical(
             size=n_particles, jitter=jitter,
             start=start, model=model, random_seed=random_seed)

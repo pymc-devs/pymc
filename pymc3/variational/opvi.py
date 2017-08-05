@@ -55,6 +55,22 @@ __all__ = [
 ]
 
 
+class VariationalInferenceError(Exception):
+    """Exception for VI specific cases"""
+
+
+class ParametrizationError(VariationalInferenceError, ValueError):
+    """Error raised in case of bad parametrization"""
+
+
+class GroupError(VariationalInferenceError, TypeError):
+    """Error related to VI groups"""
+
+
+class LocalGroupError(GroupError):
+    """Error raised in case of bad local_rv usage"""
+
+
 def node_property(f):
     """
     A shortcut for wrapping method to accessible tensor
@@ -381,7 +397,7 @@ class Operator(object):
     def __call__(self, f=None):
         if self.has_test_function:
             if f is None:
-                raise ValueError('Operator %s requires TestFunction' % self)
+                raise ParametrizationError('Operator %s requires TestFunction' % self)
             else:
                 if not isinstance(f, TestFunction):
                     f = TestFunction.from_function(f)
@@ -463,7 +479,7 @@ class TestFunction(object):
     @classmethod
     def from_function(cls, f):
         if not callable(f):
-            raise ValueError('Need callable, got %r' % f)
+            raise ParametrizationError('Need callable, got %r' % f)
         obj = TestFunction()
         obj.__call__ = f
         return obj
@@ -542,7 +558,7 @@ class Group(object):
                  model=None,
                  local=False, **kwargs):
         if local and not self.supports_local:
-            raise TypeError('%s does not support local groups' % self.__class__)
+            raise LocalGroupError('%s does not support local groups' % self.__class__)
         if isinstance(vfam, str):
             vfam = vfam.lower()
         self._vfam = vfam
@@ -575,9 +591,10 @@ class Group(object):
         givens = set(user_params.keys())
         needed = set(self.__param_spec__)
         if givens != needed:
-            raise ValueError('Passed parameters do not have a needed set of keys, '
-                             'they should be equal, got {givens}, needed {needed}'.format(
-                              givens=givens, needed=needed))
+            raise ParametrizationError(
+                'Passed parameters do not have a needed set of keys, '
+                'they should be equal, got {givens}, needed {needed}'.format(
+                 givens=givens, needed=needed))
         self._user_params = dict()
         spec = self.get_param_spec_for(d=self.ndim, **kwargs.pop('spec_kw', {}))
         for name, param in self.user_params.items():
@@ -602,12 +619,12 @@ class Group(object):
     @change_flags(compute_test_value='off')
     def __init_group__(self, group):
         if not group:
-            raise ValueError('Got empty group')
+            raise GroupError('Got empty group')
         if self.group is None:
             # delayed init
             self.group = group
         if self.islocal and len(group) > 1:
-            raise TypeError('Local groups with more than 1 variable are not supported')
+            raise LocalGroupError('Local groups with more than 1 variable are not supported')
         self.symbolic_initial = self._initial_type(
             self.__class__.__name__ + '_symbolic_initial_tensor'
         )
@@ -617,12 +634,13 @@ class Group(object):
         # I do some staff that is not supported by standard __init__
         # so I have to to it by myself
         self.ordering = ArrayOrdering([])
+        self.replacements = dict()
         for var in self.group:
             var = get_transformed(var)
             begin = self.ndim
             if self.islocal:
                 if var.ndim < 1:
-                    raise ValueError('Local variable should not be scalar')
+                    raise LocalGroupError('Local variable should not be scalar')
                 self.ordering.size += (np.prod(var.dshape[1:])).astype(int)
                 shape = (-1, ) + var.dshape[1:]
             else:
@@ -632,13 +650,10 @@ class Group(object):
             vmap = VarMap(var.name, slice(begin, end), shape, var.dtype)
             self.ordering.vmap.append(vmap)
             self.ordering.by_name[vmap.var] = vmap
+            vr = self.input[..., vmap.slc].reshape(shape).astype(vmap.dtyp)
+            vr.name = vmap.var + '_vi_replacement'
+            self.replacements[var] = vr
         self.bij = DictToArrayBijection(self.ordering, {})
-        self.replacements = dict()
-        for name, slc, shape, dtype in self.ordering.vmap:
-            # slice is taken by last dimension that is valid for both 1d and 2d input
-            vr = self.input[..., slc].reshape(shape).astype(dtype)
-            vr.name = name + '_vi_replacement'
-            self.replacements[self.model.named_vars[name]] = vr
 
     def _finalize_init(self):
         """
@@ -719,12 +734,15 @@ class Group(object):
 
     @change_flags(compute_test_value='off')
     def set_size_and_deterministic(self, node, s, d):
-        initial_ = self._new_initial(s, d)
-        out = theano.clone(node, {
-            self.symbolic_initial: initial_,
-        })
+        out = theano.clone(node, self.make_size_and_deterministic_replacements(s, d))
         try_to_set_test_value(node, out, None)
         return out
+
+    def make_size_and_deterministic_replacements(self, s, d):
+        initial_ = self._new_initial(s, d)
+        return {
+            self.symbolic_initial: initial_,
+        }
 
     @node_property
     def symbolic_normalizing_constant(self):
@@ -784,17 +802,17 @@ class Approximation(object):
         for g in groups:
             if g.group is None:
                 if rest is not None:
-                    raise TypeError('More that one group is specified for '
-                                    'the rest variables')
+                    raise GroupError('More that one group is specified for '
+                                     'the rest variables')
                 else:
                     rest = g
             else:
                 if set(g.group) & seen:
-                    raise ValueError('Found duplicates in groups')
+                    raise GroupError('Found duplicates in groups')
                 seen.update(g.group)
         if set(model.free_RVs) - seen:
             if rest is None:
-                raise ValueError('No approximation is specified for the rest variables')
+                raise GroupError('No approximation is specified for the rest variables')
             else:
                 rest.__init_group__(set(model.free_RVs) - seen)
         self.groups = groups
@@ -802,7 +820,7 @@ class Approximation(object):
 
     @property
     def has_logq(self):
-        return all(self.collect('HAS_LOGQ'))
+        return all(self.collect('has_logq'))
 
     def collect(self, item, part='total'):
         if part == 'total':
@@ -847,7 +865,7 @@ class Approximation(object):
     @node_property
     def sized_symbolic_logp(self):
         logp = self.to_flat_input(self.model.logpt)
-        free_logp_local = self.sample_over_posterior(logp)
+        free_logp_local = self.sample_over_posterior_apply(logp)
         return free_logp_local  # shape (s,)
 
     @node_property
@@ -877,31 +895,38 @@ class Approximation(object):
         replacements = self.replacements
         if more_replacements is not None:
             replacements.update(more_replacements)
-        return more_replacements
+        return replacements
 
     @change_flags(compute_test_value='off')
-    def set_size_and_deterministic(self, node, s, d):
-        optimizations = self._get_optimization_replacements(s, d)
-        node = theano.clone(node, optimizations)
+    def set_size_and_deterministic(self, node, s, d, optimize=True):
+        if optimize:
+            optimizations = self._get_optimization_replacements(s, d)
+            node = theano.clone(node, optimizations)
+        flat2rand = dict()
         for g in self.groups:
-            node = g.set_size_and_deterministic(node, s, d)
-        return node
+            flat2rand.update(g.make_size_and_deterministic_replacements(s, d))
+        return theano.clone(node, flat2rand)
 
-    def to_flat_input(self, node):
+    def to_flat_input(self, node, more_replacements=None):
         """
         Replaces vars with flattened view stored in self.inputs
         """
-        return theano.clone(node, self.replacements, strict=False)
+        return theano.clone(node, self.construct_replacements(more_replacements), strict=False)
 
-    def sample_over_posterior(self, node):
-        node = self.to_flat_input(node)
-
+    def sample_over_posterior_apply(self, node):
         def sample(*post):
             return theano.clone(node, dict(zip(self.inputs, post)))
 
         nodes, _ = theano.scan(
             sample, self.symbolic_randoms)
         return nodes
+
+    def scalar_sample_apply(self, node):
+        post = [v[0] for v in self.symbolic_randoms]
+        inp = self.inputs
+        return theano.clone(
+            node, dict(zip(inp, post))
+        )
 
     def _get_optimization_replacements(self, s, d):
         repl = dict()
@@ -932,14 +957,12 @@ class Approximation(object):
         sampled node(s) with replacements
         """
         node_in = node
-        replacements = self.replacements
-        if more_replacements is not None:
-            replacements.update(more_replacements)
+
+        node_out = self.to_flat_input(node, more_replacements)
         if size is None:
-            node_out = self.to_flat_input(node)
-            node_out = theano.clone(node_out, replacements)
+            node_out = self.scalar_sample_apply(node_out)
         else:
-            node_out = self.sample_over_posterior(node)
+            node_out = self.sample_over_posterior_apply(node_out)
         node_out = self.set_size_and_deterministic(node_out, size, deterministic)
         try_to_set_test_value(node_in, node_out, size)
         return node_out
@@ -1067,7 +1090,7 @@ class Approximation(object):
     @node_property
     def joint_histogram(self):
         if not self.all_histograms:
-            raise TypeError('%s does not consist of all Empirical approximations')
+            raise VariationalInferenceError('%s does not consist of all Empirical approximations')
         return tt.concatenate(self.collect('histogram'), axis=-1)
 
     @property
