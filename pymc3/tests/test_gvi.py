@@ -267,7 +267,7 @@ def test_group_api_vfam(three_var_model, raises, vfam, type_, kw):
          NormalizingFlowGroup, {}, 'loc'),
 
         (not_raises(),
-         {0: dict(log_scale=np.ones((10, 2), 'float32'))},
+         {0: dict(rho=np.ones((10, 2), 'float32'))},
          NormalizingFlowGroup, {}, 'scale'),
 
         (not_raises(),
@@ -287,7 +287,7 @@ def test_group_api_vfam(three_var_model, raises, vfam, type_, kw):
          NormalizingFlowGroup, {}, 'radial'),
 
         (not_raises(),
-         {0: dict(log_scale=np.ones((10, 2), 'float32')),
+         {0: dict(rho=np.ones((10, 2), 'float32')),
           1: dict(loc=np.ones((10, 2), 'float32'))},
          NormalizingFlowGroup, {}, 'scale-loc'),
 

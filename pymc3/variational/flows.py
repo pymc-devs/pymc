@@ -2,6 +2,7 @@ import numpy as np
 import theano
 from theano import tensor as tt
 
+from pymc3.distributions.dist_math import rho2sd
 from pymc3.theanof import change_flags
 from .opvi import node_property, collect_shared_to_list
 
@@ -512,15 +513,15 @@ class LocFlow(AbstractFlow):
 
 @AbstractFlow.register
 class ScaleFlow(AbstractFlow):
-    __param_spec__ = dict(log_scale=('d', ))
+    __param_spec__ = dict(rho=('d', ))
     short_name = 'scale'
 
     @change_flags(compute_test_value='off')
-    def __init__(self, z0=None, dim=None, log_scale=None, jitter=.1):
+    def __init__(self, z0=None, dim=None, rho=None, jitter=.1):
         super(ScaleFlow, self).__init__(dim=dim, z0=z0, jitter=jitter)
-        log_scale = self.add_param(log_scale, 'log_scale')
-        self.scale = tt.exp(log_scale)
-        self.shared_params = dict(log_scale=log_scale)
+        rho = self.add_param(rho, 'rho')
+        self.scale = rho2sd(rho)
+        self.shared_params = dict(rho=rho)
 
     log_scale = property(lambda self: self.shared_params['log_scale'])
 
@@ -532,7 +533,7 @@ class ScaleFlow(AbstractFlow):
 
     @node_property
     def logdet(self):
-        return tt.repeat(tt.sum(self.log_scale), self.z0.shape[0])
+        return tt.repeat(tt.sum(tt.log(self.scale)), self.z0.shape[0])
 
 
 @AbstractFlow.register
