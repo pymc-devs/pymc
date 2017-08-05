@@ -4,7 +4,7 @@ import operator
 import numpy as np
 from theano import theano, tensor as tt
 
-from .conftest import not_raises
+
 import pymc3 as pm
 from pymc3.theanof import change_flags
 from pymc3.variational.approximations import (
@@ -20,6 +20,7 @@ from pymc3.variational import flows
 from pymc3.variational.opvi import Approximation, Group
 
 from . import models
+from .conftest import not_raises
 
 pytestmark = pytest.mark.usefixtures(
     'strict_float32',
