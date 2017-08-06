@@ -456,3 +456,10 @@ def ix_(*args):
         new = new.reshape((1,)*k + (new.size,) + (1,)*(nd-k-1))
         out.append(new)
     return tuple(out)
+
+
+def largest_common_dtype(tensors):
+    dtypes = set(str(t.dtype) if hasattr(t, 'dtype')
+                 else smartfloatX(np.asarray(t)).dtype
+                 for t in tensors)
+    return np.stack([np.ones((), dtype=dtype) for dtype in dtypes]).dtype
