@@ -4,7 +4,8 @@ from theano import tensor as tt
 
 from pymc3.distributions.dist_math import rho2sd
 from pymc3.theanof import change_flags
-from .opvi import node_property, collect_shared_to_list, LocalGroupError
+from .opvi import node_property, collect_shared_to_list
+from . import opvi
 
 __all__ = [
     'Formula',
@@ -50,14 +51,14 @@ class Formula(object):
         if len(self.flows) == 0:
             raise ValueError('No flows in formula')
 
-    def __call__(self, z0=None, dim=None, jitter=.001, params=None):
+    def __call__(self, z0=None, dim=None, jitter=.001, params=None, batch_size=None):
         if len(self.flows) == 0:
             raise ValueError('No flows in formula')
         if params is None:
             params = dict()
         flow = z0
         for i, flow_cls in enumerate(self.flows):
-            flow = flow_cls(dim=dim, jitter=jitter, z0=flow, **params.get(i, {}))
+            flow = flow_cls(dim=dim, jitter=jitter, z0=flow, batch_size=batch_size, **params.get(i, {}))
         return flow
 
     def __reduce__(self):
@@ -123,7 +124,9 @@ class AbstractFlow(object):
             raise KeyError('No such flow: %r' % name)
         return cls.__name_registry[name.lower()]
 
-    def __init__(self, z0=None, dim=None, jitter=.001):
+    def __init__(self, z0=None, dim=None, jitter=.001, batch_size=None, local=False):
+        self.islocal = local
+        self.batch_size = batch_size
         self.__jitter = jitter
         if isinstance(z0, AbstractFlow):
             parent = z0
@@ -139,7 +142,7 @@ class AbstractFlow(object):
         if z0 is None:
             self.z0 = tt.matrix()  # type: tt.TensorVariable
         else:
-            self.z0 = z0
+            self.z0 = tt.as_tensor(z0)
         self.parent = parent
 
     def add_param(self, user=None, name=None, ref=0., dtype='floatX'):
@@ -147,20 +150,25 @@ class AbstractFlow(object):
             dtype = theano.config.floatX
         spec = self.__param_spec__[name]
         shape = tuple(eval(s, {'d': self.dim}) for s in spec)
-        if self.islocal:
-            if user is None:
-                raise LocalGroupError('Need parameters for local group flow')
-            else:
-                shape = (-1,) + shape
-                return tt.as_tensor(user).reshape(shape)
+        if user is None:
+            if self.islocal:
+                raise opvi.LocalGroupError('Need parameters for local group flow')
+            if self.batched:
+                if self.batch_size is None:
+                    raise opvi.BatchedGroupError('Need batch size to infer parameter shape')
+                shape = (self.batch_size,) + shape
+            return theano.shared(
+                np.asarray(np.random.normal(size=shape) * self.__jitter + ref).astype(dtype),
+                name=name
+            )
+
         else:
-            if user is None:
-                return theano.shared(
-                    np.asarray(np.random.normal(size=shape) * self.__jitter + ref).astype(dtype),
-                    name=name
-                )
-            else:
-                return tt.as_tensor(user).reshape(shape)
+            if self.batched:
+                if self.islocal or self.batch_size is None:
+                    shape = (-1,) + shape
+                else:
+                    shape = (self.batch_size,) + shape
+            return tt.as_tensor(user).reshape(shape)
 
     @property
     def params(self):
@@ -227,7 +235,7 @@ class AbstractFlow(object):
         return self.parent is None
 
     @property
-    def islocal(self):
+    def batched(self):
         return self.z0.ndim == 3
 
     @classmethod
@@ -268,9 +276,9 @@ class LinearFlow(AbstractFlow):
     __param_spec__ = dict(u=('d', ), w=('d', ), b=())
 
     @change_flags(compute_test_value='off')
-    def __init__(self, h, z0=None, dim=None, u=None, w=None, b=None, jitter=.001):
+    def __init__(self, h, u=None, w=None, b=None, **kwargs):
         self.h = h
-        super(LinearFlow, self).__init__(dim=dim, z0=z0, jitter=jitter)
+        super(LinearFlow, self).__init__(**kwargs)
         u = self.add_param(u, 'u')
         w = self.add_param(w, 'w')
         b = self.add_param(b, 'b')
@@ -292,7 +300,7 @@ class LinearFlow(AbstractFlow):
         b = self.b   # .
         h = self.h   # f
         # h(sxd \dot d + .)  = s
-        if not self.islocal:
+        if not self.batched:
             hwz = h(z.dot(w) + b)  # s
             # sxd + (s \outer d) = sxd
             z1 = z + tt.outer(hwz,  u)  # sxd
@@ -318,7 +326,7 @@ class LinearFlow(AbstractFlow):
         w = self.w_  # d
         b = self.b  # .
         deriv = self.h.deriv  # f'
-        if not self.islocal:
+        if not self.batched:
             # f'(sxd \dot d + .) * -xd = sxd
             phi = deriv(z.dot(w) + b).dimshuffle(0, 'x') * w.dimshuffle('x', 0)
             # \abs(. + sxd \dot d) = s
@@ -356,7 +364,7 @@ class PlanarFlow(LinearFlow):
         super(PlanarFlow, self).__init__(h=Tanh(), **kwargs)
 
     def make_uw(self, u, w):
-        if not self.islocal:
+        if not self.batched:
             # u_ : d
             # w_ : d
             wu = u.dot(w)  # .
@@ -385,8 +393,8 @@ class ReferencePointFlow(AbstractFlow):
     __param_spec__ = dict(a=(), b=(), z_ref=('d', ))
 
     @change_flags(compute_test_value='off')
-    def __init__(self, h, z0=None, dim=None, a=None, b=None, z_ref=None, jitter=.1):
-        super(ReferencePointFlow, self).__init__(dim=dim, z0=z0, jitter=jitter)
+    def __init__(self, h, a=None, b=None, z_ref=None, **kwargs):
+        super(ReferencePointFlow, self).__init__(**kwargs)
         a = self.add_param(a, 'a')
         b = self.add_param(b, 'b')
         if hasattr(self.z0, 'tag') and hasattr(self.z0.tag, 'test_value'):
@@ -417,7 +425,7 @@ class ReferencePointFlow(AbstractFlow):
         z_ref = self.z_ref  # d
         z = self.z0  # sxd
         h = self.h  # h(a, r)
-        if self.islocal:
+        if self.batched:
             # a bx-x-
             # b bx-x-
             # z bxsxd
@@ -430,7 +438,7 @@ class ReferencePointFlow(AbstractFlow):
         # global: sxd + . * h(., sx-) * (sxd - sxd) = sxd
         # local: bxsxd + b * h(b, bxsx-) * (bxsxd - bxsxd) = bxsxd
         z1 = z + b * h(a, r) * (z-z_ref)
-        if self.islocal:
+        if self.batched:
             z1 = z1.swapaxes(0, 1)
         return z1
 
@@ -443,7 +451,7 @@ class ReferencePointFlow(AbstractFlow):
         z = self.z0  # sxd
         h = self.h  # h(a, r)
         deriv = self.h.deriv  # h'(a, r)
-        if self.islocal:
+        if self.batched:
             z = z.swapaxes(0, 1)
             a = a.dimshuffle(0, 'x', 'x')
             b = b.dimshuffle(0, 'x', 'x')
@@ -456,7 +464,7 @@ class ReferencePointFlow(AbstractFlow):
         har = h(a, r)
         dar = deriv(a, r)
         logdet = tt.log((1. + b*har)**(d-1.) * (1. + b*har + b*dar*r))
-        if self.islocal:
+        if self.batched:
             return logdet.sum([0, -1])
         else:
             return logdet.sum(-1)
@@ -497,8 +505,8 @@ class LocFlow(AbstractFlow):
     __param_spec__ = dict(loc=('d', ))
     short_name = 'loc'
 
-    def __init__(self, z0=None, dim=None, loc=None, jitter=0):
-        super(LocFlow, self).__init__(dim=dim, z0=z0, jitter=jitter)
+    def __init__(self, loc=None, **kwargs):
+        super(LocFlow, self).__init__(**kwargs)
         loc = self.add_param(loc, 'loc')
         self.shared_params = dict(loc=loc)
 
@@ -521,8 +529,8 @@ class ScaleFlow(AbstractFlow):
     short_name = 'scale'
 
     @change_flags(compute_test_value='off')
-    def __init__(self, z0=None, dim=None, rho=None, jitter=.1):
-        super(ScaleFlow, self).__init__(dim=dim, z0=z0, jitter=jitter)
+    def __init__(self, rho=None, **kwargs):
+        super(ScaleFlow, self).__init__(**kwargs)
         rho = self.add_param(rho, 'rho')
         self.scale = rho2sd(rho)
         self.shared_params = dict(rho=rho)
@@ -546,17 +554,17 @@ class HouseholderFlow(AbstractFlow):
     short_name = 'hh'
 
     @change_flags(compute_test_value='raise')
-    def __init__(self, z0=None, dim=None, v=None, jitter=.1):
-        super(HouseholderFlow, self).__init__(dim=dim, z0=z0, jitter=jitter)
+    def __init__(self, v=None, **kwargs):
+        super(HouseholderFlow, self).__init__(**kwargs)
         v = self.add_param(v, 'v')
         self.shared_params = dict(v=v)
-        if self.islocal:
+        if self.batched:
             vv = v.dimshuffle(0, 1, 'x') * v.dimshuffle(0, 'x', 1)
-            I = tt.eye(dim).dimshuffle('x', 0, 1)
+            I = tt.eye(self.dim).dimshuffle('x', 0, 1)
             vvn = (1e-10+(v**2).sum(-1)).dimshuffle(0, 'x', 'x')
         else:
             vv = tt.outer(v, v)
-            I = tt.eye(dim)
+            I = tt.eye(self.dim)
             vvn = ((v**2).sum(-1)+1e-10)
         self.H = I - 2. * vv / vvn
 
@@ -564,7 +572,7 @@ class HouseholderFlow(AbstractFlow):
     def forward(self):
         z = self.z0  # sxd
         H = self.H   # dxd
-        if self.islocal:
+        if self.batched:
             return tt.batched_dot(z.swapaxes(0, 1), H).swapaxes(0, 1)
         else:
             return z.dot(H)

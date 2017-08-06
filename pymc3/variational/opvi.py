@@ -76,7 +76,11 @@ class GroupError(VariationalInferenceError, TypeError):
     """Error related to VI groups"""
 
 
-class LocalGroupError(GroupError, AEVBInferenceError):
+class BatchedGroupError(GroupError):
+    """Error with batched variables"""
+
+
+class LocalGroupError(BatchedGroupError, AEVBInferenceError):
     """Error raised in case of bad local_rv usage"""
 
 
@@ -414,11 +418,11 @@ class Operator(object):
             if f is not None:
                 warnings.warn(
                     'TestFunction for %s is redundant and removed' %
-                    self)
+                    self, stacklevel=3)
             else:
                 pass
             f = TestFunction()
-        f.setup(self.approx.ndim)
+        f.setup(self.approx)
         return self.objective_class(self, f)
 
     def __str__(self):    # pragma: no cover
@@ -455,13 +459,6 @@ class TestFunction(object):
         self._inited = False
         self.shared_params = None
 
-    def create_shared_params(self, dim):
-        """Returns
-        -------
-        {dict|list|theano.shared}
-        """
-        pass
-
     @property
     def params(self):
         return collect_shared_to_list(self.shared_params)
@@ -469,20 +466,7 @@ class TestFunction(object):
     def __call__(self, z):
         raise NotImplementedError
 
-    def setup(self, dim):
-        if not self._inited:
-            self._setup(dim)
-            self.shared_params = self.create_shared_params(dim)
-            self._inited = True
-
-    def _setup(self, dim):
-        R"""Does some preparation stuff before calling :func:`Approximation.create_shared_params`
-
-        Parameters
-        ----------
-        dim : int
-            dimension of posterior distribution
-        """
+    def setup(self, approx):
         pass
 
     @classmethod
@@ -492,6 +476,32 @@ class TestFunction(object):
         obj = TestFunction()
         obj.__call__ = f
         return obj
+
+
+def _independent_dims_pattern(independent_dims, ndim, forwad=True):
+    independent_dims = set(independent_dims)
+    all_dims = set(range(ndim))
+    rest_dims = list(sorted(all_dims - independent_dims))
+    independent_dims = list(sorted(independent_dims))
+    new_order = independent_dims + rest_dims
+    if forwad:
+        return new_order
+    else:
+        old_order = [None] * ndim
+        for i, v in enumerate(new_order):
+            old_order[v] = i
+        return old_order
+
+
+def _map_back(sliced, shape, dtype, independent_dims):
+    if not independent_dims:
+        return sliced.reshape(shape).astype(dtype)
+    else:
+        old_order = _independent_dims_pattern(independent_dims, len(shape), False)
+        old_shape = [None] * len(shape)
+        for i, v in enumerate(old_order):
+            old_shape[v] = shape[i]
+        return sliced.reshape(old_shape).dimshuffle(*old_order).astype(dtype)
 
 
 class Group(object):
@@ -506,7 +516,7 @@ class Group(object):
     input = None
     # defined by approximation
     # class level constants, so capitalized
-    supports_local = True
+    supports_batched = True
     has_logq = True
 
     # some important defaults
@@ -565,18 +575,28 @@ class Group(object):
                  params=None,
                  random_seed=None,
                  model=None,
-                 local=False, **kwargs):
-        if local and not self.supports_local:
+                 local=False,
+                 batched=False,
+                 options=None,
+                 **kwargs):
+        if local and not self.supports_batched:
             raise LocalGroupError('%s does not support local groups' % self.__class__)
+        if local and batched:
+            raise LocalGroupError('%s does not support local grouping in batched mode')
         if isinstance(vfam, str):
             vfam = vfam.lower()
+        if options is None:
+            options = dict()
+        self.options = options
         self._vfam = vfam
         self._islocal = local
+        self._batched = batched
         self._rng = tt_rng(random_seed)
         model = modelcontext(model)
         self.model = model
         self.group = group
         self.user_params = params
+        self._user_params = None
         # save this stuff to use in __init_group__ later
         self._kwargs = kwargs
         if self.group is not None:
@@ -593,7 +613,6 @@ class Group(object):
     def _check_user_params(self, **kwargs):
         user_params = self.user_params
         if user_params is None:
-            self._user_params = None
             return False
         if not isinstance(user_params, dict):
             raise TypeError('params should be a dict')
@@ -605,22 +624,24 @@ class Group(object):
                 'they should be equal, got {givens}, needed {needed}'.format(
                  givens=givens, needed=needed))
         self._user_params = dict()
-        spec = self.get_param_spec_for(d=self.ndim, **kwargs.pop('spec_kw', {}))
+        spec = self.get_param_spec_for(d=self.ddim, **kwargs.pop('spec_kw', {}))
         for name, param in self.user_params.items():
             shape = spec[name]
             if self.islocal:
                 shape = (-1, ) + shape
+            elif self.batched:
+                shape = (self.bdim, ) + shape
             self._user_params[name] = tt.as_tensor(param).reshape(shape)
         return True
 
     def _initial_type(self, name):
-        if self.islocal:
+        if self.batched:
             return tt.tensor3(name)
         else:
             return tt.matrix(name)
 
     def _input_type(self, name):
-        if self.islocal:
+        if self.batched:
             return tt.matrix(name)
         else:
             return tt.vector(name)
@@ -632,8 +653,11 @@ class Group(object):
         if self.group is None:
             # delayed init
             self.group = group
-        if self.islocal and len(group) > 1:
-            raise LocalGroupError('Local groups with more than 1 variable are not supported')
+        if self.batched and len(group) > 1:
+            if self.islocal:  # better error message
+                raise LocalGroupError('Local groups with more than 1 variable are not supported')
+            else:
+                raise BatchedGroupError('Batched groups with more than 1 variable are not supported')
         self.symbolic_initial = self._initial_type(
             self.__class__.__name__ + '_symbolic_initial_tensor'
         )
@@ -646,16 +670,22 @@ class Group(object):
         self.replacements = dict()
         for var in self.group:
             var = get_transformed(var)
-            begin = self.ndim
-            if self.islocal:
+            begin = self.ddim
+            if self.batched:
                 if var.ndim < 1:
-                    raise LocalGroupError('Local variable should not be scalar')
+                    if self.islocal:
+                        raise LocalGroupError('Local variable should not be scalar')
+                    else:
+                        raise BatchedGroupError('Batched variable should not be scalar')
                 self.ordering.size += (np.prod(var.dshape[1:])).astype(int)
-                shape = (-1, ) + var.dshape[1:]
+                if self.islocal:
+                    shape = (-1, ) + var.dshape[1:]
+                else:
+                    shape = var.dshape
             else:
                 self.ordering.size += var.dsize
                 shape = var.dshape
-            end = self.ndim
+            end = self.ordering.size
             vmap = VarMap(var.name, slice(begin, end), shape, var.dtype)
             self.ordering.vmap.append(vmap)
             self.ordering.by_name[vmap.var] = vmap
@@ -670,8 +700,8 @@ class Group(object):
         """
         del self._kwargs
 
-    ndim = property(lambda self: self.ordering.size)
     islocal = property(lambda self: self._islocal)
+    batched = property(lambda self: self._islocal or self._batched)
 
     @property
     def params_dict(self):
@@ -690,17 +720,28 @@ class Group(object):
             return collect_shared_to_list(self.shared_params)
 
     def _new_initial_shape(self, size, dim):
-        if self.islocal:
-            return tt.stack([size, self.batch_size, dim])
+        if self.batched:
+            return tt.stack([size, self.bdim, dim])
         else:
             return tt.stack([size, dim])
 
     @node_property
-    def batch_size(self):
+    def bdim(self):
         if not self.islocal:
-            return 0
+            if self.batched:
+                return self.ordering.vmap[0].shp[0]
+            else:
+                return 1
         else:
             return next(iter(self.params_dict.values())).shape[0]
+
+    @node_property
+    def ndim(self):
+        return self.ordering.size * self.bdim
+
+    @property
+    def ddim(self):
+        return self.ordering.size
 
     def _new_initial(self, size, deterministic):
         if size is None:
@@ -708,7 +749,7 @@ class Group(object):
         if not isinstance(deterministic, tt.Variable):
             deterministic = np.int8(deterministic)
         dim, dist_name, dist_map = (
-            self.ndim,
+            self.ddim,
             self.initial_dist_name,
             self.initial_dist_map
         )
@@ -734,6 +775,13 @@ class Group(object):
     @node_property
     def symbolic_random(self):
         raise NotImplementedError
+
+    @node_property
+    def symbolic_random2d(self):
+        if self.batched:
+            return self.symbolic_random.flatten(2)
+        else:
+            return self.symbolic_random
 
     @change_flags(compute_test_value='off')
     def set_size_and_deterministic(self, node, s, d):
@@ -796,9 +844,11 @@ class Group(object):
         return self.logq / self.symbolic_normalizing_constant
 
     def __str__(self):
-        shp = str(self.ndim)
+        shp = str(self.ddim)
         if self.islocal:
             shp = 'None, ' + shp
+        elif self.batched:
+            shp = str(self.bdim) + shp
         return '{cls}[{shp}]'.format(shp=shp, cls=self.__class__.__name__)
 
     @node_property
@@ -852,11 +902,13 @@ class Approximation(object):
         if part == 'total':
             return [getattr(g, item) for g in self.groups]
         elif part == 'local':
-            return [getattr(g, item) for g in self.groups if g.islocal]
+            return [getattr(g, item) for g in self.groups if g.batched]
         elif part == 'global':
-            return [getattr(g, item) for g in self.groups if not g.islocal]
+            return [getattr(g, item) for g in self.groups if not g.batched]
+        elif part == 'batched':
+            return [getattr(g, item) for g in self.groups if not g.batched]
         else:
-            raise ValueError("unknown part %s, expected {'local', 'global', 'total'}")
+            raise ValueError("unknown part %s, expected {'local', 'global', 'total', 'batched'}")
 
     inputs = property(lambda self: self.collect('input'))
     symbolic_randoms = property(lambda self: self.collect('symbolic_random'))
@@ -1055,15 +1107,9 @@ class Approximation(object):
     def ndim(self):
         return sum(self.collect('ndim'))
 
-    @node_property
-    def dim_local(self):
-        dims = self.collect('dim', 'local')
-        batches = self.collect('batch_size', 'local')
-        return tt.add(*map(tt.mul, dims, batches))
-
     @property
-    def dim_global(self):
-        return sum(self.collect('dim', 'global'))
+    def ddim(self):
+        return sum(self.collect('ddim'))
 
     @property
     def has_local(self):
@@ -1073,26 +1119,13 @@ class Approximation(object):
     def has_global(self):
         return any(not c for c in self.collect('islocal'))
 
-    @node_property
-    def symbolic_batched_random_local(self):
-        return tt.concatenate(self.collect('symbolic_random', 'local'), axis=-1)
-
-    @node_property
-    def symbolic_random_local(self):
-        return self.symbolic_batched_random_local.flatten(2)
-
-    @node_property
-    def symbolic_random_global(self):
-        return tt.concatenate(self.collect('symbolic_random', 'global'), axis=-1)
+    @property
+    def has_batched(self):
+        return any(not c for c in self.collect('batched'))
 
     @node_property
     def symbolic_random(self):
-        def unpack(tensor):
-            if tensor.ndim == 3:
-                return tensor.flatten(2)
-            else:
-                return tensor
-        return tt.concatenate(list(map(unpack, self.symbolic_randoms)), axis=-1)
+        return tt.concatenate(self.collect('symbolic_random2d'), axis=-1)
 
     def __str__(self):
         if len(self.groups) < 5:

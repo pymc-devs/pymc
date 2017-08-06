@@ -641,6 +641,22 @@ def test_aevb(inference_spec, aevb_model):
             pytest.skip('Does not support AEVB')
 
 
+def test_batched_approx(three_var_model, parametric_grouped_approxes):
+    # add to inference that supports aevb
+    cls, kw = parametric_grouped_approxes
+    with three_var_model:
+        try:
+            approx = Approximation([cls([three_var_model.one], batched=True, **kw), Group(vfam='mf')])
+            inference = pm.KLqp(approx)
+            approx = inference.fit(3, obj_n_mc=2)
+            approx.sample(10)
+            approx.sample_node(
+                three_var_model.one
+            ).eval()
+        except pm.opvi.BatchedGroupError:
+            pytest.skip('Does not support grouping')
+
+
 @pytest.fixture('module')
 def binomial_model():
     n_samples = 100
@@ -771,7 +787,7 @@ def test_flow_det_local(flow_spec):
     for k, shp in spec.items():
         params[k] = np.random.randn(1, *shp).astype('float32')
     flow = flow_spec(dim=12, z0=z0.reshape((1, 1, 12)), **params)
-    assert flow.islocal
+    assert flow.batched
     with change_flags(compute_test_value='off'):
         z1 = flow.forward.flatten()
         J = tt.jacobian(z1, z0)

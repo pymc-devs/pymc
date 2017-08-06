@@ -43,7 +43,7 @@ class MeanFieldGroup(Group):
     @node_property
     def cov(self):
         var = rho2sd(self.rho)**2
-        if self.islocal:
+        if self.batched:
             return batched_diag(var)
         else:
             return tt.diag(var)
@@ -54,8 +54,7 @@ class MeanFieldGroup(Group):
 
     def __init_group__(self, group):
         super(MeanFieldGroup, self).__init_group__(group)
-        self._check_user_params()
-        if not self.user_params:
+        if not self._check_user_params():
             self.shared_params = self.create_shared_params(
                 self._kwargs.get('start', None)
             )
@@ -68,16 +67,23 @@ class MeanFieldGroup(Group):
             start_ = start.copy()
             update_start_vals(start_, self.model.test_point, self.model)
             start = start_
-        start = self.bij.map(start)
+        if self.batched:
+            start = start[self.group[0].name][0]
+        else:
+            start = self.bij.map(start)
+        rho = np.zeros((self.ddim,))
+        if self.batched:
+            start = np.tile(start, (self.bdim, 1))
+            rho = np.tile(rho, (self.bdim, 1))
         return {'mu': theano.shared(
                     pm.floatX(start), 'mu'),
                 'rho': theano.shared(
-                    pm.floatX(np.zeros((self.ndim,))), 'rho')}
+                    pm.floatX(rho), 'rho')}
 
     @node_property
     def symbolic_random(self):
         initial = self.symbolic_initial
-        sd = rho2sd(self.rho)
+        sd = rho2sd(self)
         mu = self.mean
         return sd * initial + mu
 
@@ -125,13 +131,19 @@ class FullRankGroup(Group):
             start_ = start.copy()
             update_start_vals(start_, self.model.test_point, self.model)
             start = start_
-        start = pm.floatX(self.bij.map(start))
-        n = self.ndim
+        if self.batched:
+            start = start[self.group[0].name][0]
+        else:
+            start = self.bij.map(start)
+        n = self.ddim
         L_tril = (
             np.eye(n)
             [np.tril_indices(n)]
             .astype(theano.config.floatX)
         )
+        if self.batched:
+            start = np.tile(start, (self.bdim, 1))
+            L_tril = np.tile(L_tril, (self.bdim, 1))
         return {'mu': theano.shared(start, 'mu'),
                 'L_tril': theano.shared(L_tril, 'L_tril')}
 
@@ -146,26 +158,26 @@ class FullRankGroup(Group):
     @node_property
     def cov(self):
         L = self.L
-        if self.islocal:
+        if self.batched:
             return tt.batched_dot(L, L.swapaxes(-1, -2))
         else:
             return L.dot(L.T)
 
     @node_property
     def std(self):
-        if self.islocal:
+        if self.batched:
             return tt.sqrt(batched_diag(self.cov))
         else:
             return tt.sqrt(tt.diag(self.cov))
 
     @property
     def num_tril_entries(self):
-        n = self.ndim
+        n = self.ddim
         return int(n * (n + 1) / 2)
 
     @property
     def tril_index_matrix(self):
-        n = self.ndim
+        n = self.ddim
         num_tril_entries = self.num_tril_entries
         tril_index_matrix = np.zeros([n, n], dtype=int)
         tril_index_matrix[np.tril_indices(n)] = np.arange(num_tril_entries)
@@ -177,7 +189,7 @@ class FullRankGroup(Group):
     @node_property
     def symbolic_logq(self):
         z = self.symbolic_random
-        if self.islocal:
+        if self.batched:
             def logq(z_b, mu_b, L_b):
                 return pm.MvNormal.dist(mu=mu_b, chol=L_b).logp(z_b)
             # it's gonna be so slow
@@ -192,7 +204,7 @@ class FullRankGroup(Group):
         initial = self.symbolic_initial
         L = self.L
         mu = self.mean
-        if self.islocal:
+        if self.batched:
             initial = initial.swapaxes(0, 1)
             return tt.batched_dot(initial, L).swapaxes(0, 1) + mu
         else:
@@ -204,7 +216,7 @@ class EmpiricalGroup(Group):
     """Builds Approximation instance from a given trace,
     it has the same interface as variational approximation
     """
-    supports_local = False
+    supports_batched = False
     has_logq = False
     __param_spec__ = dict(histogram=('s', 'd'))
     short_name = 'empirical'
@@ -238,7 +250,7 @@ class EmpiricalGroup(Group):
                 histogram += pm.floatX(np.random.normal(0, jitter, histogram.shape))
 
         else:
-            histogram = np.empty((len(trace) * len(trace.chains), self.ndim))
+            histogram = np.empty((len(trace) * len(trace.chains), self.ddim))
             i = 0
             for t in trace.chains:
                 for j in range(len(trace)):
@@ -315,7 +327,7 @@ class EmpiricalGroup(Group):
         if isinstance(self.histogram, theano.compile.SharedVariable):
             shp = ', '.join(map(str, self.histogram.shape.eval()))
         else:
-            shp = 'None, ' + str(self.ndim)
+            shp = 'None, ' + str(self.ddim)
         return '{cls}[{shp}]'.format(shp=shp, cls=self.__class__.__name__)
 
 
@@ -397,12 +409,19 @@ class NormalizingFlowGroup(Group):
             )
         if not isinstance(formula, flows.Formula):
             formula = flows.Formula(formula)
+        if self.islocal:
+            bs = -1
+        elif self.batched:
+            bs = self.bdim
+        else:
+            bs = None
         self.flow = formula(
-                dim=self.ndim,
-                z0=self.symbolic_initial,
-                jitter=jitter,
-                params=self.user_params
-            )
+            dim=self.ddim,
+            z0=self.symbolic_initial,
+            jitter=jitter,
+            params=self.user_params,
+            batch_size=bs,
+        )
         self._finalize_init()
 
     def _check_user_params(self, **kwargs):
@@ -475,21 +494,15 @@ class NormalizingFlowGroup(Group):
         return self.flow.forward
 
     @node_property
-    def batch_size(self):
+    def bdim(self):
         if not self.islocal:
-            return 0
+            return super(NormalizingFlowGroup, self).bdim
         else:
-            return next(iter(self.params_dict[0].values())).shape[0]
+            return next(iter(self.user_params[0].values())).shape[0]
 
     @classmethod
     def get_param_spec_for(cls, flow, **kwargs):
         return flows.Formula(flow).get_param_spec_for(**kwargs)
-
-    def __str__(self):
-        shp = str(self.ndim)
-        if self.islocal:
-            shp = 'None, ' + shp
-        return '{cls}[{shp}]'.format(shp=shp, cls=self.__class__.__name__)
 
 
 def sample_approx(approx, draws=100, include_transformed=True):
