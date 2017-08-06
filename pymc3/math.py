@@ -11,10 +11,14 @@ from theano.tensor import (
     maximum, minimum, sgn, ceil, floor)
 from theano.tensor.nlinalg import det, matrix_inverse, extract_diag, matrix_dot, trace
 import theano.tensor.slinalg
+import theano.sparse
 from theano.tensor.nnet import sigmoid
 from theano.gof import Op, Apply
 import numpy as np
-from pymc3.theanof import floatX
+import scipy as sp
+import scipy.sparse
+from scipy.linalg import block_diag as scipy_block_diag
+from pymc3.theanof import floatX, largest_common_dtype, ix_
 
 # pylint: enable=unused-import
 
@@ -186,3 +190,47 @@ def batched_diag(C):
         return C[..., idx, idx]
     else:
         raise ValueError('Input should be 2 or 3 dimensional')
+
+
+class BlockDiagonalMatrix(Op):
+    __props__ = ('sparse', 'format')
+
+    def __init__(self, sparse=False, format='csr'):
+        if format not in ('csr', 'csc'):
+            raise ValueError("format must be one of: 'csr', 'csc'", format)
+        self.sparse = sparse
+        self.format = format
+
+    def make_node(self, *matrices):
+        if not matrices:
+            raise ValueError('Got no matrices to allocate')
+        matrices = list(map(tt.as_tensor, matrices))
+        if any(mat.type.ndim != 2 for mat in matrices):
+            raise TypeError('all data arguments must be matrices')
+        if self.sparse:
+            out_type = theano.sparse.matrix(self.format, dtype=largest_common_dtype(matrices))
+        else:
+            out_type = theano.tensor.matrix(dtype=largest_common_dtype(matrices))
+        return tt.Apply(self, matrices, [out_type])
+
+    def perform(self, node, inputs, output_storage, params=None):
+        dtype = largest_common_dtype(inputs)
+        if self.sparse:
+            output_storage[0][0] = sp.sparse.block_diag(
+                inputs, self.format, dtype
+            )
+        else:
+            output_storage[0][0] = scipy_block_diag(*inputs).astype(dtype)
+
+    def grad(self, inputs, gout):
+        shapes = tt.stack([i.shape for i in inputs])
+        index_end = shapes.cumsum(0)
+        index_begin = index_end - shapes
+        slices = [ix_(tt.arange(index_begin[i, 0], index_end[i, 0]),
+                      tt.arange(index_begin[i, 1], index_end[i, 1])
+                      ) for i in range(len(inputs))]
+        return [gout[0][slc] for slc in slices]
+
+    def infer_shape(self, nodes, shapes):
+        first, second = zip(*shapes)
+        return [(tt.add(*first), tt.add(*second))]
