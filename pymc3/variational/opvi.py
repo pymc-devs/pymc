@@ -1016,11 +1016,11 @@ class Approximation(object):
         if part == 'total':
             return [getattr(g, item) for g in self.groups]
         elif part == 'local':
-            return [getattr(g, item) for g in self.groups if g.batched]
+            return [getattr(g, item) for g in self.groups if g.islocal]
         elif part == 'global':
-            return [getattr(g, item) for g in self.groups if not g.batched]
+            return [getattr(g, item) for g in self.groups if not g.islocal]
         elif part == 'batched':
-            return [getattr(g, item) for g in self.groups if not g.batched]
+            return [getattr(g, item) for g in self.groups if g.batched]
         else:
             raise ValueError("unknown part %s, expected {'local', 'global', 'total', 'batched'}")
 
