@@ -648,7 +648,7 @@ def test_batched_approx(three_var_model, parametric_grouped_approxes):
     cls, kw = parametric_grouped_approxes
     with three_var_model:
         try:
-            approx = Approximation([cls([three_var_model.one], batched=True, **kw), Group(vfam='mf')])
+            approx = Approximation([cls([three_var_model.one], batched=True, **kw), Group(None, vfam='mf')])
             inference = pm.KLqp(approx)
             approx = inference.fit(3, obj_n_mc=2)
             approx.sample(10)
