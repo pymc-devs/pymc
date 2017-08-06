@@ -1,4 +1,5 @@
 from logging.handlers import BufferingHandler
+import contextlib
 import numpy.random as nr
 from theano.sandbox.rng_mrg import MRG_RandomStreams
 from ..theanof import set_tt_rng, tt_rng
@@ -86,3 +87,8 @@ def select_by_precision(float64, float32):
     """Helper function to choose reasonable decimal cutoffs for different floatX modes."""
     decimal = float64 if theano.config.floatX == "float64" else float32
     return decimal
+
+
+@contextlib.contextmanager
+def not_raises():
+    yield
