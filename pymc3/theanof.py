@@ -463,3 +463,5 @@ def largest_common_dtype(tensors):
                  else smartfloatX(np.asarray(t)).dtype
                  for t in tensors)
     return np.stack([np.ones((), dtype=dtype) for dtype in dtypes]).dtype
+
+
