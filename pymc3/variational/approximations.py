@@ -83,7 +83,7 @@ class MeanFieldGroup(Group):
     @node_property
     def symbolic_random(self):
         initial = self.symbolic_initial
-        sd = rho2sd(self)
+        sd = self.std
         mu = self.mean
         return sd * initial + mu
 
