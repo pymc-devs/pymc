@@ -948,7 +948,10 @@ class Group(object):
 
     @node_property
     def logq(self):
-        return self.symbolic_logq.mean(0)
+        if self.islocal:
+            return self.symbolic_logq.mean(0) * self.group[0].scaling
+        else:
+            return self.symbolic_logq.mean(0)
 
     @node_property
     def logq_norm(self):
@@ -1040,12 +1043,8 @@ class Approximation(object):
         return pm.floatX(t)
 
     @node_property
-    def symbolic_logq(self):
-        return tt.add(*self.collect('symbolic_logq'))
-
-    @node_property
     def logq(self):
-        return self.symbolic_logq.mean(0)
+        return tt.add(*self.collect('logq'))
 
     @node_property
     def logq_norm(self):
