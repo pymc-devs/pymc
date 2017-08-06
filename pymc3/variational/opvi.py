@@ -380,7 +380,7 @@ class Operator(object):
             raise ExplicitInferenceError('%s requires logq, but %s does not implement it'
                                          'please change inference method' % (type(self), approx))
 
-    input = property(lambda self: self.approx.inputs)
+    inputs = property(lambda self: self.approx.inputs)
     logp = property(lambda self: self.approx.logp)
     logq = property(lambda self: self.approx.logq)
     logp_norm = property(lambda self: self.approx.logp_norm)
