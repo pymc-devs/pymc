@@ -375,10 +375,10 @@ class Operator(object):
         self.approx = approx
         if not self.supports_aevb and approx.has_local:
             raise AEVBInferenceError('%s does not support AEVB, '
-                                     'please change inference method' % type(self))
+                                     'please change inference method' % self)
         if self.require_logq and not approx.has_logq:
             raise ExplicitInferenceError('%s requires logq, but %s does not implement it'
-                                         'please change inference method' % (type(self), approx))
+                                         'please change inference method' % (self, approx))
 
     inputs = property(lambda self: self.approx.inputs)
     logp = property(lambda self: self.approx.logp)
