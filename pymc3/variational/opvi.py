@@ -1033,7 +1033,7 @@ class Approximation(object):
 
     @scale_cost_to_minibatch.setter
     def scale_cost_to_minibatch(self, value):
-        self._scale_cost_to_minibatch.set_value(int(bool(value)))
+        self._scale_cost_to_minibatch.set_value(np.int8(bool(value)))
 
     @node_property
     def symbolic_normalizing_constant(self):
