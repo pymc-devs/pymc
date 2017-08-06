@@ -186,7 +186,7 @@ def three_var_aevb_groups(parametric_grouped_approxes, three_var_model, aevb_ini
         else:
             params[k] = aevb_initial.dot(np.random.rand(7, *v).astype('float32'))
     aevb_g = cls([three_var_model.one], params=params, model=three_var_model, local=True)
-    return [aevb_g, MeanFieldGroup(model=three_var_model)]
+    return [aevb_g, MeanFieldGroup(None, model=three_var_model)]
 
 
 @pytest.fixture

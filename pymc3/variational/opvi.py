@@ -478,44 +478,155 @@ class TestFunction(object):
         return obj
 
 
-def _independent_dims_pattern(independent_dims, ndim, forwad=True):
-    independent_dims = set(independent_dims)
-    all_dims = set(range(ndim))
-    rest_dims = list(sorted(all_dims - independent_dims))
-    independent_dims = list(sorted(independent_dims))
-    new_order = independent_dims + rest_dims
-    if forwad:
-        return new_order
-    else:
-        old_order = [None] * ndim
-        for i, v in enumerate(new_order):
-            old_order[v] = i
-        return old_order
-
-
-def _map_back(sliced, shape, dtype, independent_dims):
-    if not independent_dims:
-        return sliced.reshape(shape).astype(dtype)
-    else:
-        old_order = _independent_dims_pattern(independent_dims, len(shape), False)
-        old_shape = [None] * len(shape)
-        for i, v in enumerate(old_order):
-            old_shape[v] = shape[i]
-        return sliced.reshape(old_shape).dimshuffle(*old_order).astype(dtype)
-
-
 class Group(object):
-    """
+    R"""
     Grouped Approximation that is used for modelling mutual dependencies
     for a specified group of variables. Base for local and global group
+
+    Group instance/class has some important constants:
+
+    -   **supports_batched**
+        Determines whether such variational family can be used for AEVB or batched approx.
+
+        AEVB approx is such approx that somehow depends on input data. It can be treated
+        as conditional distribution. You an read more about in the corresponding paper
+        mentioned in references
+
+        Batched mode is a special case approximation that treats every 'row', of a tensor as
+        independent from each other. Some distributions can't do that by
+        definition e.g. :class:`Empirical` that consists of particles only.
+
+    -   **has_logq**
+        Tells that distribution is defined explicitly
+
+    These constants help providing the correct inference method for given parametrization
+
+    Examples
+    --------
+
+    Basic Initialization
+    ^^^^^^^^^^^^^^^^^^^^
+    :class:`Group` is a factory class. You do not need to call every ApproximationGroup explicitly.
+    Passing the correct `vfam` (*v*ariational *fam*ily) argument you'll tell what
+    parametrization is desired for the group. This helps not to overload code with lot's of classes.
+
+    >>> group = Group([latent1, latent2], vfam='mean_field')
+
+    The other way to select approximation is to provide `params` dictionary that has some
+    predefined well shaped parameters. Keys of the dict serve as an identifier for variational family and help
+    to autoselect the correct group class. To identify what approximation to use, params dict should
+    have the full set of needed parameters. As there are 2 ways to instantiate the :class:`Group`
+    passing both `vfam` and `params` is prohibited. Partial parametrization is prohibited by design to
+    avoid corner cases and possible problems.
+
+    >>> group = Group([latent3], params=dict(mu=my_mu, rho=my_rho))
+
+    Important to note that in case you pass custom params they will not be autocollected by optimizer, you'll
+    have to provide them with `more_obj_params` keyword.
+
+    Using AEVB
+    ^^^^^^^^^^
+    Autoencoding variational Bayes is a powerful tool to get conditional :math:`q(\lambda|X)` distribution
+    on latent variables. It is well supported by PyMC3 and all you need is to provide a dictionary
+    with well shaped variational parameters, the correct approximation will be autoselected as mentioned
+    in section above. However we have some implementation restrictions in AEVB. They require autoencoded
+    variable to have first dimension as *batch* dimension and other dimensions should stay fixed.
+    With this assumptions it is possible to generalize all variational approximation families as
+    batched approximations that have flexible parameters and leading axis.
+
+    Only single variable local group is supported. Params are required.
+
+    for mean field
+    >>> group = Group([latent3], params=dict(mu=my_mu, rho=my_rho), local=True)
+    or for full rank
+    >>> group = Group([latent3], params=dict(mu=my_mu, L_tril=my_L_tril), local=True)
+
+    Using Batched Group
+    ^^^^^^^^^^^^^^^^^^^
+    Batch groups have independent row wise approximations, thus using batched
+    mean field will give no effect. It is more interesting if you want each row of a matrix
+    to be parametrized independently with normalizing flow or full rank gaussian.
+
+    To tell :class:`Group` that group is batched you need set `batched` kwarg as `True`.
+    Only single variable group is allowed due to implementation details.
+
+    >>> group = Group([latent3], vfam='fr', batched=True) # 'fr' is alias for 'full_rank'
+
+    The resulting approximation for this variable will have the following structure
+
+    .. math::
+
+        latent3_{i, \dots} \sim \mathcal{N}(\mu_i, \Sigma_i) \foreach i
+
+    **Note**: Using batched and parametrized approximation is ok, but
+    shape should be checked beforehand, it is impossible to infer it by PyMC3
+
+    Normalizing Flow Group
+    ^^^^^^^^^^^^^^^^^^^^^^
+    In case you use simple initialization pattern using `vfam` you'll not meet any changes.
+    Passing flow formula to `vfam` you'll get correct flow parametrization for group
+
+    >>> group = Group([latent3], vfam='scale-hh*5-radial*4-loc')
+
+    **Note**: Consider passing location flow as the last one and scale as the first one for stable inference.
+
+    Batched normalizing flow is supported as well
+
+    >>> group = Group([latent3], vfam='scale-hh*2-radial-loc', batched=True)
+
+    Custom parameters for normalizing flow can be a real trouble for the first time.
+    They have quite different format from the rest variational families.
+
+
+    >>> # int is used as key, it also tells the flow position
+    ... flow_params = {
+    ...     # `rho` parametrizes scale flow, softplus is used to map (-inf; inf) -> (0, inf)
+    ...     0: dict(rho=my_scale),
+    ...     1: dict(v=my_v1),  # Householder Flow, `v` is parameter name from the original paper
+    ...     2: dict(v=my_v2),  # do not miss any number in dict, or else error is raised
+    ...     3: dict(a=my_a, b=my_b, z_ref=my_z_ref),  # Radial flow
+    ...     4: dict(loc=my_loc)  # Location Flow
+    ... }
+    ... group = Group([latent3], params=flow_params)
+    ... # local=True can be added in case you do AEVB inference
+    ... group = Group([latent3], params=flow_params, local=True)
+
+    Delayed Initialization
+    ^^^^^^^^^^^^^^^^^^^^^^
+    When you have a lot of latent variables it is impractical to do it all manually.
+    To make life much simpler, You can pass `None` instead of list of variables. That case
+    you'll not create shared parameters untill you pass all collected groups to
+    Approximation object that collects all the croups together and checks that every group is
+    correctly initialized. For those groups which have group equal to `None` it will collect all
+    the rest variables not covered by other groups and perform delayed init.
+
+    >>> group_1 = Group([latent1], vfam='fr')  # latent1 has full rank approximation
+    >>> group_other = Group(None, vfam='mf')  # other variables have mean field Q
+    >>> approx = Approximation([group_1, group_other])
+
+    Summing Up
+    ^^^^^^^^^^
+    When you have created all the groups they need to pass all the groups to :class:`Approximation`.
+    It does not accept any other parameter rather than `groups`
+
+    >>> approx = Approximation(my_groups)
+
+    See Also
+    --------
+    See more information about :class:`Approximation` in it's docs
+
+    References
+    ----------
+    -   Kingma, D. P., & Welling, M. (2014).
+        `Auto-Encoding Variational Bayes. stat, 1050, 1. <https://arxiv.org/abs/1312.6114>`_
     """
     # need to be defined in init
     shared_params = None
     symbolic_initial = None
     replacements = None
     input = None
+
     # defined by approximation
-    # class level constants, so capitalized
     supports_batched = True
     has_logq = True
 
@@ -557,7 +668,7 @@ class Group(object):
             raise KeyError('No such group: {!r}'.format(name))
         return cls.__name_registry[name.lower()]
 
-    def __new__(cls, group=None, vfam=None, params=None, *args, **kwargs):
+    def __new__(cls, group, vfam=None, params=None, *args, **kwargs):
         if cls is Group:
             if vfam is not None and params is not None:
                 raise TypeError('Cannot call Group with both `vfam` and `params` provided')
@@ -570,7 +681,7 @@ class Group(object):
         else:
             return object.__new__(cls)
 
-    def __init__(self, group=None,
+    def __init__(self, group,
                  vfam=None,
                  params=None,
                  random_seed=None,
@@ -890,7 +1001,7 @@ class Approximation(object):
             if rest is None:
                 raise GroupError('No approximation is specified for the rest variables')
             else:
-                rest.__init_group__(set(model.free_RVs) - seen)
+                rest.__init_group__(list(set(model.free_RVs) - seen))
         self.groups = groups
         self.model = model
 
