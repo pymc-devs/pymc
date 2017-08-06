@@ -20,12 +20,14 @@ from pymc3.variational import flows
 from pymc3.variational.opvi import Approximation, Group
 
 from . import models
-from .conftest import not_raises
+from .helpers import not_raises
 
 pytestmark = pytest.mark.usefixtures(
     'strict_float32',
     'seeded_test'
 )
+
+
 @pytest.mark.parametrize(
     'diff',
     [
