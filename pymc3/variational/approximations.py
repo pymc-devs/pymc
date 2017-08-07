@@ -88,7 +88,7 @@ class MeanFieldGroup(Group):
         return sd * initial + mu
 
     @node_property
-    def symbolic_logq(self):
+    def symbolic_logq_not_scaled(self):
         """
         log_q_W samples over q for global vars
         """
@@ -149,7 +149,18 @@ class FullRankGroup(Group):
 
     @node_property
     def L(self):
-        return self.params_dict['L_tril'][..., self.tril_index_matrix]
+        if self.batched:
+            L = tt.zeros((self.ddim, self.ddim, self.bdim))
+            L = tt.set_subtensor(
+                L[self.tril_indices],
+                self.params_dict['L_tril'].T)
+            L = L.dimshuffle(2, 0, 1)
+        else:
+            L = tt.zeros((self.ddim, self.ddim))
+            L = tt.set_subtensor(
+                L[self.tril_indices],
+                self.params_dict['L_tril'])
+        return L
 
     @node_property
     def mean(self):
@@ -166,9 +177,9 @@ class FullRankGroup(Group):
     @node_property
     def std(self):
         if self.batched:
-            return tt.sqrt(batched_diag(self.cov))
+            return batched_diag(tt.sqrt(self.cov))
         else:
-            return tt.sqrt(tt.diag(self.cov))
+            return tt.diag(tt.sqrt(self.cov))
 
     @property
     def num_tril_entries(self):
@@ -176,18 +187,11 @@ class FullRankGroup(Group):
         return int(n * (n + 1) / 2)
 
     @property
-    def tril_index_matrix(self):
-        n = self.ddim
-        num_tril_entries = self.num_tril_entries
-        tril_index_matrix = np.zeros([n, n], dtype=int)
-        tril_index_matrix[np.tril_indices(n)] = np.arange(num_tril_entries)
-        tril_index_matrix[
-            np.tril_indices(n)[::-1]
-        ] = np.arange(num_tril_entries)
-        return tril_index_matrix
+    def tril_indices(self):
+        return np.tril_indices(self.ddim)
 
     @node_property
-    def symbolic_logq(self):
+    def symbolic_logq_not_scaled(self):
         z = self.symbolic_random
         if self.batched:
             def logq(z_b, mu_b, L_b):
@@ -484,7 +488,7 @@ class NormalizingFlowGroup(Group):
         return self.flow.all_params
 
     @node_property
-    def symbolic_logq(self):
+    def symbolic_logq_not_scaled(self):
         z0 = self.symbolic_initial
         q0 = pm.Normal.dist().logp(z0).sum(range(1, z0.ndim))
         return q0-self.flow.sum_logdets
