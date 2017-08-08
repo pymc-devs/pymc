@@ -198,7 +198,7 @@ class Marginal(GPBase):
         chol = cholesky(stabilize(cov))
         return mu, chol
 
-    def marginal_likelihood(self, name, n_points, X, y, noise, is_observed=True):
+    def marginal_likelihood(self, name, X, y, noise, n_points=None, is_observed=True):
         if not isinstance(noise, Covariance):
             noise = pm.gp.cov.WhiteNoise(noise)
         mu, chol = self._build_marginal_likelihood(X, noise)
@@ -208,6 +208,8 @@ class Marginal(GPBase):
         if is_observed:
             return pm.MvNormal(name, mu=mu, chol=chol, observed=y)
         else:
+            if n_points is None:
+                raise ValueError("When `y` is not observed, `n_points` arg is required")
             return pm.MvNormal(name, mu=mu, chol=chol, size=n_points)
 
     def _build_conditional(self, Xnew, X, y, noise, pred_noise):
@@ -295,7 +297,7 @@ class MarginalSparse(GPBase):
         self.y = y
         self.sigma = sigma
         logp = lambda y: self._build_marginal_likelihood_logp(X, Xu, y, sigma)
-        if is_observed:
+        if is_observed:  # same thing ith n_points here?? check
             return pm.DensityDist(name, logp, observed=y)
         else:
             return pm.DensityDist(name, logp, size=n_points) # need size? if not, dont need size arg
