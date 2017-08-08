@@ -957,11 +957,11 @@ class TestLatex(object):
             Y_obs = Normal('Y_obs', mu=mu, sd=sigma, observed=Y)
         self.distributions = [alpha, sigma, mu, b, Y_obs]
         self.expected = (
-            '$alpha \\sim \\text{Normal}(\\mathit{mu}=0, \\mathit{sd}=10.0)$',
-            '$sigma \\sim \\text{HalfNormal}(\\mathit{sd}=1.0)$',
-            '$mu \\sim \\text{Deterministic}(alpha, \\text{Constant}, beta)$',
-            '$beta \\sim \\text{Normal}(\\mathit{mu}=0, \\mathit{sd}=10.0)$',
-            '$Y_obs \\sim \\text{Normal}(\\mathit{mu}=mu, \\mathit{sd}=f(sigma))$'
+            r'$alpha \sim \text{Normal}(\mathit{mu}=0, \mathit{sd}=10.0)$',
+            r'$sigma \sim \text{HalfNormal}(\mathit{sd}=1.0)$',
+            r'$mu \sim \text{Deterministic}(alpha, \text{Constant}, beta)$',
+            r'$beta \sim \text{Normal}(\mathit{mu}=0, \mathit{sd}=10.0)$',
+            r'$Y\_obs \sim \text{Normal}(\mathit{mu}=mu, \mathit{sd}=f(sigma))$'
         )
 
     def test__repr_latex_(self):
