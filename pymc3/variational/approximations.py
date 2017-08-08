@@ -177,9 +177,9 @@ class FullRankGroup(Group):
     @node_property
     def std(self):
         if self.batched:
-            return batched_diag(tt.sqrt(self.cov))
+            return tt.sqrt(batched_diag(self.cov))
         else:
-            return tt.diag(tt.sqrt(self.cov))
+            return tt.sqrt(tt.diag(self.cov))
 
     @property
     def num_tril_entries(self):
