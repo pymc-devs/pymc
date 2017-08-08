@@ -201,9 +201,7 @@ class Flat(Continuous):
         return tt.zeros_like(value)
 
     def _repr_latex_(self, name=None, dist=None):
-        if dist is None:
-            dist = self
-        return r'${} \sim \text{Flat}()$'
+        return r'${} \sim \text{Flat}()$'.format(name)
 
 
 class HalfFlat(PositiveContinuous):
@@ -220,9 +218,7 @@ class HalfFlat(PositiveContinuous):
         return bound(tt.zeros_like(value), value > 0)
 
     def _repr_latex_(self, name=None, dist=None):
-        if dist is None:
-            dist = self
-        return r'${} \sim \text{{HalfFlat}()$'
+        return r'${} \sim \text{{HalfFlat}()$'.format(name)
 
 
 class Normal(Continuous):

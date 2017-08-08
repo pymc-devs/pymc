@@ -17,7 +17,7 @@ from .memoize import memoize
 from .theanof import gradient, hessian, inputvars, generator
 from .vartypes import typefilter, discrete_types, continuous_types, isgenerator
 from .blocking import DictToArrayBijection, ArrayOrdering
-from .util import get_transformed_name
+from .util import get_transformed_name, escape_latex
 
 __all__ = [
     'Model', 'Factor', 'compilef', 'fn', 'fastfn', 'modelcontext',
@@ -1081,7 +1081,7 @@ class FreeRV(Factor, TensorVariable):
             name = self.name
         if dist is None:
             dist = self.distribution
-        return self.distribution._repr_latex_(name=name, dist=dist)
+        return self.distribution._repr_latex_(name=escape_latex(name), dist=dist)
 
     __latex__ = _repr_latex_
 
@@ -1186,7 +1186,7 @@ class ObservedRV(Factor, TensorVariable):
             name = self.name
         if dist is None:
             dist = self.distribution
-        return self.distribution._repr_latex_(name=name, dist=dist)
+        return self.distribution._repr_latex_(name=escape_latex(name), dist=dist)
 
     __latex__ = _repr_latex_
 
@@ -1335,7 +1335,7 @@ class TransformedRV(TensorVariable):
             name = self.name
         if dist is None:
             dist = self.distribution
-        return self.distribution._repr_latex_(name=name, dist=dist)
+        return self.distribution._repr_latex_(name=escape_latex(name), dist=dist)
 
     __latex__ = _repr_latex_
 
