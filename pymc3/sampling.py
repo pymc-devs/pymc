@@ -2,8 +2,8 @@ from collections import defaultdict, Sequence
 
 from joblib import Parallel, delayed
 from numpy.random import randint, seed
-from pymc3.external.emcee.backends import EnsembleNDArray, ensure_multitrace
-from pymc3.external.emcee.step_methods import ExternalEnsembleStepShared
+from .external.emcee.backends import EnsembleNDArray, ensure_multitrace
+from .external.emcee.step_methods import ExternalEnsembleStepShared
 import numpy as np
 
 import pymc3 as pm
@@ -15,7 +15,7 @@ from .step_methods import (NUTS, HamiltonianMC, SGFS, Metropolis, BinaryMetropol
                            Slice, CompoundStep)
 from .plots.traceplot import traceplot
 from .util import update_start_vals
-from pymc3.step_methods.hmc import quadpotential
+from .step_methods.hmc import quadpotential
 from tqdm import tqdm
 
 import sys
@@ -247,7 +247,7 @@ def sample(draws=500, step=None, init='auto', n_init=200000, start=None,
         if start is None:
             _start = build_start_points(step.nparticles, init, model)
             if start is None: start = {}
-            _update_start_vals(start, _start, model)
+            update_start_vals(start, _start, model)
 
     if model.ndim == 0:
         raise ValueError('The model does not contain any free variables.')
