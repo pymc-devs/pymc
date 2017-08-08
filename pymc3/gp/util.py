@@ -1,5 +1,5 @@
 from scipy.cluster.vq import kmeans
-
+import numpy as np
 
 def kmeans_inducing_points(n_inducing, X):
     # first whiten X
@@ -48,6 +48,24 @@ def conditioned_vars(varnames):
     return gp_wrapper
 
 
+def plot_gp_dist(ax, samples, x, plot_samples=True, palette="Reds"):
+    """ A helper function for plotting 1D GP posteriors from trace """
+    import matplotlib.pyplot as plt
+
+    cmap = plt.get_cmap(palette)
+    percs = np.linspace(51, 99, 40)
+    colors = (percs - np.min(percs)) / (np.max(percs) - np.min(percs))
+    samples = samples.T
+    x = x.flatten()
+    for i, p in enumerate(percs[::-1]):
+        upper = np.percentile(samples, p, axis=1)
+        lower = np.percentile(samples, 100-p, axis=1)
+        color_val = colors[i]
+        ax.fill_between(x, upper, lower, color=cmap(color_val), alpha=0.8)
+    if plot_samples:
+        # plot a few samples
+        idx = np.random.randint(0, samples.shape[1], 30)
+        ax.plot(x, samples[:,idx], color=cmap(0.9), lw=1, alpha=0.1)
 
 
 

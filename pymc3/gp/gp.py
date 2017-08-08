@@ -186,7 +186,6 @@ class TP(Latent):
 
 @conditioned_vars(["X", "y", "noise"])
 class Marginal(GPBase):
-    # should I rename 'prior' method to 'marginal_likelihood'?
 
     def __init__(self, mean_func=None, cov_func=None):
         super(Marginal, self).__init__(mean_func, cov_func)
