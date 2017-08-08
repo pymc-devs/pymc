@@ -234,3 +234,7 @@ class BlockDiagonalMatrix(Op):
     def infer_shape(self, nodes, shapes):
         first, second = zip(*shapes)
         return [(tt.add(*first), tt.add(*second))]
+
+
+def block_diagonal(*matrices, sparse=False, format='csr'):
+    return BlockDiagonalMatrix(sparse=sparse, format=format)(*matrices)
