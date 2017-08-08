@@ -144,6 +144,28 @@ class Prod(Combination):
         return reduce((lambda x, y: x * y), self.merge_factors(X, Xs, diag))
 
 
+class Constant(Covariance):
+    R"""
+    Constant valued covariance function.
+
+    .. math::
+
+       k(x, x') = c
+    """
+    def __init__(self, c):
+        super(Constant, self).__init__(1, None)
+        self.c = c
+
+    def diag(self, X):
+        return tt.alloc(self.c, X.shape[0])
+
+    def full(self, X, Xs=None):
+        if Xs is None:
+            return tt.alloc(self.c, X.shape[0], X.shape[0])
+        else:
+            return tt.alloc(self.c, X.shape[0], Xs.shape[0])
+
+
 class WhiteNoise(Covariance):
     R"""
     White noise covariance function.
