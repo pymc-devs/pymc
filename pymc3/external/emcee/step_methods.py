@@ -1,7 +1,7 @@
 import pymc3 as pm
 import theano
-from pymc3.blocking import VarMap, Compose
-from pymc3.step_methods.arraystep import ArrayStepShared
+from ...blocking import VarMap, Compose
+from ...step_methods.arraystep import ArrayStepShared
 from theano.gradient import np
 
 import emcee
@@ -191,7 +191,7 @@ class AffineInvariantEnsemble(ExternalEnsembleStepShared):
         except StopIteration:
             self.sample_generator = None
             return self.astep(point_array)
-        return q
+        return q.astype(theano.config.floatX)
 
 
 LARGENUMBER = 100000
