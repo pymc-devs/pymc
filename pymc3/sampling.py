@@ -883,4 +883,6 @@ def build_start_points(nparticles, method='random', model=None, **kwargs):
         return get_random_starters(nparticles, model)
     else:
         start, _ = pm.init_nuts(method, nparticles, model=model, **kwargs)
-        return {v: start.get_values(v) for v in start.varnames}
+        if nparticles == 1:
+            return {k: np.asarray([v]) for k,v in start.items()}
+        return {varname: np.asarray([s[varname] for s in start]) for varname in start[0].keys()}
