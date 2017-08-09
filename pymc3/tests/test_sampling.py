@@ -267,3 +267,16 @@ def test_exec_nuts_init(method):
         assert isinstance(start, list)
         assert len(start) == 2
         assert isinstance(start[0], dict)
+
+
+def test_trace_variable_rename():
+
+    with pm.Model():
+        a = pm.Uniform("a", 0, 1)  # noqa
+        x = pm.Deterministic("x", pm.math.constant(0.0))  # noqa
+        y = pm.Deterministic("y", pm.math.constant(0.0))  # noqa
+        tr = pm.sample(2)
+
+    varnames = set(tr.varnames)
+    truth = set(["a_interval__", "a", "x", "y"])
+    assert varnames == truth, "Incorrect variables."
