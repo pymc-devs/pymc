@@ -197,7 +197,7 @@ class BlockDiagonalMatrix(Op):
 
     def __init__(self, sparse=False, format='csr'):
         if format not in ('csr', 'csc'):
-            raise ValueError("format must be one of: 'csr', 'csc'", format)
+            raise ValueError("format must be one of: 'csr', 'csc', got {}".format(format))
         self.sparse = sparse
         self.format = format
 
@@ -236,5 +236,19 @@ class BlockDiagonalMatrix(Op):
         return [(tt.add(*first), tt.add(*second))]
 
 
-def block_diagonal(*matrices, sparse=False, format='csr'):
-    return BlockDiagonalMatrix(sparse=sparse, format=format)(*matrices)
+def block_diagonal(*matrices, **kwargs):
+    """
+
+    Parameters
+    ----------
+    matrices : tensors
+    format : str (default 'csr')
+        must be one of: 'csr', 'csc'
+    sparse : bool (default False)
+        if True return sparse format
+
+    Returns
+    -------
+    matrix
+    """
+    return BlockDiagonalMatrix(**kwargs)(*matrices)
