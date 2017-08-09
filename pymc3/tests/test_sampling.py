@@ -270,6 +270,7 @@ def test_exec_nuts_init(method):
 
 
 def test_trace_variable_rename():
+    """Test for bug #2400 which incorrectly merges similar deterministic RVs."""
 
     with pm.Model():
         a = pm.Uniform("a", 0, 1)  # noqa
