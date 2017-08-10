@@ -24,8 +24,9 @@ class Distribution(object):
             model = Model.get_context()
         except TypeError:
             raise TypeError("No model on context stack, which is needed to "
-                            "use the Normal('x', 0,1) syntax. "
-                            "Add a 'with model:' block")
+                            "instantiate distributions. Add variable inside "
+                            "a 'with model:' block, or use the '.dist' syntax "
+                            "for a standalone distribution.")
 
         if isinstance(name, string_types):
             data = kwargs.pop('observed', None)
@@ -87,8 +88,11 @@ class Distribution(object):
         return val
 
     def _repr_latex_(self, name=None, dist=None):
+        """Magic method name for IPython to use for LaTeX formatting."""
         return None
-                                                                     
+
+    __latex__ = _repr_latex_
+
 
 def TensorType(dtype, shape, broadcastable=None):
     if broadcastable is None:
@@ -127,6 +131,11 @@ class Discrete(Distribution):
                 dtype = 'int64'
         if dtype != 'int16' and dtype != 'int64':
             raise TypeError('Discrete classes expect dtype to be int16 or int64.')
+
+        if kwargs.get('transform', None) is not None:
+            raise ValueError("Transformations for discrete distributions "
+                             "are not allowed.")
+
         super(Discrete, self).__init__(
             shape, dtype, defaults=defaults, *args, **kwargs)
 

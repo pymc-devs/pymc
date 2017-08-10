@@ -65,7 +65,6 @@ class AR(distribution.Continuous):
        x_t = \rho_0 + \rho_1 x_{t-1} + \ldots + \rho_p x_{t-p} + \epsilon_t,
        \epsilon_t \sim N(0,\sigma^2)
 
-
     The innovation can be parameterized either in terms of precision
     or standard deviation. The link between the two parametrizations is
     given by
@@ -74,21 +73,16 @@ class AR(distribution.Continuous):
 
        \tau = \dfrac{1}{\sigma^2}
 
-
     Parameters
     ----------
     rho : tensor
         Vector of autoregressive coefficients. 
-
     sd : float 
         Standard deviation of innovation (sd > 0).
-
     tau : float
         Precision of innovation (tau > 0).
-
     constant: bool (optional, default = False)
         Whether to include a constant. 
-
     init : distribution
         distribution for initial values (Defaults to Flat())
     """

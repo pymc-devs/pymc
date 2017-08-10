@@ -13,8 +13,8 @@ from ..distributions import (DensityDist, Categorical, Multinomial, VonMises, Di
                              InverseGamma, Gamma, Cauchy, HalfCauchy, Lognormal, Laplace,
                              NegativeBinomial, Geometric, Exponential, ExGaussian, Normal,
                              Flat, LKJCorr, Wald, ChiSquared, HalfNormal, DiscreteUniform,
-                             Bound, Uniform, Triangular, Binomial, SkewNormal, DiscreteWeibull, Gumbel,
-                             Interpolated, ZeroInflatedBinomial, HalfFlat, AR1)
+                             Bound, Uniform, Triangular, Binomial, SkewNormal, DiscreteWeibull, 
+                             Gumbel, Interpolated, ZeroInflatedBinomial, HalfFlat, AR1)
 from ..distributions import continuous
 from pymc3.theanof import floatX
 from numpy import array, inf, log, exp
