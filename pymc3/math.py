@@ -236,8 +236,9 @@ class BlockDiagonalMatrix(Op):
         return [(tt.add(*first), tt.add(*second))]
 
 
-def block_diagonal(*matrices, **kwargs):
-    """
+def block_diagonal(matrices, sparse=False, format='csr'):
+    """See scipy.sparse.block_diag or
+    scipy.linalg.block_diag for reference
 
     Parameters
     ----------
@@ -251,4 +252,6 @@ def block_diagonal(*matrices, **kwargs):
     -------
     matrix
     """
-    return BlockDiagonalMatrix(**kwargs)(*matrices)
+    if len(matrices) == 1:  # graph optimization
+        return matrices[0]
+    return BlockDiagonalMatrix(sparse=sparse, format=format)(*matrices)
