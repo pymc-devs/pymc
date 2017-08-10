@@ -123,7 +123,7 @@ def sample(draws=500, step=None, init='auto', n_init=200000, start=None,
         Initialization method to use for auto-assigned NUTS samplers.
 
         * auto : Choose a default initialization method automatically.
-          Currently, this is `'unif+adapt_diag'`, but this can change in
+          Currently, this is `'jitter+adapt_diag'`, but this can change in
           the future. If you depend on the exact behaviour, choose an
           initialization method explicitly.
         * adapt_diag : Start with a identity mass matrix and then adapt
@@ -311,8 +311,8 @@ def _check_start_shape(model, start):
                 if var_shape:
                     e += "\nExpected shape {} for var " \
                          "'{}', got scalar {}".format(
-                        tuple(var_shape), var.name, start[var.name]
-                    )
+                             tuple(var_shape), var.name, start[var.name]
+                         )
 
     if e != '':
         raise ValueError("Bad shape for start argument:{}".format(e))
@@ -699,7 +699,7 @@ def init_nuts(init='auto', njobs=1, n_init=500000, model=None,
         Initialization method to use.
 
         * auto : Choose a default initialization method automatically.
-          Currently, this is `'unif+adapt_diag'`, but this can change in
+          Currently, this is `'jitter+adapt_diag'`, but this can change in
           the future. If you depend on the exact behaviour, choose an
           initialization method explicitly.
         * adapt_diag : Start with a identity mass matrix and then adapt
