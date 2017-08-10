@@ -2,11 +2,40 @@ from __future__ import division
 
 from ..model import Model
 from ..distributions.continuous import Flat, Normal
-from ..distributions.timeseries import EulerMaruyama
+from ..distributions.timeseries import EulerMaruyama, AR
 from ..sampling import sample, sample_ppc
 from ..theanof import floatX
 
 import numpy as np
+
+def test_AR():
+    # AR1
+    data = np.array([0.3,1,2,3,4])
+    phi = np.array([0.99])
+    with Model() as t:
+        y = AR('y', phi, sd=1, shape=len(data))
+        z = Normal('z', mu=phi*data[:-1], sd=1, shape=len(data)-1)
+    ar_like = t['y'].logp({'z':data[1:], 'y': data})
+    reg_like = t['z'].logp({'z':data[1:], 'y': data})
+    np.testing.assert_allclose(ar_like, reg_like)
+
+    # AR1 + constant
+    with Model() as t:
+        y = AR('y', [0.3, phi], sd=1, shape=len(data), constant=True)
+        z = Normal('z', mu=0.3 + phi*data[:-1], sd=1, shape=len(data)-1)
+    ar_like = t['y'].logp({'z':data[1:], 'y': data})
+    reg_like = t['z'].logp({'z':data[1:], 'y': data})
+    np.testing.assert_allclose(ar_like, reg_like)
+
+    # AR2
+    phi = np.array([0.84, 0.10])
+    with Model() as t:
+        y = AR('y', phi, sd=1, shape=len(data))
+        z = Normal('z', mu=phi[0]*data[1:-1]+phi[1]*data[:-2], sd=1, shape=len(data)-2)
+    ar_like = t['y'].logp({'z':data[2:], 'y': data})
+    reg_like = t['z'].logp({'z':data[2:], 'y': data})
+    np.testing.assert_allclose(ar_like, reg_like)
+
 
 
 def _gen_sde_path(sde, pars, dt, n, x0):
