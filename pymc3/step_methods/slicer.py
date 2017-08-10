@@ -34,8 +34,7 @@ class Slice(ArrayStep):
         self.model = modelcontext(model)
         self.w = w
         self.tune = tune
-        self.w_sum = 0
-        self.n_tunes = 0
+        self.n_tunes = 0.
 
         if vars is None:
             vars = self.model.cont_vars
@@ -44,33 +43,39 @@ class Slice(ArrayStep):
         super(Slice, self).__init__(vars, [self.model.fastlogp], **kwargs)
 
     def astep(self, q0, logp):
-        self.w = np.resize(self.w, len(q0))
-        y = logp(q0) - nr.standard_exponential()
+        self.w = np.resize(self.w, len(q0))  # this is a repmat
+        q = np.copy(q0)  # TODO: find out if we need this
+        ql = np.copy(q0)  # l for left boundary
+        qr = np.copy(q0)  # r for right boudary
+        for i in range(len(q0)):
+            # uniformly sample from 0 to p(q), but in log space
+            y = logp(q) - nr.standard_exponential()
+            ql[i] = q[i] - nr.uniform(0, self.w[i])
+            qr[i] = q[i] + self.w[i]
+            # Stepping out procedure
+            while(y <= logp(ql)):  # changed lt to leq  for locally uniform posteriors
+                ql[i] -= self.w[i]
+            while(y <= logp(qr)):
+                qr[i] += self.w[i]
 
-        # Stepping out procedure
-        q_left = q0 - nr.uniform(0, self.w)
-        q_right = q_left + self.w
+            q[i] = nr.uniform(ql[i], qr[i])
+            while logp(q) < y:  # Changed leq to lt, to accomodate for locally flat posteriors
+                # Sample uniformly from slice
+                if q[i] > q0[i]:
+                    qr[i] = q[i]
+                elif q[i] < q0[i]:
+                    ql[i] = q[i]
+                q[i] = nr.uniform(ql[i], qr[i])
 
-        while (y < logp(q_left)).all():
-            q_left -= self.w
-
-        while (y < logp(q_right)).all():
-            q_right += self.w
-
-        q = nr.uniform(q_left, q_right, size=q_left.size)  # new variable to avoid copies
-        while logp(q) <= y:
-            # Sample uniformly from slice
-            if (q > q0).all():
-                q_right = q
-            elif (q < q0).all():
-                q_left = q
-            q = nr.uniform(q_left, q_right, size=q_left.size)
-
+            if self.tune:  # I was under impression from MacKays lectures that slice width can be tuned without
+                # breaking markovianness. Can we do it regardless of self.tune?(@madanh)
+                self.w[i] = self.w[i] * (self.n_tunes / (self.n_tunes + 1)) +\
+                    (qr[i] - ql[i]) / (self.n_tunes + 1)  # same as before
+            # unobvious and important: return qr and ql to the same point
+                qr[i] = q[i]
+                ql[i] = q[i]
         if self.tune:
-            # Tune sampler parameters
-            self.w_sum += np.abs(q0 - q)
-            self.n_tunes += 1.
-            self.w = 2. * self.w_sum / self.n_tunes
+            self.n_tunes += 1
         return q
 
     @staticmethod

@@ -1,4 +1,6 @@
 import collections
+import functools
+import itertools
 import threading
 import six
 
@@ -15,7 +17,7 @@ from .memoize import memoize
 from .theanof import gradient, hessian, inputvars, generator
 from .vartypes import typefilter, discrete_types, continuous_types, isgenerator
 from .blocking import DictToArrayBijection, ArrayOrdering
-from .util import get_transformed_name
+from .util import get_transformed_name, escape_latex
 
 __all__ = [
     'Model', 'Factor', 'compilef', 'fn', 'fastfn', 'modelcontext',
@@ -892,6 +894,14 @@ class Model(six.with_metaclass(InitContextMeta, Context, Factor)):
         flat_view = FlatView(inputvar, replacements, view)
         return flat_view
 
+    def _repr_latex_(self, name=None, dist=None):
+        tex_vars = []
+        for rv in itertools.chain(self.unobserved_RVs, self.observed_RVs):
+            tex_vars.append(rv.__latex__())
+        return u'$${}$$'.format('\\\\'.join([tex.strip('$') for tex in tex_vars if tex is not None]))
+
+    __latex__ = _repr_latex_
+
 
 def fn(outs, mode=None, model=None, *args, **kwargs):
     """Compiles a Theano function which returns the values of `outs` and
@@ -1071,7 +1081,9 @@ class FreeRV(Factor, TensorVariable):
             name = self.name
         if dist is None:
             dist = self.distribution
-        return self.distribution._repr_latex_(name=name, dist=dist)
+        return self.distribution._repr_latex_(name=escape_latex(name), dist=dist)
+
+    __latex__ = _repr_latex_
 
     @property
     def init_value(self):
@@ -1174,7 +1186,9 @@ class ObservedRV(Factor, TensorVariable):
             name = self.name
         if dist is None:
             dist = self.distribution
-        return self.distribution._repr_latex_(name=name, dist=dist)
+        return self.distribution._repr_latex_(name=escape_latex(name), dist=dist)
+
+    __latex__ = _repr_latex_
 
     @property
     def init_value(self):
@@ -1212,6 +1226,26 @@ class MultiObservedRV(Factor):
         self.scaling = _get_scaling(total_size, self.logp_elemwiset.shape, self.logp_elemwiset.ndim)
 
 
+def _walk_up_rv(rv):
+    """Walk up theano graph to get inputs for deterministic RV."""
+    all_rvs = []
+    parents = list(itertools.chain(*[j.inputs for j in rv.get_parents()]))
+    if parents:
+        for parent in parents:
+            all_rvs.extend(_walk_up_rv(parent))
+    else:
+        if rv.name:
+            all_rvs.append(rv.name)
+        else:
+            all_rvs.append(r'\text{Constant}')
+    return all_rvs
+
+
+def _latex_repr_rv(rv):
+    """Make latex string for a Deterministic variable"""
+    return r'${} \sim \text{{Deterministic}}({})$'.format(rv.name, r', '.join(_walk_up_rv(rv)))
+
+
 def Deterministic(name, var, model=None):
     """Create a named deterministic variable
 
@@ -1228,6 +1262,8 @@ def Deterministic(name, var, model=None):
     var.name = model.name_for(name)
     model.deterministics.append(var)
     model.add_random_variable(var)
+    var._repr_latex_ = functools.partial(_latex_repr_rv, var)
+    var.__latex__ = var._repr_latex_
     return var
 
 
@@ -1299,7 +1335,9 @@ class TransformedRV(TensorVariable):
             name = self.name
         if dist is None:
             dist = self.distribution
-        return self.distribution._repr_latex_(name=name, dist=dist)
+        return self.distribution._repr_latex_(name=escape_latex(name), dist=dist)
+
+    __latex__ = _repr_latex_
 
     @property
     def init_value(self):

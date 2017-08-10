@@ -117,6 +117,24 @@ class Uniform(Continuous):
 
        f(x \mid lower, upper) = \frac{1}{upper-lower}
 
+    .. plot::
+
+        import matplotlib.pyplot as plt
+        import numpy as np
+        x = np.linspace(-3.0, 3.0, 1000)
+        a, b = 0.0, 2.0
+        y = np.zeros(1000)
+        y[(x<b) & (x>a)] = 1.0/(b-a)
+        fig, ax = plt.subplots()
+        ax.plot(x, y, label='lower=1, upper=2')
+        a, b = -2.0, 1.0
+        y = np.zeros(1000)
+        y[(x<b) & (x>a)] = 1.0/(b-a)
+        ax.plot(x, y, label='lower=-2, upper=1')
+        ax.legend(loc='upper right')
+        ax.set(ylim=[-0.2,1.2], xlabel='x', ylabel='f(x)')
+        plt.show()
+
     ========  =====================================
     Support   :math:`x \in [lower, upper]`
     Mean      :math:`\dfrac{lower + upper}{2}`
@@ -183,9 +201,7 @@ class Flat(Continuous):
         return tt.zeros_like(value)
 
     def _repr_latex_(self, name=None, dist=None):
-        if dist is None:
-            dist = self
-        return r'${} \sim \text{{Flat}()$'
+        return r'${} \sim \text{Flat}()$'.format(name)
 
 
 class HalfFlat(PositiveContinuous):
@@ -202,9 +218,7 @@ class HalfFlat(PositiveContinuous):
         return bound(tt.zeros_like(value), value > 0)
 
     def _repr_latex_(self, name=None, dist=None):
-        if dist is None:
-            dist = self
-        return r'${} \sim \text{{HalfFlat}()$'
+        return r'${} \sim \text{{HalfFlat}()$'.format(name)
 
 
 class Normal(Continuous):
@@ -230,6 +244,23 @@ class Normal(Continuous):
     .. math::
 
        \tau = \dfrac{1}{\sigma^2}
+
+    .. plot::
+
+        import matplotlib.pyplot as plt
+        import numpy as np
+        import scipy.stats as st
+        x = np.linspace(-5.0, 5.0, 1000)
+        fig, ax = plt.subplots()
+        f = lambda mu, sd : st.norm.pdf(x, loc=mu, scale=sd)
+        plot_pdf = lambda a, b : ax.plot(x, f(a,b), label=r'$\mu$={0}, $\sigma$={1}'.format(a,b))
+        plot_pdf(0.0, 0.4)
+        plot_pdf(0.0, 1.0)
+        plot_pdf(0.0, 2.0)
+        plot_pdf(-2.0, 0.4)
+        plt.legend(loc='upper right', frameon=False)
+        ax.set(xlim=[-5,5], ylim=[0,1.2], xlabel='x', ylabel='f(x)')
+        plt.show()
 
     Parameters
     ----------
@@ -288,6 +319,22 @@ class HalfNormal(PositiveContinuous):
        f(x \mid \tau) =
            \sqrt{\frac{2\tau}{\pi}}
            \exp\left\{ {\frac{-x^2 \tau}{2}}\right\}
+
+    .. plot::
+
+        import matplotlib.pyplot as plt
+        import numpy as np
+        import scipy.stats as st
+        x = np.linspace(0.0, 5.0, 1000)
+        fig, ax = plt.subplots()
+        f = lambda b : st.halfnorm.pdf(x, scale=1.0/np.sqrt(b))
+        plot_pdf = lambda b : ax.plot(x, f(b), label=r'$\tau$={0}'.format(b))
+        plot_pdf(0.5)
+        plot_pdf(1.0)
+        plot_pdf(2.0)
+        plt.legend(loc='upper right', frameon=False)
+        ax.set(xlim=[0,5], ylim=[0,1.2], xlabel='x', ylabel='f(x)')
+        plt.show()
 
     ========  ==========================================
     Support   :math:`x \in [0, \infty)`
@@ -348,6 +395,24 @@ class Wald(PositiveContinuous):
            \exp\left\{
                -\frac{\lambda}{2x}\left(\frac{x-\mu}{\mu}\right)^2
            \right\}
+
+    .. plot::
+
+        import matplotlib.pyplot as plt
+        import numpy as np
+        import scipy.stats as st
+        x = np.linspace(0.0, 3.0, 1000)
+        fig, ax = plt.subplots()
+        f = lambda mu, lam : st.invgauss.pdf(x, mu/lam, scale=lam)
+        plot_pdf = lambda a, b : ax.plot(x, f(a,b), label=r'$\mu$={0}, $\lambda$={1}'.format(a,b))
+        plot_pdf(1.0,1.0)
+        plot_pdf(1.0,0.2)
+        plot_pdf(1.0,3.0)
+        plot_pdf(3,1)
+        plot_pdf(3,0.2)
+        plt.legend(loc='upper right', frameon=False)
+        ax.set(xlim=[0,3], ylim=[0,3.0], xlabel='x', ylabel='f(x)')
+        plt.show()
 
     ========  =============================
     Support   :math:`x \in (0, \infty)`
@@ -478,6 +543,24 @@ class Beta(UnitContinuous):
        f(x \mid \alpha, \beta) =
            \frac{x^{\alpha - 1} (1 - x)^{\beta - 1}}{B(\alpha, \beta)}
 
+    .. plot::
+
+        import matplotlib.pyplot as plt
+        import numpy as np
+        import scipy.stats as st
+        x = np.linspace(0.0, 1.0, 1000)
+        fig, ax = plt.subplots()
+        f = lambda a, b : st.beta.pdf(x, a, b)
+        plot_pdf = lambda a, b : ax.plot(x, f(a,b), label=r'$\alpha$={0}, $\beta$={1}'.format(a,b))
+        plot_pdf(0.5, 0.5)
+        plot_pdf(5.0, 1.0)
+        plot_pdf(1.0, 3.0)
+        plot_pdf(2.0, 2.0)
+        plot_pdf(2.0, 5.0)
+        plt.legend(loc='upper center', frameon=False)
+        ax.set(xlim=[0,1], ylim=[0,2.5], xlabel='x', ylabel='f(x)')
+        plt.show()
+
     ========  ==============================================================
     Support   :math:`x \in (0, 1)`
     Mean      :math:`\dfrac{\alpha}{\alpha + \beta}`
@@ -574,6 +657,22 @@ class Exponential(PositiveContinuous):
 
        f(x \mid \lambda) = \lambda \exp\left\{ -\lambda x \right\}
 
+    .. plot::
+
+        import matplotlib.pyplot as plt
+        import numpy as np
+        import scipy.stats as st
+        x = np.linspace(0.0, 5.0, 1000)
+        fig, ax = plt.subplots()
+        f = lambda lam : st.expon.pdf(x, scale=1.0/lam)
+        plot_pdf = lambda lam : ax.plot(x, f(lam), label=r'$\lambda$={0}'.format(lam))
+        plot_pdf(0.5)
+        plot_pdf(1.0)
+        plot_pdf(1.5)
+        plt.legend(loc='upper right', frameon=False)
+        ax.set(xlim=[0,5], ylim=[0,1.6], xlabel='x', ylabel='f(x)')
+        plt.show()
+
     ========  ============================
     Support   :math:`x \in [0, \infty)`
     Mean      :math:`\dfrac{1}{\lambda}`
@@ -622,6 +721,23 @@ class Laplace(Continuous):
 
        f(x \mid \mu, b) =
            \frac{1}{2b} \exp \left\{ - \frac{|x - \mu|}{b} \right\}
+
+    .. plot::
+
+        import matplotlib.pyplot as plt
+        import numpy as np
+        import scipy.stats as st
+        x = np.linspace(-10.0, 10.0, 1000)
+        fig, ax = plt.subplots()
+        f = lambda mu, b : st.laplace.pdf(x, loc=mu, scale=b)
+        plot_pdf = lambda mu, b : ax.plot(x, f(mu, b), label=r'$\mu$={0}, $b$={1}'.format(mu, b))
+        plot_pdf(0.0, 1.0)
+        plot_pdf(0.0, 2.0)
+        plot_pdf(0.0, 4)
+        plot_pdf(-5.0, 4)
+        plt.legend(loc='upper right', frameon=False)
+        ax.set(xlim=[-10,10], ylim=[0,0.5], xlabel='x', ylabel='f(x)')
+        plt.show()
 
     ========  ========================
     Support   :math:`x \in \mathbb{R}`
@@ -683,10 +799,26 @@ class Lognormal(PositiveContinuous):
            \frac{1}{x} \sqrt{\frac{\tau}{2\pi}}
            \exp\left\{ -\frac{\tau}{2} (\ln(x)-\mu)^2 \right\}
 
+    .. plot::
+
+        import matplotlib.pyplot as plt
+        import numpy as np
+        import scipy.stats as st
+        x = np.linspace(0.0, 3.0, 1000)
+        fig, ax = plt.subplots()
+        f = lambda mu, sd : st.lognorm.pdf(x, sd, scale=np.exp(mu))
+        plot_pdf = lambda mu, sd : ax.plot(x, f(mu, sd), label=r'$\mu$={0}, $\sigma$={1}'.format(mu, sd))
+        plot_pdf(0.0, 0.25)
+        plot_pdf(0.0, 0.5)
+        plot_pdf(0.0, 1.0)
+        plt.legend(loc='upper right', frameon=False)
+        ax.set(xlim=[0,3], ylim=[0,1.8], xlabel='x', ylabel='f(x)')
+        plt.show()
+
     ========  =========================================================================
-    Support   :math:`x \in (0, 1)`
+    Support   :math:`x \in [0, \infty)`
     Mean      :math:`\exp\{\mu + \frac{1}{2\tau}\}`
-    Variance  :math:\(\exp\{\frac{1}{\tau}\} - 1\) \times \exp\{2\mu + \frac{1}{\tau}\}
+    Variance  :math:`(\exp\{\frac{1}{\tau}\} - 1) \times \exp\{2\mu + \frac{1}{\tau}\}`
     ========  =========================================================================
 
     Parameters
@@ -755,6 +887,24 @@ class StudentT(Continuous):
            \frac{\Gamma(\frac{\nu + 1}{2})}{\Gamma(\frac{\nu}{2})}
            \left(\frac{\lambda}{\pi\nu}\right)^{\frac{1}{2}}
            \left[1+\frac{\lambda(x-\mu)^2}{\nu}\right]^{-\frac{\nu+1}{2}}
+
+    .. plot::
+
+        import matplotlib.pyplot as plt
+        import numpy as np
+        import scipy.stats as st
+        x = np.linspace(-5.0, 5.0, 1000)
+        fig, ax = plt.subplots()
+        f = lambda mu, lam, df : st.t.pdf(x, df, loc=mu, scale=1.0/np.sqrt(lam))
+        plot_pdf = lambda mu, lam, df : ax.plot(x, f(mu, lam, df), label=r'$\mu$={0}, $\lambda$={1}, $\nu$={2}'.format(mu, lam, df))
+        plot_pdf(0.0, 1.0, 1.0)
+        plot_pdf(0.0, 1.0, 2.0)
+        plot_pdf(0.0, 1.0, 5)
+        plot_pdf(-1.0, 1.0, 5)
+        plot_pdf(-1.0, 2.0, 5)
+        plt.legend(loc='upper right', frameon=False)
+        ax.set(xlim=[-5,5], ylim=[0,0.6], xlabel='x', ylabel='f(x)')
+        plt.show()
 
     ========  ========================
     Support   :math:`x \in \mathbb{R}`
@@ -827,6 +977,22 @@ class Pareto(PositiveContinuous):
 
        f(x \mid \alpha, m) = \frac{\alpha m^{\alpha}}{x^{\alpha+1}}
 
+    .. plot::
+
+        import matplotlib.pyplot as plt
+        import numpy as np
+        import scipy.stats as st
+        x = np.linspace(0.0, 5.0, 1000)
+        fig, ax = plt.subplots()
+        f = lambda m, alpha : st.pareto.pdf(x, alpha, scale=m)
+        plot_pdf = lambda m, alpha : ax.plot(x, f(m, alpha), label=r'm={0}, $\alpha$={1}'.format(m, alpha))
+        plot_pdf(1.0,1.0)
+        plot_pdf(1.0,2.0)
+        plot_pdf(1.0,3.0)
+        plt.legend(loc='upper right', frameon=False)
+        ax.set(xlim=[0,5], ylim=[0,3.0], xlabel='x', ylabel='f(x)')
+        plt.show()
+
     ========  =============================================================
     Support   :math:`x \in [m, \infty)`
     Mean      :math:`\dfrac{\alpha m}{\alpha - 1}` for :math:`\alpha \ge 1`
@@ -898,6 +1064,23 @@ class Cauchy(Continuous):
        f(x \mid \alpha, \beta) =
            \frac{1}{\pi \beta [1 + (\frac{x-\alpha}{\beta})^2]}
 
+    .. plot::
+
+        import matplotlib.pyplot as plt
+        import numpy as np
+        import scipy.stats as st
+        x = np.linspace(-5.0, 5.0, 1000)
+        fig, ax = plt.subplots()
+        f = lambda a, b : st.cauchy.pdf(x, loc=a, scale=b)
+        plot_pdf = lambda a, b : ax.plot(x, f(a, b), label=r'$\alpha$={0}, $\beta$={1}'.format(a, b))
+        plot_pdf(0.0, 0.5)
+        plot_pdf(0.0, 1.0)
+        plot_pdf(0.0, 2.0)
+        plot_pdf(-2.0, 1.0)
+        plt.legend(loc='upper right', frameon=False)
+        ax.set(xlim=[-5,5], ylim=[0,0.7], xlabel='x', ylabel='f(x)')
+        plt.show()
+
     ========  ========================
     Support   :math:`x \in \mathbb{R}`
     Mode      :math:`\alpha`
@@ -956,6 +1139,22 @@ class HalfCauchy(PositiveContinuous):
 
        f(x \mid \beta) = \frac{2}{\pi \beta [1 + (\frac{x}{\beta})^2]}
 
+    .. plot::
+
+        import matplotlib.pyplot as plt
+        import numpy as np
+        import scipy.stats as st
+        x = np.linspace(0.0, 5.0, 1000)
+        fig, ax = plt.subplots()
+        f = lambda b : st.cauchy.pdf(x, scale=b)
+        plot_pdf = lambda b : ax.plot(x, f(b), label=r'$\beta$={0}'.format(b))
+        plot_pdf(0.5)
+        plot_pdf(1.0)
+        plot_pdf(2.0)
+        plt.legend(loc='upper right', frameon=False)
+        ax.set(xlim=[0,5], ylim=[0,0.7], xlabel='x', ylabel='f(x)')
+        plt.show()
+
     ========  ========================
     Support   :math:`x \in \mathbb{R}`
     Mode      0
@@ -1011,6 +1210,23 @@ class Gamma(PositiveContinuous):
 
        f(x \mid \alpha, \beta) =
            \frac{\beta^{\alpha}x^{\alpha-1}e^{-\beta x}}{\Gamma(\alpha)}
+
+    .. plot::
+
+        import matplotlib.pyplot as plt
+        import numpy as np
+        import scipy.stats as st
+        x = np.linspace(0.0, 20.0, 1000)
+        fig, ax = plt.subplots()
+        f = lambda a, b : st.gamma.pdf(x, a, scale=1.0/b)
+        plot_pdf = lambda a, b : ax.plot(x, f(a, b), label=r'$\alpha$={0}, $\beta$={1}'.format(a, b))
+        plot_pdf(1.0, 0.5)
+        plot_pdf(2.0, 0.5)
+        plot_pdf(3.0, 1.0)
+        plot_pdf(7.5, 1.0)
+        plt.legend(loc='upper right', frameon=False)
+        ax.set(xlim=[0,20], ylim=[0,0.5], xlabel='x', ylabel='f(x)')
+        plt.show()
 
     ========  ===============================
     Support   :math:`x \in (0, \infty)`
@@ -1102,6 +1318,23 @@ class InverseGamma(PositiveContinuous):
            \frac{\beta^{\alpha}}{\Gamma(\alpha)} x^{-\alpha - 1}
            \exp\left(\frac{-\beta}{x}\right)
 
+    .. plot::
+
+        import matplotlib.pyplot as plt
+        import numpy as np
+        import scipy.stats as st
+        x = np.linspace(0.0, 3.0, 1000)
+        fig, ax = plt.subplots()
+        f = lambda alpha, beta : st.invgamma.pdf(x, alpha, scale=beta)
+        plot_pdf = lambda alpha, beta : ax.plot(x, f(alpha, beta), label=r'$\alpha$={0}, $\beta$={1}'.format(alpha, beta))
+        plot_pdf(1.0,1.0)
+        plot_pdf(2.0,1.0)
+        plot_pdf(3.0,1.0)
+        plot_pdf(3.0,0.5)
+        plt.legend(loc='upper right', frameon=False)
+        ax.set(xlim=[0,3], ylim=[0,5], xlabel='x', ylabel='f(x)')
+        plt.show()
+
     ========  ======================================================
     Support   :math:`x \in (0, \infty)`
     Mean      :math:`\dfrac{\beta}{\alpha-1}` for :math:`\alpha > 1`
@@ -1170,6 +1403,25 @@ class ChiSquared(Gamma):
 
        f(x \mid \nu) = \frac{x^{(\nu-2)/2}e^{-x/2}}{2^{\nu/2}\Gamma(\nu/2)}
 
+    .. plot::
+
+        import matplotlib.pyplot as plt
+        import numpy as np
+        import scipy.stats as st
+        x = np.linspace(0.0, 8.0, 1000)
+        fig, ax = plt.subplots()
+        f = lambda df : st.chi2.pdf(x, df)
+        plot_pdf = lambda df : ax.plot(x, f(df), label=r'$\nu$={0}'.format(df))
+        plot_pdf(1.0)
+        plot_pdf(2.0)
+        plot_pdf(3.0)
+        plot_pdf(4.0)
+        plot_pdf(6.0)
+        plot_pdf(9.0)
+        plt.legend(loc='upper right', frameon=False)
+        ax.set(xlim=[0,8], ylim=[0,0.5], xlabel='x', ylabel='f(x)')
+        plt.show()
+
     ========  ===============================
     Support   :math:`x \in [0, \infty)`
     Mean      :math:`\nu`
@@ -1204,6 +1456,23 @@ class Weibull(PositiveContinuous):
        f(x \mid \alpha, \beta) =
            \frac{\alpha x^{\alpha - 1}
            \exp(-(\frac{x}{\beta})^{\alpha})}{\beta^\alpha}
+
+    .. plot::
+
+        import matplotlib.pyplot as plt
+        import numpy as np
+        import scipy.stats as st
+        x = np.linspace(0.0, 2.5, 1000)
+        fig, ax = plt.subplots()
+        f = lambda alpha, beta : st.weibull_min.pdf(x, alpha, scale=beta)
+        plot_pdf = lambda alpha, beta : ax.plot(x, f(alpha, beta), label=r'$\alpha$={0}, $\beta$={1}'.format(alpha, beta))
+        plot_pdf(0.5, 1.0)
+        plot_pdf(1.0, 1.0)
+        plot_pdf(1.5, 1.0)
+        plot_pdf(5.0, 1.0)
+        plt.legend(loc='upper right', frameon=False)
+        ax.set(xlim=[0,2.5], ylim=[0,2.5], xlabel='x', ylabel='f(x)')
+        plt.show()
 
     ========  ====================================================
     Support   :math:`x \in [0, \infty)`
@@ -1284,6 +1553,23 @@ class ExGaussian(Continuous):
 
     where :math:`\Phi` is the cumulative distribution function of the
     standard normal distribution.
+
+    .. plot::
+
+        import matplotlib.pyplot as plt
+        import numpy as np
+        import scipy.stats as st
+        x = np.linspace(-6.0, 6.0, 1000)
+        fig, ax = plt.subplots()
+        f = lambda mu, sigma, nu : st.exponnorm.pdf(x, nu/sigma, loc=mu, scale=sigma)
+        plot_pdf = lambda mu, sigma, nu : ax.plot(x, f(mu, sigma, nu), label=r'$\mu$={0}, $\sigma$={1}, $\nu$={2}'.format(mu, sigma, nu))
+        plot_pdf(0.0,1.0,1.0)
+        plot_pdf(-2.0,1.0,1.0)
+        plot_pdf(0.0,3.0,1.0)
+        plot_pdf(-3.0,1.0,4.0)
+        plt.legend(loc='upper right', frameon=False)
+        ax.set(xlim=[-6,6], ylim=[0,0.4], xlabel='x', ylabel='f(x)')
+        plt.show()
 
     ========  ========================
     Support   :math:`x \in \mathbb{R}`
@@ -1369,7 +1655,25 @@ class VonMises(Continuous):
         f(x \mid \mu, \kappa) =
             \frac{e^{\kappa\cos(x-\mu)}}{2\pi I_0(\kappa)}
 
-    where :I_0 is the modified Bessel function of order 0.
+    where :math:`I_0` is the modified Bessel function of order 0.
+
+    .. plot::
+
+        import matplotlib.pyplot as plt
+        import numpy as np
+        import scipy.stats as st
+        x = np.linspace(-np.pi, np.pi, 1000)
+        fig, ax = plt.subplots()
+        f = lambda mu, kappa : st.vonmises.pdf(x, kappa, loc=mu)
+        plot_pdf = lambda mu, kappa : ax.plot(x, f(mu, kappa), label=r'$\mu$={0}, $\kappa$={1}'.format(mu, kappa))
+        plot_pdf(0.0,0.001)
+        plot_pdf(0.0,0.5)
+        plot_pdf(0.0,1.0)
+        plot_pdf(0.0,2.0)
+        plot_pdf(0.0,4.0)
+        plt.legend(loc='upper right', frameon=False)
+        ax.set(xlim=[-np.pi,np.pi], ylim=[0,1.0], xlabel='x', ylabel='f(x)')
+        plt.show()
 
     ========  ==========================================
     Support   :math:`x \in [-\pi, \pi]`
@@ -1426,6 +1730,24 @@ class SkewNormal(Continuous):
     .. math::
        f(x \mid \mu, \tau, \alpha) =
        2 \Phi((x-\mu)\sqrt{\tau}\alpha) \phi(x,\mu,\tau)
+
+    .. plot::
+
+        import matplotlib.pyplot as plt
+        import numpy as np
+        import scipy.stats as st
+        x = np.linspace(-3.0, 3.0, 1000)
+        fig, ax = plt.subplots()
+        f = lambda alpha, mu, sigma : st.skewnorm.pdf(x, alpha, loc=mu, scale=sigma)
+        plot_pdf = lambda alpha, mu, sigma : ax.plot(x, f(alpha, mu, sigma), label=r'$\mu$={0}, $\sigma$={1}, $\alpha$={2}'.format(mu, sigma, alpha))
+        plot_pdf(-4.0,0.0,1.0)
+        plot_pdf(-1.0,0.0,1.0)
+        plot_pdf(0.0,0.0,1.0)
+        plot_pdf(1.0,0.0,1.0)
+        plot_pdf(4.0,0.0,1.0)
+        plt.legend(loc='upper right', frameon=False)
+        ax.set(xlim=[-3,3], ylim=[0,0.7], xlabel='x', ylabel='f(x)')
+        plt.show()
 
     ========  ==========================================
     Support   :math:`x \in \mathbb{R}`
