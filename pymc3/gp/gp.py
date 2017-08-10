@@ -7,6 +7,7 @@ import theano.tensor.slinalg
 import pymc3 as pm
 from pymc3.gp.cov import Covariance
 from pymc3.gp.util import conditioned_vars
+from pymc3.distributions import draw_values
 
 __all__ = ['Latent', 'Marginal', 'TP', 'MarginalSparse']
 
@@ -36,44 +37,35 @@ class GPBase(object):
         self.mean_func = mean_func
         self.cov_func = cov_func
 
-    @property
-    def cov_total(self):
-        total = getattr(self, "_cov_total", None)
-        if total is None:
-            return self.cov_func
-        else:
-            return total
+    #@property
+    #def cov_total(self):
+    #    total = getattr(self, "_cov_total", None)
+    #    if total is None:
+    #        return self.cov_func
+    #    else:
+    #        return total
+    #@cov_total.setter
+    #def cov_total(self, new_cov_total):
+    #    self._cov_total = new_cov_total
 
-    @cov_total.setter
-    def cov_total(self, new_cov_total):
-        self._cov_total = new_cov_total
-
-    @property
-    def mean_total(self):
-        total = getattr(self, "_mean_total", None)
-        if total is None:
-            return self.mean_func
-        else:
-            return total
-
-    @mean_total.setter
-    def mean_total(self, new_mean_total):
-        self._mean_total = new_mean_total
+    #@property
+    #def mean_total(self):
+    #    total = getattr(self, "_mean_total", None)
+    #    if total is None:
+    #        return self.mean_func
+    #    else:
+    #        return total
+    #@mean_total.setter
+    #def mean_total(self, new_mean_total):
+    #    self._mean_total = new_mean_total
 
     def __add__(self, other):
         same_attrs = set(self.__dict__.keys()) == set(other.__dict__.keys())
         if not isinstance(self, type(other)) and not same_attrs:
             raise ValueError("cant add different GP types")
-
-        # set cov_func and mean_func of new GP
-        cov_total = self.cov_func + other.cov_func
         mean_total = self.mean_func + other.mean_func
-
-        # update self and other mean and cov totals
-        self.cov_total, self.mean_total = (cov_total, mean_total)
-        other.cov_total, other.mean_total = (cov_total, mean_total)
-        new_gp = self.__class__(mean_total, cov_total)
-        return new_gp
+        cov_total = self.cov_func + other.cov_func
+        return self.__class__(mean_total, cov_total)
 
     def prior(self, name, X, *args, **kwargs):
         raise NotImplementedError
@@ -125,6 +117,15 @@ class Latent(GPBase):
         if f is None: f = self.f
         mu, chol = self._build_conditional(Xnew, X, f)
         return pm.MvNormal(name, mu=mu, chol=chol, shape=n_points)
+
+    def conditional2(self, name, n_points, X_new, gp_fitted=None):
+        # cant condition on a gp that hasnt been fit, so gp should have gp.f
+        # the changing X thing is dumb, get rid of it?
+
+        if gp is not None:
+            X = gp.X
+            f = gp.f
+
 
 
 @conditioned_vars(["X", "f", "nu"])
@@ -192,7 +193,7 @@ class Marginal(GPBase):
 
     def _build_marginal_likelihood(self, X, noise):
         mu = self.mean_func(X)
-        Kxx = self.cov_total(X)
+        Kxx = self.cov_func(X)
         Knx = noise(X)
         cov = Kxx + Knx
         chol = cholesky(stabilize(cov))
@@ -212,34 +213,59 @@ class Marginal(GPBase):
                 raise ValueError("When `y` is not observed, `n_points` arg is required")
             return pm.MvNormal(name, mu=mu, chol=chol, size=n_points)
 
-    def _build_conditional(self, Xnew, X, y, noise, pred_noise):
-        Kxx = self.cov_total(X)
+    def _build_conditional(self, Xnew, X, y, noise, cov_total, mean_total,
+                           pred_noise, diag=False):
+        # when not conditioning on another gp, cov_total = self.cov_func
+        Kxx = cov_total(X)
         Kxs = self.cov_func(X, Xnew)
-        Kss = self.cov_func(Xnew)
         Knx = noise(X)
-        rxx = y - self.mean_total(X)
+        rxx = y - mean_total(X)
         L = cholesky(stabilize(Kxx) + Knx)
         A = solve_lower(L, Kxs)
         v = solve_lower(L, rxx)
         mu = self.mean_func(Xnew) + tt.dot(tt.transpose(A), v)
-        if pred_noise:
-            cov = noise(Xnew) + Kss - tt.dot(tt.transpose(A), A)
+        if diag:
+            Kss = self.cov_func(Xnew, diag=True)
+            var = Kss - tt.sum(tt.square(A), 0)
+            if pred_noise:
+                var += noise(Xnew, diag=True)
+            return mu, var
         else:
-            cov = stabilize(Kss) - tt.dot(tt.transpose(A), A)
-        chol = cholesky(cov)
-        return mu, chol
+            Kss = self.cov_func(Xnew)
+            cov = Kss - tt.dot(tt.transpose(A), A)
+            if pred_noise:
+                cov += noise(Xnew)
+            return mu, stabilize(cov)
 
-    def conditional(self, name, n_points, Xnew, X=None, y=None,
-                    noise=None, pred_noise=False):
-        if X is None: X = self.X
-        if y is None: y = self.y
-        if noise is None:
-            noise = self.noise
+    def _get_cond_vals(self, other=None):
+        if other is None:
+            return self.X, self.y, self.noise, self.cov_func, self.mean_func,
         else:
-            if not isinstance(noise, Covariance):
-                noise = pm.gp.cov.WhiteNoise(noise)
-        mu, chol = self._build_conditional(Xnew, X, y, noise, pred_noise)
+            return other.X, other.y, other.noise, other.cov_func, other.mean_func
+
+    def conditional(self, name, n_points, Xnew, gp=None, pred_noise=False):
+        # try to get n_points from X, (via cast to int?), error if cant and n_points is none
+        X, y, noise, cov_total, mean_total = self._get_cond_vals(gp)
+        mu, cov = self._build_conditional(Xnew, X, y, noise, cov_total, mean_total,
+                                          pred_noise, diag=False)
+        chol = cholesky(cov)
         return pm.MvNormal(name, mu=mu, chol=chol, shape=n_points)
+
+    def predict(self, Xnew, point=None, gp=None, pred_noise=False, diag=False):
+        X, y, noise, cov_total, mean_total = self._get_cond_vals(gp)
+        mu, cov = self._build_conditional(Xnew, X, y, noise, cov_total, mean_total,
+                                          pred_noise, diag)
+        mu, cov = draw_values([mu, cov], point=point)
+        return mu, cov
+
+    #def conditional(self, name, n_points, Xnew, X=None, y=None,
+    #                noise=None, pred_noise=False):
+    #    X, y, noise = self._get_cond_vals(X, y, noise)
+    #    mu, cov = self._build_conditional(Xnew, X, y, noise, pred_noise, diag=False)
+    #    chol = cholesky(cov)
+    #    return pm.MvNormal(name, mu=mu, chol=chol, shape=n_points)
+
+
 
 
 @conditioned_vars(["X", "Xu", "y", "sigma"])
