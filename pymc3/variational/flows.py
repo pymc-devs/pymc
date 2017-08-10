@@ -115,13 +115,17 @@ class AbstractFlow(object):
     @classmethod
     def flow_for_params(cls, params):
         if frozenset(params) not in cls.__param_registry:
-            raise KeyError('No such flow for the following params: %r' % params)
+            raise KeyError('No such flow for the following params: {!r}, '
+                           'only the following are supported\n\n{}'
+                           .format(params, cls.__param_registry))
         return cls.__param_registry[frozenset(params)]
 
     @classmethod
     def flow_for_short_name(cls, name):
         if name.lower() not in cls.__name_registry:
-            raise KeyError('No such flow: %r' % name)
+            raise KeyError('No such flow: {!r}, '
+                           'only the following are supported\n\n{}'
+                           .format(name, cls.__name_registry))
         return cls.__name_registry[name.lower()]
 
     def __init__(self, z0=None, dim=None, jitter=.001, batch_size=None, local=False):

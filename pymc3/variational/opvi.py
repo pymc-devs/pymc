@@ -483,6 +483,33 @@ class Group(object):
     Grouped Approximation that is used for modelling mutual dependencies
     for a specified group of variables. Base for local and global group.
 
+    Parameters
+    ----------
+    group : list
+        List of PyMC3 variables or None indicating that group takes all the rest variables
+    vfam : str
+        String that marks the corresponding variational family for the group.
+        Cannot be passed both with `params`
+    params : dict
+        Dict with variation family parameters, full description can be found below.
+        Cannot be passed both with `vfam`
+    random_seed : int
+        Random seed for underlying random generator
+    model :
+        PyMC3 Model
+    local : bool
+        Indicates whether this group is local. Cannot be passed without `params`.
+        Such group should have only one variable
+    batched : bool
+        Indicates whether this group is independently parametrized over first dim.
+        Such group should have only one variable
+    options : dict
+        Special options for the group
+    kwargs : Other kwargs for the group
+
+    Returns
+    -------
+
     Group instance/class has some important constants:
 
     -   **supports_batched**
@@ -687,7 +714,9 @@ class Group(object):
         if pm.variational.flows.seems_like_flow_params(params):
             return pm.variational.approximations.NormalizingFlowGroup
         if frozenset(params) not in cls.__param_registry:
-            raise KeyError('No such group for the following params: {!r}'.format(params))
+            raise KeyError('No such group for the following params: {!r}, '
+                           'only the following are supported\n\n{}'
+                           .format(params, cls.__param_registry))
         return cls.__param_registry[frozenset(params)]
 
     @classmethod
@@ -695,7 +724,9 @@ class Group(object):
         if pm.variational.flows.seems_like_formula(name):
             return pm.variational.approximations.NormalizingFlowGroup
         if name.lower() not in cls.__name_registry:
-            raise KeyError('No such group: {!r}'.format(name))
+            raise KeyError('No such group: {!r}, '
+                           'only the following are supported\n\n{}'
+                           .format(name, cls.__name_registry))
         return cls.__name_registry[name.lower()]
 
     def __new__(cls, group, vfam=None, params=None, *args, **kwargs):
@@ -1016,6 +1047,31 @@ group_for_short_name = Group.group_for_short_name
 
 
 class Approximation(object):
+    """
+    A wrapper for list of groups, creates an Approximation instance that collects
+    sampled variables from all the groups, it also collects logQ for needed for
+    explicit variational inference.
+
+    Parameters
+    ----------
+    groups : list[Group]
+        List of :class:`Group` instances. They should have all model variables
+    model : Model
+
+    Some shortcuts for single group approximations are available:
+
+    -   :class:`MeanField`
+    -   :class:`FullRank`
+    -   :class:`NormalizingFlow`
+    -   :class:`Empirical`
+
+    Single group accepts `local_rv` keyword with dict mapping PyMC3 variables
+    to their local Group parameters dict
+
+    See Also
+    --------
+    See more info about :class:`Group` in it's docstring.
+    """
     def __init__(self, groups, model=None):
         self._scale_cost_to_minibatch = theano.shared(np.int8(1))
         model = modelcontext(model)
