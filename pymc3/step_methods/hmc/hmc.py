@@ -1,13 +1,9 @@
-'''
-Created on Mar 7, 2011
+import numpy as np
 
-@author: johnsalvatier
-'''
 from ..arraystep import metrop_select, Competence
 from .base_hmc import BaseHMC
 from pymc3.vartypes import discrete_types
 from pymc3.theanof import floatX
-import numpy as np
 
 
 __all__ = ['HamiltonianMC']
@@ -22,11 +18,17 @@ def unif(step_size, elow=.85, ehigh=1.15):
 
 
 class HamiltonianMC(BaseHMC):
+    R"""A sampler for continuous variables based on Hamiltonian mechanics.
+
+    See NUTS sampler for automatically tuned stopping time and step size scaling.
+    """
+
     name = 'hmc'
     default_blocked = True
 
     def __init__(self, vars=None, path_length=2., step_rand=unif, **kwargs):
-        """
+        """Set up the Hamiltonian Monte Carlo sampler.
+
         Parameters
         ----------
         vars : list of theano variables
@@ -57,17 +59,27 @@ class HamiltonianMC(BaseHMC):
         self.step_rand = step_rand
 
     def astep(self, q0):
+        """Perform a single HMC iteration."""
         e = floatX(self.step_rand(self.step_size))
-        n_steps = np.array(self.path_length / e, dtype='int32')
-        q = q0
-        p = self.H.pot.random()  # initialize momentum
-        initial_energy = self.compute_energy(q, p)
-        q, p, current_energy = self.leapfrog(q, p, e, n_steps)
-        energy_change = initial_energy - current_energy
-        return metrop_select(energy_change, q, q0)[0]
+        n_steps = int(self.path_length / e)
+
+        p0 = self.potential.random()
+        start = self.integrator.compute_state(q0, p0)
+
+        if not np.isfinite(start.energy):
+            raise ValueError('Bad initial energy: %s. The model '
+                             'might be misspecified.' % start.energy)
+
+        state = start
+        for _ in range(n_steps):
+            state = self.integrator.step(e, state)
+
+        energy_change = start.energy - state.energy
+        return metrop_select(energy_change, state.q, start.q)[0]
 
     @staticmethod
     def competence(var):
+        """Check how appropriate this class is for sampling a random variable."""
         if var.dtype in discrete_types:
             return Competence.INCOMPATIBLE
         return Competence.COMPATIBLE

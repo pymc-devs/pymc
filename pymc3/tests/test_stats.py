@@ -6,7 +6,7 @@ import pymc3 as pm
 from .helpers import SeededTest
 from ..tests import backend_fixtures as bf
 from ..backends import ndarray
-from ..stats import df_summary, autocorr, hpd, mc_error, quantiles, make_indices
+from ..stats import df_summary, autocorr, hpd, mc_error, quantiles, make_indices, bfmi
 from ..theanof import floatX_array
 import pymc3.stats as pmstats
 from numpy.random import random, normal
@@ -17,7 +17,7 @@ from scipy import stats as st
 def test_log_post_trace():
     with pm.Model() as model:
         pm.Normal('y')
-        trace = pm.sample()
+        trace = pm.sample(10, tune=10)
 
     logp = pmstats._log_post_trace(trace, model)
     assert logp.shape == (len(trace), 0)
@@ -25,7 +25,7 @@ def test_log_post_trace():
     with pm.Model() as model:
         pm.Normal('a')
         pm.Normal('y', observed=np.zeros((2, 3)))
-        trace = pm.sample()
+        trace = pm.sample(10, tune=10)
 
     logp = pmstats._log_post_trace(trace, model)
     assert logp.shape == (len(trace), 6)
@@ -40,7 +40,7 @@ def test_log_post_trace():
         data = data.copy()
         data.values[:] = np.nan
         pm.Normal('y3', observed=data)
-        trace = pm.sample()
+        trace = pm.sample(10, tune=10)
 
     logp = pmstats._log_post_trace(trace, model)
     assert logp.shape == (len(trace), 17)
@@ -358,6 +358,11 @@ class TestStats(SeededTest):
         assert len(keys) == len(expected_keys)
         for key in keys:
             assert result[key] == [key + (0,), key + (1,)]
+
+    def test_bfmi(self):
+        trace = {'energy': np.array([1, 2, 3, 4])}
+
+        assert_almost_equal(bfmi(trace), 0.8)
 
 
 class TestDfSummary(bf.ModelBackendSampledTestCase):

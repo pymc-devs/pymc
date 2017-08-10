@@ -1,17 +1,16 @@
 from collections import namedtuple
 
-from pymc3.theanof import join_nonshared_inputs, gradient, CallableTensor, floatX
-
 import theano
 import theano.tensor as tt
 import numpy as np
 
+from pymc3.theanof import join_nonshared_inputs, gradient, CallableTensor, floatX
 
 Hamiltonian = namedtuple("Hamiltonian", "logp, dlogp, pot")
 
 
 def _theano_hamiltonian(model_vars, shared, logpt, potential):
-    """Creates a Hamiltonian with shared inputs.
+    """Create a Hamiltonian with shared inputs.
 
     Parameters
     ----------
@@ -23,7 +22,8 @@ def _theano_hamiltonian(model_vars, shared, logpt, potential):
     Returns
     -------
     Hamiltonian : namedtuple with log pdf, gradient of log pdf, and potential functions
-    q : Starting position variable.
+    q : Initial position for Hamiltonian Monte Carlo
+    dlogp_func: theano function that computes the gradient of a log pdf at a point
     """
     dlogp = gradient(logpt, model_vars)
     (logp, dlogp), q = join_nonshared_inputs([logpt, dlogp], model_vars, shared)
@@ -35,7 +35,7 @@ def _theano_hamiltonian(model_vars, shared, logpt, potential):
 
 
 def _theano_energy_function(H, q, **theano_kwargs):
-    """Creates a Hamiltonian with shared inputs.
+    """Create a theano function for computing energy at a point in parameter space.
 
     Parameters
     ----------
@@ -65,8 +65,9 @@ def _theano_velocity_function(H, p, **theano_kwargs):
 
 
 def _theano_leapfrog_integrator(H, q, p, **theano_kwargs):
-    """Computes a theano function that computes one leapfrog step and the energy at the
-    end of the trajectory.
+    """Compute a theano function that computes one leapfrog step.
+
+    Returns not only the new positiona and momentum, but also the energy.
 
     Parameters
     ----------
@@ -137,12 +138,12 @@ def get_theano_hamiltonian_functions(model_vars, shared, logpt, potential,
 
 
 def energy(H, q, p):
-    """Compute the total energy for the Hamiltonian at a given position/momentum"""
+    """Compute the total energy for the Hamiltonian at a given position/momentum."""
     return H.pot.energy(p) - H.logp(q)
 
 
 def leapfrog(H, q, p, epsilon, n_steps):
-    """Leapfrog integrator.
+    r"""Leapfrog integrator.
 
     Estimates `p(t)` and `q(t)` at time :math:`t = n \cdot e`, by integrating the
     Hamiltonian equations

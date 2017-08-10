@@ -69,6 +69,16 @@ def simple_2model():
     return model.test_point, model
 
 
+def simple_2model_continuous():
+    mu = -2.1
+    tau = 1.3
+    with Model() as model:
+        x = pm.Normal('x', mu, tau=tau, testval=.1)
+        pm.Deterministic('logx', tt.log(x))
+        pm.Beta('y', alpha=1, beta=1, shape=2)
+    return model.test_point, model
+
+
 def mv_simple():
     mu = floatX_array([-.1, .5, 1.1])
     p = floatX_array([

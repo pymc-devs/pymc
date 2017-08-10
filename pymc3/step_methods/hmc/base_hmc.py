@@ -1,35 +1,36 @@
-from ..arraystep import ArrayStepShared
-from .trajectory import get_theano_hamiltonian_functions
-
-from pymc3.tuning import guess_scaling
-from pymc3.model import modelcontext, Point
-from .quadpotential import quad_potential
-from pymc3.theanof import inputvars, make_shared_replacements, floatX
 import numpy as np
 
+from pymc3.model import modelcontext, Point
+from pymc3.step_methods import arraystep
+from pymc3.step_methods.hmc import integration
+from pymc3.theanof import inputvars, floatX
+from pymc3.tuning import guess_scaling
+from .quadpotential import quad_potential, QuadPotentialDiagAdapt
 
-class BaseHMC(ArrayStepShared):
+
+class BaseHMC(arraystep.GradientSharedStep):
+    """Superclass to implement Hamiltonian/hybrid monte carlo."""
+
     default_blocked = True
 
     def __init__(self, vars=None, scaling=None, step_scale=0.25, is_cov=False,
-                 model=None, blocked=True, use_single_leapfrog=False,
-                 potential=None, integrator="leapfrog", **theano_kwargs):
-        """Superclass to implement Hamiltonian/hybrid monte carlo
+                 model=None, blocked=True, potential=None,
+                 integrator="leapfrog", dtype=None, **theano_kwargs):
+        """Set up Hamiltonian samplers with common structures.
 
         Parameters
         ----------
         vars : list of theano variables
         scaling : array_like, ndim = {1,2}
-            Scaling for momentum distribution. 1d arrays interpreted matrix diagonal.
+            Scaling for momentum distribution. 1d arrays interpreted matrix
+            diagonal.
         step_scale : float, default=0.25
             Size of steps to take, automatically scaled down by 1/n**(1/4)
         is_cov : bool, default=False
-            Treat scaling as a covariance matrix/vector if True, else treat it as a
-            precision matrix/vector
-        model : pymc3 Model instance.  default=Context model
-        blocked: Boolean, default True
-        use_single_leapfrog: Boolean, will leapfrog steps take a single step at a time.
-            default False.
+            Treat scaling as a covariance matrix/vector if True, else treat
+            it as a precision matrix/vector
+        model : pymc3 Model instance
+        blocked: bool, default=True
         potential : Potential, optional
             An object that represents the Hamiltonian with methods `velocity`,
             `energy`, and `random` methods.
@@ -41,26 +42,27 @@ class BaseHMC(ArrayStepShared):
             vars = model.cont_vars
         vars = inputvars(vars)
 
+        super(BaseHMC, self).__init__(vars, blocked=blocked, model=model,
+                                      dtype=dtype, **theano_kwargs)
+
+        size = self._logp_dlogp_func.size
+
         if scaling is None and potential is None:
-            scaling = floatX(np.ones(model.dict_to_array(model.test_point).size))
+            mean = floatX(np.zeros(size))
+            var = floatX(np.ones(size))
+            potential = QuadPotentialDiagAdapt(size, mean, var, 10)
 
         if isinstance(scaling, dict):
-            scaling = guess_scaling(Point(scaling, model=model), model=model, vars=vars)
+            point = Point(scaling, model=model)
+            scaling = guess_scaling(point, model=model, vars=vars)
 
         if scaling is not None and potential is not None:
             raise ValueError("Can not specify both potential and scaling.")
 
-        self.step_size = step_scale / (model.ndim ** 0.25)
+        self.step_size = step_scale / (size ** 0.25)
         if potential is not None:
             self.potential = potential
         else:
-            self.potential = quad_potential(scaling, is_cov, as_cov=False)
+            self.potential = quad_potential(scaling, is_cov)
 
-        shared = make_shared_replacements(vars, model)
-        if theano_kwargs is None:
-            theano_kwargs = {}
-
-        self.H, self.compute_energy, self.compute_velocity, self.leapfrog, self.dlogp = get_theano_hamiltonian_functions(
-            vars, shared, model.logpt, self.potential, use_single_leapfrog, integrator, **theano_kwargs)
-
-        super(BaseHMC, self).__init__(vars, shared, blocked=blocked)
+        self.integrator = integration.CpuLeapfrogIntegrator(self.potential, self._logp_dlogp_func)

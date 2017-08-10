@@ -1,4 +1,6 @@
 import collections
+import functools
+import itertools
 import threading
 import six
 
@@ -15,7 +17,7 @@ from .memoize import memoize
 from .theanof import gradient, hessian, inputvars, generator
 from .vartypes import typefilter, discrete_types, continuous_types, isgenerator
 from .blocking import DictToArrayBijection, ArrayOrdering
-from .util import get_transformed_name
+from .util import get_transformed_name, escape_latex
 
 __all__ = [
     'Model', 'Factor', 'compilef', 'fn', 'fastfn', 'modelcontext',
@@ -184,9 +186,12 @@ class Factor(object):
     def logpt(self):
         """Theano scalar of log-probability of the model"""
         if getattr(self, 'total_size', None) is not None:
-            return tt.sum(self.logp_elemwiset) * self.scaling
+            logp = tt.sum(self.logp_elemwiset) * self.scaling
         else:
-            return tt.sum(self.logp_elemwiset)
+            logp = tt.sum(self.logp_elemwiset)
+        if self.name is not None:
+            logp.name = '__logp_%s' % self.name
+        return logp
 
 
 class InitContextMeta(type):
@@ -275,6 +280,173 @@ class treedict(dict):
                     self.parent.__contains__(item))
         else:
             return dict.__contains__(self, item)
+
+
+class ValueGradFunction(object):
+    """Create a theano function that computes a value and its gradient.
+
+    Parameters
+    ----------
+    cost : theano variable
+        The value that we compute with its gradient.
+    grad_vars : list of named theano variables or None
+        The arguments with respect to which the gradient is computed.
+    extra_args : list of named theano variables or None
+        Other arguments of the function that are assumed constant. They
+        are stored in shared variables and can be set using
+        `set_extra_values`.
+    dtype : str, default=theano.config.floatX
+        The dtype of the arrays.
+    casting : {'no', 'equiv', 'save', 'same_kind', 'unsafe'}, default='no'
+        Casting rule for casting `grad_args` to the array dtype.
+        See `numpy.can_cast` for a description of the options.
+        Keep in mind that we cast the variables to the array *and*
+        back from the array dtype to the variable dtype.
+    kwargs
+        Extra arguments are passed on to `theano.function`.
+
+    Attributes
+    ----------
+    size : int
+        The number of elements in the parameter array.
+    profile : theano profiling object or None
+        The profiling object of the theano function that computes value and
+        gradient. This is None unless `profile=True` was set in the
+        kwargs.
+    """
+    def __init__(self, cost, grad_vars, extra_vars=None, dtype=None,
+                 casting='no', **kwargs):
+        if extra_vars is None:
+            extra_vars = []
+
+        names = [arg.name for arg in grad_vars + extra_vars]
+        if any(name is None for name in names):
+            raise ValueError('Arguments must be named.')
+        if len(set(names)) != len(names):
+            raise ValueError('Names of the arguments are not unique.')
+
+        if cost.ndim > 0:
+            raise ValueError('Cost must be a scalar.')
+
+        self._grad_vars = grad_vars
+        self._extra_vars = extra_vars
+        self._extra_var_names = set(var.name for var in extra_vars)
+        self._cost = cost
+        self._ordering = ArrayOrdering(grad_vars)
+        self.size = self._ordering.size
+        self._extra_are_set = False
+        if dtype is None:
+            dtype = theano.config.floatX
+        self.dtype = dtype
+        for var in self._grad_vars:
+            if not np.can_cast(var.dtype, self.dtype, casting):
+                raise TypeError('Invalid dtype for variable %s. Can not '
+                                'cast to %s with casting rule %s.'
+                                % (var.name, self.dtype, casting))
+            if not np.issubdtype(var.dtype, float):
+                raise TypeError('Invalid dtype for variable %s. Must be '
+                                'floating point but is %s.'
+                                % (var.name, var.dtype))
+
+        givens = []
+        self._extra_vars_shared = {}
+        for var in extra_vars:
+            shared = theano.shared(var.tag.test_value, var.name + '_shared__')
+            self._extra_vars_shared[var.name] = shared
+            givens.append((var, shared))
+
+        self._vars_joined, self._cost_joined = self._build_joined(
+            self._cost, grad_vars, self._ordering.vmap)
+
+        grad = tt.grad(self._cost_joined, self._vars_joined)
+        grad.name = '__grad'
+
+        inputs = [self._vars_joined]
+
+        self._theano_function = theano.function(
+            inputs, [self._cost_joined, grad], givens=givens, **kwargs)
+
+    def set_extra_values(self, extra_vars):
+        self._extra_are_set = True
+        for var in self._extra_vars:
+            self._extra_vars_shared[var.name].set_value(extra_vars[var.name])
+
+    def get_extra_values(self):
+        if not self._extra_are_set:
+            raise ValueError('Extra values are not set.')
+
+        return {var.name: self._extra_vars_shared[var.name].get_value()
+                for var in self._extra_vars}
+
+    def __call__(self, array, grad_out=None, extra_vars=None):
+        if extra_vars is not None:
+            self.set_extra_values(extra_vars)
+
+        if not self._extra_are_set:
+            raise ValueError('Extra values are not set.')
+
+        if array.shape != (self.size,):
+            raise ValueError('Invalid shape for array. Must be %s but is %s.'
+                             % ((self.size,), array.shape))
+
+        if grad_out is None:
+            out = np.empty_like(array)
+        else:
+            out = grad_out
+
+        logp, dlogp = self._theano_function(array)
+        if grad_out is None:
+            return logp, dlogp
+        else:
+            out[...] = dlogp
+            return logp
+
+    @property
+    def profile(self):
+        """Profiling information of the underlying theano function."""
+        return self._theano_function.profile
+
+    def dict_to_array(self, point):
+        """Convert a dictionary with values for grad_vars to an array."""
+        array = np.empty(self.size, dtype=self.dtype)
+        for varmap in self._ordering.vmap:
+            array[varmap.slc] = point[varmap.var].ravel().astype(self.dtype)
+        return array
+
+    def array_to_dict(self, array):
+        """Convert an array to a dictionary containing the grad_vars."""
+        if array.shape != (self.size,):
+            raise ValueError('Array should have shape (%s,) but has %s'
+                             % (self.size, array.shape))
+        if array.dtype != self.dtype:
+            raise ValueError('Array has invalid dtype. Should be %s but is %s'
+                             % (self._dtype, self.dtype))
+        point = {}
+        for varmap in self._ordering.vmap:
+            data = array[varmap.slc].reshape(varmap.shp)
+            point[varmap.var] = data.astype(varmap.dtyp)
+
+        return point
+
+    def array_to_full_dict(self, array):
+        """Convert an array to a dictionary with grad_vars and extra_vars."""
+        point = self.array_to_dict(array)
+        for name, var in self._extra_vars_shared.items():
+            point[name] = var.get_value()
+        return point
+
+    def _build_joined(self, cost, args, vmap):
+        args_joined = tt.vector('__args_joined')
+        args_joined.tag.test_value = np.zeros(self.size, dtype=self.dtype)
+
+        joined_slices = {}
+        for vmap in vmap:
+            sliced = args_joined[vmap.slc].reshape(vmap.shp)
+            sliced.name = vmap.var
+            joined_slices[vmap.var] = sliced
+
+        replace = {var: joined_slices[var.name] for var in args}
+        return args_joined, theano.clone(cost, replace=replace)
 
 
 class Model(six.with_metaclass(InitContextMeta, Context, Factor)):
@@ -419,7 +591,6 @@ class Model(six.with_metaclass(InitContextMeta, Context, Factor)):
         return bij
 
     @property
-    @memoize
     def dict_to_array(self):
         return self.bijection.map
 
@@ -428,23 +599,34 @@ class Model(six.with_metaclass(InitContextMeta, Context, Factor)):
         return sum(var.dsize for var in self.free_RVs)
 
     @property
-    @memoize
     def logp_array(self):
         return self.bijection.mapf(self.fastlogp)
 
     @property
-    @memoize
     def dlogp_array(self):
         vars = inputvars(self.cont_vars)
         return self.bijection.mapf(self.fastdlogp(vars))
 
+    def logp_dlogp_function(self, grad_vars=None, **kwargs):
+        if grad_vars is None:
+            grad_vars = list(typefilter(self.free_RVs, continuous_types))
+        else:
+            for var in grad_vars:
+                if var.dtype not in continuous_types:
+                    raise ValueError("Can only compute the gradient of "
+                                     "continuous types: %s" % var)
+        varnames = [var.name for var in grad_vars]
+        extra_vars = [var for var in self.free_RVs if var.name not in varnames]
+        return ValueGradFunction(self.logpt, grad_vars, extra_vars, **kwargs)
+
     @property
-    @memoize
     def logpt(self):
         """Theano scalar of log-probability of the model"""
         with self:
             factors = [var.logpt for var in self.basic_RVs] + self.potentials
-            return tt.add(*map(tt.sum, factors))
+            logp = tt.add(*map(tt.sum, factors))
+            logp.name = '__logp'
+            return logp
 
     @property
     def varlogpt(self):
@@ -595,7 +777,6 @@ class Model(six.with_metaclass(InitContextMeta, Context, Factor)):
             except KeyError:
                 raise e
 
-    @memoize
     def makefn(self, outs, mode=None, *args, **kwargs):
         """Compiles a Theano function which returns `outs` and takes the variable
         ancestors of `outs` as inputs.
@@ -712,6 +893,14 @@ class Model(six.with_metaclass(InitContextMeta, Context, Factor)):
         view = {vm.var: vm for vm in order.vmap}
         flat_view = FlatView(inputvar, replacements, view)
         return flat_view
+
+    def _repr_latex_(self, name=None, dist=None):
+        tex_vars = []
+        for rv in itertools.chain(self.unobserved_RVs, self.observed_RVs):
+            tex_vars.append(rv.__latex__())
+        return u'$${}$$'.format('\\\\'.join([tex.strip('$') for tex in tex_vars if tex is not None]))
+
+    __latex__ = _repr_latex_
 
 
 def fn(outs, mode=None, model=None, *args, **kwargs):
@@ -892,7 +1081,9 @@ class FreeRV(Factor, TensorVariable):
             name = self.name
         if dist is None:
             dist = self.distribution
-        return self.distribution._repr_latex_(name=name, dist=dist)
+        return self.distribution._repr_latex_(name=escape_latex(name), dist=dist)
+
+    __latex__ = _repr_latex_
 
     @property
     def init_value(self):
@@ -995,7 +1186,9 @@ class ObservedRV(Factor, TensorVariable):
             name = self.name
         if dist is None:
             dist = self.distribution
-        return self.distribution._repr_latex_(name=name, dist=dist)
+        return self.distribution._repr_latex_(name=escape_latex(name), dist=dist)
+
+    __latex__ = _repr_latex_
 
     @property
     def init_value(self):
@@ -1033,6 +1226,26 @@ class MultiObservedRV(Factor):
         self.scaling = _get_scaling(total_size, self.logp_elemwiset.shape, self.logp_elemwiset.ndim)
 
 
+def _walk_up_rv(rv):
+    """Walk up theano graph to get inputs for deterministic RV."""
+    all_rvs = []
+    parents = list(itertools.chain(*[j.inputs for j in rv.get_parents()]))
+    if parents:
+        for parent in parents:
+            all_rvs.extend(_walk_up_rv(parent))
+    else:
+        if rv.name:
+            all_rvs.append(rv.name)
+        else:
+            all_rvs.append(r'\text{Constant}')
+    return all_rvs
+
+
+def _latex_repr_rv(rv):
+    """Make latex string for a Deterministic variable"""
+    return r'${} \sim \text{{Deterministic}}({})$'.format(rv.name, r', '.join(_walk_up_rv(rv)))
+
+
 def Deterministic(name, var, model=None):
     """Create a named deterministic variable
 
@@ -1049,6 +1262,8 @@ def Deterministic(name, var, model=None):
     var.name = model.name_for(name)
     model.deterministics.append(var)
     model.add_random_variable(var)
+    var._repr_latex_ = functools.partial(_latex_repr_rv, var)
+    var.__latex__ = var._repr_latex_
     return var
 
 
@@ -1120,7 +1335,9 @@ class TransformedRV(TensorVariable):
             name = self.name
         if dist is None:
             dist = self.distribution
-        return self.distribution._repr_latex_(name=name, dist=dist)
+        return self.distribution._repr_latex_(name=escape_latex(name), dist=dist)
+
+    __latex__ = _repr_latex_
 
     @property
     def init_value(self):
