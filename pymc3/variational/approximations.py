@@ -527,12 +527,11 @@ def sample_approx(approx, draws=100, include_transformed=True):
 class SingleGroupApproximation(Approximation):
     group_class = None
 
-    def __init__(self, *args, local_rv=None, model=None, **kwargs):
-        if local_rv is None:
-            local_rv = dict()
-        groups = [self.group_class(None, *args, model=model, **kwargs)]
-        groups.extend([Group([v], params=p, local=True, model=model) for v, p in local_rv.items()])
-        super(SingleGroupApproximation, self).__init__(groups, model=model)
+    def __init__(self, *args, **kwargs):
+        groups = [self.group_class(None, *args, **kwargs)]
+        groups.extend([Group([v], params=p, local=True, model=kwargs.get('model'))
+                       for v, p in kwargs.get('local_rv', {}).items()])
+        super(SingleGroupApproximation, self).__init__(groups, model=kwargs.get('model'))
 
     def __getattr__(self, item):
         return getattr(self.groups[0], item)
