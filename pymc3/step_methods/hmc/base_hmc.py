@@ -1,19 +1,22 @@
+import numpy as np
+
 from pymc3.model import modelcontext, Point
 from pymc3.step_methods import arraystep
-from .quadpotential import quad_potential, QuadPotentialDiagAdapt
 from pymc3.step_methods.hmc import integration
 from pymc3.theanof import inputvars, floatX
 from pymc3.tuning import guess_scaling
-import numpy as np
+from .quadpotential import quad_potential, QuadPotentialDiagAdapt
 
 
 class BaseHMC(arraystep.GradientSharedStep):
+    """Superclass to implement Hamiltonian/hybrid monte carlo."""
+
     default_blocked = True
 
     def __init__(self, vars=None, scaling=None, step_scale=0.25, is_cov=False,
                  model=None, blocked=True, potential=None,
                  integrator="leapfrog", dtype=None, **theano_kwargs):
-        """Superclass to implement Hamiltonian/hybrid monte carlo
+        """Set up Hamiltonian samplers with common structures.
 
         Parameters
         ----------
@@ -62,5 +65,4 @@ class BaseHMC(arraystep.GradientSharedStep):
         else:
             self.potential = quad_potential(scaling, is_cov)
 
-        self.integrator = integration.CpuLeapfrogIntegrator(
-            size, self.potential, self._logp_dlogp_func)
+        self.integrator = integration.CpuLeapfrogIntegrator(self.potential, self._logp_dlogp_func)

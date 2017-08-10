@@ -1,16 +1,16 @@
 from collections import namedtuple
 import warnings
 
+import numpy as np
+import numpy.random as nr
+from scipy import stats, linalg
+import six
+
 from ..arraystep import Competence
 from pymc3.exceptions import SamplingError
 from .base_hmc import BaseHMC
 from pymc3.theanof import floatX
 from pymc3.vartypes import continuous_types
-
-import numpy as np
-import numpy.random as nr
-from scipy import stats, linalg
-import six
 
 __all__ = ['NUTS']
 
@@ -28,7 +28,7 @@ class NUTS(BaseHMC):
     sample. A detailed description can be found at [1], "Algorithm 6:
     Efficient No-U-Turn Sampler with Dual Averaging".
 
-    Nuts provides a number of statistics that can be accessed with
+    NUTS provides a number of statistics that can be accessed with
     `trace.get_sampler_stats`:
 
     - `mean_tree_accept`: The mean acceptance probability for the tree
@@ -70,6 +70,7 @@ class NUTS(BaseHMC):
     .. [1] Hoffman, Matthew D., & Gelman, Andrew. (2011). The No-U-Turn Sampler:
        Adaptively Setting Path Lengths in Hamiltonian Monte Carlo.
     """
+
     name = 'nuts'
 
     default_blocked = True
@@ -92,7 +93,8 @@ class NUTS(BaseHMC):
                  max_treedepth=10, on_error='summary',
                  early_max_treedepth=8,
                  **kwargs):
-        R"""
+        R"""Set up the No-U-Turn sampler.
+
         Parameters
         ----------
         vars : list of Theano variables, default all continuous vars
@@ -171,6 +173,7 @@ class NUTS(BaseHMC):
         self.report = NutsReport(on_error, max_treedepth, target_accept)
 
     def astep(self, q0):
+        """Perform a single NUTS iteration."""
         p0 = self.potential.random()
         start = self.integrator.compute_state(q0, p0)
 
@@ -194,12 +197,12 @@ class NUTS(BaseHMC):
 
         for _ in range(max_treedepth):
             direction = logbern(np.log(0.5)) * 2 - 1
-            diverging, turning = tree.extend(direction)
+            diverging_info, turning = tree.extend(direction)
             q, q_grad = tree.proposal.q, tree.proposal.q_grad
 
-            if diverging or turning:
-                if diverging:
-                    self.report._add_divergence(self.tune, *diverging)
+            if diverging_info or turning:
+                if diverging_info:
+                    self.report._add_divergence(self.tune, *diverging_info)
                 break
 
         w = 1. / (self.m + self.t0)
@@ -220,7 +223,7 @@ class NUTS(BaseHMC):
             'step_size': step_size,
             'tune': self.tune,
             'step_size_bar': np.exp(self.log_step_size_bar),
-            'diverging': diverging,
+            'diverging': bool(diverging_info),
         }
 
         stats.update(tree.stats())
@@ -229,6 +232,7 @@ class NUTS(BaseHMC):
 
     @staticmethod
     def competence(var):
+        """Check how appropriate this class is for sampling a random variable."""
         if var.dtype in continuous_types:
             return Competence.IDEAL
         return Competence.INCOMPATIBLE
@@ -466,19 +470,20 @@ class NutsReport(object):
         """Print warnings for obviously problematic chains."""
         self._chain_id = strace.chain
 
-        tuning = strace.get_sampler_stats('tune')
-        if tuning.ndim == 2:
-            tuning = np.any(tuning, axis=-1)
+        if strace.supports_sampler_stats:
+            tuning = strace.get_sampler_stats('tune')
+            if tuning.ndim == 2:
+                tuning = np.any(tuning, axis=-1)
 
-        accept = strace.get_sampler_stats('mean_tree_accept')
-        if accept.ndim == 2:
-            accept = np.mean(accept, axis=-1)
+            accept = strace.get_sampler_stats('mean_tree_accept')
+            if accept.ndim == 2:
+                accept = np.mean(accept, axis=-1)
 
-        depth = strace.get_sampler_stats('depth')
-        if depth.ndim == 2:
-            depth = np.max(depth, axis=-1)
+            depth = strace.get_sampler_stats('depth')
+            if depth.ndim == 2:
+                depth = np.max(depth, axis=-1)
 
-        self._check_len(tuning)
-        self._check_depth(depth[~tuning])
-        self._check_accept(accept[~tuning])
-        self._check_divergence()
+            self._check_len(tuning)
+            self._check_depth(depth[~tuning])
+            self._check_accept(accept[~tuning])
+            self._check_divergence()

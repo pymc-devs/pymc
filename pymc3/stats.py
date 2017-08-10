@@ -4,6 +4,7 @@ import numpy as np
 import pandas as pd
 import itertools
 import sys
+from tqdm import tqdm
 import warnings
 from collections import namedtuple
 from .model import modelcontext
@@ -11,6 +12,7 @@ from .util import get_default_varnames
 from pymc3.theanof import floatX
 
 from scipy.misc import logsumexp
+from scipy.stats import dirichlet
 from scipy.stats.distributions import pareto
 
 from .backends import tracetab as ttab
@@ -114,17 +116,18 @@ def dic(trace, model=None):
     `float` representing the deviance information criterion of the model and trace
     """
     model = modelcontext(model)
+    logp = model.logp
 
-    mean_deviance = -2 * np.mean([model.logp(pt) for pt in trace])
+    mean_deviance = -2 * np.mean([logp(pt) for pt in trace])
 
     free_rv_means = {rv.name: trace[rv.name].mean(
         axis=0) for rv in model.free_RVs}
-    deviance_at_mean = -2 * model.logp(free_rv_means)
+    deviance_at_mean = -2 * logp(free_rv_means)
 
     return 2 * mean_deviance - deviance_at_mean
 
 
-def _log_post_trace(trace, model):
+def _log_post_trace(trace, model, progressbar=False):
     """Calculate the elementwise log-posterior for the sampled trace.
 
     Parameters
@@ -132,30 +135,42 @@ def _log_post_trace(trace, model):
     trace : result of MCMC run
     model : PyMC Model
         Optional model. Default None, taken from context.
+    progressbar: bool
+        Whether or not to display a progress bar in the command line. The
+        bar shows the percentage of completion, the evaluation speed, and
+        the estimated time to completion
 
     Returns
     -------
     logp : array of shape (n_samples, n_observations)
         The contribution of the observations to the logp of the whole model.
     """
+    cached = [(var, var.logp_elemwise) for var in model.observed_RVs]
+
     def logp_vals_point(pt):
         if len(model.observed_RVs) == 0:
             return floatX(np.array([], dtype='d'))
 
         logp_vals = []
-        for var in model.observed_RVs:
-            logp = var.logp_elemwise(pt)
+        for var, logp in cached:
+            logp = logp(pt)
             if var.missing_values:
                 logp = logp[~var.observations.mask]
             logp_vals.append(logp.ravel())
 
         return np.concatenate(logp_vals)
 
-    logp = (logp_vals_point(pt) for pt in trace)
-    return np.stack(logp)
+    points = tqdm(trace) if progressbar else trace
+
+    try:
+        logp = (logp_vals_point(pt) for pt in points)
+        return np.stack(logp)
+    finally:
+        if progressbar:
+            points.close()
 
 
-def waic(trace, model=None, pointwise=False):
+def waic(trace, model=None, pointwise=False, progressbar=False):
     """Calculate the widely available information criterion, its standard error
     and the effective number of parameters of the samples in trace from model.
     Read more theory here - in a paper by some of the leading authorities on
@@ -169,6 +184,10 @@ def waic(trace, model=None, pointwise=False):
     pointwise: bool
         if True the pointwise predictive accuracy will be returned.
         Default False
+    progressbar: bool
+        Whether or not to display a progress bar in the command line. The
+        bar shows the percentage of completion, the evaluation speed, and
+        the estimated time to completion
 
     Returns
     -------
@@ -180,7 +199,7 @@ def waic(trace, model=None, pointwise=False):
     """
     model = modelcontext(model)
 
-    log_py = _log_post_trace(trace, model)
+    log_py = _log_post_trace(trace, model, progressbar=progressbar)
     if log_py.size == 0:
         raise ValueError('The model does not contain observed values.')
 
@@ -208,7 +227,7 @@ def waic(trace, model=None, pointwise=False):
         return WAIC_r(waic, waic_se, p_waic)
 
 
-def loo(trace, model=None, pointwise=False):
+def loo(trace, model=None, pointwise=False, progressbar=False):
     """Calculates leave-one-out (LOO) cross-validation for out of sample predictive
     model fit, following Vehtari et al. (2015). Cross-validation is computed using
     Pareto-smoothed importance sampling (PSIS).
@@ -221,6 +240,10 @@ def loo(trace, model=None, pointwise=False):
     pointwise: bool
         if True the pointwise predictive accuracy will be returned.
         Default False
+    progressbar: bool
+        Whether or not to display a progress bar in the command line. The
+        bar shows the percentage of completion, the evaluation speed, and
+        the estimated time to completion
 
     Returns
     -------
@@ -232,7 +255,7 @@ def loo(trace, model=None, pointwise=False):
     """
     model = modelcontext(model)
 
-    log_py = _log_post_trace(trace, model)
+    log_py = _log_post_trace(trace, model, progressbar=progressbar)
     if log_py.size == 0:
         raise ValueError('The model does not contain observed values.')
 
@@ -306,17 +329,19 @@ def bpic(trace, model=None):
         Optional model. Default None, taken from context.
     """
     model = modelcontext(model)
+    logp = model.logp
 
-    mean_deviance = -2 * np.mean([model.logp(pt) for pt in trace])
+    mean_deviance = -2 * np.mean([logp(pt) for pt in trace])
 
     free_rv_means = {rv.name: trace[rv.name].mean(
         axis=0) for rv in model.free_RVs}
-    deviance_at_mean = -2 * model.logp(free_rv_means)
+    deviance_at_mean = -2 * logp(free_rv_means)
 
     return 3 * mean_deviance - 2 * deviance_at_mean
 
 
-def compare(traces, models, ic='WAIC'):
+def compare(traces, models, ic='WAIC', bootstrap=True, b_samples=1000,
+            alpha=1, seed=None):
     """Compare models based on the widely available information criterion (WAIC)
     or leave-one-out (LOO) cross-validation.
     Read more theory here - in a paper by some of the leading authorities on
@@ -330,6 +355,19 @@ def compare(traces, models, ic='WAIC'):
     ic : string
         Information Criterion (WAIC or LOO) used to compare models.
         Default WAIC.
+    bootstrap : boolean
+        If True a Bayesian bootstrap will be used to compute the weights and
+        the standard error of the IC estimate (SE).
+    b_samples: int
+        Number of samples taken by the Bayesian bootstrap estimation
+    alpha : float
+        The shape parameter in the Dirichlet distribution used for the
+        Bayesian bootstrap. When alpha=1 (default), the distribution is uniform
+        on the simplex. A smaller alpha will keeps the final weights
+        more away from 0 and 1.
+    seed : int or np.random.RandomState instance
+           If int or RandomState, use it for seeding Bayesian bootstrap.
+           Default None the global np.random state is used.
 
     Returns
     -------
@@ -342,13 +380,13 @@ def compare(traces, models, ic='WAIC'):
     dIC : Relative difference between each IC (WAIC or LOO)
     and the lowest IC (WAIC or LOO).
         It's always 0 for the top-ranked model.
-    weight: Akaike weights for each model.
+    weight: Akaike-like weights for each model.
         This can be loosely interpreted as the probability of each model
-        (among the compared model) given the data. Be careful that these
-        weights are based on point estimates of the IC (uncertainty is ignored).
+        (among the compared model) given the data. By default the uncertainty 
+        in the weights estimation is considered using Bayesian bootstrap.
     SE : Standard error of the IC estimate.
-        For a "large enough" sample size this is an estimate of the uncertainty
-        in the computation of the IC.
+        By default these values are estimated using Bayesian bootstrap (best
+        option) or, if bootstrap=False, using a Gaussian approximation
     dSE : Standard error of the difference in IC between each model and
     the top-ranked model.
         It's always 0 for the top-ranked model.
@@ -359,12 +397,14 @@ def compare(traces, models, ic='WAIC'):
         ic_func = waic
         df_comp = pd.DataFrame(index=np.arange(len(models)),
                                columns=['WAIC', 'pWAIC', 'dWAIC', 'weight',
-                               'SE', 'dSE', 'warning'])
+                                        'SE', 'dSE', 'warning'])
+
     elif ic == 'LOO':
         ic_func = loo
         df_comp = pd.DataFrame(index=np.arange(len(models)),
                                columns=['LOO', 'pLOO', 'dLOO', 'weight',
-                               'SE', 'dSE', 'warning'])
+                                        'SE', 'dSE', 'warning'])
+
     else:
         raise NotImplementedError(
             'The information criterion {} is not supported.'.format(ic))
@@ -372,7 +412,6 @@ def compare(traces, models, ic='WAIC'):
     warns = np.zeros(len(models))
 
     c = 0
-
     def add_warns(*args):
         warns[c] = 1
 
@@ -386,16 +425,43 @@ def compare(traces, models, ic='WAIC'):
 
     ics.sort(key=lambda x: x[1][0])
 
-    min_ic = ics[0][1][0]
-    Z = np.sum([np.exp(-0.5 * (x[1][0] - min_ic)) for x in ics])
+    if bootstrap:
+        N = len(ics[0][1][3])
 
-    for idx, res in ics:
-        diff = ics[0][1][3] - res[3]
-        d_ic = np.sum(diff)
-        d_se = np.sqrt(len(diff) * np.var(diff))
-        weight = np.exp(-0.5 * (res[0] - min_ic)) / Z
-        df_comp.at[idx] = (res[0], res[2], abs(d_ic), weight, res[1],
-                           d_se, warns[idx])
+        ic_i = np.zeros((len(ics), N))
+        for i in range(len(ics)):
+            ic_i[i] = ics[i][1][3] * N
+
+        b_weighting = dirichlet.rvs(alpha=[alpha] * N, size=b_samples,
+                                    random_state=seed)
+        weights = np.zeros((b_samples, len(ics)))
+        z_bs = np.zeros((b_samples, len(ics)))
+        for i in range(b_samples):
+            z_b = np.dot(ic_i, b_weighting[i])
+            u_weights = np.exp(-0.5 * (z_b - np.min(z_b)))
+            z_bs[i] = z_b
+            weights[i] = u_weights / np.sum(u_weights)
+
+        weights_mean = weights.mean(0)
+        se = z_bs.std(0)
+        for i, (idx, res) in enumerate(ics):
+            diff = res[3] - ics[0][1][3]
+            d_ic = np.sum(diff)
+            d_se = np.sqrt(len(diff) * np.var(diff))
+            df_comp.at[idx] = (res[0], res[2], d_ic, weights_mean[i],
+                               se[i], d_se, warns[idx])
+
+    else:
+        min_ic = ics[0][1][0]
+        Z = np.sum([np.exp(-0.5 * (x[1][0] - min_ic)) for x in ics])
+
+        for idx, res in ics:
+            diff = res[3] - ics[0][1][3]
+            d_ic = np.sum(diff)
+            d_se = np.sqrt(len(diff) * np.var(diff))
+            weight = np.exp(-0.5 * (res[0] - min_ic)) / Z
+            df_comp.at[idx] = (res[0], res[2], d_ic, weight, res[1],
+                               d_se, warns[idx])
 
     return df_comp.sort_values(by=ic)
 

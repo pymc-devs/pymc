@@ -1,4 +1,4 @@
-from collections import defaultdict
+from collections import defaultdict, Sequence
 
 from joblib import Parallel, delayed
 from numpy.random import randint, seed
@@ -14,7 +14,6 @@ from .step_methods import (NUTS, HamiltonianMC, SGFS, Metropolis, BinaryMetropol
 from .plots.traceplot import traceplot
 from .util import update_start_vals
 from pymc3.step_methods.hmc import quadpotential
-from pymc3.distributions import distribution
 from tqdm import tqdm
 
 import sys
@@ -144,7 +143,7 @@ def sample(draws=500, step=None, init='auto', n_init=200000, start=None,
     n_init : int
         Number of iterations of initializer
         If 'ADVI', number of iterations, if 'nuts', number of draws.
-    start : dict
+    start : dict, or array of dict
         Starting point in parameter space (or partial point)
         Defaults to trace.point(-1)) if there is a trace provided and
         model.test_point if not (defaults to empty dict).
@@ -227,6 +226,9 @@ def sample(draws=500, step=None, init='auto', n_init=200000, start=None,
     """
     model = modelcontext(model)
 
+    if start is not None:
+        _check_start_shape(model, start)
+
     draws += tune
 
     if nuts_kwargs is not None:
@@ -278,6 +280,38 @@ def sample(draws=500, step=None, init='auto', n_init=200000, start=None,
     discard = tune if discard_tuned_samples else 0
 
     return sample_func(**sample_args)[discard:]
+
+
+def _check_start_shape(model, start):
+    e = ''
+    if isinstance(start, (Sequence, np.ndarray)):
+        # to deal with iterable start argument
+        for start_iter in start:
+            _check_start_shape(model, start_iter)
+        return
+    elif not isinstance(start, dict):
+        raise TypeError("start argument must be a dict "
+                        "or an array-like of dicts")
+    for var in model.vars:
+        if var.name in start.keys():
+            var_shape = var.shape.tag.test_value
+            start_var_shape = np.shape(start[var.name])
+            if start_var_shape:
+                if not np.array_equal(var_shape, start_var_shape):
+                    e += "\nExpected shape {} for var '{}', got: {}".format(
+                        tuple(var_shape), var.name, start_var_shape
+                    )
+            # if start var has no shape
+            else:
+                # if model var has a specified shape
+                if var_shape:
+                    e += "\nExpected shape {} for var " \
+                         "'{}', got scalar {}".format(
+                        tuple(var_shape), var.name, start[var.name]
+                    )
+
+    if e != '':
+        raise ValueError("Bad shape for start argument:{}".format(e))
 
 
 def _sample(draws, step=None, start=None, trace=None, chain=0, tune=None,
@@ -719,19 +753,18 @@ def init_nuts(init='auto', njobs=1, n_init=500000, model=None,
     random_seed = int(np.atleast_1d(random_seed)[0])
 
     cb = [
-        pm.callbacks.CheckParametersConvergence(tolerance=1e-2, diff='absolute'),
-        pm.callbacks.CheckParametersConvergence(tolerance=1e-2, diff='relative'),
+        pm.callbacks.CheckParametersConvergence(
+            tolerance=1e-2, diff='absolute'),
+        pm.callbacks.CheckParametersConvergence(
+            tolerance=1e-2, diff='relative'),
     ]
 
     if init == 'adapt_diag':
-        start = []
-        for _ in range(njobs):
-            vals = distribution.draw_values(model.free_RVs)
-            point = {var.name: vals[i] for i, var in enumerate(model.free_RVs)}
-            start.append(point)
+        start = [model.test_point] * njobs
         mean = np.mean([model.dict_to_array(vals) for vals in start], axis=0)
         var = np.ones_like(mean)
-        potential = quadpotential.QuadPotentialDiagAdapt(model.ndim, mean, var, 10)
+        potential = quadpotential.QuadPotentialDiagAdapt(
+            model.ndim, mean, var, 10)
         if njobs == 1:
             start = start[0]
     elif init == 'advi+adapt_diag_grad':

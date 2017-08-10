@@ -8,6 +8,7 @@ API Reference
    :maxdepth: 2
 
    api/distributions
+   api/bounds
    api/inference
    api/glm
    api/gp
