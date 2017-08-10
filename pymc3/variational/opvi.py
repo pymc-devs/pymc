@@ -481,7 +481,7 @@ class TestFunction(object):
 class Group(object):
     R"""
     Grouped Approximation that is used for modelling mutual dependencies
-    for a specified group of variables. Base for local and global group
+    for a specified group of variables. Base for local and global group.
 
     Group instance/class has some important constants:
 
@@ -489,8 +489,8 @@ class Group(object):
         Determines whether such variational family can be used for AEVB or batched approx.
 
         AEVB approx is such approx that somehow depends on input data. It can be treated
-        as conditional distribution. You an read more about in the corresponding paper
-        mentioned in references
+        as conditional distribution. You can see more about in the corresponding paper
+        mentioned in references.
 
         Batched mode is a special case approximation that treats every 'row', of a tensor as
         independent from each other. Some distributions can't do that by
@@ -524,6 +524,32 @@ class Group(object):
     Important to note that in case you pass custom params they will not be autocollected by optimizer, you'll
     have to provide them with `more_obj_params` keyword.
 
+    **Supported dict keys:**
+
+    -   `{'mu', 'rho'}`: :class:`MeanFieldGroup`
+
+    -   `{'mu', 'L_tril'}`: :class:`FullRankGroup`
+
+    -   `{'histogram'}`: :class:`EmpiricalGroup`
+
+    -   `{0, 1, 2, 3, ..., k-1}`: :class:`NormalizingFlowGroup` of depth `k`
+
+        NormalizingFlows have other parameters than ordinary groups and should be
+        passed as nested dicts with the following keys:
+
+        -   `{'u', 'w', 'b'}`: :class:`PlanarFlow`
+
+        -   `{'a', 'b', 'z_ref'}`: :class:`RadialFlow`
+
+        -   `{'loc'}`: :class:`LocFlow`
+
+        -   `{'rho'}`: :class:`ScaleFlow`
+
+        -   `{'v'}`: :class:`HouseholderFlow`
+
+        Note that all integer keys should be present in the dictionary. An example
+        of NormalizingFlow initialization can be found below.
+
     Using AEVB
     ^^^^^^^^^^
     Autoencoding variational Bayes is a powerful tool to get conditional :math:`q(\lambda|X)` distribution
@@ -540,6 +566,10 @@ class Group(object):
     >>> group = Group([latent3], params=dict(mu=my_mu, rho=my_rho), local=True)
     or for full rank
     >>> group = Group([latent3], params=dict(mu=my_mu, L_tril=my_L_tril), local=True)
+
+    -   An Approximation class is selected automatically based on the keys in dict.
+
+    -   `my_mu` and `my_rho` are usually estimated with neural network or function approximator.
 
     Using Batched Group
     ^^^^^^^^^^^^^^^^^^^
