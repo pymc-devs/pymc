@@ -105,12 +105,6 @@ class FullRankGroup(Group):
     is fitted to minimize KL divergence from True posterior. In contrast to
     MeanField approach correlations between variables are taken in account. The
     main drawback of the method is computational cost.
-
-    References
-    ----------
-    -   Geoffrey Roeder, Yuhuai Wu, David Duvenaud, 2016
-        Sticking the Landing: A Simple Reduced-Variance Gradient for ADVI
-        approximateinference.org/accepted/RoederEtAl2016.pdf
     """
     __param_spec__ = dict(mu=('d',), L_tril=('int(d * (d + 1) / 2)',))
     short_name = 'full_rank'
@@ -555,14 +549,15 @@ class FullRank(SingleGroupApproximation):
 class Empirical(SingleGroupApproximation):
     group_class = EmpiricalGroup
 
-    def __init__(self, trace=None, size=None, *args, **kwargs):
+    def __init__(self, trace=None, size=None, **kwargs):
         if kwargs.get('local_rv', None) is not None:
             raise opvi.LocalGroupError('Empirical approximation does not support local variables')
-        super(Empirical, self).__init__(*args, trace=trace, size=size, **kwargs)
+        super(Empirical, self).__init__(trace=trace, size=size, **kwargs)
 
 
 class NormalizingFlow(SingleGroupApproximation):
     group_class = NormalizingFlowGroup
 
     def __init__(self, flow=NormalizingFlowGroup.default_flow, *args, **kwargs):
-        super(NormalizingFlow, self).__init__(*args, flow=flow, **kwargs)
+        kwargs['flow'] = flow
+        super(NormalizingFlow, self).__init__(*args, **kwargs)
