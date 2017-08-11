@@ -85,8 +85,7 @@ class LocalGroupError(BatchedGroupError, AEVBInferenceError):
 
 
 def node_property(f):
-    """
-    A shortcut for wrapping method to accessible tensor
+    """A shortcut for wrapping method to accessible tensor
     """
     return property(memoize(change_flags(compute_test_value='off')(f)))
 
@@ -120,8 +119,7 @@ def get_transformed(z):
 
 
 class ObjectiveUpdates(theano.OrderedUpdates):
-    """
-    OrderedUpdates extension for storing loss
+    """OrderedUpdates extension for storing loss
     """
     loss = None
 
@@ -152,7 +150,7 @@ class ObjectiveFunction(object):
     def updates(self, obj_n_mc=None, tf_n_mc=None, obj_optimizer=adagrad_window, test_optimizer=adagrad_window,
                 more_obj_params=None, more_tf_params=None, more_updates=None,
                 more_replacements=None, total_grad_norm_constraint=None):
-        """Calculates gradients for objective function, test function and then
+        """Calculate gradients for objective function, test function and then
         constructs updates for optimization step
 
         Parameters
@@ -313,7 +311,7 @@ class ObjectiveFunction(object):
     @memoize
     @change_flags(compute_test_value='off')
     def score_function(self, sc_n_mc=None, more_replacements=None, fn_kwargs=None):   # pragma: no cover
-        R"""Compiles scoring function that operates which takes no inputs and returns Loss
+        R"""Compile scoring function that operates which takes no inputs and returns Loss
 
         Parameters
         ----------
@@ -867,8 +865,7 @@ class Group(object):
         self.bij = DictToArrayBijection(self.ordering, {})
 
     def _finalize_init(self):
-        """
-        Clean up after init
+        """Clean up after init
         """
         del self._kwargs
 
@@ -963,8 +960,7 @@ class Group(object):
         return node_out
 
     def to_flat_input(self, node, more_replacements=None):
-        """
-        Replaces vars with flattened view stored in self.inputs
+        """Replace vars with flattened view stored in self.inputs
         """
         if more_replacements:
             node = theano.clone(node, more_replacements)
@@ -994,9 +990,6 @@ class Group(object):
 
     @node_property
     def symbolic_normalizing_constant(self):
-        """
-        Constant to divide when we want to scale down loss from minibatches
-        """
         t = self.to_flat_input(
             tt.max([v.scaling for v in self.group]))
         t = self.symbolic_single_sample(t)
@@ -1047,7 +1040,8 @@ group_for_short_name = Group.group_for_short_name
 
 
 class Approximation(object):
-    """
+    """Wrapper for grouped approximations
+
     A wrapper for list of groups, creates an Approximation instance that collects
     sampled variables from all the groups, it also collects logQ for needed for
     explicit variational inference.
@@ -1127,6 +1121,8 @@ class Approximation(object):
 
     @node_property
     def symbolic_normalizing_constant(self):
+        """Constant to divide when we want to scale down loss from minibatches
+        """
         t = tt.max(self.collect('symbolic_normalizing_constant'))
         t = tt.switch(self._scale_cost_to_minibatch, t,
                       tt.constant(1, dtype=t.dtype))
