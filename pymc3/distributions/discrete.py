@@ -482,7 +482,7 @@ class Categorical(Discrete):
     .. math:: f(x \mid p) = p_x
 
     ========  ===================================
-    Support   :math:`x \in \{1, 2, \ldots, |p|\}`
+    Support   :math:`x \in \{0, 1, \ldots, |p|-1\}`
     ========  ===================================
 
     Parameters
