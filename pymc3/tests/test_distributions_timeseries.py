@@ -56,15 +56,15 @@ def test_linear():
     dt = 1e-1
     sde = lambda x, lam: (lam * x, sig2)
     x = floatX(_gen_sde_path(sde, (lam,), dt, N, 5.0))
-    z = x + np.random.randn(x.size) * 5e-3
+    z = x + np.random.randn(x.size) * sig2
     # build model
     with Model() as model:
         lamh = Flat('lamh')
         xh = EulerMaruyama('xh', dt, sde, (lamh,), shape=N + 1, testval=x)
-        Normal('zh', mu=xh, sd=5e-3, observed=z)
+        Normal('zh', mu=xh, sd=sig2, observed=z)
     # invert
     with model:
-        trace = sample()
+        trace = sample(init='advi+adapt_diag')
 
     ppc = sample_ppc(trace, model=model)
     # test
