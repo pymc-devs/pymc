@@ -3,6 +3,7 @@ import numpy as np
 import theano
 import theano.tensor as tt
 from scipy import stats
+import warnings
 
 from pymc3.util import get_variable_name
 from .dist_math import bound, factln, binomln, betaln, logpow
@@ -555,6 +556,8 @@ class Constant(Discrete):
     """
 
     def __init__(self, c, *args, **kwargs):
+        warnings.warn("Constant has been deprecated. We recommend using a Determinstic object instead.",
+                    DeprecationWarning)
         super(Constant, self).__init__(*args, **kwargs)
         self.mean = self.median = self.mode = self.c = c = tt.as_tensor_variable(c)
 
@@ -578,11 +581,7 @@ class Constant(Discrete):
         return r'${} \sim \text{{Constant}}()$'.format(name)
 
 
-def ConstantDist(*args, **kwargs):
-    import warnings
-    warnings.warn("ConstantDist has been deprecated. In future, use Constant instead.",
-                  DeprecationWarning)
-    return Constant(*args, **kwargs)
+ConstantDist = Constant
 
 
 class ZeroInflatedPoisson(Discrete):
