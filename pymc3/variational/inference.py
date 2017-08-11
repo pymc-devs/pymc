@@ -2,6 +2,7 @@ from __future__ import division
 
 import logging
 import warnings
+import collections
 
 import numpy as np
 import tqdm
@@ -28,6 +29,8 @@ __all__ = [
     'fit'
 ]
 
+State = collections.namedtuple('State', 'i,step,callbacks,score')
+
 
 class Inference(object):
     R"""
@@ -40,21 +43,15 @@ class Inference(object):
     op : Operator class
     approx : Approximation class or instance
     tf : TestFunction instance
-    local_rv : dict
-        mapping {model_variable -> local_variable}
-        Local Vars are used for Autoencoding Variational Bayes
-        See (AEVB; Kingma and Welling, 2014) for details
     model : Model
         PyMC3 Model
-    op_kwargs : dict
-        kwargs passed to :class:`Operator`
-    kwargs : kwargs
-        additional kwargs for :class:`Approximation`
+    kwargs : kwargs passed to :class:`Operator`
     """
 
     def __init__(self, op, approx, tf, **kwargs):
         self.hist = np.asarray(())
         self.objective = op(approx, **kwargs)(tf)
+        self.state = None
 
     approx = property(lambda self: self.objective.approx)
 
@@ -109,17 +106,17 @@ class Inference(object):
 
         Returns
         -------
-        Approximation
+        :class:`Approximation`
         """
         if callbacks is None:
             callbacks = []
         score = self._maybe_score(score)
         step_func = self.objective.step_function(score=score, **kwargs)
-        progress = tqdm.trange(n, disable=not progressbar)
-        if score:
-            self._iterate_with_loss(n, step_func, progress, callbacks)
-        else:
-            self._iterate_without_loss(n, step_func, progress, callbacks)
+        with tqdm.trange(n, disable=not progressbar) as progress:
+            if score:
+                state = self._iterate_with_loss(n, step_func, progress, callbacks)
+            else:
+                state = self._iterate_without_loss(n, step_func, progress, callbacks)
 
         # hack to allow pm.fit() access to loss hist
         self.approx.hist = self.hist
@@ -127,6 +124,7 @@ class Inference(object):
         return self.approx
 
     def _iterate_without_loss(self, _, step_func, progress, callbacks):
+        i = 0
         try:
             for i in progress:
                 step_func()
@@ -140,6 +138,9 @@ class Inference(object):
                 logger.info(str(e))
         finally:
             progress.close()
+        return State(i, step=step_func,
+                     callbacks=callbacks,
+                     score=False)
 
     def _iterate_with_loss(self, n, step_func, progress, callbacks):
         def _infmean(input_array):
@@ -192,19 +193,37 @@ class Inference(object):
         finally:
             progress.close()
         self.hist = np.concatenate([self.hist, scores])
+        return State(i, step=step_func,
+                     callbacks=callbacks,
+                     score=False)
+
+    def refine(self, n, progressbar=True):
+        """Refine the solution using the last compiled step function"""
+        if self.state is None:
+            raise TypeError('Need to call `.fit` first')
+        i, step, callbacks, score = self.state
+        with tqdm.trange(i, n+i, disable=not progressbar) as progress:
+            if score:
+                state = self._iterate_with_loss(n, step, progress, callbacks)
+            else:
+                state = self._iterate_without_loss(n, step, progress, callbacks)
+        self.state = state
 
 
 class KLqp(Inference):
-    """
-    General approach to fit Approximations thet define :math:`logq`
+    """General approach to fit Approximations that define :math:`logq`
+    by maximizing ELBO (Evidence Lower BOund).
+
+    Parameters
+    ----------
+    approx : :class:`Approximation`
     """
     def __init__(self, approx):
         super(KLqp, self).__init__(KL, approx, None)
 
 
 class ADVI(KLqp):
-    R"""
-    Automatic Differentiation Variational Inference (ADVI)
+    R"""Automatic Differentiation Variational Inference (ADVI)
 
     This class implements the meanfield ADVI, where the variational
     posterior distribution is assumed to be spherical Gaussian without
@@ -327,14 +346,6 @@ class ADVI(KLqp):
         See (AEVB; Kingma and Welling, 2014) for details
     model : :class:`pymc3.Model`
         PyMC3 model for inference
-    cost_part_grad_scale : `scalar`
-        Scaling score part of gradient can be useful near optimum for
-        archiving better convergence properties. Common schedule is
-        1 at the start and 0 in the end. So slow decay will be ok.
-        See (Sticking the Landing; Geoffrey Roeder,
-        Yuhuai Wu, David Duvenaud, 2016) for details
-    scale_cost_to_minibatch : `bool`
-        Scale cost to minibatch instead of full dataset, default False
     random_seed : None or int
         leave None to use package global RandomStream or other
         valid value to create instance specific one
@@ -371,14 +382,6 @@ class FullRankADVI(KLqp):
         See (AEVB; Kingma and Welling, 2014) for details
     model : :class:`pymc3.Model`
         PyMC3 model for inference
-    cost_part_grad_scale : `scalar`
-        Scaling score part of gradient can be useful near optimum for
-        archiving better convergence properties. Common schedule is
-        1 at the start and 0 in the end. So slow decay will be ok.
-        See (Sticking the Landing; Geoffrey Roeder,
-        Yuhuai Wu, David Duvenaud, 2016) for details
-    scale_cost_to_minibatch : bool, default False
-        Scale cost to minibatch instead of full dataset
     random_seed : None or int
         leave None to use package global RandomStream or other
         valid value to create instance specific one
@@ -404,6 +407,14 @@ class FullRankADVI(KLqp):
 
 
 class ImplicitGradient(Inference):
+    """Implicit Gradient for Variational Inference
+
+    An approach to fit arbitrary approximation by computing kernel based gradient
+    By default RBF kernel is used for gradient estimation. Default estimator is
+    Kernelized Stein Discrepancy with temperature equal to 1. This temperature works
+    only for large number of samples. Larger temperature is needed for small number of
+    samples but there is no theoretical approach to choose the best one in such case.
+    """
     def __init__(self, approx, estimator=KSD, kernel=test_functions.rbf, **kwargs):
         super(ImplicitGradient, self).__init__(
             op=estimator,
@@ -414,8 +425,7 @@ class ImplicitGradient(Inference):
 
 
 class SVGD(ImplicitGradient):
-    R"""
-    Stein Variational Gradient Descent
+    R"""Stein Variational Gradient Descent
 
     This inference is based on Kernelized Stein Discrepancy
     it's main idea is to move initial noisy particles so that
@@ -452,6 +462,7 @@ class SVGD(ImplicitGradient):
         valid value to create instance specific one
     start : `Point`
         starting point for inference
+    kwargs : other keyword arguments passed to estimator
 
     References
     ----------
@@ -480,8 +491,7 @@ class SVGD(ImplicitGradient):
 
 
 class ASVGD(ImplicitGradient):
-    R"""
-    Amortized Stein Variational Gradient Descent
+    R"""Amortized Stein Variational Gradient Descent
 
     This inference is based on Kernelized Stein Discrepancy
     it's main idea is to move initial noisy particles so that
@@ -502,16 +512,11 @@ class ASVGD(ImplicitGradient):
     Parameters
     ----------
     approx : :class:`Approximation`
-    local_rv : dict[var->tuple]
-        mapping {model_variable -> local_variable (:math:`\mu`, :math:`\rho`)}
-        Local Vars are used for Autoencoding Variational Bayes
-        See (AEVB; Kingma and Welling, 2014) for details
+        default is :class:`FullRank` but can be any
     kernel : `callable`
         kernel function for KSD :math:`f(histogram) -> (k(x,.), \nabla_x k(x,.))`
-    temperature : float
-        parameter responsible for exploration, higher temperature gives more broad posterior estimate
     model : :class:`Model`
-    kwargs : kwargs for :class:`Approximation`
+    kwargs : kwargs for gradient estimator
 
     References
     ----------
@@ -582,7 +587,8 @@ class ASVGD(ImplicitGradient):
 
 
 class NFVI(KLqp):
-    R"""
+    R"""Normalizing Flow based :class:`KLqp` inference
+
     Normalizing flow is a series of invertible transformations on initial distribution.
 
     .. math::
@@ -626,8 +632,6 @@ class NFVI(KLqp):
         is identical to MeanField
     model : :class:`pymc3.Model`
         PyMC3 model for inference
-    scale_cost_to_minibatch : bool, default False
-        Scale cost to minibatch instead of full dataset
     random_seed : None or int
         leave None to use package global RandomStream or other
         valid value to create instance specific one
@@ -658,8 +662,8 @@ def fit(n=10000, local_rv=None, method='advi', model=None,
         -   'advi->fullrank_advi'  for fitting ADVI first and then FullRankADVI
         -   'svgd'  for Stein Variational Gradient Descent
         -   'asvgd'  for Amortized Stein Variational Gradient Descent
-        -   'nfvi'  for Normalizing Flow
-        -   'nfvi=formula'  for Normalizing Flow using formula
+        -   'nfvi'  for Normalizing Flow with default `scale-loc` flow
+        -   'nfvi=<formula>'  for Normalizing Flow using formula
 
     model : :class:`Model`
         PyMC3 model for inference
@@ -670,11 +674,6 @@ def fit(n=10000, local_rv=None, method='advi', model=None,
         additional kwargs passed to :class:`Inference`
     start : `Point`
         starting point for inference
-
-    Other Parameters
-    ----------------
-    frac : `float`
-        if method is 'advi->fullrank_advi' represents advi fraction when training
     kwargs : kwargs
         additional kwargs for :func:`Inference.fit`
 
