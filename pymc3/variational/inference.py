@@ -120,6 +120,7 @@ class Inference(object):
 
         # hack to allow pm.fit() access to loss hist
         self.approx.hist = self.hist
+        self.state = state
 
         return self.approx
 
@@ -371,8 +372,7 @@ class ADVI(KLqp):
 
 
 class FullRankADVI(KLqp):
-    R"""
-    Full Rank Automatic Differentiation Variational Inference (ADVI)
+    R"""Full Rank Automatic Differentiation Variational Inference (ADVI)
 
     Parameters
     ----------
@@ -555,8 +555,7 @@ class ASVGD(ImplicitGradient):
 
     def fit(self, n=10000, score=None, callbacks=None, progressbar=True,
             obj_n_mc=300, **kwargs):
-        """
-        Performs Amortized Stein Variational Gradient Descent
+        """Perform Amortized Stein Variational Gradient Descent
 
         Parameters
         ----------
@@ -643,8 +642,7 @@ class NFVI(KLqp):
 
 def fit(n=10000, local_rv=None, method='advi', model=None,
         random_seed=None, start=None, inf_kwargs=None, **kwargs):
-    R"""
-    Handy shortcut for using inference methods in functional way
+    R"""Handy shortcut for using inference methods in functional way
 
     Parameters
     ----------
