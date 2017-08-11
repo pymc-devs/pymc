@@ -23,7 +23,9 @@ __all__ = [
 
 @Group.register
 class MeanFieldGroup(Group):
-    R"""Mean Field approximation to the posterior where spherical Gaussian family
+    R"""Mean Field Group
+
+    Mean Field approximation to the posterior where spherical Gaussian family
     is fitted to minimize KL divergence from True posterior. It is assumed
     that latent space variables are uncorrelated that is the main drawback
     of the method
@@ -89,9 +91,6 @@ class MeanFieldGroup(Group):
 
     @node_property
     def symbolic_logq_not_scaled(self):
-        """
-        log_q_W samples over q for global vars
-        """
         z0 = self.symbolic_initial
         std = rho2sd(self.rho)
         logdet = tt.log(std)
@@ -101,7 +100,9 @@ class MeanFieldGroup(Group):
 
 @Group.register
 class FullRankGroup(Group):
-    """Full Rank approximation to the posterior where Multivariate Gaussian family
+    """Full Rank Group
+
+    Full Rank approximation to the posterior where Multivariate Gaussian family
     is fitted to minimize KL divergence from True posterior. In contrast to
     MeanField approach correlations between variables are taken in account. The
     main drawback of the method is computational cost.
@@ -211,7 +212,9 @@ class FullRankGroup(Group):
 
 @Group.register
 class EmpiricalGroup(Group):
-    """Builds Approximation instance from a given trace,
+    """Empirical Group
+
+    Builds Approximation instance from a given trace,
     it has the same interface as variational approximation
     """
     supports_batched = False
@@ -304,8 +307,6 @@ class EmpiricalGroup(Group):
 
     @property
     def histogram(self):
-        """Shortcut to flattened Trace
-        """
         return self.params_dict['histogram']
 
     @node_property
@@ -330,7 +331,8 @@ class EmpiricalGroup(Group):
 
 
 class NormalizingFlowGroup(Group):
-    R"""
+    R"""Normalizing Flow Group
+
     Normalizing flow is a series of invertible transformations on initial distribution.
 
     .. math::
@@ -525,6 +527,7 @@ def sample_approx(approx, draws=100, include_transformed=True):
 
 # single group shortcuts exported to user
 class SingleGroupApproximation(Approximation):
+    """Base class for Single Group Approximation"""
     group_class = None
 
     def __init__(self, *args, **kwargs):
@@ -538,14 +541,17 @@ class SingleGroupApproximation(Approximation):
 
 
 class MeanField(SingleGroupApproximation):
+    """Single Group Mean Field Approximation"""
     group_class = MeanFieldGroup
 
 
 class FullRank(SingleGroupApproximation):
+    """Single Group Full Rank Approximation"""
     group_class = FullRankGroup
 
 
 class Empirical(SingleGroupApproximation):
+    """Single Group Full Rank Approximation"""
     group_class = EmpiricalGroup
 
     def __init__(self, trace=None, size=None, **kwargs):
@@ -555,6 +561,7 @@ class Empirical(SingleGroupApproximation):
 
 
 class NormalizingFlow(SingleGroupApproximation):
+    """Single Group Normalizing Flow Approximation"""
     group_class = NormalizingFlowGroup
 
     def __init__(self, flow=NormalizingFlowGroup.default_flow, *args, **kwargs):
