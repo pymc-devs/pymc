@@ -18,8 +18,10 @@ from inspect import getargspec
 
 __all__ = ['find_MAP']
 
+
 def find_MAP(start=None, vars=None, fmin=None,
-             return_raw=False, model=None, live_disp=False, callback=None, *args, **kwargs):
+             return_raw=False, model=None, live_disp=False, callback=None,
+             *args, **kwargs):
     """
     Sets state to the local maximum a posteriori point given a model.
     Current default of fmin_Hessian does not deal well with optimizing close
@@ -69,7 +71,7 @@ def find_MAP(start=None, vars=None, fmin=None,
     except AttributeError:
         gradient_avail = False
 
-    if disc_vars or not gradient_avail :
+    if disc_vars or not gradient_avail:
         pm._log.warning("Warning: gradient not available." +
                         "(E.g. vars contains discrete variables). MAP " +
                         "estimates may not be accurate for the default " +
@@ -88,13 +90,13 @@ def find_MAP(start=None, vars=None, fmin=None,
     start = Point(start, model=model)
     bij = DictToArrayBijection(ArrayOrdering(vars), start)
 
-    logp = bij.mapf(model.fastlogp)
+    logp = bij.mapf(model.fastlogp_nojac)
     def logp_o(point):
         return nan_to_high(-logp(point))
 
     # Check to see if minimization function actually uses the gradient
     if 'fprime' in getargspec(fmin).args:
-        dlogp = bij.mapf(model.fastdlogp(vars))
+        dlogp = bij.mapf(model.fastdlogp_nojac(vars))
         def grad_logp_o(point):
             return nan_to_num(-dlogp(point))
 
