@@ -150,7 +150,7 @@ where with the normal likelihood :math:`N(x|μ,σ^2)`
 .. math::
 
     \text{logp}\colon \mathbb{R} \to \mathbb{R}\\
-    μ \mapsto \log N(μ|0, 1) + \log N(y|0, 1),
+    μ \mapsto \log N(μ|0, 1) + \log N(y|μ, 1),
 
 To build that function we need to keep track of two things: The parameter
 space (the *free variables*) and the logp function. For each free variable

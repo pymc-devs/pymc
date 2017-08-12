@@ -1,4 +1,32 @@
+import re
+
 from numpy import asscalar
+
+LATEX_ESCAPE_RE = re.compile(r'(%|_|\$|#|&)', re.MULTILINE)
+
+
+def escape_latex(strng):
+    """Consistently escape LaTeX special characters for _repr_latex_ in IPython
+
+    Implementation taken from the IPython magic `format_latex`
+
+    Example
+    -------
+        escape_latex('disease_rate')  # 'disease\_rate'
+
+    Parameters
+    ----------
+    strng : str
+        string to escape LaTeX characters
+
+    Returns
+    -------
+    str
+        A string with LaTeX escaped
+    """
+    if strng is None:
+        return u'None'
+    return LATEX_ESCAPE_RE.sub(r'\\\1', strng)
 
 
 def get_transformed_name(name, transform):
@@ -14,7 +42,7 @@ def get_transformed_name(name, transform):
 
     Returns
     -------
-    str 
+    str
         A string to use for the transformed variable
     """
     return "{}_{}__".format(name, transform.name)
@@ -88,6 +116,7 @@ def get_variable_name(variable):
             try:
                 names = [get_variable_name(item)
                          for item in variable.get_parents()[0].inputs]
+                # do not escape_latex these, since it is not idempotent
                 return 'f(%s)' % ','.join([n for n in names if isinstance(n, str)])
             except IndexError:
                 pass
@@ -95,7 +124,7 @@ def get_variable_name(variable):
         if not value.shape:
             return asscalar(value)
         return 'array'
-    return name
+    return escape_latex(name)
 
 
 def update_start_vals(a, b, model):
