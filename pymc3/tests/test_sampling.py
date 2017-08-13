@@ -253,12 +253,13 @@ class TestSamplePPC(object):
 
 
 @pytest.mark.parametrize('method', [
-    'adapt_diag', 'advi', 'ADVI+adapt_diag', 'advi+adapt_diag_grad',
-    'map', 'advi_map', 'nuts'
+    'jitter+adapt_diag', 'adapt_diag', 'advi', 'ADVI+adapt_diag',
+    'advi+adapt_diag_grad', 'map', 'advi_map', 'nuts'
 ])
 def test_exec_nuts_init(method):
     with pm.Model() as model:
         pm.Normal('a', mu=0, sd=1, shape=2)
+        pm.HalfNormal('b', sd=1)
     with model:
         start, _ = pm.init_nuts(init=method, n_init=10)
         assert isinstance(start, dict)
