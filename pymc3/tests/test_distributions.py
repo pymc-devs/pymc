@@ -378,7 +378,7 @@ class TestMatchesScipy(SeededTest):
 
     def check_int_to_1(self, model, value, domain, paramdomains):
         pdf = model.fastfn(exp(model.logpt))
-        for pt in product(paramdomains, n_samples=100):
+        for pt in product(paramdomains, n_samples=10):
             pt = Point(pt, value=value.tag.test_value, model=model)
             bij = DictToVarBijection(value, (), pt)
             pdfx = bij.mapf(pdf)
