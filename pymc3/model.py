@@ -152,6 +152,9 @@ class Factor(object):
     """Common functionality for objects with a log probability density
     associated with them.
     """
+    def __init__(self, *args, **kwargs):
+        super(Factor, self).__init__(*args, **kwargs)
+
     @property
     def logp(self):
         """Compiled log probability density function"""
