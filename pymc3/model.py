@@ -662,7 +662,10 @@ class Model(six.with_metaclass(InitContextMeta, Context, Factor)):
             logp_factors = tt.sum(factors)
             logp_potentials = tt.sum([tt.sum(pot) for pot in self.potentials])
             logp = logp_factors + logp_potentials
-            logp.name = '__logp'
+            if self.name:
+                logp.name = '__logp_%s' % self.name
+            else:
+                logp.name = '__logp'
             return logp
 
     @property
@@ -671,7 +674,10 @@ class Model(six.with_metaclass(InitContextMeta, Context, Factor)):
         with self:
             factors = [var.logp_nojact for var in self.basic_RVs] + self.potentials
             logp = tt.sum([tt.sum(factor) for factor in factors])
-            logp.name = '__logp_nojac'
+            if self.name:
+                logp.name = '__logp_nojac_%s' % self.name
+            else:
+                logp.name = '__logp_nojac'
             return logp
 
     @property
