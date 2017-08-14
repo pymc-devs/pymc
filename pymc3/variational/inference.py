@@ -114,9 +114,9 @@ class Inference(object):
         step_func = self.objective.step_function(score=score, **kwargs)
         with tqdm.trange(n, disable=not progressbar) as progress:
             if score:
-                state = self._iterate_with_loss(n, step_func, progress, callbacks)
+                state = self._iterate_with_loss(0, n, step_func, progress, callbacks)
             else:
-                state = self._iterate_without_loss(n, step_func, progress, callbacks)
+                state = self._iterate_without_loss(0, n, step_func, progress, callbacks)
 
         # hack to allow pm.fit() access to loss hist
         self.approx.hist = self.hist
@@ -124,7 +124,7 @@ class Inference(object):
 
         return self.approx
 
-    def _iterate_without_loss(self, _, step_func, progress, callbacks):
+    def _iterate_without_loss(self, s, _, step_func, progress, callbacks):
         i = 0
         try:
             for i in progress:
@@ -139,11 +139,11 @@ class Inference(object):
                 logger.info(str(e))
         finally:
             progress.close()
-        return State(i, step=step_func,
+        return State(i+s, step=step_func,
                      callbacks=callbacks,
                      score=False)
 
-    def _iterate_with_loss(self, n, step_func, progress, callbacks):
+    def _iterate_with_loss(self, s, n, step_func, progress, callbacks):
         def _infmean(input_array):
             """Return the mean of the finite values of the array"""
             input_array = input_array[np.isfinite(input_array)].astype('float64')
@@ -194,7 +194,7 @@ class Inference(object):
         finally:
             progress.close()
         self.hist = np.concatenate([self.hist, scores])
-        return State(i, step=step_func,
+        return State(i+s, step=step_func,
                      callbacks=callbacks,
                      score=True)
 
@@ -203,11 +203,11 @@ class Inference(object):
         if self.state is None:
             raise TypeError('Need to call `.fit` first')
         i, step, callbacks, score = self.state
-        with tqdm.trange(i, n+i, disable=not progressbar) as progress:
+        with tqdm.trange(n, disable=not progressbar) as progress:
             if score:
-                state = self._iterate_with_loss(n, step, progress, callbacks)
+                state = self._iterate_with_loss(i, n, step, progress, callbacks)
             else:
-                state = self._iterate_without_loss(n, step, progress, callbacks)
+                state = self._iterate_without_loss(i, n, step, progress, callbacks)
         self.state = state
 
 
