@@ -196,7 +196,7 @@ class Inference(object):
         self.hist = np.concatenate([self.hist, scores])
         return State(i, step=step_func,
                      callbacks=callbacks,
-                     score=False)
+                     score=True)
 
     def refine(self, n, progressbar=True):
         """Refine the solution using the last compiled step function"""
