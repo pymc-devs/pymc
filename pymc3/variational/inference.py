@@ -13,7 +13,6 @@ from pymc3.variational.approximations import (
     MeanField, FullRank, Empirical, NormalizingFlow
 )
 from pymc3.variational.operators import KL, KSD
-from pymc3.variational.opvi import Approximation
 from . import opvi
 
 logger = logging.getLogger(__name__)
