@@ -533,9 +533,11 @@ class SingleGroupApproximation(Approximation):
     group_class = None
 
     def __init__(self, *args, **kwargs):
+        local_rv = kwargs.get('local_rv')
         groups = [self.group_class(None, *args, **kwargs)]
-        groups.extend([Group([v], params=p, local=True, model=kwargs.get('model'))
-                       for v, p in kwargs.get('local_rv', {}).items()])
+        if local_rv is not None:
+            groups.extend([Group([v], params=p, local=True, model=kwargs.get('model'))
+                           for v, p in local_rv.items()])
         super(SingleGroupApproximation, self).__init__(groups, model=kwargs.get('model'))
 
     def __getattr__(self, item):
