@@ -80,6 +80,9 @@ class TransformedDistribution(distribution.Distribution):
         return (self.dist.logp(self.transform_used.backward(x)) +
                 self.transform_used.jacobian_det(x))
 
+    def logp_nojac(self, x):
+        return self.dist.logp(self.transform_used.backward(x))
+
 transform = Transform
 
 

@@ -94,10 +94,20 @@ def find_MAP(start=None, vars=None, method=None, progressbar=True, return_raw=Fa
     logp_func = bij.mapf(model.fastlogp)
     x0 = bij.map(start)
 
+
+    logp = bij.mapf(model.fastlogp_nojac)
+    def logp_o(point):
+        return nan_to_high(-logp(point))
+
+    # Check to see if minimization function actually uses the gradient
     if method in ["CG", "BFGS", "Newton-CG", "L-BFGS-B", "TNC",
                   "SLSQP", "dogleg", "trust-ncg"]:
-        dlogp_func = bij.mapf(model.fastdlogp(vars))
-        cost_func = CostFuncWrapper(maxeval, progressbar, logp_func, dlogp_func)
+
+        dlogp = bij.mapf(model.fastdlogp_nojac(vars))
+        def grad_logp_o(point):
+            return nan_to_num(-dlogp(point))
+
+        cost_func = CostFuncWrapper(maxeval, progressbar, logp, dlogp)
         compute_gradient = True
     else:
         cost_func = CostFuncWrapper(maxeval, progressbar, logp_func)
@@ -229,4 +239,3 @@ class CostFuncWrapper(object):
         else:
             norm_grad = np.linalg.norm(grad)
             self.progress.set_description(self.desc.format(neg_value, norm_grad))
-

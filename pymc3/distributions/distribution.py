@@ -91,6 +91,28 @@ class Distribution(object):
         """Magic method name for IPython to use for LaTeX formatting."""
         return None
 
+    def logp_nojac(self, *args, **kwargs):
+        """Return the logp, but do not include a jacobian term for transforms.
+
+        If we use different parametrizations for the same distribution, we
+        need to add the determinant of the jacobian of the transformation
+        to make sure the densities still describe the same distribution.
+        However, MAP estimates are not invariant with respect to the
+        parametrization, we need to exclude the jacobian terms in this case.
+
+        This function should be overwritten in base classes for transformed
+        distributions.
+        """
+        return self.logp(*args, **kwargs)
+
+    def logp_sum(self, *args, **kwargs):
+        """Return the sum of the logp values for the given observations.
+
+        Subclasses can use this to improve the speed of logp evaluations
+        if only the sum of the logp values is needed.
+        """
+        return tt.sum(self.logp(*args, **kwargs))
+
     __latex__ = _repr_latex_
 
 
