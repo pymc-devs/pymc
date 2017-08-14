@@ -596,7 +596,7 @@ class Group(object):
 
     -   `my_mu` and `my_rho` are usually estimated with neural network or function approximator.
 
-    Using Batched Group
+    Using Row-Wise Group
     ^^^^^^^^^^^^^^^^^^^
     Batch groups have independent row wise approximations, thus using batched
     mean field will give no effect. It is more interesting if you want each row of a matrix
@@ -605,7 +605,7 @@ class Group(object):
     To tell :class:`Group` that group is batched you need set `batched` kwarg as `True`.
     Only single variable group is allowed due to implementation details.
 
-    >>> group = Group([latent3], vfam='fr', batched=True) # 'fr' is alias for 'full_rank'
+    >>> group = Group([latent3], vfam='fr', rowwise=True) # 'fr' is alias for 'full_rank'
 
     The resulting approximation for this variable will have the following structure
 
@@ -627,7 +627,7 @@ class Group(object):
 
     Batched normalizing flow is supported as well
 
-    >>> group = Group([latent3], vfam='scale-hh*2-radial-loc', batched=True)
+    >>> group = Group([latent3], vfam='scale-hh*2-radial-loc', rowwise=True)
 
     Custom parameters for normalizing flow can be a real trouble for the first time.
     They have quite different format from the rest variational families.
@@ -746,13 +746,13 @@ class Group(object):
                  random_seed=None,
                  model=None,
                  local=False,
-                 batched=False,
+                 rowwise=False,
                  options=None,
                  **kwargs):
         if local and not self.supports_batched:
             raise LocalGroupError('%s does not support local groups' % self.__class__)
-        if local and batched:
-            raise LocalGroupError('%s does not support local grouping in batched mode')
+        if local and rowwise:
+            raise LocalGroupError('%s does not support local grouping in rowwise mode')
         if isinstance(vfam, str):
             vfam = vfam.lower()
         if options is None:
@@ -760,7 +760,7 @@ class Group(object):
         self.options = options
         self._vfam = vfam
         self._islocal = local
-        self._batched = batched
+        self._batched = rowwise
         self._rng = tt_rng(random_seed)
         model = modelcontext(model)
         self.model = model

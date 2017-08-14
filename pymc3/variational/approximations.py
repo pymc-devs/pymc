@@ -204,8 +204,10 @@ class FullRankGroup(Group):
         L = self.L
         mu = self.mean
         if self.batched:
+            # initial: bxsxd
+            # L: bxdxd
             initial = initial.swapaxes(0, 1)
-            return tt.batched_dot(initial, L).swapaxes(0, 1) + mu
+            return tt.batched_dot(initial, L.swapaxes(1, 2)).swapaxes(0, 1) + mu
         else:
             return initial.dot(L.T) + mu
 
