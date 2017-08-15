@@ -55,6 +55,8 @@ class Base(object):
     def conditional(self, name, n_points, Xnew, *args, **kwargs):
         raise NotImplementedError
 
+    def predict(self, Xnew, point=None, given=None, diag=False):
+        raise NotImplementedError
 
 @conditioned_vars(["X", "f"])
 class Latent(Base):
@@ -85,32 +87,22 @@ class Latent(Base):
         else:
             return other.X, other.f, other.cov_func, other.mean_func
 
-    def _build_conditional(self, Xnew, X, f, cov_total, mean_total, diag=False):
+    def _build_conditional(self, Xnew, X, f, cov_total, mean_total):
         Kxx = cov_total(X)
         Kxs = self.cov_func(X, Xnew)
         L = cholesky(stabilize(Kxx))
         A = solve_lower(L, Kxs)
         v = solve_lower(L, f - mean_total(X))
         mu = self.mean_func(Xnew) + tt.dot(tt.transpose(A), v)
-        if diag:
-            Kss = self.cov_func(Xnew, diag=True)
-            cov = Kss - tt.sum(tt.square(A), 0)
-        else:
-            Kss = self.cov_func(Xnew)
-            cov = Kss - tt.dot(tt.transpose(A), A)
+        Kss = self.cov_func(Xnew)
+        cov = Kss - tt.dot(tt.transpose(A), A)
         return mu, cov
 
-    def conditional(self, name, n_points, Xnew, gp=None):
-        X, f, cov_total, mean_total = self._get_cond_vals(gp)
+    def conditional(self, name, n_points, Xnew, given=None):
+        X, f, cov_total, mean_total = self._get_cond_vals(given)
         mu, cov = self._build_conditional(Xnew, X, f, cov_total, mean_total)
         chol = cholesky(stabilize(cov))
         return pm.MvNormal(name, mu=mu, chol=chol, shape=n_points)
-
-    def predict(self, Xnew, point=None, gp=None, diag=False):
-        X, f, cov_total, mean_total = self._get_cond_vals(gp)
-        mu, cov = self._build_conditional(Xnew, X, f, cov_total, mean_total, diag)
-        mu, cov = draw_values([mu, cov], point=point)
-        return mu, cov
 
 
 @conditioned_vars(["X", "f", "nu"])
@@ -127,45 +119,42 @@ class TP(Latent):
     def __add__(self, other):
         raise ValueError("Student T processes aren't additive")
 
-    def _build_prior(self, name, n_points, X, nu):
+    def _build_prior(self, name, n_points, X, reparameterize=True):
         mu = self.mean_func(X)
         chol = cholesky(stabilize(self.cov_func(X)))
-
-        chi2 = pm.ChiSquared("chi2_", nu)
-        v = pm.Normal(name + "_rotated_", mu=0.0, sd=1.0, shape=n_points)
-        f = pm.Deterministic(name, (tt.sqrt(nu) / chi2) * (mu + tt.dot(chol, v)))
+        if reparameterize:
+            chi2 = pm.ChiSquared("chi2_", self.nu)
+            v = pm.Normal(name + "_rotated_", mu=0.0, sd=1.0, shape=n_points)
+            f = pm.Deterministic(name, (tt.sqrt(self.nu) / chi2) * (mu + tt.dot(chol, v)))
+        else:
+            f = pm.MvStudentT(name, nu=self.nu, mu=mu, chol=chol, shape=n_points)
         return f
 
-    def prior(self, name, n_points, X, nu):
-        f = self._build_prior(name, n_points, X, nu)
+    def prior(self, name, n_points, X, reparameterize=True):
+        f = self._build_prior(name, n_points, X, reparameterize)
         self.X = X
-        self.nu = nu
         self.f = f
         return f
 
-    def _build_conditional(self, Xnew, X, f, nu):
-        Kxx = self.cov_total(X)
+    def _build_conditional(self, Xnew, X, f):
+        Kxx = self.cov_func(X)
         Kxs = self.cov_func(X, Xnew)
         Kss = self.cov_func(Xnew)
         L = cholesky(stabilize(Kxx))
         A = solve_lower(L, Kxs)
         cov = Kss - tt.dot(tt.transpose(A), A)
-
-        v = solve_lower(L, f - self.mean_total(X))
+        v = solve_lower(L, f - self.mean_func(X))
         mu = self.mean_func(Xnew) + tt.dot(tt.transpose(A), v)
-
         beta = tt.dot(v, v)
-        nu2 = nu + X.shape[0]
+        nu2 = self.nu + X.shape[0]
+        covT = (self.nu + beta - 2)/(nu2 - 2) * cov
+        return nu2, mu, covT
 
-        covT = (nu + beta - 2)/(nu2 - 2) * cov
+    def conditional(self, name, n_points, Xnew):
+        X = self.X
+        f = self.f
+        nu2, mu, covT = self._build_conditional(Xnew, X, f)
         chol = cholesky(stabilize(covT))
-        return nu2, mu, chol
-
-    def conditional(self, name, n_points, Xnew, X=None, f=None, nu=None):
-        if X is None: X = self.X
-        if f is None: f = self.f
-        if nu is None: nu = self.nu
-        nu2, mu, chol = self._build_conditional(Xnew, X, f, nu)
         return pm.MvStudentT(name, nu=nu2, mu=mu, chol=chol, shape=n_points)
 
 
@@ -226,16 +215,16 @@ class Marginal(Base):
         else:
             return other.X, other.y, other.noise, other.cov_func, other.mean_func
 
-    def conditional(self, name, n_points, Xnew, gp=None, pred_noise=False):
+    def conditional(self, name, n_points, Xnew, given=None, pred_noise=False):
         # try to get n_points from X, (via cast to int?), error if cant and n_points is none
-        X, y, noise, cov_total, mean_total = self._get_cond_vals(gp)
+        X, y, noise, cov_total, mean_total = self._get_cond_vals(given)
         mu, cov = self._build_conditional(Xnew, X, y, noise, cov_total, mean_total,
                                           pred_noise, diag=False)
         chol = cholesky(cov)
         return pm.MvNormal(name, mu=mu, chol=chol, shape=n_points)
 
-    def predict(self, Xnew, point=None, gp=None, pred_noise=False, diag=False):
-        X, y, noise, cov_total, mean_total = self._get_cond_vals(gp)
+    def predict(self, Xnew, point=None, given=None, pred_noise=False, diag=False):
+        X, y, noise, cov_total, mean_total = self._get_cond_vals(given)
         mu, cov = self._build_conditional(Xnew, X, y, noise, cov_total, mean_total,
                                           pred_noise, diag)
         mu, cov = draw_values([mu, cov], point=point)
@@ -291,7 +280,7 @@ class MarginalSparse(Base):
         quadratic = 0.5 * (tt.dot(r, r_l) - tt.dot(c, c))
         return -1.0 * (constant + logdet + quadratic + trace)
 
-    def marginal_likelihood(self, name, n_points, X, Xu, y, sigma, is_observed=True):
+    def marginal_likelihood(self, name, X, Xu, y, sigma, n_points=None, is_observed=True):
         self.X = X
         self.Xu = Xu
         self.y = y
@@ -300,49 +289,66 @@ class MarginalSparse(Base):
         if is_observed:  # same thing ith n_points here?? check
             return pm.DensityDist(name, logp, observed=y)
         else:
-            return pm.DensityDist(name, logp, size=n_points) # need size? if not, dont need size arg
+            if n_points is None:
+                raise ValueError("When `y` is not observed, `n_points` arg is required")
+            return pm.DensityDist(name, logp, size=n_points) #  not, dont need size arg
 
-    def _build_conditional(self, Xnew, Xu, X, y, sigma, pred_noise):
+    def _build_conditional(self, Xnew, Xu, X, y, sigma, cov_total, mean_total,
+                           pred_noise, diag=False):
         sigma2 = tt.square(sigma)
-        Kuu = self.cov_func(Xu)
-        Kuf = self.cov_func(Xu, X)
+        Kuu = cov_total(Xu)
+        Kuf = cov_total(Xu, X)
         Luu = cholesky(stabilize(Kuu))
         A = solve_lower(Luu, Kuf)
         Qffd = tt.sum(A * A, 0)
         if self.approx not in self._available_approx:
             raise NotImplementedError(self.approx)
         elif self.approx == "FITC":
-            Kffd = self.cov_func(X, diag=True)
+            Kffd = cov_total(X, diag=True)
             Lamd = tt.clip(Kffd - Qffd, 0.0, np.inf) + sigma2
         else: # VFE or DTC
             Lamd = tt.ones_like(Qffd) * sigma2
         A_l = A / Lamd
         L_B = cholesky(tt.eye(Xu.shape[0]) + tt.dot(A_l, tt.transpose(A)))
-        r = y - self.mean_func(X)
+        r = y - mean_total(X)
         r_l = r / Lamd
         c = solve_lower(L_B, tt.dot(A, r_l))
         Kus = self.cov_func(Xu, Xnew)
         As = solve_lower(Luu, Kus)
-        mean = (self.mean_func(Xnew) +
-                tt.dot(tt.transpose(As), solve_upper(tt.transpose(L_B), c)))
+        mu = self.mean_func(Xnew) + tt.dot(tt.transpose(As), solve_upper(tt.transpose(L_B), c))
         C = solve_lower(L_B, As)
-        if pred_noise:
-            cov = (self.cov_func(Xnew) - tt.dot(tt.transpose(As), As) +
-                   tt.dot(tt.transpose(C), C) + sigma2*tt.eye(Xnew.shape[0]))
+        if diag:
+            Kss = self.cov_func(Xnew, diag=True)
+            var = Kss - tt.sum(tt.sqaure(As), 0) + tt.sum(tt.square(C), 0)
+            if pred_noise:
+                var += sigma2
+            return mu, var
         else:
             cov = (self.cov_func(Xnew) - tt.dot(tt.transpose(As), As) +
                    tt.dot(tt.transpose(C), C))
-        return mean, stabilize(cov)
+            if pred_noise:
+                cov += sigma2 * tt.identity_like(cov)
+            return mu, stabilize(cov)
 
-    def conditional(self, name, n_points, Xnew, Xu=None, X=None, y=None,
-                    sigma=None, pred_noise=False):
-        if Xu is None: Xu = self.Xu
-        if X is None: X = self.X
-        if y is None: y = self.y
-        if sigma is None: sigma = self.sigma
-        mu, chol = self._build_conditional(Xnew, Xu, X, y, sigma, pred_noise)
+    def _get_cond_vals(self, other=None):
+        if other is None:
+            return self.X, self.Xu, self.y, self.sigma, self.cov_func, self.mean_func,
+        else:
+            return other.X, self.Xu, other.y, other.sigma, other.cov_func, other.mean_func
+
+    def conditional(self, name, n_points, Xnew, given=None, pred_noise=False):
+        # try to get n_points from X, (via cast to int?), error if cant and n_points is none
+        X, Xu, y, sigma, cov_total, mean_total = self._get_cond_vals(given)
+        mu, cov = self._build_conditional(Xnew, Xu, X, y, sigma, cov_total, mean_total,
+                                          pred_noise, diag=False)
+        chol = cholesky(cov)
         return pm.MvNormal(name, mu=mu, chol=chol, shape=n_points)
 
-
+    def predict(self, Xnew, point=None, given=None, pred_noise=False, diag=False):
+        X, Xu, y, sigma, cov_total, mean_total = self._get_cond_vals(given)
+        mu, cov = self._build_conditional(Xnew, Xu, X, y, sigma, cov_total, mean_total,
+                                          pred_noise, diag)
+        mu, cov = draw_values([mu, cov], point=point)
+        return mu, cov
 
 
