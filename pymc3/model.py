@@ -684,15 +684,6 @@ class Model(six.with_metaclass(InitContextMeta, Context, Factor)):
             return logp
 
     @property
-    def logp_nojact(self):
-        """Theano scalar of log-probability of the model"""
-        with self:
-            factors = [var.logp_nojact for var in self.basic_RVs] + self.potentials
-            logp = tt.sum([tt.sum(factor) for factor in factors])
-            logp.name = '__logp_nojac'
-            return logp
-
-    @property
     def varlogpt(self):
         """Theano scalar of log-probability of the unobserved random variables
            (excluding deterministic)."""
