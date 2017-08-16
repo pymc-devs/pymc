@@ -152,6 +152,9 @@ class Factor(object):
     """Common functionality for objects with a log probability density
     associated with them.
     """
+    def __init__(self, *args, **kwargs):
+        super(Factor, self).__init__(*args, **kwargs)
+
     @property
     def logp(self):
         """Compiled log probability density function"""
@@ -662,7 +665,22 @@ class Model(six.with_metaclass(InitContextMeta, Context, Factor)):
             logp_factors = tt.sum(factors)
             logp_potentials = tt.sum([tt.sum(pot) for pot in self.potentials])
             logp = logp_factors + logp_potentials
-            logp.name = '__logp'
+            if self.name:
+                logp.name = '__logp_%s' % self.name
+            else:
+                logp.name = '__logp'
+            return logp
+
+    @property
+    def logp_nojact(self):
+        """Theano scalar of log-probability of the model"""
+        with self:
+            factors = [var.logp_nojact for var in self.basic_RVs] + self.potentials
+            logp = tt.sum([tt.sum(factor) for factor in factors])
+            if self.name:
+                logp.name = '__logp_nojac_%s' % self.name
+            else:
+                logp.name = '__logp_nojac'
             return logp
 
     @property

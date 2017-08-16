@@ -47,6 +47,55 @@ def test_log_post_trace():
     npt.assert_allclose(logp, -0.5 * np.log(2 * np.pi), atol=1e-7)
 
 
+def test_compare():
+    np.random.seed(42)
+    x_obs = np.random.normal(0, 1, size=100)
+
+    with pm.Model() as model0:
+        mu = pm.Normal('mu', 0, 1)
+        x = pm.Normal('x', mu=mu, sd=1, observed=x_obs)
+        trace0 = pm.sample(1000)
+
+    with pm.Model() as model1:
+        mu = pm.Normal('mu', 0, 1)
+        x = pm.Normal('x', mu=mu, sd=0.8, observed=x_obs)
+        trace1 = pm.sample(1000)
+
+    with pm.Model() as model2:
+        mu = pm.Normal('mu', 0, 1)
+        x = pm.StudentT('x', nu=1, mu=mu, lam=1, observed=x_obs)
+        trace2 = pm.sample(1000)
+
+    traces = [trace0] * 2
+    models = [model0] * 2
+
+    w_st = pm.compare(traces, models, method='stacking')['weight']
+    w_bb_bma = pm.compare(traces, models, method='BB-pseudo-BMA')['weight']
+    w_bma = pm.compare(traces, models, method='pseudo-BMA')['weight']
+
+    assert_almost_equal(w_st[0], w_st[1])
+    assert_almost_equal(w_bb_bma[0], w_bb_bma[1])
+    assert_almost_equal(w_bma[0], w_bma[1])
+
+    assert_almost_equal(np.sum(w_st), 1.)
+    assert_almost_equal(np.sum(w_bb_bma), 1.)
+    assert_almost_equal(np.sum(w_bma), 1.)
+
+    traces = [trace0, trace1, trace2]
+    models = [model0, model1, model2]
+    w_st = pm.compare(traces, models, method='stacking')['weight']
+    w_bb_bma = pm.compare(traces, models, method='BB-pseudo-BMA')['weight']
+    w_bma = pm.compare(traces, models, method='pseudo-BMA')['weight']
+
+    assert(w_st[0] > w_st[1] > w_st[2])
+    assert(w_bb_bma[0] > w_bb_bma[1] > w_bb_bma[2])
+    assert(w_bma[0] > w_bma[1] > w_bma[2])
+
+    assert_almost_equal(np.sum(w_st), 1.)
+    assert_almost_equal(np.sum(w_st), 1.)
+    assert_almost_equal(np.sum(w_st), 1.)
+
+
 class TestStats(SeededTest):
     @classmethod
     def setup_class(cls):
