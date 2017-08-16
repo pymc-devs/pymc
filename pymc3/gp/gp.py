@@ -217,7 +217,7 @@ class Marginal(Base):
         if other is None:
             return self.X, self.y, self.noise, self.cov_func, self.mean_func,
         else:
-            return self.X, self.y, self.noise, other.cov_func, other.mean_func
+            return other.X, other.y, other.noise, other.cov_func, other.mean_func
 
     def conditional(self, name, n_points, Xnew, given=None, pred_noise=False):
         # try to get n_points from X, (via cast to int?), error if cant and n_points is none
