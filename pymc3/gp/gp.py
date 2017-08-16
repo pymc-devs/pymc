@@ -210,6 +210,10 @@ class Marginal(Base):
             return mu, stabilize(cov)
 
     def _get_cond_vals(self, other=None):
+        # LOOK AT THIS MORE, where to X, y, noise need to come from? depending on situation
+        # provide this function with **kwargs and return those if given? X=X, y=y, etc
+        #  i think this would be good.  could build the gp "from scratch".  caching these
+        #  from prior or marglike is a convenience
         if other is None:
             return self.X, self.y, self.noise, self.cov_func, self.mean_func,
         else:
