@@ -173,6 +173,18 @@ class Factor(object):
         return self.model.fn(hessian(self.logpt, vars))
 
     @property
+    def logp_nojac(self):
+        return self.model.fn(self.logp_nojact)
+
+    def dlogp_nojac(self, vars=None):
+        """Compiled log density gradient function, without jacobian terms."""
+        return self.model.fn(gradient(self.logp_nojact, vars))
+
+    def d2logp_nojac(self, vars=None):
+        """Compiled log density hessian function, without jacobian terms."""
+        return self.model.fn(hessian(self.logp_nojact, vars))
+
+    @property
     def fastlogp(self):
         """Compiled log probability density function"""
         return self.model.fastfn(self.logpt)
@@ -186,12 +198,35 @@ class Factor(object):
         return self.model.fastfn(hessian(self.logpt, vars))
 
     @property
+    def fastlogp_nojac(self):
+        return self.model.fastfn(self.logp_nojact)
+
+    def fastdlogp_nojac(self, vars=None):
+        """Compiled log density gradient function, without jacobian terms."""
+        return self.model.fastfn(gradient(self.logp_nojact, vars))
+
+    def fastd2logp_nojac(self, vars=None):
+        """Compiled log density hessian function, without jacobian terms."""
+        return self.model.fastfn(hessian(self.logp_nojact, vars))
+
+    @property
     def logpt(self):
         """Theano scalar of log-probability of the model"""
         if getattr(self, 'total_size', None) is not None:
-            logp = tt.sum(self.logp_elemwiset) * self.scaling
+            logp = self.logp_sum_unscaledt * self.scaling
         else:
-            logp = tt.sum(self.logp_elemwiset)
+            logp = self.logp_sum_unscaledt
+        if self.name is not None:
+            logp.name = '__logp_%s' % self.name
+        return logp
+
+    @property
+    def logp_nojact(self):
+        """Theano scalar of log-probability, excluding jacobian terms."""
+        if getattr(self, 'total_size', None) is not None:
+            logp = tt.sum(self.logp_nojac_unscaledt) * self.scaling
+        else:
+            logp = tt.sum(self.logp_nojac_unscaledt)
         if self.name is not None:
             logp.name = '__logp_%s' % self.name
         return logp
@@ -626,9 +661,26 @@ class Model(six.with_metaclass(InitContextMeta, Context, Factor)):
     def logpt(self):
         """Theano scalar of log-probability of the model"""
         with self:
-            factors = [var.logpt for var in self.basic_RVs] + self.potentials
-            logp = tt.add(*map(tt.sum, factors))
-            logp.name = '__logp'
+            factors = [var.logpt for var in self.basic_RVs]
+            logp_factors = tt.sum(factors)
+            logp_potentials = tt.sum([tt.sum(pot) for pot in self.potentials])
+            logp = logp_factors + logp_potentials
+            if self.name:
+                logp.name = '__logp_%s' % self.name
+            else:
+                logp.name = '__logp'
+            return logp
+
+    @property
+    def logp_nojact(self):
+        """Theano scalar of log-probability of the model"""
+        with self:
+            factors = [var.logp_nojact for var in self.basic_RVs] + self.potentials
+            logp = tt.sum([tt.sum(factor) for factor in factors])
+            if self.name:
+                logp.name = '__logp_nojac_%s' % self.name
+            else:
+                logp.name = '__logp_nojac'
             return logp
 
     @property
@@ -637,7 +689,7 @@ class Model(six.with_metaclass(InitContextMeta, Context, Factor)):
            (excluding deterministic)."""
         with self:
             factors = [var.logpt for var in self.vars]
-            return tt.add(*map(tt.sum, factors))
+            return tt.sum(factors)
 
     @property
     def vars(self):
@@ -1069,6 +1121,10 @@ class FreeRV(Factor, TensorVariable):
             self.tag.test_value = np.ones(
                 distribution.shape, distribution.dtype) * distribution.default()
             self.logp_elemwiset = distribution.logp(self)
+            # The logp might need scaling in minibatches.
+            # This is done in `Factor`.
+            self.logp_sum_unscaledt = distribution.logp_sum(self)
+            self.logp_nojac_unscaledt = distribution.logp_nojac(self)
             self.total_size = total_size
             self.model = model
             self.scaling = _get_scaling(total_size, self.shape, self.ndim)
@@ -1172,6 +1228,10 @@ class ObservedRV(Factor, TensorVariable):
 
             self.missing_values = data.missing_values
             self.logp_elemwiset = distribution.logp(data)
+            # The logp might need scaling in minibatches.
+            # This is done in `Factor`.
+            self.logp_sum_unscaledt = distribution.logp_sum(data)
+            self.logp_nojac_unscaledt = distribution.logp_nojac(data)
             self.total_size = total_size
             self.model = model
             self.distribution = distribution
@@ -1223,6 +1283,10 @@ class MultiObservedRV(Factor):
         self.missing_values = [datum.missing_values for datum in self.data.values()
                                if datum.missing_values is not None]
         self.logp_elemwiset = distribution.logp(**self.data)
+        # The logp might need scaling in minibatches.
+        # This is done in `Factor`.
+        self.logp_sum_unscaledt = distribution.logp_sum(**self.data)
+        self.logp_nojac_unscaledt = distribution.logp_nojac(**self.data)
         self.total_size = total_size
         self.model = model
         self.distribution = distribution
