@@ -317,11 +317,13 @@ class SplineWrapper(theano.Op):
     """
 
     __props__ = ('spline',)
-    itypes = [tt.dscalar]
-    otypes = [tt.dscalar]
 
     def __init__(self, spline):
         self.spline = spline
+
+    def make_node(self, x):
+        x = tt.as_tensor_variable(x)
+        return tt.Apply(self, [x], [x.type()])
 
     @property
     def grad_op(self):
