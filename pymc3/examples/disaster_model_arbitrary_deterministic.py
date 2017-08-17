@@ -1,6 +1,6 @@
 """
 Similar to disaster_model.py, but for arbitrary
-determinsitics which are not not working with Theano.
+deterministics which are not not working with Theano.
 Note that gradient based samplers will not work.
 """
 
