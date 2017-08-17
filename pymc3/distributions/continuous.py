@@ -2004,11 +2004,4 @@ class Interpolated(Continuous):
                                 size=size)
 
     def logp(self, value):
-        # TODO: this implementation is suboptimal
-        #       the SplineWrapper should get proper broadcasting behavior
-        value = tt.as_tensor_variable(value)
-        if hasattr(value, "__iter__"):
-            iv = tt.stack([self.interp_op(v) for v in value])
-        else:
-            iv = self.interp_op(value)
-        return tt.log(iv / self.Z)
+        return tt.log(self.interp_op(value) / self.Z)
