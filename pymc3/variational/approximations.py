@@ -457,7 +457,7 @@ class NormalizingFlowGroup(Group):
 
     @property
     def shared_params(self):
-        if self.user_params is None:
+        if self.user_params is not None:
             return None
         params = dict()
         current = self.flow
@@ -471,7 +471,7 @@ class NormalizingFlowGroup(Group):
 
     @shared_params.setter
     def shared_params(self, value):
-        if self.user_params is None:
+        if self.user_params is not None:
             raise AttributeError('Cannot set when having user params')
         current = self.flow
         i = 0
