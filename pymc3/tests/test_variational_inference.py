@@ -16,7 +16,7 @@ from pymc3.variational.inference import (
     ADVI, FullRankADVI, SVGD, NFVI, ASVGD,
     fit
 )
-from pymc3.variational import flows
+from pymc3.variational import flows, opvi
 from pymc3.variational.opvi import Approximation, Group
 
 from . import models
@@ -79,7 +79,7 @@ def test_tracker_callback():
 @pytest.fixture('module')
 def three_var_model():
     with pm.Model() as model:
-        pm.Normal('one', shape=(10, 2))
+        pm.HalfNormal('one', shape=(10, 2))
         pm.Normal('two', shape=(10, ))
         pm.Normal('three', shape=(10, 1, 2))
     return model
@@ -174,7 +174,7 @@ def parametric_grouped_approxes(request):
 
 @pytest.fixture
 def three_var_aevb_groups(parametric_grouped_approxes, three_var_model, aevb_initial):
-    dsize = np.prod(three_var_model.one.dshape[1:])
+    dsize = np.prod(opvi.get_transformed(three_var_model.one).dshape[1:])
     cls, kw = parametric_grouped_approxes
     spec = cls.get_param_spec_for(d=dsize, **kw)
     params = dict()
@@ -610,11 +610,11 @@ def test_fit_fn_text(method, kwargs, error, another_simple_model):
 @pytest.fixture('module')
 def aevb_model():
     with pm.Model() as model:
-        pm.Normal('x', shape=(2,))
+        pm.HalfNormal('x', shape=(2,))
         pm.Normal('y', shape=(2,))
     x = model.x
     y = model.y
-    mu = theano.shared(x.init_value) * 2
+    mu = theano.shared(x.init_value)
     rho = theano.shared(np.zeros_like(x.init_value))
     return {
         'model': model,
@@ -632,8 +632,8 @@ def test_aevb(inference_spec, aevb_model):
     replace = aevb_model['replace']
     with model:
         try:
-            inference = inference_spec(local_rv={x: replace})
-            approx = inference.fit(3, obj_n_mc=2)
+            inference = inference_spec(local_rv={x: {'mu': replace['mu']*5, 'rho': replace['rho']}})
+            approx = inference.fit(3, obj_n_mc=2, more_obj_params=replace.values())
             approx.sample(10)
             approx.sample_node(
                 y,
