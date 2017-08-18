@@ -7,19 +7,11 @@ import theano.tensor.slinalg
 import pymc3 as pm
 from pymc3.gp.cov import Covariance
 from pymc3.gp.mean import Constant
-from pymc3.gp.util import conditioned_vars
+from pymc3.gp.util import (conditioned_vars,
+    infer_shape, stabilize, cholesky, solve, solve_lower, solve_upper)
 from pymc3.distributions import draw_values
 
 __all__ = ['Latent', 'Marginal', 'TP', 'MarginalSparse']
-
-
-cholesky = pm.distributions.dist_math.Cholesky(nofail=True, lower=True)
-solve_lower = tt.slinalg.Solve(A_structure='lower_triangular')
-solve_upper = tt.slinalg.Solve(A_structure='upper_triangular')
-
-def stabilize(K):
-    """ adds small diagonal to a covariance matrix """
-    return K + 1e-6 * tt.identity_like(K)
 
 
 class Base(object):
@@ -58,6 +50,7 @@ class Base(object):
     def predict(self, Xnew, point=None, given=None, diag=False):
         raise NotImplementedError
 
+
 @conditioned_vars(["X", "f"])
 class Latent(Base):
     """ Where the GP f isnt integrated out, and is sampled explicitly
@@ -65,7 +58,7 @@ class Latent(Base):
     def __init__(self, mean_func=None, cov_func=None):
         super(Latent, self).__init__(mean_func, cov_func)
 
-    def _build_prior(self, name, n_points, X, reparameterize=True):
+    def _build_prior(self, name, X, n_points, reparameterize=True):
         mu = self.mean_func(X)
         chol = cholesky(stabilize(self.cov_func(X)))
         if reparameterize:
@@ -75,17 +68,25 @@ class Latent(Base):
             f = pm.MvNormal(name, mu=mu, chol=chol, shape=n_points)
         return f
 
-    def prior(self, name, n_points, X, reparameterize=True):
-        f = self._build_prior(name, n_points, X, reparameterize)
+    def prior(self, name, X, n_points=None, reparameterize=True):
+        n_points = infer_shape(X, n_points)
+        f = self._build_prior(name, X, n_points, reparameterize)
         self.X = X
         self.f = f
         return f
 
-    def _get_cond_vals(self, other=None):
-        if other is None:
-            return self.X, self.f, self.cov_func, self.mean_func,
+    def _get_given_vals(self, **given):
+        if 'gp' in given:
+            cov_total = given['gp'].cov_func
+            mean_total = given['gp'].mean_func
         else:
-            return other.X, other.f, other.cov_func, other.mean_func
+            cov_total = self.cov_func
+            mean_total = self.mean_func
+        if all(val in given for val in ['X', 'f']):
+            X, f = given['X'], given['f']
+        else:
+            X, f = self.X, self.f
+        return X, f, cov_total, mean_total
 
     def _build_conditional(self, Xnew, X, f, cov_total, mean_total):
         Kxx = cov_total(X)
@@ -98,10 +99,11 @@ class Latent(Base):
         cov = Kss - tt.dot(tt.transpose(A), A)
         return mu, cov
 
-    def conditional(self, name, n_points, Xnew, given=None):
-        X, f, cov_total, mean_total = self._get_cond_vals(given)
-        mu, cov = self._build_conditional(Xnew, X, f, cov_total, mean_total)
+    def conditional(self, name, Xnew, n_points=None, given=None):
+        givens = self._get_given_vals(**given)
+        mu, cov = self._build_conditional(Xnew, *givens)
         chol = cholesky(stabilize(cov))
+        n_points = infer_shape(Xnew, n_points)
         return pm.MvNormal(name, mu=mu, chol=chol, shape=n_points)
 
 
@@ -150,11 +152,12 @@ class TP(Latent):
         covT = (self.nu + beta - 2)/(nu2 - 2) * cov
         return nu2, mu, covT
 
-    def conditional(self, name, n_points, Xnew):
+    def conditional(self, name, Xnew, n_points=None):
         X = self.X
         f = self.f
         nu2, mu, covT = self._build_conditional(Xnew, X, f)
         chol = cholesky(stabilize(covT))
+        n_points = infer_shape(Xnew, n_points)
         return pm.MvStudentT(name, nu=nu2, mu=mu, chol=chol, shape=n_points)
 
 
@@ -182,9 +185,23 @@ class Marginal(Base):
         if is_observed:
             return pm.MvNormal(name, mu=mu, chol=chol, observed=y)
         else:
-            if n_points is None:
-                raise ValueError("When `y` is not observed, `n_points` arg is required")
+            n_points = infer_shape(X, n_points)
             return pm.MvNormal(name, mu=mu, chol=chol, size=n_points)
+
+    def _get_given_vals(self, **given):
+        if 'gp' in given:
+            cov_total = given['gp'].cov_func
+            mean_total = given['gp'].mean_func
+        else:
+            cov_total = self.cov_func
+            mean_total = self.mean_func
+        if all(val in given for val in ['X', 'y', 'noise']):
+            X, y, noise = given['X'], given['y'], given['noise']
+            if not isinstance(noise, Covariance):
+                noise = pm.gp.cov.WhiteNoise(noise)
+        else:
+            X, y, noise = self.X, self.y, self.noise
+        return X, y, noise, cov_total, mean_total
 
     def _build_conditional(self, Xnew, X, y, noise, cov_total, mean_total,
                            pred_noise, diag=False):
@@ -209,38 +226,32 @@ class Marginal(Base):
                 cov += noise(Xnew)
             return mu, stabilize(cov)
 
-    def _get_cond_vals(self, other=None):
-        # LOOK AT THIS MORE, where to X, y, noise need to come from? depending on situation
-        # provide this function with **kwargs and return those if given? X=X, y=y, etc
-        #  i think this would be good.  could build the gp "from scratch".  caching these
-        #  from prior or marglike is a convenience
-        if other is None:
-            return self.X, self.y, self.noise, self.cov_func, self.mean_func,
-        else:
-            return other.X, other.y, other.noise, other.cov_func, other.mean_func
-
-    def conditional(self, name, n_points, Xnew, given=None, pred_noise=False):
-        # try to get n_points from X, (via cast to int?), error if cant and n_points is none
-        X, y, noise, cov_total, mean_total = self._get_cond_vals(given)
-        mu, cov = self._build_conditional(Xnew, X, y, noise, cov_total, mean_total,
-                                          pred_noise, diag=False)
+    def conditional(self, name, Xnew, pred_noise=False, n_points=None, **given):
+        givens = self._get_given_vals(**given)
+        mu, cov = self._build_conditional(Xnew, *givens, pred_noise, diag=False)
         chol = cholesky(cov)
+        n_points = infer_shape(Xnew, n_points)
         return pm.MvNormal(name, mu=mu, chol=chol, shape=n_points)
 
-    def predict(self, Xnew, point=None, given=None, pred_noise=False, diag=False):
-        X, y, noise, cov_total, mean_total = self._get_cond_vals(given)
-        mu, cov = self._build_conditional(Xnew, X, y, noise, cov_total, mean_total,
-                                          pred_noise, diag)
+    def predict(self, Xnew, point=None, diag=False, pred_noise=False, **given):
+        mu, cov = self.predictt(Xnew, diag, pred_noise, **given)
         mu, cov = draw_values([mu, cov], point=point)
+        return mu, cov
+
+    def predictt(self, Xnew, diag=False, pred_noise=False, **given):
+        givens = self._get_given_vals(**given)
+        mu, cov = self._build_conditional(Xnew, *givens, pred_noise, diag)
         return mu, cov
 
 
 @conditioned_vars(["X", "Xu", "y", "sigma"])
-class MarginalSparse(Base):
+class MarginalSparse(Marginal):
     _available_approx = ["FITC", "VFE", "DTC"]
     """ FITC and VFE sparse approximations
     """
     def __init__(self, mean_func=None, cov_func=None, approx="FITC"):
+        if approx not in self._available_approx:
+            raise NotImplementedError(approx)
         self.approx = approx
         super(MarginalSparse, self).__init__(mean_func, cov_func)
 
@@ -260,9 +271,7 @@ class MarginalSparse(Base):
         Luu = cholesky(stabilize(Kuu))
         A = solve_lower(Luu, Kuf)
         Qffd = tt.sum(A * A, 0)
-        if self.approx not in self._available_approx:
-            raise NotImplementedError(self.approx)
-        elif self.approx == "FITC":
+        if self.approx == "FITC":
             Kffd = self.cov_func(X, diag=True)
             Lamd = tt.clip(Kffd - Qffd, 0.0, np.inf) + sigma2
             trace = 0.0
@@ -293,9 +302,8 @@ class MarginalSparse(Base):
         if is_observed:  # same thing ith n_points here?? check
             return pm.DensityDist(name, logp, observed=y)
         else:
-            if n_points is None:
-                raise ValueError("When `y` is not observed, `n_points` arg is required")
-            return pm.DensityDist(name, logp, size=n_points) #  not, dont need size arg
+            n_points = infer_shape(X, n_points)
+            return pm.DensityDist(name, logp, size=n_points)
 
     def _build_conditional(self, Xnew, Xu, X, y, sigma, cov_total, mean_total,
                            pred_noise, diag=False):
@@ -305,9 +313,7 @@ class MarginalSparse(Base):
         Luu = cholesky(stabilize(Kuu))
         A = solve_lower(Luu, Kuf)
         Qffd = tt.sum(A * A, 0)
-        if self.approx not in self._available_approx:
-            raise NotImplementedError(self.approx)
-        elif self.approx == "FITC":
+        if self.approx == "FITC":
             Kffd = cov_total(X, diag=True)
             Lamd = tt.clip(Kffd - Qffd, 0.0, np.inf) + sigma2
         else: # VFE or DTC
@@ -334,25 +340,17 @@ class MarginalSparse(Base):
                 cov += sigma2 * tt.identity_like(cov)
             return mu, stabilize(cov)
 
-    def _get_cond_vals(self, other=None):
-        if other is None:
-            return self.X, self.Xu, self.y, self.sigma, self.cov_func, self.mean_func,
+    def _get_given_vals(self, **given):
+        if 'gp' in given:
+            cov_total = given['gp'].cov_func
+            mean_total = given['gp'].mean_func
         else:
-            return other.X, self.Xu, other.y, other.sigma, other.cov_func, other.mean_func
-
-    def conditional(self, name, n_points, Xnew, given=None, pred_noise=False):
-        # try to get n_points from X, (via cast to int?), error if cant and n_points is none
-        X, Xu, y, sigma, cov_total, mean_total = self._get_cond_vals(given)
-        mu, cov = self._build_conditional(Xnew, Xu, X, y, sigma, cov_total, mean_total,
-                                          pred_noise, diag=False)
-        chol = cholesky(cov)
-        return pm.MvNormal(name, mu=mu, chol=chol, shape=n_points)
-
-    def predict(self, Xnew, point=None, given=None, pred_noise=False, diag=False):
-        X, Xu, y, sigma, cov_total, mean_total = self._get_cond_vals(given)
-        mu, cov = self._build_conditional(Xnew, Xu, X, y, sigma, cov_total, mean_total,
-                                          pred_noise, diag)
-        mu, cov = draw_values([mu, cov], point=point)
-        return mu, cov
+            cov_total = self.cov_func
+            mean_total = self.mean_func
+        if all(val in given for val in ['X', 'Xu', 'y', 'sigma']):
+            X, Xu, y, sigma = given['X'], given['Xu'], given['y'], given['sigma']
+        else:
+            X, Xu, y, sigma = self.X, self.y, self.sigma
+        return X, y, sigma, cov_total, mean_total
 
 
