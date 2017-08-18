@@ -7,7 +7,10 @@ from .test_distributions import Simplex, Rplusbig, Rminusbig, Unit, R, Vector, M
 from .checks import close_to, close_to_logical
 from ..theanof import jacobian
 
-tol = 1e-7
+
+# some transforms (stick breaking) require additon of small slack in order to be numerically
+# stable. The minimal addable slack for float32 is higher thus we need to be less strict
+tol = 1e-7 if theano.config.floatX == 'flaot64' else 1e-6
 
 
 def check_transform_identity(transform, domain, constructor=tt.dscalar, test=0):
