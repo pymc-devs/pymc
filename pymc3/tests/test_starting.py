@@ -75,7 +75,7 @@ def test_find_MAP():
         # Test gradient minimization
         map_est1 = starting.find_MAP()
         # Test non-gradient minimization
-        map_est2 = starting.find_MAP(fmin=starting.optimize.fmin_powell)
+        map_est2 = starting.find_MAP(method="powell")
 
     close_to(map_est1['mu'], 0, tol)
     close_to(map_est1['sigma'], 1, tol)
