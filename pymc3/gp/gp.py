@@ -53,8 +53,47 @@ class Base(object):
 
 @conditioned_vars(["X", "f"])
 class Latent(Base):
-    """ Where the GP f isnt integrated out, and is sampled explicitly
+    R"""
+    The `gp.Latent` class is a direct implementation of a GP.  No addiive
+    noise is assumed.  It is called "Latent" because the underlying function
+    values are treated as latent variables.  It has a `prior` method, and a
+    `conditional` method.  Given a mean and covariance function, the
+    function $f(x)$ is modeled as,
+
+    .. math::
+
+    f(x) \sim \mathcal{GP}\left(\mu(x), k(x, x')\right)
+
+    Use the `prior` and `conditional` methods to construct random
+    variables representing the unknown, or latent, function whose
+    distribution is the GP prior or GP conditional.  This GP implementation
+    can be used to implement regression with non-normal likelihoods or
+    classification.
+
+    Parameters
+    ----------
+    cov_func : None, 2D array, or instance of Covariance
+        The covariance function.  Defaults to matrix of zeros.
+    mean_func : None, instance of Mean
+        The mean function.  Defaults to a vector of ones.
+
+    Notes
+    -----
+    - After initializing the GP object with a mean and covariance
+    function, it can be added to other `Latent` GP objects.
+
+    - For more information on the `prior` and `conditional` methods,
+    see their docstrings.
+
+    Examples
+    --------
+    .. code:: python
+
+        with pm.Model() as model:
+
+
     """
+
     def __init__(self, mean_func=None, cov_func=None):
         super(Latent, self).__init__(mean_func, cov_func)
 
@@ -69,6 +108,29 @@ class Latent(Base):
         return f
 
     def prior(self, name, X, n_points=None, reparameterize=True):
+        R"""
+	Returns the GP prior distribution evaluated over the input
+        locations `X`.  This is the prior probability over the space
+        of functions described by its mean and covariance function.
+
+        .. math::
+
+        f \mid X \sim \text{MvNormal}\left(\boldsymbol\mu, \mathbf{K}\right)
+
+        Parameters
+        ----------
+        name : string
+            Name of the random variable
+        X : array-like
+            Function input values.
+        n_points : int, optional
+            Required if `X` is a random variable or a Theano object.
+            This is the number of points the GP is evaluated over, the
+            number of rows in `X`.
+        reparameterize : bool
+            Reparameterize the distribution by rotating the random
+            variable by the Cholesky factor of the covariance matrix.
+        """
         n_points = infer_shape(X, n_points)
         f = self._build_prior(name, X, n_points, reparameterize)
         self.X = X
@@ -100,6 +162,31 @@ class Latent(Base):
         return mu, cov
 
     def conditional(self, name, Xnew, n_points=None, given=None):
+        R"""
+	Returns the conditional distribution evaluated over new input
+        locations `Xnew`.  Given a set of function values `f` that
+        the GP prior was over, the conditional distribution over a
+        set of new points, `f_*` is
+
+        .. math::
+
+        f^* \mid f, X, X_{\text{new}} \sim \mathcal{GP}\left(\mu(x), k(x, x')\right)
+
+        Parameters
+        ----------
+        name : string
+            Name of the random variable
+        Xnew : array-like
+            Function input values.
+        n_points : int, optional
+            Required if `Xnew` is a random variable or a Theano object.
+            This is the number of points the GP is evaluated over, the
+            number of rows in `Xnew`.
+        given : keyword arguments
+            The `gp.Latent` argument can optionally take as keyword args,
+            `X`, `f`, and `gp`.  See the tutorial on additive GP models in
+            PyMC3 for more information.
+        """
         givens = self._get_given_vals(**given)
         mu, cov = self._build_conditional(Xnew, *givens)
         chol = cholesky(stabilize(cov))
