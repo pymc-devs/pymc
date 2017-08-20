@@ -31,7 +31,7 @@ def find_MAP(start=None, vars=None, fmin=None,
     ----------
     start : `dict` of parameter values (Defaults to `model.test_point`)
     vars : list
-        List of variables to set to MAP point (Defaults to all continuous).
+        List of variables to optimize and set to optimum (Defaults to all continuous).
     fmin : function
         Optimization algorithm (Defaults to `scipy.optimize.fmin_bfgs` unless
         discrete variables are specified in `vars`, then
