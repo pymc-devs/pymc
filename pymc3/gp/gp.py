@@ -239,6 +239,29 @@ class TP(Latent):
         return f
 
     def prior(self, name, n_points, X, reparameterize=True):
+        R"""
+	Returns the TP prior distribution evaluated over the input
+        locations `X`.  This is the prior probability over the space
+        of functions described by its mean and covariance function.
+
+        .. math::
+
+        f \mid X \sim \text{MvStudentT}\left(\boldsymbol\mu, \mathbf{K}, \nu \right)
+
+        Parameters
+        ----------
+        name : string
+            Name of the random variable
+        X : array-like
+            Function input values.
+        n_points : int, optional
+            Required if `X` is a random variable or a Theano object.
+            This is the number of points the GP is evaluated over, the
+            number of rows in `X`.
+        reparameterize : bool
+            Reparameterize the distribution by rotating the random
+            variable by the Cholesky factor of the covariance matrix.
+        """
         f = self._build_prior(name, n_points, X, reparameterize)
         self.X = X
         self.f = f
@@ -290,6 +313,54 @@ class TP(Latent):
 
 @conditioned_vars(["X", "y", "noise"])
 class Marginal(Base):
+    R"""
+    The `gp.Marginal` class is an implementation of the sum of a GP
+    prior and additive noise.  It has `marginal_likelihood`, `conditional`
+    and `predict` methods.  This GP implementation can be used to
+    implement regression on data that is normally distributed.
+
+    Parameters
+    ----------
+    cov_func : None, 2D array, or instance of Covariance
+        The covariance function.  Defaults to zero.
+    mean_func : None, instance of Mean
+        The mean function.  Defaults to zero.
+
+    Examples
+    --------
+    .. code:: python
+
+    # A one dimensional column vector of inputs.
+    X = np.linspace(0, 1, 10)[:, None]
+
+    with pm.Model() as model:
+        # Specify the covariance function.
+        cov_func = pm.gp.cov.ExpQuad(1, lengthscales=0.1)
+
+        # Specify the GP.  The default mean function is `Zero`.
+        gp = pm.gp.Latent(cov_func=cov_func)
+
+        # Place a GP prior over the function f.
+        sigma = pm.HalfCauchy("sigma", beta=3)
+        y_ = gp.marginal_likelihood("y", X=X, y=y, noise=sigma)
+
+    ...
+
+    # After fitting or sampling, specify the distribution
+    # at new points with .conditional
+    Xnew = np.linspace(-1, 2, 50)[:, None]
+
+    with model:
+        fcond = gp.conditional("fcond", Xnew=Xnew)
+
+    Notes
+    -----
+    - After initializing the GP object with a mean and covariance
+    function, it can be added to other `Latent` GP objects.
+
+    - For more information on the `prior` and `conditional` methods,
+    see their docstrings.
+    """
 
     def __init__(self, mean_func=None, cov_func=None):
         super(Marginal, self).__init__(mean_func, cov_func)
