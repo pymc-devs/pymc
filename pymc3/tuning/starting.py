@@ -7,7 +7,6 @@ from scipy import optimize
 import numpy as np
 from numpy import isfinite, nan_to_num, logical_not
 import pymc3 as pm
-import time
 from ..vartypes import discrete_types, typefilter
 from ..model import modelcontext, Point
 from ..theanof import inputvars
