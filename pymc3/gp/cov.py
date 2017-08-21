@@ -195,22 +195,30 @@ class Stationary(Covariance):
 
     Parameters
     ----------
-    lengthscales: If input_dim > 1, a list or array of scalars or PyMC3 random
+    ls : If input_dim > 1, a list or array of scalars or PyMC3 random
     variables.  If input_dim == 1, a scalar or PyMC3 random variable.
+    ls_inv : 1 / ls.  One of ls or ls_inv must be provided.
     """
 
-    def __init__(self, input_dim, lengthscales, active_dims=None):
+    def __init__(self, input_dim, ls=None, ls_inv=None, active_dims=None):
         super(Stationary, self).__init__(input_dim, active_dims)
-        self.lengthscales = tt.as_tensor_variable(lengthscales)
+        if (ls is None and ls_inv is None) or (ls is not None and ls_inv is not None):
+            raise ValueError("Only one of 'ls' or 'ls_inv' must be provided")
+        elif ls_inv is not None:
+            if isinstance(ls_inv, (np.ndarray, list, tuple)):
+                ls = 1.0 / np.asarray(ls_inv)
+            else:
+                ls = 1.0 / ls_inv
+        self.ls = tt.as_tensor_variable(ls)
 
     def square_dist(self, X, Xs):
-        X = tt.mul(X, 1.0 / self.lengthscales)
+        X = tt.mul(X, 1.0 / self.ls)
         X2 = tt.sum(tt.square(X), 1)
         if Xs is None:
             sqd = (-2.0 * tt.dot(X, tt.transpose(X))
                    + (tt.reshape(X2, (-1, 1)) + tt.reshape(X2, (1, -1))))
         else:
-            Xs = tt.mul(Xs, 1.0 / self.lengthscales)
+            Xs = tt.mul(Xs, 1.0 / self.ls)
             Xs2 = tt.sum(tt.square(Xs), 1)
             sqd = (-2.0 * tt.dot(X, tt.transpose(Xs))
                    + (tt.reshape(X2, (-1, 1)) + tt.reshape(Xs2, (1, -1))))
@@ -228,8 +236,8 @@ class Stationary(Covariance):
 
 
 class Periodic(Stationary):
-    def __init__(self, input_dim, lengthscales, period, active_dims=None):
-        super(Periodic, self).__init__(input_dim, lengthscales, active_dims)
+    def __init__(self, input_dim, period, ls=None, ls_inv=None, active_dims=None):
+        super(Periodic, self).__init__(input_dim, ls, ls_inv, active_dims)
         self.period = period
     def full(self, X, Xs=None):
         X, Xs = self._slice(X, Xs)
@@ -238,7 +246,7 @@ class Periodic(Stationary):
         f1 = X.dimshuffle(0, 'x', 1)
         f2 = Xs.dimshuffle('x', 0, 1)
         r = np.pi * (f1 - f2) / self.period
-        r = tt.sum(tt.square(tt.sin(r) / self.lengthscales), 2)
+        r = tt.sum(tt.square(tt.sin(r) / self.ls), 2)
         return tt.exp(-0.5 * r)
 
 
@@ -266,8 +274,8 @@ class RatQuad(Stationary):
        k(x, x') = \left(1 + \frac{(x - x')^2}{2\alpha\ell^2} \right)^{-\alpha}
     """
 
-    def __init__(self, input_dim, lengthscales, alpha, active_dims=None):
-        super(RatQuad, self).__init__(input_dim, lengthscales, active_dims)
+    def __init__(self, input_dim, alpha, ls, ls_inv, active_dims=None):
+        super(RatQuad, self).__init__(input_dim, ls, ls_inv, active_dims)
         self.alpha = alpha
 
     def full(self, X, Xs=None):

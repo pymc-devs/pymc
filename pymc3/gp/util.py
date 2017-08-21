@@ -1,5 +1,28 @@
 from scipy.cluster.vq import kmeans
 import numpy as np
+import pymc3 as pm
+import theano.tensor as tt
+
+
+cholesky = pm.distributions.dist_math.Cholesky(nofail=True, lower=True)
+solve_lower = tt.slinalg.Solve(A_structure='lower_triangular')
+solve_upper = tt.slinalg.Solve(A_structure='upper_triangular')
+solve = tt.slinalg.Solve(A_structure='general')
+
+
+def infer_shape(X, n_points=None):
+    if n_points is None:
+        try:
+            n_points = np.int(X.shape[0])
+        except TypeError:
+            raise TypeError("Cannot infer n_points, provide as an argument")
+    return n_points
+
+
+def stabilize(K):
+    """ adds small diagonal to a covariance matrix """
+    return K + 1e-6 * tt.identity_like(K)
+
 
 def kmeans_inducing_points(n_inducing, X):
     # first whiten X
