@@ -16,8 +16,8 @@ __all__ = ['Latent', 'Marginal', 'TP', 'MarginalSparse']
 
 class Base(object):
     """
-    Base class.  Can be used as a GP placeholder object in
-    additive models for GPs that won't be used for prediction.
+    Base class.  Can be used as a GP placeholder object in additive
+    models for GP objects that won't be used for prediction.
     """
     def __init__(self, mean_func=None, cov_func=None):
         # check if not None, args are correct subclasses.
@@ -69,7 +69,8 @@ class Latent(Base):
     variables representing the unknown, or latent, function whose
     distribution is the GP prior or GP conditional.  This GP implementation
     can be used to implement regression on data that is not normally
-    distributed.
+    distributed.  For more information on the `prior` and `conditional` methods,
+    see their docstrings.
 
     Parameters
     ----------
@@ -103,14 +104,6 @@ class Latent(Base):
 
     with model:
         fcond = gp.conditional("fcond", Xnew=Xnew)
-
-    Notes
-    -----
-    - After initializing the GP object with a mean and covariance
-    function, it can be added to other `Latent` GP objects.
-
-    - For more information on the `prior` and `conditional` methods,
-    see their docstrings.
     """
 
     def __init__(self, mean_func=None, cov_func=None):
@@ -215,8 +208,27 @@ class Latent(Base):
 
 @conditioned_vars(["X", "f", "nu"])
 class TP(Latent):
-    """ StudentT process
-    https://www.cs.cmu.edu/~andrewgw/tprocess.pdf
+    """
+    Implementation of a Student's T process prior.  The usage is nearly
+    identical to that of `gp.Latent`.  The differences are that it must
+    be initialized with a degrees of freedom parameter, and TP is not
+    additive.  Given a mean and covariance function, and a degrees of
+    freedom parameter, the function $f(x)$ is modeled as,
+
+    .. math::
+
+    f(x) \sim \mathcal{TP}\left(\mu(x), k(x, x'),\, \nu \right)
+
+    Parameters
+    ----------
+    cov_func : None, 2D array, or instance of Covariance
+        The covariance function.  Defaults to zero.
+    mean_func : None, instance of Mean
+        The mean function.  Defaults to zero.
+    nu : float
+        The degrees of freedom
+
+    For more information, see https://www.cs.cmu.edu/~andrewgw/tprocess.pdf
     """
     def __init__(self, mean_func=None, cov_func=None, nu=None):
         if nu is None:
@@ -317,7 +329,8 @@ class Marginal(Base):
     The `gp.Marginal` class is an implementation of the sum of a GP
     prior and additive noise.  It has `marginal_likelihood`, `conditional`
     and `predict` methods.  This GP implementation can be used to
-    implement regression on data that is normally distributed.
+    implement regression on data that is normally distributed.  For more
+    information on the `prior` and `conditional` methods, see their docstrings.
 
     Parameters
     ----------
@@ -352,14 +365,6 @@ class Marginal(Base):
 
     with model:
         fcond = gp.conditional("fcond", Xnew=Xnew)
-
-    Notes
-    -----
-    - After initializing the GP object with a mean and covariance
-    function, it can be added to other `Latent` GP objects.
-
-    - For more information on the `prior` and `conditional` methods,
-    see their docstrings.
     """
 
     def __init__(self, mean_func=None, cov_func=None):
@@ -542,9 +547,67 @@ class Marginal(Base):
 
 @conditioned_vars(["X", "Xu", "y", "sigma"])
 class MarginalSparse(Marginal):
-    _available_approx = ("FITC", "VFE", "DTC")
-    """ FITC and VFE sparse approximations
+    R"""
+    The `gp.MarginalSparse` class is an implementation of the sum of a GP
+    prior and additive noise.  It has `marginal_likelihood`, `conditional`
+    and `predict` methods.  This GP implementation can be used to
+    implement regression on data that is normally distributed.  The
+    available approximations are:
+
+    - DTC: Deterministic Training Conditional
+    - FITC: Fully independent Training Conditional
+    - VFE: Variational Free Energy
+
+    For more information on these approximations, see e.g.
+
+    - "A unifying view of sparse approximate Gaussian process regression",
+    2005, Quinonero-Candela, Rasmussen
+    - "Variational Learning of Inducing Variables in Sparse Gaussian Processes",
+    2009, Titsias
+
+    Parameters
+    ----------
+    cov_func : None, 2D array, or instance of Covariance
+        The covariance function.  Defaults to zero.
+    mean_func : None, instance of Mean
+        The mean function.  Defaults to zero.
+    approx : string
+        The approximation to use.  Must be one of `VFE`, `FITC` or `DTC`.
+
+    Examples
+    --------
+    .. code:: python
+
+    # A one dimensional column vector of inputs.
+    X = np.linspace(0, 1, 10)[:, None]
+
+    # A smaller set of inducing inputs
+    Xu = np.linspace(0, 1, 5)[:, None]
+
+    with pm.Model() as model:
+        # Specify the covariance function.
+        cov_func = pm.gp.cov.ExpQuad(1, lengthscales=0.1)
+
+        # Specify the GP.  The default mean function is `Zero`.
+        gp = pm.gp.Latent(cov_func=cov_func, approx="FITC")
+
+        # Place a GP prior over the function f.
+        sigma = pm.HalfCauchy("sigma", beta=3)
+        y_ = gp.marginal_likelihood("y", X=X, Xu=Xu, y=y, sigma=sigma)
+
+    ...
+
+    # After fitting or sampling, specify the distribution
+    # at new points with .conditional
+    Xnew = np.linspace(-1, 2, 50)[:, None]
+
+    with model:
+        fcond = gp.conditional("fcond", Xnew=Xnew)
     """
+
+
+    _available_approx = ("FITC", "VFE", "DTC")
+
     def __init__(self, mean_func=None, cov_func=None, approx="FITC"):
         if approx not in self._available_approx:
             raise NotImplementedError(approx)
