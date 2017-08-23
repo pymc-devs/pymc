@@ -7,6 +7,7 @@ import numpy as np
 import numpy.testing as npt
 import pytest
 
+
 class TestZeroMean(object):
     def test_value(self):
         X = np.linspace(0, 1, 10)[:, None]
@@ -125,6 +126,17 @@ class TestCovAdd(object):
         Kd = theano.function([], cov(X, diag=True))()
         npt.assert_allclose(np.diag(K), Kd, atol=1e-5)
 
+    def test_leftadd_matrixt(self):
+        X = np.linspace(0, 1, 10)[:, None]
+        M = 2 * tt.ones((10, 10))
+        with Model() as model:
+            cov = M + gp.cov.ExpQuad(1, 0.1)
+        K = theano.function([], cov(X))()
+        npt.assert_allclose(K[0, 1], 2.53940, atol=1e-3)
+        # check diagonal
+        Kd = theano.function([], cov(X, diag=True))()
+        npt.assert_allclose(np.diag(K), Kd, atol=1e-5)
+
     def test_leftprod_matrix(self):
         X = np.linspace(0, 1, 3)[:, None]
         M = np.array([[1, 2, 3], [2, 1, 2], [3, 2, 1]])
@@ -222,7 +234,7 @@ class TestCovSliceDim(object):
     def test_slice2(self):
         X = np.linspace(0, 1, 30).reshape(10, 3)
         with Model() as model:
-            cov = gp.cov.ExpQuad(3, [0.1, 0.1], active_dims=[False, True, True])
+            cov = gp.cov.ExpQuad(3, ls=[0.1, 0.1], active_dims=[1,2])
         K = theano.function([], cov(X))()
         npt.assert_allclose(K[0, 1], 0.34295549, atol=1e-3)
         # check diagonal
@@ -232,7 +244,7 @@ class TestCovSliceDim(object):
     def test_slice3(self):
         X = np.linspace(0, 1, 30).reshape(10, 3)
         with Model() as model:
-            cov = gp.cov.ExpQuad(3, np.array([0.1, 0.1]), active_dims=[False, True, True])
+            cov = gp.cov.ExpQuad(3, ls=np.array([0.1, 0.1]), active_dims=[1,2])
         K = theano.function([], cov(X))()
         npt.assert_allclose(K[0, 1], 0.34295549, atol=1e-3)
         # check diagonal
@@ -242,7 +254,7 @@ class TestCovSliceDim(object):
     def test_diffslice(self):
         X = np.linspace(0, 1, 30).reshape(10, 3)
         with Model() as model:
-            cov = gp.cov.ExpQuad(3, 0.1, [1, 0, 0]) + gp.cov.ExpQuad(3, [0.1, 0.2, 0.3])
+            cov = gp.cov.ExpQuad(3, ls=0.1, active_dims=[1, 0, 0]) + gp.cov.ExpQuad(3, ls=[0.1, 0.2, 0.3])
         K = theano.function([], cov(X))()
         npt.assert_allclose(K[0, 1], 0.683572, atol=1e-3)
         # check diagonal
@@ -303,7 +315,7 @@ class TestRatQuad(object):
     def test_1d(self):
         X = np.linspace(0, 1, 10)[:, None]
         with Model() as model:
-            cov = gp.cov.RatQuad(1, 0.1, 0.5)
+            cov = gp.cov.RatQuad(1, ls=0.1, alpha=0.5)
         K = theano.function([], cov(X))()
         npt.assert_allclose(K[0, 1], 0.66896, atol=1e-3)
         K = theano.function([], cov(X, X))()
@@ -442,7 +454,7 @@ class TestGibbs(object):
         with pytest.raises(NotImplementedError):
             gp.cov.Gibbs(2, lambda x: x)
         with pytest.raises(NotImplementedError):
-            gp.cov.Gibbs(3, lambda x: x, active_dims=[True, True, False])
+            gp.cov.Gibbs(3, lambda x: x, active_dims=[0,1])
 
 
 class TestHandleArgs(object):
