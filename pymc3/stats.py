@@ -451,7 +451,7 @@ def compare(traces, models, ic='WAIC', method='stacking', b_samples=1000,
         Km = K - 1
 
         def w_fuller(w):
-            return np.concatenate((w, 1. - np.sum(w, keepdims=True)))
+            return np.concatenate((w, [max(1. - np.sum(w), 0.)]))
 
         def log_score(w):
             w_full = w_fuller(w)
@@ -480,7 +480,7 @@ def compare(traces, models, ic='WAIC', method='stacking', b_samples=1000,
                      bounds=bounds,
                      constraints=constraints)
 
-        weights = w_fuller(np.round(w['x'], round_to))
+        weights = w_fuller(w['x'])
         ses = [res[1] for _, res in ics]
 
     elif method == 'BB-pseudo-BMA':
