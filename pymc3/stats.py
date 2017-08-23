@@ -426,9 +426,8 @@ def compare(traces, models, ic='WAIC', method='stacking', b_samples=1000,
             'The number of observed RVs should be the same across all models')
 
     if method not in ['stacking', 'BB-pseudo-BMA', 'pseudo-BMA']:
-        raise NotImplementedError(
-            'The method {}, to compute weights,'
-            'is not supported.'.format(method))
+        raise ValueError('The method {}, to compute weights,'
+                         'is not supported.'.format(method))
 
     warns = np.zeros(len(models))
 
@@ -539,7 +538,7 @@ def _ic_matrix(ics):
     for i in range(K):
         ic = ics[i][1][3]
         if len(ic) != N:
-            raise ValueError('The number of data points should be the same '
+            raise ValueError('The number of observations should be the same '
                              'across all models')
         else:
             ic_i[:, i] = ic
