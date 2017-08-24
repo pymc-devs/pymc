@@ -7,7 +7,7 @@ Note that gradient based samplers will not work.
 
 import pymc3 as pm
 import theano.tensor as tt
-from numpy import arange, array
+from numpy import arange, array, empty
 
 __all__ = ['disasters_data', 'switchpoint', 'early_mean', 'late_mean', 'rate',
            'disasters']
@@ -22,6 +22,15 @@ disasters_data = array([4, 5, 4, 0, 1, 4, 3, 4, 0, 6, 3, 3, 4, 0, 2, 6,
                         0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 1])
 years = len(disasters_data)
 
+
+@as_op(itypes=[tt.lscalar, tt.dscalar, tt.dscalar], otypes=[tt.dvector])
+def rate_(switchpoint, early_mean, late_mean):
+    out = empty(years)
+    out[:switchpoint] = early_mean
+    out[switchpoint:] = late_mean
+    return out
+
+
 with pm.Model() as model:
 
     # Prior for distribution of switchpoint location
@@ -33,8 +42,8 @@ with pm.Model() as model:
     # Allocate appropriate Poisson rates to years before and after current
     # switchpoint location
     idx = arange(years)
-    rate = tt.switch(switchpoint >= idx, early_mean, late_mean)
-    
+    rate = rate_(switchpoint, early_mean, late_mean)
+
     # Data likelihood
     disasters = pm.Poisson('disasters', rate, observed=disasters_data)
 
