@@ -342,7 +342,7 @@ def bpic(trace, model=None):
 
 
 def compare(traces, models, ic='WAIC', method='stacking', b_samples=1000,
-            alpha=1, seed=None):
+            alpha=1, seed=None, round_to=2):
     """Compare models based on the widely available information criterion (WAIC)
     or leave-one-out (LOO) cross-validation.
     Read more theory here - in a paper by some of the leading authorities on
@@ -378,6 +378,8 @@ def compare(traces, models, ic='WAIC', method='stacking', b_samples=1000,
            If int or RandomState, use it for seeding Bayesian bootstrap. Only
            useful when method = 'BB-pseudo-BMA'. Default None the global
            np.random state is used.
+    round_to : int
+        Number of decimals used to round results (default 2).
 
     Returns
     -------
@@ -421,11 +423,11 @@ def compare(traces, models, ic='WAIC', method='stacking', b_samples=1000,
 
     if len(set([len(m.observed_RVs) for m in models])) != 1:
         raise ValueError(
-            'The Observed RVs should be the same across all models')
+            'The number of observed RVs should be the same across all models')
 
     if method not in ['stacking', 'BB-pseudo-BMA', 'pseudo-BMA']:
-        raise NotImplementedError(
-            'The method to compute weights {} is not supported.'.format(method))
+        raise ValueError('The method {}, to compute weights,'
+                         'is not supported.'.format(method))
 
     warns = np.zeros(len(models))
 
@@ -449,7 +451,7 @@ def compare(traces, models, ic='WAIC', method='stacking', b_samples=1000,
         Km = K - 1
 
         def w_fuller(w):
-            return np.concatenate((w, 1. - np.sum(w, keepdims=True)))
+            return np.concatenate((w, [max(1. - np.sum(w), 0.)]))
 
         def log_score(w):
             w_full = w_fuller(w)
@@ -514,7 +516,12 @@ def compare(traces, models, ic='WAIC', method='stacking', b_samples=1000,
             d_se = np.sqrt(len(diff) * np.var(diff))
             se = ses[i]
             weight = weights[i]
-            df_comp.at[idx] = (res[0], res[2], d_ic, weight, se, d_se,
+            df_comp.at[idx] = (round(res[0], round_to),
+                               round(res[2], round_to),
+                               round(d_ic, round_to),
+                               round(weight, round_to),
+                               round(se, round_to),
+                               round(d_se, round_to),
                                warns[idx])
 
         return df_comp.sort_values(by=ic)
@@ -526,10 +533,15 @@ def _ic_matrix(ics):
     """
     N = len(ics[0][1][3])
     K = len(ics)
-
     ic_i = np.zeros((N, K))
+
     for i in range(K):
-        ic_i[:, i] = ics[i][1][3]
+        ic = ics[i][1][3]
+        if len(ic) != N:
+            raise ValueError('The number of observations should be the same '
+                             'across all models')
+        else:
+            ic_i[:, i] = ic
 
     return N, K, ic_i
 
