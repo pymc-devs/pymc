@@ -143,6 +143,7 @@ class Constant(Covariance):
 
        k(x, x') = c
     """
+
     def __init__(self, c):
         super(Constant, self).__init__(1, None)
         self.c = c
@@ -334,7 +335,7 @@ class Cosine(Stationary):
 
     def full(self, X, Xs=None):
         X, Xs = self._slice(X, Xs)
-        return tt.cos(np.pi * self.euclidean_dist(X, Xs))
+        return tt.cos(2.0 * np.pi * self.euclidean_dist(X, Xs))
 
 
 class Linear(Covariance):
