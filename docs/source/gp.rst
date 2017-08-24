@@ -51,16 +51,12 @@ distribution is
   Williams, or `this introduction <https://www.ics.uci.edu/~welling/teaching/KernelsICS273B/gpB.pdf>`_ 
   by D. Mackay.
 
-=============================
-Overview of GP usage In PyMC3
-=============================
-
 PyMC3 is a great environment for working with fully Bayesian Gaussian Process
-models.  The GP functionality of PyMC3 is meant to have a clear syntax and be
-highly composable.  It includes many predefined covariance functions (or
-kernels), mean functions, and several GP implementations.  GPs are treated as
-distributions that can be used within larger or hierarchical models, not just
-as standalone regression models.
+models.  GPs in PyMC3 have a clear syntax and are highly composable, and many 
+predefined covariance functions (or kernels), mean functions, and several GP 
+implementations are included.  GPs are treated as distributions that can be
+used within larger or hierarchical models, not just as standalone regression 
+models.
 
 Mean and covariance functions
 =============================
@@ -78,10 +74,10 @@ For example, to construct an exponentiated quadratic covariance function that
 operates on the second and third column of a three column matrix representing
 three predictor variables::
 
-    lengthscales = [2, 5]
-    cov_func = pm.gp.cov.ExpQuad(input_dim=3, lengthscales, active_dims=[1, 2])
+    ls = [2, 5] # the lengthscales
+    cov_func = pm.gp.cov.ExpQuad(input_dim=3, ls=ls, active_dims=[1, 2])
 
-Here the :code:`lengthscales` parameter is two dimensional, allowing the second
+Here the :code:`ls` parameter is two dimensional, allowing the second
 and third dimension to have a different lengthscale.  The reason we have to
 specify :code:`input_dim`, the total number of columns of :code:`X`, and
 :code:`active_dims`, which of those columns or dimensions the covariance
@@ -102,15 +98,17 @@ which allows users to combine covariance functions into new ones, for example:
 
     cov_func = pm.gp.cov.ExpQuad(...) * pm.gp.cov.Periodic(...)
     
-- The product (or sum) of a covariance function with a scalar is a covariance function::
+- The product (or sum) of a covariance function with a scalar is a covariance
+function::
 
     
     cov_func = eta**2 * pm.gp.cov.Matern32(...)
     
 After the covariance function is defined, it is now a function that is
-evaluated by calling :code:`cov_func(x, x)` (or :code:`mean_func(x)`).  For more
-information on mean and covariance functions in PyMC3, check out the tutorial
-on covariance functions.
+evaluated by calling :code:`cov_func(x, x)` (or :code:`mean_func(x)`).  Since
+PyMC3 is built on top of Theano, it is relatively easy to define and experiment
+with non-standard covariance and mean functons.  For more information check out
+the tutorial on covariance functions.
 
 
 :code:`gp.*` implementations
@@ -133,66 +131,140 @@ is::
 The first argument is the mean function and the second is the covariance
 function.  We've made the GP object, but we haven't made clear which function
 it is to be a prior for, what the inputs are, or what parameters it will be
-conditioned on.
+conditioned on.  
 
-GPs in PyMC3 are additive, which means we can write::
+.. note::
 
-    gp1 = pm.gp.Latent(mean_func1, cov_func1)
-    gp2 = pm.gp.Latent(mean_func2, cov_func2)
-    gp3 = gp1 + gp2
-   
+  The :code:`gp.Marginal` class and similar don't have a :code:`prior` method.
+  Instead they have a :code:`marginal_likelihood` method that is used similarly,
+  but has additional required arguments, such as the observed data, noise,
+  or other, depending on the implementation.  See the notebooks for examples.
+  The :code:`conditional` method works similarly.
 
 Calling the `prior` method will create a PyMC3 random variable that represents
-the latent function :math:$f(x) = \mathbf{f}$::
+the latent function :math:`f(x) = \mathbf{f}`::
   
-	f = gp3.prior("f", n_points, X)
+	f = gp.prior("f", X)
 
 :code:`f` is a random variable that can be used within a PyMC3 model like any
 other type of random variable.  The first argument is the name of the random
-variable representing the function we are placing the prior over.  The second
-argument is :code:`n_points`, which is number of points that the GP acts on ---
-the total number of dimensions.  The third argument is the inputs to the
-function that the prior is over, :code:`X`.  The inputs are usually known and
-present in the data, but they can also be PyMC3 random variables.
+variable representing the function we are placing the prior over.  
+The second argument is the inputs to the function that the prior is over, 
+:code:`X`.  The inputs are usually known and present in the data, but they can
+also be PyMC3 random variables.  If the inputs are a Theano tensor or a 
+PyMC3 random variable, the :code:`n_points` argument is required.
 
 .. note::
 
-  The :code:`n_points` argument is required because of how Theano and PyMC3
-  handle the shape information of distributions.  For :code:`prior` or
-  :code:`marginal_likelihood`, it is the number of rows in the inputs,
-  :code:`X`.  For :code:`conditional`, it is the number of rows in the new
-  inputs, :code:`X_new`.
+  The :code:`n_points` argument is sometimes required due to how Theano and 
+  PyMC3 handle the shape information of distributions.  It needs to be specified
+  when :code:`X` or :code:`Xnew` is a Theano tensor or a random variable. 
+  For :code:`prior` or :code:`marginal_likelihood`, it is the number of rows
+  of the inputs, :code:`X`.  For :code:`conditional`, it is the number of 
+  rows in the new inputs, :code:`X_new`.
+
+Usually at this point, inference is performed on the model.  The 
+:code:`conditional` method creates the conditional, or predictive,
+distribution over the latent function at arbitrary :math:`x_*` input points,
+:math:`f(x_*)`.  To construct the conditional distribution we write::
+
+	f_star = gp.conditional("f_star", X_star)
+
+Additive GPs
+============
+
+The GP implementation in PyMC3 is constructed so that it is easy to define 
+additive GPs and sample from individual GP components.  We can write::
+
+    gp1 = pm.gp.Marginal(mean_func1, cov_func1)
+    gp2 = pm.gp.Marginal(mean_func2, cov_func2)
+    gp3 = gp1 + gp2
+
+The GP objects have to have the same type, :code:`gp.Marginal` cannot
+be added to :code:`gp.Latent`.
+
+Consider two independent GP distributed functions, :math:`f_1(x) \sim
+\mathcal{GP}\left(m_1(x),\, k_1(x, x')\right)` and :math:`f_2(x) \sim
+\mathcal{GP}\left( m_2(x),\, k_2(x, x')\right)`.  The joint distribution of
+:math:`f_1,\, f_1^*,\, f_2,\, f_2^*,\, f_1 + f_2 and f_1^* + f_2^*` is
+
+.. math::
+
+  \begin{bmatrix} f_1 \\ f_1^* \\ f_2 \\ f_2^* 
+               \\ f_1 + f_2    \\ f_1^* + f_2^* \end{bmatrix} \sim
+  \text{N}\left( 
+    \begin{bmatrix} m_1 \\ m_1^* \\ m_2 \\ m_2^* \\
+                    m_1 + m_2    \\ m_1^* + m_2^*   \\ \end{bmatrix} \,,\,
+    \begin{bmatrix} 
+      K_1       &  K_1^*     &   0       &    0      & K_1        & K_1^*              \\
+      K_1^{*^T} &  K_1^{**}  &   0       &    0      & K_1^*      & K_1^{**}           \\
+      0         &  0         & K_2       & K_2^*     & K_2        & K_2^{*}            \\
+      0         &  0         & K_2^{*^T} & K_2^{**}  & K_2^{*}    & K_2^{**}           \\
+      K_1       &  K_1^{*}   & K_2       & K_2^{*}   & K_1 + K_2  & K_1^{*} + K_2^{*}  \\
+      K_1^{*^T} & K_1^{**} & K_2^{*^T} & K_2^{**} & K_1^{*^T}+K_2^{*^T} & K_1^{**}+K_2^{**} 
+    \end{bmatrix}
+  \right) \,.
+
+Using the joint distribution to obtain the conditional distribution of :math:`f_1^*`
+with the contribution due to :math:`f_1 + f_2` factored out, we get
+
+.. math::
+  f_1^* \mid f_1 + f_2 \sim \text{N}\left(
+    m_1^* + K_1^{*^T}(K_1 + K_2)^{-1}\left[f_1 + f_2 - m_1 - m_2\right] \,,\,
+    K_1^{**} - K_1^{*^T}(K_1 + K_2)^{-1}K_1^* \right) \,.
 
 
-The :code:`conditional` method creates the conditional, or predictive,
-distribution over the latent function at arbitrary :math:$x_*$ input points,
-:math:$f(x_*)$.  It can be called on any or all of the component GPs,
-:code:`gp1`, :code:`gp2`, or :code:`gp3`.  To construct the conditional
-distribution for :code:`gp3`, we write::
+So one can break down GP models into individual components to examine how each
+contribute to the data.  For more information, check out `David Duvenaud's PhD
+thesis <https://www.cs.toronto.edu/~duvenaud/thesis.pdf>`_.
 
-	f_star = gp3.conditional("f_star", n_newpoints, X_star)
+The GP objects in PyMC3 keeps track of these marginals automatically.  The
+following code sketch shows how to define the conditional distribution of
+:math:`f_2^*`.  We use `gp.Marginal` in the example, but the same works for
+other implementations.  The first block fits the GP prior.  We denote
+:math:`f_1 + f_2` as just :math:`f` for brevity::
 
-To construct the conditional distribution of one of the component GPs,
-:code:`gp1` or :code:`gp2`, we also need to include the original inputs
-:code:`X` as an argument::
+    with pm.Model() as model:
+        gp1 = pm.gp.Latent(mean_func1, cov_func1)
+        gp2 = pm.gp.Latent(mean_func2, cov_func2)
+        
+        # gp represents f1 + f2.  
+        gp = gp1 + gp2
+        
+        f = gp.marginal_likelihood("f", X, y, noise)
+        
+        trace = pm.sample(1000)
 
-	f1_star = gp1.conditional("f1_start", n_newpoints, X_star, X=X)
 
-The :code:`gp3` object keeps track of the inputs it used when :code:`prior` was
-set.  Since the prior method of :code:`gp1` wasn't called, it needs to be
-provided with the inputs :code:`X`.  In the same fashion as the prior,
-:code:`f_star` and :code:`f1_star` are random variables that can now be used
-like any other random variable in PyMC3.  
+The second block produces conditional distributions, including :math:`f_2^*
+\mid f_1 + f_2`.  Notice that extra arguments are required for conditionals of
+:math:`f1` and :math:`f2`, but not :math:`f`.  This is because those arguments
+are cached when calling :code:`.marginal_likelihood`.
+
+To construct the conditional distribution of :code:`gp1` or :code:`gp2`, we 
+also need to include the additional arguments, :code:`X`, :code:`y`, and 
+:code:`noise`::
+
+    with model:
+        # conditional distributions of f1 and f2
+        f1_star = gp1.conditional("f1_star", X_star, X=X, y=y, noise=noise)
+        f2_star = gp2.conditional("f2_star", X_star, X=X, y=y, noise=noise)
+
+        # conditional of f1 + f2, additional kwargs not required
+        f_star = gp.conditional("f_star", X_star)
 
 .. note::
+  The additional arguments :code:`X`, :code:`y`, and :code:`noise` must be
+  provided as **keyword arguments**!
 
-  `gp.Latent` has a `prior` and a `conditional`, but not a `marginal_likelihood`,
-  since that method doesn't make sense in this case.  Other GP implementations
-  have `marginal_likelihood`, but not a `prior`, such as `gp.Marginal` and
-  `gp.MarginalSparse`.  
+The :code:`gp` object keeps track of the inputs it used when :code:`marginal_likelihood`
+or :code:`prior` was set.  Since the marginal likelihoood method of :code:`gp1` or 
+:code:`gp2` weren't called, their conditionals need to be provided with the required 
+inputs.  In the same fashion as the prior, :code:`f_star`, :code:`f1_star` and 
+:code:`f2_star` are random variables that can now be used like any other random 
+variable in PyMC3.  
 
-There are examples demonstrating in more detail the usage
-of GP functionality in PyMC3, including examples demonstrating the usage of the
-different GP implementations.  Link to other GPs here in a note 
+Check the notebooks for detailed demonstrations of the usage of GP functionality
+in PyMC3.
 
 
