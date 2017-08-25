@@ -54,6 +54,7 @@ class MeanFieldGroup(Group):
     def std(self):
         return rho2sd(self.rho)
 
+    @change_flags(compute_test_value='off')
     def __init_group__(self, group):
         super(MeanFieldGroup, self).__init_group__(group)
         if not self._check_user_params():
@@ -111,6 +112,7 @@ class FullRankGroup(Group):
     short_name = 'full_rank'
     alias_names = frozenset(['fr'])
 
+    @change_flags(compute_test_value='off')
     def __init_group__(self, group):
         super(FullRankGroup, self).__init_group__(group)
         if not self._check_user_params():
@@ -224,6 +226,7 @@ class EmpiricalGroup(Group):
     __param_spec__ = dict(histogram=('s', 'd'))
     short_name = 'empirical'
 
+    @change_flags(compute_test_value='off')
     def __init_group__(self, group):
         super(EmpiricalGroup, self).__init_group__(group)
         self._check_trace()
