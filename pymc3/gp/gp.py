@@ -97,7 +97,7 @@ class Latent(Base):
         fcond = gp.conditional("fcond", Xnew=Xnew)
     """
 
-    def __init__(self, mean_func=None, cov_func=None):
+    def __init__(self, mean_func=Zero(), cov_func=Constant(0.0)):
         super(Latent, self).__init__(mean_func, cov_func)
 
     def _build_prior(self, name, X, reparameterize=True, **kwargs):
@@ -218,7 +218,7 @@ class TP(Latent):
 
     For more information, see https://www.cs.cmu.edu/~andrewgw/tprocess.pdf
     """
-    def __init__(self, mean_func=None, cov_func=None, nu=None):
+    def __init__(self, mean_func=Zero(), cov_func=Constant(0.0), nu=None):
         if nu is None:
             raise ValueError("T Process requires a degrees of freedom parameter, 'nu'")
         self.nu = nu
@@ -353,7 +353,7 @@ class Marginal(Base):
         fcond = gp.conditional("fcond", Xnew=Xnew)
     """
 
-    def __init__(self, mean_func=None, cov_func=None):
+    def __init__(self, mean_func=Zero(), cov_func=Constant(0.0)):
         super(Marginal, self).__init__(mean_func, cov_func)
 
     def _build_marginal_likelihood(self, X, noise):
@@ -592,7 +592,7 @@ class MarginalSparse(Marginal):
 
     _available_approx = ("FITC", "VFE", "DTC")
 
-    def __init__(self, mean_func=None, cov_func=None, approx="FITC"):
+    def __init__(self, mean_func=Zero(), cov_func=Constant(0.0), approx="FITC"):
         if approx not in self._available_approx:
             raise NotImplementedError(approx)
         self.approx = approx
