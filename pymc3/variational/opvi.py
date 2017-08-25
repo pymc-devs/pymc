@@ -838,8 +838,8 @@ class Group(object):
         # so I have to to it by myself
         self.ordering = ArrayOrdering([])
         self.replacements = dict()
+        self.group = [get_transformed(var) for var in self.group]
         for var in self.group:
-            var = get_transformed(var)
             begin = self.ddim
             if self.batched:
                 if var.ndim < 1:
@@ -1003,7 +1003,11 @@ class Group(object):
     @node_property
     def symbolic_logq(self):
         if self.islocal:
-            return self.symbolic_logq_not_scaled * self.group[0].scaling
+            s = self.group[0].scaling
+            s = self.to_flat_input(s)
+            s = self.symbolic_single_sample(s)
+            s = self.set_size_and_deterministic(s, 1, 1)
+            return self.symbolic_logq_not_scaled * s
         else:
             return self.symbolic_logq_not_scaled
 

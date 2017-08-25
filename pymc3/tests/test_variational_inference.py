@@ -150,7 +150,7 @@ def test_sample_simple(three_var_approx):
     assert trace[0]['three'].shape == (10, 1, 2)
 
 
-@pytest.fixture('module')
+@pytest.fixture
 def aevb_initial():
     return theano.shared(np.random.rand(3, 7).astype('float32'))
 
@@ -196,9 +196,12 @@ def three_var_aevb_approx(three_var_model, three_var_aevb_groups):
 
 
 def test_sample_aevb(three_var_aevb_approx, aevb_initial):
+    pm.KLqp(three_var_aevb_approx).fit(1, more_replacements={
+        aevb_initial: np.zeros_like(aevb_initial.get_value())[:1]
+    })
     aevb_initial.set_value(np.random.rand(7, 7).astype('float32'))
     trace = three_var_aevb_approx.sample(500)
-    assert set(trace.varnames) == {'one', 'two', 'three'}
+    assert set(trace.varnames) == {'one', 'one_log__', 'two', 'three'}
     assert len(trace) == 500
     assert trace[0]['one'].shape == (7, 2)
     assert trace[0]['two'].shape == (10, )
@@ -206,7 +209,7 @@ def test_sample_aevb(three_var_aevb_approx, aevb_initial):
 
     aevb_initial.set_value(np.random.rand(13, 7).astype('float32'))
     trace = three_var_aevb_approx.sample(500)
-    assert set(trace.varnames) == {'one', 'two', 'three'}
+    assert set(trace.varnames) == {'one', 'one_log__', 'two', 'three'}
     assert len(trace) == 500
     assert trace[0]['one'].shape == (13, 2)
     assert trace[0]['two'].shape == (10,)
@@ -610,7 +613,7 @@ def test_fit_fn_text(method, kwargs, error, another_simple_model):
 @pytest.fixture('module')
 def aevb_model():
     with pm.Model() as model:
-        pm.HalfNormal('x', shape=(2,))
+        pm.HalfNormal('x', shape=(2,), total_size=5)
         pm.Normal('y', shape=(2,))
     x = model.x
     y = model.y
@@ -633,7 +636,7 @@ def test_aevb(inference_spec, aevb_model):
     with model:
         try:
             inference = inference_spec(local_rv={x: {'mu': replace['mu']*5, 'rho': replace['rho']}})
-            approx = inference.fit(3, obj_n_mc=2, more_obj_params=replace.values())
+            approx = inference.fit(3, obj_n_mc=2, more_obj_params=list(replace.values()))
             approx.sample(10)
             approx.sample_node(
                 y,
