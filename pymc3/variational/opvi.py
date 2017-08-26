@@ -1021,11 +1021,14 @@ class Group(object):
         return self.logq / self.symbolic_normalizing_constant
 
     def __str__(self):
-        shp = str(self.ddim)
-        if self.islocal:
-            shp = 'None, ' + shp
-        elif self.batched:
-            shp = str(self.bdim) + shp
+        if self.group is None:
+            shp = 'undefined'
+        else:
+            shp = str(self.ddim)
+            if self.islocal:
+                shp = 'None, ' + shp
+            elif self.batched:
+                shp = str(self.bdim) + ', ' + shp
         return '{cls}[{shp}]'.format(shp=shp, cls=self.__class__.__name__)
 
     @node_property
