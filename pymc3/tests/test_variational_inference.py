@@ -6,6 +6,7 @@ from theano import theano, tensor as tt
 
 
 import pymc3 as pm
+import pymc3.util
 from pymc3.theanof import change_flags
 from pymc3.variational.approximations import (
     MeanFieldGroup, FullRankGroup,
@@ -16,7 +17,7 @@ from pymc3.variational.inference import (
     ADVI, FullRankADVI, SVGD, NFVI, ASVGD,
     fit
 )
-from pymc3.variational import flows, opvi
+from pymc3.variational import flows
 from pymc3.variational.opvi import Approximation, Group
 
 from . import models
@@ -109,7 +110,7 @@ def test_init_groups(three_var_model, raises, grouping):
             if g is None:
                 pass
             else:
-                assert set(g) == set(ig.group)
+                assert set(pm.util.get_transformed(z) for z in g) == set(ig.group)
         else:
             assert approx.ndim == three_var_model.ndim
 
@@ -143,7 +144,7 @@ def three_var_approx(three_var_model, three_var_groups):
 
 def test_sample_simple(three_var_approx):
     trace = three_var_approx.sample(500)
-    assert set(trace.varnames) == {'one', 'two', 'three'}
+    assert set(trace.varnames) == {'one', 'one_log__', 'three', 'two'}
     assert len(trace) == 500
     assert trace[0]['one'].shape == (10, 2)
     assert trace[0]['two'].shape == (10, )
@@ -174,7 +175,7 @@ def parametric_grouped_approxes(request):
 
 @pytest.fixture
 def three_var_aevb_groups(parametric_grouped_approxes, three_var_model, aevb_initial):
-    dsize = np.prod(opvi.get_transformed(three_var_model.one).dshape[1:])
+    dsize = np.prod(pymc3.util.get_transformed(three_var_model.one).dshape[1:])
     cls, kw = parametric_grouped_approxes
     spec = cls.get_param_spec_for(d=dsize, **kw)
     params = dict()
