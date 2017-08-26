@@ -31,21 +31,23 @@ References
     https://arxiv.org/abs/1610.09033 (2016)
 """
 
-import warnings
-import itertools
 import collections
+import itertools
+import warnings
+
 import numpy as np
 import theano
 import theano.tensor as tt
+
 import pymc3 as pm
+from pymc3.util import get_transformed
 from .updates import adagrad_window
-from ..model import modelcontext
 from ..blocking import (
     ArrayOrdering, DictToArrayBijection, VarMap
 )
-from ..util import get_default_varnames
+from ..model import modelcontext
 from ..theanof import tt_rng, memoize, change_flags, identity
-
+from ..util import get_default_varnames
 
 __all__ = [
     'ObjectiveFunction',
@@ -110,12 +112,6 @@ def try_to_set_test_value(node_in, node_out, s):
                 if _s is None:
                     tv = tv[0]
                 o.tag.test_value = tv
-
-
-def get_transformed(z):
-    if hasattr(z, 'transformed'):
-        z = z.transformed
-    return z
 
 
 class ObjectiveUpdates(theano.OrderedUpdates):
