@@ -134,6 +134,7 @@ class ObjectiveFunction(object):
     tf : :class:`TestFunction`
         OPVI TestFunction
     """
+    __hash__ = id
 
     def __init__(self, op, tf):
         self.op = op
@@ -357,6 +358,7 @@ class Operator(object):
     -----
     For implementing Custom operator it is needed to define :func:`Operator.apply` method
     """
+    __hash__ = id
 
     has_test_function = False
     returns_loss = True
@@ -449,6 +451,8 @@ def collect_shared_to_list(params):
 
 
 class TestFunction(object):
+    __hash__ = id
+
     def __init__(self):
         self._inited = False
         self.shared_params = None
@@ -671,6 +675,7 @@ class Group(object):
     -   Kingma, D. P., & Welling, M. (2014).
         `Auto-Encoding Variational Bayes. stat, 1050, 1. <https://arxiv.org/abs/1312.6114>`_
     """
+    __hash__ = id
     # need to be defined in init
     shared_params = None
     symbolic_initial = None
@@ -1066,6 +1071,8 @@ class Approximation(object):
     --------
     See more info about :class:`Group` in it's docstring.
     """
+    __hash__ = id
+
     def __init__(self, groups, model=None):
         self._scale_cost_to_minibatch = theano.shared(np.int8(1))
         model = modelcontext(model)
