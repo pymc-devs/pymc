@@ -55,7 +55,7 @@ class KSDObjective(ObjectiveFunction):
             params = self.test_params + kwargs['more_tf_params']
             grad *= pm.floatX(-1)
         grads = tt.grad(None, params, known_grads={z: grad})
-        return self.approx.set_size_and_deterministic(grads, nmc, 0)
+        return self.approx.set_size_and_deterministic(grads, nmc, 0, kwargs.get('more_replacements'))
 
 
 class KSD(Operator):

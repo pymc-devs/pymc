@@ -217,6 +217,17 @@ def test_sample_aevb(three_var_aevb_approx, aevb_initial):
     assert trace[0]['three'].shape == (10, 1, 2)
 
 
+def test_replacements_in_sample_node_aevb(three_var_aevb_approx, aevb_initial):
+    inp = tt.matrix(dtype='float32')
+    three_var_aevb_approx.sample_node(
+        three_var_aevb_approx.model.one, 2,
+        more_replacements={aevb_initial: inp}).eval({inp: np.random.rand(7, 7).astype('float32')})
+
+    three_var_aevb_approx.sample_node(
+        three_var_aevb_approx.model.one, None,
+        more_replacements={aevb_initial: inp}).eval({inp: np.random.rand(7, 7).astype('float32')})
+
+
 def test_logq_mini_1_sample_1_var(parametric_grouped_approxes, three_var_model):
     cls, kw = parametric_grouped_approxes
     approx = cls([three_var_model.one], model=three_var_model, **kw)
