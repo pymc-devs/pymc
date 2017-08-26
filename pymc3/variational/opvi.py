@@ -210,8 +210,7 @@ class ObjectiveFunction(object):
             more_tf_params = []
         if more_replacements is None:
             more_replacements = dict()
-        tf_target = self(tf_n_mc, more_tf_params=more_tf_params)
-        tf_target = theano.clone(tf_target, more_replacements, strict=False)
+        tf_target = self(tf_n_mc, more_tf_params=more_tf_params, more_replacements=more_replacements)
         grads = pm.updates.get_or_compute_grads(tf_target, self.obj_params + more_tf_params)
         if total_grad_norm_constraint is not None:
             grads = pm.total_norm_constraint(grads, total_grad_norm_constraint)
@@ -228,8 +227,7 @@ class ObjectiveFunction(object):
             more_obj_params = []
         if more_replacements is None:
             more_replacements = dict()
-        obj_target = self(obj_n_mc, more_obj_params=more_obj_params)
-        obj_target = theano.clone(obj_target, more_replacements, strict=False)
+        obj_target = self(obj_n_mc, more_obj_params=more_obj_params, more_replacements=more_replacements)
         grads = pm.updates.get_or_compute_grads(obj_target, self.obj_params + more_obj_params)
         if total_grad_norm_constraint is not None:
             grads = pm.total_norm_constraint(grads, total_grad_norm_constraint)
@@ -329,10 +327,7 @@ class ObjectiveFunction(object):
             raise NotImplementedError('%s does not have loss' % self.op)
         if more_replacements is None:
             more_replacements = {}
-        loss = theano.clone(
-            self(sc_n_mc),
-            more_replacements,
-            strict=False)
+        loss = self(sc_n_mc, more_replacements=more_replacements)
         return theano.function([], loss, **fn_kwargs)
 
     @change_flags(compute_test_value='off')
@@ -342,7 +337,7 @@ class ObjectiveFunction(object):
         else:
             m = 1.
         a = self.op.apply(self.tf)
-        a = self.approx.set_size_and_deterministic(a, nmc, 0)
+        a = self.approx.set_size_and_deterministic(a, nmc, 0, kwargs.get('more_replacements'))
         return m * self.op.T(a)
 
 
@@ -954,21 +949,19 @@ class Group(object):
             return self.symbolic_random
 
     @change_flags(compute_test_value='off')
-    def set_size_and_deterministic(self, node, s, d):
-        flat2rand = self.make_size_and_deterministic_replacements(s, d)
+    def set_size_and_deterministic(self, node, s, d, more_replacements=None):
+        flat2rand = self.make_size_and_deterministic_replacements(s, d, more_replacements)
         node_out = theano.clone(node, flat2rand)
         try_to_set_test_value(node, node_out, s)
         return node_out
 
-    def to_flat_input(self, node, more_replacements=None):
+    def to_flat_input(self, node):
         """Replace vars with flattened view stored in self.inputs
         """
-        if more_replacements:
-            node = theano.clone(node, more_replacements)
         return theano.clone(node, self.replacements, strict=False)
 
-    def symbolic_sample_over_posterior(self, node, more_replacements=None):
-        node = self.to_flat_input(node, more_replacements)
+    def symbolic_sample_over_posterior(self, node):
+        node = self.to_flat_input(node)
 
         def sample(post):
             return theano.clone(node, {self.input: post})
@@ -977,24 +970,23 @@ class Group(object):
             sample, self.symbolic_random)
         return nodes
 
-    def symbolic_single_sample(self, node, more_replacements=None):
-        node = self.to_flat_input(node, more_replacements)
+    def symbolic_single_sample(self, node):
+        node = self.to_flat_input(node)
         return theano.clone(
             node, {self.input: self.symbolic_random[0]}
         )
 
-    def make_size_and_deterministic_replacements(self, s, d):
-        initial_ = self._new_initial(s, d)
-        return collections.OrderedDict({
-            self.symbolic_initial: initial_
-        })
+    def make_size_and_deterministic_replacements(self, s, d, more_replacements=None):
+        initial = self._new_initial(s, d)
+        if more_replacements:
+            initial = theano.clone(initial, more_replacements)
+        return {self.symbolic_initial: initial}
 
     @node_property
     def symbolic_normalizing_constant(self):
         t = self.to_flat_input(
             tt.max([v.scaling for v in self.group]))
         t = self.symbolic_single_sample(t)
-        t = self.set_size_and_deterministic(t, 1, 1)  # remove random, we do not it here at all
         return pm.floatX(t)
 
     @node_property
@@ -1007,7 +999,6 @@ class Group(object):
             s = self.group[0].scaling
             s = self.to_flat_input(s)
             s = self.symbolic_single_sample(s)
-            s = self.set_size_and_deterministic(s, 1, 1)
             return self.symbolic_logq_not_scaled * s
         else:
             return self.symbolic_logq_not_scaled
@@ -1173,31 +1164,32 @@ class Approximation(object):
             g.replacements.items() for g in self.groups
         ))
 
-    def make_size_and_deterministic_replacements(self, s, d):
+    def make_size_and_deterministic_replacements(self, s, d, more_replacements=None):
+        if more_replacements is None:
+            more_replacements = {}
         flat2rand = collections.OrderedDict()
+        flat2rand.update(more_replacements)
         for g in self.groups:
-            flat2rand.update(g.make_size_and_deterministic_replacements(s, d))
+            flat2rand.update(g.make_size_and_deterministic_replacements(s, d, more_replacements))
         return flat2rand
 
     @change_flags(compute_test_value='off')
-    def set_size_and_deterministic(self, node, s, d):
+    def set_size_and_deterministic(self, node, s, d, more_replacements=None):
         optimizations = self.get_optimization_replacements(s, d)
         node = theano.clone(node, optimizations)
-        flat2rand = self.make_size_and_deterministic_replacements(s, d)
+        flat2rand = self.make_size_and_deterministic_replacements(s, d, more_replacements)
         node_out = theano.clone(node, flat2rand)
         try_to_set_test_value(node, node_out, s)
         return node_out
 
-    def to_flat_input(self, node, more_replacements=None):
+    def to_flat_input(self, node):
         """
         Replaces vars with flattened view stored in self.inputs
         """
-        if more_replacements:
-            node = theano.clone(node, more_replacements)
         return theano.clone(node, self.replacements, strict=False)
 
-    def symbolic_sample_over_posterior(self, node, more_replacements=None):
-        node = self.to_flat_input(node, more_replacements)
+    def symbolic_sample_over_posterior(self, node):
+        node = self.to_flat_input(node)
 
         def sample(*post):
             return theano.clone(node, dict(zip(self.inputs, post)))
@@ -1206,8 +1198,8 @@ class Approximation(object):
             sample, self.symbolic_randoms)
         return nodes
 
-    def symbolic_single_sample(self, node, more_replacements=None):
-        node = self.to_flat_input(node, more_replacements)
+    def symbolic_single_sample(self, node):
+        node = self.to_flat_input(node)
         post = [v[0] for v in self.symbolic_randoms]
         inp = self.inputs
         return theano.clone(
@@ -1244,10 +1236,10 @@ class Approximation(object):
         """
         node_in = node
         if size is None:
-            node_out = self.symbolic_single_sample(node, more_replacements)
+            node_out = self.symbolic_single_sample(node)
         else:
-            node_out = self.symbolic_sample_over_posterior(node, more_replacements)
-        node_out = self.set_size_and_deterministic(node_out, size, deterministic)
+            node_out = self.symbolic_sample_over_posterior(node)
+        node_out = self.set_size_and_deterministic(node_out, size, deterministic, more_replacements)
         try_to_set_test_value(node_in, node_out, size)
         return node_out
 
