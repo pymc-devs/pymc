@@ -3,7 +3,6 @@ import sys
 import theano.tensor as tt
 # pylint: disable=unused-import
 import theano
-from theano import tensor as tt
 from theano.tensor import (
     constant, flatten, zeros_like, ones_like, stack, concatenate, sum, prod,
     lt, gt, le, ge, eq, neq, switch, clip, where, and_, or_, abs_, exp, log,
