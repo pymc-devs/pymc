@@ -2,3 +2,4 @@ from . import cov
 from . import mean
 from . import util
 from .gp import Latent, Marginal, MarginalSparse, TP
+from .grid import Grid2DLatent
