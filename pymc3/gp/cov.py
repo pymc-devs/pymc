@@ -2,8 +2,11 @@ import theano
 import theano.tensor as tt
 import numpy as np
 from functools import reduce
+from operator import mul, add
 
-__all__ = ['ExpQuad',
+__all__ = ['Constant',
+           'WhiteNoise',
+           'ExpQuad',
            'RatQuad',
            'Exponential',
            'Matern52',
@@ -11,6 +14,7 @@ __all__ = ['ExpQuad',
            'Linear',
            'Polynomial',
            'Cosine',
+           'Periodic',
            'WarpedInput',
            'Gibbs']
 
@@ -54,6 +58,12 @@ class Covariance(object):
         else:
             return self.full(X, Xs)
 
+    def diag(self, X):
+        raise NotImplementedError
+
+    def full(self, X, Xs):
+        raise NotImplementedError
+
     def _slice(self, X, Xs):
         X = tt.as_tensor_variable(X[:, self.active_dims])
         if Xs is not None:
@@ -91,9 +101,8 @@ class Covariance(object):
 
 class Combination(Covariance):
     def __init__(self, factor_list):
-        input_dim = np.max([factor.input_dim for factor in
-                            filter(lambda x: isinstance(x, Covariance),
-                                   factor_list)])
+        input_dim = max([factor.input_dim for factor in factor_list
+                             if isinstance(factor, Covariance)])
         super(Combination, self).__init__(input_dim=input_dim)
         self.factor_list = []
         for factor in factor_list:
@@ -103,45 +112,36 @@ class Combination(Covariance):
                 self.factor_list.append(factor)
 
     def merge_factors(self, X, Xs=None, diag=False):
-        # this function makes sure diag=True is handled properly
         factor_list = []
         for factor in self.factor_list:
-
-            # if factor is a Covariance
+            # make sure diag=True is handled properly
             if isinstance(factor, Covariance):
                 factor_list.append(factor(X, Xs, diag))
-                continue
-
-            # if factor is a numpy array
-            if isinstance(factor, np.ndarray):
-                if np.ndim(factor) == 2:
-                    if diag:
-                        factor_list.append(np.diag(factor))
-                        continue
-
-            # if factor is a theano variable with ndim attribute
-            if isinstance(factor, (tt.TensorConstant,
+            elif isinstance(factor, np.ndarray):
+                if np.ndim(factor) == 2 and diag:
+                    factor_list.append(np.diag(factor))
+                else:
+                    factor_list.append(factor)
+            elif isinstance(factor, (tt.TensorConstant,
                                      tt.TensorVariable,
                                      tt.sharedvar.TensorSharedVariable)):
-                if factor.ndim == 2:
-                    if diag:
-                        factor_list.append(tt.diag(factor))
-                        continue
-
-            # othewise
-            factor_list.append(factor)
-
+                if factor.ndim == 2 and diag:
+                    factor_list.append(tt.diag(factor))
+                else:
+                    factor_list.append(factor)
+            else:
+                factor_list.append(factor)
         return factor_list
 
 
 class Add(Combination):
     def __call__(self, X, Xs=None, diag=False):
-        return reduce((lambda x, y: x + y), self.merge_factors(X, Xs, diag))
+        return reduce(add, self.merge_factors(X, Xs, diag))
 
 
 class Prod(Combination):
     def __call__(self, X, Xs=None, diag=False):
-        return reduce((lambda x, y: x * y), self.merge_factors(X, Xs, diag))
+        return reduce(mul, self.merge_factors(X, Xs, diag))
 
 
 class Constant(Covariance):
@@ -152,6 +152,7 @@ class Constant(Covariance):
 
        k(x, x') = c
     """
+
     def __init__(self, c):
         super(Constant, self).__init__(1, None)
         self.c = c
@@ -180,13 +181,13 @@ class WhiteNoise(Covariance):
         self.sigma = sigma
 
     def diag(self, X):
-        return tt.square(self.sigma) * tt.ones(tt.stack([X.shape[0], ]))
+        return tt.alloc(tt.square(self.sigma), X.shape[0])
 
     def full(self, X, Xs=None):
         if Xs is None:
             return tt.square(self.sigma) * tt.eye(X.shape[0])
         else:
-            return tt.zeros(tt.stack([X.shape[0], Xs.shape[0]]))
+            return tt.alloc(0.0, X.shape[0], Xs.shape[0])
 
 
 class Stationary(Covariance):
@@ -195,9 +196,9 @@ class Stationary(Covariance):
 
     Parameters
     ----------
-    ls : If input_dim > 1, a list or array of scalars or PyMC3 random
+    ls : Lengthscale.  If input_dim > 1, a list or array of scalars or PyMC3 random
     variables.  If input_dim == 1, a scalar or PyMC3 random variable.
-    ls_inv : 1 / ls.  One of ls or ls_inv must be provided.
+    ls_inv : Inverse lengthscale.  1 / ls.  One of ls or ls_inv must be provided.
     """
 
     def __init__(self, input_dim, ls=None, ls_inv=None, active_dims=None):
@@ -205,7 +206,7 @@ class Stationary(Covariance):
         if (ls is None and ls_inv is None) or (ls is not None and ls_inv is not None):
             raise ValueError("Only one of 'ls' or 'ls_inv' must be provided")
         elif ls_inv is not None:
-            if isinstance(ls_inv, (np.ndarray, list, tuple)):
+            if isinstance(ls_inv, (list, tuple)):
                 ls = 1.0 / np.asarray(ls_inv)
             else:
                 ls = 1.0 / ls_inv
@@ -229,13 +230,20 @@ class Stationary(Covariance):
         return tt.sqrt(r2 + 1e-12)
 
     def diag(self, X):
-        return tt.ones(tt.stack([X.shape[0], ]))
+        return tt.alloc(1.0, X.shape[0])
 
     def full(self, X, Xs=None):
         raise NotImplementedError
 
 
 class Periodic(Stationary):
+    R"""
+    The Periodic kernel.
+
+    .. math::
+       k(x, x') = \mathrm{exp}\left( -\frac{2 \mathrm{sin}^2(\pi |x-x'| \frac{1}{T})}{\ell^2} \right)
+    """
+
     def __init__(self, input_dim, period, ls=None, ls_inv=None, active_dims=None):
         super(Periodic, self).__init__(input_dim, ls, ls_inv, active_dims)
         self.period = period
@@ -274,7 +282,7 @@ class RatQuad(Stationary):
        k(x, x') = \left(1 + \frac{(x - x')^2}{2\alpha\ell^2} \right)^{-\alpha}
     """
 
-    def __init__(self, input_dim, alpha, ls, ls_inv, active_dims=None):
+    def __init__(self, input_dim, alpha, ls=None, ls_inv=None, active_dims=None):
         super(RatQuad, self).__init__(input_dim, ls, ls_inv, active_dims)
         self.alpha = alpha
 
@@ -337,12 +345,12 @@ class Cosine(Stationary):
     The Cosine kernel.
 
     .. math::
-       k(x, x') = \mathrm{cos}\left( \frac{||x - x'||}{ \ell^2} \right)
+       k(x, x') = \mathrm{cos}\left( \pi \frac{||x - x'||}{ \ell^2} \right)
     """
 
     def full(self, X, Xs=None):
         X, Xs = self._slice(X, Xs)
-        return tt.cos(np.pi * self.euclidean_dist(X, Xs))
+        return tt.cos(2.0 * np.pi * self.euclidean_dist(X, Xs))
 
 
 class Linear(Covariance):
@@ -497,8 +505,7 @@ class Gibbs(Covariance):
                 * tt.exp(-1.0 * r2 / (rx2 + rz2)))
 
     def diag(self, X):
-        return tt.ones(tt.stack([X.shape[0], ]))
-
+        return tt.alloc(1.0, X.shape[0])
 
 def handle_args(func, args):
     def f(x, args):
