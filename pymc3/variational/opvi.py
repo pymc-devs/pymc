@@ -958,7 +958,7 @@ class Group(object):
     def to_flat_input(self, node):
         """Replace vars with flattened view stored in self.inputs
         """
-        return theano.clone(node, self.replacements, strict=False)
+        return theano.clone(node, self.replacements)
 
     def symbolic_sample_over_posterior(self, node):
         node = self.to_flat_input(node)
@@ -1186,7 +1186,7 @@ class Approximation(object):
         """
         Replaces vars with flattened view stored in self.inputs
         """
-        return theano.clone(node, self.replacements, strict=False)
+        return theano.clone(node, self.replacements)
 
     def symbolic_sample_over_posterior(self, node):
         node = self.to_flat_input(node)
