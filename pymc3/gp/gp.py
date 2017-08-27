@@ -479,7 +479,7 @@ class Marginal(Base):
         shape = infer_shape(Xnew, kwargs.pop("shape", None))
         return pm.MvNormal(name, mu=mu, chol=chol, shape=shape, **kwargs)
 
-    def predict(self, Xnew, point, diag=False, pred_noise=False, given={}):
+    def predict(self, Xnew, point=None, diag=False, pred_noise=False, given={}):
         R"""
         Return the mean vector and covariance matrix of the conditional
         distribution as numpy arrays, given a `point`, such as the MAP
@@ -702,7 +702,7 @@ class MarginalSparse(Marginal):
         C = solve_lower(L_B, As)
         if diag:
             Kss = self.cov_func(Xnew, diag=True)
-            var = Kss - tt.sum(tt.sqaure(As), 0) + tt.sum(tt.square(C), 0)
+            var = Kss - tt.sum(tt.square(As), 0) + tt.sum(tt.square(C), 0)
             if pred_noise:
                 var += sigma2
             return mu, var
