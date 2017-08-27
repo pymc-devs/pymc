@@ -1077,7 +1077,7 @@ class Approximation(object):
         for g in groups:
             if g.group is None:
                 if rest is not None:
-                    raise GroupError('More that one group is specified for '
+                    raise GroupError('More than one group is specified for '
                                      'the rest variables')
                 else:
                     rest = g
