@@ -312,6 +312,52 @@ class TestExpQuad(object):
         Kd = theano.function([], cov(X, diag=True))()
         npt.assert_allclose(np.diag(K), Kd, atol=1e-5)
 
+    def test_inv_lengthscale(self):
+        X = np.linspace(0, 1, 10)[:, None]
+        with pm.Model() as model:
+            cov = pm.gp.cov.ExpQuad(1, ls_inv=10)
+        K = theano.function([], cov(X))()
+        npt.assert_allclose(K[0, 1], 0.53940, atol=1e-3)
+        K = theano.function([], cov(X, X))()
+        npt.assert_allclose(K[0, 1], 0.53940, atol=1e-3)
+        # check diagonal
+        Kd = theano.function([], cov(X, diag=True))()
+        npt.assert_allclose(np.diag(K), Kd, atol=1e-5)
+
+
+class TestWhiteNoise(object):
+    def test_1d(self):
+        X = np.linspace(0, 1, 10)[:, None]
+        with pm.Model() as model:
+            cov = pm.gp.cov.WhiteNoise(sigma=0.5)
+        K = theano.function([], cov(X))()
+        npt.assert_allclose(K[0, 1], 0.0, atol=1e-3)
+        npt.assert_allclose(K[0, 0], 0.5**2, atol=1e-3)
+        # check diagonal
+        Kd = theano.function([], cov(X, diag=True))()
+        npt.assert_allclose(np.diag(K), Kd, atol=1e-5)
+        # check predict
+        K = theano.function([], cov(X, X))()
+        npt.assert_allclose(K[0, 1], 0.0, atol=1e-3)
+        # white noise predicting should return all zeros
+        npt.assert_allclose(K[0, 0], 0.0, atol=1e-3)
+
+
+class TestConstant(object):
+    def test_1d(self):
+        X = np.linspace(0, 1, 10)[:, None]
+        with pm.Model() as model:
+            cov = pm.gp.cov.Constant(2.5)
+        K = theano.function([], cov(X))()
+        npt.assert_allclose(K[0, 1], 2.5, atol=1e-3)
+        npt.assert_allclose(K[0, 0], 2.5, atol=1e-3)
+        K = theano.function([], cov(X, X))()
+        npt.assert_allclose(K[0, 1], 2.5, atol=1e-3)
+        npt.assert_allclose(K[0, 0], 2.5, atol=1e-3)
+        # check diagonal
+        Kd = theano.function([], cov(X, diag=True))()
+        npt.assert_allclose(np.diag(K), Kd, atol=1e-5)
+
 
 class TestRatQuad(object):
     def test_1d(self):
@@ -378,6 +424,20 @@ class TestCosine(object):
         npt.assert_allclose(K[0, 1], 0.766, atol=1e-3)
         K = theano.function([], cov(X, X))()
         npt.assert_allclose(K[0, 1], 0.766, atol=1e-3)
+        # check diagonal
+        Kd = theano.function([], cov(X, diag=True))()
+        npt.assert_allclose(np.diag(K), Kd, atol=1e-5)
+
+
+class TestPeriodic(object):
+    def test_1d(self):
+        X = np.linspace(0, 1, 10)[:, None]
+        with pm.Model() as model:
+            cov = pm.gp.cov.Periodic(1, 0.1, 0.1)
+        K = theano.function([], cov(X))()
+        npt.assert_allclose(K[0, 1], 0.00288, atol=1e-3)
+        K = theano.function([], cov(X, X))()
+        npt.assert_allclose(K[0, 1], 0.00288, atol=1e-3)
         # check diagonal
         Kd = theano.function([], cov(X, diag=True))()
         npt.assert_allclose(np.diag(K), Kd, atol=1e-5)
@@ -491,7 +551,7 @@ class TestMarginalVsLatent(object):
             cov_func = pm.gp.cov.ExpQuad(3, [0.1, 0.2, 0.3])
             mean_func = pm.gp.mean.Constant(0.5)
             gp = pm.gp.Marginal(mean_func, cov_func)
-            f = gp.marginal_likelihood("f", X, y, noise=0.0)
+            f = gp.marginal_likelihood("f", X, y, noise=0.0, is_observed=False, observed=y)
             p = gp.conditional("p", Xnew)
         self.logp = model.logp({"p": pnew})
         self.X = X
@@ -558,27 +618,28 @@ class TestMarginalVsMarginalSparse(object):
         approx_logp = model.logp({"f": self.y, "p": self.pnew})
         npt.assert_allclose(approx_logp, self.logp, atol=0, rtol=1e-2)
 
-    def testPredictCov(self):
+    @pytest.mark.parametrize('approx', ['FITC', 'VFE', 'DTC'])
+    def testPredictVar(self, approx):
         with pm.Model() as model:
             cov_func = pm.gp.cov.ExpQuad(3, [0.1, 0.2, 0.3])
             mean_func = pm.gp.mean.Constant(0.5)
-            gp = pm.gp.MarginalSparse(mean_func, cov_func, approx="DTC")
-            f = gp.marginal_likelihood("f", self.X, self.X, self.y, self.sigma)
-        mu1, cov1 = self.gp.predict(self.Xnew, pred_noise=True)
-        mu2, cov2 = gp.predict(self.Xnew, pred_noise=True)
-        npt.assert_allclose(mu1, mu2, atol=0, rtol=1e-3)
-        npt.assert_allclose(cov1, cov2, atol=0, rtol=1e-3)
-
-    def testPredictVar(self):
-        with pm.Model() as model:
-            cov_func = pm.gp.cov.ExpQuad(3, [0.1, 0.2, 0.3])
-            mean_func = pm.gp.mean.Constant(0.5)
-            gp = pm.gp.MarginalSparse(mean_func, cov_func, approx="DTC")
+            gp = pm.gp.MarginalSparse(mean_func, cov_func, approx=approx)
             f = gp.marginal_likelihood("f", self.X, self.X, self.y, self.sigma)
         mu1, var1 = self.gp.predict(self.Xnew, diag=True)
         mu2, var2 = gp.predict(self.Xnew, diag=True)
         npt.assert_allclose(mu1, mu2, atol=0, rtol=1e-3)
         npt.assert_allclose(var1, var2, atol=0, rtol=1e-3)
+
+    def testPredictCov(self):
+        with pm.Model() as model:
+            cov_func = pm.gp.cov.ExpQuad(3, [0.1, 0.2, 0.3])
+            mean_func = pm.gp.mean.Constant(0.5)
+            gp = pm.gp.MarginalSparse(mean_func, cov_func, approx="DTC")
+            f = gp.marginal_likelihood("f", self.X, self.X, self.y, self.sigma, is_observed=False)
+        mu1, cov1 = self.gp.predict(self.Xnew, pred_noise=True)
+        mu2, cov2 = gp.predict(self.Xnew, pred_noise=True)
+        npt.assert_allclose(mu1, mu2, atol=0, rtol=1e-3)
+        npt.assert_allclose(cov1, cov2, atol=0, rtol=1e-3)
 
 
 class TestGPAdditive(object):
@@ -621,7 +682,7 @@ class TestGPAdditive(object):
 
     @pytest.mark.parametrize('approx', ['FITC', 'VFE', 'DTC'])
     def testAdditiveMarginalSparse(self, approx):
-        Xu = np.random.randn(10, 1)
+        Xu = np.random.randn(10, 3)
         sigma = 0.1
         with pm.Model() as model1:
             gp1 = pm.gp.MarginalSparse(self.means[0], self.covs[0], approx=approx)
@@ -669,8 +730,8 @@ class TestGPAdditive(object):
             fp2 = gptot.conditional("fp2", self.Xnew)
 
         fp = np.random.randn(self.Xnew.shape[0])
-        npt.assert_allclose(fp1.logp({"fp1": fp}), fp2.logp({"fp2": fp}), atol=0, rtol=1e-2)
-
+        npt.assert_allclose(fp1.logp({"fsum": self.y, "fp1": fp}),
+                            fp2.logp({"fsum": self.y, "fp2": fp}), atol=0, rtol=1e-2)
 
     def testAdditiveSparseRaises(self):
         # cant add different approximations

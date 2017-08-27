@@ -4,7 +4,9 @@ import numpy as np
 from functools import reduce
 from operator import mul, add
 
-__all__ = ['ExpQuad',
+__all__ = ['Constant',
+           'WhiteNoise',
+           'ExpQuad',
            'RatQuad',
            'Exponential',
            'Matern52',
@@ -12,6 +14,7 @@ __all__ = ['ExpQuad',
            'Linear',
            'Polynomial',
            'Cosine',
+           'Periodic',
            'WarpedInput',
            'Gibbs']
 
@@ -54,6 +57,12 @@ class Covariance(object):
             return self.diag(X)
         else:
             return self.full(X, Xs)
+
+    def diag(self, X):
+        raise NotImplementedError
+
+    def full(self, X, Xs):
+        raise NotImplementedError
 
     def _slice(self, X, Xs):
         X = tt.as_tensor_variable(X[:, self.active_dims])
@@ -172,13 +181,13 @@ class WhiteNoise(Covariance):
         self.sigma = sigma
 
     def diag(self, X):
-        return tt.square(self.sigma) * tt.ones(tt.stack([X.shape[0], ]))
+        return tt.alloc(tt.square(self.sigma), X.shape[0])
 
     def full(self, X, Xs=None):
         if Xs is None:
             return tt.square(self.sigma) * tt.eye(X.shape[0])
         else:
-            return tt.zeros(tt.stack([X.shape[0], Xs.shape[0]]))
+            return tt.alloc(0.0, X.shape[0], Xs.shape[0])
 
 
 class Stationary(Covariance):
@@ -187,9 +196,9 @@ class Stationary(Covariance):
 
     Parameters
     ----------
-    ls : If input_dim > 1, a list or array of scalars or PyMC3 random
+    ls : Lengthscale.  If input_dim > 1, a list or array of scalars or PyMC3 random
     variables.  If input_dim == 1, a scalar or PyMC3 random variable.
-    ls_inv : 1 / ls.  One of ls or ls_inv must be provided.
+    ls_inv : Inverse lengthscale.  1 / ls.  One of ls or ls_inv must be provided.
     """
 
     def __init__(self, input_dim, ls=None, ls_inv=None, active_dims=None):
@@ -222,13 +231,19 @@ class Stationary(Covariance):
 
     def diag(self, X):
         return tt.alloc(1.0, X.shape[0])
-        #return tt.ones(tt.stack([X.shape[0], ]))
 
     def full(self, X, Xs=None):
         raise NotImplementedError
 
 
 class Periodic(Stationary):
+    R"""
+    The Periodic kernel.
+
+    .. math::
+       k(x, x') = \mathrm{exp}\left( -\frac{2 \mathrm{sin}^2(\pi |x-x'| \frac{1}{T})}{\ell^2} \right)
+    """
+
     def __init__(self, input_dim, period, ls=None, ls_inv=None, active_dims=None):
         super(Periodic, self).__init__(input_dim, ls, ls_inv, active_dims)
         self.period = period
@@ -490,8 +505,7 @@ class Gibbs(Covariance):
                 * tt.exp(-1.0 * r2 / (rx2 + rz2)))
 
     def diag(self, X):
-        return tt.ones(tt.stack([X.shape[0], ]))
-
+        return tt.alloc(1.0, X.shape[0])
 
 def handle_args(func, args):
     def f(x, args):

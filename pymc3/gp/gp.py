@@ -24,7 +24,7 @@ class Base(object):
 
     def __add__(self, other):
         same_attrs = set(self.__dict__.keys()) == set(other.__dict__.keys())
-        if not isinstance(self, type(other)) and not same_attrs:
+        if not isinstance(self, type(other)) or not same_attrs:
             raise ValueError("cant add different GP types")
         mean_total = self.mean_func + other.mean_func
         cov_total = self.cov_func + other.cov_func
