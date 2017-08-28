@@ -8,6 +8,7 @@ from . import distribution
 
 __all__ = [
     'AR1',
+    'AR',
     'GaussianRandomWalk',
     'GARCH11',
     'EulerMaruyama',
@@ -44,7 +45,7 @@ class AR1(distribution.Continuous):
         boundary = Normal.dist(0., tau=tau_e).logp
 
         innov_like = Normal.dist(k * x_im1, tau=tau_e).logp(x_i)
-        return boundary(x[0]) + tt.sum(innov_like) + boundary(x[-1])
+        return boundary(x[0]) + tt.sum(innov_like)
 
     def _repr_latex_(self, name=None, dist=None):
         if dist is None:
@@ -52,8 +53,79 @@ class AR1(distribution.Continuous):
         k = dist.k
         tau_e = dist.tau_e
         return r'${} \sim \text{{AR1}}(\mathit{{k}}={}, \mathit{{tau_e}}={})$'.format(name,
-                                                get_variable_name(k),
-                                                get_variable_name(tau_e))
+                 get_variable_name(k), get_variable_name(tau_e))
+
+
+class AR(distribution.Continuous):
+    R"""
+    Autoregressive process with p lags.
+
+    .. math::
+
+       x_t = \rho_0 + \rho_1 x_{t-1} + \ldots + \rho_p x_{t-p} + \epsilon_t,
+       \epsilon_t \sim N(0,\sigma^2)
+
+    The innovation can be parameterized either in terms of precision
+    or standard deviation. The link between the two parametrizations is
+    given by
+
+    .. math::
+
+       \tau = \dfrac{1}{\sigma^2}
+
+    Parameters
+    ----------
+    rho : tensor
+        Vector of autoregressive coefficients. 
+    sd : float 
+        Standard deviation of innovation (sd > 0).
+    tau : float
+        Precision of innovation (tau > 0).
+    constant: bool (optional, default = False)
+        Whether to include a constant. 
+    init : distribution
+        distribution for initial values (Defaults to Flat())
+    """
+
+    def __init__(self, rho, sd=None, tau=None,
+                 constant=False, init=Flat.dist(),
+                 *args, **kwargs):
+
+        super(AR, self).__init__(*args, **kwargs)
+        tau, sd = get_tau_sd(tau=tau, sd=sd)
+        self.sd = tt.as_tensor_variable(sd)
+        self.tau = tt.as_tensor_variable(tau)
+
+        self.mean = tt.as_tensor_variable(0.)
+
+        rho = tt.as_tensor_variable(rho, ndim=1)
+        if constant:
+            self.p = rho.shape[0] - 1
+        else:
+            self.p = rho.shape[0]
+
+        self.constant = constant
+        self.rho = rho
+        self.init = init
+
+    def logp(self, value):
+
+        y = value[self.p:]
+        results, _ = scan(lambda l, obs, p: obs[p - l:-l],
+                          outputs_info=None, sequences=[tt.arange(1, self.p + 1)],
+                          non_sequences=[value, self.p])
+        x = tt.stack(results)
+
+        if self.constant:
+            y = y - self.rho[0]
+            eps = y - self.rho[1:].dot(x)
+        else:
+            eps = y - self.rho.dot(x)
+
+        innov_like = Normal.dist(mu=0.0, tau=self.tau).logp(eps)
+        init_like = self.init.logp(value[:self.p])
+
+        return tt.sum(innov_like) + tt.sum(init_like)
 
 
 class GaussianRandomWalk(distribution.Continuous):

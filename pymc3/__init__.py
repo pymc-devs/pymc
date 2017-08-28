@@ -18,8 +18,6 @@ from .vartypes import *
 from .exceptions import *
 from . import sampling
 
-from .debug import *
-
 from .diagnostics import *
 from .backends.tracetab import *
 

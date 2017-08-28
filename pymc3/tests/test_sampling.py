@@ -253,8 +253,8 @@ class TestSamplePPC(object):
 
 
 @pytest.mark.parametrize('method', [
-    'adapt_diag', 'advi', 'ADVI+adapt_diag', 'advi+adapt_diag_grad',
-    'map', 'advi_map', 'nuts'
+    'jitter+adapt_diag', 'adapt_diag', 'advi', 'ADVI+adapt_diag',
+    'advi+adapt_diag_grad', 'map', 'advi_map', 'nuts'
 ])
 def test_exec_nuts_init(method):
     with pm.Model() as model:

@@ -10,7 +10,7 @@ import theano.tensor as tt
 from scipy import stats, linalg
 
 from theano.tensor.nlinalg import det, matrix_inverse, trace
-
+import theano.tensor.slinalg
 import pymc3 as pm
 
 from pymc3.math import tround

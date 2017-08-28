@@ -14,7 +14,7 @@ from ..distributions import (DensityDist, Categorical, Multinomial, VonMises, Di
                              NegativeBinomial, Geometric, Exponential, ExGaussian, Normal,
                              Flat, LKJCorr, Wald, ChiSquared, HalfNormal, DiscreteUniform,
                              Bound, Uniform, Triangular, Binomial, SkewNormal, DiscreteWeibull,
-                             Gumbel, Interpolated, ZeroInflatedBinomial, HalfFlat)
+                             Gumbel, Interpolated, ZeroInflatedBinomial, HalfFlat, AR1)
 from ..distributions import continuous
 from pymc3.theanof import floatX
 from numpy import array, inf, log, exp
@@ -285,6 +285,10 @@ def mvt_logpdf(value, nu, Sigma, mu=0):
     return logp.sum()
 
 
+def AR1_logpdf(value, k, tau_e):
+    return (sp.norm(loc=0,scale=1/np.sqrt(tau_e)).logpdf(value[0]) +
+            sp.norm(loc=k*value[:-1],scale=1/np.sqrt(tau_e)).logpdf(value[1:]).sum())
+
 class Simplex(object):
     def __init__(self, n):
         self.vals = list(simplex_values(n))
@@ -374,7 +378,7 @@ class TestMatchesScipy(SeededTest):
 
     def check_int_to_1(self, model, value, domain, paramdomains):
         pdf = model.fastfn(exp(model.logpt))
-        for pt in product(paramdomains, n_samples=100):
+        for pt in product(paramdomains, n_samples=10):
             pt = Point(pt, value=value.tag.test_value, model=model)
             bij = DictToVarBijection(value, (), pt)
             pdfx = bij.mapf(pdf)
@@ -693,6 +697,11 @@ class TestMatchesScipy(SeededTest):
         self.pymc3_matches_scipy(MvStudentT, RealMatrix(2, n),
                                  {'nu': Rplus, 'Sigma': PdMatrix(n), 'mu': Vector(R, n)},
                                  mvt_logpdf)
+
+    @pytest.mark.parametrize('n',[2,3,4])
+    def test_AR1(self, n):
+        self.pymc3_matches_scipy(AR1, Vector(R, n), {'k': Unit, 'tau_e': Rplus}, AR1_logpdf)
+
 
     @pytest.mark.parametrize('n', [2, 3])
     def test_wishart(self, n):

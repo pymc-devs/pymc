@@ -14,6 +14,7 @@ from pymc3.theanof import floatX
 from scipy.misc import logsumexp
 from scipy.stats import dirichlet
 from scipy.stats.distributions import pareto
+from scipy.optimize import minimize
 
 from .backends import tracetab as ttab
 
@@ -340,8 +341,8 @@ def bpic(trace, model=None):
     return 3 * mean_deviance - 2 * deviance_at_mean
 
 
-def compare(traces, models, ic='WAIC', bootstrap=True, b_samples=1000,
-            alpha=1, seed=None):
+def compare(traces, models, ic='WAIC', method='stacking', b_samples=1000,
+            alpha=1, seed=None, round_to=2):
     """Compare models based on the widely available information criterion (WAIC)
     or leave-one-out (LOO) cross-validation.
     Read more theory here - in a paper by some of the leading authorities on
@@ -355,19 +356,30 @@ def compare(traces, models, ic='WAIC', bootstrap=True, b_samples=1000,
     ic : string
         Information Criterion (WAIC or LOO) used to compare models.
         Default WAIC.
-    bootstrap : boolean
-        If True a Bayesian bootstrap will be used to compute the weights and
-        the standard error of the IC estimate (SE).
+    method : str
+        Method used to estimate the weights for each model. Available options
+        are:
+            - 'stacking' : (default) stacking of predictive distributions.
+            - 'BB-pseudo-BMA' : pseudo-Bayesian Model averaging using Akaike-type
+        weighting. The weights are stabilized using the Bayesian bootstrap
+            - 'pseudo-BMA': pseudo-Bayesian Model averaging using Akaike-type
+        weighting, without Bootstrap stabilization (not recommended)
+
+        For more information read https://arxiv.org/abs/1704.02030
     b_samples: int
-        Number of samples taken by the Bayesian bootstrap estimation
+        Number of samples taken by the Bayesian bootstrap estimation. Only
+        useful when method = 'BB-pseudo-BMA'.
     alpha : float
         The shape parameter in the Dirichlet distribution used for the
-        Bayesian bootstrap. When alpha=1 (default), the distribution is uniform
-        on the simplex. A smaller alpha will keeps the final weights
-        more away from 0 and 1.
+        Bayesian bootstrap. Only useful when method = 'BB-pseudo-BMA'. When
+        alpha=1 (default), the distribution is uniform on the simplex. A
+        smaller alpha will keeps the final weights more away from 0 and 1.
     seed : int or np.random.RandomState instance
-           If int or RandomState, use it for seeding Bayesian bootstrap.
-           Default None the global np.random state is used.
+           If int or RandomState, use it for seeding Bayesian bootstrap. Only
+           useful when method = 'BB-pseudo-BMA'. Default None the global
+           np.random state is used.
+    round_to : int
+        Number of decimals used to round results (default 2).
 
     Returns
     -------
@@ -380,13 +392,13 @@ def compare(traces, models, ic='WAIC', bootstrap=True, b_samples=1000,
     dIC : Relative difference between each IC (WAIC or LOO)
     and the lowest IC (WAIC or LOO).
         It's always 0 for the top-ranked model.
-    weight: Akaike-like weights for each model.
+    weight: Relative weight for each model.
         This can be loosely interpreted as the probability of each model
         (among the compared model) given the data. By default the uncertainty 
         in the weights estimation is considered using Bayesian bootstrap.
     SE : Standard error of the IC estimate.
-        By default these values are estimated using Bayesian bootstrap (best
-        option) or, if bootstrap=False, using a Gaussian approximation
+        If method = BB-pseudo-BMA these values are estimated using Bayesian
+        bootstrap.
     dSE : Standard error of the difference in IC between each model and
     the top-ranked model.
         It's always 0 for the top-ranked model.
@@ -409,6 +421,14 @@ def compare(traces, models, ic='WAIC', bootstrap=True, b_samples=1000,
         raise NotImplementedError(
             'The information criterion {} is not supported.'.format(ic))
 
+    if len(set([len(m.observed_RVs) for m in models])) != 1:
+        raise ValueError(
+            'The number of observed RVs should be the same across all models')
+
+    if method not in ['stacking', 'BB-pseudo-BMA', 'pseudo-BMA']:
+        raise ValueError('The method {}, to compute weights,'
+                         'is not supported.'.format(method))
+
     warns = np.zeros(len(models))
 
     c = 0
@@ -425,45 +445,105 @@ def compare(traces, models, ic='WAIC', bootstrap=True, b_samples=1000,
 
     ics.sort(key=lambda x: x[1][0])
 
-    if bootstrap:
-        N = len(ics[0][1][3])
+    if method == 'stacking':
+        N, K, ic_i = _ic_matrix(ics)
+        exp_ic_i = np.exp(-0.5 * ic_i)
+        Km = K - 1
 
-        ic_i = np.zeros((len(ics), N))
-        for i in range(len(ics)):
-            ic_i[i] = ics[i][1][3] * N
+        def w_fuller(w):
+            return np.concatenate((w, [max(1. - np.sum(w), 0.)]))
+
+        def log_score(w):
+            w_full = w_fuller(w)
+            score = 0.
+            for i in range(N):
+                score += np.log(np.dot(exp_ic_i[i], w_full))
+            return -score
+
+        def gradient(w):
+            w_full = w_fuller(w)
+            grad = np.zeros(Km)
+            for k in range(Km):
+                for i in range(N):
+                    grad[k] += (exp_ic_i[i, k] - exp_ic_i[i, Km]) / \
+                        np.dot(exp_ic_i[i], w_full)
+            return -grad
+
+        theta = np.full(Km, 1. / K)
+        bounds = [(0., 1.) for i in range(Km)]
+        constraints = [{'type': 'ineq', 'fun': lambda x: -np.sum(x) + 1.},
+                       {'type': 'ineq', 'fun': lambda x: np.sum(x)}]
+
+        w = minimize(fun=log_score,
+                     x0=theta,
+                     jac=gradient,
+                     bounds=bounds,
+                     constraints=constraints)
+
+        weights = w_fuller(w['x'])
+        ses = [res[1] for _, res in ics]
+
+    elif method == 'BB-pseudo-BMA':
+        N, K, ic_i = _ic_matrix(ics)
+        ic_i = ic_i * N
 
         b_weighting = dirichlet.rvs(alpha=[alpha] * N, size=b_samples,
                                     random_state=seed)
-        weights = np.zeros((b_samples, len(ics)))
-        z_bs = np.zeros((b_samples, len(ics)))
+        weights = np.zeros((b_samples, K))
+        z_bs = np.zeros_like(weights)
         for i in range(b_samples):
-            z_b = np.dot(ic_i, b_weighting[i])
+            z_b = np.dot(b_weighting[i], ic_i)
             u_weights = np.exp(-0.5 * (z_b - np.min(z_b)))
             z_bs[i] = z_b
             weights[i] = u_weights / np.sum(u_weights)
 
-        weights_mean = weights.mean(0)
-        se = z_bs.std(0)
+        weights = weights.mean(0)
+        ses = z_bs.std(0)
+
+    elif method == 'pseudo-BMA':
+        min_ic = ics[0][1][0]
+        Z = np.sum([np.exp(-0.5 * (x[1][0] - min_ic)) for x in ics])
+        weights = []
+        ses = []
+        for _, res in ics:
+            weights.append(np.exp(-0.5 * (res[0] - min_ic)) / Z)
+            ses.append(res[1])
+
+    if np.any(weights):
         for i, (idx, res) in enumerate(ics):
             diff = res[3] - ics[0][1][3]
             d_ic = np.sum(diff)
             d_se = np.sqrt(len(diff) * np.var(diff))
-            df_comp.at[idx] = (res[0], res[2], d_ic, weights_mean[i],
-                               se[i], d_se, warns[idx])
+            se = ses[i]
+            weight = weights[i]
+            df_comp.at[idx] = (round(res[0], round_to),
+                               round(res[2], round_to),
+                               round(d_ic, round_to),
+                               round(weight, round_to),
+                               round(se, round_to),
+                               round(d_se, round_to),
+                               warns[idx])
 
-    else:
-        min_ic = ics[0][1][0]
-        Z = np.sum([np.exp(-0.5 * (x[1][0] - min_ic)) for x in ics])
+        return df_comp.sort_values(by=ic)
 
-        for idx, res in ics:
-            diff = res[3] - ics[0][1][3]
-            d_ic = np.sum(diff)
-            d_se = np.sqrt(len(diff) * np.var(diff))
-            weight = np.exp(-0.5 * (res[0] - min_ic)) / Z
-            df_comp.at[idx] = (res[0], res[2], d_ic, weight, res[1],
-                               d_se, warns[idx])
 
-    return df_comp.sort_values(by=ic)
+def _ic_matrix(ics):
+    """Store the previously computed pointwise predictive accuracy values (ics)
+    in a 2D matrix array.
+    """
+    N = len(ics[0][1][3])
+    K = len(ics)
+    ic_i = np.zeros((N, K))
+
+    for i in range(K):
+        ic = ics[i][1][3]
+        if len(ic) != N:
+            raise ValueError('The number of observations should be the same '
+                             'across all models')
+        else:
+            ic_i[:, i] = ic
+
+    return N, K, ic_i
 
 
 def make_indices(dimensions):

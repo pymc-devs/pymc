@@ -1,3 +1,4 @@
+import theano
 import theano.tensor as tt
 
 from ..model import FreeRV
@@ -79,6 +80,9 @@ class TransformedDistribution(distribution.Distribution):
     def logp(self, x):
         return (self.dist.logp(self.transform_used.backward(x)) +
                 self.transform_used.jacobian_det(x))
+
+    def logp_nojac(self, x):
+        return self.dist.logp(self.transform_used.backward(x))
 
 transform = Transform
 
@@ -246,7 +250,7 @@ class StickBreaking(Transform):
 
     name = "stickbreaking"
 
-    def __init__(self, eps=0.0):
+    def __init__(self, eps=floatX(np.finfo(theano.config.floatX).eps)):
         self.eps = eps
 
     def forward(self, x_):
@@ -259,7 +263,7 @@ class StickBreaking(Transform):
         k = tt.arange(Km1)[(slice(None), ) + (None, ) * (x.ndim - 1)]
         eq_share = logit(1. / (Km1 + 1 - k).astype(str(x_.dtype)))
         y = logit(z) - eq_share
-        return y.T
+        return floatX(y.T)
 
     def forward_val(self, x, point=None):
         return self.forward(x)
@@ -274,7 +278,7 @@ class StickBreaking(Transform):
         yu = tt.concatenate([tt.ones(y[:1].shape), 1 - z])
         S = tt.extra_ops.cumprod(yu, 0)
         x = S * yl
-        return x.T
+        return floatX(x.T)
 
     def jacobian_det(self, y_):
         y = y_.T
