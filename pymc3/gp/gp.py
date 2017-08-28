@@ -502,8 +502,7 @@ class Marginal(Base):
             Same as `conditional` method.
         """
         mu, cov = self.predictt(Xnew, diag, pred_noise, given)
-        mu, cov = draw_values([mu, cov], point=point)
-        return mu, cov
+        return draw_values([mu, cov], point=point)
 
     def predictt(self, Xnew, diag=False, pred_noise=False, given={}):
         R"""

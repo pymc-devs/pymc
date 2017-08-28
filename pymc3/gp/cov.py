@@ -185,7 +185,7 @@ class WhiteNoise(Covariance):
 
     def full(self, X, Xs=None):
         if Xs is None:
-            return tt.square(self.sigma) * tt.eye(X.shape[0])
+            return tt.diag(self.diag(X))
         else:
             return tt.alloc(0.0, X.shape[0], Xs.shape[0])
 
