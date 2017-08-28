@@ -80,7 +80,7 @@ def test_tracker_callback():
 @pytest.fixture('module')
 def three_var_model():
     with pm.Model() as model:
-        pm.HalfNormal('one', shape=(10, 2))
+        pm.HalfNormal('one', shape=(10, 2), total_size=100)
         pm.Normal('two', shape=(10, ))
         pm.Normal('three', shape=(10, 1, 2))
     return model
@@ -226,6 +226,33 @@ def test_replacements_in_sample_node_aevb(three_var_aevb_approx, aevb_initial):
     three_var_aevb_approx.sample_node(
         three_var_aevb_approx.model.one, None,
         more_replacements={aevb_initial: inp}).eval({inp: np.random.rand(7, 7).astype('float32')})
+
+
+def test_vae():
+    minibatch_size = 10
+    data = np.random.rand(100).astype('float32')
+    x_mini = pm.Minibatch(data, minibatch_size)
+    x_inp = tt.vector()
+    x_inp.tag.test_value = data[:minibatch_size]
+
+    ae = theano.shared(np.asarray([.1, .1], 'float32'))
+    be = theano.shared(np.asarray(1., dtype='float32'))
+
+    ad = theano.shared(np.asarray(1., dtype='float32'))
+    bd = theano.shared(np.asarray(1., dtype='float32'))
+
+    enc = x_inp.dimshuffle(0, 'x') * ae.dimshuffle('x', 0) + be
+    mu,  rho = enc[:, 0], enc[:, 1]
+
+    with pm.Model():
+        # Hidden variables
+        zs = pm.Normal('zs', mu=0, sd=1, shape=minibatch_size, dtype='float32')
+        dec = zs * ad + bd
+        # Observation model
+        pm.Normal('xs_', mu=dec, sd=0.1, observed=x_inp, dtype='float32')
+
+        pm.fit(1, local_rv={zs: dict(mu=mu, rho=rho)},
+               more_replacements={x_inp: x_mini}, more_obj_params=[ae, be, ad, bd])
 
 
 def test_logq_mini_1_sample_1_var(parametric_grouped_approxes, three_var_model):

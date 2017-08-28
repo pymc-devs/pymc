@@ -884,9 +884,11 @@ class Group(object):
         else:
             return collect_shared_to_list(self.shared_params)
 
-    def _new_initial_shape(self, size, dim):
+    def _new_initial_shape(self, size, dim, more_replacements):
         if self.batched:
-            return tt.stack([size, self.bdim, dim])
+            bdim = tt.as_tensor(self.bdim)
+            bdim = theano.clone(bdim, more_replacements)
+            return tt.stack([size, bdim, dim])
         else:
             return tt.stack([size, dim])
 
@@ -908,7 +910,7 @@ class Group(object):
     def ddim(self):
         return self.ordering.size
 
-    def _new_initial(self, size, deterministic):
+    def _new_initial(self, size, deterministic, more_replacements=None):
         if size is None:
             size = 1
         if not isinstance(deterministic, tt.Variable):
@@ -921,7 +923,7 @@ class Group(object):
         dtype = self.symbolic_initial.dtype
         dim = tt.as_tensor(dim)
         size = tt.as_tensor(size)
-        shape = self._new_initial_shape(size, dim)
+        shape = self._new_initial_shape(size, dim, more_replacements)
         # apply optimizations if possible
         if not isinstance(deterministic, tt.Variable):
             if deterministic:
@@ -951,33 +953,38 @@ class Group(object):
     @change_flags(compute_test_value='off')
     def set_size_and_deterministic(self, node, s, d, more_replacements=None):
         flat2rand = self.make_size_and_deterministic_replacements(s, d, more_replacements)
-        node_out = theano.clone(node, flat2rand)
+        node_out = theano.clone(node, flat2rand, strict=False)
         try_to_set_test_value(node, node_out, s)
         return node_out
 
     def to_flat_input(self, node):
         """Replace vars with flattened view stored in self.inputs
         """
-        return theano.clone(node, self.replacements)
+        return theano.clone(node, self.replacements, strict=False)
 
     def symbolic_sample_over_posterior(self, node):
         node = self.to_flat_input(node)
+        random = self.symbolic_random.astype(self.symbolic_initial.dtype)
+        random = tt.patternbroadcast(random, self.symbolic_initial.broadcastable)
 
         def sample(post):
             return theano.clone(node, {self.input: post})
 
         nodes, _ = theano.scan(
-            sample, self.symbolic_random)
+            sample, random)
         return nodes
 
     def symbolic_single_sample(self, node):
         node = self.to_flat_input(node)
+        random = self.symbolic_random.astype(self.symbolic_initial.dtype)
+        random = tt.patternbroadcast(random, self.symbolic_initial.broadcastable)
         return theano.clone(
-            node, {self.input: self.symbolic_random[0]}
+            node, {self.input: random[0]}
         )
 
     def make_size_and_deterministic_replacements(self, s, d, more_replacements=None):
-        initial = self._new_initial(s, d)
+        initial = self._new_initial(s, d, more_replacements)
+        initial = tt.patternbroadcast(initial, self.symbolic_initial.broadcastable)
         if more_replacements:
             initial = theano.clone(initial, more_replacements)
         return {self.symbolic_initial: initial}
@@ -1072,6 +1079,7 @@ class Approximation(object):
         model = modelcontext(model)
         if not model.free_RVs:
             raise TypeError('Model does not have FreeRVs')
+        self.groups = list()
         seen = set()
         rest = None
         for g in groups:
@@ -1085,12 +1093,13 @@ class Approximation(object):
                 if set(g.group) & seen:
                     raise GroupError('Found duplicates in groups')
                 seen.update(g.group)
+                self.groups.append(g)
         if set(model.free_RVs) - seen:
             if rest is None:
                 raise GroupError('No approximation is specified for the rest variables')
             else:
                 rest.__init_group__(list(set(model.free_RVs) - seen))
-        self.groups = groups
+                self.groups.append(rest)
         self.model = model
 
     @property
@@ -1168,17 +1177,17 @@ class Approximation(object):
         if more_replacements is None:
             more_replacements = {}
         flat2rand = collections.OrderedDict()
-        flat2rand.update(more_replacements)
         for g in self.groups:
             flat2rand.update(g.make_size_and_deterministic_replacements(s, d, more_replacements))
+        flat2rand.update(more_replacements)
         return flat2rand
 
     @change_flags(compute_test_value='off')
     def set_size_and_deterministic(self, node, s, d, more_replacements=None):
         optimizations = self.get_optimization_replacements(s, d)
-        node = theano.clone(node, optimizations)
         flat2rand = self.make_size_and_deterministic_replacements(s, d, more_replacements)
-        node_out = theano.clone(node, flat2rand)
+        node = theano.clone(node, optimizations)
+        node_out = theano.clone(node, flat2rand, strict=False)
         try_to_set_test_value(node, node_out, s)
         return node_out
 
