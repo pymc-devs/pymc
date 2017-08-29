@@ -1,14 +1,11 @@
 import numpy as np
-
-import theano
 import theano.tensor as tt
-import theano.tensor.slinalg
 
 import pymc3 as pm
 from pymc3.gp.cov import Covariance, Constant
 from pymc3.gp.mean import Zero
 from pymc3.gp.util import (conditioned_vars,
-    infer_shape, stabilize, cholesky, solve, solve_lower, solve_upper)
+    infer_shape, stabilize, cholesky, solve_lower, solve_upper)
 from pymc3.distributions import draw_values
 
 __all__ = ['Latent', 'Marginal', 'TP', 'MarginalSparse']
