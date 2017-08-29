@@ -239,7 +239,6 @@ class ObjectiveFunction(object):
         if self.op.returns_loss:
             updates.loss = obj_target
 
-    @memoize
     @change_flags(compute_test_value='off')
     def step_function(self, obj_n_mc=None, tf_n_mc=None,
                       obj_optimizer=adagrad_window, test_optimizer=adagrad_window,
@@ -303,7 +302,6 @@ class ObjectiveFunction(object):
             step_fn = theano.function([], None, updates=updates, **fn_kwargs)
         return step_fn
 
-    @memoize
     @change_flags(compute_test_value='off')
     def score_function(self, sc_n_mc=None, more_replacements=None, fn_kwargs=None):   # pragma: no cover
         R"""Compile scoring function that operates which takes no inputs and returns Loss
