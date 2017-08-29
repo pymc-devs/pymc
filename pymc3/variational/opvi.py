@@ -884,7 +884,7 @@ class Group(object):
         else:
             return collect_shared_to_list(self.shared_params)
 
-    def _new_initial_shape(self, size, dim, more_replacements):
+    def _new_initial_shape(self, size, dim, more_replacements=None):
         if self.batched:
             bdim = tt.as_tensor(self.bdim)
             bdim = theano.clone(bdim, more_replacements)
