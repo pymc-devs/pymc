@@ -15,9 +15,10 @@ __all__ = ['Latent', 'Marginal', 'TP', 'MarginalSparse']
 
 
 class Base(object):
-    """
+    R"""
     Base class.
     """
+
     def __init__(self, mean_func=Zero(), cov_func=Constant(0.0)):
         self.mean_func = mean_func
         self.cov_func = cov_func
@@ -54,7 +55,7 @@ class Latent(Base):
 
     .. math::
 
-    f(x) \sim \mathcal{GP}\left(\mu(x), k(x, x')\right)
+       f(x) \sim \mathcal{GP}\left(\mu(x), k(x, x')\right)
 
     Use the `prior` and `conditional` methods to actually construct random
     variables representing the unknown, or latent, function whose
@@ -70,31 +71,31 @@ class Latent(Base):
     mean_func : None, instance of Mean
         The mean function.  Defaults to zero.
 
-    Examples
+    Example
     --------
     .. code:: python
 
-    # A one dimensional column vector of inputs.
-    X = np.linspace(0, 1, 10)[:, None]
+        # A one dimensional column vector of inputs.
+        X = np.linspace(0, 1, 10)[:, None]
 
-    with pm.Model() as model:
-        # Specify the covariance function.
-        cov_func = pm.gp.cov.ExpQuad(1, ls=0.1)
+        with pm.Model() as model:
+            # Specify the covariance function.
+            cov_func = pm.gp.cov.ExpQuad(1, ls=0.1)
 
-        # Specify the GP.  The default mean function is `Zero`.
-        gp = pm.gp.Latent(cov_func=cov_func)
+            # Specify the GP.  The default mean function is `Zero`.
+            gp = pm.gp.Latent(cov_func=cov_func)
 
-        # Place a GP prior over the function f.
-        f = gp.prior("f", X=X)
+            # Place a GP prior over the function f.
+            f = gp.prior("f", X=X)
 
-    ...
+        ...
 
-    # After fitting or sampling, specify the distribution
-    # at new points with .conditional
-    Xnew = np.linspace(-1, 2, 50)[:, None]
+        # After fitting or sampling, specify the distribution
+        # at new points with .conditional
+        Xnew = np.linspace(-1, 2, 50)[:, None]
 
-    with model:
-        fcond = gp.conditional("fcond", Xnew=Xnew)
+        with model:
+            fcond = gp.conditional("fcond", Xnew=Xnew)
     """
 
     def __init__(self, mean_func=Zero(), cov_func=Constant(0.0)):
@@ -119,7 +120,7 @@ class Latent(Base):
 
         .. math::
 
-        f \mid X \sim \text{MvNormal}\left(\boldsymbol\mu, \mathbf{K}\right)
+           f \mid X \sim \text{MvNormal}\left( \mu(X), k(X, X') \right)
 
         Parameters
         ----------
@@ -133,6 +134,7 @@ class Latent(Base):
         **kwargs
             Extra keyword arguments that are passed to distribution constructor.
         """
+
         f = self._build_prior(name, X, reparameterize, **kwargs)
         self.X = X
         self.f = f
@@ -171,7 +173,9 @@ class Latent(Base):
 
         .. math::
 
-        f^* \mid f, X, X_{\text{new}} \sim \mathcal{GP}\left(\mu(x), k(x, x')\right)
+           f_* \mid f, X, X_* \sim \mathcal{GP}\left(
+               K(X_*, X) K(X, X)^{-1} f \,,
+               K(X_*, X_*) - K(X_*, X) K(X, X)^{-1} K(X, X_*) \right)
 
         Parameters
         ----------
@@ -187,8 +191,9 @@ class Latent(Base):
             Extra keyword arguments that are passed to `MvNormal` distribution
             constructor.
         """
-        givens = self._get_given_vals(given)
-        mu, cov = self._build_conditional(Xnew, *givens)
+
+        X, f, cov_total, mean_total = self._get_given_vals(given)
+        mu, cov = self._build_conditional(Xnew, X, f, cov_total, mean_total)
         chol = cholesky(stabilize(cov))
         shape = infer_shape(Xnew, kwargs.pop("shape", None))
         return pm.MvNormal(name, mu=mu, chol=chol, shape=shape, **kwargs)
@@ -205,7 +210,8 @@ class TP(Latent):
 
     .. math::
 
-    f(x) \sim \mathcal{TP}\left(\mu(x), k(x, x'),\, \nu \right)
+       f(X) \sim \mathcal{TP}\left( \mu(X), k(X, X'), \\nu \\right)
+
 
     Parameters
     ----------
@@ -218,6 +224,7 @@ class TP(Latent):
 
     For more information, see https://www.cs.cmu.edu/~andrewgw/tprocess.pdf
     """
+
     def __init__(self, mean_func=Zero(), cov_func=Constant(0.0), nu=None):
         if nu is None:
             raise ValueError("T Process requires a degrees of freedom parameter, 'nu'")
@@ -245,10 +252,6 @@ class TP(Latent):
         locations `X`.  This is the prior probability over the space
         of functions described by its mean and covariance function.
 
-        .. math::
-
-        f \mid X \sim \text{MvStudentT}\left(\boldsymbol\mu, \mathbf{K}, \nu \right)
-
         Parameters
         ----------
         name : string
@@ -261,6 +264,7 @@ class TP(Latent):
         **kwargs
             Extra keyword arguments that are passed to distribution constructor.
         """
+
         f = self._build_prior(name, X, reparameterize, **kwargs)
         self.X = X
         self.f = f
@@ -287,10 +291,6 @@ class TP(Latent):
         the TP prior was over, the conditional distribution over a
         set of new points, `f_*` is
 
-        .. math::
-
-        f^* \mid f, X, X_{\text{new}} \sim \mathcal{TP}\left(\mu(x), k(x, x'), \nu, \right)
-
         Parameters
         ----------
         name : string
@@ -301,6 +301,7 @@ class TP(Latent):
             Extra keyword arguments that are passed to `MvNormal` distribution
             constructor.
         """
+
         X = self.X
         f = self.f
         nu2, mu, covT = self._build_conditional(Xnew, X, f)
@@ -325,32 +326,32 @@ class Marginal(Base):
     mean_func : None, instance of Mean
         The mean function.  Defaults to zero.
 
-    Examples
+    Example
     --------
     .. code:: python
 
-    # A one dimensional column vector of inputs.
-    X = np.linspace(0, 1, 10)[:, None]
+        # A one dimensional column vector of inputs.
+        X = np.linspace(0, 1, 10)[:, None]
 
-    with pm.Model() as model:
-        # Specify the covariance function.
-        cov_func = pm.gp.cov.ExpQuad(1, ls=0.1)
+        with pm.Model() as model:
+            # Specify the covariance function.
+            cov_func = pm.gp.cov.ExpQuad(1, ls=0.1)
 
-        # Specify the GP.  The default mean function is `Zero`.
-        gp = pm.gp.Latent(cov_func=cov_func)
+            # Specify the GP.  The default mean function is `Zero`.
+            gp = pm.gp.Latent(cov_func=cov_func)
 
-        # Place a GP prior over the function f.
-        sigma = pm.HalfCauchy("sigma", beta=3)
-        y_ = gp.marginal_likelihood("y", X=X, y=y, noise=sigma)
+            # Place a GP prior over the function f.
+            sigma = pm.HalfCauchy("sigma", beta=3)
+            y_ = gp.marginal_likelihood("y", X=X, y=y, noise=sigma)
 
-    ...
+        ...
 
-    # After fitting or sampling, specify the distribution
-    # at new points with .conditional
-    Xnew = np.linspace(-1, 2, 50)[:, None]
+        # After fitting or sampling, specify the distribution
+        # at new points with .conditional
+        Xnew = np.linspace(-1, 2, 50)[:, None]
 
-    with model:
-        fcond = gp.conditional("fcond", Xnew=Xnew)
+        with model:
+            fcond = gp.conditional("fcond", Xnew=Xnew)
     """
 
     def __init__(self, mean_func=Zero(), cov_func=Constant(0.0)):
@@ -371,7 +372,7 @@ class Marginal(Base):
 
         .. math::
 
-        y \mid X,\theta \sim \int p(y \mid f,\, X,\, \theta) \, p(f \mid X,\, \theta) \, df
+           y \mid X,\theta \sim \int p(y \mid f,\, X,\, \theta) \, p(f \mid X,\, \theta) \, df
 
         Parameters
         ----------
@@ -393,6 +394,7 @@ class Marginal(Base):
             Extra keyword arguments that are passed to `MvNormal` distribution
             constructor.
         """
+
         if not isinstance(noise, Covariance):
             noise = pm.gp.cov.WhiteNoise(noise)
         mu, cov = self._build_marginal_likelihood(X, noise)
@@ -453,7 +455,9 @@ class Marginal(Base):
 
         .. math::
 
-        f^* \mid f, X, X_{\text{new}} \sim \mathcal{GP}\left(\mu(x), k(x, x')\right)
+           f_* \mid f, X, X_* \sim \mathcal{GP}\left(
+               K(X_*, X) [K(X, X) + K_{n}(X, X)]^{-1} f \,,
+               K(X_*, X_*) - K(X_*, X) [K(X, X) + K_{n}(X, X)]^{-1} K(X, X_*) \right)
 
         Parameters
         ----------
@@ -473,8 +477,10 @@ class Marginal(Base):
             Extra keyword arguments that are passed to `MvNormal` distribution
             constructor.
         """
-        givens = self._get_given_vals(given)
-        mu, cov = self._build_conditional(Xnew, *givens, pred_noise, diag=False)
+
+        X, y, noise, cov_total, mean_total = self._get_given_vals(given)
+        mu, cov = self._build_conditional(Xnew, X, y, noise, cov_total, mean_total,
+                                          pred_noise, diag=False)
         chol = cholesky(cov)
         shape = infer_shape(Xnew, kwargs.pop("shape", None))
         return pm.MvNormal(name, mu=mu, chol=chol, shape=shape, **kwargs)
@@ -501,6 +507,7 @@ class Marginal(Base):
         given : dict
             Same as `conditional` method.
         """
+
         mu, cov = self.predictt(Xnew, diag, pred_noise, given)
         return draw_values([mu, cov], point=point)
 
@@ -523,8 +530,10 @@ class Marginal(Base):
         given : dict
             Same as `conditional` method.
         """
-        givens = self._get_given_vals(given)
-        mu, cov = self._build_conditional(Xnew, *givens, pred_noise, diag)
+
+        X, y, noise, cov_total, mean_total = self._get_given_vals(given)
+        mu, cov = self._build_conditional(Xnew, X, y, noise, cov_total,
+                                          mean_total, pred_noise, diag)
         return mu, cov
 
 
@@ -541,12 +550,10 @@ class MarginalSparse(Marginal):
     - FITC: Fully independent Training Conditional
     - VFE: Variational Free Energy
 
-    For more information on these approximations, see e.g.
-
-    - "A unifying view of sparse approximate Gaussian process regression",
-    2005, Quinonero-Candela, Rasmussen
-    - "Variational Learning of Inducing Variables in Sparse Gaussian Processes",
-    2009, Titsias
+    For more information on these approximations, see e.g. "A unifying view of
+    sparse approximate Gaussian process regression", 2005, *Quinonero-Candela, Rasmussen*,
+    and "Variational Learning of Inducing Variables in Sparse Gaussian Processes",
+    2009, *Titsias*.
 
     Parameters
     ----------
@@ -557,37 +564,36 @@ class MarginalSparse(Marginal):
     approx : string
         The approximation to use.  Must be one of `VFE`, `FITC` or `DTC`.
 
-    Examples
+    Example
     --------
     .. code:: python
 
-    # A one dimensional column vector of inputs.
-    X = np.linspace(0, 1, 10)[:, None]
+        # A one dimensional column vector of inputs.
+        X = np.linspace(0, 1, 10)[:, None]
 
-    # A smaller set of inducing inputs
-    Xu = np.linspace(0, 1, 5)[:, None]
+        # A smaller set of inducing inputs
+        Xu = np.linspace(0, 1, 5)[:, None]
 
-    with pm.Model() as model:
-        # Specify the covariance function.
-        cov_func = pm.gp.cov.ExpQuad(1, ls=0.1)
+        with pm.Model() as model:
+            # Specify the covariance function.
+            cov_func = pm.gp.cov.ExpQuad(1, ls=0.1)
 
-        # Specify the GP.  The default mean function is `Zero`.
-        gp = pm.gp.Latent(cov_func=cov_func, approx="FITC")
+            # Specify the GP.  The default mean function is `Zero`.
+            gp = pm.gp.Latent(cov_func=cov_func, approx="FITC")
 
-        # Place a GP prior over the function f.
-        sigma = pm.HalfCauchy("sigma", beta=3)
-        y_ = gp.marginal_likelihood("y", X=X, Xu=Xu, y=y, sigma=sigma)
+            # Place a GP prior over the function f.
+            sigma = pm.HalfCauchy("sigma", beta=3)
+            y_ = gp.marginal_likelihood("y", X=X, Xu=Xu, y=y, sigma=sigma)
 
-    ...
+        ...
 
-    # After fitting or sampling, specify the distribution
-    # at new points with .conditional
-    Xnew = np.linspace(-1, 2, 50)[:, None]
+        # After fitting or sampling, specify the distribution
+        # at new points with .conditional
+        Xnew = np.linspace(-1, 2, 50)[:, None]
 
-    with model:
-        fcond = gp.conditional("fcond", Xnew=Xnew)
+        with model:
+            fcond = gp.conditional("fcond", Xnew=Xnew)
     """
-
 
     _available_approx = ("FITC", "VFE", "DTC")
 
@@ -638,12 +644,8 @@ class MarginalSparse(Marginal):
     def marginal_likelihood(self, name, X, Xu, y, sigma, is_observed=True, **kwargs):
         R"""
 	Returns the approximate marginal likelihood distribution, given the input
-        locations `X` and the data `y`.  This is integral over the product of the GP
-        prior and a normal likelihood.
-
-        .. math::
-
-        y \mid X,\theta \sim \int p(y \mid f,\, X,\, \theta) \, p(f \mid X,\, \theta) \, df
+        locations `X`, inducing point locations `Xu`, data `y`, and white noise
+        standard deviations `sigma`.
 
         Parameters
         ----------
@@ -666,6 +668,7 @@ class MarginalSparse(Marginal):
             Extra keyword arguments that are passed to `MvNormal` distribution
             constructor.
         """
+
         self.X = X
         self.Xu = Xu
         self.y = y
@@ -727,14 +730,8 @@ class MarginalSparse(Marginal):
 
     def conditional(self, name, Xnew, pred_noise=False, given={}, **kwargs):
         R"""
-	Returns the conditional distribution evaluated over new input
-        locations `Xnew`.  Given a set of function values `f` that
-        the GP prior was over, the conditional distribution over a
-        set of new points, `f_*` is
-
-        .. math::
-
-        f^* \mid f, X, X_{\text{new}} \sim \mathcal{GP}\left(\mu(x), k(x, x')\right)
+	Returns the approximate conditional distribution of the GP evaluated over
+        new input locations `Xnew`.
 
         Parameters
         ----------
@@ -747,15 +744,17 @@ class MarginalSparse(Marginal):
             Whether or not observation noise is included in the conditional.
             Default is `False`.
         given : dict
-            Can optionally take as key value pairs: `X`, `y`, `noise`,
+            Can optionally take as key value pairs: `X`, `Xu`, `y`, `noise`,
             and `gp`.  See the section in the documentation on additive GP
             models in PyMC3 for more information.
         **kwargs
             Extra keyword arguments that are passed to `MvNormal` distribution
             constructor.
         """
-        givens = self._get_given_vals(given)
-        mu, cov = self._build_conditional(Xnew, *givens, pred_noise, diag=False)
+
+        X, Xu, y, sigma, cov_total, mean_total = self._get_given_vals(given)
+        mu, cov = self._build_conditional(Xnew, X, Xu, y, sigma, cov_total,
+                                          mean_total, pred_noise, diag=False)
         chol = cholesky(cov)
         shape = infer_shape(Xnew, kwargs.pop("shape", None))
         return pm.MvNormal(name, mu=mu, chol=chol, shape=shape, **kwargs)
