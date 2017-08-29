@@ -131,7 +131,7 @@ class Inference(object):
                 if np.isnan(self.approx.params[0].get_value()).any():
                     raise FloatingPointError('NaN occurred in optimization.')
                 for callback in callbacks:
-                    callback(self.approx, None, i)
+                    callback(self.approx, None, i+s+1)
         except (KeyboardInterrupt, StopIteration) as e:
             progress.close()
             if isinstance(e, StopIteration):
@@ -168,7 +168,7 @@ class Inference(object):
                     progress.set_description(
                         'Average Loss = {:,.5g}'.format(avg_loss))
                 for callback in callbacks:
-                    callback(self.approx, scores[:i + 1], i)
+                    callback(self.approx, scores[:i + 1], i+s+1)
         except (KeyboardInterrupt, StopIteration) as e:  # pragma: no cover
             # do not print log on the same line
             progress.close()
