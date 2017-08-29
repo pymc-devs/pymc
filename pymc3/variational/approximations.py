@@ -289,7 +289,7 @@ class EmpiricalGroup(Group):
                          high=pm.floatX(self.histogram.shape[0]) - pm.floatX(1e-16))
                 .astype('int32'))
 
-    def _new_initial(self, size, deterministic):
+    def _new_initial(self, size, deterministic, more_replacements=None):
         theano_condition_is_here = isinstance(deterministic, tt.Variable)
         if theano_condition_is_here:
             return tt.switch(
