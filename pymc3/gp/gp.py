@@ -192,8 +192,8 @@ class Latent(Base):
             constructor.
         """
 
-        X, f, cov_total, mean_total = self._get_given_vals(given)
-        mu, cov = self._build_conditional(Xnew, X, f, cov_total, mean_total)
+        givens = self._get_given_vals(given)
+        mu, cov = self._build_conditional(Xnew, *givens)
         chol = cholesky(stabilize(cov))
         shape = infer_shape(Xnew, kwargs.pop("shape", None))
         return pm.MvNormal(name, mu=mu, chol=chol, shape=shape, **kwargs)
@@ -423,8 +423,8 @@ class Marginal(Base):
             X, y, noise = self.X, self.y, self.noise
         return X, y, noise, cov_total, mean_total
 
-    def _build_conditional(self, Xnew, X, y, noise, cov_total, mean_total,
-                           pred_noise, diag=False):
+    def _build_conditional(self, Xnew, pred_noise, diag, X, y, noise,
+                           cov_total, mean_total):
         Kxx = cov_total(X)
         Kxs = self.cov_func(X, Xnew)
         Knx = noise(X)
@@ -478,9 +478,8 @@ class Marginal(Base):
             constructor.
         """
 
-        X, y, noise, cov_total, mean_total = self._get_given_vals(given)
-        mu, cov = self._build_conditional(Xnew, X, y, noise, cov_total, mean_total,
-                                          pred_noise, diag=False)
+        givens = self._get_given_vals(given)
+        mu, cov = self._build_conditional(Xnew, pred_noise, False, *givens)
         chol = cholesky(cov)
         shape = infer_shape(Xnew, kwargs.pop("shape", None))
         return pm.MvNormal(name, mu=mu, chol=chol, shape=shape, **kwargs)
@@ -531,9 +530,8 @@ class Marginal(Base):
             Same as `conditional` method.
         """
 
-        X, y, noise, cov_total, mean_total = self._get_given_vals(given)
-        mu, cov = self._build_conditional(Xnew, X, y, noise, cov_total,
-                                          mean_total, pred_noise, diag)
+        givens = self._get_given_vals(given)
+        mu, cov = self._build_conditional(Xnew, pred_noise, diag, *givens)
         return mu, cov
 
 
@@ -680,8 +678,7 @@ class MarginalSparse(Marginal):
             shape = infer_shape(X, kwargs.pop("shape", None))
             return pm.DensityDist(name, logp, shape=shape, **kwargs)
 
-    def _build_conditional(self, Xnew, X, Xu, y, sigma, cov_total, mean_total,
-                           pred_noise, diag=False):
+    def _build_conditional(self, Xnew, pred_noise, diag, X, Xu, y, sigma, cov_total, mean_total):
         sigma2 = tt.square(sigma)
         Kuu = cov_total(Xu)
         Kuf = cov_total(Xu, X)
@@ -752,10 +749,8 @@ class MarginalSparse(Marginal):
             constructor.
         """
 
-        X, Xu, y, sigma, cov_total, mean_total = self._get_given_vals(given)
-        mu, cov = self._build_conditional(Xnew, X, Xu, y, sigma, cov_total,
-                                          mean_total, pred_noise, diag=False)
+        givens = self._get_given_vals(given)
+        mu, cov = self._build_conditional(Xnew, pred_noise, False, *givens)
         chol = cholesky(cov)
         shape = infer_shape(Xnew, kwargs.pop("shape", None))
         return pm.MvNormal(name, mu=mu, chol=chol, shape=shape, **kwargs)
-
