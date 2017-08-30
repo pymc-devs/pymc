@@ -912,8 +912,8 @@ class StudentT(Continuous):
 
     Parameters
     ----------
-    nu : int
-        Degrees of freedom (nu > 0).
+    nu : float
+        Degrees of freedom, also known as normality parameter (nu > 0).
     mu : float
         Location parameter.
     lam : float
