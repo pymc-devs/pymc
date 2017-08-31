@@ -163,7 +163,7 @@ class Latent(Base):
 
     def conditional(self, name, Xnew, given={}, **kwargs):
         R"""
-	Returns the conditional distribution evaluated over new input
+	    Returns the conditional distribution evaluated over new input
         locations `Xnew`.  Given a set of function values `f` that
         the GP prior was over, the conditional distribution over a
         set of new points, `f_*` is
@@ -283,7 +283,7 @@ class TP(Latent):
 
     def conditional(self, name, Xnew, **kwargs):
         R"""
-	Returns the conditional distribution evaluated over new input
+	    Returns the conditional distribution evaluated over new input
         locations `Xnew`.  Given a set of function values `f` that
         the TP prior was over, the conditional distribution over a
         set of new points, `f_*` is
@@ -335,7 +335,7 @@ class Marginal(Base):
             cov_func = pm.gp.cov.ExpQuad(1, ls=0.1)
 
             # Specify the GP.  The default mean function is `Zero`.
-            gp = pm.gp.Latent(cov_func=cov_func)
+            gp = pm.gp.Marginal(cov_func=cov_func)
 
             # Place a GP prior over the function f.
             sigma = pm.HalfCauchy("sigma", beta=3)
@@ -638,7 +638,7 @@ class MarginalSparse(Marginal):
 
     def marginal_likelihood(self, name, X, Xu, y, sigma, is_observed=True, **kwargs):
         R"""
-	Returns the approximate marginal likelihood distribution, given the input
+	    Returns the approximate marginal likelihood distribution, given the input
         locations `X`, inducing point locations `Xu`, data `y`, and white noise
         standard deviations `sigma`.
 
