@@ -44,6 +44,8 @@ class Base(object):
 @conditioned_vars(["X", "f"])
 class Latent(Base):
     R"""
+    Latent Gaussian process.
+    
     The `gp.Latent` class is a direct implementation of a GP.  No addiive
     noise is assumed.  It is called "Latent" because the underlying function
     values are treated as latent variables.  It has a `prior` method and a
@@ -111,8 +113,10 @@ class Latent(Base):
 
     def prior(self, name, X, reparameterize=True, **kwargs):
         R"""
-	Returns the GP prior distribution evaluated over the input
-        locations `X`.  This is the prior probability over the space
+	    Returns the GP prior distribution evaluated over the input
+        locations `X`.  
+        
+        This is the prior probability over the space
         of functions described by its mean and covariance function.
 
         .. math::
@@ -163,8 +167,10 @@ class Latent(Base):
 
     def conditional(self, name, Xnew, given={}, **kwargs):
         R"""
-	Returns the conditional distribution evaluated over new input
-        locations `Xnew`.  Given a set of function values `f` that
+	    Returns the conditional distribution evaluated over new input
+        locations `Xnew`.  
+        
+        Given a set of function values `f` that
         the GP prior was over, the conditional distribution over a
         set of new points, `f_*` is
 
@@ -199,10 +205,11 @@ class Latent(Base):
 @conditioned_vars(["X", "f", "nu"])
 class TP(Latent):
     """
-    Implementation of a Student's T process prior.  The usage is nearly
-    identical to that of `gp.Latent`.  The differences are that it must
-    be initialized with a degrees of freedom parameter, and TP is not
-    additive.  Given a mean and covariance function, and a degrees of
+    Student's T process prior.  
+    
+    The usage is nearly identical to that of `gp.Latent`.  The differences 
+    are that it must be initialized with a degrees of freedom parameter, and 
+    TP is not additive.  Given a mean and covariance function, and a degrees of
     freedom parameter, the function $f(x)$ is modeled as,
 
     .. math::
@@ -245,8 +252,10 @@ class TP(Latent):
 
     def prior(self, name, X, reparameterize=True, **kwargs):
         R"""
-	Returns the TP prior distribution evaluated over the input
-        locations `X`.  This is the prior probability over the space
+	    Returns the TP prior distribution evaluated over the input
+        locations `X`.  
+        
+        This is the prior probability over the space
         of functions described by its mean and covariance function.
 
         Parameters
@@ -283,8 +292,10 @@ class TP(Latent):
 
     def conditional(self, name, Xnew, **kwargs):
         R"""
-	Returns the conditional distribution evaluated over new input
-        locations `Xnew`.  Given a set of function values `f` that
+	    Returns the conditional distribution evaluated over new input
+        locations `Xnew`.  
+        
+        Given a set of function values `f` that
         the TP prior was over, the conditional distribution over a
         set of new points, `f_*` is
 
@@ -310,6 +321,8 @@ class TP(Latent):
 @conditioned_vars(["X", "y", "noise"])
 class Marginal(Base):
     R"""
+    Marginal Gaussian process.
+    
     The `gp.Marginal` class is an implementation of the sum of a GP
     prior and additive noise.  It has `marginal_likelihood`, `conditional`
     and `predict` methods.  This GP implementation can be used to
@@ -335,7 +348,7 @@ class Marginal(Base):
             cov_func = pm.gp.cov.ExpQuad(1, ls=0.1)
 
             # Specify the GP.  The default mean function is `Zero`.
-            gp = pm.gp.Latent(cov_func=cov_func)
+            gp = pm.gp.Marginal(cov_func=cov_func)
 
             # Place a GP prior over the function f.
             sigma = pm.HalfCauchy("sigma", beta=3)
@@ -363,9 +376,10 @@ class Marginal(Base):
 
     def marginal_likelihood(self, name, X, y, noise, is_observed=True, **kwargs):
         R"""
-	Returns the marginal likelihood distribution, given the input
-        locations `X` and the data `y`.  This is integral over the product of the GP
-        prior and a normal likelihood.
+	    Returns the marginal likelihood distribution, given the input
+        locations `X` and the data `y`.  
+        
+        This is integral over the product of the GP prior and a normal likelihood.
 
         .. math::
 
@@ -445,10 +459,11 @@ class Marginal(Base):
 
     def conditional(self, name, Xnew, pred_noise=False, given={}, **kwargs):
         R"""
-	Returns the conditional distribution evaluated over new input
-        locations `Xnew`.  Given a set of function values `f` that
-        the GP prior was over, the conditional distribution over a
-        set of new points, `f_*` is
+	    Returns the conditional distribution evaluated over new input
+        locations `Xnew`.  
+        
+        Given a set of function values `f` that the GP prior was over, the 
+        conditional distribution over a set of new points, `f_*` is:
 
         .. math::
 
@@ -535,6 +550,8 @@ class Marginal(Base):
 @conditioned_vars(["X", "Xu", "y", "sigma"])
 class MarginalSparse(Marginal):
     R"""
+    Approximate marginal Gaussian process.
+    
     The `gp.MarginalSparse` class is an implementation of the sum of a GP
     prior and additive noise.  It has `marginal_likelihood`, `conditional`
     and `predict` methods.  This GP implementation can be used to
@@ -638,7 +655,7 @@ class MarginalSparse(Marginal):
 
     def marginal_likelihood(self, name, X, Xu, y, sigma, is_observed=True, **kwargs):
         R"""
-	Returns the approximate marginal likelihood distribution, given the input
+	    Returns the approximate marginal likelihood distribution, given the input
         locations `X`, inducing point locations `Xu`, data `y`, and white noise
         standard deviations `sigma`.
 
@@ -724,7 +741,7 @@ class MarginalSparse(Marginal):
 
     def conditional(self, name, Xnew, pred_noise=False, given={}, **kwargs):
         R"""
-	Returns the approximate conditional distribution of the GP evaluated over
+	    Returns the approximate conditional distribution of the GP evaluated over
         new input locations `Xnew`.
 
         Parameters
