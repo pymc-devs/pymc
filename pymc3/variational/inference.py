@@ -539,7 +539,7 @@ class ASVGD(ImplicitGradient):
                       'for significant `n_obj_mc`. Temperature > 1 gives more exploration '
                       'power to algorithm, < 1 leads to undesirable results. Please take '
                       'it in account when looking at inference result. Posterior variance '
-                      'is often **underestimated** when using temperature = 1.', stacklevel=1)
+                      'is often **underestimated** when using temperature = 1.')
         if approx is None:
             approx = FullRank(
                 model=kwargs.pop('model', None),
