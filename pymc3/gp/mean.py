@@ -1,11 +1,13 @@
 import theano.tensor as tt
 
-__all__ = ['Zero', 'Constant']
+__all__ = ['Zero', 'Constant', 'Linear']
+
 
 class Mean(object):
     R"""
     Base class for mean functions
     """
+
     def __call__(self, X):
         R"""
         Evaluate the mean function.
@@ -22,13 +24,15 @@ class Mean(object):
     def __mul__(self, other):
         return Prod(self, other)
 
+
 class Zero(Mean):
     R"""
     Zero mean function for Gaussian process.
 
     """
+
     def __call__(self, X):
-        return tt.zeros(tt.stack([X.shape[0], ]), dtype='float32')
+        return tt.alloc(0.0, X.shape[0])
 
 class Constant(Mean):
     R"""
@@ -39,12 +43,13 @@ class Constant(Mean):
     c : variable, array or integer
         Constant mean value
     """
+
     def __init__(self, c=0):
         Mean.__init__(self)
         self.c = c
 
     def __call__(self, X):
-        return tt.ones(tt.stack([X.shape[0], ])) * self.c
+        return tt.alloc(1.0, X.shape[0]) * self.c
 
 
 class Linear(Mean):
@@ -58,13 +63,14 @@ class Linear(Mean):
     intercept : variable, array or integer
         Intercept for linear function (Defaults to zero)
     """
+
     def __init__(self, coeffs, intercept=0):
         Mean.__init__(self)
         self.b = intercept
         self.A = coeffs
 
     def __call__(self, X):
-        return (tt.dot(X, self.A) + self.b).squeeze()
+        return tt.squeeze(tt.dot(X, self.A) + self.b)
 
 
 class Add(Mean):

@@ -48,8 +48,12 @@ Gaussian Processes
 ==================
 
 .. toctree::
-   notebooks/GP-introduction.ipynb
-   notebooks/GP-covariances.ipynb
+   notebooks/GP-Marginal.ipynb
+   notebooks/GP-Covariances.ipynb
+   notebooks/GP-Latent.ipynb
+   notebooks/GP-SparseApprox.ipynb
+   notebooks/GP-TProcess.ipynb
+   notebooks/GP-MaunaLoa.ipynb
    notebooks/GP-slice-sampling.ipynb
    notebooks/GP-smoothing.ipynb
 

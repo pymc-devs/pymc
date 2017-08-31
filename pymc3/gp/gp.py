@@ -1,151 +1,753 @@
 import numpy as np
-from scipy import stats
-from tqdm import tqdm
-
-from theano.tensor.nlinalg import matrix_inverse
 import theano.tensor as tt
 
-from .mean import Zero, Mean
-from .cov import Covariance
-from ..distributions import MvNormal, Continuous, draw_values, generate_samples
-from ..model import modelcontext
+import pymc3 as pm
+from pymc3.gp.cov import Covariance, Constant
+from pymc3.gp.mean import Zero
+from pymc3.gp.util import (conditioned_vars,
+    infer_shape, stabilize, cholesky, solve_lower, solve_upper)
+from pymc3.distributions import draw_values
+
+__all__ = ['Latent', 'Marginal', 'TP', 'MarginalSparse']
 
 
-__all__ = ['GP', 'sample_gp']
+class Base(object):
+    R"""
+    Base class.
+    """
+
+    def __init__(self, mean_func=Zero(), cov_func=Constant(0.0)):
+        self.mean_func = mean_func
+        self.cov_func = cov_func
+
+    def __add__(self, other):
+        same_attrs = set(self.__dict__.keys()) == set(other.__dict__.keys())
+        if not isinstance(self, type(other)) or not same_attrs:
+            raise ValueError("cant add different GP types")
+        mean_total = self.mean_func + other.mean_func
+        cov_total = self.cov_func + other.cov_func
+        return self.__class__(mean_total, cov_total)
+
+    def prior(self, name, X, *args, **kwargs):
+        raise NotImplementedError
+
+    def marginal_likelihood(self, name, X, *args, **kwargs):
+        raise NotImplementedError
+
+    def conditional(self, name, Xnew, *args, **kwargs):
+        raise NotImplementedError
+
+    def predict(self, Xnew, point=None, given=None, diag=False):
+        raise NotImplementedError
 
 
-class GP(Continuous):
-    """Gausian process
+@conditioned_vars(["X", "f"])
+class Latent(Base):
+    R"""
+    The `gp.Latent` class is a direct implementation of a GP.  No addiive
+    noise is assumed.  It is called "Latent" because the underlying function
+    values are treated as latent variables.  It has a `prior` method and a
+    `conditional` method.  Given a mean and covariance function the
+    function $f(x)$ is modeled as,
+
+    .. math::
+
+       f(x) \sim \mathcal{GP}\left(\mu(x), k(x, x')\right)
+
+    Use the `prior` and `conditional` methods to actually construct random
+    variables representing the unknown, or latent, function whose
+    distribution is the GP prior or GP conditional.  This GP implementation
+    can be used to implement regression on data that is not normally
+    distributed.  For more information on the `prior` and `conditional` methods,
+    see their docstrings.
 
     Parameters
     ----------
-    mean_func : Mean
-        Mean function of Gaussian process
-    cov_func : Covariance
-        Covariance function of Gaussian process
-    X : array
-        Grid of points to evaluate Gaussian process over. Only required if the
-        GP is not an observed variable.
-    sigma : scalar or array
-        Observation standard deviation (defaults to zero)
-    """
-    def __init__(self, mean_func=None, cov_func=None, X=None, sigma=0, *args, **kwargs):
+    cov_func : None, 2D array, or instance of Covariance
+        The covariance function.  Defaults to zero.
+    mean_func : None, instance of Mean
+        The mean function.  Defaults to zero.
 
-        if mean_func is None:
-            self.M = Zero()
+    Example
+    --------
+    .. code:: python
+
+        # A one dimensional column vector of inputs.
+        X = np.linspace(0, 1, 10)[:, None]
+
+        with pm.Model() as model:
+            # Specify the covariance function.
+            cov_func = pm.gp.cov.ExpQuad(1, ls=0.1)
+
+            # Specify the GP.  The default mean function is `Zero`.
+            gp = pm.gp.Latent(cov_func=cov_func)
+
+            # Place a GP prior over the function f.
+            f = gp.prior("f", X=X)
+
+        ...
+
+        # After fitting or sampling, specify the distribution
+        # at new points with .conditional
+        Xnew = np.linspace(-1, 2, 50)[:, None]
+
+        with model:
+            fcond = gp.conditional("fcond", Xnew=Xnew)
+    """
+
+    def __init__(self, mean_func=Zero(), cov_func=Constant(0.0)):
+        super(Latent, self).__init__(mean_func, cov_func)
+
+    def _build_prior(self, name, X, reparameterize=True, **kwargs):
+        mu = self.mean_func(X)
+        chol = cholesky(stabilize(self.cov_func(X)))
+        shape = infer_shape(X, kwargs.pop("shape", None))
+        if reparameterize:
+            v = pm.Normal(name + "_rotated_", mu=0.0, sd=1.0, shape=shape, **kwargs)
+            f = pm.Deterministic(name, mu + tt.dot(chol, v))
         else:
-            if not isinstance(mean_func, Mean):
-                raise ValueError('mean_func must be a subclass of Mean')
-            self.M = mean_func
+            f = pm.MvNormal(name, mu=mu, chol=chol, shape=shape, **kwargs)
+        return f
 
-        if cov_func is None:
-            raise ValueError('A covariance function must be specified for GPP')
-        if not isinstance(cov_func, Covariance):
-            raise ValueError('cov_func must be a subclass of Covariance')
-        self.K = cov_func
+    def prior(self, name, X, reparameterize=True, **kwargs):
+        R"""
+	Returns the GP prior distribution evaluated over the input
+        locations `X`.  This is the prior probability over the space
+        of functions described by its mean and covariance function.
 
-        self.sigma = sigma
+        .. math::
 
-        if X is not None:
-            self.X = X
-            self.mean = self.mode = self.M(X)
-            kwargs.setdefault("shape", X.squeeze().shape)
+           f \mid X \sim \text{MvNormal}\left( \mu(X), k(X, X') \right)
 
-        super(GP, self).__init__(*args, **kwargs)
+        Parameters
+        ----------
+        name : string
+            Name of the random variable
+        X : array-like
+            Function input values.
+        reparameterize : bool
+            Reparameterize the distribution by rotating the random
+            variable by the Cholesky factor of the covariance matrix.
+        **kwargs
+            Extra keyword arguments that are passed to distribution constructor.
+        """
 
-    def random(self, point=None, size=None, **kwargs):
-        X = self.X
-        mu, cov = draw_values([self.M(X).squeeze(), self.K(X) + np.eye(X.shape[0])*self.sigma**2], point=point)
+        f = self._build_prior(name, X, reparameterize, **kwargs)
+        self.X = X
+        self.f = f
+        return f
 
-        def _random(mean, cov, size=None):
-            return stats.multivariate_normal.rvs(
-                mean, cov, None if size == mean.shape else size)
+    def _get_given_vals(self, given):
+        if 'gp' in given:
+            cov_total = given['gp'].cov_func
+            mean_total = given['gp'].mean_func
+        else:
+            cov_total = self.cov_func
+            mean_total = self.mean_func
+        if all(val in given for val in ['X', 'f']):
+            X, f = given['X'], given['f']
+        else:
+            X, f = self.X, self.f
+        return X, f, cov_total, mean_total
 
-        samples = generate_samples(_random,
-                                   mean=mu, cov=cov,
-                                   dist_shape=mu.shape,
-                                   broadcast_shape=mu.shape,
-                                   size=size)
-        return samples
+    def _build_conditional(self, Xnew, X, f, cov_total, mean_total):
+        Kxx = cov_total(X)
+        Kxs = self.cov_func(X, Xnew)
+        L = cholesky(stabilize(Kxx))
+        A = solve_lower(L, Kxs)
+        v = solve_lower(L, f - mean_total(X))
+        mu = self.mean_func(Xnew) + tt.dot(tt.transpose(A), v)
+        Kss = self.cov_func(Xnew)
+        cov = Kss - tt.dot(tt.transpose(A), A)
+        return mu, cov
 
-    def logp(self, Y, X=None):
-        if X is None:
-            X = self.X
-        mu = self.M(X).squeeze()
-        Sigma = self.K(X) + tt.eye(X.shape[0])*self.sigma**2
+    def conditional(self, name, Xnew, given={}, **kwargs):
+        R"""
+	Returns the conditional distribution evaluated over new input
+        locations `Xnew`.  Given a set of function values `f` that
+        the GP prior was over, the conditional distribution over a
+        set of new points, `f_*` is
 
-        return MvNormal.dist(mu, Sigma).logp(Y)
+        .. math::
+
+           f_* \mid f, X, X_* \sim \mathcal{GP}\left(
+               K(X_*, X) K(X, X)^{-1} f \,,
+               K(X_*, X_*) - K(X_*, X) K(X, X)^{-1} K(X, X_*) \right)
+
+        Parameters
+        ----------
+        name : string
+            Name of the random variable
+        Xnew : array-like
+            Function input values.
+        given : dict
+            Can optionally take as key value pairs: `X`, `y`, `noise`,
+            and `gp`.  See the section in the documentation on additive GP
+            models in PyMC3 for more information.
+        **kwargs
+            Extra keyword arguments that are passed to `MvNormal` distribution
+            constructor.
+        """
+
+        givens = self._get_given_vals(given)
+        mu, cov = self._build_conditional(Xnew, *givens)
+        chol = cholesky(stabilize(cov))
+        shape = infer_shape(Xnew, kwargs.pop("shape", None))
+        return pm.MvNormal(name, mu=mu, chol=chol, shape=shape, **kwargs)
 
 
-def sample_gp(trace, gp, X_values, samples=None, obs_noise=True, model=None, random_seed=None, progressbar=True,
-              chol_const=True):
-    """Generate samples from a posterior Gaussian process.
+@conditioned_vars(["X", "f", "nu"])
+class TP(Latent):
+    """
+    Implementation of a Student's T process prior.  The usage is nearly
+    identical to that of `gp.Latent`.  The differences are that it must
+    be initialized with a degrees of freedom parameter, and TP is not
+    additive.  Given a mean and covariance function, and a degrees of
+    freedom parameter, the function $f(x)$ is modeled as,
+
+    .. math::
+
+       f(X) \sim \mathcal{TP}\left( \mu(X), k(X, X'), \\nu \\right)
+
 
     Parameters
     ----------
-    trace : backend, list, or MultiTrace
-        Trace generated from MCMC sampling.
-    gp : Gaussian process object
-        The GP variable to sample from.
-    X_values : array
-        Grid of values at which to sample GP.
-    samples : int
-        Number of posterior predictive samples to generate. Defaults to the
-        length of `trace`
-    obs_noise : bool
-        Flag for including observation noise in sample. Defaults to True.
-    model : Model
-        Model used to generate `trace`. Optional if in `with` context manager.
-    random_seed : integer > 0
-        Random number seed for sampling.
-    progressbar : bool
-        Flag for showing progress bar.
-    chol_const : bool
-        Flag to a small diagonal to the posterior covariance
-        for numerical stability
+    cov_func : None, 2D array, or instance of Covariance
+        The covariance function.  Defaults to zero.
+    mean_func : None, instance of Mean
+        The mean function.  Defaults to zero.
+    nu : float
+        The degrees of freedom
 
-    Returns
-    -------
-    Array of samples from posterior GP evaluated at Z.
+    For more information, see https://www.cs.cmu.edu/~andrewgw/tprocess.pdf
     """
-    if samples is None:
-        samples = len(trace)
 
-    model = modelcontext(model)
+    def __init__(self, mean_func=Zero(), cov_func=Constant(0.0), nu=None):
+        if nu is None:
+            raise ValueError("T Process requires a degrees of freedom parameter, 'nu'")
+        self.nu = nu
+        super(TP, self).__init__(mean_func, cov_func)
 
-    if random_seed:
-        np.random.seed(random_seed)
+    def __add__(self, other):
+        raise ValueError("Student T processes aren't additive")
 
-    indices = np.random.randint(0, len(trace), samples)
-    if progressbar:
-        indices = tqdm(indices, total=samples)
+    def _build_prior(self, name, X, reparameterize=True, **kwargs):
+        mu = self.mean_func(X)
+        chol = cholesky(stabilize(self.cov_func(X)))
+        shape = infer_shape(X, kwargs.pop("shape", None))
+        if reparameterize:
+            chi2 = pm.ChiSquared("chi2_", self.nu)
+            v = pm.Normal(name + "_rotated_", mu=0.0, sd=1.0, shape=shape, **kwargs)
+            f = pm.Deterministic(name, (tt.sqrt(self.nu) / chi2) * (mu + tt.dot(chol, v)))
+        else:
+            f = pm.MvStudentT(name, nu=self.nu, mu=mu, chol=chol, shape=shape, **kwargs)
+        return f
 
-    K = gp.distribution.K
+    def prior(self, name, X, reparameterize=True, **kwargs):
+        R"""
+	Returns the TP prior distribution evaluated over the input
+        locations `X`.  This is the prior probability over the space
+        of functions described by its mean and covariance function.
 
-    data = [v for v in model.observed_RVs if v.name==gp.name][0].data
+        Parameters
+        ----------
+        name : string
+            Name of the random variable
+        X : array-like
+            Function input values.
+        reparameterize : bool
+            Reparameterize the distribution by rotating the random
+            variable by the Cholesky factor of the covariance matrix.
+        **kwargs
+            Extra keyword arguments that are passed to distribution constructor.
+        """
 
-    X = data['X']
-    Y = data['Y']
-    Z = X_values
+        f = self._build_prior(name, X, reparameterize, **kwargs)
+        self.X = X
+        self.f = f
+        return f
 
-    S_xz = K(X, Z)
-    S_zz = K(Z)
-    if obs_noise:
-        S_inv = matrix_inverse(K(X) + tt.eye(X.shape[0])*gp.distribution.sigma**2)
-    else:
-        S_inv = matrix_inverse(K(X))
+    def _build_conditional(self, Xnew, X, f):
+        Kxx = self.cov_func(X)
+        Kxs = self.cov_func(X, Xnew)
+        Kss = self.cov_func(Xnew)
+        L = cholesky(stabilize(Kxx))
+        A = solve_lower(L, Kxs)
+        cov = Kss - tt.dot(tt.transpose(A), A)
+        v = solve_lower(L, f - self.mean_func(X))
+        mu = self.mean_func(Xnew) + tt.dot(tt.transpose(A), v)
+        beta = tt.dot(v, v)
+        nu2 = self.nu + X.shape[0]
+        covT = (self.nu + beta - 2)/(nu2 - 2) * cov
+        return nu2, mu, covT
 
-    S_xz_S_inv = tt.dot(S_xz.T, S_inv)
-    # Posterior mean
-    m_post = tt.dot(S_xz_S_inv, Y)
-    # Posterior covariance
-    S_post = S_zz - tt.dot(S_xz_S_inv, S_xz)
+    def conditional(self, name, Xnew, **kwargs):
+        R"""
+	Returns the conditional distribution evaluated over new input
+        locations `Xnew`.  Given a set of function values `f` that
+        the TP prior was over, the conditional distribution over a
+        set of new points, `f_*` is
 
-    correction = 0
-    if chol_const:
-        n = S_post.shape[0]
-        correction = 1e-6 * tt.nlinalg.trace(S_post) * tt.eye(n)
+        Parameters
+        ----------
+        name : string
+            Name of the random variable
+        Xnew : array-like
+            Function input values.
+        **kwargs
+            Extra keyword arguments that are passed to `MvNormal` distribution
+            constructor.
+        """
 
-    gp_post = MvNormal.dist(m_post, S_post + correction, shape=Z.shape[0])
-    samples = [gp_post.random(point=trace[idx]) for idx in indices]
-    return np.array(samples)
+        X = self.X
+        f = self.f
+        nu2, mu, covT = self._build_conditional(Xnew, X, f)
+        chol = cholesky(stabilize(covT))
+        shape = infer_shape(Xnew, kwargs.pop("shape", None))
+        return pm.MvStudentT(name, nu=nu2, mu=mu, chol=chol, shape=shape, **kwargs)
+
+
+@conditioned_vars(["X", "y", "noise"])
+class Marginal(Base):
+    R"""
+    The `gp.Marginal` class is an implementation of the sum of a GP
+    prior and additive noise.  It has `marginal_likelihood`, `conditional`
+    and `predict` methods.  This GP implementation can be used to
+    implement regression on data that is normally distributed.  For more
+    information on the `prior` and `conditional` methods, see their docstrings.
+
+    Parameters
+    ----------
+    cov_func : None, 2D array, or instance of Covariance
+        The covariance function.  Defaults to zero.
+    mean_func : None, instance of Mean
+        The mean function.  Defaults to zero.
+
+    Example
+    --------
+    .. code:: python
+
+        # A one dimensional column vector of inputs.
+        X = np.linspace(0, 1, 10)[:, None]
+
+        with pm.Model() as model:
+            # Specify the covariance function.
+            cov_func = pm.gp.cov.ExpQuad(1, ls=0.1)
+
+            # Specify the GP.  The default mean function is `Zero`.
+            gp = pm.gp.Latent(cov_func=cov_func)
+
+            # Place a GP prior over the function f.
+            sigma = pm.HalfCauchy("sigma", beta=3)
+            y_ = gp.marginal_likelihood("y", X=X, y=y, noise=sigma)
+
+        ...
+
+        # After fitting or sampling, specify the distribution
+        # at new points with .conditional
+        Xnew = np.linspace(-1, 2, 50)[:, None]
+
+        with model:
+            fcond = gp.conditional("fcond", Xnew=Xnew)
+    """
+
+    def __init__(self, mean_func=Zero(), cov_func=Constant(0.0)):
+        super(Marginal, self).__init__(mean_func, cov_func)
+
+    def _build_marginal_likelihood(self, X, noise):
+        mu = self.mean_func(X)
+        Kxx = self.cov_func(X)
+        Knx = noise(X)
+        cov = Kxx + Knx
+        return mu, cov
+
+    def marginal_likelihood(self, name, X, y, noise, is_observed=True, **kwargs):
+        R"""
+	Returns the marginal likelihood distribution, given the input
+        locations `X` and the data `y`.  This is integral over the product of the GP
+        prior and a normal likelihood.
+
+        .. math::
+
+           y \mid X,\theta \sim \int p(y \mid f,\, X,\, \theta) \, p(f \mid X,\, \theta) \, df
+
+        Parameters
+        ----------
+        name : string
+            Name of the random variable
+        X : array-like
+            Function input values.  If one-dimensional, must be a column
+            vector with shape `(n, 1)`.
+        y : array-like
+            Data that is the sum of the function with the GP prior and Gaussian
+            noise.  Must have shape `(n, )`.
+        noise : scalar, Variable, or Covariance
+            Standard deviation of the Gaussian noise.  Can also be a Covariance for
+            non-white noise.
+        is_observed : bool
+            Whether to set `y` as an `observed` variable in the `model`.
+            Default is `True`.
+        **kwargs
+            Extra keyword arguments that are passed to `MvNormal` distribution
+            constructor.
+        """
+
+        if not isinstance(noise, Covariance):
+            noise = pm.gp.cov.WhiteNoise(noise)
+        mu, cov = self._build_marginal_likelihood(X, noise)
+        chol = cholesky(stabilize(cov))
+        self.X = X
+        self.y = y
+        self.noise = noise
+        if is_observed:
+            return pm.MvNormal(name, mu=mu, chol=chol, observed=y, **kwargs)
+        else:
+            shape = infer_shape(X, kwargs.pop("shape", None))
+            return pm.MvNormal(name, mu=mu, chol=chol, shape=shape, **kwargs)
+
+    def _get_given_vals(self, given):
+        if 'gp' in given:
+            cov_total = given['gp'].cov_func
+            mean_total = given['gp'].mean_func
+        else:
+            cov_total = self.cov_func
+            mean_total = self.mean_func
+        if all(val in given for val in ['X', 'y', 'noise']):
+            X, y, noise = given['X'], given['y'], given['noise']
+            if not isinstance(noise, Covariance):
+                noise = pm.gp.cov.WhiteNoise(noise)
+        else:
+            X, y, noise = self.X, self.y, self.noise
+        return X, y, noise, cov_total, mean_total
+
+    def _build_conditional(self, Xnew, pred_noise, diag, X, y, noise,
+                           cov_total, mean_total):
+        Kxx = cov_total(X)
+        Kxs = self.cov_func(X, Xnew)
+        Knx = noise(X)
+        rxx = y - mean_total(X)
+        L = cholesky(stabilize(Kxx) + Knx)
+        A = solve_lower(L, Kxs)
+        v = solve_lower(L, rxx)
+        mu = self.mean_func(Xnew) + tt.dot(tt.transpose(A), v)
+        if diag:
+            Kss = self.cov_func(Xnew, diag=True)
+            var = Kss - tt.sum(tt.square(A), 0)
+            if pred_noise:
+                var += noise(Xnew, diag=True)
+            return mu, var
+        else:
+            Kss = self.cov_func(Xnew)
+            cov = Kss - tt.dot(tt.transpose(A), A)
+            if pred_noise:
+                cov += noise(Xnew)
+            return mu, stabilize(cov)
+
+    def conditional(self, name, Xnew, pred_noise=False, given={}, **kwargs):
+        R"""
+	Returns the conditional distribution evaluated over new input
+        locations `Xnew`.  Given a set of function values `f` that
+        the GP prior was over, the conditional distribution over a
+        set of new points, `f_*` is
+
+        .. math::
+
+           f_* \mid f, X, X_* \sim \mathcal{GP}\left(
+               K(X_*, X) [K(X, X) + K_{n}(X, X)]^{-1} f \,,
+               K(X_*, X_*) - K(X_*, X) [K(X, X) + K_{n}(X, X)]^{-1} K(X, X_*) \right)
+
+        Parameters
+        ----------
+        name : string
+            Name of the random variable
+        Xnew : array-like
+            Function input values.  If one-dimensional, must be a column
+            vector with shape `(n, 1)`.
+        pred_noise : bool
+            Whether or not observation noise is included in the conditional.
+            Default is `False`.
+        given : dict
+            Can optionally take as key value pairs: `X`, `y`, `noise`,
+            and `gp`.  See the section in the documentation on additive GP
+            models in PyMC3 for more information.
+        **kwargs
+            Extra keyword arguments that are passed to `MvNormal` distribution
+            constructor.
+        """
+
+        givens = self._get_given_vals(given)
+        mu, cov = self._build_conditional(Xnew, pred_noise, False, *givens)
+        chol = cholesky(cov)
+        shape = infer_shape(Xnew, kwargs.pop("shape", None))
+        return pm.MvNormal(name, mu=mu, chol=chol, shape=shape, **kwargs)
+
+    def predict(self, Xnew, point=None, diag=False, pred_noise=False, given={}):
+        R"""
+        Return the mean vector and covariance matrix of the conditional
+        distribution as numpy arrays, given a `point`, such as the MAP
+        estimate or a sample from a `trace`.
+
+        Parameters
+        ----------
+        Xnew : array-like
+            Function input values.  If one-dimensional, must be a column
+            vector with shape `(n, 1)`.
+        point : pymc3.model.Point
+            A specific point to condition on.
+        diag : bool
+            If `True`, return the diagonal instead of the full covariance
+            matrix.  Default is `False`.
+        pred_noise : bool
+            Whether or not observation noise is included in the conditional.
+            Default is `False`.
+        given : dict
+            Same as `conditional` method.
+        """
+
+        mu, cov = self.predictt(Xnew, diag, pred_noise, given)
+        return draw_values([mu, cov], point=point)
+
+    def predictt(self, Xnew, diag=False, pred_noise=False, given={}):
+        R"""
+        Return the mean vector and covariance matrix of the conditional
+        distribution as symbolic variables.
+
+        Parameters
+        ----------
+        Xnew : array-like
+            Function input values.  If one-dimensional, must be a column
+            vector with shape `(n, 1)`.
+        diag : bool
+            If `True`, return the diagonal instead of the full covariance
+            matrix.  Default is `False`.
+        pred_noise : bool
+            Whether or not observation noise is included in the conditional.
+            Default is `False`.
+        given : dict
+            Same as `conditional` method.
+        """
+
+        givens = self._get_given_vals(given)
+        mu, cov = self._build_conditional(Xnew, pred_noise, diag, *givens)
+        return mu, cov
+
+
+@conditioned_vars(["X", "Xu", "y", "sigma"])
+class MarginalSparse(Marginal):
+    R"""
+    The `gp.MarginalSparse` class is an implementation of the sum of a GP
+    prior and additive noise.  It has `marginal_likelihood`, `conditional`
+    and `predict` methods.  This GP implementation can be used to
+    implement regression on data that is normally distributed.  The
+    available approximations are:
+
+    - DTC: Deterministic Training Conditional
+    - FITC: Fully independent Training Conditional
+    - VFE: Variational Free Energy
+
+    For more information on these approximations, see e.g. "A unifying view of
+    sparse approximate Gaussian process regression", 2005, *Quinonero-Candela, Rasmussen*,
+    and "Variational Learning of Inducing Variables in Sparse Gaussian Processes",
+    2009, *Titsias*.
+
+    Parameters
+    ----------
+    cov_func : None, 2D array, or instance of Covariance
+        The covariance function.  Defaults to zero.
+    mean_func : None, instance of Mean
+        The mean function.  Defaults to zero.
+    approx : string
+        The approximation to use.  Must be one of `VFE`, `FITC` or `DTC`.
+
+    Example
+    --------
+    .. code:: python
+
+        # A one dimensional column vector of inputs.
+        X = np.linspace(0, 1, 10)[:, None]
+
+        # A smaller set of inducing inputs
+        Xu = np.linspace(0, 1, 5)[:, None]
+
+        with pm.Model() as model:
+            # Specify the covariance function.
+            cov_func = pm.gp.cov.ExpQuad(1, ls=0.1)
+
+            # Specify the GP.  The default mean function is `Zero`.
+            gp = pm.gp.Latent(cov_func=cov_func, approx="FITC")
+
+            # Place a GP prior over the function f.
+            sigma = pm.HalfCauchy("sigma", beta=3)
+            y_ = gp.marginal_likelihood("y", X=X, Xu=Xu, y=y, sigma=sigma)
+
+        ...
+
+        # After fitting or sampling, specify the distribution
+        # at new points with .conditional
+        Xnew = np.linspace(-1, 2, 50)[:, None]
+
+        with model:
+            fcond = gp.conditional("fcond", Xnew=Xnew)
+    """
+
+    _available_approx = ("FITC", "VFE", "DTC")
+
+    def __init__(self, mean_func=Zero(), cov_func=Constant(0.0), approx="FITC"):
+        if approx not in self._available_approx:
+            raise NotImplementedError(approx)
+        self.approx = approx
+        super(MarginalSparse, self).__init__(mean_func, cov_func)
+
+    def __add__(self, other):
+        # new_gp will default to FITC approx
+        new_gp = super(MarginalSparse, self).__add__(other)
+        # make sure new gp has correct approx
+        if not self.approx == other.approx:
+            raise ValueError("Cant add GPs with different approximations")
+        new_gp.approx = self.approx
+        return new_gp
+
+    def _build_marginal_likelihood_logp(self, X, Xu, y, sigma):
+        sigma2 = tt.square(sigma)
+        Kuu = self.cov_func(Xu)
+        Kuf = self.cov_func(Xu, X)
+        Luu = cholesky(stabilize(Kuu))
+        A = solve_lower(Luu, Kuf)
+        Qffd = tt.sum(A * A, 0)
+        if self.approx == "FITC":
+            Kffd = self.cov_func(X, diag=True)
+            Lamd = tt.clip(Kffd - Qffd, 0.0, np.inf) + sigma2
+            trace = 0.0
+        elif self.approx == "VFE":
+            Lamd = tt.ones_like(Qffd) * sigma2
+            trace = ((1.0 / (2.0 * sigma2)) *
+                     (tt.sum(self.cov_func(X, diag=True)) -
+                      tt.sum(tt.sum(A * A, 0))))
+        else: # DTC
+            Lamd = tt.ones_like(Qffd) * sigma2
+            trace = 0.0
+        A_l = A / Lamd
+        L_B = cholesky(tt.eye(Xu.shape[0]) + tt.dot(A_l, tt.transpose(A)))
+        r = y - self.mean_func(X)
+        r_l = r / Lamd
+        c = solve_lower(L_B, tt.dot(A, r_l))
+        constant = 0.5 * X.shape[0] * tt.log(2.0 * np.pi)
+        logdet = 0.5 * tt.sum(tt.log(Lamd)) + tt.sum(tt.log(tt.diag(L_B)))
+        quadratic = 0.5 * (tt.dot(r, r_l) - tt.dot(c, c))
+        return -1.0 * (constant + logdet + quadratic + trace)
+
+    def marginal_likelihood(self, name, X, Xu, y, sigma, is_observed=True, **kwargs):
+        R"""
+	Returns the approximate marginal likelihood distribution, given the input
+        locations `X`, inducing point locations `Xu`, data `y`, and white noise
+        standard deviations `sigma`.
+
+        Parameters
+        ----------
+        name : string
+            Name of the random variable
+        X : array-like
+            Function input values.  If one-dimensional, must be a column
+            vector with shape `(n, 1)`.
+        Xu: array-like
+            The inducing points.  Must have the same number of columns as `X`.
+        y : array-like
+            Data that is the sum of the function with the GP prior and Gaussian
+            noise.  Must have shape `(n, )`.
+        sigma : scalar, Variable
+            Standard deviation of the Gaussian noise.
+        is_observed : bool
+            Whether to set `y` as an `observed` variable in the `model`.
+            Default is `True`.
+        **kwargs
+            Extra keyword arguments that are passed to `MvNormal` distribution
+            constructor.
+        """
+
+        self.X = X
+        self.Xu = Xu
+        self.y = y
+        self.sigma = sigma
+        logp = lambda y: self._build_marginal_likelihood_logp(X, Xu, y, sigma)
+        if is_observed:
+            return pm.DensityDist(name, logp, observed=y, **kwargs)
+        else:
+            shape = infer_shape(X, kwargs.pop("shape", None))
+            return pm.DensityDist(name, logp, shape=shape, **kwargs)
+
+    def _build_conditional(self, Xnew, pred_noise, diag, X, Xu, y, sigma, cov_total, mean_total):
+        sigma2 = tt.square(sigma)
+        Kuu = cov_total(Xu)
+        Kuf = cov_total(Xu, X)
+        Luu = cholesky(stabilize(Kuu))
+        A = solve_lower(Luu, Kuf)
+        Qffd = tt.sum(A * A, 0)
+        if self.approx == "FITC":
+            Kffd = cov_total(X, diag=True)
+            Lamd = tt.clip(Kffd - Qffd, 0.0, np.inf) + sigma2
+        else: # VFE or DTC
+            Lamd = tt.ones_like(Qffd) * sigma2
+        A_l = A / Lamd
+        L_B = cholesky(tt.eye(Xu.shape[0]) + tt.dot(A_l, tt.transpose(A)))
+        r = y - mean_total(X)
+        r_l = r / Lamd
+        c = solve_lower(L_B, tt.dot(A, r_l))
+        Kus = self.cov_func(Xu, Xnew)
+        As = solve_lower(Luu, Kus)
+        mu = self.mean_func(Xnew) + tt.dot(tt.transpose(As), solve_upper(tt.transpose(L_B), c))
+        C = solve_lower(L_B, As)
+        if diag:
+            Kss = self.cov_func(Xnew, diag=True)
+            var = Kss - tt.sum(tt.square(As), 0) + tt.sum(tt.square(C), 0)
+            if pred_noise:
+                var += sigma2
+            return mu, var
+        else:
+            cov = (self.cov_func(Xnew) - tt.dot(tt.transpose(As), As) +
+                   tt.dot(tt.transpose(C), C))
+            if pred_noise:
+                cov += sigma2 * tt.identity_like(cov)
+            return mu, stabilize(cov)
+
+    def _get_given_vals(self, given):
+        if 'gp' in given:
+            cov_total = given['gp'].cov_func
+            mean_total = given['gp'].mean_func
+        else:
+            cov_total = self.cov_func
+            mean_total = self.mean_func
+        if all(val in given for val in ['X', 'Xu', 'y', 'sigma']):
+            X, Xu, y, sigma = given['X'], given['Xu'], given['y'], given['sigma']
+        else:
+            X, Xu, y, sigma = self.X, self.Xu, self.y, self.sigma
+        return X, Xu, y, sigma, cov_total, mean_total
+
+    def conditional(self, name, Xnew, pred_noise=False, given={}, **kwargs):
+        R"""
+	Returns the approximate conditional distribution of the GP evaluated over
+        new input locations `Xnew`.
+
+        Parameters
+        ----------
+        name : string
+            Name of the random variable
+        Xnew : array-like
+            Function input values.  If one-dimensional, must be a column
+            vector with shape `(n, 1)`.
+        pred_noise : bool
+            Whether or not observation noise is included in the conditional.
+            Default is `False`.
+        given : dict
+            Can optionally take as key value pairs: `X`, `Xu`, `y`, `noise`,
+            and `gp`.  See the section in the documentation on additive GP
+            models in PyMC3 for more information.
+        **kwargs
+            Extra keyword arguments that are passed to `MvNormal` distribution
+            constructor.
+        """
+
+        givens = self._get_given_vals(given)
+        mu, cov = self._build_conditional(Xnew, pred_noise, False, *givens)
+        chol = cholesky(cov)
+        shape = infer_shape(Xnew, kwargs.pop("shape", None))
+        return pm.MvNormal(name, mu=mu, chol=chol, shape=shape, **kwargs)
