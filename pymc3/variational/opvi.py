@@ -482,7 +482,7 @@ class Group(object):
         String that marks the corresponding variational family for the group.
         Cannot be passed both with `params`
     params : dict
-        Dict with variation family parameters, full description can be found below.
+        Dict with variational family parameters, full description can be found below.
         Cannot be passed both with `vfam`
     random_seed : int
         Random seed for underlying random generator
@@ -606,7 +606,7 @@ class Group(object):
 
         latent3_{i, \dots} \sim \mathcal{N}(\mu_i, \Sigma_i) \foreach i
 
-    **Note**: Using batched and parametrized approximation is ok, but
+    **Note**: Using rowwise and user-parametrized approximation is ok, but
     shape should be checked beforehand, it is impossible to infer it by PyMC3
 
     Normalizing Flow Group
@@ -618,7 +618,7 @@ class Group(object):
 
     **Note**: Consider passing location flow as the last one and scale as the first one for stable inference.
 
-    Batched normalizing flow is supported as well
+    Rowwise normalizing flow is supported as well
 
     >>> group = Group([latent3], vfam='scale-hh*2-radial-loc', rowwise=True)
 
@@ -643,8 +643,8 @@ class Group(object):
     ^^^^^^^^^^^^^^^^^^^^^^
     When you have a lot of latent variables it is impractical to do it all manually.
     To make life much simpler, You can pass `None` instead of list of variables. That case
-    you'll not create shared parameters untill you pass all collected groups to
-    Approximation object that collects all the croups together and checks that every group is
+    you'll not create shared parameters until you pass all collected groups to
+    Approximation object that collects all the groups together and checks that every group is
     correctly initialized. For those groups which have group equal to `None` it will collect all
     the rest variables not covered by other groups and perform delayed init.
 
