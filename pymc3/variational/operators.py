@@ -69,7 +69,8 @@ class KSD(Operator):
     .. math::
 
         x_i^{l+1} \leftarrow \epsilon_l \hat{\phi}^{*}(x_i^l) \\
-        \hat{\phi}^{*}(x) = \frac{1}{n}\sum^{n}_{j=1}[k(x^l_j,x) \nabla_{x^l_j} logp(x^l_j)+ \nabla_{x^l_j} k(x^l_j,x)]
+        \hat{\phi}^{*}(x) = \frac{1}{n}\sum^{n}_{j=1}[k(x^l_j,x) \nabla_{x^l_j} logp(x^l_j)/temp +
+        \nabla_{x^l_j} k(x^l_j,x)]
 
     Parameters
     ----------
