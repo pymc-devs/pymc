@@ -23,9 +23,7 @@ __all__ = [
 
 @Group.register
 class MeanFieldGroup(Group):
-    R"""Mean Field Group
-
-    Mean Field approximation to the posterior where spherical Gaussian family
+    R"""Mean Field approximation to the posterior where spherical Gaussian family
     is fitted to minimize KL divergence from True posterior. It is assumed
     that latent space variables are uncorrelated that is the main drawback
     of the method
@@ -101,9 +99,7 @@ class MeanFieldGroup(Group):
 
 @Group.register
 class FullRankGroup(Group):
-    """Full Rank Group
-
-    Full Rank approximation to the posterior where Multivariate Gaussian family
+    """Full Rank approximation to the posterior where Multivariate Gaussian family
     is fitted to minimize KL divergence from True posterior. In contrast to
     MeanField approach correlations between variables are taken in account. The
     main drawback of the method is computational cost.
@@ -216,9 +212,7 @@ class FullRankGroup(Group):
 
 @Group.register
 class EmpiricalGroup(Group):
-    """Empirical Group
-
-    Builds Approximation instance from a given trace,
+    """Builds Approximation instance from a given trace,
     it has the same interface as variational approximation
     """
     supports_batched = False
@@ -336,13 +330,12 @@ class EmpiricalGroup(Group):
 
 
 class NormalizingFlowGroup(Group):
-    R"""Normalizing Flow Group
-
-    Normalizing flow is a series of invertible transformations on initial distribution.
+    R"""Normalizing flow is a series of invertible transformations on initial distribution.
 
     .. math::
 
-        z_K = f_K \circ \dots \circ f_2 \circ f_1(z_0)
+        z_K &= f_K \circ \dots \circ f_2 \circ f_1(z_0) \\
+        & z_0 \sim \mathcal{N}(0, 1)
 
     In that case we can compute tractable density for the flow.
 
@@ -548,17 +541,23 @@ class SingleGroupApproximation(Approximation):
 
 
 class MeanField(SingleGroupApproximation):
-    """Single Group Mean Field Approximation"""
+    __doc__ = """**Single Group Mean Field Approximation**
+
+    """ + str(MeanFieldGroup.__doc__)
     _group_class = MeanFieldGroup
 
 
 class FullRank(SingleGroupApproximation):
-    """Single Group Full Rank Approximation"""
+    __doc__ = """**Single Group Full Rank Approximation**
+
+    """ + str(FullRankGroup.__doc__)
     _group_class = FullRankGroup
 
 
 class Empirical(SingleGroupApproximation):
-    """Single Group Full Rank Approximation"""
+    __doc__ = """**Single Group Full Rank Approximation**
+
+    """ + str(EmpiricalGroup.__doc__)
     _group_class = EmpiricalGroup
 
     def __init__(self, trace=None, size=None, **kwargs):
@@ -568,7 +567,9 @@ class Empirical(SingleGroupApproximation):
 
 
 class NormalizingFlow(SingleGroupApproximation):
-    """Single Group Normalizing Flow Approximation"""
+    __doc__ = """**Single Group Normalizing Flow Approximation**
+
+    """ + str(NormalizingFlowGroup.__doc__)
     _group_class = NormalizingFlowGroup
 
     def __init__(self, flow=NormalizingFlowGroup.default_flow, *args, **kwargs):
