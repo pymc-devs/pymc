@@ -32,8 +32,7 @@ State = collections.namedtuple('State', 'i,step,callbacks,score')
 
 
 class Inference(object):
-    R"""
-    Base class for Variational Inference
+    R"""**Base class for Variational Inference**
 
     Communicates Operator, Approximation and Test Function to build Objective Function
 
@@ -87,8 +86,7 @@ class Inference(object):
 
     def fit(self, n=10000, score=None, callbacks=None, progressbar=True,
             **kwargs):
-        """
-        Performs Operator Variational Inference
+        """Perform Operator Variational Inference
 
         Parameters
         ----------
@@ -100,8 +98,29 @@ class Inference(object):
             calls provided functions after each iteration step
         progressbar : bool
             whether to show progressbar or not
-        kwargs : kwargs
-            additional kwargs for :func:`ObjectiveFunction.step_function`
+
+        Other Parameters
+        ----------------
+        obj_n_mc : `int`
+            Number of monte carlo samples used for approximation of objective gradients
+        tf_n_mc : `int`
+            Number of monte carlo samples used for approximation of test function gradients
+        obj_optimizer : function (grads, params) -> updates
+            Optimizer that is used for objective params
+        test_optimizer : function (grads, params) -> updates
+            Optimizer that is used for test function params
+        more_obj_params : `list`
+            Add custom params for objective optimizer
+        more_tf_params : `list`
+            Add custom params for test function optimizer
+        more_updates : `dict`
+            Add custom updates to resulting updates
+        total_grad_norm_constraint : `float`
+            Bounds gradient norm, prevents exploding gradient problem
+        fn_kwargs : `dict`
+            Add kwargs to theano.function (e.g. `{'profile': True}`)
+        more_replacements : `dict`
+            Apply custom replacements before calculating gradients
 
         Returns
         -------
@@ -198,7 +217,8 @@ class Inference(object):
                      score=True)
 
     def refine(self, n, progressbar=True):
-        """Refine the solution using the last compiled step function"""
+        """Refine the solution using the last compiled step function
+        """
         if self.state is None:
             raise TypeError('Need to call `.fit` first')
         i, step, callbacks, score = self.state
@@ -211,19 +231,22 @@ class Inference(object):
 
 
 class KLqp(Inference):
-    """General approach to fit Approximations that define :math:`logq`
-    by maximizing ELBO (Evidence Lower BOund).
+    """**Kullback Leibler Divergence Inference**
+
+    General approach to fit Approximations that define :math:`logq`
+    by maximizing ELBO (Evidence Lower Bound).
 
     Parameters
     ----------
     approx : :class:`Approximation`
+        Approximation to fit, it is required to have `logQ`
     """
     def __init__(self, approx):
         super(KLqp, self).__init__(KL, approx, None)
 
 
 class ADVI(KLqp):
-    R"""Automatic Differentiation Variational Inference (ADVI)
+    R"""**Automatic Differentiation Variational Inference (ADVI)**
 
     This class implements the meanfield ADVI, where the variational
     posterior distribution is assumed to be spherical Gaussian without
@@ -341,7 +364,7 @@ class ADVI(KLqp):
     Parameters
     ----------
     local_rv : dict[var->tuple]
-        mapping {model_variable -> local_variable (:math:`\mu`, :math:`\rho`)}
+        mapping {model_variable -> approx params}
         Local Vars are used for Autoencoding Variational Bayes
         See (AEVB; Kingma and Welling, 2014) for details
     model : :class:`pymc3.Model`
@@ -371,12 +394,12 @@ class ADVI(KLqp):
 
 
 class FullRankADVI(KLqp):
-    R"""Full Rank Automatic Differentiation Variational Inference (ADVI)
+    R"""**Full Rank Automatic Differentiation Variational Inference (ADVI)**
 
     Parameters
     ----------
     local_rv : dict[var->tuple]
-        mapping {model_variable -> local_variable (:math:`\mu`, :math:`\rho`)}
+        mapping {model_variable -> approx params}
         Local Vars are used for Autoencoding Variational Bayes
         See (AEVB; Kingma and Welling, 2014) for details
     model : :class:`pymc3.Model`
@@ -406,7 +429,9 @@ class FullRankADVI(KLqp):
 
 
 class ImplicitGradient(Inference):
-    """Implicit Gradient for Variational Inference
+    """**Implicit Gradient for Variational Inference**
+
+    **not suggested to use**
 
     An approach to fit arbitrary approximation by computing kernel based gradient
     By default RBF kernel is used for gradient estimation. Default estimator is
@@ -424,7 +449,7 @@ class ImplicitGradient(Inference):
 
 
 class SVGD(ImplicitGradient):
-    R"""Stein Variational Gradient Descent
+    R"""**Stein Variational Gradient Descent**
 
     This inference is based on Kernelized Stein Discrepancy
     it's main idea is to move initial noisy particles so that
@@ -433,9 +458,9 @@ class SVGD(ImplicitGradient):
     Algorithm is outlined below
 
     *Input:* A target distribution with density function :math:`p(x)`
-            and a set of initial particles :math:`{x^0_i}^n_{i=1}`
+            and a set of initial particles :math:`\{x^0_i\}^n_{i=1}`
 
-    *Output:* A set of particles :math:`{x_i}^n_{i=1}` that approximates the target distribution.
+    *Output:* A set of particles :math:`\{x^{*}_i\}^n_{i=1}` that approximates the target distribution.
 
     .. math::
 
@@ -490,7 +515,9 @@ class SVGD(ImplicitGradient):
 
 
 class ASVGD(ImplicitGradient):
-    R"""Amortized Stein Variational Gradient Descent
+    R"""**Amortized Stein Variational Gradient Descent**
+
+    **not suggested to use**
 
     This inference is based on Kernelized Stein Discrepancy
     it's main idea is to move initial noisy particles so that
@@ -585,7 +612,7 @@ class ASVGD(ImplicitGradient):
 
 
 class NFVI(KLqp):
-    R"""Normalizing Flow based :class:`KLqp` inference
+    R"""**Normalizing Flow based :class:`KLqp` inference**
 
     Normalizing flow is a series of invertible transformations on initial distribution.
 
@@ -648,7 +675,7 @@ def fit(n=10000, local_rv=None, method='advi', model=None,
     n : `int`
         number of iterations
     local_rv : dict[var->tuple]
-        mapping {model_variable -> local_variable (:math:`\mu`, :math:`\rho`)}
+        mapping {model_variable -> approx params}
         Local Vars are used for Autoencoding Variational Bayes
         See (AEVB; Kingma and Welling, 2014) for details
     method : str or :class:`Inference`
@@ -656,7 +683,6 @@ def fit(n=10000, local_rv=None, method='advi', model=None,
 
         -   'advi'  for ADVI
         -   'fullrank_advi'  for FullRankADVI
-        -   'advi->fullrank_advi'  for fitting ADVI first and then FullRankADVI
         -   'svgd'  for Stein Variational Gradient Descent
         -   'asvgd'  for Amortized Stein Variational Gradient Descent
         -   'nfvi'  for Normalizing Flow with default `scale-loc` flow
@@ -671,8 +697,35 @@ def fit(n=10000, local_rv=None, method='advi', model=None,
         additional kwargs passed to :class:`Inference`
     start : `Point`
         starting point for inference
-    kwargs : kwargs
-        additional kwargs for :func:`Inference.fit`
+
+    Other Parameters
+    ----------------
+    score : bool
+            evaluate loss on each iteration or not
+    callbacks : list[function : (Approximation, losses, i) -> None]
+        calls provided functions after each iteration step
+    progressbar : bool
+        whether to show progressbar or not
+    obj_n_mc : `int`
+        Number of monte carlo samples used for approximation of objective gradients
+    tf_n_mc : `int`
+        Number of monte carlo samples used for approximation of test function gradients
+    obj_optimizer : function (grads, params) -> updates
+        Optimizer that is used for objective params
+    test_optimizer : function (grads, params) -> updates
+        Optimizer that is used for test function params
+    more_obj_params : `list`
+        Add custom params for objective optimizer
+    more_tf_params : `list`
+        Add custom params for test function optimizer
+    more_updates : `dict`
+        Add custom updates to resulting updates
+    total_grad_norm_constraint : `float`
+        Bounds gradient norm, prevents exploding gradient problem
+    fn_kwargs : `dict`
+        Add kwargs to theano.function (e.g. `{'profile': True}`)
+    more_replacements : `dict`
+        Apply custom replacements before calculating gradients
 
     Returns
     -------

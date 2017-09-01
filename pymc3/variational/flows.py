@@ -129,7 +129,7 @@ class AbstractFlow(object):
         return cls.__name_registry[name.lower()]
 
     def __init__(self, z0=None, dim=None, jitter=.001, batch_size=None, local=False):
-        self.islocal = local
+        self.local = local
         self.batch_size = batch_size
         self.__jitter = jitter
         if isinstance(z0, AbstractFlow):
@@ -155,7 +155,7 @@ class AbstractFlow(object):
         spec = self.__param_spec__[name]
         shape = tuple(eval(s, {'d': self.dim}) for s in spec)
         if user is None:
-            if self.islocal:
+            if self.local:
                 raise opvi.LocalGroupError('Need parameters for local group flow')
             if self.batched:
                 if self.batch_size is None:
@@ -168,7 +168,7 @@ class AbstractFlow(object):
 
         else:
             if self.batched:
-                if self.islocal or self.batch_size is None:
+                if self.local or self.batch_size is None:
                     shape = (-1,) + shape
                 else:
                     shape = (self.batch_size,) + shape
