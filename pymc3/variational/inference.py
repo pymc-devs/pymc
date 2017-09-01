@@ -580,28 +580,7 @@ class ASVGD(ImplicitGradient):
         )
 
     def fit(self, n=10000, score=None, callbacks=None, progressbar=True,
-            obj_n_mc=300, **kwargs):
-        """Perform Amortized Stein Variational Gradient Descent
-
-        Parameters
-        ----------
-        n : int
-            number of iterations
-        score : bool
-            evaluate loss on each iteration or not
-        callbacks : list[function : (Approximation, losses, i) -> None]
-            calls provided functions after each iteration step
-        progressbar : bool
-            whether to show progressbar or not
-        obj_n_mc : int
-            sample `n` particles for Stein gradient
-        kwargs : kwargs
-            additional kwargs for :func:`ObjectiveFunction.step_function`
-
-        Returns
-        -------
-        Approximation
-        """
+            obj_n_mc=500, **kwargs):
         return super(ASVGD, self).fit(
             n=n, score=score, callbacks=callbacks,
             progressbar=progressbar, obj_n_mc=obj_n_mc, **kwargs)
