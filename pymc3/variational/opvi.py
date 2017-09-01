@@ -968,16 +968,12 @@ class Group(object):
 
         Notes
         -----
-        Corner case explained
+        Suppose you have a AEVB setup that:
 
-        -   suppose you have AEVB setup
-        -   `X` is purely symbolic
-        -   `X.shape[0]` is needed for `initial` second dim
-        -   for inference you replace `X` with data tensor
-        -   `X.shape[0]` in `initial` remains symbolic and can't be replaced
-        -   you get `MissingInputError`
-
-        Solution is to do manual replacements for second dim in `initial` here
+            -   input `X` is purely symbolic, and `X.shape[0]` is needed to `initial` second dim
+            -   to perform inference, `X` is replaced with data tensor, however, since `X.shape[0]` in `initial`
+                remains symbolic and can't be replaced, you get `MissingInputError`
+            -   as a solution, here we perform a manual replacement for the second dim in `initial`.
 
         Returns
         -------
