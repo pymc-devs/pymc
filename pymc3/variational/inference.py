@@ -553,7 +553,7 @@ class ASVGD(ImplicitGradient):
     -   Dilin Wang, Qiang Liu (2016)
         Learning to Draw Samples: With Application to Amortized MLE for Generative Adversarial Learning
         arXiv:1611.01722
-    
+
     -   Yang Liu, Prajit Ramachandran, Qiang Liu, Jian Peng (2017)
         Stein Variational Policy Gradient
         arXiv:1704.02399

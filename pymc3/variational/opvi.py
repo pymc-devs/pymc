@@ -797,7 +797,7 @@ class Group(object):
             raise ParametrizationError(
                 'Passed parameters do not have a needed set of keys, '
                 'they should be equal, got {givens}, needed {needed}'.format(
-                 givens=givens, needed=needed))
+                    givens=givens, needed=needed))
         self._user_params = dict()
         spec = self.get_param_spec_for(d=self.ddim, **kwargs.pop('spec_kw', {}))
         for name, param in self.user_params.items():

@@ -439,7 +439,7 @@ class NormalizingFlowGroup(Group):
             raise opvi.ParametrizationError(
                 'Passed parameters do not have a needed set of keys, '
                 'they should be equal, needed {needed}, got {givens}'.format(
-                 givens=list(sorted(givens)), needed='[0, 1, ..., %d]' % len(formula.flows)))
+                    givens=list(sorted(givens)), needed='[0, 1, ..., %d]' % len(formula.flows)))
         for i in needed:
             flow = flows.flow_for_params(params[i])
             flow_keys = set(flow.__param_spec__)
@@ -448,7 +448,7 @@ class NormalizingFlowGroup(Group):
                 raise opvi.ParametrizationError(
                     'Passed parameters for flow `{i}` ({cls}) do not have a needed set of keys, '
                     'they should be equal, needed {needed}, got {givens}'.format(
-                     givens=user_keys, needed=flow_keys, i=i, cls=flow.__name__))
+                        givens=user_keys, needed=flow_keys, i=i, cls=flow.__name__))
         return True
 
     @property
