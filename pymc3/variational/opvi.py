@@ -962,9 +962,22 @@ class Group(object):
         size : scalar
             sample size
         deterministic : bool or scalar
-            whether sample in deterministic manner
+            whether to sample in deterministic manner
         more_replacements : dict
             more replacements passed to shape
+
+        Notes
+        -----
+        Corner case explained
+
+        -   suppose you have AEVB setup
+        -   `X` is purely symbolic
+        -   `X.shape[0]` is needed for `initial` second dim
+        -   for inference you replace `X` with data tensor
+        -   `X.shape[0]` in `initial` remains symbolic and can't be replaced
+        -   you get `MissingInputError`
+
+        Solution is to do manual replacements for second dim in `initial` here
 
         Returns
         -------
