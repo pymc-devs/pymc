@@ -12,13 +12,13 @@ __all__ = [
 
 
 class KL(Operator):
-    """
-    Operator based on Kullback Leibler Divergence
+    R"""**Operator based on Kullback Leibler Divergence**
 
     .. math::
 
-        KL[q(v)||p(v)] = \int q(v)\log\\frac{q(v)}{p(v)}dv
+        KL[q(v)||p(v)] = \int q(v)\log\frac{q(v)}{p(v)}dv
     """
+
     def apply(self, f):
         return self.logq_norm - self.logp_norm
 
@@ -26,7 +26,7 @@ class KL(Operator):
 
 
 class KSDObjective(ObjectiveFunction):
-    """Helper class for construction loss and updates for variational inference
+    R"""Helper class for construction loss and updates for variational inference
 
     Parameters
     ----------
@@ -59,8 +59,7 @@ class KSDObjective(ObjectiveFunction):
 
 
 class KSD(Operator):
-    R"""
-    Operator based on Kernelized Stein Discrepancy
+    R"""**Operator based on Kernelized Stein Discrepancy**
 
     Input: A target distribution with density function :math:`p(x)`
         and a set of initial particles :math:`\{x^0_i\}^n_{i=1}`
@@ -74,8 +73,8 @@ class KSD(Operator):
 
     Parameters
     ----------
-    approx : :class:`Empirical`
-        Empirical Approximation used for inference
+    approx : :class:`Approximation`
+        Approximation used for inference
 
     References
     ----------

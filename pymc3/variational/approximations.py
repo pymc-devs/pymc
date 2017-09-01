@@ -414,7 +414,7 @@ class NormalizingFlowGroup(Group):
             )
         if not isinstance(formula, flows.Formula):
             formula = flows.Formula(formula)
-        if self.islocal:
+        if self.local:
             bs = -1
         elif self.batched:
             bs = self.bdim
@@ -500,7 +500,7 @@ class NormalizingFlowGroup(Group):
 
     @node_property
     def bdim(self):
-        if not self.islocal:
+        if not self.local:
             return super(NormalizingFlowGroup, self).bdim
         else:
             return next(iter(self.user_params[0].values())).shape[0]
@@ -533,11 +533,11 @@ def sample_approx(approx, draws=100, include_transformed=True):
 # single group shortcuts exported to user
 class SingleGroupApproximation(Approximation):
     """Base class for Single Group Approximation"""
-    group_class = None
+    _group_class = None
 
     def __init__(self, *args, **kwargs):
         local_rv = kwargs.get('local_rv')
-        groups = [self.group_class(None, *args, **kwargs)]
+        groups = [self._group_class(None, *args, **kwargs)]
         if local_rv is not None:
             groups.extend([Group([v], params=p, local=True, model=kwargs.get('model'))
                            for v, p in local_rv.items()])
@@ -549,17 +549,17 @@ class SingleGroupApproximation(Approximation):
 
 class MeanField(SingleGroupApproximation):
     """Single Group Mean Field Approximation"""
-    group_class = MeanFieldGroup
+    _group_class = MeanFieldGroup
 
 
 class FullRank(SingleGroupApproximation):
     """Single Group Full Rank Approximation"""
-    group_class = FullRankGroup
+    _group_class = FullRankGroup
 
 
 class Empirical(SingleGroupApproximation):
     """Single Group Full Rank Approximation"""
-    group_class = EmpiricalGroup
+    _group_class = EmpiricalGroup
 
     def __init__(self, trace=None, size=None, **kwargs):
         if kwargs.get('local_rv', None) is not None:
@@ -569,7 +569,7 @@ class Empirical(SingleGroupApproximation):
 
 class NormalizingFlow(SingleGroupApproximation):
     """Single Group Normalizing Flow Approximation"""
-    group_class = NormalizingFlowGroup
+    _group_class = NormalizingFlowGroup
 
     def __init__(self, flow=NormalizingFlowGroup.default_flow, *args, **kwargs):
         kwargs['flow'] = flow
