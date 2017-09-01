@@ -587,7 +587,7 @@ class Beta(UnitContinuous):
     mu : float
         Alternative mean (0 < mu < 1).
     sd : float
-        Alternative standard deviation (sd > 0).
+        Alternative standard deviation (0 < sd < sqrt(mu * (1 - mu))).
 
     Notes
     -----
