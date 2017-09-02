@@ -2,6 +2,7 @@
 
 import numpy as np
 from .stats import statfunc
+from .util import get_default_varnames
 
 __all__ = ['geweke', 'gelman_rubin', 'effective_n']
 
@@ -95,7 +96,7 @@ def geweke(x, first=.1, last=.5, intervals=20):
         return np.array(zscores)
 
 
-def gelman_rubin(mtrace):
+def gelman_rubin(mtrace, varnames=None, include_transformed=False):
     R"""Returns estimate of R for a set of traces.
 
     The Gelman-Rubin diagnostic tests for lack of convergence by comparing
@@ -110,6 +111,11 @@ def gelman_rubin(mtrace):
     mtrace : MultiTrace
       A MultiTrace object containing parallel traces (minimum 2)
       of one or more stochastic parameters.
+    varnames : list
+      Names of variables to include in the rhat report
+    include_transformed : bool
+      Flag for reporting automatically transformed variables in addition
+      to original variables (defaults to False).
 
     Returns
     -------
@@ -140,8 +146,11 @@ def gelman_rubin(mtrace):
             'Gelman-Rubin diagnostic requires multiple chains '
             'of the same length.')
 
+    if varnames is None:
+        varnames = get_default_varnames(mtrace.varnames, include_transformed=include_transformed)
+
     Rhat = {}
-    for var in mtrace.varnames:
+    for var in varnames:
         x = np.array(mtrace.get_values(var, combine=False))
         num_samples = x.shape[1]
 
@@ -159,14 +168,19 @@ def gelman_rubin(mtrace):
     return Rhat
 
 
-def effective_n(mtrace):
+def effective_n(mtrace, varnames=None, include_transformed=False):
     R"""Returns estimate of the effective sample size of a set of traces.
 
     Parameters
     ----------
     mtrace : MultiTrace
-        A MultiTrace object containing parallel traces (minimum 2)
-        of one or more stochastic parameters.
+      A MultiTrace object containing parallel traces (minimum 2)
+      of one or more stochastic parameters.
+    varnames : list
+      Names of variables to include in the effective_n report
+    include_transformed : bool
+      Flag for reporting automatically transformed variables in addition
+      to original variables (defaults to False).
 
     Returns
     -------
@@ -191,6 +205,9 @@ def effective_n(mtrace):
         raise ValueError(
             'Calculation of effective sample size requires multiple chains '
             'of the same length.')
+
+    if varnames is None:
+        varnames = get_default_varnames(mtrace.varnames, include_transformed=include_transformed)
 
     def get_vhat(x):
         # number of chains is last dim (-1)
@@ -234,7 +251,7 @@ def effective_n(mtrace):
                    int(num_chains * num_samples / (1. + 2 * rho[1:t-1].sum())))
 
     n_eff = {}
-    for var in mtrace.varnames:
+    for var in varnames:
         x = np.array(mtrace.get_values(var, combine=False))
 
         # make sure to handle scalars correctly - add extra dim if needed
