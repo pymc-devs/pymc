@@ -147,7 +147,7 @@ def gelman_rubin(mtrace, varnames=None, include_transformed=False):
             'of the same length.')
 
     if varnames is None:
-        varnames = get_default_varnames(trace.varnames, include_transformed=include_transformed)
+        varnames = get_default_varnames(mtrace.varnames, include_transformed=include_transformed)
 
     Rhat = {}
     for var in varnames:
@@ -207,7 +207,7 @@ def effective_n(mtrace, varnames=None, include_transformed=False):
             'of the same length.')
 
     if varnames is None:
-        varnames = get_default_varnames(trace.varnames, include_transformed=include_transformed)
+        varnames = get_default_varnames(mtrace.varnames, include_transformed=include_transformed)
 
     def get_vhat(x):
         # number of chains is last dim (-1)
