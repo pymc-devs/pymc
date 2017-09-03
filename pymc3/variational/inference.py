@@ -550,8 +550,6 @@ class SVGD(Inference):
         Scale cost to minibatch instead of full dataset
     start : `dict`
         initial point for inference
-    histogram : :class:`Empirical`
-        initialize SVGD with given Empirical approximation instead of default initial particles
     random_seed : None or int
         leave None to use package global RandomStream or other
         valid value to create instance specific one

@@ -8,7 +8,8 @@ import pymc3 as pm
 
 __all__ = [
     'KL',
-    'KSD'
+    'KSD',
+    'AKSD'
 ]
 
 
@@ -76,10 +77,10 @@ class KSD(Operator):
     R"""
     Operator based on Kernelized Stein Discrepancy
 
-    Input: A target distribution with density function :math:`p(x)`
+    *Input:* A target distribution with density function :math:`p(x)`
         and a set of initial particles :math:`\{x^0_i\}^n_{i=1}`
 
-    Output: A set of particles :math:`\{x_i\}^n_{i=1}` that approximates the target distribution.
+    *Output:* A set of particles :math:`\{x_i\}^n_{i=1}` that approximates the target distribution.
 
     .. math::
 
@@ -124,6 +125,40 @@ class KSD(Operator):
 
 
 class AKSD(KSD):
+    R"""
+    Amortized Stein Variational Gradient Descent
+
+    This inference is based on Kernelized Stein Discrepancy
+    it's main idea is to move initial noisy particles so that
+    they fit target distribution best.
+
+    Algorithm is outlined below
+
+    *Input:* Parametrized random generator :math:`R_{\theta}`
+
+    *Output:* :math:`R_{\theta^{*}}` that approximates the target distribution.
+
+    .. math::
+
+        \Delta x_i &= \hat{\phi}^{*}(x_i) \\
+        \hat{\phi}^{*}(x) &= \frac{1}{n}\sum^{n}_{j=1}[k(x_j,x) \nabla_{x_j} logp(x_j)+ \nabla_{x_j} k(x_j,x)] \\
+        \Delta_{\theta} &= \frac{1}{n}\sum^{n}_{i=1}\Delta x_i\frac{\partial x_i}{\partial \theta}
+
+    References
+    ----------
+    -   Dilin Wang, Yihao Feng, Qiang Liu (2016)
+        Learning to Sample Using Stein Discrepancy
+        http://bayesiandeeplearning.org/papers/BDL_21.pdf
+
+    -   Dilin Wang, Qiang Liu (2016)
+        Learning to Draw Samples: With Application to Amortized MLE for Generative Adversarial Learning
+        arXiv:1611.01722
+
+    -   Yang Liu, Prajit Ramachandran, Qiang Liu, Jian Peng (2017)
+        Stein Variational Policy Gradient
+        arXiv:1704.02399
+    """
+
     def __init__(self, approx, temperature=1):
         warnings.warn('You are using experimental inference Operator. '
                       'It requires careful choice of temperature, default is 1. '
