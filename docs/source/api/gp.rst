@@ -266,9 +266,18 @@ GP Implementations
 .. automodule:: pymc3.gp.gp
    :members:
 
+Mean Functions
+--------------
 
-Covariance Functions / Kernels
-------------------------------
+.. currentmodule:: pymc3.gp.cov
+.. autosummary::
+
+   Zero
+   Constant
+   Linear
+
+Covariance Functions
+--------------------
 
 .. currentmodule:: pymc3.gp.cov
 .. autosummary::
