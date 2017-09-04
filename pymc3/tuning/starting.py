@@ -25,9 +25,7 @@ def find_MAP(start=None, vars=None, method="L-BFGS-B",
              return_raw=False, progressbar=True, maxeval=5000, model=None, callback=None,
              *args, **kwargs):
     """
-    Sets state to the local maximum a posteriori point given a model.
-    Current default of fmin_Hessian does not deal well with optimizing close
-    to sharp edges, especially if they are the minimum.
+    Finds the local maximum a posteriori point given a model.
 
     Parameters
     ----------
@@ -39,14 +37,14 @@ def find_MAP(start=None, vars=None, method="L-BFGS-B",
         discrete variables are specified in `vars`, then
         `Powell` which will perform better).
     return_raw : Bool
-        Whether to return extra value returned by fmin (Defaults to `False`)
+        Whether to return the full output of scipy.optimize.minimize (Defaults to `False`)
     progressbar : bool
         Whether or not to display a progress bar in the command line.
     maxeval : int
         The maximum number of times the posterior distribution is evaluated.
     model : Model (optional if in `with` context)
     *args, **kwargs
-        Extra args passed to fmin
+        Extra args passed to scipy.optimize.minimize
     """
     model = modelcontext(model)
     if start is None:
@@ -82,7 +80,7 @@ def find_MAP(start=None, vars=None, method="L-BFGS-B",
                         "(E.g. vars contains discrete variables). MAP " +
                         "estimates may not be accurate for the default " +
                         "parameters. Defaulting to non-gradient minimization " +
-                        "fmin_powell.")
+                        "'Powell'.")
         method = "Powell"
 
     if "fmin" in kwargs:
@@ -130,6 +128,47 @@ def find_MAP(start=None, vars=None, method="L-BFGS-B",
 
     vars = model.unobserved_RVs
     mx = {var.name: value for var, value in zip(vars, model.fastfn(vars)(bij.rmap(mx0)))}
+
+    # check optimization result
+    allfinite_mx0 = allfinite(mx0)
+    allfinite_logp = allfinite(model.logp(mx))
+    if compute_gradient:
+        allfinite_dlogp = allfinite(model.dlogp()(mx))
+    else:
+        allfinite_dlogp = True
+
+    if (not allfinite_mx0 or
+        not allfinite_logp or
+        not allfinite_dlogp):
+
+        messages = []
+        for var in vars:
+            vals = {
+                "value": mx[var.name],
+                "logp": var.logp(mx)}
+            if compute_gradient:
+                vals["dlogp"] = var.dlogp()(mx)
+
+            def message(name, values):
+                if np.size(values) < 10:
+                    return name + " bad: " + str(values)
+                else:
+                    idx = np.nonzero(logical_not(isfinite(values)))
+                    return name + " bad at idx: " + str(idx) + " with values: " + str(values[idx])
+
+            messages += [
+                message(var.name + "." + k, v)
+                for k, v in vals.items()
+                if not allfinite(v)]
+
+        specific_errors = '\n'.join(messages)
+        warnings.warn("The final result of the optimization (max, logp or dlogp at max) contain " +
+                      "non-finite values. Some values may be outside of distribution support. max: " +
+                      repr(mx) + " logp: " + repr(model.logp(mx)) + " dlogp: " + repr(model.dlogp()(mx)) +
+                      "Check that 1) you don't have hierarchical parameters, these will lead to points " +
+                      "with infinite density. 2) your distribution logp's are properly specified. The " +
+                      "state of the optimization at the iteration before problematic values were " +
+                      "encountered is returned.  Specific issues: \n" + specific_errors)
 
     if return_raw:
         return mx, opt_result
