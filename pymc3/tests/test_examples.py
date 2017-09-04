@@ -2,7 +2,6 @@ import matplotlib
 import numpy as np
 import pandas as pd
 import pymc3 as pm
-import scipy.optimize as opt
 import theano.tensor as tt
 import pytest
 import theano
