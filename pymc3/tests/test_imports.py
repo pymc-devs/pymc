@@ -1,3 +1,4 @@
+# pylint: skip-file
 import sys
 
 from pymc3 import *  # noqa

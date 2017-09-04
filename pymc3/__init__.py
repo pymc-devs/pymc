@@ -21,7 +21,7 @@ from . import sampling
 from .diagnostics import *
 from .backends.tracetab import *
 
-import pymc3
+import pymc3  # pylint: disable=import-self
 import pymc3.plots
 # deprecate plotting imports to prepare to remove matplotlib as dependency
 autocorrplot = pymc3.util.deprecate(
