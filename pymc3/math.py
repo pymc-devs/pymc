@@ -202,7 +202,7 @@ class BlockDiagonalMatrix(Op):
 
     def make_node(self, *matrices):
         if not matrices:
-            raise ValueError('Got no matrices to allocate')
+            raise ValueError('no matrices to allocate')
         matrices = list(map(tt.as_tensor, matrices))
         if any(mat.type.ndim != 2 for mat in matrices):
             raise TypeError('all data arguments must be matrices')
