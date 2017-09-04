@@ -22,7 +22,7 @@ __all__ = ['find_MAP']
 
 
 def find_MAP(start=None, vars=None, method="L-BFGS-B",
-             return_raw=False, progressbar=True, maxeval=5000, model=None, callback=None,
+             return_raw=False, progressbar=True, maxeval=5000, model=None,
              *args, **kwargs):
     """
     Finds the local maximum a posteriori point given a model.
@@ -241,11 +241,3 @@ class CostFuncWrapper(object):
         else:
             norm_grad = np.linalg.norm(grad)
             self.progress.set_description(self.desc.format(neg_value, norm_grad))
-
-
-
-
-
-
-
-
