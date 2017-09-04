@@ -1,5 +1,4 @@
 from collections import OrderedDict
-import matplotlib.pyplot as plt
 import numpy as np
 
 from .artists import plot_posterior_op
@@ -54,6 +53,8 @@ def plot_posterior(trace, varnames=None, transform=identity_transform, figsize=N
     ax : matplotlib axes
 
     """
+    import matplotlib.pyplot as plt
+
     def create_axes_grid(figsize, traces):
         l_trace = len(traces)
         if l_trace == 1:
@@ -137,6 +138,8 @@ def plot_posterior_predictive_glm(trace, eval=None, lm=None, samples=30, **kwarg
             How many posterior samples to draw.
     Additional keyword arguments are passed to pylab.plot().
     """
+    import matplotlib.pyplot as plt
+
     if lm is None:
         lm = lambda x, sample: sample['Intercept'] + sample['x'] * x
 

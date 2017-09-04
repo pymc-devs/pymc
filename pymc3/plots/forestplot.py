@@ -1,5 +1,3 @@
-from matplotlib import gridspec
-import matplotlib.pyplot as plt
 import numpy as np
 from pymc3.diagnostics import gelman_rubin
 from pymc3.stats import quantiles, hpd
@@ -180,6 +178,8 @@ def forestplot(trace_obj, varnames=None, transform=identity_transform, alpha=0.0
     gs : matplotlib GridSpec
 
     """
+    import matplotlib.pyplot as plt
+
     # Quantiles to be calculated
     if quartiles:
         qlist = [100 * alpha / 2, 25, 50, 75, 100 * (1 - alpha / 2)]
@@ -201,6 +201,7 @@ def forestplot(trace_obj, varnames=None, transform=identity_transform, alpha=0.0
     # Empty list for y-axis labels
     if gs is None:
         # Initialize plot
+        from matplotlib import gridspec
         if plot_rhat:
             gs = gridspec.GridSpec(1, 2, width_ratios=[3, 1])
         else:

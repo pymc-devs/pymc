@@ -1,6 +1,5 @@
 import warnings
 
-import matplotlib.pyplot as plt
 import numpy as np
 from .kdeplot import kdeplot
 
@@ -34,6 +33,10 @@ def energyplot(trace, kind='kde', figsize=None, ax=None, legend=True,
 
     ax : matplotlib axes
     """
+
+    if ax is None:
+        import matplotlib.pyplot as plt
+        _, ax = plt.subplots(figsize=figsize)
 
     try:
         energy = trace['energy']

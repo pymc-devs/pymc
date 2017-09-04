@@ -1,4 +1,3 @@
-import matplotlib.pyplot as plt
 import numpy as np
 # plotting utilities can all be in this namespace
 from ..util import get_default_varnames  # pylint: disable=unused-import
@@ -24,6 +23,7 @@ def get_axis(ax, default_rows, default_columns, **default_kwargs):
 
     default_shape = (default_rows, default_columns)
     if ax is None:
+        import matplotlib.pyplot as plt
         _, ax = plt.subplots(*default_shape, **default_kwargs)
     elif ax.shape != default_shape:
         raise ValueError('Subplots with shape %r required' % (default_shape,))

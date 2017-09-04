@@ -1,4 +1,3 @@
-import matplotlib.pyplot as plt
 import numpy as np
 from scipy.signal import gaussian, convolve
 
@@ -26,6 +25,7 @@ def kdeplot(values, label=None, shade=0, ax=None, kwargs_shade=None, **kwargs):
 
     """
     if ax is None:
+        import matplotlib.pyplot as plt
         _, ax = plt.subplots()
 
     if kwargs_shade is None:
