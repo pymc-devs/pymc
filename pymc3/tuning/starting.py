@@ -33,9 +33,10 @@ def find_MAP(start=None, vars=None, method="L-BFGS-B",
     vars : list
         List of variables to optimize and set to optimum (Defaults to all continuous).
     method : string or callable
-        Optimization algorithm (Defaults to `L-BFGS-B` unless
+        Optimization algorithm (Defaults to 'L-BFGS-B' unless
         discrete variables are specified in `vars`, then
-        `Powell` which will perform better).
+        `Powell` which will perform better).  For instructions on use of a callable,
+        refer to scipy's documentation of `optimize.minimize`.
     return_raw : Bool
         Whether to return the full output of scipy.optimize.minimize (Defaults to `False`)
     progressbar : bool
