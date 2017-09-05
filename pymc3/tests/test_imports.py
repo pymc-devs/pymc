@@ -4,7 +4,7 @@ import sys
 
 def test_matplotlib_not_imported():
     if 'matplotlib' in sys.modules:
-        del sys.modules['matplotlib']
+        mpl = sys.modules.pop('matplotlib')
 
     # make sure matplotlib isn't already imported
     assert 'matplotlib' not in sys.modules
@@ -16,3 +16,6 @@ def test_matplotlib_not_imported():
     # show that it is possible for the test to fail
     import matplotlib  # noqa
     assert 'matplotlib' in sys.modules
+
+    # Other tests fail without adding this back...
+    sys.modules['matplotlib'] = mpl
