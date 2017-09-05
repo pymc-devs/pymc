@@ -1,38 +1,8 @@
-from functools import wraps
 import re
-import warnings
 
 from numpy import asscalar
 
 LATEX_ESCAPE_RE = re.compile(r'(%|_|\$|#|&)', re.MULTILINE)
-
-
-def deprecate(name, alternative, alt_module, version=None):
-    """Replace a function with a new one and emit a deprecation warning.
-
-    Parameters
-    ----------
-    name : str
-        Name of function to deprecate
-    alternative : function
-        Function to use instead
-    alt_module : str
-        Path to use to import the alternative function
-    version : str
-        Version where name will be removed.  Optional.
-    """
-    if version is None:
-        version_msg = ''
-    else:
-        version_msg = ' and will be removed in {}'.format(version)
-    msg = "pymc3.{name} is deprecated{version_msg}. Use {alt_module}.{alt_name} instead.".format(
-        name=name, version_msg=version_msg, alt_module=alt_module, alt_name=alternative.__name__)
-
-    @wraps(alternative)
-    def wrapper(*args, **kwargs):
-        warnings.warn(msg, FutureWarning, stacklevel=2)
-        return alternative(*args, **kwargs)
-    return wrapper
 
 
 def escape_latex(strng):
