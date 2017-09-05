@@ -6,6 +6,7 @@ CommonMark>=0.5.4
 recommonmark>=0.4.0
 sphinx>=1.5.5
 nbsphinx>=0.2.13
+sphinx-autobuild
 pytest>=3.0.7
 pytest-cov>=2.5.1
 mock>=2.0.0; python_version < '3.4'
