@@ -70,10 +70,12 @@ class SQLite(base.BaseTrace):
     vars : list of variables
         Sampling values will be stored for these variables. If None,
         `model.unobserved_RVs` is used.
+    test_point : dict
+        use different test point that might be with changed variables shapes
     """
 
-    def __init__(self, name, model=None, vars=None):
-        super(SQLite, self).__init__(name, model, vars)
+    def __init__(self, name, model=None, vars=None, test_point=None):
+        super(SQLite, self).__init__(name, model, vars, test_point)
         self._var_cols = {}
         self.var_inserts = {}  # varname -> insert statement
         self.draw_idx = 0

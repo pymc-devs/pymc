@@ -1,16 +1,15 @@
 import numpy as np
 import theano
-
 from theano import theano, scalar, tensor as tt
-from theano.sandbox.rng_mrg import MRG_RandomStreams
-from theano.gof.graph import inputs
-from theano.gof import Op
 from theano.configparser import change_flags
+from theano.gof import Op
+from theano.gof.graph import inputs
+from theano.sandbox.rng_mrg import MRG_RandomStreams
 
-from .vartypes import typefilter, continuous_types
-from .memoize import memoize
 from .blocking import ArrayOrdering
 from .data import GeneratorAdapter
+from .memoize import memoize
+from .vartypes import typefilter, continuous_types
 
 __all__ = ['gradient',
            'hessian',
@@ -457,3 +456,12 @@ def ix_(*args):
         new = new.reshape((1,)*k + (new.size,) + (1,)*(nd-k-1))
         out.append(new)
     return tuple(out)
+
+
+def largest_common_dtype(tensors):
+    dtypes = set(str(t.dtype) if hasattr(t, 'dtype')
+                 else smartfloatX(np.asarray(t)).dtype
+                 for t in tensors)
+    return np.stack([np.ones((), dtype=dtype) for dtype in dtypes]).dtype
+
+

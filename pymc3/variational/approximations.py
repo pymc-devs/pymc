@@ -3,9 +3,12 @@ import theano
 from theano import tensor as tt
 
 import pymc3 as pm
-from pymc3.distributions.dist_math import rho2sd, log_normal
-from pymc3.variational.opvi import Approximation, node_property
+from pymc3.distributions.dist_math import rho2sd
+from . import opvi
+from pymc3.variational.opvi import Group, Approximation, node_property
 from pymc3.util import update_start_vals
+from pymc3.theanof import change_flags
+from pymc3.math import batched_diag
 from pymc3.variational import flows
 
 
@@ -18,310 +21,249 @@ __all__ = [
 ]
 
 
-class MeanField(Approximation):
-    """Mean Field approximation to the posterior where spherical Gaussian family
+@Group.register
+class MeanFieldGroup(Group):
+    R"""Mean Field approximation to the posterior where spherical Gaussian family
     is fitted to minimize KL divergence from True posterior. It is assumed
     that latent space variables are uncorrelated that is the main drawback
     of the method
-
-    Parameters
-    ----------
-    local_rv : dict[var->tuple]
-        mapping {model_variable -> local_variable (:math:`\\mu`, :math:`\\rho`)}
-        Local Vars are used for Autoencoding Variational Bayes
-        See (AEVB; Kingma and Welling, 2014) for details
-    model : :class:`pymc3.Model`
-        PyMC3 model for inference
-    start : `Point`
-        initial mean
-    cost_part_grad_scale : `scalar`
-        Scaling score part of gradient can be useful near optimum for
-        archiving better convergence properties. Common schedule is
-        1 at the start and 0 in the end. So slow decay will be ok.
-        See (Sticking the Landing; Geoffrey Roeder,
-        Yuhuai Wu, David Duvenaud, 2016) for details
-    scale_cost_to_minibatch : `bool`
-        Scale cost to minibatch instead of full dataset, default False
-    random_seed : None or int
-        leave None to use package global RandomStream or other
-        valid value to create instance specific one
-
-    References
-    ----------
-    -   Geoffrey Roeder, Yuhuai Wu, David Duvenaud, 2016
-        Sticking the Landing: A Simple Reduced-Variance Gradient for ADVI
-        approximateinference.org/accepted/RoederEtAl2016.pdf
     """
-
-    def __init__(self, local_rv=None, model=None, cost_part_grad_scale=1,
-                 scale_cost_to_minibatch=False,
-                 random_seed=None, start=None, **kwargs):
-        super(MeanField, self).__init__(
-            local_rv=local_rv, model=model,
-            cost_part_grad_scale=cost_part_grad_scale,
-            scale_cost_to_minibatch=scale_cost_to_minibatch,
-            random_seed=random_seed, **kwargs
-        )
-        self.shared_params = self.create_shared_params(start=start)
+    __param_spec__ = dict(mu=('d', ), rho=('d', ))
+    short_name = 'mean_field'
+    alias_names = frozenset(['mf'])
 
     @node_property
     def mean(self):
-        return self.shared_params['mu']
+        return self.params_dict['mu']
 
     @node_property
     def rho(self):
-        return self.shared_params['rho']
+        return self.params_dict['rho']
 
     @node_property
     def cov(self):
-        return tt.diag(rho2sd(self.rho)**2)
+        var = rho2sd(self.rho)**2
+        if self.batched:
+            return batched_diag(var)
+        else:
+            return tt.diag(var)
 
     @node_property
     def std(self):
         return rho2sd(self.rho)
 
+    @change_flags(compute_test_value='off')
+    def __init_group__(self, group):
+        super(MeanFieldGroup, self).__init_group__(group)
+        if not self._check_user_params():
+            self.shared_params = self.create_shared_params(
+                self._kwargs.get('start', None)
+            )
+        self._finalize_init()
+
     def create_shared_params(self, start=None):
         if start is None:
             start = self.model.test_point
         else:
-            start_ = self.model.test_point.copy()
-            update_start_vals(start_, start, self.model)
+            start_ = start.copy()
+            update_start_vals(start_, self.model.test_point, self.model)
             start = start_
-        start = self.gbij.map(start)
+        if self.batched:
+            start = start[self.group[0].name][0]
+        else:
+            start = self.bij.map(start)
+        rho = np.zeros((self.ddim,))
+        if self.batched:
+            start = np.tile(start, (self.bdim, 1))
+            rho = np.tile(rho, (self.bdim, 1))
         return {'mu': theano.shared(
                     pm.floatX(start), 'mu'),
                 'rho': theano.shared(
-                    pm.floatX(np.zeros((self.global_size,))), 'rho')}
+                    pm.floatX(rho), 'rho')}
 
     @node_property
-    def symbolic_random_global_matrix(self):
-        initial = self.symbolic_initial_global_matrix
-        sd = rho2sd(self.rho)
+    def symbolic_random(self):
+        initial = self.symbolic_initial
+        sd = self.std
         mu = self.mean
         return sd * initial + mu
 
     @node_property
-    def symbolic_log_q_W_global(self):
-        """
-        log_q_W samples over q for global vars
-        """
-        mu = self.scale_grad(self.mean)
-        rho = self.scale_grad(self.rho)
-        z = self.symbolic_random_global_matrix
-        logq = log_normal(z, mu, rho=rho)
-        return logq.sum(1)
+    def symbolic_logq_not_scaled(self):
+        z0 = self.symbolic_initial
+        std = rho2sd(self.rho)
+        logdet = tt.log(std)
+        logq = pm.Normal.dist().logp(z0) - logdet
+        return logq.sum(range(1, logq.ndim))
 
 
-class FullRank(Approximation):
+@Group.register
+class FullRankGroup(Group):
     """Full Rank approximation to the posterior where Multivariate Gaussian family
     is fitted to minimize KL divergence from True posterior. In contrast to
     MeanField approach correlations between variables are taken in account. The
     main drawback of the method is computational cost.
-
-    Parameters
-    ----------
-    local_rv : dict[var->tuple]
-        mapping {model_variable -> local_variable (:math:`\\mu`, :math:`\\rho`)}
-        Local Vars are used for Autoencoding Variational Bayes
-        See (AEVB; Kingma and Welling, 2014) for details
-    model : PyMC3 model for inference
-    start : Point
-        initial mean
-    cost_part_grad_scale : float or scalar tensor
-        Scaling score part of gradient can be useful near optimum for
-        archiving better convergence properties. Common schedule is
-        1 at the start and 0 in the end. So slow decay will be ok.
-        See (Sticking the Landing; Geoffrey Roeder,
-        Yuhuai Wu, David Duvenaud, 2016) for details
-    scale_cost_to_minibatch : bool, default False
-        Scale cost to minibatch instead of full dataset
-    random_seed : None or int
-        leave None to use package global RandomStream or other
-        valid value to create instance specific one
-
-    Other Parameters
-    ----------------
-    gpu_compat : bool
-        use GPU compatible version or not
-
-    References
-    ----------
-    -   Geoffrey Roeder, Yuhuai Wu, David Duvenaud, 2016
-        Sticking the Landing: A Simple Reduced-Variance Gradient for ADVI
-        approximateinference.org/accepted/RoederEtAl2016.pdf
     """
+    __param_spec__ = dict(mu=('d',), L_tril=('int(d * (d + 1) / 2)',))
+    short_name = 'full_rank'
+    alias_names = frozenset(['fr'])
 
-    def __init__(self, local_rv=None, model=None, cost_part_grad_scale=1,
-                 scale_cost_to_minibatch=False,
-                 gpu_compat=False, random_seed=None, start=None, **kwargs):
-        super(FullRank, self).__init__(
-            local_rv=local_rv, model=model,
-            cost_part_grad_scale=cost_part_grad_scale,
-            scale_cost_to_minibatch=scale_cost_to_minibatch,
-            random_seed=random_seed, **kwargs
-        )
-        self.gpu_compat = gpu_compat
-        self.shared_params = self.create_shared_params(start=start)
+    @change_flags(compute_test_value='off')
+    def __init_group__(self, group):
+        super(FullRankGroup, self).__init_group__(group)
+        if not self._check_user_params():
+            self.shared_params = self.create_shared_params(
+                self._kwargs.get('start', None)
+            )
+        self._finalize_init()
 
     def create_shared_params(self, start=None):
         if start is None:
             start = self.model.test_point
         else:
-            start_ = self.model.test_point.copy()
-            update_start_vals(start_, start, self.model)
+            start_ = start.copy()
+            update_start_vals(start_, self.model.test_point, self.model)
             start = start_
-        start = pm.floatX(self.gbij.map(start))
-        n = self.global_size
+        if self.batched:
+            start = start[self.group[0].name][0]
+        else:
+            start = self.bij.map(start)
+        n = self.ddim
         L_tril = (
             np.eye(n)
             [np.tril_indices(n)]
             .astype(theano.config.floatX)
         )
+        if self.batched:
+            start = np.tile(start, (self.bdim, 1))
+            L_tril = np.tile(L_tril, (self.bdim, 1))
         return {'mu': theano.shared(start, 'mu'),
                 'L_tril': theano.shared(L_tril, 'L_tril')}
 
     @node_property
     def L(self):
-        return self.shared_params['L_tril'][self.tril_index_matrix]
+        if self.batched:
+            L = tt.zeros((self.ddim, self.ddim, self.bdim))
+            L = tt.set_subtensor(
+                L[self.tril_indices],
+                self.params_dict['L_tril'].T)
+            L = L.dimshuffle(2, 0, 1)
+        else:
+            L = tt.zeros((self.ddim, self.ddim))
+            L = tt.set_subtensor(
+                L[self.tril_indices],
+                self.params_dict['L_tril'])
+        return L
 
     @node_property
     def mean(self):
-        return self.shared_params['mu']
+        return self.params_dict['mu']
 
     @node_property
     def cov(self):
         L = self.L
-        return L.dot(L.T)
+        if self.batched:
+            return tt.batched_dot(L, L.swapaxes(-1, -2))
+        else:
+            return L.dot(L.T)
+
+    @node_property
+    def std(self):
+        if self.batched:
+            return tt.sqrt(batched_diag(self.cov))
+        else:
+            return tt.sqrt(tt.diag(self.cov))
 
     @property
     def num_tril_entries(self):
-        n = self.global_size
+        n = self.ddim
         return int(n * (n + 1) / 2)
 
     @property
-    def tril_index_matrix(self):
-        n = self.global_size
-        num_tril_entries = self.num_tril_entries
-        tril_index_matrix = np.zeros([n, n], dtype=int)
-        tril_index_matrix[np.tril_indices(n)] = np.arange(num_tril_entries)
-        tril_index_matrix[
-            np.tril_indices(n)[::-1]
-        ] = np.arange(num_tril_entries)
-        return tril_index_matrix
+    def tril_indices(self):
+        return np.tril_indices(self.ddim)
 
     @node_property
-    def symbolic_log_q_W_global(self):
-        """log_q_W samples over q for global vars
-        """
-        mu = self.scale_grad(self.mean)
-        L = self.scale_grad(self.L)
-        z = self.symbolic_random_global_matrix
-        return pm.MvNormal.dist(mu=mu, chol=L).logp(z)
+    def symbolic_logq_not_scaled(self):
+        z = self.symbolic_random
+        if self.batched:
+            def logq(z_b, mu_b, L_b):
+                return pm.MvNormal.dist(mu=mu_b, chol=L_b).logp(z_b)
+            # it's gonna be so slow
+            # scan is computed over batch and then summed up
+            # output shape is (batch, samples)
+            return theano.scan(logq, [z.swapaxes(0, 1), self.mean, self.L])[0].sum(0)
+        else:
+            return pm.MvNormal.dist(mu=self.mean, chol=self.L).logp(z)
 
     @node_property
-    def symbolic_random_global_matrix(self):
-        # (samples, dim) or (dim, )
-        initial = self.symbolic_initial_global_matrix.T
-        # (dim, dim)
+    def symbolic_random(self):
+        initial = self.symbolic_initial
         L = self.L
-        # (dim, )
         mu = self.mean
-        # x = Az + m, but it assumes z is vector
-        # When we get z with shape (samples, dim)
-        # we need to transpose Az
-        return L.dot(initial).T + mu
-
-    @classmethod
-    def from_mean_field(cls, mean_field, gpu_compat=False):
-        """Construct FullRank from MeanField approximation
-
-        Parameters
-        ----------
-        mean_field : :class:`MeanField`
-            approximation to start with
-
-        Other Parameters
-        ----------------
-        gpu_compat : `bool`
-            use GPU compatible version or not
-
-        Returns
-        -------
-        :class:`FullRank`
-        """
-        full_rank = object.__new__(cls)  # type: FullRank
-        full_rank.gpu_compat = gpu_compat
-        full_rank.__dict__.update(mean_field.__dict__)
-        full_rank.shared_params = full_rank.create_shared_params()
-        full_rank.shared_params['mu'].set_value(
-            mean_field.shared_params['mu'].get_value()
-        )
-        rho = mean_field.shared_params['rho'].get_value()
-        n = full_rank.global_size
-        L_tril = (
-            np.diag(np.log1p(np.exp(rho)))  # rho2sd
-            [np.tril_indices(n)]
-            .astype(theano.config.floatX)
-        )
-        full_rank.shared_params['L_tril'].set_value(L_tril)
-        return full_rank
+        if self.batched:
+            # initial: bxsxd
+            # L: bxdxd
+            initial = initial.swapaxes(0, 1)
+            return tt.batched_dot(initial, L.swapaxes(1, 2)).swapaxes(0, 1) + mu
+        else:
+            return initial.dot(L.T) + mu
 
 
-class Empirical(Approximation):
+@Group.register
+class EmpiricalGroup(Group):
     """Builds Approximation instance from a given trace,
     it has the same interface as variational approximation
-
-    Parameters
-    ----------
-    trace : :class:`MultiTrace`
-        Trace storing samples (e.g. from step methods)
-    local_rv : dict[var->tuple]
-        Experimental for Empirical Approximation
-        mapping {model_variable -> local_variable (:math:`\\mu`, :math:`\\rho`)}
-        Local Vars are used for Autoencoding Variational Bayes
-        See (AEVB; Kingma and Welling, 2014) for details
-    scale_cost_to_minibatch : `bool`
-        Scale cost to minibatch instead of full dataset, default False
-    model : :class:`pymc3.Model`
-        PyMC3 model for inference
-    random_seed : None or int
-        leave None to use package global RandomStream or other
-        valid value to create instance specific one
-
-    Examples
-    --------
-    >>> with model:
-    ...     step = NUTS()
-    ...     trace = sample(1000, step=step)
-    ...     histogram = Empirical(trace[100:])
     """
+    supports_batched = False
+    has_logq = False
+    __param_spec__ = dict(histogram=('s', 'd'))
+    short_name = 'empirical'
 
-    def __init__(self, trace, local_rv=None,
-                 scale_cost_to_minibatch=False,
-                 model=None, random_seed=None, **kwargs):
-        super(Empirical, self).__init__(
-            local_rv=local_rv, scale_cost_to_minibatch=scale_cost_to_minibatch,
-            model=model, trace=trace, random_seed=random_seed, **kwargs)
-        self.shared_params = self.create_shared_params(trace=trace)
+    @change_flags(compute_test_value='off')
+    def __init_group__(self, group):
+        super(EmpiricalGroup, self).__init_group__(group)
+        self._check_trace()
+        if not self._check_user_params(spec_kw=dict(s=-1)):
+            self.shared_params = self.create_shared_params(
+                trace=self._kwargs.get('trace', None),
+                size=self._kwargs.get('size', None),
+                jitter=self._kwargs.get('jitter', 1),
+                start=self._kwargs.get('start', None)
+            )
+        self._finalize_init()
 
-    def create_shared_params(self, trace=None):
+    def create_shared_params(self, trace=None, size=None, jitter=1, start=None):
         if trace is None:
-            histogram = np.atleast_2d(self.gbij.map(self.model.test_point))
+            if size is None:
+                raise opvi.ParametrizationError('Need `trace` or `size` to initialize')
+            else:
+                if start is None:
+                    start = self.model.test_point
+                else:
+                    start_ = self.model.test_point.copy()
+                    update_start_vals(start_, start, self.model)
+                    start = start_
+                start = pm.floatX(self.bij.map(start))
+                # Initialize particles
+                histogram = np.tile(start, (size, 1))
+                histogram += pm.floatX(np.random.normal(0, jitter, histogram.shape))
+
         else:
-            histogram = np.empty((len(trace) * len(trace.chains), self.global_size))
+            histogram = np.empty((len(trace) * len(trace.chains), self.ddim))
             i = 0
             for t in trace.chains:
                 for j in range(len(trace)):
-                    histogram[i] = self.gbij.map(trace.point(j, t))
+                    histogram[i] = self.bij.map(trace.point(j, t))
                     i += 1
         return dict(histogram=theano.shared(pm.floatX(histogram), 'histogram'))
 
-    def check_model(self, model, **kwargs):
-        trace = kwargs.get('trace')
+    def _check_trace(self):
+        trace = self._kwargs.get('trace', None)
         if (trace is not None
             and not all([var.name in trace.varnames
-                         for var in model.free_RVs])):
-            raise ValueError('trace has not all FreeRV')
+                         for var in self.group])):
+            raise ValueError('trace has not all FreeRV in the group')
 
     def randidx(self, size=None):
         if size is None:
@@ -341,37 +283,30 @@ class Empirical(Approximation):
                          high=pm.floatX(self.histogram.shape[0]) - pm.floatX(1e-16))
                 .astype('int32'))
 
-    def _initial_part_matrix(self, part, size, deterministic):
-        if part == 'local':
-            return super(Empirical, self)._initial_part_matrix(
-                part, size, deterministic
-            )
-        elif part == 'global':
-            theano_condition_is_here = isinstance(deterministic, tt.Variable)
-            if theano_condition_is_here:
-                return tt.switch(
-                    deterministic,
-                    tt.repeat(
-                        self.mean.dimshuffle('x', 0),
-                        size if size is not None else 1, -1),
-                    self.histogram[self.randidx(size)])
+    def _new_initial(self, size, deterministic, more_replacements=None):
+        theano_condition_is_here = isinstance(deterministic, tt.Variable)
+        if theano_condition_is_here:
+            return tt.switch(
+                deterministic,
+                tt.repeat(
+                    self.mean.dimshuffle('x', 0),
+                    size if size is not None else 1, -1),
+                self.histogram[self.randidx(size)])
+        else:
+            if deterministic:
+                return tt.repeat(
+                    self.mean.dimshuffle('x', 0),
+                    size if size is not None else 1, -1)
             else:
-                if deterministic:
-                    return tt.repeat(
-                        self.mean.dimshuffle('x', 0),
-                        size if size is not None else 1, -1)
-                else:
-                    return self.histogram[self.randidx(size)]
+                return self.histogram[self.randidx(size)]
 
     @property
-    def symbolic_random_global_matrix(self):
-        return self.symbolic_initial_global_matrix
+    def symbolic_random(self):
+        return self.symbolic_initial
 
     @property
     def histogram(self):
-        """Shortcut to flattened Trace
-        """
-        return self.shared_params['histogram']
+        return self.params_dict['histogram']
 
     @node_property
     def mean(self):
@@ -382,61 +317,25 @@ class Empirical(Approximation):
         x = (self.histogram - self.mean)
         return x.T.dot(x) / pm.floatX(self.histogram.shape[0])
 
-    @classmethod
-    def from_noise(cls, size, jitter=.01, local_rv=None,
-                   start=None, model=None, random_seed=None, **kwargs):
-        """Initialize Histogram with random noise
+    @node_property
+    def std(self):
+        return tt.sqrt(tt.diag(self.cov))
 
-        Parameters
-        ----------
-        size : `int`
-            number of initial particles
-        jitter : `float`
-            initial sd
-        local_rv : `dict`
-            mapping {model_variable -> local_variable}
-            Local Vars are used for Autoencoding Variational Bayes
-            See (AEVB; Kingma and Welling, 2014) for details
-        start : `Point`
-            initial point
-        model : :class:`pymc3.Model`
-            PyMC3 model for inference
-        random_seed : None or `int`
-            leave None to use package global RandomStream or other
-            valid value to create instance specific one
-        kwargs : other kwargs passed to init
-
-        Returns
-        -------
-        :class:`Empirical`
-        """
-        hist = cls(
-            None,
-            local_rv=local_rv,
-            model=model,
-            random_seed=random_seed,
-            **kwargs)
-        if start is None:
-            start = hist.model.test_point
+    def __str__(self):
+        if isinstance(self.histogram, theano.compile.SharedVariable):
+            shp = ', '.join(map(str, self.histogram.shape.eval()))
         else:
-            start_ = hist.model.test_point.copy()
-            update_start_vals(start_, start, hist.model)
-            start = start_
-        start = pm.floatX(hist.gbij.map(start))
-        # Initialize particles
-        x0 = np.tile(start, (size, 1))
-        x0 += pm.floatX(np.random.normal(0, jitter, x0.shape))
-        hist.histogram.set_value(x0)
-        return hist
+            shp = 'None, ' + str(self.ddim)
+        return '{cls}[{shp}]'.format(shp=shp, cls=self.__class__.__name__)
 
 
-class NormalizingFlow(Approximation):
-    R"""
-    Normalizing flow is a series of invertible transformations on initial distribution.
+class NormalizingFlowGroup(Group):
+    R"""Normalizing flow is a series of invertible transformations on initial distribution.
 
     .. math::
 
-        z_K = f_K \circ \dots \circ f_2 \circ f_1(z_0)
+        z_K &= f_K \circ \dots \circ f_2 \circ f_1(z_0) \\
+        & z_0 \sim \mathcal{N}(0, 1)
 
     In that case we can compute tractable density for the flow.
 
@@ -466,27 +365,7 @@ class NormalizingFlow(Approximation):
     -   Householder (:code:`hh`): :math:`z' = H z`
 
     Formula can be written as a string, e.g. `'scale-loc'`, `'scale-hh*4-loc'`, `'panar*10'`.
-    Every step is separated with `'-'`, repeated flow is marked with `'*'` produsing `'flow*repeats'`.
-
-    Parameters
-    ----------
-    flow : str|AbstractFlow
-        formula or initialized Flow, default is `'scale-loc'` that
-        is identical to MeanField
-    local_rv : dict[var->tuple]
-        Experimental for Empirical Approximation
-        mapping {model_variable -> local_variable (:math:`\mu`, :math:`\rho`)}
-        Local Vars are used for Autoencoding Variational Bayes
-        See (AEVB; Kingma and Welling, 2014) for details
-    scale_cost_to_minibatch : `bool`
-        Scale cost to minibatch instead of full dataset, default False
-    model : :class:`pymc3.Model`
-        PyMC3 model for inference
-    random_seed : None or int
-        leave None to use package global RandomStream or other
-        valid value to create instance specific one
-    jitter : float
-        noise for flows' parameters initialization
+    Every step is separated with `'-'`, repeated flow is marked with `'*'` producing `'flow*repeats'`.
 
     References
     ----------
@@ -498,26 +377,86 @@ class NormalizingFlow(Approximation):
         Improving Variational Auto-Encoders using Householder Flow
         arXiv:1611.09630
     """
+    default_flow = 'scale-loc'
 
-    def __init__(self, flow='scale-loc',
-                 local_rv=None, model=None,
-                 scale_cost_to_minibatch=False,
-                 random_seed=None, jitter=.1, **kwargs):
-        super(NormalizingFlow, self).__init__(
-            local_rv=local_rv, scale_cost_to_minibatch=scale_cost_to_minibatch,
-            model=model, random_seed=random_seed, **kwargs)
-        if isinstance(flow, str):
-            flow = flows.Formula(flow)(
-                dim=self.global_size,
-                z0=self.symbolic_initial_global_matrix,
-                jitter=jitter
+    @change_flags(compute_test_value='off')
+    def __init_group__(self, group):
+        super(NormalizingFlowGroup, self).__init_group__(group)
+        # objects to be resolved
+        # 1. string formula
+        # 2. not changed default value
+        # 3. Formula
+        formula = self._kwargs.get('flow', self._vfam)
+        jitter = self._kwargs.get('jitter', 1)
+        if formula is None or isinstance(formula, str):
+            # case 1 and 2
+            has_params = self._check_user_params(f=formula)
+        elif isinstance(formula, flows.Formula):
+            # case 3
+            has_params = self._check_user_params(f=formula.formula)
+        else:
+            raise TypeError('Wrong type provided for NormalizingFlow as `flow` argument, '
+                            'expected Formula or string')
+        if not has_params:
+            if formula is None:
+                formula = self.default_flow
+        else:
+            formula = '-'.join(
+                flows.flow_for_params(self.user_params[i]).short_name
+                for i in range(len(self.user_params))
             )
-        self.gflow = flow
+        if not isinstance(formula, flows.Formula):
+            formula = flows.Formula(formula)
+        if self.local:
+            bs = -1
+        elif self.batched:
+            bs = self.bdim
+        else:
+            bs = None
+        self.flow = formula(
+            dim=self.ddim,
+            z0=self.symbolic_initial,
+            jitter=jitter,
+            params=self.user_params,
+            batch_size=bs,
+        )
+        self._finalize_init()
+
+    def _check_user_params(self, **kwargs):
+        params = self._user_params = self.user_params
+        formula = kwargs.pop('f')
+        if params is None:
+            return False
+        if formula is not None:
+            raise opvi.ParametrizationError('No formula is allowed if user params are provided')
+        if not isinstance(params, dict):
+            raise TypeError('params should be a dict')
+        if not all(isinstance(k, int) for k in params.keys()):
+            raise TypeError('params should be a dict with `int` keys')
+        needed = set(range(len(params)))
+        givens = set(params.keys())
+        if givens != needed:
+            raise opvi.ParametrizationError(
+                'Passed parameters do not have a needed set of keys, '
+                'they should be equal, needed {needed}, got {givens}'.format(
+                    givens=list(sorted(givens)), needed='[0, 1, ..., %d]' % len(formula.flows)))
+        for i in needed:
+            flow = flows.flow_for_params(params[i])
+            flow_keys = set(flow.__param_spec__)
+            user_keys = set(params[i].keys())
+            if flow_keys != user_keys:
+                raise opvi.ParametrizationError(
+                    'Passed parameters for flow `{i}` ({cls}) do not have a needed set of keys, '
+                    'they should be equal, needed {needed}, got {givens}'.format(
+                        givens=user_keys, needed=flow_keys, i=i, cls=flow.__name__))
+        return True
 
     @property
     def shared_params(self):
+        if self.user_params is not None:
+            return None
         params = dict()
-        current = self.gflow
+        current = self.flow
         i = 0
         params[i] = current.shared_params
         while not current.isroot:
@@ -528,7 +467,9 @@ class NormalizingFlow(Approximation):
 
     @shared_params.setter
     def shared_params(self, value):
-        current = self.gflow
+        if self.user_params is not None:
+            raise AttributeError('Cannot set when having user params')
+        current = self.flow
         i = 0
         current.shared_params = value[i]
         while not current.isroot:
@@ -538,17 +479,28 @@ class NormalizingFlow(Approximation):
 
     @property
     def params(self):
-        return self.gflow.all_params
+        return self.flow.all_params
 
     @node_property
-    def symbolic_log_q_W_global(self):
-        z0 = self.symbolic_initial_global_matrix
-        q0 = pm.Normal.dist().logp(z0).sum(-1)
-        return q0-self.gflow.sum_logdets
+    def symbolic_logq_not_scaled(self):
+        z0 = self.symbolic_initial
+        q0 = pm.Normal.dist().logp(z0).sum(range(1, z0.ndim))
+        return q0-self.flow.sum_logdets
 
     @property
-    def symbolic_random_global_matrix(self):
-        return self.gflow.forward
+    def symbolic_random(self):
+        return self.flow.forward
+
+    @node_property
+    def bdim(self):
+        if not self.local:
+            return super(NormalizingFlowGroup, self).bdim
+        else:
+            return next(iter(self.user_params[0].values())).shape[0]
+
+    @classmethod
+    def get_param_spec_for(cls, flow, **kwargs):
+        return flows.Formula(flow).get_param_spec_for(**kwargs)
 
 
 def sample_approx(approx, draws=100, include_transformed=True):
@@ -568,6 +520,58 @@ def sample_approx(approx, draws=100, include_transformed=True):
     trace : class:`pymc3.backends.base.MultiTrace`
         Samples drawn from variational posterior.
     """
-    if not isinstance(approx, Approximation):
-        raise TypeError('Need Approximation instance, got %r' % approx)
     return approx.sample(draws=draws, include_transformed=include_transformed)
+
+
+# single group shortcuts exported to user
+class SingleGroupApproximation(Approximation):
+    """Base class for Single Group Approximation"""
+    _group_class = None
+
+    def __init__(self, *args, **kwargs):
+        local_rv = kwargs.get('local_rv')
+        groups = [self._group_class(None, *args, **kwargs)]
+        if local_rv is not None:
+            groups.extend([Group([v], params=p, local=True, model=kwargs.get('model'))
+                           for v, p in local_rv.items()])
+        super(SingleGroupApproximation, self).__init__(groups, model=kwargs.get('model'))
+
+    def __getattr__(self, item):
+        return getattr(self.groups[0], item)
+
+
+class MeanField(SingleGroupApproximation):
+    __doc__ = """**Single Group Mean Field Approximation**
+
+    """ + str(MeanFieldGroup.__doc__)
+    _group_class = MeanFieldGroup
+
+
+class FullRank(SingleGroupApproximation):
+    __doc__ = """**Single Group Full Rank Approximation**
+
+    """ + str(FullRankGroup.__doc__)
+    _group_class = FullRankGroup
+
+
+class Empirical(SingleGroupApproximation):
+    __doc__ = """**Single Group Full Rank Approximation**
+
+    """ + str(EmpiricalGroup.__doc__)
+    _group_class = EmpiricalGroup
+
+    def __init__(self, trace=None, size=None, **kwargs):
+        if kwargs.get('local_rv', None) is not None:
+            raise opvi.LocalGroupError('Empirical approximation does not support local variables')
+        super(Empirical, self).__init__(trace=trace, size=size, **kwargs)
+
+
+class NormalizingFlow(SingleGroupApproximation):
+    __doc__ = """**Single Group Normalizing Flow Approximation**
+
+    """ + str(NormalizingFlowGroup.__doc__)
+    _group_class = NormalizingFlowGroup
+
+    def __init__(self, flow=NormalizingFlowGroup.default_flow, *args, **kwargs):
+        kwargs['flow'] = flow
+        super(NormalizingFlow, self).__init__(*args, **kwargs)

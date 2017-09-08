@@ -144,3 +144,8 @@ def update_start_vals(a, b, model):
 
     a.update({k: v for k, v in b.items() if k not in a})
 
+
+def get_transformed(z):
+    if hasattr(z, 'transformed'):
+        z = z.transformed
+    return z

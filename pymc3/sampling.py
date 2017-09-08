@@ -795,12 +795,12 @@ def init_nuts(init='auto', njobs=1, n_init=500000, model=None,
             callbacks=cb,
             progressbar=progressbar,
             obj_optimizer=pm.adagrad_window,
-        )
+        )  # type: pm.MeanField
         start = approx.sample(draws=njobs)
         start = list(start)
-        stds = approx.gbij.rmap(approx.std.eval())
+        stds = approx.bij.rmap(approx.std.eval())
         cov = model.dict_to_array(stds) ** 2
-        mean = approx.gbij.rmap(approx.mean.get_value())
+        mean = approx.bij.rmap(approx.mean.get_value())
         mean = model.dict_to_array(mean)
         weight = 50
         potential = quadpotential.QuadPotentialDiagAdaptGrad(
@@ -814,12 +814,12 @@ def init_nuts(init='auto', njobs=1, n_init=500000, model=None,
             callbacks=cb,
             progressbar=progressbar,
             obj_optimizer=pm.adagrad_window,
-        )
+        )  # type: pm.MeanField
         start = approx.sample(draws=njobs)
         start = list(start)
-        stds = approx.gbij.rmap(approx.std.eval())
+        stds = approx.bij.rmap(approx.std.eval())
         cov = model.dict_to_array(stds) ** 2
-        mean = approx.gbij.rmap(approx.mean.get_value())
+        mean = approx.bij.rmap(approx.mean.get_value())
         mean = model.dict_to_array(mean)
         weight = 50
         potential = quadpotential.QuadPotentialDiagAdapt(
@@ -836,7 +836,7 @@ def init_nuts(init='auto', njobs=1, n_init=500000, model=None,
         )  # type: pm.MeanField
         start = approx.sample(draws=njobs)
         start = list(start)
-        stds = approx.gbij.rmap(approx.std.eval())
+        stds = approx.bij.rmap(approx.std.eval())
         cov = model.dict_to_array(stds) ** 2
         potential = quadpotential.QuadPotentialDiag(cov)
         if njobs == 1:
@@ -846,14 +846,14 @@ def init_nuts(init='auto', njobs=1, n_init=500000, model=None,
         approx = pm.MeanField(model=model, start=start)
         pm.fit(
             random_seed=random_seed,
-            n=n_init, method=pm.ADVI.from_mean_field(approx),
+            n=n_init, method=pm.KLqp(approx),
             callbacks=cb,
             progressbar=progressbar,
             obj_optimizer=pm.adagrad_window
         )
         start = approx.sample(draws=njobs)
         start = list(start)
-        stds = approx.gbij.rmap(approx.std.eval())
+        stds = approx.bij.rmap(approx.std.eval())
         cov = model.dict_to_array(stds) ** 2
         potential = quadpotential.QuadPotentialDiag(cov)
         if njobs == 1:
