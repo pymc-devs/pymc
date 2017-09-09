@@ -132,10 +132,12 @@ class NoDistribution(Distribution):
         self.parent_dist = parent_dist
 
     def __getattr__(self, name):
-        try:
-            self.__dict__[name]
-        except KeyError:
-            return getattr(self.parent_dist, name)
+        # Do not use __getstate__ and __setstate__ from parent_dist
+        # to avoid infinite recursion during unpickling
+        if name.startswith('__'):
+            raise AttributeError(
+                "'NoDistribution' has no attribute '%s'" % name)
+        return getattr(self.parent_dist, name)
 
     def logp(self, x):
         return 0
