@@ -685,12 +685,12 @@ def test_aevb(inference_spec, aevb_model):
             pytest.skip('Does not support AEVB')
 
 
-def test_batched_approx(three_var_model, parametric_grouped_approxes):
+def test_rowwise_approx(three_var_model, parametric_grouped_approxes):
     # add to inference that supports aevb
     cls, kw = parametric_grouped_approxes
     with three_var_model:
         try:
-            approx = Approximation([cls([three_var_model.one], batched=True, **kw), Group(None, vfam='mf')])
+            approx = Approximation([cls([three_var_model.one], rowwise=True, **kw), Group(None, vfam='mf')])
             inference = pm.KLqp(approx)
             approx = inference.fit(3, obj_n_mc=2)
             approx.sample(10)
@@ -698,7 +698,7 @@ def test_batched_approx(three_var_model, parametric_grouped_approxes):
                 three_var_model.one
             ).eval()
         except pm.opvi.BatchedGroupError:
-            pytest.skip('Does not support grouping')
+            pytest.skip('Does not support rowwise grouping')
 
 
 @pytest.fixture('module')
