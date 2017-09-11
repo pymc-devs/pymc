@@ -474,22 +474,24 @@ class Multinomial(Discrete):
     Parameters
     ----------
     n : int or array
-        Number of trials (n > 0).
+        Number of trials (n > 0). If n is an array its shape must be (N,) with 
+        N = p.shape[0]
     p : one- or two-dimensional array
         Probability of each one of the different outcomes. Elements must
-        be non-negative and sum to 1 along the last axis. They will be automatically
-        rescaled otherwise.
+        be non-negative and sum to 1 along the last axis. They will be 
+        automatically rescaled otherwise.
     """
 
     def __init__(self, n, p, *args, **kwargs):
         super(Multinomial, self).__init__(*args, **kwargs)
 
         p = p / tt.sum(p, axis=-1, keepdims=True)
+        n = np.squeeze(n) # works also if n is a tensor
 
         if len(self.shape) == 2:
             try:
                 assert n.shape == (self.shape[0],)
-            except AttributeError:
+            except AssertionError:
                 # this occurs when n is a scalar Python int or float
                 n *= tt.ones(self.shape[0])
 
