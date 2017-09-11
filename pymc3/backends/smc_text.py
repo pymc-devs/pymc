@@ -303,7 +303,8 @@ class TextStage(object):
         ----------
         stage_number : int
             stage of which result traces are loaded
-
+        idxs : iterable
+            of indexes to the point at each chain to extract and concatenate
         Returns
         -------
         MultiTrace
@@ -312,14 +313,13 @@ class TextStage(object):
             step = self.load_atmip_params(stage_number, model)
 
         mtrace = self.load_multitrace(stage_number, model=model)
-        len_mtrace = len(mtrace)
 
         summary_dir = self.stage_path(-2)
         rtrace = TextChain(summary_dir, model=model)
-        draws = len(mtrace.chains) * len_mtrace
+        draws = len(mtrace.chains) * len(idxs)
         rtrace.setup(draws, chain=0)
 
-        for idx in range(len_mtrace):
+        for idx in idxs:
             for chain in mtrace.chains:
                 point = mtrace.point(idx, chain)
                 lpoint = step.lij.dmap(point)

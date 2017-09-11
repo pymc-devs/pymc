@@ -590,7 +590,10 @@ def sample_smc(n_steps, n_chains=100, step=None, start=None, homepath=None, stag
         _iter_parallel_chains(**sample_args)
 
         stage_handler.dump_atmip_params(step)
-        return stage_handler.create_result_trace(step.stage, step=step, model=model)
+        return stage_handler.create_result_trace(step.stage,
+                                                 idxs=range(n_steps),
+                                                 step=step,
+                                                 model=model)
 
 
 def _sample(draws, step=None, start=None, trace=None, chain=0, tune=None,
