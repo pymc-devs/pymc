@@ -126,6 +126,18 @@ class TestMultiTrace(bf.ModelBackendSetupTestCase):
             base.merge_traces([mtrace0, mtrace1])
 
 
+class TestMultiTrace_combine_chains(bf.ModelBackendSampledTestCase):
+    name = None
+    backend = ndarray.NDArray
+    shape = ()
+
+    def test_iter(self):
+        mtrace = self.mtrace 
+        expected_len = sum(len(mtrace._straces[chain]) for chain in mtrace.chains)
+        
+        assert len(list(mtrace)) == expected_len
+
+
 class TestMultiTrace_add_values(bf.ModelBackendSampledTestCase):
     name = None
     backend = ndarray.NDArray

@@ -3,6 +3,7 @@
 See the docstring for pymc3.backends for more information (including
 creating custom backends).
 """
+import itertools as itl
 import numpy as np
 import warnings
 import theano.tensor as tt
@@ -255,6 +256,9 @@ class MultiTrace(object):
             if strace.chain in self._straces:
                 raise ValueError("Chains are not unique.")
             self._straces[strace.chain] = strace
+
+    def __iter__(self):
+        return itl.chain.from_iterable(self._straces[chain] for chain in self.chains)
 
     def __repr__(self):
         template = '<{}: {} chains, {} iterations, {} variables>'
