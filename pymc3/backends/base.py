@@ -3,6 +3,8 @@
 See the docstring for pymc3.backends for more information (including
 creating custom backends).
 """
+import itertools as itl
+
 import numpy as np
 import warnings
 import theano.tensor as tt
@@ -462,6 +464,10 @@ class MultiTrace(object):
         if chain is None:
             chain = self.chains[-1]
         return self._straces[chain].point(idx)
+
+    @property
+    def points(self):
+        return itl.chain.from_iterable(self._straces[chain] for chain in self.chains)
 
 
 def merge_traces(mtraces):
