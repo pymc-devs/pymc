@@ -465,9 +465,19 @@ class MultiTrace(object):
             chain = self.chains[-1]
         return self._straces[chain].point(idx)
 
-    @property
-    def points(self):
-        return itl.chain.from_iterable(self._straces[chain] for chain in self.chains)
+    def points(self, chains=None):
+        """Return an iterator over all or some of the sample points
+
+        Parameters
+        ----------
+        chains : list of int or N
+            The chains whose points should be inlcuded in the iterator.  If
+            chains is not given, include points from all chains
+        """
+        if chains is None:
+            chains = self.chains
+
+        return itl.chain.from_iterable(self._straces[chain] for chain in chains)
 
 
 def merge_traces(mtraces):
