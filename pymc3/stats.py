@@ -161,7 +161,12 @@ def _log_post_trace(trace, model, progressbar=False):
 
         return np.concatenate(logp_vals)
 
-    points = tqdm(trace) if progressbar else trace
+    try:
+        points = trace.points()
+    except AttributeError:
+        points = trace
+
+    points = tqdm(points) if progressbar else points
 
     try:
         logp = (logp_vals_point(pt) for pt in points)
