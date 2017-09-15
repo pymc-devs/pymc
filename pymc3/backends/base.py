@@ -472,7 +472,7 @@ class MultiTrace(object):
         ----------
         chains : list of int or N
             The chains whose points should be inlcuded in the iterator.  If
-            chains is not given, include points from all chains
+            chains is not given, include points from all chains.
         """
         if chains is None:
             chains = self.chains
