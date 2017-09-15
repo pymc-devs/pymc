@@ -162,7 +162,7 @@ def _log_post_trace(trace, model, progressbar=False):
         return np.concatenate(logp_vals)
 
     try:
-        points = trace.points
+        points = trace.points()
     except AttributeError:
         points = trace
 
