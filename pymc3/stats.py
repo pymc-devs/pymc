@@ -4,7 +4,6 @@ import numpy as np
 import pandas as pd
 import itertools
 import sys
-from tqdm import tqdm
 import warnings
 from collections import namedtuple
 from .model import modelcontext
@@ -128,7 +127,7 @@ def dic(trace, model=None):
     return 2 * mean_deviance - deviance_at_mean
 
 
-def _log_post_trace(trace, model, progressbar=False):
+def _log_post_trace(trace, model):
     """Calculate the elementwise log-posterior for the sampled trace.
 
     Parameters
@@ -136,10 +135,6 @@ def _log_post_trace(trace, model, progressbar=False):
     trace : result of MCMC run
     model : PyMC Model
         Optional model. Default None, taken from context.
-    progressbar: bool
-        Whether or not to display a progress bar in the command line. The
-        bar shows the percentage of completion, the evaluation speed, and
-        the estimated time to completion
 
     Returns
     -------
@@ -166,18 +161,12 @@ def _log_post_trace(trace, model, progressbar=False):
     except AttributeError:
         points = trace
 
-    points = tqdm(points) if progressbar else points
-
-    try:
-        logp = (logp_vals_point(pt) for pt in points)
-        return np.stack(logp)
-    finally:
-        if progressbar:
-            points.close()
+    logp = (logp_vals_point(pt) for pt in points)
+    return np.stack(logp)
 
 
-def waic(trace, model=None, pointwise=False, progressbar=False):
-    """Calculate the widely available information criterion, its standard error
+def waic(trace, model=None, pointwise=False):
+    """Calculate the widely applicable information criterion, its standard error
     and the effective number of parameters of the samples in trace from model.
     Read more theory here - in a paper by some of the leading authorities on
     Model Selection - dx.doi.org/10.1111/1467-9868.00353
@@ -198,14 +187,14 @@ def waic(trace, model=None, pointwise=False, progressbar=False):
     Returns
     -------
     namedtuple with the following elements:
-    waic: widely available information criterion
+    waic: widely applicable information criterion
     waic_se: standard error of waic
     p_waic: effective number parameters
     waic_i: and array of the pointwise predictive accuracy, only if pointwise True
     """
     model = modelcontext(model)
 
-    log_py = _log_post_trace(trace, model, progressbar=progressbar)
+    log_py = _log_post_trace(trace, model)
     if log_py.size == 0:
         raise ValueError('The model does not contain observed values.')
 
@@ -233,7 +222,7 @@ def waic(trace, model=None, pointwise=False, progressbar=False):
         return WAIC_r(waic, waic_se, p_waic)
 
 
-def loo(trace, model=None, pointwise=False, progressbar=False):
+def loo(trace, model=None, pointwise=False):
     """Calculates leave-one-out (LOO) cross-validation for out of sample predictive
     model fit, following Vehtari et al. (2015). Cross-validation is computed using
     Pareto-smoothed importance sampling (PSIS).
@@ -246,10 +235,6 @@ def loo(trace, model=None, pointwise=False, progressbar=False):
     pointwise: bool
         if True the pointwise predictive accuracy will be returned.
         Default False
-    progressbar: bool
-        Whether or not to display a progress bar in the command line. The
-        bar shows the percentage of completion, the evaluation speed, and
-        the estimated time to completion
 
     Returns
     -------
@@ -261,7 +246,7 @@ def loo(trace, model=None, pointwise=False, progressbar=False):
     """
     model = modelcontext(model)
 
-    log_py = _log_post_trace(trace, model, progressbar=progressbar)
+    log_py = _log_post_trace(trace, model)
     if log_py.size == 0:
         raise ValueError('The model does not contain observed values.')
 
@@ -348,7 +333,7 @@ def bpic(trace, model=None):
 
 def compare(traces, models, ic='WAIC', method='stacking', b_samples=1000,
             alpha=1, seed=None, round_to=2):
-    """Compare models based on the widely available information criterion (WAIC)
+    """Compare models based on the widely applicable information criterion (WAIC)
     or leave-one-out (LOO) cross-validation.
     Read more theory here - in a paper by some of the leading authorities on
     Model Selection - dx.doi.org/10.1111/1467-9868.00353
