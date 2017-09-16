@@ -10,8 +10,7 @@ which focuses on advanced Markov chain Monte Carlo and variational fitting
 algorithms. Its flexibility and extensibility make it applicable to a
 large suite of problems.
 
-Check out the `getting started
-guide <http://pymc-devs.github.io/pymc3/notebooks/getting_started.html>`__!
+Check out the :ref:`getting started guide<notebooks/getting_started.ipynb>`!
 
 Features
 ========
@@ -38,10 +37,9 @@ Getting started
 If you already know about Bayesian statistics:
 ----------------------------------------------
 
--  `API quickstart guide <http://pymc-devs.github.io/pymc3/notebooks/api_quickstart.html>`__
--  The `PyMC3 tutorial <http://pymc-devs.github.io/pymc3/notebooks/getting_started.html>`__
--  `PyMC3 examples <http://pymc-devs.github.io/pymc3/examples.html>`__
-   and the `API reference <http://pymc-devs.github.io/pymc3/api.html>`__
+-  :ref:`API quickstart guide<notebooks/api_quickstart.ipynb>`
+-  The :ref:`PyMC3 tutorial<notebooks/getting_started.ipynb>`
+-  :ref:`PyMC3 examples<examples>` and the :ref:`API reference<api>`
 
 Learn Bayesian statistics with a book together with PyMC3:
 ----------------------------------------------------------
