@@ -166,7 +166,7 @@ def _log_post_trace(trace, model):
 
 
 def waic(trace, model=None, pointwise=False):
-    """Calculate the widely available information criterion, its standard error
+    """Calculate the widely applicable information criterion, its standard error
     and the effective number of parameters of the samples in trace from model.
     Read more theory here - in a paper by some of the leading authorities on
     Model Selection - dx.doi.org/10.1111/1467-9868.00353
@@ -187,7 +187,7 @@ def waic(trace, model=None, pointwise=False):
     Returns
     -------
     namedtuple with the following elements:
-    waic: widely available information criterion
+    waic: widely applicable information criterion
     waic_se: standard error of waic
     p_waic: effective number parameters
     waic_i: and array of the pointwise predictive accuracy, only if pointwise True
@@ -333,7 +333,7 @@ def bpic(trace, model=None):
 
 def compare(traces, models, ic='WAIC', method='stacking', b_samples=1000,
             alpha=1, seed=None, round_to=2):
-    """Compare models based on the widely available information criterion (WAIC)
+    """Compare models based on the widely applicable information criterion (WAIC)
     or leave-one-out (LOO) cross-validation.
     Read more theory here - in a paper by some of the leading authorities on
     Model Selection - dx.doi.org/10.1111/1467-9868.00353
