@@ -4,7 +4,6 @@ import numpy as np
 import pandas as pd
 import itertools
 import sys
-from tqdm import tqdm
 import warnings
 from collections import namedtuple
 from .model import modelcontext
@@ -136,10 +135,6 @@ def _log_post_trace(trace, model):
     trace : result of MCMC run
     model : PyMC Model
         Optional model. Default None, taken from context.
-    progressbar: bool
-        Whether or not to display a progress bar in the command line. The
-        bar shows the percentage of completion, the evaluation speed, and
-        the estimated time to completion
 
     Returns
     -------
