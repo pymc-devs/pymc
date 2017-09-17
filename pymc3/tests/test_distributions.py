@@ -752,30 +752,34 @@ class TestMatchesScipy(SeededTest):
             m = Multinomial('m', n, _p, _p.shape)
         assert_allclose(m.distribution.mode.eval().sum(axis=-1), n)
 
-    @pytest.mark.parametrize('p,shape', [
-        [[.25, .25, .25, .25], 4],
-        [[.25, .25, .25, .25], (1, 4)],
+    @pytest.mark.parametrize('p, shape, n', [
+        [[.25, .25, .25, .25], 4, 2],
+        [[.25, .25, .25, .25], (1, 4), 3],
         # 3: expect to fail
         # [[.25, .25, .25, .25], (10, 4)],
-        [[.25, .25, .25, .25], (10, 1, 4)],
+        [[.25, .25, .25, .25], (10, 1, 4), 5],
+        # 5: expect to fail
+        # [[[.25, .25, .25, .25]], (2, 4), [7, 11]],
         [[[.25, .25, .25, .25],
-         [.25, .25, .25, .25]], (2, 4)],
+         [.25, .25, .25, .25]], (2, 4), 13],
         [[[.25, .25, .25, .25],
-         [.25, .25, .25, .25]], (1, 2, 4)],
+         [.25, .25, .25, .25]], (2, 4), [17, 19]],
         [[[.25, .25, .25, .25],
-         [.25, .25, .25, .25]], (10, 2, 4)],
+         [.25, .25, .25, .25]], (1, 2, 4), [23, 29]],
+        [[[.25, .25, .25, .25],
+         [.25, .25, .25, .25]], (10, 2, 4), [31, 37]],
     ])
-    def test_multinomial_random(self, p, shape):
+    def test_multinomial_random(self, p, shape, n):
         p = np.asarray(p)
         with Model() as model:
-            m = Multinomial('m', n=1, p=p, shape=shape)
+            m = Multinomial('m', n=n, p=p, shape=shape)
         m.random()
 
     def test_multinomial_mode_with_shape(self):
-        n = 1
-        p = np.asarray([[.25,.25,.25,.25], [.25,.25,.25,.25]])
+        n = [1, 10]
+        p = np.asarray([[.25,.25,.25,.25], [.26, .26, .26, .22]])
         with Model() as model:
-            m = Multinomial('m', n=n, p=p, shape=(10, 2, 4))
+            m = Multinomial('m', n=n, p=p, shape=(2, 4))
         assert_allclose(m.distribution.mode.eval().sum(axis=-1), n)
 
     def test_multinomial_vec(self):
