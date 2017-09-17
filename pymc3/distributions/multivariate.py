@@ -485,14 +485,25 @@ class Multinomial(Discrete):
         super(Multinomial, self).__init__(*args, **kwargs)
 
         p = p / tt.sum(p, axis=-1, keepdims=True)
-
-        # make sure n is 1D and p is 2D
-        self.p = tt.shape_padleft(p) if p.ndim == 1 else tt.as_tensor_variable(p)
         n = np.squeeze(n) # works also if n is a tensor
-        self.n = tt.shape_padright(n)
+
+        if len(self.shape) > 1:
+            m = self.shape[-2]
+            try:
+                assert n.shape == (m,)
+            except (AttributeError, AssertionError):
+                n = n * tt.ones(m)
+            self.n = tt.shape_padright(n)
+            self.p = p if p.ndim > 1 else tt.shape_padleft(p)
+        elif n.ndim == 1:
+            self.n = tt.shape_padright(n)
+            self.p = p if p.ndim > 1 else tt.shape_padleft(p)
+        else:
+            # n is a scalar, p is a 1d array
+            self.n = tt.as_tensor_variable(n)
+            self.p = tt.as_tensor_variable(p)
 
         self.mean = self.n * self.p
-        
         mode = tt.cast(tt.round(self.mean), 'int32')
         diff = self.n - tt.sum(mode, axis=-1, keepdims=True)
         inc_bool_arr = diff > 0
@@ -507,10 +518,15 @@ class Multinomial(Discrete):
         # Now, re-normalize all of the values in float64 precision. This is done inside the conditionals
         if size == p.shape:
             size = None
-
-        p = p / p.sum(axis=1, keepdims=True)
-        randnum = np.asarray([np.random.multinomial(nn, pp, size=size) \
-                                  for (nn, pp) in zip(n, p)])
+        if (p.ndim == 1) and (n.ndim == 0):
+            p = p / p.sum()
+            randnum = np.random.multinomial(n, p.squeeze(), size=size)
+        else:
+            p = p / p.sum(axis=1, keepdims=True)
+            randnum = np.asarray([
+                np.random.multinomial(nn, pp, size=size)
+                for (nn, pp) in zip(n, p)
+            ])
         return randnum.astype(original_dtype)
 
     def random(self, point=None, size=None):
