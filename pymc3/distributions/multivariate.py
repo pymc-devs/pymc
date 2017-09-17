@@ -518,26 +518,27 @@ class Multinomial(Discrete):
         # Now, re-normalize all of the values in float64 precision. This is done inside the conditionals
         if size == p.shape:
             size = None
-        if (p.ndim == 1) and (n.ndim == 0):
+        if (n.ndim == 0) and (p.ndim == 1):
             p = p / p.sum()
             randnum = np.random.multinomial(n, p.squeeze(), size=size)
+        elif (n.ndim == 0) and (p.ndim > 1):
+            p = p / p.sum(axis=1, keepdims=True)
+            randnum = np.asarray([
+                np.random.multinomial(n.squeeze(), pp, size=size)
+                for pp in p
+            ])
+        elif (n.ndim > 0) and (p.ndim == 1):
+            p = p / p.sum()
+            randnum = np.asarray([
+                np.random.multinomial(nn, p.squeeze(), size=size)
+                for nn in n
+            ])   
         else:
             p = p / p.sum(axis=1, keepdims=True)
-            if n.shape[0] > p.shape[0]:
-                randnum = np.asarray([
-                    np.random.multinomial(nn, p.squeeze(), size=size)
-                    for nn in n
-                ])
-            elif n.shape[0] < p.shape[0]:
-                randnum = np.asarray([
-                    np.random.multinomial(n.squeeze(), pp, size=size)
-                    for pp in p
-                ])
-            else:
-                randnum = np.asarray([
-                    np.random.multinomial(nn, pp, size=size)
-                    for (nn, pp) in zip(n, p)
-                ])
+            randnum = np.asarray([
+                np.random.multinomial(nn, pp, size=size)
+                for (nn, pp) in zip(n, p)
+            ])
         return randnum.astype(original_dtype)
 
     def random(self, point=None, size=None):
