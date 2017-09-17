@@ -485,31 +485,19 @@ class Multinomial(Discrete):
         super(Multinomial, self).__init__(*args, **kwargs)
 
         p = p / tt.sum(p, axis=-1, keepdims=True)
-        n = np.squeeze(n) # works also if n is a tensor
 
-        lst = range(self.shape[-1])
-        if len(self.shape) > 1:
-            m = self.shape[-2]
-            try:
-                assert n.shape == (m,)
-            except AttributeError:
-                n = n*tt.ones(m)
-    
-            self.n = tt.shape_padright(n)
-            self.p = p if p.ndim > 1 else tt.shape_padleft(p)
-            lst = list(lst for _ in range(m))
-        else:
-            # n is a scalar, p is a 1d array
-            self.n = tt.as_tensor_variable(n)
-            self.p = tt.as_tensor_variable(p)
+        # make sure n is 1D and p is 2D
+        self.p = tt.shape_padleft(p) if p.ndim == 1 else tt.as_tensor_variable(p)
+        n = np.squeeze(n) # works also if n is a tensor
+        self.n = tt.shape_padright(n)
 
         self.mean = self.n * self.p
+        
         mode = tt.cast(tt.round(self.mean), 'int32')
         diff = self.n - tt.sum(mode, axis=-1, keepdims=True)
-        inc_bool_arr = tt.as_tensor_variable(lst) < diff
-        mode = tt.inc_subtensor(mode[inc_bool_arr.nonzero()], 1)
-        dec_bool_arr = tt.as_tensor_variable(lst) < -diff
-        mode = tt.inc_subtensor(mode[dec_bool_arr.nonzero()], -1)
+        inc_bool_arr = diff > 0
+        mode = tt.inc_subtensor(mode[inc_bool_arr.nonzero()],
+                                diff[inc_bool_arr.nonzero()])
         self.mode = mode
 
     def _random(self, n, p, size=None):
@@ -519,20 +507,10 @@ class Multinomial(Discrete):
         # Now, re-normalize all of the values in float64 precision. This is done inside the conditionals
         if size == p.shape:
             size = None
-        if p.ndim == 1:
-            p = p / p.sum()
-            randnum = np.random.multinomial(n, p.squeeze(), size=size)
-        elif p.ndim == 2:
-            p = p / p.sum(axis=1, keepdims=True)
-            if n.ndim == 2:
-                randnum = np.asarray([np.random.multinomial(nn, pp, size=size) \
-                                      for (nn, pp) in zip(n, p)])
-            else:
-                randnum = np.asarray([np.random.multinomial(n, pp, size=size) \
-                                      for pp in p])
-        else:
-            raise ValueError('Outcome probabilities must be 1- or 2-dimensional '
-                             '(supplied `p` has {} dimensions)'.format(p.ndim))
+
+        p = p / p.sum(axis=1, keepdims=True)
+        randnum = np.asarray([np.random.multinomial(nn, pp, size=size) \
+                                  for (nn, pp) in zip(n, p)])
         return randnum.astype(original_dtype)
 
     def random(self, point=None, size=None):
