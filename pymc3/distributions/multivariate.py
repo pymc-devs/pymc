@@ -506,7 +506,7 @@ class Multinomial(Discrete):
         self.mean = self.n * self.p
         mode = tt.cast(tt.round(self.mean), 'int32')
         diff = self.n - tt.sum(mode, axis=-1, keepdims=True)
-        inc_bool_arr = diff > 0
+        inc_bool_arr = tt.abs_(diff) > 0
         mode = tt.inc_subtensor(mode[inc_bool_arr.nonzero()],
                                 diff[inc_bool_arr.nonzero()])
         self.mode = mode
@@ -523,10 +523,21 @@ class Multinomial(Discrete):
             randnum = np.random.multinomial(n, p.squeeze(), size=size)
         else:
             p = p / p.sum(axis=1, keepdims=True)
-            randnum = np.asarray([
-                np.random.multinomial(nn, pp, size=size)
-                for (nn, pp) in zip(n, p)
-            ])
+            if n.shape[0] > p.shape[0]:
+                randnum = np.asarray([
+                    np.random.multinomial(nn, p.squeeze(), size=size)
+                    for nn in n
+                ])
+            elif n.shape[0] < p.shape[0]:
+                randnum = np.asarray([
+                    np.random.multinomial(n.squeeze(), pp, size=size)
+                    for pp in p
+                ])
+            else:
+                randnum = np.asarray([
+                    np.random.multinomial(nn, pp, size=size)
+                    for (nn, pp) in zip(n, p)
+                ])
         return randnum.astype(original_dtype)
 
     def random(self, point=None, size=None):
