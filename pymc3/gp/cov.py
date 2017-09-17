@@ -466,7 +466,7 @@ class Gibbs(Covariance):
                  active_dims=None):
         super(Gibbs, self).__init__(input_dim, active_dims)
         if active_dims is not None:
-            if input_dim != 1 or sum(active_dims) == 1:
+            if len(active_dims) > 1:
                 raise NotImplementedError(("Higher dimensional inputs ",
                                            "are untested"))
         else:
@@ -478,7 +478,7 @@ class Gibbs(Covariance):
         self.lfunc = handle_args(lengthscale_func, args)
         self.args = args
 
-    def square_dist(self, X, Xs):
+    def square_dist(self, X, Xs=None):
         X2 = tt.sum(tt.square(X), 1)
         if Xs is None:
             sqd = (-2.0 * tt.dot(X, tt.transpose(X))
@@ -500,7 +500,7 @@ class Gibbs(Covariance):
             r2 = self.square_dist(X, Xs)
             rz = self.lfunc(Xs, self.args)
         rz2 = tt.reshape(tt.square(rz), (1, -1))
-        return (tt.sqrt((2.0 * tt.dot(rx, tt.transpose(rz))) / (rx2 + rz2))
+        return (tt.sqrt((2.0 * tt.outer(rx, rz)) / (rx2 + rz2))
                 * tt.exp(-1.0 * r2 / (rx2 + rz2)))
 
     def diag(self, X):
