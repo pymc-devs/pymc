@@ -776,10 +776,10 @@ class TestMatchesScipy(SeededTest):
         m.random()
 
     def test_multinomial_mode_with_shape(self):
-        n = 1
-        p = np.asarray([[.25,.25,.25,.25], [.25,.25,.25,.25]])
+        n = [1, 10]
+        p = np.asarray([[.25,.25,.25,.25], [.26, .26, .26, .22]])
         with Model() as model:
-            m = Multinomial('m', n=n, p=p, shape=(10, 2, 4))
+            m = Multinomial('m', n=n, p=p, shape=(2, 4))
         assert_allclose(m.distribution.mode.eval().sum(axis=-1), n)
 
     def test_multinomial_vec(self):
