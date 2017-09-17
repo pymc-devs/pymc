@@ -305,7 +305,6 @@ class TextStage(object):
             stage of which result traces are loaded
         idxs : iterable
             of indexes to the point at each chain to extract and concatenate
-
         Returns
         -------
         MultiTrace
@@ -478,6 +477,6 @@ class TextChain(BaseSMCTrace):
         self._load_df()
         pt = {}
         for varname in self.varnames:
-            vals = self.df[self.flat_names[varname]].iloc[idx]
+            vals = self.df[self.flat_names[varname]].iloc[idx].values
             pt[varname] = vals.reshape(self.var_shapes[varname])
         return pt
