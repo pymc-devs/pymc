@@ -50,7 +50,7 @@ class Latent(Base):
     noise is assumed.  It is called "Latent" because the underlying function
     values are treated as latent variables.  It has a `prior` method and a
     `conditional` method.  Given a mean and covariance function the
-    function $f(x)$ is modeled as,
+    function :math:`f(x)` is modeled as,
 
     .. math::
 
@@ -210,7 +210,7 @@ class TP(Latent):
     The usage is nearly identical to that of `gp.Latent`.  The differences
     are that it must be initialized with a degrees of freedom parameter, and
     TP is not additive.  Given a mean and covariance function, and a degrees of
-    freedom parameter, the function $f(x)$ is modeled as,
+    freedom parameter, the function :math:`f(x)` is modeled as,
 
     .. math::
 
@@ -226,7 +226,10 @@ class TP(Latent):
     nu : float
         The degrees of freedom
 
-    For more information, see https://www.cs.cmu.edu/~andrewgw/tprocess.pdf
+    References
+    ----------
+    -   Shah, A., Wilson, A. G., and Ghahramani, Z. (2014).  Student-t
+        Processes as Alternatives to Gaussian Processes.  arXiv preprint arXiv:1402.4306.
     """
 
     def __init__(self, mean_func=Zero(), cov_func=Constant(0.0), nu=None):
@@ -562,11 +565,6 @@ class MarginalSparse(Marginal):
     - FITC: Fully independent Training Conditional
     - VFE: Variational Free Energy
 
-    For more information on these approximations, see e.g. "A unifying view of
-    sparse approximate Gaussian process regression", 2005, *Quinonero-Candela, Rasmussen*,
-    and "Variational Learning of Inducing Variables in Sparse Gaussian Processes",
-    2009, *Titsias*.
-
     Parameters
     ----------
     cov_func : None, 2D array, or instance of Covariance
@@ -605,6 +603,14 @@ class MarginalSparse(Marginal):
 
         with model:
             fcond = gp.conditional("fcond", Xnew=Xnew)
+
+    References
+    ----------
+    -   Quinonero-Candela, J., and Rasmussen, C. (2005). A Unifying View of
+        Sparse Approximate Gaussian Process Regression.
+
+    -   Titsias, M. (2009). Variational Learning of Inducing Variables in
+        Sparse Gaussian Processes.
     """
 
     _available_approx = ("FITC", "VFE", "DTC")
