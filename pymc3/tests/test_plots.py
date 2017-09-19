@@ -6,7 +6,7 @@ import pymc3 as pm
 from .checks import close_to
 
 from .models import multidimensional_model, simple_categorical
-from ..plots import traceplot, forestplot, autocorrplot, plot_posterior
+from ..plots import traceplot, forestplot, autocorrplot, plot_posterior, energyplot
 from ..plots.utils import make_2d
 from ..step_methods import Slice, Metropolis
 from ..sampling import sample
@@ -29,6 +29,14 @@ def test_plots():
         forestplot(trace)
         plot_posterior(trace)
         autocorrplot(trace)
+        energyplot(trace)
+
+
+def test_energyplot():
+    with asmod.build_model() as model:
+        trace = sample()
+
+        energyplot(trace)
 
 
 def test_plots_categorical():
