@@ -165,6 +165,7 @@ class SMC(atext.ArrayStepSharedLLK):
         self.accepted = 0
 
         self.beta = 0
+        self.sjs = 1
         self.stage = 0
         self.chain_index = 0
         self.resampling_indexes = np.arange(n_chains)
@@ -276,23 +277,25 @@ class SMC(atext.ArrayStepSharedLLK):
             tempering parameter of the current stage
         weights : :class:`numpy.ndarray`
             Importance weights (floats)
+        sj : float
+            Mean of unnormalized weights
         """
-        low_beta = self.beta
+        low_beta = old_beta = self.beta
         up_beta = 2.
-        old_beta = self.beta
 
         while up_beta - low_beta > 1e-6:
             current_beta = (low_beta + up_beta) / 2.
-            temp = np.exp((current_beta - self.beta) * (self.likelihoods - self.likelihoods.max()))
-            cov_temp = np.std(temp) / np.mean(temp)
+            weights_un = np.exp((current_beta - self.beta) *
+                                (self.likelihoods - self.likelihoods.max()))
+            sj = np.mean(weights_un)
+            cov_temp = np.std(weights_un) / sj
             if cov_temp > self.coef_variation:
                 up_beta = current_beta
             else:
                 low_beta = current_beta
 
-        beta = current_beta
-        weights = temp / np.sum(temp)
-        return beta, old_beta, weights
+        weights = weights_un / np.sum(weights_un)
+        return current_beta, old_beta, weights, sj
 
     def calc_covariance(self):
         """Calculate trace covariance matrix based on importance weights.
@@ -551,7 +554,8 @@ def sample_smc(n_steps, n_chains=100, step=None, start=None, homepath=None, stag
 
             step.population, step.array_population, step.likelihoods = step.select_end_points(
                 mtrace)
-            step.beta, step.old_beta, step.weights = step.calc_beta()
+            step.beta, step.old_beta, step.weights, sj = step.calc_beta()
+            step.sjs *= sj
 
             if step.beta > 1.:
                 pm._log.info('Beta > 1.: %f' % step.beta)
@@ -576,8 +580,8 @@ def sample_smc(n_steps, n_chains=100, step=None, start=None, homepath=None, stag
         pm._log.info('Sample final stage')
         step.stage = -1
         chains = stage_handler.clean_directory(step.stage, chains, rm_flag)
-        temp = np.exp((1 - step.old_beta) * (step.likelihoods - step.likelihoods.max()))
-        step.weights = temp / np.sum(temp)
+        weights_un = np.exp((1 - step.old_beta) * (step.likelihoods - step.likelihoods.max()))
+        step.weights = weights_un / np.sum(weights_un)
         step.covariance = step.calc_covariance()
         step.proposal_dist = choose_proposal(step.proposal_name, scale=step.covariance)
         step.resampling_indexes = step.resample()
@@ -590,6 +594,8 @@ def sample_smc(n_steps, n_chains=100, step=None, start=None, homepath=None, stag
         _iter_parallel_chains(**sample_args)
 
         stage_handler.dump_atmip_params(step)
+
+        model.marginal_likelihood = step.sjs
         return stage_handler.create_result_trace(step.stage,
                                                  idxs=range(n_steps),
                                                  step=step,
