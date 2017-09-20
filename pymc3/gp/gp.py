@@ -5,7 +5,7 @@ import pymc3 as pm
 from pymc3.gp.cov import Covariance, Constant
 from pymc3.gp.mean import Zero
 from pymc3.gp.util import (conditioned_vars,
-    infer_shape, stabilize, cholesky, solve_lower, solve_upper)
+                           infer_shape, stabilize, cholesky, solve_lower, solve_upper)
 from pymc3.distributions import draw_values
 
 __all__ = ['Latent', 'Marginal', 'TP', 'MarginalSparse']
@@ -113,7 +113,7 @@ class Latent(Base):
 
     def prior(self, name, X, reparameterize=True, **kwargs):
         R"""
-	    Returns the GP prior distribution evaluated over the input
+        Returns the GP prior distribution evaluated over the input
         locations `X`.
 
         This is the prior probability over the space
@@ -142,6 +142,8 @@ class Latent(Base):
         return f
 
     def _get_given_vals(self, given):
+        if given is None:
+            given = {}
         if 'gp' in given:
             cov_total = given['gp'].cov_func
             mean_total = given['gp'].mean_func
@@ -165,9 +167,9 @@ class Latent(Base):
         cov = Kss - tt.dot(tt.transpose(A), A)
         return mu, cov
 
-    def conditional(self, name, Xnew, given={}, **kwargs):
+    def conditional(self, name, Xnew, given=None, **kwargs):
         R"""
-	    Returns the conditional distribution evaluated over new input
+        Returns the conditional distribution evaluated over new input
         locations `Xnew`.
 
         Given a set of function values `f` that
@@ -194,7 +196,6 @@ class Latent(Base):
             Extra keyword arguments that are passed to `MvNormal` distribution
             constructor.
         """
-
         givens = self._get_given_vals(given)
         mu, cov = self._build_conditional(Xnew, *givens)
         chol = cholesky(stabilize(cov))
@@ -255,7 +256,7 @@ class TP(Latent):
 
     def prior(self, name, X, reparameterize=True, **kwargs):
         R"""
-	    Returns the TP prior distribution evaluated over the input
+        Returns the TP prior distribution evaluated over the input
         locations `X`.
 
         This is the prior probability over the space
@@ -295,7 +296,7 @@ class TP(Latent):
 
     def conditional(self, name, Xnew, **kwargs):
         R"""
-	    Returns the conditional distribution evaluated over new input
+        Returns the conditional distribution evaluated over new input
         locations `Xnew`.
 
         Given a set of function values `f` that
@@ -379,7 +380,7 @@ class Marginal(Base):
 
     def marginal_likelihood(self, name, X, y, noise, is_observed=True, **kwargs):
         R"""
-	    Returns the marginal likelihood distribution, given the input
+        Returns the marginal likelihood distribution, given the input
         locations `X` and the data `y`.
 
         This is integral over the product of the GP prior and a normal likelihood.
@@ -423,6 +424,9 @@ class Marginal(Base):
             return pm.MvNormal(name, mu=mu, chol=chol, shape=shape, **kwargs)
 
     def _get_given_vals(self, given):
+        if given is None:
+            given = {}
+
         if 'gp' in given:
             cov_total = given['gp'].cov_func
             mean_total = given['gp'].mean_func
@@ -460,9 +464,9 @@ class Marginal(Base):
                 cov += noise(Xnew)
             return mu, stabilize(cov)
 
-    def conditional(self, name, Xnew, pred_noise=False, given={}, **kwargs):
+    def conditional(self, name, Xnew, pred_noise=False, given=None, **kwargs):
         R"""
-	    Returns the conditional distribution evaluated over new input
+        Returns the conditional distribution evaluated over new input
         locations `Xnew`.
 
         Given a set of function values `f` that the GP prior was over, the
@@ -499,7 +503,7 @@ class Marginal(Base):
         shape = infer_shape(Xnew, kwargs.pop("shape", None))
         return pm.MvNormal(name, mu=mu, chol=chol, shape=shape, **kwargs)
 
-    def predict(self, Xnew, point=None, diag=False, pred_noise=False, given={}):
+    def predict(self, Xnew, point=None, diag=False, pred_noise=False, given=None):
         R"""
         Return the mean vector and covariance matrix of the conditional
         distribution as numpy arrays, given a `point`, such as the MAP
@@ -521,11 +525,13 @@ class Marginal(Base):
         given : dict
             Same as `conditional` method.
         """
+        if given is None:
+            given = {}
 
         mu, cov = self.predictt(Xnew, diag, pred_noise, given)
         return draw_values([mu, cov], point=point)
 
-    def predictt(self, Xnew, diag=False, pred_noise=False, given={}):
+    def predictt(self, Xnew, diag=False, pred_noise=False, given=None):
         R"""
         Return the mean vector and covariance matrix of the conditional
         distribution as symbolic variables.
@@ -544,7 +550,6 @@ class Marginal(Base):
         given : dict
             Same as `conditional` method.
         """
-
         givens = self._get_given_vals(given)
         mu, cov = self._build_conditional(Xnew, pred_noise, diag, *givens)
         return mu, cov
@@ -646,7 +651,7 @@ class MarginalSparse(Marginal):
             trace = ((1.0 / (2.0 * sigma2)) *
                      (tt.sum(self.cov_func(X, diag=True)) -
                       tt.sum(tt.sum(A * A, 0))))
-        else: # DTC
+        else:  # DTC
             Lamd = tt.ones_like(Qffd) * sigma2
             trace = 0.0
         A_l = A / Lamd
@@ -661,7 +666,7 @@ class MarginalSparse(Marginal):
 
     def marginal_likelihood(self, name, X, Xu, y, sigma, is_observed=True, **kwargs):
         R"""
-	    Returns the approximate marginal likelihood distribution, given the input
+        Returns the approximate marginal likelihood distribution, given the input
         locations `X`, inducing point locations `Xu`, data `y`, and white noise
         standard deviations `sigma`.
 
@@ -708,7 +713,7 @@ class MarginalSparse(Marginal):
         if self.approx == "FITC":
             Kffd = cov_total(X, diag=True)
             Lamd = tt.clip(Kffd - Qffd, 0.0, np.inf) + sigma2
-        else: # VFE or DTC
+        else:  # VFE or DTC
             Lamd = tt.ones_like(Qffd) * sigma2
         A_l = A / Lamd
         L_B = cholesky(tt.eye(Xu.shape[0]) + tt.dot(A_l, tt.transpose(A)))
@@ -733,6 +738,8 @@ class MarginalSparse(Marginal):
             return mu, stabilize(cov)
 
     def _get_given_vals(self, given):
+        if given is None:
+            given = {}
         if 'gp' in given:
             cov_total = given['gp'].cov_func
             mean_total = given['gp'].mean_func
@@ -745,9 +752,9 @@ class MarginalSparse(Marginal):
             X, Xu, y, sigma = self.X, self.Xu, self.y, self.sigma
         return X, Xu, y, sigma, cov_total, mean_total
 
-    def conditional(self, name, Xnew, pred_noise=False, given={}, **kwargs):
+    def conditional(self, name, Xnew, pred_noise=False, given=None, **kwargs):
         R"""
-	    Returns the approximate conditional distribution of the GP evaluated over
+        Returns the approximate conditional distribution of the GP evaluated over
         new input locations `Xnew`.
 
         Parameters
