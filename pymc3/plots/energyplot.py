@@ -3,7 +3,7 @@ import numpy as np
 from .kdeplot import kdeplot
 
 
-def energyplot(trace, kind='kde', figsize=None, ax=None, legend=True, lw=0,
+def energyplot(trace, kind='kde', figsize=None, ax=None, legend=True,
                shade=0.35, frame=True, kwargs_shade={}, **kwargs):
     """Plot energy transition distribution and marginal energy distribution in
     order to diagnose poor exploration by HMC algorithms.
@@ -20,8 +20,6 @@ def energyplot(trace, kind='kde', figsize=None, ax=None, legend=True, lw=0,
         Matplotlib axes.
     legend : bool
         Flag for plotting legend (defaults to True)
-    lw : int
-        Line width
     shade : float
         Alpha blending value for the shaded area under the curve, between 0
         (no shade) and 1 (opaque). Defaults to 0.35
@@ -56,7 +54,7 @@ def energyplot(trace, kind='kde', figsize=None, ax=None, legend=True, lw=0,
 
     elif kind == 'hist':
         for label, value in series:
-            ax.hist(value, lw=lw, alpha=alpha, label=label, **kwargs)
+            ax.hist(value, alpha=shade, label=label, **kwargs)
 
     else:
         raise ValueError('Plot type {} not recognized.'.format(kind))

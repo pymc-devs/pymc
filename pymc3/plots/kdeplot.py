@@ -18,7 +18,8 @@ def kdeplot(values, label=None, shade=0, ax=None, kwargs_shade={}, **kwargs):
         (no shade) and 1 (opaque). Defaults to 0
     ax : matplotlib axes
     kwargs_shade : dicts, optional
-        Additional keywords passed to `fill_between` (to control the shade)
+        Additional keywords passed to `matplotlib.axes.Axes.fill_between`
+        (to control the shade)
     Returns
     ----------
     ax : matplotlib axes

@@ -25,18 +25,20 @@ def test_plots():
         step = Metropolis(model.vars, h)
         trace = sample(3000, tune=0, step=step, start=start)
 
-        traceplot(trace)
-        forestplot(trace)
-        plot_posterior(trace)
-        autocorrplot(trace)
-        energyplot(trace)
+    traceplot(trace)
+    forestplot(trace)
+    plot_posterior(trace)
+    autocorrplot(trace)
+    energyplot(trace)
 
 
 def test_energyplot():
     with asmod.build_model() as model:
         trace = sample()
 
-        energyplot(trace)
+    energyplot(trace)
+    energyplot(trace, shade=0.5, alpha=0)
+    energyplot(trace, kind='hist')
 
 
 def test_plots_categorical():
