@@ -1,13 +1,12 @@
 import matplotlib.pyplot as plt
 import numpy as np
-
 from .kdeplot import kdeplot
 
 
-def energyplot(trace, kind='kde', figsize=None, ax=None, legend=True, lw=0,
-               alpha=0.35, frame=True, **kwargs):
-    """Plot energy transition distribution and marginal energy distribution in order
-    to diagnose poor exploration by HMC algorithms.
+def energyplot(trace, kind='kde', figsize=None, ax=None, legend=True,
+               shade=0.35, frame=True, kwargs_shade={}, **kwargs):
+    """Plot energy transition distribution and marginal energy distribution in
+    order to diagnose poor exploration by HMC algorithms.
 
     Parameters
     ----------
@@ -21,13 +20,13 @@ def energyplot(trace, kind='kde', figsize=None, ax=None, legend=True, lw=0,
         Matplotlib axes.
     legend : bool
         Flag for plotting legend (defaults to True)
-    lw : int
-        Line width
-    alpha : float
-        Alpha value for plot line. Defaults to 0.35.
+    shade : float
+        Alpha blending value for the shaded area under the curve, between 0
+        (no shade) and 1 (opaque). Defaults to 0.35
     frame : bool
         Flag for plotting frame around figure.
-
+    kwargs_shade : dicts, optional
+        Additional keywords passed to `fill_between` (to control the shade)
     Returns
     -------
 
@@ -50,12 +49,12 @@ def energyplot(trace, kind='kde', figsize=None, ax=None, legend=True, lw=0,
 
     if kind == 'kde':
         for label, value in series:
-            kdeplot(value, label=label, alpha=alpha, shade=True, ax=ax,
-                    **kwargs)
+            kdeplot(value, label=label, shade=shade, ax=ax,
+                    kwargs_shade=kwargs_shade, **kwargs)
 
     elif kind == 'hist':
         for label, value in series:
-            ax.hist(value, lw=lw, alpha=alpha, label=label, **kwargs)
+            ax.hist(value, alpha=shade, label=label, **kwargs)
 
     else:
         raise ValueError('Plot type {} not recognized.'.format(kind))
