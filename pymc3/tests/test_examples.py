@@ -2,7 +2,6 @@ import matplotlib
 import numpy as np
 import pandas as pd
 import pymc3 as pm
-import scipy.optimize as opt
 import theano.tensor as tt
 import pytest
 import theano
@@ -195,7 +194,7 @@ class TestGLMLinear(SeededTest):
 
     def test_run(self):
         with self.build_model():
-            start = pm.find_MAP(fmin=opt.fmin_powell)
+            start = pm.find_MAP(method="Powell")
             pm.sample(50, pm.Slice(), start=start)
 
 

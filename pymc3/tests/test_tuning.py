@@ -22,13 +22,13 @@ def test_mle_jacobian():
 
     start, model, _ = models.simple_normal(bounded_prior=False)
     with model:
-        map_estimate = find_MAP(model=model)
+        map_estimate = find_MAP(method="BFGS", model=model)
 
     rtol = 1E-5  # this rtol should work on both floatX precisions
     np.testing.assert_allclose(map_estimate["mu_i"], truth, rtol=rtol)
 
     start, model, _ = models.simple_normal(bounded_prior=True)
     with model:
-        map_estimate = find_MAP(model=model)
+        map_estimate = find_MAP(method="BFGS", model=model)
 
     np.testing.assert_allclose(map_estimate["mu_i"], truth, rtol=rtol)

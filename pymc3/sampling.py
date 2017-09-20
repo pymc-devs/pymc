@@ -842,7 +842,7 @@ def init_nuts(init='auto', njobs=1, n_init=500000, model=None,
         if njobs == 1:
             start = start[0]
     elif init == 'advi_map':
-        start = pm.find_MAP()
+        start = pm.find_MAP(include_transformed=True)
         approx = pm.MeanField(model=model, start=start)
         pm.fit(
             random_seed=random_seed,
@@ -859,7 +859,7 @@ def init_nuts(init='auto', njobs=1, n_init=500000, model=None,
         if njobs == 1:
             start = start[0]
     elif init == 'map':
-        start = pm.find_MAP()
+        start = pm.find_MAP(include_transformed=True)
         cov = pm.find_hessian(point=start)
         start = [start] * njobs
         potential = quadpotential.QuadPotentialFull(cov)
