@@ -23,7 +23,7 @@ class Base(object):
     def __add__(self, other):
         same_attrs = set(self.__dict__.keys()) == set(other.__dict__.keys())
         if not isinstance(self, type(other)) or not same_attrs:
-            raise ValueError("cant add different GP types")
+            raise TypeError("Cannot add different GP types")
         mean_total = self.mean_func + other.mean_func
         cov_total = self.cov_func + other.cov_func
         return self.__class__(mean_total, cov_total)
@@ -45,12 +45,12 @@ class Base(object):
 class Latent(Base):
     R"""
     Latent Gaussian process.
-    
+
     The `gp.Latent` class is a direct implementation of a GP.  No addiive
     noise is assumed.  It is called "Latent" because the underlying function
     values are treated as latent variables.  It has a `prior` method and a
     `conditional` method.  Given a mean and covariance function the
-    function $f(x)$ is modeled as,
+    function :math:`f(x)` is modeled as,
 
     .. math::
 
@@ -114,8 +114,8 @@ class Latent(Base):
     def prior(self, name, X, reparameterize=True, **kwargs):
         R"""
 	    Returns the GP prior distribution evaluated over the input
-        locations `X`.  
-        
+        locations `X`.
+
         This is the prior probability over the space
         of functions described by its mean and covariance function.
 
@@ -168,8 +168,8 @@ class Latent(Base):
     def conditional(self, name, Xnew, given={}, **kwargs):
         R"""
 	    Returns the conditional distribution evaluated over new input
-        locations `Xnew`.  
-        
+        locations `Xnew`.
+
         Given a set of function values `f` that
         the GP prior was over, the conditional distribution over a
         set of new points, `f_*` is
@@ -205,12 +205,12 @@ class Latent(Base):
 @conditioned_vars(["X", "f", "nu"])
 class TP(Latent):
     """
-    Student's T process prior.  
-    
-    The usage is nearly identical to that of `gp.Latent`.  The differences 
-    are that it must be initialized with a degrees of freedom parameter, and 
+    Student's T process prior.
+
+    The usage is nearly identical to that of `gp.Latent`.  The differences
+    are that it must be initialized with a degrees of freedom parameter, and
     TP is not additive.  Given a mean and covariance function, and a degrees of
-    freedom parameter, the function $f(x)$ is modeled as,
+    freedom parameter, the function :math:`f(x)` is modeled as,
 
     .. math::
 
@@ -226,17 +226,20 @@ class TP(Latent):
     nu : float
         The degrees of freedom
 
-    For more information, see https://www.cs.cmu.edu/~andrewgw/tprocess.pdf
+    References
+    ----------
+    -   Shah, A., Wilson, A. G., and Ghahramani, Z. (2014).  Student-t
+        Processes as Alternatives to Gaussian Processes.  arXiv preprint arXiv:1402.4306.
     """
 
     def __init__(self, mean_func=Zero(), cov_func=Constant(0.0), nu=None):
         if nu is None:
-            raise ValueError("T Process requires a degrees of freedom parameter, 'nu'")
+            raise ValueError("Student's T process requires a degrees of freedom parameter, 'nu'")
         self.nu = nu
         super(TP, self).__init__(mean_func, cov_func)
 
     def __add__(self, other):
-        raise ValueError("Student T processes aren't additive")
+        raise TypeError("Student's T processes aren't additive")
 
     def _build_prior(self, name, X, reparameterize=True, **kwargs):
         mu = self.mean_func(X)
@@ -253,8 +256,8 @@ class TP(Latent):
     def prior(self, name, X, reparameterize=True, **kwargs):
         R"""
 	    Returns the TP prior distribution evaluated over the input
-        locations `X`.  
-        
+        locations `X`.
+
         This is the prior probability over the space
         of functions described by its mean and covariance function.
 
@@ -293,8 +296,8 @@ class TP(Latent):
     def conditional(self, name, Xnew, **kwargs):
         R"""
 	    Returns the conditional distribution evaluated over new input
-        locations `Xnew`.  
-        
+        locations `Xnew`.
+
         Given a set of function values `f` that
         the TP prior was over, the conditional distribution over a
         set of new points, `f_*` is
@@ -322,7 +325,7 @@ class TP(Latent):
 class Marginal(Base):
     R"""
     Marginal Gaussian process.
-    
+
     The `gp.Marginal` class is an implementation of the sum of a GP
     prior and additive noise.  It has `marginal_likelihood`, `conditional`
     and `predict` methods.  This GP implementation can be used to
@@ -377,8 +380,8 @@ class Marginal(Base):
     def marginal_likelihood(self, name, X, y, noise, is_observed=True, **kwargs):
         R"""
 	    Returns the marginal likelihood distribution, given the input
-        locations `X` and the data `y`.  
-        
+        locations `X` and the data `y`.
+
         This is integral over the product of the GP prior and a normal likelihood.
 
         .. math::
@@ -460,9 +463,9 @@ class Marginal(Base):
     def conditional(self, name, Xnew, pred_noise=False, given={}, **kwargs):
         R"""
 	    Returns the conditional distribution evaluated over new input
-        locations `Xnew`.  
-        
-        Given a set of function values `f` that the GP prior was over, the 
+        locations `Xnew`.
+
+        Given a set of function values `f` that the GP prior was over, the
         conditional distribution over a set of new points, `f_*` is:
 
         .. math::
@@ -551,7 +554,7 @@ class Marginal(Base):
 class MarginalSparse(Marginal):
     R"""
     Approximate marginal Gaussian process.
-    
+
     The `gp.MarginalSparse` class is an implementation of the sum of a GP
     prior and additive noise.  It has `marginal_likelihood`, `conditional`
     and `predict` methods.  This GP implementation can be used to
@@ -561,11 +564,6 @@ class MarginalSparse(Marginal):
     - DTC: Deterministic Training Conditional
     - FITC: Fully independent Training Conditional
     - VFE: Variational Free Energy
-
-    For more information on these approximations, see e.g. "A unifying view of
-    sparse approximate Gaussian process regression", 2005, *Quinonero-Candela, Rasmussen*,
-    and "Variational Learning of Inducing Variables in Sparse Gaussian Processes",
-    2009, *Titsias*.
 
     Parameters
     ----------
@@ -605,6 +603,14 @@ class MarginalSparse(Marginal):
 
         with model:
             fcond = gp.conditional("fcond", Xnew=Xnew)
+
+    References
+    ----------
+    -   Quinonero-Candela, J., and Rasmussen, C. (2005). A Unifying View of
+        Sparse Approximate Gaussian Process Regression.
+
+    -   Titsias, M. (2009). Variational Learning of Inducing Variables in
+        Sparse Gaussian Processes.
     """
 
     _available_approx = ("FITC", "VFE", "DTC")
@@ -620,7 +626,7 @@ class MarginalSparse(Marginal):
         new_gp = super(MarginalSparse, self).__add__(other)
         # make sure new gp has correct approx
         if not self.approx == other.approx:
-            raise ValueError("Cant add GPs with different approximations")
+            raise TypeError("Cannot add GPs with different approximations")
         new_gp.approx = self.approx
         return new_gp
 

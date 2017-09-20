@@ -15,7 +15,7 @@ def infer_shape(X, n_points=None):
         try:
             n_points = np.int(X.shape[0])
         except TypeError:
-            raise TypeError("Cannot infer n_points, provide as an argument")
+            raise TypeError("Cannot infer 'shape', provide as an argument")
     return n_points
 
 
@@ -31,10 +31,10 @@ def kmeans_inducing_points(n_inducing, X):
     elif isinstance(X, (np.ndarray, tuple, list)):
         X = np.asarray(X)
     else:
-        raise ValueError(("To use K-means initialization, "
-                          "please provide X as a type that "
-                          "can be cast to np.ndarray, instead "
-                          "of {}".format(type(X))))
+        raise TypeError(("To use K-means initialization, "
+                         "please provide X as a type that "
+                         "can be cast to np.ndarray, instead "
+                         "of {}".format(type(X))))
     scaling = np.std(X, 0)
     # if std of a column is very small (zero), don't normalize that column
     scaling[scaling <= 1e-6] = 1.0

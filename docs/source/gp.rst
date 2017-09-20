@@ -1,6 +1,6 @@
-===========================
-Gaussian Processes in PyMC3
-===========================
+******************
+Gaussian Processes
+******************
 
 GP Basics
 =========
@@ -111,8 +111,8 @@ with non-standard covariance and mean functons.  For more information check out
 the tutorial on covariance functions.
 
 
-:code:`gp.*` implementations
-============================
+GP Implementations
+==================
 
 PyMC3 includes several GP implementations, including marginal and latent
 variable models and also some fast approximations.  Their usage all follows a

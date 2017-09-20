@@ -49,8 +49,8 @@ Gaussian Processes
 ==================
 
 .. toctree::
+   notebooks/GP-MeansAndCovs.ipynb
    notebooks/GP-Marginal.ipynb
-   notebooks/GP-Covariances.ipynb
    notebooks/GP-Latent.ipynb
    notebooks/GP-SparseApprox.ipynb
    notebooks/GP-TProcess.ipynb
