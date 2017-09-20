@@ -4,7 +4,7 @@ from .kdeplot import kdeplot
 
 
 def energyplot(trace, kind='kde', figsize=None, ax=None, legend=True,
-               shade=0.35, frame=True, kwargs_shade={}, **kwargs):
+               shade=0.35, frame=True, kwargs_shade=None, **kwargs):
     """Plot energy transition distribution and marginal energy distribution in
     order to diagnose poor exploration by HMC algorithms.
 
@@ -46,6 +46,9 @@ def energyplot(trace, kind='kde', figsize=None, ax=None, legend=True,
 
     if ax is None:
         _, ax = plt.subplots(figsize=figsize)
+
+    if kwargs_shade is None:
+        kwargs_shade = {}
 
     if kind == 'kde':
         for label, value in series:

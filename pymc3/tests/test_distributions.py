@@ -358,7 +358,10 @@ def PdMatrixCholUpper(n):
 
 
 class TestMatchesScipy(SeededTest):
-    def pymc3_matches_scipy(self, pymc3_dist, domain, paramdomains, scipy_dist, decimal=None, extra_args={}):
+    def pymc3_matches_scipy(self, pymc3_dist, domain, paramdomains, scipy_dist,
+                            decimal=None, extra_args=None):
+        if extra_args is None:
+            extra_args = {}
         model = build_model(pymc3_dist, domain, paramdomains, extra_args)
         value = model.named_vars['value']
 
@@ -413,9 +416,12 @@ class TestMatchesScipy(SeededTest):
             decimals = select_by_precision(float64=6, float32=4)
             assert_almost_equal(dlogp(pt), ndlogp(pt), decimal=decimals, err_msg=str(pt))
 
-    def checkd(self, distfam, valuedomain, vardomains, checks=None, extra_args={}):
+    def checkd(self, distfam, valuedomain, vardomains, checks=None, extra_args=None):
         if checks is None:
             checks = (self.check_int_to_1, self.check_dlogp)
+
+        if extra_args is None:
+            extra_args = {}
         m = build_model(distfam, valuedomain, vardomains, extra_args=extra_args)
         for check in checks:
             check(m, m.named_vars['value'], valuedomain, vardomains)

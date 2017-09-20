@@ -3,7 +3,7 @@ import numpy as np
 from scipy.signal import gaussian, convolve
 
 
-def kdeplot(values, label=None, shade=0, ax=None, kwargs_shade={}, **kwargs):
+def kdeplot(values, label=None, shade=0, ax=None, kwargs_shade=None, **kwargs):
     """
     1D KDE plot taking into account boundary conditions
 
@@ -27,6 +27,10 @@ def kdeplot(values, label=None, shade=0, ax=None, kwargs_shade={}, **kwargs):
     """
     if ax is None:
         _, ax = plt.subplots()
+
+    if kwargs_shade is None:
+        kwargs_shade = {}
+
     density, l, u = fast_kde(values)
     x = np.linspace(l, u, len(density))
     ax.plot(x, density, label=label, **kwargs)
