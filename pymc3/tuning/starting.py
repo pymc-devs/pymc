@@ -3,45 +3,51 @@ Created on Mar 12, 2011
 
 @author: johnsalvatier
 '''
-from scipy import optimize
+from scipy.optimize import minimize
 import numpy as np
-from numpy import isfinite, nan_to_num, logical_not
+from numpy import isfinite, nan_to_num
+from tqdm import tqdm
 import pymc3 as pm
 from ..vartypes import discrete_types, typefilter
 from ..model import modelcontext, Point
 from ..theanof import inputvars
 from ..blocking import DictToArrayBijection, ArrayOrdering
-from ..util import update_start_vals
+from ..util import update_start_vals, get_default_varnames
 
+import warnings
 from inspect import getargspec
 
 __all__ = ['find_MAP']
 
 
-def find_MAP(start=None, vars=None, fmin=None,
-             return_raw=False, model=None, callback=None,
+def find_MAP(start=None, vars=None, method="L-BFGS-B",
+             return_raw=False, include_transformed=False, progressbar=True, maxeval=5000, model=None,
              *args, **kwargs):
     """
-    Sets state to the local maximum a posteriori point given a model.
-    Current default of fmin_Hessian does not deal well with optimizing close
-    to sharp edges, especially if they are the minimum.
+    Finds the local maximum a posteriori point given a model.
 
     Parameters
     ----------
     start : `dict` of parameter values (Defaults to `model.test_point`)
     vars : list
         List of variables to optimize and set to optimum (Defaults to all continuous).
-    fmin : function
-        Optimization algorithm (Defaults to `scipy.optimize.fmin_bfgs` unless
+    method : string or callable
+        Optimization algorithm (Defaults to 'L-BFGS-B' unless
         discrete variables are specified in `vars`, then
-        `scipy.optimize.fmin_powell` which will perform better).
-    return_raw : Bool
-        Whether to return extra value returned by fmin (Defaults to `False`)
+        `Powell` which will perform better).  For instructions on use of a callable,
+        refer to SciPy's documentation of `optimize.minimize`.
+    return_raw : bool
+        Whether to return the full output of scipy.optimize.minimize (Defaults to `False`)
+    include_transformed : bool
+        Flag for reporting automatically transformed variables in addition
+        to original variables (defaults to False).
+    progressbar : bool
+        Whether or not to display a progress bar in the command line.
+    maxeval : int
+        The maximum number of times the posterior distribution is evaluated.
     model : Model (optional if in `with` context)
-    callback : callable
-        Callback function to pass to scipy optimization routine.
     *args, **kwargs
-        Extra args passed to fmin
+        Extra args passed to scipy.optimize.minimize
     """
     model = modelcontext(model)
     if start is None:
@@ -59,108 +65,76 @@ def find_MAP(start=None, vars=None, fmin=None,
         vars = model.cont_vars
     vars = inputvars(vars)
     disc_vars = list(typefilter(vars, discrete_types))
-
-    try:
-        model.fastdlogp(vars)
-        gradient_avail = True
-    except AttributeError:
-        gradient_avail = False
-
-    if disc_vars or not gradient_avail:
-        pm._log.warning("Warning: gradient not available." +
-                        "(E.g. vars contains discrete variables). MAP " +
-                        "estimates may not be accurate for the default " +
-                        "parameters. Defaulting to non-gradient minimization " +
-                        "fmin_powell.")
-        fmin = optimize.fmin_powell
-
-    if fmin is None:
-        if disc_vars:
-            fmin = optimize.fmin_powell
-        else:
-            fmin = optimize.fmin_bfgs
-
     allinmodel(vars, model)
 
     start = Point(start, model=model)
     bij = DictToArrayBijection(ArrayOrdering(vars), start)
-    logp_func = bij.mapf(model.fastlogp)
+    logp_func = bij.mapf(model.fastlogp_nojac)
     x0 = bij.map(start)
-    logp = bij.mapf(model.fastlogp_nojac)
-    def logp_o(point):
-        return nan_to_high(-logp(point))
 
-    # Check to see if minimization function actually uses the gradient
-    if 'fprime' in getargspec(fmin).args:
-        dlogp = bij.mapf(model.fastdlogp_nojac(vars))
-        def grad_logp_o(point):
-            return nan_to_num(-dlogp(point))
-
-        r = fmin(logp_o, bij.map(start), fprime=grad_logp_o, callback=callback, *args, **kwargs)
+    try:
+        dlogp_func = bij.mapf(model.fastdlogp_nojac(vars))
         compute_gradient = True
-    else:
-        # Check to see if minimization function uses a starting value
-        if 'x0' in getargspec(fmin).args:
-            r = fmin(logp_o, bij.map(start), callback=callback, *args, **kwargs)
-        else:
-            r = fmin(logp_o, callback=callback, *args, **kwargs)
+    except AttributeError:
         compute_gradient = False
 
-    if isinstance(r, tuple):
-        mx0 = r[0]
+    if disc_vars or not compute_gradient:
+        pm._log.warning("Warning: gradient not available." +
+                        "(E.g. vars contains discrete variables). MAP " +
+                        "estimates may not be accurate for the default " +
+                        "parameters. Defaulting to non-gradient minimization " +
+                        "'Powell'.")
+        method = "Powell"
+
+    if "fmin" in kwargs:
+        fmin = kwargs.pop("fmin")
+        warnings.warn('In future versions, set the optimization algorithm with a string. '
+                      'For example, use `method="L-BFGS-B"` instead of '
+                      '`fmin=sp.optimize.fmin_l_bfgs_b"`.')
+
+        cost_func = CostFuncWrapper(maxeval, progressbar, logp_func)
+
+        # Check to see if minimization function actually uses the gradient
+        if 'fprime' in getargspec(fmin).args:
+            def grad_logp(point):
+                return nan_to_num(-dlogp_func(point))
+            opt_result = fmin(cost_func, bij.map(start), fprime=grad_logp, *args, **kwargs)
+        else:
+            # Check to see if minimization function uses a starting value
+            if 'x0' in getargspec(fmin).args:
+                opt_result = fmin(cost_func, bij.map(start), *args, **kwargs)
+            else:
+                opt_result = fmin(cost_func, *args, **kwargs)
+
+        if isinstance(opt_result, tuple):
+            mx0 = opt_result[0]
+        else:
+            mx0 = opt_result
     else:
-        mx0 = r
+        # remove 'if' part, keep just this 'else' block after version change
+        if compute_gradient:
+            cost_func = CostFuncWrapper(maxeval, progressbar, logp_func, dlogp_func)
+        else:
+            cost_func = CostFuncWrapper(maxeval, progressbar, logp_func)
 
-    mx = bij.rmap(mx0)
+        try:
+            opt_result = minimize(cost_func, x0, method=method, jac=compute_gradient, *args, **kwargs)
+            mx0 = opt_result["x"]  # r -> opt_result
+            cost_func.progress.total = cost_func.progress.n + 1
+            cost_func.progress.update()
+        except (KeyboardInterrupt, StopIteration) as e:
+            mx0, opt_result = cost_func.previous_x, None
+            cost_func.progress.close()
+            if isinstance(e, StopIteration):
+                pm._log.info(e)
+        finally:
+            cost_func.progress.close()
 
-    allfinite_mx0 = allfinite(mx0)
-    allfinite_logp = allfinite(model.logp(mx))
-    if compute_gradient:
-        allfinite_dlogp = allfinite(model.dlogp()(mx))
-    else:
-        allfinite_dlogp = True
-
-    if (not allfinite_mx0 or
-        not allfinite_logp or
-        not allfinite_dlogp):
-
-        messages = []
-        for var in vars:
-            vals = {
-                "value": mx[var.name],
-                "logp": var.logp(mx)}
-            if compute_gradient:
-                vals["dlogp"] = var.dlogp()(mx)
-
-            def message(name, values):
-                if np.size(values) < 10:
-                    return name + " bad: " + str(values)
-                else:
-                    idx = np.nonzero(logical_not(isfinite(values)))
-                    return name + " bad at idx: " + str(idx) + " with values: " + str(values[idx])
-
-            messages += [
-                message(var.name + "." + k, v)
-                for k, v in vals.items()
-                if not allfinite(v)]
-
-        specific_errors = '\n'.join(messages)
-        raise ValueError("Optimization error: max, logp or dlogp at " +
-                         "max have non-finite values. Some values may be " +
-                         "outside of distribution support. max: " +
-                         repr(mx) + " logp: " + repr(model.logp(mx)) +
-                         " dlogp: " + repr(model.dlogp()(mx)) + "Check that " +
-                         "1) you don't have hierarchical parameters, " +
-                         "these will lead to points with infinite " +
-                         "density. 2) your distribution logp's are " +
-                         "properly specified. Specific issues: \n" +
-                         specific_errors)
-
-    vars = model.unobserved_RVs
-    mx = {var.name: value for var, value in zip(vars, model.fastfn(vars)(mx))}
+    vars = get_default_varnames(model.unobserved_RVs, include_transformed)
+    mx = {var.name: value for var, value in zip(vars, model.fastfn(vars)(bij.rmap(mx0)))}
 
     if return_raw:
-        return mx, r
+        return mx, opt_result
     else:
         return mx
 
@@ -179,13 +153,53 @@ def allinmodel(vars, model):
         raise ValueError("Some variables not in the model: " + str(notin))
 
 
-def format_values(val):
-    fmt = "{:8.3f}"
-    if val.size == 1:
-        return fmt.format(np.float(val))
-    elif val.size < 9:
-        return "[" + ", ".join([fmt.format(v) for v in val]) + "]"
-    else:
-        start = "[" + ", ".join([fmt.format(v) for v in val[:4]])
-        end   = ", ".join([fmt.format(v) for v in val[-4:]]) +"]"
-        return start + ",   ...   , " + end
+class CostFuncWrapper(object):
+    def __init__(self, maxeval=5000, progressbar=True, logp_func=None, dlogp_func=None):
+        self.n_eval = 0
+        self.maxeval = maxeval
+        self.logp_func = logp_func
+        if dlogp_func is None:
+            self.use_gradient = False
+            self.desc = 'logp = {:,.5g}'
+        else:
+            self.dlogp_func = dlogp_func
+            self.use_gradient = True
+            self.desc = 'logp = {:,.5g}, ||grad|| = {:,.5g}'
+        self.previous_x = None
+        self.progress = tqdm(total=maxeval, disable=not progressbar)
+
+    def __call__(self, x):
+        neg_value = np.float64(self.logp_func(pm.floatX(x)))
+        value = -1.0 * nan_to_high(neg_value)
+        if self.use_gradient:
+            neg_grad = self.dlogp_func(pm.floatX(x))
+            if np.all(np.isfinite(neg_grad)):
+                self.previous_x = x
+            grad = nan_to_num(-1.0*neg_grad)
+            grad = grad.astype(np.float64)
+        else:
+            self.previous_x = x
+            grad = None
+
+        if self.n_eval % 10 == 0:
+            self.update_progress_desc(neg_value, grad)
+
+        if self.n_eval > self.maxeval:
+            self.update_progress_desc(neg_value, grad)
+            self.progress.close()
+            raise StopIteration
+
+        self.n_eval += 1
+        self.progress.update(1)
+
+        if self.use_gradient:
+            return value, grad
+        else:
+            return value
+
+    def update_progress_desc(self, neg_value, grad=None):
+        if grad is None:
+            self.progress.set_description(self.desc.format(neg_value))
+        else:
+            norm_grad = np.linalg.norm(grad)
+            self.progress.set_description(self.desc.format(neg_value, norm_grad))

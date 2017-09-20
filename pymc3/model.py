@@ -329,7 +329,7 @@ class ValueGradFunction(object):
         The value that we compute with its gradient.
     grad_vars : list of named theano variables or None
         The arguments with respect to which the gradient is computed.
-    extra_args : list of named theano variables or None
+    extra_vars : list of named theano variables or None
         Other arguments of the function that are assumed constant. They
         are stored in shared variables and can be set using
         `set_extra_values`.
