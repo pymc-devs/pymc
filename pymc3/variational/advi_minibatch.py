@@ -14,9 +14,9 @@ from .advi import ADVIFit, adagrad_optimizer, gen_random_state, infmean
 __all__ = ['advi_minibatch']
 
 
-def _value_error(cond, str):
+def _value_error(cond, msg):
     if not cond:
-        raise ValueError(str)
+        raise ValueError(msg)
 
 
 def _check_minibatches(minibatch_tensors, minibatches):
@@ -475,12 +475,10 @@ def advi_minibatch(vars=None, start=None, model=None, n=5000, n_mcsamples=1,
     grvs = list(set(vars) - set(list(local_RVs) + list(observed_RVs)))
     if global_RVs is None:
         global_RVs = OrderedDict({v: 1 for v in grvs})
-    elif len(grvs) != len(global_RVs):
-        _value_error(
-            'global_RVs ({}) must have all global RVs: {}'.format(
-                [v for v in global_RVs], grvs
-            )
-        )
+    _value_error(len(grvs) == len(global_RVs(),
+                 'global_RVs ({}) must have all global RVs: {}'.format(
+                     [v for v in global_RVs], grvs)
+    ))
 
     # ELBO wrt variational parameters
     elbo, uw_l, uw_g = _make_elbo_t(observed_RVs, global_RVs, local_RVs,

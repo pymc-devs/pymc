@@ -169,7 +169,6 @@ class TestStepMethods(object):  # yield test doesn't work subclassing object
 
     def setup_class(self):
         self.temp_dir = tempfile.mkdtemp()
-        print(self.temp_dir)
 
     def teardown_class(self):
         shutil.rmtree(self.temp_dir)
@@ -402,7 +401,6 @@ class TestNutsCheckTrace(object):
             with pytest.warns(None) as warns:
                 trace = sample(20, init=None, tune=5)
             warns = [str(warn.message) for warn in warns]
-            print(warns)
             assert np.any(trace['diverging'])
             assert any('diverging samples after tuning' in warn
                        for warn in warns)

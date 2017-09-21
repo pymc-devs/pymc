@@ -239,7 +239,7 @@ class MvNormal(_QuadFormBase):
             try:
                 dist = stats.multivariate_normal(
                     mean=mu, cov=cov, allow_singular=True)
-            except ValueError as error:
+            except ValueError:
                 size.append(mu.shape[-1])
                 return np.nan * np.zeros(size)
             return dist.rvs(size)
@@ -473,11 +473,11 @@ class Multinomial(Discrete):
     Parameters
     ----------
     n : int or array
-        Number of trials (n > 0). If n is an array its shape must be (N,) with 
+        Number of trials (n > 0). If n is an array its shape must be (N,) with
         N = p.shape[0]
     p : one- or two-dimensional array
         Probability of each one of the different outcomes. Elements must
-        be non-negative and sum to 1 along the last axis. They will be 
+        be non-negative and sum to 1 along the last axis. They will be
         automatically rescaled otherwise.
     """
 
@@ -532,7 +532,7 @@ class Multinomial(Discrete):
             randnum = np.asarray([
                 np.random.multinomial(nn, p.squeeze(), size=size)
                 for nn in n
-            ])   
+            ])
         else:
             p = p / p.sum(axis=1, keepdims=True)
             randnum = np.asarray([
@@ -605,7 +605,7 @@ class PosDefMatrix(theano.Op):
         try:
             z[0] = np.array(posdef(x), dtype='int8')
         except Exception:
-            pm._log.exception('Failed to check if positive definite', x)
+            pm._log.exception('Failed to check if %s positive definite', x)
             raise
 
     def infer_shape(self, node, shapes):
@@ -675,11 +675,11 @@ class Wishart(Continuous):
                               (nu - p - 1) * V,
                               np.nan)
 
-    def random(self, point=None, size=None): 
-        nu, V = draw_values([self.nu, self.V], point=point) 
+    def random(self, point=None, size=None):
+        nu, V = draw_values([self.nu, self.V], point=point)
         size= 1 if size is None else size
-        return generate_samples(stats.wishart.rvs, np.asscalar(nu), V, 
-                                    broadcast_shape=(size,)) 
+        return generate_samples(stats.wishart.rvs, np.asscalar(nu), V,
+                                    broadcast_shape=(size,))
 
     def logp(self, X):
         nu = self.nu
@@ -1049,7 +1049,7 @@ class LKJCorr(Continuous):
         self.tri_index[np.triu_indices(n, k=1)[::-1]] = np.arange(shape)
 
     def _random(self, n, eta, size=None):
-        size = size if isinstance(size, tuple) else (size,) 
+        size = size if isinstance(size, tuple) else (size,)
         # original implementation in R see:
         # https://github.com/rmcelreath/rethinking/blob/master/R/distributions.r
         beta = eta - 1 + n/2

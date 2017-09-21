@@ -9,6 +9,7 @@ import warnings
 from collections import namedtuple
 from .model import modelcontext
 from .util import get_default_varnames
+import pymc3 as pm
 from pymc3.theanof import floatX
 
 from scipy.misc import logsumexp
@@ -399,7 +400,7 @@ def compare(traces, models, ic='WAIC', method='stacking', b_samples=1000,
         It's always 0 for the top-ranked model.
     weight: Relative weight for each model.
         This can be loosely interpreted as the probability of each model
-        (among the compared model) given the data. By default the uncertainty 
+        (among the compared model) given the data. By default the uncertainty
         in the weights estimation is considered using Bayesian bootstrap.
     SE : Standard error of the IC estimate.
         If method = BB-pseudo-BMA these values are estimated using Bayesian
@@ -718,10 +719,10 @@ def quantiles(x, qlist=(2.5, 25, 50, 75, 97.5), transform=lambda x: x):
         return dict(zip(qlist, quants))
 
     except IndexError:
-        _log.warning("Too few elements for quantile calculation")
+        pm._log.warning("Too few elements for quantile calculation")
 
 
-def df_summary(trace, varnames=None, transform=lambda x: x, stat_funcs=None, 
+def df_summary(trace, varnames=None, transform=lambda x: x, stat_funcs=None,
                extend=False, include_transformed=False,
                alpha=0.05, start=0, batches=None):
     R"""Create a data frame with summary statistics.

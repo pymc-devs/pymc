@@ -36,8 +36,8 @@ def energyplot(trace, kind='kde', figsize=None, ax=None, legend=True,
     try:
         energy = trace['energy']
     except KeyError:
-        print('There is no energy information in the passed trace.')
-        return ax
+        raise ValueError('There is no energy information in the passed trace.')
+
     series = [('Marginal energy distribution', energy - energy.mean()),
               ('Energy transition distribution', np.diff(energy))]
 
