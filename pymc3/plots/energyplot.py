@@ -1,3 +1,5 @@
+import warnings
+
 import matplotlib.pyplot as plt
 import numpy as np
 from .kdeplot import kdeplot
@@ -36,7 +38,8 @@ def energyplot(trace, kind='kde', figsize=None, ax=None, legend=True,
     try:
         energy = trace['energy']
     except KeyError:
-        raise ValueError('There is no energy information in the passed trace.')
+        warnings.warn('There is no energy information in the passed trace.')
+        return ax
 
     series = [('Marginal energy distribution', energy - energy.mean()),
               ('Energy transition distribution', np.diff(energy))]

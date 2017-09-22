@@ -209,8 +209,8 @@ def forestplot(trace_obj, varnames=None, transform=identity_transform, alpha=0.0
         # Subplot for confidence intervals
         interval_plot = plt.subplot(gs[0])
 
-    trace_quantiles = quantiles(trace_obj, qlist, transform=transform)
-    hpd_intervals = hpd(trace_obj, alpha, transform=transform)
+    trace_quantiles = quantiles(trace_obj, qlist, transform=transform, squeeze=False)
+    hpd_intervals = hpd(trace_obj, alpha, transform=transform, squeeze=False)
 
     labels = []
     for j, chain in enumerate(trace_obj.chains):
