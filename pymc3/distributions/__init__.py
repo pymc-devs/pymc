@@ -26,6 +26,7 @@ from .continuous import VonMises
 from .continuous import SkewNormal
 from .continuous import Triangular
 from .continuous import Gumbel
+from .continuous import Logistic
 from .continuous import Interpolated
 
 from .discrete import Binomial
@@ -141,6 +142,7 @@ __all__ = ['Uniform',
            'Triangular',
            'DiscreteWeibull',
            'Gumbel',
+           'Logistic',
            'Interpolated',
            'Bound',
            ]
