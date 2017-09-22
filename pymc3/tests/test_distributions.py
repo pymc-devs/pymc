@@ -14,7 +14,7 @@ from ..distributions import (DensityDist, Categorical, Multinomial, VonMises, Di
                              NegativeBinomial, Geometric, Exponential, ExGaussian, Normal,
                              Flat, LKJCorr, Wald, ChiSquared, HalfNormal, DiscreteUniform,
                              Bound, Uniform, Triangular, Binomial, SkewNormal, DiscreteWeibull,
-                             Gumbel, Interpolated, ZeroInflatedBinomial, HalfFlat, AR1)
+                             Gumbel, Logistic, Interpolated, ZeroInflatedBinomial, HalfFlat, AR1)
 from ..distributions import continuous
 from pymc3.theanof import floatX
 from numpy import array, inf, log, exp
@@ -894,6 +894,11 @@ class TestMatchesScipy(SeededTest):
         def gumbel(value, mu, beta):
             return floatX(sp.gumbel_r.logpdf(value, loc=mu, scale=beta))
         self.pymc3_matches_scipy(Gumbel, R, {'mu': R, 'beta': Rplusbig}, gumbel)
+
+    def test_logistic(self):
+        self.pymc3_matches_scipy(Logistic, R, {'mu': R, 's': Rplus},
+                                 lambda value, mu, s: sp.logistic.logpdf(value, mu, s),
+                                 decimal=select_by_precision(float64=6, float32=1))
 
     def test_multidimensional_beta_construction(self):
         with Model():
