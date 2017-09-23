@@ -490,13 +490,13 @@ class Gibbs(Covariance):
         return tt.clip(sqd, 0.0, np.inf)
 
     def full(self, X, Xs=None):
-        rx = self.lfunc(X, self.args)
+        rx = self.lfunc(tt.as_tensor_variable(X), self.args)
         if Xs is None:
-            rz = self.lfunc(X, self.args)
+            rz = self.lfunc(tt.as_tensor_variable(X), self.args)
             X, Xs = self._slice(X, Xs)
             r2 = self.square_dist(X, X)
         else:
-            rz = self.lfunc(Xs, self.args)
+            rz = self.lfunc(tt.as_tensor_variable(Xs), self.args)
             X, Xs = self._slice(X, Xs)
             r2 = self.square_dist(X, Xs)
         rx2 = tt.reshape(tt.square(rx), (-1, 1))
