@@ -1,3 +1,7 @@
+try:
+    import matplotlib.pyplot as plt
+except ImportError:  # mpl is optional
+    pass
 import numpy as np
 
 from .artists import histplot_op, kdeplot_op
@@ -67,7 +71,6 @@ def traceplot(trace, varnames=None, transform=identity_transform, figsize=None, 
     ax : matplotlib axes
 
     """
-    import matplotlib.pyplot as plt
     trace = trace[skip_first:]
 
     if varnames is None:

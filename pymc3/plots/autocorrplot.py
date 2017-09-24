@@ -1,6 +1,11 @@
 import itertools
 import numpy as np
 
+try:
+    import matplotlib.pyplot as plt
+except ImportError:  # mpl is optional
+    pass
+
 from .utils import get_default_varnames, get_axis
 
 
@@ -34,8 +39,6 @@ def autocorrplot(trace, varnames=None, max_lag=100, burn=0, plot_transformed=Fal
     -------
     ax : matplotlib axes
     """
-    import matplotlib.pyplot as plt
-
     def _handle_array_varnames(varname):
         if trace[0][varname].__class__ is np.ndarray:
             k = trace[varname].shape[1]

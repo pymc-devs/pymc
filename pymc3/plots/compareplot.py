@@ -1,4 +1,8 @@
 import numpy as np
+try:
+    import matplotlib.pyplot as plt
+except ImportError:  # mpl is optional
+    pass
 
 
 def compareplot(comp_df, ax=None):
@@ -21,7 +25,6 @@ def compareplot(comp_df, ax=None):
 
     """
     if ax is None:
-        import matplotlib.pyplot as plt
         _, ax = plt.subplots()
 
     yticks_pos, step = np.linspace(0, -1, (comp_df.shape[0] * 2) - 1, retstep=True)

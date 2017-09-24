@@ -1,3 +1,8 @@
+try:
+    import matplotlib.pyplot as plt
+    from matplotlib import gridspec
+except ImportError:  # mpl is optional
+    pass
 import numpy as np
 from pymc3.diagnostics import gelman_rubin
 from pymc3.stats import quantiles, hpd
@@ -100,18 +105,18 @@ def _plot_tree(ax, y, ntiles, show_quartiles, **plot_kwargs):
     if show_quartiles:
         # Plot median
         ax.plot(ntiles[2], y, color=plot_kwargs.get('color', 'blue'),
-                        marker=plot_kwargs.get('marker', 'o'),
-                        markersize=plot_kwargs.get('markersize', 4))
+                marker=plot_kwargs.get('marker', 'o'),
+                markersize=plot_kwargs.get('markersize', 4))
         # Plot quartile interval
         ax.errorbar(x=(ntiles[1], ntiles[3]), y=(y, y),
-                        linewidth=plot_kwargs.get('linewidth', 2),
-                        color=plot_kwargs.get('color', 'blue'))
+                    linewidth=plot_kwargs.get('linewidth', 2),
+                    color=plot_kwargs.get('color', 'blue'))
 
     else:
         # Plot median
         ax.plot(ntiles[1], y, marker=plot_kwargs.get('marker', 'o'),
-                            color=plot_kwargs.get('color', 'blue'),
-                            markersize=plot_kwargs.get('markersize', 4))
+                color=plot_kwargs.get('color', 'blue'),
+                markersize=plot_kwargs.get('markersize', 4))
 
     # Plot outer interval
     ax.errorbar(x=(ntiles[0], ntiles[-1]), y=(y, y),
@@ -178,8 +183,6 @@ def forestplot(trace_obj, varnames=None, transform=identity_transform, alpha=0.0
     gs : matplotlib GridSpec
 
     """
-    import matplotlib.pyplot as plt
-
     # Quantiles to be calculated
     if quartiles:
         qlist = [100 * alpha / 2, 25, 50, 75, 100 * (1 - alpha / 2)]
@@ -201,7 +204,6 @@ def forestplot(trace_obj, varnames=None, transform=identity_transform, alpha=0.0
     # Empty list for y-axis labels
     if gs is None:
         # Initialize plot
-        from matplotlib import gridspec
         if plot_rhat:
             gs = gridspec.GridSpec(1, 2, width_ratios=[3, 1])
         else:
