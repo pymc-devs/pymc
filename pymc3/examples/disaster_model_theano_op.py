@@ -6,6 +6,7 @@ Note that gradient based samplers will not work.
 
 
 import pymc3 as pm
+from theano.compile.ops import as_op
 import theano.tensor as tt
 from numpy import arange, array, empty
 
@@ -51,9 +52,9 @@ with pm.Model() as model:
     step1 = pm.Slice([early_mean, late_mean])
     # Use Metropolis for switchpoint, since it accomodates discrete variables
     step2 = pm.Metropolis([switchpoint])
-    
+
     # Initial values for stochastic nodes
     start = {'early_mean': 2., 'late_mean': 3.}
-    
+
     tr = pm.sample(1000, tune=500, start=start, step=[step1, step2], njobs=2)
     pm.traceplot(tr)

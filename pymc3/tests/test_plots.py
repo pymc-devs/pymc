@@ -33,7 +33,7 @@ def test_plots():
 
 
 def test_energyplot():
-    with asmod.build_model() as model:
+    with asmod.build_model():
         trace = sample()
 
     energyplot(trace)
