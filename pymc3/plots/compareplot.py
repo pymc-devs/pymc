@@ -2,7 +2,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 
-def compareplot(comp_df, insample=True, se=True, dse=True, ax=None,
+def compareplot(comp_df, insample_dev=True, se=True, dse=True, ax=None,
                 plot_kwargs=None):
     """
     Model comparison summary plot in the style of the one used in the book
@@ -13,7 +13,7 @@ def compareplot(comp_df, insample=True, se=True, dse=True, ax=None,
 
     comp_df: DataFrame
         the result of the `pm.compare()` function
-    insample : bool
+    insample_dev : bool
         plot the in-sample deviance, that is the value of the IC without the
         penalization given by the effective number of parameters (pIC).
         Defaults to True
@@ -24,7 +24,7 @@ def compareplot(comp_df, insample=True, se=True, dse=True, ax=None,
         top-ranked model. Defaults to True
     plot_kwargs : dict
         Optional arguments for plot elements. Currently accepts 'color_ic',
-        'marker_ic', 'color_insample', 'marker_insample', 'color_dse',
+        'marker_ic', 'color_insample_dev', 'marker_insample_dev', 'color_dse',
         'marker_dse', 'ls_min_ic' 'color_ls_min_ic',  'fontsize'
     ax : axes
         Matplotlib axes. Defaults to None
@@ -78,11 +78,11 @@ def compareplot(comp_df, insample=True, se=True, dse=True, ax=None,
                 mew=1,
                 lw=0)
 
-    if insample:
+    if insample_dev:
         ax.plot(comp_df.WAIC - (2 * comp_df.pWAIC),
                 yticks_pos[::2],
-                color=plot_kwargs.get('color_insample', 'k'),
-                marker=plot_kwargs.get('marker_insample', 'o'),
+                color=plot_kwargs.get('color_insample_dev', 'k'),
+                marker=plot_kwargs.get('marker_insample_dev', 'o'),
                 lw=0)
 
     ax.axvline(comp_df.WAIC[0],
