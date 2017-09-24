@@ -14,7 +14,7 @@ class CpuLeapfrogIntegrator(object):
         self._logp_dlogp_func = logp_dlogp_func
         self._dtype = self._logp_dlogp_func.dtype
         if self._potential.dtype != self._dtype:
-            raise ValueError("dtypes of potential and logp function "
+            raise ValueError("dtypes of potential (%s) and logp function (%s)"
                              "don't match."
                              % (self._potential.dtype, self._dtype))
 

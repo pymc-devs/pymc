@@ -101,25 +101,25 @@ def _plot_tree(ax, y, ntiles, show_quartiles, **plot_kwargs):
     """
     if show_quartiles:
         # Plot median
-        ax.plot(ntiles[2], y, color=plot_kwargs.get('color', 'blue'), 
-                        marker=plot_kwargs.get('marker', 'o'), 
+        ax.plot(ntiles[2], y, color=plot_kwargs.get('color', 'blue'),
+                        marker=plot_kwargs.get('marker', 'o'),
                         markersize=plot_kwargs.get('markersize', 4))
         # Plot quartile interval
-        ax.errorbar(x=(ntiles[1], ntiles[3]), y=(y, y), 
-                        linewidth=plot_kwargs.get('linewidth', 2), 
+        ax.errorbar(x=(ntiles[1], ntiles[3]), y=(y, y),
+                        linewidth=plot_kwargs.get('linewidth', 2),
                         color=plot_kwargs.get('color', 'blue'))
 
     else:
         # Plot median
-        ax.plot(ntiles[1], y, marker=plot_kwargs.get('marker', 'o'), 
+        ax.plot(ntiles[1], y, marker=plot_kwargs.get('marker', 'o'),
                             color=plot_kwargs.get('color', 'blue'),
                             markersize=plot_kwargs.get('markersize', 4))
 
     # Plot outer interval
-    ax.errorbar(x=(ntiles[0], ntiles[-1]), y=(y, y), 
-                linewidth=int(plot_kwargs.get('linewidth', 2)/2), 
+    ax.errorbar(x=(ntiles[0], ntiles[-1]), y=(y, y),
+                linewidth=int(plot_kwargs.get('linewidth', 2)/2),
                 color=plot_kwargs.get('color', 'blue'))
-                
+
     return ax
 
 
@@ -227,11 +227,11 @@ def forestplot(trace_obj, varnames=None, transform=identity_transform, alpha=0.0
             quants[-1] = var_hpd[1].T
 
             # Ensure x-axis contains range of current interval
-            if plotrange:
+            if plotrange is None:
+                plotrange = [np.min(quants), np.max(quants)]
+            else:
                 plotrange = [min(plotrange[0], np.min(quants)),
                              max(plotrange[1], np.max(quants))]
-            else:
-                plotrange = [np.min(quants), np.max(quants)]
 
             # Number of elements in current variable
             value = trace_obj.get_values(varname, chains=[chain])[0]
@@ -255,12 +255,10 @@ def forestplot(trace_obj, varnames=None, transform=identity_transform, alpha=0.0
             if k > 1:
                 for q in np.transpose(quants).squeeze():
                     # Multiple y values
-                    interval_plot = _plot_tree(interval_plot, y, q, quartiles,
-                                    **plot_kwargs)
+                    interval_plot = _plot_tree(interval_plot, y, q, quartiles, **plot_kwargs)
                     y -= 1
             else:
-                interval_plot = _plot_tree(interval_plot, y, quants, quartiles,
-                                **plot_kwargs)
+                interval_plot = _plot_tree(interval_plot, y, quants, quartiles, **plot_kwargs)
 
             # Increment index
             var += k
