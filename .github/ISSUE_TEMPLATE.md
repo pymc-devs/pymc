@@ -1,4 +1,4 @@
-If you have questions about specific usecase, please post it to our discourse channel: https://discourse.pymc.io
+If you have questions about specific usecase, please post it to our discourse channel: https://discourse.pymc.io  
 If you are not sure this is bug or not, please also post it on our discourse.
 
 ## Description of your problem
