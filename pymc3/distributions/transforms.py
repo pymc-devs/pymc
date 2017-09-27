@@ -118,7 +118,7 @@ class Softplus(ElemwiseTransform):
         return self.forward(x)
     
     def jacobian_det(self, x):
-        return tt.nnet.softplus(-x)
+        return -tt.nnet.softplus(-x)
 
 softplus = Softplus()
 
