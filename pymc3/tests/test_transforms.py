@@ -104,13 +104,13 @@ def test_log():
     close_to_logical(vals > 0, True, tol)
 
 
-def test_softplus():
-    check_transform_identity(tr.softplus, Rplusbig)
-    check_jacobian_det(tr.softplus, Rplusbig, elemwise=True)
-    check_jacobian_det(tr.softplus, Vector(Rplusbig, 2),
+def test_logexpm1():
+    check_transform_identity(tr.logexpm1, Rplusbig)
+    check_jacobian_det(tr.logexpm1, Rplusbig, elemwise=True)
+    check_jacobian_det(tr.logexpm1, Vector(Rplusbig, 2),
                        tt.dvector, [0, 0], elemwise=True)
 
-    vals = get_values(tr.softplus)
+    vals = get_values(tr.logexpm1)
     close_to_logical(vals > 0, True, tol)
 
 
