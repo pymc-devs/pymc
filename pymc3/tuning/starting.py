@@ -21,7 +21,7 @@ __all__ = ['find_MAP']
 
 
 def find_MAP(start=None, vars=None, method="L-BFGS-B",
-             return_raw=False, include_transformed=False, progressbar=True, maxeval=5000, model=None,
+             return_raw=False, include_transformed=True, progressbar=True, maxeval=5000, model=None,
              *args, **kwargs):
     """
     Finds the local maximum a posteriori point given a model.
