@@ -8,7 +8,7 @@ from ..math import logit, invlogit
 from .distribution import draw_values
 import numpy as np
 
-__all__ = ['transform', 'stick_breaking', 'logodds', 'interval',
+__all__ = ['transform', 'stick_breaking', 'logodds', 'interval', 'softplus',
            'lowerbound', 'upperbound', 'log', 'sum_to_1', 't_stick_breaking']
 
 
@@ -105,11 +105,26 @@ class Log(ElemwiseTransform):
 log = Log()
 
 
+class Softplus(ElemwiseTransform):
+    name = "softplus"
+    
+    def backward(self, x):
+        return tt.nnet.softplus(x)
+    
+    def forward(self, x):
+        return tt.log(tt.exp(x) - 1)
+    
+    def forward_val(self, x, point=None):
+        return self.forward(x)
+    
+    def jacobian_det(self, x):
+        return tt.nnet.softplus(-x)
+
+softplus = Softplus()
+
+
 class LogOdds(ElemwiseTransform):
     name = "logodds"
-
-    def __init__(self):
-        pass
 
     def backward(self, x):
         return invlogit(x, 0.0)
