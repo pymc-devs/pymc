@@ -34,7 +34,7 @@ __all__ = ['Uniform', 'Flat', 'HalfFlat', 'Normal', 'Beta', 'Exponential',
 class PositiveContinuous(Continuous):
     """Base class for positive continuous distributions"""
 
-    def __init__(self, transform=transforms.log, *args, **kwargs):
+    def __init__(self, transform=transforms.logexpm1, *args, **kwargs):
         super(PositiveContinuous, self).__init__(
             transform=transform, *args, **kwargs)
 
