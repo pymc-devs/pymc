@@ -80,7 +80,7 @@ def _make_rhat_plot(trace, ax, title, labels, varnames, include_transformed):
     return ax
 
 
-def _plot_tree(ax, y, ntiles, show_quartiles, **plot_kwargs):
+def _plot_tree(ax, y, ntiles, show_quartiles, plot_kwargs):
     """Helper to plot errorbars for the forestplot.
 
     Parameters
@@ -123,10 +123,10 @@ def _plot_tree(ax, y, ntiles, show_quartiles, **plot_kwargs):
     return ax
 
 
-def forestplot(trace_obj, varnames=None, transform=identity_transform, alpha=0.05, quartiles=True,
-               rhat=True, main=None, xtitle=None, xlim=None, ylabels=None,
-               chain_spacing=0.05, vline=0, gs=None, plot_transformed=False,
-               **plot_kwargs):
+def forestplot(trace_obj, varnames=None, transform=identity_transform,
+               alpha=0.05, quartiles=True, rhat=True, main=None, xtitle=None,
+               xlim=None, ylabels=None, chain_spacing=0.05, vline=0, gs=None,
+               plot_transformed=False, plot_kwargs=None):
     """
     Forest plot (model summary plot).
 
@@ -180,6 +180,9 @@ def forestplot(trace_obj, varnames=None, transform=identity_transform, alpha=0.0
     gs : matplotlib GridSpec
 
     """
+    if plot_kwargs is None:
+        plot_kwargs = {}
+
     # Quantiles to be calculated
     if quartiles:
         qlist = [100 * alpha / 2, 25, 50, 75, 100 * (1 - alpha / 2)]
@@ -209,7 +212,8 @@ def forestplot(trace_obj, varnames=None, transform=identity_transform, alpha=0.0
         # Subplot for confidence intervals
         interval_plot = plt.subplot(gs[0])
 
-    trace_quantiles = quantiles(trace_obj, qlist, transform=transform, squeeze=False)
+    trace_quantiles = quantiles(trace_obj, qlist, transform=transform,
+                                squeeze=False)
     hpd_intervals = hpd(trace_obj, alpha, transform=transform, squeeze=False)
 
     labels = []
@@ -246,7 +250,8 @@ def forestplot(trace_obj, varnames=None, transform=identity_transform, alpha=0.0
                     labels.append(varname)
 
             # Add spacing for each chain, if more than one
-            offset = [0] + [(chain_spacing * ((i + 2) / 2)) * (-1) ** i for i in range(nchains - 1)]
+            offset = [0] + [(chain_spacing * ((i + 2) / 2)) *
+                            (-1) ** i for i in range(nchains - 1)]
 
             # Y coordinate with offset
             y = -var + offset[j]
@@ -255,10 +260,12 @@ def forestplot(trace_obj, varnames=None, transform=identity_transform, alpha=0.0
             if k > 1:
                 for q in np.transpose(quants).squeeze():
                     # Multiple y values
-                    interval_plot = _plot_tree(interval_plot, y, q, quartiles, **plot_kwargs)
+                    interval_plot = _plot_tree(interval_plot, y, q, quartiles,
+                                               plot_kwargs)
                     y -= 1
             else:
-                interval_plot = _plot_tree(interval_plot, y, quants, quartiles, **plot_kwargs)
+                interval_plot = _plot_tree(interval_plot, y, quants, quartiles,
+                                           plot_kwargs)
 
             # Increment index
             var += k
@@ -273,11 +280,13 @@ def forestplot(trace_obj, varnames=None, transform=identity_transform, alpha=0.0
     interval_plot.set_ylim(-var + 0.5, 0.5)
 
     datarange = plotrange[1] - plotrange[0]
-    interval_plot.set_xlim(plotrange[0] - 0.05 * datarange, plotrange[1] + 0.05 * datarange)
+    interval_plot.set_xlim(plotrange[0] - 0.05 * datarange,
+                           plotrange[1] + 0.05 * datarange)
 
     # Add variable labels
     interval_plot.set_yticks([-l for l in range(len(labels))])
-    interval_plot.set_yticklabels(labels, fontsize=plot_kwargs.get('fontsize', None))
+    interval_plot.set_yticklabels(labels,
+                                  fontsize=plot_kwargs.get('fontsize', None))
 
     # Add title
     plot_title = ""
@@ -286,7 +295,8 @@ def forestplot(trace_obj, varnames=None, transform=identity_transform, alpha=0.0
     elif main:
         plot_title = main
     if plot_title:
-        interval_plot.set_title(plot_title, fontsize=plot_kwargs.get('fontsize', None))
+        interval_plot.set_title(plot_title,
+                                fontsize=plot_kwargs.get('fontsize', None))
 
     # Add x-axis label
     if xtitle is not None:
@@ -310,6 +320,7 @@ def forestplot(trace_obj, varnames=None, transform=identity_transform, alpha=0.0
 
     # Genenerate Gelman-Rubin plot
     if plot_rhat:
-        _make_rhat_plot(trace_obj, plt.subplot(gs[1]), "R-hat", labels, varnames, plot_transformed)
+        _make_rhat_plot(trace_obj, plt.subplot(gs[1]), "R-hat", labels,
+                        varnames, plot_transformed)
 
     return gs
