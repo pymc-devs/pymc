@@ -1,6 +1,10 @@
-import matplotlib.pyplot as plt
 import numpy as np
 from scipy.signal import gaussian, convolve
+
+try:
+    import matplotlib.pyplot as plt
+except ImportError:  # mpl is optional
+    pass
 
 
 def kdeplot(values, label=None, shade=0, ax=None, kwargs_shade=None, **kwargs):

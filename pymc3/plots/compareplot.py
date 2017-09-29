@@ -1,5 +1,8 @@
-import matplotlib.pyplot as plt
 import numpy as np
+try:
+    import matplotlib.pyplot as plt
+except ImportError:  # mpl is optional
+    pass
 
 
 def compareplot(comp_df, insample_dev=True, se=True, dse=True, ax=None,
