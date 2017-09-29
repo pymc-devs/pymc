@@ -13,7 +13,6 @@ from theano.tensor.nlinalg import det, matrix_inverse, trace
 import theano.tensor.slinalg
 import pymc3 as pm
 
-from pymc3.math import tround
 from pymc3.theanof import floatX
 from . import transforms
 from pymc3.util import get_variable_name
@@ -240,7 +239,7 @@ class MvNormal(_QuadFormBase):
             try:
                 dist = stats.multivariate_normal(
                     mean=mu, cov=cov, allow_singular=True)
-            except ValueError as error:
+            except ValueError:
                 size.append(mu.shape[-1])
                 return np.nan * np.zeros(size)
             return dist.rvs(size)
@@ -474,33 +473,43 @@ class Multinomial(Discrete):
     Parameters
     ----------
     n : int or array
-        Number of trials (n > 0).
+        Number of trials (n > 0). If n is an array its shape must be (N,) with
+        N = p.shape[0]
     p : one- or two-dimensional array
         Probability of each one of the different outcomes. Elements must
-        be non-negative and sum to 1 along the last axis. They will be automatically
-        rescaled otherwise.
+        be non-negative and sum to 1 along the last axis. They will be
+        automatically rescaled otherwise.
     """
 
     def __init__(self, n, p, *args, **kwargs):
         super(Multinomial, self).__init__(*args, **kwargs)
 
         p = p / tt.sum(p, axis=-1, keepdims=True)
+        n = np.squeeze(n) # works also if n is a tensor
 
-        if len(self.shape) == 2:
+        if len(self.shape) > 1:
+            m = self.shape[-2]
             try:
-                assert n.shape == (self.shape[0],)
-            except AttributeError:
-                # this occurs when n is a scalar Python int or float
-                n *= tt.ones(self.shape[0])
-
+                assert n.shape == (m,)
+            except (AttributeError, AssertionError):
+                n = n * tt.ones(m)
             self.n = tt.shape_padright(n)
-            self.p = p if p.ndim == 2 else tt.shape_padleft(p)
+            self.p = p if p.ndim > 1 else tt.shape_padleft(p)
+        elif n.ndim == 1:
+            self.n = tt.shape_padright(n)
+            self.p = p if p.ndim > 1 else tt.shape_padleft(p)
         else:
+            # n is a scalar, p is a 1d array
             self.n = tt.as_tensor_variable(n)
             self.p = tt.as_tensor_variable(p)
 
         self.mean = self.n * self.p
-        self.mode = tt.cast(tround(self.mean), 'int32')
+        mode = tt.cast(tt.round(self.mean), 'int32')
+        diff = self.n - tt.sum(mode, axis=-1, keepdims=True)
+        inc_bool_arr = tt.abs_(diff) > 0
+        mode = tt.inc_subtensor(mode[inc_bool_arr.nonzero()],
+                                diff[inc_bool_arr.nonzero()])
+        self.mode = mode
 
     def _random(self, n, p, size=None):
         original_dtype = p.dtype
@@ -509,15 +518,27 @@ class Multinomial(Discrete):
         # Now, re-normalize all of the values in float64 precision. This is done inside the conditionals
         if size == p.shape:
             size = None
-        if p.ndim == 1:
+        if (n.ndim == 0) and (p.ndim == 1):
             p = p / p.sum()
             randnum = np.random.multinomial(n, p.squeeze(), size=size)
-        elif p.ndim == 2:
+        elif (n.ndim == 0) and (p.ndim > 1):
             p = p / p.sum(axis=1, keepdims=True)
-            randnum = np.asarray([np.random.multinomial(n, pp, size=size) for pp in p])
+            randnum = np.asarray([
+                np.random.multinomial(n.squeeze(), pp, size=size)
+                for pp in p
+            ])
+        elif (n.ndim > 0) and (p.ndim == 1):
+            p = p / p.sum()
+            randnum = np.asarray([
+                np.random.multinomial(nn, p.squeeze(), size=size)
+                for nn in n
+            ])
         else:
-            raise ValueError('Outcome probabilities must be 1- or 2-dimensional '
-                             '(supplied `p` has {} dimensions)'.format(p.ndim))
+            p = p / p.sum(axis=1, keepdims=True)
+            randnum = np.asarray([
+                np.random.multinomial(nn, pp, size=size)
+                for (nn, pp) in zip(n, p)
+            ])
         return randnum.astype(original_dtype)
 
     def random(self, point=None, size=None):
@@ -584,7 +605,7 @@ class PosDefMatrix(theano.Op):
         try:
             z[0] = np.array(posdef(x), dtype='int8')
         except Exception:
-            pm._log.exception('Failed to check if positive definite', x)
+            pm._log.exception('Failed to check if %s positive definite', x)
             raise
 
     def infer_shape(self, node, shapes):
@@ -654,11 +675,11 @@ class Wishart(Continuous):
                               (nu - p - 1) * V,
                               np.nan)
 
-    def random(self, point=None, size=None): 
-        nu, V = draw_values([self.nu, self.V], point=point) 
+    def random(self, point=None, size=None):
+        nu, V = draw_values([self.nu, self.V], point=point)
         size= 1 if size is None else size
-        return generate_samples(stats.wishart.rvs, np.asscalar(nu), V, 
-                                    broadcast_shape=(size,)) 
+        return generate_samples(stats.wishart.rvs, np.asscalar(nu), V,
+                                    broadcast_shape=(size,))
 
     def logp(self, X):
         nu = self.nu
@@ -1028,7 +1049,7 @@ class LKJCorr(Continuous):
         self.tri_index[np.triu_indices(n, k=1)[::-1]] = np.arange(shape)
 
     def _random(self, n, eta, size=None):
-        size = size if isinstance(size, tuple) else (size,) 
+        size = size if isinstance(size, tuple) else (size,)
         # original implementation in R see:
         # https://github.com/rmcelreath/rethinking/blob/master/R/distributions.r
         beta = eta - 1 + n/2

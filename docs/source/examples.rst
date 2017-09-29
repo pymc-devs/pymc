@@ -13,6 +13,7 @@ Howto
    notebooks/posterior_predictive.ipynb
    notebooks/model_comparison.ipynb
    notebooks/model_averaging.ipynb
+   notebooks/Bayes_factor.ipynb
    notebooks/howto_debugging.ipynb
    notebooks/PyMC3_tips_and_heuristic.ipynb
    notebooks/LKJ.ipynb
@@ -48,8 +49,8 @@ Gaussian Processes
 ==================
 
 .. toctree::
+   notebooks/GP-MeansAndCovs.ipynb
    notebooks/GP-Marginal.ipynb
-   notebooks/GP-Covariances.ipynb
    notebooks/GP-Latent.ipynb
    notebooks/GP-SparseApprox.ipynb
    notebooks/GP-TProcess.ipynb

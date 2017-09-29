@@ -11,7 +11,6 @@ from .model import modelcontext, Point
 from .step_methods import (NUTS, HamiltonianMC, SGFS, Metropolis, BinaryMetropolis,
                            BinaryGibbsMetropolis, CategoricalGibbsMetropolis,
                            Slice, CompoundStep)
-from .plots.traceplot import traceplot
 from .util import update_start_vals
 from pymc3.step_methods.hmc import quadpotential
 from tqdm import tqdm
@@ -337,9 +336,9 @@ def _sample(draws, step=None, start=None, trace=None, chain=0, tune=None,
                 if it >= skip_first:
                     trace = MultiTrace([strace])
                     if it == skip_first:
-                        ax = traceplot(trace, live_plot=False, **live_plot_kwargs)
+                        ax = pm.plots.traceplot(trace, live_plot=False, **live_plot_kwargs)
                     elif (it - skip_first) % refresh_every == 0 or it == draws - 1:
-                        traceplot(trace, ax=ax, live_plot=True, **live_plot_kwargs)
+                        pm.plots.traceplot(trace, ax=ax, live_plot=True, **live_plot_kwargs)
     except KeyboardInterrupt:
         pass
     finally:
@@ -842,7 +841,7 @@ def init_nuts(init='auto', njobs=1, n_init=500000, model=None,
         if njobs == 1:
             start = start[0]
     elif init == 'advi_map':
-        start = pm.find_MAP()
+        start = pm.find_MAP(include_transformed=True)
         approx = pm.MeanField(model=model, start=start)
         pm.fit(
             random_seed=random_seed,
@@ -859,7 +858,7 @@ def init_nuts(init='auto', njobs=1, n_init=500000, model=None,
         if njobs == 1:
             start = start[0]
     elif init == 'map':
-        start = pm.find_MAP()
+        start = pm.find_MAP(include_transformed=True)
         cov = pm.find_hessian(point=start)
         start = [start] * njobs
         potential = quadpotential.QuadPotentialFull(cov)

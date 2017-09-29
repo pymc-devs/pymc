@@ -14,7 +14,7 @@ from ..distributions import (DensityDist, Categorical, Multinomial, VonMises, Di
                              NegativeBinomial, Geometric, Exponential, ExGaussian, Normal,
                              Flat, LKJCorr, Wald, ChiSquared, HalfNormal, DiscreteUniform,
                              Bound, Uniform, Triangular, Binomial, SkewNormal, DiscreteWeibull,
-                             Gumbel, Interpolated, ZeroInflatedBinomial, HalfFlat, AR1)
+                             Gumbel, Logistic, Interpolated, ZeroInflatedBinomial, HalfFlat, AR1)
 from ..distributions import continuous
 from pymc3.theanof import floatX
 from numpy import array, inf, log, exp
@@ -358,7 +358,10 @@ def PdMatrixCholUpper(n):
 
 
 class TestMatchesScipy(SeededTest):
-    def pymc3_matches_scipy(self, pymc3_dist, domain, paramdomains, scipy_dist, decimal=None, extra_args={}):
+    def pymc3_matches_scipy(self, pymc3_dist, domain, paramdomains, scipy_dist,
+                            decimal=None, extra_args=None):
+        if extra_args is None:
+            extra_args = {}
         model = build_model(pymc3_dist, domain, paramdomains, extra_args)
         value = model.named_vars['value']
 
@@ -413,9 +416,12 @@ class TestMatchesScipy(SeededTest):
             decimals = select_by_precision(float64=6, float32=4)
             assert_almost_equal(dlogp(pt), ndlogp(pt), decimal=decimals, err_msg=str(pt))
 
-    def checkd(self, distfam, valuedomain, vardomains, checks=None, extra_args={}):
+    def checkd(self, distfam, valuedomain, vardomains, checks=None, extra_args=None):
         if checks is None:
             checks = (self.check_int_to_1, self.check_dlogp)
+
+        if extra_args is None:
+            extra_args = {}
         m = build_model(distfam, valuedomain, vardomains, extra_args=extra_args)
         for check in checks:
             check(m, m.named_vars['value'], valuedomain, vardomains)
@@ -737,6 +743,51 @@ class TestMatchesScipy(SeededTest):
         self.pymc3_matches_scipy(Multinomial, Vector(Nat, n), {'p': Simplex(n), 'n': Nat},
                                  multinomial_logpdf)
 
+    @pytest.mark.parametrize('p,n', [
+        [[.25, .25, .25, .25], 1],
+        [[.3, .6, .05, .05], 2],
+        [[.3, .6, .05, .05], 10],
+    ])
+    def test_multinomial_mode(self, p, n):
+        _p = np.array(p)
+        with Model() as model:
+            m = Multinomial('m', n, _p, _p.shape)
+        assert_allclose(m.distribution.mode.eval().sum(), n)
+        _p = np.array([p, p])
+        with Model() as model:
+            m = Multinomial('m', n, _p, _p.shape)
+        assert_allclose(m.distribution.mode.eval().sum(axis=-1), n)
+
+    @pytest.mark.parametrize('p, shape, n', [
+        [[.25, .25, .25, .25], 4, 2],
+        [[.25, .25, .25, .25], (1, 4), 3],
+        # 3: expect to fail
+        # [[.25, .25, .25, .25], (10, 4)],
+        [[.25, .25, .25, .25], (10, 1, 4), 5],
+        # 5: expect to fail
+        # [[[.25, .25, .25, .25]], (2, 4), [7, 11]],
+        [[[.25, .25, .25, .25],
+         [.25, .25, .25, .25]], (2, 4), 13],
+        [[[.25, .25, .25, .25],
+         [.25, .25, .25, .25]], (2, 4), [17, 19]],
+        [[[.25, .25, .25, .25],
+         [.25, .25, .25, .25]], (1, 2, 4), [23, 29]],
+        [[[.25, .25, .25, .25],
+         [.25, .25, .25, .25]], (10, 2, 4), [31, 37]],
+    ])
+    def test_multinomial_random(self, p, shape, n):
+        p = np.asarray(p)
+        with Model() as model:
+            m = Multinomial('m', n=n, p=p, shape=shape)
+        m.random()
+
+    def test_multinomial_mode_with_shape(self):
+        n = [1, 10]
+        p = np.asarray([[.25,.25,.25,.25], [.26, .26, .26, .22]])
+        with Model() as model:
+            m = Multinomial('m', n=n, p=p, shape=(2, 4))
+        assert_allclose(m.distribution.mode.eval().sum(axis=-1), n)
+
     def test_multinomial_vec(self):
         vals = np.array([[2,4,4], [3,3,4]])
         p = np.array([0.2, 0.3, 0.5])
@@ -843,6 +894,11 @@ class TestMatchesScipy(SeededTest):
         def gumbel(value, mu, beta):
             return floatX(sp.gumbel_r.logpdf(value, loc=mu, scale=beta))
         self.pymc3_matches_scipy(Gumbel, R, {'mu': R, 'beta': Rplusbig}, gumbel)
+
+    def test_logistic(self):
+        self.pymc3_matches_scipy(Logistic, R, {'mu': R, 's': Rplus},
+                                 lambda value, mu, s: sp.logistic.logpdf(value, mu, s),
+                                 decimal=select_by_precision(float64=6, float32=1))
 
     def test_multidimensional_beta_construction(self):
         with Model():

@@ -5,7 +5,7 @@ import pymc3 as pm
 from pymc3.gp.cov import Covariance, Constant
 from pymc3.gp.mean import Zero
 from pymc3.gp.util import (conditioned_vars,
-    infer_shape, stabilize, cholesky, solve_lower, solve_upper)
+                           infer_shape, stabilize, cholesky, solve_lower, solve_upper)
 from pymc3.distributions import draw_values
 
 __all__ = ['Latent', 'Marginal', 'TP', 'MarginalSparse']
@@ -23,7 +23,7 @@ class Base(object):
     def __add__(self, other):
         same_attrs = set(self.__dict__.keys()) == set(other.__dict__.keys())
         if not isinstance(self, type(other)) or not same_attrs:
-            raise ValueError("cant add different GP types")
+            raise TypeError("Cannot add different GP types")
         mean_total = self.mean_func + other.mean_func
         cov_total = self.cov_func + other.cov_func
         return self.__class__(mean_total, cov_total)
@@ -45,12 +45,12 @@ class Base(object):
 class Latent(Base):
     R"""
     Latent Gaussian process.
-    
+
     The `gp.Latent` class is a direct implementation of a GP.  No addiive
     noise is assumed.  It is called "Latent" because the underlying function
     values are treated as latent variables.  It has a `prior` method and a
     `conditional` method.  Given a mean and covariance function the
-    function $f(x)$ is modeled as,
+    function :math:`f(x)` is modeled as,
 
     .. math::
 
@@ -113,9 +113,9 @@ class Latent(Base):
 
     def prior(self, name, X, reparameterize=True, **kwargs):
         R"""
-	    Returns the GP prior distribution evaluated over the input
-        locations `X`.  
-        
+        Returns the GP prior distribution evaluated over the input
+        locations `X`.
+
         This is the prior probability over the space
         of functions described by its mean and covariance function.
 
@@ -142,6 +142,8 @@ class Latent(Base):
         return f
 
     def _get_given_vals(self, given):
+        if given is None:
+            given = {}
         if 'gp' in given:
             cov_total = given['gp'].cov_func
             mean_total = given['gp'].mean_func
@@ -165,11 +167,11 @@ class Latent(Base):
         cov = Kss - tt.dot(tt.transpose(A), A)
         return mu, cov
 
-    def conditional(self, name, Xnew, given={}, **kwargs):
+    def conditional(self, name, Xnew, given=None, **kwargs):
         R"""
-	    Returns the conditional distribution evaluated over new input
-        locations `Xnew`.  
-        
+        Returns the conditional distribution evaluated over new input
+        locations `Xnew`.
+
         Given a set of function values `f` that
         the GP prior was over, the conditional distribution over a
         set of new points, `f_*` is
@@ -194,7 +196,6 @@ class Latent(Base):
             Extra keyword arguments that are passed to `MvNormal` distribution
             constructor.
         """
-
         givens = self._get_given_vals(given)
         mu, cov = self._build_conditional(Xnew, *givens)
         chol = cholesky(stabilize(cov))
@@ -205,12 +206,12 @@ class Latent(Base):
 @conditioned_vars(["X", "f", "nu"])
 class TP(Latent):
     """
-    Student's T process prior.  
-    
-    The usage is nearly identical to that of `gp.Latent`.  The differences 
-    are that it must be initialized with a degrees of freedom parameter, and 
+    Student's T process prior.
+
+    The usage is nearly identical to that of `gp.Latent`.  The differences
+    are that it must be initialized with a degrees of freedom parameter, and
     TP is not additive.  Given a mean and covariance function, and a degrees of
-    freedom parameter, the function $f(x)$ is modeled as,
+    freedom parameter, the function :math:`f(x)` is modeled as,
 
     .. math::
 
@@ -226,17 +227,20 @@ class TP(Latent):
     nu : float
         The degrees of freedom
 
-    For more information, see https://www.cs.cmu.edu/~andrewgw/tprocess.pdf
+    References
+    ----------
+    -   Shah, A., Wilson, A. G., and Ghahramani, Z. (2014).  Student-t
+        Processes as Alternatives to Gaussian Processes.  arXiv preprint arXiv:1402.4306.
     """
 
     def __init__(self, mean_func=Zero(), cov_func=Constant(0.0), nu=None):
         if nu is None:
-            raise ValueError("T Process requires a degrees of freedom parameter, 'nu'")
+            raise ValueError("Student's T process requires a degrees of freedom parameter, 'nu'")
         self.nu = nu
         super(TP, self).__init__(mean_func, cov_func)
 
     def __add__(self, other):
-        raise ValueError("Student T processes aren't additive")
+        raise TypeError("Student's T processes aren't additive")
 
     def _build_prior(self, name, X, reparameterize=True, **kwargs):
         mu = self.mean_func(X)
@@ -252,9 +256,9 @@ class TP(Latent):
 
     def prior(self, name, X, reparameterize=True, **kwargs):
         R"""
-	    Returns the TP prior distribution evaluated over the input
-        locations `X`.  
-        
+        Returns the TP prior distribution evaluated over the input
+        locations `X`.
+
         This is the prior probability over the space
         of functions described by its mean and covariance function.
 
@@ -292,9 +296,9 @@ class TP(Latent):
 
     def conditional(self, name, Xnew, **kwargs):
         R"""
-	    Returns the conditional distribution evaluated over new input
-        locations `Xnew`.  
-        
+        Returns the conditional distribution evaluated over new input
+        locations `Xnew`.
+
         Given a set of function values `f` that
         the TP prior was over, the conditional distribution over a
         set of new points, `f_*` is
@@ -322,7 +326,7 @@ class TP(Latent):
 class Marginal(Base):
     R"""
     Marginal Gaussian process.
-    
+
     The `gp.Marginal` class is an implementation of the sum of a GP
     prior and additive noise.  It has `marginal_likelihood`, `conditional`
     and `predict` methods.  This GP implementation can be used to
@@ -376,9 +380,9 @@ class Marginal(Base):
 
     def marginal_likelihood(self, name, X, y, noise, is_observed=True, **kwargs):
         R"""
-	    Returns the marginal likelihood distribution, given the input
-        locations `X` and the data `y`.  
-        
+        Returns the marginal likelihood distribution, given the input
+        locations `X` and the data `y`.
+
         This is integral over the product of the GP prior and a normal likelihood.
 
         .. math::
@@ -420,6 +424,9 @@ class Marginal(Base):
             return pm.MvNormal(name, mu=mu, chol=chol, shape=shape, **kwargs)
 
     def _get_given_vals(self, given):
+        if given is None:
+            given = {}
+
         if 'gp' in given:
             cov_total = given['gp'].cov_func
             mean_total = given['gp'].mean_func
@@ -457,12 +464,12 @@ class Marginal(Base):
                 cov += noise(Xnew)
             return mu, stabilize(cov)
 
-    def conditional(self, name, Xnew, pred_noise=False, given={}, **kwargs):
+    def conditional(self, name, Xnew, pred_noise=False, given=None, **kwargs):
         R"""
-	    Returns the conditional distribution evaluated over new input
-        locations `Xnew`.  
-        
-        Given a set of function values `f` that the GP prior was over, the 
+        Returns the conditional distribution evaluated over new input
+        locations `Xnew`.
+
+        Given a set of function values `f` that the GP prior was over, the
         conditional distribution over a set of new points, `f_*` is:
 
         .. math::
@@ -496,7 +503,7 @@ class Marginal(Base):
         shape = infer_shape(Xnew, kwargs.pop("shape", None))
         return pm.MvNormal(name, mu=mu, chol=chol, shape=shape, **kwargs)
 
-    def predict(self, Xnew, point=None, diag=False, pred_noise=False, given={}):
+    def predict(self, Xnew, point=None, diag=False, pred_noise=False, given=None):
         R"""
         Return the mean vector and covariance matrix of the conditional
         distribution as numpy arrays, given a `point`, such as the MAP
@@ -518,11 +525,13 @@ class Marginal(Base):
         given : dict
             Same as `conditional` method.
         """
+        if given is None:
+            given = {}
 
         mu, cov = self.predictt(Xnew, diag, pred_noise, given)
         return draw_values([mu, cov], point=point)
 
-    def predictt(self, Xnew, diag=False, pred_noise=False, given={}):
+    def predictt(self, Xnew, diag=False, pred_noise=False, given=None):
         R"""
         Return the mean vector and covariance matrix of the conditional
         distribution as symbolic variables.
@@ -541,7 +550,6 @@ class Marginal(Base):
         given : dict
             Same as `conditional` method.
         """
-
         givens = self._get_given_vals(given)
         mu, cov = self._build_conditional(Xnew, pred_noise, diag, *givens)
         return mu, cov
@@ -551,7 +559,7 @@ class Marginal(Base):
 class MarginalSparse(Marginal):
     R"""
     Approximate marginal Gaussian process.
-    
+
     The `gp.MarginalSparse` class is an implementation of the sum of a GP
     prior and additive noise.  It has `marginal_likelihood`, `conditional`
     and `predict` methods.  This GP implementation can be used to
@@ -561,11 +569,6 @@ class MarginalSparse(Marginal):
     - DTC: Deterministic Training Conditional
     - FITC: Fully independent Training Conditional
     - VFE: Variational Free Energy
-
-    For more information on these approximations, see e.g. "A unifying view of
-    sparse approximate Gaussian process regression", 2005, *Quinonero-Candela, Rasmussen*,
-    and "Variational Learning of Inducing Variables in Sparse Gaussian Processes",
-    2009, *Titsias*.
 
     Parameters
     ----------
@@ -605,6 +608,14 @@ class MarginalSparse(Marginal):
 
         with model:
             fcond = gp.conditional("fcond", Xnew=Xnew)
+
+    References
+    ----------
+    -   Quinonero-Candela, J., and Rasmussen, C. (2005). A Unifying View of
+        Sparse Approximate Gaussian Process Regression.
+
+    -   Titsias, M. (2009). Variational Learning of Inducing Variables in
+        Sparse Gaussian Processes.
     """
 
     _available_approx = ("FITC", "VFE", "DTC")
@@ -620,7 +631,7 @@ class MarginalSparse(Marginal):
         new_gp = super(MarginalSparse, self).__add__(other)
         # make sure new gp has correct approx
         if not self.approx == other.approx:
-            raise ValueError("Cant add GPs with different approximations")
+            raise TypeError("Cannot add GPs with different approximations")
         new_gp.approx = self.approx
         return new_gp
 
@@ -640,7 +651,7 @@ class MarginalSparse(Marginal):
             trace = ((1.0 / (2.0 * sigma2)) *
                      (tt.sum(self.cov_func(X, diag=True)) -
                       tt.sum(tt.sum(A * A, 0))))
-        else: # DTC
+        else:  # DTC
             Lamd = tt.ones_like(Qffd) * sigma2
             trace = 0.0
         A_l = A / Lamd
@@ -655,7 +666,7 @@ class MarginalSparse(Marginal):
 
     def marginal_likelihood(self, name, X, Xu, y, sigma, is_observed=True, **kwargs):
         R"""
-	    Returns the approximate marginal likelihood distribution, given the input
+        Returns the approximate marginal likelihood distribution, given the input
         locations `X`, inducing point locations `Xu`, data `y`, and white noise
         standard deviations `sigma`.
 
@@ -702,7 +713,7 @@ class MarginalSparse(Marginal):
         if self.approx == "FITC":
             Kffd = cov_total(X, diag=True)
             Lamd = tt.clip(Kffd - Qffd, 0.0, np.inf) + sigma2
-        else: # VFE or DTC
+        else:  # VFE or DTC
             Lamd = tt.ones_like(Qffd) * sigma2
         A_l = A / Lamd
         L_B = cholesky(tt.eye(Xu.shape[0]) + tt.dot(A_l, tt.transpose(A)))
@@ -727,6 +738,8 @@ class MarginalSparse(Marginal):
             return mu, stabilize(cov)
 
     def _get_given_vals(self, given):
+        if given is None:
+            given = {}
         if 'gp' in given:
             cov_total = given['gp'].cov_func
             mean_total = given['gp'].mean_func
@@ -739,9 +752,9 @@ class MarginalSparse(Marginal):
             X, Xu, y, sigma = self.X, self.Xu, self.y, self.sigma
         return X, Xu, y, sigma, cov_total, mean_total
 
-    def conditional(self, name, Xnew, pred_noise=False, given={}, **kwargs):
+    def conditional(self, name, Xnew, pred_noise=False, given=None, **kwargs):
         R"""
-	    Returns the approximate conditional distribution of the GP evaluated over
+        Returns the approximate conditional distribution of the GP evaluated over
         new input locations `Xnew`.
 
         Parameters
