@@ -1,5 +1,9 @@
 from collections import OrderedDict
-import matplotlib.pyplot as plt
+
+try:
+    import matplotlib.pyplot as plt
+except ImportError:  # mpl is optional
+    pass
 import numpy as np
 
 from .artists import plot_posterior_op
@@ -88,7 +92,8 @@ def plot_posterior(trace, varnames=None, transform=identity_transform, figsize=N
             fig, ax = plt.subplots(figsize=figsize)
         plot_posterior_op(transform(trace), ax=ax, kde_plot=kde_plot,
                           point_estimate=point_estimate, round_to=round_to,
-                          alpha_level=alpha_level, ref_val=ref_val, rope=rope, text_size=text_size, **kwargs)
+                          alpha_level=alpha_level, ref_val=ref_val, rope=rope,
+                          text_size=text_size, **kwargs)
     else:
         if varnames is None:
             varnames = get_default_varnames(trace.varnames, plot_transformed)

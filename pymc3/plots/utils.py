@@ -1,4 +1,7 @@
-import matplotlib.pyplot as plt
+try:
+    import matplotlib.pyplot as plt
+except ImportError:  # mpl is optional
+    pass
 import numpy as np
 # plotting utilities can all be in this namespace
 from ..util import get_default_varnames  # pylint: disable=unused-import

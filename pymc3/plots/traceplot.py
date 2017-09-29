@@ -1,4 +1,7 @@
-import matplotlib.pyplot as plt
+try:
+    import matplotlib.pyplot as plt
+except ImportError:  # mpl is optional
+    pass
 import numpy as np
 
 from .artists import histplot_op, kdeplot_op

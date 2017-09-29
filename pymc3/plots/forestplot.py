@@ -1,5 +1,8 @@
-from matplotlib import gridspec
-import matplotlib.pyplot as plt
+try:
+    import matplotlib.pyplot as plt
+    from matplotlib import gridspec
+except ImportError:  # mpl is optional
+    pass
 import numpy as np
 from pymc3.diagnostics import gelman_rubin
 from pymc3.stats import quantiles, hpd
@@ -102,18 +105,18 @@ def _plot_tree(ax, y, ntiles, show_quartiles, plot_kwargs):
     if show_quartiles:
         # Plot median
         ax.plot(ntiles[2], y, color=plot_kwargs.get('color', 'blue'),
-                        marker=plot_kwargs.get('marker', 'o'),
-                        markersize=plot_kwargs.get('markersize', 4))
+                marker=plot_kwargs.get('marker', 'o'),
+                markersize=plot_kwargs.get('markersize', 4))
         # Plot quartile interval
         ax.errorbar(x=(ntiles[1], ntiles[3]), y=(y, y),
-                        linewidth=plot_kwargs.get('linewidth', 2),
-                        color=plot_kwargs.get('color', 'blue'))
+                    linewidth=plot_kwargs.get('linewidth', 2),
+                    color=plot_kwargs.get('color', 'blue'))
 
     else:
         # Plot median
         ax.plot(ntiles[1], y, marker=plot_kwargs.get('marker', 'o'),
-                            color=plot_kwargs.get('color', 'blue'),
-                            markersize=plot_kwargs.get('markersize', 4))
+                color=plot_kwargs.get('color', 'blue'),
+                markersize=plot_kwargs.get('markersize', 4))
 
     # Plot outer interval
     ax.errorbar(x=(ntiles[0], ntiles[-1]), y=(y, y),
