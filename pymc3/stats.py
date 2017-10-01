@@ -104,7 +104,7 @@ def autocov(x, lag=1):
 
 def dic(trace, model=None):
     """Calculate the deviance information criterion of the samples in trace from model
-    Read more theory here - in a paper by some of the leading authorities on Model Selection -
+    Read more theory here - in a paper by some of the leading authorities on model selection -
     dx.doi.org/10.1111/1467-9868.00353
 
     Parameters
@@ -182,7 +182,7 @@ def waic(trace, model=None, pointwise=False, progressbar=False):
     """Calculate the widely available information criterion, its standard error
     and the effective number of parameters of the samples in trace from model.
     Read more theory here - in a paper by some of the leading authorities on
-    Model Selection - dx.doi.org/10.1111/1467-9868.00353
+    model selection - dx.doi.org/10.1111/1467-9868.00353
 
     Parameters
     ----------
@@ -326,7 +326,7 @@ def loo(trace, model=None, pointwise=False, progressbar=False):
 
 def bpic(trace, model=None):
     R"""Calculates Bayesian predictive information criterion n of the samples in trace from model
-    Read more theory here - in a paper by some of the leading authorities on Model Selection -
+    Read more theory here - in a paper by some of the leading authorities on model selection -
     dx.doi.org/10.1080/01966324.2011.10737798
 
     Parameters
@@ -357,7 +357,7 @@ def compare(traces, models, ic='WAIC', method='stacking', b_samples=1000,
     R"""Compare models based on the widely available information criterion (WAIC)
     or leave-one-out (LOO) cross-validation.
     Read more theory here - in a paper by some of the leading authorities on
-    Model Selection - dx.doi.org/10.1111/1467-9868.00353
+    model selection - dx.doi.org/10.1111/1467-9868.00353
 
     Parameters
     ----------
