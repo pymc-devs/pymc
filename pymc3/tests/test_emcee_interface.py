@@ -2,7 +2,6 @@ import numpy as np
 import pymc3 as pm
 
 import pytest
-from pymc3.external.emcee.step_methods import AffineInvariantEnsemble
 
 
 def setup_model(yshape):
@@ -38,10 +37,15 @@ def nparticles(request):
 def init(request):
     return request.param
 
+@pytest.fixture()
+def affine_invariant_ensemble():
+    from pymc3.external.emcee.step_methods import AffineInvariantEnsemble
+    return AffineInvariantEnsemble
 
-def test_correct_instantiation(yshape, nparticles, init):
+
+def test_correct_instantiation(yshape, nparticles, init, affine_invariant_ensemble):
     ndraws = 100
-    model, trace = correct_instatiation(ndraws, nparticles, AffineInvariantEnsemble, yshape, init)
+    model, trace = correct_instatiation(ndraws, nparticles, affine_invariant_ensemble, yshape, init)
 
     if yshape is None:
         ylen = 1

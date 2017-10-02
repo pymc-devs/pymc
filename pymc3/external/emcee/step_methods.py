@@ -6,6 +6,8 @@ from theano.gradient import np
 
 import emcee
 
+LARGENUMBER = 100000
+
 
 class EnsembleArrayOrdering(object):
     """
@@ -192,6 +194,3 @@ class AffineInvariantEnsemble(ExternalEnsembleStepShared):
             self.sample_generator = None
             return self.astep(point_array)
         return q.astype(theano.config.floatX)
-
-
-LARGENUMBER = 100000

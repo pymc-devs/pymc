@@ -2,13 +2,11 @@ from collections import defaultdict, Sequence
 
 from joblib import Parallel, delayed
 from numpy.random import randint, seed
-from .external.emcee.backends import EnsembleNDArray, ensure_multitrace
-from .external.emcee.step_methods import ExternalEnsembleStepShared
 import numpy as np
 
 import pymc3 as pm
-from .backends.base import merge_traces, BaseTrace, MultiTrace
-from .backends.ndarray import NDArray
+from .backends.base import merge_traces, BaseTrace, MultiTrace, ensure_multitrace
+from .backends.ndarray import NDArray, EnsembleNDArray
 from .model import modelcontext, Point
 from .step_methods import (NUTS, HamiltonianMC, SGFS, Metropolis, BinaryMetropolis,
                            BinaryGibbsMetropolis, CategoricalGibbsMetropolis,
@@ -230,6 +228,10 @@ def sample(draws=500, step=None, init='auto', n_init=200000, start=None,
 
     if start is not None:
         _check_start_shape(model, start)
+    elif hasattr(step, 'nparticles'):
+        _start = build_start_points(step.nparticles, init, model)
+        if start is None: start = {}
+        update_start_vals(start, _start, model)
 
     draws += tune
 
@@ -237,17 +239,6 @@ def sample(draws=500, step=None, init='auto', n_init=200000, start=None,
         if step_kwargs is not None:
             raise ValueError("Specify only one of step_kwargs and nuts_kwargs")
         step_kwargs = {'nuts': nuts_kwargs}
-
-    if isinstance(step, ExternalEnsembleStepShared):
-        if trace is None:
-            trace = EnsembleNDArray('mcmc', model, step.vars, step.nparticles)
-        elif not isinstance(trace, EnsembleNDArray):
-            raise TypeError("trace must be of type EnsembleNDArray")
-
-        if start is None:
-            _start = build_start_points(step.nparticles, init, model)
-            if start is None: start = {}
-            update_start_vals(start, _start, model)
 
     if model.ndim == 0:
         raise ValueError('The model does not contain any free variables.')
@@ -264,6 +255,12 @@ def sample(draws=500, step=None, init='auto', n_init=200000, start=None,
             start = start_
     else:
         step = assign_step_methods(model, step, step_kwargs=step_kwargs)
+
+    if hasattr(step, 'nparticles'):
+        if trace is None:
+            trace = EnsembleNDArray('mcmc', model, step.vars, step.nparticles)
+        elif not hasattr(trace, 'nparticles'):
+            raise TypeError("trace must be able to accept ensemble/particle step methods")
 
     if njobs is None:
         import multiprocessing as mp

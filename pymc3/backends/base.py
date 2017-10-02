@@ -4,6 +4,9 @@ See the docstring for pymc3.backends for more information (including
 creating custom backends).
 """
 import numpy as np
+from pymc3.backends import NDArray
+from pymc3.backends.ndarray import EnsembleNDArray
+
 from ..model import modelcontext
 import warnings
 import theano.tensor as tt
@@ -491,3 +494,23 @@ def _squeeze_cat(results, combine, squeeze):
         if squeeze and len(results) == 1:
             results = results[0]
     return results
+
+
+def repack_ensemble_trace(trace):
+    traces = []
+    for i in range(trace.nparticles):
+        tr = NDArray('mcmc', trace.model, trace.vars)
+        tr.setup(len(trace), i)
+        for varname in trace.varnames:
+            tr.samples[varname] = trace.samples[varname][:, i]
+            tr.draw_idx = len(trace)
+        traces.append(tr)
+    return MultiTrace(traces)
+
+
+def ensure_multitrace(trace):
+    if isinstance(trace, list) and isinstance(trace[0], EnsembleNDArray):
+        return repack_ensemble_trace(trace[0])
+    if isinstance(trace, EnsembleNDArray):
+        return repack_ensemble_trace(trace)
+    return MultiTrace(trace)
