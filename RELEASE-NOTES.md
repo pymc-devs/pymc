@@ -11,7 +11,7 @@ This version includes two major contributions from our Google Summer of Code 201
 
 Documentation has been improved as the result of the project's monthly "docathons".
 
-An experimental stochastic gradient Fisher scoring (`SGFS`) class has been added to the `variational` module.
+An experimental stochastic gradient Fisher scoring (`SGFS`) sampling step method has been added.
 
 The API for find_MAP was enhanced.
 
@@ -33,7 +33,7 @@ The `Constant` variable class has been deprecated, and will be removed in 3.3.
 
 DIC an BPIC calculations have been sped up.
 
-Arrays are now accepted as arguments for the `Bound` class.
+Arrays are now accepted as arguments for the `Bound` class.SGFS
 
 `random` method was added to the `Wishart` and `LKJCorr` distributions.
 
