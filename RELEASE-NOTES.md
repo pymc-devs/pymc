@@ -13,7 +13,7 @@ Documentation has been improved as the result of the project's monthly "docathon
 
 An experimental stochastic gradient Fisher scoring (`SGFS`) sampling step method has been added.
 
-The API for find_MAP was enhanced.
+The API for `find_MAP` was enhanced.
 
 SMC now estimates the marginal likelihood.
 
@@ -31,9 +31,9 @@ MAP estimates now available for transformed and non-transformed variables.
 
 The `Constant` variable class has been deprecated, and will be removed in 3.3.
 
-DIC an BPIC calculations have been sped up.
+DIC and BPIC calculations have been sped up.
 
-Arrays are now accepted as arguments for the `Bound` class.SGFS
+Arrays are now accepted as arguments for the `Bound` class.
 
 `random` method was added to the `Wishart` and `LKJCorr` distributions.
 
