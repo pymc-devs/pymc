@@ -57,4 +57,4 @@ def run(n=1000):
 
 
 if __name__ == '__main__':
-    print(summary(run()))
+    summary(run())

@@ -3,6 +3,7 @@ import numpy as np
 import theano
 import theano.tensor as tt
 from scipy import stats
+import warnings
 
 from pymc3.util import get_variable_name
 from .dist_math import bound, factln, binomln, betaln, logpow
@@ -482,7 +483,7 @@ class Categorical(Discrete):
     .. math:: f(x \mid p) = p_x
 
     ========  ===================================
-    Support   :math:`x \in \{1, 2, \ldots, |p|\}`
+    Support   :math:`x \in \{0, 1, \ldots, |p|-1\}`
     ========  ===================================
 
     Parameters
@@ -555,6 +556,8 @@ class Constant(Discrete):
     """
 
     def __init__(self, c, *args, **kwargs):
+        warnings.warn("Constant has been deprecated. We recommend using a Determinstic object instead.",
+                    DeprecationWarning)
         super(Constant, self).__init__(*args, **kwargs)
         self.mean = self.median = self.mode = self.c = c = tt.as_tensor_variable(c)
 
@@ -578,11 +581,7 @@ class Constant(Discrete):
         return r'${} \sim \text{{Constant}}()$'.format(name)
 
 
-def ConstantDist(*args, **kwargs):
-    import warnings
-    warnings.warn("ConstantDist has been deprecated. In future, use Constant instead.",
-                  DeprecationWarning)
-    return Constant(*args, **kwargs)
+ConstantDist = Constant
 
 
 class ZeroInflatedPoisson(Discrete):
@@ -633,11 +632,13 @@ class ZeroInflatedPoisson(Discrete):
         psi = self.psi
         theta = self.theta
 
-        logp_val = tt.switch(tt.gt(value, 0),
-                     tt.log(psi) + self.pois.logp(value),
-                     logaddexp(tt.log1p(-psi), tt.log(psi) - theta))
+        logp_val = tt.switch(
+            tt.gt(value, 0),
+            tt.log(psi) + self.pois.logp(value),
+            logaddexp(tt.log1p(-psi), tt.log(psi) - theta))
 
-        return bound(logp_val,
+        return bound(
+            logp_val,
             0 <= value,
             0 <= psi, psi <= 1,
             0 <= theta)
@@ -701,11 +702,13 @@ class ZeroInflatedBinomial(Discrete):
         p = self.p
         n = self.n
 
-        logp_val = tt.switch(tt.gt(value, 0),
-                 tt.log(psi) + self.bin.logp(value),
-                 logaddexp(tt.log1p(-psi), tt.log(psi) + n * tt.log1p(-p)))
+        logp_val = tt.switch(
+            tt.gt(value, 0),
+            tt.log(psi) + self.bin.logp(value),
+            logaddexp(tt.log1p(-psi), tt.log(psi) + n * tt.log1p(-p)))
 
-        return bound(logp_val,
+        return bound(
+            logp_val,
             0 <= value, value <= n,
             0 <= psi, psi <= 1,
             0 <= p, p <= 1)
@@ -716,10 +719,14 @@ class ZeroInflatedBinomial(Discrete):
         n = dist.n
         p = dist.p
         psi = dist.psi
-        return r'${} \sim \text{{ZeroInflatedBinomial}}(\mathit{{n}}={}, \mathit{{p}}={}, \mathit{{psi}}={})$'.format(name,
-                                                get_variable_name(n),
-                                                get_variable_name(p),
-                                                get_variable_name(psi))
+
+        name_n = get_variable_name(n)
+        name_p = get_variable_name(p)
+        name_psi = get_variable_name(psi)
+        return (r'${} \sim \text{{ZeroInflatedBinomial}}'
+                r'(\mathit{{n}}={}, \mathit{{p}}={}, '
+                r'\mathit{{psi}}={})$'
+                .format(name, name_n, name_p, name_psi))
 
 
 class ZeroInflatedNegativeBinomial(Discrete):
@@ -732,10 +739,18 @@ class ZeroInflatedNegativeBinomial(Discrete):
 
     .. math::
 
-       f(x \mid \psi, \mu, \alpha) = \left\{ \begin{array}{l}
-            (1-\psi) + \psi \left (\frac{\alpha}{\alpha+\mu} \right) ^\alpha, \text{if } x = 0 \\
-            \psi \frac{\Gamma(x+\alpha)}{x! \Gamma(\alpha)} \left (\frac{\alpha}{\mu+\alpha} \right)^\alpha \left( \frac{\mu}{\mu+\alpha} \right)^x, \text{if } x=1,2,3,\ldots
-            \end{array} \right.
+       f(x \mid \psi, \mu, \alpha) = \left\{
+         \begin{array}{l}
+           (1-\psi) + \psi \left (
+             \frac{\alpha}{\alpha+\mu}
+           \right) ^\alpha, \text{if } x = 0 \\
+           \psi \frac{\Gamma(x+\alpha)}{x! \Gamma(\alpha)} \left (
+             \frac{\alpha}{\mu+\alpha}
+           \right)^\alpha \left(
+             \frac{\mu}{\mu+\alpha}
+           \right)^x, \text{if } x=1,2,3,\ldots
+         \end{array}
+       \right.
 
     ========  ==========================
     Support   :math:`x \in \mathbb{N}_0`
@@ -777,14 +792,21 @@ class ZeroInflatedNegativeBinomial(Discrete):
         mu = self.mu
         psi = self.psi
 
-        logp_val = tt.switch(tt.gt(value, 0),
-                     tt.log(psi) + self.nb.logp(value),
-                     logaddexp(tt.log1p(-psi), tt.log(psi) + alpha * (tt.log(alpha) - tt.log(alpha + mu))))
+        logp_other = tt.log(psi) + self.nb.logp(value)
+        logp_0 = logaddexp(
+            tt.log1p(-psi),
+            tt.log(psi) + alpha * (tt.log(alpha) - tt.log(alpha + mu)))
 
-        return bound(logp_val,
-                    0 <= value,
-                    0 <= psi, psi <= 1,
-                    mu > 0, alpha > 0)
+        logp_val = tt.switch(
+            tt.gt(value, 0),
+            logp_other,
+            logp_0)
+
+        return bound(
+            logp_val,
+            0 <= value,
+            0 <= psi, psi <= 1,
+            mu > 0, alpha > 0)
 
     def _repr_latex_(self, name=None, dist=None):
         if dist is None:
@@ -792,7 +814,11 @@ class ZeroInflatedNegativeBinomial(Discrete):
         mu = dist.mu
         alpha = dist.alpha
         psi = dist.psi
-        return r'${} \sim \text{{ZeroInflatedNegativeBinomial}}(\mathit{{mu}}={}, \mathit{{alpha}}={}, \mathit{{psi}}={})$'.format(name,
-                                                get_variable_name(mu),
-                                                get_variable_name(alpha),
-                                                get_variable_name(psi))
+
+        name_mu = get_variable_name(mu)
+        name_alpha = get_variable_name(alpha)
+        name_psi = get_variable_name(psi)
+        return (r'${} \sim \text{{ZeroInflatedNegativeBinomial}}'
+                r'(\mathit{{mu}}={}, \mathit{{alpha}}={}, '
+                r'\mathit{{psi}}={})$'
+                .format(name, name_mu, name_alpha, name_psi))

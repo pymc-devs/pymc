@@ -11,7 +11,6 @@ from .model import modelcontext, Point
 from .step_methods import (NUTS, HamiltonianMC, SGFS, Metropolis, BinaryMetropolis,
                            BinaryGibbsMetropolis, CategoricalGibbsMetropolis,
                            Slice, CompoundStep)
-from .plots.traceplot import traceplot
 from .util import update_start_vals
 from .step_methods.hmc import quadpotential
 from tqdm import tqdm
@@ -123,11 +122,15 @@ def sample(draws=500, step=None, init='auto', n_init=200000, start=None,
         Initialization method to use for auto-assigned NUTS samplers.
 
         * auto : Choose a default initialization method automatically.
-          Currently, this is `'advi+adapt_diag'`, but this can change in
+          Currently, this is `'jitter+adapt_diag'`, but this can change in
           the future. If you depend on the exact behaviour, choose an
           initialization method explicitly.
         * adapt_diag : Start with a identity mass matrix and then adapt
-          a diagonal based on the variance of the tuning samples.
+          a diagonal based on the variance of the tuning samples. All
+          chains use the test value (usually the prior mean) as starting
+          point.
+        * jitter+adapt_diag : Same as `adapt_diag`, but add uniform jitter
+          in [-1, 1] to the starting point in each chain.
         * advi+adapt_diag : Run ADVI and then adapt the resulting diagonal
           mass matrix based on the sample variance of the tuning samples.
         * advi+adapt_diag_grad : Run ADVI and then adapt the resulting
@@ -317,8 +320,8 @@ def _check_start_shape(model, start):
                 if var_shape:
                     e += "\nExpected shape {} for var " \
                          "'{}', got scalar {}".format(
-                        tuple(var_shape), var.name, start[var.name]
-                    )
+                             tuple(var_shape), var.name, start[var.name]
+                         )
 
     if e != '':
         raise ValueError("Bad shape for start argument:{}".format(e))
@@ -343,9 +346,9 @@ def _sample(draws, step=None, start=None, trace=None, chain=0, tune=None,
                 if it >= skip_first:
                     trace = MultiTrace([strace])
                     if it == skip_first:
-                        ax = traceplot(trace, live_plot=False, **live_plot_kwargs)
+                        ax = pm.plots.traceplot(trace, live_plot=False, **live_plot_kwargs)
                     elif (it - skip_first) % refresh_every == 0 or it == draws - 1:
-                        traceplot(trace, ax=ax, live_plot=True, **live_plot_kwargs)
+                        pm.plots.traceplot(trace, ax=ax, live_plot=True, **live_plot_kwargs)
     except KeyboardInterrupt:
         pass
     finally:
@@ -705,11 +708,15 @@ def init_nuts(init='auto', njobs=1, n_init=500000, model=None,
         Initialization method to use.
 
         * auto : Choose a default initialization method automatically.
-          Currently, this is `'advi+adapt_diag'`, but this can change in
+          Currently, this is `'jitter+adapt_diag'`, but this can change in
           the future. If you depend on the exact behaviour, choose an
           initialization method explicitly.
         * adapt_diag : Start with a identity mass matrix and then adapt
-          a diagonal based on the variance of the tuning samples.
+          a diagonal based on the variance of the tuning samples. All
+          chains use the test value (usually the prior mean) as starting
+          point.
+        * jitter+adapt_diag : Same as `adapt_diag`, but add uniform jitter
+          in [-1, 1] to the starting point in each chain.
         * advi+adapt_diag : Run ADVI and then adapt the resulting diagonal
           mass matrix based on the sample variance of the tuning samples.
         * advi+adapt_diag_grad : Run ADVI and then adapt the resulting
@@ -756,7 +763,7 @@ def init_nuts(init='auto', njobs=1, n_init=500000, model=None,
         init = init.lower()
 
     if init == 'auto':
-        init = 'advi+adapt_diag'
+        init = 'jitter+adapt_diag'
 
     pm._log.info('Initializing NUTS using {}...'.format(init))
 
@@ -777,6 +784,19 @@ def init_nuts(init='auto', njobs=1, n_init=500000, model=None,
             model.ndim, mean, var, 10)
         if njobs == 1:
             start = start[0]
+    elif init == 'jitter+adapt_diag':
+        start = []
+        for _ in range(njobs):
+            mean = {var: val.copy() for var, val in model.test_point.items()}
+            for val in mean.values():
+                val[...] += 2 * np.random.rand(*val.shape) - 1
+            start.append(mean)
+        mean = np.mean([model.dict_to_array(vals) for vals in start], axis=0)
+        var = np.ones_like(mean)
+        potential = quadpotential.QuadPotentialDiagAdapt(
+            model.ndim, mean, var, 10)
+        if njobs == 1:
+            start = start[0]
     elif init == 'advi+adapt_diag_grad':
         approx = pm.fit(
             random_seed=random_seed,
@@ -784,12 +804,12 @@ def init_nuts(init='auto', njobs=1, n_init=500000, model=None,
             callbacks=cb,
             progressbar=progressbar,
             obj_optimizer=pm.adagrad_window,
-        )
+        )  # type: pm.MeanField
         start = approx.sample(draws=njobs)
         start = list(start)
-        stds = approx.gbij.rmap(approx.std.eval())
+        stds = approx.bij.rmap(approx.std.eval())
         cov = model.dict_to_array(stds) ** 2
-        mean = approx.gbij.rmap(approx.mean.get_value())
+        mean = approx.bij.rmap(approx.mean.get_value())
         mean = model.dict_to_array(mean)
         weight = 50
         potential = quadpotential.QuadPotentialDiagAdaptGrad(
@@ -803,12 +823,12 @@ def init_nuts(init='auto', njobs=1, n_init=500000, model=None,
             callbacks=cb,
             progressbar=progressbar,
             obj_optimizer=pm.adagrad_window,
-        )
+        )  # type: pm.MeanField
         start = approx.sample(draws=njobs)
         start = list(start)
-        stds = approx.gbij.rmap(approx.std.eval())
+        stds = approx.bij.rmap(approx.std.eval())
         cov = model.dict_to_array(stds) ** 2
-        mean = approx.gbij.rmap(approx.mean.get_value())
+        mean = approx.bij.rmap(approx.mean.get_value())
         mean = model.dict_to_array(mean)
         weight = 50
         potential = quadpotential.QuadPotentialDiagAdapt(
@@ -825,30 +845,30 @@ def init_nuts(init='auto', njobs=1, n_init=500000, model=None,
         )  # type: pm.MeanField
         start = approx.sample(draws=njobs)
         start = list(start)
-        stds = approx.gbij.rmap(approx.std.eval())
+        stds = approx.bij.rmap(approx.std.eval())
         cov = model.dict_to_array(stds) ** 2
         potential = quadpotential.QuadPotentialDiag(cov)
         if njobs == 1:
             start = start[0]
     elif init == 'advi_map':
-        start = pm.find_MAP()
+        start = pm.find_MAP(include_transformed=True)
         approx = pm.MeanField(model=model, start=start)
         pm.fit(
             random_seed=random_seed,
-            n=n_init, method=pm.ADVI.from_mean_field(approx),
+            n=n_init, method=pm.KLqp(approx),
             callbacks=cb,
             progressbar=progressbar,
             obj_optimizer=pm.adagrad_window
         )
         start = approx.sample(draws=njobs)
         start = list(start)
-        stds = approx.gbij.rmap(approx.std.eval())
+        stds = approx.bij.rmap(approx.std.eval())
         cov = model.dict_to_array(stds) ** 2
         potential = quadpotential.QuadPotentialDiag(cov)
         if njobs == 1:
             start = start[0]
     elif init == 'map':
-        start = pm.find_MAP()
+        start = pm.find_MAP(include_transformed=True)
         cov = pm.find_hessian(point=start)
         start = [start] * njobs
         potential = quadpotential.QuadPotentialFull(cov)

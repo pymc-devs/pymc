@@ -30,6 +30,7 @@ env:
   - PYTHON_VERSION=3.6 FLOATX='float64' TESTCMD="--durations=10 --cov-append pymc3/tests/test_variational_inference.py pymc3/tests/test_updates.py"
 script:
   - . ./scripts/test.sh $TESTCMD
+  - . ./scripts/confirm_mpl_optional.sh
 
 after_success:
   - coveralls

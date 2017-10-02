@@ -26,6 +26,7 @@ from .continuous import VonMises
 from .continuous import SkewNormal
 from .continuous import Triangular
 from .continuous import Gumbel
+from .continuous import Logistic
 from .continuous import Interpolated
 
 from .discrete import Binomial
@@ -65,6 +66,7 @@ from .multivariate import LKJCholeskyCov
 from .multivariate import LKJCorr
 
 from .timeseries import AR1
+from .timeseries import AR
 from .timeseries import GaussianRandomWalk
 from .timeseries import GARCH11
 from .timeseries import MvGaussianRandomWalk
@@ -129,6 +131,7 @@ __all__ = ['Uniform',
            'LKJCholeskyCov',
            'LKJCorr',
            'AR1',
+           'AR',
            'GaussianRandomWalk',
            'MvGaussianRandomWalk',
            'MvStudentTRandomWalk',
@@ -139,6 +142,7 @@ __all__ = ['Uniform',
            'Triangular',
            'DiscreteWeibull',
            'Gumbel',
+           'Logistic',
            'Interpolated',
            'Bound',
            ]

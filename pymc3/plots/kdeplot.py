@@ -1,17 +1,45 @@
-import matplotlib.pyplot as plt
 import numpy as np
 from scipy.signal import gaussian, convolve
 
+try:
+    import matplotlib.pyplot as plt
+except ImportError:  # mpl is optional
+    pass
 
-def kdeplot(trace_values, label=None, alpha=0.35, shade=False, ax=None,
-            **kwargs):
+
+def kdeplot(values, label=None, shade=0, ax=None, kwargs_shade=None, **kwargs):
+    """
+    1D KDE plot taking into account boundary conditions
+
+    Parameters
+    ----------
+    values : array-like
+        Values to plot
+    label : string
+        Text to include as part of the legend
+    shade : float
+        Alpha blending value for the shaded area under the curve, between 0
+        (no shade) and 1 (opaque). Defaults to 0
+    ax : matplotlib axes
+    kwargs_shade : dicts, optional
+        Additional keywords passed to `matplotlib.axes.Axes.fill_between`
+        (to control the shade)
+    Returns
+    ----------
+    ax : matplotlib axes
+
+    """
     if ax is None:
         _, ax = plt.subplots()
-    density, l, u = fast_kde(trace_values)
+
+    if kwargs_shade is None:
+        kwargs_shade = {}
+
+    density, l, u = fast_kde(values)
     x = np.linspace(l, u, len(density))
     ax.plot(x, density, label=label, **kwargs)
     if shade:
-        ax.fill_between(x, density, alpha=alpha, **kwargs)
+        ax.fill_between(x, density, alpha=shade, **kwargs_shade)
     return ax
 
 
@@ -34,6 +62,7 @@ def fast_kde(x):
     xmax: maximum value of x
 
     """
+    x = np.array(x, dtype=float)
     x = x[~np.isnan(x)]
     x = x[~np.isinf(x)]
     n = len(x)

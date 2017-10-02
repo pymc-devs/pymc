@@ -9,10 +9,15 @@ from theano.tensor import (
     cos, sin, tan, cosh, sinh, tanh, sqr, sqrt, erf, erfc, erfinv, erfcinv, dot,
     maximum, minimum, sgn, ceil, floor)
 from theano.tensor.nlinalg import det, matrix_inverse, extract_diag, matrix_dot, trace
+import theano.tensor.slinalg
+import theano.sparse
 from theano.tensor.nnet import sigmoid
 from theano.gof import Op, Apply
 import numpy as np
-from pymc3.theanof import floatX
+import scipy as sp
+import scipy.sparse
+from scipy.linalg import block_diag as scipy_block_diag
+from pymc3.theanof import floatX, largest_common_dtype, ix_
 
 # pylint: enable=unused-import
 
@@ -136,3 +141,116 @@ def expand_packed_triangular(n, packed, lower=True, diagonal_only=False):
         out = tt.zeros((n, n), dtype=theano.config.floatX)
         idxs = np.triu_indices(n)
         return tt.set_subtensor(out[idxs], packed)
+
+
+class BatchedDiag(tt.Op):
+    """
+    Fast BatchedDiag allocation
+    """
+    __props__ = ()
+
+    def make_node(self, diag):
+        diag = tt.as_tensor_variable(diag)
+        if diag.type.ndim != 2:
+            raise TypeError('data argument must be a matrix', diag.type)
+
+        return tt.Apply(self, [diag], [tt.tensor3(dtype=diag.dtype)])
+
+    def perform(self, node, ins, outs, params=None):
+        (C,) = ins
+        (z,) = outs
+
+        bc = C.shape[0]
+        dim = C.shape[-1]
+        Cd = np.zeros((bc, dim, dim), C.dtype)
+        bidx = np.repeat(np.arange(bc), dim)
+        didx = np.tile(np.arange(dim), bc)
+        Cd[bidx, didx, didx] = C.flatten()
+        z[0] = Cd
+
+    def grad(self, inputs, gout):
+        (gz,) = gout
+        idx = tt.arange(gz.shape[-1])
+        return [gz[..., idx, idx]]
+
+    def infer_shape(self, nodes, shapes):
+        return [(shapes[0][0], ) + (shapes[0][1],) * 2]
+
+
+def batched_diag(C):
+    C = tt.as_tensor(C)
+    dim = C.shape[-1]
+    if C.ndim == 2:
+        # diag -> matrices
+        return BatchedDiag()(C)
+    elif C.ndim == 3:
+        # matrices -> diag
+        idx = tt.arange(dim)
+        return C[..., idx, idx]
+    else:
+        raise ValueError('Input should be 2 or 3 dimensional')
+
+
+class BlockDiagonalMatrix(Op):
+    __props__ = ('sparse', 'format')
+
+    def __init__(self, sparse=False, format='csr'):
+        if format not in ('csr', 'csc'):
+            raise ValueError("format must be one of: 'csr', 'csc', got {}".format(format))
+        self.sparse = sparse
+        self.format = format
+
+    def make_node(self, *matrices):
+        if not matrices:
+            raise ValueError('no matrices to allocate')
+        matrices = list(map(tt.as_tensor, matrices))
+        if any(mat.type.ndim != 2 for mat in matrices):
+            raise TypeError('all data arguments must be matrices')
+        if self.sparse:
+            out_type = theano.sparse.matrix(self.format, dtype=largest_common_dtype(matrices))
+        else:
+            out_type = theano.tensor.matrix(dtype=largest_common_dtype(matrices))
+        return tt.Apply(self, matrices, [out_type])
+
+    def perform(self, node, inputs, output_storage, params=None):
+        dtype = largest_common_dtype(inputs)
+        if self.sparse:
+            output_storage[0][0] = sp.sparse.block_diag(
+                inputs, self.format, dtype
+            )
+        else:
+            output_storage[0][0] = scipy_block_diag(*inputs).astype(dtype)
+
+    def grad(self, inputs, gout):
+        shapes = tt.stack([i.shape for i in inputs])
+        index_end = shapes.cumsum(0)
+        index_begin = index_end - shapes
+        slices = [ix_(tt.arange(index_begin[i, 0], index_end[i, 0]),
+                      tt.arange(index_begin[i, 1], index_end[i, 1])
+                      ) for i in range(len(inputs))]
+        return [gout[0][slc] for slc in slices]
+
+    def infer_shape(self, nodes, shapes):
+        first, second = zip(*shapes)
+        return [(tt.add(*first), tt.add(*second))]
+
+
+def block_diagonal(matrices, sparse=False, format='csr'):
+    """See scipy.sparse.block_diag or
+    scipy.linalg.block_diag for reference
+
+    Parameters
+    ----------
+    matrices : tensors
+    format : str (default 'csr')
+        must be one of: 'csr', 'csc'
+    sparse : bool (default False)
+        if True return sparse format
+
+    Returns
+    -------
+    matrix
+    """
+    if len(matrices) == 1:  # graph optimization
+        return matrices[0]
+    return BlockDiagonalMatrix(sparse=sparse, format=format)(*matrices)

@@ -1,6 +1,10 @@
 import itertools
-import matplotlib.pyplot as plt
 import numpy as np
+
+try:
+    import matplotlib.pyplot as plt
+except ImportError:  # mpl is optional
+    pass
 
 from .utils import get_default_varnames, get_axis
 

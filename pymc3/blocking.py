@@ -23,28 +23,26 @@ class ArrayOrdering(object):
 
     def __init__(self, vars):
         self.vmap = []
-        self._by_name = {}
-        size = 0
+        self.by_name = {}
+        self.size = 0
 
         for var in vars:
             name = var.name
             if name is None:
                 raise ValueError('Unnamed variable in ArrayOrdering.')
-            if name in self._by_name:
+            if name in self.by_name:
                 raise ValueError('Name of variable not unique: %s.' % name)
             if not hasattr(var, 'dshape') or not hasattr(var, 'dsize'):
                 raise ValueError('Shape of variable not known %s' % name)
 
-            slc = slice(size, size + var.dsize)
+            slc = slice(self.size, self.size + var.dsize)
             varmap = VarMap(name, slc, var.dshape, var.dtype)
             self.vmap.append(varmap)
-            self._by_name[name] = varmap
-            size += var.dsize
-
-        self.size = size
+            self.by_name[name] = varmap
+            self.size += var.dsize
 
     def __getitem__(self, key):
-        return self._by_name[key]
+        return self.by_name[key]
 
 
 class DictToArrayBijection(object):
@@ -122,24 +120,22 @@ class ListArrayOrdering(object):
     """
 
     def __init__(self, list_arrays, intype='numpy'):
+        if intype not in {'tensor', 'numpy'}:
+            raise ValueError("intype not in {'tensor', 'numpy'}")
         self.vmap = []
-        dim = 0
-
-        count = 0
+        self.intype = intype
+        self.size = 0
         for array in list_arrays:
-            if intype == 'tensor':
+            if self.intype == 'tensor':
                 name = array.name
                 array = array.tag.test_value
-            elif intype == 'numpy':
+            else:
                 name = 'numpy'
 
-            slc = slice(dim, dim + array.size)
+            slc = slice(self.size, self.size + array.size)
             self.vmap.append(DataMap(
-                count, slc, array.shape, array.dtype, name))
-            dim += array.size
-            count += 1
-
-        self.size = dim
+                len(self.vmap), slc, array.shape, array.dtype, name))
+            self.size += array.size
 
 
 class ListToArrayBijection(object):

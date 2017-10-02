@@ -28,7 +28,7 @@ __all__ = ['Uniform', 'Flat', 'HalfFlat', 'Normal', 'Beta', 'Exponential',
            'Laplace', 'StudentT', 'Cauchy', 'HalfCauchy', 'Gamma', 'Weibull',
            'HalfStudentT', 'StudentTpos', 'Lognormal', 'ChiSquared',
            'HalfNormal', 'Wald', 'Pareto', 'InverseGamma', 'ExGaussian',
-           'VonMises', 'SkewNormal', 'Interpolated']
+           'VonMises', 'SkewNormal', 'Logistic', 'Interpolated']
 
 
 class PositiveContinuous(Continuous):
@@ -201,9 +201,7 @@ class Flat(Continuous):
         return tt.zeros_like(value)
 
     def _repr_latex_(self, name=None, dist=None):
-        if dist is None:
-            dist = self
-        return r'${} \sim \text{Flat}()$'
+        return r'${} \sim \text{{Flat}}()$'.format(name)
 
 
 class HalfFlat(PositiveContinuous):
@@ -220,9 +218,7 @@ class HalfFlat(PositiveContinuous):
         return bound(tt.zeros_like(value), value > 0)
 
     def _repr_latex_(self, name=None, dist=None):
-        if dist is None:
-            dist = self
-        return r'${} \sim \text{{HalfFlat}()$'
+        return r'${} \sim \text{{HalfFlat}}()$'.format(name)
 
 
 class Normal(Continuous):
@@ -591,7 +587,7 @@ class Beta(UnitContinuous):
     mu : float
         Alternative mean (0 < mu < 1).
     sd : float
-        Alternative standard deviation (sd > 0).
+        Alternative standard deviation (0 < sd < sqrt(mu * (1 - mu))).
 
     Notes
     -----
@@ -916,8 +912,8 @@ class StudentT(Continuous):
 
     Parameters
     ----------
-    nu : int
-        Degrees of freedom (nu > 0).
+    nu : float
+        Degrees of freedom, also known as normality parameter (nu > 0).
     mu : float
         Location parameter.
     lam : float
@@ -1933,6 +1929,83 @@ class Gumbel(Continuous):
         return r'${} \sim \text{{Gumbel}}(\mathit{{mu}}={}, \mathit{{beta}}={})$'.format(name,
                                                                 get_variable_name(mu),
                                                                 get_variable_name(beta))
+
+
+class Logistic(Continuous):
+    R"""
+    Logistic log-likelihood.
+
+    .. math::
+
+       f(x \mid \mu, s) =
+           \frac{\exp\left(-\frac{x - \mu}{s}\right)}{s \left(1 + \exp\left(-\frac{x - \mu}{s}\right)\right)^2}
+
+    ========  ==========================================
+    Support   :math:`x \in \mathbb{R}`
+    Mean      :math:`\mu`
+    Variance  :math:`\frac{s^2 \pi^2}{3}`
+    ========  ==========================================
+
+    .. plot::
+
+        import matplotlib.pyplot as plt
+        import numpy as np
+        import scipy.stats as st
+        x = np.linspace(-5.0, 5.0, 1000)
+        fig, ax = plt.subplots()
+        f = lambda mu, s : st.logistic.pdf(x, loc=mu, scale=s)
+        plot_pdf = lambda a, b : ax.plot(x, f(a,b), label=r'$\mu$={0}, $s$={1}'.format(a,b))
+        plot_pdf(0.0, 0.4)
+        plot_pdf(0.0, 1.0)
+        plot_pdf(0.0, 2.0)
+        plot_pdf(-2.0, 0.4)
+        plt.legend(loc='upper right', frameon=False)
+        ax.set(xlim=[-5,5], ylim=[0,1.2], xlabel='x', ylabel='f(x)')
+        plt.show()
+
+    Parameters
+    ----------
+    mu : float
+        Mean.
+    s : float
+        Scale (s > 0).
+    """
+    def __init__(self, mu=0., s=1., *args, **kwargs):
+        super(Logistic, self).__init__(*args, **kwargs)
+
+        self.mu = tt.as_tensor_variable(mu)
+        self.s = tt.as_tensor_variable(s)
+
+        self.mean = self.mode = mu
+        self.variance = s**2 * np.pi**2 / 3.
+
+    def logp(self, value):
+        mu = self.mu
+        s = self.s
+
+        return bound(
+            -(value - mu) / s - tt.log(s) - 2 * tt.log1p(tt.exp(-(value - mu) / s)),
+            s > 0
+        )
+
+    def random(self, point=None, size=None, repeat=None):
+        mu, s = draw_values([self.mu, self.s], point=point)
+
+        return generate_samples(
+            stats.logistic.rvs,
+            loc=mu, scale=s,
+            dist_shape=self.shape,
+            size=size
+        )
+
+    def _repr_latex_(self, name=None, dist=None):
+        if dist is None:
+            dist = self
+        mu = dist.mu
+        s = dist.s
+        return r'${} \sim \text{{Logistic}}(\mathit{{mu}}={}, \mathit{{s}}={})$'.format(name,
+                                                                get_variable_name(mu),
+                                                                get_variable_name(s))
 
 
 class Interpolated(Continuous):
