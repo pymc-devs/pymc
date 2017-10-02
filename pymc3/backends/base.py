@@ -8,7 +8,9 @@ import numpy as np
 import warnings
 import theano.tensor as tt
 
-from .ndarray import NDArray, EnsembleNDArray
+from pymc3.backends import NDArray
+from pymc3.backends.ndarray import EnsembleNDArray
+
 from ..model import modelcontext
 
 
