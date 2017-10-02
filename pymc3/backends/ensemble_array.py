@@ -1,51 +1,15 @@
-"""NumPy array trace backend
-
-Store sampling values in memory as a NumPy array.
-"""
 import numpy as np
+from ..backends import NDArray, base
+from ..backends.base import MultiTrace
 
-from ..backends import base
 
-
-class NDArray(base.BaseTrace):
-    """NDArray trace object
-
-    Parameters
-    ----------
-    name : str
-        Name of backend. This has no meaning for the NDArray backend.
-    model : Model
-        If None, the model is taken from the `with` context.
-    vars : list of variables
-        Sampling values will be stored for these variables. If None,
-        `model.unobserved_RVs` is used.
-    """
-
-    supports_sampler_stats = True
-
-    def __init__(self, name=None, model=None, vars=None, test_point=None):
-        super(NDArray, self).__init__(name, model, vars, test_point)
-        self.draw_idx = 0
-        self.draws = None
-        self.samples = {}
-        self._stats = None
-
-    # Sampling methods
+class EnsembleNDArray(NDArray):
+    def __init__(self, name=None, model=None, vars=None, nparticles=None):
+        super(EnsembleNDArray, self).__init__(name, model, vars)
+        self.nparticles = nparticles
 
     def setup(self, draws, chain, sampler_vars=None):
-        """Perform chain-specific setup.
-
-        Parameters
-        ----------
-        draws : int
-            Expected number of draws
-        chain : int
-            Chain number
-        sampler_vars : list of dicts
-            Names and dtypes of the variables that are
-            exported by the samplers.
-        """
-        super(NDArray, self).setup(draws, chain, sampler_vars)
+        base.BaseTrace.setup(self, draws, chain, sampler_vars)
 
         self.chain = chain
         if self.samples:  # Concatenate new array if chain is already present.
@@ -54,7 +18,7 @@ class NDArray(base.BaseTrace):
             self.draws_idx = old_draws
             for varname, shape in self.var_shapes.items():
                 old_var_samples = self.samples[varname]
-                new_var_samples = np.zeros((draws, ) + shape,
+                new_var_samples = np.zeros((draws, self.nparticles) + shape,
                                            self.var_dtypes[varname])
                 self.samples[varname] = np.concatenate((old_var_samples,
                                                         new_var_samples),
@@ -62,7 +26,7 @@ class NDArray(base.BaseTrace):
         else:  # Otherwise, make array of zeros for each variable.
             self.draws = draws
             for varname, shape in self.var_shapes.items():
-                self.samples[varname] = np.zeros((draws, ) + shape,
+                self.samples[varname] = np.zeros((draws, self.nparticles) + shape,
                                                  dtype=self.var_dtypes[varname])
 
         if sampler_vars is None:
@@ -74,7 +38,7 @@ class NDArray(base.BaseTrace):
                 data = dict()
                 self._stats.append(data)
                 for varname, dtype in sampler.items():
-                    data[varname] = np.zeros(draws, dtype=dtype)
+                    data[varname] = np.zeros((self.nparticles, draws), dtype=dtype)
         else:
             for data, vars in zip(self._stats, sampler_vars):
                 if vars.keys() != data.keys():
@@ -82,8 +46,13 @@ class NDArray(base.BaseTrace):
                 old_draws = len(self)
                 for varname, dtype in vars.items():
                     old = data[varname]
-                    new = np.zeros(draws, dtype=dtype)
+                    new = np.zeros((draws, self.nparticles), dtype=dtype)
                     data[varname] = np.concatenate([old, new])
+
+    def multi_fn(self, point):
+        l = [self.fn({k: point[k][i] for k in self.varnames}) for i in range(self.nparticles)]
+        return map(np.asarray, zip(*l))
+
 
     def record(self, point, sampler_stats=None):
         """Record results of a sampling iteration.
@@ -93,7 +62,7 @@ class NDArray(base.BaseTrace):
         point : dict
             Values mapped to variable names
         """
-        for varname, value in zip(self.varnames, self.fn(point)):
+        for varname, value in zip(self.varnames, self.multi_fn(point)):
             self.samples[varname][self.draw_idx] = value
 
         if self._stats is not None and sampler_stats is None:
@@ -173,25 +142,26 @@ class NDArray(base.BaseTrace):
         with variable names as keys.
         """
         idx = int(idx)
-        return {varname: values[idx]
-                for varname, values in self.samples.items()}
+        return {varname: values[idx] for varname, values in self.samples.items()}
 
 
-def _slice_as_ndarray(strace, idx):
-    sliced = NDArray(model=strace.model, vars=strace.vars)
-    sliced.chain = strace.chain
+def repack_ensemble_trace(trace):
+    traces = []
+    for i in range(trace.nparticles):
+        tr = NDArray('mcmc', trace.model, trace.vars)
+        tr.setup(len(trace), i)
+        for varname in trace.varnames:
+            tr.samples[varname] = trace.samples[varname][:, i]
+            tr.draw_idx = len(trace)
+        traces.append(tr)
+    return MultiTrace(traces)
 
-    # Happy path where we do not need to load everything from the trace
-    if ((idx.step is None or idx.step >= 1) and
-            (idx.stop is None or idx.stop == len(strace))):
-        start, stop, step = idx.indices(len(strace))
-        sliced.samples = {v: strace.get_values(v, burn=idx.start, thin=idx.step)
-                          for v in strace.varnames}
-        sliced.draw_idx = (stop - start) // step
-    else:
-        start, stop, step = idx.indices(len(strace))
-        sliced.samples = {v: strace.get_values(v)[start:stop:step]
-                          for v in strace.varnames}
-        sliced.draw_idx = (stop - start) // step
 
-    return sliced
+def ensure_multitrace(trace):
+    if isinstance(trace, list) and isinstance(trace[0], EnsembleNDArray):
+        return repack_ensemble_trace(trace[0])
+    if isinstance(trace, EnsembleNDArray):
+        return repack_ensemble_trace(trace)
+    return MultiTrace(trace)
+
+# TODO: create generic EnsembleTrace to use a normal Basetrace (create duplicate parameter names for particles?)

@@ -5,8 +5,9 @@ from numpy.random import randint, seed
 import numpy as np
 
 import pymc3 as pm
-from .backends.base import merge_traces, BaseTrace, MultiTrace, ensure_multitrace
-from .backends.ndarray import NDArray, EnsembleNDArray
+from .backends.base import merge_traces, BaseTrace, MultiTrace
+from .backends.ndarray import NDArray
+from pymc3.backends.ensemble_array import EnsembleNDArray, ensure_multitrace
 from .model import modelcontext, Point
 from .step_methods import (NUTS, HamiltonianMC, SGFS, Metropolis, BinaryMetropolis,
                            BinaryGibbsMetropolis, CategoricalGibbsMetropolis,
