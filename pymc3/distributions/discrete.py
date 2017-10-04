@@ -447,10 +447,8 @@ class DiscreteUniform(Discrete):
     def _random(self, lower, upper, size=None):
         # This way seems to be the only to deal with lower and upper
         # as array-like.
-        samples = stats.uniform.rvs(lower,
-                                    upper + 1 - lower - np.finfo(float).eps,
-                                    size=size)
-        return np.floor(samples).astype('int32')
+        samples = stats.randint.rvs(lower, upper + 1, size=size)
+        return samples
 
     def random(self, point=None, size=None, repeat=None):
         lower, upper = draw_values([self.lower, self.upper], point=point)
