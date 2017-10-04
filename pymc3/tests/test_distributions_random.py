@@ -506,7 +506,7 @@ class TestScalarParameterSamples(SeededTest):
 
     def test_discrete_uniform(self):
         def ref_rand(size, lower, upper):
-            return st.randint.rvs(lower, upper, size=size)
+            return st.randint.rvs(lower, upper + 1, size=size)
         pymc3_random_discrete(pm.DiscreteUniform, {'lower': -NatSmall, 'upper': NatSmall},
                               ref_rand=ref_rand)
 
