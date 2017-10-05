@@ -6,7 +6,7 @@ import numpy as np
 import theano.gradient as tg
 
 import pymc3 as pm
-from .backends.base import merge_traces, BaseTrace, MultiTrace
+from .backends.base import BaseTrace, MultiTrace
 from .backends.ndarray import NDArray
 from .model import modelcontext, Point
 from .step_methods import (NUTS, HamiltonianMC, SGFS, Metropolis, BinaryMetropolis,
@@ -328,25 +328,27 @@ def sample(draws=500, step=None, init='auto', n_init=200000, start=None,
     if model.ndim == 0:
         raise ValueError('The model does not contain any free variables.')
 
-
     if step is None and init is not None and pm.model.all_continuous(model.vars):
         try:
             # By default, try to use NUTS
             pm._log.info('Auto-assigning NUTS sampler...')
             args = step_kwargs if step_kwargs is not None else {}
             args = args.get('nuts', {})
-            start_, step = init_nuts(init=init, njobs=njobs, n_init=n_init,
+            start_, step = init_nuts(init=init, chains=chains, n_init=n_init,
                                      model=model, random_seed=random_seed,
                                      progressbar=progressbar, **args)
             if start is None:
                 start = start_
         except (AttributeError, NotImplementedError, tg.NullTypeGradError):
             # gradient computation failed
-            pm._log.info("Initializing NUTS failed. "\
+            pm._log.info("Initializing NUTS failed. "
                          "Falling back to elementwise auto-assignment.")
             step = assign_step_methods(model, step, step_kwargs=step_kwargs)
     else:
         step = assign_step_methods(model, step, step_kwargs=step_kwargs)
+
+    if start is None:
+        start = [None] * chains
 
     sample_args = {
         'draws': draws,
@@ -587,7 +589,7 @@ def _mp_sample(**kwargs):
     jobs = (delayed(_sample)(*args, **kwargs)
             for args in zip(chain_nums, pbars, rseed, start))
     traces = Parallel(n_jobs=njobs)(jobs)
-    return merge_traces(traces)
+    return MultiTrace(traces)
 
 
 def stop_tuning(step):
@@ -770,8 +772,8 @@ def sample_ppc_w(traces, samples=None, models=None, size=None, weights=None,
     return {k: np.asarray(v) for k, v in ppc.items()}
 
 
-def init_nuts(init='auto', njobs=1, n_init=500000, model=None,
-              random_seed=-1, progressbar=True, **kwargs):
+def init_nuts(init='auto', chains=1, n_init=500000, model=None,
+              random_seed=None, progressbar=True, **kwargs):
     """Set up the mass matrix initialization for NUTS.
 
     NUTS convergence and sampling speed is extremely dependent on the
@@ -805,8 +807,8 @@ def init_nuts(init='auto', njobs=1, n_init=500000, model=None,
         * map : Use the MAP as starting point. This is discouraged.
         * nuts : Run NUTS and estimate posterior mean and mass matrix from
           the trace.
-    njobs : int
-        Number of parallel jobs to start.
+    chains : int
+        Number of jobs to start.
     n_init : int
         Number of iterations of initializer
         If 'ADVI', number of iterations, if 'nuts', number of draws.
@@ -843,7 +845,9 @@ def init_nuts(init='auto', njobs=1, n_init=500000, model=None,
 
     pm._log.info('Initializing NUTS using {}...'.format(init))
 
-    random_seed = int(np.atleast_1d(random_seed)[0])
+    if random_seed is not None:
+        random_seed = int(np.atleast_1d(random_seed)[0])
+        np.random.seed(random_seed)
 
     cb = [
         pm.callbacks.CheckParametersConvergence(
@@ -853,14 +857,14 @@ def init_nuts(init='auto', njobs=1, n_init=500000, model=None,
     ]
 
     if init == 'adapt_diag':
-        start = [model.test_point] * njobs
+        start = [model.test_point] * chains
         mean = np.mean([model.dict_to_array(vals) for vals in start], axis=0)
         var = np.ones_like(mean)
         potential = quadpotential.QuadPotentialDiagAdapt(
             model.ndim, mean, var, 10)
     elif init == 'jitter+adapt_diag':
         start = []
-        for _ in range(njobs):
+        for _ in range(chains):
             mean = {var: val.copy() for var, val in model.test_point.items()}
             for val in mean.values():
                 val[...] += 2 * np.random.rand(*val.shape) - 1
@@ -877,7 +881,7 @@ def init_nuts(init='auto', njobs=1, n_init=500000, model=None,
             progressbar=progressbar,
             obj_optimizer=pm.adagrad_window,
         )  # type: pm.MeanField
-        start = approx.sample(draws=njobs)
+        start = approx.sample(draws=chains)
         start = list(start)
         stds = approx.bij.rmap(approx.std.eval())
         cov = model.dict_to_array(stds) ** 2
@@ -894,7 +898,7 @@ def init_nuts(init='auto', njobs=1, n_init=500000, model=None,
             progressbar=progressbar,
             obj_optimizer=pm.adagrad_window,
         )  # type: pm.MeanField
-        start = approx.sample(draws=njobs)
+        start = approx.sample(draws=chains)
         start = list(start)
         stds = approx.bij.rmap(approx.std.eval())
         cov = model.dict_to_array(stds) ** 2
@@ -911,7 +915,7 @@ def init_nuts(init='auto', njobs=1, n_init=500000, model=None,
             progressbar=progressbar,
             obj_optimizer=pm.adagrad_window
         )  # type: pm.MeanField
-        start = approx.sample(draws=njobs)
+        start = approx.sample(draws=chains)
         start = list(start)
         stds = approx.bij.rmap(approx.std.eval())
         cov = model.dict_to_array(stds) ** 2
@@ -926,7 +930,7 @@ def init_nuts(init='auto', njobs=1, n_init=500000, model=None,
             progressbar=progressbar,
             obj_optimizer=pm.adagrad_window
         )
-        start = approx.sample(draws=njobs)
+        start = approx.sample(draws=chains)
         start = list(start)
         stds = approx.bij.rmap(approx.std.eval())
         cov = model.dict_to_array(stds) ** 2
@@ -934,14 +938,14 @@ def init_nuts(init='auto', njobs=1, n_init=500000, model=None,
     elif init == 'map':
         start = pm.find_MAP(include_transformed=True)
         cov = pm.find_hessian(point=start)
-        start = [start] * njobs
+        start = [start] * chains
         potential = quadpotential.QuadPotentialFull(cov)
     elif init == 'nuts':
         init_trace = pm.sample(draws=n_init, step=pm.NUTS(),
                                tune=n_init // 2,
                                random_seed=random_seed)
         cov = np.atleast_1d(pm.trace_cov(init_trace))
-        start = list(np.random.choice(init_trace, njobs))
+        start = list(np.random.choice(init_trace, chains))
         potential = quadpotential.QuadPotentialFull(cov)
     else:
         raise NotImplementedError('Initializer {} is not supported.'.format(init))
