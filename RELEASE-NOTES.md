@@ -1,5 +1,62 @@
 # Release Notes
 
+## PyMC3 3.2 (October 2, 2017)
+
+### New features
+
+This version includes two major contributions from our Google Summer of Code 2017 students:
+
+* Maxim Kucherov extended and refactored the variational inference module. This primarily adds two important classes, representing operator variational inference (`OPVI`) objects and `Approximation` objects. These make it easier to extend existing `variational` classes, and to derive inference from `variational` optimizations, respectively. The `variational` module now also includes normalizing flows (`NFVI`).
+* Bill Engels added an extensive new Gaussian processes (`gp`) module. Standard GPs can be specified using either `Latent` or `Marginal` classes, depending on the nature of the underlying function. A Student-T process `TP` has been added. In order to accomodate larger datasets, approximate marginal Gaussian processes (`MarginalSparse`) have been added. 
+
+Documentation has been improved as the result of the project's monthly "docathons".
+
+An experimental stochastic gradient Fisher scoring (`SGFS`) sampling step method has been added.
+
+The API for `find_MAP` was enhanced.
+
+SMC now estimates the marginal likelihood.
+
+Added `Logistic` and `HalfFlat` distributions to set of continuous distributions.
+
+Bayesian fraction of missing information (`bfmi`) function added to `stats`.
+
+Enhancements to `compareplot` added.
+
+QuadPotential adaptation has been implemented.
+
+Script added to build and deploy documentation.
+
+MAP estimates now available for transformed and non-transformed variables.
+
+The `Constant` variable class has been deprecated, and will be removed in 3.3.
+
+DIC and BPIC calculations have been sped up.
+
+Arrays are now accepted as arguments for the `Bound` class.
+
+`random` method was added to the `Wishart` and `LKJCorr` distributions.
+
+Progress bars have been added to LOO and WAIC calculations.
+
+All example notebooks updated to reflect changes in API since 3.1.
+
+Parts of the test suite have been refactored.
+
+### Fixes
+
+Matplotlib is  no longer a hard dependency, making it easier to use in settings where installing Matplotlib is problematic. PyMC will only complain if plotting is attempted.
+
+Several bugs in the Gaussian process covariance were fixed.
+
+All chains are now used to calculate WAIC and LOO.
+
+AR(1) log-likelihood function has been fixed.
+
+Slice sampler fixed to sample from 1D conditionals.
+
+Several docstring fixes.
+
 ## PyMC3 3.1 (June 23, 2017)
 
 ### New features
