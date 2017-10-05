@@ -28,7 +28,7 @@ class TestSample(SeededTest):
         for _ in range(2):
             np.random.seed(1)
             with self.model:
-                pm.sample(1, tune=0)
+                pm.sample(1, tune=0, chains=1)
                 random_numbers.append(np.random.random())
         assert random_numbers[0] == random_numbers[1]
 
@@ -125,7 +125,8 @@ class TestSample(SeededTest):
     @pytest.mark.parametrize(
         'start', [
             {'x': np.array([1, 1])},
-            [{'x': [10, 10]}, {'x': [-10, -10]}]
+            {'x': [10, 10]},
+            {'x': [-10, -10]},
         ]
     )
     def test_sample_start_good_shape(self, start):
@@ -262,8 +263,12 @@ def test_exec_nuts_init(method):
         pm.HalfNormal('b', sd=1)
     with model:
         start, _ = pm.init_nuts(init=method, n_init=10)
-        assert isinstance(start, dict)
-        start, _ = pm.init_nuts(init=method, n_init=10, njobs=2)
+        assert isinstance(start, list)
+        assert len(start) == 1
+        assert isinstance(start[0], dict)
+        assert 'a' in start[0] and 'b_log__' in start[0]
+        start, _ = pm.init_nuts(init=method, n_init=10, chains=2)
         assert isinstance(start, list)
         assert len(start) == 2
         assert isinstance(start[0], dict)
+        assert 'a' in start[0] and 'b_log__' in start[0]

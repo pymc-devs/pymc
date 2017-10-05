@@ -166,7 +166,7 @@ class TestDisasterModel(SeededTest):
             start = {'early_mean': 2., 'late_mean': 3.}
             # Use slice sampler for means (other varibles auto-selected)
             step = pm.Slice([model.early_mean_log__, model.late_mean_log__])
-            tr = pm.sample(500, tune=50, start=start, step=step)
+            tr = pm.sample(500, tune=50, start=start, step=step, chains=1)
             pm.summary(tr)
 
     def test_disaster_model_missing(self):
@@ -176,7 +176,7 @@ class TestDisasterModel(SeededTest):
             start = {'early_mean': 2., 'late_mean': 3.}
             # Use slice sampler for means (other varibles auto-selected)
             step = pm.Slice([model.early_mean_log__, model.late_mean_log__])
-            tr = pm.sample(500, tune=50, start=start, step=step)
+            tr = pm.sample(500, tune=50, start=start, step=step, chains=1)
             pm.summary(tr)
 
 
@@ -256,10 +256,14 @@ class TestLatentOccupancy(SeededTest):
     def test_run(self):
         model = self.build_model()
         with model:
-            start = {'psi': 0.5, 'z': (self.y > 0).astype('int16'), 'theta': 5}
+            start = {
+                'psi': np.array(0.5, dtype='f'),
+                'z': (self.y > 0).astype('int16'),
+                'theta': np.array(5, dtype='f'),
+            }
             step_one = pm.Metropolis([model.theta_interval__, model.psi_logodds__])
             step_two = pm.BinaryMetropolis([model.z])
-            pm.sample(50, step=[step_one, step_two], start=start)
+            pm.sample(50, step=[step_one, step_two], start=start, chains=1)
 
 
 @pytest.mark.xfail(condition=(theano.config.floatX == "float32"), reason="Fails on float32 due to starting inf at starting logP")

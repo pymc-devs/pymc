@@ -1,5 +1,4 @@
 from collections import defaultdict
-import random
 
 from joblib import Parallel, delayed
 import numpy as np
@@ -264,7 +263,7 @@ def sample(draws=500, step=None, init='auto', n_init=200000, start=None,
         completion ("expected time of arrival"; ETA).
     model : Model (optional if in `with` context)
     random_seed : int or list of ints
-        A list is accepted if more if `njobs` is greater than one.
+        A list is accepted if `njobs` is greater than one.
     live_plot : bool
         Flag for live plotting the trace while sampling
     live_plot_kwargs : dict
@@ -307,10 +306,12 @@ def sample(draws=500, step=None, init='auto', n_init=200000, start=None,
         start = [start] * chains
     if random_seed == -1:
         random_seed = None
+    if chains == 1 and isinstance(random_seed, int):
+        random_seed = [random_seed]
     if random_seed is None or isinstance(random_seed, int):
-        rand = random.Random()
-        rand.seed(random_seed)
-        random_seed = [rand.getrandbits(32) for _ in range(chains)]
+        if random_seed is not None:
+            np.random.seed(random_seed)
+        random_seed = [np.random.randint(2 ** 30) for _ in range(chains)]
     if not isinstance(random_seed, list):
         raise TypeError('Invalid value for `random_seed`. Must be list or int')
 
@@ -349,6 +350,8 @@ def sample(draws=500, step=None, init='auto', n_init=200000, start=None,
 
     if start is None:
         start = [None] * chains
+    if isinstance(start, dict):
+        start = [start] * chains
 
     sample_args = {
         'draws': draws,
@@ -455,7 +458,7 @@ def _sample(chain, progressbar, random_seed, start, draws=None, step=None,
 
 
 def iter_sample(draws, step, start=None, trace=None, chain=0, tune=None,
-                model=None, random_seed=-1):
+                model=None, random_seed=None):
     """Generator that returns a trace on each iteration using the given
     step method.  Multiple step methods supported via compound step
     method returns the amount of time taken.
@@ -498,10 +501,10 @@ def iter_sample(draws, step, start=None, trace=None, chain=0, tune=None,
 
 
 def _iter_sample(draws, step, start=None, trace=None, chain=0, tune=None,
-                 model=None, random_seed=-1):
+                 model=None, random_seed=None):
     model = modelcontext(model)
     draws = int(draws)
-    if random_seed != -1:
+    if random_seed is not None:
         np.random.seed(random_seed)
     if draws < 1:
         raise ValueError('Argument `draws` should be above 0.')
