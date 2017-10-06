@@ -300,7 +300,7 @@ def sample(draws=500, step=None, init='auto', n_init=200000, start=None,
     model = modelcontext(model)
 
     if njobs is None:
-        njobs = _cpu_count()
+        njobs = min(4, _cpu_count())
     if chains is None:
         chains = max(2, njobs)
     if isinstance(start, dict):
