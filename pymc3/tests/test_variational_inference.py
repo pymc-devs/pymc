@@ -701,6 +701,18 @@ def test_rowwise_approx(three_var_model, parametric_grouped_approxes):
             pytest.skip('Does not support rowwise grouping')
 
 
+def test_pickle_approx(three_var_approx):
+    import pickle
+    dump = pickle.dumps(three_var_approx)
+    pickle.loads(dump)
+
+
+def test_pickle_approx_aevb(three_var_aevb_approx):
+    import pickle
+    dump = pickle.dumps(three_var_aevb_approx)
+    pickle.loads(dump)
+
+
 @pytest.fixture('module')
 def binomial_model():
     n_samples = 100

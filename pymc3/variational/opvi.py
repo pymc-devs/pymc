@@ -469,6 +469,12 @@ class TestFunction(object):
         return obj
 
 
+def _unpickle_group(cls, state):
+    group = object.__new__(cls)
+    group.__dict__.update(state)
+    return group
+
+
 class Group(object):
     R"""**Base class for grouping variables in VI**
 
@@ -689,6 +695,9 @@ class Group(object):
     alias_names = frozenset()
     __param_registry = dict()
     __name_registry = dict()
+
+    def __reduce__(self):
+        return _unpickle_group, (self.__class__, self.__dict__)
 
     @classmethod
     def register(cls, sbcls):
