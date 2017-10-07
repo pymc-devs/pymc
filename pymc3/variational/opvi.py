@@ -469,12 +469,6 @@ class TestFunction(object):
         return obj
 
 
-def _unpickle_group(cls, state):
-    group = object.__new__(cls)
-    group.__dict__.update(state)
-    return group
-
-
 class Group(object):
     R"""**Base class for grouping variables in VI**
 
@@ -696,9 +690,6 @@ class Group(object):
     __param_registry = dict()
     __name_registry = dict()
 
-    def __reduce__(self):
-        return _unpickle_group, (self.__class__, self.__dict__)
-
     @classmethod
     def register(cls, sbcls):
         assert frozenset(sbcls.__param_spec__) not in cls.__param_registry, 'Duplicate __param_spec__'
@@ -730,7 +721,7 @@ class Group(object):
                            .format(name, cls.__name_registry))
         return cls.__name_registry[name.lower()]
 
-    def __new__(cls, group, vfam=None, params=None, *args, **kwargs):
+    def __new__(cls, group=None, vfam=None, params=None, *args, **kwargs):
         if cls is Group:
             if vfam is not None and params is not None:
                 raise TypeError('Cannot call Group with both `vfam` and `params` provided')
