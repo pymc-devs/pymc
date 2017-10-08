@@ -634,8 +634,13 @@ class Beta(UnitContinuous):
         alpha = self.alpha
         beta = self.beta
 
-        return bound(logpow(value, alpha - 1) + logpow(1 - value, beta - 1)
-                     - betaln(alpha, beta),
+        logval = tt.log(value)
+        log1pval = tt.log1p(-value)
+        logp = (tt.switch(tt.eq(alpha, 1), 0, (alpha - 1) * logval)
+                + tt.switch(tt.eq(beta, 1), 0, (beta - 1) * log1pval)
+                - betaln(alpha, beta))
+
+        return bound(logp,
                      value >= 0, value <= 1,
                      alpha > 0, beta > 0)
 
