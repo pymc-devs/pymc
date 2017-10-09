@@ -142,6 +142,11 @@ def three_var_approx(three_var_model, three_var_groups):
     return approx
 
 
+@pytest.fixture
+def three_var_approx_single_group_mf(three_var_model):
+    return MeanField(model=three_var_model)
+
+
 def test_sample_simple(three_var_approx):
     trace = three_var_approx.sample(500)
     assert set(trace.varnames) == {'one', 'one_log__', 'three', 'two'}
@@ -699,6 +704,27 @@ def test_rowwise_approx(three_var_model, parametric_grouped_approxes):
             ).eval()
         except pm.opvi.BatchedGroupError:
             pytest.skip('Does not support rowwise grouping')
+
+
+def test_pickle_approx(three_var_approx):
+    import pickle
+    dump = pickle.dumps(three_var_approx)
+    new = pickle.loads(dump)
+    assert new.sample(1)
+
+
+def test_pickle_single_group(three_var_approx_single_group_mf):
+    import pickle
+    dump = pickle.dumps(three_var_approx_single_group_mf)
+    new = pickle.loads(dump)
+    assert new.sample(1)
+
+
+def test_pickle_approx_aevb(three_var_aevb_approx):
+    import pickle
+    dump = pickle.dumps(three_var_aevb_approx)
+    new = pickle.loads(dump)
+    assert new.sample(1000)
 
 
 @pytest.fixture('module')
