@@ -721,7 +721,7 @@ class Group(object):
                            .format(name, cls.__name_registry))
         return cls.__name_registry[name.lower()]
 
-    def __new__(cls, group, vfam=None, params=None, *args, **kwargs):
+    def __new__(cls, group=None, vfam=None, params=None, *args, **kwargs):
         if cls is Group:
             if vfam is not None and params is not None:
                 raise TypeError('Cannot call Group with both `vfam` and `params` provided')
