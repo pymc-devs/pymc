@@ -38,6 +38,7 @@ def kdeplot(values, label=None, shade=0, ax=None, kwargs_shade=None, **kwargs):
     density, l, u = fast_kde(values)
     x = np.linspace(l, u, len(density))
     ax.plot(x, density, label=label, **kwargs)
+    ax.set_ylim(0)
     if shade:
         ax.fill_between(x, density, alpha=shade, **kwargs_shade)
     return ax
