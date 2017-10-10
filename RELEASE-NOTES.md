@@ -1,12 +1,12 @@
 # Release Notes
 
-## PyMC3 3.2 (October 2, 2017)
+## PyMC3 3.2 (October 10, 2017)
 
 ### New features
 
 This version includes two major contributions from our Google Summer of Code 2017 students:
 
-* Maxim Kucherov extended and refactored the variational inference module. This primarily adds two important classes, representing operator variational inference (`OPVI`) objects and `Approximation` objects. These make it easier to extend existing `variational` classes, and to derive inference from `variational` optimizations, respectively. The `variational` module now also includes normalizing flows (`NFVI`).
+* Maxim Kochurov extended and refactored the variational inference module. This primarily adds two important classes, representing operator variational inference (`OPVI`) objects and `Approximation` objects. These make it easier to extend existing `variational` classes, and to derive inference from `variational` optimizations, respectively. The `variational` module now also includes normalizing flows (`NFVI`).
 * Bill Engels added an extensive new Gaussian processes (`gp`) module. Standard GPs can be specified using either `Latent` or `Marginal` classes, depending on the nature of the underlying function. A Student-T process `TP` has been added. In order to accomodate larger datasets, approximate marginal Gaussian processes (`MarginalSparse`) have been added. 
 
 Documentation has been improved as the result of the project's monthly "docathons".
@@ -44,6 +44,8 @@ All example notebooks updated to reflect changes in API since 3.1.
 Parts of the test suite have been refactored.
 
 ### Fixes
+
+Fixed sampler stats error in NUTS for non-RAM backends
 
 Matplotlib is  no longer a hard dependency, making it easier to use in settings where installing Matplotlib is problematic. PyMC will only complain if plotting is attempted.
 
