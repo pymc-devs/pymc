@@ -134,7 +134,8 @@ def assign_step_methods(model, step=None, methods=STEP_METHODS,
                     has_gradient = False
             # select the best method
             selected = max(methods, key=lambda method,
-                           var=var: method._competence(var, has_gradient))
+                           var=var, has_gradient=has_gradient:
+                           method._competence(var, has_gradient))
             pm._log.info('Assigned {0} to {1}'.format(selected.__name__, var))
             selected_steps[selected].append(var)
 
