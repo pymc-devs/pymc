@@ -94,7 +94,7 @@ def assign_step_methods(model, step=None, methods=STEP_METHODS):
 
 
 
-def instantiate_steppers(model, steps, selected_steps:dict, step_kwargs=None):
+def instantiate_steppers(model, steps, selected_steps, step_kwargs=None):
     """Instantiates steppers assigned to the model variables.
 
     This function is intended to be called automatically from `sample()`, but
