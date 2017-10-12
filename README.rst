@@ -10,7 +10,7 @@ which focuses on advanced Markov chain Monte Carlo and variational fitting
 algorithms. Its flexibility and extensibility make it applicable to a
 large suite of problems.
 
-Check out the :ref:`getting started guide<notebooks/getting_started.ipynb>`!
+Check out the `getting started guide <notebooks/getting_started.ipynb>`__!
 
 Features
 ========
@@ -37,9 +37,9 @@ Getting started
 If you already know about Bayesian statistics:
 ----------------------------------------------
 
--  :ref:`API quickstart guide<notebooks/api_quickstart.ipynb>`
--  The :ref:`PyMC3 tutorial<notebooks/getting_started.ipynb>`
--  :ref:`PyMC3 examples<examples>` and the :ref:`API reference<api>`
+-  `API quickstart guide <notebooks/api_quickstart.ipynb>`__
+-  The `PyMC3 tutorial <notebooks/getting_started.ipynb>`__
+-  `PyMC3 examples <examples>`__ and the `API reference <api>`__
 
 Learn Bayesian statistics with a book together with PyMC3:
 ----------------------------------------------------------
@@ -115,9 +115,9 @@ enables sparse scaling matrices which are useful for large problems.
 Citing PyMC3
 ============
 
-Salvatier J, Wiecki TV, Fonnesbeck C. (2016) Probabilistic programming
+Salvatier J., Wiecki T.V., Fonnesbeck C. (2016) Probabilistic programming
 in Python using PyMC3. PeerJ Computer Science 2:e55
-https://doi.org/10.7717/peerj-cs.55
+`DOI: 10.7717/peerj-cs.55 <https://doi.org/10.7717/peerj-cs.55>`__.
 
 Contact
 =======
