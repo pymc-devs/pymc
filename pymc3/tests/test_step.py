@@ -371,6 +371,21 @@ class TestAssignStepMethods(object):
             steps = assign_step_methods(model, [])
         assert isinstance(steps, Metropolis)
 
+    def test_normal_nograd_op(self):
+        """Test normal distribution without an implemented gradient is assigned slice method"""
+        with Model() as model:
+            x = Normal('x', 0, 1)
+
+            # a custom Theano Op that does not have a grad:
+            @theano.as_op([tt.dscalar], [tt.dscalar])
+            def kill_grad(x):
+                return x
+
+            Normal("y", mu=kill_grad(x), sd=1, observed=np.random.normal(size=(100,)))
+
+            steps = assign_step_methods(model, [])
+        assert isinstance(steps, Slice)
+
 
 @pytest.mark.xfail(condition=(theano.config.floatX == "float32"), reason="Fails on float32")
 class TestNutsCheckTrace(object):
