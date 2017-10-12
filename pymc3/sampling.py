@@ -3,9 +3,7 @@ from collections import defaultdict, Sequence
 from joblib import Parallel, delayed
 from numpy.random import randint, seed
 import numpy as np
-import theano
-
-import theano.tensor as tt
+import theano.gradient as tg
 
 import pymc3 as pm
 from .backends.base import merge_traces, BaseTrace, MultiTrace
@@ -26,72 +24,6 @@ __all__ = ['sample', 'iter_sample', 'sample_ppc', 'sample_ppc_w', 'init_nuts']
 
 STEP_METHODS = (NUTS, HamiltonianMC, SGFS, Metropolis, BinaryMetropolis,
                 BinaryGibbsMetropolis, Slice, CategoricalGibbsMetropolis)
-
-
-def assign_step_methods(model, step=None, methods=STEP_METHODS):
-    """Assign model variables to appropriate step methods.
-
-    Passing a specified model will auto-assign its constituent stochastic
-    variables to step methods based on the characteristics of the variables.
-    This function is intended to be called automatically from `sample()`, but
-    may be called manually. Each step method passed should have a
-    `competence()` method that returns an ordinal competence value
-    corresponding to the variable passed to it. This value quantifies the
-    appropriateness of the step method for sampling the variable.
-
-    Parameters
-    ----------
-    model : Model object
-        A fully-specified model object
-    step : step function or vector of step functions
-        One or more step functions that have been assigned to some subset of
-        the model's parameters. Defaults to None (no assigned variables).
-    methods : vector of step method classes
-        The set of step methods from which the function may choose. Defaults
-        to the main step methods provided by PyMC3.
-
-    Returns
-    -------
-    steps : list
-        List of step methods associated with the model's variables.
-    selected_steps : defaultdict
-        Maps selected step methods to variables
-    """
-    steps = []
-    assigned_vars = set()
-    if step is not None:
-        try:
-            steps += list(step)
-        except TypeError:
-            steps.append(step)
-        for step in steps:
-            try:
-                assigned_vars = assigned_vars.union(set(step.vars))
-            except AttributeError:
-                for method in step.methods:
-                    assigned_vars = assigned_vars.union(set(method.vars))
-
-    # Use competence classmethods to select step methods for remaining
-    # variables
-    selected_steps = defaultdict(list)
-    for var in model.free_RVs:
-        if var not in assigned_vars:
-            # determine if a gradient can be computed
-            has_gradient = var.dtype not in discrete_types
-            if has_gradient:
-                try:
-                    tt.grad(model.logpt, var)
-                except (AttributeError,
-                        NotImplementedError,
-                        theano.gradient.NullTypeGradError):
-                    has_gradient = False
-            # select the best method
-            selected = max(methods, key=lambda method,
-                           var=var: method._competence(var, has_gradient))
-            pm._log.info('Assigned {0} to {1}'.format(selected.__name__, var))
-            selected_steps[selected].append(var)
-    return steps, selected_steps
-
 
 
 def instantiate_steppers(model, steps, selected_steps, step_kwargs=None):
@@ -121,7 +53,6 @@ def instantiate_steppers(model, steps, selected_steps, step_kwargs=None):
     if step_kwargs is None:
         step_kwargs = {}
 
-    # Instantiate all selected step methods
     used_keys = set()
     for step_class, vars in selected_steps.items():
         if len(vars) == 0:
@@ -139,6 +70,75 @@ def instantiate_steppers(model, steps, selected_steps, step_kwargs=None):
         steps = steps[0]
 
     return steps
+
+
+def assign_step_methods(model, step=None, methods=STEP_METHODS,
+                        step_kwargs=None):
+    """Assign model variables to appropriate step methods.
+
+    Passing a specified model will auto-assign its constituent stochastic
+    variables to step methods based on the characteristics of the variables.
+    This function is intended to be called automatically from `sample()`, but
+    may be called manually. Each step method passed should have a
+    `competence()` method that returns an ordinal competence value
+    corresponding to the variable passed to it. This value quantifies the
+    appropriateness of the step method for sampling the variable.
+
+    Parameters
+    ----------
+    model : Model object
+        A fully-specified model object
+    step : step function or vector of step functions
+        One or more step functions that have been assigned to some subset of
+        the model's parameters. Defaults to None (no assigned variables).
+    methods : vector of step method classes
+        The set of step methods from which the function may choose. Defaults
+        to the main step methods provided by PyMC3.
+    step_kwargs : dict
+        Parameters for the samplers. Keys are the lower case names of
+        the step method, values a dict of arguments.
+
+    Returns
+    -------
+    methods : list
+        List of step methods associated with the model's variables.
+    """
+    steps = []
+    assigned_vars = set()
+
+    if step is not None:
+        try:
+            steps += list(step)
+        except TypeError:
+            steps.append(step)
+        for step in steps:
+            try:
+                assigned_vars = assigned_vars.union(set(step.vars))
+            except AttributeError:
+                for method in step.methods:
+                    assigned_vars = assigned_vars.union(set(method.vars))
+
+    # Use competence classmethods to select step methods for remaining
+    # variables
+    selected_steps = defaultdict(list)
+    for var in model.free_RVs:
+        if var not in assigned_vars:
+            # determine if a gradient can be computed
+            has_gradient = var.dtype not in discrete_types
+            if has_gradient:
+                try:
+                    tg.grad(model.logpt, var)
+                except (AttributeError,
+                        NotImplementedError,
+                        tg.NullTypeGradError):
+                    has_gradient = False
+            # select the best method
+            selected = max(methods, key=lambda method,
+                           var=var: method._competence(var, has_gradient))
+            pm._log.info('Assigned {0} to {1}'.format(selected.__name__, var))
+            selected_steps[selected].append(var)
+
+    return instantiate_steppers(model, steps, selected_steps, step_kwargs)
 
 
 def sample(draws=500, step=None, init='auto', n_init=200000, start=None,
@@ -283,21 +283,25 @@ def sample(draws=500, step=None, init='auto', n_init=200000, start=None,
     if model.ndim == 0:
         raise ValueError('The model does not contain any free variables.')
 
-    steps, selected_steps = assign_step_methods(model, step)
 
-    # if NUTS was assigned to all variables, we can initialize it
-    if len(selected_steps.keys()) == 1 and NUTS in selected_steps:
-        pm._log.info('Assigning NUTS sampler to all variables...')
-        args = step_kwargs if step_kwargs is not None else {}
-        args = args.get('nuts', {})
-        start_, step = init_nuts(init=init, njobs=njobs, n_init=n_init,
-                                 model=model, random_seed=random_seed,
-                                 progressbar=progressbar, **args)
-        if start is None:
-            start = start_
-    # if there's a mix of step methods, instantiate them independently
+    if step is None and init is not None and pm.model.all_continuous(model.vars):
+        try:
+            # By default, try to use NUTS
+            pm._log.info('Auto-assigning NUTS sampler...')
+            args = step_kwargs if step_kwargs is not None else {}
+            args = args.get('nuts', {})
+            start_, step = init_nuts(init=init, njobs=njobs, n_init=n_init,
+                                     model=model, random_seed=random_seed,
+                                     progressbar=progressbar, **args)
+            if start is None:
+                start = start_
+        except (AttributeError, NotImplementedError, tg.NullTypeGradError):
+            # gradient computation failed
+            pm._log.info("Initializing NUTS failed. "\
+                         "Falling back to elementwise auto-assignment.")
+            step = assign_step_methods(model, step, step_kwargs=step_kwargs)
     else:
-        step = instantiate_steppers(model, steps, selected_steps, step_kwargs)
+        step = assign_step_methods(model, step, step_kwargs=step_kwargs)
 
 
     if njobs is None:
