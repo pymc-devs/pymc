@@ -79,7 +79,7 @@ class Slice(ArrayStep):
         return q
 
     @staticmethod
-    def competence(var):
+    def competence(var, has_grad):
         if var.dtype in continuous_types:
             if not var.shape:
                 return Competence.PREFERRED
