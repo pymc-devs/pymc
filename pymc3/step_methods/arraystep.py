@@ -5,6 +5,7 @@ from ..blocking import ArrayOrdering, DictToArrayBijection
 import numpy as np
 from numpy.random import uniform
 from enum import IntEnum, unique
+import inspect
 
 __all__ = [
     'ArrayStep', 'ArrayStepShared', 'metrop_select', 'Competence']
@@ -79,12 +80,20 @@ class BlockedStep(object):
         return self.__newargs
 
     @staticmethod
-    def competence(var):
+    def competence(var, has_grad):
         return Competence.INCOMPATIBLE
 
     @classmethod
-    def _competence(cls, vars):
-        return [cls.competence(var) for var in np.atleast_1d(vars)]
+    def _competence(cls, vars, have_grad):
+        vars = np.atleast_1d(vars)
+        have_grad = np.atleast_1d(have_grad)
+        competences = []
+        for var,has_grad in zip(vars, have_grad):
+            if "has_grad" in inspect.signature(cls.competence).parameters:
+                competences.append(cls.competence(var, has_grad))
+            else:
+                competences.append(cls.competence(var))
+        return competences
 
 
 class ArrayStep(BlockedStep):

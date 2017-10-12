@@ -167,7 +167,7 @@ class Metropolis(ArrayStepShared):
         return q_new, [stats]
 
     @staticmethod
-    def competence(var):
+    def competence(var, has_grad):
         if var.dtype in pm.discrete_types:
             return Competence.COMPATIBLE
         return Competence.INCOMPATIBLE

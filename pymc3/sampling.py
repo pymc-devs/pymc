@@ -3,6 +3,9 @@ from collections import defaultdict, Sequence
 from joblib import Parallel, delayed
 from numpy.random import randint, seed
 import numpy as np
+import theano
+
+import theano.tensor as tt
 
 import pymc3 as pm
 from .backends.base import merge_traces, BaseTrace, MultiTrace
@@ -12,6 +15,7 @@ from .step_methods import (NUTS, HamiltonianMC, SGFS, Metropolis, BinaryMetropol
                            BinaryGibbsMetropolis, CategoricalGibbsMetropolis,
                            Slice, CompoundStep)
 from .util import update_start_vals
+from .vartypes import discrete_types
 from pymc3.step_methods.hmc import quadpotential
 from tqdm import tqdm
 
@@ -24,8 +28,7 @@ STEP_METHODS = (NUTS, HamiltonianMC, SGFS, Metropolis, BinaryMetropolis,
                 BinaryGibbsMetropolis, Slice, CategoricalGibbsMetropolis)
 
 
-def assign_step_methods(model, step=None, methods=STEP_METHODS,
-                        step_kwargs=None):
+def assign_step_methods(model, step=None, methods=STEP_METHODS):
     """Assign model variables to appropriate step methods.
 
     Passing a specified model will auto-assign its constituent stochastic
@@ -46,17 +49,14 @@ def assign_step_methods(model, step=None, methods=STEP_METHODS,
     methods : vector of step method classes
         The set of step methods from which the function may choose. Defaults
         to the main step methods provided by PyMC3.
-    step_kwargs : dict
-        Parameters for the samplers. Keys are the lower case names of
-        the step method, values a dict of arguments.
 
     Returns
     -------
-    methods : list
+    steps : list
         List of step methods associated with the model's variables.
+    selected_steps : defaultdict
+        Maps selected step methods to variables
     """
-    if step_kwargs is None:
-        step_kwargs = {}
     steps = []
     assigned_vars = set()
     if step is not None:
@@ -76,9 +76,50 @@ def assign_step_methods(model, step=None, methods=STEP_METHODS,
     selected_steps = defaultdict(list)
     for var in model.free_RVs:
         if var not in assigned_vars:
-            selected = max(methods, key=lambda method, var=var: method._competence(var))
+            # determine if a gradient can be computed
+            has_gradient = var.dtype not in discrete_types
+            if has_gradient:
+                try:
+                    tt.grad(model.logpt, var)
+                except (AttributeError,
+                        NotImplementedError,
+                        theano.gradient.NullTypeGradError):
+                    has_gradient = False
+            # select the best method
+            selected = max(methods, key=lambda method,
+                           var=var: method._competence(var, has_gradient))
             pm._log.info('Assigned {0} to {1}'.format(selected.__name__, var))
             selected_steps[selected].append(var)
+    return steps, selected_steps
+
+
+
+def instantiate_steppers(model, steps, selected_steps:dict, step_kwargs=None):
+    """Instantiates steppers assigned to the model variables.
+
+    This function is intended to be called automatically from `sample()`, but
+    may be called manually.
+
+    Parameters
+    ----------
+    model : Model object
+        A fully-specified model object
+    step : step function or vector of step functions
+        One or more step functions that have been assigned to some subset of
+        the model's parameters. Defaults to None (no assigned variables).
+    selected_steps: dictionary of step methods and variables
+        The step methods and the variables that have were assigned to them.
+    step_kwargs : dict
+        Parameters for the samplers. Keys are the lower case names of
+        the step method, values a dict of arguments.
+
+    Returns
+    -------
+    methods : list
+        List of step methods associated with the model's variables.
+    """
+    if step_kwargs is None:
+        step_kwargs = {}
 
     # Instantiate all selected step methods
     used_keys = set()
@@ -242,9 +283,11 @@ def sample(draws=500, step=None, init='auto', n_init=200000, start=None,
     if model.ndim == 0:
         raise ValueError('The model does not contain any free variables.')
 
-    if step is None and init is not None and pm.model.all_continuous(model.vars):
-        # By default, use NUTS sampler
-        pm._log.info('Auto-assigning NUTS sampler...')
+    steps, selected_steps = assign_step_methods(model, step)
+
+    # if NUTS was assigned to all variables, we can initialize it
+    if len(selected_steps.keys()) == 1 and NUTS in selected_steps:
+        pm._log.info('Assigning NUTS sampler to all variables...')
         args = step_kwargs if step_kwargs is not None else {}
         args = args.get('nuts', {})
         start_, step = init_nuts(init=init, njobs=njobs, n_init=n_init,
@@ -252,8 +295,10 @@ def sample(draws=500, step=None, init='auto', n_init=200000, start=None,
                                  progressbar=progressbar, **args)
         if start is None:
             start = start_
+    # if there's a mix of step methods, instantiate them independently
     else:
-        step = assign_step_methods(model, step, step_kwargs=step_kwargs)
+        step = instantiate_steppers(model, steps, selected_steps, step_kwargs)
+
 
     if njobs is None:
         import multiprocessing as mp
