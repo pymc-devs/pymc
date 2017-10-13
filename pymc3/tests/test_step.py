@@ -377,7 +377,10 @@ class TestAssignStepMethods(object):
             x = Normal('x', 0, 1)
 
             # a custom Theano Op that does not have a grad:
-            @theano.as_op([tt.dscalar], [tt.dscalar])
+            is_64 = theano.config.floatX == "float64"
+            itypes = [tt.dscalar] if is_64 else [tt.fscalar]
+            otypes = [tt.dscalar] if is_64 else [tt.fscalar]
+            @theano.as_op(itypes, otypes)
             def kill_grad(x):
                 return x
 
