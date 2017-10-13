@@ -381,7 +381,8 @@ class TestAssignStepMethods(object):
             def kill_grad(x):
                 return x
 
-            Normal("y", mu=kill_grad(x), sd=1, observed=np.random.normal(size=(100,)))
+            data = np.random.normal(size=(100,))
+            Normal("y", mu=kill_grad(x), sd=1, observed=data.astype(theano.config.floatX))
 
             steps = assign_step_methods(model, [])
         assert isinstance(steps, Slice)
