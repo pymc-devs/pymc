@@ -10,7 +10,8 @@ which focuses on advanced Markov chain Monte Carlo and variational fitting
 algorithms. Its flexibility and extensibility make it applicable to a
 large suite of problems.
 
-Check out the `getting started guide <notebooks/getting_started.ipynb>`__!
+Check out the `getting started guide <docs/source/notebooks/getting_started.ipynb>`__!
+
 
 Features
 ========
