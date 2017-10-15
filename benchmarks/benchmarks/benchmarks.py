@@ -1,6 +1,7 @@
 import numpy as np
 import pandas as pd
 import pymc3 as pm
+import theano
 
 
 class OverheadSuite(object):
@@ -11,7 +12,7 @@ class OverheadSuite(object):
     params = [pm.NUTS, pm.HamiltonianMC, pm.Metropolis, pm.Slice]
 
     def setup(self, step):
-        self.n_steps = 100000
+        self.n_steps = 10000
         with pm.Model() as self.model:
             pm.Normal('x', mu=0, sd=1)
 
@@ -22,8 +23,8 @@ class OverheadSuite(object):
 
 class ExampleSuite(object):
     """Implements examples to keep up with benchmarking them."""
-
     timeout = 360.0  # give it a few minutes
+
     def time_drug_evaluation(self):
         drug = np.array([101, 100, 102, 104, 102, 97, 105, 105, 98, 101,
                          100, 123, 105, 103, 100, 95, 102, 106, 109, 102, 82,
@@ -45,7 +46,7 @@ class ExampleSuite(object):
 
         sigma_low = 1
         sigma_high = 10
-        with pm.Model() as model:
+        with pm.Model():
             group1_mean = pm.Normal('group1_mean', y_mean, sd=y_std)
             group2_mean = pm.Normal('group2_mean', y_mean, sd=y_std)
             group1_std = pm.Uniform('group1_std', lower=sigma_low, upper=sigma_high)
@@ -55,12 +56,40 @@ class ExampleSuite(object):
 
             nu = pm.Exponential('ν_minus_one', 1/29.) + 1
 
-            group1 = pm.StudentT('drug', nu=nu, mu=group1_mean, lam=lambda_1,
-                                 observed=drug)
-            group2 = pm.StudentT('placebo', nu=nu, mu=group2_mean, lam=lambda_2,
-                                 observed=placebo)
+            pm.StudentT('drug', nu=nu, mu=group1_mean, lam=lambda_1, observed=drug)
+            pm.StudentT('placebo', nu=nu, mu=group2_mean, lam=lambda_2, observed=placebo)
             diff_of_means = pm.Deterministic('difference of means', group1_mean - group2_mean)
-            diff_of_stds = pm.Deterministic('difference of stds', group1_std - group2_std)
-            effect_size = pm.Deterministic(
+            pm.Deterministic('difference of stds', group1_std - group2_std)
+            pm.Deterministic(
                 'effect size', diff_of_means / np.sqrt((group1_std**2 + group2_std**2) / 2))
-            trace = pm.sample(2000, init=None, njobs=2)
+            pm.sample(2000, njobs=4)
+
+    def time_glm_hierarchical(self):
+        data = pd.read_csv(pm.get_data('radon.csv'))
+        data['log_radon'] = data['log_radon'].astype(theano.config.floatX)
+        county_idx = data.county_code.values
+
+        n_counties = len(data.county.unique())
+        with pm.Model():
+            # Hyperpriors for group nodes
+            mu_a = pm.Normal('mu_a', mu=0., sd=100**2)
+            sigma_a = pm.HalfCauchy('sigma_a', 5)
+            mu_b = pm.Normal('mu_b', mu=0., sd=100**2)
+            sigma_b = pm.HalfCauchy('sigma_b', 5)
+
+            # Intercept for each county, distributed around group mean mu_a
+            # Above we just set mu and sd to a fixed value while here we
+            # plug in a common group distribution for all a and b (which are
+            # vectors of length n_counties).
+            a = pm.Normal('a', mu=mu_a, sd=sigma_a, shape=n_counties)
+            # Intercept for each county, distributed around group mean mu_a
+            b = pm.Normal('b', mu=mu_b, sd=sigma_b, shape=n_counties)
+
+            # Model error
+            eps = pm.HalfCauchy('eps', 5)
+
+            radon_est = a[county_idx] + b[county_idx] * data.floor.values
+
+            # Data likelihood
+            pm.Normal('radon_like', mu=radon_est, sd=eps, observed=data.log_radon)
+            pm.sample(draws=2000, njobs=4)

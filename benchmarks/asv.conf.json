@@ -28,7 +28,7 @@
     // If missing or the empty string, the tool will be automatically
     // determined by looking for tools on the PATH environment
     // variable.
-    "environment_type": "virtualenv",
+    "environment_type": "conda",
 
     // the base URL to show a commit for the project.
     "show_commit_url": "https://github.com/pymc-devs/pymc3/commit/",
@@ -42,7 +42,6 @@
     // list indicates to just test against the default (latest)
     // version.
     "matrix": {
-    	"six": [],
     },
 
     // The directory (relative to the current directory) that benchmarks are
@@ -52,7 +51,6 @@
     // The directory (relative to the current directory) to cache the Python
     // environments in.  If not provided, defaults to "env"
     "env_dir": "env",
-
 
     // The directory (relative to the current directory) that raw benchmark
     // results are stored in.  If not provided, defaults to "results".
