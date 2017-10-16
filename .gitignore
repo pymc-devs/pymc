@@ -24,3 +24,8 @@ mcmc.sqlite
 
 # Docker development
 # notebooks/
+
+# air speed velocity (asv)
+benchmarks/env/
+benchmarks/html/
+benchmarks/results/
