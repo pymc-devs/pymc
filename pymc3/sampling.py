@@ -7,12 +7,13 @@ import numpy as np
 import pymc3 as pm
 from .backends.base import merge_traces, BaseTrace, MultiTrace
 from .backends.ndarray import NDArray
+from pymc3.backends.ensemble_array import EnsembleNDArray, ensure_multitrace
 from .model import modelcontext, Point
 from .step_methods import (NUTS, HamiltonianMC, SGFS, Metropolis, BinaryMetropolis,
                            BinaryGibbsMetropolis, CategoricalGibbsMetropolis,
                            Slice, CompoundStep)
 from .util import update_start_vals
-from pymc3.step_methods.hmc import quadpotential
+from .step_methods.hmc import quadpotential
 from tqdm import tqdm
 
 import sys
@@ -231,6 +232,10 @@ def sample(draws=500, step=None, init='auto', n_init=200000, start=None,
 
     if start is not None:
         _check_start_shape(model, start)
+    elif hasattr(step, 'nparticles'):
+        _start = build_start_points(step.nparticles, init, model)
+        if start is None: start = {}
+        update_start_vals(start, _start, model)
 
     draws += tune
 
@@ -254,6 +259,12 @@ def sample(draws=500, step=None, init='auto', n_init=200000, start=None,
             start = start_
     else:
         step = assign_step_methods(model, step, step_kwargs=step_kwargs)
+
+    if hasattr(step, 'nparticles'):
+        if trace is None:
+            trace = EnsembleNDArray('mcmc', model, step.vars, step.nparticles)
+        elif not hasattr(trace, 'nparticles'):
+            raise TypeError("trace must be able to accept ensemble/particle step methods")
 
     if njobs is None:
         import multiprocessing as mp
@@ -345,7 +356,7 @@ def _sample(draws, step=None, start=None, trace=None, chain=0, tune=None,
         if progressbar:
             sampling.close()
     result = [] if strace is None else [strace]
-    return MultiTrace(result)
+    return ensure_multitrace(result)
 
 
 def iter_sample(draws, step, start=None, trace=None, chain=0, tune=None,
@@ -388,7 +399,7 @@ def iter_sample(draws, step, start=None, trace=None, chain=0, tune=None,
     sampling = _iter_sample(draws, step, start, trace, chain, tune,
                             model, random_seed)
     for i, strace in enumerate(sampling):
-        yield MultiTrace([strace[:i + 1]])
+        yield ensure_multitrace([strace[:i + 1]])
 
 
 def _iter_sample(draws, step, start=None, trace=None, chain=0, tune=None,
@@ -879,3 +890,17 @@ def init_nuts(init='auto', njobs=1, n_init=500000, model=None,
     step = pm.NUTS(potential=potential, **kwargs)
 
     return start, step
+
+
+def get_random_starters(nparticles, model):
+    return {v.name: np.asarray([v.distribution.random() for i in range(nparticles)]) for v in model.vars}
+
+
+def build_start_points(nparticles, method='random', model=None, **kwargs):
+    if method == 'random':
+        return get_random_starters(nparticles, model)
+    else:
+        start, _ = pm.init_nuts(method, nparticles, model=model, **kwargs)
+        if nparticles == 1:
+            return {k: np.asarray([v]) for k,v in start.items()}
+        return {varname: np.asarray([s[varname] for s in start]) for varname in start[0].keys()}

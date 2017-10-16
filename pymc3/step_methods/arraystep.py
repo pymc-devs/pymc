@@ -28,6 +28,7 @@ class Competence(IntEnum):
 class BlockedStep(object):
 
     generates_stats = False
+    dependencies = ()
 
     def __new__(cls, *args, **kwargs):
         blocked = kwargs.get('blocked')

@@ -4,7 +4,6 @@ See the docstring for pymc3.backends for more information (including
 creating custom backends).
 """
 import itertools as itl
-
 import numpy as np
 import warnings
 import theano.tensor as tt
