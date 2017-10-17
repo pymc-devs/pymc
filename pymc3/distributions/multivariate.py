@@ -1097,42 +1097,97 @@ class MatrixNormal(Continuous):
     R"""
     Matrix-valued normal log-likelihood.
 
+    .. math::
+       f(x \mid \pi, K_R, K_L) =
+           \frac{1}{(2\pi |K_R| |K_L|)^{1/2}}
+           \exp\left\{
+                -\frac{1}{2} \mathrm{Tr}[ K_R^{-1} (x-\mu)^{\prime} K_L^{-1} (x-\mu)]
+            \right\}
+
     ===============  =====================================
     Support          :math:`x \in \mathbb{R}^{q \times p}`
     Mean             :math:`\mu`
-    Right Variance   :math:`T_R^{-1}`
-    Left Variance    :math:`T_L^{-1}`
+    Right Variance   :math:`K_R`
+    Left Variance    :math:`K_L`
     ===============  =====================================
 
     Parameters
     ----------
     mu : array
-        Vector of means.
-    rcov : array
-        Right (or row) pxp covariance matrix. Defines variance within rows.
+        Array of means. Must be broadcastable with the random variable X such
+        that the shape of mu + X is (q,p).
+    rcov : pxp array
+        Right (or row) covariance matrix. Defines variance within rows.
+        If lcov is the identity matrix, this functions as `cov` in MvNormal.
         Exactly one of rcov or rchol is needed.
-    rchol : array
-        Cholesky decomposition of pxp covariance matrix. Defines variance
+    rchol : pxp array
+        Cholesky decomposition of right covariance matrix. Defines variance
         within rows. Exactly one of rcov or rchol is needed.
-    lcov : array
-        Left (or column) qxq covariance matrix. Defines variance within
+    lcov : qxq array
+        Left (or column) covariance matrix. Defines variance within
         columns. Exactly one of lcov or lchol is needed.
-    lchol : array
-        Cholesky decomposition of qxq covariance matrix. Defines variance
+    lchol : qxq array
+        Cholesky decomposition of left covariance matrix. Defines variance
         within columns. Exactly one of lcov or lchol is needed.
 
     Examples
     --------
-    ?
+    Define a matrixvariate normal variable for given left and right covariance
+    matrices::
+
+        rcov = np.array([[1., 0.5], [0.5, 2]])
+        lcov = np.array([[1, 0, 0], [0, 4, 0], [0, 0, 16]])
+        q = lcov.shape[0]
+        p = rcov.shape[0]
+        mu = np.zeros((q, p))
+        vals = pm.MatrixNormal('vals', mu=mu, rcov=rcov,
+                               lcov=lcov, shape=(q, p))
+
+    Above, the ith row in vals has a variance that is scaled by 4^i.
+    Alternatively, left or right cholesky matrices could be substituted for
+    either covariance matrix. The MatrixNormal is quicker way compute
+    MvNormal(mu, np.kron(lcov, rcov)) that takes advantage of kronecker product
+    properties for inversion. For example, if draws from MvNormal had the same
+    covariance structure, but were scaled by different powers of an unknown
+    constant, both the covariance and scaling could be learned as follows
+    (see the docstring of `LKJCholeskyCov` for more information about this)::
+
+        # Setup data
+        true_rcov = np.array([[1.0, 0.5, 0.1],
+                              [0.5, 1.0, 0.2],
+                              [0.1, 0.2, 1.0]])
+        p = true_rcov.shape[0]
+        q = 3
+        true_scale = 3
+        true_lcov = np.diag([true_scale**(2*n) for n in range(q)])
+        mu = np.zeros((q, p))
+        true_kron = np.kron(true_lcov, true_rcov)
+        data = np.random.multivariate_normal(mu.flatten(), true_kron)
+        data = data.reshape(q, p)
+
+        # Setup right cholesky matrix
+        sd_dist = pm.HalfCauchy.dist(beta=2.5, shape=3)
+        rchol_packed = pm.LKJCholeskyCov('rcholpacked', n=3, eta=2,
+                                         sd_dist=sd_dist)
+        rchol = pm.expand_packed_triangular(3, rchol_packed)
+
+        # Setup left covariance matrix
+        scale = pm.Lognormal('scale', mu=np.log(true_scale), sd=0.5)
+        lcov = tt.nlinalg.diag([scale**(2*n) for n in range(q)])
+
+        vals = pm.MatrixNormal('vals', mu=mu, rchol=rchol, lcov=lcov,
+                               observed=data, shape=(q, p))
     """
 
     def __init__(self, mu=0, rcov=None, rchol=None, rtau=None,
-                 lcov=None, lchol=None, ltau=None, *args, **kwargs):
+                 lcov=None, lchol=None, ltau=None, *args, shape=None,
+                 **kwargs):
 
-        self.setup_matrices(rcov, rchol, rtau, lcov, lchol, ltau)
+        self._setup_matrices(rcov, rchol, rtau, lcov, lchol, ltau)
 
-        shape = kwargs.pop('shape', None)
-        assert len(shape) == 2, "only 2d tuple inputs work right now: qxp"
+        if shape is None:
+            raise TypeError('shape is a required argument')
+        assert len(shape) == 2, "shape must have length 2: qxp"
         self.shape = shape
 
         super(MatrixNormal, self).__init__(shape=shape, *args, **kwargs)
@@ -1141,17 +1196,11 @@ class MatrixNormal(Continuous):
 
         self.mean = self.median = self.mode = self.mu
 
-        # self.solve_lower = tt.slinalg.Solve(A_structure="lower_triangular")
-        # self.solve_upper = tt.slinalg.Solve(A_structure="upper_triangular")
         self.solve_lower = tt.slinalg.solve_lower_triangular
         self.solve_upper = tt.slinalg.solve_upper_triangular
 
-    def setup_matrices(self, rcov, rchol, rtau, lcov, lchol, ltau):
-        # Step methods and advi do not catch LinAlgErrors at the
-        # moment. We work around that by using a cholesky op
-        # that returns a nan as first entry instead of raising
-        # an error.
-        cholesky = Cholesky(nofail=True, lower=True)
+    def _setup_matrices(self, rcov, rchol, rtau, lcov, lchol, ltau):
+        cholesky = Cholesky(nofail=False, lower=True)
 
         # Right (or row) matrices
         if len([i for i in [rtau, rcov, rchol] if i is not None]) != 1:
@@ -1159,7 +1208,7 @@ class MatrixNormal(Continuous):
                              'Specify exactly one of rtau, rcov, '
                              'or rchol.')
         if rcov is not None:
-            self.p = rcov.shape[0]  # How many points along vector
+            self.p = rcov.shape[0]
             self._rcov_type = 'cov'
             rcov = tt.as_tensor_variable(rcov)
             if rcov.ndim != 2:
@@ -1227,29 +1276,18 @@ class MatrixNormal(Continuous):
                                 )
         standard_normal = np.random.standard_normal(size)
 
-        return mu + lchol @ standard_normal @ rchol.T
+        return mu + np.matmul(lchol, np.matmul(standard_normal, rchol.T))
 
     def _trquaddist(self, value):
         """Compute Tr[rcov^-1 @ (x - mu).T @ lcov^-1 @ (x - mu)] and
         the logdet of rcov and lcov."""
-        mu = self.mu
 
-        delta = value - mu
-
+        delta = value - self.mu
         lchol_cov = self.lchol_cov
         rchol_cov = self.rchol_cov
 
         rdiag = tt.nlinalg.diag(rchol_cov)
         ldiag = tt.nlinalg.diag(lchol_cov)
-        # Check if the covariance matrix is positive definite.
-        rok = tt.all(rdiag > 0)
-        lok = tt.all(ldiag > 0)
-        ok = rok and lok
-
-        # If not, replace the diagonal. We return -inf later, but
-        # need to prevent solve_lower from throwing an exception.
-        rchol_cov = tt.switch(rok, rchol_cov, 1)
-        lchol_cov = tt.switch(lok, lchol_cov, 1)
 
         # Find exponent piece by piece
         right_quaddist = self.solve_lower(lchol_cov, delta)
@@ -1261,13 +1299,11 @@ class MatrixNormal(Continuous):
         half_rlogdet = tt.sum(tt.log(rdiag))  # logdet(M) = 2*Tr(log(L))
         half_llogdet = tt.sum(tt.log(ldiag))  # Using Cholesky: M = L L^T
 
-        return trquaddist, half_rlogdet, half_llogdet, ok
+        return trquaddist, half_rlogdet, half_llogdet
 
     def logp(self, value):
-        trquaddist, half_rlogdet, half_llogdet, ok = self._trquaddist(value)
+        trquaddist, half_rlogdet, half_llogdet = self._trquaddist(value)
         q = self.q
         p = self.p
         norm = - 0.5 * q * p * pm.floatX(np.log(2 * np.pi))
-        return bound(
-                norm - 0.5 * trquaddist - q * half_rlogdet - p * half_llogdet,
-                ok)
+        return norm - 0.5 * trquaddist - q * half_rlogdet - p * half_llogdet
