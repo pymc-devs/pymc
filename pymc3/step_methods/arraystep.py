@@ -79,12 +79,20 @@ class BlockedStep(object):
         return self.__newargs
 
     @staticmethod
-    def competence(var):
+    def competence(var, has_grad):
         return Competence.INCOMPATIBLE
 
     @classmethod
-    def _competence(cls, vars):
-        return [cls.competence(var) for var in np.atleast_1d(vars)]
+    def _competence(cls, vars, have_grad):
+        vars = np.atleast_1d(vars)
+        have_grad = np.atleast_1d(have_grad)
+        competences = []
+        for var,has_grad in zip(vars, have_grad):
+            try:
+                competences.append(cls.competence(var, has_grad))
+            except TypeError:
+                competences.append(cls.competence(var))
+        return competences
 
 
 class ArrayStep(BlockedStep):

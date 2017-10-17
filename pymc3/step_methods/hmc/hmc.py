@@ -78,8 +78,8 @@ class HamiltonianMC(BaseHMC):
         return metrop_select(energy_change, state.q, start.q)[0]
 
     @staticmethod
-    def competence(var):
+    def competence(var, has_grad):
         """Check how appropriate this class is for sampling a random variable."""
-        if var.dtype in discrete_types:
+        if var.dtype in discrete_types or not has_grad:
             return Competence.INCOMPATIBLE
         return Competence.COMPATIBLE

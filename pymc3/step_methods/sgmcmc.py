@@ -40,7 +40,7 @@ def elemwise_dlogL(vars, model, flat_view):
     Returns Jacobian of the log likelihood for each training datum wrt vars
     as a matrix of size N x D
     """
-    # select one observed random variable 
+    # select one observed random variable
     obs_var = model.observed_RVs[0]
     # tensor of shape (batch_size,)
     logL = obs_var.logp_elemwiset.sum(axis=tuple(range(1, obs_var.logp_elemwiset.ndim)))
@@ -57,12 +57,12 @@ def elemwise_dlogL(vars, model, flat_view):
 class BaseStochasticGradient(ArrayStepShared):
     R"""
     BaseStochasticGradient Object
-    
+
     For working with BaseStochasticGradient Object
-    we need to supply the probabilistic model 
+    we need to supply the probabilistic model
     (:code:`model`) with the data supplied to observed
     variables of type `GeneratorOp`
-    
+
     Parameters
     -------
     vars : list
@@ -74,7 +74,7 @@ class BaseStochasticGradient(ArrayStepShared):
     step_size : float
         Step size for the parameter update
     step_size_decay : int
-        Step size decay rate. Every `step_size_decay` iteration the step size reduce 
+        Step size decay rate. Every `step_size_decay` iteration the step size reduce
         to the half of the previous step size
     model : PyMC Model
         Optional model for sampling step. Defaults to None (taken from context)
@@ -108,9 +108,9 @@ class BaseStochasticGradient(ArrayStepShared):
                  minibatch_tensors=None,
                  **kwargs):
         warnings.warn(EXPERIMENTAL_WARNING)
-        
+
         model = modelcontext(model)
-        
+
         if vars is None:
             vars = model.vars
 
@@ -136,7 +136,7 @@ class BaseStochasticGradient(ArrayStepShared):
         self.step_size_decay = step_size_decay
         shared = make_shared_replacements(vars, model)
         self.q_size = int(sum(v.dsize for v in self.vars))
-        
+
         flat_view = model.flatten(vars)
         self.inarray = [flat_view.input]
         self.updates = OrderedDict()
@@ -146,7 +146,7 @@ class BaseStochasticGradient(ArrayStepShared):
         if minibatch_tensors != None:
             _check_minibatches(minibatch_tensors, minibatches)
             self.minibatches = minibatches
-            
+
             # Replace input shared variables with tensors
             def is_shared(t):
                 return isinstance(t, theano.compile.sharedvalue.SharedVariable)
@@ -165,7 +165,7 @@ class BaseStochasticGradient(ArrayStepShared):
         """Initializes the parameters for the stochastic gradient minibatch
         algorithm"""
         raise NotImplementedError
-    
+
     def mk_training_fn(self):
         raise NotImplementedError
 
@@ -175,7 +175,7 @@ class BaseStochasticGradient(ArrayStepShared):
 
     def astep(self, q0):
         """Perform a single update in the stochastic gradient method.
-        
+
         Returns new shared values and values sampled
         The size and ordering of q0 and q must be the same
         Parameters
@@ -196,7 +196,7 @@ class BaseStochasticGradient(ArrayStepShared):
 class SGFS(BaseStochasticGradient):
     R"""
     StochasticGradientFisherScoring
-    
+
     Parameters
     -----
     vars : list
@@ -214,7 +214,7 @@ class SGFS(BaseStochasticGradient):
         """
         Parameters
         ----------
-        vars : list 
+        vars : list
             Theano variables, default continuous vars
         B : np.array
             Symmetric positive Semi-definite Matrix
@@ -229,7 +229,7 @@ class SGFS(BaseStochasticGradient):
         self.t = theano.shared(1, name='t')
         # 2. Set gamma
         self.gamma = (self.batch_size + self.total_size) / (self.total_size)
-        
+
         self.training_fn = self.mk_training_fn()
 
     def mk_training_fn(self):
@@ -259,7 +259,7 @@ class SGFS(BaseStochasticGradient):
         I_t = (1. - 1. / t) * avg_I + (1. / t) * V
 
         if B is None:
-            # if B is not specified 
+            # if B is not specified
             # B \propto I_t as given in
             # http://www.ics.uci.edu/~welling/publications/papers/SGFS_v10_final.pdf
             # after iterating over the data few times to get a good approximation of I_N
@@ -294,7 +294,7 @@ class SGFS(BaseStochasticGradient):
         return f
 
     @staticmethod
-    def competence(var):
-        if var.dtype in continuous_types:
+    def competence(var, has_grad):
+        if var.dtype in continuous_types and has_grad:
             return Competence.COMPATIBLE
         return Competence.INCOMPATIBLE

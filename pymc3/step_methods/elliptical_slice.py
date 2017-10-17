@@ -110,7 +110,7 @@ class EllipticalSlice(ArrayStep):
         return q_new
 
     @staticmethod
-    def competence(var):
+    def competence(var, has_grad):
         # Because it requires a specific type of prior, this step method
         # should only be assigned explicitly.
         return Competence.INCOMPATIBLE
