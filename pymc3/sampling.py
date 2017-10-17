@@ -1,4 +1,5 @@
 from collections import defaultdict
+import pickle
 
 from joblib import Parallel, delayed
 import numpy as np
@@ -366,19 +367,23 @@ def sample(draws=500, step=None, init='auto', n_init=200000, start=None,
         'random_seed': random_seed,
         'live_plot': live_plot,
         'live_plot_kwargs': live_plot_kwargs,
+        'njobs': njobs,
     }
 
     sample_args.update(kwargs)
 
-    if njobs > 1 and chains > 1:
-        sample_func = _mp_sample
-        sample_args['njobs'] = njobs
-    else:
-        sample_func = _sample_many
+    parallel = njobs > 1 and chains > 1
+    if parallel:
+        try:
+            trace = _mp_sample(**sample_args)
+        except pickle.PickleError:
+            pm._log.warn("Could not pickle model, sampling sequentially.")
+            parallel = False
+    if not parallel:
+        trace = _sample_many(**sample_args)
 
     discard = tune if discard_tuned_samples else 0
-
-    return sample_func(**sample_args)[discard:]
+    return trace[discard:]
 
 
 def _check_start_shape(model, start):
