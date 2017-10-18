@@ -1,12 +1,12 @@
-from collections import defaultdict, Sequence
+from collections import defaultdict
+import pickle
 
 from joblib import Parallel, delayed
-from numpy.random import randint, seed
 import numpy as np
 import theano.gradient as tg
 
 import pymc3 as pm
-from .backends.base import merge_traces, BaseTrace, MultiTrace
+from .backends.base import BaseTrace, MultiTrace
 from .backends.ndarray import NDArray
 from .model import modelcontext, Point
 from .step_methods import (NUTS, HamiltonianMC, SGFS, Metropolis, BinaryMetropolis,
@@ -142,11 +142,32 @@ def assign_step_methods(model, step=None, methods=STEP_METHODS,
     return instantiate_steppers(model, steps, selected_steps, step_kwargs)
 
 
+def _cpu_count():
+    """Try to guess the number of CPUs in the system.
+
+    We use the number provided by psutil if that is installed.
+    If not, we use the number provided by multiprocessing, but assume
+    that half of the cpus are only hardware threads and ignore those.
+    """
+    try:
+        import psutil
+        cpus = psutil.cpu_count(False)
+    except ImportError:
+        import multiprocessing
+        try:
+            cpus = multiprocessing.cpu_count() // 2
+        except NotImplementedError:
+            cpus = 1
+    if cpus is None:
+        cpus = 1
+    return cpus
+
+
 def sample(draws=500, step=None, init='auto', n_init=200000, start=None,
-           trace=None, chain=0, njobs=1, tune=500, nuts_kwargs=None,
-           step_kwargs=None, progressbar=True, model=None, random_seed=-1,
-           live_plot=False, discard_tuned_samples=True, live_plot_kwargs=None,
-           **kwargs):
+           trace=None, chain=0, chains=None, njobs=None, tune=500,
+           nuts_kwargs=None, step_kwargs=None, progressbar=True, model=None,
+           random_seed=None, live_plot=False, discard_tuned_samples=True,
+           live_plot_kwargs=None, **kwargs):
     """Draw samples from the posterior using the given step methods.
 
     Multiple step methods are supported via compound step methods.
@@ -191,7 +212,8 @@ def sample(draws=500, step=None, init='auto', n_init=200000, start=None,
     start : dict, or array of dict
         Starting point in parameter space (or partial point)
         Defaults to trace.point(-1)) if there is a trace provided and
-        model.test_point if not (defaults to empty dict).
+        model.test_point if not (defaults to empty dict). Initialization
+        methods for NUTS (see `init` keyword) can overwrite the default.
     trace : backend, list, or MultiTrace
         This should be a backend instance, a list of variables to track,
         or a MultiTrace object with past values. If a MultiTrace object
@@ -201,11 +223,17 @@ def sample(draws=500, step=None, init='auto', n_init=200000, start=None,
         up the corresponding backend (with "mcmc" used as the base
         name).
     chain : int
-        Chain number used to store sample in backend. If `njobs` is
+        Chain number used to store sample in backend. If `chains` is
         greater than one, chain numbers will start here.
+    chains : int
+        The number of chains to sample. Running independent chains
+        is important for some convergence statistics and can also
+        reveal multiple modes in the posterior.
     njobs : int
-        Number of parallel jobs to start. If None, set to number of cpus
-        in the system - 2.
+        The number of chains to run in parallel. If None, set to the
+        number of CPUs in the system, but at most 4. Keep in mind that
+        some chains might themselves be multithreaded via openmp or
+        BLAS. In those cases it might be faster to set this to one.
     tune : int
         Number of iterations to tune, if applicable (defaults to 500).
         These samples will be drawn in addition to samples and discarded
@@ -236,7 +264,7 @@ def sample(draws=500, step=None, init='auto', n_init=200000, start=None,
         completion ("expected time of arrival"; ETA).
     model : Model (optional if in `with` context)
     random_seed : int or list of ints
-        A list is accepted if more if `njobs` is greater than one.
+        A list is accepted if `njobs` is greater than one.
     live_plot : bool
         Flag for live plotting the trace while sampling
     live_plot_kwargs : dict
@@ -271,8 +299,26 @@ def sample(draws=500, step=None, init='auto', n_init=200000, start=None,
     """
     model = modelcontext(model)
 
+    if njobs is None:
+        njobs = min(4, _cpu_count())
+    if chains is None:
+        chains = max(2, njobs)
+    if isinstance(start, dict):
+        start = [start] * chains
+    if random_seed == -1:
+        random_seed = None
+    if chains == 1 and isinstance(random_seed, int):
+        random_seed = [random_seed]
+    if random_seed is None or isinstance(random_seed, int):
+        if random_seed is not None:
+            np.random.seed(random_seed)
+        random_seed = [np.random.randint(2 ** 30) for _ in range(chains)]
+    if not isinstance(random_seed, list):
+        raise TypeError('Invalid value for `random_seed`. Must be list or int')
+
     if start is not None:
-        _check_start_shape(model, start)
+        for start_vals in start:
+            _check_start_shape(model, start_vals)
 
     draws += tune
 
@@ -284,67 +330,67 @@ def sample(draws=500, step=None, init='auto', n_init=200000, start=None,
     if model.ndim == 0:
         raise ValueError('The model does not contain any free variables.')
 
-
     if step is None and init is not None and pm.model.all_continuous(model.vars):
         try:
             # By default, try to use NUTS
             pm._log.info('Auto-assigning NUTS sampler...')
             args = step_kwargs if step_kwargs is not None else {}
             args = args.get('nuts', {})
-            start_, step = init_nuts(init=init, njobs=njobs, n_init=n_init,
+            start_, step = init_nuts(init=init, chains=chains, n_init=n_init,
                                      model=model, random_seed=random_seed,
                                      progressbar=progressbar, **args)
             if start is None:
                 start = start_
         except (AttributeError, NotImplementedError, tg.NullTypeGradError):
             # gradient computation failed
-            pm._log.info("Initializing NUTS failed. "\
+            pm._log.info("Initializing NUTS failed. "
                          "Falling back to elementwise auto-assignment.")
             step = assign_step_methods(model, step, step_kwargs=step_kwargs)
     else:
         step = assign_step_methods(model, step, step_kwargs=step_kwargs)
 
+    if start is None:
+        start = [None] * chains
+    if isinstance(start, dict):
+        start = [start] * chains
 
-    if njobs is None:
-        import multiprocessing as mp
-        njobs = max(mp.cpu_count() - 2, 1)
-
-    sample_args = {'draws': draws,
-                   'step': step,
-                   'start': start,
-                   'trace': trace,
-                   'chain': chain,
-                   'tune': tune,
-                   'progressbar': progressbar,
-                   'model': model,
-                   'random_seed': random_seed,
-                   'live_plot': live_plot,
-                   'live_plot_kwargs': live_plot_kwargs,
-                   }
+    sample_args = {
+        'draws': draws,
+        'step': step,
+        'start': start,
+        'trace': trace,
+        'chain': chain,
+        'chains': chains,
+        'tune': tune,
+        'progressbar': progressbar,
+        'model': model,
+        'random_seed': random_seed,
+        'live_plot': live_plot,
+        'live_plot_kwargs': live_plot_kwargs,
+        'njobs': njobs,
+    }
 
     sample_args.update(kwargs)
 
-    if njobs > 1:
-        sample_func = _mp_sample
-        sample_args['njobs'] = njobs
-    else:
-        sample_func = _sample
+    parallel = njobs > 1 and chains > 1
+    if parallel:
+        try:
+            trace = _mp_sample(**sample_args)
+        except pickle.PickleError:
+            pm._log.warn("Could not pickle model, sampling sequentially.")
+            parallel = False
+    if not parallel:
+        trace = _sample_many(**sample_args)
 
     discard = tune if discard_tuned_samples else 0
-
-    return sample_func(**sample_args)[discard:]
+    return trace[discard:]
 
 
 def _check_start_shape(model, start):
-    e = ''
-    if isinstance(start, (Sequence, np.ndarray)):
-        # to deal with iterable start argument
-        for start_iter in start:
-            _check_start_shape(model, start_iter)
-        return
-    elif not isinstance(start, dict):
+    if not isinstance(start, dict):
         raise TypeError("start argument must be a dict "
                         "or an array-like of dicts")
+    e = ''
     for var in model.vars:
         if var.name in start.keys():
             var_shape = var.shape.tag.test_value
@@ -367,8 +413,27 @@ def _check_start_shape(model, start):
         raise ValueError("Bad shape for start argument:{}".format(e))
 
 
-def _sample(draws, step=None, start=None, trace=None, chain=0, tune=None,
-            progressbar=True, model=None, random_seed=-1, live_plot=False,
+def _sample_many(draws, chain, chains, start, random_seed, **kwargs):
+    traces = []
+    for i in range(chains):
+        trace = _sample(draws=draws, chain=chain + i, start=start[i],
+                        random_seed=random_seed[i], **kwargs)
+        if trace is None:
+            if len(traces) == 0:
+                raise ValueError('Sampling stopped before a sample was created.')
+            else:
+                break
+        elif len(trace) < draws:
+            if len(traces) == 0:
+                traces.append(trace)
+            break
+        else:
+            traces.append(trace)
+    return MultiTrace(traces)
+
+
+def _sample(chain, progressbar, random_seed, start, draws=None, step=None,
+            trace=None, tune=None, model=None, live_plot=False,
             live_plot_kwargs=None, **kwargs):
     skip_first = kwargs.get('skip_first', 0)
     refresh_every = kwargs.get('refresh_every', 100)
@@ -394,12 +459,11 @@ def _sample(draws, step=None, start=None, trace=None, chain=0, tune=None,
     finally:
         if progressbar:
             sampling.close()
-    result = [] if strace is None else [strace]
-    return MultiTrace(result)
+    return strace
 
 
 def iter_sample(draws, step, start=None, trace=None, chain=0, tune=None,
-                model=None, random_seed=-1):
+                model=None, random_seed=None):
     """Generator that returns a trace on each iteration using the given
     step method.  Multiple step methods supported via compound step
     method returns the amount of time taken.
@@ -442,11 +506,11 @@ def iter_sample(draws, step, start=None, trace=None, chain=0, tune=None,
 
 
 def _iter_sample(draws, step, start=None, trace=None, chain=0, tune=None,
-                 model=None, random_seed=-1):
+                 model=None, random_seed=None):
     model = modelcontext(model)
     draws = int(draws)
-    if random_seed != -1:
-        seed(random_seed)
+    if random_seed is not None:
+        np.random.seed(random_seed)
     if draws < 1:
         raise ValueError('Argument `draws` should be above 0.')
 
@@ -521,37 +585,19 @@ def _choose_backend(trace, chain, shortcuts=None, **kwds):
         raise ValueError('Argument `trace` is invalid.')
 
 
-def _make_parallel(arg, njobs):
-    if not np.shape(arg):
-        return [arg] * njobs
-    return arg
-
-
-def _parallel_random_seed(random_seed, njobs):
-    if random_seed == -1 and njobs > 1:
-        max_int = np.iinfo(np.int32).max
-        return [randint(max_int) for _ in range(njobs)]
-    else:
-        return _make_parallel(random_seed, njobs)
-
-
 def _mp_sample(**kwargs):
     njobs = kwargs.pop('njobs')
     chain = kwargs.pop('chain')
-    random_seed = kwargs.pop('random_seed')
+    rseed = kwargs.pop('random_seed')
     start = kwargs.pop('start')
+    chains = kwargs.pop('chains')
 
-    rseed = _parallel_random_seed(random_seed, njobs)
-    start_vals = _make_parallel(start, njobs)
-
-    chains = list(range(chain, chain + njobs))
-    pbars = [kwargs.pop('progressbar')] + [False] * (njobs - 1)
-    traces = Parallel(n_jobs=njobs)(delayed(_sample)(chain=chains[i],
-                                                     progressbar=pbars[i],
-                                                     random_seed=rseed[i],
-                                                     start=start_vals[i],
-                                                     **kwargs) for i in range(njobs))
-    return merge_traces(traces)
+    chain_nums = list(range(chain, chain + chains))
+    pbars = [kwargs.pop('progressbar')] + [False] * (chains - 1)
+    jobs = (delayed(_sample)(*args, **kwargs)
+            for args in zip(chain_nums, pbars, rseed, start))
+    traces = Parallel(n_jobs=njobs)(jobs)
+    return MultiTrace(traces)
 
 
 def stop_tuning(step):
@@ -607,9 +653,9 @@ def sample_ppc(trace, samples=None, model=None, vars=None, size=None,
     if vars is None:
         vars = model.observed_RVs
 
-    seed(random_seed)
+    np.random.seed(random_seed)
 
-    indices = randint(0, len(trace), samples)
+    indices = np.random.randint(0, len(trace), samples)
     if progressbar:
         indices = tqdm(indices, total=samples)
 
@@ -670,7 +716,7 @@ def sample_ppc_w(traces, samples=None, models=None, size=None, weights=None,
         Dictionary with the variables as keys. The values corresponding to the
         posterior predictive samples from the weighted models.
     """
-    seed(random_seed)
+    np.random.seed(random_seed)
 
     if models is None:
         models = [modelcontext(models)] * len(traces)
@@ -711,7 +757,7 @@ def sample_ppc_w(traces, samples=None, models=None, size=None, weights=None,
     if samples is None:
         samples = len_trace
 
-    indices = randint(0, len_trace, samples)
+    indices = np.random.randint(0, len_trace, samples)
 
     if progressbar:
         indices = tqdm(indices, total=samples)
@@ -734,8 +780,8 @@ def sample_ppc_w(traces, samples=None, models=None, size=None, weights=None,
     return {k: np.asarray(v) for k, v in ppc.items()}
 
 
-def init_nuts(init='auto', njobs=1, n_init=500000, model=None,
-              random_seed=-1, progressbar=True, **kwargs):
+def init_nuts(init='auto', chains=1, n_init=500000, model=None,
+              random_seed=None, progressbar=True, **kwargs):
     """Set up the mass matrix initialization for NUTS.
 
     NUTS convergence and sampling speed is extremely dependent on the
@@ -769,8 +815,8 @@ def init_nuts(init='auto', njobs=1, n_init=500000, model=None,
         * map : Use the MAP as starting point. This is discouraged.
         * nuts : Run NUTS and estimate posterior mean and mass matrix from
           the trace.
-    njobs : int
-        Number of parallel jobs to start.
+    chains : int
+        Number of jobs to start.
     n_init : int
         Number of iterations of initializer
         If 'ADVI', number of iterations, if 'nuts', number of draws.
@@ -807,7 +853,9 @@ def init_nuts(init='auto', njobs=1, n_init=500000, model=None,
 
     pm._log.info('Initializing NUTS using {}...'.format(init))
 
-    random_seed = int(np.atleast_1d(random_seed)[0])
+    if random_seed is not None:
+        random_seed = int(np.atleast_1d(random_seed)[0])
+        np.random.seed(random_seed)
 
     cb = [
         pm.callbacks.CheckParametersConvergence(
@@ -817,16 +865,14 @@ def init_nuts(init='auto', njobs=1, n_init=500000, model=None,
     ]
 
     if init == 'adapt_diag':
-        start = [model.test_point] * njobs
+        start = [model.test_point] * chains
         mean = np.mean([model.dict_to_array(vals) for vals in start], axis=0)
         var = np.ones_like(mean)
         potential = quadpotential.QuadPotentialDiagAdapt(
             model.ndim, mean, var, 10)
-        if njobs == 1:
-            start = start[0]
     elif init == 'jitter+adapt_diag':
         start = []
-        for _ in range(njobs):
+        for _ in range(chains):
             mean = {var: val.copy() for var, val in model.test_point.items()}
             for val in mean.values():
                 val[...] += 2 * np.random.rand(*val.shape) - 1
@@ -835,8 +881,6 @@ def init_nuts(init='auto', njobs=1, n_init=500000, model=None,
         var = np.ones_like(mean)
         potential = quadpotential.QuadPotentialDiagAdapt(
             model.ndim, mean, var, 10)
-        if njobs == 1:
-            start = start[0]
     elif init == 'advi+adapt_diag_grad':
         approx = pm.fit(
             random_seed=random_seed,
@@ -845,7 +889,7 @@ def init_nuts(init='auto', njobs=1, n_init=500000, model=None,
             progressbar=progressbar,
             obj_optimizer=pm.adagrad_window,
         )  # type: pm.MeanField
-        start = approx.sample(draws=njobs)
+        start = approx.sample(draws=chains)
         start = list(start)
         stds = approx.bij.rmap(approx.std.eval())
         cov = model.dict_to_array(stds) ** 2
@@ -854,8 +898,6 @@ def init_nuts(init='auto', njobs=1, n_init=500000, model=None,
         weight = 50
         potential = quadpotential.QuadPotentialDiagAdaptGrad(
             model.ndim, mean, cov, weight)
-        if njobs == 1:
-            start = start[0]
     elif init == 'advi+adapt_diag':
         approx = pm.fit(
             random_seed=random_seed,
@@ -864,7 +906,7 @@ def init_nuts(init='auto', njobs=1, n_init=500000, model=None,
             progressbar=progressbar,
             obj_optimizer=pm.adagrad_window,
         )  # type: pm.MeanField
-        start = approx.sample(draws=njobs)
+        start = approx.sample(draws=chains)
         start = list(start)
         stds = approx.bij.rmap(approx.std.eval())
         cov = model.dict_to_array(stds) ** 2
@@ -873,8 +915,6 @@ def init_nuts(init='auto', njobs=1, n_init=500000, model=None,
         weight = 50
         potential = quadpotential.QuadPotentialDiagAdapt(
             model.ndim, mean, cov, weight)
-        if njobs == 1:
-            start = start[0]
     elif init == 'advi':
         approx = pm.fit(
             random_seed=random_seed,
@@ -883,13 +923,11 @@ def init_nuts(init='auto', njobs=1, n_init=500000, model=None,
             progressbar=progressbar,
             obj_optimizer=pm.adagrad_window
         )  # type: pm.MeanField
-        start = approx.sample(draws=njobs)
+        start = approx.sample(draws=chains)
         start = list(start)
         stds = approx.bij.rmap(approx.std.eval())
         cov = model.dict_to_array(stds) ** 2
         potential = quadpotential.QuadPotentialDiag(cov)
-        if njobs == 1:
-            start = start[0]
     elif init == 'advi_map':
         start = pm.find_MAP(include_transformed=True)
         approx = pm.MeanField(model=model, start=start)
@@ -900,29 +938,23 @@ def init_nuts(init='auto', njobs=1, n_init=500000, model=None,
             progressbar=progressbar,
             obj_optimizer=pm.adagrad_window
         )
-        start = approx.sample(draws=njobs)
+        start = approx.sample(draws=chains)
         start = list(start)
         stds = approx.bij.rmap(approx.std.eval())
         cov = model.dict_to_array(stds) ** 2
         potential = quadpotential.QuadPotentialDiag(cov)
-        if njobs == 1:
-            start = start[0]
     elif init == 'map':
         start = pm.find_MAP(include_transformed=True)
         cov = pm.find_hessian(point=start)
-        start = [start] * njobs
+        start = [start] * chains
         potential = quadpotential.QuadPotentialFull(cov)
-        if njobs == 1:
-            start = start[0]
     elif init == 'nuts':
         init_trace = pm.sample(draws=n_init, step=pm.NUTS(),
                                tune=n_init // 2,
                                random_seed=random_seed)
         cov = np.atleast_1d(pm.trace_cov(init_trace))
-        start = list(np.random.choice(init_trace, njobs))
+        start = list(np.random.choice(init_trace, chains))
         potential = quadpotential.QuadPotentialFull(cov)
-        if njobs == 1:
-            start = start[0]
     else:
         raise NotImplementedError('Initializer {} is not supported.'.format(init))
 

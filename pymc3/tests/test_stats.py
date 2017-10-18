@@ -17,7 +17,7 @@ from scipy import stats as st
 def test_log_post_trace():
     with pm.Model() as model:
         pm.Normal('y')
-        trace = pm.sample(10, tune=10)
+        trace = pm.sample(10, tune=10, chains=1)
 
     logp = pmstats._log_post_trace(trace, model)
     assert logp.shape == (len(trace), 0)
@@ -25,7 +25,7 @@ def test_log_post_trace():
     with pm.Model() as model:
         pm.Normal('a')
         pm.Normal('y', observed=np.zeros((2, 3)))
-        trace = pm.sample(10, tune=10)
+        trace = pm.sample(10, tune=10, chains=1)
 
     logp = pmstats._log_post_trace(trace, model)
     assert logp.shape == (len(trace), 6)
@@ -40,7 +40,7 @@ def test_log_post_trace():
         data = data.copy()
         data.values[:] = np.nan
         pm.Normal('y3', observed=data)
-        trace = pm.sample(10, tune=10)
+        trace = pm.sample(10, tune=10, chains=1)
 
     logp = pmstats._log_post_trace(trace, model)
     assert logp.shape == (len(trace), 17)
@@ -118,7 +118,7 @@ class TestStats(SeededTest):
             pm.Binomial('x', 5, p, observed=x_obs)
 
             step = pm.Metropolis()
-            trace = pm.sample(100, step)
+            trace = pm.sample(100, step, chains=1)
             calculated = pm.dic(trace)
 
         mean_deviance = -2 * st.binom.logpmf(
@@ -139,7 +139,7 @@ class TestStats(SeededTest):
             pm.Binomial('x', 5, p, observed=x_obs)
 
             step = pm.Metropolis()
-            trace = pm.sample(100, step)
+            trace = pm.sample(100, step, chains=1)
             calculated = pm.bpic(trace)
 
         mean_deviance = -2 * st.binom.logpmf(
