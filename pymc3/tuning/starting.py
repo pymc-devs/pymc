@@ -11,6 +11,7 @@ import pymc3 as pm
 from ..vartypes import discrete_types, typefilter
 from ..model import modelcontext, Point
 from ..theanof import inputvars
+import theano.gradient as tg
 from ..blocking import DictToArrayBijection, ArrayOrdering
 from ..util import update_start_vals, get_default_varnames
 
@@ -75,7 +76,7 @@ def find_MAP(start=None, vars=None, method="L-BFGS-B",
     try:
         dlogp_func = bij.mapf(model.fastdlogp_nojac(vars))
         compute_gradient = True
-    except AttributeError:
+    except (AttributeError, NotImplementedError, tg.NullTypeGradError):
         compute_gradient = False
 
     if disc_vars or not compute_gradient:
