@@ -44,7 +44,8 @@ class TestMixture(SeededTest):
                     [Normal.dist(mu[0], tau=tau[0]), Normal.dist(mu[1], tau=tau[1])],
                     observed=self.norm_x)
             step = Metropolis()
-            trace = sample(5000, step, random_seed=self.random_seed, progressbar=False)
+            trace = sample(5000, step, random_seed=self.random_seed,
+                           progressbar=False, chains=1)
 
         assert_allclose(np.sort(trace['w'].mean(axis=0)),
                         np.sort(self.norm_w),
@@ -60,7 +61,8 @@ class TestMixture(SeededTest):
             tau = Gamma('tau', 1., 1., shape=self.norm_w.size)
             NormalMixture('x_obs', w, mu, tau=tau, observed=self.norm_x)
             step = Metropolis()
-            trace = sample(5000, step, random_seed=self.random_seed, progressbar=False)
+            trace = sample(5000, step, random_seed=self.random_seed,
+                           progressbar=False, chains=1)
 
         assert_allclose(np.sort(trace['w'].mean(axis=0)),
                         np.sort(self.norm_w),
@@ -75,7 +77,8 @@ class TestMixture(SeededTest):
             mu = Gamma('mu', 1., 1., shape=self.pois_w.size)
             Mixture('x_obs', w, Poisson.dist(mu), observed=self.pois_x)
             step = Metropolis()
-            trace = sample(5000, step, random_seed=self.random_seed, progressbar=False)
+            trace = sample(5000, step, random_seed=self.random_seed,
+                           progressbar=False, chains=1)
 
         assert_allclose(np.sort(trace['w'].mean(axis=0)),
                         np.sort(self.pois_w),
@@ -92,7 +95,8 @@ class TestMixture(SeededTest):
                     [Poisson.dist(mu[0]), Poisson.dist(mu[1])],
                     observed=self.pois_x)
             step = Metropolis()
-            trace = sample(5000, step, random_seed=self.random_seed, progressbar=False)
+            trace = sample(5000, step, random_seed=self.random_seed,
+                           progressbar=False, chains=1)
 
         assert_allclose(np.sort(trace['w'].mean(axis=0)),
                         np.sort(self.pois_w),
