@@ -252,6 +252,33 @@ class TestSamplePPC(object):
             _, pval = stats.kstest(ppc['b'], stats.norm(scale=scale).cdf)
             assert pval > 0.001
 
+class TestSamplePPCW(object):
+    def test_sample_ppc_w(self):
+        data = np.random.normal(0, 1, size=200)
+        with pm.Model() as model_0:
+            mu = pm.Normal('mu', mu=0, sd=1)
+            y = pm.Normal('y', mu=mu, sd=1, observed=data)
+            trace_0 = pm.sample()
+
+        with pm.Model() as model_1:
+            mu = pm.Normal('mu', mu=0, sd=1, shape=len(data))
+            y = pm.Normal('y', mu=mu, sd=1, observed=data)
+            trace_1 = pm.sample()
+
+
+        traces = [trace_0, trace_0]
+        models = [model_0, model_0]
+        ppc = pm.sample_ppc_w(traces, 1000, models)
+
+        assert ppc['y'].shape == (1000,)
+        _, pval = stats.kstest(ppc['y'], stats.norm().cdf)
+        assert pval > 0.001
+
+        traces = [trace_0, trace_1]
+        models = [model_0, model_1]
+        ppc = pm.sample_ppc_w(traces, 50, models)
+        assert ppc['y'].shape == (50, 200)
+
 
 @pytest.mark.parametrize('method', [
     'jitter+adapt_diag', 'adapt_diag', 'advi', 'ADVI+adapt_diag',
