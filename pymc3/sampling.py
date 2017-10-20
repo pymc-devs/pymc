@@ -677,7 +677,7 @@ def sample_ppc(trace, samples=None, model=None, vars=None, size=None,
     return {k: np.asarray(v) for k, v in ppc.items()}
 
 
-def sample_ppc_w(traces, samples=None, models=None, size=None, weights=None,
+def sample_ppc_w(traces, samples=None, models=None, weights=None,
                  random_seed=None, progressbar=True):
     """Generate weighted posterior predictive samples from a list of models and
     a list of traces according to a set of weights.
@@ -697,9 +697,6 @@ def sample_ppc_w(traces, samples=None, models=None, size=None, weights=None,
         By default a single model will be inferred from `with` context, in this
         case results will only be meaningful if all models share the same
         distributions for the observed RVs.
-    size : int
-        The number of random draws from the distributions specified by the
-        parameters in each sample of the trace.
     weights: array-like
         Individual weights for each trace. Default, same weight for each model.
     random_seed : int
@@ -744,14 +741,29 @@ def sample_ppc_w(traces, samples=None, models=None, size=None, weights=None,
     # ensure n sum up to min_tr
     idx = np.argmax(n)
     n[idx] = n[idx] + min_tr - np.sum(n)
-
     trace = np.concatenate([np.random.choice(traces[i], j)
                             for i, j in enumerate(n)])
 
-    variables = []
-    for i, m in enumerate(models):
-        variables.extend(m.observed_RVs * n[i])
+    obs = [x for m in models for x in m.observed_RVs]
+    variables = np.repeat(obs, n)
 
+    lenghts = list(set([np.shape(np.atleast_1d(o.distribution.default())) for o in obs]))
+
+    if len(lenghts) == 1:
+        size = [None for i in variables]
+    elif len(lenghts) > 2:
+        raise ValueError('Observed variables could not be broadcast together')
+    else:
+        size = []
+        x = np.zeros(shape=lenghts[0])
+        y = np.zeros(shape=lenghts[1])
+        b = np.broadcast(x, y)
+        for var in variables:
+            l = np.shape(np.atleast_1d(var.distribution.default()))
+            if l != b.shape:
+                size.append(b.shape)
+            else:
+                size.append(None)
     len_trace = len(trace)
 
     if samples is None:
@@ -768,7 +780,7 @@ def sample_ppc_w(traces, samples=None, models=None, size=None, weights=None,
             param = trace[idx]
             var = variables[idx]
             ppc[var.name].append(var.distribution.random(point=param,
-                                                         size=size))
+                                                         size=size[idx]))
 
     except KeyboardInterrupt:
         pass
