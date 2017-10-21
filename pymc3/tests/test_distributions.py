@@ -248,6 +248,15 @@ def normal_logpdf_chol_upper(value, mu, chol):
     return normal_logpdf_cov(value, mu, np.dot(chol.T, chol)).sum()
 
 
+def matrix_normal_logpdf_cov(value, mu, rowcov, colcov):
+    return scipy.stats.matrix_normal.logpdf(value, mu, rowcov, colcov)
+
+
+def matrix_normal_logpdf_chol(value, mu, rowchol, colchol):
+    return matrix_normal_logpdf_cov(value, mu, np.dot(rowchol, rowchol.T),
+                                    np.dot(colchol, colchol.T))
+
+
 def betafn(a):
     return floatX(scipy.special.gammaln(a).sum(-1) - scipy.special.gammaln(a.sum(-1)))
 
@@ -694,6 +703,29 @@ class TestMatchesScipy(SeededTest):
                 x = MvNormal('x', mu=np.zeros(3), shape=3)
             with pytest.raises(ValueError):
                 x = MvNormal('x', mu=np.zeros(3), cov=np.eye(3), tau=np.eye(3), shape=3)
+
+    @pytest.mark.parametrize('n', [1, 2, 3])
+    def test_matrixnormal(self, n):
+        self.pymc3_matches_scipy(MatrixNormal, RealMatrix(5, n),
+                                 {'mu': Vector(R, n), 'rowcov': PdMatrix(n),
+                                  'colcov': PdMatrix(n)},
+                                 matrix_normal_logpdf_cov)
+        self.pymc3_matches_scipy(MatrixNormal, Vector(R, n),
+                                 {'mu': Vector(R, n), 'rowcov': PdMatrix(n),
+                                  'colcov': PdMatrix(n)},
+                                 matrix_normal_logpdf_cov)
+        self.pymc3_matches_scipy(MatrixNormal, RealMatrix(5, n),
+                                 {'mu': Vector(R, n),
+                                  'rowchol': PdMatrixChol(n),
+                                  'colchol': PdMatrixChol(n)},
+                                 matrix_normal_logpdf_chol,
+                                 decimal=select_by_precision(float64=6, float32=-1))
+        self.pymc3_matches_scipy(MatrixNormal, Vector(R, n),
+                                 {'mu': Vector(R, n),
+                                  'rowchol': PdMatrixChol(n),
+                                  'colchol': PdMatrixChol(n)},
+                                 matrix_normal_logpdf_chol,
+                                 decimal=select_by_precision(float64=6, float32=0))
 
     @pytest.mark.parametrize('n', [1, 2])
     def test_mvt(self, n):
