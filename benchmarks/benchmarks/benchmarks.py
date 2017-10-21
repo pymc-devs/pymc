@@ -84,32 +84,11 @@ class ExampleSuite(object):
             pm.Normal('radon_like', mu=radon_est, sd=eps, observed=data.log_radon)
             pm.sample(draws=2000, njobs=4)
 
-    def track_glm_hierarchical_ess(self):
-        data = pd.read_csv(pm.get_data('radon.csv'))
-        data['log_radon'] = data['log_radon'].astype(theano.config.floatX)
-        county_idx = data.county_code.values
-
-        n_counties = len(data.county.unique())
-        with pm.Model():
-            mu_a = pm.Normal('mu_a', mu=0., sd=100**2)
-            sigma_a = pm.HalfCauchy('sigma_a', 5)
-
-            mu_b = pm.Normal('mu_b', mu=0., sd=100**2)
-            sigma_b = pm.HalfCauchy('sigma_b', 5)
-
-            a = pm.Normal('a', mu=mu_a, sd=sigma_a, shape=n_counties)
-            b = pm.Normal('b', mu=mu_b, sd=sigma_b, shape=n_counties)
-            eps = pm.HalfCauchy('eps', 5)
-
-            radon_est = a[county_idx] + b[county_idx] * data.floor.values
-
-            pm.Normal('radon_like', mu=radon_est, sd=eps, observed=data.log_radon)
-            pm.sample(draws=2000, njobs=4)
-
 
 class EffectiveSampleSizeSuite(object):
     """Tests effective sample size per second on models
     """
+    timeout = 360.0
     params = [pm.NUTS, pm.HamiltonianMC, pm.Metropolis]  # Slice too slow
 
     def setup(self, step):
