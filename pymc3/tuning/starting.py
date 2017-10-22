@@ -168,6 +168,7 @@ class CostFuncWrapper(object):
             self.desc = 'logp = {:,.5g}, ||grad|| = {:,.5g}'
         self.previous_x = None
         self.progress = tqdm(total=maxeval, disable=not progressbar)
+        self.progress.n = 0
 
     def __call__(self, x):
         neg_value = np.float64(self.logp_func(pm.floatX(x)))
