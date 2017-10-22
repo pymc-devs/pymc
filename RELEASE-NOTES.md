@@ -1,5 +1,10 @@
 # Release Notes
 
+## PyMC 3.3. (Unreleased)
+
+- Improve NUTS initialization `advi+adapt_diag_grad` and add `jitter+adapt_diag_grad` (#2643)
+
+
 ## PyMC3 3.2 (October 10, 2017)
 
 ### New features
