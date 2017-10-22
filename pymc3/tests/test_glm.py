@@ -1,4 +1,5 @@
 import numpy as np
+from numpy.testing import assert_equal
 
 from .helpers import SeededTest
 from pymc3 import Model, Uniform, Normal, find_MAP, Slice, sample
@@ -79,3 +80,16 @@ class TestGLM(SeededTest):
                 self.data_logistic['y'],
                 family=families.Binomial(link=families.logit),
                 name='glm1')
+
+    def test_boolean_y(self):
+        model = GLM.from_formula('y ~ x', pd.DataFrame(
+                {'x': self.data_logistic['x'],
+                 'y': self.data_logistic['y']}
+            )
+        )
+        model_bool = GLM.from_formula('y ~ x', pd.DataFrame(
+                {'x': self.data_logistic['x'],
+                 'y': [bool(i) for i in self.data_logistic['y']]}
+            )
+        )
+        assert_equal(model.y.observations, model_bool.y.observations)
