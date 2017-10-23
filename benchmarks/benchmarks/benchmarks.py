@@ -89,9 +89,13 @@ class EffectiveSampleSizeSuite(object):
     """Tests effective sample size per second on models
     """
     timeout = 360.0
-    params = [pm.NUTS, pm.HamiltonianMC, pm.Metropolis]  # Slice too slow
+    params = (
+        [pm.NUTS, pm.HamiltonianMC, pm.Metropolis],  # Slice too slow
+        ['advi', 'jitter+adapt_diag', 'advi+adapt_diag_grad'],
+    )
+    param_names = ['step', 'init']
 
-    def setup(self, step):
+    def setup(self, step, init):
         """Initialize model and get start position"""
         np.random.seed(123)
         self.chains = 4
@@ -113,12 +117,12 @@ class EffectiveSampleSizeSuite(object):
             radon_est = a[county_idx] + b[county_idx] * data.floor.values
 
             pm.Normal('radon_like', mu=radon_est, sd=eps, observed=data.log_radon)
-            self.start, _ = pm.init_nuts(chains=self.chains)
+            self.start, _ = pm.init_nuts(chains=self.chains, init=init)
 
-    def track_glm_hierarchical_ess(self, step):
+    def track_glm_hierarchical_ess(self, step, init):
         with self.model:
             t0 = time.time()
-            trace = pm.sample(draws=2000, step=step(), njobs=4, chains=self.chains,
+            trace = pm.sample(draws=20000, step=step(), njobs=4, chains=self.chains,
                               start=self.start, random_seed=100)
             tot = time.time() - t0
         ess = pm.effective_n(trace, ('mu_a',))['mu_a']
