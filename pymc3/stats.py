@@ -104,7 +104,7 @@ def autocov(x, lag=1):
 
 def dic(trace, model=None):
     """Calculate the deviance information criterion of the samples in trace from model
-    Read more theory here - in a paper by some of the leading authorities on Model Selection -
+    Read more theory here - in a paper by some of the leading authorities on model selection -
     dx.doi.org/10.1111/1467-9868.00353
 
     Parameters
@@ -115,7 +115,8 @@ def dic(trace, model=None):
 
     Returns
     -------
-    `float` representing the deviance information criterion of the model and trace
+    z : float
+        The deviance information criterion of the model and trace
     """
     model = modelcontext(model)
     logp = model.logp
@@ -181,7 +182,7 @@ def waic(trace, model=None, pointwise=False, progressbar=False):
     """Calculate the widely available information criterion, its standard error
     and the effective number of parameters of the samples in trace from model.
     Read more theory here - in a paper by some of the leading authorities on
-    Model Selection - dx.doi.org/10.1111/1467-9868.00353
+    model selection - dx.doi.org/10.1111/1467-9868.00353
 
     Parameters
     ----------
@@ -324,16 +325,20 @@ def loo(trace, model=None, pointwise=False, progressbar=False):
 
 
 def bpic(trace, model=None):
-    """
-    Calculates Bayesian predictive information criterion n of the samples in trace from model
-    Read more theory here - in a paper by some of the leading authorities on Model Selection -
-    dx.doi.org/10.1111/1467-9868.00353
+    R"""Calculates Bayesian predictive information criterion n of the samples in trace from model
+    Read more theory here - in a paper by some of the leading authorities on model selection -
+    dx.doi.org/10.1080/01966324.2011.10737798
 
     Parameters
     ----------
     trace : result of MCMC run
     model : PyMC Model
         Optional model. Default None, taken from context.
+    
+    Returns
+    -------
+    z : float
+        The Bayesian predictive information criterion of the model and trace
     """
     model = modelcontext(model)
     logp = model.logp
@@ -349,10 +354,10 @@ def bpic(trace, model=None):
 
 def compare(traces, models, ic='WAIC', method='stacking', b_samples=1000,
             alpha=1, seed=None, round_to=2):
-    """Compare models based on the widely available information criterion (WAIC)
+    R"""Compare models based on the widely available information criterion (WAIC)
     or leave-one-out (LOO) cross-validation.
     Read more theory here - in a paper by some of the leading authorities on
-    Model Selection - dx.doi.org/10.1111/1467-9868.00353
+    model selection - dx.doi.org/10.1111/1467-9868.00353
 
     Parameters
     ----------
@@ -840,8 +845,7 @@ def _hpd_df(x, alpha):
 
 def summary(trace, varnames=None, transform=lambda x: x, alpha=0.05, start=0,
             batches=None, roundto=3, include_transformed=False, to_file=None):
-    R"""
-    Generate a pretty-printed summary of the node.
+    R"""Generate a pretty-printed summary of the node.
 
     Parameters
     ----------
@@ -1063,8 +1067,7 @@ def _groupby_leading_idxs(shape):
 
 
 def bfmi(trace):
-    """
-    Calculate the estimated Bayesian fraction of missing information (BFMI).
+    R"""Calculate the estimated Bayesian fraction of missing information (BFMI).
 
     BFMI quantifies how well momentum resampling matches the marginal energy
     distribution.  For more information on BFMI, see
@@ -1080,7 +1083,8 @@ def bfmi(trace):
 
     Returns
     -------
-    `float` representing the estimated BFMI.
+    z : float
+        The Bayesian fraction of missing information of the model and trace.
     """
     energy = trace['energy']
 
