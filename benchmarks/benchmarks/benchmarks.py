@@ -128,4 +128,47 @@ class EffectiveSampleSizeSuite(object):
         ess = pm.effective_n(trace, ('mu_a',))['mu_a']
         return ess / tot
 
+<<<<<<< HEAD
+EffectiveSampleSizeSuite.track_glm_hierarchical_ess.unit = 'Effective samples per second            pm.sample(draws=2000, njobs=4)
+=======
 EffectiveSampleSizeSuite.track_glm_hierarchical_ess.unit = 'Effective samples per second'
+>>>>>>> 6a1ebd85... Merging
+
+class EffectiveSampleSizeSuiteMarginal(object):
+    """Tests effective sample size per second on models
+     """
+     timeout = 360.0
+     params = (
+         [pm.NUTS, pm.Metropolis],  # Slice too slow, don't want to tune HMC
+         ['advi', 'jitter+adapt_diag', 'advi+adapt_diag_grad'],
+     )
+     param_names = ['step', 'init']
+    def setup(self, step, init):
+        np.random.seed(1234)
+        N = 1000
+        self.chains = 4
+        W = np.array([0.35, 0.4, 0.25])
+        MU = np.array([0., 2., 5.])
+        SIGMA = np.array([0.5, 0.5, 1.])
+        component = np.random.choice(MU.size, size=N, p=W)
+        x = np.random.normal(MU[component], SIGMA[component], size=N)
+
+        with pm.Model():
+            w = pm.Dirichlet('w', np.ones_like(W))
+
+            mu = pm.Normal('mu', 0., 10., shape=W.size)
+            tau = pm.Gamma('tau', 1., 1., shape=W.size)
+
+            x_obs = pm.NormalMixture('x_obs', w, mu, tau=tau, observed=x)
+            self.start, _ = pm.init_nuts(chains=self.chains, init=init)
+
+    def track_marginal_mixture_model(self, step, init):
+        with self.model:
+            t0 = time.time()
+            trace = pm.sample(draws=20000, step=step(), njobs=4,
+                chains=self.chains, start=self.start, random_seed=100)
+            tot = time.time() - t0
+        ess = pm.effective_n(trace, ('w',))['mu']
+        return ess / tot
+
+EffectiveSampleSizeSuiteMarginal.track_marginal_mixture_model.unit = 'Effective samples per second'
