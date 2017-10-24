@@ -38,9 +38,11 @@ Getting started
 If you already know about Bayesian statistics:
 ----------------------------------------------
 
+
 -  `API quickstart guide <http://docs.pymc.io/notebooks/api_quickstart>`__
 -  The `PyMC3 tutorial <http://docs.pymc.io/notebooks/getting_started>`__
 -  `PyMC3 examples <http://docs.pymc.io/examples>`__ and the `API reference <http://docs.pymc.io/api>`__
+
 
 
 Learn Bayesian statistics with a book together with PyMC3:
