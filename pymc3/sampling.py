@@ -1,4 +1,4 @@
-from collections import defaultdict
+from collections import defaultdict, Iterable
 import pickle
 
 from joblib import Parallel, delayed
@@ -314,7 +314,7 @@ def sample(draws=500, step=None, init='auto', n_init=200000, start=None,
         if random_seed is not None:
             np.random.seed(random_seed)
         random_seed = [np.random.randint(2 ** 30) for _ in range(chains)]
-    if not isinstance(random_seed, (list, tuple)):
+    if not isinstance(random_seed, Iterable):
         raise TypeError('Invalid value for `random_seed`. Must be tuple, list or int')
 
     if start is not None:
