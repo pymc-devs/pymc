@@ -19,6 +19,7 @@ from glob import glob
 import os
 import pandas as pd
 
+from ..model import modelcontext
 from ..backends import base, ndarray
 from . import tracetab as ttab
 from ..theanof import floatX
@@ -184,7 +185,7 @@ def load(name, model=None):
     return base.MultiTrace(straces)
 
 
-def dump(name, trace, chains=None):
+def dump(name, trace, model=None, chains=None):
     """Store values from NDArray trace as CSV files.
 
     Parameters
@@ -200,6 +201,12 @@ def dump(name, trace, chains=None):
         os.mkdir(name)
     if chains is None:
         chains = trace.chains
+    model = modelcontext(model)
+    model_vars = sorted([x.name for x in model.unobserved_RVs])
+    trace_vars = sorted(trace.varnames)
+
+    if model_vars != trace_vars:
+        raise ValueError('Variables mismatch: model_vars=' + str(model_vars) + ", trace_vars=" + str(trace_vars))
 
     for chain in chains:
         filename = os.path.join(name, 'chain-{}.csv'.format(chain))
