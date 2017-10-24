@@ -314,8 +314,8 @@ def sample(draws=500, step=None, init='auto', n_init=200000, start=None,
         if random_seed is not None:
             np.random.seed(random_seed)
         random_seed = [np.random.randint(2 ** 30) for _ in range(chains)]
-    if not isinstance(random_seed, list):
-        raise TypeError('Invalid value for `random_seed`. Must be list or int')
+    if not isinstance(random_seed, (list, tuple)):
+        raise TypeError('Invalid value for `random_seed`. Must be tuple, list or int')
 
     if start is not None:
         for start_vals in start:
