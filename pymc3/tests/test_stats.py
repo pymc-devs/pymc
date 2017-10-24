@@ -6,7 +6,7 @@ import pymc3 as pm
 from .helpers import SeededTest
 from ..tests import backend_fixtures as bf
 from ..backends import ndarray
-from ..stats import df_summary, autocorr, hpd, mc_error, quantiles, make_indices, bfmi
+from ..stats import summary, autocorr, hpd, mc_error, quantiles, make_indices, bfmi
 from ..theanof import floatX_array
 import pymc3.stats as pmstats
 from numpy.random import random, normal
@@ -420,13 +420,13 @@ class TestDfSummary(bf.ModelBackendSampledTestCase):
     shape = (2, 3)
 
     def test_column_names(self):
-        ds = df_summary(self.mtrace, batches=3)
+        ds = summary(self.mtrace, batches=3)
         npt.assert_equal(np.array(['mean', 'sd', 'mc_error',
                                    'hpd_2.5', 'hpd_97.5']),
                          ds.columns)
 
     def test_column_names_decimal_hpd(self):
-        ds = df_summary(self.mtrace, batches=3, alpha=0.001)
+        ds = summary(self.mtrace, batches=3, alpha=0.001)
         npt.assert_equal(np.array(['mean', 'sd', 'mc_error',
                                    'hpd_0.05', 'hpd_99.95']),
                          ds.columns)
@@ -435,14 +435,14 @@ class TestDfSummary(bf.ModelBackendSampledTestCase):
         def customf(x):
             return pd.Series(np.mean(x, 0), name='my_mean')
 
-        ds = df_summary(self.mtrace, batches=3, stat_funcs=[customf])
+        ds = summary(self.mtrace, batches=3, stat_funcs=[customf])
         npt.assert_equal(np.array(['my_mean']), ds.columns)
 
     def test_column_names_custom_function_extend(self):
         def customf(x):
             return pd.Series(np.mean(x, 0), name='my_mean')
 
-        ds = df_summary(self.mtrace, batches=3,
+        ds = summary(self.mtrace, batches=3,
                         stat_funcs=[customf], extend=True)
         npt.assert_equal(np.array(['mean', 'sd', 'mc_error',
                                    'hpd_2.5', 'hpd_97.5', 'my_mean']),
@@ -450,7 +450,7 @@ class TestDfSummary(bf.ModelBackendSampledTestCase):
 
     def test_value_alignment(self):
         mtrace = self.mtrace
-        ds = df_summary(mtrace, batches=3)
+        ds = summary(mtrace, batches=3)
         for var in mtrace.varnames:
             result = mtrace[var].mean(0)
             for idx, val in np.ndenumerate(result):
@@ -465,6 +465,6 @@ class TestDfSummary(bf.ModelBackendSampledTestCase):
             pm.Uniform('x', 0, 1)
             step = Metropolis()
             trace = pm.sample(100, step=step)
-        ds = df_summary(trace, batches=3, include_transformed=True)
+        ds = summary(trace, batches=3, include_transformed=True)
         npt.assert_equal(np.array(['x_interval__', 'x']),
                          ds.index)

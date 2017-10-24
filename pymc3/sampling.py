@@ -294,7 +294,7 @@ def sample(draws=500, step=None, init='auto', n_init=200000, start=None,
         ...     p = pm.Beta('p', alpha=alpha, beta=beta)
         ...     y = pm.Binomial('y', n=n, p=p, observed=h)
         ...     trace = pm.sample(2000, tune=1000, njobs=4)
-        >>> pm.df_summary(trace)
+        >>> pm.summary(trace)
                mean        sd  mc_error   hpd_2.5  hpd_97.5
         p  0.604625  0.047086   0.00078  0.510498  0.694774
     """
