@@ -3,7 +3,6 @@
 import numpy as np
 import pandas as pd
 import itertools
-import sys
 from tqdm import tqdm
 import warnings
 from collections import namedtuple
