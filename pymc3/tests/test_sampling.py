@@ -203,7 +203,7 @@ class TestChooseBackend(object):
         assert backend.called
 
 
-class TestSamplePPC(object):
+class TestSamplePPC(SeededTest):
     def test_normal_scalar(self):
         with pm.Model() as model:
             a = pm.Normal('a', mu=0, sd=1)
@@ -252,7 +252,7 @@ class TestSamplePPC(object):
             _, pval = stats.kstest(ppc['b'], stats.norm(scale=scale).cdf)
             assert pval > 0.001
 
-class TestSamplePPCW(object):
+class TestSamplePPCW(SeededTest):
     def test_sample_ppc_w(self):
         data = np.random.normal(0, 1, size=200)
         with pm.Model() as model_0:
