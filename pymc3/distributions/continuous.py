@@ -1533,7 +1533,7 @@ class Weibull(PositiveContinuous):
                                                                 get_variable_name(beta))
 
 
-class HalfStudentT(Continuous):
+class HalfStudentT(PositiveContinuous):
     R"""
     Half Student's T log-likelihood
 
