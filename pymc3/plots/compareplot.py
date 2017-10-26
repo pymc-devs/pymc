@@ -49,12 +49,16 @@ def compareplot(comp_df, insample_dev=True, se=True, dse=True, ax=None,
     yticks_pos[1::2] = yticks_pos[1::2] + step / 2
 
     yticks_labels = [''] * len(yticks_pos)
+    
+    ic = 'WAIC'
+    if not comp_df.columns.contains(ic):
+        ic = 'LOO'
 
     if dse:
         yticks_labels[0] = comp_df.index[0]
         yticks_labels[2::2] = comp_df.index[1:]
         ax.set_yticks(yticks_pos)
-        ax.errorbar(x=comp_df.WAIC[1:],
+        ax.errorbar(x=comp_df.loc[1:, ic],
                     y=yticks_pos[1::2],
                     xerr=comp_df.dSE[1:],
                     color=plot_kwargs.get('color_dse', 'grey'),
@@ -65,7 +69,7 @@ def compareplot(comp_df, insample_dev=True, se=True, dse=True, ax=None,
         ax.set_yticks(yticks_pos[::2])
 
     if se:
-        ax.errorbar(x=comp_df.WAIC,
+        ax.errorbar(x=comp_df[ic],
                     y=yticks_pos[::2],
                     xerr=comp_df.SE,
                     color=plot_kwargs.get('color_ic', 'k'),
@@ -73,7 +77,7 @@ def compareplot(comp_df, insample_dev=True, se=True, dse=True, ax=None,
                     mfc='None',
                     mew=1)
     else:
-        ax.plot(comp_df.WAIC,
+        ax.plot(comp_df[ic],
                 yticks_pos[::2],
                 color=plot_kwargs.get('color_ic', 'k'),
                 marker=plot_kwargs.get('marker_ic', 'o'),
@@ -82,13 +86,13 @@ def compareplot(comp_df, insample_dev=True, se=True, dse=True, ax=None,
                 lw=0)
 
     if insample_dev:
-        ax.plot(comp_df.WAIC - (2 * comp_df.pWAIC),
+        ax.plot(comp_df[ic] - (2 * comp_df['p'+ic]),
                 yticks_pos[::2],
                 color=plot_kwargs.get('color_insample_dev', 'k'),
                 marker=plot_kwargs.get('marker_insample_dev', 'o'),
                 lw=0)
 
-    ax.axvline(comp_df.WAIC[0],
+    ax.axvline(comp_df.loc[0, ic],
                ls=plot_kwargs.get('ls_min_ic', '--'),
                color=plot_kwargs.get('color_ls_min_ic', 'grey'))
 
