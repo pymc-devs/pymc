@@ -580,11 +580,6 @@ class TestMatchesScipy(SeededTest):
         # this is only testing for nu=1 (halfcauchy)
         self.pymc3_matches_scipy(HalfStudentT, Rplus, {'beta': Rplus},
                                  lambda value, beta: sp.halfcauchy.logpdf(value, 0, beta))
-        # this is only testing for large nu (approx-gaussian)
-        self.pymc3_matches_scipy(HalfStudentT, Rplus, {'beta': Rplusbig},
-                                 lambda value, beta: sp.halfnorm.logpdf(value, 0, beta),
-                                                                        decimal=3,
-                                                                        extra_args={'nu': 1E12})
 
     def test_skew_normal(self):
         self.pymc3_matches_scipy(SkewNormal, R, {'mu': R, 'sd': Rplusbig, 'alpha': R},
