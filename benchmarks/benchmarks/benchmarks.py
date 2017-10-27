@@ -90,7 +90,7 @@ class EffectiveSampleSizeSuite(object):
     """
     timeout = 360.0
     params = (
-        [pm.NUTS, pm.HamiltonianMC, pm.Metropolis],  # Slice too slow
+        [pm.NUTS, pm.Metropolis],  # Slice too slow, don't want to tune HMC
         ['advi', 'jitter+adapt_diag', 'advi+adapt_diag_grad'],
     )
     param_names = ['step', 'init']
