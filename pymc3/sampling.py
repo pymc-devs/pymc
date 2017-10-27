@@ -164,7 +164,7 @@ def _cpu_count():
 
 
 def sample(draws=500, step=None, init='auto', n_init=200000, start=None,
-           trace=None, chain=0, chains=None, njobs=None, tune=500,
+           trace=None, chain_ind=0, chains=None, njobs=None, tune=500,
            nuts_kwargs=None, step_kwargs=None, progressbar=True, model=None,
            random_seed=None, live_plot=False, discard_tuned_samples=True,
            live_plot_kwargs=None, **kwargs):
@@ -222,7 +222,7 @@ def sample(draws=500, step=None, init='auto', n_init=200000, start=None,
         Passing either "text" or "sqlite" is taken as a shortcut to set
         up the corresponding backend (with "mcmc" used as the base
         name).
-    chain : int
+    chain_ind : int
         Chain number used to store sample in backend. If `chains` is
         greater than one, chain numbers will start here.
     chains : int
@@ -360,7 +360,7 @@ def sample(draws=500, step=None, init='auto', n_init=200000, start=None,
         'step': step,
         'start': start,
         'trace': trace,
-        'chain': chain,
+        'chain': chain_ind,
         'chains': chains,
         'tune': tune,
         'progressbar': progressbar,
