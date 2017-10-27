@@ -3,7 +3,6 @@
 import numpy as np
 import pandas as pd
 import itertools
-import sys
 from tqdm import tqdm
 import warnings
 from collections import namedtuple
@@ -727,7 +726,7 @@ def quantiles(x, qlist=(2.5, 25, 50, 75, 97.5), transform=lambda x: x):
         pm._log.warning("Too few elements for quantile calculation")
 
 
-def df_summary(trace, varnames=None, transform=lambda x: x, stat_funcs=None,
+def summary(trace, varnames=None, transform=lambda x: x, stat_funcs=None,
                extend=False, include_transformed=False,
                alpha=0.05, start=0, batches=None):
     R"""Create a data frame with summary statistics.
@@ -790,7 +789,7 @@ def df_summary(trace, varnames=None, transform=lambda x: x, stat_funcs=None,
         >>> import pymc3 as pm
         >>> trace.mu.shape
         (1000, 2)
-        >>> pm.df_summary(trace, ['mu'])
+        >>> pm.summary(trace, ['mu'])
                    mean        sd  mc_error     hpd_5    hpd_95
         mu__0  0.106897  0.066473  0.001818 -0.020612  0.231626
         mu__1 -0.046597  0.067513  0.002048 -0.174753  0.081924
@@ -806,7 +805,7 @@ def df_summary(trace, varnames=None, transform=lambda x: x, stat_funcs=None,
         >>> def trace_quantiles(x):
         ...     return pd.DataFrame(pm.quantiles(x, [5, 50, 95]))
         ...
-        >>> pm.df_summary(trace, ['mu'], stat_funcs=[trace_sd, trace_quantiles])
+        >>> pm.summary(trace, ['mu'], stat_funcs=[trace_sd, trace_quantiles])
                      sd         5        50        95
         mu__0  0.066473  0.000312  0.105039  0.214242
         mu__1  0.067513 -0.159097 -0.045637  0.062912
@@ -836,69 +835,15 @@ def df_summary(trace, varnames=None, transform=lambda x: x, stat_funcs=None,
         var_dfs.append(var_df)
     return pd.concat(var_dfs, axis=0)
 
+def df_summary(*args, **kwargs):
+    warnings.warn("df_summary has been deprecated. In future, use summary instead.",
+                DeprecationWarning)
+    return summary(*args, **kwargs)
 
 def _hpd_df(x, alpha):
     cnames = ['hpd_{0:g}'.format(100 * alpha / 2),
               'hpd_{0:g}'.format(100 * (1 - alpha / 2))]
     return pd.DataFrame(hpd(x, alpha), columns=cnames)
-
-
-def summary(trace, varnames=None, transform=lambda x: x, alpha=0.05, start=0,
-            batches=None, roundto=3, include_transformed=False, to_file=None):
-    R"""Generate a pretty-printed summary of the node.
-
-    Parameters
-    ----------
-    trace : Trace object
-      Trace containing MCMC sample
-    varnames : list of strings
-      List of variables to summarize. Defaults to None, which results
-      in all variables summarized.
-    transform : callable
-      Function to transform data (defaults to identity)
-    alpha : float
-      The alpha level for generating posterior intervals. Defaults to
-      0.05.
-    start : int
-      The starting index from which to summarize (each) chain. Defaults
-      to zero.
-    batches : None or int
-        Batch size for calculating standard deviation for non-independent
-        samples. Defaults to the smaller of 100 or the number of samples.
-        This is only meaningful when `stat_funcs` is None.
-    roundto : int
-      The number of digits to round posterior statistics.
-    include_transformed : bool
-      Flag for summarizing automatically transformed variables in addition to
-      original variables (defaults to False).
-    to_file : None or string
-      File to write results to. If not given, print to stdout.
-    """
-    if varnames is None:
-        varnames = get_default_varnames(trace.varnames, include_transformed=include_transformed)
-
-    if batches is None:
-        batches = min([100, len(trace)])
-
-    stat_summ = _StatSummary(roundto, batches, alpha)
-    pq_summ = _PosteriorQuantileSummary(roundto, alpha)
-
-    if to_file is None:
-        fh = sys.stdout
-    else:
-        fh = open(to_file, mode='w')
-
-    for var in varnames:
-        # Extract sampled values
-        sample = transform(trace.get_values(var, burn=start, combine=True))
-
-        fh.write('\n%s:\n\n' % var)
-
-        fh.write(stat_summ.output(sample))
-        fh.write(pq_summ.output(sample))
-
-    if fh is not sys.stdout:
-        fh.close()
 
 
 class _Summary(object):
