@@ -17,7 +17,6 @@ from .continuous import HalfStudentT
 from .continuous import Lognormal
 from .continuous import ChiSquared
 from .continuous import HalfNormal
-from .continuous import StudentTpos
 from .continuous import Wald
 from .continuous import Pareto
 from .continuous import InverseGamma
@@ -95,7 +94,6 @@ __all__ = ['Uniform',
            'Bound',
            'Lognormal',
            'HalfStudentT',
-           'StudentTpos',
            'ChiSquared',
            'HalfNormal',
            'Wald',

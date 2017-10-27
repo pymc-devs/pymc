@@ -22,13 +22,12 @@ from .dist_math import (
     i1, alltrue_elemwise, SplineWrapper
 )
 from .distribution import Continuous, draw_values, generate_samples
-from .bound import Bound
 
 __all__ = ['Uniform', 'Flat', 'HalfFlat', 'Normal', 'Beta', 'Exponential',
            'Laplace', 'StudentT', 'Cauchy', 'HalfCauchy', 'Gamma', 'Weibull',
-           'HalfStudentT', 'StudentTpos', 'Lognormal', 'ChiSquared',
-           'HalfNormal', 'Wald', 'Pareto', 'InverseGamma', 'ExGaussian',
-           'VonMises', 'SkewNormal', 'Logistic', 'Interpolated']
+           'HalfStudentT', 'Lognormal', 'ChiSquared', 'HalfNormal', 'Wald',
+           'Pareto', 'InverseGamma', 'ExGaussian', 'VonMises', 'SkewNormal',
+           'Logistic', 'Interpolated']
 
 
 class PositiveContinuous(Continuous):
@@ -1534,12 +1533,79 @@ class Weibull(PositiveContinuous):
                                                                 get_variable_name(beta))
 
 
-def StudentTpos(*args, **kwargs):
-    warnings.warn("StudentTpos has been deprecated. In future, use HalfStudentT instead.",
-                DeprecationWarning)
-    return HalfStudentT(*args, **kwargs)
+class HalfStudentT(PositiveContinuous):
+    R"""
+    Half Student's T log-likelihood
 
-HalfStudentT = Bound(StudentT, lower=0)
+    .. math::
+
+        f(x \mid \beta,\nu) =
+            \frac{2\;\Gamma\left(\frac{\nu+1}{2}\right)}
+            {\Gamma\left(\frac{\nu}{2}\right)\sqrt{\nu\pi\beta^2}}
+            \left(1+\frac{1}{\nu}\frac{x^2}{\beta^2}\right)^{-\frac{\nu+1}{2}}
+
+    .. plot::
+
+        import matplotlib.pyplot as plt
+        import numpy as np
+        import scipy.stats as st
+        x = np.linspace(-5.0, 5.0, 200)
+        fig, ax = plt.subplots()
+        f = lambda beta, nu : st.t.pdf(x, df=nu, loc=0, scale=beta)
+        plot_pdf = lambda beta, nu : ax.plot(x, f(beta, nu), label=r'$\beta$={}, $\nu$={}'.format(beta, nu))
+        plot_pdf(1, 0.5)
+        plot_pdf(1, 1)
+        plot_pdf(2, 1)
+        plot_pdf(1, 30)
+        plt.legend(loc='upper right', frameon=False)
+        ax.set(xlim=[0,5], ylim=[0, 0.4], xlabel='x', ylabel='f(x)')
+        plt.show()
+
+    ========  ========================
+    Support   :math:`x \in [0, \infty)`
+    ========  ========================
+
+    Parameters
+    ----------
+    nu : float
+        Degrees of freedom, also known as normality parameter (nu > 0).
+    beta : float
+        Scale parameter (beta > 0).
+    """
+    def __init__(self, nu=1, beta=1, *args, **kwargs):
+        super(HalfStudentT, self).__init__(*args, **kwargs)
+        self.mode = tt.as_tensor_variable(0)
+        self.median = tt.as_tensor_variable(beta)
+        self.beta = tt.as_tensor_variable(beta)
+        self.nu = nu = tt.as_tensor_variable(nu)
+
+        assert_negative_support(beta, 'beta', 'HalfStudentT')
+        assert_negative_support(nu, 'nu', 'HalfStudentT')
+
+    def random(self, point=None, size=None, repeat=None):
+        nu, beta = draw_values([self.nu, self.beta], point=point)
+        return np.abs(generate_samples(stats.t.rvs, nu, loc=0, scale=beta,
+                                       dist_shape=self.shape,
+                                       size=size))
+
+    def logp(self, value):
+        nu = self.nu
+        beta = self.beta
+
+        return bound(tt.log(2) + gammaln((nu + 1.0) / 2.0)
+                     - gammaln(nu / 2.0)
+                     - .5 * tt.log(nu * np.pi * beta**2)
+                     - (nu + 1.0) / 2.0 * tt.log1p(value ** 2 / (nu * beta**2)),
+                     beta > 0, nu > 0, value >= 0)
+
+    def _repr_latex_(self, name=None, dist=None):
+        if dist is None:
+            dist = self
+        nu = dist.nu
+        beta = dist.beta
+        return r'${} \sim \text{{HalfStudentT}}(\mathit{{nu}}={}, \mathit{{beta}}={})$'.format(name,
+                                                                get_variable_name(nu),
+                                                                get_variable_name(beta))
 
 
 class ExGaussian(Continuous):
