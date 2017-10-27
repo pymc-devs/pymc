@@ -255,8 +255,6 @@ class TestSamplePPC(object):
 class TestSamplePPCW(object):
     def test_sample_ppc_w(self):
         data0 = np.random.normal(0, 1, size=500)
-        data1 = data0 + 5
-        data2 = np.concatenate((data0, data1))
 
         with pm.Model() as model_0:
             mu = pm.Normal('mu', mu=0, sd=1)
@@ -264,25 +262,18 @@ class TestSamplePPCW(object):
             trace_0 = pm.sample()
 
         with pm.Model() as model_1:
-            mu = pm.Normal('mu', mu=5, sd=1)
-            y = pm.Normal('y', mu=mu, sd=1, observed=data1)
-            trace_1 = pm.sample()
-
-        with pm.Model() as model_2:
             mu = pm.Normal('mu', mu=0, sd=1, shape=len(data0))
             y = pm.Normal('y', mu=mu, sd=1, observed=data0)
-            trace_2 = pm.sample()
+            trace_1 = pm.sample()
+
+        traces = [trace_0, trace_0]
+        models = [model_0, model_0]
+        ppc = pm.sample_ppc_w(traces, 1000, models)
+        assert ppc['y'].shape == (1000,)
 
         traces = [trace_0, trace_1]
         models = [model_0, model_1]
-        ppc = pm.sample_ppc_w(traces, 1000, models, progressbar=False)
-        assert ppc['y'].shape == (1000,)
-        _, pval = stats.ks_2samp(ppc['y'], data2)
-        assert pval > 0.001
-
-        traces = [trace_0, trace_2]
-        models = [model_0, model_2]
-        ppc = pm.sample_ppc_w(traces, 100, models, progressbar=False)
+        ppc = pm.sample_ppc_w(traces, 100, models)
         assert ppc['y'].shape == (100, 500)
 
 
