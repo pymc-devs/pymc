@@ -422,13 +422,15 @@ class TestDfSummary(bf.ModelBackendSampledTestCase):
     def test_column_names(self):
         ds = summary(self.mtrace, batches=3)
         npt.assert_equal(np.array(['mean', 'sd', 'mc_error',
-                                   'hpd_2.5', 'hpd_97.5']),
+                                   'hpd_2.5', 'hpd_97.5',
+                                   'n_eff', 'Rhat']),
                          ds.columns)
 
     def test_column_names_decimal_hpd(self):
         ds = summary(self.mtrace, batches=3, alpha=0.001)
         npt.assert_equal(np.array(['mean', 'sd', 'mc_error',
-                                   'hpd_0.05', 'hpd_99.95']),
+                                   'hpd_0.05', 'hpd_99.95',
+                                   'n_eff', 'Rhat']),
                          ds.columns)
 
     def test_column_names_custom_function(self):
@@ -445,7 +447,8 @@ class TestDfSummary(bf.ModelBackendSampledTestCase):
         ds = summary(self.mtrace, batches=3,
                         stat_funcs=[customf], extend=True)
         npt.assert_equal(np.array(['mean', 'sd', 'mc_error',
-                                   'hpd_2.5', 'hpd_97.5', 'my_mean']),
+                                   'hpd_2.5', 'hpd_97.5',
+                                   'n_eff', 'Rhat', 'my_mean']),
                          ds.columns)
 
     def test_value_alignment(self):

@@ -333,7 +333,7 @@ def bpic(trace, model=None):
     trace : result of MCMC run
     model : PyMC Model
         Optional model. Default None, taken from context.
-    
+
     Returns
     -------
     z : float
@@ -555,7 +555,6 @@ def _ic_matrix(ics):
 
     return N, K, ic_i
 
-
 def make_indices(dimensions):
     # Generates complete set of indices for given dimensions
     level = len(dimensions)
@@ -725,7 +724,6 @@ def quantiles(x, qlist=(2.5, 25, 50, 75, 97.5), transform=lambda x: x):
     except IndexError:
         pm._log.warning("Too few elements for quantile calculation")
 
-
 def summary(trace, varnames=None, transform=lambda x: x, stat_funcs=None,
                extend=False, include_transformed=False,
                alpha=0.05, start=0, batches=None):
@@ -794,6 +792,10 @@ def summary(trace, varnames=None, transform=lambda x: x, stat_funcs=None,
         mu__0  0.106897  0.066473  0.001818 -0.020612  0.231626
         mu__1 -0.046597  0.067513  0.002048 -0.174753  0.081924
 
+                  n_eff      Rhat
+        mu__0     487.0   1.00001
+        mu__1     379.0   1.00203
+
     Other statistics can be calculated by passing a list of functions.
 
     .. code:: ipython
@@ -810,8 +812,12 @@ def summary(trace, varnames=None, transform=lambda x: x, stat_funcs=None,
         mu__0  0.066473  0.000312  0.105039  0.214242
         mu__1  0.067513 -0.159097 -0.045637  0.062912
     """
+
+    from .diagnostics import gelman_rubin, effective_n
+
     if varnames is None:
-        varnames = get_default_varnames(trace.varnames, include_transformed=include_transformed)
+        varnames = get_default_varnames(trace.varnames,
+                       include_transformed=include_transformed)
 
     if batches is None:
         batches = min([100, len(trace)])
@@ -819,10 +825,13 @@ def summary(trace, varnames=None, transform=lambda x: x, stat_funcs=None,
     funcs = [lambda x: pd.Series(np.mean(x, 0), name='mean'),
              lambda x: pd.Series(np.std(x, 0), name='sd'),
              lambda x: pd.Series(mc_error(x, batches), name='mc_error'),
-             lambda x: _hpd_df(x, alpha)]
+             lambda x: _hpd_df(x, alpha),
+             lambda x: pd.Series(effective_n(x), name='n_eff'),
+             lambda x: pd.Series(gelman_rubin(x), name='Rhat')]
 
     if stat_funcs is not None and extend:
         stat_funcs = funcs + stat_funcs
+
     elif stat_funcs is None:
         stat_funcs = funcs
 
@@ -844,7 +853,6 @@ def _hpd_df(x, alpha):
     cnames = ['hpd_{0:g}'.format(100 * alpha / 2),
               'hpd_{0:g}'.format(100 * (1 - alpha / 2))]
     return pd.DataFrame(hpd(x, alpha), columns=cnames)
-
 
 class _Summary(object):
     """Base class for summary output"""
