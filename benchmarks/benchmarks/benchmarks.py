@@ -1,3 +1,5 @@
+import time
+
 import numpy as np
 import pandas as pd
 import pymc3 as pm
@@ -71,25 +73,59 @@ class ExampleSuite(object):
 
         n_counties = len(data.county.unique())
         with pm.Model():
-            # Hyperpriors for group nodes
             mu_a = pm.Normal('mu_a', mu=0., sd=100**2)
             sigma_a = pm.HalfCauchy('sigma_a', 5)
             mu_b = pm.Normal('mu_b', mu=0., sd=100**2)
             sigma_b = pm.HalfCauchy('sigma_b', 5)
-
-            # Intercept for each county, distributed around group mean mu_a
-            # Above we just set mu and sd to a fixed value while here we
-            # plug in a common group distribution for all a and b (which are
-            # vectors of length n_counties).
             a = pm.Normal('a', mu=mu_a, sd=sigma_a, shape=n_counties)
-            # Intercept for each county, distributed around group mean mu_a
             b = pm.Normal('b', mu=mu_b, sd=sigma_b, shape=n_counties)
+            eps = pm.HalfCauchy('eps', 5)
+            radon_est = a[county_idx] + b[county_idx] * data.floor.values
+            pm.Normal('radon_like', mu=radon_est, sd=eps, observed=data.log_radon)
+            pm.sample(draws=2000, njobs=4)
 
-            # Model error
+
+class EffectiveSampleSizeSuite(object):
+    """Tests effective sample size per second on models
+    """
+    timeout = 360.0
+    params = (
+        [pm.NUTS, pm.Metropolis],  # Slice too slow, don't want to tune HMC
+        ['advi', 'jitter+adapt_diag', 'advi+adapt_diag_grad'],
+    )
+    param_names = ['step', 'init']
+
+    def setup(self, step, init):
+        """Initialize model and get start position"""
+        np.random.seed(123)
+        self.chains = 4
+        data = pd.read_csv(pm.get_data('radon.csv'))
+        data['log_radon'] = data['log_radon'].astype(theano.config.floatX)
+        county_idx = data.county_code.values
+        n_counties = len(data.county.unique())
+        with pm.Model() as self.model:
+            mu_a = pm.Normal('mu_a', mu=0., sd=100**2)
+            sigma_a = pm.HalfCauchy('sigma_a', 5)
+
+            mu_b = pm.Normal('mu_b', mu=0., sd=100**2)
+            sigma_b = pm.HalfCauchy('sigma_b', 5)
+
+            a = pm.Normal('a', mu=mu_a, sd=sigma_a, shape=n_counties)
+            b = pm.Normal('b', mu=mu_b, sd=sigma_b, shape=n_counties)
             eps = pm.HalfCauchy('eps', 5)
 
             radon_est = a[county_idx] + b[county_idx] * data.floor.values
 
-            # Data likelihood
             pm.Normal('radon_like', mu=radon_est, sd=eps, observed=data.log_radon)
-            pm.sample(draws=2000, njobs=4)
+            self.start, _ = pm.init_nuts(chains=self.chains, init=init)
+
+    def track_glm_hierarchical_ess(self, step, init):
+        with self.model:
+            t0 = time.time()
+            trace = pm.sample(draws=20000, step=step(), njobs=4, chains=self.chains,
+                              start=self.start, random_seed=100)
+            tot = time.time() - t0
+        ess = pm.effective_n(trace, ('mu_a',))['mu_a']
+        return ess / tot
+
+EffectiveSampleSizeSuite.track_glm_hierarchical_ess.unit = 'Effective samples per second'
