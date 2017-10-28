@@ -10,7 +10,7 @@ from .artists import plot_posterior_op
 from .utils import identity_transform, get_default_varnames
 
 
-def plot_posterior(trace, varnames=None, transform=identity_transform, figsize=None, text_size=16,
+def plot_posterior(trace, varnames=None, transform=identity_transform, figsize=None, text_size=None,
                    alpha_level=0.05, round_to=3, point_estimate='mean', rope=None,
                    ref_val=None, kde_plot=False, plot_transformed=False, ax=None, **kwargs):
     """Plot Posterior densities in style of John K. Kruschke book.
@@ -26,7 +26,8 @@ def plot_posterior(trace, varnames=None, transform=identity_transform, figsize=N
     figsize : figure size tuple
         If None, size is (12, num of variables * 2) inch
     text_size : int
-        Text size of the point_estimates, axis ticks, and HPD (Default:16)
+        Text size of the point_estimates, axis ticks, and HPD. 
+        If None, font size is same as figure width in inches.
     alpha_level : float
         Defines range for High Posterior Density
     round_to : int
@@ -58,6 +59,9 @@ def plot_posterior(trace, varnames=None, transform=identity_transform, figsize=N
     ax : matplotlib axes
 
     """
+
+    
+
     def create_axes_grid(figsize, traces):
         l_trace = len(traces)
         if l_trace == 1:
@@ -90,6 +94,8 @@ def plot_posterior(trace, varnames=None, transform=identity_transform, figsize=N
             figsize = (6, 2)
         if ax is None:
             fig, ax = plt.subplots(figsize=figsize)
+        if text_size is None:
+            text_size=figsize[0]
         plot_posterior_op(transform(trace), ax=ax, kde_plot=kde_plot,
                           point_estimate=point_estimate, round_to=round_to,
                           alpha_level=alpha_level, ref_val=ref_val, rope=rope,
@@ -102,6 +108,7 @@ def plot_posterior(trace, varnames=None, transform=identity_transform, figsize=N
 
         if ax is None:
             fig, ax = create_axes_grid(figsize, trace_dict)
+            figsize=fig.get_size_inches()
 
         var_num = len(trace_dict)
         if ref_val is None:
@@ -114,13 +121,17 @@ def plot_posterior(trace, varnames=None, transform=identity_transform, figsize=N
         elif np.ndim(rope) == 1:
             rope = [rope] * var_num
 
+        if text_size is None:
+            text_size=figsize[0]
+
+
         for idx, (a, v) in enumerate(zip(np.atleast_1d(ax), trace_dict)):
             tr_values = transform(trace_dict[v])
             plot_posterior_op(tr_values, ax=a, kde_plot=kde_plot,
                               point_estimate=point_estimate, round_to=round_to,
                               alpha_level=alpha_level, ref_val=ref_val[idx],
                               rope=rope[idx], text_size=text_size, **kwargs)
-            a.set_title(v)
+            a.set_title(v,fontsize = text_size)
 
         plt.tight_layout()
     return ax
