@@ -261,7 +261,7 @@ def forestplot(trace_obj, varnames=None, transform=identity_transform,
 
             # Deal with multivariate nodes
             if k > 1:
-                for q in np.transpose(quants).squeeze():
+                for q in np.moveaxis(np.array(quants), 0, -1).squeeze().reshape(-1, len(quants)):
                     # Multiple y values
                     interval_plot = _plot_tree(interval_plot, y, q, quartiles,
                                                plot_kwargs)
