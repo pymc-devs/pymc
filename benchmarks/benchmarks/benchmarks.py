@@ -117,7 +117,9 @@ class NUTSInitSuite(object):
     """Tests initializations for NUTS sampler on models
     """
     timeout = 360.0
-    params = ('adapt_diag', 'jitter+adapt_diag', 'advi+adapt_diag_grad', 'advi', 'advi_map')
+    params = ('adapt_diag', 'jitter+adapt_diag', 'advi+adapt_diag_grad', 'advi_map')
+    number = 1
+    repeat = 1
 
     def time_glm_hierarchical_init(self, init):
         """How long does it take to run the initialization."""
@@ -128,7 +130,7 @@ class NUTSInitSuite(object):
         with glm_hierarchical_model():
             start, step = pm.init_nuts(init=init, chains=4, progressbar=False, random_seed=123)
             t0 = time.time()
-            trace = pm.sample(draws=20000, step=step, njobs=4, chains=4,
+            trace = pm.sample(draws=10000, step=step, njobs=4, chains=4,
                               start=start, random_seed=100)
             tot = time.time() - t0
         ess = pm.effective_n(trace, ('mu_a',))['mu_a']
@@ -169,6 +171,7 @@ NUTSInitSuite.track_marginal_mixture_model_ess.unit = 'Effective samples per sec
 
 
 class CompareMetropolisNUTSSuite(object):
+    timeout = 360.0
     # None will be the "sensible default", and include initialization, but should be fastest
     params = (None, pm.NUTS, pm.Metropolis)
     number = 1
@@ -179,7 +182,7 @@ class CompareMetropolisNUTSSuite(object):
             if step is not None:
                 step = step()
             t0 = time.time()
-            trace = pm.sample(draws=20000, step=step, njobs=4, chains=4,
+            trace = pm.sample(draws=10000, step=step, njobs=4, chains=4,
                               random_seed=100)
             tot = time.time() - t0
         ess = pm.effective_n(trace, ('mu_a',))['mu_a']
