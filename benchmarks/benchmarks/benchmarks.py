@@ -128,6 +128,7 @@ class EffectiveSampleSizeSuite(object):
         ess = pm.effective_n(trace, ('mu_a',))['mu_a']
         return ess / tot
 
+EffectiveSampleSizeSuite.track_glm_hierarchical_ess.unit = 'Effective samples per second            pm.sample(draws=2000, njobs=4)
 
 class EffectiveSampleSizeSuiteMarginal(object):
     """Tests effective sample size per second on models
