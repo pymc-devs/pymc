@@ -351,6 +351,7 @@ def sample(draws=500, step=None, init='auto', n_init=200000, start=None,
             # gradient computation failed
             pm._log.info("Initializing NUTS failed. "
                          "Falling back to elementwise auto-assignment.")
+            pm._log.debug('Exception in init nuts', exec_info=True)
             step = assign_step_methods(model, step, step_kwargs=step_kwargs)
     else:
         step = assign_step_methods(model, step, step_kwargs=step_kwargs)
@@ -384,7 +385,15 @@ def sample(draws=500, step=None, init='auto', n_init=200000, start=None,
             trace = _mp_sample(**sample_args)
         except pickle.PickleError:
             pm._log.warn("Could not pickle model, sampling sequentially.")
+            pm._log.debug('Pickling error:', exec_info=True)
             parallel = False
+        except AttributeError as e:
+            if str(e).startswith("AttributeError: Can't pickle"):
+                pm._log.warn("Could not pickle model, sampling sequentially.")
+                pm._log.debug('Pickling error:', exec_info=True)
+                parallel = False
+            else:
+                raise
     if not parallel:
         trace = _sample_many(**sample_args)
 
