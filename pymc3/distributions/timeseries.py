@@ -3,8 +3,10 @@ from theano import scan
 
 from pymc3.util import get_variable_name
 from .continuous import get_tau_sd, Normal, Flat
+from .dist_math import Cholesky
 from . import multivariate
 from . import distribution
+
 
 __all__ = [
     'AR1',
@@ -76,13 +78,13 @@ class AR(distribution.Continuous):
     Parameters
     ----------
     rho : tensor
-        Vector of autoregressive coefficients. 
-    sd : float 
+        Vector of autoregressive coefficients.
+    sd : float
         Standard deviation of innovation (sd > 0).
     tau : float
         Precision of innovation (tau > 0).
     constant: bool (optional, default = False)
-        Whether to include a constant. 
+        Whether to include a constant.
     init : distribution
         distribution for initial values (Defaults to Flat())
     """
@@ -271,43 +273,80 @@ class EulerMaruyama(distribution.Continuous):
                                                 get_variable_name(dt))
 
 
-class MvGaussianRandomWalk(distribution.Continuous):
+class _CovSet():
+    """
+    Convenience class to set Covariance, Inverse Covariance and Cholesky
+    descomposition of Covariance marrices.
+    """
+    def __initCov__(self, cov=None, tau=None, chol=None, lower=True):
+        if all([val is None for val in [cov, tau, chol]]):
+            raise ValueError('One of cov, tau or chol arguments must be provided.')
+
+        self.cov = self.tau = self.chol_cov = None
+
+        cholesky = Cholesky(nofail=True, lower=True)
+        if cov is not None:
+            self.k = cov.shape[0]
+            self._cov_type = 'cov'
+            cov = tt.as_tensor_variable(cov)
+            if cov.ndim != 2:
+                raise ValueError('cov must be two dimensional.')
+            self.chol_cov = cholesky(cov)
+            self.cov = cov
+            self._n = self.cov.shape[-1]
+        elif tau is not None:
+            self.k = tau.shape[0]
+            self._cov_type = 'tau'
+            tau = tt.as_tensor_variable(tau)
+            if tau.ndim != 2:
+                raise ValueError('tau must be two dimensional.')
+            self.chol_tau = cholesky(tau)
+            self.tau = tau
+            self._n = self.tau.shape[-1]
+        else:
+            if chol is not None and not lower:
+                chol = chol.T
+            self.k = chol.shape[0]
+            self._cov_type = 'chol'
+            if chol.ndim != 2:
+                raise ValueError('chol must be two dimensional.')
+            self.chol_cov = tt.as_tensor_variable(chol)
+            self._n = self.chol_cov.shape[-1]
+
+
+class MvGaussianRandomWalk(distribution.Continuous, _CovSet):
     """
     Multivariate Random Walk with Normal innovations
-
     Parameters
     ----------
     mu : tensor
         innovation drift, defaults to 0.0
     cov : tensor
         pos def matrix, innovation covariance matrix
+    tau : tensor
+        pos def matrix, inverse covariance matrix
+    chol : tensor
+        Cholesky decomposition of covariance matrix
+    Only one of cov, tau or chol is required
     init : distribution
         distribution for initial value (Defaults to Flat())
     """
-    def __init__(self, mu=0., cov=None, init=Flat.dist(),
+    def __init__(self, mu=0., cov=None, tau=None, chol=None, lower=True, init=Flat.dist(),
                  *args, **kwargs):
         super(MvGaussianRandomWalk, self).__init__(*args, **kwargs)
-        if cov is None:
-            raise ValueError('A covariance matrix must be provided as cov argument.')
-        self.k = cov.shape[0]
-        cov = tt.as_tensor_variable(cov)
-        if cov.ndim != 2:
-            raise ValueError('cov must be two dimensional.')
-        self.cov = cov
+        super(MvGaussianRandomWalk, self).__initCov__(cov, tau, chol, lower)
+
         self.mu = mu = tt.as_tensor_variable(mu)
         self.init = init
         self.mean = tt.as_tensor_variable(0.)
 
     def logp(self, x):
-        cov = self.cov
-        mu = self.mu
-        init = self.init
-
         x_im1 = x[:-1]
         x_i = x[1:]
 
-        innov_like = multivariate.MvNormal.dist(mu=x_im1 + mu, cov=cov).logp(x_i)
-        return init.logp(x[0]) + tt.sum(innov_like)
+        innov_like = multivariate.MvNormal.dist(mu=x_im1 + self.mu, cov=self.cov,
+                                                tau=self.tau, chol=self.chol_cov).logp(x_i)
+        return self.init.logp(x[0]) + tt.sum(innov_like)
 
     def _repr_latex_(self, name=None, dist=None):
         if dist is None:
@@ -319,7 +358,7 @@ class MvGaussianRandomWalk(distribution.Continuous):
                                                 get_variable_name(cov))
 
 
-class MvStudentTRandomWalk(distribution.Continuous):
+class MvStudentTRandomWalk(distribution.Continuous, _CovSet):
     """
     Multivariate Random Walk with StudentT innovations
 
@@ -330,35 +369,29 @@ class MvStudentTRandomWalk(distribution.Continuous):
         innovation drift, defaults to 0.0
     cov : tensor
         pos def matrix, innovation covariance matrix
+    tau : tensor
+        pos def matrix, inverse covariance matrix
+    chol : tensor
+        Cholesky decomposition of covariance matrix
     init : distribution
         distribution for initial value (Defaults to Flat())
     """
-    def __init__(self, nu, mu=0., cov=None, init=Flat.dist(),
+    def __init__(self, nu, mu=0., cov=None, tau=None, chol=None, lower=True, init=Flat.dist(),
                  *args, **kwargs):
         super(MvStudentTRandomWalk, self).__init__(*args, **kwargs)
+        super(MvStudentTRandomWalk, self).__initCov__(cov, tau, chol, lower)
         self.mu = mu = tt.as_tensor_variable(mu)
         self.nu = nu = tt.as_tensor_variable(nu)
         self.init = init
         self.mean = tt.as_tensor_variable(0.)
 
-        if cov is None:
-            raise ValueError('A covariance matrix must be provided as cov argument.')
-        self.k = cov.shape[0]
-        cov = tt.as_tensor_variable(cov)
-        if cov.ndim != 2:
-            raise ValueError('cov must be two dimensional.')
-        self.cov = cov
-
     def logp(self, x):
-        cov = self.cov
-        mu = self.mu
-        nu = self.nu
-        init = self.init
-
         x_im1 = x[:-1]
         x_i = x[1:]
-        innov_like = multivariate.MvStudentT.dist(nu, cov, mu=x_im1 + mu).logp(x_i)
-        return init.logp(x[0]) + tt.sum(innov_like)
+        innov_like = multivariate.MvStudentT.dist(self.nu, mu=x_im1 + self.mu,
+                                                  cov=self.cov, tau=self.tau,
+                                                  chol=self.chol_cov).logp(x_i)
+        return self.init.logp(x[0]) + tt.sum(innov_like)
 
     def _repr_latex_(self, name=None, dist=None):
         if dist is None:
