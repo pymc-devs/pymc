@@ -1,3 +1,5 @@
+from __future__ import division
+
 from collections import namedtuple
 import warnings
 
@@ -11,6 +13,7 @@ from pymc3.exceptions import SamplingError
 from .base_hmc import BaseHMC
 from pymc3.theanof import floatX
 from pymc3.vartypes import continuous_types
+from pymc3.step_methods import step_size
 
 __all__ = ['NUTS']
 
@@ -155,19 +158,13 @@ class NUTS(BaseHMC):
         super(NUTS, self).__init__(vars, **kwargs)
         self.Emax = Emax
 
-        self.target_accept = target_accept
-        self.gamma = gamma
-        self.k = k
-        self.t0 = t0
-
-        self.h_bar = 0
-        self.mu = np.log(self.step_size * 10)
-        self.log_step_size = np.log(self.step_size)
-        self.log_step_size_bar = 0
-        self.m = 1
         self.adapt_step_size = adapt_step_size
         self.max_treedepth = max_treedepth
         self.early_max_treedepth = early_max_treedepth
+        self.iter_count = 0
+
+        self.step_adapt = step_size.DualAverageAdaptation(
+            self.step_size, target_accept, gamma, k, t0)
 
         self.tune = True
         self.report = NutsReport(on_error, max_treedepth, target_accept)
@@ -181,14 +178,11 @@ class NUTS(BaseHMC):
             raise ValueError('Bad initial energy: %s. The model '
                              'might be misspecified.' % start.energy)
 
-        if not self.adapt_step_size:
-            step_size = self.step_size
-        elif self.tune:
-            step_size = np.exp(self.log_step_size)
-        else:
-            step_size = np.exp(self.log_step_size_bar)
+        if self.adapt_step_size:
+            self.step_size = self.step_adapt.current(self.tune)
+        step_size = self.step_size
 
-        if self.tune and self.m < 200:
+        if self.tune and self.iter_count < 200:
             max_treedepth = self.early_max_treedepth
         else:
             max_treedepth = self.max_treedepth
@@ -205,28 +199,20 @@ class NUTS(BaseHMC):
                     self.report._add_divergence(self.tune, *diverging_info)
                 break
 
-        w = 1. / (self.m + self.t0)
-        self.h_bar = ((1 - w) * self.h_bar +
-                      w * (self.target_accept - tree.accept_sum * 1. / tree.n_proposals))
-
         if self.tune:
-            self.log_step_size = self.mu - self.h_bar * np.sqrt(self.m) / self.gamma
-            mk = self.m ** -self.k
-            self.log_step_size_bar = mk * self.log_step_size + (1 - mk) * self.log_step_size_bar
-
-        self.m += 1
-
-        if self.tune:
+            accept_stat = tree.accept_sum / tree.n_proposals
+            self.step_adapt.update(accept_stat)
             self.potential.adapt(q, q_grad)
 
+        self.iter_count += 1
+
         stats = {
-            'step_size': step_size,
             'tune': self.tune,
-            'step_size_bar': np.exp(self.log_step_size_bar),
             'diverging': bool(diverging_info),
         }
 
         stats.update(tree.stats())
+        stats.update(self.step_adapt.stats())
 
         return q, [stats]
 
