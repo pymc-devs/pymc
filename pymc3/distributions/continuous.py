@@ -489,43 +489,190 @@ class Wald(PositiveContinuous):
         )
 
 
-def cont_fraction_beta(value, a, b, max_iter=200):
-    '''Evaluates the continued fraction form of the incomplete Beta function.
-    Derived from implementation by Ali Shoaib (https://goo.gl/HxjIJx).
+def incomplete_beta_cfe(a, b, x, small):
+    '''Incomplete beta continued fraction expansions
+    based on Cephes library by Steve Moshier (incbet.c).
+    small: Choose element-wise which continued fraction expansion to use.
     '''
+    big = tt.constant(4.503599627370496e15, dtype='float64')
+    biginv = tt.constant(2.22044604925031308085e-16, dtype='float64')
+    thresh = tt.constant(3. * np.MachAr().eps, dtype='float64')
 
-    EPS = 3.0e-7
-    qab = a + b
-    qap = a + 1.0
-    qam = a - 1.0
+    zero = tt.constant(0., dtype='float64')
+    one = tt.constant(1., dtype='float64')
+    two = tt.constant(2., dtype='float64')
 
-    def _step(i, az, bm, am, bz):
+    r = one
+    k1 = a
+    k3 = a
+    k4 = a + one
+    k5 = one
+    k8 = a + two
 
-        tem = i + i
-        d = i * (b - i) * value / ((qam + tem) * (a + tem))
-        d =- (a + i) * i * value / ((qap + tem) * (a + tem))
+    k2 = tt.switch(small, a + b, b - one)
+    k6 = tt.switch(small, b - one, a + b)
+    k7 = tt.switch(small, k4, a + one)
+    k26update = tt.switch(small, one, -one)
+    x = tt.switch(small, x, x / (one - x))
 
-        ap = az + d * am
-        bp = bz + d * bm
+    pkm2 = zero
+    qkm2 = one
+    pkm1 = one
+    qkm1 = one
+    r = one
 
-        app = ap + d * az
-        bpp = bp + d * bz
+    def _step(
+            i,
+            pkm1, pkm2, qkm1, qkm2,
+            k1, k2, k3, k4, k5, k6, k7, k8, r
+    ):
+        xk = -(x * k1 * k2) / (k3 * k4)
+        pk = pkm1 + pkm2 * xk
+        qk = qkm1 + qkm2 * xk
+        pkm2 = pkm1
+        pkm1 = pk
+        qkm2 = qkm1
+        qkm1 = qk
 
-        aold = az
+        xk = (x * k5 * k6) / (k7 * k8)
+        pk = pkm1 + pkm2 * xk
+        qk = qkm1 + qkm2 * xk
+        pkm2 = pkm1
+        pkm1 = pk
+        qkm2 = qkm1
+        qkm1 = qk
 
-        am = ap / bpp
-        bm = bp / bpp
-        az = app / bpp
+        old_r = r
+        r = tt.switch(tt.eq(qk, zero), r, pk/qk)
 
-        bz = tt.constant(1.0, dtype='float64')
+        k1 += one
+        k2 += k26update
+        k3 += two
+        k4 += two
+        k5 += one
+        k6 -= k26update
+        k7 += two
+        k8 += two
 
-        return (az, bm, am, bz), until(abs(az - aold) < (EPS * abs(az)))
+        big_cond = tt.gt(tt.abs_(qk) + tt.abs_(pk), big)
+        biginv_cond = tt.or_(
+            tt.lt(tt.abs_(qk), biginv),
+            tt.lt(tt.abs_(pk), biginv)
+        )
 
-    (az, bm, am, bz), _ = scan(_step,
-                sequences=[tt.arange(1, max_iter)],
-                outputs_info=[*tt.cast((1., 1., 1., 1. - qab * value / qap), 'float64')])
+        pkm2 = tt.switch(big_cond, pkm2 * biginv, pkm2)
+        pkm1 = tt.switch(big_cond, pkm1 * biginv, pkm1)
+        qkm2 = tt.switch(big_cond, qkm2 * biginv, qkm2)
+        qkm1 = tt.switch(big_cond, qkm1 * biginv, qkm1)
 
-    return az[-1]
+        pkm2 = tt.switch(biginv_cond, pkm2 * big, pkm2)
+        pkm1 = tt.switch(biginv_cond, pkm1 * big, pkm1)
+        qkm2 = tt.switch(biginv_cond, qkm2 * big, qkm2)
+        qkm1 = tt.switch(biginv_cond, qkm1 * big, qkm1)
+
+        return ((pkm1, pkm2, qkm1, qkm2,
+                 k1, k2, k3, k4, k5, k6, k7, k8, r),
+                until(tt.abs_(old_r - r) < (thresh * tt.abs_(r))))
+
+    (pkm1, pkm2, qkm1, qkm2,
+     k1, k2, k3, k4, k5, k6, k7, k8, r), _ = scan(
+        _step,
+        sequences=[tt.arange(0, 300)],
+        outputs_info=[
+            e for e in
+            tt.cast((pkm1, pkm2, qkm1, qkm2,
+                     k1, k2, k3, k4, k5, k6, k7, k8, r),
+                    'float64')
+        ]
+    )
+
+    return r[-1]
+
+
+def incomplete_beta_ps(a, b, value):
+    '''Power series for incomplete beta
+    Use when b*x is small and value not too close to 1.
+    Based on Cephes library by Steve Moshier (incbet.c)
+    '''
+    one = tt.constant(1, dtype='float64')
+    ai = one / a
+    u = (one - b) * value
+    t1 = u / (a + one)
+    t = u
+    threshold = np.MachAr().eps * ai
+    s = tt.constant(0, dtype='float64')
+
+    def _step(i, t, s):
+        t *= (i - b) * value / i
+        step = t / (a + i)
+        s += step
+        return ((t, s), until(tt.abs_(step) < threshold))
+
+    (t, s), _ = scan(
+        _step,
+        sequences=[tt.arange(2, 302)],
+        outputs_info=[
+            e for e in
+            tt.cast((t, s),
+                    'float64')
+        ]
+    )
+
+    s = s[-1] + t1 + ai
+
+    t = (
+        gammaln(a + b) - gammaln(a) - gammaln(b) +
+        a * tt.log(value) +
+        tt.log(s)
+    )
+    return tt.exp(t)
+
+
+def incomplete_beta(a, b, value):
+    '''Incomplete beta implementation
+    Power series and continued fraction expansions chosen for best numerical
+    convergence across the board based on inputs.
+    '''
+    machep = tt.constant(np.MachAr().eps, dtype='float64')
+    one = tt.constant(1, dtype='float64')
+    w = one - value
+
+    ps = incomplete_beta_ps(a, b, value)
+
+    flip = tt.gt(value, (a / (a + b)))
+    aa, bb = a, b
+    a = tt.switch(flip, bb, aa)
+    b = tt.switch(flip, aa, bb)
+    xc = tt.switch(flip, value, w)
+    x = tt.switch(flip, w, value)
+
+    tps = incomplete_beta_ps(a, b, x)
+    tps = tt.switch(tt.le(tps, machep), one - machep, one - tps)
+
+    # Choose which continued fraction expansion for best convergence.
+    small = tt.lt(x * (a + b - 2.0) - (a - one), 0.0)
+    cfe = incomplete_beta_cfe(a, b, x, small)
+    w = tt.switch(small, cfe, cfe / xc)
+
+    # Direct incomplete beta accounting for flipped a, b.
+    t = tt.exp(
+        a * tt.log(x) + b * tt.log(xc) +
+        gammaln(a + b) - gammaln(a) - gammaln(b) +
+        tt.log(w / a)
+    )
+
+    t = tt.switch(
+        flip,
+        tt.switch(tt.le(t, machep), one - machep, one - t),
+        t
+    )
+    return tt.switch(
+        tt.and_(flip, tt.and_(tt.le((b * x), one), tt.le(x, 0.95))),
+        tps,
+        tt.switch(
+            tt.and_(tt.le(b * value, one), tt.le(value, 0.95)),
+            ps,
+            t))
 
 
 class Beta(UnitContinuous):
@@ -616,21 +763,16 @@ class Beta(UnitContinuous):
                      alpha > 0, beta > 0)
 
     def logcdf(self, value):
-        a = self.alpha
-        b = self.beta
-        log_beta = tt.gammaln(a+b) - tt.gammaln(a) - tt.gammaln(b)
-        log_beta += a * tt.log(value) + b * tt.log(1 - value)
+        value = floatX(tt.as_tensor(value))
+        a = floatX(tt.as_tensor(self.alpha))
+        b = floatX(tt.as_tensor(self.beta))
         return tt.switch(
             tt.le(value, 0),
             -np.inf,
             tt.switch(
                 tt.ge(value, 1),
                 0,
-                tt.switch(
-                    tt.lt(value, (a + 1) / (a + b + 2)),
-                    tt.log(tt.exp(log_beta) * cont_fraction_beta(value, a, b) / a),
-                    tt.log(1. - tt.exp(log_beta) * cont_fraction_beta(1. - value, b, a) / b)
-                )
+                tt.log(incomplete_beta(a, b, value))
             )
         )
 
