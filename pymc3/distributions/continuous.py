@@ -879,7 +879,7 @@ class Lognormal(PositiveContinuous):
 
 class StudentT(Continuous):
     R"""
-    Non-central Student's T log-likelihood.
+    Student's T log-likelihood.
 
     Describes a normal variable whose precision is gamma distributed.
     If only nu parameter is passed, this specifies a standard (central)
