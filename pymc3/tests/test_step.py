@@ -11,7 +11,6 @@ from pymc3.step_methods import (NUTS, BinaryGibbsMetropolis, CategoricalGibbsMet
                                 MultivariateNormalProposal, HamiltonianMC,
                                 EllipticalSlice, smc, DEMetropolis)
 from pymc3.theanof import floatX
-from pymc3 import SamplingError
 from pymc3.distributions import (
     Binomial, Normal, Bernoulli, Categorical, Beta, HalfNormal)
 
@@ -423,7 +422,8 @@ class TestPopulationSamplers(object):
         pass
 
 
-@pytest.mark.xfail(condition=(theano.config.floatX == "float32"), reason="Fails on float32")
+@pytest.mark.xfail(condition=(theano.config.floatX == "float32"),
+                   reason="Fails on float32")
 class TestNutsCheckTrace(object):
     def test_multiple_samplers(self):
         with Model():

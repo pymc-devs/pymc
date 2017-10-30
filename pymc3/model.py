@@ -366,7 +366,7 @@ class ValueGradFunction(object):
         if cost.ndim > 0:
             raise ValueError('Cost must be a scalar.')
 
-        self._grad_vars = grad_vars
+        self.grad_vars = grad_vars
         self._extra_vars = extra_vars
         self._extra_var_names = set(var.name for var in extra_vars)
         self._cost = cost
@@ -376,7 +376,7 @@ class ValueGradFunction(object):
         if dtype is None:
             dtype = theano.config.floatX
         self.dtype = dtype
-        for var in self._grad_vars:
+        for var in self.grad_vars:
             if not np.can_cast(var.dtype, self.dtype, casting):
                 raise TypeError('Invalid dtype for variable %s. Can not '
                                 'cast to %s with casting rule %s.'

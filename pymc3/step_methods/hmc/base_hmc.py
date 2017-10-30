@@ -15,7 +15,8 @@ class BaseHMC(arraystep.GradientSharedStep):
 
     def __init__(self, vars=None, scaling=None, step_scale=0.25, is_cov=False,
                  model=None, blocked=True, potential=None,
-                 integrator="leapfrog", dtype=None, **theano_kwargs):
+                 integrator="leapfrog", dtype=None,
+                 logp_dlogp_function=None, **theano_kwargs):
         """Set up Hamiltonian samplers with common structures.
 
         Parameters
@@ -38,12 +39,20 @@ class BaseHMC(arraystep.GradientSharedStep):
         """
         model = modelcontext(model)
 
-        if vars is None:
+        if vars is None and logp_dlogp_function is None:
             vars = model.cont_vars
-        vars = inputvars(vars)
+        elif vars is not None and logp_dlogp_function is not None:
+            raise ValueError('Specify only one of logp_dlogp_function and vars')
+        elif logp_dlogp_function is not None:
+            vars = logp_dlogp_function.grad_vars
+
+        if vars is not None:
+            vars = inputvars(vars)
 
         super(BaseHMC, self).__init__(vars, blocked=blocked, model=model,
-                                      dtype=dtype, **theano_kwargs)
+                                      dtype=dtype,
+                                      logp_dlogp_function=logp_dlogp_function,
+                                      **theano_kwargs)
 
         size = self._logp_dlogp_func.size
 

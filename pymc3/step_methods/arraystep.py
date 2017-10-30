@@ -206,13 +206,22 @@ class PopulationArrayStepShared(ArrayStepShared):
 
 class GradientSharedStep(BlockedStep):
     def __init__(self, vars, model=None, blocked=True,
-                 dtype=None, **theano_kwargs):
+                 dtype=None, logp_dlogp_function=None, **theano_kwargs):
         model = modelcontext(model)
-        self.vars = vars
         self.blocked = blocked
-
-        self._logp_dlogp_func = model.logp_dlogp_function(
-            vars, dtype=dtype, **theano_kwargs)
+        if vars is None:
+            if logp_dlogp_function is None:
+                raise ValueError('One of logp_dlogp_function and vars has '
+                                 'to be specified.')
+            self.vars = None
+            self._logp_dlogp_func = logp_dlogp_function
+        else:
+            if logp_dlogp_function is not None:
+                raise ValueError('Only one of logp_dlogp_function and vars can '
+                                 'be specified.')
+            self.vars = vars
+            self._logp_dlogp_func = model.logp_dlogp_function(
+                vars, dtype=dtype, **theano_kwargs)
 
     def step(self, point):
         self._logp_dlogp_func.set_extra_values(point)

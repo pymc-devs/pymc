@@ -1233,9 +1233,11 @@ def init_nuts(init='auto', chains=1, n_init=500000, model=None,
             tolerance=1e-2, diff='relative'),
     ]
 
+    logp = model.logp_dlogp_function()
+
     if init == 'adapt_diag':
         start = [model.test_point] * chains
-        mean = np.mean([model.dict_to_array(vals) for vals in start], axis=0)
+        mean = np.mean([logp.dict_to_array(vals) for vals in start], axis=0)
         var = np.ones_like(mean)
         potential = quadpotential.QuadPotentialDiagAdapt(
             model.ndim, mean, var, 10)
@@ -1246,9 +1248,20 @@ def init_nuts(init='auto', chains=1, n_init=500000, model=None,
             for val in mean.values():
                 val[...] += 2 * np.random.rand(*val.shape) - 1
             start.append(mean)
-        mean = np.mean([model.dict_to_array(vals) for vals in start], axis=0)
+        mean = np.mean([logp.dict_to_array(vals) for vals in start], axis=0)
         var = np.ones_like(mean)
         potential = quadpotential.QuadPotentialDiagAdapt(
+            model.ndim, mean, var, 10)
+    elif init == 'jitter+adapt_diag_grad':
+        start = []
+        for _ in range(chains):
+            mean = {var: val.copy() for var, val in model.test_point.items()}
+            for val in mean.values():
+                val[...] += 2 * np.random.rand(*val.shape) - 1
+            start.append(mean)
+        mean = np.mean([logp.dict_to_array(vals) for vals in start], axis=0)
+        var = np.ones_like(mean)
+        potential = quadpotential.QuadPotentialDiagAdaptGrad(
             model.ndim, mean, var, 10)
     elif init == 'advi+adapt_diag_grad':
         approx = pm.fit(
@@ -1261,9 +1274,9 @@ def init_nuts(init='auto', chains=1, n_init=500000, model=None,
         start = approx.sample(draws=chains)
         start = list(start)
         stds = approx.bij.rmap(approx.std.eval())
-        cov = model.dict_to_array(stds) ** 2
+        cov = logp.dict_to_array(stds) ** 2
         mean = approx.bij.rmap(approx.mean.get_value())
-        mean = model.dict_to_array(mean)
+        mean = logp.dict_to_array(mean)
         weight = 50
         potential = quadpotential.QuadPotentialDiagAdaptGrad(
             model.ndim, mean, cov, weight)
@@ -1278,9 +1291,9 @@ def init_nuts(init='auto', chains=1, n_init=500000, model=None,
         start = approx.sample(draws=chains)
         start = list(start)
         stds = approx.bij.rmap(approx.std.eval())
-        cov = model.dict_to_array(stds) ** 2
+        cov = logp.dict_to_array(stds) ** 2
         mean = approx.bij.rmap(approx.mean.get_value())
-        mean = model.dict_to_array(mean)
+        mean = logp.dict_to_array(mean)
         weight = 50
         potential = quadpotential.QuadPotentialDiagAdapt(
             model.ndim, mean, cov, weight)
@@ -1295,7 +1308,7 @@ def init_nuts(init='auto', chains=1, n_init=500000, model=None,
         start = approx.sample(draws=chains)
         start = list(start)
         stds = approx.bij.rmap(approx.std.eval())
-        cov = model.dict_to_array(stds) ** 2
+        cov = logp.dict_to_array(stds) ** 2
         potential = quadpotential.QuadPotentialDiag(cov)
     elif init == 'advi_map':
         start = pm.find_MAP(include_transformed=True)
@@ -1310,7 +1323,7 @@ def init_nuts(init='auto', chains=1, n_init=500000, model=None,
         start = approx.sample(draws=chains)
         start = list(start)
         stds = approx.bij.rmap(approx.std.eval())
-        cov = model.dict_to_array(stds) ** 2
+        cov = logp.dict_to_array(stds) ** 2
         potential = quadpotential.QuadPotentialDiag(cov)
     elif init == 'map':
         start = pm.find_MAP(include_transformed=True)
@@ -1325,8 +1338,10 @@ def init_nuts(init='auto', chains=1, n_init=500000, model=None,
         start = list(np.random.choice(init_trace, chains))
         potential = quadpotential.QuadPotentialFull(cov)
     else:
-        raise NotImplementedError('Initializer {} is not supported.'.format(init))
+        raise NotImplementedError(
+            'Initializer {} is not supported.'.format(init))
 
-    step = pm.NUTS(potential=potential, model=model, **kwargs)
+    step = pm.NUTS(potential=potential, model=model,
+                   logp_dlogp_function=logp, **kwargs)
 
     return start, step
