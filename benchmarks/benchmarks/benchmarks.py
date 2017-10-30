@@ -128,24 +128,19 @@ class EffectiveSampleSizeSuite(object):
         ess = pm.effective_n(trace, ('mu_a',))['mu_a']
         return ess / tot
 
-<<<<<<< HEAD
-=======
-<<<<<<< HEAD
-EffectiveSampleSizeSuite.track_glm_hierarchical_ess.unit = 'Effective samples per second            pm.sample(draws=2000, njobs=4)
-=======
 EffectiveSampleSizeSuite.track_glm_hierarchical_ess.unit = 'Effective samples per second'
->>>>>>> 6a1ebd85... Merging
->>>>>>> Added a benchmark for marginalized distributions (#2661)
+
 
 class EffectiveSampleSizeSuiteMarginal(object):
     """Tests effective sample size per second on models
-     """
-     timeout = 360.0
-     params = (
-         [pm.NUTS, pm.Metropolis],  # Slice too slow, don't want to tune HMC
-         ['advi', 'jitter+adapt_diag', 'advi+adapt_diag_grad'],
-     )
-     param_names = ['step', 'init']
+    """
+    timeout = 360.0
+    params = (
+        [pm.NUTS, pm.Metropolis],  # Slice too slow, don't want to tune HMC
+        ['advi', 'jitter+adapt_diag', 'advi+adapt_diag_grad'],
+    )
+    param_names = ['step', 'init']
+
     def setup(self, step, init):
         np.random.seed(1234)
         N = 1000
@@ -175,3 +170,4 @@ class EffectiveSampleSizeSuiteMarginal(object):
         return ess / tot
 
 EffectiveSampleSizeSuiteMarginal.track_marginal_mixture_model.unit = 'Effective samples per second'
+
