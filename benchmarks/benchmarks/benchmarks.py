@@ -138,25 +138,6 @@ class NUTSInitSuite(object):
         ess = pm.effective_n(trace, ('mu_a',))['mu_a']
         return ess / tot
 
-
-class EffectiveSampleSizeSuiteMarginal(object):
-    """Tests effective sample size per second on models
-     """
-     timeout = 360.0
-     params = (
-         [pm.NUTS, pm.Metropolis],  # Slice too slow, don't want to tune HMC
-         ['advi', 'jitter+adapt_diag', 'advi+adapt_diag_grad'],
-     )
-     param_names = ['step', 'init']
-    def setup(self, step, init):
-        np.random.seed(1234)
-        N = 1000
-        self.chains = 4
-        W = np.array([0.35, 0.4, 0.25])
-        MU = np.array([0., 2., 5.])
-        SIGMA = np.array([0.5, 0.5, 1.])
-        component = np.random.choice(MU.size, size=N, p=W)
-        x = np.random.normal(MU[component], SIGMA[component], size=N)
     def track_marginal_mixture_model_ess(self, init):
         with mixture_model():
             start, step = pm.init_nuts(init=init, chains=4, progressbar=False, random_seed=123)
@@ -178,13 +159,14 @@ class CompareMetropolisNUTSSuite(object):
     params = (None, pm.NUTS, pm.Metropolis)
     number = 1
     repeat = 1
+    draws = 20000
 
     def track_glm_hierarchical_ess(self, step):
         with glm_hierarchical_model():
             if step is not None:
                 step = step()
             t0 = time.time()
-            trace = pm.sample(draws=10000, step=step, njobs=4, chains=4,
+            trace = pm.sample(draws=self.draws, step=step, njobs=4, chains=4,
                               random_seed=100)
             tot = time.time() - t0
         ess = pm.effective_n(trace, ('mu_a',))['mu_a']
