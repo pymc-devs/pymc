@@ -30,23 +30,24 @@ def glm_hierarchical_model(random_seed=123):
 
 def mixture_model(random_seed=1234):
     """Sample mixture model to use in benchmarks"""
-    np.random.seed(1234)
+    np.random.seed(random_seed)
     size = 1000
-    self.chains = 4
-    w = np.array([0.35, 0.4, 0.25])
-    mu = np.array([0., 2., 5.])
+    w_true = np.array([0.35, 0.4, 0.25])
+    mu_true = np.array([0., 2., 5.])
     sigma = np.array([0.5, 0.5, 1.])
-    component = np.random.choice(mu.size, size=size, p=w)
-    x = np.random.normal(mu[component], sigma[component], size=size)
+    component = np.random.choice(mu_true.size, size=size, p=w_true)
+    x = np.random.normal(mu_true[component], sigma[component], size=size)
 
     with pm.Model() as model:
-        w = pm.Dirichlet('w', np.ones_like(w))
-
-        mu = pm.Normal('mu', 0., 10., shape=w.size)
-        tau = pm.Gamma('tau', 1., 1., shape=w.size)
-
-        pm.NormalMixture('x_obs', w, mu, tau=tau, observed=x)
+        w = pm.Dirichlet('w', a=np.ones_like(w_true))
+        mu = pm.Normal('mu', mu=0., sd=10., shape=w_true.shape)
+        # effective sample size of mu is 2 if not sorted
+        # exercise left to the reader
+        sorted_mu = pm.Deterministic('sorted_mu', tt.sort(mu))
+        tau = pm.Gamma('tau', alpha=1., beta=1., shape=w_true.shape)
+        pm.NormalMixture('x_obs', w=w, mu=mu, tau=tau, observed=x)
     return model
+
 
 class OverheadSuite(object):
     """
@@ -106,20 +107,21 @@ class ExampleSuite(object):
             pm.Deterministic('difference of stds', group1_std - group2_std)
             pm.Deterministic(
                 'effect size', diff_of_means / np.sqrt((group1_std**2 + group2_std**2) / 2))
-            pm.sample(2000, njobs=4)
+            pm.sample(20000, njobs=4, chains=4)
 
     def time_glm_hierarchical(self):
         with glm_hierarchical_model():
-            pm.sample(draws=2000, njobs=4)
+            pm.sample(draws=20000, njobs=4, chains=4)
 
 
 class NUTSInitSuite(object):
     """Tests initializations for NUTS sampler on models
     """
     timeout = 360.0
-    params = ('adapt_diag', 'jitter+adapt_diag', 'advi+adapt_diag_grad', 'advi_map')
+    params = ('adapt_diag', 'jitter+adapt_diag', 'advi+adapt_diag_grad')
     number = 1
     repeat = 1
+    draws = 10000
 
     def time_glm_hierarchical_init(self, init):
         """How long does it take to run the initialization."""
@@ -130,7 +132,7 @@ class NUTSInitSuite(object):
         with glm_hierarchical_model():
             start, step = pm.init_nuts(init=init, chains=4, progressbar=False, random_seed=123)
             t0 = time.time()
-            trace = pm.sample(draws=10000, step=step, njobs=4, chains=4,
+            trace = pm.sample(draws=self.draws, step=step, njobs=4, chains=4,
                               start=start, random_seed=100)
             tot = time.time() - t0
         ess = pm.effective_n(trace, ('mu_a',))['mu_a']
@@ -156,13 +158,13 @@ class EffectiveSampleSizeSuiteMarginal(object):
         component = np.random.choice(MU.size, size=N, p=W)
         x = np.random.normal(MU[component], SIGMA[component], size=N)
     def track_marginal_mixture_model_ess(self, init):
-        with mixure_model():
+        with mixture_model():
             start, step = pm.init_nuts(init=init, chains=4, progressbar=False, random_seed=123)
             t0 = time.time()
-            trace = pm.sample(draws=20000, step=step, njobs=4, chains=4,
+            trace = pm.sample(draws=self.draws, step=step, njobs=4, chains=4,
                               start=start, random_seed=100)
             tot = time.time() - t0
-        ess = pm.effective_n(trace, ('w',))['mu']
+        ess = pm.effective_n(trace, ('sorted_mu',))['sorted_mu'].min()  # worst case
         return ess / tot
 
 
