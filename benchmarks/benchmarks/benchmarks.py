@@ -20,8 +20,10 @@ def glm_hierarchical_model(random_seed=123):
         sigma_a = pm.HalfCauchy('sigma_a', 5)
         mu_b = pm.Normal('mu_b', mu=0., sd=100**2)
         sigma_b = pm.HalfCauchy('sigma_b', 5)
-        a = pm.Normal('a', mu=mu_a, sd=sigma_a, shape=n_counties)
-        b = pm.Normal('b', mu=mu_b, sd=sigma_b, shape=n_counties)
+        a = pm.Normal('a', mu=0, sd=1, shape=n_counties)
+        b = pm.Normal('b', mu=0, sd=1, shape=n_counties)
+        a = mu_a + sigma_a * a
+        b = mu_b + sigma_b * b
         eps = pm.HalfCauchy('eps', 5)
         radon_est = a[county_idx] + b[county_idx] * data.floor.values
         pm.Normal('radon_like', mu=radon_est, sd=eps, observed=data.log_radon)
@@ -30,7 +32,7 @@ def glm_hierarchical_model(random_seed=123):
 
 def mixture_model(random_seed=1234):
     """Sample mixture model to use in benchmarks"""
-    np.random.seed(random_seed)
+    np.random.seed(1234)
     size = 1000
     w_true = np.array([0.35, 0.4, 0.25])
     mu_true = np.array([0., 2., 5.])
@@ -41,12 +43,18 @@ def mixture_model(random_seed=1234):
     with pm.Model() as model:
         w = pm.Dirichlet('w', a=np.ones_like(w_true))
         mu = pm.Normal('mu', mu=0., sd=10., shape=w_true.shape)
-        # effective sample size of mu is 2 if not sorted
-        # exercise left to the reader
-        sorted_mu = pm.Deterministic('sorted_mu', tt.sort(mu))
+        enforce_order = pm.Potential('enforce_order', tt.switch(mu[0] - mu[1] <= 0, 0., -np.inf) +
+                                                      tt.switch(mu[1] - mu[2] <= 0, 0., -np.inf))
         tau = pm.Gamma('tau', alpha=1., beta=1., shape=w_true.shape)
         pm.NormalMixture('x_obs', w=w, mu=mu, tau=tau, observed=x)
-    return model
+
+    # Initialization can be poorly specified, this is a hack to make it work
+    start = {
+        'mu': mu_true.copy(),
+        'tau_log__': np.log(1. / sigma**2),
+        'w_stickbreaking__': np.array([-0.03,  0.44])
+    }
+    return model, start
 
 
 class OverheadSuite(object):
@@ -122,30 +130,34 @@ class NUTSInitSuite(object):
     number = 1
     repeat = 1
     draws = 10000
+    chains = 4
 
     def time_glm_hierarchical_init(self, init):
         """How long does it take to run the initialization."""
         with glm_hierarchical_model():
-            pm.init_nuts(init=init, chains=4, progressbar=False)
+            pm.init_nuts(init=init, chains=self.chains, progressbar=False)
 
     def track_glm_hierarchical_ess(self, init):
         with glm_hierarchical_model():
-            start, step = pm.init_nuts(init=init, chains=4, progressbar=False, random_seed=123)
+            start, step = pm.init_nuts(init=init, chains=self.chains, progressbar=False, random_seed=123)
             t0 = time.time()
-            trace = pm.sample(draws=self.draws, step=step, njobs=4, chains=4,
+            trace = pm.sample(draws=self.draws, step=step, njobs=4, chains=self.chains,
                               start=start, random_seed=100)
             tot = time.time() - t0
         ess = pm.effective_n(trace, ('mu_a',))['mu_a']
         return ess / tot
 
     def track_marginal_mixture_model_ess(self, init):
-        with mixture_model():
-            start, step = pm.init_nuts(init=init, chains=4, progressbar=False, random_seed=123)
+        model, start = mixture_model()
+        with model:
+            _, step = pm.init_nuts(init=init, chains=self.chains,
+                                   progressbar=False, random_seed=123)
+            start = [{k: v for k, v in start.items()} for _ in range(self.chains)]
             t0 = time.time()
-            trace = pm.sample(draws=self.draws, step=step, njobs=4, chains=4,
+            trace = pm.sample(draws=self.draws, step=step, njobs=4, chains=self.chains,
                               start=start, random_seed=100)
             tot = time.time() - t0
-        ess = pm.effective_n(trace, ('sorted_mu',))['sorted_mu'].min()  # worst case
+        ess = pm.effective_n(trace, ('mu',))['mu'].min()  # worst case
         return ess / tot
 
 
