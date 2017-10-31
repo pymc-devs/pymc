@@ -87,6 +87,8 @@ def autocorrplot(trace, varnames=None, max_lag=100, burn=0, plot_transformed=Fal
                 ax[i, j].set_xlim(0, max_lag)
 
             if nchains > 1:
-                ax[i, j].set_title("chain {0}".format(j + 1))
+                ax[i, j].set_title("{0} (chain {1})".format(v, j + 1))
+            else:
+                ax[i, j].set_title(v)
 
     return ax
