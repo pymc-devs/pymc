@@ -645,6 +645,12 @@ def hpd(x, alpha=0.05, transform=lambda x: x):
         return np.array(calc_min_interval(sx, alpha))
 
 
+def _hpd_df(x, alpha):
+    cnames = ['hpd_{0:g}'.format(100 * alpha / 2),
+              'hpd_{0:g}'.format(100 * (1 - alpha / 2))]
+    return pd.DataFrame(hpd(x, alpha), columns=cnames)
+
+
 @statfunc
 def mc_error(x, batches=5):
     R"""Calculates the simulation standard error, accounting for non-independent
@@ -724,6 +730,19 @@ def quantiles(x, qlist=(2.5, 25, 50, 75, 97.5), transform=lambda x: x):
     except IndexError:
         pm._log.warning("Too few elements for quantile calculation")
 
+def dict2pd(statdict, labelname):
+    """Small helper function to transform a diagnostics output dict into a
+    pandas Series.
+    """
+    var_dfs = []
+    for key, value in statdict.items():
+        var_df = pd.Series(value)
+        var_df.index = ttab.create_flat_names(key, value.shape)
+        var_dfs.append(var_df)
+    statpd = pd.concat(var_dfs, axis=0)
+    statpd = statpd.rename(labelname)
+    return statpd
+    
 def summary(trace, varnames=None, transform=lambda x: x, stat_funcs=None,
                extend=False, include_transformed=False,
                alpha=0.05, start=0, batches=None):
@@ -813,8 +832,6 @@ def summary(trace, varnames=None, transform=lambda x: x, stat_funcs=None,
         mu__1  0.067513 -0.159097 -0.045637  0.062912
     """
 
-    from .diagnostics import gelman_rubin, effective_n
-
     if varnames is None:
         varnames = get_default_varnames(trace.varnames,
                        include_transformed=include_transformed)
@@ -825,34 +842,40 @@ def summary(trace, varnames=None, transform=lambda x: x, stat_funcs=None,
     funcs = [lambda x: pd.Series(np.mean(x, 0), name='mean'),
              lambda x: pd.Series(np.std(x, 0), name='sd'),
              lambda x: pd.Series(mc_error(x, batches), name='mc_error'),
-             lambda x: _hpd_df(x, alpha),
-             lambda x: pd.Series(effective_n(x), name='n_eff'),
-             lambda x: pd.Series(gelman_rubin(x), name='Rhat')]
+             lambda x: _hpd_df(x, alpha)]
 
     if stat_funcs is not None and extend:
-        stat_funcs = funcs + stat_funcs
-
-    elif stat_funcs is None:
-        stat_funcs = funcs
+        funcs = funcs + stat_funcs
 
     var_dfs = []
     for var in varnames:
         vals = transform(trace.get_values(var, burn=start, combine=True))
         flat_vals = vals.reshape(vals.shape[0], -1)
-        var_df = pd.concat([f(flat_vals) for f in stat_funcs], axis=1)
+        var_df = pd.concat([f(flat_vals) for f in funcs], axis=1)
         var_df.index = ttab.create_flat_names(var, vals.shape[1:])
         var_dfs.append(var_df)
-    return pd.concat(var_dfs, axis=0)
+    dforg = pd.concat(var_dfs, axis=0)
+    
+    if (stat_funcs is not None) and (not extend):
+        return dforg
+    else:
+        n_eff = pm.effective_n(trace, 
+                               varnames=varnames, 
+                               include_transformed=include_transformed)
+        n_eff_pd = dict2pd(n_eff, 'n_eff')
+        rhat = pm.gelman_rubin(trace, 
+                               varnames=varnames, 
+                               include_transformed=include_transformed)
+        rhat_pd = dict2pd(rhat, 'rhat')
+        return pd.concat([dforg, n_eff_pd, rhat_pd], 
+                         axis=1, join_axes=[dforg.index])
+
 
 def df_summary(*args, **kwargs):
     warnings.warn("df_summary has been deprecated. In future, use summary instead.",
                 DeprecationWarning)
     return summary(*args, **kwargs)
 
-def _hpd_df(x, alpha):
-    cnames = ['hpd_{0:g}'.format(100 * alpha / 2),
-              'hpd_{0:g}'.format(100 * (1 - alpha / 2))]
-    return pd.DataFrame(hpd(x, alpha), columns=cnames)
 
 class _Summary(object):
     """Base class for summary output"""
