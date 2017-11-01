@@ -58,7 +58,7 @@ def compareplot(comp_df, insample_dev=True, se=True, dse=True, ax=None,
         yticks_labels[0] = comp_df.index[0]
         yticks_labels[2::2] = comp_df.index[1:]
         ax.set_yticks(yticks_pos)
-        ax.errorbar(x=comp_df.loc[1:, ic],
+        ax.errorbar(x=comp_df[ic].iloc[1:],
                     y=yticks_pos[1::2],
                     xerr=comp_df.dSE[1:],
                     color=plot_kwargs.get('color_dse', 'grey'),
@@ -92,7 +92,7 @@ def compareplot(comp_df, insample_dev=True, se=True, dse=True, ax=None,
                 marker=plot_kwargs.get('marker_insample_dev', 'o'),
                 lw=0)
 
-    ax.axvline(comp_df.loc[0, ic],
+    ax.axvline(comp_df[ic].iloc[0],
                ls=plot_kwargs.get('ls_min_ic', '--'),
                color=plot_kwargs.get('color_ls_min_ic', 'grey'))
 
