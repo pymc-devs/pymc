@@ -736,7 +736,7 @@ def dict2pd(statdict, labelname):
     """
     var_dfs = []
     for key, value in statdict.items():
-        var_df = pd.Series(value)
+        var_df = pd.Series(value.flatten())
         var_df.index = ttab.create_flat_names(key, value.shape)
         var_dfs.append(var_df)
     statpd = pd.concat(var_dfs, axis=0)
@@ -844,9 +844,12 @@ def summary(trace, varnames=None, transform=lambda x: x, stat_funcs=None,
              lambda x: pd.Series(mc_error(x, batches), name='mc_error'),
              lambda x: _hpd_df(x, alpha)]
 
-    if stat_funcs is not None and extend:
-        funcs = funcs + stat_funcs
-
+    if stat_funcs is not None:
+        if extend:
+            funcs = funcs + stat_funcs
+        else:
+            funcs = stat_funcs
+            
     var_dfs = []
     for var in varnames:
         vals = transform(trace.get_values(var, burn=start, combine=True))
@@ -866,7 +869,7 @@ def summary(trace, varnames=None, transform=lambda x: x, stat_funcs=None,
         rhat = pm.gelman_rubin(trace, 
                                varnames=varnames, 
                                include_transformed=include_transformed)
-        rhat_pd = dict2pd(rhat, 'rhat')
+        rhat_pd = dict2pd(rhat, 'Rhat')
         return pd.concat([dforg, n_eff_pd, rhat_pd], 
                          axis=1, join_axes=[dforg.index])
 
@@ -875,110 +878,6 @@ def df_summary(*args, **kwargs):
     warnings.warn("df_summary has been deprecated. In future, use summary instead.",
                 DeprecationWarning)
     return summary(*args, **kwargs)
-
-
-class _Summary(object):
-    """Base class for summary output"""
-
-    def __init__(self, roundto):
-        self.roundto = roundto
-        self.header_lines = None
-        self.leader = '  '
-        self.spaces = None
-        self.width = None
-
-    def output(self, sample):
-        return '\n'.join(list(self._get_lines(sample))) + '\n\n'
-
-    def _get_lines(self, sample):
-        for line in self.header_lines:
-            yield self.leader + line
-        summary_lines = self._calculate_values(sample)
-        for line in self._create_value_output(summary_lines):
-            yield self.leader + line
-
-    def _create_value_output(self, lines):
-        for values in lines:
-            try:
-                self._format_values(values)
-                yield self.value_line.format(pad=self.spaces, **values).strip()
-            except AttributeError:
-                # This is a key for the leading indices, not a normal row.
-                # `values` will be an empty tuple unless it is 2d or above.
-                if values:
-                    leading_idxs = [str(v) for v in values]
-                    numpy_idx = '[{}, :]'.format(', '.join(leading_idxs))
-                    yield self._create_idx_row(numpy_idx)
-                else:
-                    yield ''
-
-    def _calculate_values(self, sample):
-        raise NotImplementedError
-
-    def _format_values(self, summary_values):
-        for key, val in summary_values.items():
-            summary_values[key] = '{:.{ndec}f}'.format(
-                float(val), ndec=self.roundto)
-
-    def _create_idx_row(self, value):
-        return '{:.^{}}'.format(value, self.width)
-
-
-class _StatSummary(_Summary):
-
-    def __init__(self, roundto, batches, alpha):
-        super(_StatSummary, self).__init__(roundto)
-        spaces = 17
-        hpd_name = '{0:g}% HPD interval'.format(100 * (1 - alpha))
-        value_line = '{mean:<{pad}}{sd:<{pad}}{mce:<{pad}}{hpd:<{pad}}'
-        header = value_line.format(mean='Mean', sd='SD', mce='MC Error',
-                                   hpd=hpd_name, pad=spaces).strip()
-        self.width = len(header)
-        hline = '-' * self.width
-
-        self.header_lines = [header, hline]
-        self.spaces = spaces
-        self.value_line = value_line
-        self.batches = batches
-        self.alpha = alpha
-
-    def _calculate_values(self, sample):
-        return _calculate_stats(sample, self.batches, self.alpha)
-
-    def _format_values(self, summary_values):
-        roundto = self.roundto
-        for key, val in summary_values.items():
-            if key == 'hpd':
-                summary_values[key] = '[{:.{ndec}f}, {:.{ndec}f}]'.format(
-                    *val, ndec=roundto)
-            else:
-                summary_values[key] = '{:.{ndec}f}'.format(
-                    float(val), ndec=roundto)
-
-
-class _PosteriorQuantileSummary(_Summary):
-
-    def __init__(self, roundto, alpha):
-        super(_PosteriorQuantileSummary, self).__init__(roundto)
-        spaces = 15
-        title = 'Posterior quantiles:'
-        value_line = '{lo:<{pad}}{q25:<{pad}}{q50:<{pad}}{q75:<{pad}}{hi:<{pad}}'
-        lo, hi = 100 * alpha / 2, 100 * (1. - alpha / 2)
-        qlist = (lo, 25, 50, 75, hi)
-        header = value_line.format(lo=lo, q25=25, q50=50, q75=75, hi=hi,
-                                   pad=spaces).strip()
-        self.width = len(header)
-        hline = '|{thin}|{thick}|{thick}|{thin}|'.format(
-            thin='-' * (spaces - 1), thick='=' * (spaces - 1))
-
-        self.header_lines = [title, header, hline]
-        self.spaces = spaces
-        self.lo, self.hi = lo, hi
-        self.qlist = qlist
-        self.value_line = value_line
-
-    def _calculate_values(self, sample):
-        return _calculate_posterior_quantiles(sample, self.qlist)
 
 
 def _calculate_stats(sample, batches, alpha):
