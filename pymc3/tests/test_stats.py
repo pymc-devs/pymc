@@ -203,7 +203,7 @@ class TestStats(SeededTest):
             Normal('x', mu, tau, testval=floatX_array(.1))
             step = Metropolis(model.vars, np.diag([1.]), blocked=True)
             trace = pm.sample(100, step=step)
-        pm.summary(trace)
+        summary(trace)
 
     def test_summary_1d_variable_model(self):
         mu = -2.1
@@ -212,7 +212,7 @@ class TestStats(SeededTest):
             Normal('x', mu, tau, shape=2, testval=floatX_array([.1, .1]))
             step = Metropolis(model.vars, np.diag([1.]), blocked=True)
             trace = pm.sample(100, step=step)
-        pm.summary(trace)
+        summary(trace)
 
     def test_summary_2d_variable_model(self):
         mu = -2.1
@@ -222,7 +222,7 @@ class TestStats(SeededTest):
                    testval=floatX_array(np.tile(.1, (2, 2))))
             step = Metropolis(model.vars, np.diag([1.]), blocked=True)
             trace = pm.sample(100, step=step)
-        pm.summary(trace)
+        summary(trace)
 
     def test_calculate_stats_0d_variable(self):
         sample = np.arange(10)
@@ -327,10 +327,37 @@ class TestDfSummary(bf.ModelBackendSampledTestCase):
                 npt.assert_equal(val, ds.loc[vidx, 'mean'])
 
     def test_row_names(self):
-        with Model() as model:
+        with Model():
             pm.Uniform('x', 0, 1)
             step = Metropolis()
             trace = pm.sample(100, step=step)
         ds = summary(trace, batches=3, include_transformed=True)
         npt.assert_equal(np.array(['x_interval__', 'x']),
                          ds.index)
+
+    def test_value_n_eff_rhat(self):
+        mu = -2.1
+        tau = 1.3
+        with Model():
+            Normal('x0', mu, tau, testval=floatX_array(.1)) # 0d
+            Normal('x1', mu, tau, shape=2, testval=floatX_array([.1, .1]))# 1d
+            Normal('x2', mu, tau, shape=(2, 2),
+                   testval=floatX_array(np.tile(.1, (2, 2))))# 2d
+            Normal('x3', mu, tau, shape=(2, 2, 3),
+                   testval=floatX_array(np.tile(.1, (2, 2, 3))))# 3d
+            trace = pm.sample(100, step=pm.Metropolis())
+        for varname in trace.varnames:
+            # test effective_n value
+            n_eff = pm.effective_n(trace, varnames=[varname])[varname]
+            n_eff_df = np.asarray(
+                    pm.summary(trace, varnames=[varname])['n_eff']
+                                 ).reshape(n_eff.shape)
+            npt.assert_equal(n_eff, n_eff_df)
+            
+            # test Rhat value
+            rhat = pm.gelman_rubin(trace, varnames=[varname])[varname]
+            rhat_df = np.asarray(
+                    pm.summary(trace, varnames=[varname])['Rhat']
+                                 ).reshape(rhat.shape)
+            npt.assert_equal(rhat, rhat_df)
+
