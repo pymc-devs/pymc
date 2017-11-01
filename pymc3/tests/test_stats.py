@@ -447,8 +447,8 @@ class TestDfSummary(bf.ModelBackendSampledTestCase):
         ds = summary(self.mtrace, batches=3,
                         stat_funcs=[customf], extend=True)
         npt.assert_equal(np.array(['mean', 'sd', 'mc_error',
-                                   'hpd_2.5', 'hpd_97.5',
-                                   'n_eff', 'Rhat', 'my_mean']),
+                                   'hpd_2.5', 'hpd_97.5', 'my_mean',
+                                   'n_eff', 'Rhat']),
                          ds.columns)
 
     def test_value_alignment(self):
