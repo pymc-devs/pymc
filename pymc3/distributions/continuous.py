@@ -1846,6 +1846,15 @@ class StudentT(Continuous):
                                                                 get_variable_name(mu),
                                                                 get_variable_name(lam))
 
+    def logcdf(self, value):
+        nu = self.nu
+        mu = self.mu
+        sd = self.sd
+        t = (value - mu)/sd
+        sqrt_t2_nu = tt.sqrt(t**2 + nu)
+        x = (t + sqrt_t2_nu)/(2.0 * sqrt_t2_nu)
+        return tt.log(incomplete_beta(nu/2., nu/2., x))
+
 
 class Pareto(Continuous):
     R"""

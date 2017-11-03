@@ -668,6 +668,8 @@ class TestMatchesScipy(SeededTest):
     def test_t(self):
         self.pymc3_matches_scipy(StudentT, R, {'nu': Rplus, 'mu': R, 'lam': Rplus},
                                  lambda value, nu, mu, lam: sp.t.logpdf(value, nu, mu, lam**-0.5))
+        self.check_logcdf(StudentT, R, {'nu': Rplus, 'mu': R, 'lam': Rplus},
+                          lambda value, nu, mu, lam: sp.t.logcdf(value, nu, mu, lam**-0.5))
 
     def test_cauchy(self):
         self.pymc3_matches_scipy(Cauchy, R, {'alpha': R, 'beta': Rplusbig},
