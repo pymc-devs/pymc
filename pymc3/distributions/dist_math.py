@@ -308,3 +308,9 @@ def random_choice(*args, **kwargs):
         samples = np.random.choice(k, p=p, size=size)
     return samples
 
+
+def zvalue(value, sd, mu):
+    """
+    Calculate the z-value for a normal distribution.
+    """
+    return (value - mu) / sd
