@@ -550,6 +550,10 @@ class TestMatchesScipy(SeededTest):
             x = HalfFlat('a', shape=2)
             assert_allclose(x.tag.test_value, 1)
             assert x.tag.test_value.shape == (2,)
+        self.check_logcdf(HalfFlat, Runif, {}, lambda value: -np.inf)
+        # Check infinite cases individually.
+        assert 0. == HalfFlat.dist().logcdf(np.inf).tag.test_value
+        assert -np.inf == HalfFlat.dist().logcdf(-np.inf).tag.test_value
 
     def test_normal(self):
         self.pymc3_matches_scipy(Normal, R, {'mu': R, 'sd': Rplus},
