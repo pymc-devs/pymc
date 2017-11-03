@@ -2217,6 +2217,15 @@ class HalfCauchy(PositiveContinuous):
         return r'${} \sim \text{{HalfCauchy}}(\mathit{{beta}}={})$'.format(name,
                                                                 get_variable_name(beta))
 
+    def logcdf(self, value):
+        return tt.switch(
+            tt.le(value, 0),
+            -np.inf,
+            tt.log(
+                2 * tt.arctan(value / self.beta) / np.pi
+            ))
+
+
 class Gamma(PositiveContinuous):
     R"""
     Gamma log-likelihood.
