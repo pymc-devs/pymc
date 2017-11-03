@@ -684,6 +684,8 @@ class TestMatchesScipy(SeededTest):
     def test_half_cauchy(self):
         self.pymc3_matches_scipy(HalfCauchy, Rplus, {'beta': Rplusbig},
                                  lambda value, beta: sp.halfcauchy.logpdf(value, scale=beta))
+        self.check_logcdf(HalfCauchy, Rplus, {'beta': Rplusbig},
+                          lambda value, beta: sp.halfcauchy.logcdf(value, scale=beta))
 
     def test_gamma(self):
         self.pymc3_matches_scipy(
