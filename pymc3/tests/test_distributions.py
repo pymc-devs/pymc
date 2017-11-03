@@ -573,6 +573,8 @@ class TestMatchesScipy(SeededTest):
                                  lambda value, sd: sp.halfnorm.logpdf(value, scale=sd),
                                  decimal=select_by_precision(float64=6, float32=-1)
                                  )
+        self.check_logcdf(HalfNormal, Rplus, {'sd': Rplus},
+                          lambda value, sd: sp.halfnorm.logcdf(value, scale=sd))
 
     def test_chi_squared(self):
         self.pymc3_matches_scipy(ChiSquared, Rplus, {'nu': Rplusdunif},

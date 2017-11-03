@@ -781,6 +781,15 @@ class HalfNormal(PositiveContinuous):
         return r'${} \sim \text{{HalfNormal}}(\mathit{{sd}}={})$'.format(name,
                                                                          get_variable_name(sd))
 
+    def logcdf(self, value):
+        sd = self.sd
+        z = zvalue(value, mu=0, sd=sd)
+        return tt.switch(
+            tt.lt(z, -1.0),
+            tt.log(tt.erfcx(-z / tt.sqrt(2.))) - tt.sqr(z),
+            tt.log1p(-tt.erfc(z / tt.sqrt(2.)))
+        )
+
 
 class Wald(PositiveContinuous):
     R"""
