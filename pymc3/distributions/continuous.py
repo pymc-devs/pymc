@@ -350,6 +350,17 @@ class HalfFlat(PositiveContinuous):
         name = r'\text{%s}' % name
         return r'${} \sim \text{{HalfFlat}}()$'.format(name)
 
+    def logcdf(self, value):
+        return tt.switch(
+            tt.lt(value, np.inf),
+            -np.inf,
+            tt.switch(
+                tt.eq(value, np.inf),
+                0,
+                -np.inf
+            )
+        )
+
 
 class Normal(Continuous):
     R"""
