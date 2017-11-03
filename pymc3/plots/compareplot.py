@@ -51,7 +51,7 @@ def compareplot(comp_df, insample_dev=True, se=True, dse=True, ax=None,
     yticks_labels = [''] * len(yticks_pos)
     
     ic = 'WAIC'
-    if not comp_df.columns.contains(ic):
+    if ic not in comp_df.columns:
         ic = 'LOO'
 
     if dse:
