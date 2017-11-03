@@ -447,6 +447,19 @@ class TestMatchesScipy(SeededTest):
                 decimal = select_by_precision(float64=6, float32=3)
             assert_almost_equal(logp(pt), logp_reference(pt), decimal=decimal, err_msg=str(pt))
 
+    def check_logcdf(self, pymc3_dist, domain, paramdomains, scipy_logcdf, decimal=None):
+        domains = paramdomains.copy()
+        domains['value'] = domain
+        if decimal is None:
+            decimal = select_by_precision(float64=6, float32=3)
+        for pt in product(domains, n_samples=100):
+            params = dict(pt)
+            scipy_cdf = scipy_logcdf(**params)
+            value = params.pop('value')
+            dist = pymc3_dist.dist(**params)
+            assert_almost_equal(dist.logcdf(value).tag.test_value, scipy_cdf,
+                                decimal=decimal, err_msg=str(pt))
+
     def check_int_to_1(self, model, value, domain, paramdomains):
         pdf = model.fastfn(exp(model.logpt))
         for pt in product(paramdomains, n_samples=10):
@@ -535,6 +548,8 @@ class TestMatchesScipy(SeededTest):
                                  lambda value, mu, sd: sp.norm.logpdf(value, mu, sd),
                                  decimal=select_by_precision(float64=6, float32=1)
                                  )
+        self.check_logcdf(Normal, R, {'mu': R, 'sd': Rplus},
+                          lambda value, mu, sd: sp.norm.logcdf(value, mu, sd))
 
     def test_truncated_normal(self):
         def scipy_logp(value, mu, sd, lower, upper):

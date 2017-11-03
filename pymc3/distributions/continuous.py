@@ -19,8 +19,8 @@ from pymc3.util import get_variable_name
 from .special import log_i0
 from ..math import invlogit, logit, logdiffexp
 from .dist_math import (
-    bound, logpow, gammaln, betaln, std_cdf, alltrue_elemwise,
-    SplineWrapper, i0e, normal_lcdf, normal_lccdf
+    alltrue_elemwise, betaln, bound, gammaln, i0e, logpow, normal_lccdf,
+    normal_lcdf, SplineWrapper, std_cdf, zvalue,
 )
 from .distribution import Continuous, draw_values, generate_samples
 
@@ -456,6 +456,9 @@ class Normal(Continuous):
         return r'${} \sim \text{{Normal}}(\mathit{{mu}}={},~\mathit{{sd}}={})$'.format(name,
                                                                 get_variable_name(mu),
                                                                 get_variable_name(sd))
+
+    def logcdf(self, value):
+        return normal_lcdf(self.mu, self.sd, value)
 
 
 class TruncatedNormal(BoundedContinuous):
