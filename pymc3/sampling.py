@@ -985,6 +985,6 @@ def init_nuts(init='auto', chains=1, n_init=500000, model=None,
     else:
         raise NotImplementedError('Initializer {} is not supported.'.format(init))
 
-    step = pm.NUTS(potential=potential, **kwargs)
+    step = pm.NUTS(potential=potential, model=model, **kwargs)
 
     return start, step
