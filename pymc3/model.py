@@ -10,7 +10,7 @@ import theano.sparse as sparse
 from theano import theano, tensor as tt
 from theano.tensor.var import TensorVariable
 
-from pymc3.theanof import set_theano_conf
+from pymc3.theanof import set_theano_conf, floatX
 import pymc3 as pm
 from pymc3.math import flatten_list
 from .memoize import memoize, WithMemoization
@@ -1061,13 +1061,13 @@ def _get_scaling(total_size, shape, ndim):
     scalar
     """
     if total_size is None:
-        coef = pm.floatX(1)
+        coef = floatX(1)
     elif isinstance(total_size, int):
         if ndim >= 1:
             denom = shape[0]
         else:
             denom = 1
-        coef = pm.floatX(total_size) / pm.floatX(denom)
+        coef = floatX(total_size) / floatX(denom)
     elif isinstance(total_size, (list, tuple)):
         if not all(isinstance(i, int) for i in total_size if (i is not Ellipsis and i is not None)):
             raise TypeError('Unrecognized `total_size` type, expected '
@@ -1085,20 +1085,20 @@ def _get_scaling(total_size, shape, ndim):
             raise ValueError('Length of `total_size` is too big, '
                              'number of scalings is bigger that ndim, got %r' % total_size)
         elif (len(begin) + len(end)) == 0:
-            return pm.floatX(1)
+            return floatX(1)
         if len(end) > 0:
             shp_end = shape[-len(end):]
         else:
             shp_end = np.asarray([])
         shp_begin = shape[:len(begin)]
-        begin_coef = [pm.floatX(t) / shp_begin[i] for i, t in enumerate(begin) if t is not None]
-        end_coef = [pm.floatX(t) / shp_end[i] for i, t in enumerate(end) if t is not None]
+        begin_coef = [floatX(t) / shp_begin[i] for i, t in enumerate(begin) if t is not None]
+        end_coef = [floatX(t) / shp_end[i] for i, t in enumerate(end) if t is not None]
         coefs = begin_coef + end_coef
         coef = tt.prod(coefs)
     else:
         raise TypeError('Unrecognized `total_size` type, expected '
                         'int or list of ints, got %r' % total_size)
-    return tt.as_tensor(pm.floatX(coef))
+    return tt.as_tensor(floatX(coef))
 
 
 class FreeRV(Factor, TensorVariable):

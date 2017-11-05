@@ -1,0 +1,124 @@
+from collections import namedtuple
+import logging
+
+
+logger = logging.getLogger('pymc3')
+
+
+SamplerWarning = namedtuple(
+    'SamplerWarning',
+    "kind, message, level, step, exec_info, extra")
+
+
+_LEVELS = {
+    'info': logging.INFO,
+    'error': logging.ERROR,
+    'warn': logging.WARN,
+    'debug': logging.DEBUG,
+}
+
+
+class SamplerReport(object):
+    def __init__(self):
+        self._chain_warnings = {}
+        self._global_warnings = []
+        self.effective_n = None
+        self.gelman_rubin = None
+
+    @property
+    def ok(self):
+        pass
+
+    def raise_status(self, level='error'):
+        pass
+
+    def _add_stats(self, gelman_rubin, effective_n):
+        self.effective_n = effective_n
+        self.gelman_rubin = gelman_rubin
+
+        warnings = []
+        rhat_max = max(val.max() for val in gelman_rubin.values())
+        if rhat_max > 1.4:
+            msg = ("The gelman-rubin statistic is larger than 1.4 for some "
+                   "parameters. The sampler did not converge.")
+            warn = SamplerWarning(
+                'convergence', msg, 'error', None, None, gelman_rubin)
+            warnings.append(warn)
+        elif rhat_max > 1.2:
+            msg = ("The gelman-rubin statistic is larger than 1.2 for some "
+                   "parameters.")
+            warn = SamplerWarning(
+                'convergence', msg, 'warn', None, None, gelman_rubin)
+            warnings.append(warn)
+        elif rhat_max > 1.05:
+            msg = ("The gelman-rubin statistic is larger than 1.05 for some "
+                   "parameters. This indicates slight problems during sampling.")
+            warn = SamplerWarning(
+                'convergence', msg, 'info', None, None, gelman_rubin)
+            warnings.append(warn)
+
+        eff_min = min(val.min() for val in effective_n.values())
+        if eff_min < 100:
+            msg = ("The estimated number of effective samples is smaller than "
+                   "100 for some parameters.")
+            warn = SamplerWarning(
+                'convergence', msg, 'error', None, None, effective_n)
+            warnings.append(warn)
+        elif eff_min < 500:
+            msg = ("The estimated number of effective samples is smaller than "
+                   "500 for some parameters.")
+            warn = SamplerWarning(
+                'convergence', msg, 'warn', None, None, effective_n)
+            warnings.append(warn)
+
+        self._add_warnings(warnings)
+
+    def _add_warnings(self, warnings, chain=None):
+        if chain is None:
+            warn_list = self._global_warnings
+        else:
+            warn_list = self._chain_warnings.setdefault(chain, [])
+        warn_list.extend(warnings)
+
+    def _log_summary(self):
+
+        def log_warning(warn):
+            level = _LEVELS[warn.level]
+            logger.log(level, warn.message)
+
+        for chain, warns in self._chain_warnings.items():
+            for warn in warns:
+                log_warning(warn)
+        for warn in self._global_warnings:
+            log_warning(warn)
+
+    def _slice(self, start, stop, step):
+        report = SamplerReport()
+
+        def filter_warns(warnings):
+            filtered = []
+            for warn in warnings:
+                if warn.step is None:
+                    filtered.append(warn)
+                elif (start <= warn.step < stop and
+                        (warn.step - start) % step == 0):
+                    warn = warn._replace(step=warn.step - start)
+                    filtered.append(warn)
+            return filtered
+
+        report._add_warnings(filter_warns(self._global_warnings))
+        for chain in self._chain_warnings:
+            report._add_warnings(
+                filter_warns(self._chain_warnings[chain]),
+                chain)
+
+        return report
+
+
+def merge_reports(reports):
+    report = SamplerReport()
+    for rep in reports:
+        report._add_warnings(rep._global_warnings)
+        for chain in rep._chain_warnings:
+            report._add_warnings(rep._chain_warnings[chain], chain)
+    return report
