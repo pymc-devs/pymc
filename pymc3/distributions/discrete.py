@@ -47,7 +47,7 @@ class Binomial(Discrete):
         self.p = p = tt.as_tensor_variable(p)
         self.mode = tt.cast(tround(n * p), self.dtype)
 
-    def random(self, point=None, size=None, repeat=None):
+    def random(self, point=None, size=None):
         n, p = draw_values([self.n, self.p], point=point)
         return generate_samples(stats.binom.rvs, n=n, p=p,
                                 dist_shape=self.shape,
@@ -119,7 +119,7 @@ class BetaBinomial(Discrete):
         samples = np.reshape(stats.binom.rvs(n=_n, p=_p, size=_size), size)
         return samples
 
-    def random(self, point=None, size=None, repeat=None):
+    def random(self, point=None, size=None):
         alpha, beta, n = \
             draw_values([self.alpha, self.beta, self.n], point=point)
         return generate_samples(self._random, alpha=alpha, beta=beta, n=n,
@@ -170,7 +170,7 @@ class Bernoulli(Discrete):
         self.p = p = tt.as_tensor_variable(p)
         self.mode = tt.cast(tround(p), 'int8')
 
-    def random(self, point=None, size=None, repeat=None):
+    def random(self, point=None, size=None):
         p = draw_values([self.p], point=point)[0]
         return generate_samples(stats.bernoulli.rvs, p,
                                 dist_shape=self.shape,
@@ -237,7 +237,7 @@ class DiscreteWeibull(Discrete):
 
         return np.ceil(np.power(np.log(1 - p) / np.log(q), 1. / beta)) - 1
 
-    def random(self, point=None, size=None, repeat=None):
+    def random(self, point=None, size=None):
         q, beta = draw_values([self.q, self.beta], point=point)
 
         return generate_samples(self._random, q, beta,
@@ -286,7 +286,7 @@ class Poisson(Discrete):
         self.mu = mu = tt.as_tensor_variable(mu)
         self.mode = tt.floor(mu).astype('int32')
 
-    def random(self, point=None, size=None, repeat=None):
+    def random(self, point=None, size=None):
         mu = draw_values([self.mu], point=point)[0]
         return generate_samples(stats.poisson.rvs, mu,
                                 dist_shape=self.shape,
@@ -341,7 +341,7 @@ class NegativeBinomial(Discrete):
         self.alpha = alpha = tt.as_tensor_variable(alpha)
         self.mode = tt.floor(mu).astype('int32')
 
-    def random(self, point=None, size=None, repeat=None):
+    def random(self, point=None, size=None):
         mu, alpha = draw_values([self.mu, self.alpha], point=point)
         g = generate_samples(stats.gamma.rvs, alpha, scale=mu / alpha,
                              dist_shape=self.shape,
@@ -398,7 +398,7 @@ class Geometric(Discrete):
         self.p = p = tt.as_tensor_variable(p)
         self.mode = 1
 
-    def random(self, point=None, size=None, repeat=None):
+    def random(self, point=None, size=None):
         p = draw_values([self.p], point=point)[0]
         return generate_samples(np.random.geometric, p,
                                 dist_shape=self.shape,
@@ -450,7 +450,7 @@ class DiscreteUniform(Discrete):
         samples = stats.randint.rvs(lower, upper + 1, size=size)
         return samples
 
-    def random(self, point=None, size=None, repeat=None):
+    def random(self, point=None, size=None):
         lower, upper = draw_values([self.lower, self.upper], point=point)
         return generate_samples(self._random,
                                 lower, upper,
@@ -560,7 +560,7 @@ class Constant(Discrete):
         super(Constant, self).__init__(*args, **kwargs)
         self.mean = self.median = self.mode = self.c = c = tt.as_tensor_variable(c)
 
-    def random(self, point=None, size=None, repeat=None):
+    def random(self, point=None, size=None):
         c = draw_values([self.c], point=point)[0]
         dtype = np.array(c).dtype
 
@@ -619,7 +619,7 @@ class ZeroInflatedPoisson(Discrete):
         self.pois = Poisson.dist(theta)
         self.mode = self.pois.mode
 
-    def random(self, point=None, size=None, repeat=None):
+    def random(self, point=None, size=None):
         theta, psi = draw_values([self.theta, self.psi], point=point)
         g = generate_samples(stats.poisson.rvs, theta,
                              dist_shape=self.shape,
@@ -688,7 +688,7 @@ class ZeroInflatedBinomial(Discrete):
         self.bin = Binomial.dist(n, p)
         self.mode = self.bin.mode
 
-    def random(self, point=None, size=None, repeat=None):
+    def random(self, point=None, size=None):
         n, p, psi = draw_values([self.n, self.p, self.psi], point=point)
         g = generate_samples(stats.binom.rvs, n, p,
                              dist_shape=self.shape,
@@ -776,7 +776,7 @@ class ZeroInflatedNegativeBinomial(Discrete):
         self.nb = NegativeBinomial.dist(mu, alpha)
         self.mode = self.nb.mode
 
-    def random(self, point=None, size=None, repeat=None):
+    def random(self, point=None, size=None):
         mu, alpha, psi = draw_values(
             [self.mu, self.alpha, self.psi], point=point)
         g = generate_samples(stats.gamma.rvs, alpha, scale=mu / alpha,
