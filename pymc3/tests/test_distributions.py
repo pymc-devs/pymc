@@ -713,6 +713,9 @@ class TestMatchesScipy(SeededTest):
         self.pymc3_matches_scipy(Weibull, Rplus, {'alpha': Rplusbig, 'beta': Rplusbig},
                                  lambda value, alpha, beta: sp.exponweib.logpdf(value, 1, alpha, scale=beta),
                                  )
+        self.check_logcdf(Weibull, Rplus, {'alpha': Rplusbig, 'beta': Rplusbig},
+                          lambda value, alpha, beta:
+                          sp.exponweib.logcdf(value, 1, alpha, scale=beta),)
 
     def test_half_studentt(self):
         # this is only testing for nu=1 (halfcauchy)
