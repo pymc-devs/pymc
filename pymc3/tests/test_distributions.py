@@ -578,8 +578,8 @@ class TestMatchesScipy(SeededTest):
 
     def test_half_studentt(self):
         # this is only testing for nu=1 (halfcauchy)
-        self.pymc3_matches_scipy(HalfStudentT, Rplus, {'beta': Rplus},
-                                 lambda value, beta: sp.halfcauchy.logpdf(value, 0, beta))
+        self.pymc3_matches_scipy(HalfStudentT, Rplus, {'sd': Rplus},
+                                 lambda value, sd: sp.halfcauchy.logpdf(value, 0, sd))
 
     def test_skew_normal(self):
         self.pymc3_matches_scipy(SkewNormal, R, {'mu': R, 'sd': Rplusbig, 'alpha': R},
