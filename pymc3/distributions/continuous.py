@@ -2655,6 +2655,28 @@ class Weibull(PositiveContinuous):
                                                                 get_variable_name(alpha),
                                                                 get_variable_name(beta))
 
+    def logcdf(self, value):
+        '''
+        Compute the log CDF for the Weibull distribution
+
+        References
+        ----------
+        .. [Machler2012] Martin Mächler (2012).
+            "Accurately computing log(1-exp(-|a|)) Assessed by the Rmpfr
+            package"
+        '''
+        alpha = self.alpha
+        beta = self.beta
+        a = (value / beta)**alpha
+        return tt.switch(
+            tt.le(value, 0.0),
+            -np.inf,
+            tt.switch(
+                tt.le(a, tt.log(2.0)),
+                tt.log(-tt.expm1(-a)),
+                tt.log1p(-tt.exp(-a)))
+        )
+
 
 class HalfStudentT(PositiveContinuous):
     R"""
