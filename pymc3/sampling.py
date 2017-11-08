@@ -3,6 +3,7 @@ import pickle
 
 from joblib import Parallel, delayed
 import numpy as np
+import warnings
 import theano.gradient as tg
 
 import pymc3 as pm
