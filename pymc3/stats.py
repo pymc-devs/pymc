@@ -19,7 +19,7 @@ from scipy.optimize import minimize
 from .backends import tracetab as ttab
 
 __all__ = ['autocorr', 'autocov', 'dic', 'bpic', 'waic', 'loo', 'hpd', 'quantiles',
-           'mc_error', 'summary', 'df_summary', 'compare', 'bfmi']
+           'mc_error', 'summary', 'df_summary', 'compare', 'bfmi', 'r2_score']
 
 
 def statfunc(f):
@@ -964,3 +964,33 @@ def bfmi(trace):
     energy = trace['energy']
 
     return np.square(np.diff(energy)).mean() / np.var(energy)
+
+
+def r2_score(y_true, y_pred):
+    R"""R-squared for Bayesian regression models. Only valid for linear models.
+    http://www.stat.columbia.edu/%7Egelman/research/unpublished/bayes_R2.pdf
+
+    Parameters
+    ----------
+    y_true: : array-like of shape = (n_samples) or (n_samples, n_outputs)
+        Ground truth (correct) target values.
+    y_pred : array-like of shape = (n_samples) or (n_samples, n_outputs)
+        Estimated target values.
+
+    Returns
+    -------
+    `namedtuple` with the following elements:
+    R2_median: median of the Bayesian R2
+    R2_mean: mean of the Bayesian R2
+    R2_std: standard deviation of the Bayesian R2
+    """
+    e = y_true - y_pred
+    var_y_est = np.var(y_pred, 1)
+    var_e = np.var(e, 1)
+
+    r2_median = np.median(var_y_est / (var_y_est + var_e))
+    r2_mean = np.mean(var_y_est / (var_y_est + var_e))
+    r2_std = np.std(var_y_est / (var_y_est + var_e))
+    R2_r = namedtuple('R2_r', 'R2_median, R2_mean, R2_std')
+    return R2_r(r2_median, r2_mean, r2_std)
+
