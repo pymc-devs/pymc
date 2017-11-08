@@ -966,7 +966,7 @@ def bfmi(trace):
     return np.square(np.diff(energy)).mean() / np.var(energy)
 
 
-def r2_score(y_true, y_pred):
+def r2_score(y_true, y_pred, round_to=2):
     R"""R-squared for Bayesian regression models. Only valid for linear models.
     http://www.stat.columbia.edu/%7Egelman/research/unpublished/bayes_R2.pdf
 
@@ -976,6 +976,8 @@ def r2_score(y_true, y_pred):
         Ground truth (correct) target values.
     y_pred : array-like of shape = (n_samples) or (n_samples, n_outputs)
         Estimated target values.
+    round_to : int
+        Number of decimals used to round results (default 2).
 
     Returns
     -------
@@ -984,13 +986,18 @@ def r2_score(y_true, y_pred):
     R2_mean: mean of the Bayesian R2
     R2_std: standard deviation of the Bayesian R2
     """
-    e = y_true - y_pred
-    var_y_est = np.var(y_pred, 1)
-    var_e = np.var(e, 1)
+    dimension = None
+    if y_true.ndim > 1:
+        dimension = 1
 
-    r2_median = np.median(var_y_est / (var_y_est + var_e))
-    r2_mean = np.mean(var_y_est / (var_y_est + var_e))
-    r2_std = np.std(var_y_est / (var_y_est + var_e))
+    e = y_true - y_pred
+    var_y_est = np.var(y_pred, dimension)
+    var_e = np.var(e, dimension)
+
+    r2 = var_y_est / (var_y_est + var_e)
+    r2_median = np.around(np.median(r2), round_to)
+    r2_mean = np.around(np.mean(r2), round_to)
+    r2_std = np.around(np.std(r2), round_to)
     R2_r = namedtuple('R2_r', 'R2_median, R2_mean, R2_std')
     return R2_r(r2_median, r2_mean, r2_std)
 
