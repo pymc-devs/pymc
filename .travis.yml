@@ -7,6 +7,10 @@ cache:
     - $HOME/minicoda2
     - $HOME/minicoda3
 
+addons:
+  apt_packages:
+    - pandoc
+
 before_install:
   - . ./scripts/install_miniconda.sh
   - sh -e /etc/init.d/xvfb start
