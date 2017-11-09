@@ -1126,6 +1126,10 @@ class TestMatchesScipy(SeededTest):
             return floatX(sp.gumbel_r.logpdf(value, loc=mu, scale=beta))
         self.pymc3_matches_scipy(Gumbel, R, {'mu': R, 'beta': Rplusbig}, gumbel)
 
+        def gumbellcdf(value, mu, beta):
+            return floatX(sp.gumbel_r.logcdf(value, loc=mu, scale=beta))
+        self.check_logcdf(Gumbel, R, {'mu': R, 'beta': Rplusbig}, gumbellcdf)
+
     def test_logistic(self):
         self.pymc3_matches_scipy(Logistic, R, {'mu': R, 's': Rplus},
                                  lambda value, mu, s: sp.logistic.logpdf(value, mu, s),
