@@ -3434,6 +3434,12 @@ class Gumbel(Continuous):
                                                                 get_variable_name(mu),
                                                                 get_variable_name(beta))
 
+    def logcdf(self, value):
+        beta = self.beta
+        mu = self.mu
+
+        return -tt.exp(-(value - mu)/beta)
+
 
 class Rice(PositiveContinuous):
     R"""
