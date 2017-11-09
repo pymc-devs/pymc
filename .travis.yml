@@ -34,7 +34,7 @@ script:
   - . ./scripts/confirm_mpl_optional.sh
 
 script:
-  - travis-sphinx build
+  - travis-sphinx -n build
 
 after_success:
   - coveralls

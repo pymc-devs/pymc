@@ -3,6 +3,7 @@ scipy>=0.12.0
 h5py>=2.7.0
 matplotlib>=1.5.0
 numdifftools>=0.9.20
+numpydoc==0.7.0
 CommonMark==0.5.4
 recommonmark>=0.4.0
 sphinx>=1.5.5

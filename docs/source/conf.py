@@ -38,6 +38,7 @@ extensions = [
     'sphinx.ext.doctest',
     'sphinx.ext.mathjax',
     'sphinx.ext.napoleon',
+    'numpydoc',
     'nbsphinx',
     'IPython.sphinxext.ipython_console_highlighting',
 ]

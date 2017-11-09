@@ -10,8 +10,8 @@ def escape_latex(strng):
 
     Implementation taken from the IPython magic `format_latex`
 
-    Example
-    -------
+    Examples
+    --------
         escape_latex('disease_rate')  # 'disease\_rate'
 
     Parameters
