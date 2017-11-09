@@ -4,10 +4,7 @@ set -e
 
 if [[ "$BUILD_DOCS" == "true" ]]; then
     travis-sphinx -n build
-
-    if [[ "${TRAVIS_PULL_REQUEST}" = "false" ]]; then
-        travis-sphinx deploy;
-    fi
+    travis-sphinx deploy;
 fi
 
 if [[ "$RUN_PYLINT" == "true" ]]; then
