@@ -1134,6 +1134,9 @@ class TestMatchesScipy(SeededTest):
         self.pymc3_matches_scipy(Logistic, R, {'mu': R, 's': Rplus},
                                  lambda value, mu, s: sp.logistic.logpdf(value, mu, s),
                                  decimal=select_by_precision(float64=6, float32=1))
+        self.check_logcdf(Logistic, R, {'mu': R, 's': Rplus},
+                          lambda value, mu, s: sp.logistic.logcdf(value, mu, s),
+                          decimal=select_by_precision(float64=6, float32=1))
 
     def test_logitnormal(self):
         self.pymc3_matches_scipy(LogitNormal, Unit, {'mu': R, 'sd': Rplus},

@@ -3630,6 +3630,30 @@ class Logistic(Continuous):
                                                                 get_variable_name(mu),
                                                                 get_variable_name(s))
 
+    def logcdf(self, value):
+        """
+        Compute the log CDF for the Logistic distribution
+
+        References
+        ----------
+        .. [Machler2012] Martin Mächler (2012).
+            "Accurately computing log(1-exp(-|a|)) Assessed by the Rmpfr
+            package"
+        """
+        mu = self.mu
+        s = self.s
+        a = -(value - mu)/s
+        return - tt.switch(
+            tt.le(a, -37),
+            tt.exp(a),
+            tt.switch(
+                tt.le(a, 18),
+                tt.log1p(tt.exp(a)),
+                tt.switch(
+                    tt.le(a, 33.3),
+                    tt.exp(-a) + a,
+                    a)))
+
 
 class LogitNormal(UnitContinuous):
     R"""
