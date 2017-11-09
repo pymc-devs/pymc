@@ -40,4 +40,3 @@ script:
 
 after_success:
   - coveralls
-  - travis-sphinx deploy
