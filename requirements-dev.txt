@@ -3,10 +3,12 @@ scipy>=0.12.0
 h5py>=2.7.0
 matplotlib>=1.5.0
 numdifftools>=0.9.20
-CommonMark>=0.5.4
+numpydoc==0.7.0
+CommonMark==0.5.4
 recommonmark>=0.4.0
 sphinx>=1.5.5
 nbsphinx>=0.2.13
+sphinx-autobuild==0.7.1
 pytest>=3.0.7
 pytest-cov>=2.5.1
 mock>=2.0.0; python_version < '3.4'

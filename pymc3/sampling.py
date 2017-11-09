@@ -317,7 +317,7 @@ def sample(draws=500, step=None, init='auto', n_init=200000, start=None,
         random_seed = [np.random.randint(2 ** 30) for _ in range(chains)]
     if not isinstance(random_seed, Iterable):
         raise TypeError('Invalid value for `random_seed`. Must be tuple, list or int')
-        
+
     if 'chain' in kwargs:
         chain_idx = kwargs['chain']
         warnings.warn("The chain argument has been deprecated. Use chain_idx instead.",
@@ -508,8 +508,8 @@ def iter_sample(draws, step, start=None, trace=None, chain=0, tune=None,
     random_seed : int or list of ints
         A list is accepted if more if `njobs` is greater than one.
 
-    Example
-    -------
+    Examples
+    --------
     ::
 
         for trace in iter_sample(500, step):

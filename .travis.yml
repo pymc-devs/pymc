@@ -14,7 +14,8 @@ before_install:
 
 install:
   - . ./scripts/create_testenv.sh
-  - pip install coveralls pylint
+  - pip install coveralls pylint travis-sphinx
+  - pip install -r requirements-dev.txt
 
 env:
   - PYTHON_VERSION=2.7 FLOATX='float32' TESTCMD="--durations=10 --ignore=pymc3/tests/test_examples.py --cov-append --ignore=pymc3/tests/test_distributions_random.py --ignore=pymc3/tests/test_variational_inference.py --ignore=pymc3/tests/test_shared.py --ignore=pymc3/tests/test_smc.py --ignore=pymc3/tests/test_updates.py --ignore=pymc3/tests/test_posteriors.py --ignore=pymc3/tests/test_sampling.py"
@@ -32,5 +33,9 @@ script:
   - . ./scripts/test.sh $TESTCMD
   - . ./scripts/confirm_mpl_optional.sh
 
+script:
+  - travis-sphinx -n build
+
 after_success:
   - coveralls
+  - travis-sphinx deploy
