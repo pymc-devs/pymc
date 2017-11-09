@@ -112,7 +112,7 @@ class Metropolis(ArrayStepShared):
         else:
             raise ValueError("Invalid rank for variance: %s" % S.ndim)
 
-        self.scaling = np.atleast_1d(scaling)
+        self.scaling = np.atleast_1d(scaling).astype('d')
         self.tune = tune
         self.tune_interval = tune_interval
         self.steps_until_tune = tune_interval

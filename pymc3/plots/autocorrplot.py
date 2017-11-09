@@ -63,14 +63,14 @@ def autocorrplot(trace, varnames=None, max_lag=100, burn=0, plot_transformed=Fal
     max_lag = min(len(trace) - 1, max_lag)
 
     for i, v in enumerate(varnames):
-        for j in range(nchains):
+        for j, chain in enumerate(trace.chains):
             try:
-                d = np.squeeze(trace.get_values(v, chains=[j], burn=burn,
+                d = np.squeeze(trace.get_values(v, chains=[chain], burn=burn,
                                                 combine=False))
             except KeyError:
                 k = int(v.split('_')[-1])
                 v_use = '_'.join(v.split('_')[:-1])
-                d = np.squeeze(trace.get_values(v_use, chains=[j],
+                d = np.squeeze(trace.get_values(v_use, chains=[chain],
                                                 burn=burn, combine=False)[:, k])
 
             ax[i, j].acorr(d, detrend=plt.mlab.detrend_mean, maxlags=max_lag)
@@ -81,12 +81,12 @@ def autocorrplot(trace, varnames=None, max_lag=100, burn=0, plot_transformed=Fal
             if i == len(varnames) - 1:
                 ax[i, j].set_xlabel("lag")
 
-            ax[i, j].set_title(v)
-
             if not symmetric_plot:
                 ax[i, j].set_xlim(0, max_lag)
 
             if nchains > 1:
-                ax[i, j].set_title("chain {0}".format(j + 1))
+                ax[i, j].set_title("{0} (chain {1})".format(v, chain))
+            else:
+                ax[i, j].set_title(v)
 
     return ax

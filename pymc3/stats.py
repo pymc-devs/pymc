@@ -3,7 +3,6 @@
 import numpy as np
 import pandas as pd
 import itertools
-import sys
 from tqdm import tqdm
 import warnings
 from collections import namedtuple
@@ -104,7 +103,7 @@ def autocov(x, lag=1):
 
 def dic(trace, model=None):
     """Calculate the deviance information criterion of the samples in trace from model
-    Read more theory here - in a paper by some of the leading authorities on Model Selection -
+    Read more theory here - in a paper by some of the leading authorities on model selection -
     dx.doi.org/10.1111/1467-9868.00353
 
     Parameters
@@ -115,7 +114,8 @@ def dic(trace, model=None):
 
     Returns
     -------
-    `float` representing the deviance information criterion of the model and trace
+    z : float
+        The deviance information criterion of the model and trace
     """
     model = modelcontext(model)
     logp = model.logp
@@ -181,7 +181,7 @@ def waic(trace, model=None, pointwise=False, progressbar=False):
     """Calculate the widely available information criterion, its standard error
     and the effective number of parameters of the samples in trace from model.
     Read more theory here - in a paper by some of the leading authorities on
-    Model Selection - dx.doi.org/10.1111/1467-9868.00353
+    model selection - dx.doi.org/10.1111/1467-9868.00353
 
     Parameters
     ----------
@@ -324,16 +324,20 @@ def loo(trace, model=None, pointwise=False, progressbar=False):
 
 
 def bpic(trace, model=None):
-    """
-    Calculates Bayesian predictive information criterion n of the samples in trace from model
-    Read more theory here - in a paper by some of the leading authorities on Model Selection -
-    dx.doi.org/10.1111/1467-9868.00353
+    R"""Calculates Bayesian predictive information criterion n of the samples in trace from model
+    Read more theory here - in a paper by some of the leading authorities on model selection -
+    dx.doi.org/10.1080/01966324.2011.10737798
 
     Parameters
     ----------
     trace : result of MCMC run
     model : PyMC Model
         Optional model. Default None, taken from context.
+
+    Returns
+    -------
+    z : float
+        The Bayesian predictive information criterion of the model and trace
     """
     model = modelcontext(model)
     logp = model.logp
@@ -349,10 +353,10 @@ def bpic(trace, model=None):
 
 def compare(traces, models, ic='WAIC', method='stacking', b_samples=1000,
             alpha=1, seed=None, round_to=2):
-    """Compare models based on the widely available information criterion (WAIC)
+    R"""Compare models based on the widely available information criterion (WAIC)
     or leave-one-out (LOO) cross-validation.
     Read more theory here - in a paper by some of the leading authorities on
-    Model Selection - dx.doi.org/10.1111/1467-9868.00353
+    model selection - dx.doi.org/10.1111/1467-9868.00353
 
     Parameters
     ----------
@@ -551,7 +555,6 @@ def _ic_matrix(ics):
 
     return N, K, ic_i
 
-
 def make_indices(dimensions):
     # Generates complete set of indices for given dimensions
     level = len(dimensions)
@@ -642,6 +645,12 @@ def hpd(x, alpha=0.05, transform=lambda x: x):
         return np.array(calc_min_interval(sx, alpha))
 
 
+def _hpd_df(x, alpha):
+    cnames = ['hpd_{0:g}'.format(100 * alpha / 2),
+              'hpd_{0:g}'.format(100 * (1 - alpha / 2))]
+    return pd.DataFrame(hpd(x, alpha), columns=cnames)
+
+
 @statfunc
 def mc_error(x, batches=5):
     R"""Calculates the simulation standard error, accounting for non-independent
@@ -721,8 +730,20 @@ def quantiles(x, qlist=(2.5, 25, 50, 75, 97.5), transform=lambda x: x):
     except IndexError:
         pm._log.warning("Too few elements for quantile calculation")
 
-
-def df_summary(trace, varnames=None, transform=lambda x: x, stat_funcs=None,
+def dict2pd(statdict, labelname):
+    """Small helper function to transform a diagnostics output dict into a
+    pandas Series.
+    """
+    var_dfs = []
+    for key, value in statdict.items():
+        var_df = pd.Series(value.flatten())
+        var_df.index = ttab.create_flat_names(key, value.shape)
+        var_dfs.append(var_df)
+    statpd = pd.concat(var_dfs, axis=0)
+    statpd = statpd.rename(labelname)
+    return statpd
+    
+def summary(trace, varnames=None, transform=lambda x: x, stat_funcs=None,
                extend=False, include_transformed=False,
                alpha=0.05, start=0, batches=None):
     R"""Create a data frame with summary statistics.
@@ -785,10 +806,14 @@ def df_summary(trace, varnames=None, transform=lambda x: x, stat_funcs=None,
         >>> import pymc3 as pm
         >>> trace.mu.shape
         (1000, 2)
-        >>> pm.df_summary(trace, ['mu'])
+        >>> pm.summary(trace, ['mu'])
                    mean        sd  mc_error     hpd_5    hpd_95
         mu__0  0.106897  0.066473  0.001818 -0.020612  0.231626
         mu__1 -0.046597  0.067513  0.002048 -0.174753  0.081924
+
+                  n_eff      Rhat
+        mu__0     487.0   1.00001
+        mu__1     379.0   1.00203
 
     Other statistics can be calculated by passing a list of functions.
 
@@ -801,13 +826,15 @@ def df_summary(trace, varnames=None, transform=lambda x: x, stat_funcs=None,
         >>> def trace_quantiles(x):
         ...     return pd.DataFrame(pm.quantiles(x, [5, 50, 95]))
         ...
-        >>> pm.df_summary(trace, ['mu'], stat_funcs=[trace_sd, trace_quantiles])
+        >>> pm.summary(trace, ['mu'], stat_funcs=[trace_sd, trace_quantiles])
                      sd         5        50        95
         mu__0  0.066473  0.000312  0.105039  0.214242
         mu__1  0.067513 -0.159097 -0.045637  0.062912
     """
+
     if varnames is None:
-        varnames = get_default_varnames(trace.varnames, include_transformed=include_transformed)
+        varnames = get_default_varnames(trace.varnames,
+                       include_transformed=include_transformed)
 
     if batches is None:
         batches = min([100, len(trace)])
@@ -817,188 +844,40 @@ def df_summary(trace, varnames=None, transform=lambda x: x, stat_funcs=None,
              lambda x: pd.Series(mc_error(x, batches), name='mc_error'),
              lambda x: _hpd_df(x, alpha)]
 
-    if stat_funcs is not None and extend:
-        stat_funcs = funcs + stat_funcs
-    elif stat_funcs is None:
-        stat_funcs = funcs
-
+    if stat_funcs is not None:
+        if extend:
+            funcs = funcs + stat_funcs
+        else:
+            funcs = stat_funcs
+            
     var_dfs = []
     for var in varnames:
         vals = transform(trace.get_values(var, burn=start, combine=True))
         flat_vals = vals.reshape(vals.shape[0], -1)
-        var_df = pd.concat([f(flat_vals) for f in stat_funcs], axis=1)
+        var_df = pd.concat([f(flat_vals) for f in funcs], axis=1)
         var_df.index = ttab.create_flat_names(var, vals.shape[1:])
         var_dfs.append(var_df)
-    return pd.concat(var_dfs, axis=0)
-
-
-def _hpd_df(x, alpha):
-    cnames = ['hpd_{0:g}'.format(100 * alpha / 2),
-              'hpd_{0:g}'.format(100 * (1 - alpha / 2))]
-    return pd.DataFrame(hpd(x, alpha), columns=cnames)
-
-
-def summary(trace, varnames=None, transform=lambda x: x, alpha=0.05, start=0,
-            batches=None, roundto=3, include_transformed=False, to_file=None):
-    R"""
-    Generate a pretty-printed summary of the node.
-
-    Parameters
-    ----------
-    trace : Trace object
-      Trace containing MCMC sample
-    varnames : list of strings
-      List of variables to summarize. Defaults to None, which results
-      in all variables summarized.
-    transform : callable
-      Function to transform data (defaults to identity)
-    alpha : float
-      The alpha level for generating posterior intervals. Defaults to
-      0.05.
-    start : int
-      The starting index from which to summarize (each) chain. Defaults
-      to zero.
-    batches : None or int
-        Batch size for calculating standard deviation for non-independent
-        samples. Defaults to the smaller of 100 or the number of samples.
-        This is only meaningful when `stat_funcs` is None.
-    roundto : int
-      The number of digits to round posterior statistics.
-    include_transformed : bool
-      Flag for summarizing automatically transformed variables in addition to
-      original variables (defaults to False).
-    to_file : None or string
-      File to write results to. If not given, print to stdout.
-    """
-    if varnames is None:
-        varnames = get_default_varnames(trace.varnames, include_transformed=include_transformed)
-
-    if batches is None:
-        batches = min([100, len(trace)])
-
-    stat_summ = _StatSummary(roundto, batches, alpha)
-    pq_summ = _PosteriorQuantileSummary(roundto, alpha)
-
-    if to_file is None:
-        fh = sys.stdout
+    dforg = pd.concat(var_dfs, axis=0)
+    
+    if (stat_funcs is not None) and (not extend):
+        return dforg
     else:
-        fh = open(to_file, mode='w')
-
-    for var in varnames:
-        # Extract sampled values
-        sample = transform(trace.get_values(var, burn=start, combine=True))
-
-        fh.write('\n%s:\n\n' % var)
-
-        fh.write(stat_summ.output(sample))
-        fh.write(pq_summ.output(sample))
-
-    if fh is not sys.stdout:
-        fh.close()
+        n_eff = pm.effective_n(trace, 
+                               varnames=varnames, 
+                               include_transformed=include_transformed)
+        n_eff_pd = dict2pd(n_eff, 'n_eff')
+        rhat = pm.gelman_rubin(trace, 
+                               varnames=varnames, 
+                               include_transformed=include_transformed)
+        rhat_pd = dict2pd(rhat, 'Rhat')
+        return pd.concat([dforg, n_eff_pd, rhat_pd], 
+                         axis=1, join_axes=[dforg.index])
 
 
-class _Summary(object):
-    """Base class for summary output"""
-
-    def __init__(self, roundto):
-        self.roundto = roundto
-        self.header_lines = None
-        self.leader = '  '
-        self.spaces = None
-        self.width = None
-
-    def output(self, sample):
-        return '\n'.join(list(self._get_lines(sample))) + '\n\n'
-
-    def _get_lines(self, sample):
-        for line in self.header_lines:
-            yield self.leader + line
-        summary_lines = self._calculate_values(sample)
-        for line in self._create_value_output(summary_lines):
-            yield self.leader + line
-
-    def _create_value_output(self, lines):
-        for values in lines:
-            try:
-                self._format_values(values)
-                yield self.value_line.format(pad=self.spaces, **values).strip()
-            except AttributeError:
-                # This is a key for the leading indices, not a normal row.
-                # `values` will be an empty tuple unless it is 2d or above.
-                if values:
-                    leading_idxs = [str(v) for v in values]
-                    numpy_idx = '[{}, :]'.format(', '.join(leading_idxs))
-                    yield self._create_idx_row(numpy_idx)
-                else:
-                    yield ''
-
-    def _calculate_values(self, sample):
-        raise NotImplementedError
-
-    def _format_values(self, summary_values):
-        for key, val in summary_values.items():
-            summary_values[key] = '{:.{ndec}f}'.format(
-                float(val), ndec=self.roundto)
-
-    def _create_idx_row(self, value):
-        return '{:.^{}}'.format(value, self.width)
-
-
-class _StatSummary(_Summary):
-
-    def __init__(self, roundto, batches, alpha):
-        super(_StatSummary, self).__init__(roundto)
-        spaces = 17
-        hpd_name = '{0:g}% HPD interval'.format(100 * (1 - alpha))
-        value_line = '{mean:<{pad}}{sd:<{pad}}{mce:<{pad}}{hpd:<{pad}}'
-        header = value_line.format(mean='Mean', sd='SD', mce='MC Error',
-                                   hpd=hpd_name, pad=spaces).strip()
-        self.width = len(header)
-        hline = '-' * self.width
-
-        self.header_lines = [header, hline]
-        self.spaces = spaces
-        self.value_line = value_line
-        self.batches = batches
-        self.alpha = alpha
-
-    def _calculate_values(self, sample):
-        return _calculate_stats(sample, self.batches, self.alpha)
-
-    def _format_values(self, summary_values):
-        roundto = self.roundto
-        for key, val in summary_values.items():
-            if key == 'hpd':
-                summary_values[key] = '[{:.{ndec}f}, {:.{ndec}f}]'.format(
-                    *val, ndec=roundto)
-            else:
-                summary_values[key] = '{:.{ndec}f}'.format(
-                    float(val), ndec=roundto)
-
-
-class _PosteriorQuantileSummary(_Summary):
-
-    def __init__(self, roundto, alpha):
-        super(_PosteriorQuantileSummary, self).__init__(roundto)
-        spaces = 15
-        title = 'Posterior quantiles:'
-        value_line = '{lo:<{pad}}{q25:<{pad}}{q50:<{pad}}{q75:<{pad}}{hi:<{pad}}'
-        lo, hi = 100 * alpha / 2, 100 * (1. - alpha / 2)
-        qlist = (lo, 25, 50, 75, hi)
-        header = value_line.format(lo=lo, q25=25, q50=50, q75=75, hi=hi,
-                                   pad=spaces).strip()
-        self.width = len(header)
-        hline = '|{thin}|{thick}|{thick}|{thin}|'.format(
-            thin='-' * (spaces - 1), thick='=' * (spaces - 1))
-
-        self.header_lines = [title, header, hline]
-        self.spaces = spaces
-        self.lo, self.hi = lo, hi
-        self.qlist = qlist
-        self.value_line = value_line
-
-    def _calculate_values(self, sample):
-        return _calculate_posterior_quantiles(sample, self.qlist)
+def df_summary(*args, **kwargs):
+    warnings.warn("df_summary has been deprecated. In future, use summary instead.",
+                DeprecationWarning)
+    return summary(*args, **kwargs)
 
 
 def _calculate_stats(sample, batches, alpha):
@@ -1063,8 +942,7 @@ def _groupby_leading_idxs(shape):
 
 
 def bfmi(trace):
-    """
-    Calculate the estimated Bayesian fraction of missing information (BFMI).
+    R"""Calculate the estimated Bayesian fraction of missing information (BFMI).
 
     BFMI quantifies how well momentum resampling matches the marginal energy
     distribution.  For more information on BFMI, see
@@ -1080,7 +958,8 @@ def bfmi(trace):
 
     Returns
     -------
-    `float` representing the estimated BFMI.
+    z : float
+        The Bayesian fraction of missing information of the model and trace.
     """
     energy = trace['energy']
 

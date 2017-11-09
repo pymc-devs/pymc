@@ -166,7 +166,7 @@ class TestDisasterModel(SeededTest):
             start = {'early_mean': 2., 'late_mean': 3.}
             # Use slice sampler for means (other varibles auto-selected)
             step = pm.Slice([model.early_mean_log__, model.late_mean_log__])
-            tr = pm.sample(500, tune=50, start=start, step=step, chains=1)
+            tr = pm.sample(500, tune=50, start=start, step=step, chains=2)
             pm.summary(tr)
 
     def test_disaster_model_missing(self):
@@ -176,7 +176,7 @@ class TestDisasterModel(SeededTest):
             start = {'early_mean': 2., 'late_mean': 3.}
             # Use slice sampler for means (other varibles auto-selected)
             step = pm.Slice([model.early_mean_log__, model.late_mean_log__])
-            tr = pm.sample(500, tune=50, start=start, step=step, chains=1)
+            tr = pm.sample(500, tune=50, start=start, step=step, chains=2)
             pm.summary(tr)
 
 

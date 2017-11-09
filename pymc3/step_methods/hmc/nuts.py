@@ -285,9 +285,10 @@ class _Tree(object):
         If direction is larger than 0, extend it to the right, otherwise
         extend it to the left.
 
-        Return a tuple `(diverging, turning)` of type (bool, bool).
-        `diverging` indicates, that the tree extension was aborted because
-        the energy change exceeded `self.Emax`. `turning` indicates that
+        Return a tuple `(diverging, turning)`. `diverging` indicates if the
+        tree extension was aborted because the energy change exceeded
+        `self.Emax`. If so, it is a tuple containing details about the reason.
+        Otherwise, it will be `False`. `turning` indicates that
         the tree extension was stopped because the termination criterior
         was reached (the trajectory is turning back).
         """

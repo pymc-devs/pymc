@@ -15,7 +15,7 @@ Continuous
    Exponential
    Laplace
    StudentT
-   StudentTpos
+   HalfStudentT
    Cauchy
    HalfCauchy
    Gamma
@@ -29,6 +29,7 @@ Continuous
    VonMises
    Triangular
    Gumbel
+   Interpolated
 
 .. automodule:: pymc3.distributions.continuous
    :members:

@@ -12,7 +12,7 @@ Discrete
    Poisson
    ZeroInflatedPoisson
    NegativeBinomial
-   ZeroInflatedPoisson
+   ZeroInflatedNegativeBinomial
    DiscreteUniform
    Geometric
    Categorical

@@ -203,7 +203,7 @@ class TestChooseBackend(object):
         assert backend.called
 
 
-class TestSamplePPC(object):
+class TestSamplePPC(SeededTest):
     def test_normal_scalar(self):
         with pm.Model() as model:
             a = pm.Normal('a', mu=0, sd=1)
@@ -251,6 +251,30 @@ class TestSamplePPC(object):
             scale = np.sqrt(1 + 0.2 ** 2)
             _, pval = stats.kstest(ppc['b'], stats.norm(scale=scale).cdf)
             assert pval > 0.001
+
+class TestSamplePPCW(SeededTest):
+    def test_sample_ppc_w(self):
+        data0 = np.random.normal(0, 1, size=500)
+
+        with pm.Model() as model_0:
+            mu = pm.Normal('mu', mu=0, sd=1)
+            y = pm.Normal('y', mu=mu, sd=1, observed=data0)
+            trace_0 = pm.sample()
+
+        with pm.Model() as model_1:
+            mu = pm.Normal('mu', mu=0, sd=1, shape=len(data0))
+            y = pm.Normal('y', mu=mu, sd=1, observed=data0)
+            trace_1 = pm.sample()
+
+        traces = [trace_0, trace_0]
+        models = [model_0, model_0]
+        ppc = pm.sample_ppc_w(traces, 1000, models)
+        assert ppc['y'].shape == (1000,)
+
+        traces = [trace_0, trace_1]
+        models = [model_0, model_1]
+        ppc = pm.sample_ppc_w(traces, 100, models)
+        assert ppc['y'].shape == (100, 500)
 
 
 @pytest.mark.parametrize('method', [

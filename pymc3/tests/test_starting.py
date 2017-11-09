@@ -60,9 +60,9 @@ def test_find_MAP():
         Normal('y', mu=mu, tau=sigma**-2, observed=data)
 
         # Test gradient minimization
-        map_est1 = starting.find_MAP()
+        map_est1 = starting.find_MAP(progressbar=False)
         # Test non-gradient minimization
-        map_est2 = starting.find_MAP(method="Powell")
+        map_est2 = starting.find_MAP(progressbar=False, method="Powell")
 
     close_to(map_est1['mu'], 0, tol)
     close_to(map_est1['sigma'], 1, tol)

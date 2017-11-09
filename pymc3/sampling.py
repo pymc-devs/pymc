@@ -1,8 +1,9 @@
-from collections import defaultdict
+from collections import defaultdict, Iterable
 import pickle
 
 from joblib import Parallel, delayed
 import numpy as np
+import warnings
 import theano.gradient as tg
 
 import pymc3 as pm
@@ -164,7 +165,7 @@ def _cpu_count():
 
 
 def sample(draws=500, step=None, init='auto', n_init=200000, start=None,
-           trace=None, chain=0, chains=None, njobs=None, tune=500,
+           trace=None, chain_idx=0, chains=None, njobs=None, tune=500,
            nuts_kwargs=None, step_kwargs=None, progressbar=True, model=None,
            random_seed=None, live_plot=False, discard_tuned_samples=True,
            live_plot_kwargs=None, **kwargs):
@@ -222,7 +223,7 @@ def sample(draws=500, step=None, init='auto', n_init=200000, start=None,
         Passing either "text" or "sqlite" is taken as a shortcut to set
         up the corresponding backend (with "mcmc" used as the base
         name).
-    chain : int
+    chain_idx : int
         Chain number used to store sample in backend. If `chains` is
         greater than one, chain numbers will start here.
     chains : int
@@ -236,8 +237,9 @@ def sample(draws=500, step=None, init='auto', n_init=200000, start=None,
         BLAS. In those cases it might be faster to set this to one.
     tune : int
         Number of iterations to tune, if applicable (defaults to 500).
-        These samples will be drawn in addition to samples and discarded
-        unless discard_tuned_samples is set to True.
+        Samplers adjust the step sizes, scalings or similar during
+        tuning. These samples will be drawn in addition to samples
+        and discarded unless discard_tuned_samples is set to True.
     nuts_kwargs : dict
         Options for the NUTS sampler. See the docstring of NUTS
         for a complete list of options. Common options are
@@ -293,7 +295,7 @@ def sample(draws=500, step=None, init='auto', n_init=200000, start=None,
         ...     p = pm.Beta('p', alpha=alpha, beta=beta)
         ...     y = pm.Binomial('y', n=n, p=p, observed=h)
         ...     trace = pm.sample(2000, tune=1000, njobs=4)
-        >>> pm.df_summary(trace)
+        >>> pm.summary(trace)
                mean        sd  mc_error   hpd_2.5  hpd_97.5
         p  0.604625  0.047086   0.00078  0.510498  0.694774
     """
@@ -313,8 +315,13 @@ def sample(draws=500, step=None, init='auto', n_init=200000, start=None,
         if random_seed is not None:
             np.random.seed(random_seed)
         random_seed = [np.random.randint(2 ** 30) for _ in range(chains)]
-    if not isinstance(random_seed, list):
-        raise TypeError('Invalid value for `random_seed`. Must be list or int')
+    if not isinstance(random_seed, Iterable):
+        raise TypeError('Invalid value for `random_seed`. Must be tuple, list or int')
+        
+    if 'chain' in kwargs:
+        chain_idx = kwargs['chain']
+        warnings.warn("The chain argument has been deprecated. Use chain_idx instead.",
+                    DeprecationWarning)
 
     if start is not None:
         for start_vals in start:
@@ -345,6 +352,7 @@ def sample(draws=500, step=None, init='auto', n_init=200000, start=None,
             # gradient computation failed
             pm._log.info("Initializing NUTS failed. "
                          "Falling back to elementwise auto-assignment.")
+            pm._log.debug('Exception in init nuts', exec_info=True)
             step = assign_step_methods(model, step, step_kwargs=step_kwargs)
     else:
         step = assign_step_methods(model, step, step_kwargs=step_kwargs)
@@ -359,7 +367,7 @@ def sample(draws=500, step=None, init='auto', n_init=200000, start=None,
         'step': step,
         'start': start,
         'trace': trace,
-        'chain': chain,
+        'chain': chain_idx,
         'chains': chains,
         'tune': tune,
         'progressbar': progressbar,
@@ -378,7 +386,15 @@ def sample(draws=500, step=None, init='auto', n_init=200000, start=None,
             trace = _mp_sample(**sample_args)
         except pickle.PickleError:
             pm._log.warn("Could not pickle model, sampling sequentially.")
+            pm._log.debug('Pickling error:', exec_info=True)
             parallel = False
+        except AttributeError as e:
+            if str(e).startswith("AttributeError: Can't pickle"):
+                pm._log.warn("Could not pickle model, sampling sequentially.")
+                pm._log.debug('Pickling error:', exec_info=True)
+                parallel = False
+            else:
+                raise
     if not parallel:
         trace = _sample_many(**sample_args)
 
@@ -677,7 +693,7 @@ def sample_ppc(trace, samples=None, model=None, vars=None, size=None,
     return {k: np.asarray(v) for k, v in ppc.items()}
 
 
-def sample_ppc_w(traces, samples=None, models=None, size=None, weights=None,
+def sample_ppc_w(traces, samples=None, models=None, weights=None,
                  random_seed=None, progressbar=True):
     """Generate weighted posterior predictive samples from a list of models and
     a list of traces according to a set of weights.
@@ -697,9 +713,6 @@ def sample_ppc_w(traces, samples=None, models=None, size=None, weights=None,
         By default a single model will be inferred from `with` context, in this
         case results will only be meaningful if all models share the same
         distributions for the observed RVs.
-    size : int
-        The number of random draws from the distributions specified by the
-        parameters in each sample of the trace.
     weights: array-like
         Individual weights for each trace. Default, same weight for each model.
     random_seed : int
@@ -744,14 +757,29 @@ def sample_ppc_w(traces, samples=None, models=None, size=None, weights=None,
     # ensure n sum up to min_tr
     idx = np.argmax(n)
     n[idx] = n[idx] + min_tr - np.sum(n)
-
     trace = np.concatenate([np.random.choice(traces[i], j)
                             for i, j in enumerate(n)])
 
-    variables = []
-    for i, m in enumerate(models):
-        variables.extend(m.observed_RVs * n[i])
+    obs = [x for m in models for x in m.observed_RVs]
+    variables = np.repeat(obs, n)
 
+    lenghts = list(set([np.shape(np.atleast_1d(o.distribution.default())) for o in obs]))
+
+    if len(lenghts) == 1:
+        size = [None for i in variables]
+    elif len(lenghts) > 2:
+        raise ValueError('Observed variables could not be broadcast together')
+    else:
+        size = []
+        x = np.zeros(shape=lenghts[0])
+        y = np.zeros(shape=lenghts[1])
+        b = np.broadcast(x, y)
+        for var in variables:
+            l = np.shape(np.atleast_1d(var.distribution.default()))
+            if l != b.shape:
+                size.append(b.shape)
+            else:
+                size.append(None)
     len_trace = len(trace)
 
     if samples is None:
@@ -768,7 +796,7 @@ def sample_ppc_w(traces, samples=None, models=None, size=None, weights=None,
             param = trace[idx]
             var = variables[idx]
             ppc[var.name].append(var.distribution.random(point=param,
-                                                         size=size))
+                                                         size=size[idx]))
 
     except KeyboardInterrupt:
         pass
@@ -958,6 +986,6 @@ def init_nuts(init='auto', chains=1, n_init=500000, model=None,
     else:
         raise NotImplementedError('Initializer {} is not supported.'.format(init))
 
-    step = pm.NUTS(potential=potential, **kwargs)
+    step = pm.NUTS(potential=potential, model=model, **kwargs)
 
     return start, step
