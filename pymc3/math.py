@@ -38,8 +38,8 @@ def logsumexp(x, axis=None):
 
 def logaddexp(a, b):
     diff = b - a
-    return tt.switch(diff > 0, 
-                    b + tt.log1p(tt.exp(-diff)), 
+    return tt.switch(diff > 0,
+                    b + tt.log1p(tt.exp(-diff)),
                     a + tt.log1p(tt.exp(diff)))
 
 def invlogit(x, eps=sys.float_info.epsilon):
@@ -55,12 +55,12 @@ def flatten_list(tensors):
 
 
 class LogDet(Op):
-    """Compute the logarithm of the absolute determinant of a square
+    r"""Compute the logarithm of the absolute determinant of a square
     matrix M, log(abs(det(M))) on the CPU. Avoids det(M) overflow/
     underflow.
 
-    Note
-    ----
+    Notes
+    -----
     Once PR #3959 (https://github.com/Theano/Theano/pull/3959/) by harpone is merged,
     this must be removed.
     """
@@ -104,7 +104,7 @@ def expand_packed_triangular(n, packed, lower=True, diagonal_only=False):
 
     Triangular matrices can be stored with better space efficiancy by
     storing the non-zero values in a one-dimensional array. We number
-    the elements by row like this (for lower or upper triangular matrices)::
+    the elements by row like this (for lower or upper triangular matrices):
 
         [[0 - - -]     [[0 1 2 3]
          [1 2 - -]      [- 4 5 6]
@@ -236,7 +236,7 @@ class BlockDiagonalMatrix(Op):
 
 
 def block_diagonal(matrices, sparse=False, format='csr'):
-    """See scipy.sparse.block_diag or
+    r"""See scipy.sparse.block_diag or
     scipy.linalg.block_diag for reference
 
     Parameters

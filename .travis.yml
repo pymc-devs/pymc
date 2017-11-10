@@ -7,6 +7,10 @@ cache:
     - $HOME/minicoda2
     - $HOME/minicoda3
 
+addons:
+  apt_packages:
+    - pandoc
+
 before_install:
   - . ./scripts/install_miniconda.sh
   - sh -e /etc/init.d/xvfb start
@@ -14,7 +18,9 @@ before_install:
 
 install:
   - . ./scripts/create_testenv.sh
-  - pip install coveralls pylint
+  - pip install coveralls pylint 
+  - pip install git+git://github.com/Syntaf/travis-sphinx@7cdd18f20#egg=travis-sphinx
+  - pip install -r requirements-dev.txt
 
 env:
   - PYTHON_VERSION=2.7 FLOATX='float32' TESTCMD="--durations=10 --ignore=pymc3/tests/test_examples.py --cov-append --ignore=pymc3/tests/test_distributions_random.py --ignore=pymc3/tests/test_variational_inference.py --ignore=pymc3/tests/test_shared.py --ignore=pymc3/tests/test_smc.py --ignore=pymc3/tests/test_updates.py --ignore=pymc3/tests/test_posteriors.py --ignore=pymc3/tests/test_sampling.py"
@@ -26,8 +32,9 @@ env:
   - PYTHON_VERSION=2.7 FLOATX='float64' TESTCMD="--durations=10 --cov-append pymc3/tests/test_examples.py pymc3/tests/test_posteriors.py"
   - PYTHON_VERSION=3.6 FLOATX='float64' TESTCMD="--durations=10 --cov-append --ignore=pymc3/tests/test_examples.py --ignore=pymc3/tests/test_distributions_random.py --ignore=pymc3/tests/test_variational_inference.py --ignore=pymc3/tests/test_shared.py --ignore=pymc3/tests/test_smc.py --ignore=pymc3/tests/test_updates.py --ignore=pymc3/tests/test_posteriors.py --ignore=pymc3/tests/test_sampling.py"
   - PYTHON_VERSION=3.6 FLOATX='float64' TESTCMD="--durations=10 --cov-append pymc3/tests/test_distributions_random.py pymc3/tests/test_shared.py pymc3/tests/test_smc.py pymc3/tests/test_sampling.py"
-  - PYTHON_VERSION=3.6 FLOATX='float64' TESTCMD="--durations=10 --cov-append pymc3/tests/test_examples.py pymc3/tests/test_posteriors.py"
+  - PYTHON_VERSION=3.6 FLOATX='float64' BUILD_DOCS="true" TESTCMD="--durations=10 --cov-append pymc3/tests/test_examples.py pymc3/tests/test_posteriors.py"
   - PYTHON_VERSION=3.6 FLOATX='float64' TESTCMD="--durations=10 --cov-append pymc3/tests/test_variational_inference.py pymc3/tests/test_updates.py"
+
 script:
   - . ./scripts/test.sh $TESTCMD
   - . ./scripts/confirm_mpl_optional.sh

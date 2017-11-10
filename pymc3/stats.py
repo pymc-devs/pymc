@@ -371,9 +371,9 @@ def compare(traces, models, ic='WAIC', method='stacking', b_samples=1000,
         are:
             - 'stacking' : (default) stacking of predictive distributions.
             - 'BB-pseudo-BMA' : pseudo-Bayesian Model averaging using Akaike-type
-        weighting. The weights are stabilized using the Bayesian bootstrap
+               weighting. The weights are stabilized using the Bayesian bootstrap
             - 'pseudo-BMA': pseudo-Bayesian Model averaging using Akaike-type
-        weighting, without Bootstrap stabilization (not recommended)
+               weighting, without Bootstrap stabilization (not recommended)
 
         For more information read https://arxiv.org/abs/1704.02030
     b_samples: int
@@ -742,7 +742,7 @@ def dict2pd(statdict, labelname):
     statpd = pd.concat(var_dfs, axis=0)
     statpd = statpd.rename(labelname)
     return statpd
-    
+
 def summary(trace, varnames=None, transform=lambda x: x, stat_funcs=None,
                extend=False, include_transformed=False,
                alpha=0.05, start=0, batches=None):
@@ -851,7 +851,7 @@ def summary(trace, varnames=None, transform=lambda x: x, stat_funcs=None,
             funcs = funcs + stat_funcs
         else:
             funcs = stat_funcs
-            
+
     var_dfs = []
     for var in varnames:
         vals = transform(trace.get_values(var, burn=start, combine=True))
@@ -860,21 +860,21 @@ def summary(trace, varnames=None, transform=lambda x: x, stat_funcs=None,
         var_df.index = ttab.create_flat_names(var, vals.shape[1:])
         var_dfs.append(var_df)
     dforg = pd.concat(var_dfs, axis=0)
-    
+
     if (stat_funcs is not None) and (not extend):
         return dforg
     elif trace.nchains < 2:
         return dforg
     else:
-        n_eff = pm.effective_n(trace, 
-                               varnames=varnames, 
+        n_eff = pm.effective_n(trace,
+                               varnames=varnames,
                                include_transformed=include_transformed)
         n_eff_pd = dict2pd(n_eff, 'n_eff')
-        rhat = pm.gelman_rubin(trace, 
-                               varnames=varnames, 
+        rhat = pm.gelman_rubin(trace,
+                               varnames=varnames,
                                include_transformed=include_transformed)
         rhat_pd = dict2pd(rhat, 'Rhat')
-        return pd.concat([dforg, n_eff_pd, rhat_pd], 
+        return pd.concat([dforg, n_eff_pd, rhat_pd],
                          axis=1, join_axes=[dforg.index])
 
 

@@ -652,8 +652,8 @@ class Wishart(Continuous):
     V : array
         p x p positive definite matrix.
 
-    Note
-    ----
+    Notes
+    -----
     This distribution is unusable in a PyMC3 model. You should instead
     use LKJCholeskyCov or LKJCorr.
     """
@@ -746,8 +746,8 @@ def WishartBartlett(name, S, nu, is_cholesky=False, return_cholesky=False, testv
     testval : ndarray
         p x p positive definite matrix used to initialize
 
-    Note
-    ----
+    Notes
+    -----
     This is not a standard Distribution class but follows a similar
     interface. Besides the Wishart distribution, it will add RVs
     c and z to your model which make up the matrix.
@@ -866,9 +866,7 @@ class LKJCholeskyCov(Continuous):
             # Extract the standard deviations
             stds = tt.sqrt(tt.diag(cov))
 
-    Implementation
-    --------------
-    In the unconstrained space all values of the cholesky factor
+    **Implementation** In the unconstrained space all values of the cholesky factor
     are stored untransformed, except for the diagonal entries, where
     we use a log-transform to restrict them to positive values.
 

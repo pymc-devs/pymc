@@ -252,7 +252,7 @@ class ObjectiveFunction(object):
 
         .. math::
 
-                \mathbf{\lambda^{*}} = \inf_{\lambda} \sup_{\theta} t(\mathbb{E}_{\lambda}[(O^{p,q}f_{\theta})(z)])
+                \mathbf{\lambda^{\*}} = \inf_{\lambda} \sup_{\theta} t(\mathbb{E}_{\lambda}[(O^{p,q}f_{\theta})(z)])
 
         Parameters
         ----------
@@ -525,10 +525,12 @@ class Group(object):
     **Basic Initialization**
 
     :class:`Group` is a factory class. You do not need to call every ApproximationGroup explicitly.
-    Passing the correct `vfam` (*v*ariational *fam*ily) argument you'll tell what
-    parametrization is desired for the group. This helps not to overload code with lot's of classes.
+    Passing the correct `vfam` (Variational FAMily) argument you'll tell what
+    parametrization is desired for the group. This helps not to overload code with lots of classes.
 
-    >>> group = Group([latent1, latent2], vfam='mean_field')
+    .. code:: python
+
+        >>> group = Group([latent1, latent2], vfam='mean_field')
 
     The other way to select approximation is to provide `params` dictionary that has some
     predefined well shaped parameters. Keys of the dict serve as an identifier for variational family and help
@@ -537,7 +539,9 @@ class Group(object):
     passing both `vfam` and `params` is prohibited. Partial parametrization is prohibited by design to
     avoid corner cases and possible problems.
 
-    >>> group = Group([latent3], params=dict(mu=my_mu, rho=my_rho))
+    .. code:: python
+
+        >>> group = Group([latent3], params=dict(mu=my_mu, rho=my_rho))
 
     Important to note that in case you pass custom params they will not be autocollected by optimizer, you'll
     have to provide them with `more_obj_params` keyword.
@@ -614,30 +618,36 @@ class Group(object):
     In case you use simple initialization pattern using `vfam` you'll not meet any changes.
     Passing flow formula to `vfam` you'll get correct flow parametrization for group
 
-    >>> group = Group([latent3], vfam='scale-hh*5-radial*4-loc')
+    .. code:: python
+
+        >>> group = Group([latent3], vfam='scale-hh*5-radial*4-loc')
 
     **Note**: Consider passing location flow as the last one and scale as the first one for stable inference.
 
     Rowwise normalizing flow is supported as well
 
-    >>> group = Group([latent3], vfam='scale-hh*2-radial-loc', rowwise=True)
+    .. code:: python
+
+        >>> group = Group([latent3], vfam='scale-hh*2-radial-loc', rowwise=True)
 
     Custom parameters for normalizing flow can be a real trouble for the first time.
     They have quite different format from the rest variational families.
 
 
-    >>> # int is used as key, it also tells the flow position
-    ... flow_params = {
-    ...     # `rho` parametrizes scale flow, softplus is used to map (-inf; inf) -> (0, inf)
-    ...     0: dict(rho=my_scale),
-    ...     1: dict(v=my_v1),  # Householder Flow, `v` is parameter name from the original paper
-    ...     2: dict(v=my_v2),  # do not miss any number in dict, or else error is raised
-    ...     3: dict(a=my_a, b=my_b, z_ref=my_z_ref),  # Radial flow
-    ...     4: dict(loc=my_loc)  # Location Flow
-    ... }
-    ... group = Group([latent3], params=flow_params)
-    ... # local=True can be added in case you do AEVB inference
-    ... group = Group([latent3], params=flow_params, local=True)
+    .. code:: python
+
+        >>> # int is used as key, it also tells the flow position
+        ... flow_params = {
+        ...     # `rho` parametrizes scale flow, softplus is used to map (-inf; inf) -> (0, inf)
+        ...     0: dict(rho=my_scale),
+        ...     1: dict(v=my_v1),  # Householder Flow, `v` is parameter name from the original paper
+        ...     2: dict(v=my_v2),  # do not miss any number in dict, or else error is raised
+        ...     3: dict(a=my_a, b=my_b, z_ref=my_z_ref),  # Radial flow
+        ...     4: dict(loc=my_loc)  # Location Flow
+        ... }
+        ... group = Group([latent3], params=flow_params)
+        ... # local=True can be added in case you do AEVB inference
+        ... group = Group([latent3], params=flow_params, local=True)
 
     **Delayed Initialization**
 
@@ -648,16 +658,20 @@ class Group(object):
     correctly initialized. For those groups which have group equal to `None` it will collect all
     the rest variables not covered by other groups and perform delayed init.
 
-    >>> group_1 = Group([latent1], vfam='fr')  # latent1 has full rank approximation
-    >>> group_other = Group(None, vfam='mf')  # other variables have mean field Q
-    >>> approx = Approximation([group_1, group_other])
+    .. code:: python
+
+        >>> group_1 = Group([latent1], vfam='fr')  # latent1 has full rank approximation
+        >>> group_other = Group(None, vfam='mf')  # other variables have mean field Q
+        >>> approx = Approximation([group_1, group_other])
 
     **Summing Up**
 
     When you have created all the groups they need to pass all the groups to :class:`Approximation`.
     It does not accept any other parameter rather than `groups`
 
-    >>> approx = Approximation(my_groups)
+    .. code:: python
+
+        >>> approx = Approximation(my_groups)
 
     See Also
     --------
@@ -775,7 +789,7 @@ class Group(object):
         return res
 
     def _check_user_params(self, **kwargs):
-        """*Dev* - checks user params, allocates them if they are correct, returns True.
+        R"""*Dev* - checks user params, allocates them if they are correct, returns True.
         If they are not present, returns False
 
         Parameters
@@ -810,7 +824,7 @@ class Group(object):
         return True
 
     def _initial_type(self, name):
-        """*Dev* - initial type with given name. The correct type depends on `self.batched`
+        R"""*Dev* - initial type with given name. The correct type depends on `self.batched`
 
         Parameters
         ----------
@@ -826,7 +840,7 @@ class Group(object):
             return tt.matrix(name)
 
     def _input_type(self, name):
-        """*Dev* - input type with given name. The correct type depends on `self.batched`
+        R"""*Dev* - input type with given name. The correct type depends on `self.batched`
 
         Parameters
         ----------

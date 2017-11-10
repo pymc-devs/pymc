@@ -72,7 +72,7 @@ class Latent(Base):
     mean_func : None, instance of Mean
         The mean function.  Defaults to zero.
 
-    Example
+    Examples
     --------
     .. code:: python
 
@@ -342,7 +342,7 @@ class Marginal(Base):
     mean_func : None, instance of Mean
         The mean function.  Defaults to zero.
 
-    Example
+    Examples
     --------
     .. code:: python
 
@@ -581,7 +581,7 @@ class MarginalSparse(Marginal):
     approx : string
         The approximation to use.  Must be one of `VFE`, `FITC` or `DTC`.
 
-    Example
+    Examples
     --------
     .. code:: python
 
