@@ -706,24 +706,24 @@ class TestMatchesScipy(SeededTest):
 
     @pytest.mark.parametrize('n', [1, 2, 3])
     def test_matrixnormal(self, n):
-        self.pymc3_matches_scipy(MatrixNormal, RealMatrix(5, n),
-                                 {'mu': Vector(R, n), 'rowcov': PdMatrix(n),
+        self.pymc3_matches_scipy(MatrixNormal, RealMatrix(n, n),
+                                 {'mu': RealMatrix(n, n), 'rowcov': PdMatrix(n),
                                   'colcov': PdMatrix(n)},
                                  matrix_normal_logpdf_cov)
-        self.pymc3_matches_scipy(MatrixNormal, Vector(R, n),
-                                 {'mu': Vector(R, n), 'rowcov': PdMatrix(n),
+        self.pymc3_matches_scipy(MatrixNormal, RealMatrix(2, n),
+                                 {'mu': RealMatrix(2, n), 'rowcov': PdMatrix(2),
                                   'colcov': PdMatrix(n)},
                                  matrix_normal_logpdf_cov)
-        self.pymc3_matches_scipy(MatrixNormal, RealMatrix(5, n),
-                                 {'mu': Vector(R, n),
-                                  'rowchol': PdMatrixChol(n),
+        self.pymc3_matches_scipy(MatrixNormal, RealMatrix(3, n),
+                                 {'mu': RealMatrix(3, n),
+                                  'rowchol': PdMatrixChol(3),
                                   'colchol': PdMatrixChol(n)},
                                  matrix_normal_logpdf_chol,
                                  decimal=select_by_precision(float64=6, float32=-1))
-        self.pymc3_matches_scipy(MatrixNormal, Vector(R, n),
-                                 {'mu': Vector(R, n),
+        self.pymc3_matches_scipy(MatrixNormal, RealMatrix(n, 3),
+                                 {'mu': RealMatrix(n, 3),
                                   'rowchol': PdMatrixChol(n),
-                                  'colchol': PdMatrixChol(n)},
+                                  'colchol': PdMatrixChol(3)},
                                  matrix_normal_logpdf_chol,
                                  decimal=select_by_precision(float64=6, float32=0))
 
