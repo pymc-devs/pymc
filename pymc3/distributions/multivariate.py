@@ -1180,7 +1180,7 @@ class MatrixNormal(Continuous):
     """
 
     def __init__(self, mu=0, rowcov=None, rowchol=None, rowtau=None,
-                 colcov=None, colchol=None, coltau=None, *args, shape=None,
+                 colcov=None, colchol=None, coltau=None, shape=None, *args,
                  **kwargs):
 
         self._setup_matrices(colcov, colchol, coltau, rowcov, rowchol, rowtau)
