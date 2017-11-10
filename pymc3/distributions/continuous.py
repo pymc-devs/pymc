@@ -2947,6 +2947,30 @@ class ExGaussian(Continuous):
                                                                 get_variable_name(sigma),
                                                                 get_variable_name(nu))
 
+    def logcdf(self, value):
+        """
+        Compute the log CDF for the ExGaussian distribution
+
+        References
+        ----------
+        .. [Rigby2005] R.A. Rigby (2005).
+           "Generalized additive models for location, scale and shape"
+           http://dx.doi.org/10.1111/j.1467-9876.2005.00510.x
+        """
+        mu = self.mu
+        sigma = self.sigma
+        sigma_2 = sigma**2
+        nu = self.nu
+        z = value - mu - sigma_2/nu
+        return tt.switch(
+            tt.gt(nu, 0.05 * sigma),
+            tt.log(std_cdf((value - mu)/sigma) -
+                   std_cdf(z/sigma) * tt.exp(
+                       ((mu + (sigma_2/nu))**2 -
+                        (mu**2) -
+                        2 * value * ((sigma_2)/nu))/(2 * sigma_2))),
+            normal_lcdf(mu, sigma, value))
+
 
 class VonMises(Continuous):
     R"""

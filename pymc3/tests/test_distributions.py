@@ -1115,6 +1115,25 @@ class TestMatchesScipy(SeededTest):
         pt = {'eg': value}
         assert_almost_equal(model.fastlogp(pt), logp, decimal=select_by_precision(float64=6, float32=2), err_msg=str(pt))
 
+    @pytest.mark.parametrize('value,mu,sigma,nu,logcdf', [
+        (0.5, -50.000, 0.500, 0.500, 0.0000000),
+        (1.0, -1.000, 0.001, 0.001, 0.0000000),
+        (2.0, 0.001, 1.000, 1.000, -0.2365674),
+        (5.0, 0.500, 2.500, 2.500, -0.2886489),
+        (7.5, 2.000, 5.000, 5.000, -0.5655104),
+        (15.0, 5.000, 7.500, 7.500, -0.4545255),
+        (50.0, 50.000, 10.000, 10.000, -1.433714),
+        (1000.0, 500.000, 10.000, 20.000, -1.573708e-11),
+    ])
+    def test_ex_gaussian_cdf(self, value, mu, sigma, nu, logcdf):
+        """Log probabilities calculated using the pexGAUS function from the R package gamlss.
+        See e.g., doi: 10.1111/j.1467-9876.2005.00510.x, or http://www.gamlss.org/."""
+        assert_almost_equal(
+            ExGaussian.dist(mu=mu, sigma=sigma, nu=nu).logcdf(value).tag.test_value,
+            logcdf,
+            decimal=select_by_precision(float64=6, float32=2),
+            err_msg=str((value, mu, sigma, nu, logcdf)))
+
     @pytest.mark.xfail(condition=(theano.config.floatX == "float32"), reason="Fails on float32")
     def test_vonmises(self):
         self.pymc3_matches_scipy(
