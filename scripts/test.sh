@@ -4,7 +4,7 @@ set -e
 
 if [[ "$BUILD_DOCS" == "true" ]]; then
     travis-sphinx -n build
-    travis-sphinx deploy -c "docs.pymc.io"
+    travis-sphinx -c "docs.pymc.io" deploy
 fi
 
 if [[ "$RUN_PYLINT" == "true" ]]; then
