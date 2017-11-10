@@ -797,7 +797,9 @@ def summary(trace, varnames=None, transform=lambda x: x, stat_funcs=None,
 
     Returns
     -------
-    `pandas.DataFrame` with summary statistics for each variable
+    `pandas.DataFrame` with summary statistics for each variable Defaults one
+    are: `mean`, `sd`, `mc_error`, `hpd_2.5`, `hpd_97.5`, `n_eff` and `Rhat`.
+    Last two are only computed for traces with 2 or more chains.
 
     Examples
     --------
