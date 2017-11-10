@@ -3,7 +3,7 @@
 set -e
 
 if [[ "$BUILD_DOCS" == "true" ]]; then
-    travis-sphinx build -n
+    travis-sphinx build -n -s docs/source
     travis-sphinx deploy -c "docs.pymc.io"
 fi
 
