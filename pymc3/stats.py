@@ -861,6 +861,8 @@ def summary(trace, varnames=None, transform=lambda x: x, stat_funcs=None,
     
     if (stat_funcs is not None) and (not extend):
         return dforg
+    elif trace.nchains < 2:
+        return dforg
     else:
         n_eff = pm.effective_n(trace, 
                                varnames=varnames, 
