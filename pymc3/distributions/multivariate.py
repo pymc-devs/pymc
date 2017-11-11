@@ -1182,20 +1182,14 @@ class MatrixNormal(Continuous):
     def __init__(self, mu=0, rowcov=None, rowchol=None, rowtau=None,
                  colcov=None, colchol=None, coltau=None, shape=None, *args,
                  **kwargs):
-
         self._setup_matrices(colcov, colchol, coltau, rowcov, rowchol, rowtau)
-
         if shape is None:
             raise TypeError('shape is a required argument')
         assert len(shape) == 2, "shape must have length 2: mxn"
         self.shape = shape
-
         super(MatrixNormal, self).__init__(shape=shape, *args, **kwargs)
-
         self.mu = tt.as_tensor_variable(mu)
-
         self.mean = self.median = self.mode = self.mu
-
         self.solve_lower = tt.slinalg.solve_lower_triangular
         self.solve_upper = tt.slinalg.solve_upper_triangular
 
@@ -1269,7 +1263,6 @@ class MatrixNormal(Continuous):
                                 point=point
                                 )
         standard_normal = np.random.standard_normal(size)
-
         return mu + np.matmul(rowchol, np.matmul(standard_normal, colchol.T))
 
     def _trquaddist(self, value):
@@ -1291,7 +1284,6 @@ class MatrixNormal(Continuous):
         rowdiag = tt.nlinalg.diag(rowchol_cov)
         half_collogdet = tt.sum(tt.log(coldiag))  # logdet(M) = 2*Tr(log(L))
         half_rowlogdet = tt.sum(tt.log(rowdiag))  # Using Cholesky: M = L L^T
-
         return trquaddist, half_collogdet, half_rowlogdet
 
     def logp(self, value):
