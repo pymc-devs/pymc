@@ -75,11 +75,18 @@ class Domain(object):
             self.shape)
 
     def __mul__(self, other):
-        return Domain(
-            [v * other for v in self.vals],
-            self.dtype,
-            (self.lower * other, self.upper * other),
-            self.shape)
+        try:
+            return Domain(
+                [v * other for v in self.vals],
+                self.dtype,
+                (self.lower * other, self.upper * other),
+                self.shape)
+        except TypeError:
+            return Domain(
+                [v * other for v in self.vals],
+                self.dtype,
+                (self.lower, self.upper),
+                self.shape)
 
     def __neg__(self):
         return Domain(
@@ -445,7 +452,6 @@ class TestMatchesScipy(SeededTest):
             Triangular, Runif, {'lower': -Rplusunif, 'c': Runif, 'upper': Rplusunif},
             lambda value, c, lower, upper: sp.triang.logpdf(value, c-lower, lower, upper-lower))
 
-
     def test_bound_normal(self):
         PositiveNormal = Bound(Normal, lower=0.)
         self.pymc3_matches_scipy(PositiveNormal, Rplus, {'mu': Rplus, 'sd': Rplus},
@@ -706,24 +712,28 @@ class TestMatchesScipy(SeededTest):
 
     @pytest.mark.parametrize('n', [1, 2, 3])
     def test_matrixnormal(self, n):
+        mat_scale = 1e3  # To reduce logp magnitude
+        mean_scale = .1
         self.pymc3_matches_scipy(MatrixNormal, RealMatrix(n, n),
-                                 {'mu': RealMatrix(n, n), 'rowcov': PdMatrix(n),
-                                  'colcov': PdMatrix(n)},
+                                 {'mu': RealMatrix(n, n)*mean_scale,
+                                  'rowcov': PdMatrix(n)*mat_scale,
+                                  'colcov': PdMatrix(n)*mat_scale},
                                  matrix_normal_logpdf_cov)
         self.pymc3_matches_scipy(MatrixNormal, RealMatrix(2, n),
-                                 {'mu': RealMatrix(2, n), 'rowcov': PdMatrix(2),
-                                  'colcov': PdMatrix(n)},
+                                 {'mu': RealMatrix(2, n)*mean_scale,
+                                  'rowcov': PdMatrix(2)*mat_scale,
+                                  'colcov': PdMatrix(n)*mat_scale},
                                  matrix_normal_logpdf_cov)
         self.pymc3_matches_scipy(MatrixNormal, RealMatrix(3, n),
-                                 {'mu': RealMatrix(3, n),
-                                  'rowchol': PdMatrixChol(3),
-                                  'colchol': PdMatrixChol(n)},
+                                 {'mu': RealMatrix(3, n)*mean_scale,
+                                  'rowchol': PdMatrixChol(3)*mat_scale,
+                                  'colchol': PdMatrixChol(n)*mat_scale},
                                  matrix_normal_logpdf_chol,
                                  decimal=select_by_precision(float64=6, float32=-1))
         self.pymc3_matches_scipy(MatrixNormal, RealMatrix(n, 3),
-                                 {'mu': RealMatrix(n, 3),
-                                  'rowchol': PdMatrixChol(n),
-                                  'colchol': PdMatrixChol(3)},
+                                 {'mu': RealMatrix(n, 3)*mean_scale,
+                                  'rowchol': PdMatrixChol(n)*mat_scale,
+                                  'colchol': PdMatrixChol(3)*mat_scale},
                                  matrix_normal_logpdf_chol,
                                  decimal=select_by_precision(float64=6, float32=0))
 
