@@ -141,7 +141,7 @@ html_theme = 'alabaster'
 # further.  For a list of options available for each theme, see the
 # documentation.
 html_theme_options = {
-    "fixed_sidebar": "true",
+    "fixed_sidebar": "false",
     "description": "Probabilistic Programming in Python: Bayesian Modeling and Probabilistic Machine Learning with Theano"
 }
 
