@@ -17,7 +17,7 @@ from .memoize import memoize
 from .theanof import gradient, hessian, inputvars, generator
 from .vartypes import typefilter, discrete_types, continuous_types, isgenerator
 from .blocking import DictToArrayBijection, ArrayOrdering
-from .util import get_transformed_name, escape_latex
+from .util import get_transformed_name
 
 __all__ = [
     'Model', 'Factor', 'compilef', 'fn', 'fastfn', 'modelcontext',
@@ -952,8 +952,15 @@ class Model(six.with_metaclass(InitContextMeta, Context, Factor)):
     def _repr_latex_(self, name=None, dist=None):
         tex_vars = []
         for rv in itertools.chain(self.unobserved_RVs, self.observed_RVs):
-            tex_vars.append(rv.__latex__())
-        return u'$${}$$'.format('\\\\'.join([tex.strip('$') for tex in tex_vars if tex is not None]))
+            rv_tex = rv.__latex__()
+            tilde_index = rv_tex.index('\\sim')
+            array_rv = rv_tex[:tilde_index] + '&' + rv_tex[tilde_index:]
+            tex_vars.append(array_rv)
+        return r'''$$
+            \begin{{array}}{{ll}}
+            {}
+            \end{{array}}
+            $$'''.format('\\\\'.join([tex.strip('$') for tex in tex_vars if tex is not None]))
 
     __latex__ = _repr_latex_
 
@@ -1140,7 +1147,7 @@ class FreeRV(Factor, TensorVariable):
             name = self.name
         if dist is None:
             dist = self.distribution
-        return self.distribution._repr_latex_(name=escape_latex(name), dist=dist)
+        return self.distribution._repr_latex_(name=r'\text{%s}' % name, dist=dist)
 
     __latex__ = _repr_latex_
 
@@ -1249,7 +1256,7 @@ class ObservedRV(Factor, TensorVariable):
             name = self.name
         if dist is None:
             dist = self.distribution
-        return self.distribution._repr_latex_(name=escape_latex(name), dist=dist)
+        return self.distribution._repr_latex_(name=r'\text{%s}' % name, dist=dist)
 
     __latex__ = _repr_latex_
 
@@ -1402,7 +1409,7 @@ class TransformedRV(TensorVariable):
             name = self.name
         if dist is None:
             dist = self.distribution
-        return self.distribution._repr_latex_(name=escape_latex(name), dist=dist)
+        return self.distribution._repr_latex_(name=r'\text{%s}' % name, dist=dist)
 
     __latex__ = _repr_latex_
 
