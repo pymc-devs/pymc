@@ -19,7 +19,7 @@ before_install:
 install:
   - . ./scripts/create_testenv.sh
   - pip install coveralls pylint 
-  - pip install git+git://github.com/Syntaf/travis-sphinx@7cdd18f20#egg=travis-sphinx
+  - pip install travis-sphinx==2.0.0
   - pip install -r requirements-dev.txt
 
 env:
