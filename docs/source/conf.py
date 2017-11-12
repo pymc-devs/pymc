@@ -71,8 +71,8 @@ master_doc = 'index'
 
 # General information about the project.
 project = 'PyMC3'
-copyright = '2016, John Salvatier, Christopher Fonnesbeck, Thomas Wiecki'
-author = 'John Salvatier, Christopher Fonnesbeck, Thomas Wiecki'
+copyright = '2017, The PyMC Development Team'
+author = 'PyMC developers'
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
@@ -258,8 +258,8 @@ latex_elements = {
 # (source start file, target name, title,
 #  author, documentclass [howto, manual, or own class]).
 latex_documents = [
-  (master_doc, 'pymc3.tex', 'pymc3 Documentation',
-   'John Salvatier, Christopher Fonnesbeck, Thomas Wiecki', 'manual'),
+  (master_doc, 'pymc3.tex', 'PyMC3 Documentation',
+   'PyMC developers', 'manual'),
 ]
 
 # The name of an image file (relative to this directory) to place at the top of
