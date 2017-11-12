@@ -44,8 +44,8 @@ if sys.version_info[0] == 2:  # py3 has mock in stdlib
 if __name__ == "__main__":
     setup(name=DISTNAME,
           version=VERSION,
-          maintainer=MAINTAINER,
-          maintainer_email=MAINTAINER_EMAIL,
+          maintainer=AUTHOR,
+          maintainer_email=AUTHOR_EMAIL,
           description=DESCRIPTION,
           license=LICENSE,
           url=URL,
