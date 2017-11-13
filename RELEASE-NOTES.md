@@ -2,9 +2,20 @@
 
 ## PyMC 3.3. (Unreleased)
 
+### New features
+
+- Added `MatrixNormal` class for representing vectors of multivariate normal variables
+- Implemented `HalfStudentT` distribution
+- New benchmark suite added (see http://pandas.pydata.org/speed/pymc3/)
+- Generalized random seed types
+
+### Fixes
+
 - Improve NUTS initialization `advi+adapt_diag_grad` and add `jitter+adapt_diag_grad` (#2643)
 - Fixed `compareplot` to use `loo` output.
-- Added `MatrixNormal` class for representing vectors of multivariate normal variables
+- Improved `posteriorplot` to scale fonts
+- `sample_ppc_w` now broadcasts
+- `df_summary` function renamed to `summary`
 
 
 ## PyMC3 3.2 (October 10, 2017)
