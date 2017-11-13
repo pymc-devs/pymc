@@ -1137,7 +1137,7 @@ class MatrixNormal(Continuous):
         rowcov = np.array([[1, 0, 0], [0, 4, 0], [0, 0, 16]])
         m = rowcov.shape[0]
         n = colcov.shape[0]
-        mu = np.zeros((q, p))
+        mu = np.zeros((m, n))
         vals = pm.MatrixNormal('vals', mu=mu, colcov=colcov,
                                rowcov=rowcov, shape=(m, n))
 
@@ -1149,11 +1149,12 @@ class MatrixNormal(Continuous):
     covariance structure, but were scaled by different powers of an unknown
     constant, both the covariance and scaling could be learned as follows
     (see the docstring of `LKJCholeskyCov` for more information about this)::
+    .. code:: python
 
         # Setup data
         true_colcov = np.array([[1.0, 0.5, 0.1],
-                              [0.5, 1.0, 0.2],
-                              [0.1, 0.2, 1.0]])
+                                [0.5, 1.0, 0.2],
+                                [0.1, 0.2, 1.0]])
         m = 3
         n = true_colcov.shape[0]
         true_scale = 3
@@ -1163,18 +1164,19 @@ class MatrixNormal(Continuous):
         data = np.random.multivariate_normal(mu.flatten(), true_kron)
         data = data.reshape(m, n)
 
-        # Setup right cholesky matrix
-        sd_dist = pm.HalfCauchy.dist(beta=2.5, shape=3)
-        colchol_packed = pm.LKJCholeskyCov('colcholpacked', n=3, eta=2,
-                                           sd_dist=sd_dist)
-        colchol = pm.expand_packed_triangular(3, colchol_packed)
+        with pm.Model() as model:
+            # Setup right cholesky matrix
+            sd_dist = pm.HalfCauchy.dist(beta=2.5, shape=3)
+            colchol_packed = pm.LKJCholeskyCov('colcholpacked', n=3, eta=2,
+                                               sd_dist=sd_dist)
+            colchol = pm.expand_packed_triangular(3, colchol_packed)
 
-        # Setup left covariance matrix
-        scale = pm.Lognormal('scale', mu=np.log(true_scale), sd=0.5)
-        rowcov = tt.nlinalg.diag([scale**(2*i) for i in range(m)])
+            # Setup left covariance matrix
+            scale = pm.Lognormal('scale', mu=np.log(true_scale), sd=0.5)
+            rowcov = tt.nlinalg.diag([scale**(2*i) for i in range(m)])
 
-        vals = pm.MatrixNormal('vals', mu=mu, colchol=colchol, rowcov=rowcov,
-                               observed=data, shape=(m, n))
+            vals = pm.MatrixNormal('vals', mu=mu, colchol=colchol, rowcov=rowcov,
+                                   observed=data, shape=(m, n))
     """
 
     def __init__(self, mu=0, rowcov=None, rowchol=None, rowtau=None,
