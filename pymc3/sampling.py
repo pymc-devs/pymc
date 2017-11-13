@@ -310,9 +310,9 @@ def sample(draws=500, step=None, init='auto', n_init=200000, start=None,
         start = [start] * chains
     if random_seed == -1:
         random_seed = None
-    if chains == 1 and isinstance(random_seed, int):
+    if chains == 1 and isinstance(random_seed, (int, long)):
         random_seed = [random_seed]
-    if random_seed is None or isinstance(random_seed, int):
+    if random_seed is None or isinstance(random_seed, (int, long)):
         if random_seed is not None:
             np.random.seed(random_seed)
         random_seed = [np.random.randint(2 ** 30) for _ in range(chains)]
