@@ -117,14 +117,14 @@ def get_variable_name(variable):
                 names = [get_variable_name(item)
                          for item in variable.get_parents()[0].inputs]
                 # do not escape_latex these, since it is not idempotent
-                return 'f(%s)' % ','.join([n for n in names if isinstance(n, str)])
+                return 'f(%s)' % ',~'.join([n for n in names if isinstance(n, str)])
             except IndexError:
                 pass
         value = variable.eval()
         if not value.shape:
             return asscalar(value)
         return 'array'
-    return escape_latex(name)
+    return r'\text{%s}' % name
 
 
 def update_start_vals(a, b, model):

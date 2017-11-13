@@ -67,7 +67,8 @@ class Binomial(Discrete):
             dist = self
         n = dist.n
         p = dist.p
-        return r'${} \sim \text{{Binomial}}(\mathit{{n}}={}, \mathit{{p}}={})$'.format(name,
+        name = r'\text{%s}' % name
+        return r'${} \sim \text{{Binomial}}(\mathit{{n}}={},~\mathit{{p}}={})$'.format(name,
                                                 get_variable_name(n),
                                                 get_variable_name(p))
 
@@ -140,7 +141,8 @@ class BetaBinomial(Discrete):
             dist = self
         alpha = dist.alpha
         beta = dist.beta
-        return r'${} \sim \text{{NegativeBinomial}}(\mathit{{alpha}}={}, \mathit{{beta}}={})$'.format(name,
+        name = r'\text{%s}' % name
+        return r'${} \sim \text{{NegativeBinomial}}(\mathit{{alpha}}={},~\mathit{{beta}}={})$'.format(name,
                                                 get_variable_name(alpha),
                                                 get_variable_name(beta))
 
@@ -187,6 +189,7 @@ class Bernoulli(Discrete):
         if dist is None:
             dist = self
         p = dist.p
+        name = r'\text{%s}' % name
         return r'${} \sim \text{{Bernoulli}}(\mathit{{p}}={})$'.format(name,
                                                 get_variable_name(p))
 
@@ -249,7 +252,8 @@ class DiscreteWeibull(Discrete):
             dist = self
         q = dist.q
         beta = dist.beta
-        return r'${} \sim \text{{DiscreteWeibull}}(\mathit{{q}}={}, \mathit{{beta}}={})$'.format(name,
+        name = r'\text{%s}' % name
+        return r'${} \sim \text{{DiscreteWeibull}}(\mathit{{q}}={},~\mathit{{beta}}={})$'.format(name,
                                                 get_variable_name(q),
                                                 get_variable_name(beta))
 
@@ -305,6 +309,7 @@ class Poisson(Discrete):
         if dist is None:
             dist = self
         mu = dist.mu
+        name = r'\text{%s}' % name
         return r'${} \sim \text{{Poisson}}(\mathit{{mu}}={})$'.format(name,
                                                 get_variable_name(mu))
 
@@ -367,7 +372,8 @@ class NegativeBinomial(Discrete):
             dist = self
         mu = dist.mu
         alpha = dist.alpha
-        return r'${} \sim \text{{NegativeBinomial}}(\mathit{{mu}}={}, \mathit{{alpha}}={})$'.format(name,
+        name = r'\text{%s}' % name
+        return r'${} \sim \text{{NegativeBinomial}}(\mathit{{mu}}={},~\mathit{{alpha}}={})$'.format(name,
                                                 get_variable_name(mu),
                                                 get_variable_name(alpha))
 
@@ -413,6 +419,7 @@ class Geometric(Discrete):
         if dist is None:
             dist = self
         p = dist.p
+        name = r'\text{%s}' % name
         return r'${} \sim \text{{Geometric}}(\mathit{{p}}={})$'.format(name,
                                                 get_variable_name(p))
 
@@ -468,7 +475,8 @@ class DiscreteUniform(Discrete):
             dist = self
         lower = dist.lower
         upper = dist.upper
-        return r'${} \sim \text{{DiscreteUniform}}(\mathit{{lower}}={}, \mathit{{upper}}={})$'.format(name,
+        name = r'\text{%s}' % name
+        return r'${} \sim \text{{DiscreteUniform}}(\mathit{{lower}}={},~\mathit{{upper}}={})$'.format(name,
                                                 get_variable_name(lower),
                                                 get_variable_name(upper))
 
@@ -540,6 +548,7 @@ class Categorical(Discrete):
         if dist is None:
             dist = self
         p = dist.p
+        name = r'\text{%s}' % name
         return r'${} \sim \text{{Categorical}}(\mathit{{p}}={})$'.format(name,
                                                 get_variable_name(p))
 
@@ -577,6 +586,7 @@ class Constant(Discrete):
     def _repr_latex_(self, name=None, dist=None):
         if dist is None:
             dist = self
+        name = r'\text{%s}' % name
         return r'${} \sim \text{{Constant}}()$'.format(name)
 
 
@@ -647,7 +657,8 @@ class ZeroInflatedPoisson(Discrete):
             dist = self
         theta = dist.theta
         psi = dist.psi
-        return r'${} \sim \text{{ZeroInflatedPoisson}}(\mathit{{theta}}={}, \mathit{{psi}}={})$'.format(name,
+        name = r'\text{%s}' % name
+        return r'${} \sim \text{{ZeroInflatedPoisson}}(\mathit{{theta}}={},~\mathit{{psi}}={})$'.format(name,
                                                 get_variable_name(theta),
                                                 get_variable_name(psi))
 
@@ -722,8 +733,9 @@ class ZeroInflatedBinomial(Discrete):
         name_n = get_variable_name(n)
         name_p = get_variable_name(p)
         name_psi = get_variable_name(psi)
+        name = r'\text{%s}' % name
         return (r'${} \sim \text{{ZeroInflatedBinomial}}'
-                r'(\mathit{{n}}={}, \mathit{{p}}={}, '
+                r'(\mathit{{n}}={},~\mathit{{p}}={},~'
                 r'\mathit{{psi}}={})$'
                 .format(name, name_n, name_p, name_psi))
 
@@ -817,7 +829,8 @@ class ZeroInflatedNegativeBinomial(Discrete):
         name_mu = get_variable_name(mu)
         name_alpha = get_variable_name(alpha)
         name_psi = get_variable_name(psi)
+        name = r'\text{%s}' % name
         return (r'${} \sim \text{{ZeroInflatedNegativeBinomial}}'
-                r'(\mathit{{mu}}={}, \mathit{{alpha}}={}, '
+                r'(\mathit{{mu}}={},~\mathit{{alpha}}={},~'
                 r'\mathit{{psi}}={})$'
                 .format(name, name_mu, name_alpha, name_psi))
