@@ -1,5 +1,6 @@
 from collections import defaultdict, Iterable
 import pickle
+from six import integer_types
 
 from joblib import Parallel, delayed
 import numpy as np
@@ -310,9 +311,9 @@ def sample(draws=500, step=None, init='auto', n_init=200000, start=None,
         start = [start] * chains
     if random_seed == -1:
         random_seed = None
-    if chains == 1 and isinstance(random_seed, (int, long)):
+    if chains == 1 and isinstance(random_seed, integer_types):
         random_seed = [random_seed]
-    if random_seed is None or isinstance(random_seed, (int, long)):
+    if random_seed is None or isinstance(random_seed, integer_types):
         if random_seed is not None:
             np.random.seed(random_seed)
         random_seed = [np.random.randint(2 ** 30) for _ in range(chains)]
