@@ -373,7 +373,7 @@ class MultiTrace(object):
                               "total samples in the trace "
                               "(chains * iterations)".format(l_v, l_samples))
 
-            v = v.reshape(len(chains), -1)
+            v = np.squeeze(v.reshape(len(chains), len(self), -1))
 
             for idx, chain in enumerate(chains.values()):
                 chain.samples[k] = v[idx]

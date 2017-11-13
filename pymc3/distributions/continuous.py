@@ -1539,10 +1539,10 @@ class HalfStudentT(PositiveContinuous):
 
     .. math::
 
-        f(x \mid \beta,\nu) =
+        f(x \mid \sigma,\nu) =
             \frac{2\;\Gamma\left(\frac{\nu+1}{2}\right)}
-            {\Gamma\left(\frac{\nu}{2}\right)\sqrt{\nu\pi\beta^2}}
-            \left(1+\frac{1}{\nu}\frac{x^2}{\beta^2}\right)^{-\frac{\nu+1}{2}}
+            {\Gamma\left(\frac{\nu}{2}\right)\sqrt{\nu\pi\sigma^2}}
+            \left(1+\frac{1}{\nu}\frac{x^2}{\sigma^2}\right)^{-\frac{\nu+1}{2}}
 
     .. plot::
 
@@ -1551,8 +1551,8 @@ class HalfStudentT(PositiveContinuous):
         import scipy.stats as st
         x = np.linspace(-5.0, 5.0, 200)
         fig, ax = plt.subplots()
-        f = lambda beta, nu : st.t.pdf(x, df=nu, loc=0, scale=beta)
-        plot_pdf = lambda beta, nu : ax.plot(x, f(beta, nu), label=r'$\beta$={}, $\nu$={}'.format(beta, nu))
+        f = lambda sigma, nu : st.t.pdf(x, df=nu, loc=0, scale=sigma)
+        plot_pdf = lambda sigma, nu : ax.plot(x, f(sigma, nu), label=r'$\sigma$={}, $\nu$={}'.format(sigma, nu))
         plot_pdf(1, 0.5)
         plot_pdf(1, 1)
         plot_pdf(2, 1)
@@ -1569,43 +1569,50 @@ class HalfStudentT(PositiveContinuous):
     ----------
     nu : float
         Degrees of freedom, also known as normality parameter (nu > 0).
-    beta : float
-        Scale parameter (beta > 0).
+    sd : float
+        Scale parameter (sd > 0). Converges to the standard deviation as nu
+        increases
+    lam : float
+        Scale parameter (lam > 0). Converges to the precision as nu increases
     """
-    def __init__(self, nu=1, beta=1, *args, **kwargs):
+    def __init__(self, nu=1, sd=None, lam=None, *args, **kwargs):
         super(HalfStudentT, self).__init__(*args, **kwargs)
         self.mode = tt.as_tensor_variable(0)
-        self.median = tt.as_tensor_variable(beta)
-        self.beta = tt.as_tensor_variable(beta)
+        lam, sd = get_tau_sd(lam, sd)
+        self.median = tt.as_tensor_variable(sd)
+        self.sd = tt.as_tensor_variable(sd)
+        self.lam = tt.as_tensor_variable(lam)
         self.nu = nu = tt.as_tensor_variable(nu)
 
-        assert_negative_support(beta, 'beta', 'HalfStudentT')
+        assert_negative_support(sd, 'sd', 'HalfStudentT')
+        assert_negative_support(lam, 'lam', 'HalfStudentT')
         assert_negative_support(nu, 'nu', 'HalfStudentT')
 
     def random(self, point=None, size=None, repeat=None):
-        nu, beta = draw_values([self.nu, self.beta], point=point)
-        return np.abs(generate_samples(stats.t.rvs, nu, loc=0, scale=beta,
+        nu, sd = draw_values([self.nu, self.sd], point=point)
+        return np.abs(generate_samples(stats.t.rvs, nu, loc=0, scale=sd,
                                        dist_shape=self.shape,
                                        size=size))
 
     def logp(self, value):
         nu = self.nu
-        beta = self.beta
+        sd = self.sd
+        lam = self.lam
 
         return bound(tt.log(2) + gammaln((nu + 1.0) / 2.0)
                      - gammaln(nu / 2.0)
-                     - .5 * tt.log(nu * np.pi * beta**2)
-                     - (nu + 1.0) / 2.0 * tt.log1p(value ** 2 / (nu * beta**2)),
-                     beta > 0, nu > 0, value >= 0)
+                     - .5 * tt.log(nu * np.pi * sd**2)
+                     - (nu + 1.0) / 2.0 * tt.log1p(value ** 2 / (nu * sd**2)),
+                     sd > 0, lam > 0, nu > 0, value >= 0)
 
     def _repr_latex_(self, name=None, dist=None):
         if dist is None:
             dist = self
         nu = dist.nu
-        beta = dist.beta
-        return r'${} \sim \text{{HalfStudentT}}(\mathit{{nu}}={}, \mathit{{beta}}={})$'.format(name,
+        sd = dist.sd
+        return r'${} \sim \text{{HalfStudentT}}(\mathit{{nu}}={}, \mathit{{sd}}={})$'.format(name,
                                                                 get_variable_name(nu),
-                                                                get_variable_name(beta))
+                                                                get_variable_name(sd))
 
 
 class ExGaussian(Continuous):
