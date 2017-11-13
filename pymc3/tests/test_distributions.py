@@ -1064,11 +1064,11 @@ class TestLatex(object):
             Y_obs = Normal('Y_obs', mu=mu, sd=sigma, observed=Y)
         self.distributions = [alpha, sigma, mu, b, Y_obs]
         self.expected = (
-            r'$alpha \sim \text{Normal}(\mathit{mu}=0, \mathit{sd}=10.0)$',
-            r'$sigma \sim \text{HalfNormal}(\mathit{sd}=1.0)$',
-            r'$mu \sim \text{Deterministic}(alpha, \text{Constant}, beta)$',
-            r'$beta \sim \text{Normal}(\mathit{mu}=0, \mathit{sd}=10.0)$',
-            r'$Y\_obs \sim \text{Normal}(\mathit{mu}=mu, \mathit{sd}=f(sigma))$'
+            r'$\text{alpha} \sim \text{Normal}(\mathit{mu}=0,~\mathit{sd}=10.0)$',
+            r'$\text{sigma} \sim \text{HalfNormal}(\mathit{sd}=1.0)$',
+            r'$\text{mu} \sim \text{Deterministic}(\text{alpha},~\text{Constant},~\text{beta})$',
+            r'$\text{beta} \sim \text{Normal}(\mathit{mu}=0,~\mathit{sd}=10.0)$',
+            r'$\text{Y_obs} \sim \text{Normal}(\mathit{mu}=\text{mu},~\mathit{sd}=f(\text{sigma}))$'
         )
 
     def test__repr_latex_(self):
@@ -1078,7 +1078,8 @@ class TestLatex(object):
         model_tex = self.model._repr_latex_()
 
         for tex in self.expected:  # make sure each variable is in the model
-            assert tex.strip('$') in model_tex
+            for segment in tex.strip('$').split(r'\sim'):
+                assert segment in model_tex
 
     def test___latex__(self):
         for distribution, tex in zip(self.distributions, self.expected):
