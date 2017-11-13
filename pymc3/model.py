@@ -953,11 +953,10 @@ class Model(six.with_metaclass(InitContextMeta, Context, Factor)):
         tex_vars = []
         for rv in itertools.chain(self.unobserved_RVs, self.observed_RVs):
             rv_tex = rv.__latex__()
-            tilde_index = rv_tex.index('\\sim')
-            array_rv = rv_tex[:tilde_index] + '&' + rv_tex[tilde_index:]
+            array_rv = rv_tex.replace(r'\sim', r'&\sim &')
             tex_vars.append(array_rv)
         return r'''$$
-            \begin{{array}}{{ll}}
+            \begin{{array}}{{rcl}}
             {}
             \end{{array}}
             $$'''.format('\\\\'.join([tex.strip('$') for tex in tex_vars if tex is not None]))
@@ -1147,7 +1146,7 @@ class FreeRV(Factor, TensorVariable):
             name = self.name
         if dist is None:
             dist = self.distribution
-        return self.distribution._repr_latex_(name=r'\text{%s}' % name, dist=dist)
+        return self.distribution._repr_latex_(name=name, dist=dist)
 
     __latex__ = _repr_latex_
 
@@ -1256,7 +1255,7 @@ class ObservedRV(Factor, TensorVariable):
             name = self.name
         if dist is None:
             dist = self.distribution
-        return self.distribution._repr_latex_(name=r'\text{%s}' % name, dist=dist)
+        return self.distribution._repr_latex_(name=name, dist=dist)
 
     __latex__ = _repr_latex_
 
@@ -1317,7 +1316,8 @@ def _walk_up_rv(rv):
 
 def _latex_repr_rv(rv):
     """Make latex string for a Deterministic variable"""
-    return r'${} \sim \text{{Deterministic}}({})$'.format(rv.name, r', '.join(_walk_up_rv(rv)))
+    return r'$\text{{}} \sim \text{{Deterministic}}({})$'.format(rv.name,
+                                                                 r',~'.join(_walk_up_rv(rv)))
 
 
 def Deterministic(name, var, model=None):
@@ -1409,7 +1409,7 @@ class TransformedRV(TensorVariable):
             name = self.name
         if dist is None:
             dist = self.distribution
-        return self.distribution._repr_latex_(name=r'\text{%s}' % name, dist=dist)
+        return self.distribution._repr_latex_(name=name, dist=dist)
 
     __latex__ = _repr_latex_
 
