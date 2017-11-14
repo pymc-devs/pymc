@@ -23,7 +23,7 @@
 This version includes two major contributions from our Google Summer of Code 2017 students:
 
 * Maxim Kochurov extended and refactored the variational inference module. This primarily adds two important classes, representing operator variational inference (`OPVI`) objects and `Approximation` objects. These make it easier to extend existing `variational` classes, and to derive inference from `variational` optimizations, respectively. The `variational` module now also includes normalizing flows (`NFVI`).
-* Bill Engels added an extensive new Gaussian processes (`gp`) module. Standard GPs can be specified using either `Latent` or `Marginal` classes, depending on the nature of the underlying function. A Student-T process `TP` has been added. In order to accomodate larger datasets, approximate marginal Gaussian processes (`MarginalSparse`) have been added. 
+* Bill Engels added an extensive new Gaussian processes (`gp`) module. Standard GPs can be specified using either `Latent` or `Marginal` classes, depending on the nature of the underlying function. A Student-T process `TP` has been added. In order to accomodate larger datasets, approximate marginal Gaussian processes (`MarginalSparse`) have been added.
 
 Documentation has been improved as the result of the project's monthly "docathons".
 
@@ -74,6 +74,44 @@ AR(1) log-likelihood function has been fixed.
 Slice sampler fixed to sample from 1D conditionals.
 
 Several docstring fixes.
+
+### Contributors
+
+The following people contributed to this release (ordered by number of commits):
+
+Maxim Kochurov <maxim.v.kochurov@gmail.com>
+Bill Engels <w.j.engels@gmail.com>
+Chris Fonnesbeck <chris.fonnesbeck@vanderbilt.edu>
+Junpeng Lao <junpeng.lao@unifr.ch>
+Adrian Seyboldt <adrian.seyboldt@gmail.com>
+AustinRochford <arochford@monetate.com>
+Osvaldo Martin <aloctavodia@gmail.com>
+Colin <ColCarroll@users.noreply.github.com>
+Adrian Seyboldt <aseyboldt@users.noreply.github.com>
+Hannes Vasyura-Bathke <hannes.bathke@gmx.net>
+Thomas Wiecki <thomas.wiecki@gmail.com>
+michaelosthege <thecakedev@hotmail.com>
+Marco De Nadai <me@marcodena.it>
+Colin Carroll <colcarroll@gmail.com>
+Kyle Beauchamp <kyleabeauchamp@gmail.com>
+Massimo <mcavallaro@users.noreply.github.com>
+ctm22396 <ctm22396@gmail.com>
+Max Horn <maexlich@gmail.com>
+Hennadii Madan <madanh2014@gmail.com>
+Hassan Naseri <h.nasseri@gmail.com>
+Peadar Coyle <peadarcoyle@googlemail.com>
+Saurav R. Tuladhar <saurav@fastmail.com>
+Shashank Shekhar <shashank.f1@gmail.com>
+Eric Ma <ericmjl@users.noreply.github.com>
+Ed Herbst <ed.herbst@gmail.com>
+tsdlovell <dlovell@twosigma.com>
+zaxtax <zaxtax@users.noreply.github.com>
+Dan Nichol <daniel.nichol@univ.ox.ac.uk>
+Benjamin Yetton <bdyetton@gmail.com>
+jackhansom <jack.hansom@outlook.com>
+Jack Tsai <jacksctsai@gmail.com>
+Andrés Asensio Ramos <aasensioramos@gmail.com>
+Max Horn <maexlich@users.noreply.github.com>
 
 ## PyMC3 3.1 (June 23, 2017)
 
