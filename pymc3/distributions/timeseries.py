@@ -54,7 +54,8 @@ class AR1(distribution.Continuous):
             dist = self
         k = dist.k
         tau_e = dist.tau_e
-        return r'${} \sim \text{{AR1}}(\mathit{{k}}={}, \mathit{{tau_e}}={})$'.format(name,
+        name = r'\text{%s}' % name
+        return r'${} \sim \text{{AR1}}(\mathit{{k}}={},~\mathit{{tau_e}}={})$'.format(name,
                  get_variable_name(k), get_variable_name(tau_e))
 
 
@@ -131,7 +132,7 @@ class AR(distribution.Continuous):
 
 
 class GaussianRandomWalk(distribution.Continuous):
-    """
+    R"""
     Random Walk with Normal innovations
 
     Parameters
@@ -173,17 +174,19 @@ class GaussianRandomWalk(distribution.Continuous):
             dist = self
         mu = dist.mu
         sd = dist.sd
-        return r'${} \sim \text{{GaussianRandomWalk}}(\mathit{{mu}}={}, \mathit{{sd}}={})$'.format(name,
+        name = r'\text{%s}' % name
+        return r'${} \sim \text{{GaussianRandomWalk}}(\mathit{{mu}}={},~\mathit{{sd}}={})$'.format(name,
                                                 get_variable_name(mu),
                                                 get_variable_name(sd))
 
 
 class GARCH11(distribution.Continuous):
-    """
+    R"""
     GARCH(1,1) with Normal innovations. The model is specified by
 
-    y_t = sigma_t * z_t
-    sigma_t^2 = omega + alpha_1 * y_{t-1}^2 + beta_1 * sigma_{t-1}^2
+    .. math::
+        y_t = \sigma_t * z_t
+        \sigma_t^2 = \omega + \alpha_1 * y_{t-1}^2 + \beta_1 * \sigma_{t-1}^2
 
     with z_t iid and Normal with mean zero and unit standard deviation.
 
@@ -233,14 +236,16 @@ class GARCH11(distribution.Continuous):
         omega = dist.omega
         alpha_1 = dist.alpha_1
         beta_1 = dist.beta_1
-        return r'${} \sim \text{GARCH}(1, 1, \mathit{{omega}}={}, \mathit{{alpha_1}}={}, \mathit{{beta_1}}={})$'.format(name,
-                                                get_variable_name(omega),
-                                                get_variable_name(alpha_1),
-                                                get_variable_name(beta_1))
+        name = r'\text{%s}' % name
+        return r'${} \sim \text{GARCH}(1,~1,~\mathit{{omega}}={},~\mathit{{alpha_1}}={},~\mathit{{beta_1}}={})$'.format(
+            name,
+            get_variable_name(omega),
+            get_variable_name(alpha_1),
+            get_variable_name(beta_1))
 
 
 class EulerMaruyama(distribution.Continuous):
-    """
+    R"""
     Stochastic differential equation discretized with the Euler-Maruyama method.
 
     Parameters
@@ -269,12 +274,13 @@ class EulerMaruyama(distribution.Continuous):
         if dist is None:
             dist = self
         dt = dist.dt
+        name = r'\text{%s}' % name
         return r'${} \sim \text{EulerMaruyama}(\mathit{{dt}}={})$'.format(name,
                                                 get_variable_name(dt))
 
 
 class _CovSet():
-    """
+    R"""
     Convenience class to set Covariance, Inverse Covariance and Cholesky
     descomposition of Covariance marrices.
     """
@@ -315,8 +321,9 @@ class _CovSet():
 
 
 class MvGaussianRandomWalk(distribution.Continuous, _CovSet):
-    """
+    R"""
     Multivariate Random Walk with Normal innovations
+
     Parameters
     ----------
     mu : tensor
@@ -327,9 +334,13 @@ class MvGaussianRandomWalk(distribution.Continuous, _CovSet):
         pos def matrix, inverse covariance matrix
     chol : tensor
         Cholesky decomposition of covariance matrix
-    Only one of cov, tau or chol is required
     init : distribution
         distribution for initial value (Defaults to Flat())
+
+    Notes
+    -----
+    Only one of cov, tau or chol is required.
+
     """
     def __init__(self, mu=0., cov=None, tau=None, chol=None, lower=True, init=Flat.dist(),
                  *args, **kwargs):
@@ -353,13 +364,14 @@ class MvGaussianRandomWalk(distribution.Continuous, _CovSet):
             dist = self
         mu = dist.mu
         cov = dist.cov
-        return r'${} \sim \text{MvGaussianRandomWalk}(\mathit{{mu}}={}, \mathit{{cov}}={})$'.format(name,
+        name = r'\text{%s}' % name
+        return r'${} \sim \text{MvGaussianRandomWalk}(\mathit{{mu}}={},~\mathit{{cov}}={})$'.format(name,
                                                 get_variable_name(mu),
                                                 get_variable_name(cov))
 
 
 class MvStudentTRandomWalk(distribution.Continuous, _CovSet):
-    """
+    R"""
     Multivariate Random Walk with StudentT innovations
 
     Parameters
@@ -399,7 +411,8 @@ class MvStudentTRandomWalk(distribution.Continuous, _CovSet):
         nu = dist.nu
         mu = dist.mu
         cov = dist.cov
-        return r'${} \sim \text{MvStudentTRandomWalk}(\mathit{{nu}}={}, \mathit{{mu}}={}, \mathit{{cov}}={})$'.format(name,
+        name = r'\text{%s}' % name
+        return r'${} \sim \text{MvStudentTRandomWalk}(\mathit{{nu}}={},~\mathit{{mu}}={},~\mathit{{cov}}={})$'.format(name,
                                                 get_variable_name(nu),
                                                 get_variable_name(mu),
                                                 get_variable_name(cov))

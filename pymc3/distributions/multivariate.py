@@ -25,7 +25,7 @@ from .dist_math import bound, logpow, factln, Cholesky
 
 __all__ = ['MvNormal', 'MvStudentT', 'Dirichlet',
            'Multinomial', 'Wishart', 'WishartBartlett',
-           'LKJCorr', 'LKJCholeskyCov']
+           'LKJCorr', 'LKJCholeskyCov', 'MatrixNormal']
 
 
 class _QuadFormBase(Continuous):
@@ -652,8 +652,8 @@ class Wishart(Continuous):
     V : array
         p x p positive definite matrix.
 
-    Note
-    ----
+    Notes
+    -----
     This distribution is unusable in a PyMC3 model. You should instead
     use LKJCholeskyCov or LKJCorr.
     """
@@ -746,8 +746,8 @@ def WishartBartlett(name, S, nu, is_cholesky=False, return_cholesky=False, testv
     testval : ndarray
         p x p positive definite matrix used to initialize
 
-    Note
-    ----
+    Notes
+    -----
     This is not a standard Distribution class but follows a similar
     interface. Besides the Wishart distribution, it will add RVs
     c and z to your model which make up the matrix.
@@ -866,9 +866,7 @@ class LKJCholeskyCov(Continuous):
             # Extract the standard deviations
             stds = tt.sqrt(tt.diag(cov))
 
-    Implementation
-    --------------
-    In the unconstrained space all values of the cholesky factor
+    **Implementation** In the unconstrained space all values of the cholesky factor
     are stored untransformed, except for the diagonal entries, where
     we use a log-transform to restrict them to positive values.
 
@@ -1091,3 +1089,206 @@ class LKJCorr(Continuous):
                      eta > 0,
                      broadcast_conditions=False
         )
+
+
+class MatrixNormal(Continuous):
+    R"""
+    Matrix-valued normal log-likelihood.
+
+    .. math::
+       f(x \mid \mu, U, V) =
+           \frac{1}{(2\pi |U|^n |V|^m)^{1/2}}
+           \exp\left\{
+                -\frac{1}{2} \mathrm{Tr}[ V^{-1} (x-\mu)^{\prime} U^{-1} (x-\mu)]
+            \right\}
+
+    ===============  =====================================
+    Support          :math:`x \in \mathbb{R}^{m \times n}`
+    Mean             :math:`\mu`
+    Row Variance     :math:`U`
+    Column Variance  :math:`V`
+    ===============  =====================================
+
+    Parameters
+    ----------
+    mu : array
+        Array of means. Must be broadcastable with the random variable X such
+        that the shape of mu + X is (m,n).
+    rowcov : mxm array
+        Among-row covariance matrix. Defines variance within
+        columns. Exactly one of rowcov or rowchol is needed.
+    rowchol : mxm array
+        Cholesky decomposition of among-row covariance matrix. Exactly one of
+        rowcov or rowchol is needed.
+    colcov : nxn array
+        Among-column covariance matrix. If rowcov is the identity matrix,
+        this functions as `cov` in MvNormal.
+        Exactly one of colcov or colchol is needed.
+    colchol : nxn array
+        Cholesky decomposition of among-column covariance matrix. Exactly one
+        of colcov or colchol is needed.
+
+    Examples
+    --------
+    Define a matrixvariate normal variable for given row and column covariance
+    matrices::
+
+        colcov = np.array([[1., 0.5], [0.5, 2]])
+        rowcov = np.array([[1, 0, 0], [0, 4, 0], [0, 0, 16]])
+        m = rowcov.shape[0]
+        n = colcov.shape[0]
+        mu = np.zeros((m, n))
+        vals = pm.MatrixNormal('vals', mu=mu, colcov=colcov,
+                               rowcov=rowcov, shape=(m, n))
+
+    Above, the ith row in vals has a variance that is scaled by 4^i.
+    Alternatively, row or column cholesky matrices could be substituted for
+    either covariance matrix. The MatrixNormal is quicker way compute
+    MvNormal(mu, np.kron(rowcov, colcov)) that takes advantage of kronecker product
+    properties for inversion. For example, if draws from MvNormal had the same
+    covariance structure, but were scaled by different powers of an unknown
+    constant, both the covariance and scaling could be learned as follows
+    (see the docstring of `LKJCholeskyCov` for more information about this)::
+    .. code:: python
+
+        # Setup data
+        true_colcov = np.array([[1.0, 0.5, 0.1],
+                                [0.5, 1.0, 0.2],
+                                [0.1, 0.2, 1.0]])
+        m = 3
+        n = true_colcov.shape[0]
+        true_scale = 3
+        true_rowcov = np.diag([true_scale**(2*i) for i in range(m)])
+        mu = np.zeros((m, n))
+        true_kron = np.kron(true_rowcov, true_colcov)
+        data = np.random.multivariate_normal(mu.flatten(), true_kron)
+        data = data.reshape(m, n)
+
+        with pm.Model() as model:
+            # Setup right cholesky matrix
+            sd_dist = pm.HalfCauchy.dist(beta=2.5, shape=3)
+            colchol_packed = pm.LKJCholeskyCov('colcholpacked', n=3, eta=2,
+                                               sd_dist=sd_dist)
+            colchol = pm.expand_packed_triangular(3, colchol_packed)
+
+            # Setup left covariance matrix
+            scale = pm.Lognormal('scale', mu=np.log(true_scale), sd=0.5)
+            rowcov = tt.nlinalg.diag([scale**(2*i) for i in range(m)])
+
+            vals = pm.MatrixNormal('vals', mu=mu, colchol=colchol, rowcov=rowcov,
+                                   observed=data, shape=(m, n))
+    """
+
+    def __init__(self, mu=0, rowcov=None, rowchol=None, rowtau=None,
+                 colcov=None, colchol=None, coltau=None, shape=None, *args,
+                 **kwargs):
+        self._setup_matrices(colcov, colchol, coltau, rowcov, rowchol, rowtau)
+        if shape is None:
+            raise TypeError('shape is a required argument')
+        assert len(shape) == 2, "shape must have length 2: mxn"
+        self.shape = shape
+        super(MatrixNormal, self).__init__(shape=shape, *args, **kwargs)
+        self.mu = tt.as_tensor_variable(mu)
+        self.mean = self.median = self.mode = self.mu
+        self.solve_lower = tt.slinalg.solve_lower_triangular
+        self.solve_upper = tt.slinalg.solve_upper_triangular
+
+    def _setup_matrices(self, colcov, colchol, coltau, rowcov, rowchol, rowtau):
+        cholesky = Cholesky(nofail=False, lower=True)
+
+        # Among-row matrices
+        if len([i for i in [rowtau, rowcov, rowchol] if i is not None]) != 1:
+            raise ValueError('Incompatible parameterization. '
+                             'Specify exactly one of rowtau, rowcov, '
+                             'or rowchol.')
+        if rowcov is not None:
+            self.m = rowcov.shape[0]
+            self._rowcov_type = 'cov'
+            rowcov = tt.as_tensor_variable(rowcov)
+            if rowcov.ndim != 2:
+                raise ValueError('rowcov must be two dimensional.')
+            self.rowchol_cov = cholesky(rowcov)
+            self.rowcov = rowcov
+        elif rowtau is not None:
+            raise ValueError('rowtau not supported at this time')
+            self.m = rowtau.shape[0]
+            self._rowcov_type = 'tau'
+            rowtau = tt.as_tensor_variable(rowtau)
+            if rowtau.ndim != 2:
+                raise ValueError('rowtau must be two dimensional.')
+            self.rowchol_tau = cholesky(rowtau)
+            self.rowtau = rowtau
+        else:
+            self.m = rowchol.shape[0]
+            self._rowcov_type = 'chol'
+            if rowchol.ndim != 2:
+                raise ValueError('rowchol must be two dimensional.')
+            self.rowchol_cov = tt.as_tensor_variable(rowchol)
+
+        # Among-column matrices
+        if len([i for i in [coltau, colcov, colchol] if i is not None]) != 1:
+            raise ValueError('Incompatible parameterization. '
+                             'Specify exactly one of coltau, colcov, '
+                             'or colchol.')
+        if colcov is not None:
+            self.n = colcov.shape[0]
+            self._colcov_type = 'cov'
+            colcov = tt.as_tensor_variable(colcov)
+            if colcov.ndim != 2:
+                raise ValueError('colcov must be two dimensional.')
+            self.colchol_cov = cholesky(colcov)
+            self.colcov = colcov
+        elif coltau is not None:
+            raise ValueError('coltau not supported at this time')
+            self.n = coltau.shape[0]
+            self._colcov_type = 'tau'
+            coltau = tt.as_tensor_variable(coltau)
+            if coltau.ndim != 2:
+                raise ValueError('coltau must be two dimensional.')
+            self.colchol_tau = cholesky(coltau)
+            self.coltau = coltau
+        else:
+            self.n = colchol.shape[0]
+            self._colcov_type = 'chol'
+            if colchol.ndim != 2:
+                raise ValueError('colchol must be two dimensional.')
+            self.colchol_cov = tt.as_tensor_variable(colchol)
+
+    def random(self, point=None, size=None):
+        if size is None:
+            size = list(self.shape)
+
+        mu, colchol, rowchol = draw_values(
+                                [self.mu, self.colchol_cov, self.rowchol_cov],
+                                point=point
+                                )
+        standard_normal = np.random.standard_normal(size)
+        return mu + np.matmul(rowchol, np.matmul(standard_normal, colchol.T))
+
+    def _trquaddist(self, value):
+        """Compute Tr[colcov^-1 @ (x - mu).T @ rowcov^-1 @ (x - mu)] and
+        the logdet of colcov and rowcov."""
+
+        delta = value - self.mu
+        rowchol_cov = self.rowchol_cov
+        colchol_cov = self.colchol_cov
+
+        # Find exponent piece by piece
+        right_quaddist = self.solve_lower(rowchol_cov, delta)
+        quaddist = tt.nlinalg.matrix_dot(right_quaddist.T, right_quaddist)
+        quaddist = self.solve_lower(colchol_cov, quaddist)
+        quaddist = self.solve_upper(colchol_cov.T, quaddist)
+        trquaddist = tt.nlinalg.trace(quaddist)
+
+        coldiag = tt.nlinalg.diag(colchol_cov)
+        rowdiag = tt.nlinalg.diag(rowchol_cov)
+        half_collogdet = tt.sum(tt.log(coldiag))  # logdet(M) = 2*Tr(log(L))
+        half_rowlogdet = tt.sum(tt.log(rowdiag))  # Using Cholesky: M = L L^T
+        return trquaddist, half_collogdet, half_rowlogdet
+
+    def logp(self, value):
+        trquaddist, half_collogdet, half_rowlogdet = self._trquaddist(value)
+        m = self.m
+        n = self.n
+        norm = - 0.5 * m * n * pm.floatX(np.log(2 * np.pi))
+        return norm - 0.5*trquaddist - m*half_collogdet - n*half_rowlogdet
