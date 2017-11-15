@@ -10,6 +10,8 @@ from ..vartypes import continuous_types
 
 __all__ = ['Slice']
 
+LOOP_ERR_MSG = 'max slicer iters %d exceeded'
+
 
 class Slice(ArrayStep):
     """
@@ -30,11 +32,13 @@ class Slice(ArrayStep):
     name = 'slice'
     default_blocked = False
 
-    def __init__(self, vars=None, w=1., tune=True, model=None, **kwargs):
+    def __init__(self, vars=None, w=1., tune=True, model=None,
+                 iter_limit=np.inf, **kwargs):
         self.model = modelcontext(model)
         self.w = w
         self.tune = tune
         self.n_tunes = 0.
+        self.iter_limit = iter_limit
 
         if vars is None:
             vars = self.model.cont_vars
@@ -53,11 +57,20 @@ class Slice(ArrayStep):
             ql[i] = q[i] - nr.uniform(0, self.w[i])
             qr[i] = q[i] + self.w[i]
             # Stepping out procedure
+            cnt = 0
             while(y <= logp(ql)):  # changed lt to leq  for locally uniform posteriors
                 ql[i] -= self.w[i]
+                cnt += 1
+                if cnt > self.iter_limit:
+                    raise RuntimeError(LOOP_ERR_MSG % self.iter_limit)
+            cnt = 0
             while(y <= logp(qr)):
                 qr[i] += self.w[i]
+                cnt += 1
+                if cnt > self.iter_limit:
+                    raise RuntimeError(LOOP_ERR_MSG % self.iter_limit)
 
+            cnt = 0
             q[i] = nr.uniform(ql[i], qr[i])
             while logp(q) < y:  # Changed leq to lt, to accomodate for locally flat posteriors
                 # Sample uniformly from slice
@@ -66,6 +79,9 @@ class Slice(ArrayStep):
                 elif q[i] < q0[i]:
                     ql[i] = q[i]
                 q[i] = nr.uniform(ql[i], qr[i])
+                cnt += 1
+                if cnt > self.iter_limit:
+                    raise RuntimeError(LOOP_ERR_MSG % self.iter_limit)
 
             if self.tune:  # I was under impression from MacKays lectures that slice width can be tuned without
                 # breaking markovianness. Can we do it regardless of self.tune?(@madanh)
