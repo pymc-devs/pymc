@@ -7,23 +7,29 @@ Continuous
 
    Uniform
    Flat
+   HalfFlat
    Normal
+   HalfNormal
+   SkewNormal
    Beta
    Exponential
    Laplace
    StudentT
+   HalfStudentT
    Cauchy
    HalfCauchy
    Gamma
    Weibull
-   StudentTpos
    Lognormal
    ChiSquared
-   HalfNormal
    Wald
    Pareto
    InverseGamma
    ExGaussian
+   VonMises
+   Triangular
+   Gumbel
+   Interpolated
 
 .. automodule:: pymc3.distributions.continuous
    :members:

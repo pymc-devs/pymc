@@ -22,13 +22,12 @@ from .dist_math import (
     i1, alltrue_elemwise, SplineWrapper
 )
 from .distribution import Continuous, draw_values, generate_samples
-from .bound import Bound
 
 __all__ = ['Uniform', 'Flat', 'HalfFlat', 'Normal', 'Beta', 'Exponential',
            'Laplace', 'StudentT', 'Cauchy', 'HalfCauchy', 'Gamma', 'Weibull',
-           'HalfStudentT', 'StudentTpos', 'Lognormal', 'ChiSquared',
-           'HalfNormal', 'Wald', 'Pareto', 'InverseGamma', 'ExGaussian',
-           'VonMises', 'SkewNormal', 'Interpolated']
+           'HalfStudentT', 'Lognormal', 'ChiSquared', 'HalfNormal', 'Wald',
+           'Pareto', 'InverseGamma', 'ExGaussian', 'VonMises', 'SkewNormal',
+           'Logistic', 'Interpolated']
 
 
 class PositiveContinuous(Continuous):
@@ -117,6 +116,24 @@ class Uniform(Continuous):
 
        f(x \mid lower, upper) = \frac{1}{upper-lower}
 
+    .. plot::
+
+        import matplotlib.pyplot as plt
+        import numpy as np
+        x = np.linspace(-3.0, 3.0, 1000)
+        a, b = 0.0, 2.0
+        y = np.zeros(1000)
+        y[(x<b) & (x>a)] = 1.0/(b-a)
+        fig, ax = plt.subplots()
+        ax.plot(x, y, label='lower=1, upper=2')
+        a, b = -2.0, 1.0
+        y = np.zeros(1000)
+        y[(x<b) & (x>a)] = 1.0/(b-a)
+        ax.plot(x, y, label='lower=-2, upper=1')
+        ax.legend(loc='upper right')
+        ax.set(ylim=[-0.2,1.2], xlabel='x', ylabel='f(x)')
+        plt.show()
+
     ========  =====================================
     Support   :math:`x \in [lower, upper]`
     Mean      :math:`\dfrac{lower + upper}{2}`
@@ -161,9 +178,9 @@ class Uniform(Continuous):
             dist = self
         lower = dist.lower
         upper = dist.upper
-        return r'${} \sim \text{{Uniform}}(\mathit{{lower}}={}, \mathit{{upper}}={})$'.format(name,
-                                                                get_variable_name(lower),
-                                                                get_variable_name(upper))
+        name = r'\text{%s}' % name
+        return r'${} \sim \text{{Uniform}}(\mathit{{lower}}={},~\mathit{{upper}}={})$'.format(
+            name, get_variable_name(lower), get_variable_name(upper))
 
 
 class Flat(Continuous):
@@ -183,9 +200,8 @@ class Flat(Continuous):
         return tt.zeros_like(value)
 
     def _repr_latex_(self, name=None, dist=None):
-        if dist is None:
-            dist = self
-        return r'${} \sim \text{{Flat}()$'
+        name = r'\text{%s}' % name
+        return r'${} \sim \text{{Flat}}()$'.format(name)
 
 
 class HalfFlat(PositiveContinuous):
@@ -202,9 +218,8 @@ class HalfFlat(PositiveContinuous):
         return bound(tt.zeros_like(value), value > 0)
 
     def _repr_latex_(self, name=None, dist=None):
-        if dist is None:
-            dist = self
-        return r'${} \sim \text{{HalfFlat}()$'
+        name = r'\text{%s}' % name
+        return r'${} \sim \text{{HalfFlat}}()$'.format(name)
 
 
 class Normal(Continuous):
@@ -230,6 +245,23 @@ class Normal(Continuous):
     .. math::
 
        \tau = \dfrac{1}{\sigma^2}
+
+    .. plot::
+
+        import matplotlib.pyplot as plt
+        import numpy as np
+        import scipy.stats as st
+        x = np.linspace(-5.0, 5.0, 1000)
+        fig, ax = plt.subplots()
+        f = lambda mu, sd : st.norm.pdf(x, loc=mu, scale=sd)
+        plot_pdf = lambda a, b : ax.plot(x, f(a,b), label=r'$\mu$={0}, $\sigma$={1}'.format(a,b))
+        plot_pdf(0.0, 0.4)
+        plot_pdf(0.0, 1.0)
+        plot_pdf(0.0, 2.0)
+        plot_pdf(-2.0, 0.4)
+        plt.legend(loc='upper right', frameon=False)
+        ax.set(xlim=[-5,5], ylim=[0,1.2], xlabel='x', ylabel='f(x)')
+        plt.show()
 
     Parameters
     ----------
@@ -274,7 +306,8 @@ class Normal(Continuous):
             dist = self
         sd = dist.sd
         mu = dist.mu
-        return r'${} \sim \text{{Normal}}(\mathit{{mu}}={}, \mathit{{sd}}={})$'.format(name,
+        name = r'\text{%s}' % name
+        return r'${} \sim \text{{Normal}}(\mathit{{mu}}={},~\mathit{{sd}}={})$'.format(name,
                                                                 get_variable_name(mu),
                                                                 get_variable_name(sd))
 
@@ -288,6 +321,22 @@ class HalfNormal(PositiveContinuous):
        f(x \mid \tau) =
            \sqrt{\frac{2\tau}{\pi}}
            \exp\left\{ {\frac{-x^2 \tau}{2}}\right\}
+
+    .. plot::
+
+        import matplotlib.pyplot as plt
+        import numpy as np
+        import scipy.stats as st
+        x = np.linspace(0.0, 5.0, 1000)
+        fig, ax = plt.subplots()
+        f = lambda b : st.halfnorm.pdf(x, scale=1.0/np.sqrt(b))
+        plot_pdf = lambda b : ax.plot(x, f(b), label=r'$\tau$={0}'.format(b))
+        plot_pdf(0.5)
+        plot_pdf(1.0)
+        plot_pdf(2.0)
+        plt.legend(loc='upper right', frameon=False)
+        ax.set(xlim=[0,5], ylim=[0,1.2], xlabel='x', ylabel='f(x)')
+        plt.show()
 
     ========  ==========================================
     Support   :math:`x \in [0, \infty)`
@@ -333,6 +382,7 @@ class HalfNormal(PositiveContinuous):
         if dist is None:
             dist = self
         sd = dist.sd
+        name = r'\text{%s}' % name
         return r'${} \sim \text{{HalfNormal}}(\mathit{{sd}}={})$'.format(name,
                                                                 get_variable_name(sd))
 
@@ -348,6 +398,24 @@ class Wald(PositiveContinuous):
            \exp\left\{
                -\frac{\lambda}{2x}\left(\frac{x-\mu}{\mu}\right)^2
            \right\}
+
+    .. plot::
+
+        import matplotlib.pyplot as plt
+        import numpy as np
+        import scipy.stats as st
+        x = np.linspace(0.0, 3.0, 1000)
+        fig, ax = plt.subplots()
+        f = lambda mu, lam : st.invgauss.pdf(x, mu/lam, scale=lam)
+        plot_pdf = lambda a, b : ax.plot(x, f(a,b), label=r'$\mu$={0}, $\lambda$={1}'.format(a,b))
+        plot_pdf(1.0,1.0)
+        plot_pdf(1.0,0.2)
+        plot_pdf(1.0,3.0)
+        plot_pdf(3,1)
+        plot_pdf(3,0.2)
+        plt.legend(loc='upper right', frameon=False)
+        ax.set(xlim=[0,3], ylim=[0,3.0], xlabel='x', ylabel='f(x)')
+        plt.show()
 
     ========  =============================
     Support   :math:`x \in (0, \infty)`
@@ -463,7 +531,8 @@ class Wald(PositiveContinuous):
         lam = dist.lam
         mu = dist.mu
         alpha = dist.alpha
-        return r'${} \sim \text{{Wald}}(\mathit{{mu}}={}, \mathit{{lam}}={}, \mathit{{alpha}}={})$'.format(name,
+        name = r'\text{%s}' % name
+        return r'${} \sim \text{{Wald}}(\mathit{{mu}}={},~\mathit{{lam}}={},~\mathit{{alpha}}={})$'.format(name,
                                                                 get_variable_name(mu),
                                                                 get_variable_name(lam),
                                                                 get_variable_name(alpha))
@@ -477,6 +546,24 @@ class Beta(UnitContinuous):
 
        f(x \mid \alpha, \beta) =
            \frac{x^{\alpha - 1} (1 - x)^{\beta - 1}}{B(\alpha, \beta)}
+
+    .. plot::
+
+        import matplotlib.pyplot as plt
+        import numpy as np
+        import scipy.stats as st
+        x = np.linspace(0.0, 1.0, 1000)
+        fig, ax = plt.subplots()
+        f = lambda a, b : st.beta.pdf(x, a, b)
+        plot_pdf = lambda a, b : ax.plot(x, f(a,b), label=r'$\alpha$={0}, $\beta$={1}'.format(a,b))
+        plot_pdf(0.5, 0.5)
+        plot_pdf(5.0, 1.0)
+        plot_pdf(1.0, 3.0)
+        plot_pdf(2.0, 2.0)
+        plot_pdf(2.0, 5.0)
+        plt.legend(loc='upper center', frameon=False)
+        ax.set(xlim=[0,1], ylim=[0,2.5], xlabel='x', ylabel='f(x)')
+        plt.show()
 
     ========  ==============================================================
     Support   :math:`x \in (0, 1)`
@@ -504,7 +591,7 @@ class Beta(UnitContinuous):
     mu : float
         Alternative mean (0 < mu < 1).
     sd : float
-        Alternative standard deviation (sd > 0).
+        Alternative standard deviation (0 < sd < sqrt(mu * (1 - mu))).
 
     Notes
     -----
@@ -551,8 +638,13 @@ class Beta(UnitContinuous):
         alpha = self.alpha
         beta = self.beta
 
-        return bound(logpow(value, alpha - 1) + logpow(1 - value, beta - 1)
-                     - betaln(alpha, beta),
+        logval = tt.log(value)
+        log1pval = tt.log1p(-value)
+        logp = (tt.switch(tt.eq(alpha, 1), 0, (alpha - 1) * logval)
+                + tt.switch(tt.eq(beta, 1), 0, (beta - 1) * log1pval)
+                - betaln(alpha, beta))
+
+        return bound(logp,
                      value >= 0, value <= 1,
                      alpha > 0, beta > 0)
 
@@ -561,7 +653,8 @@ class Beta(UnitContinuous):
             dist = self
         alpha = dist.alpha
         beta = dist.beta
-        return r'${} \sim \text{{Beta}}(\mathit{{alpha}}={}, \mathit{{alpha}}={})$'.format(name,
+        name = r'\text{%s}' % name
+        return r'${} \sim \text{{Beta}}(\mathit{{alpha}}={},~\mathit{{alpha}}={})$'.format(name,
                                                                 get_variable_name(alpha),
                                                                 get_variable_name(beta))
 
@@ -573,6 +666,22 @@ class Exponential(PositiveContinuous):
     .. math::
 
        f(x \mid \lambda) = \lambda \exp\left\{ -\lambda x \right\}
+
+    .. plot::
+
+        import matplotlib.pyplot as plt
+        import numpy as np
+        import scipy.stats as st
+        x = np.linspace(0.0, 5.0, 1000)
+        fig, ax = plt.subplots()
+        f = lambda lam : st.expon.pdf(x, scale=1.0/lam)
+        plot_pdf = lambda lam : ax.plot(x, f(lam), label=r'$\lambda$={0}'.format(lam))
+        plot_pdf(0.5)
+        plot_pdf(1.0)
+        plot_pdf(1.5)
+        plt.legend(loc='upper right', frameon=False)
+        ax.set(xlim=[0,5], ylim=[0,1.6], xlabel='x', ylabel='f(x)')
+        plt.show()
 
     ========  ============================
     Support   :math:`x \in [0, \infty)`
@@ -611,6 +720,7 @@ class Exponential(PositiveContinuous):
         if dist is None:
             dist = self
         lam = dist.lam
+        name = r'\text{%s}' % name
         return r'${} \sim \text{{Exponential}}(\mathit{{lam}}={})$'.format(name,
                                                                 get_variable_name(lam))
 
@@ -622,6 +732,23 @@ class Laplace(Continuous):
 
        f(x \mid \mu, b) =
            \frac{1}{2b} \exp \left\{ - \frac{|x - \mu|}{b} \right\}
+
+    .. plot::
+
+        import matplotlib.pyplot as plt
+        import numpy as np
+        import scipy.stats as st
+        x = np.linspace(-10.0, 10.0, 1000)
+        fig, ax = plt.subplots()
+        f = lambda mu, b : st.laplace.pdf(x, loc=mu, scale=b)
+        plot_pdf = lambda mu, b : ax.plot(x, f(mu, b), label=r'$\mu$={0}, $b$={1}'.format(mu, b))
+        plot_pdf(0.0, 1.0)
+        plot_pdf(0.0, 2.0)
+        plot_pdf(0.0, 4)
+        plot_pdf(-5.0, 4)
+        plt.legend(loc='upper right', frameon=False)
+        ax.set(xlim=[-10,10], ylim=[0,0.5], xlabel='x', ylabel='f(x)')
+        plt.show()
 
     ========  ========================
     Support   :math:`x \in \mathbb{R}`
@@ -663,7 +790,8 @@ class Laplace(Continuous):
             dist = self
         b = dist.b
         mu = dist.mu
-        return r'${} \sim \text{{Laplace}}(\mathit{{mu}}={}, \mathit{{b}}={})$'.format(name,
+        name = r'\text{%s}' % name
+        return r'${} \sim \text{{Laplace}}(\mathit{{mu}}={},~\mathit{{b}}={})$'.format(name,
                                                                 get_variable_name(mu),
                                                                 get_variable_name(b))
 
@@ -683,10 +811,26 @@ class Lognormal(PositiveContinuous):
            \frac{1}{x} \sqrt{\frac{\tau}{2\pi}}
            \exp\left\{ -\frac{\tau}{2} (\ln(x)-\mu)^2 \right\}
 
+    .. plot::
+
+        import matplotlib.pyplot as plt
+        import numpy as np
+        import scipy.stats as st
+        x = np.linspace(0.0, 3.0, 1000)
+        fig, ax = plt.subplots()
+        f = lambda mu, sd : st.lognorm.pdf(x, sd, scale=np.exp(mu))
+        plot_pdf = lambda mu, sd : ax.plot(x, f(mu, sd), label=r'$\mu$={0}, $\sigma$={1}'.format(mu, sd))
+        plot_pdf(0.0, 0.25)
+        plot_pdf(0.0, 0.5)
+        plot_pdf(0.0, 1.0)
+        plt.legend(loc='upper right', frameon=False)
+        ax.set(xlim=[0,3], ylim=[0,1.8], xlabel='x', ylabel='f(x)')
+        plt.show()
+
     ========  =========================================================================
-    Support   :math:`x \in (0, 1)`
+    Support   :math:`x \in [0, \infty)`
     Mean      :math:`\exp\{\mu + \frac{1}{2\tau}\}`
-    Variance  :math:\(\exp\{\frac{1}{\tau}\} - 1\) \times \exp\{2\mu + \frac{1}{\tau}\}
+    Variance  :math:`(\exp\{\frac{1}{\tau}\} - 1) \times \exp\{2\mu + \frac{1}{\tau}\}`
     ========  =========================================================================
 
     Parameters
@@ -736,14 +880,15 @@ class Lognormal(PositiveContinuous):
             dist = self
         tau = dist.tau
         mu = dist.mu
-        return r'${} \sim \text{{Lognormal}}(\mathit{{mu}}={}, \mathit{{tau}}={})$'.format(name,
+        name = r'\text{%s}' % name
+        return r'${} \sim \text{{Lognormal}}(\mathit{{mu}}={},~\mathit{{tau}}={})$'.format(name,
                                                                 get_variable_name(mu),
                                                                 get_variable_name(tau))
 
 
 class StudentT(Continuous):
     R"""
-    Non-central Student's T log-likelihood.
+    Student's T log-likelihood.
 
     Describes a normal variable whose precision is gamma distributed.
     If only nu parameter is passed, this specifies a standard (central)
@@ -756,14 +901,32 @@ class StudentT(Continuous):
            \left(\frac{\lambda}{\pi\nu}\right)^{\frac{1}{2}}
            \left[1+\frac{\lambda(x-\mu)^2}{\nu}\right]^{-\frac{\nu+1}{2}}
 
+    .. plot::
+
+        import matplotlib.pyplot as plt
+        import numpy as np
+        import scipy.stats as st
+        x = np.linspace(-5.0, 5.0, 1000)
+        fig, ax = plt.subplots()
+        f = lambda mu, lam, df : st.t.pdf(x, df, loc=mu, scale=1.0/np.sqrt(lam))
+        plot_pdf = lambda mu, lam, df : ax.plot(x, f(mu, lam, df), label=r'$\mu$={0}, $\lambda$={1}, $\nu$={2}'.format(mu, lam, df))
+        plot_pdf(0.0, 1.0, 1.0)
+        plot_pdf(0.0, 1.0, 2.0)
+        plot_pdf(0.0, 1.0, 5)
+        plot_pdf(-1.0, 1.0, 5)
+        plot_pdf(-1.0, 2.0, 5)
+        plt.legend(loc='upper right', frameon=False)
+        ax.set(xlim=[-5,5], ylim=[0,0.6], xlabel='x', ylabel='f(x)')
+        plt.show()
+
     ========  ========================
     Support   :math:`x \in \mathbb{R}`
     ========  ========================
 
     Parameters
     ----------
-    nu : int
-        Degrees of freedom (nu > 0).
+    nu : float
+        Degrees of freedom, also known as normality parameter (nu > 0).
     mu : float
         Location parameter.
     lam : float
@@ -810,7 +973,8 @@ class StudentT(Continuous):
         nu = dist.nu
         mu = dist.mu
         lam = dist.lam
-        return r'${} \sim \text{{StudentT}}(\mathit{{nu}}={}, \mathit{{mu}}={}, \mathit{{lam}}={})$'.format(name,
+        name = r'\text{%s}' % name
+        return r'${} \sim \text{{StudentT}}(\mathit{{nu}}={},~\mathit{{mu}}={},~\mathit{{lam}}={})$'.format(name,
                                                                 get_variable_name(nu),
                                                                 get_variable_name(mu),
                                                                 get_variable_name(lam))
@@ -826,6 +990,22 @@ class Pareto(PositiveContinuous):
     .. math::
 
        f(x \mid \alpha, m) = \frac{\alpha m^{\alpha}}{x^{\alpha+1}}
+
+    .. plot::
+
+        import matplotlib.pyplot as plt
+        import numpy as np
+        import scipy.stats as st
+        x = np.linspace(0.0, 5.0, 1000)
+        fig, ax = plt.subplots()
+        f = lambda m, alpha : st.pareto.pdf(x, alpha, scale=m)
+        plot_pdf = lambda m, alpha : ax.plot(x, f(m, alpha), label=r'm={0}, $\alpha$={1}'.format(m, alpha))
+        plot_pdf(1.0,1.0)
+        plot_pdf(1.0,2.0)
+        plot_pdf(1.0,3.0)
+        plt.legend(loc='upper right', frameon=False)
+        ax.set(xlim=[0,5], ylim=[0,3.0], xlabel='x', ylabel='f(x)')
+        plt.show()
 
     ========  =============================================================
     Support   :math:`x \in [m, \infty)`
@@ -882,7 +1062,8 @@ class Pareto(PositiveContinuous):
             dist = self
         alpha = dist.alpha
         m = dist.m
-        return r'${} \sim \text{{Pareto}}(\mathit{{alpha}}={}, \mathit{{m}}={})$'.format(name,
+        name = r'\text{%s}' % name
+        return r'${} \sim \text{{Pareto}}(\mathit{{alpha}}={},~\mathit{{m}}={})$'.format(name,
                                                                 get_variable_name(alpha),
                                                                 get_variable_name(m))
 
@@ -897,6 +1078,23 @@ class Cauchy(Continuous):
 
        f(x \mid \alpha, \beta) =
            \frac{1}{\pi \beta [1 + (\frac{x-\alpha}{\beta})^2]}
+
+    .. plot::
+
+        import matplotlib.pyplot as plt
+        import numpy as np
+        import scipy.stats as st
+        x = np.linspace(-5.0, 5.0, 1000)
+        fig, ax = plt.subplots()
+        f = lambda a, b : st.cauchy.pdf(x, loc=a, scale=b)
+        plot_pdf = lambda a, b : ax.plot(x, f(a, b), label=r'$\alpha$={0}, $\beta$={1}'.format(a, b))
+        plot_pdf(0.0, 0.5)
+        plot_pdf(0.0, 1.0)
+        plot_pdf(0.0, 2.0)
+        plot_pdf(-2.0, 1.0)
+        plt.legend(loc='upper right', frameon=False)
+        ax.set(xlim=[-5,5], ylim=[0,0.7], xlabel='x', ylabel='f(x)')
+        plt.show()
 
     ========  ========================
     Support   :math:`x \in \mathbb{R}`
@@ -943,7 +1141,8 @@ class Cauchy(Continuous):
             dist = self
         alpha = dist.alpha
         beta = dist.beta
-        return r'${} \sim \text{{Cauchy}}(\mathit{{alpha}}={}, \mathit{{beta}}={})$'.format(name,
+        name = r'\text{%s}' % name
+        return r'${} \sim \text{{Cauchy}}(\mathit{{alpha}}={},~\mathit{{beta}}={})$'.format(name,
                                                                 get_variable_name(alpha),
                                                                 get_variable_name(beta))
 
@@ -955,6 +1154,22 @@ class HalfCauchy(PositiveContinuous):
     .. math::
 
        f(x \mid \beta) = \frac{2}{\pi \beta [1 + (\frac{x}{\beta})^2]}
+
+    .. plot::
+
+        import matplotlib.pyplot as plt
+        import numpy as np
+        import scipy.stats as st
+        x = np.linspace(0.0, 5.0, 1000)
+        fig, ax = plt.subplots()
+        f = lambda b : st.cauchy.pdf(x, scale=b)
+        plot_pdf = lambda b : ax.plot(x, f(b), label=r'$\beta$={0}'.format(b))
+        plot_pdf(0.5)
+        plot_pdf(1.0)
+        plot_pdf(2.0)
+        plt.legend(loc='upper right', frameon=False)
+        ax.set(xlim=[0,5], ylim=[0,0.7], xlabel='x', ylabel='f(x)')
+        plt.show()
 
     ========  ========================
     Support   :math:`x \in \mathbb{R}`
@@ -997,6 +1212,7 @@ class HalfCauchy(PositiveContinuous):
         if dist is None:
             dist = self
         beta = dist.beta
+        name = r'\text{%s}' % name
         return r'${} \sim \text{{HalfCauchy}}(\mathit{{beta}}={})$'.format(name,
                                                                 get_variable_name(beta))
 
@@ -1011,6 +1227,23 @@ class Gamma(PositiveContinuous):
 
        f(x \mid \alpha, \beta) =
            \frac{\beta^{\alpha}x^{\alpha-1}e^{-\beta x}}{\Gamma(\alpha)}
+
+    .. plot::
+
+        import matplotlib.pyplot as plt
+        import numpy as np
+        import scipy.stats as st
+        x = np.linspace(0.0, 20.0, 1000)
+        fig, ax = plt.subplots()
+        f = lambda a, b : st.gamma.pdf(x, a, scale=1.0/b)
+        plot_pdf = lambda a, b : ax.plot(x, f(a, b), label=r'$\alpha$={0}, $\beta$={1}'.format(a, b))
+        plot_pdf(1.0, 0.5)
+        plot_pdf(2.0, 0.5)
+        plot_pdf(3.0, 1.0)
+        plot_pdf(7.5, 1.0)
+        plt.legend(loc='upper right', frameon=False)
+        ax.set(xlim=[0,20], ylim=[0,0.5], xlabel='x', ylabel='f(x)')
+        plt.show()
 
     ========  ===============================
     Support   :math:`x \in (0, \infty)`
@@ -1087,7 +1320,8 @@ class Gamma(PositiveContinuous):
             dist = self
         beta = dist.beta
         alpha = dist.alpha
-        return r'${} \sim \text{{Gamma}}(\mathit{{alpha}}={}, \mathit{{beta}}={})$'.format(name,
+        name = r'\text{%s}' % name
+        return r'${} \sim \text{{Gamma}}(\mathit{{alpha}}={},~\mathit{{beta}}={})$'.format(name,
                                                                 get_variable_name(alpha),
                                                                 get_variable_name(beta))
 
@@ -1101,6 +1335,23 @@ class InverseGamma(PositiveContinuous):
        f(x \mid \alpha, \beta) =
            \frac{\beta^{\alpha}}{\Gamma(\alpha)} x^{-\alpha - 1}
            \exp\left(\frac{-\beta}{x}\right)
+
+    .. plot::
+
+        import matplotlib.pyplot as plt
+        import numpy as np
+        import scipy.stats as st
+        x = np.linspace(0.0, 3.0, 1000)
+        fig, ax = plt.subplots()
+        f = lambda alpha, beta : st.invgamma.pdf(x, alpha, scale=beta)
+        plot_pdf = lambda alpha, beta : ax.plot(x, f(alpha, beta), label=r'$\alpha$={0}, $\beta$={1}'.format(alpha, beta))
+        plot_pdf(1.0,1.0)
+        plot_pdf(2.0,1.0)
+        plot_pdf(3.0,1.0)
+        plot_pdf(3.0,0.5)
+        plt.legend(loc='upper right', frameon=False)
+        ax.set(xlim=[0,3], ylim=[0,5], xlabel='x', ylabel='f(x)')
+        plt.show()
 
     ========  ======================================================
     Support   :math:`x \in (0, \infty)`
@@ -1157,7 +1408,8 @@ class InverseGamma(PositiveContinuous):
             dist = self
         beta = dist.beta
         alpha = dist.alpha
-        return r'${} \sim \text{{InverseGamma}}(\mathit{{alpha}}={}, \mathit{{beta}}={})$'.format(name,
+        name = r'\text{%s}' % name
+        return r'${} \sim \text{{InverseGamma}}(\mathit{{alpha}}={},~\mathit{{beta}}={})$'.format(name,
                                                                 get_variable_name(alpha),
                                                                 get_variable_name(beta))
 
@@ -1169,6 +1421,25 @@ class ChiSquared(Gamma):
     .. math::
 
        f(x \mid \nu) = \frac{x^{(\nu-2)/2}e^{-x/2}}{2^{\nu/2}\Gamma(\nu/2)}
+
+    .. plot::
+
+        import matplotlib.pyplot as plt
+        import numpy as np
+        import scipy.stats as st
+        x = np.linspace(0.0, 8.0, 1000)
+        fig, ax = plt.subplots()
+        f = lambda df : st.chi2.pdf(x, df)
+        plot_pdf = lambda df : ax.plot(x, f(df), label=r'$\nu$={0}'.format(df))
+        plot_pdf(1.0)
+        plot_pdf(2.0)
+        plot_pdf(3.0)
+        plot_pdf(4.0)
+        plot_pdf(6.0)
+        plot_pdf(9.0)
+        plt.legend(loc='upper right', frameon=False)
+        ax.set(xlim=[0,8], ylim=[0,0.5], xlabel='x', ylabel='f(x)')
+        plt.show()
 
     ========  ===============================
     Support   :math:`x \in [0, \infty)`
@@ -1191,6 +1462,7 @@ class ChiSquared(Gamma):
         if dist is None:
             dist = self
         nu = dist.nu
+        name = r'\text{%s}' % name
         return r'${} \sim \Chi^2(\mathit{{nu}}={})$'.format(name,
                                                                 get_variable_name(nu))
 
@@ -1204,6 +1476,23 @@ class Weibull(PositiveContinuous):
        f(x \mid \alpha, \beta) =
            \frac{\alpha x^{\alpha - 1}
            \exp(-(\frac{x}{\beta})^{\alpha})}{\beta^\alpha}
+
+    .. plot::
+
+        import matplotlib.pyplot as plt
+        import numpy as np
+        import scipy.stats as st
+        x = np.linspace(0.0, 2.5, 1000)
+        fig, ax = plt.subplots()
+        f = lambda alpha, beta : st.weibull_min.pdf(x, alpha, scale=beta)
+        plot_pdf = lambda alpha, beta : ax.plot(x, f(alpha, beta), label=r'$\alpha$={0}, $\beta$={1}'.format(alpha, beta))
+        plot_pdf(0.5, 1.0)
+        plot_pdf(1.0, 1.0)
+        plot_pdf(1.5, 1.0)
+        plot_pdf(5.0, 1.0)
+        plt.legend(loc='upper right', frameon=False)
+        ax.set(xlim=[0,2.5], ylim=[0,2.5], xlabel='x', ylabel='f(x)')
+        plt.show()
 
     ========  ====================================================
     Support   :math:`x \in [0, \infty)`
@@ -1255,17 +1544,93 @@ class Weibull(PositiveContinuous):
             dist = self
         beta = dist.beta
         alpha = dist.alpha
-        return r'${} \sim \text{{Weibull}}(\mathit{{alpha}}={}, \mathit{{beta}}={})$'.format(name,
+        name = r'\text{%s}' % name
+        return r'${} \sim \text{{Weibull}}(\mathit{{alpha}}={},~\mathit{{beta}}={})$'.format(name,
                                                                 get_variable_name(alpha),
                                                                 get_variable_name(beta))
 
 
-def StudentTpos(*args, **kwargs):
-    warnings.warn("StudentTpos has been deprecated. In future, use HalfStudentT instead.",
-                DeprecationWarning)
-    return HalfStudentT(*args, **kwargs)
+class HalfStudentT(PositiveContinuous):
+    R"""
+    Half Student's T log-likelihood
 
-HalfStudentT = Bound(StudentT, lower=0)
+    .. math::
+
+        f(x \mid \sigma,\nu) =
+            \frac{2\;\Gamma\left(\frac{\nu+1}{2}\right)}
+            {\Gamma\left(\frac{\nu}{2}\right)\sqrt{\nu\pi\sigma^2}}
+            \left(1+\frac{1}{\nu}\frac{x^2}{\sigma^2}\right)^{-\frac{\nu+1}{2}}
+
+    .. plot::
+
+        import matplotlib.pyplot as plt
+        import numpy as np
+        import scipy.stats as st
+        x = np.linspace(-5.0, 5.0, 200)
+        fig, ax = plt.subplots()
+        f = lambda sigma, nu : st.t.pdf(x, df=nu, loc=0, scale=sigma)
+        plot_pdf = lambda sigma, nu : ax.plot(x, f(sigma, nu), label=r'$\sigma$={}, $\nu$={}'.format(sigma, nu))
+        plot_pdf(1, 0.5)
+        plot_pdf(1, 1)
+        plot_pdf(2, 1)
+        plot_pdf(1, 30)
+        plt.legend(loc='upper right', frameon=False)
+        ax.set(xlim=[0,5], ylim=[0, 0.4], xlabel='x', ylabel='f(x)')
+        plt.show()
+
+    ========  ========================
+    Support   :math:`x \in [0, \infty)`
+    ========  ========================
+
+    Parameters
+    ----------
+    nu : float
+        Degrees of freedom, also known as normality parameter (nu > 0).
+    sd : float
+        Scale parameter (sd > 0). Converges to the standard deviation as nu
+        increases
+    lam : float
+        Scale parameter (lam > 0). Converges to the precision as nu increases
+    """
+    def __init__(self, nu=1, sd=None, lam=None, *args, **kwargs):
+        super(HalfStudentT, self).__init__(*args, **kwargs)
+        self.mode = tt.as_tensor_variable(0)
+        lam, sd = get_tau_sd(lam, sd)
+        self.median = tt.as_tensor_variable(sd)
+        self.sd = tt.as_tensor_variable(sd)
+        self.lam = tt.as_tensor_variable(lam)
+        self.nu = nu = tt.as_tensor_variable(nu)
+
+        assert_negative_support(sd, 'sd', 'HalfStudentT')
+        assert_negative_support(lam, 'lam', 'HalfStudentT')
+        assert_negative_support(nu, 'nu', 'HalfStudentT')
+
+    def random(self, point=None, size=None, repeat=None):
+        nu, sd = draw_values([self.nu, self.sd], point=point)
+        return np.abs(generate_samples(stats.t.rvs, nu, loc=0, scale=sd,
+                                       dist_shape=self.shape,
+                                       size=size))
+
+    def logp(self, value):
+        nu = self.nu
+        sd = self.sd
+        lam = self.lam
+
+        return bound(tt.log(2) + gammaln((nu + 1.0) / 2.0)
+                     - gammaln(nu / 2.0)
+                     - .5 * tt.log(nu * np.pi * sd**2)
+                     - (nu + 1.0) / 2.0 * tt.log1p(value ** 2 / (nu * sd**2)),
+                     sd > 0, lam > 0, nu > 0, value >= 0)
+
+    def _repr_latex_(self, name=None, dist=None):
+        if dist is None:
+            dist = self
+        nu = dist.nu
+        sd = dist.sd
+        name = r'\text{%s}' % name
+        return r'${} \sim \text{{HalfStudentT}}(\mathit{{nu}}={},~\mathit{{sd}}={})$'.format(name,
+                                                                get_variable_name(nu),
+                                                                get_variable_name(sd))
 
 
 class ExGaussian(Continuous):
@@ -1284,6 +1649,23 @@ class ExGaussian(Continuous):
 
     where :math:`\Phi` is the cumulative distribution function of the
     standard normal distribution.
+
+    .. plot::
+
+        import matplotlib.pyplot as plt
+        import numpy as np
+        import scipy.stats as st
+        x = np.linspace(-6.0, 6.0, 1000)
+        fig, ax = plt.subplots()
+        f = lambda mu, sigma, nu : st.exponnorm.pdf(x, nu/sigma, loc=mu, scale=sigma)
+        plot_pdf = lambda mu, sigma, nu : ax.plot(x, f(mu, sigma, nu), label=r'$\mu$={0}, $\sigma$={1}, $\nu$={2}'.format(mu, sigma, nu))
+        plot_pdf(0.0,1.0,1.0)
+        plot_pdf(-2.0,1.0,1.0)
+        plot_pdf(0.0,3.0,1.0)
+        plot_pdf(-3.0,1.0,4.0)
+        plt.legend(loc='upper right', frameon=False)
+        ax.set(xlim=[-6,6], ylim=[0,0.4], xlabel='x', ylabel='f(x)')
+        plt.show()
 
     ========  ========================
     Support   :math:`x \in \mathbb{R}`
@@ -1355,7 +1737,8 @@ class ExGaussian(Continuous):
         sigma = dist.sigma
         mu = dist.mu
         nu = dist.nu
-        return r'${} \sim \text{{ExGaussian}}(\mathit{{mu}}={}, \mathit{{sigma}}={}, \mathit{{nu}}={})$'.format(name,
+        name = r'\text{%s}' % name
+        return r'${} \sim \text{{ExGaussian}}(\mathit{{mu}}={},~\mathit{{sigma}}={},~\mathit{{nu}}={})$'.format(name,
                                                                 get_variable_name(mu),
                                                                 get_variable_name(sigma),
                                                                 get_variable_name(nu))
@@ -1369,7 +1752,25 @@ class VonMises(Continuous):
         f(x \mid \mu, \kappa) =
             \frac{e^{\kappa\cos(x-\mu)}}{2\pi I_0(\kappa)}
 
-    where :I_0 is the modified Bessel function of order 0.
+    where :math:`I_0` is the modified Bessel function of order 0.
+
+    .. plot::
+
+        import matplotlib.pyplot as plt
+        import numpy as np
+        import scipy.stats as st
+        x = np.linspace(-np.pi, np.pi, 1000)
+        fig, ax = plt.subplots()
+        f = lambda mu, kappa : st.vonmises.pdf(x, kappa, loc=mu)
+        plot_pdf = lambda mu, kappa : ax.plot(x, f(mu, kappa), label=r'$\mu$={0}, $\kappa$={1}'.format(mu, kappa))
+        plot_pdf(0.0,0.001)
+        plot_pdf(0.0,0.5)
+        plot_pdf(0.0,1.0)
+        plot_pdf(0.0,2.0)
+        plot_pdf(0.0,4.0)
+        plt.legend(loc='upper right', frameon=False)
+        ax.set(xlim=[-np.pi,np.pi], ylim=[0,1.0], xlabel='x', ylabel='f(x)')
+        plt.show()
 
     ========  ==========================================
     Support   :math:`x \in [-\pi, \pi]`
@@ -1413,7 +1814,8 @@ class VonMises(Continuous):
             dist = self
         kappa = dist.kappa
         mu = dist.mu
-        return r'${} \sim \text{{VonMises}}(\mathit{{mu}}={}, \mathit{{kappa}}={})$'.format(name,
+        name = r'\text{%s}' % name
+        return r'${} \sim \text{{VonMises}}(\mathit{{mu}}={},~\mathit{{kappa}}={})$'.format(name,
                                                                 get_variable_name(mu),
                                                                 get_variable_name(kappa))
 
@@ -1426,6 +1828,24 @@ class SkewNormal(Continuous):
     .. math::
        f(x \mid \mu, \tau, \alpha) =
        2 \Phi((x-\mu)\sqrt{\tau}\alpha) \phi(x,\mu,\tau)
+
+    .. plot::
+
+        import matplotlib.pyplot as plt
+        import numpy as np
+        import scipy.stats as st
+        x = np.linspace(-3.0, 3.0, 1000)
+        fig, ax = plt.subplots()
+        f = lambda alpha, mu, sigma : st.skewnorm.pdf(x, alpha, loc=mu, scale=sigma)
+        plot_pdf = lambda alpha, mu, sigma : ax.plot(x, f(alpha, mu, sigma), label=r'$\mu$={0}, $\sigma$={1}, $\alpha$={2}'.format(mu, sigma, alpha))
+        plot_pdf(-4.0,0.0,1.0)
+        plot_pdf(-1.0,0.0,1.0)
+        plot_pdf(0.0,0.0,1.0)
+        plot_pdf(1.0,0.0,1.0)
+        plot_pdf(4.0,0.0,1.0)
+        plt.legend(loc='upper right', frameon=False)
+        ax.set(xlim=[-3,3], ylim=[0,0.7], xlabel='x', ylabel='f(x)')
+        plt.show()
 
     ========  ==========================================
     Support   :math:`x \in \mathbb{R}`
@@ -1499,7 +1919,8 @@ class SkewNormal(Continuous):
         sd = dist.sd
         mu = dist.mu
         alpha = dist.alpha
-        return r'${} \sim \text{{Skew-Normal}}(\mathit{{mu}}={}, \mathit{{sd}}={}, \mathit{{alpha}}={})$'.format(name,
+        name = r'\text{%s}' % name
+        return r'${} \sim \text{{Skew-Normal}}(\mathit{{mu}}={},~\mathit{{sd}}={},~\mathit{{alpha}}={})$'.format(name,
                                                                 get_variable_name(mu),
                                                                 get_variable_name(sd),
                                                                 get_variable_name(alpha))
@@ -1550,7 +1971,8 @@ class Triangular(Continuous):
         lower = dist.lower
         upper = dist.upper
         c = dist.c
-        return r'${} \sim \text{{Triangular}}(\mathit{{c}}={}, \mathit{{lower}}={}, \mathit{{upper}}={})$'.format(name,
+        name = r'\text{%s}' % name
+        return r'${} \sim \text{{Triangular}}(\mathit{{c}}={},~\mathit{{lower}}={},~\mathit{{upper}}={})$'.format(name,
                                                                 get_variable_name(c),
                                                                 get_variable_name(lower),
                                                                 get_variable_name(upper))
@@ -1604,9 +2026,88 @@ class Gumbel(Continuous):
             dist = self
         beta = dist.beta
         mu = dist.mu
-        return r'${} \sim \text{{Gumbel}}(\mathit{{mu}}={}, \mathit{{beta}}={})$'.format(name,
+        name = r'\text{%s}' % name
+        return r'${} \sim \text{{Gumbel}}(\mathit{{mu}}={},~\mathit{{beta}}={})$'.format(name,
                                                                 get_variable_name(mu),
                                                                 get_variable_name(beta))
+
+
+class Logistic(Continuous):
+    R"""
+    Logistic log-likelihood.
+
+    .. math::
+
+       f(x \mid \mu, s) =
+           \frac{\exp\left(-\frac{x - \mu}{s}\right)}{s \left(1 + \exp\left(-\frac{x - \mu}{s}\right)\right)^2}
+
+    ========  ==========================================
+    Support   :math:`x \in \mathbb{R}`
+    Mean      :math:`\mu`
+    Variance  :math:`\frac{s^2 \pi^2}{3}`
+    ========  ==========================================
+
+    .. plot::
+
+        import matplotlib.pyplot as plt
+        import numpy as np
+        import scipy.stats as st
+        x = np.linspace(-5.0, 5.0, 1000)
+        fig, ax = plt.subplots()
+        f = lambda mu, s : st.logistic.pdf(x, loc=mu, scale=s)
+        plot_pdf = lambda a, b : ax.plot(x, f(a,b), label=r'$\mu$={0}, $s$={1}'.format(a,b))
+        plot_pdf(0.0, 0.4)
+        plot_pdf(0.0, 1.0)
+        plot_pdf(0.0, 2.0)
+        plot_pdf(-2.0, 0.4)
+        plt.legend(loc='upper right', frameon=False)
+        ax.set(xlim=[-5,5], ylim=[0,1.2], xlabel='x', ylabel='f(x)')
+        plt.show()
+
+    Parameters
+    ----------
+    mu : float
+        Mean.
+    s : float
+        Scale (s > 0).
+    """
+    def __init__(self, mu=0., s=1., *args, **kwargs):
+        super(Logistic, self).__init__(*args, **kwargs)
+
+        self.mu = tt.as_tensor_variable(mu)
+        self.s = tt.as_tensor_variable(s)
+
+        self.mean = self.mode = mu
+        self.variance = s**2 * np.pi**2 / 3.
+
+    def logp(self, value):
+        mu = self.mu
+        s = self.s
+
+        return bound(
+            -(value - mu) / s - tt.log(s) - 2 * tt.log1p(tt.exp(-(value - mu) / s)),
+            s > 0
+        )
+
+    def random(self, point=None, size=None, repeat=None):
+        mu, s = draw_values([self.mu, self.s], point=point)
+
+        return generate_samples(
+            stats.logistic.rvs,
+            loc=mu, scale=s,
+            dist_shape=self.shape,
+            size=size
+        )
+
+    def _repr_latex_(self, name=None, dist=None):
+        if dist is None:
+            dist = self
+        mu = dist.mu
+        s = dist.s
+        name = r'\text{%s}' % name
+        return r'${} \sim \text{{Logistic}}(\mathit{{mu}}={},~\mathit{{s}}={})$'.format(name,
+                                                                get_variable_name(mu),
+                                                                get_variable_name(s))
 
 
 class Interpolated(Continuous):

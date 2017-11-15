@@ -157,3 +157,19 @@ def beta_bernoulli(n=2):
         pm.Beta('x', 3, 1, shape=n, transform=None)
         pm.Bernoulli('y', 0.5)
     return model.test_point, model, None
+
+
+def simple_normal(bounded_prior=False):
+    """Simple normal for testing MLE / MAP; probes issue #2482."""
+    x0 = 10.0
+    sd = 1.0
+    a, b = (9, 12)  # bounds for uniform RV, need non-symmetric to reproduce issue
+
+    with pm.Model() as model:
+        if bounded_prior:
+            mu_i = pm.Uniform("mu_i", a, b)
+        else:
+            mu_i = pm.Flat("mu_i")
+        pm.Normal("X_obs", mu=mu_i, sd=sd, observed=x0)
+
+    return model.test_point, model, None

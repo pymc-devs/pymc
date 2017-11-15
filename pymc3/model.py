@@ -1,4 +1,6 @@
 import collections
+import functools
+import itertools
 import threading
 import six
 
@@ -150,6 +152,9 @@ class Factor(object):
     """Common functionality for objects with a log probability density
     associated with them.
     """
+    def __init__(self, *args, **kwargs):
+        super(Factor, self).__init__(*args, **kwargs)
+
     @property
     def logp(self):
         """Compiled log probability density function"""
@@ -168,6 +173,18 @@ class Factor(object):
         return self.model.fn(hessian(self.logpt, vars))
 
     @property
+    def logp_nojac(self):
+        return self.model.fn(self.logp_nojact)
+
+    def dlogp_nojac(self, vars=None):
+        """Compiled log density gradient function, without jacobian terms."""
+        return self.model.fn(gradient(self.logp_nojact, vars))
+
+    def d2logp_nojac(self, vars=None):
+        """Compiled log density hessian function, without jacobian terms."""
+        return self.model.fn(hessian(self.logp_nojact, vars))
+
+    @property
     def fastlogp(self):
         """Compiled log probability density function"""
         return self.model.fastfn(self.logpt)
@@ -181,12 +198,35 @@ class Factor(object):
         return self.model.fastfn(hessian(self.logpt, vars))
 
     @property
+    def fastlogp_nojac(self):
+        return self.model.fastfn(self.logp_nojact)
+
+    def fastdlogp_nojac(self, vars=None):
+        """Compiled log density gradient function, without jacobian terms."""
+        return self.model.fastfn(gradient(self.logp_nojact, vars))
+
+    def fastd2logp_nojac(self, vars=None):
+        """Compiled log density hessian function, without jacobian terms."""
+        return self.model.fastfn(hessian(self.logp_nojact, vars))
+
+    @property
     def logpt(self):
         """Theano scalar of log-probability of the model"""
         if getattr(self, 'total_size', None) is not None:
-            logp = tt.sum(self.logp_elemwiset) * self.scaling
+            logp = self.logp_sum_unscaledt * self.scaling
         else:
-            logp = tt.sum(self.logp_elemwiset)
+            logp = self.logp_sum_unscaledt
+        if self.name is not None:
+            logp.name = '__logp_%s' % self.name
+        return logp
+
+    @property
+    def logp_nojact(self):
+        """Theano scalar of log-probability, excluding jacobian terms."""
+        if getattr(self, 'total_size', None) is not None:
+            logp = tt.sum(self.logp_nojac_unscaledt) * self.scaling
+        else:
+            logp = tt.sum(self.logp_nojac_unscaledt)
         if self.name is not None:
             logp.name = '__logp_%s' % self.name
         return logp
@@ -289,7 +329,7 @@ class ValueGradFunction(object):
         The value that we compute with its gradient.
     grad_vars : list of named theano variables or None
         The arguments with respect to which the gradient is computed.
-    extra_args : list of named theano variables or None
+    extra_vars : list of named theano variables or None
         Other arguments of the function that are assumed constant. They
         are stored in shared variables and can be set using
         `set_extra_values`.
@@ -621,9 +661,26 @@ class Model(six.with_metaclass(InitContextMeta, Context, Factor)):
     def logpt(self):
         """Theano scalar of log-probability of the model"""
         with self:
-            factors = [var.logpt for var in self.basic_RVs] + self.potentials
-            logp = tt.add(*map(tt.sum, factors))
-            logp.name = '__logp'
+            factors = [var.logpt for var in self.basic_RVs]
+            logp_factors = tt.sum(factors)
+            logp_potentials = tt.sum([tt.sum(pot) for pot in self.potentials])
+            logp = logp_factors + logp_potentials
+            if self.name:
+                logp.name = '__logp_%s' % self.name
+            else:
+                logp.name = '__logp'
+            return logp
+
+    @property
+    def logp_nojact(self):
+        """Theano scalar of log-probability of the model"""
+        with self:
+            factors = [var.logp_nojact for var in self.basic_RVs] + self.potentials
+            logp = tt.sum([tt.sum(factor) for factor in factors])
+            if self.name:
+                logp.name = '__logp_nojac_%s' % self.name
+            else:
+                logp.name = '__logp_nojac'
             return logp
 
     @property
@@ -632,7 +689,7 @@ class Model(six.with_metaclass(InitContextMeta, Context, Factor)):
            (excluding deterministic)."""
         with self:
             factors = [var.logpt for var in self.vars]
-            return tt.add(*map(tt.sum, factors))
+            return tt.sum(factors)
 
     @property
     def vars(self):
@@ -892,6 +949,21 @@ class Model(six.with_metaclass(InitContextMeta, Context, Factor)):
         flat_view = FlatView(inputvar, replacements, view)
         return flat_view
 
+    def _repr_latex_(self, name=None, dist=None):
+        tex_vars = []
+        for rv in itertools.chain(self.unobserved_RVs, self.observed_RVs):
+            rv_tex = rv.__latex__()
+            if rv_tex is not None:
+                array_rv = rv_tex.replace(r'\sim', r'&\sim &').strip('$')
+                tex_vars.append(array_rv)
+        return r'''$$
+            \begin{{array}}{{rcl}}
+            {}
+            \end{{array}}
+            $$'''.format('\\\\'.join(tex_vars))
+
+    __latex__ = _repr_latex_
+
 
 def fn(outs, mode=None, model=None, *args, **kwargs):
     """Compiles a Theano function which returns the values of `outs` and
@@ -1056,6 +1128,10 @@ class FreeRV(Factor, TensorVariable):
             self.tag.test_value = np.ones(
                 distribution.shape, distribution.dtype) * distribution.default()
             self.logp_elemwiset = distribution.logp(self)
+            # The logp might need scaling in minibatches.
+            # This is done in `Factor`.
+            self.logp_sum_unscaledt = distribution.logp_sum(self)
+            self.logp_nojac_unscaledt = distribution.logp_nojac(self)
             self.total_size = total_size
             self.model = model
             self.scaling = _get_scaling(total_size, self.shape, self.ndim)
@@ -1072,6 +1148,8 @@ class FreeRV(Factor, TensorVariable):
         if dist is None:
             dist = self.distribution
         return self.distribution._repr_latex_(name=name, dist=dist)
+
+    __latex__ = _repr_latex_
 
     @property
     def init_value(self):
@@ -1157,6 +1235,10 @@ class ObservedRV(Factor, TensorVariable):
 
             self.missing_values = data.missing_values
             self.logp_elemwiset = distribution.logp(data)
+            # The logp might need scaling in minibatches.
+            # This is done in `Factor`.
+            self.logp_sum_unscaledt = distribution.logp_sum(data)
+            self.logp_nojac_unscaledt = distribution.logp_nojac(data)
             self.total_size = total_size
             self.model = model
             self.distribution = distribution
@@ -1175,6 +1257,8 @@ class ObservedRV(Factor, TensorVariable):
         if dist is None:
             dist = self.distribution
         return self.distribution._repr_latex_(name=name, dist=dist)
+
+    __latex__ = _repr_latex_
 
     @property
     def init_value(self):
@@ -1206,10 +1290,34 @@ class MultiObservedRV(Factor):
         self.missing_values = [datum.missing_values for datum in self.data.values()
                                if datum.missing_values is not None]
         self.logp_elemwiset = distribution.logp(**self.data)
+        # The logp might need scaling in minibatches.
+        # This is done in `Factor`.
+        self.logp_sum_unscaledt = distribution.logp_sum(**self.data)
+        self.logp_nojac_unscaledt = distribution.logp_nojac(**self.data)
         self.total_size = total_size
         self.model = model
         self.distribution = distribution
         self.scaling = _get_scaling(total_size, self.logp_elemwiset.shape, self.logp_elemwiset.ndim)
+
+
+def _walk_up_rv(rv):
+    """Walk up theano graph to get inputs for deterministic RV."""
+    all_rvs = []
+    parents = list(itertools.chain(*[j.inputs for j in rv.get_parents()]))
+    if parents:
+        for parent in parents:
+            all_rvs.extend(_walk_up_rv(parent))
+    else:
+        if rv.name:
+            all_rvs.append(r'\text{%s}' % rv.name)
+        else:
+            all_rvs.append(r'\text{Constant}')
+    return all_rvs
+
+
+def _latex_repr_rv(rv):
+    """Make latex string for a Deterministic variable"""
+    return r'$\text{%s} \sim \text{Deterministic}(%s)$' % (rv.name, r',~'.join(_walk_up_rv(rv)))
 
 
 def Deterministic(name, var, model=None):
@@ -1228,6 +1336,8 @@ def Deterministic(name, var, model=None):
     var.name = model.name_for(name)
     model.deterministics.append(var)
     model.add_random_variable(var)
+    var._repr_latex_ = functools.partial(_latex_repr_rv, var)
+    var.__latex__ = var._repr_latex_
     return var
 
 
@@ -1300,6 +1410,8 @@ class TransformedRV(TensorVariable):
         if dist is None:
             dist = self.distribution
         return self.distribution._repr_latex_(name=name, dist=dist)
+
+    __latex__ = _repr_latex_
 
     @property
     def init_value(self):

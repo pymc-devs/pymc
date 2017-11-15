@@ -112,7 +112,7 @@ class Metropolis(ArrayStepShared):
         else:
             raise ValueError("Invalid rank for variance: %s" % S.ndim)
 
-        self.scaling = np.atleast_1d(scaling)
+        self.scaling = np.atleast_1d(scaling).astype('d')
         self.tune = tune
         self.tune_interval = tune_interval
         self.steps_until_tune = tune_interval
@@ -167,7 +167,7 @@ class Metropolis(ArrayStepShared):
         return q_new, [stats]
 
     @staticmethod
-    def competence(var):
+    def competence(var, has_grad):
         if var.dtype in pm.discrete_types:
             return Competence.COMPATIBLE
         return Competence.INCOMPATIBLE

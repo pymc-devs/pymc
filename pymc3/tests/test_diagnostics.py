@@ -25,7 +25,7 @@ class TestGelmanRubin(SeededTest):
             step2 = Metropolis([model.switchpoint])
             start = {'early_mean': 7., 'late_mean': 5., 'switchpoint': 10}
             ptrace = sample(n_samples, tune=0, step=[step1, step2], start=start, njobs=2,
-                    progressbar=False, random_seed=[20090425, 19700903])
+                            progressbar=False, random_seed=[20090425, 19700903])
         return ptrace
 
     def test_good(self):
@@ -90,13 +90,15 @@ class TestGelmanRubin(SeededTest):
 @pytest.mark.xfail(condition=(theano.config.floatX == "float32"), reason="Fails on float32")
 class TestDiagnostics(SeededTest):
 
-    def get_switchpoint(self, n_samples):
+    def get_switchpoint(self, n_samples, chains=1):
         model = build_disaster_model()
         with model:
             # Run sampler
             step1 = Slice([model.early_mean_log__, model.late_mean_log__])
             step2 = Metropolis([model.switchpoint])
-            trace = sample(0, tune=n_samples, step=[step1, step2], progressbar=False, random_seed=1, discard_tuned_samples=False)
+            trace = sample(0, tune=n_samples, step=[step1, step2],
+                           progressbar=False, random_seed=1,
+                           discard_tuned_samples=False, chains=chains)
         return trace['switchpoint']
 
     def test_geweke_negative(self):
@@ -118,7 +120,8 @@ class TestDiagnostics(SeededTest):
         """Confirm Geweke diagnostic is smaller than 1 for a reasonable number of samples."""
         n_samples = 2000
         n_intervals = 20
-        switchpoint = self.get_switchpoint(n_samples)
+        chains = 2
+        switchpoint = self.get_switchpoint(n_samples, chains=chains)
 
         with pytest.raises(ValueError):
             # first and last must be between 0 and 1
@@ -141,7 +144,7 @@ class TestDiagnostics(SeededTest):
         assert z_switch.shape[0] == n_intervals
 
         # Start index should not be in the last <last>% of samples
-        assert_array_less(start, (1 - last) * n_samples)
+        assert_array_less(start, (1 - last) * n_samples * chains)
 
         # These z-scores should be small, since there are more samples.
         assert max(abs(z_scores)) < 1

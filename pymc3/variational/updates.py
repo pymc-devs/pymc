@@ -90,8 +90,8 @@ Examples
 >>> updates = apply_momentum(updates_sgd, params, momentum=0.9)
 >>> train_function = theano.function([x, y], updates=updates)
 
-Note
-----
+Notes
+-----
 Taken from the Lasagne project: http://lasagne.readthedocs.io/en/latest/
 
 """
@@ -535,7 +535,7 @@ def adagrad(loss_or_grads=None, params=None, learning_rate=1.0, epsilon=1e-6):
 def adagrad_window(loss_or_grads=None, params=None,
                    learning_rate=0.001, epsilon=.1, n_win=10):
     """Returns a function that returns parameter updates.
-    Instead of accumulated estimate, uses running window 
+    Instead of accumulated estimate, uses running window
 
     Parameters
     ----------

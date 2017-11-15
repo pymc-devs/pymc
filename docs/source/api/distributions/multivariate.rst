@@ -6,6 +6,8 @@ Multivariate
 .. autosummary::
 
    MvNormal
+   MatrixNormal
+   MvStudentT
    Wishart
    LKJCholeskyCov
    LKJCorr

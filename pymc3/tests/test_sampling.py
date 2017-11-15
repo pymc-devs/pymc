@@ -28,7 +28,7 @@ class TestSample(SeededTest):
         for _ in range(2):
             np.random.seed(1)
             with self.model:
-                pm.sample(1, tune=0)
+                pm.sample(1, tune=0, chains=1)
                 random_numbers.append(np.random.random())
         assert random_numbers[0] == random_numbers[1]
 
@@ -110,6 +110,28 @@ class TestSample(SeededTest):
             trace = pm.sample(draws=100, tune=50, njobs=4)
             assert len(trace) == 100
 
+    @pytest.mark.parametrize(
+        'start, error', [
+            ([1, 2], TypeError),
+            ({'x': 1}, ValueError),
+            ({'x': [1, 2, 3]}, ValueError),
+            ({'x': np.array([[1, 1], [1, 1]])}, ValueError)
+        ]
+    )
+    def test_sample_start_bad_shape(self, start, error):
+        with pytest.raises(error):
+            pm.sampling._check_start_shape(self.model, start)
+
+    @pytest.mark.parametrize(
+        'start', [
+            {'x': np.array([1, 1])},
+            {'x': [10, 10]},
+            {'x': [-10, -10]},
+        ]
+    )
+    def test_sample_start_good_shape(self, start):
+        pm.sampling._check_start_shape(self.model, start)
+
 
 def test_empty_model():
     with pm.Model():
@@ -181,7 +203,7 @@ class TestChooseBackend(object):
         assert backend.called
 
 
-class TestSamplePPC(object):
+class TestSamplePPC(SeededTest):
     def test_normal_scalar(self):
         with pm.Model() as model:
             a = pm.Normal('a', mu=0, sd=1)
@@ -230,18 +252,47 @@ class TestSamplePPC(object):
             _, pval = stats.kstest(ppc['b'], stats.norm(scale=scale).cdf)
             assert pval > 0.001
 
+class TestSamplePPCW(SeededTest):
+    def test_sample_ppc_w(self):
+        data0 = np.random.normal(0, 1, size=500)
+
+        with pm.Model() as model_0:
+            mu = pm.Normal('mu', mu=0, sd=1)
+            y = pm.Normal('y', mu=mu, sd=1, observed=data0)
+            trace_0 = pm.sample()
+
+        with pm.Model() as model_1:
+            mu = pm.Normal('mu', mu=0, sd=1, shape=len(data0))
+            y = pm.Normal('y', mu=mu, sd=1, observed=data0)
+            trace_1 = pm.sample()
+
+        traces = [trace_0, trace_0]
+        models = [model_0, model_0]
+        ppc = pm.sample_ppc_w(traces, 1000, models)
+        assert ppc['y'].shape == (1000,)
+
+        traces = [trace_0, trace_1]
+        models = [model_0, model_1]
+        ppc = pm.sample_ppc_w(traces, 100, models)
+        assert ppc['y'].shape == (100, 500)
+
 
 @pytest.mark.parametrize('method', [
-    'adapt_diag', 'advi', 'ADVI+adapt_diag', 'advi+adapt_diag_grad',
-    'map', 'advi_map', 'nuts'
+    'jitter+adapt_diag', 'adapt_diag', 'advi', 'ADVI+adapt_diag',
+    'advi+adapt_diag_grad', 'map', 'advi_map', 'nuts'
 ])
 def test_exec_nuts_init(method):
     with pm.Model() as model:
         pm.Normal('a', mu=0, sd=1, shape=2)
+        pm.HalfNormal('b', sd=1)
     with model:
         start, _ = pm.init_nuts(init=method, n_init=10)
-        assert isinstance(start, dict)
-        start, _ = pm.init_nuts(init=method, n_init=10, njobs=2)
+        assert isinstance(start, list)
+        assert len(start) == 1
+        assert isinstance(start[0], dict)
+        assert 'a' in start[0] and 'b_log__' in start[0]
+        start, _ = pm.init_nuts(init=method, n_init=10, chains=2)
         assert isinstance(start, list)
         assert len(start) == 2
         assert isinstance(start[0], dict)
+        assert 'a' in start[0] and 'b_log__' in start[0]

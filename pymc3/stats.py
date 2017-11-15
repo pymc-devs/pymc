@@ -3,20 +3,23 @@
 import numpy as np
 import pandas as pd
 import itertools
-import sys
+from tqdm import tqdm
 import warnings
 from collections import namedtuple
 from .model import modelcontext
 from .util import get_default_varnames
+import pymc3 as pm
 from pymc3.theanof import floatX
 
 from scipy.misc import logsumexp
+from scipy.stats import dirichlet
 from scipy.stats.distributions import pareto
+from scipy.optimize import minimize
 
 from .backends import tracetab as ttab
 
 __all__ = ['autocorr', 'autocov', 'dic', 'bpic', 'waic', 'loo', 'hpd', 'quantiles',
-           'mc_error', 'summary', 'df_summary', 'compare', 'bfmi']
+           'mc_error', 'summary', 'df_summary', 'compare', 'bfmi', 'r2_score']
 
 
 def statfunc(f):
@@ -100,7 +103,7 @@ def autocov(x, lag=1):
 
 def dic(trace, model=None):
     """Calculate the deviance information criterion of the samples in trace from model
-    Read more theory here - in a paper by some of the leading authorities on Model Selection -
+    Read more theory here - in a paper by some of the leading authorities on model selection -
     dx.doi.org/10.1111/1467-9868.00353
 
     Parameters
@@ -111,20 +114,22 @@ def dic(trace, model=None):
 
     Returns
     -------
-    `float` representing the deviance information criterion of the model and trace
+    z : float
+        The deviance information criterion of the model and trace
     """
     model = modelcontext(model)
+    logp = model.logp
 
-    mean_deviance = -2 * np.mean([model.logp(pt) for pt in trace])
+    mean_deviance = -2 * np.mean([logp(pt) for pt in trace])
 
     free_rv_means = {rv.name: trace[rv.name].mean(
         axis=0) for rv in model.free_RVs}
-    deviance_at_mean = -2 * model.logp(free_rv_means)
+    deviance_at_mean = -2 * logp(free_rv_means)
 
     return 2 * mean_deviance - deviance_at_mean
 
 
-def _log_post_trace(trace, model):
+def _log_post_trace(trace, model, progressbar=False):
     """Calculate the elementwise log-posterior for the sampled trace.
 
     Parameters
@@ -132,34 +137,51 @@ def _log_post_trace(trace, model):
     trace : result of MCMC run
     model : PyMC Model
         Optional model. Default None, taken from context.
+    progressbar: bool
+        Whether or not to display a progress bar in the command line. The
+        bar shows the percentage of completion, the evaluation speed, and
+        the estimated time to completion
 
     Returns
     -------
     logp : array of shape (n_samples, n_observations)
         The contribution of the observations to the logp of the whole model.
     """
+    cached = [(var, var.logp_elemwise) for var in model.observed_RVs]
+
     def logp_vals_point(pt):
         if len(model.observed_RVs) == 0:
             return floatX(np.array([], dtype='d'))
 
         logp_vals = []
-        for var in model.observed_RVs:
-            logp = var.logp_elemwise(pt)
+        for var, logp in cached:
+            logp = logp(pt)
             if var.missing_values:
                 logp = logp[~var.observations.mask]
             logp_vals.append(logp.ravel())
 
         return np.concatenate(logp_vals)
 
-    logp = (logp_vals_point(pt) for pt in trace)
-    return np.stack(logp)
+    try:
+        points = trace.points()
+    except AttributeError:
+        points = trace
+
+    points = tqdm(points) if progressbar else points
+
+    try:
+        logp = (logp_vals_point(pt) for pt in points)
+        return np.stack(logp)
+    finally:
+        if progressbar:
+            points.close()
 
 
-def waic(trace, model=None, pointwise=False):
+def waic(trace, model=None, pointwise=False, progressbar=False):
     """Calculate the widely available information criterion, its standard error
     and the effective number of parameters of the samples in trace from model.
     Read more theory here - in a paper by some of the leading authorities on
-    Model Selection - dx.doi.org/10.1111/1467-9868.00353
+    model selection - dx.doi.org/10.1111/1467-9868.00353
 
     Parameters
     ----------
@@ -169,6 +191,10 @@ def waic(trace, model=None, pointwise=False):
     pointwise: bool
         if True the pointwise predictive accuracy will be returned.
         Default False
+    progressbar: bool
+        Whether or not to display a progress bar in the command line. The
+        bar shows the percentage of completion, the evaluation speed, and
+        the estimated time to completion
 
     Returns
     -------
@@ -180,7 +206,7 @@ def waic(trace, model=None, pointwise=False):
     """
     model = modelcontext(model)
 
-    log_py = _log_post_trace(trace, model)
+    log_py = _log_post_trace(trace, model, progressbar=progressbar)
     if log_py.size == 0:
         raise ValueError('The model does not contain observed values.')
 
@@ -208,7 +234,7 @@ def waic(trace, model=None, pointwise=False):
         return WAIC_r(waic, waic_se, p_waic)
 
 
-def loo(trace, model=None, pointwise=False):
+def loo(trace, model=None, pointwise=False, progressbar=False):
     """Calculates leave-one-out (LOO) cross-validation for out of sample predictive
     model fit, following Vehtari et al. (2015). Cross-validation is computed using
     Pareto-smoothed importance sampling (PSIS).
@@ -221,6 +247,10 @@ def loo(trace, model=None, pointwise=False):
     pointwise: bool
         if True the pointwise predictive accuracy will be returned.
         Default False
+    progressbar: bool
+        Whether or not to display a progress bar in the command line. The
+        bar shows the percentage of completion, the evaluation speed, and
+        the estimated time to completion
 
     Returns
     -------
@@ -232,7 +262,7 @@ def loo(trace, model=None, pointwise=False):
     """
     model = modelcontext(model)
 
-    log_py = _log_post_trace(trace, model)
+    log_py = _log_post_trace(trace, model, progressbar=progressbar)
     if log_py.size == 0:
         raise ValueError('The model does not contain observed values.')
 
@@ -294,33 +324,39 @@ def loo(trace, model=None, pointwise=False):
 
 
 def bpic(trace, model=None):
-    """
-    Calculates Bayesian predictive information criterion n of the samples in trace from model
-    Read more theory here - in a paper by some of the leading authorities on Model Selection -
-    dx.doi.org/10.1111/1467-9868.00353
+    R"""Calculates Bayesian predictive information criterion n of the samples in trace from model
+    Read more theory here - in a paper by some of the leading authorities on model selection -
+    dx.doi.org/10.1080/01966324.2011.10737798
 
     Parameters
     ----------
     trace : result of MCMC run
     model : PyMC Model
         Optional model. Default None, taken from context.
+
+    Returns
+    -------
+    z : float
+        The Bayesian predictive information criterion of the model and trace
     """
     model = modelcontext(model)
+    logp = model.logp
 
-    mean_deviance = -2 * np.mean([model.logp(pt) for pt in trace])
+    mean_deviance = -2 * np.mean([logp(pt) for pt in trace])
 
     free_rv_means = {rv.name: trace[rv.name].mean(
         axis=0) for rv in model.free_RVs}
-    deviance_at_mean = -2 * model.logp(free_rv_means)
+    deviance_at_mean = -2 * logp(free_rv_means)
 
     return 3 * mean_deviance - 2 * deviance_at_mean
 
 
-def compare(traces, models, ic='WAIC'):
-    """Compare models based on the widely available information criterion (WAIC)
+def compare(traces, models, ic='WAIC', method='stacking', b_samples=1000,
+            alpha=1, seed=None, round_to=2):
+    R"""Compare models based on the widely available information criterion (WAIC)
     or leave-one-out (LOO) cross-validation.
     Read more theory here - in a paper by some of the leading authorities on
-    Model Selection - dx.doi.org/10.1111/1467-9868.00353
+    model selection - dx.doi.org/10.1111/1467-9868.00353
 
     Parameters
     ----------
@@ -330,6 +366,30 @@ def compare(traces, models, ic='WAIC'):
     ic : string
         Information Criterion (WAIC or LOO) used to compare models.
         Default WAIC.
+    method : str
+        Method used to estimate the weights for each model. Available options
+        are:
+            - 'stacking' : (default) stacking of predictive distributions.
+            - 'BB-pseudo-BMA' : pseudo-Bayesian Model averaging using Akaike-type
+               weighting. The weights are stabilized using the Bayesian bootstrap
+            - 'pseudo-BMA': pseudo-Bayesian Model averaging using Akaike-type
+               weighting, without Bootstrap stabilization (not recommended)
+
+        For more information read https://arxiv.org/abs/1704.02030
+    b_samples: int
+        Number of samples taken by the Bayesian bootstrap estimation. Only
+        useful when method = 'BB-pseudo-BMA'.
+    alpha : float
+        The shape parameter in the Dirichlet distribution used for the
+        Bayesian bootstrap. Only useful when method = 'BB-pseudo-BMA'. When
+        alpha=1 (default), the distribution is uniform on the simplex. A
+        smaller alpha will keeps the final weights more away from 0 and 1.
+    seed : int or np.random.RandomState instance
+           If int or RandomState, use it for seeding Bayesian bootstrap. Only
+           useful when method = 'BB-pseudo-BMA'. Default None the global
+           np.random state is used.
+    round_to : int
+        Number of decimals used to round results (default 2).
 
     Returns
     -------
@@ -342,13 +402,13 @@ def compare(traces, models, ic='WAIC'):
     dIC : Relative difference between each IC (WAIC or LOO)
     and the lowest IC (WAIC or LOO).
         It's always 0 for the top-ranked model.
-    weight: Akaike weights for each model.
+    weight: Relative weight for each model.
         This can be loosely interpreted as the probability of each model
-        (among the compared model) given the data. Be careful that these
-        weights are based on point estimates of the IC (uncertainty is ignored).
+        (among the compared model) given the data. By default the uncertainty
+        in the weights estimation is considered using Bayesian bootstrap.
     SE : Standard error of the IC estimate.
-        For a "large enough" sample size this is an estimate of the uncertainty
-        in the computation of the IC.
+        If method = BB-pseudo-BMA these values are estimated using Bayesian
+        bootstrap.
     dSE : Standard error of the difference in IC between each model and
     the top-ranked model.
         It's always 0 for the top-ranked model.
@@ -359,20 +419,29 @@ def compare(traces, models, ic='WAIC'):
         ic_func = waic
         df_comp = pd.DataFrame(index=np.arange(len(models)),
                                columns=['WAIC', 'pWAIC', 'dWAIC', 'weight',
-                               'SE', 'dSE', 'warning'])
+                                        'SE', 'dSE', 'warning'])
+
     elif ic == 'LOO':
         ic_func = loo
         df_comp = pd.DataFrame(index=np.arange(len(models)),
                                columns=['LOO', 'pLOO', 'dLOO', 'weight',
-                               'SE', 'dSE', 'warning'])
+                                        'SE', 'dSE', 'warning'])
+
     else:
         raise NotImplementedError(
             'The information criterion {} is not supported.'.format(ic))
 
+    if len(set([len(m.observed_RVs) for m in models])) != 1:
+        raise ValueError(
+            'The number of observed RVs should be the same across all models')
+
+    if method not in ['stacking', 'BB-pseudo-BMA', 'pseudo-BMA']:
+        raise ValueError('The method {}, to compute weights,'
+                         'is not supported.'.format(method))
+
     warns = np.zeros(len(models))
 
     c = 0
-
     def add_warns(*args):
         warns[c] = 1
 
@@ -386,19 +455,105 @@ def compare(traces, models, ic='WAIC'):
 
     ics.sort(key=lambda x: x[1][0])
 
-    min_ic = ics[0][1][0]
-    Z = np.sum([np.exp(-0.5 * (x[1][0] - min_ic)) for x in ics])
+    if method == 'stacking':
+        N, K, ic_i = _ic_matrix(ics)
+        exp_ic_i = np.exp(-0.5 * ic_i)
+        Km = K - 1
 
-    for idx, res in ics:
-        diff = ics[0][1][3] - res[3]
-        d_ic = np.sum(diff)
-        d_se = np.sqrt(len(diff) * np.var(diff))
-        weight = np.exp(-0.5 * (res[0] - min_ic)) / Z
-        df_comp.at[idx] = (res[0], res[2], abs(d_ic), weight, res[1],
-                           d_se, warns[idx])
+        def w_fuller(w):
+            return np.concatenate((w, [max(1. - np.sum(w), 0.)]))
 
-    return df_comp.sort_values(by=ic)
+        def log_score(w):
+            w_full = w_fuller(w)
+            score = 0.
+            for i in range(N):
+                score += np.log(np.dot(exp_ic_i[i], w_full))
+            return -score
 
+        def gradient(w):
+            w_full = w_fuller(w)
+            grad = np.zeros(Km)
+            for k in range(Km):
+                for i in range(N):
+                    grad[k] += (exp_ic_i[i, k] - exp_ic_i[i, Km]) / \
+                        np.dot(exp_ic_i[i], w_full)
+            return -grad
+
+        theta = np.full(Km, 1. / K)
+        bounds = [(0., 1.) for i in range(Km)]
+        constraints = [{'type': 'ineq', 'fun': lambda x: -np.sum(x) + 1.},
+                       {'type': 'ineq', 'fun': lambda x: np.sum(x)}]
+
+        w = minimize(fun=log_score,
+                     x0=theta,
+                     jac=gradient,
+                     bounds=bounds,
+                     constraints=constraints)
+
+        weights = w_fuller(w['x'])
+        ses = [res[1] for _, res in ics]
+
+    elif method == 'BB-pseudo-BMA':
+        N, K, ic_i = _ic_matrix(ics)
+        ic_i = ic_i * N
+
+        b_weighting = dirichlet.rvs(alpha=[alpha] * N, size=b_samples,
+                                    random_state=seed)
+        weights = np.zeros((b_samples, K))
+        z_bs = np.zeros_like(weights)
+        for i in range(b_samples):
+            z_b = np.dot(b_weighting[i], ic_i)
+            u_weights = np.exp(-0.5 * (z_b - np.min(z_b)))
+            z_bs[i] = z_b
+            weights[i] = u_weights / np.sum(u_weights)
+
+        weights = weights.mean(0)
+        ses = z_bs.std(0)
+
+    elif method == 'pseudo-BMA':
+        min_ic = ics[0][1][0]
+        Z = np.sum([np.exp(-0.5 * (x[1][0] - min_ic)) for x in ics])
+        weights = []
+        ses = []
+        for _, res in ics:
+            weights.append(np.exp(-0.5 * (res[0] - min_ic)) / Z)
+            ses.append(res[1])
+
+    if np.any(weights):
+        for i, (idx, res) in enumerate(ics):
+            diff = res[3] - ics[0][1][3]
+            d_ic = np.sum(diff)
+            d_se = np.sqrt(len(diff) * np.var(diff))
+            se = ses[i]
+            weight = weights[i]
+            df_comp.at[idx] = (round(res[0], round_to),
+                               round(res[2], round_to),
+                               round(d_ic, round_to),
+                               round(weight, round_to),
+                               round(se, round_to),
+                               round(d_se, round_to),
+                               warns[idx])
+
+        return df_comp.sort_values(by=ic)
+
+
+def _ic_matrix(ics):
+    """Store the previously computed pointwise predictive accuracy values (ics)
+    in a 2D matrix array.
+    """
+    N = len(ics[0][1][3])
+    K = len(ics)
+    ic_i = np.zeros((N, K))
+
+    for i in range(K):
+        ic = ics[i][1][3]
+        if len(ic) != N:
+            raise ValueError('The number of observations should be the same '
+                             'across all models')
+        else:
+            ic_i[:, i] = ic
+
+    return N, K, ic_i
 
 def make_indices(dimensions):
     # Generates complete set of indices for given dimensions
@@ -490,6 +645,12 @@ def hpd(x, alpha=0.05, transform=lambda x: x):
         return np.array(calc_min_interval(sx, alpha))
 
 
+def _hpd_df(x, alpha):
+    cnames = ['hpd_{0:g}'.format(100 * alpha / 2),
+              'hpd_{0:g}'.format(100 * (1 - alpha / 2))]
+    return pd.DataFrame(hpd(x, alpha), columns=cnames)
+
+
 @statfunc
 def mc_error(x, batches=5):
     R"""Calculates the simulation standard error, accounting for non-independent
@@ -567,10 +728,22 @@ def quantiles(x, qlist=(2.5, 25, 50, 75, 97.5), transform=lambda x: x):
         return dict(zip(qlist, quants))
 
     except IndexError:
-        _log.warning("Too few elements for quantile calculation")
+        pm._log.warning("Too few elements for quantile calculation")
 
+def dict2pd(statdict, labelname):
+    """Small helper function to transform a diagnostics output dict into a
+    pandas Series.
+    """
+    var_dfs = []
+    for key, value in statdict.items():
+        var_df = pd.Series(value.flatten())
+        var_df.index = ttab.create_flat_names(key, value.shape)
+        var_dfs.append(var_df)
+    statpd = pd.concat(var_dfs, axis=0)
+    statpd = statpd.rename(labelname)
+    return statpd
 
-def df_summary(trace, varnames=None, transform=lambda x: x, stat_funcs=None, 
+def summary(trace, varnames=None, transform=lambda x: x, stat_funcs=None,
                extend=False, include_transformed=False,
                alpha=0.05, start=0, batches=None):
     R"""Create a data frame with summary statistics.
@@ -624,7 +797,9 @@ def df_summary(trace, varnames=None, transform=lambda x: x, stat_funcs=None,
 
     Returns
     -------
-    `pandas.DataFrame` with summary statistics for each variable
+    `pandas.DataFrame` with summary statistics for each variable Defaults one
+    are: `mean`, `sd`, `mc_error`, `hpd_2.5`, `hpd_97.5`, `n_eff` and `Rhat`.
+    Last two are only computed for traces with 2 or more chains.
 
     Examples
     --------
@@ -633,10 +808,14 @@ def df_summary(trace, varnames=None, transform=lambda x: x, stat_funcs=None,
         >>> import pymc3 as pm
         >>> trace.mu.shape
         (1000, 2)
-        >>> pm.df_summary(trace, ['mu'])
+        >>> pm.summary(trace, ['mu'])
                    mean        sd  mc_error     hpd_5    hpd_95
         mu__0  0.106897  0.066473  0.001818 -0.020612  0.231626
         mu__1 -0.046597  0.067513  0.002048 -0.174753  0.081924
+
+                  n_eff      Rhat
+        mu__0     487.0   1.00001
+        mu__1     379.0   1.00203
 
     Other statistics can be calculated by passing a list of functions.
 
@@ -649,13 +828,15 @@ def df_summary(trace, varnames=None, transform=lambda x: x, stat_funcs=None,
         >>> def trace_quantiles(x):
         ...     return pd.DataFrame(pm.quantiles(x, [5, 50, 95]))
         ...
-        >>> pm.df_summary(trace, ['mu'], stat_funcs=[trace_sd, trace_quantiles])
+        >>> pm.summary(trace, ['mu'], stat_funcs=[trace_sd, trace_quantiles])
                      sd         5        50        95
         mu__0  0.066473  0.000312  0.105039  0.214242
         mu__1  0.067513 -0.159097 -0.045637  0.062912
     """
+
     if varnames is None:
-        varnames = get_default_varnames(trace.varnames, include_transformed=include_transformed)
+        varnames = get_default_varnames(trace.varnames,
+                       include_transformed=include_transformed)
 
     if batches is None:
         batches = min([100, len(trace)])
@@ -665,188 +846,42 @@ def df_summary(trace, varnames=None, transform=lambda x: x, stat_funcs=None,
              lambda x: pd.Series(mc_error(x, batches), name='mc_error'),
              lambda x: _hpd_df(x, alpha)]
 
-    if stat_funcs is not None and extend:
-        stat_funcs = funcs + stat_funcs
-    elif stat_funcs is None:
-        stat_funcs = funcs
+    if stat_funcs is not None:
+        if extend:
+            funcs = funcs + stat_funcs
+        else:
+            funcs = stat_funcs
 
     var_dfs = []
     for var in varnames:
         vals = transform(trace.get_values(var, burn=start, combine=True))
         flat_vals = vals.reshape(vals.shape[0], -1)
-        var_df = pd.concat([f(flat_vals) for f in stat_funcs], axis=1)
+        var_df = pd.concat([f(flat_vals) for f in funcs], axis=1)
         var_df.index = ttab.create_flat_names(var, vals.shape[1:])
         var_dfs.append(var_df)
-    return pd.concat(var_dfs, axis=0)
+    dforg = pd.concat(var_dfs, axis=0)
 
-
-def _hpd_df(x, alpha):
-    cnames = ['hpd_{0:g}'.format(100 * alpha / 2),
-              'hpd_{0:g}'.format(100 * (1 - alpha / 2))]
-    return pd.DataFrame(hpd(x, alpha), columns=cnames)
-
-
-def summary(trace, varnames=None, transform=lambda x: x, alpha=0.05, start=0,
-            batches=None, roundto=3, include_transformed=False, to_file=None):
-    R"""
-    Generate a pretty-printed summary of the node.
-
-    Parameters
-    ----------
-    trace : Trace object
-      Trace containing MCMC sample
-    varnames : list of strings
-      List of variables to summarize. Defaults to None, which results
-      in all variables summarized.
-    transform : callable
-      Function to transform data (defaults to identity)
-    alpha : float
-      The alpha level for generating posterior intervals. Defaults to
-      0.05.
-    start : int
-      The starting index from which to summarize (each) chain. Defaults
-      to zero.
-    batches : None or int
-        Batch size for calculating standard deviation for non-independent
-        samples. Defaults to the smaller of 100 or the number of samples.
-        This is only meaningful when `stat_funcs` is None.
-    roundto : int
-      The number of digits to round posterior statistics.
-    include_transformed : bool
-      Flag for summarizing automatically transformed variables in addition to
-      original variables (defaults to False).
-    to_file : None or string
-      File to write results to. If not given, print to stdout.
-    """
-    if varnames is None:
-        varnames = get_default_varnames(trace.varnames, include_transformed=include_transformed)
-
-    if batches is None:
-        batches = min([100, len(trace)])
-
-    stat_summ = _StatSummary(roundto, batches, alpha)
-    pq_summ = _PosteriorQuantileSummary(roundto, alpha)
-
-    if to_file is None:
-        fh = sys.stdout
+    if (stat_funcs is not None) and (not extend):
+        return dforg
+    elif trace.nchains < 2:
+        return dforg
     else:
-        fh = open(to_file, mode='w')
-
-    for var in varnames:
-        # Extract sampled values
-        sample = transform(trace.get_values(var, burn=start, combine=True))
-
-        fh.write('\n%s:\n\n' % var)
-
-        fh.write(stat_summ.output(sample))
-        fh.write(pq_summ.output(sample))
-
-    if fh is not sys.stdout:
-        fh.close()
+        n_eff = pm.effective_n(trace,
+                               varnames=varnames,
+                               include_transformed=include_transformed)
+        n_eff_pd = dict2pd(n_eff, 'n_eff')
+        rhat = pm.gelman_rubin(trace,
+                               varnames=varnames,
+                               include_transformed=include_transformed)
+        rhat_pd = dict2pd(rhat, 'Rhat')
+        return pd.concat([dforg, n_eff_pd, rhat_pd],
+                         axis=1, join_axes=[dforg.index])
 
 
-class _Summary(object):
-    """Base class for summary output"""
-
-    def __init__(self, roundto):
-        self.roundto = roundto
-        self.header_lines = None
-        self.leader = '  '
-        self.spaces = None
-        self.width = None
-
-    def output(self, sample):
-        return '\n'.join(list(self._get_lines(sample))) + '\n\n'
-
-    def _get_lines(self, sample):
-        for line in self.header_lines:
-            yield self.leader + line
-        summary_lines = self._calculate_values(sample)
-        for line in self._create_value_output(summary_lines):
-            yield self.leader + line
-
-    def _create_value_output(self, lines):
-        for values in lines:
-            try:
-                self._format_values(values)
-                yield self.value_line.format(pad=self.spaces, **values).strip()
-            except AttributeError:
-                # This is a key for the leading indices, not a normal row.
-                # `values` will be an empty tuple unless it is 2d or above.
-                if values:
-                    leading_idxs = [str(v) for v in values]
-                    numpy_idx = '[{}, :]'.format(', '.join(leading_idxs))
-                    yield self._create_idx_row(numpy_idx)
-                else:
-                    yield ''
-
-    def _calculate_values(self, sample):
-        raise NotImplementedError
-
-    def _format_values(self, summary_values):
-        for key, val in summary_values.items():
-            summary_values[key] = '{:.{ndec}f}'.format(
-                float(val), ndec=self.roundto)
-
-    def _create_idx_row(self, value):
-        return '{:.^{}}'.format(value, self.width)
-
-
-class _StatSummary(_Summary):
-
-    def __init__(self, roundto, batches, alpha):
-        super(_StatSummary, self).__init__(roundto)
-        spaces = 17
-        hpd_name = '{0:g}% HPD interval'.format(100 * (1 - alpha))
-        value_line = '{mean:<{pad}}{sd:<{pad}}{mce:<{pad}}{hpd:<{pad}}'
-        header = value_line.format(mean='Mean', sd='SD', mce='MC Error',
-                                   hpd=hpd_name, pad=spaces).strip()
-        self.width = len(header)
-        hline = '-' * self.width
-
-        self.header_lines = [header, hline]
-        self.spaces = spaces
-        self.value_line = value_line
-        self.batches = batches
-        self.alpha = alpha
-
-    def _calculate_values(self, sample):
-        return _calculate_stats(sample, self.batches, self.alpha)
-
-    def _format_values(self, summary_values):
-        roundto = self.roundto
-        for key, val in summary_values.items():
-            if key == 'hpd':
-                summary_values[key] = '[{:.{ndec}f}, {:.{ndec}f}]'.format(
-                    *val, ndec=roundto)
-            else:
-                summary_values[key] = '{:.{ndec}f}'.format(
-                    float(val), ndec=roundto)
-
-
-class _PosteriorQuantileSummary(_Summary):
-
-    def __init__(self, roundto, alpha):
-        super(_PosteriorQuantileSummary, self).__init__(roundto)
-        spaces = 15
-        title = 'Posterior quantiles:'
-        value_line = '{lo:<{pad}}{q25:<{pad}}{q50:<{pad}}{q75:<{pad}}{hi:<{pad}}'
-        lo, hi = 100 * alpha / 2, 100 * (1. - alpha / 2)
-        qlist = (lo, 25, 50, 75, hi)
-        header = value_line.format(lo=lo, q25=25, q50=50, q75=75, hi=hi,
-                                   pad=spaces).strip()
-        self.width = len(header)
-        hline = '|{thin}|{thick}|{thick}|{thin}|'.format(
-            thin='-' * (spaces - 1), thick='=' * (spaces - 1))
-
-        self.header_lines = [title, header, hline]
-        self.spaces = spaces
-        self.lo, self.hi = lo, hi
-        self.qlist = qlist
-        self.value_line = value_line
-
-    def _calculate_values(self, sample):
-        return _calculate_posterior_quantiles(sample, self.qlist)
+def df_summary(*args, **kwargs):
+    warnings.warn("df_summary has been deprecated. In future, use summary instead.",
+                DeprecationWarning)
+    return summary(*args, **kwargs)
 
 
 def _calculate_stats(sample, batches, alpha):
@@ -911,8 +946,7 @@ def _groupby_leading_idxs(shape):
 
 
 def bfmi(trace):
-    """
-    Calculate the estimated Bayesian fraction of missing information (BFMI).
+    R"""Calculate the estimated Bayesian fraction of missing information (BFMI).
 
     BFMI quantifies how well momentum resampling matches the marginal energy
     distribution.  For more information on BFMI, see
@@ -928,8 +962,46 @@ def bfmi(trace):
 
     Returns
     -------
-    `float` representing the estimated BFMI.
+    z : float
+        The Bayesian fraction of missing information of the model and trace.
     """
     energy = trace['energy']
 
     return np.square(np.diff(energy)).mean() / np.var(energy)
+
+
+def r2_score(y_true, y_pred, round_to=2):
+    R"""R-squared for Bayesian regression models. Only valid for linear models.
+    http://www.stat.columbia.edu/%7Egelman/research/unpublished/bayes_R2.pdf
+
+    Parameters
+    ----------
+    y_true: : array-like of shape = (n_samples) or (n_samples, n_outputs)
+        Ground truth (correct) target values.
+    y_pred : array-like of shape = (n_samples) or (n_samples, n_outputs)
+        Estimated target values.
+    round_to : int
+        Number of decimals used to round results (default 2).
+
+    Returns
+    -------
+    `namedtuple` with the following elements:
+    R2_median: median of the Bayesian R2
+    R2_mean: mean of the Bayesian R2
+    R2_std: standard deviation of the Bayesian R2
+    """
+    dimension = None
+    if y_true.ndim > 1:
+        dimension = 1
+
+    e = y_true - y_pred
+    var_y_est = np.var(y_pred, dimension)
+    var_e = np.var(e, dimension)
+
+    r2 = var_y_est / (var_y_est + var_e)
+    r2_median = np.around(np.median(r2), round_to)
+    r2_mean = np.around(np.mean(r2), round_to)
+    r2_std = np.around(np.std(r2), round_to)
+    R2_r = namedtuple('R2_r', 'R2_median, R2_mean, R2_std')
+    return R2_r(r2_median, r2_mean, r2_std)
+

@@ -18,8 +18,8 @@ class TestSMC(SeededTest):
         super(TestSMC, self).setup_class()
         self.test_folder = mkdtemp(prefix='ATMIP_TEST')
 
-        self.n_chains = 300
-        self.n_steps = 100
+        self.n_chains = 1000
+        self.n_steps = 10
         self.tune_interval = 25
 
         n = 4
@@ -76,6 +76,8 @@ class TestSMC(SeededTest):
         x = mtrace.get_values('X')
         mu1d = np.abs(x).mean(axis=0)
         np.testing.assert_allclose(self.muref, mu1d, rtol=0., atol=0.03)
+        # Scenario IV Ching, J. & Chen, Y. 2007
+        assert np.round(np.log(self.ATMIP_test.marginal_likelihood)) == -11.0
 
     def test_stage_handler(self):
         stage_number = -1

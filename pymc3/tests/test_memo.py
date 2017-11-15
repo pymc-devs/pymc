@@ -3,7 +3,7 @@ from pymc3.memoize import memoize
 
 def getmemo():
     @memoize
-    def f(a, b=['a']):
+    def f(a, b=('a')):
         return str(a) + str(b)
     return f
 

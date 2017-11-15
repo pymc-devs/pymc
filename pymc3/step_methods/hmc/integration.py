@@ -8,16 +8,13 @@ State = namedtuple("State", 'q, p, v, q_grad, energy')
 
 
 class CpuLeapfrogIntegrator(object):
-    """Optimized leapfrog integration using numpy."""
-
-    def __init__(self, ndim, potential, logp_dlogp_func):
+    def __init__(self, potential, logp_dlogp_func):
         """Leapfrog integrator using CPU."""
-        self._ndim = ndim
         self._potential = potential
         self._logp_dlogp_func = logp_dlogp_func
         self._dtype = self._logp_dlogp_func.dtype
         if self._potential.dtype != self._dtype:
-            raise ValueError("dtypes of potential and logp function "
+            raise ValueError("dtypes of potential (%s) and logp function (%s)"
                              "don't match."
                              % (self._potential.dtype, self._dtype))
 

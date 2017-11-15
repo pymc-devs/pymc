@@ -1,13 +1,17 @@
-import matplotlib.pyplot as plt
-import numpy as np
+import warnings
 
+import numpy as np
+try:
+    import matplotlib.pyplot as plt
+except ImportError:  # mpl is optional
+    pass
 from .kdeplot import kdeplot
 
 
-def energyplot(trace, kind='kde', figsize=None, ax=None, legend=True, lw=0,
-               alpha=0.35, frame=True, **kwargs):
-    """Plot energy transition distribution and marginal energy distribution in order
-    to diagnose poor exploration by HMC algorithms.
+def energyplot(trace, kind='kde', figsize=None, ax=None, legend=True,
+               shade=0.35, frame=True, kwargs_shade=None, **kwargs):
+    """Plot energy transition distribution and marginal energy distribution in
+    order to diagnose poor exploration by HMC algorithms.
 
     Parameters
     ----------
@@ -21,24 +25,28 @@ def energyplot(trace, kind='kde', figsize=None, ax=None, legend=True, lw=0,
         Matplotlib axes.
     legend : bool
         Flag for plotting legend (defaults to True)
-    lw : int
-        Line width
-    alpha : float
-        Alpha value for plot line. Defaults to 0.35.
+    shade : float
+        Alpha blending value for the shaded area under the curve, between 0
+        (no shade) and 1 (opaque). Defaults to 0.35
     frame : bool
         Flag for plotting frame around figure.
-
+    kwargs_shade : dicts, optional
+        Additional keywords passed to `fill_between` (to control the shade)
     Returns
     -------
 
     ax : matplotlib axes
     """
 
+    if ax is None:
+        _, ax = plt.subplots(figsize=figsize)
+
     try:
         energy = trace['energy']
     except KeyError:
-        print('There is no energy information in the passed trace.')
+        warnings.warn('There is no energy information in the passed trace.')
         return ax
+
     series = [('Marginal energy distribution', energy - energy.mean()),
               ('Energy transition distribution', np.diff(energy))]
 
@@ -48,14 +56,17 @@ def energyplot(trace, kind='kde', figsize=None, ax=None, legend=True, lw=0,
     if ax is None:
         _, ax = plt.subplots(figsize=figsize)
 
+    if kwargs_shade is None:
+        kwargs_shade = {}
+
     if kind == 'kde':
         for label, value in series:
-            kdeplot(value, label=label, alpha=alpha, shade=True, ax=ax,
-                    **kwargs)
+            kdeplot(value, label=label, shade=shade, ax=ax,
+                    kwargs_shade=kwargs_shade, **kwargs)
 
     elif kind == 'hist':
         for label, value in series:
-            ax.hist(value, lw=lw, alpha=alpha, label=label, **kwargs)
+            ax.hist(value, alpha=shade, label=label, **kwargs)
 
     else:
         raise ValueError('Plot type {} not recognized.'.format(kind))

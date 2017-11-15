@@ -99,3 +99,119 @@ Good reasons for defining a custom Op might be the following:
 
 Theano has extensive `documentation, <http://deeplearning.net/software/theano/extending/index.html>`_
 about how to write new Ops.
+
+
+Finding the root of a function
+------------------------------
+
+We'll use finding the root of a function as a simple example.
+Let's say we want to define a model where a parameter is defined
+implicitly as the root of a function, that depends on another
+parameter:
+
+.. math::
+
+   \theta \sim N^+(0, 1)\\
+   \text{$\mu\in \mathbb{R}^+$ such that $R(\mu, \theta)
+         = \mu + \mu e^{\theta \mu} - 1= 0$}\\
+   y \sim N(\mu, 0.1^2)
+
+First, we observe that this problem is well-defined, because
+:math:`R(\cdot, \theta)` is monotone and has the image :math:`(-1, \infty)`
+for :math:`\mu, \theta \in \mathbb{R}^+`. To avoid overflows in
+:math:`\exp(\mu \theta)` for large
+values of :math:`\mu\theta` we instead find the root of
+
+.. math::
+
+    R'(\mu, \theta)
+        = \log(R(\mu, \theta) + 1)
+        = \log(\mu) + \log(1 + e^{\theta\mu}).
+
+Also, we have
+
+.. math::
+
+    \frac{\partial}{\partial\mu}R'(\mu, \theta)
+        = \theta\, \text{logit}^{-1}(\theta\mu) + \mu^{-1}.
+
+We can now use `scipy.optimize.newton` to find the root::
+
+    from scipy import optimize, special
+    import numpy as np
+
+    def func(mu, theta):
+        thetamu = theta * mu
+        value = np.log(mu) + np.logaddexp(0, thetamu)
+        return value
+
+    def jac(mu, theta):
+        thetamu = theta * mu
+        jac = theta * special.expit(thetamu) + 1 / mu
+        return jac
+
+    def mu_from_theta(theta):
+        return optimize.newton(func, 1, fprime=jac, args=(0.4,))
+
+We could wrap `mu_from_theta` with `tt.as_op` and use gradient-free
+methods like Metropolis, but to get NUTS and ADVI working, we also
+need to define the derivative of `mu_from_theta`. We can find this
+derivative using the implicit function theorem, or equivalently we
+take the derivative with respect of :math:`\theta` for both sides of
+:math:`R(\mu(\theta), \theta) = 0` and solve for :math:`\frac{d\mu}{d\theta}`.
+This isn't hard to do by hand, but for the fun of it, let's do it using
+sympy::
+
+    import sympy
+
+    mu = sympy.Function('mu')
+    theta = sympy.Symbol('theta')
+    R = mu(theta) + mu(theta) * sympy.exp(theta * mu(theta)) - 1
+    solution = sympy.solve(R.diff(theta), mu(theta).diff(theta))[0]
+
+We get
+
+.. math::
+
+    \frac{d}{d\theta}\mu(\theta)
+        = - \frac{\mu(\theta)^2}{1 + \theta\mu(\theta) + e^{-\theta\mu(\theta)}}
+
+Now, we use this to define a theano op, that also computes the gradient::
+
+    import theano
+    import theano.tensor as tt
+    import theano.tests.unittest_tools
+
+    class MuFromTheta(tt.Op):
+        itypes = [tt.dscalar]
+        otypes = [tt.dscalar]
+
+        def perform(self, node, inputs, outputs):
+            theta, = inputs
+            mu = mu_from_theta(theta)
+            outputs[0][0] = np.array(mu)
+
+        def grad(self, inputs, g):
+            theta, = inputs
+            mu = self(theta)
+            thetamu = theta * mu
+            return [- g[0] * mu ** 2 / (1 + thetamu + tt.exp(-thetamu))]
+
+If you value your sanity, always check that the gradient is ok::
+
+    theano.tests.unittest_tools.verify_grad(MuFromTheta(), [np.array(0.2)])
+    theano.tests.unittest_tools.verify_grad(MuFromTheta(), [np.array(1e-5)])
+    theano.tests.unittest_tools.verify_grad(MuFromTheta(), [np.array(1e5)])
+
+We can now define our model using this new op::
+
+    import pymc3 as pm
+
+    tt_mu_from_theta = MuFromTheta()
+
+    with pm.Model() as model:
+        theta = pm.HalfNormal('theta', sd=1)
+        mu = pm.Deterministic('mu', tt_mu_from_theta(theta))
+        pm.Normal('y', mu=mu, sd=0.1, observed=[0.2, 0.21, 0.3])
+
+        trace = pm.sample()

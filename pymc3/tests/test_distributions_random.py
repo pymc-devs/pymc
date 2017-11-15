@@ -13,7 +13,7 @@ from .helpers import SeededTest
 from .test_distributions import (
     build_model, Domain, product, R, Rplus, Rplusbig, Rplusdunif,
     Unit, Nat, NatSmall, I, Simplex, Vector, PdMatrix,
-    PdMatrixChol, PdMatrixCholUpper
+    PdMatrixChol, PdMatrixCholUpper, RealMatrix
 )
 
 
@@ -506,7 +506,7 @@ class TestScalarParameterSamples(SeededTest):
 
     def test_discrete_uniform(self):
         def ref_rand(size, lower, upper):
-            return st.randint.rvs(lower, upper, size=size)
+            return st.randint.rvs(lower, upper + 1, size=size)
         pymc3_random_discrete(pm.DiscreteUniform, {'lower': -NatSmall, 'upper': NatSmall},
                               ref_rand=ref_rand)
 
@@ -556,6 +556,35 @@ class TestScalarParameterSamples(SeededTest):
                 size=100, valuedomain=Vector(R, n), ref_rand=ref_rand_uchol,
                 extra_args={'lower': False}
             )
+
+    def test_matrix_normal(self):
+        def ref_rand(size, mu, rowcov, colcov):
+            return st.matrix_normal.rvs(mean=mu, rowcov=rowcov, colcov=colcov, size=size)
+
+        # def ref_rand_tau(size, mu, tau):
+        #     return ref_rand(size, mu, linalg.inv(tau))
+
+        def ref_rand_chol(size, mu, rowchol, colchol):
+            return ref_rand(size, mu, rowcov=np.dot(rowchol, rowchol.T),
+                            colcov=np.dot(colchol, colchol.T))
+
+        def ref_rand_uchol(size, mu, rowchol, colchol):
+            return ref_rand(size, mu, rowcov=np.dot(rowchol.T, rowchol),
+                            colcov=np.dot(colchol.T, colchol))
+
+        for n in [2, 3]:
+            pymc3_random(pm.MatrixNormal, {'mu': RealMatrix(n, n), 'rowcov': PdMatrix(n), 'colcov': PdMatrix(n)},
+                         size=n, valuedomain=RealMatrix(n, n), ref_rand=ref_rand)
+            # pymc3_random(pm.MatrixNormal, {'mu': RealMatrix(n, n), 'tau': PdMatrix(n)},
+            #              size=n, valuedomain=RealMatrix(n, n), ref_rand=ref_rand_tau)
+            pymc3_random(pm.MatrixNormal, {'mu': RealMatrix(n, n), 'rowchol': PdMatrixChol(n), 'colchol': PdMatrixChol(n)},
+                         size=n, valuedomain=RealMatrix(n, n), ref_rand=ref_rand_chol)
+            # pymc3_random(
+            #     pm.MvNormal,
+            #     {'mu': RealMatrix(n, n), 'rowchol': PdMatrixCholUpper(n), 'colchol': PdMatrixCholUpper(n)},
+            #     size=n, valuedomain=RealMatrix(n, n), ref_rand=ref_rand_uchol,
+            #     extra_args={'lower': False}
+            # )
 
     def test_mv_t(self):
         def ref_rand(size, nu, Sigma, mu):
@@ -621,7 +650,25 @@ class TestScalarParameterSamples(SeededTest):
         #                           st.wishart(V, df=n, size=size))
         pass
 
-    @pytest.mark.skip('LKJ random sampling not implemented yet.')
     def test_lkj(self):
-        # TODO: generate random numbers.
-        pass
+        for n in [2, 10, 50]:
+            #pylint: disable=cell-var-from-loop
+            shape = n*(n-1)//2
+            
+            def ref_rand(size, eta):
+                beta = eta - 1 + n/2
+                return (st.beta.rvs(size=(size, shape), a=beta, b=beta)-.5)*2
+
+            class TestedLKJCorr (pm.LKJCorr):
+                
+                def __init__(self, **kwargs):
+                    kwargs.pop('shape', None)
+                    super(TestedLKJCorr, self).__init__(
+                            n=n, 
+                            **kwargs
+                    )
+
+            pymc3_random(TestedLKJCorr,
+                     {'eta': Domain([1., 10., 100.])},
+                     size=10000//n,
+                     ref_rand=ref_rand)

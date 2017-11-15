@@ -1,7 +1,21 @@
+import pymc3 as pm
 from pymc3.tests import backend_fixtures as bf
 from pymc3.backends import ndarray, text
 import pytest
 import theano
+
+
+class TestTextSampling(object):
+    name = 'text-db'
+
+    def test_supports_sampler_stats(self):
+        with pm.Model():
+            pm.Normal("mu", mu=0, sd=1, shape=2)
+            db = text.Text(self.name)
+            pm.sample(20, tune=10, init=None, trace=db)
+
+    def teardown_method(self):
+        bf.remove_file_or_directory(self.name)
 
 
 class TestText0dSampling(bf.SamplingTestCase):

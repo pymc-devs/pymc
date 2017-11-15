@@ -6,15 +6,18 @@ Discrete
 .. autosummary::
 
    Binomial
+   ZeroInflatedBinomial
    BetaBinomial
    Bernoulli
    Poisson
-   NegativeBinomial
-   ConstantDist
    ZeroInflatedPoisson
+   NegativeBinomial
+   ZeroInflatedNegativeBinomial
    DiscreteUniform
    Geometric
    Categorical
+   DiscreteWeibull
+   Constant
 
 .. automodule:: pymc3.distributions.discrete
    :members:

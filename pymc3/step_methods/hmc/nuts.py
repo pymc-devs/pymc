@@ -197,12 +197,12 @@ class NUTS(BaseHMC):
 
         for _ in range(max_treedepth):
             direction = logbern(np.log(0.5)) * 2 - 1
-            diverging, turning = tree.extend(direction)
+            diverging_info, turning = tree.extend(direction)
             q, q_grad = tree.proposal.q, tree.proposal.q_grad
 
-            if diverging or turning:
-                if diverging:
-                    self.report._add_divergence(self.tune, *diverging)
+            if diverging_info or turning:
+                if diverging_info:
+                    self.report._add_divergence(self.tune, *diverging_info)
                 break
 
         w = 1. / (self.m + self.t0)
@@ -223,7 +223,7 @@ class NUTS(BaseHMC):
             'step_size': step_size,
             'tune': self.tune,
             'step_size_bar': np.exp(self.log_step_size_bar),
-            'diverging': diverging,
+            'diverging': bool(diverging_info),
         }
 
         stats.update(tree.stats())
@@ -231,9 +231,9 @@ class NUTS(BaseHMC):
         return q, [stats]
 
     @staticmethod
-    def competence(var):
+    def competence(var, has_grad):
         """Check how appropriate this class is for sampling a random variable."""
-        if var.dtype in continuous_types:
+        if var.dtype in continuous_types and has_grad:
             return Competence.IDEAL
         return Competence.INCOMPATIBLE
 
@@ -285,9 +285,10 @@ class _Tree(object):
         If direction is larger than 0, extend it to the right, otherwise
         extend it to the left.
 
-        Return a tuple `(diverging, turning)` of type (bool, bool).
-        `diverging` indicates, that the tree extension was aborted because
-        the energy change exceeded `self.Emax`. `turning` indicates that
+        Return a tuple `(diverging, turning)`. `diverging` indicates if the
+        tree extension was aborted because the energy change exceeded
+        `self.Emax`. If so, it is a tuple containing details about the reason.
+        Otherwise, it will be `False`. `turning` indicates that
         the tree extension was stopped because the termination criterior
         was reached (the trajectory is turning back).
         """
@@ -470,19 +471,20 @@ class NutsReport(object):
         """Print warnings for obviously problematic chains."""
         self._chain_id = strace.chain
 
-        tuning = strace.get_sampler_stats('tune')
-        if tuning.ndim == 2:
-            tuning = np.any(tuning, axis=-1)
+        if strace.supports_sampler_stats:
+            tuning = strace.get_sampler_stats('tune')
+            if tuning.ndim == 2:
+                tuning = np.any(tuning, axis=-1)
 
-        accept = strace.get_sampler_stats('mean_tree_accept')
-        if accept.ndim == 2:
-            accept = np.mean(accept, axis=-1)
+            accept = strace.get_sampler_stats('mean_tree_accept')
+            if accept.ndim == 2:
+                accept = np.mean(accept, axis=-1)
 
-        depth = strace.get_sampler_stats('depth')
-        if depth.ndim == 2:
-            depth = np.max(depth, axis=-1)
+            depth = strace.get_sampler_stats('depth')
+            if depth.ndim == 2:
+                depth = np.max(depth, axis=-1)
 
-        self._check_len(tuning)
-        self._check_depth(depth[~tuning])
-        self._check_accept(accept[~tuning])
-        self._check_divergence()
+            self._check_len(tuning)
+            self._check_depth(depth[~tuning])
+            self._check_accept(accept[~tuning])
+            self._check_divergence()

@@ -2,8 +2,14 @@
 
 set -e
 
-THEANO_FLAGS="floatX=${FLOATX},gcc.cxxflags='-march=core2'" pytest -v --cov=pymc3 "$@"
+if [[ "$BUILD_DOCS" == "true" ]]; then
+    travis-sphinx build -n -s docs/source
+    travis-sphinx deploy -c "docs.pymc.io"
+fi
 
 if [[ "$RUN_PYLINT" == "true" ]]; then
     . ./scripts/lint.sh
 fi
+
+THEANO_FLAGS="floatX=${FLOATX},gcc.cxxflags='-march=core2'" pytest -v --cov=pymc3 "$@"
+
