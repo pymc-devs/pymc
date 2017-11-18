@@ -7,8 +7,7 @@ except ImportError:  # mpl is optional
     pass
 
 
-def kdeplot(values, label=None, shade=0, clip_tails=True, ax=None,
-            kwargs_shade=None, **kwargs):
+def kdeplot(values, label=None, shade=0, ax=None, kwargs_shade=None, **kwargs):
     """
     1D KDE plot taking into account boundary conditions
 
@@ -21,9 +20,6 @@ def kdeplot(values, label=None, shade=0, clip_tails=True, ax=None,
     shade : float
         Alpha blending value for the shaded area under the curve, between 0
         (no shade) and 1 (opaque). Defaults to 0
-    clip_tails : boolean
-        Whether to force the boundaries of the estimated distribution to drop
-        to zero. Defaults to True.
     ax : matplotlib axes
     kwargs_shade : dicts, optional
         Additional keywords passed to `matplotlib.axes.Axes.fill_between`
@@ -39,7 +35,7 @@ def kdeplot(values, label=None, shade=0, clip_tails=True, ax=None,
     if kwargs_shade is None:
         kwargs_shade = {}
 
-    density, l, u = fast_kde(values, clip_tails)
+    density, l, u = fast_kde(values)
     x = np.linspace(l, u, len(density))
     ax.plot(x, density, label=label, **kwargs)
     ax.set_ylim(0, auto=True)
@@ -48,7 +44,7 @@ def kdeplot(values, label=None, shade=0, clip_tails=True, ax=None,
     return ax
 
 
-def fast_kde(x, clip_tails=True):
+def fast_kde(x):
     """
     A fft-based Gaussian kernel density estimate (KDE) for computing
     the KDE on a regular grid.
@@ -102,8 +98,5 @@ def fast_kde(x, clip_tails=True):
     norm_factor = n * dx * (2 * np.pi * std_x ** 2 * scotts_factor ** 2) ** 0.5
 
     grid = grid / norm_factor
-    if clip_tails:
-        grid[0] = 0.
-        grid[-1] = 0.
 
     return grid, xmin, xmax
