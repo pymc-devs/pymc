@@ -129,7 +129,7 @@ def dic(trace, model=None):
     return 2 * mean_deviance - deviance_at_mean
 
 
-def _log_post_trace(trace, model, progressbar=False):
+def _log_post_trace(trace, model=None, progressbar=False):
     """Calculate the elementwise log-posterior for the sampled trace.
 
     Parameters
@@ -147,6 +147,7 @@ def _log_post_trace(trace, model, progressbar=False):
     logp : array of shape (n_samples, n_observations)
         The contribution of the observations to the logp of the whole model.
     """
+    model = modelcontext(model)
     cached = [(var, var.logp_elemwise) for var in model.observed_RVs]
 
     def logp_vals_point(pt):
