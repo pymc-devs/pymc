@@ -28,6 +28,8 @@ def run(steppers, p):
             print('Step method: {}'.format(name))
             mt = pm.sample(
                 draws=10000,
+                njobs=1,
+                chains=6,
                 step=step_cls(),
                 start={'z': [0, 0]}
             )
