@@ -1,5 +1,5 @@
 """
-Comparing different samplers on the banana-shaped distribution
+Comparing different samplers on a correlated bivariate normal distribution.
 
 """
 
