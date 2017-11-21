@@ -1,6 +1,6 @@
 # Release Notes
 
-## PyMC 3.3. (Unreleased)
+## PyMC 3.3. (Unreleased) 
 
 ### New features
 
@@ -16,6 +16,9 @@
 - Improved `posteriorplot` to scale fonts
 - `sample_ppc_w` now broadcasts
 - `df_summary` function renamed to `summary`
+- Add test for `model.logp_array` and `model.bijection` (#2724) 
+- Fixed `sample_ppc` and `sample_ppc_w` to iterate all chains(#2633)
+
 
 
 ## PyMC3 3.2 (October 10, 2017)

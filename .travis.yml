@@ -40,4 +40,5 @@ script:
   - . ./scripts/confirm_mpl_optional.sh
 
 after_success:
+  - if [[ "$BUILD_DOCS" == "true" ]]; then travis-sphinx deploy -c "docs.pymc.io"; fi
   - coveralls
