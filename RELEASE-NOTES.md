@@ -1,14 +1,17 @@
 # Release Notes
 
-## PyMC 3.3. (Unreleased)
 
-### New features
+## PyMC 3.3. (Unreleased) 
+ 
+### New features 
+ 
+- Improve NUTS initialization `advi+adapt_diag_grad` and add `jitter+adapt_diag_grad` (#2643) 
+ 
+### Fixes 
+- Fixed `compareplot` to use `loo` output. 
+- Add test for `model.logp_array` and `model.bijection` (#2724) 
+- Fixed `sample_ppc` and `sample_ppc_w` to iterate all chains(#2633)
 
-- Improve NUTS initialization `advi+adapt_diag_grad` and add `jitter+adapt_diag_grad` (#2643)
-
-### Fixes
-- Fixed `compareplot` to use `loo` output.
-- Add test for `model.logp_array` and `model.bijection` (#2724)
 
 
 ## PyMC3 3.2 (October 10, 2017)
