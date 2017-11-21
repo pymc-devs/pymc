@@ -20,12 +20,14 @@ from .distribution import Continuous, Discrete, draw_values, generate_samples
 from ..model import Deterministic
 from .continuous import ChiSquared, Normal
 from .special import gammaln, multigammaln
-from .dist_math import bound, logpow, factln, Cholesky
+from .dist_math import bound, logpow, factln, Cholesky, eigh
+from ..math import kron_dot, kron_diag, kron_solve_lower
 
 
 __all__ = ['MvNormal', 'MvStudentT', 'Dirichlet',
            'Multinomial', 'Wishart', 'WishartBartlett',
-           'LKJCorr', 'LKJCholeskyCov', 'MatrixNormal']
+           'LKJCorr', 'LKJCholeskyCov', 'MatrixNormal',
+           'KroneckerNormal']
 
 
 class _QuadFormBase(Continuous):
@@ -1293,3 +1295,145 @@ class MatrixNormal(Continuous):
         n = self.n
         norm = - 0.5 * m * n * pm.floatX(np.log(2 * np.pi))
         return norm - 0.5*trquaddist - m*half_collogdet - n*half_rowlogdet
+
+
+class KroneckerNormal(Continuous):
+    R"""Multivariate normal log-likelihood that makes use of the Kronecker
+    structure of the covariance matrix.
+
+    .. math::
+
+       f(x \mid \mu, K) =
+           \frac{1}{(2\pi |K|)^{1/2}}
+           \exp\left\{ -\frac{1}{2} (x-\mu)^{\prime} K^{-1} (x-\mu) \right\}
+
+    ========  ==========================
+    Support   :math:`x \in \mathbb{R}^k`
+    Mean      :math:`\mu`
+    Variance  :math:`K = K_1 \otimes K_2 \otimes \dots`
+    ========  ==========================
+
+    Parameters
+    ----------
+    mu   : array-like
+    covs : list of arrays
+           The set of covariance matrices to be Kroneckered
+                [K_1, K_2, ...]
+           such that K = K_1 \otimes K_2 \otimes ...
+    chols: list of arrays
+           The set of lower cholesky matrices to be Kroneckered
+                [chol_1, chol_2, ...]
+           such that K_i = chol_i * chol_i^T
+    EVDs : list of tuples
+           The set of eigenvalue-vector, eigenvector-matrix pairs, e.g.,
+                [(v_1, Q_1), (v_2, Q_2), ...]
+           such that K_i = Q_i * diag(v_i) * Q_i^T, or
+                v_i, Q_i = tt.nlinalg.eigh(cov_i)
+    noise: float
+    """
+
+    def __init__(self, mu=0, covs=None, chols=None, EVDs=None, noise=None,
+                 shape=None, *args, **kwargs):
+        self._setup(covs, chols, EVDs, noise)
+        self.shape = shape
+        super(KroneckerNormal, self).__init__(shape=shape, *args, **kwargs)
+        self.mu = tt.as_tensor_variable(mu)
+        self.mean = self.median = self.mode = self.mu
+
+    def _setup(self, covs, chols, EVDs, noise):
+        cholesky = Cholesky(nofail=False, lower=True)
+        if len([i for i in [covs, chols, EVDs] if i is not None]) != 1:
+            raise ValueError('Incompatible parameterization. '
+                             'Specify exactly one of covs, chols, '
+                             'or EVDs.')
+        self._isEVD = False
+        if covs is not None:
+            self.covs = covs
+            if noise is not None and noise != 0:
+                # Noise requires eigendecomposition
+                self._isEVD = True
+                eigs_sep, self.Qs = zip(*map(eigh, covs))  # Unzip
+                self.QTs = list(map(tt.transpose, self.Qs))
+                self.eigs = kron_diag(*eigs_sep)  # Combine separate eigs
+                self.eigs += noise
+                self.N = self.eigs.shape[0]
+            else:
+                # Otherwise use cholesky
+                self.chols = list(map(cholesky, self.covs))
+                self.chol_diags = list(map(tt.nlinalg.diag, self.chols))
+                self.sizes = tt.as_tensor_variable(
+                                [chol.shape[0] for chol in self.chols])
+                self.N = tt.prod(self.sizes)
+        elif chols is not None:
+            self.chols = chols
+            self.chol_diags = list(map(tt.nlinalg.diag, self.chols))
+            self.sizes = tt.as_tensor_variable(
+                            [chol.shape[0] for chol in self.chols])
+            self.N = tt.prod(self.sizes)
+        else:
+            self._isEVD = True
+            eigs_sep, self.Qs = zip(*EVDs)  # Unzip tuples
+            self.QTs = list(map(tt.transpose, self.Qs))
+            self.eigs = kron_diag(*eigs_sep)  # Combine separate eigs
+            if noise is not None:
+                self.eigs += noise
+            self.N = self.eigs.shape[0]
+
+    def random(self, point=None, size=None):
+        """Drawn using x = mu + A.z for z~N(0,I) and
+            A = Q.sqrt(Lambda), if isEVD
+            A = chol,           otherwise
+
+        Warning: EVD does not (yet) match with random draws from numpy
+        since A is only defined up to some unknown orthogonal transformation.
+        Numpy used svd while we must use eigendecomposition, which aren't
+        easily related due to sign ambiguities and permutations of eigenvalues.
+        """
+        if size is None:
+            size = self.shape
+        elif isinstance(size, int):
+            size = [size, *self.shape]
+        else:
+            raise NotImplementedError
+
+        z = np.random.standard_normal(size)
+        if self._isEVD:
+            mu, eigs, Qs = draw_values(
+                [self.mu, self.eigs, self.Qs], point=point)
+            sqrtLz = tt.sqrt(eigs) * z
+            Az = kron_dot(Qs, sqrtLz.T).T
+        else:
+            mu, chols = draw_values([self.mu, self.chols], point=point)
+            Az = kron_dot(chols, z.T).T
+        return mu + Az
+
+    def _quaddist(self, value):
+        """Computes the quadratic (x-mu)^T @ K^-1 @ (x-mu) and log(det(K))"""
+        if value.ndim > 2 or value.ndim == 0:
+            raise ValueError('Invalid dimension for value: %s' % value.ndim)
+        if value.ndim == 1:
+            onedim = True
+            value = value[None, :]
+        else:
+            onedim = False
+
+        delta = value - self.mu
+        if self._isEVD:
+            sqrt_quad = kron_dot(self.QTs, delta.T)
+            sqrt_quad = sqrt_quad/tt.sqrt(self.eigs[:, None])
+            logdet = tt.sum(tt.log(self.eigs))
+        else:
+            sqrt_quad = kron_solve_lower(self.chols, delta.T)
+            logdet = 0
+            for chol_size, chol_diag in zip(self.sizes, self.chol_diags):
+                logchol = tt.log(chol_diag) * self.N/chol_size
+                logdet += tt.sum(2*logchol)
+        # Square each sample
+        quad = tt.batched_dot(sqrt_quad.T, sqrt_quad.T)
+        if onedim:
+            quad = quad[0]
+        return quad, logdet
+
+    def logp(self, value):
+        quad, logdet = self._quaddist(value)
+        return -1/2 * (quad + logdet + self.N*tt.log(2*np.pi))
