@@ -45,10 +45,11 @@ def test_mapping():
     lparray = model.logp_array
     point = model.test_point
     parray = model.bijection.map(point)
-    assert lp(point)==lparray(parray)
+    assert lp(point) == lparray(parray)
+
     randarray = np.random.randn(*parray.shape)
     randpoint = model.bijection.rmap(randarray)
-    assert lp(randpoint)==lparray(randarray)
+    assert lp(randpoint) == lparray(randarray)
 
 
 
