@@ -1,4 +1,5 @@
 from collections import defaultdict, Iterable
+from copy import copy
 import pickle
 
 from joblib import Parallel, delayed
@@ -382,6 +383,7 @@ def sample(draws=500, step=None, init='auto', n_init=200000, start=None,
 
     parallel = njobs > 1 and chains > 1
     if parallel:
+        pm._log.info('Multiprocess sampling ({} jobs, {} chains)'.format(njobs, chains))
         try:
             trace = _mp_sample(**sample_args)
         except pickle.PickleError:
@@ -396,6 +398,7 @@ def sample(draws=500, step=None, init='auto', n_init=200000, start=None,
             else:
                 raise
     if not parallel:
+        pm._log.info('Multichain sampling ({} jobs, {} chains)'.format(njobs, chains))
         trace = _sample_many(**sample_args)
 
     discard = tune if discard_tuned_samples else 0
@@ -429,7 +432,7 @@ def _check_start_shape(model, start):
         raise ValueError("Bad shape for start argument:{}".format(e))
 
 
-def _sample_many(draws, chain, chains, start, random_seed, **kwargs):
+def _sample_many_sequentially(draws, chain, chains, start, random_seed, **kwargs):
     traces = []
     for i in range(chains):
         trace = _sample(draws=draws, chain=chain + i, start=start[i],
@@ -445,6 +448,21 @@ def _sample_many(draws, chain, chains, start, random_seed, **kwargs):
             break
         else:
             traces.append(trace)
+    return MultiTrace(traces)
+
+
+def _sample_many(draws, chain, chains, start, random_seed, step, tune, model, progressbar=None, **kwargs):
+    # create the generator that iterates all chains in parallel
+    chains = [chain + c for c in range(chains)]
+    sampling = _iter_chains(draws, chains, step, start, tune=tune, model=model, random_seed=random_seed)
+
+    if progressbar:
+        sampling = tqdm(sampling, total=draws)
+
+    latest_traces = None
+    for it,traces in enumerate(sampling):
+        latest_traces = traces
+        # TODO: add support for liveplot during population-sampling
     return MultiTrace(traces)
 
 
@@ -578,6 +596,78 @@ def _iter_sample(draws, step, start=None, trace=None, chain=0, tune=None,
         strace.close()
         if hasattr(step, 'report'):
             step.report._finalize(strace)
+
+
+def _iter_chains(draws, chains, step, start, tune=None,
+                 model=None, random_seed=None):
+    model = modelcontext(model)
+    draws = int(draws)
+    if random_seed is not None:
+        np.random.seed(random_seed)
+    if draws < 1:
+        raise ValueError('Argument `draws` should be above 0.')
+
+    # need indepenently tuned samplers for each chain
+    try:
+        steppers = [CompoundStep(copy(step)) for c in chains]
+    except TypeError:
+        steppers = [copy(step) for c in chains]
+
+    # points tracks the current position of each chain in the parameter space
+    # it is updated as the chains are advanced
+    points = [Point(start[c], model=model) for c in chains]
+
+    # prepare a BaseTrace for each chain
+    traces = [_choose_backend(None, c, model=model) for c in chains]
+    for chain,strace,step in zip(chains, traces, steppers):
+        # initialize the trace size
+        if len(strace) > 0:
+            update_start_vals(start[chain], strace.point(-1), model)
+        else:
+            update_start_vals(start[chain], model.test_point, model)
+        # initialize tracking of sampler stats
+        if step.generates_stats and strace.supports_sampler_stats:
+            strace.setup(draws, chain, step.stats_dtypes)
+        else:
+            strace.setup(draws, chain)
+
+    try:
+        # iterate draws of all chains
+        for i in range(draws):
+            # step each of the chains
+            for c,strace in enumerate(traces):
+                if i == tune:
+                    steppers[c] = stop_tuning(steppers[c])
+
+                # advance this chain (TODO: using the points of all chains)
+                step_result = steppers[c].step(points[c])
+
+                if steppers[c].generates_stats:
+                    points[c], states = step_result
+                    if strace.supports_sampler_stats:
+                        strace.record(points[c], states)
+                    else:
+                        strace.record(points[c])
+                else:
+                    points[c] = step_result
+                    strace.record(points[c])
+            # yield the state of all chains in parallel
+            yield traces
+    except KeyboardInterrupt:
+        for chain,strace in enumerate(traces):
+            strace.close()
+            if hasattr(step, 'report'):
+                step.report._finalize(strace)
+        raise
+    except BaseException:
+        for chain,strace in enumerate(traces):
+            strace.close()
+        raise
+    else:
+        for chain,strace in enumerate(traces):
+            strace.close()
+            if hasattr(step, 'report'):
+                step.report._finalize(strace)
 
 
 def _choose_backend(trace, chain, shortcuts=None, **kwds):
