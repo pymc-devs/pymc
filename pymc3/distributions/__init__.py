@@ -57,6 +57,7 @@ from .mixture import NormalMixture
 
 from .multivariate import MvNormal
 from .multivariate import MatrixNormal
+from .multivariate import KroneckerNormal
 from .multivariate import MvStudentT
 from .multivariate import Dirichlet
 from .multivariate import Multinomial
@@ -123,6 +124,7 @@ __all__ = ['Uniform',
            'TensorType',
            'MvNormal',
            'MatrixNormal',
+           'KroneckerNormal',
            'MvStudentT',
            'Dirichlet',
            'Multinomial',
