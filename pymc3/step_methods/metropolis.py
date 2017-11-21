@@ -168,9 +168,7 @@ class Metropolis(ArrayStepShared):
 
     @staticmethod
     def competence(var, has_grad):
-        if var.dtype in pm.discrete_types:
-            return Competence.COMPATIBLE
-        return Competence.INCOMPATIBLE
+        return Competence.COMPATIBLE
 
 
 def tune(scale, acc_rate):
@@ -348,6 +346,7 @@ class BinaryGibbsMetropolis(ArrayStep):
             return Competence.IDEAL
         return Competence.INCOMPATIBLE
 
+
 class CategoricalGibbsMetropolis(ArrayStep):
     """A Metropolis-within-Gibbs step method optimized for categorical variables.
        This step method works for Bernoulli variables as well, but it is not
@@ -465,15 +464,18 @@ class CategoricalGibbsMetropolis(ArrayStep):
             return Competence.COMPATIBLE
         return Competence.INCOMPATIBLE
 
+
 def sample_except(limit, excluded):
     candidate = nr.choice(limit - 1)
     if candidate >= excluded:
         candidate += 1
     return candidate
 
+
 def softmax(x):
     e_x = np.exp(x - np.max(x))
     return e_x / np.sum(e_x, axis = 0)
+
 
 def delta_logp(logp, vars, shared):
     [logp0], inarray0 = pm.join_nonshared_inputs([logp], vars, shared)
