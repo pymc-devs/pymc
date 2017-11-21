@@ -66,7 +66,7 @@ def fast_kde(x):
 
     xmin, xmax = np.min(x), np.max(x)
 
-    dx = ((xmax - xmin) / (nx - 1))
+    dx = (xmax - xmin) / (nx - 1)
     std_x = np.std((x - xmin) / dx)
     grid, _ = np.histogram(x, bins=nx)
 
