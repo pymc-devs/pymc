@@ -600,6 +600,8 @@ def _iter_sample(draws, step, start=None, trace=None, chain=0, tune=None,
 
 def _iter_chains(draws, chains, step, start, tune=None,
                  model=None, random_seed=None):
+    # chains contains the chain numbers, but for indexing we need indices...
+    cs = list(range(len(chains)))
     model = modelcontext(model)
     draws = int(draws)
     if random_seed is not None:
@@ -608,32 +610,36 @@ def _iter_chains(draws, chains, step, start, tune=None,
         raise ValueError('Argument `draws` should be above 0.')
 
     # need indepenently tuned samplers for each chain
-    try:
-        steppers = [CompoundStep(copy(step)) for c in chains]
-    except TypeError:
-        steppers = [copy(step) for c in chains]
+    is_compound = isinstance(step, list)
+    if is_compound:
+        steppers = [CompoundStep(copy(step)) for c in cs]
+    else:
+        steppers = [copy(step) for c in cs]
 
     # points tracks the current position of each chain in the parameter space
     # it is updated as the chains are advanced
-    points = [Point(start[c], model=model) for c in chains]
+    points = [Point(start[c], model=model) for c in cs]
 
     # prepare a BaseTrace for each chain
     traces = [_choose_backend(None, c, model=model) for c in chains]
-    for chain,strace,step in zip(chains, traces, steppers):
+    for c,strace in enumerate(traces):
         # initialize the trace size
         if len(strace) > 0:
-            update_start_vals(start[chain], strace.point(-1), model)
+            update_start_vals(start[c], strace.point(-1), model)
         else:
-            update_start_vals(start[chain], model.test_point, model)
+            update_start_vals(start[c], model.test_point, model)
         # initialize tracking of sampler stats
         if step.generates_stats and strace.supports_sampler_stats:
-            strace.setup(draws, chain, step.stats_dtypes)
+            strace.setup(draws, c, steppers[c].stats_dtypes)
         else:
-            strace.setup(draws, chain)
+            strace.setup(draws, c)
 
     try:
         # iterate draws of all chains
         for i in range(draws):
+            # snapshot all points (the original will be updated)
+            last_points = copy(points)
+
             # step each of the chains
             for c,strace in enumerate(traces):
                 if i == tune:
@@ -654,17 +660,17 @@ def _iter_chains(draws, chains, step, start, tune=None,
             # yield the state of all chains in parallel
             yield traces
     except KeyboardInterrupt:
-        for chain,strace in enumerate(traces):
+        for c,strace in enumerate(traces):
             strace.close()
             if hasattr(step, 'report'):
                 step.report._finalize(strace)
         raise
     except BaseException:
-        for chain,strace in enumerate(traces):
+        for c,strace in enumerate(traces):
             strace.close()
         raise
     else:
-        for chain,strace in enumerate(traces):
+        for c,strace in enumerate(traces):
             strace.close()
             if hasattr(step, 'report'):
                 step.report._finalize(strace)
