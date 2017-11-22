@@ -5,19 +5,18 @@ except ImportError:  # mpl is optional
     pass
 import numpy as np
 from pymc3.diagnostics import gelman_rubin
-from pymc3.stats import quantiles, hpd
+from pymc3.stats import quantiles, hpd, dict2pd
 from .utils import identity_transform, get_default_varnames
-
 
 def _var_str(name, shape):
     """Return a sequence of strings naming the element of the tallyable object.
 
     :Example:
     >>> _var_str('theta', (4,))
-    ['theta[1]', 'theta[2]', 'theta[3]', 'theta[4]']
+    ['theta[0]', 'theta[1]', 'theta[2]', 'theta[3]']
     """
     size = np.prod(shape)
-    ind = (np.indices(shape) + 1).reshape(-1, size)
+    ind = (np.indices(shape)).reshape(-1, size)
     names = ['[' + ','.join(map(str, i)) + ']' for i in zip(*ind)]
     names[0] = '%s %s' % (name, names[0])
     return names
@@ -45,9 +44,6 @@ def _make_rhat_plot(trace, ax, title, labels, varnames, include_transformed):
     if varnames is None:
         varnames = get_default_varnames(trace.varnames, include_transformed)
 
-    R = gelman_rubin(trace)
-    R = {v: R[v] for v in varnames}
-
     ax.set_title(title)
 
     # Set x range
@@ -62,9 +58,11 @@ def _make_rhat_plot(trace, ax, title, labels, varnames, include_transformed):
         chain = trace.chains[0]
         value = trace.get_values(varname, chains=[chain])[0]
         k = np.size(value)
+        R = gelman_rubin(trace, varnames=[varname])
 
         if k > 1:
-            ax.plot([min(r, 2) for r in R[varname]],
+            Rval = dict2pd(R, 'rhat').values
+            ax.plot([min(r, 2) for r in Rval],
                     [-(j + i) for j in range(k)], 'bo', markersize=4)
         else:
             ax.plot(min(R[varname], 2), -i, 'bo', markersize=4)
@@ -261,7 +259,7 @@ def forestplot(trace_obj, varnames=None, transform=identity_transform,
 
             # Deal with multivariate nodes
             if k > 1:
-                for q in np.transpose(quants).squeeze():
+                for q in np.moveaxis(np.array(quants), 0, -1).squeeze().reshape(-1, len(quants)):
                     # Multiple y values
                     interval_plot = _plot_tree(interval_plot, y, q, quartiles,
                                                plot_kwargs)
