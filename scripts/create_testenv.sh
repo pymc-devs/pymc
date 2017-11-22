@@ -34,19 +34,12 @@ then
     fi
 fi
 
-# conda handle these two
-conda install --yes numpy scipy
-
 pip install --upgrade pip
 
 #  Install editable using the setup.py
 pip install -e .
 
-# Install extra testing stuff
-if [ ${PYTHON_VERSION} == "2.7" ]; then
-    pip install mock
-fi
-
+# Dev requirements
 pip install -r requirements-dev.txt
 
 # Install untested, non-required code (linter fails without them)
