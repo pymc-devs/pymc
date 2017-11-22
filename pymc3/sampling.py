@@ -3,6 +3,7 @@ import pickle
 
 from joblib import Parallel, delayed
 import numpy as np
+import warnings
 import theano.gradient as tg
 
 import pymc3 as pm
@@ -316,7 +317,7 @@ def sample(draws=500, step=None, init='auto', n_init=200000, start=None,
         random_seed = [np.random.randint(2 ** 30) for _ in range(chains)]
     if not isinstance(random_seed, Iterable):
         raise TypeError('Invalid value for `random_seed`. Must be tuple, list or int')
-        
+
     if 'chain' in kwargs:
         chain_idx = kwargs['chain']
         warnings.warn("The chain argument has been deprecated. Use chain_idx instead.",
@@ -351,6 +352,7 @@ def sample(draws=500, step=None, init='auto', n_init=200000, start=None,
             # gradient computation failed
             pm._log.info("Initializing NUTS failed. "
                          "Falling back to elementwise auto-assignment.")
+            pm._log.debug('Exception in init nuts', exec_info=True)
             step = assign_step_methods(model, step, step_kwargs=step_kwargs)
     else:
         step = assign_step_methods(model, step, step_kwargs=step_kwargs)
@@ -384,7 +386,15 @@ def sample(draws=500, step=None, init='auto', n_init=200000, start=None,
             trace = _mp_sample(**sample_args)
         except pickle.PickleError:
             pm._log.warn("Could not pickle model, sampling sequentially.")
+            pm._log.debug('Pickling error:', exec_info=True)
             parallel = False
+        except AttributeError as e:
+            if str(e).startswith("AttributeError: Can't pickle"):
+                pm._log.warn("Could not pickle model, sampling sequentially.")
+                pm._log.debug('Pickling error:', exec_info=True)
+                parallel = False
+            else:
+                raise
     if not parallel:
         trace = _sample_many(**sample_args)
 
@@ -498,8 +508,8 @@ def iter_sample(draws, step, start=None, trace=None, chain=0, tune=None,
     random_seed : int or list of ints
         A list is accepted if more if `njobs` is greater than one.
 
-    Example
-    -------
+    Examples
+    --------
     ::
 
         for trace in iter_sample(500, step):
@@ -651,6 +661,9 @@ def sample_ppc(trace, samples=None, model=None, vars=None, size=None,
         Dictionary with the variables as keys. The values corresponding to the
         posterior predictive samples.
     """
+    len_trace = len(trace)
+    nchain = trace.nchains
+
     if samples is None:
         samples = len(trace)
 
@@ -661,14 +674,15 @@ def sample_ppc(trace, samples=None, model=None, vars=None, size=None,
 
     np.random.seed(random_seed)
 
-    indices = np.random.randint(0, len(trace), samples)
+    indices = np.random.randint(0, nchain*len_trace, samples)
+    chain_idx, point_idx = np.divmod(indices, len_trace)
     if progressbar:
         indices = tqdm(indices, total=samples)
 
     try:
         ppc = defaultdict(list)
-        for idx in indices:
-            param = trace[idx]
+        for idx in zip(chain_idx, point_idx):
+            param = trace._straces[idx[0]].point(idx[1])
             for var in vars:
                 ppc[var.name].append(var.distribution.random(point=param,
                                                              size=size))
@@ -741,14 +755,21 @@ def sample_ppc_w(traces, samples=None, models=None, weights=None,
     weights = np.asarray(weights)
     p = weights / np.sum(weights)
 
-    min_tr = min([len(i) for i in traces])
+    min_tr = min([len(i)*i.nchains for i in traces])
 
     n = (min_tr * p).astype('int')
     # ensure n sum up to min_tr
     idx = np.argmax(n)
     n[idx] = n[idx] + min_tr - np.sum(n)
-    trace = np.concatenate([np.random.choice(traces[i], j)
-                            for i, j in enumerate(n)])
+    trace = []
+    for i, j in enumerate(n):
+        tr = traces[i]
+        len_trace = len(tr) 
+        nchain = tr.nchains 
+        indices = np.random.randint(0, nchain*len_trace, j)
+        chain_idx, point_idx = np.divmod(indices, len_trace)
+        for idx in zip(chain_idx, point_idx): 
+            trace.append(tr._straces[idx[0]].point(idx[1]))
 
     obs = [x for m in models for x in m.observed_RVs]
     variables = np.repeat(obs, n)
@@ -976,6 +997,6 @@ def init_nuts(init='auto', chains=1, n_init=500000, model=None,
     else:
         raise NotImplementedError('Initializer {} is not supported.'.format(init))
 
-    step = pm.NUTS(potential=potential, **kwargs)
+    step = pm.NUTS(potential=potential, model=model, **kwargs)
 
     return start, step

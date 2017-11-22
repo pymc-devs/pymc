@@ -47,7 +47,7 @@ class Binomial(Discrete):
         self.p = p = tt.as_tensor_variable(p)
         self.mode = tt.cast(tround(n * p), self.dtype)
 
-    def random(self, point=None, size=None, repeat=None):
+    def random(self, point=None, size=None):
         n, p = draw_values([self.n, self.p], point=point)
         return generate_samples(stats.binom.rvs, n=n, p=p,
                                 dist_shape=self.shape,
@@ -67,7 +67,8 @@ class Binomial(Discrete):
             dist = self
         n = dist.n
         p = dist.p
-        return r'${} \sim \text{{Binomial}}(\mathit{{n}}={}, \mathit{{p}}={})$'.format(name,
+        name = r'\text{%s}' % name
+        return r'${} \sim \text{{Binomial}}(\mathit{{n}}={},~\mathit{{p}}={})$'.format(name,
                                                 get_variable_name(n),
                                                 get_variable_name(p))
 
@@ -119,7 +120,7 @@ class BetaBinomial(Discrete):
         samples = np.reshape(stats.binom.rvs(n=_n, p=_p, size=_size), size)
         return samples
 
-    def random(self, point=None, size=None, repeat=None):
+    def random(self, point=None, size=None):
         alpha, beta, n = \
             draw_values([self.alpha, self.beta, self.n], point=point)
         return generate_samples(self._random, alpha=alpha, beta=beta, n=n,
@@ -140,7 +141,8 @@ class BetaBinomial(Discrete):
             dist = self
         alpha = dist.alpha
         beta = dist.beta
-        return r'${} \sim \text{{NegativeBinomial}}(\mathit{{alpha}}={}, \mathit{{beta}}={})$'.format(name,
+        name = r'\text{%s}' % name
+        return r'${} \sim \text{{NegativeBinomial}}(\mathit{{alpha}}={},~\mathit{{beta}}={})$'.format(name,
                                                 get_variable_name(alpha),
                                                 get_variable_name(beta))
 
@@ -170,7 +172,7 @@ class Bernoulli(Discrete):
         self.p = p = tt.as_tensor_variable(p)
         self.mode = tt.cast(tround(p), 'int8')
 
-    def random(self, point=None, size=None, repeat=None):
+    def random(self, point=None, size=None):
         p = draw_values([self.p], point=point)[0]
         return generate_samples(stats.bernoulli.rvs, p,
                                 dist_shape=self.shape,
@@ -187,6 +189,7 @@ class Bernoulli(Discrete):
         if dist is None:
             dist = self
         p = dist.p
+        name = r'\text{%s}' % name
         return r'${} \sim \text{{Bernoulli}}(\mathit{{p}}={})$'.format(name,
                                                 get_variable_name(p))
 
@@ -237,7 +240,7 @@ class DiscreteWeibull(Discrete):
 
         return np.ceil(np.power(np.log(1 - p) / np.log(q), 1. / beta)) - 1
 
-    def random(self, point=None, size=None, repeat=None):
+    def random(self, point=None, size=None):
         q, beta = draw_values([self.q, self.beta], point=point)
 
         return generate_samples(self._random, q, beta,
@@ -249,7 +252,8 @@ class DiscreteWeibull(Discrete):
             dist = self
         q = dist.q
         beta = dist.beta
-        return r'${} \sim \text{{DiscreteWeibull}}(\mathit{{q}}={}, \mathit{{beta}}={})$'.format(name,
+        name = r'\text{%s}' % name
+        return r'${} \sim \text{{DiscreteWeibull}}(\mathit{{q}}={},~\mathit{{beta}}={})$'.format(name,
                                                 get_variable_name(q),
                                                 get_variable_name(beta))
 
@@ -286,7 +290,7 @@ class Poisson(Discrete):
         self.mu = mu = tt.as_tensor_variable(mu)
         self.mode = tt.floor(mu).astype('int32')
 
-    def random(self, point=None, size=None, repeat=None):
+    def random(self, point=None, size=None):
         mu = draw_values([self.mu], point=point)[0]
         return generate_samples(stats.poisson.rvs, mu,
                                 dist_shape=self.shape,
@@ -305,6 +309,7 @@ class Poisson(Discrete):
         if dist is None:
             dist = self
         mu = dist.mu
+        name = r'\text{%s}' % name
         return r'${} \sim \text{{Poisson}}(\mathit{{mu}}={})$'.format(name,
                                                 get_variable_name(mu))
 
@@ -341,7 +346,7 @@ class NegativeBinomial(Discrete):
         self.alpha = alpha = tt.as_tensor_variable(alpha)
         self.mode = tt.floor(mu).astype('int32')
 
-    def random(self, point=None, size=None, repeat=None):
+    def random(self, point=None, size=None):
         mu, alpha = draw_values([self.mu, self.alpha], point=point)
         g = generate_samples(stats.gamma.rvs, alpha, scale=mu / alpha,
                              dist_shape=self.shape,
@@ -367,7 +372,8 @@ class NegativeBinomial(Discrete):
             dist = self
         mu = dist.mu
         alpha = dist.alpha
-        return r'${} \sim \text{{NegativeBinomial}}(\mathit{{mu}}={}, \mathit{{alpha}}={})$'.format(name,
+        name = r'\text{%s}' % name
+        return r'${} \sim \text{{NegativeBinomial}}(\mathit{{mu}}={},~\mathit{{alpha}}={})$'.format(name,
                                                 get_variable_name(mu),
                                                 get_variable_name(alpha))
 
@@ -398,7 +404,7 @@ class Geometric(Discrete):
         self.p = p = tt.as_tensor_variable(p)
         self.mode = 1
 
-    def random(self, point=None, size=None, repeat=None):
+    def random(self, point=None, size=None):
         p = draw_values([self.p], point=point)[0]
         return generate_samples(np.random.geometric, p,
                                 dist_shape=self.shape,
@@ -413,6 +419,7 @@ class Geometric(Discrete):
         if dist is None:
             dist = self
         p = dist.p
+        name = r'\text{%s}' % name
         return r'${} \sim \text{{Geometric}}(\mathit{{p}}={})$'.format(name,
                                                 get_variable_name(p))
 
@@ -450,7 +457,7 @@ class DiscreteUniform(Discrete):
         samples = stats.randint.rvs(lower, upper + 1, size=size)
         return samples
 
-    def random(self, point=None, size=None, repeat=None):
+    def random(self, point=None, size=None):
         lower, upper = draw_values([self.lower, self.upper], point=point)
         return generate_samples(self._random,
                                 lower, upper,
@@ -468,7 +475,8 @@ class DiscreteUniform(Discrete):
             dist = self
         lower = dist.lower
         upper = dist.upper
-        return r'${} \sim \text{{DiscreteUniform}}(\mathit{{lower}}={}, \mathit{{upper}}={})$'.format(name,
+        name = r'\text{%s}' % name
+        return r'${} \sim \text{{DiscreteUniform}}(\mathit{{lower}}={},~\mathit{{upper}}={})$'.format(name,
                                                 get_variable_name(lower),
                                                 get_variable_name(upper))
 
@@ -540,6 +548,7 @@ class Categorical(Discrete):
         if dist is None:
             dist = self
         p = dist.p
+        name = r'\text{%s}' % name
         return r'${} \sim \text{{Categorical}}(\mathit{{p}}={})$'.format(name,
                                                 get_variable_name(p))
 
@@ -560,7 +569,7 @@ class Constant(Discrete):
         super(Constant, self).__init__(*args, **kwargs)
         self.mean = self.median = self.mode = self.c = c = tt.as_tensor_variable(c)
 
-    def random(self, point=None, size=None, repeat=None):
+    def random(self, point=None, size=None):
         c = draw_values([self.c], point=point)[0]
         dtype = np.array(c).dtype
 
@@ -577,6 +586,7 @@ class Constant(Discrete):
     def _repr_latex_(self, name=None, dist=None):
         if dist is None:
             dist = self
+        name = r'\text{%s}' % name
         return r'${} \sim \text{{Constant}}()$'.format(name)
 
 
@@ -619,7 +629,7 @@ class ZeroInflatedPoisson(Discrete):
         self.pois = Poisson.dist(theta)
         self.mode = self.pois.mode
 
-    def random(self, point=None, size=None, repeat=None):
+    def random(self, point=None, size=None):
         theta, psi = draw_values([self.theta, self.psi], point=point)
         g = generate_samples(stats.poisson.rvs, theta,
                              dist_shape=self.shape,
@@ -647,7 +657,8 @@ class ZeroInflatedPoisson(Discrete):
             dist = self
         theta = dist.theta
         psi = dist.psi
-        return r'${} \sim \text{{ZeroInflatedPoisson}}(\mathit{{theta}}={}, \mathit{{psi}}={})$'.format(name,
+        name = r'\text{%s}' % name
+        return r'${} \sim \text{{ZeroInflatedPoisson}}(\mathit{{theta}}={},~\mathit{{psi}}={})$'.format(name,
                                                 get_variable_name(theta),
                                                 get_variable_name(psi))
 
@@ -688,7 +699,7 @@ class ZeroInflatedBinomial(Discrete):
         self.bin = Binomial.dist(n, p)
         self.mode = self.bin.mode
 
-    def random(self, point=None, size=None, repeat=None):
+    def random(self, point=None, size=None):
         n, p, psi = draw_values([self.n, self.p, self.psi], point=point)
         g = generate_samples(stats.binom.rvs, n, p,
                              dist_shape=self.shape,
@@ -722,8 +733,9 @@ class ZeroInflatedBinomial(Discrete):
         name_n = get_variable_name(n)
         name_p = get_variable_name(p)
         name_psi = get_variable_name(psi)
+        name = r'\text{%s}' % name
         return (r'${} \sim \text{{ZeroInflatedBinomial}}'
-                r'(\mathit{{n}}={}, \mathit{{p}}={}, '
+                r'(\mathit{{n}}={},~\mathit{{p}}={},~'
                 r'\mathit{{psi}}={})$'
                 .format(name, name_n, name_p, name_psi))
 
@@ -776,7 +788,7 @@ class ZeroInflatedNegativeBinomial(Discrete):
         self.nb = NegativeBinomial.dist(mu, alpha)
         self.mode = self.nb.mode
 
-    def random(self, point=None, size=None, repeat=None):
+    def random(self, point=None, size=None):
         mu, alpha, psi = draw_values(
             [self.mu, self.alpha, self.psi], point=point)
         g = generate_samples(stats.gamma.rvs, alpha, scale=mu / alpha,
@@ -817,7 +829,8 @@ class ZeroInflatedNegativeBinomial(Discrete):
         name_mu = get_variable_name(mu)
         name_alpha = get_variable_name(alpha)
         name_psi = get_variable_name(psi)
+        name = r'\text{%s}' % name
         return (r'${} \sim \text{{ZeroInflatedNegativeBinomial}}'
-                r'(\mathit{{mu}}={}, \mathit{{alpha}}={}, '
+                r'(\mathit{{mu}}={},~\mathit{{alpha}}={},~'
                 r'\mathit{{psi}}={})$'
                 .format(name, name_mu, name_alpha, name_psi))

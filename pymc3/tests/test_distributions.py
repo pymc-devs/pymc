@@ -7,7 +7,7 @@ from ..vartypes import continuous_types
 from ..model import Model, Point, Potential, Deterministic
 from ..blocking import DictToVarBijection, DictToArrayBijection, ArrayOrdering
 from ..distributions import (DensityDist, Categorical, Multinomial, VonMises, Dirichlet,
-                             MvStudentT, MvNormal, ZeroInflatedPoisson,
+                             MvStudentT, MvNormal, MatrixNormal, ZeroInflatedPoisson,
                              ZeroInflatedNegativeBinomial, Constant, Poisson, Bernoulli, Beta,
                              BetaBinomial, HalfStudentT, StudentT, Weibull, Pareto,
                              InverseGamma, Gamma, Cauchy, HalfCauchy, Lognormal, Laplace,
@@ -75,11 +75,18 @@ class Domain(object):
             self.shape)
 
     def __mul__(self, other):
-        return Domain(
-            [v * other for v in self.vals],
-            self.dtype,
-            (self.lower * other, self.upper * other),
-            self.shape)
+        try:
+            return Domain(
+                [v * other for v in self.vals],
+                self.dtype,
+                (self.lower * other, self.upper * other),
+                self.shape)
+        except TypeError:
+            return Domain(
+                [v * other for v in self.vals],
+                self.dtype,
+                (self.lower, self.upper),
+                self.shape)
 
     def __neg__(self):
         return Domain(
@@ -246,6 +253,15 @@ def normal_logpdf_chol(value, mu, chol):
 
 def normal_logpdf_chol_upper(value, mu, chol):
     return normal_logpdf_cov(value, mu, np.dot(chol.T, chol)).sum()
+
+
+def matrix_normal_logpdf_cov(value, mu, rowcov, colcov):
+    return scipy.stats.matrix_normal.logpdf(value, mu, rowcov, colcov)
+
+
+def matrix_normal_logpdf_chol(value, mu, rowchol, colchol):
+    return matrix_normal_logpdf_cov(value, mu, np.dot(rowchol, rowchol.T),
+                                    np.dot(colchol, colchol.T))
 
 
 def betafn(a):
@@ -436,7 +452,6 @@ class TestMatchesScipy(SeededTest):
             Triangular, Runif, {'lower': -Rplusunif, 'c': Runif, 'upper': Rplusunif},
             lambda value, c, lower, upper: sp.triang.logpdf(value, c-lower, lower, upper-lower))
 
-
     def test_bound_normal(self):
         PositiveNormal = Bound(Normal, lower=0.)
         self.pymc3_matches_scipy(PositiveNormal, Rplus, {'mu': Rplus, 'sd': Rplus},
@@ -578,8 +593,8 @@ class TestMatchesScipy(SeededTest):
 
     def test_half_studentt(self):
         # this is only testing for nu=1 (halfcauchy)
-        self.pymc3_matches_scipy(HalfStudentT, Rplus, {'beta': Rplus},
-                                 lambda value, beta: sp.halfcauchy.logpdf(value, 0, beta))
+        self.pymc3_matches_scipy(HalfStudentT, Rplus, {'sd': Rplus},
+                                 lambda value, sd: sp.halfcauchy.logpdf(value, 0, sd))
 
     def test_skew_normal(self):
         self.pymc3_matches_scipy(SkewNormal, R, {'mu': R, 'sd': Rplusbig, 'alpha': R},
@@ -694,6 +709,33 @@ class TestMatchesScipy(SeededTest):
                 x = MvNormal('x', mu=np.zeros(3), shape=3)
             with pytest.raises(ValueError):
                 x = MvNormal('x', mu=np.zeros(3), cov=np.eye(3), tau=np.eye(3), shape=3)
+
+    @pytest.mark.parametrize('n', [1, 2, 3])
+    def test_matrixnormal(self, n):
+        mat_scale = 1e3  # To reduce logp magnitude
+        mean_scale = .1
+        self.pymc3_matches_scipy(MatrixNormal, RealMatrix(n, n),
+                                 {'mu': RealMatrix(n, n)*mean_scale,
+                                  'rowcov': PdMatrix(n)*mat_scale,
+                                  'colcov': PdMatrix(n)*mat_scale},
+                                 matrix_normal_logpdf_cov)
+        self.pymc3_matches_scipy(MatrixNormal, RealMatrix(2, n),
+                                 {'mu': RealMatrix(2, n)*mean_scale,
+                                  'rowcov': PdMatrix(2)*mat_scale,
+                                  'colcov': PdMatrix(n)*mat_scale},
+                                 matrix_normal_logpdf_cov)
+        self.pymc3_matches_scipy(MatrixNormal, RealMatrix(3, n),
+                                 {'mu': RealMatrix(3, n)*mean_scale,
+                                  'rowchol': PdMatrixChol(3)*mat_scale,
+                                  'colchol': PdMatrixChol(n)*mat_scale},
+                                 matrix_normal_logpdf_chol,
+                                 decimal=select_by_precision(float64=6, float32=-1))
+        self.pymc3_matches_scipy(MatrixNormal, RealMatrix(n, 3),
+                                 {'mu': RealMatrix(n, 3)*mean_scale,
+                                  'rowchol': PdMatrixChol(n)*mat_scale,
+                                  'colchol': PdMatrixChol(3)*mat_scale},
+                                 matrix_normal_logpdf_chol,
+                                 decimal=select_by_precision(float64=6, float32=0))
 
     @pytest.mark.parametrize('n', [1, 2])
     def test_mvt(self, n):
@@ -1022,11 +1064,11 @@ class TestLatex(object):
             Y_obs = Normal('Y_obs', mu=mu, sd=sigma, observed=Y)
         self.distributions = [alpha, sigma, mu, b, Y_obs]
         self.expected = (
-            r'$alpha \sim \text{Normal}(\mathit{mu}=0, \mathit{sd}=10.0)$',
-            r'$sigma \sim \text{HalfNormal}(\mathit{sd}=1.0)$',
-            r'$mu \sim \text{Deterministic}(alpha, \text{Constant}, beta)$',
-            r'$beta \sim \text{Normal}(\mathit{mu}=0, \mathit{sd}=10.0)$',
-            r'$Y\_obs \sim \text{Normal}(\mathit{mu}=mu, \mathit{sd}=f(sigma))$'
+            r'$\text{alpha} \sim \text{Normal}(\mathit{mu}=0,~\mathit{sd}=10.0)$',
+            r'$\text{sigma} \sim \text{HalfNormal}(\mathit{sd}=1.0)$',
+            r'$\text{mu} \sim \text{Deterministic}(\text{alpha},~\text{Constant},~\text{beta})$',
+            r'$\text{beta} \sim \text{Normal}(\mathit{mu}=0,~\mathit{sd}=10.0)$',
+            r'$\text{Y_obs} \sim \text{Normal}(\mathit{mu}=\text{mu},~\mathit{sd}=f(\text{sigma}))$'
         )
 
     def test__repr_latex_(self):
@@ -1036,7 +1078,8 @@ class TestLatex(object):
         model_tex = self.model._repr_latex_()
 
         for tex in self.expected:  # make sure each variable is in the model
-            assert tex.strip('$') in model_tex
+            for segment in tex.strip('$').split(r'\sim'):
+                assert segment in model_tex
 
     def test___latex__(self):
         for distribution, tex in zip(self.distributions, self.expected):
