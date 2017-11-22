@@ -23,7 +23,7 @@ def test_plots():
         start = model.test_point
         h = find_hessian(start)
         step = Metropolis(model.vars, h)
-        trace = sample(3000, tune=0, step=step, start=start, njobs=1)
+        trace = sample(3000, tune=0, step=step, start=start, chains=1)
 
     traceplot(trace)
     forestplot(trace)
@@ -48,21 +48,22 @@ def test_plots_categorical():
         start = model.test_point
         h = find_hessian(start)
         step = Metropolis(model.vars, h)
-        trace = sample(3000, tune=0, step=step, start=start, njobs=1)
+        trace = sample(3000, tune=0, step=step, start=start, chains=1)
 
-        traceplot(trace)
+    traceplot(trace)
 
 
 def test_plots_multidimensional():
-    # Test single trace
+    # Test multiple trace
     start, model, _ = multidimensional_model()
     with model:
         h = np.diag(find_hessian(start))
         step = Metropolis(model.vars, h)
         trace = sample(3000, tune=0, step=step, start=start)
-
-        traceplot(trace)
-        plot_posterior(trace)
+    
+    traceplot(trace)
+    plot_posterior(trace)
+    forestplot(trace)
 
 @pytest.mark.xfail(condition=(theano.config.floatX == "float32"), reason="Fails on GPU due to njobs=2")
 def test_multichain_plots():

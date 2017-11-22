@@ -661,6 +661,9 @@ def sample_ppc(trace, samples=None, model=None, vars=None, size=None,
         Dictionary with the variables as keys. The values corresponding to the
         posterior predictive samples.
     """
+    len_trace = len(trace)
+    nchain = trace.nchains
+
     if samples is None:
         samples = len(trace)
 
@@ -671,14 +674,15 @@ def sample_ppc(trace, samples=None, model=None, vars=None, size=None,
 
     np.random.seed(random_seed)
 
-    indices = np.random.randint(0, len(trace), samples)
+    indices = np.random.randint(0, nchain*len_trace, samples)
+    chain_idx, point_idx = np.divmod(indices, len_trace)
     if progressbar:
         indices = tqdm(indices, total=samples)
 
     try:
         ppc = defaultdict(list)
-        for idx in indices:
-            param = trace[idx]
+        for idx in zip(chain_idx, point_idx):
+            param = trace._straces[idx[0]].point(idx[1])
             for var in vars:
                 ppc[var.name].append(var.distribution.random(point=param,
                                                              size=size))
@@ -751,14 +755,21 @@ def sample_ppc_w(traces, samples=None, models=None, weights=None,
     weights = np.asarray(weights)
     p = weights / np.sum(weights)
 
-    min_tr = min([len(i) for i in traces])
+    min_tr = min([len(i)*i.nchains for i in traces])
 
     n = (min_tr * p).astype('int')
     # ensure n sum up to min_tr
     idx = np.argmax(n)
     n[idx] = n[idx] + min_tr - np.sum(n)
-    trace = np.concatenate([np.random.choice(traces[i], j)
-                            for i, j in enumerate(n)])
+    trace = []
+    for i, j in enumerate(n):
+        tr = traces[i]
+        len_trace = len(tr) 
+        nchain = tr.nchains 
+        indices = np.random.randint(0, nchain*len_trace, j)
+        chain_idx, point_idx = np.divmod(indices, len_trace)
+        for idx in zip(chain_idx, point_idx): 
+            trace.append(tr._straces[idx[0]].point(idx[1]))
 
     obs = [x for m in models for x in m.observed_RVs]
     variables = np.repeat(obs, n)
