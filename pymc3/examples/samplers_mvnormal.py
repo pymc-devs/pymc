@@ -52,4 +52,4 @@ if __name__ == '__main__':
             df.set_value(p, name, rate[name])
 
     print('Effective sample size [0...1]')
-    print(df)
+    print(df.T)
