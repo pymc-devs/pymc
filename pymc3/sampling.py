@@ -11,6 +11,7 @@ import pymc3 as pm
 from .backends.base import BaseTrace, MultiTrace
 from .backends.ndarray import NDArray
 from .model import modelcontext, Point
+from .step_methods import arraystep
 from .step_methods import (NUTS, HamiltonianMC, SGFS, Metropolis, BinaryMetropolis,
                            BinaryGibbsMetropolis, CategoricalGibbsMetropolis,
                            Slice, CompoundStep)
@@ -601,24 +602,33 @@ def _iter_sample(draws, step, start=None, trace=None, chain=0, tune=None,
 def _iter_chains(draws, chains, step, start, tune=None,
                  model=None, random_seed=None):
     # chains contains the chain numbers, but for indexing we need indices...
-    cs = list(range(len(chains)))
+    nchains = len(chains)
     model = modelcontext(model)
     draws = int(draws)
+    if not isinstance(step, (list, tuple)):
+        step = [step]
+    is_compound = len(step) > 1
     if random_seed is not None:
         np.random.seed(random_seed)
     if draws < 1:
         raise ValueError('Argument `draws` should be above 0.')
 
-    # need indepenently tuned samplers for each chain
-    is_compound = isinstance(step, list)
-    if is_compound:
-        steppers = [CompoundStep(copy(step)) for c in cs]
-    else:
-        steppers = [copy(step) for c in cs]
-
     # points tracks the current position of each chain in the parameter space
     # it is updated as the chains are advanced
-    points = [Point(start[c], model=model) for c in cs]
+    points = [Point(start[c], model=model) for c in range(nchains)]
+    updates = [None] * nchains
+
+    # Set up the steppers
+    steppers = [None] * nchains
+    for c in range(nchains):
+        # need indepenently tuned samplers for each chain
+        smethods = copy(step)
+        # link Population samplers to the shared population state
+        for sm in smethods:
+            if isinstance(sm, arraystep.PopulationArrayStepShared):
+                sm.link_population(points, c)
+        steppers[c] = CompoundStep(smethods) if is_compound else smethods[0]
+
 
     # prepare a BaseTrace for each chain
     traces = [_choose_backend(None, c, model=model) for c in chains]
@@ -629,7 +639,7 @@ def _iter_chains(draws, chains, step, start, tune=None,
         else:
             update_start_vals(start[c], model.test_point, model)
         # initialize tracking of sampler stats
-        if step.generates_stats and strace.supports_sampler_stats:
+        if steppers[c].generates_stats and strace.supports_sampler_stats:
             strace.setup(draws, c, steppers[c].stats_dtypes)
         else:
             strace.setup(draws, c)
@@ -637,25 +647,22 @@ def _iter_chains(draws, chains, step, start, tune=None,
     try:
         # iterate draws of all chains
         for i in range(draws):
-            # snapshot all points (the original will be updated)
-            last_points = copy(points)
-
             # step each of the chains
-            for c,strace in enumerate(traces):
+            for c in range(nchains):
                 if i == tune:
                     steppers[c] = stop_tuning(steppers[c])
+                updates[c] = steppers[c].step(points[c])
 
-                # advance this chain (TODO: using the points of all chains)
-                step_result = steppers[c].step(points[c])
-
+            # apply the update to the points and record to the traces
+            for c,strace in enumerate(traces):
                 if steppers[c].generates_stats:
-                    points[c], states = step_result
+                    points[c], states = updates[c]
                     if strace.supports_sampler_stats:
                         strace.record(points[c], states)
                     else:
                         strace.record(points[c])
                 else:
-                    points[c] = step_result
+                    points[c] = updates[c]
                     strace.record(points[c])
             # yield the state of all chains in parallel
             yield traces
