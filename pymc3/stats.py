@@ -13,7 +13,6 @@ from pymc3.theanof import floatX
 
 from scipy.misc import logsumexp
 from scipy.stats import dirichlet
-from scipy.stats.distributions import pareto
 from scipy.optimize import minimize
 
 from .backends import tracetab as ttab
