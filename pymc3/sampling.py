@@ -339,6 +339,7 @@ def sample(draws=500, step=None, init='auto', n_init=200000, start=None,
     if model.ndim == 0:
         raise ValueError('The model does not contain any free variables.')
 
+
     if step is None and init is not None and pm.model.all_continuous(model.vars):
         try:
             # By default, try to use NUTS
@@ -358,6 +359,15 @@ def sample(draws=500, step=None, init='auto', n_init=200000, start=None,
             step = assign_step_methods(model, step, step_kwargs=step_kwargs)
     else:
         step = assign_step_methods(model, step, step_kwargs=step_kwargs)
+
+    if not isinstance(step, CompoundStep):
+        if not isinstance(step, (list, tuple)):
+            step = [step]
+        step = CompoundStep(step)
+
+    # print the sampler assignment
+    for sm in step.methods:
+        pm._log.info('{}: {}'.format(sm.__class__.__name__, sm.vars))
 
     if start is None:
         start = [None] * chains
@@ -601,13 +611,12 @@ def _iter_sample(draws, step, start=None, trace=None, chain=0, tune=None,
 
 def _iter_chains(draws, chains, step, start, tune=None,
                  model=None, random_seed=None):
+    if not isinstance(step, CompoundStep):
+        raise ValueError('step-kwarg must be CompoundStep, got {} instead.'.format(step.__class__))
     # chains contains the chain numbers, but for indexing we need indices...
     nchains = len(chains)
     model = modelcontext(model)
     draws = int(draws)
-    if not isinstance(step, (list, tuple)):
-        step = [step]
-    is_compound = len(step) > 1
     if random_seed is not None:
         np.random.seed(random_seed)
     if draws < 1:
@@ -620,17 +629,14 @@ def _iter_chains(draws, chains, step, start, tune=None,
 
     # Set up the steppers
     steppers = [None] * nchains
-    pm._log.info('Sampler setup')
     for c in range(nchains):
-        pm._log.info('Chain {}'.format(c))
         # need indepenently tuned samplers for each chain
-        smethods = copy(step)
+        chainstep = copy(step)
         # link Population samplers to the shared population state
-        for sm in smethods:
-            pm._log.info('{}: {}'.format(sm.__class__.__name__, sm.vars))
+        for sm in chainstep.methods:
             if isinstance(sm, arraystep.PopulationArrayStepShared):
                 sm.link_population(points, c)
-        steppers[c] = CompoundStep(smethods) if is_compound else smethods[0]
+        steppers[c] = chainstep
 
 
     # prepare a BaseTrace for each chain
