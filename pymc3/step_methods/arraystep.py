@@ -5,7 +5,6 @@ from ..blocking import ArrayOrdering, DictToArrayBijection
 import numpy as np
 from numpy.random import uniform
 from enum import IntEnum, unique
-import pymc3 as pm
 
 __all__ = [
     'ArrayStep', 'ArrayStepShared', 'metrop_select', 'Competence']
@@ -198,7 +197,6 @@ class PopulationArrayStepShared(BlockedStep):
         if not len(self.other_chains) > 1:
             raise ValueError('Population is just {} + {}. This is too small. You should ' \
                 'increase the number of chains.'.format(self.this_chain, self.other_chains))
-        pm._log.info('Sampler {} in population {}'.format(self.this_chain, self.other_chains))
         return
 
     def step(self, point):
