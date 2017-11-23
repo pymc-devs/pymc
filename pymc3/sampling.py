@@ -620,11 +620,14 @@ def _iter_chains(draws, chains, step, start, tune=None,
 
     # Set up the steppers
     steppers = [None] * nchains
+    pm._log.info('Sampler setup')
     for c in range(nchains):
+        pm._log.info('Chain {}'.format(c))
         # need indepenently tuned samplers for each chain
         smethods = copy(step)
         # link Population samplers to the shared population state
         for sm in smethods:
+            pm._log.info('{}: {}'.format(sm.__class__.__name__, sm.vars))
             if isinstance(sm, arraystep.PopulationArrayStepShared):
                 sm.link_population(points, c)
         steppers[c] = CompoundStep(smethods) if is_compound else smethods[0]
