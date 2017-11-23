@@ -237,8 +237,8 @@ def waic(trace, model=None, pointwise=False, progressbar=False):
 
 def loo(trace, model=None, pointwise=False, reff=1., progressbar=False):
     """Calculates leave-one-out (LOO) cross-validation for out of sample
-    predictive model fit, following https://arxiv.org/abs/1507.02646
-    Cross-validation is computed using Pareto-smoothed importance sampling (PSIS).
+    predictive model fit, following Vehtari et al. (2015). Cross-validation is
+    computed using Pareto-smoothed importance sampling (PSIS).
 
     Parameters
     ----------
@@ -303,7 +303,7 @@ def _psislw(lw, reff):
     lw : array
         Array of size (n_samples, n_observations)
     reff : float
-        Relative MCMC efficiency, `effective_n / n`
+        relative MCMC efficiency, `effective_n / n`
 
     Returns
     -------
@@ -318,7 +318,7 @@ def _psislw(lw, reff):
     kss = np.empty(m)
 
     # precalculate constants
-    cutoff_ind = int(np.ceil(min(n / 0.5, 3 * (n / reff) ** 0.5))) - 1
+    cutoff_ind = - int(np.ceil(min(n / 0.5, 3 * (n / reff) ** 0.5))) - 1
     cutoffmin = np.log(np.finfo(float).tiny)
     k_min = 1. / 3
 
@@ -329,7 +329,7 @@ def _psislw(lw, reff):
         # sort the array
         x_sort_ind = np.argsort(x)
         # divide log weights into body and right tail
-        xcutoff = max(x[x_sort_ind[-cutoff_ind]], cutoffmin)
+        xcutoff = max(x[x_sort_ind[cutoff_ind]], cutoffmin)
 
         expxcutoff = np.exp(xcutoff)
         tailinds, = np.where(x > xcutoff)
@@ -386,10 +386,11 @@ def _gpdfit(x):
     n = len(x)
     m = 30 + int(n**0.5)
 
-    bs = (np.sqrt(1 - ((np.arange(1., m + 1) - 0.5) / m)) /
-          prior_bs * x[int(n / 4 + 0.5) - 1]) + 1 / x[-1]
+    bs = 1 - np.sqrt(m / (np.arange(1, m + 1, dtype=float) - 0.5))
+    bs /= prior_bs * x[int(n/4 + 0.5) - 1]
+    bs += 1 / x[-1]
 
-    ks = np.log1p(- bs[:, None] * x).mean(axis=1)
+    ks = np.log1p(-bs[:, None] * x).mean(axis=1)
     L = n * (np.log(-(bs / ks)) - ks - 1)
     w = 1 / np.exp(L - L[:, None]).sum(axis=1)
 
@@ -406,7 +407,7 @@ def _gpdfit(x):
     # estimate for k
     k = np.log1p(- b * x).mean()
     # add prior for k
-    k = (m * k + prior_k * 0.5) / (m + prior_k)
+    k = (n * k + prior_k * 0.5) / (n + prior_k)
     sigma = - k / b
 
     return k, sigma
@@ -435,6 +436,7 @@ def _gpinv(p, k, sigma):
             x[p == 1] = np.inf
         else:
             x[p == 1] = - sigma / k
+
     return x
 
 
