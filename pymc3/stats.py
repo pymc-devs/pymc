@@ -995,14 +995,13 @@ def r2_score(y_true, y_pred, round_to=2):
     if y_true.ndim > 1:
         dimension = 1
 
-    e = y_true - y_pred
-    var_y_est = np.var(y_pred, dimension)
-    var_e = np.var(e, dimension)
+    var_y_est = np.var(y_pred, axis=dimension)
+    var_e = np.var(y_true - y_pred, axis=dimension)
 
     r2 = var_y_est / (var_y_est + var_e)
     r2_median = np.around(np.median(r2), round_to)
     r2_mean = np.around(np.mean(r2), round_to)
     r2_std = np.around(np.std(r2), round_to)
-    R2_r = namedtuple('R2_r', 'R2_median, R2_mean, R2_std')
-    return R2_r(r2_median, r2_mean, r2_std)
+    r2_r = namedtuple('r2_r', 'r2_median, r2_mean, r2_std')
+    return r2_r(r2_median, r2_mean, r2_std)
 

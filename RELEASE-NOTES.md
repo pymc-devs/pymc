@@ -11,6 +11,7 @@
 - Fixed `compareplot` to use `loo` output. 
 - Add test for `model.logp_array` and `model.bijection` (#2724) 
 - Fixed `sample_ppc` and `sample_ppc_w` to iterate all chains(#2633)
+- Add test for `stats.r2_score` (#2729)
 
 
 
