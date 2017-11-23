@@ -490,9 +490,9 @@ class DEMetropolis(PopulationArrayStepShared):
     mode :  string or `Mode` instance.
         compilation mode passed to Theano functions
     """
-    name = 'DEmetropolis'
+    name = 'DEMetropolis'
 
-    default_blocked = False
+    default_blocked = True
     generates_stats = True
     stats_dtypes = [{
         'accept': np.float64,
