@@ -165,6 +165,52 @@ class ArrayStepShared(BlockedStep):
             return bij.rmap(apoint)
 
 
+class PopulationArrayStepShared(BlockedStep):
+    """Faster version of ArrayStep that requires the substep method that does not wrap
+       the functions the step method uses.
+
+    Works by setting shared variables before using the step. This eliminates the mapping
+    and unmapping overhead as well as moving fewer variables around.
+    """
+
+    def __init__(self, vars, shared, blocked=True):
+        """
+        Parameters
+        ----------
+        vars : list of sampling variables
+        shared : dict of theano variable -> shared variable
+        blocked : Boolean (default True)
+        """
+        self.vars = vars
+        self.ordering = ArrayOrdering(vars)
+        self.bij = None
+        self.shared = {str(var): shared for var, shared in shared.items()}
+        self.blocked = blocked
+        self.population = None
+        self.this_chain = None
+        self.other_chains = None
+
+    def link_population(self, population, chain_index):
+        self.population = population
+        self.this_chain = chain_index
+        self.other_chains = [c for c in range(len(population)) if c != chain_index]
+        return
+
+    def step(self, point):
+        for var, share in self.shared.items():
+            share.set_value(point[var])
+
+        if self.bij is None:
+            self.bij = DictToArrayBijection(self.ordering, point)
+
+        if self.generates_stats:
+            apoint, stats = self.astep(self.bij.map(point))
+            return self.bij.rmap(apoint), stats
+        else:
+            apoint = self.astep(self.bij.map(point))
+            return self.bij.rmap(apoint)
+
+
 class GradientSharedStep(BlockedStep):
     def __init__(self, vars, model=None, blocked=True,
                  dtype=None, **theano_kwargs):
