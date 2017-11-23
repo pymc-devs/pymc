@@ -4,7 +4,8 @@ import theano
 import scipy.linalg
 
 from ..distributions import draw_values
-from .arraystep import ArrayStepShared, ArrayStep, metrop_select, Competence
+from .arraystep import ArrayStepShared, PopulationArrayStepShared, ArrayStep, metrop_select, Competence
+from ..blocking import DictToArrayBijection
 import pymc3 as pm
 from pymc3.theanof import floatX
 
@@ -463,6 +464,112 @@ class CategoricalGibbsMetropolis(ArrayStep):
         elif isinstance(distribution, pm.Bernoulli) or (var.dtype in pm.bool_types):
             return Competence.COMPATIBLE
         return Competence.INCOMPATIBLE
+
+
+class DEMetropolis(PopulationArrayStepShared):
+    """
+    Differential Evolution Metropolis sampling step
+
+    Parameters
+    ----------
+    vars : list
+        List of variables for sampler
+    S : standard deviation or covariance matrix
+        Some measure of variance to parameterize proposal distribution
+    proposal_dist : function
+        Function that returns zero-mean deviates when parameterized with
+        S (and n). Defaults to normal.
+    scaling : scalar or array
+        Initial scale factor for proposal. Defaults to 1.
+    tune : bool
+        Flag for tuning. Defaults to True.
+    tune_interval : int
+        The frequency of tuning. Defaults to 100 iterations.
+    model : PyMC Model
+        Optional model for sampling step. Defaults to None (taken from context).
+    mode :  string or `Mode` instance.
+        compilation mode passed to Theano functions
+    """
+    name = 'DEmetropolis'
+
+    default_blocked = False
+    generates_stats = True
+    stats_dtypes = [{
+        'accept': np.float64,
+        'tune': np.bool,
+    }]
+
+    def __init__(self, lamb=None, vars=None, S=None, proposal_dist=None, scaling=1.,
+                 tune=True, tune_interval=100, model=None, mode=None, **kwargs):
+
+        model = pm.modelcontext(model)
+
+        if vars is None:
+            vars = model.vars
+        vars = pm.inputvars(vars)
+
+        if S is None:
+            S = np.ones(sum(v.dsize for v in vars))
+
+        if proposal_dist is not None:
+            self.proposal_dist = proposal_dist(S)
+        elif S.ndim == 1:
+            self.proposal_dist = NormalProposal(S)
+        elif S.ndim == 2:
+            self.proposal_dist = MultivariateNormalProposal(S)
+        else:
+            raise ValueError("Invalid rank for variance: %s" % S.ndim)
+
+        self.scaling = np.atleast_1d(scaling).astype('d')
+        self.lamb = lamb if lamb is not None else 2.38 / np.sqrt(2 * S.ndim)
+        self.tune = tune
+        self.tune_interval = tune_interval
+        self.steps_until_tune = tune_interval
+        self.accepted = 0
+
+        self.mode = mode
+
+        shared = pm.make_shared_replacements(vars, model)
+        self.delta_logp = delta_logp(model.logpt, vars, shared)
+        super(DEMetropolis, self).__init__(vars, shared)
+
+    def astep(self, q0):
+        if not self.steps_until_tune and self.tune:
+            # Tune scaling parameter
+            self.scaling = tune(
+                self.scaling, self.accepted / float(self.tune_interval))
+            # Reset counter
+            self.steps_until_tune = self.tune_interval
+            self.accepted = 0
+
+        epsilon = self.proposal_dist() * self.scaling
+
+        # differential evolution proposal
+        # select two other chains
+        ir1, ir2 = np.random.choice(self.other_chains, 2, replace=False)
+        r1 = self.bij.map(self.population[ir1])
+        r2 = self.bij.map(self.population[ir2])
+        # propose a jump
+        q = floatX(q0 + self.lamb * (r1 - r2) + epsilon)
+
+        accept = self.delta_logp(q, q0)
+        q_new, accepted = metrop_select(accept, q, q0)
+        self.accepted += accepted
+
+        self.steps_until_tune -= 1
+
+        stats = {
+            'tune': self.tune,
+            'accept': np.exp(accept),
+        }
+
+        return q_new, [stats]
+
+    @staticmethod
+    def competence(var, has_grad):
+        if var.dtype in pm.discrete_types:
+            return Competence.INCOMPATIBLE
+        return Competence.COMPATIBLE
 
 
 def sample_except(limit, excluded):

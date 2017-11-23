@@ -40,7 +40,11 @@ def run(steppers, p):
 
 
 if __name__ == '__main__':
-    methods = [pm.Metropolis, pm.NUTS]
+    methods = [
+        pm.Metropolis,
+        pm.NUTS,
+        pm.DEMetropolis
+    ]
     names = [c.__name__ for c in methods]
     df = pd.DataFrame(columns=['p'] + names)
     df['p'] = [.0,.9]
