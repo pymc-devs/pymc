@@ -272,7 +272,6 @@ def loo(trace, model=None, pointwise=False, reff=1., progressbar=False):
 
     lw, ks = _psislw(-log_py, reff)
     lw += log_py
-    print(ks)
     if np.any(ks > 0.7):
         warnings.warn("""Estimated shape parameter of Pareto distribution is
         greater than 0.7 for one or more samples.
