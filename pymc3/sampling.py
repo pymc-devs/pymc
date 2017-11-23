@@ -339,7 +339,6 @@ def sample(draws=500, step=None, init='auto', n_init=200000, start=None,
     if model.ndim == 0:
         raise ValueError('The model does not contain any free variables.')
 
-
     if step is None and init is not None and pm.model.all_continuous(model.vars):
         try:
             # By default, try to use NUTS
