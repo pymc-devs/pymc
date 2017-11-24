@@ -234,7 +234,7 @@ def waic(trace, model=None, pointwise=False, progressbar=False):
         return WAIC_r(waic, waic_se, p_waic)
 
 
-def loo(trace, model=None, pointwise=False, reff=1., progressbar=False):
+def loo(trace, model=None, pointwise=False, reff=None, progressbar=False):
     """Calculates leave-one-out (LOO) cross-validation for out of sample
     predictive model fit, following Vehtari et al. (2015). Cross-validation is
     computed using Pareto-smoothed importance sampling (PSIS).
@@ -249,7 +249,8 @@ def loo(trace, model=None, pointwise=False, reff=1., progressbar=False):
         Default False
     reff : float
         relative MCMC efficiency, `effective_n / n` i.e. number of effective
-        samples divided by the number of actual samples
+        samples divided by the number of actual samples. Computed from trace by
+        default.
     progressbar: bool
         Whether or not to display a progress bar in the command line. The
         bar shows the percentage of completion, the evaluation speed, and
@@ -264,6 +265,15 @@ def loo(trace, model=None, pointwise=False, reff=1., progressbar=False):
     loo_i: array of pointwise predictive accuracy, only if pointwise True
     """
     model = modelcontext(model)
+
+    if reff is None:
+        if trace.nchains == 1:
+            reff = 1.
+        else:
+            eff = pm.effective_n(trace)
+            eff_ave = sum(eff[v] for v in eff) / len(eff)
+            samples = len(trace) * trace.nchains
+            reff = eff_ave / samples
 
     log_py = _log_post_trace(trace, model, progressbar=progressbar)
     if log_py.size == 0:
