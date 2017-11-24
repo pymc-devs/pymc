@@ -369,7 +369,7 @@ def sample(draws=500, step=None, init='auto', n_init=200000, start=None,
         pm._log.info('{}: {}'.format(sm.__class__.__name__, sm.vars))
 
     if start is None:
-        start = [None] * chains
+        start = {}
     if isinstance(start, dict):
         start = [start] * chains
 
