@@ -6,7 +6,8 @@
 ### New features 
  
 - Improve NUTS initialization `advi+adapt_diag_grad` and add `jitter+adapt_diag_grad` (#2643) 
- 
+- Update loo, new improved algorithm (#2730)
+
 ### Fixes 
 - Fixed `compareplot` to use `loo` output. 
 - Add test for `model.logp_array` and `model.bijection` (#2724) 
