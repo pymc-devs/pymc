@@ -621,12 +621,28 @@ def _iter_chains(draws, chains, step, start, tune=None,
     if draws < 1:
         raise ValueError('Argument `draws` should be above 0.')
 
-    # points tracks the current position of each chain in the parameter space
+    # IMPORTANT: The initialization of traces, samplers and points must happen in the right order:
+    # 1. traces are initialized and update_start_vals configures variable transforms
+    # 2. population of points is created
+    # 3. steppers are initialized and linked to the points object
+    # 4. traces are configured to track the sampler stats
+
+
+    # 1. prepare a BaseTrace for each chain
+    traces = [_choose_backend(None, c, model=model) for c in chains]
+    for c,strace in enumerate(traces):
+        # initialize the trace size
+        if len(strace) > 0:
+            update_start_vals(start[c], strace.point(-1), model)
+        else:
+            update_start_vals(start[c], model.test_point, model)
+
+    # 2. create a population (points) that tracks each chain
     # it is updated as the chains are advanced
     points = [Point(start[c], model=model) for c in range(nchains)]
     updates = [None] * nchains
 
-    # Set up the steppers
+    # 3. Set up the steppers
     steppers = [None] * nchains
     for c in range(nchains):
         # need indepenently tuned samplers for each chain
@@ -637,20 +653,12 @@ def _iter_chains(draws, chains, step, start, tune=None,
                 sm.link_population(points, c)
         steppers[c] = chainstep
 
-
-    # prepare a BaseTrace for each chain
-    traces = [_choose_backend(None, c, model=model) for c in chains]
-    for c,strace in enumerate(traces):
-        # initialize the trace size
-        if len(strace) > 0:
-            update_start_vals(start[c], strace.point(-1), model)
+    # 4. configure tracking of sampler stats
+    for c in range(nchains):
+        if steppers[c].generates_stats and traces[c].supports_sampler_stats:
+            traces[c].setup(draws, c, steppers[c].stats_dtypes)
         else:
-            update_start_vals(start[c], model.test_point, model)
-        # initialize tracking of sampler stats
-        if steppers[c].generates_stats and strace.supports_sampler_stats:
-            strace.setup(draws, c, steppers[c].stats_dtypes)
-        else:
-            strace.setup(draws, c)
+            traces[c].setup(draws, c)
 
     try:
         # iterate draws of all chains
