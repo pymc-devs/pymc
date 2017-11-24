@@ -271,7 +271,7 @@ def loo(trace, model=None, pointwise=False, reff=None, progressbar=False):
             reff = 1.
         else:
             eff = pm.effective_n(trace)
-            eff_ave = sum(eff[v] for v in eff) / len(eff)
+            eff_ave = pm.stats.dict2pd(eff, 'eff').mean()
             samples = len(trace) * trace.nchains
             reff = eff_ave / samples
 
