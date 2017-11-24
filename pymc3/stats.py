@@ -13,7 +13,6 @@ from pymc3.theanof import floatX
 
 from scipy.misc import logsumexp
 from scipy.stats import dirichlet
-from scipy.stats.distributions import pareto
 from scipy.optimize import minimize
 
 from .backends import tracetab as ttab
@@ -235,10 +234,10 @@ def waic(trace, model=None, pointwise=False, progressbar=False):
         return WAIC_r(waic, waic_se, p_waic)
 
 
-def loo(trace, model=None, pointwise=False, progressbar=False):
-    """Calculates leave-one-out (LOO) cross-validation for out of sample predictive
-    model fit, following Vehtari et al. (2015). Cross-validation is computed using
-    Pareto-smoothed importance sampling (PSIS).
+def loo(trace, model=None, pointwise=False, reff=None, progressbar=False):
+    """Calculates leave-one-out (LOO) cross-validation for out of sample
+    predictive model fit, following Vehtari et al. (2015). Cross-validation is
+    computed using Pareto-smoothed importance sampling (PSIS).
 
     Parameters
     ----------
@@ -248,6 +247,10 @@ def loo(trace, model=None, pointwise=False, progressbar=False):
     pointwise: bool
         if True the pointwise predictive accuracy will be returned.
         Default False
+    reff : float
+        relative MCMC efficiency, `effective_n / n` i.e. number of effective
+        samples divided by the number of actual samples. Computed from trace by
+        default.
     progressbar: bool
         Whether or not to display a progress bar in the command line. The
         bar shows the percentage of completion, the evaluation speed, and
@@ -259,61 +262,37 @@ def loo(trace, model=None, pointwise=False, progressbar=False):
     loo: approximated Leave-one-out cross-validation
     loo_se: standard error of loo
     p_loo: effective number of parameters
-    loo_i: and array of the pointwise predictive accuracy, only if pointwise True
+    loo_i: array of pointwise predictive accuracy, only if pointwise True
     """
     model = modelcontext(model)
+
+    if reff is None:
+        if trace.nchains == 1:
+            reff = 1.
+        else:
+            eff = pm.effective_n(trace)
+            eff_ave = pm.stats.dict2pd(eff, 'eff').mean()
+            samples = len(trace) * trace.nchains
+            reff = eff_ave / samples
 
     log_py = _log_post_trace(trace, model, progressbar=progressbar)
     if log_py.size == 0:
         raise ValueError('The model does not contain observed values.')
 
-    # Importance ratios
-    r = np.exp(-log_py)
-    r_sorted = np.sort(r, axis=0)
-
-    # Extract largest 20% of importance ratios and fit generalized Pareto to each
-    # (returns tuple with shape, location, scale)
-    q80 = int(len(log_py) * 0.8)
-    pareto_fit = np.apply_along_axis(
-        lambda x: pareto.fit(x, floc=0), 0, r_sorted[q80:])
-
-    if np.any(pareto_fit[0] > 0.7):
+    lw, ks = _psislw(-log_py, reff)
+    lw += log_py
+    if np.any(ks > 0.7):
         warnings.warn("""Estimated shape parameter of Pareto distribution is
         greater than 0.7 for one or more samples.
-        You should consider using a more robust model, this is
-        because importance sampling is less likely to work well if the marginal
+        You should consider using a more robust model, this is because
+        importance sampling is less likely to work well if the marginal
         posterior and LOO posterior are very different. This is more likely to
         happen with a non-robust model and highly influential observations.""")
 
-    elif np.any(pareto_fit[0] > 0.5):
-        warnings.warn("""Estimated shape parameter of Pareto distribution is
-        greater than 0.5 for one or more samples. This may indicate
-        that the variance of the Pareto smoothed importance sampling estimate
-        is very large.""")
-
-    # Calculate expected values of the order statistics of the fitted Pareto
-    S = len(r_sorted)
-    M = S - q80
-    z = (np.arange(M) + 0.5) / M
-    expvals = map(lambda x: pareto.ppf(z, x[0], scale=x[2]), pareto_fit.T)
-
-    # Replace importance ratios with order statistics of fitted Pareto
-    r_sorted[q80:] = np.vstack(expvals).T
-    # Unsort ratios (within columns) before using them as weights
-    r_new = np.array([r[np.argsort(i)]
-                      for r, i in zip(r_sorted.T, np.argsort(r.T, axis=1))]).T
-
-    # Truncate weights to guarantee finite variance
-    w = np.minimum(r_new, r_new.mean(axis=0) * S**0.75)
-
-    loo_lppd_i = - 2. * logsumexp(log_py, axis=0, b=w / np.sum(w, axis=0))
-
-    loo_lppd_se = np.sqrt(len(loo_lppd_i) * np.var(loo_lppd_i))
-
-    loo_lppd = np.sum(loo_lppd_i)
-
+    loo_lppd_i = - 2 * logsumexp(lw, axis=0)
+    loo_lppd = loo_lppd_i.sum()
+    loo_lppd_se = (len(loo_lppd_i) * np.var(loo_lppd_i)) ** 0.5
     lppd = np.sum(logsumexp(log_py, axis=0, b=1. / log_py.shape[0]))
-
     p_loo = lppd + (0.5 * loo_lppd)
 
     if pointwise:
@@ -322,6 +301,151 @@ def loo(trace, model=None, pointwise=False, progressbar=False):
     else:
         LOO_r = namedtuple('LOO_r', 'LOO, LOO_se, p_LOO')
         return LOO_r(loo_lppd, loo_lppd_se, p_loo)
+
+
+def _psislw(lw, reff):
+    """Pareto smoothed importance sampling (PSIS).
+
+    Parameters
+    ----------
+    lw : array
+        Array of size (n_samples, n_observations)
+    reff : float
+        relative MCMC efficiency, `effective_n / n`
+
+    Returns
+    -------
+    lw_out : array
+        Smoothed log weights
+    kss : array
+        Pareto tail indices
+    """
+    n, m = lw.shape
+
+    lw_out = np.copy(lw, order='F')
+    kss = np.empty(m)
+
+    # precalculate constants
+    cutoff_ind = - int(np.ceil(min(n / 0.5, 3 * (n / reff) ** 0.5))) - 1
+    cutoffmin = np.log(np.finfo(float).tiny)
+    k_min = 1. / 3
+
+    # loop over sets of log weights
+    for i, x in enumerate(lw_out.T):
+        # improve numerical accuracy
+        x -= np.max(x)
+        # sort the array
+        x_sort_ind = np.argsort(x)
+        # divide log weights into body and right tail
+        xcutoff = max(x[x_sort_ind[cutoff_ind]], cutoffmin)
+
+        expxcutoff = np.exp(xcutoff)
+        tailinds, = np.where(x > xcutoff)
+        x2 = x[tailinds]
+        n2 = len(x2)
+        if n2 <= 4:
+            # not enough tail samples for gpdfit
+            k = np.inf
+        else:
+            # order of tail samples
+            x2si = np.argsort(x2)
+            # fit generalized Pareto distribution to the right tail samples
+            x2 = np.exp(x2) - expxcutoff
+            k, sigma = _gpdfit(x2[x2si])
+
+        if k >= k_min and not np.isinf(k):
+            # no smoothing if short tail or GPD fit failed
+            # compute ordered statistic for the fit
+            sti = np.arange(0.5, n2) / n2
+            qq = _gpinv(sti, k, sigma)
+            qq = np.log(qq + expxcutoff)
+            # place the smoothed tail into the output array
+            x[tailinds[x2si]] = qq
+            # truncate smoothed values to the largest raw weight 0
+            x[x > 0] = 0
+        # renormalize weights
+        x -= logsumexp(x)
+        # store tail index k
+        kss[i] = k
+
+    return lw_out, kss
+
+
+def _gpdfit(x):
+    """Estimate the parameters for the Generalized Pareto Distribution (GPD)
+
+    Empirical Bayes estimate for the parameters of the generalized Pareto
+    distribution given the data.
+
+    Parameters
+    ----------
+    x : array
+        sorted 1D data array
+
+    Returns
+    -------
+    k : float
+        estimated shape parameter
+    sigma : float
+        estimated scale parameter
+    """
+    prior_bs = 3
+    prior_k = 10
+    n = len(x)
+    m = 30 + int(n**0.5)
+
+    bs = 1 - np.sqrt(m / (np.arange(1, m + 1, dtype=float) - 0.5))
+    bs /= prior_bs * x[int(n/4 + 0.5) - 1]
+    bs += 1 / x[-1]
+
+    ks = np.log1p(-bs[:, None] * x).mean(axis=1)
+    L = n * (np.log(-(bs / ks)) - ks - 1)
+    w = 1 / np.exp(L - L[:, None]).sum(axis=1)
+
+    # remove negligible weights
+    dii = w >= 10 * np.finfo(float).eps
+    if not np.all(dii):
+        w = w[dii]
+        bs = bs[dii]
+    # normalise w
+    w /= w.sum()
+
+    # posterior mean for b
+    b = np.sum(bs * w)
+    # estimate for k
+    k = np.log1p(- b * x).mean()
+    # add prior for k
+    k = (n * k + prior_k * 0.5) / (n + prior_k)
+    sigma = - k / b
+
+    return k, sigma
+
+
+def _gpinv(p, k, sigma):
+    """Inverse Generalized Pareto distribution function"""
+    x = np.full_like(p, np.nan)
+    if sigma <= 0:
+        return x
+    ok = (p > 0) & (p < 1)
+    if np.all(ok):
+        if np.abs(k) < np.finfo(float).eps:
+            x = - np.log1p(-p)
+        else:
+            x = np.expm1(-k * np.log1p(-p)) / k
+        x *= sigma
+    else:
+        if np.abs(k) < np.finfo(float).eps:
+            x[ok] = - np.log1p(-p[ok])
+        else:
+            x[ok] = np.expm1(-k * np.log1p(-p[ok])) / k
+        x *= sigma
+        x[p == 0] = 0
+        if k >= 0:
+            x[p == 1] = np.inf
+        else:
+            x[p == 1] = - sigma / k
+
+    return x
 
 
 def bpic(trace, model=None):
