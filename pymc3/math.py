@@ -47,12 +47,12 @@ def cartesian(*arrays):
 
 
 def kron_matrix_op(krons, m, op):
-    """Apply op to krons and m in a way that reproduces op(kronecker(krons), m)
+    """Apply op to krons and m in a way that reproduces op(kronecker(*krons), m)
 
     Parameters
     -----------
-    krons: list of 2D array-like objects
-           D matrices [A_1, A_2, ..., A_D] to be Kronecker'ed:
+    krons: list of square 2D array-like objects
+           D square matrices [A_1, A_2, ..., A_D] to be Kronecker'ed:
               A = A_1 \otimes A_2 \otimes ... \otimes A_D
            Product of column dimensions must be N
     m    : NxM array or 1D array (treated as Nx1)
@@ -70,7 +70,7 @@ def kron_matrix_op(krons, m, op):
     if m.ndim == 1:
         m = m[:, None]  # Treat 1D array as Nx1 matrix
     if m.ndim != 2:  # Has not been tested otherwise
-        raise TypeError('m must have ndim == 2 instead of {}'.format(mat.ndim))
+        raise ValueError('m must have ndim <= 2, not {}'.format(mat.ndim))
     m = m.T
     res, _ = theano.scan(kron_vector_op, sequences=[m])
     return res.T
