@@ -5,10 +5,77 @@ import theano.tensor as tt
 from theano.tests import unittest_tools as utt
 from pymc3.math import (
     LogDet, logdet, probit, invprobit, expand_packed_triangular,
-    log1pexp, log1mexp)
+    log1pexp, log1mexp, kronecker, cartesian, kron_dot, kron_solve_lower)
 from .helpers import SeededTest
 import pytest
 from pymc3.theanof import floatX
+
+
+def test_kronecker():
+    np.random.seed(1)
+    # Create random matrices
+    [a, b, c] = [np.random.rand(3, 3+i) for i in range(3)]
+
+    custom = kronecker(a, b, c)       # Custom version
+    nested = tt.slinalg.kron(a, tt.slinalg.kron(b, c))
+    np.testing.assert_array_almost_equal(
+        custom.eval(),
+        nested.eval()   # Standard nested version
+        )
+
+
+def test_cartesian():
+    np.random.seed(1)
+    a = [1, 2, 3]
+    b = [0, 2]
+    c = [5, 6]
+    manual_cartesian = np.array(
+        [[1, 0, 5],
+         [1, 0, 6],
+         [1, 2, 5],
+         [1, 2, 6],
+         [2, 0, 5],
+         [2, 0, 6],
+         [2, 2, 5],
+         [2, 2, 6],
+         [3, 0, 5],
+         [3, 0, 6],
+         [3, 2, 5],
+         [3, 2, 6],
+         ]
+        )
+    auto_cart = cartesian(a, b, c)
+    np.testing.assert_array_almost_equal(manual_cartesian, auto_cart)
+
+
+def test_kron_dot():
+    np.random.seed(1)
+    # Create random matrices
+    Ks = [np.random.rand(3, 3) for i in range(3)]
+    # Create random vector with correct shape
+    tot_size = np.prod([k.shape[1] for k in Ks])
+    x = np.random.rand(tot_size).reshape((tot_size, 1))
+    # Construct entire kronecker product then multiply
+    big = kronecker(*Ks)
+    slow_ans = tt.dot(big, x)
+    # Use tricks to avoid construction of entire kronecker product
+    fast_ans = kron_dot(Ks, x)
+    np.testing.assert_array_almost_equal(slow_ans.eval(), fast_ans.eval())
+
+
+def test_kron_solve_lower():
+    np.random.seed(1)
+    # Create random matrices
+    Ls = [np.tril(np.random.rand(3, 3)) for i in range(3)]
+    # Create random vector with correct shape
+    tot_size = np.prod([L.shape[1] for L in Ls])
+    x = np.random.rand(tot_size).reshape((tot_size, 1))
+    # Construct entire kronecker product then solve
+    big = kronecker(*Ls)
+    slow_ans = tt.slinalg.solve_lower_triangular(big, x)
+    # Use tricks to avoid construction of entire kronecker product
+    fast_ans = kron_solve_lower(Ls, x)
+    np.testing.assert_array_almost_equal(slow_ans.eval(), fast_ans.eval())
 
 
 def test_probit():
