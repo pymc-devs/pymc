@@ -521,7 +521,7 @@ class DEMetropolis(PopulationArrayStepShared):
             raise ValueError("Invalid rank for variance: %s" % S.ndim)
 
         self.scaling = np.atleast_1d(scaling).astype('d')
-        self.lamb = lamb if lamb is not None else 2.38 / np.sqrt(2 * S.ndim)
+        self.lamb = lamb if lamb is not None else 2.38 / np.sqrt(2 * S.size)
         self.tune = tune
         self.tune_interval = tune_interval
         self.steps_until_tune = tune_interval
