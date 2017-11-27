@@ -124,32 +124,51 @@ class TestStepMethods(object):  # yield test doesn't work subclassing object
               -3.91174647e-01,  -2.60664979e+00,  -2.27637534e+00,  -2.81505065e+00,
               -2.24238542e+00,  -1.01648100e+00,  -1.01648100e+00,  -7.60912865e-01,
                1.44384812e+00,   2.07355127e+00,   1.91390340e+00,   1.66559696e+00]),
-        smc.SMC: np.array([
-            -0.26421709, -2.07555186,  1.03443124,  0.16260898, -0.2809841 ,
-            -0.35185097, -0.56387677,  0.18332851,  1.59614152,  0.39866217,
-            -0.55781016, -0.74446992,  0.41198452,  0.47484429,  0.43417346,
-             1.24153494,  1.10037457,  2.55408602, -1.47011338,  0.50824935,
-            -2.09842977,  0.74269458,  0.31025837,  0.48376623,  1.74272003,
-            -0.3975872 , -0.83735649, -0.33724478,  1.20300335,  1.40710795,
-            -0.63740634, -0.33976389, -0.95412333,  1.84658352,  1.2000763 ,
-            -1.08264783, -1.55367546,  0.66209331,  0.6577848 ,  0.5727828 ,
-             0.30248057,  0.89674302,  0.70148518,  0.56483303,  1.35161821,
-             0.06392528,  0.70670242,  1.04846633,  0.54696351, -2.49061003,
-            -1.29925327, -1.31906407, -0.36650058, -1.44809118, -0.96224606,
-            -0.2501728 , -1.88779999,  0.35774637,  1.06917986,  2.07049617,
-            -0.18667668,  0.19360673, -0.37665179,  0.98526962,  1.03010772,
-            -0.25348684,  2.43418902,  0.89153789, -1.02035572,  1.77851957,
-             0.6408621 ,  0.50163095,  0.59934511,  0.73985647,  0.78719236,
-            -0.41001864, -1.99859554,  1.53574307, -1.71336207,  1.04355849,
-             0.21864817, -2.03911519, -0.42358936, -0.49666918,  1.64327219,
-            -0.86416032,  1.10236002,  0.16396354, -0.13313781,  0.32649281,
-            -1.01918397,  0.20525201,  1.04927506,  0.98243013,  2.46970704,
-            -0.68709777,  2.05038381,  0.71417231,  1.13267395, -0.48644823]),
+        smc.SMC: np.array(
+        [ 1.30059573, -1.        ,  1.30059573, -1.28860918,  1.30059573,
+       -1.33854363,  0.98809372, -0.22700433,  0.98809372,  0.45421367,
+        0.53534095, -0.0571964 ,  0.53534095, -0.58075355,  0.53534095,
+       -0.81941713,  0.21067768, -0.77333386,  0.21067768, -0.57169475,
+        0.21067768, -0.57169475,  0.71695573, -0.1735022 ,  0.87048219,
+       -0.28469019,  1.08731483,  0.08746968,  1.08059419,  0.08746968,
+        0.31491769, -0.17753158,  0.48834878,  0.99152949, -0.1423678 ,
+        0.1923664 ,  0.06791856, -0.99708314, -0.13981681, -0.99708314,
+        0.15039906, -0.99708314,  0.15039906, -0.6557885 ,  0.15039906,
+       -0.6557885 ,  0.3553436 , -0.22781864,  0.3553436 , -0.86087058,
+        0.3553436 , -1.26758014,  0.3553436 , -0.02546953,  1.992939  ,
+        0.03739508,  1.992939  ,  0.04077929,  1.47964467, -0.79954537,
+        1.36470456, -1.28038148,  1.34975939, -1.28038148,  0.5058148 ,
+       -1.28038148,  0.46681777, -1.51635697,  1.14761057, -1.51635697,
+        0.70585017, -1.51635697,  0.56298035, -1.51635697,  0.68107999,
+       -1.24900543,  0.68107999, -1.58687463,  0.8251361 , -0.30236423,
+        0.19971902,  0.0871776 ,  0.19971902,  0.51328569,  0.19971902,
+        0.55526923,  0.19971902,  0.16065882, -0.87573391,  0.42539449,
+       -0.87573391,  0.31060689, -0.87573391,  0.48370178,  0.27495794,
+        0.48370178,  0.37129344,  0.48370178,  1.06413954,  0.48370178,
+        1.57177313,  0.01683961,  1.75583481,  0.01683961,  1.87895941,
+        0.49419352,  1.87895941,  0.49419352,  1.58832631, -0.02168877,
+        1.58832631,  0.79617759,  1.41454982,  0.79617759,  1.93168471,
+        0.78016131,  1.73345978,  0.19202933,  1.62254723, -0.22699057,
+        1.62254723, -0.37699978, -0.14380698, -1.39915323, -0.0647066 ,
+       -1.39915323, -0.27796904, -0.76046542, -1.39097353, -0.95882837,
+       -2.37809137, -0.95882837, -0.76288136, -0.95882837,  0.10702519,
+        0.6982565 ,  0.47017639,  0.6982565 ,  0.9479599 ,  1.22950397,
+        0.9479599 ,  0.06416429,  0.9479599 , -0.0761023 ,  1.18090459,
+       -0.54169371,  1.18090459,  0.00447742,  0.93159018,  0.77757319,
+        0.76557639,  0.77757319,  0.41731133,  0.77757319,  0.68380287,
+        1.08320749, -0.43989818,  1.05260977, -0.32229488,  1.15892126,
+        0.38764854,  1.15892126,  0.41491972,  0.71650402, -0.27923606,
+        0.71650402, -1.32493526, -0.09371072, -0.74606271,  0.5227973 ,
+       -0.74606271,  0.63974633, -1.41947892, -0.96488174, -1.294319  ,
+       -0.96488174, -1.294319  , -0.78112189, -1.294319  ,  0.45821163,
+       -1.31499922,  0.54901984, -1.10260234,  1.12896946,  0.43768361,
+        1.12896946, -0.58455279,  1.12896946, -0.58455279,  1.12896946,
+       -0.58455279,  0.19820143, -1.19295628, -0.02548627, -1.19295628,
+        0.50411866, -1.19295628,  0.50411866, -1.55631463,  0.92268245]),
     }
 
     def setup_class(self):
         self.temp_dir = tempfile.mkdtemp()
-        print(self.temp_dir)
 
     def teardown_class(self):
         shutil.rmtree(self.temp_dir)
@@ -180,19 +199,21 @@ class TestStepMethods(object):  # yield test doesn't work subclassing object
             x = Normal('x', mu=0, sd=1)
             if step_method.__name__ == 'SMC':
                 trace = smc.sample_smc(n_steps=n_steps,
-                                       step=step_method(random_seed=1),
+                                       n_chains=2,
+                                       start=[{'x':1.}, {'x':-1.}],
+                                       random_seed=1,
                                        n_jobs=1, progressbar=False,
                                        homepath=self.temp_dir)
+
             elif step_method.__name__ == 'NUTS':
                 step = step_method(scaling=model.test_point)
                 trace = sample(0, tune=n_steps,
                                discard_tuned_samples=False,
-                               step=step, random_seed=1)
+                               step=step, random_seed=1, chains=1)
             else:
                 trace = sample(0, tune=n_steps,
                                discard_tuned_samples=False,
-                               step=step_method(), random_seed=1)
-
+                               step=step_method(), random_seed=1, chains=1)
         assert_array_almost_equal(
             trace.get_values('x'),
             self.master_samples[step_method],
@@ -222,7 +243,7 @@ class TestStepMethods(object):  # yield test doesn't work subclassing object
                     HamiltonianMC(scaling=C, is_cov=True, blocked=False)]),
             )
         for step in steps:
-            trace = sample(0, tune=8000,
+            trace = sample(0, tune=8000, chains=1,
                            discard_tuned_samples=False, step=step,
                            start=start, model=model, random_seed=1)
             self.check_stat(check, trace, step.__class__.__name__)
@@ -239,7 +260,8 @@ class TestStepMethods(object):  # yield test doesn't work subclassing object
                 Metropolis(S=C, proposal_dist=MultivariateNormalProposal),
             )
         for step in steps:
-            trace = sample(20000, tune=0, step=step, start=start, model=model, random_seed=1)
+            trace = sample(20000, tune=0, step=step, start=start, model=model,
+                           random_seed=1, chains=1)
             self.check_stat(check, trace, step.__class__.__name__)
 
     def test_step_categorical(self):
@@ -267,7 +289,8 @@ class TestStepMethods(object):  # yield test doesn't work subclassing object
                 EllipticalSlice(prior_chol=L),
             )
         for step in steps:
-            trace = sample(5000, tune=0, step=step, start=start, model=model, random_seed=1)
+            trace = sample(5000, tune=0, step=step, start=start, model=model,
+                           random_seed=1, chains=1)
             self.check_stat(check, trace, step.__class__.__name__)
 
 
@@ -350,6 +373,25 @@ class TestAssignStepMethods(object):
             steps = assign_step_methods(model, [])
         assert isinstance(steps, Metropolis)
 
+    def test_normal_nograd_op(self):
+        """Test normal distribution without an implemented gradient is assigned slice method"""
+        with Model() as model:
+            x = Normal('x', 0, 1)
+
+            # a custom Theano Op that does not have a grad:
+            is_64 = theano.config.floatX == "float64"
+            itypes = [tt.dscalar] if is_64 else [tt.fscalar]
+            otypes = [tt.dscalar] if is_64 else [tt.fscalar]
+            @theano.as_op(itypes, otypes)
+            def kill_grad(x):
+                return x
+
+            data = np.random.normal(size=(100,))
+            Normal("y", mu=kill_grad(x), sd=1, observed=data.astype(theano.config.floatX))
+
+            steps = assign_step_methods(model, [])
+        assert isinstance(steps, Slice)
+
 
 @pytest.mark.xfail(condition=(theano.config.floatX == "float32"), reason="Fails on float32")
 class TestNutsCheckTrace(object):
@@ -357,9 +399,11 @@ class TestNutsCheckTrace(object):
         with Model():
             prob = Beta('prob', alpha=5., beta=3.)
             Binomial('outcome', n=1, p=prob)
+            # Catching warnings through multiprocessing doesn't work,
+            # so we have to use single threaded sampling.
             with pytest.warns(None) as warns:
                 sample(3, tune=2, discard_tuned_samples=False,
-                       n_init=None)
+                       n_init=None, chains=1)
             messages = [warn.message.args[0] for warn in warns]
             assert any("contains only 3" in msg for msg in messages)
             assert all('boolean index did not' not in msg for msg in messages)
@@ -377,10 +421,11 @@ class TestNutsCheckTrace(object):
             a = tt.switch(a > 0, np.inf, a)
             b = tt.slinalg.solve(floatX(np.eye(2)), a)
             Normal('c', mu=b, shape=2)
+            # Catching warnings through multiprocessing doesn't work,
+            # so we have to use single threaded sampling.
             with pytest.warns(None) as warns:
-                trace = sample(20, init=None, tune=5)
+                trace = sample(20, init=None, tune=5, chains=1)
             warns = [str(warn.message) for warn in warns]
-            print(warns)
             assert np.any(trace['diverging'])
             assert any('diverging samples after tuning' in warn
                        for warn in warns)

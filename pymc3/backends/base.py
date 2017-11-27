@@ -3,10 +3,14 @@
 See the docstring for pymc3.backends for more information (including
 creating custom backends).
 """
+import itertools as itl
+
 import numpy as np
-from ..model import modelcontext
 import warnings
 import theano.tensor as tt
+
+from ..model import modelcontext
+
 
 class BackendError(Exception):
     pass
@@ -24,11 +28,13 @@ class BaseTrace(object):
     vars : list of variables
         Sampling values will be stored for these variables. If None,
         `model.unobserved_RVs` is used.
+    test_point : dict
+        use different test point that might be with changed variables shapes
     """
 
     supports_sampler_stats = False
 
-    def __init__(self, name, model=None, vars=None):
+    def __init__(self, name, model=None, vars=None, test_point=None):
         self.name = name
 
         model = modelcontext(model)
@@ -41,7 +47,13 @@ class BaseTrace(object):
 
         # Get variable shapes. Most backends will need this
         # information.
-        var_values = list(zip(self.varnames, self.fn(model.test_point)))
+        if test_point is None:
+            test_point = model.test_point
+        else:
+            test_point_ = model.test_point.copy()
+            test_point_.update(test_point)
+            test_point = test_point_
+        var_values = list(zip(self.varnames, self.fn(test_point)))
         self.var_shapes = {var: value.shape
                            for var, value in var_values}
         self.var_dtypes = {var: value.dtype
@@ -71,7 +83,6 @@ class BaseTrace(object):
                                      "different types." % key)
 
         self.sampler_vars = sampler_vars
-
 
     def setup(self, draws, chain, sampler_vars=None):
         """Perform chain-specific setup.
@@ -362,7 +373,7 @@ class MultiTrace(object):
                               "total samples in the trace "
                               "(chains * iterations)".format(l_v, l_samples))
 
-            v = v.reshape(len(chains), -1)
+            v = np.squeeze(v.reshape(len(chains), len(self), -1))
 
             for idx, chain in enumerate(chains.values()):
                 chain.samples[k] = v[idx]
@@ -453,6 +464,20 @@ class MultiTrace(object):
         if chain is None:
             chain = self.chains[-1]
         return self._straces[chain].point(idx)
+
+    def points(self, chains=None):
+        """Return an iterator over all or some of the sample points
+
+        Parameters
+        ----------
+        chains : list of int or N
+            The chains whose points should be inlcuded in the iterator.  If
+            chains is not given, include points from all chains.
+        """
+        if chains is None:
+            chains = self.chains
+
+        return itl.chain.from_iterable(self._straces[chain] for chain in chains)
 
 
 def merge_traces(mtraces):

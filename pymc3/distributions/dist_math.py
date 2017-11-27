@@ -91,7 +91,7 @@ def i0(x):
     return tt.switch(tt.lt(x, 5), 1. + x**2 / 4. + x**4 / 64. + x**6 / 2304. + x**8 / 147456.
                      + x**10 / 14745600. + x**12 / 2123366400.,
                      np.e**x / (2. * np.pi * x)**0.5 * (1. + 1. / (8. * x) + 9. / (128. * x**2) + 225. / (3072 * x**3)
-                                                       + 11025. / (98304. * x**4)))
+                                                        + 11025. / (98304. * x**4)))
 
 
 def i1(x):
@@ -108,14 +108,14 @@ def sd2rho(sd):
     """
     `sd -> rho` theano converter
     :math:`mu + sd*e = mu + log(1+exp(rho))*e`"""
-    return tt.log(tt.exp(sd) - 1.)
+    return tt.log(tt.exp(tt.abs_(sd)) - 1.)
 
 
 def rho2sd(rho):
     """
     `rho -> sd` theano converter
     :math:`mu + sd*e = mu + log(1+exp(rho))*e`"""
-    return tt.log1p(tt.exp(rho))
+    return tt.nnet.softplus(rho)
 
 
 def log_normal(x, mean, **kwargs):

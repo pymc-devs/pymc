@@ -63,18 +63,11 @@ class TestNDArray0dSelection(bf.SelectionTestCase):
     sampler_vars = STATS1
 
 
-class TestNDArray0dSelection(bf.SelectionTestCase):
+class TestNDArray0dSelection2(bf.SelectionTestCase):
     backend = ndarray.NDArray
     name = None
     shape = ()
     sampler_vars = STATS2
-
-
-class TestNDArray0dSelection(bf.SelectionTestCase):
-    backend = ndarray.NDArray
-    name = None
-    shape = ()
-    sampler_vars = STATS1
 
 
 class TestNDArray0dSelectionStats1(bf.SelectionTestCase):
@@ -136,7 +129,7 @@ class TestMultiTrace_add_values(bf.ModelBackendSampledTestCase):
         orig_varnames = list(mtrace.varnames)
         name = 'new_var'
         vals = mtrace[orig_varnames[0]]
-        mtrace.add_values({name : vals})
+        mtrace.add_values({name: vals})
         assert len(orig_varnames) == len(mtrace.varnames) - 1
         assert name in mtrace.varnames
         assert np.all(mtrace[orig_varnames[0]] == mtrace[name])

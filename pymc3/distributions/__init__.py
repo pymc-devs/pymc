@@ -17,7 +17,6 @@ from .continuous import HalfStudentT
 from .continuous import Lognormal
 from .continuous import ChiSquared
 from .continuous import HalfNormal
-from .continuous import StudentTpos
 from .continuous import Wald
 from .continuous import Pareto
 from .continuous import InverseGamma
@@ -26,6 +25,7 @@ from .continuous import VonMises
 from .continuous import SkewNormal
 from .continuous import Triangular
 from .continuous import Gumbel
+from .continuous import Logistic
 from .continuous import Interpolated
 
 from .discrete import Binomial
@@ -56,6 +56,7 @@ from .mixture import Mixture
 from .mixture import NormalMixture
 
 from .multivariate import MvNormal
+from .multivariate import MatrixNormal
 from .multivariate import MvStudentT
 from .multivariate import Dirichlet
 from .multivariate import Multinomial
@@ -94,7 +95,6 @@ __all__ = ['Uniform',
            'Bound',
            'Lognormal',
            'HalfStudentT',
-           'StudentTpos',
            'ChiSquared',
            'HalfNormal',
            'Wald',
@@ -122,6 +122,7 @@ __all__ = ['Uniform',
            'NoDistribution',
            'TensorType',
            'MvNormal',
+           'MatrixNormal',
            'MvStudentT',
            'Dirichlet',
            'Multinomial',
@@ -141,6 +142,7 @@ __all__ = ['Uniform',
            'Triangular',
            'DiscreteWeibull',
            'Gumbel',
+           'Logistic',
            'Interpolated',
            'Bound',
            ]

@@ -44,7 +44,7 @@ class ElemwiseCategorical(ArrayStep):
         return categorical(p, self.var.dshape)
 
     @staticmethod
-    def competence(var):
+    def competence(var, has_grad):
         if isinstance(var.distribution, Categorical):
             return Competence.COMPATIBLE
         return Competence.INCOMPATIBLE

@@ -1,12 +1,16 @@
 from collections import OrderedDict
-import matplotlib.pyplot as plt
+
+try:
+    import matplotlib.pyplot as plt
+except ImportError:  # mpl is optional
+    pass
 import numpy as np
 
 from .artists import plot_posterior_op
 from .utils import identity_transform, get_default_varnames
 
 
-def plot_posterior(trace, varnames=None, transform=identity_transform, figsize=None, text_size=16,
+def plot_posterior(trace, varnames=None, transform=identity_transform, figsize=None, text_size=None,
                    alpha_level=0.05, round_to=3, point_estimate='mean', rope=None,
                    ref_val=None, kde_plot=False, plot_transformed=False, ax=None, **kwargs):
     """Plot Posterior densities in style of John K. Kruschke book.
@@ -54,6 +58,18 @@ def plot_posterior(trace, varnames=None, transform=identity_transform, figsize=N
     ax : matplotlib axes
 
     """
+
+    def scale_text(figsize, text_size=text_size):
+        """Scale text to figsize."""
+
+        if text_size is None and figsize is not None:
+            if figsize[0] <= 11:
+                return 12
+            else:
+                return figsize[0]
+        else:
+            return text_size
+
     def create_axes_grid(figsize, traces):
         l_trace = len(traces)
         if l_trace == 1:
@@ -86,9 +102,11 @@ def plot_posterior(trace, varnames=None, transform=identity_transform, figsize=N
             figsize = (6, 2)
         if ax is None:
             fig, ax = plt.subplots(figsize=figsize)
+
         plot_posterior_op(transform(trace), ax=ax, kde_plot=kde_plot,
                           point_estimate=point_estimate, round_to=round_to,
-                          alpha_level=alpha_level, ref_val=ref_val, rope=rope, text_size=text_size, **kwargs)
+                          alpha_level=alpha_level, ref_val=ref_val, rope=rope,
+                          text_size=scale_text(figsize), **kwargs)
     else:
         if varnames is None:
             varnames = get_default_varnames(trace.varnames, plot_transformed)
@@ -114,8 +132,8 @@ def plot_posterior(trace, varnames=None, transform=identity_transform, figsize=N
             plot_posterior_op(tr_values, ax=a, kde_plot=kde_plot,
                               point_estimate=point_estimate, round_to=round_to,
                               alpha_level=alpha_level, ref_val=ref_val[idx],
-                              rope=rope[idx], text_size=text_size, **kwargs)
-            a.set_title(v)
+                              rope=rope[idx], text_size=scale_text(figsize), **kwargs)
+            a.set_title(v, fontsize=scale_text(figsize))
 
         plt.tight_layout()
     return ax

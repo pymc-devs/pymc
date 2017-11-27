@@ -44,7 +44,7 @@ def elemwise_dlogL(vars, model, flat_view):
     Returns Jacobian of the log likelihood for each training datum wrt vars
     as a matrix of size N x D
     """
-    # select one observed random variable 
+    # select one observed random variable
     obs_var = model.observed_RVs[0]
     # tensor of shape (batch_size,)
     logL = obs_var.logp_elemwiset.sum(
@@ -63,12 +63,12 @@ def elemwise_dlogL(vars, model, flat_view):
 class BaseStochasticGradient(ArrayStepShared):
     R"""
     BaseStochasticGradient Object
-    
+
     For working with BaseStochasticGradient Object
-    we need to supply the probabilistic model 
+    we need to supply the probabilistic model
     (:code:`model`) with the data supplied to observed
     variables of type `GeneratorOp`
-    
+
     Parameters
     -------
     vars : list
@@ -139,6 +139,7 @@ class BaseStochasticGradient(ArrayStepShared):
         shared = make_shared_replacements(vars, model)
 
         self.updates = OrderedDict()
+        self.q_size = int(sum(v.dsize for v in self.vars))
 
         flat_view = model.flatten(vars)
         self.inarray = [flat_view.input]
@@ -182,7 +183,7 @@ class BaseStochasticGradient(ArrayStepShared):
 
     def astep(self, q0):
         """Perform a single update in the stochastic gradient method.
-        
+
         Returns new shared values and values sampled
         The size and ordering of q0 and q must be the same
         Parameters
@@ -203,7 +204,7 @@ class BaseStochasticGradient(ArrayStepShared):
 class SGFS(BaseStochasticGradient):
     R"""
     StochasticGradientFisherScoring
-    
+
     Parameters
     -----
     vars : list
@@ -224,7 +225,7 @@ class SGFS(BaseStochasticGradient):
         """
         Parameters
         ----------
-        vars : list 
+        vars : list
             Theano variables, default continuous vars
         B : np.array
             Symmetric positive Semi-definite Matrix
@@ -271,7 +272,7 @@ class SGFS(BaseStochasticGradient):
         I_t = (1. - 1. / t) * avg_I + (1. / t) * V
 
         if B is None:
-            # if B is not specified 
+            # if B is not specified
             # B \propto I_t as given in
             # http://www.ics.uci.edu/~welling/publications/papers/SGFS_v10_final.pdf
             # after iterating over the data few times to get a good approximation of I_N
@@ -306,8 +307,8 @@ class SGFS(BaseStochasticGradient):
         return f
 
     @staticmethod
-    def competence(var):
-        if var.dtype in continuous_types:
+    def competence(var, has_grad):
+        if var.dtype in continuous_types and has_grad:
             return Competence.COMPATIBLE
         return Competence.INCOMPATIBLE
 

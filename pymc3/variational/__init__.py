@@ -27,6 +27,8 @@ from .inference import (
     ASVGD,
     NFVI,
     Inference,
+    KLqp,
+    ImplicitGradient,
     fit
 )
 
@@ -38,11 +40,15 @@ from .approximations import (
     NormalizingFlow,
     sample_approx
 )
+from . import opvi
+from .opvi import (
+    Group,
+    Approximation
+)
 
 # special
 from .stein import Stein
 from . import flows
 from . import operators
 from . import test_functions
-from . import opvi
 from . import callbacks

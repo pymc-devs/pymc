@@ -41,7 +41,7 @@ class RBF(Kernel):
 
         # Derivative
         dxkxy = -tt.dot(Kxy, X)
-        sumkxy = tt.sum(Kxy, axis=1).dimshuffle(0, 'x')
+        sumkxy = tt.sum(Kxy, axis=-1, keepdims=True)
         dxkxy = tt.add(dxkxy, tt.mul(X, sumkxy)) / h
 
         return Kxy, dxkxy

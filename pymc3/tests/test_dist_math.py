@@ -154,10 +154,7 @@ class TestMvNormalLogp():
         chol_vec_val = floatX(np.array([0.5, 1., -0.1]))
 
         delta_val = floatX(np.random.randn(1, 2))
-        try:
-            utt.verify_grad(func, [chol_vec_val, delta_val])
-        except ValueError as e:
-            print(e.args[0])
+        utt.verify_grad(func, [chol_vec_val, delta_val])
 
         delta_val = floatX(np.random.randn(5, 2))
         utt.verify_grad(func, [chol_vec_val, delta_val])

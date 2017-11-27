@@ -10,8 +10,8 @@ def escape_latex(strng):
 
     Implementation taken from the IPython magic `format_latex`
 
-    Example
-    -------
+    Examples
+    --------
         escape_latex('disease_rate')  # 'disease\_rate'
 
     Parameters
@@ -117,14 +117,14 @@ def get_variable_name(variable):
                 names = [get_variable_name(item)
                          for item in variable.get_parents()[0].inputs]
                 # do not escape_latex these, since it is not idempotent
-                return 'f(%s)' % ','.join([n for n in names if isinstance(n, str)])
+                return 'f(%s)' % ',~'.join([n for n in names if isinstance(n, str)])
             except IndexError:
                 pass
         value = variable.eval()
         if not value.shape:
             return asscalar(value)
         return 'array'
-    return escape_latex(name)
+    return r'\text{%s}' % name
 
 
 def update_start_vals(a, b, model):
@@ -144,3 +144,8 @@ def update_start_vals(a, b, model):
 
     a.update({k: v for k, v in b.items() if k not in a})
 
+
+def get_transformed(z):
+    if hasattr(z, 'transformed'):
+        z = z.transformed
+    return z

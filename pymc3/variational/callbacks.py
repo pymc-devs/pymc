@@ -101,7 +101,7 @@ class Tracker(Callback):
     >>> tracker = Tracker(time=time.time)
     >>> with model:
     ...     approx = pm.fit(callbacks=[tracker])
-    
+
     Time can be accessed via :code:`tracker['time']` now
     For more complex summary one can use callable that takes
     (approx, hist, i) as arguments
@@ -109,7 +109,7 @@ class Tracker(Callback):
     ...     my_callable = lambda ap, h, i: h[-1]
     ...     tracker = Tracker(some_stat=my_callable)
     ...     approx = pm.fit(callbacks=[tracker])
-    
+
     Multiple stats are valid too
     >>> with model:
     ...     tracker = Tracker(some_stat=my_callable, time=time.time)

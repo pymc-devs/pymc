@@ -180,7 +180,8 @@ class NormalMixture(Mixture):
         mu = dist.mu
         w = dist.w
         sd = dist.sd
-        return r'${} \sim \text{{NormalMixture}}(\mathit{{w}}={}, \mathit{{mu}}={}, \mathit{{sigma}}={})$'.format(name,
+        name = r'\text{%s}' % name
+        return r'${} \sim \text{{NormalMixture}}(\mathit{{w}}={},~\mathit{{mu}}={},~\mathit{{sigma}}={})$'.format(name,
                                                 get_variable_name(w),
                                                 get_variable_name(mu),
                                                 get_variable_name(sd))
