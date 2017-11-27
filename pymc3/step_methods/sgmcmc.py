@@ -9,7 +9,7 @@ from ..theanof import tt_rng, make_shared_replacements
 import theano
 import numpy as np
 
-__all__ = ['SGFS']
+__all__ = ['SGFS', 'CSG']
 
 EXPERIMENTAL_WARNING = "Warning: Stochastic Gradient based sampling methods are experimental step methods and not yet"\
     " recommended for use in PyMC3!"
@@ -79,9 +79,6 @@ class BaseStochasticGradient(ArrayStepShared):
         Total size of the training data
     step_size : float
         Step size for the parameter update
-    step_size_decay : int
-        Step size decay rate. Every `step_size_decay` iteration the step size reduce 
-        to the half of the previous step size
     model : PyMC Model
         Optional model for sampling step. Defaults to None (taken from context)
     random_seed : int
@@ -107,7 +104,6 @@ class BaseStochasticGradient(ArrayStepShared):
                  batch_size=None,
                  total_size=None,
                  step_size=1.0,
-                 step_size_decay=100,
                  model=None,
                  random_seed=None,
                  minibatches=None,
@@ -139,7 +135,6 @@ class BaseStochasticGradient(ArrayStepShared):
             self.random = tt_rng(random_seed)
 
         self.step_size = step_size
-        self.step_size_decay = step_size_decay
 
         shared = make_shared_replacements(vars, model)
 
@@ -215,14 +210,17 @@ class SGFS(BaseStochasticGradient):
         model variables
     B : np.array
         the pre-conditioner matrix for the fisher scoring step
-
+    step_size_decay : int
+        Step size decay rate. Every `step_size_decay` iteration the step size reduce 
+        to the half of the previous step size
+ 
     References
     -----
     -   Bayesian Posterior Sampling via Stochastic Gradient Fisher Scoring
         Implements Algorithm 1 from the publication http://people.ee.duke.edu/%7Elcarin/782.pdf
     """
 
-    def __init__(self, vars=None, B=None, **kwargs):
+    def __init__(self, vars=None, B=None, step_size_decay=100, **kwargs):
         """
         Parameters
         ----------
@@ -233,6 +231,7 @@ class SGFS(BaseStochasticGradient):
         kwargs: passed to BaseHMC
         """
         self.B = B
+        self.step_size_decay = step_size_decay
         super(SGFS, self).__init__(vars, **kwargs)
 
     def _initialize_values(self):
@@ -313,15 +312,16 @@ class SGFS(BaseStochasticGradient):
         return Competence.INCOMPATIBLE
 
 
-class ConstantStochasticGradient(BaseStochasticGradient):
+class CSG(BaseStochasticGradient):
     R"""
-    ConstantStochasticGradient: approximates stochastic variational inference
+    CSG: ConstantStochasticGradient
     
-    It approximates stochastic variational inference
-    where it differs from SGFS and many other MCMC techniques which
-    converge towards the exact posterior. In comparison to SGFS the paper 
+    It is an approximate stochastic variational inference algorithm
+    while SGFS and many other MCMC techniques provably
+    converge towards the exact posterior. The referenced paper 
     discusses a proof for the optimal preconditioning matrix
-    based on variational inference, so there is no additional input.
+    based on variational inference, so there is no parameter tuning required
+    like in the case of 'B' matrix used for preconditioning in SGFS.
      
     Parameters
     -----
@@ -342,7 +342,7 @@ class ConstantStochasticGradient(BaseStochasticGradient):
             Theano variables, default continuous vars
         kwargs: passed to BaseHMC
         """
-        super(ConstantStochasticGradient, self).__init__(vars, **kwargs)
+        super(CSG, self).__init__(vars, **kwargs)
 
     def _initialize_values(self):
         # Init avg_C: Noise Covariance Moving Average

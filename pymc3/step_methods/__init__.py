@@ -12,7 +12,7 @@ from .metropolis import LaplaceProposal
 from .metropolis import PoissonProposal
 from .metropolis import MultivariateNormalProposal
 
-from .sgmcmc import SGFS, ConstantStochasticGradient
+from .sgmcmc import SGFS, CSG
 from .gibbs import ElemwiseCategorical
 
 from .slicer import Slice
