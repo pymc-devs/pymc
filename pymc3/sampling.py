@@ -229,9 +229,10 @@ def sample(draws=500, step=None, init='auto', n_init=200000, start=None,
     chains : int
         The number of chains to sample. Running independent chains
         is important for some convergence statistics and can also
-        reveal multiple modes in the posterior.
+        reveal multiple modes in the posterior. If `None`, then set to 
+        either `njobs` or 2, whichever is larger.
     njobs : int
-        The number of chains to run in parallel. If None, set to the
+        The number of chains to run in parallel. If `None`, set to the
         number of CPUs in the system, but at most 4. Keep in mind that
         some chains might themselves be multithreaded via openmp or
         BLAS. In those cases it might be faster to set this to one.
