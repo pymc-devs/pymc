@@ -629,7 +629,7 @@ def _iter_chains(draws, chains, step, start, tune=None,
 
 
     # 1. prepare a BaseTrace for each chain
-    traces = [_choose_backend(None, c, model=model) for c in chains]
+    traces = [_choose_backend(None, chain, model=model) for chain in chains]
     for c,strace in enumerate(traces):
         # initialize the trace size
         if len(strace) > 0:
