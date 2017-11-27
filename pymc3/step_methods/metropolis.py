@@ -26,6 +26,11 @@ class NormalProposal(Proposal):
         return nr.normal(scale=self.s)
 
 
+class UniformProposal(Proposal):
+    def __call__(self):
+        return nr.uniform(low=-self.s, high=self.s, size=len(self.s))
+
+
 class CauchyProposal(Proposal):
     def __call__(self):
         return nr.standard_cauchy(size=np.size(self.s)) * self.s
@@ -499,7 +504,7 @@ class DEMetropolis(PopulationArrayStepShared):
         'tune': np.bool,
     }]
 
-    def __init__(self, lamb=None, vars=None, S=None, proposal_dist=None, scaling=1.,
+    def __init__(self, lamb=None, vars=None, S=None, proposal_dist=None, scaling=0.001,
                  tune=True, tune_interval=100, model=None, mode=None, **kwargs):
 
         model = pm.modelcontext(model)
@@ -513,12 +518,8 @@ class DEMetropolis(PopulationArrayStepShared):
 
         if proposal_dist is not None:
             self.proposal_dist = proposal_dist(S)
-        elif S.ndim == 1:
-            self.proposal_dist = NormalProposal(S)
-        elif S.ndim == 2:
-            self.proposal_dist = MultivariateNormalProposal(S)
         else:
-            raise ValueError("Invalid rank for variance: %s" % S.ndim)
+            self.proposal_dist = UniformProposal(S)
 
         self.scaling = np.atleast_1d(scaling).astype('d')
         self.lamb = lamb if lamb is not None else 2.38 / np.sqrt(2 * S.size)
