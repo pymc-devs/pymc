@@ -391,9 +391,13 @@ def sample(draws=500, step=None, init='auto', n_init=200000, start=None,
 
     sample_args.update(kwargs)
 
-    parallel = njobs > 1 and chains > 1
+    has_population_samplers = np.any([
+        isinstance(m, arraystep.PopulationArrayStepShared)
+        for m in step.methods
+    ])
+    parallel = njobs > 1 and chains > 1 and not has_population_samplers
     if parallel:
-        pm._log.info('Multiprocess sampling ({} jobs, {} chains)'.format(njobs, chains))
+        pm._log.info('Multiprocess sampling ({} chains in {} jobs)'.format(chains, njobs))
         try:
             trace = _mp_sample(**sample_args)
         except pickle.PickleError:
@@ -408,7 +412,7 @@ def sample(draws=500, step=None, init='auto', n_init=200000, start=None,
             else:
                 raise
     if not parallel:
-        pm._log.info('Multichain sampling ({} jobs, {} chains)'.format(njobs, chains))
+        pm._log.info('Multichain sampling ({} chains in 1 job)'.format(chains))
         trace = _sample_many(**sample_args)
 
     discard = tune if discard_tuned_samples else 0
