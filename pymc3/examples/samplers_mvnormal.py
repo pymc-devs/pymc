@@ -45,10 +45,11 @@ def run(steppers, p):
                 step=step_cls(),
                 start=start
             )
-            print('{} samples across {} chains'.format(len(mt), mt.nchains))
             runtimes[name] = time.time() - t_start
+            print('{} samples across {} chains'.format(len(mt), mt.nchains))
             traces[name] = mt
             en = pm.diagnostics.effective_n(mt)
+            print(en)
             if USE_XY:
                 effn[name] = np.mean(en['x']) / len(mt) / mt.nchains
             else:
