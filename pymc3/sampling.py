@@ -401,19 +401,22 @@ def sample(draws=500, step=None, init='auto', n_init=200000, start=None,
         try:
             trace = _mp_sample(**sample_args)
         except pickle.PickleError:
-            pm._log.warn("Could not pickle model, sampling sequentially.")
+            pm._log.warn("Could not pickle model, sampling singlethreaded.")
             pm._log.debug('Pickling error:', exec_info=True)
             parallel = False
         except AttributeError as e:
             if str(e).startswith("AttributeError: Can't pickle"):
-                pm._log.warn("Could not pickle model, sampling sequentially.")
+                pm._log.warn("Could not pickle model, sampling singlethreaded.")
                 pm._log.debug('Pickling error:', exec_info=True)
                 parallel = False
             else:
                 raise
-    if not parallel:
+    if not parallel and has_population_samplers:
         pm._log.info('Multichain sampling ({} chains in 1 job)'.format(chains))
         trace = _sample_many(**sample_args)
+    else:
+        pm._log.info('Sequential sampling ({} chains in 1 job)'.format(chains))
+        trace = _sample_many_sequentially(**sample_args)
 
     discard = tune if discard_tuned_samples else 0
     return trace[discard:]
