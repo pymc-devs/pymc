@@ -411,12 +411,13 @@ def sample(draws=500, step=None, init='auto', n_init=200000, start=None,
                 parallel = False
             else:
                 raise
-    if not parallel and has_population_samplers:
-        pm._log.info('Multichain sampling ({} chains in 1 job)'.format(chains))
-        trace = _sample_many(**sample_args)
-    else:
-        pm._log.info('Sequential sampling ({} chains in 1 job)'.format(chains))
-        trace = _sample_many_sequentially(**sample_args)
+    if not parallel:
+       if has_population_samplers:
+            pm._log.info('Multichain sampling ({} chains in 1 job)'.format(chains))
+            trace = _sample_many(**sample_args)
+       else:
+            pm._log.info('Sequential sampling ({} chains in 1 job)'.format(chains))
+            trace = _sample_many_sequentially(**sample_args)
 
     discard = tune if discard_tuned_samples else 0
     return trace[discard:]
