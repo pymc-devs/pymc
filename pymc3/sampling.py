@@ -646,7 +646,11 @@ def _iter_chains(draws, chains, step, start, tune=None,
     steppers = [None] * nchains
     for c in range(nchains):
         # need indepenently tuned samplers for each chain
-        chainstep = copy(step)
+        # it is important to copy the actual steppers (but not the delta_logp)
+        if isinstance(step, CompoundStep):
+            chainstep = CompoundStep([copy(m) for m in step.methods])
+        else:
+            chainstep = copy(step)
         # link Population samplers to the shared population state
         for sm in chainstep.methods:
             if isinstance(sm, arraystep.PopulationArrayStepShared):
