@@ -46,7 +46,7 @@ def run(steppers, p):
                 start=start
             )
             runtimes[name] = time.time() - t_start
-            print('{} samples across {} chains'.format(len(mt), mt.nchains))
+            print('{} samples across {} chains'.format(len(mt) * mt.nchains, mt.nchains))
             traces[name] = mt
             en = pm.diagnostics.effective_n(mt)
             print(en)
