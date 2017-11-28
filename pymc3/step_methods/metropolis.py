@@ -504,9 +504,6 @@ class DEMetropolis(PopulationArrayStepShared):
     stats_dtypes = [{
         'accept': np.float64,
         'tune': np.bool,
-        'ir1': np.int,
-        'ir2': np.int,
-        'scaling': np.float64,
     }]
 
     def __init__(self, lamb=None, vars=None, S=None, proposal_dist=None, scaling=0.001,
@@ -567,9 +564,6 @@ class DEMetropolis(PopulationArrayStepShared):
         stats = {
             'tune': self.tune,
             'accept': np.exp(accept),
-            'ir1': ir1,
-            'ir2': ir2,
-            'scaling': self.scaling
         }
 
         return q_new, [stats]
