@@ -635,7 +635,7 @@ def _iter_chains(draws, chains, step, start, tune=None,
     # 1. prepare a BaseTrace for each chain
     traces = [_choose_backend(None, chain, model=model) for chain in chains]
     for c,strace in enumerate(traces):
-        # initialize the trace size
+        # initialize the trace size and variable transforms
         if len(strace) > 0:
             update_start_vals(start[c], strace.point(-1), model)
         else:
@@ -649,13 +649,13 @@ def _iter_chains(draws, chains, step, start, tune=None,
     # 3. Set up the steppers
     steppers = [None] * nchains
     for c in range(nchains):
-        # need indepenently tuned samplers for each chain
+        # need indepenent samplers for each chain
         # it is important to copy the actual steppers (but not the delta_logp)
         if isinstance(step, CompoundStep):
             chainstep = CompoundStep([copy(m) for m in step.methods])
         else:
             chainstep = copy(step)
-        # link Population samplers to the shared population state
+        # link population samplers to the shared population state
         for sm in chainstep.methods:
             if isinstance(sm, arraystep.PopulationArrayStepShared):
                 sm.link_population(points, c)

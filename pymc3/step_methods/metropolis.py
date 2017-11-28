@@ -473,21 +473,23 @@ class CategoricalGibbsMetropolis(ArrayStep):
 
 class DEMetropolis(PopulationArrayStepShared):
     """
-    Differential Evolution Metropolis sampling step
+    Differential Evolution Metropolis sampling step.
 
     Parameters
     ----------
+    lamb : float
+        Lambda parameter of the DE proposal mechanism. Defaults to 2.38 / sqrt(2 * ndim)
     vars : list
         List of variables for sampler
     S : standard deviation or covariance matrix
         Some measure of variance to parameterize proposal distribution
     proposal_dist : function
         Function that returns zero-mean deviates when parameterized with
-        S (and n). Defaults to normal.
+        S (and n). Defaults to Uniform(-S,+S).
     scaling : scalar or array
-        Initial scale factor for proposal. Defaults to 1.
+        Initial scale factor for epsilon. Defaults to 0.001
     tune : bool
-        Flag for tuning. Defaults to True.
+        Flag for tuning the scaling. Defaults to True.
     tune_interval : int
         The frequency of tuning. Defaults to 100 iterations.
     model : PyMC Model
