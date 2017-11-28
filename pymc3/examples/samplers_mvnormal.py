@@ -91,4 +91,4 @@ if __name__ == '__main__':
     else:
         print('\r\nNormalized effective sampling rate [1/s]')
         df_performance = df_performance.T
-    print(df_performance.to_string(float_format='{:.0f}'.format))
+    print(df_performance.to_string(float_format='{:.3f}'.format))
