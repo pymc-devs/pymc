@@ -41,11 +41,11 @@ def run(steppers, p):
             t_start = time.time()
             mt = pm.sample(
                 draws=10000,
-                njobs=1,
                 chains=6,
                 step=step_cls(),
                 start=start
             )
+            print('{} samples across {} chains'.format(len(mt), mt.nchains))
             runtimes[name] = time.time() - t_start
             traces[name] = mt
             en = pm.diagnostics.effective_n(mt)
@@ -63,22 +63,32 @@ if __name__ == '__main__':
         pm.DEMetropolis
     ]
     names = [c.__name__ for c in methods]
-    df_effectiven = pd.DataFrame(columns=['p'] + names)
-    df_effectiven['p'] = [.0,.9]
-    df_effectiven = df_effectiven.set_index('p')
 
-    df_runtime = pd.DataFrame(columns=['p'] + names)
-    df_runtime['p'] = [.0,.9]
-    df_runtime = df_runtime.set_index('p')
+    df_base = pd.DataFrame(columns=['p'] + names)
+    df_base['p'] = [.0,.9]
+    df_base = df_base.set_index('p')
+
+    df_effectiven = df_base.copy()
+    df_runtime = df_base.copy()
+    df_performance = df_base.copy()
 
     for p in df_effectiven.index:
         trace, rate, runtime = run(methods, p)
         for name in names:
             df_effectiven.set_value(p, name, rate[name])
             df_runtime.set_value(p, name, runtime[name])
+            df_performance.set_value(p, name, rate[name] / runtime[name])
 
     print('\r\nEffective sample size [0...1]')
-    print(df_effectiven.T)
+    print(df_effectiven.T.to_string(float_format='{:.3f}'.format))
 
     print('\r\nRuntime [s]')
-    print(df_runtime.T)
+    print(df_runtime.T.to_string(float_format='{:.1f}'.format))
+
+    if 'NUTS' in names:
+        print('\r\nNormalized effective sampling rate [0...1]')
+        df_performance = df_performance.T / df_performance.loc[0]['NUTS']
+    else:
+        print('\r\nNormalized effective sampling rate [1/s]')
+        df_performance = df_performance.T
+    print(df_performance.to_string(float_format='{:.0f}'.format))
