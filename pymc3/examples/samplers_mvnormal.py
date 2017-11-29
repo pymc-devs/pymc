@@ -12,7 +12,6 @@ import time
 import pandas as pd
 import pymc3 as pm
 import theano.tensor as tt
-import matplotlib.pyplot as plt
 
 # with this flag one can switch between defining the bivariate normal as
 # either a 2D MvNormal (USE_XY = False) split up the two dimensions into
@@ -33,7 +32,7 @@ def run(steppers, p):
             mu = np.array([0.,0.])
             cov = np.array([[1.,p],[p,1.]])
             z = pm.MvNormal.dist(mu=mu, cov=cov, shape=(2,)).logp(tt.stack([x,y]))
-            p = pm.Potential('logp_xy', z)
+            pot = pm.Potential('logp_xy', z)
             start = {'x': 0, 'y': 0}
         else:
             mu = np.array([0.,0.])
@@ -43,7 +42,6 @@ def run(steppers, p):
 
         for step_cls in steppers:
             name = step_cls.__name__
-            print('\r\nStep method: {}'.format(name))
             t_start = time.time()
             mt = pm.sample(
                 draws=10000,
@@ -55,7 +53,7 @@ def run(steppers, p):
             print('{} samples across {} chains'.format(len(mt) * mt.nchains, mt.nchains))
             traces[name] = mt
             en = pm.diagnostics.effective_n(mt)
-            print(en)
+            print('effective: {}\r\n'.format(en))
             if USE_XY:
                 effn[name] = np.mean(en['x']) / len(mt) / mt.nchains
             else:
@@ -66,6 +64,7 @@ def run(steppers, p):
 if __name__ == '__main__':
     methods = [
         pm.Metropolis,
+        pm.Slice,
         pm.NUTS,
         pm.DEMetropolis
     ]
