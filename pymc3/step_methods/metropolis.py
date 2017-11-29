@@ -5,7 +5,6 @@ import scipy.linalg
 
 from ..distributions import draw_values
 from .arraystep import ArrayStepShared, PopulationArrayStepShared, ArrayStep, metrop_select, Competence
-from ..blocking import DictToArrayBijection
 import pymc3 as pm
 from pymc3.theanof import floatX
 
