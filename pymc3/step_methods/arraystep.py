@@ -156,8 +156,7 @@ class ArrayStepShared(BlockedStep):
         for var, share in self.shared.items():
             share.set_value(point[var])
 
-        if self.bij is None:
-            self.bij = DictToArrayBijection(self.ordering, point)
+        self.bij = DictToArrayBijection(self.ordering, point)
 
         if self.generates_stats:
             apoint, stats = self.astep(self.bij.map(point))
