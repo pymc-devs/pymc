@@ -622,6 +622,7 @@ def _iter_chains(draws, chains, step, start, tune=None,
                  model=None, random_seed=None):
     if not isinstance(step, CompoundStep):
         raise ValueError('step-kwarg must be CompoundStep, got {} instead.'.format(step.__class__))
+
     # chains contains the chain numbers, but for indexing we need indices...
     nchains = len(chains)
     model = modelcontext(model)
@@ -631,7 +632,7 @@ def _iter_chains(draws, chains, step, start, tune=None,
     if draws < 1:
         raise ValueError('Argument `draws` should be above 0.')
 
-    # IMPORTANT: The initialization of traces, samplers and points must happen in the right order:
+    # The initialization of traces, samplers and points must happen in the right order:
     # 1. traces are initialized and update_start_vals configures variable transforms
     # 2. population of points is created
     # 3. steppers are initialized and linked to the points object
