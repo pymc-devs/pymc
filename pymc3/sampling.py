@@ -145,6 +145,19 @@ def assign_step_methods(model, step=None, methods=STEP_METHODS,
     return instantiate_steppers(model, steps, selected_steps, step_kwargs)
 
 
+def print_step_hierarchy(s, level=0):
+    if isinstance(s, (list, tuple)):
+        pm._log.info('>' * level + 'list')
+        for i in s:
+            print_step_hierarchy(i, level+1)
+    elif isinstance(s, CompoundStep):
+        pm._log.info('>' * level + 'CompoundStep')
+        for i in s.methods:
+            print_step_hierarchy(i, level+1)
+    else:
+        pm._log.info('>' * level + '{}: {}'.format(s.__class__.__name__, s.vars))
+
+
 def _cpu_count():
     """Try to guess the number of CPUs in the system.
 
@@ -359,15 +372,8 @@ def sample(draws=500, step=None, init='auto', n_init=200000, start=None,
     else:
         step = assign_step_methods(model, step, step_kwargs=step_kwargs)
 
-    if not isinstance(step, CompoundStep):
-        if not isinstance(step, (list, tuple)):
-            step = [step]
+    if isinstance(step, list):
         step = CompoundStep(step)
-
-    # print the sampler assignment
-    for sm in step.methods:
-        pm._log.info('{}: {}'.format(sm.__class__.__name__, sm.vars))
-
     if start is None:
         start = {}
     if isinstance(start, dict):
@@ -393,11 +399,12 @@ def sample(draws=500, step=None, init='auto', n_init=200000, start=None,
 
     has_population_samplers = np.any([
         isinstance(m, arraystep.PopulationArrayStepShared)
-        for m in step.methods
+        for m in (step.methods if isinstance(step, CompoundStep) else [step])
     ])
     parallel = njobs > 1 and chains > 1 and not has_population_samplers
     if parallel:
         pm._log.info('Multiprocess sampling ({} chains in {} jobs)'.format(chains, njobs))
+        print_step_hierarchy(step)
         try:
             trace = _mp_sample(**sample_args)
         except pickle.PickleError:
@@ -414,9 +421,11 @@ def sample(draws=500, step=None, init='auto', n_init=200000, start=None,
     if not parallel:
        if has_population_samplers:
             pm._log.info('Population sampling ({} chains in 1 job)'.format(chains))
+            print_step_hierarchy(step)
             trace = _sample_population(**sample_args)
        else:
             pm._log.info('Sequential sampling ({} chains in 1 job)'.format(chains))
+            print_step_hierarchy(step)
             trace = _sample_many(**sample_args)
 
     discard = tune if discard_tuned_samples else 0
@@ -483,7 +492,7 @@ def _sample_population(draws, chain, chains, start, random_seed, step, tune,
     for it,traces in enumerate(sampling):
         latest_traces = traces
         # TODO: add support for liveplot during population-sampling
-    return MultiTrace(traces)
+    return MultiTrace(latest_traces)
 
 
 def _sample(chain, progressbar, random_seed, start, draws=None, step=None,
@@ -620,9 +629,6 @@ def _iter_sample(draws, step, start=None, trace=None, chain=0, tune=None,
 
 def _iter_chains(draws, chains, step, start, tune=None,
                  model=None, random_seed=None):
-    if not isinstance(step, CompoundStep):
-        raise ValueError('step-kwarg must be CompoundStep, got {} instead.'.format(step.__class__))
-
     # chains contains the chain numbers, but for indexing we need indices...
     nchains = len(chains)
     model = modelcontext(model)
@@ -663,7 +669,7 @@ def _iter_chains(draws, chains, step, start, tune=None,
         else:
             chainstep = copy(step)
         # link population samplers to the shared population state
-        for sm in chainstep.methods:
+        for sm in (chainstep.methods if isinstance(step, CompoundStep) else [chainstep]):
             if isinstance(sm, arraystep.PopulationArrayStepShared):
                 sm.link_population(points, c)
         steppers[c] = chainstep
