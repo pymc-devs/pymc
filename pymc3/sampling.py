@@ -413,11 +413,11 @@ def sample(draws=500, step=None, init='auto', n_init=200000, start=None,
                 raise
     if not parallel:
        if has_population_samplers:
-            pm._log.info('Multichain sampling ({} chains in 1 job)'.format(chains))
-            trace = _sample_many(**sample_args)
+            pm._log.info('Population sampling ({} chains in 1 job)'.format(chains))
+            trace = _sample_population(**sample_args)
        else:
             pm._log.info('Sequential sampling ({} chains in 1 job)'.format(chains))
-            trace = _sample_many_sequentially(**sample_args)
+            trace = _sample_many(**sample_args)
 
     discard = tune if discard_tuned_samples else 0
     return trace[discard:]
@@ -450,7 +450,7 @@ def _check_start_shape(model, start):
         raise ValueError("Bad shape for start argument:{}".format(e))
 
 
-def _sample_many_sequentially(draws, chain, chains, start, random_seed, **kwargs):
+def _sample_many(draws, chain, chains, start, random_seed, **kwargs):
     traces = []
     for i in range(chains):
         trace = _sample(draws=draws, chain=chain + i, start=start[i],
@@ -469,10 +469,12 @@ def _sample_many_sequentially(draws, chain, chains, start, random_seed, **kwargs
     return MultiTrace(traces)
 
 
-def _sample_many(draws, chain, chains, start, random_seed, step, tune, model, progressbar=None, **kwargs):
+def _sample_population(draws, chain, chains, start, random_seed, step, tune,
+        model, progressbar=None, **kwargs):
     # create the generator that iterates all chains in parallel
     chains = [chain + c for c in range(chains)]
-    sampling = _iter_chains(draws, chains, step, start, tune=tune, model=model, random_seed=random_seed)
+    sampling = _iter_chains(draws, chains, step, start, tune=tune,
+                            model=model, random_seed=random_seed)
 
     if progressbar:
         sampling = tqdm(sampling, total=draws)
