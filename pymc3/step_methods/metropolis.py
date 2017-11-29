@@ -505,13 +505,13 @@ class DEMetropolis(PopulationArrayStepShared):
         'tune': np.bool,
     }]
 
-    def __init__(self, lamb=None, vars=None, S=None, proposal_dist=None, scaling=0.001,
+    def __init__(self, vars=None, S=None, proposal_dist=None, lamb=None, scaling=0.001,
                  tune=True, tune_interval=100, model=None, mode=None, **kwargs):
 
         model = pm.modelcontext(model)
 
         if vars is None:
-            vars = model.vars
+            vars = model.cont_vars
         vars = pm.inputvars(vars)
 
         if S is None:
@@ -523,7 +523,9 @@ class DEMetropolis(PopulationArrayStepShared):
             self.proposal_dist = UniformProposal(S)
 
         self.scaling = np.atleast_1d(scaling).astype('d')
-        self.lamb = lamb if lamb is not None else 2.38 / np.sqrt(2 * S.size)
+        if lamb is None:
+            lamb = 2.38 / np.sqrt(2 * S.size)
+        self.lamb = float(lamb)
         self.tune = tune
         self.tune_interval = tune_interval
         self.steps_until_tune = tune_interval
