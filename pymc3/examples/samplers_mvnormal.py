@@ -1,6 +1,9 @@
 """
 Comparing different samplers on a correlated bivariate normal distribution.
 
+This example will sample a bivariate normal with Metropolis, NUTS and DEMetropolis
+at two correlations (0, 0.9) and print out the effective sample sizes, runtime and
+normalized effective sampling rates.
 """
 
 
@@ -11,7 +14,10 @@ import pymc3 as pm
 import theano.tensor as tt
 import matplotlib.pyplot as plt
 
-
+# with this flag one can switch between defining the bivariate normal as
+# either a 2D MvNormal (USE_XY = False) split up the two dimensions into
+# two variables 'x' and 'y'.  The latter is recommended because it highlights
+# different behaviour with respect to blocking.
 USE_XY = True
 
 def run(steppers, p):
