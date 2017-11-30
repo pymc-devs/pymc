@@ -1,7 +1,7 @@
 from collections import defaultdict, Iterable
 from copy import copy
 import pickle
-
+import multiprocessing
 from joblib import Parallel, delayed
 import numpy as np
 import warnings
@@ -627,6 +627,108 @@ def _iter_sample(draws, step, start=None, trace=None, chain=0, tune=None,
             step.report._finalize(strace)
 
 
+class ChainWorkers(object):
+    def __init__(self, steppers):
+        self.nchains = len(steppers)
+        self._master_ends = []
+        self._processes = []
+        # configure a child process for each stepper
+        for c,stepper in enumerate(steppers):
+            slave_end, master_end = multiprocessing.Pipe()
+            stepper_dumps = pickle.dumps(stepper, protocol=4)
+            process = multiprocessing.Process(
+                target=self.__class__._run_slave,
+                args=(c, stepper_dumps, slave_end),
+                name='ChainWalker{}'.format(c)
+            )
+            self._master_ends.append(master_end)
+            self._processes.append(process)
+        return super(ChainWorkers, self).__init__()
+
+    def __enter__(self):
+        for process in self._processes:
+            process.start()
+        return
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        try:
+            # terminate the workers
+            for master_end in self._master_ends:
+                master_end.send(None)
+            # join the processes
+            for process in self._processes:
+                process.join(timeout=3)
+        except:
+            pm._log.warning('Termination failed.')
+        return
+
+    @staticmethod
+    def _run_slave(c, stepper_dumps, slave_end):
+        """Started on a separate process to perform stepping of a chain.
+
+        Parameters
+        ----------
+        c : int
+            number of this chain
+        stepper : BlockedStep
+            a step method such as CompoundStep
+        slave_end : multiprocessing.connection.PipeConnection
+            This is our connection to the main process
+        """
+        try:
+            stepper = pickle.loads(stepper_dumps)
+            # the stepper is not necessarily a PopulationArraySharedStep itself,
+            # but rather a CompoundStep, but PopulationArrayStepShared.population
+            # has to be updated. Therefore we identify the substeppers first.
+            population_steppers = []
+            for sm in (stepper.methods if isinstance(stepper, CompoundStep) else [stepper]):
+                if isinstance(sm, arraystep.PopulationArrayStepShared):
+                    population_steppers.append(sm)
+            while True:
+                incoming = slave_end.recv()
+                if incoming is None:
+                    break
+                tune_stop, population = incoming
+                if tune_stop:
+                    stop_tuning(stepper)
+                # forward the population to the PopulationArrayStepShared objects
+                for popstep in population_steppers:
+                    popstep.population = population
+                update = stepper.step(population[c])
+                slave_end.send(update)
+        except Exception:
+            pm._log.exception('ChainWalker{}'.format(c))
+        return
+
+    def step_start(self, tune_stop, population):
+        """Submits the instructions to make a step.
+
+        Parameters
+        ----------
+        tune_stop : bool
+            Indicates if the condition (i == tune) is fulfilled
+        population : list
+            Current Points of all chains
+        """
+        for c in range(self.nchains):
+            self._master_ends[c].send((tune_stop, population))
+        return
+
+    def step_end(self):
+        """Blockingly waits for the completion of a step.
+
+        Returns
+        -------
+        update : Point
+            The new position of the chain
+        """
+        updates = [
+            self._master_ends[c].recv()
+            for c in range(self.nchains)
+        ]
+        return updates
+
+
 def _iter_chains(draws, chains, step, start, tune=None,
                  model=None, random_seed=None):
     # chains contains the chain numbers, but for indexing we need indices...
@@ -657,7 +759,6 @@ def _iter_chains(draws, chains, step, start, tune=None,
     # 2. create a population (points) that tracks each chain
     # it is updated as the chains are advanced
     points = [Point(start[c], model=model) for c in range(nchains)]
-    updates = [None] * nchains
 
     # 3. Set up the steppers
     steppers = [None] * nchains
@@ -682,27 +783,33 @@ def _iter_chains(draws, chains, step, start, tune=None,
             traces[c].setup(draws, c)
 
     try:
-        # iterate draws of all chains
-        for i in range(draws):
-            # step each of the chains
-            for c in range(nchains):
-                if i == tune:
-                    steppers[c] = stop_tuning(steppers[c])
-                updates[c] = steppers[c].step(points[c])
+        workers = ChainWorkers(steppers)
+        with workers:
+            # iterate draws of all chains
+            for i in range(draws):
+                tune_stop = i == tune
+                workers.step_start(tune_stop, points)
+                updates = workers.step_end()
 
-            # apply the update to the points and record to the traces
-            for c,strace in enumerate(traces):
-                if steppers[c].generates_stats:
-                    points[c], states = updates[c]
-                    if strace.supports_sampler_stats:
-                        strace.record(points[c], states)
+                ## step each of the chains
+                #for c in range(nchains):
+                #    if i == tune:
+                #        steppers[c] = stop_tuning(steppers[c])
+                #    updates[c] = steppers[c].step(points[c])
+
+                # apply the update to the points and record to the traces
+                for c,strace in enumerate(traces):
+                    if steppers[c].generates_stats:
+                        points[c], states = updates[c]
+                        if strace.supports_sampler_stats:
+                            strace.record(points[c], states)
+                        else:
+                            strace.record(points[c])
                     else:
+                        points[c] = updates[c]
                         strace.record(points[c])
-                else:
-                    points[c] = updates[c]
-                    strace.record(points[c])
-            # yield the state of all chains in parallel
-            yield traces
+                # yield the state of all chains in parallel
+                yield traces
     except KeyboardInterrupt:
         for c,strace in enumerate(traces):
             strace.close()
