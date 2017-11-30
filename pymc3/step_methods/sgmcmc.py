@@ -70,7 +70,7 @@ class BaseStochasticGradient(ArrayStepShared):
     variables of type `GeneratorOp`
 
     Parameters
-    -------
+    ----------
     vars : list
         List of variables for sampler
     batch_size`: int
@@ -206,7 +206,7 @@ class SGFS(BaseStochasticGradient):
     StochasticGradientFisherScoring
 
     Parameters
-    -----
+    ----------
     vars : list
         model variables
     B : np.array
@@ -216,10 +216,11 @@ class SGFS(BaseStochasticGradient):
         to the half of the previous step size
  
     References
-    -----
+    ----------
     -   Bayesian Posterior Sampling via Stochastic Gradient Fisher Scoring
         Implements Algorithm 1 from the publication http://people.ee.duke.edu/%7Elcarin/782.pdf
     """
+    name = 'stochastic_gradient_fisher_scoring'
 
     def __init__(self, vars=None, B=None, step_size_decay=100, **kwargs):
         """
@@ -323,17 +324,20 @@ class CSG(BaseStochasticGradient):
     discusses a proof for the optimal preconditioning matrix
     based on variational inference, so there is no parameter tuning required
     like in the case of 'B' matrix used for preconditioning in SGFS.
+    Take a look at this example notebook 
+    https://github.com/pymc-devs/pymc3/tree/master/docs/source/notebooks/constant_stochastic_gradient.ipynb
      
     Parameters
-    -----
+    ----------
     vars : list
         model variables
 
     References
-    -----
+    ----------
     -   Stochastic Gradient Descent as Approximate Bayesian Inference
         https://arxiv.org/pdf/1704.04289v1.pdf
     """
+    name = 'constant_stochastic_gradient'
 
     def __init__(self, vars=None, **kwargs):
         """

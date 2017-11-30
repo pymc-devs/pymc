@@ -8,7 +8,7 @@
 - Improve NUTS initialization `advi+adapt_diag_grad` and add `jitter+adapt_diag_grad` (#2643) 
 - Update loo, new improved algorithm (#2730)
 - New CSG (Constant Stochastic Gradient) approximate posterior sampling
-  algorithm added
+  algorithm (#2544)
 ### Fixes 
 - Fixed `compareplot` to use `loo` output. 
 - Add test for `model.logp_array` and `model.bijection` (#2724) 
@@ -202,6 +202,7 @@ Taku Yoshioka <taku.yoshioka.4096@gmail.com>
 Peadar Coyle (springcoil) <peadarcoyle@googlemail.com>
 Austin Rochford <arochford@monetate.com>
 Osvaldo Martin <aloctavodia@gmail.com>
+Shashank Shekhar <shashank.f1@gmail.com>
 
 In addition, the following community members contributed to this release:
 
@@ -250,7 +251,6 @@ Patricio Benavente <patbenavente@gmail.com>
 Raymond Roberts
 Rodrigo Benenson <rodrigo.benenson@gmail.com>
 Sergei Lebedev <superbobry@gmail.com>
-Shashank Shekhar <shashank.f1@gmail.com>
 Skipper Seabold <chris.fonnesbeck@vanderbilt.edu>
 Thomas Kluyver <takowl@gmail.com>
 Tobias Knuth <mail@tobiasknuth.de>
