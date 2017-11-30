@@ -22,7 +22,7 @@ def _var_str(name, shape):
     return names
 
 
-def _plot_tree(ax, y, ntiles, show_quartiles, plot_kwargs):
+def _plot_tree(ax, y, ntiles, show_quartiles, c, plot_kwargs):
     """Helper to plot errorbars for the forestplot.
 
     Parameters
@@ -34,7 +34,8 @@ def _plot_tree(ax, y, ntiles, show_quartiles, plot_kwargs):
         A list or array of length 5 or 3
     show_quartiles: boolean
         Whether to plot the interquartile range
-
+    c : string
+        color
     Returns
     -------
 
@@ -43,32 +44,31 @@ def _plot_tree(ax, y, ntiles, show_quartiles, plot_kwargs):
     """
     if show_quartiles:
         # Plot median
-        ax.plot(ntiles[2], y, color=plot_kwargs.get('color', 'blue'),
+        ax.plot(ntiles[2], y, color=c,
                 marker=plot_kwargs.get('marker', 'o'),
                 markersize=plot_kwargs.get('markersize', 4))
         # Plot quartile interval
         ax.errorbar(x=(ntiles[1], ntiles[3]), y=(y, y),
                     linewidth=plot_kwargs.get('linewidth', 2),
-                    color=plot_kwargs.get('color', 'blue'))
+                    color=c)
 
     else:
         # Plot median
         ax.plot(ntiles[1], y, marker=plot_kwargs.get('marker', 'o'),
-                color=plot_kwargs.get('color', 'blue'),
-                markersize=plot_kwargs.get('markersize', 4))
+                color=c, markersize=plot_kwargs.get('markersize', 4))
 
     # Plot outer interval
     ax.errorbar(x=(ntiles[0], ntiles[-1]), y=(y, y),
                 linewidth=int(plot_kwargs.get('linewidth', 2)/2),
-                color=plot_kwargs.get('color', 'blue'))
+                color=c)
 
     return ax
 
 
 def forestplot(trace, models=None, varnames=None, transform=identity_transform,
                alpha=0.05, quartiles=True, rhat=True, main=None, xtitle=None,
-               xlim=None, ylabels=None, chain_spacing=0.05, vline=0, gs=None,
-               plot_transformed=False, plot_kwargs=None):
+               xlim=None, ylabels=None, colors='C0', chain_spacing=0.1, vline=0,
+               gs=None, plot_transformed=False, plot_kwargs=None):
     """
     Forest plot (model summary plot).
 
@@ -88,27 +88,33 @@ def forestplot(trace, models=None, varnames=None, transform=identity_transform,
         variables plotted).
     transform : callable
         Function to transform data (defaults to identity)
-    alpha (optional): float
+    alpha : float, optional
         Alpha value for (1-alpha)*100% credible intervals (defaults to 0.05).
-    quartiles (optional): bool
+    quartiles : bool, optional
         Flag for plotting the interquartile range, in addition to the
         (1-alpha)*100% intervals (defaults to True).
-    rhat (optional): bool
+    rhat : bool, optional
         Flag for plotting Gelman-Rubin statistics. Requires 2 or more chains
         (defaults to True).
-    main (optional): string
+    main : string, optional
         Title for main plot. Passing False results in titles being suppressed;
         passing None (default) results in default titles.
-    xtitle (optional): string
+    xtitle : string, optional
         Label for x-axis. Defaults to no label
-    xlim (optional): list or tuple
+    xlim : list or tuple, optional
         Range for x-axis. Defaults to matplotlib's best guess.
-    ylabels (optional): list or array
+    ylabels : list or array, optional
         User-defined labels for each variable. If not provided, the node
         __name__ attributes are used.
-    chain_spacing (optional): float
-        Plot spacing between chains (defaults to 0.05).
-    vline (optional): numeric
+    colors : list or string, optional
+        list with valid matplotlib colors, one color per model. Alternative a
+        string can be passed. If the string is `cycle `, it will automatically
+        chose a color per model from the matyplolib's cycle. If a single color
+        is passed, eg 'k', 'C2', 'red' this color will be used for all models.
+        Defauls to 'C0' (blueish in most matplotlib styles)
+    chain_spacing : float, optional
+        Plot spacing between chains (defaults to 0.1).
+    vline : numeric, optional
         Location of vertical reference line (defaults to 0).
     gs : GridSpec
         Matplotlib GridSpec object. Defaults to None.
@@ -117,7 +123,7 @@ def forestplot(trace, models=None, varnames=None, transform=identity_transform,
         original variables (defaults to False).
     plot_kwargs : dict
         Optional arguments for plot elements. Currently accepts 'fontsize',
-        'linewidth', 'color', 'marker', and 'markersize'.
+        'linewidth', 'marker', and 'markersize'.
 
     Returns
     -------
@@ -130,6 +136,11 @@ def forestplot(trace, models=None, varnames=None, transform=identity_transform,
 
     if models is None:
         models = ['']
+
+    if colors == 'cycle':
+        colors = ['C{}'.format(i) for i in range(len(models))]
+    elif isinstance(colors, str):
+        colors = [colors for i in range(len(models))]
 
     if not isinstance(trace, (list, tuple)):
         trace = [trace]
@@ -178,7 +189,9 @@ def forestplot(trace, models=None, varnames=None, transform=identity_transform,
     labels = []
     var = 0
     all_quants = []
-    for v in varnames:
+    bands = [0.05, 0] * len(varnames)
+    var_old = 0.5
+    for v_idx, v in enumerate(varnames):
         for h, tr in enumerate(trace):
             if v not in tr.varnames:
                 labels.append(models[h] + ' ' + v)
@@ -187,7 +200,7 @@ def forestplot(trace, models=None, varnames=None, transform=identity_transform,
                 for j, chain in enumerate(tr.chains):
                     var_quantiles = trace_quantiles[h][chain][v]
 
-                    quants = [var_quantiles[v] for v in qlist]
+                    quants = [var_quantiles[vq] for vq in qlist]
                     var_hpd = hpd_intervals[h][chain][v].T
 
                     # Substitute HPD interval for quantile
@@ -218,17 +231,18 @@ def forestplot(trace, models=None, varnames=None, transform=identity_transform,
                     y = - var + offset[j]
 
                     # Deal with multivariate nodes
+
                     if k > 1:
                         qs = np.moveaxis(np.array(quants), 0, -1).squeeze()
                         for q in qs.reshape(-1, len(quants)):
                             # Multiple y values
                             interval_plot = _plot_tree(interval_plot, y, q,
-                                                       quartiles,
+                                                       quartiles, colors[h],
                                                        plot_kwargs)
                             y -= 1
                     else:
                         interval_plot = _plot_tree(interval_plot, y, quants,
-                                                   quartiles,
+                                                   quartiles, colors[h],
                                                    plot_kwargs)
 
                 # Genenerate Gelman-Rubin plot
@@ -237,12 +251,19 @@ def forestplot(trace, models=None, varnames=None, transform=identity_transform,
                     if k > 1:
                         Rval = dict2pd(R, 'rhat').values
                         gr_plot.plot([min(r, 2) for r in Rval],
-                                     [-(j + var) for j in range(k)],
-                                     'bo', markersize=4)
+                                     [-(j + var) for j in range(k)], 'o',
+                                     color=colors[h], markersize=4)
                     else:
-                        gr_plot.plot(min(R[v], 2), -var, 'bo', markersize=4)
-
+                        gr_plot.plot(min(R[v], 2), -var, 'o', color=colors[h],
+                                     markersize=4)
                 var += k
+
+        if len(trace) > 1:
+            interval_plot.axhspan(var_old, y - chain_spacing * 2,
+                                  facecolor='k', alpha=bands[v_idx])
+            gr_plot.axhspan(var_old, y - chain_spacing * 2,
+                            facecolor='k', alpha=bands[v_idx])
+            var_old = y - chain_spacing * 2
 
     if ylabels is not None:
         labels = ylabels
