@@ -184,7 +184,7 @@ class PopulationArrayStepShared(ArrayStepShared):
         self.population = None
         self.this_chain = None
         self.other_chains = None
-        return super().__init__(vars, shared, blocked)
+        return super(PopulationArrayStepShared, self).__init__(vars, shared, blocked)
 
     def link_population(self, population, chain_index):
         """Links the sampler to the population.
