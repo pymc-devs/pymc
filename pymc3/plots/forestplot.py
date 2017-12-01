@@ -80,7 +80,7 @@ def forestplot(trace, models=None, varnames=None, transform=identity_transform,
 
     trace : trace or list of traces
         Trace(s) from an MCMC sample.
-    models : list
+    models : list (optional)
         List with names for the models in the list of traces. Useful when
         plotting more that one trace.
     varnames: list
@@ -134,16 +134,22 @@ def forestplot(trace, models=None, varnames=None, transform=identity_transform,
     if plot_kwargs is None:
         plot_kwargs = {}
 
+    if not isinstance(trace, (list, tuple)):
+        trace = [trace]
+
     if models is None:
-        models = ['']
+        if len(trace) > 1:
+            models = ['m_{}'.format(i) for i in range(len(trace))]
+        else:
+            models = ['']
+    elif len(models) != len(trace):
+        raise ValueError("The number of names for the models does not match "
+                         "the number of models")
 
     if colors == 'cycle':
         colors = ['C{}'.format(i) for i in range(len(models))]
     elif isinstance(colors, str):
         colors = [colors for i in range(len(models))]
-
-    if not isinstance(trace, (list, tuple)):
-        trace = [trace]
 
     # Quantiles to be calculated
     if quartiles:
