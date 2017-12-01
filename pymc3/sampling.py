@@ -420,9 +420,9 @@ def sample(draws=500, step=None, init='auto', n_init=200000, start=None,
                 raise
     if not parallel:
        if has_population_samplers:
-            pm._log.info('Population sampling ({} chains in 1 job)'.format(chains))
+            pm._log.info('Population sampling ({} chains)'.format(chains))
             print_step_hierarchy(step)
-            trace = _sample_population(**sample_args)
+            trace = _sample_population(parallelize=njobs > 1, **sample_args)
        else:
             pm._log.info('Sequential sampling ({} chains in 1 job)'.format(chains))
             print_step_hierarchy(step)
@@ -479,11 +479,11 @@ def _sample_many(draws, chain, chains, start, random_seed, **kwargs):
 
 
 def _sample_population(draws, chain, chains, start, random_seed, step, tune,
-        model, progressbar=None, **kwargs):
+        model, progressbar=None, parallelize=True, **kwargs):
     # create the generator that iterates all chains in parallel
     chains = [chain + c for c in range(chains)]
-    sampling = _iter_chains(draws, chains, step, start, tune=tune,
-                            model=model, random_seed=random_seed)
+    sampling = _prepare_iter_population(draws, chains, step, start, tune=tune,
+                    model=model, random_seed=random_seed, parallelize=parallelize)
 
     if progressbar:
         sampling = tqdm(sampling, total=draws)
@@ -627,39 +627,68 @@ def _iter_sample(draws, step, start=None, trace=None, chain=0, tune=None,
             step.report._finalize(strace)
 
 
-class ChainWorkers(object):
-    def __init__(self, steppers):
+class PopulationStepper(object):
+    def __init__(self, steppers, parallelize=True):
+        """Tries to use multiprocessing to parallelize chains.
+
+        Falls back to sequential evaluation if multiprocessing fails.
+
+        In the multiprocessing mode of operation, a new process is started for each
+        chain/stepper and Pipes are used to communicate with the main process.
+
+        Parameters
+        ----------
+        steppers : list
+            A collection of independent step methods, one for each chain.
+        parallelize : bool
+            Indicates if chain parallelization is desired
+        """
         self.nchains = len(steppers)
+        self.is_parallelized = False
         self._master_ends = []
         self._processes = []
-        # configure a child process for each stepper
-        for c,stepper in enumerate(steppers):
-            slave_end, master_end = multiprocessing.Pipe()
-            stepper_dumps = pickle.dumps(stepper, protocol=4)
-            process = multiprocessing.Process(
-                target=self.__class__._run_slave,
-                args=(c, stepper_dumps, slave_end),
-                name='ChainWalker{}'.format(c)
-            )
-            self._master_ends.append(master_end)
-            self._processes.append(process)
-        return super(ChainWorkers, self).__init__()
+        self._steppers = steppers
+        if parallelize and sys.version_info >= (3,4):
+            try:
+                # configure a child process for each stepper
+                pm._log.info('Attempting to parallelize chains.')
+                for c,stepper in enumerate(steppers):
+                    slave_end, master_end = multiprocessing.Pipe()
+                    stepper_dumps = pickle.dumps(stepper, protocol=4)
+                    process = multiprocessing.Process(
+                        target=self.__class__._run_slave,
+                        args=(c, stepper_dumps, slave_end),
+                        name='ChainWalker{}'.format(c)
+                    )
+                    # Starting the process might fail and takes time.
+                    # By doing it in the constructor, the sampling progress bar
+                    # will not be confused by the process start.
+                    process.start()
+                    self._master_ends.append(master_end)
+                    self._processes.append(process)
+                self.is_parallelized = True
+            except:
+                pm._log.info('Population parallelization failed. ' \
+                                'Falling back to sequential stepping of chains.')
+        else:
+            if parallelize:
+                warnings.warn('Population parallelization is only supported on Python 3.4 and ' \
+                    'higher.  All {} chains will step on one process.'.format(self.nchains))
+        return super(PopulationStepper, self).__init__()
 
     def __enter__(self):
-        for process in self._processes:
-            process.start()
+        """Does nothing because processes are already started in __init__."""
         return
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        try:
-            # terminate the workers
-            for master_end in self._master_ends:
-                master_end.send(None)
-            # join the processes
-            for process in self._processes:
-                process.join(timeout=3)
-        except:
-            pm._log.warning('Termination failed.')
+        if len(self._processes) > 0:
+            try:
+                for master_end in self._master_ends:
+                    master_end.send(None)
+                for process in self._processes:
+                    process.join(timeout=3)
+            except:
+                pm._log.warning('Termination failed.')
         return
 
     @staticmethod
@@ -678,20 +707,23 @@ class ChainWorkers(object):
         try:
             stepper = pickle.loads(stepper_dumps)
             # the stepper is not necessarily a PopulationArraySharedStep itself,
-            # but rather a CompoundStep, but PopulationArrayStepShared.population
-            # has to be updated. Therefore we identify the substeppers first.
+            # but rather a CompoundStep. PopulationArrayStepShared.population
+            # has to be updated, therefore we identify the substeppers first.
             population_steppers = []
             for sm in (stepper.methods if isinstance(stepper, CompoundStep) else [stepper]):
                 if isinstance(sm, arraystep.PopulationArrayStepShared):
                     population_steppers.append(sm)
             while True:
                 incoming = slave_end.recv()
+                # receiving a None is the signal to exit
                 if incoming is None:
                     break
                 tune_stop, population = incoming
                 if tune_stop:
                     stop_tuning(stepper)
                 # forward the population to the PopulationArrayStepShared objects
+                # This is necessary because due to the process fork, the population
+                # object is no longer shared between the steppers.
                 for popstep in population_steppers:
                     popstep.population = population
                 update = stepper.step(population[c])
@@ -700,8 +732,8 @@ class ChainWorkers(object):
             pm._log.exception('ChainWalker{}'.format(c))
         return
 
-    def step_start(self, tune_stop, population):
-        """Submits the instructions to make a step.
+    def step(self, tune_stop, population):
+        """Steps the entire population of chains.
 
         Parameters
         ----------
@@ -709,28 +741,36 @@ class ChainWorkers(object):
             Indicates if the condition (i == tune) is fulfilled
         population : list
             Current Points of all chains
-        """
-        for c in range(self.nchains):
-            self._master_ends[c].send((tune_stop, population))
-        return
-
-    def step_end(self):
-        """Blockingly waits for the completion of a step.
 
         Returns
         -------
         update : Point
-            The new position of the chain
+            The new positions of the chains
         """
-        updates = [
-            self._master_ends[c].recv()
-            for c in range(self.nchains)
-        ]
+        updates = [None] * self.nchains
+        if self.is_parallelized:
+            for c in range(self.nchains):
+                self._master_ends[c].send((tune_stop, population))
+            # Blockingly get the step outcomes
+            for c in range(self.nchains):
+                updates[c] = self._master_ends[c].recv()
+        else:
+            for c in range(self.nchains):
+                if tune_stop:
+                    self._steppers[c] = stop_tuning(self._steppers[c])
+                updates[c] = self._steppers[c].step(population[c])
         return updates
 
 
-def _iter_chains(draws, chains, step, start, tune=None,
-                 model=None, random_seed=None):
+def _prepare_iter_population(draws, chains, step, start, tune=None,
+                 model=None, random_seed=None, parallelize=True):
+    """Prepares a PopulationStepper and traces for population sampling.
+
+    Returns
+    -------
+    _iter_population : generator
+        The generator the yields traces of all chains at the same time
+    """
     # chains contains the chain numbers, but for indexing we need indices...
     nchains = len(chains)
     model = modelcontext(model)
@@ -745,7 +785,7 @@ def _iter_chains(draws, chains, step, start, tune=None,
     # 2. population of points is created
     # 3. steppers are initialized and linked to the points object
     # 4. traces are configured to track the sampler stats
-
+    # 5. a PopulationStepper is configured for parallelized stepping
 
     # 1. prepare a BaseTrace for each chain
     traces = [_choose_backend(None, chain, model=model) for chain in chains]
@@ -758,7 +798,7 @@ def _iter_chains(draws, chains, step, start, tune=None,
 
     # 2. create a population (points) that tracks each chain
     # it is updated as the chains are advanced
-    points = [Point(start[c], model=model) for c in range(nchains)]
+    population = [Point(start[c], model=model) for c in range(nchains)]
 
     # 3. Set up the steppers
     steppers = [None] * nchains
@@ -772,7 +812,7 @@ def _iter_chains(draws, chains, step, start, tune=None,
         # link population samplers to the shared population state
         for sm in (chainstep.methods if isinstance(step, CompoundStep) else [chainstep]):
             if isinstance(sm, arraystep.PopulationArrayStepShared):
-                sm.link_population(points, c)
+                sm.link_population(population, c)
         steppers[c] = chainstep
 
     # 4. configure tracking of sampler stats
@@ -782,20 +822,37 @@ def _iter_chains(draws, chains, step, start, tune=None,
         else:
             traces[c].setup(draws, c)
 
+    # 5. configure the PopulationStepper (expensive call)
+    popstep = PopulationStepper(steppers, parallelize)
+
+    # Because the preperations above are expensive, the actual iterator is
+    # in another method. This way the progbar will not be disturbed.
+    return _iter_population(draws, tune, popstep, steppers, traces, population)
+
+
+def _iter_population(draws, tune, popstep, steppers, traces, points):
+    """Generator that iterates a PopulationStepper.
+
+    Parameters
+    ----------
+    draws : int
+        number of draws per chain
+    tune : int
+        number of tuning steps
+    popstep : PopulationStepper
+        the helper object for (parallelized) stepping of chains
+    steppers : list
+        The step methods for each chain
+    traces : list
+        Traces for each chain
+    points : list
+        population of chain states
+    """
     try:
-        workers = ChainWorkers(steppers)
-        with workers:
+        with popstep:
             # iterate draws of all chains
             for i in range(draws):
-                tune_stop = i == tune
-                workers.step_start(tune_stop, points)
-                updates = workers.step_end()
-
-                ## step each of the chains
-                #for c in range(nchains):
-                #    if i == tune:
-                #        steppers[c] = stop_tuning(steppers[c])
-                #    updates[c] = steppers[c].step(points[c])
+                updates = popstep.step(i == tune, points)
 
                 # apply the update to the points and record to the traces
                 for c,strace in enumerate(traces):
@@ -813,8 +870,8 @@ def _iter_chains(draws, chains, step, start, tune=None,
     except KeyboardInterrupt:
         for c,strace in enumerate(traces):
             strace.close()
-            if hasattr(step, 'report'):
-                step.report._finalize(strace)
+            if hasattr(steppers[c], 'report'):
+                steppers[c].report._finalize(strace)
         raise
     except BaseException:
         for c,strace in enumerate(traces):
@@ -823,8 +880,8 @@ def _iter_chains(draws, chains, step, start, tune=None,
     else:
         for c,strace in enumerate(traces):
             strace.close()
-            if hasattr(step, 'report'):
-                step.report._finalize(strace)
+            if hasattr(steppers[c], 'report'):
+                steppers[c].report._finalize(strace)
 
 
 def _choose_backend(trace, chain, shortcuts=None, **kwds):
