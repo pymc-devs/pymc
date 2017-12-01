@@ -45,7 +45,7 @@ def run(steppers, p):
             t_start = time.time()
             mt = pm.sample(
                 draws=10000,
-                chains=6,
+                chains=16, parallelize=False,
                 step=step_cls(),
                 start=start
             )
