@@ -495,6 +495,14 @@ class DEMetropolis(PopulationArrayStepShared):
         Optional model for sampling step. Defaults to None (taken from context).
     mode :  string or `Mode` instance.
         compilation mode passed to Theano functions
+
+    References
+    ----------
+    .. [Braak2006] Cajo C.F. ter Braak (2006).
+        A Markov Chain Monte Carlo version of the genetic algorithm
+        Differential Evolution: easy Bayesian computing for real parameter spaces.
+        Statistics and Computing
+        `link <https://doi.org/10.1007/s11222-006-8769-1>`__
     """
     name = 'DEMetropolis'
 
