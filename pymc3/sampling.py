@@ -1,7 +1,6 @@
 from collections import defaultdict, Iterable
 from copy import copy
 import pickle
-import multiprocessing
 from joblib import Parallel, delayed
 import numpy as np
 import warnings
@@ -422,7 +421,7 @@ def sample(draws=500, step=None, init='auto', n_init=200000, start=None,
        if has_population_samplers:
             pm._log.info('Population sampling ({} chains)'.format(chains))
             print_step_hierarchy(step)
-            trace = _sample_population(parallelize=njobs > 1, **sample_args)
+            trace = _sample_population(**sample_args)
        else:
             pm._log.info('Sequential sampling ({} chains in 1 job)'.format(chains))
             print_step_hierarchy(step)
@@ -479,11 +478,11 @@ def _sample_many(draws, chain, chains, start, random_seed, **kwargs):
 
 
 def _sample_population(draws, chain, chains, start, random_seed, step, tune,
-        model, progressbar=None, parallelize=True, **kwargs):
+        model, progressbar=None, parallelize=False, **kwargs):
     # create the generator that iterates all chains in parallel
     chains = [chain + c for c in range(chains)]
-    sampling = _prepare_iter_population(draws, chains, step, start, tune=tune,
-                    model=model, random_seed=random_seed, parallelize=parallelize)
+    sampling = _prepare_iter_population(draws, chains, step, start, parallelize,
+                                        tune=tune, model=model, random_seed=random_seed)
 
     if progressbar:
         sampling = tqdm(sampling, total=draws)
@@ -628,7 +627,7 @@ def _iter_sample(draws, step, start=None, trace=None, chain=0, tune=None,
 
 
 class PopulationStepper(object):
-    def __init__(self, steppers, parallelize=True):
+    def __init__(self, steppers, parallelize):
         """Tries to use multiprocessing to parallelize chains.
 
         Falls back to sequential evaluation if multiprocessing fails.
@@ -652,6 +651,7 @@ class PopulationStepper(object):
             try:
                 # configure a child process for each stepper
                 pm._log.info('Attempting to parallelize chains.')
+                import multiprocessing
                 for c,stepper in enumerate(steppers):
                     slave_end, master_end = multiprocessing.Pipe()
                     stepper_dumps = pickle.dumps(stepper, protocol=4)
@@ -674,6 +674,9 @@ class PopulationStepper(object):
             if parallelize:
                 warnings.warn('Population parallelization is only supported on Python 3.4 and ' \
                     'higher.  All {} chains will step on one process.'.format(self.nchains))
+            else:
+                pm._log.info('Chains are not parallelized. You can enable this by passing ' \
+                             'pm.sample(parallelize=True).')
         return super(PopulationStepper, self).__init__()
 
     def __enter__(self):
@@ -762,8 +765,8 @@ class PopulationStepper(object):
         return updates
 
 
-def _prepare_iter_population(draws, chains, step, start, tune=None,
-                 model=None, random_seed=None, parallelize=True):
+def _prepare_iter_population(draws, chains, step, start, parallelize, tune=None,
+                 model=None, random_seed=None):
     """Prepares a PopulationStepper and traces for population sampling.
 
     Returns
