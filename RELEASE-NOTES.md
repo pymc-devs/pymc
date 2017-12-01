@@ -7,6 +7,7 @@
  
 - Improve NUTS initialization `advi+adapt_diag_grad` and add `jitter+adapt_diag_grad` (#2643) 
 - Update loo, new improved algorithm (#2730)
+- Forestplot supports multiple traces (#2736)
 
 ### Fixes 
 - Fixed `compareplot` to use `loo` output. 
