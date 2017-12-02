@@ -78,3 +78,12 @@ Variational Inference
    notebooks/convolutional_vae_keras_advi.ipynb
    notebooks/empirical-approx-overview.ipynb
    notebooks/normalizing_flows_overview.ipynb
+   
+
+Stochastic Gradient
+===================
+
+.. toctree::
+   notebooks/constant_stochastic_gradient.ipynb
+   notebooks/sgfs_simple_optimization.ipynb
+   notebooks/bayesian_neural_network_with_sgfs.ipynb

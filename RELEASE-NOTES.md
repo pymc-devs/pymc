@@ -4,20 +4,25 @@
 
 ### New features
 
+- Improve NUTS initialization `advi+adapt_diag_grad` and add `jitter+adapt_diag_grad` (#2643)
 - Added `MatrixNormal` class for representing vectors of multivariate normal variables
 - Implemented `HalfStudentT` distribution
 - New benchmark suite added (see http://pandas.pydata.org/speed/pymc3/)
 - Generalized random seed types
+- Update loo, new improved algorithm (#2730)
+- New CSG (Constant Stochastic Gradient) approximate posterior sampling
+  algorithm (#2544)
 
 ### Fixes
 
-- Improve NUTS initialization `advi+adapt_diag_grad` and add `jitter+adapt_diag_grad` (#2643)
 - Fixed `compareplot` to use `loo` output.
 - Improved `posteriorplot` to scale fonts
 - `sample_ppc_w` now broadcasts
 - `df_summary` function renamed to `summary`
+- Fixed `compareplot` to use `loo` output. 
 - Add test for `model.logp_array` and `model.bijection` (#2724) 
 - Fixed `sample_ppc` and `sample_ppc_w` to iterate all chains(#2633)
+- Add Bayesian R2 score (for GLMs) `stats.r2_score` (#2696) and test (#2729).
 
 
 
@@ -79,6 +84,42 @@ AR(1) log-likelihood function has been fixed.
 Slice sampler fixed to sample from 1D conditionals.
 
 Several docstring fixes.
+
+### Contributors
+
+The following people contributed to this release (ordered by number of commits):
+
+Maxim Kochurov <maxim.v.kochurov@gmail.com>
+Bill Engels <w.j.engels@gmail.com>
+Chris Fonnesbeck <chris.fonnesbeck@vanderbilt.edu>
+Junpeng Lao <junpeng.lao@unifr.ch>
+Adrian Seyboldt <adrian.seyboldt@gmail.com>
+AustinRochford <arochford@monetate.com>
+Osvaldo Martin <aloctavodia@gmail.com>
+Colin Carroll <colcarroll@gmail.com>
+Hannes Vasyura-Bathke <hannes.bathke@gmx.net>
+Thomas Wiecki <thomas.wiecki@gmail.com>
+michaelosthege <thecakedev@hotmail.com>
+Marco De Nadai <me@marcodena.it>
+Kyle Beauchamp <kyleabeauchamp@gmail.com>
+Massimo <mcavallaro@users.noreply.github.com>
+ctm22396 <ctm22396@gmail.com>
+Max Horn <maexlich@gmail.com>
+Hennadii Madan <madanh2014@gmail.com>
+Hassan Naseri <h.nasseri@gmail.com>
+Peadar Coyle <peadarcoyle@googlemail.com>
+Saurav R. Tuladhar <saurav@fastmail.com>
+Shashank Shekhar <shashank.f1@gmail.com>
+Eric Ma <ericmjl@users.noreply.github.com>
+Ed Herbst <ed.herbst@gmail.com>
+tsdlovell <dlovell@twosigma.com>
+zaxtax <zaxtax@users.noreply.github.com>
+Dan Nichol <daniel.nichol@univ.ox.ac.uk>
+Benjamin Yetton <bdyetton@gmail.com>
+jackhansom <jack.hansom@outlook.com>
+Jack Tsai <jacksctsai@gmail.com>
+Andrés Asensio Ramos <aasensioramos@gmail.com>
+
 
 ## PyMC3 3.1 (June 23, 2017)
 
@@ -206,6 +247,7 @@ Taku Yoshioka <taku.yoshioka.4096@gmail.com>
 Peadar Coyle (springcoil) <peadarcoyle@googlemail.com>
 Austin Rochford <arochford@monetate.com>
 Osvaldo Martin <aloctavodia@gmail.com>
+Shashank Shekhar <shashank.f1@gmail.com>
 
 In addition, the following community members contributed to this release:
 

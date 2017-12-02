@@ -10,7 +10,7 @@ import pymc3 as pm
 from .backends.base import BaseTrace, MultiTrace
 from .backends.ndarray import NDArray
 from .model import modelcontext, Point
-from .step_methods import (NUTS, HamiltonianMC, SGFS, Metropolis, BinaryMetropolis,
+from .step_methods import (NUTS, HamiltonianMC, Metropolis, BinaryMetropolis,
                            BinaryGibbsMetropolis, CategoricalGibbsMetropolis,
                            Slice, CompoundStep)
 from .util import update_start_vals
@@ -23,7 +23,7 @@ sys.setrecursionlimit(10000)
 
 __all__ = ['sample', 'iter_sample', 'sample_ppc', 'sample_ppc_w', 'init_nuts']
 
-STEP_METHODS = (NUTS, HamiltonianMC, SGFS, Metropolis, BinaryMetropolis,
+STEP_METHODS = (NUTS, HamiltonianMC, Metropolis, BinaryMetropolis,
                 BinaryGibbsMetropolis, Slice, CategoricalGibbsMetropolis)
 
 
@@ -229,9 +229,10 @@ def sample(draws=500, step=None, init='auto', n_init=200000, start=None,
     chains : int
         The number of chains to sample. Running independent chains
         is important for some convergence statistics and can also
-        reveal multiple modes in the posterior.
+        reveal multiple modes in the posterior. If `None`, then set to 
+        either `njobs` or 2, whichever is larger.
     njobs : int
-        The number of chains to run in parallel. If None, set to the
+        The number of chains to run in parallel. If `None`, set to the
         number of CPUs in the system, but at most 4. Keep in mind that
         some chains might themselves be multithreaded via openmp or
         BLAS. In those cases it might be faster to set this to one.

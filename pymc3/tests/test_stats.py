@@ -6,7 +6,8 @@ import pymc3 as pm
 from .helpers import SeededTest
 from ..tests import backend_fixtures as bf
 from ..backends import ndarray
-from ..stats import summary, autocorr, hpd, mc_error, quantiles, make_indices, bfmi
+from ..stats import (summary, autocorr, hpd, mc_error, quantiles, make_indices,
+                     bfmi, r2_score)
 from ..theanof import floatX_array
 import pymc3.stats as pmstats
 from numpy.random import random, normal
@@ -276,6 +277,14 @@ class TestStats(SeededTest):
 
         assert_almost_equal(bfmi(trace), 0.8)
 
+    def test_r2_score(self):
+        x = np.linspace(0, 1, 100)
+        y = np.random.normal(x, 1)
+        res = st.linregress(x, y)
+        assert_almost_equal(res.rvalue ** 2,
+                            r2_score(y, res.intercept +
+                                     res.slope * x).r2_median,
+                            2)
 
 class TestDfSummary(bf.ModelBackendSampledTestCase):
     backend = ndarray.NDArray
