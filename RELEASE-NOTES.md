@@ -1,15 +1,24 @@
 # Release Notes
 
-
 ## PyMC 3.3. (Unreleased) 
- 
-### New features 
- 
-- Improve NUTS initialization `advi+adapt_diag_grad` and add `jitter+adapt_diag_grad` (#2643) 
+
+### New features
+
+- Improve NUTS initialization `advi+adapt_diag_grad` and add `jitter+adapt_diag_grad` (#2643)
+- Added `MatrixNormal` class for representing vectors of multivariate normal variables
+- Implemented `HalfStudentT` distribution
+- New benchmark suite added (see http://pandas.pydata.org/speed/pymc3/)
+- Generalized random seed types
 - Update loo, new improved algorithm (#2730)
 - New CSG (Constant Stochastic Gradient) approximate posterior sampling
   algorithm (#2544)
-### Fixes 
+
+### Fixes
+
+- Fixed `compareplot` to use `loo` output.
+- Improved `posteriorplot` to scale fonts
+- `sample_ppc_w` now broadcasts
+- `df_summary` function renamed to `summary`
 - Fixed `compareplot` to use `loo` output. 
 - Add test for `model.logp_array` and `model.bijection` (#2724) 
 - Fixed `sample_ppc` and `sample_ppc_w` to iterate all chains(#2633)
