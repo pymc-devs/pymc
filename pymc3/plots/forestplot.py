@@ -147,7 +147,7 @@ def forestplot(trace, models=None, varnames=None, transform=identity_transform,
                          "the number of models")
 
     if colors == 'cycle':
-        colors = ['C{}'.format(i) for i in range(len(models))]
+        colors = ['C{}'.format(i % 10) for i in range(len(models))]
     elif isinstance(colors, str):
         colors = [colors for i in range(len(models))]
 
