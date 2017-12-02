@@ -19,11 +19,9 @@
 - Improved `posteriorplot` to scale fonts
 - `sample_ppc_w` now broadcasts
 - `df_summary` function renamed to `summary`
-- Fixed `compareplot` to use `loo` output. 
 - Add test for `model.logp_array` and `model.bijection` (#2724) 
 - Fixed `sample_ppc` and `sample_ppc_w` to iterate all chains(#2633)
 - Add Bayesian R2 score (for GLMs) `stats.r2_score` (#2696) and test (#2729).
-
 
 
 ## PyMC3 3.2 (October 10, 2017)
