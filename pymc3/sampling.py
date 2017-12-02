@@ -10,7 +10,7 @@ import pymc3 as pm
 from .backends.base import BaseTrace, MultiTrace
 from .backends.ndarray import NDArray
 from .model import modelcontext, Point
-from .step_methods import (NUTS, HamiltonianMC, SGFS, Metropolis, BinaryMetropolis,
+from .step_methods import (NUTS, HamiltonianMC, Metropolis, BinaryMetropolis,
                            BinaryGibbsMetropolis, CategoricalGibbsMetropolis,
                            Slice, CompoundStep)
 from .util import update_start_vals
@@ -23,7 +23,7 @@ sys.setrecursionlimit(10000)
 
 __all__ = ['sample', 'iter_sample', 'sample_ppc', 'sample_ppc_w', 'init_nuts']
 
-STEP_METHODS = (NUTS, HamiltonianMC, SGFS, Metropolis, BinaryMetropolis,
+STEP_METHODS = (NUTS, HamiltonianMC, Metropolis, BinaryMetropolis,
                 BinaryGibbsMetropolis, Slice, CategoricalGibbsMetropolis)
 
 
