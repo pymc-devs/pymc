@@ -1,5 +1,6 @@
 from collections import defaultdict, Iterable
 import pickle
+from six import integer_types
 
 from joblib import Parallel, delayed
 import numpy as np
@@ -10,7 +11,7 @@ import pymc3 as pm
 from .backends.base import BaseTrace, MultiTrace
 from .backends.ndarray import NDArray
 from .model import modelcontext, Point
-from .step_methods import (NUTS, HamiltonianMC, SGFS, Metropolis, BinaryMetropolis,
+from .step_methods import (NUTS, HamiltonianMC, Metropolis, BinaryMetropolis,
                            BinaryGibbsMetropolis, CategoricalGibbsMetropolis,
                            Slice, CompoundStep)
 from .util import update_start_vals
@@ -23,7 +24,7 @@ sys.setrecursionlimit(10000)
 
 __all__ = ['sample', 'iter_sample', 'sample_ppc', 'sample_ppc_w', 'init_nuts']
 
-STEP_METHODS = (NUTS, HamiltonianMC, SGFS, Metropolis, BinaryMetropolis,
+STEP_METHODS = (NUTS, HamiltonianMC, Metropolis, BinaryMetropolis,
                 BinaryGibbsMetropolis, Slice, CategoricalGibbsMetropolis)
 
 
@@ -310,9 +311,9 @@ def sample(draws=500, step=None, init='auto', n_init=200000, start=None,
         start = [start] * chains
     if random_seed == -1:
         random_seed = None
-    if chains == 1 and isinstance(random_seed, int):
+    if chains == 1 and isinstance(random_seed, integer_types):
         random_seed = [random_seed]
-    if random_seed is None or isinstance(random_seed, int):
+    if random_seed is None or isinstance(random_seed, integer_types):
         if random_seed is not None:
             np.random.seed(random_seed)
         random_seed = [np.random.randint(2 ** 30) for _ in range(chains)]

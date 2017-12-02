@@ -12,7 +12,7 @@ from .metropolis import LaplaceProposal
 from .metropolis import PoissonProposal
 from .metropolis import MultivariateNormalProposal
 
-from .sgmcmc import SGFS
+from .sgmcmc import SGFS, CSG
 from .gibbs import ElemwiseCategorical
 
 from .slicer import Slice
@@ -20,4 +20,3 @@ from .slicer import Slice
 from .elliptical_slice import EllipticalSlice
 
 from .smc import SMC
-
