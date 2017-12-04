@@ -279,7 +279,7 @@ def sample(draws=500, step=None, init='auto', n_init=200000, start=None,
     Returns
     -------
     trace : pymc3.backends.base.MultiTrace
-        A `MultiTrace` object that contains the samples.
+        A `MultiTrace` object that contains `draws` number samples per variable.
 
     Examples
     --------
@@ -329,7 +329,8 @@ def sample(draws=500, step=None, init='auto', n_init=200000, start=None,
         for start_vals in start:
             _check_start_shape(model, start_vals)
 
-    draws += tune
+    draws_per_chain = int(draws/chains)
+    draws_per_chain += tune
 
     if nuts_kwargs is not None:
         if step_kwargs is not None:
@@ -363,9 +364,9 @@ def sample(draws=500, step=None, init='auto', n_init=200000, start=None,
         start = [None] * chains
     if isinstance(start, dict):
         start = [start] * chains
-
+    
     sample_args = {
-        'draws': draws,
+        'draws': draws_per_chain,
         'step': step,
         'start': start,
         'trace': trace,

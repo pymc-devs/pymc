@@ -53,11 +53,11 @@ class TestSample(SeededTest):
         assert (draws[0] == draws[1]).all()
 
     def test_sample(self):
-        test_njobs = [1]
+        test_chains = [1]
         with self.model:
-            for njobs in test_njobs:
+            for chains in test_chains:
                 for steps in [1, 10, 300]:
-                    pm.sample(steps, tune=0, step=self.step, njobs=njobs,
+                    pm.sample(steps, tune=0, step=self.step, chains=chains,
                               random_seed=self.random_seed)
 
     def test_sample_init(self):
@@ -100,15 +100,18 @@ class TestSample(SeededTest):
         assert tr.get_values('x', chains=0)[0][0] > 0
         assert tr.get_values('x', chains=1)[0][0] < 0
 
-    def test_sample_tune_len(self):
+    def test_sample_len(self):
         with self.model:
-            trace = pm.sample(draws=100, tune=50, njobs=1)
-            assert len(trace) == 100
+            trace = pm.sample(draws=100, tune=50, chains=1)
+            assert trace['x'].shape[0] == 100
+            trace = pm.sample(draws=100, tune=50, chains=1,
+                              discard_tuned_samples=False)
+            assert trace['x'].shape[0] == 150
             trace = pm.sample(draws=100, tune=50, njobs=1,
                               discard_tuned_samples=False)
-            assert len(trace) == 150
-            trace = pm.sample(draws=100, tune=50, njobs=4)
-            assert len(trace) == 100
+            assert trace['x'].shape[0] == 200
+            trace = pm.sample(draws=100, tune=50, chains=4)
+            assert trace['x'].shape[0] == 100
 
     @pytest.mark.parametrize(
         'start, error', [

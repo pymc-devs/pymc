@@ -425,9 +425,6 @@ class NutsReport(object):
 
     def _check_len(self, tuning):
         n = (~tuning).sum()
-        if n < 500:
-            warnings.warn('Chain %s contains only %s samples.'
-                          % (self._chain_id, n))
         if np.all(tuning):
             warnings.warn('Step size tuning was enabled throughout the whole '
                           'trace. You might want to specify the number of '
