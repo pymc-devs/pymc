@@ -330,6 +330,11 @@ def sample(draws=500, step=None, init='auto', n_init=200000, start=None,
             _check_start_shape(model, start_vals)
 
     draws_per_chain = int(draws/chains)
+    if draws % chains:
+        msg = "Specified draws do not evenly divide among chains. "
+        msg += "Realized trace will consist of {} samples.".format(int(draws/chains)*chains)
+        warnings.warn(msg, UserWarning)
+        
     draws_per_chain += tune
 
     if nuts_kwargs is not None:
