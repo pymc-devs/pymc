@@ -12,10 +12,9 @@ import pymc3 as pm
 from .backends.base import BaseTrace, MultiTrace
 from .backends.ndarray import NDArray
 from .model import modelcontext, Point
-from .step_methods import arraystep
 from .step_methods import (NUTS, HamiltonianMC, Metropolis, BinaryMetropolis,
                            BinaryGibbsMetropolis, CategoricalGibbsMetropolis,
-                           Slice, CompoundStep)
+                           Slice, CompoundStep, arraystep)
 from .util import update_start_vals
 from .vartypes import discrete_types
 from pymc3.step_methods.hmc import quadpotential
