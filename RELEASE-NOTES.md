@@ -5,6 +5,9 @@
 - Improve NUTS initialization `advi+adapt_diag_grad` and add `jitter+adapt_diag_grad` (#2643)
 - Fixed `compareplot` to use `loo` output.
 
+### New Features
+- Michael Osthege added support for population-samplers and implemented differential evolution metropolis (`DEMetropolis`).  For models with correlated dimensions that can not use gradient-based samplers, the `DEMetropolis` sampler can give higher effective sampling rates. (also see [PR#2735](https://github.com/pymc-devs/pymc3/pull/2735))
+
 
 ## PyMC3 3.2 (October 10, 2017)
 
