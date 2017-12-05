@@ -23,6 +23,9 @@
 - Fixed `sample_ppc` and `sample_ppc_w` to iterate all chains(#2633)
 - Add Bayesian R2 score (for GLMs) `stats.r2_score` (#2696) and test (#2729).
 
+### New Features
+- Michael Osthege added support for population-samplers and implemented differential evolution metropolis (`DEMetropolis`).  For models with correlated dimensions that can not use gradient-based samplers, the `DEMetropolis` sampler can give higher effective sampling rates. (also see [PR#2735](https://github.com/pymc-devs/pymc3/pull/2735))
+
 
 ## PyMC3 3.2 (October 10, 2017)
 
