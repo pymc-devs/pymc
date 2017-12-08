@@ -1100,3 +1100,49 @@ class ZeroInflatedNegativeBinomial(Discrete):
                 r'(\mathit{{mu}}={},~\mathit{{alpha}}={},~'
                 r'\mathit{{psi}}={})$'
                 .format(name, name_mu, name_alpha, name_psi))
+
+
+def OrderedLogistic(name, eta, c, observed):
+    R"""
+    Ordered Logistic log-likelihood.
+
+    Useful for regression on ordinal data values whose values range
+    from 1 to K as a function of some predictor, :math:`eta`. The
+    cutpoints, :math:`c`, separate which ranges of eta are mapped to
+    which of the K observed dependent variables.  The number of
+    cutpoints is K - 1.  It is recommended that the cutpoints are
+    constrained to be ordered.
+
+    .. math::
+
+       f(k \mid \eta, c) = \left\{
+         \begin{array}{l}
+           1 - \text{logit}^{-1}(\eta - c_1)
+             \,, \text{if } k = 0 \\
+           \text{logit}^{-1}(\eta - c_{k - 1}) -
+           \text{logit}^{-1}(\eta - c_{k})
+             \,, \text{if } 0 < k < K \\
+           \text{logit}^{-1}(\eta - c_{K - 1})
+             \,, \text{if } k = K \\
+         \end{array}
+       \right.
+
+    Parameters
+    ----------
+    eta : float
+        The predictor.
+    c : array
+        The length K - 1 array of cutpoints which break :math:`\eta` into
+        ranges.  Do not explicitly set the first and last elements of :math:`c`
+         to negative and positive infinity.
+
+    """
+
+    pa = pm.math.sigmoid(tt.shape_padleft(c) - tt.shape_padright(eta))
+    p_cum = tt.concatenate([
+        tt.zeros_like(tt.shape_padright(pa[:, 0])),
+        pa,
+        tt.ones_like(tt.shape_padright(pa[:, 0]))
+    ], axis=1)
+    p = p_cum[:, 1:] - p_cum[:, :-1]
+    return pm.Categorical(name, p, observed=observed)
