@@ -12,6 +12,7 @@
 - Update loo, new improved algorithm (#2730)
 - New CSG (Constant Stochastic Gradient) approximate posterior sampling
   algorithm (#2544)
+- Michael Osthege added support for population-samplers and implemented differential evolution metropolis (`DEMetropolis`).  For models with correlated dimensions that can not use gradient-based samplers, the `DEMetropolis` sampler can give higher effective sampling rates. (also see [PR#2735](https://github.com/pymc-devs/pymc3/pull/2735))
 
 ### Fixes
 
@@ -20,11 +21,8 @@
 - `sample_ppc_w` now broadcasts
 - `df_summary` function renamed to `summary`
 - Add test for `model.logp_array` and `model.bijection` (#2724) 
-- Fixed `sample_ppc` and `sample_ppc_w` to iterate all chains(#2633)
+- Fixed `sample_ppc` and `sample_ppc_w` to iterate all chains(#2633, #2748)
 - Add Bayesian R2 score (for GLMs) `stats.r2_score` (#2696) and test (#2729).
-
-### New Features
-- Michael Osthege added support for population-samplers and implemented differential evolution metropolis (`DEMetropolis`).  For models with correlated dimensions that can not use gradient-based samplers, the `DEMetropolis` sampler can give higher effective sampling rates. (also see [PR#2735](https://github.com/pymc-devs/pymc3/pull/2735))
 
 
 ## PyMC3 3.2 (October 10, 2017)
