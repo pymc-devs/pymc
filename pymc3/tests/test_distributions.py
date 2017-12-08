@@ -1,13 +1,14 @@
 from __future__ import division
 
 import itertools
+import sys
 
 from .helpers import SeededTest, select_by_precision
 from ..vartypes import continuous_types
 from ..model import Model, Point, Potential, Deterministic
 from ..blocking import DictToVarBijection, DictToArrayBijection, ArrayOrdering
 from ..distributions import (DensityDist, Categorical, Multinomial, VonMises, Dirichlet,
-                             MvStudentT, MvNormal, ZeroInflatedPoisson,
+                             MvStudentT, MvNormal, ZeroInflatedPoisson, OrderedLogistic,
                              ZeroInflatedNegativeBinomial, Constant, Poisson, Bernoulli, Beta,
                              BetaBinomial, HalfStudentT, StudentT, Weibull, Pareto,
                              InverseGamma, Gamma, Cauchy, HalfCauchy, Lognormal, Laplace,
@@ -287,10 +288,13 @@ def AR1_logpdf(value, k, tau_e):
     return (sp.norm(loc=0,scale=1/np.sqrt(tau_e)).logpdf(value[0]) +
             sp.norm(loc=k*value[:-1],scale=1/np.sqrt(tau_e)).logpdf(value[1:]).sum())
 
+def invlogit(x, eps=sys.float_info.epsilon):
+    return (1. - 2. * eps) / (1. + np.exp(-x)) + eps
+
 def orderedlogistic_logpdf(value, eta, cutpoints):
     c = np.concatenate(([-np.inf], cutpoints, [np.inf]))
-    logp = pm.math.invlogit(eta - c[value]) - pm.math.invlogit(eta - c[value + 1])
-    return logp
+    p = invlogit(eta - c[value]) - invlogit(eta - c[value + 1])
+    return np.log(p)
 
 class Simplex(object):
     def __init__(self, n):
@@ -858,8 +862,8 @@ class TestMatchesScipy(SeededTest):
     @pytest.mark.parametrize('n', [2, 3, 4])
     def test_orderedlogistic(self, n):
         self.pymc3_matches_scipy(OrderedLogistic, Domain(range(n), 'int64'),
-                                 {'eta': R, 'c': Domain(range(n-1))},
-                                 lambda value, eta, c: orderedlogistic_logpdf(value, eta, c))
+                                 {'eta': R, 'cutpoints': Vector(R, n-1)},
+                                 lambda value, eta, cutpoints: orderedlogistic_logpdf(value, eta, cutpoints))
 
     def test_densitydist(self):
         def logp(x):

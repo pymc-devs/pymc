@@ -8,13 +8,12 @@ import warnings
 from pymc3.util import get_variable_name
 from .dist_math import bound, factln, binomln, betaln, logpow
 from .distribution import Discrete, draw_values, generate_samples, reshape_sampled
-from pymc3.math import tround
-from ..math import logaddexp
+from pymc3.math import tround, sigmoid, logaddexp
 
 __all__ = ['Binomial',  'BetaBinomial',  'Bernoulli',  'DiscreteWeibull',
            'Poisson', 'NegativeBinomial', 'ConstantDist', 'Constant',
            'ZeroInflatedPoisson', 'ZeroInflatedBinomial', 'ZeroInflatedNegativeBinomial',
-           'DiscreteUniform', 'Geometric', 'Categorical']
+           'DiscreteUniform', 'Geometric', 'Categorical', 'OrderedLogistic']
 
 
 class Binomial(Discrete):
@@ -863,7 +862,7 @@ class OrderedLogistic(Categorical):
         self.eta = tt.as_tensor_variable(eta)
         self.cutpoints = tt.as_tensor_variable(cutpoints)
 
-        pa = pm.math.sigmoid(tt.shape_padleft(self.cutpoints) - tt.shape_padright(self.eta))
+        pa = sigmoid(tt.shape_padleft(self.cutpoints) - tt.shape_padright(self.eta))
         p_cum = tt.concatenate([
             tt.zeros_like(tt.shape_padright(pa[:, 0])),
             pa,
