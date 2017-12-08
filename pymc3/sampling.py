@@ -944,7 +944,8 @@ def sample_ppc(trace, samples=None, model=None, vars=None, size=None,
     Parameters
     ----------
     trace : backend, list, or MultiTrace
-        Trace generated from MCMC sampling.
+        Trace generated from MCMC sampling. Or a list containing dicts from
+        find_MAP() or points
     samples : int
         Number of posterior predictive samples to generate. Defaults to the
         length of `trace`
@@ -971,7 +972,11 @@ def sample_ppc(trace, samples=None, model=None, vars=None, size=None,
         posterior predictive samples.
     """
     len_trace = len(trace)
-    nchain = trace.nchains
+    try:
+        nchain = trace.nchains
+
+    except AttributeError:
+        nchain = 1
 
     if samples is None:
         samples = len(trace)
@@ -984,14 +989,19 @@ def sample_ppc(trace, samples=None, model=None, vars=None, size=None,
     np.random.seed(random_seed)
 
     indices = np.random.randint(0, nchain*len_trace, samples)
-    chain_idx, point_idx = np.divmod(indices, len_trace)
+
     if progressbar:
         indices = tqdm(indices, total=samples)
 
     try:
         ppc = defaultdict(list)
-        for idx in zip(chain_idx, point_idx):
-            param = trace._straces[idx[0]].point(idx[1])
+        for idx in indices:
+            if nchain > 1:
+                chain_idx, point_idx = np.divmod(idx, len_trace)
+                param = trace._straces[chain_idx].point(point_idx)
+            else:
+                param = trace[idx]
+
             for var in vars:
                 ppc[var.name].append(var.distribution.random(point=param,
                                                              size=size))
