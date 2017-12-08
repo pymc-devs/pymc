@@ -1132,8 +1132,8 @@ class OrderedLogistic(Categorical):
         The predictor.
     c : array
         The length K - 1 array of cutpoints which break :math:`\eta` into
-        ranges.  Do not explicitly set the first and last elements of :math:`c`
-         to negative and positive infinity.
+        ranges.  Do not explicitly set the first and last elements of
+        :math:`c` to negative and positive infinity.
 
     Example
     --------
