@@ -1083,12 +1083,20 @@ def sample_ppc_w(traces, samples=None, models=None, weights=None,
     trace = []
     for i, j in enumerate(n):
         tr = traces[i]
-        len_trace = len(tr) 
-        nchain = tr.nchains 
+        len_trace = len(tr)
+        try:
+            nchain = tr.nchains
+        except AttributeError:
+            nchain = 1
+
         indices = np.random.randint(0, nchain*len_trace, j)
-        chain_idx, point_idx = np.divmod(indices, len_trace)
-        for idx in zip(chain_idx, point_idx): 
-            trace.append(tr._straces[idx[0]].point(idx[1]))
+        if nchain > 1:
+            chain_idx, point_idx = np.divmod(indices, len_trace)
+            for idx in zip(chain_idx, point_idx):
+                trace.append(tr._straces[idx[0]].point(idx[1]))
+        else:
+            for idx in indices:
+                trace.append(tr[idx])
 
     obs = [x for m in models for x in m.observed_RVs]
     variables = np.repeat(obs, n)
