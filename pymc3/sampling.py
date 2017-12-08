@@ -974,7 +974,6 @@ def sample_ppc(trace, samples=None, model=None, vars=None, size=None,
     len_trace = len(trace)
     try:
         nchain = trace.nchains
-
     except AttributeError:
         nchain = 1
 
@@ -1023,8 +1022,9 @@ def sample_ppc_w(traces, samples=None, models=None, weights=None,
 
     Parameters
     ----------
-    traces : list
-        List of traces generated from MCMC sampling. The number of traces should
+    traces : list or list of lists
+        List of traces generated from MCMC sampling, or a list of list
+        containing dicts from find_MAP() or points. The number of traces should
         be equal to the number of weights.
     samples : int
         Number of posterior predictive samples to generate. Defaults to the
