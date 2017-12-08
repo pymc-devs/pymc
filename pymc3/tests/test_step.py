@@ -9,7 +9,7 @@ from pymc3.model import Model
 from pymc3.step_methods import (NUTS, BinaryGibbsMetropolis, CategoricalGibbsMetropolis,
                                 Metropolis, Slice, CompoundStep, NormalProposal,
                                 MultivariateNormalProposal, HamiltonianMC,
-                                EllipticalSlice, smc)
+                                EllipticalSlice, smc, DEMetropolis)
 from pymc3.theanof import floatX
 from pymc3 import SamplingError
 from pymc3.distributions import (
@@ -318,7 +318,7 @@ class TestMetropolisProposal(object):
 
 
 class TestCompoundStep(object):
-    samplers = (Metropolis, Slice, HamiltonianMC, NUTS)
+    samplers = (Metropolis, Slice, HamiltonianMC, NUTS, DEMetropolis)
 
     @pytest.mark.skipif(theano.config.floatX == "float32",
                         reason="Test fails on 32 bit due to linalg issues")
@@ -391,6 +391,22 @@ class TestAssignStepMethods(object):
 
             steps = assign_step_methods(model, [])
         assert isinstance(steps, Slice)
+
+
+class TestPopulationSamplers(object):
+    def test_checks_population_size(self):
+        """Test that population samplers check the population size."""
+        steppers = [
+            DEMetropolis
+        ]
+        with Model() as model:
+            n = Normal('n', mu=0, sd=1)
+            for stepper in steppers:
+                step = stepper()
+                with pytest.raises(ValueError):
+                    trace = sample(draws=100, chains=1, step=step)
+                trace = sample(draws=100, chains=4, step=step)
+        pass
 
 
 @pytest.mark.xfail(condition=(theano.config.floatX == "float32"), reason="Fails on float32")

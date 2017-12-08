@@ -150,19 +150,58 @@ class ArrayStepShared(BlockedStep):
         self.ordering = ArrayOrdering(vars)
         self.shared = {str(var): shared for var, shared in shared.items()}
         self.blocked = blocked
+        self.bij = None
 
     def step(self, point):
         for var, share in self.shared.items():
             share.set_value(point[var])
 
-        bij = DictToArrayBijection(self.ordering, point)
+        self.bij = DictToArrayBijection(self.ordering, point)
 
         if self.generates_stats:
-            apoint, stats = self.astep(bij.map(point))
-            return bij.rmap(apoint), stats
+            apoint, stats = self.astep(self.bij.map(point))
+            return self.bij.rmap(apoint), stats
         else:
-            apoint = self.astep(bij.map(point))
-            return bij.rmap(apoint)
+            apoint = self.astep(self.bij.map(point))
+            return self.bij.rmap(apoint)
+
+
+class PopulationArrayStepShared(ArrayStepShared):
+    """Version of ArrayStepShared that allows samplers to access the states
+    of other chains in the population.
+
+    Works by linking a list of Points that is updated as the chains are iterated.
+    """
+
+    def __init__(self, vars, shared, blocked=True):
+        """
+        Parameters
+        ----------
+        vars : list of sampling variables
+        shared : dict of theano variable -> shared variable
+        blocked : Boolean (default True)
+        """
+        self.population = None
+        self.this_chain = None
+        self.other_chains = None
+        return super(PopulationArrayStepShared, self).__init__(vars, shared, blocked)
+
+    def link_population(self, population, chain_index):
+        """Links the sampler to the population.
+
+        Parameters
+        ----------
+        population : list of Points. (The elements of this list must be
+            replaced with current chain states in every iteration.)
+        chain_index : int of the index of this sampler in the population
+        """
+        self.population = population
+        self.this_chain = chain_index
+        self.other_chains = [c for c in range(len(population)) if c != chain_index]
+        if not len(self.other_chains) > 1:
+            raise ValueError('Population is just {} + {}. This is too small. You should ' \
+                'increase the number of chains.'.format(self.this_chain, self.other_chains))
+        return
 
 
 class GradientSharedStep(BlockedStep):
