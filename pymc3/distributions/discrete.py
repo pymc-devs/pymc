@@ -1102,7 +1102,7 @@ class ZeroInflatedNegativeBinomial(Discrete):
                 .format(name, name_mu, name_alpha, name_psi))
 
 
-def OrderedLogistic(name, eta, c, observed):
+class OrderedLogistic(Categorical):
     R"""
     Ordered Logistic log-likelihood.
 
@@ -1138,11 +1138,25 @@ def OrderedLogistic(name, eta, c, observed):
 
     """
 
-    pa = pm.math.sigmoid(tt.shape_padleft(c) - tt.shape_padright(eta))
-    p_cum = tt.concatenate([
-        tt.zeros_like(tt.shape_padright(pa[:, 0])),
-        pa,
-        tt.ones_like(tt.shape_padright(pa[:, 0]))
-    ], axis=1)
-    p = p_cum[:, 1:] - p_cum[:, :-1]
-    return pm.Categorical(name, p, observed=observed)
+    def __init__(self, eta, cutpoints, *args, **kwargs):
+        self.eta = tt.as_tensor_variable(eta)
+        self.cutpoints = tt.as_tensor_variable(cutpoints)
+
+        pa = pm.math.sigmoid(tt.shape_padleft(self.cutpoints) - tt.shape_padright(self.eta))
+        p_cum = tt.concatenate([
+            tt.zeros_like(tt.shape_padright(pa[:, 0])),
+            pa,
+            tt.ones_like(tt.shape_padright(pa[:, 0]))
+        ], axis=1)
+        p = p_cum[:, 1:] - p_cum[:, :-1]
+
+        super(OrderedLogistic, self).__init__(p=p, *args, **kwargs)
+
+    def _repr_latex_(self, name=None, dist=None):
+        if dist is None:
+            dist = self
+        name_eta = get_variable_name(dist.eta)
+        name_cutpoints = get_variable_name(dist.cutpoints)
+        return (r'${} \sim \text{{OrderedLogistic}}'
+                r'(\mathit{{eta}}={}, \mathit{{cutpoints}}={}$'
+                .format(name, name_eta, name_cutpoints))
