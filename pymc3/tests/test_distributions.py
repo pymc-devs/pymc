@@ -271,7 +271,6 @@ def categorical_logpdf(value, p):
     else:
         return -inf
 
-
 def mvt_logpdf(value, nu, Sigma, mu=0):
     d = len(Sigma)
     dist = np.atleast_2d(value) - mu
@@ -284,10 +283,14 @@ def mvt_logpdf(value, nu, Sigma, mu=0):
     logp = norm - logdet - (nu + d) / 2. * np.log1p((trafo * trafo).sum(-1) / nu)
     return logp.sum()
 
-
 def AR1_logpdf(value, k, tau_e):
     return (sp.norm(loc=0,scale=1/np.sqrt(tau_e)).logpdf(value[0]) +
             sp.norm(loc=k*value[:-1],scale=1/np.sqrt(tau_e)).logpdf(value[1:]).sum())
+
+def orderedlogistic_logpdf(value, eta, cutpoints):
+    c = np.concatenate(([-np.inf], cutpoints, [np.inf]))
+    logp = pm.math.invlogit(eta - c[value]) - pm.math.invlogit(eta - c[value + 1])
+    return logp
 
 class Simplex(object):
     def __init__(self, n):
@@ -851,6 +854,12 @@ class TestMatchesScipy(SeededTest):
     def test_categorical(self, n):
         self.pymc3_matches_scipy(Categorical, Domain(range(n), 'int64'), {'p': Simplex(n)},
                                  lambda value, p: categorical_logpdf(value, p))
+
+    @pytest.mark.parametrize('n', [2, 3, 4])
+    def test_orderedlogistic(self, n):
+        self.pymc3_matches_scipy(OrderedLogistic, Domain(range(n), 'int64'),
+                                 {'eta': R, 'c': Domain(range(n-1))},
+                                 lambda value, eta, c: orderedlogistic_logpdf(value, eta, c))
 
     def test_densitydist(self):
         def logp(x):
