@@ -827,10 +827,10 @@ class OrderedLogistic(Categorical):
     Ordered Logistic log-likelihood.
 
     Useful for regression on ordinal data values whose values range
-    from 1 to K as a function of some predictor, :math:`eta`. The
-    cutpoints, :math:`c`, separate which ranges of eta are mapped to
-    which of the K observed dependent variables.  The number of
-    cutpoints is K - 1.  It is recommended that the cutpoints are
+    from 1 to K as a function of some predictor, :math:`\eta`. The
+    cutpoints, :math:`c`, separate which ranges of :math:`\eta` are
+    mapped to which of the K observed dependent variables.  The number
+    of cutpoints is K - 1.  It is recommended that the cutpoints are
     constrained to be ordered.
 
     .. math::
@@ -855,6 +855,35 @@ class OrderedLogistic(Categorical):
         The length K - 1 array of cutpoints which break :math:`\eta` into
         ranges.  Do not explicitly set the first and last elements of :math:`c`
          to negative and positive infinity.
+
+    Example
+    --------
+    .. code:: python
+
+        # Generate data for a simple 1 dimensional example problem
+        n1 = 300; n2 = 300; n3 = 300
+        cluster1 = np.random.randn(n1_c) + -1
+        cluster2 = np.random.randn(n2_c) + 0
+        cluster3 = np.random.randn(n3_c) + 2
+
+        x = np.concatenate((cluster1, cluster2, cluster3))
+        y = np.concatenate((1*np.ones(n1_c),
+                            2*np.ones(n2_c),
+                            3*np.ones(n3_c))) - 1
+
+        # Ordered logistic regression
+        with pm.Model() as model:
+            cutpoints = pm.Normal("cutpoints", mu=[-1,1], sd=10, shape=2,
+                                  transform=pm.distributions.transforms.ordered)
+            y_ = pm.OrderedLogistic("y", cutpoints=cutpoints, eta=x, observed=y)
+            tr = pm.sample(1000)
+
+        # Plot the results
+        plt.hist(cluster1, 30, alpha=0.5);
+        plt.hist(cluster2, 30, alpha=0.5);
+        plt.hist(cluster3, 30, alpha=0.5);
+        plt.hist(tr["cutpoints"][:,0], 80, alpha=0.2, color='k');
+        plt.hist(tr["cutpoints"][:,1], 80, alpha=0.2, color='k');
 
     """
 
