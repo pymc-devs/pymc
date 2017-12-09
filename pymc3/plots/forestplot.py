@@ -22,66 +22,7 @@ def _var_str(name, shape):
     return names
 
 
-def _make_rhat_plot(trace, ax, title, labels, varnames, include_transformed):
-    """Helper to plot rhat for multiple chains.
-
-    Parameters
-    ----------
-    trace: pymc3 trace
-    ax: Matplotlib.Axes
-    title: str
-    labels: iterable
-        Same length as the number of chains
-    include_transformed: bool
-        Whether to include the transformed variables
-
-    Returns
-    -------
-
-    Matplotlib.Axes with a single error bar added
-
-    """
-    if varnames is None:
-        varnames = get_default_varnames(trace.varnames, include_transformed)
-
-    ax.set_title(title)
-
-    # Set x range
-    ax.set_xlim(0.9, 2.1)
-
-    # X axis labels
-    ax.set_xticks((1.0, 1.5, 2.0), ("1", "1.5", "2+"))
-    ax.set_yticks([-(l + 1) for l in range(len(labels))], "")
-
-    i = 1
-    for varname in varnames:
-        chain = trace.chains[0]
-        value = trace.get_values(varname, chains=[chain])[0]
-        k = np.size(value)
-        R = gelman_rubin(trace, varnames=[varname])
-
-        if k > 1:
-            Rval = dict2pd(R, 'rhat').values
-            ax.plot([min(r, 2) for r in Rval],
-                    [-(j + i) for j in range(k)], 'bo', markersize=4)
-        else:
-            ax.plot(min(R[varname], 2), -i, 'bo', markersize=4)
-
-        i += k
-
-    # Define range of y-axis
-    ax.set_ylim(-i + 0.5, -0.5)
-
-    # Remove ticklines on y-axes
-    ax.set_yticks([])
-
-    for loc, spine in ax.spines.items():
-        if loc in ['left', 'right']:
-            spine.set_color('none')  # don't draw spine
-    return ax
-
-
-def _plot_tree(ax, y, ntiles, show_quartiles, plot_kwargs):
+def _plot_tree(ax, y, ntiles, show_quartiles, c, plot_kwargs):
     """Helper to plot errorbars for the forestplot.
 
     Parameters
@@ -93,7 +34,8 @@ def _plot_tree(ax, y, ntiles, show_quartiles, plot_kwargs):
         A list or array of length 5 or 3
     show_quartiles: boolean
         Whether to plot the interquartile range
-
+    c : string
+        color
     Returns
     -------
 
@@ -102,69 +44,77 @@ def _plot_tree(ax, y, ntiles, show_quartiles, plot_kwargs):
     """
     if show_quartiles:
         # Plot median
-        ax.plot(ntiles[2], y, color=plot_kwargs.get('color', 'blue'),
+        ax.plot(ntiles[2], y, color=c,
                 marker=plot_kwargs.get('marker', 'o'),
                 markersize=plot_kwargs.get('markersize', 4))
         # Plot quartile interval
         ax.errorbar(x=(ntiles[1], ntiles[3]), y=(y, y),
                     linewidth=plot_kwargs.get('linewidth', 2),
-                    color=plot_kwargs.get('color', 'blue'))
+                    color=c)
 
     else:
         # Plot median
         ax.plot(ntiles[1], y, marker=plot_kwargs.get('marker', 'o'),
-                color=plot_kwargs.get('color', 'blue'),
-                markersize=plot_kwargs.get('markersize', 4))
+                color=c, markersize=plot_kwargs.get('markersize', 4))
 
     # Plot outer interval
     ax.errorbar(x=(ntiles[0], ntiles[-1]), y=(y, y),
                 linewidth=int(plot_kwargs.get('linewidth', 2)/2),
-                color=plot_kwargs.get('color', 'blue'))
+                color=c)
 
     return ax
 
 
-def forestplot(trace_obj, varnames=None, transform=identity_transform,
+def forestplot(trace, models=None, varnames=None, transform=identity_transform,
                alpha=0.05, quartiles=True, rhat=True, main=None, xtitle=None,
-               xlim=None, ylabels=None, chain_spacing=0.05, vline=0, gs=None,
-               plot_transformed=False, plot_kwargs=None):
+               xlim=None, ylabels=None, colors='C0', chain_spacing=0.1, vline=0,
+               gs=None, plot_transformed=False, plot_kwargs=None):
     """
     Forest plot (model summary plot).
 
-    Generates a "forest plot" of 100*(1-alpha)% credible intervals for either
-    the set of variables in a given model, or a specified set of nodes.
+    Generates a "forest plot" of 100*(1-alpha)% credible intervals from a trace
+    or list of traces.
 
     Parameters
     ----------
 
-    trace_obj: NpTrace or MultiTrace object
+    trace : trace or list of traces
         Trace(s) from an MCMC sample.
+    models : list (optional)
+        List with names for the models in the list of traces. Useful when
+        plotting more that one trace.
     varnames: list
         List of variables to plot (defaults to None, which results in all
         variables plotted).
     transform : callable
         Function to transform data (defaults to identity)
-    alpha (optional): float
+    alpha : float, optional
         Alpha value for (1-alpha)*100% credible intervals (defaults to 0.05).
-    quartiles (optional): bool
+    quartiles : bool, optional
         Flag for plotting the interquartile range, in addition to the
         (1-alpha)*100% intervals (defaults to True).
-    rhat (optional): bool
+    rhat : bool, optional
         Flag for plotting Gelman-Rubin statistics. Requires 2 or more chains
         (defaults to True).
-    main (optional): string
+    main : string, optional
         Title for main plot. Passing False results in titles being suppressed;
         passing None (default) results in default titles.
-    xtitle (optional): string
+    xtitle : string, optional
         Label for x-axis. Defaults to no label
-    xlim (optional): list or tuple
+    xlim : list or tuple, optional
         Range for x-axis. Defaults to matplotlib's best guess.
-    ylabels (optional): list or array
+    ylabels : list or array, optional
         User-defined labels for each variable. If not provided, the node
         __name__ attributes are used.
-    chain_spacing (optional): float
-        Plot spacing between chains (defaults to 0.05).
-    vline (optional): numeric
+    colors : list or string, optional
+        list with valid matplotlib colors, one color per model. Alternative a
+        string can be passed. If the string is `cycle `, it will automatically
+        chose a color per model from the matyplolib's cycle. If a single color
+        is passed, eg 'k', 'C2', 'red' this color will be used for all models.
+        Defauls to 'C0' (blueish in most matplotlib styles)
+    chain_spacing : float, optional
+        Plot spacing between chains (defaults to 0.1).
+    vline : numeric, optional
         Location of vertical reference line (defaults to 0).
     gs : GridSpec
         Matplotlib GridSpec object. Defaults to None.
@@ -173,7 +123,7 @@ def forestplot(trace_obj, varnames=None, transform=identity_transform,
         original variables (defaults to False).
     plot_kwargs : dict
         Optional arguments for plot elements. Currently accepts 'fontsize',
-        'linewidth', 'color', 'marker', and 'markersize'.
+        'linewidth', 'marker', and 'markersize'.
 
     Returns
     -------
@@ -184,120 +134,175 @@ def forestplot(trace_obj, varnames=None, transform=identity_transform,
     if plot_kwargs is None:
         plot_kwargs = {}
 
+    if not isinstance(trace, (list, tuple)):
+        trace = [trace]
+
+    if models is None:
+        if len(trace) > 1:
+            models = ['m_{}'.format(i) for i in range(len(trace))]
+        else:
+            models = ['']
+    elif len(models) != len(trace):
+        raise ValueError("The number of names for the models does not match "
+                         "the number of models")
+
+    if colors == 'cycle':
+        colors = ['C{}'.format(i % 10) for i in range(len(models))]
+    elif isinstance(colors, str):
+        colors = [colors for i in range(len(models))]
+
     # Quantiles to be calculated
     if quartiles:
         qlist = [100 * alpha / 2, 25, 50, 75, 100 * (1 - alpha / 2)]
     else:
         qlist = [100 * alpha / 2, 50, 100 * (1 - alpha / 2)]
 
-    # Range for x-axis
-    plotrange = None
-
-    # Subplots
-    interval_plot = None
-
-    nchains = trace_obj.nchains
+    nchains = [tr.nchains for tr in trace]
 
     if varnames is None:
-        varnames = get_default_varnames(trace_obj.varnames, plot_transformed)
+        varnames = []
+        for idx, tr in enumerate(trace):
+            varnames_tmp = get_default_varnames(tr.varnames, plot_transformed)
+            for v in varnames_tmp:
+                if v not in varnames:
+                    varnames.append(v)
 
-    plot_rhat = (rhat and nchains > 1)
+    plot_rhat = [rhat and nch > 1 for nch in nchains]
     # Empty list for y-axis labels
     if gs is None:
         # Initialize plot
-        if plot_rhat:
+        if np.any(plot_rhat):
             gs = gridspec.GridSpec(1, 2, width_ratios=[3, 1])
+            gr_plot = plt.subplot(gs[1])
+            gr_plot.set_xticks((1.0, 1.5, 2.0), ("1", "1.5", "2+"))
+            gr_plot.set_xlim(0.9, 2.1)
+            gr_plot.set_yticks([])
+            gr_plot.set_title('R-hat')
         else:
             gs = gridspec.GridSpec(1, 1)
 
         # Subplot for confidence intervals
         interval_plot = plt.subplot(gs[0])
 
-    trace_quantiles = quantiles(trace_obj, qlist, transform=transform,
-                                squeeze=False)
-    hpd_intervals = hpd(trace_obj, alpha, transform=transform, squeeze=False)
+    trace_quantiles = []
+    hpd_intervals = []
+    for tr in trace:
+        trace_quantiles.append(quantiles(tr, qlist, transform=transform,
+                                         squeeze=False))
+        hpd_intervals.append(hpd(tr, alpha, transform=transform,
+                                 squeeze=False))
 
     labels = []
-    for j, chain in enumerate(trace_obj.chains):
-        # Counter for current variable
-        var = 0
-        for varname in varnames:
-            var_quantiles = trace_quantiles[chain][varname]
-
-            quants = [var_quantiles[v] for v in qlist]
-            var_hpd = hpd_intervals[chain][varname].T
-
-            # Substitute HPD interval for quantile
-            quants[0] = var_hpd[0].T
-            quants[-1] = var_hpd[1].T
-
-            # Ensure x-axis contains range of current interval
-            if plotrange is None:
-                plotrange = [np.min(quants), np.max(quants)]
+    var = 0
+    all_quants = []
+    bands = [0.05, 0] * len(varnames)
+    var_old = 0.5
+    for v_idx, v in enumerate(varnames):
+        for h, tr in enumerate(trace):
+            if v not in tr.varnames:
+                labels.append(models[h] + ' ' + v)
+                var += 1
             else:
-                plotrange = [min(plotrange[0], np.min(quants)),
-                             max(plotrange[1], np.max(quants))]
+                for j, chain in enumerate(tr.chains):
+                    var_quantiles = trace_quantiles[h][chain][v]
 
-            # Number of elements in current variable
-            value = trace_obj.get_values(varname, chains=[chain])[0]
-            k = np.size(value)
+                    quants = [var_quantiles[vq] for vq in qlist]
+                    var_hpd = hpd_intervals[h][chain][v].T
 
-            # Append variable name(s) to list
-            if j == 0:
-                if k > 1:
-                    names = _var_str(varname, np.shape(value))
-                    labels += names
-                else:
-                    labels.append(varname)
+                    # Substitute HPD interval for quantile
+                    quants[0] = var_hpd[0].T
+                    quants[-1] = var_hpd[1].T
 
-            # Add spacing for each chain, if more than one
-            offset = [0] + [(chain_spacing * ((i + 2) / 2)) *
-                            (-1) ** i for i in range(nchains - 1)]
+                    # Ensure x-axis contains range of current interval
+                    all_quants.extend(np.ravel(quants))
 
-            # Y coordinate with offset
-            y = -var + offset[j]
+                    # Number of elements in current variable
+                    value = tr.get_values(v, chains=[chain])[0]
+                    k = np.size(value)
 
-            # Deal with multivariate nodes
-            if k > 1:
-                for q in np.moveaxis(np.array(quants), 0, -1).squeeze().reshape(-1, len(quants)):
-                    # Multiple y values
-                    interval_plot = _plot_tree(interval_plot, y, q, quartiles,
-                                               plot_kwargs)
-                    y -= 1
-            else:
-                interval_plot = _plot_tree(interval_plot, y, quants, quartiles,
-                                           plot_kwargs)
+                    # Append variable name(s) to list
+                    if j == 0:
+                        if k > 1:
+                            names = _var_str(v, np.shape(value))
+                            names[0] = models[h] + ' ' + names[0]
+                            labels += names
+                        else:
+                            labels.append(models[h] + ' ' + v)
 
-            # Increment index
-            var += k
+                    # Add spacing for each chain, if more than one
+                    offset = [0] + [(chain_spacing * ((i + 2) / 2)) *
+                                    (-1) ** i for i in range(nchains[h] - 1)]
 
-    labels = ylabels if ylabels is not None else labels
+                    # Y coordinate with offset
+                    y = - var + offset[j]
+
+                    # Deal with multivariate nodes
+
+                    if k > 1:
+                        qs = np.moveaxis(np.array(quants), 0, -1).squeeze()
+                        for q in qs.reshape(-1, len(quants)):
+                            # Multiple y values
+                            interval_plot = _plot_tree(interval_plot, y, q,
+                                                       quartiles, colors[h],
+                                                       plot_kwargs)
+                            y -= 1
+                    else:
+                        interval_plot = _plot_tree(interval_plot, y, quants,
+                                                   quartiles, colors[h],
+                                                   plot_kwargs)
+
+                # Genenerate Gelman-Rubin plot
+                if plot_rhat[h] and v in tr.varnames:
+                    R = gelman_rubin(tr, [v])
+                    if k > 1:
+                        Rval = dict2pd(R, 'rhat').values
+                        gr_plot.plot([min(r, 2) for r in Rval],
+                                     [-(j + var) for j in range(k)], 'o',
+                                     color=colors[h], markersize=4)
+                    else:
+                        gr_plot.plot(min(R[v], 2), -var, 'o', color=colors[h],
+                                     markersize=4)
+                var += k
+
+        if len(trace) > 1:
+            interval_plot.axhspan(var_old, y - chain_spacing - 0.5,
+                                  facecolor='k', alpha=bands[v_idx])
+            gr_plot.axhspan(var_old, y - chain_spacing - 0.5,
+                            facecolor='k', alpha=bands[v_idx])
+            var_old = y - chain_spacing - 0.5
+
+    if ylabels is not None:
+        labels = ylabels
 
     # Update margins
     left_margin = np.max([len(x) for x in labels]) * 0.015
     gs.update(left=left_margin, right=0.95, top=0.9, bottom=0.05)
 
-    # Define range of y-axis
-    interval_plot.set_ylim(-var + 0.5, 0.5)
+    # Define range of y-axis for forestplot and R-hat
+    interval_plot.set_ylim(- var + 0.5, 0.5)
+    if np.any(plot_rhat):
+        gr_plot.set_ylim(- var + 0.5, 0.5)
 
+    plotrange = [np.min(all_quants), np.max(all_quants)]
     datarange = plotrange[1] - plotrange[0]
     interval_plot.set_xlim(plotrange[0] - 0.05 * datarange,
                            plotrange[1] + 0.05 * datarange)
 
     # Add variable labels
-    interval_plot.set_yticks([-l for l in range(len(labels))])
+    interval_plot.set_yticks([- l for l in range(len(labels))])
     interval_plot.set_yticklabels(labels,
                                   fontsize=plot_kwargs.get('fontsize', None))
 
     # Add title
-    plot_title = ""
     if main is None:
         plot_title = "{:.0f}% Credible Intervals".format((1 - alpha) * 100)
     elif main:
         plot_title = main
-    if plot_title:
-        interval_plot.set_title(plot_title,
-                                fontsize=plot_kwargs.get('fontsize', None))
+    else:
+        plot_title = ""
+
+    interval_plot.set_title(plot_title,
+                            fontsize=plot_kwargs.get('fontsize', None))
 
     # Add x-axis label
     if xtitle is not None:
@@ -318,10 +323,5 @@ def forestplot(trace_obj, varnames=None, transform=identity_transform,
 
     # Reference line
     interval_plot.axvline(vline, color='k', linestyle=':')
-
-    # Genenerate Gelman-Rubin plot
-    if plot_rhat:
-        _make_rhat_plot(trace_obj, plt.subplot(gs[1]), "R-hat", labels,
-                        varnames, plot_transformed)
 
     return gs
