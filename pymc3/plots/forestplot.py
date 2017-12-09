@@ -265,11 +265,11 @@ def forestplot(trace, models=None, varnames=None, transform=identity_transform,
                 var += k
 
         if len(trace) > 1:
-            interval_plot.axhspan(var_old, y - chain_spacing * 2,
+            interval_plot.axhspan(var_old, y - chain_spacing - 0.5,
                                   facecolor='k', alpha=bands[v_idx])
-            gr_plot.axhspan(var_old, y - chain_spacing * 2,
+            gr_plot.axhspan(var_old, y - chain_spacing - 0.5,
                             facecolor='k', alpha=bands[v_idx])
-            var_old = y - chain_spacing * 2
+            var_old = y - chain_spacing - 0.5
 
     if ylabels is not None:
         labels = ylabels
