@@ -17,7 +17,7 @@ from .memoize import memoize
 from .theanof import gradient, hessian, inputvars, generator
 from .vartypes import typefilter, discrete_types, continuous_types, isgenerator
 from .blocking import DictToArrayBijection, ArrayOrdering
-from .util import get_transformed_name, escape_latex
+from .util import get_transformed_name
 
 __all__ = [
     'Model', 'Factor', 'compilef', 'fn', 'fastfn', 'modelcontext',
@@ -952,8 +952,15 @@ class Model(six.with_metaclass(InitContextMeta, Context, Factor)):
     def _repr_latex_(self, name=None, dist=None):
         tex_vars = []
         for rv in itertools.chain(self.unobserved_RVs, self.observed_RVs):
-            tex_vars.append(rv.__latex__())
-        return u'$${}$$'.format('\\\\'.join([tex.strip('$') for tex in tex_vars if tex is not None]))
+            rv_tex = rv.__latex__()
+            if rv_tex is not None:
+                array_rv = rv_tex.replace(r'\sim', r'&\sim &').strip('$')
+                tex_vars.append(array_rv)
+        return r'''$$
+            \begin{{array}}{{rcl}}
+            {}
+            \end{{array}}
+            $$'''.format('\\\\'.join(tex_vars))
 
     __latex__ = _repr_latex_
 
@@ -1140,7 +1147,7 @@ class FreeRV(Factor, TensorVariable):
             name = self.name
         if dist is None:
             dist = self.distribution
-        return self.distribution._repr_latex_(name=escape_latex(name), dist=dist)
+        return self.distribution._repr_latex_(name=name, dist=dist)
 
     __latex__ = _repr_latex_
 
@@ -1249,7 +1256,7 @@ class ObservedRV(Factor, TensorVariable):
             name = self.name
         if dist is None:
             dist = self.distribution
-        return self.distribution._repr_latex_(name=escape_latex(name), dist=dist)
+        return self.distribution._repr_latex_(name=name, dist=dist)
 
     __latex__ = _repr_latex_
 
@@ -1302,7 +1309,7 @@ def _walk_up_rv(rv):
             all_rvs.extend(_walk_up_rv(parent))
     else:
         if rv.name:
-            all_rvs.append(rv.name)
+            all_rvs.append(r'\text{%s}' % rv.name)
         else:
             all_rvs.append(r'\text{Constant}')
     return all_rvs
@@ -1310,7 +1317,7 @@ def _walk_up_rv(rv):
 
 def _latex_repr_rv(rv):
     """Make latex string for a Deterministic variable"""
-    return r'${} \sim \text{{Deterministic}}({})$'.format(rv.name, r', '.join(_walk_up_rv(rv)))
+    return r'$\text{%s} \sim \text{Deterministic}(%s)$' % (rv.name, r',~'.join(_walk_up_rv(rv)))
 
 
 def Deterministic(name, var, model=None):
@@ -1402,7 +1409,7 @@ class TransformedRV(TensorVariable):
             name = self.name
         if dist is None:
             dist = self.distribution
-        return self.distribution._repr_latex_(name=escape_latex(name), dist=dist)
+        return self.distribution._repr_latex_(name=name, dist=dist)
 
     __latex__ = _repr_latex_
 

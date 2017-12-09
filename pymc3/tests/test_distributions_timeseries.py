@@ -64,7 +64,7 @@ def test_linear():
         Normal('zh', mu=xh, sd=sig2, observed=z)
     # invert
     with model:
-        trace = sample(init='advi+adapt_diag')
+        trace = sample(init='advi+adapt_diag', chains=1)
 
     ppc = sample_ppc(trace, model=model)
     # test
