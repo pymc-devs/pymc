@@ -156,7 +156,7 @@ class MvNormal(_QuadFormBase):
     .. math::
 
        f(x \mid \pi, T) =
-           \frac{|T|^{1/2}}{(2\pi)^{1/2}}
+           \frac{|T|^{1/2}}{(2\pi)^{k/2}}
            \exp\left\{ -\frac{1}{2} (x-\mu)^{\prime} T (x-\mu) \right\}
 
     ========  ==========================
