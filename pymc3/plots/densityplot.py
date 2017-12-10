@@ -8,13 +8,12 @@ from .utils import get_default_varnames
 from ..stats import hpd
 
 
-def densityplot(trace, models=None, varnames=None, alpha=0.05,
-                point_estimate='mean', colors='cycle', opacity=0.75,
-                figsize=None, textsize=12, plot_transformed=False, ax=None):
+def densityplot(trace, models=None, varnames=None, alpha=0.05, point_estimate='mean',
+                colors='cycle', outline=True, hpd_markers='', shade=0., figsize=None, textsize=12,
+                plot_transformed=False, ax=None):
     """
-    Generates KDE plots truncated at their 100*(1-alpha) % credible intervals
-    from a trace or list of traces. KDE plots are grouped per variable and
-    different colors assigned to models.
+    Generates KDE plots truncated at their 100*(1-alpha)% credible intervals from a trace or list of
+    traces. KDE plots are grouped per variable and colors assigned to models.
 
     Parameters
     ----------
@@ -29,24 +28,28 @@ def densityplot(trace, models=None, varnames=None, alpha=0.05,
     alpha : float
         Alpha value for (1-alpha)*100% credible intervals (defaults to 0.05).
     point_estimate : str or None
-        Plot a point estimate per variable. Values should be 'mean' (default),
-        'median' or None. Defaults to 'mean'.
+        Plot point estimate per variable. Values should be 'mean', 'median' or None.
+        Defaults to 'mean'.
     colors : list or string, optional
-        list with valid matplotlib colors, one color per model. Alternative a
-        string can be passed. If the string is `cycle `, it will automatically
-        chose a color per model from the matyplolib's cycle. If a single color
-        is passed, eg 'k', 'C2', 'red' this color will be used for all models.
-        Defauls to 'C0' (blueish in most matplotlib styles)
-    opacity : float
-        opacity level for the density plots, opaqueness increase from 0 to 1.
-        Default value is 0.75.
+        List with valid matplotlib colors, one color per model. Alternative a string can be passed.
+        If the string is `cycle `, it will automatically choose a color per model from matplolib's
+        cycle. If a single color is passed, e.g. 'k', 'C2' or 'red' this color will be used for all
+        models. Defaults to 'C0' (blueish in most matplotlib styles)
+    outline : boolean
+        Use a line to draw the truncated KDE and. Defaults to True
+    hpd_markers : str
+        A valid `matplotlib.markers` like 'v', used to indicate the limits of the hpd interval.
+        Defaults to empty string (no marker).
+    shade : float
+        Alpha blending value for the shaded area under the curve, between 0 (no shade) and 1
+        (opaque). Defaults to 0.
     figsize : tuple
         Figure size. If None, size is (6, number of variables * 2)
     textsize : int
-        Text size of the lenged. Default 12
+        Text size of the legend. Default 12.
     plot_transformed : bool
-        Flag for plotting automatically transformed variables in addition to
-        original variables (defaults to False).
+        Flag for plotting automatically transformed variables in addition to original variables
+        Defaults to False.
     ax : axes
         Matplotlib axes.
 
@@ -57,7 +60,7 @@ def densityplot(trace, models=None, varnames=None, alpha=0.05,
 
     """
     if point_estimate not in ('mean', 'median', None):
-        raise ValueError("Point Estimate should be 'mean' or 'median'")
+        raise ValueError("Point estimate should be 'mean' or 'median'")
 
     if not isinstance(trace, (list, tuple)):
         trace = [trace]
@@ -70,8 +73,7 @@ def densityplot(trace, models=None, varnames=None, alpha=0.05,
         else:
             models = ['']
     elif len(models) != lenght_trace:
-        raise ValueError("The number of names for the models does not "
-                         "match the number of models")
+        raise ValueError("The number of names for the models does not match the number of models")
 
     lenght_models = len(models)
 
@@ -102,11 +104,12 @@ def densityplot(trace, models=None, varnames=None, alpha=0.05,
                 if k > 1:
                     vec = np.split(vec.T.ravel(), k)
                     for i in range(k):
-                        _kde_helper(vec[i], vname, colors[t_idx], alpha,
-                                    point_estimate, opacity, kplot[v_idx])
+                        _kde_helper(vec[i], vname, colors[t_idx], alpha, point_estimate,
+                                    hpd_markers, outline, shade, kplot[v_idx])
                 else:
-                    _kde_helper(vec, vname, colors[t_idx], alpha,
-                                point_estimate, opacity, kplot[v_idx])
+                    _kde_helper(vec, vname, colors[t_idx], alpha, point_estimate,
+                                hpd_markers, outline, shade, kplot[v_idx])
+
     if lenght_trace > 1:
         for m_idx, m in enumerate(models):
             kplot[0].plot([], label=m, c=colors[m_idx])
@@ -117,30 +120,45 @@ def densityplot(trace, models=None, varnames=None, alpha=0.05,
     return kplot
 
 
-def _kde_helper(vec, vname, c, alpha, point_estimate, opacity, ax):
+def _kde_helper(vec, vname, c, alpha, point_estimate, hpd_markers,
+                outline, shade, ax):
     """
-    Helper function to plot truncated kde plots with point estimates.
-
-    Parameters
-    ----------
-
     vec : array
         1D array from trace
     vname : str
         variable name
     c : str
         matplotlib color
+    alpha : float
+        Alpha value for (1-alpha)*100% credible intervals (defaults to 0.05).
     point_estimate : str or None
         'mean' or 'median'
-    opacity : float
-        0 to 1 value controling the opacity of the kdeplot
+    shade : float
+        Alpha blending value for the shaded area under the curve, between 0 (no shade) and 1
+        (opaque). Defaults to 0.
     ax : matplotlib axes
     """
     density, l, u = fast_kde(vec)
     x = np.linspace(l, u, len(density))
     hpd_ = hpd(vec, alpha)
-    cut = (x > hpd_[0]) & (x < hpd_[1])
-    ax.fill_between(x[cut], density[cut], color=c, alpha=opacity)
+    cut = (x >= hpd_[0]) & (x <= hpd_[1])
+
+    xmin = x[cut][0]
+    xmax = x[cut][-1]
+    ymin = density[cut][0]
+    ymax = density[cut][-1]
+
+    if outline:
+        ax.plot(x[cut], density[cut], color=c)
+        ax.plot([xmin, xmin], [-0.5, ymin], color=c, ls='-')
+        ax.plot([xmax, xmax], [-0.5, ymax], color=c, ls='-')
+
+    if hpd_markers:
+        ax.plot(xmin, 0, 'v', color=c, markeredgecolor='k')
+        ax.plot(xmax, 0, 'v', color=c, markeredgecolor='k')
+
+    if shade:
+        ax.fill_between(x, density, where=cut, color=c, alpha=shade)
 
     if point_estimate is not None:
         if point_estimate == 'mean':
@@ -152,4 +170,4 @@ def _kde_helper(vec, vname, c, alpha, point_estimate, opacity, ax):
     ax.set_yticks([])
     ax.set_title(vname)
     for pos in ['left', 'right', 'top']:
-        ax.spines[pos].set_visible(False)
+        ax.spines[pos].set_visible(0)
