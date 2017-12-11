@@ -210,6 +210,8 @@ class TestSamplePPC(SeededTest):
             trace = pm.sample()
 
         with model:
+            # test list input
+            ppc0 = pm.sample_ppc([model.test_point], samples=10)
             ppc = pm.sample_ppc(trace, samples=1000, vars=[])
             assert len(ppc) == 0
             ppc = pm.sample_ppc(trace, samples=1000, vars=[a])
@@ -228,6 +230,8 @@ class TestSamplePPC(SeededTest):
             trace = pm.sample()
 
         with model:
+	    # test list input
+            ppc0 = pm.sample_ppc([model.test_point], samples=10)
             ppc = pm.sample_ppc(trace, samples=10, vars=[])
             assert len(ppc) == 0
             ppc = pm.sample_ppc(trace, samples=10, vars=[a])
@@ -245,6 +249,8 @@ class TestSamplePPC(SeededTest):
             trace = pm.sample()
 
         with model:
+	    # test list input
+            ppc0 = pm.sample_ppc([model.test_point], samples=10)
             ppc = pm.sample_ppc(trace, samples=1000, vars=[b])
             assert len(ppc) == 1
             assert ppc['b'].shape == (1000,)

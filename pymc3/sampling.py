@@ -654,7 +654,7 @@ class PopulationStepper(object):
                 # configure a child process for each stepper
                 pm._log.info('Attempting to parallelize chains.')
                 import multiprocessing
-                for c,stepper in enumerate(steppers):
+                for c, stepper in enumerate(tqdm(steppers)):
                     slave_end, master_end = multiprocessing.Pipe()
                     stepper_dumps = pickle.dumps(stepper, protocol=4)
                     process = multiprocessing.Process(
@@ -662,6 +662,8 @@ class PopulationStepper(object):
                         args=(c, stepper_dumps, slave_end),
                         name='ChainWalker{}'.format(c)
                     )
+                    # we want the child process to exit if the parent is terminated
+                    process.daemon = True
                     # Starting the process might fail and takes time.
                     # By doing it in the constructor, the sampling progress bar
                     # will not be confused by the process start.
@@ -794,7 +796,7 @@ def _prepare_iter_population(draws, chains, step, start, parallelize, tune=None,
 
     # 1. prepare a BaseTrace for each chain
     traces = [_choose_backend(None, chain, model=model) for chain in chains]
-    for c,strace in enumerate(traces):
+    for c, strace in enumerate(traces):
         # initialize the trace size and variable transforms
         if len(strace) > 0:
             update_start_vals(start[c], strace.point(-1), model)
@@ -860,7 +862,7 @@ def _iter_population(draws, tune, popstep, steppers, traces, points):
                 updates = popstep.step(i == tune, points)
 
                 # apply the update to the points and record to the traces
-                for c,strace in enumerate(traces):
+                for c, strace in enumerate(traces):
                     if steppers[c].generates_stats:
                         points[c], states = updates[c]
                         if strace.supports_sampler_stats:
@@ -873,17 +875,17 @@ def _iter_population(draws, tune, popstep, steppers, traces, points):
                 # yield the state of all chains in parallel
                 yield traces
     except KeyboardInterrupt:
-        for c,strace in enumerate(traces):
+        for c, strace in enumerate(traces):
             strace.close()
             if hasattr(steppers[c], 'report'):
                 steppers[c].report._finalize(strace)
         raise
     except BaseException:
-        for c,strace in enumerate(traces):
+        for c, strace in enumerate(traces):
             strace.close()
         raise
     else:
-        for c,strace in enumerate(traces):
+        for c, strace in enumerate(traces):
             strace.close()
             if hasattr(steppers[c], 'report'):
                 steppers[c].report._finalize(strace)
@@ -944,7 +946,8 @@ def sample_ppc(trace, samples=None, model=None, vars=None, size=None,
     Parameters
     ----------
     trace : backend, list, or MultiTrace
-        Trace generated from MCMC sampling.
+        Trace generated from MCMC sampling. Or a list containing dicts from
+        find_MAP() or points
     samples : int
         Number of posterior predictive samples to generate. Defaults to the
         length of `trace`
@@ -971,7 +974,10 @@ def sample_ppc(trace, samples=None, model=None, vars=None, size=None,
         posterior predictive samples.
     """
     len_trace = len(trace)
-    nchain = trace.nchains
+    try:
+        nchain = trace.nchains
+    except AttributeError:
+        nchain = 1
 
     if samples is None:
         samples = len(trace)
@@ -984,14 +990,19 @@ def sample_ppc(trace, samples=None, model=None, vars=None, size=None,
     np.random.seed(random_seed)
 
     indices = np.random.randint(0, nchain*len_trace, samples)
-    chain_idx, point_idx = np.divmod(indices, len_trace)
+
     if progressbar:
         indices = tqdm(indices, total=samples)
 
     try:
         ppc = defaultdict(list)
-        for idx in zip(chain_idx, point_idx):
-            param = trace._straces[idx[0]].point(idx[1])
+        for idx in indices:
+            if nchain > 1:
+                chain_idx, point_idx = np.divmod(idx, len_trace)
+                param = trace._straces[chain_idx].point(point_idx)
+            else:
+                param = trace[idx]
+
             for var in vars:
                 ppc[var.name].append(var.distribution.random(point=param,
                                                              size=size))
@@ -1013,8 +1024,9 @@ def sample_ppc_w(traces, samples=None, models=None, weights=None,
 
     Parameters
     ----------
-    traces : list
-        List of traces generated from MCMC sampling. The number of traces should
+    traces : list or list of lists
+        List of traces generated from MCMC sampling, or a list of list
+        containing dicts from find_MAP() or points. The number of traces should
         be equal to the number of weights.
     samples : int
         Number of posterior predictive samples to generate. Defaults to the
@@ -1073,12 +1085,20 @@ def sample_ppc_w(traces, samples=None, models=None, weights=None,
     trace = []
     for i, j in enumerate(n):
         tr = traces[i]
-        len_trace = len(tr) 
-        nchain = tr.nchains 
+        len_trace = len(tr)
+        try:
+            nchain = tr.nchains
+        except AttributeError:
+            nchain = 1
+
         indices = np.random.randint(0, nchain*len_trace, j)
-        chain_idx, point_idx = np.divmod(indices, len_trace)
-        for idx in zip(chain_idx, point_idx): 
-            trace.append(tr._straces[idx[0]].point(idx[1]))
+        if nchain > 1:
+            chain_idx, point_idx = np.divmod(indices, len_trace)
+            for idx in zip(chain_idx, point_idx):
+                trace.append(tr._straces[idx[0]].point(idx[1]))
+        else:
+            for idx in indices:
+                trace.append(tr[idx])
 
     obs = [x for m in models for x in m.observed_RVs]
     variables = np.repeat(obs, n)
