@@ -18,12 +18,11 @@ class TestSMC(SeededTest):
         super(TestSMC, self).setup_class()
         self.test_folder = mkdtemp(prefix='ATMIP_TEST')
 
-        self.n_chains = 1000
-        self.n_steps = 10
+        self.n_chains = 100
+        self.n_steps = 20
         self.tune_interval = 25
 
         n = 4
-
         mu1 = np.ones(n) * (1. / 2)
         mu2 = -mu1
 
@@ -49,8 +48,7 @@ class TestSMC(SeededTest):
                            shape=n,
                            lower=-2. * np.ones_like(mu1),
                            upper=2. * np.ones_like(mu1),
-                           testval=-1. * np.ones_like(mu1),
-                           transform=None)
+                           testval=-1. * np.ones_like(mu1))
             llk = pm.Potential('muh', two_gaussians(X))
 
         self.step = smc.SMC(
