@@ -31,12 +31,10 @@ from ..backends import smc_text as atext
 
 __all__ = ['SMC', 'sample_smc']
 
-EXPERIMENTAL_WARNING = "Warning: SMC is an experimental step method, and not yet"\
-    " recommended for use in PyMC3!"
+EXPERIMENTAL_WARNING = ("Warning: SMC is an experimental step method, and not yet "
+                       "recommended for use in PyMC3!")
 
-proposal_dists = {
-    'MultivariateNormal': MultivariateNormalProposal,
-        }
+proposal_dists = {'MultivariateNormal': MultivariateNormalProposal}
 
 
 def choose_proposal(proposal_name, scale=1.):
@@ -117,7 +115,9 @@ class SMC(atext.ArrayStepSharedLLK):
                  likelihood_name='like', proposal_name='MultivariateNormal', tune=True,
                  tune_interval=100, coef_variation=1., check_bound=True, model=None,
                  random_seed=-1):
+
         warnings.warn(EXPERIMENTAL_WARNING)
+
         if random_seed != -1:
             nr.seed(random_seed)
 
@@ -183,8 +183,19 @@ class SMC(atext.ArrayStepSharedLLK):
         # create initial population
         self.population = []
         self.array_population = np.zeros(n_chains)
-        for _ in range(self.n_chains):
-            self.population.append(pm.Point({v.name: v.random() for v in vars}, model=model))
+
+        init_rnd = {}
+        for v in vars:
+            if pm.util.is_transformed_name(v.name):
+                trans = v.distribution.transform_used.forward
+                rnd = trans(v.distribution.dist.random(size=self.n_chains))
+                init_rnd[v.name] = rnd.eval()
+            else:
+                init_rnd[v.name] = v.random(size=self.n_chains)
+
+        for i in range(self.n_chains):
+            self.population.append(pm.Point({v.name: init_rnd[v.name][i] for v in vars},
+                                            model=model))
 
         self.chain_previous_lpoint = copy.deepcopy(self.population)
 
@@ -332,15 +343,13 @@ class SMC(atext.ArrayStepSharedLLK):
 
         # collect end points of each chain and put into array
         for var, slc, shp, _ in self.ordering.vmap:
-            slc_population = mtrace.get_values(varname=var, burn=n_steps - 1, combine=True)
+            slc_population = mtrace.get_values(varname=var, burn=n_steps-1, combine=True)
             if len(shp) == 0:
                 array_population[:, slc] = np.atleast_2d(slc_population).T
             else:
                 array_population[:, slc] = slc_population
         # get likelihoods
-        likelihoods = mtrace.get_values(varname=self.likelihood_name,
-                                        burn=n_steps - 1,
-                                        combine=True)
+        likelihoods = mtrace.get_values(varname=self.likelihood_name, burn=n_steps-1, combine=True)
 
         # map end array_endpoints to dict points
         population = [self.bij.rmap(row) for row in array_population]
@@ -363,7 +372,7 @@ class SMC(atext.ArrayStepSharedLLK):
         array_population = np.zeros((self.n_chains, self.lordering.size))
         n_steps = len(mtrace)
         for _, slc, shp, _, var in self.lordering.vmap:
-            slc_population = mtrace.get_values(varname=var, burn=n_steps - 1, combine=True)
+            slc_population = mtrace.get_values(varname=var, burn=n_steps-1, combine=True)
             if len(shp) == 0:
                 array_population[:, slc] = np.atleast_2d(slc_population).T
             else:
@@ -414,7 +423,8 @@ class SMC(atext.ArrayStepSharedLLK):
 
 
 def sample_smc(n_steps, n_chains=100, step=None, start=None, homepath=None, stage=0, n_jobs=1,
-                 tune_interval=10, tune=None, progressbar=False, model=None, random_seed=-1, rm_flag=True):
+               tune_interval=10, tune=None, progressbar=False, model=None, random_seed=-1,
+               rm_flag=True):
     """Sequential Monte Carlo sampling
 
     Samples the solution space with n_chains of Metropolis chains, where each
@@ -504,11 +514,11 @@ def sample_smc(n_steps, n_chains=100, step=None, start=None, homepath=None, stag
             step.population = start
 
     if not any(step.likelihood_name in var.name for var in model.deterministics):
-        raise TypeError('Model (deterministic) variables need to contain a variable %s '
-                        'as defined in `step`.' % step.likelihood_name)
+        raise TypeError('Model (deterministic) variables need to contain a variable {} as defined '
+                        'in `step`.'.format(step.likelihood_name))
 
     step.n_steps = int(n_steps)
-    
+
     stage_handler = atext.TextStage(homepath)
 
     if progressbar and n_jobs > 1:
@@ -539,21 +549,19 @@ def sample_smc(n_steps, n_chains=100, step=None, start=None, homepath=None, stag
 
             # Metropolis sampling intermediate stages
             chains = stage_handler.clean_directory(step.stage, chains, rm_flag)
-            sample_args = {
-                    'draws': draws,
-                    'step': step,
-                    'stage_path': stage_handler.stage_path(step.stage),
-                    'progressbar': progressbar,
-                    'model': model,
-                    'n_jobs': n_jobs,
-                    'chains': chains}
+            sample_args = {'draws': draws,
+                           'step': step,
+                           'stage_path': stage_handler.stage_path(step.stage),
+                           'progressbar': progressbar,
+                           'model': model,
+                           'n_jobs': n_jobs,
+                           'chains': chains}
 
             _iter_parallel_chains(**sample_args)
 
             mtrace = stage_handler.load_multitrace(step.stage)
 
-            step.population, step.array_population, step.likelihoods = step.select_end_points(
-                mtrace)
+            step.population, step.array_population, step.likelihoods = step.select_end_points(mtrace)
             step.beta, step.old_beta, step.weights, sj = step.calc_beta()
             step.sjs *= sj
 
@@ -602,8 +610,8 @@ def sample_smc(n_steps, n_chains=100, step=None, start=None, homepath=None, stag
                                                  model=model)
 
 
-def _sample(draws, step=None, start=None, trace=None, chain=0, tune=None,
-            progressbar=True, model=None, random_seed=-1):
+def _sample(draws, step=None, start=None, trace=None, chain=0, tune=None, progressbar=True,
+            model=None, random_seed=-1):
 
     sampling = _iter_sample(draws, step, start, trace, chain,
                             tune, model, random_seed)
