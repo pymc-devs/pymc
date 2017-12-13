@@ -186,10 +186,12 @@ class SMC(atext.ArrayStepSharedLLK):
 
         init_smc_model = copy.copy(model)
         init_smc_model.observed_RVs = []
-        trace = pm.sample(self.n_chains, random_seed=random_seed, progressbar=False,
-                          model=init_smc_model)
+        total_samples = self.n_chains * 2
+        with init_smc_model:
+            trace = pm.sample(total_samples, step=pm.Metropolis(), random_seed=random_seed,
+                              chains=1, progressbar=False)
 
-        for i in range(self.n_chains):
+        for i in range(0, total_samples, 2):
             self.population.append(pm.Point({v.name: trace[v.name][i] for v in vars},
                                              model=model))
 
