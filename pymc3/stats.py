@@ -116,6 +116,8 @@ def dic(trace, model=None):
     z : float
         The deviance information criterion of the model and trace
     """
+    warnings.warn("dic has been deprecated. Use `waic` or `loo` instead.", DeprecationWarning)
+
     model = modelcontext(model)
     logp = model.logp
 
@@ -464,6 +466,8 @@ def bpic(trace, model=None):
     z : float
         The Bayesian predictive information criterion of the model and trace
     """
+    warnings.warn("bpic has been deprecated. Use `waic` or `loo` instead.", DeprecationWarning)
+
     model = modelcontext(model)
     logp = model.logp
 
