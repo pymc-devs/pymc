@@ -184,18 +184,14 @@ class SMC(atext.ArrayStepSharedLLK):
         self.population = []
         self.array_population = np.zeros(n_chains)
 
-        init_rnd = {}
-        for v in vars:
-            if pm.util.is_transformed_name(v.name):
-                trans = v.distribution.transform_used.forward
-                rnd = trans(v.distribution.dist.random(size=self.n_chains))
-                init_rnd[v.name] = rnd.eval()
-            else:
-                init_rnd[v.name] = v.random(size=self.n_chains)
+        init_smc_model = copy.copy(model)
+        init_smc_model.observed_RVs = []
+        trace = pm.sample(self.n_chains, random_seed=random_seed, progressbar=False,
+                          model=init_smc_model)
 
         for i in range(self.n_chains):
-            self.population.append(pm.Point({v.name: init_rnd[v.name][i] for v in vars},
-                                            model=model))
+            self.population.append(pm.Point({v.name: trace[v.name][i] for v in vars},
+                                             model=model))
 
         self.chain_previous_lpoint = copy.deepcopy(self.population)
 
