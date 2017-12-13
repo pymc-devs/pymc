@@ -116,7 +116,8 @@ def dic(trace, model=None):
     z : float
         The deviance information criterion of the model and trace
     """
-    warnings.warn("dic has been deprecated. Use `waic` or `loo` instead.", DeprecationWarning)
+    warnings.warn("dic has been deprecated. Use `waic` or `loo` instead.", DeprecationWarning,
+                  stacklevel=2)
 
     model = modelcontext(model)
     logp = model.logp
@@ -466,7 +467,8 @@ def bpic(trace, model=None):
     z : float
         The Bayesian predictive information criterion of the model and trace
     """
-    warnings.warn("bpic has been deprecated. Use `waic` or `loo` instead.", DeprecationWarning)
+    warnings.warn("bpic has been deprecated. Use `waic` or `loo` instead.", DeprecationWarning,
+                  stacklevel=2)
 
     model = modelcontext(model)
     logp = model.logp
@@ -1009,7 +1011,7 @@ def summary(trace, varnames=None, transform=lambda x: x, stat_funcs=None,
 
 def df_summary(*args, **kwargs):
     warnings.warn("df_summary has been deprecated. In future, use summary instead.",
-                DeprecationWarning)
+                  DeprecationWarning, stacklevel=2)
     return summary(*args, **kwargs)
 
 
