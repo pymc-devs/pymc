@@ -34,4 +34,4 @@ after_success:
   - coveralls
 
 after_failure:
-  - cat /tmp/theano_compilation_error_*
+  - cat /tmp/theano_compilation_error_* && sleep 10;
