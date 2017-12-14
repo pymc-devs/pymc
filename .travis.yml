@@ -32,3 +32,6 @@ script:
 after_success:
   - if [[ "$BUILD_DOCS" == "true" ]]; then travis-sphinx deploy -c "docs.pymc.io"; fi
   - coveralls
+
+after_failure:
+  - cat /tmp/theano_compilation_error_*
