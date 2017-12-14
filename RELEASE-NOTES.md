@@ -15,6 +15,7 @@
 - Michael Osthege added support for population-samplers and implemented differential evolution metropolis (`DEMetropolis`).  For models with correlated dimensions that can not use gradient-based samplers, the `DEMetropolis` sampler can give higher effective sampling rates. (also see [PR#2735](https://github.com/pymc-devs/pymc3/pull/2735))
 - Forestplot supports multiple traces (#2736)
 - Add new plot, densityplot (#2741)
+- DIC and BPIC calculations have been deprecated
 
 ### Fixes
 
