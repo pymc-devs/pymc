@@ -20,7 +20,6 @@ class TestSMC(SeededTest):
 
         self.n_chains = 100
         self.n_steps = 20
-        self.tune_interval = 25
 
         n = 4
         mu1 = np.ones(n) * (1. / 2)
@@ -44,16 +43,11 @@ class TestSMC(SeededTest):
             return tt.log(w1 * tt.exp(log_like1) + w2 * tt.exp(log_like2))
 
         with pm.Model() as self.ATMIP_test:
-            X = pm.Uniform('X',
-                           shape=n,
-                           lower=-2. * np.ones_like(mu1),
-                           upper=2. * np.ones_like(mu1),
-                           testval=-1. * np.ones_like(mu1))
+            X = pm.Uniform('X', lower=-2, upper=2., shape=n)
             llk = pm.Potential('muh', two_gaussians(X))
 
         self.step = smc.SMC(
             n_chains=self.n_chains,
-            tune_interval=self.tune_interval,
             model=self.ATMIP_test)
 
         self.muref = mu1
@@ -75,7 +69,7 @@ class TestSMC(SeededTest):
         mu1d = np.abs(x).mean(axis=0)
         np.testing.assert_allclose(self.muref, mu1d, rtol=0., atol=0.03)
         # Scenario IV Ching, J. & Chen, Y. 2007
-        assert np.round(np.log(self.ATMIP_test.marginal_likelihood)) == -11.0
+        assert np.round(np.log(self.ATMIP_test.marginal_likelihood)) == -12.0
 
     def test_stage_handler(self):
         stage_number = -1
