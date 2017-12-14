@@ -1,7 +1,5 @@
 #!/usr/bin/env bash
 
-set -e
-
 if [[ "$BUILD_DOCS" == "true" ]]; then
     travis-sphinx build -n -s docs/source
 fi
