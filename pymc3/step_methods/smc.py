@@ -81,6 +81,10 @@ class SMC(atext.ArrayStepSharedLLK):
     proposal_name :
         Type of proposal distribution, see
         smc.proposal_dists.keys() for options
+    tune : boolean
+        Flag for adaptive scaling based on the acceptance rate
+    tune_interval : int
+        Number of steps to tune for
     coef_variation : scalar, float
         Coefficient of variation, determines the change of beta
         from stage to stage, i.e.indirectly the number of stages,
@@ -107,9 +111,10 @@ class SMC(atext.ArrayStepSharedLLK):
     """
     default_blocked = True
 
-    def __init__(self, vars=None, out_vars=None, n_chains=100, covariance=None,
-                 likelihood_name='like', proposal_name='MultivariateNormal', coef_variation=1.,
-                 check_bound=True, model=None, random_seed=-1):
+    def __init__(self, vars=None, out_vars=None, n_chains=100, scaling=1., covariance=None,
+                 likelihood_name='like', proposal_name='MultivariateNormal', tune=True,
+                 tune_interval=100, coef_variation=1., check_bound=True, model=None,
+                 random_seed=-1):
 
         warnings.warn(EXPERIMENTAL_WARNING)
 
@@ -148,7 +153,11 @@ class SMC(atext.ArrayStepSharedLLK):
         self.proposal_name = proposal_name
         self.proposal_dist = choose_proposal(self.proposal_name, scale=scale)
 
+        self.scaling = np.atleast_1d(scaling)
+        self.tune = tune
         self.check_bnd = check_bound
+        self.tune_interval = tune_interval
+        self.steps_until_tune = tune_interval
 
         self.proposal_samples_array = self.proposal_dist(n_chains)
 
@@ -175,6 +184,7 @@ class SMC(atext.ArrayStepSharedLLK):
         self.population = []
         self.array_population = np.zeros(n_chains)
         start = model.test_point
+
         init_rnd = {}
         for v in vars:
             if pm.util.is_transformed_name(v.name):
@@ -186,7 +196,7 @@ class SMC(atext.ArrayStepSharedLLK):
 
         for i in range(self.n_chains):
             self.population.append(pm.Point({v.name: init_rnd[v.name][i] for v in vars},
-            model=model))
+                                            model=model))
 
         self.chain_previous_lpoint = copy.deepcopy(self.population)
 
@@ -205,7 +215,14 @@ class SMC(atext.ArrayStepSharedLLK):
             if not self.stage_sample:
                 self.proposal_samples_array = self.proposal_dist(self.n_steps)
 
-            delta = self.proposal_samples_array[self.stage_sample, :]
+            if not self.steps_until_tune and self.tune:
+                # Tune scaling parameter
+                self.scaling = tune(self.accepted / float(self.tune_interval))
+                # Reset counter
+                self.steps_until_tune = self.tune_interval
+                self.accepted = 0
+
+            delta = self.proposal_samples_array[self.stage_sample, :] * self.scaling
 
             if self.any_discrete:
                 if self.all_discrete:
@@ -251,6 +268,7 @@ class SMC(atext.ArrayStepSharedLLK):
                 else:
                     l_new = l0
 
+            self.steps_until_tune -= 1
             self.stage_sample += 1
 
             # reset sample counter
@@ -299,9 +317,7 @@ class SMC(atext.ArrayStepSharedLLK):
         cov : :class:`numpy.ndarray`
             weighted covariances (NumPy > 1.10. required)
         """
-        cov = 0.04 * np.cov(self.array_population,
-                            aweights=self.weights.ravel(), bias=True, rowvar=False)
-
+        cov = np.cov(self.array_population, aweights=self.weights.ravel(), bias=False, rowvar=0)
         if np.isnan(cov).any() or np.isinf(cov).any():
             raise ValueError('Sample covariances not valid! Likely "n_chains" is too small!')
         return np.atleast_2d(cov)
@@ -408,7 +424,8 @@ class SMC(atext.ArrayStepSharedLLK):
 
 
 def sample_smc(n_steps, n_chains=100, step=None, start=None, homepath=None, stage=0, n_jobs=1,
-               progressbar=False, model=None, random_seed=-1, rm_flag=True):
+               tune_interval=10, tune=None, progressbar=False, model=None, random_seed=-1,
+               rm_flag=True):
     """Sequential Monte Carlo sampling
 
     Samples the solution space with n_chains of Metropolis chains, where each
@@ -447,6 +464,10 @@ def sample_smc(n_steps, n_chains=100, step=None, start=None, homepath=None, stag
         internal parallelisation. Sometimes this is more efficient especially
         for simple models.
         step.n_chains / n_jobs has to be an integer number!
+    tune_interval : int
+        Number of steps to tune for
+    tune : int
+        Number of iterations to tune, if applicable (defaults to None)
     progressbar : bool
         Flag for displaying a progress bar
     model : :class:`pymc3.Model`
@@ -477,7 +498,7 @@ def sample_smc(n_steps, n_chains=100, step=None, start=None, homepath=None, stag
     if step is None:
         pm._log.info('Argument `step` is None. Auto-initialising step object '
                      'using given/default parameters.')
-        step = SMC(n_chains=n_chains, model=model)
+        step = SMC(n_chains=n_chains, tune_interval=tune_interval, model=model)
 
     if homepath is None:
         raise TypeError('Argument `homepath` should be path to result_directory.')
@@ -590,10 +611,11 @@ def sample_smc(n_steps, n_chains=100, step=None, start=None, homepath=None, stag
                                                  model=model)
 
 
-def _sample(draws, step=None, start=None, trace=None, chain=0, progressbar=True, model=None,
-            random_seed=-1):
+def _sample(draws, step=None, start=None, trace=None, chain=0, tune=None, progressbar=True,
+            model=None, random_seed=-1):
 
-    sampling = _iter_sample(draws, step, start, trace, chain, model, random_seed)
+    sampling = _iter_sample(draws, step, start, trace, chain,
+                            tune, model, random_seed)
 
     if progressbar:
         sampling = tqdm(sampling, total=draws)
@@ -608,7 +630,8 @@ def _sample(draws, step=None, start=None, trace=None, chain=0, progressbar=True,
     return chain
 
 
-def _iter_sample(draws, step, start=None, trace=None, chain=0, model=None, random_seed=-1):
+def _iter_sample(draws, step, start=None, trace=None, chain=0, tune=None,
+                 model=None, random_seed=-1):
     """Modified from :func:`pymc3.sampling._iter_sample` to be more efficient with SMC algorithm."""
     model = modelcontext(model)
     draws = int(draws)
@@ -630,6 +653,8 @@ def _iter_sample(draws, step, start=None, trace=None, chain=0, model=None, rando
     step.chain_index = chain
     trace.setup(draws, chain)
     for i in range(draws):
+        if i == tune:
+            step = pm.sampling.stop_tuning(step)
 
         point, out_list = step.step(point)
         trace.record(out_list)
@@ -672,6 +697,7 @@ def _iter_parallel_chains(draws, step, stage_path, progressbar, model, n_jobs, c
              step.population[step.resampling_indexes[chain]],
              atext.TextChain(stage_path, model=model),
              chain,
+             None,
              False,
              model,
              rseed) for chain, rseed in
@@ -689,6 +715,24 @@ def _iter_parallel_chains(draws, step, stage_path, progressbar, model, n_jobs, c
 
     for _ in p:
         pass
+
+
+def tune(acc_rate):
+    """Tune adaptively based on the acceptance rate.
+
+    Parameters
+    ----------
+    acc_rate: scalar, float
+        Acceptance rate of the Metropolis sampling
+
+    Returns
+    -------
+    scaling: scalar float
+    """
+    # a and b after Muto & Beck 2008 .
+    a = 1. / 9
+    b = 8. / 9
+    return np.power((a + (b * acc_rate)), 2)
 
 
 def logp_forw(out_vars, vars, shared):
