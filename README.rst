@@ -12,6 +12,9 @@ large suite of problems.
 
 Check out the `getting started guide <http://docs.pymc.io/notebooks/getting_started>`__!
 
+You can also interact with live examples using [Binder](http://mybinder.org/): 
+[![Binder](https://mybinder.org/badge.svg)](https://mybinder.org/v2/gh/pymc-devs/pymc3/master?filepath=%2Fdocs%2Fsource%2Fnotebooks)
+
 
 Features
 ========
