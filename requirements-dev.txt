@@ -1,6 +1,6 @@
 CommonMark==0.5.4
 h5py>=2.7.0
-ipython>=6.1.0
+ipython
 Keras>=2.0.8
 matplotlib>=1.5.0
 mock>=2.0.0; python_version < '3.4'
