@@ -1,3 +1,4 @@
+bokeh>=0.12.13
 CommonMark==0.5.4
 h5py>=2.7.0
 ipython
