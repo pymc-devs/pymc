@@ -30,8 +30,9 @@ script:
   - . ./scripts/confirm_mpl_optional.sh
 
 after_success:
+  - echo "success!" && sleep 20 && cat /tmp/theano_compilation_error_* && sleep 20;
   - if [[ "$BUILD_DOCS" == "true" ]]; then travis-sphinx deploy -c "docs.pymc.io"; fi
   - coveralls
 
 after_failure:
-  - echo "sleeping" && sleep 20 && cat /tmp/theano_compilation_error_* && sleep 20;
+  - echo "failure!" && sleep 20 && cat /tmp/theano_compilation_error_* && sleep 20;
