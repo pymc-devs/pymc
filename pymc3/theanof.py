@@ -85,10 +85,10 @@ def gradient1(f, v):
     """flat gradient of f wrt v"""
     return tt.flatten(tt.grad(f, v, disconnected_inputs='warn'))
 
+
 empty_gradient = tt.zeros(0, dtype='float32')
 
 
-@memoize
 def gradient(f, vars=None):
     if vars is None:
         vars = cont_inputs(f)
@@ -110,7 +110,6 @@ def jacobian1(f, v):
     return theano.map(grad_i, idx)[0]
 
 
-@memoize
 def jacobian(f, vars=None):
     if vars is None:
         vars = cont_inputs(f)
@@ -132,7 +131,6 @@ def jacobian_diag(f, x):
                        name='jacobian_diag')[0]
 
 
-@memoize
 @change_flags(compute_test_value='ignore')
 def hessian(f, vars=None):
     return -jacobian(gradient(f, vars), vars)
@@ -149,7 +147,6 @@ def hessian_diag1(f, v):
     return theano.map(hess_ii, idx)[0]
 
 
-@memoize
 @change_flags(compute_test_value='ignore')
 def hessian_diag(f, vars=None):
     if vars is None:
@@ -463,5 +460,3 @@ def largest_common_dtype(tensors):
                  else smartfloatX(np.asarray(t)).dtype
                  for t in tensors)
     return np.stack([np.ones((), dtype=dtype) for dtype in dtypes]).dtype
-
-
