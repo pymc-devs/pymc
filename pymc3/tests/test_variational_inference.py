@@ -1,4 +1,5 @@
 import pytest
+import six
 import functools
 import operator
 import numpy as np
@@ -596,11 +597,16 @@ def test_fit_oo(inference,
 
 
 def test_profile(inference):
-    try:
-        inference.run_profiling(n=100).summary()
-    except ZeroDivisionError:
-        # weird error in SVGD, ASVGD
-        pass
+    inference.run_profiling(n=100).summary()
+
+
+def test_remove_scan_op():
+    with pm.Model():
+        pm.Normal('n', 0, 1)
+        inference = ADVI()
+        with six.StringIO() as buff:
+            inference.run_profiling(n=10).summary(buff)
+            assert 'theano.scan_module.scan_op.Scan' not in buff.getvalue()
 
 
 @pytest.fixture('module')

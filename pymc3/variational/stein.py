@@ -15,6 +15,9 @@ class Stein(object):
         self._kernel_f = kernel
         self.use_histogram = use_histogram
 
+    def __hash__(self):
+        return hash(id(self))
+
     @property
     def input_joint_matrix(self):
         if self.use_histogram:
