@@ -8,7 +8,6 @@ from theano.sandbox.rng_mrg import MRG_RandomStreams
 
 from .blocking import ArrayOrdering
 from .data import GeneratorAdapter
-from .memoize import memoize
 from .vartypes import typefilter, continuous_types
 
 __all__ = ['gradient',
@@ -272,6 +271,7 @@ class CallableTensor(object):
         """
         oldinput, = inputvars(self.tensor)
         return theano.clone(self.tensor, {oldinput: input}, strict=False)
+
 
 scalar_identity = IdentityOp(scalar.upgrade_to_float, name='scalar_identity')
 identity = tt.Elemwise(scalar_identity, name='identity')
