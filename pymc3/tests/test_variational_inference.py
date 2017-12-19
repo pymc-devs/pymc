@@ -611,6 +611,7 @@ def test_remove_scan_op():
 
 
 def test_clear_cache():
+    pymc3.memoize.clear_cache()
     with pm.Model():
         pm.Normal('n', 0, 1)
         inference = ADVI()
