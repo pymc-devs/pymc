@@ -179,7 +179,7 @@ def _cpu_count():
     return cpus
 
 
-def sample(draws=500, step=None, init='auto', n_init=200000, start=None,
+def sample(draws=1000, step=None, init='auto', n_init=200000, start=None,
            trace=None, chain_idx=0, chains=None, njobs=None, tune=500,
            nuts_kwargs=None, step_kwargs=None, progressbar=True, model=None,
            random_seed=None, live_plot=False, discard_tuned_samples=True,
@@ -293,7 +293,7 @@ def sample(draws=500, step=None, init='auto', n_init=200000, start=None,
     Returns
     -------
     trace : pymc3.backends.base.MultiTrace
-        A `MultiTrace` object that contains the samples.
+        A `MultiTrace` object that contains `draws` number samples per variable.
 
     Examples
     --------
@@ -343,7 +343,13 @@ def sample(draws=500, step=None, init='auto', n_init=200000, start=None,
         for start_vals in start:
             _check_start_shape(model, start_vals)
 
-    draws += tune
+    draws_per_chain = int(draws/chains)
+    if draws % chains:
+        msg = "Specified draws do not evenly divide among chains. "
+        msg += "Realized trace will consist of {} samples.".format(int(draws/chains)*chains)
+        warnings.warn(msg, UserWarning)
+        
+    draws_per_chain += tune
 
     if nuts_kwargs is not None:
         if step_kwargs is not None:
@@ -379,9 +385,9 @@ def sample(draws=500, step=None, init='auto', n_init=200000, start=None,
         start = {}
     if isinstance(start, dict):
         start = [start] * chains
-
+    
     sample_args = {
-        'draws': draws,
+        'draws': draws_per_chain,
         'step': step,
         'start': start,
         'trace': trace,
