@@ -1,5 +1,8 @@
+bokeh>=0.12.13
 CommonMark==0.5.4
 h5py>=2.7.0
+ipython
+Keras>=2.0.8
 matplotlib>=1.5.0
 mock>=2.0.0; python_version < '3.4'
 nbsphinx>=0.2.13
@@ -13,5 +16,6 @@ pytest-cov>=2.5.1
 pytest>=3.0.7
 recommonmark>=0.4.0
 scipy>=0.12.0
+seaborn>=0.8.1
 sphinx-autobuild==0.7.1
 sphinx>=1.5.5
