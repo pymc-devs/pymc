@@ -13,7 +13,7 @@ from theano.tensor.var import TensorVariable
 from pymc3.theanof import set_theano_conf
 import pymc3 as pm
 from pymc3.math import flatten_list
-from .memoize import memoize
+from .memoize import memoize, WithMemoization
 from .theanof import gradient, hessian, inputvars, generator
 from .vartypes import typefilter, discrete_types, continuous_types, isgenerator
 from .blocking import DictToArrayBijection, ArrayOrdering
@@ -487,7 +487,7 @@ class ValueGradFunction(object):
         return args_joined, theano.clone(cost, replace=replace)
 
 
-class Model(six.with_metaclass(InitContextMeta, Context, Factor)):
+class Model(six.with_metaclass(InitContextMeta, Context, Factor, WithMemoization)):
     """Encapsulates the variables and likelihood factors of a model.
 
     Model class can be used for creating class based models. To create

@@ -1,14 +1,15 @@
 from theano import theano, tensor as tt
 from pymc3.variational.opvi import node_property
 from pymc3.variational.test_functions import rbf
-from pymc3.theanof import memoize, floatX, change_flags
+from pymc3.theanof import floatX, change_flags
+from pymc3.memoize import WithMemoization, memoize
 
 __all__ = [
     'Stein'
 ]
 
 
-class Stein(object):
+class Stein(WithMemoization):
     def __init__(self, approx, kernel=rbf, use_histogram=True, temperature=1):
         self.approx = approx
         self.temperature = floatX(temperature)
