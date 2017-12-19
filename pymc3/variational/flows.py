@@ -2,8 +2,9 @@ import numpy as np
 import theano
 from theano import tensor as tt
 
-from pymc3.distributions.dist_math import rho2sd
-from pymc3.theanof import change_flags
+from ..distributions.dist_math import rho2sd
+from ..theanof import change_flags
+from ..memoize import WithMemoization
 from .opvi import node_property, collect_shared_to_list
 from . import opvi
 
@@ -97,7 +98,7 @@ def seems_like_flow_params(params):
         return False
 
 
-class AbstractFlow(object):
+class AbstractFlow(WithMemoization):
     shared_params = None
     __param_spec__ = dict()
     short_name = ''
@@ -254,9 +255,6 @@ class AbstractFlow(object):
 
     def __str__(self):
         return self.short_name
-
-    def __hash__(self):
-        return hash(id(self))
 
 
 flow_for_params = AbstractFlow.flow_for_params

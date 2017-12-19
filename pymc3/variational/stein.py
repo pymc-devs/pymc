@@ -2,23 +2,19 @@ from theano import theano, tensor as tt
 from pymc3.variational.opvi import node_property
 from pymc3.variational.test_functions import rbf
 from pymc3.theanof import memoize, floatX, change_flags
-from pymc3.memoize import clear_cache_for_instance
+from pymc3.memoize import WithMemoization
 
 __all__ = [
     'Stein'
 ]
 
 
-class Stein(object):
+class Stein(WithMemoization):
     def __init__(self, approx, kernel=rbf, use_histogram=True, temperature=1):
         self.approx = approx
         self.temperature = floatX(temperature)
         self._kernel_f = kernel
         self.use_histogram = use_histogram
-
-    def __hash__(self):
-        return hash(id(self))
-    __del__ = clear_cache_for_instance
 
     @property
     def input_joint_matrix(self):

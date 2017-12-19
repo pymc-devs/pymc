@@ -48,7 +48,7 @@ from ..blocking import (
 from ..model import modelcontext
 from ..theanof import tt_rng, memoize, change_flags, identity
 from ..util import get_default_varnames
-from ..memoize import clear_cache_for_instance
+from ..memoize import WithMemoization
 
 __all__ = [
     'ObjectiveFunction',
@@ -154,9 +154,6 @@ class ObjectiveFunction(object):
     tf : :class:`TestFunction`
         OPVI TestFunction
     """
-    def __hash__(self):
-        return hash(id(self))
-    __del__ = clear_cache_for_instance
 
     def __init__(self, op, tf):
         self.op = op
@@ -374,9 +371,6 @@ class Operator(object):
     For implementing custom operator it is needed to define :func:`Operator.apply` method
     """
 
-    def __hash__(self):
-        return hash(id(self))
-    __del__ = clear_cache_for_instance
     has_test_function = False
     returns_loss = True
     require_logq = True
@@ -491,7 +485,7 @@ class TestFunction(object):
         return obj
 
 
-class Group(object):
+class Group(WithMemoization):
     R"""**Base class for grouping variables in VI**
 
     Grouped Approximation is used for modelling mutual dependencies
@@ -704,11 +698,7 @@ class Group(object):
     -   Kingma, D. P., & Welling, M. (2014).
         `Auto-Encoding Variational Bayes. stat, 1050, 1. <https://arxiv.org/abs/1312.6114>`_
     """
-
-    def __hash__(self):
-        return hash(id(self))
-    __del__ = clear_cache_for_instance
-    # need to be defined in init
+    # needs to be defined in init
     shared_params = None
     symbolic_initial = None
     replacements = None
@@ -1214,7 +1204,7 @@ group_for_params = Group.group_for_params
 group_for_short_name = Group.group_for_short_name
 
 
-class Approximation(object):
+class Approximation(WithMemoization):
     """**Wrapper for grouped approximations**
 
     Wraps list of groups, creates an Approximation instance that collects
@@ -1243,9 +1233,6 @@ class Approximation(object):
     --------
     :class:`Group`
     """
-    def __hash__(self):
-        return hash(id(self))
-    __del__ = clear_cache_for_instance
 
     def __init__(self, groups, model=None):
         self._scale_cost_to_minibatch = theano.shared(np.int8(1))
