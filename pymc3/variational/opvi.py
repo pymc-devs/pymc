@@ -46,9 +46,9 @@ from ..blocking import (
     ArrayOrdering, DictToArrayBijection, VarMap
 )
 from ..model import modelcontext
-from ..theanof import tt_rng, memoize, change_flags, identity
+from ..theanof import tt_rng, change_flags, identity
 from ..util import get_default_varnames
-from ..memoize import WithMemoization
+from ..memoize import WithMemoization, memoize
 
 __all__ = [
     'ObjectiveFunction',
