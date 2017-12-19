@@ -324,3 +324,10 @@ class TestMinibatch(object):
         pm.align_minibatches()
         a, b = zip(*(f() for _ in range(1000)))
         assert a == b
+        n.eval()  # not aligned
+        pm.align_minibatches([m])
+        a, b = zip(*(f() for _ in range(1000)))
+        assert a != b
+        pm.align_minibatches([m, n])
+        a, b = zip(*(f() for _ in range(1000)))
+        assert a == b

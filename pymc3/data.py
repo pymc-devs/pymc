@@ -368,7 +368,14 @@ class Minibatch(tt.TensorVariable):
         return ret
 
 
-def align_minibatches():
-    for rngs in Minibatch.RNG.values():
-        for rng in rngs:
-            rng.seed()
+def align_minibatches(batches=None):
+    if batches is None:
+        for rngs in Minibatch.RNG.values():
+            for rng in rngs:
+                rng.seed()
+    else:
+        for b in batches:
+            if not isinstance(b, Minibatch):
+                raise TypeError('{b} is not a Minibatch')
+            for rng in Minibatch.RNG[id(b)]:
+                rng.seed()
