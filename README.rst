@@ -3,19 +3,16 @@
     :alt: PyMC3 logo
     :align: center
 
-|Build Status| |Coverage| |NumFOCUS_badge|
+|Build Status| |Coverage| |NumFOCUS_badge| |Binder|
 
 PyMC3 is a Python package for Bayesian statistical modeling and Probabilistic Machine Learning
 which focuses on advanced Markov chain Monte Carlo and variational fitting
 algorithms. Its flexibility and extensibility make it applicable to a
 large suite of problems.
 
-Check out the `getting started guide <http://docs.pymc.io/notebooks/getting_started>`__!
-
-You can also interact with live examples using `Binder <http://mybinder.org/>`__: 
-
-|Binder|
-
+Check out the `getting started guide <http://docs.pymc.io/notebooks/getting_started>`__,  or 
+`interact with live examples <https://mybinder.org/v2/gh/pymc-devs/pymc3/master?filepath=%2Fdocs%2Fsource%2Fnotebooks>`__
+using Binder!
 
 Features
 ========
