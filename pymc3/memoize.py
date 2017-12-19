@@ -1,13 +1,15 @@
 import functools
 import pickle
 
+CACHE_REGISTRY = []
+
 
 def memoize(obj):
     """
     An expensive memoizer that works with unhashables
     """
     cache = obj.cache = {}
-    WithMemoization.CACHE_REGISTRY.append(cache)
+    CACHE_REGISTRY.append(cache)
 
     @functools.wraps(obj)
     def memoizer(*args, **kwargs):
@@ -21,9 +23,12 @@ def memoize(obj):
     return memoizer
 
 
-class WithMemoization(object):
-    CACHE_REGISTRY = []
+def clear_cache():
+    for c in CACHE_REGISTRY:
+        c.clear()
 
+
+class WithMemoization(object):
     def __hash__(self):
         return hash(id(self))
 
@@ -31,7 +36,7 @@ class WithMemoization(object):
         # regular property call with args (self, )
         key = hash((self, ))
         to_del = []
-        for c in WithMemoization.CACHE_REGISTRY:
+        for c in CACHE_REGISTRY:
             for k in c.keys():
                 if k[0] == key:
                     to_del.append((c, k))

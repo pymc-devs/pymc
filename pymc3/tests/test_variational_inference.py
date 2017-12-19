@@ -618,7 +618,7 @@ def test_clear_cache():
         assert len(pm.variational.opvi.Approximation.logp.fget.cache) == 1
         del inference
         assert len(pm.variational.opvi.Approximation.logp.fget.cache) == 0
-        for c in pymc3.memoize.WithMemoization.CACHE_REGISTRY:
+        for c in pymc3.memoize.CACHE_REGISTRY:
             assert len(c) == 0
 
 
