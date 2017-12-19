@@ -48,6 +48,7 @@ from ..blocking import (
 from ..model import modelcontext
 from ..theanof import tt_rng, memoize, change_flags, identity
 from ..util import get_default_varnames
+from ..memoize import clear_cache_for_instance
 
 __all__ = [
     'ObjectiveFunction',
@@ -155,6 +156,7 @@ class ObjectiveFunction(object):
     """
     def __hash__(self):
         return hash(id(self))
+    __del__ = clear_cache_for_instance
 
     def __init__(self, op, tf):
         self.op = op
@@ -371,9 +373,10 @@ class Operator(object):
     -----
     For implementing custom operator it is needed to define :func:`Operator.apply` method
     """
+
     def __hash__(self):
         return hash(id(self))
-
+    __del__ = clear_cache_for_instance
     has_test_function = False
     returns_loss = True
     require_logq = True
@@ -465,9 +468,6 @@ def collect_shared_to_list(params):
 
 
 class TestFunction(object):
-    def __hash__(self):
-        return hash(id(self))
-
     def __init__(self):
         self._inited = False
         self.shared_params = None
@@ -707,6 +707,7 @@ class Group(object):
 
     def __hash__(self):
         return hash(id(self))
+    __del__ = clear_cache_for_instance
     # need to be defined in init
     shared_params = None
     symbolic_initial = None
@@ -1244,6 +1245,7 @@ class Approximation(object):
     """
     def __hash__(self):
         return hash(id(self))
+    __del__ = clear_cache_for_instance
 
     def __init__(self, groups, model=None):
         self._scale_cost_to_minibatch = theano.shared(np.int8(1))

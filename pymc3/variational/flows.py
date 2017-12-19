@@ -255,6 +255,10 @@ class AbstractFlow(object):
     def __str__(self):
         return self.short_name
 
+    def __hash__(self):
+        return hash(id(self))
+
+
 flow_for_params = AbstractFlow.flow_for_params
 flow_for_short_name = AbstractFlow.flow_for_short_name
 
