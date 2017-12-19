@@ -11,6 +11,8 @@ from . import opvi
 __all__ = [
     'Formula',
     'PlanarFlow',
+    'HouseholderFlow',
+    'RadialFlow',
     'LocFlow',
     'ScaleFlow'
 ]
