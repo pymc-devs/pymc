@@ -313,3 +313,14 @@ class TestMinibatch(object):
         res1 = theano.clone(res, {gop: shared})
         f = theano.function([], res1)
         assert f() == np.array([100])
+
+    def test_align(self):
+        m = pm.Minibatch(np.arange(1000), 1, random_seed=1)
+        n = pm.Minibatch(np.arange(1000), 1, random_seed=1)
+        f = theano.function([], [m, n])
+        n.eval()  # not aligned
+        a, b = zip(*(f() for _ in range(1000)))
+        assert a != b
+        pm.align_minibatches()
+        a, b = zip(*(f() for _ in range(1000)))
+        assert a == b
