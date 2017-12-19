@@ -23,7 +23,7 @@ install:
   - pip install -r requirements-dev.txt
 
 env:
-    - PYTHON_VERSION=2.7 FLOATX='float32' TESTCMD="--durations=10 --cov-append pymc3/tests/test_variational_inference.py"
+    - PYTHON_VERSION=2.7 FLOATX='float32' TESTCMD="--durations=10 --cov-append pymc3/tests/test_variational_inference.py::test_sample_aevb"
 
 script:
   - . ./scripts/test.sh $TESTCMD
