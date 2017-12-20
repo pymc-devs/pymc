@@ -1,4 +1,5 @@
 import pytest
+import six
 import functools
 import operator
 import numpy as np
@@ -6,6 +7,7 @@ from theano import theano, tensor as tt
 
 
 import pymc3 as pm
+import pymc3.memoize
 import pymc3.util
 from pymc3.theanof import change_flags
 from pymc3.variational.approximations import (
@@ -596,11 +598,30 @@ def test_fit_oo(inference,
 
 
 def test_profile(inference):
-    try:
-        inference.run_profiling(n=100).summary()
-    except ZeroDivisionError:
-        # weird error in SVGD, ASVGD
-        pass
+    inference.run_profiling(n=100).summary()
+
+
+def test_remove_scan_op():
+    with pm.Model():
+        pm.Normal('n', 0, 1)
+        inference = ADVI()
+        buff = six.StringIO()
+        inference.run_profiling(n=10).summary(buff)
+        assert 'theano.scan_module.scan_op.Scan' not in buff.getvalue()
+        buff.close()
+
+
+def test_clear_cache():
+    pymc3.memoize.clear_cache()
+    with pm.Model():
+        pm.Normal('n', 0, 1)
+        inference = ADVI()
+        inference.fit(n=10)
+        assert len(pm.variational.opvi.Approximation.logp.fget.cache) == 1
+        del inference
+        assert len(pm.variational.opvi.Approximation.logp.fget.cache) == 0
+        for c in pymc3.memoize.CACHE_REGISTRY:
+            assert len(c) == 0
 
 
 @pytest.fixture('module')

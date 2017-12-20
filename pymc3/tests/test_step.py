@@ -451,3 +451,4 @@ class TestNutsCheckTrace(object):
 
             with pytest.raises(SamplingError):
                 sample(20, init=None, nuts_kwargs={'on_error': 'raise'})
+
