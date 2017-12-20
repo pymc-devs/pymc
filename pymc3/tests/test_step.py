@@ -394,18 +394,32 @@ class TestAssignStepMethods(object):
 
 
 class TestPopulationSamplers(object):
+
+    steppers = [DEMetropolis]
+
     def test_checks_population_size(self):
         """Test that population samplers check the population size."""
-        steppers = [
-            DEMetropolis
-        ]
         with Model() as model:
             n = Normal('n', mu=0, sd=1)
-            for stepper in steppers:
+            for stepper in TestPopulationSamplers.steppers:
                 step = stepper()
                 with pytest.raises(ValueError):
                     trace = sample(draws=100, chains=1, step=step)
                 trace = sample(draws=100, chains=4, step=step)
+        pass
+
+    def test_parallelized_chains_are_random(self):
+        with Model() as model:
+            x = Normal('x', 0, 1)
+            for stepper in TestPopulationSamplers.steppers:
+                step = stepper()
+
+                trace = sample(chains=4, draws=20, tune=0, step=DEMetropolis(),
+                               parallelize=True)
+                samples = np.array(trace.get_values('x', combine=False))[:,5]
+
+                assert len(set(samples)) == 4, 'Parallelized {} ' \
+                    'chains are identical.'.format(stepper)
         pass
 
 
