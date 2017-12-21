@@ -660,13 +660,17 @@ def compare(model_dict, ic='WAIC', method='stacking', b_samples=1000,
             d_se = np.sqrt(len(diff) * np.var(diff))
             se = ses[i]
             weight = weights[i]
+            try:
+                warn = warns[names.index(idx)]
+            except AttributeError:
+                warn = warns[idx]
             df_comp.at[idx] = (round(res[0], round_to),
                                round(res[2], round_to),
                                round(d_ic, round_to),
                                round(weight, round_to),
                                round(se, round_to),
                                round(d_se, round_to),
-                               warns[names.index(idx)])
+                               warn)
 
         return df_comp.sort_values(by=ic)
 
