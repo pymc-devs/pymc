@@ -482,7 +482,7 @@ def bpic(trace, model=None):
     return 3 * mean_deviance - 2 * deviance_at_mean
 
 
-def compare(traces, models, ic='WAIC', method='stacking', b_samples=1000,
+def compare(model_dict, ic='WAIC', method='stacking', b_samples=1000,
             alpha=1, seed=None, round_to=2):
     R"""Compare models based on the widely available information criterion (WAIC)
     or leave-one-out (LOO) cross-validation.
@@ -491,9 +491,7 @@ def compare(traces, models, ic='WAIC', method='stacking', b_samples=1000,
 
     Parameters
     ----------
-    traces : list of PyMC3 traces
-    models : list of PyMC3 models
-        in the same order as traces.
+    model_dict : dictionary of PyMC3 traces indexed by corresponding model
     ic : string
         Information Criterion (WAIC or LOO) used to compare models.
         Default WAIC.
@@ -546,15 +544,20 @@ def compare(traces, models, ic='WAIC', method='stacking', b_samples=1000,
     warning : A value of 1 indicates that the computation of the IC may not be
         reliable see http://arxiv.org/abs/1507.04544 for details.
     """
+
+    names = [model.name for model in model_dict if model.name]
+    if not names:
+        names = np.arange(len(model_dict))
+
     if ic == 'WAIC':
         ic_func = waic
-        df_comp = pd.DataFrame(index=np.arange(len(models)),
+        df_comp = pd.DataFrame(index=names,
                                columns=['WAIC', 'pWAIC', 'dWAIC', 'weight',
                                         'SE', 'dSE', 'warning'])
 
     elif ic == 'LOO':
         ic_func = loo
-        df_comp = pd.DataFrame(index=np.arange(len(models)),
+        df_comp = pd.DataFrame(index=names,
                                columns=['LOO', 'pLOO', 'dLOO', 'weight',
                                         'SE', 'dSE', 'warning'])
 
@@ -562,7 +565,7 @@ def compare(traces, models, ic='WAIC', method='stacking', b_samples=1000,
         raise NotImplementedError(
             'The information criterion {} is not supported.'.format(ic))
 
-    if len(set([len(m.observed_RVs) for m in models])) != 1:
+    if len(set([len(m.observed_RVs) for m in model_dict])) != 1:
         raise ValueError(
             'The number of observed RVs should be the same across all models')
 
@@ -570,7 +573,7 @@ def compare(traces, models, ic='WAIC', method='stacking', b_samples=1000,
         raise ValueError('The method {}, to compute weights,'
                          'is not supported.'.format(method))
 
-    warns = np.zeros(len(models))
+    warns = np.zeros(len(model_dict))
 
     c = 0
     def add_warns(*args):
@@ -581,8 +584,8 @@ def compare(traces, models, ic='WAIC', method='stacking', b_samples=1000,
         warnings.filterwarnings('always')
 
         ics = []
-        for c, (t, m) in enumerate(zip(traces, models)):
-            ics.append((c, ic_func(t, m, pointwise=True)))
+        for n, (m, t) in zip(names, model_dict.items()):
+            ics.append((n, ic_func(t, m, pointwise=True)))
 
     ics.sort(key=lambda x: x[1][0])
 
@@ -663,7 +666,7 @@ def compare(traces, models, ic='WAIC', method='stacking', b_samples=1000,
                                round(weight, round_to),
                                round(se, round_to),
                                round(d_se, round_to),
-                               warns[idx])
+                               warns[names.index(idx)])
 
         return df_comp.sort_values(by=ic)
 
