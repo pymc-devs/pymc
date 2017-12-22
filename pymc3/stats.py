@@ -584,8 +584,8 @@ def compare(model_dict, ic='WAIC', method='stacking', b_samples=1000,
         warnings.filterwarnings('always')
 
         ics = []
-        for n, (m, t) in zip(names, model_dict.items()):
-            ics.append((n, ic_func(t, m, pointwise=True)))
+        for c, (m, t) in enumerate(model_dict.items()):
+            ics.append((c, ic_func(t, m, pointwise=True)))
 
     ics.sort(key=lambda x: x[1][0])
 
