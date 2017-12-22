@@ -244,7 +244,7 @@ def sample(draws=500, step=None, init='auto', n_init=200000, start=None,
     chains : int
         The number of chains to sample. Running independent chains
         is important for some convergence statistics and can also
-        reveal multiple modes in the posterior. If `None`, then set to 
+        reveal multiple modes in the posterior. If `None`, then set to
         either `njobs` or 2, whichever is larger.
     njobs : int
         The number of chains to run in parallel. If `None`, set to the
@@ -711,6 +711,8 @@ class PopulationStepper(object):
         slave_end : multiprocessing.connection.PipeConnection
             This is our connection to the main process
         """
+        # re-seed each child process to make them unique
+        np.random.seed(None)
         try:
             stepper = pickle.loads(stepper_dumps)
             # the stepper is not necessarily a PopulationArraySharedStep itself,
