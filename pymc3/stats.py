@@ -661,7 +661,6 @@ def compare(model_dict, ic='WAIC', method='stacking', b_samples=1000,
             se = ses[i]
             weight = weights[i]
             try:
-                import pdb; pdb.set_trace()
                 warn = warns[names.index(idx)]
             except AttributeError:
                 warn = warns[idx]
