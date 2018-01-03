@@ -4,10 +4,10 @@ from collections import namedtuple
 
 import numpy as np
 import numpy.random as nr
-from scipy import linalg
 
 from ..arraystep import Competence
 from .base_hmc import BaseHMC, HMCStepData, DivergenceInfo
+from .integration import IntegrationError
 from pymc3.backends.report import SamplerWarning
 from pymc3.theanof import floatX
 from pymc3.vartypes import continuous_types
@@ -67,8 +67,8 @@ class NUTS(BaseHMC):
 
     References
     ----------
-    .. [1] Hoffman, Matthew D., & Gelman, Andrew. (2011). The No-U-Turn Sampler:
-       Adaptively Setting Path Lengths in Hamiltonian Monte Carlo.
+    .. [1] Hoffman, Matthew D., & Gelman, Andrew. (2011). The No-U-Turn
+       Sampler: Adaptively Setting Path Lengths in Hamiltonian Monte Carlo.
     """
 
     name = 'nuts'
@@ -135,12 +135,6 @@ class NUTS(BaseHMC):
             this will be interpreded as the mass or covariance matrix.
         is_cov : bool, default=False
             Treat the scaling as mass or covariance matrix.
-        on_error : {'summary', 'warn', 'raise'}, default='summary'
-            How to report problems during sampling.
-
-            * `summary`: Print one warning after sampling.
-            * `warn`: Print individual warnings as soon as they appear.
-            * `raise`: Raise an error on the first problem.
         potential : Potential, optional
             An object that represents the Hamiltonian with methods `velocity`,
             `energy`, and `random` methods. It can be specified instead
@@ -178,8 +172,8 @@ class NUTS(BaseHMC):
         else:
             self._reached_max_treedepth += 1
 
-        stats = {'depth': tree.depth}
-        accept_stat = tree.accept_sum / tree.n_proposals
+        stats = tree.stats()
+        accept_stat = stats['mean_tree_accept']
         return HMCStepData(tree.proposal, accept_stat, divergence_info, stats)
 
     @staticmethod
@@ -286,17 +280,9 @@ class _Tree(object):
         """Perform a leapfrog step and handle error cases."""
         try:
             right = self.integrator.step(epsilon, left)
-        except linalg.LinAlgError as err:
-            error_msg = "LinAlgError during leapfrog step."
+        except IntegrationError as err:
+            error_msg = str(err)
             error = err
-        except ValueError as err:
-            # Raised by many scipy.linalg functions
-            scipy_msg = "array must not contain infs or nans"
-            if len(err.args) > 0 and scipy_msg in err.args[0].lower():
-                error_msg = "Infs or nans in scipy.linalg during leapfrog step."
-                error = err
-            else:
-                raise
         else:
             energy_change = right.energy - self.start_energy
             if np.isnan(energy_change):
@@ -307,11 +293,13 @@ class _Tree(object):
             if np.abs(energy_change) < self.Emax:
                 p_accept = min(1, np.exp(-energy_change))
                 log_size = -energy_change
-                proposal = Proposal(right.q, right.q_grad, right.energy, p_accept)
-                tree = Subtree(right, right, right.p, proposal, log_size, p_accept, 1)
+                proposal = Proposal(
+                    right.q, right.q_grad, right.energy, p_accept)
+                tree = Subtree(right, right, right.p,
+                               proposal, log_size, p_accept, 1)
                 return tree, None, False
             else:
-                error_msg = ("Energy change in leapfrog step is too large: %s. "
+                error_msg = ("Energy change in leapfrog step is too large: %s."
                              % energy_change)
                 error = None
         tree = Subtree(None, None, None, None, -np.inf, 0, 1)
@@ -322,11 +310,13 @@ class _Tree(object):
         if depth == 0:
             return self._single_step(left, epsilon)
 
-        tree1, diverging, turning = self._build_subtree(left, depth - 1, epsilon)
+        tree1, diverging, turning = self._build_subtree(
+            left, depth - 1, epsilon)
         if diverging or turning:
             return tree1, diverging, turning
 
-        tree2, diverging, turning = self._build_subtree(tree1.right, depth - 1, epsilon)
+        tree2, diverging, turning = self._build_subtree(
+            tree1.right, depth - 1, epsilon)
 
         left, right = tree1.left, tree2.right
 
@@ -347,7 +337,8 @@ class _Tree(object):
         accept_sum = tree1.accept_sum + tree2.accept_sum
         n_proposals = tree1.n_proposals + tree2.n_proposals
 
-        tree = Subtree(left, right, p_sum, proposal, log_size, accept_sum, n_proposals)
+        tree = Subtree(left, right, p_sum, proposal,
+                       log_size, accept_sum, n_proposals)
         return tree, diverging, turning
 
     def stats(self):

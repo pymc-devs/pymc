@@ -23,6 +23,20 @@ class HamiltonianMC(BaseHMC):
 
     name = 'hmc'
     default_blocked = True
+    generates_stats = True
+    stats_dtypes = [{
+        'step_size': np.float64,
+        'n_steps': np.int64,
+        'tune': np.bool,
+        'step_size_bar': np.float64,
+        'accept': np.float64,
+        'diverging': np.bool,
+        'energy_error': np.float64,
+        'energy': np.float64,
+        'max_energy_error': np.float64,
+        'path_length': np.float64,
+        'accepted': np.bool,
+    }]
 
     def __init__(self, vars=None, path_length=2.,
                  adapt_step_size=True, gamma=0.05, k=0.75, t0=10,
@@ -101,10 +115,20 @@ class HamiltonianMC(BaseHMC):
 
         if div_info is not None or np.random.rand() >= accept_stat:
             end = start
+            accepted = False
         else:
             end = state
+            accepted = True
 
-        return HMCStepData(end, accept_stat, div_info, {})
+        stats = {
+            'path_length': path_length,
+            'n_steps': n_steps,
+            'accept': accept_stat,
+            'energy_error': energy_change,
+            'energy': state.energy,
+            'accepted': accepted,
+        }
+        return HMCStepData(end, accept_stat, div_info, stats)
 
     @staticmethod
     def competence(var, has_grad):

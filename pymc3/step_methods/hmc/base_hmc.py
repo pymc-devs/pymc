@@ -31,7 +31,7 @@ class BaseHMC(arraystep.GradientSharedStep):
                  model=None, blocked=True, potential=None,
                  integrator="leapfrog", dtype=None, Emax=1000,
                  target_accept=0.8, gamma=0.05, k=0.75, t0=10,
-                 adapt_step_size=True, on_error='summary', step_rand=None,
+                 adapt_step_size=True, step_rand=None,
                  **theano_kwargs):
         """Set up Hamiltonian samplers with common structures.
 
@@ -127,7 +127,6 @@ class BaseHMC(arraystep.GradientSharedStep):
 
         self.step_adapt.update(hmc_step.accept_stat, adapt_step)
         self.potential.update(hmc_step.end.q, hmc_step.end.q_grad, self.tune)
-
         if hmc_step.divergence_info:
             info = hmc_step.divergence_info
             if self.tune:
@@ -162,6 +161,7 @@ class BaseHMC(arraystep.GradientSharedStep):
         return hmc_step.end.q, [stats]
 
     def reset(self, start=None):
+        self.tune = True
         self.potential.reset()
 
     def warnings(self, strace):

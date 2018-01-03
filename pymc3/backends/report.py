@@ -15,6 +15,7 @@ _LEVELS = {
     'error': logging.ERROR,
     'warn': logging.WARN,
     'debug': logging.DEBUG,
+    'critical': logging.CRITICAL,
 }
 
 
@@ -22,19 +23,38 @@ class SamplerReport(object):
     def __init__(self):
         self._chain_warnings = {}
         self._global_warnings = []
-        self.effective_n = None
-        self.gelman_rubin = None
+        self._effective_n = None
+        self._gelman_rubin = None
+
+    @property
+    def _warnings(self):
+        chains = sum(self._chain_warnings.values(), [])
+        return chains + self._global_warnings
 
     @property
     def ok(self):
-        pass
+        """Whether the automatic convergence checks found serious problems."""
+        return all(_LEVELS[warn.level] < _LEVELS['warn']
+                   for warn in self._warnings)
 
-    def raise_status(self, level='error'):
-        pass
+    def raise_ok(self, level='error'):
+        errors = [warn for warn in self._warnings
+                  if _LEVELS[warn.level] >= _LEVELS[level]]
+        if errors:
+            raise ValueError('Serious convergence issues during sampling.')
 
-    def _add_stats(self, gelman_rubin, effective_n):
-        self.effective_n = effective_n
-        self.gelman_rubin = gelman_rubin
+    def _run_convergence_checks(self, trace):
+        if trace.nchains == 1:
+            msg = ("Only one chain was sampled, this makes it impossible to "
+                   "run some convergence checks")
+            warn = SamplerWarning('bad-params', msg, 'info', None, None, None)
+            self._add_warnings([warn])
+            return
+
+        from pymc3 import diagnostics
+
+        self._effective_n = effective_n = diagnostics.effective_n(trace)
+        self._gelman_rubin = gelman_rubin = diagnostics.gelman_rubin(trace)
 
         warnings = []
         rhat_max = max(val.max() for val in gelman_rubin.values())
@@ -52,7 +72,8 @@ class SamplerReport(object):
             warnings.append(warn)
         elif rhat_max > 1.05:
             msg = ("The gelman-rubin statistic is larger than 1.05 for some "
-                   "parameters. This indicates slight problems during sampling.")
+                   "parameters. This indicates slight problems during "
+                   "sampling.")
             warn = SamplerWarning(
                 'convergence', msg, 'info', None, None, gelman_rubin)
             warnings.append(warn)
@@ -64,9 +85,9 @@ class SamplerReport(object):
             warn = SamplerWarning(
                 'convergence', msg, 'error', None, None, effective_n)
             warnings.append(warn)
-        elif eff_min < 500:
+        elif eff_min < 300:
             msg = ("The estimated number of effective samples is smaller than "
-                   "500 for some parameters.")
+                   "300 for some parameters.")
             warn = SamplerWarning(
                 'convergence', msg, 'warn', None, None, effective_n)
             warnings.append(warn)

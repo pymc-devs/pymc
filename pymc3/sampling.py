@@ -12,12 +12,11 @@ import theano.gradient as tg
 from .backends.base import BaseTrace, MultiTrace
 from .backends.ndarray import NDArray
 from .model import modelcontext, Point, all_continuous
-from .step_methods import (NUTS, HamiltonianMC, SGFS, Metropolis, BinaryMetropolis,
+from .step_methods import (NUTS, HamiltonianMC, Metropolis, BinaryMetropolis,
                            BinaryGibbsMetropolis, CategoricalGibbsMetropolis,
                            Slice, CompoundStep, arraystep)
 from .util import update_start_vals
 from .vartypes import discrete_types
-from pymc3.diagnostics import gelman_rubin, effective_n
 from pymc3.step_methods.hmc import quadpotential
 from pymc3.backends.report import SamplerWarning
 from pymc3 import plots
@@ -189,7 +188,7 @@ def sample(draws=500, step=None, init='auto', n_init=200000, start=None,
            trace=None, chain_idx=0, chains=None, njobs=None, tune=500,
            nuts_kwargs=None, step_kwargs=None, progressbar=True, model=None,
            random_seed=None, live_plot=False, discard_tuned_samples=True,
-           live_plot_kwargs=None, compute_stats=True, **kwargs):
+           live_plot_kwargs=None, compute_convergence_checks=True, **kwargs):
     """Draw samples from the posterior using the given step methods.
 
     Multiple step methods are supported via compound step methods.
@@ -295,7 +294,7 @@ def sample(draws=500, step=None, init='auto', n_init=200000, start=None,
         Options for traceplot. Example: live_plot_kwargs={'varnames': ['x']}
     discard_tuned_samples : bool
         Whether to discard posterior samples of the tune interval.
-    compute_stats : bool, default=True
+    compute_convergence_checks : bool, default=True
         Whether to compute sampler statistics like gelman-rubin and
         effective_n.
 
@@ -443,16 +442,8 @@ def sample(draws=500, step=None, init='auto', n_init=200000, start=None,
     discard = tune if discard_tuned_samples else 0
     trace = trace[discard:]
 
-    if compute_stats and chains > 1:
-        rhat = gelman_rubin(trace)
-        eff = effective_n(trace)
-        trace.report._add_stats(gelman_rubin=rhat, effective_n=eff)
-
-    if compute_stats and chains == 1:
-        msg = ("Only one chain was sampled, this makes it impossible to run "
-               "some convergence checks")
-        warn = SamplerWarning('bad-params', msg, 'info', None, None, None)
-        trace.report._add_warnings([warn])
+    if compute_convergence_checks:
+        trace.report._run_convergence_checks(trace)
 
     trace.report._log_summary()
     return trace
@@ -645,6 +636,7 @@ def _iter_sample(draws, step, start=None, trace=None, chain=0, tune=None,
         if hasattr(step, 'warnings'):
             warns = step.warnings(strace)
             strace._add_warnings(warns)
+        raise
     except BaseException:
         strace.close()
         raise
@@ -724,7 +716,7 @@ class PopulationStepper(object):
                     master_end.send(None)
                 for process in self._processes:
                     process.join(timeout=3)
-            except:
+            except Exception:
                 _log.warning('Termination failed.')
         return
 

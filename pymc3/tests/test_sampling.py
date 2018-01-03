@@ -264,18 +264,18 @@ class TestSamplePPCW(SeededTest):
 
         with pm.Model() as model_0:
             mu = pm.Normal('mu', mu=0, sd=1)
-            y = pm.Normal('y', mu=mu, sd=1, observed=data0)
+            y = pm.Normal('y', mu=mu, sd=1, observed=data0, shape=500)
             trace_0 = pm.sample()
 
         with pm.Model() as model_1:
             mu = pm.Normal('mu', mu=0, sd=1, shape=len(data0))
-            y = pm.Normal('y', mu=mu, sd=1, observed=data0)
+            y = pm.Normal('y', mu=mu, sd=1, observed=data0, shape=500)
             trace_1 = pm.sample()
 
         traces = [trace_0, trace_0]
         models = [model_0, model_0]
-        ppc = pm.sample_ppc_w(traces, 1000, models)
-        assert ppc['y'].shape == (1000,)
+        ppc = pm.sample_ppc_w(traces, 100, models)
+        assert ppc['y'].shape == (100, 500)
 
         traces = [trace_0, trace_1]
         models = [model_0, model_1]
