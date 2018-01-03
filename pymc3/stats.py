@@ -581,11 +581,13 @@ def compare(model_dict, ic='WAIC', method='stacking', b_samples=1000,
 
     with warnings.catch_warnings():
         warnings.showwarning = add_warns
-        warnings.filterwarnings('always')
+        warnings.filterwarnings('always', 'For one or more samples')
+        warnings.filterwarnings('always', 'Estimated shape parameter')
 
         ics = []
         for m, t in model_dict.items():
             ics.append((m.name, ic_func(t, m, pointwise=True)))
+        c += 1
 
     ics.sort(key=lambda x: x[1][0])
 
