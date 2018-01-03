@@ -16,6 +16,7 @@
 - Forestplot supports multiple traces (#2736)
 - Add new plot, densityplot (#2741)
 - DIC and BPIC calculations have been deprecated
+- `compare` now accepts dictionary of model:trace pairs instead of lists
 
 ### Fixes
 
