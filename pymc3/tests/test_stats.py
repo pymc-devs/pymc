@@ -86,6 +86,9 @@ def test_compare():
 
     traces = [trace0, trace1, trace2]
     models = [model0, model1, model2]
+
+    model_dict = dict(zip(models, traces))
+    
     w_st = pm.compare(model_dict, method='stacking')['weight']
     w_bb_bma = pm.compare(model_dict, method='BB-pseudo-BMA')['weight']
     w_bma = pm.compare(model_dict, method='pseudo-BMA')['weight']
