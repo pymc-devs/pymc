@@ -19,6 +19,7 @@
 - `njobs` and `nchains` kwarg are deprecated in favor of `cores` and `chains` for `sample`
 - `lag` kwarg in `pm.stats.autocorr` and `pm.stats.autocov` is deprecated.
 
+
 ## PyMC 3.3 (January 9, 2018)
 
 ### New features
