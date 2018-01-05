@@ -147,6 +147,7 @@ Software using PyMC3
 
 - `Bambi <https://github.com/bambinos/bambi>`__: BAyesian Model-Building Interface (BAMBI) in Python.
 - `pymc3_models <https://github.com/parsing-science/pymc3_models>`__: Custom PyMC3 models built on top of the scikit-learn API.
+- `webmc3 <https://github.com/AustinRochford/webmc3>`__: A web interface for exploring PyMC3 traces
 - `sampled <https://github.com/ColCarroll/sampled>`__: Decorator for PyMC3 models.
 - `NiPyMC <https://github.com/PsychoinformaticsLab/nipymc>`__: Bayesian mixed-effects modeling of fMRI data in Python.
 - `beat <https://github.com/hvasbath/beat>`__: Bayesian Earthquake Analysis Tool.
