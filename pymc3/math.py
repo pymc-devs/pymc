@@ -36,18 +36,43 @@ def logsumexp(x, axis=None):
     x_max = tt.max(x, axis=axis, keepdims=True)
     return tt.log(tt.sum(tt.exp(x - x_max), axis=axis, keepdims=True)) + x_max
 
+
 def logaddexp(a, b):
     diff = b - a
     return tt.switch(diff > 0,
                     b + tt.log1p(tt.exp(-diff)),
                     a + tt.log1p(tt.exp(diff)))
 
+
 def invlogit(x, eps=sys.float_info.epsilon):
-    return (1. - 2. * eps) / (1. + tt.exp(-x)) + eps
+    """The inverse of the logit function, 1 / (1 + exp(-x))."""
+    return tt.nnet.sigmoid(x)
 
 
 def logit(p):
     return tt.log(p / (floatX(1) - p))
+
+
+def log1pexp(x):
+    """Return log(1 + exp(x)), also called softplus.
+
+    This function is numerically more stable than the naive approch.
+    """
+    return tt.nnet.softplus(x)
+
+
+def log1mexp(x):
+    """Return log(1 - exp(-x)).
+
+    This function is numerically more stable than the naive approch.
+
+    For details, see
+    https://cran.r-project.org/web/packages/Rmpfr/vignettes/log1mexp-note.pdf
+    """
+    return tt.switch(
+        tt.lt(x, 0.683),
+        tt.log(-tt.expm1(-x)),
+        tt.log1p(-tt.exp(-x)))
 
 
 def flatten_list(tensors):

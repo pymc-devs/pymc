@@ -9,7 +9,7 @@ from pymc3.util import get_variable_name
 from .dist_math import bound, factln, binomln, betaln, logpow
 from .distribution import Discrete, draw_values, generate_samples, reshape_sampled
 from pymc3.math import tround
-from ..math import logaddexp
+from ..math import logaddexp, logit, log1pexp
 
 __all__ = ['Binomial',  'BetaBinomial',  'Bernoulli',  'DiscreteWeibull',
            'Poisson', 'NegativeBinomial', 'ConstantDist', 'Constant',
@@ -165,12 +165,25 @@ class Bernoulli(Discrete):
     ----------
     p : float
         Probability of success (0 < p < 1).
+    logit_p : float
+        Logit of success probability. Only one of `p` and `logit_p`
+        can be specified.
     """
 
-    def __init__(self, p, *args, **kwargs):
+    def __init__(self, p=None, logit_p=None, *args, **kwargs):
         super(Bernoulli, self).__init__(*args, **kwargs)
-        self.p = p = tt.as_tensor_variable(p)
-        self.mode = tt.cast(tround(p), 'int8')
+        if sum(int(var is None) for var in [p, logit_p]) != 1:
+            raise ValueError('Specify one of p and logit_p')
+        if p is not None:
+            self._is_logit = False
+            self.p = p = tt.as_tensor_variable(p)
+            self._logit_p = logit(p)
+        else:
+            self._is_logit = True
+            self.p = tt.nnet.sigmoid(logit_p)
+            self._logit_p = tt.as_tensor_variable(logit_p)
+
+        self.mode = tt.cast(tround(self.p), 'int8')
 
     def random(self, point=None, size=None):
         p = draw_values([self.p], point=point)[0]
@@ -179,11 +192,15 @@ class Bernoulli(Discrete):
                                 size=size)
 
     def logp(self, value):
-        p = self.p
-        return bound(
-            tt.switch(value, tt.log(p), tt.log(1 - p)),
-            value >= 0, value <= 1,
-            p >= 0, p <= 1)
+        if self._is_logit:
+            lp = tt.switch(value, self._logit_p, -self._logit_p)
+            return -log1pexp(-lp)
+        else:
+            p = self.p
+            return bound(
+                tt.switch(value, tt.log(p), tt.log(1 - p)),
+                value >= 0, value <= 1,
+                p >= 0, p <= 1)
 
     def _repr_latex_(self, name=None, dist=None):
         if dist is None:

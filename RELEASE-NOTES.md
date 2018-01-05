@@ -1,5 +1,13 @@
 # Release Notes
 
+## PyMC 3.4 (unreleased)
+
+### New features
+
+- Add `logit_p` keyword to `pm.Bernoulli`, so that users can specify the logit
+  of the success probability. This is faster and more stable than using
+  `p=tt.nnet.sigmoid(logit_p)`.
+
 ## PyMC 3.3 (January 9, 2018)
 
 ### New features

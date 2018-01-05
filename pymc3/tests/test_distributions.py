@@ -610,8 +610,12 @@ class TestMatchesScipy(SeededTest):
         self.checkd(BetaBinomial, Nat, {'alpha': Rplus, 'beta': Rplus, 'n': NatSmall})
 
     def test_bernoulli(self):
+        self.pymc3_matches_scipy(
+            Bernoulli, Bool, {'logit_p': R},
+            lambda value, logit_p: sp.bernoulli.logpmf(value, scipy.special.expit(logit_p)))
         self.pymc3_matches_scipy(Bernoulli, Bool, {'p': Unit},
                                  lambda value, p: sp.bernoulli.logpmf(value, p))
+
 
     def test_discrete_weibull(self):
         self.pymc3_matches_scipy(DiscreteWeibull, Nat,
