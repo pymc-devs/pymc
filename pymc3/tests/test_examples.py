@@ -43,15 +43,15 @@ class TestARM5_4(SeededTest):
         P['1'] = 1
 
         with pm.Model() as model:
-            effects = pm.Normal('effects', mu=0, tau=100. ** -2, shape=len(P.columns))
-            p = tt.nnet.sigmoid(tt.dot(floatX(np.array(P)), effects))
-            pm.Bernoulli('s', p, observed=floatX(np.array(data.switch)))
+            effects = pm.Normal('effects', mu=0, sd=100, shape=len(P.columns))
+            logit_p = tt.dot(floatX(np.array(P)), effects)
+            pm.Bernoulli('s', logit_p=logit_p, observed=floatX(data.switch.values))
         return model
 
     def test_run(self):
         model = self.build_model()
         with model:
-            pm.sample(50, tune=50, n_init=1000)
+            pm.sample(50, tune=50)
 
 
 class TestARM12_6(SeededTest):
@@ -247,7 +247,7 @@ class TestLatentOccupancy(SeededTest):
             # Estimated occupancy
             psi = pm.Beta('psi', 1, 1)
             # Latent variable for occupancy
-            pm.Bernoulli('z', psi, self.y.shape)
+            pm.Bernoulli('z', psi, shape=self.y.shape)
             # Estimated mean count
             theta = pm.Uniform('theta', 0, 100)
             # Poisson likelihood
