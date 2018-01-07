@@ -33,25 +33,18 @@ then
       source activate ${ENVNAME}
     fi
 fi
-conda install --yes numpy scipy mkl-service
 
 pip install --upgrade pip
 
 #  Install editable using the setup.py
 pip install -e .
 
-# Install extra testing stuff
-if [ ${PYTHON_VERSION} == "2.7" ]; then
-    pip install mock
-fi
-
-pip install pytest pytest-cov nose-parameterized pylint
+# Dev requirements
+pip install -r requirements-dev.txt
 
 # Install untested, non-required code (linter fails without them)
-pip install ipython ipywidgets numdifftools
+pip install ipython ipywidgets
 
-# matplotlib is not required for the library, but is for tests
-pip install matplotlib
 
 if [ -z ${NO_SETUP} ]; then
     python setup.py build_ext --inplace

@@ -23,22 +23,16 @@ install:
   - pip install -r requirements-dev.txt
 
 env:
-  - PYTHON_VERSION=2.7 FLOATX='float32' TESTCMD="--durations=10 --ignore=pymc3/tests/test_examples.py --cov-append --ignore=pymc3/tests/test_distributions_random.py --ignore=pymc3/tests/test_variational_inference.py --ignore=pymc3/tests/test_shared.py --ignore=pymc3/tests/test_smc.py --ignore=pymc3/tests/test_updates.py --ignore=pymc3/tests/test_posteriors.py --ignore=pymc3/tests/test_sampling.py"
-  - PYTHON_VERSION=2.7 FLOATX='float32' RUN_PYLINT="true" TESTCMD="--durations=10 --cov-append pymc3/tests/test_distributions_random.py pymc3/tests/test_shared.py pymc3/tests/test_smc.py pymc3/tests/test_sampling.py"
-  - PYTHON_VERSION=2.7 FLOATX='float32' TESTCMD="--durations=10 --cov-append pymc3/tests/test_examples.py pymc3/tests/test_posteriors.py"
-  - PYTHON_VERSION=2.7 FLOATX='float32' TESTCMD="--durations=10 --cov-append pymc3/tests/test_variational_inference.py pymc3/tests/test_updates.py"
-  - PYTHON_VERSION=2.7 FLOATX='float64' TESTCMD="--durations=10 --ignore=pymc3/tests/test_examples.py --cov-append --ignore=pymc3/tests/test_distributions_random.py --ignore=pymc3/tests/test_variational_inference.py --ignore=pymc3/tests/test_shared.py --ignore=pymc3/tests/test_smc.py --ignore=pymc3/tests/test_updates.py --ignore=pymc3/tests/test_posteriors.py --ignore=pymc3/tests/test_sampling.py"
-  - PYTHON_VERSION=2.7 FLOATX='float64' RUN_PYLINT="true" TESTCMD="--durations=10 --cov-append pymc3/tests/test_distributions_random.py pymc3/tests/test_shared.py pymc3/tests/test_smc.py pymc3/tests/test_sampling.py"
-  - PYTHON_VERSION=2.7 FLOATX='float64' TESTCMD="--durations=10 --cov-append pymc3/tests/test_examples.py pymc3/tests/test_posteriors.py"
-  - PYTHON_VERSION=3.6 FLOATX='float64' TESTCMD="--durations=10 --cov-append --ignore=pymc3/tests/test_examples.py --ignore=pymc3/tests/test_distributions_random.py --ignore=pymc3/tests/test_variational_inference.py --ignore=pymc3/tests/test_shared.py --ignore=pymc3/tests/test_smc.py --ignore=pymc3/tests/test_updates.py --ignore=pymc3/tests/test_posteriors.py --ignore=pymc3/tests/test_sampling.py"
-  - PYTHON_VERSION=3.6 FLOATX='float64' TESTCMD="--durations=10 --cov-append pymc3/tests/test_distributions_random.py pymc3/tests/test_shared.py pymc3/tests/test_smc.py pymc3/tests/test_sampling.py"
-  - PYTHON_VERSION=3.6 FLOATX='float64' BUILD_DOCS="true" TESTCMD="--durations=10 --cov-append pymc3/tests/test_examples.py pymc3/tests/test_posteriors.py"
-  - PYTHON_VERSION=3.6 FLOATX='float64' TESTCMD="--durations=10 --cov-append pymc3/tests/test_variational_inference.py pymc3/tests/test_updates.py"
+    - PYTHON_VERSION=2.7 FLOATX='float32' TESTCMD="--durations=10 --cov-append pymc3/tests/test_variational_inference.py::test_sample_aevb"
 
 script:
   - . ./scripts/test.sh $TESTCMD
   - . ./scripts/confirm_mpl_optional.sh
 
 after_success:
+  - echo "success!" && sleep 20 && cat /tmp/theano_compilation_error_* && sleep 20;
   - if [[ "$BUILD_DOCS" == "true" ]]; then travis-sphinx deploy -c "docs.pymc.io"; fi
   - coveralls
+
+after_failure:
+  - echo "failure!" && sleep 20 && cat /tmp/theano_compilation_error_* && sleep 20;
