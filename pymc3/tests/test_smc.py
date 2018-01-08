@@ -18,13 +18,11 @@ class TestSMC(SeededTest):
         super(TestSMC, self).setup_class()
         self.test_folder = mkdtemp(prefix='ATMIP_TEST')
 
-        self.n_chains = 100
-        self.n_steps = 20
-        self.tune_interval = 25
-
+        self.samples = 1000
+        self.n_chains = 200
         n = 4
         mu1 = np.ones(n) * (1. / 2)
-        mu2 = -mu1
+        mu2 = - mu1
 
         stdev = 0.1
         sigma = np.power(stdev, 2) * np.eye(n)
@@ -47,31 +45,25 @@ class TestSMC(SeededTest):
             X = pm.Uniform('X', lower=-2, upper=2., shape=n)
             llk = pm.Potential('muh', two_gaussians(X))
 
-        self.step = smc.SMC(
-            n_chains=self.n_chains,
-            tune_interval=self.tune_interval,
-            model=self.ATMIP_test)
-
         self.muref = mu1
 
     @pytest.mark.parametrize(['n_jobs', 'stage'], [[1, 0], [2, 6]])
     def test_sample_n_core(self, n_jobs, stage):
 
-        mtrace = smc.sample_smc(
-            n_steps=self.n_steps,
-            step=self.step,
-            stage=stage,
-            n_jobs=n_jobs,
-            progressbar=True,
-            homepath=self.test_folder,
-            model=self.ATMIP_test,
-            rm_flag=True)
+        mtrace = smc.sample_smc(samples=self.samples,
+                                n_chains=self.n_chains,
+                                stage=stage,
+                                n_jobs=n_jobs,
+                                progressbar=True,
+                                homepath=self.test_folder,
+                                model=self.ATMIP_test,
+                                rm_flag=True)
 
         x = mtrace.get_values('X')
         mu1d = np.abs(x).mean(axis=0)
         np.testing.assert_allclose(self.muref, mu1d, rtol=0., atol=0.03)
         # Scenario IV Ching, J. & Chen, Y. 2007
-        assert np.round(np.log(self.ATMIP_test.marginal_likelihood)) == -11.0
+        assert np.round(np.log(self.ATMIP_test.marginal_likelihood)) == -12.0
 
     def test_stage_handler(self):
         stage_number = -1
@@ -80,7 +72,9 @@ class TestSMC(SeededTest):
         step = stage_handler.load_atmip_params(stage_number, model=self.ATMIP_test)
         assert step.stage == stage_number
 
-        corrupted_chains = stage_handler.recover_existing_results(stage_number, self.n_steps, step,
+        corrupted_chains = stage_handler.recover_existing_results(stage_number,
+                                                                  self.samples / self.n_chains,
+                                                                  step,
                                                                   model=self.ATMIP_test)
         assert len(corrupted_chains) == 0
 
