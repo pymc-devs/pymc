@@ -17,7 +17,7 @@
 - Forestplot supports multiple traces (#2736)
 - Add new plot, densityplot (#2741)
 - DIC and BPIC calculations have been deprecated
-- New logging system for warning and information (#2677)
+- New logging system for warning and information (#2677, #2778)
 
 
 ### Fixes
