@@ -8,7 +8,7 @@ import numpy.random as nr
 from ..arraystep import Competence
 from .base_hmc import BaseHMC, HMCStepData, DivergenceInfo
 from .integration import IntegrationError
-from pymc3.backends.report import SamplerWarning
+from pymc3.backends.report import SamplerWarning, WarningType
 from pymc3.theanof import floatX
 from pymc3.vartypes import continuous_types
 
@@ -189,7 +189,8 @@ class NUTS(BaseHMC):
         if np.mean(self._reached_max_treedepth) > 0.05:
             msg = ('The chain reached the maximum tree depth. Increase '
                    'max_treedepth, increase target_accept or reparameterize.')
-            warn = SamplerWarning('treedepth', msg, 'warn', None, None, None)
+            warn = SamplerWarning(WarningType.TREEDEPTH, msg, 'warn',
+                                  None, None, None)
             warnings.append(warn)
         return warnings
 

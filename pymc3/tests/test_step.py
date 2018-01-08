@@ -11,7 +11,6 @@ from pymc3.step_methods import (NUTS, BinaryGibbsMetropolis, CategoricalGibbsMet
                                 MultivariateNormalProposal, HamiltonianMC,
                                 EllipticalSlice, smc, DEMetropolis)
 from pymc3.theanof import floatX
-from pymc3 import SamplingError
 from pymc3.distributions import (
     Binomial, Normal, Bernoulli, Categorical, Beta, HalfNormal)
 

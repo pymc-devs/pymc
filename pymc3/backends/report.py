@@ -1,8 +1,23 @@
 from collections import namedtuple
 import logging
+import enum
 
 
 logger = logging.getLogger('pymc3')
+
+
+@enum.unique
+class WarningType(enum.Enum):
+    # For HMC and NUTS
+    DIVERGENCE = 1
+    TUNING_DIVERGENCE = 2
+    DIVERGENCES = 3
+    TREEDEPTH = 4
+    # Problematic sampler parameters
+    BAD_PARAMS = 5
+    # Indications that chains did not converge, eg Rhat
+    CONVERGENCE = 6
+    BAD_ACCEPTANCE = 7
 
 
 SamplerWarning = namedtuple(
@@ -47,7 +62,8 @@ class SamplerReport(object):
         if trace.nchains == 1:
             msg = ("Only one chain was sampled, this makes it impossible to "
                    "run some convergence checks")
-            warn = SamplerWarning('bad-params', msg, 'info', None, None, None)
+            warn = SamplerWarning(WarningType.BAD_PARAMS, msg, 'info',
+                                  None, None, None)
             self._add_warnings([warn])
             return
 
@@ -62,34 +78,35 @@ class SamplerReport(object):
             msg = ("The gelman-rubin statistic is larger than 1.4 for some "
                    "parameters. The sampler did not converge.")
             warn = SamplerWarning(
-                'convergence', msg, 'error', None, None, gelman_rubin)
+                WarningType.CONVERGENCE, msg, 'error', None, None, gelman_rubin)
             warnings.append(warn)
         elif rhat_max > 1.2:
             msg = ("The gelman-rubin statistic is larger than 1.2 for some "
                    "parameters.")
             warn = SamplerWarning(
-                'convergence', msg, 'warn', None, None, gelman_rubin)
+                WarningType.CONVERGENCE, msg, 'warn', None, None, gelman_rubin)
             warnings.append(warn)
         elif rhat_max > 1.05:
             msg = ("The gelman-rubin statistic is larger than 1.05 for some "
                    "parameters. This indicates slight problems during "
                    "sampling.")
             warn = SamplerWarning(
-                'convergence', msg, 'info', None, None, gelman_rubin)
+                WarningType.CONVERGENCE, msg, 'info', None, None, gelman_rubin)
             warnings.append(warn)
 
         eff_min = min(val.min() for val in effective_n.values())
-        if eff_min < 100:
+        n_samples = len(trace) * trace.nchains
+        if eff_min < 200 and n_samples >= 500:
             msg = ("The estimated number of effective samples is smaller than "
-                   "100 for some parameters.")
+                   "200 for some parameters.")
             warn = SamplerWarning(
-                'convergence', msg, 'error', None, None, effective_n)
+                WarningType.CONVERGENCE, msg, 'error', None, None, effective_n)
             warnings.append(warn)
-        elif eff_min < 300:
-            msg = ("The estimated number of effective samples is smaller than "
-                   "300 for some parameters.")
+        elif eff_min / n_samples < 0.25:
+            msg = ("The number of effective samples is smaller than "
+                   "25% for some parameters.")
             warn = SamplerWarning(
-                'convergence', msg, 'warn', None, None, effective_n)
+                WarningType.CONVERGENCE, msg, 'warn', None, None, effective_n)
             warnings.append(warn)
 
         self._add_warnings(warnings)

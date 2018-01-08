@@ -9,7 +9,7 @@ from pymc3.theanof import inputvars, floatX
 from pymc3.tuning import guess_scaling
 from .quadpotential import quad_potential, QuadPotentialDiagAdapt
 from pymc3.step_methods import step_sizes
-from pymc3.backends.report import SamplerWarning
+from pymc3.backends.report import SamplerWarning, WarningType
 
 
 HMCStepData = namedtuple(
@@ -107,7 +107,7 @@ class BaseHMC(arraystep.GradientSharedStep):
         raise NotImplementedError("Abstract method")
 
     def astep(self, q0):
-        """Perform a single NUTS iteration."""
+        """Perform a single HMC iteration."""
         p0 = self.potential.random()
         start = self.integrator.compute_state(q0, p0)
 
@@ -130,10 +130,10 @@ class BaseHMC(arraystep.GradientSharedStep):
         if hmc_step.divergence_info:
             info = hmc_step.divergence_info
             if self.tune:
-                kind = 'tuning-divergence'
+                kind = WarningType.TUNING_DIVERGENCE
                 point = None
             else:
-                kind = 'divergence'
+                kind = WarningType.DIVERGENCE
                 self._num_divs_sample += 1
                 # We don't want to fill up all memory with divergence info
                 if self._num_divs_sample < 100:
@@ -174,25 +174,25 @@ class BaseHMC(arraystep.GradientSharedStep):
             msg = ('The chain contains only diverging samples. The model is '
                    'probably misspecified.')
             warning = SamplerWarning(
-                'divergences', msg, 'error', None, None, None)
+                WarningType.DIVERGENCES, msg, 'error', None, None, None)
             warnings.append(warning)
         elif n_divs > 0:
             message = ('Divergences after tuning. Increase `target_accept` or '
                        'reparameterize.')
             warning = SamplerWarning(
-                'divergences', message, 'error', None, None, None)
+                WarningType.DIVERGENCES, message, 'error', None, None, None)
             warnings.append(warning)
 
         # small trace
         if self._samples_after_tune == 0:
             msg = "Tuning was enabled throughout the whole trace."
             warning = SamplerWarning(
-                'bad-params', msg, 'error', None, None, None)
+                WarningType.BAD_PARAMS, msg, 'error', None, None, None)
             warnings.append(warning)
         elif self._samples_after_tune < 500:
             msg = "Only %s samples in chain." % self._samples_after_tune
             warning = SamplerWarning(
-                'bad-params', msg, 'error', None, None, None)
+                WarningType.BAD_PARAMS, msg, 'error', None, None, None)
             warnings.append(warning)
 
         warnings.extend(self.step_adapt.warnings())

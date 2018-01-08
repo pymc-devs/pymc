@@ -464,7 +464,7 @@ class MultiTrace(object):
         return _squeeze_cat(results, combine, squeeze)
 
     def _slice(self, slice):
-        """Return a new MultiTrace object sliced according to `idx`."""
+        """Return a new MultiTrace object sliced according to `slice`."""
         new_traces = [trace._slice(slice) for trace in self._straces.values()]
         trace = MultiTrace(new_traces)
         idxs = slice.indices(len(self))

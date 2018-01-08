@@ -3,7 +3,7 @@ import math
 import numpy as np
 from scipy import stats
 
-from pymc3.backends.report import SamplerWarning
+from pymc3.backends.report import SamplerWarning, WarningType
 
 
 class DualAverageAdaptation(object):
@@ -61,7 +61,7 @@ class DualAverageAdaptation(object):
                    % (mean_accept, target_accept))
             info = {'target': target_accept, 'actual': mean_accept}
             warning = SamplerWarning(
-                'bad-acceptance', msg, 'warn', None, None, info)
+                WarningType.BAD_ACCEPTANCE, msg, 'warn', None, None, info)
             return [warning]
         else:
             return []
