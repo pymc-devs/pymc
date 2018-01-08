@@ -15,7 +15,6 @@ from scipy.misc import logsumexp
 from scipy.stats import dirichlet
 from scipy.optimize import minimize
 
-from .backends import tracetab as ttab
 
 __all__ = ['autocorr', 'autocov', 'dic', 'bpic', 'waic', 'loo', 'hpd', 'quantiles',
            'mc_error', 'summary', 'df_summary', 'compare', 'bfmi', 'r2_score']
@@ -865,6 +864,7 @@ def dict2pd(statdict, labelname):
     """Small helper function to transform a diagnostics output dict into a
     pandas Series.
     """
+    from .backends import tracetab as ttab
     var_dfs = []
     for key, value in statdict.items():
         var_df = pd.Series(value.flatten())
@@ -964,6 +964,7 @@ def summary(trace, varnames=None, transform=lambda x: x, stat_funcs=None,
         mu__0  0.066473  0.000312  0.105039  0.214242
         mu__1  0.067513 -0.159097 -0.045637  0.062912
     """
+    from .backends import tracetab as ttab
 
     if varnames is None:
         varnames = get_default_varnames(trace.varnames,
