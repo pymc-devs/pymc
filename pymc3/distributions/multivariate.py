@@ -1,11 +1,11 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-import warnings
 import numpy as np
 import scipy
 import theano
 import theano.tensor as tt
+import logging
 
 from scipy import stats, linalg
 
@@ -26,6 +26,8 @@ from .dist_math import bound, logpow, factln, Cholesky
 __all__ = ['MvNormal', 'MvStudentT', 'Dirichlet',
            'Multinomial', 'Wishart', 'WishartBartlett',
            'LKJCorr', 'LKJCholeskyCov', 'MatrixNormal']
+
+_log = logging.getLogger('pymc3')
 
 
 class _QuadFormBase(Continuous):
@@ -605,7 +607,7 @@ class PosDefMatrix(theano.Op):
         try:
             z[0] = np.array(posdef(x), dtype='int8')
         except Exception:
-            pm._log.exception('Failed to check if %s positive definite', x)
+            _log.exception('Failed to check if %s positive definite', x)
             raise
 
     def infer_shape(self, node, shapes):
@@ -660,7 +662,7 @@ class Wishart(Continuous):
 
     def __init__(self, nu, V, *args, **kwargs):
         super(Wishart, self).__init__(*args, **kwargs)
-        warnings.warn('The Wishart distribution can currently not be used '
+        _log.warning('The Wishart distribution can currently not be used '
                       'for MCMC sampling. The probability of sampling a '
                       'symmetric matrix is basically zero. Instead, please '
                       'use LKJCholeskyCov or LKJCorr. For more information '
@@ -774,9 +776,9 @@ def WishartBartlett(name, S, nu, is_cholesky=False, return_cholesky=False, testv
 
     c = tt.sqrt(ChiSquared('c', nu - np.arange(2, 2 + n_diag), shape=n_diag,
                            testval=diag_testval))
-    pm._log.info('Added new variable c to model diagonal of Wishart.')
+    _log.info('Added new variable c to model diagonal of Wishart.')
     z = Normal('z', 0., 1., shape=n_tril, testval=tril_testval)
-    pm._log.info('Added new variable z to model off-diagonals of Wishart.')
+    _log.info('Added new variable z to model off-diagonals of Wishart.')
     # Construct A matrix
     A = tt.zeros(S.shape, dtype=np.float32)
     A = tt.set_subtensor(A[diag_idx], c)
@@ -1016,7 +1018,7 @@ class LKJCorr(Continuous):
 
     def __init__(self, eta=None, n=None, p=None, transform='interval', *args, **kwargs):
         if (p is not None) and (n is not None) and (eta is None):
-            warnings.warn('Parameters to LKJCorr have changed: shape parameter n -> eta '
+            _log.warning('Parameters to LKJCorr have changed: shape parameter n -> eta '
                           'dimension parameter p -> n. Please update your code. '
                           'Automatically re-assigning parameters for backwards compatibility.',
                           DeprecationWarning)
@@ -1039,7 +1041,7 @@ class LKJCorr(Continuous):
 
         super(LKJCorr, self).__init__(shape=shape, transform=transform,
                                       *args, **kwargs)
-        warnings.warn('Parameters in LKJCorr have been rename: shape parameter n -> eta '
+        _log.warning('Parameters in LKJCorr have been rename: shape parameter n -> eta '
                       'dimension parameter p -> n. Please double check your initialization.',
                       DeprecationWarning)
         self.tri_index = np.zeros([n, n], dtype='int32')

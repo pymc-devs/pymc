@@ -3,6 +3,8 @@ Created on Mar 12, 2011
 
 @author: johnsalvatier
 '''
+
+import logging
 from scipy.optimize import minimize
 import numpy as np
 from numpy import isfinite, nan_to_num
@@ -15,10 +17,12 @@ import theano.gradient as tg
 from ..blocking import DictToArrayBijection, ArrayOrdering
 from ..util import update_start_vals, get_default_varnames
 
-import warnings
 from inspect import getargspec
 
 __all__ = ['find_MAP']
+
+
+_log = logging.getLogger('pymc3')
 
 
 def find_MAP(start=None, vars=None, method="L-BFGS-B",
@@ -80,7 +84,7 @@ def find_MAP(start=None, vars=None, method="L-BFGS-B",
         compute_gradient = False
 
     if disc_vars or not compute_gradient:
-        pm._log.warning("Warning: gradient not available." +
+        _log.warning("Warning: gradient not available." +
                         "(E.g. vars contains discrete variables). MAP " +
                         "estimates may not be accurate for the default " +
                         "parameters. Defaulting to non-gradient minimization " +
@@ -89,7 +93,7 @@ def find_MAP(start=None, vars=None, method="L-BFGS-B",
 
     if "fmin" in kwargs:
         fmin = kwargs.pop("fmin")
-        warnings.warn('In future versions, set the optimization algorithm with a string. '
+        _log.warning('In future versions, set the optimization algorithm with a string. '
                       'For example, use `method="L-BFGS-B"` instead of '
                       '`fmin=sp.optimize.fmin_l_bfgs_b"`.')
 
@@ -127,7 +131,7 @@ def find_MAP(start=None, vars=None, method="L-BFGS-B",
             mx0, opt_result = cost_func.previous_x, None
             cost_func.progress.close()
             if isinstance(e, StopIteration):
-                pm._log.info(e)
+                _log.info(e)
         finally:
             cost_func.progress.close()
 

@@ -3,7 +3,7 @@ import numpy as np
 import theano
 import theano.tensor as tt
 from scipy import stats
-import warnings
+import logging
 
 from pymc3.util import get_variable_name
 from .dist_math import bound, factln, binomln, betaln, logpow
@@ -16,6 +16,7 @@ __all__ = ['Binomial',  'BetaBinomial',  'Bernoulli',  'DiscreteWeibull',
            'ZeroInflatedPoisson', 'ZeroInflatedBinomial', 'ZeroInflatedNegativeBinomial',
            'DiscreteUniform', 'Geometric', 'Categorical']
 
+_log = logging.getLogger('pymc3')
 
 class Binomial(Discrete):
     R"""
@@ -564,7 +565,7 @@ class Constant(Discrete):
     """
 
     def __init__(self, c, *args, **kwargs):
-        warnings.warn("Constant has been deprecated. We recommend using a Determinstic object instead.",
+        _log.warning("Constant has been deprecated. We recommend using a Determinstic object instead.",
                     DeprecationWarning)
         super(Constant, self).__init__(*args, **kwargs)
         self.mean = self.median = self.mode = self.c = c = tt.as_tensor_variable(c)

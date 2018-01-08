@@ -7,14 +7,12 @@ import itertools as itl
 import logging
 
 import numpy as np
-import warnings
 import theano.tensor as tt
 
 from ..model import modelcontext
 from .report import SamplerReport, merge_reports
 
-logger = logging.getLogger('pymc3')
-
+_log = logging.getLogger('pymc3')
 
 class BackendError(Exception):
     pass
@@ -310,7 +308,7 @@ class MultiTrace(object):
         var = str(var)
         if var in self.varnames:
             if var in self.stat_names:
-                warnings.warn("Attribute access on a trace object is ambigous. "
+                _log.warning("Attribute access on a trace object is ambigous. "
                 "Sampler statistic and model variable share a name. Use "
                 "trace.get_values or trace.get_sampler_stats.")
             return self.get_values(var, burn=burn, thin=thin)
@@ -330,7 +328,7 @@ class MultiTrace(object):
         name = str(name)
         if name in self.varnames:
             if name in self.stat_names:
-                warnings.warn("Attribute access on a trace object is ambigous. "
+                _log.warning("Attribute access on a trace object is ambigous. "
                 "Sampler statistic and model variable share a name. Use "
                 "trace.get_values or trace.get_sampler_stats.")
             return self.get_values(name)
@@ -384,7 +382,7 @@ class MultiTrace(object):
             l_samples = len(self) * len(self.chains)
             l_v = len(v)
             if l_v != l_samples:
-                warnings.warn("The lenght of the values you are trying to "
+                _log.warning("The lenght of the values you are trying to "
                               "add ({}) does not match the number ({}) of "
                               "total samples in the trace "
                               "(chains * iterations)".format(l_v, l_samples))

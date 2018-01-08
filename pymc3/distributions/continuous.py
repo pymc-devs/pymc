@@ -11,7 +11,7 @@ import numpy as np
 import theano.tensor as tt
 from scipy import stats
 from scipy.interpolate import InterpolatedUnivariateSpline
-import warnings
+import logging
 
 from pymc3.theanof import floatX
 from . import transforms
@@ -29,6 +29,7 @@ __all__ = ['Uniform', 'Flat', 'HalfFlat', 'Normal', 'Beta', 'Exponential',
            'Pareto', 'InverseGamma', 'ExGaussian', 'VonMises', 'SkewNormal',
            'Logistic', 'Interpolated']
 
+_log = logging.getLogger('pymc3')
 
 class PositiveContinuous(Continuous):
     """Base class for positive continuous distributions"""
@@ -64,7 +65,7 @@ def assert_negative_support(var, label, distname, value=-1e-6):
     if np.any(support):
         msg = "The variable specified for {0} has negative support for {1}, ".format(label, distname)
         msg += "likely making it unsuitable for this parameter."
-        warnings.warn(msg)
+        _log.warning(msg)
 
 
 def get_tau_sd(tau=None, sd=None):

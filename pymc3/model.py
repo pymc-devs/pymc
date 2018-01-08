@@ -3,6 +3,7 @@ import functools
 import itertools
 import threading
 import six
+import logging
 
 import numpy as np
 import scipy.sparse as sps
@@ -25,6 +26,9 @@ __all__ = [
 ]
 
 FlatView = collections.namedtuple('FlatView', 'input, replacements, view')
+
+
+_log = logging.getLogger('pymc3')
 
 
 class InstanceMethod(object):
@@ -757,7 +761,7 @@ class Model(six.with_metaclass(InitContextMeta, Context, Factor, WithMemoization
                                         transform=dist.transform,
                                         total_size=total_size,
                                         model=self)
-                pm._log.debug('Applied {transform}-transform to {name}'
+                _log.info('Applied {transform}-transform to {name}'
                               ' and added transformed {orig_name} to model.'.format(
                                 transform=dist.transform.name,
                                 name=name,

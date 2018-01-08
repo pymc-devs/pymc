@@ -1,7 +1,6 @@
 from __future__ import division
 
 import logging
-import warnings
 import collections
 
 import numpy as np
@@ -15,7 +14,7 @@ from pymc3.variational.approximations import (
 from pymc3.variational.operators import KL, KSD
 from . import opvi
 
-logger = logging.getLogger(__name__)
+_log = logging.getLogger('pymc3')
 
 __all__ = [
     'ADVI',
@@ -58,7 +57,7 @@ class Inference(object):
         if score is None:
             score = returns_loss
         elif score and not returns_loss:
-            warnings.warn('method `fit` got `score == True` but %s '
+            _log.warning('method `fit` got `score == True` but %s '
                           'does not return loss. Ignoring `score` argument'
                           % self.objective.op)
             score = False
@@ -154,7 +153,7 @@ class Inference(object):
         except (KeyboardInterrupt, StopIteration) as e:
             progress.close()
             if isinstance(e, StopIteration):
-                logger.info(str(e))
+                _log.info(str(e))
         finally:
             progress.close()
         return State(i+s, step=step_func,
@@ -193,21 +192,21 @@ class Inference(object):
             progress.close()
             scores = scores[:i]
             if isinstance(e, StopIteration):
-                logger.info(str(e))
+                _log.info(str(e))
             if n < 10:
-                logger.info('Interrupted at {:,d} [{:.0f}%]: Loss = {:,.5g}'.format(
+                _log.info('Interrupted at {:,d} [{:.0f}%]: Loss = {:,.5g}'.format(
                     i, 100 * i // n, scores[i]))
             else:
                 avg_loss = _infmean(scores[min(0, i - 1000):i + 1])
-                logger.info('Interrupted at {:,d} [{:.0f}%]: Average Loss = {:,.5g}'.format(
+                _log.info('Interrupted at {:,d} [{:.0f}%]: Average Loss = {:,.5g}'.format(
                     i, 100 * i // n, avg_loss))
         else:
             if n < 10:
-                logger.info(
+                _log.info(
                     'Finished [100%]: Loss = {:,.5g}'.format(scores[-1]))
             else:
                 avg_loss = _infmean(scores[max(0, i - 1000):i + 1])
-                logger.info(
+                _log.info(
                     'Finished [100%]: Average Loss = {:,.5g}'.format(avg_loss))
         finally:
             progress.close()
@@ -560,7 +559,7 @@ class ASVGD(ImplicitGradient):
     """
 
     def __init__(self, approx=None, estimator=KSD, kernel=test_functions.rbf, **kwargs):
-        warnings.warn('You are using experimental inference Operator. '
+        _log.warning('You are using experimental inference Operator. '
                       'It requires careful choice of temperature, default is 1. '
                       'Default temperature works well for low dimensional problems and '
                       'for significant `n_obj_mc`. Temperature > 1 gives more exploration '

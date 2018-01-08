@@ -1,4 +1,4 @@
-import warnings
+import logging
 
 import numpy as np
 try:
@@ -7,6 +7,7 @@ except ImportError:  # mpl is optional
     pass
 from .kdeplot import kdeplot
 
+_log = logging.getLogger('pymc3')
 
 def energyplot(trace, kind='kde', figsize=None, ax=None, legend=True,
                shade=0.35, frame=True, kwargs_shade=None, **kwargs):
@@ -44,7 +45,7 @@ def energyplot(trace, kind='kde', figsize=None, ax=None, legend=True,
     try:
         energy = trace['energy']
     except KeyError:
-        warnings.warn('There is no energy information in the passed trace.')
+        _log.warning('There is no energy information in the passed trace.')
         return ax
 
     series = [('Marginal energy distribution', energy - energy.mean()),

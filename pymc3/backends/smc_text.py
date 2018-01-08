@@ -21,6 +21,8 @@ import multiprocessing
 import pickle
 import os
 import shutil
+import logging
+
 from six.moves import map, zip
 
 import pandas as pd
@@ -32,6 +34,8 @@ from . import tracetab as ttab
 from ..blocking import DictToArrayBijection, ArrayOrdering,\
                        ListArrayOrdering, ListToArrayBijection
 from ..step_methods.arraystep import BlockedStep
+
+_log = logging.getLogger('pymc3')
 
 
 def paripool(function, work, nprocs=None, chunksize=1):
@@ -195,7 +199,7 @@ class TextStage(object):
             prev = self.highest_sampled_stage()
         else:
             prev = stage_number - 1
-        pm._log.info('Loading parameters from completed stage {}'.format(prev))
+        _log.info('Loading parameters from completed stage {}'.format(prev))
 
         with model:
             with open(self.atmip_path(prev), 'rb') as buff:
@@ -215,7 +219,7 @@ class TextStage(object):
         stage_path = self.stage_path(stage)
         if rm_flag:
             if os.path.exists(stage_path):
-                pm._log.info('Removing previous sampling results ... %s' % stage_path)
+                _log.info('Removing previous sampling results ... %s' % stage_path)
                 shutil.rmtree(stage_path)
             chains = None
         elif not os.path.exists(stage_path):
@@ -240,7 +244,7 @@ class TextStage(object):
         dirname = self.stage_path(stage_number)
         files = glob(os.path.join(dirname, 'chain_*.csv'))
         if len(files) < 1:
-            pm._log.warn('Stage directory %s contains no traces!' % dirname)
+            _log.warning('Stage directory %s contains no traces!' % dirname)
 
         straces = []
         for f in files:
@@ -272,7 +276,7 @@ class TextStage(object):
         for chain in range(n_chains):
             if chain in mtrace.chains:
                 if len(mtrace._straces[chain]) != draws:
-                    pm._log.warn('Trace number %i incomplete' % chain)
+                    _log.warning('Trace number %i incomplete' % chain)
                     mtrace._straces[chain].corrupted_flag = True
             else:
                 not_sampled_idx.append(chain)
@@ -285,13 +289,13 @@ class TextStage(object):
         stage_path = self.stage_path(stage_number)
         if os.path.exists(stage_path):
             # load incomplete stage results
-            pm._log.info('Reloading existing results ...')
+            _log.info('Reloading existing results ...')
             mtrace = self.load_multitrace(stage_number, model=model)
             if len(mtrace.chains) > 0:
                 # continue sampling if traces exist
-                pm._log.info('Checking for corrupted files ...')
+                _log.info('Checking for corrupted files ...')
                 return self.check_multitrace(mtrace, draws=draws, n_chains=step.n_chains)
-        pm._log.info('Init new trace!')
+        _log.info('Init new trace!')
         return None
 
     def create_result_trace(self, stage_number=-1, idxs=(-1, ), step=None, model=None):
@@ -412,11 +416,11 @@ class TextChain(BaseSMCTrace):
             try:
                 self.df = pd.read_csv(self.filename)
             except pd.parser.EmptyDataError:
-                pm._log.warn('Trace %s is empty and needs to be resampled!' % self.filename)
+                _log.warning('Trace %s is empty and needs to be resampled!' % self.filename)
                 os.remove(self.filename)
                 self.corrupted_flag = True
             except pd.io.common.CParserError:
-                pm._log.warn('Trace %s has wrong size!' % self.filename)
+                _log.warning('Trace %s has wrong size!' % self.filename)
                 self.corrupted_flag = True
                 os.remove(self.filename)
 

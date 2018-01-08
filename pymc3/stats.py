@@ -1,10 +1,11 @@
 """Statistical utility functions for PyMC"""
 
+import itertools
+import logging
 import numpy as np
 import pandas as pd
-import itertools
 from tqdm import tqdm
-import warnings
+
 from collections import namedtuple
 from .model import modelcontext
 from .util import get_default_varnames
@@ -18,6 +19,9 @@ from scipy.optimize import minimize
 
 __all__ = ['autocorr', 'autocov', 'dic', 'bpic', 'waic', 'loo', 'hpd', 'quantiles',
            'mc_error', 'summary', 'df_summary', 'compare', 'bfmi', 'r2_score']
+
+
+_log = logging.getLogger('pymc3')
 
 
 def statfunc(f):
@@ -115,7 +119,7 @@ def dic(trace, model=None):
     z : float
         The deviance information criterion of the model and trace
     """
-    warnings.warn("dic has been deprecated. Use `waic` or `loo` instead.", DeprecationWarning,
+    _log.warning("dic has been deprecated. Use `waic` or `loo` instead.", DeprecationWarning,
                   stacklevel=2)
 
     model = modelcontext(model)
@@ -216,7 +220,7 @@ def waic(trace, model=None, pointwise=False, progressbar=False):
 
     vars_lpd = np.var(log_py, axis=0)
     if np.any(vars_lpd > 0.4):
-        warnings.warn("""For one or more samples the posterior variance of the
+        _log.warning("""For one or more samples the posterior variance of the
         log predictive densities exceeds 0.4. This could be indication of
         WAIC starting to fail see http://arxiv.org/abs/1507.04544 for details
         """)
@@ -284,7 +288,7 @@ def loo(trace, model=None, pointwise=False, reff=None, progressbar=False):
     lw, ks = _psislw(-log_py, reff)
     lw += log_py
     if np.any(ks > 0.7):
-        warnings.warn("""Estimated shape parameter of Pareto distribution is
+        _log.warning("""Estimated shape parameter of Pareto distribution is
         greater than 0.7 for one or more samples.
         You should consider using a more robust model, this is because
         importance sampling is less likely to work well if the marginal
@@ -466,7 +470,7 @@ def bpic(trace, model=None):
     z : float
         The Bayesian predictive information criterion of the model and trace
     """
-    warnings.warn("bpic has been deprecated. Use `waic` or `loo` instead.", DeprecationWarning,
+    _log.warning("bpic has been deprecated. Use `waic` or `loo` instead.", DeprecationWarning,
                   stacklevel=2)
 
     model = modelcontext(model)
@@ -858,7 +862,7 @@ def quantiles(x, qlist=(2.5, 25, 50, 75, 97.5), transform=lambda x: x):
         return dict(zip(qlist, quants))
 
     except IndexError:
-        pm._log.warning("Too few elements for quantile calculation")
+        _log.warning("Too few elements for quantile calculation")
 
 def dict2pd(statdict, labelname):
     """Small helper function to transform a diagnostics output dict into a
@@ -1011,7 +1015,7 @@ def summary(trace, varnames=None, transform=lambda x: x, stat_funcs=None,
 
 
 def df_summary(*args, **kwargs):
-    warnings.warn("df_summary has been deprecated. In future, use summary instead.",
+    _log.warning("df_summary has been deprecated. In future, use summary instead.",
                   DeprecationWarning, stacklevel=2)
     return summary(*args, **kwargs)
 

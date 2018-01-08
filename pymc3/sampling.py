@@ -344,7 +344,7 @@ def sample(draws=500, step=None, init='auto', n_init=200000, start=None,
 
     if 'chain' in kwargs:
         chain_idx = kwargs['chain']
-        warnings.warn(
+        _log.warning(
             "The chain argument has been deprecated. Use chain_idx instead.",
             DeprecationWarning)
 
@@ -695,7 +695,7 @@ class PopulationStepper(object):
                 _log.debug('Error was: ', exec_info=True)
         else:
             if parallelize:
-                warnings.warn('Population parallelization is only supported '
+                _log.warning('Population parallelization is only supported '
                               'on Python 3.4 and higher.  All {} chains will '
                               'run sequentially on one process.'
                               .format(self.nchains))

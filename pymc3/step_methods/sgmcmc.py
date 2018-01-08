@@ -1,5 +1,5 @@
 from collections import OrderedDict
-import warnings
+import logging
 
 from .arraystep import Competence, ArrayStepShared
 from ..vartypes import continuous_types
@@ -14,6 +14,7 @@ __all__ = ['SGFS', 'CSG']
 EXPERIMENTAL_WARNING = "Warning: Stochastic Gradient based sampling methods are experimental step methods and not yet"\
     " recommended for use in PyMC3!"
 
+_log = logging.getLogger('pymc3')
 
 def _value_error(cond, str):
     """Throws ValueError if cond is False"""
@@ -109,7 +110,7 @@ class BaseStochasticGradient(ArrayStepShared):
                  minibatches=None,
                  minibatch_tensors=None,
                  **kwargs):
-        warnings.warn(EXPERIMENTAL_WARNING)
+        _log.warning(EXPERIMENTAL_WARNING)
 
         model = modelcontext(model)
 

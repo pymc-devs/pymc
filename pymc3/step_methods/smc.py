@@ -18,7 +18,7 @@ from tqdm import tqdm
 
 import theano
 import copy
-import warnings
+import logging
 
 from ..model import modelcontext
 from ..vartypes import discrete_types
@@ -35,6 +35,9 @@ EXPERIMENTAL_WARNING = ("Warning: SMC is an experimental step method, and not ye
                        "recommended for use in PyMC3!")
 
 proposal_dists = {'MultivariateNormal': MultivariateNormalProposal}
+
+
+_log = logging.getLogger('pymc3')
 
 
 def choose_proposal(proposal_name, scale=1.):
@@ -116,7 +119,7 @@ class SMC(atext.ArrayStepSharedLLK):
                  tune_interval=100, coef_variation=1., check_bound=True, model=None,
                  random_seed=-1):
 
-        warnings.warn(EXPERIMENTAL_WARNING)
+        _log.warning(EXPERIMENTAL_WARNING)
 
         if random_seed != -1:
             nr.seed(random_seed)
@@ -130,12 +133,12 @@ class SMC(atext.ArrayStepSharedLLK):
 
         if out_vars is None:
             if not any(likelihood_name == RV.name for RV in model.unobserved_RVs):
-                pm._log.info(
+                _log.info(
                     'Adding model likelihood to RVs!')
                 with model:
                     llk = pm.Deterministic(likelihood_name, model.logpt)
             else:
-                pm._log.info(
+                _log.info(
                     'Using present model likelihood!')
 
             out_vars = model.unobserved_RVs
@@ -488,7 +491,7 @@ def sample_smc(n_steps, n_chains=100, step=None, start=None, homepath=None, stag
         194(3), pp.1701-1726,
         `link <https://gji.oxfordjournals.org/content/194/3/1701.full>`__
     """
-    warnings.warn(EXPERIMENTAL_WARNING)
+    _log.warning(EXPERIMENTAL_WARNING)
 
     model = modelcontext(model)
 
@@ -496,7 +499,7 @@ def sample_smc(n_steps, n_chains=100, step=None, start=None, homepath=None, stag
         nr.seed(random_seed)
 
     if step is None:
-        pm._log.info('Argument `step` is None. Auto-initialising step object '
+        _log.info('Argument `step` is None. Auto-initialising step object '
                      'using given/default parameters.')
         step = SMC(n_chains=n_chains, tune_interval=tune_interval, model=model)
 
@@ -541,12 +544,12 @@ def sample_smc(n_steps, n_chains=100, step=None, start=None, homepath=None, stag
         while step.beta < 1:
             if step.stage == 0:
                 # Initial stage
-                pm._log.info('Sample initial stage: ...')
+                _log.info('Sample initial stage: ...')
                 draws = 1
             else:
                 draws = n_steps
 
-            pm._log.info('Beta: %f Stage: %i' % (step.beta, step.stage))
+            _log.info('Beta: %f Stage: %i' % (step.beta, step.stage))
 
             # Metropolis sampling intermediate stages
             chains = stage_handler.clean_directory(step.stage, chains, rm_flag)
@@ -567,7 +570,7 @@ def sample_smc(n_steps, n_chains=100, step=None, start=None, homepath=None, stag
             step.sjs *= sj
 
             if step.beta > 1.:
-                pm._log.info('Beta > 1.: %f' % step.beta)
+                _log.info('Beta > 1.: %f' % step.beta)
                 step.beta = 1.
                 stage_handler.dump_atmip_params(step)
                 if stage == -1:
@@ -586,7 +589,7 @@ def sample_smc(n_steps, n_chains=100, step=None, start=None, homepath=None, stag
                 del(mtrace)
 
         # Metropolis sampling final stage
-        pm._log.info('Sample final stage')
+        _log.info('Sample final stage')
         step.stage = -1
         chains = stage_handler.clean_directory(step.stage, chains, rm_flag)
         weights_un = np.exp((1 - step.old_beta) * (step.likelihoods - step.likelihoods.max()))
@@ -686,12 +689,12 @@ def _iter_parallel_chains(draws, step, stage_path, progressbar, model, n_jobs, c
     if chains is None:
         chains = range(step.n_chains)
 
-    pm._log.info('Initialising chain traces ...')
+    _log.info('Initialising chain traces ...')
 
     max_int = np.iinfo(np.int32).max
     random_seeds = nr.randint(1, max_int, size=len(chains))
 
-    pm._log.info('Sampling ...')
+    _log.info('Sampling ...')
     work = [(draws,
              step,
              step.population[step.resampling_indexes[chain]],

@@ -33,7 +33,7 @@ References
 
 import collections
 import itertools
-import warnings
+import logging
 
 import numpy as np
 import theano
@@ -57,6 +57,8 @@ __all__ = [
     'Group',
     'Approximation'
 ]
+
+_log = logging.getLogger('pymc3')
 
 
 class VariationalInferenceError(Exception):
@@ -141,7 +143,7 @@ class ObjectiveUpdates(theano.OrderedUpdates):
 
 
 def _warn_not_used(smth, where):
-    warnings.warn('`%s` is not used for %s and ignored' % (smth, where))
+    _log.warning('`%s` is not used for %s and ignored' % (smth, where))
 
 
 class ObjectiveFunction(object):
@@ -423,7 +425,7 @@ class Operator(object):
                     f = TestFunction.from_function(f)
         else:
             if f is not None:
-                warnings.warn(
+                _log.warning(
                     'TestFunction for %s is redundant and removed' %
                     self, stacklevel=3)
             else:

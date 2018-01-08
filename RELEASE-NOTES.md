@@ -5,6 +5,7 @@
 ### New features
 
 - Improve NUTS initialization `advi+adapt_diag_grad` and add `jitter+adapt_diag_grad` (#2643)
+- Refactored HMC (#2677)
 - Added `MatrixNormal` class for representing vectors of multivariate normal variables
 - Implemented `HalfStudentT` distribution
 - New benchmark suite added (see http://pandas.pydata.org/speed/pymc3/)
@@ -16,6 +17,8 @@
 - Forestplot supports multiple traces (#2736)
 - Add new plot, densityplot (#2741)
 - DIC and BPIC calculations have been deprecated
+- New logging system for warning and information (#2677)
+
 
 ### Fixes
 
