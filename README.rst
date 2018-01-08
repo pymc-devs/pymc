@@ -3,15 +3,16 @@
     :alt: PyMC3 logo
     :align: center
 
-|Build Status| |Coverage| |NumFOCUS_badge|
+|Build Status| |Coverage| |NumFOCUS_badge| |Binder|
 
 PyMC3 is a Python package for Bayesian statistical modeling and Probabilistic Machine Learning
 which focuses on advanced Markov chain Monte Carlo and variational fitting
 algorithms. Its flexibility and extensibility make it applicable to a
 large suite of problems.
 
-Check out the `getting started guide <http://docs.pymc.io/notebooks/getting_started>`__!
-
+Check out the `getting started guide <http://docs.pymc.io/notebooks/getting_started>`__,  or
+`interact with live examples <https://mybinder.org/v2/gh/pymc-devs/pymc3/master?filepath=%2Fdocs%2Fsource%2Fnotebooks>`__
+using Binder!
 
 Features
 ========
@@ -126,7 +127,7 @@ in Python using PyMC3. PeerJ Computer Science 2:e55
 Contact
 =======
 
-We are using `discourse.pymc.io <https://discourse.pymc.io/>`__ as our main communication channel. You can also follow us on `Twitter @pymc_devs <https://twitter.com/pymc_devs>`__ for updates and other announcements. 
+We are using `discourse.pymc.io <https://discourse.pymc.io/>`__ as our main communication channel. You can also follow us on `Twitter @pymc_devs <https://twitter.com/pymc_devs>`__ for updates and other announcements.
 
 To ask a question regarding modeling or usage of PyMC3 we encourage posting to our Discourse forum under the `“Questions” Category <https://discourse.pymc.io/c/questions>`__. You can also suggest feature in the `“Development” Category <https://discourse.pymc.io/c/development>`__.
 
@@ -144,11 +145,12 @@ License
 Software using PyMC3
 ====================
 
- - `sampled <https://github.com/ColCarroll/sampled>`__: Decorator for PyMC3.
- - `Bambi <https://github.com/bambinos/bambi>`__: BAyesian Model-Building Interface (BAMBI) in Python.
- - `gelato <https://github.com/ferrine/gelato>`__: Bayesian Neural Networks with PyMC3 and Lasagne.
- - `NiPyMC <https://github.com/PsychoinformaticsLab/nipymc>`__: Bayesian mixed-effects modeling of fMRI data in Python.
- - `beat <https://github.com/hvasbath/beat>`__: Bayesian Earthquake Analysis Tool.
+- `Bambi <https://github.com/bambinos/bambi>`__: BAyesian Model-Building Interface (BAMBI) in Python.
+- `pymc3_models <https://github.com/parsing-science/pymc3_models>`__: Custom PyMC3 models built on top of the scikit-learn API.
+- `webmc3 <https://github.com/AustinRochford/webmc3>`__: A web interface for exploring PyMC3 traces
+- `sampled <https://github.com/ColCarroll/sampled>`__: Decorator for PyMC3 models.
+- `NiPyMC <https://github.com/PsychoinformaticsLab/nipymc>`__: Bayesian mixed-effects modeling of fMRI data in Python.
+- `beat <https://github.com/hvasbath/beat>`__: Bayesian Earthquake Analysis Tool.
 
 
 Please contact us if your software is not listed here.
@@ -176,6 +178,8 @@ Sponsors
 
 |Quantopian|
 
+.. |Binder| image:: https://mybinder.org/badge.svg
+   :target: https://mybinder.org/v2/gh/pymc-devs/pymc3/master?filepath=%2Fdocs%2Fsource%2Fnotebooks
 .. |Build Status| image:: https://travis-ci.org/pymc-devs/pymc3.png?branch=master
    :target: https://travis-ci.org/pymc-devs/pymc3
 .. |Coverage| image:: https://coveralls.io/repos/github/pymc-devs/pymc3/badge.svg?branch=master

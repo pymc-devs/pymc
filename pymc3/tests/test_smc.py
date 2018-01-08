@@ -44,11 +44,7 @@ class TestSMC(SeededTest):
             return tt.log(w1 * tt.exp(log_like1) + w2 * tt.exp(log_like2))
 
         with pm.Model() as self.ATMIP_test:
-            X = pm.Uniform('X',
-                           shape=n,
-                           lower=-2. * np.ones_like(mu1),
-                           upper=2. * np.ones_like(mu1),
-                           testval=-1. * np.ones_like(mu1))
+            X = pm.Uniform('X', lower=-2, upper=2., shape=n)
             llk = pm.Potential('muh', two_gaussians(X))
 
         self.step = smc.SMC(

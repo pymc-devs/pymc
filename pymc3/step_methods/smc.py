@@ -183,15 +183,16 @@ class SMC(atext.ArrayStepSharedLLK):
         # create initial population
         self.population = []
         self.array_population = np.zeros(n_chains)
+        start = model.test_point
 
         init_rnd = {}
         for v in vars:
             if pm.util.is_transformed_name(v.name):
                 trans = v.distribution.transform_used.forward
-                rnd = trans(v.distribution.dist.random(size=self.n_chains))
+                rnd = trans(v.distribution.dist.random(size=self.n_chains, point=start))
                 init_rnd[v.name] = rnd.eval()
             else:
-                init_rnd[v.name] = v.random(size=self.n_chains)
+                init_rnd[v.name] = v.random(size=self.n_chains, point=start)
 
         for i in range(self.n_chains):
             self.population.append(pm.Point({v.name: init_rnd[v.name][i] for v in vars},
