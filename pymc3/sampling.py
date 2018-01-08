@@ -2,7 +2,6 @@ from collections import defaultdict, Iterable
 from copy import copy
 import pickle
 import logging
-import warnings
 
 from six import integer_types
 from joblib import Parallel, delayed
