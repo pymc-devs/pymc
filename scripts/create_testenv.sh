@@ -33,7 +33,7 @@ then
       source activate ${ENVNAME}
     fi
 fi
-conda install --yes numpy scipy mkl-service
+conda install --yes numpy scipy mkl-service && export MKL_THREADING_LAYER=GNU
 
 pip install --upgrade pip
 
