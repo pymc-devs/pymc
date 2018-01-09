@@ -1,5 +1,5 @@
 language: python
-sudo: false
+sudo: required
 
 cache:
   directories:
@@ -15,6 +15,7 @@ before_install:
   - . ./scripts/install_miniconda.sh
   - sh -e /etc/init.d/xvfb start
   - export DISPLAY=":99.0"
+  - set MKL_THREADING_LAYER=GNU
 
 install:
   - . ./scripts/create_testenv.sh
