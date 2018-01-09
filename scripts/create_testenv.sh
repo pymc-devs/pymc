@@ -33,7 +33,7 @@ then
       source activate ${ENVNAME}
     fi
 fi
-conda install --yes numpy scipy
+conda install --yes numpy scipy mkl-service
 
 pip install --upgrade pip
 
