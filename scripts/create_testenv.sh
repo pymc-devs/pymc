@@ -33,7 +33,7 @@ then
       source activate ${ENVNAME}
     fi
 fi
-conda install --yes numpy scipy mkl-service && export MKL_THREADING_LAYER=GNU
+conda install --yes numpy scipy
 
 pip install --upgrade pip
 
@@ -45,10 +45,10 @@ if [ ${PYTHON_VERSION} == "2.7" ]; then
     pip install mock
 fi
 
-pip install pytest pytest-cov nose-parameterized pylint
+pip install -r requirements-dev.txt
 
 # Install untested, non-required code (linter fails without them)
-pip install ipython ipywidgets numdifftools
+pip install ipython ipywidgets
 
 # matplotlib is not required for the library, but is for tests
 pip install matplotlib
