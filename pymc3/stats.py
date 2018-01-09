@@ -2,10 +2,11 @@
 
 import itertools
 import logging
+import warnings
+
 import numpy as np
 import pandas as pd
 from tqdm import tqdm
-
 from collections import namedtuple
 from .model import modelcontext
 from .util import get_default_varnames
@@ -119,8 +120,7 @@ def dic(trace, model=None):
     z : float
         The deviance information criterion of the model and trace
     """
-    _log.warning("dic has been deprecated. Use `waic` or `loo` instead.", DeprecationWarning,
-                  stacklevel=2)
+    _log.warning("dic has been deprecated. Use `waic` or `loo` instead.")
 
     model = modelcontext(model)
     logp = model.logp
@@ -470,8 +470,7 @@ def bpic(trace, model=None):
     z : float
         The Bayesian predictive information criterion of the model and trace
     """
-    _log.warning("bpic has been deprecated. Use `waic` or `loo` instead.", DeprecationWarning,
-                  stacklevel=2)
+    _log.warning("bpic has been deprecated. Use `waic` or `loo` instead.")
 
     model = modelcontext(model)
     logp = model.logp
@@ -1015,8 +1014,7 @@ def summary(trace, varnames=None, transform=lambda x: x, stat_funcs=None,
 
 
 def df_summary(*args, **kwargs):
-    _log.warning("df_summary has been deprecated. In future, use summary instead.",
-                  DeprecationWarning, stacklevel=2)
+    _log.warning("df_summary has been deprecated. In future, use summary instead.")
     return summary(*args, **kwargs)
 
 

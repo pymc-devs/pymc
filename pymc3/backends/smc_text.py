@@ -26,7 +26,6 @@ import logging
 from six.moves import map, zip
 
 import pandas as pd
-import pymc3 as pm
 
 from ..model import modelcontext
 from ..backends import base, ndarray
