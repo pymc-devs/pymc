@@ -11,7 +11,6 @@ from pymc3.step_methods import (NUTS, BinaryGibbsMetropolis, CategoricalGibbsMet
                                 MultivariateNormalProposal, HamiltonianMC,
                                 EllipticalSlice, smc, DEMetropolis)
 from pymc3.theanof import floatX
-from pymc3 import SamplingError
 from pymc3.distributions import (
     Binomial, Normal, Bernoulli, Categorical, Beta, HalfNormal)
 
@@ -62,26 +61,26 @@ class TestStepMethods(object):  # yield test doesn't work subclassing object
             2.41488213e+00, 4.68298379e-01, 4.86342250e-01,
             -8.43949966e-01]),
         HamiltonianMC: np.array([
-           -0.74925631, -0.2566773 , -2.12480977,  1.64328926, -1.39315913,
-            2.04200003,  0.00706711,  0.34240498,  0.44276674, -0.21368043,
-           -0.76398723,  1.19280082, -1.43030242, -0.44896107,  0.0547087 ,
-           -1.72170938, -0.20443956,  0.35432546,  1.77695096, -0.31053636,
-           -0.26729283,  1.26450201,  0.17049917,  0.27953939, -0.24185153,
-            0.95617117, -0.45707061,  0.75837366, -1.73391277,  1.63331612,
-           -0.68426038,  0.20499991, -0.43866983,  0.31080195,  0.47104548,
-           -0.50331753,  0.7821196 , -1.7544931 ,  1.24106497, -1.0152971 ,
-           -0.01949091, -0.33151479,  0.19138253,  0.40349184,  0.31694823,
-           -0.01508142, -0.31330951,  0.40874228,  0.40874228,  0.58078882,
-            0.68378375,  0.84142914,  0.44756075, -0.87297183,  0.59695222,
-            1.96161733, -0.37126652,  0.27552912,  0.74547583, -0.16172925,
-            0.79969568, -0.20501522, -0.36181518,  0.13114261, -0.8461323 ,
-           -0.07749079, -0.07013026,  0.88022116, -0.5546825 ,  0.25232708,
-            0.09483573,  0.84910913,  1.33348018, -1.1971401 ,  0.49203123,
-            0.22365435,  1.3801812 ,  0.06885929,  1.07115053, -1.52225141,
-            1.50179721, -2.01528399, -1.31610679, -0.32298834, -0.80630885,
-           -0.6828592 ,  0.2897919 ,  1.64608125, -0.71793662, -0.5233058 ,
-            0.53549836,  0.61119221,  0.24235732, -1.3940593 ,  0.28380114,
-           -0.22629978, -0.19318957,  1.12543101, -1.40328285,  0.21054137]),
+             0.40608634,  0.40608634,  0.04610354, -0.78588609,  0.03773683,
+            -0.49373368,  0.21708042,  0.21708042, -0.14413517, -0.68284611,
+             0.76299659,  0.24128663,  0.24128663, -0.54835464, -0.84408365,
+            -0.82762589, -0.67429432, -0.67429432, -0.57900517, -0.97138029,
+            -0.37809745, -0.37809745, -0.19333181, -0.40329098,  0.54999765,
+             1.171515  ,  0.90279792,  0.90279792,  1.63830503, -0.90436674,
+            -0.02516293, -0.02516293, -0.22177082, -0.28061216, -0.10158021,
+             0.0807234 ,  0.16994063,  0.16994063,  0.4141503 ,  0.38505666,
+            -0.25936504,  2.12074192,  2.24467132,  0.9628703 , -1.37044749,
+             0.32983336, -0.55317525, -0.55317525, -0.40295662, -0.40295662,
+            -0.40295662,  0.49076931,  0.04234407, -1.0002905 ,  0.99823615,
+             0.99823615,  0.24915904, -0.00965061,  0.48519377,  0.21959942,
+            -0.93094702, -0.93094702, -0.76812553, -0.73699981, -0.91834134,
+            -0.91834134,  0.79522886, -0.04267669, -0.04267669,  0.51368761,
+             0.51368761,  0.02255577,  0.70823409,  0.70823409,  0.73921198,
+             0.30295007,  0.30295007,  0.30295007, -0.1300897 ,  0.44310964,
+            -1.35839961, -1.55398633, -0.57323153, -0.57323153, -1.15435458,
+            -0.17697793, -0.17697793,  0.2925856 , -0.56119025, -0.15360141,
+             0.83715916, -0.02340449, -0.02340449, -0.63074456, -0.82745942,
+            -0.67626237,  1.13814805, -0.81857813, -0.81857813,  0.26367166]),
         Metropolis: np.array([
             1.62434536, 1.01258895, 0.4844172, -0.58855142, 1.15626034, 0.39505344, 1.85716138,
             -0.20297933, -0.20297933, -0.20297933, -0.20297933, -1.08083775, -1.08083775,
@@ -425,17 +424,14 @@ class TestPopulationSamplers(object):
 
 @pytest.mark.xfail(condition=(theano.config.floatX == "float32"), reason="Fails on float32")
 class TestNutsCheckTrace(object):
-    def test_multiple_samplers(self):
+    def test_multiple_samplers(self, caplog):
         with Model():
             prob = Beta('prob', alpha=5., beta=3.)
             Binomial('outcome', n=1, p=prob)
-            # Catching warnings through multiprocessing doesn't work,
-            # so we have to use single threaded sampling.
-            with pytest.warns(None) as warns:
-                sample(3, tune=2, discard_tuned_samples=False,
-                       n_init=None, chains=1)
-            messages = [warn.message.args[0] for warn in warns]
-            assert any("contains only 3" in msg for msg in messages)
+            caplog.clear()
+            sample(3, tune=2, discard_tuned_samples=False,
+                   n_init=None, chains=1)
+            messages = [msg.msg for msg in caplog.records]
             assert all('boolean index did not' not in msg for msg in messages)
 
     def test_bad_init(self):
@@ -445,24 +441,25 @@ class TestNutsCheckTrace(object):
                 sample(init=None)
             error.match('Bad initial')
 
-    def test_linalg(self):
+    def test_linalg(self, caplog):
         with Model():
             a = Normal('a', shape=2)
             a = tt.switch(a > 0, np.inf, a)
             b = tt.slinalg.solve(floatX(np.eye(2)), a)
             Normal('c', mu=b, shape=2)
-            # Catching warnings through multiprocessing doesn't work,
-            # so we have to use single threaded sampling.
-            with pytest.warns(None) as warns:
-                trace = sample(20, init=None, tune=5, chains=1)
-            warns = [str(warn.message) for warn in warns]
+            caplog.clear()
+            trace = sample(20, init=None, tune=5, chains=2)
+            warns = [msg.msg for msg in caplog.records]
             assert np.any(trace['diverging'])
-            assert any('diverging samples after tuning' in warn
-                       for warn in warns)
-            # FIXME This test fails sporadically on py27.
-            # It seems that capturing warnings doesn't work as expected.
-            # assert any('contains only' in warn for warn in warns)
+            assert (
+                any('Divergences after tuning' in warn
+                    for warn in warns)
+                or
+                any('only diverging samples' in warn
+                    for warn in warns))
 
-            with pytest.raises(SamplingError):
-                sample(20, init=None, nuts_kwargs={'on_error': 'raise'})
+            with pytest.raises(ValueError) as error:
+                trace.report.raise_ok()
+            error.match('issues during sampling')
 
+            assert not trace.report.ok

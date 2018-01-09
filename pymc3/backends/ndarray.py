@@ -116,8 +116,9 @@ class NDArray(base.BaseTrace):
         self.samples = {var: vtrace[:self.draw_idx]
                         for var, vtrace in self.samples.items()}
         if self._stats is not None:
-            self._stats = [{var: trace[:self.draw_idx] for var, trace in stats.items()}
-                           for stats in self._stats]
+            self._stats = [
+                {var: trace[:self.draw_idx] for var, trace in stats.items()}
+                for stats in self._stats]
 
     # Selection methods
 

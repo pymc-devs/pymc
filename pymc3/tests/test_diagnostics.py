@@ -44,7 +44,7 @@ class TestGelmanRubin(SeededTest):
 
     def test_right_shape_python_float(self, shape=None, test_shape=None):
         """Check Gelman-Rubin statistic shape is correct w/ python float"""
-        n_jobs = 3
+        chains = 3
         n_samples = 5
 
         with Model():
@@ -55,9 +55,9 @@ class TestGelmanRubin(SeededTest):
 
             # start sampling at the MAP
             start = find_MAP()
-            step = NUTS(scaling=start)
+            step = NUTS(scaling=start, step_scale=0.1)
             ptrace = sample(n_samples, tune=0, step=step, start=start,
-                            njobs=n_jobs, random_seed=42)
+                            chains=chains, random_seed=42)
 
         rhat = gelman_rubin(ptrace)['x']
 
