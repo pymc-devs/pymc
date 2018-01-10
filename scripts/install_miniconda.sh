@@ -35,7 +35,7 @@ if [ ! -d $INSTALL_FOLDER ] || [ ! -e $INSTALL_FOLDER/bin/conda ]; then
 
   echo "Installing miniconda for python-$PYTHON_VERSION to $INSTALL_FOLDER"
   # install miniconda to home folder
-  bash ${DOWNLOAD_PATH} -b -p $INSTALL_FOLDER
+  bash ${DOWNLOAD_PATH} -b -f -p $INSTALL_FOLDER
 
   # tidy up
   rm ${DOWNLOAD_PATH}
