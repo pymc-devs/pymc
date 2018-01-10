@@ -215,12 +215,15 @@ class SMC(atext.ArrayStepSharedLLK):
                 # Tune scaling parameter
                 acc_rate = self.accepted / float(self.tune_interval)
                 self.scaling = tune(acc_rate)
+                # compute n_steps
+                if self.accepted == 0:
+                    acc_rate = 1 / float(self.tune_interval)
+                self.n_steps = int(max(1, np.log(0.01) / np.log(1 - acc_rate)))
                 # Reset counter
                 self.steps_until_tune = self.tune_interval
                 self.accepted = 0
                 self.stage_sample = 0
 
-                self.n_steps = int(max(1, np.log(0.01) / np.log1p(- acc_rate)))
 
             if not self.stage_sample:
                 self.proposal_samples_array = self.proposal_dist(self.n_steps)
