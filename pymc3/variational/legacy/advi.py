@@ -1,7 +1,7 @@
 
-'''
+"""
 (c) 2016, John Salvatier & Taku Yoshioka
-'''
+"""
 from collections import OrderedDict, namedtuple, deque
 
 import numpy as np
@@ -11,7 +11,7 @@ from theano.sandbox.rng_mrg import MRG_RandomStreams
 
 import pymc3 as pm
 from pymc3.backends.base import MultiTrace
-from ..theanof import floatX
+from pymc3.theanof import floatX
 
 from tqdm import trange
 
@@ -42,7 +42,7 @@ def advi(vars=None, start=None, model=None, n=5000, accurate_elbo=False,
     The return value of this function is an :code:`ADVIfit` object, which has
     variational parameters. If you want to draw samples from the variational
     posterior, you need to pass the :code:`ADVIfit` object to
-    :code:`pymc3.variational.sample_vp()`.
+    :code:`pymc3.variational.legacy.sample_vp()`.
 
     The variational parameters are defined on the transformed space, which is
     required to do ADVI on an unconstrained parameter space as described in
@@ -345,7 +345,7 @@ def sample_vp(
 
     Parameters
     ----------
-    vparams : dict or pymc3.variational.ADVIFit
+    vparams : dict or pymc3.variational.legacy.ADVIFit
         Estimated variational parameters of the model.
     draws : int
         Number of random samples.
