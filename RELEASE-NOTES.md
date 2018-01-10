@@ -1,6 +1,6 @@
 # Release Notes
 
-## PyMC 3.3. (Unreleased) 
+## PyMC 3.3 (January 9, 2018)
 
 ### New features
 
