@@ -28,6 +28,10 @@
 - Add Bayesian R2 score (for GLMs) `stats.r2_score` (#2696) and test (#2729).
 - SMC works with transformed variables (#2755)
 
+### Deprecations
+
+- Old (`minibatch-`)`advi` is moved to `pymc3/variational/legacy`
+
 
 ## PyMC3 3.2 (October 10, 2017)
 
