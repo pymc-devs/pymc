@@ -4,8 +4,8 @@ sudo: false
 cache:
   directories:
     - $HOME/.theano
-    - $HOME/minicoda2
-    - $HOME/minicoda3
+    - $HOME/miniconda2
+    - $HOME/miniconda3
 
 addons:
   apt_packages:
