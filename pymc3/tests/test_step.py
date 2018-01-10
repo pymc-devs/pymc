@@ -204,7 +204,6 @@ class TestStepMethods(object):  # yield test doesn't work subclassing object
                                        random_seed=1,
                                        n_jobs=1, progressbar=False,
                                        homepath=self.temp_dir)
-                print(trace.get_values('x'))
             elif step_method.__name__ == 'NUTS':
                 step = step_method(scaling=model.test_point)
                 trace = sample(0, tune=n_steps,
