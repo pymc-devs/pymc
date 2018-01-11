@@ -1,5 +1,5 @@
 language: python
-sudo: false
+sudo: required
 
 cache:
   directories:
@@ -15,12 +15,11 @@ before_install:
   - . ./scripts/install_miniconda.sh
   - sh -e /etc/init.d/xvfb start
   - export DISPLAY=":99.0"
+  - export MKL_THREADING_LAYER=GNU
 
 install:
   - . ./scripts/create_testenv.sh
-  - pip install coveralls pylint 
-  - pip install travis-sphinx==2.0.0
-  - pip install -r requirements-dev.txt
+  - pip install coveralls travis-sphinx==2.0.0
 
 env:
   - PYTHON_VERSION=2.7 FLOATX='float32' TESTCMD="--durations=10 --ignore=pymc3/tests/test_examples.py --cov-append --ignore=pymc3/tests/test_distributions_random.py --ignore=pymc3/tests/test_variational_inference.py --ignore=pymc3/tests/test_shared.py --ignore=pymc3/tests/test_smc.py --ignore=pymc3/tests/test_updates.py --ignore=pymc3/tests/test_posteriors.py --ignore=pymc3/tests/test_sampling.py"
