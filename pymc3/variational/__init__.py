@@ -1,5 +1,3 @@
-from . import legacy
-
 # commonly used
 from . import updates
 from .updates import (

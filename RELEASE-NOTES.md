@@ -31,7 +31,7 @@
 
 ### Deprecations
 
-- Old (`minibatch-`)`advi` is moved to `pymc3/variational/legacy` (#2781)
+- Old (`minibatch-`)`advi` is removed (#2781)
 
 
 ## PyMC3 3.2 (October 10, 2017)
