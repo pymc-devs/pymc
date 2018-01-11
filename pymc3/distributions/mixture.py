@@ -165,6 +165,8 @@ class NormalMixture(Mixture):
         the component standard deviations
     tau : array of floats
         the component precisions
+        
+    Note: You only have to pass in sd or tau, but not both.
     """
     def __init__(self, w, mu, *args, **kwargs):
         _, sd = get_tau_sd(tau=kwargs.pop('tau', None),
