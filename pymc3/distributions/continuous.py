@@ -268,9 +268,17 @@ class Normal(Continuous):
     mu : float
         Mean.
     sd : float
-        Standard deviation (sd > 0).
+        Standard deviation (sd > 0) (only required if tau is not specified).
     tau : float
-        Precision (tau > 0).
+        Precision (tau > 0) (only required if tau is not specified).
+        
+    Examples
+    --------
+    with pm.Model():
+        x = pm.Normal('x', mu=0, sd=10)
+        
+    with pm.Model():
+        x = pm.Normal('x', mu=0, tau=1/23)
     """
 
     def __init__(self, mu=0, sd=None, tau=None, **kwargs):
