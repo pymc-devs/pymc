@@ -7,7 +7,7 @@ Using shared variables
 
 Shared variables allow us to use values in theano functions that are
 not considered an input to the function, but can still be changed
-later. They are very similar to global variables in may ways.::
+later. They are very similar to global variables in may ways::
 
     a = tt.scalar('a')
     # Create a new shared variable with initial value of 0.1
@@ -23,7 +23,7 @@ their shape as long as the number of dimensions stays the same.
 
 We can use shared variables in PyMC3 to fit the same model to several
 datasets without the need to recreate the model each time (which can
-be time consuming if the number of datasets is large).::
+be time consuming if the number of datasets is large)::
 
     # We generate 10 datasets
     true_mu = [np.random.randn() for _ in range(10)]

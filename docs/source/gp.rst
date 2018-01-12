@@ -244,7 +244,7 @@ also need to include the additional arguments, :code:`X`, :code:`y`, and
 This second block produces the conditional distributions.  Notice that extra 
 arguments are required for conditionals of :math:`f1` and :math:`f2`, but not
 :math:`f`.  This is because those arguments are cached when calling 
-:code:`.marginal_likelihood` was called on :code:`gp`.
+:code:`.marginal_likelihood` on :code:`gp`.
 
 .. note::
   When constructing conditionals, the additional arguments :code:`X`, :code:`y`,
