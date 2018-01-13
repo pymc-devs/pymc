@@ -69,7 +69,8 @@ def assert_negative_support(var, label, distname, value=-1e-6):
 
 def get_tau_sd(tau=None, sd=None):
     """
-    Find precision and standard deviation
+    Find precision and standard deviation. The link between the two 
+    parameterizations is given by the inverse relationship:
 
     .. math::
         \tau = \frac{1}{\sigma^2}
