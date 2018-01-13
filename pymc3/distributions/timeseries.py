@@ -81,9 +81,9 @@ class AR(distribution.Continuous):
     rho : tensor
         Vector of autoregressive coefficients.
     sd : float
-        Standard deviation of innovation (sd > 0).
+        Standard deviation of innovation (sd > 0). (only required if tau is not specified)
     tau : float
-        Precision of innovation (tau > 0).
+        Precision of innovation (tau > 0). (only required if sd is not specified)
     constant: bool (optional, default = False)
         Whether to include a constant.
     init : distribution
