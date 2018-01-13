@@ -137,12 +137,12 @@ class GaussianRandomWalk(distribution.Continuous):
 
     Parameters
     ----------
-    tau : tensor
-        tau > 0, innovation precision
-    sd : tensor
-        sd > 0, innovation standard deviation (alternative to specifying tau)
     mu: tensor
         innovation drift, defaults to 0.0
+    sd : tensor
+        sd > 0, innovation standard deviation (only required if tau is not specified)
+    tau : tensor
+        tau > 0, innovation precision (only required if sd is not specified)
     init : distribution
         distribution for initial value (Defaults to Flat())
     """
