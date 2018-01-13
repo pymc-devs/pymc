@@ -967,7 +967,7 @@ class StudentT(Continuous):
         x = pm.StudentT('x', nu=15, mu=0, sd=10)
         
     with pm.Model():
-        x = pm.StudentT('x', nu=15, mu=0, sd=1/23)
+        x = pm.StudentT('x', nu=15, mu=0, lam=1/23)
     """
 
     def __init__(self, nu, mu=0, lam=None, sd=None, *args, **kwargs):
