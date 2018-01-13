@@ -838,8 +838,18 @@ class Lognormal(PositiveContinuous):
     ----------
     mu : float
         Location parameter.
+    sd : float
+        Standard deviation. (sd > 0). (only required if tau is not specified).
     tau : float
-        Scale parameter (tau > 0).
+        Scale parameter (tau > 0). (only required if sd is not specified).
+        
+    Example
+    -------
+    with pm.Model():
+        x = pm.Lognormal('x', mu=2, sd=30)
+        
+    with pm.Model():
+        x = pm.Lognormal('x', mu=2, tau=1/100)
     """
 
     def __init__(self, mu=0, sd=None, tau=None, *args, **kwargs):
