@@ -845,8 +845,19 @@ class Lognormal(PositiveContinuous):
     ----------
     mu : float
         Location parameter.
+    sd : float
+        Standard deviation. (sd > 0). (only required if tau is not specified).
     tau : float
-        Scale parameter (tau > 0).
+        Scale parameter (tau > 0). (only required if sd is not specified).
+        
+    Example
+    -------
+    # Example to show that we pass in only `sd` or `tau` but not both.
+    with pm.Model():
+        x = pm.Lognormal('x', mu=2, sd=30)
+
+    with pm.Model():
+        x = pm.Lognormal('x', mu=2, tau=1/100)
     """
 
     def __init__(self, mu=0, sd=None, tau=None, *args, **kwargs):
@@ -1596,9 +1607,19 @@ class HalfStudentT(PositiveContinuous):
         Degrees of freedom, also known as normality parameter (nu > 0).
     sd : float
         Scale parameter (sd > 0). Converges to the standard deviation as nu
-        increases
+        increases. (only required if lam is not specified)
     lam : float
-        Scale parameter (lam > 0). Converges to the precision as nu increases
+        Scale parameter (lam > 0). Converges to the precision as nu
+        increases. (only required if sd is not specified)
+        
+    Examples
+    --------
+    # Only pass in one of lam or sd, but not both.
+    with pm.Model():
+        x = pm.HalfStudentT('x', sd=10, nu=10)
+ 
+    with pm.Model():
+        x = pm.HalfStudentT('x', lam=4, nu=10)
     """
     def __init__(self, nu=1, sd=None, lam=None, *args, **kwargs):
         super(HalfStudentT, self).__init__(*args, **kwargs)
