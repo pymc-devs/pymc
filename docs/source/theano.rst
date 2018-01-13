@@ -38,7 +38,7 @@ is similar to eg SymPy's `Symbol`)::
     y = tt.ivector('y')
 
 Next, we use those variables to build up a symbolic representation
-of the output of our function. Note, that no computation is actually
+of the output of our function. Note that no computation is actually
 being done at this point. We only record what operations we need to
 do to compute the output::
 
@@ -57,7 +57,7 @@ do to compute the output::
    we are working with symbolic input instead of plain arrays.
 
 Now we can tell Theano to build a function that does this computation.
-With a typical configuration Theano generates C code, compiles it,
+With a typical configuration, Theano generates C code, compiles it,
 and creates a python function which wraps the C function::
 
     func = theano.function([a, x, y], [out])
@@ -79,7 +79,7 @@ in `theano.sparse`. For a detailed overview of available operations,
 see `the theano api docs <http://deeplearning.net/software/theano/library/tensor/index.html>`_.
 
 A notable exception where theano variables do *not* behave like
-NumPy arrays are operations involving conditional execution:
+NumPy arrays are operations involving conditional execution.
 
 Code like this won't work as expected::
 
