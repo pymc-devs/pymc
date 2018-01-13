@@ -355,9 +355,17 @@ class HalfNormal(PositiveContinuous):
     Parameters
     ----------
     sd : float
-        Standard deviation (sd > 0).
+        Standard deviation (sd > 0) .(only required if tau is not specified)
     tau : float
-        Precision (tau > 0).
+        Precision (tau > 0). (only required if sd is not specified)
+        
+    Examples
+    --------
+    with pm.Model():
+        x = pm.HalfNormal('x', sd=10)
+    
+    with pm.Model():
+        x = pm.HalfNormal('x', tau=1/15)
     """
 
     def __init__(self, sd=None, tau=None, *args, **kwargs):
@@ -948,8 +956,18 @@ class StudentT(Continuous):
         Degrees of freedom, also known as normality parameter (nu > 0).
     mu : float
         Location parameter.
+    sd : float
+        Standard deviation (sd > 0) (only required if lam is not specified)
     lam : float
-        Scale parameter (lam > 0).
+        Precision (lam > 0) (only required if sd is not specified)
+        
+    Examples
+    --------
+    with pm.Model():
+        x = pm.StudentT('x', nu=15, mu=0, sd=10)
+        
+    with pm.Model():
+        x = pm.StudentT('x', nu=15, mu=0, sd=1/23)
     """
 
     def __init__(self, nu, mu=0, lam=None, sd=None, *args, **kwargs):
