@@ -355,9 +355,9 @@ class HalfNormal(PositiveContinuous):
     Parameters
     ----------
     sd : float
-        Standard deviation (sd > 0) .(only required if tau is not specified)
+        Standard deviation (sd > 0) (only required if tau is not specified).
     tau : float
-        Precision (tau > 0). (only required if sd is not specified)
+        Precision (tau > 0) (only required if sd is not specified).
         
     Examples
     --------
