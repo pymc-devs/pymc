@@ -36,8 +36,20 @@ class Mixture(Distribution):
     w : array of floats
         w >= 0 and w <= 1
         the mixture weights
-    comp_dists : multidimensional PyMC3 distribution or iterable of one-dimensional PyMC3 distributions
-        the component distributions :math:`f_1, \ldots, f_n`
+    comp_dists : multidimensional PyMC3 distribution (e.g. `pm.Poisson.dist(...)`) 
+        or iterable of one-dimensional PyMC3 distributions the 
+        component distributions :math:`f_1, \ldots, f_n`
+
+    Example
+    -------
+    # 2-Mixture Poisson distribution
+    with pm.Model() as model:
+        lam = pm.Exponential('lam', lam=1, shape=(2,))  # `shape=(2,)` indicates two mixtures.
+        components = pm.Poisson.dist(mu=lam, shape=(2,))  # must use dist, not plain Poisson object!
+        
+        w = pm.Dirichlet('w', a=np.array([1, 1]))  # two mixture component weights.
+        
+        like = pm.Mixture('like', w=w, comp_dists=components, observed=mixture)
     """
     def __init__(self, w, comp_dists, *args, **kwargs):
         shape = kwargs.pop('shape', ())
