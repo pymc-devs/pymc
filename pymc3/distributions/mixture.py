@@ -36,8 +36,34 @@ class Mixture(Distribution):
     w : array of floats
         w >= 0 and w <= 1
         the mixture weights
-    comp_dists : multidimensional PyMC3 distribution or iterable of one-dimensional PyMC3 distributions
-        the component distributions :math:`f_1, \ldots, f_n`
+    comp_dists : multidimensional PyMC3 distribution (e.g. `pm.Poisson.dist(...)`)
+        or iterable of one-dimensional PyMC3 distributions the
+        component distributions :math:`f_1, \ldots, f_n`
+
+    Example
+    -------
+    # 2-Mixture Poisson distribution
+    with pm.Model() as model:
+        lam = pm.Exponential('lam', lam=1, shape=(2,))  # `shape=(2,)` indicates two mixtures.
+
+        # As we just need the logp, rather than add a RV to the model, we need to call .dist()
+        components = pm.Poisson.dist(mu=lam, shape=(2,))  
+
+        w = pm.Dirichlet('w', a=np.array([1, 1]))  # two mixture component weights.
+
+        like = pm.Mixture('like', w=w, comp_dists=components, observed=data)
+
+    # 2-Mixture Poisson using iterable of distributions.
+    with pm.Model() as model:
+        lam1 = pm.Exponential('lam1', lam=1)
+        lam2 = pm.Exponential('lam2', lam=1)
+
+        pois1 = pm.Poisson.dist(mu=lam1)
+        pois2 = pm.Poisson.dist(mu=lam2)
+
+        w = pm.Dirichlet('w', a=np.array([1, 1]))
+
+        like = pm.Mixture('like', w=w, comp_dists = [pois1, pois2], observed=data)
     """
     def __init__(self, w, comp_dists, *args, **kwargs):
         shape = kwargs.pop('shape', ())
@@ -165,7 +191,7 @@ class NormalMixture(Mixture):
         the component standard deviations
     tau : array of floats
         the component precisions
-        
+
     Note: You only have to pass in sd or tau, but not both.
     """
     def __init__(self, w, mu, *args, **kwargs):
