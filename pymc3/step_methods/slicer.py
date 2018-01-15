@@ -97,5 +97,8 @@ class Slice(ArrayStep):
     @staticmethod
     def competence(var, has_grad):
         if var.dtype in continuous_types:
+            if not has_grad and (var.shape is None or var.shape.ndim == 1):
+                return Competence.PREFERRED
             return Competence.COMPATIBLE
         return Competence.INCOMPATIBLE
+       
