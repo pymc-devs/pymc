@@ -31,6 +31,9 @@ def test_minibatch():
         pm.Normal('y', mu=y, observed=y_obs)
 
         step_method = pm.SGFS(batch_size=batch_size, step_size=1., total_size=total_size)
-        trace = pm.sample(draws=draws, step=step_method, init=None, njobs=2)
-
+        
+        chains = 1
+        njobs = max(1, chains) # njobs >= chains
+        trace = pm.sample(draws=draws, step=step_method, njobs=njobs, chains=chains)
+        
     np.testing.assert_allclose(np.mean(trace['abc'], axis=0), np.asarray([a, b, c]), rtol=0.1)
