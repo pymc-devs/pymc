@@ -1554,7 +1554,9 @@ class Weibull(PositiveContinuous):
         self.median = beta * tt.exp(gammaln(tt.log(2)))**(1. / alpha)
         self.variance = (beta**2) * \
             tt.exp(gammaln(1 + 2. / alpha - self.mean**2))
-        self.mode = tt.switch(self.alpha >= 1, self.beta * ((self.alpha - 1)/self.alpha) ** (1 / self.alpha) , 0)  # Reference: https://en.wikipedia.org/wiki/Weibull_distribution
+        self.mode = tt.switch(alpha >= 1, 
+                              beta * ((alpha - 1)/alpha) ** (1 / alpha), 
+                              0)  # Reference: https://en.wikipedia.org/wiki/Weibull_distribution
 
         assert_negative_support(alpha, 'alpha', 'Weibull')
         assert_negative_support(beta, 'beta', 'Weibull')
