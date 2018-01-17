@@ -286,6 +286,9 @@ class MultiTrace(object):
     @property
     def report(self):
         return self._report
+    
+    def __contains__(self, key):
+        return key in self.varnames
 
     def __getitem__(self, idx):
         if isinstance(idx, slice):
