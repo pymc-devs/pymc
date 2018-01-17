@@ -1,6 +1,6 @@
 # Release Notes
 
-## PyMC 3.3. (Unreleased) 
+## PyMC 3.3 (January 9, 2018)
 
 ### New features
 
@@ -27,6 +27,11 @@
 - Fixed `sample_ppc` and `sample_ppc_w` to iterate all chains(#2633, #2748)
 - Add Bayesian R2 score (for GLMs) `stats.r2_score` (#2696) and test (#2729).
 - SMC works with transformed variables (#2755)
+- Speedup OPVI (#2759)
+
+### Deprecations
+
+- Old (`minibatch-`)`advi` is removed (#2781)
 
 
 ## PyMC3 3.2 (October 10, 2017)

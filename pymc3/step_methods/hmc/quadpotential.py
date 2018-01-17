@@ -86,12 +86,18 @@ class QuadPotential(object):
     def velocity_energy(self, x, v_out):
         raise NotImplementedError('Abstract method')
 
-    def adapt(self, sample, grad):
+    def update(self, sample, grad, tune):
         """Inform the potential about a new sample during tuning.
 
         This can be used by adaptive potentials to change the
         mass matrix.
         """
+        pass
+
+    def raise_ok(self):
+        pass
+
+    def reset(self):
         pass
 
 
@@ -104,7 +110,7 @@ class QuadPotentialDiagAdapt(QuadPotential):
     """Adapt a diagonal mass matrix from the sample variances."""
 
     def __init__(self, n, initial_mean, initial_diag=None, initial_weight=0,
-                 adaptation_window=100, dtype=None):
+                 adaptation_window=101, dtype=None):
         """Set up a diagonal mass matrix."""
         if initial_diag is not None and initial_diag.ndim != 1:
             raise ValueError('Initial diagonal must be one-dimensional.')
@@ -162,8 +168,11 @@ class QuadPotentialDiagAdapt(QuadPotential):
         np.divide(1, self._stds, out=self._inv_stds)
         self._var_theano.set_value(self._var)
 
-    def adapt(self, sample, grad):
+    def update(self, sample, grad, tune):
         """Inform the potential about a new sample during tuning."""
+        if not tune:
+            return
+
         window = self.adaptation_window
 
         self._foreground_var.add_sample(sample, weight=1)
@@ -175,6 +184,16 @@ class QuadPotentialDiagAdapt(QuadPotential):
             self._background_var = _WeightedVariance(self._n, dtype=self.dtype)
 
         self._n_samples += 1
+
+    def raise_ok(self):
+        if np.any(self._stds == 0):
+            raise ValueError('Mass matrix contains zeros on the diagonal. '
+                             'Some derivatives might always be zero.')
+        if np.any(self._stds < 0):
+            raise ValueError('Mass matrix contains negative values on the '
+                             'diagonal.')
+        if np.any(~np.isfinite(self._stds)):
+            raise ValueError('Mass matrix contains non-finite values.')
 
 
 class QuadPotentialDiagAdaptGrad(QuadPotentialDiagAdapt):
@@ -196,15 +215,18 @@ class QuadPotentialDiagAdaptGrad(QuadPotentialDiagAdapt):
         np.divide(1, self._stds, out=self._inv_stds)
         self._var_theano.set_value(self._var)
 
-    def adapt(self, sample, grad):
+    def update(self, sample, grad, tune):
         """Inform the potential about a new sample during tuning."""
+        if not tune:
+            return
+
         self._grads1[:] += np.abs(grad)
         self._grads2[:] += np.abs(grad)
         self._ngrads1 += 1
         self._ngrads2 += 1
 
         if self._n_samples <= 150:
-            super().adapt(sample, grad)
+            super().update(sample, grad)
         else:
             self._update((self._ngrads1 / self._grads1) ** 2)
 
