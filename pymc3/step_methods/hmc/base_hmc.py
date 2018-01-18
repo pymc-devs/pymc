@@ -177,8 +177,9 @@ class BaseHMC(arraystep.GradientSharedStep):
                 WarningType.DIVERGENCES, msg, 'error', None, None, None)
             warnings.append(warning)
         elif n_divs > 0:
-            message = ('Divergences after tuning. Increase `target_accept` or '
-                       'reparameterize.')
+            message = ('There were %s divergences after tuning. Increase '
+                       '`target_accept` or reparameterize.'
+                       % n_divs)
             warning = SamplerWarning(
                 WarningType.DIVERGENCES, message, 'error', None, None, None)
             warnings.append(warning)
