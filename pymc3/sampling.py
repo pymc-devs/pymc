@@ -1,5 +1,6 @@
 from collections import defaultdict, Iterable
 from copy import copy
+from copy import deepcopy
 import pickle
 import logging
 import warnings
@@ -479,7 +480,7 @@ def _sample_many(draws, chain, chains, start, random_seed, step, **kwargs):
     traces = []
     for i in range(chains):
         trace = _sample(draws=draws, chain=chain + i, start=start[i],
-                        step=step, random_seed=random_seed[i], **kwargs)
+                        step=deepcopy(step), random_seed=random_seed[i], **kwargs)
         if trace is None:
             if len(traces) == 0:
                 raise ValueError('Sampling stopped before a sample was created.')
