@@ -42,28 +42,29 @@ class Mixture(Distribution):
 
     Example
     -------
-    # 2-Mixture Poisson distribution
-    with pm.Model() as model:
-        lam = pm.Exponential('lam', lam=1, shape=(2,))  # `shape=(2,)` indicates two mixtures.
+    .. code-block:: python
+        # 2-Mixture Poisson distribution
+        with pm.Model() as model:
+            lam = pm.Exponential('lam', lam=1, shape=(2,))  # `shape=(2,)` indicates two mixtures.
 
-        # As we just need the logp, rather than add a RV to the model, we need to call .dist()
-        components = pm.Poisson.dist(mu=lam, shape=(2,))  
+            # As we just need the logp, rather than add a RV to the model, we need to call .dist()
+            components = pm.Poisson.dist(mu=lam, shape=(2,))  
 
-        w = pm.Dirichlet('w', a=np.array([1, 1]))  # two mixture component weights.
+            w = pm.Dirichlet('w', a=np.array([1, 1]))  # two mixture component weights.
 
-        like = pm.Mixture('like', w=w, comp_dists=components, observed=data)
+            like = pm.Mixture('like', w=w, comp_dists=components, observed=data)
 
-    # 2-Mixture Poisson using iterable of distributions.
-    with pm.Model() as model:
-        lam1 = pm.Exponential('lam1', lam=1)
-        lam2 = pm.Exponential('lam2', lam=1)
+        # 2-Mixture Poisson using iterable of distributions.
+        with pm.Model() as model:
+            lam1 = pm.Exponential('lam1', lam=1)
+            lam2 = pm.Exponential('lam2', lam=1)
 
-        pois1 = pm.Poisson.dist(mu=lam1)
-        pois2 = pm.Poisson.dist(mu=lam2)
+            pois1 = pm.Poisson.dist(mu=lam1)
+            pois2 = pm.Poisson.dist(mu=lam2)
 
-        w = pm.Dirichlet('w', a=np.array([1, 1]))
+            w = pm.Dirichlet('w', a=np.array([1, 1]))
 
-        like = pm.Mixture('like', w=w, comp_dists = [pois1, pois2], observed=data)
+            like = pm.Mixture('like', w=w, comp_dists = [pois1, pois2], observed=data)
     """
     def __init__(self, w, comp_dists, *args, **kwargs):
         shape = kwargs.pop('shape', ())
