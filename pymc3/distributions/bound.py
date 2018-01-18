@@ -177,6 +177,7 @@ class Bound(object):
     Examples
     --------
     .. code-block:: python
+
         with pm.Model():
             NegativeNormal = pm.Bound(pm.Normal, upper=0.0)
             par1 = NegativeNormal('par2', mu=0.0, sd=1.0, testval=1.0)

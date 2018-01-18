@@ -43,6 +43,7 @@ class Mixture(Distribution):
     Example
     -------
     .. code-block:: python
+
         # 2-Mixture Poisson distribution
         with pm.Model() as model:
             lam = pm.Exponential('lam', lam=1, shape=(2,))  # `shape=(2,)` indicates two mixtures.

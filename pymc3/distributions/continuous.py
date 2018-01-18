@@ -276,6 +276,7 @@ class Normal(Continuous):
     Examples
     --------
     .. code-block:: python
+
         with pm.Model():
             x = pm.Normal('x', mu=0, sd=10)
             
@@ -364,6 +365,7 @@ class HalfNormal(PositiveContinuous):
     Examples
     --------
     .. code-block:: python
+
         with pm.Model():
             x = pm.HalfNormal('x', sd=10)
         
@@ -864,6 +866,7 @@ class Lognormal(PositiveContinuous):
     Example
     -------
     .. code-block:: python
+
         # Example to show that we pass in only `sd` or `tau` but not both.
         with pm.Model():
             x = pm.Lognormal('x', mu=2, sd=30)
@@ -968,6 +971,7 @@ class StudentT(Continuous):
     Examples
     --------
     .. code-block:: python
+
         with pm.Model():
             x = pm.StudentT('x', nu=15, mu=0, sd=10)
             
@@ -1638,6 +1642,7 @@ class HalfStudentT(PositiveContinuous):
     Examples
     --------
     .. code-block:: python
+
         # Only pass in one of lam or sd, but not both.
         with pm.Model():
             x = pm.HalfStudentT('x', sd=10, nu=10)
