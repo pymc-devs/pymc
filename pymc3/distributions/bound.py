@@ -176,13 +176,15 @@ class Bound(object):
 
     Examples
     --------
-    with pm.Model():
-        NegativeNormal = pm.Bound(pm.Normal, upper=0.0)
-        par1 = NegativeNormal('par2', mu=0.0, sd=1.0, testval=1.0)
+    .. code-block:: python
 
-        # or you can define it implicitly within the model context
-        par2 = pm.Bound(pm.Normal, lower=-1.0, upper=1.0)(
-                'par2', mu=0.0, sd=1.0, testval=1.0)
+        with pm.Model():
+            NegativeNormal = pm.Bound(pm.Normal, upper=0.0)
+            par1 = NegativeNormal('par2', mu=0.0, sd=1.0, testval=1.0)
+
+            # or you can define it implicitly within the model context
+            par2 = pm.Bound(pm.Normal, lower=-1.0, upper=1.0)(
+                    'par2', mu=0.0, sd=1.0, testval=1.0)
     """
 
     def __init__(self, distribution, lower=None, upper=None):

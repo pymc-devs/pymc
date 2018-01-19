@@ -275,11 +275,13 @@ class Normal(Continuous):
         
     Examples
     --------
-    with pm.Model():
-        x = pm.Normal('x', mu=0, sd=10)
-        
-    with pm.Model():
-        x = pm.Normal('x', mu=0, tau=1/23)
+    .. code-block:: python
+
+        with pm.Model():
+            x = pm.Normal('x', mu=0, sd=10)
+            
+        with pm.Model():
+            x = pm.Normal('x', mu=0, tau=1/23)
     """
 
     def __init__(self, mu=0, sd=None, tau=None, **kwargs):
@@ -362,11 +364,13 @@ class HalfNormal(PositiveContinuous):
         
     Examples
     --------
-    with pm.Model():
-        x = pm.HalfNormal('x', sd=10)
-    
-    with pm.Model():
-        x = pm.HalfNormal('x', tau=1/15)
+    .. code-block:: python
+
+        with pm.Model():
+            x = pm.HalfNormal('x', sd=10)
+        
+        with pm.Model():
+            x = pm.HalfNormal('x', tau=1/15)
     """
 
     def __init__(self, sd=None, tau=None, *args, **kwargs):
@@ -861,12 +865,14 @@ class Lognormal(PositiveContinuous):
         
     Example
     -------
-    # Example to show that we pass in only `sd` or `tau` but not both.
-    with pm.Model():
-        x = pm.Lognormal('x', mu=2, sd=30)
+    .. code-block:: python
 
-    with pm.Model():
-        x = pm.Lognormal('x', mu=2, tau=1/100)
+        # Example to show that we pass in only `sd` or `tau` but not both.
+        with pm.Model():
+            x = pm.Lognormal('x', mu=2, sd=30)
+
+        with pm.Model():
+            x = pm.Lognormal('x', mu=2, tau=1/100)
     """
 
     def __init__(self, mu=0, sd=None, tau=None, *args, **kwargs):
@@ -964,11 +970,13 @@ class StudentT(Continuous):
         
     Examples
     --------
-    with pm.Model():
-        x = pm.StudentT('x', nu=15, mu=0, sd=10)
-        
-    with pm.Model():
-        x = pm.StudentT('x', nu=15, mu=0, lam=1/23)
+    .. code-block:: python
+
+        with pm.Model():
+            x = pm.StudentT('x', nu=15, mu=0, sd=10)
+            
+        with pm.Model():
+            x = pm.StudentT('x', nu=15, mu=0, lam=1/23)
     """
 
     def __init__(self, nu, mu=0, lam=None, sd=None, *args, **kwargs):
@@ -1636,12 +1644,14 @@ class HalfStudentT(PositiveContinuous):
         
     Examples
     --------
-    # Only pass in one of lam or sd, but not both.
-    with pm.Model():
-        x = pm.HalfStudentT('x', sd=10, nu=10)
- 
-    with pm.Model():
-        x = pm.HalfStudentT('x', lam=4, nu=10)
+    .. code-block:: python
+
+        # Only pass in one of lam or sd, but not both.
+        with pm.Model():
+            x = pm.HalfStudentT('x', sd=10, nu=10)
+     
+        with pm.Model():
+            x = pm.HalfStudentT('x', lam=4, nu=10)
     """
     def __init__(self, nu=1, sd=None, lam=None, *args, **kwargs):
         super(HalfStudentT, self).__init__(*args, **kwargs)
