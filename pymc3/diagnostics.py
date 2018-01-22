@@ -225,33 +225,56 @@ def effective_n(mtrace, varnames=None, include_transformed=False):
         return Vhat
 
     def get_neff(x, Vhat):
+        def get_autocor(chains, t):
+            # Calculate lagged multiseries autocorrelation
+
+            def lagged_auto_cov(Xi, t):
+                # for series of values x_i, length N, compute empirical 
+                # auto-cov with lag t
+
+                N = len(Xi)
+
+                # use sample mean estimate from whole series
+                Xs = np.mean(Xi)
+
+                # construct copies of series shifted relative to each other,
+                # with mean subtracted from values
+                end_padded_series = np.zeros(N + t)
+                end_padded_series[:N] = Xi - Xs
+                start_padded_series = np.zeros(N + t)
+                start_padded_series[t:] = Xi - Xs
+
+                auto_cov = 1. / (N - 1) * \
+                    np.sum(start_padded_series * end_padded_series)
+                return auto_cov
+
+            auto_cor = []
+            # Compute autocorrelation of each chain in chains with lag t
+            # autocor-autocov relation: 
+            # autocor(chain=xi) = autocov(chain=xi, lag=t)/autocov(chain=xi, lag=0)
+            for xi in chains:
+                auto_cor.append(lagged_auto_cov(xi, t) / lagged_auto_cov(xi, 0))
+
+            return auto_cor
+
         # Number of chains is last dim (-1)
         num_chains = x.shape[-1]
 
         # Chain samples are second to last dim (-2)
         num_samples = x.shape[-2]
 
-        negative_autocorr = False
+        # Calculate within-chain variance
+        W = np.mean(np.var(x, axis=-2, ddof=1), axis=-1)
 
         rho = np.ones(num_samples)
-        t = 1
 
-        # Iterate until the sum of consecutive estimates of autocorrelation is
-        # negative
-        while not negative_autocorr and (t < num_samples):
+        # Iterate over different lags of autocorrelation
+        for t in range(num_samples):
+            rho[t] = 1. - (W - np.mean(get_autocor(x, t))) / Vhat
 
-            variogram = np.mean((x[t:, :] - x[:-t, :])**2)
-            rho[t] = 1. - variogram / (2. * Vhat)
-
-            negative_autocorr = sum(rho[t - 1:t + 1]) < 0
-
-            t += 1
-
-        if t % 2:
-            t -= 1
-
-        neff = num_chains * num_samples / (1. + 2 * rho[1:t-1].sum())
-        return min(num_chains * num_samples, np.floor(neff))
+        tHat = 1. + 2 * rho[0:2 * num_chains + 1].sum()
+        neff = num_chains * num_samples / tHat
+        return neff
 
     def generate_neff(trace_values):
         x = np.array(trace_values)
