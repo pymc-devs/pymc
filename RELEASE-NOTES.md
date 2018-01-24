@@ -10,12 +10,12 @@
 - New benchmark suite added (see http://pandas.pydata.org/speed/pymc3/)
 - Generalized random seed types
 - Update loo, new improved algorithm (#2730)
-- New CSG (Constant Stochastic Gradient) approximate posterior sampling
-  algorithm (#2544)
+- New CSG (Constant Stochastic Gradient) approximate posterior sampling algorithm (#2544)
 - Michael Osthege added support for population-samplers and implemented differential evolution metropolis (`DEMetropolis`).  For models with correlated dimensions that can not use gradient-based samplers, the `DEMetropolis` sampler can give higher effective sampling rates. (also see [PR#2735](https://github.com/pymc-devs/pymc3/pull/2735))
 - Forestplot supports multiple traces (#2736)
 - Add new plot, densityplot (#2741)
 - DIC and BPIC calculations have been deprecated
+- Refactor HMC and implemented new warning system (#2677, #2808) 
 
 ### Fixes
 
@@ -28,6 +28,7 @@
 - Add Bayesian R2 score (for GLMs) `stats.r2_score` (#2696) and test (#2729).
 - SMC works with transformed variables (#2755)
 - Speedup OPVI (#2759)
+- Multiple minor fixes and improvements in the docs (#2775, #2786, #2787, #2789, #2790, #2794, #2799, #2809)
 
 ### Deprecations
 
