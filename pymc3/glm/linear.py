@@ -5,6 +5,7 @@ from . import families
 from ..model import Model, Deterministic
 from .utils import any_to_tensor_and_labels
 
+
 __all__ = [
     'LinearComponent',
     'GLM'
@@ -79,12 +80,14 @@ class LinearComponent(Model):
         self.y_est = x.dot(self.coeffs)
 
     @classmethod
-    def from_formula(cls, formula, data, priors=None, vars=None, name='', model=None):
+    def from_formula(cls, formula, data, priors=None, vars=None,
+                     name='', model=None):
         import patsy
         y, x = patsy.dmatrices(formula, data)
         labels = x.design_info.column_names
-        return cls(np.asarray(x), np.asarray(y)[:, 0], intercept=False, labels=labels,
-                   priors=priors, vars=vars, name=name, model=model)
+        return cls(np.asarray(x), np.asarray(y)[:, -1], intercept=False,
+                   labels=labels, priors=priors, vars=vars, name=name,
+                   model=model)
 
 
 class GLM(LinearComponent):
@@ -132,7 +135,9 @@ class GLM(LinearComponent):
         import patsy
         y, x = patsy.dmatrices(formula, data)
         labels = x.design_info.column_names
-        return cls(np.asarray(x), np.asarray(y)[:, 0], intercept=False, labels=labels,
-                   priors=priors, vars=vars, family=family, name=name, model=model)
+        return cls(np.asarray(x), np.asarray(y)[:, -1], intercept=False,
+                   labels=labels, priors=priors, vars=vars, family=family,
+                   name=name, model=model)
+
 
 glm = GLM

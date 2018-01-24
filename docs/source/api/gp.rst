@@ -8,12 +8,15 @@ GP Implementations
 Mean Functions
 --------------
 
-.. currentmodule:: pymc3.gp.cov
+.. currentmodule:: pymc3.gp.mean
 .. autosummary::
 
    Zero
    Constant
    Linear
+
+.. automodule:: pymc3.gp.mean
+   :members:
 
 Covariance Functions
 --------------------

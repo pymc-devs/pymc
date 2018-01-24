@@ -135,5 +135,5 @@ def test_user_potential():
     pot = Potential(floatX([1]))
     with model:
         step = pymc3.NUTS(potential=pot)
-        pymc3.sample(10, init=None, step=step)
+        pymc3.sample(10, init=None, step=step, chains=1)
     assert called

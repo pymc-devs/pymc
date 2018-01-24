@@ -9,7 +9,7 @@ from pymc3.model import Model
 from pymc3.step_methods import (NUTS, BinaryGibbsMetropolis, CategoricalGibbsMetropolis,
                                 Metropolis, Slice, CompoundStep, NormalProposal,
                                 MultivariateNormalProposal, HamiltonianMC,
-                                EllipticalSlice, smc)
+                                EllipticalSlice, smc, DEMetropolis)
 from pymc3.theanof import floatX
 from pymc3 import SamplingError
 from pymc3.distributions import (
@@ -209,11 +209,11 @@ class TestStepMethods(object):  # yield test doesn't work subclassing object
                 step = step_method(scaling=model.test_point)
                 trace = sample(0, tune=n_steps,
                                discard_tuned_samples=False,
-                               step=step, random_seed=1)
+                               step=step, random_seed=1, chains=1)
             else:
                 trace = sample(0, tune=n_steps,
                                discard_tuned_samples=False,
-                               step=step_method(), random_seed=1)
+                               step=step_method(), random_seed=1, chains=1)
         assert_array_almost_equal(
             trace.get_values('x'),
             self.master_samples[step_method],
@@ -243,7 +243,7 @@ class TestStepMethods(object):  # yield test doesn't work subclassing object
                     HamiltonianMC(scaling=C, is_cov=True, blocked=False)]),
             )
         for step in steps:
-            trace = sample(0, tune=8000,
+            trace = sample(0, tune=8000, chains=1,
                            discard_tuned_samples=False, step=step,
                            start=start, model=model, random_seed=1)
             self.check_stat(check, trace, step.__class__.__name__)
@@ -260,7 +260,8 @@ class TestStepMethods(object):  # yield test doesn't work subclassing object
                 Metropolis(S=C, proposal_dist=MultivariateNormalProposal),
             )
         for step in steps:
-            trace = sample(20000, tune=0, step=step, start=start, model=model, random_seed=1)
+            trace = sample(20000, tune=0, step=step, start=start, model=model,
+                           random_seed=1, chains=1)
             self.check_stat(check, trace, step.__class__.__name__)
 
     def test_step_categorical(self):
@@ -288,7 +289,8 @@ class TestStepMethods(object):  # yield test doesn't work subclassing object
                 EllipticalSlice(prior_chol=L),
             )
         for step in steps:
-            trace = sample(5000, tune=0, step=step, start=start, model=model, random_seed=1)
+            trace = sample(5000, tune=0, step=step, start=start, model=model,
+                           random_seed=1, chains=1)
             self.check_stat(check, trace, step.__class__.__name__)
 
 
@@ -316,7 +318,7 @@ class TestMetropolisProposal(object):
 
 
 class TestCompoundStep(object):
-    samplers = (Metropolis, Slice, HamiltonianMC, NUTS)
+    samplers = (Metropolis, Slice, HamiltonianMC, NUTS, DEMetropolis)
 
     @pytest.mark.skipif(theano.config.floatX == "float32",
                         reason="Test fails on 32 bit due to linalg issues")
@@ -391,15 +393,33 @@ class TestAssignStepMethods(object):
         assert isinstance(steps, Slice)
 
 
+class TestPopulationSamplers(object):
+    def test_checks_population_size(self):
+        """Test that population samplers check the population size."""
+        steppers = [
+            DEMetropolis
+        ]
+        with Model() as model:
+            n = Normal('n', mu=0, sd=1)
+            for stepper in steppers:
+                step = stepper()
+                with pytest.raises(ValueError):
+                    trace = sample(draws=100, chains=1, step=step)
+                trace = sample(draws=100, chains=4, step=step)
+        pass
+
+
 @pytest.mark.xfail(condition=(theano.config.floatX == "float32"), reason="Fails on float32")
 class TestNutsCheckTrace(object):
     def test_multiple_samplers(self):
         with Model():
             prob = Beta('prob', alpha=5., beta=3.)
             Binomial('outcome', n=1, p=prob)
+            # Catching warnings through multiprocessing doesn't work,
+            # so we have to use single threaded sampling.
             with pytest.warns(None) as warns:
                 sample(3, tune=2, discard_tuned_samples=False,
-                       n_init=None)
+                       n_init=None, chains=1)
             messages = [warn.message.args[0] for warn in warns]
             assert any("contains only 3" in msg for msg in messages)
             assert all('boolean index did not' not in msg for msg in messages)
@@ -417,8 +437,10 @@ class TestNutsCheckTrace(object):
             a = tt.switch(a > 0, np.inf, a)
             b = tt.slinalg.solve(floatX(np.eye(2)), a)
             Normal('c', mu=b, shape=2)
+            # Catching warnings through multiprocessing doesn't work,
+            # so we have to use single threaded sampling.
             with pytest.warns(None) as warns:
-                trace = sample(20, init=None, tune=5)
+                trace = sample(20, init=None, tune=5, chains=1)
             warns = [str(warn.message) for warn in warns]
             assert np.any(trace['diverging'])
             assert any('diverging samples after tuning' in warn

@@ -28,7 +28,7 @@ class TestSample(SeededTest):
         for _ in range(2):
             np.random.seed(1)
             with self.model:
-                pm.sample(1, tune=0)
+                pm.sample(1, tune=0, chains=1)
                 random_numbers.append(np.random.random())
         assert random_numbers[0] == random_numbers[1]
 
@@ -125,7 +125,8 @@ class TestSample(SeededTest):
     @pytest.mark.parametrize(
         'start', [
             {'x': np.array([1, 1])},
-            [{'x': [10, 10]}, {'x': [-10, -10]}]
+            {'x': [10, 10]},
+            {'x': [-10, -10]},
         ]
     )
     def test_sample_start_good_shape(self, start):
@@ -202,13 +203,15 @@ class TestChooseBackend(object):
         assert backend.called
 
 
-class TestSamplePPC(object):
+class TestSamplePPC(SeededTest):
     def test_normal_scalar(self):
         with pm.Model() as model:
             a = pm.Normal('a', mu=0, sd=1)
             trace = pm.sample()
 
         with model:
+            # test list input
+            ppc0 = pm.sample_ppc([model.test_point], samples=10)
             ppc = pm.sample_ppc(trace, samples=1000, vars=[])
             assert len(ppc) == 0
             ppc = pm.sample_ppc(trace, samples=1000, vars=[a])
@@ -227,6 +230,8 @@ class TestSamplePPC(object):
             trace = pm.sample()
 
         with model:
+	    # test list input
+            ppc0 = pm.sample_ppc([model.test_point], samples=10)
             ppc = pm.sample_ppc(trace, samples=10, vars=[])
             assert len(ppc) == 0
             ppc = pm.sample_ppc(trace, samples=10, vars=[a])
@@ -244,12 +249,38 @@ class TestSamplePPC(object):
             trace = pm.sample()
 
         with model:
+	    # test list input
+            ppc0 = pm.sample_ppc([model.test_point], samples=10)
             ppc = pm.sample_ppc(trace, samples=1000, vars=[b])
             assert len(ppc) == 1
             assert ppc['b'].shape == (1000,)
             scale = np.sqrt(1 + 0.2 ** 2)
             _, pval = stats.kstest(ppc['b'], stats.norm(scale=scale).cdf)
             assert pval > 0.001
+
+class TestSamplePPCW(SeededTest):
+    def test_sample_ppc_w(self):
+        data0 = np.random.normal(0, 1, size=500)
+
+        with pm.Model() as model_0:
+            mu = pm.Normal('mu', mu=0, sd=1)
+            y = pm.Normal('y', mu=mu, sd=1, observed=data0)
+            trace_0 = pm.sample()
+
+        with pm.Model() as model_1:
+            mu = pm.Normal('mu', mu=0, sd=1, shape=len(data0))
+            y = pm.Normal('y', mu=mu, sd=1, observed=data0)
+            trace_1 = pm.sample()
+
+        traces = [trace_0, trace_0]
+        models = [model_0, model_0]
+        ppc = pm.sample_ppc_w(traces, 1000, models)
+        assert ppc['y'].shape == (1000,)
+
+        traces = [trace_0, trace_1]
+        models = [model_0, model_1]
+        ppc = pm.sample_ppc_w(traces, 100, models)
+        assert ppc['y'].shape == (100, 500)
 
 
 @pytest.mark.parametrize('method', [
@@ -262,8 +293,12 @@ def test_exec_nuts_init(method):
         pm.HalfNormal('b', sd=1)
     with model:
         start, _ = pm.init_nuts(init=method, n_init=10)
-        assert isinstance(start, dict)
-        start, _ = pm.init_nuts(init=method, n_init=10, njobs=2)
+        assert isinstance(start, list)
+        assert len(start) == 1
+        assert isinstance(start[0], dict)
+        assert 'a' in start[0] and 'b_log__' in start[0]
+        start, _ = pm.init_nuts(init=method, n_init=10, chains=2)
         assert isinstance(start, list)
         assert len(start) == 2
         assert isinstance(start[0], dict)
+        assert 'a' in start[0] and 'b_log__' in start[0]

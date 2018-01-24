@@ -23,7 +23,7 @@ def test_plots():
         start = model.test_point
         h = find_hessian(start)
         step = Metropolis(model.vars, h)
-        trace = sample(3000, tune=0, step=step, start=start)
+        trace = sample(3000, tune=0, step=step, start=start, chains=1)
 
     traceplot(trace)
     forestplot(trace)
@@ -34,7 +34,7 @@ def test_plots():
 
 def test_energyplot():
     with asmod.build_model():
-        trace = sample()
+        trace = sample(njobs=1)
 
     energyplot(trace)
     energyplot(trace, shade=0.5, alpha=0)
@@ -48,21 +48,22 @@ def test_plots_categorical():
         start = model.test_point
         h = find_hessian(start)
         step = Metropolis(model.vars, h)
-        trace = sample(3000, tune=0, step=step, start=start)
+        trace = sample(3000, tune=0, step=step, start=start, chains=1)
 
-        traceplot(trace)
+    traceplot(trace)
 
 
 def test_plots_multidimensional():
-    # Test single trace
+    # Test multiple trace
     start, model, _ = multidimensional_model()
     with model:
         h = np.diag(find_hessian(start))
         step = Metropolis(model.vars, h)
         trace = sample(3000, tune=0, step=step, start=start)
-
-        traceplot(trace)
-        plot_posterior(trace)
+    
+    traceplot(trace)
+    plot_posterior(trace)
+    forestplot(trace)
 
 @pytest.mark.xfail(condition=(theano.config.floatX == "float32"), reason="Fails on GPU due to njobs=2")
 def test_multichain_plots():
@@ -93,14 +94,26 @@ def test_make_2d():
 
 
 def test_plots_transformed():
-    with pm.Model() as model:
+    with pm.Model():
         pm.Uniform('x', 0, 1)
         step = pm.Metropolis()
-        trace = pm.sample(100, tune=0, step=step)
+        trace = pm.sample(100, tune=0, step=step, chains=1)
 
     assert traceplot(trace).shape == (1, 2)
     assert traceplot(trace, plot_transformed=True).shape == (2, 2)
     assert autocorrplot(trace).shape == (1, 1)
     assert autocorrplot(trace, plot_transformed=True).shape == (2, 1)
+    assert plot_posterior(trace).numCols == 1
+    assert plot_posterior(trace, plot_transformed=True).shape == (2, )
+
+    with pm.Model():
+        pm.Uniform('x', 0, 1)
+        step = pm.Metropolis()
+        trace = pm.sample(100, tune=0, step=step, chains=2)
+
+    assert traceplot(trace).shape == (1, 2)
+    assert traceplot(trace, plot_transformed=True).shape == (2, 2)
+    assert autocorrplot(trace).shape == (1, 2)
+    assert autocorrplot(trace, plot_transformed=True).shape == (2, 2)
     assert plot_posterior(trace).numCols == 1
     assert plot_posterior(trace, plot_transformed=True).shape == (2, )

@@ -1,3 +1,5 @@
+import functools
+
 import numpy as np
 import theano.tensor as tt
 
@@ -70,7 +72,7 @@ class Latent(Base):
     mean_func : None, instance of Mean
         The mean function.  Defaults to zero.
 
-    Example
+    Examples
     --------
     .. code:: python
 
@@ -340,7 +342,7 @@ class Marginal(Base):
     mean_func : None, instance of Mean
         The mean function.  Defaults to zero.
 
-    Example
+    Examples
     --------
     .. code:: python
 
@@ -579,7 +581,7 @@ class MarginalSparse(Marginal):
     approx : string
         The approximation to use.  Must be one of `VFE`, `FITC` or `DTC`.
 
-    Example
+    Examples
     --------
     .. code:: python
 
@@ -635,7 +637,10 @@ class MarginalSparse(Marginal):
         new_gp.approx = self.approx
         return new_gp
 
-    def _build_marginal_likelihood_logp(self, X, Xu, y, sigma):
+    # Use y as first argument, so that we can use functools.partial
+    # in marginal_likelihood instead of lambda. This makes pickling
+    # possible.
+    def _build_marginal_likelihood_logp(self, y, X, Xu, sigma):
         sigma2 = tt.square(sigma)
         Kuu = self.cov_func(Xu)
         Kuf = self.cov_func(Xu, X)
@@ -696,7 +701,8 @@ class MarginalSparse(Marginal):
         self.Xu = Xu
         self.y = y
         self.sigma = sigma
-        logp = lambda y: self._build_marginal_likelihood_logp(X, Xu, y, sigma)
+        logp = functools.partial(self._build_marginal_likelihood_logp,
+                                 X=X, Xu=Xu, sigma=sigma)
         if is_observed:
             return pm.DensityDist(name, logp, observed=y, **kwargs)
         else:

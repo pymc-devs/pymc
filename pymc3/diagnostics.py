@@ -3,6 +3,7 @@
 import numpy as np
 from .stats import statfunc
 from .util import get_default_varnames
+from .backends.base import MultiTrace
 
 __all__ = ['geweke', 'gelman_rubin', 'effective_n']
 
@@ -108,7 +109,7 @@ def gelman_rubin(mtrace, varnames=None, include_transformed=False):
 
     Parameters
     ----------
-    mtrace : MultiTrace
+    mtrace : MultiTrace or trace object
       A MultiTrace object containing parallel traces (minimum 2)
       of one or more stochastic parameters.
     varnames : list
@@ -119,7 +120,7 @@ def gelman_rubin(mtrace, varnames=None, include_transformed=False):
 
     Returns
     -------
-    Rhat : dict
+    Rhat : dict of floats (MultiTrace) or float (trace object)
       Returns dictionary of the potential scale reduction
       factors, :math:`\hat{R}`
 
@@ -141,19 +142,7 @@ def gelman_rubin(mtrace, varnames=None, include_transformed=False):
     Brooks and Gelman (1998)
     Gelman and Rubin (1992)"""
 
-    if mtrace.nchains < 2:
-        raise ValueError(
-            'Gelman-Rubin diagnostic requires multiple chains '
-            'of the same length.')
-
-    if varnames is None:
-        varnames = get_default_varnames(mtrace.varnames, include_transformed=include_transformed)
-
-    Rhat = {}
-    for var in varnames:
-        x = np.array(mtrace.get_values(var, combine=False))
-        num_samples = x.shape[1]
-
+    def rscore(x, num_samples):
         # Calculate between-chain variance
         B = num_samples * np.var(np.mean(x, axis=1), axis=0, ddof=1)
 
@@ -163,7 +152,26 @@ def gelman_rubin(mtrace, varnames=None, include_transformed=False):
         # Estimate of marginal posterior variance
         Vhat = W * (num_samples - 1) / num_samples + B / num_samples
 
-        Rhat[var] = np.sqrt(Vhat / W)
+        return np.sqrt(Vhat / W)
+
+    if not isinstance(mtrace, MultiTrace):
+        # Return rscore for passed arrays
+        return rscore(np.array(mtrace), mtrace.shape[1])
+
+    if mtrace.nchains < 2:
+        raise ValueError(
+            'Gelman-Rubin diagnostic requires multiple chains '
+            'of the same length.')
+
+    if varnames is None:
+        varnames = get_default_varnames(mtrace.varnames, include_transformed=include_transformed)
+
+    Rhat = {}
+
+    for var in varnames:
+        x = np.array(mtrace.get_values(var, combine=False))
+        num_samples = x.shape[1]
+        Rhat[var] = rscore(x, num_samples)
 
     return Rhat
 
@@ -173,7 +181,7 @@ def effective_n(mtrace, varnames=None, include_transformed=False):
 
     Parameters
     ----------
-    mtrace : MultiTrace
+    mtrace : MultiTrace or trace object
       A MultiTrace object containing parallel traces (minimum 2)
       of one or more stochastic parameters.
     varnames : list
@@ -184,7 +192,7 @@ def effective_n(mtrace, varnames=None, include_transformed=False):
 
     Returns
     -------
-    n_eff : float
+    n_eff : dictionary of floats (MultiTrace) or float (trace object)
         Return the effective sample size, :math:`\hat{n}_{eff}`
 
     Notes
@@ -201,17 +209,8 @@ def effective_n(mtrace, varnames=None, include_transformed=False):
     ----------
     Gelman et al. (2014)"""
 
-    if mtrace.nchains < 2:
-        raise ValueError(
-            'Calculation of effective sample size requires multiple chains '
-            'of the same length.')
-
-    if varnames is None:
-        varnames = get_default_varnames(mtrace.varnames, include_transformed=include_transformed)
-
     def get_vhat(x):
-        # number of chains is last dim (-1)
-        # chain samples are second to last dim (-2)
+        # Chain samples are second to last dim (-2)
         num_samples = x.shape[-2]
 
         # Calculate between-chain variance
@@ -220,19 +219,23 @@ def effective_n(mtrace, varnames=None, include_transformed=False):
         # Calculate within-chain variance
         W = np.mean(np.var(x, axis=-2, ddof=1), axis=-1)
 
-        # Estimate of marginal posterior variance
+        # Estimate marginal posterior variance
         Vhat = W * (num_samples - 1) / num_samples + B / num_samples
 
         return Vhat
 
     def get_neff(x, Vhat):
+        # Number of chains is last dim (-1)
         num_chains = x.shape[-1]
+
+        # Chain samples are second to last dim (-2)
         num_samples = x.shape[-2]
 
         negative_autocorr = False
-        t = 1
 
         rho = np.ones(num_samples)
+        t = 1
+
         # Iterate until the sum of consecutive estimates of autocorrelation is
         # negative
         while not negative_autocorr and (t < num_samples):
@@ -250,37 +253,50 @@ def effective_n(mtrace, varnames=None, include_transformed=False):
         return min(num_chains * num_samples,
                    int(num_chains * num_samples / (1. + 2 * rho[1:t-1].sum())))
 
-    n_eff = {}
-    for var in varnames:
-        x = np.array(mtrace.get_values(var, combine=False))
+    def generate_neff(trace_values):
+        x = np.array(trace_values)
+        shape = x.shape
 
-        # make sure to handle scalars correctly - add extra dim if needed
-        if len(x.shape) == 2:
-            is_scalar = True
-            x = np.atleast_3d(mtrace.get_values(var, combine=False))
-        else:
-            is_scalar = False
+        # Make sure to handle scalars correctly, adding extra dimensions if
+        # needed. We could use np.squeeze here, but we don't want to squeeze
+        # out dummy dimensions that a user inputs.
+        if len(shape) == 2:
+            x = np.atleast_3d(trace_values)
 
-        # now we are going to transpose all dims - makes the loop below
+        # Transpose all dimensions, which makes the loop below
         # easier by moving the axes of the variable to the front instead
-        # of the chain and sample axes
+        # of the chain and sample axes.
         x = x.transpose()
 
         Vhat = get_vhat(x)
 
-        # get an array the same shape as the var
+        # Get an array the same shape as the var
         _n_eff = np.zeros(x.shape[:-2])
 
-        # iterate over tuples of indices of the shape of var
+        # Iterate over tuples of indices of the shape of var
         for tup in np.ndindex(*list(x.shape[:-2])):
             _n_eff[tup] = get_neff(x[tup], Vhat[tup])
 
-        # we could be using np.squeeze here, but we don't want to squeeze
-        # out dummy dimensions that a user inputs
-        if is_scalar:
-            n_eff[var] = _n_eff[0]
-        else:
-            # make sure to transpose the dims back
-            n_eff[var] = np.transpose(_n_eff)
+        if len(shape) == 2:
+            return _n_eff[0]
+
+        return np.transpose(_n_eff)
+
+    if not isinstance(mtrace, MultiTrace):
+        # Return neff for non-multitrace array
+        return generate_neff(mtrace)
+
+    if mtrace.nchains < 2:
+        raise ValueError(
+            'Calculation of effective sample size requires multiple chains '
+            'of the same length.')
+
+    if varnames is None:
+        varnames = get_default_varnames(mtrace.varnames,include_transformed=include_transformed)
+
+    n_eff = {}
+
+    for var in varnames:
+        n_eff[var] = generate_neff(mtrace.get_values(var, combine=False))
 
     return n_eff

@@ -198,21 +198,21 @@ class QuadPotentialDiagAdaptGrad(QuadPotentialDiagAdapt):
 
     def adapt(self, sample, grad):
         """Inform the potential about a new sample during tuning."""
-        self._grads1[:] += grad ** 2
-        self._grads2[:] += grad ** 2
+        self._grads1[:] += np.abs(grad)
+        self._grads2[:] += np.abs(grad)
         self._ngrads1 += 1
         self._ngrads2 += 1
 
         if self._n_samples <= 150:
             super().adapt(sample, grad)
         else:
-            self._update(self._ngrads1 / self._grads1)
+            self._update((self._ngrads1 / self._grads1) ** 2)
 
         if self._n_samples > 100 and self._n_samples % 100 == 50:
             self._ngrads1 = self._ngrads2
-            self._ngrads2 = 0
+            self._ngrads2 = 1
             self._grads1[:] = self._grads2
-            self._grads2[:] = 0
+            self._grads2[:] = 1
 
 
 class _WeightedVariance(object):
