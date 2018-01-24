@@ -170,7 +170,8 @@ class NUTS(BaseHMC):
             if divergence_info or turning:
                 break
         else:
-            self._reached_max_treedepth += 1
+            if not self.tune:
+                self._reached_max_treedepth += 1
 
         stats = tree.stats()
         accept_stat = stats['mean_tree_accept']
@@ -185,8 +186,10 @@ class NUTS(BaseHMC):
 
     def warnings(self, strace):
         warnings = super(NUTS, self).warnings(strace)
+        n_samples = self._samples_after_tune
+        n_treedepth = self._reached_max_treedepth
 
-        if np.mean(self._reached_max_treedepth) > 0.05:
+        if n_samples > 0 and n_treedepth / float(n_samples) > 0.05:
             msg = ('The chain reached the maximum tree depth. Increase '
                    'max_treedepth, increase target_accept or reparameterize.')
             warn = SamplerWarning(WarningType.TREEDEPTH, msg, 'warn',
