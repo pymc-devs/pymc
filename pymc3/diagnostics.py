@@ -237,8 +237,11 @@ def effective_n(mtrace, varnames=None, include_transformed=False):
         rho = np.ones(num_samples)
 
         # Iterate over different lags of autocorrelation
-        for t in range(num_samples):
-            rho[t] = 1. - (W - np.mean(autocorr(x, t))) / Vhat
+        for t in range(1,num_chains-1):
+            auto_corr = []
+            for m in range(num_samples):
+                auto_corr.append(autocorr(x[m], t))
+            rho[t] = 1. - (W - np.mean(auto_corr)) / Vhat
 
         tHat = 1. + 2 * rho[0:2 * num_chains + 1].sum()
         neff = num_chains * num_samples / tHat
