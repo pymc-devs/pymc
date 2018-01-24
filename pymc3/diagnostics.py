@@ -1,7 +1,7 @@
 """Convergence diagnostics and model validation"""
 
 import numpy as np
-from .stats import statfunc
+from .stats import statfunc, autocorr
 from .util import get_default_varnames
 from .backends.base import MultiTrace
 
@@ -225,38 +225,6 @@ def effective_n(mtrace, varnames=None, include_transformed=False):
         return Vhat
 
     def get_neff(x, Vhat):
-        def get_autocor(chains, t):
-            # Calculate lagged multiseries autocorrelation
-
-            def lagged_auto_cov(Xi, t):
-                # for series of values x_i, length N, compute empirical 
-                # auto-cov with lag t
-
-                N = len(Xi)
-
-                # use sample mean estimate from whole series
-                Xs = np.mean(Xi)
-
-                # construct copies of series shifted relative to each other,
-                # with mean subtracted from values
-                end_padded_series = np.zeros(N + t)
-                end_padded_series[:N] = Xi - Xs
-                start_padded_series = np.zeros(N + t)
-                start_padded_series[t:] = Xi - Xs
-
-                auto_cov = 1. / (N - 1) * \
-                    np.sum(start_padded_series * end_padded_series)
-                return auto_cov
-
-            auto_cor = []
-            # Compute autocorrelation of each chain in chains with lag t
-            # autocor-autocov relation: 
-            # autocor(chain=xi) = autocov(chain=xi, lag=t)/autocov(chain=xi, lag=0)
-            for xi in chains:
-                auto_cor.append(lagged_auto_cov(xi, t) / lagged_auto_cov(xi, 0))
-
-            return auto_cor
-
         # Number of chains is last dim (-1)
         num_chains = x.shape[-1]
 
@@ -270,7 +238,7 @@ def effective_n(mtrace, varnames=None, include_transformed=False):
 
         # Iterate over different lags of autocorrelation
         for t in range(num_samples):
-            rho[t] = 1. - (W - np.mean(get_autocor(x, t))) / Vhat
+            rho[t] = 1. - (W - np.mean(autocorr(x, t))) / Vhat
 
         tHat = 1. + 2 * rho[0:2 * num_chains + 1].sum()
         neff = num_chains * num_samples / tHat
