@@ -145,17 +145,26 @@ class BaseSampler(SeededTest):
             npt.assert_allclose(rhat[var], 1, rtol=0.01)
 
 
+class HMCFixture(BaseSampler):
+    @classmethod
+    def make_step(cls):
+        args = {}
+        if hasattr(cls, 'step_args'):
+            args.update(cls.step_args)
+        return pm.HamiltonianMC(**args)
+
+    def test_target_accept(self):
+        accept = self.trace[self.burn:]['accept']
+        npt.assert_allclose(accept.mean(), self.step.target_accept, 1)
+
+
 class NutsFixture(BaseSampler):
     @classmethod
     def make_step(cls):
         args = {}
         if hasattr(cls, 'step_args'):
             args.update(cls.step_args)
-        if 'scaling' not in args:
-            _, step = pm.sampling.init_nuts(n_init=10000, **args)
-        else:
-            step = pm.NUTS(**args)
-        return step
+        return pm.NUTS(**args)
 
     def test_target_accept(self):
         accept = self.trace[self.burn:]['mean_tree_accept']

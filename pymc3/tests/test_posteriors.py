@@ -49,6 +49,16 @@ class TestNUTSUniform5(TestNUTSUniform):
     step_args = {'target_accept': 0.80, 'integrator': 'three-stage'}
 
 
+class TestHMCNormal(sf.HMCFixture, sf.NormalFixture):
+    n_samples = 10000
+    tune = 1000
+    burn = 0
+    chains = 2
+    min_n_eff = 10000
+    rtol = 0.1
+    atol = 0.05
+
+
 class TestNUTSNormal(sf.NutsFixture, sf.NormalFixture):
     n_samples = 10000
     tune = 1000
@@ -66,6 +76,16 @@ class TestNUTSBetaBinomial(sf.NutsFixture, sf.BetaBinomialFixture):
     burn = 0
     chains = 2
     min_n_eff = 400
+
+
+class TestHMCStudentT(sf.HMCFixture, sf.StudentTFixture):
+    n_samples = 10000
+    tune = 1000
+    burn = 0
+    chains = 2
+    min_n_eff = 1000
+    rtol = 0.1
+    atol = 0.05
 
 
 class TestNUTSStudentT(sf.NutsFixture, sf.StudentTFixture):
@@ -87,6 +107,18 @@ class TestNUTSNormalLong(sf.NutsFixture, sf.NormalFixture):
     min_n_eff = 300000
     rtol = 0.01
     atol = 0.001
+
+
+@pytest.mark.skip('Takes too long to run')
+class TestHMCNormalLong(sf.HMCFixture, sf.NormalFixture):
+    n_samples = 500000
+    tune = 5000
+    burn = 0
+    chains = 2
+    min_n_eff = 300000
+    rtol = 0.01
+    atol = 0.001
+    step_args = {'path_length': 4}
 
 
 class TestNUTSLKJCholeskyCov(sf.NutsFixture, sf.LKJCholeskyCovFixture):
