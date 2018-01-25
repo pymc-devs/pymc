@@ -8,6 +8,10 @@
   of the success probability. This is faster and more stable than using
   `p=tt.nnet.sigmoid(logit_p)`.
 
+### Deprecations
+
+- DIC and BPIC calculations have been removed
+
 ## PyMC 3.3 (January 9, 2018)
 
 ### New features

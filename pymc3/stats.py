@@ -16,7 +16,7 @@ from scipy.stats import dirichlet
 from scipy.optimize import minimize
 
 
-__all__ = ['autocorr', 'autocov', 'dic', 'bpic', 'waic', 'loo', 'hpd', 'quantiles',
+__all__ = ['autocorr', 'autocov', 'waic', 'loo', 'hpd', 'quantiles',
            'mc_error', 'summary', 'df_summary', 'compare', 'bfmi', 'r2_score']
 
 
@@ -97,37 +97,6 @@ def autocov(x, lag=1):
     if lag < 0:
         raise ValueError("Autocovariance lag must be a positive integer")
     return np.cov(x[:-lag], x[lag:], bias=1)
-
-
-def dic(trace, model=None):
-    """Calculate the deviance information criterion of the samples in trace from model
-    Read more theory here - in a paper by some of the leading authorities on model selection -
-    dx.doi.org/10.1111/1467-9868.00353
-
-    Parameters
-    ----------
-    trace : result of MCMC run
-    model : PyMC Model
-        Optional model. Default None, taken from context.
-
-    Returns
-    -------
-    z : float
-        The deviance information criterion of the model and trace
-    """
-    warnings.warn("dic has been deprecated. Use `waic` or `loo` instead.", DeprecationWarning,
-                  stacklevel=2)
-
-    model = modelcontext(model)
-    logp = model.logp
-
-    mean_deviance = -2 * np.mean([logp(pt) for pt in trace])
-
-    free_rv_means = {rv.name: trace[rv.name].mean(
-        axis=0) for rv in model.free_RVs}
-    deviance_at_mean = -2 * logp(free_rv_means)
-
-    return 2 * mean_deviance - deviance_at_mean
 
 
 def _log_post_trace(trace, model=None, progressbar=False):
@@ -448,37 +417,6 @@ def _gpinv(p, k, sigma):
             x[p == 1] = - sigma / k
 
     return x
-
-
-def bpic(trace, model=None):
-    R"""Calculates Bayesian predictive information criterion n of the samples in trace from model
-    Read more theory here - in a paper by some of the leading authorities on model selection -
-    dx.doi.org/10.1080/01966324.2011.10737798
-
-    Parameters
-    ----------
-    trace : result of MCMC run
-    model : PyMC Model
-        Optional model. Default None, taken from context.
-
-    Returns
-    -------
-    z : float
-        The Bayesian predictive information criterion of the model and trace
-    """
-    warnings.warn("bpic has been deprecated. Use `waic` or `loo` instead.", DeprecationWarning,
-                  stacklevel=2)
-
-    model = modelcontext(model)
-    logp = model.logp
-
-    mean_deviance = -2 * np.mean([logp(pt) for pt in trace])
-
-    free_rv_means = {rv.name: trace[rv.name].mean(
-        axis=0) for rv in model.free_RVs}
-    deviance_at_mean = -2 * logp(free_rv_means)
-
-    return 3 * mean_deviance - 2 * deviance_at_mean
 
 
 def compare(traces, models, ic='WAIC', method='stacking', b_samples=1000,
