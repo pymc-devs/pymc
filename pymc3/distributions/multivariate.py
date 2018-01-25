@@ -257,11 +257,12 @@ class MvNormal(_QuadFormBase):
                 raise ValueError("Shapes for mu and tau don't match")
 
             size.append(mu.shape[-1])
-            standard_normal = np.random.standard_normal(size)
             try:
                 chol = linalg.cholesky(tau, lower=True)
             except linalg.LinAlgError:
                 return np.nan * np.zeros(size)
+
+            standard_normal = np.random.standard_normal(size)
             transformed = linalg.solve_triangular(
                 chol, standard_normal.T, lower=True)
             return mu + transformed.T
