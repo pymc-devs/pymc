@@ -34,7 +34,6 @@ class HamiltonianMC(BaseHMC):
         'energy_error': np.float64,
         'energy': np.float64,
         'max_energy_error': np.float64,
-        'path_length': np.float64,
         'accepted': np.bool,
     }]
 
@@ -90,8 +89,7 @@ class HamiltonianMC(BaseHMC):
         self.path_length = path_length
 
     def _hamiltonian_step(self, start, p0, step_size):
-        path_length = np.random.rand() * self.path_length
-        n_steps = max(1, int(path_length / step_size))
+        n_steps = max(1, int(self.path_length / step_size))
 
         energy_change = -np.inf
         state = start
@@ -121,7 +119,6 @@ class HamiltonianMC(BaseHMC):
             accepted = True
 
         stats = {
-            'path_length': path_length,
             'n_steps': n_steps,
             'accept': accept_stat,
             'energy_error': energy_change,
