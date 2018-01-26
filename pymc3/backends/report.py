@@ -102,11 +102,17 @@ class SamplerReport(object):
             warn = SamplerWarning(
                 WarningType.CONVERGENCE, msg, 'error', None, None, effective_n)
             warnings.append(warn)
+        elif eff_min / n_samples < 0.1:
+            msg = ("The number of effective samples is smaller than "
+                   "10% for some parameters.")
+            warn = SamplerWarning(
+                WarningType.CONVERGENCE, msg, 'warn', None, None, effective_n)
+            warnings.append(warn)
         elif eff_min / n_samples < 0.25:
             msg = ("The number of effective samples is smaller than "
                    "25% for some parameters.")
             warn = SamplerWarning(
-                WarningType.CONVERGENCE, msg, 'warn', None, None, effective_n)
+                WarningType.CONVERGENCE, msg, 'info', None, None, effective_n)
             warnings.append(warn)
 
         self._add_warnings(warnings)
