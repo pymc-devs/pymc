@@ -7,13 +7,13 @@
 - Add `logit_p` keyword to `pm.Bernoulli`, so that users can specify the logit
   of the success probability. This is faster and more stable than using
   `p=tt.nnet.sigmoid(logit_p)`.
+- Apply new warning system project wise (#2778)
 
 ## PyMC 3.3 (January 9, 2018)
 
 ### New features
 
 - Improve NUTS initialization `advi+adapt_diag_grad` and add `jitter+adapt_diag_grad` (#2643)
-- Refactored HMC (#2677)
 - Added `MatrixNormal` class for representing vectors of multivariate normal variables
 - Implemented `HalfStudentT` distribution
 - New benchmark suite added (see http://pandas.pydata.org/speed/pymc3/)
