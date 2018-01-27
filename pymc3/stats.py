@@ -419,8 +419,8 @@ def _gpinv(p, k, sigma):
     return x
 
 
-def compare(traces, models, ic='WAIC', method='stacking', b_samples=1000,
-            alpha=1, seed=None, round_to=2):
+def compare(traces, models, names=None, ic='WAIC', method='stacking',
+            b_samples=1000, alpha=1, seed=None, round_to=2):
     R"""Compare models based on the widely available information criterion (WAIC)
     or leave-one-out (LOO) cross-validation.
     Read more theory here - in a paper by some of the leading authorities on
@@ -431,6 +431,8 @@ def compare(traces, models, ic='WAIC', method='stacking', b_samples=1000,
     traces : list of PyMC3 traces
     models : list of PyMC3 models
         in the same order as traces.
+    names : list of str or None
+        the names of the models
     ic : string
         Information Criterion (WAIC or LOO) used to compare models.
         Default WAIC.
@@ -461,8 +463,9 @@ def compare(traces, models, ic='WAIC', method='stacking', b_samples=1000,
 
     Returns
     -------
-    A DataFrame, ordered from lowest to highest IC. The index reflects
-    the order in which the models are passed to this function. The columns are:
+    A DataFrame, ordered from lowest to highest IC. The index reflects names,
+    or the order in which the models are passed to this function if names is
+    None. The columns are:
     IC : Information Criteria (WAIC or LOO).
         Smaller IC indicates higher out-of-sample predictive fit ("better" model).
         Default WAIC.
@@ -483,15 +486,18 @@ def compare(traces, models, ic='WAIC', method='stacking', b_samples=1000,
     warning : A value of 1 indicates that the computation of the IC may not be
         reliable see http://arxiv.org/abs/1507.04544 for details.
     """
+    if names is None:
+        names = np.arange(len(models))
+
     if ic == 'WAIC':
         ic_func = waic
-        df_comp = pd.DataFrame(index=np.arange(len(models)),
+        df_comp = pd.DataFrame(index=names,
                                columns=['WAIC', 'pWAIC', 'dWAIC', 'weight',
                                         'SE', 'dSE', 'warning'])
 
     elif ic == 'LOO':
         ic_func = loo
-        df_comp = pd.DataFrame(index=np.arange(len(models)),
+        df_comp = pd.DataFrame(index=names,
                                columns=['LOO', 'pLOO', 'dLOO', 'weight',
                                         'SE', 'dSE', 'warning'])
 
@@ -518,7 +524,7 @@ def compare(traces, models, ic='WAIC', method='stacking', b_samples=1000,
         warnings.filterwarnings('always')
 
         ics = []
-        for c, (t, m) in enumerate(zip(traces, models)):
+        for c, t, m in zip(names, traces, models):
             ics.append((c, ic_func(t, m, pointwise=True)))
 
     ics.sort(key=lambda x: x[1][0])
@@ -600,7 +606,7 @@ def compare(traces, models, ic='WAIC', method='stacking', b_samples=1000,
                                round(weight, round_to),
                                round(se, round_to),
                                round(d_se, round_to),
-                               warns[idx])
+                               warns[i])
 
         return df_comp.sort_values(by=ic)
 
