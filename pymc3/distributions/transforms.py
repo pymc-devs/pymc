@@ -241,21 +241,21 @@ upperbound = UpperBound
 class Ordered(ElemwiseTransform):
     name = "ordered"
 
-    def forward(self, x):
+    def backward(self, x):
         out = tt.zeros(x.shape)
         out = tt.inc_subtensor(out[0], x[0])
         out = tt.inc_subtensor(out[1:], tt.log(x[1:] - x[:-1]))
         return out
 
-    def forward_val(self, x, point=None):
-        x, = draw_values([x], point=point)
-        return self.forward(x)
-
-    def backward(self, y):
+    def forward(self, y):
         out = tt.zeros(y.shape)
         out = tt.inc_subtensor(out[0], y[0])
         out = tt.inc_subtensor(out[1:], tt.exp(y[1:]))
         return tt.cumsum(out)
+
+    def forward_val(self, x, point=None):
+        x, = draw_values([x], point=point)
+        return self.forward(x)
 
     def jacobian_det(self, y):
         return tt.sum(y[1:])

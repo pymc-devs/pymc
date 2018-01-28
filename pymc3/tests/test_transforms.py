@@ -10,7 +10,7 @@ from ..theanof import jacobian
 
 # some transforms (stick breaking) require additon of small slack in order to be numerically
 # stable. The minimal addable slack for float32 is higher thus we need to be less strict
-tol = 1e-7 if theano.config.floatX == 'flaot64' else 1e-6
+tol = 1e-7 if theano.config.floatX == 'float64' else 1e-6
 
 
 def check_transform_identity(transform, domain, constructor=tt.dscalar, test=0):
@@ -92,6 +92,17 @@ def check_jacobian_det(transform, domain,
         close_to(
             actual_ljd(yval),
             computed_ljd(yval), tol)
+
+def test_ordered():
+    check_vector_transform_identity(tr.ordered, Vector(R, 6))
+
+def test_ordered_jacobian_det():
+    check_jacobian_det(tr.ordered, Vector(R, 2),
+                      tt.dvector, np.array([0, 0]), elemwise=True)
+
+def test_ordered_vals():
+    vals = get_values(tr.ordered)
+    close_to_logicals(vals > 0, True, tol)
 
 
 def test_log():
