@@ -11,32 +11,56 @@ __all__ = ['DensityDist', 'Distribution', 'Continuous', 'Discrete',
            'NoDistribution', 'TensorType', 'draw_values']
 
 
+# TODO document changes:
+# - dist does not have a shape arg anymore. It is now atom_shape and param_shape
+# - Entries in _default must have the right shape (and be theano vars)
+
+
 class _Unpickling(object):
     pass
 
 
 class Distribution(object):
-    """Statistical distribution"""
+    """Base class for all statistical distributions."""
     def __new__(cls, name, *args, **kwargs):
         if name is _Unpickling:
             return object.__new__(cls)  # for pickle
         try:
             model = Model.get_context()
         except TypeError:
-            raise TypeError("No model on context stack, which is needed to "
-                            "instantiate distributions. Add variable inside "
-                            "a 'with model:' block, or use the '.dist' syntax "
-                            "for a standalone distribution.")
+            raise TypeError(
+                "No model on context stack, which is needed to "
+                "instantiate distributions. Add variable inside "
+                "a 'with model:' block, or use the '.dist' syntax "
+                "for a standalone distribution.")
 
-        if isinstance(name, string_types):
-            data = kwargs.pop('observed', None)
-            if isinstance(data, ObservedRV) or isinstance(data, FreeRV):
-                raise TypeError("observed needs to be data but got: {}".format(type(data)))
-            total_size = kwargs.pop('total_size', None)
-            dist = cls.dist(*args, **kwargs)
-            return model.Var(name, dist, data, total_size)
-        else:
-            raise TypeError("Name needs to be a string but got: {}".format(name))
+        if not isinstance(name, string_types):
+            raise TypeError(
+                "Name needs to be a string but got: {}".format(name))
+
+        data = kwargs.pop('observed', None)
+        if isinstance(data, ObservedRV) or isinstance(data, FreeRV):
+            raise TypeError(
+                "observed needs to be data but got: {}".format(type(data)))
+
+        testval = kwargs.pop('testval', None)
+
+        total_size = kwargs.pop('total_size', None)
+        shape = kwargs.pop('shape', None)
+        if shape is not None and isinstance(shape, int):
+            shape = (shape,)
+        dims = kwargs.pop('dims', None)
+        if dims is not None and isinstance(dims, str):
+            dims = (dims,)
+
+        dist = cls.dist(*args, **kwargs)
+        return model.Var(name, dist, data=data, total_size=total_size,
+                         dims=dims, shape=shape, testval=testval)
+        # TODO move into RV
+        # - dims
+        # - shape
+        # - type = TensorType(self.dtype, sefl.shape, broadcastable)
+        # - testval
 
     def __getnewargs__(self):
         return _Unpickling,
@@ -47,45 +71,48 @@ class Distribution(object):
         dist.__init__(*args, **kwargs)
         return dist
 
-    def __init__(self, shape, dtype, testval=None, defaults=(),
-                 transform=None, broadcastable=None):
-        self.shape = np.atleast_1d(shape)
-        if False in (np.floor(self.shape) == self.shape):
-            raise TypeError("Expected int elements in shape")
+    def __init__(self, atom_shape, dtype, defaults=(), transform=None):
+        self.atom_shape = atom_shape
         self.dtype = dtype
-        self.type = TensorType(self.dtype, self.shape, broadcastable)
-        self.testval = testval
-        self.defaults = defaults
+        self._defaults = defaults
         self.transform = transform
 
-    def default(self):
-        return np.asarray(self.get_test_val(self.testval, self.defaults), self.dtype)
+    def param_shape(self, parameters, shape=None, return_testval=False):
+        value = self.default(shape=shape)
+        out = [value.shape]
+        if return_testval:
+            out.append(value)
 
-    def get_test_val(self, val, defaults):
-        if val is None:
-            for v in defaults:
-                if hasattr(self, v) and np.all(np.isfinite(self.getattr_value(v))):
-                    return self.getattr_value(v)
-        else:
-            return self.getattr_value(val)
+        func = theano.function(
+            list(parameters),
+            out,
+            mode='FAST_COMPILE',
+            on_unused_input='ignore')
 
-        if val is None:
-            raise AttributeError("%s has no finite default value to use, "
-                                 "checked: %s. Pass testval argument or "
-                                 "adjust so value is finite."
-                                 % (self, str(defaults)))
+        params = {var.name: val for var, val in parameters.items()}
+        if return_testval:
+            shape, value = func(**params)
+            shape = tuple(int(i) for i in shape)
+            return shape, np.array(value)
+        shape, = func(**params)
+        return shape
 
-    def getattr_value(self, val):
-        if isinstance(val, string_types):
-            val = getattr(self, val)
-
-        if isinstance(val, tt.TensorVariable):
-            return val.tag.test_value
-
-        if isinstance(val, tt.TensorConstant):
-            return val.value
-
-        return val
+    def default(self, shape=None):
+        """Return a default value for this distribution as theano variable."""
+        if len(self._defaults) == 0:
+            raise ValueError('Distribution has no default.')
+        value = None
+        for name in self._defaults:
+            if hasattr(self, name):
+                value = getattr(self, name)
+        if value is None:
+            raise ValueError('Distribution has no default.')
+        if value.dtype != self.dtype:
+            raise ValueError('Default value as incorrect dtype. It is %s '
+                             'but should be %s.' % (value.dtype, self.dtype))
+        if shape is not None:
+            value = value + tt.zeros(shape, dtype=self.dtype)
+        return value
 
     def _repr_latex_(self, name=None, dist=None):
         """Magic method name for IPython to use for LaTeX formatting."""
@@ -123,7 +150,6 @@ def TensorType(dtype, shape, broadcastable=None):
 
 
 class NoDistribution(Distribution):
-
     def __init__(self, shape, dtype, testval=None, defaults=(),
                  transform=None, parent_dist=None, *args, **kwargs):
         super(NoDistribution, self).__init__(shape=shape, dtype=dtype,
@@ -146,33 +172,40 @@ class NoDistribution(Distribution):
 class Discrete(Distribution):
     """Base class for discrete distributions"""
 
-    def __init__(self, shape=(), dtype=None, defaults=('mode',),
+    def __init__(self, atom_shape=(), dtype=None, defaults=('mode',),
                  *args, **kwargs):
         if dtype is None:
             if theano.config.floatX == 'float32':
                 dtype = 'int16'
             else:
                 dtype = 'int64'
-        if dtype != 'int16' and dtype != 'int64':
-            raise TypeError('Discrete classes expect dtype to be int16 or int64.')
+        dtype = str(dtype)
+        if dtype != 'int16' and dtype != 'int64' and dtype != 'int32':
+            raise TypeError(
+                'Discrete classes expect dtype int16, int32 or int64.')
 
         if kwargs.get('transform', None) is not None:
             raise ValueError("Transformations for discrete distributions "
                              "are not allowed.")
 
         super(Discrete, self).__init__(
-            shape, dtype, defaults=defaults, *args, **kwargs)
+            atom_shape, dtype, defaults=defaults, *args, **kwargs)
 
 
 class Continuous(Distribution):
     """Base class for continuous distributions"""
 
-    def __init__(self, shape=(), dtype=None, defaults=('median', 'mean', 'mode'),
+    def __init__(self, atom_shape=(), dtype=None,
+                 defaults=('median', 'mean', 'mode'),
                  *args, **kwargs):
         if dtype is None:
             dtype = theano.config.floatX
+        dtype = str(dtype)
+        if dtype not in ['float16', 'float32', 'float64']:
+            raise ValueError('Invalid dtype for continuous variable: %s'
+                             % dtype)
         super(Continuous, self).__init__(
-            shape, dtype, defaults=defaults, *args, **kwargs)
+            atom_shape, dtype, defaults=defaults, *args, **kwargs)
 
 
 class DensityDist(Distribution):

@@ -6,15 +6,17 @@ from .helpers import SeededTest, select_by_precision
 from ..vartypes import continuous_types
 from ..model import Model, Point, Potential, Deterministic
 from ..blocking import DictToVarBijection, DictToArrayBijection, ArrayOrdering
-from ..distributions import (DensityDist, Categorical, Multinomial, VonMises, Dirichlet,
-                             MvStudentT, MvNormal, MatrixNormal, ZeroInflatedPoisson,
-                             ZeroInflatedNegativeBinomial, Constant, Poisson, Bernoulli, Beta,
-                             BetaBinomial, HalfStudentT, StudentT, Weibull, Pareto,
-                             InverseGamma, Gamma, Cauchy, HalfCauchy, Lognormal, Laplace,
-                             NegativeBinomial, Geometric, Exponential, ExGaussian, Normal,
-                             Flat, LKJCorr, Wald, ChiSquared, HalfNormal, DiscreteUniform,
-                             Bound, Uniform, Triangular, Binomial, SkewNormal, DiscreteWeibull,
-                             Gumbel, Logistic, Interpolated, ZeroInflatedBinomial, HalfFlat, AR1)
+from ..distributions import (
+    DensityDist, Categorical, Multinomial, VonMises, Dirichlet,
+    MvStudentT, MvNormal, MatrixNormal, ZeroInflatedPoisson,
+    ZeroInflatedNegativeBinomial, Constant, Poisson, Bernoulli, Beta,
+    BetaBinomial, HalfStudentT, StudentT, Weibull, Pareto,
+    InverseGamma, Gamma, Cauchy, HalfCauchy, Lognormal, Laplace,
+    NegativeBinomial, Geometric, Exponential, ExGaussian, Normal,
+    Flat, LKJCorr, Wald, ChiSquared, HalfNormal, DiscreteUniform,
+    Bound, Uniform, Triangular, Binomial, SkewNormal, DiscreteWeibull,
+    Gumbel, Logistic, Interpolated, ZeroInflatedBinomial, HalfFlat, AR1,
+    DiscreteFlat)
 from ..distributions import continuous
 from pymc3.theanof import floatX
 from numpy import array, inf, log, exp
@@ -146,8 +148,12 @@ def build_model(distfam, valuedomain, vardomains, extra_args=None):
     with Model() as m:
         vals = {}
         for v, dom in vardomains.items():
-            vals[v] = Flat(v, dtype=dom.dtype, shape=dom.shape,
-                           testval=dom.vals[0])
+            if np.issubdtype(dom.dtype, np.integer):
+                vals[v] = DiscreteFlat(v, dtype=dom.dtype, shape=dom.shape,
+                                       testval=dom.vals[0])
+            else:
+                vals[v] = Flat(v, dtype=dom.dtype, shape=dom.shape,
+                               testval=dom.vals[0])
         vals.update(extra_args)
         distfam('value', shape=valuedomain.shape, transform=None, **vals)
     return m

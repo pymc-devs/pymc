@@ -3,12 +3,14 @@ import functools
 import itertools
 import threading
 import six
+import numbers
 
 import numpy as np
 import scipy.sparse as sps
 import theano.sparse as sparse
 from theano import theano, tensor as tt
 from theano.tensor.var import TensorVariable
+import pandas as pd
 
 from pymc3.theanof import set_theano_conf, floatX
 import pymc3 as pm
@@ -26,57 +28,6 @@ __all__ = [
 
 FlatView = collections.namedtuple('FlatView', 'input, replacements, view')
 
-
-class InstanceMethod(object):
-    """Class for hiding references to instance methods so they can be pickled.
-
-    >>> self.method = InstanceMethod(some_object, 'method_name')
-    """
-
-    def __init__(self, obj, method_name):
-        self.obj = obj
-        self.method_name = method_name
-
-    def __call__(self, *args, **kwargs):
-        return getattr(self.obj, self.method_name)(*args, **kwargs)
-
-
-def incorporate_methods(source, destination, methods, default=None,
-                        wrapper=None, override=False):
-    """
-    Add attributes to a destination object which points to
-    methods from from a source object.
-
-    Parameters
-    ----------
-    source : object
-        The source object containing the methods.
-    destination : object
-        The destination object for the methods.
-    methods : list of str
-        Names of methods to incorporate.
-    default : object
-        The value used if the source does not have one of the listed methods.
-    wrapper : function
-        An optional function to allow the source method to be
-        wrapped. Should take the form my_wrapper(source, method_name)
-        and return a single value.
-    override : bool
-        If the destination object already has a method/attribute
-        an AttributeError will be raised if override is False (the default).
-    """
-    for method in methods:
-        if hasattr(destination, method) and not override:
-            raise AttributeError("Cannot add method {!r}".format(method) +
-                                 "to destination object as it already exists. "
-                                 "To prevent this error set 'override=True'.")
-        if hasattr(source, method):
-            if wrapper is None:
-                setattr(destination, method, getattr(source, method))
-            else:
-                setattr(destination, method, wrapper(source, method))
-        else:
-            setattr(destination, method, None)
 
 
 def get_named_nodes(graph):
@@ -487,7 +438,7 @@ class ValueGradFunction(object):
         return args_joined, theano.clone(cost, replace=replace)
 
 
-class Model(six.with_metaclass(InitContextMeta, Context, Factor, WithMemoization)):
+class Model(six.with_metaclass(InitContextMeta, Context, Factor)):
     """Encapsulates the variables and likelihood factors of a model.
 
     Model class can be used for creating class based models. To create
@@ -510,6 +461,13 @@ class Model(six.with_metaclass(InitContextMeta, Context, Factor, WithMemoization
         temporarily in the model context. See the documentation
         of theano for a complete list. Set `compute_test_value` to
         `raise` if it is None.
+    coords : dict, optional
+        A dictionary of dimension names to and index for that dimension.
+        Indices can be an iteratble, a pandas Index or an xarray
+        `IndexVariable`. This follows the same conventions as the
+        `coords` argument in `xarray.Dataset`. If this is specified,
+        variables can use `dims=('coord_name1', 'coord_name2')` instead
+        of the `shape` argument.
 
     Examples
     --------
@@ -582,8 +540,18 @@ class Model(six.with_metaclass(InitContextMeta, Context, Factor, WithMemoization
         instance._theano_config = theano_config
         return instance
 
-    def __init__(self, name='', model=None, theano_config=None):
+    def __init__(self, name='', prefix=None, model=None,
+                 theano_config=None, coords=None):
         self.name = name
+        self._prefix = prefix
+        if coords is None:
+            coords = {}
+        self._coords = {}
+        for key in coords:
+            if not isinstance(key, str):
+                raise TypeError('coords must be dict with integer keys.')
+            self._coords[key] = pd.Index(coords[key])
+
         if self.parent is not None:
             self.named_vars = treedict(parent=self.parent.named_vars)
             self.free_RVs = treelist(parent=self.parent.free_RVs)
@@ -591,6 +559,10 @@ class Model(six.with_metaclass(InitContextMeta, Context, Factor, WithMemoization
             self.deterministics = treelist(parent=self.parent.deterministics)
             self.potentials = treelist(parent=self.parent.potentials)
             self.missing_values = treelist(parent=self.parent.missing_values)
+            self._random_vars = treelist(parent=self.parent._random_vars)
+            self._RV_shapes = treedict(parent=self.parent._RV_shapes)
+            self._RV_defaults = treedict(parent=self.parent._RV_defaults)
+            self._default_values = treedict(parent=self.parent._default_values)
         else:
             self.named_vars = treedict()
             self.free_RVs = treelist()
@@ -598,6 +570,10 @@ class Model(six.with_metaclass(InitContextMeta, Context, Factor, WithMemoization
             self.deterministics = treelist()
             self.potentials = treelist()
             self.missing_values = treelist()
+            self._random_vars = treelist()
+            self._RV_shapes = treedict()
+            self._RV_defaults = treedict()
+            self._default_values = treedict()
 
     @property
     def model(self):
@@ -619,7 +595,6 @@ class Model(six.with_metaclass(InitContextMeta, Context, Factor, WithMemoization
         return self.parent is None
 
     @property
-    @memoize
     def bijection(self):
         vars = inputvars(self.cont_vars)
 
@@ -713,8 +688,7 @@ class Model(six.with_metaclass(InitContextMeta, Context, Factor, WithMemoization
     @property
     def test_point(self):
         """Test point used to check that the model doesn't generate errors"""
-        return Point(((var, var.tag.test_value) for var in self.vars),
-                     model=self)
+        return Point(self._default_values.items(), model=self)
 
     @property
     def disc_vars(self):
@@ -726,7 +700,71 @@ class Model(six.with_metaclass(InitContextMeta, Context, Factor, WithMemoization
         """All the continuous variables in the model"""
         return list(typefilter(self.vars, continuous_types))
 
-    def Var(self, name, dist, data=None, total_size=None):
+    def _add_observed_rv(self, name, dist, dims, shape, data, total_size):
+        if isinstance(data, dict):
+            var = MultiObservedRV(name=name, data=data, distribution=dist,
+                                  total_size=total_size, model=self)
+            self.observed_RVs.append(var)
+            if var.missing_values:
+                self.free_RVs.extend(var.missing_values)
+                self.missing_values.extend(var.missing_values)
+                for v in var.missing_values:
+                    self.named_vars[v.name] = v
+                    self._add_random_variable(var)
+        else:
+            var = ObservedRV(
+                name=name,
+                data=data,
+                distribution=dist,
+                total_size=total_size,
+                model=self,
+                dims=dims,
+                shape=shape)
+            self.observed_RVs.append(var)
+            if var.missing_values:
+                self.free_RVs.append(var.missing_values)
+                self.missing_values.append(var.missing_values)
+                self.named_vars[var.missing_values.name] = var.missing_values
+                self._add_random_variable(var)
+
+        self._add_random_variable(var)
+        return var
+
+    def _add_unobserved_rv(self, name, dist, dims, shape, total_size,
+                           broadcastable, testval):
+        trafo = dist.transform
+        if trafo is not None:
+            var = TransformedRV(name=name, dist=dist,
+                                transform=dist.transform,
+                                total_size=total_size,
+                                dims=dims,
+                                broadcastable=broadcastable,
+                                testval=testval,
+                                shape=shape,
+                                model=self)
+            pm._log.debug(
+                'Applied {transform}-transform to {name} '
+                'and added transformed {orig_name} to model.'
+                .format(
+                    transform=dist.transform.name,
+                    name=name,
+                    orig_name=get_transformed_name(name, dist.transform)))
+            self.deterministics.append(var)
+            self._add_random_variable(var)
+            return var
+
+        else:
+            # TODO First 3 args because of copy.
+            # Wrap FreeRV creation in function...
+            var = FreeRV(None, None, None, name, dist, dims, shape,
+                         total_size, broadcastable, testval=testval,
+                         model=self)
+            self.free_RVs.append(var)
+            self._add_random_variable(var)
+        return var
+
+    def Var(self, name, dist, dims, shape, data=None, total_size=None,
+            testval=None, broadcastable=None):
         """Create and add (un)observed random variable to the model with an
         appropriate prior distribution.
 
@@ -734,73 +772,77 @@ class Model(six.with_metaclass(InitContextMeta, Context, Factor, WithMemoization
         ----------
         name : str
         dist : distribution for the random variable
+        dims : tuple of str
+            Names for the dimensions of the variable.
+        shape : tuple of int
+            Shape of the random variable.
         data : array_like (optional)
-           If data is provided, the variable is observed. If None,
-           the variable is unobserved.
+           If data is provided, the variable is observed. If None, the
+           variable is unobserved.
         total_size : scalar
-            upscales logp of variable with :math:`coef = total_size/var.shape[0]`
+            upscales logp of variable with
+            :math:`coef = total_size/var.shape[0]`
 
         Returns
         -------
         FreeRV or ObservedRV
         """
         name = self.name_for(name)
-        if data is None:
-            if getattr(dist, "transform", None) is None:
-                with self:
-                    var = FreeRV(name=name, distribution=dist,
-                                 total_size=total_size, model=self)
-                self.free_RVs.append(var)
-            else:
-                with self:
-                    var = TransformedRV(name=name, distribution=dist,
-                                        transform=dist.transform,
-                                        total_size=total_size,
-                                        model=self)
-                pm._log.debug('Applied {transform}-transform to {name}'
-                              ' and added transformed {orig_name} to model.'.format(
-                                transform=dist.transform.name,
-                                name=name,
-                                orig_name=get_transformed_name(name, dist.transform)))
-                self.deterministics.append(var)
-                self.add_random_variable(var)
+        param_shape, param_testval = dist.param_shape(
+            self._default_values, return_testval=True)
+
+        if shape is not None and dims is not None:
+            raise ValueError('Specify only one of shape and dims')
+        if dims is not None:
+            shape = _shape_from_coords(self._coords, dims)
+        if data is not None:  # TODO case where data is dict
+            shape, dims = _from_data_shape(self._coords, shape, dims, data)
+        if shape is None:
+            shape = param_shape
+
+        if (len(param_shape) > 0 and (
+                len(shape) < len(param_shape)
+                or shape[-len(param_shape):] != param_shape)):
+            raise ValueError('shape must end with %s, but it is %s'
+                             % (param_shape, shape))
+
+        if dims is None:
+            dims = _dims_from_shape(name, self._coords, shape)
+
+        if testval is None:
+            testval = np.broadcast_to(param_testval, shape)
+
+        if testval.shape != shape:
+            raise ValueError('Invalid testval. Shape is %s but '
+                             'should be %s.' % (testval.shape, shape))
+
+        if broadcastable is None:
+            broadcastable = tuple(i == 1 for i in shape)
+
+        with self:
+            if data is None:
+                var = self._add_unobserved_rv(
+                    name, dist, dims, shape, total_size,
+                    testval=testval, broadcastable=broadcastable)
+                self._default_values[var] = testval
                 return var
-        elif isinstance(data, dict):
-            with self:
-                var = MultiObservedRV(name=name, data=data, distribution=dist,
-                                      total_size=total_size, model=self)
-            self.observed_RVs.append(var)
-            if var.missing_values:
-                self.free_RVs += var.missing_values
-                self.missing_values += var.missing_values
-                for v in var.missing_values:
-                    self.named_vars[v.name] = v
-        else:
-            with self:
-                var = ObservedRV(name=name, data=data,
-                                 distribution=dist,
-                                 total_size=total_size, model=self)
-            self.observed_RVs.append(var)
-            if var.missing_values:
-                self.free_RVs.append(var.missing_values)
-                self.missing_values.append(var.missing_values)
-                self.named_vars[var.missing_values.name] = var.missing_values
+            else:
+                return self._add_observed_rv(
+                    name, dist, dims, shape, data, total_size)
 
-        self.add_random_variable(var)
-        return var
-
-    def add_random_variable(self, var):
+    def _add_random_variable(self, var):
         """Add a random variable to the named variables of the model."""
         if self.named_vars.tree_contains(var.name):
             raise ValueError(
                 "Variable name {} already exists.".format(var.name))
         self.named_vars[var.name] = var
+        self._random_vars.append(var)
         if not hasattr(self, self.name_of(var.name)):
             setattr(self, self.name_of(var.name), var)
 
     @property
     def prefix(self):
-        return '%s_' % self.name if self.name else ''
+        return '%s_' % self._prefix if self._prefix else ''
 
     def name_for(self, name):
         """Checks if name has prefix and adds if needed
@@ -965,6 +1007,58 @@ class Model(six.with_metaclass(InitContextMeta, Context, Factor, WithMemoization
     __latex__ = _repr_latex_
 
 
+def _shape_from_coords(coords, dims):
+    shape = []
+    for dim in dims:
+        if not isinstance(dim, str):
+            raise TypeError('All dimension names must be strings.')
+        if dim not in coords:
+            raise KeyError('Unknown dimension name %s. All dimensions '
+                           'must be specified in the coords argument of '
+                           'pm.Model' % dim)
+        shape.append(len(coords[dim]))
+    return tuple(shape)
+
+
+def _dims_from_shape(name, coords, shape):
+    import pandas as pd
+
+    dims = []
+    for i, size in enumerate(shape):
+        dim_name = '{}_dim_{}'.format(name, i)
+        if dim_name in coords:
+            raise ValueError('Trying to create coord {}, but it already '
+                             'exists.'.format(dim_name))
+        coord = pd.RangeIndex(size, name=dim_name)
+        coords[dim_name] = coord
+        dims.append(dim_name)
+    return tuple(dims)
+
+
+def _from_data_shape(coords, shape, dims, data):
+    if isinstance(data, numbers.Real):
+        data = np.array(data)
+
+    if hasattr(data, 'dims') and hasattr(data, 'coords'):
+        data_dims = data.dims
+        data_coords = data.coords
+    elif hasattr(data, 'index') and hasattr(data, 'columns'):
+        data_dims = (data.index.name, data.columns.name)
+        data_coords = (data.index, data.columns)
+    elif hasattr(data, 'shape'):
+        data_dims = None
+        data_coords = None
+    elif isinstance(data, dict):
+        # TODO
+        raise NotImplementedError
+    else:
+        raise TypeError('Invalid type for data: %s' % type(data))
+        # TODO
+
+
+    return dims, shape
+
+
 def fn(outs, mode=None, model=None, *args, **kwargs):
     """Compiles a Theano function which returns the values of `outs` and
     takes values of model vars as arguments.
@@ -1069,7 +1163,9 @@ def _get_scaling(total_size, shape, ndim):
             denom = 1
         coef = floatX(total_size) / floatX(denom)
     elif isinstance(total_size, (list, tuple)):
-        if not all(isinstance(i, int) for i in total_size if (i is not Ellipsis and i is not None)):
+        if not all(isinstance(i, int)
+                   for i in total_size
+                   if (i is not Ellipsis and i is not None)):
             raise TypeError('Unrecognized `total_size` type, expected '
                             'int or list of ints, got %r' % total_size)
         if Ellipsis in total_size:
@@ -1077,13 +1173,15 @@ def _get_scaling(total_size, shape, ndim):
             begin = total_size[:sep]
             end = total_size[sep+1:]
             if Ellipsis in end:
-                raise ValueError('Double Ellipsis in `total_size` is restricted, got %r' % total_size)
+                raise ValueError('Double Ellipsis in `total_size` '
+                                 'is restricted, got %r' % total_size)
         else:
             begin = total_size
             end = []
         if (len(begin) + len(end)) > ndim:
             raise ValueError('Length of `total_size` is too big, '
-                             'number of scalings is bigger that ndim, got %r' % total_size)
+                             'number of scalings is bigger that '
+                             'ndim, got %r' % total_size)
         elif (len(begin) + len(end)) == 0:
             return floatX(1)
         if len(end) > 0:
@@ -1091,8 +1189,12 @@ def _get_scaling(total_size, shape, ndim):
         else:
             shp_end = np.asarray([])
         shp_begin = shape[:len(begin)]
-        begin_coef = [floatX(t) / shp_begin[i] for i, t in enumerate(begin) if t is not None]
-        end_coef = [floatX(t) / shp_end[i] for i, t in enumerate(end) if t is not None]
+        begin_coef = [floatX(t) / shp_begin[i]
+                      for i, t in enumerate(begin)
+                      if t is not None]
+        end_coef = [floatX(t) / shp_end[i]
+                    for i, t in enumerate(end)
+                    if t is not None]
         coefs = begin_coef + end_coef
         coef = tt.prod(coefs)
     else:
@@ -1104,9 +1206,12 @@ def _get_scaling(total_size, shape, ndim):
 class FreeRV(Factor, TensorVariable):
     """Unobserved random variable that a model is specified in terms of."""
 
+    # First four arguments are used for copy
     def __init__(self, type=None, owner=None, index=None, name=None,
-                 distribution=None, total_size=None, model=None):
+                 dist=None, dims=None, shape=None, total_size=None,
+                 broadcastable=None, testval=None, model=None):
         """
+        TODO update
         Parameters
         ----------
         type : theano type (optional)
@@ -1117,28 +1222,30 @@ class FreeRV(Factor, TensorVariable):
         total_size : scalar Tensor (optional)
             needed for upscaling logp
         """
-        if type is None:
-            type = distribution.type
-        super(FreeRV, self).__init__(type, owner, index, name)
+        # We are not copying this RV
+        if dist is not None:
+            type = tt.TensorType(str(dist.dtype), broadcastable)
+            super(FreeRV, self).__init__(type, owner=owner, index=None, name=name)
 
-        if distribution is not None:
-            self.dshape = tuple(distribution.shape)
-            self.dsize = int(np.prod(distribution.shape))
-            self.distribution = distribution
-            self.tag.test_value = np.ones(
-                distribution.shape, distribution.dtype) * distribution.default()
-            self.logp_elemwiset = distribution.logp(self)
+            self.model = model
+            self.distribution = dist
+            if testval is not None:
+                self.tag.test_value = testval
+            self.logp_elemwiset = dist.logp(self)
             # The logp might need scaling in minibatches.
             # This is done in `Factor`.
-            self.logp_sum_unscaledt = distribution.logp_sum(self)
-            self.logp_nojac_unscaledt = distribution.logp_nojac(self)
+            self.logp_sum_unscaledt = dist.logp_sum(self)
+            self.logp_nojac_unscaledt = dist.logp_nojac(self)
             self.total_size = total_size
-            self.model = model
-            self.scaling = _get_scaling(total_size, self.shape, self.ndim)
+            self.dshape = shape
+            self.dsize = np.prod(self.dshape, dtype='int64')
+            # TODO fix scaling
+            # self.scaling = _get_scaling(total_size, self.shape, self.ndim)
+        else:
+            super(FreeRV, self).__init__(type, owner, index, name)
 
-            incorporate_methods(source=distribution, destination=self,
-                                methods=['random'],
-                                wrapper=InstanceMethod)
+    def random(self, *args, **kwargs):
+        return self.distribution.ramod(*args, **kwargs)
 
     def _repr_latex_(self, name=None, dist=None):
         if self.distribution is None:
@@ -1209,7 +1316,8 @@ class ObservedRV(Factor, TensorVariable):
     """
 
     def __init__(self, type=None, owner=None, index=None, name=None, data=None,
-                 distribution=None, total_size=None, model=None):
+                 distribution=None, total_size=None, model=None, shape=None,
+                 dims=None):
         """
         Parameters
         ----------
@@ -1226,11 +1334,10 @@ class ObservedRV(Factor, TensorVariable):
             data = pandas_to_array(data)
             type = TensorType(distribution.dtype, data.shape)
 
-        self.observations = data
-
         super(ObservedRV, self).__init__(type, owner, index, name)
 
         if distribution is not None:
+            self.observations = data
             data = as_tensor(data, name, model, distribution)
 
             self.missing_values = data.missing_values
@@ -1247,7 +1354,9 @@ class ObservedRV(Factor, TensorVariable):
             theano.gof.Apply(theano.compile.view_op,
                              inputs=[data], outputs=[self])
             self.tag.test_value = theano.compile.view_op(data).tag.test_value
-            self.scaling = _get_scaling(total_size, data.shape, data.ndim)
+            # TODO repair
+            # self.scaling = _get_scaling(total_size, data.shape, data.ndim)
+            self.scaling = 1.
 
     def _repr_latex_(self, name=None, dist=None):
         if self.distribution is None:
@@ -1363,9 +1472,11 @@ def Potential(name, var, model=None):
 class TransformedRV(TensorVariable):
 
     def __init__(self, type=None, owner=None, index=None, name=None,
-                 distribution=None, model=None, transform=None,
-                 total_size=None):
+                 dist=None, transform=None, dims=None, shape=None,
+                 total_size=None, broadcastable=None, testval=None,
+                 model=None):
         """
+        # TODO update
         Parameters
         ----------
 
@@ -1377,30 +1488,38 @@ class TransformedRV(TensorVariable):
         total_size : scalar Tensor (optional)
             needed for upscaling logp
         """
-        if type is None:
-            type = distribution.type
+        if type is not None:
+            super(TransformedRV, self).__init__(type, owner, index, name)
+            return
+
+        type = tt.TensorType(str(dist.dtype), broadcastable)
+        self.transformation = transform
+        self.model = model
+        self.distribution = dist
+
+        transformed_name = get_transformed_name(name, transform)
+
+        self.transformed = model.Var(
+            name=transformed_name,
+            dist=transform.apply(dist),
+            dims=None,
+            shape=shape,
+            total_size=total_size,
+            testval=None)
+
+        normalRV = transform.backward(self.transformed)
+
         super(TransformedRV, self).__init__(type, owner, index, name)
 
-        self.transformation = transform
+        theano.Apply(theano.compile.view_op, inputs=[
+                     normalRV], outputs=[self])
+        self.tag.test_value = normalRV.tag.test_value
+        # TODO
+        # self.scaling = _get_scaling(total_size, self.shape, self.ndim)
+        self.scaling = 1.
 
-        if distribution is not None:
-            self.model = model
-            self.distribution = distribution
-
-            transformed_name = get_transformed_name(name, transform)
-
-            self.transformed = model.Var(
-                transformed_name, transform.apply(distribution), total_size=total_size)
-
-            normalRV = transform.backward(self.transformed)
-
-            theano.Apply(theano.compile.view_op, inputs=[
-                         normalRV], outputs=[self])
-            self.tag.test_value = normalRV.tag.test_value
-            self.scaling = _get_scaling(total_size, self.shape, self.ndim)
-            incorporate_methods(source=distribution, destination=self,
-                                methods=['random'],
-                                wrapper=InstanceMethod)
+    def random(self, *args, **kwargs):
+        return self.distribution.random(*args, **kwargs)
 
     def _repr_latex_(self, name=None, dist=None):
         if self.distribution is None:
@@ -1417,13 +1536,6 @@ class TransformedRV(TensorVariable):
     def init_value(self):
         """Convenience attribute to return tag.test_value"""
         return self.tag.test_value
-
-
-def as_iterargs(data):
-    if isinstance(data, tuple):
-        return data
-    else:
-        return [data]
 
 
 def all_continuous(vars):

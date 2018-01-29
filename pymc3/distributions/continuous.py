@@ -12,6 +12,7 @@ import theano.tensor as tt
 from scipy import stats
 from scipy.interpolate import InterpolatedUnivariateSpline
 import warnings
+import theano
 
 from pymc3.theanof import floatX
 from . import transforms
@@ -191,7 +192,7 @@ class Flat(Continuous):
     """
 
     def __init__(self, *args, **kwargs):
-        self._default = 0
+        self._default = tt.as_tensor_variable(floatX(0.))
         super(Flat, self).__init__(defaults=('_default',), *args, **kwargs)
 
     def random(self, point=None, size=None, repeat=None):
@@ -209,8 +210,8 @@ class HalfFlat(PositiveContinuous):
     """Improper flat prior over the positive reals."""
 
     def __init__(self, *args, **kwargs):
-        self._default = 1
         super(HalfFlat, self).__init__(defaults=('_default',), *args, **kwargs)
+        self._default = tt.ones((), self.dtype)
 
     def random(self, point=None, size=None, repeat=None):
         raise ValueError('Cannot sample from HalfFlat distribution')
@@ -285,11 +286,14 @@ class Normal(Continuous):
     """
 
     def __init__(self, mu=0, sd=None, tau=None, **kwargs):
+        dtype = kwargs.get('dtype', theano.config.floatX)
         tau, sd = get_tau_sd(tau=tau, sd=sd)
         self.sd = tt.as_tensor_variable(sd)
         self.tau = tt.as_tensor_variable(tau)
 
-        self.mean = self.median = self.mode = self.mu = mu = tt.as_tensor_variable(mu)
+        mu = tt.as_tensor_variable(mu) + tt.zeros_like(self.sd)
+        self.mean = self.median = self.mode = self.mu = mu.astype(dtype)
+
         self.variance = 1. / self.tau
 
         assert_negative_support(sd, 'sd', 'Normal')
@@ -485,10 +489,10 @@ class Wald(PositiveContinuous):
     def __init__(self, mu=None, lam=None, phi=None, alpha=0., *args, **kwargs):
         super(Wald, self).__init__(*args, **kwargs)
         mu, lam, phi = self.get_mu_lam_phi(mu, lam, phi)
-        self.alpha = alpha = tt.as_tensor_variable(alpha)
-        self.mu = mu = tt.as_tensor_variable(mu)
-        self.lam = lam = tt.as_tensor_variable(lam)
-        self.phi = phi = tt.as_tensor_variable(phi)
+        self.alpha = alpha = tt.as_tensor_variable(alpha).astype(self.dtype)
+        self.mu = mu = tt.as_tensor_variable(mu).astype(self.dtype)
+        self.lam = lam = tt.as_tensor_variable(lam).astype(self.dtype)
+        self.phi = phi = tt.as_tensor_variable(phi).astype(self.dtype)
 
         self.mean = self.mu + self.alpha
         self.mode = self.mu * (tt.sqrt(1. + (1.5 * self.mu / self.lam)**2)

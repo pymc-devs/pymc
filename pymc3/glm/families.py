@@ -86,7 +86,7 @@ class StudentT(Family):
     link = identity
     likelihood = pm_dists.StudentT
     parent = 'mu'
-    priors = {'lam': pm_dists.HalfCauchy.dist(beta=10, testval=1.),
+    priors = {'lam': pm_dists.HalfCauchy.dist(beta=10),
               'nu': 1}
 
 
@@ -94,7 +94,7 @@ class Normal(Family):
     link = identity
     likelihood = pm_dists.Normal
     parent = 'mu'
-    priors = {'sd': pm_dists.HalfCauchy.dist(beta=10, testval=1.)}
+    priors = {'sd': pm_dists.HalfCauchy.dist(beta=10)}
 
 
 class Binomial(Family):
@@ -107,12 +107,12 @@ class Poisson(Family):
     link = exp
     likelihood = pm_dists.Poisson
     parent = 'mu'
-    priors = {'mu': pm_dists.HalfCauchy.dist(beta=10, testval=1.)}
+    priors = {'mu': pm_dists.HalfCauchy.dist(beta=10)}
 
 
 class NegativeBinomial(Family):
     link = exp
     likelihood = pm_dists.NegativeBinomial
     parent = 'mu'
-    priors = {'mu': pm_dists.HalfCauchy.dist(beta=10, testval=1.),
-              'alpha': pm_dists.HalfCauchy.dist(beta=10, testval=1.)}
+    priors = {'mu': pm_dists.HalfCauchy.dist(beta=10),
+              'alpha': pm_dists.HalfCauchy.dist(beta=10)}

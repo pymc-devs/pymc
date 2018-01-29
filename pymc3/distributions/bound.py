@@ -19,7 +19,7 @@ class _Bounded(Distribution):
         self._wrapped = distribution.dist(*args, **kwargs)
 
         if default is None:
-            defaults = self._wrapped.defaults
+            defaults = self._wrapped._defaults
             for name in defaults:
                 setattr(self, name, getattr(self._wrapped, name))
         else:
@@ -27,9 +27,8 @@ class _Bounded(Distribution):
             self._default = default
 
         super(_Bounded, self).__init__(
-            shape=self._wrapped.shape,
+            atom_shape=self._wrapped.atom_shape,
             dtype=self._wrapped.dtype,
-            testval=self._wrapped.testval,
             defaults=defaults,
             transform=self._wrapped.transform)
 
@@ -142,10 +141,10 @@ class _ContinuousBounded(_Bounded, Continuous):
                 default = 0.5 * (lower + upper)
             elif upper is not None:
                 transform = transforms.upperbound(upper)
-                default = upper - 1
+                default = upper - 1.
             else:
                 transform = transforms.lowerbound(lower)
-                default = lower + 1
+                default = lower + 1.
         else:
             default = None
 

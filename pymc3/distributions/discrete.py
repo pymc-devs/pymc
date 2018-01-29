@@ -344,7 +344,7 @@ class NegativeBinomial(Discrete):
         super(NegativeBinomial, self).__init__(*args, **kwargs)
         self.mu = mu = tt.as_tensor_variable(mu)
         self.alpha = alpha = tt.as_tensor_variable(alpha)
-        self.mode = tt.floor(mu).astype('int32')
+        self.mode = tt.floor(mu).astype(self.dtype)
 
     def random(self, point=None, size=None):
         mu, alpha = draw_values([self.mu, self.alpha], point=point)
@@ -402,7 +402,7 @@ class Geometric(Discrete):
     def __init__(self, p, *args, **kwargs):
         super(Geometric, self).__init__(*args, **kwargs)
         self.p = p = tt.as_tensor_variable(p)
-        self.mode = 1
+        self.mode = tt.ones_like(self.p).astype(self.dtype)
 
     def random(self, point=None, size=None):
         p = draw_values([self.p], point=point)[0]
@@ -422,6 +422,19 @@ class Geometric(Discrete):
         name = r'\text{%s}' % name
         return r'${} \sim \text{{Geometric}}(\mathit{{p}}={})$'.format(name,
                                                 get_variable_name(p))
+
+
+class DiscreteFlat(Discrete):
+    """Discrete flat distribution."""
+
+    def __init__(self, *args, **kwargs):
+        kwargs['defaults'] = ('_default',)
+        super(DiscreteFlat, self).__init__(*args, **kwargs)
+
+        self._default = tt.zeros((), dtype=self.dtype)
+
+    def logp(self, value):
+        return tt.zeros_like(value)
 
 
 class DiscreteUniform(Discrete):
@@ -446,10 +459,10 @@ class DiscreteUniform(Discrete):
 
     def __init__(self, lower, upper, *args, **kwargs):
         super(DiscreteUniform, self).__init__(*args, **kwargs)
-        self.lower = tt.floor(lower).astype('int32')
-        self.upper = tt.floor(upper).astype('int32')
+        self.lower = tt.floor(lower).astype(self.dtype)
+        self.upper = tt.floor(upper).astype(self.dtype)
         self.mode = tt.maximum(
-            tt.floor((upper + lower) / 2.).astype('int32'), self.lower)
+            tt.floor((upper + lower) / 2.).astype(self.dtype), self.lower)
 
     def _random(self, lower, upper, size=None):
         # This way seems to be the only to deal with lower and upper

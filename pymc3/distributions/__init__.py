@@ -42,6 +42,7 @@ from .discrete import ZeroInflatedBinomial
 from .discrete import DiscreteUniform
 from .discrete import Geometric
 from .discrete import Categorical
+from .discrete import DiscreteFlat
 
 from .distribution import DensityDist
 from .distribution import Distribution

@@ -59,30 +59,25 @@ class TransformedDistribution(distribution.Distribution):
         transform : Transform
         args, kwargs
             arguments to Distribution"""
-        forward = transform.forward
-        testval = forward(dist.default())
-        forward_val = transform.forward_val
 
-        self.dist = dist
-        self.transform_used = transform
-        v = forward(FreeRV(name='v', distribution=dist))
-        self.type = v.type
+        self._base_dist = dist
+        self._default = transform.forward(dist.default())
+        dtype = self._default.dtype
+
+        self._transform_used = transform
 
         super(TransformedDistribution, self).__init__(
-            v.shape.tag.test_value, v.dtype,
-            testval, dist.defaults, *args, **kwargs)
-
-        if transform.name == 'stickbreaking':
-            b = np.hstack(((np.atleast_1d(self.shape) == 1)[:-1], False))
-            # force the last dim not broadcastable
-            self.type = tt.TensorType(v.dtype, b)
+            dist.atom_shape, dtype, ('_default',))
 
     def logp(self, x):
-        return (self.dist.logp(self.transform_used.backward(x)) +
-                self.transform_used.jacobian_det(x))
+        dist = self._base_dist
+        trafo = self._transform_used
+        return dist.logp(trafo.backward(x)) + trafo.jacobian_det(x)
 
     def logp_nojac(self, x):
-        return self.dist.logp(self.transform_used.backward(x))
+        dist = self._base_dist
+        trafo = self._transform_used
+        return dist.logp(trafo.backward(x))
 
 transform = Transform
 
