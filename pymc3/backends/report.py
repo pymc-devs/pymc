@@ -58,7 +58,7 @@ class SamplerReport(object):
         if errors:
             raise ValueError('Serious convergence issues during sampling.')
 
-    def _run_convergence_checks(self, trace):
+    def _run_convergence_checks(self, trace, model):
         if trace.nchains == 1:
             msg = ("Only one chain was sampled, this makes it impossible to "
                    "run some convergence checks")
@@ -69,8 +69,10 @@ class SamplerReport(object):
 
         from pymc3 import diagnostics
 
-        self._effective_n = effective_n = diagnostics.effective_n(trace)
-        self._gelman_rubin = gelman_rubin = diagnostics.gelman_rubin(trace)
+        varname = [rv.name for rv in model.free_RVs]
+
+        self._effective_n = effective_n = diagnostics.effective_n(trace, varname)
+        self._gelman_rubin = gelman_rubin = diagnostics.gelman_rubin(trace, varname)
 
         warnings = []
         rhat_max = max(val.max() for val in gelman_rubin.values())
