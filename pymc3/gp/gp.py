@@ -596,7 +596,7 @@ class MarginalSparse(Marginal):
             cov_func = pm.gp.cov.ExpQuad(1, ls=0.1)
 
             # Specify the GP.  The default mean function is `Zero`.
-            gp = pm.gp.Latent(cov_func=cov_func, approx="FITC")
+            gp = pm.gp.MarginalSparse(cov_func=cov_func, approx="FITC")
 
             # Place a GP prior over the function f.
             sigma = pm.HalfCauchy("sigma", beta=3)
