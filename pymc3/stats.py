@@ -173,6 +173,8 @@ def waic(trace, model=None, pointwise=False, progressbar=False):
     waic: widely available information criterion
     waic_se: standard error of waic
     p_waic: effective number parameters
+    var_warn: 1 if posterior variance of the log predictive 
+         densities exceeds 0.4
     waic_i: and array of the pointwise predictive accuracy, only if pointwise True
     """
     model = modelcontext(model)
@@ -184,11 +186,14 @@ def waic(trace, model=None, pointwise=False, progressbar=False):
     lppd_i = logsumexp(log_py, axis=0, b=1.0 / log_py.shape[0])
 
     vars_lpd = np.var(log_py, axis=0)
+    warn_mg = 0
     if np.any(vars_lpd > 0.4):
         warnings.warn("""For one or more samples the posterior variance of the
         log predictive densities exceeds 0.4. This could be indication of
         WAIC starting to fail see http://arxiv.org/abs/1507.04544 for details
         """)
+        warn_mg = 1
+
     waic_i = - 2 * (lppd_i - vars_lpd)
 
     waic_se = np.sqrt(len(waic_i) * np.var(waic_i))
@@ -198,11 +203,11 @@ def waic(trace, model=None, pointwise=False, progressbar=False):
     p_waic = np.sum(vars_lpd)
 
     if pointwise:
-        WAIC_r = namedtuple('WAIC_r', 'WAIC, WAIC_se, p_WAIC, WAIC_i')
-        return WAIC_r(waic, waic_se, p_waic, waic_i)
+        WAIC_r = namedtuple('WAIC_r', 'WAIC, WAIC_se, p_WAIC, var_warn, WAIC_i')
+        return WAIC_r(waic, waic_se, p_waic, warn_mg, waic_i)
     else:
-        WAIC_r = namedtuple('WAIC_r', 'WAIC, WAIC_se, p_WAIC')
-        return WAIC_r(waic, waic_se, p_waic)
+        WAIC_r = namedtuple('WAIC_r', 'WAIC, WAIC_se, p_WAIC, var_warn')
+        return WAIC_r(waic, waic_se, p_waic, warn_mg)
 
 
 def loo(trace, model=None, pointwise=False, reff=None, progressbar=False):
@@ -233,6 +238,8 @@ def loo(trace, model=None, pointwise=False, reff=None, progressbar=False):
     loo: approximated Leave-one-out cross-validation
     loo_se: standard error of loo
     p_loo: effective number of parameters
+    shape_warn: 1 if the estimated shape parameter of 
+        Pareto distribution is greater than 0.7 for one or more samples
     loo_i: array of pointwise predictive accuracy, only if pointwise True
     """
     model = modelcontext(model)
@@ -252,6 +259,8 @@ def loo(trace, model=None, pointwise=False, reff=None, progressbar=False):
 
     lw, ks = _psislw(-log_py, reff)
     lw += log_py
+
+    warn_mg = 0
     if np.any(ks > 0.7):
         warnings.warn("""Estimated shape parameter of Pareto distribution is
         greater than 0.7 for one or more samples.
@@ -259,6 +268,7 @@ def loo(trace, model=None, pointwise=False, reff=None, progressbar=False):
         importance sampling is less likely to work well if the marginal
         posterior and LOO posterior are very different. This is more likely to
         happen with a non-robust model and highly influential observations.""")
+        warn_mg = 1
 
     loo_lppd_i = - 2 * logsumexp(lw, axis=0)
     loo_lppd = loo_lppd_i.sum()
@@ -267,11 +277,11 @@ def loo(trace, model=None, pointwise=False, reff=None, progressbar=False):
     p_loo = lppd + (0.5 * loo_lppd)
 
     if pointwise:
-        LOO_r = namedtuple('LOO_r', 'LOO, LOO_se, p_LOO, LOO_i')
-        return LOO_r(loo_lppd, loo_lppd_se, p_loo, loo_lppd_i)
+        LOO_r = namedtuple('LOO_r', 'LOO, LOO_se, p_LOO, shape_warn, LOO_i')
+        return LOO_r(loo_lppd, loo_lppd_se, p_loo, warn_mg, loo_lppd_i)
     else:
-        LOO_r = namedtuple('LOO_r', 'LOO, LOO_se, p_LOO')
-        return LOO_r(loo_lppd, loo_lppd_se, p_loo)
+        LOO_r = namedtuple('LOO_r', 'LOO, LOO_se, p_LOO, shape_warn')
+        return LOO_r(loo_lppd, loo_lppd_se, p_loo, warn_mg)
 
 
 def _psislw(lw, reff):
@@ -481,19 +491,19 @@ def compare(traces, models, ic='WAIC', method='stacking', b_samples=1000,
     the top-ranked model.
         It's always 0 for the top-ranked model.
     warning : A value of 1 indicates that the computation of the IC may not be
-        reliable see http://arxiv.org/abs/1507.04544 for details.
+        reliable. Details see the related warning message in pm.waic and pm.loo
     """
     if ic == 'WAIC':
         ic_func = waic
         df_comp = pd.DataFrame(index=np.arange(len(models)),
                                columns=['WAIC', 'pWAIC', 'dWAIC', 'weight',
-                                        'SE', 'dSE', 'warning'])
+                                        'SE', 'dSE', 'var_warn'])
 
     elif ic == 'LOO':
         ic_func = loo
         df_comp = pd.DataFrame(index=np.arange(len(models)),
                                columns=['LOO', 'pLOO', 'dLOO', 'weight',
-                                        'SE', 'dSE', 'warning'])
+                                        'SE', 'dSE', 'shape_warn'])
 
     else:
         raise NotImplementedError(
@@ -507,19 +517,9 @@ def compare(traces, models, ic='WAIC', method='stacking', b_samples=1000,
         raise ValueError('The method {}, to compute weights,'
                          'is not supported.'.format(method))
 
-    warns = np.zeros(len(models))
-
-    c = 0
-    def add_warns(*args):
-        warns[c] = 1
-
-    with warnings.catch_warnings():
-        warnings.showwarning = add_warns
-        warnings.filterwarnings('always')
-
-        ics = []
-        for c, (t, m) in enumerate(zip(traces, models)):
-            ics.append((c, ic_func(t, m, pointwise=True)))
+    ics = []
+    for c, (t, m) in enumerate(zip(traces, models)):
+        ics.append((c, ic_func(t, m, pointwise=True)))
 
     ics.sort(key=lambda x: x[1][0])
 
@@ -589,7 +589,7 @@ def compare(traces, models, ic='WAIC', method='stacking', b_samples=1000,
 
     if np.any(weights):
         for i, (idx, res) in enumerate(ics):
-            diff = res[3] - ics[0][1][3]
+            diff = res[4] - ics[0][1][4]
             d_ic = np.sum(diff)
             d_se = np.sqrt(len(diff) * np.var(diff))
             se = ses[i]
@@ -600,7 +600,7 @@ def compare(traces, models, ic='WAIC', method='stacking', b_samples=1000,
                                round(weight, round_to),
                                round(se, round_to),
                                round(d_se, round_to),
-                               warns[idx])
+                               res[3])
 
         return df_comp.sort_values(by=ic)
 
@@ -609,12 +609,12 @@ def _ic_matrix(ics):
     """Store the previously computed pointwise predictive accuracy values (ics)
     in a 2D matrix array.
     """
-    N = len(ics[0][1][3])
+    N = len(ics[0][1][4])
     K = len(ics)
     ic_i = np.zeros((N, K))
 
     for i in range(K):
-        ic = ics[i][1][3]
+        ic = ics[i][1][4]
         if len(ic) != N:
             raise ValueError('The number of observations should be the same '
                              'across all models')
