@@ -442,7 +442,7 @@ def sample(draws=500, step=None, init='auto', n_init=200000, start=None,
     trace = trace[discard:]
 
     if compute_convergence_checks:
-        trace.report._run_convergence_checks(trace)
+        trace.report._run_convergence_checks(trace, model)
 
     trace.report._log_summary()
     return trace
