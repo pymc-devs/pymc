@@ -1,6 +1,5 @@
 import numpy as np
 import theano.tensor as tt
-from scipy import special
 from theano.scalar.basic_scipy import GammaLn, Psi, I0, I1
 from theano import scalar
 
