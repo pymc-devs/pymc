@@ -759,6 +759,7 @@ class TestScalarParameterSamples(SeededTest):
                 normal_dist = pm.Normal.dist()
                 density_dist = pm.DensityDist('density_dist', normal_dist.logp, random=normal_dist.random)
                 step = pm.Metropolis()
+<<<<<<< refs/remotes/pymc-devs/master
                 trace = pm.sample(100, step, tuning=0)
 
             try:
@@ -784,3 +785,15 @@ class TestScalarParameterSamples(SeededTest):
             except:
                 assert False
             
+=======
+                trace = pm.sample(5000, step)
+
+            try:
+                ppc = pm.sample_ppc(trace, samples=500, model=model, size=100)
+                if len(ppc) > 0:
+                    pass
+                else:
+                    npt.assert_true(len(ppc) > 0, 'length of ppc sample is zero')
+            except:
+                assert False
+>>>>>>> Added test
