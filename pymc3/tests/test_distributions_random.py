@@ -688,3 +688,32 @@ class TestScalarParameterSamples(SeededTest):
                      'sd': Domain([[1.5, 2., 3.]], edges=(None, None))}, 
                      size=1000,
                      ref_rand=ref_rand)
+
+    def test_density_dist(self):
+        def ref_rand(size, mu, sd):
+            return st.norm.rvs(size=size, loc=mu, scale=sd)
+        
+        class TestDensityDist(pm.DensityDist):
+
+            def __init__(self, **kwargs):
+                norm_dist = pm.Normal.dist()
+                super(TestDensityDist, self).__init__(logp=norm_dist.logp, random=norm_dist.random)
+
+        pymc3_random(TestDensityDist, {},ref_rand=ref_rand)
+
+        def check_model_samplability(self):
+            model = pm.Model()
+            with model:
+                normal_dist = pm.Normal.dist()
+                density_dist = pm.DensityDist('density_dist', normal_dist.logp, random=normal_dist.random)
+                step = pm.Metropolis()
+                trace = pm.sample(5000, step)
+
+            try:
+                ppc = pm.sample_ppc(trace, samples=500, model=model, size=100)
+                if len(ppc) > 0:
+                    pass
+                else:
+                    npt.assert_true(len(ppc) > 0, 'length of ppc sample is zero')
+            except:
+                assert False
