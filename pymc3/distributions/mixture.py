@@ -203,6 +203,10 @@ class NormalMixture(Mixture):
         distshape = np.broadcast(mu, sd).shape
         self.mu = mu = tt.as_tensor_variable(mu)
         self.sd = sd = tt.as_tensor_variable(sd)
+
+        if not distshape: 
+            distshape = np.broadcast(mu.tag.test_value, sd.tag.test_value).shape
+
         super(NormalMixture, self).__init__(w, Normal.dist(mu, sd=sd, shape=distshape),
                                             *args, **kwargs)
 
