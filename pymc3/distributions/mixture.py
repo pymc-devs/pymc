@@ -199,9 +199,11 @@ class NormalMixture(Mixture):
     def __init__(self, w, mu, *args, **kwargs):
         _, sd = get_tau_sd(tau=kwargs.pop('tau', None),
                            sd=kwargs.pop('sd', None))
+        
+        distshape = np.broadcast(mu, sd).shape
         self.mu = mu = tt.as_tensor_variable(mu)
         self.sd = sd = tt.as_tensor_variable(sd)
-        super(NormalMixture, self).__init__(w, Normal.dist(mu, sd=sd),
+        super(NormalMixture, self).__init__(w, Normal.dist(mu, sd=sd, shape=distshape),
                                             *args, **kwargs)
 
     def _repr_latex_(self, name=None, dist=None):
