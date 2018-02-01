@@ -250,7 +250,7 @@ def sample(draws=500, step=None, init='auto', n_init=200000, start=None,
         is important for some convergence statistics and can also
         reveal multiple modes in the posterior. If `None`, then set to
         either `njobs` or 2, whichever is larger.
-    njobs : int
+    cores : int
         The number of chains to run in parallel. If `None`, set to the
         number of CPUs in the system, but at most 4. Keep in mind that
         some chains might themselves be multithreaded via openmp or
@@ -324,8 +324,13 @@ def sample(draws=500, step=None, init='auto', n_init=200000, start=None,
     """
     model = modelcontext(model)
 
-    if njobs is None:
+    if cores is None:
         njobs = min(4, _cpu_count())
+    if 'njobs' in kwargs:
+        njobs = kwargs['njobs']
+        warnings.warn(
+            "The njobs argument has been deprecated. Use cores instead.",
+            DeprecationWarning)
     if chains is None:
         chains = max(2, njobs)
     if isinstance(start, dict):
@@ -341,7 +346,11 @@ def sample(draws=500, step=None, init='auto', n_init=200000, start=None,
     if not isinstance(random_seed, Iterable):
         raise TypeError(
             'Invalid value for `random_seed`. Must be tuple, list or int')
-
+    if 'nchains' in kwargs:
+        chains = kwargs['nchains']
+        warnings.warn(
+            "The nchains argument has been deprecated. Use chains instead.",
+            DeprecationWarning)
     if 'chain' in kwargs:
         chain_idx = kwargs['chain']
         warnings.warn(
