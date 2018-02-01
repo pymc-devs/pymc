@@ -184,7 +184,7 @@ def _cpu_count():
 
 
 def sample(draws=500, step=None, init='auto', n_init=200000, start=None,
-           trace=None, chain_idx=0, chains=None, njobs=None, tune=500,
+           trace=None, chain_idx=0, chains=None, cores=None, tune=500,
            nuts_kwargs=None, step_kwargs=None, progressbar=True, model=None,
            random_seed=None, live_plot=False, discard_tuned_samples=True,
            live_plot_kwargs=None, compute_convergence_checks=True, **kwargs):
