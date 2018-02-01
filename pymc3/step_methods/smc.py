@@ -433,51 +433,51 @@ class SMC(atext.ArrayStepSharedLLK):
         return outindx
 
 
-def sample_smc(samples=1000, n_chains=100, step=None, start=None, homepath=None, stage=0, n_jobs=1,
+def sample_smc(samples=1000, chains=100, step=None, start=None, homepath=None, stage=0, cores=1,
                tune_interval=10, progressbar=False, model=None, random_seed=-1, rm_flag=True):
     """Sequential Monte Carlo sampling
 
-    Samples the solution space with n_chains of Metropolis chains, where each chain has n_steps
+    Samples the solution space with `chains` of Metropolis chains, where each chain has `n_steps`=`samples`/`chains`
     iterations. Once finished, the sampled traces are evaluated:
 
     (1) Based on the likelihoods of the final samples, chains are weighted
     (2) the weighted covariance of the ensemble is calculated and set as new proposal distribution
-    (3) the variation in the ensemble is calculated and also the next tempering parameter (beta)
+    (3) the variation in the ensemble is calculated and also the next tempering parameter (`beta`)
     (4) New n_chains Markov chains are seeded on the traces with high weight for n_steps iterations
-    (5) Repeat until beta > 1.
+    (5) Repeat until `beta` > 1.
 
     Parameters
     ----------
     samples : int
         The number of samples to draw from the last stage, i.e. the posterior. Defaults to 1000.
-        The number of samples should be a multiple of `n_chains`, otherwise the returned number of
-        draws will be the lowest closest multiple of `n_chains`.
-    n_chains : int
+        The number of samples should be a multiple of `chains`, otherwise the returned number of
+        draws will be the lowest closest multiple of `chains`.
+    chains : int
         Number of chains used to store samples in backend.
     step : :class:`SMC`
         SMC initialization object
     start : List of dictionaries
-        with length of (n_chains). Starting points in parameter space (or partial point)
+        with length of (`chains`). Starting points in parameter space (or partial point)
         Defaults to random draws from variables (defaults to empty dict)
     homepath : string
         Result_folder for storing stages, will be created if not existing.
     stage : int
         Stage where to start or continue the calculation. It is possible to continue after completed
-        stages (stage should be the number of the completed stage + 1). If None the start will be at
-        stage = 0.
-    n_jobs : int
+        stages (`stage` should be the number of the completed stage + 1). If None the start will be at
+        `stage=0`.
+    cores : int
         The number of cores to be used in parallel. Be aware that Theano has internal
         parallelization. Sometimes this is more efficient especially for simple models.
-        step.n_chains / n_jobs has to be an integer number!
+        `step.n_chains / cores` has to be an integer number!
     tune_interval : int
         Number of steps to tune for. Defaults to 10.
     progressbar : bool
         Flag for displaying a progress bar
     model : :class:`pymc3.Model`
         (optional if in `with` context) has to contain deterministic variable name defined under
-        step.likelihood_name' that contains the model likelihood
+        `step.likelihood_name` that contains the model likelihood
     random_seed : int or list of ints
-        A list is accepted, more if `n_jobs` is greater than one.
+        A list is accepted, more if `cores` is greater than one.
     rm_flag : bool
         If True existing stage result folders are being deleted prior to sampling.
 
@@ -490,9 +490,15 @@ def sample_smc(samples=1000, n_chains=100, step=None, start=None, homepath=None,
     """
     warnings.warn(EXPERIMENTAL_WARNING)
 
+    n_chains = chains
+    if 'n_chains' in kwargs:
+        n_chains = kwargs['n_chains']
+        warnings.warn(
+            "The n_chains argument has been deprecated. Use chains instead.",
+            DeprecationWarning)
     remainder = samples % n_chains
     if remainder != 0:
-        warnings.warn("'samples' {} is not a multiple of 'n_chains' {}. Hence, you will get {} "
+        warnings.warn("'samples' {} is not a multiple of 'chains' {}. Hence, you will get {} "
                       "draws from the posterior".format(samples, n_chains, samples - remainder))
 
     model = modelcontext(model)
@@ -508,9 +514,14 @@ def sample_smc(samples=1000, n_chains=100, step=None, start=None, homepath=None,
     if homepath is None:
         raise TypeError('Argument `homepath` should be path to result_directory.')
 
-    if n_jobs > 1:
-        if not (step.n_chains / float(n_jobs)).is_integer():
-            raise TypeError('n_chains / n_jobs has to be a whole number!')
+    if 'n_jobs' in kwargs:
+        cores = kwargs['n_jobs']
+        warnings.warn(
+            "The n_jobs argument has been deprecated. Use cores instead.",
+            DeprecationWarning)
+    if cores > 1:
+        if not (step.n_chains / float(cores)).is_integer():
+            raise TypeError('chains / cores has to be a whole number!')
 
     if start is not None:
         if len(start) != step.n_chains:
@@ -525,7 +536,7 @@ def sample_smc(samples=1000, n_chains=100, step=None, start=None, homepath=None,
 
     stage_handler = atext.TextStage(homepath)
 
-    if progressbar and n_jobs > 1:
+    if progressbar and cores > 1:
         progressbar = False
 
     if stage == 0:
@@ -558,7 +569,7 @@ def sample_smc(samples=1000, n_chains=100, step=None, start=None, homepath=None,
                            'stage_path': stage_handler.stage_path(step.stage),
                            'progressbar': progressbar,
                            'model': model,
-                           'n_jobs': n_jobs,
+                           'n_jobs': cores,
                            'chains': chains}
 
             _iter_parallel_chains(**sample_args)
