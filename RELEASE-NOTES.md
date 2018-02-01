@@ -9,6 +9,10 @@
   `p=tt.nnet.sigmoid(logit_p)`.
 - Apply new warning system project wise (#2778)
 
+### Deprecations
+
+- DIC and BPIC calculations have been removed
+
 ## PyMC 3.3 (January 9, 2018)
 
 ### New features

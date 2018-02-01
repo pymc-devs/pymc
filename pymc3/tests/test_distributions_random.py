@@ -672,3 +672,19 @@ class TestScalarParameterSamples(SeededTest):
                      {'eta': Domain([1., 10., 100.])},
                      size=10000//n,
                      ref_rand=ref_rand)
+
+    def test_normalmixture(self):
+        def ref_rand(size, w, mu, sd):
+            component = np.random.choice(w.size, size=size, p=w)
+            return np.random.normal(mu[component], sd[component], size=size)
+
+        pymc3_random(pm.NormalMixture, {'w': Simplex(2),
+                     'mu': Domain([[.05, 2.5], [-5., 1.]], edges=(None, None)),
+                     'sd': Domain([[1, 1], [1.5, 2.]], edges=(None, None))}, 
+                     size=1000,
+                     ref_rand=ref_rand)
+        pymc3_random(pm.NormalMixture, {'w': Simplex(3),
+                     'mu': Domain([[-5., 1., 2.5]], edges=(None, None)),
+                     'sd': Domain([[1.5, 2., 3.]], edges=(None, None))}, 
+                     size=1000,
+                     ref_rand=ref_rand)
