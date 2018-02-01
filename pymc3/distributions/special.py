@@ -1,10 +1,9 @@
 import numpy as np
 import theano.tensor as tt
-from scipy import special
-from theano.scalar.basic_scipy import GammaLn, Psi
+from theano.scalar.basic_scipy import GammaLn, Psi, I0, I1
 from theano import scalar
 
-__all__ = ['gammaln', 'multigammaln', 'psi', 'trigamma']
+__all__ = ['gammaln', 'multigammaln', 'psi', 'i0', 'i1']
 
 scalar_gammaln = GammaLn(scalar.upgrade_to_float, name='scalar_gammaln')
 gammaln = tt.Elemwise(scalar_gammaln, name='gammaln')
@@ -25,25 +24,8 @@ def multigammaln(a, p):
 scalar_psi = Psi(scalar.upgrade_to_float, name='scalar_psi')
 psi = tt.Elemwise(scalar_psi, name='psi')
 
+scalar_i0 = I0(scalar.upgrade_to_float, name='scalar_i0')
+i0 = tt.Elemwise(scalar_i0, name='i0')
 
-class Trigamma(scalar.UnaryScalarOp):
-    """
-    Compute 2nd derivative of gammaln(x)
-    """
-    @staticmethod
-    def st_impl(x):
-        return special.polygamma(1, x)
-
-    def impl(self, x):
-        return Psi.st_impl(x)
-
-    # def grad()  no gradient now
-
-    def __eq__(self, other):
-        return type(self) == type(other)
-
-    def __hash__(self):
-        return hash(type(self))
-
-scalar_trigamma = Trigamma(scalar.upgrade_to_float, name='scalar_trigamma')
-trigamma = tt.Elemwise(scalar_trigamma, name='trigamma')
+scalar_i1 = I1(scalar.upgrade_to_float, name='scalar_i1')
+i1 = tt.Elemwise(scalar_i1, name='i1')

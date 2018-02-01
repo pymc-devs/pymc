@@ -16,11 +16,8 @@ import warnings
 from pymc3.theanof import floatX
 from . import transforms
 from pymc3.util import get_variable_name
-
-from .dist_math import (
-    bound, logpow, gammaln, betaln, std_cdf, i0,
-    i1, alltrue_elemwise, SplineWrapper
-)
+from .special import i0, i1
+from .dist_math import bound, logpow, gammaln, betaln, std_cdf, alltrue_elemwise, SplineWrapper
 from .distribution import Continuous, draw_values, generate_samples
 
 __all__ = ['Uniform', 'Flat', 'HalfFlat', 'Normal', 'Beta', 'Exponential',
