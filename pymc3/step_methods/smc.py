@@ -443,7 +443,7 @@ def sample_smc(samples=1000, chains=100, step=None, start=None, homepath=None, s
     (1) Based on the likelihoods of the final samples, chains are weighted
     (2) the weighted covariance of the ensemble is calculated and set as new proposal distribution
     (3) the variation in the ensemble is calculated and also the next tempering parameter (`beta`)
-    (4) New n_chains Markov chains are seeded on the traces with high weight for n_steps iterations
+    (4) New `chains` Markov chains are seeded on the traces with high weight for n_steps iterations
     (5) Repeat until `beta` > 1.
 
     Parameters
