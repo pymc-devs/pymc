@@ -434,7 +434,7 @@ class SMC(atext.ArrayStepSharedLLK):
 
 
 def sample_smc(samples=1000, chains=100, step=None, start=None, homepath=None, stage=0, cores=1,
-               tune_interval=10, progressbar=False, model=None, random_seed=-1, rm_flag=True):
+               tune_interval=10, progressbar=False, model=None, random_seed=-1, rm_flag=True, **kwargs):
     """Sequential Monte Carlo sampling
 
     Samples the solution space with `chains` of Metropolis chains, where each chain has `n_steps`=`samples`/`chains`
