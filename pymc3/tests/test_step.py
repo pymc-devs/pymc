@@ -198,10 +198,10 @@ class TestStepMethods(object):  # yield test doesn't work subclassing object
             x = Normal('x', mu=0, sd=1)
             if step_method.__name__ == 'SMC':
                 trace = smc.sample_smc(samples=200,
-                                       n_chains=2,
+                                       chains=2,
                                        start=[{'x':1.}, {'x':-1.}],
                                        random_seed=1,
-                                       n_jobs=1, progressbar=False,
+                                       cores=1, progressbar=False,
                                        homepath=self.temp_dir)
             elif step_method.__name__ == 'NUTS':
                 step = step_method(scaling=model.test_point)
