@@ -11,6 +11,7 @@
 ### Deprecations
 
 - DIC and BPIC calculations have been removed
+- `njobs` and `nchains` deprecated in favor of `cores` and `chains` for `sample`
 
 ## PyMC 3.3 (January 9, 2018)
 
