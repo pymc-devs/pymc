@@ -234,18 +234,19 @@ def effective_n(mtrace, varnames=None, include_transformed=False):
         # Calculate within-chain variance
         W = np.mean(np.var(x, axis=-2, ddof=1), axis=-1)
 
-        rho = np.ones(num_samples)
+        rho = np.ones(2 * num_chains + 1)
 
         # Iterate over different lags of autocorrelation
-        for t in range(1,num_chains-1):
+        for t in range(1, 2 * num_chains + 2):
             auto_corr = []
-            for m in range(num_samples):
-                auto_corr.append(autocorr(x[m], t))
-            rho[t] = 1. - (W - np.mean(auto_corr)) / Vhat
+            for m in range(num_chains):
+                auto_corr.append(autocorr(x[:, m], t))
+            print(x.shape)
+            rho[t - 1] = 1. - (W - np.mean(auto_corr)) / Vhat
 
-        tHat = 1. + 2 * rho[0:2 * num_chains + 1].sum()
+        tHat = 1. + 2 * rho.sum()
         neff = num_chains * num_samples / tHat
-        return neff
+        return abs(neff)
 
     def generate_neff(trace_values):
         x = np.array(trace_values)
