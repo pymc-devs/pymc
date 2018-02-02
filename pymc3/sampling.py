@@ -259,7 +259,7 @@ def sample(draws=500, step=None, init='auto', n_init=200000, start=None,
         Number of iterations to tune, if applicable (defaults to 500).
         Samplers adjust the step sizes, scalings or similar during
         tuning. These samples will be drawn in addition to samples
-        and discarded unless discard_tuned_samples is set to True.
+        and discarded unless discard_tuned_samples is set to False.
     nuts_kwargs : dict
         Options for the NUTS sampler. See the docstring of NUTS
         for a complete list of options. Common options are
