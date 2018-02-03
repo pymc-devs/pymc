@@ -717,3 +717,22 @@ class TestScalarParameterSamples(SeededTest):
                     npt.assert_true(len(ppc) > 0, 'length of ppc sample is zero')
             except:
                 assert False
+
+        def check_scipy_distributions(self):
+            model = pm.Model()
+            with model:
+                norm_dist_logp = st.norm.logpdf
+                norm_dist_random = np.random.normal
+                density_dist = pm.DensityDist('density_dist', normal_dist_logp, random=normal_dist_random)
+                step = pm.Metropolis()
+                trace = pm.sample(5000, step)
+
+            try:
+                ppc = pm.sample_ppc(trace, samples=500, model=model, size=100)
+                if len(ppc) > 0:
+                    pass
+                else:
+                    npt.assert_true(len(ppc) > 0, 'length of ppc sample is zero')
+            except:
+                assert False
+            
