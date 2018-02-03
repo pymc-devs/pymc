@@ -1,6 +1,7 @@
 from collections import namedtuple
 import logging
 import enum
+from ..util import is_transformed_name, get_untransformed_name
 
 
 logger = logging.getLogger('pymc3')
@@ -69,10 +70,15 @@ class SamplerReport(object):
 
         from pymc3 import diagnostics
 
-        varname = [rv.name for rv in model.free_RVs]
+        varnames = []
+        for rv in model.free_RVs:
+            rv_name = rv.name
+            if is_transformed_name(rv_name):
+                rv_name = get_untransformed_name(rv_name)
+            varnames.append(rv_name)
 
-        self._effective_n = effective_n = diagnostics.effective_n(trace, varname)
-        self._gelman_rubin = gelman_rubin = diagnostics.gelman_rubin(trace, varname)
+        self._effective_n = effective_n = diagnostics.effective_n(trace, varnames)
+        self._gelman_rubin = gelman_rubin = diagnostics.gelman_rubin(trace, varnames)
 
         warnings = []
         rhat_max = max(val.max() for val in gelman_rubin.values())
