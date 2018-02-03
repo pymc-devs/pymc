@@ -1,5 +1,6 @@
 import numpy as np
 from scipy.signal import gaussian, convolve
+from scipy.stats import entropy
 
 try:
     import matplotlib.pyplot as plt
@@ -67,7 +68,7 @@ def fast_kde(x):
     xmin, xmax = np.min(x), np.max(x)
 
     dx = (xmax - xmin) / (nx - 1)
-    std_x = np.std((x - xmin) / dx)
+    std_x = entropy((x - xmin) / dx) * 3
     grid, _ = np.histogram(x, bins=nx)
 
     scotts_factor = n ** (-0.2)
