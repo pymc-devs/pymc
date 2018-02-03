@@ -16,7 +16,7 @@ import warnings
 from pymc3.theanof import floatX
 from . import transforms
 from pymc3.util import get_variable_name
-from .special import i0, i1, log_i0
+from .special import log_i0
 from .dist_math import bound, logpow, gammaln, betaln, std_cdf, alltrue_elemwise, SplineWrapper
 from .distribution import Continuous, draw_values, generate_samples
 
@@ -1851,7 +1851,6 @@ class VonMises(Continuous):
         super(VonMises, self).__init__(transform=transform, *args, **kwargs)
         self.mean = self.median = self.mode = self.mu = mu = tt.as_tensor_variable(mu)
         self.kappa = kappa = floatX(tt.as_tensor_variable(kappa))
-        self.variance = 1 - i1(kappa) / i0(kappa)
 
         assert_negative_support(kappa, 'kappa', 'VonMises')
 

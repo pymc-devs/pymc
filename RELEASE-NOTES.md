@@ -8,6 +8,11 @@
   of the success probability. This is faster and more stable than using
   `p=tt.nnet.sigmoid(logit_p)`.
 
+### Fixes
+
+- `VonMises` does not overflow for large values of kappa. i0 and i1 have been removed and we now use
+   log_i0 to compute the logp.
+
 ### Deprecations
 
 - DIC and BPIC calculations have been removed
