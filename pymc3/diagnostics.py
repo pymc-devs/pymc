@@ -241,7 +241,6 @@ def effective_n(mtrace, varnames=None, include_transformed=False):
             auto_corr = []
             for m in range(num_chains):
                 auto_corr.append(autocorr(x[:, m], t))
-            print(x.shape)
             rho[t - 1] = 1. - (W - np.mean(auto_corr)) / Vhat
 
         tHat = 1. + 2 * rho.sum()
