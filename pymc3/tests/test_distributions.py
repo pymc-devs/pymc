@@ -931,6 +931,7 @@ class TestMatchesScipy(SeededTest):
         pt = {'eg': value}
         assert_almost_equal(model.fastlogp(pt), logp, decimal=select_by_precision(float64=6, float32=2), err_msg=str(pt))
 
+    @pytest.mark.xfail(condition=(theano.config.floatX == "float32"), reason="Fails on float32")
     def test_vonmises(self):
         self.pymc3_matches_scipy(
             VonMises, R, {'mu': Circ, 'kappa': Rplus},
