@@ -362,6 +362,14 @@ def sample(draws=500, step=None, init='auto', n_init=200000, start=None,
         for start_vals in start:
             _check_start_shape(model, start_vals)
 
+    # small trace warning
+    if draws == 0:
+        msg = "Tuning was enabled throughout the whole trace."
+        _log.warning(msg)
+    elif draws < 500:
+        msg = "Only %s samples in chain." % draws
+        _log.warning(msg)
+
     draws += tune
 
     if nuts_kwargs is not None:
@@ -428,12 +436,12 @@ def sample(draws=500, step=None, init='auto', n_init=200000, start=None,
         try:
             trace = _mp_sample(**sample_args)
         except pickle.PickleError:
-            _log.warn("Could not pickle model, sampling singlethreaded.")
+            _log.warning("Could not pickle model, sampling singlethreaded.")
             _log.debug('Pickling error:', exec_info=True)
             parallel = False
         except AttributeError as e:
             if str(e).startswith("AttributeError: Can't pickle"):
-                _log.warn("Could not pickle model, sampling singlethreaded.")
+                _log.warning("Could not pickle model, sampling singlethreaded.")
                 _log.debug('Pickling error:', exec_info=True)
                 parallel = False
             else:
@@ -966,7 +974,7 @@ def stop_tuning(step):
     if hasattr(step, 'tune'):
         step.tune = False
 
-    elif hasattr(step, 'methods'):
+    if hasattr(step, 'methods'):
         step.methods = [stop_tuning(s) for s in step.methods]
 
     return step
