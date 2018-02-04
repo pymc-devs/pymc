@@ -51,9 +51,9 @@ class TestSMC(SeededTest):
     def test_sample_n_core(self, n_jobs, stage):
 
         mtrace = smc.sample_smc(samples=self.samples,
-                                n_chains=self.n_chains,
+                                chains=self.n_chains,
                                 stage=stage,
-                                n_jobs=n_jobs,
+                                cores=n_jobs,
                                 progressbar=True,
                                 homepath=self.test_folder,
                                 model=self.ATMIP_test,
