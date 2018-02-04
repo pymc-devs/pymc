@@ -16,7 +16,7 @@ import warnings
 from pymc3.theanof import floatX
 from . import transforms
 from pymc3.util import get_variable_name
-from .special import i0, i1
+from .special import log_i0
 from .dist_math import bound, logpow, gammaln, betaln, std_cdf, alltrue_elemwise, SplineWrapper
 from .distribution import Continuous, draw_values, generate_samples
 
@@ -1850,8 +1850,7 @@ class VonMises(Continuous):
             transform = transforms.Circular()
         super(VonMises, self).__init__(transform=transform, *args, **kwargs)
         self.mean = self.median = self.mode = self.mu = mu = tt.as_tensor_variable(mu)
-        self.kappa = kappa = tt.as_tensor_variable(kappa)
-        self.variance = 1 - i1(kappa) / i0(kappa)
+        self.kappa = kappa = floatX(tt.as_tensor_variable(kappa))
 
         assert_negative_support(kappa, 'kappa', 'VonMises')
 
@@ -1865,7 +1864,8 @@ class VonMises(Continuous):
     def logp(self, value):
         mu = self.mu
         kappa = self.kappa
-        return bound(kappa * tt.cos(mu - value) - tt.log(2 * np.pi * i0(kappa)), value >= -np.pi, value <= np.pi, kappa >= 0)
+        return bound(kappa * tt.cos(mu - value) - (tt.log(2 * np.pi) + log_i0(kappa)),
+                     kappa > 0, value >= -np.pi, value <= np.pi)
 
     def _repr_latex_(self, name=None, dist=None):
         if dist is None:
