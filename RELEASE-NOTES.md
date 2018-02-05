@@ -7,6 +7,8 @@
 - Add `logit_p` keyword to `pm.Bernoulli`, so that users can specify the logit
   of the success probability. This is faster and more stable than using
   `p=tt.nnet.sigmoid(logit_p)`.
+- Add `random` keyword to `pm.DensityDist` thus enabling users to pass custom random method
+  which in turn makes sampling from a `DensityDist` possible. 
 
 ### Fixes
 
