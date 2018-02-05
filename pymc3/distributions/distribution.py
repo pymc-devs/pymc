@@ -176,7 +176,23 @@ class Continuous(Distribution):
 
 
 class DensityDist(Distribution):
-    """Distribution based on a given log density function."""
+    """Distribution based on a given log density function.
+        
+        A distribution with the passed log density function is created. 
+        Requires a custom random function passed as kwarg `random` to
+        enable sampling.
+
+        Example:
+        --------
+        .. code-block:: python
+            with pm.Model():
+                normal_dist = pm.Normal.dist()
+                density_dist = pm.DensityDist('density_dist', normal_dist.logp, observed=np.random.randn(100),
+                random=normal_dist.random)
+                step = pm.Metropolis()
+                trace = pm.sample(100, step, tuning=0)
+
+    """
 
     def __init__(self, logp, shape=(), dtype=None, testval=0, random=None, *args, **kwargs):
         if dtype is None:
