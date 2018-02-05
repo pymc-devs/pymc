@@ -68,7 +68,7 @@ def fast_kde(x):
     xmin, xmax = np.min(x), np.max(x)
 
     dx = (xmax - xmin) / (nx - 1)
-    std_x = entropy((x - xmin) / dx) * 3
+    std_x = entropy((x - xmin) / dx) * 4.5
     grid, _ = np.histogram(x, bins=nx)
 
     scotts_factor = n ** (-0.2)
