@@ -757,16 +757,13 @@ class TestScalarParameterSamples(SeededTest):
             model = pm.Model()
             with model:
                 normal_dist = pm.Normal.dist()
-                density_dist = pm.DensityDist('density_dist', normal_dist.logp, random=normal_dist.random)
+                density_dist = pm.DensityDist('density_dist', normal_dist.logp, observed=np.random.randn(100), random=normal_dist.random)
                 step = pm.Metropolis()
-<<<<<<< refs/remotes/pymc-devs/master
-<<<<<<< refs/remotes/pymc-devs/master
                 trace = pm.sample(100, step, tuning=0)
 
             try:
                 ppc = pm.sample_ppc(trace, samples=500, model=model, size=100)
-                if len(ppc) == 0:
-                    npt.assert_true(len(ppc) == 0, 'length of ppc sample is zero')
+                npt.assert_true(len(ppc) == 0, 'length of ppc sample is zero')
             except:
                 assert False
 
@@ -775,47 +772,12 @@ class TestScalarParameterSamples(SeededTest):
             with model:
                 norm_dist_logp = st.norm.logpdf
                 norm_dist_random = np.random.normal
-                density_dist = pm.DensityDist('density_dist', normal_dist_logp, random=normal_dist_random)
+                density_dist = pm.DensityDist('density_dist', normal_dist_logp, observed=np.random.randn(100), random=normal_dist_random)
                 step = pm.Metropolis()
                 trace = pm.sample(100, step, tuning=0)
 
             try:
                 ppc = pm.sample_ppc(trace, samples=500, model=model, size=100)
-                if len(ppc) == 0:
-                    npt.assert_true(len(ppc) == 0, 'length of ppc sample is zero')
+                npt.assert_true(len(ppc) == 0, 'length of ppc sample is zero')
             except:
                 assert False
-            
-=======
-                trace = pm.sample(5000, step)
-=======
-                trace = pm.sample(100, step, tuning=0)
->>>>>>> Updated RELEASE-NOTES.md
-
-            try:
-                ppc = pm.sample_ppc(trace, samples=500, model=model, size=100)
-                if len(ppc) == 0:
-                    npt.assert_true(len(ppc) == 0, 'length of ppc sample is zero')
-            except:
-                assert False
-<<<<<<< refs/remotes/pymc-devs/master
->>>>>>> Added test
-=======
-
-        def check_scipy_distributions(self):
-            model = pm.Model()
-            with model:
-                norm_dist_logp = st.norm.logpdf
-                norm_dist_random = np.random.normal
-                density_dist = pm.DensityDist('density_dist', normal_dist_logp, random=normal_dist_random)
-                step = pm.Metropolis()
-                trace = pm.sample(100, step, tuning=0)
-
-            try:
-                ppc = pm.sample_ppc(trace, samples=500, model=model, size=100)
-                if len(ppc) == 0:
-                    npt.assert_true(len(ppc) == 0, 'length of ppc sample is zero')
-            except:
-                assert False
-            
->>>>>>> Test scipy distribution compatibility with DensityDist
