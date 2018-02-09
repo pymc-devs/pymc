@@ -103,8 +103,7 @@ class _QuadFormBase(Continuous):
 
     def _quaddist_chol(self, delta):
         chol_cov = self.chol_cov
-        _, k = delta.shape
-        k = pm.floatX(k)
+
         diag = tt.nlinalg.diag(chol_cov)
         # Check if the covariance matrix is positive definite.
         ok = tt.all(diag > 0)
@@ -122,8 +121,6 @@ class _QuadFormBase(Continuous):
 
     def _quaddist_tau(self, delta):
         chol_tau = self.chol_tau
-        _, k = delta.shape
-        k = pm.floatX(k)
 
         diag = tt.nlinalg.diag(chol_tau)
         ok = tt.all(diag > 0)
