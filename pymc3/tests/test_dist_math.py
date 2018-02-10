@@ -155,7 +155,7 @@ class TestMvNormalLogp():
         logp_chol_f = theano.function([chol, delta], logp_chol)
         logp_chol = logp_cov_f(chol_val, delta_val)
         npt.assert_allclose(logp_chol, expect)
-        
+
     @theano.configparser.change_flags(compute_test_value="ignore")
     def test_grad(self):
         np.random.seed(42)
@@ -165,8 +165,27 @@ class TestMvNormalLogp():
                 tt.stack([tt.exp(0.1 * chol_vec[0]), 0]),
                 tt.stack([chol_vec[1], 2 * tt.exp(chol_vec[2])]),
             ])
-            cov = tt.dot(chol, chol.T)
+            cov = floatX(tt.dot(chol, chol.T))
             return MvNormalLogp()(cov, delta)
+
+        chol_vec_val = floatX(np.array([0.5, 1., -0.1]))
+
+        delta_val = floatX(np.random.randn(1, 2))
+        utt.verify_grad(func, [chol_vec_val, delta_val])
+
+        delta_val = floatX(np.random.randn(5, 2))
+        utt.verify_grad(func, [chol_vec_val, delta_val])
+
+    @theano.configparser.change_flags(compute_test_value="ignore")
+    def test_grad_with_chol(self):
+        np.random.seed(42)
+
+        def func(chol_vec, delta):
+            chol = tt.stack([
+                tt.stack([tt.exp(0.1 * chol_vec[0]), 0]),
+                tt.stack([chol_vec[1], 2 * tt.exp(chol_vec[2])]),
+            ])
+            return MvNormalLogp(True)(floatX(chol), delta)
 
         chol_vec_val = floatX(np.array([0.5, 1., -0.1]))
 
@@ -179,14 +198,14 @@ class TestMvNormalLogp():
     @theano.configparser.change_flags(compute_test_value="ignore")
     def test_hessian(self):
         chol_vec = tt.vector('chol_vec')
-        chol_vec.tag.test_value = np.array([0.1, 2, 3])
+        chol_vec.tag.test_value = floatX(np.array([0.1, 2, 3]))
         chol = tt.stack([
             tt.stack([tt.exp(0.1 * chol_vec[0]), 0]),
             tt.stack([chol_vec[1], 2 * tt.exp(chol_vec[2])]),
         ])
         cov = tt.dot(chol, chol.T)
         delta = tt.matrix('delta')
-        delta.tag.test_value = np.ones((5, 2))
+        delta.tag.test_value = floatX(np.ones((5, 2)))
         logp = MvNormalLogp()(cov, delta)
         g_cov, g_delta = tt.grad(logp, [cov, delta])
         tt.grad(g_delta.sum() + g_cov.sum(), [delta, cov])
