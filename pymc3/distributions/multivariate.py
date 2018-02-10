@@ -300,6 +300,9 @@ class MvStudentT(_QuadFormBase):
             cov = Sigma
         super(MvStudentT, self).__init__(mu=mu, cov=cov, tau=tau, chol=chol,
                                          lower=lower, *args, **kwargs)
+        if self._cov_type == 'cov':
+            cholesky = tt.slinalg.Cholesky(lower=True, on_error="nan")
+            self.chol_cov = cholesky(self.cov)
         self.nu = nu = tt.as_tensor_variable(nu)
         self.mean = self.median = self.mode = self.mu = self.mu
 
@@ -327,12 +330,7 @@ class MvStudentT(_QuadFormBase):
         return dist, logdet, ok
 
     def _quaddist_chol(self, delta):
-        try:
-            chol_cov = self.chol_cov
-        except:
-            cholesky = tt.slinalg.Cholesky(lower=True, on_error="nan")
-            self.chol_cov = cholesky(self.cov)
-            chol_cov = self.chol_cov
+        chol_cov = self.chol_cov
 
         diag = tt.ExtractDiag(view=True)(chol_cov)
         # Check if the covariance matrix is positive definite.
