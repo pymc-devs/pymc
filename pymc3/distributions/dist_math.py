@@ -201,7 +201,7 @@ def MvNormalLogp(with_choleksy=False):
 
         if not with_choleksy:
             cov = cholesky(cov)
-            ok = ~tt.isnan(chol_cov[0,0])
+            ok = ~tt.isnan(cov[0,0])
         else:
             diag = tt.ExtractDiag(view=True)(cov)
             ok = tt.all(diag>0)

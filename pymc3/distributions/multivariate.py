@@ -331,7 +331,8 @@ class MvStudentT(_QuadFormBase):
             chol_cov = self.chol_cov
         except:
             cholesky = tt.slinalg.Cholesky(lower=True, on_error="nan")
-            self.chol_cov = chol_cov = cholesky(self.cov)
+            self.chol_cov = cholesky(self.cov)
+            chol_cov = self.chol_cov
 
         diag = tt.ExtractDiag(view=True)(chol_cov)
         # Check if the covariance matrix is positive definite.
