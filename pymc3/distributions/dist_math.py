@@ -169,9 +169,9 @@ def MvNormalLogp(with_choleksy=False):
     if not with_choleksy:
         # add inplace=True when/if impletemented by Theano
         cholesky = slinalg.Cholesky(lower=True, on_error="nan")
-        cov = cholesky(cov)
+        cov = f(cholesky(cov))
         # The Cholesky op will return NaNs if the cov is not positive definite
-        # checking the first one is sufficient
+        # -- checking the first value is sufficient
         ok = ~tt.isnan(cov[0,0])
         # will all be NaN if the Cholesky was no-go, which is fine
         diag = tt.ExtractDiag(view=True)(cov)
@@ -217,8 +217,8 @@ def MvNormalLogp(with_choleksy=False):
         tau_delta = solve_upper(chol_cov.T, delta_trans.T)
         g_delta = tau_delta.T
 
-        g_cov = ifelse(ok, g_cov, -np.nan)
-        g_delta = ifelse(ok, g_delta, -np.nan)
+        g_cov = ifelse(ok, g_cov, f(-np.nan * tt.zeros_like(g_cov)))
+        g_delta = ifelse(ok, g_delta, f(-np.nan * tt.zeros_like(g_delta)))
 
         return [-0.5 * g_cov * g_logp, -g_delta * g_logp]
 

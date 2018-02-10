@@ -305,7 +305,7 @@ class MvStudentT(_QuadFormBase):
             self.chol_cov = cholesky(self.cov)
         self.nu = nu = tt.as_tensor_variable(nu)
         self.mean = self.median = self.mode = self.mu = self.mu
-
+        self.solve_lower = tt.slinalg.Solve(A_structure='lower_triangular', overwrite_b=True)
 
     def _quaddist(self, value):
         """Compute (x - mu).T @ Sigma^-1 @ (x - mu) and the logdet of Sigma."""
