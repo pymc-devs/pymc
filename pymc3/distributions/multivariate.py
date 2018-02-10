@@ -7,7 +7,6 @@ import scipy
 import theano
 import theano.tensor as tt
 from theano.ifelse import ifelse
-from theano.tensor import slinalg
 
 from scipy import stats, linalg
 from six import raise_from
@@ -73,7 +72,7 @@ class _CovSet():
             self._cov_type = 'tau'
             tau = tt.as_tensor_variable(tau)
             try:
-                self.chol_tau = slinalg.Cholesky(lower=True, on_error="nan")(tau)
+                self.chol_tau = tt.slinalg.Cholesky(lower=True, on_error="nan")(tau)
                 def deltalogp(delta):
                     delta_trans = tt.dot(delta, self.chol_tau)
                     quaddist = (delta_trans ** 2).sum(axis=-1)
@@ -234,15 +233,13 @@ class MvNormal(_QuadFormBase):
         if value.ndim > 2 or value.ndim == 0:
             raise ValueError('Invalid dimension for value: %s' % value.ndim)
         if value.ndim == 1:
-            onedim = True
             value = value[None, :]
-        else:
-            onedim = False
 
         delta = value - self.mu
         logp = self.deltalogp(delta)
 
-        return logp[0] if onedim else logp
+        #return logp[0] if onedim else logp
+        return logp
 
     def _repr_latex_(self, name=None, dist=None):
         if dist is None:

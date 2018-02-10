@@ -182,7 +182,7 @@ def MvNormalLogp(with_choleksy=False):
 
     # `solve_lower` throws errors with NaNs hence we replace the cov with
     # identity and return -Inf later
-    chol_cov = ifelse(ok, cov, tt.eye(k, theano.config.floatX))
+    chol_cov = ifelse(ok, cov, tt.eye(k, dtype=theano.config.floatX))
     delta_trans = solve_lower(chol_cov, delta.T).T
 
     result = n * f(k) * tt.log(f(2) * np.pi)
@@ -206,10 +206,11 @@ def MvNormalLogp(with_choleksy=False):
             diag = tt.ExtractDiag(view=True)(cov)
             ok = tt.all(diag>0)
 
-        chol_cov = ifelse(ok, cov, tt.eye(k, theano.config.floatX))
+        I_k = tt.eye(k, dtype=theano.config.floatX)
+        chol_cov = ifelse(ok, cov, I_k)
         delta_trans = solve_lower(chol_cov, delta.T).T
 
-        inner = n * tt.eye(k) - tt.dot(delta_trans.T, delta_trans)
+        inner =  n * I_k - tt.dot(delta_trans.T, delta_trans)
         g_cov = solve_upper(chol_cov.T, inner)
         g_cov = solve_upper(chol_cov.T, g_cov.T)
 
