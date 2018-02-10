@@ -27,24 +27,22 @@ __all__ = ['MvNormal', 'MvStudentT', 'Dirichlet',
            'Multinomial', 'Wishart', 'WishartBartlett',
            'LKJCorr', 'LKJCholeskyCov', 'MatrixNormal']
 
-
-class _QuadFormBase(Continuous):
-    def __init__(self, mu=None, cov=None, chol=None, tau=None, lower=True,
-                 *args, **kwargs):
-        super(_QuadFormBase, self).__init__(*args, **kwargs)
-        if len(self.shape) > 2:
-            raise ValueError("Only 1 or 2 dimensions are allowed.")
+class _CovSet():
+    R"""
+    Convenience class to set Covariance, Inverse Covariance and Cholesky
+    descomposition of Covariance matrices.
+    """
+    def __initCov__(self, cov=None, tau=None, chol=None, lower=True):
+        if all([val is None for val in [cov, tau, chol]]):
+            raise ValueError('One of cov, tau or chol arguments must be provided.')
 
         if chol is not None and not lower:
             chol = chol.T
-        if len([i for i in [tau, cov, chol] if i is not None]) != 1:
-            raise ValueError('Incompatible parameterization. '
-                             'Specify exactly one of tau, cov, '
-                             'or chol.')
-        self.mu = mu = tt.as_tensor_variable(mu)
+
+        self.cov = self.tau = self.chol_cov = None
+
         self.solve_lower = tt.slinalg.solve_lower_triangular
         self.solve_upper = tt.slinalg.solve_upper_triangular
-
         cholesky = tt.slinalg.Cholesky(lower=True, on_error="nan")
 
         if cov is not None:
@@ -68,6 +66,22 @@ class _QuadFormBase(Continuous):
             self.chol_cov = tt.as_tensor_variable(chol)
             if self.chol_cov.ndim != 2:
                 raise ValueError('`chol` must be two dimensional.')
+
+class _QuadFormBase(Continuous, _CovSet):
+    def __init__(self, mu=None, cov=None, chol=None, tau=None, lower=True,
+                 *args, **kwargs):
+
+        super(_QuadFormBase, self).__init__(*args, **kwargs)
+        super(_QuadFormBase, self).__initCov__(cov, tau, chol, lower)
+
+        if len(self.shape) > 2:
+            raise ValueError("Only 1 or 2 dimensions are allowed.")
+
+        if len([i for i in [tau, cov, chol] if i is not None]) != 1:
+            raise ValueError('Incompatible parameterization. '
+                             'Specify exactly one of tau, cov, '
+                             'or chol.')
+        self.mu = mu = tt.as_tensor_variable(mu)
 
     def _quaddist(self, value):
         """Compute (x - mu).T @ Sigma^-1 @ (x - mu) and the logdet of Sigma."""

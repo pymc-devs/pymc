@@ -3,7 +3,6 @@ from theano import scan
 
 from pymc3.util import get_variable_name
 from .continuous import get_tau_sd, Normal, Flat
-from .dist_math import Cholesky
 from . import multivariate
 from . import distribution
 
@@ -278,49 +277,7 @@ class EulerMaruyama(distribution.Continuous):
         return r'${} \sim \text{EulerMaruyama}(\mathit{{dt}}={})$'.format(name,
                                                 get_variable_name(dt))
 
-
-class _CovSet():
-    R"""
-    Convenience class to set Covariance, Inverse Covariance and Cholesky
-    descomposition of Covariance marrices.
-    """
-    def __initCov__(self, cov=None, tau=None, chol=None, lower=True):
-        if all([val is None for val in [cov, tau, chol]]):
-            raise ValueError('One of cov, tau or chol arguments must be provided.')
-
-        self.cov = self.tau = self.chol_cov = None
-
-        cholesky = Cholesky(nofail=True, lower=True)
-        if cov is not None:
-            self.k = cov.shape[0]
-            self._cov_type = 'cov'
-            cov = tt.as_tensor_variable(cov)
-            if cov.ndim != 2:
-                raise ValueError('cov must be two dimensional.')
-            self.chol_cov = cholesky(cov)
-            self.cov = cov
-            self._n = self.cov.shape[-1]
-        elif tau is not None:
-            self.k = tau.shape[0]
-            self._cov_type = 'tau'
-            tau = tt.as_tensor_variable(tau)
-            if tau.ndim != 2:
-                raise ValueError('tau must be two dimensional.')
-            self.chol_tau = cholesky(tau)
-            self.tau = tau
-            self._n = self.tau.shape[-1]
-        else:
-            if chol is not None and not lower:
-                chol = chol.T
-            self.k = chol.shape[0]
-            self._cov_type = 'chol'
-            if chol.ndim != 2:
-                raise ValueError('chol must be two dimensional.')
-            self.chol_cov = tt.as_tensor_variable(chol)
-            self._n = self.chol_cov.shape[-1]
-
-
-class MvGaussianRandomWalk(distribution.Continuous, _CovSet):
+class MvGaussianRandomWalk(distribution.Continuous, multivariate._CovSet):
     R"""
     Multivariate Random Walk with Normal innovations
 
@@ -370,7 +327,7 @@ class MvGaussianRandomWalk(distribution.Continuous, _CovSet):
                                                 get_variable_name(cov))
 
 
-class MvStudentTRandomWalk(distribution.Continuous, _CovSet):
+class MvStudentTRandomWalk(distribution.Continuous, multivariate._CovSet):
     R"""
     Multivariate Random Walk with StudentT innovations
 
