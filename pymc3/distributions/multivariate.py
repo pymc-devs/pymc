@@ -50,30 +50,27 @@ class _QuadFormBase(Continuous):
         cholesky = Cholesky(nofail=True, lower=True)
 
         if cov is not None:
-            self.k = cov.shape[0]
             self._cov_type = 'cov'
             cov = tt.as_tensor_variable(cov)
-            if cov.ndim != 2:
-                raise ValueError('cov must be two dimensional.')
-            self.chol_cov = cholesky(cov)
+            try:
+                self.chol_cov = cholesky(cov)
+            except ValueError:
+                raise ValueError('cov must be two dimensional.') from None
             self.cov = cov
-            self._n = self.cov.shape[-1]
         elif tau is not None:
-            self.k = tau.shape[0]
             self._cov_type = 'tau'
             tau = tt.as_tensor_variable(tau)
-            if tau.ndim != 2:
-                raise ValueError('tau must be two dimensional.')
-            self.chol_tau = cholesky(tau)
+            try:
+                self.chol_tau = cholesky(tau)
+            except ValueError:
+                raise ValueError('tau must be two dimensional.') from None
             self.tau = tau
-            self._n = self.tau.shape[-1]
         else:
-            self.k = chol.shape[0]
             self._cov_type = 'chol'
-            if chol.ndim != 2:
-                raise ValueError('chol must be two dimensional.')
-            self.chol_cov = tt.as_tensor_variable(chol)
-            self._n = self.chol_cov.shape[-1]
+            try:
+                self.chol_cov = tt.as_tensor_variable(chol)
+            except ValueError:
+                raise ValueError('chol must be two dimensional.') from None
 
     def _quaddist(self, value):
         """Compute (x - mu).T @ Sigma^-1 @ (x - mu) and the logdet of Sigma."""
@@ -88,13 +85,11 @@ class _QuadFormBase(Continuous):
 
         delta = value - mu
 
-        if self._cov_type == 'cov':
-            # Use this when Theano#5908 is released.
-            # return MvNormalLogp()(self.cov, delta)
-            dist, logdet, ok = self._quaddist_cov(delta)
-        elif self._cov_type == 'tau':
+        if self._cov_type == 'tau':
             dist, logdet, ok = self._quaddist_tau(delta)
         else:
+            # Use this when Theano#5908 is released.
+            # return MvNormalLogp()(self.cov, delta)
             dist, logdet, ok = self._quaddist_chol(delta)
 
         if onedim:
@@ -116,9 +111,6 @@ class _QuadFormBase(Continuous):
         logdet = tt.sum(tt.log(diag))
         return quaddist, logdet, ok
 
-    def _quaddist_cov(self, delta):
-        return self._quaddist_chol(delta)
-
     def _quaddist_tau(self, delta):
         chol_tau = self.chol_tau
 
@@ -132,18 +124,14 @@ class _QuadFormBase(Continuous):
         logdet = -tt.sum(tt.log(diag))
         return quaddist, logdet, ok
 
-    def _repr_cov_params(self, dist=None):
-        if dist is None:
-            dist = self
+    def _repr_cov_params(self):
         if self._cov_type == 'chol':
-            chol = get_variable_name(self.chol)
-            return r'\mathit{{chol}}={}'.format(chol)
+            name = get_variable_name(self.chol)
         elif self._cov_type == 'cov':
-            cov = get_variable_name(self.cov)
-            return r'\mathit{{cov}}={}'.format(cov)
-        elif self._cov_type == 'tau':
-            tau = get_variable_name(self.tau)
-            return r'\mathit{{tau}}={}'.format(tau)
+            name = get_variable_name(self.cov)
+        else:
+            name = get_variable_name(self.tau)
+        return r'\mathit{{{}}}={}'.format(self._cov_type, name)
 
 
 class MvNormal(_QuadFormBase):
