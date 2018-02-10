@@ -8,7 +8,7 @@ import theano
 import theano.tensor as tt
 
 from scipy import stats, linalg
-
+from six import raise_from
 from theano.tensor.nlinalg import det, matrix_inverse, trace
 import theano.tensor.slinalg
 import pymc3 as pm
@@ -20,7 +20,7 @@ from .distribution import Continuous, Discrete, draw_values, generate_samples
 from ..model import Deterministic
 from .continuous import ChiSquared, Normal
 from .special import gammaln, multigammaln
-from .dist_math import bound, logpow, factln, Cholesky
+from .dist_math import bound, logpow, factln
 
 
 __all__ = ['MvNormal', 'MvStudentT', 'Dirichlet',
@@ -42,12 +42,10 @@ class _QuadFormBase(Continuous):
                              'Specify exactly one of tau, cov, '
                              'or chol.')
         self.mu = mu = tt.as_tensor_variable(mu)
-        self.solve_lower = tt.slinalg.Solve(A_structure="lower_triangular")
-        # Step methods and advi do not catch LinAlgErrors at the
-        # moment. We work around that by using a cholesky op
-        # that returns a nan as first entry instead of raising
-        # an error.
-        cholesky = Cholesky(nofail=True, lower=True)
+        self.solve_lower = tt.slinalg.solve_lower_triangular
+        self.solve_upper = tt.slinalg.solve_upper_triangular
+
+        cholesky = tt.slinalg.Cholesky(lower=True, on_error="nan")
 
         if cov is not None:
             self._cov_type = 'cov'
@@ -55,7 +53,7 @@ class _QuadFormBase(Continuous):
             try:
                 self.chol_cov = cholesky(cov)
             except ValueError:
-                raise ValueError('cov must be two dimensional.') from None
+                raise_from(ValueError('`cov` must be two dimensional.'), None)
             self.cov = cov
         elif tau is not None:
             self._cov_type = 'tau'
@@ -63,14 +61,13 @@ class _QuadFormBase(Continuous):
             try:
                 self.chol_tau = cholesky(tau)
             except ValueError:
-                raise ValueError('tau must be two dimensional.') from None
+                raise_from(ValueError('`tau` must be two dimensional.'), None)
             self.tau = tau
         else:
             self._cov_type = 'chol'
-            try:
-                self.chol_cov = tt.as_tensor_variable(chol)
-            except ValueError:
-                raise ValueError('chol must be two dimensional.') from None
+            self.chol_cov = tt.as_tensor_variable(chol)
+            if self.chol_cov.ndim != 2:
+                raise ValueError('`chol` must be two dimensional.')
 
     def _quaddist(self, value):
         """Compute (x - mu).T @ Sigma^-1 @ (x - mu) and the logdet of Sigma."""
@@ -99,7 +96,7 @@ class _QuadFormBase(Continuous):
     def _quaddist_chol(self, delta):
         chol_cov = self.chol_cov
 
-        diag = tt.nlinalg.diag(chol_cov)
+        diag = tt.ExtractDiag(view=True)(chol_cov)
         # Check if the covariance matrix is positive definite.
         ok = tt.all(diag > 0)
         # If not, replace the diagonal. We return -inf later, but
@@ -114,7 +111,7 @@ class _QuadFormBase(Continuous):
     def _quaddist_tau(self, delta):
         chol_tau = self.chol_tau
 
-        diag = tt.nlinalg.diag(chol_tau)
+        diag = tt.ExtractDiag(view=True)(chol_tau)
         ok = tt.all(diag > 0)
 
         chol_tau = tt.switch(ok, chol_tau, 1)
@@ -1176,8 +1173,6 @@ class MatrixNormal(Continuous):
         super(MatrixNormal, self).__init__(shape=shape, *args, **kwargs)
         self.mu = tt.as_tensor_variable(mu)
         self.mean = self.median = self.mode = self.mu
-        self.solve_lower = tt.slinalg.solve_lower_triangular
-        self.solve_upper = tt.slinalg.solve_upper_triangular
 
     def _setup_matrices(self, colcov, colchol, coltau, rowcov, rowchol, rowtau):
         cholesky = Cholesky(nofail=False, lower=True)

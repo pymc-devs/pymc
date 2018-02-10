@@ -7,11 +7,11 @@ import pymc3 as pm
 from pymc3.gp.cov import Covariance, Constant
 from pymc3.gp.mean import Zero
 from pymc3.gp.util import (conditioned_vars,
-                           infer_shape, stabilize, cholesky, solve_lower, solve_upper)
+                           infer_shape, stabilize, solve_lower, solve_upper)
 from pymc3.distributions import draw_values
 
 __all__ = ['Latent', 'Marginal', 'TP', 'MarginalSparse']
-
+cholesky = tt.slinalg.Cholesky(lower=True, on_error="nan")
 
 class Base(object):
     R"""
