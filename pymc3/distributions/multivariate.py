@@ -21,7 +21,7 @@ from .distribution import Continuous, Discrete, draw_values, generate_samples
 from ..model import Deterministic
 from .continuous import ChiSquared, Normal
 from .special import gammaln, multigammaln
-from .dist_math import bound, logpow, factln
+from .dist_math import bound, logpow, factln, MvNormalLogp
 
 
 __all__ = ['MvNormal', 'MvStudentT', 'Dirichlet',
