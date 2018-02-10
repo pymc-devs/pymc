@@ -70,11 +70,13 @@ class SamplerReport(object):
 
         from pymc3 import diagnostics
 
+        valid_name = [rv.name for rv in model.free_RVs + model.deterministics]
         varnames = []
         for rv in model.free_RVs:
             rv_name = rv.name
             if is_transformed_name(rv_name):
-                rv_name = get_untransformed_name(rv_name)
+                rv_name2 = get_untransformed_name(rv_name)
+                rv_name = rv_name2 if rv_name2 in valid_name else rv_name
             varnames.append(rv_name)
 
         self._effective_n = effective_n = diagnostics.effective_n(trace, varnames)
