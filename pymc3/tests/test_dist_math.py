@@ -10,7 +10,7 @@ import pytest
 from ..theanof import floatX
 from ..distributions import Discrete
 from ..distributions.dist_math import (
-    bound, factln, alltrue_scalar, SplineWrapper)
+    bound, factln, alltrue_scalar, MvNormalLogp, SplineWrapper)
 
 
 def test_bound():
@@ -119,6 +119,66 @@ def test_multinomial_bound():
 
     assert np.isclose(modelA.logp({'p_stickbreaking__': [0]}),
                       modelB.logp({'p_stickbreaking__': [0]}))
+
+
+class TestMvNormalLogp():
+    def test_logp(self):
+        np.random.seed(42)
+
+        chol_val = floatX(np.array([[1, 0.9], [0, 2]]))
+        cov_val = floatX(np.dot(chol_val, chol_val.T))
+        cov = tt.matrix('cov')
+        cov.tag.test_value = cov_val
+        delta_val = floatX(np.random.randn(5, 2))
+        delta = tt.matrix('delta')
+        delta.tag.test_value = delta_val
+        expect = stats.multivariate_normal(mean=np.zeros(2), cov=cov_val)
+        expect = expect.logpdf(delta_val).sum()
+        logp_cov = MvNormalLogp()(cov, delta)
+        logp_cov_f = theano.function([cov, delta], logp_cov)
+        logp_cov = logp_cov_f(cov_val, delta_val)
+        npt.assert_allclose(logp_cov, expect)
+        cov.tag.test_value = chol_val
+        logp_chol = MvNormalLogp(True)(cov, delta)
+        logp_chol_f = theano.function([cov, delta], logp_chol)
+        logp_cov = logp_cov_f(chol_val, delta_val)
+        npt.assert_allclose(logp_cov, expect)
+
+    @theano.configparser.change_flags(compute_test_value="ignore")
+    def test_grad(self):
+        np.random.seed(42)
+
+        def func(chol_vec, delta):
+            chol = tt.stack([
+                tt.stack([tt.exp(0.1 * chol_vec[0]), 0]),
+                tt.stack([chol_vec[1], 2 * tt.exp(chol_vec[2])]),
+            ])
+            cov = tt.dot(chol, chol.T)
+            return MvNormalLogp()(cov, delta)
+
+        chol_vec_val = floatX(np.array([0.5, 1., -0.1]))
+
+        delta_val = floatX(np.random.randn(1, 2))
+        utt.verify_grad(func, [chol_vec_val, delta_val])
+
+        delta_val = floatX(np.random.randn(5, 2))
+        utt.verify_grad(func, [chol_vec_val, delta_val])
+
+    @pytest.mark.skip(reason="Fix in theano not released yet: Theano#5908")
+    @theano.configparser.change_flags(compute_test_value="ignore")
+    def test_hessian(self):
+        chol_vec = tt.vector('chol_vec')
+        chol_vec.tag.test_value = np.array([0.1, 2, 3])
+        chol = tt.stack([
+            tt.stack([tt.exp(0.1 * chol_vec[0]), 0]),
+            tt.stack([chol_vec[1], 2 * tt.exp(chol_vec[2])]),
+        ])
+        cov = tt.dot(chol, chol.T)
+        delta = tt.matrix('delta')
+        delta.tag.test_value = np.ones((5, 2))
+        logp = MvNormalLogp()(cov, delta)
+        g_cov, g_delta = tt.grad(logp, [cov, delta])
+        tt.grad(g_delta.sum() + g_cov.sum(), [delta, cov])
 
 
 class TestSplineWrapper(object):

@@ -6,6 +6,7 @@ import numpy as np
 import scipy
 import theano
 import theano.tensor as tt
+from theano.ifelse import ifelse
 
 from scipy import stats, linalg
 from six import raise_from
@@ -36,36 +37,56 @@ class _CovSet():
         if all([val is None for val in [cov, tau, chol]]):
             raise ValueError('One of cov, tau or chol arguments must be provided.')
 
+        if len([i for i in [tau, cov, chol] if i is not None]) != 1:
+            raise ValueError('Incompatible parameterization. '
+                             'Specify exactly one of tau, cov, '
+                             'or chol.')
+
         if chol is not None and not lower:
             chol = chol.T
 
         self.cov = self.tau = self.chol_cov = None
 
-        self.solve_lower = tt.slinalg.solve_lower_triangular
-        self.solve_upper = tt.slinalg.solve_upper_triangular
-        cholesky = tt.slinalg.Cholesky(lower=True, on_error="nan")
-
         if cov is not None:
             self._cov_type = 'cov'
-            cov = tt.as_tensor_variable(cov)
+            self.cov = tt.as_tensor_variable(cov)
             try:
-                self.chol_cov = cholesky(cov)
+                deltaop = MvNormalLogp()
+                def deltalogp(delta):
+                    return deltaop(self.cov, delta)
+                self.deltalogp = deltalogp
             except ValueError:
                 raise_from(ValueError('`cov` must be two dimensional.'), None)
-            self.cov = cov
-        elif tau is not None:
-            self._cov_type = 'tau'
-            tau = tt.as_tensor_variable(tau)
-            try:
-                self.chol_tau = cholesky(tau)
-            except ValueError:
-                raise_from(ValueError('`tau` must be two dimensional.'), None)
-            self.tau = tau
-        else:
+
+        elif chol is not None:
             self._cov_type = 'chol'
             self.chol_cov = tt.as_tensor_variable(chol)
             if self.chol_cov.ndim != 2:
                 raise ValueError('`chol` must be two dimensional.')
+            deltaop = MvNormalLogp(False)
+            def deltalogp(delta):
+                return deltaop(self.chol_cov, delta)
+            self.deltalogp = deltalogp
+
+        else:
+            self._cov_type = 'tau'
+            tau = tt.as_tensor_variable(tau)
+            try:
+                self.chol_tau = cholesky(tau)
+                def deltalogp(delta):
+                    delta_trans = tt.dot(delta, self.chol_tau)
+                    quaddist = (delta_trans ** 2).sum(axis=-1)
+                    diag = tt.ExtractDiag(view=True)(self.chol_tau)
+                    logdet = -tt.log(diag).sum()
+                    k = delta.shape[-1].astype(theano.config.floatX)
+                    norm = - 0.5 * k * pm.floatX(np.log(2 * np.pi))
+                    ok = ~tt.any(tt.isnan(self.chol_tau))
+                    logp = norm - 0.5 * quaddist - logdet
+                    return ifelse(ok, logp, -np.inf * tt.zeros_like(delta))
+                self.deltalogp = deltalogp
+            except ValueError:
+                raise_from(ValueError('`tau` must be two dimensional.'), None)
+            self.tau = tau
 
 class _QuadFormBase(Continuous, _CovSet):
     def __init__(self, mu=None, cov=None, chol=None, tau=None, lower=True,
@@ -77,63 +98,7 @@ class _QuadFormBase(Continuous, _CovSet):
         if len(self.shape) > 2:
             raise ValueError("Only 1 or 2 dimensions are allowed.")
 
-        if len([i for i in [tau, cov, chol] if i is not None]) != 1:
-            raise ValueError('Incompatible parameterization. '
-                             'Specify exactly one of tau, cov, '
-                             'or chol.')
         self.mu = mu = tt.as_tensor_variable(mu)
-
-    def _quaddist(self, value):
-        """Compute (x - mu).T @ Sigma^-1 @ (x - mu) and the logdet of Sigma."""
-        mu = self.mu
-        if value.ndim > 2 or value.ndim == 0:
-            raise ValueError('Invalid dimension for value: %s' % value.ndim)
-        if value.ndim == 1:
-            onedim = True
-            value = value[None, :]
-        else:
-            onedim = False
-
-        delta = value - mu
-
-        if self._cov_type == 'tau':
-            dist, logdet, ok = self._quaddist_tau(delta)
-        else:
-            # Use this when Theano#5908 is released.
-            # return MvNormalLogp()(self.cov, delta)
-            dist, logdet, ok = self._quaddist_chol(delta)
-
-        if onedim:
-            return dist[0], logdet, ok
-        return dist, logdet, ok
-
-    def _quaddist_chol(self, delta):
-        chol_cov = self.chol_cov
-
-        diag = tt.ExtractDiag(view=True)(chol_cov)
-        # Check if the covariance matrix is positive definite.
-        ok = tt.all(diag > 0)
-        # If not, replace the diagonal. We return -inf later, but
-        # need to prevent solve_lower from throwing an exception.
-        chol_cov = tt.switch(ok, chol_cov, 1)
-
-        delta_trans = self.solve_lower(chol_cov, delta.T).T
-        quaddist = (delta_trans ** 2).sum(axis=-1)
-        logdet = tt.sum(tt.log(diag))
-        return quaddist, logdet, ok
-
-    def _quaddist_tau(self, delta):
-        chol_tau = self.chol_tau
-
-        diag = tt.ExtractDiag(view=True)(chol_tau)
-        ok = tt.all(diag > 0)
-
-        chol_tau = tt.switch(ok, chol_tau, 1)
-        diag = tt.nlinalg.diag(chol_tau)
-        delta_trans = tt.dot(delta, chol_tau)
-        quaddist = (delta_trans ** 2).sum(axis=-1)
-        logdet = -tt.sum(tt.log(diag))
-        return quaddist, logdet, ok
 
     def _repr_cov_params(self):
         if self._cov_type == 'chol':
@@ -264,10 +229,19 @@ class MvNormal(_QuadFormBase):
             return mu + transformed.T
 
     def logp(self, value):
-        quaddist, logdet, ok = self._quaddist(value)
-        k = value.shape[-1].astype(theano.config.floatX)
-        norm = - 0.5 * k * pm.floatX(np.log(2 * np.pi))
-        return bound(norm - 0.5 * quaddist - logdet, ok)
+        """Compute (x - mu).T @ Sigma^-1 @ (x - mu) and the logdet of Sigma."""
+        if value.ndim > 2 or value.ndim == 0:
+            raise ValueError('Invalid dimension for value: %s' % value.ndim)
+        if value.ndim == 1:
+            onedim = True
+            value = value[None, :]
+        else:
+            onedim = False
+
+        delta = value - self.mu
+        logp = self.deltalogp(delta)
+
+        return logp[0] if onedim else logp
 
     def _repr_latex_(self, name=None, dist=None):
         if dist is None:
@@ -330,6 +304,57 @@ class MvStudentT(_QuadFormBase):
                                          lower=lower, *args, **kwargs)
         self.nu = nu = tt.as_tensor_variable(nu)
         self.mean = self.median = self.mode = self.mu = self.mu
+
+
+    def _quaddist(self, value):
+        """Compute (x - mu).T @ Sigma^-1 @ (x - mu) and the logdet of Sigma."""
+        mu = self.mu
+        if value.ndim > 2 or value.ndim == 0:
+            raise ValueError('Invalid dimension for value: %s' % value.ndim)
+        if value.ndim == 1:
+            onedim = True
+            value = value[None, :]
+        else:
+            onedim = False
+
+        delta = value - mu
+
+        if self._cov_type == 'tau':
+            dist, logdet, ok = self._quaddist_tau(delta)
+        else:
+            dist, logdet, ok = self._quaddist_chol(delta)
+
+        if onedim:
+            return dist[0], logdet, ok
+        return dist, logdet, ok
+
+    def _quaddist_chol(self, delta):
+        chol_cov = self.chol_cov
+
+        diag = tt.ExtractDiag(view=True)(chol_cov)
+        # Check if the covariance matrix is positive definite.
+        ok = tt.all(diag > 0)
+        # If not, replace the diagonal. We return -inf later, but
+        # need to prevent solve_lower from throwing an exception.
+        chol_cov = tt.switch(ok, chol_cov, 1)
+
+        delta_trans = self.solve_lower(chol_cov, delta.T).T
+        quaddist = (delta_trans ** 2).sum(axis=-1)
+        logdet = tt.sum(tt.log(diag))
+        return quaddist, logdet, ok
+
+    def _quaddist_tau(self, delta):
+        chol_tau = self.chol_tau
+
+        diag = tt.ExtractDiag(view=True)(chol_tau)
+        ok = tt.all(diag > 0)
+
+        chol_tau = tt.switch(ok, chol_tau, 1)
+        diag = tt.nlinalg.diag(chol_tau)
+        delta_trans = tt.dot(delta, chol_tau)
+        quaddist = (delta_trans ** 2).sum(axis=-1)
+        logdet = -tt.sum(tt.log(diag))
+        return quaddist, logdet, ok
 
     def random(self, point=None, size=None):
         nu, mu = draw_values([self.nu, self.mu], point=point)
@@ -1189,7 +1214,11 @@ class MatrixNormal(Continuous):
         self.mean = self.median = self.mode = self.mu
 
     def _setup_matrices(self, colcov, colchol, coltau, rowcov, rowchol, rowtau):
-        cholesky = Cholesky(nofail=False, lower=True)
+
+        cholesky = tt.slinalg.Cholesky(lower=True, on_error="nan")
+
+        self.solve_lower = tt.slinalg.solve_lower_triangular
+        self.solve_upper = tt.slinalg.solve_upper_triangular
 
         # Among-row matrices
         if len([i for i in [rowtau, rowcov, rowchol] if i is not None]) != 1:
@@ -1200,24 +1229,27 @@ class MatrixNormal(Continuous):
             self.m = rowcov.shape[0]
             self._rowcov_type = 'cov'
             rowcov = tt.as_tensor_variable(rowcov)
-            if rowcov.ndim != 2:
-                raise ValueError('rowcov must be two dimensional.')
+            try:
+                self.rowchol_cov = cholesky(rowcov)
+            except:
+                raise_from(ValueError('`rowcov` must be two dimensional.'), None)
             self.rowchol_cov = cholesky(rowcov)
             self.rowcov = rowcov
         elif rowtau is not None:
-            raise ValueError('rowtau not supported at this time')
+            raise ValueError('`rowtau` not supported at this time')
             self.m = rowtau.shape[0]
             self._rowcov_type = 'tau'
             rowtau = tt.as_tensor_variable(rowtau)
-            if rowtau.ndim != 2:
-                raise ValueError('rowtau must be two dimensional.')
-            self.rowchol_tau = cholesky(rowtau)
+            try:
+                self.rowchol_tau = cholesky(rowtau)
+            except:
+                raise_from(ValueError('`rowtau` must be two dimensional.'), None)
             self.rowtau = rowtau
         else:
             self.m = rowchol.shape[0]
             self._rowcov_type = 'chol'
             if rowchol.ndim != 2:
-                raise ValueError('rowchol must be two dimensional.')
+                raise ValueError('`rowchol` must be two dimensional.')
             self.rowchol_cov = tt.as_tensor_variable(rowchol)
 
         # Among-column matrices
@@ -1229,18 +1261,20 @@ class MatrixNormal(Continuous):
             self.n = colcov.shape[0]
             self._colcov_type = 'cov'
             colcov = tt.as_tensor_variable(colcov)
-            if colcov.ndim != 2:
-                raise ValueError('colcov must be two dimensional.')
-            self.colchol_cov = cholesky(colcov)
+            try:
+                self.colchol_cov = cholesky(colcov)
+            except:
+                raise_from(ValueError('`colcov` must be two dimensional.'), None)
             self.colcov = colcov
         elif coltau is not None:
             raise ValueError('coltau not supported at this time')
             self.n = coltau.shape[0]
             self._colcov_type = 'tau'
             coltau = tt.as_tensor_variable(coltau)
-            if coltau.ndim != 2:
-                raise ValueError('coltau must be two dimensional.')
-            self.colchol_tau = cholesky(coltau)
+            try:
+                self.colchol_tau = cholesky(v)
+            except:
+                raise_from(ValueError('`coltau` must be two dimensional.'), None)
             self.coltau = coltau
         else:
             self.n = colchol.shape[0]

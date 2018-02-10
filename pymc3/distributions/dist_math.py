@@ -9,6 +9,8 @@ import numpy as np
 import scipy.linalg
 import theano.tensor as tt
 import theano
+from theano.ifelse import ifelse
+from theano.tensor import slinalg
 
 from .special import gammaln
 from pymc3.theanof import floatX
@@ -141,6 +143,90 @@ def log_normal(x, mean, **kwargs):
         std = tau**(-1)
     std += f(eps)
     return f(c) - tt.log(tt.abs_(std)) - (x - mean) ** 2 / (2. * std ** 2)
+
+
+def MvNormalLogp(chol_cov=False):
+    """Compute the log pdf of a multivariate normal distribution.
+
+    Parameters
+    ----------
+    cov : tt.matrix
+        The covariance matrix or its Cholesky decompositon (the latter if
+        `chol_cov` is set to True when instantiating the Op).
+    delta : tt.matrix
+        Array of deviations from the mean.
+    """
+    cov = tt.matrix('cov')
+    cov.tag.test_value = floatX(np.eye(3))
+    delta = tt.matrix('delta')
+    delta.tag.test_value = floatX(np.zeros((2, 3)))
+
+    solve_lower = slinalg.Solve(A_structure='lower_triangular', overwrite_b=True)
+    solve_upper = slinalg.Solve(A_structure='upper_triangular', overwrite_b=True)
+
+    n, k = delta.shape
+    n, k = f(n), f(k)
+
+    if not chol_cov:
+        # add inplace=True when/if impletemented by Theano
+        cholesky = slinalg.Cholesky(lower=True, on_error="nan")
+        cov = cholesky(cov)
+        # The Cholesky op will return NaNs if the cov is not positive definite
+        # checking the first one is sufficient
+        ok = ~tt.isnan(cov[0,0])
+        # will all be NaN if the Cholesky was no-go, which is fine
+        diag = tt.ExtractDiag(view=True)(cov)
+    else:
+        diag = tt.ExtractDiag(view=True)(cov)
+        # Here we must check if the Cholesky is positive definite
+        ok = tt.all(diag>0)
+
+    # `solve_lower` throws errors with NaNs hence we replace the cov with
+    # identity and return -Inf later
+    chol_cov = ifelse(ok, cov, tt.eye(k))
+    delta_trans = solve_lower(chol_cov, delta.T).T
+
+    result = n * k * tt.log(f(2) * np.pi)
+    result += f(2) * n * tt.sum(tt.log(diag))
+    result += (delta_trans ** f(2)).sum()
+    result = f(-.5) * result
+
+    logp = ifelse(ok, result, -np.inf * tt.zeros_like(delta))
+
+    def dlogp(inputs, gradients):
+        g_logp, = gradients
+        cov, delta = inputs
+
+        g_logp.tag.test_value = floatX(1.)
+        n, k = delta.shape
+
+        if not chol_cov:
+            cov = cholesky(cov)
+            ok = ~tt.isnan(chol_cov[0,0])
+        else:
+            diag = tt.ExtractDiag(view=True)(cov)
+            ok = tt.all(diag>0)
+
+        chol_cov = ifelse(ok, cov, tt.eye(k))
+        delta_trans = solve_lower(chol_cov, delta.T).T
+
+        inner = n * tt.eye(k) - tt.dot(delta_trans.T, delta_trans)
+        g_cov = solve_upper(chol_cov.T, inner)
+        g_cov = solve_upper(chol_cov.T, g_cov.T)
+
+        tau_delta = solve_upper(chol_cov.T, delta_trans.T)
+        g_delta = tau_delta.T
+
+        g_cov = ifelse(ok, g_cov, -np.nan)
+        g_delta = ifelse(ok, g_delta, -np.nan)
+
+        return [-0.5 * g_cov * g_logp, -g_delta * g_logp]
+
+    return theano.OpFromGraph(
+        [cov, delta], [logp], grad_overrides=dlogp, inline=True)
+
+
+
 
 class SplineWrapper(theano.Op):
     """
