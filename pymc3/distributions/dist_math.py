@@ -164,7 +164,7 @@ def MvNormalLogp(chol_cov=False):
     solve_upper = slinalg.Solve(A_structure='upper_triangular', overwrite_b=True)
 
     n, k = delta.shape
-    n, k = f(n), f(k)
+    n = f(n)
 
     if not chol_cov:
         # add inplace=True when/if impletemented by Theano
@@ -185,7 +185,7 @@ def MvNormalLogp(chol_cov=False):
     chol_cov = ifelse(ok, cov, tt.eye(k))
     delta_trans = solve_lower(chol_cov, delta.T).T
 
-    result = n * k * tt.log(f(2) * np.pi)
+    result = n * f(k) * tt.log(f(2) * np.pi)
     result += f(2) * n * tt.sum(tt.log(diag))
     result += (delta_trans ** f(2)).sum()
     result = f(-.5) * result
