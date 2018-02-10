@@ -7,6 +7,7 @@ import scipy
 import theano
 import theano.tensor as tt
 from theano.ifelse import ifelse
+from theano.tensor import slinalg
 
 from scipy import stats, linalg
 from six import raise_from
@@ -72,7 +73,7 @@ class _CovSet():
             self._cov_type = 'tau'
             tau = tt.as_tensor_variable(tau)
             try:
-                self.chol_tau = cholesky(tau)
+                self.chol_tau = slinalg.Cholesky(lower=True, on_error="nan")(tau)
                 def deltalogp(delta):
                     delta_trans = tt.dot(delta, self.chol_tau)
                     quaddist = (delta_trans ** 2).sum(axis=-1)
@@ -80,9 +81,9 @@ class _CovSet():
                     logdet = -tt.log(diag).sum()
                     k = delta.shape[-1].astype(theano.config.floatX)
                     norm = - 0.5 * k * pm.floatX(np.log(2 * np.pi))
-                    ok = ~tt.any(tt.isnan(self.chol_tau))
+                    ok = ~tt.isnan(self.chol_tau[0,0])
                     logp = norm - 0.5 * quaddist - logdet
-                    return ifelse(ok, logp, -np.inf * tt.zeros_like(delta))
+                    return ifelse(ok, logp, -np.inf * tt.zeros_like(delta, float))
                 self.deltalogp = deltalogp
             except ValueError:
                 raise_from(ValueError('`tau` must be two dimensional.'), None)
