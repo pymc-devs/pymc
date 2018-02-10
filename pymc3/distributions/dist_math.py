@@ -144,7 +144,7 @@ def log_normal(x, mean, **kwargs):
     return f(c) - tt.log(tt.abs_(std)) - (x - mean) ** 2 / (2. * std ** 2)
 
 
-def MvNormalLogp(chol_cov=False):
+def MvNormalLogp(with_choleksy=False):
     """Compute the log pdf of a multivariate normal distribution.
 
     Parameters
@@ -166,7 +166,7 @@ def MvNormalLogp(chol_cov=False):
     n, k = delta.shape
     n = f(n)
 
-    if not chol_cov:
+    if not with_choleksy:
         # add inplace=True when/if impletemented by Theano
         cholesky = slinalg.Cholesky(lower=True, on_error="nan")
         cov = cholesky(cov)
@@ -182,7 +182,7 @@ def MvNormalLogp(chol_cov=False):
 
     # `solve_lower` throws errors with NaNs hence we replace the cov with
     # identity and return -Inf later
-    chol_cov = ifelse(ok, cov, tt.eye(k))
+    chol_cov = ifelse(ok, cov, tt.eye(k, theano.config.floatX))
     delta_trans = solve_lower(chol_cov, delta.T).T
 
     result = n * f(k) * tt.log(f(2) * np.pi)
@@ -190,7 +190,7 @@ def MvNormalLogp(chol_cov=False):
     result += (delta_trans ** f(2)).sum()
     result = f(-.5) * result
 
-    logp = ifelse(ok, result, -np.inf * tt.zeros_like(result, float))
+    logp = ifelse(ok, result, -np.inf * tt.zeros_like(result, theano.config.floatX))
 
     def dlogp(inputs, gradients):
         g_logp, = gradients
@@ -199,14 +199,14 @@ def MvNormalLogp(chol_cov=False):
         g_logp.tag.test_value = floatX(1.)
         n, k = delta.shape
 
-        if not chol_cov:
+        if not with_choleksy:
             cov = cholesky(cov)
             ok = ~tt.isnan(chol_cov[0,0])
         else:
             diag = tt.ExtractDiag(view=True)(cov)
             ok = tt.all(diag>0)
 
-        chol_cov = ifelse(ok, cov, tt.eye(k))
+        chol_cov = ifelse(ok, cov, tt.eye(k, theano.config.floatX))
         delta_trans = solve_lower(chol_cov, delta.T).T
 
         inner = n * tt.eye(k) - tt.dot(delta_trans.T, delta_trans)

@@ -330,7 +330,11 @@ class MvStudentT(_QuadFormBase):
         return dist, logdet, ok
 
     def _quaddist_chol(self, delta):
-        chol_cov = self.chol_cov
+        try:
+            chol_cov = self.chol_cov
+        except:
+            cholesky = tt.slinalg.Cholesky(lower=True, on_error="nan")
+            self.chol_cov = chol_cov = cholesky(self.cov)
 
         diag = tt.ExtractDiag(view=True)(chol_cov)
         # Check if the covariance matrix is positive definite.
