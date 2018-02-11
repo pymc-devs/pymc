@@ -1,7 +1,7 @@
 from scipy.cluster.vq import kmeans
 import numpy as np
 import theano.tensor as tt
-
+from pymc3.theanof import floatX
 
 solve_lower = tt.slinalg.Solve(A_structure='lower_triangular')
 solve_upper = tt.slinalg.Solve(A_structure='upper_triangular')
@@ -19,7 +19,7 @@ def infer_shape(X, n_points=None):
 
 def stabilize(K):
     """ adds small diagonal to a covariance matrix """
-    return K + 1e-6 * tt.identity_like(K)
+    return K + floatX(1e-6) * tt.identity_like(K)
 
 
 def kmeans_inducing_points(n_inducing, X):
@@ -35,7 +35,7 @@ def kmeans_inducing_points(n_inducing, X):
                          "of {}".format(type(X))))
     scaling = np.std(X, 0)
     # if std of a column is very small (zero), don't normalize that column
-    scaling[scaling <= 1e-6] = 1.0
+    scaling[scaling <= 1e-6] = floatX(1.0)
     Xw = X / scaling
     Xu, distortion = kmeans(Xw, n_inducing)
     return Xu * scaling
