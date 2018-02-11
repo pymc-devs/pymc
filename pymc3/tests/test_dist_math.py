@@ -238,7 +238,7 @@ class TestMvNormalLogp():
                 tt.stack([tt.exp(0.1 * chol_vec[0]), 0]),
                 tt.stack([chol_vec[1], 2 * tt.exp(chol_vec[2])]),
             ])
-            return MvNormalLogp(True)(floatX(chol), delta)
+            return MvNormalLogpSum(True)(floatX(chol), delta)
 
         chol_vec_val = floatX(np.array([0.5, 1., -0.1]))
 
@@ -259,7 +259,7 @@ class TestMvNormalLogp():
         cov = tt.dot(chol, chol.T)
         delta = tt.matrix('delta')
         delta.tag.test_value = floatX(np.ones((5, 2)))
-        logp = MvNormalLogp()(cov, delta)
+        logp = MvNormalLogpSum()(cov, delta)
         g_cov, g_delta = tt.grad(logp, [cov, delta])
         tt.grad(g_delta.sum() + g_cov.sum(), [delta, cov])
 
