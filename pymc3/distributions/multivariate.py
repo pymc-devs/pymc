@@ -61,14 +61,14 @@ class _CovSet():
             self.tau = _cov = tt.as_tensor_variable(tau)
 
         try:
-            deltalogp = self._logphelper(self._cov_type)
+            _deltalogp = self._logphelper(self._cov_type)
             def deltalogp(delta):
-                return deltalogp(_cov, delta)
+                return _deltalogp(_cov, delta)
             self._delta_logp = deltalogp
 
-            delta_logpsum = self._logpsumhelper(self._cov_type)
+            _delta_logpsum = self._logpsumhelper(self._cov_type)
             def deltalogpsum(delta):
-                return delta_logpsum(_cov, delta)
+                return _delta_logpsum(_cov, delta)
             self._delta_logp_sum = deltalogpsum
 
         except ValueError:

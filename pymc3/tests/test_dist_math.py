@@ -10,7 +10,8 @@ import pytest
 from ..theanof import floatX
 from ..distributions import Discrete
 from ..distributions.dist_math import (
-    bound, factln, alltrue_scalar, MvNormalLogp, SplineWrapper)
+    bound, factln, alltrue_scalar, MvNormalLogp,
+    MvNormalLogpSum, SplineWrapper)
 
 
 def test_bound():
@@ -129,15 +130,15 @@ class TestMvNormalLogp():
         chol_val = floatX(np.array([[1, 0], [ 0.9, 2]]))
         cov_val = floatX(np.dot(chol_val, chol_val.T))
         tau_val = floatX(np.linalg.inv(cov_val))
-        cov = tt.matrix('cov')
-        cov.tag.test_value = cov_val
+        tau = tt.matrix('tau')
+        tau.tag.test_value = tau_val
         delta_val = floatX(np.random.randn(5, 2))
         delta = tt.matrix('delta')
         delta.tag.test_value = delta_val
         expect = stats.multivariate_normal(mean=np.zeros(2), cov=cov_val)
         expect = expect.logpdf(delta_val)
-        logp_tau = MvNormalLogp('tau')(cov, delta)
-        logp_tau_f = theano.function([cov, delta], logp_cov)
+        logp_tau = MvNormalLogp('tau')(tau, delta)
+        logp_tau_f = theano.function([tau, delta], logp_tau)
         logp_tau = logp_tau_f(tau_val, delta_val)
         npt.assert_allclose(logp_tau, expect)
 
