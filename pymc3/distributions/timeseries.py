@@ -277,7 +277,7 @@ class EulerMaruyama(distribution.Continuous):
         return r'${} \sim \text{EulerMaruyama}(\mathit{{dt}}={})$'.format(name,
                                                 get_variable_name(dt))
 
-class MvGaussianRandomWalk(distribution.Continuous, multivariate._CovSet):
+class MvGaussianRandomWalk(distribution.Continuous):
     R"""
     Multivariate Random Walk with Normal innovations
 
@@ -307,14 +307,12 @@ class MvGaussianRandomWalk(distribution.Continuous, multivariate._CovSet):
         self.mu = mu = tt.as_tensor_variable(mu)
         self.init = init
         self.mean = tt.as_tensor_variable(0.)
+        self.innov = multivariate.MvNormal.dist(self.mu, cov, tau, chol, lower)
 
     def logp(self, x):
         x_im1 = x[:-1]
         x_i = x[1:]
-
-        innov_like = multivariate.MvNormal.dist(mu=x_im1 + self.mu, cov=self.cov,
-                                                tau=self.tau, chol=self.chol_cov).logp(x_i)
-        return self.init.logp(x[0]) + tt.sum(innov_like)
+        return self.init.logp(x[0]) + self.innov.logp_sum(x_i - x_im1)
 
     def _repr_latex_(self, name=None, dist=None):
         if dist is None:
@@ -327,7 +325,7 @@ class MvGaussianRandomWalk(distribution.Continuous, multivariate._CovSet):
                                                 get_variable_name(cov))
 
 
-class MvStudentTRandomWalk(distribution.Continuous, multivariate._CovSet):
+class MvStudentTRandomWalk(distribution.Continuous):
     R"""
     Multivariate Random Walk with StudentT innovations
 
@@ -348,19 +346,17 @@ class MvStudentTRandomWalk(distribution.Continuous, multivariate._CovSet):
     def __init__(self, nu, mu=0., cov=None, tau=None, chol=None, lower=True, init=Flat.dist(),
                  *args, **kwargs):
         super(MvStudentTRandomWalk, self).__init__(*args, **kwargs)
-        super(MvStudentTRandomWalk, self).__initCov__(cov, tau, chol, lower)
         self.mu = mu = tt.as_tensor_variable(mu)
         self.nu = nu = tt.as_tensor_variable(nu)
         self.init = init
+        self.inov = multivariate.MvStudentT.dist(self.nu, self.mu, cov=cov,
+                                            tau=tau, chol=chol)
         self.mean = tt.as_tensor_variable(0.)
 
     def logp(self, x):
         x_im1 = x[:-1]
         x_i = x[1:]
-        innov_like = multivariate.MvStudentT.dist(self.nu, mu=x_im1 + self.mu,
-                                                  cov=self.cov, tau=self.tau,
-                                                  chol=self.chol_cov).logp(x_i)
-        return self.init.logp(x[0]) + tt.sum(innov_like)
+        return self.init.logp(x[0]) + self.innov.logp_sum(x_i - x_im1)
 
     def _repr_latex_(self, name=None, dist=None):
         if dist is None:

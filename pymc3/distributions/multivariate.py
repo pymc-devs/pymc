@@ -6,7 +6,6 @@ import numpy as np
 import scipy
 import theano
 import theano.tensor as tt
-from theano.ifelse import ifelse
 
 from scipy import stats, linalg
 from six import raise_from
@@ -65,7 +64,7 @@ class _CovSet():
             deltalogp = self._logphelper(self._cov_type)
             def deltalogp(delta):
                 return deltalogp(_cov, delta)
-            self._delta_logp = deltalog
+            self._delta_logp = deltalogp
 
             delta_logpsum = self._sumlogphelper(self._cov_type)
             def deltalogpsum(delta):
