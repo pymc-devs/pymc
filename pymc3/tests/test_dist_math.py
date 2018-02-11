@@ -125,7 +125,7 @@ class TestMvNormalLogp():
     def test_logp_with_cov(self):
         np.random.seed(42)
 
-        chol_val = floatX(np.array([[1, 0.9], [0, 2]]))
+        chol_val = floatX(np.array([[1, 0], [ 0.9, 2]]))
         cov_val = floatX(np.dot(chol_val, chol_val.T))
         cov = tt.matrix('cov')
         cov.tag.test_value = cov_val
@@ -142,7 +142,7 @@ class TestMvNormalLogp():
     def test_logp_with_chol(self):
         np.random.seed(42)
 
-        chol_val = floatX(np.array([[1, 0.9], [0, 2]]))
+        chol_val = floatX(np.array([[1, 0], [ 0.9, 2]]))
         cov_val = floatX(np.dot(chol_val, chol_val.T))
         chol = tt.matrix('cov')
         chol.tag.test_value = chol_val

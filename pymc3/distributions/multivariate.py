@@ -54,7 +54,7 @@ class _CovSet():
                 deltaop = MvNormalLogp()
                 def deltalogp(delta):
                     return deltaop(self.cov, delta)
-                self.deltalogp = deltalogp
+                self._delta_logp = deltalogp
             except ValueError:
                 raise_from(ValueError('`cov` must be two dimensional.'), None)
 
@@ -66,7 +66,7 @@ class _CovSet():
             deltaop = MvNormalLogp(False)
             def deltalogp(delta):
                 return deltaop(self.chol_cov, delta)
-            self.deltalogp = deltalogp
+            self._delta_logp = deltalogp
 
         else:
             self._cov_type = 'tau'
@@ -83,7 +83,7 @@ class _CovSet():
                     ok = ~tt.isnan(self.chol_tau[0,0])
                     logp = norm - 0.5 * quaddist - logdet
                     return ifelse(ok, floatX(logp), floatX(-np.inf * tt.ones_like(logp)))
-                self.deltalogp = deltalogp
+                self._delta_logp = deltalogp
             except ValueError:
                 raise_from(ValueError('`tau` must be two dimensional.'), None)
             self.tau = tau
@@ -236,7 +236,7 @@ class MvNormal(_QuadFormBase):
             value = value[None, :]
 
         delta = value - self.mu
-        logp = self.deltalogp(delta)
+        logp = self._delta_logp(delta)
 
         #return logp[0] if onedim else logp
         return logp
@@ -1231,10 +1231,9 @@ class MatrixNormal(Continuous):
             self._rowcov_type = 'cov'
             rowcov = tt.as_tensor_variable(rowcov)
             try:
-                self.rowchol_cov = cholesky(rowcov)
+                self._rowchol_cov = cholesky(rowcov)
             except:
                 raise_from(ValueError('`rowcov` must be two dimensional.'), None)
-            self.rowchol_cov = cholesky(rowcov)
             self.rowcov = rowcov
         elif rowtau is not None:
             raise ValueError('`rowtau` not supported at this time')
@@ -1242,7 +1241,7 @@ class MatrixNormal(Continuous):
             self._rowcov_type = 'tau'
             rowtau = tt.as_tensor_variable(rowtau)
             try:
-                self.rowchol_tau = cholesky(rowtau)
+                self._rowchol_tau = cholesky(rowtau)
             except:
                 raise_from(ValueError('`rowtau` must be two dimensional.'), None)
             self.rowtau = rowtau
@@ -1251,7 +1250,7 @@ class MatrixNormal(Continuous):
             self._rowcov_type = 'chol'
             if rowchol.ndim != 2:
                 raise ValueError('`rowchol` must be two dimensional.')
-            self.rowchol_cov = tt.as_tensor_variable(rowchol)
+            self._rowchol_cov = tt.as_tensor_variable(rowchol)
 
         # Among-column matrices
         if len([i for i in [coltau, colcov, colchol] if i is not None]) != 1:
@@ -1263,7 +1262,7 @@ class MatrixNormal(Continuous):
             self._colcov_type = 'cov'
             colcov = tt.as_tensor_variable(colcov)
             try:
-                self.colchol_cov = cholesky(colcov)
+                self._colchol_cov = cholesky(colcov)
             except:
                 raise_from(ValueError('`colcov` must be two dimensional.'), None)
             self.colcov = colcov
@@ -1273,7 +1272,7 @@ class MatrixNormal(Continuous):
             self._colcov_type = 'tau'
             coltau = tt.as_tensor_variable(coltau)
             try:
-                self.colchol_tau = cholesky(v)
+                self._colchol_tau = cholesky(v)
             except:
                 raise_from(ValueError('`coltau` must be two dimensional.'), None)
             self.coltau = coltau
@@ -1282,7 +1281,7 @@ class MatrixNormal(Continuous):
             self._colcov_type = 'chol'
             if colchol.ndim != 2:
                 raise ValueError('colchol must be two dimensional.')
-            self.colchol_cov = tt.as_tensor_variable(colchol)
+            self._colchol_cov = tt.as_tensor_variable(colchol)
 
     def random(self, point=None, size=None):
         if size is None:
@@ -1300,8 +1299,8 @@ class MatrixNormal(Continuous):
         the logdet of colcov and rowcov."""
 
         delta = value - self.mu
-        rowchol_cov = self.rowchol_cov
-        colchol_cov = self.colchol_cov
+        rowchol_cov = self._rowchol_cov
+        colchol_cov = self._colchol_cov
 
         # Find exponent piece by piece
         right_quaddist = self.solve_lower(rowchol_cov, delta)
