@@ -66,7 +66,7 @@ class _CovSet():
                 return deltalogp(_cov, delta)
             self._delta_logp = deltalogp
 
-            delta_logpsum = self._sumlogphelper(self._cov_type)
+            delta_logpsum = self._logpsumhelper(self._cov_type)
             def deltalogpsum(delta):
                 return delta_logpsum(_cov, delta)
             self._delta_logp_sum = deltalogpsum
