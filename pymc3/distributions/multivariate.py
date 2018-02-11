@@ -107,11 +107,11 @@ class _QuadFormBase(Continuous, _CovSet):
         else:
             onedim = False
         if dosum:
-            logp = self._delta_logpsum(value - mu)
+            logp = self._delta_logp_sum(value - mu)
         else :
             logp = self._delta_logp(value - mu)
 
-        if onedim:
+        if onedim and logp.ndim != 0:
             logp = logp[0]
 
         return logp
