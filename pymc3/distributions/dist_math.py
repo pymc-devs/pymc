@@ -255,7 +255,7 @@ def MvNormalLogpSum(mode='cov'):
         if (mode == 'tau'):
             warnings.warn("For now, gradient of MvNormalLogp only works "
                           "for cov or chol parameters, not tau.")
-            return [grad_not_implemented(self, 0, cov)] * 2
+            return [theano.gradient.grad_not_implemented(self, 0, cov)] * 2
 
         n, k = delta.shape
         I_k = tt.eye(k, dtype=theano.config.floatX)
