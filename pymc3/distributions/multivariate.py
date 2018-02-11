@@ -50,15 +50,15 @@ class _CovSet():
 
         if cov is not None:
             self._cov_type = 'cov'
-            self.cov = _cov = tt.as_tensor_variable(cov)
+            self.cov = tt.as_tensor_variable(cov)
         elif chol is not None:
             self._cov_type = 'chol'
-            self.chol_cov = _cov = tt.as_tensor_variable(chol)
-            if self.chol_cov.ndim != 2:
+            self.chol = tt.as_tensor_variable(chol)
+            if self.chol.ndim != 2:
                 raise ValueError('`chol` must be two dimensional.')
         else:
             self._cov_type = 'tau'
-            self.tau = _cov = tt.as_tensor_variable(tau)
+            self.tau = tt.as_tensor_variable(tau)
 
 class _QuadFormBase(Continuous, _CovSet):
     def __init__(self, mu=None, cov=None, chol=None, tau=None, lower=True,
@@ -69,6 +69,7 @@ class _QuadFormBase(Continuous, _CovSet):
         if len(self.shape) > 2:
             raise ValueError("Only 1 or 2 dimensions are allowed.")
 
+        _cov = self.__getattr__(self._cov_type)
 
         try:
             _deltalogp = self._logphelper(self._cov_type)
@@ -84,7 +85,6 @@ class _QuadFormBase(Continuous, _CovSet):
         except ValueError:
             errot = '`{}` must be two dimensional.'.format(self._cov_type)
             raise_from(ValueError(error), None)
-
 
         self.mu = mu = tt.as_tensor_variable(mu)
 
@@ -212,7 +212,7 @@ class MvNormal(_QuadFormBase):
                 return np.nan * np.zeros(size)
             return dist.rvs(size)
         elif self._cov_type == 'chol':
-            mu, chol = draw_values([self.mu, self.chol_cov], point=point)
+            mu, chol = draw_values([self.mu, self.chol], point=point)
             if mu.shape[-1] != chol[0].shape[-1]:
                 raise ValueError("Shapes for mu and chol don't match")
 
@@ -311,7 +311,7 @@ class MvStudentT(_QuadFormBase):
             tau, = draw_values([self.tau], point=point)
             dist = MvNormal.dist(mu=np.zeros_like(mu), tau=tau)
         else:
-            chol, = draw_values([self.chol_cov], point=point)
+            chol, = draw_values([self.chol], point=point)
             dist = MvNormal.dist(mu=np.zeros_like(mu), chol=chol)
 
         samples = dist.random(point, size)
