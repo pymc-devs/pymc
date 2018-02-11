@@ -82,7 +82,7 @@ class _CovSet():
                     norm = - 0.5 * k * floatX(np.log(2 * np.pi))
                     ok = ~tt.isnan(self.chol_tau[0,0])
                     logp = norm - 0.5 * quaddist - logdet
-                    return ifelse(ok, floatX(logp), floatX(-np.inf * tt.zeros_like(logp)))
+                    return ifelse(ok, floatX(logp), floatX(-np.inf * tt.ones_like(logp)))
                 self.deltalogp = deltalogp
             except ValueError:
                 raise_from(ValueError('`tau` must be two dimensional.'), None)

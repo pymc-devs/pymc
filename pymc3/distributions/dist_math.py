@@ -190,7 +190,7 @@ def MvNormalLogp(with_choleksy=False):
     result += (delta_trans ** f(2)).sum()
     result = f(-.5) * result
 
-    logp = ifelse(ok, f(result), f(-np.inf * tt.zeros_like(result)))
+    logp = ifelse(ok, f(result), f(-np.inf * tt.ones_like(result)))
 
     def dlogp(inputs, gradients):
         g_logp, = gradients
