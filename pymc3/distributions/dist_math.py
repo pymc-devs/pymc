@@ -4,7 +4,7 @@ Created on Mar 7, 2011
 @author: johnsalvatier
 '''
 from __future__ import division
-
+import warnings
 import numpy as np
 import theano.tensor as tt
 import theano
@@ -172,12 +172,12 @@ def CholeskyCheck(mode='cov', return_ldet=True, replacement=None):
     check = check_chol if is_cholesky else check_nonchol
     repl = lambda ncov, r: r if replacement else tt.identity_like(ncov)
 
-    def func(cov, r=None):
+    def func(cov, fallback=None):
         if not is_cholesky:
             # add inplace=True when/if impletemented by Theano
             cov = cholesky(cov)
         ok, ldet = check(cov)
-        chol_cov = ifelse(ok, cov, repl(cov, r))
+        chol_cov = ifelse(ok, cov, repl(cov, fallback))
         return [chol_cov, ldet, ok] if w_ldet else [chol_cov, ok]
 
     return func
@@ -260,7 +260,7 @@ def MvNormalLogpSum(mode='cov'):
         n, k = delta.shape
         I_k = tt.eye(k, dtype=theano.config.floatX)
 
-        chol_cov, ok = check_chol(cov, replacement=I_k)
+        chol_cov, ok = check_chol(cov, fallback=I_k)
 
         delta_trans = solve_lower(chol_cov, delta.T).T
 
