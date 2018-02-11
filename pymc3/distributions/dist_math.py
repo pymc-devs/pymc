@@ -185,7 +185,7 @@ def MvNormalLogp(with_choleksy=False):
     chol_cov = ifelse(ok, cov, tt.eye(k, dtype=theano.config.floatX))
     delta_trans = solve_lower(chol_cov, delta.T).T
 
-    result = n * f(k) * tt.log(f(2) * np.pi)
+    result = n * f(k) * tt.log(f(2 * np.pi))
     result += f(2) * n * tt.sum(tt.log(diag))
     result += (delta_trans ** f(2)).sum()
     result = f(-.5) * result
