@@ -306,7 +306,7 @@ def MvTLogp(nu, mode='cov'):
 
         quaddist = (delta_trans ** floatX(2)).sum()
 
-        result = (gammaln((nu + k) / 2.)
+        result = gammaln((nu + k) / 2.)
         result -= gammaln(nu / 2.)
         result -= .5 * k * tt.log(nu * floatX(np.pi))
         result -= (nu + k) / 2. * tt.log1p(quaddist / nu)
