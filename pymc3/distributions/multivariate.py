@@ -79,10 +79,10 @@ class _CovSet():
                     diag = tt.ExtractDiag(view=True)(self.chol_tau)
                     logdet = -tt.log(diag).sum()
                     k = delta.shape[-1].astype(theano.config.floatX)
-                    norm = - 0.5 * k * pm.floatX(np.log(2 * np.pi))
+                    norm = - 0.5 * k * floatX(np.log(2 * np.pi))
                     ok = ~tt.isnan(self.chol_tau[0,0])
                     logp = norm - 0.5 * quaddist - logdet
-                    return ifelse(ok, f(logp), f(-np.inf * tt.zeros_like(logp)))
+                    return ifelse(ok, floatX(logp), floatX(-np.inf * tt.zeros_like(logp)))
                 self.deltalogp = deltalogp
             except ValueError:
                 raise_from(ValueError('`tau` must be two dimensional.'), None)
@@ -376,7 +376,7 @@ class MvStudentT(_QuadFormBase):
 
     def logp(self, value):
         quaddist, logdet, ok = self._quaddist(value)
-        k = value.shape[-1].astype(theano.config.floatX)
+        k = floatX(value.shape[-1])
 
         norm = (gammaln((self.nu + k) / 2.)
                 - gammaln(self.nu / 2.)
@@ -1320,5 +1320,5 @@ class MatrixNormal(Continuous):
         trquaddist, half_collogdet, half_rowlogdet = self._trquaddist(value)
         m = self.m
         n = self.n
-        norm = - 0.5 * m * n * pm.floatX(np.log(2 * np.pi))
+        norm = - 0.5 * m * n * floatX(np.log(2 * np.pi))
         return norm - 0.5*trquaddist - m*half_collogdet - n*half_rowlogdet
