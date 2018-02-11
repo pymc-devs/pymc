@@ -330,7 +330,7 @@ def MvTLogpSum(nu):
     """
     solve_lower = slinalg.Solve(A_structure='lower_triangular', overwrite_b=True)
     nu = tt.as_tensor_variable(nu)
-    def constuctor(mode='cov'):
+    def constructor(mode='cov'):
         check_chol_wldet = CholeskyCheck(mode, return_ldet=True)
         def logpf(cov, delta):
             chol, logdet, ok = check_chol_wldet(cov)

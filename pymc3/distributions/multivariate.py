@@ -69,7 +69,7 @@ class _QuadFormBase(Continuous, _CovSet):
         if len(self.shape) > 2:
             raise ValueError("Only 1 or 2 dimensions are allowed.")
 
-        _cov = self.__getattr__(self._cov_type)
+        _cov = getattr(self, self._cov_type)
 
         try:
             _deltalogp = self._logphelper(self._cov_type)
