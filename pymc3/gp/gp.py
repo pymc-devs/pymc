@@ -104,13 +104,13 @@ class Latent(Base):
 
     def _build_prior(self, name, X, reparameterize=True, **kwargs):
         mu = self.mean_func(X)
-        chol = cholesky(stabilize(self.cov_func(X)))
+        cov = stabilize(self.cov_func(X))
         shape = infer_shape(X, kwargs.pop("shape", None))
         if reparameterize:
             v = pm.Normal(name + "_rotated_", mu=0.0, sd=1.0, shape=shape, **kwargs)
-            f = pm.Deterministic(name, mu + tt.dot(chol, v))
+            f = pm.Deterministic(name, mu + tt.dot(cholesky(cov), v))
         else:
-            f = pm.MvNormal(name, mu=mu, chol=chol, shape=shape, **kwargs)
+            f = pm.MvNormal(name, mu=mu, cov=cov, shape=shape, **kwargs)
         return f
 
     def prior(self, name, X, reparameterize=True, **kwargs):
@@ -200,9 +200,9 @@ class Latent(Base):
         """
         givens = self._get_given_vals(given)
         mu, cov = self._build_conditional(Xnew, *givens)
-        chol = cholesky(stabilize(cov))
+        cov = stabilize(cov)
         shape = infer_shape(Xnew, kwargs.pop("shape", None))
-        return pm.MvNormal(name, mu=mu, chol=chol, shape=shape, **kwargs)
+        return pm.MvNormal(name, mu=mu, cov=cov, shape=shape, **kwargs)
 
 
 @conditioned_vars(["X", "f", "nu"])
@@ -319,9 +319,9 @@ class TP(Latent):
         X = self.X
         f = self.f
         nu2, mu, covT = self._build_conditional(Xnew, X, f)
-        chol = cholesky(stabilize(covT))
+        cov = stabilize(covT)
         shape = infer_shape(Xnew, kwargs.pop("shape", None))
-        return pm.MvStudentT(name, nu=nu2, mu=mu, chol=chol, shape=shape, **kwargs)
+        return pm.MvStudentT(name, nu=nu2, mu=mu, cov=cov, shape=shape, **kwargs)
 
 
 @conditioned_vars(["X", "y", "noise"])
@@ -415,15 +415,15 @@ class Marginal(Base):
         if not isinstance(noise, Covariance):
             noise = pm.gp.cov.WhiteNoise(noise)
         mu, cov = self._build_marginal_likelihood(X, noise)
-        chol = cholesky(stabilize(cov))
+        cov = stabilize(cov)
         self.X = X
         self.y = y
         self.noise = noise
         if is_observed:
-            return pm.MvNormal(name, mu=mu, chol=chol, observed=y, **kwargs)
+            return pm.MvNormal(name, mu=mu, cov=cov, observed=y, **kwargs)
         else:
             shape = infer_shape(X, kwargs.pop("shape", None))
-            return pm.MvNormal(name, mu=mu, chol=chol, shape=shape, **kwargs)
+            return pm.MvNormal(name, mu=mu, cov=cov, shape=shape, **kwargs)
 
     def _get_given_vals(self, given):
         if given is None:
@@ -501,9 +501,8 @@ class Marginal(Base):
 
         givens = self._get_given_vals(given)
         mu, cov = self._build_conditional(Xnew, pred_noise, False, *givens)
-        chol = cholesky(cov)
         shape = infer_shape(Xnew, kwargs.pop("shape", None))
-        return pm.MvNormal(name, mu=mu, chol=chol, shape=shape, **kwargs)
+        return pm.MvNormal(name, mu=mu, cov=cov, shape=shape, **kwargs)
 
     def predict(self, Xnew, point=None, diag=False, pred_noise=False, given=None):
         R"""
@@ -784,6 +783,5 @@ class MarginalSparse(Marginal):
 
         givens = self._get_given_vals(given)
         mu, cov = self._build_conditional(Xnew, pred_noise, False, *givens)
-        chol = cholesky(cov)
         shape = infer_shape(Xnew, kwargs.pop("shape", None))
-        return pm.MvNormal(name, mu=mu, chol=chol, shape=shape, **kwargs)
+        return pm.MvNormal(name, mu=mu, cov=cov, shape=shape, **kwargs)
