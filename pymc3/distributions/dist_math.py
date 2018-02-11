@@ -169,7 +169,7 @@ def MvNormalLogp(with_choleksy=False):
     if not with_choleksy:
         # add inplace=True when/if impletemented by Theano
         cholesky = slinalg.Cholesky(lower=True, on_error="nan")
-        cov = f(cholesky(cov))
+        cov = cholesky(cov)
         # The Cholesky op will return NaNs if the cov is not positive definite
         # -- checking the first value is sufficient
         ok = ~tt.isnan(cov[0,0])
@@ -190,7 +190,7 @@ def MvNormalLogp(with_choleksy=False):
     result += (delta_trans ** f(2)).sum()
     result = f(-.5) * result
 
-    logp = ifelse(ok, result, f(-np.inf * tt.zeros_like(result)))
+    logp = ifelse(ok, f(result), f(-np.inf * tt.zeros_like(result)))
 
     def dlogp(inputs, gradients):
         g_logp, = gradients

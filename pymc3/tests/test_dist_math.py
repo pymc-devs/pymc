@@ -153,7 +153,7 @@ class TestMvNormalLogp():
         expect = expect.logpdf(delta_val).sum()
         logp_chol = MvNormalLogp(True)(chol, delta)
         logp_chol_f = theano.function([chol, delta], logp_chol)
-        logp_chol = logp_cov_f(chol_val, delta_val)
+        logp_chol = logp_chol_f(chol_val, delta_val)
         npt.assert_allclose(logp_chol, expect)
 
     @theano.configparser.change_flags(compute_test_value="ignore")
