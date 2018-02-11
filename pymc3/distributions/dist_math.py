@@ -170,14 +170,14 @@ def CholeskyCheck(mode='cov', return_ldet=True, replacement=None):
         return ~tt.isnan(cov[0,0]), ldet
 
     check = check_chol if is_cholesky else check_nonchol
-    repl = lambda ncov: replacement if replacement else tt.identity_like(ncov)
+    repl = lambda ncov, r: r if replacement else tt.identity_like(ncov)
 
-    def func(cov):
+    def func(cov, r=None):
         if not is_cholesky:
             # add inplace=True when/if impletemented by Theano
             cov = cholesky(cov)
         ok, ldet = check(cov)
-        chol_cov = ifelse(ok, cov, repl(cov))
+        chol_cov = ifelse(ok, cov, repl(cov, r))
         return [chol_cov, ldet, ok] if w_ldet else [chol_cov, ok]
 
     return func
