@@ -60,6 +60,16 @@ class _CovSet():
             self._cov_type = 'tau'
             self.tau = _cov = tt.as_tensor_variable(tau)
 
+class _QuadFormBase(Continuous, _CovSet):
+    def __init__(self, mu=None, cov=None, chol=None, tau=None, lower=True,
+                 *args, **kwargs):
+        super(_QuadFormBase, self).__init__(*args, **kwargs)
+        super(_QuadFormBase, self).__initCov__(cov, tau, chol, lower)
+
+        if len(self.shape) > 2:
+            raise ValueError("Only 1 or 2 dimensions are allowed.")
+
+
         try:
             _deltalogp = self._logphelper(self._cov_type)
             def deltalogp(delta):
@@ -75,15 +85,6 @@ class _CovSet():
             errot = '`{}` must be two dimensional.'.format(self._cov_type)
             raise_from(ValueError(error), None)
 
-class _QuadFormBase(Continuous, _CovSet):
-    def __init__(self, mu=None, cov=None, chol=None, tau=None, lower=True,
-                 *args, **kwargs):
-
-        super(_QuadFormBase, self).__init__(*args, **kwargs)
-        super(_QuadFormBase, self).__initCov__(cov, tau, chol, lower)
-
-        if len(self.shape) > 2:
-            raise ValueError("Only 1 or 2 dimensions are allowed.")
 
         self.mu = mu = tt.as_tensor_variable(mu)
 
@@ -235,7 +236,7 @@ class MvNormal(_QuadFormBase):
             return mu + transformed.T
 
     def logp_sum(self, value):
-        return self.logp(delta, True)
+        return self.logp(value, True)
 
     def _repr_latex_(self, name=None, dist=None):
         if dist is None:
@@ -294,12 +295,11 @@ class MvStudentT(_QuadFormBase):
             if cov is not None:
                 raise ValueError('Specify only one of cov and Sigma')
             cov = Sigma
-        self._logphelper = MvTLogp
-        self._logpsumhelper = MvTLogpSum
+        self.nu = nu = tt.as_tensor_variable(nu)
+        self._logphelper = MvTLogp(self.nu)
+        self._logpsumhelper = MvTLogpSum(self.nu)
         super(MvStudentT, self).__init__(mu=mu, cov=cov, tau=tau, chol=chol,
                                          lower=lower, *args, **kwargs)
-
-        self.nu = nu = tt.as_tensor_variable(nu)
         self.mean = self.median = self.mode = self.mu = self.mu
 
     def random(self, point=None, size=None):

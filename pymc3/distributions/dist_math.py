@@ -279,7 +279,7 @@ def MvNormalLogpSum(mode='cov'):
     return theano.OpFromGraph(
         [cov, delta], [logp], grad_overrides=dlogp, inline=True)
 
-def MvTLogp(nu, mode='cov'):
+def MvTLogp(nu):
     """Concstructor for the elementwise log pdf of a multivariate normal distribution.
 
     The returned function will have parameters:
@@ -294,28 +294,30 @@ def MvTLogp(nu, mode='cov'):
     check_chol_wldet = CholeskyCheck(mode, return_ldet=True)
     nu = tt.as_tensor_variable(nu)
 
-    def logpf(cov, delta):
-        chol, logdet, ok = check_chol_wldet(cov)
+    def constructor(mode='cov'):
+        def logpf(cov, delta):
+            chol, logdet, ok = check_chol_wldet(cov)
 
-        if mode == 'tau':
-            delta_trans = tt.dot(delta, chol)
-        else:
-            delta_trans = solve_lower(chol, delta.T).T
-        _, k = delta.shape
-        k = floatX(k)
+            if mode == 'tau':
+                delta_trans = tt.dot(delta, chol)
+            else:
+                delta_trans = solve_lower(chol, delta.T).T
+            _, k = delta.shape
+            k = floatX(k)
 
-        quaddist = (delta_trans ** floatX(2)).sum()
+            quaddist = (delta_trans ** floatX(2)).sum()
 
-        result = gammaln((nu + k) / 2.)
-        result -= gammaln(nu / 2.)
-        result -= .5 * k * tt.log(nu * floatX(np.pi))
-        result -= (nu + k) / 2. * tt.log1p(quaddist / nu)
-        result -= logdet
-        return ifelse(ok, floatX(result), floatX(-np.inf * tt.ones_like(result)))
+            result = gammaln((nu + k) / 2.)
+            result -= gammaln(nu / 2.)
+            result -= .5 * k * tt.log(nu * floatX(np.pi))
+            result -= (nu + k) / 2. * tt.log1p(quaddist / nu)
+            result -= logdet
+            return ifelse(ok, floatX(result), floatX(-np.inf * tt.ones_like(result)))
 
-    return logpf
+        return logpf
+    return constructor
 
-def MvTLogpSum(nu, mode='cov'):
+def MvTLogpSum(nu):
     """Concstructor for the sum of log pdf of a multivariate t distribution.
     WIP (not sure if this is at all possible)
     The returned function will have parameters:
@@ -329,26 +331,26 @@ def MvTLogpSum(nu, mode='cov'):
     solve_lower = slinalg.Solve(A_structure='lower_triangular', overwrite_b=True)
     check_chol_wldet = CholeskyCheck(mode, return_ldet=True)
     nu = tt.as_tensor_variable(nu)
+    def constuctor(mode='cov'):
+        def logpf(cov, delta):
+            chol, logdet, ok = check_chol_wldet(cov)
 
-    def logpf(cov, delta):
-        chol, logdet, ok = check_chol_wldet(cov)
+            if mode == 'tau':
+                delta_trans = tt.dot(delta, chol)
+            else:
+                delta_trans = solve_lower(chol, delta.T).T
+            n, k = delta.shape
+            n, k = floatX(n), floatX(k)
 
-        if mode == 'tau':
-            delta_trans = tt.dot(delta, chol)
-        else:
-            delta_trans = solve_lower(chol, delta.T).T
-        n, k = delta.shape
-        n, k = floatX(n), floatX(k)
-
-        quaddist = (delta_trans ** floatX(2)).sum(axis=-1)
-        ## TODO haven't done the full math yet
-        result = n * (gammaln((nu + k) / 2.) - gammaln(nu / 2.))
-        result -= n * .5 * k * tt.log(nu * floatX(np.pi))
-        result -= (nu + k) / 2. * tt.log1p(quaddist / nu)
-        result -= logdet
-        return ifelse(ok, floatX(result), floatX(-np.inf * tt.ones_like(result)))
-
-    return logpf
+            quaddist = (delta_trans ** floatX(2)).sum(axis=-1)
+            ## TODO haven't done the full math yet
+            result = n * (gammaln((nu + k) / 2.) - gammaln(nu / 2.))
+            result -= n * .5 * k * tt.log(nu * floatX(np.pi))
+            result -= (nu + k) / 2. * tt.log1p(quaddist / nu)
+            result -= logdet
+            return ifelse(ok, floatX(result), floatX(-np.inf * tt.ones_like(result)))
+        return logpf
+    return constructor
 
 class SplineWrapper(theano.Op):
     """
