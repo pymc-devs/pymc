@@ -192,7 +192,7 @@ class FullRankGroup(Group):
             # it's gonna be so slow
             # scan is computed over batch and then summed up
             # output shape is (batch, samples)
-            return theano.scan(logq, [z.swapaxes(0, 1), self.mean, self.L]).sum()
+            return theano.scan(logq, [z.swapaxes(0, 1), self.mean, self.L])[0].sum(0)
         else:
             return pm.MvNormal.dist(mu=self.mean, chol=self.L).logp(z)
 

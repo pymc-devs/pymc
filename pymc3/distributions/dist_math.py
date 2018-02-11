@@ -144,8 +144,75 @@ def log_normal(x, mean, **kwargs):
     return f(c) - tt.log(tt.abs_(std)) - (x - mean) ** 2 / (2. * std ** 2)
 
 
-def MvNormalLogp(with_choleksy=False):
-    """Compute the log pdf of a multivariate normal distribution.
+def CholeskyCheck(mode='cov', return_ldet=True, replacement=None):
+    """Checks if the given matrix/cholesky is positive definite. Returns a dummy
+       Cholesky replacement if it is not, along with a boolean to assert whether
+       replacement was needed and, optionally, the log of the determinant of
+       either the real Cholesky or its replacement."""
+    is_cholesky = (mode == 'chol')
+    w_ldet = return_ldet
+    cholesky = slinalg.Cholesky(lower=True, on_error="nan")
+
+    # Check if a given Cholesky is positive definite
+    def check_chol(cov):
+        diag = tt.ExtractDiag(view=True)(cov)
+        ldet = tt.sum(diag.log()) if w_ldet else None
+        return tt.all(diag>0), ldet
+
+    # Check if the Cholesky decomposition worked (ie, the cov or tau
+    # was positive definite)
+    def check_nonchol(cov):
+        ldet = None
+        if w_ldet :
+            # will all be NaN if the Cholesky was no-go, which is fine
+            diag = tt.ExtractDiag(view=True)(cov)
+            ldet = tt.sum(diag.log())
+        return ~tt.isnan(cov[0,0]), ldet
+
+    check = check_chol if is_cholesky else check_nonchol
+    repl = lambda ncov: replacement if replacement else tt.identity_like(ncov)
+
+    def func(cov):
+        if not is_cholesky:
+            # add inplace=True when/if impletemented by Theano
+            cov = cholesky(cov)
+        ok, ldet = check(cov)
+        chol_cov = ifelse(ok, cov, repl(cov))
+        return [chol_cov, ldet, ok] if w_ldet else [chol_cov, ok]
+
+    return func
+
+
+def MvNormalLogp(mode='cov'):
+    """Concstructor for the elementwise log pdf of a multivariate normal distribution.
+
+    The returned function will have parameters:
+    ----------
+    cov : tt.matrix
+        The covariance matrix or its Cholesky decompositon (the latter if
+        `chol_cov` is set to True when instantiating the Op).
+    delta : tt.matrix
+        Array of deviations from the mean.
+    """
+    solve_lower = slinalg.Solve(A_structure='lower_triangular', overwrite_b=True)
+    check_chol_wldet = CholeskyCheck(mode, return_ldet=True)
+    def logpf(cov, delta):
+        chol, logdet, ok = check_chol_wldet(cov)
+
+        if mode == 'tau':
+            delta_trans = tt.dot(delta, chol)
+        else:
+            delta_trans = solve_lower(chol, delta.T).T
+        _, k = delta.shape
+        quaddist = (delta_trans ** floatX(2)).sum(axis=-1)
+        result = floatX(-.5) * floatX(k) * tt.log(floatX(2 * np.pi))
+        result += floatX(-.5) * quaddist - logdet
+        return ifelse(ok, floatX(result), floatX(-np.inf * tt.ones_like(result)))
+
+    return logpf
+
+def MvNormalLogpSum(mode='cov'):
+    """Compute the sum of log pdf of a multivariate normal distribution.
 
     Parameters
     ----------
@@ -162,52 +229,39 @@ def MvNormalLogp(with_choleksy=False):
 
     solve_lower = slinalg.Solve(A_structure='lower_triangular', overwrite_b=True)
     solve_upper = slinalg.Solve(A_structure='upper_triangular', overwrite_b=True)
+    check_chol = CholeskyCheck(mode, return_ldet=False)
+    check_chol_wldet = CholeskyCheck(mode, return_ldet=True)
+
+    chol, logdet, ok = check_chol_wldet(cov)
+
+    if mode == 'tau':
+        delta_trans = tt.dot(delta, chol)
+    else:
+        delta_trans = solve_lower(chol, delta.T).T
+    quaddist = (delta_trans ** floatX(2)).sum()
 
     n, k = delta.shape
-    n = f(n)
+    result = n * floatX(k) * tt.log(floatX(2 * np.pi))
+    result += floatX(2) * n * logdet
+    result += quaddist
+    result = floatX(-.5) * result
 
-    if not with_choleksy:
-        # add inplace=True when/if impletemented by Theano
-        cholesky = slinalg.Cholesky(lower=True, on_error="nan")
-        cov = cholesky(cov)
-        # The Cholesky op will return NaNs if the cov is not positive definite
-        # -- checking the first value is sufficient
-        ok = ~tt.isnan(cov[0,0])
-        # will all be NaN if the Cholesky was no-go, which is fine
-        diag = tt.ExtractDiag(view=True)(cov)
-    else:
-        diag = tt.ExtractDiag(view=True)(cov)
-        # Here we must check if the Cholesky is positive definite
-        ok = tt.all(diag>0)
-
-    # `solve_lower` throws errors with NaNs hence we replace the cov with
-    # identity and return -Inf later
-    chol_cov = ifelse(ok, cov, tt.eye(k, dtype=theano.config.floatX))
-    delta_trans = solve_lower(chol_cov, delta.T).T
-
-    result = n * f(k) * tt.log(f(2 * np.pi))
-    result += f(2) * n * tt.sum(tt.log(diag))
-    result += (delta_trans ** f(2)).sum()
-    result = f(-.5) * result
-
-    logp = ifelse(ok, f(result), f(-np.inf * tt.ones_like(result)))
+    logp = ifelse(ok, floatX(result), floatX(-np.inf * tt.ones_like(result)))
 
     def dlogp(inputs, gradients):
         g_logp, = gradients
-        cov, delta = inputs
-
         g_logp.tag.test_value = floatX(1.)
+        cov, delta = inputs
+        if (mode == 'tau'):
+            warnings.warn("For now, gradient of MvNormalLogp only works "
+                          "for cov or chol parameters, not tau.")
+            return [grad_not_implemented(self, 0, cov)] * 2
+
         n, k = delta.shape
-
-        if not with_choleksy:
-            cov = cholesky(cov)
-            ok = ~tt.isnan(cov[0,0])
-        else:
-            diag = tt.ExtractDiag(view=True)(cov)
-            ok = tt.all(diag>0)
-
         I_k = tt.eye(k, dtype=theano.config.floatX)
-        chol_cov = ifelse(ok, cov, I_k)
+
+        chol_cov, ok = check_chol(cov, replacement=I_k)
+
         delta_trans = solve_lower(chol_cov, delta.T).T
 
         inner =  n * I_k - tt.dot(delta_trans.T, delta_trans)
@@ -225,8 +279,76 @@ def MvNormalLogp(with_choleksy=False):
     return theano.OpFromGraph(
         [cov, delta], [logp], grad_overrides=dlogp, inline=True)
 
+def MvTLogp(nu, mode='cov'):
+    """Concstructor for the elementwise log pdf of a multivariate normal distribution.
 
+    The returned function will have parameters:
+    ----------
+    cov : tt.matrix
+        The covariance matrix or its Cholesky decompositon (the latter if
+        `chol_cov` is set to True when instantiating the Op).
+    delta : tt.matrix
+        Array of deviations from the mean.
+    """
+    solve_lower = slinalg.Solve(A_structure='lower_triangular', overwrite_b=True)
+    check_chol_wldet = CholeskyCheck(mode, return_ldet=True)
+    nu = tt.as_tensor_variable(nu)
 
+    def logpf(cov, delta):
+        chol, logdet, ok = check_chol_wldet(cov)
+
+        if mode == 'tau':
+            delta_trans = tt.dot(delta, chol)
+        else:
+            delta_trans = solve_lower(chol, delta.T).T
+        _, k = delta.shape
+        k = floatX(k)
+
+        quaddist = (delta_trans ** floatX(2)).sum()
+
+        result = (gammaln((nu + k) / 2.)
+        result -= gammaln(nu / 2.)
+        result -= .5 * k * tt.log(nu * floatX(np.pi))
+        result -= (nu + k) / 2. * tt.log1p(quaddist / nu)
+        result -= logdet
+        return ifelse(ok, floatX(result), floatX(-np.inf * tt.ones_like(result)))
+
+    return logpf
+
+def MvTLogpSum(nu, mode='cov'):
+    """Concstructor for the sum of log pdf of a multivariate t distribution.
+    WIP (not sure if this is at all possible)
+    The returned function will have parameters:
+    ----------
+    cov : tt.matrix
+        The covariance matrix or its Cholesky decompositon (the latter if
+        `chol_cov` is set to True when instantiating the Op).
+    delta : tt.matrix
+        Array of deviations from the mean.
+    """
+    solve_lower = slinalg.Solve(A_structure='lower_triangular', overwrite_b=True)
+    check_chol_wldet = CholeskyCheck(mode, return_ldet=True)
+    nu = tt.as_tensor_variable(nu)
+
+    def logpf(cov, delta):
+        chol, logdet, ok = check_chol_wldet(cov)
+
+        if mode == 'tau':
+            delta_trans = tt.dot(delta, chol)
+        else:
+            delta_trans = solve_lower(chol, delta.T).T
+        n, k = delta.shape
+        n, k = floatX(n), floatX(k)
+
+        quaddist = (delta_trans ** floatX(2)).sum(axis=-1)
+        ## TODO haven't done the full math yet
+        result = n * (gammaln((nu + k) / 2.) - gammaln(nu / 2.))
+        result -= n * .5 * k * tt.log(nu * floatX(np.pi))
+        result -= (nu + k) / 2. * tt.log1p(quaddist / nu)
+        result -= logdet
+        return ifelse(ok, floatX(result), floatX(-np.inf * tt.ones_like(result)))
+
+    return logpf
 
 class SplineWrapper(theano.Op):
     """

@@ -21,12 +21,14 @@ from .distribution import Continuous, Discrete, draw_values, generate_samples
 from ..model import Deterministic
 from .continuous import ChiSquared, Normal
 from .special import gammaln, multigammaln
-from .dist_math import bound, logpow, factln, MvNormalLogp
+from .dist_math import ( bound, logpow, factln, MvNormalLogp, MvNormalLogpSum,
+                         MvTLogp, MvTLogpSum )
 
 
 __all__ = ['MvNormal', 'MvStudentT', 'Dirichlet',
            'Multinomial', 'Wishart', 'WishartBartlett',
            'LKJCorr', 'LKJCholeskyCov', 'MatrixNormal']
+
 
 class _CovSet():
     R"""
@@ -49,44 +51,30 @@ class _CovSet():
 
         if cov is not None:
             self._cov_type = 'cov'
-            self.cov = tt.as_tensor_variable(cov)
-            try:
-                deltaop = MvNormalLogp()
-                def deltalogp(delta):
-                    return deltaop(self.cov, delta)
-                self._delta_logp = deltalogp
-            except ValueError:
-                raise_from(ValueError('`cov` must be two dimensional.'), None)
-
+            self.cov = _cov = tt.as_tensor_variable(cov)
         elif chol is not None:
             self._cov_type = 'chol'
-            self.chol_cov = tt.as_tensor_variable(chol)
+            self.chol_cov = _cov = tt.as_tensor_variable(chol)
             if self.chol_cov.ndim != 2:
                 raise ValueError('`chol` must be two dimensional.')
-            deltaop = MvNormalLogp(False)
-            def deltalogp(delta):
-                return deltaop(self.chol_cov, delta)
-            self._delta_logp = deltalogp
-
         else:
             self._cov_type = 'tau'
-            tau = tt.as_tensor_variable(tau)
-            try:
-                self.chol_tau = tt.slinalg.Cholesky(lower=True, on_error="nan")(tau)
-                def deltalogp(delta):
-                    delta_trans = tt.dot(delta, self.chol_tau)
-                    quaddist = (delta_trans ** 2).sum(axis=-1)
-                    diag = tt.ExtractDiag(view=True)(self.chol_tau)
-                    logdet = -tt.log(diag).sum()
-                    k = delta.shape[-1].astype(theano.config.floatX)
-                    norm = - 0.5 * k * floatX(np.log(2 * np.pi))
-                    ok = ~tt.isnan(self.chol_tau[0,0])
-                    logp = norm - 0.5 * quaddist - logdet
-                    return ifelse(ok, floatX(logp), floatX(-np.inf * tt.ones_like(logp)))
-                self._delta_logp = deltalogp
-            except ValueError:
-                raise_from(ValueError('`tau` must be two dimensional.'), None)
-            self.tau = tau
+            self.tau = _cov = tt.as_tensor_variable(tau)
+
+        try:
+            deltalogp = self._logphelper(self._cov_type)
+            def deltalogp(delta):
+                return deltalogp(_cov, delta)
+            self._delta_logp = deltalog
+
+            delta_logpsum = self._sumlogphelper(self._cov_type)
+            def deltalogpsum(delta):
+                return delta_logpsum(_cov, delta)
+            self._delta_logp_sum = deltalogpsum
+
+        except ValueError:
+            errot = '`{}` must be two dimensional.'.format(self._cov_type)
+            raise_from(ValueError(error), None)
 
 class _QuadFormBase(Continuous, _CovSet):
     def __init__(self, mu=None, cov=None, chol=None, tau=None, lower=True,
@@ -109,6 +97,24 @@ class _QuadFormBase(Continuous, _CovSet):
             name = get_variable_name(self.tau)
         return r'\mathit{{{}}}={}'.format(self._cov_type, name)
 
+    def logp(self, value, dosum=False):
+        mu = self.mu
+        if value.ndim > 2 or value.ndim == 0:
+            raise ValueError('Invalid dimension for value: %s' % value.ndim)
+        if value.ndim == 1:
+            onedim = True
+            value = value[None, :]
+        else:
+            onedim = False
+        if dosum:
+            logp = self._delta_logpsum(value - mu)
+        else :
+            logp = self._delta_logp(value - mu)
+
+        if onedim:
+            logp = logp[0]
+
+        return logp
 
 class MvNormal(_QuadFormBase):
     R"""
@@ -179,6 +185,8 @@ class MvNormal(_QuadFormBase):
 
     def __init__(self, mu, cov=None, tau=None, chol=None, lower=True,
                  *args, **kwargs):
+        self._logphelper = MvNormalLogp
+        self._logpsumhelper = MvNormalLogpSum
         super(MvNormal, self).__init__(mu=mu, cov=cov, tau=tau, chol=chol,
                                        lower=lower, *args, **kwargs)
         self.mean = self.median = self.mode = self.mu = self.mu
@@ -196,7 +204,6 @@ class MvNormal(_QuadFormBase):
             mu, cov = draw_values([self.mu, self.cov], point=point)
             if mu.shape[-1] != cov.shape[-1]:
                 raise ValueError("Shapes for mu and cov don't match")
-
             try:
                 dist = stats.multivariate_normal(
                     mean=mu, cov=cov, allow_singular=True)
@@ -228,18 +235,8 @@ class MvNormal(_QuadFormBase):
                 chol, standard_normal.T, lower=True)
             return mu + transformed.T
 
-    def logp(self, value):
-        """Compute (x - mu).T @ Sigma^-1 @ (x - mu) and the logdet of Sigma."""
-        if value.ndim > 2 or value.ndim == 0:
-            raise ValueError('Invalid dimension for value: %s' % value.ndim)
-        if value.ndim == 1:
-            value = value[None, :]
-
-        delta = value - self.mu
-        logp = self._delta_logp(delta)
-
-        #return logp[0] if onedim else logp
-        return logp
+    def logp_sum(self, value):
+        return self.logp(delta, True)
 
     def _repr_latex_(self, name=None, dist=None):
         if dist is None:
@@ -298,64 +295,13 @@ class MvStudentT(_QuadFormBase):
             if cov is not None:
                 raise ValueError('Specify only one of cov and Sigma')
             cov = Sigma
+        self._logphelper = MvTLogp
+        self._logpsumhelper = MvTLogpSum
         super(MvStudentT, self).__init__(mu=mu, cov=cov, tau=tau, chol=chol,
                                          lower=lower, *args, **kwargs)
-        if self._cov_type == 'cov':
-            cholesky = tt.slinalg.Cholesky(lower=True, on_error="nan")
-            self.chol_cov = cholesky(self.cov)
+
         self.nu = nu = tt.as_tensor_variable(nu)
         self.mean = self.median = self.mode = self.mu = self.mu
-        self.solve_lower = tt.slinalg.Solve(A_structure='lower_triangular', overwrite_b=True)
-
-    def _quaddist(self, value):
-        """Compute (x - mu).T @ Sigma^-1 @ (x - mu) and the logdet of Sigma."""
-        mu = self.mu
-        if value.ndim > 2 or value.ndim == 0:
-            raise ValueError('Invalid dimension for value: %s' % value.ndim)
-        if value.ndim == 1:
-            onedim = True
-            value = value[None, :]
-        else:
-            onedim = False
-
-        delta = value - mu
-
-        if self._cov_type == 'tau':
-            dist, logdet, ok = self._quaddist_tau(delta)
-        else:
-            dist, logdet, ok = self._quaddist_chol(delta)
-
-        if onedim:
-            return dist[0], logdet, ok
-        return dist, logdet, ok
-
-    def _quaddist_chol(self, delta):
-        chol_cov = self.chol_cov
-
-        diag = tt.ExtractDiag(view=True)(chol_cov)
-        # Check if the covariance matrix is positive definite.
-        ok = tt.all(diag > 0)
-        # If not, replace the diagonal. We return -inf later, but
-        # need to prevent solve_lower from throwing an exception.
-        chol_cov = tt.switch(ok, chol_cov, 1)
-
-        delta_trans = self.solve_lower(chol_cov, delta.T).T
-        quaddist = (delta_trans ** 2).sum(axis=-1)
-        logdet = tt.sum(tt.log(diag))
-        return quaddist, logdet, ok
-
-    def _quaddist_tau(self, delta):
-        chol_tau = self.chol_tau
-
-        diag = tt.ExtractDiag(view=True)(chol_tau)
-        ok = tt.all(diag > 0)
-
-        chol_tau = tt.switch(ok, chol_tau, 1)
-        diag = tt.nlinalg.diag(chol_tau)
-        delta_trans = tt.dot(delta, chol_tau)
-        quaddist = (delta_trans ** 2).sum(axis=-1)
-        logdet = -tt.sum(tt.log(diag))
-        return quaddist, logdet, ok
 
     def random(self, point=None, size=None):
         nu, mu = draw_values([self.nu, self.mu], point=point)
@@ -373,16 +319,6 @@ class MvStudentT(_QuadFormBase):
 
         chi2 = np.random.chisquare
         return (np.sqrt(nu) * samples.T / chi2(nu, size)).T + mu
-
-    def logp(self, value):
-        quaddist, logdet, ok = self._quaddist(value)
-        k = floatX(value.shape[-1])
-
-        norm = (gammaln((self.nu + k) / 2.)
-                - gammaln(self.nu / 2.)
-                - 0.5 * k * floatX(np.log(self.nu * np.pi)))
-        inner = - (self.nu + k) / 2. * tt.log1p(quaddist / self.nu)
-        return bound(norm + inner - logdet, ok)
 
     def _repr_latex_(self, name=None, dist=None):
         if dist is None:
@@ -1288,7 +1224,7 @@ class MatrixNormal(Continuous):
             size = list(self.shape)
 
         mu, colchol, rowchol = draw_values(
-                                [self.mu, self.colchol_cov, self.rowchol_cov],
+                                [self.mu, self._colchol_cov, self._rowchol_cov],
                                 point=point
                                 )
         standard_normal = np.random.standard_normal(size)
