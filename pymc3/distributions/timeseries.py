@@ -302,8 +302,6 @@ class MvGaussianRandomWalk(distribution.Continuous):
     def __init__(self, mu=0., cov=None, tau=None, chol=None, lower=True, init=Flat.dist(),
                  *args, **kwargs):
         super(MvGaussianRandomWalk, self).__init__(*args, **kwargs)
-        super(MvGaussianRandomWalk, self).__initCov__(cov, tau, chol, lower)
-
         self.mu = mu = tt.as_tensor_variable(mu)
         self.init = init
         self.mean = tt.as_tensor_variable(0.)
