@@ -176,7 +176,7 @@ def CholeskyCheck(mode='cov', return_ldet=True, replacement=None):
         if not is_cholesky:
             cov = cholesky(cov)
         ok, ldet = check(cov)
-        chol_cov = ifelse(ok, cov, repl(cov, fallback))
+        chol_cov = ifelse(ok, tt.unbroadcast(cov, 0, 1), repl(cov, fallback))
         return [chol_cov, ldet, ok] if w_ldet else [chol_cov, ok]
 
     return func
