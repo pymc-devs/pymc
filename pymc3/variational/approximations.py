@@ -153,7 +153,7 @@ class FullRankGroup(Group):
             L = tt.set_subtensor(
                 L[self.tril_indices],
                 self.params_dict['L_tril'])
-        return stabilize(L)
+        return L
 
     @node_property
     def mean(self):
@@ -188,13 +188,13 @@ class FullRankGroup(Group):
         z = self.symbolic_random
         if self.batched:
             def logq(z_b, mu_b, L_b):
-                return pm.MvNormal.dist(mu=mu_b, chol=L_b).logp(z_b)
+                return pm.MvNormal.dist(mu=mu_b, chol=stabilize(L_b)).logp(z_b)
             # it's gonna be so slow
             # scan is computed over batch and then summed up
             # output shape is (batch, samples)
             return theano.scan(logq, [z.swapaxes(0, 1), self.mean, self.L])[0].sum(0)
         else:
-            return pm.MvNormal.dist(mu=self.mean, chol=self.L).logp(z)
+            return pm.MvNormal.dist(mu=self.mean, chol=stabilize(self.L)).logp(z)
 
     @node_property
     def symbolic_random(self):
