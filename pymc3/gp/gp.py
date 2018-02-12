@@ -6,7 +6,8 @@ import theano.tensor as tt
 import pymc3 as pm
 from pymc3.gp.cov import Covariance, Constant
 from pymc3.gp.mean import Zero
-from pymc3.gp.util import (conditioned_vars, infer_shape, stabilize)
+from pymc3.gp.util import (conditioned_vars, infer_shape)
+from pymc3.distributions.dist_math import stabilize
 from pymc3.distributions import draw_values
 __all__ = ['Latent', 'Marginal', 'TP', 'MarginalSparse']
 

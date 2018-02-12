@@ -3,7 +3,6 @@ import numpy as np
 import theano.tensor as tt
 from pymc3.theanof import floatX
 
-
 def infer_shape(X, n_points=None):
     if n_points is None:
         try:
@@ -11,12 +10,6 @@ def infer_shape(X, n_points=None):
         except TypeError:
             raise TypeError("Cannot infer 'shape', provide as an argument")
     return n_points
-
-
-def stabilize(K):
-    """ adds small diagonal to a covariance matrix """
-    return K + floatX(1e-6) * tt.identity_like(K)
-
 
 def kmeans_inducing_points(n_inducing, X):
     # first whiten X

@@ -10,7 +10,7 @@ from pymc3.util import update_start_vals
 from pymc3.theanof import change_flags
 from pymc3.math import batched_diag
 from pymc3.variational import flows
-
+from pymc3.distributions.dist_math import stabilize
 
 __all__ = [
     'MeanField',
@@ -153,7 +153,7 @@ class FullRankGroup(Group):
             L = tt.set_subtensor(
                 L[self.tril_indices],
                 self.params_dict['L_tril'])
-        return L
+        return stabilize(L)
 
     @node_property
     def mean(self):

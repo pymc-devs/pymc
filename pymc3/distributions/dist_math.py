@@ -141,6 +141,10 @@ def log_normal(x, mean, **kwargs):
     std += floatX(eps)
     return floatX(c) - tt.log(tt.abs_(std)) - (x - mean) ** 2 / (2. * std ** 2)
 
+def stabilize(K):
+    """ adds small diagonal to a covariance matrix """
+    return K + floatX(1e-6) * tt.identity_like(K)
+
 
 def CholeskyCheck(mode='cov', return_ldet=True, replacement=None):
     """Checks if the given matrix/cholesky is positive definite. Returns a dummy
