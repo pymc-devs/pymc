@@ -6,12 +6,15 @@ import theano.tensor as tt
 import pymc3 as pm
 from pymc3.gp.cov import Covariance, Constant
 from pymc3.gp.mean import Zero
-from pymc3.gp.util import (conditioned_vars,
-                           infer_shape, stabilize, solve_lower, solve_upper)
+from pymc3.gp.util import (conditioned_vars, infer_shape, stabilize)
 from pymc3.distributions import draw_values
-
 __all__ = ['Latent', 'Marginal', 'TP', 'MarginalSparse']
-cholesky = tt.slinalg.Cholesky(lower=True, on_error="nan")
+
+cholesky = tt.slinalg.cholesky
+# TODO: see if any of the solves might be done inplace
+solve_lower = tt.slinalg.Solve(A_structure='lower_triangular')
+solve_upper = tt.slinalg.Solve(A_structure='upper_triangular')
+solve = tt.slinalg.Solve(A_structure='general')
 
 class Base(object):
     R"""
@@ -246,14 +249,15 @@ class TP(Latent):
 
     def _build_prior(self, name, X, reparameterize=True, **kwargs):
         mu = self.mean_func(X)
-        chol = cholesky(stabilize(self.cov_func(X)))
+        cov = stabilize(self.cov_func(X))
         shape = infer_shape(X, kwargs.pop("shape", None))
         if reparameterize:
             chi2 = pm.ChiSquared("chi2_", self.nu)
             v = pm.Normal(name + "_rotated_", mu=0.0, sd=1.0, shape=shape, **kwargs)
-            f = pm.Deterministic(name, (tt.sqrt(self.nu) / chi2) * (mu + tt.dot(chol, v)))
+            a = (tt.sqrt(self.nu) / chi2) * (mu + tt.dot(cholesky(cov), v))
+            f = pm.Deterministic(name, a)
         else:
-            f = pm.MvStudentT(name, nu=self.nu, mu=mu, chol=chol, shape=shape, **kwargs)
+            f = pm.MvStudentT(name, nu=self.nu, mu=mu, cov=cov, shape=shape, **kwargs)
         return f
 
     def prior(self, name, X, reparameterize=True, **kwargs):

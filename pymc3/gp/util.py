@@ -3,10 +3,6 @@ import numpy as np
 import theano.tensor as tt
 from pymc3.theanof import floatX
 
-solve_lower = tt.slinalg.Solve(A_structure='lower_triangular')
-solve_upper = tt.slinalg.Solve(A_structure='upper_triangular')
-solve = tt.slinalg.Solve(A_structure='general')
-
 
 def infer_shape(X, n_points=None):
     if n_points is None:
