@@ -99,7 +99,7 @@ class _QuadFormBase(Continuous):
         return value, value.ndim == 1
 
     def logp(self, value):
-        value, onedim = _check_logp_value(value)
+        value, onedim = self._check_logp_value(value)
 
         logp = self._delta_logp(value - self.mu)
 
