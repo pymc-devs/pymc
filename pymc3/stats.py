@@ -78,7 +78,7 @@ def autocorr(x, lag=None):
     n = len(y)
     result = fftconvolve(y, y[::-1])
     acorr = result[len(result) // 2:]
-    acorr /= (n - np.arange(n))
+    acorr /= np.arange(n, 0, -1)
     acorr /= acorr[0]
     if lag is None:
         return acorr
