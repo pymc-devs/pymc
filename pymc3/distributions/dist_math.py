@@ -197,14 +197,14 @@ def MvNormalLogp(mode='cov'):
     check_chol_wldet = CholeskyCheck(mode, return_ldet=True)
     def logpf(cov, delta):
         chol, logdet, ok = check_chol_wldet(cov)
-
+        _, k = delta.shape
+        k = floatX(k)
         if mode == 'tau':
             delta_trans = tt.dot(delta, chol)
         else:
             delta_trans = solve_lower(chol, delta.T).T
-        _, k = delta.shape
         quaddist = (delta_trans ** floatX(2)).sum(axis=-1)
-        result = floatX(-.5) * floatX(k) * tt.log(floatX(2 * np.pi))
+        result = floatX(-.5) * k * tt.log(floatX(2 * np.pi))
         result += floatX(-.5) * quaddist - logdet
         return ifelse(ok, floatX(result), floatX(-np.inf * tt.ones_like(result)))
 

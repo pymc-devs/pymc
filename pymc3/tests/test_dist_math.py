@@ -171,7 +171,7 @@ class TestMvNormalLogp():
         delta.tag.test_value = delta_val
         expect = stats.multivariate_normal(mean=np.zeros(2), cov=cov_val)
         expect = expect.logpdf(delta_val)
-        logp_chol = MvNormalLogp(True)(chol, delta)
+        logp_chol = MvNormalLogp('chol')(chol, delta)
         logp_chol_f = theano.function([chol, delta], logp_chol)
         logp_chol = logp_chol_f(chol_val, delta_val)
         npt.assert_allclose(logp_chol, expect)
@@ -205,7 +205,7 @@ class TestMvNormalLogp():
         delta.tag.test_value = delta_val
         expect = stats.multivariate_normal(mean=np.zeros(2), cov=cov_val)
         expect = expect.logpdf(delta_val).sum()
-        logp_chol = MvNormalLogpSum(True)(chol, delta)
+        logp_chol = MvNormalLogpSum('chol')(chol, delta)
         logp_chol_f = theano.function([chol, delta], logp_chol)
         logp_chol = logp_chol_f(chol_val, delta_val)
         npt.assert_allclose(logp_chol, expect)
@@ -239,7 +239,7 @@ class TestMvNormalLogp():
                 tt.stack([tt.exp(0.1 * chol_vec[0]), 0]),
                 tt.stack([chol_vec[1], 2 * tt.exp(chol_vec[2])]),
             ])
-            return MvNormalLogpSum(True)(floatX(chol), delta)
+            return MvNormalLogpSum('chol')(floatX(chol), delta)
 
         chol_vec_val = floatX(np.array([0.5, 1., -0.1]))
 
