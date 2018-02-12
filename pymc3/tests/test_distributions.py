@@ -693,14 +693,14 @@ class TestMatchesScipy(SeededTest):
         mu = floatX(np.zeros(2))
         x = tt.vector('x')
         x.tag.test_value = np.zeros(2)
-        logp = MvNormal.dist(mu=mu, cov=cov).logp(x)
+        logp = MvNormal.dist(mu=mu, cov=cov).logp_sum(x)
         f_logp = theano.function([cov, x], logp)
         assert f_logp(cov_val, np.ones(2)) == -np.inf
         dlogp = tt.grad(logp, cov)
         f_dlogp = theano.function([cov, x], dlogp)
         assert not np.all(np.isfinite(f_dlogp(cov_val, np.ones(2))))
 
-        logp = MvNormal.dist(mu=mu, tau=cov).logp(x)
+        logp = MvNormal.dist(mu=mu, tau=cov).logp_sum(x)
         f_logp = theano.function([cov, x], logp)
         assert f_logp(cov_val, np.ones(2)) == -np.inf
         dlogp = tt.grad(logp, cov)
