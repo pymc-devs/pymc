@@ -206,7 +206,7 @@ def MvNormalLogp(mode='cov'):
         else:
             delta_trans = solve_lower(chol, delta.T).T
         quaddist = (delta_trans ** floatX(2)).sum(axis=-1)
-        result = floatX(-.5) * k * tt.log(floatX(2 * np.pi))
+        result = floatX(-.5) * k * tt.log(floatX(2) * floatX(np.pi))
         result += floatX(-.5) * quaddist - logdet
         return ifelse(ok, floatX(result), floatX(-np.inf * tt.ones_like(result)))
 
@@ -242,7 +242,7 @@ def MvNormalLogpSum(mode='cov'):
     quaddist = (delta_trans ** floatX(2)).sum()
 
     n, k = delta.shape
-    result = n * floatX(k) * tt.log(floatX(2 * np.pi))
+    result = n * floatX(k) * tt.log(floatX(2) * floatX(np.pi))
     result += floatX(2) * n * logdet
     result += quaddist
     result = floatX(-.5) * result
@@ -271,7 +271,7 @@ def MvNormalLogpSum(mode='cov'):
         g_cov = ifelse(ok, floatX(g_cov), floatX(-np.nan * tt.zeros_like(g_cov)))
         g_delta = ifelse(ok, floatX(g_delta), floatX(-np.nan * tt.zeros_like(g_delta)))
 
-        return [-0.5 * g_cov * g_logp, -g_delta * g_logp]
+        return [floatX(-.5) * g_cov * g_logp, -g_delta * g_logp]
 
     if (mode == 'cov'):
         return theano.OpFromGraph(
@@ -308,10 +308,10 @@ def MvTLogp(nu):
 
             quaddist = (delta_trans ** floatX(2)).sum()
 
-            result = gammaln((nu + k) / 2.)
-            result -= gammaln(nu / 2.)
-            result -= .5 * k * tt.log(nu * floatX(np.pi))
-            result -= (nu + k) / 2. * tt.log1p(quaddist / nu)
+            result = gammaln((nu + k) / floatX(2))
+            result -= gammaln(nu / floatX(2))
+            result -= floatX(.5) * k * tt.log(nu * floatX(np.pi))
+            result -= (nu + k) / floatX(2) * tt.log1p(quaddist / nu)
             result -= logdet
             return ifelse(ok, floatX(result), floatX(-np.inf * tt.ones_like(result)))
 
