@@ -4,7 +4,6 @@ Created on Mar 7, 2011
 @author: johnsalvatier
 '''
 from __future__ import division
-import warnings
 import numpy as np
 import theano.tensor as tt
 import theano
@@ -152,12 +151,13 @@ def CholeskyCheck(mode='cov', return_ldet=True, replacement=None):
     w_ldet = return_ldet
     # add inplace=True when/if impletemented by Theano
     cholesky = slinalg.Cholesky(lower=True, on_error="nan")
+    _true = tt.as_tensor_variable(np.array(True))
 
-    # Check if a given Cholesky is positive definite
+    # Presume a given Cholesky is positive definite and return its lodget
     def check_chol(cov):
         diag = tt.ExtractDiag(view=True)(cov)
         ldet = tt.sum(diag.log()) if w_ldet else None
-        return tt.all(diag>0), ldet
+        return _true, ldet
 
     # Check if the Cholesky decomposition worked (ie, the cov or tau
     # was positive definite)
