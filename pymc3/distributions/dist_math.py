@@ -307,7 +307,7 @@ def MvTLogp(nu):
             _, k = delta.shape
             k = floatX(k)
 
-            quaddist = (delta_trans ** floatX(2)).sum()
+            quaddist = (delta_trans ** floatX(2)).sum(axis=-1)
 
             result = gammaln((nu + k) / floatX(2))
             result -= gammaln(nu / floatX(2))
@@ -344,7 +344,7 @@ def MvTLogpSum(nu):
             n, k = delta.shape
             n, k = floatX(n), floatX(k)
 
-            quaddist = (delta_trans ** floatX(2)).sum(axis=-1)
+            quaddist = (delta_trans ** floatX(2)).sum()
             ## TODO haven't done the full math yet
             result = n * (gammaln((nu + k) / 2.) - gammaln(nu / 2.))
             result -= n * .5 * k * tt.log(nu * floatX(np.pi))

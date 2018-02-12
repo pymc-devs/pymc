@@ -543,8 +543,8 @@ class TestMarginalVsLatent(object):
     Compare the logp of models Marginal, noise=0 and Latent.
     """
     def setup_method(self):
-        X = np.random.randn(50,3)
-        y = np.random.randn(50)*0.01
+        X = pm.floatX(np.random.randn(50,3))
+        y = pm.floatX(np.random.randn(50)*0.01)
         Xnew = np.random.randn(60, 3)
         pnew = np.random.randn(60)*0.01
         with pm.Model() as model:
@@ -808,15 +808,3 @@ class TestTP(object):
             gp2 = pm.gp.TP(cov_func=cov_func, nu=10)
             with pytest.raises(Exception) as e_info:
                 gp1 + gp2
-
-
-
-
-
-
-
-
-
-
-
-
