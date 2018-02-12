@@ -233,7 +233,7 @@ class MvNormal(_QuadFormBase):
             return mu + transformed.T
 
     def logp_sum(self, value):
-        value, onedim = _check_logp_value(value)
+        value, onedim = self._check_logp_value(value)
 
         logpsum = self._delta_logp_sum(value - self.mu)
 
