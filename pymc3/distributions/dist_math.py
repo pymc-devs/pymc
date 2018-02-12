@@ -151,6 +151,7 @@ def CholeskyCheck(mode='cov', return_ldet=True, replacement=None):
        either the real Cholesky or its replacement."""
     is_cholesky = (mode == 'chol')
     w_ldet = return_ldet
+    # add inplace=True when/if impletemented by Theano
     cholesky = slinalg.Cholesky(lower=True, on_error="nan")
 
     # Check if a given Cholesky is positive definite
@@ -174,7 +175,6 @@ def CholeskyCheck(mode='cov', return_ldet=True, replacement=None):
 
     def func(cov, fallback=None):
         if not is_cholesky:
-            # add inplace=True when/if impletemented by Theano
             cov = cholesky(cov)
         ok, ldet = check(cov)
         chol_cov = ifelse(ok, cov, repl(cov, fallback))

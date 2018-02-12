@@ -86,15 +86,10 @@ class _QuadFormBase(Continuous, _CovSet):
             errot = '`{}` must be two dimensional.'.format(self._cov_type)
             raise_from(ValueError(error), None)
 
-        self.mu = mu = tt.as_tensor_variable(mu)
+        self.mu = tt.as_tensor_variable(mu)
 
     def _repr_cov_params(self):
-        if self._cov_type == 'chol':
-            name = get_variable_name(self.chol)
-        elif self._cov_type == 'cov':
-            name = get_variable_name(self.cov)
-        else:
-            name = get_variable_name(self.tau)
+        name = get_variable_name(getattr(self, self._cov_type))
         return r'\mathit{{{}}}={}'.format(self._cov_type, name)
 
     def logp(self, value, dosum=False):
