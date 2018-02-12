@@ -114,7 +114,7 @@ def mv_simple_discrete():
 
 def mv_prior_simple():
     n = 3
-    noise = floatX(.1)
+    noise = pm.floatX(.1)
     X = np.linspace(0, 1, n)[:, None]
 
     K = pm.gp.cov.ExpQuad(1, 1)(X).eval()

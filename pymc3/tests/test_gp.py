@@ -447,7 +447,7 @@ class TestLinear(object):
     def test_1d(self):
         X = np.linspace(0, 1, 10)[:, None]
         with pm.Model() as model:
-            cov = pm.gp.cov.Linear(1, 0.5)
+            cov = pm.gp.cov.Linear(pm.floatX(1), pm.floatX(.5))
         K = theano.function([], cov(X))()
         npt.assert_allclose(K[0, 1], 0.19444, atol=1e-3)
         K = theano.function([], cov(X, X))()
@@ -461,7 +461,7 @@ class TestPolynomial(object):
     def test_1d(self):
         X = np.linspace(0, 1, 10)[:, None]
         with pm.Model() as model:
-            cov = pm.gp.cov.Polynomial(1, 0.5, 2, 0)
+            cov = pm.gp.cov.Polynomial(1, pm.floatX(.5), 2, 0)
         K = theano.function([], cov(X))()
         npt.assert_allclose(K[0, 1], 0.03780, atol=1e-3)
         K = theano.function([], cov(X, X))()
@@ -549,7 +549,7 @@ class TestMarginalVsLatent(object):
         pnew = pm.floatX(np.random.randn(60)*0.01)
         with pm.Model() as model:
             cov_func = pm.gp.cov.ExpQuad(3, [0.1, 0.2, 0.3])
-            mean_func = pm.gp.mean.Constant(0.5)
+            mean_func = pm.gp.mean.Constant(pm.floatX(.5))
             gp = pm.gp.Marginal(mean_func, cov_func)
             f = gp.marginal_likelihood("f", X, y, noise=pm.floatX(0), is_observed=False, observed=y)
             p = gp.conditional("p", Xnew)
@@ -562,7 +562,7 @@ class TestMarginalVsLatent(object):
     def testLatent1(self):
         with pm.Model() as model:
             cov_func = pm.gp.cov.ExpQuad(3, [0.1, 0.2, 0.3])
-            mean_func = pm.gp.mean.Constant(0.5)
+            mean_func = pm.gp.mean.Constant(pm.floatX(.5))
             gp = pm.gp.Latent(mean_func, cov_func)
             f = gp.prior("f", self.X, reparameterize=False)
             p = gp.conditional("p", self.Xnew)
@@ -572,7 +572,7 @@ class TestMarginalVsLatent(object):
     def testLatent2(self):
         with pm.Model() as model:
             cov_func = pm.gp.cov.ExpQuad(3, [0.1, 0.2, 0.3])
-            mean_func = pm.gp.mean.Constant(0.5)
+            mean_func = pm.gp.mean.Constant(pm.floatX(.5))
             gp = pm.gp.Latent(mean_func, cov_func)
             f = gp.prior("f", self.X, reparameterize=True)
             p = gp.conditional("p", self.Xnew)
@@ -594,7 +594,7 @@ class TestMarginalVsMarginalSparse(object):
         pnew = pm.floatX(np.random.randn(60)*0.01)
         with pm.Model() as model:
             cov_func = pm.gp.cov.ExpQuad(3, [0.1, 0.2, 0.3])
-            mean_func = pm.gp.mean.Constant(0.5)
+            mean_func = pm.gp.mean.Constant(pm.floatX(.5))
             gp = pm.gp.Marginal(mean_func, cov_func)
             sigma = pm.floatX(.1)
             f = gp.marginal_likelihood("f", X, y, noise=sigma)
@@ -611,7 +611,7 @@ class TestMarginalVsMarginalSparse(object):
     def testApproximations(self, approx):
         with pm.Model() as model:
             cov_func = pm.gp.cov.ExpQuad(3, [0.1, 0.2, 0.3])
-            mean_func = pm.gp.mean.Constant(0.5)
+            mean_func = pm.gp.mean.Constant(pm.floatX(.5))
             gp = pm.gp.MarginalSparse(mean_func, cov_func, approx=approx)
             f = gp.marginal_likelihood("f", self.X, self.X, self.y, self.sigma)
             p = gp.conditional("p", self.Xnew)
@@ -622,7 +622,7 @@ class TestMarginalVsMarginalSparse(object):
     def testPredictVar(self, approx):
         with pm.Model() as model:
             cov_func = pm.gp.cov.ExpQuad(3, [0.1, 0.2, 0.3])
-            mean_func = pm.gp.mean.Constant(0.5)
+            mean_func = pm.gp.mean.Constant(pm.floatX(.5))
             gp = pm.gp.MarginalSparse(mean_func, cov_func, approx=approx)
             f = gp.marginal_likelihood("f", self.X, self.X, self.y, self.sigma)
         mu1, var1 = self.gp.predict(self.Xnew, diag=True)
@@ -633,7 +633,7 @@ class TestMarginalVsMarginalSparse(object):
     def testPredictCov(self):
         with pm.Model() as model:
             cov_func = pm.gp.cov.ExpQuad(3, [0.1, 0.2, 0.3])
-            mean_func = pm.gp.mean.Constant(0.5)
+            mean_func = pm.gp.mean.Constant(pm.floatX(.5))
             gp = pm.gp.MarginalSparse(mean_func, cov_func, approx="DTC")
             f = gp.marginal_likelihood("f", self.X, self.X, self.y, self.sigma, is_observed=False)
         mu1, cov1 = self.gp.predict(self.Xnew, pred_noise=True)
@@ -651,9 +651,9 @@ class TestGPAdditive(object):
         self.covs = (pm.gp.cov.ExpQuad(3, [0.1, 0.2, 0.3]),
                      pm.gp.cov.ExpQuad(3, [0.1, 0.2, 0.3]),
                      pm.gp.cov.ExpQuad(3, [0.1, 0.2, 0.3]))
-        self.means = (pm.gp.mean.Constant(0.5),
-                      pm.gp.mean.Constant(0.5),
-                      pm.gp.mean.Constant(0.5))
+        self.means = (pm.gp.mean.Constant(pm.floatX(.5)),
+                      pm.gp.mean.Constant(pm.floatX(.5)),
+                      pm.gp.mean.Constant(pm.floatX(.5)))
 
     def testAdditiveMarginal(self):
         with pm.Model() as model1:
