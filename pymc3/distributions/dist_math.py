@@ -201,6 +201,7 @@ def MvNormalLogp(mode='cov'):
         k = floatX(k)
         if mode == 'tau':
             delta_trans = tt.dot(delta, chol)
+            logdet = - logdet
         else:
             delta_trans = solve_lower(chol, delta.T).T
         quaddist = (delta_trans ** floatX(2)).sum(axis=-1)
@@ -300,6 +301,7 @@ def MvTLogp(nu):
 
             if mode == 'tau':
                 delta_trans = tt.dot(delta, chol)
+                logdet = - logdet
             else:
                 delta_trans = solve_lower(chol, delta.T).T
             _, k = delta.shape
@@ -337,6 +339,7 @@ def MvTLogpSum(nu):
 
             if mode == 'tau':
                 delta_trans = tt.dot(delta, chol)
+                logdet = - logdet
             else:
                 delta_trans = solve_lower(chol, delta.T).T
             n, k = delta.shape
