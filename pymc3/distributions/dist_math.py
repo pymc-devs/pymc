@@ -242,7 +242,8 @@ def MvNormalLogpSum(mode='cov'):
     quaddist = (delta_trans ** floatX(2)).sum()
 
     n, k = delta.shape
-    result = n * floatX(k) * tt.log(floatX(2) * floatX(np.pi))
+    n, k = floatX(n), floatX(k)
+    result = n * k * tt.log(floatX(2) * floatX(np.pi))
     result += floatX(2) * n * logdet
     result += quaddist
     result = floatX(-.5) * result
@@ -256,7 +257,7 @@ def MvNormalLogpSum(mode='cov'):
 
         n, k = delta.shape
         I_k = tt.eye(k, dtype=theano.config.floatX)
-
+        n, k = floatX(n), floatX(k)
         chol_cov, ok = check_chol(cov, fallback=I_k)
 
         delta_trans = solve_lower(chol_cov, delta.T).T
