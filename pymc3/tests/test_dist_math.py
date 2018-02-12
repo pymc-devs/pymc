@@ -159,6 +159,7 @@ class TestMvNormalLogp():
         logp_cov = logp_cov_f(cov_val, delta_val)
         npt.assert_allclose(logp_cov, expect)
 
+    @pytest.mark.skip(reason="Not yet implemented")
     def test_logp_with_chol(self):
         np.random.seed(42)
 

@@ -235,6 +235,7 @@ def MvNormalLogpSum(mode='cov'):
 
     if mode == 'tau':
         delta_trans = tt.dot(delta, chol)
+        logdet = - logdet
     else:
         delta_trans = solve_lower(chol, delta.T).T
     quaddist = (delta_trans ** floatX(2)).sum()
@@ -251,10 +252,6 @@ def MvNormalLogpSum(mode='cov'):
         g_logp, = gradients
         g_logp.tag.test_value = floatX(1.)
         cov, delta = inputs
-        if (mode != 'cov'):
-            warnings.warn("For now, gradient of MvNormalLogp only works "
-                          "for cov parameters, not tau or chol.")
-            return [theano.gradient.grad_not_implemented(None, 0, cov)] * 2
 
         n, k = delta.shape
         I_k = tt.eye(k, dtype=theano.config.floatX)
@@ -275,8 +272,12 @@ def MvNormalLogpSum(mode='cov'):
 
         return [-0.5 * g_cov * g_logp, -g_delta * g_logp]
 
-    return theano.OpFromGraph(
-        [cov, delta], [logp], grad_overrides=dlogp, inline=True)
+    if (mode == 'cov'):
+        return theano.OpFromGraph(
+            [cov, delta], [logp], grad_overrides=dlogp, inline=True)
+    else:
+        return theano.OpFromGraph(
+            [cov, delta], [logp], inline=True)
 
 def MvTLogp(nu):
     """Concstructor for the elementwise log pdf of a multivariate normal distribution.
