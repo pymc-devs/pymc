@@ -167,6 +167,8 @@ def CholeskyCheck(mode='cov', return_ldet=True, replacement=None):
             # will all be NaN if the Cholesky was no-go, which is fine
             diag = tt.ExtractDiag(view=True)(cov)
             ldet = tt.sum(diag.log())
+        if mode == 'tau':
+            ldet = -ldet
         return ~tt.isnan(cov[0,0]), ldet
 
     check = check_chol if is_cholesky else check_nonchol
@@ -201,7 +203,6 @@ def MvNormalLogp(mode='cov'):
         k = floatX(k)
         if mode == 'tau':
             delta_trans = tt.dot(delta, chol)
-            logdet = - logdet
         else:
             delta_trans = solve_lower(chol, delta.T).T
         quaddist = (delta_trans ** floatX(2)).sum(axis=-1)
@@ -236,7 +237,6 @@ def MvNormalLogpSum(mode='cov'):
 
     if mode == 'tau':
         delta_trans = tt.dot(delta, chol)
-        logdet = - logdet
     else:
         delta_trans = solve_lower(chol, delta.T).T
     quaddist = (delta_trans ** floatX(2)).sum()
@@ -301,7 +301,6 @@ def MvTLogp(nu):
 
             if mode == 'tau':
                 delta_trans = tt.dot(delta, chol)
-                logdet = - logdet
             else:
                 delta_trans = solve_lower(chol, delta.T).T
             _, k = delta.shape
@@ -339,7 +338,6 @@ def MvTLogpSum(nu):
 
             if mode == 'tau':
                 delta_trans = tt.dot(delta, chol)
-                logdet = - logdet
             else:
                 delta_trans = solve_lower(chol, delta.T).T
             n, k = delta.shape
