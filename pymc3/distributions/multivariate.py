@@ -28,13 +28,44 @@ __all__ = ['MvNormal', 'MvStudentT', 'Dirichlet',
            'Multinomial', 'Wishart', 'WishartBartlett',
            'LKJCorr', 'LKJCholeskyCov', 'MatrixNormal']
 
+class _QuadFormBase(Continuous):
+    def __init__(self, mu=None, cov=None, chol=None, tau=None, lower=True,
+                logphelper=None, logpsumhelper=None, *args, **kwargs):
+        super(_QuadFormBase, self).__init__(*args, **kwargs)
 
-class _CovSet():
-    R"""
-    Convenience class to set Covariance, Inverse Covariance and Cholesky
-    descomposition of Covariance matrices.
-    """
-    def __initCov__(self, cov=None, tau=None, chol=None, lower=True):
+        self._initCov(cov, tau, chol, lower)
+
+        if len(self.shape) > 2:
+            raise ValueError("Only 1 or 2 dimensions are allowed.")
+
+        _cov = getattr(self, self._cov_type)
+
+        if logphelper is None:
+            raise ValueError("`logphelper` not passed during initialization. "
+                             "_QuadFormBase expects a function that will construct "
+                             "a quadratic distance calculator appropriate for "
+                             "given covariance parameter, with arguments cov "
+                             "and delta (distance from the mean).")
+
+        try:
+            _deltalogp = logphelper(self._cov_type)
+            def deltalogp(delta):
+                return _deltalogp(_cov, delta)
+            self._delta_logp = deltalogp
+
+            if logpsumhelper is not None:
+                _delta_logpsum = logpsumhelper(self._cov_type)
+                def deltalogpsum(delta):
+                    return _delta_logpsum(_cov, delta)
+                self._delta_logp_sum = deltalogpsum
+
+        except ValueError:
+            errot = '`{}` must be two dimensional.'.format(self._cov_type)
+            raise_from(ValueError(error), None)
+
+        self.mu = tt.as_tensor_variable(mu)
+
+    def _initCov(self, cov=None, tau=None, chol=None, lower=True):
         if all([val is None for val in [cov, tau, chol]]):
             raise ValueError('One of cov, tau or chol arguments must be provided.')
 
@@ -60,56 +91,26 @@ class _CovSet():
             self._cov_type = 'tau'
             self.tau = tt.as_tensor_variable(tau)
 
-class _QuadFormBase(Continuous, _CovSet):
-    def __init__(self, mu=None, cov=None, chol=None, tau=None, lower=True,
-                 *args, **kwargs):
-        super(_QuadFormBase, self).__init__(*args, **kwargs)
-        super(_QuadFormBase, self).__initCov__(cov, tau, chol, lower)
+    def _check_logp_value(self, value):
+        if value.ndim > 2 or value.ndim == 0:
+            raise ValueError('Invalid dimension for value: %s' % value.ndim)
+        if value.ndim == 1:
+            value = value[None, :]
+        return value, value.ndim == 1
 
-        if len(self.shape) > 2:
-            raise ValueError("Only 1 or 2 dimensions are allowed.")
+    def logp(self, value):
+        value, onedim = _check_logp_value(value)
 
-        _cov = getattr(self, self._cov_type)
+        logp = self._delta_logp(value - self.mu)
 
-        try:
-            _deltalogp = self._logphelper(self._cov_type)
-            def deltalogp(delta):
-                return _deltalogp(_cov, delta)
-            self._delta_logp = deltalogp
+        if onedim and logp.ndim != 0:
+            return logp[0]
 
-            _delta_logpsum = self._logpsumhelper(self._cov_type)
-            def deltalogpsum(delta):
-                return _delta_logpsum(_cov, delta)
-            self._delta_logp_sum = deltalogpsum
-
-        except ValueError:
-            errot = '`{}` must be two dimensional.'.format(self._cov_type)
-            raise_from(ValueError(error), None)
-
-        self.mu = tt.as_tensor_variable(mu)
+        return logp
 
     def _repr_cov_params(self):
         name = get_variable_name(getattr(self, self._cov_type))
         return r'\mathit{{{}}}={}'.format(self._cov_type, name)
-
-    def logp(self, value, dosum=False):
-        mu = self.mu
-        if value.ndim > 2 or value.ndim == 0:
-            raise ValueError('Invalid dimension for value: %s' % value.ndim)
-        if value.ndim == 1:
-            onedim = True
-            value = value[None, :]
-        else:
-            onedim = False
-        if dosum:
-            logp = self._delta_logp_sum(value - mu)
-        else :
-            logp = self._delta_logp(value - mu)
-
-        if onedim and logp.ndim != 0:
-            logp = logp[0]
-
-        return logp
 
 class MvNormal(_QuadFormBase):
     R"""
@@ -180,10 +181,11 @@ class MvNormal(_QuadFormBase):
 
     def __init__(self, mu, cov=None, tau=None, chol=None, lower=True,
                  *args, **kwargs):
-        self._logphelper = MvNormalLogp
-        self._logpsumhelper = MvNormalLogpSum
+
         super(MvNormal, self).__init__(mu=mu, cov=cov, tau=tau, chol=chol,
-                                       lower=lower, *args, **kwargs)
+                                       lower=lower, logphelper=MvNormalLogp,
+                                       logpsumhelper=MvNormalLogpSum,
+                                       *args, **kwargs)
         self.mean = self.median = self.mode = self.mu = self.mu
 
     def random(self, point=None, size=None):
@@ -231,7 +233,14 @@ class MvNormal(_QuadFormBase):
             return mu + transformed.T
 
     def logp_sum(self, value):
-        return self.logp(value, True)
+        value, onedim = _check_logp_value(value)
+
+        logpsum = self._delta_logp_sum(value - self.mu)
+
+        if onedim and logp.ndim != 0:
+            return logpsum[0]
+
+        return logpsum
 
     def _repr_latex_(self, name=None, dist=None):
         if dist is None:
@@ -286,15 +295,17 @@ class MvStudentT(_QuadFormBase):
 
     def __init__(self, nu, Sigma=None, mu=None, cov=None, tau=None, chol=None,
                  lower=None, *args, **kwargs):
+
         if Sigma is not None:
             if cov is not None:
                 raise ValueError('Specify only one of cov and Sigma')
             cov = Sigma
+
         self.nu = nu = tt.as_tensor_variable(nu)
-        self._logphelper = MvTLogp(self.nu)
-        self._logpsumhelper = MvTLogpSum(self.nu)
         super(MvStudentT, self).__init__(mu=mu, cov=cov, tau=tau, chol=chol,
-                                         lower=lower, *args, **kwargs)
+                                         lower=lower, logphelper=MvTLogp(self.nu),
+                                         logpsumhelper=MvTLogpSum(self.nu),
+                                         *args, **kwargs)
         self.mean = self.median = self.mode = self.mu = self.mu
 
     def random(self, point=None, size=None):
