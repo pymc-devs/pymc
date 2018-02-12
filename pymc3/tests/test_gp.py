@@ -765,7 +765,7 @@ class TestTP(object):
     """
     def setup_method(self):
         X = pm.floatX(np.random.randn(20,3))
-        y = pm.floatX(np.random.randn(20)*0.01))
+        y = pm.floatX(np.random.randn(20)*0.01)
         Xnew = pm.floatX(np.random.randn(50, 3))
         pnew = pm.floatX(np.random.randn(50)*0.01)
         with pm.Model() as model:
