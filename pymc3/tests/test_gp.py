@@ -545,13 +545,13 @@ class TestMarginalVsLatent(object):
     def setup_method(self):
         X = pm.floatX(np.random.randn(50,3))
         y = pm.floatX(np.random.randn(50)*0.01)
-        Xnew = np.random.randn(60, 3)
-        pnew = np.random.randn(60)*0.01
+        Xnew = pm.floatX(np.random.randn(60, 3))
+        pnew = pm.floatX(np.random.randn(60)*0.01)
         with pm.Model() as model:
             cov_func = pm.gp.cov.ExpQuad(3, [0.1, 0.2, 0.3])
             mean_func = pm.gp.mean.Constant(0.5)
             gp = pm.gp.Marginal(mean_func, cov_func)
-            f = gp.marginal_likelihood("f", X, y, noise=0.0, is_observed=False, observed=y)
+            f = gp.marginal_likelihood("f", X, y, noise=pm.floatX(0), is_observed=False, observed=y)
             p = gp.conditional("p", Xnew)
         self.logp = model.logp({"p": pnew})
         self.X = X
@@ -588,15 +588,15 @@ class TestMarginalVsMarginalSparse(object):
     Should be nearly equal when inducing points are same as inputs.
     """
     def setup_method(self):
-        X = np.random.randn(50,3)
-        y = np.random.randn(50)*0.01
-        Xnew = np.random.randn(60, 3)
-        pnew = np.random.randn(60)*0.01
+        X = pm.floatX(np.random.randn(50,3))
+        y = pm.floatX(np.random.randn(50)*0.01)
+        Xnew = pm.floatX(np.random.randn(60, 3))
+        pnew = pm.floatX(np.random.randn(60)*0.01)
         with pm.Model() as model:
             cov_func = pm.gp.cov.ExpQuad(3, [0.1, 0.2, 0.3])
             mean_func = pm.gp.mean.Constant(0.5)
             gp = pm.gp.Marginal(mean_func, cov_func)
-            sigma = 0.1
+            sigma = pm.floatX(.1)
             f = gp.marginal_likelihood("f", X, y, noise=sigma)
             p = gp.conditional("p", Xnew)
         self.logp = model.logp({"p": pnew})
@@ -644,10 +644,10 @@ class TestMarginalVsMarginalSparse(object):
 
 class TestGPAdditive(object):
     def setup_method(self):
-        self.X = np.random.randn(50,3)
-        self.y = np.random.randn(50)*0.01
-        self.Xnew = np.random.randn(60, 3)
-        self.noise = pm.gp.cov.WhiteNoise(0.1)
+        self.X = pm.floatX(np.random.randn(50,3))
+        self.y = pm.floatX(np.random.randn(50)*0.01)
+        self.Xnew = pm.floatX(np.random.randn(60, 3))
+        self.noise = pm.gp.cov.WhiteNoise(.1)
         self.covs = (pm.gp.cov.ExpQuad(3, [0.1, 0.2, 0.3]),
                      pm.gp.cov.ExpQuad(3, [0.1, 0.2, 0.3]),
                      pm.gp.cov.ExpQuad(3, [0.1, 0.2, 0.3]))
@@ -682,8 +682,8 @@ class TestGPAdditive(object):
 
     @pytest.mark.parametrize('approx', ['FITC', 'VFE', 'DTC'])
     def testAdditiveMarginalSparse(self, approx):
-        Xu = np.random.randn(10, 3)
-        sigma = 0.1
+        Xu = pm.floatX(np.random.randn(10, 3))
+        sigma = pm.floatX(.1)
         with pm.Model() as model1:
             gp1 = pm.gp.MarginalSparse(self.means[0], self.covs[0], approx=approx)
             gp2 = pm.gp.MarginalSparse(self.means[1], self.covs[1], approx=approx)
@@ -764,10 +764,10 @@ class TestTP(object):
     Compare TP with high degress of freedom to GP
     """
     def setup_method(self):
-        X = np.random.randn(20,3)
-        y = np.random.randn(20)*0.01
-        Xnew = np.random.randn(50, 3)
-        pnew = np.random.randn(50)*0.01
+        X = pm.floatX(np.random.randn(20,3))
+        y = pm.floatX(np.random.randn(20)*0.01))
+        Xnew = pm.floatX(np.random.randn(50, 3))
+        pnew = pm.floatX(np.random.randn(50)*0.01)
         with pm.Model() as model:
             cov_func = pm.gp.cov.ExpQuad(3, [0.1, 0.2, 0.3])
             gp = pm.gp.Latent(cov_func=cov_func)
