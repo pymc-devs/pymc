@@ -14,7 +14,6 @@ from theano.tensor import slinalg
 from .special import gammaln
 from pymc3.theanof import floatX
 
-f = floatX
 c = - .5 * np.log(2. * np.pi)
 
 
@@ -140,8 +139,8 @@ def log_normal(x, mean, **kwargs):
         std = rho2sd(rho)
     else:
         std = tau**(-1)
-    std += f(eps)
-    return f(c) - tt.log(tt.abs_(std)) - (x - mean) ** 2 / (2. * std ** 2)
+    std += floatX(eps)
+    return floatX(c) - tt.log(tt.abs_(std)) - (x - mean) ** 2 / (2. * std ** 2)
 
 
 def CholeskyCheck(mode='cov', return_ldet=True, replacement=None):
@@ -271,8 +270,8 @@ def MvNormalLogpSum(mode='cov'):
         tau_delta = solve_upper(chol_cov.T, delta_trans.T)
         g_delta = tau_delta.T
 
-        g_cov = ifelse(ok, f(g_cov), f(-np.nan * tt.zeros_like(g_cov)))
-        g_delta = ifelse(ok, f(g_delta), f(-np.nan * tt.zeros_like(g_delta)))
+        g_cov = ifelse(ok, floatX(g_cov), floatX(-np.nan * tt.zeros_like(g_cov)))
+        g_delta = ifelse(ok, floatX(g_delta), floatX(-np.nan * tt.zeros_like(g_delta)))
 
         return [-0.5 * g_cov * g_logp, -g_delta * g_logp]
 
