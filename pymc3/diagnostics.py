@@ -1,7 +1,7 @@
 """Convergence diagnostics and model validation"""
 
 import numpy as np
-from .stats import statfunc
+from .stats import statfunc, autocorr
 from .util import get_default_varnames
 from .backends.base import MultiTrace
 
@@ -231,27 +231,21 @@ def effective_n(mtrace, varnames=None, include_transformed=False):
         # Chain samples are second to last dim (-2)
         num_samples = x.shape[-2]
 
-        negative_autocorr = False
+        # Calculate within-chain variance
+        W = np.mean(np.var(x, axis=-2, ddof=1), axis=-1)
 
-        rho = np.ones(num_samples)
-        t = 1
+        rho = np.ones(2 * num_chains + 1)
 
-        # Iterate until the sum of consecutive estimates of autocorrelation is
-        # negative
-        while not negative_autocorr and (t < num_samples):
+        # Iterate over different lags of autocorrelation
+        for t in range(1, 2 * num_chains + 2):
+            auto_corr = []
+            for m in range(num_chains):
+                auto_corr.append(autocorr(x[:, m], t))
+            rho[t - 1] = 1. - (W - np.mean(auto_corr)) / Vhat
 
-            variogram = np.mean((x[t:, :] - x[:-t, :])**2)
-            rho[t] = 1. - variogram / (2. * Vhat)
-
-            negative_autocorr = sum(rho[t - 1:t + 1]) < 0
-
-            t += 1
-
-        if t % 2:
-            t -= 1
-
-        neff = num_chains * num_samples / (1. + 2 * rho[1:t-1].sum())
-        return min(num_chains * num_samples, np.floor(neff))
+        tHat = 1. + 2 * rho.sum()
+        neff = num_chains * num_samples / tHat
+        return abs(neff)
 
     def generate_neff(trace_values):
         x = np.array(trace_values)
