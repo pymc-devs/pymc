@@ -129,7 +129,7 @@ def mv_prior_simple():
 
     # Posterior standard deviation
     v = np.linalg.solve(L_noise, K)
-    std_post = (K - np.dot(v.T, v)).diagonal() ** floatX(.5)
+    std_post = (K - np.dot(v.T, v)).diagonal() ** pm.floatX(.5)
 
     with pm.Model() as model:
         x = pm.Flat('x', shape=n)
