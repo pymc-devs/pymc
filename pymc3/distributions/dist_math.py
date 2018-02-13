@@ -226,6 +226,7 @@ def MvNormalLogpSum(mode='cov'):
     delta : tt.matrix
         Array of deviations from the mean.
     """
+
     cov = tt.matrix('cov')
     cov.tag.test_value = floatX(np.eye(3))
     delta = tt.matrix('delta')
@@ -236,22 +237,23 @@ def MvNormalLogpSum(mode='cov'):
     check_chol = CholeskyCheck(mode, return_ldet=False)
     check_chol_wldet = CholeskyCheck(mode, return_ldet=True)
 
-    chol, logdet, ok = check_chol_wldet(cov)
+    def logp(cov, delta):
+        chol, logdet, ok = check_chol_wldet(cov)
 
-    if mode == 'tau':
-        delta_trans = tt.dot(delta, chol)
-    else:
-        delta_trans = solve_lower(chol, delta.T).T
-    quaddist = (delta_trans ** floatX(2)).sum()
+        if mode == 'tau':
+            delta_trans = tt.dot(delta, chol)
+        else:
+            delta_trans = solve_lower(chol, delta.T).T
+        quaddist = (delta_trans ** floatX(2)).sum()
 
-    n, k = delta.shape
-    n, k = floatX(n), floatX(k)
-    result = n * k * tt.log(floatX(2) * floatX(np.pi))
-    result += floatX(2) * n * logdet
-    result += quaddist
-    result = floatX(-.5) * result
+        n, k = delta.shape
+        n, k = floatX(n), floatX(k)
+        result = n * k * tt.log(floatX(2) * floatX(np.pi))
+        result += floatX(2) * n * logdet
+        result += quaddist
+        result = floatX(-.5) * result
 
-    logp = tt.switch(ok, floatX(result), floatX(-np.inf * tt.ones_like(result)))
+        logp = tt.switch(ok, floatX(result), floatX(-np.inf * tt.ones_like(result)))
 
     def dlogp(inputs, gradients):
         g_logp, = gradients
@@ -276,12 +278,16 @@ def MvNormalLogpSum(mode='cov'):
 
         return [floatX(-.5) * g_cov * g_logp, -g_delta * g_logp]
 
+    return logp
+
+    """
+    This doesn't seem to really improve performance but causes issues with model.dlogp2
     if (mode == 'cov'):
         return theano.OpFromGraph(
             [cov, delta], [logp], grad_overrides=dlogp, name='MvNormalLogpSum', inline=True)
     else:
         return theano.OpFromGraph(
-            [cov, delta], [logp], inline=True)
+            [cov, delta], [logp], inline=True)"""
 
 def MvTLogp(nu):
     """Concstructor for the elementwise log pdf of a multivariate normal distribution.

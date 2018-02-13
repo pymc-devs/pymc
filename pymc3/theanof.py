@@ -69,7 +69,7 @@ def floatX(X):
 
 def smartfloatX(x):
     """
-    Convert non int types to floatX 
+    Convert non int types to floatX
     """
     if str(x.dtype).startswith('float'):
         x = floatX(x)
@@ -82,7 +82,7 @@ Theano derivative functions
 
 def gradient1(f, v):
     """flat gradient of f wrt v"""
-    return tt.flatten(tt.grad(f, v, disconnected_inputs='ignore'))
+    return tt.flatten(tt.grad(f, v, disconnected_inputs='warn'))
 
 
 empty_gradient = tt.zeros(0, dtype='float32')
