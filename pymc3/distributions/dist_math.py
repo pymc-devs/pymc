@@ -137,7 +137,7 @@ def log_normal(x, mean, **kwargs):
     else:
         std = tau**(-1)
     std += floatX(eps)
-    return floatX(c) - tt.log(tt.abs_(std)) - (x - mean) ** 2 / (2. * std ** 2)
+    return floatX(-.5 * np.log(2. * np.pi)) - tt.log(tt.abs_(std)) - (x - mean) ** 2 / (2. * std ** 2)
 
 
 def stabilize(K):
