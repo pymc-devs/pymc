@@ -253,7 +253,7 @@ def MvNormalLogpSum(mode='cov'):
         result += quaddist
         result = floatX(-.5) * result
 
-        logp = tt.switch(ok, floatX(result), floatX(-np.inf * tt.ones_like(result)))
+        return tt.switch(ok, floatX(result), floatX(-np.inf * tt.ones_like(result)))
 
     def dlogp(inputs, gradients):
         g_logp, = gradients
