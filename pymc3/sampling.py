@@ -460,7 +460,12 @@ def sample(draws=500, step=None, init='auto', n_init=200000, start=None,
     trace = trace[discard:]
 
     if compute_convergence_checks:
-        trace.report._run_convergence_checks(trace, model)
+        if draws-tune < 100:
+            warnings.warn(
+                "The number of samples is too small to check "
+                "convergence reliably.")
+        else:
+            trace.report._run_convergence_checks(trace, model)
 
     trace.report._log_summary()
     return trace

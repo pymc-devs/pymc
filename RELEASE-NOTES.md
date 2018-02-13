@@ -4,21 +4,20 @@
 
 ### New features
 
-- Add `logit_p` keyword to `pm.Bernoulli`, so that users can specify the logit
-  of the success probability. This is faster and more stable than using
-  `p=tt.nnet.sigmoid(logit_p)`.
-- Add `random` keyword to `pm.DensityDist` thus enabling users to pass custom random method
-  which in turn makes sampling from a `DensityDist` possible. 
+- Add `logit_p` keyword to `pm.Bernoulli`, so that users can specify the logit of the success probability. This is faster and more stable than using `p=tt.nnet.sigmoid(logit_p)`.
+- Add `random` keyword to `pm.DensityDist` thus enabling users to pass custom random method which in turn makes sampling from a `DensityDist` possible. 
+- Effective sample size computation is updated. The estimation uses Geyer's initial positive sequence, which no longer truncates the autocorrelation series inaccurately. `pm.diagnostics.effective_n` now can reports N_eff>N.
+ 
 
 ### Fixes
 
-- `VonMises` does not overflow for large values of kappa. i0 and i1 have been removed and we now use
-   log_i0 to compute the logp.
+- `VonMises` does not overflow for large values of kappa. i0 and i1 have been removed and we now use log_i0 to compute the logp.
 
 ### Deprecations
 
 - DIC and BPIC calculations have been removed
-- `njobs` and `nchains` deprecated in favor of `cores` and `chains` for `sample`
+- `njobs` and `nchains` kwarg are deprecated in favor of `cores` and `chains` for `sample`
+- `lag` kwarg in `pm.stats.autocorr` and `pm.stats.autocov` is deprecated.
 
 ## PyMC 3.3 (January 9, 2018)
 
