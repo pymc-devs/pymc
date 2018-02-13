@@ -7,13 +7,11 @@ from __future__ import division
 import numpy as np
 import theano.tensor as tt
 import theano
-from theano.ifelse import ifelse
 from theano.tensor import slinalg
 
 from .special import gammaln
 from pymc3.theanof import floatX
 
-c = - .5 * np.log(2. * np.pi)
 
 
 def bound(logp, *conditions, **kwargs):
@@ -141,6 +139,7 @@ def log_normal(x, mean, **kwargs):
     std += floatX(eps)
     return floatX(c) - tt.log(tt.abs_(std)) - (x - mean) ** 2 / (2. * std ** 2)
 
+
 def stabilize(K):
     """ adds small diagonal to a covariance matrix """
     return K + floatX(1e-6) * tt.identity_like(K)
@@ -182,7 +181,7 @@ def CholeskyCheck(mode='cov', return_ldet=True, replacement=None):
         if not is_cholesky:
             cov = cholesky(cov)
         ok, ldet = check(cov)
-        chol_cov = ifelse(ok, tt.unbroadcast(cov, 0, 1), repl(cov, fallback))
+        chol_cov = tt.switch(ok, tt.unbroadcast(cov, 0, 1), repl(cov, fallback))
         return [chol_cov, ldet, ok] if w_ldet else [chol_cov, ok]
 
     return func
@@ -212,7 +211,7 @@ def MvNormalLogp(mode='cov'):
         quaddist = (delta_trans ** floatX(2)).sum(axis=-1)
         result = floatX(-.5) * k * tt.log(floatX(2) * floatX(np.pi))
         result += floatX(-.5) * quaddist - logdet
-        return ifelse(ok, floatX(result), floatX(-np.inf * tt.ones_like(result)))
+        return tt.switch(ok, floatX(result), floatX(-np.inf * tt.ones_like(result)))
 
     return logpf
 
@@ -252,7 +251,7 @@ def MvNormalLogpSum(mode='cov'):
     result += quaddist
     result = floatX(-.5) * result
 
-    logp = ifelse(ok, floatX(result), floatX(-np.inf * tt.ones_like(result)))
+    logp = tt.switch(ok, floatX(result), floatX(-np.inf * tt.ones_like(result)))
 
     def dlogp(inputs, gradients):
         g_logp, = gradients
@@ -271,16 +270,15 @@ def MvNormalLogpSum(mode='cov'):
         g_cov = solve_upper(chol_cov.T, g_cov.T)
 
         tau_delta = solve_upper(chol_cov.T, delta_trans.T)
-        g_delta = tau_delta.T
 
-        g_cov = ifelse(ok, floatX(g_cov), floatX(-np.nan * tt.zeros_like(g_cov)))
-        g_delta = ifelse(ok, floatX(g_delta), floatX(-np.nan * tt.zeros_like(g_delta)))
+        g_cov = tt.switch(ok, floatX(g_cov), floatX(-np.nan * tt.zeros_like(g_cov)))
+        g_delta = tt.switch(ok, floatX(tau_delta.T), floatX(-np.nan * tt.zeros_like(tau_delta.T)))
 
         return [floatX(-.5) * g_cov * g_logp, -g_delta * g_logp]
 
     if (mode == 'cov'):
         return theano.OpFromGraph(
-            [cov, delta], [logp], grad_overrides=dlogp, inline=True)
+            [cov, delta], [logp], grad_overrides=dlogp, name='MvNormalLogpSum', inline=True)
     else:
         return theano.OpFromGraph(
             [cov, delta], [logp], inline=True)
@@ -318,7 +316,7 @@ def MvTLogp(nu):
             result -= floatX(.5) * k * tt.log(nu * floatX(np.pi))
             result -= (nu + k) / floatX(2) * tt.log1p(quaddist / nu)
             result -= logdet
-            return ifelse(ok, floatX(result), floatX(-np.inf * tt.ones_like(result)))
+            return tt.switch(ok, floatX(result), floatX(-np.inf * tt.ones_like(result)))
 
         return logpf
     return constructor
@@ -354,7 +352,7 @@ def MvTLogpSum(nu):
             result -= n * .5 * k * tt.log(nu * floatX(np.pi))
             result -= (nu + k) / 2. * tt.log1p(quaddist / nu)
             result -= logdet
-            return ifelse(ok, floatX(result), floatX(-np.inf * tt.ones_like(result)))
+            return tt.switch(ok, floatX(result), floatX(-np.inf * tt.ones_like(result)))
         return logpf
     return constructor
 

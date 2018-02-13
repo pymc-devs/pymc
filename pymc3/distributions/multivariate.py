@@ -108,7 +108,7 @@ class _QuadFormBase(Continuous):
 
         return logp
 
-    def _repr_cov_params(self):
+    def _repr_cov_params(self, dist=None):
         name = get_variable_name(getattr(self, self._cov_type))
         return r'\mathit{{{}}}={}'.format(self._cov_type, name)
 

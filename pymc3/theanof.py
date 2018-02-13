@@ -82,7 +82,7 @@ Theano derivative functions
 
 def gradient1(f, v):
     """flat gradient of f wrt v"""
-    return tt.flatten(tt.grad(f, v, disconnected_inputs='warn'))
+    return tt.flatten(tt.grad(f, v, disconnected_inputs='ignore'))
 
 
 empty_gradient = tt.zeros(0, dtype='float32')

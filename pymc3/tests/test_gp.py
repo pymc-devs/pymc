@@ -447,7 +447,7 @@ class TestLinear(object):
     def test_1d(self):
         X = np.linspace(0, 1, 10)[:, None]
         with pm.Model() as model:
-            cov = pm.gp.cov.Linear(pm.floatX(1), pm.floatX(.5))
+            cov = pm.gp.cov.Linear(1, pm.floatX(.5))
         K = theano.function([], cov(X))()
         npt.assert_allclose(K[0, 1], 0.19444, atol=1e-3)
         K = theano.function([], cov(X, X))()
