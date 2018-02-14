@@ -10,7 +10,7 @@ from pymc3.util import update_start_vals
 from pymc3.theanof import change_flags
 from pymc3.math import batched_diag
 from pymc3.variational import flows
-
+from pymc3.distributions.dist_math import stabilize
 
 __all__ = [
     'MeanField',
@@ -188,13 +188,13 @@ class FullRankGroup(Group):
         z = self.symbolic_random
         if self.batched:
             def logq(z_b, mu_b, L_b):
-                return pm.MvNormal.dist(mu=mu_b, chol=L_b).logp(z_b)
+                return pm.MvNormal.dist(mu=mu_b, chol=stabilize(L_b)).logp(z_b)
             # it's gonna be so slow
             # scan is computed over batch and then summed up
             # output shape is (batch, samples)
             return theano.scan(logq, [z.swapaxes(0, 1), self.mean, self.L])[0].sum(0)
         else:
-            return pm.MvNormal.dist(mu=self.mean, chol=self.L).logp(z)
+            return pm.MvNormal.dist(mu=self.mean, chol=stabilize(self.L)).logp(z)
 
     @node_property
     def symbolic_random(self):

@@ -1,14 +1,7 @@
 from scipy.cluster.vq import kmeans
 import numpy as np
-import pymc3 as pm
 import theano.tensor as tt
-
-
-cholesky = pm.distributions.dist_math.Cholesky(nofail=True, lower=True)
-solve_lower = tt.slinalg.Solve(A_structure='lower_triangular')
-solve_upper = tt.slinalg.Solve(A_structure='upper_triangular')
-solve = tt.slinalg.Solve(A_structure='general')
-
+from pymc3.theanof import floatX
 
 def infer_shape(X, n_points=None):
     if n_points is None:
@@ -17,12 +10,6 @@ def infer_shape(X, n_points=None):
         except TypeError:
             raise TypeError("Cannot infer 'shape', provide as an argument")
     return n_points
-
-
-def stabilize(K):
-    """ adds small diagonal to a covariance matrix """
-    return K + 1e-6 * tt.identity_like(K)
-
 
 def kmeans_inducing_points(n_inducing, X):
     # first whiten X
@@ -37,7 +24,7 @@ def kmeans_inducing_points(n_inducing, X):
                          "of {}".format(type(X))))
     scaling = np.std(X, 0)
     # if std of a column is very small (zero), don't normalize that column
-    scaling[scaling <= 1e-6] = 1.0
+    scaling[scaling <= 1e-6] = floatX(1.0)
     Xw = X / scaling
     Xu, distortion = kmeans(Xw, n_inducing)
     return Xu * scaling
@@ -89,6 +76,3 @@ def plot_gp_dist(ax, samples, x, plot_samples=True, palette="Reds"):
         # plot a few samples
         idx = np.random.randint(0, samples.shape[1], 30)
         ax.plot(x, samples[:,idx], color=cmap(0.9), lw=1, alpha=0.1)
-
-
-

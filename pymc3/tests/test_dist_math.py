@@ -10,7 +10,8 @@ import pytest
 from ..theanof import floatX
 from ..distributions import Discrete
 from ..distributions.dist_math import (
-    bound, factln, alltrue_scalar, MvNormalLogp, SplineWrapper)
+    bound, factln, alltrue_scalar, MvNormalLogp,
+    MvNormalLogpSum, SplineWrapper)
 
 
 def test_bound():
@@ -122,10 +123,64 @@ def test_multinomial_bound():
 
 
 class TestMvNormalLogp():
-    def test_logp(self):
+
+    def test_logp_with_tau(self):
         np.random.seed(42)
 
-        chol_val = floatX(np.array([[1, 0.9], [0, 2]]))
+        chol_val = floatX(np.array([[1, 0], [ 0.9, 2]]))
+        cov_val = floatX(np.dot(chol_val, chol_val.T))
+        tau_val = floatX(np.linalg.inv(cov_val))
+        tau = tt.matrix('tau')
+        tau.tag.test_value = tau_val
+        delta_val = floatX(np.random.randn(5, 2))
+        delta = tt.matrix('delta')
+        delta.tag.test_value = delta_val
+        expect = stats.multivariate_normal(mean=np.zeros(2), cov=cov_val)
+        expect = expect.logpdf(delta_val)
+        logp_tau = MvNormalLogp('tau')(tau, delta)
+        logp_tau_f = theano.function([tau, delta], logp_tau)
+        logp_tau = logp_tau_f(tau_val, delta_val)
+        npt.assert_allclose(logp_tau, expect)
+
+    def test_logp_with_cov(self):
+        np.random.seed(42)
+
+        chol_val = floatX(np.array([[1, 0], [ 0.9, 2]]))
+        cov_val = floatX(np.dot(chol_val, chol_val.T))
+        cov = tt.matrix('cov')
+        cov.tag.test_value = cov_val
+        delta_val = floatX(np.random.randn(5, 2))
+        delta = tt.matrix('delta')
+        delta.tag.test_value = delta_val
+        expect = stats.multivariate_normal(mean=np.zeros(2), cov=cov_val)
+        expect = expect.logpdf(delta_val)
+        logp_cov = MvNormalLogp()(cov, delta)
+        logp_cov_f = theano.function([cov, delta], logp_cov)
+        logp_cov = logp_cov_f(cov_val, delta_val)
+        npt.assert_allclose(logp_cov, expect)
+
+    @pytest.mark.skip(reason="Not yet implemented")
+    def test_logp_with_chol(self):
+        np.random.seed(42)
+
+        chol_val = floatX(np.array([[1, 0], [ 0.9, 2]]))
+        cov_val = floatX(np.dot(chol_val, chol_val.T))
+        chol = tt.matrix('cov')
+        chol.tag.test_value = chol_val
+        delta_val = floatX(np.random.randn(5, 2))
+        delta = tt.matrix('delta')
+        delta.tag.test_value = delta_val
+        expect = stats.multivariate_normal(mean=np.zeros(2), cov=cov_val)
+        expect = expect.logpdf(delta_val)
+        logp_chol = MvNormalLogp('chol')(chol, delta)
+        logp_chol_f = theano.function([chol, delta], logp_chol)
+        logp_chol = logp_chol_f(chol_val, delta_val)
+        npt.assert_allclose(logp_chol, expect)
+
+    def test_logpsum_with_cov(self):
+        np.random.seed(42)
+
+        chol_val = floatX(np.array([[1, 0], [ 0.9, 2]]))
         cov_val = floatX(np.dot(chol_val, chol_val.T))
         cov = tt.matrix('cov')
         cov.tag.test_value = cov_val
@@ -134,10 +189,27 @@ class TestMvNormalLogp():
         delta.tag.test_value = delta_val
         expect = stats.multivariate_normal(mean=np.zeros(2), cov=cov_val)
         expect = expect.logpdf(delta_val).sum()
-        logp = MvNormalLogp()(cov, delta)
-        logp_f = theano.function([cov, delta], logp)
-        logp = logp_f(cov_val, delta_val)
-        npt.assert_allclose(logp, expect)
+        logp_cov = MvNormalLogpSum()(cov, delta)
+        logp_cov_f = theano.function([cov, delta], logp_cov)
+        logp_cov = logp_cov_f(cov_val, delta_val)
+        npt.assert_allclose(logp_cov, expect)
+
+    def test_logpsum_with_chol(self):
+        np.random.seed(42)
+
+        chol_val = floatX(np.array([[1, 0], [ 0.9, 2]]))
+        cov_val = floatX(np.dot(chol_val, chol_val.T))
+        chol = tt.matrix('cov')
+        chol.tag.test_value = chol_val
+        delta_val = floatX(np.random.randn(5, 2))
+        delta = tt.matrix('delta')
+        delta.tag.test_value = delta_val
+        expect = stats.multivariate_normal(mean=np.zeros(2), cov=cov_val)
+        expect = expect.logpdf(delta_val).sum()
+        logp_chol = MvNormalLogpSum('chol')(chol, delta)
+        logp_chol_f = theano.function([chol, delta], logp_chol)
+        logp_chol = logp_chol_f(chol_val, delta_val)
+        npt.assert_allclose(logp_chol, expect)
 
     @theano.configparser.change_flags(compute_test_value="ignore")
     def test_grad(self):
@@ -148,8 +220,8 @@ class TestMvNormalLogp():
                 tt.stack([tt.exp(0.1 * chol_vec[0]), 0]),
                 tt.stack([chol_vec[1], 2 * tt.exp(chol_vec[2])]),
             ])
-            cov = tt.dot(chol, chol.T)
-            return MvNormalLogp()(cov, delta)
+            cov = floatX(tt.dot(chol, chol.T))
+            return MvNormalLogpSum()(cov, delta)
 
         chol_vec_val = floatX(np.array([0.5, 1., -0.1]))
 
@@ -159,19 +231,37 @@ class TestMvNormalLogp():
         delta_val = floatX(np.random.randn(5, 2))
         utt.verify_grad(func, [chol_vec_val, delta_val])
 
-    @pytest.mark.skip(reason="Fix in theano not released yet: Theano#5908")
+    @theano.configparser.change_flags(compute_test_value="ignore")
+    def test_grad_with_chol(self):
+        np.random.seed(42)
+
+        def func(chol_vec, delta):
+            chol = tt.stack([
+                tt.stack([tt.exp(0.1 * chol_vec[0]), 0]),
+                tt.stack([chol_vec[1], 2 * tt.exp(chol_vec[2])]),
+            ])
+            return MvNormalLogpSum('chol')(floatX(chol), delta)
+
+        chol_vec_val = floatX(np.array([0.5, 1., -0.1]))
+
+        delta_val = floatX(np.random.randn(1, 2))
+        utt.verify_grad(func, [chol_vec_val, delta_val])
+
+        delta_val = floatX(np.random.randn(5, 2))
+        utt.verify_grad(func, [chol_vec_val, delta_val])
+
     @theano.configparser.change_flags(compute_test_value="ignore")
     def test_hessian(self):
         chol_vec = tt.vector('chol_vec')
-        chol_vec.tag.test_value = np.array([0.1, 2, 3])
+        chol_vec.tag.test_value = floatX(np.array([0.1, 2, 3]))
         chol = tt.stack([
             tt.stack([tt.exp(0.1 * chol_vec[0]), 0]),
             tt.stack([chol_vec[1], 2 * tt.exp(chol_vec[2])]),
         ])
         cov = tt.dot(chol, chol.T)
         delta = tt.matrix('delta')
-        delta.tag.test_value = np.ones((5, 2))
-        logp = MvNormalLogp()(cov, delta)
+        delta.tag.test_value = floatX(np.ones((5, 2)))
+        logp = MvNormalLogpSum()(cov, delta)
         g_cov, g_delta = tt.grad(logp, [cov, delta])
         tt.grad(g_delta.sum() + g_cov.sum(), [delta, cov])
 

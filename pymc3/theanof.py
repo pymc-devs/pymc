@@ -69,7 +69,7 @@ def floatX(X):
 
 def smartfloatX(x):
     """
-    Convert non int types to floatX 
+    Convert non int types to floatX
     """
     if str(x.dtype).startswith('float'):
         x = floatX(x)
