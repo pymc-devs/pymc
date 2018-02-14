@@ -12,7 +12,7 @@ from .utils import identity_transform, get_default_varnames
 
 def plot_posterior(trace, varnames=None, transform=identity_transform, figsize=None, text_size=None,
                    alpha_level=0.05, round_to=3, point_estimate='mean', rope=None,
-                   ref_val=None, kde_plot=False, plot_transformed=False, ax=None, **kwargs):
+                   ref_val=None, kde_plot=False, plot_transformed=False, bw=4.5, ax=None, **kwargs):
     """Plot Posterior densities in style of John K. Kruschke book.
 
     Parameters
@@ -44,6 +44,10 @@ def plot_posterior(trace, varnames=None, transform=identity_transform, figsize=N
     plot_transformed : bool
         Flag for plotting automatically transformed variables in addition to
         original variables (defaults to False).
+    bw : float
+        Bandwidth scaling factor for the KDE. Should be larger than 0. The higher this number the
+        smoother the KDE will be. Defaults to 4.5 which is essentially the same as the Scott's rule
+        of thumb (the default rule used by SciPy). Only works if `kde_plot` is True.
     ax : axes
         Matplotlib axes. Defaults to None.
     **kwargs
@@ -103,10 +107,9 @@ def plot_posterior(trace, varnames=None, transform=identity_transform, figsize=N
         if ax is None:
             fig, ax = plt.subplots(figsize=figsize)
 
-        plot_posterior_op(transform(trace), ax=ax, kde_plot=kde_plot,
-                          point_estimate=point_estimate, round_to=round_to,
-                          alpha_level=alpha_level, ref_val=ref_val, rope=rope,
-                          text_size=scale_text(figsize), **kwargs)
+        plot_posterior_op(transform(trace), ax=ax, bw=bw, kde_plot=kde_plot,
+                          point_estimate=point_estimate, round_to=round_to, alpha_level=alpha_level,
+                          ref_val=ref_val, rope=rope, text_size=scale_text(figsize), **kwargs)
     else:
         if varnames is None:
             varnames = get_default_varnames(trace.varnames, plot_transformed)
@@ -129,7 +132,7 @@ def plot_posterior(trace, varnames=None, transform=identity_transform, figsize=N
 
         for idx, (a, v) in enumerate(zip(np.atleast_1d(ax), trace_dict)):
             tr_values = transform(trace_dict[v])
-            plot_posterior_op(tr_values, ax=a, kde_plot=kde_plot,
+            plot_posterior_op(tr_values, ax=a, bw=bw, kde_plot=kde_plot,
                               point_estimate=point_estimate, round_to=round_to,
                               alpha_level=alpha_level, ref_val=ref_val[idx],
                               rope=rope[idx], text_size=scale_text(figsize), **kwargs)

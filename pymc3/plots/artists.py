@@ -22,14 +22,14 @@ def histplot_op(ax, data, alpha=.35):
     return hs
 
 
-def kdeplot_op(ax, data, prior=None, prior_alpha=1, prior_style='--'):
+def kdeplot_op(ax, data, bw, prior=None, prior_alpha=1, prior_style='--'):
     """Get a list of density and likelihood plots, if a prior is provided."""
     ls = []
     pls = []
     errored = []
     for i, d in enumerate(data.T):
         try:
-            density, l, u = fast_kde(d)
+            density, l, u = fast_kde(d, bw)
             x = np.linspace(l, u, len(density))
             if prior is not None:
                 p = prior.logp(x).eval()
@@ -48,7 +48,7 @@ def kdeplot_op(ax, data, prior=None, prior_alpha=1, prior_style='--'):
     return ls, pls
 
 
-def plot_posterior_op(trace_values, ax, kde_plot, point_estimate, round_to,
+def plot_posterior_op(trace_values, ax, bw, kde_plot, point_estimate, round_to,
                       alpha_level, ref_val, rope, text_size=16, **kwargs):
     """Artist to draw posterior."""
     def format_as_percent(x, round_to=0):
@@ -83,7 +83,7 @@ def plot_posterior_op(trace_values, ax, kde_plot, point_estimate, round_to,
             point_value = trace_values.mean()
         elif point_estimate == 'mode':
             if isinstance(trace_values[0], float):
-                density, l, u = fast_kde(trace_values)
+                density, l, u = fast_kde(trace_values, bw)
                 x = np.linspace(l, u, len(density))
                 point_value = x[np.argmax(density)]
             else:
@@ -127,7 +127,7 @@ def plot_posterior_op(trace_values, ax, kde_plot, point_estimate, round_to,
             d[key] = value
 
     if kde_plot and isinstance(trace_values[0], float):
-        kdeplot(trace_values, alpha=kwargs.pop('alpha', 0.35), ax=ax, **kwargs)
+        kdeplot(trace_values, alpha=kwargs.pop('alpha', 0.35), bw=bw, ax=ax, **kwargs)
 
     else:
         set_key_if_doesnt_exist(kwargs, 'bins', 30)
