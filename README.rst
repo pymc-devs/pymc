@@ -114,8 +114,6 @@ Optional
 In addtion to the above dependencies, the GLM submodule relies on
 `Patsy <http://patsy.readthedocs.io/en/latest/>`__.
 
-`scikits.sparse <https://github.com/njsmith/scikits-sparse>`__
-enables sparse scaling matrices which are useful for large problems.
 
 Citing PyMC3
 ============
