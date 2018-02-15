@@ -6,3 +6,4 @@ from .posteriorplot import plot_posterior, plot_posterior_predictive_glm
 from .traceplot import traceplot
 from .energyplot import energyplot
 from .densityplot import densityplot
+from .scatterplot import scatterplot

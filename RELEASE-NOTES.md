@@ -9,6 +9,8 @@
   `p=tt.nnet.sigmoid(logit_p)`.
 - Add `random` keyword to `pm.DensityDist` thus enabling users to pass custom random method
   which in turn makes sampling from a `DensityDist` possible. 
+- Add new 'scatterplot' function, for plotting scatter or hexbin matrices of sampled parameters.
+  Optionally it can plot divergences. 
 
 ### Fixes
 
