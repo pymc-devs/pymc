@@ -6,7 +6,7 @@ import pymc3 as pm
 from .checks import close_to
 
 from .models import multidimensional_model, simple_categorical
-from ..plots import traceplot, forestplot, autocorrplot, plot_posterior, energyplot
+from ..plots import traceplot, forestplot, autocorrplot, plot_posterior, energyplot, densityplot
 from ..plots.utils import make_2d
 from ..step_methods import Slice, Metropolis
 from ..sampling import sample
@@ -30,7 +30,7 @@ def test_plots():
     plot_posterior(trace)
     autocorrplot(trace)
     energyplot(trace)
-
+    densityplot(trace) 
 
 def test_energyplot():
     with asmod.build_model():
@@ -64,6 +64,7 @@ def test_plots_multidimensional():
     traceplot(trace)
     plot_posterior(trace)
     forestplot(trace)
+    densityplot(trace)
 
 @pytest.mark.xfail(condition=(theano.config.floatX == "float32"), reason="Fails on GPU due to njobs=2")
 def test_multichain_plots():

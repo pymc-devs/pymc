@@ -69,7 +69,8 @@ def assert_negative_support(var, label, distname, value=-1e-6):
 
 def get_tau_sd(tau=None, sd=None):
     """
-    Find precision and standard deviation
+    Find precision and standard deviation. The link between the two 
+    parameterizations is given by the inverse relationship:
 
     .. math::
         \tau = \frac{1}{\sigma^2}
@@ -268,9 +269,19 @@ class Normal(Continuous):
     mu : float
         Mean.
     sd : float
-        Standard deviation (sd > 0).
+        Standard deviation (sd > 0) (only required if tau is not specified).
     tau : float
-        Precision (tau > 0).
+        Precision (tau > 0) (only required if sd is not specified).
+        
+    Examples
+    --------
+    .. code-block:: python
+
+        with pm.Model():
+            x = pm.Normal('x', mu=0, sd=10)
+            
+        with pm.Model():
+            x = pm.Normal('x', mu=0, tau=1/23)
     """
 
     def __init__(self, mu=0, sd=None, tau=None, **kwargs):
@@ -347,9 +358,19 @@ class HalfNormal(PositiveContinuous):
     Parameters
     ----------
     sd : float
-        Standard deviation (sd > 0).
+        Standard deviation (sd > 0) (only required if tau is not specified).
     tau : float
-        Precision (tau > 0).
+        Precision (tau > 0) (only required if sd is not specified).
+        
+    Examples
+    --------
+    .. code-block:: python
+
+        with pm.Model():
+            x = pm.HalfNormal('x', sd=10)
+        
+        with pm.Model():
+            x = pm.HalfNormal('x', tau=1/15)
     """
 
     def __init__(self, sd=None, tau=None, *args, **kwargs):
@@ -837,8 +858,21 @@ class Lognormal(PositiveContinuous):
     ----------
     mu : float
         Location parameter.
+    sd : float
+        Standard deviation. (sd > 0). (only required if tau is not specified).
     tau : float
-        Scale parameter (tau > 0).
+        Scale parameter (tau > 0). (only required if sd is not specified).
+        
+    Example
+    -------
+    .. code-block:: python
+
+        # Example to show that we pass in only `sd` or `tau` but not both.
+        with pm.Model():
+            x = pm.Lognormal('x', mu=2, sd=30)
+
+        with pm.Model():
+            x = pm.Lognormal('x', mu=2, tau=1/100)
     """
 
     def __init__(self, mu=0, sd=None, tau=None, *args, **kwargs):
@@ -929,8 +963,20 @@ class StudentT(Continuous):
         Degrees of freedom, also known as normality parameter (nu > 0).
     mu : float
         Location parameter.
+    sd : float
+        Standard deviation (sd > 0) (only required if lam is not specified)
     lam : float
-        Scale parameter (lam > 0).
+        Precision (lam > 0) (only required if sd is not specified)
+        
+    Examples
+    --------
+    .. code-block:: python
+
+        with pm.Model():
+            x = pm.StudentT('x', nu=15, mu=0, sd=10)
+            
+        with pm.Model():
+            x = pm.StudentT('x', nu=15, mu=0, lam=1/23)
     """
 
     def __init__(self, nu, mu=0, lam=None, sd=None, *args, **kwargs):
@@ -1516,6 +1562,9 @@ class Weibull(PositiveContinuous):
         self.median = beta * tt.exp(gammaln(tt.log(2)))**(1. / alpha)
         self.variance = (beta**2) * \
             tt.exp(gammaln(1 + 2. / alpha - self.mean**2))
+        self.mode = tt.switch(alpha >= 1, 
+                              beta * ((alpha - 1)/alpha) ** (1 / alpha), 
+                              0)  # Reference: https://en.wikipedia.org/wiki/Weibull_distribution
 
         assert_negative_support(alpha, 'alpha', 'Weibull')
         assert_negative_support(beta, 'beta', 'Weibull')
@@ -1588,9 +1637,21 @@ class HalfStudentT(PositiveContinuous):
         Degrees of freedom, also known as normality parameter (nu > 0).
     sd : float
         Scale parameter (sd > 0). Converges to the standard deviation as nu
-        increases
+        increases. (only required if lam is not specified)
     lam : float
-        Scale parameter (lam > 0). Converges to the precision as nu increases
+        Scale parameter (lam > 0). Converges to the precision as nu
+        increases. (only required if sd is not specified)
+        
+    Examples
+    --------
+    .. code-block:: python
+
+        # Only pass in one of lam or sd, but not both.
+        with pm.Model():
+            x = pm.HalfStudentT('x', sd=10, nu=10)
+     
+        with pm.Model():
+            x = pm.HalfStudentT('x', lam=4, nu=10)
     """
     def __init__(self, nu=1, sd=None, lam=None, *args, **kwargs):
         super(HalfStudentT, self).__init__(*args, **kwargs)

@@ -1,16 +1,14 @@
+import math
+
 import numpy as np
 
-from ..arraystep import metrop_select, Competence
-from .base_hmc import BaseHMC
+from ..arraystep import Competence
 from pymc3.vartypes import discrete_types
-from pymc3.theanof import floatX
+from pymc3.step_methods.hmc.integration import IntegrationError
+from pymc3.step_methods.hmc.base_hmc import BaseHMC, HMCStepData, DivergenceInfo
 
 
 __all__ = ['HamiltonianMC']
-
-# TODO:
-# add constraint handling via page 37 of Radford's
-# http://www.cs.utoronto.ca/~radford/ham-mcmc.abstract.html
 
 
 def unif(step_size, elow=.85, ehigh=1.15):
@@ -25,8 +23,24 @@ class HamiltonianMC(BaseHMC):
 
     name = 'hmc'
     default_blocked = True
+    generates_stats = True
+    stats_dtypes = [{
+        'step_size': np.float64,
+        'n_steps': np.int64,
+        'tune': np.bool,
+        'step_size_bar': np.float64,
+        'accept': np.float64,
+        'diverging': np.bool,
+        'energy_error': np.float64,
+        'energy': np.float64,
+        'max_energy_error': np.float64,
+        'path_length': np.float64,
+        'accepted': np.bool,
+    }]
 
-    def __init__(self, vars=None, path_length=2., step_rand=unif, **kwargs):
+    def __init__(self, vars=None, path_length=2.,
+                 adapt_step_size=True, gamma=0.05, k=0.75, t0=10,
+                 target_accept=0.8, **kwargs):
         """Set up the Hamiltonian Monte Carlo sampler.
 
         Parameters
@@ -50,32 +64,71 @@ class HamiltonianMC(BaseHMC):
             An object that represents the Hamiltonian with methods `velocity`,
             `energy`, and `random` methods. It can be specified instead
             of the scaling matrix.
+        target_accept : float, default .8
+            Adapt the step size such that the average acceptance
+            probability across the trajectories are close to target_accept.
+            Higher values for target_accept lead to smaller step sizes.
+            Setting this to higher values like 0.9 or 0.99 can help
+            with sampling from difficult posteriors. Valid values are
+            between 0 and 1 (exclusive).
+        gamma : float, default .05
+        k : float, default .75
+            Parameter for dual averaging for step size adaptation. Values
+            between 0.5 and 1 (exclusive) are admissible. Higher values
+            correspond to slower adaptation.
+        t0 : int, default 10
+            Parameter for dual averaging. Higher values slow initial
+            adaptation.
+        adapt_step_size : bool, default=True
+            Whether step size adaptation should be enabled. If this is
+            disabled, `k`, `t0`, `gamma` and `target_accept` are ignored.
         model : pymc3.Model
             The model
         **kwargs : passed to BaseHMC
         """
         super(HamiltonianMC, self).__init__(vars, **kwargs)
         self.path_length = path_length
-        self.step_rand = step_rand
 
-    def astep(self, q0):
-        """Perform a single HMC iteration."""
-        e = floatX(self.step_rand(self.step_size))
-        n_steps = int(self.path_length / e)
+    def _hamiltonian_step(self, start, p0, step_size):
+        path_length = np.random.rand() * self.path_length
+        n_steps = max(1, int(path_length / step_size))
 
-        p0 = self.potential.random()
-        start = self.integrator.compute_state(q0, p0)
-
-        if not np.isfinite(start.energy):
-            raise ValueError('Bad initial energy: %s. The model '
-                             'might be misspecified.' % start.energy)
-
+        energy_change = -np.inf
         state = start
-        for _ in range(n_steps):
-            state = self.integrator.step(e, state)
+        div_info = None
+        try:
+            for _ in range(n_steps):
+                state = self.integrator.step(step_size, state)
+        except IntegrationError as e:
+            div_info = DivergenceInfo('Divergence encountered.', e, state)
+        else:
+            if not np.isfinite(state.energy):
+                div_info = DivergenceInfo(
+                    'Divergence encountered, bad energy.', None, state)
+            energy_change = start.energy - state.energy
+            if np.abs(energy_change) > self.Emax:
+                div_info = DivergenceInfo(
+                    'Divergence encountered, large integration error.',
+                    None, state)
 
-        energy_change = start.energy - state.energy
-        return metrop_select(energy_change, state.q, start.q)[0]
+        accept_stat = min(1, math.exp(energy_change))
+
+        if div_info is not None or np.random.rand() >= accept_stat:
+            end = start
+            accepted = False
+        else:
+            end = state
+            accepted = True
+
+        stats = {
+            'path_length': path_length,
+            'n_steps': n_steps,
+            'accept': accept_stat,
+            'energy_error': energy_change,
+            'energy': state.energy,
+            'accepted': accepted,
+        }
+        return HMCStepData(end, accept_stat, div_info, stats)
 
     @staticmethod
     def competence(var, has_grad):

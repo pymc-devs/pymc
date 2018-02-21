@@ -1,0 +1,4 @@
+-r ../requirements-dev.txt
+# this installs pymc3 itself. it is funny that this is an absolute path, 
+# but reqirements-dev.txt is relative.
+.

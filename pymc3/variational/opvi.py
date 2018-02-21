@@ -46,8 +46,9 @@ from ..blocking import (
     ArrayOrdering, DictToArrayBijection, VarMap
 )
 from ..model import modelcontext
-from ..theanof import tt_rng, memoize, change_flags, identity
+from ..theanof import tt_rng, change_flags, identity
 from ..util import get_default_varnames
+from ..memoize import WithMemoization, memoize
 
 __all__ = [
     'ObjectiveFunction',
@@ -86,10 +87,29 @@ class LocalGroupError(BatchedGroupError, AEVBInferenceError):
     """Error raised in case of bad local_rv usage"""
 
 
+def append_name(name):
+    def wrap(f):
+        if name is None:
+            return f
+
+        def inner(*args, **kwargs):
+            res = f(*args, **kwargs)
+            res.name = name
+            return res
+        return inner
+    return wrap
+
+
 def node_property(f):
     """A shortcut for wrapping method to accessible tensor
     """
-    return property(memoize(change_flags(compute_test_value='off')(f)))
+    if isinstance(f, str):
+
+        def wrapper(fn):
+            return property(memoize(change_flags(compute_test_value='off')(append_name(f)(fn))))
+        return wrapper
+    else:
+        return property(memoize(change_flags(compute_test_value='off')(f)))
 
 
 @change_flags(compute_test_value='ignore')
@@ -134,7 +154,6 @@ class ObjectiveFunction(object):
     tf : :class:`TestFunction`
         OPVI TestFunction
     """
-    __hash__ = id
 
     def __init__(self, op, tf):
         self.op = op
@@ -351,7 +370,6 @@ class Operator(object):
     -----
     For implementing custom operator it is needed to define :func:`Operator.apply` method
     """
-    __hash__ = id
 
     has_test_function = False
     returns_loss = True
@@ -444,8 +462,6 @@ def collect_shared_to_list(params):
 
 
 class TestFunction(object):
-    __hash__ = id
-
     def __init__(self):
         self._inited = False
         self.shared_params = None
@@ -469,7 +485,7 @@ class TestFunction(object):
         return obj
 
 
-class Group(object):
+class Group(WithMemoization):
     R"""**Base class for grouping variables in VI**
 
     Grouped Approximation is used for modelling mutual dependencies
@@ -682,8 +698,7 @@ class Group(object):
     -   Kingma, D. P., & Welling, M. (2014).
         `Auto-Encoding Variational Bayes. stat, 1050, 1. <https://arxiv.org/abs/1312.6114>`_
     """
-    __hash__ = id
-    # need to be defined in init
+    # needs to be defined in init
     shared_params = None
     symbolic_initial = None
     replacements = None
@@ -1064,14 +1079,14 @@ class Group(object):
         :class:`Variable` with applied replacements, ready to use
         """
         flat2rand = self.make_size_and_deterministic_replacements(s, d, more_replacements)
-        node_out = theano.clone(node, flat2rand, strict=False)
+        node_out = theano.clone(node, flat2rand)
         try_to_set_test_value(node, node_out, s)
         return node_out
 
     def to_flat_input(self, node):
         """*Dev* - replace vars with flattened view stored in `self.inputs`
         """
-        return theano.clone(node, self.replacements, strict=False)
+        return theano.clone(node, self.replacements)
 
     def symbolic_sample_over_posterior(self, node):
         """*Dev* - performs sampling of node applying independent samples from posterior each time.
@@ -1184,11 +1199,12 @@ class Group(object):
     def mean(self):
         raise NotImplementedError
 
+
 group_for_params = Group.group_for_params
 group_for_short_name = Group.group_for_short_name
 
 
-class Approximation(object):
+class Approximation(WithMemoization):
     """**Wrapper for grouped approximations**
 
     Wraps list of groups, creates an Approximation instance that collects
@@ -1217,7 +1233,6 @@ class Approximation(object):
     --------
     :class:`Group`
     """
-    __hash__ = id
 
     def __init__(self, groups, model=None):
         self._scale_cost_to_minibatch = theano.shared(np.int8(1))
@@ -1374,12 +1389,13 @@ class Approximation(object):
         -------
         :class:`Variable` with applied replacements, ready to use
         """
+        _node = node
         optimizations = self.get_optimization_replacements(s, d)
         flat2rand = self.make_size_and_deterministic_replacements(s, d, more_replacements)
         node = theano.clone(node, optimizations)
-        node_out = theano.clone(node, flat2rand, strict=False)
-        try_to_set_test_value(node, node_out, s)
-        return node_out
+        node = theano.clone(node, flat2rand)
+        try_to_set_test_value(_node, node, s)
+        return node
 
     def to_flat_input(self, node):
         """*Dev* - replace vars with flattened view stored in `self.inputs`

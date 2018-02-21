@@ -250,8 +250,8 @@ def effective_n(mtrace, varnames=None, include_transformed=False):
         if t % 2:
             t -= 1
 
-        return min(num_chains * num_samples,
-                   int(num_chains * num_samples / (1. + 2 * rho[1:t-1].sum())))
+        neff = num_chains * num_samples / (1. + 2 * rho[1:t-1].sum())
+        return min(num_chains * num_samples, np.floor(neff))
 
     def generate_neff(trace_values):
         x = np.array(trace_values)
