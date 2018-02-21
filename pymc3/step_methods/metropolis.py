@@ -300,9 +300,12 @@ class BinaryGibbsMetropolis(ArrayStep):
     """A Metropolis-within-Gibbs step method optimized for binary variables"""
     name = 'binary_gibbs_metropolis'
 
-    def __init__(self, vars, order='random', model=None):
+    def __init__(self, vars, order='random', transit_p=.8, model=None):
 
         model = pm.modelcontext(model)
+
+        # transition probabilities
+        self.transit_p = transit_p
 
         self.dim = sum(v.dsize for v in vars)
 
@@ -330,7 +333,8 @@ class BinaryGibbsMetropolis(ArrayStep):
         logp_curr = logp(q)
 
         for idx in order:
-            curr_val, q[idx] = q[idx], nr.randint(0, 2)
+            state = [q[idx], True-q[idx]]
+            curr_val, q[idx] = q[idx], state[int(nr.rand() < self.transit_p)]
             logp_prop = logp(q)
             q[idx], accepted = metrop_select(logp_prop - logp_curr, q[idx], curr_val)
             if accepted:
