@@ -131,3 +131,4 @@ def test_pairplot():
     pairplot(trace)
     pairplot(trace, hexbin=True, plot_transformed=True)
     pairplot(trace, sub_varnames=['a_0', 'c_0', 'b_1'])
+    
