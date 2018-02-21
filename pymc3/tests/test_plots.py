@@ -6,7 +6,7 @@ import pymc3 as pm
 from .checks import close_to
 
 from .models import multidimensional_model, simple_categorical
-from ..plots import traceplot, forestplot, autocorrplot, plot_posterior, energyplot, densityplot, scatterplot
+from ..plots import traceplot, forestplot, autocorrplot, plot_posterior, energyplot, densityplot, pairplot
 from ..plots.utils import make_2d
 from ..step_methods import Slice, Metropolis
 from ..sampling import sample
@@ -120,7 +120,7 @@ def test_plots_transformed():
     assert plot_posterior(trace).numCols == 1
     assert plot_posterior(trace, plot_transformed=True).shape == (2, )
 
-def test_scatterplot():
+def test_pairplot():
     with pm.Model() as model:
         a = pm.Normal('a', shape=2)
         c = pm.HalfNormal('c', shape=2)
@@ -128,6 +128,6 @@ def test_scatterplot():
         d = pm.Normal('d', 100, 1)
         trace = pm.sample(1000)
 
-    scatterplot(trace)
-    scatterplot(trace, hexbin=True, plot_transformed=True)
-    scatterplot(trace, sub_varnames=['a_0', 'c_0', 'b_1'])
+    pairplot(trace)
+    pairplot(trace, hexbin=True, plot_transformed=True)
+    pairplot(trace, sub_varnames=['a_0', 'c_0', 'b_1'])

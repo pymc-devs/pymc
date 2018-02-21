@@ -168,3 +168,4 @@ def get_trace_dict(tr, varnames):
             else:
                 traces[v] = vals
         return traces
+        
