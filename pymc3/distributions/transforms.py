@@ -9,7 +9,8 @@ from .distribution import draw_values
 import numpy as np
 
 __all__ = ['transform', 'stick_breaking', 'logodds', 'interval', 'log_exp_m1',
-           'lowerbound', 'upperbound', 'log', 'sum_to_1', 't_stick_breaking']
+           'lowerbound', 'upperbound', 'ordered', 'log', 'sum_to_1',
+           't_stick_breaking']
 
 
 class Transform(object):
@@ -107,20 +108,20 @@ log = Log()
 
 class LogExpM1(ElemwiseTransform):
     name = "log_exp_m1"
-    
+
     def backward(self, x):
         return tt.nnet.softplus(x)
-    
+
     def forward(self, x):
         """Inverse operation of softplus
-        y = Log(Exp(x) - 1) 
+        y = Log(Exp(x) - 1)
           = Log(1 - Exp(-x)) + x
         """
         return tt.log(1.-tt.exp(-x)) + x
-    
+
     def forward_val(self, x, point=None):
         return self.forward(x)
-    
+
     def jacobian_det(self, x):
         return -tt.nnet.softplus(-x)
 
@@ -235,6 +236,53 @@ class UpperBound(ElemwiseTransform):
         return x
 
 upperbound = UpperBound
+
+
+class Ordered(ElemwiseTransform):
+    name = "ordered"
+
+    def backward(self, x):
+        out = tt.zeros(x.shape)
+        out = tt.inc_subtensor(out[0], x[0])
+        out = tt.inc_subtensor(out[1:], tt.log(x[1:] - x[:-1]))
+        return out
+
+    def forward(self, y):
+        out = tt.zeros(y.shape)
+        out = tt.inc_subtensor(out[0], y[0])
+        out = tt.inc_subtensor(out[1:], tt.exp(y[1:]))
+        return tt.cumsum(out)
+
+    def forward_val(self, x, point=None):
+        x, = draw_values([x], point=point)
+        return self.forward(x)
+
+    def jacobian_det(self, y):
+        return tt.sum(y[1:])
+
+ordered = Ordered()
+
+
+class Composed(Transform):
+    def __init__(self, transform1, transform2):
+        self._transform1 = transform1
+        self._transform2 = transform2
+        self.name = '_'.join([transform1.name, transform2.name])
+
+    def forward(self, x):
+        return self._transform2.forward(self._transform1.forward(x))
+
+    def forward_val(self, x, point=None):
+        return self.forward(x)
+
+    def backward(self, y):
+        return self._transform1.backward(self._transform2.backward(y))
+
+    def jacobian_det(self, y):
+        y2 = self._transform2.backward(y)
+        det1 = self._transform1.jacobian_det(y2)
+        det2 = self._transform2.jacobian_det(y)
+        return det1 + det2
 
 
 class SumTo1(Transform):
