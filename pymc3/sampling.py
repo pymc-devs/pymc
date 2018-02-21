@@ -258,8 +258,8 @@ def sample(draws=500, step=None, init='auto', n_init=200000, start=None,
     tune : int
         Number of iterations to tune, if applicable (defaults to 500).
         Samplers adjust the step sizes, scalings or similar during
-        tuning. Tuning samples will be drawn in addition to the number 
-        specified in the `draws` argument, and will be discarded 
+        tuning. Tuning samples will be drawn in addition to the number
+        specified in the `draws` argument, and will be discarded
         unless `discard_tuned_samples` is set to False.
     nuts_kwargs : dict
         Options for the NUTS sampler. See the docstring of NUTS
@@ -460,7 +460,12 @@ def sample(draws=500, step=None, init='auto', n_init=200000, start=None,
     trace = trace[discard:]
 
     if compute_convergence_checks:
-        trace.report._run_convergence_checks(trace, model)
+        if draws-tune < 100:
+            warnings.warn(
+                "The number of samples is too small to check "
+                "convergence reliably.")
+        else:
+            trace.report._run_convergence_checks(trace, model)
 
     trace.report._log_summary()
     return trace
@@ -1028,7 +1033,8 @@ def sample_ppc(trace, samples=None, model=None, vars=None, size=None,
     if vars is None:
         vars = model.observed_RVs
 
-    np.random.seed(random_seed)
+    if random_seed is not None:
+        np.random.seed(random_seed)
 
     indices = np.random.randint(0, nchain * len_trace, samples)
 

@@ -13,16 +13,20 @@ from .helpers import SeededTest
 from .test_distributions import (
     build_model, Domain, product, R, Rplus, Rplusbig, Rplusdunif,
     Unit, Nat, NatSmall, I, Simplex, Vector, PdMatrix,
-    PdMatrixChol, PdMatrixCholUpper, RealMatrix
+    PdMatrixChol, PdMatrixCholUpper, RealMatrix, RandomPdMatrix
 )
 
 
 def pymc3_random(dist, paramdomains, ref_rand, valuedomain=Domain([0]),
-                 size=10000, alpha=0.05, fails=10, extra_args=None):
+                 size=10000, alpha=0.05, fails=10, extra_args=None,
+                 model_args=None):
+    if model_args is None:
+        model_args = {}
     model = build_model(dist, valuedomain, paramdomains, extra_args)
     domains = paramdomains.copy()
     for pt in product(domains, n_samples=100):
         pt = pm.Point(pt, model=model)
+        pt.update(model_args)
         p = alpha
         # Allow KS test to fail (i.e., the samples be different)
         # a certain number of times. Crude, but necessary.
@@ -585,6 +589,54 @@ class TestScalarParameterSamples(SeededTest):
             #     size=n, valuedomain=RealMatrix(n, n), ref_rand=ref_rand_uchol,
             #     extra_args={'lower': False}
             # )
+
+    def test_kronecker_normal(self):
+        def ref_rand(size, mu, covs, sigma):
+            cov = pm.math.kronecker(covs[0], covs[1]).eval()
+            cov += sigma**2 * np.identity(cov.shape[0])
+            return st.multivariate_normal.rvs(mean=mu, cov=cov, size=size)
+
+        def ref_rand_chol(size, mu, chols, sigma):
+            covs = [np.dot(chol, chol.T) for chol in chols]
+            return ref_rand(size, mu, covs, sigma)
+
+        def ref_rand_evd(size, mu, evds, sigma):
+            covs = []
+            for eigs, Q in evds:
+                covs.append(np.dot(Q, np.dot(np.diag(eigs), Q.T)))
+            return ref_rand(size, mu, covs, sigma)
+
+        sizes = [2, 3]
+        sigmas = [0, 1]
+        for n, sigma in zip(sizes, sigmas):
+            N = n**2
+            covs = [RandomPdMatrix(n), RandomPdMatrix(n)]
+            chols = list(map(np.linalg.cholesky, covs))
+            evds = list(map(np.linalg.eigh, covs))
+            dom = Domain([np.random.randn(N)*0.1], edges=(None, None), shape=N)
+            mu = Domain([np.random.randn(N)*0.1], edges=(None, None), shape=N)
+
+            std_args = {'mu': mu}
+            cov_args = {'covs': covs}
+            chol_args = {'chols': chols}
+            evd_args = {'evds': evds}
+            if sigma is not None and sigma != 0:
+                std_args['sigma'] = Domain([sigma], edges=(None, None))
+            else:
+                for args in [cov_args, chol_args, evd_args]:
+                    args['sigma'] = sigma
+
+            pymc3_random(
+                 pm.KroneckerNormal, std_args, valuedomain=dom,
+                 ref_rand=ref_rand, extra_args=cov_args, model_args=cov_args)
+            pymc3_random(
+                 pm.KroneckerNormal, std_args, valuedomain=dom,
+                 ref_rand=ref_rand_chol, extra_args=chol_args,
+                 model_args=chol_args)
+            pymc3_random(
+                 pm.KroneckerNormal, std_args, valuedomain=dom,
+                 ref_rand=ref_rand_evd, extra_args=evd_args,
+                 model_args=evd_args)
 
     def test_mv_t(self):
         def ref_rand(size, nu, Sigma, mu):
