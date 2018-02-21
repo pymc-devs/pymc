@@ -330,7 +330,7 @@ class BinaryGibbsMetropolis(ArrayStep):
         logp_curr = logp(q)
 
         for idx in order:
-            curr_val, q[idx] = q[idx], True - q[idx]
+            curr_val, q[idx] = q[idx], nr.randint(0, 2)
             logp_prop = logp(q)
             q[idx], accepted = metrop_select(logp_prop - logp_curr, q[idx], curr_val)
             if accepted:
