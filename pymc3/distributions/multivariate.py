@@ -20,12 +20,14 @@ from .distribution import Continuous, Discrete, draw_values, generate_samples
 from ..model import Deterministic
 from .continuous import ChiSquared, Normal
 from .special import gammaln, multigammaln
-from .dist_math import bound, logpow, factln, Cholesky
+from .dist_math import bound, logpow, factln, Cholesky, eigh
+from ..math import kron_dot, kron_diag, kron_solve_lower, kronecker
 
 
 __all__ = ['MvNormal', 'MvStudentT', 'Dirichlet',
            'Multinomial', 'Wishart', 'WishartBartlett',
-           'LKJCorr', 'LKJCholeskyCov', 'MatrixNormal']
+           'LKJCorr', 'LKJCholeskyCov', 'MatrixNormal',
+           'KroneckerNormal']
 
 
 class _QuadFormBase(Continuous):
@@ -1293,3 +1295,220 @@ class MatrixNormal(Continuous):
         n = self.n
         norm = - 0.5 * m * n * pm.floatX(np.log(2 * np.pi))
         return norm - 0.5*trquaddist - m*half_collogdet - n*half_rowlogdet
+
+
+class KroneckerNormal(Continuous):
+    R"""
+    Multivariate normal log-likelihood with Kronecker-structured covariance.
+
+    .. math::
+
+       f(x \mid \mu, K) =
+           \frac{1}{(2\pi |K|)^{1/2}}
+           \exp\left\{ -\frac{1}{2} (x-\mu)^{\prime} K^{-1} (x-\mu) \right\}
+
+    ========  ==========================
+    Support   :math:`x \in \mathbb{R}^N`
+    Mean      :math:`\mu`
+    Variance  :math:`K = \bigotimes K_i` + \sigma^2 I_N
+    ========  ==========================
+
+    Parameters
+    ----------
+    mu : array
+        Vector of means, just as in `MvNormal`.
+    covs : list of arrays
+        The set of covariance matrices :math:`[K_1, K_2, ...]` to be
+        Kroneckered in the order provided :math:`\bigotimes K_i`.
+    chols : list of arrays
+        The set of lower cholesky matrices :math:`[L_1, L_2, ...]` such that
+        :math:`K_i = L_i L_i'`.
+    evds : list of tuples
+        The set of eigenvalue-vector, eigenvector-matrix pairs
+        :math:`[(v_1, Q_1), (v_2, Q_2), ...]` such that
+        :math:`K_i = Q_i \text{diag}(v_i) Q_i'`. For example::
+
+            v_i, Q_i = tt.nlinalg.eigh(K_i)
+
+    sigma : scalar, variable
+        Standard deviation of the Gaussian white noise.
+
+    Examples
+    --------
+    Define a multivariate normal variable with a covariance
+    :math:`K = K_1 \otimes K_2`
+
+    .. code:: python
+
+        K1 = np.array([[1., 0.5], [0.5, 2]])
+        K2 = np.array([[1., 0.4, 0.2], [0.4, 2, 0.3], [0.2, 0.3, 1]])
+        covs = [K1, K2]
+        N = 6
+        mu = np.zeros(N)
+        with pm.Model() as model:
+            vals = pm.KroneckerNormal('vals', mu=mu, covs=covs, shape=N)
+
+    Effeciency gains are made by cholesky decomposing :math:`K_1` and
+    :math:`K_2` individually rather than the larger :math:`K` matrix. Although
+    only two matrices :math:`K_1` and :math:`K_2` are shown here, an arbitrary
+    number of submatrices can be combined in this way. Choleskys and
+    eigendecompositions can be provided instead
+
+    .. code:: python
+
+        chols = [np.linalg.cholesky(Ki) for Ki in covs]
+        evds = [np.linalg.eigh(Ki) for Ki in covs]
+        with pm.Model() as model:
+            vals2 = pm.KroneckerNormal('vals2', mu=mu, chols=chols, shape=N)
+            # or
+            vals3 = pm.KroneckerNormal('vals3', mu=mu, evds=evds, shape=N)
+
+    neither of which will be converted. Diagonal noise can also be added to
+    the covariance matrix, :math:`K = K_1 \otimes K_2 + \sigma^2 I_N`.
+    Despite the noise removing the overall Kronecker structure of the matrix,
+    `KroneckerNormal` can continue to make efficient calculations by
+    utilizing eigendecompositons of the submatrices behind the scenes [1].
+    Thus,
+
+    .. code:: python
+
+        sigma = 0.1
+        with pm.Model() as noise_model:
+            vals = pm.KroneckerNormal('vals', mu=mu, covs=covs, sigma=sigma, shape=N)
+            vals2 = pm.KroneckerNormal('vals2', mu=mu, chols=chols, sigma=sigma, shape=N)
+            vals3 = pm.KroneckerNormal('vals3', mu=mu, evds=evds, sigma=sigma, shape=N)
+
+    are identical, with `covs` and `chols` each converted to
+    eigendecompositions.
+
+    References
+    ----------
+    .. [1] Saatchi, Y. (2011). "Scalable inference for structured Gaussian process models"
+    """
+
+    def __init__(self, mu, covs=None, chols=None, evds=None, sigma=None,
+                 *args, **kwargs):
+        self._setup(covs, chols, evds, sigma)
+        super(KroneckerNormal, self).__init__(*args, **kwargs)
+        self.mu = tt.as_tensor_variable(mu)
+        self.mean = self.median = self.mode = self.mu
+
+    def _setup(self, covs, chols, evds, sigma):
+        self.cholesky = Cholesky(nofail=False, lower=True)
+        if len([i for i in [covs, chols, evds] if i is not None]) != 1:
+            raise ValueError('Incompatible parameterization. '
+                             'Specify exactly one of covs, chols, '
+                             'or evds.')
+        self._isEVD = False
+        self.sigma = sigma
+        self.is_noisy = self.sigma is not None and self.sigma != 0
+        if covs is not None:
+            self._cov_type = 'cov'
+            self.covs = covs
+            if self.is_noisy:
+                # Noise requires eigendecomposition
+                eigh_map = map(eigh, covs)
+                self._setup_evd(eigh_map)
+            else:
+                # Otherwise use cholesky as usual
+                self.chols = list(map(self.cholesky, self.covs))
+                self.chol_diags = list(map(tt.nlinalg.diag, self.chols))
+                self.sizes = tt.as_tensor_variable(
+                                [chol.shape[0] for chol in self.chols])
+                self.N = tt.prod(self.sizes)
+        elif chols is not None:
+            self._cov_type = 'chol'
+            if self.is_noisy:  # A strange case...
+                # Noise requires eigendecomposition
+                covs = [tt.dot(chol, chol.T) for chol in chols]
+                eigh_map = map(eigh, covs)
+                self._setup_evd(eigh_map)
+            else:
+                self.chols = chols
+                self.chol_diags = list(map(tt.nlinalg.diag, self.chols))
+                self.sizes = tt.as_tensor_variable(
+                                [chol.shape[0] for chol in self.chols])
+                self.N = tt.prod(self.sizes)
+        else:
+            self._cov_type = 'evd'
+            self._setup_evd(evds)
+
+    def _setup_evd(self, eigh_iterable):
+        self._isEVD = True
+        eigs_sep, Qs = zip(*eigh_iterable)  # Unzip
+        self.Qs = list(map(tt.as_tensor_variable, Qs))
+        self.QTs = list(map(tt.transpose, self.Qs))
+
+        self.eigs_sep = list(map(tt.as_tensor_variable, eigs_sep))
+        self.eigs = kron_diag(*self.eigs_sep)  # Combine separate eigs
+        if self.is_noisy:
+            self.eigs += self.sigma**2
+        self.N = self.eigs.shape[0]
+
+    def _setup_random(self):
+        if not hasattr(self, 'mv_params'):
+            self.mv_params = {'mu': self.mu}
+            if self._cov_type == 'cov':
+                cov = kronecker(*self.covs)
+                if self.is_noisy:
+                    cov = cov + self.sigma**2 * tt.identity_like(cov)
+                self.mv_params['cov'] = cov
+            elif self._cov_type == 'chol':
+                if self.is_noisy:
+                    covs = []
+                    for eig, Q in zip(self.eigs_sep, self.Qs):
+                        cov_i = tt.dot(Q, tt.dot(tt.diag(eig), Q.T))
+                        covs.append(cov_i)
+                    cov = kronecker(*covs)
+                    if self.is_noisy:
+                        cov = cov + self.sigma**2 * tt.identity_like(cov)
+                    self.mv_params['chol'] = self.cholesky(cov)
+                else:
+                    self.mv_params['chol'] = kronecker(*self.chols)
+            elif self._cov_type == 'evd':
+                covs = []
+                for eig, Q in zip(self.eigs_sep, self.Qs):
+                    # print()
+                    cov_i = tt.dot(Q, tt.dot(tt.diag(eig), Q.T))
+                    covs.append(cov_i)
+                cov = kronecker(*covs)
+                if self.is_noisy:
+                    cov = cov + self.sigma**2 * tt.identity_like(cov)
+                self.mv_params['cov'] = cov
+
+    def random(self, point=None, size=None):
+        # Expand params into terms MvNormal can understand to force consistency
+        self._setup_random()
+        dist = MvNormal.dist(**self.mv_params)
+        return dist.random(point, size)
+
+    def _quaddist(self, value):
+        """Computes the quadratic (x-mu)^T @ K^-1 @ (x-mu) and log(det(K))"""
+        if value.ndim > 2 or value.ndim == 0:
+            raise ValueError('Invalid dimension for value: %s' % value.ndim)
+        if value.ndim == 1:
+            onedim = True
+            value = value[None, :]
+        else:
+            onedim = False
+
+        delta = value - self.mu
+        if self._isEVD:
+            sqrt_quad = kron_dot(self.QTs, delta.T)
+            sqrt_quad = sqrt_quad/tt.sqrt(self.eigs[:, None])
+            logdet = tt.sum(tt.log(self.eigs))
+        else:
+            sqrt_quad = kron_solve_lower(self.chols, delta.T)
+            logdet = 0
+            for chol_size, chol_diag in zip(self.sizes, self.chol_diags):
+                logchol = tt.log(chol_diag) * self.N/chol_size
+                logdet += tt.sum(2*logchol)
+        # Square each sample
+        quad = tt.batched_dot(sqrt_quad.T, sqrt_quad.T)
+        if onedim:
+            quad = quad[0]
+        return quad, logdet
+
+    def logp(self, value):
+        quad, logdet = self._quaddist(value)
+        return - (quad + logdet + self.N*tt.log(2*np.pi)) / 2.0
