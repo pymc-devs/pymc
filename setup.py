@@ -11,7 +11,7 @@ AUTHOR = 'PyMC Developers'
 AUTHOR_EMAIL = 'pymc.devs@gmail.com'
 URL = "http://github.com/pymc-devs/pymc3"
 LICENSE = "Apache License, Version 2.0"
-VERSION = "3.3rc2"
+VERSION = "3.3"
 
 classifiers = ['Development Status :: 5 - Production/Stable',
                'Programming Language :: Python',

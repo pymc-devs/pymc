@@ -56,5 +56,5 @@ with pm.Model() as model:
     # Initial values for stochastic nodes
     start = {'early_mean': 2., 'late_mean': 3.}
 
-    tr = pm.sample(1000, tune=500, start=start, step=[step1, step2], njobs=2)
+    tr = pm.sample(1000, tune=500, start=start, step=[step1, step2], cores=2)
     pm.traceplot(tr)

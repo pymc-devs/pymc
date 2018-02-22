@@ -15,7 +15,8 @@ __all__ = ['Constant',
            'Cosine',
            'Periodic',
            'WarpedInput',
-           'Gibbs']
+           'Gibbs',
+           'Coregion']
 
 
 class Covariance(object):
@@ -141,6 +142,41 @@ class Add(Combination):
 class Prod(Combination):
     def __call__(self, X, Xs=None, diag=False):
         return reduce(mul, self.merge_factors(X, Xs, diag))
+
+
+class Kron(Covariance):
+    R"""Form a covariance object that is the kronecker product of other covariances.
+
+    In contrast to standard multiplication, where each covariance is given the
+    same inputs X and Xs, kronecker product covariances first split the inputs
+    into their respective spaces (inferred from the input_dim of each object)
+    before forming their product. Kronecker covariances have a larger
+    input dimension than any of its factors since the inputs are the
+    concatenated columns of its components.
+
+    Factors must be covariances or their combinations, arrays will not work.
+    """
+
+    def __init__(self, factor_list):
+        self.input_dims = [factor.input_dim for factor in factor_list]
+        input_dim = sum(self.input_dims)
+        super(Kron, self).__init__(input_dim=input_dim)
+        self.factor_list = factor_list
+
+    def _split(self, X, Xs):
+        indices = np.cumsum(self.input_dims)
+        X_split = np.hsplit(X, indices)
+        if Xs is not None:
+            Xs_split = np.hsplit(Xs, indices)
+        else:
+            Xs_split = [None] * len(X_split)
+        return X_split, Xs_split
+
+    def __call__(self, X, Xs=None, diag=False):
+        X_split, Xs_split = self._split(X, Xs)
+        covs = [cov(x, xs, diag) for cov, x, xs
+                in zip(self.factor_list, X_split, Xs_split)]
+        return reduce(mul, covs)
 
 
 class Constant(Covariance):
@@ -515,3 +551,67 @@ def handle_args(func, args):
                 args = (args,)
             return func(x, *args)
     return f
+
+
+class Coregion(Covariance):
+    R"""Covariance function for intrinsic/linear coregionalization models.
+    Adapted from GPy http://gpy.readthedocs.io/en/deploy/GPy.kern.src.html#GPy.kern.src.coregionalize.Coregionalize.
+
+    This covariance has the form:
+
+    .. math::
+
+       \mathbf{B} = \mathbf{W}\mathbf{W}^\top + \text{diag}(\kappa)
+
+    and calls must use integers associated with the index of the matrix.
+    This allows the api to remain consistent with other covariance objects:
+
+    .. math::
+
+        k(x, x') = \mathbf{B}[x, x'^\top]
+
+    Parameters
+    ----------
+    W : 2D array of shape (num_outputs, rank)
+        a low rank matrix that determines the correlations between
+        the different outputs (rows)
+    kappa : 1D array of shape (num_outputs, )
+        a vector which allows the outputs to behave independently
+    B : 2D array of shape (num_outputs, rank)
+        the total matrix, exactly one of (W, kappa) and B must be provided
+
+    Notes
+    -----
+    Exactly one dimension must be active for this kernel. Thus, if
+    `input_dim != 1`, then `active_dims` must have a length of one.
+    """
+
+    def __init__(self, input_dim, W=None, kappa=None, B=None, active_dims=None):
+        super(Coregion, self).__init__(input_dim, active_dims)
+        if len(self.active_dims) != 1:
+            raise ValueError('Coregion requires exactly one dimension to be active')
+        make_B = W is not None or kappa is not None
+        if make_B and B is not None:
+            raise ValueError('Exactly one of (W, kappa) and B must be provided to Coregion')
+        if make_B:
+            self.W = tt.as_tensor_variable(W)
+            self.kappa = tt.as_tensor_variable(kappa)
+            self.B = tt.dot(self.W, self.W.T) + tt.diag(self.kappa)
+        elif B is not None:
+            self.B = tt.as_tensor_variable(B)
+        else:
+            raise ValueError('Exactly one of (W, kappa) and B must be provided to Coregion')
+
+    def full(self, X, Xs=None):
+        X, Xs = self._slice(X, Xs)
+        index = tt.cast(X, 'int32')
+        if Xs is None:
+            index2 = index.T
+        else:
+            index2 = tt.cast(Xs, 'int32').T
+        return self.B[index, index2]
+
+    def diag(self, X):
+        X, _ = self._slice(X, None)
+        index = tt.cast(X, 'int32')
+        return tt.diag(self.B)[index.ravel()]

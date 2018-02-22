@@ -1,6 +1,7 @@
 from collections import namedtuple
 import logging
 import enum
+from ..util import is_transformed_name, get_untransformed_name
 
 
 logger = logging.getLogger('pymc3')
@@ -58,7 +59,7 @@ class SamplerReport(object):
         if errors:
             raise ValueError('Serious convergence issues during sampling.')
 
-    def _run_convergence_checks(self, trace):
+    def _run_convergence_checks(self, trace, model):
         if trace.nchains == 1:
             msg = ("Only one chain was sampled, this makes it impossible to "
                    "run some convergence checks")
@@ -69,8 +70,17 @@ class SamplerReport(object):
 
         from pymc3 import diagnostics
 
-        self._effective_n = effective_n = diagnostics.effective_n(trace)
-        self._gelman_rubin = gelman_rubin = diagnostics.gelman_rubin(trace)
+        valid_name = [rv.name for rv in model.free_RVs + model.deterministics]
+        varnames = []
+        for rv in model.free_RVs:
+            rv_name = rv.name
+            if is_transformed_name(rv_name):
+                rv_name2 = get_untransformed_name(rv_name)
+                rv_name = rv_name2 if rv_name2 in valid_name else rv_name
+            varnames.append(rv_name)
+
+        self._effective_n = effective_n = diagnostics.effective_n(trace, varnames)
+        self._gelman_rubin = gelman_rubin = diagnostics.gelman_rubin(trace, varnames)
 
         warnings = []
         rhat_max = max(val.max() for val in gelman_rubin.values())
@@ -102,11 +112,17 @@ class SamplerReport(object):
             warn = SamplerWarning(
                 WarningType.CONVERGENCE, msg, 'error', None, None, effective_n)
             warnings.append(warn)
+        elif eff_min / n_samples < 0.1:
+            msg = ("The number of effective samples is smaller than "
+                   "10% for some parameters.")
+            warn = SamplerWarning(
+                WarningType.CONVERGENCE, msg, 'warn', None, None, effective_n)
+            warnings.append(warn)
         elif eff_min / n_samples < 0.25:
             msg = ("The number of effective samples is smaller than "
                    "25% for some parameters.")
             warn = SamplerWarning(
-                WarningType.CONVERGENCE, msg, 'warn', None, None, effective_n)
+                WarningType.CONVERGENCE, msg, 'info', None, None, effective_n)
             warnings.append(warn)
 
         self._add_warnings(warnings)

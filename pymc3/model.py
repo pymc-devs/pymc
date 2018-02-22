@@ -381,7 +381,7 @@ class ValueGradFunction(object):
                 raise TypeError('Invalid dtype for variable %s. Can not '
                                 'cast to %s with casting rule %s.'
                                 % (var.name, self.dtype, casting))
-            if not np.issubdtype(var.dtype, float):
+            if not np.issubdtype(var.dtype, np.floating):
                 raise TypeError('Invalid dtype for variable %s. Must be '
                                 'floating point but is %s.'
                                 % (var.name, var.dtype))

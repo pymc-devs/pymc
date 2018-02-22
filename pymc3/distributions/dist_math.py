@@ -13,6 +13,9 @@ import theano
 from .special import gammaln
 from pymc3.theanof import floatX
 
+from six.moves import xrange
+from functools import partial
+
 f = floatX
 c = - .5 * np.log(2. * np.pi)
 
@@ -82,26 +85,6 @@ def std_cdf(x):
     Calculates the standard normal cumulative distribution function.
     """
     return .5 + .5 * tt.erf(x / tt.sqrt(2.))
-
-
-def i0(x):
-    """
-    Calculates the 0 order modified Bessel function of the first kind""
-    """
-    return tt.switch(tt.lt(x, 5), 1. + x**2 / 4. + x**4 / 64. + x**6 / 2304. + x**8 / 147456.
-                     + x**10 / 14745600. + x**12 / 2123366400.,
-                     np.e**x / (2. * np.pi * x)**0.5 * (1. + 1. / (8. * x) + 9. / (128. * x**2) + 225. / (3072 * x**3)
-                                                        + 11025. / (98304. * x**4)))
-
-
-def i1(x):
-    """
-    Calculates the 1 order modified Bessel function of the first kind""
-    """
-    return tt.switch(tt.lt(x, 5), x / 2. + x**3 / 16. + x**5 / 384. + x**7 / 18432. +
-                     x**9 / 1474560. + x**11 / 176947200. + x**13 / 29727129600.,
-                     np.e**x / (2. * np.pi * x)**0.5 * (1. - 3. / (8. * x) + 15. / (128. * x**2) + 315. / (3072. * x**3)
-                                                        + 14175. / (98304. * x**4)))
 
 
 def sd2rho(sd):
@@ -346,3 +329,135 @@ class SplineWrapper(theano.Op):
         x_grad, = grads
 
         return [x_grad * self.grad_op(x)]
+
+
+# Custom Eigh, EighGrad, and eigh are required until
+# https://github.com/Theano/Theano/pull/6557 is handled, since lambda's
+# cannot be used with pickling.
+class Eigh(tt.nlinalg.Eig):
+    """
+    Return the eigenvalues and eigenvectors of a Hermitian or symmetric matrix.
+
+    This is a copy of Eigh from theano that calls an EighGrad which uses
+    partial instead of lambda. Once this has been merged with theano this
+    should be removed.
+    """
+
+    _numop = staticmethod(np.linalg.eigh)
+    __props__ = ('UPLO',)
+
+    def __init__(self, UPLO='L'):
+        assert UPLO in ['L', 'U']
+        self.UPLO = UPLO
+
+    def make_node(self, x):
+        x = tt.as_tensor_variable(x)
+        assert x.ndim == 2
+        # Numpy's linalg.eigh may return either double or single
+        # presision eigenvalues depending on installed version of
+        # LAPACK.  Rather than trying to reproduce the (rather
+        # involved) logic, we just probe linalg.eigh with a trivial
+        # input.
+        w_dtype = self._numop([[np.dtype(x.dtype).type()]])[0].dtype.name
+        w = theano.tensor.vector(dtype=w_dtype)
+        v = theano.tensor.matrix(dtype=x.dtype)
+        return theano.gof.Apply(self, [x], [w, v])
+
+    def perform(self, node, inputs, outputs):
+        (x,) = inputs
+        (w, v) = outputs
+        w[0], v[0] = self._numop(x, self.UPLO)
+
+    def grad(self, inputs, g_outputs):
+        r"""The gradient function should return
+           .. math:: \sum_n\left(W_n\frac{\partial\,w_n}
+                           {\partial a_{ij}} +
+                     \sum_k V_{nk}\frac{\partial\,v_{nk}}
+                           {\partial a_{ij}}\right),
+        where [:math:`W`, :math:`V`] corresponds to ``g_outputs``,
+        :math:`a` to ``inputs``, and  :math:`(w, v)=\mbox{eig}(a)`.
+        Analytic formulae for eigensystem gradients are well-known in
+        perturbation theory:
+           .. math:: \frac{\partial\,w_n}
+                          {\partial a_{ij}} = v_{in}\,v_{jn}
+           .. math:: \frac{\partial\,v_{kn}}
+                          {\partial a_{ij}} =
+                \sum_{m\ne n}\frac{v_{km}v_{jn}}{w_n-w_m}
+        """
+        x, = inputs
+        w, v = self(x)
+        # Replace gradients wrt disconnected variables with
+        # zeros. This is a work-around for issue #1063.
+        gw, gv = tt.nlinalg._zero_disconnected([w, v], g_outputs)
+        return [EighGrad(self.UPLO)(x, w, v, gw, gv)]
+
+
+class EighGrad(theano.Op):
+    """
+    Gradient of an eigensystem of a Hermitian matrix.
+
+    This is a copy of EighGrad from theano that uses partial instead of lambda.
+    Once this has been merged with theano this should be removed.
+    """
+
+    __props__ = ('UPLO',)
+
+    def __init__(self, UPLO='L'):
+        assert UPLO in ['L', 'U']
+        self.UPLO = UPLO
+        if UPLO == 'L':
+            self.tri0 = np.tril
+            self.tri1 = partial(np.triu, k=1)
+        else:
+            self.tri0 = np.triu
+            self.tri1 = partial(np.tril, k=-1)
+
+    def make_node(self, x, w, v, gw, gv):
+        x, w, v, gw, gv = map(tt.as_tensor_variable, (x, w, v, gw, gv))
+        assert x.ndim == 2
+        assert w.ndim == 1
+        assert v.ndim == 2
+        assert gw.ndim == 1
+        assert gv.ndim == 2
+        out_dtype = theano.scalar.upcast(x.dtype, w.dtype, v.dtype,
+                                         gw.dtype, gv.dtype)
+        out = theano.tensor.matrix(dtype=out_dtype)
+        return theano.gof.Apply(self, [x, w, v, gw, gv], [out])
+
+    def perform(self, node, inputs, outputs):
+        """
+        Implements the "reverse-mode" gradient for the eigensystem of
+        a square matrix.
+        """
+        x, w, v, W, V = inputs
+        N = x.shape[0]
+        outer = np.outer
+
+        def G(n):
+            return sum(v[:, m] * V.T[n].dot(v[:, m]) / (w[n] - w[m])
+                       for m in xrange(N) if m != n)
+
+        g = sum(outer(v[:, n], v[:, n] * W[n] + G(n))
+                for n in xrange(N))
+
+        # Numpy's eigh(a, 'L') (eigh(a, 'U')) is a function of tril(a)
+        # (triu(a)) only.  This means that partial derivative of
+        # eigh(a, 'L') (eigh(a, 'U')) with respect to a[i,j] is zero
+        # for i < j (i > j).  At the same time, non-zero components of
+        # the gradient must account for the fact that variation of the
+        # opposite triangle contributes to variation of two elements
+        # of Hermitian (symmetric) matrix. The following line
+        # implements the necessary logic.
+        out = self.tri0(g) + self.tri1(g).T
+
+        # Make sure we return the right dtype even if NumPy performed
+        # upcasting in self.tri0.
+        outputs[0][0] = np.asarray(out, dtype=node.outputs[0].dtype)
+
+    def infer_shape(self, node, shapes):
+        return [shapes[0]]
+
+
+def eigh(a, UPLO='L'):
+    """A copy, remove with Eigh and EighGrad when possible"""
+    return Eigh(UPLO)(a)

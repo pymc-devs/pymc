@@ -1,4 +1,5 @@
 theano>=1.0.0
+numpy>=1.13.0
 pandas>=0.18.0
 patsy>=0.4.0
 joblib>=0.9
