@@ -55,29 +55,29 @@ def pairplot(trace, varnames=None, figsize=None, text_size=None,
     if varnames is None:
         if plot_transformed:
 
+            varnames_copy = list(trace.varnames)
             remove = [get_untransformed_name(var) for var in trace.varnames 
                       if is_transformed_name(var)]
-            varnames_copy = trace.varnames
-
+            
             try:
                 [varnames_copy.remove(i) for i in remove]
                 varnames = varnames_copy
             except:
                 varnames = trace.varnames
-                    
+                   
             trace_dict = get_trace_dict(trace, 
-                get_default_varnames(varnames, True))
+                get_default_varnames(varnames, plot_transformed))
 
         else:
             trace_dict = get_trace_dict(trace, 
-                get_default_varnames(trace.varnames, False))
+                get_default_varnames(trace.varnames, plot_transformed))
 
         if sub_varnames is None:
             varnames = list(trace_dict.keys())
 
         else:
             trace_dict = get_trace_dict(trace, 
-                get_default_varnames(trace.varnames, True))
+                get_default_varnames(trace.varnames, plot_transformed))
             varnames = sub_varnames
 
     else:
