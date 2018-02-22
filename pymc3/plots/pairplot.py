@@ -117,7 +117,7 @@ def pairplot(trace, varnames=None, figsize=None, text_size=None,
                        trace_dict[varnames[1]][diverge], **kwargs_divergence)
 
     if gs is None and ax is None:
-
+        plt.figure(figsize=figsize)
         gs = gridspec.GridSpec(numvars -1, numvars-1)
 
         for i in range(0, numvars-1):
