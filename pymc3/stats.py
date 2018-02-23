@@ -220,7 +220,7 @@ def waic(trace, model=None, pointwise=False, progressbar=False):
     p_waic = np.sum(vars_lpd)
 
     if pointwise:
-        if waic == waic_i:
+        if np.equal(waic, waic_i).all():
             warnings.warn("""The point-wise WAIC is the same with the sum WAIC,
             please double check the Observed RV in your model to make sure it
             returns element-wise logp.
@@ -299,7 +299,7 @@ def loo(trace, model=None, pointwise=False, reff=None, progressbar=False):
     p_loo = lppd + (0.5 * loo_lppd)
 
     if pointwise:
-        if loo_lppd == loo_lppd_i:
+        if np.equal(loo_lppd, loo_lppd_i).all():
             warnings.warn("""The point-wise LOO is the same with the sum LOO,
             please double check the Observed RV in your model to make sure it
             returns element-wise logp.
