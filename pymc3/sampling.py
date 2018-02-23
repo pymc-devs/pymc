@@ -187,7 +187,8 @@ def sample(draws=500, step=None, init='auto', n_init=200000, start=None,
            trace=None, chain_idx=0, chains=None, cores=None, tune=500,
            nuts_kwargs=None, step_kwargs=None, progressbar=True, model=None,
            random_seed=None, live_plot=False, discard_tuned_samples=True,
-           live_plot_kwargs=None, compute_convergence_checks=True, **kwargs):
+           live_plot_kwargs=None, compute_convergence_checks=True,
+           use_mmap=True, **kwargs):
     """Draw samples from the posterior using the given step methods.
 
     Multiple step methods are supported via compound step methods.
@@ -297,6 +298,9 @@ def sample(draws=500, step=None, init='auto', n_init=200000, start=None,
     compute_convergence_checks : bool, default=True
         Whether to compute sampler statistics like gelman-rubin and
         effective_n.
+    use_mmap : bool, default=True
+        Whether to use joblib's memory mapping to share numpy arrays when
+        sampling across multiple cores.
 
     Returns
     -------
@@ -421,6 +425,7 @@ def sample(draws=500, step=None, init='auto', n_init=200000, start=None,
         'live_plot': live_plot,
         'live_plot_kwargs': live_plot_kwargs,
         'cores': cores,
+        'use_mmap': use_mmap
     }
 
     sample_args.update(kwargs)
@@ -964,12 +969,18 @@ def _mp_sample(**kwargs):
     rseed = kwargs.pop('random_seed')
     start = kwargs.pop('start')
     chains = kwargs.pop('chains')
+    use_mmap = kwargs.pop('use_mmap')
 
     chain_nums = list(range(chain, chain + chains))
     pbars = [kwargs.pop('progressbar')] + [False] * (chains - 1)
     jobs = (delayed(_sample)(*args, **kwargs)
             for args in zip(chain_nums, pbars, rseed, start))
-    traces = Parallel(n_jobs=cores)(jobs)
+
+    if use_mmap:
+        traces = Parallel(n_jobs=cores)(jobs)
+    else:
+        traces = Parallel(n_jobs=cores, mmap_mode=None)(jobs)
+
     return MultiTrace(traces)
 
 
