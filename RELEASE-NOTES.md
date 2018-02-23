@@ -12,7 +12,6 @@
   lower-level functions such as `cartesian` and `kronecker` products.
 - Added `Coregion` covariance function.
 - Plots of discrete distributions in the docstrings
- 
 
 ### Fixes
 
