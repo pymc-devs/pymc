@@ -220,6 +220,11 @@ def waic(trace, model=None, pointwise=False, progressbar=False):
     p_waic = np.sum(vars_lpd)
 
     if pointwise:
+        if np.equal(waic, waic_i).all():
+            warnings.warn("""The point-wise WAIC is the same with the sum WAIC,
+            please double check the Observed RV in your model to make sure it
+            returns element-wise logp.
+            """)
         WAIC_r = namedtuple('WAIC_r', 'WAIC, WAIC_se, p_WAIC, var_warn, WAIC_i')
         return WAIC_r(waic, waic_se, p_waic, warn_mg, waic_i)
     else:
@@ -294,6 +299,11 @@ def loo(trace, model=None, pointwise=False, reff=None, progressbar=False):
     p_loo = lppd + (0.5 * loo_lppd)
 
     if pointwise:
+        if np.equal(loo_lppd, loo_lppd_i).all():
+            warnings.warn("""The point-wise LOO is the same with the sum LOO,
+            please double check the Observed RV in your model to make sure it
+            returns element-wise logp.
+            """)
         LOO_r = namedtuple('LOO_r', 'LOO, LOO_se, p_LOO, shape_warn, LOO_i')
         return LOO_r(loo_lppd, loo_lppd_se, p_loo, warn_mg, loo_lppd_i)
     else:

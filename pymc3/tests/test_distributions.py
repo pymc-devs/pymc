@@ -925,6 +925,14 @@ class TestMatchesScipy(SeededTest):
         with Model() as model_many:
             Multinomial('m', n=n, p=p, shape=vals.shape)
 
+        assert_almost_equal(scipy.stats.multinomial.logpmf(vals, n, p),
+                            np.asarray([model_single.fastlogp({'m': val}) for val in vals]),
+                            decimal=4)
+
+        assert_almost_equal(scipy.stats.multinomial.logpmf(vals, n, p),
+                            model_many.free_RVs[0].logp_elemwise({'m': vals}).squeeze(),
+                            decimal=4)
+
         assert_almost_equal(sum([model_single.fastlogp({'m': val}) for val in vals]),
                             model_many.fastlogp({'m': vals}),
                             decimal=4)
