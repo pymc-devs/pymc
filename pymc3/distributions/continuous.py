@@ -110,6 +110,8 @@ class Uniform(Continuous):
     R"""
     Continuous uniform log-likelihood.
 
+    The pdf of this distribution is
+
     .. math::
 
        f(x \mid lower, upper) = \frac{1}{upper-lower}
@@ -224,17 +226,13 @@ class Normal(Continuous):
     R"""
     Univariate normal log-likelihood.
 
+    The pdf of this distribution is
+
     .. math::
 
        f(x \mid \mu, \tau) =
            \sqrt{\frac{\tau}{2\pi}}
            \exp\left\{ -\frac{\tau}{2} (x-\mu)^2 \right\}
-
-    ========  ==========================================
-    Support   :math:`x \in \mathbb{R}`
-    Mean      :math:`\mu`
-    Variance  :math:`\dfrac{1}{\tau}` or :math:`\sigma^2`
-    ========  ==========================================
 
     Normal distribution can be parameterized either in terms of precision
     or standard deviation. The link between the two parametrizations is
@@ -260,6 +258,12 @@ class Normal(Continuous):
         plt.ylabel('f(x)', fontsize=12)
         plt.legend(loc=1)
         plt.show()
+
+    ========  ==========================================
+    Support   :math:`x \in \mathbb{R}`
+    Mean      :math:`\mu`
+    Variance  :math:`\dfrac{1}{\tau}` or :math:`\sigma^2`
+    ========  ==========================================
 
     Parameters
     ----------
@@ -323,6 +327,8 @@ class Normal(Continuous):
 class HalfNormal(PositiveContinuous):
     R"""
     Half-normal log-likelihood.
+
+    The pdf of this distribution is
 
     .. math::
 
@@ -407,6 +413,8 @@ class HalfNormal(PositiveContinuous):
 class Wald(PositiveContinuous):
     R"""
     Wald log-likelihood.
+
+    The pdf of this distribution is
 
     .. math::
 
@@ -558,6 +566,8 @@ class Beta(UnitContinuous):
     R"""
     Beta log-likelihood.
 
+    The pdf of this distribution is
+
     .. math::
 
        f(x \mid \alpha, \beta) =
@@ -679,6 +689,8 @@ class Exponential(PositiveContinuous):
     R"""
     Exponential log-likelihood.
 
+    The pdf of this distribution is
+
     .. math::
 
        f(x \mid \lambda) = \lambda \exp\left\{ -\lambda x \right\}
@@ -742,6 +754,8 @@ class Exponential(PositiveContinuous):
 class Laplace(Continuous):
     R"""
     Laplace log-likelihood.
+
+    The pdf of this distribution is
 
     .. math::
 
@@ -819,6 +833,8 @@ class Lognormal(PositiveContinuous):
     distributed. A variable might be modeled as log-normal if it can
     be thought of as the multiplicative product of many small
     independent factors.
+
+    The pdf of this distribution is
 
     .. math::
 
@@ -922,6 +938,8 @@ class StudentT(Continuous):
     Describes a normal variable whose precision is gamma distributed.
     If only nu parameter is passed, this specifies a standard (central)
     Student's T.
+
+    The pdf of this distribution is
 
     .. math::
 
@@ -1028,6 +1046,8 @@ class Pareto(PositiveContinuous):
     Often used to characterize wealth distribution, or other examples of the
     80/20 rule.
 
+    The pdf of this distribution is
+
     .. math::
 
        f(x \mid \alpha, m) = \frac{\alpha m^{\alpha}}{x^{\alpha+1}}
@@ -1116,6 +1136,8 @@ class Cauchy(Continuous):
 
     Also known as the Lorentz or the Breit-Wigner distribution.
 
+    The pdf of this distribution is
+
     .. math::
 
        f(x \mid \alpha, \beta) =
@@ -1193,6 +1215,8 @@ class HalfCauchy(PositiveContinuous):
     R"""
     Half-Cauchy log-likelihood.
 
+    The pdf of this distribution is
+
     .. math::
 
        f(x \mid \beta) = \frac{2}{\pi \beta [1 + (\frac{x}{\beta})^2]}
@@ -1263,6 +1287,8 @@ class Gamma(PositiveContinuous):
 
     Represents the sum of alpha exponentially distributed random variables,
     each of which has mean beta.
+
+    The pdf of this distribution is
 
     .. math::
 
@@ -1371,6 +1397,8 @@ class InverseGamma(PositiveContinuous):
     R"""
     Inverse gamma log-likelihood, the reciprocal of the gamma distribution.
 
+    The pdf of this distribution is
+
     .. math::
 
        f(x \mid \alpha, \beta) =
@@ -1459,6 +1487,8 @@ class ChiSquared(Gamma):
     R"""
     :math:`\chi^2` log-likelihood.
 
+    The pdf of this distribution is
+
     .. math::
 
        f(x \mid \nu) = \frac{x^{(\nu-2)/2}e^{-x/2}}{2^{\nu/2}\Gamma(\nu/2)}
@@ -1508,6 +1538,8 @@ class ChiSquared(Gamma):
 class Weibull(PositiveContinuous):
     R"""
     Weibull log-likelihood.
+
+    The pdf of this distribution is
 
     .. math::
 
@@ -1595,6 +1627,8 @@ class Weibull(PositiveContinuous):
 class HalfStudentT(PositiveContinuous):
     R"""
     Half Student's T log-likelihood
+
+    The pdf of this distribution is
 
     .. math::
 
@@ -1693,6 +1727,8 @@ class ExGaussian(Continuous):
 
     Results from the convolution of a normal distribution with an exponential
     distribution.
+
+    The pdf of this distribution is
 
     .. math::
 
@@ -1803,6 +1839,8 @@ class VonMises(Continuous):
     R"""
     Univariate VonMises log-likelihood.
 
+    The pdf of this distribution is
+
     .. math::
 
         f(x \mid \mu, \kappa) =
@@ -1879,6 +1917,8 @@ class VonMises(Continuous):
 class SkewNormal(Continuous):
     R"""
     Univariate skew-normal log-likelihood.
+
+     The pdf of this distribution is
 
     .. math::
 
@@ -1983,6 +2023,8 @@ class Triangular(Continuous):
     R"""
     Continuous Triangular log-likelihood
 
+    The pdf of this distribution is
+
     .. math::
 
        \begin{cases}
@@ -2070,6 +2112,8 @@ class Gumbel(Continuous):
     R"""
         Univariate Gumbel log-likelihood
 
+    The pdf of this distribution is
+
     .. math::
 
        f(x \mid \mu, \beta) = -\frac{x - \mu}{\beta} - \exp \left(-\frac{x - \mu}{\beta} \right) - \log(\beta)
@@ -2144,6 +2188,8 @@ class Logistic(Continuous):
     R"""
     Logistic log-likelihood.
 
+    The pdf of this distribution is
+
     .. math::
 
        f(x \mid \mu, s) =
@@ -2171,6 +2217,7 @@ class Logistic(Continuous):
     Mean      :math:`\mu`
     Variance  :math:`\frac{s^2 \pi^2}{3}`
     ========  ==========================================
+
 
     Parameters
     ----------

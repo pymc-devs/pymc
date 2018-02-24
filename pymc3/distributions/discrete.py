@@ -24,6 +24,7 @@ class Binomial(Discrete):
     The discrete probability distribution of the number of successes
     in a sequence of n independent yes/no experiments, each of which
     yields success with probability p.
+    The pmf of this distribution is
 
     .. math:: f(x \mid n, p) = \binom{n}{x} p^x (1-p)^{n-x}
 
@@ -95,6 +96,7 @@ class BetaBinomial(Discrete):
 
     Equivalent to binomial random variable with success probability
     drawn from a beta distribution.
+    The pmf of this distribution is
 
     .. math::
 
@@ -194,6 +196,7 @@ class Bernoulli(Discrete):
 
     The Bernoulli distribution describes the probability of successes
     (x=1) and failures (x=0).
+    The pmf of this distribution is
 
     .. math:: f(x \mid p) = p^{x} (1-p)^{1-x}
 
@@ -274,6 +277,7 @@ class DiscreteWeibull(Discrete):
 
     The discrete Weibull distribution is a flexible model of count data that
     can handle both over- and under-dispersion.
+    The pmf of this distribution is
 
     .. math:: f(x \mid q, \beta) = q^{x^{\beta}} - q^{(x + 1)^{\beta}}
 
@@ -362,6 +366,7 @@ class Poisson(Discrete):
 
     Often used to model the number of events occurring in a fixed period
     of time when the times at which events occur are independent.
+    The pmf of this distribution is
 
     .. math:: f(x \mid \mu) = \frac{e^{-\mu}\mu^x}{x!}
 
@@ -434,6 +439,7 @@ class NegativeBinomial(Discrete):
 
     The negative binomial distribution describes a Poisson random variable
     whose rate parameter is gamma distributed.
+    The pmf of this distribution is
 
     .. math::
 
@@ -521,6 +527,7 @@ class Geometric(Discrete):
 
     The probability that the first success in a sequence of Bernoulli
     trials occurs on the x'th trial.
+    The pmf of this distribution is
 
     .. math:: f(x \mid p) = p(1-p)^{x-1}
 
@@ -579,6 +586,7 @@ class Geometric(Discrete):
 class DiscreteUniform(Discrete):
     R"""
     Discrete uniform distribution.
+    The pmf of this distribution is
 
     .. math:: f(x \mid lower, upper) = \frac{1}{upper-lower}
 
@@ -655,7 +663,7 @@ class Categorical(Discrete):
     R"""
     Categorical log-likelihood.
 
-    The most general discrete distribution.
+    The most general discrete distribution. The pmf of this distribution is
 
     .. math:: f(x \mid p) = p_x
 
@@ -785,6 +793,7 @@ class ZeroInflatedPoisson(Discrete):
 
     Often used to model the number of events occurring in a fixed period
     of time when the times at which events occur are independent.
+    The pmf of this distribution is
 
     .. math::
 
@@ -872,6 +881,8 @@ class ZeroInflatedPoisson(Discrete):
 class ZeroInflatedBinomial(Discrete):
     R"""
     Zero-inflated Binomial log-likelihood.
+
+    The pmf of this distribution is
 
     .. math::
 
@@ -974,6 +985,7 @@ class ZeroInflatedNegativeBinomial(Discrete):
     The Zero-inflated version of the Negative Binomial (NB).
     The NB distribution describes a Poisson random variable
     whose rate parameter is gamma distributed.
+        The pmf of this distribution is
 
     .. math::
 
