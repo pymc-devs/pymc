@@ -985,7 +985,7 @@ class ZeroInflatedNegativeBinomial(Discrete):
     The Zero-inflated version of the Negative Binomial (NB).
     The NB distribution describes a Poisson random variable
     whose rate parameter is gamma distributed.
-        The pmf of this distribution is
+    The pmf of this distribution is
 
     .. math::
 
