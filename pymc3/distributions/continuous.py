@@ -24,7 +24,7 @@ __all__ = ['Uniform', 'Flat', 'HalfFlat', 'Normal', 'Beta', 'Exponential',
            'Laplace', 'StudentT', 'Cauchy', 'HalfCauchy', 'Gamma', 'Weibull',
            'HalfStudentT', 'Lognormal', 'ChiSquared', 'HalfNormal', 'Wald',
            'Pareto', 'InverseGamma', 'ExGaussian', 'VonMises', 'SkewNormal',
-           'Logistic', 'Interpolated']
+           'Triangular', 'Gumbel', 'Logistic', 'Interpolated']
 
 
 class PositiveContinuous(Continuous):
@@ -942,7 +942,7 @@ class StudentT(Continuous):
         dfs = [1., 5., 5., 5.]
         for mu, sd, df in zip(mus, sds, dfs):
             pdf = st.t.pdf(x, df, loc=mu, scale=sd)
-            plt.plot(x, pdf, label=r'$\mu$ = {}, $\sigma$ = {}, $\nu$ = {}'.format(mu, lam, df))
+            plt.plot(x, pdf, label=r'$\mu$ = {}, $\sigma$ = {}, $\nu$ = {}'.format(mu, sd, df))
         plt.xlabel('x', fontsize=12)
         plt.ylabel('f(x)', fontsize=12)
         plt.legend(loc=1)
@@ -1715,8 +1715,8 @@ class ExGaussian(Continuous):
         sds = [1., 1., 3., 1.]
         nus = [1., 1., 1., 4.]
         for mu, sd, nu in zip(mus, sds, nus):
-            pdf = st.exponnorm.pdf(x, nu/sigma, loc=mu, scale=sd)
-            plt.plot(x, pdf, label=r'$\mu$ = {}, $\sigma$ = {}, $\nu$ = {}'.format(mu, sigma, nu))
+            pdf = st.exponnorm.pdf(x, nu/sd, loc=mu, scale=sd)
+            plt.plot(x, pdf, label=r'$\mu$ = {}, $\sigma$ = {}, $\nu$ = {}'.format(mu, sd, nu))
         plt.xlabel('x', fontsize=12)
         plt.ylabel('f(x)', fontsize=12)
         plt.legend(loc=1)
@@ -2092,19 +2092,19 @@ class Gumbel(Continuous):
         plt.show()
 
 
-        ========  ==========================================
-        Support   :math:`x \in \mathbb{R}`
-        Mean      :math:`\mu + \beta\gamma`, where \gamma is the Euler-Mascheroni constant
-        Variance  :math:`\frac{\pi^2}{6} \beta^2)`
-        ========  ==========================================
+    ========  ==========================================
+    Support   :math:`x \in \mathbb{R}`
+    Mean      :math:`\mu + \beta\gamma`, where \gamma is the Euler-Mascheroni constant
+    Variance  :math:`\frac{\pi^2}{6} \beta^2)`
+    ========  ==========================================
 
-        Parameters
-        ----------
-        mu : float
-            Location parameter.
-        beta : float
-            Scale parameter (beta > 0).
-        """
+    Parameters
+    ----------
+    mu : float
+        Location parameter.
+    beta : float
+        Scale parameter (beta > 0).
+    """
 
     def __init__(self, mu=0, beta=1.0, **kwargs):
         self.mu = tt.as_tensor_variable(mu)
@@ -2149,12 +2149,6 @@ class Logistic(Continuous):
        f(x \mid \mu, s) =
            \frac{\exp\left(-\frac{x - \mu}{s}\right)}{s \left(1 + \exp\left(-\frac{x - \mu}{s}\right)\right)^2}
 
-    ========  ==========================================
-    Support   :math:`x \in \mathbb{R}`
-    Mean      :math:`\mu`
-    Variance  :math:`\frac{s^2 \pi^2}{3}`
-    ========  ==========================================
-
     .. plot::
 
         import matplotlib.pyplot as plt
@@ -2171,6 +2165,12 @@ class Logistic(Continuous):
         plt.ylabel('f(x)', fontsize=12)
         plt.legend(loc=1)
         plt.show()
+
+    ========  ==========================================
+    Support   :math:`x \in \mathbb{R}`
+    Mean      :math:`\mu`
+    Variance  :math:`\frac{s^2 \pi^2}{3}`
+    ========  ==========================================
 
     Parameters
     ----------
@@ -2193,9 +2193,7 @@ class Logistic(Continuous):
         s = self.s
 
         return bound(
-            -(value - mu) / s - tt.log(s) - 2 * tt.log1p(tt.exp(-(value - mu) / s)),
-            s > 0
-        )
+            -(value - mu) / s - tt.log(s) - 2 * tt.log1p(tt.exp(-(value - mu) / s)), s > 0)
 
     def random(self, point=None, size=None, repeat=None):
         mu, s = draw_values([self.mu, self.s], point=point)
@@ -2204,8 +2202,7 @@ class Logistic(Continuous):
             stats.logistic.rvs,
             loc=mu, scale=s,
             dist_shape=self.shape,
-            size=size
-        )
+            size=size)
 
     def _repr_latex_(self, name=None, dist=None):
         if dist is None:
