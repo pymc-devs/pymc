@@ -188,7 +188,7 @@ def sample(draws=500, step=None, init='auto', n_init=200000, start=None,
            nuts_kwargs=None, step_kwargs=None, progressbar=True, model=None,
            random_seed=None, live_plot=False, discard_tuned_samples=True,
            live_plot_kwargs=None, compute_convergence_checks=True,
-           use_mmap=True, **kwargs):
+           use_mmap=False, **kwargs):
     """Draw samples from the posterior using the given step methods.
 
     Multiple step methods are supported via compound step methods.
@@ -298,7 +298,7 @@ def sample(draws=500, step=None, init='auto', n_init=200000, start=None,
     compute_convergence_checks : bool, default=True
         Whether to compute sampler statistics like gelman-rubin and
         effective_n.
-    use_mmap : bool, default=True
+    use_mmap : bool, default=False
         Whether to use joblib's memory mapping to share numpy arrays when
         sampling across multiple cores.
 
