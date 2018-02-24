@@ -28,16 +28,19 @@ class Binomial(Discrete):
     .. math:: f(x \mid n, p) = \binom{n}{x} p^x (1-p)^{n-x}
 
     .. plot::
+
         import matplotlib.pyplot as plt
         import numpy as np
         import scipy.stats as st
         plt.style.use('seaborn-darkgrid')
-        x = np.arange(0, 20)
+        x = np.arange(0, 22)
         ns = [10, 17]
         ps = [0.5, 0.7]
         for n, p in zip(ns, ps):
             pmf = st.binom.pmf(x, n, p)
             plt.plot(x, pmf, '-o', label='n = {}, p = {}'.format(n, p))
+        plt.xlabel('x', fontsize=14)
+        plt.ylabel('f(x)', fontsize=14)
         plt.legend(loc=1)
         plt.show()
 
@@ -100,6 +103,7 @@ class BetaBinomial(Discrete):
            \frac{B(x + \alpha, n - x + \beta)}{B(\alpha, \beta)}
 
     .. plot::
+
         import matplotlib.pyplot as plt
         import numpy as np
         import scipy.stats as st
@@ -117,6 +121,8 @@ class BetaBinomial(Discrete):
         for a, b in zip(alphas, betas):
             pmf = BetaBinom(a, b, n, x)
             plt.plot(x, pmf, '-o', label=r'$\alpha$ = {}, $\beta$ = {}, n = {}'.format(a, b, n))
+        plt.xlabel('x', fontsize=12)
+        plt.ylabel('f(x)', fontsize=12)
         plt.ylim(0)
         plt.legend(loc=9)
         plt.show()
@@ -192,6 +198,7 @@ class Bernoulli(Discrete):
     .. math:: f(x \mid p) = p^{x} (1-p)^{1-x}
 
     .. plot::
+
         import matplotlib.pyplot as plt
         import numpy as np
         import scipy.stats as st
@@ -200,6 +207,8 @@ class Bernoulli(Discrete):
         for p in [0, 0.5, 0.8]:
             pmf = st.bernoulli.pmf(x, p)
             plt.plot(x, pmf, '-o', label='p = {}'.format(p))
+        plt.xlabel('x', fontsize=12)
+        plt.ylabel('f(x)', fontsize=12)
         plt.ylim(0)
         plt.legend(loc=9)
         plt.show()
@@ -269,6 +278,7 @@ class DiscreteWeibull(Discrete):
     .. math:: f(x \mid q, \beta) = q^{x^{\beta}} - q^{(x + 1)^{\beta}}
 
     .. plot::
+
         import matplotlib.pyplot as plt
         import numpy as np
         import scipy.stats as st
@@ -284,6 +294,8 @@ class DiscreteWeibull(Discrete):
         for q, b in zip(qs, betas):
             pmf = DiscreteWeibull(q, b, x)
             plt.plot(x, pmf, '-o', label=r'q = {}, $\beta$ = {}'.format(q, b))
+        plt.xlabel('x', fontsize=12)
+        plt.ylabel('f(x)', fontsize=12)
         plt.ylim(0)
         plt.legend(loc=1)
         plt.show()
@@ -354,6 +366,7 @@ class Poisson(Discrete):
     .. math:: f(x \mid \mu) = \frac{e^{-\mu}\mu^x}{x!}
 
     .. plot::
+
         import matplotlib.pyplot as plt
         import numpy as np
         import scipy.stats as st
@@ -362,6 +375,8 @@ class Poisson(Discrete):
         for m in [0.5, 3, 8]:
             pmf = st.poisson.pmf(x, m)
             plt.plot(x, pmf, '-o', label='$\mu$ = {}'.format(m))
+        plt.xlabel('x', fontsize=12)
+        plt.ylabel('f(x)', fontsize=12)
         plt.ylim(0)
         plt.legend(loc=1)
         plt.show()
@@ -427,6 +442,7 @@ class NegativeBinomial(Discrete):
            (\alpha/(\mu+\alpha))^\alpha (\mu/(\mu+\alpha))^x
 
     .. plot::
+
         import matplotlib.pyplot as plt
         import numpy as np
         import scipy.stats as st
@@ -437,12 +453,14 @@ class NegativeBinomial(Discrete):
             pmf = special.binom(x + a - 1, x) * (a / (m + a))**a * (m / (m + a))**x
             return pmf
 
-        x = np.arange(0, 20)
+        x = np.arange(0, 22)
         alphas = [0.9, 2, 4]
         mus = [1, 2, 8]
         for a, m in zip(alphas, mus):
             pmf = NegBinom(a, m, x)
             plt.plot(x, pmf, '-o', label=r'$\alpha$ = {}, $\mu$ = {}'.format(a, m))
+        plt.xlabel('x', fontsize=12)
+        plt.ylabel('f(x)', fontsize=12)
         plt.legend(loc=1)
         plt.show()
 
@@ -507,6 +525,7 @@ class Geometric(Discrete):
     .. math:: f(x \mid p) = p(1-p)^{x-1}
 
     .. plot::
+
         import matplotlib.pyplot as plt
         import numpy as np
         import scipy.stats as st
@@ -515,6 +534,8 @@ class Geometric(Discrete):
         for p in [0.1, 0.25, 0.75]:
             pmf = st.geom.pmf(x, p)
             plt.plot(x, pmf, '-o', label='p = {}'.format(p))
+        plt.xlabel('x', fontsize=12)
+        plt.ylabel('f(x)', fontsize=12)
         plt.legend(loc=1)
         plt.show()
 
@@ -562,6 +583,7 @@ class DiscreteUniform(Discrete):
     .. math:: f(x \mid lower, upper) = \frac{1}{upper-lower}
 
     .. plot::
+
         import matplotlib.pyplot as plt
         import numpy as np
         import scipy.stats as st
@@ -572,6 +594,8 @@ class DiscreteUniform(Discrete):
             x = np.arange(l, u+1)
             pmf = [1 / (u - l)] * len(x)
             plt.plot(x, pmf, '-o', label='lower = {}, upper = {}'.format(l, u))
+        plt.xlabel('x', fontsize=12)
+        plt.ylabel('f(x)', fontsize=12)
         plt.ylim(0, 0.4)
         plt.legend(loc=1)
         plt.show()
@@ -636,6 +660,7 @@ class Categorical(Discrete):
     .. math:: f(x \mid p) = p_x
 
     .. plot::
+
         import matplotlib.pyplot as plt
         import numpy as np
         import scipy.stats as st
@@ -644,6 +669,8 @@ class Categorical(Discrete):
         for p in ps:
             x = range(len(p))
             plt.plot(x, p, '-o', label='p = {}'.format(p))
+        plt.xlabel('x', fontsize=12)
+        plt.ylabel('f(x)', fontsize=12)
         plt.ylim(0)
         plt.legend(loc=1)
         plt.show()
@@ -767,11 +794,12 @@ class ZeroInflatedPoisson(Discrete):
             \end{array} \right.
 
     .. plot::
+
         import matplotlib.pyplot as plt
         import numpy as np
         import scipy.stats as st
         plt.style.use('seaborn-darkgrid')
-        x = np.arange(0, 20)
+        x = np.arange(0, 22)
         psis = [0.7, 0.4]
         thetas = [8, 4]
         for psi, theta in zip(psis, thetas):
@@ -780,6 +808,8 @@ class ZeroInflatedPoisson(Discrete):
             pmf[1:] =  psi * pmf[1:]
             pmf /= pmf.sum()
             plt.plot(x, pmf, '-o', label='$\\psi$ = {}, $\\theta$ = {}'.format(psi, theta))
+        plt.xlabel('x', fontsize=12)
+        plt.ylabel('f(x)', fontsize=12)
         plt.legend(loc=1)
         plt.show()
 
@@ -851,6 +881,7 @@ class ZeroInflatedBinomial(Discrete):
             \end{array} \right.
 
     .. plot::
+
         import matplotlib.pyplot as plt
         import numpy as np
         import scipy.stats as st
@@ -865,6 +896,8 @@ class ZeroInflatedBinomial(Discrete):
             pmf[1:] =  psi * pmf[1:]
             pmf /= pmf.sum()
             plt.plot(x, pmf, '-o', label='n = {}, p = {}, $\\psi$ = {}'.format(n, p, psi))
+        plt.xlabel('x', fontsize=12)
+        plt.ylabel('f(x)', fontsize=12)
         plt.legend(loc=1)
         plt.show()
 
@@ -958,6 +991,7 @@ class ZeroInflatedNegativeBinomial(Discrete):
        \right.
 
     .. plot::
+
         import matplotlib.pyplot as plt
         import numpy as np
         import scipy.stats as st
@@ -978,6 +1012,8 @@ class ZeroInflatedNegativeBinomial(Discrete):
         for a, m, psi in zip(alphas, mus, psis):
             pmf = ZeroInfNegBinom(a, m, psi, x)
             plt.plot(x, pmf, '-o', label=r'$\alpha$ = {}, $\mu$ = {}, $\psi$ = {}'.format(a, m, psi))
+        plt.xlabel('x', fontsize=12)
+        plt.ylabel('f(x)', fontsize=12)
         plt.legend(loc=1)
         plt.show()
 
