@@ -297,7 +297,22 @@ class BinaryMetropolis(ArrayStep):
 
 
 class BinaryGibbsMetropolis(ArrayStep):
-    """A Metropolis-within-Gibbs step method optimized for binary variables"""
+    """A Metropolis-within-Gibbs step method optimized for binary variables
+
+    Parameters
+    ----------
+    vars : list
+        List of variables for sampler
+    order : list or 'random'
+        List of integers indicating the Gibbs update order
+        e.g., [0, 2, 1, ...]. Default is random
+    transit_p : float
+        The diagonal of the transition kernel. A value > .5 gives anticorrelated proposals,
+        which resulting in more efficient antithetical sampling.
+    model : PyMC Model
+        Optional model for sampling step. Defaults to None (taken from context).
+
+    """
     name = 'binary_gibbs_metropolis'
 
     def __init__(self, vars, order='random', transit_p=.8, model=None):
@@ -333,12 +348,14 @@ class BinaryGibbsMetropolis(ArrayStep):
         logp_curr = logp(q)
 
         for idx in order:
-            state = [q[idx], True-q[idx]]
-            curr_val, q[idx] = q[idx], state[int(nr.rand() < self.transit_p)]
-            logp_prop = logp(q)
-            q[idx], accepted = metrop_select(logp_prop - logp_curr, q[idx], curr_val)
-            if accepted:
-                logp_curr = logp_prop
+            # No need to do metropolis update if the same value is proposed,
+            # as you will get the same value regardless of accepted or reject
+            if nr.rand() < self.transit_p:
+                curr_val, q[idx] = q[idx], True - q[idx]
+                logp_prop = logp(q)
+                q[idx], accepted = metrop_select(logp_prop - logp_curr, q[idx], curr_val)
+                if accepted:
+                    logp_curr = logp_prop
 
         return q
 
