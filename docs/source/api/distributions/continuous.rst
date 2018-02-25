@@ -29,6 +29,7 @@ Continuous
    VonMises
    Triangular
    Gumbel
+   Logistic
    Interpolated
 
 .. automodule:: pymc3.distributions.continuous
