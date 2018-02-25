@@ -1,5 +1,3 @@
-from collections import OrderedDict
-
 try:
     import matplotlib.pyplot as plt
 except ImportError:  # mpl is optional
