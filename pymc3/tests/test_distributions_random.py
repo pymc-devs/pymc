@@ -741,43 +741,25 @@ class TestScalarParameterSamples(SeededTest):
                      size=1000,
                      ref_rand=ref_rand)
 
-    def test_density_dist(self):
-        def ref_rand(size, mu, sd):
-            return st.norm.rvs(size=size, loc=mu, scale=sd)
-        
-        class TestDensityDist(pm.DensityDist):
+def test_density_dist_with_random_sampleable():
+    with pm.Model() as model:
+        mu = pm.Normal('mu',0,1)
+        normal_dist = pm.Normal.dist(mu, 1)
+        pm.DensityDist('density_dist', normal_dist.logp, observed=np.random.randn(100), random=normal_dist.random)
+        trace = pm.sample(100)
 
-            def __init__(self, **kwargs):
-                norm_dist = pm.Normal.dist()
-                super(TestDensityDist, self).__init__(logp=norm_dist.logp, random=norm_dist.random)
+    samples = 500
+    ppc = pm.sample_ppc(trace, samples=samples, model=model, size=100)
+    assert len(ppc['density_dist']) == samples
 
-        pymc3_random(TestDensityDist, {},ref_rand=ref_rand)
 
-        def check_model_samplability(self):
-            model = pm.Model()
-            with model:
-                normal_dist = pm.Normal.dist()
-                density_dist = pm.DensityDist('density_dist', normal_dist.logp, observed=np.random.randn(100), random=normal_dist.random)
-                step = pm.Metropolis()
-                trace = pm.sample(100, step, tuning=0)
+def test_density_dist_without_random_not_sampleable():
+    with pm.Model() as model:
+        mu = pm.Normal('mu',0,1)
+        normal_dist = pm.Normal.dist(mu, 1)
+        pm.DensityDist('density_dist', normal_dist.logp, observed=np.random.randn(100))
+        trace = pm.sample(100)
 
-            try:
-                ppc = pm.sample_ppc(trace, samples=500, model=model, size=100)
-                npt.assert_true(len(ppc) == 0, 'length of ppc sample is zero')
-            except:
-                assert False
-
-        def check_scipy_distributions(self):
-            model = pm.Model()
-            with model:
-                norm_dist_logp = st.norm.logpdf
-                norm_dist_random = np.random.normal
-                density_dist = pm.DensityDist('density_dist', normal_dist_logp, observed=np.random.randn(100), random=normal_dist_random)
-                step = pm.Metropolis()
-                trace = pm.sample(100, step, tuning=0)
-
-            try:
-                ppc = pm.sample_ppc(trace, samples=500, model=model, size=100)
-                npt.assert_true(len(ppc) == 0, 'length of ppc sample is zero')
-            except:
-                assert False
+    samples = 500
+    with pytest.raises(ValueError):
+        pm.sample_ppc(trace, samples=samples, model=model, size=100)

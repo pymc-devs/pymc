@@ -186,11 +186,10 @@ class DensityDist(Distribution):
         --------
         .. code-block:: python
             with pm.Model():
-                normal_dist = pm.Normal.dist()
-                density_dist = pm.DensityDist('density_dist', normal_dist.logp, observed=np.random.randn(100),
-                random=normal_dist.random)
-                step = pm.Metropolis()
-                trace = pm.sample(100, step, tuning=0)
+                mu = pm.Normal('mu',0,1)
+                normal_dist = pm.Normal.dist(mu, 1)
+                pm.DensityDist('density_dist', normal_dist.logp, observed=np.random.randn(100), random=normal_dist.random)
+                trace = pm.sample(100)
 
     """
 
