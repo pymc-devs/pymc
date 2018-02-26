@@ -1,21 +1,32 @@
 import functools
 import pickle
-
+import collections
+from .util import biwrap
 CACHE_REGISTRY = []
 
 
-def memoize(obj):
+@biwrap
+def memoize(obj, bound=False):
     """
     An expensive memoizer that works with unhashables
     """
-    cache = obj.cache = {}
-    CACHE_REGISTRY.append(cache)
+    # this is declared not to be a bound method, so just attach new attr to obj
+    if not bound:
+        obj.cache = {}
+        CACHE_REGISTRY.append(obj.cache)
 
     @functools.wraps(obj)
     def memoizer(*args, **kwargs):
-        # remember first argument as well, used to clear cache for particular instance
-        key = (hashable(args[:1]), hashable(args), hashable(kwargs))
-
+        if not bound:
+            key = (hashable(args), hashable(kwargs))
+            cache = obj.cache
+        else:
+            # bound methods have self as first argument, remove it to compute key
+            key = (hashable(args[1:]), hashable(kwargs))
+            if not hasattr(args[0], '_cache'):
+                setattr(args[0], '_cache', collections.defaultdict(dict))
+                # do not add to cache regestry
+            cache = getattr(args[0], '_cache')[obj.__name__]
         if key not in cache:
             cache[key] = obj(*args, **kwargs)
 
@@ -23,25 +34,26 @@ def memoize(obj):
     return memoizer
 
 
-def clear_cache():
-    for c in CACHE_REGISTRY:
-        c.clear()
+def clear_cache(obj=None):
+    if obj is None:
+        for c in CACHE_REGISTRY:
+            c.clear()
+    else:
+        if isinstance(obj, WithMemoization):
+            for v in getattr(obj, '_cache', {}).values():
+                v.clear()
+        else:
+            obj.cache.clear()
 
 
 class WithMemoization(object):
     def __hash__(self):
         return hash(id(self))
 
-    def __del__(self):
-        # regular property call with args (self, )
-        key = hash((self, ))
-        to_del = []
-        for c in CACHE_REGISTRY:
-            for k in c.keys():
-                if k[0] == key:
-                    to_del.append((c, k))
-        for (c, k) in to_del:
-            del c[k]
+    def __getstate__(self):
+        state = self.__dict__.copy()
+        state.pop('_cache', None)
+        return state
 
 
 def hashable(a):
