@@ -106,10 +106,10 @@ def node_property(f):
     if isinstance(f, str):
 
         def wrapper(fn):
-            return property(memoize(change_flags(compute_test_value='off')(append_name(f)(fn))))
+            return property(memoize(change_flags(compute_test_value='off')(append_name(f)(fn)), bound=True))
         return wrapper
     else:
-        return property(memoize(change_flags(compute_test_value='off')(f)))
+        return property(memoize(change_flags(compute_test_value='off')(f), bound=True))
 
 
 @change_flags(compute_test_value='ignore')
@@ -1487,7 +1487,7 @@ class Approximation(WithMemoization):
         return found
 
     @property
-    @memoize
+    @memoize(bound=True)
     @change_flags(compute_test_value='off')
     def sample_dict_fn(self):
         s = tt.iscalar()

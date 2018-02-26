@@ -619,7 +619,7 @@ class Model(six.with_metaclass(InitContextMeta, Context, Factor, WithMemoization
         return self.parent is None
 
     @property
-    @memoize
+    @memoize(bound=True)
     def bijection(self):
         vars = inputvars(self.cont_vars)
 
