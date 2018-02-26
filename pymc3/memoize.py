@@ -55,6 +55,9 @@ class WithMemoization(object):
         state.pop('_cache', None)
         return state
 
+    def __setstate__(self, state):
+        self.__dict__.update(state)
+
 
 def hashable(a):
     """

@@ -569,7 +569,7 @@ class Model(six.with_metaclass(InitContextMeta, Context, Factor, WithMemoization
     """
     def __new__(cls, *args, **kwargs):
         # resolves the parent instance
-        instance = object.__new__(cls)
+        instance = super(Model, cls).__new__(cls)
         if kwargs.get('model') is not None:
             instance._parent = kwargs.get('model')
         elif cls.get_contexts():
