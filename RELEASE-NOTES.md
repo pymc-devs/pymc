@@ -4,7 +4,6 @@
 
 ### New features
 
-<<<<<<< refs/remotes/pymc-devs/master
 - Add `logit_p` keyword to `pm.Bernoulli`, so that users can specify the logit of the success probability. This is faster and more stable than using `p=tt.nnet.sigmoid(logit_p)`.
 - Add `random` keyword to `pm.DensityDist` thus enabling users to pass custom random method which in turn makes sampling from a `DensityDist` possible.
 - Effective sample size computation is updated. The estimation uses Geyer's initial positive sequence, which no longer truncates the autocorrelation series inaccurately. `pm.diagnostics.effective_n` now can reports N_eff>N.
@@ -12,6 +11,8 @@
   Gaussian Process implementation for efficient inference, along with
   lower-level functions such as `cartesian` and `kronecker` products.
 - Added `Coregion` covariance function.
+- Add new 'pairplot' function, for plotting scatter or hexbin matrices of sampled parameters.
+  Optionally it can plot divergences.
 - Plots of discrete distributions in the docstrings
 
 ### Fixes
@@ -31,7 +32,6 @@ deviation. This works better for multimodal distributions. Functions using KDE p
 
 - `VonMises` does not overflow for large values of kappa. i0 and i1 have been removed and we now use
    log_i0 to compute the logp.
->>>>>>> Changes in test for random method in DensityDist
 
 ### Deprecations
 
