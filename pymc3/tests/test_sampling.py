@@ -302,3 +302,15 @@ def test_exec_nuts_init(method):
         assert len(start) == 2
         assert isinstance(start[0], dict)
         assert 'a' in start[0] and 'b_log__' in start[0]
+
+
+def test_sample_prior():
+    observed = np.random.normal(10, 1, size=200)
+    with pm.Model():
+        # Use a prior that's way off to show we're actually sampling from it
+        mu = pm.Normal('mu', mu=-10, sd=1)
+        pm.Normal('x_obs', mu=mu, sd=1, observed=observed)
+        prior = pm.sample_prior()
+    
+    assert (prior['mu'] < 0).all()
+    assert (prior['x_obs'] < 0).all()

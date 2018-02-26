@@ -25,7 +25,7 @@ from tqdm import tqdm
 import sys
 sys.setrecursionlimit(10000)
 
-__all__ = ['sample', 'iter_sample', 'sample_ppc', 'sample_ppc_w', 'init_nuts']
+__all__ = ['sample', 'iter_sample', 'sample_ppc', 'sample_ppc_w', 'init_nuts', 'sample_prior']
 
 STEP_METHODS = (NUTS, HamiltonianMC, Metropolis, BinaryMetropolis,
                 BinaryGibbsMetropolis, Slice, CategoricalGibbsMetropolis)
@@ -1204,6 +1204,63 @@ def sample_ppc_w(traces, samples=None, models=None, weights=None,
             indices.close()
 
     return {k: np.asarray(v) for k, v in ppc.items()}
+
+
+def sample_prior(samples=500, model=None, vars=None, size=None,
+                   random_seed=None, progressbar=True):
+    """Generate samples from the prior of a model.
+
+    Parameters
+    ----------
+    samples : int
+        Number of samples from the prior to generate. Defaults to 500.
+    model : Model (optional if in `with` context)
+    vars : iterable
+        Variables for which to compute the posterior predictive samples.
+        Defaults to `model.named_vars`.
+    size : int
+        The number of random draws from the distribution specified by the
+        parameters in each sample of the trace.
+    random_seed : int
+        Seed for the random number generator.
+    progressbar : bool
+        Whether or not to display a progress bar in the command line.
+
+    Returns
+    -------
+    dict
+        Dictionary with the variables as keys. The values are arrays of prior samples.
+    """
+        
+    model = modelcontext(model)
+
+    if vars is None:
+        vars = set(model.named_vars.keys())
+
+    if random_seed is not None:
+        np.random.seed(random_seed)
+
+    if progressbar:
+        indices = tqdm(range(samples))
+
+    try:
+        prior = {var: [] for var in vars}
+        for _ in indices:
+            point = {}
+            for var_name, var in model.named_vars.items():
+                val = var.distribution.random(point=point, size=size)
+                point[var_name] = val
+                if var_name in vars:
+                    prior[var_name].append(val)
+                    
+    except KeyboardInterrupt:
+        pass
+
+    finally:
+        if progressbar:
+            indices.close()
+
+    return {k: np.asarray(v) for k, v in prior.items()}
 
 
 def init_nuts(init='auto', chains=1, n_init=500000, model=None,
