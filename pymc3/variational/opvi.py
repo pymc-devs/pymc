@@ -755,13 +755,13 @@ class Group(WithMemoization):
             if vfam is not None and params is not None:
                 raise TypeError('Cannot call Group with both `vfam` and `params` provided')
             elif vfam is not None:
-                return object.__new__(cls.group_for_short_name(vfam))
+                return super(Group, cls).__new__(cls.group_for_short_name(vfam))
             elif params is not None:
-                return object.__new__(cls.group_for_params(params))
+                return super(Group, cls).__new__(cls.group_for_params(params))
             else:
                 raise TypeError('Need to call Group with either `vfam` or `params` provided')
         else:
-            return object.__new__(cls)
+            return super(Group, cls).__new__(cls)
 
     def __init__(self, group,
                  vfam=None,
