@@ -15,8 +15,8 @@ from ..distributions import (DensityDist, Categorical, Multinomial, VonMises, Di
                              NegativeBinomial, Geometric, Exponential, ExGaussian, Normal,
                              Flat, LKJCorr, Wald, ChiSquared, HalfNormal, DiscreteUniform,
                              Bound, Uniform, Triangular, Binomial, SkewNormal, DiscreteWeibull,
-                             Gumbel, Logistic, LogitNormal, Interpolated, ZeroInflatedBinomial,
-                             HalfFlat, AR1, KroneckerNormal)
+                             Gumbel, Logistic, Interpolated, ZeroInflatedBinomial, HalfFlat,
+                             AR1, OrderedLogistic)
 from ..distributions import continuous
 from pymc3.theanof import floatX
 from numpy import array, inf, log, exp
@@ -211,6 +211,14 @@ class ProductDomain(object):
 
 def Vector(D, n):
     return ProductDomain([D] * n)
+
+
+def SortedVector(n):
+    vals = []
+    np.random.seed(42)
+    for _ in range(10):
+        vals.append(np.sort(np.random.randn(n)))
+    return Domain(vals, edges=(None, None))
 
 
 def RealMatrix(n, m):

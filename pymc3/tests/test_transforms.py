@@ -2,8 +2,9 @@ import pymc3.distributions.transforms as tr
 import numpy as np
 import theano
 import theano.tensor as tt
-from .test_distributions import Simplex, Rplusbig, Rminusbig, Unit, R, Vector, MultiSimplex, Circ
-
+from .test_distributions import (Simplex, Rplusbig, Rminusbig,
+                                 Unit, R, Vector, MultiSimplex,
+                                 Circ, SortedVector)
 from .checks import close_to, close_to_logical
 from ..theanof import jacobian
 
@@ -20,7 +21,6 @@ def check_transform(transform, domain, constructor=tt.dscalar, test=0):
     forward_f = theano.function([x], transform.forward(x))
     # test transform identity
     identity_f = theano.function([x], transform.backward(transform.forward(x)))
-
     for val in domain.vals:
         close_to(val, identity_f(val), tol)
         close_to(transform.forward_val(val), forward_f(val), tol)
@@ -96,17 +96,6 @@ def check_jacobian_det(transform, domain,
         close_to(
             actual_ljd(yval),
             computed_ljd(yval), tol)
-
-def test_ordered():
-    check_vector_transform_identity(tr.ordered, Vector(R, 6))
-
-def test_ordered_jacobian_det():
-    check_jacobian_det(tr.ordered, Vector(R, 2),
-                      tt.dvector, np.array([0, 0]), elemwise=True)
-
-def test_ordered_vals():
-    vals = get_values(tr.ordered)
-    close_to_logicals(vals > 0, True, tol)
 
 
 def test_log():
@@ -184,3 +173,18 @@ def test_circular():
     close_to_logical(vals < np.pi, True, tol)
 
     assert isinstance(trans.forward(1), tt.TensorConstant)
+
+
+def test_ordered():
+    check_vector_transform_identity(tr.ordered, SortedVector(6))
+
+
+def test_ordered_jacobian_det():
+    check_jacobian_det(tr.ordered, Vector(R, 2),
+                      tt.dvector, np.array([0, 0]), elemwise=False)
+
+
+def test_ordered_vals():
+    vals = get_values(tr.ordered, Vector(R, 3),
+                      tt.dvector, np.zeros(3))
+    close_to_logical(np.diff(vals) >= 0, True, tol)
