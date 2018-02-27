@@ -14,8 +14,8 @@ from ..distributions import (DensityDist, Categorical, Multinomial, VonMises, Di
                              NegativeBinomial, Geometric, Exponential, ExGaussian, Normal,
                              Flat, LKJCorr, Wald, ChiSquared, HalfNormal, DiscreteUniform,
                              Bound, Uniform, Triangular, Binomial, SkewNormal, DiscreteWeibull,
-                             Gumbel, Logistic, Interpolated, ZeroInflatedBinomial, HalfFlat, AR1,
-                             KroneckerNormal)
+                             Gumbel, Logistic, LogitNormal, Interpolated, ZeroInflatedBinomial,
+                             HalfFlat, AR1, KroneckerNormal)
 from ..distributions import continuous
 from pymc3.theanof import floatX
 from numpy import array, inf, log, exp
@@ -27,6 +27,7 @@ import pytest
 from scipy import integrate
 import scipy.stats.distributions as sp
 import scipy.stats
+from scipy.special import logit
 import theano
 import theano.tensor as tt
 from ..math import kronecker
@@ -1034,6 +1035,11 @@ class TestMatchesScipy(SeededTest):
         self.pymc3_matches_scipy(Logistic, R, {'mu': R, 's': Rplus},
                                  lambda value, mu, s: sp.logistic.logpdf(value, mu, s),
                                  decimal=select_by_precision(float64=6, float32=1))
+
+    def test_logitnormal(self):
+        self.pymc3_matches_scipy(LogitNormal, Unit, {'mu': R, 'sd': Rplus},
+                                 lambda value, mu, sd: (sp.norm.logpdf(logit(value), mu, sd)
+                                                        - (np.log(value) + np.log1p(-value))))
 
     def test_multidimensional_beta_construction(self):
         with Model():

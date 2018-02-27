@@ -30,6 +30,7 @@ Continuous
    Triangular
    Gumbel
    Logistic
+   LogitNormal
    Interpolated
 
 .. automodule:: pymc3.distributions.continuous

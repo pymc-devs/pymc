@@ -10,6 +10,7 @@ from __future__ import division
 import numpy as np
 import theano.tensor as tt
 from scipy import stats
+from scipy.special import expit
 from scipy.interpolate import InterpolatedUnivariateSpline
 import warnings
 
@@ -17,6 +18,7 @@ from pymc3.theanof import floatX
 from . import transforms
 from pymc3.util import get_variable_name
 from .special import log_i0
+from ..math import invlogit, logit
 from .dist_math import bound, logpow, gammaln, betaln, std_cdf, alltrue_elemwise, SplineWrapper
 from .distribution import Continuous, draw_values, generate_samples
 
@@ -24,7 +26,7 @@ __all__ = ['Uniform', 'Flat', 'HalfFlat', 'Normal', 'Beta', 'Exponential',
            'Laplace', 'StudentT', 'Cauchy', 'HalfCauchy', 'Gamma', 'Weibull',
            'HalfStudentT', 'Lognormal', 'ChiSquared', 'HalfNormal', 'Wald',
            'Pareto', 'InverseGamma', 'ExGaussian', 'VonMises', 'SkewNormal',
-           'Triangular', 'Gumbel', 'Logistic', 'Interpolated']
+           'Triangular', 'Gumbel', 'Logistic', 'LogitNormal', 'Interpolated']
 
 
 class PositiveContinuous(Continuous):
@@ -2260,6 +2262,86 @@ class Logistic(Continuous):
         return r'${} \sim \text{{Logistic}}(\mathit{{mu}}={},~\mathit{{s}}={})$'.format(name,
                                                                 get_variable_name(mu),
                                                                 get_variable_name(s))
+
+
+class LogitNormal(UnitContinuous):
+    R"""
+    Logit-Normal log-likelihood.
+
+    The pdf of this distribution is
+
+    .. math::
+       f(x \mid \mu, \tau) =
+           \frac{1}{x(1-x)} \sqrt{\frac{\tau}{2\pi}}
+           \exp\left\{ -\frac{\tau}{2} (logit(x)-\mu)^2 \right\}
+
+
+    .. plot::
+
+        import matplotlib.pyplot as plt
+        import numpy as np
+        import scipy.stats as st
+        from scipy.special import logit
+        plt.style.use('seaborn-darkgrid')
+        x = np.linspace(0.0001, 0.9999, 500)
+        mus = [0., 0., 0., 1.]
+        sds = [0.3, 1., 2., 1.]
+        for mu, sd in  zip(mus, sds):
+            pdf = st.norm.pdf(logit(x), loc=mu, scale=sd) * 1/(x * (1-x))
+            plt.plot(x, pdf, label=r'$\mu$ = {}, $\sigma$ = {}'.format(mu, sd))
+            plt.legend(loc=1)
+        plt.show()
+
+    ========  ==========================================
+    Support   :math:`x \in (0, 1)`
+    Mean      no analytical solution
+    Variance  no analytical solution
+    ========  ==========================================
+
+    Parameters
+    ----------
+    mu : float
+        Location parameter.
+    sd : float
+        Scale parameter (sd > 0).
+    tau : float
+        Scale parameter (tau > 0).
+    """
+
+    def __init__(self, mu=0, sd=None, tau=None, **kwargs):
+        self.mu = mu = tt.as_tensor_variable(mu)
+        tau, sd = get_tau_sd(tau=tau, sd=sd)
+        self.sd = tt.as_tensor_variable(sd)
+        self.tau = tau = tt.as_tensor_variable(tau)
+
+        self.median = invlogit(mu)
+        assert_negative_support(sd, 'sd', 'LogitNormal')
+        assert_negative_support(tau, 'tau', 'LogitNormal')
+
+        super(LogitNormal, self).__init__(**kwargs)
+
+    def random(self, point=None, size=None, repeat=None):
+        mu, _, sd = draw_values([self.mu, self.tau, self.sd], point=point)
+        return expit(generate_samples(stats.norm.rvs, loc=mu, scale=sd, dist_shape=self.shape,
+                                      size=size))
+
+    def logp(self, value):
+        sd = self.sd
+        mu = self.mu
+        tau = self.tau
+        return bound(-0.5 * tau * (logit(value) - mu) ** 2
+                     + 0.5 * tt.log(tau / (2. * np.pi))
+                     - tt.log(value * (1 - value)), value > 0, value < 1, tau > 0)
+
+    def _repr_latex_(self, name=None, dist=None):
+        if dist is None:
+            dist = self
+        sd = dist.sd
+        mu = dist.mu
+        name = r'\text{%s}' % name
+        return r'${} \sim \text{{LogitNormal}}(\mathit{{mu}}={},~\mathit{{sd}}={})$'.format(name,
+                                                                get_variable_name(mu),
+                                                                get_variable_name(sd))
 
 
 class Interpolated(Continuous):
