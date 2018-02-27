@@ -15,8 +15,9 @@ from ..distributions import (DensityDist, Categorical, Multinomial, VonMises, Di
                              NegativeBinomial, Geometric, Exponential, ExGaussian, Normal,
                              Flat, LKJCorr, Wald, ChiSquared, HalfNormal, DiscreteUniform,
                              Bound, Uniform, Triangular, Binomial, SkewNormal, DiscreteWeibull,
-                             Gumbel, Logistic, Interpolated, ZeroInflatedBinomial, HalfFlat,
-                             AR1, OrderedLogistic)
+                             Gumbel, Logistic, Interpolated, ZeroInflatedBinomial, HalfFlat, AR1,
+                             KroneckerNormal, OrderedLogistic)
+
 from ..distributions import continuous
 from pymc3.theanof import floatX
 from numpy import array, inf, log, exp
@@ -30,7 +31,7 @@ import scipy.stats.distributions as sp
 import scipy.stats
 import theano
 import theano.tensor as tt
-
+from ..math import kronecker
 
 def get_lkj_cases():
     """
@@ -274,6 +275,33 @@ def matrix_normal_logpdf_chol(value, mu, rowchol, colchol):
                                     np.dot(colchol, colchol.T))
 
 
+def kron_normal_logpdf_cov(value, mu, covs, sigma):
+    cov = kronecker(*covs).eval()
+    if sigma is not None:
+        cov += sigma**2 * np.eye(*cov.shape)
+    return scipy.stats.multivariate_normal.logpdf(value, mu, cov).sum()
+
+
+def kron_normal_logpdf_chol(value, mu, chols, sigma):
+    covs = [np.dot(chol, chol.T) for chol in chols]
+    return kron_normal_logpdf_cov(value, mu, covs, sigma=sigma)
+
+
+def kron_normal_logpdf_evd(value, mu, evds, sigma):
+    covs = []
+    for eigs, Q in evds:
+        try:
+            eigs = eigs.eval()
+        except AttributeError:
+            pass
+        try:
+            Q = Q.eval()
+        except AttributeError:
+            pass
+        covs.append(np.dot(Q, np.dot(np.diag(eigs), Q.T)))
+    return kron_normal_logpdf_cov(value, mu, covs, sigma)
+
+
 def betafn(a):
     return floatX(scipy.special.gammaln(a).sum(-1) - scipy.special.gammaln(a.sum(-1)))
 
@@ -389,15 +417,23 @@ def PdMatrixCholUpper(n):
         raise ValueError("n out of bounds")
 
 
+def RandomPdMatrix(n):
+    A = np.random.rand(n, n)
+    return np.dot(A, A.T) + n * np.identity(n)
+
+
 class TestMatchesScipy(SeededTest):
     def pymc3_matches_scipy(self, pymc3_dist, domain, paramdomains, scipy_dist,
-                            decimal=None, extra_args=None):
+                            decimal=None, extra_args=None, scipy_args=None):
         if extra_args is None:
             extra_args = {}
+        if scipy_args is None:
+            scipy_args = {}
         model = build_model(pymc3_dist, domain, paramdomains, extra_args)
         value = model.named_vars['value']
 
         def logp(args):
+            args.update(scipy_args)
             return scipy_dist(**args)
         self.check_logp(model, value, domain, paramdomains, logp, decimal=decimal)
 
@@ -626,8 +662,12 @@ class TestMatchesScipy(SeededTest):
         self.checkd(BetaBinomial, Nat, {'alpha': Rplus, 'beta': Rplus, 'n': NatSmall})
 
     def test_bernoulli(self):
+        self.pymc3_matches_scipy(
+            Bernoulli, Bool, {'logit_p': R},
+            lambda value, logit_p: sp.bernoulli.logpmf(value, scipy.special.expit(logit_p)))
         self.pymc3_matches_scipy(Bernoulli, Bool, {'p': Unit},
                                  lambda value, p: sp.bernoulli.logpmf(value, p))
+
 
     def test_discrete_weibull(self):
         self.pymc3_matches_scipy(DiscreteWeibull, Nat,
@@ -752,6 +792,50 @@ class TestMatchesScipy(SeededTest):
                                   'colchol': PdMatrixChol(3)*mat_scale},
                                  matrix_normal_logpdf_chol,
                                  decimal=select_by_precision(float64=6, float32=0))
+
+    @pytest.mark.parametrize('n', [2, 3])
+    @pytest.mark.parametrize('m', [3])
+    @pytest.mark.parametrize('sigma', [None, 1.0])
+    def test_kroneckernormal(self, n, m, sigma):
+        np.random.seed(5)
+        N = n*m
+        covs = [RandomPdMatrix(n), RandomPdMatrix(m)]
+        chols = list(map(np.linalg.cholesky, covs))
+        evds = list(map(np.linalg.eigh, covs))
+        dom = Domain([np.random.randn(N)*0.1], edges=(None, None), shape=N)
+        mu = Domain([np.random.randn(N)*0.1], edges=(None, None), shape=N)
+
+        std_args = {'mu': mu}
+        cov_args = {'covs': covs}
+        chol_args = {'chols': chols}
+        evd_args = {'evds': evds}
+        if sigma is not None and sigma != 0:
+            std_args['sigma'] = Domain([sigma], edges=(None, None))
+        else:
+            for args in [cov_args, chol_args, evd_args]:
+                args['sigma'] = sigma
+
+        self.pymc3_matches_scipy(
+             KroneckerNormal, dom, std_args, kron_normal_logpdf_cov,
+             extra_args=cov_args, scipy_args=cov_args)
+        self.pymc3_matches_scipy(
+             KroneckerNormal, dom, std_args, kron_normal_logpdf_chol,
+             extra_args=chol_args, scipy_args=chol_args)
+        self.pymc3_matches_scipy(
+             KroneckerNormal, dom, std_args, kron_normal_logpdf_evd,
+             extra_args=evd_args, scipy_args=evd_args)
+
+        dom = Domain([np.random.randn(2, N)*0.1], edges=(None, None), shape=(2, N))
+
+        self.pymc3_matches_scipy(
+             KroneckerNormal, dom, std_args, kron_normal_logpdf_cov,
+             extra_args=cov_args, scipy_args=cov_args)
+        self.pymc3_matches_scipy(
+             KroneckerNormal, dom, std_args, kron_normal_logpdf_chol,
+             extra_args=chol_args, scipy_args=chol_args)
+        self.pymc3_matches_scipy(
+             KroneckerNormal, dom, std_args, kron_normal_logpdf_evd,
+             extra_args=evd_args, scipy_args=evd_args)
 
     @pytest.mark.parametrize('n', [1, 2])
     def test_mvt(self, n):
@@ -949,6 +1033,7 @@ class TestMatchesScipy(SeededTest):
         pt = {'eg': value}
         assert_almost_equal(model.fastlogp(pt), logp, decimal=select_by_precision(float64=6, float32=2), err_msg=str(pt))
 
+    @pytest.mark.xfail(condition=(theano.config.floatX == "float32"), reason="Fails on float32")
     def test_vonmises(self):
         self.pymc3_matches_scipy(
             VonMises, R, {'mu': Circ, 'kappa': Rplus},

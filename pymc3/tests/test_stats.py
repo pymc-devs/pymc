@@ -6,8 +6,8 @@ import pymc3 as pm
 from .helpers import SeededTest
 from ..tests import backend_fixtures as bf
 from ..backends import ndarray
-from ..stats import (summary, autocorr, hpd, mc_error, quantiles, make_indices,
-                     bfmi, r2_score)
+from ..stats import (summary, autocorr, autocov, hpd, mc_error, quantiles,
+                     make_indices, bfmi, r2_score)
 from ..theanof import floatX_array
 import pymc3.stats as pmstats
 from numpy.random import random, normal
@@ -105,52 +105,15 @@ class TestStats(SeededTest):
 
     def test_autocorr(self):
         """Test autocorrelation and autocovariance functions"""
-        assert_almost_equal(autocorr(self.normal_sample), 0, 2)
+        assert_almost_equal(autocorr(self.normal_sample)[1], 0, 2)
         y = [(self.normal_sample[i - 1] + self.normal_sample[i]) /
              2 for i in range(1, len(self.normal_sample))]
-        assert_almost_equal(autocorr(y), 0.5, 2)
-
-    def test_dic(self):
-        """Test deviance information criterion calculation"""
-        x_obs = np.arange(6)
-
-        with pm.Model():
-            p = pm.Beta('p', 1., 1., transform=None)
-            pm.Binomial('x', 5, p, observed=x_obs)
-
-            step = pm.Metropolis()
-            trace = pm.sample(100, step, chains=1)
-            calculated = pm.dic(trace)
-
-        mean_deviance = -2 * st.binom.logpmf(
-            np.repeat(np.atleast_2d(x_obs), 100, axis=0),
-            5,
-            np.repeat(np.atleast_2d(trace['p']), 6, axis=0).T).sum(axis=1).mean()
-        deviance_at_mean = -2 * st.binom.logpmf(x_obs, 5, trace['p'].mean()).sum()
-        actual = 2 * mean_deviance - deviance_at_mean
-
-        assert_almost_equal(calculated, actual, decimal=2)
-
-    def test_bpic(self):
-        """Test Bayesian predictive information criterion"""
-        x_obs = np.arange(6)
-
-        with pm.Model():
-            p = pm.Beta('p', 1., 1., transform=None)
-            pm.Binomial('x', 5, p, observed=x_obs)
-
-            step = pm.Metropolis()
-            trace = pm.sample(100, step, chains=1)
-            calculated = pm.bpic(trace)
-
-        mean_deviance = -2 * st.binom.logpmf(
-            np.repeat(np.atleast_2d(x_obs), 100, axis=0),
-            5,
-            np.repeat(np.atleast_2d(trace['p']), 6, axis=0).T).sum(axis=1).mean()
-        deviance_at_mean = -2 * st.binom.logpmf(x_obs, 5, trace['p'].mean()).sum()
-        actual = 3 * mean_deviance - 2 * deviance_at_mean
-
-        assert_almost_equal(calculated, actual, decimal=2)
+        assert_almost_equal(autocorr(np.asarray(y))[1], 0.5, 2)
+        lag = 5
+        acov_np = np.cov(self.normal_sample[:-lag],
+                         self.normal_sample[lag:], bias=1)[0, 1]
+        acov_pm = autocov(self.normal_sample)[lag]
+        assert_almost_equal(acov_pm, acov_np, 7)
 
     def test_waic(self):
         """Test widely available information criterion calculation"""

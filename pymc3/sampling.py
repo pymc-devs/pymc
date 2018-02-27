@@ -184,7 +184,7 @@ def _cpu_count():
 
 
 def sample(draws=500, step=None, init='auto', n_init=200000, start=None,
-           trace=None, chain_idx=0, chains=None, njobs=None, tune=500,
+           trace=None, chain_idx=0, chains=None, cores=None, tune=500,
            nuts_kwargs=None, step_kwargs=None, progressbar=True, model=None,
            random_seed=None, live_plot=False, discard_tuned_samples=True,
            live_plot_kwargs=None, compute_convergence_checks=True, **kwargs):
@@ -249,8 +249,8 @@ def sample(draws=500, step=None, init='auto', n_init=200000, start=None,
         The number of chains to sample. Running independent chains
         is important for some convergence statistics and can also
         reveal multiple modes in the posterior. If `None`, then set to
-        either `njobs` or 2, whichever is larger.
-    njobs : int
+        either `chains` or 2, whichever is larger.
+    cores : int
         The number of chains to run in parallel. If `None`, set to the
         number of CPUs in the system, but at most 4. Keep in mind that
         some chains might themselves be multithreaded via openmp or
@@ -258,8 +258,9 @@ def sample(draws=500, step=None, init='auto', n_init=200000, start=None,
     tune : int
         Number of iterations to tune, if applicable (defaults to 500).
         Samplers adjust the step sizes, scalings or similar during
-        tuning. These samples will be drawn in addition to samples
-        and discarded unless discard_tuned_samples is set to True.
+        tuning. Tuning samples will be drawn in addition to the number
+        specified in the `draws` argument, and will be discarded
+        unless `discard_tuned_samples` is set to False.
     nuts_kwargs : dict
         Options for the NUTS sampler. See the docstring of NUTS
         for a complete list of options. Common options are
@@ -286,7 +287,7 @@ def sample(draws=500, step=None, init='auto', n_init=200000, start=None,
         completion ("expected time of arrival"; ETA).
     model : Model (optional if in `with` context)
     random_seed : int or list of ints
-        A list is accepted if `njobs` is greater than one.
+        A list is accepted if `cores` is greater than one.
     live_plot : bool
         Flag for live plotting the trace while sampling
     live_plot_kwargs : dict
@@ -317,17 +318,22 @@ def sample(draws=500, step=None, init='auto', n_init=200000, start=None,
         >>> with pm.Model() as model: # context management
         ...     p = pm.Beta('p', alpha=alpha, beta=beta)
         ...     y = pm.Binomial('y', n=n, p=p, observed=h)
-        ...     trace = pm.sample(2000, tune=1000, njobs=4)
+        ...     trace = pm.sample(2000, tune=1000, cores=4)
         >>> pm.summary(trace)
                mean        sd  mc_error   hpd_2.5  hpd_97.5
         p  0.604625  0.047086   0.00078  0.510498  0.694774
     """
     model = modelcontext(model)
 
-    if njobs is None:
-        njobs = min(4, _cpu_count())
+    if cores is None:
+        cores = min(4, _cpu_count())
+    if 'njobs' in kwargs:
+        cores = kwargs['njobs']
+        warnings.warn(
+            "The njobs argument has been deprecated. Use cores instead.",
+            DeprecationWarning)
     if chains is None:
-        chains = max(2, njobs)
+        chains = max(2, cores)
     if isinstance(start, dict):
         start = [start] * chains
     if random_seed == -1:
@@ -341,7 +347,11 @@ def sample(draws=500, step=None, init='auto', n_init=200000, start=None,
     if not isinstance(random_seed, Iterable):
         raise TypeError(
             'Invalid value for `random_seed`. Must be tuple, list or int')
-
+    if 'nchains' in kwargs:
+        chains = kwargs['nchains']
+        warnings.warn(
+            "The nchains argument has been deprecated. Use chains instead.",
+            DeprecationWarning)
     if 'chain' in kwargs:
         chain_idx = kwargs['chain']
         warnings.warn(
@@ -351,6 +361,14 @@ def sample(draws=500, step=None, init='auto', n_init=200000, start=None,
     if start is not None:
         for start_vals in start:
             _check_start_shape(model, start_vals)
+
+    # small trace warning
+    if draws == 0:
+        msg = "Tuning was enabled throughout the whole trace."
+        _log.warning(msg)
+    elif draws < 500:
+        msg = "Only %s samples in chain." % draws
+        _log.warning(msg)
 
     draws += tune
 
@@ -402,7 +420,7 @@ def sample(draws=500, step=None, init='auto', n_init=200000, start=None,
         'random_seed': random_seed,
         'live_plot': live_plot,
         'live_plot_kwargs': live_plot_kwargs,
-        'njobs': njobs,
+        'cores': cores,
     }
 
     sample_args.update(kwargs)
@@ -411,19 +429,19 @@ def sample(draws=500, step=None, init='auto', n_init=200000, start=None,
         isinstance(m, arraystep.PopulationArrayStepShared)
         for m in (step.methods if isinstance(step, CompoundStep) else [step])
     ])
-    parallel = njobs > 1 and chains > 1 and not has_population_samplers
+    parallel = cores > 1 and chains > 1 and not has_population_samplers
     if parallel:
-        _log.info('Multiprocess sampling ({} chains in {} jobs)'.format(chains, njobs))
+        _log.info('Multiprocess sampling ({} chains in {} jobs)'.format(chains, cores))
         _print_step_hierarchy(step)
         try:
             trace = _mp_sample(**sample_args)
         except pickle.PickleError:
-            _log.warn("Could not pickle model, sampling singlethreaded.")
+            _log.warning("Could not pickle model, sampling singlethreaded.")
             _log.debug('Pickling error:', exec_info=True)
             parallel = False
         except AttributeError as e:
             if str(e).startswith("AttributeError: Can't pickle"):
-                _log.warn("Could not pickle model, sampling singlethreaded.")
+                _log.warning("Could not pickle model, sampling singlethreaded.")
                 _log.debug('Pickling error:', exec_info=True)
                 parallel = False
             else:
@@ -442,7 +460,12 @@ def sample(draws=500, step=None, init='auto', n_init=200000, start=None,
     trace = trace[discard:]
 
     if compute_convergence_checks:
-        trace.report._run_convergence_checks(trace)
+        if draws-tune < 100:
+            warnings.warn(
+                "The number of samples is too small to check "
+                "convergence reliably.")
+        else:
+            trace.report._run_convergence_checks(trace, model)
 
     trace.report._log_summary()
     return trace
@@ -563,13 +586,13 @@ def iter_sample(draws, step, start=None, trace=None, chain=0, tune=None,
         is given, it must contain samples for the chain number `chain`.
         If None or a list of variables, the NDArray backend is used.
     chain : int
-        Chain number used to store sample in backend. If `njobs` is
+        Chain number used to store sample in backend. If `cores` is
         greater than one, chain numbers will start here.
     tune : int
         Number of iterations to tune, if applicable (defaults to None)
     model : Model (optional if in `with` context)
     random_seed : int or list of ints
-        A list is accepted if more if `njobs` is greater than one.
+        A list is accepted if more if `cores` is greater than one.
 
     Examples
     --------
@@ -936,7 +959,7 @@ def _choose_backend(trace, chain, shortcuts=None, **kwds):
 
 
 def _mp_sample(**kwargs):
-    njobs = kwargs.pop('njobs')
+    cores = kwargs.pop('cores')
     chain = kwargs.pop('chain')
     rseed = kwargs.pop('random_seed')
     start = kwargs.pop('start')
@@ -946,7 +969,7 @@ def _mp_sample(**kwargs):
     pbars = [kwargs.pop('progressbar')] + [False] * (chains - 1)
     jobs = (delayed(_sample)(*args, **kwargs)
             for args in zip(chain_nums, pbars, rseed, start))
-    traces = Parallel(n_jobs=njobs)(jobs)
+    traces = Parallel(n_jobs=cores)(jobs)
     return MultiTrace(traces)
 
 
@@ -956,7 +979,7 @@ def stop_tuning(step):
     if hasattr(step, 'tune'):
         step.tune = False
 
-    elif hasattr(step, 'methods'):
+    if hasattr(step, 'methods'):
         step.methods = [stop_tuning(s) for s in step.methods]
 
     return step
@@ -1010,7 +1033,8 @@ def sample_ppc(trace, samples=None, model=None, vars=None, size=None,
     if vars is None:
         vars = model.observed_RVs
 
-    np.random.seed(random_seed)
+    if random_seed is not None:
+        np.random.seed(random_seed)
 
     indices = np.random.randint(0, nchain * len_trace, samples)
 

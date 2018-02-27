@@ -71,7 +71,8 @@ class OverheadSuite(object):
 
     def time_overhead_sample(self, step):
         with self.model:
-            pm.sample(self.n_steps, step=step(), random_seed=1)
+            pm.sample(self.n_steps, step=step(), random_seed=1,
+                      progressbar=False, compute_convergence_checks=False)
 
 
 class ExampleSuite(object):
@@ -115,11 +116,13 @@ class ExampleSuite(object):
             pm.Deterministic('difference of stds', group1_std - group2_std)
             pm.Deterministic(
                 'effect size', diff_of_means / np.sqrt((group1_std**2 + group2_std**2) / 2))
-            pm.sample(20000, njobs=4, chains=4)
+            pm.sample(draws=20000, cores=4, chains=4,
+                      progressbar=False, compute_convergence_checks=False)
 
     def time_glm_hierarchical(self):
         with glm_hierarchical_model():
-            pm.sample(draws=20000, njobs=4, chains=4)
+            pm.sample(draws=20000, cores=4, chains=4,
+                      progressbar=False, compute_convergence_checks=False)
 
 
 class NUTSInitSuite(object):
@@ -141,8 +144,9 @@ class NUTSInitSuite(object):
         with glm_hierarchical_model():
             start, step = pm.init_nuts(init=init, chains=self.chains, progressbar=False, random_seed=123)
             t0 = time.time()
-            trace = pm.sample(draws=self.draws, step=step, njobs=4, chains=self.chains,
-                              start=start, random_seed=100)
+            trace = pm.sample(draws=self.draws, step=step, cores=4, chains=self.chains,
+                              start=start, random_seed=100, progressbar=False,
+                              compute_convergence_checks=False)
             tot = time.time() - t0
         ess = pm.effective_n(trace, ('mu_a',))['mu_a']
         return ess / tot
@@ -154,8 +158,9 @@ class NUTSInitSuite(object):
                                    progressbar=False, random_seed=123)
             start = [{k: v for k, v in start.items()} for _ in range(self.chains)]
             t0 = time.time()
-            trace = pm.sample(draws=self.draws, step=step, njobs=4, chains=self.chains,
-                              start=start, random_seed=100)
+            trace = pm.sample(draws=self.draws, step=step, cores=4, chains=self.chains,
+                              start=start, random_seed=100, progressbar=False,
+                              compute_convergence_checks=False)
             tot = time.time() - t0
         ess = pm.effective_n(trace, ('mu',))['mu'].min()  # worst case
         return ess / tot
@@ -178,8 +183,9 @@ class CompareMetropolisNUTSSuite(object):
             if step is not None:
                 step = step()
             t0 = time.time()
-            trace = pm.sample(draws=self.draws, step=step, njobs=4, chains=4,
-                              random_seed=100)
+            trace = pm.sample(draws=self.draws, step=step, cores=4, chains=4,
+                              random_seed=100, progressbar=False,
+                              compute_convergence_checks=False)
             tot = time.time() - t0
         ess = pm.effective_n(trace, ('mu_a',))['mu_a']
         return ess / tot

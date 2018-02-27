@@ -177,22 +177,11 @@ class BaseHMC(arraystep.GradientSharedStep):
                 WarningType.DIVERGENCES, msg, 'error', None, None, None)
             warnings.append(warning)
         elif n_divs > 0:
-            message = ('Divergences after tuning. Increase `target_accept` or '
-                       'reparameterize.')
+            message = ('There were %s divergences after tuning. Increase '
+                       '`target_accept` or reparameterize.'
+                       % n_divs)
             warning = SamplerWarning(
                 WarningType.DIVERGENCES, message, 'error', None, None, None)
-            warnings.append(warning)
-
-        # small trace
-        if self._samples_after_tune == 0:
-            msg = "Tuning was enabled throughout the whole trace."
-            warning = SamplerWarning(
-                WarningType.BAD_PARAMS, msg, 'error', None, None, None)
-            warnings.append(warning)
-        elif self._samples_after_tune < 500:
-            msg = "Only %s samples in chain." % self._samples_after_tune
-            warning = SamplerWarning(
-                WarningType.BAD_PARAMS, msg, 'error', None, None, None)
             warnings.append(warning)
 
         warnings.extend(self.step_adapt.warnings())

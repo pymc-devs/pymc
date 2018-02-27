@@ -34,7 +34,7 @@ def test_plots():
 
 def test_energyplot():
     with asmod.build_model():
-        trace = sample(njobs=1)
+        trace = sample(cores=1)
 
     energyplot(trace)
     energyplot(trace, shade=0.5, alpha=0)
@@ -66,7 +66,7 @@ def test_plots_multidimensional():
     forestplot(trace)
     densityplot(trace)
 
-@pytest.mark.xfail(condition=(theano.config.floatX == "float32"), reason="Fails on GPU due to njobs=2")
+@pytest.mark.xfail(condition=(theano.config.floatX == "float32"), reason="Fails on GPU due to cores=2")
 def test_multichain_plots():
     model = build_disaster_model()
     with model:
@@ -74,7 +74,7 @@ def test_multichain_plots():
         step1 = Slice([model.early_mean_log__, model.late_mean_log__])
         step2 = Metropolis([model.switchpoint])
         start = {'early_mean': 2., 'late_mean': 3., 'switchpoint': 50}
-        ptrace = sample(1000, tune=0, step=[step1, step2], start=start, njobs=2)
+        ptrace = sample(1000, tune=0, step=[step1, step2], start=start, cores=2)
 
     forestplot(ptrace, varnames=['early_mean', 'late_mean'])
     autocorrplot(ptrace, varnames=['switchpoint'])
