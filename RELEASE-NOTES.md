@@ -14,6 +14,7 @@
 - Add new 'pairplot' function, for plotting scatter or hexbin matrices of sampled parameters.
   Optionally it can plot divergences.
 - Plots of discrete distributions in the docstrings
+- Add logitnormal distribution
 
 ### Fixes
 

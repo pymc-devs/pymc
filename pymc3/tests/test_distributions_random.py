@@ -4,6 +4,7 @@ import pytest
 import numpy as np
 import numpy.testing as npt
 import scipy.stats as st
+from scipy.special import expit
 from scipy import linalg
 import numpy.random as nr
 import theano
@@ -297,6 +298,16 @@ class TestVonMises(BaseTestCases.BaseTestCase):
 class TestGumbel(BaseTestCases.BaseTestCase):
     distribution = pm.Gumbel
     params = {'mu': 0., 'beta': 1.}
+
+
+class TestLogistic(BaseTestCases.BaseTestCase):
+    distribution = pm.Logistic
+    params = {'mu': 0., 's': 1.}
+
+
+class TestLogitNormal(BaseTestCases.BaseTestCase):
+    distribution = pm.LogitNormal
+    params = {'mu': 0., 'sd': 1.}
 
 
 class TestBinomial(BaseTestCases.BaseTestCase):
@@ -667,6 +678,16 @@ class TestScalarParameterSamples(SeededTest):
         def ref_rand(size, mu, beta):
             return st.gumbel_r.rvs(loc=mu, scale=beta, size=size)
         pymc3_random(pm.Gumbel, {'mu': R, 'beta': Rplus}, ref_rand=ref_rand)
+
+    def test_logistic(self):
+        def ref_rand(size, mu, s):
+            return st.logistic.rvs(loc=mu, scale=s, size=size)
+        pymc3_random(pm.Logistic, {'mu': R, 's': Rplus}, ref_rand=ref_rand)
+
+    def test_logitnormal(self):
+        def ref_rand(size, mu, sd):
+            return expit(st.norm.rvs(loc=mu, scale=sd, size=size))
+        pymc3_random(pm.LogitNormal, {'mu': R, 'sd': Rplus}, ref_rand=ref_rand)
 
     @pytest.mark.xfail(condition=(theano.config.floatX == "float32"), reason="Fails on float32")
     def test_interpolated(self):
