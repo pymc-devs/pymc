@@ -1039,7 +1039,8 @@ class TestMatchesScipy(SeededTest):
     def test_logitnormal(self):
         self.pymc3_matches_scipy(LogitNormal, Unit, {'mu': R, 'sd': Rplus},
                                  lambda value, mu, sd: (sp.norm.logpdf(logit(value), mu, sd)
-                                                        - (np.log(value) + np.log1p(-value))))
+                                                        - (np.log(value) + np.log1p(-value))),
+                                 decimal=select_by_precision(float64=6, float32=1))
 
     def test_multidimensional_beta_construction(self):
         with Model():
