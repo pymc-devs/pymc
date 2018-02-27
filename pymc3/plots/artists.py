@@ -1,5 +1,6 @@
 import numpy as np
 from scipy.stats import mode
+from collections import OrderedDict
 
 from pymc3.stats import hpd
 from .kdeplot import fast_kde, kdeplot
@@ -144,3 +145,27 @@ def plot_posterior_op(trace_values, ax, bw, kde_plot, point_estimate, round_to,
         display_ref_val(ref_val)
     if rope is not None:
         display_rope(rope)
+
+def scale_text(figsize, text_size):
+        """Scale text to figsize."""
+
+        if text_size is None and figsize is not None:
+            if figsize[0] <= 11:
+                return 12
+            else:
+                return figsize[0]
+        else:
+            return text_size
+
+def get_trace_dict(tr, varnames):
+        traces = OrderedDict()
+        for v in varnames:
+            vals = tr.get_values(v, combine=True, squeeze=True)
+            if vals.ndim > 1:
+                vals_flat = vals.reshape(vals.shape[0], -1).T
+                for i, vi in enumerate(vals_flat):
+                    traces['_'.join([v, str(i)])] = vi
+            else:
+                traces[v] = vals
+        return traces
+        

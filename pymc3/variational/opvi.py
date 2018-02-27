@@ -106,10 +106,10 @@ def node_property(f):
     if isinstance(f, str):
 
         def wrapper(fn):
-            return property(memoize(change_flags(compute_test_value='off')(append_name(f)(fn))))
+            return property(memoize(change_flags(compute_test_value='off')(append_name(f)(fn)), bound=True))
         return wrapper
     else:
-        return property(memoize(change_flags(compute_test_value='off')(f)))
+        return property(memoize(change_flags(compute_test_value='off')(f), bound=True))
 
 
 @change_flags(compute_test_value='ignore')
@@ -755,13 +755,13 @@ class Group(WithMemoization):
             if vfam is not None and params is not None:
                 raise TypeError('Cannot call Group with both `vfam` and `params` provided')
             elif vfam is not None:
-                return object.__new__(cls.group_for_short_name(vfam))
+                return super(Group, cls).__new__(cls.group_for_short_name(vfam))
             elif params is not None:
-                return object.__new__(cls.group_for_params(params))
+                return super(Group, cls).__new__(cls.group_for_params(params))
             else:
                 raise TypeError('Need to call Group with either `vfam` or `params` provided')
         else:
-            return object.__new__(cls)
+            return super(Group, cls).__new__(cls)
 
     def __init__(self, group,
                  vfam=None,
@@ -1487,7 +1487,7 @@ class Approximation(WithMemoization):
         return found
 
     @property
-    @memoize
+    @memoize(bound=True)
     @change_flags(compute_test_value='off')
     def sample_dict_fn(self):
         s = tt.iscalar()

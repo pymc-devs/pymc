@@ -4,6 +4,7 @@ import pytest
 import numpy as np
 import numpy.testing as npt
 import scipy.stats as st
+from scipy.special import expit
 from scipy import linalg
 import numpy.random as nr
 import theano
@@ -297,6 +298,16 @@ class TestVonMises(BaseTestCases.BaseTestCase):
 class TestGumbel(BaseTestCases.BaseTestCase):
     distribution = pm.Gumbel
     params = {'mu': 0., 'beta': 1.}
+
+
+class TestLogistic(BaseTestCases.BaseTestCase):
+    distribution = pm.Logistic
+    params = {'mu': 0., 's': 1.}
+
+
+class TestLogitNormal(BaseTestCases.BaseTestCase):
+    distribution = pm.LogitNormal
+    params = {'mu': 0., 'sd': 1.}
 
 
 class TestBinomial(BaseTestCases.BaseTestCase):
@@ -668,6 +679,16 @@ class TestScalarParameterSamples(SeededTest):
             return st.gumbel_r.rvs(loc=mu, scale=beta, size=size)
         pymc3_random(pm.Gumbel, {'mu': R, 'beta': Rplus}, ref_rand=ref_rand)
 
+    def test_logistic(self):
+        def ref_rand(size, mu, s):
+            return st.logistic.rvs(loc=mu, scale=s, size=size)
+        pymc3_random(pm.Logistic, {'mu': R, 's': Rplus}, ref_rand=ref_rand)
+
+    def test_logitnormal(self):
+        def ref_rand(size, mu, sd):
+            return expit(st.norm.rvs(loc=mu, scale=sd, size=size))
+        pymc3_random(pm.LogitNormal, {'mu': R, 'sd': Rplus}, ref_rand=ref_rand)
+
     @pytest.mark.xfail(condition=(theano.config.floatX == "float32"), reason="Fails on float32")
     def test_interpolated(self):
         for mu in R.vals:
@@ -741,46 +762,25 @@ class TestScalarParameterSamples(SeededTest):
                      size=1000,
                      ref_rand=ref_rand)
 
-    def test_density_dist(self):
-        def ref_rand(size, mu, sd):
-            return st.norm.rvs(size=size, loc=mu, scale=sd)
-        
-        class TestDensityDist(pm.DensityDist):
+def test_density_dist_with_random_sampleable():
+    with pm.Model() as model:
+        mu = pm.Normal('mu',0,1)
+        normal_dist = pm.Normal.dist(mu, 1)
+        pm.DensityDist('density_dist', normal_dist.logp, observed=np.random.randn(100), random=normal_dist.random)
+        trace = pm.sample(100)
 
-            def __init__(self, **kwargs):
-                norm_dist = pm.Normal.dist()
-                super(TestDensityDist, self).__init__(logp=norm_dist.logp, random=norm_dist.random)
+    samples = 500
+    ppc = pm.sample_ppc(trace, samples=samples, model=model, size=100)
+    assert len(ppc['density_dist']) == samples
 
-        pymc3_random(TestDensityDist, {},ref_rand=ref_rand)
 
-        def check_model_samplability(self):
-            model = pm.Model()
-            with model:
-                normal_dist = pm.Normal.dist()
-                density_dist = pm.DensityDist('density_dist', normal_dist.logp, random=normal_dist.random)
-                step = pm.Metropolis()
-                trace = pm.sample(100, step, tuning=0)
+def test_density_dist_without_random_not_sampleable():
+    with pm.Model() as model:
+        mu = pm.Normal('mu',0,1)
+        normal_dist = pm.Normal.dist(mu, 1)
+        pm.DensityDist('density_dist', normal_dist.logp, observed=np.random.randn(100))
+        trace = pm.sample(100)
 
-            try:
-                ppc = pm.sample_ppc(trace, samples=500, model=model, size=100)
-                if len(ppc) == 0:
-                    npt.assert_true(len(ppc) == 0, 'length of ppc sample is zero')
-            except:
-                assert False
-
-        def check_scipy_distributions(self):
-            model = pm.Model()
-            with model:
-                norm_dist_logp = st.norm.logpdf
-                norm_dist_random = np.random.normal
-                density_dist = pm.DensityDist('density_dist', normal_dist_logp, random=normal_dist_random)
-                step = pm.Metropolis()
-                trace = pm.sample(100, step, tuning=0)
-
-            try:
-                ppc = pm.sample_ppc(trace, samples=500, model=model, size=100)
-                if len(ppc) == 0:
-                    npt.assert_true(len(ppc) == 0, 'length of ppc sample is zero')
-            except:
-                assert False
-            
+    samples = 500
+    with pytest.raises(ValueError):
+        pm.sample_ppc(trace, samples=samples, model=model, size=100)

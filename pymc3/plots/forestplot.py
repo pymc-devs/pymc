@@ -181,8 +181,8 @@ def forestplot(trace, models=None, varnames=None, transform=identity_transform,
         else:
             gs = gridspec.GridSpec(1, 1)
 
-        # Subplot for confidence intervals
-        interval_plot = plt.subplot(gs[0])
+    # Subplot for confidence intervals
+    interval_plot = plt.subplot(gs[0])
 
     trace_quantiles = []
     hpd_intervals = []
@@ -267,8 +267,9 @@ def forestplot(trace, models=None, varnames=None, transform=identity_transform,
         if len(trace) > 1:
             interval_plot.axhspan(var_old, y - chain_spacing - 0.5,
                                   facecolor='k', alpha=bands[v_idx])
-            gr_plot.axhspan(var_old, y - chain_spacing - 0.5,
-                            facecolor='k', alpha=bands[v_idx])
+            if np.any(plot_rhat):
+                gr_plot.axhspan(var_old, y - chain_spacing - 0.5,
+                                facecolor='k', alpha=bands[v_idx])
             var_old = y - chain_spacing - 0.5
 
     if ylabels is not None:
