@@ -1249,8 +1249,7 @@ def sample_prior(samples=500, model=None, vars=None, size=None,
             point = {}
             for var_name, var in model.named_vars.items():
                 if is_transformed_name(var_name):
-                    trans = var.distribution.transform_used.forward
-                    val = trans(var.distribution.dist.random(point=point, size=size)).eval()
+                    val = var.distribution.dist.random(point=point, size=size)
                 else:
                     val = var.distribution.random(point=point, size=size)
                 point[var_name] = val
