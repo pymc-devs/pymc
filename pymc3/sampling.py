@@ -15,7 +15,7 @@ from .model import modelcontext, Point, all_continuous
 from .step_methods import (NUTS, HamiltonianMC, Metropolis, BinaryMetropolis,
                            BinaryGibbsMetropolis, CategoricalGibbsMetropolis,
                            Slice, CompoundStep, arraystep)
-from .util import update_start_vals
+from .util import update_start_vals, is_transformed_name
 from .vartypes import discrete_types
 from pymc3.step_methods.hmc import quadpotential
 from pymc3 import plots
@@ -1248,7 +1248,11 @@ def sample_prior(samples=500, model=None, vars=None, size=None,
         for _ in indices:
             point = {}
             for var_name, var in model.named_vars.items():
-                val = var.distribution.random(point=point, size=size)
+                if is_transformed_name(var_name):
+                    trans = var.distribution.transform_used.forward
+                    val = trans(var.distribution.dist.random(point=point, size=size)).eval()
+                else:
+                    val = var.distribution.random(point=point, size=size)
                 point[var_name] = val
                 if var_name in vars:
                     prior[var_name].append(val)
