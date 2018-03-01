@@ -1,5 +1,6 @@
 import numpy as np
 from scipy.signal import gaussian, convolve
+from scipy.stats import entropy
 
 try:
     import matplotlib.pyplot as plt
@@ -7,7 +8,7 @@ except ImportError:  # mpl is optional
     pass
 
 
-def kdeplot(values, label=None, shade=0, ax=None, kwargs_shade=None, **kwargs):
+def kdeplot(values, label=None, shade=0, bw=4.5, ax=None, kwargs_shade=None, **kwargs):
     """
     1D KDE plot taking into account boundary conditions
 
@@ -20,6 +21,10 @@ def kdeplot(values, label=None, shade=0, ax=None, kwargs_shade=None, **kwargs):
     shade : float
         Alpha blending value for the shaded area under the curve, between 0
         (no shade) and 1 (opaque). Defaults to 0
+    bw : float
+        Bandwidth scaling factor. Should be larger than 0. The higher this number the smoother the
+        KDE will be. Defaults to 4.5 which is essentially the same as the Scott's rule of thumb
+        (the default rule used by SciPy).
     ax : matplotlib axes
     kwargs_shade : dicts, optional
         Additional keywords passed to `matplotlib.axes.Axes.fill_between`
@@ -35,7 +40,7 @@ def kdeplot(values, label=None, shade=0, ax=None, kwargs_shade=None, **kwargs):
     if kwargs_shade is None:
         kwargs_shade = {}
 
-    density, l, u = fast_kde(values)
+    density, l, u = fast_kde(values, bw)
     x = np.linspace(l, u, len(density))
     ax.plot(x, density, label=label, **kwargs)
     ax.set_ylim(0, auto=True)
@@ -44,7 +49,7 @@ def kdeplot(values, label=None, shade=0, ax=None, kwargs_shade=None, **kwargs):
     return ax
 
 
-def fast_kde(x):
+def fast_kde(x, bw=4.5):
     """
     A fft-based Gaussian kernel density estimate (KDE)
     The code was adapted from https://github.com/mfouesneau/faststats
@@ -52,6 +57,10 @@ def fast_kde(x):
     Parameters
     ----------
     x : Numpy array or list
+    bw : float
+        Bandwidth scaling factor for the KDE. Should be larger than 0. The higher this number the
+        smoother the KDE will be. Defaults to 4.5 which is essentially the same as the Scott's rule
+        of thumb (the default rule used by SciPy).
 
     Returns
     -------
@@ -67,7 +76,9 @@ def fast_kde(x):
     xmin, xmax = np.min(x), np.max(x)
 
     dx = (xmax - xmin) / (nx - 1)
-    std_x = np.std((x - xmin) / dx)
+    std_x = entropy((x - xmin) / dx) * bw
+    if ~np.isfinite(std_x):
+        std_x = 0.
     grid, _ = np.histogram(x, bins=nx)
 
     scotts_factor = n ** (-0.2)

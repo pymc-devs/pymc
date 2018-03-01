@@ -18,8 +18,82 @@ import scipy as sp
 import scipy.sparse
 from scipy.linalg import block_diag as scipy_block_diag
 from pymc3.theanof import floatX, largest_common_dtype, ix_
+from functools import reduce, partial
 
 # pylint: enable=unused-import
+
+
+def kronecker(*Ks):
+    """Return the Kronecker product of arguments:
+            K_1 \otimes K_2 \otimes ... \otimes K_D
+
+    Parameters
+    ----------
+    Ks: 2D array-like
+    """
+    return reduce(tt.slinalg.kron, Ks)
+
+
+def cartesian(*arrays):
+    """Makes the Cartesian product of arrays.
+
+    Parameters
+    ----------
+    arrays: 1D array-like
+            1D arrays where earlier arrays loop more slowly than later ones
+    """
+    N = len(arrays)
+    return np.stack(np.meshgrid(*arrays, indexing='ij'), -1).reshape(-1, N)
+
+
+def kron_matrix_op(krons, m, op):
+    """Apply op to krons and m in a way that reproduces op(kronecker(*krons), m)
+
+    Parameters
+    -----------
+    krons: list of square 2D array-like objects
+           D square matrices [A_1, A_2, ..., A_D] to be Kronecker'ed:
+              A = A_1 \otimes A_2 \otimes ... \otimes A_D
+           Product of column dimensions must be N
+    m    : NxM array or 1D array (treated as Nx1)
+           Object that krons act upon
+    """
+    def flat_matrix_op(flat_mat, mat):
+        Nmat = mat.shape[1]
+        flat_shape = flat_mat.shape
+        mat2 = flat_mat.reshape((Nmat, -1))
+        return op(mat, mat2).T.reshape(flat_shape)
+
+    def kron_vector_op(v):
+        return reduce(flat_matrix_op, krons, v)
+
+    if m.ndim == 1:
+        m = m[:, None]  # Treat 1D array as Nx1 matrix
+    if m.ndim != 2:  # Has not been tested otherwise
+        raise ValueError('m must have ndim <= 2, not {}'.format(mat.ndim))
+    m = m.T
+    res, _ = theano.scan(kron_vector_op, sequences=[m])
+    return res.T
+
+
+# Define kronecker functions that work on 1D and 2D arrays
+kron_dot = partial(kron_matrix_op, op=tt.dot)
+kron_solve_lower = partial(kron_matrix_op, op=tt.slinalg.solve_lower_triangular)
+
+
+def flat_outer(a, b):
+    return tt.outer(a, b).ravel()
+
+
+def kron_diag(*diags):
+    """Returns diagonal of a kronecker product.
+
+    Parameters
+    ----------
+    diags: 1D arrays
+           The diagonals of matrices that are to be Kroneckered
+    """
+    return reduce(flat_outer, diags)
 
 
 def tround(*args, **kwargs):

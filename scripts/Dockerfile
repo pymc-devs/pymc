@@ -15,6 +15,7 @@ USER $NB_USER
 COPY scripts/create_testenv.sh /tmp/create_testenv.sh
 COPY setup.py $HOME/setup.py
 COPY requirements.txt $HOME/requirements.txt
+COPY requirements-dev.txt $HOME/requirements-dev.txt
 RUN /bin/bash /tmp/create_testenv.sh --global --no-setup
 
 #  matplotlib nonsense

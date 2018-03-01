@@ -16,6 +16,7 @@ from pymc3.theanof import floatX
 from scipy.misc import logsumexp
 from scipy.stats import dirichlet
 from scipy.optimize import minimize
+from scipy.signal import fftconvolve
 
 
 __all__ = ['autocorr', 'autocov', 'waic', 'loo', 'hpd', 'quantiles',
@@ -64,44 +65,60 @@ def statfunc(f):
 
 
 @statfunc
-def autocorr(x, lag=1):
-    """Sample autocorrelation at specified lag.
-
-    Parameters
-    ----------
-    x : Numpy array
-        An array containing MCMC samples
-    lag : int
-        The desidered lag to take in consideration
+def autocorr(x, lag=None):
     """
-    S = autocov(x, lag)
-    return S[0, 1] / np.sqrt(np.prod(np.diag(S)))
-
-
-@statfunc
-def autocov(x, lag=1):
-    """Sample autocovariance at specified lag.
+    Compute autocorrelation using FFT for every lag for the input array
+    https://en.wikipedia.org/wiki/Autocorrelation#Efficient_computation
 
     Parameters
     ----------
     x : Numpy array
         An array containing MCMC samples
-    lag : int
-        The desidered lag to take in consideration
 
     Returns
     -------
-    2x2 matrix with the variances of
-    x[:-lag] and x[lag:] in the diagonal and the autocovariance
-    on the off-diagonal.
+    acorr: Numpy array same size as the input array
     """
-    x = np.asarray(x)
+    y = x - x.mean()
+    n = len(y)
+    result = fftconvolve(y, y[::-1])
+    acorr = result[len(result) // 2:]
+    acorr /= np.arange(n, 0, -1)
+    acorr /= acorr[0]
+    if lag is None:
+        return acorr
+    else:
+        warnings.warn(
+            "The `lag` argument has been deprecated. If you want to get "
+            "the value of a specific lag please call `autocorr(x)[lag]`.",
+            DeprecationWarning)
+        return acorr[lag]
 
-    if not lag:
-        return 1
-    if lag < 0:
-        raise ValueError("Autocovariance lag must be a positive integer")
-    return np.cov(x[:-lag], x[lag:], bias=1)
+
+@statfunc
+def autocov(x, lag=None):
+    """Compute autocovariance estimates for every lag for the input array
+
+    Parameters
+    ----------
+    x : Numpy array
+        An array containing MCMC samples
+
+    Returns
+    -------
+    acov: Numpy array same size as the input array
+    """
+    acorr = autocorr(x)
+    varx = np.var(x, ddof=1) * (len(x) - 1) / len(x)
+    acov = acorr * varx
+    if lag is None:
+        return acov
+    else:
+        warnings.warn(
+            "The `lag` argument has been deprecated. If you want to get "
+            "the value of a specific lag please call `autocov(x)[lag]`.",
+            DeprecationWarning)
+        return acov[lag]
 
 
 def _log_post_trace(trace, model=None, progressbar=False):
@@ -208,6 +225,11 @@ def waic(trace, model=None, pointwise=False, progressbar=False):
     p_waic = np.sum(vars_lpd)
 
     if pointwise:
+        if np.equal(waic, waic_i).all():
+            warnings.warn("""The point-wise WAIC is the same with the sum WAIC,
+            please double check the Observed RV in your model to make sure it
+            returns element-wise logp.
+            """)
         WAIC_r = namedtuple('WAIC_r', 'WAIC, WAIC_se, p_WAIC, var_warn, WAIC_i')
         return WAIC_r(waic, waic_se, p_waic, warn_mg, waic_i)
     else:
@@ -282,6 +304,11 @@ def loo(trace, model=None, pointwise=False, reff=None, progressbar=False):
     p_loo = lppd + (0.5 * loo_lppd)
 
     if pointwise:
+        if np.equal(loo_lppd, loo_lppd_i).all():
+            warnings.warn("""The point-wise LOO is the same with the sum LOO,
+            please double check the Observed RV in your model to make sure it
+            returns element-wise logp.
+            """)
         LOO_r = namedtuple('LOO_r', 'LOO, LOO_se, p_LOO, shape_warn, LOO_i')
         return LOO_r(loo_lppd, loo_lppd_se, p_loo, warn_mg, loo_lppd_i)
     else:

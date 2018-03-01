@@ -9,8 +9,8 @@ from ..stats import hpd
 
 
 def densityplot(trace, models=None, varnames=None, alpha=0.05, point_estimate='mean',
-                colors='cycle', outline=True, hpd_markers='', shade=0., figsize=None, textsize=12,
-                plot_transformed=False, ax=None):
+                colors='cycle', outline=True, hpd_markers='', shade=0., bw=4.5, figsize=None,
+                textsize=12, plot_transformed=False, ax=None):
     """
     Generates KDE plots truncated at their 100*(1-alpha)% credible intervals from a trace or list of
     traces. KDE plots are grouped per variable and colors assigned to models.
@@ -43,6 +43,10 @@ def densityplot(trace, models=None, varnames=None, alpha=0.05, point_estimate='m
     shade : float
         Alpha blending value for the shaded area under the curve, between 0 (no shade) and 1
         (opaque). Defaults to 0.
+    bw : float
+        Bandwidth scaling factor for the KDE. Should be larger than 0. The higher this number the
+        smoother the KDE will be. Defaults to 4.5 which is essentially the same as the Scott's rule
+        of thumb (the default rule used by SciPy).
     figsize : tuple
         Figure size. If None, size is (6, number of variables * 2)
     textsize : int
@@ -104,10 +108,10 @@ def densityplot(trace, models=None, varnames=None, alpha=0.05, point_estimate='m
                 if k > 1:
                     vec = np.split(vec.T.ravel(), k)
                     for i in range(k):
-                        _kde_helper(vec[i], vname, colors[t_idx], alpha, point_estimate,
+                        _kde_helper(vec[i], vname, colors[t_idx], bw, alpha, point_estimate,
                                     hpd_markers, outline, shade, kplot[v_idx])
                 else:
-                    _kde_helper(vec, vname, colors[t_idx], alpha, point_estimate,
+                    _kde_helper(vec, vname, colors[t_idx], bw, alpha, point_estimate,
                                 hpd_markers, outline, shade, kplot[v_idx])
 
     if lenght_trace > 1:
@@ -120,8 +124,7 @@ def densityplot(trace, models=None, varnames=None, alpha=0.05, point_estimate='m
     return kplot
 
 
-def _kde_helper(vec, vname, c, alpha, point_estimate, hpd_markers,
-                outline, shade, ax):
+def _kde_helper(vec, vname, c, bw, alpha, point_estimate, hpd_markers, outline, shade, ax):
     """
     vec : array
         1D array from trace
@@ -129,6 +132,10 @@ def _kde_helper(vec, vname, c, alpha, point_estimate, hpd_markers,
         variable name
     c : str
         matplotlib color
+    bw : float
+        Bandwidth scaling factor. Should be larger than 0. The higher this number the smoother the
+        KDE will be. Defaults to 4.5 which is essentially the same as the Scott's rule of thumb
+        (the default used rule by SciPy).
     alpha : float
         Alpha value for (1-alpha)*100% credible intervals (defaults to 0.05).
     point_estimate : str or None
@@ -138,7 +145,7 @@ def _kde_helper(vec, vname, c, alpha, point_estimate, hpd_markers,
         (opaque). Defaults to 0.
     ax : matplotlib axes
     """
-    density, l, u = fast_kde(vec)
+    density, l, u = fast_kde(vec, bw)
     x = np.linspace(l, u, len(density))
     hpd_ = hpd(vec, alpha)
     cut = (x >= hpd_[0]) & (x <= hpd_[1])

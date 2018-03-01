@@ -10,7 +10,7 @@ from .utils import identity_transform, get_default_varnames, get_axis, make_2d
 
 def traceplot(trace, varnames=None, transform=identity_transform, figsize=None, lines=None,
               combined=False, plot_transformed=False, grid=False, alpha=0.35, priors=None,
-              prior_alpha=1, prior_style='--', ax=None, live_plot=False,
+              prior_alpha=1, prior_style='--', bw=4.5, ax=None, live_plot=False,
               skip_first=0, refresh_every=100, roll_over=1000):
     """Plot samples histograms and values.
 
@@ -47,6 +47,10 @@ def traceplot(trace, varnames=None, transform=identity_transform, figsize=None, 
         Alpha value for prior plot. Defaults to 1.
     prior_style : str
         Line style for prior plot. Defaults to '--' (dashed line).
+    bw : float
+        Bandwidth scaling factor for the KDE. Should be larger than 0. The higher this number the
+        smoother the KDE will be. Defaults to 4.5 which is essentially the same as the Scott's rule
+        of thumb (the default rule used by SciPy).
     ax : axes
         Matplotlib axes. Accepts an array of axes, e.g.:
     live_plot: bool
@@ -107,7 +111,7 @@ def traceplot(trace, varnames=None, transform=identity_transform, figsize=None, 
                 hist_objs = histplot_op(ax[i, 0], d, alpha=alpha)
                 colors = [h[-1][0].get_facecolor() for h in hist_objs]
             else:
-                artists = kdeplot_op(ax[i, 0], d, prior, prior_alpha, prior_style)[0]
+                artists = kdeplot_op(ax[i, 0], d, bw, prior, prior_alpha, prior_style)[0]
                 colors = [a[0].get_color() for a in artists]
             ax[i, 0].set_title(str(v))
             ax[i, 0].grid(grid)

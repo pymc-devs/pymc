@@ -138,7 +138,7 @@ class Mixture(Distribution):
     def logp(self, value):
         w = self.w
 
-        return bound(logsumexp(tt.log(w) + self._comp_logp(value), axis=-1).sum(),
+        return bound(logsumexp(tt.log(w) + self._comp_logp(value), axis=-1),
                      w >= 0, w <= 1, tt.allclose(w.sum(axis=-1), 1),
                      broadcast_conditions=False)
 

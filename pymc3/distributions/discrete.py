@@ -25,8 +25,26 @@ class Binomial(Discrete):
     The discrete probability distribution of the number of successes
     in a sequence of n independent yes/no experiments, each of which
     yields success with probability p.
+    The pmf of this distribution is
 
     .. math:: f(x \mid n, p) = \binom{n}{x} p^x (1-p)^{n-x}
+
+    .. plot::
+
+        import matplotlib.pyplot as plt
+        import numpy as np
+        import scipy.stats as st
+        plt.style.use('seaborn-darkgrid')
+        x = np.arange(0, 22)
+        ns = [10, 17]
+        ps = [0.5, 0.7]
+        for n, p in zip(ns, ps):
+            pmf = st.binom.pmf(x, n, p)
+            plt.plot(x, pmf, '-o', label='n = {}, p = {}'.format(n, p))
+        plt.xlabel('x', fontsize=14)
+        plt.ylabel('f(x)', fontsize=14)
+        plt.legend(loc=1)
+        plt.show()
 
     ========  ==========================================
     Support   :math:`x \in \{0, 1, \ldots, n\}`
@@ -79,12 +97,38 @@ class BetaBinomial(Discrete):
 
     Equivalent to binomial random variable with success probability
     drawn from a beta distribution.
+    The pmf of this distribution is
 
     .. math::
 
        f(x \mid \alpha, \beta, n) =
            \binom{n}{x}
            \frac{B(x + \alpha, n - x + \beta)}{B(\alpha, \beta)}
+
+    .. plot::
+
+        import matplotlib.pyplot as plt
+        import numpy as np
+        import scipy.stats as st
+        from scipy import special
+        plt.style.use('seaborn-darkgrid')
+
+        def BetaBinom(a, b, n, x):
+            pmf = special.binom(n, x) * (special.beta(x+a, n-x+b) / special.beta(a, b))
+            return pmf
+
+        x = np.arange(0, 11)
+        alphas = [0.5, 1, 2.3]
+        betas = [0.5, 1, 2]
+        n = 10
+        for a, b in zip(alphas, betas):
+            pmf = BetaBinom(a, b, n, x)
+            plt.plot(x, pmf, '-o', label=r'$\alpha$ = {}, $\beta$ = {}, n = {}'.format(a, b, n))
+        plt.xlabel('x', fontsize=12)
+        plt.ylabel('f(x)', fontsize=12)
+        plt.ylim(0)
+        plt.legend(loc=9)
+        plt.show()
 
     ========  =================================================================
     Support   :math:`x \in \{0, 1, \ldots, n\}`
@@ -153,8 +197,25 @@ class Bernoulli(Discrete):
 
     The Bernoulli distribution describes the probability of successes
     (x=1) and failures (x=0).
+    The pmf of this distribution is
 
     .. math:: f(x \mid p) = p^{x} (1-p)^{1-x}
+
+    .. plot::
+
+        import matplotlib.pyplot as plt
+        import numpy as np
+        import scipy.stats as st
+        plt.style.use('seaborn-darkgrid')
+        x = [0, 1]
+        for p in [0, 0.5, 0.8]:
+            pmf = st.bernoulli.pmf(x, p)
+            plt.plot(x, pmf, '-o', label='p = {}'.format(p))
+        plt.xlabel('x', fontsize=12)
+        plt.ylabel('f(x)', fontsize=12)
+        plt.ylim(0)
+        plt.legend(loc=9)
+        plt.show()
 
     ========  ======================
     Support   :math:`x \in \{0, 1\}`
@@ -217,8 +278,32 @@ class DiscreteWeibull(Discrete):
 
     The discrete Weibull distribution is a flexible model of count data that
     can handle both over- and under-dispersion.
+    The pmf of this distribution is
 
     .. math:: f(x \mid q, \beta) = q^{x^{\beta}} - q^{(x + 1)^{\beta}}
+
+    .. plot::
+
+        import matplotlib.pyplot as plt
+        import numpy as np
+        import scipy.stats as st
+        from scipy import special
+        plt.style.use('seaborn-darkgrid')
+
+        def DiscreteWeibull(q, b, x):
+            return q**(x**b) - q**((x + 1)**b)
+
+        x = np.arange(0, 10)
+        qs = [0.1, 0.9, 0.9]
+        betas = [0.3, 1.3, 3]
+        for q, b in zip(qs, betas):
+            pmf = DiscreteWeibull(q, b, x)
+            plt.plot(x, pmf, '-o', label=r'q = {}, $\beta$ = {}'.format(q, b))
+        plt.xlabel('x', fontsize=12)
+        plt.ylabel('f(x)', fontsize=12)
+        plt.ylim(0)
+        plt.legend(loc=1)
+        plt.show()
 
     ========  ======================
     Support   :math:`x \in \mathbb{N}_0`
@@ -282,8 +367,25 @@ class Poisson(Discrete):
 
     Often used to model the number of events occurring in a fixed period
     of time when the times at which events occur are independent.
+    The pmf of this distribution is
 
     .. math:: f(x \mid \mu) = \frac{e^{-\mu}\mu^x}{x!}
+
+    .. plot::
+
+        import matplotlib.pyplot as plt
+        import numpy as np
+        import scipy.stats as st
+        plt.style.use('seaborn-darkgrid')
+        x = np.arange(0, 15)
+        for m in [0.5, 3, 8]:
+            pmf = st.poisson.pmf(x, m)
+            plt.plot(x, pmf, '-o', label='$\mu$ = {}'.format(m))
+        plt.xlabel('x', fontsize=12)
+        plt.ylabel('f(x)', fontsize=12)
+        plt.ylim(0)
+        plt.legend(loc=1)
+        plt.show()
 
     ========  ==========================
     Support   :math:`x \in \mathbb{N}_0`
@@ -338,12 +440,36 @@ class NegativeBinomial(Discrete):
 
     The negative binomial distribution describes a Poisson random variable
     whose rate parameter is gamma distributed.
+    The pmf of this distribution is
 
     .. math::
 
        f(x \mid \mu, \alpha) =
-           \frac{\Gamma(x+\alpha)}{x! \Gamma(\alpha)}
+           \binom{x + \alpha - 1}{x}
            (\alpha/(\mu+\alpha))^\alpha (\mu/(\mu+\alpha))^x
+
+    .. plot::
+
+        import matplotlib.pyplot as plt
+        import numpy as np
+        import scipy.stats as st
+        from scipy import special
+        plt.style.use('seaborn-darkgrid')
+
+        def NegBinom(a, m, x):
+            pmf = special.binom(x + a - 1, x) * (a / (m + a))**a * (m / (m + a))**x
+            return pmf
+
+        x = np.arange(0, 22)
+        alphas = [0.9, 2, 4]
+        mus = [1, 2, 8]
+        for a, m in zip(alphas, mus):
+            pmf = NegBinom(a, m, x)
+            plt.plot(x, pmf, '-o', label=r'$\alpha$ = {}, $\mu$ = {}'.format(a, m))
+        plt.xlabel('x', fontsize=12)
+        plt.ylabel('f(x)', fontsize=12)
+        plt.legend(loc=1)
+        plt.show()
 
     ========  ==========================
     Support   :math:`x \in \mathbb{N}_0`
@@ -402,8 +528,24 @@ class Geometric(Discrete):
 
     The probability that the first success in a sequence of Bernoulli
     trials occurs on the x'th trial.
+    The pmf of this distribution is
 
     .. math:: f(x \mid p) = p(1-p)^{x-1}
+
+    .. plot::
+
+        import matplotlib.pyplot as plt
+        import numpy as np
+        import scipy.stats as st
+        plt.style.use('seaborn-darkgrid')
+        x = np.arange(1, 11)
+        for p in [0.1, 0.25, 0.75]:
+            pmf = st.geom.pmf(x, p)
+            plt.plot(x, pmf, '-o', label='p = {}'.format(p))
+        plt.xlabel('x', fontsize=12)
+        plt.ylabel('f(x)', fontsize=12)
+        plt.legend(loc=1)
+        plt.show()
 
     ========  =============================
     Support   :math:`x \in \mathbb{N}_{>0}`
@@ -445,8 +587,27 @@ class Geometric(Discrete):
 class DiscreteUniform(Discrete):
     R"""
     Discrete uniform distribution.
+    The pmf of this distribution is
 
     .. math:: f(x \mid lower, upper) = \frac{1}{upper-lower}
+
+    .. plot::
+
+        import matplotlib.pyplot as plt
+        import numpy as np
+        import scipy.stats as st
+        plt.style.use('seaborn-darkgrid')
+        ls = [1, -2]
+        us = [6, 2]
+        for l, u in zip(ls, us):
+            x = np.arange(l, u+1)
+            pmf = [1 / (u - l)] * len(x)
+            plt.plot(x, pmf, '-o', label='lower = {}, upper = {}'.format(l, u))
+        plt.xlabel('x', fontsize=12)
+        plt.ylabel('f(x)', fontsize=12)
+        plt.ylim(0, 0.4)
+        plt.legend(loc=1)
+        plt.show()
 
     ========  ===============================================
     Support   :math:`x \in {lower, lower + 1, \ldots, upper}`
@@ -503,9 +664,25 @@ class Categorical(Discrete):
     R"""
     Categorical log-likelihood.
 
-    The most general discrete distribution.
+    The most general discrete distribution. The pmf of this distribution is
 
     .. math:: f(x \mid p) = p_x
+
+    .. plot::
+
+        import matplotlib.pyplot as plt
+        import numpy as np
+        import scipy.stats as st
+        plt.style.use('seaborn-darkgrid')
+        ps = [[0.1, 0.6, 0.3], [0.3, 0.1, 0.1, 0.5]]
+        for p in ps:
+            x = range(len(p))
+            plt.plot(x, p, '-o', label='p = {}'.format(p))
+        plt.xlabel('x', fontsize=12)
+        plt.ylabel('f(x)', fontsize=12)
+        plt.ylim(0)
+        plt.legend(loc=1)
+        plt.show()
 
     ========  ===================================
     Support   :math:`x \in \{0, 1, \ldots, |p|-1\}`
@@ -617,6 +794,7 @@ class ZeroInflatedPoisson(Discrete):
 
     Often used to model the number of events occurring in a fixed period
     of time when the times at which events occur are independent.
+    The pmf of this distribution is
 
     .. math::
 
@@ -624,6 +802,26 @@ class ZeroInflatedPoisson(Discrete):
             (1-\psi) + \psi e^{-\theta}, \text{if } x = 0 \\
             \psi \frac{e^{-\theta}\theta^x}{x!}, \text{if } x=1,2,3,\ldots
             \end{array} \right.
+
+    .. plot::
+
+        import matplotlib.pyplot as plt
+        import numpy as np
+        import scipy.stats as st
+        plt.style.use('seaborn-darkgrid')
+        x = np.arange(0, 22)
+        psis = [0.7, 0.4]
+        thetas = [8, 4]
+        for psi, theta in zip(psis, thetas):
+            pmf = st.poisson.pmf(x, theta)
+            pmf[0] = (1 - psi) + pmf[0]
+            pmf[1:] =  psi * pmf[1:]
+            pmf /= pmf.sum()
+            plt.plot(x, pmf, '-o', label='$\\psi$ = {}, $\\theta$ = {}'.format(psi, theta))
+        plt.xlabel('x', fontsize=12)
+        plt.ylabel('f(x)', fontsize=12)
+        plt.legend(loc=1)
+        plt.show()
 
     ========  ==========================
     Support   :math:`x \in \mathbb{N}_0`
@@ -685,12 +883,35 @@ class ZeroInflatedBinomial(Discrete):
     R"""
     Zero-inflated Binomial log-likelihood.
 
+    The pmf of this distribution is
+
     .. math::
 
         f(x \mid \psi, n, p) = \left\{ \begin{array}{l}
             (1-\psi) + \psi (1-p)^{n}, \text{if } x = 0 \\
             \psi {n \choose x} p^x (1-p)^{n-x}, \text{if } x=1,2,3,\ldots,n
             \end{array} \right.
+
+    .. plot::
+
+        import matplotlib.pyplot as plt
+        import numpy as np
+        import scipy.stats as st
+        plt.style.use('seaborn-darkgrid')
+        x = np.arange(0, 25)
+        ns = [10, 20]
+        ps = [0.5, 0.7]
+        psis = [0.7, 0.4]
+        for n, p, psi in zip(ns, ps, psis):
+            pmf = st.binom.pmf(x, n, p)
+            pmf[0] = (1 - psi) + pmf[0]
+            pmf[1:] =  psi * pmf[1:]
+            pmf /= pmf.sum()
+            plt.plot(x, pmf, '-o', label='n = {}, p = {}, $\\psi$ = {}'.format(n, p, psi))
+        plt.xlabel('x', fontsize=12)
+        plt.ylabel('f(x)', fontsize=12)
+        plt.legend(loc=1)
+        plt.show()
 
     ========  ==========================
     Support   :math:`x \in \mathbb{N}_0`
@@ -765,6 +986,7 @@ class ZeroInflatedNegativeBinomial(Discrete):
     The Zero-inflated version of the Negative Binomial (NB).
     The NB distribution describes a Poisson random variable
     whose rate parameter is gamma distributed.
+    The pmf of this distribution is
 
     .. math::
 
@@ -780,6 +1002,33 @@ class ZeroInflatedNegativeBinomial(Discrete):
            \right)^x, \text{if } x=1,2,3,\ldots
          \end{array}
        \right.
+
+    .. plot::
+
+        import matplotlib.pyplot as plt
+        import numpy as np
+        import scipy.stats as st
+        from scipy import special
+        plt.style.use('seaborn-darkgrid')
+
+        def ZeroInfNegBinom(a, m, psi, x):
+            pmf = special.binom(x + a - 1, x) * (a / (m + a))**a * (m / (m + a))**x
+            pmf[0] = (1 - psi) + pmf[0]
+            pmf[1:] =  psi * pmf[1:]
+            pmf /= pmf.sum()
+            return pmf
+
+        x = np.arange(0, 25)
+        alphas = [2, 4]
+        mus = [2, 8]
+        psis = [0.7, 0.7]
+        for a, m, psi in zip(alphas, mus, psis):
+            pmf = ZeroInfNegBinom(a, m, psi, x)
+            plt.plot(x, pmf, '-o', label=r'$\alpha$ = {}, $\mu$ = {}, $\psi$ = {}'.format(a, m, psi))
+        plt.xlabel('x', fontsize=12)
+        plt.ylabel('f(x)', fontsize=12)
+        plt.legend(loc=1)
+        plt.show()
 
     ========  ==========================
     Support   :math:`x \in \mathbb{N}_0`
