@@ -15,6 +15,7 @@
   Optionally it can plot divergences.
 - Plots of discrete distributions in the docstrings
 - Add logitnormal distribution
+- Densityplot: add support for discrete variables
 
 ### Fixes
 

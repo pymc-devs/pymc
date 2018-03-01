@@ -173,7 +173,6 @@ def _d_helper(vec, vname, c, bw, alpha, point_estimate, hpd_markers, outline, sh
         if outline:
             ax.hist(vec, bins=bins, color=c, histtype='step')
         ax.hist(vec, bins=bins, color=c, alpha=shade)
-        ax.set_xticks(bins)
 
     if hpd_markers:
         ax.plot(xmin, 0, 'v', color=c, markeredgecolor='k')
