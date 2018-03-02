@@ -10,24 +10,23 @@ from __future__ import division
 import numpy as np
 import theano.tensor as tt
 from scipy import stats
+from scipy.special import expit
 from scipy.interpolate import InterpolatedUnivariateSpline
 import warnings
 
 from pymc3.theanof import floatX
 from . import transforms
 from pymc3.util import get_variable_name
-
-from .dist_math import (
-    bound, logpow, gammaln, betaln, std_cdf, i0,
-    i1, alltrue_elemwise, SplineWrapper
-)
+from .special import log_i0
+from ..math import invlogit, logit
+from .dist_math import bound, logpow, gammaln, betaln, std_cdf, alltrue_elemwise, SplineWrapper
 from .distribution import Continuous, draw_values, generate_samples
 
 __all__ = ['Uniform', 'Flat', 'HalfFlat', 'Normal', 'Beta', 'Exponential',
            'Laplace', 'StudentT', 'Cauchy', 'HalfCauchy', 'Gamma', 'Weibull',
            'HalfStudentT', 'Lognormal', 'ChiSquared', 'HalfNormal', 'Wald',
            'Pareto', 'InverseGamma', 'ExGaussian', 'VonMises', 'SkewNormal',
-           'Logistic', 'Interpolated']
+           'Triangular', 'Gumbel', 'Logistic', 'LogitNormal', 'Interpolated']
 
 
 class PositiveContinuous(Continuous):
@@ -113,6 +112,8 @@ class Uniform(Continuous):
     R"""
     Continuous uniform log-likelihood.
 
+    The pdf of this distribution is
+
     .. math::
 
        f(x \mid lower, upper) = \frac{1}{upper-lower}
@@ -121,18 +122,18 @@ class Uniform(Continuous):
 
         import matplotlib.pyplot as plt
         import numpy as np
-        x = np.linspace(-3.0, 3.0, 1000)
-        a, b = 0.0, 2.0
-        y = np.zeros(1000)
-        y[(x<b) & (x>a)] = 1.0/(b-a)
-        fig, ax = plt.subplots()
-        ax.plot(x, y, label='lower=1, upper=2')
-        a, b = -2.0, 1.0
-        y = np.zeros(1000)
-        y[(x<b) & (x>a)] = 1.0/(b-a)
-        ax.plot(x, y, label='lower=-2, upper=1')
-        ax.legend(loc='upper right')
-        ax.set(ylim=[-0.2,1.2], xlabel='x', ylabel='f(x)')
+        plt.style.use('seaborn-darkgrid')
+        x = np.linspace(-3, 3, 500)
+        ls = [0., -2]
+        us = [2., 1]
+        for l, u in zip(ls, us):
+            y = np.zeros(500)
+            y[(x<u) & (x>l)] = 1.0/(u-l)
+            plt.plot(x, y, label='lower = {}, upper = {}'.format(l, u))
+        plt.xlabel('x', fontsize=12)
+        plt.ylabel('f(x)', fontsize=12)
+        plt.ylim(0, 1)
+        plt.legend(loc=1)
         plt.show()
 
     ========  =====================================
@@ -227,17 +228,13 @@ class Normal(Continuous):
     R"""
     Univariate normal log-likelihood.
 
+    The pdf of this distribution is
+
     .. math::
 
        f(x \mid \mu, \tau) =
            \sqrt{\frac{\tau}{2\pi}}
            \exp\left\{ -\frac{\tau}{2} (x-\mu)^2 \right\}
-
-    ========  ==========================================
-    Support   :math:`x \in \mathbb{R}`
-    Mean      :math:`\mu`
-    Variance  :math:`\dfrac{1}{\tau}` or :math:`\sigma^2`
-    ========  ==========================================
 
     Normal distribution can be parameterized either in terms of precision
     or standard deviation. The link between the two parametrizations is
@@ -252,17 +249,23 @@ class Normal(Continuous):
         import matplotlib.pyplot as plt
         import numpy as np
         import scipy.stats as st
-        x = np.linspace(-5.0, 5.0, 1000)
-        fig, ax = plt.subplots()
-        f = lambda mu, sd : st.norm.pdf(x, loc=mu, scale=sd)
-        plot_pdf = lambda a, b : ax.plot(x, f(a,b), label=r'$\mu$={0}, $\sigma$={1}'.format(a,b))
-        plot_pdf(0.0, 0.4)
-        plot_pdf(0.0, 1.0)
-        plot_pdf(0.0, 2.0)
-        plot_pdf(-2.0, 0.4)
-        plt.legend(loc='upper right', frameon=False)
-        ax.set(xlim=[-5,5], ylim=[0,1.2], xlabel='x', ylabel='f(x)')
+        plt.style.use('seaborn-darkgrid')
+        x = np.linspace(-5, 5, 1000)
+        mus = [0., 0., 0., -2.]
+        sds = [0.4, 1., 2., 0.4]
+        for mu, sd in zip(mus, sds):
+            pdf = st.norm.pdf(x, mu, sd)
+            plt.plot(x, pdf, label=r'$\mu$ = {}, $\sigma$ = {}'.format(mu, sd))
+        plt.xlabel('x', fontsize=12)
+        plt.ylabel('f(x)', fontsize=12)
+        plt.legend(loc=1)
         plt.show()
+
+    ========  ==========================================
+    Support   :math:`x \in \mathbb{R}`
+    Mean      :math:`\mu`
+    Variance  :math:`\dfrac{1}{\tau}` or :math:`\sigma^2`
+    ========  ==========================================
 
     Parameters
     ----------
@@ -275,11 +278,13 @@ class Normal(Continuous):
         
     Examples
     --------
-    with pm.Model():
-        x = pm.Normal('x', mu=0, sd=10)
-        
-    with pm.Model():
-        x = pm.Normal('x', mu=0, tau=1/23)
+    .. code-block:: python
+
+        with pm.Model():
+            x = pm.Normal('x', mu=0, sd=10)
+            
+        with pm.Model():
+            x = pm.Normal('x', mu=0, tau=1/23)
     """
 
     def __init__(self, mu=0, sd=None, tau=None, **kwargs):
@@ -325,6 +330,8 @@ class HalfNormal(PositiveContinuous):
     R"""
     Half-normal log-likelihood.
 
+    The pdf of this distribution is
+
     .. math::
 
        f(x \mid \tau) =
@@ -336,15 +343,14 @@ class HalfNormal(PositiveContinuous):
         import matplotlib.pyplot as plt
         import numpy as np
         import scipy.stats as st
-        x = np.linspace(0.0, 5.0, 1000)
-        fig, ax = plt.subplots()
-        f = lambda b : st.halfnorm.pdf(x, scale=1.0/np.sqrt(b))
-        plot_pdf = lambda b : ax.plot(x, f(b), label=r'$\tau$={0}'.format(b))
-        plot_pdf(0.5)
-        plot_pdf(1.0)
-        plot_pdf(2.0)
-        plt.legend(loc='upper right', frameon=False)
-        ax.set(xlim=[0,5], ylim=[0,1.2], xlabel='x', ylabel='f(x)')
+        plt.style.use('seaborn-darkgrid')
+        x = np.linspace(0, 5, 200)
+        for sd in [0.4, 1., 2.]:
+            pdf = st.halfnorm.pdf(x, scale=sd)
+            plt.plot(x, pdf, label=r'$\sigma$ = {}'.format(sd))
+        plt.xlabel('x', fontsize=12)
+        plt.ylabel('f(x)', fontsize=12)
+        plt.legend(loc=1)
         plt.show()
 
     ========  ==========================================
@@ -362,11 +368,13 @@ class HalfNormal(PositiveContinuous):
         
     Examples
     --------
-    with pm.Model():
-        x = pm.HalfNormal('x', sd=10)
-    
-    with pm.Model():
-        x = pm.HalfNormal('x', tau=1/15)
+    .. code-block:: python
+
+        with pm.Model():
+            x = pm.HalfNormal('x', sd=10)
+        
+        with pm.Model():
+            x = pm.HalfNormal('x', tau=1/15)
     """
 
     def __init__(self, sd=None, tau=None, *args, **kwargs):
@@ -408,6 +416,8 @@ class Wald(PositiveContinuous):
     R"""
     Wald log-likelihood.
 
+    The pdf of this distribution is
+
     .. math::
 
        f(x \mid \mu, \lambda) =
@@ -421,17 +431,16 @@ class Wald(PositiveContinuous):
         import matplotlib.pyplot as plt
         import numpy as np
         import scipy.stats as st
-        x = np.linspace(0.0, 3.0, 1000)
-        fig, ax = plt.subplots()
-        f = lambda mu, lam : st.invgauss.pdf(x, mu/lam, scale=lam)
-        plot_pdf = lambda a, b : ax.plot(x, f(a,b), label=r'$\mu$={0}, $\lambda$={1}'.format(a,b))
-        plot_pdf(1.0,1.0)
-        plot_pdf(1.0,0.2)
-        plot_pdf(1.0,3.0)
-        plot_pdf(3,1)
-        plot_pdf(3,0.2)
-        plt.legend(loc='upper right', frameon=False)
-        ax.set(xlim=[0,3], ylim=[0,3.0], xlabel='x', ylabel='f(x)')
+        plt.style.use('seaborn-darkgrid')
+        x = np.linspace(0, 3, 500)
+        mus = [1., 1., 1., 3.]
+        lams = [1., .2, 3., 1.]
+        for mu, lam in zip(mus, lams):
+            pdf = st.invgauss.pdf(x, mu/lam, scale=lam)
+            plt.plot(x, pdf, label=r'$\mu$ = {}, $\lambda$ = {}'.format(mu, lam))
+        plt.xlabel('x', fontsize=12)
+        plt.ylabel('f(x)', fontsize=12)
+        plt.legend(loc=1)
         plt.show()
 
     ========  =============================
@@ -559,6 +568,8 @@ class Beta(UnitContinuous):
     R"""
     Beta log-likelihood.
 
+    The pdf of this distribution is
+
     .. math::
 
        f(x \mid \alpha, \beta) =
@@ -569,17 +580,17 @@ class Beta(UnitContinuous):
         import matplotlib.pyplot as plt
         import numpy as np
         import scipy.stats as st
-        x = np.linspace(0.0, 1.0, 1000)
-        fig, ax = plt.subplots()
-        f = lambda a, b : st.beta.pdf(x, a, b)
-        plot_pdf = lambda a, b : ax.plot(x, f(a,b), label=r'$\alpha$={0}, $\beta$={1}'.format(a,b))
-        plot_pdf(0.5, 0.5)
-        plot_pdf(5.0, 1.0)
-        plot_pdf(1.0, 3.0)
-        plot_pdf(2.0, 2.0)
-        plot_pdf(2.0, 5.0)
-        plt.legend(loc='upper center', frameon=False)
-        ax.set(xlim=[0,1], ylim=[0,2.5], xlabel='x', ylabel='f(x)')
+        plt.style.use('seaborn-darkgrid')
+        x = np.linspace(0, 1, 200)
+        alphas = [.5, 5., 1., 2., 2.]
+        betas = [.5, 1., 3., 2., 5.]
+        for a, b in zip(alphas, betas):
+            pdf = st.beta.pdf(x, a, b)
+            plt.plot(x, pdf, label=r'$\alpha$ = {}, $\beta$ = {}'.format(a, b))
+        plt.xlabel('x', fontsize=12)
+        plt.ylabel('f(x)', fontsize=12)
+        plt.ylim(0, 4.5)
+        plt.legend(loc=9)
         plt.show()
 
     ========  ==============================================================
@@ -680,6 +691,8 @@ class Exponential(PositiveContinuous):
     R"""
     Exponential log-likelihood.
 
+    The pdf of this distribution is
+
     .. math::
 
        f(x \mid \lambda) = \lambda \exp\left\{ -\lambda x \right\}
@@ -689,15 +702,14 @@ class Exponential(PositiveContinuous):
         import matplotlib.pyplot as plt
         import numpy as np
         import scipy.stats as st
-        x = np.linspace(0.0, 5.0, 1000)
-        fig, ax = plt.subplots()
-        f = lambda lam : st.expon.pdf(x, scale=1.0/lam)
-        plot_pdf = lambda lam : ax.plot(x, f(lam), label=r'$\lambda$={0}'.format(lam))
-        plot_pdf(0.5)
-        plot_pdf(1.0)
-        plot_pdf(1.5)
-        plt.legend(loc='upper right', frameon=False)
-        ax.set(xlim=[0,5], ylim=[0,1.6], xlabel='x', ylabel='f(x)')
+        plt.style.use('seaborn-darkgrid')
+        x = np.linspace(0, 3, 100)
+        for lam in [0.5, 1., 2.]:
+            pdf = st.expon.pdf(x, scale=1.0/lam)
+            plt.plot(x, pdf, label=r'$\lambda$ = {}'.format(lam))
+        plt.xlabel('x', fontsize=12)
+        plt.ylabel('f(x)', fontsize=12)
+        plt.legend(loc=1)
         plt.show()
 
     ========  ============================
@@ -745,6 +757,8 @@ class Laplace(Continuous):
     R"""
     Laplace log-likelihood.
 
+    The pdf of this distribution is
+
     .. math::
 
        f(x \mid \mu, b) =
@@ -755,16 +769,16 @@ class Laplace(Continuous):
         import matplotlib.pyplot as plt
         import numpy as np
         import scipy.stats as st
-        x = np.linspace(-10.0, 10.0, 1000)
-        fig, ax = plt.subplots()
-        f = lambda mu, b : st.laplace.pdf(x, loc=mu, scale=b)
-        plot_pdf = lambda mu, b : ax.plot(x, f(mu, b), label=r'$\mu$={0}, $b$={1}'.format(mu, b))
-        plot_pdf(0.0, 1.0)
-        plot_pdf(0.0, 2.0)
-        plot_pdf(0.0, 4)
-        plot_pdf(-5.0, 4)
-        plt.legend(loc='upper right', frameon=False)
-        ax.set(xlim=[-10,10], ylim=[0,0.5], xlabel='x', ylabel='f(x)')
+        plt.style.use('seaborn-darkgrid')
+        x = np.linspace(-10, 10, 1000)
+        mus = [0., 0., 0., -5.]
+        bs = [1., 2., 4., 4.]
+        for mu, b in zip(mus, bs):
+            pdf = st.laplace.pdf(x, loc=mu, scale=b)
+            plt.plot(x, pdf, label=r'$\mu$ = {}, $b$ = {}'.format(mu, b))
+        plt.xlabel('x', fontsize=12)
+        plt.ylabel('f(x)', fontsize=12)
+        plt.legend(loc=1)
         plt.show()
 
     ========  ========================
@@ -822,6 +836,8 @@ class Lognormal(PositiveContinuous):
     be thought of as the multiplicative product of many small
     independent factors.
 
+    The pdf of this distribution is
+
     .. math::
 
        f(x \mid \mu, \tau) =
@@ -833,15 +849,16 @@ class Lognormal(PositiveContinuous):
         import matplotlib.pyplot as plt
         import numpy as np
         import scipy.stats as st
-        x = np.linspace(0.0, 3.0, 1000)
-        fig, ax = plt.subplots()
-        f = lambda mu, sd : st.lognorm.pdf(x, sd, scale=np.exp(mu))
-        plot_pdf = lambda mu, sd : ax.plot(x, f(mu, sd), label=r'$\mu$={0}, $\sigma$={1}'.format(mu, sd))
-        plot_pdf(0.0, 0.25)
-        plot_pdf(0.0, 0.5)
-        plot_pdf(0.0, 1.0)
-        plt.legend(loc='upper right', frameon=False)
-        ax.set(xlim=[0,3], ylim=[0,1.8], xlabel='x', ylabel='f(x)')
+        plt.style.use('seaborn-darkgrid')
+        x = np.linspace(0, 3, 100)
+        mus = [0., 0., 0.]
+        sds = [.25, .5, 1.]
+        for mu, sd in zip(mus, sds):
+            pdf = st.lognorm.pdf(x, sd, scale=np.exp(mu))
+            plt.plot(x, pdf, label=r'$\mu$ = {}, $\sigma$ = {}'.format(mu, sd))
+        plt.xlabel('x', fontsize=12)
+        plt.ylabel('f(x)', fontsize=12)
+        plt.legend(loc=1)
         plt.show()
 
     ========  =========================================================================
@@ -861,12 +878,14 @@ class Lognormal(PositiveContinuous):
         
     Example
     -------
-    # Example to show that we pass in only `sd` or `tau` but not both.
-    with pm.Model():
-        x = pm.Lognormal('x', mu=2, sd=30)
+    .. code-block:: python
 
-    with pm.Model():
-        x = pm.Lognormal('x', mu=2, tau=1/100)
+        # Example to show that we pass in only `sd` or `tau` but not both.
+        with pm.Model():
+            x = pm.Lognormal('x', mu=2, sd=30)
+
+        with pm.Model():
+            x = pm.Lognormal('x', mu=2, tau=1/100)
     """
 
     def __init__(self, mu=0, sd=None, tau=None, *args, **kwargs):
@@ -922,6 +941,8 @@ class StudentT(Continuous):
     If only nu parameter is passed, this specifies a standard (central)
     Student's T.
 
+    The pdf of this distribution is
+
     .. math::
 
        f(x|\mu,\lambda,\nu) =
@@ -934,17 +955,17 @@ class StudentT(Continuous):
         import matplotlib.pyplot as plt
         import numpy as np
         import scipy.stats as st
-        x = np.linspace(-5.0, 5.0, 1000)
-        fig, ax = plt.subplots()
-        f = lambda mu, lam, df : st.t.pdf(x, df, loc=mu, scale=1.0/np.sqrt(lam))
-        plot_pdf = lambda mu, lam, df : ax.plot(x, f(mu, lam, df), label=r'$\mu$={0}, $\lambda$={1}, $\nu$={2}'.format(mu, lam, df))
-        plot_pdf(0.0, 1.0, 1.0)
-        plot_pdf(0.0, 1.0, 2.0)
-        plot_pdf(0.0, 1.0, 5)
-        plot_pdf(-1.0, 1.0, 5)
-        plot_pdf(-1.0, 2.0, 5)
-        plt.legend(loc='upper right', frameon=False)
-        ax.set(xlim=[-5,5], ylim=[0,0.6], xlabel='x', ylabel='f(x)')
+        plt.style.use('seaborn-darkgrid')
+        x = np.linspace(-8, 8, 200)
+        mus = [0., 0., -2., -2.]
+        sds = [1., 1., 1., 2.]
+        dfs = [1., 5., 5., 5.]
+        for mu, sd, df in zip(mus, sds, dfs):
+            pdf = st.t.pdf(x, df, loc=mu, scale=sd)
+            plt.plot(x, pdf, label=r'$\mu$ = {}, $\sigma$ = {}, $\nu$ = {}'.format(mu, sd, df))
+        plt.xlabel('x', fontsize=12)
+        plt.ylabel('f(x)', fontsize=12)
+        plt.legend(loc=1)
         plt.show()
 
     ========  ========================
@@ -964,11 +985,13 @@ class StudentT(Continuous):
         
     Examples
     --------
-    with pm.Model():
-        x = pm.StudentT('x', nu=15, mu=0, sd=10)
-        
-    with pm.Model():
-        x = pm.StudentT('x', nu=15, mu=0, lam=1/23)
+    .. code-block:: python
+
+        with pm.Model():
+            x = pm.StudentT('x', nu=15, mu=0, sd=10)
+            
+        with pm.Model():
+            x = pm.StudentT('x', nu=15, mu=0, lam=1/23)
     """
 
     def __init__(self, nu, mu=0, lam=None, sd=None, *args, **kwargs):
@@ -1025,6 +1048,8 @@ class Pareto(PositiveContinuous):
     Often used to characterize wealth distribution, or other examples of the
     80/20 rule.
 
+    The pdf of this distribution is
+
     .. math::
 
        f(x \mid \alpha, m) = \frac{\alpha m^{\alpha}}{x^{\alpha+1}}
@@ -1034,15 +1059,16 @@ class Pareto(PositiveContinuous):
         import matplotlib.pyplot as plt
         import numpy as np
         import scipy.stats as st
-        x = np.linspace(0.0, 5.0, 1000)
-        fig, ax = plt.subplots()
-        f = lambda m, alpha : st.pareto.pdf(x, alpha, scale=m)
-        plot_pdf = lambda m, alpha : ax.plot(x, f(m, alpha), label=r'm={0}, $\alpha$={1}'.format(m, alpha))
-        plot_pdf(1.0,1.0)
-        plot_pdf(1.0,2.0)
-        plot_pdf(1.0,3.0)
-        plt.legend(loc='upper right', frameon=False)
-        ax.set(xlim=[0,5], ylim=[0,3.0], xlabel='x', ylabel='f(x)')
+        plt.style.use('seaborn-darkgrid')
+        x = np.linspace(0, 4, 1000)
+        alphas = [1., 2., 5., 5.]
+        ms = [1., 1., 1., 2.]
+        for alpha, m in zip(alphas, ms):
+            pdf = st.pareto.pdf(x, alpha, scale=m)
+            plt.plot(x, pdf, label=r'$\alpha$ = {}, m = {}'.format(alpha, m))
+        plt.xlabel('x', fontsize=12)
+        plt.ylabel('f(x)', fontsize=12)
+        plt.legend(loc=1)
         plt.show()
 
     ========  =============================================================
@@ -1112,6 +1138,8 @@ class Cauchy(Continuous):
 
     Also known as the Lorentz or the Breit-Wigner distribution.
 
+    The pdf of this distribution is
+
     .. math::
 
        f(x \mid \alpha, \beta) =
@@ -1122,16 +1150,16 @@ class Cauchy(Continuous):
         import matplotlib.pyplot as plt
         import numpy as np
         import scipy.stats as st
-        x = np.linspace(-5.0, 5.0, 1000)
-        fig, ax = plt.subplots()
-        f = lambda a, b : st.cauchy.pdf(x, loc=a, scale=b)
-        plot_pdf = lambda a, b : ax.plot(x, f(a, b), label=r'$\alpha$={0}, $\beta$={1}'.format(a, b))
-        plot_pdf(0.0, 0.5)
-        plot_pdf(0.0, 1.0)
-        plot_pdf(0.0, 2.0)
-        plot_pdf(-2.0, 1.0)
-        plt.legend(loc='upper right', frameon=False)
-        ax.set(xlim=[-5,5], ylim=[0,0.7], xlabel='x', ylabel='f(x)')
+        plt.style.use('seaborn-darkgrid')
+        x = np.linspace(-5, 5, 500)
+        alphas = [0., 0., 0., -2.]
+        betas = [.5, 1., 2., 1.]
+        for a, b in zip(alphas, betas):
+            pdf = st.cauchy.pdf(x, loc=a, scale=b)
+            plt.plot(x, pdf, label=r'$\alpha$ = {}, $\beta$ = {}'.format(a, b))
+        plt.xlabel('x', fontsize=12)
+        plt.ylabel('f(x)', fontsize=12)
+        plt.legend(loc=1)
         plt.show()
 
     ========  ========================
@@ -1189,6 +1217,8 @@ class HalfCauchy(PositiveContinuous):
     R"""
     Half-Cauchy log-likelihood.
 
+    The pdf of this distribution is
+
     .. math::
 
        f(x \mid \beta) = \frac{2}{\pi \beta [1 + (\frac{x}{\beta})^2]}
@@ -1198,15 +1228,14 @@ class HalfCauchy(PositiveContinuous):
         import matplotlib.pyplot as plt
         import numpy as np
         import scipy.stats as st
-        x = np.linspace(0.0, 5.0, 1000)
-        fig, ax = plt.subplots()
-        f = lambda b : st.cauchy.pdf(x, scale=b)
-        plot_pdf = lambda b : ax.plot(x, f(b), label=r'$\beta$={0}'.format(b))
-        plot_pdf(0.5)
-        plot_pdf(1.0)
-        plot_pdf(2.0)
-        plt.legend(loc='upper right', frameon=False)
-        ax.set(xlim=[0,5], ylim=[0,0.7], xlabel='x', ylabel='f(x)')
+        plt.style.use('seaborn-darkgrid')
+        x = np.linspace(0, 5, 200)
+        for b in [0.5, 1.0, 2.0]:
+            pdf = st.cauchy.pdf(x, scale=b)
+            plt.plot(x, pdf, label=r'$\beta$ = {}'.format(b))
+        plt.xlabel('x', fontsize=12)
+        plt.ylabel('f(x)', fontsize=12)
+        plt.legend(loc=1)
         plt.show()
 
     ========  ========================
@@ -1261,6 +1290,8 @@ class Gamma(PositiveContinuous):
     Represents the sum of alpha exponentially distributed random variables,
     each of which has mean beta.
 
+    The pdf of this distribution is
+
     .. math::
 
        f(x \mid \alpha, \beta) =
@@ -1271,16 +1302,16 @@ class Gamma(PositiveContinuous):
         import matplotlib.pyplot as plt
         import numpy as np
         import scipy.stats as st
-        x = np.linspace(0.0, 20.0, 1000)
-        fig, ax = plt.subplots()
-        f = lambda a, b : st.gamma.pdf(x, a, scale=1.0/b)
-        plot_pdf = lambda a, b : ax.plot(x, f(a, b), label=r'$\alpha$={0}, $\beta$={1}'.format(a, b))
-        plot_pdf(1.0, 0.5)
-        plot_pdf(2.0, 0.5)
-        plot_pdf(3.0, 1.0)
-        plot_pdf(7.5, 1.0)
-        plt.legend(loc='upper right', frameon=False)
-        ax.set(xlim=[0,20], ylim=[0,0.5], xlabel='x', ylabel='f(x)')
+        plt.style.use('seaborn-darkgrid')
+        x = np.linspace(0, 20, 200)
+        alphas = [1., 2., 3., 7.5]
+        betas = [.5, .5, 1., 1.]
+        for a, b in zip(alphas, betas):
+            pdf = st.gamma.pdf(x, a, scale=1.0/b)
+            plt.plot(x, pdf, label=r'$\alpha$ = {}, $\beta$ = {}'.format(a, b))
+        plt.xlabel('x', fontsize=12)
+        plt.ylabel('f(x)', fontsize=12)
+        plt.legend(loc=1)
         plt.show()
 
     ========  ===============================
@@ -1368,6 +1399,8 @@ class InverseGamma(PositiveContinuous):
     R"""
     Inverse gamma log-likelihood, the reciprocal of the gamma distribution.
 
+    The pdf of this distribution is
+
     .. math::
 
        f(x \mid \alpha, \beta) =
@@ -1379,16 +1412,16 @@ class InverseGamma(PositiveContinuous):
         import matplotlib.pyplot as plt
         import numpy as np
         import scipy.stats as st
-        x = np.linspace(0.0, 3.0, 1000)
-        fig, ax = plt.subplots()
-        f = lambda alpha, beta : st.invgamma.pdf(x, alpha, scale=beta)
-        plot_pdf = lambda alpha, beta : ax.plot(x, f(alpha, beta), label=r'$\alpha$={0}, $\beta$={1}'.format(alpha, beta))
-        plot_pdf(1.0,1.0)
-        plot_pdf(2.0,1.0)
-        plot_pdf(3.0,1.0)
-        plot_pdf(3.0,0.5)
-        plt.legend(loc='upper right', frameon=False)
-        ax.set(xlim=[0,3], ylim=[0,5], xlabel='x', ylabel='f(x)')
+        plt.style.use('seaborn-darkgrid')
+        x = np.linspace(0, 3, 500)
+        alphas = [1., 2., 3., 3.]
+        betas = [1., 1., 1., .5]
+        for a, b in zip(alphas, betas):
+            pdf = st.invgamma.pdf(x, a, scale=b)
+            plt.plot(x, pdf, label=r'$\alpha$ = {}, $\beta$ = {}'.format(a, b))
+        plt.xlabel('x', fontsize=12)
+        plt.ylabel('f(x)', fontsize=12)
+        plt.legend(loc=1)
         plt.show()
 
     ========  ======================================================
@@ -1456,6 +1489,8 @@ class ChiSquared(Gamma):
     R"""
     :math:`\chi^2` log-likelihood.
 
+    The pdf of this distribution is
+
     .. math::
 
        f(x \mid \nu) = \frac{x^{(\nu-2)/2}e^{-x/2}}{2^{\nu/2}\Gamma(\nu/2)}
@@ -1465,18 +1500,15 @@ class ChiSquared(Gamma):
         import matplotlib.pyplot as plt
         import numpy as np
         import scipy.stats as st
-        x = np.linspace(0.0, 8.0, 1000)
-        fig, ax = plt.subplots()
-        f = lambda df : st.chi2.pdf(x, df)
-        plot_pdf = lambda df : ax.plot(x, f(df), label=r'$\nu$={0}'.format(df))
-        plot_pdf(1.0)
-        plot_pdf(2.0)
-        plot_pdf(3.0)
-        plot_pdf(4.0)
-        plot_pdf(6.0)
-        plot_pdf(9.0)
-        plt.legend(loc='upper right', frameon=False)
-        ax.set(xlim=[0,8], ylim=[0,0.5], xlabel='x', ylabel='f(x)')
+        plt.style.use('seaborn-darkgrid')
+        x = np.linspace(0, 15, 200)
+        for df in [1, 2, 3, 6, 9]:
+            pdf = st.chi2.pdf(x, df)
+            plt.plot(x, pdf, label=r'$\nu$ = {}'.format(df))
+        plt.xlabel('x', fontsize=12)
+        plt.ylabel('f(x)', fontsize=12)
+        plt.ylim(0, 0.6)
+        plt.legend(loc=1)
         plt.show()
 
     ========  ===============================
@@ -1509,6 +1541,8 @@ class Weibull(PositiveContinuous):
     R"""
     Weibull log-likelihood.
 
+    The pdf of this distribution is
+
     .. math::
 
        f(x \mid \alpha, \beta) =
@@ -1520,16 +1554,17 @@ class Weibull(PositiveContinuous):
         import matplotlib.pyplot as plt
         import numpy as np
         import scipy.stats as st
-        x = np.linspace(0.0, 2.5, 1000)
-        fig, ax = plt.subplots()
-        f = lambda alpha, beta : st.weibull_min.pdf(x, alpha, scale=beta)
-        plot_pdf = lambda alpha, beta : ax.plot(x, f(alpha, beta), label=r'$\alpha$={0}, $\beta$={1}'.format(alpha, beta))
-        plot_pdf(0.5, 1.0)
-        plot_pdf(1.0, 1.0)
-        plot_pdf(1.5, 1.0)
-        plot_pdf(5.0, 1.0)
-        plt.legend(loc='upper right', frameon=False)
-        ax.set(xlim=[0,2.5], ylim=[0,2.5], xlabel='x', ylabel='f(x)')
+        plt.style.use('seaborn-darkgrid')
+        x = np.linspace(0, 3, 200)
+        alphas = [.5, 1., 1.5, 5., 5.]
+        betas = [1., 1., 1., 1.,  2]
+        for a, b in zip(alphas, betas):
+            pdf = st.weibull_min.pdf(x, a, scale=b)
+            plt.plot(x, pdf, label=r'$\alpha$ = {}, $\beta$ = {}'.format(a, b))
+        plt.xlabel('x', fontsize=12)
+        plt.ylabel('f(x)', fontsize=12)
+        plt.ylim(0, 2.5)
+        plt.legend(loc=1)
         plt.show()
 
     ========  ====================================================
@@ -1554,6 +1589,9 @@ class Weibull(PositiveContinuous):
         self.median = beta * tt.exp(gammaln(tt.log(2)))**(1. / alpha)
         self.variance = (beta**2) * \
             tt.exp(gammaln(1 + 2. / alpha - self.mean**2))
+        self.mode = tt.switch(alpha >= 1, 
+                              beta * ((alpha - 1)/alpha) ** (1 / alpha), 
+                              0)  # Reference: https://en.wikipedia.org/wiki/Weibull_distribution
 
         assert_negative_support(alpha, 'alpha', 'Weibull')
         assert_negative_support(beta, 'beta', 'Weibull')
@@ -1592,6 +1630,8 @@ class HalfStudentT(PositiveContinuous):
     R"""
     Half Student's T log-likelihood
 
+    The pdf of this distribution is
+
     .. math::
 
         f(x \mid \sigma,\nu) =
@@ -1604,16 +1644,16 @@ class HalfStudentT(PositiveContinuous):
         import matplotlib.pyplot as plt
         import numpy as np
         import scipy.stats as st
-        x = np.linspace(-5.0, 5.0, 200)
-        fig, ax = plt.subplots()
-        f = lambda sigma, nu : st.t.pdf(x, df=nu, loc=0, scale=sigma)
-        plot_pdf = lambda sigma, nu : ax.plot(x, f(sigma, nu), label=r'$\sigma$={}, $\nu$={}'.format(sigma, nu))
-        plot_pdf(1, 0.5)
-        plot_pdf(1, 1)
-        plot_pdf(2, 1)
-        plot_pdf(1, 30)
-        plt.legend(loc='upper right', frameon=False)
-        ax.set(xlim=[0,5], ylim=[0, 0.4], xlabel='x', ylabel='f(x)')
+        plt.style.use('seaborn-darkgrid')
+        x = np.linspace(0, 5, 200)
+        sigmas = [1., 1., 2., 1.]
+        nus = [.5, 1., 1., 30.]
+        for sigma, nu in zip(sigmas, nus):
+            pdf = st.t.pdf(x, df=nu, loc=0, scale=sigma)
+            plt.plot(x, pdf, label=r'$\sigma$ = {}, $\nu$ = {}'.format(sigma, nu))
+        plt.xlabel('x', fontsize=12)
+        plt.ylabel('f(x)', fontsize=12)
+        plt.legend(loc=1)
         plt.show()
 
     ========  ========================
@@ -1633,12 +1673,14 @@ class HalfStudentT(PositiveContinuous):
         
     Examples
     --------
-    # Only pass in one of lam or sd, but not both.
-    with pm.Model():
-        x = pm.HalfStudentT('x', sd=10, nu=10)
- 
-    with pm.Model():
-        x = pm.HalfStudentT('x', lam=4, nu=10)
+    .. code-block:: python
+
+        # Only pass in one of lam or sd, but not both.
+        with pm.Model():
+            x = pm.HalfStudentT('x', sd=10, nu=10)
+     
+        with pm.Model():
+            x = pm.HalfStudentT('x', lam=4, nu=10)
     """
     def __init__(self, nu=1, sd=None, lam=None, *args, **kwargs):
         super(HalfStudentT, self).__init__(*args, **kwargs)
@@ -1688,6 +1730,8 @@ class ExGaussian(Continuous):
     Results from the convolution of a normal distribution with an exponential
     distribution.
 
+    The pdf of this distribution is
+
     .. math::
 
        f(x \mid \mu, \sigma, \tau) =
@@ -1703,16 +1747,17 @@ class ExGaussian(Continuous):
         import matplotlib.pyplot as plt
         import numpy as np
         import scipy.stats as st
-        x = np.linspace(-6.0, 6.0, 1000)
-        fig, ax = plt.subplots()
-        f = lambda mu, sigma, nu : st.exponnorm.pdf(x, nu/sigma, loc=mu, scale=sigma)
-        plot_pdf = lambda mu, sigma, nu : ax.plot(x, f(mu, sigma, nu), label=r'$\mu$={0}, $\sigma$={1}, $\nu$={2}'.format(mu, sigma, nu))
-        plot_pdf(0.0,1.0,1.0)
-        plot_pdf(-2.0,1.0,1.0)
-        plot_pdf(0.0,3.0,1.0)
-        plot_pdf(-3.0,1.0,4.0)
-        plt.legend(loc='upper right', frameon=False)
-        ax.set(xlim=[-6,6], ylim=[0,0.4], xlabel='x', ylabel='f(x)')
+        plt.style.use('seaborn-darkgrid')
+        x = np.linspace(-6, 9, 200)
+        mus = [0., -2., 0., -3.]
+        sds = [1., 1., 3., 1.]
+        nus = [1., 1., 1., 4.]
+        for mu, sd, nu in zip(mus, sds, nus):
+            pdf = st.exponnorm.pdf(x, nu/sd, loc=mu, scale=sd)
+            plt.plot(x, pdf, label=r'$\mu$ = {}, $\sigma$ = {}, $\nu$ = {}'.format(mu, sd, nu))
+        plt.xlabel('x', fontsize=12)
+        plt.ylabel('f(x)', fontsize=12)
+        plt.legend(loc=1)
         plt.show()
 
     ========  ========================
@@ -1796,7 +1841,10 @@ class VonMises(Continuous):
     R"""
     Univariate VonMises log-likelihood.
 
+    The pdf of this distribution is
+
     .. math::
+
         f(x \mid \mu, \kappa) =
             \frac{e^{\kappa\cos(x-\mu)}}{2\pi I_0(\kappa)}
 
@@ -1807,17 +1855,16 @@ class VonMises(Continuous):
         import matplotlib.pyplot as plt
         import numpy as np
         import scipy.stats as st
-        x = np.linspace(-np.pi, np.pi, 1000)
-        fig, ax = plt.subplots()
-        f = lambda mu, kappa : st.vonmises.pdf(x, kappa, loc=mu)
-        plot_pdf = lambda mu, kappa : ax.plot(x, f(mu, kappa), label=r'$\mu$={0}, $\kappa$={1}'.format(mu, kappa))
-        plot_pdf(0.0,0.001)
-        plot_pdf(0.0,0.5)
-        plot_pdf(0.0,1.0)
-        plot_pdf(0.0,2.0)
-        plot_pdf(0.0,4.0)
-        plt.legend(loc='upper right', frameon=False)
-        ax.set(xlim=[-np.pi,np.pi], ylim=[0,1.0], xlabel='x', ylabel='f(x)')
+        plt.style.use('seaborn-darkgrid')
+        x = np.linspace(-np.pi, np.pi, 200)
+        mus = [0., 0., 0.,  -2.5]
+        kappas = [.01, 0.5,  4., 2.]
+        for mu, kappa in zip(mus, kappas):
+            pdf = st.vonmises.pdf(x, kappa, loc=mu)
+            plt.plot(x, pdf, label=r'$\mu$ = {}, $\kappa$ = {}'.format(mu, kappa))
+        plt.xlabel('x', fontsize=12)
+        plt.ylabel('f(x)', fontsize=12)
+        plt.legend(loc=1)
         plt.show()
 
     ========  ==========================================
@@ -1840,8 +1887,7 @@ class VonMises(Continuous):
             transform = transforms.Circular()
         super(VonMises, self).__init__(transform=transform, *args, **kwargs)
         self.mean = self.median = self.mode = self.mu = mu = tt.as_tensor_variable(mu)
-        self.kappa = kappa = tt.as_tensor_variable(kappa)
-        self.variance = 1 - i1(kappa) / i0(kappa)
+        self.kappa = kappa = floatX(tt.as_tensor_variable(kappa))
 
         assert_negative_support(kappa, 'kappa', 'VonMises')
 
@@ -1855,7 +1901,8 @@ class VonMises(Continuous):
     def logp(self, value):
         mu = self.mu
         kappa = self.kappa
-        return bound(kappa * tt.cos(mu - value) - tt.log(2 * np.pi * i0(kappa)), value >= -np.pi, value <= np.pi, kappa >= 0)
+        return bound(kappa * tt.cos(mu - value) - (tt.log(2 * np.pi) + log_i0(kappa)),
+                     kappa > 0, value >= -np.pi, value <= np.pi)
 
     def _repr_latex_(self, name=None, dist=None):
         if dist is None:
@@ -1873,7 +1920,10 @@ class SkewNormal(Continuous):
     R"""
     Univariate skew-normal log-likelihood.
 
+     The pdf of this distribution is
+
     .. math::
+
        f(x \mid \mu, \tau, \alpha) =
        2 \Phi((x-\mu)\sqrt{\tau}\alpha) \phi(x,\mu,\tau)
 
@@ -1882,17 +1932,14 @@ class SkewNormal(Continuous):
         import matplotlib.pyplot as plt
         import numpy as np
         import scipy.stats as st
-        x = np.linspace(-3.0, 3.0, 1000)
-        fig, ax = plt.subplots()
-        f = lambda alpha, mu, sigma : st.skewnorm.pdf(x, alpha, loc=mu, scale=sigma)
-        plot_pdf = lambda alpha, mu, sigma : ax.plot(x, f(alpha, mu, sigma), label=r'$\mu$={0}, $\sigma$={1}, $\alpha$={2}'.format(mu, sigma, alpha))
-        plot_pdf(-4.0,0.0,1.0)
-        plot_pdf(-1.0,0.0,1.0)
-        plot_pdf(0.0,0.0,1.0)
-        plot_pdf(1.0,0.0,1.0)
-        plot_pdf(4.0,0.0,1.0)
-        plt.legend(loc='upper right', frameon=False)
-        ax.set(xlim=[-3,3], ylim=[0,0.7], xlabel='x', ylabel='f(x)')
+        plt.style.use('seaborn-darkgrid')
+        x = np.linspace(-4, 4, 200)
+        for alpha in [-6, 0, 6]:
+            pdf = st.skewnorm.pdf(x, alpha, loc=0, scale=1)
+            plt.plot(x, pdf, label=r'$\mu$ = {}, $\sigma$ = {}, $\alpha$ = {}'.format(0, 1, alpha))
+        plt.xlabel('x', fontsize=12)
+        plt.ylabel('f(x)', fontsize=12)
+        plt.legend(loc=1)
         plt.show()
 
     ========  ==========================================
@@ -1975,9 +2022,46 @@ class SkewNormal(Continuous):
 
 
 class Triangular(Continuous):
-    """
+    R"""
     Continuous Triangular log-likelihood
-    Implemented by J. A. Fonseca 22/12/16
+
+    The pdf of this distribution is
+
+    .. math::
+
+       \begin{cases}
+         0 & \text{for } x < a, \\
+         \frac{2(x-a)}{(b-a)(c-a)} & \text{for } a \le x < c, \\[4pt]
+         \frac{2}{b-a}             & \text{for } x = c, \\[4pt]
+         \frac{2(b-x)}{(b-a)(b-c)} & \text{for } c < x \le b, \\[4pt]
+         0 & \text{for } b < x.
+        \end{cases}
+
+    .. plot::
+
+        import matplotlib.pyplot as plt
+        import numpy as np
+        import scipy.stats as st
+        plt.style.use('seaborn-darkgrid')
+        x = np.linspace(-2, 10, 500)
+        lowers = [0., -1, 2]
+        cs = [0.5, 0.5, 0.75]
+        uppers = [4., 2, 6]
+        for lower, c_, upper_ in zip(lowers, cs, uppers):
+            pdf = st.triang.pdf(x, loc=lower, c=c_, scale=upper_)
+            plt.plot(x, pdf, label='lower = {}, c = {}, upper = {}'.format(lower,
+                                                                           lower + upper_ * c_,
+                                                                           lower + upper_))
+        plt.xlabel('x', fontsize=12)
+        plt.ylabel('f(x)', fontsize=12)
+        plt.legend(loc=1)
+        plt.show()
+
+    ========  ============================================================================
+    Support   :math:`x \in [lower, upper]`
+    Mean      :math:`\dfrac{lower + upper + c}{3}`
+    Variance  :math:`\dfrac{upper^2 + lower^2 +c^2 - lower*upper - lower*c - upper*c}{18}`
+    ========  ============================================================================
 
     Parameters
     ----------
@@ -2030,21 +2114,43 @@ class Gumbel(Continuous):
     R"""
         Univariate Gumbel log-likelihood
 
-        .. math::
-           f(x \mid \mu, \beta) = -\frac{x - \mu}{\beta} - \exp \left(-\frac{x - \mu}{\beta} \right) - \log(\beta)
-        ========  ==========================================
-        Support   :math:`x \in \mathbb{R}`
-        Mean      :math:`\mu + \beta\gamma`, where \gamma is the Euler-Mascheroni constant
-        Variance  :math:`\frac{\pi^2}{6} \beta^2)`
-        ========  ==========================================
+    The pdf of this distribution is
 
-        Parameters
-        ----------
-        mu : float
-            Location parameter.
-        beta : float
-            Scale parameter (beta > 0).
-        """
+    .. math::
+
+       f(x \mid \mu, \beta) = -\frac{x - \mu}{\beta} - \exp \left(-\frac{x - \mu}{\beta} \right) - \log(\beta)
+
+    .. plot::
+
+        import matplotlib.pyplot as plt
+        import numpy as np
+        import scipy.stats as st
+        plt.style.use('seaborn-darkgrid')
+        x = np.linspace(-10, 20, 200)
+        mus = [0., 4., -1.]
+        betas = [2., 2., 4.]
+        for mu, beta in zip(mus, betas):
+            pdf = st.gumbel_r.pdf(x, loc=mu, scale=beta)
+            plt.plot(x, pdf, label=r'$\mu$ = {}, $\beta$ = {}'.format(mu, beta))
+        plt.xlabel('x', fontsize=12)
+        plt.ylabel('f(x)', fontsize=12)
+        plt.legend(loc=1)
+        plt.show()
+
+
+    ========  ==========================================
+    Support   :math:`x \in \mathbb{R}`
+    Mean      :math:`\mu + \beta\gamma`, where \gamma is the Euler-Mascheroni constant
+    Variance  :math:`\frac{\pi^2}{6} \beta^2)`
+    ========  ==========================================
+
+    Parameters
+    ----------
+    mu : float
+        Location parameter.
+    beta : float
+        Scale parameter (beta > 0).
+    """
 
     def __init__(self, mu=0, beta=1.0, **kwargs):
         self.mu = tt.as_tensor_variable(mu)
@@ -2084,10 +2190,29 @@ class Logistic(Continuous):
     R"""
     Logistic log-likelihood.
 
+    The pdf of this distribution is
+
     .. math::
 
        f(x \mid \mu, s) =
            \frac{\exp\left(-\frac{x - \mu}{s}\right)}{s \left(1 + \exp\left(-\frac{x - \mu}{s}\right)\right)^2}
+
+    .. plot::
+
+        import matplotlib.pyplot as plt
+        import numpy as np
+        import scipy.stats as st
+        plt.style.use('seaborn-darkgrid')
+        x = np.linspace(-5, 5, 200)
+        mus = [0., 0., 0., -2.]
+        ss = [.4, 1., 2., .4]
+        for mu, s in zip(mus, ss):
+            pdf = st.logistic.pdf(x, loc=mu, scale=s)
+            plt.plot(x, pdf, label=r'$\mu$ = {}, $s$ = {}'.format(mu, s))
+        plt.xlabel('x', fontsize=12)
+        plt.ylabel('f(x)', fontsize=12)
+        plt.legend(loc=1)
+        plt.show()
 
     ========  ==========================================
     Support   :math:`x \in \mathbb{R}`
@@ -2095,22 +2220,6 @@ class Logistic(Continuous):
     Variance  :math:`\frac{s^2 \pi^2}{3}`
     ========  ==========================================
 
-    .. plot::
-
-        import matplotlib.pyplot as plt
-        import numpy as np
-        import scipy.stats as st
-        x = np.linspace(-5.0, 5.0, 1000)
-        fig, ax = plt.subplots()
-        f = lambda mu, s : st.logistic.pdf(x, loc=mu, scale=s)
-        plot_pdf = lambda a, b : ax.plot(x, f(a,b), label=r'$\mu$={0}, $s$={1}'.format(a,b))
-        plot_pdf(0.0, 0.4)
-        plot_pdf(0.0, 1.0)
-        plot_pdf(0.0, 2.0)
-        plot_pdf(-2.0, 0.4)
-        plt.legend(loc='upper right', frameon=False)
-        ax.set(xlim=[-5,5], ylim=[0,1.2], xlabel='x', ylabel='f(x)')
-        plt.show()
 
     Parameters
     ----------
@@ -2133,9 +2242,7 @@ class Logistic(Continuous):
         s = self.s
 
         return bound(
-            -(value - mu) / s - tt.log(s) - 2 * tt.log1p(tt.exp(-(value - mu) / s)),
-            s > 0
-        )
+            -(value - mu) / s - tt.log(s) - 2 * tt.log1p(tt.exp(-(value - mu) / s)), s > 0)
 
     def random(self, point=None, size=None, repeat=None):
         mu, s = draw_values([self.mu, self.s], point=point)
@@ -2144,8 +2251,7 @@ class Logistic(Continuous):
             stats.logistic.rvs,
             loc=mu, scale=s,
             dist_shape=self.shape,
-            size=size
-        )
+            size=size)
 
     def _repr_latex_(self, name=None, dist=None):
         if dist is None:
@@ -2156,6 +2262,86 @@ class Logistic(Continuous):
         return r'${} \sim \text{{Logistic}}(\mathit{{mu}}={},~\mathit{{s}}={})$'.format(name,
                                                                 get_variable_name(mu),
                                                                 get_variable_name(s))
+
+
+class LogitNormal(UnitContinuous):
+    R"""
+    Logit-Normal log-likelihood.
+
+    The pdf of this distribution is
+
+    .. math::
+       f(x \mid \mu, \tau) =
+           \frac{1}{x(1-x)} \sqrt{\frac{\tau}{2\pi}}
+           \exp\left\{ -\frac{\tau}{2} (logit(x)-\mu)^2 \right\}
+
+
+    .. plot::
+
+        import matplotlib.pyplot as plt
+        import numpy as np
+        import scipy.stats as st
+        from scipy.special import logit
+        plt.style.use('seaborn-darkgrid')
+        x = np.linspace(0.0001, 0.9999, 500)
+        mus = [0., 0., 0., 1.]
+        sds = [0.3, 1., 2., 1.]
+        for mu, sd in  zip(mus, sds):
+            pdf = st.norm.pdf(logit(x), loc=mu, scale=sd) * 1/(x * (1-x))
+            plt.plot(x, pdf, label=r'$\mu$ = {}, $\sigma$ = {}'.format(mu, sd))
+            plt.legend(loc=1)
+        plt.show()
+
+    ========  ==========================================
+    Support   :math:`x \in (0, 1)`
+    Mean      no analytical solution
+    Variance  no analytical solution
+    ========  ==========================================
+
+    Parameters
+    ----------
+    mu : float
+        Location parameter.
+    sd : float
+        Scale parameter (sd > 0).
+    tau : float
+        Scale parameter (tau > 0).
+    """
+
+    def __init__(self, mu=0, sd=None, tau=None, **kwargs):
+        self.mu = mu = tt.as_tensor_variable(mu)
+        tau, sd = get_tau_sd(tau=tau, sd=sd)
+        self.sd = tt.as_tensor_variable(sd)
+        self.tau = tau = tt.as_tensor_variable(tau)
+
+        self.median = invlogit(mu)
+        assert_negative_support(sd, 'sd', 'LogitNormal')
+        assert_negative_support(tau, 'tau', 'LogitNormal')
+
+        super(LogitNormal, self).__init__(**kwargs)
+
+    def random(self, point=None, size=None, repeat=None):
+        mu, _, sd = draw_values([self.mu, self.tau, self.sd], point=point)
+        return expit(generate_samples(stats.norm.rvs, loc=mu, scale=sd, dist_shape=self.shape,
+                                      size=size))
+
+    def logp(self, value):
+        sd = self.sd
+        mu = self.mu
+        tau = self.tau
+        return bound(-0.5 * tau * (logit(value) - mu) ** 2
+                     + 0.5 * tt.log(tau / (2. * np.pi))
+                     - tt.log(value * (1 - value)), value > 0, value < 1, tau > 0)
+
+    def _repr_latex_(self, name=None, dist=None):
+        if dist is None:
+            dist = self
+        sd = dist.sd
+        mu = dist.mu
+        name = r'\text{%s}' % name
+        return r'${} \sim \text{{LogitNormal}}(\mathit{{mu}}={},~\mathit{{sd}}={})$'.format(name,
+                                                                get_variable_name(mu),
+                                                                get_variable_name(sd))
 
 
 class Interpolated(Continuous):

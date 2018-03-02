@@ -1,7 +1,7 @@
 """Convergence diagnostics and model validation"""
 
 import numpy as np
-from .stats import statfunc
+from .stats import statfunc, autocov
 from .util import get_default_varnames
 from .backends.base import MultiTrace
 
@@ -205,53 +205,55 @@ def effective_n(mtrace, varnames=None, include_transformed=False):
     is the first odd positive integer for which the sum
     :math:`\hat{\rho}_{T+1} + \hat{\rho}_{T+1}` is negative.
 
+    The current implementation is similar to Stan, which uses Geyer's initial
+    monotone sequence criterion (Geyer, 1992; Geyer, 2011).
+
     References
     ----------
-    Gelman et al. (2014)"""
+    Gelman et al. BDA (2014)"""
 
-    def get_vhat(x):
-        # Chain samples are second to last dim (-2)
-        num_samples = x.shape[-2]
+    def get_neff(x):
+        """Compute the effective sample size for a 2D array
+        """
+        trace_value = x.T
+        nchain, n_samples = trace_value.shape
 
-        # Calculate between-chain variance
-        B = num_samples * np.var(np.mean(x, axis=-2), axis=-1, ddof=1)
+        acov = np.asarray([autocov(trace_value[chain]) for chain in range(nchain)])
 
-        # Calculate within-chain variance
-        W = np.mean(np.var(x, axis=-2, ddof=1), axis=-1)
+        chain_mean = trace_value.mean(axis=1)
+        chain_var = acov[:, 0] * n_samples / (n_samples - 1.)
+        acov_t = acov[:, 1] * n_samples / (n_samples - 1.)
+        mean_var = np.mean(chain_var)
+        var_plus = mean_var * (n_samples - 1.) / n_samples
+        var_plus += np.var(chain_mean, ddof=1)
 
-        # Estimate marginal posterior variance
-        Vhat = W * (num_samples - 1) / num_samples + B / num_samples
-
-        return Vhat
-
-    def get_neff(x, Vhat):
-        # Number of chains is last dim (-1)
-        num_chains = x.shape[-1]
-
-        # Chain samples are second to last dim (-2)
-        num_samples = x.shape[-2]
-
-        negative_autocorr = False
-
-        rho = np.ones(num_samples)
+        rho_hat_t = np.zeros(n_samples)
+        rho_hat_even = 1.
+        rho_hat_t[0] = rho_hat_even
+        rho_hat_odd = 1. - (mean_var - np.mean(acov_t)) / var_plus
+        rho_hat_t[1] = rho_hat_odd
+        # Geyer's initial positive sequence
+        max_t = 1
         t = 1
+        while t < (n_samples - 2) and (rho_hat_even + rho_hat_odd) >= 0.:
+            rho_hat_even = 1. - (mean_var - np.mean(acov[:, t + 1])) / var_plus
+            rho_hat_odd = 1. - (mean_var - np.mean(acov[:, t + 2])) / var_plus
+            if (rho_hat_even + rho_hat_odd) >= 0:
+                rho_hat_t[t + 1] = rho_hat_even
+                rho_hat_t[t + 2] = rho_hat_odd
+            max_t = t + 2
+            t += 2
 
-        # Iterate until the sum of consecutive estimates of autocorrelation is
-        # negative
-        while not negative_autocorr and (t < num_samples):
-
-            variogram = np.mean((x[t:, :] - x[:-t, :])**2)
-            rho[t] = 1. - variogram / (2. * Vhat)
-
-            negative_autocorr = sum(rho[t - 1:t + 1]) < 0
-
-            t += 1
-
-        if t % 2:
-            t -= 1
-
-        neff = num_chains * num_samples / (1. + 2 * rho[1:t-1].sum())
-        return min(num_chains * num_samples, np.floor(neff))
+        # Geyer's initial monotone sequence
+        t = 3
+        while t <= max_t - 2:
+            if (rho_hat_t[t + 1] + rho_hat_t[t + 2]) > (rho_hat_t[t - 1] + rho_hat_t[t]):
+                rho_hat_t[t + 1] = (rho_hat_t[t - 1] + rho_hat_t[t]) / 2.
+                rho_hat_t[t + 2] = rho_hat_t[t + 1]
+            t += 2
+        ess = nchain * n_samples
+        ess = ess / (-1. + 2. * np.sum(rho_hat_t))
+        return ess
 
     def generate_neff(trace_values):
         x = np.array(trace_values)
@@ -268,14 +270,12 @@ def effective_n(mtrace, varnames=None, include_transformed=False):
         # of the chain and sample axes.
         x = x.transpose()
 
-        Vhat = get_vhat(x)
-
         # Get an array the same shape as the var
         _n_eff = np.zeros(x.shape[:-2])
 
         # Iterate over tuples of indices of the shape of var
         for tup in np.ndindex(*list(x.shape[:-2])):
-            _n_eff[tup] = get_neff(x[tup], Vhat[tup])
+            _n_eff[tup] = get_neff(x[tup])
 
         if len(shape) == 2:
             return _n_eff[0]

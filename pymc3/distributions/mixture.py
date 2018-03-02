@@ -42,28 +42,30 @@ class Mixture(Distribution):
 
     Example
     -------
-    # 2-Mixture Poisson distribution
-    with pm.Model() as model:
-        lam = pm.Exponential('lam', lam=1, shape=(2,))  # `shape=(2,)` indicates two mixtures.
+    .. code-block:: python
 
-        # As we just need the logp, rather than add a RV to the model, we need to call .dist()
-        components = pm.Poisson.dist(mu=lam, shape=(2,))  
+        # 2-Mixture Poisson distribution
+        with pm.Model() as model:
+            lam = pm.Exponential('lam', lam=1, shape=(2,))  # `shape=(2,)` indicates two mixtures.
 
-        w = pm.Dirichlet('w', a=np.array([1, 1]))  # two mixture component weights.
+            # As we just need the logp, rather than add a RV to the model, we need to call .dist()
+            components = pm.Poisson.dist(mu=lam, shape=(2,))  
 
-        like = pm.Mixture('like', w=w, comp_dists=components, observed=data)
+            w = pm.Dirichlet('w', a=np.array([1, 1]))  # two mixture component weights.
 
-    # 2-Mixture Poisson using iterable of distributions.
-    with pm.Model() as model:
-        lam1 = pm.Exponential('lam1', lam=1)
-        lam2 = pm.Exponential('lam2', lam=1)
+            like = pm.Mixture('like', w=w, comp_dists=components, observed=data)
 
-        pois1 = pm.Poisson.dist(mu=lam1)
-        pois2 = pm.Poisson.dist(mu=lam2)
+        # 2-Mixture Poisson using iterable of distributions.
+        with pm.Model() as model:
+            lam1 = pm.Exponential('lam1', lam=1)
+            lam2 = pm.Exponential('lam2', lam=1)
 
-        w = pm.Dirichlet('w', a=np.array([1, 1]))
+            pois1 = pm.Poisson.dist(mu=lam1)
+            pois2 = pm.Poisson.dist(mu=lam2)
 
-        like = pm.Mixture('like', w=w, comp_dists = [pois1, pois2], observed=data)
+            w = pm.Dirichlet('w', a=np.array([1, 1]))
+
+            like = pm.Mixture('like', w=w, comp_dists = [pois1, pois2], observed=data)
     """
     def __init__(self, w, comp_dists, *args, **kwargs):
         shape = kwargs.pop('shape', ())
@@ -136,7 +138,7 @@ class Mixture(Distribution):
     def logp(self, value):
         w = self.w
 
-        return bound(logsumexp(tt.log(w) + self._comp_logp(value), axis=-1).sum(),
+        return bound(logsumexp(tt.log(w) + self._comp_logp(value), axis=-1),
                      w >= 0, w <= 1, tt.allclose(w.sum(axis=-1), 1),
                      broadcast_conditions=False)
 
@@ -197,9 +199,15 @@ class NormalMixture(Mixture):
     def __init__(self, w, mu, *args, **kwargs):
         _, sd = get_tau_sd(tau=kwargs.pop('tau', None),
                            sd=kwargs.pop('sd', None))
+        
+        distshape = np.broadcast(mu, sd).shape
         self.mu = mu = tt.as_tensor_variable(mu)
         self.sd = sd = tt.as_tensor_variable(sd)
-        super(NormalMixture, self).__init__(w, Normal.dist(mu, sd=sd),
+
+        if not distshape: 
+            distshape = np.broadcast(mu.tag.test_value, sd.tag.test_value).shape
+
+        super(NormalMixture, self).__init__(w, Normal.dist(mu, sd=sd, shape=distshape),
                                             *args, **kwargs)
 
     def _repr_latex_(self, name=None, dist=None):

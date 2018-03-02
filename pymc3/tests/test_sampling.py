@@ -33,15 +33,15 @@ class TestSample(SeededTest):
         assert random_numbers[0] == random_numbers[1]
 
     def test_parallel_sample_does_not_reuse_seed(self):
-        njobs = 4
+        cores = 4
         random_numbers = []
         draws = []
         for _ in range(2):
             np.random.seed(1)  # seeds in other processes don't effect main process
             with self.model:
-                trace = pm.sample(100, tune=0, njobs=njobs)
+                trace = pm.sample(100, tune=0, cores=cores)
             # numpy thread mentioned race condition.  might as well check none are equal
-            for first, second in combinations(range(njobs), 2):
+            for first, second in combinations(range(cores), 2):
                 first_chain = trace.get_values('x', chains=first)
                 second_chain = trace.get_values('x', chains=second)
                 assert not (first_chain == second_chain).all()
@@ -53,11 +53,11 @@ class TestSample(SeededTest):
         assert (draws[0] == draws[1]).all()
 
     def test_sample(self):
-        test_njobs = [1]
+        test_cores = [1]
         with self.model:
-            for njobs in test_njobs:
+            for cores in test_cores:
                 for steps in [1, 10, 300]:
-                    pm.sample(steps, tune=0, step=self.step, njobs=njobs,
+                    pm.sample(steps, tune=0, step=self.step, cores=cores,
                               random_seed=self.random_seed)
 
     def test_sample_init(self):
@@ -93,7 +93,7 @@ class TestSample(SeededTest):
 
     def test_parallel_start(self):
         with self.model:
-            tr = pm.sample(0, tune=5, njobs=2,
+            tr = pm.sample(0, tune=5, cores=2,
                            discard_tuned_samples=False,
                            start=[{'x': [10, 10]}, {'x': [-10, -10]}],
                            random_seed=self.random_seed)
@@ -102,12 +102,12 @@ class TestSample(SeededTest):
 
     def test_sample_tune_len(self):
         with self.model:
-            trace = pm.sample(draws=100, tune=50, njobs=1)
+            trace = pm.sample(draws=100, tune=50, cores=1)
             assert len(trace) == 100
-            trace = pm.sample(draws=100, tune=50, njobs=1,
+            trace = pm.sample(draws=100, tune=50, cores=1,
                               discard_tuned_samples=False)
             assert len(trace) == 150
-            trace = pm.sample(draws=100, tune=50, njobs=4)
+            trace = pm.sample(draws=100, tune=50, cores=4)
             assert len(trace) == 100
 
     @pytest.mark.parametrize(

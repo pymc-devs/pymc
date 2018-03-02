@@ -31,3 +31,4 @@ mcmc.sqlite
 benchmarks/env/
 benchmarks/html/
 benchmarks/results/
+.pytest_cache/

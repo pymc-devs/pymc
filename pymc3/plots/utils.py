@@ -4,7 +4,7 @@ except ImportError:  # mpl is optional
     pass
 import numpy as np
 # plotting utilities can all be in this namespace
-from ..util import get_default_varnames  # pylint: disable=unused-import
+from ..util import get_default_varnames # pylint: disable=unused-import
 
 
 def identity_transform(x):
