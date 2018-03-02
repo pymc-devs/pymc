@@ -515,7 +515,7 @@ class DEMetropolis(PopulationArrayStepShared):
     }]
 
     def __init__(self, vars=None, S=None, proposal_dist=None, lamb=None, scaling=0.001,
-                 tune=True, tune_interval=100, model=None, mode=None, **kwargs):
+                 tune=True, tune_interval=100, model=None, mode=None, noisy_logp=True, **kwargs):
         warnings.warn('Population based sampling methods such as DEMetropolis are experimental.' \
             ' Use carefully and be extra critical about their results!')
 
@@ -545,7 +545,14 @@ class DEMetropolis(PopulationArrayStepShared):
         self.mode = mode
 
         shared = pm.make_shared_replacements(vars, model)
+        self.noisy_logp = noisy_logp
+        if noisy_logp:
+            self.single_logp = single_logp(model.logpt, vars, shared)
+            self.cached_q = None
+            self.cached_logp = None
+        #else:
         self.delta_logp = delta_logp(model.logpt, vars, shared)
+
         super(DEMetropolis, self).__init__(vars, shared)
 
     def astep(self, q0):
@@ -567,8 +574,26 @@ class DEMetropolis(PopulationArrayStepShared):
         # propose a jump
         q = floatX(q0 + self.lamb * (r1 - r2) + epsilon)
 
-        accept = self.delta_logp(q, q0)
-        q_new, accepted = metrop_select(accept, q, q0)
+        # with noisy logp, do not re-evaluate logp(q0)
+        if self.noisy_logp:
+            # get or determine logp(q0)
+            if np.array_equal(q0, self.cached_q):
+                logp_q0 = self.cached_logp
+            else:
+                logp_q0 = self.single_logp(q0)
+            # logp(q) is always re-evaluated
+            logp_new = self.single_logp(q)
+
+            # partially noisy accept
+            accept = logp_new - logp_q0
+            q_new, accepted = metrop_select(accept, q, q0)
+            if accepted:
+                self.cached_logp = logp_new
+                self.cached_q = q_new
+        else:
+            accept = self.delta_logp(q, q0)
+            q_new, accepted = metrop_select(accept, q, q0)
+
         self.accepted += accepted
 
         self.steps_until_tune -= 1
@@ -608,5 +633,13 @@ def delta_logp(logp, vars, shared):
     logp1 = pm.CallableTensor(logp0)(inarray1)
 
     f = theano.function([inarray1, inarray0], logp1 - logp0)
+    f.trust_input = True
+    return f
+
+
+def single_logp(logp, vars, shared):
+    [logp0], inarray0 = pm.join_nonshared_inputs([logp], vars, shared)
+
+    f = theano.function([inarray0], logp0)
     f.trust_input = True
     return f
