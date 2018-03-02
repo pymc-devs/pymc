@@ -2,7 +2,6 @@
 
 import itertools
 import logging
-import warnings
 
 import numpy as np
 import pandas as pd
@@ -88,7 +87,7 @@ def autocorr(x, lag=None):
     if lag is None:
         return acorr
     else:
-        warnings.warn(
+        _log.warning(
             "The `lag` argument has been deprecated. If you want to get "
             "the value of a specific lag please call `autocorr(x)[lag]`.",
             DeprecationWarning)
@@ -114,7 +113,7 @@ def autocov(x, lag=None):
     if lag is None:
         return acov
     else:
-        warnings.warn(
+        _log.warning(
             "The `lag` argument has been deprecated. If you want to get "
             "the value of a specific lag please call `autocov(x)[lag]`.",
             DeprecationWarning)
@@ -226,7 +225,7 @@ def waic(trace, model=None, pointwise=False, progressbar=False):
 
     if pointwise:
         if np.equal(waic, waic_i).all():
-            warnings.warn("""The point-wise WAIC is the same with the sum WAIC,
+            _log.warning("""The point-wise WAIC is the same with the sum WAIC,
             please double check the Observed RV in your model to make sure it
             returns element-wise logp.
             """)
@@ -305,7 +304,7 @@ def loo(trace, model=None, pointwise=False, reff=None, progressbar=False):
 
     if pointwise:
         if np.equal(loo_lppd, loo_lppd_i).all():
-            warnings.warn("""The point-wise LOO is the same with the sum LOO,
+            _log.warning("""The point-wise LOO is the same with the sum LOO,
             please double check the Observed RV in your model to make sure it
             returns element-wise logp.
             """)

@@ -332,7 +332,7 @@ def sample(draws=500, step=None, init='auto', n_init=200000, start=None,
         cores = min(4, _cpu_count())
     if 'njobs' in kwargs:
         cores = kwargs['njobs']
-        warnings.warn(
+        _log.warning(
             "The njobs argument has been deprecated. Use cores instead.",
             DeprecationWarning)
     if chains is None:
@@ -352,7 +352,7 @@ def sample(draws=500, step=None, init='auto', n_init=200000, start=None,
             'Invalid value for `random_seed`. Must be tuple, list or int')
     if 'nchains' in kwargs:
         chains = kwargs['nchains']
-        warnings.warn(
+        _log.warning(
             "The nchains argument has been deprecated. Use chains instead.",
             DeprecationWarning)
     if 'chain' in kwargs:
@@ -465,7 +465,7 @@ def sample(draws=500, step=None, init='auto', n_init=200000, start=None,
 
     if compute_convergence_checks:
         if draws-tune < 100:
-            warnings.warn(
+            _log.warning(
                 "The number of samples is too small to check "
                 "convergence reliably.")
         else:

@@ -1,4 +1,5 @@
-import warnings
+import logging
+_log = logging.getLogger('pymc3')
 
 try:
     import matplotlib.pyplot as plt
@@ -113,7 +114,7 @@ def pairplot(trace, varnames=None, figsize=None, text_size=None,
             try:
                 divergent = trace['diverging']
             except KeyError:
-                warnings.warn('No divergences were found.')
+                _log.warning('No divergences were found.')
 
             diverge = (divergent == 1)
             ax.scatter(trace_dict[varnames[0]][diverge],
@@ -145,7 +146,7 @@ def pairplot(trace, varnames=None, figsize=None, text_size=None,
                     try:
                         divergent = trace['diverging']
                     except KeyError:
-                        warnings.warn('No divergences were found.')
+                        _log.warning('No divergences were found.')
                         return ax
 
                     diverge = (divergent == 1)

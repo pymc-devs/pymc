@@ -498,12 +498,12 @@ def sample_smc(samples=1000, chains=100, step=None, start=None, homepath=None, s
     n_chains = chains
     if 'n_chains' in kwargs:
         n_chains = kwargs['n_chains']
-        warnings.warn(
+        _log.warning(
             "The n_chains argument has been deprecated. Use chains instead.",
             DeprecationWarning)
     remainder = samples % n_chains
     if remainder != 0:
-        warnings.warn("'samples' {} is not a multiple of 'chains' {}. Hence, you will get {} "
+        _log.warning("'samples' {} is not a multiple of 'chains' {}. Hence, you will get {} "
                       "draws from the posterior".format(samples, n_chains, samples - remainder))
 
     model = modelcontext(model)
@@ -521,7 +521,7 @@ def sample_smc(samples=1000, chains=100, step=None, start=None, homepath=None, s
 
     if 'n_jobs' in kwargs:
         cores = kwargs['n_jobs']
-        warnings.warn(
+        _log.warning(
             "The n_jobs argument has been deprecated. Use cores instead.",
             DeprecationWarning)
     if cores > 1:
