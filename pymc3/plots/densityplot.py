@@ -65,7 +65,7 @@ def densityplot(trace, models=None, varnames=None, alpha=0.05, point_estimate='m
 
     """
     if point_estimate not in ('mean', 'median', None):
-        raise ValueError("Point Estimate should be 'mean', 'median' or None")
+        raise ValueError("Point estimate should be 'mean', 'median' or None")
 
     if not isinstance(trace, (list, tuple)):
         trace = [trace]
