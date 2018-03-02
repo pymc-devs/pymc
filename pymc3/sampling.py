@@ -1126,8 +1126,8 @@ def sample_ppc_w(traces, samples=None, models=None, weights=None,
     if len(models) != len(weights):
         raise ValueError('The number of models and weights should be the same')
 
-    lenght_morv = len(models[0].observed_RVs)
-    if not all(len(i.observed_RVs) == lenght_morv for i in models):
+    length_morv = len(models[0].observed_RVs)
+    if not all(len(i.observed_RVs) == length_morv for i in models):
         raise ValueError(
             'The number of observed RVs should be the same for all models')
 
@@ -1161,17 +1161,16 @@ def sample_ppc_w(traces, samples=None, models=None, weights=None,
     obs = [x for m in models for x in m.observed_RVs]
     variables = np.repeat(obs, n)
 
-    lengths = [np.atleast_1d(observed).shape for observed in obs]
-    lenghts = list(set(lengths))
+    lengths = list(set([np.atleast_1d(observed).shape for observed in obs]))
 
-    if len(lenghts) == 1:
+    if len(lengths) == 1:
         size = [None for i in variables]
-    elif len(lenghts) > 2:
+    elif len(lengths) > 2:
         raise ValueError('Observed variables could not be broadcast together')
     else:
         size = []
-        x = np.zeros(shape=lenghts[0])
-        y = np.zeros(shape=lenghts[1])
+        x = np.zeros(shape=lengths[0])
+        y = np.zeros(shape=lengths[1])
         b = np.broadcast(x, y)
         for var in variables:
             shape = np.shape(np.atleast_1d(var.distribution.default()))

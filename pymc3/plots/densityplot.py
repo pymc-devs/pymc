@@ -69,22 +69,22 @@ def densityplot(trace, models=None, varnames=None, alpha=0.05, point_estimate='m
     if not isinstance(trace, (list, tuple)):
         trace = [trace]
 
-    lenght_trace = len(trace)
+    length_trace = len(trace)
 
     if models is None:
-        if lenght_trace > 1:
-            models = ['m_{}'.format(i) for i in range(lenght_trace)]
+        if length_trace > 1:
+            models = ['m_{}'.format(i) for i in range(length_trace)]
         else:
             models = ['']
-    elif len(models) != lenght_trace:
+    elif len(models) != length_trace:
         raise ValueError("The number of names for the models does not match the number of models")
 
-    lenght_models = len(models)
+    length_models = len(models)
 
     if colors == 'cycle':
-        colors = ['C{}'.format(i % 10) for i in range(lenght_models)]
+        colors = ['C{}'.format(i % 10) for i in range(length_models)]
     elif isinstance(colors, str):
-        colors = [colors for i in range(lenght_models)]
+        colors = [colors for i in range(length_models)]
 
     if varnames is None:
         varnames = []
@@ -114,7 +114,7 @@ def densityplot(trace, models=None, varnames=None, alpha=0.05, point_estimate='m
                     _kde_helper(vec, vname, colors[t_idx], bw, alpha, point_estimate,
                                 hpd_markers, outline, shade, kplot[v_idx])
 
-    if lenght_trace > 1:
+    if length_trace > 1:
         for m_idx, m in enumerate(models):
             kplot[0].plot([], label=m, c=colors[m_idx])
         kplot[0].legend(fontsize=textsize)
