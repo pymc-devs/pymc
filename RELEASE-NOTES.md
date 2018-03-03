@@ -16,6 +16,7 @@
 - Plots of discrete distributions in the docstrings
 - Add logitnormal distribution
 - Densityplot: add support for discrete variables
+- Fix the Binomial likelihood in `.glm.families.Binomial`, with the flexibility of specifying the `n`. 
 
 ### Fixes
 
