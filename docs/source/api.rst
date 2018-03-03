@@ -18,3 +18,4 @@ API Reference
    api/backends
    api/math
    api/data
+   api/model
