@@ -513,59 +513,63 @@ class Model(six.with_metaclass(InitContextMeta, Context, Factor, WithMemoization
 
     Examples
     --------
-    # How to define a custom model
-    class CustomModel(Model):
-        # 1) override init
-        def __init__(self, mean=0, sd=1, name='', model=None):
-            # 2) call super's init first, passing model and name to it
-            # name will be prefix for all variables here
-            # if no name specified for model there will be no prefix
-            super(CustomModel, self).__init__(name, model)
-            # now you are in the context of instance,
-            # `modelcontext` will return self
-            # you can define variables in several ways
-            # note, that all variables will get model's name prefix
 
-            # 3) you can create variables with Var method
-            self.Var('v1', Normal.dist(mu=mean, sd=sd))
-            # this will create variable named like '{prefix_}v1'
-            # and assign attribute 'v1' to instance
-            # created variable can be accessed with self.v1 or self['v1']
+    How to define a custom model
 
-            # 4) this syntax will also work as we are in the context
-            # of instance itself, names are given as usual
-            Normal('v2', mu=mean, sd=sd)
+    .. code-block:: python
 
-            # something more complex is allowed too
-            Normal('v3', mu=mean, sd=HalfCauchy('sd', beta=10, testval=1.))
+        class CustomModel(Model):
+            # 1) override init
+            def __init__(self, mean=0, sd=1, name='', model=None):
+                # 2) call super's init first, passing model and name to it
+                # name will be prefix for all variables here
+                # if no name specified for model there will be no prefix
+                super(CustomModel, self).__init__(name, model)
+                # now you are in the context of instance,
+                # `modelcontext` will return self
+                # you can define variables in several ways
+                # note, that all variables will get model's name prefix
 
-            # Deterministic variables can be used in usual way
-            Deterministic('v3_sq', self.v3 ** 2)
-            # Potentials too
-            Potential('p1', tt.constant(1))
+                # 3) you can create variables with Var method
+                self.Var('v1', Normal.dist(mu=mean, sd=sd))
+                # this will create variable named like '{prefix_}v1'
+                # and assign attribute 'v1' to instance
+                # created variable can be accessed with self.v1 or self['v1']
 
-    # After defining a class CustomModel you can use it in several ways
+                # 4) this syntax will also work as we are in the context
+                # of instance itself, names are given as usual
+                Normal('v2', mu=mean, sd=sd)
 
-    # I:
-    #   state the model within a context
-    with Model() as model:
-        CustomModel()
-        # arbitrary actions
+                # something more complex is allowed too
+                Normal('v3', mu=mean, sd=HalfCauchy('sd', beta=10, testval=1.))
 
-    # II:
-    #   use new class as entering point in context
-    with CustomModel() as model:
-        Normal('new_normal_var', mu=1, sd=0)
+                # Deterministic variables can be used in usual way
+                Deterministic('v3_sq', self.v3 ** 2)
+                # Potentials too
+                Potential('p1', tt.constant(1))
 
-    # III:
-    #   just get model instance with all that was defined in it
-    model = CustomModel()
+        # After defining a class CustomModel you can use it in several ways
 
-    # IV:
-    #   use many custom models within one context
-    with Model() as model:
-        CustomModel(mean=1, name='first')
-        CustomModel(mean=2, name='second')
+        # I:
+        #   state the model within a context
+        with Model() as model:
+            CustomModel()
+            # arbitrary actions
+
+        # II:
+        #   use new class as entering point in context
+        with CustomModel() as model:
+            Normal('new_normal_var', mu=1, sd=0)
+
+        # III:
+        #   just get model instance with all that was defined in it
+        model = CustomModel()
+
+        # IV:
+        #   use many custom models within one context
+        with Model() as model:
+            CustomModel(mean=1, name='first')
+            CustomModel(mean=2, name='second')
     """
     def __new__(cls, *args, **kwargs):
         # resolves the parent instance
