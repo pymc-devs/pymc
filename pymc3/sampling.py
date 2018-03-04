@@ -1248,10 +1248,14 @@ def sample_prior(samples=500, model=None, vars=None, size=None,
         for _ in indices:
             point = {}
             for var_name, var in model.named_vars.items():
-                if is_transformed_name(var_name):
-                    val = var.distribution.dist.random(point=point, size=size)
+                if hasattr(var, 'distribution'):
+                    if is_transformed_name(var_name):
+                        val = var.distribution.dist.random(point=point, size=size)
+                    else:
+                        val = var.distribution.random(point=point, size=size)
                 else:
-                    val = var.distribution.random(point=point, size=size)
+                    val = var.eval({model.named_vars[v]: point[v] for v in pm.model.get_named_nodes(var)})
+
                 point[var_name] = val
                 if var_name in vars:
                     prior[var_name].append(val)
