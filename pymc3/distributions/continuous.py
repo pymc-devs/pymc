@@ -344,11 +344,11 @@ class HalfNormal(PositiveContinuous):
 
     .. note::
 
-       The parameters σ/τ refer to the standard deviation/precision of the
-       unfolded normal distribution, for the standard deviation of the
-       half-normal distribution, see below. For the half-normal, they are just
-       two parameterisation :math:`\sigma^2 \equiv \frac{1}{\tau}` of a scale
-       parameter
+       The parameters ``sigma``/``tau`` (:math:`\sigma`/:math:`\tau`) refer to
+       the standard deviation/precision of the unfolded normal distribution, for
+       the standard deviation of the half-normal distribution, see below. For
+       the half-normal, they are just two parameterisation :math:`\sigma^2
+       \equiv \frac{1}{\tau}` of a scale parameter
 
     .. plot::
 
