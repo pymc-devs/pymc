@@ -17,24 +17,12 @@
 - Add logitnormal distribution
 - Densityplot: add support for discrete variables
 - Fix the Binomial likelihood in `.glm.families.Binomial`, with the flexibility of specifying the `n`. 
+- Add `offset` kwarg to `.glm`.
 
 ### Fixes
 
 - `VonMises` does not overflow for large values of kappa. i0 and i1 have been removed and we now use log_i0 to compute the logp.
-- The bandwidth for KDE plots is computed using a modified version of Scott's rule. The new version uses entropy instead of standard
-deviation. This works better for multimodal distributions. Functions using KDE plots has a new argument `bw` controlling the bandwidth.
-
-=======
-- Add `logit_p` keyword to `pm.Bernoulli`, so that users can specify the logit
-  of the success probability. This is faster and more stable than using
-  `p=tt.nnet.sigmoid(logit_p)`.
-- Add `random` keyword to `pm.DensityDist` thus enabling users to pass custom random method
-  which in turn makes sampling from a `DensityDist` possible. 
-
-### Fixes
-
-- `VonMises` does not overflow for large values of kappa. i0 and i1 have been removed and we now use
-   log_i0 to compute the logp.
+- The bandwidth for KDE plots is computed using a modified version of Scott's rule. The new version uses entropy instead of standard deviation. This works better for multimodal distributions. Functions using KDE plots has a new argument `bw` controlling the bandwidth.
 
 ### Deprecations
 
