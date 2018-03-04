@@ -28,22 +28,20 @@ class LinearComponent(Model):
         use `Regressor` key for defining default prior for all regressors
             defaults to Normal.dist(mu=0, tau=1.0E-6)
     vars : dict - random variables instead of creating new ones
-    offset : this can be used to specify an a priori known component to be 
-        included in the linear predictor during fitting. This should be None
-        or a numpy array with the same number of rows as the observations. 
+    offset : scalar, or numpy/theano array with the same shape as y
+        this can be used to specify an a priori known component to be
+        included in the linear predictor during fitting.
     """
     default_regressor_prior = Normal.dist(mu=0, tau=1.0E-6)
     default_intercept_prior = Flat.dist()
 
     def __init__(self, x, y, intercept=True, labels=None,
-                 priors=None, vars=None, name='', model=None, offset=None):
+                 priors=None, vars=None, name='', model=None, offset=0.):
         super(LinearComponent, self).__init__(name, model)
         if priors is None:
             priors = {}
         if vars is None:
             vars = {}
-        if offset is None:
-            offset = 0.
         x, labels = any_to_tensor_and_labels(x, labels)
         # now we have x, shape and labels
         if intercept:
@@ -86,7 +84,7 @@ class LinearComponent(Model):
 
     @classmethod
     def from_formula(cls, formula, data, priors=None, vars=None,
-                     name='', model=None, offset=None):
+                     name='', model=None, offset=0.):
         import patsy
         y, x = patsy.dmatrices(formula, data)
         labels = x.design_info.column_names
@@ -113,13 +111,13 @@ class GLM(LinearComponent):
     init : dict - test_vals for coefficients
     vars : dict - random variables instead of creating new ones
     family : pymc3..families object
-    offset : this can be used to specify an a priori known component to be 
-        included in the linear predictor during fitting. This should be None
-        or a numpy array with the same number of rows as the observations. 
+    offset : scalar, or numpy/theano array with the same shape as y
+        this can be used to specify an a priori known component to be
+        included in the linear predictor during fitting.
     """
     def __init__(self, x, y, intercept=True, labels=None,
                  priors=None, vars=None, family='normal', name='',
-                 model=None, offset=None):
+                 model=None, offset=0.):
         super(GLM, self).__init__(
             x, y, intercept=intercept, labels=labels,
             priors=priors, vars=vars, name=name, 
@@ -142,7 +140,7 @@ class GLM(LinearComponent):
     @classmethod
     def from_formula(cls, formula, data, priors=None,
                      vars=None, family='normal', name='',
-                     model=None, offset=None):
+                     model=None, offset=0.):
         import patsy
         y, x = patsy.dmatrices(formula, data)
         labels = x.design_info.column_names
