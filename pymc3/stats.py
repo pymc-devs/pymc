@@ -887,10 +887,6 @@ def summary(trace, varnames=None, transform=lambda x: x, stat_funcs=None,
         samples. Defaults to the smaller of 100 or the number of samples.
         This is only meaningful when `stat_funcs` is None.
 
-    See also
-    --------
-    summary : Generate a pretty-printed summary of a trace.
-
     Returns
     -------
     `pandas.DataFrame` with summary statistics for each variable Defaults one

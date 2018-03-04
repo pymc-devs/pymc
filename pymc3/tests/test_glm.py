@@ -58,6 +58,16 @@ class TestGLM(SeededTest):
             assert round(abs(np.mean(trace['x'])-self.slope), 1) == 0
             assert round(abs(np.mean(trace['sd'])-self.sd), 1) == 0
 
+    def test_glm_offset(self):
+        offset = 1.
+        with Model() as model:
+            GLM.from_formula('y ~ x', self.data_linear, offset=offset)
+            step = Slice(model.vars)
+            trace = sample(500, step=step, tune=0, progressbar=False,
+                           random_seed=self.random_seed)
+
+            assert round(abs(np.mean(trace['Intercept'])-self.intercept+offset), 1) == 0
+
     def test_glm_link_func(self):
         with Model() as model:
             GLM.from_formula('y ~ x', self.data_logistic,
