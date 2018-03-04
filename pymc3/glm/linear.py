@@ -43,7 +43,7 @@ class LinearComponent(Model):
         if vars is None:
             vars = {}
         if offset is None:
-            offset = 0
+            offset = 0.
         x, labels = any_to_tensor_and_labels(x, labels)
         # now we have x, shape and labels
         if intercept:
