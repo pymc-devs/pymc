@@ -309,8 +309,10 @@ def test_sample_prior():
     with pm.Model():
         # Use a prior that's way off to show we're actually sampling from it
         mu = pm.Normal('mu', mu=-10, sd=1)
+        positive_mu = pm.Deterministic('positive_mu', np.abs(mu))
         pm.Normal('x_obs', mu=mu, sd=1, observed=observed)
         prior = pm.sample_prior()
     
     assert (prior['mu'] < 0).all()
+    assert (prior['positive_mu'] > 0).all()
     assert (prior['x_obs'] < 0).all()
