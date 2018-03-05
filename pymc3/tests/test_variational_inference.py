@@ -835,6 +835,20 @@ def test_sample_replacements(binomial_model_inference):
     assert sampled.shape[0] == 101
 
 
+def test_var_replacement():
+    X_mean = np.linspace(0, 10, 10, dtype='float32')
+    y = (np.random.randn(*X_mean.shape) * .05 + X_mean) * 4.
+    with pm.Model():
+        inp = pm.Normal('X', X_mean, shape=X_mean.shape)
+        coef = pm.Normal('b', 4.)
+        mean = inp * coef
+        pm.Normal('y', mean, .1, observed=y)
+        advi = pm.fit(100)
+        assert advi.sample_node(mean).eval().shape == (10, )
+        x_new = np.linspace(0, 10, 11, dtype='float32')
+        assert advi.sample_node(mean, more_replacements={inp: x_new}).eval().shape == (11, )
+
+
 def test_empirical_from_trace(another_simple_model):
     with another_simple_model:
         step = pm.Metropolis()
