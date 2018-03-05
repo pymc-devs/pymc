@@ -837,7 +837,7 @@ def test_sample_replacements(binomial_model_inference):
 
 def test_var_replacement():
     X_mean = np.linspace(0, 10, 10, dtype='float32')
-    y = (np.random.randn(*X_mean.shape) * .05 + X_mean) * 4.
+    y = np.random.normal(X_mean*4, .05).astype('float32')
     with pm.Model():
         inp = pm.Normal('X', X_mean, shape=X_mean.shape)
         coef = pm.Normal('b', 4.)
