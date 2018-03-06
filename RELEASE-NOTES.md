@@ -27,6 +27,7 @@
 ### Deprecations
 
 - DIC and BPIC calculations have been removed
+- df_summary have been removed, use summary instead
 - `njobs` and `nchains` kwarg are deprecated in favor of `cores` and `chains` for `sample`
 - `lag` kwarg in `pm.stats.autocorr` and `pm.stats.autocov` is deprecated.
 
