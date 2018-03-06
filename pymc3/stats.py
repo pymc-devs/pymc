@@ -18,7 +18,7 @@ from scipy.signal import fftconvolve
 
 
 __all__ = ['autocorr', 'autocov', 'waic', 'loo', 'hpd', 'quantiles',
-           'mc_error', 'summary', 'df_summary', 'compare', 'bfmi', 'r2_score']
+           'mc_error', 'summary', 'compare', 'bfmi', 'r2_score']
 
 
 def statfunc(f):
@@ -969,12 +969,6 @@ def summary(trace, varnames=None, transform=lambda x: x, stat_funcs=None,
         rhat_pd = dict2pd(rhat, 'Rhat')
         return pd.concat([dforg, n_eff_pd, rhat_pd],
                          axis=1, join_axes=[dforg.index])
-
-
-def df_summary(*args, **kwargs):
-    warnings.warn("df_summary has been deprecated. In future, use summary instead.",
-                  DeprecationWarning, stacklevel=2)
-    return summary(*args, **kwargs)
 
 
 def _calculate_stats(sample, batches, alpha):
