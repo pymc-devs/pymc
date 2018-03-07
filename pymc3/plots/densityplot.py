@@ -175,8 +175,8 @@ def _d_helper(vec, vname, c, bw, alpha, point_estimate, hpd_markers, outline, sh
         ax.hist(vec, bins=bins, color=c, alpha=shade)
 
     if hpd_markers:
-        ax.plot(xmin, 0, 'v', color=c, markeredgecolor='k')
-        ax.plot(xmax, 0, 'v', color=c, markeredgecolor='k')
+        ax.plot(xmin, 0, hpd_markers, color=c, markeredgecolor='k')
+        ax.plot(xmax, 0, hpd_markers, color=c, markeredgecolor='k')
 
     if point_estimate is not None:
         if point_estimate == 'mean':
