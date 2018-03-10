@@ -1459,6 +1459,7 @@ class Approximation(WithMemoization):
         sampled node(s) with replacements
         """
         node_in = node
+        node = theano.clone(node, more_replacements)
         if size is None:
             node_out = self.symbolic_single_sample(node)
         else:
