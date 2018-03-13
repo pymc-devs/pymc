@@ -13,6 +13,7 @@ import pymc3.stats as pmstats
 from numpy.random import random, normal
 from numpy.testing import assert_equal, assert_almost_equal, assert_array_almost_equal
 from scipy import stats as st
+import copy
 
 
 def test_log_post_trace():
@@ -67,8 +68,8 @@ def test_compare():
         x = pm.StudentT('x', nu=1, mu=mu, lam=1, observed=x_obs)
         trace2 = pm.sample(1000)
 
-    traces = [trace0] * 2
-    models = [model0] * 2
+    traces = [trace0, copy.copy(trace0)]
+    models = [model0, copy.copy(model0)]
 
     model_dict = dict(zip(models, traces))
 
