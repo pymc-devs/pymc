@@ -14,11 +14,11 @@ from pymc3.theanof import floatX
 from scipy.misc import logsumexp
 from scipy.stats import dirichlet
 from scipy.optimize import minimize
+from scipy.signal import fftconvolve
 
-from .backends import tracetab as ttab
 
-__all__ = ['autocorr', 'autocov', 'dic', 'bpic', 'waic', 'loo', 'hpd', 'quantiles',
-           'mc_error', 'summary', 'df_summary', 'compare', 'bfmi', 'r2_score']
+__all__ = ['autocorr', 'autocov', 'waic', 'loo', 'hpd', 'quantiles',
+           'mc_error', 'summary', 'compare', 'bfmi', 'r2_score']
 
 
 def statfunc(f):
@@ -60,75 +60,60 @@ def statfunc(f):
 
 
 @statfunc
-def autocorr(x, lag=1):
-    """Sample autocorrelation at specified lag.
+def autocorr(x, lag=None):
+    """
+    Compute autocorrelation using FFT for every lag for the input array
+    https://en.wikipedia.org/wiki/Autocorrelation#Efficient_computation
 
     Parameters
     ----------
     x : Numpy array
         An array containing MCMC samples
-    lag : int
-        The desidered lag to take in consideration
+
+    Returns
+    -------
+    acorr: Numpy array same size as the input array
     """
-    S = autocov(x, lag)
-    return S[0, 1] / np.sqrt(np.prod(np.diag(S)))
+    y = x - x.mean()
+    n = len(y)
+    result = fftconvolve(y, y[::-1])
+    acorr = result[len(result) // 2:]
+    acorr /= np.arange(n, 0, -1)
+    acorr /= acorr[0]
+    if lag is None:
+        return acorr
+    else:
+        warnings.warn(
+            "The `lag` argument has been deprecated. If you want to get "
+            "the value of a specific lag please call `autocorr(x)[lag]`.",
+            DeprecationWarning)
+        return acorr[lag]
 
 
 @statfunc
-def autocov(x, lag=1):
-    """Sample autocovariance at specified lag.
+def autocov(x, lag=None):
+    """Compute autocovariance estimates for every lag for the input array
 
     Parameters
     ----------
     x : Numpy array
         An array containing MCMC samples
-    lag : int
-        The desidered lag to take in consideration
 
     Returns
     -------
-    2x2 matrix with the variances of
-    x[:-lag] and x[lag:] in the diagonal and the autocovariance
-    on the off-diagonal.
+    acov: Numpy array same size as the input array
     """
-    x = np.asarray(x)
-
-    if not lag:
-        return 1
-    if lag < 0:
-        raise ValueError("Autocovariance lag must be a positive integer")
-    return np.cov(x[:-lag], x[lag:], bias=1)
-
-
-def dic(trace, model=None):
-    """Calculate the deviance information criterion of the samples in trace from model
-    Read more theory here - in a paper by some of the leading authorities on model selection -
-    dx.doi.org/10.1111/1467-9868.00353
-
-    Parameters
-    ----------
-    trace : result of MCMC run
-    model : PyMC Model
-        Optional model. Default None, taken from context.
-
-    Returns
-    -------
-    z : float
-        The deviance information criterion of the model and trace
-    """
-    warnings.warn("dic has been deprecated. Use `waic` or `loo` instead.", DeprecationWarning,
-                  stacklevel=2)
-
-    model = modelcontext(model)
-    logp = model.logp
-
-    mean_deviance = -2 * np.mean([logp(pt) for pt in trace])
-
-    free_rv_means = {rv.name: trace[rv.name].mean(
-        axis=0) for rv in model.free_RVs}
-    deviance_at_mean = -2 * logp(free_rv_means)
-
-    return 2 * mean_deviance - deviance_at_mean
+    acorr = autocorr(x)
+    varx = np.var(x, ddof=1) * (len(x) - 1) / len(x)
+    acov = acorr * varx
+    if lag is None:
+        return acov
+    else:
+        warnings.warn(
+            "The `lag` argument has been deprecated. If you want to get "
+            "the value of a specific lag please call `autocov(x)[lag]`.",
+            DeprecationWarning)
+        return acov[lag]
 
 
 def _log_post_trace(trace, model=None, progressbar=False):
@@ -205,6 +190,8 @@ def waic(trace, model=None, pointwise=False, progressbar=False):
     waic: widely available information criterion
     waic_se: standard error of waic
     p_waic: effective number parameters
+    var_warn: 1 if posterior variance of the log predictive 
+         densities exceeds 0.4
     waic_i: and array of the pointwise predictive accuracy, only if pointwise True
     """
     model = modelcontext(model)
@@ -216,11 +203,14 @@ def waic(trace, model=None, pointwise=False, progressbar=False):
     lppd_i = logsumexp(log_py, axis=0, b=1.0 / log_py.shape[0])
 
     vars_lpd = np.var(log_py, axis=0)
+    warn_mg = 0
     if np.any(vars_lpd > 0.4):
         warnings.warn("""For one or more samples the posterior variance of the
         log predictive densities exceeds 0.4. This could be indication of
         WAIC starting to fail see http://arxiv.org/abs/1507.04544 for details
         """)
+        warn_mg = 1
+
     waic_i = - 2 * (lppd_i - vars_lpd)
 
     waic_se = np.sqrt(len(waic_i) * np.var(waic_i))
@@ -230,11 +220,16 @@ def waic(trace, model=None, pointwise=False, progressbar=False):
     p_waic = np.sum(vars_lpd)
 
     if pointwise:
-        WAIC_r = namedtuple('WAIC_r', 'WAIC, WAIC_se, p_WAIC, WAIC_i')
-        return WAIC_r(waic, waic_se, p_waic, waic_i)
+        if np.equal(waic, waic_i).all():
+            warnings.warn("""The point-wise WAIC is the same with the sum WAIC,
+            please double check the Observed RV in your model to make sure it
+            returns element-wise logp.
+            """)
+        WAIC_r = namedtuple('WAIC_r', 'WAIC, WAIC_se, p_WAIC, var_warn, WAIC_i')
+        return WAIC_r(waic, waic_se, p_waic, warn_mg, waic_i)
     else:
-        WAIC_r = namedtuple('WAIC_r', 'WAIC, WAIC_se, p_WAIC')
-        return WAIC_r(waic, waic_se, p_waic)
+        WAIC_r = namedtuple('WAIC_r', 'WAIC, WAIC_se, p_WAIC, var_warn')
+        return WAIC_r(waic, waic_se, p_waic, warn_mg)
 
 
 def loo(trace, model=None, pointwise=False, reff=None, progressbar=False):
@@ -265,6 +260,8 @@ def loo(trace, model=None, pointwise=False, reff=None, progressbar=False):
     loo: approximated Leave-one-out cross-validation
     loo_se: standard error of loo
     p_loo: effective number of parameters
+    shape_warn: 1 if the estimated shape parameter of 
+        Pareto distribution is greater than 0.7 for one or more samples
     loo_i: array of pointwise predictive accuracy, only if pointwise True
     """
     model = modelcontext(model)
@@ -284,6 +281,8 @@ def loo(trace, model=None, pointwise=False, reff=None, progressbar=False):
 
     lw, ks = _psislw(-log_py, reff)
     lw += log_py
+
+    warn_mg = 0
     if np.any(ks > 0.7):
         warnings.warn("""Estimated shape parameter of Pareto distribution is
         greater than 0.7 for one or more samples.
@@ -291,6 +290,7 @@ def loo(trace, model=None, pointwise=False, reff=None, progressbar=False):
         importance sampling is less likely to work well if the marginal
         posterior and LOO posterior are very different. This is more likely to
         happen with a non-robust model and highly influential observations.""")
+        warn_mg = 1
 
     loo_lppd_i = - 2 * logsumexp(lw, axis=0)
     loo_lppd = loo_lppd_i.sum()
@@ -299,11 +299,16 @@ def loo(trace, model=None, pointwise=False, reff=None, progressbar=False):
     p_loo = lppd + (0.5 * loo_lppd)
 
     if pointwise:
-        LOO_r = namedtuple('LOO_r', 'LOO, LOO_se, p_LOO, LOO_i')
-        return LOO_r(loo_lppd, loo_lppd_se, p_loo, loo_lppd_i)
+        if np.equal(loo_lppd, loo_lppd_i).all():
+            warnings.warn("""The point-wise LOO is the same with the sum LOO,
+            please double check the Observed RV in your model to make sure it
+            returns element-wise logp.
+            """)
+        LOO_r = namedtuple('LOO_r', 'LOO, LOO_se, p_LOO, shape_warn, LOO_i')
+        return LOO_r(loo_lppd, loo_lppd_se, p_loo, warn_mg, loo_lppd_i)
     else:
-        LOO_r = namedtuple('LOO_r', 'LOO, LOO_se, p_LOO')
-        return LOO_r(loo_lppd, loo_lppd_se, p_loo)
+        LOO_r = namedtuple('LOO_r', 'LOO, LOO_se, p_LOO, shape_warn')
+        return LOO_r(loo_lppd, loo_lppd_se, p_loo, warn_mg)
 
 
 def _psislw(lw, reff):
@@ -451,38 +456,7 @@ def _gpinv(p, k, sigma):
     return x
 
 
-def bpic(trace, model=None):
-    R"""Calculates Bayesian predictive information criterion n of the samples in trace from model
-    Read more theory here - in a paper by some of the leading authorities on model selection -
-    dx.doi.org/10.1080/01966324.2011.10737798
-
-    Parameters
-    ----------
-    trace : result of MCMC run
-    model : PyMC Model
-        Optional model. Default None, taken from context.
-
-    Returns
-    -------
-    z : float
-        The Bayesian predictive information criterion of the model and trace
-    """
-    warnings.warn("bpic has been deprecated. Use `waic` or `loo` instead.", DeprecationWarning,
-                  stacklevel=2)
-
-    model = modelcontext(model)
-    logp = model.logp
-
-    mean_deviance = -2 * np.mean([logp(pt) for pt in trace])
-
-    free_rv_means = {rv.name: trace[rv.name].mean(
-        axis=0) for rv in model.free_RVs}
-    deviance_at_mean = -2 * logp(free_rv_means)
-
-    return 3 * mean_deviance - 2 * deviance_at_mean
-
-
-def compare(model_dict, ic='WAIC', method='stacking', b_samples=1000,
+def compare(traces, models, ic='WAIC', method='stacking', b_samples=1000,
             alpha=1, seed=None, round_to=2):
     R"""Compare models based on the widely available information criterion (WAIC)
     or leave-one-out (LOO) cross-validation.
@@ -542,7 +516,7 @@ def compare(model_dict, ic='WAIC', method='stacking', b_samples=1000,
     the top-ranked model.
         It's always 0 for the top-ranked model.
     warning : A value of 1 indicates that the computation of the IC may not be
-        reliable see http://arxiv.org/abs/1507.04544 for details.
+        reliable. Details see the related warning message in pm.waic and pm.loo
     """
 
     names = [model.name for model in model_dict if model.name]
@@ -553,13 +527,13 @@ def compare(model_dict, ic='WAIC', method='stacking', b_samples=1000,
         ic_func = waic
         df_comp = pd.DataFrame(index=names,
                                columns=['WAIC', 'pWAIC', 'dWAIC', 'weight',
-                                        'SE', 'dSE', 'warning'])
+                                        'SE', 'dSE', 'var_warn'])
 
     elif ic == 'LOO':
         ic_func = loo
         df_comp = pd.DataFrame(index=names,
                                columns=['LOO', 'pLOO', 'dLOO', 'weight',
-                                        'SE', 'dSE', 'warning'])
+                                        'SE', 'dSE', 'shape_warn'])
 
     else:
         raise NotImplementedError(
@@ -573,21 +547,9 @@ def compare(model_dict, ic='WAIC', method='stacking', b_samples=1000,
         raise ValueError('The method {}, to compute weights,'
                          'is not supported.'.format(method))
 
-    warns = np.zeros(len(model_dict))
-
-    c = 0
-    def add_warns(*args):
-        warns[c] = 1
-
-    with warnings.catch_warnings():
-        warnings.showwarning = add_warns
-        warnings.filterwarnings('always', 'For one or more samples')
-        warnings.filterwarnings('always', 'Estimated shape parameter')
-
-        ics = []
-        for m, t in model_dict.items():
-            ics.append((m.name, ic_func(t, m, pointwise=True)))
-            c += 1
+    ics = []
+    for c, (t, m) in enumerate(zip(traces, models)):
+        ics.append((c, ic_func(t, m, pointwise=True)))
 
     ics.sort(key=lambda x: x[1][0])
 
@@ -657,7 +619,7 @@ def compare(model_dict, ic='WAIC', method='stacking', b_samples=1000,
 
     if np.any(weights):
         for i, (idx, res) in enumerate(ics):
-            diff = res[3] - ics[0][1][3]
+            diff = res[4] - ics[0][1][4]
             d_ic = np.sum(diff)
             d_se = np.sqrt(len(diff) * np.var(diff))
             se = ses[i]
@@ -672,7 +634,7 @@ def compare(model_dict, ic='WAIC', method='stacking', b_samples=1000,
                                round(weight, round_to),
                                round(se, round_to),
                                round(d_se, round_to),
-                               warn)
+                               res[3])
 
         return df_comp.sort_values(by=ic)
 
@@ -681,12 +643,12 @@ def _ic_matrix(ics):
     """Store the previously computed pointwise predictive accuracy values (ics)
     in a 2D matrix array.
     """
-    N = len(ics[0][1][3])
+    N = len(ics[0][1][4])
     K = len(ics)
     ic_i = np.zeros((N, K))
 
     for i in range(K):
-        ic = ics[i][1][3]
+        ic = ics[i][1][4]
         if len(ic) != N:
             raise ValueError('The number of observations should be the same '
                              'across all models')
@@ -874,6 +836,7 @@ def dict2pd(statdict, labelname):
     """Small helper function to transform a diagnostics output dict into a
     pandas Series.
     """
+    from .backends import tracetab as ttab
     var_dfs = []
     for key, value in statdict.items():
         var_df = pd.Series(value.flatten())
@@ -931,10 +894,6 @@ def summary(trace, varnames=None, transform=lambda x: x, stat_funcs=None,
         samples. Defaults to the smaller of 100 or the number of samples.
         This is only meaningful when `stat_funcs` is None.
 
-    See also
-    --------
-    summary : Generate a pretty-printed summary of a trace.
-
     Returns
     -------
     `pandas.DataFrame` with summary statistics for each variable Defaults one
@@ -973,6 +932,7 @@ def summary(trace, varnames=None, transform=lambda x: x, stat_funcs=None,
         mu__0  0.066473  0.000312  0.105039  0.214242
         mu__1  0.067513 -0.159097 -0.045637  0.062912
     """
+    from .backends import tracetab as ttab
 
     if varnames is None:
         varnames = get_default_varnames(trace.varnames,
@@ -1016,12 +976,6 @@ def summary(trace, varnames=None, transform=lambda x: x, stat_funcs=None,
         rhat_pd = dict2pd(rhat, 'Rhat')
         return pd.concat([dforg, n_eff_pd, rhat_pd],
                          axis=1, join_axes=[dforg.index])
-
-
-def df_summary(*args, **kwargs):
-    warnings.warn("df_summary has been deprecated. In future, use summary instead.",
-                  DeprecationWarning, stacklevel=2)
-    return summary(*args, **kwargs)
 
 
 def _calculate_stats(sample, batches, alpha):

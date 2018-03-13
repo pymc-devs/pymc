@@ -24,7 +24,7 @@ class TestGelmanRubin(SeededTest):
             step1 = Slice([model.early_mean_log__, model.late_mean_log__])
             step2 = Metropolis([model.switchpoint])
             start = {'early_mean': 7., 'late_mean': 5., 'switchpoint': 10}
-            ptrace = sample(n_samples, tune=0, step=[step1, step2], start=start, njobs=2,
+            ptrace = sample(n_samples, tune=0, step=[step1, step2], start=start, cores=2,
                             progressbar=False, random_seed=[20090425, 19700903])
         return ptrace
 
@@ -44,7 +44,7 @@ class TestGelmanRubin(SeededTest):
 
     def test_right_shape_python_float(self, shape=None, test_shape=None):
         """Check Gelman-Rubin statistic shape is correct w/ python float"""
-        n_jobs = 3
+        chains = 3
         n_samples = 5
 
         with Model():
@@ -55,9 +55,9 @@ class TestGelmanRubin(SeededTest):
 
             # start sampling at the MAP
             start = find_MAP()
-            step = NUTS(scaling=start)
+            step = NUTS(scaling=start, step_scale=0.1)
             ptrace = sample(n_samples, tune=0, step=step, start=start,
-                            njobs=n_jobs, random_seed=42)
+                            chains=chains, random_seed=42)
 
         rhat = gelman_rubin(ptrace)['x']
 
@@ -161,7 +161,7 @@ class TestDiagnostics(SeededTest):
             start = find_MAP()
             step = NUTS(scaling=start)
             ptrace = sample(0, tune=n_samples, step=step, start=start,
-                            njobs=n_jobs, discard_tuned_samples=False,
+                            cores=n_jobs, discard_tuned_samples=False,
                             random_seed=42)
 
         n_effective = effective_n(ptrace)['x']
@@ -183,7 +183,7 @@ class TestDiagnostics(SeededTest):
             start = find_MAP()
             step = NUTS(scaling=start)
             ptrace = sample(0, tune=n_samples, step=step, start=start,
-                            njobs=n_jobs, discard_tuned_samples=False,
+                            cores=n_jobs, discard_tuned_samples=False,
                             random_seed=42)
 
         n_effective = effective_n(ptrace)['x']

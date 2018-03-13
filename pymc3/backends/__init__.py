@@ -34,7 +34,7 @@ backend object with a variable or variable name.
 
 The call will return the sampling values of `x`, with the values for
 all chains concatenated. (For a single call to `sample`, the number of
-chains will correspond to the `njobs` argument.)
+chains will correspond to the `cores` argument.)
 
 To discard the first N values of each chain, slicing syntax can be
 used.

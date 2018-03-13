@@ -28,12 +28,15 @@ class LinearComponent(Model):
         use `Regressor` key for defining default prior for all regressors
             defaults to Normal.dist(mu=0, tau=1.0E-6)
     vars : dict - random variables instead of creating new ones
+    offset : scalar, or numpy/theano array with the same shape as y
+        this can be used to specify an a priori known component to be
+        included in the linear predictor during fitting.
     """
     default_regressor_prior = Normal.dist(mu=0, tau=1.0E-6)
     default_intercept_prior = Flat.dist()
 
     def __init__(self, x, y, intercept=True, labels=None,
-                 priors=None, vars=None, name='', model=None):
+                 priors=None, vars=None, name='', model=None, offset=0.):
         super(LinearComponent, self).__init__(name, model)
         if priors is None:
             priors = {}
@@ -77,17 +80,17 @@ class LinearComponent(Model):
                     )
                 coeffs.append(v)
         self.coeffs = tt.stack(coeffs, axis=0)
-        self.y_est = x.dot(self.coeffs)
+        self.y_est = x.dot(self.coeffs) + offset
 
     @classmethod
     def from_formula(cls, formula, data, priors=None, vars=None,
-                     name='', model=None):
+                     name='', model=None, offset=0.):
         import patsy
         y, x = patsy.dmatrices(formula, data)
         labels = x.design_info.column_names
         return cls(np.asarray(x), np.asarray(y)[:, -1], intercept=False,
                    labels=labels, priors=priors, vars=vars, name=name,
-                   model=model)
+                   model=model, offset=offset)
 
 
 class GLM(LinearComponent):
@@ -108,12 +111,17 @@ class GLM(LinearComponent):
     init : dict - test_vals for coefficients
     vars : dict - random variables instead of creating new ones
     family : pymc3..families object
+    offset : scalar, or numpy/theano array with the same shape as y
+        this can be used to specify an a priori known component to be
+        included in the linear predictor during fitting.
     """
     def __init__(self, x, y, intercept=True, labels=None,
-                 priors=None, vars=None, family='normal', name='', model=None):
+                 priors=None, vars=None, family='normal', name='',
+                 model=None, offset=0.):
         super(GLM, self).__init__(
             x, y, intercept=intercept, labels=labels,
-            priors=priors, vars=vars, name=name, model=model
+            priors=priors, vars=vars, name=name, 
+            model=model, offset=offset
         )
 
         _families = dict(
@@ -131,13 +139,14 @@ class GLM(LinearComponent):
 
     @classmethod
     def from_formula(cls, formula, data, priors=None,
-                     vars=None, family='normal', name='', model=None):
+                     vars=None, family='normal', name='',
+                     model=None, offset=0.):
         import patsy
         y, x = patsy.dmatrices(formula, data)
         labels = x.design_info.column_names
         return cls(np.asarray(x), np.asarray(y)[:, -1], intercept=False,
                    labels=labels, priors=priors, vars=vars, family=family,
-                   name=name, model=model)
+                   name=name, model=model, offset=offset)
 
 
 glm = GLM

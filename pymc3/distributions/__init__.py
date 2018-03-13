@@ -26,6 +26,7 @@ from .continuous import SkewNormal
 from .continuous import Triangular
 from .continuous import Gumbel
 from .continuous import Logistic
+from .continuous import LogitNormal
 from .continuous import Interpolated
 
 from .discrete import Binomial
@@ -57,6 +58,7 @@ from .mixture import NormalMixture
 
 from .multivariate import MvNormal
 from .multivariate import MatrixNormal
+from .multivariate import KroneckerNormal
 from .multivariate import MvStudentT
 from .multivariate import Dirichlet
 from .multivariate import Multinomial
@@ -123,6 +125,7 @@ __all__ = ['Uniform',
            'TensorType',
            'MvNormal',
            'MatrixNormal',
+           'KroneckerNormal',
            'MvStudentT',
            'Dirichlet',
            'Multinomial',
@@ -143,6 +146,7 @@ __all__ = ['Uniform',
            'DiscreteWeibull',
            'Gumbel',
            'Logistic',
+           'LogitNormal',
            'Interpolated',
            'Bound',
            ]

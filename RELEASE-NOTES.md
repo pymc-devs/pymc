@@ -1,6 +1,39 @@
 # Release Notes
 
-## PyMC 3.3. (Unreleased) 
+## PyMC 3.4 (unreleased)
+
+### New features
+
+- Add `logit_p` keyword to `pm.Bernoulli`, so that users can specify the logit of the success probability. This is faster and more stable than using `p=tt.nnet.sigmoid(logit_p)`.
+- Add `random` keyword to `pm.DensityDist` thus enabling users to pass custom random method which in turn makes sampling from a `DensityDist` possible.
+- Effective sample size computation is updated. The estimation uses Geyer's initial positive sequence, which no longer truncates the autocorrelation series inaccurately. `pm.diagnostics.effective_n` now can reports N_eff>N.
+- Added `KroneckerNormal` distribution and a corresponding `MarginalKron`
+  Gaussian Process implementation for efficient inference, along with
+  lower-level functions such as `cartesian` and `kronecker` products.
+- Added `Coregion` covariance function.
+- Add new 'pairplot' function, for plotting scatter or hexbin matrices of sampled parameters.
+  Optionally it can plot divergences.
+- Plots of discrete distributions in the docstrings
+- Add logitnormal distribution
+- Densityplot: add support for discrete variables
+- Fix the Binomial likelihood in `.glm.families.Binomial`, with the flexibility of specifying the `n`. 
+- Add `offset` kwarg to `.glm`.
+
+### Fixes
+
+- `VonMises` does not overflow for large values of kappa. i0 and i1 have been removed and we now use log_i0 to compute the logp.
+- The bandwidth for KDE plots is computed using a modified version of Scott's rule. The new version uses entropy instead of standard deviation. This works better for multimodal distributions. Functions using KDE plots has a new argument `bw` controlling the bandwidth.
+- fix PyMC3 variable is not replaced if provided in more_replacements (#2890)
+
+### Deprecations
+
+- DIC and BPIC calculations have been removed
+- df_summary have been removed, use summary instead
+- `njobs` and `nchains` kwarg are deprecated in favor of `cores` and `chains` for `sample`
+- `lag` kwarg in `pm.stats.autocorr` and `pm.stats.autocov` is deprecated.
+
+
+## PyMC 3.3 (January 9, 2018)
 
 ### New features
 
@@ -10,13 +43,12 @@
 - New benchmark suite added (see http://pandas.pydata.org/speed/pymc3/)
 - Generalized random seed types
 - Update loo, new improved algorithm (#2730)
-- New CSG (Constant Stochastic Gradient) approximate posterior sampling
-  algorithm (#2544)
+- New CSG (Constant Stochastic Gradient) approximate posterior sampling algorithm (#2544)
 - Michael Osthege added support for population-samplers and implemented differential evolution metropolis (`DEMetropolis`).  For models with correlated dimensions that can not use gradient-based samplers, the `DEMetropolis` sampler can give higher effective sampling rates. (also see [PR#2735](https://github.com/pymc-devs/pymc3/pull/2735))
 - Forestplot supports multiple traces (#2736)
 - Add new plot, densityplot (#2741)
 - DIC and BPIC calculations have been deprecated
-- `compare` now accepts dictionary of model:trace pairs instead of lists
+- Refactor HMC and implemented new warning system (#2677, #2808) 
 
 ### Fixes
 
@@ -28,6 +60,12 @@
 - Fixed `sample_ppc` and `sample_ppc_w` to iterate all chains(#2633, #2748)
 - Add Bayesian R2 score (for GLMs) `stats.r2_score` (#2696) and test (#2729).
 - SMC works with transformed variables (#2755)
+- Speedup OPVI (#2759)
+- Multiple minor fixes and improvements in the docs (#2775, #2786, #2787, #2789, #2790, #2794, #2799, #2809)
+
+### Deprecations
+
+- Old (`minibatch-`)`advi` is removed (#2781)
 
 
 ## PyMC3 3.2 (October 10, 2017)

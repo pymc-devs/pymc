@@ -69,7 +69,7 @@ PyMC began development in 2003, as an effort to generalize the process of
 building Metropolis-Hastings samplers, with an aim to making Markov chain Monte
 Carlo (MCMC) more accessible to applied scientists.
 The choice to develop PyMC as a python module, rather than a standalone
-application, allowed the use MCMC methods in a larger modeling framework. By
+application, allowed the use of MCMC methods in a larger modeling framework. By
 2005, PyMC was reliable enough for version 1.0 to be released to the public. A
 small group of regular users, most associated with the University of Georgia,
 provided much of the feedback necessary for the refinement of PyMC to a usable

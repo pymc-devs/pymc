@@ -612,16 +612,24 @@ def test_remove_scan_op():
 
 
 def test_clear_cache():
+    import pickle
     pymc3.memoize.clear_cache()
+    assert all(len(c) == 0 for c in pymc3.memoize.CACHE_REGISTRY)
     with pm.Model():
         pm.Normal('n', 0, 1)
         inference = ADVI()
         inference.fit(n=10)
-        assert len(pm.variational.opvi.Approximation.logp.fget.cache) == 1
-        del inference
-        assert len(pm.variational.opvi.Approximation.logp.fget.cache) == 0
-        for c in pymc3.memoize.CACHE_REGISTRY:
-            assert len(c) == 0
+        assert any(len(c) != 0 for c in inference.approx._cache.values())
+        pymc3.memoize.clear_cache(inference.approx)
+        # should not be cleared at this call
+        assert all(len(c) == 0 for c in inference.approx._cache.values())
+        new_a = pickle.loads(pickle.dumps(inference.approx))
+        assert not hasattr(new_a, '_cache')
+        inference_new = pm.KLqp(new_a)
+        inference_new.fit(n=10)
+        assert any(len(c) != 0 for c in inference_new.approx._cache.values())
+        pymc3.memoize.clear_cache(inference_new.approx)
+        assert all(len(c) == 0 for c in inference_new.approx._cache.values())
 
 
 @pytest.fixture('module')
@@ -825,6 +833,20 @@ def test_sample_replacements(binomial_model_inference):
     assert sampled.shape[0] == 100
     sampled = p_d.eval({i: 101})
     assert sampled.shape[0] == 101
+
+
+def test_var_replacement():
+    X_mean = pm.floatX(np.linspace(0, 10, 10))
+    y = pm.floatX(np.random.normal(X_mean*4, .05))
+    with pm.Model():
+        inp = pm.Normal('X', X_mean, shape=X_mean.shape)
+        coef = pm.Normal('b', 4.)
+        mean = inp * coef
+        pm.Normal('y', mean, .1, observed=y)
+        advi = pm.fit(100)
+        assert advi.sample_node(mean).eval().shape == (10, )
+        x_new = pm.floatX(np.linspace(0, 10, 11))
+        assert advi.sample_node(mean, more_replacements={inp: x_new}).eval().shape == (11, )
 
 
 def test_empirical_from_trace(another_simple_model):
