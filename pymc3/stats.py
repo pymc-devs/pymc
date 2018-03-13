@@ -456,7 +456,7 @@ def _gpinv(p, k, sigma):
     return x
 
 
-def compare(traces, models, ic='WAIC', method='stacking', b_samples=1000,
+def compare(model_dict, ic='WAIC', method='stacking', b_samples=1000,
             alpha=1, seed=None, round_to=2):
     R"""Compare models based on the widely available information criterion (WAIC)
     or leave-one-out (LOO) cross-validation.
