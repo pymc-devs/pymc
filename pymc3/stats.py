@@ -548,8 +548,8 @@ def compare(model_dict, ic='WAIC', method='stacking', b_samples=1000,
                          'is not supported.'.format(method))
 
     ics = []
-    for c, (t, m) in enumerate(zip(traces, models)):
-        ics.append((c, ic_func(t, m, pointwise=True)))
+    for n, (m, t) in zip(names, model_dict.items()):
+        ics.append((n, ic_func(t, m, pointwise=True)))
 
     ics.sort(key=lambda x: x[1][0])
 
@@ -624,10 +624,6 @@ def compare(model_dict, ic='WAIC', method='stacking', b_samples=1000,
             d_se = np.sqrt(len(diff) * np.var(diff))
             se = ses[i]
             weight = weights[i]
-            try:
-                warn = warns[names.index(idx)]
-            except AttributeError:
-                warn = warns[idx]
             df_comp.at[idx] = (round(res[0], round_to),
                                round(res[2], round_to),
                                round(d_ic, round_to),
