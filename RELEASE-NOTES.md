@@ -18,6 +18,7 @@
 - Densityplot: add support for discrete variables
 - Fix the Binomial likelihood in `.glm.families.Binomial`, with the flexibility of specifying the `n`. 
 - Add `offset` kwarg to `.glm`.
+- Changed the `compare` function to accept a dictionary of model-trace pairs instead of two separate lists of models and traces.
 
 ### Fixes
 
