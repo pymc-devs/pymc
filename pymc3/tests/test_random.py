@@ -80,13 +80,17 @@ class TestDrawValues(object):
         point = {'a': np.array([1., 2.])}
         npt.assert_equal(draw_values([a], point=point), [point['a']])
 
-        with pytest.raises(theano.gof.MissingInputError):
-            draw_values([a])
+        # After #2900 theano.gof.MissingInputError should not be raised
+        # with a plain draw_values
+        val1 = draw_values([a])[0]
 
-        # We need the untransformed vars
-        with pytest.raises(theano.gof.MissingInputError):
-            draw_values([a], point={'sd': np.array([2., 3.])})
+        # After #2900 theano.gof.MissingInputError should not be raised
+        # even when using the untransformed var sd
+        val2 = draw_values([a], point={'sd': np.array([2., 3.])})[0]
 
-        val1 = draw_values([a], point={'sd_log__': np.array([2., 3.])})[0]
-        val2 = draw_values([a], point={'sd_log__': np.array([2., 3.])})[0]
-        assert np.all(val1 != val2)
+        val3 = draw_values([a], point={'sd_log__': np.array([2., 3.])})[0]
+        val4 = draw_values([a], point={'sd_log__': np.array([2., 3.])})[0]
+        
+        assert all([np.all(val1 != val2), np.all(val1 != val3),
+                    np.all(val1 != val4), np.all(val2 != val3),
+                    np.all(val2 != val4), np.all(val3 != val4)])
