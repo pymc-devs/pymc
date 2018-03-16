@@ -548,7 +548,7 @@ class Model(six.with_metaclass(InitContextMeta, Context, Factor, WithMemoization
         defined within instance will be passed to the parent instance.
         So that 'nested' model contributes to the variables and
         likelihood factors of parent model.
-    theano_config : dict, default=None
+    theano_config : dict
         A dictionary of theano config values that should be set
         temporarily in the model context. See the documentation
         of theano for a complete list. Set config key
@@ -556,7 +556,7 @@ class Model(six.with_metaclass(InitContextMeta, Context, Factor, WithMemoization
 
     Examples
     --------
-    
+
     How to define a custom model
 
     .. code-block:: python
@@ -564,34 +564,37 @@ class Model(six.with_metaclass(InitContextMeta, Context, Factor, WithMemoization
         class CustomModel(Model):
             # 1) override init
             def __init__(self, mean=0, sd=1, name='', model=None):
-                # 2) call super's init first, passing model and name to it
-                # name will be prefix for all variables here
-                # if no name specified for model there will be no prefix
+                # 2) call super's init first, passing model and name
+                # to it name will be prefix for all variables here if
+                # no name specified for model there will be no prefix
                 super(CustomModel, self).__init__(name, model)
                 # now you are in the context of instance,
-                # `modelcontext` will return self
-                # you can define variables in several ways
-                # note, that all variables will get model's name prefix
+                # `modelcontext` will return self you can define
+                # variables in several ways note, that all variables
+                will get model's name prefix
 
                 # 3) you can create variables with Var method
                 self.Var('v1', Normal.dist(mu=mean, sd=sd))
                 # this will create variable named like '{prefix_}v1'
-                # and assign attribute 'v1' to instance
-                # created variable can be accessed with self.v1 or self['v1']
+                # and assign attribute 'v1' to instance created
+                # variable can be accessed with self.v1 or self['v1']
 
-                # 4) this syntax will also work as we are in the context
-                # of instance itself, names are given as usual
+                # 4) this syntax will also work as we are in the
+                # context of instance itself, names are given as usual
                 Normal('v2', mu=mean, sd=sd)
 
-                # something more complex is allowed too
-                Normal('v3', mu=mean, sd=HalfCauchy('sd', beta=10, testval=1.))
+                # something more complex is allowed, too
+                half_cauchy = HalfCauchy('sd', beta=10, testval=1.)
+                Normal('v3', mu=mean, sd=half_cauchy)
 
                 # Deterministic variables can be used in usual way
                 Deterministic('v3_sq', self.v3 ** 2)
+
                 # Potentials too
                 Potential('p1', tt.constant(1))
 
-        # After defining a class CustomModel you can use it in several ways
+        # After defining a class CustomModel you can use it in several
+        # ways
 
         # I:
         #   state the model within a context
@@ -961,7 +964,7 @@ class Model(six.with_metaclass(InitContextMeta, Context, Factor, WithMemoization
 
     def flatten(self, vars=None, order=None, inputvar=None):
         """Flattens model's input and returns:
-        
+
         FlatView with
             * input vector variable
             * replacements ``input_var -> vars``
@@ -1053,7 +1056,7 @@ def Point(*args, **kwargs):
 
     Parameters
     ----------
-    *args, **kwargs
+    args, kwargs
         arguments to build a dict
     """
     model = modelcontext(kwargs.pop('model', None))
@@ -1421,6 +1424,7 @@ class TransformedRV(TensorVariable):
     total_size : scalar Tensor (optional)
         needed for upscaling logp
     """
+
     def __init__(self, type=None, owner=None, index=None, name=None,
                  distribution=None, model=None, transform=None,
                  total_size=None):
@@ -1475,7 +1479,7 @@ def as_iterargs(data):
 
 def all_continuous(vars):
     """Check that vars not include discrete variables, excepting
-    ObservedRVs. """
+    ObservedRVs.  """
     vars_ = [var for var in vars if not isinstance(var, pm.model.ObservedRV)]
     if any([var.dtype in pm.discrete_types for var in vars_]):
         return False

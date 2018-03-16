@@ -177,28 +177,37 @@ class Continuous(Distribution):
 
 class DensityDist(Distribution):
     """Distribution based on a given log density function.
-       
-       A distribution with the passed log density function is created. 
-       Requires a custom random function passed as kwarg `random` to
-       enable sampling.
+        
+        A distribution with the passed log density function is created. 
+        Requires a custom random function passed as kwarg `random` to
+        enable sampling.
 
-       Example:
-       --------
-       .. code-block:: python
-           with pm.Model():
-               mu = pm.Normal('mu',0,1)
-               normal_dist = pm.Normal.dist(mu, 1)
-               pm.DensityDist('density_dist', normal_dist.logp, observed=np.random.randn(100), random=normal_dist.random)
-               trace = pm.sample(100)
+        Example:
+        --------
+        .. code-block:: python
+            with pm.Model():
+                mu = pm.Normal('mu',0,1)
+                normal_dist = pm.Normal.dist(mu, 1)
+                pm.DensityDist('density_dist', normal_dist.logp, observed=np.random.randn(100), random=normal_dist.random)
+                trace = pm.sample(100)
 
     """
 
-    def __init__(self, logp, shape=(), dtype=None, testval=0, *args, **kwargs):
+    def __init__(self, logp, shape=(), dtype=None, testval=0, random=None, *args, **kwargs):
         if dtype is None:
             dtype = theano.config.floatX
         super(DensityDist, self).__init__(
             shape, dtype, testval, *args, **kwargs)
         self.logp = logp
+        self.rand = random
+    
+    def random(self, *args, **kwargs):
+        if self.rand is not None:
+            return self.rand(*args, **kwargs)
+        else:
+            raise ValueError("Distribution was not passed any random method "
+                            "Define a custom random method and pass it as kwarg random")
+
 
 
 def draw_values(params, point=None):
