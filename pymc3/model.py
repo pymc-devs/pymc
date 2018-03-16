@@ -78,29 +78,71 @@ def incorporate_methods(source, destination, methods, default=None,
         else:
             setattr(destination, method, None)
 
-
-def get_named_nodes(graph):
-    """Get the named nodes in a theano graph
-    (i.e., nodes whose name attribute is not None).
+def get_named_nodes_and_relations(graph):
+    """Get the named nodes in a theano graph (i.e., nodes whose name
+    attribute is not None) along with their relationships (i.e., the
+    node's named parents, and named children, while skipping unnamed
+    intermediate nodes)
 
     Parameters
     ----------
     graph - a theano node
 
     Returns:
-    A dictionary of name:node pairs.
+    leaf_nodes: A dictionary of name:node pairs, of the named nodes that
+        are also leafs of the graph
+    node_parents: A dictionary of node:set([parents]) pairs. Each key is
+        a theano named node, and the corresponding value is the set of
+        theano named nodes that are parents of the node. These parental
+        relations skip unnamed intermediate nodes.
+    node_children: A dictionary of node:set([children]) pairs. Each key
+        is a theano named node, and the corresponding value is the set
+        of theano named nodes that are children of the node. These child
+        relations skip unnamed intermediate nodes.
+    
     """
-    return _get_named_nodes(graph, {})
-
-
-def _get_named_nodes(graph, nodes):
-    if graph.owner is None:
-        if graph.name is not None:
-            nodes.update({graph.name: graph})
+    if graph.name is not None:
+        node_parents = {graph: set()}
+        node_children = {graph: set()}
     else:
+        node_parents = {}
+        node_children = {}
+    return _get_named_nodes_and_relations(graph, None, {}, node_parents, node_children)
+
+def _get_named_nodes_and_relations(graph, parent, leaf_nodes,
+                                        node_parents, node_children):
+    if graph.owner is None:  # Leaf node
+        if graph.name is not None:  # Named leaf node
+            leaf_nodes.update({graph.name: graph})
+            if parent is not None:  # Is None for the root node
+                try:
+                    node_parents[graph].add(parent)
+                except KeyError:
+                    node_parents[graph] = set([parent])
+                node_children[parent].add(graph)
+            # Flag that the leaf node has no children
+            node_children[graph] = set()
+    else:  # Intermediate node
+        if graph.name is not None:  # Intermediate named node
+            if parent is not None:  # Is only None for the root node
+                try:
+                    node_parents[graph].add(parent)
+                except KeyError:
+                    node_parents[graph] = set([parent])
+                node_children[parent].add(graph)
+            # The current node will be set as the parent of the next
+            # nodes only if it is a named node
+            parent = graph
+            # Init the nodes children to an empty set
+            node_children[graph] = set()
         for i in graph.owner.inputs:
-            nodes.update(_get_named_nodes(i, nodes))
-    return nodes
+            temp_nodes, temp_inter, temp_tree = \
+                _get_named_nodes_and_relations(i, parent, leaf_nodes,
+                                               node_parents, node_children)
+            leaf_nodes.update(temp_nodes)
+            node_parents.update(temp_inter)
+            node_children.update(temp_tree)
+    return leaf_nodes, node_parents, node_children
 
 
 class Context(object):
@@ -381,7 +423,7 @@ class ValueGradFunction(object):
                 raise TypeError('Invalid dtype for variable %s. Can not '
                                 'cast to %s with casting rule %s.'
                                 % (var.name, self.dtype, casting))
-            if not np.issubdtype(var.dtype, np.floating):
+            if not np.issubdtype(var.dtype, float):
                 raise TypeError('Invalid dtype for variable %s. Must be '
                                 'floating point but is %s.'
                                 % (var.name, var.dtype))
@@ -491,93 +533,85 @@ class Model(six.with_metaclass(InitContextMeta, Context, Factor, WithMemoization
     """Encapsulates the variables and likelihood factors of a model.
 
     Model class can be used for creating class based models. To create
-    a class based model you should inherit from :class:`~.Model` and
-    override :meth:`~.__init__` with arbitrary definitions (do not
-    forget to call base class :meth:`__init__` first).
+    a class based model you should inherit from `Model` and
+    override `__init__` with arbitrary definitions
+    (do not forget to call base class `__init__` first).
 
     Parameters
     ----------
-    name : str
-        name that will be used as prefix for names of all random
-        variables defined within model
-    model : Model
-        instance of Model that is supposed to be a parent for the new
-        instance. If ``None``, context will be used. All variables
-        defined within instance will be passed to the parent instance.
-        So that 'nested' model contributes to the variables and
-        likelihood factors of parent model.
-    theano_config : dict
+    name : str, default '' - name that will be used as prefix for
+        names of all random variables defined within model
+    model : Model, default None - instance of Model that is
+        supposed to be a parent for the new instance. If None,
+        context will be used. All variables defined within instance
+        will be passed to the parent instance. So that 'nested' model
+        contributes to the variables and likelihood factors of
+        parent model.
+    theano_config : dict, default=None
         A dictionary of theano config values that should be set
         temporarily in the model context. See the documentation
-        of theano for a complete list. Set config key
-        ``compute_test_value`` to `raise` if it is None.
+        of theano for a complete list. Set `compute_test_value` to
+        `raise` if it is None.
 
     Examples
     --------
+    # How to define a custom model
+    class CustomModel(Model):
+        # 1) override init
+        def __init__(self, mean=0, sd=1, name='', model=None):
+            # 2) call super's init first, passing model and name to it
+            # name will be prefix for all variables here
+            # if no name specified for model there will be no prefix
+            super(CustomModel, self).__init__(name, model)
+            # now you are in the context of instance,
+            # `modelcontext` will return self
+            # you can define variables in several ways
+            # note, that all variables will get model's name prefix
 
-    How to define a custom model
+            # 3) you can create variables with Var method
+            self.Var('v1', Normal.dist(mu=mean, sd=sd))
+            # this will create variable named like '{prefix_}v1'
+            # and assign attribute 'v1' to instance
+            # created variable can be accessed with self.v1 or self['v1']
 
-    .. code-block:: python
+            # 4) this syntax will also work as we are in the context
+            # of instance itself, names are given as usual
+            Normal('v2', mu=mean, sd=sd)
 
-        class CustomModel(Model):
-            # 1) override init
-            def __init__(self, mean=0, sd=1, name='', model=None):
-                # 2) call super's init first, passing model and name
-                # to it name will be prefix for all variables here if
-                # no name specified for model there will be no prefix
-                super(CustomModel, self).__init__(name, model)
-                # now you are in the context of instance,
-                # `modelcontext` will return self you can define
-                # variables in several ways note, that all variables
-                # will get model's name prefix
+            # something more complex is allowed too
+            Normal('v3', mu=mean, sd=HalfCauchy('sd', beta=10, testval=1.))
 
-                # 3) you can create variables with Var method
-                self.Var('v1', Normal.dist(mu=mean, sd=sd))
-                # this will create variable named like '{prefix_}v1'
-                # and assign attribute 'v1' to instance created
-                # variable can be accessed with self.v1 or self['v1']
+            # Deterministic variables can be used in usual way
+            Deterministic('v3_sq', self.v3 ** 2)
+            # Potentials too
+            Potential('p1', tt.constant(1))
 
-                # 4) this syntax will also work as we are in the
-                # context of instance itself, names are given as usual
-                Normal('v2', mu=mean, sd=sd)
+    # After defining a class CustomModel you can use it in several ways
 
-                # something more complex is allowed, too
-                half_cauchy = HalfCauchy('sd', beta=10, testval=1.)
-                Normal('v3', mu=mean, sd=half_cauchy)
+    # I:
+    #   state the model within a context
+    with Model() as model:
+        CustomModel()
+        # arbitrary actions
 
-                # Deterministic variables can be used in usual way
-                Deterministic('v3_sq', self.v3 ** 2)
+    # II:
+    #   use new class as entering point in context
+    with CustomModel() as model:
+        Normal('new_normal_var', mu=1, sd=0)
 
-                # Potentials too
-                Potential('p1', tt.constant(1))
+    # III:
+    #   just get model instance with all that was defined in it
+    model = CustomModel()
 
-        # After defining a class CustomModel you can use it in several
-        # ways
-
-        # I:
-        #   state the model within a context
-        with Model() as model:
-            CustomModel()
-            # arbitrary actions
-
-        # II:
-        #   use new class as entering point in context
-        with CustomModel() as model:
-            Normal('new_normal_var', mu=1, sd=0)
-
-        # III:
-        #   just get model instance with all that was defined in it
-        model = CustomModel()
-
-        # IV:
-        #   use many custom models within one context
-        with Model() as model:
-            CustomModel(mean=1, name='first')
-            CustomModel(mean=2, name='second')
+    # IV:
+    #   use many custom models within one context
+    with Model() as model:
+        CustomModel(mean=1, name='first')
+        CustomModel(mean=2, name='second')
     """
     def __new__(cls, *args, **kwargs):
         # resolves the parent instance
-        instance = super(Model, cls).__new__(cls)
+        instance = object.__new__(cls)
         if kwargs.get('model') is not None:
             instance._parent = kwargs.get('model')
         elif cls.get_contexts():
@@ -627,7 +661,7 @@ class Model(six.with_metaclass(InitContextMeta, Context, Factor, WithMemoization
         return self.parent is None
 
     @property
-    @memoize(bound=True)
+    @memoize
     def bijection(self):
         vars = inputvars(self.cont_vars)
 
@@ -746,7 +780,7 @@ class Model(six.with_metaclass(InitContextMeta, Context, Factor, WithMemoization
            If data is provided, the variable is observed. If None,
            the variable is unobserved.
         total_size : scalar
-            upscales logp of variable with ``coef = total_size/var.shape[0]``
+            upscales logp of variable with :math:`coef = total_size/var.shape[0]`
 
         Returns
         -------
@@ -841,8 +875,8 @@ class Model(six.with_metaclass(InitContextMeta, Context, Factor, WithMemoization
                 raise e
 
     def makefn(self, outs, mode=None, *args, **kwargs):
-        """Compiles a Theano function which returns ``outs`` and takes the variable
-        ancestors of ``outs`` as inputs.
+        """Compiles a Theano function which returns `outs` and takes the variable
+        ancestors of `outs` as inputs.
 
         Parameters
         ----------
@@ -861,7 +895,7 @@ class Model(six.with_metaclass(InitContextMeta, Context, Factor, WithMemoization
                                    mode=mode, *args, **kwargs)
 
     def fn(self, outs, mode=None, *args, **kwargs):
-        """Compiles a Theano function which returns the values of ``outs``
+        """Compiles a Theano function which returns the values of `outs`
         and takes values of model vars as arguments.
 
         Parameters
@@ -876,7 +910,7 @@ class Model(six.with_metaclass(InitContextMeta, Context, Factor, WithMemoization
         return LoosePointFunc(self.makefn(outs, mode, *args, **kwargs), self)
 
     def fastfn(self, outs, mode=None, *args, **kwargs):
-        """Compiles a Theano function which returns ``outs`` and takes values
+        """Compiles a Theano function which returns `outs` and takes values
         of model vars as a dict as an argument.
 
         Parameters
@@ -892,7 +926,7 @@ class Model(six.with_metaclass(InitContextMeta, Context, Factor, WithMemoization
         return FastPointFunc(f)
 
     def profile(self, outs, n=1000, point=None, profile=True, *args, **kwargs):
-        """Compiles and profiles a Theano function which returns ``outs`` and
+        """Compiles and profiles a Theano function which returns `outs` and
         takes values of model vars as a dict as an argument.
 
         Parameters
@@ -903,7 +937,7 @@ class Model(six.with_metaclass(InitContextMeta, Context, Factor, WithMemoization
         point : point
             Point to pass to the function
         profile : True or ProfileStats
-        args, kwargs
+        *args, **kwargs
             Compilation args
 
         Returns
@@ -922,11 +956,10 @@ class Model(six.with_metaclass(InitContextMeta, Context, Factor, WithMemoization
 
     def flatten(self, vars=None, order=None, inputvar=None):
         """Flattens model's input and returns:
-
-        FlatView with
+            FlatView with
             * input vector variable
-            * replacements ``input_var -> vars``
-            * view `{variable: VarMap}`
+            * replacements `input_var -> vars`
+            * view {variable: VarMap}
 
         Parameters
         ----------
@@ -975,7 +1008,7 @@ class Model(six.with_metaclass(InitContextMeta, Context, Factor, WithMemoization
 
 
 def fn(outs, mode=None, model=None, *args, **kwargs):
-    """Compiles a Theano function which returns the values of ``outs`` and
+    """Compiles a Theano function which returns the values of `outs` and
     takes values of model vars as arguments.
 
     Parameters
@@ -992,7 +1025,7 @@ def fn(outs, mode=None, model=None, *args, **kwargs):
 
 
 def fastfn(outs, mode=None, model=None):
-    """Compiles a Theano function which returns ``outs`` and takes values of model
+    """Compiles a Theano function which returns `outs` and takes values of model
     vars as a dict as an argument.
 
     Parameters
@@ -1014,7 +1047,7 @@ def Point(*args, **kwargs):
 
     Parameters
     ----------
-    args, kwargs
+    *args, **kwargs
         arguments to build a dict
     """
     model = modelcontext(kwargs.pop('model', None))
@@ -1370,22 +1403,22 @@ def Potential(name, var, model=None):
 
 
 class TransformedRV(TensorVariable):
-    """
-    Parameters
-    ----------
-
-    type : theano type (optional)
-    owner : theano owner (optional)
-    name : str
-    distribution : Distribution
-    model : Model
-    total_size : scalar Tensor (optional)
-        needed for upscaling logp
-    """
 
     def __init__(self, type=None, owner=None, index=None, name=None,
                  distribution=None, model=None, transform=None,
                  total_size=None):
+        """
+        Parameters
+        ----------
+
+        type : theano type (optional)
+        owner : theano owner (optional)
+        name : str
+        distribution : Distribution
+        model : Model
+        total_size : scalar Tensor (optional)
+            needed for upscaling logp
+        """
         if type is None:
             type = distribution.type
         super(TransformedRV, self).__init__(type, owner, index, name)
@@ -1436,8 +1469,8 @@ def as_iterargs(data):
 
 
 def all_continuous(vars):
-    """Check that vars not include discrete variables, excepting
-    ObservedRVs.  """
+    """Check that vars not include discrete variables, excepting ObservedRVs.
+    """
     vars_ = [var for var in vars if not isinstance(var, pm.model.ObservedRV)]
     if any([var.dtype in pm.discrete_types for var in vars_]):
         return False

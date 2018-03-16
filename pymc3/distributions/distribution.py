@@ -4,7 +4,7 @@ import theano.tensor as tt
 from theano import function
 import theano
 from ..memoize import memoize
-from ..model import Model, get_named_nodes, FreeRV, ObservedRV
+from ..model import Model, get_named_nodes_and_relations, FreeRV, ObservedRV
 from ..vartypes import string_types
 
 __all__ = ['DensityDist', 'Distribution', 'Continuous', 'Discrete',
@@ -176,38 +176,14 @@ class Continuous(Distribution):
 
 
 class DensityDist(Distribution):
-    """Distribution based on a given log density function.
-        
-        A distribution with the passed log density function is created. 
-        Requires a custom random function passed as kwarg `random` to
-        enable sampling.
+    """Distribution based on a given log density function."""
 
-        Example:
-        --------
-        .. code-block:: python
-            with pm.Model():
-                mu = pm.Normal('mu',0,1)
-                normal_dist = pm.Normal.dist(mu, 1)
-                pm.DensityDist('density_dist', normal_dist.logp, observed=np.random.randn(100), random=normal_dist.random)
-                trace = pm.sample(100)
-
-    """
-
-    def __init__(self, logp, shape=(), dtype=None, testval=0, random=None, *args, **kwargs):
+    def __init__(self, logp, shape=(), dtype=None, testval=0, *args, **kwargs):
         if dtype is None:
             dtype = theano.config.floatX
         super(DensityDist, self).__init__(
             shape, dtype, testval, *args, **kwargs)
         self.logp = logp
-        self.rand = random
-    
-    def random(self, *args, **kwargs):
-        if self.rand is not None:
-            return self.rand(*args, **kwargs)
-        else:
-            raise ValueError("Distribution was not passed any random method "
-                            "Define a custom random method and pass it as kwarg random")
-
 
 
 def draw_values(params, point=None):
@@ -230,16 +206,65 @@ def draw_values(params, point=None):
     """
     # Distribution parameters may be nodes which have named node-inputs
     # specified in the point. Need to find the node-inputs to replace them.
-    givens = {}
+    
+    # Issue #2900 describes a situation in which, the named node-inputs
+    # do not have a random method, while some intermediate node may have
+    # it. This means that if the named node-input at the leaf of the
+    # graph does not have a fixed value, theano will try to compile it
+    # and fail to find inputs, raising a theano.gof.fg.MissingInputError.
+    # To deal with this problem, we have to try the leaf nodes
+    # _draw_value, and try it for the parents of the leaf nodes which
+    # fail with a theano.gof.fg.MissingInputError. This will fill in the
+    # givens dictionary for the final _draw_value
+    
+    # Init named nodes dictionary
+    leaf_nodes = {}
+    named_nodes_parents = {}
+    named_nodes_children = {}
     for param in params:
         if hasattr(param, 'name'):
-            named_nodes = get_named_nodes(param)
-            if param.name in named_nodes:
-                named_nodes.pop(param.name)
-            for name, node in named_nodes.items():
-                if not isinstance(node, (tt.sharedvar.SharedVariable,
-                                         tt.TensorConstant)):
-                    givens[name] = (node, _draw_value(node, point=point))
+            # Get the named nodes under the `param` node
+            nn, nnp, nnc = get_named_nodes_and_relations(param)
+            leaf_nodes.update(nn)
+            # Update the discovered parental relationships
+            for k in nnp.keys():
+                if k not in named_nodes_parents.keys():
+                    named_nodes_parents[k] = nnp[k]
+                else:
+                    named_nodes_parents[k].update(nnp[k])
+            # Update the discovered child relationships
+            for k in nnc.keys():
+                if k not in named_nodes_children.keys():
+                    named_nodes_children[k] = nnc[k]
+                else:
+                    named_nodes_children[k].update(nnc[k])
+    
+    # Init givens and the stack of nodes to try to `_draw_value` from
+    givens = {}
+    stack = list(leaf_nodes.values())  # A queue would be more appropriate
+    while stack:
+        next_ = stack.pop(0)
+        if next_ in givens.keys():  # If the node already has a givens value, skip it
+            continue
+        else:
+            # If the node does not have a givens value, try to draw it
+            # The named node's children givens values must also be taken
+            # into account 
+            children = named_nodes_children[next_]
+            temp_givens = [givens[k] for k in givens.keys() if k in children]
+            if not temp_givens:
+                temp_givens = None
+            try:
+                # This may fail for autotransformed RVs, which don't
+                # have the random method
+                givens[next_.name] = (next_, _draw_value(next_, point=point, givens=temp_givens))
+            except theano.gof.fg.MissingInputError:
+                # The node failed, so we must add the node's parents to
+                # the stack of nodes to try to draw from. We exclude the
+                # nodes in the `params` list.
+                stack.extend([node for node in named_nodes_parents[next_]
+                              if node is not None and node.name not in givens.keys()
+                              and node not in params])
     values = []
     for param in params:
         values.append(_draw_value(param, point=point, givens=givens.values()))
@@ -306,6 +331,7 @@ def _draw_value(param, point=None, givens=None):
                 variables, values = list(zip(*givens))
             else:
                 variables = values = []
+            #~ print(param, type(param))
             func = _compile_theano_function(param, variables)
             return func(*values)
     else:
