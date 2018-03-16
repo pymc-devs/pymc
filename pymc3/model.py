@@ -571,7 +571,7 @@ class Model(six.with_metaclass(InitContextMeta, Context, Factor, WithMemoization
                 # now you are in the context of instance,
                 # `modelcontext` will return self you can define
                 # variables in several ways note, that all variables
-                will get model's name prefix
+                # will get model's name prefix
 
                 # 3) you can create variables with Var method
                 self.Var('v1', Normal.dist(mu=mean, sd=sd))
