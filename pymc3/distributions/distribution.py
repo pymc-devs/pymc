@@ -176,7 +176,22 @@ class Continuous(Distribution):
 
 
 class DensityDist(Distribution):
-    """Distribution based on a given log density function."""
+    """Distribution based on a given log density function.
+       
+       A distribution with the passed log density function is created. 
+       Requires a custom random function passed as kwarg `random` to
+       enable sampling.
+
+       Example:
+       --------
+       .. code-block:: python
+           with pm.Model():
+               mu = pm.Normal('mu',0,1)
+               normal_dist = pm.Normal.dist(mu, 1)
+               pm.DensityDist('density_dist', normal_dist.logp, observed=np.random.randn(100), random=normal_dist.random)
+               trace = pm.sample(100)
+
+    """
 
     def __init__(self, logp, shape=(), dtype=None, testval=0, *args, **kwargs):
         if dtype is None:
@@ -331,7 +346,6 @@ def _draw_value(param, point=None, givens=None):
                 variables, values = list(zip(*givens))
             else:
                 variables = values = []
-            #~ print(param, type(param))
             func = _compile_theano_function(param, variables)
             return func(*values)
     else:
