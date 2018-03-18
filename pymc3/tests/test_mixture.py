@@ -7,7 +7,7 @@ from pymc3 import Dirichlet, Gamma, Normal, Lognormal, Poisson, Exponential, \
 import scipy.stats as st
 from scipy.special import logsumexp
 from pymc3.theanof import floatX
-
+import theano
 
 # Generate data
 def generate_normal_mixture_data(w, mu, sd, size=1000):
@@ -108,6 +108,40 @@ class TestMixture(SeededTest):
                         np.sort(self.pois_mu),
                         rtol=0.1, atol=0.1)
 
+    def test_mixture_of_mvn(self):
+        mu1 = np.asarray([0., 1.])
+        cov1 = np.diag([1.5, 2.5])
+        mu2 = np.asarray([1., 0.])
+        cov2 = np.diag([2.5, 3.5])
+        obs = np.asarray([[.5, .5], mu1, mu2])
+        with Model() as model:
+            w = Dirichlet('w', floatX(np.ones(2)), transform=None)
+            mvncomp1 = MvNormal.dist(mu=mu1, cov=cov1)
+            mvncomp2 = MvNormal.dist(mu=mu2, cov=cov2)
+            y = Mixture('x_obs', w, [mvncomp1, mvncomp2],
+                    observed=obs)
+
+        # check logp of each component
+        complogp_st = np.vstack((st.multivariate_normal.logpdf(obs, mu1, cov1),
+                                 st.multivariate_normal.logpdf(obs, mu2, cov2))
+                                ).T
+        complogp = y.distribution._comp_logp(theano.shared(obs)).eval()
+        assert_allclose(complogp, complogp_st)
+
+        # check logp of mixture
+        testpoint = model.test_point
+        mixlogp_st = logsumexp(np.log(testpoint['w']) + complogp_st,
+                               axis=-1, keepdims=True)
+        assert_allclose(y.logp_elemwise(testpoint),
+                        mixlogp_st)
+
+        # check logp of model
+        priorlogp = st.dirichlet.logpdf(x=testpoint['w'],
+                                        alpha=np.ones(2),
+                                        )
+        assert_allclose(model.logp(testpoint),
+                        mixlogp_st.sum() + priorlogp)
+
     def test_mixture_of_mixture(self):
         nbr = 3
         with Model() as model:
@@ -121,8 +155,8 @@ class TestMixture(SeededTest):
                 sd=1,
                 shape=nbr)
             # weight vector for the mixtures
-            g_w = Dirichlet('g_w', a=floatX(np.ones(nbr)), transform=None)
-            l_w = Dirichlet('l_w', a=floatX(np.ones(nbr)), transform=None)
+            g_w = Dirichlet('g_w', a=floatX(np.ones(nbr)*0.0000001), transform=None)
+            l_w = Dirichlet('l_w', a=floatX(np.ones(nbr)*0.0000001), transform=None)
             # mixture components
             g_mix = Mixture.dist(w=g_w, comp_dists=g_comp)
             l_mix = Mixture.dist(w=l_w, comp_dists=l_comp)
@@ -136,31 +170,39 @@ class TestMixture(SeededTest):
 
         def mixmixlogp(value, point):
             priorlogp = st.dirichlet.logpdf(x=point['g_w'],
-                                            alpha=np.array([0.0000001] * nbr),
+                                            alpha=np.ones(nbr)*0.0000001,
                                             ) + \
                         st.expon.logpdf(x=point['mu_g']).sum() + \
                         st.dirichlet.logpdf(x=point['l_w'],
-                                            alpha=np.array([0.0000001] * nbr),
+                                            alpha=np.ones(nbr)*0.0000001,
                                             ) + \
                         st.expon.logpdf(x=point['mu_l']).sum() + \
                         st.dirichlet.logpdf(x=point['mix_w'],
-                                            alpha=np.array([1.1] * 2),
+                                            alpha=np.ones(2),
                                             )
             complogp1 = st.norm.logpdf(x=value,
                                        loc=point['mu_g'])
-            mixlogp1 = logsumexp(np.log(point['g_w']) + complogp1, axis=-1, keepdims=True)
+            mixlogp1 = logsumexp(np.log(point['g_w']) + complogp1,
+                                 axis=-1, keepdims=True)
             complogp2 = st.lognorm.logpdf(value, 1., 0., np.exp(point['mu_l']))
-            mixlogp2 = logsumexp(np.log(point['l_w']) + complogp2, axis=-1, keepdims=True)
+            mixlogp2 = logsumexp(np.log(point['l_w']) + complogp2,
+                                 axis=-1, keepdims=True)
             complogp_mix = np.concatenate((mixlogp1, mixlogp2), axis=1)
-            mixmixlogpg = logsumexp(np.log(point['mix_w']) + complogp_mix, axis=-1, keepdims=True)
+            mixmixlogpg = logsumexp(np.log(point['mix_w']) + complogp_mix,
+                                    axis=-1, keepdims=True)
             return priorlogp, mixmixlogpg
 
         value = np.exp(self.norm_x)[:, None]
         priorlogp, mixmixlogpg = mixmixlogp(value, test_point)
+
+        # check logp of mixture
         assert_allclose(mixmixlogpg, mix.logp_elemwise(test_point))
+
+        # check model logp
         assert_allclose(priorlogp + mixmixlogpg.sum(),
                         model.logp(test_point))
 
+        # check input and check logp again
         test_point['g_w'] = np.asarray([.1, .1, .8])
         test_point['mu_g'] = np.exp(np.random.randn(3))
         priorlogp, mixmixlogpg = mixmixlogp(value, test_point)
