@@ -143,7 +143,7 @@ class TestMixture(SeededTest):
                         mixlogp_st.sum() + priorlogp)
 
     def test_mixture_of_mixture(self):
-        nbr = 3
+        nbr = 4
         with Model() as model:
             # mixtures components
             g_comp = Normal.dist(
@@ -203,8 +203,8 @@ class TestMixture(SeededTest):
                         model.logp(test_point))
 
         # check input and check logp again
-        test_point['g_w'] = np.asarray([.1, .1, .8])
-        test_point['mu_g'] = np.exp(np.random.randn(3))
+        test_point['g_w'] = np.asarray([.1, .1, .2, .6])
+        test_point['mu_g'] = np.exp(np.random.randn(nbr))
         priorlogp, mixmixlogpg = mixmixlogp(value, test_point)
         assert_allclose(mixmixlogpg, mix.logp_elemwise(test_point))
         assert_allclose(priorlogp + mixmixlogpg.sum(),
