@@ -3,7 +3,7 @@ from numpy.testing import assert_allclose
 
 from .helpers import SeededTest
 from pymc3 import Dirichlet, Gamma, Normal, Lognormal, Poisson, Exponential, \
-    Mixture, NormalMixture, sample, Metropolis, Model
+    Mixture, NormalMixture, MvNormal, sample, Metropolis, Model
 import scipy.stats as st
 from scipy.special import logsumexp
 from pymc3.theanof import floatX
@@ -115,18 +115,19 @@ class TestMixture(SeededTest):
             g_comp = Normal.dist(
                 mu=Exponential('mu_g', lam=1.0, shape=nbr, transform=None),
                 sd=1,
-                shape=nbr)  # pm.HalfNormal('sd_g', sd=1.0,shape=nbr)
+                shape=nbr)
             l_comp = Lognormal.dist(
                 mu=Exponential('mu_l', lam=1.0, shape=nbr, transform=None),
                 sd=1,
-                shape=nbr)  # pm.HalfNormal('sd_l', sd=1.0,shape=nbr)
+                shape=nbr)
             # weight vector for the mixtures
-            g_w = Dirichlet('g_w', a=np.array([0.0000001] * nbr), transform=None)
-            l_w = Dirichlet('l_w', a=np.array([0.0000001] * nbr), transform=None)
-            mix_w = Dirichlet('mix_w', a=np.array([1] * 2), transform=None)
-            # mixtures
+            g_w = Dirichlet('g_w', a=floatX(np.ones(nbr)), transform=None)
+            l_w = Dirichlet('l_w', a=floatX(np.ones(nbr)), transform=None)
+            # mixture components
             g_mix = Mixture.dist(w=g_w, comp_dists=g_comp)
             l_mix = Mixture.dist(w=l_w, comp_dists=l_comp)
+            # mixture of mixtures
+            mix_w = Dirichlet('mix_w', a=floatX(np.ones(2)), transform=None)
             mix = Mixture('mix', w=mix_w,
                           comp_dists=[g_mix, l_mix],
                           observed=np.exp(self.norm_x))
@@ -143,7 +144,7 @@ class TestMixture(SeededTest):
                                             ) + \
                         st.expon.logpdf(x=point['mu_l']).sum() + \
                         st.dirichlet.logpdf(x=point['mix_w'],
-                                            alpha=np.array([1] * 2),
+                                            alpha=np.array([1.1] * 2),
                                             )
             complogp1 = st.norm.logpdf(x=value,
                                        loc=point['mu_g'])
