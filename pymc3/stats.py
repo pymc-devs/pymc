@@ -11,7 +11,7 @@ from .util import get_default_varnames
 import pymc3 as pm
 from pymc3.theanof import floatX
 
-from scipy.misc import logsumexp
+from scipy.special import logsumexp
 from scipy.stats import dirichlet
 from scipy.optimize import minimize
 from scipy.signal import fftconvolve
