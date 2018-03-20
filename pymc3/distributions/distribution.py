@@ -254,10 +254,11 @@ def draw_values(params, point=None):
     
     # Init givens and the stack of nodes to try to `_draw_value` from
     givens = {}
+    stored = set([])  # Some nodes 
     stack = list(leaf_nodes.values())  # A queue would be more appropriate
     while stack:
         next_ = stack.pop(0)
-        if next_ in givens.keys():
+        if next_ in stored:
             # If the node already has a givens value, skip it
             continue
         elif isinstance(next_, tt.TensorConstant) or \
@@ -271,6 +272,7 @@ def draw_values(params, point=None):
             # ('Constants not allowed in param list', ...)` for 
             # TensorConstant, and a `TypeError: Cannot use a shared
             # variable (...) as explicit input` for SharedVariable.
+            stored.add(next_.name)
             continue
         else:
             # If the node does not have a givens value, try to draw it.
@@ -284,13 +286,14 @@ def draw_values(params, point=None):
                 givens[next_.name] = (next_, _draw_value(next_,
                                                          point=point,
                                                          givens=temp_givens))
+                stored.add(next_.name)
             except theano.gof.fg.MissingInputError:
                 # The node failed, so we must add the node's parents to
                 # the stack of nodes to try to draw from. We exclude the
                 # nodes in the `params` list.
                 stack.extend([node for node in named_nodes_parents[next_]
                               if node is not None and
-                              node.name not in givens.keys() and
+                              node.name not in stored and
                               node not in params])
     values = []
     for param in params:
