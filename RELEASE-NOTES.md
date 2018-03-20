@@ -19,6 +19,7 @@
 - Fix the Binomial likelihood in `.glm.families.Binomial`, with the flexibility of specifying the `n`. 
 - Add `offset` kwarg to `.glm`.
 - Changed the `compare` function to accept a dictionary of model-trace pairs instead of two separate lists of models and traces.
+- add test and support for creating multivariate mixture and mixture of mixtures
 - `distribution.draw_values`, now is also able to draw values from conditionally dependent RVs, such as autotransformed RVs (Refer to PR #2902).
 
 ### Fixes
