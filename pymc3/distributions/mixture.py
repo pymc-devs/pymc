@@ -67,6 +67,7 @@ class Mixture(Distribution):
 
             like = pm.Mixture('like', w=w, comp_dists = [pois1, pois2], observed=data)
     """
+
     def __init__(self, w, comp_dists, *args, **kwargs):
         shape = kwargs.pop('shape', ())
 
@@ -95,7 +96,7 @@ class Mixture(Distribution):
 
             if 'mode' not in defaults:
                 defaults.append('mode')
-        except AttributeError:
+        except (AttributeError, ValueError):
             pass
 
         super(Mixture, self).__init__(shape, dtype, defaults=defaults,
@@ -109,22 +110,25 @@ class Mixture(Distribution):
 
             return comp_dists.logp(value_)
         except AttributeError:
-            return tt.stack([comp_dist.logp(value) for comp_dist in comp_dists],
-                            axis=1)
+            return tt.squeeze(tt.stack([comp_dist.logp(value)
+                                        for comp_dist in comp_dists],
+                                       axis=1))
 
     def _comp_means(self):
         try:
             return tt.as_tensor_variable(self.comp_dists.mean)
         except AttributeError:
-            return tt.stack([comp_dist.mean for comp_dist in self.comp_dists],
-                            axis=1)
+            return tt.squeeze(tt.stack([comp_dist.mean
+                                        for comp_dist in self.comp_dists],
+                                       axis=1))
 
     def _comp_modes(self):
         try:
             return tt.as_tensor_variable(self.comp_dists.mode)
         except AttributeError:
-            return tt.stack([comp_dist.mode for comp_dist in self.comp_dists],
-                            axis=1)
+            return tt.squeeze(tt.stack([comp_dist.mode
+                                        for comp_dist in self.comp_dists],
+                                       axis=1))
 
     def _comp_samples(self, point=None, size=None, repeat=None):
         try:
@@ -196,15 +200,16 @@ class NormalMixture(Mixture):
 
     Note: You only have to pass in sd or tau, but not both.
     """
+
     def __init__(self, w, mu, *args, **kwargs):
         _, sd = get_tau_sd(tau=kwargs.pop('tau', None),
                            sd=kwargs.pop('sd', None))
-        
+
         distshape = np.broadcast(mu, sd).shape
         self.mu = mu = tt.as_tensor_variable(mu)
         self.sd = sd = tt.as_tensor_variable(sd)
 
-        if not distshape: 
+        if not distshape:
             distshape = np.broadcast(mu.tag.test_value, sd.tag.test_value).shape
 
         super(NormalMixture, self).__init__(w, Normal.dist(mu, sd=sd, shape=distshape),
