@@ -80,14 +80,8 @@ class TestDrawValues(object):
         point = {'a': np.array([1., 2.])}
         npt.assert_equal(draw_values([a], point=point), [point['a']])
 
-        # After #2900 theano.gof.MissingInputError should not be raised
-        # with a plain draw_values
         val1 = draw_values([a])[0]
-
-        # After #2900 theano.gof.MissingInputError should not be raised
-        # even when using the untransformed var sd
         val2 = draw_values([a], point={'sd': np.array([2., 3.])})[0]
-
         val3 = draw_values([a], point={'sd_log__': np.array([2., 3.])})[0]
         val4 = draw_values([a], point={'sd_log__': np.array([2., 3.])})[0]
         

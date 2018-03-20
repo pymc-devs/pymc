@@ -19,12 +19,15 @@
 - Fix the Binomial likelihood in `.glm.families.Binomial`, with the flexibility of specifying the `n`. 
 - Add `offset` kwarg to `.glm`.
 - Changed the `compare` function to accept a dictionary of model-trace pairs instead of two separate lists of models and traces.
+- `distribution.draw_values`, now is also able to draw values from conditionally dependent RVs, such as autotransformed RVs (Refer to PR #2902).
 
 ### Fixes
 
 - `VonMises` does not overflow for large values of kappa. i0 and i1 have been removed and we now use log_i0 to compute the logp.
 - The bandwidth for KDE plots is computed using a modified version of Scott's rule. The new version uses entropy instead of standard deviation. This works better for multimodal distributions. Functions using KDE plots has a new argument `bw` controlling the bandwidth.
 - fix PyMC3 variable is not replaced if provided in more_replacements (#2890)
+- Fix for issue #2900. For many situations, named node-inputs do not have a `random` method, while some intermediate node may have it. This meant that if the named node-input at the leaf of the graph did not have a fixed value, `theano` would try to compile it and fail to find inputs, raising a `theano.gof.fg.MissingInputError`. This was fixed by going through the theano variable's owner inputs graph, trying to get intermediate named-nodes values if the leafs had failed.
+- In `distribution.draw_values`, some named nodes could be `theano.tensor.TensorConstant`s. Nevertheless, in `distribution._draw_value`, these would be passed to `distribution._compile_theano_function` as if they were `theano.tensor.TensorVariable`s. This could lead to the following exception `TypeError: ('Constants not allowed in param list', ...)`. The fix was to not add `theano.tensor.TensorConstant` named nodes into the `givens` dict that could be used in `distribution._compile_theano_function`.
 
 ### Deprecations
 

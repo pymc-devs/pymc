@@ -229,19 +229,8 @@ def draw_values(params, point=None):
 
     """
     # Distribution parameters may be nodes which have named node-inputs
-    # specified in the point. Need to find the node-inputs to replace them.
-    
-    # Issue #2900 describes a situation in which, the named node-inputs
-    # do not have a random method, while some intermediate node may have
-    # it. This means that if the named node-input at the leaf of the
-    # graph does not have a fixed value, theano will try to compile it
-    # and fail to find inputs, raising a theano.gof.fg.MissingInputError.
-    # To deal with this problem, we have to try the leaf nodes
-    # _draw_value, and try it for the parents of the leaf nodes which
-    # fail with a theano.gof.fg.MissingInputError. This will fill in the
-    # givens dictionary for the final _draw_value
-    
-    # Init named nodes dictionary
+    # specified in the point. Need to find the node-inputs, their
+    # parents and children to replace them.
     leaf_nodes = {}
     named_nodes_parents = {}
     named_nodes_children = {}
@@ -268,27 +257,37 @@ def draw_values(params, point=None):
     stack = list(leaf_nodes.values())  # A queue would be more appropriate
     while stack:
         next_ = stack.pop(0)
-        if next_ in givens.keys():  # If the node already has a givens value, skip it
+        if next_ in givens.keys():
+            # If the node already has a givens value, skip it
+            continue
+        elif isinstance(next_, theano.tensor.TensorConstant):
+            # If the node is a TensorConstant, its value will be
+            # available automatically in _compile_theano_function so
+            # we can skip it. Furthermore, if this node was treated as a
+            # TensorVariable that should be compiled by theano in
+            # _compile_theano_function, it would raise a `TypeError:
+            # ('Constants not allowed in param list', ...)`.
             continue
         else:
-            # If the node does not have a givens value, try to draw it
+            # If the node does not have a givens value, try to draw it.
             # The named node's children givens values must also be taken
-            # into account 
+            # into account.
             children = named_nodes_children[next_]
             temp_givens = [givens[k] for k in givens.keys() if k in children]
-            if not temp_givens:
-                temp_givens = None
             try:
                 # This may fail for autotransformed RVs, which don't
                 # have the random method
-                givens[next_.name] = (next_, _draw_value(next_, point=point, givens=temp_givens))
+                givens[next_.name] = (next_, _draw_value(next_,
+                                                         point=point,
+                                                         givens=temp_givens))
             except theano.gof.fg.MissingInputError:
                 # The node failed, so we must add the node's parents to
                 # the stack of nodes to try to draw from. We exclude the
                 # nodes in the `params` list.
                 stack.extend([node for node in named_nodes_parents[next_]
-                              if node is not None and node.name not in givens.keys()
-                              and node not in params])
+                              if node is not None and
+                              node.name not in givens.keys() and
+                              node not in params])
     values = []
     for param in params:
         values.append(_draw_value(param, point=point, givens=givens.values()))
