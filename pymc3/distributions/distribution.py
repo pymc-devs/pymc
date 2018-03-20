@@ -260,13 +260,17 @@ def draw_values(params, point=None):
         if next_ in givens.keys():
             # If the node already has a givens value, skip it
             continue
-        elif isinstance(next_, theano.tensor.TensorConstant):
-            # If the node is a TensorConstant, its value will be
+        elif isinstance(next_, tt.TensorConstant) or \
+             isinstance(next_, tt.sharedvar.SharedVariable):
+            # If the node is a theano.tensor.TensorConstant or a
+            # theano.tensor.sharedvar.SharedVariable, its value will be
             # available automatically in _compile_theano_function so
             # we can skip it. Furthermore, if this node was treated as a
             # TensorVariable that should be compiled by theano in
             # _compile_theano_function, it would raise a `TypeError:
-            # ('Constants not allowed in param list', ...)`.
+            # ('Constants not allowed in param list', ...)` for 
+            # TensorConstant, and a `TypeError: Cannot use a shared
+            # variable (...) as explicit input` for SharedVariable.
             continue
         else:
             # If the node does not have a givens value, try to draw it.
