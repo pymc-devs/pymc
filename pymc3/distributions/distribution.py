@@ -261,8 +261,8 @@ def draw_values(params, point=None):
         if next_ in stored:
             # If the node already has a givens value, skip it
             continue
-        elif isinstance(next_, tt.TensorConstant) or \
-             isinstance(next_, tt.sharedvar.SharedVariable):
+        elif isinstance(next_, (tt.TensorConstant,
+                                tt.sharedvar.SharedVariable)):
             # If the node is a theano.tensor.TensorConstant or a
             # theano.tensor.sharedvar.SharedVariable, its value will be
             # available automatically in _compile_theano_function so
