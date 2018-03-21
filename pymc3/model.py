@@ -78,29 +78,71 @@ def incorporate_methods(source, destination, methods, default=None,
         else:
             setattr(destination, method, None)
 
-
-def get_named_nodes(graph):
-    """Get the named nodes in a theano graph
-    (i.e., nodes whose name attribute is not None).
+def get_named_nodes_and_relations(graph):
+    """Get the named nodes in a theano graph (i.e., nodes whose name
+    attribute is not None) along with their relationships (i.e., the
+    node's named parents, and named children, while skipping unnamed
+    intermediate nodes)
 
     Parameters
     ----------
     graph - a theano node
 
     Returns:
-    A dictionary of name:node pairs.
+    leaf_nodes: A dictionary of name:node pairs, of the named nodes that
+        are also leafs of the graph
+    node_parents: A dictionary of node:set([parents]) pairs. Each key is
+        a theano named node, and the corresponding value is the set of
+        theano named nodes that are parents of the node. These parental
+        relations skip unnamed intermediate nodes.
+    node_children: A dictionary of node:set([children]) pairs. Each key
+        is a theano named node, and the corresponding value is the set
+        of theano named nodes that are children of the node. These child
+        relations skip unnamed intermediate nodes.
+    
     """
-    return _get_named_nodes(graph, {})
-
-
-def _get_named_nodes(graph, nodes):
-    if graph.owner is None:
-        if graph.name is not None:
-            nodes.update({graph.name: graph})
+    if graph.name is not None:
+        node_parents = {graph: set()}
+        node_children = {graph: set()}
     else:
+        node_parents = {}
+        node_children = {}
+    return _get_named_nodes_and_relations(graph, None, {}, node_parents, node_children)
+
+def _get_named_nodes_and_relations(graph, parent, leaf_nodes,
+                                        node_parents, node_children):
+    if graph.owner is None:  # Leaf node
+        if graph.name is not None:  # Named leaf node
+            leaf_nodes.update({graph.name: graph})
+            if parent is not None:  # Is None for the root node
+                try:
+                    node_parents[graph].add(parent)
+                except KeyError:
+                    node_parents[graph] = set([parent])
+                node_children[parent].add(graph)
+            # Flag that the leaf node has no children
+            node_children[graph] = set()
+    else:  # Intermediate node
+        if graph.name is not None:  # Intermediate named node
+            if parent is not None:  # Is only None for the root node
+                try:
+                    node_parents[graph].add(parent)
+                except KeyError:
+                    node_parents[graph] = set([parent])
+                node_children[parent].add(graph)
+            # The current node will be set as the parent of the next
+            # nodes only if it is a named node
+            parent = graph
+            # Init the nodes children to an empty set
+            node_children[graph] = set()
         for i in graph.owner.inputs:
-            nodes.update(_get_named_nodes(i, nodes))
-    return nodes
+            temp_nodes, temp_inter, temp_tree = \
+                _get_named_nodes_and_relations(i, parent, leaf_nodes,
+                                               node_parents, node_children)
+            leaf_nodes.update(temp_nodes)
+            node_parents.update(temp_inter)
+            node_children.update(temp_tree)
+    return leaf_nodes, node_parents, node_children
 
 
 class Context(object):
