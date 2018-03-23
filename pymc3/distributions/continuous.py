@@ -152,14 +152,14 @@ class Uniform(Continuous):
 
     def __init__(self, lower=0, upper=1, transform='interval',
                  *args, **kwargs):
+        self.lower = lower = tt.as_tensor_variable(floatX(lower))
+        self.upper = upper = tt.as_tensor_variable(floatX(upper))
+        self.mean = (upper + lower) / 2.
+        self.median = self.mean
+
         if transform == 'interval':
             transform = transforms.interval(lower, upper)
         super(Uniform, self).__init__(transform=transform, *args, **kwargs)
-
-        self.lower = lower = floatX(tt.as_tensor_variable(lower))
-        self.upper = upper = floatX(tt.as_tensor_variable(upper))
-        self.mean = (upper + lower) / 2.
-        self.median = self.mean
 
     def random(self, point=None, size=None, repeat=None):
         lower, upper = draw_values([self.lower, self.upper],
