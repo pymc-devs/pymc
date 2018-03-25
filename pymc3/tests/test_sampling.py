@@ -304,14 +304,14 @@ def test_exec_nuts_init(method):
         assert 'a' in start[0] and 'b_log__' in start[0]
 
 
-def test_sample_prior():
+def test_sample_generative():
     observed = np.random.normal(10, 1, size=200)
     with pm.Model():
         # Use a prior that's way off to show we're actually sampling from it
         mu = pm.Normal('mu', mu=-10, sd=1)
         positive_mu = pm.Deterministic('positive_mu', np.abs(mu))
         pm.Normal('x_obs', mu=mu, sd=1, observed=observed)
-        prior = pm.sample_prior()
+        prior = pm.sample_generative()
     
     assert (prior['mu'] < 0).all()
     assert (prior['positive_mu'] > 0).all()

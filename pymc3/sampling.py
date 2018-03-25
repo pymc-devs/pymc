@@ -11,11 +11,12 @@ import theano.gradient as tg
 
 from .backends.base import BaseTrace, MultiTrace
 from .backends.ndarray import NDArray
+from .distributions import draw_values
 from .model import modelcontext, Point, all_continuous
 from .step_methods import (NUTS, HamiltonianMC, Metropolis, BinaryMetropolis,
                            BinaryGibbsMetropolis, CategoricalGibbsMetropolis,
                            Slice, CompoundStep, arraystep)
-from .util import update_start_vals, is_transformed_name
+from .util import update_start_vals, is_transformed_name, get_untransformed_name, get_default_varnames
 from .vartypes import discrete_types
 from pymc3.step_methods.hmc import quadpotential
 from pymc3 import plots
@@ -25,7 +26,7 @@ from tqdm import tqdm
 import sys
 sys.setrecursionlimit(10000)
 
-__all__ = ['sample', 'iter_sample', 'sample_ppc', 'sample_ppc_w', 'init_nuts', 'sample_prior']
+__all__ = ['sample', 'iter_sample', 'sample_ppc', 'sample_ppc_w', 'init_nuts', 'sample_generative']
 
 STEP_METHODS = (NUTS, HamiltonianMC, Metropolis, BinaryMetropolis,
                 BinaryGibbsMetropolis, Slice, CategoricalGibbsMetropolis)
@@ -1206,9 +1207,8 @@ def sample_ppc_w(traces, samples=None, models=None, weights=None,
     return {k: np.asarray(v) for k, v in ppc.items()}
 
 
-def sample_prior(samples=500, model=None, vars=None, size=None,
-                   random_seed=None, progressbar=True):
-    """Generate samples from the prior of a model.
+def sample_generative(samples=500, model=None, vars=None, random_seed=None):
+    """Generate samples from the generative model.
 
     Parameters
     ----------
@@ -1218,20 +1218,14 @@ def sample_prior(samples=500, model=None, vars=None, size=None,
     vars : iterable
         Variables for which to compute the posterior predictive samples.
         Defaults to `model.named_vars`.
-    size : int
-        The number of random draws from the distribution specified by the
-        parameters in each sample of the trace.
     random_seed : int
         Seed for the random number generator.
-    progressbar : bool
-        Whether or not to display a progress bar in the command line.
 
     Returns
     -------
     dict
         Dictionary with the variables as keys. The values are arrays of prior samples.
     """
-        
     model = modelcontext(model)
 
     if vars is None:
@@ -1240,34 +1234,21 @@ def sample_prior(samples=500, model=None, vars=None, size=None,
     if random_seed is not None:
         np.random.seed(random_seed)
 
-    if progressbar:
-        indices = tqdm(range(samples))
-
-    try:
-        prior = {var: [] for var in vars}
-        for _ in indices:
-            point = {}
-            for var_name, var in model.named_vars.items():
-                if hasattr(var, 'distribution'):
-                    if is_transformed_name(var_name):
-                        val = var.distribution.dist.random(point=point, size=size)
-                    else:
-                        val = var.distribution.random(point=point, size=size)
-                else:
-                    val = var.eval({model.named_vars[v]: point[v] for v in pm.model.get_named_nodes(var)})
-
-                point[var_name] = val
-                if var_name in vars:
-                    prior[var_name].append(val)
-                    
-    except KeyboardInterrupt:
-        pass
-
-    finally:
-        if progressbar:
-            indices.close()
-
-    return {k: np.asarray(v) for k, v in prior.items()}
+    names = get_default_varnames(model.named_vars, include_transformed=False)
+    # draw_values fails with auto-transformed variables. transform them later!
+    values = draw_values([model[name] for name in names], size=samples)
+    
+    data = {k: v for k, v in zip(names, values)}
+    
+    prior = {}
+    for var_name in vars:
+        if var_name in data:
+            prior[var_name] = data[var_name]
+        elif is_transformed_name(var_name):
+            untransformed = get_untransformed_name(var_name)
+            if untransformed in data:
+                prior[var_name] = model[untransformed].transformation.forward(data[untransformed]).eval()
+    return prior
 
 
 def init_nuts(init='auto', chains=1, n_init=500000, model=None,
