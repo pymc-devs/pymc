@@ -1,3 +1,4 @@
+import collections
 import numbers
 import numpy as np
 import theano.tensor as tt
@@ -307,13 +308,14 @@ def draw_values(params, point=None, size=None):
             raise ValueError('Cannot resolve inputs for {}'.format([str(params[j]) for j in to_eval]))
         to_eval = set(missing_inputs)
         missing_inputs = set()
-        for param in to_eval:
+        for param_idx in to_eval:
+            param = params[param_idx]
             try:  # might evaluate in a bad order,
-                evaluated[param] = _draw_value(params[param], point=point, givens=givens.values(), size=size)
-                if any(params[param] in j for j in named_nodes_children.values()):
-                    givens[params[param].name] = (params[param], evaluated[param])
+                evaluated[param_idx] = _draw_value(param, point=point, givens=givens.values(), size=size)
+                if isinstance(param, collections.Hashable) and named_nodes_parents.get(param):
+                    givens[param.name] = (param, evaluated[param_idx])
             except theano.gof.fg.MissingInputError:
-                missing_inputs.add(param)
+                missing_inputs.add(param_idx)
         
             
     return [evaluated[j] for j in params] # set the order back
