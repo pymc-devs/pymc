@@ -304,14 +304,14 @@ def draw_values(params, point=None, size=None):
     missing_inputs = set(params)
     while to_eval or missing_inputs:
         if to_eval == missing_inputs:
-            raise ValueError('Cannot resolve inputs for {}'.format([str(j) for j in to_eval]))
+            raise ValueError('Cannot resolve inputs for {}'.format([str(params[j]) for j in to_eval]))
         to_eval = set(missing_inputs)
         missing_inputs = set()
         for param in to_eval:
             try:  # might evaluate in a bad order,
                 evaluated[param] = _draw_value(params[param], point=point, givens=givens.values(), size=size)
-                if any(param in j for j in named_nodes_children.values()):
-                    givens[param.name] = (params[param], evaluated[param])
+                if any(params[param] in j for j in named_nodes_children.values()):
+                    givens[params[param].name] = (params[param], evaluated[param])
             except theano.gof.fg.MissingInputError:
                 missing_inputs.add(param)
         
