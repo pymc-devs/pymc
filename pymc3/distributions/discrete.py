@@ -758,7 +758,7 @@ class Constant(Discrete):
     """
 
     def __init__(self, c, *args, **kwargs):
-        warnings.warn("Constant has been deprecated. We recommend using a Determinstic object instead.",
+        warnings.warn("Constant has been deprecated. We recommend using a Deterministic object instead.",
                     DeprecationWarning)
         super(Constant, self).__init__(*args, **kwargs)
         self.mean = self.median = self.mode = self.c = c = tt.as_tensor_variable(c)
