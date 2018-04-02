@@ -755,7 +755,7 @@ class Exponential(PositiveContinuous):
 
     def logp(self, value):
         lam = self.lam
-        return bound(tt.log(lam) - lam * value, value > 0, lam > 0)
+        return bound(tt.log(lam) - lam * value, value >= 0, lam > 0)
 
     def _repr_latex_(self, name=None, dist=None):
         if dist is None:
