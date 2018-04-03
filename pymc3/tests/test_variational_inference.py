@@ -841,7 +841,7 @@ def test_discrete_not_allowed():
     y = np.random.normal(mu_true[z_true], np.ones_like(z_true))
 
     with pm.Model():
-        mu = pm.Normal('μ', mu=0, sd=10, shape=3)
+        mu = pm.Normal('mu', mu=0, sd=10, shape=3)
         z = pm.Categorical('z', p=tt.ones(3) / 3, shape=len(y))
         pm.Normal('y_obs', mu=mu[z], sd=1., observed=y)
         with pytest.raises(opvi.ParametrizationError):
