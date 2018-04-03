@@ -154,8 +154,8 @@ class Metropolis(ArrayStepShared):
                 q = (q0 + delta).astype('int64')
             else:
                 delta[self.discrete] = np.round(
-                    delta[self.discrete], 0).astype('int64')
-                q = (q0 + delta).astype('int64')
+                    delta[self.discrete], 0)
+                q = (q0 + delta)
         else:
             q = floatX(q0 + delta)
 
