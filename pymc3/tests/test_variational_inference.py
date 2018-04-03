@@ -21,7 +21,7 @@ from pymc3.variational.inference import (
 )
 from pymc3.variational import flows
 from pymc3.variational.opvi import Approximation, Group
-
+from pymc3.variational import opvi
 from . import models
 from .helpers import not_raises
 
@@ -833,6 +833,19 @@ def test_sample_replacements(binomial_model_inference):
     assert sampled.shape[0] == 100
     sampled = p_d.eval({i: 101})
     assert sampled.shape[0] == 101
+
+
+def test_discrete_not_allowed():
+    mu_true = np.array([-2, 0, 2])
+    z_true = np.random.randint(len(mu_true), size=100)
+    y = np.random.normal(mu_true[z_true], np.ones_like(z_true))
+
+    with pm.Model():
+        mu = pm.Normal('μ', mu=0, sd=10, shape=3)
+        z = pm.Categorical('z', p=tt.ones(3) / 3, shape=len(y))
+        pm.Normal('y_obs', mu=mu[z], sd=1., observed=y)
+        with pytest.raises(opvi.ParametrizationError):
+            pm.fit(n=1)  # fails
 
 
 def test_var_replacement():

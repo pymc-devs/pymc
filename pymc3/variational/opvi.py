@@ -894,6 +894,9 @@ class Group(WithMemoization):
         self.replacements = dict()
         self.group = [get_transformed(var) for var in self.group]
         for var in self.group:
+            if isinstance(var.distribution, pm.Discrete):
+                raise ParametrizationError('Discrete variables are not supported by VI: {}'
+                                           .format(var))
             begin = self.ddim
             if self.batched:
                 if var.ndim < 1:
