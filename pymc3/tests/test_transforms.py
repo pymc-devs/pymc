@@ -16,10 +16,12 @@ tol = 1e-7 if theano.config.floatX == 'flaot64' else 1e-6
 def check_transform_identity(transform, domain, constructor=tt.dscalar, test=0):
     x = constructor('x')
     x.tag.test_value = test
+    forward_f = theano.function([x], transform.forward(x))
     identity_f = theano.function([x], transform.backward(transform.forward(x)))
 
     for val in domain.vals:
         close_to(val, identity_f(val), tol)
+        close_to(transform.forward_val(val), forward_f(val), tol)
 
 
 def check_vector_transform_identity(transform, domain):
