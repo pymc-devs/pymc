@@ -6,7 +6,7 @@
 |Build Status| |Coverage| |NumFOCUS_badge| |Binder|
 
 PyMC3 is a Python package for Bayesian statistical modeling and Probabilistic Machine Learning
-focusing on advanced Markov chain, Monte Carlo, and variational fitting
+focusing on advanced Markov chain Monte Carlo (MCMC) and variational inference (VI)
 algorithms. Its flexibility and extensibility make it applicable to a
 large suite of problems.
 
