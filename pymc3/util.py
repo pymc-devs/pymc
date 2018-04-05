@@ -143,7 +143,7 @@ def update_start_vals(a, b, model):
                         d.transformation for d in model.deterministics if d.name == name]
                     if transform_func:
                         b[tname] = transform_func[0].forward_val(
-                            a[name], point=b).eval()
+                            a[name], point=b)
 
     a.update({k: v for k, v in b.items() if k not in a})
 
