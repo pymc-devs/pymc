@@ -694,7 +694,7 @@ class Beta(UnitContinuous):
         alpha = dist.alpha
         beta = dist.beta
         name = r'\text{%s}' % name
-        return r'${} \sim \text{{Beta}}(\mathit{{alpha}}={},~\mathit{{alpha}}={})$'.format(name,
+        return r'${} \sim \text{{Beta}}(\mathit{{alpha}}={},~\mathit{{beta}}={})$'.format(name,
                                                                 get_variable_name(alpha),
                                                                 get_variable_name(beta))
 
