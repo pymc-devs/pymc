@@ -10,7 +10,7 @@ DESCRIPTION = "Probabilistic Programming in Python: Bayesian Modeling and Probab
 AUTHOR = 'PyMC Developers'
 AUTHOR_EMAIL = 'pymc.devs@gmail.com'
 URL = "http://github.com/pymc-devs/pymc3"
-LICENSE = "Apachimport numpye License, Version 2.0"
+LICENSE = "Apache License, Version 2.0"
 
 classifiers = ['Development Status :: 5 - Production/Stable',
                'Programming Language :: Python',
