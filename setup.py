@@ -4,6 +4,7 @@ from os.path import realpath, dirname, join
 from setuptools import setup, find_packages
 import sys
 
+import pymc3
 
 DISTNAME = 'pymc3'
 DESCRIPTION = "Probabilistic Programming in Python: Bayesian Modeling and Probabilistic Machine Learning with Theano"
@@ -11,7 +12,6 @@ AUTHOR = 'PyMC Developers'
 AUTHOR_EMAIL = 'pymc.devs@gmail.com'
 URL = "http://github.com/pymc-devs/pymc3"
 LICENSE = "Apache License, Version 2.0"
-VERSION = "3.4rc1"
 
 classifiers = ['Development Status :: 5 - Production/Stable',
                'Programming Language :: Python',
@@ -48,7 +48,7 @@ if sys.version_info[0] == 2:  # py3 has mock in stdlib
 
 if __name__ == "__main__":
     setup(name=DISTNAME,
-          version=VERSION,
+          version=pymc3.__version__,
           maintainer=AUTHOR,
           maintainer_email=AUTHOR_EMAIL,
           description=DESCRIPTION,
