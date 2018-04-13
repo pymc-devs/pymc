@@ -1,5 +1,3 @@
-import math
-
 import numpy as np
 
 from ..arraystep import Competence
@@ -111,7 +109,7 @@ class HamiltonianMC(BaseHMC):
                     'Divergence encountered, large integration error.',
                     None, state)
 
-        accept_stat = min(1, math.exp(energy_change))
+        accept_stat = min(1, np.exp(energy_change))
 
         if div_info is not None or np.random.rand() >= accept_stat:
             end = start
