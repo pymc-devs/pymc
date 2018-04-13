@@ -3,7 +3,7 @@ from codecs import open
 from os.path import realpath, dirname, join
 from setuptools import setup, find_packages
 import sys
-
+import re
 
 DISTNAME = 'pymc3'
 DESCRIPTION = "Probabilistic Programming in Python: Bayesian Modeling and Probabilistic Machine Learning with Theano"
@@ -11,7 +11,6 @@ AUTHOR = 'PyMC Developers'
 AUTHOR_EMAIL = 'pymc.devs@gmail.com'
 URL = "http://github.com/pymc-devs/pymc3"
 LICENSE = "Apache License, Version 2.0"
-VERSION = "3.4rc1"
 
 classifiers = ['Development Status :: 5 - Production/Stable',
                'Programming Language :: Python',
@@ -45,10 +44,19 @@ test_reqs = ['pytest', 'pytest-cov']
 if sys.version_info[0] == 2:  # py3 has mock in stdlib
     test_reqs.append('mock')
 
+def get_version():
+    VERSIONFILE = join('pymc3', '__init__.py')
+    lines = open(VERSIONFILE, 'rt').readlines()
+    version_regex = r"^__version__ = ['\"]([^'\"]*)['\"]"
+    for line in lines:
+        mo = re.search(version_regex, line, re.M)
+        if mo:
+            return mo.group(1)
+    raise RuntimeError('Unable to find version in %s.' % (VERSIONFILE,))
 
 if __name__ == "__main__":
     setup(name=DISTNAME,
-          version=VERSION,
+          version=get_version(),
           maintainer=AUTHOR,
           maintainer_email=AUTHOR_EMAIL,
           description=DESCRIPTION,
