@@ -1019,7 +1019,7 @@ class Model(six.with_metaclass(InitContextMeta, Context, Factor, WithMemoization
         if test_point is None:
             test_point = self.test_point
 
-        return Series({RV.name:np.round(RV.logp(value_model.test_point), round_vals) for RV in self.basic_RVs}, 
+        return Series({RV.name:np.round(RV.logp(self.test_point), round_vals) for RV in self.basic_RVs}, 
             name='Log-probability of test_point')
 
     def _repr_latex_(self, name=None, dist=None):
