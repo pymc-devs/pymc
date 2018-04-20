@@ -207,6 +207,178 @@ class Latent(Base):
         return pm.MvNormal(name, mu=mu, chol=chol, shape=shape, **kwargs)
 
 
+@conditioned_vars(["X", "Xu", "f"])
+class LatentSparse(Latent):
+    R"""
+    Approximate latent Gaussian process.
+
+    The `gp.LatentSparse` class is a direct implementation of a GP.  No addiive
+    noise is assumed.  It is called "Latent" because the underlying function
+    values are treated as latent variables.  It has a `prior` method and a
+    `conditional` method.  Given a mean and covariance function the
+    function :math:`f(x)` is modeled as,
+
+    .. math::
+
+       f(x) \sim \mathcal{GP}\left(\mu(x), k(x_u, x_u')\right)
+
+    with the inducing points x_u approximating the full covariance.
+
+    Use the `prior` and `conditional` methods to actually construct random
+    variables representing the unknown, or latent, function whose
+    distribution is the GP prior or GP conditional.  This GP implementation
+    can be used to implement regression on data that is not normally
+    distributed.  For more information on the `prior` and `conditional` methods,
+    see their docstrings.
+
+    Parameters
+    ----------
+    cov_func : None, 2D array, or instance of Covariance
+        The covariance function.  Defaults to zero.
+    mean_func : None, instance of Mean
+        The mean function.  Defaults to zero.
+
+    Examples
+    --------
+    .. code:: python
+
+        # A one dimensional column vector of inputs.
+        X = np.linspace(0, 1, 10)[:, None]
+
+        # A smaller set of inducing inputs
+        Xu = np.linspace(0, 1, 5)[:, None]
+
+        with pm.Model() as model:
+            # Specify the covariance function.
+            cov_func = pm.gp.cov.ExpQuad(1, ls=0.1)
+
+            # Specify the GP.  The default mean function is `Zero`.
+            gp = pm.gp.LatentSparse(cov_func=cov_func)
+
+            # Place a GP prior over the function f.at points X and inducing points Xu
+            f = gp.prior("f", X=X, Xu=Xu)
+
+        ...
+
+        # After fitting or sampling, specify the distribution
+        # at new points with .conditional
+        Xnew = np.linspace(-1, 2, 50)[:, None]
+
+        with model:
+            fcond = gp.conditional("fcond", Xnew=Xnew)
+    """
+
+
+    def __init__(self, mean_func=Zero(), cov_func=Constant(0.0), approx="FITC"):
+        if approx not in self._available_approx:
+            raise NotImplementedError(approx)
+        self.approx = approx
+        super(Latent, self).__init__(mean_func, cov_func)
+
+    def _build_prior(self, name, X, Xu, **kwargs):
+        mu = self.mean_func(X)
+        L = cholesky(stabilize(self.cov_func(Xu)))
+        shape = infer_shape(Xu, kwargs.pop("shape", None))
+        v = pm.Normal(name + "_u_rotated_", mu=0.0, sd=1.0, shape=shape, **kwargs)
+        u = pm.Deterministic(name+'_u', tt.dot(L, v))  # TODO do we need to keep it?
+        Kfu = self.cov_func(X, Xu)
+        Kuiu = solve_upper(L.T, solve_lower(L, u))
+        f = pm.Deterministic("f", mu + tt.dot(Kfu, Kuiu))
+        return f
+
+    def prior(self, name, X, Xu, **kwargs):
+        R"""
+        Returns the GP prior distribution evaluated over the input
+        locations `X`.
+
+        This is the prior probability over the space
+        of functions described by its mean and covariance function.
+
+        .. math::
+
+           f \mid X, X_u \sim \text{MvNormal}\left( \mu(X), k(X_u, X_u') \right)
+
+        Parameters
+        ----------
+        name : string
+            Name of the random variable
+        X : array-like
+            Function input values.  If one-dimensional, must be a column
+            vector with shape `(n, 1)`.
+        Xu: array-like
+            The inducing points.  Must have the same number of columns as `X`.
+        **kwargs
+            Extra keyword arguments that are passed to distribution constructor.
+        """
+
+        f = self._build_prior(name, X, Xu, **kwargs)
+        self.X = X
+        self.Xu = Xu
+        self.f = f
+        return f
+
+    def _get_given_vals(self, given):
+        if given is None:
+            given = {}
+        if 'gp' in given:
+            cov_total = given['gp'].cov_func
+            mean_total = given['gp'].mean_func
+        else:
+            cov_total = self.cov_func
+            mean_total = self.mean_func
+        if all(val in given for val in ['X', 'f', 'Xu']):
+            X, Xu, f = given['X'], given['Xu'], given['f']
+        else:
+            X, Xu, f = self.X, self.Xu, self.f
+        return X, Xu, f, cov_total, mean_total
+
+    def _build_conditional(self, Xnew, X, Xu, f, cov_total, mean_total):
+        Ksu = self.cov_func(Xnew, Xu)
+        L = cholesky(stabilize(cov_total(Xu)))
+        mus = self.mean_func(Xnew) + tt.dot(Ksu, Kuiu)
+        #TODO use mean_total?
+        tmp = solve_lower(L, Ksu.T)
+        Qss = tt.dot(tmp.T, tmp)  #Qss = tt.dot(tt.dot(Ksu, tt.nlinalg.pinv(Kuu)), Ksu.T) 
+        Kss = self.cov_func(Xnew)
+        cov = Kss - Qss
+        return mus, cov
+
+    def conditional(self, name, Xnew, given=None, **kwargs):
+        R"""
+        Returns the conditional distribution evaluated over new input
+        locations `Xnew`.
+
+        Given a set of function values `f` that
+        the GP prior was over, the conditional distribution over a
+        set of new points, `f_*` is
+
+        .. math::
+
+           f_* \mid f, X, X_* \sim \mathcal{GP}\left(
+               K(X_*, X) K(X, X)^{-1} f \,,
+               K(X_*, X_*) - K(X_*, X) K(X, X)^{-1} K(X, X_*) \right)
+
+        Parameters
+        ----------
+        name : string
+            Name of the random variable
+        Xnew : array-like
+            Function input values.
+        given : dict
+            Can optionally take as key value pairs: `X`, `y`, `Xu`,
+            and `gp`.  See the section in the documentation on additive GP
+            models in PyMC3 for more information.
+        **kwargs
+            Extra keyword arguments that are passed to `MvNormal` distribution
+            constructor.
+        """
+        givens = self._get_given_vals(given)
+        mu, cov = self._build_conditional(Xnew, *givens)
+        chol = cholesky(stabilize(cov))
+        shape = infer_shape(Xnew, kwargs.pop("shape", None))
+        return pm.MvNormal(name, mu=mu, chol=chol, shape=shape, **kwargs)
+
+
 @conditioned_vars(["X", "f", "nu"])
 class TP(Latent):
     """
