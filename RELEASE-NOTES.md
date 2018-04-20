@@ -1,6 +1,14 @@
 # Release Notes
 
-## PyMC 3.4 (unreleased)
+
+## PyMC 3.5 (Unreleaased)
+
+
+### Fixes
+
+- Fixed `KeyError` raised when only subset of variables are specified to be recorded in the trace.
+
+## PyMC 3.4.1 (April 18 2018)
 
 ### New features
 

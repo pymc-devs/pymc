@@ -77,7 +77,8 @@ class SamplerReport(object):
             if is_transformed_name(rv_name):
                 rv_name2 = get_untransformed_name(rv_name)
                 rv_name = rv_name2 if rv_name2 in valid_name else rv_name
-            varnames.append(rv_name)
+            if rv_name in trace.varnames:
+                varnames.append(rv_name)
 
         self._effective_n = effective_n = diagnostics.effective_n(trace, varnames)
         self._gelman_rubin = gelman_rubin = diagnostics.gelman_rubin(trace, varnames)
