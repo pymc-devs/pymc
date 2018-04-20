@@ -2,7 +2,7 @@ from __future__ import division
 
 from ..model import Model
 from ..distributions.continuous import Flat, Normal
-from ..distributions.timeseries import EulerMaruyama, AR
+from ..distributions.timeseries import EulerMaruyama, AR, GARCH11
 from ..sampling import sample, sample_ppc
 from ..theanof import floatX
 
@@ -35,6 +35,31 @@ def test_AR():
     ar_like = t['y'].logp({'z':data[2:], 'y': data})
     reg_like = t['z'].logp({'z':data[2:], 'y': data})
     np.testing.assert_allclose(ar_like, reg_like)
+
+
+
+def test_GARCH11():
+    # test data ~ N(0, 1)
+    data = np.array([-1.35078362, -0.81254164,  0.28918551, -2.87043544, -0.94353337,
+                     0.83660719, -0.23336562, -0.58586298, -1.36856736, -1.60832975,
+                     -1.31403141,  0.05446936, -0.97213128, -0.18928725,  1.62011258,
+                     -0.95978616, -2.06536047,  0.6556103 , -0.27816645, -1.26413397])
+    omega = 0.6
+    alpha_1 = 0.4
+    beta_1 = 0.5
+    initial_vol = np.float64(0.9)
+    vol = np.empty_like(data)
+    vol[0] = initial_vol
+    for i in range(len(data)-1):
+        vol[i+1] = np.sqrt(omega + beta_1*vol[i]**2 + alpha_1*data[i]**2)
+
+    with Model() as t:
+        y = GARCH11('y', omega=omega, alpha_1=alpha_1, beta_1=beta_1,
+                    initial_vol=initial_vol, shape=data.shape)
+        z = Normal('z', mu=0, sd=vol, shape=data.shape)
+    garch_like = t['y'].logp({'z':data, 'y': data})
+    reg_like = t['z'].logp({'z':data, 'y': data})
+    np.testing.assert_allclose(garch_like, reg_like)
 
 
 
