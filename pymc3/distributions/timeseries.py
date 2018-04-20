@@ -224,7 +224,7 @@ class GARCH11(distribution.Continuous):
                       outputs_info=[self.initial_vol],
                       non_sequences=[self.omega, self.alpha_1,
                                      self.beta_1])
-        return tt.concatenate(self.initial_vol, vol)
+        return tt.concatenate([[self.initial_vol], vol])
 
     def logp(self, x):
         vol = self.get_volatility(x)
