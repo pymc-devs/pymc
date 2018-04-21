@@ -5,6 +5,7 @@ import threading
 import six
 
 import numpy as np
+from pandas import Series
 import scipy.sparse as sps
 import theano.sparse as sparse
 from theano import theano, tensor as tt
@@ -999,6 +1000,27 @@ class Model(six.with_metaclass(InitContextMeta, Context, Factor, WithMemoization
         view = {vm.var: vm for vm in order.vmap}
         flat_view = FlatView(inputvar, replacements, view)
         return flat_view
+
+    def check_test_point(self, test_point=None, round_vals=2):
+        """Checks log probability of test_point for all random variables in the model.
+
+        Parameters
+        ----------
+        test_point : Point
+            Point to be evaluated.
+            if None, then all model.test_point is used
+        round_vals : int
+            Number of decimals to round log-probabilities
+
+        Returns
+        -------
+        Pandas Series
+        """
+        if test_point is None:
+            test_point = self.test_point
+
+        return Series({RV.name:np.round(RV.logp(self.test_point), round_vals) for RV in self.basic_RVs}, 
+            name='Log-probability of test_point')
 
     def _repr_latex_(self, name=None, dist=None):
         tex_vars = []

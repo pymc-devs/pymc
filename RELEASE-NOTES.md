@@ -4,6 +4,10 @@
 ## PyMC 3.5 (Unreleaased)
 
 
+### New features
+
+- Add `check_test_point` method to `pm.Model`
+
 ### Fixes
 
 - Fixed `KeyError` raised when only subset of variables are specified to be recorded in the trace.
