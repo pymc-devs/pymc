@@ -7,6 +7,7 @@
 ### New features
 
 - Add `check_test_point` method to `pm.Model`
+- Apply new warning and logging system project-wise
 
 ### Fixes
 
