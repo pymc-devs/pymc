@@ -1,4 +1,5 @@
 import numbers
+import numpy as np
 from copy import copy
 
 import theano.tensor as tt
@@ -51,7 +52,7 @@ class Family(object):
         model = modelcontext(model)
         priors = {}
         for key, val in self.priors.items():
-            if isinstance(val, numbers.Number):
+            if isinstance(val, (numbers.Number, np.ndarray, np.generic)):
                 priors[key] = val
             else:
                 priors[key] = model.Var('{}{}'.format(name, key), val)
@@ -99,8 +100,9 @@ class Normal(Family):
 
 class Binomial(Family):
     link = logit
-    likelihood = pm_dists.Bernoulli
+    likelihood = pm_dists.Binomial
     parent = 'p'
+    priors = {'n': 1}
 
 
 class Poisson(Family):

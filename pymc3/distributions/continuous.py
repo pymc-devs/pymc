@@ -153,14 +153,14 @@ class Uniform(Continuous):
 
     def __init__(self, lower=0, upper=1, transform='interval',
                  *args, **kwargs):
+        self.lower = lower = tt.as_tensor_variable(floatX(lower))
+        self.upper = upper = tt.as_tensor_variable(floatX(upper))
+        self.mean = (upper + lower) / 2.
+        self.median = self.mean
+
         if transform == 'interval':
             transform = transforms.interval(lower, upper)
         super(Uniform, self).__init__(transform=transform, *args, **kwargs)
-
-        self.lower = lower = floatX(tt.as_tensor_variable(lower))
-        self.upper = upper = floatX(tt.as_tensor_variable(upper))
-        self.mean = (upper + lower) / 2.
-        self.median = self.mean
 
     def random(self, point=None, size=None, repeat=None):
         lower, upper = draw_values([self.lower, self.upper],
@@ -337,7 +337,19 @@ class HalfNormal(PositiveContinuous):
 
        f(x \mid \tau) =
            \sqrt{\frac{2\tau}{\pi}}
-           \exp\left\{ {\frac{-x^2 \tau}{2}}\right\}
+           \exp\left(\frac{-x^2 \tau}{2}\right)
+
+       f(x \mid \sigma) =\sigma
+           \sqrt{\frac{2}{\pi}}
+           \exp\left(\frac{-x^2}{2\sigma^2}\right)
+
+    .. note::
+
+       The parameters ``sigma``/``tau`` (:math:`\sigma`/:math:`\tau`) refer to
+       the standard deviation/precision of the unfolded normal distribution, for
+       the standard deviation of the half-normal distribution, see below. For
+       the half-normal, they are just two parameterisation :math:`\sigma^2
+       \equiv \frac{1}{\tau}` of a scale parameter
 
     .. plot::
 
@@ -356,24 +368,24 @@ class HalfNormal(PositiveContinuous):
 
     ========  ==========================================
     Support   :math:`x \in [0, \infty)`
-    Mean      :math:`0`
-    Variance  :math:`\dfrac{1}{\tau}` or :math:`\sigma^2`
+    Mean      :math:`\sqrt{\dfrac{2}{\tau \pi}}` or :math:`\dfrac{\sigma \sqrt{2}}{\sqrt{\pi}}`
+    Variance  :math:`\dfrac{1}{\tau}\left(1 - \dfrac{2}{\pi}\right)` or :math:`\sigma^2\left(1 - \dfrac{2}{\pi}\right)`
     ========  ==========================================
 
     Parameters
     ----------
     sd : float
-        Standard deviation (sd > 0) (only required if tau is not specified).
+        Scale parameter :math:`sigma` (``sd`` > 0) (only required if ``tau`` is not specified).
     tau : float
-        Precision (tau > 0) (only required if sd is not specified).
-        
+        Precision :math:`tau` (tau > 0) (only required if sd is not specified).
+
     Examples
     --------
     .. code-block:: python
 
         with pm.Model():
             x = pm.HalfNormal('x', sd=10)
-        
+
         with pm.Model():
             x = pm.HalfNormal('x', tau=1/15)
     """
@@ -683,7 +695,7 @@ class Beta(UnitContinuous):
         alpha = dist.alpha
         beta = dist.beta
         name = r'\text{%s}' % name
-        return r'${} \sim \text{{Beta}}(\mathit{{alpha}}={},~\mathit{{alpha}}={})$'.format(name,
+        return r'${} \sim \text{{Beta}}(\mathit{{alpha}}={},~\mathit{{beta}}={})$'.format(name,
                                                                 get_variable_name(alpha),
                                                                 get_variable_name(beta))
 
@@ -744,7 +756,7 @@ class Exponential(PositiveContinuous):
 
     def logp(self, value):
         lam = self.lam
-        return bound(tt.log(lam) - lam * value, value > 0, lam > 0)
+        return bound(tt.log(lam) - lam * value, value >= 0, lam > 0)
 
     def _repr_latex_(self, name=None, dist=None):
         if dist is None:

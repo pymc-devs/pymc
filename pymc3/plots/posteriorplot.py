@@ -86,7 +86,7 @@ def plot_posterior(trace, varnames=None, transform=identity_transform, figsize=N
 
         plot_posterior_op(transform(trace), ax=ax, bw=bw, kde_plot=kde_plot,
                           point_estimate=point_estimate, round_to=round_to, alpha_level=alpha_level,
-                          ref_val=ref_val, rope=rope, text_size=scale_text(figsize), **kwargs)
+                          ref_val=ref_val, rope=rope, text_size=scale_text(figsize, text_size), **kwargs)
 
     else:
         if varnames is None:

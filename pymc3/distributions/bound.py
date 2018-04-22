@@ -161,7 +161,7 @@ class Bound(object):
     The resulting distribution is not normalized anymore. This
     is usually fine if the bounds are constants. If you need
     truncated distributions, use `Bound` in combination with
-    a `pm.Potential` with the cumulative probability function.
+    a :class:`~pymc3.model.Potential` with the cumulative probability function.
 
     The bounds are inclusive for discrete distributions.
 

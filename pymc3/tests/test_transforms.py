@@ -13,17 +13,21 @@ from ..theanof import jacobian
 tol = 1e-7 if theano.config.floatX == 'flaot64' else 1e-6
 
 
-def check_transform_identity(transform, domain, constructor=tt.dscalar, test=0):
+def check_transform(transform, domain, constructor=tt.dscalar, test=0):
     x = constructor('x')
     x.tag.test_value = test
+    # test forward and forward_val
+    forward_f = theano.function([x], transform.forward(x))
+    # test transform identity
     identity_f = theano.function([x], transform.backward(transform.forward(x)))
 
     for val in domain.vals:
         close_to(val, identity_f(val), tol)
+        close_to(transform.forward_val(val), forward_f(val), tol)
 
 
-def check_vector_transform_identity(transform, domain):
-    return check_transform_identity(transform, domain, tt.dvector, test=np.array([0, 0]))
+def check_vector_transform(transform, domain):
+    return check_transform(transform, domain, tt.dvector, test=np.array([0, 0]))
 
 
 def get_values(transform, domain=R, constructor=tt.dscalar, test=0):
@@ -35,9 +39,9 @@ def get_values(transform, domain=R, constructor=tt.dscalar, test=0):
 
 
 def test_simplex():
-    check_vector_transform_identity(tr.stick_breaking, Simplex(2))
-    check_vector_transform_identity(tr.stick_breaking, Simplex(4))
-    check_transform_identity(tr.stick_breaking, MultiSimplex(
+    check_vector_transform(tr.stick_breaking, Simplex(2))
+    check_vector_transform(tr.stick_breaking, Simplex(4))
+    check_transform(tr.stick_breaking, MultiSimplex(
         3, 2), constructor=tt.dmatrix, test=np.zeros((2, 2)))
 
 
@@ -56,8 +60,8 @@ def test_simplex_jacobian_det():
 
 
 def test_sum_to_1():
-    check_vector_transform_identity(tr.sum_to_1, Simplex(2))
-    check_vector_transform_identity(tr.sum_to_1, Simplex(4))
+    check_vector_transform(tr.sum_to_1, Simplex(2))
+    check_vector_transform(tr.sum_to_1, Simplex(4))
 
 
 def test_sum_to_1_jacobian_det():
@@ -95,7 +99,7 @@ def check_jacobian_det(transform, domain,
 
 
 def test_log():
-    check_transform_identity(tr.log, Rplusbig)
+    check_transform(tr.log, Rplusbig)
     check_jacobian_det(tr.log, Rplusbig, elemwise=True)
     check_jacobian_det(tr.log, Vector(Rplusbig, 2),
                        tt.dvector, [0, 0], elemwise=True)
@@ -105,7 +109,7 @@ def test_log():
 
 
 def test_log_exp_m1():
-    check_transform_identity(tr.log_exp_m1, Rplusbig)
+    check_transform(tr.log_exp_m1, Rplusbig)
     check_jacobian_det(tr.log_exp_m1, Rplusbig, elemwise=True)
     check_jacobian_det(tr.log_exp_m1, Vector(Rplusbig, 2),
                        tt.dvector, [0, 0], elemwise=True)
@@ -115,7 +119,7 @@ def test_log_exp_m1():
 
 
 def test_logodds():
-    check_transform_identity(tr.logodds, Unit)
+    check_transform(tr.logodds, Unit)
     check_jacobian_det(tr.logodds, Unit, elemwise=True)
     check_jacobian_det(tr.logodds, Vector(Unit, 2),
                        tt.dvector, [.5, .5], elemwise=True)
@@ -127,7 +131,7 @@ def test_logodds():
 
 def test_lowerbound():
     trans = tr.lowerbound(0.0)
-    check_transform_identity(trans, Rplusbig)
+    check_transform(trans, Rplusbig)
     check_jacobian_det(trans, Rplusbig, elemwise=True)
     check_jacobian_det(trans, Vector(Rplusbig, 2),
                        tt.dvector, [0, 0], elemwise=True)
@@ -138,7 +142,7 @@ def test_lowerbound():
 
 def test_upperbound():
     trans = tr.upperbound(0.0)
-    check_transform_identity(trans, Rminusbig)
+    check_transform(trans, Rminusbig)
     check_jacobian_det(trans, Rminusbig, elemwise=True)
     check_jacobian_det(trans, Vector(Rminusbig, 2),
                        tt.dvector, [-1, -1], elemwise=True)
@@ -151,7 +155,7 @@ def test_interval():
     for a, b in [(-4, 5.5), (.1, .7), (-10, 4.3)]:
         domain = Unit * np.float64(b - a) + np.float64(a)
         trans = tr.interval(a, b)
-        check_transform_identity(trans, domain)
+        check_transform(trans, domain)
         check_jacobian_det(trans, domain, elemwise=True)
 
         vals = get_values(trans)
@@ -161,7 +165,7 @@ def test_interval():
 
 def test_circular():
     trans = tr.circular
-    check_transform_identity(trans, Circ)
+    check_transform(trans, Circ)
     check_jacobian_det(trans, Circ)
 
     vals = get_values(trans)

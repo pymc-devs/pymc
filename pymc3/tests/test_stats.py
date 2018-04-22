@@ -13,6 +13,7 @@ import pymc3.stats as pmstats
 from numpy.random import random, normal
 from numpy.testing import assert_equal, assert_almost_equal, assert_array_almost_equal
 from scipy import stats as st
+import copy
 
 
 def test_log_post_trace():
@@ -67,12 +68,14 @@ def test_compare():
         x = pm.StudentT('x', nu=1, mu=mu, lam=1, observed=x_obs)
         trace2 = pm.sample(1000)
 
-    traces = [trace0] * 2
-    models = [model0] * 2
+    traces = [trace0, copy.copy(trace0)]
+    models = [model0, copy.copy(model0)]
 
-    w_st = pm.compare(traces, models, method='stacking')['weight']
-    w_bb_bma = pm.compare(traces, models, method='BB-pseudo-BMA')['weight']
-    w_bma = pm.compare(traces, models, method='pseudo-BMA')['weight']
+    model_dict = dict(zip(models, traces))
+
+    w_st = pm.compare(model_dict, method='stacking')['weight']
+    w_bb_bma = pm.compare(model_dict, method='BB-pseudo-BMA')['weight']
+    w_bma = pm.compare(model_dict, method='pseudo-BMA')['weight']
 
     assert_almost_equal(w_st[0], w_st[1])
     assert_almost_equal(w_bb_bma[0], w_bb_bma[1])
@@ -84,9 +87,12 @@ def test_compare():
 
     traces = [trace0, trace1, trace2]
     models = [model0, model1, model2]
-    w_st = pm.compare(traces, models, method='stacking')['weight']
-    w_bb_bma = pm.compare(traces, models, method='BB-pseudo-BMA')['weight']
-    w_bma = pm.compare(traces, models, method='pseudo-BMA')['weight']
+
+    model_dict = dict(zip(models, traces))
+    
+    w_st = pm.compare(model_dict, method='stacking')['weight']
+    w_bb_bma = pm.compare(model_dict, method='BB-pseudo-BMA')['weight']
+    w_bma = pm.compare(model_dict, method='pseudo-BMA')['weight']
 
     assert(w_st[0] > w_st[1] > w_st[2])
     assert(w_bb_bma[0] > w_bb_bma[1] > w_bb_bma[2])

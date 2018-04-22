@@ -140,6 +140,11 @@ def test_empty_model():
             pm.sample()
         error.match('any free variables')
 
+def test_partial_trace_sample():
+    with pm.Model() as model:
+        a = pm.Normal('a', mu=0, sd=1)
+        b = pm.Normal('b', mu=0, sd=1)
+        trace = pm.sample(trace=[a])
 
 @pytest.mark.xfail(condition=(theano.config.floatX == "float32"), reason="Fails on float32")
 class TestNamedSampling(SeededTest):

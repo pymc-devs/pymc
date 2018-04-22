@@ -58,9 +58,6 @@ def energyplot(trace, kind='kde', figsize=None, ax=None, legend=True, shade=0.35
     if figsize is None:
         figsize = (8, 6)
 
-    if ax is None:
-        _, ax = plt.subplots(figsize=figsize)
-
     if kwargs_shade is None:
         kwargs_shade = {}
 

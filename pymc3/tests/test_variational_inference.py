@@ -21,7 +21,7 @@ from pymc3.variational.inference import (
 )
 from pymc3.variational import flows
 from pymc3.variational.opvi import Approximation, Group
-
+from pymc3.variational import opvi
 from . import models
 from .helpers import not_raises
 
@@ -563,11 +563,11 @@ def fit_kwargs(inference, use_minibatch):
             n=12000
         ),
         (SVGD, 'full'): dict(
-            obj_optimizer=pm.adagrad_window(learning_rate=0.07, n_win=7),
+            obj_optimizer=pm.adagrad_window(learning_rate=0.075, n_win=7),
             n=300
         ),
         (SVGD, 'mini'): dict(
-            obj_optimizer=pm.adagrad_window(learning_rate=0.07, n_win=7),
+            obj_optimizer=pm.adagrad_window(learning_rate=0.075, n_win=7),
             n=300
         ),
         (ASVGD, 'full'): dict(
@@ -833,6 +833,33 @@ def test_sample_replacements(binomial_model_inference):
     assert sampled.shape[0] == 100
     sampled = p_d.eval({i: 101})
     assert sampled.shape[0] == 101
+
+
+def test_discrete_not_allowed():
+    mu_true = np.array([-2, 0, 2])
+    z_true = np.random.randint(len(mu_true), size=100)
+    y = np.random.normal(mu_true[z_true], np.ones_like(z_true))
+
+    with pm.Model():
+        mu = pm.Normal('mu', mu=0, sd=10, shape=3)
+        z = pm.Categorical('z', p=tt.ones(3) / 3, shape=len(y))
+        pm.Normal('y_obs', mu=mu[z], sd=1., observed=y)
+        with pytest.raises(opvi.ParametrizationError):
+            pm.fit(n=1)  # fails
+
+
+def test_var_replacement():
+    X_mean = pm.floatX(np.linspace(0, 10, 10))
+    y = pm.floatX(np.random.normal(X_mean*4, .05))
+    with pm.Model():
+        inp = pm.Normal('X', X_mean, shape=X_mean.shape)
+        coef = pm.Normal('b', 4.)
+        mean = inp * coef
+        pm.Normal('y', mean, .1, observed=y)
+        advi = pm.fit(100)
+        assert advi.sample_node(mean).eval().shape == (10, )
+        x_new = pm.floatX(np.linspace(0, 10, 11))
+        assert advi.sample_node(mean, more_replacements={inp: x_new}).eval().shape == (11, )
 
 
 def test_empirical_from_trace(another_simple_model):
