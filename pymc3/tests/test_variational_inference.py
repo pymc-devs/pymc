@@ -563,11 +563,11 @@ def fit_kwargs(inference, use_minibatch):
             n=12000
         ),
         (SVGD, 'full'): dict(
-            obj_optimizer=pm.adagrad_window(learning_rate=0.07, n_win=7),
+            obj_optimizer=pm.adagrad_window(learning_rate=0.075, n_win=7),
             n=300
         ),
         (SVGD, 'mini'): dict(
-            obj_optimizer=pm.adagrad_window(learning_rate=0.07, n_win=7),
+            obj_optimizer=pm.adagrad_window(learning_rate=0.075, n_win=7),
             n=300
         ),
         (ASVGD, 'full'): dict(
