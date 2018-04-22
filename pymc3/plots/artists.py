@@ -134,6 +134,7 @@ def plot_posterior_op(trace_values, ax, bw, kde_plot, point_estimate, round_to,
         set_key_if_doesnt_exist(kwargs, 'bins', 30)
         set_key_if_doesnt_exist(kwargs, 'edgecolor', 'w')
         set_key_if_doesnt_exist(kwargs, 'align', 'right')
+        set_key_if_doesnt_exist(kwargs, 'color', '#87ceeb')
         ax.hist(trace_values, **kwargs)
 
     plot_height = ax.get_ylim()[1]
