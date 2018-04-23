@@ -3,16 +3,22 @@ Created on May 12, 2012
 
 @author: john
 '''
+import logging
+
 from .arraystep import ArrayStep, Competence
 from ..distributions.discrete import Categorical
 from numpy import array, max, exp, cumsum, nested_iters, empty, searchsorted, ones, arange
 from numpy.random import uniform
-from warnings import warn
 
 from theano.gof.graph import inputs
 from theano.tensor import add
 from ..model import modelcontext
+
+
 __all__ = ['ElemwiseCategorical']
+
+
+_log = logging.getLogger('pymc3')
 
 
 class ElemwiseCategorical(ArrayStep):
@@ -26,8 +32,9 @@ class ElemwiseCategorical(ArrayStep):
     # variables)
 
     def __init__(self, vars, values=None, model=None):
-        warn('ElemwiseCategorical is deprecated, switch to CategoricalGibbsMetropolis.',
-             DeprecationWarning, stacklevel = 2)
+        _log.warning(
+            "ElemwiseCategorical is deprecated, switch to CategoricalGibbsMetropolis.",
+            DeprecationWarning)
         model = modelcontext(model)
         self.var = vars[0]
         self.sh = ones(self.var.dshape, self.var.dtype)
