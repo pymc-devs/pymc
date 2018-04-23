@@ -28,11 +28,9 @@ def build_model():
 def run(n=2000):
     model = build_model()
     with model:
-        # initialize NUTS() with ADVI under the hood
         trace = pm.sample(n, nuts_kwargs={'target_accept':.99})
 
-    # drop some first samples as burnin
-    pm.traceplot(trace[1000:])
+    pm.traceplot(trace)
 
 if __name__ == '__main__':
     run()
