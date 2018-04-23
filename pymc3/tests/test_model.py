@@ -276,4 +276,4 @@ class TestValueGradFunction(unittest.TestCase):
         logp, dlogp = func(q)
         assert logp.size == 1
         assert dlogp.size == 4
-        npt.assert_allclose(dlogp, 0., atol=1e-10)
+        npt.assert_allclose(dlogp, 0., atol=1e-5)
