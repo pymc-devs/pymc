@@ -53,8 +53,8 @@ Ported to PyMC3 by Peadar Coyle and Chris Fonnesbeck (c) 2016.
 def build_model():
     y = shared(np.array([15, 10, 16, 11, 9, 11, 10, 18], dtype=np.float32))
     with pm.Model() as arma_model:
-        sigma = pm.HalfCauchy('sigma', 5.)
-        theta = pm.Normal('theta', 0., sd=2.)
+        sigma = pm.HalfNormal('sigma', 5.)
+        theta = pm.Normal('theta', 0., sd=1.)
         phi = pm.Normal('phi', 0., sd=2.)
         mu = pm.Normal('mu', 0., sd=10.)
 
@@ -76,11 +76,12 @@ def build_model():
 def run(n_samples=1000):
     model = build_model()
     with model:
-        trace = pm.sample(draws=n_samples)
+        trace = pm.sample(draws=n_samples,
+                          tune=1000,
+                          nuts_kwargs=dict(target_accept=.99))
 
-    burn = n_samples // 10
-    pm.plots.traceplot(trace[burn:])
-    pm.plots.forestplot(trace[burn:])
+    pm.plots.traceplot(trace)
+    pm.plots.forestplot(trace)
 
 
 if __name__ == '__main__':
