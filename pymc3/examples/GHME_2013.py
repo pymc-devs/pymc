@@ -58,7 +58,7 @@ def run(n=3000):
     if n == "short":
         n = 150
     with model:
-        trace = sample(n, tune=int(n/2))
+        trace = sample(n, tune=int(n/2), init='advi+adapt_diag')
 
     for i, country in enumerate(countries):
         plt.subplot(2, 3, i + 1)

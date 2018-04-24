@@ -1,4 +1,4 @@
-from pymc3 import Normal, sample, Model, Bound, summary
+from pymc3 import Normal, sample, Model, Uniform, summary
 import theano.tensor as tt
 import numpy as np
 
@@ -32,16 +32,15 @@ model {
 
 
 def get_garch_model():
-    r = np.array([28, 8, -3, 7, -1, 1, 18, 12])
-    sigma1 = np.array([15, 10, 16, 11, 9, 11, 10, 18])
-    alpha0 = np.array([10, 10, 16, 8, 9, 11, 12, 18])
+    r = np.array([28, 8, -3, 7, -1, 1, 18, 12], dtype=np.float64)
+    sigma1 = np.array([15, 10, 16, 11, 9, 11, 10, 18], dtype=np.float64)
+    alpha0 = np.array([10, 10, 16, 8, 9, 11, 12, 18], dtype=np.float64)
     shape = r.shape
 
     with Model() as garch:
-        alpha1 = Normal('alpha1', mu=0., sd=1., shape=shape)
-        BoundedNormal = Bound(Normal, upper=(1 - alpha1))
-        beta1 = BoundedNormal('beta1', mu=0., sd=1e6, shape=shape)
-        mu = Normal('mu', mu=0., sd=1e6, shape=shape)
+        alpha1 = Uniform('alpha1', 0., 1., shape=shape)
+        beta1 = Uniform('beta1', 0., 1 - alpha1, shape=shape)
+        mu = Normal('mu', mu=0., sd=100., shape=shape)
         theta = tt.sqrt(alpha0 + alpha1 * tt.pow(r - mu, 2) +
                         beta1 * tt.pow(sigma1, 2))
         Normal('obs', mu, sd=theta, observed=r)
@@ -52,7 +51,7 @@ def run(n=1000):
     if n == "short":
         n = 50
     with get_garch_model():
-        tr = sample(n, init=None)
+        tr = sample(n, tune=1000)
     return tr
 
 
