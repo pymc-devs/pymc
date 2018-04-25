@@ -1452,7 +1452,7 @@ class InverseGamma(PositiveContinuous):
     """
 
     def __init__(self, alpha, beta=1, *args, **kwargs):
-        super(InverseGamma, self).__init__(*args, defaults=['mode'], **kwargs)
+        super(InverseGamma, self).__init__(*args, defaults=('mode',), **kwargs)
         self.alpha = alpha = tt.as_tensor_variable(alpha)
         self.beta = beta = tt.as_tensor_variable(beta)
 
