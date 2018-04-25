@@ -7,7 +7,8 @@ import pymc3 as pm
 from pymc3.gp.cov import Covariance, Constant
 from pymc3.gp.mean import Zero
 from pymc3.gp.util import (conditioned_vars,
-                           infer_shape, stabilize, cholesky, solve_lower, solve_upper)
+                           infer_shape, stabilize, cholesky, solve_lower, solve_upper,
+                           invert_dot, project_inverse)
 from pymc3.distributions import draw_values
 from pymc3.distributions.dist_math import eigh
 from ..math import cartesian, kron_dot, kron_diag
@@ -210,19 +211,27 @@ class Latent(Base):
 @conditioned_vars(["X", "Xu", "f"])
 class LatentSparse(Latent):
     R"""
-    Approximate latent Gaussian process.
+    Approximate latent Gaussian process (GP).
 
     The `gp.LatentSparse` class is a direct implementation of a GP.  No addiive
     noise is assumed.  It is called "Latent" because the underlying function
     values are treated as latent variables.  It has a `prior` method and a
     `conditional` method.  Given a mean and covariance function the
-    function :math:`f(x)` is modeled as,
+    function :math:`f(X)` is modeled as,
 
     .. math::
 
-       f(x) \sim \mathcal{GP}\left(\mu(x), k(x_u, x_u')\right)
+       f \sim \int p(f \mid u) p(u) \mathrm{d}u
 
-    with the inducing points x_u approximating the full covariance.
+    where `u` is the GP function prior on a set of inducing points `Xu`
+
+    .. math::
+
+       u \mid X_u = \sim \text{MvNormal}\left( \mu(X_u), K(X_u, X_u) \right)
+
+    The DTC and FITC approximations use a simplified `p(f | u) ~ q(f | u)`
+    and the resulting `f` is a GP prior only
+    in the case of the FITC approximation.
 
     Use the `prior` and `conditional` methods to actually construct random
     variables representing the unknown, or latent, function whose
@@ -235,8 +244,11 @@ class LatentSparse(Latent):
     ----------
     cov_func : None, 2D array, or instance of Covariance
         The covariance function.  Defaults to zero.
+        Must implement the `diag` method for the FITC approximation
     mean_func : None, instance of Mean
         The mean function.  Defaults to zero.
+    approx : str
+        Approximation to use. One of ['DTC', 'FITC']
 
     Examples
     --------
@@ -268,6 +280,7 @@ class LatentSparse(Latent):
             fcond = gp.conditional("fcond", Xnew=Xnew)
     """
 
+    _available_approx = ("DTC", "FITC")
 
     def __init__(self, mean_func=Zero(), cov_func=Constant(0.0), approx="FITC"):
         if approx not in self._available_approx:
@@ -276,27 +289,58 @@ class LatentSparse(Latent):
         super(Latent, self).__init__(mean_func, cov_func)
 
     def _build_prior(self, name, X, Xu, **kwargs):
-        mu = self.mean_func(X)
-        L = cholesky(stabilize(self.cov_func(Xu)))
+        mu = self.mean_func(X)  # (n,)
+        L = cholesky(stabilize(self.cov_func(Xu))) # (m, m) \sqrt{K_u}
         shape = infer_shape(Xu, kwargs.pop("shape", None))
         v = pm.Normal(name + "_u_rotated_", mu=0.0, sd=1.0, shape=shape, **kwargs)
-        u = pm.Deterministic(name+'_u', tt.dot(L, v))  # TODO do we need to keep it?
-        Kfu = self.cov_func(X, Xu)
-        Kuiu = solve_upper(L.T, solve_lower(L, u))
-        f = pm.Deterministic("f", mu + tt.dot(Kfu, Kuiu))
+        u_ = self.mean_func(Xu) + tt.dot(L, v)  # mean + chol method of MvGaussian
+        u = pm.Deterministic(name+'_u', u_) # (m,) prior at inducing points
+        Kuuiu = invert_dot(L, u) # (m,) K_{uu}^{-1} u
+        Kfu = self.cov_func(X, Xu)  # (n, m)
+        f_ = mu + tt.dot(Kfu, Kuuiu) # (n, m) @ (m,) = (n,)
+        if self.approx == 'DTC':
+            f = pm.Deterministic("f", f_)
+        elif self.approx == 'FITC':
+            Qff_diag = project_inverse(Kfu, L, diag=True)
+            Kff_diag = self.cov_func.diag(X)
+            # MvNormal with diagonal cov is Normal with sd=cov**0.5
+            f = pm.Normal("f", mu=f_, sd=tt.sqrt(tt.clip(Kff_diag - Qff_daig, 0, np.inf)))
         return f
 
     def prior(self, name, X, Xu, **kwargs):
         R"""
         Returns the GP prior distribution evaluated over the input
-        locations `X`.
+        locations `X` with inducing locations `Xu`.
 
         This is the prior probability over the space
         of functions described by its mean and covariance function.
 
+        The DTC and FITC approximations use a simplified form of the true conditional `p(f | u)`
+
+        .. math::
+           f \mid X, X_u \sim \text{MvNormal}\left( K(X, X_u) K(X_u, X_u)^{-1} u, K(X, X) - Q(X, X) \right)
+
+        where
+
+        .. math::
+           u \mid X_u \sim \text{MvNormal}\left( \mu(X_u), K(X_u, X_u) \right)
+
+        and
+
         .. math::
 
-           f \mid X, X_u \sim \text{MvNormal}\left( \mu(X), k(X_u, X_u') \right)
+           Q(X, X') = K(X, X_u) K(X_u, X_u)^{-1} K(X_u, X')
+
+        The DTC approximation uses (resulting in a non-GP prior)
+
+        .. math::
+           K(X, X) - Q(X, X) \approx 0
+
+        The FITC approximation uses (resulting in a GP prior)
+
+        .. math::
+
+           K(X, X) - Q(X, X) \approx  \mathrm{diag}(K(X, X) - Q(X, X))
 
         Parameters
         ----------
@@ -333,30 +377,31 @@ class LatentSparse(Latent):
         return X, Xu, f, cov_total, mean_total
 
     def _build_conditional(self, Xnew, X, Xu, f, cov_total, mean_total):
+        Kuu = cov_total(Xu)
+        Luu = cholesky(stabilize(Kuu))
+
+        Kuf = cov_total(Xu, X)
+        Kuffu = tt.dot(Kuf, Kuf.T)
+        Luffu = cholesky(stabilize(Kuffu))
         Ksu = self.cov_func(Xnew, Xu)
-        L = cholesky(stabilize(cov_total(Xu)))
-        mus = self.mean_func(Xnew) + tt.dot(Ksu, Kuiu)
-        #TODO use mean_total?
-        tmp = solve_lower(L, Ksu.T)
-        Qss = tt.dot(tmp.T, tmp)  #Qss = tt.dot(tt.dot(Ksu, tt.nlinalg.pinv(Kuu)), Ksu.T) 
+        r = f - mean_total(X)  # the equations are derived for 0-mean f
+        Kuuiu = invert_dot(Luffu, tt.dot(Kuf, r))
+        mus = self.mean_func(Xnew) + tt.dot(Ksu, Kuuiu)
+        if self.approx == 'FITC':
+            Lambda = cov_func.diag(X) - project_inverse(Kuf.T, Luu, diag=True)
+            Qsf = project_inverse(Ksu, Luu, P_T=Kuf)
+            mus += tt.dot(Qsf, f / Lambda)
+        Qss = project_inverse(Ksu, Luu)
         Kss = self.cov_func(Xnew)
         cov = Kss - Qss
+        if self.approx == 'FITC':
+            cov -= tt.dot(Qsf, tt.transpose(Qsf / Lambda))
         return mus, cov
 
     def conditional(self, name, Xnew, given=None, **kwargs):
         R"""
-        Returns the conditional distribution evaluated over new input
-        locations `Xnew`.
-
-        Given a set of function values `f` that
-        the GP prior was over, the conditional distribution over a
-        set of new points, `f_*` is
-
-        .. math::
-
-           f_* \mid f, X, X_* \sim \mathcal{GP}\left(
-               K(X_*, X) K(X, X)^{-1} f \,,
-               K(X_*, X_*) - K(X_*, X) K(X, X)^{-1} K(X, X_*) \right)
+        Returns the approximate conditional distribution evaluated
+        over new input locations `Xnew`.
 
         Parameters
         ----------

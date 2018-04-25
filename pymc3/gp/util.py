@@ -9,6 +9,20 @@ solve_lower = tt.slinalg.Solve(A_structure='lower_triangular')
 solve_upper = tt.slinalg.Solve(A_structure='upper_triangular')
 solve = tt.slinalg.Solve(A_structure='general')
 
+def invert_dot(L, X):
+    """Wrapper for common pattern K^{-1} @ X where K = L @ L^T"""
+    return solve_upper(L.T, solve_lower(L, X))
+
+def project_inverse(P, L, diag=True, P_T=None):
+    """Wrapper for common pattern P @ K^{-1} @ P^T where K = L @ L^T"""
+    if P_T is None:
+        P_T = P.T
+    if diag:
+        A = solve_lower(L, P_T)
+        return tt.sum(A * A, axis=0) # the diagonal of A.T @ A
+    else:
+        return tt.dot(P, invert_dot(L, P_T))
+
 
 def infer_shape(X, n_points=None):
     if n_points is None:
