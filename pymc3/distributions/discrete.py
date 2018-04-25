@@ -311,7 +311,7 @@ class DiscreteWeibull(Discrete):
     ========  ======================
     """
     def __init__(self, q, beta, *args, **kwargs):
-        super(DiscreteWeibull, self).__init__(*args, defaults=['median'], **kwargs)
+        super(DiscreteWeibull, self).__init__(*args, defaults=('median',), **kwargs)
 
         self.q = q = tt.as_tensor_variable(q)
         self.beta = beta = tt.as_tensor_variable(beta)
