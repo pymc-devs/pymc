@@ -304,7 +304,7 @@ class LatentSparse(Latent):
             Qff_diag = project_inverse(Kfu, L, diag=True)
             Kff_diag = self.cov_func.diag(X)
             # MvNormal with diagonal cov is Normal with sd=cov**0.5
-            f = pm.Normal("f", mu=f_, sd=tt.sqrt(tt.clip(Kff_diag - Qff_daig, 0, np.inf)))
+            f = pm.Normal("f", mu=f_, sd=tt.sqrt(tt.clip(Kff_diag - Qff_diag, 0, np.inf)), shape=shape)
         return f
 
     def prior(self, name, X, Xu, **kwargs):
@@ -388,7 +388,7 @@ class LatentSparse(Latent):
         Kuuiu = invert_dot(Luffu, tt.dot(Kuf, r))
         mus = self.mean_func(Xnew) + tt.dot(Ksu, Kuuiu)
         if self.approx == 'FITC':
-            Lambda = cov_func.diag(X) - project_inverse(Kuf.T, Luu, diag=True)
+            Lambda = self.cov_func.diag(X) - project_inverse(Kuf.T, Luu, diag=True)
             Qsf = project_inverse(Ksu, Luu, P_T=Kuf)
             mus += tt.dot(Qsf, f / Lambda)
         Qss = project_inverse(Ksu, Luu)
