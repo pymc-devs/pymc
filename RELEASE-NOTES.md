@@ -11,6 +11,7 @@
 ### Fixes
 
 - Fixed `KeyError` raised when only subset of variables are specified to be recorded in the trace.
+- Removed unused `repeat=None` arguments from all `random()` methods in distributions.
 
 ## PyMC 3.4.1 (April 18 2018)
 
