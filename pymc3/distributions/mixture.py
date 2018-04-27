@@ -130,11 +130,11 @@ class Mixture(Distribution):
                                         for comp_dist in self.comp_dists],
                                        axis=1))
 
-    def _comp_samples(self, point=None, size=None, repeat=None):
+    def _comp_samples(self, point=None, size=None):
         try:
-            samples = self.comp_dists.random(point=point, size=size, repeat=repeat)
+            samples = self.comp_dists.random(point=point, size=size)
         except AttributeError:
-            samples = np.column_stack([comp_dist.random(point=point, size=size, repeat=repeat)
+            samples = np.column_stack([comp_dist.random(point=point, size=size)
                                        for comp_dist in self.comp_dists])
 
         return np.squeeze(samples)
@@ -146,7 +146,7 @@ class Mixture(Distribution):
                      w >= 0, w <= 1, tt.allclose(w.sum(axis=-1), 1),
                      broadcast_conditions=False)
 
-    def random(self, point=None, size=None, repeat=None):
+    def random(self, point=None, size=None):
         def random_choice(*args, **kwargs):
             w = kwargs.pop('w')
             w /= w.sum(axis=-1, keepdims=True)
@@ -164,7 +164,7 @@ class Mixture(Distribution):
                                      broadcast_shape=w.shape[:-1] or (1,),
                                      dist_shape=self.shape,
                                      size=size).squeeze()
-        comp_samples = self._comp_samples(point=point, size=size, repeat=repeat)
+        comp_samples = self._comp_samples(point=point, size=size)
 
         if comp_samples.ndim > 1:
             return np.squeeze(comp_samples[np.arange(w_samples.size), w_samples])

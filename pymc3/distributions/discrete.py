@@ -704,7 +704,7 @@ class Categorical(Discrete):
         self.p = (p.T / tt.sum(p, -1)).T
         self.mode = tt.argmax(p)
 
-    def random(self, point=None, size=None, repeat=None):
+    def random(self, point=None, size=None):
         def random_choice(k, *args, **kwargs):
             if len(kwargs['p'].shape) > 1:
                 return np.asarray(

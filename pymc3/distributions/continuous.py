@@ -161,7 +161,7 @@ class Uniform(Continuous):
             transform = transforms.interval(lower, upper)
         super(Uniform, self).__init__(transform=transform, *args, **kwargs)
 
-    def random(self, point=None, size=None, repeat=None):
+    def random(self, point=None, size=None):
         lower, upper = draw_values([self.lower, self.upper],
                                    point=point)
         return generate_samples(stats.uniform.rvs, loc=lower,
@@ -195,7 +195,7 @@ class Flat(Continuous):
         self._default = 0
         super(Flat, self).__init__(defaults=('_default',), *args, **kwargs)
 
-    def random(self, point=None, size=None, repeat=None):
+    def random(self, point=None, size=None):
         raise ValueError('Cannot sample from Flat distribution')
 
     def logp(self, value):
@@ -213,7 +213,7 @@ class HalfFlat(PositiveContinuous):
         self._default = 1
         super(HalfFlat, self).__init__(defaults=('_default',), *args, **kwargs)
 
-    def random(self, point=None, size=None, repeat=None):
+    def random(self, point=None, size=None):
         raise ValueError('Cannot sample from HalfFlat distribution')
 
     def logp(self, value):
@@ -300,7 +300,7 @@ class Normal(Continuous):
 
         super(Normal, self).__init__(**kwargs)
 
-    def random(self, point=None, size=None, repeat=None):
+    def random(self, point=None, size=None):
         mu, tau, _ = draw_values([self.mu, self.tau, self.sd],
                                  point=point)
         return generate_samples(stats.norm.rvs, loc=mu, scale=tau**-0.5,
@@ -402,7 +402,7 @@ class HalfNormal(PositiveContinuous):
         assert_negative_support(tau, 'tau', 'HalfNormal')
         assert_negative_support(sd, 'sd', 'HalfNormal')
 
-    def random(self, point=None, size=None, repeat=None):
+    def random(self, point=None, size=None):
         sd = draw_values([self.sd], point=point)[0]
         return generate_samples(stats.halfnorm.rvs, loc=0., scale=sd,
                                 dist_shape=self.shape,
@@ -542,7 +542,7 @@ class Wald(PositiveContinuous):
         value = (value**-i) * (mu**(i + 1))
         return value + alpha
 
-    def random(self, point=None, size=None, repeat=None):
+    def random(self, point=None, size=None):
         mu, lam, alpha = draw_values([self.mu, self.lam, self.alpha],
                                      point=point)
         return generate_samples(self._random,
@@ -667,7 +667,7 @@ class Beta(UnitContinuous):
 
         return alpha, beta
 
-    def random(self, point=None, size=None, repeat=None):
+    def random(self, point=None, size=None):
         alpha, beta = draw_values([self.alpha, self.beta],
                                   point=point)
         return generate_samples(stats.beta.rvs, alpha, beta,
@@ -747,7 +747,7 @@ class Exponential(PositiveContinuous):
 
         assert_negative_support(lam, 'lam', 'Exponential')
 
-    def random(self, point=None, size=None, repeat=None):
+    def random(self, point=None, size=None):
         lam = draw_values([self.lam], point=point)[0]
         return generate_samples(np.random.exponential, scale=1. / lam,
                                 dist_shape=self.shape,
@@ -816,7 +816,7 @@ class Laplace(Continuous):
 
         assert_negative_support(b, 'b', 'Laplace')
 
-    def random(self, point=None, size=None, repeat=None):
+    def random(self, point=None, size=None):
         mu, b = draw_values([self.mu, self.b], point=point)
         return generate_samples(np.random.laplace, mu, b,
                                 dist_shape=self.shape,
@@ -920,7 +920,7 @@ class Lognormal(PositiveContinuous):
         samples = np.random.normal(size=size)
         return np.exp(mu + (tau**-0.5) * samples)
 
-    def random(self, point=None, size=None, repeat=None):
+    def random(self, point=None, size=None):
         mu, tau = draw_values([self.mu, self.tau], point=point)
         return generate_samples(self._random, mu, tau,
                                 dist_shape=self.shape,
@@ -1021,7 +1021,7 @@ class StudentT(Continuous):
         assert_negative_support(lam, 'lam (sd)', 'StudentT')
         assert_negative_support(nu, 'nu', 'StudentT')
 
-    def random(self, point=None, size=None, repeat=None):
+    def random(self, point=None, size=None):
         nu, mu, lam = draw_values([self.nu, self.mu, self.lam],
                                   point=point)
         return generate_samples(stats.t.rvs, nu, loc=mu, scale=lam**-0.5,
@@ -1119,7 +1119,7 @@ class Pareto(PositiveContinuous):
         u = np.random.uniform(size=size)
         return m * (1. - u)**(-1. / alpha)
 
-    def random(self, point=None, size=None, repeat=None):
+    def random(self, point=None, size=None):
         alpha, m = draw_values([self.alpha, self.m],
                                point=point)
         return generate_samples(self._random, alpha, m,
@@ -1200,7 +1200,7 @@ class Cauchy(Continuous):
         u = np.random.uniform(size=size)
         return alpha + beta * np.tan(np.pi * (u - 0.5))
 
-    def random(self, point=None, size=None, repeat=None):
+    def random(self, point=None, size=None):
         alpha, beta = draw_values([self.alpha, self.beta],
                                   point=point)
         return generate_samples(self._random, alpha, beta,
@@ -1275,7 +1275,7 @@ class HalfCauchy(PositiveContinuous):
         u = np.random.uniform(size=size)
         return beta * np.abs(np.tan(np.pi * (u - 0.5)))
 
-    def random(self, point=None, size=None, repeat=None):
+    def random(self, point=None, size=None):
         beta = draw_values([self.beta], point=point)[0]
         return generate_samples(self._random, beta,
                                 dist_shape=self.shape,
@@ -1379,7 +1379,7 @@ class Gamma(PositiveContinuous):
 
         return alpha, beta
 
-    def random(self, point=None, size=None, repeat=None):
+    def random(self, point=None, size=None):
         alpha, beta = draw_values([self.alpha, self.beta],
                                   point=point)
         return generate_samples(stats.gamma.rvs, alpha, scale=1. / beta,
@@ -1472,7 +1472,7 @@ class InverseGamma(PositiveContinuous):
             m[self.alpha <= 1] = np.inf
             return m
 
-    def random(self, point=None, size=None, repeat=None):
+    def random(self, point=None, size=None):
         alpha, beta = draw_values([self.alpha, self.beta],
                                   point=point)
         return generate_samples(stats.invgamma.rvs, a=alpha, scale=beta,
@@ -1608,7 +1608,7 @@ class Weibull(PositiveContinuous):
         assert_negative_support(alpha, 'alpha', 'Weibull')
         assert_negative_support(beta, 'beta', 'Weibull')
 
-    def random(self, point=None, size=None, repeat=None):
+    def random(self, point=None, size=None):
         alpha, beta = draw_values([self.alpha, self.beta],
                                   point=point)
 
@@ -1707,7 +1707,7 @@ class HalfStudentT(PositiveContinuous):
         assert_negative_support(lam, 'lam', 'HalfStudentT')
         assert_negative_support(nu, 'nu', 'HalfStudentT')
 
-    def random(self, point=None, size=None, repeat=None):
+    def random(self, point=None, size=None):
         nu, sd = draw_values([self.nu, self.sd], point=point)
         return np.abs(generate_samples(stats.t.rvs, nu, loc=0, scale=sd,
                                        dist_shape=self.shape,
@@ -1811,7 +1811,7 @@ class ExGaussian(Continuous):
         assert_negative_support(sigma, 'sigma', 'ExGaussian')
         assert_negative_support(nu, 'nu', 'ExGaussian')
 
-    def random(self, point=None, size=None, repeat=None):
+    def random(self, point=None, size=None):
         mu, sigma, nu = draw_values([self.mu, self.sigma, self.nu],
                                     point=point)
 
@@ -1903,7 +1903,7 @@ class VonMises(Continuous):
 
         assert_negative_support(kappa, 'kappa', 'VonMises')
 
-    def random(self, point=None, size=None, repeat=None):
+    def random(self, point=None, size=None):
         mu, kappa = draw_values([self.mu, self.kappa],
                                 point=point)
         return generate_samples(stats.vonmises.rvs, loc=mu, kappa=kappa,
@@ -2000,7 +2000,7 @@ class SkewNormal(Continuous):
         assert_negative_support(tau, 'tau', 'SkewNormal')
         assert_negative_support(sd, 'sd', 'SkewNormal')
 
-    def random(self, point=None, size=None, repeat=None):
+    def random(self, point=None, size=None):
         mu, tau, _, alpha = draw_values(
             [self.mu, self.tau, self.sd, self.alpha], point=point)
         return generate_samples(stats.skewnorm.rvs,
@@ -2177,7 +2177,7 @@ class Gumbel(Continuous):
 
         super(Gumbel, self).__init__(**kwargs)
 
-    def random(self, point=None, size=None, repeat=None):
+    def random(self, point=None, size=None):
         mu, sd = draw_values([self.mu, self.beta], point=point)
         return generate_samples(stats.gumbel_r.rvs, loc=mu, scale=sd,
                                 dist_shape=self.shape,
@@ -2256,7 +2256,7 @@ class Logistic(Continuous):
         return bound(
             -(value - mu) / s - tt.log(s) - 2 * tt.log1p(tt.exp(-(value - mu) / s)), s > 0)
 
-    def random(self, point=None, size=None, repeat=None):
+    def random(self, point=None, size=None):
         mu, s = draw_values([self.mu, self.s], point=point)
 
         return generate_samples(
@@ -2332,7 +2332,7 @@ class LogitNormal(UnitContinuous):
 
         super(LogitNormal, self).__init__(**kwargs)
 
-    def random(self, point=None, size=None, repeat=None):
+    def random(self, point=None, size=None):
         mu, _, sd = draw_values([self.mu, self.tau, self.sd], point=point)
         return expit(generate_samples(stats.norm.rvs, loc=mu, scale=sd, dist_shape=self.shape,
                                       size=size))
@@ -2423,7 +2423,7 @@ class Interpolated(Continuous):
     def _random(self, size=None):
         return self._argcdf(np.random.uniform(size=size))
 
-    def random(self, point=None, size=None, repeat=None):
+    def random(self, point=None, size=None):
         return generate_samples(self._random,
                                 dist_shape=self.shape,
                                 size=size)

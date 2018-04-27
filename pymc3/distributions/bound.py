@@ -64,7 +64,7 @@ class _Bounded(Distribution):
         else:
             return samples
 
-    def random(self, point=None, size=None, repeat=None):
+    def random(self, point=None, size=None):
         if self.lower is None and self.upper is None:
             return self._wrapped.random(point=point, size=size)
         elif self.lower is not None and self.upper is not None:
