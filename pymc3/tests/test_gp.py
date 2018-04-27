@@ -701,7 +701,10 @@ class TestLatentVsLatentSparse(object):
             p = gp.conditional("p", Xnew)
         chol = np.linalg.cholesky(cov_func(X).eval())
         y_rotated = np.linalg.solve(chol, y - mean_func(X).eval())
-        self.logp = model.logp({"p": pnew, 'f_rotated_': y_rotated})
+        self.logp = model.logp({
+            "p": pnew,
+            'f_rotated_': y_rotated
+        })
         self.X = X
         self.Xnew = Xnew
         self.y = y
@@ -718,7 +721,10 @@ class TestLatentVsLatentSparse(object):
             p = gp.conditional("p", self.Xnew)
         chol = np.linalg.cholesky(cov_func(self.X).eval())
         y_rotated = np.linalg.solve(chol, self.y - mean_func(self.X).eval())
-        model_params = {"f_u_rotated_": y_rotated, "p": self.pnew}
+        model_params = {
+            "f_u_rotated_": y_rotated,
+            "p": self.pnew
+        }
         if approx == 'FITC':
             model_params['f'] = self.y  # need to specify as well since f ~ Normal(f_, diag(Kff-Qff))
         approx_logp = model.logp(model_params)
