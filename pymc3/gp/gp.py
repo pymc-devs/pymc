@@ -299,13 +299,13 @@ class LatentSparse(Latent):
         Kfu = self.cov_func(X, Xu)  # (n, m)
         f_ = mu + tt.dot(Kfu, Kuuiu) # (n, m) @ (m,) = (n,)
         if self.approx == 'DTC':
-            f = pm.Deterministic("f", f_)
+            f = pm.Deterministic(name, f_)
         elif self.approx == 'FITC':
             Qff_diag = project_inverse(Kfu, Luu, diag=True)
             Kff_diag = self.cov_func.diag(X)
             # MvNormal with diagonal cov is Normal with sd=cov**0.5
             sd = tt.sqrt(tt.clip(Kff_diag - Qff_diag, 0, np.inf))
-            f = pm.Normal("f", mu=f_, sd=sd, shape=shape)
+            f = pm.Normal(name, mu=f_, sd=sd, shape=shape)
         return f
 
     def prior(self, name, X, Xu, **kwargs):
