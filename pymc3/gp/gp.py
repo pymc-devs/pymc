@@ -304,8 +304,8 @@ class LatentSparse(Latent):
             Qff_diag = project_inverse(Kfu, Luu, diag=True)
             Kff_diag = self.cov_func.diag(X)
             # MvNormal with diagonal cov is Normal with sd=cov**0.5
-            sd = tt.sqrt(tt.clip(Kff_diag - Qff_diag, 0, np.inf))
-            f = pm.Normal(name, mu=f_, sd=sd, shape=shape)
+            var = tt.clip(Kff_diag - Qff_diag, 0, np.inf)
+            f = pm.Normal(name, mu=f_, tau=tt.inv(var), shape=shape)
         return f
 
     def prior(self, name, X, Xu, **kwargs):
