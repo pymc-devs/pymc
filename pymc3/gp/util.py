@@ -15,14 +15,14 @@ def invert_dot(L, X):
 
 def project_inverse(P, L, diag=True, P_T=None):
     """Wrapper for common pattern P @ K^{-1} @ P^T where K = L @ L^T"""
-    symmetric = P_T is None
-    if symmetric:
+    same_P = P_T is None
+    if same_P:
         P_T = P.T
     A = solve_lower(L, P_T)
     if diag:
         return tt.sum(A * A, axis=0) # the diagonal of A.T @ A
     else:
-        if symmetric:
+        if same_P:
             return tt.dot(A.T, A)
         else:
             return tt.dot(P, invert_dot(L, P_T))
