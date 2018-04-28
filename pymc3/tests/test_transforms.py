@@ -4,8 +4,7 @@ import theano
 import theano.tensor as tt
 from .test_distributions import (Simplex, Rplusbig, Rminusbig,
                                  Unit, R, Vector, MultiSimplex,
-                                 Circ, SortedVector,
-                                 PositiveSortedVector)
+                                 Circ, SortedVector)
 from .checks import close_to, close_to_logical
 from ..theanof import jacobian
 
