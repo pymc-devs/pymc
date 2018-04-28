@@ -4,7 +4,8 @@ import theano
 import theano.tensor as tt
 from .test_distributions import (Simplex, Rplusbig, Rminusbig,
                                  Unit, R, Vector, MultiSimplex,
-                                 Circ, SortedVector)
+                                 Circ, SortedVector,
+                                 PositiveSortedVector)
 from .checks import close_to, close_to_logical
 from ..theanof import jacobian
 
@@ -173,14 +174,9 @@ def test_circular():
 
 def test_ordered():
     check_vector_transform_identity(tr.ordered, SortedVector(6))
-
-
-def test_ordered_jacobian_det():
     check_jacobian_det(tr.ordered, Vector(R, 2),
-                      tt.dvector, np.array([0, 0]), elemwise=False)
-
-
-def test_ordered_vals():
+                       tt.dvector, np.array([0, 0]), elemwise=False)
     vals = get_values(tr.ordered, Vector(R, 3),
                       tt.dvector, np.zeros(3))
     close_to_logical(np.diff(vals) >= 0, True, tol)
+
