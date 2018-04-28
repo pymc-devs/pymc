@@ -204,7 +204,11 @@ class Latent(Base):
         mu, cov = self._build_conditional(Xnew, *givens)
         chol = cholesky(stabilize(cov))
         shape = infer_shape(Xnew, kwargs.pop("shape", None))
-        return pm.MvNormal(name, mu=mu, chol=chol, shape=shape, **kwargs)
+        #return pm.MvNormal(name, mu=mu, chol=chol, shape=shape, **kwargs)
+        return pm.MatrixNormal(name, mu=mu, rowchol=chol, colcov=np.eye(shape[1]), shape=shape)
+
+        #vals = pm.MatrixNormal('vals', mu=mu, colcov=colcov,
+        #                       rowcov=rowcov, shape=(m, n))
 
 
 @conditioned_vars(["X", "f", "nu"])
@@ -422,7 +426,7 @@ class Marginal(Base):
         self.y = y
         self.noise = noise
         if is_observed:
-            return pm.MvNormal(name, mu=mu, chol=chol, observed=y, **kwargs)
+            return pm.MvNormal(name, mu=mu.T, chol=chol, observed=y.T, **kwargs)
         else:
             shape = infer_shape(X, kwargs.pop("shape", None))
             return pm.MvNormal(name, mu=mu, chol=chol, shape=shape, **kwargs)
@@ -505,7 +509,8 @@ class Marginal(Base):
         mu, cov = self._build_conditional(Xnew, pred_noise, False, *givens)
         chol = cholesky(cov)
         shape = infer_shape(Xnew, kwargs.pop("shape", None))
-        return pm.MvNormal(name, mu=mu, chol=chol, shape=shape, **kwargs)
+        return pm.MatrixNormal(name, mu=mu, rowchol=chol, colcov=np.eye(shape[1]), shape=shape)
+        #return pm.MvNormal(name, mu=mu, chol=chol, shape=shape, **kwargs)
 
     def predict(self, Xnew, point=None, diag=False, pred_noise=False, given=None):
         R"""
