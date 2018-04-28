@@ -370,7 +370,7 @@ class MultiTrace(object):
         vals : dict (str: array-like)
              The keys should be the names of the new variables. The values are
              expected to be array-like object.
-             For traces with more than one chain the lenght of each value
+             For traces with more than one chain the length of each value
              should match the number of total samples already in the trace
              (chains * iterations), otherwise a warning is raised.
         """
@@ -384,7 +384,7 @@ class MultiTrace(object):
             l_samples = len(self) * len(self.chains)
             l_v = len(v)
             if l_v != l_samples:
-                warnings.warn("The lenght of the values you are trying to "
+                warnings.warn("The length of the values you are trying to "
                               "add ({}) does not match the number ({}) of "
                               "total samples in the trace "
                               "(chains * iterations)".format(l_v, l_samples))

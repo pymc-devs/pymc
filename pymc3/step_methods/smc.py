@@ -186,9 +186,9 @@ class SMC(atext.ArrayStepSharedLLK):
         init_rnd = {}
         for v in vars:
             if pm.util.is_transformed_name(v.name):
-                trans = v.distribution.transform_used.forward
-                rnd = trans(v.distribution.dist.random(size=self.n_chains, point=start))
-                init_rnd[v.name] = rnd.eval()
+                trans = v.distribution.transform_used.forward_val
+                init_rnd[v.name] = trans(v.distribution.dist.random(
+                    size=self.n_chains, point=start))
             else:
                 init_rnd[v.name] = v.random(size=self.n_chains, point=start)
 

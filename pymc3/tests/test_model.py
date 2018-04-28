@@ -259,3 +259,21 @@ class TestValueGradFunction(unittest.TestCase):
         point_ = self.f_grad.array_to_full_dict(array)
         assert len(point_) == 3
         assert point_['extra1'] == 5
+
+    def test_edge_case(self):
+        # Edge case discovered in #2948
+        ndim = 3
+        with pm.Model() as m:
+            pm.Lognormal('sigma',
+                         mu=np.zeros(ndim),
+                         tau=np.ones(ndim),
+                         shape=ndim)  # variance for the correlation matrix
+            pm.HalfCauchy('nu', beta=10)
+
+        func = ValueGradFunction(m.logpt, m.basic_RVs)
+        func.set_extra_values(m.test_point)
+        q = func.dict_to_array(m.test_point)
+        logp, dlogp = func(q)
+        assert logp.size == 1
+        assert dlogp.size == 4
+        npt.assert_allclose(dlogp, 0., atol=1e-5)

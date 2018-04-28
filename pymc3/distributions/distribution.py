@@ -4,7 +4,7 @@ import theano.tensor as tt
 from theano import function
 import theano
 from ..memoize import memoize
-from ..model import Model, get_named_nodes, FreeRV, ObservedRV
+from ..model import Model, get_named_nodes_and_relations, FreeRV, ObservedRV
 from ..vartypes import string_types
 
 __all__ = ['DensityDist', 'Distribution', 'Continuous', 'Discrete',
@@ -229,17 +229,72 @@ def draw_values(params, point=None):
 
     """
     # Distribution parameters may be nodes which have named node-inputs
-    # specified in the point. Need to find the node-inputs to replace them.
-    givens = {}
+    # specified in the point. Need to find the node-inputs, their
+    # parents and children to replace them.
+    leaf_nodes = {}
+    named_nodes_parents = {}
+    named_nodes_children = {}
     for param in params:
         if hasattr(param, 'name'):
-            named_nodes = get_named_nodes(param)
-            if param.name in named_nodes:
-                named_nodes.pop(param.name)
-            for name, node in named_nodes.items():
-                if not isinstance(node, (tt.sharedvar.SharedVariable,
-                                         tt.TensorConstant)):
-                    givens[name] = (node, _draw_value(node, point=point))
+            # Get the named nodes under the `param` node
+            nn, nnp, nnc = get_named_nodes_and_relations(param)
+            leaf_nodes.update(nn)
+            # Update the discovered parental relationships
+            for k in nnp.keys():
+                if k not in named_nodes_parents.keys():
+                    named_nodes_parents[k] = nnp[k]
+                else:
+                    named_nodes_parents[k].update(nnp[k])
+            # Update the discovered child relationships
+            for k in nnc.keys():
+                if k not in named_nodes_children.keys():
+                    named_nodes_children[k] = nnc[k]
+                else:
+                    named_nodes_children[k].update(nnc[k])
+    
+    # Init givens and the stack of nodes to try to `_draw_value` from
+    givens = {}
+    stored = set([])  # Some nodes 
+    stack = list(leaf_nodes.values())  # A queue would be more appropriate
+    while stack:
+        next_ = stack.pop(0)
+        if next_ in stored:
+            # If the node already has a givens value, skip it
+            continue
+        elif isinstance(next_, (tt.TensorConstant,
+                                tt.sharedvar.SharedVariable)):
+            # If the node is a theano.tensor.TensorConstant or a
+            # theano.tensor.sharedvar.SharedVariable, its value will be
+            # available automatically in _compile_theano_function so
+            # we can skip it. Furthermore, if this node was treated as a
+            # TensorVariable that should be compiled by theano in
+            # _compile_theano_function, it would raise a `TypeError:
+            # ('Constants not allowed in param list', ...)` for 
+            # TensorConstant, and a `TypeError: Cannot use a shared
+            # variable (...) as explicit input` for SharedVariable.
+            stored.add(next_.name)
+            continue
+        else:
+            # If the node does not have a givens value, try to draw it.
+            # The named node's children givens values must also be taken
+            # into account.
+            children = named_nodes_children[next_]
+            temp_givens = [givens[k] for k in givens.keys() if k in children]
+            try:
+                # This may fail for autotransformed RVs, which don't
+                # have the random method
+                givens[next_.name] = (next_, _draw_value(next_,
+                                                         point=point,
+                                                         givens=temp_givens))
+                stored.add(next_.name)
+            except theano.gof.fg.MissingInputError:
+                # The node failed, so we must add the node's parents to
+                # the stack of nodes to try to draw from. We exclude the
+                # nodes in the `params` list.
+                stack.extend([node for node in named_nodes_parents[next_]
+                              if node is not None and
+                              node.name not in stored and
+                              node not in params])
     values = []
     for param in params:
         values.append(_draw_value(param, point=point, givens=givens.values()))

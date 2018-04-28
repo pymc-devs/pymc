@@ -64,7 +64,7 @@ class _Bounded(Distribution):
         else:
             return samples
 
-    def random(self, point=None, size=None, repeat=None):
+    def random(self, point=None, size=None):
         if self.lower is None and self.upper is None:
             return self._wrapped.random(point=point, size=size)
         elif self.lower is not None and self.upper is not None:
@@ -161,7 +161,7 @@ class Bound(object):
     The resulting distribution is not normalized anymore. This
     is usually fine if the bounds are constants. If you need
     truncated distributions, use `Bound` in combination with
-    a `pm.Potential` with the cumulative probability function.
+    a :class:`~pymc3.model.Potential` with the cumulative probability function.
 
     The bounds are inclusive for discrete distributions.
 

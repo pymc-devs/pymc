@@ -311,7 +311,7 @@ class DiscreteWeibull(Discrete):
     ========  ======================
     """
     def __init__(self, q, beta, *args, **kwargs):
-        super(DiscreteWeibull, self).__init__(*args, defaults=['median'], **kwargs)
+        super(DiscreteWeibull, self).__init__(*args, defaults=('median',), **kwargs)
 
         self.q = q = tt.as_tensor_variable(q)
         self.beta = beta = tt.as_tensor_variable(beta)
@@ -704,7 +704,7 @@ class Categorical(Discrete):
         self.p = (p.T / tt.sum(p, -1)).T
         self.mode = tt.argmax(p)
 
-    def random(self, point=None, size=None, repeat=None):
+    def random(self, point=None, size=None):
         def random_choice(k, *args, **kwargs):
             if len(kwargs['p'].shape) > 1:
                 return np.asarray(
@@ -758,7 +758,7 @@ class Constant(Discrete):
     """
 
     def __init__(self, c, *args, **kwargs):
-        warnings.warn("Constant has been deprecated. We recommend using a Determinstic object instead.",
+        warnings.warn("Constant has been deprecated. We recommend using a Deterministic object instead.",
                     DeprecationWarning)
         super(Constant, self).__init__(*args, **kwargs)
         self.mean = self.median = self.mode = self.c = c = tt.as_tensor_variable(c)

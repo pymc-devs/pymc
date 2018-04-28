@@ -186,21 +186,22 @@ class GARCH11(distribution.Continuous):
 
     .. math::
         y_t = \sigma_t * z_t
+
+    .. math::
         \sigma_t^2 = \omega + \alpha_1 * y_{t-1}^2 + \beta_1 * \sigma_{t-1}^2
 
     with z_t iid and Normal with mean zero and unit standard deviation.
 
     Parameters
     ----------
-    omega : distribution
-        omega > 0, distribution for mean variance
-    alpha_1 : distribution
-        alpha_1 >= 0, distribution for autoregressive term
-    beta_1 : distribution
-        beta_1 >= 0, alpha_1 + beta_1 < 1, distribution for moving
-        average term
-    initial_vol : distribution
-        initial_vol >= 0, distribution for initial volatility, sigma_0
+    omega : tensor
+        omega > 0, mean variance
+    alpha_1 : tensor
+        alpha_1 >= 0, autoregressive term coefficient
+    beta_1 : tensor
+        beta_1 >= 0, alpha_1 + beta_1 < 1, moving average term coefficient
+    initial_vol : tensor
+        initial_vol >= 0, initial volatility, sigma_0
     """
 
     def __init__(self, omega, alpha_1, beta_1,
@@ -210,7 +211,7 @@ class GARCH11(distribution.Continuous):
         self.omega = omega = tt.as_tensor_variable(omega)
         self.alpha_1 = alpha_1 = tt.as_tensor_variable(alpha_1)
         self.beta_1 = beta_1 = tt.as_tensor_variable(beta_1)
-        self.initial_vol = initial_vol
+        self.initial_vol = tt.as_tensor_variable(initial_vol)
         self.mean = tt.as_tensor_variable(0.)
 
     def get_volatility(self, x):
@@ -224,7 +225,7 @@ class GARCH11(distribution.Continuous):
                       outputs_info=[self.initial_vol],
                       non_sequences=[self.omega, self.alpha_1,
                                      self.beta_1])
-        return tt.concatenate(self.initial_vol, vol)
+        return tt.concatenate([[self.initial_vol], vol])
 
     def logp(self, x):
         vol = self.get_volatility(x)

@@ -11,14 +11,14 @@ from .util import get_default_varnames
 import pymc3 as pm
 from pymc3.theanof import floatX
 
-from scipy.misc import logsumexp
+from scipy.special import logsumexp
 from scipy.stats import dirichlet
 from scipy.optimize import minimize
 from scipy.signal import fftconvolve
 
 
 __all__ = ['autocorr', 'autocov', 'waic', 'loo', 'hpd', 'quantiles',
-           'mc_error', 'summary', 'df_summary', 'compare', 'bfmi', 'r2_score']
+           'mc_error', 'summary', 'compare', 'bfmi', 'r2_score']
 
 
 def statfunc(f):
@@ -334,7 +334,7 @@ def _psislw(lw, reff):
     kss = np.empty(m)
 
     # precalculate constants
-    cutoff_ind = - int(np.ceil(min(n / 0.5, 3 * (n / reff) ** 0.5))) - 1
+    cutoff_ind = - int(np.ceil(min(n / 5., 3 * (n / reff) ** 0.5))) - 1
     cutoffmin = np.log(np.finfo(float).tiny)
     k_min = 1. / 3
 
@@ -456,7 +456,7 @@ def _gpinv(p, k, sigma):
     return x
 
 
-def compare(traces, models, ic='WAIC', method='stacking', b_samples=1000,
+def compare(model_dict, ic='WAIC', method='stacking', b_samples=1000,
             alpha=1, seed=None, round_to=2):
     R"""Compare models based on the widely available information criterion (WAIC)
     or leave-one-out (LOO) cross-validation.
@@ -465,9 +465,7 @@ def compare(traces, models, ic='WAIC', method='stacking', b_samples=1000,
 
     Parameters
     ----------
-    traces : list of PyMC3 traces
-    models : list of PyMC3 models
-        in the same order as traces.
+    model_dict : dictionary of PyMC3 traces indexed by corresponding model
     ic : string
         Information Criterion (WAIC or LOO) used to compare models.
         Default WAIC.
@@ -520,15 +518,20 @@ def compare(traces, models, ic='WAIC', method='stacking', b_samples=1000,
     warning : A value of 1 indicates that the computation of the IC may not be
         reliable. Details see the related warning message in pm.waic and pm.loo
     """
+
+    names = [model.name for model in model_dict if model.name]
+    if not names:
+        names = np.arange(len(model_dict))
+
     if ic == 'WAIC':
         ic_func = waic
-        df_comp = pd.DataFrame(index=np.arange(len(models)),
+        df_comp = pd.DataFrame(index=names,
                                columns=['WAIC', 'pWAIC', 'dWAIC', 'weight',
                                         'SE', 'dSE', 'var_warn'])
 
     elif ic == 'LOO':
         ic_func = loo
-        df_comp = pd.DataFrame(index=np.arange(len(models)),
+        df_comp = pd.DataFrame(index=names,
                                columns=['LOO', 'pLOO', 'dLOO', 'weight',
                                         'SE', 'dSE', 'shape_warn'])
 
@@ -536,7 +539,7 @@ def compare(traces, models, ic='WAIC', method='stacking', b_samples=1000,
         raise NotImplementedError(
             'The information criterion {} is not supported.'.format(ic))
 
-    if len(set([len(m.observed_RVs) for m in models])) != 1:
+    if len(set([len(m.observed_RVs) for m in model_dict])) != 1:
         raise ValueError(
             'The number of observed RVs should be the same across all models')
 
@@ -545,8 +548,8 @@ def compare(traces, models, ic='WAIC', method='stacking', b_samples=1000,
                          'is not supported.'.format(method))
 
     ics = []
-    for c, (t, m) in enumerate(zip(traces, models)):
-        ics.append((c, ic_func(t, m, pointwise=True)))
+    for n, (m, t) in zip(names, model_dict.items()):
+        ics.append((n, ic_func(t, m, pointwise=True)))
 
     ics.sort(key=lambda x: x[1][0])
 
@@ -887,10 +890,6 @@ def summary(trace, varnames=None, transform=lambda x: x, stat_funcs=None,
         samples. Defaults to the smaller of 100 or the number of samples.
         This is only meaningful when `stat_funcs` is None.
 
-    See also
-    --------
-    summary : Generate a pretty-printed summary of a trace.
-
     Returns
     -------
     `pandas.DataFrame` with summary statistics for each variable Defaults one
@@ -973,12 +972,6 @@ def summary(trace, varnames=None, transform=lambda x: x, stat_funcs=None,
         rhat_pd = dict2pd(rhat, 'Rhat')
         return pd.concat([dforg, n_eff_pd, rhat_pd],
                          axis=1, join_axes=[dforg.index])
-
-
-def df_summary(*args, **kwargs):
-    warnings.warn("df_summary has been deprecated. In future, use summary instead.",
-                  DeprecationWarning, stacklevel=2)
-    return summary(*args, **kwargs)
 
 
 def _calculate_stats(sample, batches, alpha):

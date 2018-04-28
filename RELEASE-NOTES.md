@@ -1,6 +1,19 @@
 # Release Notes
 
-## PyMC 3.4 (unreleased)
+
+## PyMC 3.5 (Unreleaased)
+
+
+### New features
+
+- Add `check_test_point` method to `pm.Model`
+
+### Fixes
+
+- Fixed `KeyError` raised when only subset of variables are specified to be recorded in the trace.
+- Removed unused `repeat=None` arguments from all `random()` methods in distributions.
+
+## PyMC 3.4.1 (April 18 2018)
 
 ### New features
 
@@ -15,28 +28,26 @@
   Optionally it can plot divergences.
 - Plots of discrete distributions in the docstrings
 - Add logitnormal distribution
+- Densityplot: add support for discrete variables
+- Fix the Binomial likelihood in `.glm.families.Binomial`, with the flexibility of specifying the `n`. 
+- Add `offset` kwarg to `.glm`.
+- Changed the `compare` function to accept a dictionary of model-trace pairs instead of two separate lists of models and traces.
+- add test and support for creating multivariate mixture and mixture of mixtures
+- `distribution.draw_values`, now is also able to draw values from conditionally dependent RVs, such as autotransformed RVs (Refer to PR #2902).
 
 ### Fixes
 
 - `VonMises` does not overflow for large values of kappa. i0 and i1 have been removed and we now use log_i0 to compute the logp.
-- The bandwidth for KDE plots is computed using a modified version of Scott's rule. The new version uses entropy instead of standard
-deviation. This works better for multimodal distributions. Functions using KDE plots has a new argument `bw` controlling the bandwidth.
-
-=======
-- Add `logit_p` keyword to `pm.Bernoulli`, so that users can specify the logit
-  of the success probability. This is faster and more stable than using
-  `p=tt.nnet.sigmoid(logit_p)`.
-- Add `random` keyword to `pm.DensityDist` thus enabling users to pass custom random method
-  which in turn makes sampling from a `DensityDist` possible. 
-
-### Fixes
-
-- `VonMises` does not overflow for large values of kappa. i0 and i1 have been removed and we now use
-   log_i0 to compute the logp.
+- The bandwidth for KDE plots is computed using a modified version of Scott's rule. The new version uses entropy instead of standard deviation. This works better for multimodal distributions. Functions using KDE plots has a new argument `bw` controlling the bandwidth.
+- fix PyMC3 variable is not replaced if provided in more_replacements (#2890)
+- Fix for issue #2900. For many situations, named node-inputs do not have a `random` method, while some intermediate node may have it. This meant that if the named node-input at the leaf of the graph did not have a fixed value, `theano` would try to compile it and fail to find inputs, raising a `theano.gof.fg.MissingInputError`. This was fixed by going through the theano variable's owner inputs graph, trying to get intermediate named-nodes values if the leafs had failed.
+- In `distribution.draw_values`, some named nodes could be `theano.tensor.TensorConstant`s or `theano.tensor.sharedvar.SharedVariable`s. Nevertheless, in `distribution._draw_value`, these would be passed to `distribution._compile_theano_function` as if they were `theano.tensor.TensorVariable`s. This could lead to the following exceptions `TypeError: ('Constants not allowed in param list', ...)` or `TypeError: Cannot use a shared variable (...)`. The fix was to not add `theano.tensor.TensorConstant` or `theano.tensor.sharedvar.SharedVariable` named nodes into the `givens` dict that could be used in `distribution._compile_theano_function`.
+- Exponential support changed to include zero values.
 
 ### Deprecations
 
 - DIC and BPIC calculations have been removed
+- df_summary have been removed, use summary instead
 - `njobs` and `nchains` kwarg are deprecated in favor of `cores` and `chains` for `sample`
 - `lag` kwarg in `pm.stats.autocorr` and `pm.stats.autocov` is deprecated.
 

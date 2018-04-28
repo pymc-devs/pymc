@@ -894,6 +894,9 @@ class Group(WithMemoization):
         self.replacements = dict()
         self.group = [get_transformed(var) for var in self.group]
         for var in self.group:
+            if isinstance(var.distribution, pm.Discrete):
+                raise ParametrizationError('Discrete variables are not supported by VI: {}'
+                                           .format(var))
             begin = self.ddim
             if self.batched:
                 if var.ndim < 1:
@@ -1459,6 +1462,7 @@ class Approximation(WithMemoization):
         sampled node(s) with replacements
         """
         node_in = node
+        node = theano.clone(node, more_replacements)
         if size is None:
             node_out = self.symbolic_single_sample(node)
         else:

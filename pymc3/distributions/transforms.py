@@ -7,6 +7,7 @@ from . import distribution
 from ..math import logit, invlogit
 from .distribution import draw_values
 import numpy as np
+from scipy.special import logit as nplogit
 
 __all__ = ['transform', 'stick_breaking', 'logodds', 'interval', 'log_exp_m1',
            'lowerbound', 'upperbound', 'ordered', 'log', 'sum_to_1',
@@ -98,7 +99,7 @@ class Log(ElemwiseTransform):
         return tt.log(x)
 
     def forward_val(self, x, point=None):
-        return self.forward(x)
+        return np.log(x)
 
     def jacobian_det(self, x):
         return x
@@ -120,8 +121,8 @@ class LogExpM1(ElemwiseTransform):
         return tt.log(1.-tt.exp(-x)) + x
 
     def forward_val(self, x, point=None):
-        return self.forward(x)
-
+        return np.log(1.-np.exp(-x)) + x
+    
     def jacobian_det(self, x):
         return -tt.nnet.softplus(-x)
 
@@ -138,7 +139,7 @@ class LogOdds(ElemwiseTransform):
         return logit(x)
 
     def forward_val(self, x, point=None):
-        return self.forward(x)
+        return nplogit(x)
 
 logodds = LogOdds()
 
@@ -167,7 +168,7 @@ class Interval(ElemwiseTransform):
         # For an explanation see pull/2328#issuecomment-309303811
         a, b = draw_values([self.a-0., self.b-0.],
                             point=point)
-        return floatX(tt.log(x - a) - tt.log(b - x))
+        return floatX(np.log(x - a) - np.log(b - x))
 
     def jacobian_det(self, x):
         s = tt.nnet.softplus(-x)
@@ -199,7 +200,7 @@ class LowerBound(ElemwiseTransform):
         # For an explanation see pull/2328#issuecomment-309303811
         a = draw_values([self.a-0.],
                         point=point)[0]
-        return floatX(tt.log(x - a))
+        return floatX(np.log(x - a))
 
     def jacobian_det(self, x):
         return x
@@ -230,7 +231,7 @@ class UpperBound(ElemwiseTransform):
         # For an explanation see pull/2328#issuecomment-309303811
         b = draw_values([self.b-0.],
                         point=point)[0]
-        return floatX(tt.log(b - x))
+        return floatX(np.log(b - x))
 
     def jacobian_det(self, x):
         return x
@@ -297,7 +298,7 @@ class SumTo1(Transform):
         return x[:-1]
 
     def forward_val(self, x, point=None):
-        return self.forward(x)
+        return x[:-1]
 
     def jacobian_det(self, x):
         return 0
@@ -332,8 +333,17 @@ class StickBreaking(Transform):
         y = logit(z) - eq_share
         return floatX(y.T)
 
-    def forward_val(self, x, point=None):
-        return self.forward(x)
+    def forward_val(self, x_, point=None):
+        x = x_.T
+        # reverse cumsum
+        x0 = x[:-1]
+        s = np.cumsum(x0[::-1], 0)[::-1] + x[-1]
+        z = x0 / s
+        Km1 = x.shape[0] - 1
+        k = np.arange(Km1)[(slice(None),) + (None,) * (x.ndim - 1)]
+        eq_share = nplogit(1. / (Km1 + 1 - k).astype(str(x_.dtype)))
+        y = nplogit(z) - eq_share
+        return floatX(y.T)
 
     def backward(self, y_):
         y = y_.T
@@ -374,7 +384,7 @@ class Circular(Transform):
         return tt.as_tensor_variable(x)
 
     def forward_val(self, x, point=None):
-        return self.forward(x)
+        return x
 
     def jacobian_det(self, x):
         return 0
@@ -394,8 +404,9 @@ class CholeskyCovPacked(Transform):
     def forward(self, y):
         return tt.advanced_set_subtensor1(y, tt.log(y[self.diag_idxs]), self.diag_idxs)
 
-    def forward_val(self, x, point=None):
-        return self.forward(x)
+    def forward_val(self, y, point=None):
+        y[self.diag_idxs] = np.log(y[self.diag_idxs])
+        return y
 
     def jacobian_det(self, y):
         return tt.sum(y[self.diag_idxs])

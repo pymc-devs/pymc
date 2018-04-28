@@ -25,7 +25,7 @@ from functools import reduce, partial
 
 def kronecker(*Ks):
     """Return the Kronecker product of arguments:
-            K_1 \otimes K_2 \otimes ... \otimes K_D
+          :math:`K_1 \otimes K_2 \otimes ... \otimes K_D`
 
     Parameters
     ----------
@@ -47,7 +47,7 @@ def cartesian(*arrays):
 
 
 def kron_matrix_op(krons, m, op):
-    """Apply op to krons and m in a way that reproduces op(kronecker(*krons), m)
+    """Apply op to krons and m in a way that reproduces ``op(kronecker(*krons), m)``
 
     Parameters
     -----------
