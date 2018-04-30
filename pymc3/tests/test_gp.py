@@ -726,14 +726,12 @@ class TestLatentVsLatentSparse(object):
         }
         if approx == 'FITC':
             model_params['f'] = self.y  # need to specify as well since f ~ Normal(f_, diag(Kff-Qff))
-            print(pm.distributions.draw_values([f.distribution.sd], model_params))
         # test prior logp
         approx_prior_logp = model.logp(model_params)
         if approx == 'FITC':
             # for X=Xu FITC degenerates to DTC and the small residual diag(Kff - Qff) offsets the logp
-            fitc_logp = pm.Normal.dist(mu=f.distribution.mu, sd=f.distribution.sd).logp(self.y)
-            atol, = pm.distributions.draw_values([fitc_logp], model_params)
-            atol = -np.sum(atol)
+            fitc_logp = pm.Normal.dist(mu=f.distribution.mu, sd=f.distribution.sd).logp_sum(self.y)
+            atol = -pm.distributions.draw_values([fitc_logp], model_params)[0]
         else:
             atol = 0
         npt.assert_allclose(approx_prior_logp, self.logp_prior, atol=atol, rtol=1e-2)
