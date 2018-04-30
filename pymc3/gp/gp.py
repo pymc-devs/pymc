@@ -291,10 +291,11 @@ class LatentSparse(Latent):
     def _build_prior(self, name, X, Xu, **kwargs):
         mu = self.mean_func(X)  # (n,)
         Luu = cholesky(stabilize(self.cov_func(Xu))) # (m, m) \sqrt{K_u}
-        shape = infer_shape(Xu, kwargs.pop("shape", None))
-        v = pm.Normal(name + "_u_rotated_", mu=0.0, sd=1.0, shape=shape, **kwargs)
-        u_ = self.mean_func(Xu) + tt.dot(Luu, v)  # mean + chol method of MvGaussian
-        u = pm.Deterministic(name+'_u', u_) # (m,) prior at inducing points
+        shape_u = infer_shape(Xu, kwargs.pop("shape_u", None))
+        shape = infer_shape(X, kwargs.pop("shape", None))
+        v = pm.Normal(name + "_u_rotated_", mu=0.0, sd=1.0, shape=shape_u, **kwargs)
+        # (m,) prior at inducing points: mean + chol method of MvGaussian
+        u = pm.Deterministic(name + '_u', self.mean_func(Xu) + tt.dot(Luu, v))
         Kuuiu = invert_dot(Luu, u) # (m,) K_{uu}^{-1} u
         Kfu = self.cov_func(X, Xu)  # (n, m)
         f_ = mu + tt.dot(Kfu, Kuuiu) # (n, m) @ (m,) = (n,)
@@ -302,9 +303,9 @@ class LatentSparse(Latent):
             f = pm.Deterministic(name, f_)
         elif self.approx == 'FITC':
             Qff_diag = project_inverse(Kfu, Luu, diag=True)
-            Kff_diag = self.cov_func.diag(X)
-            # MvNormal with diagonal cov is Normal with sd=cov**0.5
-            var = tt.clip(Kff_diag - Qff_diag, 0, np.inf)
+            Kff_diag = self.cov_func(X, diag=True)
+            # MvNormal with diagonal cov is Normal with var=diag(cov)
+            var = tt.clip(Kff_diag - Qff_diag, 0.0, np.inf)
             f = pm.Normal(name, mu=f_, tau=tt.inv(var), shape=shape)
         return f
 
