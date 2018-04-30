@@ -390,14 +390,17 @@ class LatentSparse(Latent):
         Kuuiu = invert_dot(Luffu, tt.dot(Kuf, r))
         mus = self.mean_func(Xnew) + tt.dot(Ksu, Kuuiu)
         if self.approx == 'FITC':
-            Lambda = self.cov_func.diag(X) - project_inverse(Kuf.T, Luu, diag=True)
+            Kff_diag = self.cov_func(X, diag=True)
+            Qff_diag = project_inverse(Kuf.T, Luu, diag=True)
+            Lambda = tt.clip(Kff_diag - Qff_diag, 0.0, np.inf)
             Qsf = project_inverse(Ksu, Luu, P_T=Kuf)
             mus += tt.dot(Qsf, f / Lambda)
         Qss = project_inverse(Ksu, Luu)
         Kss = self.cov_func(Xnew)
-        cov = tt.clip(Kss - Qss, 0, np.inf)
+        cov = Kss - Qss
         if self.approx == 'FITC':
             cov -= tt.dot(Qsf, tt.transpose(Qsf / Lambda))
+        cov = tt.clip(cov, 0.0, np.inf)
         return mus, cov
 
     def conditional(self, name, Xnew, given=None, **kwargs):
