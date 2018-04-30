@@ -705,7 +705,7 @@ class TestLatentVsLatentSparse(object):
         with model:
             p = gp.conditional("p", Xnew)
         logp_params['p'] = pnew
-        self.logp_coditional = model.logp(logp_params)
+        self.logp_conditional = model.logp(logp_params)
         self.X = X
         self.Xnew = Xnew
         self.y = y
@@ -713,7 +713,7 @@ class TestLatentVsLatentSparse(object):
         self.gp = gp
 
     @pytest.mark.parametrize('approx', ['FITC', 'DTC'])
-    def testPriorApproximations(self, approx):
+    def test_approximations(self, approx):
         with pm.Model() as model:
             cov_func = pm.gp.cov.ExpQuad(3, [0.1, 0.2, 0.3])
             mean_func = pm.gp.mean.Constant(0.5)
@@ -726,27 +726,24 @@ class TestLatentVsLatentSparse(object):
         }
         if approx == 'FITC':
             model_params['f'] = self.y  # need to specify as well since f ~ Normal(f_, diag(Kff-Qff))
-        approx_logp = model.logp(model_params)
-        npt.assert_allclose(approx_logp, self.logp_prior, atol=0, rtol=1e-2)
-
-    @pytest.mark.parametrize('approx', ['FITC', 'DTC'])
-    def testConditionalApproximations(self, approx):
-        with pm.Model() as model:
-            cov_func = pm.gp.cov.ExpQuad(3, [0.1, 0.2, 0.3])
-            mean_func = pm.gp.mean.Constant(0.5)
-            gp = pm.gp.LatentSparse(mean_func, cov_func, approx=approx)
-            f = gp.prior("f", self.X, self.X)
+            print(pm.distributions.draw_values([f.distribution.sd], model_params))
+        # test prior logp
+        approx_prior_logp = model.logp(model_params)
+        if approx == 'FITC':
+            # for X=Xu FITC degenerates to DTC and the small residual diag(Kff - Qff) offsets the logp
+            fitc_logp = pm.Normal.dist(mu=f.distribution.mu, sd=f.distribution.sd).logp(self.y)
+            atol, = pm.distributions.draw_values([fitc_logp], model_params)
+            atol = -np.sum(atol)
+        else:
+            atol = 0
+        npt.assert_allclose(approx_prior_logp, self.logp_prior, atol=atol, rtol=1e-2)
+        # test prior + conditional logp
+        with model:
             p = gp.conditional("p", self.Xnew)
-        chol = np.linalg.cholesky(cov_func(self.X).eval())
-        y_rotated = np.linalg.solve(chol, self.y - mean_func(self.X).eval())
-        model_params = {
-            "f_u_rotated_": y_rotated,
-            "p": self.pnew
-        }
-        if approx == 'FITC':
-            model_params['f'] = self.y  # need to specify as well since f ~ Normal(f_, diag(Kff-Qff))
-        approx_logp = model.logp(model_params)
-        npt.assert_allclose(approx_logp, self.logp_coditional, atol=0, rtol=5e-2)
+        model_params['p'] = self.pnew
+        approx_cond_logp = model.logp(model_params)
+        npt.assert_allclose(approx_cond_logp, self.logp_conditional, atol=0, rtol=5e-2)
+
 
 
 class TestMarginalVsMarginalSparse(object):
