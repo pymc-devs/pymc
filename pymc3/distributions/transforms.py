@@ -255,35 +255,15 @@ class Ordered(ElemwiseTransform):
         return out
 
     def forward_val(self, x, point=None):
-        x, = draw_values([x], point=point)
-        return self.forward(x)
+        y = np.zeros_like(x)
+        y[0] = x[0]
+        y[1:] = np.log(x[1:] - x[:-1])
+        return y
 
     def jacobian_det(self, y):
         return tt.sum(y[1:])
 
 ordered = Ordered()
-
-
-class Composed(Transform):
-    def __init__(self, transform1, transform2):
-        self._transform1 = transform1
-        self._transform2 = transform2
-        self.name = '_'.join([transform1.name, transform2.name])
-
-    def forward(self, x):
-        return self._transform2.forward(self._transform1.forward(x))
-
-    def forward_val(self, x, point=None):
-        return self.forward(x)
-
-    def backward(self, y):
-        return self._transform1.backward(self._transform2.backward(y))
-
-    def jacobian_det(self, y):
-        y2 = self._transform2.backward(y)
-        det1 = self._transform1.jacobian_det(y2)
-        det2 = self._transform2.jacobian_det(y)
-        return det1 + det2
 
 
 class SumTo1(Transform):
