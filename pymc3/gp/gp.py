@@ -400,7 +400,6 @@ class LatentSparse(Latent):
         cov = Kss - Qss
         if self.approx == 'FITC':
             cov -= tt.dot(Qsf, tt.transpose(Qsf / Lambda))
-        cov = tt.clip(cov, 0.0, np.inf)
         return mus, cov
 
     def conditional(self, name, Xnew, given=None, **kwargs):
