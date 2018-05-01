@@ -239,7 +239,7 @@ class UpperBound(ElemwiseTransform):
 upperbound = UpperBound
 
 
-class Ordered(ElemwiseTransform):
+class Ordered(Transform):
     name = "ordered"
 
     def backward(self, y):
