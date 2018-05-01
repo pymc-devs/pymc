@@ -1,12 +1,13 @@
 # Release Notes
 
 
-## PyMC 3.5 (Unreleaased)
+## PyMC 3.5 (Unreleased)
 
 
 ### New features
 
 - Add `check_test_point` method to `pm.Model`
+- Add `Ordered` Transformation and `OrderedLogistic` distribution
 
 ### Fixes
 
