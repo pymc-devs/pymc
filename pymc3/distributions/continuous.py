@@ -19,14 +19,15 @@ from . import transforms
 from pymc3.util import get_variable_name
 from .special import log_i0
 from ..math import invlogit, logit
-from .dist_math import bound, logpow, gammaln, betaln, std_cdf, alltrue_elemwise, SplineWrapper
+from .dist_math import bound, logpow, gammaln, betaln, std_cdf, alltrue_elemwise, SplineWrapper, i0, i1
 from .distribution import Continuous, draw_values, generate_samples
 
 __all__ = ['Uniform', 'Flat', 'HalfFlat', 'Normal', 'Beta', 'Exponential',
            'Laplace', 'StudentT', 'Cauchy', 'HalfCauchy', 'Gamma', 'Weibull',
            'HalfStudentT', 'Lognormal', 'ChiSquared', 'HalfNormal', 'Wald',
            'Pareto', 'InverseGamma', 'ExGaussian', 'VonMises', 'SkewNormal',
-           'Triangular', 'Gumbel', 'Logistic', 'LogitNormal', 'Interpolated', 'Rice']
+           'Triangular', 'Gumbel', 'Logistic', 'LogitNormal', 'Interpolated',
+           'Rice']
 
 
 class PositiveContinuous(Continuous):
@@ -2477,7 +2478,8 @@ class Rice(Continuous):
     def logp(self, value):
         nu = self.nu
         sd = self.sd
-        return bound(tt.log(value / (sd**2) * tt.exp(-(value**2 + nu**2) / (2 * sd**2)) * i0(value * nu / (sd**2))),
+        x = value / sd
+        return bound(tt.log(x * tt.exp((-(x**2 + nu**2)) / 2) * i0(x * nu) / sd),
                      sd >= 0,
                      nu >= 0,
                      value > 0,
