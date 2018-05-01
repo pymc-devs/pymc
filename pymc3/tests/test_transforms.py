@@ -176,7 +176,7 @@ def test_circular():
 
 
 def test_ordered():
-    check_vector_transform_identity(tr.ordered, SortedVector(6))
+    check_vector_transform(tr.ordered, SortedVector(6))
     check_jacobian_det(tr.ordered, Vector(R, 2),
                        tt.dvector, np.array([0, 0]), elemwise=False)
     vals = get_values(tr.ordered, Vector(R, 3),
