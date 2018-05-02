@@ -16,7 +16,7 @@ from ..distributions import (DensityDist, Categorical, Multinomial, VonMises, Di
                              Flat, LKJCorr, Wald, ChiSquared, HalfNormal, DiscreteUniform,
                              Bound, Uniform, Triangular, Binomial, SkewNormal, DiscreteWeibull,
                              Gumbel, Logistic, OrderedLogistic, LogitNormal, Interpolated,
-                             ZeroInflatedBinomial, HalfFlat, AR1, KroneckerNormal)
+                             ZeroInflatedBinomial, HalfFlat, AR1, KroneckerNormal, Rice)
 
 from ..distributions import continuous
 from pymc3.theanof import floatX
@@ -1057,8 +1057,9 @@ class TestMatchesScipy(SeededTest):
             Beta('beta', alpha=1., beta=1., shape=(10, 20))
 
     def test_rice(self):
-        self.pymc3_matches_scipy(Rice, Rplus, {'nu': Rplus, 'sd': Rplus},
-                                 lambda value, nu, sd: sp.rice.logpdf(value / sd, loc=nu, scale=sd))
+        self.pymc3_matches_scipy(Rice, Rplusbig, {'nu': Rplusbig, 'sd': Rplusbig},
+                                 lambda value, nu, sd: sp.rice.logpdf(value, b=nu, loc=0, scale=sd),
+                                 decimal=select_by_precision(float64=3, float32=1))
 
     @pytest.mark.xfail(condition=(theano.config.floatX == "float32"), reason="Fails on float32")
     def test_interpolated(self):

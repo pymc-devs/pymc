@@ -19,7 +19,7 @@ from . import transforms
 from pymc3.util import get_variable_name
 from .special import log_i0
 from ..math import invlogit, logit
-from .dist_math import bound, logpow, gammaln, betaln, std_cdf, alltrue_elemwise, SplineWrapper
+from .dist_math import bound, logpow, gammaln, betaln, std_cdf, alltrue_elemwise, SplineWrapper, i0, i1
 from .distribution import Continuous, draw_values, generate_samples
 
 __all__ = ['Uniform', 'Flat', 'HalfFlat', 'Normal', 'Beta', 'Exponential',
@@ -2237,18 +2237,19 @@ class Rice(Continuous):
 
     def random(self, point=None, size=None, repeat=None):
         nu, sd = draw_values([self.nu, self.sd],
-                                  point=point)
+                             point=point)
         return generate_samples(stats.rice.rvs, b=nu, scale=sd, loc=0,
                                 dist_shape=self.shape, size=size)
 
     def logp(self, value):
         nu = self.nu
         sd = self.sd
-        return bound(tt.log(value / (sd**2) * tt.exp(-(value**2 + nu**2) / (2 * sd**2)) * i0(value * nu / (sd**2))),
+        x = value / sd
+        return bound(tt.log(x * tt.exp((-(x ** 2 + nu ** 2)) / 2)) + log_i0(x * nu) - tt.log(sd),
                      sd >= 0,
                      nu >= 0,
                      value > 0,
-        )
+                     )
 
 
 class Logistic(Continuous):
