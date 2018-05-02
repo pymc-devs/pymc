@@ -184,6 +184,7 @@ def test_ordered():
                       tt.dvector, np.zeros(3))
     close_to_logical(np.diff(vals) >= 0, True, tol)
 
+
 def test_ordered_logp():
     testval = np.asarray([-1., 1., 4.])
     with pm.Model() as m:

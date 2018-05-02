@@ -246,25 +246,25 @@ class Ordered(Transform):
     name = "ordered"
 
     def backward(self, y):
-        out = tt.zeros(y.shape)
-        out = tt.inc_subtensor(out[0], y[0])
-        out = tt.inc_subtensor(out[1:], tt.exp(y[1:]))
-        return tt.cumsum(out)
+        x = tt.zeros(y.shape)
+        x = tt.inc_subtensor(x[..., 0], y[..., 0])
+        x = tt.inc_subtensor(x[..., 1:], tt.exp(y[..., 1:]))
+        return tt.cumsum(x, axis=-1)
 
     def forward(self, x):
-        out = tt.zeros(x.shape)
-        out = tt.inc_subtensor(out[0], x[0])
-        out = tt.inc_subtensor(out[1:], tt.log(x[1:] - x[:-1]))
-        return out
+        y = tt.zeros(x.shape)
+        y = tt.inc_subtensor(y[..., 0], x[..., 0])
+        y = tt.inc_subtensor(y[..., 1:], tt.log(x[..., 1:] - x[..., :-1]))
+        return y
 
     def forward_val(self, x, point=None):
         y = np.zeros_like(x)
-        y[0] = x[0]
-        y[1:] = np.log(x[1:] - x[:-1])
+        y[..., 0] = x[..., 0]
+        y[..., 1:] = np.log(x[..., 1:] - x[..., :-1])
         return y
 
     def jacobian_det(self, y):
-        return tt.sum(y[1:])
+        return tt.sum(y[..., 1:], axis=-1)
 
 ordered = Ordered()
 
