@@ -8,7 +8,8 @@ import warnings
 from pymc3.util import get_variable_name
 from .dist_math import bound, factln, binomln, betaln, logpow
 from .distribution import Discrete, draw_values, generate_samples, reshape_sampled
-from pymc3.math import tround, sigmoid, logaddexp
+from pymc3.math import tround, sigmoid, logaddexp, logit, log1pexp
+
 
 __all__ = ['Binomial',  'BetaBinomial',  'Bernoulli',  'DiscreteWeibull',
            'Poisson', 'NegativeBinomial', 'ConstantDist', 'Constant',
