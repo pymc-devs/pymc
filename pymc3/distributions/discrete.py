@@ -1141,7 +1141,7 @@ class OrderedLogistic(Categorical):
     .. code:: python
 
         # Generate data for a simple 1 dimensional example problem
-        n1 = 300; n2 = 300; n3 = 300
+        n1_c = 300; n2_c = 300; n3_c = 300
         cluster1 = np.random.randn(n1_c) + -1
         cluster2 = np.random.randn(n2_c) + 0
         cluster3 = np.random.randn(n3_c) + 2

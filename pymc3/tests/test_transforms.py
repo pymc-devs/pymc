@@ -1,4 +1,5 @@
 import pymc3.distributions.transforms as tr
+import pymc3 as pm
 import numpy as np
 import theano
 import theano.tensor as tt
@@ -183,3 +184,11 @@ def test_ordered():
                       tt.dvector, np.zeros(3))
     close_to_logical(np.diff(vals) >= 0, True, tol)
 
+def test_ordered_logp():
+    testval = np.asarray([-1., 1., 4.])
+    with pm.Model() as m:
+        x = pm.Normal('x', 0., 1., shape=3, transform=tr.ordered, testval=testval)
+    logp = m.logp(m.test_point)
+    logp_ref = (pm.Normal.dist(0., 1.).logp(testval).sum()
+                + tr.ordered.jacobian_det(tr.ordered.forward(testval))).sum().eval()
+    close_to(logp, logp_ref, tol)
