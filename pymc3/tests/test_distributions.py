@@ -2,6 +2,7 @@ from __future__ import division
 
 import itertools
 
+from pymc3.distributions.continuous import Rice
 from .helpers import SeededTest, select_by_precision
 from ..vartypes import continuous_types
 from ..model import Model, Point, Potential, Deterministic
@@ -1045,6 +1046,12 @@ class TestMatchesScipy(SeededTest):
     def test_multidimensional_beta_construction(self):
         with Model():
             Beta('beta', alpha=1., beta=1., shape=(10, 20))
+
+    def test_rice(self):
+        self.pymc3_matches_scipy(Rice, Rplus, {'nu': Rplus, 'sd': Rplus},
+                                 lambda value, nu, sd: sp.rice.logpdf(value, b=nu, loc=0, scale=sd),
+                                 decimal=select_by_precision(float64=5, float32=1)
+                                 )
 
     @pytest.mark.xfail(condition=(theano.config.floatX == "float32"), reason="Fails on float32")
     def test_interpolated(self):
