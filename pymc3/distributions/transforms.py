@@ -124,7 +124,7 @@ class LogExpM1(ElemwiseTransform):
         return tt.log(1.-tt.exp(-x)) + x
 
     def forward_val(self, x, point=None):
-        return self.forward(x)
+        return np.log(1.-np.exp(-x)) + x
 
     def jacobian_det(self, x):
         return -tt.nnet.softplus(-x)
