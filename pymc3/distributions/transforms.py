@@ -80,8 +80,11 @@ class TransformedDistribution(distribution.Distribution):
             self.type = tt.TensorType(v.dtype, b)
 
     def logp(self, x):
-        return (self.dist.logp(self.transform_used.backward(x)) +
-                self.transform_used.jacobian_det(x))
+        logp_nojac = self.logp_nojac(x)
+        jacobian_det = self.transform_used.jacobian_det(x)
+        if logp_nojac.ndim > jacobian_det.ndim:
+            logp_nojac = logp_nojac.sum(axis=-1)
+        return logp_nojac + jacobian_det
 
     def logp_nojac(self, x):
         return self.dist.logp(self.transform_used.backward(x))
