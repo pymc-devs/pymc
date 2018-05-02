@@ -12,8 +12,8 @@ https://discourse.pymc.io/t/order-statistics-in-pymc3/617
 
 
 # data
-K = 5 # number of items being ranked
-J = 100 # number of raters
+K = 5  # number of items being ranked
+J = 100  # number of raters
 yreal = np.argsort(np.random.randn(1, K), axis=-1)
 y = np.argsort(yreal + np.random.randn(J, K), axis=-1)
 
