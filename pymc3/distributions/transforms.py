@@ -287,13 +287,15 @@ class SumTo1(Transform):
         return x[..., :-1]
 
     def jacobian_det(self, x):
-        return floatX(0.)
+        y = tt.zeros(x.shape)
+        return tt.sum(y, axis=-1)
 
 sum_to_1 = SumTo1()
 
 
 class StickBreaking(Transform):
-    """Transforms K dimensional simplex space (values in [0,1] and sum to 1) to K - 1 vector of real values.
+    """
+    Transforms K dimensional simplex space (values in [0,1] and sum to 1) to K - 1 vector of real values.
     Primarily borrowed from the STAN implementation.
 
     Parameters
@@ -358,7 +360,7 @@ stick_breaking = StickBreaking()
 t_stick_breaking = lambda eps: StickBreaking(eps)
 
 
-class Circular(Transform):
+class Circular(ElemwiseTransform):
     """Transforms a linear space into a circular one.
     """
     name = "circular"
@@ -373,7 +375,7 @@ class Circular(Transform):
         return x
 
     def jacobian_det(self, x):
-        return floatX(0.)
+        return tt.zeros(x.shape)
 
 circular = Circular()
 
