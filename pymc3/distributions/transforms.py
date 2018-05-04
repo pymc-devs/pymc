@@ -270,21 +270,24 @@ ordered = Ordered()
 
 
 class SumTo1(Transform):
-    """Transforms K dimensional simplex space (values in [0,1] and sum to 1) to K - 1 vector of values in [0,1]
+    """
+    Transforms K dimensional simplex space (values in [0,1] and sum to 1) to K - 1 vector of values in [0,1]
+    This Transformation operates on the last dimension of the input tensor.
     """
     name = "sumto1"
 
     def backward(self, y):
-        return tt.concatenate([y, 1 - tt.sum(y, keepdims=True)])
+        remaining = 1 - tt.sum(y[..., :], axis=-1, keepdims=True)
+        return tt.concatenate([y[..., :], remaining], axis=-1)
 
     def forward(self, x):
-        return x[:-1]
+        return x[..., :-1]
 
     def forward_val(self, x, point=None):
-        return x[:-1]
+        return x[..., :-1]
 
     def jacobian_det(self, x):
-        return 0
+        return floatX(0.)
 
 sum_to_1 = SumTo1()
 
@@ -370,7 +373,7 @@ class Circular(Transform):
         return x
 
     def jacobian_det(self, x):
-        return 0
+        return floatX(0.)
 
 circular = Circular()
 
