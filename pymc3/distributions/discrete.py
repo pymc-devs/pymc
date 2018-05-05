@@ -8,13 +8,13 @@ import warnings
 from pymc3.util import get_variable_name
 from .dist_math import bound, factln, binomln, betaln, logpow
 from .distribution import Discrete, draw_values, generate_samples, reshape_sampled
-from pymc3.math import tround
-from ..math import logaddexp, logit, log1pexp
+from pymc3.math import tround, sigmoid, logaddexp, logit, log1pexp
+
 
 __all__ = ['Binomial',  'BetaBinomial',  'Bernoulli',  'DiscreteWeibull',
            'Poisson', 'NegativeBinomial', 'ConstantDist', 'Constant',
            'ZeroInflatedPoisson', 'ZeroInflatedBinomial', 'ZeroInflatedNegativeBinomial',
-           'DiscreteUniform', 'Geometric', 'Categorical']
+           'DiscreteUniform', 'Geometric', 'Categorical', 'OrderedLogistic']
 
 
 class Binomial(Discrete):
@@ -1100,3 +1100,92 @@ class ZeroInflatedNegativeBinomial(Discrete):
                 r'(\mathit{{mu}}={},~\mathit{{alpha}}={},~'
                 r'\mathit{{psi}}={})$'
                 .format(name, name_mu, name_alpha, name_psi))
+
+
+class OrderedLogistic(Categorical):
+    R"""
+    Ordered Logistic log-likelihood.
+
+    Useful for regression on ordinal data values whose values range
+    from 1 to K as a function of some predictor, :math:`\eta`. The
+    cutpoints, :math:`c`, separate which ranges of :math:`\eta` are
+    mapped to which of the K observed dependent variables.  The number
+    of cutpoints is K - 1.  It is recommended that the cutpoints are
+    constrained to be ordered.
+
+    .. math::
+
+       f(k \mid \eta, c) = \left\{
+         \begin{array}{l}
+           1 - \text{logit}^{-1}(\eta - c_1)
+             \,, \text{if } k = 0 \\
+           \text{logit}^{-1}(\eta - c_{k - 1}) -
+           \text{logit}^{-1}(\eta - c_{k})
+             \,, \text{if } 0 < k < K \\
+           \text{logit}^{-1}(\eta - c_{K - 1})
+             \,, \text{if } k = K \\
+         \end{array}
+       \right.
+
+    Parameters
+    ----------
+    eta : float
+        The predictor.
+    c : array
+        The length K - 1 array of cutpoints which break :math:`\eta` into
+        ranges.  Do not explicitly set the first and last elements of
+        :math:`c` to negative and positive infinity.
+
+    Example
+    --------
+    .. code:: python
+
+        # Generate data for a simple 1 dimensional example problem
+        n1_c = 300; n2_c = 300; n3_c = 300
+        cluster1 = np.random.randn(n1_c) + -1
+        cluster2 = np.random.randn(n2_c) + 0
+        cluster3 = np.random.randn(n3_c) + 2
+
+        x = np.concatenate((cluster1, cluster2, cluster3))
+        y = np.concatenate((1*np.ones(n1_c),
+                            2*np.ones(n2_c),
+                            3*np.ones(n3_c))) - 1
+
+        # Ordered logistic regression
+        with pm.Model() as model:
+            cutpoints = pm.Normal("cutpoints", mu=[-1,1], sd=10, shape=2,
+                                  transform=pm.distributions.transforms.ordered)
+            y_ = pm.OrderedLogistic("y", cutpoints=cutpoints, eta=x, observed=y)
+            tr = pm.sample(1000)
+
+        # Plot the results
+        plt.hist(cluster1, 30, alpha=0.5);
+        plt.hist(cluster2, 30, alpha=0.5);
+        plt.hist(cluster3, 30, alpha=0.5);
+        plt.hist(tr["cutpoints"][:,0], 80, alpha=0.2, color='k');
+        plt.hist(tr["cutpoints"][:,1], 80, alpha=0.2, color='k');
+
+    """
+
+    def __init__(self, eta, cutpoints, *args, **kwargs):
+        self.eta = tt.as_tensor_variable(eta)
+        self.cutpoints = tt.as_tensor_variable(cutpoints)
+
+        pa = sigmoid(tt.shape_padleft(self.cutpoints) - tt.shape_padright(self.eta))
+        p_cum = tt.concatenate([
+            tt.zeros_like(tt.shape_padright(pa[:, 0])),
+            pa,
+            tt.ones_like(tt.shape_padright(pa[:, 0]))
+        ], axis=1)
+        p = p_cum[:, 1:] - p_cum[:, :-1]
+
+        super(OrderedLogistic, self).__init__(p=p, *args, **kwargs)
+
+    def _repr_latex_(self, name=None, dist=None):
+        if dist is None:
+            dist = self
+        name_eta = get_variable_name(dist.eta)
+        name_cutpoints = get_variable_name(dist.cutpoints)
+        return (r'${} \sim \text{{OrderedLogistic}}'
+                r'(\mathit{{eta}}={}, \mathit{{cutpoints}}={}$'
+                .format(name, name_eta, name_cutpoints))

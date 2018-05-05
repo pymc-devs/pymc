@@ -10,7 +10,8 @@ import numpy as np
 from scipy.special import logit as nplogit
 
 __all__ = ['transform', 'stick_breaking', 'logodds', 'interval', 'log_exp_m1',
-           'lowerbound', 'upperbound', 'log', 'sum_to_1', 't_stick_breaking']
+           'lowerbound', 'upperbound', 'ordered', 'log', 'sum_to_1',
+           't_stick_breaking']
 
 
 class Transform(object):
@@ -79,8 +80,11 @@ class TransformedDistribution(distribution.Distribution):
             self.type = tt.TensorType(v.dtype, b)
 
     def logp(self, x):
-        return (self.dist.logp(self.transform_used.backward(x)) +
-                self.transform_used.jacobian_det(x))
+        logp_nojac = self.logp_nojac(x)
+        jacobian_det = self.transform_used.jacobian_det(x)
+        if logp_nojac.ndim > jacobian_det.ndim:
+            logp_nojac = logp_nojac.sum(axis=-1)
+        return logp_nojac + jacobian_det
 
     def logp_nojac(self, x):
         return self.dist.logp(self.transform_used.backward(x))
@@ -108,20 +112,20 @@ log = Log()
 
 class LogExpM1(ElemwiseTransform):
     name = "log_exp_m1"
-    
+
     def backward(self, x):
         return tt.nnet.softplus(x)
-    
+
     def forward(self, x):
         """Inverse operation of softplus
-        y = Log(Exp(x) - 1) 
+        y = Log(Exp(x) - 1)
           = Log(1 - Exp(-x)) + x
         """
         return tt.log(1.-tt.exp(-x)) + x
-    
+
     def forward_val(self, x, point=None):
         return np.log(1.-np.exp(-x)) + x
-    
+
     def jacobian_det(self, x):
         return -tt.nnet.softplus(-x)
 
@@ -238,28 +242,60 @@ class UpperBound(ElemwiseTransform):
 upperbound = UpperBound
 
 
+class Ordered(Transform):
+    name = "ordered"
+
+    def backward(self, y):
+        x = tt.zeros(y.shape)
+        x = tt.inc_subtensor(x[..., 0], y[..., 0])
+        x = tt.inc_subtensor(x[..., 1:], tt.exp(y[..., 1:]))
+        return tt.cumsum(x, axis=-1)
+
+    def forward(self, x):
+        y = tt.zeros(x.shape)
+        y = tt.inc_subtensor(y[..., 0], x[..., 0])
+        y = tt.inc_subtensor(y[..., 1:], tt.log(x[..., 1:] - x[..., :-1]))
+        return y
+
+    def forward_val(self, x, point=None):
+        y = np.zeros_like(x)
+        y[..., 0] = x[..., 0]
+        y[..., 1:] = np.log(x[..., 1:] - x[..., :-1])
+        return y
+
+    def jacobian_det(self, y):
+        return tt.sum(y[..., 1:], axis=-1)
+
+ordered = Ordered()
+
+
 class SumTo1(Transform):
-    """Transforms K dimensional simplex space (values in [0,1] and sum to 1) to K - 1 vector of values in [0,1]
+    """
+    Transforms K dimensional simplex space (values in [0,1] and sum to 1) to K - 1 vector of values in [0,1]
+    This Transformation operates on the last dimension of the input tensor.
     """
     name = "sumto1"
 
     def backward(self, y):
-        return tt.concatenate([y, 1 - tt.sum(y, keepdims=True)])
+        remaining = 1 - tt.sum(y[..., :], axis=-1, keepdims=True)
+        return tt.concatenate([y[..., :], remaining], axis=-1)
 
     def forward(self, x):
-        return x[:-1]
+        return x[..., :-1]
 
     def forward_val(self, x, point=None):
-        return x[:-1]
+        return x[..., :-1]
 
     def jacobian_det(self, x):
-        return 0
+        y = tt.zeros(x.shape)
+        return tt.sum(y, axis=-1)
 
 sum_to_1 = SumTo1()
 
 
 class StickBreaking(Transform):
-    """Transforms K dimensional simplex space (values in [0,1] and sum to 1) to K - 1 vector of real values.
+    """
+    Transforms K dimensional simplex space (values in [0,1] and sum to 1) to K - 1 vector of real values.
     Primarily borrowed from the STAN implementation.
 
     Parameters
@@ -324,7 +360,7 @@ stick_breaking = StickBreaking()
 t_stick_breaking = lambda eps: StickBreaking(eps)
 
 
-class Circular(Transform):
+class Circular(ElemwiseTransform):
     """Transforms a linear space into a circular one.
     """
     name = "circular"
@@ -339,7 +375,7 @@ class Circular(Transform):
         return x
 
     def jacobian_det(self, x):
-        return 0
+        return tt.zeros(x.shape)
 
 circular = Circular()
 

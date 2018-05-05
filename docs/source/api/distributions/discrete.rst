@@ -18,6 +18,7 @@ Discrete
    Categorical
    DiscreteWeibull
    Constant
+   OrderedLogistic
 
 .. automodule:: pymc3.distributions.discrete
    :members:

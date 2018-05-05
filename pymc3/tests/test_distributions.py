@@ -1,6 +1,7 @@
 from __future__ import division
 
 import itertools
+import sys
 
 from .helpers import SeededTest, select_by_precision
 from ..vartypes import continuous_types
@@ -14,8 +15,9 @@ from ..distributions import (DensityDist, Categorical, Multinomial, VonMises, Di
                              NegativeBinomial, Geometric, Exponential, ExGaussian, Normal,
                              Flat, LKJCorr, Wald, ChiSquared, HalfNormal, DiscreteUniform,
                              Bound, Uniform, Triangular, Binomial, SkewNormal, DiscreteWeibull,
-                             Gumbel, Logistic, LogitNormal, Interpolated, ZeroInflatedBinomial,
-                             HalfFlat, AR1, KroneckerNormal)
+                             Gumbel, Logistic, OrderedLogistic, LogitNormal, Interpolated,
+                             ZeroInflatedBinomial, HalfFlat, AR1, KroneckerNormal)
+
 from ..distributions import continuous
 from pymc3.theanof import floatX
 from numpy import array, inf, log, exp
@@ -212,6 +214,14 @@ def Vector(D, n):
     return ProductDomain([D] * n)
 
 
+def SortedVector(n):
+    vals = []
+    np.random.seed(42)
+    for _ in range(10):
+        vals.append(np.sort(np.random.randn(n)))
+    return Domain(vals, edges=(None, None))
+
+
 def RealMatrix(n, m):
     vals = []
     np.random.seed(42)
@@ -316,7 +326,6 @@ def categorical_logpdf(value, p):
     else:
         return -inf
 
-
 def mvt_logpdf(value, nu, Sigma, mu=0):
     d = len(Sigma)
     dist = np.atleast_2d(value) - mu
@@ -329,10 +338,17 @@ def mvt_logpdf(value, nu, Sigma, mu=0):
     logp = norm - logdet - (nu + d) / 2. * np.log1p((trafo * trafo).sum(-1) / nu)
     return logp.sum()
 
-
 def AR1_logpdf(value, k, tau_e):
     return (sp.norm(loc=0,scale=1/np.sqrt(tau_e)).logpdf(value[0]) +
             sp.norm(loc=k*value[:-1],scale=1/np.sqrt(tau_e)).logpdf(value[1:]).sum())
+
+def invlogit(x, eps=sys.float_info.epsilon):
+    return (1. - 2. * eps) / (1. + np.exp(-x)) + eps
+
+def orderedlogistic_logpdf(value, eta, cutpoints):
+    c = np.concatenate(([-np.inf], cutpoints, [np.inf]))
+    p = invlogit(eta - c[value]) - invlogit(eta - c[value + 1])
+    return np.log(p)
 
 class Simplex(object):
     def __init__(self, n):
@@ -986,6 +1002,12 @@ class TestMatchesScipy(SeededTest):
     def test_categorical(self, n):
         self.pymc3_matches_scipy(Categorical, Domain(range(n), 'int64'), {'p': Simplex(n)},
                                  lambda value, p: categorical_logpdf(value, p))
+
+    @pytest.mark.parametrize('n', [2, 3, 4])
+    def test_orderedlogistic(self, n):
+        self.pymc3_matches_scipy(OrderedLogistic, Domain(range(n), 'int64'),
+                                 {'eta': R, 'cutpoints': Vector(R, n-1)},
+                                 lambda value, eta, cutpoints: orderedlogistic_logpdf(value, eta, cutpoints))
 
     def test_densitydist(self):
         def logp(x):

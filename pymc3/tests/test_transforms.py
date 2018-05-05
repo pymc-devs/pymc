@@ -1,16 +1,18 @@
 import pymc3.distributions.transforms as tr
+import pymc3 as pm
 import numpy as np
 import theano
 import theano.tensor as tt
-from .test_distributions import Simplex, Rplusbig, Rminusbig, Unit, R, Vector, MultiSimplex, Circ
-
+from .test_distributions import (Simplex, Rplusbig, Rminusbig,
+                                 Unit, R, Vector, MultiSimplex,
+                                 Circ, SortedVector)
 from .checks import close_to, close_to_logical
 from ..theanof import jacobian
 
 
 # some transforms (stick breaking) require additon of small slack in order to be numerically
 # stable. The minimal addable slack for float32 is higher thus we need to be less strict
-tol = 1e-7 if theano.config.floatX == 'flaot64' else 1e-6
+tol = 1e-7 if theano.config.floatX == 'float64' else 1e-6
 
 
 def check_transform(transform, domain, constructor=tt.dscalar, test=0):
@@ -20,7 +22,6 @@ def check_transform(transform, domain, constructor=tt.dscalar, test=0):
     forward_f = theano.function([x], transform.forward(x))
     # test transform identity
     identity_f = theano.function([x], transform.backward(transform.forward(x)))
-
     for val in domain.vals:
         close_to(val, identity_f(val), tol)
         close_to(transform.forward_val(val), forward_f(val), tol)
@@ -173,3 +174,22 @@ def test_circular():
     close_to_logical(vals < np.pi, True, tol)
 
     assert isinstance(trans.forward(1), tt.TensorConstant)
+
+
+def test_ordered():
+    check_vector_transform(tr.ordered, SortedVector(6))
+    check_jacobian_det(tr.ordered, Vector(R, 2),
+                       tt.dvector, np.array([0, 0]), elemwise=False)
+    vals = get_values(tr.ordered, Vector(R, 3),
+                      tt.dvector, np.zeros(3))
+    close_to_logical(np.diff(vals) >= 0, True, tol)
+
+
+def test_ordered_logp():
+    testval = np.asarray([-1., 1., 4.])
+    with pm.Model() as m:
+        x = pm.Normal('x', 0., 1., shape=3, transform=tr.ordered, testval=testval)
+    logp = m.logp(m.test_point)
+    logp_ref = (pm.Normal.dist(0., 1.).logp(testval).sum()
+                + tr.ordered.jacobian_det(tr.ordered.forward(testval))).sum().eval()
+    close_to(logp, logp_ref, tol)
