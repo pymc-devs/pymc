@@ -5,7 +5,7 @@ import theano
 import theano.tensor as tt
 from .test_distributions import (Simplex, Rplusbig, Rminusbig,
                                  Unit, R, Vector, MultiSimplex,
-                                 Circ, SortedVector)
+                                 Circ, SortedVector, UnitSortedVector)
 from .checks import close_to, close_to_logical
 from ..theanof import jacobian
 
@@ -181,6 +181,16 @@ def test_ordered():
     check_jacobian_det(tr.ordered, Vector(R, 2),
                        tt.dvector, np.array([0, 0]), elemwise=False)
     vals = get_values(tr.ordered, Vector(R, 3),
+                      tt.dvector, np.zeros(3))
+    close_to_logical(np.diff(vals) >= 0, True, tol)
+
+
+def test_chain():
+    chain_tranf = tr.Chain([tr.logodds, tr.ordered])
+    check_vector_transform(chain_tranf, UnitSortedVector(3))
+    check_jacobian_det(chain_tranf, Vector(R, 2),
+                       tt.dvector, np.array([0, 0]), elemwise=False)
+    vals = get_values(chain_tranf, Vector(R, 3),
                       tt.dvector, np.zeros(3))
     close_to_logical(np.diff(vals) >= 0, True, tol)
 

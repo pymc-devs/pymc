@@ -398,3 +398,45 @@ class CholeskyCovPacked(Transform):
 
     def jacobian_det(self, y):
         return tt.sum(y[self.diag_idxs])
+
+
+class Chain(Transform):
+    def __init__(self, transform_list):
+        self.transform_list = transform_list
+        self.name = '_'.join([transf.name for transf in self.transform_list])
+
+    def forward(self, x):
+        y = x
+        for transf in self.transform_list:
+            y = transf.forward(y)
+        return y
+
+    def forward_val(self, x, point=None):
+        y = x
+        for transf in self.transform_list:
+            y = transf.forward_val(y)
+        return y
+
+    def backward(self, y):
+        x = y
+        for transf in reversed(self.transform_list):
+            x = transf.backward(x)
+        return x
+
+    def jacobian_det(self, y):
+        y = tt.as_tensor_variable(y)
+        det_list = []
+        ndim0 = y.ndim
+        for transf in reversed(self.transform_list):
+            det_ = transf.jacobian_det(y)
+            det_list.append(det_)
+            y = transf.backward(y)
+            ndim0 = min(ndim0, det_.ndim)
+        # match the shape of the smallest jacobian_det
+        det = 0.
+        for det_ in det_list:
+            if det_.ndim > ndim0:
+                det += det_.sum(axis=-1)
+            else:
+                det += det_
+        return det
