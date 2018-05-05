@@ -239,18 +239,6 @@ def simplex_values(n):
                 yield np.concatenate([[v], (1 - v) * vals])
 
 
-def scipy_exponweib_sucks(value, alpha, beta):
-    """
-    This function is required because SciPy's implementation of
-    the Weibull PDF fails for some valid combinations of parameters, while the
-    log-PDF fails for others.
-    """
-    pdf = np.log(sp.exponweib.pdf(value, 1, alpha, scale=beta))
-    if np.isinf(pdf):
-        return sp.exponweib.logpdf(value, 1, alpha, scale=beta)
-    return floatX(pdf)
-
-
 def normal_logpdf_tau(value, mu, tau):
     return normal_logpdf_cov(value, mu, np.linalg.inv(tau)).sum()
 
@@ -641,7 +629,7 @@ class TestMatchesScipy(SeededTest):
     @pytest.mark.xfail(condition=(theano.config.floatX == "float32"), reason="Fails on float32 due to inf issues")
     def test_weibull(self):
         self.pymc3_matches_scipy(Weibull, Rplus, {'alpha': Rplusbig, 'beta': Rplusbig},
-                                 scipy_exponweib_sucks,
+                                 lambda value, alpha, beta: sp.exponweib.logpdf(value, 1, alpha, scale=beta),
                                  )
 
     def test_half_studentt(self):
