@@ -74,7 +74,7 @@ class TransformedDistribution(distribution.Distribution):
             v.shape.tag.test_value, v.dtype,
             testval, dist.defaults, *args, **kwargs)
 
-        if transform.name == 'stickbreaking':
+        if ('ordered' or 'sumto1' or 'stickbreaking') in transform.name:
             b = np.hstack(((np.atleast_1d(self.shape) == 1)[:-1], False))
             # force the last dim not broadcastable
             self.type = tt.TensorType(v.dtype, b)
