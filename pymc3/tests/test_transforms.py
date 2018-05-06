@@ -207,6 +207,8 @@ def test_chain():
 
 class TestElementWiseLogp(SeededTest):
     def build_model(self, distfam, params, shape, transform, testval=None):
+        if testval is not None:
+            testval = pm.floatX(testval)
         with pm.Model() as m:
             distfam('x', shape=shape, transform=transform, testval=testval, **params)
         return m

@@ -7,7 +7,8 @@
 ### New features
 
 - Add `check_test_point` method to `pm.Model`
-- Add `Ordered` Transformation and `OrderedLogistic` distribution
+- Add `Ordered` transformation and `OrderedLogistic` distribution
+- Add `Chain` transformation
 
 ### Fixes
 
