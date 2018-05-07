@@ -269,8 +269,9 @@ class TestValueGradFunction(unittest.TestCase):
                          tau=np.ones(ndim),
                          shape=ndim)  # variance for the correlation matrix
             pm.HalfCauchy('nu', beta=10)
+            step = pm.NUTS()
 
-        func = ValueGradFunction(m.logpt, m.basic_RVs)
+        func = step._logp_dlogp_func
         func.set_extra_values(m.test_point)
         q = func.dict_to_array(m.test_point)
         logp, dlogp = func(q)
