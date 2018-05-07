@@ -698,7 +698,7 @@ class TestLatentVsLatentSparse(SeededTest):
         return X, y
 
     def setup_method(self):
-        super().setup_method()
+        super(TestLatentVsLatentSparse, self).setup_method()
         self.X_dim = 3
         self.y_scale = 0.01
         self.X, self.f = self.normal_data_pair(50)
