@@ -702,8 +702,7 @@ class MarginalSparse(Marginal):
         self.X = X
         self.Xu = Xu
         self.y = y
-        self.sigma = noise
-        if self.sigma is None:
+        if noise is None:
             sigma = kwargs.get('sigma')
             if sigma is None:
                 raise ValueError('noise argument must be specified')
@@ -712,6 +711,8 @@ class MarginalSparse(Marginal):
                 warnings.warn(
                     "The 'sigma' argument has been deprecated. Use 'noise' instead.",
                 DeprecationWarning)
+        else:
+            self.sigma = noise
         logp = functools.partial(self._build_marginal_likelihood_logp,
                                  X=X, Xu=Xu, sigma=noise)
         if is_observed:
