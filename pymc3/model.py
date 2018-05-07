@@ -713,7 +713,7 @@ class Model(six.with_metaclass(InitContextMeta, Context, Factor, WithMemoization
         """Theano scalar of log-probability of the model"""
         with self:
             factors = [var.logpt for var in self.basic_RVs] + self.potentials
-            logp = tt.add(*map(tt.sum, factors))
+            logp = tt.sum([tt.sum(factor) for factor in factors])
             if self.name:
                 logp.name = '__logp_%s' % self.name
             else:
@@ -725,7 +725,7 @@ class Model(six.with_metaclass(InitContextMeta, Context, Factor, WithMemoization
         """Theano scalar of log-probability of the model"""
         with self:
             factors = [var.logp_nojact for var in self.basic_RVs] + self.potentials
-            logp = tt.add(*map(tt.sum, factors))
+            logp = tt.sum([tt.sum(factor) for factor in factors])
             if self.name:
                 logp.name = '__logp_nojac_%s' % self.name
             else:
