@@ -8,6 +8,7 @@ import theano.tensor as tt
 import numpy as np
 import numpy.testing as npt
 import pytest
+from .helpers import SeededTest
 
 np.random.seed(101)
 
@@ -683,65 +684,99 @@ class TestMarginalVsLatent(object):
         npt.assert_allclose(latent_logp, self.logp, atol=5)
 
 
-class TestLatentVsLatentSparse(object):
+class TestLatentVsLatentSparse(SeededTest):
     R"""
-    Compare logp of models Latent and LatentSparse.
-    Should be nearly equal when inducing points are same as inputs.
+    Compare the logp of models Latent and LatentSparse.
+    Uses the property that the LatentSparse approximations
+    are an approximation of `Latent.conditional`
+    resulting in a logp offset given by the covariance terms.
     """
+
+    def normal_data_pair(self, N):
+        X = np.random.randn(N, self.X_dim)
+        y = np.random.randn(N) * self.y_scale
+        return X, y
+
     def setup_method(self):
-        X = np.random.randn(50,3)
-        y = np.random.randn(50)*0.01
-        Xnew = np.random.randn(60, 3)
-        pnew = np.random.randn(60)*0.01
-        with pm.Model() as model:
-            cov_func = pm.gp.cov.ExpQuad(3, [0.1, 0.2, 0.3])
-            mean_func = pm.gp.mean.Constant(0.5)
-            gp = pm.gp.Latent(mean_func, cov_func)
-            f = gp.prior("f", X)
-        chol = np.linalg.cholesky(cov_func(X).eval())
-        y_rotated = np.linalg.solve(chol, y - mean_func(X).eval())
-        logp_params = { 'f_rotated_': y_rotated }
-        self.logp_prior = model.logp(logp_params)
-        with model:
-            p = gp.conditional("p", Xnew)
-        logp_params['p'] = pnew
-        self.logp_conditional = model.logp(logp_params)
-        self.X = X
-        self.Xnew = Xnew
-        self.y = y
-        self.pnew = pnew
-        self.gp = gp
+        super().setup_method()
+        self.X_dim = 3
+        self.y_scale = 0.01
+        self.X, self.f = self.normal_data_pair(50)
+        self.Xu, self.u = self.normal_data_pair(20)
+        self.Xs, self.fs = self.normal_data_pair(30)
+        self.Xs += 6  # offset the test points to prevent degeneration for Xs~X
+        self.cov_func = self.y_scale**2 * pm.gp.cov.ExpQuad(self.X_dim, [0.1, 0.2, 0.3])
+        self.mean_func = pm.gp.mean.Constant(0.5)
 
-    @pytest.mark.parametrize('approx', ['FITC', 'DTC'])
-    def test_approximations(self, approx):
-        with pm.Model() as model:
-            cov_func = pm.gp.cov.ExpQuad(3, [0.1, 0.2, 0.3])
-            mean_func = pm.gp.mean.Constant(0.5)
-            gp = pm.gp.LatentSparse(mean_func, cov_func, approx=approx)
-            f = gp.prior("f", self.X, self.X)
-        chol = np.linalg.cholesky(cov_func(self.X).eval())
-        y_rotated = np.linalg.solve(chol, self.y - mean_func(self.X).eval())
-        model_params = {
-            "f_u_rotated_": y_rotated,
+        chol = np.linalg.cholesky(self.cov_func(self.Xu).eval())
+        self.u_rotated = np.linalg.solve(chol, self.u - self.mean_func(self.Xu).eval())
+        self.params_full = {
+            'u_rotated_': self.u_rotated,
+            'f_full': self.f,
+            'fs': self.fs,
+            'f_u_rotated_': self.u_rotated,
+            'f_FITC_noise_': self.f - self.mean_func(self.X).eval(),
         }
-        if approx == 'FITC':
-            model_params['f'] = self.y  # need to specify as well since f ~ Normal(f_, diag(Kff-Qff))
-        # test prior logp
-        approx_prior_logp = model.logp(model_params)
-        if approx == 'FITC':
-            # for X=Xu FITC degenerates to DTC and the small residual diag(Kff - Qff) offsets the logp
-            fitc_logp = pm.Normal.dist(mu=f.distribution.mu, sd=f.distribution.sd).logp_sum(self.y)
-            atol = -pm.distributions.draw_values([fitc_logp], model_params)[0]
-        else:
-            atol = 0
-        npt.assert_allclose(approx_prior_logp, self.logp_prior, atol=atol, rtol=1e-2)
-        # test prior + conditional logp
-        with model:
-            p = gp.conditional("p", self.Xnew)
-        model_params['p'] = self.pnew
-        approx_cond_logp = model.logp(model_params)
-        npt.assert_allclose(approx_cond_logp, self.logp_conditional, atol=0, rtol=5e-2)
 
+        with pm.Model() as self.model_full:
+            gp_full = pm.gp.Latent(self.mean_func, self.cov_func)
+            u = gp_full.prior('u', self.Xu)
+        self.logp_prior = self.model_full.logp(self.params_full)
+
+        with self.model_full:
+            f_full = gp_full.conditional('f_full', self.X)
+        self.logp_prior_large = self.model_full.logp(self.params_full)
+        # the logp coming from the conditional MvNormal with full cov
+        self.logp_full_cov = self.logp_prior_large - self.logp_prior
+
+        with self.model_full:
+            fs = gp_full.conditional('fs', self.Xs)
+        self.logp_conditional = self.model_full.logp(self.params_full)
+
+    def test_DTC_prior(self):
+        """The value of the DTC prior over (X, Xu) is the same as
+        the full Latent conditional *mean* value over (X | Xu, u).
+        The difference in logp is given only by the covariance matrix terms.
+        """
+        # The sparse model
+        with pm.Model() as model_sparse:
+            gp = pm.gp.LatentSparse(self.mean_func, self.cov_func, approx='DTC')
+            f = gp.prior('f', self.X, self.Xu)
+        sparse_logp = model_sparse.logp(self.params_full)
+        # The sparse logp is offset from the full logp by the covariance logp
+        npt.assert_allclose(sparse_logp, self.logp_prior_large, atol=np.abs(self.logp_full_cov))
+
+    def test_FITC_prior(self):
+        """The FITC prior over (X, Xu) is the same as
+        the Latent conditional over (X | Xu, u) with a diagonal covariance.
+        The difference in the logp is given by the covariance matrix terms.
+        """
+        with pm.Model() as model_sparse:
+            gp_sparse = pm.gp.LatentSparse(self.mean_func, self.cov_func, approx='FITC')
+            f = gp_sparse.prior('f', self.X, self.Xu)
+        # The logp from the diagonal FITC noise term
+        logp_f_noise, = pm.distributions.draw_values(
+            [model_sparse.f_FITC_noise_.distribution.logp_sum(self.params_full['f_FITC_noise_'])],
+            self.params_full)
+        sparse_logp = model_sparse.logp(self.params_full)
+        # The sparse logp offset is from the full cov logp minus the diagoval cov logp
+        npt.assert_allclose(sparse_logp, self.logp_prior_large,
+                            atol=np.abs(self.logp_full_cov - logp_f_noise))
+
+    @pytest.mark.parametrize('approx', ('DTC', 'FITC'))
+    def test_conditional(self, approx):
+        """The DTC and FITC conditionals over (Xs | X, f, Xu) ~ (Xs | X, Xu, u)
+        are the same as the full Latent conditional over (Xs | Xu, u)
+        up to a logp offset due to the sparse prior covariance
+        """
+        with pm.Model() as model_sparse:
+            gp_sparse = pm.gp.LatentSparse(self.mean_func, self.cov_func, approx=approx)
+            f = gp_sparse.prior('f', self.X, self.Xu)
+            fs = gp_sparse.conditional('fs', self.Xs)
+
+        atol = np.abs(self.logp_full_cov)
+        npt.assert_allclose(model_sparse.logp(self.params_full),
+                            self.logp_conditional, atol=atol)
 
 
 class TestMarginalVsMarginalSparse(object):
