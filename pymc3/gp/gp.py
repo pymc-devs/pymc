@@ -385,29 +385,40 @@ class LatentSparse(Latent):
         Luu = cholesky(stabilize(Kuu))
 
         Kuf = cov_total(Xu, X)
-        Kuffu = tt.dot(Kuf, Kuf.T)
-        Luffu = cholesky(stabilize(Kuffu))
-        Ksu = self.cov_func(Xnew, Xu)
-        r = f - mean_total(X)  # the equations are derived for 0-mean f
-        Kuuiu = invert_dot(Luffu, tt.dot(Kuf, r))
-        mus = self.mean_func(Xnew) + tt.dot(Ksu, Kuuiu)
         if self.approx == 'FITC':
             Kff_diag = self.cov_func(X, diag=True)
             Qff_diag = project_inverse(Kuf.T, Luu, diag=True)
             Lambda = tt.clip(Kff_diag - Qff_diag, 0.0, np.inf)
-            Qsf = project_inverse(Ksu, Luu, P_T=Kuf)
-            mus += tt.dot(Qsf, f / Lambda)
+            Kfu = (Kuf / Lambda).T
+        elif self.approx == 'DTC':
+            Kfu = Kuf.T
+        Kuffu = tt.dot(Kuf, Kfu)
+        Luffu = cholesky(stabilize(Kuffu))
+        Ksu = self.cov_func(Xnew, Xu)
+        r = f - mean_total(X)  # the equations are derived for 0-mean f
+        if self.approx == 'FITC':
+            r /= Lambda
+        # reconstruct K_{uu}^{-1} u given f
+        Kuuiu = invert_dot(Luffu, tt.dot(Kuf, r))
+        # the exact conditional mean f_* | u
+        mus = self.mean_func(Xnew) + tt.dot(Ksu, Kuuiu)
         Qss = project_inverse(Ksu, Luu)
         Kss = self.cov_func(Xnew)
-        cov = Kss - Qss
-        if self.approx == 'FITC':
-            cov -= tt.dot(Qsf, tt.transpose(Qsf / Lambda))
+        cov = Kss - Qss         # the exact test conditional covariance
         return mus, cov
 
     def conditional(self, name, Xnew, given=None, **kwargs):
         R"""
         Returns the approximate conditional distribution evaluated
         over new input locations `Xnew`.
+
+        The DTC and FITC approximations
+        both use the exact test conditional `p(f_* | u)` as an approximation
+        for `p(f_* | f)`. The `u` is reconstructed from the given `f`.
+
+        Note that the conditional distribution
+        is not as sparse as the prior, because it evaluates
+        the full covariance matrix for `Xnew`.
 
         Parameters
         ----------
@@ -416,7 +427,7 @@ class LatentSparse(Latent):
         Xnew : array-like
             Function input values.
         given : dict
-            Can optionally take as key value pairs: `X`, `y`, `Xu`,
+            Can optionally take as key value pairs: `X`, `f`, `Xu`,
             and `gp`.  See the section in the documentation on additive GP
             models in PyMC3 for more information.
         **kwargs
