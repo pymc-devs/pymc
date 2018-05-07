@@ -306,7 +306,9 @@ class LatentSparse(Latent):
             Kff_diag = self.cov_func(X, diag=True)
             # MvNormal with diagonal cov is Normal with var=diag(cov)
             var = tt.clip(Kff_diag - Qff_diag, 0.0, np.inf)
-            f = pm.Normal(name, mu=f_, tau=tt.inv(var), shape=shape)
+            # The noise about the DTC mean according to the FITC diagonal cov
+            v2 = pm.Normal(name + '_FITC_noise_', tau=tt.inv(var), shape=shape)
+            f = pm.Deterministic(name, f_ + v2)  # add the FITC noise to the DTC mean
         return f
 
     def prior(self, name, X, Xu, **kwargs):
