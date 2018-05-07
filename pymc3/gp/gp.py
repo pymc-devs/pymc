@@ -671,7 +671,7 @@ class MarginalSparse(Marginal):
         quadratic = 0.5 * (tt.dot(r, r_l) - tt.dot(c, c))
         return -1.0 * (constant + logdet + quadratic + trace)
 
-    def marginal_likelihood(self, name, X, Xu, y, sigma, is_observed=True, **kwargs):
+    def marginal_likelihood(self, name, X, Xu, y, noise=None, is_observed=True, **kwargs):
         R"""
         Returns the approximate marginal likelihood distribution, given the input
         locations `X`, inducing point locations `Xu`, data `y`, and white noise
@@ -689,7 +689,7 @@ class MarginalSparse(Marginal):
         y : array-like
             Data that is the sum of the function with the GP prior and Gaussian
             noise.  Must have shape `(n, )`.
-        sigma : scalar, Variable
+        noise : scalar, Variable
             Standard deviation of the Gaussian noise.
         is_observed : bool
             Whether to set `y` as an `observed` variable in the `model`.
@@ -702,9 +702,18 @@ class MarginalSparse(Marginal):
         self.X = X
         self.Xu = Xu
         self.y = y
-        self.sigma = sigma
+        self.sigma = noise
+        if self.sigma is None:
+            sigma = kwargs.get('sigma')
+            if sigma is None:
+                raise ValueError('noise argument must be specified')
+            else:
+                self.sigma = sigma
+                warnings.warn(
+                    "The 'sigma' argument has been deprecated. Use 'noise' instead.",
+                DeprecationWarning)
         logp = functools.partial(self._build_marginal_likelihood_logp,
-                                 X=X, Xu=Xu, sigma=sigma)
+                                 X=X, Xu=Xu, sigma=noise)
         if is_observed:
             return pm.DensityDist(name, logp, observed=y, **kwargs)
         else:
