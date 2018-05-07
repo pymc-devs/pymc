@@ -215,8 +215,8 @@ class LatentSparse(Latent):
 
     The `gp.LatentSparse` class is a direct implementation of a GP.  No addiive
     noise is assumed.  It is called "Latent" because the underlying function
-    values are treated as latent variables.  It has a `prior` method and a
-    `conditional` method.  Given a mean and covariance function the
+    values are treated as latent (unobserved) variables. It has a `prior` method
+    and a `conditional` method.  Given a mean and covariance function the
     function :math:`f(X)` is modeled as,
 
     .. math::
@@ -229,9 +229,12 @@ class LatentSparse(Latent):
 
        u \mid X_u = \sim \text{MvNormal}\left( \mu(X_u), K(X_u, X_u) \right)
 
-    The DTC and FITC approximations use a simplified `p(f | u) ~ q(f | u)`
-    and the resulting `f` is a GP prior only
-    in the case of the FITC approximation.
+    The DTC and FITC approximations as formulated in
+    `Quinonero-Candela+Rasmussen, 2006`_ use a simplified `p(f | u) ~ q(f | u)`.
+    These approximations essentially use an approximate conditional distribution
+    over the full range of points `X` given a non-sparse Latent GP
+    over a small set of points `Xu` with a simplified (0 or diagonal, respectively)
+    conditional covariance matrix over the points `X`.
 
     Use the `prior` and `conditional` methods to actually construct random
     variables representing the unknown, or latent, function whose
@@ -240,15 +243,16 @@ class LatentSparse(Latent):
     distributed.  For more information on the `prior` and `conditional` methods,
     see their docstrings.
 
+    .. _`Quinonero-Candela+Rasmussen, 2006`: http://www.jmlr.org/papers/v6/quinonero-candela05a.html
+
     Parameters
     ----------
     cov_func : None, 2D array, or instance of Covariance
         The covariance function.  Defaults to zero.
-        Must implement the `diag` method for the FITC approximation
     mean_func : None, instance of Mean
         The mean function.  Defaults to zero.
     approx : str
-        Approximation to use. One of ['DTC', 'FITC']
+        Approximation to use. One of ('DTC', 'FITC')
 
     Examples
     --------
@@ -335,16 +339,22 @@ class LatentSparse(Latent):
 
            Q(X, X') = K(X, X_u) K(X_u, X_u)^{-1} K(X_u, X')
 
-        The DTC approximation uses (resulting in a non-GP prior)
+        The DTC (deterministic training conditional) approximation uses
 
         .. math::
            K(X, X) - Q(X, X) \approx 0
 
-        The FITC approximation uses (resulting in a GP prior)
+        which means the DTC approximation is essentially just a purely
+        deterministic mean of the conditional distribution `f | u`.
+
+        The FITC (fully independent training conditional) approximation uses
 
         .. math::
 
            K(X, X) - Q(X, X) \approx  \mathrm{diag}(K(X, X) - Q(X, X))
+
+        which adds an iid (diagonal) Normal noise about the DTC mean
+        corresponding to the true conditional covariance diagonal.
 
         Parameters
         ----------
@@ -357,6 +367,8 @@ class LatentSparse(Latent):
             The inducing points.  Must have the same number of columns as `X`.
         **kwargs
             Extra keyword arguments that are passed to distribution constructor.
+            The `shape` and `shape_u` can specify the number of points in X or Xu, respectively.
+            This is necessary in cases when the shape cannot be inferred.
         """
 
         f = self._build_prior(name, X, Xu, **kwargs)
