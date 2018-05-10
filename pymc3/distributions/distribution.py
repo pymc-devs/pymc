@@ -1,3 +1,4 @@
+import collections
 import numbers
 import numpy as np
 import theano.tensor as tt
@@ -210,7 +211,7 @@ class DensityDist(Distribution):
 
 
 
-def draw_values(params, point=None):
+def draw_values(params, point=None, size=None):
     """
     Draw (fix) parameter values. Handles a number of cases:
 
@@ -254,7 +255,7 @@ def draw_values(params, point=None):
     
     # Init givens and the stack of nodes to try to `_draw_value` from
     givens = {}
-    stored = set([])  # Some nodes 
+    stored = set()  # Some nodes 
     stack = list(leaf_nodes.values())  # A queue would be more appropriate
     while stack:
         next_ = stack.pop(0)
@@ -279,13 +280,14 @@ def draw_values(params, point=None):
             # The named node's children givens values must also be taken
             # into account.
             children = named_nodes_children[next_]
-            temp_givens = [givens[k] for k in givens.keys() if k in children]
+            temp_givens = [givens[k] for k in givens if k in children]
             try:
                 # This may fail for autotransformed RVs, which don't
                 # have the random method
                 givens[next_.name] = (next_, _draw_value(next_,
                                                          point=point,
-                                                         givens=temp_givens))
+                                                         givens=temp_givens,
+                                                         size=size))
                 stored.add(next_.name)
             except theano.gof.fg.MissingInputError:
                 # The node failed, so we must add the node's parents to
@@ -295,10 +297,28 @@ def draw_values(params, point=None):
                               if node is not None and
                               node.name not in stored and
                               node not in params])
-    values = []
-    for param in params:
-        values.append(_draw_value(param, point=point, givens=givens.values()))
-    return values
+
+    # Funny dance to resolve missing nodes
+    params = dict(enumerate(params))  # some nodes are not hashable
+    evaluated = {}
+    to_eval = set()
+    missing_inputs = set(params)
+    while to_eval or missing_inputs:
+        if to_eval == missing_inputs:
+            raise ValueError('Cannot resolve inputs for {}'.format([str(params[j]) for j in to_eval]))
+        to_eval = set(missing_inputs)
+        missing_inputs = set()
+        for param_idx in to_eval:
+            param = params[param_idx]
+            try:  # might evaluate in a bad order,
+                evaluated[param_idx] = _draw_value(param, point=point, givens=givens.values(), size=size)
+                if isinstance(param, collections.Hashable) and named_nodes_parents.get(param):
+                    givens[param.name] = (param, evaluated[param_idx])
+            except theano.gof.fg.MissingInputError:
+                missing_inputs.add(param_idx)
+        
+            
+    return [evaluated[j] for j in params] # set the order back
 
 
 @memoize
@@ -326,7 +346,7 @@ def _compile_theano_function(param, vars, givens=None):
                     allow_input_downcast=True)
 
 
-def _draw_value(param, point=None, givens=None):
+def _draw_value(param, point=None, givens=None, size=None):
     """Draw a random value from a distribution or return a constant.
 
     Parameters
@@ -355,14 +375,19 @@ def _draw_value(param, point=None, givens=None):
         if point and hasattr(param, 'model') and param.name in point:
             return point[param.name]
         elif hasattr(param, 'random') and param.random is not None:
-            return param.random(point=point, size=None)
+            return param.random(point=point, size=size)
+        elif hasattr(param, 'distribution') and hasattr(param.distribution, 'random') and param.distribution.random is not None:
+            return param.distribution.random(point=point, size=size)
         else:
             if givens:
                 variables, values = list(zip(*givens))
             else:
                 variables = values = []
             func = _compile_theano_function(param, variables)
-            return func(*values)
+            if size is None:
+                return func(*values)
+            else:
+                return np.array([func(*value) for value in zip(*values)])
     else:
         raise ValueError('Unexpected type in draw_value: %s' % type(param))
 

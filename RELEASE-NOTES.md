@@ -26,8 +26,7 @@
   Gaussian Process implementation for efficient inference, along with
   lower-level functions such as `cartesian` and `kronecker` products.
 - Added `Coregion` covariance function.
-- Add new 'pairplot' function, for plotting scatter or hexbin matrices of sampled parameters.
-  Optionally it can plot divergences.
+- Add new 'pairplot' function, for plotting scatter or hexbin matrices of sampled parameters. Optionally it can plot divergences.
 - Plots of discrete distributions in the docstrings
 - Add logitnormal distribution
 - Densityplot: add support for discrete variables
@@ -36,6 +35,7 @@
 - Changed the `compare` function to accept a dictionary of model-trace pairs instead of two separate lists of models and traces.
 - add test and support for creating multivariate mixture and mixture of mixtures
 - `distribution.draw_values`, now is also able to draw values from conditionally dependent RVs, such as autotransformed RVs (Refer to PR #2902).
+- New function `pm.sample_prior` which generates test data from a model in the absence of data.
 
 ### Fixes
 
