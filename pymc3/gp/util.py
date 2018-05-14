@@ -89,7 +89,7 @@ def conditioned_vars(varnames):
     return gp_wrapper
 
 
-def plot_gp_dist(ax, samples, x, plot_samples=True, palette="Reds"):
+def plot_gp_dist(ax, samples, x, plot_samples=True, palette="Reds", label=None):
     """ A helper function for plotting 1D GP posteriors from trace """
     import matplotlib.pyplot as plt
 
@@ -98,11 +98,13 @@ def plot_gp_dist(ax, samples, x, plot_samples=True, palette="Reds"):
     colors = (percs - np.min(percs)) / (np.max(percs) - np.min(percs))
     samples = samples.T
     x = x.flatten()
+    i_last = len(percs) - 1
     for i, p in enumerate(percs[::-1]):
         upper = np.percentile(samples, p, axis=1)
         lower = np.percentile(samples, 100-p, axis=1)
         color_val = colors[i]
-        ax.fill_between(x, upper, lower, color=cmap(color_val), alpha=0.8)
+        lab = label if i == i_last else None
+        ax.fill_between(x, upper, lower, color=cmap(color_val), alpha=0.8, label=lab)
     if plot_samples:
         # plot a few samples
         idx = np.random.randint(0, samples.shape[1], 30)
