@@ -50,7 +50,7 @@ class NDArray(base.BaseTrace):
         if self.samples:  # Concatenate new array if chain is already present.
             old_draws = len(self)
             self.draws = old_draws + draws
-            self.draws_idx = old_draws
+            self.draw_idx = old_draws
             for varname, shape in self.var_shapes.items():
                 old_var_samples = self.samples[varname]
                 new_var_samples = np.zeros((draws, ) + shape,
