@@ -182,7 +182,7 @@ class TestSaveLoad(object):
             cls.trace = pm.sample()
 
     def test_save_and_load(self, tmpdir_factory):
-        directory = tmpdir_factory.mktemp('data')
+        directory = str(tmpdir_factory.mktemp('data'))
         save_dir = pm.save_trace(self.trace, directory)
 
         assert save_dir == directory
@@ -193,7 +193,7 @@ class TestSaveLoad(object):
             assert (self.trace[var] == trace2[var]).all()
 
     def test_sample_ppc(self, tmpdir_factory):
-        directory = tmpdir_factory.mktemp('data')
+        directory = str(tmpdir_factory.mktemp('data'))
         save_dir = pm.save_trace(self.trace, directory)
 
         assert save_dir == directory
