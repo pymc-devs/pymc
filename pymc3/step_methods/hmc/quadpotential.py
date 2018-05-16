@@ -188,28 +188,31 @@ class QuadPotentialDiagAdapt(QuadPotential):
     def raise_ok(self, vmap):
         if np.any(self._stds == 0):
             name_slc = []
-            tmp_hold = list(range(self._std.size))
+            tmp_hold = list(range(self._stds.size))
             for vmap_ in vmap:
                 slclen = len(tmp_hold[vmap_.slc])
                 for i in range(slclen):
                     name_slc.append((i, vmap_.var))
-            index = np.where(self._std == 0)[0]
-            errmsg = ['The derivative of the element index at {} of Variable '
-                     '`{}` is zero.'.format(*name_slc[ii]) for ii in index]
-            raise ValueError('Mass matrix contains zeros on the diagonal. ' +
-                             errmsg)
+            index = np.where(self._stds == 0)[0]
+            errmsg = ['Mass matrix contains zeros on the diagonal. ']
+            for ii in index:
+                errmsg.append('The derivative of the element index at {}'
+                              ' of Variable `{}` is zero.'.format(*name_slc[ii]))
+            raise ValueError('\n'.join(errmsg))
+
         if np.any(~np.isfinite(self._stds)):
             name_slc = []
-            tmp_hold = list(range(self._std.size))
+            tmp_hold = list(range(self._stds.size))
             for vmap_ in vmap:
                 slclen = len(tmp_hold[vmap_.slc])
                 for i in range(slclen):
                     name_slc.append((i, vmap_.var))
             index = np.where(~np.isfinite(self._stds))[0]
-            errmsg = ['The derivative of the element index at {} of Variable '
-                     '`{}` is non-finite.'.format(*name_slc[ii]) for ii in index]
-            raise ValueError('Mass matrix contains non-finite values on the '
-                             'diagonal. ' + errmsg)
+            errmsg = ['Mass matrix contains non-finite values on the diagonal. ']
+            for ii in index:
+                errmsg.append('The derivative of the element index at {}'
+                              ' of Variable `{}` is non-finite.'.format(*name_slc[ii]))
+            raise ValueError('\n'.join(errmsg))
 
 
 class QuadPotentialDiagAdaptGrad(QuadPotentialDiagAdapt):
