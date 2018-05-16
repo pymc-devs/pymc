@@ -188,7 +188,7 @@ class QuadPotentialDiagAdapt(QuadPotential):
     def raise_ok(self, vmap):
         if np.any(self._stds == 0):
             name_slc = []
-            tmp_hold = list(range(_std.size))
+            tmp_hold = list(range(self._std.size))
             for vmap_ in vmap:
                 slclen = len(tmp_hold[vmap_.slc])
                 for i in range(slclen):
