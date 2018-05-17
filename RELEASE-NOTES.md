@@ -8,6 +8,7 @@
 
 - Add `check_test_point` method to `pm.Model`
 - Add `Ordered` Transformation and `OrderedLogistic` distribution
+- Better warning message for `Mass matrix contains zeros on the diagonal. Some derivatives might always be zero`
 
 ### Fixes
 
