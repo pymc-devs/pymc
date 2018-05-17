@@ -9,6 +9,7 @@ import numpy as np
 import scipy.linalg
 import theano.tensor as tt
 import theano
+from theano.scalar import UnaryScalarOp, upgrade_to_float
 
 from .special import gammaln
 from pymc3.theanof import floatX
@@ -463,21 +464,14 @@ def eigh(a, UPLO='L'):
     return Eigh(UPLO)(a)
 
 
-def i0(x):
+class I0e(UnaryScalarOp):
     """
-    Calculates the 0 order modified Bessel function of the first kind""
+    Modified Bessel function of the first kind of order 0, exponentially scaled.
     """
-    return tt.switch(tt.lt(x, 5), 1 + x**2 / 4 + x**4 / 64 + x**6 / 2304 + x**8 / 147456
-                     + x**10 / 14745600 + x**12 / 2123366400,
-                     np.e**x / (2 * np.pi * x)**0.5 * (1 + 1 / (8 * x) + 9 / (128 * x**2) + 225 / (3072 * x**3)
-                                                       + 11025 / (98304 * x**4)))
+    nfunc_spec = ('scipy.special.i0e', 1, 1)
+
+    def impl(self, x):
+        return scipy.special.i0e(x)
 
 
-def i1(x):
-    """
-    Calculates the 1 order modified Bessel function of the first kind""
-    """
-    return tt.switch(tt.lt(x, 5), x / 2 + x**3 / 16 + x**5 / 384 + x**7 / 18432 +
-                     x**9 / 1474560 + x**11 / 176947200 + x**13 / 29727129600,
-                     np.e**x / (2 * np.pi * x)**0.5 * (1 - 3 / (8 * x) + 15 / (128 * x**2) + 315 / (3072 * x**3)
-                                                       + 14175 / (98304 * x**4)))
+i0e = I0e(upgrade_to_float, name='i0e')

@@ -1057,9 +1057,9 @@ class TestMatchesScipy(SeededTest):
             Beta('beta', alpha=1., beta=1., shape=(10, 20))
 
     def test_rice(self):
-        self.pymc3_matches_scipy(Rice, Rplusbig, {'nu': Rplusbig, 'sd': Rplusbig},
+        self.pymc3_matches_scipy(Rice, Rplus, {'nu': Rplus, 'sd': Rplus},
                                  lambda value, nu, sd: sp.rice.logpdf(value, b=nu, loc=0, scale=sd),
-                                 decimal=select_by_precision(float64=3, float32=1))
+                                 decimal=select_by_precision(float64=6, float32=1))
 
     @pytest.mark.xfail(condition=(theano.config.floatX == "float32"), reason="Fails on float32")
     def test_interpolated(self):

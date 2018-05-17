@@ -14,12 +14,14 @@ from scipy.special import expit
 from scipy.interpolate import InterpolatedUnivariateSpline
 import warnings
 
+from theano.scalar import i1, i0
+
 from pymc3.theanof import floatX
 from . import transforms
 from pymc3.util import get_variable_name
 from .special import log_i0
 from ..math import invlogit, logit
-from .dist_math import bound, logpow, gammaln, betaln, std_cdf, alltrue_elemwise, SplineWrapper, i0, i1
+from .dist_math import bound, logpow, gammaln, betaln, std_cdf, alltrue_elemwise, SplineWrapper, i0e
 from .distribution import Continuous, draw_values, generate_samples
 
 __all__ = ['Uniform', 'Flat', 'HalfFlat', 'Normal', 'Beta', 'Exponential',
@@ -2225,6 +2227,7 @@ class Rice(Continuous):
         standard deviation.
 
     """
+
     def __init__(self, nu=None, sd=None, *args, **kwargs):
         super(Rice, self).__init__(*args, **kwargs)
         self.nu = nu = tt.as_tensor_variable(nu)
@@ -2233,7 +2236,6 @@ class Rice(Continuous):
                                  * i0(-(-nu**2 / (2 * sd**2)) / 2) - (-nu**2 / (2 * sd**2)) * i1(-(-nu**2 / (2 * sd**2)) / 2))
         self.variance = 2 * sd**2 + nu**2 - (np.pi * sd**2 / 2) * (tt.exp((-nu**2 / (2 * sd**2)) / 2) * ((1 - (-nu**2 / (
             2 * sd**2))) * i0(-(-nu**2 / (2 * sd**2)) / 2) - (-nu**2 / (2 * sd**2)) * i1(-(-nu**2 / (2 * sd**2)) / 2)))**2
-
 
     def random(self, point=None, size=None, repeat=None):
         nu, sd = draw_values([self.nu, self.sd],
@@ -2245,7 +2247,7 @@ class Rice(Continuous):
         nu = self.nu
         sd = self.sd
         x = value / sd
-        return bound(tt.log(x * tt.exp((-(x ** 2 + nu ** 2)) / 2)) + log_i0(x * nu) - tt.log(sd),
+        return bound(tt.log(x * tt.exp((-(x - nu) * (x - nu)) / 2) * i0e(x * nu) / sd),
                      sd >= 0,
                      nu >= 0,
                      value > 0,
