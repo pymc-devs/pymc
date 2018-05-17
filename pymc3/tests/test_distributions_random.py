@@ -97,6 +97,20 @@ class TestDrawValues(SeededTest):
         assert isinstance(mu, np.ndarray)
         assert isinstance(tau, np.ndarray)
 
+    def test_random_sample_returns_correctly(self):
+        # Based on what we discovered in #GH2909
+        with pm.Model():
+            a = pm.Uniform('a', lower=0, upper=1, shape=10)
+            b = pm.Binomial('b', n=1, p=a, shape=10)
+        array_of_uniform = a.random(size=10000).mean(axis=0)
+        array_of_binomial = b.random(size=10000).mean(axis=0)
+        npt.assert_allclose(array_of_uniform, [0.49886929, 0.49949713, 0.49946077, 0.49922606, 0.49927498, 0.50003914,
+                                               0.49980687, 0.50180495, 0.500905, 0.50035121], rtol=1e-2, atol=0)
+        npt.assert_allclose(array_of_binomial, [0.7232, 0.131 , 0.9457, 0.8279, 0.2911, 0.8686, 0.57  , 0.9184,
+                                                0.8177, 0.1625], rtol=1e-2, atol=0)
+        assert isinstance(array_of_binomial, np.ndarray)
+        assert isinstance(array_of_uniform, np.ndarray)
+
 
 class BaseTestCases(object):
     class BaseTestCase(SeededTest):

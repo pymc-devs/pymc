@@ -210,7 +210,7 @@ class DensityDist(Distribution):
 
 
 
-def draw_values(params, point=None):
+def draw_values(params, point=None, size=None):
     """
     Draw (fix) parameter values. Handles a number of cases:
 
@@ -251,10 +251,10 @@ def draw_values(params, point=None):
                     named_nodes_children[k] = nnc[k]
                 else:
                     named_nodes_children[k].update(nnc[k])
-    
+
     # Init givens and the stack of nodes to try to `_draw_value` from
     givens = {}
-    stored = set([])  # Some nodes 
+    stored = set([])  # Some nodes
     stack = list(leaf_nodes.values())  # A queue would be more appropriate
     while stack:
         next_ = stack.pop(0)
@@ -269,7 +269,7 @@ def draw_values(params, point=None):
             # we can skip it. Furthermore, if this node was treated as a
             # TensorVariable that should be compiled by theano in
             # _compile_theano_function, it would raise a `TypeError:
-            # ('Constants not allowed in param list', ...)` for 
+            # ('Constants not allowed in param list', ...)` for
             # TensorConstant, and a `TypeError: Cannot use a shared
             # variable (...) as explicit input` for SharedVariable.
             stored.add(next_.name)
@@ -285,7 +285,7 @@ def draw_values(params, point=None):
                 # have the random method
                 givens[next_.name] = (next_, _draw_value(next_,
                                                          point=point,
-                                                         givens=temp_givens))
+                                                         givens=temp_givens, size=size))
                 stored.add(next_.name)
             except theano.gof.fg.MissingInputError:
                 # The node failed, so we must add the node's parents to
@@ -297,7 +297,7 @@ def draw_values(params, point=None):
                               node not in params])
     values = []
     for param in params:
-        values.append(_draw_value(param, point=point, givens=givens.values()))
+        values.append(_draw_value(param, point=point, givens=givens.values(), size=size))
     return values
 
 
@@ -326,7 +326,7 @@ def _compile_theano_function(param, vars, givens=None):
                     allow_input_downcast=True)
 
 
-def _draw_value(param, point=None, givens=None):
+def _draw_value(param, point=None, givens=None, size=None):
     """Draw a random value from a distribution or return a constant.
 
     Parameters
@@ -342,6 +342,8 @@ def _draw_value(param, point=None, givens=None):
     givens : dict, optional
         A dictionary from theano variables to their values. These values
         are used to evaluate `param` if it is a theano variable.
+    size : int, optional
+        Number of samples
     """
     if isinstance(param, numbers.Number):
         return param

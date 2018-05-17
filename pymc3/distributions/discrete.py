@@ -66,7 +66,7 @@ class Binomial(Discrete):
         self.mode = tt.cast(tround(n * p), self.dtype)
 
     def random(self, point=None, size=None):
-        n, p = draw_values([self.n, self.p], point=point)
+        n, p = draw_values([self.n, self.p], point=point, size=size)
         return generate_samples(stats.binom.rvs, n=n, p=p,
                                 dist_shape=self.shape,
                                 size=size)
