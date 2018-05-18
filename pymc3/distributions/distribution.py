@@ -1,4 +1,6 @@
+import collections
 import numbers
+
 import numpy as np
 import theano.tensor as tt
 from theano import function
@@ -296,10 +298,31 @@ def draw_values(params, point=None, size=None):
                               if node is not None and
                               node.name not in stored and
                               node not in params])
-    values = []
-    for param in params:
-        values.append(_draw_value(param, point=point, givens=givens.values(), size=size))
-    return values
+
+    # the below makes sure the graph is evaluated in order
+    # test_distributions_random::TestDrawValues::test_draw_order fails without it
+    params = dict(enumerate(params))  # some nodes are not hashable
+    evaluated = {}
+    to_eval = set()
+    missing_inputs = set(params)
+    while to_eval or missing_inputs:
+        if to_eval == missing_inputs:
+            raise ValueError('Cannot resolve inputs for {}'.format([str(params[j]) for j in to_eval]))
+        to_eval = set(missing_inputs)
+        missing_inputs = set()
+        for param_idx in to_eval:
+            param = params[param_idx]
+            if param.name in givens:
+                evaluated[param_idx] = givens[param.name][1]
+            else:
+                try:  # might evaluate in a bad order,
+                    evaluated[param_idx] = _draw_value(param, point=point, givens=givens.values(), size=size)
+                    if isinstance(param, collections.Hashable) and named_nodes_parents.get(param):
+                        givens[param.name] = (param, evaluated[param_idx])
+                except theano.gof.fg.MissingInputError:
+                    missing_inputs.add(param_idx)
+
+    return [evaluated[j] for j in params] # set the order back
 
 
 @memoize
