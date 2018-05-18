@@ -5,6 +5,7 @@ Store sampling values in memory as a NumPy array.
 import glob
 import json
 import os
+import shutil
 
 import numpy as np
 from ..backends import base
@@ -100,8 +101,10 @@ class SerializeNDArray(object):
         if not isinstance(ndarray, NDArray):
             raise TypeError('Can only save NDArray')
 
-        if not os.path.exists(self.directory):
-            os.mkdir(self.directory)
+        if os.path.isdir(self.directory):
+            shutil.rmtree(self.directory)
+
+        os.mkdir(self.directory)
 
         with open(self.metadata_path, 'w') as buff:
             json.dump(SerializeNDArray.to_metadata(ndarray), buff)

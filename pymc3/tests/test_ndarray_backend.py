@@ -181,6 +181,21 @@ class TestSaveLoad(object):
         with TestSaveLoad.model():
             cls.trace = pm.sample()
 
+    def test_save_new_model(self, tmpdir_factory):
+        directory = str(tmpdir_factory.mktemp('data'))
+        save_dir = pm.save_trace(self.trace, directory)
+
+        assert save_dir == directory
+        with pm.Model() as model:
+            w = pm.Normal('w', 0, 1)
+            new_trace = pm.sample()
+
+        _ = pm.save_trace(new_trace, directory)
+        with model:
+            new_trace_copy = pm.load_trace(directory)
+
+        assert (new_trace['w'] == new_trace_copy['w']).all()
+
     def test_save_and_load(self, tmpdir_factory):
         directory = str(tmpdir_factory.mktemp('data'))
         save_dir = pm.save_trace(self.trace, directory)
