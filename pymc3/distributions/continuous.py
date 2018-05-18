@@ -163,7 +163,7 @@ class Uniform(Continuous):
 
     def random(self, point=None, size=None):
         lower, upper = draw_values([self.lower, self.upper],
-                                   point=point)
+                                   point=point, size=size)
         return generate_samples(stats.uniform.rvs, loc=lower,
                                 scale=upper - lower,
                                 dist_shape=self.shape,
@@ -748,7 +748,7 @@ class Exponential(PositiveContinuous):
         assert_negative_support(lam, 'lam', 'Exponential')
 
     def random(self, point=None, size=None):
-        lam = draw_values([self.lam], point=point)[0]
+        lam = draw_values([self.lam], point=point, size=size)[0]
         return generate_samples(np.random.exponential, scale=1. / lam,
                                 dist_shape=self.shape,
                                 size=size)
@@ -817,7 +817,7 @@ class Laplace(Continuous):
         assert_negative_support(b, 'b', 'Laplace')
 
     def random(self, point=None, size=None):
-        mu, b = draw_values([self.mu, self.b], point=point)
+        mu, b = draw_values([self.mu, self.b], point=point, size=size)
         return generate_samples(np.random.laplace, mu, b,
                                 dist_shape=self.shape,
                                 size=size)
@@ -921,7 +921,7 @@ class Lognormal(PositiveContinuous):
         return np.exp(mu + (tau**-0.5) * samples)
 
     def random(self, point=None, size=None):
-        mu, tau = draw_values([self.mu, self.tau], point=point)
+        mu, tau = draw_values([self.mu, self.tau], point=point, size=size)
         return generate_samples(self._random, mu, tau,
                                 dist_shape=self.shape,
                                 size=size)
@@ -1023,7 +1023,7 @@ class StudentT(Continuous):
 
     def random(self, point=None, size=None):
         nu, mu, lam = draw_values([self.nu, self.mu, self.lam],
-                                  point=point)
+                                  point=point, size=size)
         return generate_samples(stats.t.rvs, nu, loc=mu, scale=lam**-0.5,
                                 dist_shape=self.shape,
                                 size=size)
@@ -1121,7 +1121,7 @@ class Pareto(PositiveContinuous):
 
     def random(self, point=None, size=None):
         alpha, m = draw_values([self.alpha, self.m],
-                               point=point)
+                               point=point, size=size)
         return generate_samples(self._random, alpha, m,
                                 dist_shape=self.shape,
                                 size=size)
@@ -1202,7 +1202,7 @@ class Cauchy(Continuous):
 
     def random(self, point=None, size=None):
         alpha, beta = draw_values([self.alpha, self.beta],
-                                  point=point)
+                                  point=point, size=size)
         return generate_samples(self._random, alpha, beta,
                                 dist_shape=self.shape,
                                 size=size)
@@ -1276,7 +1276,7 @@ class HalfCauchy(PositiveContinuous):
         return beta * np.abs(np.tan(np.pi * (u - 0.5)))
 
     def random(self, point=None, size=None):
-        beta = draw_values([self.beta], point=point)[0]
+        beta = draw_values([self.beta], point=point, size=size)[0]
         return generate_samples(self._random, beta,
                                 dist_shape=self.shape,
                                 size=size)
@@ -1381,7 +1381,7 @@ class Gamma(PositiveContinuous):
 
     def random(self, point=None, size=None):
         alpha, beta = draw_values([self.alpha, self.beta],
-                                  point=point)
+                                  point=point, size=size)
         return generate_samples(stats.gamma.rvs, alpha, scale=1. / beta,
                                 dist_shape=self.shape,
                                 size=size)
@@ -1474,7 +1474,7 @@ class InverseGamma(PositiveContinuous):
 
     def random(self, point=None, size=None):
         alpha, beta = draw_values([self.alpha, self.beta],
-                                  point=point)
+                                  point=point, size=size)
         return generate_samples(stats.invgamma.rvs, a=alpha, scale=beta,
                                 dist_shape=self.shape,
                                 size=size)
@@ -1610,7 +1610,7 @@ class Weibull(PositiveContinuous):
 
     def random(self, point=None, size=None):
         alpha, beta = draw_values([self.alpha, self.beta],
-                                  point=point)
+                                  point=point, size=size)
 
         def _random(a, b, size=None):
             return b * (-np.log(np.random.uniform(size=size)))**(1 / a)
@@ -1708,7 +1708,7 @@ class HalfStudentT(PositiveContinuous):
         assert_negative_support(nu, 'nu', 'HalfStudentT')
 
     def random(self, point=None, size=None):
-        nu, sd = draw_values([self.nu, self.sd], point=point)
+        nu, sd = draw_values([self.nu, self.sd], point=point, size=size)
         return np.abs(generate_samples(stats.t.rvs, nu, loc=0, scale=sd,
                                        dist_shape=self.shape,
                                        size=size))
@@ -1813,7 +1813,7 @@ class ExGaussian(Continuous):
 
     def random(self, point=None, size=None):
         mu, sigma, nu = draw_values([self.mu, self.sigma, self.nu],
-                                    point=point)
+                                    point=point, size=size)
 
         def _random(mu, sigma, nu, size=None):
             return (np.random.normal(mu, sigma, size=size)
@@ -1905,7 +1905,7 @@ class VonMises(Continuous):
 
     def random(self, point=None, size=None):
         mu, kappa = draw_values([self.mu, self.kappa],
-                                point=point)
+                                point=point, size=size)
         return generate_samples(stats.vonmises.rvs, loc=mu, kappa=kappa,
                                 dist_shape=self.shape,
                                 size=size)
@@ -2002,7 +2002,7 @@ class SkewNormal(Continuous):
 
     def random(self, point=None, size=None):
         mu, tau, _, alpha = draw_values(
-            [self.mu, self.tau, self.sd, self.alpha], point=point)
+            [self.mu, self.tau, self.sd, self.alpha], point=point, size=size)
         return generate_samples(stats.skewnorm.rvs,
                                 a=alpha, loc=mu, scale=tau**-0.5,
                                 dist_shape=self.shape,
@@ -2095,7 +2095,7 @@ class Triangular(Continuous):
 
     def random(self, point=None, size=None):
         c, lower, upper = draw_values([self.c, self.lower, self.upper],
-                                      point=point)
+                                      point=point, size=size)
         return generate_samples(stats.triang.rvs, c=c-lower, loc=lower, scale=upper-lower,
                                 size=size, dist_shape=self.shape, random_state=None)
 
@@ -2178,7 +2178,7 @@ class Gumbel(Continuous):
         super(Gumbel, self).__init__(**kwargs)
 
     def random(self, point=None, size=None):
-        mu, sd = draw_values([self.mu, self.beta], point=point)
+        mu, sd = draw_values([self.mu, self.beta], point=point, size=size)
         return generate_samples(stats.gumbel_r.rvs, loc=mu, scale=sd,
                                 dist_shape=self.shape,
                                 size=size)
@@ -2257,7 +2257,7 @@ class Logistic(Continuous):
             -(value - mu) / s - tt.log(s) - 2 * tt.log1p(tt.exp(-(value - mu) / s)), s > 0)
 
     def random(self, point=None, size=None):
-        mu, s = draw_values([self.mu, self.s], point=point)
+        mu, s = draw_values([self.mu, self.s], point=point, size=size)
 
         return generate_samples(
             stats.logistic.rvs,
@@ -2333,7 +2333,7 @@ class LogitNormal(UnitContinuous):
         super(LogitNormal, self).__init__(**kwargs)
 
     def random(self, point=None, size=None):
-        mu, _, sd = draw_values([self.mu, self.tau, self.sd], point=point)
+        mu, _, sd = draw_values([self.mu, self.tau, self.sd], point=point, size=size)
         return expit(generate_samples(stats.norm.rvs, loc=mu, scale=sd, dist_shape=self.shape,
                                       size=size))
 
