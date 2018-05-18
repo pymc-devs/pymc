@@ -15,6 +15,7 @@
 - Fixed `KeyError` raised when only subset of variables are specified to be recorded in the trace.
 - Removed unused `repeat=None` arguments from all `random()` methods in distributions.
 - Deprecated the `sigma` argument in `MarginalSparse.marginal_likelihood` in favor of `noise`
+- Fixed unexpected behavior in `random`. Now the `random` functionality is more robust and will work better for `sample_prior` when that is implemented.
 
 ## PyMC 3.4.1 (April 18 2018)
 
