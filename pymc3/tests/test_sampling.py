@@ -337,3 +337,17 @@ def test_exec_nuts_init(method):
         assert len(start) == 2
         assert isinstance(start[0], dict)
         assert 'a' in start[0] and 'b_log__' in start[0]
+
+def test_sample_generative():
+    observed = np.random.normal(10, 1, size=200)
+    with pm.Model():
+        # Use a prior that's way off to show we're actually sampling from it
+        mu = pm.Normal('mu', mu=-100, sd=1)
+        positive_mu = pm.Deterministic('positive_mu', np.abs(mu))
+        z = -1 - positive_mu
+        pm.Normal('x_obs', mu=z, sd=1, observed=observed)
+        prior = pm.sample_generative()
+
+    assert (prior['mu'] < 90).all()
+    assert (prior['positive_mu'] > 90).all()
+    assert (prior['x_obs'] < 90).all()

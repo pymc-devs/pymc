@@ -254,7 +254,7 @@ def draw_values(params, point=None, size=None):
 
     # Init givens and the stack of nodes to try to `_draw_value` from
     givens = {}
-    stored = set([])  # Some nodes
+    stored = set()  # Some nodes
     stack = list(leaf_nodes.values())  # A queue would be more appropriate
     while stack:
         next_ = stack.pop(0)
@@ -279,13 +279,14 @@ def draw_values(params, point=None, size=None):
             # The named node's children givens values must also be taken
             # into account.
             children = named_nodes_children[next_]
-            temp_givens = [givens[k] for k in givens.keys() if k in children]
+            temp_givens = [givens[k] for k in givens if k in children]
             try:
                 # This may fail for autotransformed RVs, which don't
                 # have the random method
                 givens[next_.name] = (next_, _draw_value(next_,
                                                          point=point,
-                                                         givens=temp_givens, size=size))
+                                                         givens=temp_givens,
+                                                         size=size))
                 stored.add(next_.name)
             except theano.gof.fg.MissingInputError:
                 # The node failed, so we must add the node's parents to
@@ -355,7 +356,11 @@ def _draw_value(param, point=None, givens=None, size=None):
         if point and hasattr(param, 'model') and param.name in point:
             return point[param.name]
         elif hasattr(param, 'random') and param.random is not None:
-            return param.random(point=point, size=size)
+            return param.random(point=point, size=None)
+        elif (hasattr(param, 'distribution') and
+                hasattr(param.distribution, 'random') and
+                param.distribution.random is not None):
+            return param.distribution.random(point=point, size=size)
         else:
             if givens:
                 variables, values = list(zip(*givens))
