@@ -860,7 +860,7 @@ class LKJCholeskyCov(Continuous):
             vals = pm.MvNormal('vals', mu=np.zeros(10), chol=chol, shape=10)
 
             # Or transform an uncorrelated normal:
-            vals_raw = pm.Normal('vals_raw', mu=np.zeros(10), sd=1)
+            vals_raw = pm.Normal('vals_raw', mu=0, sd=1, shape=10)
             vals = tt.dot(chol, vals_raw)
 
             # Or compute the covariance matrix

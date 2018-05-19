@@ -185,15 +185,34 @@ class QuadPotentialDiagAdapt(QuadPotential):
 
         self._n_samples += 1
 
-    def raise_ok(self):
+    def raise_ok(self, vmap):
         if np.any(self._stds == 0):
-            raise ValueError('Mass matrix contains zeros on the diagonal. '
-                             'Some derivatives might always be zero.')
-        if np.any(self._stds < 0):
-            raise ValueError('Mass matrix contains negative values on the '
-                             'diagonal.')
+            name_slc = []
+            tmp_hold = list(range(self._stds.size))
+            for vmap_ in vmap:
+                slclen = len(tmp_hold[vmap_.slc])
+                for i in range(slclen):
+                    name_slc.append((vmap_.var, i))
+            index = np.where(self._stds == 0)[0]
+            errmsg = ['Mass matrix contains zeros on the diagonal. ']
+            for ii in index:
+                errmsg.append('The derivative of RV `{}`.ravel()[{}]'
+                              ' is zero.'.format(*name_slc[ii]))
+            raise ValueError('\n'.join(errmsg))
+
         if np.any(~np.isfinite(self._stds)):
-            raise ValueError('Mass matrix contains non-finite values.')
+            name_slc = []
+            tmp_hold = list(range(self._stds.size))
+            for vmap_ in vmap:
+                slclen = len(tmp_hold[vmap_.slc])
+                for i in range(slclen):
+                    name_slc.append((vmap_.var, i))
+            index = np.where(~np.isfinite(self._stds))[0]
+            errmsg = ['Mass matrix contains non-finite values on the diagonal. ']
+            for ii in index:
+                errmsg.append('The derivative of RV `{}`.ravel()[{}]'
+                              ' is non-finite.'.format(*name_slc[ii]))
+            raise ValueError('\n'.join(errmsg))
 
 
 class QuadPotentialDiagAdaptGrad(QuadPotentialDiagAdapt):

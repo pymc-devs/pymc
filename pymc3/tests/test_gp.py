@@ -791,12 +791,12 @@ class TestGPAdditive(object):
             gp3 = pm.gp.MarginalSparse(self.means[2], self.covs[2], approx=approx)
 
             gpsum = gp1 + gp2 + gp3
-            fsum = gpsum.marginal_likelihood("f", self.X, Xu, self.y, sigma=sigma)
+            fsum = gpsum.marginal_likelihood("f", self.X, Xu, self.y, noise=sigma)
             model1_logp = model1.logp({"fsum": self.y})
 
         with pm.Model() as model2:
             gptot = pm.gp.MarginalSparse(reduce(add, self.means), reduce(add, self.covs), approx=approx)
-            fsum = gptot.marginal_likelihood("f", self.X, Xu, self.y, sigma=sigma)
+            fsum = gptot.marginal_likelihood("f", self.X, Xu, self.y, noise=sigma)
             model2_logp = model2.logp({"fsum": self.y})
         npt.assert_allclose(model1_logp, model2_logp, atol=0, rtol=1e-2)
 

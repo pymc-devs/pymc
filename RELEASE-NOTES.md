@@ -7,13 +7,16 @@
 ### New features
 
 - Add `check_test_point` method to `pm.Model`
-- Add `Ordered` transformation and `OrderedLogistic` distribution
+- Add `Ordered` Transformation and `OrderedLogistic` distribution
 - Add `Chain` transformation
+- Better warning message for `Mass matrix contains zeros on the diagonal. Some derivatives might always be zero`
 
 ### Fixes
 
 - Fixed `KeyError` raised when only subset of variables are specified to be recorded in the trace.
 - Removed unused `repeat=None` arguments from all `random()` methods in distributions.
+- Deprecated the `sigma` argument in `MarginalSparse.marginal_likelihood` in favor of `noise`
+- Fixed unexpected behavior in `random`. Now the `random` functionality is more robust and will work better for `sample_prior` when that is implemented.
 
 ## PyMC 3.4.1 (April 18 2018)
 
