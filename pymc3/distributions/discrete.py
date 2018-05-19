@@ -247,7 +247,6 @@ class Bernoulli(Discrete):
         self.mode = tt.cast(tround(self.p), 'int8')
 
     def random(self, point=None, size=None):
-        print(size)
         p = draw_values([self.p], point=point, size=size)[0]
         return generate_samples(stats.bernoulli.rvs, p,
                                 dist_shape=self.shape,
