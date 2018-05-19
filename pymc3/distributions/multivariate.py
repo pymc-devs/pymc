@@ -234,7 +234,7 @@ class MvNormal(_QuadFormBase):
                 size = [size]
 
         if self._cov_type == 'cov':
-            mu, cov = draw_values([self.mu, self.cov], point=point)
+            mu, cov = draw_values([self.mu, self.cov], point=point, size=size)
             if mu.shape[-1] != cov.shape[-1]:
                 raise ValueError("Shapes for mu and cov don't match")
 
@@ -246,7 +246,7 @@ class MvNormal(_QuadFormBase):
                 return np.nan * np.zeros(size)
             return dist.rvs(size)
         elif self._cov_type == 'chol':
-            mu, chol = draw_values([self.mu, self.chol_cov], point=point)
+            mu, chol = draw_values([self.mu, self.chol_cov], point=point, size=size)
             if mu.shape[-1] != chol[0].shape[-1]:
                 raise ValueError("Shapes for mu and chol don't match")
 
@@ -254,7 +254,7 @@ class MvNormal(_QuadFormBase):
             standard_normal = np.random.standard_normal(size)
             return mu + np.dot(standard_normal, chol.T)
         else:
-            mu, tau = draw_values([self.mu, self.tau], point=point)
+            mu, tau = draw_values([self.mu, self.tau], point=point, size=size)
             if mu.shape[-1] != tau[0].shape[-1]:
                 raise ValueError("Shapes for mu and tau don't match")
 
@@ -338,15 +338,15 @@ class MvStudentT(_QuadFormBase):
         self.mean = self.median = self.mode = self.mu = self.mu
 
     def random(self, point=None, size=None):
-        nu, mu = draw_values([self.nu, self.mu], point=point)
+        nu, mu = draw_values([self.nu, self.mu], point=point, size=size)
         if self._cov_type == 'cov':
-            cov, = draw_values([self.cov], point=point)
+            cov, = draw_values([self.cov], point=point, size=size)
             dist = MvNormal.dist(mu=np.zeros_like(mu), cov=cov)
         elif self._cov_type == 'tau':
-            tau, = draw_values([self.tau], point=point)
+            tau, = draw_values([self.tau], point=point, size=size)
             dist = MvNormal.dist(mu=np.zeros_like(mu), tau=tau)
         else:
-            chol, = draw_values([self.chol_cov], point=point)
+            chol, = draw_values([self.chol_cov], point=point, size=size)
             dist = MvNormal.dist(mu=np.zeros_like(mu), chol=chol)
 
         samples = dist.random(point, size)
@@ -422,7 +422,7 @@ class Dirichlet(Continuous):
                               np.nan)
 
     def random(self, point=None, size=None):
-        a = draw_values([self.a], point=point)[0]
+        a = draw_values([self.a], point=point, size=size)[0]
 
         def _random(a, size=None):
             return stats.dirichlet.rvs(a, None if size == a.shape else size)
@@ -545,7 +545,7 @@ class Multinomial(Discrete):
         return randnum.astype(original_dtype)
 
     def random(self, point=None, size=None):
-        n, p = draw_values([self.n, self.p], point=point)
+        n, p = draw_values([self.n, self.p], point=point, size=size)
         samples = generate_samples(self._random, n, p,
                                    dist_shape=self.shape,
                                    size=size)
@@ -679,7 +679,7 @@ class Wishart(Continuous):
                               np.nan)
 
     def random(self, point=None, size=None):
-        nu, V = draw_values([self.nu, self.V], point=point)
+        nu, V = draw_values([self.nu, self.V], point=point, size=size)
         size= 1 if size is None else size
         return generate_samples(stats.wishart.rvs, np.asscalar(nu), V,
                                     broadcast_shape=(size,))
@@ -1071,7 +1071,7 @@ class LKJCorr(Continuous):
         return C.transpose((1, 2, 0))[np.triu_indices(n, k=1)].T
 
     def random(self, point=None, size=None):
-        n, eta = draw_values([self.n, self.eta], point=point)
+        n, eta = draw_values([self.n, self.eta], point=point, size=size)
         size= 1 if size is None else size
         samples = generate_samples(self._random, n, eta,
                                    broadcast_shape=(size,))
@@ -1264,8 +1264,8 @@ class MatrixNormal(Continuous):
 
         mu, colchol, rowchol = draw_values(
                                 [self.mu, self.colchol_cov, self.rowchol_cov],
-                                point=point
-                                )
+                                point=point,
+                                size=size)
         standard_normal = np.random.standard_normal(size)
         return mu + np.matmul(rowchol, np.matmul(standard_normal, colchol.T))
 

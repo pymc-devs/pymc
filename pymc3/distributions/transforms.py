@@ -170,7 +170,7 @@ class Interval(ElemwiseTransform):
         # the `self.a-0.` below is important for the testval to propagates
         # For an explanation see pull/2328#issuecomment-309303811
         a, b = draw_values([self.a-0., self.b-0.],
-                            point=point)
+                            point=point, size=size)
         return floatX(np.log(x - a) - np.log(b - x))
 
     def jacobian_det(self, x):
@@ -202,7 +202,7 @@ class LowerBound(ElemwiseTransform):
         # the `self.a-0.` below is important for the testval to propagates
         # For an explanation see pull/2328#issuecomment-309303811
         a = draw_values([self.a-0.],
-                        point=point)[0]
+                        point=point, size=size)[0]
         return floatX(np.log(x - a))
 
     def jacobian_det(self, x):
@@ -233,7 +233,7 @@ class UpperBound(ElemwiseTransform):
         # the `self.b-0.` below is important for the testval to propagates
         # For an explanation see pull/2328#issuecomment-309303811
         b = draw_values([self.b-0.],
-                        point=point)[0]
+                        point=point, size=size)[0]
         return floatX(np.log(b - x))
 
     def jacobian_det(self, x):

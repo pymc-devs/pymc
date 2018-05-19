@@ -177,8 +177,8 @@ class Continuous(Distribution):
 
 class DensityDist(Distribution):
     """Distribution based on a given log density function.
-        
-        A distribution with the passed log density function is created. 
+
+        A distribution with the passed log density function is created.
         Requires a custom random function passed as kwarg `random` to
         enable sampling.
 
@@ -200,7 +200,7 @@ class DensityDist(Distribution):
             shape, dtype, testval, *args, **kwargs)
         self.logp = logp
         self.rand = random
-    
+
     def random(self, *args, **kwargs):
         if self.rand is not None:
             return self.rand(*args, **kwargs)
@@ -345,9 +345,7 @@ def _draw_value(param, point=None, givens=None, size=None):
     size : int, optional
         Number of samples
     """
-    if isinstance(param, numbers.Number):
-        return param
-    elif isinstance(param, np.ndarray):
+    if isinstance(param, (numbers.Number, np.ndarray)):
         return param
     elif isinstance(param, tt.TensorConstant):
         return param.value
@@ -357,7 +355,7 @@ def _draw_value(param, point=None, givens=None, size=None):
         if point and hasattr(param, 'model') and param.name in point:
             return point[param.name]
         elif hasattr(param, 'random') and param.random is not None:
-            return param.random(point=point, size=None)
+            return param.random(point=point, size=size)
         else:
             if givens:
                 variables, values = list(zip(*givens))
