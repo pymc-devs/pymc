@@ -11,7 +11,7 @@ import numpy as np
 from ..backends import base
 
 
-def save_trace(trace, directory='.pymc3.trace'):
+def save_trace(trace, directory=None, overwrite=False):
     """Save multitrace to file.
 
     TODO: Also save warnings.
@@ -27,13 +27,28 @@ def save_trace(trace, directory='.pymc3.trace'):
         trace to save to disk
     directory : str (optional)
         path to a directory to save the trace
+    overwrite : bool (default False)
+        whether to overwrite an existing directory.
 
     Returns
     -------
     str, path to the directory where the trace was saved
     """
-    if not os.path.exists(directory):
-        os.makedirs(directory)
+    if directory is None:
+        directory = '.pymc_{}.trace'
+        idx = 1
+        while os.path.exists(directory.format(idx)):
+            idx += 1
+        directory = directory.format(idx)
+
+    if os.path.isdir(directory):
+        if overwrite:
+            shutil.rmtree(directory)
+        else:
+            raise OSError('Cautiously refusing to overwrite the already existing {}! Please supply '
+                          'a different directory, or set `overwrite=True`'.format(directory))
+    os.makedirs(directory)
+
     for chain, ndarray in trace._straces.items():
         SerializeNDArray(os.path.join(directory, str(chain))).save(ndarray)
     return directory
