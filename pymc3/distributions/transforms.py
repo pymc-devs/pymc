@@ -381,7 +381,7 @@ circular = Circular()
 
 
 class CholeskyCovPacked(Transform):
-    name = "cholesky_cov_packed"
+    name = "cholesky-cov-packed"
 
     def __init__(self, n):
         self.diag_idxs = np.arange(1, n + 1).cumsum() - 1
@@ -403,7 +403,7 @@ class CholeskyCovPacked(Transform):
 class Chain(Transform):
     def __init__(self, transform_list):
         self.transform_list = transform_list
-        self.name = '_'.join([transf.name for transf in self.transform_list])
+        self.name = '+'.join([transf.name for transf in self.transform_list])
 
     def forward(self, x):
         y = x

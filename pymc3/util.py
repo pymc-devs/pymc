@@ -82,10 +82,7 @@ def get_untransformed_name(name):
     if not is_transformed_name(name):
         raise ValueError(
             u'{} does not appear to be a transformed name'.format(name))
-    if 'cholesky_cov_pack' in name:
-        return '_'.join(name.split('_')[:-5])
-    else:
-        return '_'.join(name.split('_')[:-3])
+    return '_'.join(name.split('_')[:-3])
 
 
 def get_default_varnames(var_iterator, include_transformed):
