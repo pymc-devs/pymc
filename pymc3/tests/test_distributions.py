@@ -222,6 +222,14 @@ def SortedVector(n):
     return Domain(vals, edges=(None, None))
 
 
+def UnitSortedVector(n):
+    vals = []
+    np.random.seed(42)
+    for _ in range(10):
+        vals.append(np.sort(np.random.rand(n)))
+    return Domain(vals, edges=(None, None))
+
+
 def RealMatrix(n, m):
     vals = []
     np.random.seed(42)
