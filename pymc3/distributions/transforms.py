@@ -50,6 +50,16 @@ class ElemwiseTransform(Transform):
         return tt.log(tt.abs_(grad))
 
 
+class VectorTransform(Transform):
+
+    def jacobian_det(self, x):
+        f_inv = self.backward(x)
+        J, _ = theano.scan(lambda i, f, x: tt.grad(f[i], x),
+                           sequences=tt.arange(f_inv.shape[0]),
+                           non_sequences=[f_inv, x])
+        return tt.log(tt.abs_(tt.nlinalg.det(J)))
+
+
 class TransformedDistribution(distribution.Distribution):
     """A distribution that has been transformed from one space into another."""
 
