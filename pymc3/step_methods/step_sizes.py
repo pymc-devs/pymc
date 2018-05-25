@@ -1,5 +1,3 @@
-import math
-
 import numpy as np
 from scipy import stats
 
@@ -8,22 +6,22 @@ from pymc3.backends.report import SamplerWarning, WarningType
 
 class DualAverageAdaptation(object):
     def __init__(self, initial_step, target, gamma, k, t0):
-        self._log_step = math.log(initial_step)
+        self._log_step = np.log(initial_step)
         self._log_bar = self._log_step
         self._target = target
         self._hbar = 0.
         self._k = k
         self._t0 = t0
         self._count = 1
-        self._mu = math.log(10 * initial_step)
+        self._mu = np.log(10 * initial_step)
         self._gamma = gamma
         self._tuned_stats = []
 
     def current(self, tune):
         if tune:
-            return math.exp(self._log_step)
+            return np.exp(self._log_step)
         else:
-            return math.exp(self._log_bar)
+            return np.exp(self._log_bar)
 
     def update(self, accept_stat, tune):
         if not tune:
@@ -34,15 +32,15 @@ class DualAverageAdaptation(object):
         w = 1. / (count + t0)
         self._hbar = ((1 - w) * self._hbar + w * (self._target - accept_stat))
 
-        self._log_step = self._mu - self._hbar * math.sqrt(count) / self._gamma
+        self._log_step = self._mu - self._hbar * np.sqrt(count) / self._gamma
         mk = count ** -k
         self._log_bar = mk * self._log_step + (1 - mk) * self._log_bar
         self._count += 1
 
     def stats(self):
         return {
-            'step_size': math.exp(self._log_step),
-            'step_size_bar': math.exp(self._log_bar),
+            'step_size': np.exp(self._log_step),
+            'step_size_bar': np.exp(self._log_bar),
         }
 
     def warnings(self):

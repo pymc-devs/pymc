@@ -1,5 +1,5 @@
 # pylint: disable=wildcard-import
-__version__ = "3.3"
+__version__ = "3.4.1"
 
 from .blocking import *
 from .distributions import *
@@ -20,6 +20,7 @@ from . import sampling
 
 from .diagnostics import *
 from .backends.tracetab import *
+from .backends import save_trace, load_trace
 
 from .plots import *
 from .tests import test

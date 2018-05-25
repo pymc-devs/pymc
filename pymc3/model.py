@@ -5,6 +5,7 @@ import threading
 import six
 
 import numpy as np
+from pandas import Series
 import scipy.sparse as sps
 import theano.sparse as sparse
 from theano import theano, tensor as tt
@@ -711,10 +712,8 @@ class Model(six.with_metaclass(InitContextMeta, Context, Factor, WithMemoization
     def logpt(self):
         """Theano scalar of log-probability of the model"""
         with self:
-            factors = [var.logpt for var in self.basic_RVs]
-            logp_factors = tt.sum(factors)
-            logp_potentials = tt.sum([tt.sum(pot) for pot in self.potentials])
-            logp = logp_factors + logp_potentials
+            factors = [var.logpt for var in self.basic_RVs] + self.potentials
+            logp = tt.sum([tt.sum(factor) for factor in factors])
             if self.name:
                 logp.name = '__logp_%s' % self.name
             else:
@@ -999,6 +998,27 @@ class Model(six.with_metaclass(InitContextMeta, Context, Factor, WithMemoization
         view = {vm.var: vm for vm in order.vmap}
         flat_view = FlatView(inputvar, replacements, view)
         return flat_view
+
+    def check_test_point(self, test_point=None, round_vals=2):
+        """Checks log probability of test_point for all random variables in the model.
+
+        Parameters
+        ----------
+        test_point : Point
+            Point to be evaluated.
+            if None, then all model.test_point is used
+        round_vals : int
+            Number of decimals to round log-probabilities
+
+        Returns
+        -------
+        Pandas Series
+        """
+        if test_point is None:
+            test_point = self.test_point
+
+        return Series({RV.name:np.round(RV.logp(self.test_point), round_vals) for RV in self.basic_RVs}, 
+            name='Log-probability of test_point')
 
     def _repr_latex_(self, name=None, dist=None):
         tex_vars = []

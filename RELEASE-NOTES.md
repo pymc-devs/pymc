@@ -1,6 +1,25 @@
 # Release Notes
 
-## PyMC 3.4 (unreleased)
+
+## PyMC 3.5 (Unreleased)
+
+
+### New features
+
+- Add `check_test_point` method to `pm.Model`
+- Add `Ordered` Transformation and `OrderedLogistic` distribution
+- Add `Chain` transformation
+- Better warning message for `Mass matrix contains zeros on the diagonal. Some derivatives might always be zero`
+- Save and load traces without `pickle` using `pm.save_trace` and `pm.load_trace`
+
+### Fixes
+
+- Fixed `KeyError` raised when only subset of variables are specified to be recorded in the trace.
+- Removed unused `repeat=None` arguments from all `random()` methods in distributions.
+- Deprecated the `sigma` argument in `MarginalSparse.marginal_likelihood` in favor of `noise`
+- Fixed unexpected behavior in `random`. Now the `random` functionality is more robust and will work better for `sample_prior` when that is implemented.
+
+## PyMC 3.4.1 (April 18 2018)
 
 ### New features
 
@@ -16,7 +35,7 @@
 - Plots of discrete distributions in the docstrings
 - Add logitnormal distribution
 - Densityplot: add support for discrete variables
-- Fix the Binomial likelihood in `.glm.families.Binomial`, with the flexibility of specifying the `n`. 
+- Fix the Binomial likelihood in `.glm.families.Binomial`, with the flexibility of specifying the `n`.
 - Add `offset` kwarg to `.glm`.
 - Changed the `compare` function to accept a dictionary of model-trace pairs instead of two separate lists of models and traces.
 - add test and support for creating multivariate mixture and mixture of mixtures
@@ -54,7 +73,7 @@
 - Forestplot supports multiple traces (#2736)
 - Add new plot, densityplot (#2741)
 - DIC and BPIC calculations have been deprecated
-- Refactor HMC and implemented new warning system (#2677, #2808) 
+- Refactor HMC and implemented new warning system (#2677, #2808)
 
 ### Fixes
 
@@ -62,7 +81,7 @@
 - Improved `posteriorplot` to scale fonts
 - `sample_ppc_w` now broadcasts
 - `df_summary` function renamed to `summary`
-- Add test for `model.logp_array` and `model.bijection` (#2724) 
+- Add test for `model.logp_array` and `model.bijection` (#2724)
 - Fixed `sample_ppc` and `sample_ppc_w` to iterate all chains(#2633, #2748)
 - Add Bayesian R2 score (for GLMs) `stats.r2_score` (#2696) and test (#2729).
 - SMC works with transformed variables (#2755)

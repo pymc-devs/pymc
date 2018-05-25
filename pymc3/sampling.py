@@ -15,7 +15,7 @@ from .model import modelcontext, Point, all_continuous
 from .step_methods import (NUTS, HamiltonianMC, Metropolis, BinaryMetropolis,
                            BinaryGibbsMetropolis, CategoricalGibbsMetropolis,
                            Slice, CompoundStep, arraystep)
-from .util import update_start_vals
+from .util import update_start_vals, get_untransformed_name, is_transformed_name
 from .vartypes import discrete_types
 from pymc3.step_methods.hmc import quadpotential
 from pymc3 import plots
@@ -159,7 +159,9 @@ def _print_step_hierarchy(s, level=0):
         for i in s.methods:
             _print_step_hierarchy(i, level+1)
     else:
-        _log.info('>' * level + '{}: {}'.format(s.__class__.__name__, s.vars))
+        varnames = ', '.join([get_untransformed_name(v.name) if is_transformed_name(v.name)
+                              else v.name for v in s.vars])
+        _log.info('>' * level + '{}: [{}]'.format(s.__class__.__name__, varnames))
 
 
 def _cpu_count():

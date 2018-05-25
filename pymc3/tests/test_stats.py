@@ -339,3 +339,7 @@ class TestDfSummary(bf.ModelBackendSampledTestCase):
                                  ).reshape(rhat.shape)
             npt.assert_equal(rhat, rhat_df)
 
+    def test_psis(self):
+        lw = np.random.randn(20000, 10)
+        _, ks = pm.stats._psislw(lw, 1.)
+        npt.assert_array_less(ks, .5)

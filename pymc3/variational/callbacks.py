@@ -74,7 +74,7 @@ class CheckParametersConvergence(Callback):
         self.prev = current
         norm = np.linalg.norm(delta, self.ord)
         if norm < self.tolerance:
-            raise StopIteration('Convergence archived at %d' % i)
+            raise StopIteration('Convergence achieved at %d' % i)
 
     @staticmethod
     def flatten_shared(shared_list):

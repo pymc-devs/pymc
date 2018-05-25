@@ -112,7 +112,7 @@ class BaseHMC(arraystep.GradientSharedStep):
         start = self.integrator.compute_state(q0, p0)
 
         if not np.isfinite(start.energy):
-            self.potential.raise_ok()
+            self.potential.raise_ok(self._logp_dlogp_func._ordering.vmap)
             raise ValueError('Bad initial energy: %s. The model '
                              'might be misspecified.' % start.energy)
 

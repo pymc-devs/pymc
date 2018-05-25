@@ -28,6 +28,7 @@ from .continuous import Gumbel
 from .continuous import Logistic
 from .continuous import LogitNormal
 from .continuous import Interpolated
+from .continuous import Rice
 
 from .discrete import Binomial
 from .discrete import BetaBinomial
@@ -43,6 +44,7 @@ from .discrete import ZeroInflatedBinomial
 from .discrete import DiscreteUniform
 from .discrete import Geometric
 from .discrete import Categorical
+from .discrete import OrderedLogistic
 
 from .distribution import DensityDist
 from .distribution import Distribution
@@ -117,6 +119,7 @@ __all__ = ['Uniform',
            'DiscreteUniform',
            'Geometric',
            'Categorical',
+           'OrderedLogistic',
            'DensityDist',
            'Distribution',
            'Continuous',

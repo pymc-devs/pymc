@@ -334,7 +334,7 @@ def _psislw(lw, reff):
     kss = np.empty(m)
 
     # precalculate constants
-    cutoff_ind = - int(np.ceil(min(n / 0.5, 3 * (n / reff) ** 0.5))) - 1
+    cutoff_ind = - int(np.ceil(min(n / 5., 3 * (n / reff) ** 0.5))) - 1
     cutoffmin = np.log(np.finfo(float).tiny)
     k_min = 1. / 3
 

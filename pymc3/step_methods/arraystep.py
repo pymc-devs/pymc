@@ -211,8 +211,20 @@ class GradientSharedStep(BlockedStep):
         self.vars = vars
         self.blocked = blocked
 
-        self._logp_dlogp_func = model.logp_dlogp_function(
+        func = model.logp_dlogp_function(
             vars, dtype=dtype, **theano_kwargs)
+
+        # handle edge case discovered in #2948
+        try:
+            func.set_extra_values(model.test_point)
+            q = func.dict_to_array(model.test_point)
+            logp, dlogp = func(q)
+        except ValueError:
+            theano_kwargs.update(mode='FAST_COMPILE')
+            func = model.logp_dlogp_function(
+                vars, dtype=dtype, **theano_kwargs)
+
+        self._logp_dlogp_func = func
 
     def step(self, point):
         self._logp_dlogp_func.set_extra_values(point)
