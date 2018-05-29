@@ -165,6 +165,21 @@ class Uniform(Continuous):
         super(Uniform, self).__init__(transform=transform, *args, **kwargs)
 
     def random(self, point=None, size=None):
+        """
+        Draw random values from Uniform distribution.
+
+        Parameters
+        ----------
+        point : Point, optional
+            Point on which random values are to be conditioned. 
+        size : int, optional
+            Desired size of random sample.
+
+        Returns
+        -------
+        array
+        """
+
         lower, upper = draw_values([self.lower, self.upper],
                                    point=point, size=size)
         return generate_samples(stats.uniform.rvs, loc=lower,
@@ -173,6 +188,18 @@ class Uniform(Continuous):
                                 size=size)
 
     def logp(self, value):
+        """
+        Calculate log-probability of Uniform distribution at specified value.
+
+        Parameters
+        ----------
+        value : numeric
+            Value for which log-probability is calculated. 
+
+        Returns
+        -------
+        TensorVariable
+        """
         lower = self.lower
         upper = self.upper
         return bound(-tt.log(upper - lower),
