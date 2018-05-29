@@ -3,6 +3,8 @@ import numpy as np
 import scipy.stats as sp
 from .checks import close_to
 from .models import simple_model, mv_simple
+import theano
+from theano import tensor as tt
 
 
 tol = 2.0**-11
@@ -34,6 +36,64 @@ def test_deterministic():
 
     assert model.y == y
     assert model['y'] == y
+
+
+def test_deterministic_name_handling():
+    with pm.Model() as model:
+        x = pm.Normal('x', 0, 1)
+        a = tt.constant(0)
+        a.name = 'a'
+        b = tt.constant(0)
+        b.name = 'b'
+        wa = pm.Deterministic('wa', a)
+        wb = pm.Deterministic('wb', b)
+        c = wa * x + wb
+        c.name = 'c'
+        wc = pm.Deterministic('wc', c)
+
+    # Test __class__ of the Determinisitc variables
+    assert(not pm.util.MetaNameWrapped.is_name_wrapped_instance(a))
+    assert(not pm.util.MetaNameWrapped.is_name_wrapped_instance(b))
+    assert(not pm.util.MetaNameWrapped.is_name_wrapped_instance(c))
+    assert(pm.util.MetaNameWrapped.is_name_wrapped_instance(wa))
+    assert(pm.util.MetaNameWrapped.is_name_wrapped_instance(wb))
+    assert(pm.util.MetaNameWrapped.is_name_wrapped_instance(wc))
+
+    # Test name handling difference between theano variables and Deterministics
+    assert(a.name=='b')
+    assert(b.name=='b')
+    assert(c.name=='c')
+    assert(wa.name=='wa')
+    assert(wb.name=='wb')
+    assert(wc.name=='wc')
+    assert(str(wa)==str(a))
+    assert(str(wb)==str(a))
+    assert(str(wc)==str(c))
+    assert(hash(wa)==hash(wa.get_theano_instance()))
+    assert(hash(wb)==hash(wb.get_theano_instance()))
+    assert(hash(wc)==hash(wc.get_theano_instance()))
+    assert(a==b)
+    assert(wa!=wb)
+    assert(wa.equals(wb))
+
+    # Assert that the Apply nodes look the same to theano and that the outputs
+    # point to the wrapped variables
+    c_graph = tt.printing.debugprint(c, file='str')
+    wc_graph = tt.printing.debugprint(wc, file='str') 
+    assert(c_graph==wc_graph)
+    assert(all([wc==oo for oo in [o for o in wc.owner.outputs if str(wc)==str(o)]]))
+
+def get_inputs(x):
+    if hasattr(x, 'owner') and x.owner is not None:
+        out = []
+        for i in x.owner.inputs:
+            out.extend(get_inputs(i))
+        return out
+    else:
+        if not isinstance(x, tt.TensorConstant):
+            return [(x, x.name, type(x))]
+        else:
+            return []
 
 
 def test_mapping():

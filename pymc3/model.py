@@ -18,7 +18,7 @@ from .memoize import memoize, WithMemoization
 from .theanof import gradient, hessian, inputvars, generator
 from .vartypes import typefilter, discrete_types, continuous_types, isgenerator
 from .blocking import DictToArrayBijection, ArrayOrdering
-from .util import get_transformed_name
+from .util import get_transformed_name, NameWrapped
 
 __all__ = [
     'Model', 'Factor', 'compilef', 'fn', 'fastfn', 'modelcontext',
@@ -1404,7 +1404,7 @@ def Deterministic(name, var, model=None):
     var : var, with name attribute
     """
     model = modelcontext(model)
-    var.name = model.name_for(name)
+    var = NameWrapped(var, pymc_name=model.name_for(name))
     model.deterministics.append(var)
     model.add_random_variable(var)
     var._repr_latex_ = functools.partial(_latex_repr_rv, var)

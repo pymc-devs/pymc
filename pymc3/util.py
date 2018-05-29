@@ -1,6 +1,11 @@
 import re
 import functools
 from numpy import asscalar
+import os, inspect, theano, copy
+from six import with_metaclass
+
+
+THEANO_PACKAGE_PATH = os.path.dirname(theano.__file__)
 
 LATEX_ESCAPE_RE = re.compile(r'(%|_|\$|#|&)', re.MULTILINE)
 
@@ -166,3 +171,303 @@ def biwrap(wrapper):
             newwrapper = functools.partial(wrapper, *args, **kwargs)
             return newwrapper
     return enhanced
+
+
+# Methods that will wrap the attribute getting and setting methods to handle
+# name
+def called_from_inside_theano(look_behind=1):
+    """
+    Look at the call stack trace of the previous `look_behind` number of frames
+    to see if the call came from theano
+    
+    """
+    # Twisted way to control the precise look_behind steps to make, because
+    # sometimes inspect.stack finds code objects at some outer frame and crashes
+    frame = inspect.currentframe().f_back
+    for rewind in range(look_behind):
+        frame = frame.f_back
+    try:
+        caller_path = inspect.getframeinfo(frame)[0]
+    except:
+        # Failed to get the caller_path, maybe because it originated at a code
+        # object so the default is to say the call was external to theano
+        caller_path = None
+    return os.path.abspath(caller_path).startswith(THEANO_PACKAGE_PATH)
+
+
+def name_wrapped_getattribute(self, at, override=False):
+    if at=='name' and not override and not called_from_inside_theano():
+        return self.pymc_name
+    else:
+        return object.__getattribute__(self, at)
+
+
+def name_wrapped_setattr(self, at, value):
+    if at=='name' and not called_from_inside_theano():
+        self.pymc_name = value
+    elif at=='_masked_dict_keys':
+        object.__setattr__(self, at, value)
+    else:
+        if at in self._masked_dict_keys:
+            self._masked_theano_var = None
+        object.__setattr__(self, at, value)
+
+
+class MetaNameWrapped(theano.gof.utils.MetaObject):
+    registry = {}
+    def __new__(cls, clsname, bases, dct, theano_class=None):
+        """
+        MetaNameWrapped.__new__(cls, clsname, bases, dct, theano_class=None)
+        
+        This function is used to create the dynamic NameWrapped classes. It has
+        two distinct behaviors.
+        A) If theano_class is None, this method just calls super.__new__.
+           This first call to __new__ creates an empty class on which __call__
+           can operate to generate the correct dynamic class, which depends on
+           the input passed at the variable's construction.
+        
+        B) If theano_class is not None, it must be a class. If not, a TypeError
+           will be raised. If theano_class is a class then __new__ does the
+           following:
+           1) Changes clsname to clsname + theano_class.__name__
+           2) Ensures that theano_class is added as the leftmost base
+           3) Changes __getattribute__ and __setattribute__ methods in dct to
+              name_wrapped_getattribute and name_wrapped_setattr
+           4) Changes __eq__ and __ne__. __hash__ will give the same result as
+              a call to the hash of the theano variable used for construction.
+              __eq__ and __ne__ will work conditionally to whether the call
+              comes from within theano or not. If the call is from inside theano
+              they will work with the theano variable used for construction's
+              __eq__ and __ne__. If not, they will simply follow up the 
+              simply use the theano
+           5) Registers the new class (if it did not already exist)
+           6) Returns the newly created dynamic class
+        
+        """
+        if theano_class is None:
+            key = tuple(clsname)+bases
+            try:
+                return cls.registry[key]
+            except KeyError:
+                out_cls = super(MetaNameWrapped, cls).__new__(cls, clsname,
+                                                              bases, dct)
+                cls.registry[key] = out_cls
+                return out_cls
+        else:
+            if not inspect.isclass(theano_class):
+                raise TypeError("MetaNameWrapped's theano_class input must be "
+                                "a class. However, theano_class's type is "
+                                "{}".format(type(theano_class)))
+            # Step 1. Change clsname
+            clsname+= theano_class.__name__
+
+            # Step 2. Prepend theano_class to bases
+            if bases:
+                bases = list(bases)
+                # Ensure that theano_class is placed as the leftmost base
+                if theano_class in bases:
+                    bases.pop(bases.index(theano_class))
+                bases = tuple([theano_class, ] + bases)
+            else:
+                bases = (theano_class, )
+            
+            key = tuple(clsname)+bases
+            try:
+                return cls.registry[key]
+            except KeyError:
+                # Step 3. Change __getattribute__ and __setattr__ to name
+                # wrapped versions
+                dct['__getattribute__'] = name_wrapped_getattribute
+                dct['__setattr__'] = name_wrapped_setattr
+                out_cls = super(MetaNameWrapped, cls).__new__(cls, clsname,
+                                                              bases, dct)
+                # Step 4. Register the new class
+                cls.registry[key] = out_cls
+                return out_cls
+
+    def __call__(cls, theano_var, *args, **kwargs):
+        """
+        MetaNameWrapped.__call__(cls, theano_var, *args, **kwargs)
+        
+        This class method intercepts NameWrapped instance creation, and based on
+        the theano_var's class, it dynamically creates the correct class with
+        name wrapping behavior.
+        
+        Input:
+            theano_var: (Mandatory) an instance of a theano class variable
+            *args, **kwargs: Are passed to NameWrapped.__init__
+        Output:
+            An instance of 'NameWrapped{}'.format(theano_var.__class__.__name__)
+            class.
+        
+        This function does the following
+        1) When __call__ is executed, __new__ has already run a first time.
+           However, this first "dry" was in no way aware of the theano_var
+           input passed to __call__. So, when __call__ is first executed, 
+           and not before, the class of the output instance will be known. This
+           means that MetaNameWrapped.__new__ must be called here again with
+           an added parametrization, in order to get the correct wrapped class.
+        2) An instance of the class created in step 1 must be created with
+           cls.__new__
+        3) The theano variable's __dict__ must be copied into the new instance's
+           __dict__ (maybe a shallow copy is enough).
+        4) Call cls.__init__ on the newly created instance
+        5) Check if the original theano_var has owner. If so, the outputs that
+           match the theano_var must be changed to the wrapped instance.
+        6) Returned the created instance. The rules of metaclass __call__ say
+           that if __call__ returns an istance of cls, it will also call
+           cls.__init__ on it. As we are changing the input cls during this
+           call, the output will never have the same cls that was inputed, so
+           __init__ will not be called again.
+        
+        """
+        # Prepare the call for the __new__ statement that depends on the
+        # theano_var
+        dct = vars(cls).copy()
+        slots = dct.get('__slots__')
+        if slots is not None:
+            if isinstance(slots, str):
+                slots = [slots]
+            for slots_var in slots:
+                dct.pop(slots_var)
+        dct.pop('__dict__', None)
+        dct.pop('__weakref__', None)
+
+        # Step 1. Call the MetaNameWrapped.__new__ method with the theano_class,
+        # to get the actual modified class
+        try:
+            _masked_class = theano_var._masked_class
+            _masked_dict_keys = theano_var._masked_dict_keys
+        except AttributeError:
+            _masked_class = type(theano_var)
+            _masked_dict_keys = set(theano_var.__dict__.keys())
+
+        cls = MetaNameWrapped.__new__(MetaNameWrapped, cls.__name__,
+                                      cls.__bases__, dct,
+                                      theano_class=_masked_class)
+        # Step 2. Create the instance with cls.__new__
+        instance = cls.__new__(cls)
+        # Step 3. Copy the theano_var __dict__ into the newly created instance
+        instance._masked_dict_keys = _masked_dict_keys
+        instance._masked_theano_var = None
+        instance._masked_class = _masked_class
+        instance.__dict__.update(theano_var.__dict__)
+
+        # Step 4. Call __init__ as this will not be done automatically for us
+        instance.__init__(*args, **kwargs)
+
+        # Step 5. Change owner outputs to the wrapped variable
+        try:
+            owner = instance.owner
+        except AttributeError:
+            owner = None
+            if hasattr(theano_var, 'owner'):
+                raise RuntimeError('theano_vars owner not passed on to wrapped')
+        if owner:
+            if hasattr(owner, 'outputs'):
+                for i, out in enumerate(owner.outputs):
+                    if out==theano_var:
+                        instance.owner.outputs[i] = instance
+            else:
+                print(instance, theano_var, type(instance), type(theano_var))
+                theano.tensor.printing.debugprint(theano_var)
+                theano.tensor.printing.debugprint(instance)
+                print(dir(theano_var))
+        return instance
+
+    @classmethod
+    def is_name_wrapped_instance(cls, obj):
+        return isinstance(obj, tuple(cls.registry.values()))
+
+
+class NameWrapped(object, with_metaclass(MetaNameWrapped)):
+    def __init__(self, pymc_name=None, override_name=False):
+        """
+        Class that is intended to wrap instances of theano variables of any
+        type. This class is intended to change the way in which the `name`
+        attribute is handled from outside of theano's scope. From outside of
+        `theano`, the `name` attribute should be an alias for the `pymc_name`
+        attribute, whilst from inside of `theano`, the `name` should stay the
+        same.
+        
+        """
+        # We only set pymc_name here, the theano variable's original name is
+        # left untouched during the init, but later calls to
+        # setattr(self, 'name',...) will change both the name attribute and the
+        # pymc name
+        if override_name:
+            # setattr(self, 'name', val) will also set pymc_name. The contrary
+            # does not occur
+            self.name = pymc_name
+        else:
+            self.pymc_name = pymc_name
+
+    def __reduce__(self):
+        theano_var = self.get_theano_instance()
+        return (NameWrapped, (theano_var, self.pymc_name))
+
+    def get_theano_instance(self):
+        """
+        self.get_theano_instance()
+        
+        Return a new instance of the theano class that was used in the
+        construction of self.
+        
+        """
+        if self._masked_theano_var is None:
+            tv = self._masked_class.__new__(self._masked_class)
+            dct = {k: self.__getattribute__(k, override=True) for k in 
+                   self.__dict__ if k in self._masked_dict_keys}
+            tv.__dict__.update(dct)
+            self._masked_theano_var = tv
+        return self._masked_theano_var
+
+    def __eq__(self, other):
+        if MetaNameWrapped.is_name_wrapped_instance(other):
+            other_theano_var = other.get_theano_instance()
+            other_wrapped = True
+        else:
+            other_theano_var = other
+            other_wrapped = False
+        theano_var = self.get_theano_instance()
+        eq_theano_vars = theano_var == other_theano_var
+        if called_from_inside_theano():
+            return eq_theano_vars
+        else:
+            return other_wrapped and eq_theano_vars and \
+                   self.pymc_name==other.pymc_name
+
+    def __ne__(self, other):
+        if MetaNameWrapped.is_name_wrapped_instance(other):
+            other_theano_var = other.get_theano_instance()
+            other_wrapped = True
+        else:
+            other_theano_var = other
+            other_wrapped = False
+        theano_var = self.get_theano_instance()
+        eq_theano_vars = theano_var == other_theano_var
+        if called_from_inside_theano():
+            return not eq_theano_vars
+        else:
+            return not (other_wrapped and eq_theano_vars and \
+                   self.pymc_name==other.pymc_name)
+
+    def __hash__(self):
+        return hash(self.get_theano_instance())
+
+    def clone(self):
+        """
+        self.clone()
+        
+        Return a clone of the name wrapped instance, by calling clone on the
+        output from self.get_theano_instance()
+        
+        """
+        tc = self.get_theano_instance().clone()
+        cp = NameWrapped(tc, self.pymc_name)
+        return cp
+
+    def clone_with_new_inputs(self, *args, **kwargs):
+        tc = self.get_theano_instance().clone_with_new_inputs(*args, **kwargs)
+        cp = NameWrapped(tc, self.pymc_name)
+        return cp
