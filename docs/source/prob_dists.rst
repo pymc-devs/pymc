@@ -30,7 +30,7 @@ All distributions in ``pm.distributions`` will have two important methods: ``ran
 
     class SomeDistribution(Continuous):
     
-        def random(self, point=None, size=None, repeat=None):
+        def random(self, point=None, size=None):
             ...
             return random_samples
             
