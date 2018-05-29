@@ -170,10 +170,12 @@ class Uniform(Continuous):
 
         Parameters
         ----------
-        point : Point, optional
-            Point on which random values are to be conditioned. 
+        point : dict, optional
+            Dict of variable values on which random values are to be 
+            conditioned (uses default point if not specified). 
         size : int, optional
-            Desired size of random sample.
+            Desired size of random sample (returns one sample if not 
+            specified).
 
         Returns
         -------
