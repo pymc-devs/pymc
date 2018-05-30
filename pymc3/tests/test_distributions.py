@@ -16,7 +16,7 @@ from ..distributions import (DensityDist, Categorical, Multinomial, VonMises, Di
                              Flat, LKJCorr, Wald, ChiSquared, HalfNormal, DiscreteUniform,
                              Bound, Uniform, Triangular, Binomial, SkewNormal, DiscreteWeibull,
                              Gumbel, Logistic, OrderedLogistic, LogitNormal, Interpolated,
-                             ZeroInflatedBinomial, HalfFlat, AR1, KroneckerNormal)
+                             ZeroInflatedBinomial, HalfFlat, AR1, KroneckerNormal, Rice)
 
 from ..distributions import continuous
 from pymc3.theanof import floatX
@@ -219,6 +219,14 @@ def SortedVector(n):
     np.random.seed(42)
     for _ in range(10):
         vals.append(np.sort(np.random.randn(n)))
+    return Domain(vals, edges=(None, None))
+
+
+def UnitSortedVector(n):
+    vals = []
+    np.random.seed(42)
+    for _ in range(10):
+        vals.append(np.sort(np.random.rand(n)))
     return Domain(vals, edges=(None, None))
 
 
@@ -1055,6 +1063,10 @@ class TestMatchesScipy(SeededTest):
     def test_multidimensional_beta_construction(self):
         with Model():
             Beta('beta', alpha=1., beta=1., shape=(10, 20))
+
+    def test_rice(self):
+        self.pymc3_matches_scipy(Rice, Rplus, {'nu': Rplus, 'sd': Rplusbig},
+                                 lambda value, nu, sd: sp.rice.logpdf(value, b=nu, loc=0, scale=sd))
 
     @pytest.mark.xfail(condition=(theano.config.floatX == "float32"), reason="Fails on float32")
     def test_interpolated(self):

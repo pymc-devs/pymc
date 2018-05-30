@@ -9,6 +9,7 @@ import numpy as np
 import scipy.linalg
 import theano.tensor as tt
 import theano
+from theano.scalar import UnaryScalarOp, upgrade_to_float
 
 from .special import gammaln
 from pymc3.theanof import floatX
@@ -461,3 +462,16 @@ class EighGrad(theano.Op):
 def eigh(a, UPLO='L'):
     """A copy, remove with Eigh and EighGrad when possible"""
     return Eigh(UPLO)(a)
+
+
+class I0e(UnaryScalarOp):
+    """
+    Modified Bessel function of the first kind of order 0, exponentially scaled.
+    """
+    nfunc_spec = ('scipy.special.i0e', 1, 1)
+
+    def impl(self, x):
+        return scipy.special.i0e(x)
+
+
+i0e = I0e(upgrade_to_float, name='i0e')

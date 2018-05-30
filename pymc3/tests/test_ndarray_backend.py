@@ -2,6 +2,7 @@ import numpy as np
 import numpy.testing as npt
 from pymc3.tests import backend_fixtures as bf
 from pymc3.backends import base, ndarray
+import pymc3 as pm
 import pytest
 
 
@@ -165,3 +166,66 @@ class TestSqueezeCat(object):
         expected = np.concatenate([self.x, self.y])
         result = base._squeeze_cat([self.x, self.y], True, True)
         npt.assert_equal(result, expected)
+
+class TestSaveLoad(object):
+    @staticmethod
+    def model():
+        with pm.Model() as model:
+            x = pm.Normal('x', 0, 1)
+            y = pm.Normal('y', x, 1, observed=2)
+            z = pm.Normal('z', x + y, 1)
+        return model
+
+    @classmethod
+    def setup_class(cls):
+        with TestSaveLoad.model():
+            cls.trace = pm.sample()
+
+    def test_save_new_model(self, tmpdir_factory):
+        directory = str(tmpdir_factory.mktemp('data'))
+        save_dir = pm.save_trace(self.trace, directory, overwrite=True)
+
+        assert save_dir == directory
+        with pm.Model() as model:
+            w = pm.Normal('w', 0, 1)
+            new_trace = pm.sample()
+
+        with pytest.raises(OSError):
+            _ = pm.save_trace(new_trace, directory)
+
+        _ = pm.save_trace(new_trace, directory, overwrite=True)
+        with model:
+            new_trace_copy = pm.load_trace(directory)
+
+        assert (new_trace['w'] == new_trace_copy['w']).all()
+
+    def test_save_and_load(self, tmpdir_factory):
+        directory = str(tmpdir_factory.mktemp('data'))
+        save_dir = pm.save_trace(self.trace, directory, overwrite=True)
+
+        assert save_dir == directory
+
+        trace2 = pm.load_trace(directory, model=TestSaveLoad.model())
+
+        for var in ('x', 'z'):
+            assert (self.trace[var] == trace2[var]).all()
+
+    def test_sample_ppc(self, tmpdir_factory):
+        directory = str(tmpdir_factory.mktemp('data'))
+        save_dir = pm.save_trace(self.trace, directory, overwrite=True)
+
+        assert save_dir == directory
+
+        seed = 10
+        np.random.seed(seed)
+        with TestSaveLoad.model():
+            ppc = pm.sample_ppc(self.trace)
+
+        seed = 10
+        np.random.seed(seed)
+        with TestSaveLoad.model():
+            trace2 = pm.load_trace(directory)
+            ppc2 = pm.sample_ppc(trace2)
+
+        for key, value in ppc.items():
+            assert (value == ppc2[key]).all()

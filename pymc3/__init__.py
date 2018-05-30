@@ -20,6 +20,7 @@ from . import sampling
 
 from .diagnostics import *
 from .backends.tracetab import *
+from .backends import save_trace, load_trace
 
 from .plots import *
 from .tests import test

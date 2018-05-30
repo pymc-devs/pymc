@@ -113,7 +113,7 @@ defined that returns a MultiTrace object.
 
 For specific examples, see pymc3.backends.{ndarray,text,sqlite}.py.
 """
-from ..backends.ndarray import NDArray
+from ..backends.ndarray import NDArray, save_trace, load_trace
 from ..backends.text import Text
 from ..backends.sqlite import SQLite
 from ..backends.hdf5 import HDF5
