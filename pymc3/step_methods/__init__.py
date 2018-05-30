@@ -21,3 +21,5 @@ from .slicer import Slice
 from .elliptical_slice import EllipticalSlice
 
 from .smc import SMC
+
+from .smc_ABC import SMC
