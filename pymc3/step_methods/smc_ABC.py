@@ -22,6 +22,7 @@ import warnings
 
 from scipy.linalg import cholesky
 from scipy.stats import multivariate_normal
+from scipy.stats.mstats import mquantiles
 
 from ..model import modelcontext
 from ..vartypes import discrete_types
@@ -188,6 +189,8 @@ class SMC(atext.ArrayStepSharedLLK):
         self.accepted = 0
         self.observed = observed
         self.epsilons = epsilons
+        self.all_sum_stats = []
+        self.sum_stat = 0 
 
         self.beta = 0
         self.sjs = 1
@@ -228,8 +231,11 @@ class SMC(atext.ArrayStepSharedLLK):
         self.logp_forw = logp_forw(out_vars, vars, shared)
         self.check_bnd = logp_forw([model.varlogpt], vars, shared)
 
-        # epsilon computation, drawing samples from the prior
-
+        # epsilon computation, drawing samples from the prior, mean of the first population
+        self.epsilon = np.array([d[str(v)] for d in self.population for v in vars]).mean()
+        # epsilon computation, drawing samples from the prior, a quantile of the first population
+        self.epsilon = mquantiles([d['{}'.format(v)] for d in self.population for v in vars], 
+        			   prob=[0.99])[0]
 
         super(SMC, self).__init__(vars, out_vars, shared)
 
@@ -253,6 +259,7 @@ class SMC(atext.ArrayStepSharedLLK):
             logp_prior = self.logp_forw(q0)
             l_new = [q0, np.exp(logp_prior[1])]
             q_new = q0
+            sum_stat = self.sum_stat
 
         # tuning step
         else:
@@ -269,7 +276,8 @@ class SMC(atext.ArrayStepSharedLLK):
                 q_prop = q0 + delta
                 #print(q0, delta)
                 y_q = np.random.normal(loc=q_prop, scale=scale, size=size) # simulator
-                if abs(mean - y_q.mean()) < epsilon: # distance function, summary statistic
+                sum_stat = y_q.mean()
+                if abs(mean - sum_stat) < epsilon: # distance function, summary statistic
                     q_new = q_prop
                     logp_prior = self.logp_forw(q_new)[1]
                     s = self.covariance * self.scaling
@@ -280,8 +288,9 @@ class SMC(atext.ArrayStepSharedLLK):
                 else:
                 	q_new = q0
                 	l_new = self.chain_previous_lpoint[self.chain_index]
+                self.all_sum_stats.append(sum_stat)
 
-        return q_new, l_new
+        return q_new, l_new, sum_stat
 
     def calc_beta(self):
         """Calculate next tempering beta and importance weights based on current beta and sample
@@ -438,7 +447,7 @@ class SMC(atext.ArrayStepSharedLLK):
 
 def sample_smc(samples=1000, chains=100, step=None, start=None, homepath=None, stage=0, cores=1,
                tune_interval=10, progressbar=False, model=None, random_seed=-1, rm_flag=True, 
-               observed=None, epsilons=None, **kwargs):
+               observed=None, epsilons=None,**kwargs):
     """Sequential Monte Carlo sampling
 
     Samples the solution space with `chains` of Metropolis chains, where each chain has `n_steps`=`samples`/`chains`

@@ -100,7 +100,7 @@ class ArrayStepSharedLLK(BlockedStep):
         for var, share in self.shared.items():
             share.container.storage[0] = point[var]
 
-        apoint, alist = self.astep(self.bij.map(point))
+        apoint, alist, sum_stat = self.astep(self.bij.map(point))
         return self.bij.rmap(apoint), alist
 
 
