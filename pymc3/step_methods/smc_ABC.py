@@ -139,7 +139,7 @@ class SMC(atext.ArrayStepSharedLLK):
     def __init__(self, vars=None, out_vars=None, samples=1000, n_chains=100, n_steps=25, scaling=1.,
                  covariance=None, likelihood_name='l_like__', proposal_name='MultivariateNormal',
                  tune_interval=10, threshold=0.5, check_bound=True, model=None, random_seed=-1, 
-                 observed=None, epsilons=None):
+                 observed=None, epsilons=None, ladder=None, minimum_eps=None):
 
         warnings.warn(EXPERIMENTAL_WARNING)
 
@@ -188,9 +188,11 @@ class SMC(atext.ArrayStepSharedLLK):
         self.stage_sample = 0
         self.accepted = 0
         self.observed = observed
-        self.epsilons = epsilons
+
+        self.ladder = ladder
         self.all_sum_stats = []
         self.sum_stat = 0 
+        self.minimum_eps = minimum_eps
 
         self.beta = 0
         self.sjs = 1
@@ -232,12 +234,15 @@ class SMC(atext.ArrayStepSharedLLK):
         self.check_bnd = logp_forw([model.varlogpt], vars, shared)
 
         # epsilon computation, drawing samples from the prior, mean of the first population
-        self.epsilon = np.array([d[str(v)] for d in self.population for v in vars]).mean()
+        #self.epsilon = np.array([d[str(v)] for d in self.population for v in vars]).mean()
         # epsilon computation, drawing samples from the prior, a quantile of the first population
-        self.epsilon = mquantiles([d['{}'.format(v)] for d in self.population for v in vars], 
-        			   prob=[0.99])[0]
+        #self.epsilon = mquantiles([d[str(v)] for d in self.population for v in vars], 
+        #              prob=[0.99])[0]
+        self.epsilon_max = mquantiles([d[str(v)] for d in self.population for v in vars], 
+                           prob=[0.99])[0]
+        self.epsilons = np.linspace(self.epsilon_max, self.minimum_eps, self.ladder)
 
-        super(SMC, self).__init__(vars, out_vars, shared)
+        super(SMC, self).__init__(vars, out_vars, shared, epsilons)
 
     def astep(self, q0):
         """[summary]
@@ -263,8 +268,6 @@ class SMC(atext.ArrayStepSharedLLK):
 
         # tuning step
         else:
-            
-
             #delta = self.proposal_samples_array[self.stage_sample, :] * self.scaling
             #accepted = self.accepted
 
@@ -286,8 +289,8 @@ class SMC(atext.ArrayStepSharedLLK):
                     self.chain_previous_lpoint[self.chain_index] = l_new
                     break
                 else:
-                	q_new = q0
-                	l_new = self.chain_previous_lpoint[self.chain_index]
+                    q_new = q0
+                    l_new = self.chain_previous_lpoint[self.chain_index]
                 self.all_sum_stats.append(sum_stat)
 
         return q_new, l_new, sum_stat
@@ -447,7 +450,7 @@ class SMC(atext.ArrayStepSharedLLK):
 
 def sample_smc(samples=1000, chains=100, step=None, start=None, homepath=None, stage=0, cores=1,
                tune_interval=10, progressbar=False, model=None, random_seed=-1, rm_flag=True, 
-               observed=None, epsilons=None,**kwargs):
+               observed=None, epsilons=None, ladder=None, minimum_eps=None,**kwargs):
     """Sequential Monte Carlo sampling
 
     Samples the solution space with `chains` of Metropolis chains, where each chain has `n_steps`=`samples`/`chains`
@@ -523,7 +526,8 @@ def sample_smc(samples=1000, chains=100, step=None, start=None, homepath=None, s
         pm._log.info('Argument `step` is None. Auto-initialising step object '
                      'using given/default parameters.')
         step = SMC(n_chains=n_chains, tune_interval=tune_interval, model=model, 
-                   observed=observed, epsilons=epsilons)
+                   observed=observed, epsilons=epsilons, ladder=ladder, minimum_eps=minimum_eps)
+    print(step.epsilons)
 
     if homepath is None:
         raise TypeError('Argument `homepath` should be path to result_directory.')
@@ -568,6 +572,7 @@ def sample_smc(samples=1000, chains=100, step=None, start=None, homepath=None, s
     with model:
         #while step.beta < 1:
         for step.epsilon in step.epsilons:
+            print(step.epsilon)
             if step.stage == 0:
                 # Initial stage
                 pm._log.info('Sample initial stage: ...')
