@@ -244,6 +244,11 @@ class TestBeta(BaseTestCases.BaseTestCase):
     params = {'alpha': 1., 'beta': 1.}
 
 
+class TestKumaraswamy(BaseTestCases.BaseTestCase):
+    distribution = pm.Kumaraswamy
+    params = {'a': 1., 'b': 1.}
+
+
 class TestExponential(BaseTestCases.BaseTestCase):
     distribution = pm.Exponential
     params = {'lam': 1.}

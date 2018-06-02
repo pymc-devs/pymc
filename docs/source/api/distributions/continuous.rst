@@ -12,6 +12,7 @@ Continuous
    HalfNormal
    SkewNormal
    Beta
+   Kumaraswamy
    Exponential
    Laplace
    StudentT

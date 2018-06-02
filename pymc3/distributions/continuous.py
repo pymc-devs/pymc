@@ -24,7 +24,7 @@ from ..math import invlogit, logit
 from .dist_math import bound, logpow, gammaln, betaln, std_cdf, alltrue_elemwise, SplineWrapper, i0e
 from .distribution import Continuous, draw_values, generate_samples
 
-__all__ = ['Uniform', 'Flat', 'HalfFlat', 'Normal', 'Beta', 'Exponential',
+__all__ = ['Uniform', 'Flat', 'HalfFlat', 'Normal', 'Beta', 'Kumaraswamy', 'Exponential',
            'Laplace', 'StudentT', 'Cauchy', 'HalfCauchy', 'Gamma', 'Weibull',
            'HalfStudentT', 'Lognormal', 'ChiSquared', 'HalfNormal', 'Wald',
            'Pareto', 'InverseGamma', 'ExGaussian', 'VonMises', 'SkewNormal',
@@ -701,6 +701,90 @@ class Beta(UnitContinuous):
                                                                 get_variable_name(alpha),
                                                                 get_variable_name(beta))
 
+class Kumaraswamy(UnitContinuous):
+    R"""
+    Kumaraswamy log-likelihood.
+
+    The pdf of this distribution is
+
+    .. math::
+
+       f(x \mid a, b) =
+           abx^{a-1}(1-x^a)^(b-1)
+
+    .. plot::
+
+        import matplotlib.pyplot as plt
+        import numpy as np
+        plt.style.use('seaborn-darkgrid')
+        x = np.linspace(0, 1, 200)
+        as = [.5, 5., 1., 2., 2.]
+        bs = [.5, 1., 3., 2., 5.]
+        for a, b in zip(as, bs):
+            pdf = a * b * x ** (a - 1) * (1 - x ** a) ** (b - 1)
+            plt.plot(x, pdf, label=r'$a$ = {}, $b$ = {}'.format(a, b))
+        plt.xlabel('x', fontsize=12)
+        plt.ylabel('f(x)', fontsize=12)
+        plt.ylim(0, 3.)
+        plt.legend(loc=9)
+        plt.show()
+
+    ========  ==============================================================
+    Support   :math:`x \in (0, 1)`
+    Mean      :math:`b\Beta(1 + \tfrac{a}{a}, b)`
+    Variance  :math:`b\Beta(1 + \tfrac{2}{a}, b) - (b\Beta(1 + \tfrac{1}{a}, b)`
+    ========  ==============================================================
+
+    Parameters
+    ----------
+    a : float
+        a > 0.
+    b : float
+        b > 0.
+    """
+
+    def __init__(self, a, b, *args, **kwargs):
+        super(Kumaraswamy, self).__init__(*args, **kwargs)
+
+        self.a = a = tt.as_tensor_variable(a)
+        self.b = b = tt.as_tensor_variable(b)
+
+        self.mean = b * tt.gamma(1 + 1 / a) * tt.gamma(b) / tt.gamma(1 + 1 / a + b)
+        self.variance = b * tt.gamma(1 + 2 / a) * tt.gamma(b) / tt.gamma(1 + 2 / a + b) - self.mean ** 2
+
+        assert_negative_support(a, 'a', 'Kumaraswamy')
+        assert_negative_support(b, 'b', 'Kumaraswamy')
+
+    def _random(self, a, b, size=None):
+        u = np.random.uniform(size=size)
+        return (1 - (1 - u) ** (1 / b)) ** (1 / a)
+
+    def random(self, point=None, size=None):
+        a, b = draw_values([self.a, self.b],
+                           point=point, size=size)
+        return generate_samples(self._random, a, b,
+                                dist_shape=self.shape,
+                                size=size)
+
+    def logp(self, value):
+        a = self.a
+        b = self.b
+
+        logp = tt.log(a) + tt.log(b) + (a - 1) * tt.log(value) + (b - 1) * tt.log(1 - value ** a)
+
+        return bound(logp,
+                     value >= 0, value <= 1,
+                     a > 0, b > 0)
+
+    def _repr_latex_(self, name=None, dist=None):
+        if dist is None:
+            dist = self
+        a = dist.a
+        b = dist.b
+        name = r'\text{%s}' % name
+        return r'${} \sim \text{{Kumaraswamy}}(\mathit{{a}}={},~\mathit{{b}}={})$'.format(name,
+                                                                                          get_variable_name(a),
+                                                                                          get_variable_name(b))
 
 class Exponential(PositiveContinuous):
     R"""
