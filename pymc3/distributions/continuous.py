@@ -710,7 +710,7 @@ class Kumaraswamy(UnitContinuous):
     .. math::
 
        f(x \mid a, b) =
-           abx^{a-1}(1-x^a)^(b-1)
+           abx^{a-1}(1-x^a)^{b-1}
 
     .. plot::
 
@@ -731,8 +731,8 @@ class Kumaraswamy(UnitContinuous):
 
     ========  ==============================================================
     Support   :math:`x \in (0, 1)`
-    Mean      :math:`b\Beta(1 + \tfrac{a}{a}, b)`
-    Variance  :math:`b\Beta(1 + \tfrac{2}{a}, b) - (b\Beta(1 + \tfrac{1}{a}, b)`
+    Mean      :math:`b B(1 + \tfrac{1}{a}, b)`
+    Variance  :math:`b B(1 + \tfrac{2}{a}, b) - (b B(1 + \tfrac{1}{a}, b))^2`
     ========  ==============================================================
 
     Parameters
