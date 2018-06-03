@@ -718,9 +718,9 @@ class Kumaraswamy(UnitContinuous):
         import numpy as np
         plt.style.use('seaborn-darkgrid')
         x = np.linspace(0, 1, 200)
-        as = [.5, 5., 1., 2., 2.]
-        bs = [.5, 1., 3., 2., 5.]
-        for a, b in zip(as, bs):
+        a_s = [.5, 5., 1., 2., 2.]
+        b_s = [.5, 1., 3., 2., 5.]
+        for a, b in zip(a_s, b_s):
             pdf = a * b * x ** (a - 1) * (1 - x ** a) ** (b - 1)
             plt.plot(x, pdf, label=r'$a$ = {}, $b$ = {}'.format(a, b))
         plt.xlabel('x', fontsize=12)
