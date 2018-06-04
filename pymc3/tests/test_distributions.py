@@ -582,10 +582,12 @@ class TestMatchesScipy(SeededTest):
         self.pymc3_matches_scipy(Beta, Unit, {'mu': Unit, 'sd': Rplus}, beta_mu_sd)
 
     def test_kumaraswamy(self):
+        Rpositive = Domain([.01, .1, .9, .99, 1, 1.5, 2, 100, inf])
+
         # Scipy does not have a built-in Kumaraswamy pdf
         def scipy_log_pdf(value, a, b):
             return np.log(a) + np.log(b) + (a - 1) * np.log(value) + (b - 1) * np.log(1 - value ** a)
-        self.pymc3_matches_scipy(Kumaraswamy, Unit, {'a': Rplus, 'b': Rplus}, scipy_log_pdf)
+        self.pymc3_matches_scipy(Kumaraswamy, Unit, {'a': Rpositive, 'b': Rpositive}, scipy_log_pdf)
 
     def test_exponential(self):
         self.pymc3_matches_scipy(Exponential, Rplus, {'lam': Rplus},
