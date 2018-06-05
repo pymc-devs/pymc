@@ -163,7 +163,7 @@ class Mixture(Distribution):
                                      broadcast_shape=w.shape[:-1] or (1,),
                                      dist_shape=self.shape,
                                      size=size).squeeze()
-        if size is None:
+        if (size is None) or (self.shape.size == 0):
             comp_samples = self._comp_samples(point=point, size=size)
             if comp_samples.ndim > 1:
                 samples = np.squeeze(comp_samples[np.arange(w_samples.size), ..., w_samples])
