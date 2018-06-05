@@ -158,24 +158,28 @@ class Mixture(Distribution):
                 return np.random.choice(k, p=w, *args, **kwargs)
 
         w = draw_values([self.w], point=point)[0]
-        if w.ndim > 1:
-            w_samples = generate_samples(random_choice,
-                                         w=w,
-                                         broadcast_shape=w.shape[:-1] or (1,),
-                                         dist_shape=w.shape[:-1],
-                                         size=size).squeeze()
+        w_samples = generate_samples(random_choice,
+                                     w=w,
+                                     broadcast_shape=w.shape[:-1] or (1,),
+                                     dist_shape=self.shape,
+                                     size=size).squeeze()
+        if size is None:
+            comp_samples = self._comp_samples(point=point, size=size)
+            if comp_samples.ndim > 1:
+                samples = np.squeeze(comp_samples[np.arange(w_samples.size), ..., w_samples])
+            else:
+                samples = np.squeeze(comp_samples[w_samples])
         else:
-            w_samples = generate_samples(random_choice,
-                                         w=w,
-                                         broadcast_shape=w.shape[:-1] or (1,),
-                                         dist_shape=self.shape,
-                                         size=size).squeeze()
-        comp_samples = self._comp_samples(point=point, size=size)
+            samples = np.zeros((size,)+tuple(self.shape))
+            for i in range(size):
+                w_tmp = w_samples[i, :]
+                comp_tmp = self._comp_samples(point=point, size=None)
+                if comp_tmp.ndim > 1:
+                    samples[i, :] = np.squeeze(comp_tmp[np.arange(w_tmp.size), ..., w_tmp])
+                else:
+                    samples[i, :] = np.squeeze(comp_tmp[w_tmp])
 
-        if comp_samples.ndim > 1:
-            return np.squeeze(comp_samples[np.arange(w_samples.size), ..., w_samples])
-        else:
-            return np.squeeze(comp_samples[w_samples])
+        return samples
 
 
 class NormalMixture(Mixture):

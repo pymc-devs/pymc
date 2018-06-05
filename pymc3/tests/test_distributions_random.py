@@ -768,8 +768,7 @@ def test_mixture_random_shape():
     y = np.concatenate([nr.poisson(5, size=10),
                         nr.poisson(9, size=10)])
     with pm.Model() as m:
-        comp0 = pm.Poisson.dist(mu=np.ones(2),
-                                shape=2)
+        comp0 = pm.Poisson.dist(mu=np.ones(2))
         w0 = pm.Dirichlet('w0', a=np.array([1, 1]))
         like0 = pm.Mixture('like0',
                            w=w0,
@@ -782,14 +781,23 @@ def test_mixture_random_shape():
                            w=w1,
                            comp_dists=comp1, observed=y)
 
-        comp2 = pm.Poisson.dist(mu=np.ones(2),
-                                shape=2)
+        comp2 = pm.Poisson.dist(mu=np.ones(2))
         w2 = pm.Dirichlet('w2',
                           a=np.array([1, 1]),
                           shape=(20, 2))
         like2 = pm.Mixture('like2',
                            w=w2,
                            comp_dists=comp2,
+                           observed=y)
+
+        comp3 = pm.Poisson.dist(mu=np.ones(2),
+                                shape=(20, 2))
+        w3 = pm.Dirichlet('w3',
+                          a=np.array([1, 1]),
+                          shape=(20, 2))
+        like3 = pm.Mixture('like3',
+                           w=w3,
+                           comp_dists=comp3,
                            observed=y)
 
     rand0 = like0.distribution.random(m.test_point, size=100)
@@ -800,6 +808,16 @@ def test_mixture_random_shape():
 
     rand2 = like2.distribution.random(m.test_point, size=100)
     assert rand2.shape == (100, 20)
+
+    rand3 = like3.distribution.random(m.test_point, size=100)
+    assert rand3.shape == (100, 20)
+
+    with m:
+        ppc = pm.sample_ppc([m.test_point], samples=200)
+    assert ppc['like0'].shape == (200, 20)
+    assert ppc['like1'].shape == (200, 20)
+    assert ppc['like2'].shape == (200, 20)
+    assert ppc['like3'].shape == (200, 20)
 
 
 def test_density_dist_with_random_sampleable():
