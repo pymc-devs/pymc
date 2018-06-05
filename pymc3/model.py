@@ -1368,7 +1368,6 @@ class MultiObservedRV(Factor):
         self.logp_nojac_unscaledt = distribution.logp_nojac(**self.data)
         self.total_size = total_size
         self.model = model
-        distribution.shape = data.shape.eval()
         self.distribution = distribution
         self.scaling = _get_scaling(total_size, self.logp_elemwiset.shape, self.logp_elemwiset.ndim)
 
