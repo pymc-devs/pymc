@@ -160,10 +160,13 @@ class Inference(object):
                     errmsg = ['NaN occurred in optimization. ']
                     suggest_solution = 'Try tracking this parameter: ' \
                                        'http://docs.pymc.io/notebooks/variational_api_quickstart.html#Tracking-parameters'
-                    for ii in index:
-                        errmsg.append('The current approximation of RV `{}`.ravel()[{}]'
-                                      ' is NaN.'.format(*name_slc[ii]))
-                    errmsg.append(suggest_solution)
+                    try:
+                        for ii in index:
+                            errmsg.append('The current approximation of RV `{}`.ravel()[{}]'
+                                          ' is NaN.'.format(*name_slc[ii]))
+                        errmsg.append(suggest_solution)
+                    except IndexError:
+                        pass
                     raise FloatingPointError('\n'.join(errmsg))
                 for callback in callbacks:
                     callback(self.approx, None, i+s+1)
@@ -206,10 +209,13 @@ class Inference(object):
                     errmsg = ['NaN occurred in optimization. ']
                     suggest_solution = 'Try tracking this parameter: ' \
                                        'http://docs.pymc.io/notebooks/variational_api_quickstart.html#Tracking-parameters'
-                    for ii in index:
-                        errmsg.append('The current approximation of RV `{}`.ravel()[{}]'
-                                      ' is NaN.'.format(*name_slc[ii]))
-                    errmsg.append(suggest_solution)
+                    try:
+                        for ii in index:
+                            errmsg.append('The current approximation of RV `{}`.ravel()[{}]'
+                                          ' is NaN.'.format(*name_slc[ii]))
+                        errmsg.append(suggest_solution)
+                    except IndexError:
+                        pass
                     raise FloatingPointError('\n'.join(errmsg))
                 scores[i] = e
                 if i % 10 == 0:
