@@ -68,17 +68,17 @@ class _Bounded(Distribution):
         if self.lower is None and self.upper is None:
             return self._wrapped.random(point=point, size=size)
         elif self.lower is not None and self.upper is not None:
-            lower, upper = draw_values([self.lower, self.upper], point=point)
+            lower, upper = draw_values([self.lower, self.upper], point=point, size=size)
             return generate_samples(self._random, lower, upper, point,
                                     dist_shape=self.shape,
                                     size=size)
         elif self.lower is not None:
-            lower = draw_values([self.lower], point=point)
+            lower = draw_values([self.lower], point=point, size=size)
             return generate_samples(self._random, lower, np.inf, point,
                                     dist_shape=self.shape,
                                     size=size)
         else:
-            upper = draw_values([self.upper], point=point)
+            upper = draw_values([self.upper], point=point, size=size)
             return generate_samples(self._random, -np.inf, upper, point,
                                     dist_shape=self.shape,
                                     size=size)

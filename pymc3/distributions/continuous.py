@@ -305,7 +305,7 @@ class Normal(Continuous):
 
     def random(self, point=None, size=None):
         mu, tau, _ = draw_values([self.mu, self.tau, self.sd],
-                                 point=point)
+                                 point=point, size=size)
         return generate_samples(stats.norm.rvs, loc=mu, scale=tau**-0.5,
                                 dist_shape=self.shape,
                                 size=size)
@@ -406,7 +406,7 @@ class HalfNormal(PositiveContinuous):
         assert_negative_support(sd, 'sd', 'HalfNormal')
 
     def random(self, point=None, size=None):
-        sd = draw_values([self.sd], point=point)[0]
+        sd = draw_values([self.sd], point=point, size=size)[0]
         return generate_samples(stats.halfnorm.rvs, loc=0., scale=sd,
                                 dist_shape=self.shape,
                                 size=size)
@@ -547,7 +547,7 @@ class Wald(PositiveContinuous):
 
     def random(self, point=None, size=None):
         mu, lam, alpha = draw_values([self.mu, self.lam, self.alpha],
-                                     point=point)
+                                     point=point, size=size)
         return generate_samples(self._random,
                                 mu, lam, alpha,
                                 dist_shape=self.shape,
@@ -672,7 +672,7 @@ class Beta(UnitContinuous):
 
     def random(self, point=None, size=None):
         alpha, beta = draw_values([self.alpha, self.beta],
-                                  point=point)
+                                  point=point, size=size)
         return generate_samples(stats.beta.rvs, alpha, beta,
                                 dist_shape=self.shape,
                                 size=size)
@@ -2239,7 +2239,7 @@ class Rice(Continuous):
 
     def random(self, point=None, size=None, repeat=None):
         nu, sd = draw_values([self.nu, self.sd],
-                             point=point)
+                             point=point, size=size)
         return generate_samples(stats.rice.rvs, b=nu, scale=sd, loc=0,
                                 dist_shape=self.shape, size=size)
 
