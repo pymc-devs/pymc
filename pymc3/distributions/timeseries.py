@@ -350,7 +350,7 @@ class MvStudentTRandomWalk(MvGaussianRandomWalk):
     def __init__(self, nu, *args, **kwargs):
         super(MvStudentTRandomWalk, self).__init__(*args, **kwargs)
         self.nu = nu = tt.as_tensor_variable(nu)
-        self.inov = multivariate.MvStudentT.dist(self.nu, *self.innovArgs)
+        self.innov = multivariate.MvStudentT.dist(self.nu, *self.innovArgs)
 
     def _repr_latex_(self, name=None, dist=None):
         if dist is None:
