@@ -749,8 +749,10 @@ class Kumaraswamy(UnitContinuous):
         self.a = a = tt.as_tensor_variable(a)
         self.b = b = tt.as_tensor_variable(b)
 
-        self.mean = b * tt.gamma(1 + 1 / a) * tt.gamma(b) / tt.gamma(1 + 1 / a + b)
-        self.variance = b * tt.gamma(1 + 2 / a) * tt.gamma(b) / tt.gamma(1 + 2 / a + b) - self.mean ** 2
+        ln_mean = tt.log(b) + tt.gammaln(1 + 1 / a) + tt.gammaln(b) - tt.gammaln(1 + 1 / a + b)
+        self.mean = tt.exp(ln_mean)
+        ln_2nd_raw_moment = tt.log(b) + tt.gammaln(1 + 2 / a) + tt.gammaln(b) - tt.gammaln(1 + 2 / a + b)
+        self.variance = tt.exp(ln_2nd_raw_moment) - self.mean ** 2
 
         assert_negative_support(a, 'a', 'Kumaraswamy')
         assert_negative_support(b, 'b', 'Kumaraswamy')
