@@ -158,19 +158,24 @@ class Mixture(Distribution):
                 return np.random.choice(k, p=w, *args, **kwargs)
 
         w = draw_values([self.w], point=point)[0]
+        comp_tmp = self._comp_samples(point=point, size=None)
+        if self.shape.size == 0:
+            distshape = np.asarray(np.broadcast(w, comp_tmp).shape)[..., :-1]
+        else:
+            distshape = self.shape
         w_samples = generate_samples(random_choice,
                                      w=w,
                                      broadcast_shape=w.shape[:-1] or (1,),
-                                     dist_shape=self.shape,
+                                     dist_shape=distshape,
                                      size=size).squeeze()
-        if (size is None) or (self.shape.size == 0):
+        if (size is None) or (distshape.size == 0):
             comp_samples = self._comp_samples(point=point, size=size)
             if comp_samples.ndim > 1:
                 samples = np.squeeze(comp_samples[np.arange(w_samples.size), ..., w_samples])
             else:
                 samples = np.squeeze(comp_samples[w_samples])
         else:
-            samples = np.zeros((size,)+tuple(self.shape))
+            samples = np.zeros((size,)+tuple(distshape))
             for i in range(size):
                 w_tmp = w_samples[i, :]
                 comp_tmp = self._comp_samples(point=point, size=None)

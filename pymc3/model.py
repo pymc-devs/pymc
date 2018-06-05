@@ -1312,7 +1312,6 @@ class ObservedRV(Factor, TensorVariable):
             self.logp_nojac_unscaledt = distribution.logp_nojac(data)
             self.total_size = total_size
             self.model = model
-            distribution.shape = data.shape.eval()
             self.distribution = distribution
 
             # make this RV a view on the combined missing/nonmissing array
