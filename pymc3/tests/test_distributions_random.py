@@ -754,11 +754,13 @@ class TestScalarParameterSamples(SeededTest):
         pymc3_random(pm.NormalMixture, {'w': Simplex(2),
                      'mu': Domain([[.05, 2.5], [-5., 1.]], edges=(None, None)),
                      'sd': Domain([[1, 1], [1.5, 2.]], edges=(None, None))},
+                     extra_args={'distshape': 2},
                      size=1000,
                      ref_rand=ref_rand)
         pymc3_random(pm.NormalMixture, {'w': Simplex(3),
                      'mu': Domain([[-5., 1., 2.5]], edges=(None, None)),
                      'sd': Domain([[1.5, 2., 3.]], edges=(None, None))},
+                     extra_args={'distshape': 3},
                      size=1000,
                      ref_rand=ref_rand)
 

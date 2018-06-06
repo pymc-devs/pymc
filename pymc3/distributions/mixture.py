@@ -212,20 +212,20 @@ class NormalMixture(Mixture):
         the component standard deviations
     tau : array of floats
         the component precisions
+    distshape : shape of the Normal component
+        notice that it should be different than the shape
+        of the mixture distribution, with one axis being
+        the number of component.
 
     Note: You only have to pass in sd or tau, but not both.
     """
 
-    def __init__(self, w, mu, *args, **kwargs):
+    def __init__(self, w, mu, distshape=(), *args, **kwargs):
         _, sd = get_tau_sd(tau=kwargs.pop('tau', None),
                            sd=kwargs.pop('sd', None))
 
-        distshape = np.broadcast(mu, sd).shape
         self.mu = mu = tt.as_tensor_variable(mu)
         self.sd = sd = tt.as_tensor_variable(sd)
-
-        if not distshape:
-            distshape = np.broadcast(mu.tag.test_value, sd.tag.test_value).shape
 
         super(NormalMixture, self).__init__(w, Normal.dist(mu, sd=sd, shape=distshape),
                                             *args, **kwargs)
