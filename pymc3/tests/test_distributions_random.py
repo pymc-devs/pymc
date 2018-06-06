@@ -769,7 +769,7 @@ def test_mixture_random_shape():
                         nr.poisson(9, size=10)])
     with pm.Model() as m:
         comp0 = pm.Poisson.dist(mu=np.ones(2))
-        w0 = pm.Dirichlet('w0', a=np.array([1, 1]))
+        w0 = pm.Dirichlet('w0', a=np.ones(2))
         like0 = pm.Mixture('like0',
                            w=w0,
                            comp_dists=comp0,
@@ -778,14 +778,14 @@ def test_mixture_random_shape():
 
         comp1 = pm.Poisson.dist(mu=np.ones((20, 2)),
                                 shape=(20, 2))
-        w1 = pm.Dirichlet('w1', a=np.array([1, 1]))
+        w1 = pm.Dirichlet('w1', a=np.ones(2))
         like1 = pm.Mixture('like1',
                            w=w1,
                            comp_dists=comp1, observed=y)
 
         comp2 = pm.Poisson.dist(mu=np.ones(2))
         w2 = pm.Dirichlet('w2',
-                          a=np.array([1, 1]),
+                          a=np.ones(2),
                           shape=(20, 2))
         like2 = pm.Mixture('like2',
                            w=w2,
@@ -795,7 +795,7 @@ def test_mixture_random_shape():
         comp3 = pm.Poisson.dist(mu=np.ones(2),
                                 shape=(20, 2))
         w3 = pm.Dirichlet('w3',
-                          a=np.array([1, 1]),
+                          a=np.ones(2),
                           shape=(20, 2))
         like3 = pm.Mixture('like3',
                            w=w3,
