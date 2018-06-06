@@ -306,11 +306,10 @@ class MvGaussianRandomWalk(distribution.Continuous):
                  *args, **kwargs):
         super(MvGaussianRandomWalk, self).__init__(*args, **kwargs)
 
-        self.mu = mu = tt.as_tensor_variable(mu)
         self.init = init
-        self.mean = tt.as_tensor_variable(0.)
-        self.innovArgs = (self.mu, cov, tau, chol, lower)
+        self.innovArgs = (mu, cov, tau, chol, lower)
         self.innov = multivariate.MvNormal.dist(*self.innovArgs)
+        self.mean = tt.as_tensor_variable(0.)
 
     def logp(self, x):
         x_im1 = x[:-1]
