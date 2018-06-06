@@ -6,6 +6,7 @@ from .continuous import Flat
 from .continuous import HalfFlat
 from .continuous import Normal
 from .continuous import Beta
+from .continuous import Kumaraswamy
 from .continuous import Exponential
 from .continuous import Laplace
 from .continuous import StudentT
@@ -89,6 +90,7 @@ __all__ = ['Uniform',
            'HalfFlat',
            'Normal',
            'Beta',
+           'Kumaraswamy',
            'Exponential',
            'Laplace',
            'StudentT',
