@@ -316,13 +316,13 @@ class MvGaussianRandomWalk(distribution.Continuous):
         x_im1 = x[:-1]
         x_i = x[1:]
 
-        return self.init.logp(x[0]) + self.innov.logp_sum(x_i - x_im1)
+        return self.init.logp_sum(x[0]) + self.innov.logp_sum(x_i - x_im1)
 
     def _repr_latex_(self, name=None, dist=None):
         if dist is None:
             dist = self
-        mu = dist.mu
-        cov = dist.cov
+        mu = dist.innov.mu
+        cov = dist.innov.cov
         name = r'\text{%s}' % name
         return r'${} \sim \text{MvGaussianRandomWalk}(\mathit{{mu}}={},~\mathit{{cov}}={})$'.format(name,
                                                 get_variable_name(mu),
@@ -349,15 +349,15 @@ class MvStudentTRandomWalk(MvGaussianRandomWalk):
     """
     def __init__(self, nu, *args, **kwargs):
         super(MvStudentTRandomWalk, self).__init__(*args, **kwargs)
-        self.nu = nu = tt.as_tensor_variable(nu)
+        self.nu = tt.as_tensor_variable(nu)
         self.innov = multivariate.MvStudentT.dist(self.nu, *self.innovArgs)
 
     def _repr_latex_(self, name=None, dist=None):
         if dist is None:
             dist = self
-        nu = dist.nu
-        mu = dist.mu
-        cov = dist.cov
+        nu = dist.innov.nu
+        mu = dist.innov.mu
+        cov = dist.innov.cov
         name = r'\text{%s}' % name
         return r'${} \sim \text{MvStudentTRandomWalk}(\mathit{{nu}}={},~\mathit{{mu}}={},~\mathit{{cov}}={})$'.format(name,
                                                 get_variable_name(nu),
