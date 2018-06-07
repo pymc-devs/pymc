@@ -7,7 +7,6 @@ import logging
 from collections import namedtuple
 
 import six
-import tqdm
 import numpy as np
 
 from . import theanof
@@ -222,7 +221,15 @@ Draw = namedtuple(
 
 class ParallelSampler(object):
     def __init__(self, draws, tune, chains, cores, seeds, start_points,
-                 step_method, start_chain_num=0, progressbar=True):
+                 step_method, start_chain_num=0, progressbar=True,
+                 notebook=True):
+        if progressbar and notebook:
+            import tqdm
+            tqdm_ = tqdm.tqdm_notebook
+        elif progressbar:
+            import tqdm
+            tqdm_ = tqdm.tqdm
+
         self._samplers = [
             ProcessAdapter(draws, tune, step_method,
                            chain + start_chain_num, seed, start)
@@ -239,10 +246,10 @@ class ParallelSampler(object):
 
         self._global_progress = self._progress = None
         if progressbar:
-            self._global_progress = tqdm.tqdm(
+            self._global_progress = tqdm_(
                 total=chains, unit='chains', position=1)
             self._progress = [
-                tqdm.tqdm(
+                tqdm_(
                     desc='    Chain %i' % (chain + start_chain_num),
                     unit='draws',
                     position=chain + 2,
