@@ -416,7 +416,6 @@ class Marginal(Base):
         if not isinstance(noise, Covariance):
             noise = pm.gp.cov.WhiteNoise(noise)
         mu, cov = self._build_marginal_likelihood(X, noise)
-        cov = stabilize(cov)
         self.X = X
         self.y = y
         self.noise = noise
@@ -465,7 +464,7 @@ class Marginal(Base):
             cov = Kss - tt.dot(tt.transpose(A), A)
             if pred_noise:
                 cov += noise(Xnew)
-            return mu, stabilize(cov)
+            return mu, cov if pred_noise else stabilize(cov)
 
     def conditional(self, name, Xnew, pred_noise=False, given=None, **kwargs):
         R"""
@@ -751,7 +750,7 @@ class MarginalSparse(Marginal):
                    tt.dot(tt.transpose(C), C))
             if pred_noise:
                 cov += sigma2 * tt.identity_like(cov)
-            return mu, stabilize(cov)
+            return mu, cov if pred_noise else stabilize(cov)
 
     def _get_given_vals(self, given):
         if given is None:
@@ -955,7 +954,7 @@ class MarginalKron(Base):
             cov = Km - Asq
             if pred_noise:
                 cov += sigma * np.eye(cov.shape)
-        return mu, stabilize(cov)
+        return mu, cov if pred_noise else stabilize(cov)
 
     def conditional(self, name, Xnew, pred_noise=False, **kwargs):
         """
