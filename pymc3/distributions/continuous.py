@@ -8,16 +8,13 @@ nodes in PyMC.
 from __future__ import division
 
 import numpy as np
-
+#import theano.tensor as tt
 from scipy import stats
 from scipy.special import expit
 from scipy.interpolate import InterpolatedUnivariateSpline
 import warnings
 
-#import theano.tensor as tt
 #from pymc3.theanof import floatX
-from .. import backends_symbolic as S
-
 #from . import transforms
 from pymc3.util import get_variable_name
 #from .special import log_i0
@@ -25,6 +22,7 @@ from pymc3.util import get_variable_name
 #from .dist_math import bound, logpow, gammaln, betaln, std_cdf, alltrue_elemwise, SplineWrapper
 from .distribution import Continuous, draw_values, generate_samples
 
+from .. import backends_symbolic as S
 
 
 
@@ -297,17 +295,12 @@ class Normal(Continuous):
     ### changed the default mu to float so tensorflow doesn't have to recast
     def __init__(self, mu=0.0, sd=None, tau=None, **kwargs):
         tau, sd = get_tau_sd(tau=tau, sd=sd)
-
-        ## CHANGED:
         self.sd = S.as_tensor_variable(sd)
         self.tau = S.as_tensor_variable(tau)
+
+
         self.mean = self.median = self.mode = self.mu = mu = S.as_tensor_variable(mu)
-        #self.sd = tt.as_tensor_variable(sd)
-        #self.tau = tt.as_tensor_variable(tau)
-        #self.mean = self.median = self.mode = self.mu = mu = tt.as_tensor_variable(mu)
-
         self.variance = 1. / self.tau
-
         assert_negative_support(sd, 'sd', 'Normal')
         assert_negative_support(tau, 'tau', 'Normal')
 
@@ -325,8 +318,6 @@ class Normal(Continuous):
         tau = self.tau
         mu = self.mu
         ## CHANGED: Unfortunately had to move stuff like bound into the backend and out of bound.py
-        # return bound((-tau * (value - mu)**2 + tt.log(tau / np.pi / 2.)) / 2.,
-        #              sd > 0)
         return S.bound((-tau * (value - mu)**2 + S.log(tau / np.pi / 2.)) / 2.,
                      sd > 0)
 
