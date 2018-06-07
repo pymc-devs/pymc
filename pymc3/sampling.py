@@ -966,35 +966,64 @@ def _choose_backend(trace, chain, shortcuts=None, **kwds):
 
 
 def _mp_sample(**kwargs):
+    import sys
+
     cores = kwargs.pop('cores')
     chain = kwargs.pop('chain')
     rseed = kwargs.pop('random_seed')
     start = kwargs.pop('start')
     chains = kwargs.pop('chains')
+    draws = kwargs.pop('draws')
+    tune = kwargs.pop('tune')
+    step = kwargs.pop('step')
+    progressbar = kwargs.pop('progressbar')
     use_mmap = kwargs.pop('use_mmap')
 
-    chain_nums = list(range(chain, chain + chains))
-    pbars = [kwargs.pop('progressbar')] + [False] * (chains - 1)
-    jobs = (delayed(_sample)(*args, **kwargs)
-            for args in zip(chain_nums, pbars, rseed, start))
+    if sys.version_info.major >= 3:
+        import pymc3.parallel_sampling as ps
 
-    if use_mmap:
-        traces = Parallel(n_jobs=cores)(jobs)
+        model = modelcontext(kwargs.pop('model', None))
+        trace = kwargs.pop('trace', None)
+        traces = []
+        for idx in range(chain, chain + chains):
+            strace = _choose_backend(trace, idx, model=model)
+            # TODO what is this for?
+            update_start_vals(start[idx - chain], model.test_point, model)
+            if step.generates_stats and strace.supports_sampler_stats:
+                strace.setup(draws + tune, idx + chain, step.stats_dtypes)
+            else:
+                strace.setup(draws + tune, idx + chain)
+            traces.append(strace)
+
+        sampler = ps.ParallelSampler(
+            draws, tune, chains, cores, rseed, start, step, chain, progressbar)
+        with sampler:
+            for draw in sampler:
+                trace = traces[draw.chain - chain]
+                if trace.supports_sampler_stats and draw.stats is not None:
+                    trace.record(draw.point, draw.stats)
+                else:
+                    trace.record(draw.point)
+                if draw.is_last:
+                    trace.close()
+        return MultiTrace(traces)
+
     else:
-        traces = Parallel(n_jobs=cores, mmap_mode=None)(jobs)
-
-    return MultiTrace(traces)
+        chain_nums = list(range(chain, chain + chains))
+        pbars = [kwargs.pop('progressbar')] + [False] * (chains - 1)
+        jobs = (delayed(_sample)(*args, **kwargs)
+                for args in zip(chain_nums, pbars, rseed, start))
+        if use_mmap:
+            traces = Parallel(n_jobs=cores)(jobs)
+        else:
+            traces = Parallel(n_jobs=cores, mmap_mode=None)(jobs)
+        return MultiTrace(traces)
 
 
 def stop_tuning(step):
     """ stop tuning the current step method """
 
-    if hasattr(step, 'tune'):
-        step.tune = False
-
-    if hasattr(step, 'methods'):
-        step.methods = [stop_tuning(s) for s in step.methods]
-
+    step.stop_tuning()
     return step
 
 
