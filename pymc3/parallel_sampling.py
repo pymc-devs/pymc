@@ -247,19 +247,19 @@ class ParallelSampler(object):
         self._global_progress = self._progress = None
         if progressbar:
             self._global_progress = tqdm_(
-                total=chains, unit='chains', position=1)
+                total=chains, unit='chains', position=0)
             self._progress = [
                 tqdm_(
                     desc='    Chain %i' % (chain + start_chain_num),
                     unit='draws',
-                    position=chain + 2,
+                    position=chain + 1,
                     total=draws + tune)
                 for chain in range(chains)
             ]
 
     def _make_active(self):
         while self._inactive and len(self._active) < self._max_active:
-            proc = self._inactive.pop()
+            proc = self._inactive.pop(0)
             proc.start()
             proc.write_next()
             self._active.append(proc)
@@ -282,6 +282,8 @@ class ParallelSampler(object):
                 self._make_active()
                 if self._global_progress is not None:
                     self._global_progress.update()
+                if self._progress is not None:
+                    self._progress[proc.chain - self._start_chain_num].close()
 
             yield Draw(
                 proc.chain, is_last, draw, tuning,
