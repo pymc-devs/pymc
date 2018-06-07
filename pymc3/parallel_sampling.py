@@ -285,14 +285,14 @@ class ParallelSampler(object):
                 if self._progress is not None:
                     self._progress[proc.chain - self._start_chain_num].close()
 
-            yield Draw(
-                proc.chain, is_last, draw, tuning,
-                stats, proc.shared_point_view
-            )
+            point = {name: val.copy()
+                     for name, val in proc.shared_point_view.items()}
 
             # Already called for new proc in _make_active
             if not is_last:
                 proc.write_next()
+
+            yield Draw(proc.chain, is_last, draw, tuning, stats, point)
 
     def __enter__(self):
         self._in_context = True
