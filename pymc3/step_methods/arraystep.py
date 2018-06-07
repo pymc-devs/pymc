@@ -1,10 +1,13 @@
 from .compound import CompoundStep
 from ..model import modelcontext
-from ..theanof import inputvars
+#from ..theanof import inputvars
 from ..blocking import ArrayOrdering, DictToArrayBijection
 import numpy as np
 from numpy.random import uniform
 from enum import IntEnum, unique
+
+from .. import backends_symbolic as S
+
 
 __all__ = [
     'ArrayStep', 'ArrayStepShared', 'metrop_select', 'Competence']
@@ -48,8 +51,12 @@ class BlockedStep(object):
         else:  # Assume all model variables
             vars = model.vars
 
-        # get the actual inputs from the vars
-        vars = inputvars(vars)
+
+        ## CHANGED:
+        # In theano, it searches the graph for the input leaf_nodes
+        # My tensor flow version does not do this. I may need to implement get_ancestors() like in edwards.
+        vars = S.inputvars(vars)
+
 
         if len(vars) == 0:
             raise ValueError('No free random variables to sample.')
@@ -119,6 +126,7 @@ class ArrayStep(BlockedStep):
         bij = DictToArrayBijection(self.ordering, point)
 
         inputs = [bij.mapf(x) for x in self.fs]
+
         if self.allvars:
             inputs.append(point)
 
@@ -153,18 +161,26 @@ class ArrayStepShared(BlockedStep):
         self.bij = None
 
     def step(self, point):
-        for var, share in self.shared.items():
-            share.set_value(point[var])
 
-        self.bij = DictToArrayBijection(self.ordering, point)
+        ## CHANGED: At the moment, this is lazy.
+        ## But I implemented function for calculating change in logliklihood ...
+        ## for each step in each language differently.
+        if S.backend()=='theano':
+            for var, share in self.shared.items():
+                share.set_value(point[var])
 
-        if self.generates_stats:
-            apoint, stats = self.astep(self.bij.map(point))
-            return self.bij.rmap(apoint), stats
-        else:
-            apoint = self.astep(self.bij.map(point))
-            return self.bij.rmap(apoint)
+            self.bij = DictToArrayBijection(self.ordering, point)
 
+            if self.generates_stats:
+                apoint, stats = self.astep(self.bij.map(point))
+                return self.bij.rmap(apoint), stats
+            else:
+                apoint = self.astep(self.bij.map(point)) # it's only passing one variables value in becaues the others are shared.
+                return self.bij.rmap(apoint)
+
+        elif S.backend()=='tensorflow':
+            apoint, stats = self.astep(point)
+            return apoint, stats
 
 class PopulationArrayStepShared(ArrayStepShared):
     """Version of ArrayStepShared that allows samplers to access the states
@@ -202,42 +218,30 @@ class PopulationArrayStepShared(ArrayStepShared):
             raise ValueError('Population is just {} + {}. This is too small. You should ' \
                 'increase the number of chains.'.format(self.this_chain, self.other_chains))
         return
-
-
-class GradientSharedStep(BlockedStep):
-    def __init__(self, vars, model=None, blocked=True,
-                 dtype=None, **theano_kwargs):
-        model = modelcontext(model)
-        self.vars = vars
-        self.blocked = blocked
-
-        func = model.logp_dlogp_function(
-            vars, dtype=dtype, **theano_kwargs)
-
-        # handle edge case discovered in #2948
-        try:
-            func.set_extra_values(model.test_point)
-            q = func.dict_to_array(model.test_point)
-            logp, dlogp = func(q)
-        except ValueError:
-            theano_kwargs.update(mode='FAST_COMPILE')
-            func = model.logp_dlogp_function(
-                vars, dtype=dtype, **theano_kwargs)
-
-        self._logp_dlogp_func = func
-
-    def step(self, point):
-        self._logp_dlogp_func.set_extra_values(point)
-        array = self._logp_dlogp_func.dict_to_array(point)
-
-        if self.generates_stats:
-            apoint, stats = self.astep(array)
-            point = self._logp_dlogp_func.array_to_full_dict(apoint)
-            return point, stats
-        else:
-            apoint = self.astep(array)
-            point = self._logp_dlogp_func.array_to_full_dict(apoint)
-            return point
+#
+#
+# class GradientSharedStep(BlockedStep):
+#     def __init__(self, vars, model=None, blocked=True,
+#                  dtype=None, **theano_kwargs):
+#         model = modelcontext(model)
+#         self.vars = vars
+#         self.blocked = blocked
+#
+#         self._logp_dlogp_func = model.logp_dlogp_function(
+#             vars, dtype=dtype, **theano_kwargs)
+#
+#     def step(self, point):
+#         self._logp_dlogp_func.set_extra_values(point)
+#         array = self._logp_dlogp_func.dict_to_array(point)
+#
+#         if self.generates_stats:
+#             apoint, stats = self.astep(array)
+#             point = self._logp_dlogp_func.array_to_full_dict(apoint)
+#             return point, stats
+#         else:
+#             apoint = self.astep(array)
+#             point = self._logp_dlogp_func.array_to_full_dict(apoint)
+#             return point
 
 
 def metrop_select(mr, q, q0):
