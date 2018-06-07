@@ -2,7 +2,7 @@ from scipy.cluster.vq import kmeans
 import numpy as np
 import theano.tensor as tt
 
-
+cholesky = tt.slinalg.cholesky
 solve_lower = tt.slinalg.Solve(A_structure='lower_triangular')
 solve_upper = tt.slinalg.Solve(A_structure='upper_triangular')
 solve = tt.slinalg.Solve(A_structure='general')
