@@ -312,7 +312,7 @@ def draw_values(params, point=None, size=None):
         missing_inputs = set()
         for param_idx in to_eval:
             param = params[param_idx]
-            if param.name in givens:
+            if hasattr(param, 'name') and param.name in givens:
                 evaluated[param_idx] = givens[param.name][1]
             else:
                 try:  # might evaluate in a bad order,
@@ -379,7 +379,7 @@ def _draw_value(param, point=None, givens=None, size=None):
         if point and hasattr(param, 'model') and param.name in point:
             return point[param.name]
         elif hasattr(param, 'random') and param.random is not None:
-            return param.random(point=point, size=None)
+            return param.random(point=point, size=size)
         elif (hasattr(param, 'distribution') and
                 hasattr(param.distribution, 'random') and
                 param.distribution.random is not None):
@@ -393,31 +393,6 @@ def _draw_value(param, point=None, givens=None, size=None):
             return func(*values)
     else:
         raise ValueError('Unexpected type in draw_value: %s' % type(param))
-
-
-def broadcast_shapes(*args):
-    """Return the shape resulting from broadcasting multiple shapes.
-    Represents numpy's broadcasting rules.
-
-    Parameters
-    ----------
-    *args : array-like of int
-        Tuples or arrays or lists representing the shapes of arrays to be broadcast.
-
-    Returns
-    -------
-    Resulting shape or None if broadcasting is not possible.
-    """
-    x = list(np.atleast_1d(args[0])) if args else ()
-    for arg in args[1:]:
-        y = list(np.atleast_1d(arg))
-        if len(x) < len(y):
-            x, y = y, x
-        x[-len(y):] = [j if i == 1 else i if j == 1 else i if i == j else 0
-                       for i, j in zip(x[-len(y):], y)]
-        if not all(x):
-            return None
-    return tuple(x)
 
 
 def infer_shape(shape):
@@ -437,7 +412,7 @@ def reshape_sampled(sampled, size, dist_shape):
     if np.size(sampled) == 1 or repeat_shape or dist_shape:
         return np.reshape(sampled, repeat_shape + dist_shape)
     else:
-        return sampled
+        return sampled.squeeze()
 
 
 def replicate_samples(generator, size, repeats, *args, **kwargs):
@@ -483,40 +458,38 @@ def generate_samples(generator, *args, **kwargs):
     dist_shape = kwargs.pop('dist_shape', ())
     size = kwargs.pop('size', None)
     broadcast_shape = kwargs.pop('broadcast_shape', None)
-    params = args + tuple(kwargs.values())
 
-    if broadcast_shape is None:
-        broadcast_shape = broadcast_shapes(*[np.atleast_1d(p).shape for p in params
-                                             if not isinstance(p, tuple)])
-    if broadcast_shape == ():
-        broadcast_shape = (1,)
+    if size is None:
+        size = 1
 
     args = tuple(p[0] if isinstance(p, tuple) else p for p in args)
+
     for key in kwargs:
         p = kwargs[key]
         kwargs[key] = p[0] if isinstance(p, tuple) else p
 
-    if np.all(dist_shape[-len(broadcast_shape):] == broadcast_shape):
-        prefix_shape = tuple(dist_shape[:-len(broadcast_shape)])
-    else:
-        prefix_shape = tuple(dist_shape)
+    if broadcast_shape is None:
+        inputs = args + tuple(kwargs.values())
+        broadcast_shape = np.broadcast(*inputs).shape  # size of generator(size=1)
 
-    repeat_shape = infer_shape(size)
+    dist_shape = infer_shape(dist_shape)
+    broadcast_shape = (1,) + infer_shape(broadcast_shape)
+    size_tup = infer_shape(size)
 
-    if broadcast_shape == (1,) and prefix_shape == ():
-        if size is not None:
-            samples = generator(size=size, *args, **kwargs)
-        else:
-            samples = generator(size=1, *args, **kwargs)
+    if broadcast_shape == (1,):
+        samples = generator(size=size_tup + dist_shape, *args, **kwargs)
+    elif broadcast_shape[-len(dist_shape):] == dist_shape:
+        samples = generator(*args, **kwargs)
+    elif dist_shape == broadcast_shape:
+        samples = generator(size=size, *args, **kwargs)
+    elif broadcast_shape[1:1 + len(size_tup)] == size_tup:
+        suffix = broadcast_shape[1 + len(size_tup):] + dist_shape
+        samples = [generator(*args, **kwargs).reshape(size_tup + (1,)) for _ in range(np.prod(suffix))]
+        samples = np.hstack(samples).reshape(size_tup + suffix)
     else:
-        if size is not None:
-            samples = replicate_samples(generator,
-                                        broadcast_shape,
-                                        repeat_shape + prefix_shape,
-                                        *args, **kwargs)
-        else:
-            samples = replicate_samples(generator,
-                                        broadcast_shape,
-                                        prefix_shape,
-                                        *args, **kwargs)
-    return reshape_sampled(samples, size, dist_shape)
+        raise TypeError(f'''Attempted to generate values with incompatible shapes:
+            size: {size}
+            dist_shape: {dist_shape}
+            broadcast_shape: {broadcast_shape}
+        ''')
+    return samples.squeeze()
