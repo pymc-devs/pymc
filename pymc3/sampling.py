@@ -966,8 +966,6 @@ def _choose_backend(trace, chain, shortcuts=None, **kwds):
 
 
 def _mp_sample(**kwargs):
-    import sys
-
     cores = kwargs.pop('cores')
     chain = kwargs.pop('chain')
     rseed = kwargs.pop('random_seed')
@@ -978,15 +976,21 @@ def _mp_sample(**kwargs):
     step = kwargs.pop('step')
     progressbar = kwargs.pop('progressbar')
     use_mmap = kwargs.pop('use_mmap')
+    model = kwargs.pop('model', None)
+    trace = kwargs.pop('trace', None)
 
     if sys.version_info.major >= 3:
         import pymc3.parallel_sampling as ps
 
-        model = modelcontext(kwargs.pop('model', None))
-        trace = kwargs.pop('trace', None)
+        # We did draws += tune in pm.sample
+        draws -= tune
+
         traces = []
         for idx in range(chain, chain + chains):
-            strace = _choose_backend(trace, idx, model=model)
+            if trace is not None:
+                strace = _choose_backend(copy(trace), idx, model=model)
+            else:
+                strace = _choose_backend(None, idx, model=model)
             # TODO what is this for?
             update_start_vals(start[idx - chain], model.test_point, model)
             if step.generates_stats and strace.supports_sampler_stats:
@@ -997,20 +1001,27 @@ def _mp_sample(**kwargs):
 
         sampler = ps.ParallelSampler(
             draws, tune, chains, cores, rseed, start, step, chain, progressbar)
-        with sampler:
-            for draw in sampler:
-                trace = traces[draw.chain - chain]
-                if trace.supports_sampler_stats and draw.stats is not None:
-                    trace.record(draw.point, draw.stats)
-                else:
-                    trace.record(draw.point)
-                if draw.is_last:
-                    trace.close()
-        return MultiTrace(traces)
+        try:
+            with sampler:
+                for draw in sampler:
+                    trace = traces[draw.chain - chain]
+                    if trace.supports_sampler_stats and draw.stats is not None:
+                        trace.record(draw.point, draw.stats)
+                    else:
+                        trace.record(draw.point)
+                    if draw.is_last:
+                        trace.close()
+            return MultiTrace(traces)
+        except KeyboardInterrupt:
+            traces, length = _choose_chains(traces, tune)
+            return MultiTrace(traces)[:length]
+        finally:
+            for trace in traces:
+                trace.close()
 
     else:
         chain_nums = list(range(chain, chain + chains))
-        pbars = [kwargs.pop('progressbar')] + [False] * (chains - 1)
+        pbars = [progressbar] + [False] * (chains - 1)
         jobs = (delayed(_sample)(*args, **kwargs)
                 for args in zip(chain_nums, pbars, rseed, start))
         if use_mmap:
@@ -1018,6 +1029,35 @@ def _mp_sample(**kwargs):
         else:
             traces = Parallel(n_jobs=cores, mmap_mode=None)(jobs)
         return MultiTrace(traces)
+
+
+def _choose_chains(traces, tune):
+    if tune is None:
+        tune = 0
+
+    if not traces:
+        return []
+
+    lengths = [max(0, len(trace) - tune) for trace in traces]
+    if not sum(lengths):
+        raise ValueError('Not enough samples to build a trace.')
+
+    idxs = np.argsort(lengths)[::-1]
+    l_sort = np.array(lengths)[idxs]
+
+    final_length = l_sort[0]
+    last_total = 0
+    for i, length in enumerate(l_sort):
+        total = (i + 1) * length
+        if total < last_total:
+            use_until = i
+            break
+        last_total = total
+        final_length = length
+    else:
+        use_until = len(lengths)
+
+    return [traces[idx] for idx in idxs[:use_until]], final_length + tune
 
 
 def stop_tuning(step):

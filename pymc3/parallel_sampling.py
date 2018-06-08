@@ -28,7 +28,8 @@ class _Process(multiprocessing.Process):
     We communicate with the main process using a pipe,
     and send finished samples using shared memory.
     """
-    def __init__(self, msg_pipe, step_method, shared_point, draws, tune, seed):
+    def __init__(self, name, msg_pipe, step_method, shared_point,
+                 draws, tune, seed):
         super(_Process, self).__init__(daemon=True)
         self._msg_pipe = msg_pipe
         self._step_method = step_method
@@ -116,6 +117,7 @@ class ProcessAdapter(object):
     """Control a Chain process from the main thread."""
     def __init__(self, draws, tune, step_method, chain, seed, start):
         self.chain = chain
+        process_name = "worker_chain_%s" % chain
         self._msg_pipe, remote_conn = multiprocessing.Pipe()
 
         self._shared_point = {}
@@ -138,7 +140,8 @@ class ProcessAdapter(object):
         self._num_samples = 0
 
         self._process = _Process(
-            remote_conn, step_method, self._shared_point, draws, tune, seed)
+            process_name, remote_conn, step_method, self._shared_point,
+            draws, tune, seed)
         # We fork right away, so that the main process can start tqdm threads
         self._process.start()
 
@@ -185,7 +188,7 @@ class ProcessAdapter(object):
         elif msg[0] == 'writing_done':
             proc._readable = True
             proc._num_samples += 1
-            return (proc, *msg[1:])
+            return (proc,) + msg[1:]
         else:
             raise ValueError('Sampler sent bad message.')
 
@@ -200,7 +203,7 @@ class ProcessAdapter(object):
         start_time = time.time()
         try:
             for process in processes:
-                timeout = start_time + patience - time.time()
+                timeout = time.time() + patience - start_time
                 if timeout < 0:
                     raise multiprocessing.TimeoutError()
                 process.join(timeout)
@@ -285,6 +288,10 @@ class ParallelSampler(object):
                 if self._progress is not None:
                     self._progress[proc.chain - self._start_chain_num].close()
 
+            # We could also yield proc.shared_point_view directly,
+            # and only call proc.write_next() after the yield returns.
+            # This seems to be faster overally though, as the worker
+            # loses less time waiting.
             point = {name: val.copy()
                      for name, val in proc.shared_point_view.items()}
 
