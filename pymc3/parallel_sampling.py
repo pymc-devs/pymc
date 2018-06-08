@@ -30,7 +30,7 @@ class _Process(multiprocessing.Process):
     """
     def __init__(self, name, msg_pipe, step_method, shared_point,
                  draws, tune, seed):
-        super(_Process, self).__init__(daemon=True)
+        super(_Process, self).__init__(daemon=True, name=name)
         self._msg_pipe = msg_pipe
         self._step_method = step_method
         self._shared_point = shared_point

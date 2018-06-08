@@ -965,19 +965,9 @@ def _choose_backend(trace, chain, shortcuts=None, **kwds):
         raise ValueError('Argument `trace` is invalid.')
 
 
-def _mp_sample(**kwargs):
-    cores = kwargs.pop('cores')
-    chain = kwargs.pop('chain')
-    rseed = kwargs.pop('random_seed')
-    start = kwargs.pop('start')
-    chains = kwargs.pop('chains')
-    draws = kwargs.pop('draws')
-    tune = kwargs.pop('tune')
-    step = kwargs.pop('step')
-    progressbar = kwargs.pop('progressbar')
-    use_mmap = kwargs.pop('use_mmap')
-    model = kwargs.pop('model', None)
-    trace = kwargs.pop('trace', None)
+def _mp_sample(draws, tune, step, chains, cores, chain, random_seed,
+               start, progressbar, trace=None, model=None, use_mmap=False,
+               **kwargs):
 
     if sys.version_info.major >= 3:
         import pymc3.parallel_sampling as ps
@@ -1000,7 +990,8 @@ def _mp_sample(**kwargs):
             traces.append(strace)
 
         sampler = ps.ParallelSampler(
-            draws, tune, chains, cores, rseed, start, step, chain, progressbar)
+            draws, tune, chains, cores, random_seed, start, step,
+            chain, progressbar)
         try:
             with sampler:
                 for draw in sampler:
@@ -1022,8 +1013,12 @@ def _mp_sample(**kwargs):
     else:
         chain_nums = list(range(chain, chain + chains))
         pbars = [progressbar] + [False] * (chains - 1)
-        jobs = (delayed(_sample)(*args, **kwargs)
-                for args in zip(chain_nums, pbars, rseed, start))
+        jobs = (delayed(_sample)(
+                    chain=args[0], progressbar=args[1], random_seed=args[2],
+                    start=args[3], draws=draws, step=step, trace=trace,
+                    tune=tune, model=model, **kwargs
+                )
+                for args in zip(chain_nums, pbars, random_seed, start))
         if use_mmap:
             traces = Parallel(n_jobs=cores)(jobs)
         else:
