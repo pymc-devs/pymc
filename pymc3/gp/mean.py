@@ -32,7 +32,7 @@ class Zero(Mean):
     """
 
     def __call__(self, X):
-        return tt.alloc(0.0, X.shape[0], 1)
+        return tt.alloc(0.0, 1, X.shape[0])
 
 class Constant(Mean):
     R"""
@@ -49,7 +49,7 @@ class Constant(Mean):
         self.c = c
 
     def __call__(self, X):
-        return tt.alloc(1.0, X.shape[0], 1) * self.c
+        return tt.alloc(1.0, 1, X.shape[0]) * self.c
 
 
 class Linear(Mean):
@@ -70,7 +70,7 @@ class Linear(Mean):
         self.A = coeffs
 
     def __call__(self, X):
-        return tt.dot(X, self.A) + self.b
+        return tt.transpose(tt.dot(X, self.A)) + self.b
 
 
 class Add(Mean):

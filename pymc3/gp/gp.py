@@ -110,7 +110,7 @@ class Latent(Base):
         shape = infer_shape(X, kwargs.pop("shape", None))
         if reparameterize:
             v = pm.Normal(name + "_rotated_", mu=0.0, sd=1.0, shape=shape, **kwargs)
-            f = pm.Deterministic(name, mu + tt.dot(chol, v))
+            f = pm.Deterministic(name, mu + tt.dot(v, chol.T))
         else:
             f = pm.MvNormal(name, mu=mu, chol=chol, shape=shape, **kwargs)
         return f
@@ -165,8 +165,10 @@ class Latent(Base):
         Kxs = self.cov_func(X, Xnew)
         L = cholesky(stabilize(Kxx))
         A = solve_lower(L, Kxs)
-        v = solve_lower(L, f - mean_total(X))
-        mu = self.mean_func(Xnew) + tt.dot(tt.transpose(A), v)
+        #v = solve_lower(L, f - mean_total(X))
+        #mu = self.mean_func(Xnew) + tt.dot(tt.transpose(A), v)
+        v = solve_lower(L, (f - mean_total(X)).T)
+        mu = self.mean_func(Xnew) + tt.dot(v.T, A)
         Kss = self.cov_func(Xnew)
         cov = Kss - tt.dot(tt.transpose(A), A)
         return mu, cov
@@ -204,11 +206,7 @@ class Latent(Base):
         mu, cov = self._build_conditional(Xnew, *givens)
         chol = cholesky(stabilize(cov))
         shape = infer_shape(Xnew, kwargs.pop("shape", None))
-        #return pm.MvNormal(name, mu=mu, chol=chol, shape=shape, **kwargs)
-        return pm.MatrixNormal(name, mu=mu, rowchol=chol, colcov=np.eye(shape[1]), shape=shape)
-
-        #vals = pm.MatrixNormal('vals', mu=mu, colcov=colcov,
-        #                       rowcov=rowcov, shape=(m, n))
+        return pm.MvNormal(name, mu=mu, chol=chol, shape=shape, **kwargs)
 
 
 @conditioned_vars(["X", "f", "nu"])
@@ -426,7 +424,7 @@ class Marginal(Base):
         self.y = y
         self.noise = noise
         if is_observed:
-            return pm.MvNormal(name, mu=mu.T, chol=chol, observed=y.T, **kwargs)
+            return pm.MvNormal(name, mu=mu, chol=chol, observed=y, **kwargs)
         else:
             shape = infer_shape(X, kwargs.pop("shape", None))
             return pm.MvNormal(name, mu=mu, chol=chol, shape=shape, **kwargs)
@@ -457,8 +455,8 @@ class Marginal(Base):
         rxx = y - mean_total(X)
         L = cholesky(stabilize(Kxx) + Knx)
         A = solve_lower(L, Kxs)
-        v = solve_lower(L, rxx)
-        mu = self.mean_func(Xnew) + tt.dot(tt.transpose(A), v)
+        v = solve_lower(L, tt.transpose(rxx))
+        mu = self.mean_func(Xnew) + tt.dot(tt.transpose(v), A)
         if diag:
             Kss = self.cov_func(Xnew, diag=True)
             var = Kss - tt.sum(tt.square(A), 0)
@@ -509,8 +507,7 @@ class Marginal(Base):
         mu, cov = self._build_conditional(Xnew, pred_noise, False, *givens)
         chol = cholesky(cov)
         shape = infer_shape(Xnew, kwargs.pop("shape", None))
-        return pm.MatrixNormal(name, mu=mu, rowchol=chol, colcov=np.eye(shape[1]), shape=shape)
-        #return pm.MvNormal(name, mu=mu, chol=chol, shape=shape, **kwargs)
+        return pm.MvNormal(name, mu=mu, chol=chol, shape=shape, **kwargs)
 
     def predict(self, Xnew, point=None, diag=False, pred_noise=False, given=None):
         R"""
