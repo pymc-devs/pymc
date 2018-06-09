@@ -166,7 +166,7 @@ class BetaBinomial(Discrete):
 
     def random(self, point=None, size=None):
         alpha, beta, n = \
-            draw_values([self.alpha, self.beta, self.n], point=point)
+            draw_values([self.alpha, self.beta, self.n], point=point, size=size)
         return generate_samples(self._random, alpha=alpha, beta=beta, n=n,
                                 dist_shape=self.shape,
                                 size=size)
@@ -247,7 +247,7 @@ class Bernoulli(Discrete):
         self.mode = tt.cast(tround(self.p), 'int8')
 
     def random(self, point=None, size=None):
-        p = draw_values([self.p], point=point)[0]
+        p = draw_values([self.p], point=point, size=size)[0]
         return generate_samples(stats.bernoulli.rvs, p,
                                 dist_shape=self.shape,
                                 size=size)
@@ -343,7 +343,7 @@ class DiscreteWeibull(Discrete):
         return np.ceil(np.power(np.log(1 - p) / np.log(q), 1. / beta)) - 1
 
     def random(self, point=None, size=None):
-        q, beta = draw_values([self.q, self.beta], point=point)
+        q, beta = draw_values([self.q, self.beta], point=point, size=size)
 
         return generate_samples(self._random, q, beta,
                                 dist_shape=self.shape,
@@ -410,7 +410,7 @@ class Poisson(Discrete):
         self.mode = tt.floor(mu).astype('int32')
 
     def random(self, point=None, size=None):
-        mu = draw_values([self.mu], point=point)[0]
+        mu = draw_values([self.mu], point=point, size=size)[0]
         return generate_samples(stats.poisson.rvs, mu,
                                 dist_shape=self.shape,
                                 size=size)
@@ -490,7 +490,7 @@ class NegativeBinomial(Discrete):
         self.mode = tt.floor(mu).astype('int32')
 
     def random(self, point=None, size=None):
-        mu, alpha = draw_values([self.mu, self.alpha], point=point)
+        mu, alpha = draw_values([self.mu, self.alpha], point=point, size=size)
         g = generate_samples(stats.gamma.rvs, alpha, scale=mu / alpha,
                              dist_shape=self.shape,
                              size=size)
@@ -564,7 +564,7 @@ class Geometric(Discrete):
         self.mode = 1
 
     def random(self, point=None, size=None):
-        p = draw_values([self.p], point=point)[0]
+        p = draw_values([self.p], point=point, size=size)[0]
         return generate_samples(np.random.geometric, p,
                                 dist_shape=self.shape,
                                 size=size)
@@ -636,7 +636,7 @@ class DiscreteUniform(Discrete):
         return samples
 
     def random(self, point=None, size=None):
-        lower, upper = draw_values([self.lower, self.upper], point=point)
+        lower, upper = draw_values([self.lower, self.upper], point=point, size=size)
         return generate_samples(self._random,
                                 lower, upper,
                                 dist_shape=self.shape,
@@ -714,7 +714,7 @@ class Categorical(Discrete):
             else:
                 return np.random.choice(k, *args, **kwargs)
 
-        p, k = draw_values([self.p, self.k], point=point)
+        p, k = draw_values([self.p, self.k], point=point, size=size)
         return generate_samples(partial(random_choice, np.arange(k)),
                                 p=p,
                                 broadcast_shape=p.shape[:-1] or (1,),
@@ -764,7 +764,7 @@ class Constant(Discrete):
         self.mean = self.median = self.mode = self.c = c = tt.as_tensor_variable(c)
 
     def random(self, point=None, size=None):
-        c = draw_values([self.c], point=point)[0]
+        c = draw_values([self.c], point=point, size=size)[0]
         dtype = np.array(c).dtype
 
         def _random(c, dtype=dtype, size=None):
@@ -845,7 +845,7 @@ class ZeroInflatedPoisson(Discrete):
         self.mode = self.pois.mode
 
     def random(self, point=None, size=None):
-        theta, psi = draw_values([self.theta, self.psi], point=point)
+        theta, psi = draw_values([self.theta, self.psi], point=point, size=size)
         g = generate_samples(stats.poisson.rvs, theta,
                              dist_shape=self.shape,
                              size=size)
@@ -938,7 +938,7 @@ class ZeroInflatedBinomial(Discrete):
         self.mode = self.bin.mode
 
     def random(self, point=None, size=None):
-        n, p, psi = draw_values([self.n, self.p, self.psi], point=point)
+        n, p, psi = draw_values([self.n, self.p, self.psi], point=point, size=size)
         g = generate_samples(stats.binom.rvs, n, p,
                              dist_shape=self.shape,
                              size=size)
@@ -1056,7 +1056,7 @@ class ZeroInflatedNegativeBinomial(Discrete):
 
     def random(self, point=None, size=None):
         mu, alpha, psi = draw_values(
-            [self.mu, self.alpha, self.psi], point=point)
+            [self.mu, self.alpha, self.psi], point=point, size=size)
         g = generate_samples(stats.gamma.rvs, alpha, scale=mu / alpha,
                              dist_shape=self.shape,
                              size=size)

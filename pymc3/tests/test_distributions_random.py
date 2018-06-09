@@ -97,20 +97,6 @@ class TestDrawValues(SeededTest):
         assert isinstance(mu, np.ndarray)
         assert isinstance(tau, np.ndarray)
 
-    def test_random_sample_returns_correctly(self):
-        # Based on what we discovered in #GH2909
-        with pm.Model():
-            a = pm.Uniform('a', lower=0, upper=1, shape=10)
-            b = pm.Binomial('b', n=1, p=a, shape=10)
-        array_of_uniform = a.random(size=10000).mean(axis=0)
-        array_of_binomial = b.random(size=10000).mean(axis=0)
-        npt.assert_allclose(array_of_uniform, [0.49886929, 0.49949713, 0.49946077, 0.49922606, 0.49927498, 0.50003914,
-                                               0.49980687, 0.50180495, 0.500905, 0.50035121], rtol=1e-2, atol=0)
-        npt.assert_allclose(array_of_binomial, [0.7232, 0.131 , 0.9457, 0.8279, 0.2911, 0.8686, 0.57  , 0.9184,
-                                                0.8177, 0.1625], rtol=1e-2, atol=0)
-        assert isinstance(array_of_binomial, np.ndarray)
-        assert isinstance(array_of_uniform, np.ndarray)
-
 
 class BaseTestCases(object):
     class BaseTestCase(SeededTest):
@@ -242,6 +228,11 @@ class TestWald(BaseTestCases.BaseTestCase):
 class TestBeta(BaseTestCases.BaseTestCase):
     distribution = pm.Beta
     params = {'alpha': 1., 'beta': 1.}
+
+
+class TestKumaraswamy(BaseTestCases.BaseTestCase):
+    distribution = pm.Kumaraswamy
+    params = {'a': 1., 'b': 1.}
 
 
 class TestExponential(BaseTestCases.BaseTestCase):
@@ -741,17 +732,17 @@ class TestScalarParameterSamples(SeededTest):
         for n in [2, 10, 50]:
             #pylint: disable=cell-var-from-loop
             shape = n*(n-1)//2
-            
+
             def ref_rand(size, eta):
                 beta = eta - 1 + n/2
                 return (st.beta.rvs(size=(size, shape), a=beta, b=beta)-.5)*2
 
             class TestedLKJCorr (pm.LKJCorr):
-                
+
                 def __init__(self, **kwargs):
                     kwargs.pop('shape', None)
                     super(TestedLKJCorr, self).__init__(
-                            n=n, 
+                            n=n,
                             **kwargs
                     )
 
@@ -767,12 +758,12 @@ class TestScalarParameterSamples(SeededTest):
 
         pymc3_random(pm.NormalMixture, {'w': Simplex(2),
                      'mu': Domain([[.05, 2.5], [-5., 1.]], edges=(None, None)),
-                     'sd': Domain([[1, 1], [1.5, 2.]], edges=(None, None))}, 
+                     'sd': Domain([[1, 1], [1.5, 2.]], edges=(None, None))},
                      size=1000,
                      ref_rand=ref_rand)
         pymc3_random(pm.NormalMixture, {'w': Simplex(3),
                      'mu': Domain([[-5., 1., 2.5]], edges=(None, None)),
-                     'sd': Domain([[1.5, 2., 3.]], edges=(None, None))}, 
+                     'sd': Domain([[1.5, 2., 3.]], edges=(None, None))},
                      size=1000,
                      ref_rand=ref_rand)
 

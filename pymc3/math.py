@@ -120,7 +120,7 @@ def logaddexp(a, b):
 
 def invlogit(x, eps=sys.float_info.epsilon):
     """The inverse of the logit function, 1 / (1 + exp(-x))."""
-    return tt.nnet.sigmoid(x)
+    return (1. - 2. * eps) / (1. + tt.exp(-x)) + eps
 
 
 def logit(p):

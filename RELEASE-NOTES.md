@@ -12,6 +12,7 @@
 - Improve error message `Mass matrix contains zeros on the diagonal. Some derivatives might always be zero` during tuning of `pm.sample`
 - Improve error message `NaN occurred in optimization.` during ADVI
 - Save and load traces without `pickle` using `pm.save_trace` and `pm.load_trace`
+- Add `Kumaraswamy` distribution
 
 ### Fixes
 

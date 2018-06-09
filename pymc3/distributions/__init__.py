@@ -16,7 +16,7 @@ from .continuous import Normal
 # from .continuous import HalfStudentT
 # from .continuous import Lognormal
 # from .continuous import ChiSquared
-#from .continuous import HalfNormal
+# from .continuous import HalfNormal
 # from .continuous import Wald
 # from .continuous import Pareto
 # from .continuous import InverseGamma

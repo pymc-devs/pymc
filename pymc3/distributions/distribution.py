@@ -368,9 +368,7 @@ def _draw_value(param, point=None, givens=None):
         A dictionary from theano variables to their values. These values
         are used to evaluate `param` if it is a theano variable.
     """
-    if isinstance(param, numbers.Number):
-        return param
-    elif isinstance(param, np.ndarray):
+    if isinstance(param, (numbers.Number, np.ndarray)):
         return param
 
     ## CHANGED: Asking for type from backend and getting Value
@@ -390,7 +388,7 @@ def _draw_value(param, point=None, givens=None):
         if point and hasattr(param, 'model') and param.name in point:
             return point[param.name]
         elif hasattr(param, 'random') and param.random is not None:
-            return param.random(point=point, size=None)
+            return param.random(point=point, size=size)
         else:
             if givens:
                 variables, values = list(zip(*givens))
