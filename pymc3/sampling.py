@@ -7,15 +7,19 @@ import warnings
 from six import integer_types
 from joblib import Parallel, delayed
 import numpy as np
-import theano.gradient as tg
+#import theano.gradient as tg
 
 from .backends.base import BaseTrace, MultiTrace
 from .backends.ndarray import NDArray
 from .model import modelcontext, Point, all_continuous
-from .step_methods import (NUTS, HamiltonianMC, Metropolis, BinaryMetropolis,
-                           BinaryGibbsMetropolis, CategoricalGibbsMetropolis,
-                           Slice, CompoundStep, arraystep)
-from .util import update_start_vals, get_untransformed_name, is_transformed_name
+
+# from .step_methods import (NUTS, HamiltonianMC, Metropolis, BinaryMetropolis,
+#                            BinaryGibbsMetropolis, CategoricalGibbsMetropolis,
+#                            Slice, CompoundStep, arraystep)
+from .step_methods import (Metropolis,CompoundStep,arraystep)
+
+
+from .util import update_start_vals
 from .vartypes import discrete_types
 from pymc3.step_methods.hmc import quadpotential
 from pymc3 import plots
@@ -27,8 +31,10 @@ sys.setrecursionlimit(10000)
 
 __all__ = ['sample', 'iter_sample', 'sample_ppc', 'sample_ppc_w', 'init_nuts']
 
-STEP_METHODS = (NUTS, HamiltonianMC, Metropolis, BinaryMetropolis,
-                BinaryGibbsMetropolis, Slice, CategoricalGibbsMetropolis)
+# STEP_METHODS = (NUTS, HamiltonianMC, Metropolis, BinaryMetropolis,
+#                 BinaryGibbsMetropolis, Slice, CategoricalGibbsMetropolis)
+
+STEP_METHODS = (Metropolis)
 
 
 _log = logging.getLogger('pymc3')
@@ -159,9 +165,7 @@ def _print_step_hierarchy(s, level=0):
         for i in s.methods:
             _print_step_hierarchy(i, level+1)
     else:
-        varnames = ', '.join([get_untransformed_name(v.name) if is_transformed_name(v.name)
-                              else v.name for v in s.vars])
-        _log.info('>' * level + '{}: [{}]'.format(s.__class__.__name__, varnames))
+        _log.info('>' * level + '{}: {}'.format(s.__class__.__name__, s.vars))
 
 
 def _cpu_count():

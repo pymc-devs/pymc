@@ -1,14 +1,19 @@
 import numbers
 import numpy as np
-import theano.tensor as tt
-from theano import function
-import theano
+
+#import theano.tensor as tt
+#from theano import function
+#import theano
+from .. import backends_symbolic as S
+
 from ..memoize import memoize
 from ..model import Model, get_named_nodes_and_relations, FreeRV, ObservedRV
 from ..vartypes import string_types
 
+
 __all__ = ['DensityDist', 'Distribution', 'Continuous', 'Discrete',
-           'NoDistribution', 'TensorType', 'draw_values']
+           'NoDistribution', #'TensorType',
+            'draw_values']
 
 
 class _Unpickling(object):
@@ -48,15 +53,20 @@ class Distribution(object):
         return dist
 
     def __init__(self, shape, dtype, testval=None, defaults=(),
-                 transform=None, broadcastable=None):
+                 transform=None, broadcastable=None,initial_value=None):
         self.shape = np.atleast_1d(shape)
         if False in (np.floor(self.shape) == self.shape):
             raise TypeError("Expected int elements in shape")
         self.dtype = dtype
-        self.type = TensorType(self.dtype, self.shape, broadcastable)
+
+        ## CHANGED:
+        #self.type = TensorType(self.dtype, self.shape, broadcastable)
+        self.type = S.TensorVariableType(self.dtype,self.shape,broadcastable)
+
         self.testval = testval
         self.defaults = defaults
         self.transform = transform
+        self.initial_value=initial_value; ### adding this to work with theano variables
 
     def default(self):
         return np.asarray(self.get_test_val(self.testval, self.defaults), self.dtype)
@@ -79,13 +89,15 @@ class Distribution(object):
         if isinstance(val, string_types):
             val = getattr(self, val)
 
-        if isinstance(val, tt.TensorVariable):
-            return val.tag.test_value
+        ## CHANGED: Moved get-value-based-on-type logic to the backend
+        #if isinstance(val, tt.TensorVariable):
+        #    return val.tag.test_value
 
-        if isinstance(val, tt.TensorConstant):
-            return val.value
+        #if isinstance(val, tt.TensorConstant):
+            #return val.value
+        #return val
+        return S.get_val(val)
 
-        return val
 
     def _repr_latex_(self, name=None, dist=None):
         """Magic method name for IPython to use for LaTeX formatting."""
@@ -111,15 +123,17 @@ class Distribution(object):
         Subclasses can use this to improve the speed of logp evaluations
         if only the sum of the logp values is needed.
         """
-        return tt.sum(self.logp(*args, **kwargs))
+        ## CHANGED
+        #return tt.sum(self.logp(*args, **kwargs))
+        return S.tsum(self.logp(*args, **kwargs))
 
     __latex__ = _repr_latex_
 
 
-def TensorType(dtype, shape, broadcastable=None):
-    if broadcastable is None:
-        broadcastable = np.atleast_1d(shape) == 1
-    return tt.TensorType(str(dtype), broadcastable)
+#def TensorType(dtype, shape, broadcastable=None):
+#    if broadcastable is None:
+#        broadcastable = np.atleast_1d(shape) == 1
+#    return tt.TensorType(str(dtype), broadcastable)
 
 
 class NoDistribution(Distribution):
@@ -149,7 +163,10 @@ class Discrete(Distribution):
     def __init__(self, shape=(), dtype=None, defaults=('mode',),
                  *args, **kwargs):
         if dtype is None:
-            if theano.config.floatX == 'float32':
+
+            ## CHANGED: Just asking for float type from backend
+            if S.floatx()=='float32':
+            #if theano.config.floatX == 'float32':
                 dtype = 'int16'
             else:
                 dtype = 'int64'
@@ -170,7 +187,11 @@ class Continuous(Distribution):
     def __init__(self, shape=(), dtype=None, defaults=('median', 'mean', 'mode'),
                  *args, **kwargs):
         if dtype is None:
-            dtype = theano.config.floatX
+
+            ## CHANGED: asking for float type from backed.
+            #dtype = theano.config.floatX
+            dtype = S.floatx()
+
         super(Continuous, self).__init__(
             shape, dtype, defaults=defaults, *args, **kwargs)
 
@@ -210,7 +231,7 @@ class DensityDist(Distribution):
 
 
 
-def draw_values(params, point=None, size=None):
+def draw_values(params, point=None):
     """
     Draw (fix) parameter values. Handles a number of cases:
 
@@ -261,8 +282,9 @@ def draw_values(params, point=None, size=None):
         if next_ in stored:
             # If the node already has a givens value, skip it
             continue
-        elif isinstance(next_, (tt.TensorConstant,
-                                tt.sharedvar.SharedVariable)):
+        elif is_shared(next_) or is_constant(next_):
+        #elif isinstance(next_, (tt.TensorConstant,
+        #                        tt.sharedvar.SharedVariable)):
             # If the node is a theano.tensor.TensorConstant or a
             # theano.tensor.sharedvar.SharedVariable, its value will be
             # available automatically in _compile_theano_function so
@@ -285,9 +307,9 @@ def draw_values(params, point=None, size=None):
                 # have the random method
                 givens[next_.name] = (next_, _draw_value(next_,
                                                          point=point,
-                                                         givens=temp_givens, size=size))
+                                                         givens=temp_givens))
                 stored.add(next_.name)
-            except theano.gof.fg.MissingInputError:
+            except: # XXX: this will accept more errors, so error prone theano.gof.fg.MissingInputError:
                 # The node failed, so we must add the node's parents to
                 # the stack of nodes to try to draw from. We exclude the
                 # nodes in the `params` list.
@@ -297,36 +319,39 @@ def draw_values(params, point=None, size=None):
                               node not in params])
     values = []
     for param in params:
-        values.append(_draw_value(param, point=point, givens=givens.values(), size=size))
+        values.append(_draw_value(param, point=point, givens=givens.values()))
     return values
 
 
-@memoize
-def _compile_theano_function(param, vars, givens=None):
-    """Compile theano function for a given parameter and input variables.
+## CHANGED: This is a big change. All this logic is going into the backend.
+# Unforunately, I don't think I could preserve the memoizing functionality in backend at the momemt.
 
-    This function is memoized to avoid repeating costly theano compilations
-    when repeatedly drawing values, which is done when generating posterior
-    predictive samples.
+# @memoize
+# def _compile_theano_function(param, vars, givens=None):
+#     """Compile theano function for a given parameter and input variables.
+#
+#     This function is memoized to avoid repeating costly theano compilations
+#     when repeatedly drawing values, which is done when generating posterior
+#     predictive samples.
+#
+#     Parameters
+#     ----------
+#     param : Model variable from which to draw value
+#     vars : Children variables of `param`
+#     givens : Variables to be replaced in the Theano graph
+#
+#     Returns
+#     -------
+#     A compiled theano function that takes the values of `vars` as input
+#         positional args
+#     """
+#     return function(vars, param, givens=givens,
+#                     rebuild_strict=True,
+#                     on_unused_input='ignore',
+#                     allow_input_downcast=True)
 
-    Parameters
-    ----------
-    param : Model variable from which to draw value
-    vars : Children variables of `param`
-    givens : Variables to be replaced in the Theano graph
 
-    Returns
-    -------
-    A compiled theano function that takes the values of `vars` as input
-        positional args
-    """
-    return function(vars, param, givens=givens,
-                    rebuild_strict=True,
-                    on_unused_input='ignore',
-                    allow_input_downcast=True)
-
-
-def _draw_value(param, point=None, givens=None, size=None):
+def _draw_value(param, point=None, givens=None):
     """Draw a random value from a distribution or return a constant.
 
     Parameters
@@ -342,16 +367,24 @@ def _draw_value(param, point=None, givens=None, size=None):
     givens : dict, optional
         A dictionary from theano variables to their values. These values
         are used to evaluate `param` if it is a theano variable.
-    size : int, optional
-        Number of samples
     """
     if isinstance(param, (numbers.Number, np.ndarray)):
         return param
-    elif isinstance(param, tt.TensorConstant):
-        return param.value
-    elif isinstance(param, tt.sharedvar.SharedVariable):
-        return param.get_value()
-    elif isinstance(param, tt.TensorVariable):
+
+    ## CHANGED: Asking for type from backend and getting Value
+    # Probably a bit redundent with get_val
+    #elif isinstance(param, tt.TensorConstant):
+    #    return param.value
+    #elif isinstance(param, tt.sharedvar.SharedVariable):
+    #    return param.get_value()
+    elif S.is_constant(param):
+        S.get_val(param)
+    elif S.is_shared(param):
+        S.get_val(param)
+
+    ## CHANGED: Asking for type from backend and getting Value
+    #elif isinstance(param, tt.TensorVariable):
+    elif S.is_variable(param):
         if point and hasattr(param, 'model') and param.name in point:
             return point[param.name]
         elif hasattr(param, 'random') and param.random is not None:
@@ -361,8 +394,13 @@ def _draw_value(param, point=None, givens=None, size=None):
                 variables, values = list(zip(*givens))
             else:
                 variables = values = []
-            func = _compile_theano_function(param, variables)
-            return func(*values)
+
+            ## CHANGED: call the function class defined in the backend.
+            #func = _compile_theano_function(param, variables)
+            #return func(*values)
+            func = S.function(param,variables)
+            return(func(*values))
+
     else:
         raise ValueError('Unexpected type in draw_value: %s' % type(param))
 
