@@ -228,9 +228,32 @@ class Flat(Continuous):
         super(Flat, self).__init__(defaults=('_default',), *args, **kwargs)
 
     def random(self, point=None, size=None):
+        """Raises ValueError as it is not possible to sample from Flat distribution
+
+        Parameters
+        ----------
+        point : dict, optional
+        size : int, optional
+
+        Raises
+        -------
+        ValueError
+        """
         raise ValueError('Cannot sample from Flat distribution')
 
     def logp(self, value):
+        """
+        Calculate log-probability of Flat distribution at specified value.
+
+        Parameters
+        ----------
+        value : numeric
+            Value for which log-probability is calculated.
+
+        Returns
+        -------
+        TensorVariable
+        """
         return tt.zeros_like(value)
 
     def _repr_latex_(self, name=None, dist=None):
@@ -246,9 +269,32 @@ class HalfFlat(PositiveContinuous):
         super(HalfFlat, self).__init__(defaults=('_default',), *args, **kwargs)
 
     def random(self, point=None, size=None):
+        """Raises ValueError as it is not possible to sample from HalfFlat distribution
+
+        Parameters
+        ----------
+        point : dict, optional
+        size : int, optional
+
+        Raises
+        -------
+        ValueError
+        """
         raise ValueError('Cannot sample from HalfFlat distribution')
 
     def logp(self, value):
+        """
+        Calculate log-probability of Uniform distribution at specified value.
+
+        Parameters
+        ----------
+        value : numeric
+            Value for which log-probability is calculated.
+
+        Returns
+        -------
+        TensorVariable
+        """
         return bound(tt.zeros_like(value), value > 0)
 
     def _repr_latex_(self, name=None, dist=None):
@@ -333,6 +379,22 @@ class Normal(Continuous):
         super(Normal, self).__init__(**kwargs)
 
     def random(self, point=None, size=None):
+        """
+        Draw random values from Normal distribution.
+
+        Parameters
+        ----------
+        point : dict, optional
+            Dict of variable values on which random values are to be
+            conditioned (uses default point if not specified).
+        size : int, optional
+            Desired size of random sample (returns one sample if not
+            specified).
+
+        Returns
+        -------
+        array
+        """
         mu, tau, _ = draw_values([self.mu, self.tau, self.sd],
                                  point=point, size=size)
         return generate_samples(stats.norm.rvs, loc=mu, scale=tau**-0.5,
@@ -340,6 +402,18 @@ class Normal(Continuous):
                                 size=size)
 
     def logp(self, value):
+        """
+        Calculate log-probability of Normal distribution at specified value.
+
+        Parameters
+        ----------
+        value : numeric
+            Value for which log-probability is calculated.
+
+        Returns
+        -------
+        TensorVariable
+        """
         sd = self.sd
         tau = self.tau
         mu = self.mu
