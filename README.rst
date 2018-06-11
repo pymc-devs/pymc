@@ -149,7 +149,7 @@ Software using PyMC3
 - `sampled <https://github.com/ColCarroll/sampled>`__: Decorator for PyMC3 models.
 - `NiPyMC <https://github.com/PsychoinformaticsLab/nipymc>`__: Bayesian mixed-effects modeling of fMRI data in Python.
 - `beat <https://github.com/hvasbath/beat>`__: Bayesian Earthquake Analysis Tool.
-
+- `BayesFit <https://github.com/Slugocm/BayesFit>`__: Bayesian Psychometric Curve Fitting Tool.
 
 Please contact us if your software is not listed here.
 
