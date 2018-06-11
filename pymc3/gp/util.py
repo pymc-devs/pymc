@@ -1,10 +1,8 @@
 from scipy.cluster.vq import kmeans
 import numpy as np
-import pymc3 as pm
 import theano.tensor as tt
 
-
-cholesky = pm.distributions.dist_math.Cholesky(nofail=True, lower=True)
+cholesky = tt.slinalg.cholesky
 solve_lower = tt.slinalg.Solve(A_structure='lower_triangular')
 solve_upper = tt.slinalg.Solve(A_structure='upper_triangular')
 solve = tt.slinalg.Solve(A_structure='general')
@@ -89,6 +87,3 @@ def plot_gp_dist(ax, samples, x, plot_samples=True, palette="Reds"):
         # plot a few samples
         idx = np.random.randint(0, samples.shape[1], 30)
         ax.plot(x, samples[:,idx], color=cmap(0.9), lw=1, alpha=0.1)
-
-
-
