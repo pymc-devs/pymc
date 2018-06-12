@@ -1,10 +1,10 @@
 import multiprocessing
 import multiprocessing.sharedctypes
-import sys
 import ctypes
 import time
 import logging
 from collections import namedtuple
+import traceback
 
 import six
 import numpy as np
@@ -12,6 +12,32 @@ import numpy as np
 from . import theanof
 
 logger = logging.getLogger('pymc3')
+
+
+# Taken from https://hg.python.org/cpython/rev/c4f92b597074
+class RemoteTraceback(Exception):
+    def __init__(self, tb):
+        self.tb = tb
+
+    def __str__(self):
+        return self.tb
+
+
+class ExceptionWithTraceback:
+    def __init__(self, exc, tb):
+        tb = traceback.format_exception(type(exc), exc, tb)
+        tb = ''.join(tb)
+        self.exc = exc
+        self.tb = '\n"""\n%s"""' % tb
+
+    def __reduce__(self):
+        return rebuild_exc, (self.exc, self.tb)
+
+
+def rebuild_exc(exc, tb):
+    exc.__cause__ = RemoteTraceback(tb)
+    return exc
+
 
 # Messages
 # ('writing_done', is_last, sample_idx, tuning, stats)
@@ -47,9 +73,9 @@ class _Process(multiprocessing.Process):
             self._start_loop()
         except KeyboardInterrupt:
             pass
-        except BaseException:
-            exc_info = sys.exc_info()
-            self._msg_pipe.send(('error', exc_info[:2]))
+        except BaseException as e:
+            e = ExceptionWithTraceback(e, e.__traceback__)
+            self._msg_pipe.send(('error', e))
         finally:
             self._msg_pipe.close()
 
@@ -193,7 +219,7 @@ class ProcessAdapter(object):
         msg = ready[0].recv()
 
         if msg[0] == 'error':
-            old = msg[1][1]#.with_traceback(msg[1][2])
+            old = msg[1]
             six.raise_from(RuntimeError('Chain %s failed.' % proc.chain), old)
         elif msg[0] == 'writing_done':
             proc._readable = True
