@@ -390,12 +390,16 @@ def _draw_value(param, point=None, givens=None, size=None):
             else:
                 variables = values = []
             func = _compile_theano_function(param, variables)
-            return func(*values)
+            if size and all(len(v) == size for v in values):
+                return np.array([func(*v) for v in zip(*values)])
+            else:
+                return func(*values)
     else:
         raise ValueError('Unexpected type in draw_value: %s' % type(param))
 
 
-def infer_shape(shape):
+def to_tuple(shape):
+    """Convert ints, arrays, and Nones to tuples"""
     try:
         shape = tuple(shape or ())
     except TypeError:  # If size is an int
@@ -403,27 +407,6 @@ def infer_shape(shape):
     except ValueError:  # If size is np.array
         shape = tuple(shape)
     return shape
-
-
-def reshape_sampled(sampled, size, dist_shape):
-    dist_shape = infer_shape(dist_shape)
-    repeat_shape = infer_shape(size)
-
-    if np.size(sampled) == 1 or repeat_shape or dist_shape:
-        return np.reshape(sampled, repeat_shape + dist_shape)
-    else:
-        return sampled.squeeze()
-
-
-def replicate_samples(generator, size, repeats, *args, **kwargs):
-    n = int(np.prod(repeats))
-    if n == 1:
-        samples = generator(size=size, *args, **kwargs)
-    else:
-        samples = np.array([generator(size=size, *args, **kwargs)
-                            for _ in range(n)])
-        samples = np.reshape(samples, tuple(repeats) + tuple(size))
-    return samples
 
 
 def generate_samples(generator, *args, **kwargs):
@@ -458,7 +441,6 @@ def generate_samples(generator, *args, **kwargs):
     dist_shape = kwargs.pop('dist_shape', ())
     size = kwargs.pop('size', None)
     broadcast_shape = kwargs.pop('broadcast_shape', None)
-
     if size is None:
         size = 1
 
@@ -472,19 +454,21 @@ def generate_samples(generator, *args, **kwargs):
         inputs = args + tuple(kwargs.values())
         broadcast_shape = np.broadcast(*inputs).shape  # size of generator(size=1)
 
-    dist_shape = infer_shape(dist_shape)
-    broadcast_shape = (1,) + infer_shape(broadcast_shape)
-    size_tup = infer_shape(size)
-
-    if broadcast_shape == (1,):
+    dist_shape = to_tuple(dist_shape)
+    broadcast_shape = to_tuple(broadcast_shape)
+    size_tup = to_tuple(size)
+    if broadcast_shape == ():
         samples = generator(size=size_tup + dist_shape, *args, **kwargs)
     elif broadcast_shape[-len(dist_shape):] == dist_shape:
-        samples = generator(*args, **kwargs)
+        if size == 1 or (broadcast_shape == size_tup + dist_shape):
+            samples = generator(size=broadcast_shape, *args, **kwargs)
+        else:
+            samples = generator(*args, **kwargs)
     elif dist_shape == broadcast_shape:
         samples = generator(size=size, *args, **kwargs)
-    elif broadcast_shape[1:1 + len(size_tup)] == size_tup:
-        suffix = broadcast_shape[1 + len(size_tup):] + dist_shape
-        samples = [generator(*args, **kwargs).reshape(size_tup + (1,)) for _ in range(np.prod(suffix))]
+    elif broadcast_shape[:len(size_tup)] == size_tup:
+        suffix = broadcast_shape[len(size_tup):] + dist_shape
+        samples = [generator(*args, **kwargs).reshape(size_tup + (1,)) for _ in range(np.prod(suffix, dtype=int))]
         samples = np.hstack(samples).reshape(size_tup + suffix)
     else:
         raise TypeError(f'''Attempted to generate values with incompatible shapes:
@@ -492,4 +476,5 @@ def generate_samples(generator, *args, **kwargs):
             dist_shape: {dist_shape}
             broadcast_shape: {broadcast_shape}
         ''')
-    return samples.squeeze()
+    samples = samples.squeeze()
+    return samples

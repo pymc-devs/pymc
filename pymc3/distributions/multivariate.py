@@ -1469,7 +1469,6 @@ class KroneckerNormal(Continuous):
             elif self._cov_type == 'evd':
                 covs = []
                 for eig, Q in zip(self.eigs_sep, self.Qs):
-                    # print()
                     cov_i = tt.dot(Q, tt.dot(tt.diag(eig), Q.T))
                     covs.append(cov_i)
                 cov = kronecker(*covs)

@@ -7,7 +7,7 @@ import warnings
 
 from pymc3.util import get_variable_name
 from .dist_math import bound, factln, binomln, betaln, logpow
-from .distribution import Discrete, draw_values, generate_samples, reshape_sampled
+from .distribution import Discrete, draw_values, generate_samples
 from pymc3.math import tround, sigmoid, logaddexp, logit, log1pexp
 
 
@@ -495,7 +495,7 @@ class NegativeBinomial(Discrete):
                              dist_shape=self.shape,
                              size=size)
         g[g == 0] = np.finfo(float).eps  # Just in case
-        return reshape_sampled(stats.poisson.rvs(g), size, self.shape)
+        return stats.poisson.rvs(g)
 
     def logp(self, value):
         mu = self.mu
@@ -849,8 +849,7 @@ class ZeroInflatedPoisson(Discrete):
         g = generate_samples(stats.poisson.rvs, theta,
                              dist_shape=self.shape,
                              size=size)
-        sampled = g * (np.random.random(np.squeeze(g.shape)) < psi)
-        return reshape_sampled(sampled, size, self.shape)
+        return g * (np.random.random(np.squeeze(g.shape)) < psi)
 
     def logp(self, value):
         psi = self.psi
@@ -942,8 +941,7 @@ class ZeroInflatedBinomial(Discrete):
         g = generate_samples(stats.binom.rvs, n, p,
                              dist_shape=self.shape,
                              size=size)
-        sampled = g * (np.random.random(np.squeeze(g.shape)) < psi)
-        return reshape_sampled(sampled, size, self.shape)
+        return g * (np.random.random(np.squeeze(g.shape)) < psi)
 
     def logp(self, value):
         psi = self.psi
@@ -1061,8 +1059,7 @@ class ZeroInflatedNegativeBinomial(Discrete):
                              dist_shape=self.shape,
                              size=size)
         g[g == 0] = np.finfo(float).eps  # Just in case
-        sampled = stats.poisson.rvs(g) * (np.random.random(np.squeeze(g.shape)) < psi)
-        return reshape_sampled(sampled, size, self.shape)
+        return stats.poisson.rvs(g) * (np.random.random(np.squeeze(g.shape)) < psi)
 
     def logp(self, value):
         alpha = self.alpha
