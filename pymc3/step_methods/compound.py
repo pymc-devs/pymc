@@ -33,11 +33,11 @@ class CompoundStep(object):
                 point = method.step(point)
             return point
 
-    def warnings(self, strace):
+    def warnings(self):
         warns = []
         for method in self.methods:
             if hasattr(method, 'warnings'):
-                warns.extend(method.warnings(strace))
+                warns.extend(method.warnings())
         return warns
 
     def stop_tuning(self):

@@ -663,7 +663,7 @@ def _iter_sample(draws, step, start=None, trace=None, chain=0, tune=None,
     except KeyboardInterrupt:
         strace.close()
         if hasattr(step, 'warnings'):
-            warns = step.warnings(strace)
+            warns = step.warnings()
             strace._add_warnings(warns)
         raise
     except BaseException:
@@ -672,7 +672,7 @@ def _iter_sample(draws, step, start=None, trace=None, chain=0, tune=None,
     else:
         strace.close()
         if hasattr(step, 'warnings'):
-            warns = step.warnings(strace)
+            warns = step.warnings()
             strace._add_warnings(warns)
 
 
@@ -1002,6 +1002,8 @@ def _mp_sample(draws, tune, step, chains, cores, chain, random_seed,
                         trace.record(draw.point)
                     if draw.is_last:
                         trace.close()
+                        if draw.warnings is not None:
+                            trace._add_warnings(draw.warnings)
             return MultiTrace(traces)
         except KeyboardInterrupt:
             traces, length = _choose_chains(traces, tune)
@@ -1013,12 +1015,14 @@ def _mp_sample(draws, tune, step, chains, cores, chain, random_seed,
     else:
         chain_nums = list(range(chain, chain + chains))
         pbars = [progressbar] + [False] * (chains - 1)
-        jobs = (delayed(_sample)(
-                    chain=args[0], progressbar=args[1], random_seed=args[2],
-                    start=args[3], draws=draws, step=step, trace=trace,
-                    tune=tune, model=model, **kwargs
-                )
-                for args in zip(chain_nums, pbars, random_seed, start))
+        jobs = (
+            delayed(_sample)(
+                chain=args[0], progressbar=args[1], random_seed=args[2],
+                start=args[3], draws=draws, step=step, trace=trace,
+                tune=tune, model=model, **kwargs
+            )
+            for args in zip(chain_nums, pbars, random_seed, start)
+        )
         if use_mmap:
             traces = Parallel(n_jobs=cores)(jobs)
         else:

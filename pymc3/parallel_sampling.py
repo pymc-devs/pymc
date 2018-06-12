@@ -98,8 +98,12 @@ class _Process(multiprocessing.Process):
             elif msg[0] == 'write_next':
                 self._write_point(point)
                 is_last = draw + 1 == self._draws + self._tune
+                if is_last:
+                    warns = self._collect_warnings()
+                else:
+                    warns = None
                 self._msg_pipe.send(
-                    ('writing_done', is_last, draw, tuning, stats))
+                    ('writing_done', is_last, draw, tuning, stats, warns))
                 draw += 1
             else:
                 raise ValueError('Unknown message ' + msg[0])
@@ -111,6 +115,12 @@ class _Process(multiprocessing.Process):
             point = self._step_method.step(self._point)
             stats = None
         return point, stats
+
+    def _collect_warnings(self):
+        if hasattr(self._step_method, 'warnings'):
+            return self._step_method.warnings()
+        else:
+            return []
 
 
 class ProcessAdapter(object):
@@ -218,7 +228,7 @@ class ProcessAdapter(object):
 
 Draw = namedtuple(
     'Draw',
-    ['chain', 'is_last', 'draw_idx', 'tuning', 'stats', 'point']
+    ['chain', 'is_last', 'draw_idx', 'tuning', 'stats', 'point', 'warnings']
 )
 
 
@@ -274,7 +284,7 @@ class ParallelSampler(object):
 
         while self._active:
             draw = ProcessAdapter.recv_draw(self._active)
-            proc, is_last, draw, tuning, stats = draw
+            proc, is_last, draw, tuning, stats, warns = draw
             if self._progress is not None:
                 self._progress[proc.chain - self._start_chain_num].update()
 
@@ -299,7 +309,7 @@ class ParallelSampler(object):
             if not is_last:
                 proc.write_next()
 
-            yield Draw(proc.chain, is_last, draw, tuning, stats, point)
+            yield Draw(proc.chain, is_last, draw, tuning, stats, point, warns)
 
     def __enter__(self):
         self._in_context = True
