@@ -281,7 +281,7 @@ class TextStage(object):
         corrupted_idx = [i for i, x in enumerate(flag_bool) if x]
         return corrupted_idx + not_sampled_idx
 
-    def recover_existing_results(self, stage_number, draws, step, model=None):
+    def recover_existing_results(self, stage_number, draws, chains, step, model=None):
         stage_path = self.stage_path(stage_number)
         if os.path.exists(stage_path):
             # load incomplete stage results
@@ -290,7 +290,7 @@ class TextStage(object):
             if len(mtrace.chains) > 0:
                 # continue sampling if traces exist
                 pm._log.info('Checking for corrupted files ...')
-                return self.check_multitrace(mtrace, draws=draws, n_chains=step.n_chains)
+                return self.check_multitrace(mtrace, draws=draws, n_chains=chains)
         pm._log.info('Init new trace!')
         return None
 
