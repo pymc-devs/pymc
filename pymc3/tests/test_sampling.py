@@ -6,6 +6,7 @@ try:
 except ImportError:
     import mock
 
+import numpy.testing as npt
 import pymc3 as pm
 import theano.tensor as tt
 from theano import shared
@@ -338,16 +339,43 @@ def test_exec_nuts_init(method):
         assert isinstance(start[0], dict)
         assert 'a' in start[0] and 'b_log__' in start[0]
 
-def test_sample_generative():
-    observed = np.random.normal(10, 1, size=200)
-    with pm.Model():
-        # Use a prior that's way off to show we're actually sampling from it
-        mu = pm.Normal('mu', mu=-100, sd=1)
-        positive_mu = pm.Deterministic('positive_mu', np.abs(mu))
-        z = -1 - positive_mu
-        pm.Normal('x_obs', mu=z, sd=1, observed=observed)
-        prior = pm.sample_generative()
+class TestSampleGenerative(SeededTest):
+    def test_ignores_observed(self):
+        observed = np.random.normal(10, 1, size=200)
+        with pm.Model():
+            # Use a prior that's way off to show we're ignoring the observed variables
+            mu = pm.Normal('mu', mu=-100, sd=1)
+            positive_mu = pm.Deterministic('positive_mu', np.abs(mu))
+            z = -1 - positive_mu
+            pm.Normal('x_obs', mu=z, sd=1, observed=observed)
+            prior = pm.sample_generative()
 
-    assert (prior['mu'] < 90).all()
-    assert (prior['positive_mu'] > 90).all()
-    assert (prior['x_obs'] < 90).all()
+        assert (prior['mu'] < 90).all()
+        assert (prior['positive_mu'] > 90).all()
+        assert (prior['x_obs'] < 90).all()
+        assert (prior['positive_mu'] == np.abs(prior['mu'])).all()
+
+    def test_respects_shape(self):
+        for shape in (2, (2,), (10, 2), (10, 10)):
+            with pm.Model():
+                mu = pm.Gamma('mu', 3, 1, shape=1)
+                goals = pm.Poisson('goals', mu, shape=shape)
+                trace = pm.sample_generative(10)
+            if shape == 2:  # want to test shape as an int
+                shape = (2,)
+            assert trace['goals'].shape == (10,) + shape
+
+    def test_multivariate(self):
+        with pm.Model():
+            m = pm.Multinomial('m', n=5, p=np.array([[0.25, 0.25, 0.25, 0.25]]), shape=(1, 4))
+            trace = pm.sample_generative(10)
+        assert m.random(size=10).shape == (10, 4)
+        assert trace['m'].shape == (10, 4)
+
+    def test_layers(self):
+        with pm.Model() as model:
+            a = pm.Uniform('a', lower=0, upper=1, shape=10)
+            b = pm.Binomial('b', n=1, p=a, shape=10)
+
+        avg = b.random(size=10000).mean(axis=0)
+        npt.assert_array_almost_equal(avg, 0.5 * np.ones_like(b), decimal=2)

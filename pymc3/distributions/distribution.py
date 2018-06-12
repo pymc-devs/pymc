@@ -390,7 +390,7 @@ def _draw_value(param, point=None, givens=None, size=None):
             else:
                 variables = values = []
             func = _compile_theano_function(param, variables)
-            if size and all(len(v) == size for v in values):
+            if size and values and all(len(v) == size for v in values):
                 return np.array([func(*v) for v in zip(*values)])
             else:
                 return func(*values)
@@ -457,13 +457,13 @@ def generate_samples(generator, *args, **kwargs):
     dist_shape = to_tuple(dist_shape)
     broadcast_shape = to_tuple(broadcast_shape)
     size_tup = to_tuple(size)
-    if broadcast_shape == ():
+    if broadcast_shape == () or broadcast_shape == (0,):
         samples = generator(size=size_tup + dist_shape, *args, **kwargs)
     elif broadcast_shape[-len(dist_shape):] == dist_shape:
         if size == 1 or (broadcast_shape == size_tup + dist_shape):
             samples = generator(size=broadcast_shape, *args, **kwargs)
         else:
-            samples = generator(*args, **kwargs)
+            samples = generator(size=size, *args, **kwargs)
     elif dist_shape == broadcast_shape:
         samples = generator(size=size, *args, **kwargs)
     elif broadcast_shape[:len(size_tup)] == size_tup:
