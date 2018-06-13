@@ -13,6 +13,7 @@ Renamed to SMC and further improvements March 2017
 @author: Hannes Vasyura-Bathke
 """
 import numpy as np
+from math import log
 import pymc3 as pm
 from tqdm import tqdm
 
@@ -146,7 +147,7 @@ class SMC(atext.ArrayStepSharedLLK):
         self.stage_sample = 0
         self.accepted = 0
         self.beta = 0
-        self.sjs = 1
+        #self.sjs = 1
         self.stage = 0
         self.chain_index = 0
         self.threshold = threshold
@@ -176,7 +177,7 @@ class SMC(atext.ArrayStepSharedLLK):
                 # compute n_steps
                 if self.accepted == 0:
                     acc_rate = 1 / float(self.tune_interval)
-                self.n_steps = int(max(1, np.log(0.01) / np.log(1 - acc_rate)))
+                self.n_steps = int(max(1, np.log(0.001) / np.log(1 - acc_rate)))
                 # Reset counter
                 self.steps_until_tune = self.tune_interval
                 self.accepted = 0
@@ -252,8 +253,6 @@ class SMC(atext.ArrayStepSharedLLK):
             tempering parameter of the current stage
         weights : :class:`numpy.ndarray`
             Importance weights (floats)
-        sj : float
-            Mean of unnormalized weights
         """
         low_beta = old_beta = self.beta
         up_beta = 2.
@@ -273,7 +272,7 @@ class SMC(atext.ArrayStepSharedLLK):
             else:
                 low_beta = new_beta
 
-        return new_beta, old_beta, weights, np.mean(weights_un)
+        return new_beta, old_beta, weights#, np.mean(weights_un)
 
     def calc_covariance(self):
         """Calculate trace covariance matrix based on importance weights.
@@ -507,7 +506,7 @@ def sample_smc(samples=1000, chains=100, step=None, start=None, homepath=None, s
                 draws = 1
             else:
                 draws = step.n_steps
-
+            print(draws)
             pm._log.info('Beta: %f Stage: %i' % (step.beta, step.stage))
 
             # Metropolis sampling intermediate stages
@@ -527,8 +526,9 @@ def sample_smc(samples=1000, chains=100, step=None, start=None, homepath=None, s
 
             step.population, step.array_population, step.likelihoods = step.select_end_points(
                 mtrace, chains)
-            step.beta, step.old_beta, step.weights, sj = step.calc_beta()
-            step.sjs *= sj
+            step.beta, step.old_beta, step.weights = step.calc_beta()
+            #step.beta, step.old_beta, step.weights, sj = step.calc_beta()
+            #step.sjs *= sj
 
             if step.beta > 1.:
                 pm._log.info('Beta > 1.: %f' % step.beta)
@@ -571,7 +571,7 @@ def sample_smc(samples=1000, chains=100, step=None, start=None, homepath=None, s
 
         stage_handler.dump_atmip_params(step)
 
-        model.marginal_likelihood = step.sjs
+        #model.marginal_likelihood = step.sjs
         return stage_handler.create_result_trace(step.stage,
                                                  idxs=range(samples),
                                                  step=step,
