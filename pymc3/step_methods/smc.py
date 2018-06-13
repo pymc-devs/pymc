@@ -17,7 +17,6 @@ import pymc3 as pm
 from tqdm import tqdm
 
 import theano
-import copy
 import warnings
 
 from ..model import modelcontext
@@ -548,7 +547,6 @@ def sample_smc(samples=1000, chains=100, step=None, start=None, homepath=None, s
                 stage_handler.dump_atmip_params(step)
 
                 step.stage += 1
-                del(mtrace)
 
         # Metropolis sampling final stage
         pm._log.info('Sample final stage')

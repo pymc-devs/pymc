@@ -1,6 +1,5 @@
 import pymc3 as pm
 import numpy as np
-from pymc3.step_methods import smc
 from pymc3.backends.smc_text import TextStage
 import pytest
 from tempfile import mkdtemp
