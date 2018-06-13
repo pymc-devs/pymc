@@ -13,7 +13,6 @@ Renamed to SMC and further improvements March 2017
 @author: Hannes Vasyura-Bathke
 """
 import numpy as np
-from math import log
 import pymc3 as pm
 from tqdm import tqdm
 
