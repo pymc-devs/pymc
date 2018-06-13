@@ -955,6 +955,22 @@ class Kumaraswamy(UnitContinuous):
         return (1 - (1 - u) ** (1 / b)) ** (1 / a)
 
     def random(self, point=None, size=None):
+        """
+        Draw random values from Kumaraswamy distribution.
+
+        Parameters
+        ----------
+        point : dict, optional
+            Dict of variable values on which random values are to be
+            conditioned (uses default point if not specified).
+        size : int, optional
+            Desired size of random sample (returns one sample if not
+            specified).
+
+        Returns
+        -------
+        array
+        """
         a, b = draw_values([self.a, self.b],
                            point=point, size=size)
         return generate_samples(self._random, a, b,
@@ -962,6 +978,19 @@ class Kumaraswamy(UnitContinuous):
                                 size=size)
 
     def logp(self, value):
+        """
+        Calculate log-probability of Kumaraswamy distribution at specified value.
+
+        Parameters
+        ----------
+        value : numeric
+            Value(s) for which log-probability is calculated. If the log probabilities for multiple
+            values are desired the values must be provided in a numpy array or theano tensor
+
+        Returns
+        -------
+        TensorVariable
+        """
         a = self.a
         b = self.b
 
