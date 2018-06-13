@@ -512,7 +512,23 @@ class HalfNormal(PositiveContinuous):
         assert_negative_support(sd, 'sd', 'HalfNormal')
 
     def random(self, point=None, size=None):
-        sd = draw_values([self.sd], point=point, size=size)[0]
+        """
+        Draw random values from HalfNormal distribution.
+
+        Parameters
+        ----------
+        point : dict, optional
+            Dict of variable values on which random values are to be
+            conditioned (uses default point if not specified).
+        size : int, optional
+            Desired size of random sample (returns one sample if not
+            specified).
+
+        Returns
+        -------
+        array
+        """
+        sd = draw_values([self.sd], point=point)[0]
         return generate_samples(stats.halfnorm.rvs, loc=0., scale=sd,
                                 dist_shape=self.shape,
                                 size=size)
@@ -665,6 +681,22 @@ class Wald(PositiveContinuous):
         return value + alpha
 
     def random(self, point=None, size=None):
+        """
+        Draw random values from Wald distribution.
+
+        Parameters
+        ----------
+        point : dict, optional
+            Dict of variable values on which random values are to be
+            conditioned (uses default point if not specified).
+        size : int, optional
+            Desired size of random sample (returns one sample if not
+            specified).
+
+        Returns
+        -------
+        array
+        """
         mu, lam, alpha = draw_values([self.mu, self.lam, self.alpha],
                                      point=point, size=size)
         return generate_samples(self._random,
@@ -803,6 +835,22 @@ class Beta(UnitContinuous):
         return alpha, beta
 
     def random(self, point=None, size=None):
+        """
+        Draw random values from Beta distribution.
+
+        Parameters
+        ----------
+        point : dict, optional
+            Dict of variable values on which random values are to be
+            conditioned (uses default point if not specified).
+        size : int, optional
+            Desired size of random sample (returns one sample if not
+            specified).
+
+        Returns
+        -------
+        array
+        """
         alpha, beta = draw_values([self.alpha, self.beta],
                                   point=point, size=size)
         return generate_samples(stats.beta.rvs, alpha, beta,
@@ -982,6 +1030,22 @@ class Exponential(PositiveContinuous):
         assert_negative_support(lam, 'lam', 'Exponential')
 
     def random(self, point=None, size=None):
+        """
+        Draw random values from Exponential distribution.
+
+        Parameters
+        ----------
+        point : dict, optional
+            Dict of variable values on which random values are to be
+            conditioned (uses default point if not specified).
+        size : int, optional
+            Desired size of random sample (returns one sample if not
+            specified).
+
+        Returns
+        -------
+        array
+        """
         lam = draw_values([self.lam], point=point, size=size)[0]
         return generate_samples(np.random.exponential, scale=1. / lam,
                                 dist_shape=self.shape,
@@ -1064,6 +1128,22 @@ class Laplace(Continuous):
         assert_negative_support(b, 'b', 'Laplace')
 
     def random(self, point=None, size=None):
+        """
+        Draw random values from Laplace distribution.
+
+        Parameters
+        ----------
+        point : dict, optional
+            Dict of variable values on which random values are to be
+            conditioned (uses default point if not specified).
+        size : int, optional
+            Desired size of random sample (returns one sample if not
+            specified).
+
+        Returns
+        -------
+        array
+        """
         mu, b = draw_values([self.mu, self.b], point=point, size=size)
         return generate_samples(np.random.laplace, mu, b,
                                 dist_shape=self.shape,
@@ -1181,6 +1261,22 @@ class Lognormal(PositiveContinuous):
         return np.exp(mu + (tau**-0.5) * samples)
 
     def random(self, point=None, size=None):
+        """
+        Draw random values from Lognormal distribution.
+
+        Parameters
+        ----------
+        point : dict, optional
+            Dict of variable values on which random values are to be
+            conditioned (uses default point if not specified).
+        size : int, optional
+            Desired size of random sample (returns one sample if not
+            specified).
+
+        Returns
+        -------
+        array
+        """
         mu, tau = draw_values([self.mu, self.tau], point=point, size=size)
         return generate_samples(self._random, mu, tau,
                                 dist_shape=self.shape,
@@ -1295,6 +1391,22 @@ class StudentT(Continuous):
         assert_negative_support(nu, 'nu', 'StudentT')
 
     def random(self, point=None, size=None):
+        """
+        Draw random values from StudentT distribution.
+
+        Parameters
+        ----------
+        point : dict, optional
+            Dict of variable values on which random values are to be
+            conditioned (uses default point if not specified).
+        size : int, optional
+            Desired size of random sample (returns one sample if not
+            specified).
+
+        Returns
+        -------
+        array
+        """
         nu, mu, lam = draw_values([self.nu, self.mu, self.lam],
                                   point=point, size=size)
         return generate_samples(stats.t.rvs, nu, loc=mu, scale=lam**-0.5,
@@ -1406,6 +1518,22 @@ class Pareto(PositiveContinuous):
         return m * (1. - u)**(-1. / alpha)
 
     def random(self, point=None, size=None):
+        """
+        Draw random values from Pareto distribution.
+
+        Parameters
+        ----------
+        point : dict, optional
+            Dict of variable values on which random values are to be
+            conditioned (uses default point if not specified).
+        size : int, optional
+            Desired size of random sample (returns one sample if not
+            specified).
+
+        Returns
+        -------
+        array
+        """
         alpha, m = draw_values([self.alpha, self.m],
                                point=point, size=size)
         return generate_samples(self._random, alpha, m,
@@ -1500,6 +1628,22 @@ class Cauchy(Continuous):
         return alpha + beta * np.tan(np.pi * (u - 0.5))
 
     def random(self, point=None, size=None):
+        """
+        Draw random values from Cauchy distribution.
+
+        Parameters
+        ----------
+        point : dict, optional
+            Dict of variable values on which random values are to be
+            conditioned (uses default point if not specified).
+        size : int, optional
+            Desired size of random sample (returns one sample if not
+            specified).
+
+        Returns
+        -------
+        array
+        """
         alpha, beta = draw_values([self.alpha, self.beta],
                                   point=point, size=size)
         return generate_samples(self._random, alpha, beta,
@@ -1588,6 +1732,22 @@ class HalfCauchy(PositiveContinuous):
         return beta * np.abs(np.tan(np.pi * (u - 0.5)))
 
     def random(self, point=None, size=None):
+        """
+        Draw random values from HalfCauchy distribution.
+
+        Parameters
+        ----------
+        point : dict, optional
+            Dict of variable values on which random values are to be
+            conditioned (uses default point if not specified).
+        size : int, optional
+            Desired size of random sample (returns one sample if not
+            specified).
+
+        Returns
+        -------
+        array
+        """
         beta = draw_values([self.beta], point=point, size=size)[0]
         return generate_samples(self._random, beta,
                                 dist_shape=self.shape,
@@ -1705,6 +1865,22 @@ class Gamma(PositiveContinuous):
         return alpha, beta
 
     def random(self, point=None, size=None):
+        """
+        Draw random values from Gamma distribution.
+
+        Parameters
+        ----------
+        point : dict, optional
+            Dict of variable values on which random values are to be
+            conditioned (uses default point if not specified).
+        size : int, optional
+            Desired size of random sample (returns one sample if not
+            specified).
+
+        Returns
+        -------
+        array
+        """
         alpha, beta = draw_values([self.alpha, self.beta],
                                   point=point, size=size)
         return generate_samples(stats.gamma.rvs, alpha, scale=1. / beta,
@@ -1811,6 +1987,22 @@ class InverseGamma(PositiveContinuous):
             return m
 
     def random(self, point=None, size=None):
+        """
+        Draw random values from InverseGamma distribution.
+
+        Parameters
+        ----------
+        point : dict, optional
+            Dict of variable values on which random values are to be
+            conditioned (uses default point if not specified).
+        size : int, optional
+            Desired size of random sample (returns one sample if not
+            specified).
+
+        Returns
+        -------
+        array
+        """
         alpha, beta = draw_values([self.alpha, self.beta],
                                   point=point, size=size)
         return generate_samples(stats.invgamma.rvs, a=alpha, scale=beta,
@@ -1960,6 +2152,22 @@ class Weibull(PositiveContinuous):
         assert_negative_support(beta, 'beta', 'Weibull')
 
     def random(self, point=None, size=None):
+        """
+        Draw random values from Weibull distribution.
+
+        Parameters
+        ----------
+        point : dict, optional
+            Dict of variable values on which random values are to be
+            conditioned (uses default point if not specified).
+        size : int, optional
+            Desired size of random sample (returns one sample if not
+            specified).
+
+        Returns
+        -------
+        array
+        """
         alpha, beta = draw_values([self.alpha, self.beta],
                                   point=point, size=size)
 
@@ -2072,6 +2280,22 @@ class HalfStudentT(PositiveContinuous):
         assert_negative_support(nu, 'nu', 'HalfStudentT')
 
     def random(self, point=None, size=None):
+        """
+        Draw random values from HalfStudentT distribution.
+
+        Parameters
+        ----------
+        point : dict, optional
+            Dict of variable values on which random values are to be
+            conditioned (uses default point if not specified).
+        size : int, optional
+            Desired size of random sample (returns one sample if not
+            specified).
+
+        Returns
+        -------
+        array
+        """
         nu, sd = draw_values([self.nu, self.sd], point=point, size=size)
         return np.abs(generate_samples(stats.t.rvs, nu, loc=0, scale=sd,
                                        dist_shape=self.shape,
@@ -2189,6 +2413,22 @@ class ExGaussian(Continuous):
         assert_negative_support(nu, 'nu', 'ExGaussian')
 
     def random(self, point=None, size=None):
+        """
+        Draw random values from ExGaussian distribution.
+
+        Parameters
+        ----------
+        point : dict, optional
+            Dict of variable values on which random values are to be
+            conditioned (uses default point if not specified).
+        size : int, optional
+            Desired size of random sample (returns one sample if not
+            specified).
+
+        Returns
+        -------
+        array
+        """
         mu, sigma, nu = draw_values([self.mu, self.sigma, self.nu],
                                     point=point, size=size)
 
@@ -2294,6 +2534,22 @@ class VonMises(Continuous):
         assert_negative_support(kappa, 'kappa', 'VonMises')
 
     def random(self, point=None, size=None):
+        """
+        Draw random values from VonMises distribution.
+
+        Parameters
+        ----------
+        point : dict, optional
+            Dict of variable values on which random values are to be
+            conditioned (uses default point if not specified).
+        size : int, optional
+            Desired size of random sample (returns one sample if not
+            specified).
+
+        Returns
+        -------
+        array
+        """
         mu, kappa = draw_values([self.mu, self.kappa],
                                 point=point, size=size)
         return generate_samples(stats.vonmises.rvs, loc=mu, kappa=kappa,
@@ -2404,6 +2660,22 @@ class SkewNormal(Continuous):
         assert_negative_support(sd, 'sd', 'SkewNormal')
 
     def random(self, point=None, size=None):
+        """
+        Draw random values from SkewNormal distribution.
+
+        Parameters
+        ----------
+        point : dict, optional
+            Dict of variable values on which random values are to be
+            conditioned (uses default point if not specified).
+        size : int, optional
+            Desired size of random sample (returns one sample if not
+            specified).
+
+        Returns
+        -------
+        array
+        """
         mu, tau, _, alpha = draw_values(
             [self.mu, self.tau, self.sd, self.alpha], point=point, size=size)
         return generate_samples(stats.skewnorm.rvs,
@@ -2510,6 +2782,22 @@ class Triangular(Continuous):
         self.upper = upper = tt.as_tensor_variable(upper)
 
     def random(self, point=None, size=None):
+        """
+        Draw random values from Triangular distribution.
+
+        Parameters
+        ----------
+        point : dict, optional
+            Dict of variable values on which random values are to be
+            conditioned (uses default point if not specified).
+        size : int, optional
+            Desired size of random sample (returns one sample if not
+            specified).
+
+        Returns
+        -------
+        array
+        """
         c, lower, upper = draw_values([self.c, self.lower, self.upper],
                                       point=point, size=size)
         return generate_samples(stats.triang.rvs, c=c-lower, loc=lower, scale=upper-lower,
@@ -2607,6 +2895,22 @@ class Gumbel(Continuous):
         super(Gumbel, self).__init__(**kwargs)
 
     def random(self, point=None, size=None):
+        """
+        Draw random values from Gumbel distribution.
+
+        Parameters
+        ----------
+        point : dict, optional
+            Dict of variable values on which random values are to be
+            conditioned (uses default point if not specified).
+        size : int, optional
+            Desired size of random sample (returns one sample if not
+            specified).
+
+        Returns
+        -------
+        array
+        """
         mu, sd = draw_values([self.mu, self.beta], point=point, size=size)
         return generate_samples(stats.gumbel_r.rvs, loc=mu, scale=sd,
                                 dist_shape=self.shape,
@@ -2677,6 +2981,22 @@ class Rice(Continuous):
             2 * sd**2))) * i0(-(-nu**2 / (2 * sd**2)) / 2) - (-nu**2 / (2 * sd**2)) * i1(-(-nu**2 / (2 * sd**2)) / 2)))**2
 
     def random(self, point=None, size=None):
+        """
+        Draw random values from Rice distribution.
+
+        Parameters
+        ----------
+        point : dict, optional
+            Dict of variable values on which random values are to be
+            conditioned (uses default point if not specified).
+        size : int, optional
+            Desired size of random sample (returns one sample if not
+            specified).
+
+        Returns
+        -------
+        array
+        """
         nu, sd = draw_values([self.nu, self.sd],
                              point=point, size=size)
         return generate_samples(stats.rice.rvs, b=nu, scale=sd, loc=0,
@@ -2778,6 +3098,22 @@ class Logistic(Continuous):
             -(value - mu) / s - tt.log(s) - 2 * tt.log1p(tt.exp(-(value - mu) / s)), s > 0)
 
     def random(self, point=None, size=None):
+        """
+        Draw random values from Logistic distribution.
+
+        Parameters
+        ----------
+        point : dict, optional
+            Dict of variable values on which random values are to be
+            conditioned (uses default point if not specified).
+        size : int, optional
+            Desired size of random sample (returns one sample if not
+            specified).
+
+        Returns
+        -------
+        array
+        """
         mu, s = draw_values([self.mu, self.s], point=point, size=size)
 
         return generate_samples(
@@ -2854,6 +3190,22 @@ class LogitNormal(UnitContinuous):
         super(LogitNormal, self).__init__(**kwargs)
 
     def random(self, point=None, size=None):
+        """
+        Draw random values from LogitNormal distribution.
+
+        Parameters
+        ----------
+        point : dict, optional
+            Dict of variable values on which random values are to be
+            conditioned (uses default point if not specified).
+        size : int, optional
+            Desired size of random sample (returns one sample if not
+            specified).
+
+        Returns
+        -------
+        array
+        """
         mu, _, sd = draw_values([self.mu, self.tau, self.sd], point=point, size=size)
         return expit(generate_samples(stats.norm.rvs, loc=mu, scale=sd, dist_shape=self.shape,
                                       size=size))
@@ -2957,7 +3309,20 @@ class Interpolated(Continuous):
     def _random(self, size=None):
         return self._argcdf(np.random.uniform(size=size))
 
-    def random(self, point=None, size=None):
+    def random(self, size=None):
+        """
+        Draw random values from Interpolated distribution.
+
+        Parameters
+        ----------
+        size : int, optional
+            Desired size of random sample (returns one sample if not
+            specified).
+
+        Returns
+        -------
+        array
+        """
         return generate_samples(self._random,
                                 dist_shape=self.shape,
                                 size=size)
