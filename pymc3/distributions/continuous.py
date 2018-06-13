@@ -248,7 +248,8 @@ class Flat(Continuous):
         Parameters
         ----------
         value : numeric
-            Value for which log-probability is calculated.
+            Value(s) for which log-probability is calculated. If the log probabilities for multiple
+            values are desired the values must be provided in a numpy array or theano tensor
 
         Returns
         -------
@@ -284,12 +285,13 @@ class HalfFlat(PositiveContinuous):
 
     def logp(self, value):
         """
-        Calculate log-probability of Uniform distribution at specified value.
+        Calculate log-probability of HalfFlat distribution at specified value.
 
         Parameters
         ----------
         value : numeric
-            Value for which log-probability is calculated.
+            Value(s) for which log-probability is calculated. If the log probabilities for multiple
+            values are desired the values must be provided in a numpy array or theano tensor
 
         Returns
         -------
@@ -408,7 +410,8 @@ class Normal(Continuous):
         Parameters
         ----------
         value : numeric
-            Value for which log-probability is calculated.
+            Value(s) for which log-probability is calculated. If the log probabilities for multiple
+            values are desired the values must be provided in a numpy array or theano tensor
 
         Returns
         -------
@@ -515,6 +518,19 @@ class HalfNormal(PositiveContinuous):
                                 size=size)
 
     def logp(self, value):
+        """
+        Calculate log-probability of HalfNormal distribution at specified value.
+
+        Parameters
+        ----------
+        value : numeric
+            Value(s) for which log-probability is calculated. If the log probabilities for multiple
+            values are desired the values must be provided in a numpy array or theano tensor
+
+        Returns
+        -------
+        TensorVariable
+        """
         tau = self.tau
         sd = self.sd
         return bound(-0.5 * tau * value**2 + 0.5 * tt.log(tau * 2. / np.pi),
@@ -657,6 +673,19 @@ class Wald(PositiveContinuous):
                                 size=size)
 
     def logp(self, value):
+        """
+        Calculate log-probability of Wald distribution at specified value.
+
+        Parameters
+        ----------
+        value : numeric
+            Value(s) for which log-probability is calculated. If the log probabilities for multiple
+            values are desired the values must be provided in a numpy array or theano tensor
+
+        Returns
+        -------
+        TensorVariable
+        """
         mu = self.mu
         lam = self.lam
         alpha = self.alpha
@@ -781,6 +810,19 @@ class Beta(UnitContinuous):
                                 size=size)
 
     def logp(self, value):
+        """
+        Calculate log-probability of Beta distribution at specified value.
+
+        Parameters
+        ----------
+        value : numeric
+            Value(s) for which log-probability is calculated. If the log probabilities for multiple
+            values are desired the values must be provided in a numpy array or theano tensor
+
+        Returns
+        -------
+        TensorVariable
+        """
         alpha = self.alpha
         beta = self.beta
 
@@ -946,6 +988,19 @@ class Exponential(PositiveContinuous):
                                 size=size)
 
     def logp(self, value):
+        """
+        Calculate log-probability of Exponential distribution at specified value.
+
+        Parameters
+        ----------
+        value : numeric
+            Value(s) for which log-probability is calculated. If the log probabilities for multiple
+            values are desired the values must be provided in a numpy array or theano tensor
+
+        Returns
+        -------
+        TensorVariable
+        """
         lam = self.lam
         return bound(tt.log(lam) - lam * value, value >= 0, lam > 0)
 
@@ -1015,6 +1070,19 @@ class Laplace(Continuous):
                                 size=size)
 
     def logp(self, value):
+        """
+        Calculate log-probability of Laplace distribution at specified value.
+
+        Parameters
+        ----------
+        value : numeric
+            Value(s) for which log-probability is calculated. If the log probabilities for multiple
+            values are desired the values must be provided in a numpy array or theano tensor
+
+        Returns
+        -------
+        TensorVariable
+        """
         mu = self.mu
         b = self.b
 
@@ -1119,6 +1187,19 @@ class Lognormal(PositiveContinuous):
                                 size=size)
 
     def logp(self, value):
+        """
+        Calculate log-probability of Lognormal distribution at specified value.
+
+        Parameters
+        ----------
+        value : numeric
+            Value(s) for which log-probability is calculated. If the log probabilities for multiple
+            values are desired the values must be provided in a numpy array or theano tensor
+
+        Returns
+        -------
+        TensorVariable
+        """
         mu = self.mu
         tau = self.tau
         return bound(-0.5 * tau * (tt.log(value) - mu)**2
@@ -1221,6 +1302,19 @@ class StudentT(Continuous):
                                 size=size)
 
     def logp(self, value):
+        """
+        Calculate log-probability of StudentT distribution at specified value.
+
+        Parameters
+        ----------
+        value : numeric
+            Value(s) for which log-probability is calculated. If the log probabilities for multiple
+            values are desired the values must be provided in a numpy array or theano tensor
+
+        Returns
+        -------
+        TensorVariable
+        """
         nu = self.nu
         mu = self.mu
         lam = self.lam
@@ -1319,6 +1413,19 @@ class Pareto(PositiveContinuous):
                                 size=size)
 
     def logp(self, value):
+        """
+        Calculate log-probability of Pareto distribution at specified value.
+
+        Parameters
+        ----------
+        value : numeric
+            Value(s) for which log-probability is calculated. If the log probabilities for multiple
+            values are desired the values must be provided in a numpy array or theano tensor
+
+        Returns
+        -------
+        TensorVariable
+        """
         alpha = self.alpha
         m = self.m
         return bound(tt.log(alpha) + logpow(m, alpha)
@@ -1400,6 +1507,19 @@ class Cauchy(Continuous):
                                 size=size)
 
     def logp(self, value):
+        """
+        Calculate log-probability of Cauchy distribution at specified value.
+
+        Parameters
+        ----------
+        value : numeric
+            Value(s) for which log-probability is calculated. If the log probabilities for multiple
+            values are desired the values must be provided in a numpy array or theano tensor
+
+        Returns
+        -------
+        TensorVariable
+        """
         alpha = self.alpha
         beta = self.beta
         return bound(- tt.log(np.pi) - tt.log(beta)
@@ -1474,6 +1594,19 @@ class HalfCauchy(PositiveContinuous):
                                 size=size)
 
     def logp(self, value):
+        """
+        Calculate log-probability of HalfCauchy distribution at specified value.
+
+        Parameters
+        ----------
+        value : numeric
+            Value(s) for which log-probability is calculated. If the log probabilities for multiple
+            values are desired the values must be provided in a numpy array or theano tensor
+
+        Returns
+        -------
+        TensorVariable
+        """
         beta = self.beta
         return bound(tt.log(2) - tt.log(np.pi) - tt.log(beta)
                      - tt.log1p((value / beta)**2),
@@ -1579,6 +1712,19 @@ class Gamma(PositiveContinuous):
                                 size=size)
 
     def logp(self, value):
+        """
+        Calculate log-probability of Gamma distribution at specified value.
+
+        Parameters
+        ----------
+        value : numeric
+            Value(s) for which log-probability is calculated. If the log probabilities for multiple
+            values are desired the values must be provided in a numpy array or theano tensor
+
+        Returns
+        -------
+        TensorVariable
+        """
         alpha = self.alpha
         beta = self.beta
         return bound(
@@ -1672,6 +1818,19 @@ class InverseGamma(PositiveContinuous):
                                 size=size)
 
     def logp(self, value):
+        """
+        Calculate log-probability of InverseGamma distribution at specified value.
+
+        Parameters
+        ----------
+        value : numeric
+            Value(s) for which log-probability is calculated. If the log probabilities for multiple
+            values are desired the values must be provided in a numpy array or theano tensor
+
+        Returns
+        -------
+        TensorVariable
+        """
         alpha = self.alpha
         beta = self.beta
         return bound(logpow(beta, alpha) - gammaln(alpha) - beta / value
@@ -1812,6 +1971,19 @@ class Weibull(PositiveContinuous):
                                 size=size)
 
     def logp(self, value):
+        """
+        Calculate log-probability of Weibull distribution at specified value.
+
+        Parameters
+        ----------
+        value : numeric
+            Value(s) for which log-probability is calculated. If the log probabilities for multiple
+            values are desired the values must be provided in a numpy array or theano tensor
+
+        Returns
+        -------
+        TensorVariable
+        """
         alpha = self.alpha
         beta = self.beta
         return bound(tt.log(alpha) - tt.log(beta)
@@ -1906,6 +2078,19 @@ class HalfStudentT(PositiveContinuous):
                                        size=size))
 
     def logp(self, value):
+        """
+        Calculate log-probability of HalfStudentT distribution at specified value.
+
+        Parameters
+        ----------
+        value : numeric
+            Value(s) for which log-probability is calculated. If the log probabilities for multiple
+            values are desired the values must be provided in a numpy array or theano tensor
+
+        Returns
+        -------
+        TensorVariable
+        """
         nu = self.nu
         sd = self.sd
         lam = self.lam
@@ -2016,6 +2201,19 @@ class ExGaussian(Continuous):
                                 size=size)
 
     def logp(self, value):
+        """
+        Calculate log-probability of ExGaussian distribution at specified value.
+
+        Parameters
+        ----------
+        value : numeric
+            Value(s) for which log-probability is calculated. If the log probabilities for multiple
+            values are desired the values must be provided in a numpy array or theano tensor
+
+        Returns
+        -------
+        TensorVariable
+        """
         mu = self.mu
         sigma = self.sigma
         nu = self.nu
@@ -2103,6 +2301,19 @@ class VonMises(Continuous):
                                 size=size)
 
     def logp(self, value):
+        """
+        Calculate log-probability of VonMises distribution at specified value.
+
+        Parameters
+        ----------
+        value : numeric
+            Value(s) for which log-probability is calculated. If the log probabilities for multiple
+            values are desired the values must be provided in a numpy array or theano tensor
+
+        Returns
+        -------
+        TensorVariable
+        """
         mu = self.mu
         kappa = self.kappa
         return bound(kappa * tt.cos(mu - value) - (tt.log(2 * np.pi) + log_i0(kappa)),
@@ -2201,6 +2412,19 @@ class SkewNormal(Continuous):
                                 size=size)
 
     def logp(self, value):
+        """
+        Calculate log-probability of SkewNormal distribution at specified value.
+
+        Parameters
+        ----------
+        value : numeric
+            Value(s) for which log-probability is calculated. If the log probabilities for multiple
+            values are desired the values must be provided in a numpy array or theano tensor
+
+        Returns
+        -------
+        TensorVariable
+        """
         tau = self.tau
         sd = self.sd
         mu = self.mu
@@ -2292,6 +2516,19 @@ class Triangular(Continuous):
                                 size=size, dist_shape=self.shape, random_state=None)
 
     def logp(self, value):
+        """
+        Calculate log-probability of Triangular distribution at specified value.
+
+        Parameters
+        ----------
+        value : numeric
+            Value(s) for which log-probability is calculated. If the log probabilities for multiple
+            values are desired the values must be provided in a numpy array or theano tensor
+
+        Returns
+        -------
+        TensorVariable
+        """
         c = self.c
         lower = self.lower
         upper = self.upper
@@ -2376,6 +2613,19 @@ class Gumbel(Continuous):
                                 size=size)
 
     def logp(self, value):
+        """
+        Calculate log-probability of Gumbell distribution at specified value.
+
+        Parameters
+        ----------
+        value : numeric
+            Value(s) for which log-probability is calculated. If the log probabilities for multiple
+            values are desired the values must be provided in a numpy array or theano tensor
+
+        Returns
+        -------
+        TensorVariable
+        """
         scaled = (value - self.mu) / self.beta
         return bound(-scaled - tt.exp(-scaled) - tt.log(self.beta), self.beta > 0)
 
@@ -2433,6 +2683,19 @@ class Rice(Continuous):
                                 dist_shape=self.shape, size=size)
 
     def logp(self, value):
+        """
+        Calculate log-probability of Rice distribution at specified value.
+
+        Parameters
+        ----------
+        value : numeric
+            Value(s) for which log-probability is calculated. If the log probabilities for multiple
+            values are desired the values must be provided in a numpy array or theano tensor
+
+        Returns
+        -------
+        TensorVariable
+        """
         nu = self.nu
         sd = self.sd
         x = value / sd
@@ -2495,6 +2758,19 @@ class Logistic(Continuous):
         self.variance = s**2 * np.pi**2 / 3.
 
     def logp(self, value):
+        """
+        Calculate log-probability of Logistic distribution at specified value.
+
+        Parameters
+        ----------
+        value : numeric
+            Value(s) for which log-probability is calculated. If the log probabilities for multiple
+            values are desired the values must be provided in a numpy array or theano tensor
+
+        Returns
+        -------
+        TensorVariable
+        """
         mu = self.mu
         s = self.s
 
@@ -2583,6 +2859,19 @@ class LogitNormal(UnitContinuous):
                                       size=size))
 
     def logp(self, value):
+        """
+        Calculate log-probability of LogitNormal distribution at specified value.
+
+        Parameters
+        ----------
+        value : numeric
+            Value(s) for which log-probability is calculated. If the log probabilities for multiple
+            values are desired the values must be provided in a numpy array or theano tensor
+
+        Returns
+        -------
+        TensorVariable
+        """
         sd = self.sd
         mu = self.mu
         tau = self.tau
@@ -2674,4 +2963,17 @@ class Interpolated(Continuous):
                                 size=size)
 
     def logp(self, value):
+        """
+        Calculate log-probability of Interpolated distribution at specified value.
+
+        Parameters
+        ----------
+        value : numeric
+            Value(s) for which log-probability is calculated. If the log probabilities for multiple
+            values are desired the values must be provided in a numpy array or theano tensor
+
+        Returns
+        -------
+        TensorVariable
+        """
         return tt.log(self.interp_op(value) / self.Z)
