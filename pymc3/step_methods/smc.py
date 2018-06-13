@@ -506,7 +506,7 @@ def sample_smc(samples=1000, chains=100, step=None, start=None, homepath=None, s
                 draws = 1
             else:
                 draws = step.n_steps
-            print(draws)
+
             pm._log.info('Beta: %f Stage: %i' % (step.beta, step.stage))
 
             # Metropolis sampling intermediate stages
