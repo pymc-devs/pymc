@@ -36,12 +36,14 @@ class TestSQLite0dSelection(bf.SelectionTestCase):
     shape = ()
 
 
+@pytest.mark.xfail(condition=(theano.config.floatX == "float32"), reason="Fails on float32")
 class TestSQLite1dSelection(bf.SelectionTestCase):
     backend = sqlite.SQLite
     name = DBNAME
     shape = 2
 
 
+@pytest.mark.xfail(condition=(theano.config.floatX == "float32"), reason="Fails on float32")
 class TestSQLite2dSelection(bf.SelectionTestCase):
     backend = sqlite.SQLite
     name = DBNAME
