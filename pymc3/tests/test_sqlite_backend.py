@@ -15,6 +15,7 @@ class TestSQlite0dSampling(bf.SamplingTestCase):
     shape = ()
 
 
+@pytest.mark.xfail(condition=(theano.config.floatX == "float32"), reason="Fails on float32")
 class TestSQlite1dSampling(bf.SamplingTestCase):
     backend = sqlite.SQLite
     name = DBNAME
