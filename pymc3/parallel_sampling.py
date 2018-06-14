@@ -265,6 +265,10 @@ class ParallelSampler(object):
             import tqdm
             tqdm_ = tqdm.tqdm
 
+        if any(len(arg) != chains for arg in [seeds, start_points]):
+            raise ValueError(
+                'Number of seeds and start_points must be %s.' % chains)
+
         self._samplers = [
             ProcessAdapter(draws, tune, step_method,
                            chain + start_chain_num, seed, start)

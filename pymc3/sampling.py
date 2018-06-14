@@ -338,6 +338,11 @@ def sample(draws=500, step=None, init='auto', n_init=200000, start=None,
         warnings.warn(
             "The njobs argument has been deprecated. Use cores instead.",
             DeprecationWarning)
+    if 'nchains' in kwargs:
+        chains = kwargs['nchains']
+        warnings.warn(
+            "The nchains argument has been deprecated. Use chains instead.",
+            DeprecationWarning)
     if chains is None:
         chains = max(2, cores)
     if isinstance(start, dict):
@@ -353,11 +358,6 @@ def sample(draws=500, step=None, init='auto', n_init=200000, start=None,
     if not isinstance(random_seed, Iterable):
         raise TypeError(
             'Invalid value for `random_seed`. Must be tuple, list or int')
-    if 'nchains' in kwargs:
-        chains = kwargs['nchains']
-        warnings.warn(
-            "The nchains argument has been deprecated. Use chains instead.",
-            DeprecationWarning)
     if 'chain' in kwargs:
         chain_idx = kwargs['chain']
         warnings.warn(
