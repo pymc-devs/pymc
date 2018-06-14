@@ -12,6 +12,12 @@
 - Improve error message `Mass matrix contains zeros on the diagonal. Some derivatives might always be zero` during tuning of `pm.sample`
 - Improve error message `NaN occurred in optimization.` during ADVI
 - Save and load traces without `pickle` using `pm.save_trace` and `pm.load_trace`
+- Add `Kumaraswamy` distribution
+- Rewrite parallel sampling of multiple chains on py3. This resolves
+  long standing issues when tranferring large traces to the main process,
+  avoids pickleing issues on UNIX, and allows us to show a progress bar
+  for all chains. If parallel sampling is interrupted, we now return
+  partial results.
 
 ### Fixes
 
