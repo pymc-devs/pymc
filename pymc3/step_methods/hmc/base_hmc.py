@@ -164,7 +164,7 @@ class BaseHMC(arraystep.GradientSharedStep):
         self.tune = True
         self.potential.reset()
 
-    def warnings(self, strace):
+    def warnings(self):
         # list.copy() is not available in python2
         warnings = self._warnings[:]
 

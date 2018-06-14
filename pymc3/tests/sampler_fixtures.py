@@ -82,13 +82,13 @@ class BetaBinomialFixture(KnownCDF):
 
 class StudentTFixture(KnownMean, KnownCDF):
     means = {'a': 0}
-    cdfs = {'a': stats.t(df=3).cdf}
+    cdfs = {'a': stats.t(df=4).cdf}
     ks_thin = 10
 
     @classmethod
     def make_model(cls):
         with pm.Model() as model:
-            a = pm.StudentT("a", nu=3, mu=0, sd=1)
+            a = pm.StudentT("a", nu=4, mu=0, sd=1)
         return model
 
 

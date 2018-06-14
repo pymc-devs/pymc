@@ -87,12 +87,25 @@ class BlockedStep(object):
         vars = np.atleast_1d(vars)
         have_grad = np.atleast_1d(have_grad)
         competences = []
-        for var,has_grad in zip(vars, have_grad):
+        for var, has_grad in zip(vars, have_grad):
             try:
                 competences.append(cls.competence(var, has_grad))
             except TypeError:
                 competences.append(cls.competence(var))
         return competences
+
+    @property
+    def vars_shape_dtype(self):
+        shape_dtypes = {}
+        for var in self.vars:
+            dtype = np.dtype(var.dtype)
+            shape = var.dshape
+            shape_dtypes[var.name] = (shape, dtype)
+        return shape_dtypes
+
+    def stop_tuning(self):
+        if hasattr(self, 'tune'):
+            self.tune = False
 
 
 class ArrayStep(BlockedStep):
