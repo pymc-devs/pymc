@@ -367,8 +367,9 @@ class TestSampleGenerative(SeededTest):
 
     def test_multivariate(self):
         with pm.Model():
-            m = pm.Multinomial('m', n=5, p=np.array([[0.25, 0.25, 0.25, 0.25]]), shape=(1, 4))
+            m = pm.Multinomial('m', n=5, p=np.array([0.25, 0.25, 0.25, 0.25]), shape=4)
             trace = pm.sample_generative(10)
+
         assert m.random(size=10).shape == (10, 4)
         assert trace['m'].shape == (10, 4)
 

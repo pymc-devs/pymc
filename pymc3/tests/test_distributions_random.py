@@ -204,12 +204,13 @@ class BaseTestCases(object):
                             s = list(size)
                         except TypeError:
                             s = [size]
-                    s.extend(shape)
+                        if s == [1]:
+                            s = []
+                    if shape not in ((), (1,)):
+                        s.extend(shape)
                     e = tuple(s)
                     a = self.sample_random_variable(rv, size).shape
-                    expected.append(e)
-                    actual.append(a)
-            assert expected == actual
+                    assert e == a
 
 
 class TestNormal(BaseTestCases.BaseTestCase):

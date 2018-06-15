@@ -492,10 +492,10 @@ class Multinomial(Discrete):
 
         if len(self.shape) > 1:
             m = self.shape[-2]
-            try:
-                assert n.shape == (m,)
-            except (AttributeError, AssertionError):
-                n = n * tt.ones(m)
+            # try:
+            #     assert n.shape == (m,)
+            # except (AttributeError, AssertionError):
+            #     n = n * tt.ones(m)
             self.n = tt.shape_padright(n)
             self.p = p if p.ndim > 1 else tt.shape_padleft(p)
         elif n.ndim == 1:
@@ -521,27 +521,35 @@ class Multinomial(Discrete):
         # Now, re-normalize all of the values in float64 precision. This is done inside the conditionals
         if size == p.shape:
             size = None
-        if (n.ndim == 0) and (p.ndim == 1):
+        elif size[-len(p.shape):] == p.shape:
+            size = size[:len(size) - len(p.shape)]
+
+        n_dim = n.squeeze().ndim
+
+        if (n_dim == 0) and (p.ndim == 1):
             p = p / p.sum()
             randnum = np.random.multinomial(n, p.squeeze(), size=size)
-        elif (n.ndim == 0) and (p.ndim > 1):
+        elif (n_dim == 0) and (p.ndim > 1):
             p = p / p.sum(axis=1, keepdims=True)
             randnum = np.asarray([
                 np.random.multinomial(n.squeeze(), pp, size=size)
                 for pp in p
             ])
-        elif (n.ndim > 0) and (p.ndim == 1):
+            randnum = np.moveaxis(randnum, 1, 0)
+        elif (n_dim > 0) and (p.ndim == 1):
             p = p / p.sum()
             randnum = np.asarray([
                 np.random.multinomial(nn, p.squeeze(), size=size)
                 for nn in n
             ])
+            randnum = np.moveaxis(randnum, 1, 0)
         else:
             p = p / p.sum(axis=1, keepdims=True)
             randnum = np.asarray([
                 np.random.multinomial(nn, pp, size=size)
                 for (nn, pp) in zip(n, p)
             ])
+            randnum = np.moveaxis(randnum, 1, 0)
         return randnum.astype(original_dtype)
 
     def random(self, point=None, size=None):
