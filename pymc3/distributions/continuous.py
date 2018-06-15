@@ -165,6 +165,23 @@ class Uniform(Continuous):
         super(Uniform, self).__init__(transform=transform, *args, **kwargs)
 
     def random(self, point=None, size=None):
+        """
+        Draw random values from Uniform distribution.
+
+        Parameters
+        ----------
+        point : dict, optional
+            Dict of variable values on which random values are to be 
+            conditioned (uses default point if not specified). 
+        size : int, optional
+            Desired size of random sample (returns one sample if not 
+            specified).
+
+        Returns
+        -------
+        array
+        """
+
         lower, upper = draw_values([self.lower, self.upper],
                                    point=point, size=size)
         return generate_samples(stats.uniform.rvs, loc=lower,
@@ -173,6 +190,18 @@ class Uniform(Continuous):
                                 size=size)
 
     def logp(self, value):
+        """
+        Calculate log-probability of Uniform distribution at specified value.
+
+        Parameters
+        ----------
+        value : numeric
+            Value for which log-probability is calculated. 
+
+        Returns
+        -------
+        TensorVariable
+        """
         lower = self.lower
         upper = self.upper
         return bound(-tt.log(upper - lower),
@@ -2323,7 +2352,7 @@ class Rice(Continuous):
         self.variance = 2 * sd**2 + nu**2 - (np.pi * sd**2 / 2) * (tt.exp((-nu**2 / (2 * sd**2)) / 2) * ((1 - (-nu**2 / (
             2 * sd**2))) * i0(-(-nu**2 / (2 * sd**2)) / 2) - (-nu**2 / (2 * sd**2)) * i1(-(-nu**2 / (2 * sd**2)) / 2)))**2
 
-    def random(self, point=None, size=None, repeat=None):
+    def random(self, point=None, size=None):
         nu, sd = draw_values([self.nu, self.sd],
                              point=point, size=size)
         return generate_samples(stats.rice.rvs, b=nu, scale=sd, loc=0,
