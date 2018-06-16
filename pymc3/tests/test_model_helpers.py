@@ -68,17 +68,18 @@ class TestHelperFunc(object):
         # Check function behavior with Theano graph variable
         theano_output = func(theano_graph_input)
         assert isinstance(theano_output, theano.gof.graph.Variable)
-        assert theano_output.name == input_name
+        assert theano_output.owner.inputs[0].name == input_name
 
         # Check function behavior with generator data
         generator_output = func(square_generator)
-        # Make sure the returned object has .set_gen and .set_default methods
-        assert hasattr(generator_output, "set_gen")
-        assert hasattr(generator_output, "set_default")
-        # Make sure the returned object is a Theano TensorVariable
-        assert isinstance(generator_output, tt.TensorVariable)
 
-        return None
+        # Output is wrapped with `pm.floatX`, and this unwraps
+        wrapped = generator_output.owner.inputs[0]
+        # Make sure the returned object has .set_gen and .set_default methods
+        assert hasattr(wrapped, "set_gen")
+        assert hasattr(wrapped, "set_default")
+        # Make sure the returned object is a Theano TensorVariable
+        assert isinstance(wrapped, tt.TensorVariable)
 
     def test_as_tensor(self):
         """
