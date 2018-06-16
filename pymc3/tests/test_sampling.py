@@ -353,7 +353,7 @@ class TestSampleGenerative(SeededTest):
         assert (prior['mu'] < 90).all()
         assert (prior['positive_mu'] > 90).all()
         assert (prior['x_obs'] < 90).all()
-        assert (prior['positive_mu'] == np.abs(prior['mu'])).all()
+        npt.assert_array_almost_equal(prior['positive_mu'], np.abs(prior['mu']), decimal=4)
 
     def test_respects_shape(self):
         for shape in (2, (2,), (10, 2), (10, 10)):
