@@ -489,11 +489,11 @@ def generate_samples(generator, *args, **kwargs):
         samples = [generator(*args, **kwargs).reshape(size_tup + (1,)) for _ in range(np.prod(suffix, dtype=int))]
         samples = np.hstack(samples).reshape(size_tup + suffix)
     else:
-        raise TypeError(f'''Attempted to generate values with incompatible shapes:
+        raise TypeError('''Attempted to generate values with incompatible shapes:
             size: {size}
             dist_shape: {dist_shape}
             broadcast_shape: {broadcast_shape}
-        ''')
+        '''.format(size=size, dist_shape=dist_shape, broadcast_shape=broadcast_shape))
 
     # reshape samples here
     if samples.shape[0] == 1 and size == 1:
