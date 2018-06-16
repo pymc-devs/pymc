@@ -390,7 +390,7 @@ def _draw_value(param, point=None, givens=None, size=None):
             else:
                 variables = values = []
             func = _compile_theano_function(param, variables)
-            if size and values and all(len(v) == size for v in values):
+            if size and values and not all(var.dshape == val.shape for var, val in zip(variables, values)):
                 return np.array([func(*v) for v in zip(*values)])
             else:
                 return func(*values)
@@ -468,27 +468,26 @@ def generate_samples(generator, *args, **kwargs):
     size_tup = to_tuple(size)
 
     # All inputs are scalars, end up size (size_tup, dist_shape)
-    if broadcast_shape == () or broadcast_shape == (0,):
+    if broadcast_shape in {(), (0,), (1,)}:
         samples = generator(size=size_tup + dist_shape, *args, **kwargs)
     # Inputs already have the right shape. Just get the right size.
-    elif broadcast_shape[-len(dist_shape):] == dist_shape:
+    elif broadcast_shape[-len(dist_shape):] == dist_shape or len(dist_shape) == 0:
         if size == 1 or (broadcast_shape == size_tup + dist_shape):
             samples = generator(size=broadcast_shape, *args, **kwargs)
         elif dist_shape == broadcast_shape:
             samples = generator(size=size_tup + dist_shape, *args, **kwargs)
+        elif size_tup[-len(broadcast_shape):] != broadcast_shape:
+            samples = generator(size=size_tup + broadcast_shape, *args, **kwargs)
         else:
-            if size_tup[-len(broadcast_shape):] != broadcast_shape:
-                samples = generator(size=size_tup + broadcast_shape, *args, **kwargs)
-            else:
-                samples = generator(size=size_tup + dist_shape, *args, **kwargs)
+            samples = generator(size=size_tup + dist_shape, *args, **kwargs)
+    # Args have been broadcast correctly, can just ask for the right shape out
+    elif dist_shape[-len(broadcast_shape):] == broadcast_shape:
+        samples = generator(size=size_tup + dist_shape, *args, **kwargs)
     # Inputs have the right size, have to manually broadcast to the right dist_shape
     elif broadcast_shape[:len(size_tup)] == size_tup:
         suffix = broadcast_shape[len(size_tup):] + dist_shape
         samples = [generator(*args, **kwargs).reshape(size_tup + (1,)) for _ in range(np.prod(suffix, dtype=int))]
         samples = np.hstack(samples).reshape(size_tup + suffix)
-    # Args have been broadcast correctly, can just ask for the right shape out
-    elif dist_shape[-len(broadcast_shape):] == broadcast_shape:
-        samples = generator(size=size_tup + dist_shape, *args, **kwargs)
     else:
         raise TypeError(f'''Attempted to generate values with incompatible shapes:
             size: {size}

@@ -409,10 +409,12 @@ class Dirichlet(Continuous):
 
     def __init__(self, a, transform=transforms.stick_breaking,
                  *args, **kwargs):
-        shape = a.shape[-1]
+        shape = np.atleast_1d(a.shape)[-1]
+
         kwargs.setdefault("shape", shape)
         super(Dirichlet, self).__init__(transform=transform, *args, **kwargs)
 
+        self.size_prefix = tuple(self.shape[:-1])
         self.k = tt.as_tensor_variable(shape)
         self.a = a = tt.as_tensor_variable(a)
         self.mean = a / tt.sum(a)
@@ -421,13 +423,31 @@ class Dirichlet(Continuous):
                               (a - 1) / tt.sum(a - 1),
                               np.nan)
 
+    def _random(self, a, size=None):
+        gen = stats.dirichlet.rvs
+        shape = tuple(np.atleast_1d(self.shape))
+        if size[-len(shape):] == shape:
+            real_size = size[:-len(shape)]
+        else:
+            real_size = size
+        if self.size_prefix:
+            if real_size and real_size[0] == 1:
+                real_size = real_size[1:] + self.size_prefix
+            else:
+                real_size = real_size + self.size_prefix
+
+        if a.ndim == 1:
+            samples = gen(alpha=a, size=real_size)
+        else:
+            unrolled = a.reshape((np.prod(a.shape[:-1]), a.shape[-1]))
+            samples = np.array([gen(alpha=aa, size=1) for aa in unrolled])
+            samples = samples.reshape(a.shape)
+        return samples
+
     def random(self, point=None, size=None):
         a = draw_values([self.a], point=point, size=size)[0]
-
-        def _random(a, size=None):
-            return stats.dirichlet.rvs(a, None if size == a.shape else size)
-
-        samples = generate_samples(_random, a,
+        samples = generate_samples(self._random,
+                                   a=a,
                                    dist_shape=self.shape,
                                    size=size)
         return samples
@@ -1267,15 +1287,31 @@ class MatrixNormal(Continuous):
             self.colchol_cov = tt.as_tensor_variable(colchol)
 
     def random(self, point=None, size=None):
-        if size is None:
-            size = list(self.shape)
-
         mu, colchol, rowchol = draw_values(
                                 [self.mu, self.colchol_cov, self.rowchol_cov],
                                 point=point,
                                 size=size)
-        standard_normal = np.random.standard_normal(size)
-        return mu + np.matmul(rowchol, np.matmul(standard_normal, colchol.T))
+        if size is None:
+            size = ()
+        if size in (None, ()):
+            standard_normal = np.random.standard_normal((self.shape[0], colchol.shape[-1]))
+            samples = mu + np.matmul(rowchol, np.matmul(standard_normal, colchol.T))
+        else:
+            samples = []
+            size = tuple(np.atleast_1d(size))
+            if mu.shape == tuple(self.shape):
+                for _ in range(np.prod(size)):
+                    standard_normal = np.random.standard_normal((self.shape[0], colchol.shape[-1]))
+                    samples.append(mu + np.matmul(rowchol, np.matmul(standard_normal, colchol.T)))
+            else:
+                for j in range(np.prod(size)):
+                    standard_normal = np.random.standard_normal((self.shape[0], colchol[j].shape[-1]))
+                    samples.append(mu[j] +
+                                np.matmul(rowchol[j], np.matmul(standard_normal, colchol[j].T)))
+            samples = np.array(samples).reshape(size + tuple(self.shape))
+        return samples
+
+
 
     def _trquaddist(self, value):
         """Compute Tr[colcov^-1 @ (x - mu).T @ rowcov^-1 @ (x - mu)] and
