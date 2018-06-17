@@ -140,11 +140,13 @@ def test_empty_model():
             pm.sample()
         error.match('any free variables')
 
+
 def test_partial_trace_sample():
     with pm.Model() as model:
         a = pm.Normal('a', mu=0, sd=1)
         b = pm.Normal('b', mu=0, sd=1)
         trace = pm.sample(trace=[a])
+
 
 @pytest.mark.xfail(condition=(theano.config.floatX == "float32"), reason="Fails on float32")
 class TestNamedSampling(SeededTest):
@@ -235,7 +237,34 @@ class TestSamplePPC(SeededTest):
             trace = pm.sample()
 
         with model:
-	    # test list input
+            # test list input
+            ppc0 = pm.sample_ppc([model.test_point], samples=10)
+            ppc = pm.sample_ppc(trace, samples=10, vars=[])
+            assert len(ppc) == 0
+            ppc = pm.sample_ppc(trace, samples=10, vars=[a])
+            assert 'a' in ppc
+            assert ppc['a'].shape == (10, 2)
+
+            ppc = pm.sample_ppc(trace, samples=10, vars=[a], size=4)
+            assert 'a' in ppc
+            assert ppc['a'].shape == (10, 4, 2)
+
+    def test_vector_observed(self):
+        # This test was initially created to test whether observedRVs
+        # can assert the shape automatically from the observed data.
+        # It can make sample_ppc correct for RVs similar to below (i.e.,
+        # some kind of broadcasting is involved). However, doing so makes
+        # the application with `theano.shared` array as observed data
+        # invalid (after the `.set_value` the RV shape could change).
+        with pm.Model() as model:
+            mu = pm.Normal('mu', mu=0, sd=1)
+            a = pm.Normal('a', mu=mu, sd=1,
+                          shape=2,  # necessary to make ppc sample correct
+                          observed=np.array([0., 1.]))
+            trace = pm.sample()
+
+        with model:
+            # test list input
             ppc0 = pm.sample_ppc([model.test_point], samples=10)
             ppc = pm.sample_ppc(trace, samples=10, vars=[])
             assert len(ppc) == 0
@@ -254,7 +283,7 @@ class TestSamplePPC(SeededTest):
             trace = pm.sample()
 
         with model:
-	    # test list input
+            # test list input
             ppc0 = pm.sample_ppc([model.test_point], samples=10)
             ppc = pm.sample_ppc(trace, samples=1000, vars=[b])
             assert len(ppc) == 1
@@ -262,6 +291,7 @@ class TestSamplePPC(SeededTest):
             scale = np.sqrt(1 + 0.2 ** 2)
             _, pval = stats.kstest(ppc['b'], stats.norm(scale=scale).cdf)
             assert pval > 0.001
+
 
 class TestSamplePPCW(SeededTest):
     def test_sample_ppc_w(self):

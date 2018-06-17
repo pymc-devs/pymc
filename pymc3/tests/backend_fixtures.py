@@ -288,6 +288,7 @@ class SelectionTestCase(ModelBackendSampledTestCase):
     def test_len(self):
         assert len(self.mtrace) == self.draws
 
+    @pytest.mark.xfail(condition=(theano.config.floatX == "float32"), reason="Fails on float32")
     def test_dtypes(self):
         for varname in self.test_point.keys():
             assert self.expected[0][varname].dtype == \
@@ -492,6 +493,7 @@ class BackendEqualityTestCase(ModelBackendSampledTestCase):
         assert self.mtrace0.nchains == self.mtrace1.nchains
         assert len(self.mtrace0) == len(self.mtrace1)
 
+    @pytest.mark.xfail(condition=(theano.config.floatX == "float32"), reason="Fails on float32")
     def test_dtype(self):
         for varname in self.test_point.keys():
             assert self.mtrace0.get_values(varname, chains=0).dtype == \

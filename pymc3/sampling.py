@@ -345,6 +345,11 @@ def sample(draws=500, step=None, init='auto', n_init=200000, start=None, trace=N
             warnings.warn(
                 "The njobs argument has been deprecated. Use cores instead.",
                 DeprecationWarning)
+        if 'nchains' in kwargs:
+            chains = kwargs['nchains']
+            warnings.warn(
+                "The nchains argument has been deprecated. Use chains instead.",
+                DeprecationWarning)
         if chains is None:
             chains = max(2, cores)
         if isinstance(start, dict):
@@ -360,11 +365,6 @@ def sample(draws=500, step=None, init='auto', n_init=200000, start=None, trace=N
         if not isinstance(random_seed, Iterable):
             raise TypeError(
                 'Invalid value for `random_seed`. Must be tuple, list or int')
-        if 'nchains' in kwargs:
-            chains = kwargs['nchains']
-            warnings.warn(
-                "The nchains argument has been deprecated. Use chains instead.",
-                DeprecationWarning)
         if 'chain' in kwargs:
             chain_idx = kwargs['chain']
             warnings.warn(
@@ -663,7 +663,7 @@ def _iter_sample(draws, step, start=None, trace=None, chain=0, tune=None,
     except KeyboardInterrupt:
         strace.close()
         if hasattr(step, 'warnings'):
-            warns = step.warnings(strace)
+            warns = step.warnings()
             strace._add_warnings(warns)
         raise
     except BaseException:
@@ -672,7 +672,7 @@ def _iter_sample(draws, step, start=None, trace=None, chain=0, tune=None,
     else:
         strace.close()
         if hasattr(step, 'warnings'):
-            warns = step.warnings(strace)
+            warns = step.warnings()
             strace._add_warnings(warns)
 
 
@@ -965,36 +965,104 @@ def _choose_backend(trace, chain, shortcuts=None, **kwds):
         raise ValueError('Argument `trace` is invalid.')
 
 
-def _mp_sample(**kwargs):
-    cores = kwargs.pop('cores')
-    chain = kwargs.pop('chain')
-    rseed = kwargs.pop('random_seed')
-    start = kwargs.pop('start')
-    chains = kwargs.pop('chains')
-    use_mmap = kwargs.pop('use_mmap')
+def _mp_sample(draws, tune, step, chains, cores, chain, random_seed,
+               start, progressbar, trace=None, model=None, use_mmap=False,
+               **kwargs):
 
-    chain_nums = list(range(chain, chain + chains))
-    pbars = [kwargs.pop('progressbar')] + [False] * (chains - 1)
-    jobs = (delayed(_sample)(*args, **kwargs)
-            for args in zip(chain_nums, pbars, rseed, start))
+    if sys.version_info.major >= 3:
+        import pymc3.parallel_sampling as ps
 
-    if use_mmap:
-        traces = Parallel(n_jobs=cores)(jobs)
+        # We did draws += tune in pm.sample
+        draws -= tune
+
+        traces = []
+        for idx in range(chain, chain + chains):
+            if trace is not None:
+                strace = _choose_backend(copy(trace), idx, model=model)
+            else:
+                strace = _choose_backend(None, idx, model=model)
+            # TODO what is this for?
+            update_start_vals(start[idx - chain], model.test_point, model)
+            if step.generates_stats and strace.supports_sampler_stats:
+                strace.setup(draws + tune, idx + chain, step.stats_dtypes)
+            else:
+                strace.setup(draws + tune, idx + chain)
+            traces.append(strace)
+
+        sampler = ps.ParallelSampler(
+            draws, tune, chains, cores, random_seed, start, step,
+            chain, progressbar)
+        try:
+            with sampler:
+                for draw in sampler:
+                    trace = traces[draw.chain - chain]
+                    if trace.supports_sampler_stats and draw.stats is not None:
+                        trace.record(draw.point, draw.stats)
+                    else:
+                        trace.record(draw.point)
+                    if draw.is_last:
+                        trace.close()
+                        if draw.warnings is not None:
+                            trace._add_warnings(draw.warnings)
+            return MultiTrace(traces)
+        except KeyboardInterrupt:
+            traces, length = _choose_chains(traces, tune)
+            return MultiTrace(traces)[:length]
+        finally:
+            for trace in traces:
+                trace.close()
+
     else:
-        traces = Parallel(n_jobs=cores, mmap_mode=None)(jobs)
+        chain_nums = list(range(chain, chain + chains))
+        pbars = [progressbar] + [False] * (chains - 1)
+        jobs = (
+            delayed(_sample)(
+                chain=args[0], progressbar=args[1], random_seed=args[2],
+                start=args[3], draws=draws, step=step, trace=trace,
+                tune=tune, model=model, **kwargs
+            )
+            for args in zip(chain_nums, pbars, random_seed, start)
+        )
+        if use_mmap:
+            traces = Parallel(n_jobs=cores)(jobs)
+        else:
+            traces = Parallel(n_jobs=cores, mmap_mode=None)(jobs)
+        return MultiTrace(traces)
 
-    return MultiTrace(traces)
+
+def _choose_chains(traces, tune):
+    if tune is None:
+        tune = 0
+
+    if not traces:
+        return []
+
+    lengths = [max(0, len(trace) - tune) for trace in traces]
+    if not sum(lengths):
+        raise ValueError('Not enough samples to build a trace.')
+
+    idxs = np.argsort(lengths)[::-1]
+    l_sort = np.array(lengths)[idxs]
+
+    final_length = l_sort[0]
+    last_total = 0
+    for i, length in enumerate(l_sort):
+        total = (i + 1) * length
+        if total < last_total:
+            use_until = i
+            break
+        last_total = total
+        final_length = length
+    else:
+        use_until = len(lengths)
+
+    return [traces[idx] for idx in idxs[:use_until]], final_length + tune
 
 
 def stop_tuning(step):
     """ stop tuning the current step method """
 
-    if hasattr(step, 'tune'):
-        step.tune = False
-
-    if hasattr(step, 'methods'):
-        step.methods = [stop_tuning(s) for s in step.methods]
-
+    step.stop_tuning()
     return step
 
 
