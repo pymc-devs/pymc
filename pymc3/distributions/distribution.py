@@ -476,10 +476,8 @@ def generate_samples(generator, *args, **kwargs):
             samples = generator(size=broadcast_shape, *args, **kwargs)
         elif dist_shape == broadcast_shape:
             samples = generator(size=size_tup + dist_shape, *args, **kwargs)
-        elif size_tup[-len(broadcast_shape):] != broadcast_shape:
-            samples = generator(size=size_tup + broadcast_shape, *args, **kwargs)
         else:
-            samples = generator(size=size_tup + dist_shape, *args, **kwargs)
+            samples = None
     # Args have been broadcast correctly, can just ask for the right shape out
     elif dist_shape[-len(broadcast_shape):] == broadcast_shape:
         samples = generator(size=size_tup + dist_shape, *args, **kwargs)
@@ -489,6 +487,9 @@ def generate_samples(generator, *args, **kwargs):
         samples = [generator(*args, **kwargs).reshape(size_tup + (1,)) for _ in range(np.prod(suffix, dtype=int))]
         samples = np.hstack(samples).reshape(size_tup + suffix)
     else:
+        samples = None
+
+    if samples is None:
         raise TypeError('''Attempted to generate values with incompatible shapes:
             size: {size}
             dist_shape: {dist_shape}

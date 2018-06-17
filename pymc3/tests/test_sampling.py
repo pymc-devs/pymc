@@ -348,7 +348,7 @@ class TestSampleGenerative(SeededTest):
             positive_mu = pm.Deterministic('positive_mu', np.abs(mu))
             z = -1 - positive_mu
             pm.Normal('x_obs', mu=z, sd=1, observed=observed)
-            prior = pm.sample_generative()
+            prior = pm.sample_prior_predictive()
 
         assert (prior['mu'] < 90).all()
         assert (prior['positive_mu'] > 90).all()
@@ -360,7 +360,7 @@ class TestSampleGenerative(SeededTest):
             with pm.Model():
                 mu = pm.Gamma('mu', 3, 1, shape=1)
                 goals = pm.Poisson('goals', mu, shape=shape)
-                trace = pm.sample_generative(10)
+                trace = pm.sample_prior_predictive(10)
             if shape == 2:  # want to test shape as an int
                 shape = (2,)
             assert trace['goals'].shape == (10,) + shape
@@ -368,7 +368,7 @@ class TestSampleGenerative(SeededTest):
     def test_multivariate(self):
         with pm.Model():
             m = pm.Multinomial('m', n=5, p=np.array([0.25, 0.25, 0.25, 0.25]), shape=4)
-            trace = pm.sample_generative(10)
+            trace = pm.sample_prior_predictive(10)
 
         assert m.random(size=10).shape == (10, 4)
         assert trace['m'].shape == (10, 4)
@@ -380,3 +380,24 @@ class TestSampleGenerative(SeededTest):
 
         avg = b.random(size=10000).mean(axis=0)
         npt.assert_array_almost_equal(avg, 0.5 * np.ones_like(b), decimal=2)
+
+    def test_transformed(self):
+        n = 18
+        at_bats = 45 * np.ones(n, dtype=int)
+        hits = np.random.randint(1, 40, size=n, dtype=int)
+        draws = 50
+
+        with pm.Model() as model:
+            phi = pm.Beta('phi', alpha=1., beta=1.)
+
+            kappa_log = pm.Exponential('logkappa', lam=5.)
+            kappa = pm.Deterministic('kappa', tt.exp(kappa_log))
+
+            thetas = pm.Beta('thetas', alpha=phi*kappa, beta=(1.0-phi)*kappa, shape=n)
+
+            y = pm.Binomial('y', n=at_bats, p=thetas, shape=n, observed=hits)
+            gen = pm.sample_prior_predictive(draws)
+
+        assert gen['phi'].shape == (draws,)
+        assert gen['y'].shape == (draws, n)
+        assert 'thetas_logodds__' in gen
