@@ -18,6 +18,8 @@
   avoids pickleing issues on UNIX, and allows us to show a progress bar
   for all chains. If parallel sampling is interrupted, we now return
   partial results.
+- Add `sample_prior_predictive` which allows for efficient sampling from
+  the unconditioned model.
 
 ### Fixes
 
