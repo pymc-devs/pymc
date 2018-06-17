@@ -1316,7 +1316,7 @@ def sample_prior_predictive(samples=500, model=None, vars=None, random_seed=None
         elif is_transformed_name(var_name):
             untransformed = get_untransformed_name(var_name)
             if untransformed in data:
-                prior[var_name] = model[untransformed].transformation.forward(data[untransformed]).eval()
+                prior[var_name] = model[untransformed].transformation.forward_val(data[untransformed])
     return prior
 
 
