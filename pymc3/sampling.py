@@ -1277,13 +1277,13 @@ def sample_ppc_w(traces, samples=None, models=None, weights=None,
     return {k: np.asarray(v) for k, v in ppc.items()}
 
 
-def sample_generative(samples=500, model=None, vars=None, random_seed=None):
-    """Generate samples from the generative model.
+def sample_prior_predictive(samples=500, model=None, vars=None, random_seed=None):
+    """Generate samples from the prior_predictive distribution.
 
     Parameters
     ----------
     samples : int
-        Number of samples from the prior to generate. Defaults to 500.
+        Number of samples from the prior predictive to generate. Defaults to 500.
     model : Model (optional if in `with` context)
     vars : iterable
         Variables for which to compute the posterior predictive samples.
