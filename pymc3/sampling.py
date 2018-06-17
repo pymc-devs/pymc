@@ -26,7 +26,7 @@ from tqdm import tqdm
 import sys
 sys.setrecursionlimit(10000)
 
-__all__ = ['sample', 'iter_sample', 'sample_ppc', 'sample_ppc_w', 'init_nuts', 'sample_generative']
+__all__ = ['sample', 'iter_sample', 'sample_ppc', 'sample_ppc_w', 'init_nuts', 'sample_prior_predictive']
 
 STEP_METHODS = (NUTS, HamiltonianMC, Metropolis, BinaryMetropolis,
                 BinaryGibbsMetropolis, Slice, CategoricalGibbsMetropolis)
@@ -1278,7 +1278,7 @@ def sample_ppc_w(traces, samples=None, models=None, weights=None,
 
 
 def sample_prior_predictive(samples=500, model=None, vars=None, random_seed=None):
-    """Generate samples from the prior_predictive distribution.
+    """Generate samples from the prior predictive distribution.
 
     Parameters
     ----------
