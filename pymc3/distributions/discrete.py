@@ -713,8 +713,8 @@ class Categorical(Discrete):
     def _random(self, k, p, size=None):
         if len(p.shape) > 1:
             return np.asarray(
-                [np.random.choice(k, p=p, size=size)
-                    for p in kwargs['p']]
+                [np.random.choice(k, p=pp, size=size)
+                    for pp in p]
             )
         else:
             return np.asarray(np.random.choice(k, p=p, size=size))
