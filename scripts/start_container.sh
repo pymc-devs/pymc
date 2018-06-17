@@ -5,8 +5,8 @@ SRC_DIR=${SRC_DIR:-`pwd`}
 NOTEBOOK_DIR=${NOTEBOOK_DIR:-$SRC_DIR/notebooks}
 TOKEN=$(openssl rand -hex 24)
 
-# note that all paths are relative to the build context, so SRC_DIR is the same
-# . represents SRC_DIR to Docker
+# note that all paths are relative to the build context, so . represents
+# SRC_DIR to Docker
 docker build \
     -t pymc3 \
     -f $SRC_DIR/scripts/Dockerfile \
