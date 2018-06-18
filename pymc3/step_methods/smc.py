@@ -17,7 +17,6 @@ import pymc3 as pm
 from tqdm import tqdm
 
 import theano
-import copy
 import warnings
 
 from ..model import modelcontext
@@ -30,9 +29,6 @@ from .arraystep import metrop_select
 from ..backends import smc_text as atext
 
 __all__ = ['SMC', 'sample_smc']
-
-EXPERIMENTAL_WARNING = ("Warning: SMC is an experimental step method, and not yet "
-                        "recommended for use in PyMC3!")
 
 proposal_dists = {'MultivariateNormal': MultivariateNormalProposal}
 
@@ -64,13 +60,6 @@ class SMC(atext.ArrayStepSharedLLK):
         List of variables for sampler
     out_vars : list
         List of output variables for trace recording. If empty unobserved_RVs are taken.
-    samples : int
-        The number of samples to draw from the last stage, i.e. the posterior. Defaults to 1000.
-        The number of samples should be a multiple of `n_chains`, otherwise the returned number of
-        draws will be the lowest closest multiple of `n_chains`.
-    n_chains : int
-        Number of chains per stage has to be a large number of number of n_jobs (processors to be
-        used) on the machine.
     n_steps : int
         The number of steps of a Markov Chain. Only works if `tune_interval=0` otherwise it will be
         determined adaptively.
@@ -78,7 +67,7 @@ class SMC(atext.ArrayStepSharedLLK):
         Factor applied to the proposal distribution i.e. the step size of the Markov Chain. Only
         works if `tune_interval=0` otherwise it will be determined adaptively.
     covariance : :class:`numpy.ndarray`
-        (n_chains x n_chains)
+        (chains x chains)
         Initial Covariance matrix for proposal distribution, if None - identity matrix taken
     likelihood_name : string
         name of the :class:`pymc3.deterministic` variable that contains the model likelihood.
@@ -111,11 +100,9 @@ class SMC(atext.ArrayStepSharedLLK):
     """
     default_blocked = True
 
-    def __init__(self, vars=None, out_vars=None, samples=1000, n_chains=100, n_steps=25, scaling=1.,
+    def __init__(self, vars=None, out_vars=None, n_steps=25, scaling=1.,
                  covariance=None, likelihood_name='l_like__', proposal_name='MultivariateNormal',
                  tune_interval=10, threshold=0.5, check_bound=True, model=None, random_seed=-1):
-
-        warnings.warn(EXPERIMENTAL_WARNING)
 
         if random_seed != -1:
             nr.seed(random_seed)
@@ -147,56 +134,27 @@ class SMC(atext.ArrayStepSharedLLK):
         else:
             scale = covariance
 
+        self.vars = vars
         self.proposal_name = proposal_name
         self.proposal_dist = choose_proposal(self.proposal_name, scale=scale)
-
         self.scaling = np.atleast_1d(scaling)
         self.check_bnd = check_bound
         self.tune_interval = tune_interval
         self.steps_until_tune = tune_interval
-
-        self.proposal_samples_array = self.proposal_dist(n_chains)
-
-        self.samples = samples
+        self.population = [model.test_point]
         self.n_steps = n_steps
         self.stage_sample = 0
         self.accepted = 0
-
         self.beta = 0
-        self.sjs = 1
+        #self.sjs = 1
         self.stage = 0
         self.chain_index = 0
-        self.resampling_indexes = np.arange(n_chains)
-
         self.threshold = threshold
-        self.n_chains = n_chains
-        self.likelihoods = np.zeros(n_chains)
-
         self.likelihood_name = likelihood_name
         self._llk_index = out_varnames.index(likelihood_name)
         self.discrete = np.concatenate([[v.dtype in discrete_types] * (v.dsize or 1) for v in vars])
         self.any_discrete = self.discrete.any()
         self.all_discrete = self.discrete.all()
-
-        # create initial population
-        self.population = []
-        self.array_population = np.zeros(n_chains)
-        start = model.test_point
-
-        init_rnd = {}
-        for v in vars:
-            if pm.util.is_transformed_name(v.name):
-                trans = v.distribution.transform_used.forward_val
-                init_rnd[v.name] = trans(v.distribution.dist.random(
-                    size=self.n_chains, point=start))
-            else:
-                init_rnd[v.name] = v.random(size=self.n_chains, point=start)
-
-        for i in range(self.n_chains):
-            self.population.append(pm.Point({v.name: init_rnd[v.name][i] for v in vars},
-                                            model=model))
-
-        self.chain_previous_lpoint = copy.deepcopy(self.population)
 
         shared = make_shared_replacements(vars, model)
         self.logp_forw = logp_forw(out_vars, vars, shared)
@@ -218,12 +176,11 @@ class SMC(atext.ArrayStepSharedLLK):
                 # compute n_steps
                 if self.accepted == 0:
                     acc_rate = 1 / float(self.tune_interval)
-                self.n_steps = int(max(1, np.log(0.01) / np.log(1 - acc_rate)))
+                self.n_steps = int(max(1, np.log(0.001) / np.log(1 - acc_rate)))
                 # Reset counter
                 self.steps_until_tune = self.tune_interval
                 self.accepted = 0
                 self.stage_sample = 0
-
 
             if not self.stage_sample:
                 self.proposal_samples_array = self.proposal_dist(self.n_steps)
@@ -295,8 +252,6 @@ class SMC(atext.ArrayStepSharedLLK):
             tempering parameter of the current stage
         weights : :class:`numpy.ndarray`
             Importance weights (floats)
-        sj : float
-            Mean of unnormalized weights
         """
         low_beta = old_beta = self.beta
         up_beta = 2.
@@ -316,7 +271,7 @@ class SMC(atext.ArrayStepSharedLLK):
             else:
                 low_beta = new_beta
 
-        return new_beta, old_beta, weights, np.mean(weights_un)
+        return new_beta, old_beta, weights#, np.mean(weights_un)
 
     def calc_covariance(self):
         """Calculate trace covariance matrix based on importance weights.
@@ -328,10 +283,10 @@ class SMC(atext.ArrayStepSharedLLK):
         """
         cov = np.cov(self.array_population, aweights=self.weights.ravel(), bias=False, rowvar=0)
         if np.isnan(cov).any() or np.isinf(cov).any():
-            raise ValueError('Sample covariances not valid! Likely "n_chains" is too small!')
+            raise ValueError('Sample covariances not valid! Likely "chains" is too small!')
         return np.atleast_2d(cov)
 
-    def select_end_points(self, mtrace):
+    def select_end_points(self, mtrace, chains):
         """Read trace results (variables and model likelihood) and take end points for each chain
         and set as start population for the next stage.
 
@@ -348,7 +303,7 @@ class SMC(atext.ArrayStepSharedLLK):
         likelihoods : :class:`numpy.ndarray`
             Array of likelihoods of the trace end-points
         """
-        array_population = np.zeros((self.n_chains, self.ordering.size))
+        array_population = np.zeros((chains, self.ordering.size))
         n_steps = len(mtrace)
 
         # collect end points of each chain and put into array
@@ -367,7 +322,7 @@ class SMC(atext.ArrayStepSharedLLK):
 
         return population, array_population, likelihoods
 
-    def get_chain_previous_lpoint(self, mtrace):
+    def get_chain_previous_lpoint(self, mtrace, chains):
         """Read trace results and take end points for each chain and set as previous chain result
         for comparison of metropolis select.
 
@@ -380,7 +335,7 @@ class SMC(atext.ArrayStepSharedLLK):
         chain_previous_lpoint : list
             all unobservedRV values, including dataset likelihoods
         """
-        array_population = np.zeros((self.n_chains, self.lordering.size))
+        array_population = np.zeros((chains, self.lordering.size))
         n_steps = len(mtrace)
         for _, slc, shp, _, var in self.lordering.vmap:
             slc_population = mtrace.get_values(varname=var, burn=n_steps - 1, combine=True)
@@ -400,7 +355,7 @@ class SMC(atext.ArrayStepSharedLLK):
         """
         return self.bij.rmap(self.array_population.mean(axis=0))
 
-    def resample(self):
+    def resample(self, chains):
         """Resample pdf based on importance weights. based on Kitagawas deterministic resampling
         algorithm.
 
@@ -409,11 +364,11 @@ class SMC(atext.ArrayStepSharedLLK):
         outindex : :class:`numpy.ndarray`
             Array of resampled trace indexes
         """
-        parents = np.arange(self.n_chains)
-        N_childs = np.zeros(self.n_chains, dtype=int)
+        parents = np.arange(chains)
+        N_childs = np.zeros(chains, dtype=int)
 
         cum_dist = np.cumsum(self.weights)
-        u = (parents + np.random.rand()) / self.n_chains
+        u = (parents + np.random.rand()) / chains
         j = 0
         for i in parents:
             while u[i] > cum_dist[j]:
@@ -422,7 +377,7 @@ class SMC(atext.ArrayStepSharedLLK):
             N_childs[j] += 1
 
         indx = 0
-        outindx = np.zeros(self.n_chains, dtype=int)
+        outindx = np.zeros(chains, dtype=int)
         for i in parents:
             if N_childs[i] > 0:
                 for j in range(indx, (indx + N_childs[i])):
@@ -434,11 +389,12 @@ class SMC(atext.ArrayStepSharedLLK):
 
 
 def sample_smc(samples=1000, chains=100, step=None, start=None, homepath=None, stage=0, cores=1,
-               tune_interval=10, progressbar=False, model=None, random_seed=-1, rm_flag=True, **kwargs):
+               progressbar=False, model=None, random_seed=-1, rm_flag=True, **kwargs):
     """Sequential Monte Carlo sampling
 
-    Samples the solution space with `chains` of Metropolis chains, where each chain has `n_steps`=`samples`/`chains`
-    iterations. Once finished, the sampled traces are evaluated:
+    Samples the solution space with `chains` of Metropolis chains, where each chain has
+    `n_steps`=`samples`/`chains` iterations.
+    Once finished, the sampled traces are evaluated:
 
     (1) Based on the likelihoods of the final samples, chains are weighted
     (2) the weighted covariance of the ensemble is calculated and set as new proposal distribution
@@ -462,15 +418,13 @@ def sample_smc(samples=1000, chains=100, step=None, start=None, homepath=None, s
     homepath : string
         Result_folder for storing stages, will be created if not existing.
     stage : int
-        Stage where to start or continue the calculation. It is possible to continue after completed
-        stages (`stage` should be the number of the completed stage + 1). If None the start will be at
-        `stage=0`.
+        Stage where to start or continue the calculation. It is possible to continue after
+        completed stages (`stage` should be the number of the completed stage + 1). If None the
+        start will be at `stage=0`.
     cores : int
         The number of cores to be used in parallel. Be aware that Theano has internal
         parallelization. Sometimes this is more efficient especially for simple models.
-        `step.n_chains / cores` has to be an integer number!
-    tune_interval : int
-        Number of steps to tune for. Defaults to 10.
+        `chains / cores` has to be an integer number!
     progressbar : bool
         Flag for displaying a progress bar
     model : :class:`pymc3.Model`
@@ -488,28 +442,16 @@ def sample_smc(samples=1000, chains=100, step=None, start=None, homepath=None, s
         Geophysical Journal International, 2013, 194(3), pp.1701-1726,
         `link <https://gji.oxfordjournals.org/content/194/3/1701.full>`__
     """
-    warnings.warn(EXPERIMENTAL_WARNING)
 
-    n_chains = chains
-    if 'n_chains' in kwargs:
-        n_chains = kwargs['n_chains']
-        warnings.warn(
-            "The n_chains argument has been deprecated. Use chains instead.",
-            DeprecationWarning)
-    remainder = samples % n_chains
+    remainder = samples % chains
     if remainder != 0:
         warnings.warn("'samples' {} is not a multiple of 'chains' {}. Hence, you will get {} "
-                      "draws from the posterior".format(samples, n_chains, samples - remainder))
+                      "draws from the posterior".format(samples, chains, samples - remainder))
 
     model = modelcontext(model)
 
     if random_seed != -1:
         nr.seed(random_seed)
-
-    if step is None:
-        pm._log.info('Argument `step` is None. Auto-initialising step object '
-                     'using given/default parameters.')
-        step = SMC(n_chains=n_chains, tune_interval=tune_interval, model=model)
 
     if homepath is None:
         raise TypeError('Argument `homepath` should be path to result_directory.')
@@ -520,13 +462,13 @@ def sample_smc(samples=1000, chains=100, step=None, start=None, homepath=None, s
             "The n_jobs argument has been deprecated. Use cores instead.",
             DeprecationWarning)
     if cores > 1:
-        if not (step.n_chains / float(cores)).is_integer():
+        if not (chains / float(cores)).is_integer():
             raise TypeError('chains / cores has to be a whole number!')
 
     if start is not None:
-        if len(start) != step.n_chains:
+        if len(start) != chains:
             raise TypeError('Argument `start` should have dicts equal the '
-                            'number of chains (`step.n_chains`)')
+                            'number of chains (`chains`)')
         else:
             step.population = start
 
@@ -549,7 +491,11 @@ def sample_smc(samples=1000, chains=100, step=None, start=None, homepath=None, s
 
     stage_handler.clean_directory(stage, None, rm_flag)
 
-    chains = stage_handler.recover_existing_results(stage, draws, step)
+    x_chains = stage_handler.recover_existing_results(stage, draws, chains, step)
+
+    step.resampling_indexes = np.arange(chains)
+    step.proposal_samples_array = step.proposal_dist(chains)
+    step.population = _initial_population(samples, chains, model, step.vars)
 
     with model:
         while step.beta < 1:
@@ -563,13 +509,14 @@ def sample_smc(samples=1000, chains=100, step=None, start=None, homepath=None, s
             pm._log.info('Beta: %f Stage: %i' % (step.beta, step.stage))
 
             # Metropolis sampling intermediate stages
-            chains = stage_handler.clean_directory(step.stage, chains, rm_flag)
+            x_chains = stage_handler.clean_directory(step.stage, x_chains, rm_flag)
             sample_args = {'draws': draws,
                            'step': step,
                            'stage_path': stage_handler.stage_path(step.stage),
                            'progressbar': progressbar,
                            'model': model,
                            'n_jobs': cores,
+                           'x_chains': x_chains,
                            'chains': chains}
 
             _iter_parallel_chains(**sample_args)
@@ -577,57 +524,77 @@ def sample_smc(samples=1000, chains=100, step=None, start=None, homepath=None, s
             mtrace = stage_handler.load_multitrace(step.stage)
 
             step.population, step.array_population, step.likelihoods = step.select_end_points(
-                mtrace)
-            step.beta, step.old_beta, step.weights, sj = step.calc_beta()
-            step.sjs *= sj
+                mtrace, chains)
+            step.beta, step.old_beta, step.weights = step.calc_beta()
+            #step.beta, step.old_beta, step.weights, sj = step.calc_beta()
+            #step.sjs *= sj
 
             if step.beta > 1.:
                 pm._log.info('Beta > 1.: %f' % step.beta)
                 step.beta = 1.
                 stage_handler.dump_atmip_params(step)
                 if stage == -1:
-                    chains = []
+                    x_chains = []
                 else:
-                    chains = None
+                    x_chains = None
             else:
                 step.covariance = step.calc_covariance()
                 step.proposal_dist = choose_proposal(step.proposal_name, scale=step.covariance)
-                step.resampling_indexes = step.resample()
-                step.chain_previous_lpoint = step.get_chain_previous_lpoint(mtrace)
+                step.resampling_indexes = step.resample(chains)
+                step.chain_previous_lpoint = step.get_chain_previous_lpoint(mtrace, chains)
 
                 stage_handler.dump_atmip_params(step)
 
                 step.stage += 1
-                del(mtrace)
 
         # Metropolis sampling final stage
         pm._log.info('Sample final stage')
         step.stage = -1
-        chains = stage_handler.clean_directory(step.stage, chains, rm_flag)
+        x_chains = stage_handler.clean_directory(step.stage, x_chains, rm_flag)
         weights_un = np.exp((1 - step.old_beta) * (step.likelihoods - step.likelihoods.max()))
         step.weights = weights_un / np.sum(weights_un)
         step.covariance = step.calc_covariance()
         step.proposal_dist = choose_proposal(step.proposal_name, scale=step.covariance)
-        step.resampling_indexes = step.resample()
-        step.chain_previous_lpoint = step.get_chain_previous_lpoint(mtrace)
+        step.resampling_indexes = step.resample(chains)
+        step.chain_previous_lpoint = step.get_chain_previous_lpoint(mtrace, chains)
 
-        if samples < n_chains:
+        if samples < chains:
             samples = 1
         else:
-            samples = int(samples / n_chains)
+            samples = int(samples / chains)
         sample_args['draws'] = samples
         sample_args['step'] = step
         sample_args['stage_path'] = stage_handler.stage_path(step.stage)
-        sample_args['chains'] = chains
+        sample_args['x_chains'] = x_chains
         _iter_parallel_chains(**sample_args)
 
         stage_handler.dump_atmip_params(step)
 
-        model.marginal_likelihood = step.sjs
+        #model.marginal_likelihood = step.sjs
         return stage_handler.create_result_trace(step.stage,
                                                  idxs=range(samples),
                                                  step=step,
                                                  model=model)
+
+
+def _initial_population(samples, chains, model, variables):
+    """
+    Create an initial population from the prior
+    """
+    population = []
+    init_rnd = {}
+    start = model.test_point
+    for v in variables:
+        if pm.util.is_transformed_name(v.name):
+            trans = v.distribution.transform_used.forward_val
+            init_rnd[v.name] = trans(v.distribution.dist.random(size=chains, point=start))
+        else:
+            init_rnd[v.name] = v.random(size=chains, point=start)
+
+    for i in range(chains):
+        population.append(pm.Point({v.name: init_rnd[v.name][i] for v in variables}, model=model))
+
+    return population
 
 
 def _sample(draws, step=None, start=None, trace=None, chain=0, progressbar=True, model=None,
@@ -649,7 +616,9 @@ def _sample(draws, step=None, start=None, trace=None, chain=0, progressbar=True,
 
 
 def _iter_sample(draws, step, start=None, trace=None, chain=0, model=None, random_seed=-1):
-    """Modified from :func:`pymc3.sampling._iter_sample` to be more efficient with SMC algorithm."""
+    """
+    Modified from :func:`pymc3.sampling._iter_sample` to be more efficient with SMC algorithm.
+    """
     model = modelcontext(model)
     draws = int(draws)
     if draws < 1:
@@ -692,19 +661,21 @@ def _work_chain(work):
     return _sample(*work)
 
 
-def _iter_parallel_chains(draws, step, stage_path, progressbar, model, n_jobs, chains=None):
-    """Do Metropolis sampling over all the chains with each chain being sampled 'draws' times.
+def _iter_parallel_chains(draws, step, stage_path, progressbar, model, n_jobs, chains,
+                          x_chains=None):
+    """Do Metropolis sampling over all the x_chains with each chain being sampled 'draws' times.
     Parallel execution according to n_jobs.
     """
-    if chains is None:
-        chains = range(step.n_chains)
+    if x_chains is None:
+        x_chains = range(chains)
 
     pm._log.info('Initializing chain traces ...')
 
     max_int = np.iinfo(np.int32).max
-    random_seeds = nr.randint(1, max_int, size=len(chains))
 
+    random_seeds = nr.randint(1, max_int, size=len(x_chains))
     pm._log.info('Sampling ...')
+
     work = [(draws,
              step,
              step.population[step.resampling_indexes[chain]],
@@ -712,8 +683,7 @@ def _iter_parallel_chains(draws, step, stage_path, progressbar, model, n_jobs, c
              chain,
              False,
              model,
-             rseed) for chain, rseed in
-            zip(chains, random_seeds)]
+             rseed) for chain, rseed in zip(x_chains, random_seeds)]
 
     if draws < 10:
         chunksize = n_jobs
@@ -723,7 +693,7 @@ def _iter_parallel_chains(draws, step, stage_path, progressbar, model, n_jobs, c
     p = atext.paripool(_work_chain, work, chunksize=chunksize, nprocs=n_jobs)
 
     if n_jobs == 1 and progressbar:
-        p = tqdm(p, total=len(chains))
+        p = tqdm(p, total=len(x_chains))
 
     for _ in p:
         pass
