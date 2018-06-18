@@ -1,4 +1,3 @@
-from functools import partial
 import numpy as np
 import theano
 import theano.tensor as tt
@@ -7,7 +6,7 @@ import warnings
 
 from pymc3.util import get_variable_name
 from .dist_math import bound, factln, binomln, betaln, logpow
-from .distribution import Discrete, draw_values, generate_samples, reshape_sampled
+from .distribution import Discrete, draw_values, generate_samples
 from pymc3.math import tround, sigmoid, logaddexp, logit, log1pexp
 
 
@@ -154,13 +153,20 @@ class BetaBinomial(Discrete):
 
     def _random(self, alpha, beta, n, size=None):
         size = size or 1
-        p = np.atleast_1d(stats.beta.rvs(a=alpha, b=beta, size=np.prod(size)))
+        p = stats.beta.rvs(a=alpha, b=beta, size=size).flatten()
         # Sometimes scipy.beta returns nan. Ugh.
         while np.any(np.isnan(p)):
             i = np.isnan(p)
             p[i] = stats.beta.rvs(a=alpha, b=beta, size=np.sum(i))
         # Sigh...
-        _n, _p, _size = np.atleast_1d(n).flatten(), p.flatten(), np.prod(size)
+        _n, _p, _size = np.atleast_1d(n).flatten(), p.flatten(), p.shape[0]
+
+        quotient, remainder = divmod(_p.shape[0], _n.shape[0])
+        if remainder != 0:
+            raise TypeError('n has a bad size! Was cast to {}, must evenly divide {}'.format(
+                _n.shape[0], _p.shape[0]))
+        if quotient != 1:
+            _n = np.tile(_n, quotient)
         samples = np.reshape(stats.binom.rvs(n=_n, p=_p, size=_size), size)
         return samples
 
@@ -186,7 +192,7 @@ class BetaBinomial(Discrete):
         alpha = dist.alpha
         beta = dist.beta
         name = r'\text{%s}' % name
-        return r'${} \sim \text{{NegativeBinomial}}(\mathit{{alpha}}={},~\mathit{{beta}}={})$'.format(name,
+        return r'${} \sim \text{{BetaBinomial}}(\mathit{{alpha}}={},~\mathit{{beta}}={})$'.format(name,
                                                 get_variable_name(alpha),
                                                 get_variable_name(beta))
 
@@ -495,7 +501,7 @@ class NegativeBinomial(Discrete):
                              dist_shape=self.shape,
                              size=size)
         g[g == 0] = np.finfo(float).eps  # Just in case
-        return reshape_sampled(stats.poisson.rvs(g), size, self.shape)
+        return np.asarray(stats.poisson.rvs(g)).reshape(g.shape)
 
     def logp(self, value):
         mu = self.mu
@@ -700,22 +706,23 @@ class Categorical(Discrete):
             self.k = tt.shape(p)[-1].tag.test_value
         except AttributeError:
             self.k = tt.shape(p)[-1]
-        self.p = p = tt.as_tensor_variable(p)
+        p = tt.as_tensor_variable(p)
         self.p = (p.T / tt.sum(p, -1)).T
         self.mode = tt.argmax(p)
 
-    def random(self, point=None, size=None):
-        def random_choice(k, *args, **kwargs):
-            if len(kwargs['p'].shape) > 1:
-                return np.asarray(
-                    [np.random.choice(k, p=p)
-                     for p in kwargs['p']]
-                )
-            else:
-                return np.random.choice(k, *args, **kwargs)
+    def _random(self, k, p, size=None):
+        if len(p.shape) > 1:
+            return np.asarray(
+                [np.random.choice(k, p=pp, size=size)
+                    for pp in p]
+            )
+        else:
+            return np.asarray(np.random.choice(k, p=p, size=size))
 
+    def random(self, point=None, size=None):
         p, k = draw_values([self.p, self.k], point=point, size=size)
-        return generate_samples(partial(random_choice, np.arange(k)),
+        return generate_samples(self._random,
+                                k=k,
                                 p=p,
                                 broadcast_shape=p.shape[:-1] or (1,),
                                 dist_shape=self.shape,
@@ -849,8 +856,7 @@ class ZeroInflatedPoisson(Discrete):
         g = generate_samples(stats.poisson.rvs, theta,
                              dist_shape=self.shape,
                              size=size)
-        sampled = g * (np.random.random(np.squeeze(g.shape)) < psi)
-        return reshape_sampled(sampled, size, self.shape)
+        return g * (np.random.random(np.squeeze(g.shape)) < psi)
 
     def logp(self, value):
         psi = self.psi
@@ -942,8 +948,7 @@ class ZeroInflatedBinomial(Discrete):
         g = generate_samples(stats.binom.rvs, n, p,
                              dist_shape=self.shape,
                              size=size)
-        sampled = g * (np.random.random(np.squeeze(g.shape)) < psi)
-        return reshape_sampled(sampled, size, self.shape)
+        return g * (np.random.random(np.squeeze(g.shape)) < psi)
 
     def logp(self, value):
         psi = self.psi
@@ -1061,8 +1066,7 @@ class ZeroInflatedNegativeBinomial(Discrete):
                              dist_shape=self.shape,
                              size=size)
         g[g == 0] = np.finfo(float).eps  # Just in case
-        sampled = stats.poisson.rvs(g) * (np.random.random(np.squeeze(g.shape)) < psi)
-        return reshape_sampled(sampled, size, self.shape)
+        return stats.poisson.rvs(g) * (np.random.random(np.squeeze(g.shape)) < psi)
 
     def logp(self, value):
         alpha = self.alpha

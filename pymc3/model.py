@@ -100,7 +100,7 @@ def get_named_nodes_and_relations(graph):
         is a theano named node, and the corresponding value is the set
         of theano named nodes that are children of the node. These child
         relations skip unnamed intermediate nodes.
-    
+
     """
     if graph.name is not None:
         node_parents = {graph: set()}
@@ -1017,7 +1017,7 @@ class Model(six.with_metaclass(InitContextMeta, Context, Factor, WithMemoization
         if test_point is None:
             test_point = self.test_point
 
-        return Series({RV.name:np.round(RV.logp(self.test_point), round_vals) for RV in self.basic_RVs}, 
+        return Series({RV.name:np.round(RV.logp(self.test_point), round_vals) for RV in self.basic_RVs},
             name='Log-probability of test_point')
 
     def _repr_latex_(self, name=None, dist=None):
@@ -1244,7 +1244,7 @@ def pandas_to_array(data):
         ret = generator(data)
     else:
         ret = np.asarray(data)
-    return pm.smartfloatX(ret)
+    return pm.floatX(ret)
 
 
 def as_tensor(data, name, model, distribution):
@@ -1457,6 +1457,8 @@ class TransformedRV(TensorVariable):
         if distribution is not None:
             self.model = model
             self.distribution = distribution
+            self.dshape = tuple(distribution.shape)
+            self.dsize = int(np.prod(distribution.shape))
 
             transformed_name = get_transformed_name(name, transform)
 

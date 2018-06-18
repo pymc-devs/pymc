@@ -12,11 +12,12 @@ import theano.gradient as tg
 
 from .backends.base import BaseTrace, MultiTrace
 from .backends.ndarray import NDArray
+from .distributions.distribution import draw_values
 from .model import modelcontext, Point, all_continuous
 from .step_methods import (NUTS, HamiltonianMC, Metropolis, BinaryMetropolis,
                            BinaryGibbsMetropolis, CategoricalGibbsMetropolis,
                            Slice, CompoundStep, arraystep, smc)
-from .util import update_start_vals, get_untransformed_name, is_transformed_name
+from .util import update_start_vals, get_untransformed_name, is_transformed_name, get_default_varnames
 from .vartypes import discrete_types
 from pymc3.step_methods.hmc import quadpotential
 from pymc3 import plots
@@ -26,7 +27,7 @@ from tqdm import tqdm
 import sys
 sys.setrecursionlimit(10000)
 
-__all__ = ['sample', 'iter_sample', 'sample_ppc', 'sample_ppc_w', 'init_nuts']
+__all__ = ['sample', 'iter_sample', 'sample_ppc', 'sample_ppc_w', 'init_nuts', 'sample_prior_predictive']
 
 STEP_METHODS = (NUTS, HamiltonianMC, Metropolis, BinaryMetropolis,
                 BinaryGibbsMetropolis, Slice, CategoricalGibbsMetropolis)
@@ -1269,6 +1270,49 @@ def sample_ppc_w(traces, samples=None, models=None, weights=None,
             indices.close()
 
     return {k: np.asarray(v) for k, v in ppc.items()}
+
+
+def sample_prior_predictive(samples=500, model=None, vars=None, random_seed=None):
+    """Generate samples from the prior predictive distribution.
+
+    Parameters
+    ----------
+    samples : int
+        Number of samples from the prior predictive to generate. Defaults to 500.
+    model : Model (optional if in `with` context)
+    vars : iterable
+        Variables for which to compute the posterior predictive samples.
+        Defaults to `model.named_vars`.
+    random_seed : int
+        Seed for the random number generator.
+
+    Returns
+    -------
+    dict
+        Dictionary with the variables as keys. The values are arrays of prior samples.
+    """
+    model = modelcontext(model)
+
+    if vars is None:
+        vars = set(model.named_vars.keys())
+
+    if random_seed is not None:
+        np.random.seed(random_seed)
+    names = get_default_varnames(model.named_vars, include_transformed=False)
+    # draw_values fails with auto-transformed variables. transform them later!
+    values = draw_values([model[name] for name in names], size=samples)
+
+    data = {k: v for k, v in zip(names, values)}
+
+    prior = {}
+    for var_name in vars:
+        if var_name in data:
+            prior[var_name] = data[var_name]
+        elif is_transformed_name(var_name):
+            untransformed = get_untransformed_name(var_name)
+            if untransformed in data:
+                prior[var_name] = model[untransformed].transformation.forward_val(data[untransformed])
+    return prior
 
 
 def init_nuts(init='auto', chains=1, n_init=500000, model=None,

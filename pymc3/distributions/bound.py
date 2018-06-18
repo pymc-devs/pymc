@@ -54,7 +54,8 @@ class _Bounded(Distribution):
         samples = np.zeros(size, dtype=self.dtype).flatten()
         i, n = 0, len(samples)
         while i < len(samples):
-            sample = self._wrapped.random(point=point, size=n)
+            sample = np.atleast_1d(self._wrapped.random(point=point, size=n))
+
             select = sample[np.logical_and(sample >= lower, sample <= upper)]
             samples[i:(i + len(select))] = select[:]
             i += len(select)

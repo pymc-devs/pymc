@@ -49,7 +49,7 @@ class Mixture(Distribution):
             lam = pm.Exponential('lam', lam=1, shape=(2,))  # `shape=(2,)` indicates two mixtures.
 
             # As we just need the logp, rather than add a RV to the model, we need to call .dist()
-            components = pm.Poisson.dist(mu=lam, shape=(2,))  
+            components = pm.Poisson.dist(mu=lam, shape=(2,))
 
             w = pm.Dirichlet('w', a=np.array([1, 1]))  # two mixture component weights.
 
@@ -175,6 +175,8 @@ class Mixture(Distribution):
             else:
                 samples = np.squeeze(comp_samples[w_samples])
         else:
+            if w_samples.ndim == 1:
+                w_samples = np.reshape(np.tile(w_samples, size), (size,) + w_samples.shape)
             samples = np.zeros((size,)+tuple(distshape))
             for i in range(size):
                 w_tmp = w_samples[i, :]

@@ -78,6 +78,23 @@ class TestDrawValues(SeededTest):
         npt.assert_almost_equal(mu, 0)
         npt.assert_almost_equal(tau, 1)
 
+    def test_draw_dependencies(self):
+        with pm.Model():
+            x = pm.Normal('x', mu=0., sd=1.)
+            exp_x = pm.Deterministic('exp_x', pm.math.exp(x))
+
+        x, exp_x = pm.distributions.draw_values([x, exp_x])
+        npt.assert_almost_equal(np.exp(x), exp_x)
+
+    def test_draw_order(self):
+        with pm.Model():
+            x = pm.Normal('x', mu=0., sd=1.)
+            exp_x = pm.Deterministic('exp_x', pm.math.exp(x))
+
+        # Need to draw x before drawing log_x
+        exp_x, x = pm.distributions.draw_values([exp_x, x])
+        npt.assert_almost_equal(np.exp(x), exp_x)
+
     def test_draw_point_replacement(self):
         with pm.Model():
             mu = pm.Normal('mu', mu=0., tau=1e-3)
@@ -187,12 +204,13 @@ class BaseTestCases(object):
                             s = list(size)
                         except TypeError:
                             s = [size]
-                    s.extend(shape)
+                        if s == [1]:
+                            s = []
+                    if shape not in ((), (1,)):
+                        s.extend(shape)
                     e = tuple(s)
                     a = self.sample_random_variable(rv, size).shape
-                    expected.append(e)
-                    actual.append(a)
-            assert expected == actual
+                    assert e == a
 
 
 class TestNormal(BaseTestCases.BaseTestCase):
