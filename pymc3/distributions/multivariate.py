@@ -11,7 +11,6 @@ from scipy import stats, linalg
 
 from theano.tensor.nlinalg import det, matrix_inverse, trace, eigh
 from theano.tensor.slinalg import Cholesky
-import theano.tensor.slinalg
 import pymc3 as pm
 
 from pymc3.theanof import floatX
