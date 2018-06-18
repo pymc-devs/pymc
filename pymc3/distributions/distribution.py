@@ -383,7 +383,17 @@ def _draw_value(param, point=None, givens=None, size=None):
         elif (hasattr(param, 'distribution') and
                 hasattr(param.distribution, 'random') and
                 param.distribution.random is not None):
-            return param.distribution.random(point=point, size=size)
+            # reset the dist shape for ObservedRV
+            if hasattr(param, 'observations'):
+                dist_tmp = param.distribution
+                try:
+                    distshape = param.observations.shape.eval()
+                except AttributeError:
+                    distshape = param.observations.shape
+                dist_tmp.shape = distshape
+                return dist_tmp.random(point=point, size=size)
+            else:
+                return param.distribution.random(point=point, size=size)
         else:
             if givens:
                 variables, values = list(zip(*givens))
