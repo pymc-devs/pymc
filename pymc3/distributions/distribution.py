@@ -10,7 +10,7 @@ from ..model import Model, get_named_nodes_and_relations, FreeRV, ObservedRV
 from ..vartypes import string_types
 
 __all__ = ['DensityDist', 'Distribution', 'Continuous', 'Discrete',
-           'NoDistribution', 'TensorType', 'draw_values']
+           'NoDistribution', 'TensorType', 'draw_values', 'generate_samples']
 
 
 class _Unpickling(object):

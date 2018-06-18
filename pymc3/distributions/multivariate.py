@@ -9,8 +9,8 @@ import theano.tensor as tt
 
 from scipy import stats, linalg
 
-from theano.tensor.nlinalg import det, matrix_inverse, trace
-import theano.tensor.slinalg
+from theano.tensor.nlinalg import det, matrix_inverse, trace, eigh
+from theano.tensor.slinalg import Cholesky
 import pymc3 as pm
 
 from pymc3.theanof import floatX
@@ -20,7 +20,7 @@ from .distribution import Continuous, Discrete, draw_values, generate_samples
 from ..model import Deterministic
 from .continuous import ChiSquared, Normal
 from .special import gammaln, multigammaln
-from .dist_math import bound, logpow, factln, Cholesky, eigh
+from .dist_math import bound, logpow, factln
 from ..math import kron_dot, kron_diag, kron_solve_lower, kronecker
 
 
@@ -49,7 +49,7 @@ class _QuadFormBase(Continuous):
         # moment. We work around that by using a cholesky op
         # that returns a nan as first entry instead of raising
         # an error.
-        cholesky = Cholesky(nofail=True, lower=True)
+        cholesky = Cholesky(lower=True, on_error='nan')
 
         if cov is not None:
             self.k = cov.shape[0]
@@ -605,9 +605,9 @@ class Multinomial(Discrete):
 
 def posdef(AA):
     try:
-        np.linalg.cholesky(AA)
+        linalg.cholesky(AA)
         return 1
-    except np.linalg.LinAlgError:
+    except linalg.LinAlgError:
         return 0
 
 
@@ -796,7 +796,7 @@ def WishartBartlett(name, S, nu, is_cholesky=False, return_cholesky=False, testv
     if testval is not None:
         # Inverse transform
         testval = np.dot(np.dot(np.linalg.inv(L), testval), np.linalg.inv(L.T))
-        testval = scipy.linalg.cholesky(testval, lower=True)
+        testval = linalg.cholesky(testval, lower=True)
         diag_testval = testval[diag_idx]**2
         tril_testval = testval[tril_idx]
     else:
@@ -1226,7 +1226,7 @@ class MatrixNormal(Continuous):
         self.solve_upper = tt.slinalg.solve_upper_triangular
 
     def _setup_matrices(self, colcov, colchol, coltau, rowcov, rowchol, rowtau):
-        cholesky = Cholesky(nofail=False, lower=True)
+        cholesky = Cholesky(lower=True, on_error='raise')
 
         # Among-row matrices
         if len([i for i in [rowtau, rowcov, rowchol] if i is not None]) != 1:
@@ -1439,7 +1439,7 @@ class KroneckerNormal(Continuous):
         self.mean = self.median = self.mode = self.mu
 
     def _setup(self, covs, chols, evds, sigma):
-        self.cholesky = Cholesky(nofail=False, lower=True)
+        self.cholesky = Cholesky(lower=True, on_error='raise')
         if len([i for i in [covs, chols, evds] if i is not None]) != 1:
             raise ValueError('Incompatible parameterization. '
                              'Specify exactly one of covs, chols, '
