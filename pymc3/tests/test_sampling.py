@@ -353,6 +353,7 @@ class TestSampleGenerative(SeededTest):
         assert (prior['mu'] < 90).all()
         assert (prior['positive_mu'] > 90).all()
         assert (prior['x_obs'] < 90).all()
+        assert prior['x_obs'].shape == (500, 200)
         npt.assert_array_almost_equal(prior['positive_mu'], np.abs(prior['mu']), decimal=4)
 
     def test_respects_shape(self):
@@ -395,9 +396,28 @@ class TestSampleGenerative(SeededTest):
 
             thetas = pm.Beta('thetas', alpha=phi*kappa, beta=(1.0-phi)*kappa, shape=n)
 
-            y = pm.Binomial('y', n=at_bats, p=thetas, shape=n, observed=hits)
+            y = pm.Binomial('y', n=at_bats, p=thetas, observed=hits)
             gen = pm.sample_prior_predictive(draws)
 
         assert gen['phi'].shape == (draws,)
         assert gen['y'].shape == (draws, n)
         assert 'thetas_logodds__' in gen
+
+    def test_shared(self):
+        n1 = 10
+        obs = shared(np.random.rand(n1) < .5)
+        draws = 50
+
+        with pm.Model() as m:
+            p = pm.Beta('p', 1., 1.)
+            y = pm.Bernoulli('y', p, observed=obs)
+            gen1 = pm.sample_prior_predictive(draws)
+
+        assert gen1['y'].shape == (draws, n1)
+
+        n2 = 20
+        obs.set_value(np.random.rand(n2) < .5)
+        with m:
+            gen2 = pm.sample_prior_predictive(draws)
+
+        assert gen2['y'].shape == (draws, n2)
