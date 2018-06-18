@@ -379,6 +379,7 @@ class Normal(Continuous):
         assert_negative_support(tau, 'tau', 'Normal')
 
         super(Normal, self).__init__(**kwargs)
+        self.shape = np.broadcast(mu, sd).shape
 
     def random(self, point=None, size=None):
         """
