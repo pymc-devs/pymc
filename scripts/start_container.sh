@@ -12,6 +12,7 @@ docker build \
     -f $SRC_DIR/scripts/Dockerfile \
     --build-arg SRC_DIR=. \
     $SRC_DIR
+
 docker run -d \
     -p $PORT:8888 \
     -v $NOTEBOOK_DIR:/home/jovyan/work/ \

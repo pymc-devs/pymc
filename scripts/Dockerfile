@@ -15,4 +15,4 @@ RUN pip install seaborn
 # Import matplotlib the first time to build the font cache.
 RUN python -c "import matplotlib.pyplot"
 
-ENV PYTHONPATH $PYTHONPATH:"$HOME"/pymc3
+ENV PYTHONPATH $PYTHONPATH:"$HOME"
