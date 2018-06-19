@@ -1,4 +1,5 @@
 import time
+import timeit
 
 import numpy as np
 import pandas as pd
@@ -63,6 +64,7 @@ class OverheadSuite(object):
     samplers
     """
     params = [pm.NUTS, pm.HamiltonianMC, pm.Metropolis, pm.Slice]
+    timer = timeit.default_timer
 
     def setup(self, step):
         self.n_steps = 10000
@@ -78,6 +80,7 @@ class OverheadSuite(object):
 class ExampleSuite(object):
     """Implements examples to keep up with benchmarking them."""
     timeout = 360.0  # give it a few minutes
+    timer = timeit.default_timer
 
     def time_drug_evaluation(self):
         drug = np.array([101, 100, 102, 104, 102, 97, 105, 105, 98, 101,

@@ -1,4 +1,6 @@
+import collections
 import numbers
+
 import numpy as np
 
 #import theano.tensor as tt
@@ -12,8 +14,7 @@ from ..vartypes import string_types
 
 
 __all__ = ['DensityDist', 'Distribution', 'Continuous', 'Discrete',
-           'NoDistribution', #'TensorType',
-            'draw_values']
+           'NoDistribution', 'TensorType', 'draw_values', 'generate_samples']
 
 
 class _Unpickling(object):
@@ -275,7 +276,7 @@ def draw_values(params, point=None):
 
     # Init givens and the stack of nodes to try to `_draw_value` from
     givens = {}
-    stored = set([])  # Some nodes
+    stored = set()  # Some nodes
     stack = list(leaf_nodes.values())  # A queue would be more appropriate
     while stack:
         next_ = stack.pop(0)
@@ -301,13 +302,14 @@ def draw_values(params, point=None):
             # The named node's children givens values must also be taken
             # into account.
             children = named_nodes_children[next_]
-            temp_givens = [givens[k] for k in givens.keys() if k in children]
+            temp_givens = [givens[k] for k in givens if k in children]
             try:
                 # This may fail for autotransformed RVs, which don't
                 # have the random method
                 givens[next_.name] = (next_, _draw_value(next_,
                                                          point=point,
-                                                         givens=temp_givens))
+                                                         givens=temp_givens,
+                                                         size=size))
                 stored.add(next_.name)
             except: # XXX: this will accept more errors, so error prone theano.gof.fg.MissingInputError:
                 # The node failed, so we must add the node's parents to
@@ -317,10 +319,31 @@ def draw_values(params, point=None):
                               if node is not None and
                               node.name not in stored and
                               node not in params])
-    values = []
-    for param in params:
-        values.append(_draw_value(param, point=point, givens=givens.values()))
-    return values
+
+    # the below makes sure the graph is evaluated in order
+    # test_distributions_random::TestDrawValues::test_draw_order fails without it
+    params = dict(enumerate(params))  # some nodes are not hashable
+    evaluated = {}
+    to_eval = set()
+    missing_inputs = set(params)
+    while to_eval or missing_inputs:
+        if to_eval == missing_inputs:
+            raise ValueError('Cannot resolve inputs for {}'.format([str(params[j]) for j in to_eval]))
+        to_eval = set(missing_inputs)
+        missing_inputs = set()
+        for param_idx in to_eval:
+            param = params[param_idx]
+            if hasattr(param, 'name') and param.name in givens:
+                evaluated[param_idx] = givens[param.name][1]
+            else:
+                try:  # might evaluate in a bad order,
+                    evaluated[param_idx] = _draw_value(param, point=point, givens=givens.values(), size=size)
+                    if isinstance(param, collections.Hashable) and named_nodes_parents.get(param):
+                        givens[param.name] = (param, evaluated[param_idx])
+                except theano.gof.fg.MissingInputError:
+                    missing_inputs.add(param_idx)
+
+    return [evaluated[j] for j in params] # set the order back
 
 
 ## CHANGED: This is a big change. All this logic is going into the backend.
@@ -351,7 +374,7 @@ def draw_values(params, point=None):
 #                     allow_input_downcast=True)
 
 
-def _draw_value(param, point=None, givens=None):
+def _draw_value(param, point=None, givens=None, size=None):
     """Draw a random value from a distribution or return a constant.
 
     Parameters
@@ -389,48 +412,38 @@ def _draw_value(param, point=None, givens=None):
             return point[param.name]
         elif hasattr(param, 'random') and param.random is not None:
             return param.random(point=point, size=size)
+        elif (hasattr(param, 'distribution') and
+                hasattr(param.distribution, 'random') and
+                param.distribution.random is not None):
+            # reset the dist shape for ObservedRV
+            if hasattr(param, 'observations'):
+                dist_tmp = param.distribution
+                try:
+                    distshape = param.observations.shape.eval()
+                except AttributeError:
+                    distshape = param.observations.shape
+                dist_tmp.shape = distshape
+                return dist_tmp.random(point=point, size=size)
+            else:
+                return param.distribution.random(point=point, size=size)
         else:
             if givens:
                 variables, values = list(zip(*givens))
             else:
                 variables = values = []
 
-            ## CHANGED: call the function class defined in the backend.
-            #func = _compile_theano_function(param, variables)
-            #return func(*values)
-            func = S.function(param,variables)
-            return(func(*values))
-
+            # func = _compile_theano_function(param, variables)
+            func = S.function(param, variables)
+            if size and values and not all(var.dshape == val.shape for var, val in zip(variables, values)):
+                return np.array([func(*v) for v in zip(*values)])
+            else:
+                return func(*values)
     else:
         raise ValueError('Unexpected type in draw_value: %s' % type(param))
 
 
-def broadcast_shapes(*args):
-    """Return the shape resulting from broadcasting multiple shapes.
-    Represents numpy's broadcasting rules.
-
-    Parameters
-    ----------
-    *args : array-like of int
-        Tuples or arrays or lists representing the shapes of arrays to be broadcast.
-
-    Returns
-    -------
-    Resulting shape or None if broadcasting is not possible.
-    """
-    x = list(np.atleast_1d(args[0])) if args else ()
-    for arg in args[1:]:
-        y = list(np.atleast_1d(arg))
-        if len(x) < len(y):
-            x, y = y, x
-        x[-len(y):] = [j if i == 1 else i if j == 1 else i if i == j else 0
-                       for i, j in zip(x[-len(y):], y)]
-        if not all(x):
-            return None
-    return tuple(x)
-
-
-def infer_shape(shape):
+def to_tuple(shape):
+    """Convert ints, arrays, and Nones to tuples"""
     try:
         shape = tuple(shape or ())
     except TypeError:  # If size is an int
@@ -439,27 +452,14 @@ def infer_shape(shape):
         shape = tuple(shape)
     return shape
 
-
-def reshape_sampled(sampled, size, dist_shape):
-    dist_shape = infer_shape(dist_shape)
-    repeat_shape = infer_shape(size)
-
-    if np.size(sampled) == 1 or repeat_shape or dist_shape:
-        return np.reshape(sampled, repeat_shape + dist_shape)
-    else:
-        return sampled
-
-
-def replicate_samples(generator, size, repeats, *args, **kwargs):
-    n = int(np.prod(repeats))
-    if n == 1:
-        samples = generator(size=size, *args, **kwargs)
-    else:
-        samples = np.array([generator(size=size, *args, **kwargs)
-                            for _ in range(n)])
-        samples = np.reshape(samples, tuple(repeats) + tuple(size))
-    return samples
-
+def _is_one_d(dist_shape):
+    if hasattr(dist_shape, 'dshape') and dist_shape.dshape in ((), (0,), (1,)):
+        return True
+    elif hasattr(dist_shape, 'shape') and dist_shape.shape in ((), (0,), (1,)):
+        return True
+    elif dist_shape == ():
+        return True
+    return False
 
 def generate_samples(generator, *args, **kwargs):
     """Generate samples from the distribution of a random variable.
@@ -491,42 +491,60 @@ def generate_samples(generator, *args, **kwargs):
     Any remaining *args and **kwargs are passed on to the generator function.
     """
     dist_shape = kwargs.pop('dist_shape', ())
+    one_d = _is_one_d(dist_shape)
     size = kwargs.pop('size', None)
     broadcast_shape = kwargs.pop('broadcast_shape', None)
-    params = args + tuple(kwargs.values())
-
-    if broadcast_shape is None:
-        broadcast_shape = broadcast_shapes(*[np.atleast_1d(p).shape for p in params
-                                             if not isinstance(p, tuple)])
-    if broadcast_shape == ():
-        broadcast_shape = (1,)
+    if size is None:
+        size = 1
 
     args = tuple(p[0] if isinstance(p, tuple) else p for p in args)
+
     for key in kwargs:
         p = kwargs[key]
         kwargs[key] = p[0] if isinstance(p, tuple) else p
 
-    if np.all(dist_shape[-len(broadcast_shape):] == broadcast_shape):
-        prefix_shape = tuple(dist_shape[:-len(broadcast_shape)])
-    else:
-        prefix_shape = tuple(dist_shape)
+    if broadcast_shape is None:
+        inputs = args + tuple(kwargs.values())
+        broadcast_shape = np.broadcast(*inputs).shape  # size of generator(size=1)
 
-    repeat_shape = infer_shape(size)
+    dist_shape = to_tuple(dist_shape)
+    broadcast_shape = to_tuple(broadcast_shape)
+    size_tup = to_tuple(size)
 
-    if broadcast_shape == (1,) and prefix_shape == ():
-        if size is not None:
-            samples = generator(size=size, *args, **kwargs)
+    # All inputs are scalars, end up size (size_tup, dist_shape)
+    if broadcast_shape in {(), (0,), (1,)}:
+        samples = generator(size=size_tup + dist_shape, *args, **kwargs)
+    # Inputs already have the right shape. Just get the right size.
+    elif broadcast_shape[-len(dist_shape):] == dist_shape or len(dist_shape) == 0:
+        if size == 1 or (broadcast_shape == size_tup + dist_shape):
+            samples = generator(size=broadcast_shape, *args, **kwargs)
+        elif dist_shape == broadcast_shape:
+            samples = generator(size=size_tup + dist_shape, *args, **kwargs)
         else:
-            samples = generator(size=1, *args, **kwargs)
+            samples = None
+    # Args have been broadcast correctly, can just ask for the right shape out
+    elif dist_shape[-len(broadcast_shape):] == broadcast_shape:
+        samples = generator(size=size_tup + dist_shape, *args, **kwargs)
+    # Inputs have the right size, have to manually broadcast to the right dist_shape
+    elif broadcast_shape[:len(size_tup)] == size_tup:
+        suffix = broadcast_shape[len(size_tup):] + dist_shape
+        samples = [generator(*args, **kwargs).reshape(size_tup + (1,)) for _ in range(np.prod(suffix, dtype=int))]
+        samples = np.hstack(samples).reshape(size_tup + suffix)
     else:
-        if size is not None:
-            samples = replicate_samples(generator,
-                                        broadcast_shape,
-                                        repeat_shape + prefix_shape,
-                                        *args, **kwargs)
-        else:
-            samples = replicate_samples(generator,
-                                        broadcast_shape,
-                                        prefix_shape,
-                                        *args, **kwargs)
-    return reshape_sampled(samples, size, dist_shape)
+        samples = None
+
+    if samples is None:
+        raise TypeError('''Attempted to generate values with incompatible shapes:
+            size: {size}
+            dist_shape: {dist_shape}
+            broadcast_shape: {broadcast_shape}
+        '''.format(size=size, dist_shape=dist_shape, broadcast_shape=broadcast_shape))
+
+    # reshape samples here
+    if samples.shape[0] == 1 and size == 1:
+        if len(samples.shape) > len(dist_shape) and samples.shape[-len(dist_shape):] == dist_shape:
+            samples = samples.reshape(samples.shape[1:])
+
+    if one_d and samples.shape[-1] == 1:
+        samples = samples.reshape(samples.shape[:-1])
+    return np.asarray(samples)

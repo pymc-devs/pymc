@@ -99,8 +99,9 @@ class Text(base.BaseTrace):
         self._fh.write(','.join(columns) + '\n')
 
     def close(self):
-        self._fh.close()
-        self._fh = None  # Avoid serialization issue.
+        if self._fh is not None:
+            self._fh.close()
+            self._fh = None  # Avoid serialization issue.
 
     # Selection methods
 

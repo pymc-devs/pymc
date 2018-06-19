@@ -1582,6 +1582,8 @@ class TransformedRV(S.TensorVariable):
         if distribution is not None:
             self.model = model
             self.distribution = distribution
+            self.dshape = tuple(distribution.shape)
+            self.dsize = int(np.prod(distribution.shape))
 
             transformed_name = get_transformed_name(name, transform)
 

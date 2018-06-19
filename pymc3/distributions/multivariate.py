@@ -9,8 +9,8 @@ import theano.tensor as tt
 
 from scipy import stats, linalg
 
-from theano.tensor.nlinalg import det, matrix_inverse, trace
-import theano.tensor.slinalg
+from theano.tensor.nlinalg import det, matrix_inverse, trace, eigh
+from theano.tensor.slinalg import Cholesky
 import pymc3 as pm
 
 from pymc3.theanof import floatX
@@ -20,7 +20,7 @@ from .distribution import Continuous, Discrete, draw_values, generate_samples
 from ..model import Deterministic
 from .continuous import ChiSquared, Normal
 from .special import gammaln, multigammaln
-from .dist_math import bound, logpow, factln, Cholesky, eigh
+from .dist_math import bound, logpow, factln
 from ..math import kron_dot, kron_diag, kron_solve_lower, kronecker
 
 
@@ -49,7 +49,7 @@ class _QuadFormBase(Continuous):
         # moment. We work around that by using a cholesky op
         # that returns a nan as first entry instead of raising
         # an error.
-        cholesky = Cholesky(nofail=True, lower=True)
+        cholesky = Cholesky(lower=True, on_error='nan')
 
         if cov is not None:
             self.k = cov.shape[0]
@@ -409,10 +409,12 @@ class Dirichlet(Continuous):
 
     def __init__(self, a, transform=transforms.stick_breaking,
                  *args, **kwargs):
-        shape = a.shape[-1]
+        shape = np.atleast_1d(a.shape)[-1]
+
         kwargs.setdefault("shape", shape)
         super(Dirichlet, self).__init__(transform=transform, *args, **kwargs)
 
+        self.size_prefix = tuple(self.shape[:-1])
         self.k = tt.as_tensor_variable(shape)
         self.a = a = tt.as_tensor_variable(a)
         self.mean = a / tt.sum(a)
@@ -421,13 +423,31 @@ class Dirichlet(Continuous):
                               (a - 1) / tt.sum(a - 1),
                               np.nan)
 
+    def _random(self, a, size=None):
+        gen = stats.dirichlet.rvs
+        shape = tuple(np.atleast_1d(self.shape))
+        if size[-len(shape):] == shape:
+            real_size = size[:-len(shape)]
+        else:
+            real_size = size
+        if self.size_prefix:
+            if real_size and real_size[0] == 1:
+                real_size = real_size[1:] + self.size_prefix
+            else:
+                real_size = real_size + self.size_prefix
+
+        if a.ndim == 1:
+            samples = gen(alpha=a, size=real_size)
+        else:
+            unrolled = a.reshape((np.prod(a.shape[:-1]), a.shape[-1]))
+            samples = np.array([gen(alpha=aa, size=1) for aa in unrolled])
+            samples = samples.reshape(a.shape)
+        return samples
+
     def random(self, point=None, size=None):
         a = draw_values([self.a], point=point, size=size)[0]
-
-        def _random(a, size=None):
-            return stats.dirichlet.rvs(a, None if size == a.shape else size)
-
-        samples = generate_samples(_random, a,
+        samples = generate_samples(self._random,
+                                   a=a,
                                    dist_shape=self.shape,
                                    size=size)
         return samples
@@ -492,10 +512,10 @@ class Multinomial(Discrete):
 
         if len(self.shape) > 1:
             m = self.shape[-2]
-            try:
-                assert n.shape == (m,)
-            except (AttributeError, AssertionError):
-                n = n * tt.ones(m)
+            # try:
+            #     assert n.shape == (m,)
+            # except (AttributeError, AssertionError):
+            #     n = n * tt.ones(m)
             self.n = tt.shape_padright(n)
             self.p = p if p.ndim > 1 else tt.shape_padleft(p)
         elif n.ndim == 1:
@@ -521,27 +541,35 @@ class Multinomial(Discrete):
         # Now, re-normalize all of the values in float64 precision. This is done inside the conditionals
         if size == p.shape:
             size = None
-        if (n.ndim == 0) and (p.ndim == 1):
+        elif size[-len(p.shape):] == p.shape:
+            size = size[:len(size) - len(p.shape)]
+
+        n_dim = n.squeeze().ndim
+
+        if (n_dim == 0) and (p.ndim == 1):
             p = p / p.sum()
             randnum = np.random.multinomial(n, p.squeeze(), size=size)
-        elif (n.ndim == 0) and (p.ndim > 1):
+        elif (n_dim == 0) and (p.ndim > 1):
             p = p / p.sum(axis=1, keepdims=True)
             randnum = np.asarray([
                 np.random.multinomial(n.squeeze(), pp, size=size)
                 for pp in p
             ])
-        elif (n.ndim > 0) and (p.ndim == 1):
+            randnum = np.moveaxis(randnum, 1, 0)
+        elif (n_dim > 0) and (p.ndim == 1):
             p = p / p.sum()
             randnum = np.asarray([
                 np.random.multinomial(nn, p.squeeze(), size=size)
                 for nn in n
             ])
+            randnum = np.moveaxis(randnum, 1, 0)
         else:
             p = p / p.sum(axis=1, keepdims=True)
             randnum = np.asarray([
                 np.random.multinomial(nn, pp, size=size)
                 for (nn, pp) in zip(n, p)
             ])
+            randnum = np.moveaxis(randnum, 1, 0)
         return randnum.astype(original_dtype)
 
     def random(self, point=None, size=None):
@@ -577,9 +605,9 @@ class Multinomial(Discrete):
 
 def posdef(AA):
     try:
-        np.linalg.cholesky(AA)
+        linalg.cholesky(AA)
         return 1
-    except np.linalg.LinAlgError:
+    except linalg.LinAlgError:
         return 0
 
 
@@ -768,7 +796,7 @@ def WishartBartlett(name, S, nu, is_cholesky=False, return_cholesky=False, testv
     if testval is not None:
         # Inverse transform
         testval = np.dot(np.dot(np.linalg.inv(L), testval), np.linalg.inv(L.T))
-        testval = scipy.linalg.cholesky(testval, lower=True)
+        testval = linalg.cholesky(testval, lower=True)
         diag_testval = testval[diag_idx]**2
         tril_testval = testval[tril_idx]
     else:
@@ -1198,7 +1226,7 @@ class MatrixNormal(Continuous):
         self.solve_upper = tt.slinalg.solve_upper_triangular
 
     def _setup_matrices(self, colcov, colchol, coltau, rowcov, rowchol, rowtau):
-        cholesky = Cholesky(nofail=False, lower=True)
+        cholesky = Cholesky(lower=True, on_error='raise')
 
         # Among-row matrices
         if len([i for i in [rowtau, rowcov, rowchol] if i is not None]) != 1:
@@ -1259,15 +1287,31 @@ class MatrixNormal(Continuous):
             self.colchol_cov = tt.as_tensor_variable(colchol)
 
     def random(self, point=None, size=None):
-        if size is None:
-            size = list(self.shape)
-
         mu, colchol, rowchol = draw_values(
                                 [self.mu, self.colchol_cov, self.rowchol_cov],
                                 point=point,
                                 size=size)
-        standard_normal = np.random.standard_normal(size)
-        return mu + np.matmul(rowchol, np.matmul(standard_normal, colchol.T))
+        if size is None:
+            size = ()
+        if size in (None, ()):
+            standard_normal = np.random.standard_normal((self.shape[0], colchol.shape[-1]))
+            samples = mu + np.matmul(rowchol, np.matmul(standard_normal, colchol.T))
+        else:
+            samples = []
+            size = tuple(np.atleast_1d(size))
+            if mu.shape == tuple(self.shape):
+                for _ in range(np.prod(size)):
+                    standard_normal = np.random.standard_normal((self.shape[0], colchol.shape[-1]))
+                    samples.append(mu + np.matmul(rowchol, np.matmul(standard_normal, colchol.T)))
+            else:
+                for j in range(np.prod(size)):
+                    standard_normal = np.random.standard_normal((self.shape[0], colchol[j].shape[-1]))
+                    samples.append(mu[j] +
+                                np.matmul(rowchol[j], np.matmul(standard_normal, colchol[j].T)))
+            samples = np.array(samples).reshape(size + tuple(self.shape))
+        return samples
+
+
 
     def _trquaddist(self, value):
         """Compute Tr[colcov^-1 @ (x - mu).T @ rowcov^-1 @ (x - mu)] and
@@ -1395,7 +1439,7 @@ class KroneckerNormal(Continuous):
         self.mean = self.median = self.mode = self.mu
 
     def _setup(self, covs, chols, evds, sigma):
-        self.cholesky = Cholesky(nofail=False, lower=True)
+        self.cholesky = Cholesky(lower=True, on_error='raise')
         if len([i for i in [covs, chols, evds] if i is not None]) != 1:
             raise ValueError('Incompatible parameterization. '
                              'Specify exactly one of covs, chols, '
@@ -1469,7 +1513,6 @@ class KroneckerNormal(Continuous):
             elif self._cov_type == 'evd':
                 covs = []
                 for eig, Q in zip(self.eigs_sep, self.Qs):
-                    # print()
                     cov_i = tt.dot(Q, tt.dot(tt.diag(eig), Q.T))
                     covs.append(cov_i)
                 cov = kronecker(*covs)

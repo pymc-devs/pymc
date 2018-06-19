@@ -78,6 +78,23 @@ class TestDrawValues(SeededTest):
         npt.assert_almost_equal(mu, 0)
         npt.assert_almost_equal(tau, 1)
 
+    def test_draw_dependencies(self):
+        with pm.Model():
+            x = pm.Normal('x', mu=0., sd=1.)
+            exp_x = pm.Deterministic('exp_x', pm.math.exp(x))
+
+        x, exp_x = pm.distributions.draw_values([x, exp_x])
+        npt.assert_almost_equal(np.exp(x), exp_x)
+
+    def test_draw_order(self):
+        with pm.Model():
+            x = pm.Normal('x', mu=0., sd=1.)
+            exp_x = pm.Deterministic('exp_x', pm.math.exp(x))
+
+        # Need to draw x before drawing log_x
+        exp_x, x = pm.distributions.draw_values([exp_x, x])
+        npt.assert_almost_equal(np.exp(x), exp_x)
+
     def test_draw_point_replacement(self):
         with pm.Model():
             mu = pm.Normal('mu', mu=0., tau=1e-3)
@@ -187,12 +204,13 @@ class BaseTestCases(object):
                             s = list(size)
                         except TypeError:
                             s = [size]
-                    s.extend(shape)
+                        if s == [1]:
+                            s = []
+                    if shape not in ((), (1,)):
+                        s.extend(shape)
                     e = tuple(s)
                     a = self.sample_random_variable(rv, size).shape
-                    expected.append(e)
-                    actual.append(a)
-            assert expected == actual
+                    assert e == a
 
 
 class TestNormal(BaseTestCases.BaseTestCase):
@@ -759,17 +777,79 @@ class TestScalarParameterSamples(SeededTest):
         pymc3_random(pm.NormalMixture, {'w': Simplex(2),
                      'mu': Domain([[.05, 2.5], [-5., 1.]], edges=(None, None)),
                      'sd': Domain([[1, 1], [1.5, 2.]], edges=(None, None))},
+                     extra_args={'comp_shape': 2},
                      size=1000,
                      ref_rand=ref_rand)
         pymc3_random(pm.NormalMixture, {'w': Simplex(3),
                      'mu': Domain([[-5., 1., 2.5]], edges=(None, None)),
                      'sd': Domain([[1.5, 2., 3.]], edges=(None, None))},
+                     extra_args={'comp_shape': 3},
                      size=1000,
                      ref_rand=ref_rand)
 
+
+def test_mixture_random_shape():
+    # test the shape broadcasting in mixture random
+    y = np.concatenate([nr.poisson(5, size=10),
+                        nr.poisson(9, size=10)])
+    with pm.Model() as m:
+        comp0 = pm.Poisson.dist(mu=np.ones(2))
+        w0 = pm.Dirichlet('w0', a=np.ones(2))
+        like0 = pm.Mixture('like0',
+                           w=w0,
+                           comp_dists=comp0,
+                           shape=y.shape,
+                           observed=y)
+
+        comp1 = pm.Poisson.dist(mu=np.ones((20, 2)),
+                                shape=(20, 2))
+        w1 = pm.Dirichlet('w1', a=np.ones(2))
+        like1 = pm.Mixture('like1',
+                           w=w1,
+                           comp_dists=comp1, observed=y)
+
+        comp2 = pm.Poisson.dist(mu=np.ones(2))
+        w2 = pm.Dirichlet('w2',
+                          a=np.ones(2),
+                          shape=(20, 2))
+        like2 = pm.Mixture('like2',
+                           w=w2,
+                           comp_dists=comp2,
+                           observed=y)
+
+        comp3 = pm.Poisson.dist(mu=np.ones(2),
+                                shape=(20, 2))
+        w3 = pm.Dirichlet('w3',
+                          a=np.ones(2),
+                          shape=(20, 2))
+        like3 = pm.Mixture('like3',
+                           w=w3,
+                           comp_dists=comp3,
+                           observed=y)
+
+    rand0 = like0.distribution.random(m.test_point, size=100)
+    assert rand0.shape == (100, 20)
+
+    rand1 = like1.distribution.random(m.test_point, size=100)
+    assert rand1.shape == (100, 20)
+
+    rand2 = like2.distribution.random(m.test_point, size=100)
+    assert rand2.shape == (100, 20)
+
+    rand3 = like3.distribution.random(m.test_point, size=100)
+    assert rand3.shape == (100, 20)
+
+    with m:
+        ppc = pm.sample_ppc([m.test_point], samples=200)
+    assert ppc['like0'].shape == (200, 20)
+    assert ppc['like1'].shape == (200, 20)
+    assert ppc['like2'].shape == (200, 20)
+    assert ppc['like3'].shape == (200, 20)
+
+
 def test_density_dist_with_random_sampleable():
     with pm.Model() as model:
-        mu = pm.Normal('mu',0,1)
+        mu = pm.Normal('mu', 0, 1)
         normal_dist = pm.Normal.dist(mu, 1)
         pm.DensityDist('density_dist', normal_dist.logp, observed=np.random.randn(100), random=normal_dist.random)
         trace = pm.sample(100)
@@ -781,7 +861,7 @@ def test_density_dist_with_random_sampleable():
 
 def test_density_dist_without_random_not_sampleable():
     with pm.Model() as model:
-        mu = pm.Normal('mu',0,1)
+        mu = pm.Normal('mu', 0, 1)
         normal_dist = pm.Normal.dist(mu, 1)
         pm.DensityDist('density_dist', normal_dist.logp, observed=np.random.randn(100))
         trace = pm.sample(100)

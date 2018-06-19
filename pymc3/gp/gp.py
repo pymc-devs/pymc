@@ -7,10 +7,10 @@ import theano.tensor as tt
 import pymc3 as pm
 from pymc3.gp.cov import Covariance, Constant
 from pymc3.gp.mean import Zero
-from pymc3.gp.util import (conditioned_vars,
-                           infer_shape, stabilize, cholesky, solve_lower, solve_upper)
+from pymc3.gp.util import (conditioned_vars, infer_shape,
+                           stabilize, cholesky, solve_lower, solve_upper)
 from pymc3.distributions import draw_values
-from pymc3.distributions.dist_math import eigh
+from theano.tensor.nlinalg import eigh
 from ..math import cartesian, kron_dot, kron_diag
 
 __all__ = ['Latent', 'Marginal', 'TP', 'MarginalSparse', 'MarginalKron']
@@ -107,13 +107,13 @@ class Latent(Base):
 
     def _build_prior(self, name, X, reparameterize=True, **kwargs):
         mu = self.mean_func(X)
-        chol = cholesky(stabilize(self.cov_func(X)))
+        cov = stabilize(self.cov_func(X))
         shape = infer_shape(X, kwargs.pop("shape", None))
         if reparameterize:
             v = pm.Normal(name + "_rotated_", mu=0.0, sd=1.0, shape=shape, **kwargs)
-            f = pm.Deterministic(name, mu + tt.dot(chol, v))
+            f = pm.Deterministic(name, mu + cholesky(cov).dot(v))
         else:
-            f = pm.MvNormal(name, mu=mu, chol=chol, shape=shape, **kwargs)
+            f = pm.MvNormal(name, mu=mu, cov=cov, shape=shape, **kwargs)
         return f
 
     def prior(self, name, X, reparameterize=True, **kwargs):
@@ -203,9 +203,8 @@ class Latent(Base):
         """
         givens = self._get_given_vals(given)
         mu, cov = self._build_conditional(Xnew, *givens)
-        chol = cholesky(stabilize(cov))
         shape = infer_shape(Xnew, kwargs.pop("shape", None))
-        return pm.MvNormal(name, mu=mu, chol=chol, shape=shape, **kwargs)
+        return pm.MvNormal(name, mu=mu, cov=cov, shape=shape, **kwargs)
 
 
 @conditioned_vars(["X", "f", "nu"])
@@ -249,14 +248,14 @@ class TP(Latent):
 
     def _build_prior(self, name, X, reparameterize=True, **kwargs):
         mu = self.mean_func(X)
-        chol = cholesky(stabilize(self.cov_func(X)))
+        cov = stabilize(self.cov_func(X))
         shape = infer_shape(X, kwargs.pop("shape", None))
         if reparameterize:
             chi2 = pm.ChiSquared("chi2_", self.nu)
             v = pm.Normal(name + "_rotated_", mu=0.0, sd=1.0, shape=shape, **kwargs)
-            f = pm.Deterministic(name, (tt.sqrt(self.nu) / chi2) * (mu + tt.dot(chol, v)))
+            f = pm.Deterministic(name, (tt.sqrt(self.nu) / chi2) * (mu + cholesky(cov).dot(v)))
         else:
-            f = pm.MvStudentT(name, nu=self.nu, mu=mu, chol=chol, shape=shape, **kwargs)
+            f = pm.MvStudentT(name, nu=self.nu, mu=mu, cov=cov, shape=shape, **kwargs)
         return f
 
     def prior(self, name, X, reparameterize=True, **kwargs):
@@ -321,10 +320,9 @@ class TP(Latent):
 
         X = self.X
         f = self.f
-        nu2, mu, covT = self._build_conditional(Xnew, X, f)
-        chol = cholesky(stabilize(covT))
+        nu2, mu, cov = self._build_conditional(Xnew, X, f)
         shape = infer_shape(Xnew, kwargs.pop("shape", None))
-        return pm.MvStudentT(name, nu=nu2, mu=mu, chol=chol, shape=shape, **kwargs)
+        return pm.MvStudentT(name, nu=nu2, mu=mu, cov=cov, shape=shape, **kwargs)
 
 
 @conditioned_vars(["X", "y", "noise"])
@@ -418,15 +416,14 @@ class Marginal(Base):
         if not isinstance(noise, Covariance):
             noise = pm.gp.cov.WhiteNoise(noise)
         mu, cov = self._build_marginal_likelihood(X, noise)
-        chol = cholesky(stabilize(cov))
         self.X = X
         self.y = y
         self.noise = noise
         if is_observed:
-            return pm.MvNormal(name, mu=mu, chol=chol, observed=y, **kwargs)
+            return pm.MvNormal(name, mu=mu, cov=cov, observed=y, **kwargs)
         else:
             shape = infer_shape(X, kwargs.pop("shape", None))
-            return pm.MvNormal(name, mu=mu, chol=chol, shape=shape, **kwargs)
+            return pm.MvNormal(name, mu=mu, cov=cov, shape=shape, **kwargs)
 
     def _get_given_vals(self, given):
         if given is None:
@@ -467,7 +464,7 @@ class Marginal(Base):
             cov = Kss - tt.dot(tt.transpose(A), A)
             if pred_noise:
                 cov += noise(Xnew)
-            return mu, stabilize(cov)
+            return mu, cov if pred_noise else stabilize(cov)
 
     def conditional(self, name, Xnew, pred_noise=False, given=None, **kwargs):
         R"""
@@ -504,9 +501,8 @@ class Marginal(Base):
 
         givens = self._get_given_vals(given)
         mu, cov = self._build_conditional(Xnew, pred_noise, False, *givens)
-        chol = cholesky(cov)
         shape = infer_shape(Xnew, kwargs.pop("shape", None))
-        return pm.MvNormal(name, mu=mu, chol=chol, shape=shape, **kwargs)
+        return pm.MvNormal(name, mu=mu, cov=cov, shape=shape, **kwargs)
 
     def predict(self, Xnew, point=None, diag=False, pred_noise=False, given=None):
         R"""
@@ -754,7 +750,7 @@ class MarginalSparse(Marginal):
                    tt.dot(tt.transpose(C), C))
             if pred_noise:
                 cov += sigma2 * tt.identity_like(cov)
-            return mu, stabilize(cov)
+            return mu, cov if pred_noise else stabilize(cov)
 
     def _get_given_vals(self, given):
         if given is None:
@@ -797,9 +793,8 @@ class MarginalSparse(Marginal):
 
         givens = self._get_given_vals(given)
         mu, cov = self._build_conditional(Xnew, pred_noise, False, *givens)
-        chol = cholesky(cov)
         shape = infer_shape(Xnew, kwargs.pop("shape", None))
-        return pm.MvNormal(name, mu=mu, chol=chol, shape=shape, **kwargs)
+        return pm.MvNormal(name, mu=mu, cov=cov, shape=shape, **kwargs)
 
 
 @conditioned_vars(["Xs", "y", "sigma"])
@@ -959,7 +954,7 @@ class MarginalKron(Base):
             cov = Km - Asq
             if pred_noise:
                 cov += sigma * np.eye(cov.shape)
-        return mu, cov
+        return mu, cov if pred_noise else stabilize(cov)
 
     def conditional(self, name, Xnew, pred_noise=False, **kwargs):
         """
@@ -996,9 +991,8 @@ class MarginalKron(Base):
             constructor.
         """
         mu, cov = self._build_conditional(Xnew, pred_noise, False)
-        chol = cholesky(stabilize(cov))
         shape = infer_shape(Xnew, kwargs.pop("shape", None))
-        return pm.MvNormal(name, mu=mu, chol=chol, shape=shape, **kwargs)
+        return pm.MvNormal(name, mu=mu, cov=cov, shape=shape, **kwargs)
 
     def predict(self, Xnew, point=None, diag=False, pred_noise=False):
         R"""

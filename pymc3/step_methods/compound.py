@@ -6,11 +6,13 @@ Created on Mar 7, 2011
 
 
 class CompoundStep(object):
-    """Step method composed of a list of several other step methods applied in sequence."""
+    """Step method composed of a list of several other step
+    methods applied in sequence."""
 
     def __init__(self, methods):
         self.methods = list(methods)
-        self.generates_stats = any(method.generates_stats for method in self.methods)
+        self.generates_stats = any(
+            method.generates_stats for method in self.methods)
         self.stats_dtypes = []
         for method in self.methods:
             if method.generates_stats:
@@ -31,9 +33,20 @@ class CompoundStep(object):
                 point = method.step(point)
             return point
 
-    def warnings(self, strace):
+    def warnings(self):
         warns = []
         for method in self.methods:
             if hasattr(method, 'warnings'):
-                warns.extend(method.warnings(strace))
+                warns.extend(method.warnings())
         return warns
+
+    def stop_tuning(self):
+        for method in self.methods:
+            method.stop_tuning()
+
+    @property
+    def vars_shape_dtype(self):
+        dtype_shapes = {}
+        for method in self.methods:
+            dtype_shapes.update(method.vars_shape_dtype)
+        return dtype_shapes

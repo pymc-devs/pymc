@@ -49,7 +49,7 @@ class Mixture(Distribution):
             lam = pm.Exponential('lam', lam=1, shape=(2,))  # `shape=(2,)` indicates two mixtures.
 
             # As we just need the logp, rather than add a RV to the model, we need to call .dist()
-            components = pm.Poisson.dist(mu=lam, shape=(2,))  
+            components = pm.Poisson.dist(mu=lam, shape=(2,))
 
             w = pm.Dirichlet('w', a=np.array([1, 1]))  # two mixture component weights.
 
@@ -158,18 +158,35 @@ class Mixture(Distribution):
                 return np.random.choice(k, p=w, *args, **kwargs)
 
         w = draw_values([self.w], point=point)[0]
-
+        comp_tmp = self._comp_samples(point=point, size=None)
+        if self.shape.size == 0:
+            distshape = np.asarray(np.broadcast(w, comp_tmp).shape)[..., :-1]
+        else:
+            distshape = self.shape
         w_samples = generate_samples(random_choice,
                                      w=w,
                                      broadcast_shape=w.shape[:-1] or (1,),
-                                     dist_shape=self.shape,
+                                     dist_shape=distshape,
                                      size=size).squeeze()
-        comp_samples = self._comp_samples(point=point, size=size)
-
-        if comp_samples.ndim > 1:
-            return np.squeeze(comp_samples[np.arange(w_samples.size), w_samples])
+        if (size is None) or (distshape.size == 0):
+            comp_samples = self._comp_samples(point=point, size=size)
+            if comp_samples.ndim > 1:
+                samples = np.squeeze(comp_samples[np.arange(w_samples.size), ..., w_samples])
+            else:
+                samples = np.squeeze(comp_samples[w_samples])
         else:
-            return np.squeeze(comp_samples[w_samples])
+            if w_samples.ndim == 1:
+                w_samples = np.reshape(np.tile(w_samples, size), (size,) + w_samples.shape)
+            samples = np.zeros((size,)+tuple(distshape))
+            for i in range(size):
+                w_tmp = w_samples[i, :]
+                comp_tmp = self._comp_samples(point=point, size=None)
+                if comp_tmp.ndim > 1:
+                    samples[i, :] = np.squeeze(comp_tmp[np.arange(w_tmp.size), ..., w_tmp])
+                else:
+                    samples[i, :] = np.squeeze(comp_tmp[w_tmp])
+
+        return samples
 
 
 class NormalMixture(Mixture):
@@ -197,22 +214,22 @@ class NormalMixture(Mixture):
         the component standard deviations
     tau : array of floats
         the component precisions
+    comp_shape : shape of the Normal component
+        notice that it should be different than the shape
+        of the mixture distribution, with one axis being
+        the number of components.
 
     Note: You only have to pass in sd or tau, but not both.
     """
 
-    def __init__(self, w, mu, *args, **kwargs):
+    def __init__(self, w, mu, comp_shape=(), *args, **kwargs):
         _, sd = get_tau_sd(tau=kwargs.pop('tau', None),
                            sd=kwargs.pop('sd', None))
 
-        distshape = np.broadcast(mu, sd).shape
         self.mu = mu = tt.as_tensor_variable(mu)
         self.sd = sd = tt.as_tensor_variable(sd)
 
-        if not distshape:
-            distshape = np.broadcast(mu.tag.test_value, sd.tag.test_value).shape
-
-        super(NormalMixture, self).__init__(w, Normal.dist(mu, sd=sd, shape=distshape),
+        super(NormalMixture, self).__init__(w, Normal.dist(mu, sd=sd, shape=comp_shape),
                                             *args, **kwargs)
 
     def _repr_latex_(self, name=None, dist=None):
