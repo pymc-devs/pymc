@@ -8,7 +8,7 @@ from six import integer_types
 from joblib import Parallel, delayed
 from tempfile import mkdtemp
 import numpy as np
-#import theano.gradient as tg
+import theano.gradient as tg
 
 from .backends.base import BaseTrace, MultiTrace
 from .backends.ndarray import NDArray
@@ -29,10 +29,8 @@ sys.setrecursionlimit(10000)
 
 __all__ = ['sample', 'iter_sample', 'sample_ppc', 'sample_ppc_w', 'init_nuts', 'sample_prior_predictive']
 
-# STEP_METHODS = (NUTS, HamiltonianMC, Metropolis, BinaryMetropolis,
-#                 BinaryGibbsMetropolis, Slice, CategoricalGibbsMetropolis)
-
-STEP_METHODS = (Metropolis)
+STEP_METHODS = (NUTS, HamiltonianMC, Metropolis, BinaryMetropolis,
+                 BinaryGibbsMetropolis, Slice, CategoricalGibbsMetropolis)
 
 
 _log = logging.getLogger('pymc3')

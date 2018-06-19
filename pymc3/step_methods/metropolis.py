@@ -1,17 +1,14 @@
 import numpy as np
 import numpy.random as nr
-#import theano
+import theano
 import scipy.linalg
 import warnings
 
 from ..distributions import draw_values
 from .arraystep import ArrayStepShared, PopulationArrayStepShared, ArrayStep, metrop_select, Competence
-
-
-
 import pymc3 as pm
 
-#from pymc3.theanof import floatX
+from pymc3.theanof import floatX
 from .. import backends_symbolic as SS
 
 

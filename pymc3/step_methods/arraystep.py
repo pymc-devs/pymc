@@ -1,6 +1,6 @@
 from .compound import CompoundStep
 from ..model import modelcontext
-#from ..theanof import inputvars
+from ..theanof import inputvars
 from ..blocking import ArrayOrdering, DictToArrayBijection
 import numpy as np
 from numpy.random import uniform
