@@ -1,22 +1,11 @@
 FROM jupyter/minimal-notebook
 
+ARG SRC_DIR
+
 MAINTAINER Austin Rochford <austin.rochford@gmail.com>
 
-USER root
-
-# install libav-tools to support matplotlib animations
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends libav-tools && \
-    apt-get clean && \
-    rm -rf /var/lib/apt/lists/*
-
-USER $NB_USER
-
-COPY scripts/create_testenv.sh /tmp/create_testenv.sh
-COPY setup.py $HOME/setup.py
-COPY requirements.txt $HOME/requirements.txt
-COPY requirements-dev.txt $HOME/requirements-dev.txt
-RUN /bin/bash /tmp/create_testenv.sh --global --no-setup
+ADD $SRC_DIR /home/jovyan/
+RUN /bin/bash /home/jovyan/scripts/create_testenv.sh --global --no-setup
 
 #  matplotlib nonsense
 ENV XDG_CACHE_HOME /home/$NB_USER/.cache/
@@ -26,4 +15,4 @@ RUN pip install seaborn
 # Import matplotlib the first time to build the font cache.
 RUN python -c "import matplotlib.pyplot"
 
-ENV PYTHONPATH $PYTHONPATH:"$HOME"/pymc3
+ENV PYTHONPATH $PYTHONPATH:"$HOME"
