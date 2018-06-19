@@ -15,7 +15,7 @@ from scipy.interpolate import InterpolatedUnivariateSpline
 import warnings
 
 #from pymc3.theanof import floatX
-#from . import transforms
+from . import transforms
 from pymc3.util import get_variable_name
 #from .special import log_i0
 #from ..math import invlogit, logit
@@ -32,20 +32,20 @@ __all__ = ['Uniform', 'Flat', 'HalfFlat', 'Normal', 'Beta', 'Kumaraswamy', 'Expo
            'Triangular', 'Gumbel', 'Logistic', 'LogitNormal', 'Interpolated']
 
 
-# class PositiveContinuous(Continuous):
-#     """Base class for positive continuous distributions"""
-#
-#     def __init__(self, transform=transforms.log, *args, **kwargs):
-#         super(PositiveContinuous, self).__init__(
-#             transform=transform, *args, **kwargs)
+class PositiveContinuous(Continuous):
+    """Base class for positive continuous distributions"""
+
+    def __init__(self, transform=transforms.log, *args, **kwargs):
+        super(PositiveContinuous, self).__init__(
+              transform=transform, *args, **kwargs)
 
 
-# class UnitContinuous(Continuous):
-#     """Base class for continuous distributions on [0,1]"""
-#
-#     def __init__(self, transform=transforms.logodds, *args, **kwargs):
-#         super(UnitContinuous, self).__init__(
-#             transform=transform, *args, **kwargs)
+class UnitContinuous(Continuous):
+    """Base class for continuous distributions on [0,1]"""
+
+    def __init__(self, transform=transforms.logodds, *args, **kwargs):
+        super(UnitContinuous, self).__init__(transform=transform, *args, **kwargs)
+
 
 def assert_negative_support(var, label, distname, value=-1e-6):
     # Checks for evidence of positive support for a variable
@@ -263,7 +263,7 @@ class _DEPRECATED__(Continuous):
         return r'${} \sim \text{{Flat}}()$'.format(name)
 
 
-class _DEPRECATED__(PositiveContinuous):
+class Flat(PositiveContinuous):
     """Improper flat prior over the positive reals."""
 
     def __init__(self, *args, **kwargs):

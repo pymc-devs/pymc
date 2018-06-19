@@ -1,2 +1,2 @@
-#from .hmc import HamiltonianMC
-#from .nuts import NUTS
+from .hmc import HamiltonianMC
+from .nuts import NUTS
