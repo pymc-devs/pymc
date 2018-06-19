@@ -8,18 +8,18 @@ nodes in PyMC.
 from __future__ import division
 
 import numpy as np
-#import theano.tensor as tt
+import theano.tensor as tt
 from scipy import stats
 from scipy.special import expit
 from scipy.interpolate import InterpolatedUnivariateSpline
 import warnings
 
-#from pymc3.theanof import floatX
+from pymc3.theanof import floatX
 from . import transforms
 from pymc3.util import get_variable_name
-#from .special import log_i0
-#from ..math import invlogit, logit
-#from .dist_math import bound, logpow, gammaln, betaln, std_cdf, alltrue_elemwise, SplineWrapper
+from .special import log_i0
+from ..math import invlogit, logit
+from .dist_math import bound, logpow, gammaln, betaln, std_cdf, alltrue_elemwise, SplineWrapper
 from .distribution import Continuous, draw_values, generate_samples
 
 from .. import backends_symbolic as S
@@ -112,7 +112,7 @@ def get_tau_sd(tau=None, sd=None):
     #return (floatX(tau), floatX(sd))
 
 
-class _DEPRECATED__Uniform(Continuous):
+class Uniform(Continuous):
     R"""
     Continuous uniform log-likelihood.
 
@@ -218,7 +218,7 @@ class _DEPRECATED__Uniform(Continuous):
             name, get_variable_name(lower), get_variable_name(upper))
 
 
-class _DEPRECATED__(Continuous):
+class Flat(Continuous):
     """
     Uninformative log-likelihood that returns 0 regardless of
     the passed value.
@@ -263,7 +263,7 @@ class _DEPRECATED__(Continuous):
         return r'${} \sim \text{{Flat}}()$'.format(name)
 
 
-class Flat(PositiveContinuous):
+class HalfFlat(PositiveContinuous):
     """Improper flat prior over the positive reals."""
 
     def __init__(self, *args, **kwargs):

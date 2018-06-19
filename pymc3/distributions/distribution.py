@@ -3,9 +3,9 @@ import numbers
 
 import numpy as np
 
-#import theano.tensor as tt
-#from theano import function
-#import theano
+import theano.tensor as tt
+from theano import function
+import theano
 from .. import backends_symbolic as S
 
 from ..memoize import memoize
@@ -131,10 +131,10 @@ class Distribution(object):
     __latex__ = _repr_latex_
 
 
-#def TensorType(dtype, shape, broadcastable=None):
-#    if broadcastable is None:
-#        broadcastable = np.atleast_1d(shape) == 1
-#    return tt.TensorType(str(dtype), broadcastable)
+def TensorType(dtype, shape, broadcastable=None):
+    if broadcastable is None:
+        broadcastable = np.atleast_1d(shape) == 1
+    return tt.TensorType(str(dtype), broadcastable)
 
 
 class NoDistribution(Distribution):
