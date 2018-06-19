@@ -13,13 +13,14 @@ from scipy import stats
 from scipy.special import expit
 from scipy.interpolate import InterpolatedUnivariateSpline
 import warnings
+from theano.scalar import i1, i0
 
 from pymc3.theanof import floatX
 from . import transforms
 from pymc3.util import get_variable_name
 from .special import log_i0
 from ..math import invlogit, logit
-from .dist_math import bound, logpow, gammaln, betaln, std_cdf, alltrue_elemwise, SplineWrapper
+from .dist_math import bound, logpow, gammaln, betaln, std_cdf, alltrue_elemwise, SplineWrapper, i0e
 from .distribution import Continuous, draw_values, generate_samples
 
 from .. import backends_symbolic as S
@@ -29,7 +30,8 @@ __all__ = ['Uniform', 'Flat', 'HalfFlat', 'Normal', 'Beta', 'Kumaraswamy', 'Expo
            'Laplace', 'StudentT', 'Cauchy', 'HalfCauchy', 'Gamma', 'Weibull',
            'HalfStudentT', 'Lognormal', 'ChiSquared', 'HalfNormal', 'Wald',
            'Pareto', 'InverseGamma', 'ExGaussian', 'VonMises', 'SkewNormal',
-           'Triangular', 'Gumbel', 'Logistic', 'LogitNormal', 'Interpolated']
+           'Triangular', 'Gumbel', 'Logistic', 'LogitNormal', 'Interpolated',
+           'Rice']
 
 
 class PositiveContinuous(Continuous):
