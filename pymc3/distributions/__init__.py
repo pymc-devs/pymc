@@ -6,6 +6,7 @@ from .continuous import Flat
 from .continuous import HalfFlat
 from .continuous import Normal
 from .continuous import Beta
+from .continuous import Kumaraswamy
 from .continuous import Exponential
 from .continuous import Laplace
 from .continuous import StudentT
@@ -28,6 +29,7 @@ from .continuous import Gumbel
 from .continuous import Logistic
 from .continuous import LogitNormal
 from .continuous import Interpolated
+from .continuous import Rice
 
 from .discrete import Binomial
 from .discrete import BetaBinomial
@@ -43,6 +45,7 @@ from .discrete import ZeroInflatedBinomial
 from .discrete import DiscreteUniform
 from .discrete import Geometric
 from .discrete import Categorical
+from .discrete import OrderedLogistic
 
 from .distribution import DensityDist
 from .distribution import Distribution
@@ -82,12 +85,12 @@ from .transforms import sum_to_1
 
 from .bound import Bound
 
-__all__ = [
-           'Uniform',
+__all__ = ['Uniform',
            'Flat',
            'HalfFlat',
            'Normal',
            'Beta',
+           'Kumaraswamy',
            'Exponential',
            'Laplace',
            'StudentT',
@@ -118,6 +121,7 @@ __all__ = [
            'DiscreteUniform',
            'Geometric',
            'Categorical',
+           'OrderedLogistic',
            'DensityDist',
            'Distribution',
            'Continuous',
