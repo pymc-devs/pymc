@@ -13,6 +13,7 @@ from scipy import stats
 from scipy.special import expit
 from scipy.interpolate import InterpolatedUnivariateSpline
 import warnings
+
 from theano.scalar import i1, i0
 
 from pymc3.theanof import floatX
@@ -39,7 +40,7 @@ class PositiveContinuous(Continuous):
 
     def __init__(self, transform=transforms.log, *args, **kwargs):
         super(PositiveContinuous, self).__init__(
-              transform=transform, *args, **kwargs)
+            transform=transform, *args, **kwargs)
 
 
 class UnitContinuous(Continuous):

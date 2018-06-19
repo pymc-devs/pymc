@@ -232,7 +232,7 @@ class DensityDist(Distribution):
 
 
 
-def draw_values(params, point=None):
+def draw_values(params, point=None, size=None):
     """
     Draw (fix) parameter values. Handles a number of cases:
 
@@ -349,29 +349,29 @@ def draw_values(params, point=None):
 ## CHANGED: This is a big change. All this logic is going into the backend.
 # Unforunately, I don't think I could preserve the memoizing functionality in backend at the momemt.
 
-# @memoize
-# def _compile_theano_function(param, vars, givens=None):
-#     """Compile theano function for a given parameter and input variables.
-#
-#     This function is memoized to avoid repeating costly theano compilations
-#     when repeatedly drawing values, which is done when generating posterior
-#     predictive samples.
-#
-#     Parameters
-#     ----------
-#     param : Model variable from which to draw value
-#     vars : Children variables of `param`
-#     givens : Variables to be replaced in the Theano graph
-#
-#     Returns
-#     -------
-#     A compiled theano function that takes the values of `vars` as input
-#         positional args
-#     """
-#     return function(vars, param, givens=givens,
-#                     rebuild_strict=True,
-#                     on_unused_input='ignore',
-#                     allow_input_downcast=True)
+@memoize
+def _compile_theano_function(param, vars, givens=None):
+    """Compile theano function for a given parameter and input variables.
+
+    This function is memoized to avoid repeating costly theano compilations
+    when repeatedly drawing values, which is done when generating posterior
+    predictive samples.
+
+    Parameters
+    ----------
+    param : Model variable from which to draw value
+    vars : Children variables of `param`
+    givens : Variables to be replaced in the Theano graph
+
+    Returns
+    -------
+    A compiled theano function that takes the values of `vars` as input
+        positional args
+    """
+    return function(vars, param, givens=givens,
+                    rebuild_strict=True,
+                    on_unused_input='ignore',
+                    allow_input_downcast=True)
 
 
 def _draw_value(param, point=None, givens=None, size=None):
