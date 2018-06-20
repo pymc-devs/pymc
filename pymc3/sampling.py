@@ -27,7 +27,7 @@ from tqdm import tqdm
 import sys
 sys.setrecursionlimit(10000)
 
-__all__ = ['sample', 
+__all__ = ['sample',
            'sample_posterior',
            'iter_sample', 
            'sample_ppc',
