@@ -100,7 +100,7 @@ tools:
 
   ```bash
   $ pip install pytest pytest-cov coverage
-  $ pytest --cov=pymc3 pymc3/tests/tests_for_package.py
+  $ pytest --cov=pymc3 pymc3/tests/<name of test>.py
   ```
 
 * No `pyflakes` warnings, check with:
