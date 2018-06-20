@@ -6,7 +6,7 @@ import theano.tensor as tt
 from theano import function
 import theano
 from ..memoize import memoize
-from ..model import Model, get_named_nodes_and_relations, FreeRV, ObservedRV
+from ..model import Model, get_named_nodes_and_relations, FreeRV, ObservedRV, MultiObservedRV
 from ..vartypes import string_types
 
 __all__ = ['DensityDist', 'Distribution', 'Continuous', 'Discrete',
@@ -375,7 +375,7 @@ def _draw_value(param, point=None, givens=None, size=None):
         return param.value
     elif isinstance(param, tt.sharedvar.SharedVariable):
         return param.get_value()
-    elif isinstance(param, tt.TensorVariable):
+    elif isinstance(param, (tt.TensorVariable, MultiObservedRV)):
         if point and hasattr(param, 'model') and param.name in point:
             return point[param.name]
         elif hasattr(param, 'random') and param.random is not None:
@@ -404,8 +404,7 @@ def _draw_value(param, point=None, givens=None, size=None):
                 return np.array([func(*v) for v in zip(*values)])
             else:
                 return func(*values)
-    else:
-        raise ValueError('Unexpected type in draw_value: %s' % type(param))
+    raise ValueError('Unexpected type in draw_value: %s' % type(param))
 
 
 def to_tuple(shape):
