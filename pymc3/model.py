@@ -112,7 +112,7 @@ def get_named_nodes_and_relations(graph):
 
 def _get_named_nodes_and_relations(graph, parent, leaf_nodes,
                                         node_parents, node_children):
-    if graph.owner is None:  # Leaf node
+    if getattr(graph, 'owner', None) is None:  # Leaf node
         if graph.name is not None:  # Named leaf node
             leaf_nodes.update({graph.name: graph})
             if parent is not None:  # Is None for the root node
