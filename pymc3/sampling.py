@@ -187,7 +187,7 @@ def _cpu_count():
     return cpus
 
 
-def sample(draws=500, step=None, init='auto', n_init=200000, start=None, trace=None, chain_idx=0,
+def sample_posterior(draws=500, step=None, init='auto', n_init=200000, start=None, trace=None, chain_idx=0,
            chains=None, cores=None, tune=500, nuts_kwargs=None, step_kwargs=None, progressbar=True,
            model=None, random_seed=None, live_plot=False, discard_tuned_samples=True,
            live_plot_kwargs=None, compute_convergence_checks=True, use_mmap=False, **kwargs):
@@ -311,7 +311,7 @@ def sample(draws=500, step=None, init='auto', n_init=200000, start=None, trace=N
         >>> with pm.Model() as model: # context management
         ...     p = pm.Beta('p', alpha=alpha, beta=beta)
         ...     y = pm.Binomial('y', n=n, p=p, observed=h)
-        ...     trace = pm.sample(2000, tune=1000, cores=4)
+        ...     trace = pm.sample_posterior(2000, tune=1000, cores=4)
         >>> pm.summary(trace)
                mean        sd  mc_error   hpd_2.5  hpd_97.5
         p  0.604625  0.047086   0.00078  0.510498  0.694774
@@ -481,6 +481,11 @@ def sample(draws=500, step=None, init='auto', n_init=200000, start=None, trace=N
 
     return trace
 
+def sample(*args,**kwargs):
+    """This method is deprecated.  Please use :func:`~sampling.sample_posterior`"""
+    message = 'sample() is deprecated.  Please use sample_posterior()'
+    warnings.warn(message, DeprecationWarning, stacklevel=2)
+    return sample_posterior(*args,**kwargs)
 
 def _check_start_shape(model, start):
     if not isinstance(start, dict):
@@ -1067,7 +1072,7 @@ def stop_tuning(step):
     return step
 
 
-def sample_ppc(trace, samples=None, model=None, vars=None, size=None,
+def sample_posterior_predictive(trace, samples=None, model=None, vars=None, size=None,
                random_seed=None, progressbar=True):
     """Generate posterior predictive samples from a model given a trace.
 
@@ -1143,8 +1148,14 @@ def sample_ppc(trace, samples=None, model=None, vars=None, size=None,
 
     return {k: np.asarray(v) for k, v in ppc.items()}
 
+def sample_ppc(*args,**kwargs):
+    """This method is deprecated.  Please use :func:`~sampling.sample_posterior_predictive`"""
+    message = 'sample_ppc() is deprecated.  Please use sample_posterior_predictive().'
+    warnings.warn(message, DeprecationWarning, stacklevel=2)
+    return sample_posterior_predictive(*args, **kwargs)
 
-def sample_ppc_w(traces, samples=None, models=None, weights=None,
+
+def sample_predictive_posterior_w(traces, samples=None, models=None, weights=None,
                  random_seed=None, progressbar=True):
     """Generate weighted posterior predictive samples from a list of models and
     a list of traces according to a set of weights.
@@ -1270,6 +1281,12 @@ def sample_ppc_w(traces, samples=None, models=None, weights=None,
             indices.close()
 
     return {k: np.asarray(v) for k, v in ppc.items()}
+
+def sample_ppc_w(*args,**kwargs):
+    """This method is deprecated.  Please use :func:`~sampling.sample_posterior_predictive_w`"""
+    message = 'sample_ppc_w() is deprecated.  Please use sample_posterior_predictive_w()'
+    warnings.warn(message, DeprecationWarning, stacklevel=2)
+    return sample_predictive_posterior_w(*args,**kwargs)
 
 
 def sample_prior_predictive(samples=500, model=None, vars=None, random_seed=None):
