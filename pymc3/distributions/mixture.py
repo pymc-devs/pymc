@@ -96,7 +96,7 @@ class Mixture(Distribution):
 
             if 'mode' not in defaults:
                 defaults.append('mode')
-        except (AttributeError, ValueError):
+        except (AttributeError, ValueError, IndexError):
             pass
 
         super(Mixture, self).__init__(shape, dtype, defaults=defaults,
