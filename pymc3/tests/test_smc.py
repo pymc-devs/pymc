@@ -47,19 +47,19 @@ class TestSMC(SeededTest):
         self.muref = mu1
 
 
-    @pytest.mark.parametrize(['n_jobs', 'stage'], [[1, 0], [2, 6]])
-    def test_sample_n_core(self, n_jobs, stage):
+    @pytest.mark.parametrize(['cores', 'stage'], [[1, 0], [2, 6]])
+    def test_sample_n_core(self, cores, stage):
         step_kwargs = {'homepath': self.test_folder, 'stage': stage}
         with self.ATMIP_test:
             mtrace = pm.sample(draws=self.samples,
                                chains=self.chains,
-                               cores=n_jobs,
+                               cores=cores,
                                step = pm.SMC(),
                                step_kwargs=step_kwargs)
 
         x = mtrace.get_values('X')
         mu1d = np.abs(x).mean(axis=0)
-        np.testing.assert_allclose(self.muref, mu1d, rtol=0., atol=0.06)
+        np.testing.assert_allclose(self.muref, mu1d, rtol=0., atol=0.03)
         # Scenario IV Ching, J. & Chen, Y. 2007
         #assert np.round(np.log(self.ATMIP_test.marginal_likelihood)) == -12.0
 
@@ -75,7 +75,7 @@ class TestSMC(SeededTest):
                                                                   self.chains,
                                                                   step,
                                                                   model=self.ATMIP_test)
-        assert len(corrupted_chains) == 0
+        assert len(corrupted_chains) == self.chains
 
         rtrace = stage_handler.load_result_trace(model=self.ATMIP_test)
 

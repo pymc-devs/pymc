@@ -61,11 +61,16 @@ class SMC(atext.ArrayStepSharedLLK):
     out_vars : list
         List of output variables for trace recording. If empty unobserved_RVs are taken.
     n_steps : int
-        The number of steps of a Markov Chain. Only works if `tune_interval=0` otherwise it will be
-        determined adaptively.
+        The number of steps of a Markov Chain. If `tune_interval > 0` `n_steps` will be used for
+        the first and last stages, and the number of steps of the intermediate states will be
+        determined automatically. Otherwise, if `tune_interval = 0`,  `n_steps` will be used for
+        all stages.
     scaling : float
         Factor applied to the proposal distribution i.e. the step size of the Markov Chain. Only
-        works if `tune_interval=0` otherwise it will be determined adaptively.
+        works if `tune_interval=0` otherwise it will be determined automatically
+    p_acc_rate : float
+        Probability of not accepting a step. Used to compute `n_steps` when `tune_interval > 0`.
+        It should be between 0 and 1.
     covariance : :class:`numpy.ndarray`
         (chains x chains)
         Initial Covariance matrix for proposal distribution, if None - identity matrix taken
@@ -80,8 +85,8 @@ class SMC(atext.ArrayStepSharedLLK):
         Chain) and the number of steps of a Markov Chain (i.e. `n_steps`).
     threshold : float
         Determines the change of beta from stage to stage, i.e.indirectly the number of stages,
-        the higher the value of threshold the higher the number of stage. Defaults to 0.5. It should
-        be between 0 and 1.
+        the higher the value of threshold the higher the number of stage. Defaults to 0.5.
+        It should be between 0 and 1.
     check_bound : boolean
         Check if current sample lies outside of variable definition speeds up computation as the
         forward model wont be executed. Default: True
@@ -100,7 +105,7 @@ class SMC(atext.ArrayStepSharedLLK):
     """
     default_blocked = True
 
-    def __init__(self, vars=None, out_vars=None, n_steps=25, scaling=1.,
+    def __init__(self, vars=None, out_vars=None, n_steps=25, scaling=1., p_acc_rate=0.001,
                  covariance=None, likelihood_name='l_like__', proposal_name='MultivariateNormal',
                  tune_interval=10, threshold=0.5, check_bound=True, model=None, random_seed=-1):
 
@@ -143,6 +148,8 @@ class SMC(atext.ArrayStepSharedLLK):
         self.steps_until_tune = tune_interval
         self.population = [model.test_point]
         self.n_steps = n_steps
+        self.n_steps_final = n_steps
+        self.p_acc_rate = p_acc_rate
         self.stage_sample = 0
         self.accepted = 0
         self.beta = 0
@@ -176,7 +183,8 @@ class SMC(atext.ArrayStepSharedLLK):
                 # compute n_steps
                 if self.accepted == 0:
                     acc_rate = 1 / float(self.tune_interval)
-                self.n_steps = int(max(1, np.log(0.001) / np.log(1 - acc_rate)))
+                self.n_steps = 1 + (np.ceil(np.log(self.p_acc_rate) /
+                                            np.log(1 - acc_rate)).astype(int))
                 # Reset counter
                 self.steps_until_tune = self.tune_interval
                 self.accepted = 0
@@ -392,22 +400,20 @@ def sample_smc(samples=1000, chains=100, step=None, start=None, homepath=None, s
                progressbar=False, model=None, random_seed=-1, rm_flag=True, **kwargs):
     """Sequential Monte Carlo sampling
 
-    Samples the solution space with `chains` of Metropolis chains, where each chain has
-    `n_steps`=`samples`/`chains` iterations.
+    Samples the parameter space using a `chains` number of parallel Metropolis chains.
     Once finished, the sampled traces are evaluated:
 
     (1) Based on the likelihoods of the final samples, chains are weighted
     (2) the weighted covariance of the ensemble is calculated and set as new proposal distribution
     (3) the variation in the ensemble is calculated and also the next tempering parameter (`beta`)
-    (4) New `chains` Markov chains are seeded on the traces with high weight for n_steps iterations
+    (4) New `chains` Markov chains are seeded on the traces with high weight for a given number of
+        iterations, the iterations can be computed automatically.
     (5) Repeat until `beta` > 1.
 
     Parameters
     ----------
     samples : int
-        The number of samples to draw from the last stage, i.e. the posterior. Defaults to 1000.
-        The number of samples should be a multiple of `chains`, otherwise the returned number of
-        draws will be the lowest closest multiple of `chains`.
+        The number of samples to draw from the posterior (i.e. last stage). Defaults to 1000.
     chains : int
         Number of chains used to store samples in backend.
     step : :class:`SMC`
@@ -456,11 +462,6 @@ def sample_smc(samples=1000, chains=100, step=None, start=None, homepath=None, s
     if homepath is None:
         raise TypeError('Argument `homepath` should be path to result_directory.')
 
-    if 'n_jobs' in kwargs:
-        cores = kwargs['n_jobs']
-        warnings.warn(
-            "The n_jobs argument has been deprecated. Use cores instead.",
-            DeprecationWarning)
     if cores > 1:
         if not (chains / float(cores)).is_integer():
             raise TypeError('chains / cores has to be a whole number!')
@@ -525,6 +526,7 @@ def sample_smc(samples=1000, chains=100, step=None, start=None, homepath=None, s
 
             step.population, step.array_population, step.likelihoods = step.select_end_points(
                 mtrace, chains)
+
             step.beta, step.old_beta, step.weights = step.calc_beta()
             #step.beta, step.old_beta, step.weights, sj = step.calc_beta()
             #step.sjs *= sj
@@ -558,11 +560,9 @@ def sample_smc(samples=1000, chains=100, step=None, start=None, homepath=None, s
         step.resampling_indexes = step.resample(chains)
         step.chain_previous_lpoint = step.get_chain_previous_lpoint(mtrace, chains)
 
-        if samples < chains:
-            samples = 1
-        else:
-            samples = int(samples / chains)
-        sample_args['draws'] = samples
+        x_chains = nr.randint(0, chains, size=samples)
+
+        sample_args['draws'] = step.n_steps_final
         sample_args['step'] = step
         sample_args['stage_path'] = stage_handler.stage_path(step.stage)
         sample_args['x_chains'] = x_chains
@@ -572,7 +572,6 @@ def sample_smc(samples=1000, chains=100, step=None, start=None, homepath=None, s
 
         #model.marginal_likelihood = step.sjs
         return stage_handler.create_result_trace(step.stage,
-                                                 idxs=range(samples),
                                                  step=step,
                                                  model=model)
 
@@ -598,9 +597,9 @@ def _initial_population(samples, chains, model, variables):
 
 
 def _sample(draws, step=None, start=None, trace=None, chain=0, progressbar=True, model=None,
-            random_seed=-1):
+            random_seed=-1, chain_idx=0):
 
-    sampling = _iter_sample(draws, step, start, trace, chain, model, random_seed)
+    sampling = _iter_sample(draws, step, start, trace, chain, model, random_seed, chain_idx)
 
     if progressbar:
         sampling = tqdm(sampling, total=draws)
@@ -615,7 +614,7 @@ def _sample(draws, step=None, start=None, trace=None, chain=0, progressbar=True,
     return chain
 
 
-def _iter_sample(draws, step, start=None, trace=None, chain=0, model=None, random_seed=-1):
+def _iter_sample(draws, step, start=None, trace=None, chain=0, model=None, random_seed=-1, chain_idx=0):
     """
     Modified from :func:`pymc3.sampling._iter_sample` to be more efficient with SMC algorithm.
     """
@@ -637,7 +636,7 @@ def _iter_sample(draws, step, start=None, trace=None, chain=0, model=None, rando
 
     point = pm.Point(start, model=model)
     step.chain_index = chain
-    trace.setup(draws, chain)
+    trace.setup(draws, chain_idx)
     for i in range(draws):
         point, out_list = step.step(point)
         trace.record(out_list)
@@ -669,6 +668,7 @@ def _iter_parallel_chains(draws, step, stage_path, progressbar, model, n_jobs, c
     if x_chains is None:
         x_chains = range(chains)
 
+    chain_idx = range(0, len(x_chains))
     pm._log.info('Initializing chain traces ...')
 
     max_int = np.iinfo(np.int32).max
@@ -683,7 +683,8 @@ def _iter_parallel_chains(draws, step, stage_path, progressbar, model, n_jobs, c
              chain,
              False,
              model,
-             rseed) for chain, rseed in zip(x_chains, random_seeds)]
+             rseed,
+             chain_idx) for chain, rseed, chain_idx in zip(x_chains, random_seeds, chain_idx)]
 
     if draws < 10:
         chunksize = n_jobs
