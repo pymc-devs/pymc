@@ -470,7 +470,14 @@ def generate_samples(generator, *args, **kwargs):
 
     if broadcast_shape is None:
         inputs = args + tuple(kwargs.values())
-        broadcast_shape = np.broadcast(*inputs).shape  # size of generator(size=1)
+        try:
+            broadcast_shape = np.broadcast(*inputs).shape  # size of generator(size=1)
+        except ValueError:  # sometimes happens if args have shape (500,) and (500, 4)
+            max_dims = max(j.ndim for j in args + tuple(kwargs.values()))
+            args = tuple([j.reshape(j.shape + (1,) * (max_dims - j.ndim)) for j in args])
+            kwargs = {k: v.reshape(v.shape + (1,) * (max_dims - v.ndim)) for k, v in kwargs.items()}
+            inputs = args + tuple(kwargs.values())
+            broadcast_shape = np.broadcast(*inputs).shape  # size of generator(size=1)
 
     dist_shape = to_tuple(dist_shape)
     broadcast_shape = to_tuple(broadcast_shape)

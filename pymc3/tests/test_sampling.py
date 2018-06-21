@@ -432,3 +432,11 @@ class TestSamplePriorPredictive(SeededTest):
             prior = pm.sample_prior_predictive()
 
         npt.assert_almost_equal(prior['a'].mean(), 0, decimal=1)
+
+    def test_shape_edgecase(self):
+        with pm.Model():
+            mu = pm.Normal('mu', shape=5)
+            sd = pm.Uniform('sd', lower=2, upper=3)
+            x = pm.Normal('x', mu=mu, sd=sd, shape=5)
+            prior = pm.sample_prior_predictive(10)
+        assert prior['mu'].shape == (10, 5)
