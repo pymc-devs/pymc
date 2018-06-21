@@ -59,7 +59,7 @@ class TestSMC(SeededTest):
 
         x = mtrace.get_values('X')
         mu1d = np.abs(x).mean(axis=0)
-        np.testing.assert_allclose(self.muref, mu1d, rtol=0., atol=0.03)
+        np.testing.assert_allclose(self.muref, mu1d, rtol=0., atol=0.06)
         # Scenario IV Ching, J. & Chen, Y. 2007
         #assert np.round(np.log(self.ATMIP_test.marginal_likelihood)) == -12.0
 

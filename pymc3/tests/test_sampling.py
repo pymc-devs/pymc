@@ -339,7 +339,7 @@ def test_exec_nuts_init(method):
         assert isinstance(start[0], dict)
         assert 'a' in start[0] and 'b_log__' in start[0]
 
-class TestSampleGenerative(SeededTest):
+class TestSamplePriorPredictive(SeededTest):
     def test_ignores_observed(self):
         observed = np.random.normal(10, 1, size=200)
         with pm.Model():
@@ -421,3 +421,14 @@ class TestSampleGenerative(SeededTest):
             gen2 = pm.sample_prior_predictive(draws)
 
         assert gen2['y'].shape == (draws, n2)
+
+    def test_density_dist(self):
+
+        obs = np.random.normal(-1, 0.1, size=10)
+        with pm.Model():
+            mu = pm.Normal('mu', 0, 1)
+            sd = pm.Gamma('sd', 1, 2)
+            a = pm.DensityDist('a', pm.Normal.dist(mu, sd).logp, random=pm.Normal.dist(mu, sd).random, observed=obs)
+            prior = pm.sample_prior_predictive()
+
+        npt.assert_almost_equal(prior['a'].mean(), 0, decimal=1)
