@@ -18,7 +18,7 @@ class TestSMC(SeededTest):
         self.test_folder = mkdtemp(prefix='ATMIP_TEST')
 
         self.samples = 1000
-        self.chains = 100
+        self.chains = 200
         n = 4
         mu1 = np.ones(n) * (1. / 2)
         mu2 = - mu1
