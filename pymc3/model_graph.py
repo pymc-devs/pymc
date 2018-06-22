@@ -38,7 +38,7 @@ class ModelGraph(object):
         if parents != upstream:
             det_map = {}
             for d in deterministics:
-                d_set = set([j for j in inputs([func], blockers=[d])])
+                d_set = {j for j in inputs([func], blockers=[d])}
                 if upstream - d_set:
                     det_map[d] = d_set
             for d, d_set in det_map.items():
