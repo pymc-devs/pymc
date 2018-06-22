@@ -41,10 +41,10 @@ def radon_model():
         'y_like': {'a', 'b', 'sigma_y'}
     }
     plates = {
-        '': {'b', 'sigma_a', 'sigma_y'},
-        '3': {'gamma'},
-        '85': {'eps_a'},
-        '919': {'a', 'mu_a', 'y_like'},
+        (): {'b', 'sigma_a', 'sigma_y'},
+        (3,): {'gamma'},
+        (85,): {'eps_a'},
+        (919,): {'a', 'mu_a', 'y_like'},
     }
     return model, compute_graph, plates
 
