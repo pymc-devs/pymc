@@ -17,7 +17,6 @@ import pymc3 as pm
 from tqdm import tqdm
 
 import theano
-import warnings
 
 from ..model import modelcontext
 from ..vartypes import discrete_types
@@ -448,11 +447,6 @@ def sample_smc(samples=1000, chains=100, step=None, start=None, homepath=None, s
         Geophysical Journal International, 2013, 194(3), pp.1701-1726,
         `link <https://gji.oxfordjournals.org/content/194/3/1701.full>`__
     """
-
-    remainder = samples % chains
-    if remainder != 0:
-        warnings.warn("'samples' {} is not a multiple of 'chains' {}. Hence, you will get {} "
-                      "draws from the posterior".format(samples, chains, samples - remainder))
 
     model = modelcontext(model)
 
