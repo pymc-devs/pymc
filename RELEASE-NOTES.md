@@ -14,12 +14,14 @@
 - Save and load traces without `pickle` using `pm.save_trace` and `pm.load_trace`
 - Add `Kumaraswamy` distribution
 - Rewrite parallel sampling of multiple chains on py3. This resolves
-  long standing issues when tranferring large traces to the main process,
-  avoids pickleing issues on UNIX, and allows us to show a progress bar
+  long standing issues when transferring large traces to the main process,
+  avoids pickling issues on UNIX, and allows us to show a progress bar
   for all chains. If parallel sampling is interrupted, we now return
   partial results.
 - Add `sample_prior_predictive` which allows for efficient sampling from
   the unconditioned model.
+- SMC: remove experimental warning, allow sampling using `sample`, reduce autocorrelation from
+  final trace.
 
 ### Fixes
 
