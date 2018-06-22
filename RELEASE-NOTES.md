@@ -22,6 +22,8 @@
   the unconditioned model.
 - SMC: remove experimental warning, allow sampling using `sample`, reduce autocorrelation from
   final trace.
+- Add `model_to_graphviz` (which uses the optional dependency `graphviz`) to
+  plot a directed graph of a PyMC3 model using plate notation.
 
 ### Fixes
 
