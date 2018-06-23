@@ -1121,18 +1121,26 @@ def sample_ppc(trace, samples=None, model=None, vars=None, size=None,
     if progressbar:
         indices = tqdm(indices, total=samples)
 
+    varnames = [var.name for var in vars]
+
+    # draw once to inspect the shape
+    var_values = list(zip(varnames,
+                          draw_values(vars, point=model.test_point, size=size)))
+    ppc_trace = defaultdict(list)
+    for varname, value in var_values:
+        ppc_trace[varname] = np.zeros((samples,) + value.shape, value.dtype)
+
     try:
-        ppc = defaultdict(list)
-        for idx in indices:
+        for slc, idx in enumerate(indices):
             if nchain > 1:
                 chain_idx, point_idx = np.divmod(idx, len_trace)
                 param = trace._straces[chain_idx].point(point_idx)
             else:
                 param = trace[idx]
 
-            for var in vars:
-                ppc[var.name].append(var.distribution.random(point=param,
-                                                             size=size))
+            values = draw_values(vars, point=param, size=size)
+            for k, v in zip(vars, values):
+                ppc_trace[k.name][slc] = v
 
     except KeyboardInterrupt:
         pass
@@ -1141,7 +1149,7 @@ def sample_ppc(trace, samples=None, model=None, vars=None, size=None,
         if progressbar:
             indices.close()
 
-    return {k: np.asarray(v) for k, v in ppc.items()}
+    return ppc_trace
 
 
 def sample_ppc_w(traces, samples=None, models=None, weights=None,

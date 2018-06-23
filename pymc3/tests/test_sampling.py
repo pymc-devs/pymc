@@ -251,16 +251,9 @@ class TestSamplePPC(SeededTest):
             assert ppc['a'].shape == (10, 4, 2)
 
     def test_vector_observed(self):
-        # This test was initially created to test whether observedRVs
-        # can assert the shape automatically from the observed data.
-        # It can make sample_ppc correct for RVs similar to below (i.e.,
-        # some kind of broadcasting is involved). However, doing so makes
-        # the application with `theano.shared` array as observed data
-        # invalid (after the `.set_value` the RV shape could change).
         with pm.Model() as model:
             mu = pm.Normal('mu', mu=0, sd=1)
             a = pm.Normal('a', mu=mu, sd=1,
-                          shape=2,  # necessary to make ppc sample correct
                           observed=np.array([0., 1.]))
             trace = pm.sample()
 
