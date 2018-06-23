@@ -196,7 +196,7 @@ def _cpu_count():
     return cpus
 
 
-def sample_posterior(draws=500, step=None, init='auto', n_init=200000, start=None, trace=None, chain_idx=0,
+def sample(draws=500, step=None, init='auto', n_init=200000, start=None, trace=None, chain_idx=0,
            chains=None, cores=None, tune=500, nuts_kwargs=None, step_kwargs=None, progressbar=True,
            model=None, random_seed=None, live_plot=False, discard_tuned_samples=True,
            live_plot_kwargs=None, compute_convergence_checks=True, use_mmap=False, **kwargs):
@@ -490,11 +490,9 @@ def sample_posterior(draws=500, step=None, init='auto', n_init=200000, start=Non
 
     return trace
 
-def sample(*args,**kwargs):
-    """This method is deprecated.  Please use :func:`~sampling.sample_posterior`"""
-    message = 'sample() is deprecated. Please use sample_posterior()'
-    warnings.warn(message, DeprecationWarning, stacklevel=2)
-    return sample_posterior(*args,**kwargs)
+def sample_posterior(*args,**kwargs):
+    """Alias for :func:`~sampling.sample`."""
+    return sample(*args,**kwargs)
 
 def _check_start_shape(model, start):
     if not isinstance(start, dict):
