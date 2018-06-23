@@ -4,6 +4,7 @@ from . import transforms
 from .continuous import Uniform
 from .continuous import Flat
 from .continuous import HalfFlat
+from .continuous import TruncatedNormal
 from .continuous import Normal
 from .continuous import Beta
 from .continuous import Kumaraswamy
@@ -88,6 +89,7 @@ from .bound import Bound
 __all__ = ['Uniform',
            'Flat',
            'HalfFlat',
+           'TruncatedNormal',
            'Normal',
            'Beta',
            'Kumaraswamy',
