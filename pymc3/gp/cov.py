@@ -542,15 +542,44 @@ class Gibbs(Covariance):
     def diag(self, X):
         return tt.alloc(1.0, X.shape[0])
 
-def handle_args(func, args):
-    def f(x, args):
-        if args is None:
-            return func(x)
+
+class ScaledCov(Covariance):
+    R"""
+    The Gibbs kernel.  Use an arbitrary lengthscale function defined
+    using Theano.  Only tested in one dimension.
+
+    .. math::
+       k(x, x') = \sqrt{\frac{2\ell(x)\ell(x')}{\ell^2(x) + \ell^2(x')}}
+                  \mathrm{exp}\left[ -\frac{(x - x')^2}
+                                           {\ell^2(x) + \ell^2(x')} \right]
+
+    Parameters
+    ----------
+    lengthscale_func : callable
+        Theano function of X and additional optional arguments.
+    args : optional, tuple or list of scalars or PyMC3 variables
+        Additional inputs (besides X or Xs) to lengthscale_func.
+    """
+    def __init__(self, input_dim, base_cov, scaling_func, args=None, active_dims=None):
+        super(ScaledCov, self).__init__(input_dim, active_dims)
+        self.base_cov = base_cov
+        self.scaling_func = handle_args(scaling_func, args)
+        self.args = args
+
+    def diag(self, X):
+        X, _ = self._slice(X, None)
+        cov_diag = self.base_cov(X, diag=True)
+        scf_diag = tt.square(self.sc_func(X, self.args))
+        return cov_diag * scf_diag
+
+    def full(self, X, Xs=None):
+        X, Xs = self._slice(X, Xs)
+        scf_x = self.scaling_func(X, self.args)
+        if Xs is None:
+            return tt.outer(scf_x, scf_x) * self.base_cov(X)
         else:
-            if not isinstance(args, tuple):
-                args = (args,)
-            return func(x, *args)
-    return f
+            scf_xs = self.scf_func(Xs, self.args)
+            return tt.outer(scf_x, scf_xs) * self.base_cov(X, Xs)
 
 
 class Coregion(Covariance):
@@ -615,3 +644,16 @@ class Coregion(Covariance):
         X, _ = self._slice(X, None)
         index = tt.cast(X, 'int32')
         return tt.diag(self.B)[index.ravel()]
+
+
+def handle_args(func, args):
+    def f(x, args):
+        if args is None:
+            return func(x)
+        else:
+            if not isinstance(args, tuple):
+                args = (args,)
+            return func(x, *args)
+    return f
+
+
