@@ -383,14 +383,23 @@ def _draw_value(param, point=None, givens=None, size=None):
         elif (hasattr(param, 'distribution') and
                 hasattr(param.distribution, 'random') and
                 param.distribution.random is not None):
-            # reset the dist shape for ObservedRV
             if hasattr(param, 'observations'):
+                # shape inspection for ObservedRV
                 dist_tmp = param.distribution
                 try:
                     distshape = param.observations.shape.eval()
                 except AttributeError:
                     distshape = param.observations.shape
+
                 dist_tmp.shape = distshape
+                try:
+                    dist_tmp.random(point=point, size=size)
+                except (ValueError, TypeError):
+                    # reset shape to account for shape changes
+                    # with theano.shared inputs
+                    dist_tmp.shape = np.array([])
+                    val = dist_tmp.random(point=point, size=None)
+                    dist_tmp.shape = val.shape
                 return dist_tmp.random(point=point, size=size)
             else:
                 return param.distribution.random(point=point, size=size)

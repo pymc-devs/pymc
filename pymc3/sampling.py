@@ -982,7 +982,8 @@ def _mp_sample(draws, tune, step, chains, cores, chain, random_seed,
                 strace = _choose_backend(copy(trace), idx, model=model)
             else:
                 strace = _choose_backend(None, idx, model=model)
-            # TODO what is this for?
+            # for user supply start value, fill-in missing value if the supplied
+            # dict does not contain all parameters
             update_start_vals(start[idx - chain], model.test_point, model)
             if step.generates_stats and strace.supports_sampler_stats:
                 strace.setup(draws + tune, idx + chain, step.stats_dtypes)
@@ -1267,8 +1268,12 @@ def sample_ppc_w(traces, samples=None, models=None, weights=None,
         for idx in indices:
             param = trace[idx]
             var = variables[idx]
-            ppc[var.name].append(var.distribution.random(point=param,
-                                                         size=size[idx]))
+            # TODO sample_ppc_w is currently only work for model with
+            # one observed.
+            ppc[var.name].append(draw_values([var],
+                                             point=param,
+                                             size=size[idx]
+                                             )[0])
 
     except KeyboardInterrupt:
         pass
