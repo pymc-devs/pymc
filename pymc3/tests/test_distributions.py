@@ -12,7 +12,7 @@ from ..distributions import (DensityDist, Categorical, Multinomial, VonMises, Di
                              ZeroInflatedNegativeBinomial, Constant, Poisson, Bernoulli, Beta,
                              BetaBinomial, HalfStudentT, StudentT, Weibull, Pareto,
                              InverseGamma, Gamma, Cauchy, HalfCauchy, Lognormal, Laplace,
-                             NegativeBinomial, Geometric, Exponential, ExGaussian, Normal,
+                             NegativeBinomial, Geometric, Exponential, ExGaussian, Normal, TruncatedNormal,
                              Flat, LKJCorr, Wald, ChiSquared, HalfNormal, DiscreteUniform,
                              Bound, Uniform, Triangular, Binomial, SkewNormal, DiscreteWeibull,
                              Gumbel, Logistic, OrderedLogistic, LogitNormal, Interpolated,
@@ -531,6 +531,17 @@ class TestMatchesScipy(SeededTest):
     def test_normal(self):
         self.pymc3_matches_scipy(Normal, R, {'mu': R, 'sd': Rplus},
                                  lambda value, mu, sd: sp.norm.logpdf(value, mu, sd),
+                                 decimal=select_by_precision(float64=6, float32=1)
+                                 )
+
+    def test_truncated_normal(self):
+        # Rplusbig domain is specified for eveything, to avoid silly cases such as
+        # {'mu': array(-2.1), 'a': array(-100.), 'b': array(0.01), 'value': array(0.), 'sd': array(0.01)}
+        # TruncatedNormal: pdf = 0.0, logpdf = -inf
+        # Scipy's answer: pdf = 0.0, logpdf = -22048.413!!!
+        self.pymc3_matches_scipy(TruncatedNormal, R, {'mu': R, 'sd': Rplusbig, 'a':-Rplusbig, 'b':Rplusbig},
+                                 lambda value, mu, sd, a, b: sp.truncnorm.logpdf(value, (a-mu)/sd, (b-mu)/sd,
+                                                                                 loc=mu, scale=sd),
                                  decimal=select_by_precision(float64=6, float32=1)
                                  )
 

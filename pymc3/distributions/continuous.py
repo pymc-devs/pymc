@@ -515,7 +515,11 @@ class TruncatedNormal(Continuous):
         self.a = tt.as_tensor_variable(a) if a is not None else a
         self.b = tt.as_tensor_variable(b) if b is not None else b
         self.mu =  tt.as_tensor_variable(mu)
-        self.mean = self.mu
+
+        # Calculate mean
+        pdf_a, pdf_b, cdf_a, cdf_b = self._get_boundary_parameters()
+        z = cdf_b - cdf_a
+        self.mean = self.mu + (pdf_a+pdf_b) / z * self.sd
 
         assert_negative_support(sd, 'sd', 'TruncatedNormal')
         assert_negative_support(tau, 'tau', 'TruncatedNormal')
@@ -630,6 +634,22 @@ class TruncatedNormal(Continuous):
                                                                 get_variable_name(a),
                                                                 get_variable_name(b))
 
+    def _get_boundary_parameters(self):
+        """
+        Calcualte values of cdf and pdf at boundary points a and b
+
+        Returns
+        -------
+        pdf(a), pdf(b), cdf(a), cdf(b) if a,b defined, otherwise 0.0, 0.0, 0.0, 1.0
+        """
+        # pdf = 0 at +-inf
+        pdf_a = self._pdf(self.a) if not self.a is None else 0.0
+        pdf_b = self._pdf(self.b) if not self.b is None else 0.0
+
+        # b-> inf, cdf(b) = 1.0, a->-inf, cdf(a) = 0
+        cdf_a = self._cdf(self.a) if not self.a is None else 0.0
+        cdf_b = self._cdf(self.b) if not self.b is None else 1.0
+        return pdf_a, pdf_b, cdf_a, cdf_b
 
 class HalfNormal(PositiveContinuous):
     R"""
