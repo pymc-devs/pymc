@@ -159,10 +159,10 @@ class Mixture(Distribution):
 
         w = draw_values([self.w], point=point)[0]
         comp_tmp = self._comp_samples(point=point, size=None)
-        if self.shape.size == 0:
+        if np.asarray(self.shape).size == 0:
             distshape = np.asarray(np.broadcast(w, comp_tmp).shape)[..., :-1]
         else:
-            distshape = self.shape
+            distshape = np.asarray(self.shape)
         w_samples = generate_samples(random_choice,
                                      w=w,
                                      broadcast_shape=w.shape[:-1] or (1,),
