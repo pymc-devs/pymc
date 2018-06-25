@@ -16,6 +16,7 @@ __all__ = ['Constant',
            'Periodic',
            'WarpedInput',
            'Gibbs',
+           'ScaledCov',
            'Coregion']
 
 
@@ -545,41 +546,46 @@ class Gibbs(Covariance):
 
 class ScaledCov(Covariance):
     R"""
-    The Gibbs kernel.  Use an arbitrary lengthscale function defined
-    using Theano.  Only tested in one dimension.
+    Construct a kernel by multiplying a base kernel with a scaling
+    function defined using Theano.  The scaling function is
+    non-negative, and can be parameterized.
 
     .. math::
-       k(x, x') = \sqrt{\frac{2\ell(x)\ell(x')}{\ell^2(x) + \ell^2(x')}}
-                  \mathrm{exp}\left[ -\frac{(x - x')^2}
-                                           {\ell^2(x) + \ell^2(x')} \right]
+       k(x, x') = \phi(x) k_{\text{base}}(x, x') \phi(x')
 
     Parameters
     ----------
-    lengthscale_func : callable
+    cov_func: Covariance
+        Base kernel or covariance function
+    scaling_func : callable
         Theano function of X and additional optional arguments.
     args : optional, tuple or list of scalars or PyMC3 variables
         Additional inputs (besides X or Xs) to lengthscale_func.
     """
-    def __init__(self, input_dim, base_cov, scaling_func, args=None, active_dims=None):
+    def __init__(self, input_dim, cov_func, scaling_func, args=None, active_dims=None):
         super(ScaledCov, self).__init__(input_dim, active_dims)
-        self.base_cov = base_cov
+        if not callable(scaling_func):
+            raise TypeError("scaling_func must be callable")
+        if not isinstance(cov_func, Covariance):
+            raise TypeError("Must be or inherit from the Covariance class")
+        self.cov_func = cov_func
         self.scaling_func = handle_args(scaling_func, args)
         self.args = args
 
     def diag(self, X):
         X, _ = self._slice(X, None)
-        cov_diag = self.base_cov(X, diag=True)
-        scf_diag = tt.square(self.sc_func(X, self.args))
+        cov_diag = self.cov_func(X, diag=True)
+        scf_diag = tt.square(tt.flatten(self.scaling_func(X, self.args)))
         return cov_diag * scf_diag
 
     def full(self, X, Xs=None):
         X, Xs = self._slice(X, Xs)
         scf_x = self.scaling_func(X, self.args)
         if Xs is None:
-            return tt.outer(scf_x, scf_x) * self.base_cov(X)
+            return tt.outer(scf_x, scf_x) * self.cov_func(X)
         else:
-            scf_xs = self.scf_func(Xs, self.args)
-            return tt.outer(scf_x, scf_xs) * self.base_cov(X, Xs)
+            scf_xs = self.scaling_func(Xs, self.args)
+            return tt.outer(scf_x, scf_xs) * self.cov_func(X, Xs)
 
 
 class Coregion(Covariance):
