@@ -549,6 +549,7 @@ class TruncatedNormal(Continuous):
                                                  b=(b_v - mu_v) / std_v,
                                                  loc=mu_v,
                                                  scale=std_v,
+                                                 dist_shape=self.shape,
                                                  size=size,
         )
 
