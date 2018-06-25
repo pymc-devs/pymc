@@ -10,6 +10,7 @@ import numpy.random as nr
 import theano
 
 import pymc3 as pm
+from pymc3.distributions.distribution import draw_values
 from .helpers import SeededTest
 from .test_distributions import (
     build_model, Domain, product, R, Rplus, Rplusbig, Rplusdunif,
@@ -74,7 +75,7 @@ class TestDrawValues(SeededTest):
     def test_draw_scalar_parameters(self):
         with pm.Model():
             y = pm.Normal('y1', mu=0., sd=1.)
-            mu, tau = pm.distributions.draw_values([y.distribution.mu, y.distribution.tau])
+            mu, tau = draw_values([y.distribution.mu, y.distribution.tau])
         npt.assert_almost_equal(mu, 0)
         npt.assert_almost_equal(tau, 1)
 
@@ -83,7 +84,7 @@ class TestDrawValues(SeededTest):
             x = pm.Normal('x', mu=0., sd=1.)
             exp_x = pm.Deterministic('exp_x', pm.math.exp(x))
 
-        x, exp_x = pm.distributions.draw_values([x, exp_x])
+        x, exp_x = draw_values([x, exp_x])
         npt.assert_almost_equal(np.exp(x), exp_x)
 
     def test_draw_order(self):
@@ -92,7 +93,7 @@ class TestDrawValues(SeededTest):
             exp_x = pm.Deterministic('exp_x', pm.math.exp(x))
 
         # Need to draw x before drawing log_x
-        exp_x, x = pm.distributions.draw_values([exp_x, x])
+        exp_x, x = draw_values([exp_x, x])
         npt.assert_almost_equal(np.exp(x), exp_x)
 
     def test_draw_point_replacement(self):
@@ -100,7 +101,7 @@ class TestDrawValues(SeededTest):
             mu = pm.Normal('mu', mu=0., tau=1e-3)
             sigma = pm.Gamma('sigma', alpha=1., beta=1., transform=None)
             y = pm.Normal('y', mu=mu, sd=sigma)
-            mu2, tau2 = pm.distributions.draw_values([y.distribution.mu, y.distribution.tau],
+            mu2, tau2 = draw_values([y.distribution.mu, y.distribution.tau],
                                                      point={'mu': 5., 'sigma': 2.})
         npt.assert_almost_equal(mu2, 5)
         npt.assert_almost_equal(tau2, 1 / 2.**2)
@@ -110,7 +111,7 @@ class TestDrawValues(SeededTest):
             mu = pm.Normal('mu', mu=0., tau=1e-3)
             sigma = pm.Gamma('sigma', alpha=1., beta=1., transform=None)
             y = pm.Normal('y', mu=mu, sd=sigma)
-            mu, tau = pm.distributions.draw_values([y.distribution.mu, y.distribution.tau])
+            mu, tau = draw_values([y.distribution.mu, y.distribution.tau])
         assert isinstance(mu, np.ndarray)
         assert isinstance(tau, np.ndarray)
 
@@ -806,7 +807,6 @@ def test_mixture_random_shape():
         like0 = pm.Mixture('like0',
                            w=w0,
                            comp_dists=comp0,
-                           shape=y.shape,
                            observed=y)
 
         comp1 = pm.Poisson.dist(mu=np.ones((20, 2)),
@@ -814,7 +814,8 @@ def test_mixture_random_shape():
         w1 = pm.Dirichlet('w1', a=np.ones(2))
         like1 = pm.Mixture('like1',
                            w=w1,
-                           comp_dists=comp1, observed=y)
+                           comp_dists=comp1,
+                           observed=y)
 
         comp2 = pm.Poisson.dist(mu=np.ones(2))
         w2 = pm.Dirichlet('w2',
@@ -835,16 +836,12 @@ def test_mixture_random_shape():
                            comp_dists=comp3,
                            observed=y)
 
-    rand0 = like0.distribution.random(m.test_point, size=100)
+    rand0, rand1, rand2, rand3 = draw_values([like0, like1, like2, like3],
+                                             point=m.test_point,
+                                             size=100)
     assert rand0.shape == (100, 20)
-
-    rand1 = like1.distribution.random(m.test_point, size=100)
     assert rand1.shape == (100, 20)
-
-    rand2 = like2.distribution.random(m.test_point, size=100)
     assert rand2.shape == (100, 20)
-
-    rand3 = like3.distribution.random(m.test_point, size=100)
     assert rand3.shape == (100, 20)
 
     with m:

@@ -214,7 +214,8 @@ class TestChooseBackend(object):
 class TestSamplePPC(SeededTest):
     def test_normal_scalar(self):
         with pm.Model() as model:
-            a = pm.Normal('a', mu=0, sd=1)
+            mu = pm.Normal('mu', 0., 1.)
+            a = pm.Normal('a', mu=mu, sd=1, observed=0.)
             trace = pm.sample()
 
         with model:
@@ -225,7 +226,8 @@ class TestSamplePPC(SeededTest):
             ppc = pm.sample_ppc(trace, samples=1000, vars=[a])
             assert 'a' in ppc
             assert ppc['a'].shape == (1000,)
-        _, pval = stats.kstest(ppc['a'], stats.norm().cdf)
+        _, pval = stats.kstest(ppc['a'],
+                               stats.norm(loc=0, scale=np.sqrt(2)).cdf)
         assert pval > 0.001
 
         with model:
@@ -234,7 +236,9 @@ class TestSamplePPC(SeededTest):
 
     def test_normal_vector(self):
         with pm.Model() as model:
-            a = pm.Normal('a', mu=0, sd=1, shape=2)
+            mu = pm.Normal('mu', 0., 1.)
+            a = pm.Normal('a', mu=mu, sd=1,
+                          observed=np.array([.5, .2]))
             trace = pm.sample()
 
         with model:
@@ -251,16 +255,9 @@ class TestSamplePPC(SeededTest):
             assert ppc['a'].shape == (10, 4, 2)
 
     def test_vector_observed(self):
-        # This test was initially created to test whether observedRVs
-        # can assert the shape automatically from the observed data.
-        # It can make sample_ppc correct for RVs similar to below (i.e.,
-        # some kind of broadcasting is involved). However, doing so makes
-        # the application with `theano.shared` array as observed data
-        # invalid (after the `.set_value` the RV shape could change).
         with pm.Model() as model:
             mu = pm.Normal('mu', mu=0, sd=1)
             a = pm.Normal('a', mu=mu, sd=1,
-                          shape=2,  # necessary to make ppc sample correct
                           observed=np.array([0., 1.]))
             trace = pm.sample()
 
@@ -300,12 +297,12 @@ class TestSamplePPCW(SeededTest):
 
         with pm.Model() as model_0:
             mu = pm.Normal('mu', mu=0, sd=1)
-            y = pm.Normal('y', mu=mu, sd=1, observed=data0, shape=500)
+            y = pm.Normal('y', mu=mu, sd=1, observed=data0)
             trace_0 = pm.sample()
 
         with pm.Model() as model_1:
             mu = pm.Normal('mu', mu=0, sd=1, shape=len(data0))
-            y = pm.Normal('y', mu=mu, sd=1, observed=data0, shape=500)
+            y = pm.Normal('y', mu=mu, sd=1, observed=data0)
             trace_1 = pm.sample()
 
         traces = [trace_0, trace_0]
