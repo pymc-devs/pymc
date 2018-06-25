@@ -13,6 +13,7 @@
 - Improve error message `NaN occurred in optimization.` during ADVI
 - Save and load traces without `pickle` using `pm.save_trace` and `pm.load_trace`
 - Add `Kumaraswamy` distribution
+- Add 'TruncatedNormal' distribution
 - Rewrite parallel sampling of multiple chains on py3. This resolves
   long standing issues when transferring large traces to the main process,
   avoids pickling issues on UNIX, and allows us to show a progress bar

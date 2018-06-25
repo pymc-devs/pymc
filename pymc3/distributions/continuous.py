@@ -24,7 +24,7 @@ from ..math import invlogit, logit
 from .dist_math import bound, logpow, gammaln, betaln, std_cdf, alltrue_elemwise, SplineWrapper, i0e
 from .distribution import Continuous, draw_values, generate_samples
 
-__all__ = ['Uniform', 'Flat', 'HalfFlat', 'Normal', 'Beta', 'Kumaraswamy', 'Exponential',
+__all__ = ['Uniform', 'Flat', 'HalfFlat', 'Normal', 'TruncatedNormal', 'Beta', 'Kumaraswamy', 'Exponential',
            'Laplace', 'StudentT', 'Cauchy', 'HalfCauchy', 'Gamma', 'Weibull',
            'HalfStudentT', 'Lognormal', 'ChiSquared', 'HalfNormal', 'Wald',
            'Pareto', 'InverseGamma', 'ExGaussian', 'VonMises', 'SkewNormal',
@@ -434,6 +434,223 @@ class Normal(Continuous):
                                                                 get_variable_name(mu),
                                                                 get_variable_name(sd))
 
+class TruncatedNormal(Continuous):
+    R"""
+    Univariate truncated normal log-likelihood.
+
+    The pdf of this distribution is
+
+    .. math::
+
+       f(x;\mu ,\sigma ,a,b)={\frac {\phi ({\frac {x-\mu }{\sigma }})}{
+       \sigma \left(\Phi ({\frac {b-\mu }{\sigma }})-\Phi ({\frac {a-\mu }{\sigma }})\right)}}
+
+    Truncated normal distribution can be parameterized either in terms of precision
+    or standard deviation. The link between the two parametrizations is
+    given by
+
+    .. math::
+
+       \tau = \dfrac{1}{\sigma^2}
+
+
+    .. plot::
+
+        import matplotlib.pyplot as plt
+        import numpy as np
+        import scipy.stats as st
+        plt.style.use('seaborn-darkgrid')
+        x = np.linspace(-10, 10, 1000)
+        mus = [0.,  0., 0.]
+        sds = [3.,5.,7.]
+        a1 = [-3, -5, -5]
+        b1 = [7, 5, 4]
+        for mu, sd, a, b in zip(mus, sds,a1,b1):
+            print mu, sd, a, b
+            an, bn = (a - mu) / sd, (b - mu) / sd
+            pdf = st.truncnorm.pdf(x, an,bn, loc=mu, scale=sd)
+            plt.plot(x, pdf, label=r'$\mu$ = {}, $\sigma$ = {}, a={}, b={}'.format(mu, sd, a, b))
+        plt.xlabel('x', fontsize=12)
+        plt.ylabel('f(x)', fontsize=12)
+        plt.legend(loc=1)
+        plt.show()
+
+    ========  ==========================================
+    Support   :math:`x \in [a, b]`
+    Mean      :math:`\mu +{\frac {\phi (\alpha )-\phi (\beta )}{Z}}\sigma`
+    Variance  :math:`\sigma ^{2}\left[1+{\frac {\alpha \phi (\alpha )-\beta \phi (\beta )}{Z}}-
+    \left({\frac {\phi (\alpha )-\phi (\beta )}{Z}}\right)^{2}\right]`
+    ========  ==========================================
+
+    Parameters
+    ----------
+    mu : float
+        Mean.
+    sd : float
+        Standard deviation (sd > 0).
+    a : float (optional)
+        Left bound.
+    b : float (optional)
+        Right bound.
+
+    Examples
+    --------
+    .. code-block:: python
+
+        with pm.Model():
+            x = pm.TruncatedNormal('x', mu=0, sd=10, a=0)
+
+        with pm.Model():
+            x = pm.TruncatedNormal('x', mu=0, sd=10, b=1)
+
+        with pm.Model():
+            x = pm.TruncatedNormal('x', mu=0, sd=10, a=0, b=1)
+
+    """
+
+    def __init__(self, mu=0, sd=None, tau=None, a=None, b=None, **kwargs):
+        tau, sd = get_tau_sd(tau=tau, sd=sd)
+        self.sd = tt.as_tensor_variable(sd)
+        self.tau = tt.as_tensor_variable(tau)
+        self.a = tt.as_tensor_variable(a) if a is not None else a
+        self.b = tt.as_tensor_variable(b) if b is not None else b
+        self.mu =  tt.as_tensor_variable(mu)
+
+        # Calculate mean
+        pdf_a, pdf_b, cdf_a, cdf_b = self._get_boundary_parameters()
+        z = cdf_b - cdf_a
+        self.mean = self.mu + (pdf_a+pdf_b) / z * self.sd
+
+        assert_negative_support(sd, 'sd', 'TruncatedNormal')
+        assert_negative_support(tau, 'tau', 'TruncatedNormal')
+
+        super(TruncatedNormal, self).__init__(**kwargs)
+
+    def random(self, point=None, size=None):
+        """
+        Draw random values from TruncatedNormal distribution.
+
+        Parameters
+        ----------
+        point : dict, optional
+            Dict of variable values on which random values are to be
+            conditioned (uses default point if not specified).
+        size : int, optional
+            Desired size of random sample (returns one sample if not
+            specified).
+
+        Returns
+        -------
+        array
+        """
+        mu_v, std_v, a_v, b_v = draw_values([self.mu, self.sd, self.a, self.b], point=point, size=size)
+        return generate_samples(stats.truncnorm.rvs,
+                                                 a=(a_v - mu_v)/std_v,
+                                                 b=(b_v - mu_v) / std_v,
+                                                 loc=mu_v,
+                                                 scale=std_v,
+                                                 dist_shape=self.shape,
+                                                 size=size,
+        )
+
+    def logp(self, value):
+        """
+        Calculate log-probability of TruncatedNormal distribution at specified value.
+
+        Parameters
+        ----------
+        value : numeric
+            Value(s) for which log-probability is calculated. If the log probabilities for multiple
+            values are desired the values must be provided in a numpy array or theano tensor
+
+        Returns
+        -------
+        TensorVariable
+        """
+        sd = self.sd
+        tau = self.tau
+        mu = self.mu
+        a = self.a
+        b = self.b
+
+        # In case either a or b are not specified, normalization terms simplify to 1.0 and 0.0
+        # https://en.wikipedia.org/wiki/Truncated_normal_distribution
+        norm_left, norm_right = 1.0, 0.0
+
+        # Define normalization
+        if b is not None:
+            norm_left = self._cdf((b - mu) / sd)
+
+        if a is not None:
+            norm_right = self._cdf((a - mu) / sd)
+
+        f = self._pdf((value - mu) / sd) / sd / ((norm_left - norm_right))
+
+        return bound(tt.log(f), value >= a, value <= b, sd > 0)
+
+
+    def _cdf(self, value):
+        """
+        Calculate cdf of standard normal distribution
+
+        Parameters
+        ----------
+        value : numeric
+            Value(s) for which log-probability is calculated. If the log probabilities for multiple
+            values are desired the values must be provided in a numpy array or theano tensor
+
+        Returns
+        -------
+        TensorVariable
+        """
+        return 0.5 * (1.0 + tt.erf(value / tt.sqrt(2)))
+
+    def _pdf(self, value):
+        """
+        Calculate pdf of standard normal distribution
+
+        Parameters
+        ----------
+        value : numeric
+            Value(s) for which log-probability is calculated. If the log probabilities for multiple
+            values are desired the values must be provided in a numpy array or theano tensor
+
+        Returns
+        -------
+        TensorVariable
+        """
+        return 1.0 / tt.sqrt(2 * np.pi) * tt.exp(-0.5 * (value ** 2))
+
+    def _repr_latex_(self, name=None, dist=None):
+        if dist is None:
+            dist = self
+        sd = dist.sd
+        mu = dist.mu
+        a = dist.a
+        b = dist.b
+        name = r'\text{%s}' % name
+        return r'${} \sim \text{{TruncatedNormal}}(\mathit{{mu}}={},~\mathit{{sd}}={},a={},b={})$'.format(name,
+                                                                get_variable_name(mu),
+                                                                get_variable_name(sd),
+                                                                get_variable_name(a),
+                                                                get_variable_name(b))
+
+    def _get_boundary_parameters(self):
+        """
+        Calcualte values of cdf and pdf at boundary points a and b
+
+        Returns
+        -------
+        pdf(a), pdf(b), cdf(a), cdf(b) if a,b defined, otherwise 0.0, 0.0, 0.0, 1.0
+        """
+        # pdf = 0 at +-inf
+        pdf_a = self._pdf(self.a) if not self.a is None else 0.0
+        pdf_b = self._pdf(self.b) if not self.b is None else 0.0
+
+        # b-> inf, cdf(b) = 1.0, a->-inf, cdf(a) = 0
+        cdf_a = self._cdf(self.a) if not self.a is None else 0.0
+        cdf_b = self._cdf(self.b) if not self.b is None else 1.0
+        return pdf_a, pdf_b, cdf_a, cdf_b
 
 class HalfNormal(PositiveContinuous):
     R"""
