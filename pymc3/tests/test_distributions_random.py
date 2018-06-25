@@ -799,7 +799,6 @@ def test_mixture_random_shape():
         like0 = pm.Mixture('like0',
                            w=w0,
                            comp_dists=comp0,
-                           shape=y.shape,
                            observed=y)
 
         comp1 = pm.Poisson.dist(mu=np.ones((20, 2)),
@@ -807,7 +806,8 @@ def test_mixture_random_shape():
         w1 = pm.Dirichlet('w1', a=np.ones(2))
         like1 = pm.Mixture('like1',
                            w=w1,
-                           comp_dists=comp1, observed=y)
+                           comp_dists=comp1,
+                           observed=y)
 
         comp2 = pm.Poisson.dist(mu=np.ones(2))
         w2 = pm.Dirichlet('w2',
