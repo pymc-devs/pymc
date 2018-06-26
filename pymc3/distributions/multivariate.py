@@ -584,7 +584,7 @@ class Multinomial(Discrete):
         p = self.p
 
         return bound(
-            factln(n) + tt.sum(-factln(x) + x * tt.log(p), axis=-1, keepdims=True),
+            factln(n) + tt.sum(-factln(x) + logpow(p, x), axis=-1, keepdims=True),
             tt.all(x >= 0),
             tt.all(tt.eq(tt.sum(x, axis=-1, keepdims=True), n)),
             tt.all(p <= 1),
