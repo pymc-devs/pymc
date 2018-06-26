@@ -539,9 +539,9 @@ class TestMatchesScipy(SeededTest):
         # {'mu': array(-2.1), 'a': array(-100.), 'b': array(0.01), 'value': array(0.), 'sd': array(0.01)}
         # TruncatedNormal: pdf = 0.0, logpdf = -inf
         # Scipy's answer: pdf = 0.0, logpdf = -22048.413!!!
-        self.pymc3_matches_scipy(TruncatedNormal, R, {'mu': R, 'sd': Rplusbig, 'a':-Rplusbig, 'b':Rplusbig},
-                                 lambda value, mu, sd, a, b: sp.truncnorm.logpdf(value, (a-mu)/sd, (b-mu)/sd,
-                                                                                 loc=mu, scale=sd),
+        self.pymc3_matches_scipy(TruncatedNormal, R, {'mu': R, 'sd': Rplusbig, 'lower':-Rplusbig, 'upper':Rplusbig},
+                                 lambda value, mu, sd, lower, upper: sp.truncnorm.logpdf(
+                                     value, (lower-mu)/sd, (upper-mu)/sd, loc=mu, scale=sd),
                                  decimal=select_by_precision(float64=6, float32=1)
                                  )
 
