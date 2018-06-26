@@ -384,7 +384,7 @@ class Dirichlet(Continuous):
     .. math::
 
        f(\mathbf{x}|\mathbf{a}) =
-           \frac{\Gamma(\sum_{i=1}^k a_i)}{\prodi_{i=1}^k \Gamma(a_i)}
+           \frac{\Gamma(\sum_{i=1}^k a_i)}{\prod_{i=1}^k \Gamma(a_i)}
            \prod_{i=1}^k x_i^{a_i - 1}
 
     ========  ===============================================
