@@ -3215,7 +3215,7 @@ class Gumbel(Continuous):
                                                                 get_variable_name(beta))
 
 
-class Rice(Continuous):
+class Rice(PositiveContinuous):
     R"""
     Rice distribution.
 
@@ -3514,7 +3514,7 @@ class LogitNormal(UnitContinuous):
                                                                 get_variable_name(sd))
 
 
-class Interpolated(Continuous):
+class Interpolated(BoundedContinuous):
     R"""
     Univariate probability distribution defined as a linear interpolation
     of probability density function evaluated on some lattice of points.
@@ -3542,15 +3542,14 @@ class Interpolated(Continuous):
         Probability density function evaluated on lattice `x_points`
     """
 
-    def __init__(self, x_points, pdf_points, transform='interval',
-                 *args, **kwargs):
-        if transform == 'interval':
-            transform = transforms.interval(x_points[0], x_points[-1])
-        super(Interpolated, self).__init__(transform=transform,
-                                           *args, **kwargs)
+    def __init__(self, x_points, pdf_points, *args, **kwargs):
+        self.lower = lower = tt.as_tensor_variable(x_points[0])
+        self.upper = upper = tt.as_tensor_variable(x_points[-1])
+
+        super(Interpolated, self).__init__(*args, **kwargs)
 
         interp = InterpolatedUnivariateSpline(x_points, pdf_points, k=1, ext='zeros')
-        Z = interp.integral(x_points[0], x_points[-1])
+        Z = interp.integral(lower, upper)
 
         self.Z = tt.as_tensor_variable(Z)
         self.interp_op = SplineWrapper(interp)
