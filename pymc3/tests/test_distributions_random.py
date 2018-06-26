@@ -220,7 +220,7 @@ class TestNormal(BaseTestCases.BaseTestCase):
 
 class TestTruncatedNormal(BaseTestCases.BaseTestCase):
     distribution = pm.TruncatedNormal
-    params = {'mu': 0., 'tau': 1., 'a':-0.5, 'b':0.5}
+    params = {'mu': 0., 'tau': 1., 'lower':-0.5, 'upper':0.5}
 
 class TestSkewNormal(BaseTestCases.BaseTestCase):
     distribution = pm.SkewNormal
@@ -426,7 +426,8 @@ class TestScalarParameterSamples(SeededTest):
     def test_truncated_normal(self):
         def ref_rand(size, mu, sd, lower, upper):
             return st.truncnorm.rvs((lower-mu)/sd, (upper-mu)/sd, size=size, loc=mu, scale=sd)
-        pymc3_random(pm.TruncatedNormal, {'mu': R, 'sd': Rplusbig, 'lower':-Rplusbig, 'upper':Rplusbig}, ref_rand=ref_rand)
+        pymc3_random(pm.TruncatedNormal, {'mu': R, 'sd': Rplusbig, 'lower':-Rplusbig, 'upper':Rplusbig},
+                     ref_rand=ref_rand)
 
     def test_skew_normal(self):
         def ref_rand(size, alpha, mu, sd):
