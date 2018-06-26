@@ -24,12 +24,12 @@ from ..math import invlogit, logit
 from .dist_math import bound, logpow, gammaln, betaln, std_cdf, alltrue_elemwise, SplineWrapper, i0e
 from .distribution import Continuous, draw_values, generate_samples
 
-__all__ = ['Uniform', 'Flat', 'HalfFlat', 'Normal', 'TruncatedNormal', 'Beta', 'Kumaraswamy', 'Exponential',
-           'Laplace', 'StudentT', 'Cauchy', 'HalfCauchy', 'Gamma', 'Weibull',
-           'HalfStudentT', 'Lognormal', 'ChiSquared', 'HalfNormal', 'Wald',
-           'Pareto', 'InverseGamma', 'ExGaussian', 'VonMises', 'SkewNormal',
-           'Triangular', 'Gumbel', 'Logistic', 'LogitNormal', 'Interpolated',
-           'Rice']
+__all__ = ['Uniform', 'Flat', 'HalfFlat', 'Normal', 'TruncatedNormal', 'Beta',
+           'Kumaraswamy', 'Exponential', 'Laplace', 'StudentT', 'Cauchy',
+           'HalfCauchy', 'Gamma', 'Weibull', 'HalfStudentT', 'Lognormal',
+           'ChiSquared', 'HalfNormal', 'Wald', 'Pareto', 'InverseGamma',
+           'ExGaussian', 'VonMises', 'SkewNormal', 'Triangular', 'Gumbel',
+           'Logistic', 'LogitNormal', 'Interpolated', 'Rice']
 
 
 class PositiveContinuous(Continuous):
@@ -67,7 +67,7 @@ def assert_negative_support(var, label, distname, value=-1e-6):
     try:
         # Transformed distribution
         support = np.isfinite(var.transformed.distribution.dist
-                                .logp(value).tag.test_value)
+                              .logp(value).tag.test_value)
     except AttributeError:
         try:
             # Untransformed distribution
@@ -77,7 +77,8 @@ def assert_negative_support(var, label, distname, value=-1e-6):
             support = False
 
     if np.any(support):
-        msg = "The variable specified for {0} has negative support for {1}, ".format(label, distname)
+        msg = "The variable specified for {0} has negative support for {1}, ".format(
+            label, distname)
         msg += "likely making it unsuitable for this parameter."
         warnings.warn(msg)
 
@@ -181,10 +182,10 @@ class Uniform(BoundedContinuous):
         Parameters
         ----------
         point : dict, optional
-            Dict of variable values on which random values are to be 
-            conditioned (uses default point if not specified). 
+            Dict of variable values on which random values are to be
+            conditioned (uses default point if not specified).
         size : int, optional
-            Desired size of random sample (returns one sample if not 
+            Desired size of random sample (returns one sample if not
             specified).
 
         Returns
@@ -206,7 +207,7 @@ class Uniform(BoundedContinuous):
         Parameters
         ----------
         value : numeric
-            Value for which log-probability is calculated. 
+            Value for which log-probability is calculated.
 
         Returns
         -------
@@ -546,7 +547,8 @@ class TruncatedNormal(Continuous):
             else:
                 transform = transforms.lowerbound(lower)
 
-        super(TruncatedNormal, self).__init__(transform=transform, *args, **kwargs)
+        super(TruncatedNormal, self).__init__(
+            transform=transform, *args, **kwargs)
 
     def random(self, point=None, size=None):
         """
@@ -565,15 +567,16 @@ class TruncatedNormal(Continuous):
         -------
         array
         """
-        mu_v, std_v, a_v, b_v = draw_values([self.mu, self.sd, self.lower, self.upper], point=point, size=size)
+        mu_v, std_v, a_v, b_v = draw_values(
+            [self.mu, self.sd, self.lower, self.upper], point=point, size=size)
         return generate_samples(stats.truncnorm.rvs,
-                                                 a=(a_v - mu_v)/std_v,
-                                                 b=(b_v - mu_v) / std_v,
-                                                 loc=mu_v,
-                                                 scale=std_v,
-                                                 dist_shape=self.shape,
-                                                 size=size,
-        )
+                                a=(a_v - mu_v)/std_v,
+                                b=(b_v - mu_v) / std_v,
+                                loc=mu_v,
+                                scale=std_v,
+                                dist_shape=self.shape,
+                                size=size,
+                                )
 
     def logp(self, value):
         """
@@ -606,7 +609,7 @@ class TruncatedNormal(Continuous):
         if a is not None:
             norm_right = self._cdf((a - mu) / sd)
 
-        f = self._pdf((value - mu) / sd) / sd / ((norm_left - norm_right))
+        f = self._pdf((value - mu) / sd) / sd / (norm_left - norm_right)
 
         return bound(tt.log(f), value >= a, value <= b, sd > 0)
 
@@ -798,7 +801,7 @@ class HalfNormal(PositiveContinuous):
         sd = dist.sd
         name = r'\text{%s}' % name
         return r'${} \sim \text{{HalfNormal}}(\mathit{{sd}}={})$'.format(name,
-                                                                get_variable_name(sd))
+                                                                         get_variable_name(sd))
 
 
 class Wald(PositiveContinuous):
@@ -1779,7 +1782,7 @@ class Pareto(Continuous):
         assert_negative_support(alpha, 'alpha', 'Pareto')
         assert_negative_support(m, 'm', 'Pareto')
 
-        if transform=='lowerbound':
+        if transform == 'lowerbound':
             transform = transforms.lowerbound(self.m)
         super(Pareto, self).__init__(transform=transform, *args, **kwargs)
 
@@ -2359,7 +2362,7 @@ class ChiSquared(Gamma):
         nu = dist.nu
         name = r'\text{%s}' % name
         return r'${} \sim \Chi^2(\mathit{{nu}}={})$'.format(name,
-                                                                get_variable_name(nu))
+                                                            get_variable_name(nu))
 
 
 class Weibull(PositiveContinuous):
@@ -2536,6 +2539,7 @@ class HalfStudentT(PositiveContinuous):
         with pm.Model():
             x = pm.HalfStudentT('x', lam=4, nu=10)
     """
+
     def __init__(self, nu=1, sd=None, lam=None, *args, **kwargs):
         super(HalfStudentT, self).__init__(*args, **kwargs)
         self.mode = tt.as_tensor_variable(0)
@@ -2974,9 +2978,9 @@ class SkewNormal(Continuous):
         alpha = self.alpha
         return bound(
             tt.log(1 +
-            tt.erf(((value - mu) * tt.sqrt(tau) * alpha) / tt.sqrt(2)))
+                   tt.erf(((value - mu) * tt.sqrt(tau) * alpha) / tt.sqrt(2)))
             + (-tau * (value - mu)**2
-            + tt.log(tau / np.pi / 2.)) / 2.,
+               + tt.log(tau / np.pi / 2.)) / 2.,
             tau > 0, sd > 0)
 
     def _repr_latex_(self, name=None, dist=None):
@@ -3093,9 +3097,11 @@ class Triangular(BoundedContinuous):
         upper = self.upper
         return tt.switch(alltrue_elemwise([lower <= value, value < c]),
                          tt.log(2 * (value - lower) / ((upper - lower) * (c - lower))),
-                         tt.switch(tt.eq(value, c), tt.log(2 / (upper - lower)),
-                         tt.switch(alltrue_elemwise([c < value, value <= upper]),
-                         tt.log(2 * (upper - value) / ((upper - lower) * (upper - c))),np.inf)))
+                         tt.switch(tt.eq(value, c),
+                                   tt.log(2 / (upper - lower)),
+                                   tt.switch(alltrue_elemwise([c < value, value <= upper]),
+                                             tt.log(2 * (upper - value) / ((upper - lower) * (upper - c))),
+                                             np.inf)))
 
     def _repr_latex_(self, name=None, dist=None):
         if dist is None:
@@ -3478,7 +3484,8 @@ class LogitNormal(UnitContinuous):
         -------
         array
         """
-        mu, _, sd = draw_values([self.mu, self.tau, self.sd], point=point, size=size)
+        mu, _, sd = draw_values(
+            [self.mu, self.tau, self.sd], point=point, size=size)
         return expit(generate_samples(stats.norm.rvs, loc=mu, scale=sd, dist_shape=self.shape,
                                       size=size))
 
@@ -3548,7 +3555,8 @@ class Interpolated(BoundedContinuous):
 
         super(Interpolated, self).__init__(*args, **kwargs)
 
-        interp = InterpolatedUnivariateSpline(x_points, pdf_points, k=1, ext='zeros')
+        interp = InterpolatedUnivariateSpline(
+            x_points, pdf_points, k=1, ext='zeros')
         Z = interp.integral(x_points[0], x_points[-1])
 
         self.Z = tt.as_tensor_variable(Z)
