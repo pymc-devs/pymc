@@ -5,7 +5,7 @@ from scipy import stats
 import warnings
 
 from pymc3.util import get_variable_name
-from .dist_math import bound, factln, binomln, betaln, logpow
+from .dist_math import bound, factln, binomln, betaln, logpow, random_choice
 from .distribution import Discrete, draw_values, generate_samples
 from pymc3.math import tround, sigmoid, logaddexp, logit, log1pexp
 
@@ -710,19 +710,9 @@ class Categorical(Discrete):
         self.p = (p.T / tt.sum(p, -1)).T
         self.mode = tt.argmax(p)
 
-    def _random(self, k, p, size=None):
-        if len(p.shape) > 1:
-            return np.asarray(
-                [np.random.choice(k, p=pp, size=size)
-                    for pp in p]
-            )
-        else:
-            return np.asarray(np.random.choice(k, p=p, size=size))
-
     def random(self, point=None, size=None):
         p, k = draw_values([self.p, self.k], point=point, size=size)
-        return generate_samples(self._random,
-                                k=k,
+        return generate_samples(random_choice,
                                 p=p,
                                 broadcast_shape=p.shape[:-1] or (1,),
                                 dist_shape=self.shape,
