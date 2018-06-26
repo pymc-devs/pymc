@@ -3549,7 +3549,7 @@ class Interpolated(BoundedContinuous):
         super(Interpolated, self).__init__(*args, **kwargs)
 
         interp = InterpolatedUnivariateSpline(x_points, pdf_points, k=1, ext='zeros')
-        Z = interp.integral(lower, upper)
+        Z = interp.integral(x_points[0], x_points[-1])
 
         self.Z = tt.as_tensor_variable(Z)
         self.interp_op = SplineWrapper(interp)
