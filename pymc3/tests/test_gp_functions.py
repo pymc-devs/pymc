@@ -1,7 +1,5 @@
 #  pylint:disable=unused-variable
-from functools import reduce
 from ..math import cartesian, kronecker
-from operator import add
 import pymc3 as pm
 import theano
 import theano.tensor as tt

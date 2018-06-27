@@ -3,8 +3,6 @@ from functools import reduce
 from ..math import cartesian
 from operator import add
 import pymc3 as pm
-import theano
-import theano.tensor as tt
 import numpy as np
 import numpy.testing as npt
 import pytest
