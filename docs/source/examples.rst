@@ -35,7 +35,6 @@ GLM
 ===
 
 .. toctree::
-   notebooks/RatTumorExample.ipynb
    notebooks/GLM-linear.ipynb
    notebooks/GLM-robust.ipynb
    notebooks/GLM-robust-with-outlier-detection.ipynb
@@ -45,6 +44,7 @@ GLM
    notebooks/GLM-poisson-regression.ipynb
    notebooks/hierarchical_partial_pooling.ipynb
    notebooks/GLM-negative-binomial-regression.ipynb
+   notebooks/GLM-hierarchical-binominal-model.ipynb
 
 Gaussian Processes
 ==================
