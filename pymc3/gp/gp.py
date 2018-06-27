@@ -876,7 +876,7 @@ class MarginalKron(Base):
         if len(Xs) != len(self.cov_funcs):
             raise ValueError('Must provide a covariance function for each X')
         if N != len(y):
-            raise ValueError('Length of y must match cartesian product of Xs')
+            raise ValueError('Length of y ({}) must match length of cartesian product of Xs ({})'.format(len(y), N))
 
     def marginal_likelihood(self, name, Xs, y, sigma, is_observed=True, **kwargs):
         """
@@ -953,8 +953,8 @@ class MarginalKron(Base):
             Asq = tt.dot(A.T, A)
             cov = Km - Asq
             if pred_noise:
-                cov += sigma * np.eye(cov.shape)
-        return mu, cov if pred_noise else stabilize(cov)
+                cov += sigma * tt.itentity_like(cov)
+        return mu, cov
 
     def conditional(self, name, Xnew, pred_noise=False, **kwargs):
         """
