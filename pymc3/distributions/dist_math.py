@@ -306,3 +306,4 @@ def random_choice(*args, **kwargs):
     else:
         samples = np.random.choice(k, p=p, size=size)
     return samples
+
