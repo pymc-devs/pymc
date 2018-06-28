@@ -460,13 +460,6 @@ def sample_smc(samples=1000, chains=100, step=None, start=None, homepath=None, s
         if not (chains / float(cores)).is_integer():
             raise TypeError('chains / cores has to be a whole number!')
 
-    if start is not None:
-        if len(start) != chains:
-            raise TypeError('Argument `start` should have dicts equal the '
-                            'number of chains (`chains`)')
-        else:
-            step.population = start
-
     if not any(step.likelihood_name in var.name for var in model.deterministics):
         raise TypeError('Model (deterministic) variables need to contain a variable {} as defined '
                         'in `step`.'.format(step.likelihood_name))
@@ -490,7 +483,15 @@ def sample_smc(samples=1000, chains=100, step=None, start=None, homepath=None, s
 
     step.resampling_indexes = np.arange(chains)
     step.proposal_samples_array = step.proposal_dist(chains)
-    step.population = _initial_population(samples, chains, model, step.vars)
+
+    if start is not None:
+        if len(start) != chains:
+            raise TypeError('Argument `start` should have dicts equal the '
+                            'number of chains (`chains`)')
+        else:
+            step.population = start
+    else:
+        step.population = _initial_population(samples, chains, model, step.vars)
 
     with model:
         while step.beta < 1:
