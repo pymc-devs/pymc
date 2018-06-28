@@ -1293,13 +1293,13 @@ class ObservedRV(Factor, TensorVariable):
             needed for upscaling logp
         """
         from .distributions import TensorType
+
+        if hasattr(data, 'type') and isinstance(data.type, tt.TensorType):
+            type = data.type
+
         if type is None:
             data = pandas_to_array(data)
-            try:
-                data_shape = data.shape.eval()
-            except AttributeError:
-                data_shape = data.shape
-            type = TensorType(distribution.dtype, data_shape)
+            type = TensorType(distribution.dtype, data.shape)
 
         self.observations = data
 
