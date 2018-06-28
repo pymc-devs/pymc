@@ -1295,7 +1295,11 @@ class ObservedRV(Factor, TensorVariable):
         from .distributions import TensorType
         if type is None:
             data = pandas_to_array(data)
-            type = TensorType(distribution.dtype, data.shape)
+            try:
+                data_shape = data.shape.eval()
+            except AttributeError:
+                data_shape = data.shape
+            type = TensorType(distribution.dtype, data_shape)
 
         self.observations = data
 
