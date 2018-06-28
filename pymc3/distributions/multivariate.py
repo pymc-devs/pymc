@@ -383,10 +383,9 @@ class Dirichlet(Continuous):
 
     .. math::
 
-       f(\mathbf{x}) =
-           \frac{\Gamma(\sum_{i=1}^k \theta_i)}{\prod \Gamma(\theta_i)}
-           \prod_{i=1}^{k-1} x_i^{\theta_i - 1}
-           \left(1-\sum_{i=1}^{k-1}x_i\right)^\theta_k
+       f(\mathbf{x}|\mathbf{a}) =
+           \frac{\Gamma(\sum_{i=1}^k a_i)}{\prod_{i=1}^k \Gamma(a_i)}
+           \prod_{i=1}^k x_i^{a_i - 1}
 
     ========  ===============================================
     Support   :math:`x_i \in (0, 1)` for :math:`i \in \{1, \ldots, K\}`
@@ -400,11 +399,6 @@ class Dirichlet(Continuous):
     ----------
     a : array
         Concentration parameters (a > 0).
-
-    Notes
-    -----
-    Only the first `k-1` elements of `x` are expected. Can be used
-    as a parent of Multinomial and Categorical nevertheless.
     """
 
     def __init__(self, a, transform=transforms.stick_breaking,
