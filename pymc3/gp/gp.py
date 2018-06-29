@@ -953,7 +953,7 @@ class MarginalKron(Base):
             Asq = tt.dot(A.T, A)
             cov = Km - Asq
             if pred_noise:
-                cov += sigma * tt.itentity_like(cov)
+                cov += sigma * tt.identity_like(cov)
         return mu, cov
 
     def conditional(self, name, Xnew, pred_noise=False, **kwargs):
