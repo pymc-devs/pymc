@@ -78,7 +78,7 @@ class AR(distribution.Continuous):
     Parameters
     ----------
     rho : tensor
-        Vector of autoregressive coefficients.
+        Tensor of autoregressive coefficients. The first dimension is the p lag.
     sd : float
         Standard deviation of innovation (sd > 0). (only required if tau is not specified)
     tau : float
@@ -100,29 +100,30 @@ class AR(distribution.Continuous):
 
         self.mean = tt.as_tensor_variable(0.)
 
-        rho = tt.as_tensor_variable(rho, ndim=1)
-        if constant:
-            self.p = rho.shape[0] - 1
+        if isinstance(rho, list):
+            p = len(rho)
         else:
-            self.p = rho.shape[0]
+            try:
+                p = rho.shape.tag.test_value[0]
+            except AttributeError:
+                p = rho.shape[0]
+
+        if constant:
+            self.p = p - 1
+        else:
+            self.p = p
 
         self.constant = constant
-        self.rho = rho
+        self.rho = rho = tt.as_tensor_variable(rho)
         self.init = init
 
     def logp(self, value):
-
-        y = value[self.p:]
-        results, _ = scan(lambda l, obs, p: obs[p - l:-l],
-                          outputs_info=None, sequences=[tt.arange(1, self.p + 1)],
-                          non_sequences=[value, self.p])
-        x = tt.stack(results)
-
         if self.constant:
-            y = y - self.rho[0]
-            eps = y - self.rho[1:].dot(x)
+            x = tt.add(*[self.rho[i + 1] * value[self.p - (i + 1):-(i + 1)] for i in range(self.p)])
+            eps = value[self.p:] - self.rho[0] - x
         else:
-            eps = y - self.rho.dot(x)
+            x = tt.add(*[self.rho[i] * value[self.p - (i + 1):-(i + 1)] for i in range(self.p)])
+            eps = value[self.p:] - x
 
         innov_like = Normal.dist(mu=0.0, tau=self.tau).logp(eps)
         init_like = self.init.logp(value[:self.p])
