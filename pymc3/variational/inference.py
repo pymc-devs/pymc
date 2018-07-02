@@ -22,6 +22,7 @@ __all__ = [
     'FullRankADVI',
     'SVGD',
     'ASVGD',
+    'NFVI',
     'Inference',
     'ImplicitGradient',
     'KLqp',
@@ -279,8 +280,8 @@ class KLqp(Inference):
     approx : :class:`Approximation`
         Approximation to fit, it is required to have `logQ`
     """
-    def __init__(self, approx):
-        super(KLqp, self).__init__(KL, approx, None)
+    def __init__(self, approx, beta=1.):
+        super(KLqp, self).__init__(KL, approx, None, beta=beta)
 
 
 class ADVI(KLqp):
