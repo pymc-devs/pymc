@@ -668,6 +668,8 @@ def fit_kwargs(inference, use_minibatch):
     }
     if use_minibatch:
         key = 'mini'
+        # backward compat for PR#3071
+        inference.approx.scale_cost_to_minibatch = False
     else:
         key = 'full'
     return _select[(type(inference), key)]
