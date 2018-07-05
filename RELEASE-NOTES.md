@@ -25,6 +25,7 @@
   final trace.
 - Add `model_to_graphviz` (which uses the optional dependency `graphviz`) to
   plot a directed graph of a PyMC3 model using plate notation.
+- Add beta-ELBO variational inference as in beta-VAE model (Christopher P. Burgess et al. NIPS, 2017)
 
 ### Fixes
 
@@ -32,6 +33,7 @@
 - Removed unused `repeat=None` arguments from all `random()` methods in distributions.
 - Deprecated the `sigma` argument in `MarginalSparse.marginal_likelihood` in favor of `noise`
 - Fixed unexpected behavior in `random`. Now the `random` functionality is more robust and will work better for `sample_prior` when that is implemented.
+- Fixed `scale_cost_to_minibatch` behaviour, previously this was not working and always `False`
 
 ## PyMC 3.4.1 (April 18 2018)
 

@@ -14,9 +14,18 @@ __all__ = [
 class KL(Operator):
     R"""**Operator based on Kullback Leibler Divergence**
 
+    This operator constructs Evidence Lower Bound (ELBO) objective
+
+    .. math::
+
+        ELBO_\beta = \log p(D|\theta) - \beta KL(q||p)
+
+    where
+
     .. math::
 
         KL[q(v)||p(v)] = \int q(v)\log\frac{q(v)}{p(v)}dv
+
 
     Parameters
     ----------

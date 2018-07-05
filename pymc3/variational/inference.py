@@ -276,7 +276,7 @@ class KLqp(Inference):
     by maximizing ELBO (Evidence Lower Bound). In some cases
     rescaling the regularization term KL may be beneficial
 
-    .. math:
+    .. math::
 
         ELBO_\beta = \log p(D|\theta) - \beta KL(q||p)
 
