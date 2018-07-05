@@ -87,6 +87,25 @@ def std_cdf(x):
     return .5 + .5 * tt.erf(x / tt.sqrt(2.))
 
 
+def normal_lcdf(mu, sigma, x):
+    """Compute the log of the cumulative density function of the normal."""
+    z = (x - mu) / sigma
+    return tt.switch(
+        tt.lt(z, -1.0),
+        tt.log(tt.erfcx(-z / tt.sqrt(2.)) / 2.) - tt.sqr(z) / 2.,
+        tt.log1p(-tt.erfc(z / tt.sqrt(2.)) / 2.)
+    )
+
+
+def normal_lccdf(mu, sigma, x):
+    z = (x - mu) / sigma
+    return tt.switch(
+        tt.gt(z, 1.0),
+        tt.log(tt.erfcx(z / tt.sqrt(2.)) / 2.) - tt.sqr(z) / 2.,
+        tt.log1p(-tt.erfc(-z / tt.sqrt(2.)) / 2.)
+    )
+
+
 def sd2rho(sd):
     """
     `sd -> rho` theano converter

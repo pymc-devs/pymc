@@ -6,7 +6,10 @@ import theano.tensor as tt
 from theano import function
 import theano
 from ..memoize import memoize
-from ..model import Model, get_named_nodes_and_relations, FreeRV, ObservedRV, MultiObservedRV
+from ..model import (
+    Model, get_named_nodes_and_relations, FreeRV,
+    ObservedRV, MultiObservedRV
+)
 from ..vartypes import string_types
 
 __all__ = ['DensityDist', 'Distribution', 'Continuous', 'Discrete',
