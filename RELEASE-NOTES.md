@@ -26,6 +26,7 @@
 - Add `model_to_graphviz` (which uses the optional dependency `graphviz`) to
   plot a directed graph of a PyMC3 model using plate notation.
 - Add beta-ELBO variational inference as in beta-VAE model (Christopher P. Burgess et al. NIPS, 2017)
+- Add `__dir__` to `SingleGroupApproximation` to improve autocompletion in interactive environments
 
 ### Fixes
 
