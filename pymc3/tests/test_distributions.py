@@ -7,17 +7,19 @@ from .helpers import SeededTest, select_by_precision
 from ..vartypes import continuous_types
 from ..model import Model, Point, Potential, Deterministic
 from ..blocking import DictToVarBijection, DictToArrayBijection, ArrayOrdering
-from ..distributions import (DensityDist, Categorical, Multinomial, VonMises, Dirichlet,
-                             MvStudentT, MvNormal, MatrixNormal, ZeroInflatedPoisson,
-                             ZeroInflatedNegativeBinomial, Constant, Poisson, Bernoulli, Beta,
-                             BetaBinomial, HalfStudentT, StudentT, Weibull, Pareto,
-                             InverseGamma, Gamma, Cauchy, HalfCauchy, Lognormal, Laplace,
-                             NegativeBinomial, Geometric, Exponential, ExGaussian, Normal, TruncatedNormal,
-                             Flat, LKJCorr, Wald, ChiSquared, HalfNormal, DiscreteUniform,
-                             Bound, Uniform, Triangular, Binomial, SkewNormal, DiscreteWeibull,
-                             Gumbel, Logistic, OrderedLogistic, LogitNormal, Interpolated,
-                             ZeroInflatedBinomial, HalfFlat, AR1, KroneckerNormal, Rice,
-                             Kumaraswamy)
+from ..distributions import (
+    DensityDist, Categorical, Multinomial, VonMises, Dirichlet,
+    MvStudentT, MvNormal, MatrixNormal, ZeroInflatedPoisson,
+    ZeroInflatedNegativeBinomial, Constant, Poisson, Bernoulli, Beta,
+    BetaBinomial, HalfStudentT, StudentT, Weibull, Pareto,
+    InverseGamma, Gamma, Cauchy, HalfCauchy, Lognormal, Laplace,
+    NegativeBinomial, Geometric, Exponential, ExGaussian, Normal, TruncatedNormal,
+    Flat, LKJCorr, Wald, ChiSquared, HalfNormal, DiscreteUniform,
+    Bound, Uniform, Triangular, Binomial, SkewNormal, DiscreteWeibull,
+    Gumbel, Logistic, OrderedLogistic, LogitNormal, Interpolated,
+    ZeroInflatedBinomial, HalfFlat, AR1, KroneckerNormal, Rice,
+    Kumaraswamy
+)
 
 from ..distributions import continuous
 from pymc3.theanof import floatX
@@ -535,15 +537,21 @@ class TestMatchesScipy(SeededTest):
                                  )
 
     def test_truncated_normal(self):
-        # Rplusbig domain is specified for eveything, to avoid silly cases such as
-        # {'mu': array(-2.1), 'a': array(-100.), 'b': array(0.01), 'value': array(0.), 'sd': array(0.01)}
-        # TruncatedNormal: pdf = 0.0, logpdf = -inf
-        # Scipy's answer: pdf = 0.0, logpdf = -22048.413!!!
-        self.pymc3_matches_scipy(TruncatedNormal, R, {'mu': R, 'sd': Rplusbig, 'lower':-Rplusbig, 'upper':Rplusbig},
-                                 lambda value, mu, sd, lower, upper: sp.truncnorm.logpdf(
-                                     value, (lower-mu)/sd, (upper-mu)/sd, loc=mu, scale=sd),
-                                 decimal=select_by_precision(float64=6, float32=1)
-                                 )
+        def scipy_logp(value, mu, sd, lower, upper):
+            return sp.truncnorm.logpdf(
+                value, (lower-mu)/sd, (upper-mu)/sd, loc=mu, scale=sd)
+
+        args = {'mu': array(-2.1), 'lower': array(-100.), 'upper': array(0.01),
+                'sd': array(0.01)}
+        val = TruncatedNormal.dist(**args).logp(0.)
+        assert_allclose(val.eval(), scipy_logp(value=0, **args))
+
+        self.pymc3_matches_scipy(
+            TruncatedNormal, R,
+            {'mu': R, 'sd': Rplusbig, 'lower': -Rplusbig, 'upper': Rplusbig},
+            scipy_logp,
+            decimal=select_by_precision(float64=6, float32=1)
+        )
 
     def test_half_normal(self):
         self.pymc3_matches_scipy(HalfNormal, Rplus, {'sd': Rplus},

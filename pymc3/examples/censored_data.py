@@ -1,7 +1,3 @@
-import numpy as np
-import matplotlib.pyplot as plt
-import pymc3 as pm
-import theano.tensor as tt
 '''
 Data can be left, right, or interval censored.
 
@@ -31,26 +27,11 @@ PyMC3:
 
 To establish a baseline they compare to an uncensored model of uncensored data.
 '''
+import numpy as np
+import matplotlib.pyplot as plt
+import pymc3 as pm
 
-
-# Helper functions
-def normal_lcdf(mu, sigma, x):
-    z = (x - mu) / sigma
-    return tt.switch(
-        tt.lt(z, -1.0),
-        tt.log(tt.erfcx(-z / tt.sqrt(2.)) / 2.) - tt.sqr(z) / 2.,
-        tt.log1p(-tt.erfc(z / tt.sqrt(2.)) / 2.)
-    )
-
-
-def normal_lccdf(mu, sigma, x):
-    z = (x - mu) / sigma
-    return tt.switch(
-        tt.gt(z, 1.0),
-        tt.log(tt.erfcx(z / tt.sqrt(2.)) / 2.) - tt.sqr(z) / 2.,
-        tt.log1p(-tt.erfc(-z / tt.sqrt(2.)) / 2.)
-    )
-
+from pymc3.distributions.dist_math import normal_lcdf, normal_lccdf
 
 # Produce normally distributed samples
 np.random.seed(123)
@@ -103,6 +84,7 @@ def censored_right_likelihood(mu, sigma, n_right_censored, upper_bound):
 def censored_left_likelihood(mu, sigma, n_left_censored, lower_bound):
     return n_left_censored * normal_lcdf(mu, sigma, lower_bound)
 
+
 with pm.Model() as unimputed_censored_model:
     mu = pm.Normal('mu', mu=0., sd=(high - low) / 2.)
     sigma = pm.HalfNormal('sigma', sd=(high - low) / 2.)
@@ -115,7 +97,7 @@ with pm.Model() as unimputed_censored_model:
     right_censored = pm.Potential(
         'right_censored',
         censored_right_likelihood(mu, sigma, n_right_censored, high)
-        )
+    )
     left_censored = pm.Potential(
         'left_censored',
         censored_left_likelihood(mu, sigma, n_left_censored, low)
@@ -143,6 +125,7 @@ def run(n=1500):
         trace = pm.sample(n)
         pm.plot_posterior(trace[-1000:], varnames=['mu', 'sigma'])
         plt.show()
+
 
 if __name__ == '__main__':
     run()
