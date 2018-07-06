@@ -20,8 +20,11 @@ from pymc3.theanof import floatX
 from . import transforms
 from pymc3.util import get_variable_name
 from .special import log_i0
-from ..math import invlogit, logit
-from .dist_math import bound, logpow, gammaln, betaln, std_cdf, alltrue_elemwise, SplineWrapper, i0e
+from ..math import invlogit, logit, logdiffexp
+from .dist_math import (
+    bound, logpow, gammaln, betaln, std_cdf, alltrue_elemwise,
+    SplineWrapper, i0e, normal_lcdf, normal_lccdf
+)
 from .distribution import Continuous, draw_values, generate_samples
 
 __all__ = ['Uniform', 'Flat', 'HalfFlat', 'Normal', 'TruncatedNormal', 'Beta',
@@ -51,10 +54,21 @@ class UnitContinuous(Continuous):
 class BoundedContinuous(Continuous):
     """Base class for bounded continuous distributions"""
 
-    def __init__(self, transform='interval', *args, **kwargs):
+    def __init__(self, transform='auto', lower=None, upper=None,
+                 *args, **kwargs):
 
-        if transform == 'interval':
-            transform = transforms.interval(self.lower, self.upper)
+        lower = tt.as_tensor_variable(lower) if lower is not None else None
+        upper = tt.as_tensor_variable(upper) if upper is not None else None
+
+        if transform == 'auto':
+            if lower is None and upper is None:
+                transform = None
+            elif lower is not None and upper is None:
+                transform = transforms.lowerbound(lower)
+            elif lower is None and upper is not None:
+                transform = transforms.upperbound(upper)
+            else:
+                transform = transforms.interval(lower, upper)
 
         super(BoundedContinuous, self).__init__(
             transform=transform, *args, **kwargs)
@@ -173,7 +187,8 @@ class Uniform(BoundedContinuous):
         self.mean = (upper + lower) / 2.
         self.median = self.mean
 
-        super(Uniform, self).__init__(*args, **kwargs)
+        super(Uniform, self).__init__(
+            lower=lower, upper=upper, *args, **kwargs)
 
     def random(self, point=None, size=None):
         """
@@ -446,7 +461,7 @@ class Normal(Continuous):
                                                                 get_variable_name(sd))
 
 
-class TruncatedNormal(Continuous):
+class TruncatedNormal(BoundedContinuous):
     R"""
     Univariate truncated normal log-likelihood.
 
@@ -521,34 +536,29 @@ class TruncatedNormal(Continuous):
     """
 
     def __init__(self, mu=0, sd=None, tau=None, lower=None, upper=None,
-                 transform='infer', *args, **kwargs):
+                 transform='auto', *args, **kwargs):
         tau, sd = get_tau_sd(tau=tau, sd=sd)
         self.sd = tt.as_tensor_variable(sd)
         self.tau = tt.as_tensor_variable(tau)
         self.lower = tt.as_tensor_variable(lower) if lower is not None else lower
         self.upper = tt.as_tensor_variable(upper) if upper is not None else upper
-        self.mu =  tt.as_tensor_variable(mu)
+        self.mu = tt.as_tensor_variable(mu)
 
-        # Calculate mean
-        pdf_a, pdf_b, cdf_a, cdf_b = self._get_boundary_parameters()
-        z = cdf_b - cdf_a
-        self.mean = self.mu + (pdf_a+pdf_b) / z * self.sd
+        if self.lower is None and self.upper is None:
+            self._defaultval = mu
+        elif self.lower is None and self.upper is not None:
+            self._defaultval = self.upper - 1.
+        elif self.lower is not None and self.upper is None:
+            self._defaultval = self.lower + 1.
+        else:
+            self._defaultval = (self.lower + self.upper) / 2
 
         assert_negative_support(sd, 'sd', 'TruncatedNormal')
         assert_negative_support(tau, 'tau', 'TruncatedNormal')
 
-        if transform == 'infer':
-            if lower is None and upper is None:
-                transform = None
-            elif lower is not None and upper is not None:
-                transform = transforms.interval(lower, upper)
-            elif upper is not None:
-                transform = transforms.upperbound(upper)
-            else:
-                transform = transforms.lowerbound(lower)
-
         super(TruncatedNormal, self).__init__(
-            transform=transform, *args, **kwargs)
+            defaults=('_defaultval',), transform=transform,
+            lower=lower, upper=upper, *args, **kwargs)
 
     def random(self, point=None, size=None):
         """
@@ -592,89 +602,57 @@ class TruncatedNormal(Continuous):
         -------
         TensorVariable
         """
-        sd = self.sd
-        tau = self.tau
         mu = self.mu
-        a = self.lower
-        b = self.upper
+        sd = self.sd
 
-        # In case either a or b are not specified, normalization terms simplify to 1.0 and 0.0
-        # https://en.wikipedia.org/wiki/Truncated_normal_distribution
-        norm_left, norm_right = 1.0, 0.0
+        norm = self._normalization()
+        logp = Normal.dist(mu=mu, sd=sd).logp(value) - norm
 
-        # Define normalization
-        if b is not None:
-            norm_left = self._cdf((b - mu) / sd)
+        bounds = [sd > 0]
+        if self.lower is not None:
+            bounds.append(value >= self.lower)
+        if self.upper is not None:
+            bounds.append(value <= self.upper)
+        return bound(logp, *bounds)
 
-        if a is not None:
-            norm_right = self._cdf((a - mu) / sd)
+    def _normalization(self):
+        mu, sd = self.mu, self.sd
 
-        f = self._pdf((value - mu) / sd) / sd / (norm_left - norm_right)
+        if self.lower is None and self.upper is None:
+            return 0.
 
-        return bound(tt.log(f), value >= a, value <= b, sd > 0)
+        if self.lower is not None and self.upper is not None:
+            lcdf_a = normal_lcdf(mu, sd, self.lower)
+            lcdf_b = normal_lcdf(mu, sd, self.upper)
+            lsf_a = normal_lccdf(mu, sd, self.lower)
+            lsf_b = normal_lccdf(mu, sd, self.upper)
 
-    def _cdf(self, value):
-        """
-        Calculate cdf of standard normal distribution
+            return tt.switch(
+                self.lower > 0,
+                logdiffexp(lsf_a, lsf_b),
+                logdiffexp(lcdf_b, lcdf_a),
+            )
 
-        Parameters
-        ----------
-        value : numeric
-            Value(s) for which log-probability is calculated. If the log probabilities for multiple
-            values are desired the values must be provided in a numpy array or theano tensor
-
-        Returns
-        -------
-        TensorVariable
-        """
-        return 0.5 * (1.0 + tt.erf(value / tt.sqrt(2)))
-
-    def _pdf(self, value):
-        """
-        Calculate pdf of standard normal distribution
-
-        Parameters
-        ----------
-        value : numeric
-            Value(s) for which log-probability is calculated. If the log probabilities for multiple
-            values are desired the values must be provided in a numpy array or theano tensor
-
-        Returns
-        -------
-        TensorVariable
-        """
-        return 1.0 / tt.sqrt(2 * np.pi) * tt.exp(-0.5 * (value ** 2))
+        if self.lower is not None:
+            return normal_lccdf(mu, sd, self.lower)
+        else:
+            return normal_lcdf(mu, sd, self.upper)
 
     def _repr_latex_(self, name=None, dist=None):
         if dist is None:
             dist = self
-        sd = dist.sd
-        mu = dist.mu
-        a = dist.a
-        b = dist.b
         name = r'\text{%s}' % name
-        return r'${} \sim \text{{TruncatedNormal}}(\mathit{{mu}}={},~\mathit{{sd}}={},a={},b={})$'.format(name,
-                                                                get_variable_name(mu),
-                                                                get_variable_name(sd),
-                                                                get_variable_name(a),
-                                                                get_variable_name(b))
-
-    def _get_boundary_parameters(self):
-        """
-        Calcualte values of cdf and pdf at boundary points a and b
-
-        Returns
-        -------
-        pdf(a), pdf(b), cdf(a), cdf(b) if a,b defined, otherwise 0.0, 0.0, 0.0, 1.0
-        """
-        # pdf = 0 at +-inf
-        pdf_a = self._pdf(self.lower) if not self.lower is None else 0.0
-        pdf_b = self._pdf(self.upper) if not self.upper is None else 0.0
-
-        # b-> inf, cdf(b) = 1.0, a->-inf, cdf(a) = 0
-        cdf_a = self._cdf(self.lower) if not self.lower is None else 0.0
-        cdf_b = self._cdf(self.upper) if not self.upper is None else 1.0
-        return pdf_a, pdf_b, cdf_a, cdf_b
+        return (
+            r'${} \sim \text{{TruncatedNormal}}('
+            '\mathit{{mu}}={},~\mathit{{sd}}={},a={},b={})$'
+            .format(
+                name,
+                get_variable_name(self.mu),
+                get_variable_name(self.sd),
+                get_variable_name(self.lower),
+                get_variable_name(self.upper),
+            )
+        )
 
 
 class HalfNormal(PositiveContinuous):
@@ -3054,7 +3032,8 @@ class Triangular(BoundedContinuous):
         self.lower = lower = tt.as_tensor_variable(lower)
         self.upper = upper = tt.as_tensor_variable(upper)
 
-        super(Triangular, self).__init__(*args, **kwargs)
+        super(Triangular, self).__init__(lower=lower, upper=upper,
+                                         *args, **kwargs)
 
     def random(self, point=None, size=None):
         """
@@ -3553,7 +3532,8 @@ class Interpolated(BoundedContinuous):
         self.lower = lower = tt.as_tensor_variable(x_points[0])
         self.upper = upper = tt.as_tensor_variable(x_points[-1])
 
-        super(Interpolated, self).__init__(*args, **kwargs)
+        super(Interpolated, self).__init__(lower=lower, upper=upper,
+                                           *args, **kwargs)
 
         interp = InterpolatedUnivariateSpline(
             x_points, pdf_points, k=1, ext='zeros')
