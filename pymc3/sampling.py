@@ -27,7 +27,16 @@ from tqdm import tqdm
 import sys
 sys.setrecursionlimit(10000)
 
-__all__ = ['sample', 'iter_sample', 'sample_ppc', 'sample_ppc_w', 'init_nuts', 'sample_prior_predictive']
+__all__ = ['sample',
+           'sample_posterior',
+           'iter_sample', 
+           'sample_ppc',
+           'sample_posterior_predictive',
+           'sample_ppc_w',
+           'sample_posterior_predictive_w',
+           'init_nuts', 
+           'sample_prior_predictive'
+           ]
 
 STEP_METHODS = (NUTS, HamiltonianMC, Metropolis, BinaryMetropolis,
                 BinaryGibbsMetropolis, Slice, CategoricalGibbsMetropolis)
@@ -311,7 +320,7 @@ def sample(draws=500, step=None, init='auto', n_init=200000, start=None, trace=N
         >>> with pm.Model() as model: # context management
         ...     p = pm.Beta('p', alpha=alpha, beta=beta)
         ...     y = pm.Binomial('y', n=n, p=p, observed=h)
-        ...     trace = pm.sample(2000, tune=1000, cores=4)
+        ...     trace = pm.sample_posterior(2000, tune=1000, cores=4)
         >>> pm.summary(trace)
                mean        sd  mc_error   hpd_2.5  hpd_97.5
         p  0.604625  0.047086   0.00078  0.510498  0.694774
@@ -481,6 +490,9 @@ def sample(draws=500, step=None, init='auto', n_init=200000, start=None, trace=N
 
     return trace
 
+def sample_posterior(*args,**kwargs):
+    """Alias for :func:`~sampling.sample`."""
+    return sample(*args,**kwargs)
 
 def _check_start_shape(model, start):
     if not isinstance(start, dict):
@@ -1068,7 +1080,7 @@ def stop_tuning(step):
     return step
 
 
-def sample_ppc(trace, samples=None, model=None, vars=None, size=None,
+def sample_posterior_predictive(trace, samples=None, model=None, vars=None, size=None,
                random_seed=None, progressbar=True):
     """Generate posterior predictive samples from a model given a trace.
 
@@ -1152,8 +1164,14 @@ def sample_ppc(trace, samples=None, model=None, vars=None, size=None,
 
     return ppc_trace
 
+def sample_ppc(*args,**kwargs):
+    """This method is deprecated.  Please use :func:`~sampling.sample_posterior_predictive`"""
+    message = 'sample_ppc() is deprecated. Please use sample_posterior_predictive().'
+    warnings.warn(message, DeprecationWarning, stacklevel=2)
+    return sample_posterior_predictive(*args, **kwargs)
 
-def sample_ppc_w(traces, samples=None, models=None, weights=None,
+
+def sample_posterior_predictive_w(traces, samples=None, models=None, weights=None,
                  random_seed=None, progressbar=True):
     """Generate weighted posterior predictive samples from a list of models and
     a list of traces according to a set of weights.
@@ -1283,6 +1301,12 @@ def sample_ppc_w(traces, samples=None, models=None, weights=None,
             indices.close()
 
     return {k: np.asarray(v) for k, v in ppc.items()}
+
+def sample_ppc_w(*args,**kwargs):
+    """This method is deprecated.  Please use :func:`~sampling.sample_posterior_predictive_w`"""
+    message = 'sample_ppc_w() is deprecated. Please use sample_posterior_predictive_w()'
+    warnings.warn(message, DeprecationWarning, stacklevel=2)
+    return sample_posterior_predictive_w(*args,**kwargs)
 
 
 def sample_prior_predictive(samples=500, model=None, vars=None, random_seed=None):
