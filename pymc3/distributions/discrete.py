@@ -712,6 +712,7 @@ class Categorical(Discrete):
 
     def random(self, point=None, size=None):
         p, k = draw_values([self.p, self.k], point=point, size=size)
+
         return generate_samples(random_choice,
                                 p=p,
                                 broadcast_shape=p.shape[:-1] or (1,),
