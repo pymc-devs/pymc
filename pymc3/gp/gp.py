@@ -871,7 +871,7 @@ class MarginalKron(Base):
         covs = [f(X) for f, X in zip(self.cov_funcs, Xs)]
         return mu, covs
 
-    def _check_inputs(self, Xs, y, sigma):
+    def _check_inputs(self, Xs, y):
         N = np.prod([len(X) for X in Xs])
         if len(Xs) != len(self.cov_funcs):
             raise ValueError('Must provide a covariance function for each X')
@@ -904,7 +904,7 @@ class MarginalKron(Base):
             Extra keyword arguments that are passed to `KroneckerNormal`
             distribution constructor.
         """
-        self._check_inputs(Xs, y, sigma)
+        self._check_inputs(Xs, y)
         mu, covs = self._build_marginal_likelihood(Xs)
         self.Xs = Xs
         self.y = y
@@ -1036,3 +1036,55 @@ class MarginalKron(Base):
         """
         mu, cov = self._build_conditional(Xnew, pred_noise, diag)
         return mu, cov
+
+
+@conditioned_vars(["Xs", "f"])
+class LatentKron(Base):
+    def __init__(self, mean_func=Zero(), cov_funcs=(Constant(0.0))):
+        try:
+            self.cov_funcs = list(cov_funcs)
+        except TypeError:
+            self.cov_funcs = [cov_funcs]
+        cov_func = pm.gp.cov.Kron(self.cov_funcs)
+        super(MarginalKron, self).__init__(mean_func, cov_func)
+
+    def __add__(self, other):
+        raise TypeError("Efficient implementation of additive, Kronecker-structured processes not implemented")
+
+    def _build_prior(self, Xs):
+        self.N = np.prod([len(X) for X in Xs])
+        mu = self.mean_func(cartesian(*Xs))
+        chols = [cholesky(stabilize(cov(X))) for cov, X in zip(self.cov_funcs, Xs)]
+        # remove reparameterization option
+        v = pm.Normal(name + "_rotated_", mu=0.0, sd=1.0, shape=self.N, **kwargs)
+        f = pm.Deterministic(name, tt.flatten(mu + kron_dot(chols, v)))
+        return f
+
+    def prior(self, name, Xs, **kwargs):
+        if len(Xs) != len(self.cov_funcs):
+            raise ValueError('Must provide a covariance function for each X')
+        f = self._build_prior(name, Xs, **kwargs)
+        self.Xs = Xs
+        self.f = f
+        return f
+
+    def _build_conditional(self, Xnew):
+        X = cartesian(*Xs)
+        delta = f - self.mean_func(X)
+        covs = [stabilize(cov(X)) for cov, X in zip(self.cov_funcs, Xs)]
+        chols = [cholesky(cov) for cov in covs]
+        cholTs = [tt.transpose(chol) for chol in chols]
+        Kss = cov_func(Xnew)
+        Kxs = cov_func(X, Xnew)
+        Ksx = Kxs.T
+        alpha = kron_solve_lower(chols, delta)
+        alpha = kron_solve_upper(cholTs, alpha)
+        mu = tt.dot(Ksx, alpha).ravel() + self.mean_func(Xnew)
+        A = kron_solve_lower(chols, Kxs)
+        cov = pm.gp.util.stabilize(Kss - tt.dot(tt.transpose(A), A))
+        return mu, cov
+
+    def conditional(self, name, Xnew, **kwargs):
+        mu, cov = self._build_conditional(Xnew)
+        shape = infer_shape(Xnew, kwargs.pop("shape", None))
+        return pm.MvNormal(name, mu=mu, cov=cov, shape=shape, **kwargs)

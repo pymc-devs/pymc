@@ -79,7 +79,7 @@ def kron_matrix_op(krons, m, op):
 # Define kronecker functions that work on 1D and 2D arrays
 kron_dot = partial(kron_matrix_op, op=tt.dot)
 kron_solve_lower = partial(kron_matrix_op, op=tt.slinalg.solve_lower_triangular)
-
+kron_solve_upper = partial(kron_matrix_op, op=tt.slinalg.solve_upper_triangular)
 
 def flat_outer(a, b):
     return tt.outer(a, b).ravel()
