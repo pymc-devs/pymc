@@ -82,13 +82,13 @@ class BetaBinomialFixture(KnownCDF):
 
 class StudentTFixture(KnownMean, KnownCDF):
     means = {'a': 0}
-    cdfs = {'a': stats.t(df=3).cdf}
+    cdfs = {'a': stats.t(df=4).cdf}
     ks_thin = 10
 
     @classmethod
     def make_model(cls):
         with pm.Model() as model:
-            a = pm.StudentT("a", nu=3, mu=0, sd=1)
+            a = pm.StudentT("a", nu=4, mu=0, sd=1)
         return model
 
 
@@ -110,7 +110,7 @@ class LKJCholeskyCovFixture(KnownCDF):
         with pm.Model() as model:
             sd_mu = np.array([1, 2, 3, 4, 5])
             sd_dist = pm.Lognormal.dist(mu=sd_mu, sd=sd_mu / 10., shape=5)
-            chol_packed = pm.LKJCholeskyCov('chol_packed', 5, 3, sd_dist)
+            chol_packed = pm.LKJCholeskyCov('chol_packed', eta=3, n=5, sd_dist=sd_dist)
             chol = pm.expand_packed_triangular(5, chol_packed, lower=True)
             cov = tt.dot(chol, chol.T)
             stds = tt.sqrt(tt.diag(cov))

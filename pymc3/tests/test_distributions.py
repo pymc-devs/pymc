@@ -7,16 +7,19 @@ from .helpers import SeededTest, select_by_precision
 from ..vartypes import continuous_types
 from ..model import Model, Point, Potential, Deterministic
 from ..blocking import DictToVarBijection, DictToArrayBijection, ArrayOrdering
-from ..distributions import (DensityDist, Categorical, Multinomial, VonMises, Dirichlet,
-                             MvStudentT, MvNormal, MatrixNormal, ZeroInflatedPoisson,
-                             ZeroInflatedNegativeBinomial, Constant, Poisson, Bernoulli, Beta,
-                             BetaBinomial, HalfStudentT, StudentT, Weibull, Pareto,
-                             InverseGamma, Gamma, Cauchy, HalfCauchy, Lognormal, Laplace,
-                             NegativeBinomial, Geometric, Exponential, ExGaussian, Normal,
-                             Flat, LKJCorr, Wald, ChiSquared, HalfNormal, DiscreteUniform,
-                             Bound, Uniform, Triangular, Binomial, SkewNormal, DiscreteWeibull,
-                             Gumbel, Logistic, OrderedLogistic, LogitNormal, Interpolated,
-                             ZeroInflatedBinomial, HalfFlat, AR1, KroneckerNormal, Rice)
+from ..distributions import (
+    DensityDist, Categorical, Multinomial, VonMises, Dirichlet,
+    MvStudentT, MvNormal, MatrixNormal, ZeroInflatedPoisson,
+    ZeroInflatedNegativeBinomial, Constant, Poisson, Bernoulli, Beta,
+    BetaBinomial, HalfStudentT, StudentT, Weibull, Pareto,
+    InverseGamma, Gamma, Cauchy, HalfCauchy, Lognormal, Laplace,
+    NegativeBinomial, Geometric, Exponential, ExGaussian, Normal, TruncatedNormal,
+    Flat, LKJCorr, Wald, ChiSquared, HalfNormal, DiscreteUniform,
+    Bound, Uniform, Triangular, Binomial, SkewNormal, DiscreteWeibull,
+    Gumbel, Logistic, OrderedLogistic, LogitNormal, Interpolated,
+    ZeroInflatedBinomial, HalfFlat, AR1, KroneckerNormal, Rice,
+    Kumaraswamy
+)
 
 from ..distributions import continuous
 from pymc3.theanof import floatX
@@ -533,6 +536,23 @@ class TestMatchesScipy(SeededTest):
                                  decimal=select_by_precision(float64=6, float32=1)
                                  )
 
+    def test_truncated_normal(self):
+        def scipy_logp(value, mu, sd, lower, upper):
+            return sp.truncnorm.logpdf(
+                value, (lower-mu)/sd, (upper-mu)/sd, loc=mu, scale=sd)
+
+        args = {'mu': array(-2.1), 'lower': array(-100.), 'upper': array(0.01),
+                'sd': array(0.01)}
+        val = TruncatedNormal.dist(**args).logp(0.)
+        assert_allclose(val.eval(), scipy_logp(value=0, **args))
+
+        self.pymc3_matches_scipy(
+            TruncatedNormal, R,
+            {'mu': R, 'sd': Rplusbig, 'lower': -Rplusbig, 'upper': Rplusbig},
+            scipy_logp,
+            decimal=select_by_precision(float64=6, float32=1)
+        )
+
     def test_half_normal(self):
         self.pymc3_matches_scipy(HalfNormal, Rplus, {'sd': Rplus},
                                  lambda value, sd: sp.halfnorm.logpdf(value, scale=sd),
@@ -579,6 +599,12 @@ class TestMatchesScipy(SeededTest):
         self.pymc3_matches_scipy(Beta, Unit, {'alpha': Rplus, 'beta': Rplus},
                                  lambda value, alpha, beta: sp.beta.logpdf(value, alpha, beta))
         self.pymc3_matches_scipy(Beta, Unit, {'mu': Unit, 'sd': Rplus}, beta_mu_sd)
+
+    def test_kumaraswamy(self):
+        # Scipy does not have a built-in Kumaraswamy pdf
+        def scipy_log_pdf(value, a, b):
+            return np.log(a) + np.log(b) + (a - 1) * np.log(value) + (b - 1) * np.log(1 - value ** a)
+        self.pymc3_matches_scipy(Kumaraswamy, Unit, {'a': Rplus, 'b': Rplus}, scipy_log_pdf)
 
     def test_exponential(self):
         self.pymc3_matches_scipy(Exponential, Rplus, {'lam': Rplus},
@@ -908,11 +934,11 @@ class TestMatchesScipy(SeededTest):
         [[[.25, .25, .25, .25],
          [.25, .25, .25, .25]], (2, 4), 13],
         [[[.25, .25, .25, .25],
-         [.25, .25, .25, .25]], (2, 4), [17, 19]],
-        [[[.25, .25, .25, .25],
          [.25, .25, .25, .25]], (1, 2, 4), [23, 29]],
         [[[.25, .25, .25, .25],
          [.25, .25, .25, .25]], (10, 2, 4), [31, 37]],
+        [[[.25, .25, .25, .25],
+         [.25, .25, .25, .25]], (2, 4), [17, 19]],
     ])
     def test_multinomial_random(self, p, shape, n):
         p = np.asarray(p)

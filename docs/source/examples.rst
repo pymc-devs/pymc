@@ -44,6 +44,7 @@ GLM
    notebooks/GLM-poisson-regression.ipynb
    notebooks/hierarchical_partial_pooling.ipynb
    notebooks/GLM-negative-binomial-regression.ipynb
+   notebooks/GLM-hierarchical-binominal-model.ipynb
 
 Gaussian Processes
 ==================
@@ -78,7 +79,7 @@ Variational Inference
    notebooks/convolutional_vae_keras_advi.ipynb
    notebooks/empirical-approx-overview.ipynb
    notebooks/normalizing_flows_overview.ipynb
-   
+
 
 Stochastic Gradient
 ===================

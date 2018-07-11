@@ -54,7 +54,8 @@ class _Bounded(Distribution):
         samples = np.zeros(size, dtype=self.dtype).flatten()
         i, n = 0, len(samples)
         while i < len(samples):
-            sample = self._wrapped.random(point=point, size=n)
+            sample = np.atleast_1d(self._wrapped.random(point=point, size=n))
+
             select = sample[np.logical_and(sample >= lower, sample <= upper)]
             samples[i:(i + len(select))] = select[:]
             i += len(select)
@@ -68,17 +69,17 @@ class _Bounded(Distribution):
         if self.lower is None and self.upper is None:
             return self._wrapped.random(point=point, size=size)
         elif self.lower is not None and self.upper is not None:
-            lower, upper = draw_values([self.lower, self.upper], point=point)
+            lower, upper = draw_values([self.lower, self.upper], point=point, size=size)
             return generate_samples(self._random, lower, upper, point,
                                     dist_shape=self.shape,
                                     size=size)
         elif self.lower is not None:
-            lower = draw_values([self.lower], point=point)
+            lower = draw_values([self.lower], point=point, size=size)
             return generate_samples(self._random, lower, np.inf, point,
                                     dist_shape=self.shape,
                                     size=size)
         else:
-            upper = draw_values([self.upper], point=point)
+            upper = draw_values([self.upper], point=point, size=size)
             return generate_samples(self._random, -np.inf, upper, point,
                                     dist_shape=self.shape,
                                     size=size)

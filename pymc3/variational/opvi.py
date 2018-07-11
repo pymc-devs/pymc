@@ -389,8 +389,12 @@ class Operator(object):
 
     inputs = property(lambda self: self.approx.inputs)
     logp = property(lambda self: self.approx.logp)
+    varlogp = property(lambda self: self.approx.varlogp)
+    datalogp = property(lambda self: self.approx.datalogp)
     logq = property(lambda self: self.approx.logq)
     logp_norm = property(lambda self: self.approx.logp_norm)
+    varlogp_norm = property(lambda self: self.approx.varlogp_norm)
+    datalogp_norm = property(lambda self: self.approx.datalogp_norm)
     logq_norm = property(lambda self: self.approx.logq_norm)
     model = property(lambda self: self.approx.model)
 
@@ -1298,7 +1302,10 @@ class Approximation(WithMemoization):
         """*Dev* - normalizing constant for `self.logq`, scales it to `minibatch_size` instead of `total_size`.
         Here the effect is controlled by `self.scale_cost_to_minibatch`
         """
-        t = tt.max(self.collect('symbolic_normalizing_constant'))
+        t = tt.max(
+            self.collect('symbolic_normalizing_constant') + [
+                var.scaling for var in self.model.observed_RVs
+            ])
         t = tt.switch(self._scale_cost_to_minibatch, t,
                       tt.constant(1, dtype=t.dtype))
         return pm.floatX(t)
@@ -1319,26 +1326,81 @@ class Approximation(WithMemoization):
         return self.logq / self.symbolic_normalizing_constant
 
     @node_property
+    def _sized_symbolic_varlogp_and_datalogp(self):
+        """*Dev* - computes sampled prior term from model via `theano.scan`"""
+        varlogp_s, datalogp_s = self.symbolic_sample_over_posterior(
+            [self.model.varlogpt, self.model.datalogpt])
+        return varlogp_s, datalogp_s  # both shape (s,)
+
+    @node_property
+    def sized_symbolic_varlogp(self):
+        """*Dev* - computes sampled prior term from model via `theano.scan`"""
+        return self._sized_symbolic_varlogp_and_datalogp[0]  # shape (s,)
+
+    @node_property
+    def sized_symbolic_datalogp(self):
+        """*Dev* - computes sampled data term from model via `theano.scan`"""
+        return self._sized_symbolic_varlogp_and_datalogp[1]  # shape (s,)
+
+    @node_property
     def sized_symbolic_logp(self):
-        """*Dev* - computes sampled `logP` from model via `theano.scan`"""
-        free_logp_local = self.symbolic_sample_over_posterior(self.model.logpt)
-        return free_logp_local  # shape (s,)
+        """*Dev* - computes sampled logP from model via `theano.scan`"""
+        return self.sized_symbolic_varlogp + self.sized_symbolic_datalogp  # shape (s,)
 
     @node_property
     def logp(self):
         """*Dev* - computes :math:`E_{q}(logP)` from model via `theano.scan` that can be optimized later"""
-        return self.sized_symbolic_logp.mean(0)
+        return self.varlogp + self.datalogp
+
+    @node_property
+    def varlogp(self):
+        """*Dev* - computes :math:`E_{q}(prior term)` from model via `theano.scan` that can be optimized later"""
+        return self.sized_symbolic_varlogp.mean(0)
+
+    @node_property
+    def datalogp(self):
+        """*Dev* - computes :math:`E_{q}(data term)` from model via `theano.scan` that can be optimized later"""
+        return self.sized_symbolic_datalogp.mean(0)
+
+    @node_property
+    def _single_symbolic_varlogp_and_datalogp(self):
+        """*Dev* - computes sampled prior term from model via `theano.scan`"""
+        varlogp, datalogp = self.symbolic_single_sample(
+            [self.model.varlogpt, self.model.datalogpt])
+        return varlogp, datalogp
+
+    @node_property
+    def single_symbolic_varlogp(self):
+        """*Dev* - for single MC sample estimate of :math:`E_{q}(prior term)` `theano.scan`
+        is not needed and code can be optimized"""
+        return self._single_symbolic_varlogp_and_datalogp[0]
+
+    @node_property
+    def single_symbolic_datalogp(self):
+        """*Dev* - for single MC sample estimate of :math:`E_{q}(data term)` `theano.scan`
+        is not needed and code can be optimized"""
+        return self._single_symbolic_varlogp_and_datalogp[1]
 
     @node_property
     def single_symbolic_logp(self):
         """*Dev* - for single MC sample estimate of :math:`E_{q}(logP)` `theano.scan`
         is not needed and code can be optimized"""
-        return self.symbolic_single_sample(self.model.logpt)
+        return self.single_symbolic_datalogp + self.single_symbolic_varlogp
 
     @node_property
     def logp_norm(self):
         """*Dev* - normalized :math:`E_{q}(logP)`"""
         return self.logp / self.symbolic_normalizing_constant
+
+    @node_property
+    def varlogp_norm(self):
+        """*Dev* - normalized :math:`E_{q}(prior term)`"""
+        return self.varlogp / self.symbolic_normalizing_constant
+
+    @node_property
+    def datalogp_norm(self):
+        """*Dev* - normalized :math:`E_{q}(data term)`"""
+        return self.datalogp / self.symbolic_normalizing_constant
 
     @property
     def replacements(self):
@@ -1437,7 +1499,8 @@ class Approximation(WithMemoization):
         repl = collections.OrderedDict()
         # avoid scan if size is constant and equal to one
         if isinstance(s, int) and (s == 1) or s is None:
-            repl[self.logp] = self.single_symbolic_logp
+            repl[self.varlogp] = self.single_symbolic_varlogp
+            repl[self.datalogp] = self.single_symbolic_datalogp
         return repl
 
     @change_flags(compute_test_value='off')

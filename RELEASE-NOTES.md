@@ -12,6 +12,21 @@
 - Improve error message `Mass matrix contains zeros on the diagonal. Some derivatives might always be zero` during tuning of `pm.sample`
 - Improve error message `NaN occurred in optimization.` during ADVI
 - Save and load traces without `pickle` using `pm.save_trace` and `pm.load_trace`
+- Add `Kumaraswamy` distribution
+- Add 'TruncatedNormal' distribution
+- Rewrite parallel sampling of multiple chains on py3. This resolves
+  long standing issues when transferring large traces to the main process,
+  avoids pickling issues on UNIX, and allows us to show a progress bar
+  for all chains. If parallel sampling is interrupted, we now return
+  partial results.
+- Add `sample_prior_predictive` which allows for efficient sampling from
+  the unconditioned model.
+- SMC: remove experimental warning, allow sampling using `sample`, reduce autocorrelation from
+  final trace.
+- Add `model_to_graphviz` (which uses the optional dependency `graphviz`) to
+  plot a directed graph of a PyMC3 model using plate notation.
+- Add beta-ELBO variational inference as in beta-VAE model (Christopher P. Burgess et al. NIPS, 2017)
+- Add `__dir__` to `SingleGroupApproximation` to improve autocompletion in interactive environments
 
 ### Fixes
 
@@ -19,6 +34,7 @@
 - Removed unused `repeat=None` arguments from all `random()` methods in distributions.
 - Deprecated the `sigma` argument in `MarginalSparse.marginal_likelihood` in favor of `noise`
 - Fixed unexpected behavior in `random`. Now the `random` functionality is more robust and will work better for `sample_prior` when that is implemented.
+- Fixed `scale_cost_to_minibatch` behaviour, previously this was not working and always `False`
 
 ## PyMC 3.4.1 (April 18 2018)
 

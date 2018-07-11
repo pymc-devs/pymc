@@ -37,6 +37,29 @@ def test_AR():
     np.testing.assert_allclose(ar_like, reg_like)
 
 
+def test_AR_nd():
+    # AR2 multidimensional
+    p, T, n = 3, 100, 5
+    beta_tp = np.random.randn(p, n)
+    y_tp = np.random.randn(T, n)
+    with Model() as t0:
+        beta = Normal('beta', 0., 1.,
+                      shape=(p, n),
+                      testval=beta_tp)
+        AR('y', beta, sd=1.0,
+           shape=(T, n), testval=y_tp)
+
+    with Model() as t1:
+        beta = Normal('beta', 0., 1.,
+                      shape=(p, n),
+                      testval=beta_tp)
+        for i in range(n):
+            AR('y_%d' % i, beta[:, i], sd=1.0,
+               shape=T, testval=y_tp[:, i])
+
+    np.testing.assert_allclose(t0.logp(t0.test_point),
+                               t1.logp(t1.test_point))
+
 
 def test_GARCH11():
     # test data ~ N(0, 1)
