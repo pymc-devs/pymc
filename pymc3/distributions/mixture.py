@@ -3,7 +3,7 @@ import theano.tensor as tt
 
 from pymc3.util import get_variable_name
 from ..math import logsumexp
-from .dist_math import bound
+from .dist_math import bound, random_choice
 from .distribution import Discrete, Distribution, draw_values, generate_samples
 from .continuous import get_tau_sd, Normal
 
@@ -147,24 +147,18 @@ class Mixture(Distribution):
                      broadcast_conditions=False)
 
     def random(self, point=None, size=None):
-        def random_choice(*args, **kwargs):
-            w = kwargs.pop('w')
-            w /= w.sum(axis=-1, keepdims=True)
-            k = w.shape[-1]
-
-            if w.ndim > 1:
-                return np.row_stack([np.random.choice(k, p=w_) for w_ in w])
-            else:
-                return np.random.choice(k, p=w, *args, **kwargs)
-
         w = draw_values([self.w], point=point)[0]
         comp_tmp = self._comp_samples(point=point, size=None)
         if np.asarray(self.shape).size == 0:
             distshape = np.asarray(np.broadcast(w, comp_tmp).shape)[..., :-1]
         else:
             distshape = np.asarray(self.shape)
+
+        # Normalize inputs
+        w /= w.sum(axis=-1, keepdims=True)
+
         w_samples = generate_samples(random_choice,
-                                     w=w,
+                                     p=w,
                                      broadcast_shape=w.shape[:-1] or (1,),
                                      dist_shape=distshape,
                                      size=size).squeeze()

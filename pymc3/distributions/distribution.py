@@ -214,7 +214,6 @@ class DensityDist(Distribution):
                             "Define a custom random method and pass it as kwarg random")
 
 
-
 def draw_values(params, point=None, size=None):
     """
     Draw (fix) parameter values. Handles a number of cases:
