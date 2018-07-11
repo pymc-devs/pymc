@@ -107,7 +107,11 @@ class AR(distribution.Continuous):
                 shape_ = rho.shape.tag.test_value
             except AttributeError:
                 shape_ = rho.shape
-            p = 1 if shape_.size==0 else shape_[0]
+
+            if hasattr(shape_, "size") and shape_.size == 0:
+                p = 1
+            else:
+                p = shape_[0]
 
         if constant:
             self.p = p - 1
