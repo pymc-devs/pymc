@@ -280,3 +280,30 @@ class I0e(UnaryScalarOp):
 
 
 i0e = I0e(upgrade_to_float, name='i0e')
+
+
+def random_choice(*args, **kwargs):
+    """Return draws from a categorial probability functions
+
+    Args:
+        p: array
+           Probability of each class
+        size: int
+            Number of draws to return
+        k: int
+            Number of bins
+
+    Returns:
+        random sample: array
+
+    """
+    p = kwargs.pop('p')
+    size = kwargs.pop('size')
+    k = p.shape[-1]
+
+    if p.ndim > 1:
+        samples = np.row_stack([np.random.choice(k, p=p_) for p_ in p])
+    else:
+        samples = np.random.choice(k, p=p, size=size)
+    return samples
+
