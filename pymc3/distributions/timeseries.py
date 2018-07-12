@@ -104,9 +104,14 @@ class AR(distribution.Continuous):
             p = len(rho)
         else:
             try:
-                p = rho.shape.tag.test_value[0]
+                shape_ = rho.shape.tag.test_value
             except AttributeError:
-                p = rho.shape[0]
+                shape_ = rho.shape
+
+            if hasattr(shape_, "size") and shape_.size == 0:
+                p = 1
+            else:
+                p = shape_[0]
 
         if constant:
             self.p = p - 1
@@ -122,7 +127,10 @@ class AR(distribution.Continuous):
             x = tt.add(*[self.rho[i + 1] * value[self.p - (i + 1):-(i + 1)] for i in range(self.p)])
             eps = value[self.p:] - self.rho[0] - x
         else:
-            x = tt.add(*[self.rho[i] * value[self.p - (i + 1):-(i + 1)] for i in range(self.p)])
+            if self.p == 1:
+                x = self.rho * value[:-1]
+            else:
+                x = tt.add(*[self.rho[i] * value[self.p - (i + 1):-(i + 1)] for i in range(self.p)])
             eps = value[self.p:] - x
 
         innov_like = Normal.dist(mu=0.0, tau=self.tau).logp(eps)
