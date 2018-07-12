@@ -832,7 +832,7 @@ class LatentKron(Base):
         Xs, f = self.Xs, self.f
         X = cartesian(*Xs)
         delta = f - self.mean_func(X)
-        covs = [stabilize(cov(X)) for cov, X in zip(self.cov_funcs, Xs)]
+        covs = [stabilize(cov(Xi)) for cov, Xi in zip(self.cov_funcs, Xs)]
         chols = [cholesky(cov) for cov in covs]
         cholTs = [tt.transpose(chol) for chol in chols]
         Kss = self.cov_func(Xnew)

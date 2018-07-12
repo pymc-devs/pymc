@@ -922,17 +922,16 @@ class TestLatentKron(object):
         self.X = cartesian(*self.Xs)
         self.N = np.prod([len(X) for X in self.Xs])
         self.y = np.random.randn(self.N) * 0.1
-        self.Xnews = [np.random.randn(5, 1),
+        self.Xnews = (np.random.randn(5, 1),
                       np.random.randn(5, 1),
-                      np.random.randn(5, 1)]
-        self.Xnew = np.concatenate(tuple(self.Xnews), axis=1)
-        self.sigma = 0.2
+                      np.random.randn(5, 1))
+        self.Xnew = np.concatenate(self.Xnews, axis=1)
         self.pnew = np.random.randn(len(self.Xnew))*0.01
         ls = 0.2
         with pm.Model() as latent_model:
-            self.cov_funcs = [pm.gp.cov.ExpQuad(1, ls),
+            self.cov_funcs = (pm.gp.cov.ExpQuad(1, ls),
                               pm.gp.cov.ExpQuad(1, ls),
-                              pm.gp.cov.ExpQuad(1, ls)]
+                              pm.gp.cov.ExpQuad(1, ls))
             cov_func = pm.gp.cov.Kron(self.cov_funcs)
             self.mean = pm.gp.mean.Constant(0.5)
             gp = pm.gp.Latent(mean_func=self.mean, cov_func=cov_func)
@@ -980,10 +979,10 @@ class TestMarginalKron(object):
         self.X = cartesian(*self.Xs)
         self.N = np.prod([len(X) for X in self.Xs])
         self.y = np.random.randn(self.N) * 0.1
-        self.Xnews = [np.random.randn(5, 1),
+        self.Xnews = (np.random.randn(5, 1),
                       np.random.randn(5, 1),
-                      np.random.randn(5, 1)]
-        self.Xnew = np.concatenate(tuple(self.Xnews), axis=1)
+                      np.random.randn(5, 1))
+        self.Xnew = np.concatenate(self.Xnews, axis=1)
         self.sigma = 0.2
         self.pnew = np.random.randn(len(self.Xnew))*0.01
         ls = 0.2
