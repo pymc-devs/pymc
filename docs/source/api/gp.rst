@@ -37,6 +37,8 @@ Covariance Functions
    Polynomial
    WarpedInput
    Gibbs
+   Kron
+   Coregion
 
 .. automodule:: pymc3.gp.cov
    :members:
