@@ -16,7 +16,8 @@ __all__ = ['Constant',
            'Periodic',
            'WarpedInput',
            'Gibbs',
-           'Coregion']
+           'Coregion',
+           'Kron']
 
 
 class Covariance(object):
@@ -155,6 +156,9 @@ class Kron(Covariance):
     concatenated columns of its components.
 
     Factors must be covariances or their combinations, arrays will not work.
+
+    Generally utilized by the `gp.MarginalKron` and gp.LatentKron`
+    implementations.
     """
 
     def __init__(self, factor_list):

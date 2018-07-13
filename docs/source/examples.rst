@@ -53,6 +53,7 @@ Gaussian Processes
    notebooks/GP-Marginal.ipynb
    notebooks/GP-Latent.ipynb
    notebooks/GP-SparseApprox.ipynb
+   notebooks/GP-Kron.ipynb
    notebooks/GP-TProcess.ipynb
    notebooks/GP-MaunaLoa.ipynb
    notebooks/GP-slice-sampling.ipynb
