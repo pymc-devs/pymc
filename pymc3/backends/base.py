@@ -77,7 +77,7 @@ class BaseTrace(object):
             raise ValueError("Backend does not support sampler stats.")
 
         if self._is_base_setup and self.sampler_vars != sampler_vars:
-                raise ValueError("Can't change sampler_vars")
+            raise ValueError("Can't change sampler_vars")
 
         if sampler_vars is None:
             self.sampler_vars = None
@@ -311,8 +311,8 @@ class MultiTrace(object):
         if var in self.varnames:
             if var in self.stat_names:
                 warnings.warn("Attribute access on a trace object is ambigous. "
-                "Sampler statistic and model variable share a name. Use "
-                "trace.get_values or trace.get_sampler_stats.")
+                              "Sampler statistic and model variable share a name. Use "
+                              "trace.get_values or trace.get_sampler_stats.")
             return self.get_values(var, burn=burn, thin=thin)
         if var in self.stat_names:
             return self.get_sampler_stats(var, burn=burn, thin=thin)
@@ -331,8 +331,8 @@ class MultiTrace(object):
         if name in self.varnames:
             if name in self.stat_names:
                 warnings.warn("Attribute access on a trace object is ambigous. "
-                "Sampler statistic and model variable share a name. Use "
-                "trace.get_values or trace.get_sampler_stats.")
+                              "Sampler statistic and model variable share a name. Use "
+                              "trace.get_values or trace.get_sampler_stats.")
             return self.get_values(name)
         if name in self.stat_names:
             return self.get_sampler_stats(name)
@@ -363,20 +363,28 @@ class MultiTrace(object):
                 names.update(vars.keys())
         return names
 
-    def add_values(self, vals):
-        """add values to traces.
+    def add_values(self, vals, overwrite=False):
+        """add variables to traces.
+
         Parameters
         ----------
         vals : dict (str: array-like)
-             The keys should be the names of the new variables. The values are
-             expected to be array-like object.
-             For traces with more than one chain the length of each value
-             should match the number of total samples already in the trace
-             (chains * iterations), otherwise a warning is raised.
+             The keys should be the names of the new variables. The values are expected to be
+             array-like object. For traces with more than one chain the length of each value
+             should match the number of total samples already in the trace (chains * iterations),
+             otherwise a warning is raised.
+        overwrite : bool
+            If `False` (default) a ValueError is raised if the variable already exists.
+            Change to `True` to overwrite the values of variables
         """
         for k, v in vals.items():
+            new_var = 1
             if k in self.varnames:
-                raise ValueError("Variable name {} already exists.".format(k))
+                if overwrite:
+                    self.varnames.remove(k)
+                    new_var = 0
+                else:
+                    raise ValueError("Variable name {} already exists.".format(k))
 
             self.varnames.append(k)
 
@@ -392,9 +400,29 @@ class MultiTrace(object):
             v = np.squeeze(v.reshape(len(chains), len(self), -1))
 
             for idx, chain in enumerate(chains.values()):
+                if new_var:
+                    dummy = tt.as_tensor_variable([], k)
+                    chain.vars.append(dummy)
                 chain.samples[k] = v[idx]
-                dummy = tt.as_tensor_variable([], k)
-                chain.vars.append(dummy)
+
+    def remove_values(self, name):
+        """remove variables from traces.
+
+        Parameters
+        ----------
+        name : str
+            Name of the variable to remove. Raises KeyError if the variable is not present
+        """
+        varnames = self.varnames
+        if name not in varnames:
+            raise KeyError("Unknown variable {}".format(name))
+        self.varnames.remove(name)
+        chains = self._straces
+        for chain in chains.values():
+            for va in chain.vars:
+                if va.name == name:
+                    chain.vars.remove(va)
+                    del chain.samples[name]
 
     def get_values(self, varname, burn=0, thin=1, combine=True, chains=None,
                    squeeze=True):
