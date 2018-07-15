@@ -1,7 +1,7 @@
 # Release Notes
 
 
-## PyMC 3.5 (Unreleased)
+## PyMC 3.5
 
 
 ### New features
