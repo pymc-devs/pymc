@@ -50,6 +50,7 @@ Survival Analysis
 
 .. toctree::
    notebooks/survival_analysis.ipynb
+   notebooks/bayes_param_survival_pymc3.ipynb
    notebooks/weibull_aft.ipynb
    notebooks/censored_data.ipynb
 
