@@ -327,7 +327,7 @@ class MvStudentT(_QuadFormBase):
     """
 
     def __init__(self, nu, Sigma=None, mu=None, cov=None, tau=None, chol=None,
-                 lower=None, *args, **kwargs):
+                 lower=True, *args, **kwargs):
         if Sigma is not None:
             if cov is not None:
                 raise ValueError('Specify only one of cov and Sigma')
