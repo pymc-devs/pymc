@@ -173,17 +173,22 @@ class BaseHMC(arraystep.GradientSharedStep):
         if n_divs and self._samples_after_tune == n_divs:
             message = ('The chain contains only diverging samples. The model '
                        'is probably misspecified.')
+            warning = SamplerWarning(
+                WarningType.DIVERGENCES, message, 'error', None, None, None)
+            warnings.append(warning)
         elif n_divs == 1:
             message = ('There was 1 divergence after tuning. Increase '
                        '`target_accept` or reparameterize.')
+            warning = SamplerWarning(
+                WarningType.DIVERGENCES, message, 'error', None, None, None)
+            warnings.append(warning)
         elif n_divs > 1:
             message = ('There were %s divergences after tuning. Increase '
                        '`target_accept` or reparameterize.'
                        % n_divs)
+            warning = SamplerWarning(
+                WarningType.DIVERGENCES, message, 'error', None, None, None)
+            warnings.append(warning)
 
-        warning = SamplerWarning(
-            WarningType.DIVERGENCES, message, 'error', None, None, None)
-        warnings.append(warning)
         warnings.extend(self.step_adapt.warnings())
-
         return warnings
