@@ -176,7 +176,7 @@ class BaseHMC(arraystep.GradientSharedStep):
         elif n_divs == 1:
             message = ('There was 1 divergence after tuning. Increase '
                        '`target_accept` or reparameterize.')
-        elif n_divs > 0:
+        elif n_divs > 1:
             message = ('There were %s divergences after tuning. Increase '
                        '`target_accept` or reparameterize.'
                        % n_divs)
