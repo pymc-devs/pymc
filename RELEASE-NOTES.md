@@ -6,6 +6,7 @@
 
 ### New features
 
+- Add documentation section on survival analysis and censored data models
 - Add `check_test_point` method to `pm.Model`
 - Add `Ordered` Transformation and `OrderedLogistic` distribution
 - Add `Chain` transformation
