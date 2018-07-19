@@ -446,6 +446,9 @@ class TestNutsCheckTrace(object):
             warns = [msg.msg for msg in caplog.records]
             assert np.any(trace['diverging'])
             assert (
+                any('divergence after tuning' in warn
+                    for warn in warns)
+                or
                 any('divergences after tuning' in warn
                     for warn in warns)
                 or

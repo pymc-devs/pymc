@@ -31,6 +31,7 @@
 
 ### Fixes
 
+- Fixed grammar in divergence warning, previously `There were 1 divergences ...` could be raised.
 - Fixed `KeyError` raised when only subset of variables are specified to be recorded in the trace.
 - Removed unused `repeat=None` arguments from all `random()` methods in distributions.
 - Deprecated the `sigma` argument in `MarginalSparse.marginal_likelihood` in favor of `noise`
