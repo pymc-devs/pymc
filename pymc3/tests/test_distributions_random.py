@@ -402,6 +402,11 @@ class TestCategorical(BaseTestCases.BaseTestCase):
     def get_random_variable(self, shape, with_vector_params=False, **kwargs):  # don't transform categories
         return super(TestCategorical, self).get_random_variable(shape, with_vector_params=False, **kwargs)
 
+    def test_probability_vector_shape(self):
+        """Check that if a 2d array of probabilities are passed to categorical correct shape is returned"""
+        p = np.ones((10, 5))
+        assert pm.Categorical.dist(p=p).random().shape == (10,)
+
 
 class TestScalarParameterSamples(SeededTest):
     def test_bounded(self):
