@@ -194,8 +194,7 @@ class BaseTestCases(object):
         @pytest.mark.parametrize('shape', [(), (1,), (1, 1), (1, 2), (10, 10, 1), (10, 10, 2)], ids=str)
         def test_different_shapes_and_sample_sizes(self, shape):
             prefix = self.distribution.__name__
-            expected = []
-            actual = []
+
             rv = self.get_random_variable(shape, name='%s_%s' % (prefix, shape))
             for size in (None, 1, 5, (4, 5)):
                 if size is None:
