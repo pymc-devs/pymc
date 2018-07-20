@@ -194,8 +194,7 @@ class BaseTestCases(object):
         @pytest.mark.parametrize('shape', [(), (1,), (1, 1), (1, 2), (10, 10, 1), (10, 10, 2)], ids=str)
         def test_different_shapes_and_sample_sizes(self, shape):
             prefix = self.distribution.__name__
-            expected = []
-            actual = []
+
             rv = self.get_random_variable(shape, name='%s_%s' % (prefix, shape))
             for size in (None, 1, 5, (4, 5)):
                 if size is None:
@@ -401,6 +400,11 @@ class TestCategorical(BaseTestCases.BaseTestCase):
 
     def get_random_variable(self, shape, with_vector_params=False, **kwargs):  # don't transform categories
         return super(TestCategorical, self).get_random_variable(shape, with_vector_params=False, **kwargs)
+
+    def test_probability_vector_shape(self):
+        """Check that if a 2d array of probabilities are passed to categorical correct shape is returned"""
+        p = np.ones((10, 5))
+        assert pm.Categorical.dist(p=p).random().shape == (10,)
 
 
 class TestScalarParameterSamples(SeededTest):
