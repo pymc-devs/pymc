@@ -1,9 +1,6 @@
 """
-pymc3.distributions
-
 A collection of common probability distributions for stochastic
 nodes in PyMC.
-
 """
 from __future__ import division
 
