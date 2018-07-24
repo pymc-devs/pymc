@@ -1294,7 +1294,8 @@ def sample_prior_predictive(samples=500, model=None, vars=None, random_seed=None
         Number of samples from the prior predictive to generate. Defaults to 500.
     model : Model (optional if in `with` context)
     vars : iterable
-        Variables for which to compute the posterior predictive samples.
+        A list of names of variables for which to compute the posterior predictive
+         samples.
         Defaults to `model.named_vars`.
     random_seed : int
         Seed for the random number generator.
@@ -1302,7 +1303,8 @@ def sample_prior_predictive(samples=500, model=None, vars=None, random_seed=None
     Returns
     -------
     dict
-        Dictionary with the variables as keys. The values are arrays of prior samples.
+        Dictionary with variable names as keys. The values are numpy arrays of prior
+         samples.
     """
     model = modelcontext(model)
 
