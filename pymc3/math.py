@@ -71,9 +71,9 @@ def kron_matrix_op(krons, m, op):
         m = m[:, None]  # Treat 1D array as Nx1 matrix
     if m.ndim != 2:  # Has not been tested otherwise
         raise ValueError('m must have ndim <= 2, not {}'.format(mat.ndim))
-    m = m.T
-    res, _ = theano.scan(kron_vector_op, sequences=[m])
-    return res.T
+    res = kron_vector_op(m)
+    res_shape = res.shape
+    return tt.reshape(res, (res_shape[1], res_shape[0])).T
 
 
 # Define kronecker functions that work on 1D and 2D arrays
