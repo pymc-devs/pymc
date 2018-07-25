@@ -14,13 +14,33 @@ __all__ = [
 class KL(Operator):
     R"""**Operator based on Kullback Leibler Divergence**
 
+    This operator constructs Evidence Lower Bound (ELBO) objective
+
+    .. math::
+
+        ELBO_\beta = \log p(D|\theta) - \beta KL(q||p)
+
+    where
+
     .. math::
 
         KL[q(v)||p(v)] = \int q(v)\log\frac{q(v)}{p(v)}dv
+
+
+    Parameters
+    ----------
+    approx : :class:`Approximation`
+        Approximation used for inference
+    beta : float
+        Beta parameter for KL divergence, scales the regularization term.
     """
 
+    def __init__(self, approx, beta=1.):
+        Operator.__init__(self, approx)
+        self.beta = pm.floatX(beta)
+
     def apply(self, f):
-        return self.logq_norm - self.logp_norm
+        return -self.datalogp_norm + self.beta * (self.logq_norm - self.varlogp_norm)
 
 # SVGD Implementation
 
@@ -76,6 +96,8 @@ class KSD(Operator):
     ----------
     approx : :class:`Approximation`
         Approximation used for inference
+    temperature: float
+        Temperature for Stein gradient
 
     References
     ----------

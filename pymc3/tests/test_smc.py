@@ -17,7 +17,7 @@ class TestSMC(SeededTest):
         super(TestSMC, self).setup_class()
         self.test_folder = mkdtemp(prefix='ATMIP_TEST')
 
-        self.samples = 2000
+        self.samples = 1500
         self.chains = 200
         n = 4
         mu1 = np.ones(n) * (1. / 2)
@@ -47,13 +47,13 @@ class TestSMC(SeededTest):
         self.muref = mu1
 
 
-    @pytest.mark.parametrize(['n_jobs', 'stage'], [[1, 0], [2, 6]])
-    def test_sample_n_core(self, n_jobs, stage):
+    @pytest.mark.parametrize(['cores', 'stage'], [[1, 0], [2, 6]])
+    def test_sample_n_core(self, cores, stage):
         step_kwargs = {'homepath': self.test_folder, 'stage': stage}
         with self.ATMIP_test:
             mtrace = pm.sample(draws=self.samples,
                                chains=self.chains,
-                               cores=n_jobs,
+                               cores=cores,
                                step = pm.SMC(),
                                step_kwargs=step_kwargs)
 
@@ -75,7 +75,7 @@ class TestSMC(SeededTest):
                                                                   self.chains,
                                                                   step,
                                                                   model=self.ATMIP_test)
-        assert len(corrupted_chains) == 0
+        assert len(corrupted_chains) == self.chains
 
         rtrace = stage_handler.load_result_trace(model=self.ATMIP_test)
 

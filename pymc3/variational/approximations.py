@@ -539,6 +539,11 @@ class SingleGroupApproximation(Approximation):
     def __getattr__(self, item):
         return getattr(self.groups[0], item)
 
+    def __dir__(self):
+        d = set(super(SingleGroupApproximation, self).__dir__())
+        d.update(self.groups[0].__dir__())
+        return list(sorted(d))
+
 
 class MeanField(SingleGroupApproximation):
     __doc__ = """**Single Group Mean Field Approximation**

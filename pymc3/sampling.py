@@ -996,7 +996,8 @@ def _mp_sample(draws, tune, step, chains, cores, chain, random_seed,
                 strace = _choose_backend(copy(trace), idx, model=model)
             else:
                 strace = _choose_backend(None, idx, model=model)
-            # TODO what is this for?
+            # for user supply start value, fill-in missing value if the supplied
+            # dict does not contain all parameters
             update_start_vals(start[idx - chain], model.test_point, model)
             if step.generates_stats and strace.supports_sampler_stats:
                 strace.setup(draws + tune, idx + chain, step.stats_dtypes)
@@ -1134,18 +1135,26 @@ def sample_posterior_predictive(trace, samples=None, model=None, vars=None, size
     if progressbar:
         indices = tqdm(indices, total=samples)
 
+    varnames = [var.name for var in vars]
+
+    # draw once to inspect the shape
+    var_values = list(zip(varnames,
+                          draw_values(vars, point=model.test_point, size=size)))
+    ppc_trace = defaultdict(list)
+    for varname, value in var_values:
+        ppc_trace[varname] = np.zeros((samples,) + value.shape, value.dtype)
+
     try:
-        ppc = defaultdict(list)
-        for idx in indices:
+        for slc, idx in enumerate(indices):
             if nchain > 1:
                 chain_idx, point_idx = np.divmod(idx, len_trace)
                 param = trace._straces[chain_idx].point(point_idx)
             else:
                 param = trace[idx]
 
-            for var in vars:
-                ppc[var.name].append(var.distribution.random(point=param,
-                                                             size=size))
+            values = draw_values(vars, point=param, size=size)
+            for k, v in zip(vars, values):
+                ppc_trace[k.name][slc] = v
 
     except KeyboardInterrupt:
         pass
@@ -1154,7 +1163,7 @@ def sample_posterior_predictive(trace, samples=None, model=None, vars=None, size
         if progressbar:
             indices.close()
 
-    return {k: np.asarray(v) for k, v in ppc.items()}
+    return ppc_trace
 
 
 def sample_ppc(*args, **kwargs):
@@ -1279,8 +1288,12 @@ def sample_posterior_predictive_w(traces, samples=None, models=None, weights=Non
         for idx in indices:
             param = trace[idx]
             var = variables[idx]
-            ppc[var.name].append(var.distribution.random(point=param,
-                                                         size=size[idx]))
+            # TODO sample_ppc_w is currently only work for model with
+            # one observed.
+            ppc[var.name].append(draw_values([var],
+                                             point=param,
+                                             size=size[idx]
+                                             )[0])
 
     except KeyboardInterrupt:
         pass
@@ -1308,7 +1321,8 @@ def sample_prior_predictive(samples=500, model=None, vars=None, random_seed=None
         Number of samples from the prior predictive to generate. Defaults to 500.
     model : Model (optional if in `with` context)
     vars : iterable
-        Variables for which to compute the posterior predictive samples.
+        A list of names of variables for which to compute the posterior predictive
+         samples.
         Defaults to `model.named_vars`.
     random_seed : int
         Seed for the random number generator.
@@ -1316,7 +1330,8 @@ def sample_prior_predictive(samples=500, model=None, vars=None, random_seed=None
     Returns
     -------
     dict
-        Dictionary with the variables as keys. The values are arrays of prior samples.
+        Dictionary with variable names as keys. The values are numpy arrays of prior
+         samples.
     """
     model = modelcontext(model)
 

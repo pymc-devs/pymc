@@ -114,8 +114,13 @@ def logsumexp(x, axis=None):
 def logaddexp(a, b):
     diff = b - a
     return tt.switch(diff > 0,
-                    b + tt.log1p(tt.exp(-diff)),
-                    a + tt.log1p(tt.exp(diff)))
+                     b + tt.log1p(tt.exp(-diff)),
+                     a + tt.log1p(tt.exp(diff)))
+
+
+def logdiffexp(a, b):
+    """log(exp(a) - exp(b))"""
+    return a + log1mexp(a - b)
 
 
 def invlogit(x, eps=sys.float_info.epsilon):

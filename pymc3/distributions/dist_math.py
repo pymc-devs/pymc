@@ -65,7 +65,7 @@ def logpow(x, m):
     Calculates log(x**m) since m*log(x) will fail when m, x = 0.
     """
     # return m * log(x)
-    return tt.switch(tt.eq(x, 0) & ~tt.eq(m + x, 0), -np.inf, m * tt.log(x))
+    return tt.switch(tt.eq(x, 0), tt.switch(tt.eq(m, 0), 0.0, -np.inf), m * tt.log(x))
 
 
 def factln(n):
@@ -85,6 +85,25 @@ def std_cdf(x):
     Calculates the standard normal cumulative distribution function.
     """
     return .5 + .5 * tt.erf(x / tt.sqrt(2.))
+
+
+def normal_lcdf(mu, sigma, x):
+    """Compute the log of the cumulative density function of the normal."""
+    z = (x - mu) / sigma
+    return tt.switch(
+        tt.lt(z, -1.0),
+        tt.log(tt.erfcx(-z / tt.sqrt(2.)) / 2.) - tt.sqr(z) / 2.,
+        tt.log1p(-tt.erfc(z / tt.sqrt(2.)) / 2.)
+    )
+
+
+def normal_lccdf(mu, sigma, x):
+    z = (x - mu) / sigma
+    return tt.switch(
+        tt.gt(z, 1.0),
+        tt.log(tt.erfcx(z / tt.sqrt(2.)) / 2.) - tt.sqr(z) / 2.,
+        tt.log1p(-tt.erfc(-z / tt.sqrt(2.)) / 2.)
+    )
 
 
 def sd2rho(sd):
@@ -261,3 +280,31 @@ class I0e(UnaryScalarOp):
 
 
 i0e = I0e(upgrade_to_float, name='i0e')
+
+
+def random_choice(*args, **kwargs):
+    """Return draws from a categorial probability functions
+
+    Args:
+        p: array
+           Probability of each class
+        size: int
+            Number of draws to return
+        k: int
+            Number of bins
+
+    Returns:
+        random sample: array
+
+    """
+    p = kwargs.pop('p')
+    size = kwargs.pop('size')
+    k = p.shape[-1]
+
+    if p.ndim > 1:
+        # If a 2d vector of probabilities is passed return a sample for each row of categorical probability
+        samples = np.array([np.random.choice(k, p=p_) for p_ in p])
+    else:
+        samples = np.random.choice(k, p=p, size=size)
+    return samples
+

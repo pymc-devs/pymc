@@ -1,9 +1,6 @@
 """
-pymc3.distributions
-
 A collection of common probability distributions for stochastic
 nodes in PyMC.
-
 """
 from __future__ import division
 
@@ -20,16 +17,19 @@ from pymc3.theanof import floatX
 from . import transforms
 from pymc3.util import get_variable_name
 from .special import log_i0
-from ..math import invlogit, logit
-from .dist_math import bound, logpow, gammaln, betaln, std_cdf, alltrue_elemwise, SplineWrapper, i0e
+from ..math import invlogit, logit, logdiffexp
+from .dist_math import (
+    bound, logpow, gammaln, betaln, std_cdf, alltrue_elemwise,
+    SplineWrapper, i0e, normal_lcdf, normal_lccdf
+)
 from .distribution import Continuous, draw_values, generate_samples
 
-__all__ = ['Uniform', 'Flat', 'HalfFlat', 'Normal', 'Beta', 'Kumaraswamy', 'Exponential',
-           'Laplace', 'StudentT', 'Cauchy', 'HalfCauchy', 'Gamma', 'Weibull',
-           'HalfStudentT', 'Lognormal', 'ChiSquared', 'HalfNormal', 'Wald',
-           'Pareto', 'InverseGamma', 'ExGaussian', 'VonMises', 'SkewNormal',
-           'Triangular', 'Gumbel', 'Logistic', 'LogitNormal', 'Interpolated',
-           'Rice']
+__all__ = ['Uniform', 'Flat', 'HalfFlat', 'Normal', 'TruncatedNormal', 'Beta',
+           'Kumaraswamy', 'Exponential', 'Laplace', 'StudentT', 'Cauchy',
+           'HalfCauchy', 'Gamma', 'Weibull', 'HalfStudentT', 'Lognormal',
+           'ChiSquared', 'HalfNormal', 'Wald', 'Pareto', 'InverseGamma',
+           'ExGaussian', 'VonMises', 'SkewNormal', 'Triangular', 'Gumbel',
+           'Logistic', 'LogitNormal', 'Interpolated', 'Rice']
 
 
 class PositiveContinuous(Continuous):
@@ -47,6 +47,30 @@ class UnitContinuous(Continuous):
         super(UnitContinuous, self).__init__(
             transform=transform, *args, **kwargs)
 
+
+class BoundedContinuous(Continuous):
+    """Base class for bounded continuous distributions"""
+
+    def __init__(self, transform='auto', lower=None, upper=None,
+                 *args, **kwargs):
+
+        lower = tt.as_tensor_variable(lower) if lower is not None else None
+        upper = tt.as_tensor_variable(upper) if upper is not None else None
+
+        if transform == 'auto':
+            if lower is None and upper is None:
+                transform = None
+            elif lower is not None and upper is None:
+                transform = transforms.lowerbound(lower)
+            elif lower is None and upper is not None:
+                transform = transforms.upperbound(upper)
+            else:
+                transform = transforms.interval(lower, upper)
+
+        super(BoundedContinuous, self).__init__(
+            transform=transform, *args, **kwargs)
+
+
 def assert_negative_support(var, label, distname, value=-1e-6):
     # Checks for evidence of positive support for a variable
     if var is None:
@@ -54,7 +78,7 @@ def assert_negative_support(var, label, distname, value=-1e-6):
     try:
         # Transformed distribution
         support = np.isfinite(var.transformed.distribution.dist
-                                .logp(value).tag.test_value)
+                              .logp(value).tag.test_value)
     except AttributeError:
         try:
             # Untransformed distribution
@@ -64,7 +88,8 @@ def assert_negative_support(var, label, distname, value=-1e-6):
             support = False
 
     if np.any(support):
-        msg = "The variable specified for {0} has negative support for {1}, ".format(label, distname)
+        msg = "The variable specified for {0} has negative support for {1}, ".format(
+            label, distname)
         msg += "likely making it unsuitable for this parameter."
         warnings.warn(msg)
 
@@ -108,10 +133,10 @@ def get_tau_sd(tau=None, sd=None):
     tau = 1. * tau
     sd = 1. * sd
 
-    return (floatX(tau), floatX(sd))
+    return floatX(tau), floatX(sd)
 
 
-class Uniform(Continuous):
+class Uniform(BoundedContinuous):
     R"""
     Continuous uniform log-likelihood.
 
@@ -153,16 +178,14 @@ class Uniform(Continuous):
         Upper limit.
     """
 
-    def __init__(self, lower=0, upper=1, transform='interval',
-                 *args, **kwargs):
+    def __init__(self, lower=0, upper=1, *args, **kwargs):
         self.lower = lower = tt.as_tensor_variable(floatX(lower))
         self.upper = upper = tt.as_tensor_variable(floatX(upper))
         self.mean = (upper + lower) / 2.
         self.median = self.mean
 
-        if transform == 'interval':
-            transform = transforms.interval(lower, upper)
-        super(Uniform, self).__init__(transform=transform, *args, **kwargs)
+        super(Uniform, self).__init__(
+            lower=lower, upper=upper, *args, **kwargs)
 
     def random(self, point=None, size=None):
         """
@@ -171,10 +194,10 @@ class Uniform(Continuous):
         Parameters
         ----------
         point : dict, optional
-            Dict of variable values on which random values are to be 
-            conditioned (uses default point if not specified). 
+            Dict of variable values on which random values are to be
+            conditioned (uses default point if not specified).
         size : int, optional
-            Desired size of random sample (returns one sample if not 
+            Desired size of random sample (returns one sample if not
             specified).
 
         Returns
@@ -196,7 +219,7 @@ class Uniform(Continuous):
         Parameters
         ----------
         value : numeric
-            Value for which log-probability is calculated. 
+            Value for which log-probability is calculated.
 
         Returns
         -------
@@ -435,6 +458,200 @@ class Normal(Continuous):
                                                                 get_variable_name(sd))
 
 
+class TruncatedNormal(BoundedContinuous):
+    R"""
+    Univariate truncated normal log-likelihood.
+
+    The pdf of this distribution is
+
+    .. math::
+
+       f(x;\mu ,\sigma ,a,b)={\frac {\phi ({\frac {x-\mu }{\sigma }})}{
+       \sigma \left(\Phi ({\frac {b-\mu }{\sigma }})-\Phi ({\frac {a-\mu }{\sigma }})\right)}}
+
+    Truncated normal distribution can be parameterized either in terms of precision
+    or standard deviation. The link between the two parametrizations is
+    given by
+
+    .. math::
+
+       \tau = \dfrac{1}{\sigma^2}
+
+
+    .. plot::
+
+        import matplotlib.pyplot as plt
+        import numpy as np
+        import scipy.stats as st
+        plt.style.use('seaborn-darkgrid')
+        x = np.linspace(-10, 10, 1000)
+        mus = [0.,  0., 0.]
+        sds = [3.,5.,7.]
+        a1 = [-3, -5, -5]
+        b1 = [7, 5, 4]
+        for mu, sd, a, b in zip(mus, sds,a1,b1):
+            print mu, sd, a, b
+            an, bn = (a - mu) / sd, (b - mu) / sd
+            pdf = st.truncnorm.pdf(x, an,bn, loc=mu, scale=sd)
+            plt.plot(x, pdf, label=r'$\mu$ = {}, $\sigma$ = {}, a={}, b={}'.format(mu, sd, a, b))
+        plt.xlabel('x', fontsize=12)
+        plt.ylabel('f(x)', fontsize=12)
+        plt.legend(loc=1)
+        plt.show()
+
+    ========  ==========================================
+    Support   :math:`x \in [a, b]`
+    Mean      :math:`\mu +{\frac {\phi (\alpha )-\phi (\beta )}{Z}}\sigma`
+    Variance  :math:`\sigma ^{2}\left[1+{\frac {\alpha \phi (\alpha )-\beta \phi (\beta )}{Z}}-
+    \left({\frac {\phi (\alpha )-\phi (\beta )}{Z}}\right)^{2}\right]`
+    ========  ==========================================
+
+    Parameters
+    ----------
+    mu : float
+        Mean.
+    sd : float
+        Standard deviation (sd > 0).
+    lower : float (optional)
+        Left bound.
+    upper : float (optional)
+        Right bound.
+
+    Examples
+    --------
+    .. code-block:: python
+
+        with pm.Model():
+            x = pm.TruncatedNormal('x', mu=0, sd=10, lower=0)
+
+        with pm.Model():
+            x = pm.TruncatedNormal('x', mu=0, sd=10, upper=1)
+
+        with pm.Model():
+            x = pm.TruncatedNormal('x', mu=0, sd=10, lower=0, upper=1)
+
+    """
+
+    def __init__(self, mu=0, sd=None, tau=None, lower=None, upper=None,
+                 transform='auto', *args, **kwargs):
+        tau, sd = get_tau_sd(tau=tau, sd=sd)
+        self.sd = tt.as_tensor_variable(sd)
+        self.tau = tt.as_tensor_variable(tau)
+        self.lower = tt.as_tensor_variable(lower) if lower is not None else lower
+        self.upper = tt.as_tensor_variable(upper) if upper is not None else upper
+        self.mu = tt.as_tensor_variable(mu)
+
+        if self.lower is None and self.upper is None:
+            self._defaultval = mu
+        elif self.lower is None and self.upper is not None:
+            self._defaultval = self.upper - 1.
+        elif self.lower is not None and self.upper is None:
+            self._defaultval = self.lower + 1.
+        else:
+            self._defaultval = (self.lower + self.upper) / 2
+
+        assert_negative_support(sd, 'sd', 'TruncatedNormal')
+        assert_negative_support(tau, 'tau', 'TruncatedNormal')
+
+        super(TruncatedNormal, self).__init__(
+            defaults=('_defaultval',), transform=transform,
+            lower=lower, upper=upper, *args, **kwargs)
+
+    def random(self, point=None, size=None):
+        """
+        Draw random values from TruncatedNormal distribution.
+
+        Parameters
+        ----------
+        point : dict, optional
+            Dict of variable values on which random values are to be
+            conditioned (uses default point if not specified).
+        size : int, optional
+            Desired size of random sample (returns one sample if not
+            specified).
+
+        Returns
+        -------
+        array
+        """
+        mu_v, std_v, a_v, b_v = draw_values(
+            [self.mu, self.sd, self.lower, self.upper], point=point, size=size)
+        return generate_samples(stats.truncnorm.rvs,
+                                a=(a_v - mu_v)/std_v,
+                                b=(b_v - mu_v) / std_v,
+                                loc=mu_v,
+                                scale=std_v,
+                                dist_shape=self.shape,
+                                size=size,
+                                )
+
+    def logp(self, value):
+        """
+        Calculate log-probability of TruncatedNormal distribution at specified value.
+
+        Parameters
+        ----------
+        value : numeric
+            Value(s) for which log-probability is calculated. If the log probabilities for multiple
+            values are desired the values must be provided in a numpy array or theano tensor
+
+        Returns
+        -------
+        TensorVariable
+        """
+        mu = self.mu
+        sd = self.sd
+
+        norm = self._normalization()
+        logp = Normal.dist(mu=mu, sd=sd).logp(value) - norm
+
+        bounds = [sd > 0]
+        if self.lower is not None:
+            bounds.append(value >= self.lower)
+        if self.upper is not None:
+            bounds.append(value <= self.upper)
+        return bound(logp, *bounds)
+
+    def _normalization(self):
+        mu, sd = self.mu, self.sd
+
+        if self.lower is None and self.upper is None:
+            return 0.
+
+        if self.lower is not None and self.upper is not None:
+            lcdf_a = normal_lcdf(mu, sd, self.lower)
+            lcdf_b = normal_lcdf(mu, sd, self.upper)
+            lsf_a = normal_lccdf(mu, sd, self.lower)
+            lsf_b = normal_lccdf(mu, sd, self.upper)
+
+            return tt.switch(
+                self.lower > 0,
+                logdiffexp(lsf_a, lsf_b),
+                logdiffexp(lcdf_b, lcdf_a),
+            )
+
+        if self.lower is not None:
+            return normal_lccdf(mu, sd, self.lower)
+        else:
+            return normal_lcdf(mu, sd, self.upper)
+
+    def _repr_latex_(self, name=None, dist=None):
+        if dist is None:
+            dist = self
+        name = r'\text{%s}' % name
+        return (
+            r'${} \sim \text{{TruncatedNormal}}('
+            '\mathit{{mu}}={},~\mathit{{sd}}={},a={},b={})$'
+            .format(
+                name,
+                get_variable_name(self.mu),
+                get_variable_name(self.sd),
+                get_variable_name(self.lower),
+                get_variable_name(self.upper),
+            )
+        )
+
+
 class HalfNormal(PositiveContinuous):
     R"""
     Half-normal log-likelihood.
@@ -559,7 +776,7 @@ class HalfNormal(PositiveContinuous):
         sd = dist.sd
         name = r'\text{%s}' % name
         return r'${} \sim \text{{HalfNormal}}(\mathit{{sd}}={})$'.format(name,
-                                                                get_variable_name(sd))
+                                                                         get_variable_name(sd))
 
 
 class Wald(PositiveContinuous):
@@ -1389,9 +1606,11 @@ class StudentT(Continuous):
     mu : float
         Location parameter.
     sd : float
-        Standard deviation (sd > 0) (only required if lam is not specified)
+        Scale parameter (sd > 0). Converges to the standard deviation as nu
+        increases. (only required if lam is not specified)
     lam : float
-        Precision (lam > 0) (only required if sd is not specified)
+        Scale parameter (lam > 0). Converges to the precision as nu
+        increases. (only required if sd is not specified)
 
     Examples
     --------
@@ -1480,7 +1699,7 @@ class StudentT(Continuous):
                                                                 get_variable_name(lam))
 
 
-class Pareto(PositiveContinuous):
+class Pareto(Continuous):
     R"""
     Pareto log-likelihood.
 
@@ -1525,8 +1744,7 @@ class Pareto(PositiveContinuous):
         Scale parameter (m > 0).
     """
 
-    def __init__(self, alpha, m, *args, **kwargs):
-        super(Pareto, self).__init__(*args, **kwargs)
+    def __init__(self, alpha, m, transform='lowerbound', *args, **kwargs):
         self.alpha = alpha = tt.as_tensor_variable(alpha)
         self.m = m = tt.as_tensor_variable(m)
 
@@ -1541,6 +1759,9 @@ class Pareto(PositiveContinuous):
         assert_negative_support(alpha, 'alpha', 'Pareto')
         assert_negative_support(m, 'm', 'Pareto')
 
+        if transform == 'lowerbound':
+            transform = transforms.lowerbound(self.m)
+        super(Pareto, self).__init__(transform=transform, *args, **kwargs)
 
     def _random(self, alpha, m, size=None):
         u = np.random.uniform(size=size)
@@ -2118,7 +2339,7 @@ class ChiSquared(Gamma):
         nu = dist.nu
         name = r'\text{%s}' % name
         return r'${} \sim \Chi^2(\mathit{{nu}}={})$'.format(name,
-                                                                get_variable_name(nu))
+                                                            get_variable_name(nu))
 
 
 class Weibull(PositiveContinuous):
@@ -2295,6 +2516,7 @@ class HalfStudentT(PositiveContinuous):
         with pm.Model():
             x = pm.HalfStudentT('x', lam=4, nu=10)
     """
+
     def __init__(self, nu=1, sd=None, lam=None, *args, **kwargs):
         super(HalfStudentT, self).__init__(*args, **kwargs)
         self.mode = tt.as_tensor_variable(0)
@@ -2673,7 +2895,8 @@ class SkewNormal(Continuous):
     approaching plus/minus infinite we get a half-normal distribution.
 
     """
-    def __init__(self, mu=0.0, sd=None, tau=None, alpha=1,  *args, **kwargs):
+
+    def __init__(self, mu=0.0, sd=None, tau=None, alpha=1, *args, **kwargs):
         super(SkewNormal, self).__init__(*args, **kwargs)
         tau, sd = get_tau_sd(tau=tau, sd=sd)
         self.mu = mu = tt.as_tensor_variable(mu)
@@ -2732,9 +2955,9 @@ class SkewNormal(Continuous):
         alpha = self.alpha
         return bound(
             tt.log(1 +
-            tt.erf(((value - mu) * tt.sqrt(tau) * alpha) / tt.sqrt(2)))
+                   tt.erf(((value - mu) * tt.sqrt(tau) * alpha) / tt.sqrt(2)))
             + (-tau * (value - mu)**2
-            + tt.log(tau / np.pi / 2.)) / 2.,
+               + tt.log(tau / np.pi / 2.)) / 2.,
             tau > 0, sd > 0)
 
     def _repr_latex_(self, name=None, dist=None):
@@ -2750,7 +2973,7 @@ class SkewNormal(Continuous):
                                                                 get_variable_name(alpha))
 
 
-class Triangular(Continuous):
+class Triangular(BoundedContinuous):
     R"""
     Continuous Triangular log-likelihood
 
@@ -2804,11 +3027,12 @@ class Triangular(Continuous):
 
     def __init__(self, lower=0, upper=1, c=0.5,
                  *args, **kwargs):
-        super(Triangular, self).__init__(*args, **kwargs)
-
-        self.median = self.mean = self.c = c  = tt.as_tensor_variable(c)
+        self.median = self.mean = self.c = c = tt.as_tensor_variable(c)
         self.lower = lower = tt.as_tensor_variable(lower)
         self.upper = upper = tt.as_tensor_variable(upper)
+
+        super(Triangular, self).__init__(lower=lower, upper=upper,
+                                         *args, **kwargs)
 
     def random(self, point=None, size=None):
         """
@@ -2851,9 +3075,11 @@ class Triangular(Continuous):
         upper = self.upper
         return tt.switch(alltrue_elemwise([lower <= value, value < c]),
                          tt.log(2 * (value - lower) / ((upper - lower) * (c - lower))),
-                         tt.switch(tt.eq(value, c), tt.log(2 / (upper - lower)),
-                         tt.switch(alltrue_elemwise([c < value, value <= upper]),
-                         tt.log(2 * (upper - value) / ((upper - lower) * (upper - c))),np.inf)))
+                         tt.switch(tt.eq(value, c),
+                                   tt.log(2 / (upper - lower)),
+                                   tt.switch(alltrue_elemwise([c < value, value <= upper]),
+                                             tt.log(2 * (upper - value) / ((upper - lower) * (upper - c))),
+                                             np.inf)))
 
     def _repr_latex_(self, name=None, dist=None):
         if dist is None:
@@ -2973,7 +3199,7 @@ class Gumbel(Continuous):
                                                                 get_variable_name(beta))
 
 
-class Rice(Continuous):
+class Rice(PositiveContinuous):
     R"""
     Rice distribution.
 
@@ -2984,7 +3210,7 @@ class Rice(Continuous):
        \left({\frac  {-(x^{2}+\nu ^{2})}{2\sigma ^{2}}}\right)I_{0}\left({\frac  {x\nu }{\sigma ^{2}}}\right),
 
     ========  ==============================================================
-    Support   :math:`x \in (0, +\infinity)`
+    Support   :math:`x \in (0, \infty)`
     Mean      :math:`\sigma {\sqrt  {\pi /2}}\,\,L_{{1/2}}(-\nu ^{2}/2\sigma ^{2})`
     Variance  :math:`2\sigma ^{2}+\nu ^{2}-{\frac  {\pi \sigma ^{2}}{2}}L_{{1/2}}^{2}
                         \left({\frac  {-\nu ^{2}}{2\sigma ^{2}}}\right)`
@@ -3097,6 +3323,7 @@ class Logistic(Continuous):
     s : float
         Scale (s > 0).
     """
+
     def __init__(self, mu=0., s=1., *args, **kwargs):
         super(Logistic, self).__init__(*args, **kwargs)
 
@@ -3235,7 +3462,8 @@ class LogitNormal(UnitContinuous):
         -------
         array
         """
-        mu, _, sd = draw_values([self.mu, self.tau, self.sd], point=point, size=size)
+        mu, _, sd = draw_values(
+            [self.mu, self.tau, self.sd], point=point, size=size)
         return expit(generate_samples(stats.norm.rvs, loc=mu, scale=sd, dist_shape=self.shape,
                                       size=size))
 
@@ -3271,7 +3499,7 @@ class LogitNormal(UnitContinuous):
                                                                 get_variable_name(sd))
 
 
-class Interpolated(Continuous):
+class Interpolated(BoundedContinuous):
     R"""
     Univariate probability distribution defined as a linear interpolation
     of probability density function evaluated on some lattice of points.
@@ -3299,14 +3527,15 @@ class Interpolated(Continuous):
         Probability density function evaluated on lattice `x_points`
     """
 
-    def __init__(self, x_points, pdf_points, transform='interval',
-                 *args, **kwargs):
-        if transform == 'interval':
-            transform = transforms.interval(x_points[0], x_points[-1])
-        super(Interpolated, self).__init__(transform=transform,
+    def __init__(self, x_points, pdf_points, *args, **kwargs):
+        self.lower = lower = tt.as_tensor_variable(x_points[0])
+        self.upper = upper = tt.as_tensor_variable(x_points[-1])
+
+        super(Interpolated, self).__init__(lower=lower, upper=upper,
                                            *args, **kwargs)
 
-        interp = InterpolatedUnivariateSpline(x_points, pdf_points, k=1, ext='zeros')
+        interp = InterpolatedUnivariateSpline(
+            x_points, pdf_points, k=1, ext='zeros')
         Z = interp.integral(x_points[0], x_points[-1])
 
         self.Z = tt.as_tensor_variable(Z)

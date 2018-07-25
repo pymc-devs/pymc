@@ -7,17 +7,19 @@ from .helpers import SeededTest, select_by_precision
 from ..vartypes import continuous_types
 from ..model import Model, Point, Potential, Deterministic
 from ..blocking import DictToVarBijection, DictToArrayBijection, ArrayOrdering
-from ..distributions import (DensityDist, Categorical, Multinomial, VonMises, Dirichlet,
-                             MvStudentT, MvNormal, MatrixNormal, ZeroInflatedPoisson,
-                             ZeroInflatedNegativeBinomial, Constant, Poisson, Bernoulli, Beta,
-                             BetaBinomial, HalfStudentT, StudentT, Weibull, Pareto,
-                             InverseGamma, Gamma, Cauchy, HalfCauchy, Lognormal, Laplace,
-                             NegativeBinomial, Geometric, Exponential, ExGaussian, Normal,
-                             Flat, LKJCorr, Wald, ChiSquared, HalfNormal, DiscreteUniform,
-                             Bound, Uniform, Triangular, Binomial, SkewNormal, DiscreteWeibull,
-                             Gumbel, Logistic, OrderedLogistic, LogitNormal, Interpolated,
-                             ZeroInflatedBinomial, HalfFlat, AR1, KroneckerNormal, Rice,
-                             Kumaraswamy)
+from ..distributions import (
+    DensityDist, Categorical, Multinomial, VonMises, Dirichlet,
+    MvStudentT, MvNormal, MatrixNormal, ZeroInflatedPoisson,
+    ZeroInflatedNegativeBinomial, Constant, Poisson, Bernoulli, Beta,
+    BetaBinomial, HalfStudentT, StudentT, Weibull, Pareto,
+    InverseGamma, Gamma, Cauchy, HalfCauchy, Lognormal, Laplace,
+    NegativeBinomial, Geometric, Exponential, ExGaussian, Normal, TruncatedNormal,
+    Flat, LKJCorr, Wald, ChiSquared, HalfNormal, DiscreteUniform,
+    Bound, Uniform, Triangular, Binomial, SkewNormal, DiscreteWeibull,
+    Gumbel, Logistic, OrderedLogistic, LogitNormal, Interpolated,
+    ZeroInflatedBinomial, HalfFlat, AR1, KroneckerNormal, Rice,
+    Kumaraswamy
+)
 
 from ..distributions import continuous
 from pymc3.theanof import floatX
@@ -533,6 +535,23 @@ class TestMatchesScipy(SeededTest):
                                  lambda value, mu, sd: sp.norm.logpdf(value, mu, sd),
                                  decimal=select_by_precision(float64=6, float32=1)
                                  )
+
+    def test_truncated_normal(self):
+        def scipy_logp(value, mu, sd, lower, upper):
+            return sp.truncnorm.logpdf(
+                value, (lower-mu)/sd, (upper-mu)/sd, loc=mu, scale=sd)
+
+        args = {'mu': array(-2.1), 'lower': array(-100.), 'upper': array(0.01),
+                'sd': array(0.01)}
+        val = TruncatedNormal.dist(**args).logp(0.)
+        assert_allclose(val.eval(), scipy_logp(value=0, **args))
+
+        self.pymc3_matches_scipy(
+            TruncatedNormal, R,
+            {'mu': R, 'sd': Rplusbig, 'lower': -Rplusbig, 'upper': Rplusbig},
+            scipy_logp,
+            decimal=select_by_precision(float64=6, float32=1)
+        )
 
     def test_half_normal(self):
         self.pymc3_matches_scipy(HalfNormal, Rplus, {'sd': Rplus},

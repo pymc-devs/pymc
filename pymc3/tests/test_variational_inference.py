@@ -459,6 +459,93 @@ def test_elbo():
     np.testing.assert_allclose(elbo_mc, elbo_true, rtol=0, atol=1e-1)
 
 
+@pytest.mark.parametrize(
+    'aux_total_size',
+    range(2, 10, 3)
+)
+def test_scale_cost_to_minibatch_works(aux_total_size):
+    mu0 = 1.5
+    sigma = 1.0
+    y_obs = np.array([1.6, 1.4])
+    beta = len(y_obs)/float(aux_total_size)
+    post_mu = np.array([1.88], dtype=theano.config.floatX)
+    post_sd = np.array([1], dtype=theano.config.floatX)
+
+    # TODO: theano_config
+    # with pm.Model(theano_config=dict(floatX='float64')):
+    # did not not work as expected
+    # there were some numeric problems, so float64 is forced
+    with pm.theanof.change_flags(floatX='float64', warn_float64='ignore'):
+        with pm.Model():
+            assert theano.config.floatX == 'float64'
+            assert theano.config.warn_float64 == 'ignore'
+            mu = pm.Normal('mu', mu=mu0, sd=sigma)
+            pm.Normal('y', mu=mu, sd=1, observed=y_obs, total_size=aux_total_size)
+            # Create variational gradient tensor
+            mean_field_1 = MeanField()
+            assert mean_field_1.scale_cost_to_minibatch
+            mean_field_1.shared_params['mu'].set_value(post_mu)
+            mean_field_1.shared_params['rho'].set_value(np.log(np.exp(post_sd) - 1))
+
+            with pm.theanof.change_flags(compute_test_value='off'):
+                elbo_via_total_size_scaled = -pm.operators.KL(mean_field_1)()(10000)
+
+        with pm.Model():
+            mu = pm.Normal('mu', mu=mu0, sd=sigma)
+            pm.Normal('y', mu=mu, sd=1, observed=y_obs, total_size=aux_total_size)
+            # Create variational gradient tensor
+            mean_field_2 = MeanField()
+            assert mean_field_1.scale_cost_to_minibatch
+            mean_field_2.scale_cost_to_minibatch = False
+            assert not mean_field_2.scale_cost_to_minibatch
+            mean_field_2.shared_params['mu'].set_value(post_mu)
+            mean_field_2.shared_params['rho'].set_value(np.log(np.exp(post_sd) - 1))
+
+        with pm.theanof.change_flags(compute_test_value='off'):
+            elbo_via_total_size_unscaled = -pm.operators.KL(mean_field_2)()(10000)
+
+        np.testing.assert_allclose(elbo_via_total_size_unscaled.eval(),
+                                   elbo_via_total_size_scaled.eval() * pm.floatX(1 / beta), rtol=0.02, atol=1e-1)
+
+
+@pytest.mark.parametrize(
+    'aux_total_size',
+    range(2, 10, 3)
+)
+def test_elbo_beta_kl(aux_total_size):
+    mu0 = 1.5
+    sigma = 1.0
+    y_obs = np.array([1.6, 1.4])
+    beta = len(y_obs)/float(aux_total_size)
+    post_mu = np.array([1.88], dtype=theano.config.floatX)
+    post_sd = np.array([1], dtype=theano.config.floatX)
+    with pm.theanof.change_flags(floatX='float64', warn_float64='ignore'):
+        with pm.Model():
+            mu = pm.Normal('mu', mu=mu0, sd=sigma)
+            pm.Normal('y', mu=mu, sd=1, observed=y_obs, total_size=aux_total_size)
+            # Create variational gradient tensor
+            mean_field_1 = MeanField()
+            mean_field_1.scale_cost_to_minibatch = True
+            mean_field_1.shared_params['mu'].set_value(post_mu)
+            mean_field_1.shared_params['rho'].set_value(np.log(np.exp(post_sd) - 1))
+
+            with pm.theanof.change_flags(compute_test_value='off'):
+                elbo_via_total_size_scaled = -pm.operators.KL(mean_field_1)()(10000)
+
+        with pm.Model():
+            mu = pm.Normal('mu', mu=mu0, sd=sigma)
+            pm.Normal('y', mu=mu, sd=1, observed=y_obs)
+            # Create variational gradient tensor
+            mean_field_3 = MeanField()
+            mean_field_3.shared_params['mu'].set_value(post_mu)
+            mean_field_3.shared_params['rho'].set_value(np.log(np.exp(post_sd) - 1))
+
+            with pm.theanof.change_flags(compute_test_value='off'):
+                elbo_via_beta_kl = -pm.operators.KL(mean_field_3, beta=beta)()(10000)
+
+        np.testing.assert_allclose(elbo_via_total_size_scaled.eval(), elbo_via_beta_kl.eval(), rtol=0, atol=1e-1)
+
+
 @pytest.fixture(
     'module',
     params=[True, False],
@@ -581,6 +668,8 @@ def fit_kwargs(inference, use_minibatch):
     }
     if use_minibatch:
         key = 'mini'
+        # backward compat for PR#3071
+        inference.approx.scale_cost_to_minibatch = False
     else:
         key = 'full'
     return _select[(type(inference), key)]

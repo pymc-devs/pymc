@@ -6,7 +6,10 @@ import theano.tensor as tt
 from theano import function
 import theano
 from ..memoize import memoize
-from ..model import Model, get_named_nodes_and_relations, FreeRV, ObservedRV
+from ..model import (
+    Model, get_named_nodes_and_relations, FreeRV,
+    ObservedRV, MultiObservedRV
+)
 from ..vartypes import string_types
 
 __all__ = ['DensityDist', 'Distribution', 'Continuous', 'Discrete',
@@ -211,7 +214,6 @@ class DensityDist(Distribution):
                             "Define a custom random method and pass it as kwarg random")
 
 
-
 def draw_values(params, point=None, size=None):
     """
     Draw (fix) parameter values. Handles a number of cases:
@@ -375,7 +377,7 @@ def _draw_value(param, point=None, givens=None, size=None):
         return param.value
     elif isinstance(param, tt.sharedvar.SharedVariable):
         return param.get_value()
-    elif isinstance(param, tt.TensorVariable):
+    elif isinstance(param, (tt.TensorVariable, MultiObservedRV)):
         if point and hasattr(param, 'model') and param.name in point:
             return point[param.name]
         elif hasattr(param, 'random') and param.random is not None:
@@ -383,14 +385,23 @@ def _draw_value(param, point=None, givens=None, size=None):
         elif (hasattr(param, 'distribution') and
                 hasattr(param.distribution, 'random') and
                 param.distribution.random is not None):
-            # reset the dist shape for ObservedRV
             if hasattr(param, 'observations'):
+                # shape inspection for ObservedRV
                 dist_tmp = param.distribution
                 try:
                     distshape = param.observations.shape.eval()
                 except AttributeError:
                     distshape = param.observations.shape
+
                 dist_tmp.shape = distshape
+                try:
+                    dist_tmp.random(point=point, size=size)
+                except (ValueError, TypeError):
+                    # reset shape to account for shape changes
+                    # with theano.shared inputs
+                    dist_tmp.shape = np.array([])
+                    val = dist_tmp.random(point=point, size=None)
+                    dist_tmp.shape = val.shape
                 return dist_tmp.random(point=point, size=size)
             else:
                 return param.distribution.random(point=point, size=size)
@@ -404,8 +415,7 @@ def _draw_value(param, point=None, givens=None, size=None):
                 return np.array([func(*v) for v in zip(*values)])
             else:
                 return func(*values)
-    else:
-        raise ValueError('Unexpected type in draw_value: %s' % type(param))
+    raise ValueError('Unexpected type in draw_value: %s' % type(param))
 
 
 def to_tuple(shape):
@@ -471,7 +481,14 @@ def generate_samples(generator, *args, **kwargs):
 
     if broadcast_shape is None:
         inputs = args + tuple(kwargs.values())
-        broadcast_shape = np.broadcast(*inputs).shape  # size of generator(size=1)
+        try:
+            broadcast_shape = np.broadcast(*inputs).shape  # size of generator(size=1)
+        except ValueError:  # sometimes happens if args have shape (500,) and (500, 4)
+            max_dims = max(j.ndim for j in args + tuple(kwargs.values()))
+            args = tuple([j.reshape(j.shape + (1,) * (max_dims - j.ndim)) for j in args])
+            kwargs = {k: v.reshape(v.shape + (1,) * (max_dims - v.ndim)) for k, v in kwargs.items()}
+            inputs = args + tuple(kwargs.values())
+            broadcast_shape = np.broadcast(*inputs).shape  # size of generator(size=1)
 
     dist_shape = to_tuple(dist_shape)
     broadcast_shape = to_tuple(broadcast_shape)
