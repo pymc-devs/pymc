@@ -13,6 +13,7 @@
 - Improve error message `NaN occurred in optimization.` during ADVI
 - Save and load traces without `pickle` using `pm.save_trace` and `pm.load_trace`
 - Add `Kumaraswamy` distribution
+<<<<<<< HEAD
 - Add `TruncatedNormal` distribution
 - Rewrite parallel sampling of multiple chains on py3. This resolves long standing issues when transferring large traces to the main process, avoids pickling issues on UNIX, and allows us to show a progress bar for all chains. If parallel sampling is interrupted, we now return partial results.
 - Add `sample_prior_predictive` which allows for efficient sampling from the unconditioned model.
@@ -20,6 +21,17 @@
 - Add `model_to_graphviz` (which uses the optional dependency `graphviz`) to plot a directed graph of a PyMC3 model using plate notation.
 - Add beta-ELBO variational inference as in beta-VAE model (Christopher P. Burgess et al. NIPS, 2017)
 - Add `__dir__` to `SingleGroupApproximation` to improve autocompletion in interactive environments
+=======
+- Rewrite parallel sampling of multiple chains on py3. This resolves
+  long standing issues when transferring large traces to the main process,
+  avoids pickling issues on UNIX, and allows us to show a progress bar
+  for all chains. If parallel sampling is interrupted, we now return
+  partial results.
+- Add `sample_prior_predictive` which allows for efficient sampling from
+  the unconditioned model.
+- SMC: remove experimental warning, allow sampling using `sample`, reduce autocorrelation from
+  final trace.
+>>>>>>> master
 
 ### Fixes
 
