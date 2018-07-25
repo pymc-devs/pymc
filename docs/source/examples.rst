@@ -28,6 +28,7 @@ Applied
    notebooks/stochastic_volatility.ipynb
    notebooks/probabilistic_matrix_factorization.ipynb
    notebooks/rugby_analytics.ipynb
+   notebooks/survival_analysis.ipynb
    notebooks/dawid-skene.ipynb
 
 GLM
@@ -43,16 +44,6 @@ GLM
    notebooks/GLM-poisson-regression.ipynb
    notebooks/hierarchical_partial_pooling.ipynb
    notebooks/GLM-negative-binomial-regression.ipynb
-   notebooks/GLM-hierarchical-binominal-model.ipynb
-
-Survival Analysis
-=================
-
-.. toctree::
-   notebooks/survival_analysis.ipynb
-   notebooks/bayes_param_survival_pymc3.ipynb
-   notebooks/weibull_aft.ipynb
-   notebooks/censored_data.ipynb
 
 Gaussian Processes
 ==================
@@ -87,6 +78,7 @@ Variational Inference
    notebooks/convolutional_vae_keras_advi.ipynb
    notebooks/empirical-approx-overview.ipynb
    notebooks/normalizing_flows_overview.ipynb
+   
 
 Stochastic Gradient
 ===================

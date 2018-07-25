@@ -1,5 +1,5 @@
 # pylint: disable=wildcard-import
-__version__ = "3.5"
+__version__ = "3.4.1"
 
 from .blocking import *
 from .distributions import *
@@ -8,7 +8,6 @@ from .glm import *
 from . import gp
 from .math import logaddexp, logsumexp, logit, invlogit, expand_packed_triangular, probit, invprobit
 from .model import *
-from .model_graph import model_to_graphviz
 from .stats import *
 from .sampling import *
 from .step_methods import *

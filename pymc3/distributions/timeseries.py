@@ -78,7 +78,7 @@ class AR(distribution.Continuous):
     Parameters
     ----------
     rho : tensor
-        Tensor of autoregressive coefficients. The first dimension is the p lag.
+        Vector of autoregressive coefficients.
     sd : float
         Standard deviation of innovation (sd > 0). (only required if tau is not specified)
     tau : float
@@ -100,38 +100,29 @@ class AR(distribution.Continuous):
 
         self.mean = tt.as_tensor_variable(0.)
 
-        if isinstance(rho, list):
-            p = len(rho)
-        else:
-            try:
-                shape_ = rho.shape.tag.test_value
-            except AttributeError:
-                shape_ = rho.shape
-
-            if hasattr(shape_, "size") and shape_.size == 0:
-                p = 1
-            else:
-                p = shape_[0]
-
+        rho = tt.as_tensor_variable(rho, ndim=1)
         if constant:
-            self.p = p - 1
+            self.p = rho.shape[0] - 1
         else:
-            self.p = p
+            self.p = rho.shape[0]
 
         self.constant = constant
-        self.rho = rho = tt.as_tensor_variable(rho)
+        self.rho = rho
         self.init = init
 
     def logp(self, value):
+
+        y = value[self.p:]
+        results, _ = scan(lambda l, obs, p: obs[p - l:-l],
+                          outputs_info=None, sequences=[tt.arange(1, self.p + 1)],
+                          non_sequences=[value, self.p])
+        x = tt.stack(results)
+
         if self.constant:
-            x = tt.add(*[self.rho[i + 1] * value[self.p - (i + 1):-(i + 1)] for i in range(self.p)])
-            eps = value[self.p:] - self.rho[0] - x
+            y = y - self.rho[0]
+            eps = y - self.rho[1:].dot(x)
         else:
-            if self.p == 1:
-                x = self.rho * value[:-1]
-            else:
-                x = tt.add(*[self.rho[i] * value[self.p - (i + 1):-(i + 1)] for i in range(self.p)])
-            eps = value[self.p:] - x
+            eps = y - self.rho.dot(x)
 
         innov_like = Normal.dist(mu=0.0, tau=self.tau).logp(eps)
         init_like = self.init.logp(value[:self.p])
