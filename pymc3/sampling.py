@@ -341,6 +341,13 @@ def sample(draws=500, step=None, init='auto', n_init=200000, start=None, trace=N
     else:
         if cores is None:
             cores = min(4, _cpu_count())
+            # Most computers have 2 cores now, and sometimes
+            # the cpu detection doesn't work properly (eg
+            # on at least some chromebooks). So we default
+            # to a minimum of 2 parallel chains if nothing
+            # else is specified.
+            if cores < 2:
+                cores = 2
         if 'njobs' in kwargs:
             cores = kwargs['njobs']
             warnings.warn(
