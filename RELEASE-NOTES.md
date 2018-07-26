@@ -1,11 +1,11 @@
 # Release Notes
 
 
-## PyMC 3.5 (Unreleased)
-
+## PyMC 3.5 (July 21 2018)
 
 ### New features
 
+- Add documentation section on survival analysis and censored data models
 - Add `check_test_point` method to `pm.Model`
 - Add `Ordered` Transformation and `OrderedLogistic` distribution
 - Add `Chain` transformation
@@ -13,23 +13,17 @@
 - Improve error message `NaN occurred in optimization.` during ADVI
 - Save and load traces without `pickle` using `pm.save_trace` and `pm.load_trace`
 - Add `Kumaraswamy` distribution
-- Add 'TruncatedNormal' distribution
-- Rewrite parallel sampling of multiple chains on py3. This resolves
-  long standing issues when transferring large traces to the main process,
-  avoids pickling issues on UNIX, and allows us to show a progress bar
-  for all chains. If parallel sampling is interrupted, we now return
-  partial results.
-- Add `sample_prior_predictive` which allows for efficient sampling from
-  the unconditioned model.
-- SMC: remove experimental warning, allow sampling using `sample`, reduce autocorrelation from
-  final trace.
-- Add `model_to_graphviz` (which uses the optional dependency `graphviz`) to
-  plot a directed graph of a PyMC3 model using plate notation.
+- Add `TruncatedNormal` distribution
+- Rewrite parallel sampling of multiple chains on py3. This resolves long standing issues when transferring large traces to the main process, avoids pickling issues on UNIX, and allows us to show a progress bar for all chains. If parallel sampling is interrupted, we now return partial results.
+- Add `sample_prior_predictive` which allows for efficient sampling from the unconditioned model.
+- SMC: remove experimental warning, allow sampling using `sample`, reduce autocorrelation from final trace.
+- Add `model_to_graphviz` (which uses the optional dependency `graphviz`) to plot a directed graph of a PyMC3 model using plate notation.
 - Add beta-ELBO variational inference as in beta-VAE model (Christopher P. Burgess et al. NIPS, 2017)
 - Add `__dir__` to `SingleGroupApproximation` to improve autocompletion in interactive environments
 
 ### Fixes
 
+- Fixed grammar in divergence warning, previously `There were 1 divergences ...` could be raised.
 - Fixed `KeyError` raised when only subset of variables are specified to be recorded in the trace.
 - Removed unused `repeat=None` arguments from all `random()` methods in distributions.
 - Deprecated the `sigma` argument in `MarginalSparse.marginal_likelihood` in favor of `noise`
@@ -43,12 +37,9 @@
 - Add `logit_p` keyword to `pm.Bernoulli`, so that users can specify the logit of the success probability. This is faster and more stable than using `p=tt.nnet.sigmoid(logit_p)`.
 - Add `random` keyword to `pm.DensityDist` thus enabling users to pass custom random method which in turn makes sampling from a `DensityDist` possible.
 - Effective sample size computation is updated. The estimation uses Geyer's initial positive sequence, which no longer truncates the autocorrelation series inaccurately. `pm.diagnostics.effective_n` now can reports N_eff>N.
-- Added `KroneckerNormal` distribution and a corresponding `MarginalKron`
-  Gaussian Process implementation for efficient inference, along with
-  lower-level functions such as `cartesian` and `kronecker` products.
+- Added `KroneckerNormal` distribution and a corresponding `MarginalKron` Gaussian Process implementation for efficient inference, along with lower-level functions such as `cartesian` and `kronecker` products.
 - Added `Coregion` covariance function.
-- Add new 'pairplot' function, for plotting scatter or hexbin matrices of sampled parameters.
-  Optionally it can plot divergences.
+- Add new 'pairplot' function, for plotting scatter or hexbin matrices of sampled parameters. Optionally it can plot divergences.
 - Plots of discrete distributions in the docstrings
 - Add logitnormal distribution
 - Densityplot: add support for discrete variables

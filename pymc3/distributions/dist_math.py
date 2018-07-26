@@ -302,7 +302,8 @@ def random_choice(*args, **kwargs):
     k = p.shape[-1]
 
     if p.ndim > 1:
-        samples = np.row_stack([np.random.choice(k, p=p_) for p_ in p])
+        # If a 2d vector of probabilities is passed return a sample for each row of categorical probability
+        samples = np.array([np.random.choice(k, p=p_) for p_ in p])
     else:
         samples = np.random.choice(k, p=p, size=size)
     return samples

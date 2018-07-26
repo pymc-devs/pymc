@@ -1,9 +1,6 @@
 """
-pymc3.distributions
-
 A collection of common probability distributions for stochastic
 nodes in PyMC.
-
 """
 from __future__ import division
 
@@ -1609,9 +1606,11 @@ class StudentT(Continuous):
     mu : float
         Location parameter.
     sd : float
-        Standard deviation (sd > 0) (only required if lam is not specified)
+        Scale parameter (sd > 0). Converges to the standard deviation as nu
+        increases. (only required if lam is not specified)
     lam : float
-        Precision (lam > 0) (only required if sd is not specified)
+        Scale parameter (lam > 0). Converges to the precision as nu
+        increases. (only required if sd is not specified)
 
     Examples
     --------
