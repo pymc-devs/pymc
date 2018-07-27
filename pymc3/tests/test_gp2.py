@@ -15,6 +15,10 @@ import pytest
 np.random.seed(101)
 
 
+def rotate_vector(K, f, mu=0.0):
+    chol = sp.linalg.cholesky(K, lower=True)
+    return sp.linalg.solve_triangular(chol, f - mu, lower=True)
+
 class GPReference(object):
     R"""
     Reference implementation of GP to compare pymc3 implementations to.
@@ -36,7 +40,7 @@ class GPReference(object):
             Kss = self.cov_func(Xs)
             return Kxx, Kxs, Ksx, Kss, mu_xx, mu_ss
 
-    def marginal(self, X, sigma, y):
+    def marginal(self, X, sigma):
         R"""
         Marginal distribution
         """
@@ -92,7 +96,7 @@ class TestMarginal(object):
         ref_gp = GPReference(mean_func, cov_func)
         # test marginal_likelihood logp
         x = np.random.randn(self.n)
-        mu, cov = ref_gp.marginal(self.X, self.sigma, y)
+        mu, cov = ref_gp.marginal(self.X, self.sigma)
         npt.assert_allclose(y_.distribution.logp(tt.as_tensor_variable(x)).eval(),
                             ref_gp.logp_func(mu, cov)(x),
                             rtol=1e-3)
@@ -131,6 +135,41 @@ class TestMarginal(object):
         npt.assert_allclose(mu_ref, mu_pymc3, rtol=1e-3)
         npt.assert_allclose(np.diag(cov_ref), var_pymc3, rtol=1e-3)
 
+    @pytest.mark.parametrize('multiple_obs', [False, pytest.param(True, marks=pytest.mark.xfail)])
+    def testMarginalAdditive(self, multiple_obs):
+        y = self.y_vec if not multiple_obs else self.y_mat
+        means = (pm.gp.mean.Constant(0.0),
+                 pm.gp.mean.Constant(0.5),
+                 pm.gp.mean.Constant(1.0))
+        covs = (pm.gp.cov.ExpQuad(self.d, self.ls),
+                pm.gp.cov.ExpQuad(self.d, self.ls),
+                pm.gp.cov.ExpQuad(self.d, self.ls))
+
+        with pm.Model() as model1:
+            gp1 = pm.gp.Marginal(means[0], covs[0])
+            gp2 = pm.gp.Marginal(means[1], covs[1])
+            gp3 = pm.gp.Marginal(means[2], covs[2])
+
+            gp_sum = gp1 + gp2 + gp3
+            f_sum = gp_sum.marginal_likelihood("f_sum", self.X, y, noise=self.sigma)
+        model1_logp = model1.logp({"f_sum": y})
+
+        with pm.Model() as model2:
+            gp_total = pm.gp.Marginal(reduce(add, means), reduce(add, covs))
+            f_total = gp_total.marginal_likelihood("f_total", self.X, y, noise=self.sigma)
+        model2_logp = model2.logp({"f_total": y})
+
+        npt.assert_allclose(model1_logp, model2_logp, atol=0, rtol=1e-2)
+
+        with model1:
+            fp1 = gp_sum.conditional("fp1", self.Xs, given={"X": self.X, "y": y,
+                                                           "noise": self.sigma, "gp": gp_sum})
+        with model2:
+            fp2 = gp_total.conditional("fp2", self.Xs)
+
+        fp = np.random.randn(self.ns)
+        npt.assert_allclose(fp1.logp({"fp1": fp}), fp2.logp({"fp2": fp}), atol=0, rtol=1e-2)
+
 
 class TestLatent(object):
     def setup_method(self):
@@ -156,36 +195,56 @@ class TestLatent(object):
             fv = gp.prior("fv", self.X)
             fp = gp.conditional("fp", self.Xs)
 
-        chol = sp.linalg.cholesky(cov_func(self.X).eval(), lower=True)
-        x = sp.linalg.solve_triangular(chol, f, lower=True)
-        xs = np.random.randn(self.ns)
-
-        lp1 = model.fv_rotated_.logp({"fv_rotated_": x})
+        f_rotated = rotate_vector(cov_func(self.X).eval(), f)
+        fs = np.random.randn(self.ns)
+        latent_logp = model.logp({"fv_rotated_": f_rotated, "fp": fs})
 
         # reference GP
         ref_gp = GPReference(mean_func, cov_func)
-        # test marginal_likelihood logp
-        mu, cov = ref_gp.marginal(self.X, 1e-6, f)
-        ref_priorlogp = ref_gp.logp_func(np.zeros(self.n), cov_func(self.X).eval())(f)
+        ref_priorlogp = np.sum(sp.stats.norm.logpdf(f_rotated, loc=np.zeros(self.n), scale=np.ones(self.n)))
+        mu, cov = ref_gp.conditional(self.X, self.Xs, 1e-8, f=f)
+        ref_condlogp = ref_gp.logp_func(mu, cov)(fs)
+        npt.assert_allclose(latent_logp, ref_priorlogp + ref_condlogp, rtol=1e-3)
 
-        npt.assert_allclose(ref_priorlogp, lp1)
+    @pytest.mark.parametrize('multiple_obs', [False, pytest.param(True, marks=pytest.mark.xfail)])
+    def testLatentAdditive(self, multiple_obs):
+        f = self.f_vec if not multiple_obs else self.f_mat
+        means = (pm.gp.mean.Constant(0.0),
+                 pm.gp.mean.Constant(0.5),
+                 pm.gp.mean.Constant(1.0))
+        covs = (pm.gp.cov.ExpQuad(self.d, self.ls),
+                pm.gp.cov.ExpQuad(self.d, self.ls),
+                pm.gp.cov.ExpQuad(self.d, self.ls))
+        mean_total = reduce(add, means)
+        cov_total = reduce(add, covs)
+        with pm.Model() as model1:
+            gp1 = pm.gp.Latent(means[0], covs[0])
+            gp2 = pm.gp.Latent(means[1], covs[1])
+            gp3 = pm.gp.Latent(means[2], covs[2])
+            gp_sum = gp1 + gp2 + gp3
+            f_sum = gp_sum.prior("f_sum", self.X)
 
-        latent_logp = model.logp({"fv_rotated_": x, "fp": xs})
+        f_rotated = rotate_vector(cov_total(self.X).eval(), f, mean_total(self.X).eval())
+        model1_logp = model1.logp({"f_sum_rotated_": f_rotated})
 
-        # reference GP
-        ref_gp = GPReference(mean_func, cov_func)
-        # test marginal_likelihood logp
-        mu, cov = ref_gp.marginal(self.X, 1e-6, f)
-        ref_priorlogp = ref_gp.logp_func(np.zeros(self.n), cov_func(self.X).eval())(f)
+        with pm.Model() as model2:
+            gp_total = pm.gp.Latent(mean_total, cov_total)
+            f_total = gp_total.prior("f_total", self.X)
+        model2_logp = model2.logp({"f_total_rotated_": f_rotated})
+        npt.assert_allclose(model1_logp, model2_logp, atol=0, rtol=1e-2)
 
-        mu, cov = ref_gp.conditional(self.X, self.Xs, 1e-6, f=f)
-        ref_condlogp = ref_gp.logp_func(mu, cov)(xs)
+        with model1:
+            fp1 = gp_sum.conditional("fp1", self.Xs, given={"X": self.X, "f": f, "gp": gp_sum})
+        with model2:
+            fp2 = gp_total.conditional("fp2", self.Xs)
 
-        npt.assert_allclose(np.random.randn(3), [latent_logp, ref_condlogp, ref_priorlogp])
+        fp = np.random.randn(self.ns)
+        npt.assert_allclose(fp1.logp({"f_sum_rotated_": f_rotated, "fp1": fp}),
+                            fp2.logp({"f_total_rotated_": f_rotated, "fp2": fp}), atol=0, rtol=1e-2)
 
 
 
-class TestGPAdditive(object):
+class TestGPAdditiveRaises(object):
     def setup_method(self):
         self.X = np.random.randn(50,3)
         self.y = np.random.randn(50)*0.01
@@ -197,84 +256,6 @@ class TestGPAdditive(object):
         self.means = (pm.gp.mean.Constant(0.5),
                       pm.gp.mean.Constant(0.5),
                       pm.gp.mean.Constant(0.5))
-
-    def testAdditiveMarginal(self):
-        with pm.Model() as model1:
-            gp1 = pm.gp.Marginal(self.means[0], self.covs[0])
-            gp2 = pm.gp.Marginal(self.means[1], self.covs[1])
-            gp3 = pm.gp.Marginal(self.means[2], self.covs[2])
-
-            gpsum = gp1 + gp2 + gp3
-            fsum = gpsum.marginal_likelihood("f", self.X, self.y, noise=self.noise)
-            model1_logp = model1.logp({"fsum": self.y})
-
-        with pm.Model() as model2:
-            gptot = pm.gp.Marginal(reduce(add, self.means), reduce(add, self.covs))
-            fsum = gptot.marginal_likelihood("f", self.X, self.y, noise=self.noise)
-            model2_logp = model2.logp({"fsum": self.y})
-        npt.assert_allclose(model1_logp, model2_logp, atol=0, rtol=1e-2)
-
-        with model1:
-            fp1 = gpsum.conditional("fp1", self.Xnew, given={"X": self.X, "y": self.y,
-                                                            "noise": self.noise, "gp": gpsum})
-        with model2:
-            fp2 = gptot.conditional("fp2", self.Xnew)
-
-        fp = np.random.randn(self.Xnew.shape[0])
-        npt.assert_allclose(fp1.logp({"fp1": fp}), fp2.logp({"fp2": fp}), atol=0, rtol=1e-2)
-
-    @pytest.mark.parametrize('approx', ['FITC', 'VFE', 'DTC'])
-    def testAdditiveMarginalSparse(self, approx):
-        Xu = np.random.randn(10, 3)
-        sigma = 0.1
-        with pm.Model() as model1:
-            gp1 = pm.gp.MarginalSparse(self.means[0], self.covs[0], approx=approx)
-            gp2 = pm.gp.MarginalSparse(self.means[1], self.covs[1], approx=approx)
-            gp3 = pm.gp.MarginalSparse(self.means[2], self.covs[2], approx=approx)
-
-            gpsum = gp1 + gp2 + gp3
-            fsum = gpsum.marginal_likelihood("f", self.X, Xu, self.y, noise=sigma)
-            model1_logp = model1.logp({"fsum": self.y})
-
-        with pm.Model() as model2:
-            gptot = pm.gp.MarginalSparse(reduce(add, self.means), reduce(add, self.covs), approx=approx)
-            fsum = gptot.marginal_likelihood("f", self.X, Xu, self.y, noise=sigma)
-            model2_logp = model2.logp({"fsum": self.y})
-        npt.assert_allclose(model1_logp, model2_logp, atol=0, rtol=1e-2)
-
-        with model1:
-            fp1 = gpsum.conditional("fp1", self.Xnew, given={"X": self.X, "Xu": Xu, "y": self.y,
-                                                            "sigma": sigma, "gp": gpsum})
-        with model2:
-            fp2 = gptot.conditional("fp2", self.Xnew)
-
-        fp = np.random.randn(self.Xnew.shape[0])
-        npt.assert_allclose(fp1.logp({"fp1": fp}), fp2.logp({"fp2": fp}), atol=0, rtol=1e-2)
-
-    def testAdditiveLatent(self):
-        with pm.Model() as model1:
-            gp1 = pm.gp.Latent(self.means[0], self.covs[0])
-            gp2 = pm.gp.Latent(self.means[1], self.covs[1])
-            gp3 = pm.gp.Latent(self.means[2], self.covs[2])
-
-            gpsum = gp1 + gp2 + gp3
-            fsum = gpsum.prior("fsum", self.X, reparameterize=False)
-            model1_logp = model1.logp({"fsum": self.y})
-
-        with pm.Model() as model2:
-            gptot = pm.gp.Latent(reduce(add, self.means), reduce(add, self.covs))
-            fsum = gptot.prior("fsum", self.X, reparameterize=False)
-            model2_logp = model2.logp({"fsum": self.y})
-        npt.assert_allclose(model1_logp, model2_logp, atol=0, rtol=1e-2)
-
-        with model1:
-            fp1 = gpsum.conditional("fp1", self.Xnew, given={"X": self.X, "f": self.y, "gp": gpsum})
-        with model2:
-            fp2 = gptot.conditional("fp2", self.Xnew)
-
-        fp = np.random.randn(self.Xnew.shape[0])
-        npt.assert_allclose(fp1.logp({"fsum": self.y, "fp1": fp}),
-                            fp2.logp({"fsum": self.y, "fp2": fp}), atol=0, rtol=1e-2)
 
     def testAdditiveSparseRaises(self):
         # cant add different approximations
@@ -288,7 +269,7 @@ class TestGPAdditive(object):
     def testAdditiveTypeRaises1(self):
         with pm.Model() as model:
             cov_func = pm.gp.cov.ExpQuad(3, [0.1, 0.2, 0.3])
-            gp1 = pm.gp.MarginalSparse(cov_func=cov_func, approx="DTC")
+            gp1 = pm.gp.MarginalSparse(cov_func=cov_func, approx="VFE")
             gp2 = pm.gp.Marginal(cov_func=cov_func)
             with pytest.raises(Exception) as e_info:
                 gp1 + gp2
