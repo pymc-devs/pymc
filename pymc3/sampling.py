@@ -30,9 +30,9 @@ sys.setrecursionlimit(10000)
 __all__ = [ 'sample',
             'iter_sample',
             'sample_posterior_predictive',
-            'sample_ppc',
+            'sample_posterior_predictive',
             'sample_posterior_predictive_w',
-            'sample_ppc_w',
+            'sample_posterior_predictive_w',
             'init_nuts',
             'sample_prior_predictive'
             ]
@@ -1161,8 +1161,8 @@ def sample_posterior_predictive(trace, samples=None, model=None, vars=None, size
     return ppc_trace
 
 
-def sample_ppc(*args, **kwargs):
-    message = 'sample_ppc() is deprecated.  Please use sample_posterior_predictive()'
+def sample_posterior_predictive(*args, **kwargs):
+    message = 'sample_posterior_predictive() is deprecated.  Please use sample_posterior_predictive()'
     warnings.warn(message, DeprecationWarning, stacklevel=2)
     return sample_posterior_predictive(*args, **kwargs)
 
@@ -1299,8 +1299,8 @@ def sample_posterior_predictive_w(traces, samples=None, models=None, weights=Non
     return {k: np.asarray(v) for k, v in ppc.items()}
 
 
-def sample_ppc_w(*args, **kwargs):
-    message = 'sample_ppc_w() is deprecated.  Please use sample_posterior_predictive_w()'
+def sample_posterior_predictive_w(*args, **kwargs):
+    message = 'sample_posterior_predictive_w() is deprecated.  Please use sample_posterior_predictive_w()'
     warnings.warn(message, DeprecationWarning, stacklevel=2)
     return sample_posterior_predictive_w(*args, **kwargs)
 
