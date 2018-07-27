@@ -159,6 +159,17 @@ class TestLatent(object):
         chol = sp.linalg.cholesky(cov_func(self.X).eval(), lower=True)
         x = sp.linalg.solve_triangular(chol, f, lower=True)
         xs = np.random.randn(self.ns)
+
+        lp1 = model.fv_rotated_.logp({"fv_rotated_": x})
+
+        # reference GP
+        ref_gp = GPReference(mean_func, cov_func)
+        # test marginal_likelihood logp
+        mu, cov = ref_gp.marginal(self.X, 1e-6, f)
+        ref_priorlogp = ref_gp.logp_func(np.zeros(self.n), cov_func(self.X).eval())(f)
+
+        npt.assert_allclose(ref_priorlogp, lp1)
+
         latent_logp = model.logp({"fv_rotated_": x, "fp": xs})
 
         # reference GP
