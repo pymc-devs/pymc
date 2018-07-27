@@ -73,9 +73,6 @@ class SMC(atext.ArrayStepSharedLLK):
     covariance : :class:`numpy.ndarray`
         (chains x chains)
         Initial Covariance matrix for proposal distribution, if None - identity matrix taken
-    likelihood_name : string
-        name of the :class:`pymc3.deterministic` variable that contains the model likelihood.
-        Defaults to 'l_like__'
     proposal_name :
         Type of proposal distribution, see smc.proposal_dists.keys() for options
     tune_interval : int
@@ -105,8 +102,8 @@ class SMC(atext.ArrayStepSharedLLK):
     default_blocked = True
 
     def __init__(self, vars=None, out_vars=None, n_steps=25, scaling=1., p_acc_rate=0.001,
-                 covariance=None, likelihood_name='l_like__', proposal_name='MultivariateNormal',
-                 tune_interval=10, threshold=0.5, check_bound=True, model=None, random_seed=-1):
+                 covariance=None, proposal_name='MultivariateNormal', tune_interval=10,
+                 threshold=0.5, check_bound=True, model=None, random_seed=-1):
 
         if random_seed != -1:
             nr.seed(random_seed)
@@ -119,13 +116,6 @@ class SMC(atext.ArrayStepSharedLLK):
         vars = inputvars(vars)
 
         if out_vars is None:
-            if not any(likelihood_name == RV.name for RV in model.unobserved_RVs):
-                pm._log.info('Adding model likelihood to RVs!')
-                with model:
-                    llk = pm.Deterministic(likelihood_name, model.logpt)
-            else:
-                pm._log.info('Using present model likelihood!')
-
             out_vars = model.unobserved_RVs
 
         out_varnames = [out_var.name for out_var in out_vars]
