@@ -27,7 +27,23 @@ from tqdm import tqdm
 import sys
 sys.setrecursionlimit(10000)
 
+<<<<<<< HEAD
 __all__ = ['sample', 'iter_sample', 'sample_posterior_predictive', 'sample_posterior_predictive_w', 'init_nuts', 'sample_prior_predictive']
+=======
+<<<<<<< HEAD
+__all__ = ['sample', 'iter_sample', 'sample_posterior_predictive', 'sample_posterior_predictive_w', 'init_nuts', 'sample_prior_predictive']
+=======
+__all__ = [ 'sample',
+            'iter_sample',
+            'sample_posterior_predictive',
+            'sample_posterior_predictive',
+            'sample_posterior_predictive_w',
+            'sample_posterior_predictive_w',
+            'init_nuts',
+            'sample_prior_predictive'
+            ]
+>>>>>>> a63c90550064556a01a2bd1e0c62b620ae3bc86e
+>>>>>>> 1bdc254dd2267fdb87e96695aa3db15ebb54f995
 
 STEP_METHODS = (NUTS, HamiltonianMC, Metropolis, BinaryMetropolis,
                 BinaryGibbsMetropolis, Slice, CategoricalGibbsMetropolis)
@@ -1153,7 +1169,8 @@ def sample_posterior_predictive(trace, samples=None, model=None, vars=None, size
     return ppc_trace
 
 
-def sample_ppc(*args, **kwargs):
+
+def sample_ppc(*args,**kwargs):
     """This method is deprecated.  Please use :func:`~sampling.sample_posterior_predictive`"""
     message = 'sample_ppc() is deprecated.  Please use sample_posterior_predictive()'
     warnings.warn(message, DeprecationWarning, stacklevel=2)
@@ -1297,7 +1314,6 @@ def sample_ppc_w(*args,**kwargs):
     message = 'sample_ppc_w() is deprecated.  Please use sample_posterior_predictive_w()'
     warnings.warn(message, DeprecationWarning, stacklevel=2)
     return sample_predictive_posterior_w(*args, **kwargs)
-
 
 
 def sample_prior_predictive(samples=500, model=None, vars=None, random_seed=None):
