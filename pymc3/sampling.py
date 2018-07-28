@@ -193,21 +193,7 @@ def sample(draws=500, step=None, init='auto', n_init=200000, start=None, trace=N
            live_plot_kwargs=None, compute_convergence_checks=True, use_mmap=False, **kwargs):
     """Draw samples from the posterior using the given step methods.
 
-    Multiple step methods are supported via compound step methods. When compound steps are involved, it takes a list of
-    steps to generate a list of methods. At each sample, it iterates over the list of methods sequentially. Each method
-    takes a point as input, and generates a new point as output. The new point is proposed within each step via a 
-    stochastic kernel, and if the proposal was rejected by the Markov-Hastings criteria, it just outputs the original 
-    input point. When calling `pm.sample()` without specifying the step methods, PyMC3 assigns the best suitable step 
-    method to each variable. In the default setting, the parameter update order follows the same order of the definition
-    of random variables in the model and is assigned automatically. But you can also specify the update order by
-    providing the step methods. 
-
-    One thing to notice is that mixing sampler for discrete variables with the NUTS/Hamiltonian 
-    MC sampler for continuous random variables can raise problems and makes the sampling either failed (completely
-    stall) or unstable. The concern with mixing discrete and continuous sampling is that the change in discrete parameters will affect the
-    continuous distribution's geometry so that the adaptation (i.e., the tuned mass matrix and step size) may be
-    inappropriate. HMC/NUTS is hypersensitive to its tuning parameters (mass matrix and step size). 
-    The number of iterations to take in order to achieve decent sample size after each discrete parameter change might also needs to be tuned.
+    Multiple step methods are supported via compound step methods. 
 
     Parameters
     ----------
