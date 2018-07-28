@@ -220,10 +220,10 @@ class TestSamplePPC(SeededTest):
 
         with model:
             # test list input
-            ppc0 = pm.sample_ppc([model.test_point], samples=10)
-            ppc = pm.sample_ppc(trace, samples=1000, vars=[])
+            ppc0 = pm.sample_posterior_predictive([model.test_point], samples=10)
+            ppc = pm.sample_posterior_predictive(trace, samples=1000, vars=[])
             assert len(ppc) == 0
-            ppc = pm.sample_ppc(trace, samples=1000, vars=[a])
+            ppc = pm.sample_posterior_predictive(trace, samples=1000, vars=[a])
             assert 'a' in ppc
             assert ppc['a'].shape == (1000,)
         _, pval = stats.kstest(ppc['a'],
@@ -231,7 +231,7 @@ class TestSamplePPC(SeededTest):
         assert pval > 0.001
 
         with model:
-            ppc = pm.sample_ppc(trace, samples=10, size=5, vars=[a])
+            ppc = pm.sample_posterior_predictive(trace, samples=10, size=5, vars=[a])
             assert ppc['a'].shape == (10, 5)
 
     def test_normal_vector(self):
@@ -243,14 +243,14 @@ class TestSamplePPC(SeededTest):
 
         with model:
             # test list input
-            ppc0 = pm.sample_ppc([model.test_point], samples=10)
-            ppc = pm.sample_ppc(trace, samples=10, vars=[])
+            ppc0 = pm.sample_posterior_predictive([model.test_point], samples=10)
+            ppc = pm.sample_posterior_predictive(trace, samples=10, vars=[])
             assert len(ppc) == 0
-            ppc = pm.sample_ppc(trace, samples=10, vars=[a])
+            ppc = pm.sample_posterior_predictive(trace, samples=10, vars=[a])
             assert 'a' in ppc
             assert ppc['a'].shape == (10, 2)
 
-            ppc = pm.sample_ppc(trace, samples=10, vars=[a], size=4)
+            ppc = pm.sample_posterior_predictive(trace, samples=10, vars=[a], size=4)
             assert 'a' in ppc
             assert ppc['a'].shape == (10, 4, 2)
 
@@ -263,14 +263,14 @@ class TestSamplePPC(SeededTest):
 
         with model:
             # test list input
-            ppc0 = pm.sample_ppc([model.test_point], samples=10)
-            ppc = pm.sample_ppc(trace, samples=10, vars=[])
+            ppc0 = pm.sample_posterior_predictive([model.test_point], samples=10)
+            ppc = pm.sample_posterior_predictive(trace, samples=10, vars=[])
             assert len(ppc) == 0
-            ppc = pm.sample_ppc(trace, samples=10, vars=[a])
+            ppc = pm.sample_posterior_predictive(trace, samples=10, vars=[a])
             assert 'a' in ppc
             assert ppc['a'].shape == (10, 2)
 
-            ppc = pm.sample_ppc(trace, samples=10, vars=[a], size=4)
+            ppc = pm.sample_posterior_predictive(trace, samples=10, vars=[a], size=4)
             assert 'a' in ppc
             assert ppc['a'].shape == (10, 4, 2)
 
@@ -282,8 +282,8 @@ class TestSamplePPC(SeededTest):
 
         with model:
             # test list input
-            ppc0 = pm.sample_ppc([model.test_point], samples=10)
-            ppc = pm.sample_ppc(trace, samples=1000, vars=[b])
+            ppc0 = pm.sample_posterior_predictive([model.test_point], samples=10)
+            ppc = pm.sample_posterior_predictive(trace, samples=1000, vars=[b])
             assert len(ppc) == 1
             assert ppc['b'].shape == (1000,)
             scale = np.sqrt(1 + 0.2 ** 2)
@@ -292,7 +292,7 @@ class TestSamplePPC(SeededTest):
 
 
 class TestSamplePPCW(SeededTest):
-    def test_sample_ppc_w(self):
+    def test_sample_posterior_predictive_w(self):
         data0 = np.random.normal(0, 1, size=500)
 
         with pm.Model() as model_0:
@@ -307,12 +307,12 @@ class TestSamplePPCW(SeededTest):
 
         traces = [trace_0, trace_0]
         models = [model_0, model_0]
-        ppc = pm.sample_ppc_w(traces, 100, models)
+        ppc = pm.sample_posterior_predictive_w(traces, 100, models)
         assert ppc['y'].shape == (100, 500)
 
         traces = [trace_0, trace_1]
         models = [model_0, model_1]
-        ppc = pm.sample_ppc_w(traces, 100, models)
+        ppc = pm.sample_posterior_predictive_w(traces, 100, models)
         assert ppc['y'].shape == (100, 500)
 
 

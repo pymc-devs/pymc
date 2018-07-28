@@ -27,7 +27,7 @@ from tqdm import tqdm
 import sys
 sys.setrecursionlimit(10000)
 
-__all__ = ['sample', 'iter_sample', 'sample_ppc', 'sample_ppc_w', 'init_nuts', 'sample_prior_predictive']
+__all__ = ['sample', 'iter_sample', 'sample_posterior_predictive', 'sample_posterior_predictive_w', 'init_nuts', 'sample_prior_predictive']
 
 STEP_METHODS = (NUTS, HamiltonianMC, Metropolis, BinaryMetropolis,
                 BinaryGibbsMetropolis, Slice, CategoricalGibbsMetropolis)
@@ -1068,7 +1068,7 @@ def stop_tuning(step):
     return step
 
 
-def sample_ppc(trace, samples=None, model=None, vars=None, size=None,
+def sample_posterior_predictive(trace, samples=None, model=None, vars=None, size=None,
                random_seed=None, progressbar=True):
     """Generate posterior predictive samples from a model given a trace.
 
@@ -1153,7 +1153,7 @@ def sample_ppc(trace, samples=None, model=None, vars=None, size=None,
     return ppc_trace
 
 
-def sample_ppc_w(traces, samples=None, models=None, weights=None,
+def sample_posterior_predictive_w(traces, samples=None, models=None, weights=None,
                  random_seed=None, progressbar=True):
     """Generate weighted posterior predictive samples from a list of models and
     a list of traces according to a set of weights.
@@ -1268,7 +1268,7 @@ def sample_ppc_w(traces, samples=None, models=None, weights=None,
         for idx in indices:
             param = trace[idx]
             var = variables[idx]
-            # TODO sample_ppc_w is currently only work for model with
+            # TODO sample_posterior_predictive_w is currently only work for model with
             # one observed.
             ppc[var.name].append(draw_values([var],
                                              point=param,
