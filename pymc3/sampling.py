@@ -31,9 +31,9 @@ sys.setrecursionlimit(10000)
 __all__ = [ 'sample',
             'iter_sample',
             'sample_posterior_predictive',
-            'sample_posterior_predictive',
+            'sample_ppc',
             'sample_posterior_predictive_w',
-            'sample_posterior_predictive_w',
+            'sample_ppc_w',
             'init_nuts',
             'sample_prior_predictive'
             ]
