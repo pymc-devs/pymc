@@ -27,7 +27,19 @@ from tqdm import tqdm
 import sys
 sys.setrecursionlimit(10000)
 
+<<<<<<< HEAD
 __all__ = ['sample', 'iter_sample', 'sample_posterior_predictive', 'sample_posterior_predictive_w', 'init_nuts', 'sample_prior_predictive']
+=======
+__all__ = [ 'sample',
+            'iter_sample',
+            'sample_posterior_predictive',
+            'sample_posterior_predictive',
+            'sample_posterior_predictive_w',
+            'sample_posterior_predictive_w',
+            'init_nuts',
+            'sample_prior_predictive'
+            ]
+>>>>>>> a63c90550064556a01a2bd1e0c62b620ae3bc86e
 
 STEP_METHODS = (NUTS, HamiltonianMC, Metropolis, BinaryMetropolis,
                 BinaryGibbsMetropolis, Slice, CategoricalGibbsMetropolis)
@@ -1153,11 +1165,18 @@ def sample_posterior_predictive(trace, samples=None, model=None, vars=None, size
     return ppc_trace
 
 
+<<<<<<< HEAD
 def sample_ppc(*args,**kwargs):
     """This method is deprecated.  Please use :func:`~sampling.sample_posterior_predictive`"""
     message = 'sample_ppc() is deprecated.  Please use sample_posterior_predictive()'
     warnings.warn(message, DeprecationWarning, stacklevel=2)
     return sample_predictive_posterior(*args, **kwargs)
+=======
+def sample_posterior_predictive(*args, **kwargs):
+    message = 'sample_posterior_predictive() is deprecated.  Please use sample_posterior_predictive()'
+    warnings.warn(message, DeprecationWarning, stacklevel=2)
+    return sample_posterior_predictive(*args, **kwargs)
+>>>>>>> a63c90550064556a01a2bd1e0c62b620ae3bc86e
 
 
 def sample_posterior_predictive_w(traces, samples=None, models=None, weights=None,
@@ -1292,11 +1311,18 @@ def sample_posterior_predictive_w(traces, samples=None, models=None, weights=Non
     return {k: np.asarray(v) for k, v in ppc.items()}
 
 
+<<<<<<< HEAD
 def sample_ppc_w(*args,**kwargs):
     """This method is deprecated.  Please use :func:`~sampling.sample_posterior_predictive_w`"""
     message = 'sample_ppc_w() is deprecated.  Please use sample_posterior_predictive_w()'
     warnings.warn(message, DeprecationWarning, stacklevel=2)
     return sample_predictive_posterior_w(*args, **kwargs)
+=======
+def sample_posterior_predictive_w(*args, **kwargs):
+    message = 'sample_posterior_predictive_w() is deprecated.  Please use sample_posterior_predictive_w()'
+    warnings.warn(message, DeprecationWarning, stacklevel=2)
+    return sample_posterior_predictive_w(*args, **kwargs)
+>>>>>>> a63c90550064556a01a2bd1e0c62b620ae3bc86e
 
 
 def sample_prior_predictive(samples=500, model=None, vars=None, random_seed=None):
