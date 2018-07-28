@@ -31,6 +31,7 @@ __all__ = ['SMC', 'sample_smc']
 
 proposal_dists = {'MultivariateNormal': MultivariateNormalProposal}
 
+MODEL_LIKELIHOOD_NAME = 'logp__'
 
 def choose_proposal(proposal_name, scale=1.):
     """Initialize and select proposal distribution.
@@ -146,8 +147,6 @@ class SMC(atext.ArrayStepSharedLLK):
         self.stage = 0
         self.chain_index = 0
         self.threshold = threshold
-        self.likelihood_name = likelihood_name
-        self._llk_index = out_varnames.index(likelihood_name)
         self.discrete = np.concatenate([[v.dtype in discrete_types] * (v.dsize or 1) for v in vars])
         self.any_discrete = self.discrete.any()
         self.all_discrete = self.discrete.all()
@@ -311,7 +310,7 @@ class SMC(atext.ArrayStepSharedLLK):
             else:
                 array_population[:, slc] = slc_population
         # get likelihoods
-        likelihoods = mtrace.get_values(varname=self.likelihood_name,
+        likelihoods = mtrace.get_values(varname=MODEL_LIKELIHOOD_NAME,
                                         burn=n_steps - 1, combine=True)
 
         # map end array_endpoints to dict points
@@ -423,8 +422,8 @@ def sample_smc(samples=1000, chains=100, step=None, start=None, homepath=None, s
     progressbar : bool
         Flag for displaying a progress bar
     model : :class:`pymc3.Model`
-        (optional if in `with` context) has to contain deterministic variable name defined under
-        `step.likelihood_name` that contains the model likelihood
+        (optional if in `with` context) has to contain deterministic variable
+        with name 'logp__' that contains the model likelihood
     random_seed : int or list of ints
         A list is accepted, more if `cores` is greater than one.
     rm_flag : bool
@@ -450,9 +449,9 @@ def sample_smc(samples=1000, chains=100, step=None, start=None, homepath=None, s
         if not (chains / float(cores)).is_integer():
             raise TypeError('chains / cores has to be a whole number!')
 
-    if not any(step.likelihood_name in var.name for var in model.deterministics):
-        raise TypeError('Model (deterministic) variables need to contain a variable {} as defined '
-                        'in `step`.'.format(step.likelihood_name))
+    if not any(var.name == MODEL_LIKELIHOOD_NAME for var in model.deterministics):
+        raise TypeError("Model (deterministic) variables must contain a "
+                        "variable 'logp__' containing the model likelihood.")
 
     stage_handler = atext.TextStage(homepath)
 
