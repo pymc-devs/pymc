@@ -27,7 +27,14 @@ from tqdm import tqdm
 import sys
 sys.setrecursionlimit(10000)
 
-__all__ = ['sample', 'iter_sample', 'sample_posterior_predictive', 'sample_posterior_predictive_w', 'init_nuts', 'sample_prior_predictive']
+__all__ = [ 'sample',
+			'iter_sample',
+			'sample_posterior_predictive',
+			'sample_posterior_predictive_w',
+			'init_nuts',
+			'sample_prior_predictive',
+			'sample_ppc',
+			'sample_ppc_w']
 
 STEP_METHODS = (NUTS, HamiltonianMC, Metropolis, BinaryMetropolis,
                 BinaryGibbsMetropolis, Slice, CategoricalGibbsMetropolis)
@@ -1153,6 +1160,12 @@ def sample_posterior_predictive(trace, samples=None, model=None, vars=None, size
     return ppc_trace
 
 
+def sample_ppc(*args, **kwargs):
+    """This method is deprecated.  Please use :func:`~sampling.sample_posterior_predictive`"""
+    message = 'sample_ppc() is deprecated.  Please use sample_posterior_predictive()'
+    warnings.warn(message, DeprecationWarning, stacklevel=2)
+    return sample_predictive_posterior(*args, **kwargs)
+
 def sample_posterior_predictive_w(traces, samples=None, models=None, weights=None,
                  random_seed=None, progressbar=True):
     """Generate weighted posterior predictive samples from a list of models and
@@ -1283,6 +1296,13 @@ def sample_posterior_predictive_w(traces, samples=None, models=None, weights=Non
             indices.close()
 
     return {k: np.asarray(v) for k, v in ppc.items()}
+
+
+def sample_ppc_w(*args, **kwargs):
+    """This method is deprecated.  Please use :func:`~sampling.sample_posterior_predictive_w`"""
+    message = 'sample_ppc() is deprecated.  Please use sample_posterior_predictive_w()'
+    warnings.warn(message, DeprecationWarning, stacklevel=2)
+    return sample_predictive_posterior_w(*args, **kwargs)
 
 
 def sample_prior_predictive(samples=500, model=None, vars=None, random_seed=None):
