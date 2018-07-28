@@ -27,12 +27,7 @@ from tqdm import tqdm
 import sys
 sys.setrecursionlimit(10000)
 
-<<<<<<< HEAD
-__all__ = ['sample', 'iter_sample', 'sample_posterior_predictive', 'sample_posterior_predictive_w', 'init_nuts', 'sample_prior_predictive']
-=======
-<<<<<<< HEAD
-__all__ = ['sample', 'iter_sample', 'sample_posterior_predictive', 'sample_posterior_predictive_w', 'init_nuts', 'sample_prior_predictive']
-=======
+
 __all__ = [ 'sample',
             'iter_sample',
             'sample_posterior_predictive',
@@ -42,8 +37,6 @@ __all__ = [ 'sample',
             'init_nuts',
             'sample_prior_predictive'
             ]
->>>>>>> a63c90550064556a01a2bd1e0c62b620ae3bc86e
->>>>>>> 1bdc254dd2267fdb87e96695aa3db15ebb54f995
 
 STEP_METHODS = (NUTS, HamiltonianMC, Metropolis, BinaryMetropolis,
                 BinaryGibbsMetropolis, Slice, CategoricalGibbsMetropolis)
