@@ -850,7 +850,7 @@ def test_mixture_random_shape():
     assert rand3.shape == (100, 20)
 
     with m:
-        ppc = pm.sample_ppc([m.test_point], samples=200)
+        ppc = pm.sample_posterior_predictive([m.test_point], samples=200)
     assert ppc['like0'].shape == (200, 20)
     assert ppc['like1'].shape == (200, 20)
     assert ppc['like2'].shape == (200, 20)
@@ -865,7 +865,7 @@ def test_density_dist_with_random_sampleable():
         trace = pm.sample(100)
 
     samples = 500
-    ppc = pm.sample_ppc(trace, samples=samples, model=model, size=100)
+    ppc = pm.sample_posterior_predictive(trace, samples=samples, model=model, size=100)
     assert len(ppc['density_dist']) == samples
 
 
@@ -878,4 +878,4 @@ def test_density_dist_without_random_not_sampleable():
 
     samples = 500
     with pytest.raises(ValueError):
-        pm.sample_ppc(trace, samples=samples, model=model, size=100)
+        pm.sample_posterior_predictive(trace, samples=samples, model=model, size=100)
