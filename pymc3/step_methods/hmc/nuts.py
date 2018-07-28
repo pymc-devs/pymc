@@ -184,8 +184,8 @@ class NUTS(BaseHMC):
             return Competence.IDEAL
         return Competence.INCOMPATIBLE
 
-    def warnings(self, strace):
-        warnings = super(NUTS, self).warnings(strace)
+    def warnings(self):
+        warnings = super(NUTS, self).warnings()
         n_samples = self._samples_after_tune
         n_treedepth = self._reached_max_treedepth
 

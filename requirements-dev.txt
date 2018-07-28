@@ -1,5 +1,6 @@
 bokeh>=0.12.13
 CommonMark==0.5.4
+graphviz>=0.8.3
 h5py>=2.7.0
 ipython
 Keras>=2.0.8

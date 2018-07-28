@@ -10,7 +10,7 @@ from pymc3.gp.mean import Zero
 from pymc3.gp.util import (conditioned_vars, infer_shape,
                            stabilize, cholesky, solve_lower, solve_upper)
 from pymc3.distributions import draw_values
-from pymc3.distributions.dist_math import eigh
+from theano.tensor.nlinalg import eigh
 from ..math import cartesian, kron_dot, kron_diag
 
 __all__ = ['Latent', 'Marginal', 'TP', 'MarginalSparse', 'MarginalKron']
