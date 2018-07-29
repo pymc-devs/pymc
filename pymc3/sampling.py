@@ -394,6 +394,14 @@ def sample(draws=500, step=None, init='auto', n_init=200000, start=None, trace=N
         if model.ndim == 0:
             raise ValueError('The model does not contain any free variables.')
 
+        # Add model likelihood
+        if not any(RV.name == 'model_logp__' for RV in model.unobserved_RVs):
+            pm._log.info('Adding model likelihood to RVs.')
+            with model:
+                model_logp__ = pm.Deterministic('model_logp__', model.logpt)
+        else:
+            pm._log.info('Using present model likelihood.')
+
         if step is None and init is not None and all_continuous(model.vars):
             try:
                 # By default, try to use NUTS
