@@ -28,8 +28,8 @@ import sys
 sys.setrecursionlimit(10000)
 
 __all__ = ['sample', 'iter_sample', 'sample_posterior_predictive',
-            'sample_posterior_predictive_w', 'init_nuts',
-            'sample_prior_predictive', 'sample_ppc', 'sample_ppc_w']
+           'sample_posterior_predictive_w', 'init_nuts',
+           'sample_prior_predictive', 'sample_ppc', 'sample_ppc_w']
 
 STEP_METHODS = (NUTS, HamiltonianMC, Metropolis, BinaryMetropolis,
                 BinaryGibbsMetropolis, Slice, CategoricalGibbsMetropolis)
