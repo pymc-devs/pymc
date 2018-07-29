@@ -193,7 +193,7 @@ def sample(draws=500, step=None, init='auto', n_init=200000, start=None, trace=N
            live_plot_kwargs=None, compute_convergence_checks=True, use_mmap=False, **kwargs):
     """Draw samples from the posterior using the given step methods.
 
-    Multiple step methods are supported via compound step methods. 
+    Multiple step methods are supported via compound step methods.
 
     Parameters
     ----------
