@@ -120,7 +120,7 @@ class TestMultiTrace(bf.ModelBackendSetupTestCase):
             base.merge_traces([mtrace0, mtrace1])
 
 
-class TestMultiTrace_add_values(bf.ModelBackendSampledTestCase):
+class TestMultiTrace_add_remove_values(bf.ModelBackendSampledTestCase):
     name = None
     backend = ndarray.NDArray
     shape = ()
@@ -134,6 +134,9 @@ class TestMultiTrace_add_values(bf.ModelBackendSampledTestCase):
         assert len(orig_varnames) == len(mtrace.varnames) - 1
         assert name in mtrace.varnames
         assert np.all(mtrace[orig_varnames[0]] == mtrace[name])
+        mtrace.remove_values(name)
+        assert len(orig_varnames) == len(mtrace.varnames)
+        assert name not in mtrace.varnames
 
 
 class TestSqueezeCat(object):
