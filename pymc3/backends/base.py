@@ -8,6 +8,7 @@ import logging
 
 import numpy as np
 import warnings
+import pymc3 as pm
 import theano.tensor as tt
 
 from ..model import modelcontext
@@ -33,18 +34,30 @@ class BaseTrace(object):
         Sampling values will be stored for these variables. If None,
         `model.unobserved_RVs` is used.
     test_point : dict
-        use different test point that might be with changed variables shapes
+        Use different test point that might be with changed variables shapes
+    likelihood_name : str
+        Name of the pymc3.Deterministic variable that contains the model
+        likelihood. Defaults to 'logp__'.
     """
 
     supports_sampler_stats = False
 
-    def __init__(self, name, model=None, vars=None, test_point=None):
+    def __init__(self, name, model=None, vars=None, test_point=None,
+                 likelihood_name='logp__'):
         self.name = name
 
         model = modelcontext(model)
         self.model = model
         if vars is None:
+            if not any(RV.name == likelihood_name for RV in model.unobserved_RVs):
+                pm._log.info('Adding model likelihood to RVs!')
+                with model:
+                    logp__ = pm.Deterministic(likelihood_name, model.logpt)
+            else:
+                pm._log.info('Using present model likelihood!')
+
             vars = model.unobserved_RVs
+
         self.vars = vars
         self.varnames = [var.name for var in vars]
         self.fn = model.fastfn(vars)
