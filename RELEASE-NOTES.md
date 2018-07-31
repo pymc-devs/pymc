@@ -1,7 +1,12 @@
 # Release Notes
 
 
+## PyMC3 3.6
+
 ## PyMC 3.5 (July 21 2018)
+
+- Renamed `sample_ppc()` and `sample_ppc_w()` to `sample_posterior_predictive()` and `sample_posterior_predictive_w()`, respectively.
+
 
 ### New features
 
@@ -87,10 +92,10 @@
 
 - Fixed `compareplot` to use `loo` output.
 - Improved `posteriorplot` to scale fonts
-- `sample_posterior_predictive_w` now broadcasts
+- `sample_ppc_w` now broadcasts
 - `df_summary` function renamed to `summary`
 - Add test for `model.logp_array` and `model.bijection` (#2724)
-- Fixed `sample_posterior_predictive` and `sample_posterior_predictive_w` to iterate all chains(#2633, #2748)
+- Fixed `sample_ppc` and `sample_ppc_w` to iterate all chains(#2633, #2748)
 - Add Bayesian R2 score (for GLMs) `stats.r2_score` (#2696) and test (#2729).
 - SMC works with transformed variables (#2755)
 - Speedup OPVI (#2759)
@@ -275,7 +280,7 @@ Since the beta release last year, the following improvements have been implement
 
 * Added model checking utility functions, including leave-one-out (LOO) cross-validation, BPIC, WAIC, and DIC.
 
-* Implemented posterior predictive sampling (`sample_posterior_predictive`).
+* Implemented posterior predictive sampling (`sample_ppc`).
 
 * Implemented auto-assignment of step methods by `sample` function.
 
