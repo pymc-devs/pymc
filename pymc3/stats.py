@@ -698,6 +698,9 @@ def hpd(x, alpha=0.05, transform=lambda x: x):
     """Calculate highest posterior density (HPD) of array for given alpha. The HPD is the
     minimum width Bayesian credible interval (BCI).
 
+    This function assumes the posterior distribution is unimodal:
+    it always returns one interval per variable.
+
     :Arguments:
       x : Numpy array
           An array containing MCMC samples
