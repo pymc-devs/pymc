@@ -60,9 +60,9 @@ variable for our observations::
       # fit the model
       trace = pm.sample()
 
-      # Switch out the observations and use `sample_ppc` to predict
+      # Switch out the observations and use `sample_posterior_predictive` to predict
       x_shared.set_value([-1, 0, 1.])
-      post_pred = pm.sample_ppc(trace, samples=500)
+      post_pred = pm.sample_posterior_predictive(trace, samples=500)
 
 However, due to the way we handle shapes at the moment, it is
 not possible to change the shape of a shared variable if that would

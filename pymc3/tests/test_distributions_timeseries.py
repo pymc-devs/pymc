@@ -3,7 +3,7 @@ from __future__ import division
 from ..model import Model
 from ..distributions.continuous import Flat, Normal
 from ..distributions.timeseries import EulerMaruyama, AR1, AR, GARCH11
-from ..sampling import sample, sample_ppc
+from ..sampling import sample, sample_posterior_predictive
 from ..theanof import floatX
 
 import numpy as np
@@ -122,7 +122,7 @@ def test_linear():
     with model:
         trace = sample(init='advi+adapt_diag', chains=1)
 
-    ppc = sample_ppc(trace, model=model)
+    ppc = sample_posterior_predictive(trace, model=model)
     # test
     p95 = [2.5, 97.5]
     lo, hi = np.percentile(trace[lamh], p95, axis=0)

@@ -213,7 +213,7 @@ class TestSaveLoad(object):
         for var in ('x', 'z'):
             assert (self.trace[var] == trace2[var]).all()
 
-    def test_sample_ppc(self, tmpdir_factory):
+    def test_sample_posterior_predictive(self, tmpdir_factory):
         directory = str(tmpdir_factory.mktemp('data'))
         save_dir = pm.save_trace(self.trace, directory, overwrite=True)
 
@@ -222,13 +222,13 @@ class TestSaveLoad(object):
         seed = 10
         np.random.seed(seed)
         with TestSaveLoad.model():
-            ppc = pm.sample_ppc(self.trace)
+            ppc = pm.sample_posterior_predictive(self.trace)
 
         seed = 10
         np.random.seed(seed)
         with TestSaveLoad.model():
             trace2 = pm.load_trace(directory)
-            ppc2 = pm.sample_ppc(trace2)
+            ppc2 = pm.sample_posterior_predictive(trace2)
 
         for key, value in ppc.items():
             assert (value == ppc2[key]).all()
