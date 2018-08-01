@@ -194,9 +194,9 @@ class Latent(Base):
         Xnew : array-like
             Function input values.
         given : dict
-            Can optionally take as key value pairs: `X`, `y`, `noise`,
-            and `gp`.  See the section in the documentation on additive GP
-            models in PyMC3 for more information.
+            Can optionally take as key value pairs: `X`, `f`, and `gp`.
+            See the section in the documentation on additive GP models
+            in PyMC3 for more information.
         **kwargs
             Extra keyword arguments that are passed to `MvNormal` distribution
             constructor.
@@ -428,7 +428,6 @@ class Marginal(Base):
     def _get_given_vals(self, given):
         if given is None:
             given = {}
-
         if 'gp' in given:
             cov_total = given['gp'].cov_func
             mean_total = given['gp'].mean_func
@@ -556,7 +555,7 @@ class Marginal(Base):
         return mu, cov
 
 
-@conditioned_vars(["X", "Xu", "y", "sigma"])
+@conditioned_vars(["X", "Xu", "y", "noise"])
 class MarginalSparse(Marginal):
     R"""
     Approximate marginal Gaussian process.
@@ -672,7 +671,7 @@ class MarginalSparse(Marginal):
         R"""
         Returns the approximate marginal likelihood distribution, given the input
         locations `X`, inducing point locations `Xu`, data `y`, and white noise
-        standard deviations `sigma`.
+        standard deviations `noise`.
 
         Parameters
         ----------
@@ -704,12 +703,12 @@ class MarginalSparse(Marginal):
             if sigma is None:
                 raise ValueError('noise argument must be specified')
             else:
-                self.sigma = sigma
+                self.noise = sigma
                 warnings.warn(
                     "The 'sigma' argument has been deprecated. Use 'noise' instead.",
                 DeprecationWarning)
         else:
-            self.sigma = noise
+            self.noise = noise
         logp = functools.partial(self._build_marginal_likelihood_logp,
                                  X=X, Xu=Xu, sigma=noise)
         if is_observed:
@@ -761,11 +760,11 @@ class MarginalSparse(Marginal):
         else:
             cov_total = self.cov_func
             mean_total = self.mean_func
-        if all(val in given for val in ['X', 'Xu', 'y', 'sigma']):
-            X, Xu, y, sigma = given['X'], given['Xu'], given['y'], given['sigma']
+        if all(val in given for val in ['X', 'Xu', 'y', 'noise']):
+            X, Xu, y, noise = given['X'], given['Xu'], given['y'], given['noise']
         else:
-            X, Xu, y, sigma = self.X, self.Xu, self.y, self.sigma
-        return X, Xu, y, sigma, cov_total, mean_total
+            X, Xu, y, noise = self.X, self.Xu, self.y, self.noise
+        return X, Xu, y, noise, cov_total, mean_total
 
     def conditional(self, name, Xnew, pred_noise=False, given=None, **kwargs):
         R"""
