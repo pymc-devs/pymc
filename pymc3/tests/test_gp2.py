@@ -65,9 +65,8 @@ class TestMarginalKron(object):
         self.f_mu = np.mean(self.ppc["fs"], 0)
         self.f_sd = np.std(self.ppc["fs"], 0)
 
-    def test_priors(self):
-        # posteriors must be close to true values (which had strong priors)
-        npt.assert_allclose(self.map_point["sigma"], self.true_sigma, atol=0.01)
+    def test_hyperparameters(self):
+        npt.assert_allclose(self.map_point["sigma"], self.true_sigma, atol=0.05)
 
     def test_conditionals(self):
         true_f = self.true_f[self.idx_te]
@@ -75,7 +74,7 @@ class TestMarginalKron(object):
         npt.assert_array_less(self.f_mu - 3*self.f_sd, true_f)
         assert_allclose_corr(self.f_mu, true_f, atol=0.1)
 
-    def testPredictions(self):
+    def test_predictions(self):
         mu, var = self.gp.predict(self.Xs, point=self.map_point, diag=True, pred_noise=False)
         assert_allclose_corr(np.sqrt(var), self.f_sd, atol=0.1)
         assert_allclose_corr(mu, self.f_mu, atol=0.1)
