@@ -28,7 +28,8 @@ class CompoundStep(object):
                 else:
                     point = method.step(point)
             # Model logp is the logp of the last state
-            states['logp'].extend(states[-1]['logp'])
+            for state in states:
+                state['logp'] = states[-1]['logp']
             return point, states
         else:
             for method in self.methods:
