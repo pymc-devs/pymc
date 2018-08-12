@@ -11,10 +11,15 @@ from .util import get_default_varnames
 import pymc3 as pm
 from pymc3.theanof import floatX
 
-from scipy.special import logsumexp
+import scipy.__version__ as scipy_version
 from scipy.stats import dirichlet
 from scipy.optimize import minimize
 from scipy.signal import fftconvolve
+
+if scipy_version < '1.0.0':
+    from scipy.misc import logsumexp
+else:
+    from scipy.special import logsumexp
 
 
 __all__ = ['autocorr', 'autocov', 'waic', 'loo', 'hpd', 'quantiles',
@@ -190,7 +195,7 @@ def waic(trace, model=None, pointwise=False, progressbar=False):
     waic: widely available information criterion
     waic_se: standard error of waic
     p_waic: effective number parameters
-    var_warn: 1 if posterior variance of the log predictive 
+    var_warn: 1 if posterior variance of the log predictive
          densities exceeds 0.4
     waic_i: and array of the pointwise predictive accuracy, only if pointwise True
     """
@@ -260,7 +265,7 @@ def loo(trace, model=None, pointwise=False, reff=None, progressbar=False):
     loo: approximated Leave-one-out cross-validation
     loo_se: standard error of loo
     p_loo: effective number of parameters
-    shape_warn: 1 if the estimated shape parameter of 
+    shape_warn: 1 if the estimated shape parameter of
         Pareto distribution is greater than 0.7 for one or more samples
     loo_i: array of pointwise predictive accuracy, only if pointwise True
     """
