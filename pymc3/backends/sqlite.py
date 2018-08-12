@@ -113,12 +113,13 @@ class SQLite(base.BaseTrace):
             self._create_table()
             self._is_setup = True
         self._create_insert_queries()
+        self._closed = False
 
     def _create_table(self):
         template = TEMPLATES['table']
         with self.db.con:
             for varname, var_cols in self._var_cols.items():
-                if np.issubdtype(self.var_dtypes[varname], np.int):
+                if np.issubdtype(self.var_dtypes[varname], np.integer):
                     dtype = 'INT'
                 else:
                     dtype = 'FLOAT'
@@ -164,8 +165,11 @@ class SQLite(base.BaseTrace):
                 self._queue[varname] = []
 
     def close(self):
+        if self._closed:
+            return
         self._execute_queue()
         self.db.close()
+        self._closed = True
 
     # Selection methods
 
