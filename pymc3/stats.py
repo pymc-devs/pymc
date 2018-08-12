@@ -1,22 +1,22 @@
 """Statistical utility functions for PyMC"""
+from collections import namedtuple
+import itertools
+import pkg_resources
+import warnings
 
 import numpy as np
 import pandas as pd
-import itertools
+from scipy.stats import dirichlet
+from scipy.optimize import minimize
+from scipy.signal import fftconvolve
 from tqdm import tqdm
-import warnings
-from collections import namedtuple
+
 from .model import modelcontext
 from .util import get_default_varnames
 import pymc3 as pm
 from pymc3.theanof import floatX
 
-import scipy.__version__ as scipy_version
-from scipy.stats import dirichlet
-from scipy.optimize import minimize
-from scipy.signal import fftconvolve
-
-if scipy_version < '1.0.0':
+if pkg_resources.get_distribution('scipy').version < '1.0.0':
     from scipy.misc import logsumexp
 else:
     from scipy.special import logsumexp
