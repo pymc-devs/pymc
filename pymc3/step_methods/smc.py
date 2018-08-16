@@ -171,23 +171,18 @@ def sample_smc(draws=5000, step=None, progressbar=False, model=None, random_seed
     return trace
 
 
-def _initial_population(chains, model, variables):
+def _initial_population(draws, model, variables):
     """
     Create an initial population from the prior
     """
     population = []
-    init_rnd = {}
-    start = model.test_point
     var_info = {}
+    start = model.test_point
+    init_rnd = pm.sample_prior_predictive(draws, model=model)
     for v in variables:
-        if pm.util.is_transformed_name(v.name):
-            trans = v.distribution.transform_used.forward_val
-            init_rnd[v.name] = trans(v.distribution.dist.random(size=chains, point=start))
-        else:
-            init_rnd[v.name] = v.random(size=chains, point=start)
         var_info[v.name] = (start[v.name].shape, start[v.name].size)
 
-    for i in range(chains):
+    for i in range(draws):
         point = pm.Point({v.name: init_rnd[v.name][i] for v in variables}, model=model)
         population.append(model.dict_to_array(point))
 
