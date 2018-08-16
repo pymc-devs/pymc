@@ -8,7 +8,7 @@ from tqdm import tqdm
 
 from .arraystep import metrop_select
 from .metropolis import MultivariateNormalProposal
-from ..theanof import floatX, inputvars, make_shared_replacements, join_nonshared_inputs
+from ..theanof import floatX, make_shared_replacements, join_nonshared_inputs
 from ..model import modelcontext
 from ..backends.ndarray import NDArray
 from ..backends.base import MultiTrace
@@ -95,6 +95,7 @@ def sample_smc(draws=5000, step=None, progressbar=False, model=None, random_seed
 
     beta = 0
     stage = 0
+    acc_rate = 0
     model.marginal_likelihood = 1
     variables = model.vars
     discrete = np.concatenate([[v.dtype in pm.discrete_types] * (v.dsize or 1) for v in variables])
