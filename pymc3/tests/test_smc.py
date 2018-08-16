@@ -60,6 +60,6 @@ class TestSMC(SeededTest):
                 trace = pm.sample(2000, step=pm.SMC())
                 marginals.append(model.marginal_likelihood)
         # compare to the analytical result
-        assert np.floor(marginals[1] / marginals[0]) == 4.0
+        assert abs((marginals[1] / marginals[0]) - 4.0) <= 1
 
 
