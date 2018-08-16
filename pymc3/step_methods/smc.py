@@ -8,7 +8,7 @@ from tqdm import tqdm
 
 from .arraystep import metrop_select
 from .metropolis import MultivariateNormalProposal
-from ..theanof import floatX
+from ..theanof import floatX, inputvars, make_shared_replacements, join_nonshared_inputs
 from ..model import modelcontext
 from ..backends.ndarray import NDArray
 from ..backends.base import MultiTrace
@@ -100,18 +100,19 @@ def sample_smc(draws=5000, step=None, progressbar=False, model=None, random_seed
     discrete = np.concatenate([[v.dtype in pm.discrete_types] * (v.dsize or 1) for v in variables])
     any_discrete = discrete.any()
     all_discrete = discrete.all()
-    prior_logp = theano.function(model.vars, model.varlogpt)
-    likelihood_logp = theano.function(model.vars, model.datalogpt)
+    shared = make_shared_replacements(variables, model)
+    prior_logp = logp_forw([model.varlogpt], variables, shared)
+    likelihood_logp = logp_forw([model.datalogpt], variables, shared)
+
     pm._log.info('Sample initial stage: ...')
-    posterior = _initial_population(draws, model, variables)
+    posterior, var_info = _initial_population(draws, model, variables)
 
     while beta < 1:
         # compute plausibility weights (measure fitness)
-        likelihoods = np.array([likelihood_logp(*sample) for sample in posterior])
+        likelihoods = np.array([likelihood_logp(sample) for sample in posterior]).squeeze()
         beta, old_beta, weights, sj = _calc_beta(beta, likelihoods, step.threshold)
         model.marginal_likelihood *= sj
         pm._log.info('Beta: {:f} Stage: {:d}'.format(beta, stage))
-
         # resample based on plausibility weights (selection)
         resampling_indexes = np.random.choice(np.arange(draws), size=draws, p=weights)
         posterior = posterior[resampling_indexes]
@@ -132,7 +133,7 @@ def sample_smc(draws=5000, step=None, progressbar=False, model=None, random_seed
         # Apply Metropolis kernel (mutation)
         proposed = 0.
         accepted = 0.
-        priors = np.array([prior_logp(*sample) for sample in posterior])
+        priors = np.array([prior_logp(sample) for sample in posterior]).squeeze()
         tempered_post = priors + likelihoods * beta
         for draw in tqdm(range(draws), disable=not progressbar):
             old_tempered_post = tempered_post[draw]
@@ -152,7 +153,7 @@ def sample_smc(draws=5000, step=None, progressbar=False, model=None, random_seed
                 else:
                     q_new = floatX(q_old + delta)
 
-                new_tempered_post = prior_logp(*q_new) + likelihood_logp(*q_new) * beta
+                new_tempered_post = prior_logp(q_new) + likelihood_logp(q_new)[0] * beta
 
                 q_old, accept = metrop_select(new_tempered_post - old_tempered_post, q_new, q_old)
                 if accept:
@@ -164,26 +165,32 @@ def sample_smc(draws=5000, step=None, progressbar=False, model=None, random_seed
         acc_rate = accepted / proposed
         stage += 1
 
-    trace = _posterior_to_trace(posterior, model)
+    trace = _posterior_to_trace(posterior, model, var_info)
 
     return trace
 
-# FIXME!!!!
-def _initial_population(samples, model, variables):
+
+def _initial_population(chains, model, variables):
     """
     Create an initial population from the prior
     """
-    population = np.zeros((samples, len(variables)))
+    population = []
     init_rnd = {}
     start = model.test_point
-    for idx, v in enumerate(variables):
+    var_info = {}
+    for v in variables:
         if pm.util.is_transformed_name(v.name):
             trans = v.distribution.transform_used.forward_val
-            population[:,idx] = trans(v.distribution.dist.random(size=samples, point=start))
+            init_rnd[v.name] = trans(v.distribution.dist.random(size=chains, point=start))
         else:
-            population[:,idx] = v.random(size=samples, point=start)
+            init_rnd[v.name] = v.random(size=chains, point=start)
+        var_info[v.name] = (start[v.name].shape, start[v.name].size)
 
-    return population
+    for i in range(chains):
+        point = pm.Point({v.name: init_rnd[v.name][i] for v in variables}, model=model)
+        population.append(model.dict_to_array(point))
+
+    return np.array(population), var_info
 
 
 def _calc_beta(beta, likelihoods, threshold=0.5):
@@ -204,12 +211,14 @@ def _calc_beta(beta, likelihoods, threshold=0.5):
 
     Returns
     -------
-    beta : float
+    new_beta : float
         tempering parameter of the next stage
-    beta : float
+    old_beta : float
         tempering parameter of the current stage
     weights : numpy array
         Importance weights (floats)
+    sj : float
+        Partial marginal likelihood
     """
     low_beta = old_beta = beta
     up_beta = 2.
@@ -228,10 +237,10 @@ def _calc_beta(beta, likelihoods, threshold=0.5):
             low_beta = new_beta
     if new_beta >= 1:
         new_beta = 1
-    lala = np.exp((new_beta - old_beta) * likelihoods)
+    sj = np.exp((new_beta - old_beta) * likelihoods)
     weights_un = np.exp((new_beta - old_beta) * (likelihoods - likelihoods.max()))
     weights = weights_un / np.sum(weights_un)
-    return new_beta, old_beta, weights, np.mean(lala)
+    return new_beta, old_beta, weights, np.mean(sj)
 
 
 def _calc_covariance(posterior_array, weights):
@@ -242,6 +251,7 @@ def _calc_covariance(posterior_array, weights):
     if np.isnan(cov).any() or np.isinf(cov).any():
         raise ValueError('Sample covariances not valid! Likely "chains" is too small!')
     return np.atleast_2d(cov)
+
 
 def _tune(acc_rate):
     """
@@ -261,15 +271,41 @@ def _tune(acc_rate):
     b = 8. / 9
     return (a + b * acc_rate) ** 2
 
-def _posterior_to_trace(posterior, model):
+
+def _posterior_to_trace(posterior, model, var_info):
     """
     Save results into a PyMC3 trace
     """
-    length_pos = len(posterior)
+    lenght_pos = len(posterior)
     varnames = [v.name for v in model.vars]
+
     with model:
         strace = NDArray(model)
-        strace.setup(length_pos, 0)
-    for i in range(length_pos):
-        strace.record({k:v for k, v in zip(varnames, posterior[i])})
+        strace.setup(lenght_pos, 0)
+    for i in range(lenght_pos):
+        value = []
+        size = 0
+        for var in varnames:
+            shape, new_size = var_info[var]
+            value.append(posterior[i][size:size+new_size].reshape(shape))
+            size += new_size
+        strace.record({k: v for k, v in zip(varnames, value)})
     return MultiTrace([strace])
+
+
+def logp_forw(out_vars, vars, shared):
+    """Compile Theano function of the model and the input and output variables.
+
+    Parameters
+    ----------
+    out_vars : List
+        containing :class:`pymc3.Distribution` for the output variables
+    vars : List
+        containing :class:`pymc3.Distribution` for the input variables
+    shared : List
+        containing :class:`theano.tensor.Tensor` for depended shared data
+    """
+    out_list, inarray0 = join_nonshared_inputs(out_vars, vars, shared)
+    f = theano.function([inarray0], out_list)
+    f.trust_input = True
+    return f
