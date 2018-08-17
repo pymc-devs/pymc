@@ -5,6 +5,7 @@ import numpy as np
 import theano
 import pymc3 as pm
 from tqdm import tqdm
+import warnings
 
 from .arraystep import metrop_select
 from .metropolis import MultivariateNormalProposal
@@ -57,7 +58,6 @@ class SMC():
         816-832. `link <http://ascelibrary.org/doi/abs/10.1061/%28ASCE%290733-9399
         %282007%29133:7%28816%29>`__
     """
-    default_blocked = True
 
     def __init__(self, n_steps=5, scaling=1., p_acc_rate=0.01, tune=True,
                  proposal_name='MultivariateNormal', threshold=0.5):
@@ -88,6 +88,7 @@ def sample_smc(draws=5000, step=None, progressbar=False, model=None, random_seed
     random_seed : int
         random seed
     """
+    warnings.warn("Warning: SMC is experimental, hopefully it will be ready for PyMC 3.6")
     model = modelcontext(model)
 
     if random_seed != -1:
@@ -95,7 +96,7 @@ def sample_smc(draws=5000, step=None, progressbar=False, model=None, random_seed
 
     beta = 0
     stage = 0
-    acc_rate = 0
+    acc_rate = 1
     model.marginal_likelihood = 1
     variables = model.vars
     discrete = np.concatenate([[v.dtype in pm.discrete_types] * (v.dsize or 1) for v in variables])
@@ -113,7 +114,6 @@ def sample_smc(draws=5000, step=None, progressbar=False, model=None, random_seed
         likelihoods = np.array([likelihood_logp(sample) for sample in posterior]).squeeze()
         beta, old_beta, weights, sj = _calc_beta(beta, likelihoods, step.threshold)
         model.marginal_likelihood *= sj
-        pm._log.info('Beta: {:f} Stage: {:d}'.format(beta, stage))
         # resample based on plausibility weights (selection)
         resampling_indexes = np.random.choice(np.arange(draws), size=draws, p=weights)
         posterior = posterior[resampling_indexes]
@@ -129,8 +129,10 @@ def sample_smc(draws=5000, step=None, progressbar=False, model=None, random_seed
             if acc_rate == 0:
                 acc_rate = 1. / step.n_steps
             step.scaling = _tune(acc_rate)
-            step.n_steps = 1 + (np.ceil(np.log(step.p_acc_rate) / np.log(1 - acc_rate)).astype(int))
+            step.n_steps = 1 + int(np.log(step.p_acc_rate) / np.log(1 - acc_rate))
 
+        pm._log.info('Stage: {:d} Beta: {:f} Steps: {:d} Acc: {:f}'.format(stage, beta,
+                                                                           step.n_steps, acc_rate))
         # Apply Metropolis kernel (mutation)
         proposed = 0.
         accepted = 0.
