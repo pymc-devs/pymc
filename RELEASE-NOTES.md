@@ -6,6 +6,7 @@
 - Renamed `sample_ppc()` and `sample_ppc_w()` to `sample_posterior_predictive()` and `sample_posterior_predictive_w()`, respectively.
 - Refactor SMC and properly compute marginal likelihood (#3124)
 
+
 ## PyMC 3.5 (July 21 2018)
 
 ### New features
