@@ -26,11 +26,11 @@ class TestShared(SeededTest):
             prior_trace0 = pm.sample_prior_predictive(1000)
 
             trace = pm.sample(1000, init=None, progressbar=False)
-            pp_trace0 = pm.sample_ppc(trace, 1000)
+            pp_trace0 = pm.sample_posterior_predictive(trace, 1000)
 
             x_shared.set_value(x_pred)
             prior_trace1 = pm.sample_prior_predictive(1000)
-            pp_trace1 = pm.sample_ppc(trace, 1000)
+            pp_trace1 = pm.sample_posterior_predictive(trace, 1000)
 
         assert prior_trace0['b'].shape == (1000,)
         assert prior_trace0['obs'].shape == (1000, 100)

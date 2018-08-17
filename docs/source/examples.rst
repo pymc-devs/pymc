@@ -18,6 +18,7 @@ Howto
    notebooks/PyMC3_tips_and_heuristic.ipynb
    notebooks/LKJ.ipynb
    notebooks/live_sample_plots.ipynb
+   notebooks/sampling_compound_step.ipynb
 
 Applied
 =======

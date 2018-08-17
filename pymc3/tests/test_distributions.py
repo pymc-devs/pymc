@@ -1183,6 +1183,10 @@ def test_bound():
     assert rand.dtype in [np.int16, np.int32, np.int64]
     assert rand >= 5 and rand <= 8
 
+    with Model():
+        BoundPoisson = Bound(Poisson, upper=6)
+        BoundPoisson(name="y", mu=1)
+
 
 class TestLatex(object):
 
