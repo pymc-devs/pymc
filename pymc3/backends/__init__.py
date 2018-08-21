@@ -20,8 +20,12 @@ For example, the following would save the sampling values to CSV files
 in the directory 'test'.
 
     >>> import pymc3 as pm
-    >>> db = pm.backends.Text('test')
-    >>> trace = pm.sample(..., trace=db)
+    >>> with pm.Model():
+    >>>      db = pm.backends.Text('test')
+    >>>      trace = pm.sample(..., trace=db)
+
+Note that as in the example above, one must have an active model context,
+or pass a `model` parameter in order to create a backend.
 
 Selecting values from a backend
 -------------------------------
